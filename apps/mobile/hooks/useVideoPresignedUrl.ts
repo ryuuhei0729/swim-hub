@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { getPresignedUrl } from "@/utils/videoUpload";
 
@@ -17,6 +18,7 @@ export function useVideoPresignedUrl(
   videoPath: string | null | undefined,
   thumbnailPath?: string | null,
 ): UseVideoPresignedUrlResult {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -38,11 +40,11 @@ export function useVideoPresignedUrl(
       setVideoUrl(result.url);
       setThumbnailUrl(result.thumbnailUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "URLの取得に失敗しました");
+      setError(err instanceof Error ? err.message : t("common.video.urlFetchFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, [videoPath, thumbnailPath, session?.access_token]);
+  }, [videoPath, thumbnailPath, session?.access_token, t]);
 
   useEffect(() => {
     fetchUrls();

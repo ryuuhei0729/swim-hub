@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import BaseModal from "@/components/ui/BaseModal";
 import { TeamEvent } from "@swim-hub/shared/types";
 import { format } from "date-fns";
@@ -39,6 +42,7 @@ function groupEventsByMonth(events: TeamEvent[]): EventGroupedByMonth[] {
 }
 
 export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkChangeModalProps) {
+  const t = useTranslations("teamsAdmin");
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
 
   const groupedEvents = groupEventsByMonth(events);
@@ -107,11 +111,11 @@ export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkC
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} title="まとめて出欠状態を変更" size="xl">
+    <BaseModal isOpen={isOpen} onClose={handleClose} title={t("bulkChange.title")} size="xl">
       <div className="space-y-6">
         {groupedEvents.length === 0 ? (
           <div className="bg-gray-50 rounded-lg p-6 text-center">
-            <p className="text-sm text-gray-600">イベントがありません</p>
+            <p className="text-sm text-gray-600">{t("bulkChange.empty")}</p>
           </div>
         ) : (
           <>
@@ -146,10 +150,10 @@ export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkC
                         const currentStatus = event.attendance_status || null;
                         const statusLabel =
                           currentStatus === "open"
-                            ? "受付中"
+                            ? t("bulkChange.statusOpen")
                             : currentStatus === "closed"
-                              ? "締切"
-                              : "未設定";
+                              ? t("bulkChange.statusClosed")
+                              : t("bulkChange.statusUnset");
                         const statusColor =
                           currentStatus === "open"
                             ? "text-blue-600"
@@ -171,12 +175,12 @@ export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkC
                                   {getDayOfMonth(event.date)}日（{getWeekday(event.date)}）
                                 </span>
                                 {event.type === "competition" && (
-                                  <span className="text-xs text-purple-600">（大会）</span>
+                                  <span className="text-xs text-purple-600">{t("bulkChange.competitionLabel")}</span>
                                 )}
                                 <span className="text-sm text-gray-700">
                                   {event.type === "competition"
-                                    ? event.title || "大会"
-                                    : event.title || "練習"}
+                                    ? event.title || t("adminAttendance.eventDefault.competition")
+                                    : event.title || t("adminAttendance.eventDefault.practice")}
                                 </span>
                                 {event.place && (
                                   <span className="text-xs text-gray-600">@{event.place}</span>
@@ -204,7 +208,7 @@ export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkC
                   selectedEventIds.size === 0 ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
-                受付中にする
+                {t("bulkChange.openButton")}
               </button>
               <button
                 onClick={() => handleUpdate("closed")}
@@ -213,7 +217,7 @@ export function BulkChangeModal({ isOpen, events, onClose, onBulkUpdate }: BulkC
                   selectedEventIds.size === 0 ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
-                締切にする
+                {t("bulkChange.closedButton")}
               </button>
             </div>
           </>

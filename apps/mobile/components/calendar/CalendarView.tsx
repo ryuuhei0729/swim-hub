@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, PanResponder } from "react-native";
 import { startOfMonth, endOfMonth, eachDayOfInterval, getDay, format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { CalendarHeader } from "./CalendarHeader";
 import { CalendarDay } from "./CalendarDay";
 import type { CalendarItem } from "@apps/shared/types/ui";
@@ -16,8 +17,6 @@ interface CalendarViewProps {
   onMonthYearSelect: (year: number, month: number) => void;
 }
 
-const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
-
 /**
  * カレンダービューコンポーネント
  * 月間カレンダーを表示
@@ -32,6 +31,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onTodayClick,
   onMonthYearSelect,
 }) => {
+  const { t } = useTranslation();
+  const weekdays = t("common.datePicker.weekdays", { returnObjects: true }) as string[];
   // 月の日付を取得
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -104,7 +105,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
       {/* 曜日ヘッダー */}
       <View style={styles.weekdayHeader}>
-        {WEEKDAYS.map((day) => (
+        {weekdays.map((day) => (
           <View key={day} style={styles.weekdayCell}>
             <Text style={styles.weekdayText}>{day}</Text>
           </View>

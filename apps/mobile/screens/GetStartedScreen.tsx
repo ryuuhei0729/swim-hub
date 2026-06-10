@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { useAppleAuth } from "@/hooks/useAppleAuth";
 import { AppleLoginButton } from "@/components/auth/AppleLoginButton";
@@ -12,6 +13,10 @@ import type { AuthStackParamList } from "@/navigation/types";
 
 export const GetStartedScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const { t } = useTranslation();
+  const emailMethodLabel = t("auth.signup.emailMethodButton");
+  const appleSignupLabel = t("auth.appleSignup");
+  const googleSignupLabel = t("auth.googleSignup");
   const {
     signInWithGoogle,
     loading: googleLoading,
@@ -53,7 +58,7 @@ export const GetStartedScreen: React.FC = () => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
-          accessibilityLabel="戻る"
+          accessibilityLabel={t("common.back")}
         >
           <Feather name="arrow-left" size={24} color="#111827" />
         </Pressable>
@@ -61,8 +66,8 @@ export const GetStartedScreen: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>アカウント作成</Text>
-          <Text style={styles.subtitle}>SwimHubを始めましょう</Text>
+          <Text style={styles.title}>{t("auth.signup.title")}</Text>
+          <Text style={styles.subtitle}>{t("auth.signup.welcomeTagline")}</Text>
         </View>
 
         {displayError && (
@@ -78,7 +83,7 @@ export const GetStartedScreen: React.FC = () => {
               onPress={handleAppleSignup}
               loading={appleLoading}
               disabled={isLoading}
-              label="Appleで作成"
+              label={appleSignupLabel}
             />
           )}
 
@@ -87,7 +92,7 @@ export const GetStartedScreen: React.FC = () => {
             onPress={handleGoogleSignup}
             loading={googleLoading}
             disabled={isLoading}
-            label="Googleで作成"
+            label={googleSignupLabel}
           />
 
           {/* Emailで作成 */}
@@ -100,14 +105,14 @@ export const GetStartedScreen: React.FC = () => {
             onPress={() => navigation.navigate("EmailSignup")}
             disabled={isLoading}
             accessibilityRole="button"
-            accessibilityLabel="Emailで作成"
+            accessibilityLabel={emailMethodLabel}
           >
             {isLoading ? (
               <ActivityIndicator color="#374151" size="small" />
             ) : (
               <View style={styles.emailButtonContent}>
                 <Feather name="mail" size={20} color="#374151" />
-                <Text style={styles.emailButtonText}>Emailで作成</Text>
+                <Text style={styles.emailButtonText}>{emailMethodLabel}</Text>
               </View>
             )}
           </Pressable>
@@ -117,21 +122,21 @@ export const GetStartedScreen: React.FC = () => {
       {/* 利用規約・プライバシーポリシー */}
       <View style={styles.legalContainer}>
         <Text style={styles.legalText}>
-          続行することで、
+          {t("auth.legal.agreePrefix")}
           <Text
             style={styles.legalLink}
             onPress={() => Linking.openURL("https://swim-hub.app/terms")}
           >
-            利用規約
+            {t("auth.legal.termsOfService")}
           </Text>
-          と
+          {t("auth.legal.conjunction")}
           <Text
             style={styles.legalLink}
             onPress={() => Linking.openURL("https://swim-hub.app/privacy")}
           >
-            プライバシーポリシー
+            {t("auth.legal.privacyPolicy")}
           </Text>
-          に同意したものとみなされます。
+          {t("auth.legal.agreeSuffix")}
         </Text>
       </View>
     </SafeAreaView>

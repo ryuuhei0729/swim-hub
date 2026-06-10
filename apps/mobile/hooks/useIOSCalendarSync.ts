@@ -4,6 +4,7 @@
  */
 import { useState, useCallback, useEffect } from "react";
 import { Platform } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   requestCalendarPermissions,
@@ -53,6 +54,7 @@ export interface UseIOSCalendarSyncReturn {
 }
 
 export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
+  const { t } = useTranslation();
   const { supabase, user } = useAuth();
   const [permissionStatus, setPermissionStatus] = useState<
     "granted" | "denied" | "undetermined" | null
@@ -83,11 +85,11 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
   // 連携有効化
   const enableSync = useCallback(async (): Promise<boolean> => {
     if (!supabase) {
-      setError("Supabaseクライアントが初期化されていません");
+      setError(t("auth.ui.clientNotInitialized"));
       return false;
     }
     if (!user) {
-      setError("ログインが必要です");
+      setError(t("settings.iosCalendar.errors.authRequired"));
       return false;
     }
 
@@ -99,7 +101,7 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
       if (permissionStatus !== "granted") {
         const granted = await requestPermission();
         if (!granted) {
-          setError("カレンダーへのアクセス許可が必要です");
+          setError(t("settings.iosCalendar.errors.calendarPermissionRequired"));
           return false;
         }
       }
@@ -111,28 +113,28 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
         .eq("id", user.id);
 
       if (updateError) {
-        setError(`DB更新エラー: ${updateError.message}`);
+        setError(t("settings.iosCalendar.errors.dbUpdateError", { message: updateError.message }));
         return false;
       }
 
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      setError(`連携の有効化に失敗しました: ${errorMessage}`);
+      setError(t("settings.iosCalendar.errors.enableSyncFailed", { message: errorMessage }));
       return false;
     } finally {
       setLoading(false);
     }
-  }, [user, supabase, permissionStatus, requestPermission]);
+  }, [user, supabase, permissionStatus, requestPermission, t]);
 
   // 連携無効化
   const disableSync = useCallback(async (): Promise<boolean> => {
     if (!supabase) {
-      setError("Supabaseクライアントが初期化されていません");
+      setError(t("auth.ui.clientNotInitialized"));
       return false;
     }
     if (!user) {
-      setError("ログインが必要です");
+      setError(t("settings.iosCalendar.errors.authRequired"));
       return false;
     }
 
@@ -149,12 +151,12 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
 
       return true;
     } catch {
-      setError("連携の無効化に失敗しました");
+      setError(t("settings.iosCalendar.errors.disconnectFailed"));
       return false;
     } finally {
       setLoading(false);
     }
-  }, [user, supabase]);
+  }, [user, supabase, t]);
 
   // 同期設定更新
   const updateSyncSettings = useCallback(
@@ -163,11 +165,11 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
       value: boolean,
     ): Promise<boolean> => {
       if (!supabase) {
-        setError("Supabaseクライアントが初期化されていません");
+        setError(t("auth.ui.clientNotInitialized"));
         return false;
       }
       if (!user) {
-        setError("ログインが必要です");
+        setError(t("settings.iosCalendar.errors.authRequired"));
         return false;
       }
 
@@ -184,13 +186,13 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
 
         return true;
       } catch {
-        setError("設定の更新に失敗しました");
+        setError(t("settings.iosCalendar.errors.settingsUpdateFailed"));
         return false;
       } finally {
         setLoading(false);
       }
     },
-    [user, supabase],
+    [user, supabase, t],
   );
 
   // 練習記録同期

@@ -3,12 +3,14 @@ import { View, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { SignupForm } from "@/components/auth/SignupForm";
 
 export const EmailSignupScreen: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const navigation = useNavigation();
+  const { t } = useTranslation();
 
   // 認証情報を確認中
   if (loading) {
@@ -31,7 +33,7 @@ export const EmailSignupScreen: React.FC = () => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
-          accessibilityLabel="戻る"
+          accessibilityLabel={t("common.back")}
         >
           <Feather name="arrow-left" size={24} color="#111827" />
         </Pressable>

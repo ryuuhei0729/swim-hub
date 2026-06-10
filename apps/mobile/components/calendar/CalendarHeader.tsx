@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, Modal, StyleSheet, ScrollView } from "react-native";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
+import { formatDate } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 
 interface CalendarHeaderProps {
@@ -25,6 +26,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onTodayClick,
   onMonthYearSelect,
 }) => {
+  const { t } = useTranslation();
+  const locale = useDateLocale();
   const [showMonthSelector, setShowMonthSelector] = useState(false);
 
   const safeCurrentDate = currentDate instanceof Date ? currentDate : new Date(currentDate);
@@ -53,7 +56,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               disabled={isLoading}
             >
               <Text style={styles.monthYearText}>
-                {format(currentDate, "yyyy年M月", { locale: ja })}
+                {formatDate(currentDate, "yearMonth", locale)}
               </Text>
             </Pressable>
             <Pressable style={styles.navButton} onPress={onNextMonth} disabled={isLoading}>
@@ -63,7 +66,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           <View style={styles.rightSection}>
             {isLoading && <LoadingSpinner size="small" />}
             <Pressable style={styles.todayButton} onPress={onTodayClick} disabled={isLoading}>
-              <Text style={styles.todayButtonText}>今日</Text>
+              <Text style={styles.todayButtonText}>{t("common.datePicker.today")}</Text>
             </Pressable>
           </View>
         </View>
@@ -79,7 +82,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         <Pressable style={styles.modalOverlay} onPress={() => setShowMonthSelector(false)}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>年月を選択</Text>
+              <Text style={styles.modalTitle}>{t("dashboard.calendarView.selectMonth")}</Text>
               <Pressable
                 style={styles.modalCloseButton}
                 onPress={() => setShowMonthSelector(false)}
@@ -91,7 +94,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <ScrollView style={styles.modalBody}>
               {/* 年選択 */}
               <View style={styles.selectorSection}>
-                <Text style={styles.selectorLabel}>年</Text>
+                <Text style={styles.selectorLabel}>{t("dashboard.calendarView.yearLabel")}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={styles.yearList}>
                     {years.map((year) => (
@@ -109,7 +112,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                             currentYear === year && styles.yearOptionTextSelected,
                           ]}
                         >
-                          {year}年
+                          {t("dashboard.calendarView.yearUnit", { year })}
                         </Text>
                       </Pressable>
                     ))}
@@ -119,7 +122,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
               {/* 月選択 */}
               <View style={styles.selectorSection}>
-                <Text style={styles.selectorLabel}>月</Text>
+                <Text style={styles.selectorLabel}>{t("dashboard.calendarView.monthLabel")}</Text>
                 <View style={styles.monthGrid}>
                   {Array.from({ length: 12 }, (_, i) => i).map((month) => (
                     <Pressable
@@ -136,7 +139,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                           currentMonth === month && styles.monthOptionTextSelected,
                         ]}
                       >
-                        {month + 1}月
+                        {t("dashboard.calendarView.monthUnit", { month: month + 1 })}
                       </Text>
                     </Pressable>
                   ))}

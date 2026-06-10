@@ -1,0 +1,43 @@
+# 共通ログインサブフロー
+#
+# - 端末ロケールは launchApp の launch arguments (-AppleLanguages / -AppleLocale) で指定する。
+#   expo-localization はこの引数を尊重するため、シミュレータの言語設定を変えなくても
+#   アプリ全体が ${LOCALE} で表示される（fastlane snapshot と同じ仕組み）。
+# - 既にログイン済み（AsyncStorage にセッションが残っている）場合は welcome 画面を
+#   スキップし、そのままダッシュボードの表示を待つ。
+#
+# 必要な env: APP_ID, LOCALE(例 ja/en), REGION(例 JP/US), APP_EMAIL, APP_PASSWORD
+appId: ${APP_ID}
+---
+- launchApp:
+    appId: ${APP_ID}
+    arguments:
+      "-AppleLanguages": "(${LOCALE})"
+      "-AppleLocale": "${LOCALE}_${REGION}"
+    clearState: false
+
+# 未ログインなら welcome → email ログイン
+- runFlow:
+    when:
+      visible:
+        id: "welcome-login-button"
+    commands:
+      - tapOn:
+          id: "welcome-login-button"
+      - tapOn:
+          id: "login-email-method-button"
+      - tapOn:
+          id: "login-email-input"
+      - inputText: ${APP_EMAIL}
+      - tapOn:
+          id: "login-password-input"
+      - inputText: ${APP_PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          id: "login-submit-button"
+
+# メイン画面（タブバー）が出るまで待つ。オンボーディング済みのデモユーザー前提。
+- extendedWaitUntil:
+    visible:
+      id: "tab-dashboard"
+    timeout: 40000

@@ -10,11 +10,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 
 const DUMMY_EMAIL_DOMAIN = "@ryuhei.love";
 
 export const EmailChangeSettings: React.FC = () => {
+  const { t } = useTranslation();
   const { supabase, user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -41,12 +43,12 @@ export const EmailChangeSettings: React.FC = () => {
     if (!trimmed || loading) return;
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setError("有効なメールアドレスを入力してください");
+      setError(t("settings.email.modal.errors.invalidEmail"));
       return;
     }
 
     if (trimmed === currentEmail) {
-      setError("現在と同じメールアドレスです");
+      setError(t("settings.email.modal.errors.sameEmail"));
       return;
     }
 
@@ -68,7 +70,7 @@ export const EmailChangeSettings: React.FC = () => {
       setNewEmail("");
     } catch (err) {
       console.error("メールアドレス変更エラー:", err);
-      setError("メールアドレスの変更に失敗しました。再度お試しください。");
+      setError(t("settings.email.modal.errors.changeFailed"));
     } finally {
       setLoading(false);
     }
@@ -79,13 +81,13 @@ export const EmailChangeSettings: React.FC = () => {
       {/* セクション: ボタンのみ表示 */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>メールアドレス</Text>
+          <Text style={styles.sectionTitle}>{t("settings.email.title")}</Text>
         </View>
 
         <View style={styles.row}>
           <View style={styles.emailInfo}>
             {isDummyEmail ? (
-              <Text style={styles.emailTextMuted}>メールアドレス未登録</Text>
+              <Text style={styles.emailTextMuted}>{t("settings.email.notRegistered")}</Text>
             ) : (
               <Text style={styles.emailText}>{currentEmail}</Text>
             )}
@@ -94,9 +96,15 @@ export const EmailChangeSettings: React.FC = () => {
             style={styles.changeButton}
             onPress={openModal}
             accessibilityRole="button"
-            accessibilityLabel={isDummyEmail ? "メールアドレスを登録" : "メールアドレスを変更"}
+            accessibilityLabel={
+              isDummyEmail
+                ? t("settings.email.modal.registerAria")
+                : t("settings.email.modal.changeAria")
+            }
           >
-            <Text style={styles.changeButtonText}>{isDummyEmail ? "登録する" : "変更する"}</Text>
+            <Text style={styles.changeButtonText}>
+              {isDummyEmail ? t("settings.email.registerButton") : t("settings.email.changeButton")}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -110,12 +118,15 @@ export const EmailChangeSettings: React.FC = () => {
           <Pressable style={styles.modalBackdrop} onPress={closeModal} />
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {isDummyEmail ? "メールアドレス登録" : "メールアドレス変更"}
+              {isDummyEmail
+                ? t("settings.email.modal.registerTitle")
+                : t("settings.email.modal.changeTitle")}
             </Text>
 
             {!isDummyEmail && (
               <Text style={styles.currentEmailLabel}>
-                現在のメールアドレス: <Text style={styles.currentEmailValue}>{currentEmail}</Text>
+                {t("settings.email.modal.currentEmailLabel")}
+                <Text style={styles.currentEmailValue}>{currentEmail}</Text>
               </Text>
             )}
 
@@ -128,7 +139,7 @@ export const EmailChangeSettings: React.FC = () => {
             {success && (
               <View style={styles.successContainer}>
                 <Text style={styles.successText}>
-                  確認メールを送信しました。メール内のリンクをクリックして変更を完了してください。
+                  {t("settings.email.modal.successMessage")}
                 </Text>
               </View>
             )}
@@ -136,7 +147,9 @@ export const EmailChangeSettings: React.FC = () => {
             {!success ? (
               <>
                 <Text style={styles.label}>
-                  {isDummyEmail ? "登録するメールアドレス" : "新しいメールアドレス"}
+                  {isDummyEmail
+                    ? t("settings.email.modal.registerLabel")
+                    : t("settings.email.modal.changeLabel")}
                 </Text>
                 <TextInput
                   style={styles.input}
@@ -157,9 +170,11 @@ export const EmailChangeSettings: React.FC = () => {
                     style={styles.cancelButton}
                     onPress={closeModal}
                     accessibilityRole="button"
-                    accessibilityLabel="キャンセル"
+                    accessibilityLabel={t("settings.email.modal.cancelAriaLabel")}
                   >
-                    <Text style={styles.cancelButtonText}>キャンセル</Text>
+                    <Text style={styles.cancelButtonText}>
+                      {t("settings.email.modal.cancelButton")}
+                    </Text>
                   </Pressable>
                   <Pressable
                     style={[
@@ -169,13 +184,19 @@ export const EmailChangeSettings: React.FC = () => {
                     onPress={handleSubmit}
                     disabled={!newEmail.trim() || loading}
                     accessibilityRole="button"
-                    accessibilityLabel={isDummyEmail ? "登録する" : "変更する"}
+                    accessibilityLabel={
+                      isDummyEmail
+                        ? t("settings.email.modal.registerSubmit")
+                        : t("settings.email.modal.changeSubmit")
+                    }
                   >
                     {loading ? (
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                       <Text style={styles.submitButtonText}>
-                        {isDummyEmail ? "登録する" : "変更する"}
+                        {isDummyEmail
+                          ? t("settings.email.modal.registerSubmit")
+                          : t("settings.email.modal.changeSubmit")}
                       </Text>
                     )}
                   </Pressable>
@@ -187,9 +208,11 @@ export const EmailChangeSettings: React.FC = () => {
                   style={styles.cancelButton}
                   onPress={closeModal}
                   accessibilityRole="button"
-                  accessibilityLabel="閉じる"
+                  accessibilityLabel={t("settings.email.modal.closeAriaLabel")}
                 >
-                  <Text style={styles.cancelButtonText}>閉じる</Text>
+                  <Text style={styles.cancelButtonText}>
+                    {t("settings.email.modal.closeButton")}
+                  </Text>
                 </Pressable>
               </View>
             )}

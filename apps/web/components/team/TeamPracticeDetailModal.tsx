@@ -5,18 +5,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import type { PracticeTag } from "@apps/shared/types";
-
-const SWIM_STYLES: Record<string, string> = {
-  Fr: "自由形",
-  Ba: "背泳ぎ",
-  Br: "平泳ぎ",
-  Fly: "バタフライ",
-  IM: "個人メドレー",
-};
-
-const getStyleLabel = (styleValue: string): string => {
-  return SWIM_STYLES[styleValue] || styleValue;
-};
+import { useTranslations } from "next-intl";
 
 const getTextColor = (backgroundColor: string) => {
   const hex = backgroundColor.replace("#", "");
@@ -69,10 +58,13 @@ interface TeamPracticeDetailModalProps {
 }
 
 // メンバー名を安全に取得
-function getUserName(users: { name: string } | { name: string }[] | null | undefined): string {
-  if (!users) return "不明";
-  if (Array.isArray(users)) return users[0]?.name || "不明";
-  return users.name || "不明";
+function getUserName(
+  users: { name: string } | { name: string }[] | null | undefined,
+  fallback = "Unknown",
+): string {
+  if (!users) return fallback;
+  if (Array.isArray(users)) return users[0]?.name || fallback;
+  return users.name || fallback;
 }
 
 // ログをメニュー（style+distance+circle等）でグルーピングするキー
@@ -86,23 +78,37 @@ interface MemberInfo {
   times: PracticeTimeEntry[];
 }
 
-function MemberTimeTable({ logs }: { logs: PracticeLogEntry[] }) {
+interface MemberTimeTableProps {
+  logs: PracticeLogEntry[];
+  labels: {
+    noTimeRecorded: string;
+    setRepLabel: (rep: number) => string;
+    setHeader: (set: number) => string;
+    setAvgLabel: (set: number) => string;
+    setAvgSingleLabel: string;
+    overallFastest: string;
+    overallAverage: string;
+    unknownUser: string;
+  };
+}
+
+function MemberTimeTable({ logs, labels }: MemberTimeTableProps) {
   const { repCount, setCount, members } = useMemo(() => {
     const rep = logs[0].rep_count;
     const set = logs[0].set_count;
     const m: MemberInfo[] = logs.map((log) => ({
       userId: log.user_id,
-      name: getUserName(log.users),
+      name: getUserName(log.users, labels.unknownUser),
       times: log.practice_times || [],
     }));
     return { repCount: rep, setCount: set, members: m };
-  }, [logs]);
+  }, [logs, labels.unknownUser]);
 
   const hasTimes = members.some((m) => m.times.some((t) => t.time > 0));
   if (!hasTimes) {
     return (
       <div className="bg-white rounded-lg p-3 border border-green-200 text-sm text-gray-500">
-        タイム記録なし
+        {labels.noTimeRecorded}
       </div>
     );
   }
@@ -169,7 +175,7 @@ function MemberTimeTable({ logs }: { logs: PracticeLogEntry[] }) {
                       colSpan={members.length + 1}
                       className="py-1.5 px-2 text-xs font-semibold text-emerald-700"
                     >
-                      {setNumber}セット目
+                      {labels.setHeader(setNumber)}
                     </td>
                   </tr>
                 )}
@@ -183,7 +189,7 @@ function MemberTimeTable({ logs }: { logs: PracticeLogEntry[] }) {
                   return (
                     <tr key={`${setNumber}-${repNumber}`} className="border-b border-green-100">
                       <td className="py-2 px-2 font-medium text-gray-700 sticky left-0 bg-white">
-                        {repNumber}本目
+                        {labels.setRepLabel(repNumber)}
                       </td>
                       {members.map((member, mi) => {
                         const time = rowTimes[mi];
@@ -205,7 +211,7 @@ function MemberTimeTable({ logs }: { logs: PracticeLogEntry[] }) {
                 {/* セット平均行 */}
                 <tr className="border-b border-green-200 bg-green-50">
                   <td className="py-2 px-2 font-medium text-green-800 sticky left-0 bg-green-50">
-                    {setCount > 1 ? `${setNumber}set平均` : "セット平均"}
+                    {setCount > 1 ? labels.setAvgLabel(setNumber) : labels.setAvgSingleLabel}
                   </td>
                   {(() => {
                     const avgs = members.map((m) => getSetAverage(m, setNumber));
@@ -234,7 +240,7 @@ function MemberTimeTable({ logs }: { logs: PracticeLogEntry[] }) {
           {/* 全体最速行 */}
           <tr className="border-t-2 border-green-300 bg-blue-50">
             <td className="py-2 px-2 font-medium text-blue-800 sticky left-0 bg-blue-50">
-              全体最速
+              {labels.overallFastest}
             </td>
             {(() => {
               const fastests = members.map((m) => getOverallFastest(m));
@@ -258,7 +264,7 @@ function MemberTimeTable({ logs }: { logs: PracticeLogEntry[] }) {
           {/* 全体平均行 */}
           <tr className="bg-blue-50">
             <td className="py-2 px-2 font-medium text-blue-800 sticky left-0 bg-blue-50">
-              全体平均
+              {labels.overallAverage}
             </td>
             {(() => {
               const avgs = members.map((m) => getOverallAverage(m));
@@ -290,9 +296,25 @@ export default function TeamPracticeDetailModal({
   practiceId,
 }: TeamPracticeDetailModalProps) {
   const { supabase } = useAuth();
+  const t = useTranslations("teams.practiceDetailModal");
   const [practice, setPractice] = useState<PracticeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const swimStyles = useMemo(
+    () => ({
+      Fr: t("swimStyles.Fr"),
+      Ba: t("swimStyles.Ba"),
+      Br: t("swimStyles.Br"),
+      Fly: t("swimStyles.Fly"),
+      IM: t("swimStyles.IM"),
+    }),
+    [t],
+  );
+
+  const getStyleLabel = (styleValue: string): string => {
+    return (swimStyles as Record<string, string>)[styleValue] || styleValue;
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -346,19 +368,34 @@ export default function TeamPracticeDetailModal({
           .single();
 
         if (fetchError) throw fetchError;
-        if (!data) throw new Error("練習データが見つかりません");
+        if (!data) throw new Error(t("dataNotFound"));
 
         setPractice(data as unknown as PracticeDetail);
       } catch (err) {
         console.error("チーム練習詳細の取得エラー:", err);
-        setError("練習詳細の取得に失敗しました");
+        setError(t("loadError"));
       } finally {
         setLoading(false);
       }
     };
 
     loadPractice();
-  }, [isOpen, practiceId, supabase]);
+  }, [isOpen, practiceId, supabase, t]);
+
+  // MemberTimeTable に渡すラベル
+  const memberTimeTableLabels = useMemo(
+    () => ({
+      noTimeRecorded: t("noTimeRecorded"),
+      setRepLabel: (rep: number) => t("setRepLabel", { rep }),
+      setHeader: (set: number) => t("setHeader", { set }),
+      setAvgLabel: (set: number) => t("setAvgLabel", { set }),
+      setAvgSingleLabel: t("setAvgSingleLabel"),
+      overallFastest: t("overallFastest"),
+      overallAverage: t("overallAverage"),
+      unknownUser: t("unknownUser"),
+    }),
+    [t],
+  );
 
   // 同じメニューのログをグルーピング
   const groupedLogs = useMemo(() => {
@@ -382,7 +419,7 @@ export default function TeamPracticeDetailModal({
           <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             {/* ヘッダー */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">チーム練習記録</h3>
+              <h3 className="text-lg font-medium text-gray-900">{t("title")}</h3>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -390,7 +427,7 @@ export default function TeamPracticeDetailModal({
 
             {loading && (
               <div className="text-center py-8">
-                <div className="text-sm text-gray-500">読み込み中...</div>
+                <div className="text-sm text-gray-500">{t("loading")}</div>
               </div>
             )}
 
@@ -429,7 +466,7 @@ export default function TeamPracticeDetailModal({
                 {/* ログなし */}
                 {practice.practice_logs.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    練習ログがまだ登録されていません
+                    {t("noLogs")}
                   </div>
                 )}
 
@@ -464,7 +501,7 @@ export default function TeamPracticeDetailModal({
 
                         {/* メニュー情報 */}
                         <div className="bg-white rounded-lg p-3 mb-3 border border-green-300">
-                          <div className="text-xs font-medium text-gray-500 mb-1">練習内容</div>
+                          <div className="text-xs font-medium text-gray-500 mb-1">{t("practiceContentLabel")}</div>
                           <div className="text-sm text-gray-800">
                             <span className="text-lg font-semibold text-green-700">
                               {representativeLog.distance}
@@ -510,13 +547,13 @@ export default function TeamPracticeDetailModal({
                         {/* メモ */}
                         {representativeLog.note && (
                           <div className="bg-slate-50 rounded-lg p-3 mb-3 border border-slate-200">
-                            <div className="text-xs font-medium text-gray-500 mb-1">メモ</div>
+                            <div className="text-xs font-medium text-gray-500 mb-1">{t("memoLabel")}</div>
                             <div className="text-sm text-slate-700">{representativeLog.note}</div>
                           </div>
                         )}
 
                         {/* メンバー横並びタイムテーブル */}
-                        <MemberTimeTable logs={logs} />
+                        <MemberTimeTable logs={logs} labels={memberTimeTableLabels} />
                       </div>
                     );
                   })}

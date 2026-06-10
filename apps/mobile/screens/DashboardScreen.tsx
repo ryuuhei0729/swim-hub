@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { addMonths, subMonths, format as formatDate } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCalendarQuery } from "@/hooks/useCalendarQuery";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
@@ -33,6 +34,7 @@ type DashboardScreenNavigationProp = NativeStackNavigationProp<MainStackParamLis
 export const DashboardScreen: React.FC = () => {
   const navigation = useNavigation<DashboardScreenNavigationProp>();
   const { supabase } = useAuth();
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
@@ -160,13 +162,13 @@ export const DashboardScreen: React.FC = () => {
   // 練習削除
   const deleteMutation = useDeletePracticeMutation(supabase);
   const handleDeletePractice = async (itemId: string) => {
-    Alert.alert("削除確認", "この練習記録を削除しますか？\nこの操作は取り消せません。", [
+    Alert.alert(t("dashboard.mobile.deletePracticeConfirmTitle"), t("dashboard.mobile.deletePracticeConfirmMessage"), [
       {
-        text: "キャンセル",
+        text: t("common.cancel"),
         style: "cancel",
       },
       {
-        text: "削除",
+        text: t("dashboard.mobile.deleteButton"),
         style: "destructive",
         onPress: async () => {
           setIsDeleting(true);
@@ -193,7 +195,7 @@ export const DashboardScreen: React.FC = () => {
             refetch(); // カレンダーをリフレッシュ
           } catch (error) {
             console.error("削除エラー:", error);
-            Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
+            Alert.alert(t("common.error"), error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"), [
               { text: "OK" },
             ]);
           } finally {
@@ -220,13 +222,13 @@ export const DashboardScreen: React.FC = () => {
 
   // 練習ログ削除
   const handleDeletePracticeLog = async (logId: string) => {
-    Alert.alert("削除確認", "この練習メニューを削除しますか？\nこの操作は取り消せません。", [
+    Alert.alert(t("dashboard.mobile.deletePracticeConfirmTitle"), t("dashboard.mobile.deleteMenuConfirmMessage"), [
       {
-        text: "キャンセル",
+        text: t("common.cancel"),
         style: "cancel",
       },
       {
-        text: "削除",
+        text: t("dashboard.mobile.deleteButton"),
         style: "destructive",
         onPress: async () => {
           setIsDeleting(true);
@@ -236,7 +238,7 @@ export const DashboardScreen: React.FC = () => {
             refetch(); // カレンダーをリフレッシュ
           } catch (error) {
             console.error("削除エラー:", error);
-            Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
+            Alert.alert(t("common.error"), error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"), [
               { text: "OK" },
             ]);
           } finally {
@@ -253,7 +255,7 @@ export const DashboardScreen: React.FC = () => {
       item.metadata?.competition?.id || item.metadata?.record?.competition_id;
 
     if (!competitionId) {
-      Alert.alert("エラー", "大会情報が見つかりませんでした");
+      Alert.alert(t("common.error"), t("dashboard.mobile.competitionNotFound"));
       return;
     }
 
@@ -267,13 +269,13 @@ export const DashboardScreen: React.FC = () => {
   // 記録削除
   const deleteRecordMutation = useDeleteRecordMutation(supabase);
   const handleDeleteRecord = async (recordId: string) => {
-    Alert.alert("削除確認", "この大会記録を削除しますか？\nこの操作は取り消せません。", [
+    Alert.alert(t("dashboard.mobile.deletePracticeConfirmTitle"), t("dashboard.mobile.deleteRecordConfirmMessage"), [
       {
-        text: "キャンセル",
+        text: t("common.cancel"),
         style: "cancel",
       },
       {
-        text: "削除",
+        text: t("dashboard.mobile.deleteButton"),
         style: "destructive",
         onPress: async () => {
           setIsDeleting(true);
@@ -282,7 +284,7 @@ export const DashboardScreen: React.FC = () => {
             refetch(); // カレンダーをリフレッシュ
           } catch (error) {
             console.error("削除エラー:", error);
-            Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
+            Alert.alert(t("common.error"), error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"), [
               { text: "OK" },
             ]);
           } finally {
@@ -341,13 +343,13 @@ export const DashboardScreen: React.FC = () => {
   // 大会削除
   const deleteCompetitionMutation = useDeleteCompetitionMutation(supabase);
   const handleDeleteCompetition = async (competitionId: string) => {
-    Alert.alert("削除確認", "この大会を削除しますか？\nこの操作は取り消せません。", [
+    Alert.alert(t("dashboard.mobile.deletePracticeConfirmTitle"), t("dashboard.mobile.deleteCompetitionConfirmMessage"), [
       {
-        text: "キャンセル",
+        text: t("common.cancel"),
         style: "cancel",
       },
       {
-        text: "削除",
+        text: t("dashboard.mobile.deleteButton"),
         style: "destructive",
         onPress: async () => {
           setIsDeleting(true);
@@ -379,7 +381,7 @@ export const DashboardScreen: React.FC = () => {
             refetch(); // カレンダーをリフレッシュ
           } catch (error) {
             console.error("削除エラー:", error);
-            Alert.alert("エラー", error instanceof Error ? error.message : "削除に失敗しました", [
+            Alert.alert(t("common.error"), error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"), [
               { text: "OK" },
             ]);
           } finally {
@@ -395,7 +397,7 @@ export const DashboardScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <ErrorView
-          message={error.message || "カレンダーデータの取得に失敗しました"}
+          message={error.message || t("dashboard.mobile.calendarFetchFailed")}
           onRetry={() => refetch()}
           fullScreen
         />
@@ -407,7 +409,7 @@ export const DashboardScreen: React.FC = () => {
   if (isLoading && entries.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message="カレンダーを読み込み中..." />
+        <LoadingSpinner fullScreen message={t("dashboard.mobile.calendarLoading")} />
       </SafeAreaView>
     );
   }

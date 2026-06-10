@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { uploadVideo, deleteVideo, type VideoType } from "@/utils/videoUpload";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
@@ -43,6 +44,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   onPendingVideoAsset,
   onPendingVideoUri,
 }) => {
+  const { t } = useTranslation();
   const { getAccessToken } = useAuth();
   const [uploadState, setUploadState] = useState<UploadState>(
     existingVideoPath ? "done" : "idle",
@@ -65,7 +67,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         const accessToken = await getAccessToken();
         if (!isMounted) return;
         if (!accessToken) {
-          setError("セッションが無効です。再ログインしてください。");
+          setError(t("common.upload.sessionInvalid"));
           setUploadState("error");
           return;
         }
@@ -91,7 +93,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         } catch (err) {
           if (!isMounted) return;
           console.error("動画アップロードエラー:", err);
-          setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+          setError(err instanceof Error ? err.message : t("common.upload.uploadFailed"));
           setUploadState("error");
         }
       };
@@ -102,7 +104,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         isMounted = false;
       };
     }
-  }, [id, pendingVideoUri, uploadState, getAccessToken, type, onUploadComplete]);
+  }, [id, pendingVideoUri, uploadState, getAccessToken, type, onUploadComplete, t]);
 
   const pickVideo = useCallback(
     async (source: "library" | "camera") => {
@@ -124,7 +126,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         const asset = result.assets[0];
 
         if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE_MB * 1024 * 1024) {
-          Alert.alert("エラー", `動画のサイズが${MAX_FILE_SIZE_MB}MBを超えています`);
+          Alert.alert(t("common.alertErrorTitle"), t("common.upload.videoSizeError", { maxMb: MAX_FILE_SIZE_MB }));
           return;
         }
 
@@ -132,7 +134,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
           // ID あり → 最新 token を取得してから即アップロード
           const accessToken = await getAccessToken();
           if (!accessToken) {
-            Alert.alert("エラー", "認証情報が見つかりません。再ログインしてください。");
+            Alert.alert(t("common.alertErrorTitle"), t("common.upload.authNotFound"));
             return;
           }
 
@@ -163,20 +165,20 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         }
       } catch (err) {
         console.error("動画選択/アップロードエラー:", err);
-        setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+        setError(err instanceof Error ? err.message : t("common.upload.uploadFailed"));
         setUploadState("error");
       }
     },
-    [getAccessToken, type, id, onUploadComplete, onPendingVideoAsset, onPendingVideoUri],
+    [getAccessToken, type, id, onUploadComplete, onPendingVideoAsset, onPendingVideoUri, t],
   );
 
   const handleSelectSource = useCallback(() => {
-    Alert.alert("動画を追加", "動画の取得元を選択してください", [
-      { text: "キャンセル", style: "cancel" },
-      { text: "カメラで撮影", onPress: () => pickVideo("camera") },
-      { text: "ライブラリから選択", onPress: () => pickVideo("library") },
+    Alert.alert(t("common.upload.videoAddTitle"), t("common.upload.videoSourceSelectMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.upload.cameraOption"), onPress: () => pickVideo("camera") },
+      { text: t("common.upload.libraryOption"), onPress: () => pickVideo("library") },
     ]);
-  }, [pickVideo]);
+  }, [pickVideo, t]);
 
   const handleDelete = useCallback(async () => {
     // 保留中の動画を削除
@@ -190,16 +192,16 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
 
     if (!id) return;
 
-    Alert.alert("動画を削除", "この動画を削除しますか？", [
-      { text: "キャンセル", style: "cancel" },
+    Alert.alert(t("common.upload.videoRemoveTitle"), t("common.upload.videoRemoveConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "削除",
+        text: t("common.upload.removeChoice"),
         style: "destructive",
         onPress: async () => {
           try {
             const accessToken = await getAccessToken();
             if (!accessToken) {
-              Alert.alert("エラー", "認証情報が見つかりません。再ログインしてください。");
+              Alert.alert(t("common.alertErrorTitle"), t("common.upload.authNotFound"));
               return;
             }
             await deleteVideo(type, id, accessToken);
@@ -209,12 +211,12 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
             setShowPlayer(false);
             onDelete?.();
           } catch (err) {
-            Alert.alert("エラー", err instanceof Error ? err.message : "削除に失敗しました");
+            Alert.alert(t("common.alertErrorTitle"), err instanceof Error ? err.message : t("common.upload.deleteFailed"));
           }
         },
       },
     ]);
-  }, [getAccessToken, type, id, onDelete, onPendingVideoAsset, onPendingVideoUri, pendingVideoUri]);
+  }, [getAccessToken, type, id, onDelete, onPendingVideoAsset, onPendingVideoUri, pendingVideoUri, t]);
 
   // Premium 制限
   if (!isPremium && uploadState === "idle") {
@@ -227,11 +229,11 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
       <View style={styles.selectedContainer}>
         <View style={styles.selectedBadge}>
           <Feather name="check-circle" size={16} color="#059669" />
-          <Text style={styles.selectedText}>動画を選択済み（保存時にアップロードされます）</Text>
+          <Text style={styles.selectedText}>{t("common.upload.videoSelected")}</Text>
         </View>
         <Pressable style={styles.removeButton} onPress={handleDelete}>
           <Feather name="x" size={14} color="#DC2626" />
-          <Text style={styles.removeText}>取り消し</Text>
+          <Text style={styles.removeText}>{t("common.upload.videoSelectedRemove")}</Text>
         </Pressable>
       </View>
     );
@@ -242,7 +244,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
     return (
       <View style={styles.progressContainer}>
         <ActivityIndicator size="small" color="#6366F1" />
-        <Text style={styles.progressText}>アップロード中... {Math.round(progress)}%</Text>
+        <Text style={styles.progressText}>{t("common.upload.videoUploading", { progress: Math.round(progress) })}</Text>
         <View style={styles.progressBarBg}>
           <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
         </View>
@@ -259,11 +261,11 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
           <View style={styles.actionRow}>
             <Pressable style={styles.closeButton} onPress={() => setShowPlayer(false)}>
               <Feather name="x" size={16} color="#6B7280" />
-              <Text style={styles.closeText}>閉じる</Text>
+              <Text style={styles.closeText}>{t("common.upload.videoClosePlayer")}</Text>
             </Pressable>
             <Pressable style={styles.deleteButton} onPress={handleDelete}>
               <Feather name="trash-2" size={16} color="#DC2626" />
-              <Text style={styles.deleteText}>削除</Text>
+              <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
             </Pressable>
           </View>
         </View>
@@ -275,17 +277,17 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         <Pressable style={styles.thumbnailContainer} onPress={() => setShowPlayer(true)}>
           <View style={styles.thumbnailPlaceholder}>
             <Feather name="play-circle" size={32} color="#FFFFFF" />
-            <Text style={styles.thumbnailText}>タップして再生</Text>
+            <Text style={styles.thumbnailText}>{t("common.upload.videoTapToPlay")}</Text>
           </View>
         </Pressable>
         <View style={styles.actionRow}>
           <Pressable style={styles.replaceButton} onPress={handleSelectSource}>
             <Feather name="refresh-cw" size={14} color="#6366F1" />
-            <Text style={styles.replaceText}>差し替え</Text>
+            <Text style={styles.replaceText}>{t("common.upload.videoReplace")}</Text>
           </Pressable>
           <Pressable style={styles.deleteButton} onPress={handleDelete}>
             <Feather name="trash-2" size={14} color="#DC2626" />
-            <Text style={styles.deleteText}>削除</Text>
+            <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
           </Pressable>
         </View>
       </View>
@@ -298,7 +300,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
       {error && <Text style={styles.errorText}>{error}</Text>}
       <Pressable style={styles.addButton} onPress={handleSelectSource}>
         <Feather name="video" size={20} color="#6B7280" />
-        <Text style={styles.addButtonText}>動画を追加</Text>
+        <Text style={styles.addButtonText}>{t("common.upload.videoAddTitle")}</Text>
       </Pressable>
     </View>
   );

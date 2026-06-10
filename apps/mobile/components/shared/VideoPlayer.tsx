@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator } from "react-nati
 import { useVideoPlayer, VideoView } from "expo-video";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useVideoPresignedUrl } from "@/hooks/useVideoPresignedUrl";
 
 interface VideoPlayerProps {
@@ -15,6 +16,7 @@ interface VideoPlayerProps {
  * サムネイル表示 → タップで再生開始 → フルスクリーン対応
  */
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoPath, thumbnailPath }) => {
+  const { t } = useTranslation();
   const { videoUrl, thumbnailUrl, isLoading, error, refetch } = useVideoPresignedUrl(
     videoPath,
     thumbnailPath,
@@ -52,7 +54,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoPath, thumbnailPa
       <View style={styles.container}>
         <View style={styles.placeholder}>
           <ActivityIndicator size="small" color="#6366F1" />
-          <Text style={styles.loadingText}>動画を読み込み中...</Text>
+          <Text style={styles.loadingText}>{t("common.video.loading")}</Text>
         </View>
       </View>
     );
@@ -63,9 +65,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoPath, thumbnailPa
       <View style={styles.container}>
         <View style={styles.placeholder}>
           <Feather name="alert-circle" size={24} color="#9CA3AF" />
-          <Text style={styles.errorText}>{error ?? "動画を読み込めませんでした"}</Text>
+          <Text style={styles.errorText}>{error ?? t("common.video.loadFailed")}</Text>
           <Pressable style={styles.retryButton} onPress={handleRetry}>
-            <Text style={styles.retryText}>再試行</Text>
+            <Text style={styles.retryText}>{t("common.retry")}</Text>
           </Pressable>
         </View>
       </View>

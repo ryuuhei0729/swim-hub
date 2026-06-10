@@ -6,6 +6,7 @@ import { TeamEvent, TeamAttendanceWithDetails } from "@swim-hub/shared/types";
 import { TeamMember } from "@swim-hub/shared/utils/team";
 import { AttendanceGroupingDisplay } from "./AttendanceGroupingDisplay";
 import { formatDate } from "@apps/shared/utils/date";
+import { useTranslations } from "next-intl";
 
 interface AttendanceStatusModalProps {
   isOpen: boolean;
@@ -25,14 +26,15 @@ export const AttendanceStatusModal = React.memo(
     teamMembers,
     loading,
   }: AttendanceStatusModalProps) => {
-    const title = event ? `${formatDate(event.date, "shortWithWeekday")}の出欠状況` : "";
+    const t = useTranslations("teams");
+    const title = event ? `${formatDate(event.date, "shortWithWeekday")}${t("attendanceStatusModal.title")}` : "";
 
     return (
       <BaseModal isOpen={isOpen} onClose={onClose} title={title} size="lg">
         {loading ? (
           <div className="text-center py-6">
             <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-            <p className="mt-1.5 text-sm text-gray-500">読み込み中...</p>
+            <p className="mt-1.5 text-sm text-gray-500">{t("attendance.loading")}</p>
           </div>
         ) : (
           <div className="space-y-4">

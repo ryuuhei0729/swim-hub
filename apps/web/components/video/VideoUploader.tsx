@@ -2,10 +2,10 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { VideoCameraIcon, TrashIcon, CheckCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import VideoPlayer from "./VideoPlayer";
 import PremiumBadge from "@/components/ui/PremiumBadge";
-import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 
 const VideoEditor = dynamic(() => import("./VideoEditor"), { ssr: false });
 
@@ -45,6 +45,8 @@ export default function VideoUploader({
   onDelete,
   onPendingFile,
 }: VideoUploaderProps) {
+  const tPremium = useTranslations("forms.premium");
+  const t = useTranslations("common.videoUploader");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadState, setUploadState] = useState<UploadState>(
     existingVideoPath ? "done" : "idle",
@@ -82,7 +84,7 @@ export default function VideoUploader({
 
       if (!uploadUrlRes.ok) {
         const data = await uploadUrlRes.json() as { error?: string; message?: string };
-        throw new Error(data.message ?? data.error ?? "アップロードURLの取得に失敗しました");
+        throw new Error(data.message ?? data.error ?? t("uploadUrlFailed"));
       }
 
       const { videoUploadUrl, thumbnailUploadUrl, videoPath: vPath, thumbnailPath: tPath } =
@@ -99,9 +101,9 @@ export default function VideoUploader({
         };
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(`動画アップロード失敗: HTTP ${xhr.status}`));
+          else reject(new Error(t("videoUploadFailed", { status: xhr.status })));
         };
-        xhr.onerror = () => reject(new Error("動画アップロード中にネットワークエラーが発生しました"));
+        xhr.onerror = () => reject(new Error(t("videoNetworkError")));
         xhr.send(editedFile);
       });
 
@@ -113,7 +115,7 @@ export default function VideoUploader({
         body: thumbnail,
       });
       if (!thumbnailPutRes.ok) {
-        throw new Error(`サムネイルアップロード失敗: HTTP ${thumbnailPutRes.status}`);
+        throw new Error(t("thumbnailUploadFailed", { status: thumbnailPutRes.status }));
       }
 
       setUploadProgress(95);
@@ -132,7 +134,7 @@ export default function VideoUploader({
 
       if (!confirmRes.ok) {
         const data = await confirmRes.json() as { error?: string };
-        throw new Error(data.error ?? "DB更新に失敗しました");
+        throw new Error(data.error ?? t("dbUpdateFailed"));
       }
 
       setUploadProgress(100);
@@ -144,10 +146,10 @@ export default function VideoUploader({
       onUploadComplete?.(vPath, tPath);
     } catch (err) {
       console.error("動画アップロードエラー:", err);
-      setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+      setError(err instanceof Error ? err.message : t("uploadFailed"));
       setUploadState("error");
     }
-  }, [type, onUploadComplete]);
+  }, [type, onUploadComplete, t]);
 
   const handleEditorComplete = async (editedFile: File, thumbnail: Blob) => {
     if (id) {
@@ -185,7 +187,7 @@ export default function VideoUploader({
 
   const handleDelete = async () => {
     if (!id) return;
-    if (!confirm("動画を削除しますか？")) return;
+    if (!confirm(t("deleteConfirm"))) return;
 
     const endpoint =
       type === "record"
@@ -196,7 +198,7 @@ export default function VideoUploader({
       const res = await fetch(endpoint, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "削除に失敗しました");
+        throw new Error(data.error ?? t("deleteFailed"));
       }
       setVideoPath(null);
       setThumbnailPath(null);
@@ -204,13 +206,13 @@ export default function VideoUploader({
       onDelete?.();
     } catch (err) {
       console.error("動画削除エラー:", err);
-      alert(err instanceof Error ? err.message : "削除に失敗しました");
+      alert(err instanceof Error ? err.message : t("deleteFailed"));
     }
   };
 
   // Premium制限バナー
   if (!isPremium && (uploadState === "idle" || uploadState === "error")) {
-    return <PremiumBadge message={PREMIUM_MESSAGES.video_upload} />;
+    return <PremiumBadge message={tPremium("videoUpload")} />;
   }
 
   if (uploadState === "done" && videoPath) {
@@ -220,11 +222,11 @@ export default function VideoUploader({
         <button
           type="button"
           onClick={handleDelete}
-          aria-label="動画を削除"
+          aria-label={t("deleteVideoAriaLabel")}
           className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800"
         >
           <TrashIcon className="h-4 w-4" />
-          動画を削除
+          {t("deleteVideo")}
         </button>
       </div>
     );
@@ -246,7 +248,7 @@ export default function VideoUploader({
       <div className="flex items-center justify-between rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3">
         <div className="flex items-center gap-2 text-sm text-emerald-800">
           <CheckCircleIcon className="h-5 w-5 text-emerald-600" />
-          動画を選択済み（保存時にアップロードされます）
+          {t("selected")}
         </div>
         <button
           type="button"
@@ -254,7 +256,7 @@ export default function VideoUploader({
           className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800"
         >
           <XMarkIcon className="h-4 w-4" />
-          取り消し
+          {t("cancelPending")}
         </button>
       </div>
     );
@@ -263,7 +265,7 @@ export default function VideoUploader({
   if (uploadState === "uploading") {
     return (
       <div className="border border-gray-200 rounded-lg p-4 space-y-2">
-        <p className="text-sm text-gray-600">アップロード中... {uploadProgress}%</p>
+        <p className="text-sm text-gray-600">{t("uploading", { progress: uploadProgress })}</p>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
@@ -285,7 +287,7 @@ export default function VideoUploader({
         className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
       >
         <VideoCameraIcon className="h-5 w-5" />
-        動画を追加
+        {t("addVideo")}
       </button>
       <input
         ref={fileInputRef}

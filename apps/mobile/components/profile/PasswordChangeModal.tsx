@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 
 interface PasswordChangeModalProps {
@@ -26,6 +27,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const { updatePassword } = useAuth();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -49,13 +51,13 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
     setMessage(null);
 
     if (newPassword !== confirmPassword) {
-      setError("パスワードが一致しません");
+      setError(t("mypage.passwordChange.passwordMismatch"));
       setLoading(false);
       return;
     }
 
     if (newPassword.length < 6) {
-      setError("パスワードは6文字以上で入力してください");
+      setError(t("mypage.passwordChange.passwordMinLength"));
       setLoading(false);
       return;
     }
@@ -63,9 +65,9 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
     try {
       const { error: updateError } = await updatePassword(newPassword);
       if (updateError) {
-        setError("パスワードの更新に失敗しました");
+        setError(t("mypage.passwordChange.updateFailed"));
       } else {
-        setMessage("パスワードを正常に更新しました");
+        setMessage(t("mypage.passwordChange.updateSuccess"));
         setNewPassword("");
         setConfirmPassword("");
         if (onSuccess) {
@@ -77,12 +79,12 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
         }, 2000);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "予期しないエラーが発生しました";
+      const errorMessage = err instanceof Error ? err.message : t("mypage.passwordChange.unexpectedError");
       setError(errorMessage);
       if (Platform.OS === "web") {
         window.alert(errorMessage);
       } else {
-        Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+        Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
       }
     } finally {
       setLoading(false);
@@ -102,7 +104,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
       <Pressable style={styles.overlay} onPress={handleClose}>
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <Text style={styles.title}>パスワード変更</Text>
+            <Text style={styles.title}>{t("mypage.passwordChange.title")}</Text>
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>×</Text>
             </Pressable>
@@ -122,7 +124,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
             )}
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>新しいパスワード</Text>
+              <Text style={styles.label}>{t("mypage.passwordChange.newPasswordLabel")}</Text>
               <TextInput
                 style={styles.input}
                 value={newPassword}
@@ -130,7 +132,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
                   setNewPassword(text);
                   setError(null);
                 }}
-                placeholder="新しいパスワード（6文字以上）"
+                placeholder={t("mypage.passwordChange.newPasswordPlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry
                 editable={!loading}
@@ -138,7 +140,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>パスワード確認</Text>
+              <Text style={styles.label}>{t("mypage.passwordChange.confirmPasswordLabel")}</Text>
               <TextInput
                 style={styles.input}
                 value={confirmPassword}
@@ -146,7 +148,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
                   setConfirmPassword(text);
                   setError(null);
                 }}
-                placeholder="パスワード確認"
+                placeholder={t("mypage.passwordChange.confirmPasswordPlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry
                 editable={!loading}
@@ -160,7 +162,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
               onPress={handleClose}
               disabled={loading}
             >
-              <Text style={styles.cancelButtonText}>キャンセル</Text>
+              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
             </Pressable>
             <Pressable
               style={[styles.button, styles.submitButton, loading && styles.submitButtonDisabled]}
@@ -168,7 +170,9 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
               disabled={loading || newPassword.length < 6 || newPassword !== confirmPassword}
             >
               <Text style={styles.submitButtonText}>
-                {loading ? "更新中..." : "パスワードを更新"}
+                {loading
+                  ? t("mypage.passwordChange.updating")
+                  : t("mypage.passwordChange.submitButton")}
               </Text>
             </Pressable>
           </View>

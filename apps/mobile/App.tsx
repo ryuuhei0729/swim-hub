@@ -4,9 +4,11 @@ import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { AuthProvider, useAuth } from "./contexts/AuthProvider";
 import QueryProvider from "./providers/QueryProvider";
 import { NetworkProvider, useNetwork } from "./providers/NetworkProvider";
+import { I18nProvider } from "./providers/I18nProvider";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { AuthStack } from "./navigation/AuthStack";
 import { MainStack } from "./navigation/MainStack";
@@ -27,14 +29,11 @@ globalThis.__SWIM_HUB_WEB_API_URL__ = env.webApiUrl;
  * Supabase未初期化時のエラー画面
  */
 const SupabaseErrorScreen: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <View style={styles.errorContainer}>
-      <Text style={styles.errorTitle}>設定エラー</Text>
-      <Text style={styles.errorMessage}>
-        Supabaseの設定が正しく行われていません。
-        {"\n\n"}
-        アプリの設定を確認してください。
-      </Text>
+      <Text style={styles.errorTitle}>{t("common.app.setupErrorTitle")}</Text>
+      <Text style={styles.errorMessage}>{t("common.app.supabaseConfigError")}</Text>
     </View>
   );
 };
@@ -46,6 +45,7 @@ const AppNavigator: React.FC = () => {
   // React Hooksは常に同じ順序で呼ばれる必要があるため、条件分岐の前に呼ぶ
   const { isAuthenticated, loading, onboardingCompleted } = useAuth();
   const { isConnected, isInternetReachable } = useNetwork();
+  const { t } = useTranslation();
 
   // デバッグ: レンダリング状態をログ出力
   if (__DEV__) {
@@ -67,7 +67,7 @@ const AppNavigator: React.FC = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={{ color: "#6B7280", marginTop: 12, fontSize: 13 }}>読み込み中...</Text>
+        <Text style={{ color: "#6B7280", marginTop: 12, fontSize: 13 }}>{t("common.loading")}</Text>
         <StatusBar style="auto" />
       </View>
     );
@@ -101,15 +101,17 @@ const AppNavigator: React.FC = () => {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryProvider>
-          <NetworkProvider>
-            <AuthProvider>
-              <AppNavigator />
-            </AuthProvider>
-          </NetworkProvider>
-        </QueryProvider>
-      </ErrorBoundary>
+      <I18nProvider>
+        <ErrorBoundary>
+          <QueryProvider>
+            <NetworkProvider>
+              <AuthProvider>
+                <AppNavigator />
+              </AuthProvider>
+            </NetworkProvider>
+          </QueryProvider>
+        </ErrorBoundary>
+      </I18nProvider>
     </SafeAreaProvider>
   );
 }

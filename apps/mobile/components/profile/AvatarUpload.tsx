@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, Alert, Platform } from "react-native
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 
 interface AvatarUploadProps {
@@ -74,6 +75,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   onImageSelected,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   const { supabase, user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
@@ -115,11 +117,11 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
 
         // ファイルバリデーション
         if (!file.type.startsWith("image/")) {
-          setError("画像ファイルを選択してください");
+          setError(t("common.upload.imageOnlyError"));
           return;
         }
         if (file.size > 5 * 1024 * 1024) {
-          setError("画像サイズは5MB以下にしてください");
+          setError(t("common.upload.imageSizeError", { maxMb: 5 }));
           return;
         }
 
@@ -146,7 +148,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
             onImageSelected(imageUrl, base64, fileExt);
           };
           reader.onerror = () => {
-            setError("画像の読み込みに失敗しました");
+            setError(t("common.upload.imageLoadFailed"));
           };
           reader.readAsDataURL(file);
         }
@@ -159,8 +161,8 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
           Alert.alert(
-            "権限が必要です",
-            "画像を選択するには、フォトライブラリへのアクセス権限が必要です。",
+            t("common.upload.permissionRequiredTitle"),
+            t("common.upload.photoLibraryPermissionRequired"),
             [{ text: "OK" }],
           );
           return;
@@ -187,13 +189,13 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
 
         // ファイルサイズのチェック（5MB以下）
         if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
-          Alert.alert("エラー", "画像サイズは5MB以下にしてください", [{ text: "OK" }]);
+          Alert.alert(t("common.alertErrorTitle"), t("common.upload.imageSizeError", { maxMb: 5 }), [{ text: "OK" }]);
           return;
         }
 
         // base64データのチェック
         if (!asset.base64) {
-          Alert.alert("エラー", "画像データの取得に失敗しました", [{ text: "OK" }]);
+          Alert.alert(t("common.alertErrorTitle"), t("common.upload.imageDataFetchFailed"), [{ text: "OK" }]);
           return;
         }
 
@@ -209,9 +211,9 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         }
       } catch (err) {
         console.error("画像選択エラー:", err);
-        const errorMessage = err instanceof Error ? err.message : "画像の選択に失敗しました";
+        const errorMessage = err instanceof Error ? err.message : t("common.upload.imageSelectFailed");
         setError(errorMessage);
-        Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+        Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
       }
     }
   };
@@ -221,11 +223,11 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
 
     const confirmed =
       Platform.OS === "web"
-        ? window.confirm("プロフィール画像を削除しますか？")
+        ? window.confirm(t("common.upload.avatarRemoveConfirm"))
         : await new Promise<boolean>((resolve) => {
-            Alert.alert("削除確認", "プロフィール画像を削除しますか？", [
-              { text: "キャンセル", style: "cancel", onPress: () => resolve(false) },
-              { text: "削除", style: "destructive", onPress: () => resolve(true) },
+            Alert.alert(t("common.upload.removeConfirmTitle"), t("common.upload.avatarRemoveConfirm"), [
+              { text: t("common.cancel"), style: "cancel", onPress: () => resolve(false) },
+              { text: t("common.upload.removeChoice"), style: "destructive", onPress: () => resolve(true) },
             ]);
           });
 
@@ -244,12 +246,12 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       onAvatarChange(null);
     } catch (err) {
       console.error("画像削除エラー:", err);
-      const errorMessage = err instanceof Error ? err.message : "画像の削除に失敗しました";
+      const errorMessage = err instanceof Error ? err.message : t("common.upload.imageDeleteFailed");
       setError(errorMessage);
       if (Platform.OS === "web") {
         window.alert(errorMessage);
       } else {
-        Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+        Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
       }
     }
   };

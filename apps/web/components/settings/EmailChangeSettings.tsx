@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { EnvelopeIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import Input, { validationHelpers } from "@/components/ui/Input";
@@ -8,6 +9,9 @@ import Input, { validationHelpers } from "@/components/ui/Input";
 const DUMMY_EMAIL_DOMAIN = "@ryuhei.love";
 
 export default function EmailChangeSettings() {
+  const t = useTranslations("settings.email");
+  const tModal = useTranslations("settings.email.modal");
+  const tCommon = useTranslations("common.validation");
   const { supabase, user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -71,12 +75,12 @@ export default function EmailChangeSettings() {
     if (!newEmail.trim() || loading) return;
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-      setError("有効なメールアドレスを入力してください");
+      setError(tModal("errors.invalidEmail"));
       return;
     }
 
     if (newEmail === currentEmail) {
-      setError("現在と同じメールアドレスです");
+      setError(tModal("errors.sameEmail"));
       return;
     }
 
@@ -103,7 +107,7 @@ export default function EmailChangeSettings() {
       setNewEmail("");
     } catch (err) {
       console.error("メールアドレス変更エラー:", err);
-      setError("メールアドレスの変更に失敗しました。再度お試しください。");
+      setError(tModal("errors.changeFailed"));
     } finally {
       setLoading(false);
     }
@@ -114,14 +118,14 @@ export default function EmailChangeSettings() {
       {/* セクション: ボタンのみ表示 */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 pb-2 mb-4 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">メールアドレス</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{t("title")}</h2>
         </div>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
             <EnvelopeIcon className="h-5 w-5 text-gray-400" />
             {isDummyEmail ? (
-              <span className="text-gray-500">メールアドレス未登録</span>
+              <span className="text-gray-500">{t("notRegistered")}</span>
             ) : (
               <span className="text-gray-700">{currentEmail}</span>
             )}
@@ -131,7 +135,7 @@ export default function EmailChangeSettings() {
             onClick={openModal}
             className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
-            {isDummyEmail ? "登録する" : "変更する"}
+            {isDummyEmail ? t("registerButton") : t("changeButton")}
           </button>
         </div>
       </div>
@@ -161,7 +165,7 @@ export default function EmailChangeSettings() {
               type="button"
               onClick={closeModal}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="ダイアログを閉じる"
+              aria-label={tModal("closeAriaLabel")}
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
@@ -171,12 +175,12 @@ export default function EmailChangeSettings() {
                 id="email-change-dialog-title"
                 className="text-lg font-semibold text-gray-900 mb-4"
               >
-                {isDummyEmail ? "メールアドレス登録" : "メールアドレス変更"}
+                {isDummyEmail ? t("modal.registerTitle") : t("modal.changeTitle")}
               </h3>
 
               {!isDummyEmail && (
                 <p className="text-sm text-gray-600 mb-4">
-                  現在のメールアドレス: <span className="font-medium">{currentEmail}</span>
+                  {t("modal.currentEmail", { email: currentEmail })}
                 </p>
               )}
 
@@ -188,7 +192,7 @@ export default function EmailChangeSettings() {
 
               {success && (
                 <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
-                  確認メールを送信しました。メール内のリンクをクリックして変更を完了してください。
+                  {t("modal.successMessage")}
                 </div>
               )}
 
@@ -196,14 +200,14 @@ export default function EmailChangeSettings() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <Input
                     type="email"
-                    label={isDummyEmail ? "登録するメールアドレス" : "新しいメールアドレス"}
+                    label={isDummyEmail ? t("modal.registerLabel") : t("modal.changeLabel")}
                     placeholder="example@gmail.com"
                     value={newEmail}
                     onChange={(e) => {
                       setNewEmail(e.target.value);
                       setError(null);
                     }}
-                    validationRules={[validationHelpers.email()]}
+                    validationRules={[validationHelpers.email(tCommon("email"))]}
                     validateOn="blur"
                     required
                   />
@@ -213,7 +217,7 @@ export default function EmailChangeSettings() {
                       onClick={closeModal}
                       className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
                     >
-                      キャンセル
+                      {t("modal.cancelButton")}
                     </button>
                     <button
                       type="submit"
@@ -242,12 +246,12 @@ export default function EmailChangeSettings() {
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             />
                           </svg>
-                          送信中...
+                          {t("modal.sending")}
                         </>
                       ) : isDummyEmail ? (
-                        "登録する"
+                        t("modal.registerSubmit")
                       ) : (
-                        "変更する"
+                        t("modal.changeSubmit")
                       )}
                     </button>
                   </div>
@@ -261,7 +265,7 @@ export default function EmailChangeSettings() {
                     onClick={closeModal}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
                   >
-                    閉じる
+                    {t("modal.closeButton")}
                   </button>
                 </div>
               )}

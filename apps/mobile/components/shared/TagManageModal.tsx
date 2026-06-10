@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import type { PracticeTag } from "@apps/shared/types";
 import { PRESET_TAG_COLORS, getRandomTagColor } from "@/constants/tagColors";
 
@@ -32,6 +33,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   onSave,
   onDelete,
 }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [color, setColor] = useState(PRESET_TAG_COLORS[0]);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,7 +56,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   const handleSave = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      Alert.alert("エラー", "タグ名を入力してください");
+      Alert.alert(t("common.alertErrorTitle"), t("forms.tag.errorNameRequired"));
       return;
     }
 
@@ -64,7 +66,10 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
       onClose();
     } catch (error) {
       console.error("タグ保存エラー:", error);
-      Alert.alert("エラー", error instanceof Error ? error.message : "タグの保存に失敗しました");
+      Alert.alert(
+        t("common.alertErrorTitle"),
+        error instanceof Error ? error.message : t("forms.tag.errorSaveFailed"),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -74,12 +79,12 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
     if (!tag || !onDelete) return;
 
     Alert.alert(
-      "タグを削除",
-      `「${tag.name}」を削除しますか？\nこのタグが付けられた練習ログからも削除されます。`,
+      t("forms.tag.deleteConfirmTitle"),
+      t("forms.tag.deleteConfirmMessage", { name: tag.name }),
       [
-        { text: "キャンセル", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "削除",
+          text: t("forms.tag.actionDelete"),
           style: "destructive",
           onPress: async () => {
             setIsDeleting(true);
@@ -89,8 +94,8 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
             } catch (error) {
               console.error("タグ削除エラー:", error);
               Alert.alert(
-                "エラー",
-                error instanceof Error ? error.message : "タグの削除に失敗しました",
+                t("common.alertErrorTitle"),
+                error instanceof Error ? error.message : t("forms.tag.errorDeleteFailed"),
               );
             } finally {
               setIsDeleting(false);
@@ -113,7 +118,9 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
       <SafeAreaView style={styles.container}>
         {/* ヘッダー */}
         <View style={styles.header}>
-          <Text style={styles.title}>{isEditMode ? "タグを編集" : "新しいタグ"}</Text>
+          <Text style={styles.title}>
+            {isEditMode ? t("forms.tag.editTagTitle") : t("forms.tag.newTagTitle")}
+          </Text>
           <Pressable
             style={styles.closeButton}
             onPress={onClose}
@@ -127,12 +134,12 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
         <View style={styles.content}>
           {/* タグ名入力 */}
           <View style={styles.field}>
-            <Text style={styles.label}>タグ名</Text>
+            <Text style={styles.label}>{t("forms.tag.nameLabel")}</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="例: インターバル"
+              placeholder={t("forms.tag.namePlaceholderExample")}
               placeholderTextColor="#9CA3AF"
               maxLength={20}
               editable={!isLoading}
@@ -142,7 +149,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
 
           {/* カラー選択 */}
           <View style={styles.field}>
-            <Text style={styles.label}>カラー</Text>
+            <Text style={styles.label}>{t("forms.tag.colorLabel")}</Text>
             <View style={styles.colorGrid}>
               {PRESET_TAG_COLORS.map((presetColor) => (
                 <Pressable
@@ -163,10 +170,12 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
 
           {/* プレビュー */}
           <View style={styles.field}>
-            <Text style={styles.label}>プレビュー</Text>
+            <Text style={styles.label}>{t("forms.tag.previewLabel")}</Text>
             <View style={styles.previewContainer}>
               <View style={[styles.previewTag, { backgroundColor: color }]}>
-                <Text style={styles.previewTagText}>{name.trim() || "タグ名"}</Text>
+                <Text style={styles.previewTagText}>
+                  {name.trim() || t("forms.tag.previewDefault")}
+                </Text>
               </View>
             </View>
           </View>
@@ -181,14 +190,14 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
               ) : (
                 <>
                   <Feather name="trash-2" size={18} color="#DC2626" />
-                  <Text style={styles.deleteButtonText}>削除</Text>
+                  <Text style={styles.deleteButtonText}>{t("forms.tag.actionDelete")}</Text>
                 </>
               )}
             </Pressable>
           )}
           <View style={styles.footerRight}>
             <Pressable style={styles.cancelButton} onPress={onClose} disabled={isLoading}>
-              <Text style={styles.cancelButtonText}>キャンセル</Text>
+              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
             </Pressable>
             <Pressable
               style={[styles.saveButton, (!name.trim() || isLoading) && styles.saveButtonDisabled]}
@@ -198,7 +207,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
               {isSaving ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.saveButtonText}>保存</Text>
+                <Text style={styles.saveButtonText}>{t("common.save")}</Text>
               )}
             </Pressable>
           </View>

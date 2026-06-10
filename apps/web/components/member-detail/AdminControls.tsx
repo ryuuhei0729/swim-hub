@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslations } from "next-intl";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import type { MemberDetail } from "@/types/member-detail";
 
@@ -15,9 +16,10 @@ export function AdminControls({
   onRoleChangeClick,
   onRemoveMember,
 }: AdminControlsProps) {
+  const t = useTranslations("teams.memberDetail.adminControls");
   return (
     <div className="mb-8">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">管理者機能</h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-4">{t("sectionTitle")}</h3>
       <div className="flex items-center space-x-4">
         {/* 権限切り替え */}
         <div
@@ -33,7 +35,7 @@ export function AdminControls({
             }`}
             data-testid="team-member-role-user-button"
           >
-            ユーザー
+            {t("roleUser")}
           </button>
           <button
             onClick={() => onRoleChangeClick("admin")}
@@ -44,7 +46,7 @@ export function AdminControls({
             }`}
             data-testid="team-member-role-admin-button"
           >
-            管理者
+            {t("roleAdmin")}
           </button>
         </div>
 
@@ -56,7 +58,7 @@ export function AdminControls({
           data-testid="team-member-remove-button"
         >
           <TrashIcon className="h-4 w-4" />
-          <span>{isRemoving ? "削除中..." : "チームから削除"}</span>
+          <span>{isRemoving ? t("removing") : t("removeFromTeam")}</span>
         </button>
       </div>
     </div>

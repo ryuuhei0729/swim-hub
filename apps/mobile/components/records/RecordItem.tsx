@@ -1,9 +1,12 @@
 import React, { useMemo, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { format, parseISO } from "date-fns";
-import { ja } from "date-fns/locale";
+import { parseISO } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { useTranslation } from "react-i18next";
+import { formatDate } from "@apps/shared/utils/date";
 import { formatTime } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
 import type { BestTime } from "@apps/shared/types/ui";
 import BestTimeBadge from "./BestTimeBadge";
@@ -19,10 +22,12 @@ interface RecordItemProps {
  * 大会記録の1件を表示
  */
 const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress, precomputedBestTimes }) => {
-  // 大会名（nullの場合は「大会」）
+  const { t } = useTranslation();
+  const locale = useDateLocale();
+  // 大会名（null の場合は「大会」フォールバック）
   const competitionName = useMemo(
-    () => record.competition?.title || "大会",
-    [record.competition?.title],
+    () => record.competition?.title || t("recordMobile.fallbackTitle"),
+    [record.competition?.title, t],
   );
 
   // 日付をフォーマット（大会の日付を使用）
@@ -34,23 +39,26 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress, preco
     try {
       const parsed = typeof recordDate === "string" ? parseISO(recordDate) : new Date(recordDate);
       const zoned = toZonedTime(parsed, Intl.DateTimeFormat().resolvedOptions().timeZone);
-      return format(zoned, "yyyy年M月d日", { locale: ja });
+      return formatDate(zoned, "long", locale);
     } catch {
-      return "日付不明";
+      return t("recordMobile.dateUnknown");
     }
-  }, [recordDate]);
+  }, [recordDate, t, locale]);
 
   const styleDisplay = useMemo(() => {
-    return record.style?.name_jp || "不明";
-  }, [record.style?.name_jp]);
+    return localizedStyleName(record.style, t) || t("recordMobile.unknownValue");
+  }, [record.style, t]);
 
   // タイムをフォーマット
   const formattedTime = useMemo(() => formatTime(record.time), [record.time]);
 
   // プールタイプ
   const poolType = useMemo(
-    () => (record.competition?.pool_type === 0 ? "短水路" : "長水路"),
-    [record.competition?.pool_type],
+    () =>
+      record.competition?.pool_type === 0
+        ? t("recordMobile.poolTypeShort")
+        : t("recordMobile.poolTypeLong"),
+    [record.competition?.pool_type, t],
   );
 
   const handlePress = useCallback(() => {

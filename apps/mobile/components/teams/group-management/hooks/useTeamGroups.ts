@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type { TeamGroup } from "@swim-hub/shared/types";
@@ -9,6 +10,7 @@ export type TeamGroupWithCount = TeamGroup & { member_count: number };
  * グループ一覧取得 + カテゴリ導出
  */
 export const useTeamGroups = (teamId: string, supabase: SupabaseClient) => {
+  const { t } = useTranslation();
   const [groups, setGroups] = useState<TeamGroupWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,11 +24,11 @@ export const useTeamGroups = (teamId: string, supabase: SupabaseClient) => {
       setGroups(data);
     } catch (err) {
       console.error("グループ情報の取得に失敗:", err);
-      setError("グループ情報の取得に失敗しました");
+      setError(t("teams.mobile.groupFetchFailed"));
     } finally {
       setLoading(false);
     }
-  }, [teamId, supabase]);
+  }, [teamId, supabase, t]);
 
   const categories = useMemo(() => {
     const cats = [...new Set(groups.map((g) => g.category).filter(Boolean))] as string[];

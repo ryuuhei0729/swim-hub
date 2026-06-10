@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import BirthdayInput from "@/components/ui/BirthdayInput";
 import { validatePassword, type PasswordChecks } from "@/utils/passwordValidator";
@@ -22,6 +23,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  const t = useTranslations("auth");
+  const tFields = useTranslations("auth.fields");
+  const tValidation = useTranslations("auth.validation");
+  const tErrors = useTranslations("auth.errors");
+  const tCommon = useTranslations("common");
+
   const passwordValidation = useMemo(() => validatePassword(password), [password]);
 
   const { signIn, signUp, signInWithOAuth } = useAuth();
@@ -41,9 +48,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
       (typeof errorObj.message === "string" ? errorObj.message : null) ||
       (typeof errorObj.error_description === "string" ? errorObj.error_description : null) ||
       (typeof errorObj.error === "string" ? errorObj.error : null) ||
-      "不明なエラーが発生しました。";
+      tErrors("unexpected");
 
-    // エラーメッセージの日本語化と補足ヒント
+    // エラーメッセージの翻訳と補足ヒント
     if (typeof errMsg === "string") {
       const msg = errMsg.toLowerCase();
 
@@ -51,20 +58,20 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
       if (action === "signin") {
         // 認証関連エラーは全て同じメッセージで統一（アカウント列挙攻撃を防止）
         if (msg.includes("invalid") && (msg.includes("credentials") || msg.includes("email"))) {
-          return `メールアドレスまたはパスワードが正しくありません。入力内容を確認してから再度お試しください。`;
+          return tErrors("invalidCredentials");
         }
         if (msg.includes("email not confirmed")) {
-          return `メールアドレスまたはパスワードが正しくありません。入力内容を確認してから再度お試しください。`;
+          return tErrors("invalidCredentials");
         }
         if (msg.includes("too many requests")) {
-          return `ログイン試行回数が上限に達しました。しばらく時間をおいてから再度お試しください。`;
+          return tErrors("tooManyRequests");
         }
       }
 
       // サインアップエラーの処理（OWASP準拠）
       if (action === "signup") {
         if (msg.includes("user already registered")) {
-          return `アカウントの作成に失敗しました。入力内容を確認してから再度お試しください。`;
+          return tErrors("userAlreadyRegistered");
         }
         // パスワード強度エラーの検出を拡張
         const weakPwdRegex = /\b(pass(word)?).*(weak|too short|at least|characters)\b/i;
@@ -75,30 +82,30 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
           (msg.includes("minimum") && msg.includes("characters")) ||
           weakPwdRegex.test(errMsg)
         ) {
-          return `パスワードが弱すぎます。より強力なパスワードを設定してください。`;
+          return tErrors("weakPassword");
         }
       }
 
       // 共通エラーの処理
       if (msg.includes("captcha")) {
-        return `Captcha認証が必要です。Captchaを完了してから再度お試しください。`;
+        return tErrors("captchaRequired");
       }
       if (msg.includes("rate limit") || status === 429) {
-        return `リクエスト制限に達しました。しばらく時間をおいてから再度お試しください。`;
+        return tErrors("rateLimitExceeded");
       }
       if (msg.includes("network") || msg.includes("connection")) {
-        return `ネットワークエラーが発生しました。インターネット接続を確認してから再度お試しください。`;
+        return tErrors("networkError");
       }
     }
 
     // デフォルトのエラーメッセージ
     if (action === "signin" && process.env.NODE_ENV !== "development") {
       // 署名情報を隠すため、プロダクションでは非開示の汎用文言を返す
-      return "ログインに失敗しました。入力内容を確認してから再度お試しください。";
+      return tErrors("invalidCredentials");
     }
     return process.env.NODE_ENV === "development"
-      ? `エラーが発生しました: ${errMsg}${statusText}`
-      : "エラーが発生しました。時間をおいて再度お試しください。";
+      ? `${tErrors("unexpected")}: ${errMsg}${statusText}`
+      : tErrors("unexpected");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,28 +113,28 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
 
     if (formMode === "signup") {
       if (!name.trim()) {
-        setError("名前を入力してください。");
+        setError(tValidation("nameRequired"));
         return;
       }
       const checks = passwordValidation.checks;
       if (!checks.minLength) {
-        setError("パスワードは6文字以上で入力してください。");
+        setError(tValidation("passwordMinLength"));
         return;
       }
       if (!checks.lowercase) {
-        setError("パスワードに小文字を含めてください。");
+        setError(tValidation("passwordLowercase"));
         return;
       }
       if (!checks.uppercase) {
-        setError("パスワードに大文字を含めてください。");
+        setError(tValidation("passwordUppercase"));
         return;
       }
       if (!checks.digit) {
-        setError("パスワードに数字を含めてください。");
+        setError(tValidation("passwordDigit"));
         return;
       }
       if (!checks.symbol) {
-        setError("パスワードに記号を含めてください。");
+        setError(tValidation("passwordSymbol"));
         return;
       }
     }
@@ -149,11 +156,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
         if (error) {
           setError(formatAuthError(error, "signup"));
         } else {
-          setMessage("確認メールを送信しました。メールを確認してアカウントを有効化してください。");
+          setMessage(t("success.emailConfirmation"));
         }
       }
     } catch {
-      setError("予期しないエラーが発生しました。");
+      setError(tErrors("unexpected"));
     } finally {
       setLoading(false);
     }
@@ -163,14 +170,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
     <div className="max-w-md w-full space-y-4 sm:space-y-6 md:space-y-8 bg-white p-4 sm:p-8 md:p-10 rounded-2xl shadow-xl transform transition-all duration-300">
       <div className="text-center">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 mb-2">
-          {formMode === "signin" ? "ログイン" : "アカウント作成"}
+          {formMode === "signin" ? t("signin.title") : t("signup.title")}
         </h2>
         <p className="text-xs sm:text-sm text-gray-600">
-          {formMode === "signin" ? "SwimHubへようこそ" : "新しいアカウントを作成"}
+          {formMode === "signin" ? t("signin.subtitle") : t("signup.subtitle")}
         </p>
       </div>
 
-      {error && (
+      {error && !message && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
           <div className="flex items-start">
             <svg
@@ -203,11 +210,22 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
                 clipRule="evenodd"
               />
             </svg>
-            <div className="whitespace-pre-line text-sm leading-relaxed">{message}</div>
+            <div>
+              <p className="font-medium">{t("success.emailConfirmTitle")}</p>
+              <p className="mt-1 text-sm">{message}</p>
+            </div>
           </div>
+          <Link
+            href="/login"
+            className="mt-3 inline-block text-sm text-blue-600 underline hover:text-blue-800"
+          >
+            {t("backToLogin")}
+          </Link>
         </div>
       )}
 
+      {!message && (
+      <>
       <form
         onSubmit={handleSubmit}
         className="mt-4 sm:mt-6 space-y-4 sm:space-y-6"
@@ -218,7 +236,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
             <>
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  名前
+                  {tFields("name")}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -247,7 +265,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">性別</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {tFields("gender")}
+                </label>
                 <div className="mt-1 flex gap-4">
                   <label className="flex items-center">
                     <input
@@ -258,7 +278,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
                       onChange={(e) => setGender(Number(e.target.value))}
                       className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                     />
-                    <span className="ml-2 text-sm text-gray-700">男性</span>
+                    <span className="ml-2 text-sm text-gray-700">{tFields("genderMale")}</span>
                   </label>
                   <label className="flex items-center">
                     <input
@@ -269,13 +289,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
                       onChange={(e) => setGender(Number(e.target.value))}
                       className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                     />
-                    <span className="ml-2 text-sm text-gray-700">女性</span>
+                    <span className="ml-2 text-sm text-gray-700">{tFields("genderFemale")}</span>
                   </label>
                 </div>
               </div>
               <div>
                 <BirthdayInput
-                  label="生年月日"
+                  label={tFields("birthday")}
                   value={birthday}
                   onChange={(date) => setBirthday(date)}
                 />
@@ -285,7 +305,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              メールアドレス
+              {tFields("email")}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -316,7 +336,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              パスワード
+              {tFields("password")}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -342,7 +362,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-3 px-3 transition duration-150 ease-in-out"
-                placeholder="パスワード"
+                placeholder={tFields("password")}
                 minLength={6}
               />
             </div>
@@ -361,7 +381,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
             className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transform transition duration-150 ease-in-out hover:scale-[1.02] shadow-md"
             data-testid={formMode === "signin" ? "login-button" : "signup-button"}
           >
-            {loading ? "処理中..." : formMode === "signin" ? "ログイン" : "アカウント作成"}
+            {loading
+              ? tCommon("processing")
+              : formMode === "signin"
+                ? t("signin.submitButton")
+                : t("signup.submitButton")}
           </button>
         </div>
       </form>
@@ -372,7 +396,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
           <div className="w-full border-t border-gray-300"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">または</span>
+          <span className="px-2 bg-white text-gray-500">{t("orSeparator")}</span>
         </div>
       </div>
 
@@ -391,7 +415,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
                 },
               });
               if (error) {
-                setError("Google認証に失敗しました。再度お試しください。");
+                setError(tErrors("googleFailed"));
               }
             } finally {
               setLoading(false);
@@ -418,7 +442,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          Googleで{formMode === "signin" ? "ログイン" : "サインアップ"}
+          {formMode === "signin" ? t("googleSignin") : t("googleSignup")}
         </button>
       </div>
 
@@ -432,7 +456,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
             try {
               const { error } = await signInWithOAuth("apple");
               if (error) {
-                setError("Apple認証に失敗しました。再度お試しください。");
+                setError(tErrors("appleFailed"));
               }
             } finally {
               setLoading(false);
@@ -444,7 +468,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
           </svg>
-          Appleで{formMode === "signin" ? "ログイン" : "サインアップ"}
+          {formMode === "signin" ? t("appleSignin") : t("appleSignup")}
         </button>
       </div>
 
@@ -456,37 +480,39 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode = "signin", onSuccess }
             className="text-indigo-600 hover:text-indigo-800 text-sm font-medium transition duration-150 ease-in-out"
             data-testid="toggle-auth-mode-button"
           >
-            {formMode === "signin"
-              ? "アカウントをお持ちでない方はこちら"
-              : "すでにアカウントをお持ちの方はこちら"}
+            {formMode === "signin" ? t("switchToSignup") : t("switchToSignin")}
           </button>
           {formMode === "signin" && (
             <div>
               <Link
                 href="/reset-password"
                 className="text-sm text-gray-600 hover:text-indigo-600 transition duration-150 ease-in-out"
+                data-testid="forgot-password-link"
               >
-                パスワードを忘れた方はこちら
+                {t("forgotPassword")}
               </Link>
             </div>
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };
 
 function PasswordRequirementsList({ checks }: { checks: PasswordChecks }) {
+  const t = useTranslations("auth.passwordRequirements");
   const items: { key: keyof PasswordChecks; label: string }[] = [
-    { key: "minLength", label: "6文字以上" },
-    { key: "lowercase", label: "小文字を含む" },
-    { key: "uppercase", label: "大文字を含む" },
-    { key: "digit", label: "数字を含む" },
-    { key: "symbol", label: "記号を含む" },
+    { key: "minLength", label: t("minLength") },
+    { key: "lowercase", label: t("lowercase") },
+    { key: "uppercase", label: t("uppercase") },
+    { key: "digit", label: t("digit") },
+    { key: "symbol", label: t("symbol") },
   ];
   return (
     <div className="space-y-1 rounded-lg border border-gray-200 bg-gray-50 p-3">
-      <p className="text-xs font-medium text-gray-600">パスワード要件</p>
+      <p className="text-xs font-medium text-gray-600">{t("title")}</p>
       <ul className="space-y-1">
         {items.map(({ key, label }) => {
           const met = checks[key];

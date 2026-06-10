@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { UserPlan } from "@swim-hub/shared/types/auth";
 
 type PlanComparisonTableProps = {
@@ -14,15 +15,6 @@ type FeatureRow = {
   premium: CellValue;
 };
 
-const FEATURE_ROWS: FeatureRow[] = [
-  { label: "スプリットタイム", free: "3個/レコード", premium: "無制限" },
-  { label: "練習タイム", free: "18個/ログ", premium: "無制限" },
-  { label: "画像アップロード", free: false, premium: true },
-  { label: "動画アップロード", free: false, premium: true },
-  { label: "AI メニュー分析", free: "1回/日", premium: "無制限" },
-  { label: "広告", free: true, premium: false },
-];
-
 function CellContent({ value }: { value: CellValue }) {
   if (typeof value === "boolean") {
     return (
@@ -35,9 +27,44 @@ function CellContent({ value }: { value: CellValue }) {
 }
 
 export function PlanComparisonTable({ currentPlan }: PlanComparisonTableProps) {
+  const { t } = useTranslation();
+
+  const featureRows: FeatureRow[] = [
+    {
+      label: t("pricing.planTable.rowSplitTime"),
+      free: t("pricing.planTable.valueSplit3PerRecord"),
+      premium: t("pricing.planTable.valueUnlimited"),
+    },
+    {
+      label: t("pricing.planTable.rowPracticeTime"),
+      free: t("pricing.planTable.value18PerLog"),
+      premium: t("pricing.planTable.valueUnlimited"),
+    },
+    {
+      label: t("pricing.planTable.rowImageUpload"),
+      free: false,
+      premium: true,
+    },
+    {
+      label: t("pricing.planTable.rowVideoUpload"),
+      free: false,
+      premium: true,
+    },
+    {
+      label: t("pricing.planTable.rowAiAnalysis"),
+      free: t("pricing.planTable.valueOncePerDay"),
+      premium: t("pricing.planTable.valueUnlimited"),
+    },
+    {
+      label: t("pricing.planTable.rowAds"),
+      free: true,
+      premium: false,
+    },
+  ];
+
   const columns = [
-    { key: "free" as const, label: "Free" },
-    { key: "premium" as const, label: "Premium" },
+    { key: "free" as const, label: t("pricing.planTable.free") },
+    { key: "premium" as const, label: t("pricing.planTable.premium") },
   ];
 
   return (
@@ -63,7 +90,7 @@ export function PlanComparisonTable({ currentPlan }: PlanComparisonTableProps) {
             </Text>
             {currentPlan === col.key && (
               <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>現在</Text>
+                <Text style={styles.currentBadgeText}>{t("pricing.planTable.current")}</Text>
               </View>
             )}
           </View>
@@ -71,7 +98,7 @@ export function PlanComparisonTable({ currentPlan }: PlanComparisonTableProps) {
       </View>
 
       {/* Feature rows */}
-      {FEATURE_ROWS.map((row, index) => (
+      {featureRows.map((row, index) => (
         <View
           key={row.label}
           style={[styles.row, index % 2 === 1 && styles.rowAlternate]}

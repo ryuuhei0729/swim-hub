@@ -3,6 +3,7 @@
  * Web APIを呼び出して既存データをGoogleカレンダーに同期
  */
 import { env } from "@/lib/env";
+import i18n from "@/i18n";
 
 const WEB_API_URL = env.webApiUrl;
 
@@ -33,7 +34,7 @@ export const syncAllToGoogleCalendar = async (accessToken: string): Promise<Bulk
       const errorData = (await response.json().catch(() => ({}))) as { error?: string };
       return {
         success: false,
-        error: errorData.error || `一括同期に失敗しました (${response.status})`,
+        error: errorData.error || i18n.t("common.app.bulkSyncFailedWithStatus", { status: response.status }),
       };
     }
 
@@ -48,7 +49,7 @@ export const syncAllToGoogleCalendar = async (accessToken: string): Promise<Bulk
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "一括同期に失敗しました",
+      error: error instanceof Error ? error.message : i18n.t("common.app.bulkSyncFailed"),
     };
   }
 };

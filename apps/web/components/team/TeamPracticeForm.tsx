@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import DatePicker from "@/components/ui/DatePicker";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 
 interface TeamPracticeFormProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export default function TeamPracticeForm({
   onSuccess,
 }: TeamPracticeFormProps) {
   const { supabase } = useAuth();
+  const t = useTranslations("teams.practiceForm");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -104,7 +106,7 @@ export default function TeamPracticeForm({
     e.preventDefault();
 
     if (!formData.date) {
-      setError("日付は必須です");
+      setError(t("dateRequired"));
       return;
     }
 
@@ -115,7 +117,7 @@ export default function TeamPracticeForm({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw new Error(t("authRequired"));
 
       const practicesAPI = new TeamPracticesAPI(supabase);
       const practiceInput: import("@swim-hub/shared/types").PracticeInsert = {
@@ -140,7 +142,7 @@ export default function TeamPracticeForm({
       });
     } catch (err) {
       console.error("チーム練習記録作成エラー:", err);
-      setError(err instanceof Error ? err.message : "チーム練習記録の作成に失敗しました");
+      setError(err instanceof Error ? err.message : t("createFailed"));
     } finally {
       setLoading(false);
     }
@@ -172,20 +174,20 @@ export default function TeamPracticeForm({
                 id="modal-title"
                 className="text-base sm:text-lg leading-6 font-medium text-gray-900"
               >
-                練習記録を追加
+                {t("title")}
               </h3>
               <button
                 type="button"
                 onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
                 disabled={loading}
-                aria-label="モーダルを閉じる"
+                aria-label={t("closeAriaLabel")}
                 data-testid="team-practice-close-button"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <p className="mt-2 text-xs sm:text-sm text-gray-600">チームの練習記録を作成します</p>
+            <p className="mt-2 text-xs sm:text-sm text-gray-600">{t("description")}</p>
           </div>
 
           <form
@@ -204,7 +206,7 @@ export default function TeamPracticeForm({
                 >
                   <div className="flex">
                     <div className="ml-3">
-                      <h3 className="text-sm font-medium text-red-800">エラーが発生しました</h3>
+                      <h3 className="text-sm font-medium text-red-800">{t("errorTitle")}</h3>
                       <div className="mt-2 text-sm text-red-700">
                         <p id="practice-date-error">{error}</p>
                       </div>
@@ -216,7 +218,7 @@ export default function TeamPracticeForm({
               {/* 練習日 */}
               <div>
                 <DatePicker
-                  label="練習日"
+                  label={t("dateLabel")}
                   value={formData.date}
                   onChange={(date) => setFormData({ ...formData, date })}
                   required
@@ -229,14 +231,14 @@ export default function TeamPracticeForm({
                   htmlFor="practice-title"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  練習タイトル
+                  {t("titleLabel")}
                 </label>
                 <Input
                   id="practice-title"
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="例: 基礎練習、スプリント練習（空欄の場合は「チーム練習」と表示）"
+                  placeholder={t("titlePlaceholder")}
                   data-testid="team-practice-title"
                 />
               </div>
@@ -247,14 +249,14 @@ export default function TeamPracticeForm({
                   htmlFor="practice-place"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  練習場所
+                  {t("placeLabel")}
                 </label>
                 <Input
                   id="practice-place"
                   type="text"
                   value={formData.place}
                   onChange={(e) => setFormData({ ...formData, place: e.target.value })}
-                  placeholder="例: 市営プール、学校プール"
+                  placeholder={t("placePlaceholder")}
                   data-testid="team-practice-place"
                 />
               </div>
@@ -265,7 +267,7 @@ export default function TeamPracticeForm({
                   htmlFor="practice-note"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  メモ
+                  {t("noteLabel")}
                 </label>
                 <textarea
                   id="practice-note"
@@ -273,7 +275,7 @@ export default function TeamPracticeForm({
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="練習内容や感想など"
+                  placeholder={t("notePlaceholder")}
                   data-testid="team-practice-note"
                 />
               </div>
@@ -288,7 +290,7 @@ export default function TeamPracticeForm({
                 disabled={loading}
                 data-testid="team-practice-cancel-button"
               >
-                キャンセル
+                {t("cancelButton")}
               </Button>
               <Button
                 type="submit"
@@ -296,7 +298,7 @@ export default function TeamPracticeForm({
                 className="bg-blue-600 hover:bg-blue-700"
                 data-testid="team-practice-submit-button"
               >
-                {loading ? "作成中..." : "作成"}
+                {loading ? t("creating") : t("createButton")}
               </Button>
             </div>
           </form>

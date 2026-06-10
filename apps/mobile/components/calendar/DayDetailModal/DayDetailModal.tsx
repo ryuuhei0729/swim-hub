@@ -3,7 +3,9 @@ import { View, Text, Modal, Pressable, ScrollView, StyleSheet } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { format, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
+import { formatDate } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import { styles } from "./styles";
 import { MemoizedPracticeLogDetail, RecordDetail, EntryDetail } from "./components";
@@ -13,14 +15,18 @@ import type { DayDetailModalProps } from "./types";
 /**
  * エントリーのタイトルを生成
  */
-const getEntryTitle = (item: CalendarItem): string => {
+const buildEntryTitle = (
+  item: CalendarItem,
+  fallbackTeamName: string,
+  fallbackCompetitionName: string,
+): string => {
   let displayTitle = item.title;
 
   if (item.type === "team_practice") {
-    const teamName = item.metadata?.team?.name || "チーム";
+    const teamName = item.metadata?.team?.name || fallbackTeamName;
     displayTitle = `${teamName} - ${item.title}`;
   } else if (item.type === "entry" || item.type === "record") {
-    displayTitle = item.metadata?.competition?.title || item.title || "大会";
+    displayTitle = item.metadata?.competition?.title || item.title || fallbackCompetitionName;
   }
 
   return displayTitle;
@@ -46,26 +52,26 @@ const getEntryColor = (type: CalendarItem["type"]): string => {
 };
 
 /**
- * エントリーの種類に応じたラベルを取得
+ * エントリーの種類に応じたラベルキー (i18n) を取得
  */
-const getEntryTypeLabel = (type: CalendarItem["type"]): string => {
+const getEntryTypeLabelKey = (type: CalendarItem["type"]): string => {
   switch (type) {
     case "practice":
-      return "練習";
+      return "dashboard.dayDetail.entryTypeLabel.practice";
     case "team_practice":
-      return "チーム練習";
+      return "dashboard.dayDetail.entryTypeLabel.teamPractice";
     case "practice_log":
-      return "練習ログ";
+      return "dashboard.dayDetail.entryTypeLabel.practiceLog";
     case "competition":
-      return "大会";
+      return "dashboard.dayDetail.entryTypeLabel.competition";
     case "team_competition":
-      return "チーム大会";
+      return "dashboard.dayDetail.entryTypeLabel.teamCompetition";
     case "entry":
-      return "エントリー";
+      return "dashboard.dayDetail.entryTypeLabel.entry";
     case "record":
-      return "記録";
+      return "dashboard.dayDetail.entryTypeLabel.record";
     default:
-      return "その他";
+      return "dashboard.dayDetail.entryTypeLabel.other";
   }
 };
 
@@ -96,7 +102,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   isDeleting = false,
   onDeletingChange,
 }) => {
-  const formattedDate = format(date, "M月d日(E)", { locale: ja });
+  const { t } = useTranslation();
+  const locale = useDateLocale();
+  const formattedDate = formatDate(date, "shortWithWeekday", locale);
+  const fallbackTeamName = t("teams.mobile.fallbackTeamName");
+  const fallbackCompetitionName = t("teams.mobile.fallbackCompetitionName");
 
   // PracticeLogのPracticeTimeの有無を追跡
   const [practiceLogsWithTimes, setPracticeLogsWithTimes] = useState<Set<string>>(new Set());
@@ -204,7 +214,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           <View style={modalContentStyle}>
             {/* ヘッダー */}
             <View style={styles.header}>
-              <Text style={styles.title}>{formattedDate}の記録</Text>
+              <Text style={styles.title}>{formattedDate}{t("dashboard.dayDetail.headerTitleSuffix")}</Text>
               <Pressable style={styles.closeButton} onPress={onClose}>
                 <Feather name="x" size={24} color="#6B7280" />
               </Pressable>
@@ -229,7 +239,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           color="#3B82F6"
                           style={styles.addButtonCardIcon}
                         />
-                        <Text style={styles.addButtonCardText}>大会記録を追加</Text>
+                        <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addRecord")}</Text>
                       </Pressable>
                     )}
                     {onAddPractice && (
@@ -246,7 +256,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           color="#10B981"
                           style={styles.addButtonCardIcon}
                         />
-                        <Text style={styles.addButtonCardText}>練習予定を追加</Text>
+                        <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addPractice")}</Text>
                       </Pressable>
                     )}
                   </View>
@@ -256,9 +266,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   <View style={styles.entriesContainer}>
                     {/* 記録以外のエントリー */}
                     {otherItems.map((item) => {
-                      const title = getEntryTitle(item);
+                      const title = buildEntryTitle(item, fallbackTeamName, fallbackCompetitionName);
                       const color = getEntryColor(item.type);
-                      const typeLabel = getEntryTypeLabel(item.type);
+                      const typeLabel = t(getEntryTypeLabelKey(item.type));
                       const isPractice = item.type === "practice" || item.type === "team_practice";
                       const isPracticeLog = item.type === "practice_log";
                       const practiceId = item.metadata?.practice_id || item.id;
@@ -314,7 +324,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
                         const firstEntry = entryList[0];
                         const competitionName =
-                          firstEntry.metadata?.competition?.title || firstEntry.title || "大会";
+                          firstEntry.metadata?.competition?.title || firstEntry.title || fallbackCompetitionName;
                         const place =
                           firstEntry.place || firstEntry.metadata?.competition?.place || "";
                         const poolType = firstEntry.metadata?.competition?.pool_type ?? 0;
@@ -359,7 +369,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                     {Array.from(recordsByCompetition.entries()).map(([competitionId, records]) => {
                       const firstRecord = records[0];
                       const competitionName =
-                        firstRecord.metadata?.competition?.title || firstRecord.title || "大会";
+                        firstRecord.metadata?.competition?.title || firstRecord.title || fallbackCompetitionName;
                       const place =
                         firstRecord.place || firstRecord.metadata?.competition?.place || "";
                       const poolType =
@@ -431,7 +441,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
                   {/* 記録追加セクション */}
                   <View style={styles.addRecordSection}>
-                    <Text style={styles.addRecordSectionTitle}>記録を追加</Text>
+                    <Text style={styles.addRecordSectionTitle}>{t("dashboard.dayDetail.addSection")}</Text>
                     <View style={styles.addRecordButtonContainer}>
                       {onAddRecord && (
                         <Pressable
@@ -442,7 +452,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           }}
                         >
                           <Feather name="droplet" size={20} color="#3B82F6" />
-                          <Text style={styles.addRecordButtonText}>大会記録</Text>
+                          <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addRecordShort")}</Text>
                         </Pressable>
                       )}
                       {onAddPractice && (
@@ -454,7 +464,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           }}
                         >
                           <Feather name="activity" size={20} color="#10B981" />
-                          <Text style={styles.addRecordButtonText}>練習記録</Text>
+                          <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addPracticeShort")}</Text>
                         </Pressable>
                       )}
                     </View>
@@ -462,7 +472,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 </>
               )}
             </ScrollView>
-            {isDeleting && <LoadingSpinner fullScreen message="削除中..." />}
+            {isDeleting && <LoadingSpinner fullScreen message={t("dashboard.dayDetail.deletingMessage")} />}
           </View>
         </SafeAreaView>
       </View>

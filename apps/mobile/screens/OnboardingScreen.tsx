@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { View, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { Stepper } from "@/components/shared/Stepper";
 import { OnboardingWelcome } from "@/components/onboarding/OnboardingWelcome";
 import { OnboardingProfile } from "@/components/onboarding/OnboardingProfile";
 import { OnboardingBestTime } from "@/components/onboarding/OnboardingBestTime";
-import { ONBOARDING_STEP_LABELS, ONBOARDING_TOTAL_STEPS } from "@/constants/onboarding";
+import { ONBOARDING_TOTAL_STEPS } from "@/constants/onboarding";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { supabase } from "@/lib/supabase";
 
@@ -16,6 +17,7 @@ import { supabase } from "@/lib/supabase";
  */
 export const OnboardingScreen: React.FC = () => {
   const { user, updateProfile, updateOnboardingCompleted } = useAuth();
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const [profileCache, setProfileCache] = useState<Partial<UserProfile> | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -59,13 +61,13 @@ export const OnboardingScreen: React.FC = () => {
       if (Object.keys(updates).length > 0) {
         const { error } = await updateProfile(updates);
         if (error) {
-          throw new Error(error.message ?? "プロフィールの保存に失敗しました");
+          throw new Error(error.message ?? t("onboarding.step2.saveError"));
         }
         setProfileCache((prev) => (prev ? { ...prev, ...updates } : updates));
       }
       goNext();
     },
-    [updateProfile, goNext],
+    [updateProfile, goNext, t],
   );
 
   // Step 3: 完了処理 — DB に onboarding_completed = true を保存
@@ -74,11 +76,11 @@ export const OnboardingScreen: React.FC = () => {
     const { error } = await updateOnboardingCompleted(true);
     if (error) {
       setCompleting(false);
-      throw new Error(error.message ?? "完了処理に失敗しました");
+      throw new Error(error.message ?? t("onboarding.completionFailed"));
     }
     // updateOnboardingCompleted が成功すると AuthProvider の state が更新され、
     // App.tsx の AppNavigator が onboardingCompleted = true を検知して MainStack に切り替わる
-  }, [updateOnboardingCompleted]);
+  }, [updateOnboardingCompleted, t]);
 
   if (profileLoading) {
     return (
@@ -100,7 +102,11 @@ export const OnboardingScreen: React.FC = () => {
             <Stepper
               currentStep={currentStep}
               totalSteps={ONBOARDING_TOTAL_STEPS}
-              stepLabels={ONBOARDING_STEP_LABELS}
+              stepLabels={[
+                t("onboarding.stepLabels.welcome"),
+                t("onboarding.stepLabels.profile"),
+                t("onboarding.stepLabels.bestTime"),
+              ]}
             />
           </View>
 

@@ -73,11 +73,11 @@ export interface PracticeLogFormProps {
 
 // 種目の選択肢
 export const SWIM_STYLES = [
-  { value: "Fr", label: "自由形" },
-  { value: "Ba", label: "背泳ぎ" },
-  { value: "Br", label: "平泳ぎ" },
-  { value: "Fly", label: "バタフライ" },
-  { value: "IM", label: "個人メドレー" },
+  { value: "Fr" },
+  { value: "Ba" },
+  { value: "Br" },
+  { value: "Fly" },
+  { value: "IM" },
 ] as const;
 
 // 泳法カテゴリの選択肢

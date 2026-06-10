@@ -45,11 +45,13 @@ export const getTextColorForBackground = (backgroundColor: string): string => {
   return brightness > 128 ? "#000000" : "#FFFFFF";
 };
 
-export const getStyleLabel = (styleValue: string | null | undefined): string => {
-  if (!styleValue) return "不明";
-  const style = SWIM_STYLES.find((s) => s.value === styleValue);
-  if (style) return style.label;
-  // すでに日本語名の場合はそのまま返す
-  if (SWIM_STYLES.some((s) => s.label === styleValue)) return styleValue;
-  return styleValue;
+import type { TFunction } from "i18next";
+import { localizedStyleName } from "./styleName";
+
+export const getStyleLabel = (
+  styleValue: string | null | undefined,
+  t: TFunction,
+): string => {
+  if (!styleValue) return t("recordMobile.unknownValue");
+  return localizedStyleName(styleValue, t) || styleValue;
 };

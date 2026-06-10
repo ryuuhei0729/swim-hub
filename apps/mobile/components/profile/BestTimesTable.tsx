@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { differenceInDays, parseISO } from "date-fns";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { formatTime } from "@/utils/formatters";
 import type { BestTime } from "@apps/shared/types/ui";
 
@@ -39,6 +40,7 @@ const styleColors: Record<string, { bg: string; text: string }> = {
  * ベストタイム表コンポーネント
  */
 export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false);
 
@@ -145,8 +147,8 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
   if (bestTimes.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>記録がありません</Text>
-        <Text style={styles.emptySubtext}>まだ記録を登録していません</Text>
+        <Text style={styles.emptyText}>{t("mypage.bestTimesTable.noRecords")}</Text>
+        <Text style={styles.emptySubtext}>{t("mypage.bestTimesTable.noRecordsDetail")}</Text>
       </View>
     );
   }
@@ -158,8 +160,8 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
         <View style={styles.tabs}>
           {[
             { id: "all" as TabType, label: "ALL" },
-            { id: "short" as TabType, label: "短水路" },
-            { id: "long" as TabType, label: "長水路" },
+            { id: "short" as TabType, label: t("mypage.bestTimesTable.shortCourse") },
+            { id: "long" as TabType, label: t("mypage.bestTimesTable.longCourse") },
           ].map((tab) => (
             <Pressable
               key={tab.id}
@@ -179,7 +181,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
           <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
             {includeRelaying && <Feather name="check" size={10} color="#FFFFFF" />}
           </View>
-          <Text style={styles.checkboxLabel}>引き継ぎタイム含</Text>
+          <Text style={styles.checkboxLabel}>{t("mypage.bestTimesTable.includeRelayShort")}</Text>
         </Pressable>
       </View>
 
@@ -189,7 +191,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
           {/* ヘッダー */}
           <View style={styles.tableHeader}>
             <View style={[styles.headerCell, styles.distanceCell]}>
-              <Text style={styles.headerText}>距離</Text>
+              <Text style={styles.headerText}>{t("mypage.bestTimesTable.distanceHeader")}</Text>
             </View>
             {STYLES.map((style) => (
               <View
@@ -275,7 +277,9 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
 
       {/* 注釈 */}
       <View style={styles.annotation}>
-        <Text style={styles.annotationText}>※ L: 長水路, R: 引き継ぎあり</Text>
+        <Text style={styles.annotationText}>
+          {`※ ${t("mypage.bestTimesTable.legend.longCourse")}, ${t("mypage.bestTimesTable.legend.relaying")}`}
+        </Text>
       </View>
     </View>
   );

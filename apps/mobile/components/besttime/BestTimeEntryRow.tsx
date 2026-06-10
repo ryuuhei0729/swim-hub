@@ -1,0 +1,311 @@
+import React from "react";
+import { View, Text, Pressable, TextInput, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import type { TFunction } from "i18next";
+import { isEnteredButInvalid, type BestTimeEntry } from "./styleOptions";
+
+export interface BestTimeEntryRowProps {
+  entry: BestTimeEntry;
+  styleName: string;
+  onUpdate: (key: string, patch: Partial<BestTimeEntry>) => void;
+  onRemove: (key: string) => void;
+  disabled: boolean;
+  isDuplicate: boolean;
+  /** true の場合、長水路ボタンを非活性にする (25m / 100m IM 等) */
+  longCourseDisabled?: boolean;
+  /** true の場合、備考欄と引き継ぎチェックボックスを表示する (一括入力モード) */
+  showNote?: boolean;
+  /** true の場合、引き継ぎチェックボックスを表示する (引き継ぎ可能な種目) */
+  relayEnabled?: boolean;
+  t: TFunction;
+}
+
+/**
+ * ベストタイム一括入力の1エントリー (カード)。
+ * オンボーディング (showNote なし): 水路トグル + タイムを横並び。
+ * 一括入力 (showNote): 水路トグル + 引き継ぎチェックボックス / タイム + 備考を1行。
+ */
+export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
+  entry,
+  styleName,
+  onUpdate,
+  onRemove,
+  disabled,
+  isDuplicate,
+  longCourseDisabled = false,
+  showNote = false,
+  relayEnabled = false,
+  t,
+}) => {
+  const timeInvalid = showNote && isEnteredButInvalid(entry.time);
+
+  const poolToggle = (
+    <View style={styles.poolToggle}>
+      <Pressable
+        style={[styles.poolButton, entry.poolType === 0 && styles.poolButtonActive]}
+        onPress={() => onUpdate(entry.key, { poolType: 0 })}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={t("common.poolTypeShort")}
+      >
+        <Text style={[styles.poolButtonText, entry.poolType === 0 && styles.poolButtonTextActive]}>
+          {t("common.poolTypeShort")}
+        </Text>
+      </Pressable>
+      <Pressable
+        style={[
+          styles.poolButton,
+          entry.poolType === 1 && styles.poolButtonActive,
+          longCourseDisabled && styles.poolButtonDisabled,
+        ]}
+        onPress={() => onUpdate(entry.key, { poolType: 1 })}
+        disabled={disabled || longCourseDisabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: longCourseDisabled }}
+        accessibilityLabel={t("common.poolTypeLong")}
+      >
+        <Text
+          style={[
+            styles.poolButtonText,
+            entry.poolType === 1 && styles.poolButtonTextActive,
+            longCourseDisabled && styles.poolButtonTextDisabled,
+          ]}
+        >
+          {t("common.poolTypeLong")}
+        </Text>
+      </Pressable>
+    </View>
+  );
+
+  const removeButton = (
+    <Pressable
+      onPress={() => onRemove(entry.key)}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={t("onboarding.step3.removeStyleAria", { styleName })}
+      style={({ pressed }) => [styles.removeButton, pressed && styles.removeButtonPressed]}
+    >
+      <Feather name="x" size={16} color={disabled ? "#D1D5DB" : "#9CA3AF"} />
+    </Pressable>
+  );
+
+  // --- オンボーディング: 水路トグル + タイムを横並び ---
+  if (!showNote) {
+    return (
+      <View style={[styles.card, isDuplicate && styles.cardDuplicate]}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.styleName}>{styleName}</Text>
+          {removeButton}
+        </View>
+        <View style={styles.inputRow}>
+          {poolToggle}
+          <TextInput
+            style={[styles.timeInput, styles.flex1, disabled && styles.inputDisabled]}
+            value={entry.time}
+            onChangeText={(text) => onUpdate(entry.key, { time: text })}
+            placeholder={t("onboarding.step3.timePlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numbers-and-punctuation"
+            editable={!disabled}
+            accessibilityLabel={t("onboarding.step3.timeAriaLabel", { styleName })}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  // --- 一括入力: 水路トグル + 引き継ぎチェックボックス / タイム + 備考を1行 ---
+  return (
+    <View style={[styles.card, isDuplicate && styles.cardDuplicate]}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.styleName}>{styleName}</Text>
+        {removeButton}
+      </View>
+
+      {/* コントロール行: 水路トグル + 引き継ぎチェックボックス */}
+      <View style={styles.controlsRow}>
+        {poolToggle}
+        {relayEnabled && (
+          <Pressable
+            style={styles.checkbox}
+            onPress={() => onUpdate(entry.key, { isRelaying: !entry.isRelaying })}
+            disabled={disabled}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: entry.isRelaying }}
+            accessibilityLabel={`${styleName} ${t("bulkBestTime.table.relay")}`}
+          >
+            <View style={[styles.checkboxBox, entry.isRelaying && styles.checkboxBoxChecked]}>
+              {entry.isRelaying && <Feather name="check" size={12} color="#FFFFFF" />}
+            </View>
+            <Text style={[styles.checkboxLabel, entry.isRelaying && styles.checkboxLabelChecked]}>
+              {t("bulkBestTime.table.relay")}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
+      {/* タイム + 備考を1行 */}
+      <View style={styles.inputRow}>
+        <TextInput
+          style={[styles.timeInput, styles.timeCell, timeInvalid && styles.inputError, disabled && styles.inputDisabled]}
+          value={entry.time}
+          onChangeText={(text) => onUpdate(entry.key, { time: text })}
+          placeholder={t("onboarding.step3.timePlaceholder")}
+          placeholderTextColor="#9CA3AF"
+          keyboardType="numbers-and-punctuation"
+          editable={!disabled}
+          accessibilityLabel={t("onboarding.step3.timeAriaLabel", { styleName })}
+        />
+        <TextInput
+          style={[styles.noteInput, styles.noteCell, disabled && styles.inputDisabled]}
+          value={entry.note}
+          onChangeText={(text) => onUpdate(entry.key, { note: text })}
+          placeholder={t("bulkBestTime.table.notePlaceholder")}
+          placeholderTextColor="#9CA3AF"
+          editable={!disabled}
+          accessibilityLabel={`${styleName} ${t("bulkBestTime.table.note")}`}
+        />
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    gap: 10,
+  },
+  cardDuplicate: {
+    borderColor: "#FCA5A5",
+    backgroundColor: "#FEF2F2",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  styleName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    flex: 1,
+  },
+  removeButton: {
+    padding: 4,
+  },
+  removeButtonPressed: {
+    opacity: 0.6,
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  flex1: {
+    flex: 1,
+  },
+  timeCell: {
+    flex: 1,
+  },
+  noteCell: {
+    flex: 1.4,
+  },
+  poolToggle: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 6,
+    overflow: "hidden",
+    alignSelf: "flex-start",
+  },
+  poolButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#FFFFFF",
+  },
+  poolButtonActive: {
+    backgroundColor: "#2563EB",
+  },
+  poolButtonDisabled: {
+    backgroundColor: "#F3F4F6",
+  },
+  poolButtonText: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  poolButtonTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  poolButtonTextDisabled: {
+    color: "#D1D5DB",
+  },
+  checkbox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+  },
+  checkboxBox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxBoxChecked: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  checkboxLabel: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  checkboxLabelChecked: {
+    color: "#2563EB",
+    fontWeight: "600",
+  },
+  timeInput: {
+    height: 36,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    fontSize: 14,
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
+    fontVariant: ["tabular-nums"],
+  },
+  noteInput: {
+    height: 36,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    fontSize: 14,
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
+  },
+  inputError: {
+    borderColor: "#FCA5A5",
+  },
+  inputDisabled: {
+    backgroundColor: "#F3F4F6",
+    color: "#9CA3AF",
+  },
+});

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { parseISO, isValid } from "date-fns";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -30,6 +31,9 @@ export default function RecordForm({
   isLoading = false,
   styles = [],
 }: RecordFormProps) {
+
+  const t = useTranslations("forms.record");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
   const { subscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
 
@@ -95,12 +99,12 @@ export default function RecordForm({
     // recordDate のバリデーション
     const sanitized = sanitizeFormData();
     if (!sanitized.recordDate || sanitized.recordDate === "") {
-      setRecordDateError("大会日を入力してください");
+      setRecordDateError(t("validation.dateRequired"));
       return;
     }
     const parsedDate = parseISO(sanitized.recordDate);
     if (!isValid(parsedDate)) {
-      setRecordDateError("有効な日付を入力してください");
+      setRecordDateError(t("validation.dateInvalid"));
       return;
     }
     setRecordDateError(undefined);
@@ -142,13 +146,13 @@ export default function RecordForm({
           <div className="bg-white px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
-                {editData ? "記録を編集" : "記録を追加"}
+                {editData ? t("title_edit") : t("title_create")}
               </h3>
               <button
                 type="button"
                 onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600"
-                aria-label="閉じる"
+                aria-label={t("closeAria")}
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -167,7 +171,7 @@ export default function RecordForm({
               {/* 記録セクション */}
               <div className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-base sm:text-lg font-medium text-gray-900">記録</h3>
+                  <h3 className="text-base sm:text-lg font-medium text-gray-900">{t("recordsHeader")}</h3>
                   <Button
                     type="button"
                     onClick={addRecord}
@@ -175,7 +179,7 @@ export default function RecordForm({
                     data-testid="record-add-button"
                   >
                     <PlusIcon className="h-4 w-4" />
-                    種目を追加
+                    {t("addEvent")}
                   </Button>
                 </div>
 
@@ -204,13 +208,13 @@ export default function RecordForm({
 
               {/* 大会メモ */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">大会メモ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t("competitionNoteLabel")}</label>
                 <textarea
                   value={formData.note}
                   onChange={(e) => handleFieldChange("note", e.target.value)}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="大会に関する特記事項"
+                  placeholder={t("competitionNotePlaceholder")}
                   data-testid="tournament-note"
                 />
               </div>
@@ -225,10 +229,10 @@ export default function RecordForm({
                 disabled={isLoading}
                 data-testid="record-form-cancel-button"
               >
-                キャンセル
+                {t("cancel")}
               </Button>
               <Button type="submit" disabled={isLoading} data-testid="record-form-submit-button">
-                {isLoading ? "保存中..." : editData ? "更新" : "保存"}
+                {isLoading ? (editData ? t("saving") : t("saving")) : editData ? t("update") : t("save")}
               </Button>
             </div>
           </form>
@@ -240,10 +244,10 @@ export default function RecordForm({
         isOpen={showConfirmDialog}
         onConfirm={handleConfirmClose}
         onCancel={handleCancelClose}
-        title="入力内容が保存されていません"
-        message="入力内容が保存されていません。このまま閉じますか？"
-        confirmLabel="閉じる"
-        cancelLabel="編集を続ける"
+        title={tUnsaved("title")}
+        message={tUnsaved("messageClose")}
+        confirmLabel={tUnsaved("confirmClose")}
+        cancelLabel={tUnsaved("cancel")}
         variant="warning"
       />
     </div>

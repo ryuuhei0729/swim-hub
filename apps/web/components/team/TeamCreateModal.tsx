@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useAuth } from "@/contexts";
 import { useCreateTeamMutation } from "@apps/shared/hooks/queries/teams";
 import TeamCreateForm, { TeamCreateFormData } from "@/components/forms/TeamCreateForm";
+import { useTranslations } from "next-intl";
 
 export interface TeamCreateModalProps {
   isOpen: boolean;
@@ -15,12 +16,13 @@ export default function TeamCreateModal({ isOpen, onClose, onSuccess }: TeamCrea
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user, supabase } = useAuth();
+  const t = useTranslations("teams");
   const createTeamMutation = useCreateTeamMutation(supabase);
 
   // チーム作成処理
   const handleSubmit = async (data: TeamCreateFormData) => {
     if (!user) {
-      setError("ログインが必要です");
+      setError(t("createModal.loginRequired"));
       return;
     }
 
@@ -49,7 +51,7 @@ export default function TeamCreateModal({ isOpen, onClose, onSuccess }: TeamCrea
       });
 
       // より詳細なエラーメッセージを設定
-      let errorMessage = "チームの作成に失敗しました";
+      let errorMessage = t("createModal.createFailed");
       if (err instanceof Error) {
         errorMessage = err.message;
       } else if (err && typeof err === "object" && "message" in err) {
@@ -86,7 +88,7 @@ export default function TeamCreateModal({ isOpen, onClose, onSuccess }: TeamCrea
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">エラーが発生しました</h3>
+              <h3 className="text-sm font-medium text-red-800">{t("createModal.errorTitle")}</h3>
               <div className="mt-2 text-sm text-red-700">
                 <p>{error}</p>
               </div>
@@ -95,7 +97,7 @@ export default function TeamCreateModal({ isOpen, onClose, onSuccess }: TeamCrea
                   onClick={() => setError(null)}
                   className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200"
                 >
-                  閉じる
+                  {t("createModal.errorClose")}
                 </button>
               </div>
             </div>

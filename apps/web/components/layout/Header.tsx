@@ -2,12 +2,13 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { useUserQuery } from "@apps/shared/hooks";
 import Avatar from "@/components/ui/Avatar";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import {
   Bars3Icon,
   ChevronDownIcon,
@@ -24,6 +25,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const { user, supabase, signOut } = useAuth();
   const { profile } = useUserQuery(supabase, { userId: user?.id });
   const router = useRouter();
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
+  const tAuth = useTranslations("auth");
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -68,7 +72,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             className="hidden sm:inline-flex lg:hidden items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 transition-colors duration-200"
             onClick={onMenuClick}
           >
-            <span className="sr-only">メニューを開く</span>
+            <span className="sr-only">{tNav("openMenu")}</span>
             <Bars3Icon className="h-6 w-6" aria-hidden="true" />
           </button>
 
@@ -102,9 +106,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
             className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors duration-200"
             onClick={onMenuClick}
           >
-            <span className="sr-only">メニューを開く</span>
+            <span className="sr-only">{tNav("openMenu")}</span>
             <Bars3Icon className="h-6 w-6" aria-hidden="true" />
           </button>
+
+          {/* デスクトップ用：言語切り替え */}
+          <div className="hidden sm:block">
+            <LanguageSwitcher />
+          </div>
 
           {/* デスクトップ用：ユーザー情報ドロップダウン */}
           <div className="hidden sm:block relative" ref={userMenuRef}>
@@ -115,13 +124,13 @@ export default function Header({ onMenuClick }: HeaderProps) {
             >
               <div className="hidden sm:block text-right">
                 <div className="text-sm font-medium text-gray-900 truncate max-w-24 sm:max-w-32">
-                  {profile?.name || user?.email?.split("@")[0] || "ユーザー"}
+                  {profile?.name || user?.email?.split("@")[0] || tCommon("user")}
                 </div>
               </div>
               <div className="relative">
                 <Avatar
                   avatarUrl={profile?.profile_image_path || null}
-                  userName={profile?.name || user?.email?.split("@")[0] || "ユーザー"}
+                  userName={profile?.name || user?.email?.split("@")[0] || tCommon("user")}
                   size="md"
                 />
               </div>
@@ -137,7 +146,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 focus:outline-none z-50">
                 <div className="px-4 py-3">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {profile?.name || user?.email?.split("@")[0] || "ユーザー"}
+                    {profile?.name || user?.email?.split("@")[0] || tCommon("user")}
                   </p>
                   <p className="text-sm text-gray-500 truncate">{user?.email}</p>
                 </div>
@@ -147,7 +156,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
                     <UserIcon className="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" />
-                    プロフィール
+                    {tNav("profile")}
                   </button>
                   <button
                     onClick={() => {
@@ -157,11 +166,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
                     <Cog6ToothIcon className="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" />
-                    設定
+                    {tNav("settings")}
                   </button>
                 </div>
                 <div className="py-1">
                   <button
+                    data-testid="logout-button"
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       setIsLogoutDialogOpen(true);
@@ -169,7 +179,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                   >
                     <ArrowRightOnRectangleIcon className="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" />
-                    ログアウト
+                    {tNav("logout")}
                   </button>
                 </div>
               </div>
@@ -181,10 +191,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
       <ConfirmDialog
         isOpen={isLogoutDialogOpen}
         variant="danger"
-        title="ログアウト"
-        message="ログアウトしますか？"
-        confirmLabel="ログアウト"
-        cancelLabel="キャンセル"
+        title={tNav("logout")}
+        message={tAuth("logoutConfirmMessage")}
+        confirmLabel={tNav("logout")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={handleLogout}
         onCancel={() => setIsLogoutDialogOpen(false)}
       />

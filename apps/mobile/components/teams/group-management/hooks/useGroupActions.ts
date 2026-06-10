@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type { TeamGroup, TeamGroupMembership } from "@swim-hub/shared/types";
@@ -11,6 +12,7 @@ export const useGroupActions = (
   supabase: SupabaseClient,
   onSuccess?: () => void,
 ) => {
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,13 +32,13 @@ export const useGroupActions = (
         onSuccess?.();
         return result;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "グループの作成に失敗しました";
+        const message = err instanceof Error ? err.message : t("teams.mobile.groupCreateFailed");
         if (
           message.includes("23505") ||
           message.includes("duplicate") ||
           message.includes("unique")
         ) {
-          setError("同じカテゴリに同名のグループが既に存在します");
+          setError(t("teams.mobile.groupDuplicateError"));
         } else {
           setError(message);
         }
@@ -45,7 +47,7 @@ export const useGroupActions = (
         setSaving(false);
       }
     },
-    [teamId, api, onSuccess],
+    [teamId, api, onSuccess, t],
   );
 
   /** カンマ区切りで複数グループを一括作成 */
@@ -64,15 +66,15 @@ export const useGroupActions = (
               created_by: null,
             });
           } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : "作成に失敗";
+            const message = err instanceof Error ? err.message : t("teams.mobile.groupCreateFailedSimple");
             if (
               message.includes("23505") ||
               message.includes("duplicate") ||
               message.includes("unique")
             ) {
-              errors.push(`「${name}」は既に存在します`);
+              errors.push(t("teams.mobile.groupAlreadyExists", { name }));
             } else {
-              errors.push(`「${name}」: ${message}`);
+              errors.push(t("teams.mobile.groupCreateError", { name, message }));
             }
           }
         }
@@ -86,7 +88,7 @@ export const useGroupActions = (
         setSaving(false);
       }
     },
-    [teamId, api, onSuccess],
+    [teamId, api, onSuccess, t],
   );
 
   const updateGroup = useCallback(
@@ -98,13 +100,13 @@ export const useGroupActions = (
         onSuccess?.();
         return result;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "グループの更新に失敗しました";
+        const message = err instanceof Error ? err.message : t("teams.mobile.groupUpdateFailed");
         if (
           message.includes("23505") ||
           message.includes("duplicate") ||
           message.includes("unique")
         ) {
-          setError("同じカテゴリに同名のグループが既に存在します");
+          setError(t("teams.mobile.groupDuplicateError"));
         } else {
           setError(message);
         }
@@ -113,7 +115,7 @@ export const useGroupActions = (
         setSaving(false);
       }
     },
-    [api, onSuccess],
+    [api, onSuccess, t],
   );
 
   const deleteGroup = useCallback(
@@ -125,14 +127,14 @@ export const useGroupActions = (
         onSuccess?.();
         return true;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "グループの削除に失敗しました";
+        const message = err instanceof Error ? err.message : t("teams.mobile.groupDeleteFailed");
         setError(message);
         return false;
       } finally {
         setSaving(false);
       }
     },
-    [api, onSuccess],
+    [api, onSuccess, t],
   );
 
   const listGroupMembers = useCallback(
@@ -147,12 +149,12 @@ export const useGroupActions = (
         setError(null);
         return await api.listGroupMembers(groupId);
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "メンバー情報の取得に失敗しました";
+        const message = err instanceof Error ? err.message : t("teams.mobile.groupMemberFetchFailed");
         setError(message);
         return [];
       }
     },
-    [api],
+    [api, t],
   );
 
   const setGroupMembers = useCallback(
@@ -164,14 +166,14 @@ export const useGroupActions = (
         onSuccess?.();
         return true;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "メンバーの割り当てに失敗しました";
+        const message = err instanceof Error ? err.message : t("teams.mobile.groupMemberAssignFailed");
         setError(message);
         return false;
       } finally {
         setSaving(false);
       }
     },
-    [api, onSuccess],
+    [api, onSuccess, t],
   );
 
   const clearError = useCallback(() => {

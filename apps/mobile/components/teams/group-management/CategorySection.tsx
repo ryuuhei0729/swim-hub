@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { GroupCard } from "./GroupCard";
 import type { TeamGroupWithCount } from "./hooks";
 
@@ -25,6 +26,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   onManageMembers,
   onBulkAssign,
 }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -35,21 +37,26 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
           style={styles.headerLeft}
           onPress={() => setIsExpanded(!isExpanded)}
           accessibilityRole="button"
-          accessibilityLabel={`${category || "未分類"} を${isExpanded ? "折りたたむ" : "展開する"}`}
+          accessibilityLabel={t("teams.mobile.categoryToggleAria", {
+            name: category || t("teams.mobile.uncategorized"),
+            action: isExpanded ? t("teams.mobile.collapseAria") : t("teams.mobile.expandAria"),
+          })}
         >
           <Feather name={isExpanded ? "chevron-down" : "chevron-right"} size={16} color="#6B7280" />
-          <Text style={styles.categoryName}>{category || "未分類"}</Text>
-          <Text style={styles.groupCount}>({groups.length}グループ)</Text>
+          <Text style={styles.categoryName}>{category || t("teams.mobile.uncategorized")}</Text>
+          <Text style={styles.groupCount}>
+            {t("teams.mobile.categoryGroupCount", { count: groups.length })}
+          </Text>
         </Pressable>
         {isAdmin && category && onBulkAssign && (
           <Pressable
             style={styles.bulkAssignButton}
             onPress={() => onBulkAssign(category)}
             accessibilityRole="button"
-            accessibilityLabel={`${category} の一括振り分け`}
+            accessibilityLabel={t("teams.mobile.bulkAssignAria", { name: category })}
           >
             <Feather name="shuffle" size={14} color="#4B5563" />
-            <Text style={styles.bulkAssignText}>一括振り分け</Text>
+            <Text style={styles.bulkAssignText}>{t("teams.mobile.bulkAssignButton")}</Text>
           </Pressable>
         )}
       </View>

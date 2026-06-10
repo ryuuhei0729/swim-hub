@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { CheckIcon } from "@heroicons/react/24/solid";
 import { cn } from "@/utils/cn";
 
@@ -30,6 +31,8 @@ export default function FormStepper({
   className,
   skippedSteps = EMPTY_SKIPPED_STEPS,
 }: FormStepperProps) {
+  const t = useTranslations("common.formStepper");
+
   // Guard: return null if no steps
   if (steps.length === 0) {
     return null;
@@ -50,12 +53,12 @@ export default function FormStepper({
   const progressWidth = ((clampedStep + 1) / Math.max(1, steps.length)) * 100;
 
   return (
-    <nav aria-label="フォームの進捗" className={className}>
+    <nav aria-label={t("ariaLabel")} className={className}>
       {/* モバイル向け: コンパクトな表示 */}
       <div className="sm:hidden">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700">
-            ステップ {clampedStep + 1} / {steps.length}
+            {t("stepIndicator", { current: clampedStep + 1, total: steps.length })}
           </span>
           <span className="text-sm text-gray-500">{steps[clampedStep]?.label}</span>
         </div>

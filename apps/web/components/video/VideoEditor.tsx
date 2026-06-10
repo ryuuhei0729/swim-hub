@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { supportsWebCodecs } from "@/lib/cropVideo";
 
@@ -28,6 +29,7 @@ interface TrimBarProps {
   onChange: (start: number, end: number) => void;
   onSeek: (time: number) => void;
   onRelease: () => void;
+  trimmingLabel: string;
 }
 
 function formatSec(t: number): string {
@@ -36,7 +38,7 @@ function formatSec(t: number): string {
   return m > 0 ? `${m}:${s.padStart(4, "0")}` : `${s}秒`;
 }
 
-function TrimBar({ duration, startTime, endTime, onChange, onSeek, onRelease }: TrimBarProps) {
+function TrimBar({ duration, startTime, endTime, onChange, onSeek, onRelease, trimmingLabel }: TrimBarProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   const getTime = (clientX: number): number => {
@@ -94,7 +96,7 @@ function TrimBar({ duration, startTime, endTime, onChange, onSeek, onRelease }: 
     <div className="space-y-2">
       {/* Time labels */}
       <div className="flex justify-between items-baseline">
-        <span className="text-sm font-medium text-gray-700">トリミング</span>
+        <span className="text-sm font-medium text-gray-700">{trimmingLabel}</span>
         <span className="text-xs text-gray-500">
           {formatSec(startTime)} – {formatSec(endTime)}
           <span className="ml-2 text-blue-600 font-medium">({formatSec(clipDuration)})</span>
@@ -159,6 +161,7 @@ function TrimBar({ duration, startTime, endTime, onChange, onSeek, onRelease }: 
 // ---- Main VideoEditor ----
 
 export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorProps) {
+  const t = useTranslations("common.videoEditor");
   // Hidden video — used only for duration metadata & thumbnail generation
   const videoRef = useRef<HTMLVideoElement>(null);
   // Wrapper around Cropper — lets us reach its internal <video> for seeking
@@ -412,18 +415,18 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
       onComplete(editedFile, thumbnail);
     } catch (err) {
       console.error("動画変換エラー:", err);
-      alert("動画の変換中にエラーが発生しました。");
+      alert(t("processingError"));
     } finally {
       setIsProcessing(false);
     }
-  }, [file, startTime, endTime, duration, croppedAreaPixels, zoom, generateThumbnail, onComplete]);
+  }, [file, startTime, endTime, duration, croppedAreaPixels, zoom, generateThumbnail, onComplete, t]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-gray-200 shrink-0">
-          <h3 className="text-lg font-medium text-gray-900">動画を編集</h3>
+          <h3 className="text-lg font-medium text-gray-900">{t("title")}</h3>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
@@ -522,6 +525,7 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
               onChange={(s, e) => { setStartTime(s); setEndTime(e); }}
               onSeek={seekCropperVideo}
               onRelease={playFromStart}
+              trimmingLabel={t("trimming")}
             />
           )}
 
@@ -541,11 +545,11 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
           {/* 処理エンジン状態 */}
           <span className="text-xs text-gray-400">
             {webCodecsAvailable
-              ? "✓ ハードウェア変換対応"
+              ? t("hardwareSupported")
               : ffmpegStatus === "loading"
-                ? "動画変換エンジンを読み込み中..."
+                ? t("engineLoading")
                 : ffmpegStatus === "ready"
-                  ? "✓ 準備完了"
+                  ? t("engineReady")
                   : null}
           </span>
           <div className="flex gap-3">
@@ -555,7 +559,7 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
               disabled={isProcessing}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
             >
-              キャンセル
+              {t("cancel")}
             </button>
             <button
               type="button"
@@ -563,7 +567,7 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
               disabled={isProcessing}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              {isProcessing ? `変換中... ${Math.round(progress)}%` : "適用してアップロード"}
+              {isProcessing ? t("processing", { progress: Math.round(progress) }) : t("applyAndUpload")}
             </button>
           </div>
         </div>

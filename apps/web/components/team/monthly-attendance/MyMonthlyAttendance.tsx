@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts";
+import { useTranslations } from "next-intl";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import { TeamAttendancesAPI } from "@apps/shared/api/teams/attendances";
 import { TeamEvent } from "@swim-hub/shared/types";
@@ -21,6 +22,7 @@ export interface MyMonthlyAttendanceProps {
 
 export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps) {
   const { supabase } = useAuth();
+  const t = useTranslations("teams");
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
   const attendancesAPI = useMemo(() => new TeamAttendancesAPI(supabase), [supabase]);
 
@@ -141,7 +143,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
   };
 
   const getMonthLabel = (year: number, month: number) => {
-    return `${year}年${month}月`;
+    return t("attendance.monthLabel", { year, month });
   };
 
   const error = monthListError || recentError || monthError || editError;
@@ -151,7 +153,7 @@ export default function MyMonthlyAttendance({ teamId }: MyMonthlyAttendanceProps
       <div className="p-4">
         <div className="text-center py-6">
           <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-          <p className="mt-1.5 text-sm text-gray-500">読み込み中...</p>
+          <p className="mt-1.5 text-sm text-gray-500">{t("attendance.loading")}</p>
         </div>
       </div>
     );

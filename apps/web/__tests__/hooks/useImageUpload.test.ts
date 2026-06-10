@@ -1,4 +1,5 @@
-import { act, renderHook } from "@testing-library/react";
+import { act } from "@testing-library/react";
+import { renderHookWithI18n as renderHook } from "../utils/render";
 import { afterEach, beforeEach, describe, expect, it, vi, Mock } from "vitest";
 
 import {

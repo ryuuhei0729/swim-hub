@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useMemberBestTimes } from "../shared/hooks/useMemberBestTimes";
 import {
@@ -40,6 +41,7 @@ export default function TeamMemberManagement({
   onMemberClick,
 }: TeamMemberManagementProps) {
   const { supabase } = useAuth();
+  const t = useTranslations("teams");
 
   // メンバーデータ管理
   const { members, loading, error, loadMembers } = useMembers(teamId, supabase);
@@ -55,7 +57,7 @@ export default function TeamMemberManagement({
   const { handleApprove, handleReject } = useMembershipActions(teamId, onMembershipChange);
 
   // グループ別表示
-  const { categories, activeCategory, toggleCategory, groupMembers } = useMemberGroupSort(
+  const { categories, activeCategory, toggleCategory, groupMembers, getCategoryLabel } = useMemberGroupSort(
     teamId,
     supabase,
   );
@@ -163,6 +165,7 @@ export default function TeamMemberManagement({
         categories={categories}
         activeCategory={activeCategory}
         onToggle={toggleCategory}
+        getCategoryLabel={getCategoryLabel}
       />
 
       {/* 承認待ちセクション（管理者のみ） */}
@@ -190,7 +193,7 @@ export default function TeamMemberManagement({
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">エラー</h3>
+                <h3 className="text-sm font-medium text-red-800">{t("error.title")}</h3>
                 <p>{error}</p>
               </div>
             </div>

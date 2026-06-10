@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowDownTrayIcon, ClockIcon, TrophyIcon } from "@heroicons/react/24/outline";
 import { downloadPracticeExcelTemplate } from "@/utils/practiceExcel";
 import { downloadCompetitionExcelTemplate } from "@/utils/competitionExcel";
@@ -12,6 +13,7 @@ interface TemplateDownloadProps {
 }
 
 export function TemplateDownload({ loading, onLoadingChange, onError }: TemplateDownloadProps) {
+  const t = useTranslations("teamsAdmin");
   const [selectedPracticeYear, setSelectedPracticeYear] = useState<number>(
     new Date().getFullYear(),
   );
@@ -25,7 +27,7 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
       await downloadPracticeExcelTemplate(selectedPracticeYear);
       onError("");
     } catch (err) {
-      onError("練習テンプレートのダウンロードに失敗しました");
+      onError(t("templateDownload.practice.downloadError"));
       console.error("テンプレートダウンロードエラー:", err);
     } finally {
       onLoadingChange(false);
@@ -38,7 +40,7 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
       await downloadCompetitionExcelTemplate(selectedCompetitionYear);
       onError("");
     } catch (err) {
-      onError("大会テンプレートのダウンロードに失敗しました");
+      onError(t("templateDownload.competition.downloadError"));
       console.error("テンプレートダウンロードエラー:", err);
     } finally {
       onLoadingChange(false);
@@ -47,14 +49,14 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
 
   return (
     <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Excelテンプレートのダウンロード</h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-4">{t("templateDownload.title")}</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 練習テンプレート */}
         <div className="p-4 bg-white rounded-lg border border-gray-200">
           <div className="flex items-center mb-3">
             <ClockIcon className="h-5 w-5 text-green-600 mr-2" />
-            <h4 className="text-md font-medium text-gray-800">練習一括登録</h4>
+            <h4 className="text-md font-medium text-gray-800">{t("templateDownload.practice.title")}</h4>
           </div>
           <div className="flex items-center space-x-2 mb-3">
             <select
@@ -72,17 +74,17 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
               className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
             >
               <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
-              ダウンロード
+              {t("templateDownload.practice.downloadButton")}
             </button>
           </div>
-          <p className="text-xs text-gray-500">列: 日付 | 曜日 | タイトル | 場所 | 備考</p>
+          <p className="text-xs text-gray-500">{t("templateDownload.practice.columnHint")}</p>
         </div>
 
         {/* 大会テンプレート */}
         <div className="p-4 bg-white rounded-lg border border-gray-200">
           <div className="flex items-center mb-3">
             <TrophyIcon className="h-5 w-5 text-blue-600 mr-2" />
-            <h4 className="text-md font-medium text-gray-800">大会一括登録</h4>
+            <h4 className="text-md font-medium text-gray-800">{t("templateDownload.competition.title")}</h4>
           </div>
           <div className="flex items-center space-x-2 mb-3">
             <select
@@ -100,12 +102,10 @@ export function TemplateDownload({ loading, onLoadingChange, onError }: Template
               className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
               <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
-              ダウンロード
+              {t("templateDownload.competition.downloadButton")}
             </button>
           </div>
-          <p className="text-xs text-gray-500">
-            列: 開始日 | 終了日 | 大会名 | 場所 | プール種別 | 備考
-          </p>
+          <p className="text-xs text-gray-500">{t("templateDownload.competition.columnHint")}</p>
         </div>
       </div>
     </div>

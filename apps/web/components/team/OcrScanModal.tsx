@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthProvider";
 import BaseModal from "@/components/ui/BaseModal";
 import Button from "@/components/ui/Button";
@@ -83,6 +84,7 @@ function isGeminiScanResult(obj: unknown): obj is GeminiScanResult {
 }
 
 export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrScanModalProps) {
+  const t = useTranslations("teamsAdmin");
   const { supabase } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cancelledRef = useRef<boolean>(false);
@@ -129,15 +131,18 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
   }, [resetModal, onClose]);
 
   // ファイルバリデーション
-  const validateFile = (file: File): string | null => {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return "画像形式はJPEGまたはPNGのみ対応しています";
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return "画像サイズは5MB以下にしてください";
-    }
-    return null;
-  };
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        return t("ocr.upload.invalidTypeError");
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        return t("ocr.upload.fileSizeError");
+      }
+      return null;
+    },
+    [t],
+  );
 
   // ファイル選択
   const handleFileSelect = useCallback(
@@ -152,7 +157,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     },
-    [imagePreview],
+    [imagePreview, validateFile],
   );
 
   const handleFileInputChange = useCallback(
@@ -217,7 +222,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
       if (cancelledRef.current) return;
 
       if (fnError) {
-        throw new Error(fnError.message || "サーバーエラーが発生しました");
+        throw new Error(fnError.message || t("ocr.errors.serverError"));
       }
 
       if (data?.error) {
@@ -226,7 +231,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
 
       if (!isGeminiScanResult(data)) {
         console.error("Invalid scan response shape:", data);
-        throw new Error("解析結果の形式が不正です。再度お試しください");
+        throw new Error(t("ocr.errors.invalidFormat"));
       }
 
       setScanResult(data);
@@ -238,10 +243,10 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
       setStep("results");
     } catch (err) {
       if (cancelledRef.current) return;
-      setError(err instanceof Error ? err.message : "解析中にエラーが発生しました");
+      setError(err instanceof Error ? err.message : t("ocr.errors.analyzeError"));
       setStep("upload");
     }
-  }, [imageFile, supabase, members]);
+  }, [imageFile, supabase, members, t]);
 
   // メンバー割り当て変更
   const handleMemberAssign = useCallback((swimmerNo: number, userId: string) => {
@@ -341,7 +346,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
         onDrop={handleDrop}
         tabIndex={0}
         role="button"
-        aria-label="画像をアップロード"
+        aria-label={t("ocr.upload.dropzoneText")}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -350,8 +355,8 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
         }}
       >
         <CameraIcon className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-        <p className="text-sm text-gray-600">画像をドラッグ&ドロップ、またはクリックして選択</p>
-        <p className="text-xs text-gray-400 mt-1">JPEG / PNG, 5MB以下</p>
+        <p className="text-sm text-gray-600">{t("ocr.upload.dropzoneText")}</p>
+        <p className="text-xs text-gray-400 mt-1">{t("ocr.upload.dropzoneHint")}</p>
       </div>
 
       <input
@@ -367,7 +372,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
         <div className="relative">
           <img
             src={imagePreview}
-            alt="アップロード画像のプレビュー"
+            alt={t("ocr.upload.dropzoneText")}
             className="w-full max-h-64 object-contain rounded-lg border"
           />
           <button
@@ -380,7 +385,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
               setError(null);
             }}
             className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
-            aria-label="画像を削除"
+            aria-label={t("ocr.upload.dropzoneText")}
           >
             <span className="text-gray-500 text-sm">✕</span>
           </button>
@@ -397,7 +402,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
       {/* 解析ボタン */}
       <div className="flex justify-end gap-3">
         <Button type="button" variant="secondary" onClick={handleClose}>
-          キャンセル
+          {t("ocr.upload.cancelButton")}
         </Button>
         <Button
           type="button"
@@ -405,7 +410,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
           disabled={!imageFile}
           className="bg-blue-600 hover:bg-blue-700"
         >
-          解析する
+          {t("ocr.upload.analyzeButton")}
         </Button>
       </div>
     </div>
@@ -414,7 +419,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
   // ステップ2: 解析中
   const renderAnalyzingStep = () => (
     <div className="py-12">
-      <LoadingSpinner size="lg" message="画像を解析しています..." />
+      <LoadingSpinner size="lg" message={t("ocr.analyzing.message")} />
       <div className="flex justify-center mt-6">
         <Button
           type="button"
@@ -426,7 +431,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
             setError(null);
           }}
         >
-          キャンセル
+          {t("ocr.analyzing.cancelButton")}
         </Button>
       </div>
     </div>
@@ -443,15 +448,15 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
       <div className="space-y-4">
         {/* メニュー情報 */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-blue-900 mb-2">解析結果</h4>
+          <h4 className="text-sm font-medium text-blue-900 mb-2">{t("ocr.results.sectionTitle")}</h4>
           <div className="flex flex-wrap gap-4 text-sm text-blue-800">
-            <span>距離: {menu.distance}m</span>
+            <span>{t("ocr.results.distanceLabel")} {menu.distance}m</span>
             <span>
-              本数: {menu.repCount}本 × {menu.setCount}セット
+              {t("ocr.results.repsLabel")} {menu.repCount} × {menu.setCount}
             </span>
             {menu.circle && (
               <span>
-                サークル: {Math.floor(menu.circle / 60)}:{String(menu.circle % 60).padStart(2, "0")}
+                {t("ocr.results.circleLabel")} {Math.floor(menu.circle / 60)}:{String(menu.circle % 60).padStart(2, "0")}
               </span>
             )}
           </div>
@@ -463,25 +468,25 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
           <table className="min-w-full bg-white border border-gray-200 rounded-lg text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">No</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">{t("ocr.results.col.no")}</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 min-w-[160px]">
-                  メンバー
+                  {t("ocr.results.col.member")}
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">種目</th>
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">{t("ocr.results.col.style")}</th>
                 {Array.from({ length: totalTimes }, (_, i) => (
                   <th key={i} className="px-2 py-2 text-center text-xs font-medium text-gray-500">
-                    {i + 1}本目
+                    {t("ocr.results.col.repN", { n: i + 1 })}
                   </th>
                 ))}
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">平均</th>
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">{t("ocr.results.col.average")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {swimmers.map((swimmer) => {
                 const validTimes: number[] = [];
                 for (let i = 0; i < totalTimes; i++) {
-                  const t = getTimeValue(swimmer.no, i);
-                  if (t !== null && t > 0) validTimes.push(t);
+                  const tv = getTimeValue(swimmer.no, i);
+                  if (tv !== null && tv > 0) validTimes.push(tv);
                 }
                 const avg =
                   validTimes.length > 0
@@ -503,7 +508,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
                             : "border-yellow-400 bg-yellow-50"
                         }`}
                       >
-                        <option value="">未選択</option>
+                        <option value="">{t("ocr.results.unselectedOption")}</option>
                         {members.map((m) => (
                           <option
                             key={m.user_id}
@@ -516,7 +521,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
                             {m.users.name}
                             {assignedUserIds.has(m.user_id) &&
                             memberAssignments[swimmer.no] !== m.user_id
-                              ? " (選択済み)"
+                              ? t("ocr.results.alreadySelectedSuffix")
                               : ""}
                           </option>
                         ))}
@@ -596,15 +601,15 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
               }}
             >
               <ArrowPathIcon className="h-4 w-4 mr-1" />
-              やり直す
+              {t("ocr.results.retryButton")}
             </Button>
             {!allAssigned && (
-              <span className="text-sm text-yellow-600">未割り当ての記録は破棄されます</span>
+              <span className="text-sm text-yellow-600">{t("ocr.results.unassignedWarning")}</span>
             )}
           </div>
           <div className="flex gap-3">
             <Button type="button" variant="secondary" onClick={handleClose}>
-              キャンセル
+              {t("ocr.results.cancelButton")}
             </Button>
             <Button
               type="button"
@@ -612,7 +617,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
               disabled={!scanResult?.swimmers.some((s) => memberAssignments[s.no])}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              フォームに反映
+              {t("ocr.results.applyButton")}
             </Button>
           </div>
         </div>
@@ -621,9 +626,9 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
   };
 
   const stepTitles: Record<ModalStep, string> = {
-    upload: "画像から練習記録を読み取る",
-    analyzing: "画像を解析中",
-    results: "解析結果の確認",
+    upload: t("ocr.stepTitle.upload"),
+    analyzing: t("ocr.stepTitle.analyzing"),
+    results: t("ocr.stepTitle.results"),
   };
 
   return (
@@ -637,12 +642,12 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
         isOpen={showDiscardConfirm}
         onConfirm={handleConfirmDiscard}
         onCancel={() => setShowDiscardConfirm(false)}
-        title="未割り当ての記録があります"
-        message={`メンバーが割り当てられていない${
-          scanResult ? scanResult.swimmers.filter((s) => !memberAssignments[s.no]).length : 0
-        }件の記録は破棄されます。よろしいですか？`}
-        confirmLabel="破棄して反映"
-        cancelLabel="戻る"
+        title={t("ocr.discardConfirm.title")}
+        message={t("ocr.discardConfirm.message", {
+          count: scanResult ? scanResult.swimmers.filter((s) => !memberAssignments[s.no]).length : 0,
+        })}
+        confirmLabel={t("ocr.discardConfirm.confirmButton")}
+        cancelLabel={t("ocr.discardConfirm.cancelButton")}
         variant="warning"
       />
     </BaseModal>

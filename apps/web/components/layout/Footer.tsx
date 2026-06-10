@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -11,26 +13,27 @@ import {
   InformationCircleIcon,
   ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import { formatDate } from "@apps/shared/utils/date";
 
 const familyServices = [
   {
-    name: "SwimHub",
-    description: "水泳チームの総合管理",
+    nameKey: "SwimHub",
+    descKey: "swimhubDesc" as const,
     href: "https://swim-hub.app",
     iconSrc: "/icon.png",
     current: true,
   },
   {
-    name: "SwimHub Timer",
-    description: "動画にタイムをオーバーレイ",
+    nameKey: "SwimHub Timer",
+    descKey: "timerDesc" as const,
     href: "https://timer.swim-hub.app",
     iconSrc: "/timer-icon.png",
     current: false,
   },
   {
-    name: "SwimHub Scanner",
-    description: "手書きの記録表をAIで解析",
+    nameKey: "SwimHub Scanner",
+    descKey: "scannerDesc" as const,
     href: "https://scanner.swim-hub.app",
     iconSrc: "/scanner-icon.png",
     current: false,
@@ -38,41 +41,42 @@ const familyServices = [
 ];
 
 export default function Footer() {
+  const t = useTranslations("footer");
   const currentYear = new Date().getFullYear();
 
   const footerLinks = [
     {
-      name: "プライバシー",
+      name: t("links.privacy"),
       href: "/privacy",
       icon: ShieldCheckIcon,
     },
     {
-      name: "利用規約",
+      name: t("links.terms"),
       href: "/terms",
       icon: DocumentTextIcon,
     },
     {
-      name: "サポート",
+      name: t("links.support"),
       href: "/support",
       icon: QuestionMarkCircleIcon,
     },
     {
-      name: "お問い合わせ",
+      name: t("links.contact"),
       href: "/contact",
       icon: EnvelopeIcon,
     },
     {
-      name: "ブログ",
+      name: t("links.blog"),
       href: "/blog",
       icon: NewspaperIcon,
     },
     {
-      name: "SwimHubについて",
+      name: t("links.about"),
       href: "/about",
       icon: InformationCircleIcon,
     },
     {
-      name: "特定商取引法に基づく表記",
+      name: t("links.tokushoho"),
       href: "/tokushoho",
       icon: DocumentTextIcon,
     },
@@ -97,24 +101,24 @@ export default function Footer() {
               <h3 className="text-lg font-semibold text-gray-900">SwimHub</h3>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed">
-              水泳選手のための記録管理サービス
+              {t("description")}
             </p>
             <div className="flex items-center text-sm text-gray-500">
-              <span>Made with</span>
+              <span>{t("madeWith")}</span>
               <HeartIcon className="h-4 w-4 text-red-500 mx-1" />
-              <span>for swimmers</span>
+              <span>{t("forSwimmers")}</span>
             </div>
           </div>
 
           {/* 右側：法的情報とサポート */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-              サポート・情報
+              {t("supportTitle")}
             </h4>
             <div className="grid grid-cols-3 sm:grid-cols-2 gap-1 sm:gap-2">
               {footerLinks.map((link) => (
                 <Link
-                  key={link.name}
+                  key={link.href}
                   href={link.href}
                   className="flex items-center text-[10px] sm:text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 whitespace-nowrap"
                 >
@@ -129,35 +133,35 @@ export default function Footer() {
         {/* SwimHub サービス一覧 */}
         <div className="mt-8 pt-6 border-t border-gray-200">
           <h4 className="text-sm font-semibold text-gray-900 tracking-wide mb-4">
-            SwimHub サービス一覧
+            {t("services.title")}
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {familyServices.map((service) =>
               service.current ? (
                 <div
-                  key={service.name}
+                  key={service.nameKey}
                   className="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 border border-blue-200"
                 >
                   <Image
                     src={service.iconSrc}
-                    alt={service.name}
+                    alt={service.nameKey}
                     width={128}
                     height={128}
                     className="w-16 h-16 sm:w-32 sm:h-32 shrink-0 object-contain"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-blue-700">{service.name}</span>
+                      <span className="text-sm font-medium text-blue-700">{service.nameKey}</span>
                       <span className="text-[10px] font-medium text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
-                        利用中
+                        {t("services.currentBadge")}
                       </span>
                     </div>
-                    <p className="text-xs text-blue-600/70 truncate">{service.description}</p>
+                    <p className="text-xs text-blue-600/70 truncate">{t(`services.${service.descKey}`)}</p>
                   </div>
                 </div>
               ) : (
                 <a
-                  key={service.name}
+                  key={service.nameKey}
                   href={service.href}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -165,7 +169,7 @@ export default function Footer() {
                 >
                   <Image
                     src={service.iconSrc}
-                    alt={service.name}
+                    alt={service.nameKey}
                     width={128}
                     height={128}
                     className="w-16 h-16 sm:w-32 sm:h-32 shrink-0 object-contain opacity-60 group-hover:opacity-100 transition-opacity"
@@ -173,11 +177,11 @@ export default function Footer() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
                       <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                        {service.name}
+                        {service.nameKey}
                       </span>
                       <ArrowTopRightOnSquareIcon className="w-3 h-3 text-gray-400 group-hover:text-gray-500" />
                     </div>
-                    <p className="text-xs text-gray-500 truncate">{service.description}</p>
+                    <p className="text-xs text-gray-500 truncate">{t(`services.${service.descKey}`)}</p>
                   </div>
                 </a>
               ),

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowDownTrayIcon, ArrowsPointingOutIcon } from "@heroicons/react/24/outline";
 
 interface VideoPlayerProps {
@@ -22,6 +23,7 @@ export default function VideoPlayer({
   canDownload = false,
   className = "",
 }: VideoPlayerProps) {
+  const t = useTranslations("common.videoPlayer");
   const videoRef = useRef<HTMLVideoElement>(null);
   const [presignedUrl, setPresignedUrl] = useState<string | null>(null);
   const [thumbnailPresignedUrl, setThumbnailPresignedUrl] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export default function VideoPlayer({
       const res = await fetch(`/api/storage/videos/presigned-url?${params.toString()}`);
       if (!res.ok) {
         const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "URL取得に失敗しました");
+        throw new Error(data.error ?? t("urlFetchFailed"));
       }
       const data = await res.json() as PresignedUrlResponse;
       setPresignedUrl(data.url);
@@ -48,11 +50,11 @@ export default function VideoPlayer({
       setExpiresAt(new Date(data.expiresAt));
     } catch (err) {
       console.error("署名付きURL取得エラー:", err);
-      setError(err instanceof Error ? err.message : "動画の読み込みに失敗しました");
+      setError(err instanceof Error ? err.message : t("loadFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, [videoPath, thumbnailPath]);
+  }, [videoPath, thumbnailPath, t]);
 
   useEffect(() => {
     void fetchPresignedUrls();
@@ -80,7 +82,7 @@ export default function VideoPlayer({
       <div
         className={`aspect-video rounded-lg overflow-hidden bg-gray-900 flex items-center justify-center ${className}`}
       >
-        <div className="text-gray-400 text-sm">動画を読み込み中...</div>
+        <div className="text-gray-400 text-sm">{t("loading")}</div>
       </div>
     );
   }
@@ -110,7 +112,7 @@ export default function VideoPlayer({
         <button
           type="button"
           onClick={handleFullscreen}
-          aria-label="フルスクリーン"
+          aria-label={t("fullscreen")}
           className="bg-black/60 text-white rounded p-1 hover:bg-black/80 transition-colors"
         >
           <ArrowsPointingOutIcon className="h-4 w-4" />
@@ -119,7 +121,7 @@ export default function VideoPlayer({
           <a
             href={presignedUrl}
             download="video.mp4"
-            aria-label="ダウンロード"
+            aria-label={t("download")}
             className="bg-black/60 text-white rounded p-1 hover:bg-black/80 transition-colors inline-flex"
           >
             <ArrowDownTrayIcon className="h-4 w-4" />

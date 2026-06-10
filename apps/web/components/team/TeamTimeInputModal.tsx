@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { formatTimeShort, formatTimeAverage } from "@apps/shared/utils/time";
@@ -50,6 +51,7 @@ export default function TeamTimeInputModal({
   menuNumber,
   initialTimes,
 }: TeamTimeInputModalProps) {
+  const t = useTranslations("teams.timeInputModal");
   const [teamTimes, setTeamTimes] = useState<TeamTimeEntry[]>([]);
   // メンバーごとのクイック入力コンテキスト
   const [memberContexts, setMemberContexts] = useState<Record<string, QuickTimeContext>>({});
@@ -220,7 +222,7 @@ export default function TeamTimeInputModal({
           <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                {menuNumber ? `メニュー${menuNumber}のチームタイム入力` : "チームタイム入力"}
+                {menuNumber ? t("titleWithMenu", { menu: menuNumber }) : t("titleDefault")}
               </h3>
               <button
                 type="button"

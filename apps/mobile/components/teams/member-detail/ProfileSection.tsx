@@ -2,8 +2,10 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { parseISO, isValid } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { formatDate } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 interface ProfileSectionProps {
@@ -12,13 +14,15 @@ interface ProfileSectionProps {
 }
 
 export const ProfileSection: React.FC<ProfileSectionProps> = ({ member, currentUserId }) => {
+  const { t } = useTranslation();
+  const locale = useDateLocale();
   const user = member.users;
   const isCurrentUser = member.user_id === currentUserId;
 
   const formatBirthday = (birthday: string | null | undefined): string | null => {
     if (!birthday) return null;
     const date = parseISO(birthday);
-    return isValid(date) ? format(date, "yyyy年MM月dd日", { locale: ja }) : null;
+    return isValid(date) ? formatDate(date, "longPadded", locale) : null;
   };
 
   const birthday = formatBirthday(user?.birthday);
@@ -63,27 +67,31 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ member, currentU
                   member.role === "admin" ? styles.roleBadgeTextAdmin : styles.roleBadgeTextUser,
                 ]}
               >
-                {member.role === "admin" ? "管理者" : "ユーザー"}
+                {member.role === "admin"
+                  ? t("teams.mobile.roleAdmin")
+                  : t("teams.mobile.roleUser")}
               </Text>
             </View>
             {isCurrentUser && (
               <View style={styles.youBadge}>
-                <Text style={styles.youBadgeText}>あなた</Text>
+                <Text style={styles.youBadgeText}>{t("teams.mobile.youBadge")}</Text>
               </View>
             )}
           </View>
 
-          {birthday && <Text style={styles.birthday}>生年月日: {birthday}</Text>}
+          {birthday && (
+            <Text style={styles.birthday}>{t("teams.mobile.birthdayLabel", { date: birthday })}</Text>
+          )}
         </View>
       </View>
 
       {/* 自己紹介 */}
       <View style={styles.bioContainer}>
-        <Text style={styles.bioLabel}>自己紹介</Text>
+        <Text style={styles.bioLabel}>{t("teams.memberDetail.profileSection.bioTitle")}</Text>
         <View style={styles.bioContent}>
           <Text style={styles.bioText}>
             {user?.bio ||
-              `${user?.name || "Unknown User"}の自己紹介文です。まだ自己紹介が設定されていません。`}
+              t("teams.memberDetail.profileSection.noBio", { name: user?.name || "Unknown User" })}
           </Text>
         </View>
       </View>

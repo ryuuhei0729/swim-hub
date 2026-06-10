@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 interface OnboardingGuideProps {
   onComplete: () => Promise<void>;
@@ -18,6 +19,7 @@ export const OnboardingGuide: React.FC<OnboardingGuideProps> = ({
   completing,
   completeError,
 }) => {
+  const { t } = useTranslation();
   return (
     <ScrollView
       style={styles.scroll}
@@ -25,33 +27,33 @@ export const OnboardingGuide: React.FC<OnboardingGuideProps> = ({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>SwimHub の使い方</Text>
-        <Text style={styles.subtitle}>準備完了です！主な機能をご紹介します。</Text>
+        <Text style={styles.title}>{t("onboarding.guide.headerTitle")}</Text>
+        <Text style={styles.subtitle}>{t("onboarding.guide.headerSubtitle")}</Text>
       </View>
 
       <View style={styles.guideList}>
         <GuideCard
           step="1"
-          title="練習を記録する"
-          description="ダッシュボードの「練習記録」から日々のトレーニングを記録。セット・距離・タイムを詳細に管理できます。"
+          title={t("onboarding.guide.practiceTitle")}
+          description={t("onboarding.guide.practiceDescription")}
           iconName="clipboard"
         />
         <GuideCard
           step="2"
-          title="大会記録を管理する"
-          description="大会ごとにエントリーと結果を記録。自己ベストの推移をグラフで確認できます。"
+          title={t("onboarding.guide.competitionTitle")}
+          description={t("onboarding.guide.competitionDescription")}
           iconName="award"
         />
         <GuideCard
           step="3"
-          title="チームに参加する"
-          description="コーチや仲間とチームを作成・参加。お知らせや記録を共有してチーム全体で成長しましょう。"
+          title={t("onboarding.guide.teamTitle")}
+          description={t("onboarding.guide.teamDescription")}
           iconName="users"
         />
         <GuideCard
           step="4"
-          title="マイページで確認する"
-          description="自分のプロフィール・サブスクリプション・設定はマイページからいつでも変更できます。"
+          title={t("onboarding.guide.mypageTitle")}
+          description={t("onboarding.guide.mypageDescription")}
           iconName="user"
         />
       </View>
@@ -72,12 +74,12 @@ export const OnboardingGuide: React.FC<OnboardingGuideProps> = ({
           onPress={onComplete}
           disabled={completing}
           accessibilityRole="button"
-          accessibilityLabel="SwimHub を始める"
+          accessibilityLabel={t("onboarding.guide.startAriaLabel")}
         >
           {completing ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.completeButtonText}>SwimHub を始める</Text>
+            <Text style={styles.completeButtonText}>{t("onboarding.guide.startButton")}</Text>
           )}
         </Pressable>
 
@@ -86,9 +88,9 @@ export const OnboardingGuide: React.FC<OnboardingGuideProps> = ({
           onPress={onBack}
           disabled={completing}
           accessibilityRole="button"
-          accessibilityLabel="戻る"
+          accessibilityLabel={t("onboarding.guide.backAriaLabel")}
         >
-          <Text style={styles.backButtonText}>戻る</Text>
+          <Text style={styles.backButtonText}>{t("onboarding.guide.backButton")}</Text>
         </Pressable>
       </View>
     </ScrollView>

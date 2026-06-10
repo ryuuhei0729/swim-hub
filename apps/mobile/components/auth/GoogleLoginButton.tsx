@@ -4,6 +4,7 @@
 import React from "react";
 import { Pressable, Text, StyleSheet, ActivityIndicator, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { useTranslation } from "react-i18next";
 
 interface GoogleLoginButtonProps {
   /** ボタン押下時のコールバック */
@@ -44,8 +45,10 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
   onPress,
   loading = false,
   disabled = false,
-  label = "Googleでログイン",
+  label,
 }) => {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t("auth.googleSignin");
   const isDisabled = disabled || loading;
 
   return (
@@ -58,7 +61,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={resolvedLabel}
       accessibilityState={{ disabled: isDisabled }}
     >
       {loading ? (
@@ -66,7 +69,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       ) : (
         <View style={styles.content}>
           <GoogleLogo />
-          <Text style={styles.buttonText}>{label}</Text>
+          <Text style={styles.buttonText}>{resolvedLabel}</Text>
         </View>
       )}
     </Pressable>

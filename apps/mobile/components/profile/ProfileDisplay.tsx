@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { format, parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { parseISO, isValid } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { formatDate } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import type { TeamMembershipWithUser, UserProfile } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -19,13 +21,15 @@ type ProfileDisplayNavigationProp = NativeStackNavigationProp<MainStackParamList
  * プロフィール表示コンポーネント
  */
 export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams = [] }) => {
+  const { t } = useTranslation();
+  const locale = useDateLocale();
   const navigation = useNavigation<ProfileDisplayNavigationProp>();
 
   const formatBirthday = (birthday: string | null | undefined): string => {
-    if (!birthday) return "未設定";
+    if (!birthday) return t("mypage.profileDisplay.notSet");
     const date = parseISO(birthday);
-    if (!isValid(date)) return "未設定";
-    return format(date, "yyyy年M月d日", { locale: ja });
+    if (!isValid(date)) return t("mypage.profileDisplay.notSet");
+    return formatDate(date, "long", locale);
   };
 
   // 承認済みかつアクティブなチームのみフィルタリング
@@ -70,18 +74,18 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
       {/* 生年月日と参加チーム */}
       <View style={styles.detailsRow}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>生年月日</Text>
+          <Text style={styles.detailLabel}>{t("mypage.profileDisplay.birthdayLabel")}</Text>
           <Text style={styles.detailValue}>{formatBirthday(profile.birthday)}</Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>参加チーム</Text>
+          <Text style={styles.detailLabel}>{t("mypage.profileDisplay.teamsLabel")}</Text>
           {approvedTeams.length > 0 ? (
             <View style={styles.teamsContainer}>
               {approvedTeams.map((membership) => {
                 const teamName =
                   "teams" in membership && membership.teams?.name
                     ? membership.teams.name
-                    : "チーム名不明";
+                    : t("mypage.profileDisplay.unknownTeam");
                 const teamId = membership.team_id;
 
                 return (
@@ -98,16 +102,16 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
               })}
             </View>
           ) : (
-            <Text style={styles.emptyText}>参加しているチームはありません</Text>
+            <Text style={styles.emptyText}>{t("mypage.profileDisplay.noTeams")}</Text>
           )}
         </View>
       </View>
 
       {/* 自己紹介 */}
       <View style={styles.bioContainer}>
-        <Text style={styles.bioLabel}>自己紹介</Text>
+        <Text style={styles.bioLabel}>{t("mypage.profileDisplay.bioLabel")}</Text>
         <View style={styles.bioContent}>
-          <Text style={styles.bioText}>{profile.bio || "未設定"}</Text>
+          <Text style={styles.bioText}>{profile.bio || t("mypage.profileDisplay.notSet")}</Text>
         </View>
       </View>
     </View>

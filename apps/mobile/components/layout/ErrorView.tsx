@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface ErrorViewProps {
   message: string;
@@ -18,13 +19,14 @@ export const ErrorView: React.FC<ErrorViewProps> = ({
   showIcon = true,
   fullScreen = false,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen]}>
       {showIcon && <Text style={styles.icon}>⚠️</Text>}
       <Text style={styles.message}>{message}</Text>
       {onRetry && (
         <Pressable style={styles.retryButton} onPress={onRetry}>
-          <Text style={styles.retryButtonText}>再試行</Text>
+          <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
         </Pressable>
       )}
     </View>

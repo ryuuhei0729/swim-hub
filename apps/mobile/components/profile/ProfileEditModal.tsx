@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
+import { useTranslation } from "react-i18next";
 import { AvatarUpload } from "./AvatarUpload";
 import { BirthdayInput } from "@/components/ui/BirthdayInput";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -24,6 +25,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   onUpdate,
   onAvatarChange,
 }) => {
+  const { t } = useTranslation();
   const { supabase, user } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
@@ -59,7 +61,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      setError("名前は必須です");
+      setError(t("mypage.profileEdit.nameRequired"));
       return;
     }
 
@@ -124,7 +126,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
           const publicUrl = data?.publicUrl;
 
           if (!publicUrl) {
-            throw new Error("公開URLの取得に失敗しました");
+            throw new Error(t("mypage.profileEdit.publicUrlFailed"));
           }
 
           // データベースのusersテーブルを更新（WEBの実装と同様）
@@ -132,7 +134,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         } catch (err) {
           console.error("画像アップロードエラー:", err);
           const errorMessage =
-            err instanceof Error ? err.message : "画像のアップロードに失敗しました";
+            err instanceof Error ? err.message : t("mypage.profileEdit.imageUploadFailed");
           throw new Error(errorMessage);
         }
       }
@@ -151,7 +153,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       handleClose();
     } catch (err) {
       console.error("プロフィール更新エラー:", err);
-      setError("プロフィールの更新に失敗しました");
+      setError(t("mypage.profileEdit.updateFailed"));
     } finally {
       setIsUpdating(false);
     }
@@ -162,7 +164,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       <Pressable style={styles.overlay} onPress={handleClose}>
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <Text style={styles.title}>プロフィール編集</Text>
+            <Text style={styles.title}>{t("mypage.profileEdit.title")}</Text>
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>×</Text>
             </Pressable>
@@ -196,7 +198,8 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
             {/* 名前 */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>
-                名前 <Text style={styles.required}>*</Text>
+                {t("mypage.profileEdit.nameLabel")}{" "}
+                <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 style={styles.input}
@@ -205,7 +208,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   setFormData((prev) => ({ ...prev, name: text }));
                   setError(null);
                 }}
-                placeholder="名前を入力"
+                placeholder={t("mypage.profileEdit.namePlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 editable={!isUpdating}
               />
@@ -213,7 +216,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
             {/* 生年月日 */}
             <BirthdayInput
-              label="生年月日"
+              label={t("mypage.profileEdit.birthdayLabel")}
               value={formData.birthday}
               onChange={(date) => {
                 setFormData((prev) => ({ ...prev, birthday: date }));
@@ -224,7 +227,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
 
             {/* 自己紹介 */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>自己紹介</Text>
+              <Text style={styles.label}>{t("mypage.profileEdit.bioLabel")}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={formData.bio}
@@ -232,7 +235,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   setFormData((prev) => ({ ...prev, bio: text }));
                   setError(null);
                 }}
-                placeholder="自己紹介を入力してください"
+                placeholder={t("mypage.profileEdit.bioPlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={5}
@@ -240,7 +243,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 textAlignVertical="top"
                 editable={!isUpdating}
               />
-              <Text style={styles.charCount}>{formData.bio.length}/500文字</Text>
+              <Text style={styles.charCount}>
+                {t("mypage.profileEdit.bioCount", { count: formData.bio.length })}
+              </Text>
             </View>
           </ScrollView>
 
@@ -250,7 +255,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
               onPress={handleClose}
               disabled={isUpdating}
             >
-              <Text style={styles.cancelButtonText}>キャンセル</Text>
+              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
             </Pressable>
             <Pressable
               style={[
@@ -261,7 +266,11 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
               onPress={handleSubmit}
               disabled={isUpdating || !formData.name.trim()}
             >
-              <Text style={styles.submitButtonText}>{isUpdating ? "更新中..." : "更新"}</Text>
+              <Text style={styles.submitButtonText}>
+                {isUpdating
+                  ? t("mypage.profileEdit.submitUpdating")
+                  : t("mypage.profileEdit.submit")}
+              </Text>
             </Pressable>
           </View>
         </Pressable>

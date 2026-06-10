@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback, useId } from "react";
+import { useTranslations } from "next-intl";
 import { format, isValid } from "date-fns";
 import { cn } from "@/utils/cn";
 
@@ -47,6 +48,7 @@ export default function BirthdayInput({
   const dayId = `${id}-day`;
   const errorId = `${id}-error`;
 
+  const t = useTranslations("common.birthdayInput");
   const [yearText, setYearText] = useState("");
   const [monthText, setMonthText] = useState("");
   const [dayText, setDayText] = useState("");
@@ -106,13 +108,13 @@ export default function BirthdayInput({
         date.getDate() === dNum;
 
       if (!isRealDate) {
-        setInternalError("存在しない日付です");
+        setInternalError(t("invalidDate"));
         emit("");
         return;
       }
 
       if (yNum < minYear || yNum > maxYear) {
-        setInternalError(`${minYear}〜${maxYear}年の範囲で入力してください`);
+        setInternalError(t("outOfRange", { min: minYear, max: maxYear }));
         emit("");
         return;
       }
@@ -120,7 +122,7 @@ export default function BirthdayInput({
       setInternalError(null);
       emit(format(date, "yyyy-MM-dd"));
     },
-    [minYear, maxYear, emit],
+    [minYear, maxYear, emit, t],
   );
 
   // 内部 state の変化で validate + emit (handler 内 stale closure 回避)
@@ -185,7 +187,7 @@ export default function BirthdayInput({
           placeholder="1996"
           maxLength={4}
           disabled={disabled}
-          aria-label="生年"
+          aria-label={t("yearLabel")}
           aria-invalid={hasError}
           className={cn(
             "w-16 sm:w-20 h-8 sm:h-10 px-1 sm:px-2 text-sm text-center border rounded-md bg-white transition-colors focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed shrink-0",
@@ -194,7 +196,7 @@ export default function BirthdayInput({
               : "border-gray-300 focus:ring-blue-500",
           )}
         />
-        <span className="text-sm text-gray-600 shrink-0">年</span>
+        <span className="text-sm text-gray-600 shrink-0">{t("yearUnit")}</span>
 
         <input
           id={monthId}
@@ -208,7 +210,7 @@ export default function BirthdayInput({
           placeholder="2"
           maxLength={2}
           disabled={disabled}
-          aria-label="生月"
+          aria-label={t("monthLabel")}
           aria-invalid={hasError}
           className={cn(
             "w-10 sm:w-12 h-8 sm:h-10 px-1 sm:px-2 text-sm text-center border rounded-md bg-white transition-colors focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed shrink-0",
@@ -217,7 +219,7 @@ export default function BirthdayInput({
               : "border-gray-300 focus:ring-blue-500",
           )}
         />
-        <span className="text-sm text-gray-600 shrink-0">月</span>
+        <span className="text-sm text-gray-600 shrink-0">{t("monthUnit")}</span>
 
         <input
           id={dayId}
@@ -231,7 +233,7 @@ export default function BirthdayInput({
           placeholder="22"
           maxLength={2}
           disabled={disabled}
-          aria-label="生日"
+          aria-label={t("dayLabel")}
           aria-invalid={hasError}
           className={cn(
             "w-10 sm:w-12 h-8 sm:h-10 px-1 sm:px-2 text-sm text-center border rounded-md bg-white transition-colors focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed shrink-0",
@@ -240,7 +242,7 @@ export default function BirthdayInput({
               : "border-gray-300 focus:ring-blue-500",
           )}
         />
-        <span className="text-sm text-gray-600 shrink-0">日</span>
+        <span className="text-sm text-gray-600 shrink-0">{t("dayUnit")}</span>
       </div>
 
       {hasError && (

@@ -13,7 +13,7 @@
  *   [J] アクセシビリティ: fieldset/legend + aria-label
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import BirthdayInput from "../../../components/ui/BirthdayInput";

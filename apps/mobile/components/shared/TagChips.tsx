@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import type { PracticeTag } from "@apps/shared/types";
 
 interface TagChipsProps {
@@ -20,12 +21,13 @@ export const TagChips: React.FC<TagChipsProps> = ({
   onRemove,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       {tags.length === 0 ? (
         <Pressable style={styles.addButton} onPress={onPress} disabled={disabled}>
           <Feather name="plus" size={16} color="#6B7280" />
-          <Text style={styles.addButtonText}>タグを追加</Text>
+          <Text style={styles.addButtonText}>{t("common.tag.addTag")}</Text>
         </Pressable>
       ) : (
         <View style={styles.tagsWrap}>

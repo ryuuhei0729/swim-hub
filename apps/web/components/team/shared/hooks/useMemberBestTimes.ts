@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -38,6 +39,7 @@ export interface BestTime {
  * TeamMemberManagementとMemberDetailModalで共有
  */
 export const useMemberBestTimes = (supabase: SupabaseClient) => {
+  const t = useTranslations("teams.memberBestTimesHook");
   const [memberBestTimes, setMemberBestTimes] = useState<Map<string, BestTime[]>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -253,12 +255,12 @@ export const useMemberBestTimes = (supabase: SupabaseClient) => {
         setMemberBestTimes(bestTimesMap);
       } catch (err) {
         console.error("ベストタイム取得エラー:", err);
-        setError("ベストタイムの取得に失敗しました");
+        setError(t("loadError"));
       } finally {
         setLoading(false);
       }
     },
-    [loadBestTimesForMember],
+    [loadBestTimesForMember, t],
   );
 
   /**

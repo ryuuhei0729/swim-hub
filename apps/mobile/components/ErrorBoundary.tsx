@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
+import i18n from "@/i18n";
 
 interface Props {
   children: ReactNode;
@@ -46,9 +47,9 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container}>
           <View style={styles.errorContainer}>
-            <Text style={styles.title}>エラーが発生しました</Text>
+            <Text style={styles.title}>{i18n.t("common.errorBoundary.title")}</Text>
             <Text style={styles.message}>
-              {this.state.error?.message || "不明なエラーが発生しました"}
+              {this.state.error?.message || i18n.t("common.errorBoundary.unknownError")}
             </Text>
             {__DEV__ && this.state.error && (
               <ScrollView style={styles.stackTrace}>

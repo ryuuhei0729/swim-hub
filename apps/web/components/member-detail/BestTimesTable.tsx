@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Tabs } from "@/components/ui/Tabs";
 import { TrophyIcon, CalendarIcon } from "@heroicons/react/24/outline";
 import { differenceInDays, parseISO } from "date-fns";
@@ -8,7 +9,18 @@ import { formatTimeBest, formatDate } from "@/utils/formatters";
 import type { BestTime, TabType } from "@/types/member-detail";
 
 const DISTANCES = [50, 100, 200, 400, 800];
+// DB 照合用の日本語キー (バックエンドの style.name_jp と一致させるため翻訳しない)
 const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"];
+
+// 日本語 style キー → practice.styles の翻訳キー
+type StyleTranslationKey = "Fr" | "Br" | "Ba" | "Fly" | "IM";
+const STYLE_KEY_MAP: Partial<Record<string, StyleTranslationKey>> = {
+  自由形: "Fr",
+  平泳ぎ: "Br",
+  背泳ぎ: "Ba",
+  バタフライ: "Fly",
+  個人メドレー: "IM",
+};
 
 const styleHeaderBgClass: Record<string, string> = {
   自由形: "bg-yellow-100",
@@ -41,6 +53,8 @@ interface BestTimesTableProps {
 }
 
 export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
+  const t = useTranslations("teams.memberDetail.bestTimesTable");
+  const tStyles = useTranslations("practice.styles");
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false);
 
@@ -161,16 +175,16 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
 
   const tabs = [
     { id: "all", label: "ALL" },
-    { id: "short", label: "短水路" },
-    { id: "long", label: "長水路" },
+    { id: "short", label: t("shortCourse") },
+    { id: "long", label: t("longCourse") },
   ];
 
   if (bestTimes.length === 0) {
     return (
       <div className="text-center py-6">
         <TrophyIcon className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-        <p className="text-sm text-gray-600">記録がありません</p>
-        <p className="text-xs text-gray-500 mt-1">このメンバーはまだ記録を登録していません</p>
+        <p className="text-sm text-gray-600">{t("noRecords")}</p>
+        <p className="text-xs text-gray-500 mt-1">{t("noRecordsDetail")}</p>
       </div>
     );
   }
@@ -191,7 +205,7 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
             onChange={(e) => setIncludeRelaying(e.target.checked)}
             className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
-          <span className="text-xs text-gray-700">引き継ぎタイムも含めて表示</span>
+          <span className="text-xs text-gray-700">{t("includeRelay")}</span>
         </label>
       </div>
 
@@ -200,16 +214,19 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
           <thead className="sticky top-0 z-10">
             <tr>
               <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-700 border-r border-gray-300 min-w-[48px] w-[56px] h-[36px] tracking-wide">
-                距離
+                {t("distanceHeader")}
               </th>
-              {STYLES.map((style) => (
-                <th
-                  key={style}
-                  className={`px-2 py-1.5 text-center text-xs font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[90px] h-[36px] ${styleHeaderBgClass[style]}`}
-                >
-                  {style}
-                </th>
-              ))}
+              {STYLES.map((style) => {
+                const styleKey = STYLE_KEY_MAP[style];
+                return (
+                  <th
+                    key={style}
+                    className={`px-2 py-1.5 text-center text-xs font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[90px] h-[36px] ${styleHeaderBgClass[style]}`}
+                  >
+                    {styleKey ? tStyles(styleKey) : style}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody className="bg-white">
@@ -265,7 +282,7 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                             {bestTime.competition ? (
                               <div className="text-blue-300">{bestTime.competition.title}</div>
                             ) : (
-                              <div className="text-gray-400">{bestTime.note || "一括登録"}</div>
+                              <div className="text-gray-400">{bestTime.note || t("bulkEntryNote")}</div>
                             )}
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                           </div>
@@ -284,8 +301,8 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
 
       {/* 注釈 */}
       <div className="mt-2 text-xs text-gray-400 flex items-center justify-end space-x-3">
-        <span>※ L: 長水路</span>
-        <span>R: 引き継ぎあり</span>
+        <span>{`※ ${t("legend.longCourse")}`}</span>
+        <span>{t("legend.relaying")}</span>
       </div>
     </div>
   );

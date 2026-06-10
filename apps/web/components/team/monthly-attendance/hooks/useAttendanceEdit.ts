@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
+import { useTranslations } from "next-intl";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
@@ -20,6 +21,7 @@ export const useAttendanceEdit = (
   supabase: SupabaseClient,
   attendanceAPI: AttendanceAPI,
 ) => {
+  const t = useTranslations("teams");
   const [editStates, setEditStates] = useState<Record<string, AttendanceEditState>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +175,7 @@ export const useAttendanceEdit = (
             .join("、");
 
           const confirmed = window.confirm(
-            `提出締め切り後の編集になります（${eventDates}）。備考に編集日時が自動的に追加されます。保存しますか？`,
+            t("attendanceEditHook.confirmEditAfterDeadline", { dates: eventDates }),
           );
           if (!confirmed) {
             setSaving(false);
@@ -190,7 +192,7 @@ export const useAttendanceEdit = (
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("認証が必要です");
+        if (!user) throw new Error(t("attendanceEditHook.authRequired"));
 
         const newAttendances = events
           .filter((event) => {
@@ -247,12 +249,12 @@ export const useAttendanceEdit = (
         onSuccess?.();
       } catch (err) {
         console.error("出欠情報の保存に失敗:", err);
-        setError("出欠情報の保存に失敗しました");
+        setError(t("attendanceEditHook.saveError"));
       } finally {
         setSaving(false);
       }
     },
-    [editStates, supabase, attendanceAPI],
+    [editStates, supabase, attendanceAPI, t],
   );
 
   return {

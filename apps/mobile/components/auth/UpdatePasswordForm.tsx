@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 
 interface UpdatePasswordFormProps {
@@ -14,20 +15,21 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
   const [message, setMessage] = useState<string | null>(null);
 
   const { updatePassword } = useAuth();
+  const { t } = useTranslation();
 
   const validateForm = (): boolean => {
     if (!newPassword) {
-      setError("新しいパスワードを入力してください。");
+      setError(t("auth.validation.newPasswordRequired"));
       return false;
     }
 
     if (newPassword.length < 6) {
-      setError("パスワードは6文字以上で入力してください。");
+      setError(t("auth.validation.passwordMinLength"));
       return false;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("パスワードが一致しません。");
+      setError(t("auth.validation.passwordMismatch"));
       return false;
     }
 
@@ -46,15 +48,15 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
     try {
       const { error } = await updatePassword(newPassword);
       if (error) {
-        setError("パスワードの更新に失敗しました。");
+        setError(t("auth.errors.updateFailed"));
       } else {
-        setMessage("パスワードを正常に更新しました。");
+        setMessage(t("auth.updatePassword.successMessage"));
         setNewPassword("");
         setConfirmPassword("");
         onSuccess?.();
       }
     } catch {
-      setError("予期しないエラーが発生しました。");
+      setError(t("auth.errors.unexpected"));
     } finally {
       setLoading(false);
     }
@@ -64,8 +66,8 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
     <View style={styles.container}>
       <View style={styles.formContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>パスワード変更</Text>
-          <Text style={styles.subtitle}>新しいパスワードを設定してください</Text>
+          <Text style={styles.title}>{t("auth.updatePassword.title")}</Text>
+          <Text style={styles.subtitle}>{t("auth.updatePassword.subtitle")}</Text>
         </View>
 
         {error && (
@@ -82,10 +84,10 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>新しいパスワード</Text>
+            <Text style={styles.label}>{t("auth.fields.newPassword")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="新しいパスワード（6文字以上）"
+              placeholder={t("auth.fields.newPasswordPlaceholder")}
               placeholderTextColor="#9CA3AF"
               value={newPassword}
               onChangeText={setNewPassword}
@@ -98,10 +100,10 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>パスワード確認</Text>
+            <Text style={styles.label}>{t("auth.fields.confirmPassword")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="パスワード確認"
+              placeholder={t("auth.fields.confirmPasswordPlaceholder")}
               placeholderTextColor="#9CA3AF"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -121,7 +123,7 @@ export const UpdatePasswordForm: React.FC<UpdatePasswordFormProps> = ({ onSucces
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>パスワードを更新</Text>
+              <Text style={styles.buttonText}>{t("auth.updatePassword.submitButton")}</Text>
             )}
           </Pressable>
         </View>

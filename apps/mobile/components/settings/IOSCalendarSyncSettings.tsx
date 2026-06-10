@@ -14,6 +14,7 @@ import {
   Platform,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { useTranslation } from "react-i18next";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import type { UserProfile } from "@swim-hub/shared/types";
 
@@ -50,6 +51,7 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
   profile,
   onUpdate,
 }) => {
+  const { t } = useTranslation();
   const {
     isAvailable,
     enableSync,
@@ -81,19 +83,23 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
 
   // 連携解除
   const handleDisconnect = () => {
-    Alert.alert("確認", "iOSカレンダー連携を解除しますか？", [
-      { text: "キャンセル", style: "cancel" },
-      {
-        text: "解除",
-        style: "destructive",
-        onPress: async () => {
-          const success = await disableSync();
-          if (success) {
-            onUpdate();
-          }
+    Alert.alert(
+      t("settings.iosCalendar.confirmTitle"),
+      t("settings.iosCalendar.confirmDisconnect"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("settings.iosCalendar.disconnectChoice"),
+          style: "destructive",
+          onPress: async () => {
+            const success = await disableSync();
+            if (success) {
+              onUpdate();
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   // 同期設定変更
@@ -116,10 +122,10 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
     <View style={styles.container}>
       {/* ヘッダー */}
       <View style={styles.header}>
-        <Text style={styles.title}>iOSカレンダー連携</Text>
+        <Text style={styles.title}>{t("settings.iosCalendar.title")}</Text>
         {isEnabled && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>連携中</Text>
+            <Text style={styles.badgeText}>{t("settings.iosCalendar.connectedBadge")}</Text>
           </View>
         )}
       </View>
@@ -135,7 +141,7 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
         // 未連携状態
         <View style={styles.section}>
           <Text style={styles.description}>
-            iOSカレンダーと連携すると、練習記録と大会記録がデバイスのカレンダーに追加されます。
+            {t("settings.iosCalendar.disconnectedDescription")}
           </Text>
           <Pressable
             style={({ pressed }) => [
@@ -146,14 +152,14 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
             onPress={handleConnect}
             disabled={syncLoading}
             accessibilityRole="button"
-            accessibilityLabel="iOSカレンダーと連携"
+            accessibilityLabel={t("settings.iosCalendar.connectAriaLabel")}
           >
             {syncLoading ? (
               <ActivityIndicator color="#374151" size="small" />
             ) : (
               <View style={styles.buttonContent}>
                 <CalendarIcon />
-                <Text style={styles.connectButtonText}>iOSカレンダーと連携</Text>
+                <Text style={styles.connectButtonText}>{t("settings.iosCalendar.connectButton")}</Text>
               </View>
             )}
           </Pressable>
@@ -164,7 +170,7 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
           {/* 同期設定 */}
           <View style={styles.section}>
             <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>練習記録を自動同期</Text>
+              <Text style={styles.settingLabel}>{t("settings.iosCalendar.syncPracticesLabel")}</Text>
               <Switch
                 value={syncPractices}
                 onValueChange={(value) =>
@@ -176,7 +182,7 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
               />
             </View>
             <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>大会記録を自動同期</Text>
+              <Text style={styles.settingLabel}>{t("settings.iosCalendar.syncCompetitionsLabel")}</Text>
               <Switch
                 value={syncCompetitions}
                 onValueChange={(value) =>
@@ -191,9 +197,7 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
 
           {/* 説明 */}
           <View style={[styles.section, styles.borderTop]}>
-            <Text style={styles.description}>
-              練習や大会を作成・更新すると、自動的にiOSカレンダーに反映されます。
-            </Text>
+            <Text style={styles.description}>{t("settings.iosCalendar.connectedDescription")}</Text>
           </View>
 
           {/* 連携解除 */}
@@ -205,9 +209,9 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
               ]}
               onPress={handleDisconnect}
               accessibilityRole="button"
-              accessibilityLabel="連携を解除"
+              accessibilityLabel={t("settings.iosCalendar.disconnectAriaLabel")}
             >
-              <Text style={styles.disconnectButtonText}>連携を解除</Text>
+              <Text style={styles.disconnectButtonText}>{t("settings.iosCalendar.disconnectButton")}</Text>
             </Pressable>
           </View>
         </>

@@ -1,0 +1,4 @@
+# Maestro が生成する生スクショ・frameit の枠付き画像はコミットしない
+*.png
+# frameit 用の設定とコピーは残す
+!Framefile.json

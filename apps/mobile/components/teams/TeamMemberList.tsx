@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { parseISO, differenceInDays } from "date-fns";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useUpdateMemberRoleMutation,
@@ -36,7 +37,18 @@ interface MemberBestTime {
 }
 
 // 種目リスト（WEBと同様）
+// DB 照合用の日本語キー (バックエンドの style.name_jp と一致させるため翻訳しない)
 const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"] as const;
+
+// 日本語 style キー → practice.styles の翻訳キー (表示用)
+type StyleTranslationKey = "Fr" | "Br" | "Ba" | "Fly" | "IM";
+const STYLE_KEY_MAP: Record<(typeof STYLES)[number], StyleTranslationKey> = {
+  自由形: "Fr",
+  平泳ぎ: "Br",
+  背泳ぎ: "Ba",
+  バタフライ: "Fly",
+  個人メドレー: "IM",
+};
 const DISTANCES = [50, 100, 200, 400, 800] as const;
 
 // 種目の色定義
@@ -102,6 +114,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   onMemberChange,
 }) => {
   const { supabase } = useAuth();
+  const { t } = useTranslation();
   const updateRoleMutation = useUpdateMemberRoleMutation(supabase);
   const removeMemberMutation = useRemoveMemberMutation(supabase);
   const [_processingMemberId, setProcessingMemberId] = useState<string | null>(null);
@@ -324,11 +337,11 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       if (onMemberChange) onMemberChange();
     } catch (err) {
       console.error("ロール変更エラー:", err);
-      const errorMessage = err instanceof Error ? err.message : "ロールの変更に失敗しました";
+      const errorMessage = err instanceof Error ? err.message : t("teams.mobile.roleChangeFailed");
       if (Platform.OS === "web") {
         window.alert(errorMessage);
       } else {
-        Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+        Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
       }
     } finally {
       setProcessingMemberId(null);
@@ -337,18 +350,18 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
 
   // メンバー削除処理
   const _handleRemoveMember = (member: TeamMembershipWithUser) => {
-    const memberName = member.users.name || "このメンバー";
-    const confirmMessage = `${memberName}をチームから削除しますか？\nこの操作は取り消せません。`;
+    const memberName = member.users.name || t("teams.mobile.fallbackMemberName");
+    const confirmMessage = t("teams.mobile.memberRemoveConfirm", { name: memberName });
 
     if (Platform.OS === "web") {
       const confirmed = window.confirm(confirmMessage);
       if (!confirmed) return;
       executeRemoveMember(member);
     } else {
-      Alert.alert("削除確認", confirmMessage, [
-        { text: "キャンセル", style: "cancel" },
+      Alert.alert(t("teams.mobile.deleteConfirmTitle"), confirmMessage, [
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "削除",
+          text: t("teams.mobile.deleteConfirmText"),
           style: "destructive",
           onPress: () => executeRemoveMember(member),
         },
@@ -366,11 +379,12 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       if (onMemberChange) onMemberChange();
     } catch (err) {
       console.error("メンバー削除エラー:", err);
-      const errorMessage = err instanceof Error ? err.message : "メンバーの削除に失敗しました";
+      const errorMessage =
+        err instanceof Error ? err.message : t("teams.mobile.memberDeleteFailed");
       if (Platform.OS === "web") {
         window.alert(errorMessage);
       } else {
-        Alert.alert("エラー", errorMessage, [{ text: "OK" }]);
+        Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
       }
     } finally {
       setProcessingMemberId(null);
@@ -398,7 +412,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   if (isLoading && members.length === 0) {
     return (
       <View style={styles.container}>
-        <LoadingSpinner message="メンバーを読み込み中..." />
+        <LoadingSpinner message={t("teams.mobile.memberLoading")} />
       </View>
     );
   }
@@ -408,7 +422,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     return (
       <View style={styles.container}>
         <ErrorView
-          message={error.message || "メンバー一覧の取得に失敗しました"}
+          message={error.message || t("teams.mobile.memberFetchFailed")}
           onRetry={onRetry}
         />
       </View>
@@ -420,7 +434,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     return (
       <View style={styles.emptyContainer}>
         <Feather name="users" size={48} color="#9CA3AF" />
-        <Text style={styles.emptyText}>メンバーがいません</Text>
+        <Text style={styles.emptyText}>{t("teams.mobile.memberListEmpty")}</Text>
       </View>
     );
   }
@@ -434,16 +448,16 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       <View style={styles.fixedTop}>
         {/* メンバー統計ヘッダー */}
         <View style={styles.statsHeader}>
-          <Text style={styles.statsTitle}>メンバー</Text>
+          <Text style={styles.statsTitle}>{t("teams.mobile.memberListTitle")}</Text>
           <View style={styles.statsRow}>
             <Text style={styles.statsText}>
-              合計: <Text style={styles.statsValue}>{members.length}人</Text>
+              {t("teams.mobile.memberListTotal", { count: members.length })}
+            </Text>
+            <Text style={[styles.statsText, styles.statsAdmin]}>
+              {t("teams.mobile.memberListAdmin", { count: adminCount })}
             </Text>
             <Text style={styles.statsText}>
-              管理者: <Text style={[styles.statsValue, styles.statsAdmin]}>{adminCount}人</Text>
-            </Text>
-            <Text style={styles.statsText}>
-              メンバー: <Text style={styles.statsValue}>{userCount}人</Text>
+              {t("teams.mobile.memberListMember", { count: userCount })}
             </Text>
           </View>
         </View>
@@ -461,7 +475,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       {loadingBestTimes ? (
         <View style={styles.tableLoading}>
           <ActivityIndicator size="large" color="#2563EB" />
-          <Text style={styles.tableLoadingText}>ベストタイム読込中...</Text>
+          <Text style={styles.tableLoadingText}>{t("teams.mobile.bestTimeLoading")}</Text>
         </View>
       ) : (
         <View style={styles.tableWrapper}>
@@ -469,7 +483,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
           <View style={styles.tableHeaderFixed}>
             {/* 左上: メンバーラベル */}
             <View style={[styles.nameHeaderCellFrozen, styles.cellBorderRight]}>
-              <Text style={styles.nameHeaderText}>メンバー</Text>
+              <Text style={styles.nameHeaderText}>{t("teams.mobile.memberColLabel")}</Text>
             </View>
             {/* 右上: 種目ヘッダー（横スクロール同期） */}
             <ScrollView
@@ -495,7 +509,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                       ]}
                     >
                       <Text style={[styles.styleGroupHeaderText, { color: colors.text }]}>
-                        {style}
+                        {t(`practice.styles.${STYLE_KEY_MAP[style]}`)}
                       </Text>
                     </View>
                   ))}
@@ -574,13 +588,15 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                         <View style={styles.nameCellContent}>
                           <View style={styles.nameCellNameRow}>
                             <Text style={styles.nameCellText} numberOfLines={1}>
-                              {user.name || "名前未設定"}
+                              {user.name || t("teams.mobile.unnamedMember")}
                             </Text>
                             {item.role === "admin" && (
                               <Feather name="star" size={9} color="#EAB308" />
                             )}
                           </View>
-                          {isCurrentUser && <Text style={styles.nameCellYou}>あなた</Text>}
+                          {isCurrentUser && (
+                            <Text style={styles.nameCellYou}>{t("teams.mobile.youLabel")}</Text>
+                          )}
                         </View>
                       </Pressable>
                     </React.Fragment>

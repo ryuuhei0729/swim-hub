@@ -4,6 +4,7 @@
  */
 import * as VideoThumbnails from "expo-video-thumbnails";
 import { env } from "@/lib/env";
+import i18n from "@/i18n";
 
 const WEB_API_URL = env.webApiUrl;
 
@@ -52,7 +53,7 @@ export async function requestUploadUrl(
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-    throw new Error(data.message ?? data.error ?? "アップロードURLの取得に失敗しました");
+    throw new Error(data.message ?? data.error ?? i18n.t("common.upload.videoUploadUrlFailed"));
   }
 
   return (await res.json()) as UploadUrlResponse;
@@ -85,11 +86,11 @@ export async function uploadVideoToR2(
   try {
     fileResponse = await fetch(uri);
   } catch (err) {
-    throw new Error(`動画ファイル読み込み失敗: ${uri} — ${err instanceof Error ? err.message : String(err)}`);
+    throw new Error(`${i18n.t("common.upload.videoReadFailed", { uri })} — ${err instanceof Error ? err.message : String(err)}`);
   }
 
   if (!fileResponse.ok) {
-    throw new Error(`動画ファイル読み込み失敗: HTTP ${fileResponse.status} (${uri})`);
+    throw new Error(i18n.t("common.upload.videoReadHttpFailed", { status: fileResponse.status, uri }));
   }
 
   const blob = await fileResponse.blob();
@@ -103,7 +104,7 @@ export async function uploadVideoToR2(
   if (!res.ok) {
     const errorBody = await (typeof res.text === "function" ? res.text().catch(() => "") : Promise.resolve(""));
     const detail = (errorBody as string).slice(0, 200);
-    throw new Error(`動画アップロード失敗: HTTP ${res.status}${detail ? ` ${detail}` : ""}`);
+    throw new Error(i18n.t("common.upload.videoUploadHttpFailed", { status: res.status, detail: detail ? ` ${detail}` : "" }));
   }
 
   onProgress?.(90);
@@ -132,7 +133,7 @@ export async function uploadThumbnailToR2(
   });
 
   if (!res.ok) {
-    throw new Error(`サムネイルアップロード失敗: HTTP ${res.status}`);
+    throw new Error(i18n.t("common.upload.thumbnailUploadHttpFailed", { status: res.status }));
   }
 }
 
@@ -162,7 +163,7 @@ export async function confirmUpload(
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? "DB更新に失敗しました");
+    throw new Error(data.error ?? i18n.t("common.upload.videoDbUpdateFailed"));
   }
 }
 
@@ -190,7 +191,7 @@ export async function getPresignedUrl(
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? "署名付きURLの取得に失敗しました");
+    throw new Error(data.error ?? i18n.t("common.upload.videoSignedUrlFailed"));
   }
 
   return (await res.json()) as PresignedUrlResponse;
@@ -218,7 +219,7 @@ export async function deleteVideo(
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? "動画の削除に失敗しました");
+    throw new Error(data.error ?? i18n.t("common.upload.videoDeleteFailedSimple"));
   }
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { memo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { parseISO, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { ja, enUS } from "date-fns/locale";
 import { formatInTimeZone } from "date-fns-tz";
 import { TeamEvent } from "@swim-hub/shared/types";
 import type { EventStatusEditState } from "@/types/admin-attendance";
@@ -29,12 +30,16 @@ export const EventListItem = memo(function EventListItem({
   onSave,
   onClick,
 }: EventListItemProps) {
+  const t = useTranslations("teamsAdmin");
+  const locale = useLocale();
+  const dateLocale = locale === "ja" ? ja : enUS;
+  const datePattern = locale === "ja" ? "MMMM d日 (EEE)" : "MMMM d (EEE)";
   const formatEventDate = (dateStr: string) => {
     const parsed = parseISO(dateStr);
     if (!isValid(parsed)) {
       return "-";
     }
-    return formatInTimeZone(parsed, "Asia/Tokyo", "MMMM d日 (EEE)", { locale: ja });
+    return formatInTimeZone(parsed, "Asia/Tokyo", datePattern, { locale: dateLocale });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -54,7 +59,7 @@ export const EventListItem = memo(function EventListItem({
       onClick={onClick}
       role="button"
       tabIndex={0}
-      aria-label={`${formatEventDate(event.date)} ${event.type === "competition" ? event.title || "大会" : event.title || "練習"}の詳細を表示`}
+      aria-label={t("adminAttendance.eventDetailAriaLabel", { date: formatEventDate(event.date), title: event.type === "competition" ? event.title || t("adminAttendance.eventDefault.competition") : event.title || t("adminAttendance.eventDefault.practice") })}
       onKeyDown={handleKeyDown}
     >
       <div className="flex items-center justify-between gap-4">
@@ -64,7 +69,7 @@ export const EventListItem = memo(function EventListItem({
             {formatEventDate(event.date)}
           </span>
           <h3 className="text-sm font-medium text-gray-900">
-            {event.type === "competition" ? event.title || "大会" : event.title || "練習"}
+            {event.type === "competition" ? event.title || t("adminAttendance.eventDefault.competition") : event.title || t("adminAttendance.eventDefault.practice")}
           </h3>
           {event.place && <span className="text-xs text-gray-600">@{event.place}</span>}
         </div>
@@ -80,7 +85,7 @@ export const EventListItem = memo(function EventListItem({
                 : "bg-gray-100 text-gray-600 hover:bg-blue-50 border-2 border-transparent"
             } ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            受付中
+            {t("eventListItem.openButton")}
           </button>
           <button
             onClick={() => onStatusChange(event.id, "closed")}
@@ -91,7 +96,7 @@ export const EventListItem = memo(function EventListItem({
                 : "bg-gray-100 text-gray-600 hover:bg-red-50 border-2 border-transparent"
             } ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            締切
+            {t("eventListItem.closedButton")}
           </button>
           <button
             onClick={() => onSave(event.id)}
@@ -100,7 +105,7 @@ export const EventListItem = memo(function EventListItem({
               isSaving || !hasChanges ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
-            {isSaving ? "保存中..." : "保存"}
+            {isSaving ? t("eventListItem.saving") : t("eventListItem.saveButton")}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
 import type { MainStackParamList } from "./types";
 import { TabNavigator } from "./TabNavigator";
 import { PracticeDetailScreen } from "@/screens/PracticeDetailScreen";
@@ -13,6 +14,7 @@ import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
 import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
 import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
+import { BulkBestTimeScreen } from "@/screens/BulkBestTimeScreen";
 import { PaywallScreen } from "@/screens/PaywallScreen";
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -23,6 +25,15 @@ const Stack = createNativeStackNavigator<MainStackParamList>();
  * タブナビゲーターを含む
  */
 export const MainStack: React.FC = () => {
+  const { t } = useTranslation();
+  const baseHeaderOptions = {
+    headerShown: true,
+    headerBackTitle: t("common.back"),
+    headerStyle: { backgroundColor: "#FFFFFF" },
+    headerTintColor: "#111827",
+    headerTitleStyle: { fontWeight: "600" as const },
+  };
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -37,176 +48,103 @@ export const MainStack: React.FC = () => {
         name="PracticeDetail"
         component={PracticeDetailScreen}
         options={{
-          headerShown: true,
-          title: "練習記録詳細",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.practiceDetail"),
         }}
       />
       <Stack.Screen
         name="PracticeForm"
         component={PracticeFormScreen}
         options={({ route }) => ({
-          headerShown: true,
-          title: route.params?.practiceId ? "練習記録編集" : "練習記録作成",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: route.params?.practiceId
+            ? t("navigation.mobile.titles.practiceEdit")
+            : t("navigation.mobile.titles.practiceCreate"),
         })}
       />
       <Stack.Screen
         name="PracticeLogForm"
         component={PracticeLogFormScreen}
         options={({ route }) => ({
-          headerShown: true,
-          title: route.params?.practiceLogId !== undefined ? "練習ログ編集" : "練習ログ作成",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title:
+            route.params?.practiceLogId !== undefined
+              ? t("navigation.mobile.titles.practiceLogEdit")
+              : t("navigation.mobile.titles.practiceLogCreate"),
         })}
       />
       <Stack.Screen
         name="PracticeTimeForm"
         component={PracticeTimeFormScreen}
         options={{
-          headerShown: true,
-          title: "タイム入力",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.practiceTimeInput"),
         }}
       />
       <Stack.Screen
         name="RecordDetail"
         component={RecordDetailScreen}
         options={{
-          headerShown: true,
-          title: "大会記録詳細",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.recordDetail"),
         }}
       />
       <Stack.Screen
         name="RecordForm"
         component={RecordFormScreen}
         options={({ route }) => ({
-          headerShown: true,
-          title: route.params?.recordId ? "大会記録編集" : "大会記録作成",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: route.params?.recordId
+            ? t("navigation.mobile.titles.recordEdit")
+            : t("navigation.mobile.titles.recordCreate"),
         })}
       />
       <Stack.Screen
         name="CompetitionForm"
         component={CompetitionBasicFormScreen}
         options={{
-          headerShown: true,
-          title: "大会情報",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.competitionInfo"),
         }}
       />
       <Stack.Screen
         name="EntryForm"
         component={EntryLogFormScreen}
         options={{
-          headerShown: true,
-          title: "エントリー登録",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.entryRegister"),
         }}
       />
       <Stack.Screen
         name="RecordLogForm"
         component={RecordLogFormScreen}
         options={{
-          headerShown: true,
-          title: "記録入力",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.recordInput"),
         }}
       />
       <Stack.Screen
         name="TeamDetail"
         component={TeamDetailScreen}
         options={{
-          headerShown: true,
-          title: "チーム詳細",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.teamDetail"),
         }}
       />
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
-          headerShown: true,
-          title: "設定",
-          headerBackTitle: "戻る",
-          headerStyle: {
-            backgroundColor: "#FFFFFF",
-          },
-          headerTintColor: "#111827",
-          headerTitleStyle: {
-            fontWeight: "600",
-          },
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.settings"),
+        }}
+      />
+      <Stack.Screen
+        name="BulkBestTime"
+        component={BulkBestTimeScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.bulkBestTime"),
         }}
       />
       <Stack.Screen

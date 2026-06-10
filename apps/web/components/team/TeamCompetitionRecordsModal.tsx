@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { XMarkIcon, ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTimeBest } from "@/utils/formatters";
@@ -54,10 +55,10 @@ interface TeamCompetitionRecordsModalProps {
   competitionTitle: string;
 }
 
-function getUserName(users: RecordUser | RecordUser[] | null | undefined): string {
-  if (!users) return "不明";
-  if (Array.isArray(users)) return users[0]?.name || "不明";
-  return users.name || "不明";
+function getUserName(users: RecordUser | RecordUser[] | null | undefined, unknownLabel: string): string {
+  if (!users) return unknownLabel;
+  if (Array.isArray(users)) return users[0]?.name || unknownLabel;
+  return users.name || unknownLabel;
 }
 
 function getStyle(styles: StyleInfo | StyleInfo[] | null | undefined): StyleInfo | null {
@@ -74,6 +75,7 @@ function ExpandableSplitTimes({
   raceDistance: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const t = useTranslations("teams.competitionRecordsModal");
 
   const formattedSplits = useMemo(
     () =>
@@ -93,7 +95,7 @@ function ExpandableSplitTimes({
         className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
       >
         {isOpen ? <ChevronUpIcon className="h-3 w-3" /> : <ChevronDownIcon className="h-3 w-3" />}
-        スプリットタイム ({formattedSplits.length})
+        {t("splitTimesLabel", { count: formattedSplits.length })}
       </button>
       {isOpen && <LapTimeDisplay splitTimes={formattedSplits} raceDistance={raceDistance} />}
     </div>
@@ -107,6 +109,7 @@ export default function TeamCompetitionRecordsModal({
   competitionTitle,
 }: TeamCompetitionRecordsModalProps) {
   const { supabase } = useAuth();
+  const t = useTranslations("teams.competitionRecordsModal");
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [records, setRecords] = useState<RecordEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,14 +169,14 @@ export default function TeamCompetitionRecordsModal({
         setRecords((recordsResult.data || []) as unknown as RecordEntry[]);
       } catch (err) {
         console.error("大会記録の取得エラー:", err);
-        setError("大会記録の取得に失敗しました");
+        setError(t("loadError"));
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [isOpen, competitionId, supabase]);
+  }, [isOpen, competitionId, supabase, t]);
 
   // 種目ごとにグルーピング
   const recordsByStyle = useMemo(() => {
@@ -195,7 +198,7 @@ export default function TeamCompetitionRecordsModal({
 
   if (!isOpen) return null;
 
-  const poolTypeLabel = competition?.pool_type === 1 ? "長水路" : "短水路";
+  const poolTypeLabel = competition?.pool_type === 1 ? t("poolTypeLong") : t("poolTypeShort");
 
   return (
     <div className="fixed inset-0 z-70 overflow-y-auto">
@@ -206,7 +209,7 @@ export default function TeamCompetitionRecordsModal({
           <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             {/* ヘッダー */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">{competitionTitle} - 記録一覧</h3>
+              <h3 className="text-lg font-medium text-gray-900">{competitionTitle}{t("titleSuffix")}</h3>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -214,7 +217,7 @@ export default function TeamCompetitionRecordsModal({
 
             {loading && (
               <div className="text-center py-8">
-                <div className="text-sm text-gray-500">読み込み中...</div>
+                <div className="text-sm text-gray-500">{t("loading")}</div>
               </div>
             )}
 
@@ -241,7 +244,7 @@ export default function TeamCompetitionRecordsModal({
 
                 {/* 記録なし */}
                 {records.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">記録がまだ登録されていません</div>
+                  <div className="text-center py-8 text-gray-500">{t("empty")}</div>
                 )}
 
                 {/* 種目ごとの記録 */}
@@ -261,19 +264,19 @@ export default function TeamCompetitionRecordsModal({
                           <thead>
                             <tr className="border-b border-blue-200 bg-blue-50/50">
                               <th className="text-left py-2 px-3 font-medium text-blue-800">
-                                順位
+                                {t("rankLabel")}
                               </th>
                               <th className="text-left py-2 px-3 font-medium text-blue-800">
-                                名前
+                                {t("nameLabel")}
                               </th>
                               <th className="text-center py-2 px-3 font-medium text-blue-800">
-                                タイム
+                                {t("timeLabel")}
                               </th>
                               <th className="text-center py-2 px-3 font-medium text-blue-800 hidden sm:table-cell">
-                                RT
+                                {t("rtLabel")}
                               </th>
                               <th className="text-center py-2 px-3 font-medium text-blue-800 hidden sm:table-cell">
-                                備考
+                                {t("noteLabel")}
                               </th>
                             </tr>
                           </thead>
@@ -292,7 +295,7 @@ export default function TeamCompetitionRecordsModal({
                                       {index + 1}
                                     </td>
                                     <td className="py-2 px-3 text-gray-900">
-                                      {getUserName(record.users)}
+                                      {getUserName(record.users, t("unknownUser"))}
                                     </td>
                                     <td className="py-2 px-3 text-center">
                                       <span
@@ -329,7 +332,7 @@ export default function TeamCompetitionRecordsModal({
                                     colSpan={5}
                                     className="py-2 px-3 text-xs font-medium text-gray-500"
                                   >
-                                    リレー
+                                    {t("relay")}
                                   </td>
                                 </tr>
                                 {styleRecords
@@ -346,7 +349,7 @@ export default function TeamCompetitionRecordsModal({
                                           {index + 1}
                                         </td>
                                         <td className="py-2 px-3 text-gray-900">
-                                          {getUserName(record.users)}
+                                          {getUserName(record.users, t("unknownUser"))}
                                         </td>
                                         <td className="py-2 px-3 text-center text-gray-900">
                                           {formatTimeBest(record.time)}

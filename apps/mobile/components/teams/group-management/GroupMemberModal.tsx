@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, Modal, Pressable, TextInput, FlatList, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface TeamMemberForSelection {
@@ -34,6 +35,7 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
   saving,
   loading,
 }) => {
+  const { t } = useTranslation();
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -89,7 +91,7 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
             <Text style={styles.title} numberOfLines={1}>
-              {group.name} のメンバー
+              {t("teams.mobile.groupMembersTitle", { name: group.name })}
             </Text>
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>×</Text>
@@ -102,21 +104,24 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
               style={styles.searchInput}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="メンバーを検索..."
+              placeholder={t("teams.mobile.memberSearchPlaceholder")}
               placeholderTextColor="#9CA3AF"
             />
 
             {/* 選択状況 */}
             <View style={styles.selectionBar}>
               <Text style={styles.selectionCount}>
-                {selectedUserIds.size} / {teamMembers.length} 人選択中
+                {t("teams.mobile.selectionCount", {
+                  selected: selectedUserIds.size,
+                  total: teamMembers.length,
+                })}
               </Text>
               <View style={styles.selectionActions}>
                 <Pressable onPress={handleSelectAll}>
-                  <Text style={styles.selectAllText}>全選択</Text>
+                  <Text style={styles.selectAllText}>{t("teams.mobile.selectAll")}</Text>
                 </Pressable>
                 <Pressable onPress={handleDeselectAll}>
-                  <Text style={styles.deselectAllText}>全解除</Text>
+                  <Text style={styles.deselectAllText}>{t("teams.mobile.deselectAll")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -124,7 +129,7 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
             {/* メンバーリスト */}
             {loading ? (
               <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>読み込み中...</Text>
+                <Text style={styles.loadingText}>{t("teams.mobile.loadingShort")}</Text>
               </View>
             ) : (
               <FlatList
@@ -135,7 +140,9 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
                 ListEmptyComponent={
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>
-                      {searchQuery ? "該当するメンバーがいません" : "メンバーがいません"}
+                      {searchQuery
+                        ? t("teams.mobile.noMatchingMembers")
+                        : t("teams.mobile.noMembers")}
                     </Text>
                   </View>
                 }
@@ -166,14 +173,16 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
               onPress={handleClose}
               disabled={saving}
             >
-              <Text style={styles.cancelButtonText}>キャンセル</Text>
+              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
             </Pressable>
             <Pressable
               style={[styles.button, styles.submitButton, saving && styles.submitButtonDisabled]}
               onPress={handleSave}
               disabled={saving}
             >
-              <Text style={styles.submitButtonText}>{saving ? "保存中..." : "保存"}</Text>
+              <Text style={styles.submitButtonText}>
+                {saving ? t("teams.mobile.saveLoading") : t("teams.mobile.saveButton")}
+              </Text>
             </Pressable>
           </View>
         </Pressable>

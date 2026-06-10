@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { useBulkRegister } from "@/hooks/useBulkRegister";
 import { TemplateDownload } from "@/components/bulk-register/TemplateDownload";
@@ -14,6 +15,7 @@ export interface TeamBulkRegisterProps {
 }
 
 export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRegisterProps) {
+  const t = useTranslations("teamsAdmin");
   const { supabase } = useAuth();
   const {
     selectedFile,
@@ -31,9 +33,9 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
   if (!isAdmin) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">一括登録</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">{t("bulkRegister.unauthorized.title")}</h2>
         <div className="text-center py-8">
-          <p className="text-gray-600">一括登録機能を使用するには管理者権限が必要です。</p>
+          <p className="text-gray-600">{t("bulkRegister.unauthorized.description")}</p>
         </div>
       </div>
     );
@@ -41,7 +43,7 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">スケジュール一括登録</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("bulkRegister.wrapperTitle")}</h2>
 
       {/* エラー表示 */}
       {error && (
@@ -81,16 +83,16 @@ export default function TeamBulkRegister({ teamId, isAdmin = false }: TeamBulkRe
       {/* 登録結果 */}
       {registerResult && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="text-md font-medium text-blue-800 mb-2">登録結果</h4>
+          <h4 className="text-md font-medium text-blue-800 mb-2">{t("bulkRegister.result.title")}</h4>
           <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
             {registerResult.practicesCreated > 0 && (
-              <li>練習: {registerResult.practicesCreated}件登録</li>
+              <li>{t("bulkRegister.result.practicesCreated", { count: registerResult.practicesCreated })}</li>
             )}
             {registerResult.competitionsCreated > 0 && (
-              <li>大会: {registerResult.competitionsCreated}件登録</li>
+              <li>{t("bulkRegister.result.competitionsCreated", { count: registerResult.competitionsCreated })}</li>
             )}
             {registerResult.errors.length > 0 && (
-              <li className="text-red-700">エラー: {registerResult.errors.join(", ")}</li>
+              <li className="text-red-700">{t("bulkRegister.result.errors", { errors: registerResult.errors.join(", ") })}</li>
             )}
           </ul>
         </div>
