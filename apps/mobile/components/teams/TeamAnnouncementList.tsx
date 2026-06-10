@@ -69,7 +69,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
       {isAdmin && onCreateNew && (
         <View style={styles.actionBar}>
           <Pressable style={styles.createButton} onPress={onCreateNew}>
-            <Text style={styles.createButtonText}>+ お知らせを作成</Text>
+            <Text style={styles.createButtonText}>{t("teams.mobile.announcementListCreateButton")}</Text>
           </Pressable>
         </View>
       )}
@@ -97,13 +97,13 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                       </Text>
                       {!isPublished && (
                         <View style={styles.draftBadge}>
-                          <Text style={styles.draftBadgeText}>下書き</Text>
+                          <Text style={styles.draftBadgeText}>{t("common.draft")}</Text>
                         </View>
                       )}
                     </View>
                     {startAt && endAt && (
                       <Text style={styles.announcementPeriod}>
-                        公開期間: {startAt} 〜 {endAt}
+                        {t("teams.mobile.announcementPublishPeriod", { start: startAt, end: endAt })}
                       </Text>
                     )}
                   </View>
@@ -111,7 +111,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                     <View style={styles.announcementActions}>
                       {onEdit && (
                         <Pressable style={styles.actionButton} onPress={() => onEdit(item)}>
-                          <Text style={styles.actionButtonText}>編集</Text>
+                          <Text style={styles.actionButtonText}>{t("common.edit")}</Text>
                         </Pressable>
                       )}
                       {onDelete && (
@@ -120,7 +120,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                           onPress={() => onDelete(item.id)}
                         >
                           <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
-                            削除
+                            {t("common.delete")}
                           </Text>
                         </Pressable>
                       )}
@@ -139,10 +139,10 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>お知らせがありません</Text>
+          <Text style={styles.emptyText}>{t("teams.mobile.announcementListEmpty")}</Text>
           {isAdmin && onCreateNew && (
             <Pressable style={styles.emptyCreateButton} onPress={onCreateNew}>
-              <Text style={styles.emptyCreateButtonText}>お知らせを作成</Text>
+              <Text style={styles.emptyCreateButtonText}>{t("teams.mobile.announcementListEmptyCreate")}</Text>
             </Pressable>
           )}
         </View>

@@ -52,22 +52,22 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
   };
 
   const handleMorePress = (tag: PracticeTag) => {
-    Alert.alert(tag.name, t("record.tag.actionPrompt"), [
+    Alert.alert(tag.name, t("forms.tag.actionPrompt"), [
       {
-        text: t("record.tag.actionEdit"),
+        text: t("forms.tag.actionEdit"),
         onPress: () => onEditTag(tag),
       },
       {
-        text: t("record.tag.actionDelete"),
+        text: t("forms.tag.actionDelete"),
         style: "destructive",
         onPress: () => {
           Alert.alert(
-            t("record.tag.deleteConfirmTitle"),
-            t("record.tag.deleteConfirmMessage", { name: tag.name }),
+            t("forms.tag.deleteConfirmTitle"),
+            t("forms.tag.deleteConfirmMessage", { name: tag.name }),
             [
               { text: t("common.cancel"), style: "cancel" },
               {
-                text: t("record.tag.actionDelete"),
+                text: t("forms.tag.actionDelete"),
                 style: "destructive",
                 onPress: () => onDeleteTag(tag),
               },
@@ -97,7 +97,7 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
 
           {/* ヘッダー */}
           <View style={styles.header}>
-            <Text style={styles.title}>{t("record.tag.selectModalTitle")}</Text>
+            <Text style={styles.title}>{t("forms.tag.selectModalTitle")}</Text>
             <Pressable
               style={styles.closeButton}
               onPress={onClose}
@@ -115,8 +115,8 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
           >
             {availableTags.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>{t("record.tag.emptyTitle")}</Text>
-                <Text style={styles.emptySubText}>{t("record.tag.emptySubtext")}</Text>
+                <Text style={styles.emptyText}>{t("forms.tag.emptyTitle")}</Text>
+                <Text style={styles.emptySubText}>{t("forms.tag.emptySubtext")}</Text>
               </View>
             ) : (
               <View style={styles.tagsGrid}>
@@ -158,17 +158,17 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
             {/* 新規タグ作成ボタン */}
             <Pressable style={styles.createButton} onPress={onCreateTag}>
               <Feather name="plus" size={18} color="#2563EB" />
-              <Text style={styles.createButtonText}>{t("record.tag.createNewButton")}</Text>
+              <Text style={styles.createButtonText}>{t("forms.tag.createNewButton")}</Text>
             </Pressable>
           </ScrollView>
 
           {/* フッター */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              {t("record.tag.selectedCount", { count: selectedTags.length })}
+              {t("forms.tag.selectedCount", { count: selectedTags.length })}
             </Text>
             <Pressable style={styles.doneButton} onPress={onClose}>
-              <Text style={styles.doneButtonText}>{t("record.tag.doneButton")}</Text>
+              <Text style={styles.doneButtonText}>{t("forms.tag.doneButton")}</Text>
             </Pressable>
           </View>
         </View>

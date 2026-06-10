@@ -351,7 +351,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   // メンバー削除処理
   const _handleRemoveMember = (member: TeamMembershipWithUser) => {
     const memberName = member.users.name || t("teams.mobile.fallbackMemberName");
-    const confirmMessage = `${memberName}をチームから削除しますか？\nこの操作は取り消せません。`;
+    const confirmMessage = t("teams.mobile.memberRemoveConfirm", { name: memberName });
 
     if (Platform.OS === "web") {
       const confirmed = window.confirm(confirmMessage);

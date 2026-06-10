@@ -56,7 +56,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   const handleSave = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      Alert.alert(t("common.alertErrorTitle"), t("record.tag.errorNameRequired"));
+      Alert.alert(t("common.alertErrorTitle"), t("forms.tag.errorNameRequired"));
       return;
     }
 
@@ -68,7 +68,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
       console.error("タグ保存エラー:", error);
       Alert.alert(
         t("common.alertErrorTitle"),
-        error instanceof Error ? error.message : t("record.tag.errorSaveFailed"),
+        error instanceof Error ? error.message : t("forms.tag.errorSaveFailed"),
       );
     } finally {
       setIsSaving(false);
@@ -79,12 +79,12 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
     if (!tag || !onDelete) return;
 
     Alert.alert(
-      t("record.tag.deleteConfirmTitle"),
-      t("record.tag.deleteConfirmMessage", { name: tag.name }),
+      t("forms.tag.deleteConfirmTitle"),
+      t("forms.tag.deleteConfirmMessage", { name: tag.name }),
       [
         { text: t("common.cancel"), style: "cancel" },
         {
-          text: t("record.tag.actionDelete"),
+          text: t("forms.tag.actionDelete"),
           style: "destructive",
           onPress: async () => {
             setIsDeleting(true);
@@ -95,7 +95,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
               console.error("タグ削除エラー:", error);
               Alert.alert(
                 t("common.alertErrorTitle"),
-                error instanceof Error ? error.message : t("record.tag.errorDeleteFailed"),
+                error instanceof Error ? error.message : t("forms.tag.errorDeleteFailed"),
               );
             } finally {
               setIsDeleting(false);
@@ -119,7 +119,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
         {/* ヘッダー */}
         <View style={styles.header}>
           <Text style={styles.title}>
-            {isEditMode ? t("record.tag.editTagTitle") : t("record.tag.newTagTitle")}
+            {isEditMode ? t("forms.tag.editTagTitle") : t("forms.tag.newTagTitle")}
           </Text>
           <Pressable
             style={styles.closeButton}
@@ -134,12 +134,12 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
         <View style={styles.content}>
           {/* タグ名入力 */}
           <View style={styles.field}>
-            <Text style={styles.label}>{t("record.tag.nameLabel")}</Text>
+            <Text style={styles.label}>{t("forms.tag.nameLabel")}</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder={t("record.tag.namePlaceholderExample")}
+              placeholder={t("forms.tag.namePlaceholderExample")}
               placeholderTextColor="#9CA3AF"
               maxLength={20}
               editable={!isLoading}
@@ -149,7 +149,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
 
           {/* カラー選択 */}
           <View style={styles.field}>
-            <Text style={styles.label}>{t("record.tag.colorLabel")}</Text>
+            <Text style={styles.label}>{t("forms.tag.colorLabel")}</Text>
             <View style={styles.colorGrid}>
               {PRESET_TAG_COLORS.map((presetColor) => (
                 <Pressable
@@ -170,11 +170,11 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
 
           {/* プレビュー */}
           <View style={styles.field}>
-            <Text style={styles.label}>{t("record.tag.previewLabel")}</Text>
+            <Text style={styles.label}>{t("forms.tag.previewLabel")}</Text>
             <View style={styles.previewContainer}>
               <View style={[styles.previewTag, { backgroundColor: color }]}>
                 <Text style={styles.previewTagText}>
-                  {name.trim() || t("record.tag.previewDefault")}
+                  {name.trim() || t("forms.tag.previewDefault")}
                 </Text>
               </View>
             </View>
@@ -190,7 +190,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
               ) : (
                 <>
                   <Feather name="trash-2" size={18} color="#DC2626" />
-                  <Text style={styles.deleteButtonText}>{t("record.tag.actionDelete")}</Text>
+                  <Text style={styles.deleteButtonText}>{t("forms.tag.actionDelete")}</Text>
                 </>
               )}
             </Pressable>

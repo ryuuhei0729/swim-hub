@@ -24,6 +24,7 @@ import { EntryAPI } from "@apps/shared/api/entries";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
 import { formatTime } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
 import { parseTime } from "@apps/shared/utils/time";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import type { MainStackParamList } from "@/navigation/types";
@@ -378,7 +379,8 @@ export const EntryLogFormScreen: React.FC = () => {
           const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum));
           if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
             const styleName =
-              styles.find((s) => s.id === styleIdNum)?.name_jp || t("recordMobile.unknownValue");
+              localizedStyleName(styles.find((s) => s.id === styleIdNum), t) ||
+              t("recordMobile.unknownValue");
             throw new Error(t("competition.entry.duplicateStyle", { styleName }));
           }
         }
@@ -428,7 +430,7 @@ export const EntryLogFormScreen: React.FC = () => {
       if (style && entry) {
         createdEntriesList.push({
           styleId: entry.style_id,
-          styleName: style.name_jp,
+          styleName: localizedStyleName(style, t),
           entryTime: entry.entry_time ?? undefined,
         });
       }
@@ -612,8 +614,10 @@ export const EntryLogFormScreen: React.FC = () => {
                   ]}
                 >
                   {entry.styleId
-                    ? swimStyles.find((s) => s.id.toString() === entry.styleId)?.name_jp ||
-                      t("competition.entry.selectStyle")
+                    ? localizedStyleName(
+                        swimStyles.find((s) => s.id.toString() === entry.styleId),
+                        t,
+                      ) || t("competition.entry.selectStyle")
                     : t("competition.entry.selectStyle")}
                 </Text>
                 <Feather name="chevron-down" size={20} color="#6B7280" />
@@ -705,7 +709,7 @@ export const EntryLogFormScreen: React.FC = () => {
                         isSelected && styles.dropdownOptionTextSelected,
                       ]}
                     >
-                      {style.name_jp}
+                      {localizedStyleName(style, t)}
                     </Text>
                     {isSelected && <Feather name="check" size={16} color="#2563EB" />}
                   </Pressable>

@@ -110,10 +110,10 @@ export const SettingsScreen: React.FC = () => {
       >
         {/* サブスクリプション管理セクション */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>サブスクリプション</Text>
+          <Text style={styles.sectionTitle}>{t("settings.mobile.subscriptionSectionTitle")}</Text>
           <View style={styles.sectionContent}>
             <View style={styles.planRow}>
-              <Text style={styles.planLabel}>現在のプラン</Text>
+              <Text style={styles.planLabel}>{t("settings.mobile.currentPlanLabel")}</Text>
               <View
                 style={[
                   styles.planBadge,
@@ -132,13 +132,16 @@ export const SettingsScreen: React.FC = () => {
             </View>
             {subscription?.status === "trialing" && subscription.trialEnd && (
               <Text style={styles.subscriptionNote}>
-                トライアル期間: {new Date(subscription.trialEnd).toLocaleDateString("ja-JP")} まで
+                {t("settings.mobile.trialPeriodUntil", {
+                  date: new Date(subscription.trialEnd).toLocaleDateString(),
+                })}
               </Text>
             )}
             {subscription?.cancelAtPeriodEnd && subscription.premiumExpiresAt && (
               <Text style={styles.subscriptionNote}>
-                {new Date(subscription.premiumExpiresAt).toLocaleDateString("ja-JP")}{" "}
-                に解約予定
+                {t("settings.mobile.cancelScheduledOn", {
+                  date: new Date(subscription.premiumExpiresAt).toLocaleDateString(),
+                })}
               </Text>
             )}
             {!isPremium && (
@@ -148,7 +151,7 @@ export const SettingsScreen: React.FC = () => {
                 accessibilityRole="button"
                 accessibilityLabel={t("settings.mobile.upgradeAria")}
               >
-                <Text style={styles.upgradeButtonText}>Premium にアップグレード</Text>
+                <Text style={styles.upgradeButtonText}>{t("settings.mobile.upgradeButton")}</Text>
               </Pressable>
             )}
 
@@ -163,7 +166,7 @@ export const SettingsScreen: React.FC = () => {
               {isRestoring ? (
                 <ActivityIndicator color="#2563EB" size="small" />
               ) : (
-                <Text style={styles.restoreButtonText}>購入を復元する</Text>
+                <Text style={styles.restoreButtonText}>{t("settings.mobile.restoreButton")}</Text>
               )}
             </Pressable>
 
@@ -174,7 +177,7 @@ export const SettingsScreen: React.FC = () => {
               accessibilityRole="link"
               accessibilityLabel={t("settings.mobile.manageSubAria")}
             >
-              <Text style={styles.manageSubText}>サブスクリプションを管理</Text>
+              <Text style={styles.manageSubText}>{t("settings.mobile.manageSubButton")}</Text>
             </Pressable>
           </View>
         </View>
@@ -200,14 +203,14 @@ export const SettingsScreen: React.FC = () => {
             style={styles.legalLink}
             onPress={() => Linking.openURL("https://swim-hub.app/terms")}
           >
-            利用規約
+            {t("settings.mobile.termsLink")}
           </Text>
           <Text style={styles.legalDivider}> | </Text>
           <Text
             style={styles.legalLink}
             onPress={() => Linking.openURL("https://swim-hub.app/privacy")}
           >
-            プライバシーポリシー
+            {t("settings.mobile.privacyLink")}
           </Text>
         </View>
 

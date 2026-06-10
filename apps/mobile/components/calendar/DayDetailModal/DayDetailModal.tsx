@@ -57,21 +57,21 @@ const getEntryColor = (type: CalendarItem["type"]): string => {
 const getEntryTypeLabelKey = (type: CalendarItem["type"]): string => {
   switch (type) {
     case "practice":
-      return "dashboard.mobile.dayDetail.entryTypeLabel.practice";
+      return "dashboard.dayDetail.entryTypeLabel.practice";
     case "team_practice":
-      return "dashboard.mobile.dayDetail.entryTypeLabel.teamPractice";
+      return "dashboard.dayDetail.entryTypeLabel.teamPractice";
     case "practice_log":
-      return "dashboard.mobile.dayDetail.entryTypeLabel.practiceLog";
+      return "dashboard.dayDetail.entryTypeLabel.practiceLog";
     case "competition":
-      return "dashboard.mobile.dayDetail.entryTypeLabel.competition";
+      return "dashboard.dayDetail.entryTypeLabel.competition";
     case "team_competition":
-      return "dashboard.mobile.dayDetail.entryTypeLabel.teamCompetition";
+      return "dashboard.dayDetail.entryTypeLabel.teamCompetition";
     case "entry":
-      return "dashboard.mobile.dayDetail.entryTypeLabel.entry";
+      return "dashboard.dayDetail.entryTypeLabel.entry";
     case "record":
-      return "dashboard.mobile.dayDetail.entryTypeLabel.record";
+      return "dashboard.dayDetail.entryTypeLabel.record";
     default:
-      return "dashboard.mobile.dayDetail.entryTypeLabel.other";
+      return "dashboard.dayDetail.entryTypeLabel.other";
   }
 };
 
@@ -214,7 +214,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
           <View style={modalContentStyle}>
             {/* ヘッダー */}
             <View style={styles.header}>
-              <Text style={styles.title}>{formattedDate}{t("dashboard.mobile.dayDetail.headerTitleSuffix")}</Text>
+              <Text style={styles.title}>{formattedDate}{t("dashboard.dayDetail.headerTitleSuffix")}</Text>
               <Pressable style={styles.closeButton} onPress={onClose}>
                 <Feather name="x" size={24} color="#6B7280" />
               </Pressable>
@@ -239,7 +239,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           color="#3B82F6"
                           style={styles.addButtonCardIcon}
                         />
-                        <Text style={styles.addButtonCardText}>{t("dashboard.mobile.dayDetail.addRecord")}</Text>
+                        <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addRecord")}</Text>
                       </Pressable>
                     )}
                     {onAddPractice && (
@@ -256,7 +256,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           color="#10B981"
                           style={styles.addButtonCardIcon}
                         />
-                        <Text style={styles.addButtonCardText}>{t("dashboard.mobile.dayDetail.addPractice")}</Text>
+                        <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addPractice")}</Text>
                       </Pressable>
                     )}
                   </View>
@@ -441,7 +441,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
                   {/* 記録追加セクション */}
                   <View style={styles.addRecordSection}>
-                    <Text style={styles.addRecordSectionTitle}>{t("dashboard.mobile.dayDetail.addSection")}</Text>
+                    <Text style={styles.addRecordSectionTitle}>{t("dashboard.dayDetail.addSection")}</Text>
                     <View style={styles.addRecordButtonContainer}>
                       {onAddRecord && (
                         <Pressable
@@ -452,7 +452,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           }}
                         >
                           <Feather name="droplet" size={20} color="#3B82F6" />
-                          <Text style={styles.addRecordButtonText}>{t("dashboard.mobile.dayDetail.addRecordShort")}</Text>
+                          <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addRecordShort")}</Text>
                         </Pressable>
                       )}
                       {onAddPractice && (
@@ -464,7 +464,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           }}
                         >
                           <Feather name="activity" size={20} color="#10B981" />
-                          <Text style={styles.addRecordButtonText}>{t("dashboard.mobile.dayDetail.addPracticeShort")}</Text>
+                          <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addPracticeShort")}</Text>
                         </Pressable>
                       )}
                     </View>
@@ -472,7 +472,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                 </>
               )}
             </ScrollView>
-            {isDeleting && <LoadingSpinner fullScreen message={t("dashboard.mobile.dayDetail.deletingMessage")} />}
+            {isDeleting && <LoadingSpinner fullScreen message={t("dashboard.dayDetail.deletingMessage")} />}
           </View>
         </SafeAreaView>
       </View>

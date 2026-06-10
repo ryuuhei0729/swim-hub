@@ -21,7 +21,7 @@ interface PracticeLogItemProps {
  */
 export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log }) => {
   const { t } = useTranslation();
-  const styleDisplay = getStyleLabel(log.style);
+  const styleDisplay = getStyleLabel(log.style, t);
   const tags = log.practice_log_tags?.map((lt) => lt.practice_tags) || [];
   const allTimes = useMemo(
     () =>
@@ -94,12 +94,12 @@ export const PracticeLogItem: React.FC<PracticeLogItemProps> = React.memo(({ log
           <Text style={styles.contentValue}>{log.distance}</Text>
           <Text style={styles.contentUnit}>m × </Text>
           <Text style={styles.contentValue}>{log.rep_count}</Text>
-          <Text style={styles.contentUnit}>本</Text>
+          <Text style={styles.contentUnit}>{t("common.units.reps")}</Text>
           {log.set_count > 1 && (
             <>
               <Text style={styles.contentUnit}> × </Text>
               <Text style={styles.contentValue}>{log.set_count}</Text>
-              <Text style={styles.contentUnit}>セット</Text>
+              <Text style={styles.contentUnit}>{t("common.units.sets")}</Text>
             </>
           )}
           <Text style={styles.contentSpacer}>{"  "}</Text>

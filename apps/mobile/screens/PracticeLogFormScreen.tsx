@@ -626,7 +626,7 @@ export const PracticeLogFormScreen: React.FC = () => {
                           menu.style === style.value && styles.pickerOptionTextSelected,
                         ]}
                       >
-                        {style.label}
+                        {t(`practice.styleAbbrev.${style.value}`)}
                       </Text>
                     </Pressable>
                   ))}

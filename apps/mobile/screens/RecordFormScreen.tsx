@@ -36,6 +36,7 @@ import { VideoUploader } from "@/components/shared/VideoUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
+import { localizedStyleName } from "@/utils/styleName";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -736,8 +737,8 @@ export const RecordFormScreen: React.FC = () => {
   const selectedStyleName = useMemo(() => {
     if (styleId === null || styleId === undefined) return null;
     const style = styleList.find((s) => s.id === styleId);
-    return style ? `${style.name_jp}` : null;
-  }, [styleId, styleList]);
+    return style ? localizedStyleName(style, t) : null;
+  }, [styleId, styleList, t]);
 
   // ローディング状態
   if (loadingRecord || loadingStyles) {
@@ -1164,7 +1165,7 @@ export const RecordFormScreen: React.FC = () => {
                         isSelected && styles.dropdownOptionTextSelected,
                       ]}
                     >
-                      {style.name_jp}
+                      {localizedStyleName(style, t)}
                     </Text>
                     {isSelected && <Feather name="check" size={16} color="#2563EB" />}
                   </Pressable>

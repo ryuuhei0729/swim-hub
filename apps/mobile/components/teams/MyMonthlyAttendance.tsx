@@ -440,7 +440,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
 
   // 月名を取得
   const getMonthLabel = (year: number, month: number) => {
-    return `${year}年${month}月`;
+    return t("common.yearMonth", { year, month });
   };
 
   // 月のステータスバッジ
@@ -476,19 +476,19 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       case "open":
         return (
           <View style={styles.statusBadgeOpen}>
-            <Text style={styles.statusBadgeTextOpen}>提出受付中</Text>
+            <Text style={styles.statusBadgeTextOpen}>{t("teams.mobile.monthlyAttendance.statusOpen")}</Text>
           </View>
         );
       case "closed":
         return (
           <View style={styles.statusBadgeClosed}>
-            <Text style={styles.statusBadgeTextClosed}>提出締切</Text>
+            <Text style={styles.statusBadgeTextClosed}>{t("teams.mobile.monthlyAttendance.statusClosed")}</Text>
           </View>
         );
       default:
         return (
           <View style={styles.statusBadgeDefault}>
-            <Text style={styles.statusBadgeTextDefault}>未設定</Text>
+            <Text style={styles.statusBadgeTextDefault}>{t("common.notSet")}</Text>
           </View>
         );
     }
@@ -498,7 +498,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>読み込み中...</Text>
+          <Text style={styles.loadingText}>{t("common.loading")}</Text>
         </View>
       </View>
     );
@@ -520,7 +520,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         {/* 月リスト表示 */}
         {monthList.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>表示できる月がありません</Text>
+            <Text style={styles.emptyText}>{t("teams.mobile.monthlyAttendance.noMonths")}</Text>
           </View>
         ) : (
           <View style={styles.monthListContainer}>
@@ -562,7 +562,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
           <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalScrollContent}>
             {loading ? (
               <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>読み込み中...</Text>
+                <Text style={styles.loadingText}>{t("common.loading")}</Text>
               </View>
             ) : error ? (
               <View style={styles.errorContainer}>
@@ -573,7 +573,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                 {/* イベント一覧 */}
                 {events.length === 0 ? (
                   <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>この月にはイベントがありません</Text>
+                    <Text style={styles.emptyText}>{t("teams.mobile.monthlyAttendance.noEvents")}</Text>
                   </View>
                 ) : (
                   <>

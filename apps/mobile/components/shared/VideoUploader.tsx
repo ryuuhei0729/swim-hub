@@ -229,11 +229,11 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
       <View style={styles.selectedContainer}>
         <View style={styles.selectedBadge}>
           <Feather name="check-circle" size={16} color="#059669" />
-          <Text style={styles.selectedText}>動画を選択済み（保存時にアップロードされます）</Text>
+          <Text style={styles.selectedText}>{t("common.upload.videoSelected")}</Text>
         </View>
         <Pressable style={styles.removeButton} onPress={handleDelete}>
           <Feather name="x" size={14} color="#DC2626" />
-          <Text style={styles.removeText}>取り消し</Text>
+          <Text style={styles.removeText}>{t("common.upload.videoSelectedRemove")}</Text>
         </Pressable>
       </View>
     );
@@ -244,7 +244,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
     return (
       <View style={styles.progressContainer}>
         <ActivityIndicator size="small" color="#6366F1" />
-        <Text style={styles.progressText}>アップロード中... {Math.round(progress)}%</Text>
+        <Text style={styles.progressText}>{t("common.upload.videoUploading", { progress: Math.round(progress) })}</Text>
         <View style={styles.progressBarBg}>
           <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
         </View>
@@ -261,11 +261,11 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
           <View style={styles.actionRow}>
             <Pressable style={styles.closeButton} onPress={() => setShowPlayer(false)}>
               <Feather name="x" size={16} color="#6B7280" />
-              <Text style={styles.closeText}>閉じる</Text>
+              <Text style={styles.closeText}>{t("common.upload.videoClosePlayer")}</Text>
             </Pressable>
             <Pressable style={styles.deleteButton} onPress={handleDelete}>
               <Feather name="trash-2" size={16} color="#DC2626" />
-              <Text style={styles.deleteText}>削除</Text>
+              <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
             </Pressable>
           </View>
         </View>
@@ -277,17 +277,17 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         <Pressable style={styles.thumbnailContainer} onPress={() => setShowPlayer(true)}>
           <View style={styles.thumbnailPlaceholder}>
             <Feather name="play-circle" size={32} color="#FFFFFF" />
-            <Text style={styles.thumbnailText}>タップして再生</Text>
+            <Text style={styles.thumbnailText}>{t("common.upload.videoTapToPlay")}</Text>
           </View>
         </Pressable>
         <View style={styles.actionRow}>
           <Pressable style={styles.replaceButton} onPress={handleSelectSource}>
             <Feather name="refresh-cw" size={14} color="#6366F1" />
-            <Text style={styles.replaceText}>差し替え</Text>
+            <Text style={styles.replaceText}>{t("common.upload.videoReplace")}</Text>
           </Pressable>
           <Pressable style={styles.deleteButton} onPress={handleDelete}>
             <Feather name="trash-2" size={14} color="#DC2626" />
-            <Text style={styles.deleteText}>削除</Text>
+            <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
           </Pressable>
         </View>
       </View>
@@ -300,7 +300,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
       {error && <Text style={styles.errorText}>{error}</Text>}
       <Pressable style={styles.addButton} onPress={handleSelectSource}>
         <Feather name="video" size={20} color="#6B7280" />
-        <Text style={styles.addButtonText}>動画を追加</Text>
+        <Text style={styles.addButtonText}>{t("common.upload.videoAddTitle")}</Text>
       </Pressable>
     </View>
   );

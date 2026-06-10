@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text } from "react-native";
+import { useTranslation } from "react-i18next";
 import { formatTime } from "@/utils/formatters";
 import { styles } from "../styles";
 import type { TimeTableProps } from "../types";
@@ -8,6 +9,7 @@ import type { TimeTableProps } from "../types";
  * タイムテーブルコンポーネント
  */
 export const TimeTable: React.FC<TimeTableProps> = ({ times, repCount, setCount }) => {
+  const { t } = useTranslation();
   // セットごとの平均を計算
   const getSetAverage = (setNumber: number): number => {
     const setTimes = times.filter((t) => t.setNumber === setNumber && t.time > 0);
@@ -49,7 +51,7 @@ export const TimeTable: React.FC<TimeTableProps> = ({ times, repCount, setCount 
         <View style={styles.timeTableHeaderCell} />
         {Array.from({ length: setCount }, (_, i) => (
           <View key={i + 1} style={styles.timeTableHeaderCell}>
-            <Text style={styles.timeTableHeaderText}>{i + 1}セット目</Text>
+            <Text style={styles.timeTableHeaderText}>{t("practice.modal.setLabel", { n: i + 1 })}</Text>
           </View>
         ))}
       </View>
@@ -60,7 +62,7 @@ export const TimeTable: React.FC<TimeTableProps> = ({ times, repCount, setCount 
         return (
           <View key={repNumber} style={styles.timeTableRow}>
             <View style={styles.timeTableLabelCell}>
-              <Text style={styles.timeTableLabelText}>{repNumber}本目</Text>
+              <Text style={styles.timeTableLabelText}>{t("practice.modal.repLabel", { n: repNumber })}</Text>
             </View>
             {Array.from({ length: setCount }, (_, setIndex) => {
               const setNumber = setIndex + 1;
@@ -85,7 +87,7 @@ export const TimeTable: React.FC<TimeTableProps> = ({ times, repCount, setCount 
       {/* セット平均 */}
       <View style={[styles.timeTableRow, styles.timeTableAverageRow]}>
         <View style={styles.timeTableLabelCell}>
-          <Text style={styles.timeTableAverageLabel}>セット平均</Text>
+          <Text style={styles.timeTableAverageLabel}>{t("practice.modal.setAverage")}</Text>
         </View>
         {Array.from({ length: setCount }, (_, setIndex) => {
           const setNumber = setIndex + 1;
@@ -103,7 +105,7 @@ export const TimeTable: React.FC<TimeTableProps> = ({ times, repCount, setCount 
       {/* 全体平均 */}
       <View style={[styles.timeTableRow, styles.timeTableOverallRow]}>
         <View style={styles.timeTableLabelCell}>
-          <Text style={styles.timeTableOverallLabel}>全体平均</Text>
+          <Text style={styles.timeTableOverallLabel}>{t("practice.modal.overallAverage")}</Text>
         </View>
         <View style={[styles.timeTableCell, { flex: setCount }]}>
           <Text style={styles.timeTableOverallValue}>
@@ -115,7 +117,7 @@ export const TimeTable: React.FC<TimeTableProps> = ({ times, repCount, setCount 
       {/* 全体最速 */}
       <View style={[styles.timeTableRow, styles.timeTableOverallRow]}>
         <View style={styles.timeTableLabelCell}>
-          <Text style={styles.timeTableOverallLabel}>全体最速</Text>
+          <Text style={styles.timeTableOverallLabel}>{t("practice.modal.overallFastest")}</Text>
         </View>
         <View style={[styles.timeTableCell, { flex: setCount }]}>
           <Text style={styles.timeTableOverallValue}>

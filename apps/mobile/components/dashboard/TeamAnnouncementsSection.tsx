@@ -118,8 +118,10 @@ const TeamCard: React.FC<TeamCardProps> = ({
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.teamName}>{teamName} のお知らせ</Text>
-        {membership.role === "admin" && <Text style={styles.adminBadge}>管理者</Text>}
+        <Text style={styles.teamName}>{teamName}{t("dashboard.announcements.title")}</Text>
+        {membership.role === "admin" && (
+          <Text style={styles.adminBadge}>{t("dashboard.announcements.adminRole")}</Text>
+        )}
       </View>
 
       {/* 出欠未回答 */}
@@ -129,8 +131,7 @@ const TeamCard: React.FC<TeamCardProps> = ({
           onPress={() => navigation.navigate("TeamDetail", { teamId })}
         >
           <Text style={styles.notificationText}>
-            直近1ヶ月で出欠が未回答の練習・大会があります。（
-            {unansweredAttendances.length}件）
+            {t("dashboard.announcements.unansweredAttendance", { count: unansweredAttendances.length })}
           </Text>
         </Pressable>
       )}
@@ -138,7 +139,7 @@ const TeamCard: React.FC<TeamCardProps> = ({
       {/* エントリー未提出 */}
       {unsubmittedEntries.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>エントリー未提出 ({unsubmittedEntries.length}件)</Text>
+          <Text style={styles.sectionTitle}>{t("dashboard.announcements.unsubmittedEntries", { count: unsubmittedEntries.length })}</Text>
           {unsubmittedEntries.map((entry) => (
             <Pressable
               key={entry.competitionId}

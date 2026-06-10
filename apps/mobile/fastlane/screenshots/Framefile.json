@@ -1,0 +1,17 @@
+{
+  "device_frame_version": "latest",
+  "default": {
+    "title": {
+      "color": "#111827"
+    },
+    "keyword": {
+      "color": "#2563EB"
+    },
+    "padding": 50,
+    "font_scale_factor": 0.1,
+    "show_complete_frame": false,
+    "stack_title": false,
+    "title_below_image": true
+  },
+  "data": []
+}

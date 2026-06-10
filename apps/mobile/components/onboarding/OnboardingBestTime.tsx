@@ -1,126 +1,24 @@
 import React, { useState, useCallback, useMemo, useRef } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  ScrollView,
-  Modal,
-  FlatList,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { RecordAPI } from "@apps/shared/api/records";
 import { parseTime } from "@apps/shared/utils/time";
-
-// =============================================================================
-// 型定義
-// =============================================================================
-
-interface BestTimeEntry {
-  key: string;
-  styleId: number;
-  poolType: 0 | 1; // 0: 短水路, 1: 長水路
-  time: string;
-}
+import {
+  BestTimeEntryRow,
+  StylePickerModal,
+  getStyleOption,
+  formatStyleDisplay,
+  genKey,
+  getDuplicateKeys,
+  canSave,
+  type BestTimeEntry,
+} from "@/components/besttime";
 
 export interface OnboardingBestTimeProps {
   onComplete: () => Promise<void>;
   onBack: () => void;
-}
-
-type StyleKey = "Fr" | "Br" | "Ba" | "Fly" | "IM";
-
-interface StyleOption {
-  /** バックエンド (DB) 上の styleId */
-  id: number;
-  /** 距離 (メートル) */
-  distance: number;
-  /** `practice.styles.*` の i18n キー */
-  styleKey: StyleKey;
-}
-
-// =============================================================================
-// 種目マスター (Web版 Step3BestTime.tsx から複製)
-// =============================================================================
-// id は DB 上の styleId。表示は `${distance}m ${t("practice.styles." + styleKey)}`。
-
-const STYLES: StyleOption[] = [
-  { id: 1, distance: 25, styleKey: "Fr" },
-  { id: 2, distance: 50, styleKey: "Fr" },
-  { id: 3, distance: 100, styleKey: "Fr" },
-  { id: 4, distance: 200, styleKey: "Fr" },
-  { id: 5, distance: 400, styleKey: "Fr" },
-  { id: 6, distance: 800, styleKey: "Fr" },
-  { id: 7, distance: 1500, styleKey: "Fr" },
-  { id: 8, distance: 25, styleKey: "Br" },
-  { id: 9, distance: 50, styleKey: "Br" },
-  { id: 10, distance: 100, styleKey: "Br" },
-  { id: 11, distance: 200, styleKey: "Br" },
-  { id: 12, distance: 25, styleKey: "Ba" },
-  { id: 13, distance: 50, styleKey: "Ba" },
-  { id: 14, distance: 100, styleKey: "Ba" },
-  { id: 15, distance: 200, styleKey: "Ba" },
-  { id: 16, distance: 25, styleKey: "Fly" },
-  { id: 17, distance: 50, styleKey: "Fly" },
-  { id: 18, distance: 100, styleKey: "Fly" },
-  { id: 19, distance: 200, styleKey: "Fly" },
-  { id: 20, distance: 100, styleKey: "IM" },
-  { id: 21, distance: 200, styleKey: "IM" },
-  { id: 22, distance: 400, styleKey: "IM" },
-];
-
-/**
- * `StyleOption` を locale-aware な表示文字列に変換。
- * 例: ja → "50m 自由形", en → "50m Freestyle"
- */
-function formatStyleDisplay(style: StyleOption, t: (key: string) => string): string {
-  return `${style.distance}m ${t(`practice.styles.${style.styleKey}`)}`;
-}
-
-function genKey(): string {
-  return `bt-${Math.random().toString(36).slice(2)}-${Date.now()}`;
-}
-
-// =============================================================================
-// ロジック関数
-// =============================================================================
-
-function hasDuplicates(entries: BestTimeEntry[]): boolean {
-  const seen = new Set<string>();
-  for (const e of entries) {
-    // NOTE: is_relaying は固定値 (false) のため重複判定から除外
-    const composite = `${e.styleId}-${e.poolType}`;
-    if (seen.has(composite)) return true;
-    seen.add(composite);
-  }
-  return false;
-}
-
-function getDuplicateKeys(entries: BestTimeEntry[]): Set<string> {
-  const keys = new Set<string>();
-  const seen = new Map<string, string>();
-  for (const e of entries) {
-    const composite = `${e.styleId}-${e.poolType}`;
-    const existing = seen.get(composite);
-    if (existing) {
-      keys.add(existing);
-      keys.add(e.key);
-    } else {
-      seen.set(composite, e.key);
-    }
-  }
-  return keys;
-}
-
-function canSave(entries: BestTimeEntry[]): boolean {
-  if (entries.length === 0) return false;
-  if (hasDuplicates(entries)) return false;
-  return entries.every((e) => parseTime(e.time) > 0);
 }
 
 // =============================================================================
@@ -154,6 +52,8 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
         styleId,
         poolType: 1,
         time: "",
+        note: "",
+        isRelaying: false,
       },
     ]);
     setShowStyleModal(false);
@@ -244,10 +144,10 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
         keyboardShouldPersistTaps="handled"
       >
         {entries.map((entry) => {
-          const styleOption = STYLES.find((s) => s.id === entry.styleId);
+          const styleOption = getStyleOption(entry.styleId);
           const styleName = styleOption ? formatStyleDisplay(styleOption, t) : "";
           return (
-            <EntryRow
+            <BestTimeEntryRow
               key={entry.key}
               entry={entry}
               styleName={styleName}
@@ -262,7 +162,11 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
 
         {/* 種目追加ボタン */}
         <Pressable
-          style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed, saving && styles.addButtonDisabled]}
+          style={({ pressed }) => [
+            styles.addButton,
+            pressed && styles.addButtonPressed,
+            saving && styles.addButtonDisabled,
+          ]}
           onPress={() => setShowStyleModal(true)}
           disabled={saving}
           accessibilityRole="button"
@@ -331,138 +235,12 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
       </View>
 
       {/* 種目選択モーダル */}
-      <Modal
+      <StylePickerModal
         visible={showStyleModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowStyleModal(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowStyleModal(false)}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t("onboarding.step3.styleModalTitle")}</Text>
-              <Pressable
-                onPress={() => setShowStyleModal(false)}
-                accessibilityRole="button"
-                accessibilityLabel={t("common.close")}
-              >
-                <Feather name="x" size={20} color="#374151" />
-              </Pressable>
-            </View>
-            <FlatList
-              data={STYLES}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => {
-                const label = formatStyleDisplay(item, t);
-                return (
-                  <Pressable
-                    style={({ pressed }) => [styles.modalItem, pressed && styles.modalItemPressed]}
-                    onPress={() => addEntry(item.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={label}
-                  >
-                    <Text style={styles.modalItemText}>{label}</Text>
-                  </Pressable>
-                );
-              }}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        </Pressable>
-      </Modal>
-    </View>
-  );
-};
-
-// =============================================================================
-// エントリー行コンポーネント
-// =============================================================================
-
-interface EntryRowProps {
-  entry: BestTimeEntry;
-  styleName: string;
-  onUpdate: (key: string, patch: Partial<BestTimeEntry>) => void;
-  onRemove: (key: string) => void;
-  disabled: boolean;
-  isDuplicate: boolean;
-  t: TFunction;
-}
-
-const EntryRow: React.FC<EntryRowProps> = ({
-  entry,
-  styleName,
-  onUpdate,
-  onRemove,
-  disabled,
-  isDuplicate,
-  t,
-}) => {
-  return (
-    <View style={[entryStyles.card, isDuplicate && entryStyles.cardDuplicate]}>
-      {/* ヘッダー: 種目名 + 削除 */}
-      <View style={entryStyles.cardHeader}>
-        <Text style={entryStyles.styleName}>{styleName}</Text>
-        <Pressable
-          onPress={() => onRemove(entry.key)}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel={t("onboarding.step3.removeStyleAria", { styleName })}
-          style={({ pressed }) => [entryStyles.removeButton, pressed && entryStyles.removeButtonPressed]}
-        >
-          <Feather name="x" size={16} color={disabled ? "#D1D5DB" : "#9CA3AF"} />
-        </Pressable>
-      </View>
-
-      {/* 水路種別トグル + タイム入力 */}
-      <View style={entryStyles.inputRow}>
-        {/* 短水路/長水路 トグル */}
-        <View style={entryStyles.poolToggle}>
-          <Pressable
-            style={[entryStyles.poolButton, entry.poolType === 0 && entryStyles.poolButtonActive]}
-            onPress={() => onUpdate(entry.key, { poolType: 0 })}
-            disabled={disabled}
-            accessibilityRole="button"
-            accessibilityLabel={t("common.poolTypeShort")}
-          >
-            <Text
-              style={[
-                entryStyles.poolButtonText,
-                entry.poolType === 0 && entryStyles.poolButtonTextActive,
-              ]}
-            >
-              {t("common.poolTypeShort")}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[entryStyles.poolButton, entry.poolType === 1 && entryStyles.poolButtonActive]}
-            onPress={() => onUpdate(entry.key, { poolType: 1 })}
-            disabled={disabled}
-            accessibilityRole="button"
-            accessibilityLabel={t("common.poolTypeLong")}
-          >
-            <Text
-              style={[
-                entryStyles.poolButtonText,
-                entry.poolType === 1 && entryStyles.poolButtonTextActive,
-              ]}
-            >
-              {t("common.poolTypeLong")}
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* タイム入力 */}
-        <TextInput
-          style={[entryStyles.timeInput, disabled && entryStyles.timeInputDisabled]}
-          value={entry.time}
-          onChangeText={(text) => onUpdate(entry.key, { time: text })}
-          placeholder={t("onboarding.step3.timePlaceholder")}
-          placeholderTextColor="#9CA3AF"
-          keyboardType="numbers-and-punctuation"
-          editable={!disabled}
-          accessibilityLabel={t("onboarding.step3.timeAriaLabel", { styleName })}
-        />
-      </View>
+        onClose={() => setShowStyleModal(false)}
+        onSelect={addEntry}
+        t={t}
+      />
     </View>
   );
 };
@@ -470,83 +248,6 @@ const EntryRow: React.FC<EntryRowProps> = ({
 // =============================================================================
 // スタイル
 // =============================================================================
-
-const entryStyles = StyleSheet.create({
-  card: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    gap: 10,
-  },
-  cardDuplicate: {
-    borderColor: "#FCA5A5",
-    backgroundColor: "#FEF2F2",
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  styleName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-    flex: 1,
-  },
-  removeButton: {
-    padding: 4,
-  },
-  removeButtonPressed: {
-    opacity: 0.6,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  poolToggle: {
-    flexDirection: "row",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 6,
-    overflow: "hidden",
-  },
-  poolButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "#FFFFFF",
-  },
-  poolButtonActive: {
-    backgroundColor: "#2563EB",
-  },
-  poolButtonText: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  poolButtonTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  timeInput: {
-    flex: 1,
-    height: 36,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    fontSize: 14,
-    color: "#111827",
-    backgroundColor: "#FFFFFF",
-    fontVariant: ["tabular-nums"],
-  },
-  timeInputDisabled: {
-    backgroundColor: "#F3F4F6",
-    color: "#9CA3AF",
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -676,45 +377,5 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "600",
-  },
-  // モーダル
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 32,
-    maxHeight: "70%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  modalItem: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-  },
-  modalItemPressed: {
-    backgroundColor: "#F0F9FF",
-  },
-  modalItemText: {
-    fontSize: 15,
-    color: "#111827",
   },
 });

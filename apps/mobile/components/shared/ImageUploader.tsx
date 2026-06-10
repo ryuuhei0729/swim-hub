@@ -294,7 +294,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           <View key={`new-${index}`} style={styles.imageWrapper}>
             <Image source={{ uri: file.uri }} style={styles.image} contentFit="cover" />
             <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>新規</Text>
+              <Text style={styles.newBadgeText}>{t("common.imageUploader.newBadge")}</Text>
             </View>
             {!disabled && (
               <Pressable style={styles.removeButton} onPress={() => handleRemoveNew(index)}>
@@ -308,13 +308,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         {canAddMore && !disabled && (
           <Pressable style={styles.addButton} onPress={handleImageSelect}>
             <Feather name="plus" size={24} color="#6B7280" />
-            <Text style={styles.addButtonText}>追加</Text>
+            <Text style={styles.addButtonText}>{t("common.imageUploader.addButton")}</Text>
           </Pressable>
         )}
       </ScrollView>
 
       {currentImageCount >= maxImages && (
-        <Text style={styles.maxReachedText}>最大枚数に達しました</Text>
+        <Text style={styles.maxReachedText}>{t("common.imageUploader.maxReached")}</Text>
       )}
     </View>
   );

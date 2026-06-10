@@ -22,6 +22,7 @@ import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { RecordItem } from "@/components/records";
+import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import type { MainStackParamList } from "@/navigation/types";
@@ -303,7 +304,7 @@ export const RecordsScreen: React.FC = () => {
   const selectedStyleName = useMemo(() => {
     if (!filterStyleId) return t("recordMobile.filterAllStyles");
     const style = styleList.find((s) => s.id === filterStyleId);
-    return style?.name_jp || t("recordMobile.filterAllStyles");
+    return localizedStyleName(style, t) || t("recordMobile.filterAllStyles");
   }, [filterStyleId, styleList, t]);
 
   // 選択済み年度名を取得
@@ -452,7 +453,10 @@ export const RecordsScreen: React.FC = () => {
                     ]
                   : [
                       { id: "", label: t("recordMobile.filterAllStyles") },
-                      ...participatedStyles.map((s) => ({ id: s.id.toString(), label: s.name_jp })),
+                      ...participatedStyles.map((s) => ({
+                        id: s.id.toString(),
+                        label: localizedStyleName(s, t),
+                      })),
                     ]
               }
               keyExtractor={(item) => item.id.toString()}

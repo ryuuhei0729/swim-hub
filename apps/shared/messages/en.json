@@ -1,4 +1,32 @@
 {
+  "navigation": {
+    "mobile": {
+      "tabs": {
+        "home": "Home",
+        "practices": "Practices",
+        "competitions": "Competitions",
+        "teams": "Teams",
+        "myPage": "My Page"
+      },
+      "titles": {
+        "practiceDetail": "Practice details",
+        "practiceEdit": "Edit practice",
+        "practiceCreate": "New practice",
+        "practiceLogEdit": "Edit practice log",
+        "practiceLogCreate": "New practice log",
+        "practiceTimeInput": "Time entry",
+        "recordDetail": "Race details",
+        "recordEdit": "Edit race",
+        "recordCreate": "New race",
+        "competitionInfo": "Meet info",
+        "entryRegister": "Register entry",
+        "recordInput": "Enter results",
+        "teamDetail": "Team details",
+        "settings": "Settings",
+        "bulkBestTime": "Bulk best time entry"
+      }
+    }
+  },
   "metadata": {
     "title": "SwimHub - Swim records & training platform",
     "description": "Track practices, meets, and team management. A free swim records platform for athletes of all levels.",
@@ -23,6 +51,7 @@
     "cancel": "Cancel",
     "back": "Back",
     "close": "Close",
+    "ok": "OK",
     "submit": "Submit",
     "submitting": "Submitting...",
     "processing": "Processing...",
@@ -35,6 +64,47 @@
     "none": "None",
     "retry": "Retry",
     "copy": "Copy",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "new": "New",
+    "draft": "Draft",
+    "notSet": "Not set",
+    "yearMonth": "{year}-{month}",
+    "units": {
+      "items": "items",
+      "people": "people",
+      "reps": "reps",
+      "sets": "sets"
+    },
+    "app": {
+      "setupErrorTitle": "Setup error",
+      "supabaseConfigError": "Supabase is not configured correctly.\n\nPlease check the app settings.",
+      "supabaseClientNotInitialized": "Supabase client is not initialized",
+      "supabaseEnvNotSet": "Supabase environment variables are not set.\nPlease configure EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.",
+      "emailAlreadyRegistered": "This email is already registered.",
+      "urlParseFailed": "Failed to parse URL",
+      "bulkSyncFailedWithStatus": "Bulk sync failed ({status})",
+      "bulkSyncFailed": "Bulk sync failed",
+      "iosCalendarNotFound": "Calendar not found",
+      "iosEventCreateFailed": "Failed to create event",
+      "iosEventUpdateFailed": "Failed to update event",
+      "iosEventDeleteFailed": "Failed to delete event",
+      "defaultPracticeTitle": "Practice",
+      "defaultCompetitionTitle": "Meet"
+    },
+    "premiumBadge": {
+      "upgradeAction": "Upgrade"
+    },
+    "tag": {
+      "addTag": "Add tag"
+    },
+    "imageUploader": {
+      "newBadge": "New",
+      "addButton": "Add",
+      "maxReached": "Maximum number reached"
+    },
+    "offlineBanner": "📡 You are offline. Some features may be limited.",
     "aria": {
       "close": "Close",
       "previousImage": "Previous image",
@@ -72,6 +142,18 @@
       "avatarRemoveConfirm": "Delete profile picture?",
       "removeChoice": "Delete",
       "uploadFailed": "Upload failed",
+      "imageUploadFailedDetail": "Image upload failed: {detail}",
+      "imageUploadFailedSimple": "Image upload failed",
+      "imageDeleteFailedDetail": "Image deletion failed: {detail}",
+      "imageDeleteFailedSimple": "Image deletion failed",
+      "videoUploadUrlFailed": "Failed to fetch upload URL",
+      "videoReadFailed": "Failed to read video file: {uri}",
+      "videoReadHttpFailed": "Failed to read video file: HTTP {status} ({uri})",
+      "videoUploadHttpFailed": "Video upload failed: HTTP {status}{detail}",
+      "thumbnailUploadHttpFailed": "Thumbnail upload failed: HTTP {status}",
+      "videoDbUpdateFailed": "Failed to update database",
+      "videoSignedUrlFailed": "Failed to fetch signed URL",
+      "videoDeleteFailedSimple": "Failed to delete video",
       "sessionInvalid": "Your session is invalid. Please log in again.",
       "authNotFound": "Authentication info not found. Please log in again.",
       "videoSizeError": "Video size exceeds {maxMb}MB",
@@ -81,7 +163,14 @@
       "libraryOption": "Choose from library",
       "videoRemoveTitle": "Delete video",
       "videoRemoveConfirm": "Delete this video?",
-      "deleteFailed": "Deletion failed"
+      "deleteFailed": "Deletion failed",
+      "videoSelected": "Video selected (will upload on save)",
+      "videoSelectedRemove": "Cancel",
+      "videoUploading": "Uploading... {progress}%",
+      "videoClosePlayer": "Close",
+      "videoDelete": "Delete",
+      "videoTapToPlay": "Tap to play",
+      "videoReplace": "Replace"
     },
     "datePicker": {
       "placeholder": "Select date",
@@ -365,6 +454,45 @@
       "resetFailed": "Failed to send the password reset email.",
       "updateFailed": "Failed to update password."
     },
+    "supabaseErrors": {
+      "generic": "An authentication error occurred. Please try again.",
+      "genericWithDetail": "Authentication error: {detail}",
+      "cancelled": "Authentication was cancelled",
+      "invalidLoginCredentials": "Incorrect email or password",
+      "invalidCredentials": "Invalid credentials",
+      "emailNotConfirmed": "Email not confirmed. Please check your inbox.",
+      "userNotFound": "User not found",
+      "userAlreadyRegistered": "This email is already registered",
+      "emailAlreadyInUse": "This email is already in use",
+      "providerNotEnabled": "This auth provider is not enabled",
+      "oauthError": "An OAuth authentication error occurred",
+      "accessDenied": "Access denied",
+      "invalidGrant": "Authentication expired. Please try again.",
+      "invalidRequest": "Invalid request",
+      "unauthorizedClient": "Authentication not permitted",
+      "unsupportedGrantType": "Unsupported grant type",
+      "invalidToken": "Invalid auth token",
+      "tokenExpired": "Auth token expired",
+      "invalidRefreshToken": "Invalid refresh token",
+      "refreshTokenNotFound": "Refresh token not found",
+      "invalidIdToken": "Invalid ID token",
+      "idTokenExpired": "ID token expired",
+      "sessionNotFound": "Session not found. Please sign in again.",
+      "sessionExpired": "Session expired. Please sign in again.",
+      "invalidSession": "Invalid session",
+      "tooManyRequests": "Too many requests. Please wait a moment.",
+      "rateLimitExceeded": "Rate limit exceeded. Please wait a moment.",
+      "networkError": "A network error occurred. Check your connection.",
+      "connectionRefused": "Connection refused. Please try again later.",
+      "timeout": "The connection timed out. Please try again.",
+      "appleAuthFailed": "Apple authentication failed",
+      "appleSignInFailed": "Sign in with Apple failed",
+      "googleAuthFailed": "Google authentication failed",
+      "googleSignInFailed": "Sign in with Google failed",
+      "internalServerError": "A server error occurred. Please try again later.",
+      "serviceUnavailable": "Service temporarily unavailable. Please try again later.",
+      "badGateway": "There was a problem reaching the server"
+    },
     "mobile": {
       "oauthUrlGenerationFailed": "Failed to generate OAuth URL",
       "googleCalendarPermissionDenied": "Could not obtain Google Calendar access. Please try again.",
@@ -590,7 +718,13 @@
       "fieldStyle": "Style:",
       "fieldEntryTime": "Entry time:",
       "fieldMemo": "Note:",
-      "addCompetitionRecord": "Add race record"
+      "addCompetitionRecord": "Add race record",
+      "recordStyleLabel": "Event",
+      "recordTimeLabel": "Time",
+      "recordMemoLabel": "Note",
+      "recordsLoading": "Loading records...",
+      "recordsEmpty": "No records yet",
+      "entryTypeCompetition": "Meet"
     },
     "deleteConfirm": {
       "title": "Delete Record",
@@ -726,7 +860,11 @@
       "repLabel": "Rep {n}",
       "setAverage": "Set Avg",
       "overallAverage": "Overall Avg",
-      "overallFastest": "Overall Fastest"
+      "overallFastest": "Overall Fastest",
+      "reaction": "Reaction",
+      "recordNotFound": "Record details not found",
+      "addPracticeMenu": "Add practice menu",
+      "noPracticeMenus": "No practice menus"
     },
     "page": {
       "description": "Record and analyze your daily practice sessions. Add new practice entries from the dashboard calendar.",
@@ -770,6 +908,13 @@
       "Br": "Breaststroke",
       "Fly": "Butterfly",
       "IM": "Individual Medley"
+    },
+    "styleAbbrev": {
+      "Fr": "Fr",
+      "Ba": "Ba",
+      "Br": "Br",
+      "Fly": "Fly",
+      "IM": "IM"
     },
     "categories": {
       "Swim": "Swim",
@@ -846,7 +991,13 @@
       "dataFetchFailed": "Failed to fetch data",
       "loadingData": "Loading data...",
       "bestTimesFetchFailed": "Failed to fetch best times",
-      "settingsButtonAria": "Open settings"
+      "settingsButtonAria": "Open settings",
+      "profileSectionTitle": "Profile",
+      "editButton": "Edit",
+      "settingsButton": "Settings",
+      "profileNotFound": "Profile not found",
+      "bulkInput": "Bulk input",
+      "bulkInputAria": "Bulk register best times"
     },
     "title": "My Page",
     "subtitle": "Manage your profile and best times",
@@ -1310,7 +1461,16 @@
       "manageSubAria": "Manage subscription",
       "restoreSuccessTitle": "Restore complete",
       "restoreSuccessMessage": "Your purchase has been restored.",
-      "restoreFailed": "Failed to restore purchases."
+      "restoreFailed": "Failed to restore purchases.",
+      "subscriptionSectionTitle": "Subscription",
+      "currentPlanLabel": "Current plan",
+      "trialPeriodUntil": "Trial period: until {date}",
+      "cancelScheduledOn": "Cancellation scheduled on {date}",
+      "upgradeButton": "Upgrade to Premium",
+      "restoreButton": "Restore purchases",
+      "manageSubButton": "Manage subscription",
+      "termsLink": "Terms of Service",
+      "privacyLink": "Privacy Policy"
     },
     "header": {
       "title": "Settings",
@@ -1611,7 +1771,18 @@
       "register": "Register all",
       "registering": "Registering..."
     },
-    "returnToOnboarding": "Return to onboarding"
+    "returnToOnboarding": "Return to onboarding",
+    "tabsAriaLabel": "Select event",
+    "mobile": {
+      "description": "Add events and register your best times all at once.",
+      "emptyTitle": "Add best times",
+      "emptyBody": "Tap \"Add event\" to choose the events you want to register.",
+      "successTitle": "Registered",
+      "addRelaying": "+ Add relay time",
+      "hideRelaying": "Hide relay time",
+      "relayingLabel": "Relay Time",
+      "poolToggleLabel": "Select pool type"
+    }
   },
   "goals": {
     "page": {
@@ -1907,6 +2078,66 @@
       "statusPending": "Pending",
       "statusApproved": "Approved",
       "statusRejected": "Rejected",
+      "createTeamAction": "+ Create team",
+      "joinByInviteCodeAction": "Join with invite code",
+      "noTeams": "No teams",
+      "noTeamsSubtext": "Create a team or join with an invite code.",
+      "pendingRetry": "Refresh status",
+      "teamNotFound": "Team not found",
+      "webGuide": "For team management features, please use the web version.",
+      "webGuideButton": "Open web version",
+      "pendingMessage": "Your team join request is awaiting admin approval.\nPlease wait until it is approved.",
+      "memberRemoveConfirm": "Remove {name} from the team?\nThis cannot be undone.",
+      "announcementListCreateButton": "+ Create announcement",
+      "announcementListEmpty": "No announcements",
+      "announcementListEmptyCreate": "Create announcement",
+      "announcementPublishPeriod": "Publish window: {start} – {end}",
+      "monthlyAttendance": {
+        "statusOpen": "Open for submissions",
+        "statusClosed": "Submissions closed",
+        "noMonths": "No months to display",
+        "noEvents": "No events this month"
+      },
+      "groupManagement": {
+        "title": "Group management",
+        "subtitle": "Organize members into categories and groups.",
+        "emptyTitle": "No groups yet",
+        "emptyHint": "Use \"Add\" to create categories and groups.",
+        "memberCount": "{count} members",
+        "membersEmpty": "No members registered",
+        "groupCount": "({count} groups)",
+        "cardViewMembersAria": "View members of {name}",
+        "cardEditMembersAria": "Edit members of {name}",
+        "cardEditAria": "Edit {name}",
+        "cardDeleteAria": "Delete {name}"
+      },
+      "bulkRegister": {
+        "errorDateRequired": "Row {row}: date is required",
+        "errorStartDateRequired": "Row {row}: start date is required",
+        "errorEndDateAfterStart": "Row {row}: end date must be on or after the start date",
+        "rowTitlePractice": "Practice {n}",
+        "rowTitleCompetition": "Competition {n}",
+        "deleteButton": "Delete",
+        "labelDate": "Date *",
+        "labelTitle": "Title",
+        "labelPlace": "Place",
+        "labelNote": "Notes",
+        "addRowButton": "+ Add row",
+        "labelStartDate": "Start date *",
+        "labelEndDate": "End date",
+        "labelCompetitionName": "Competition name",
+        "labelPoolType": "Pool type",
+        "previewTitle": "Preview",
+        "previewSectionPractices": "Practices: {count}",
+        "previewSectionCompetitions": "Competitions: {count}",
+        "previewMore": "{count} more",
+        "resultTitle": "Registration result",
+        "resultPracticesCreated": "Practices: {count} created",
+        "resultCompetitionsCreated": "Competitions: {count} created",
+        "modeTabPractice": "Practices",
+        "modeTabCompetition": "Competitions",
+        "resultErrorPrefix": "Errors: {detail}"
+      },
       "groupFetchFailed": "Failed to fetch group information",
       "fallbackCompetitionName": "Competition",
       "groupCreateFailed": "Failed to create group",
@@ -3010,7 +3241,19 @@
     "fetchPlansFailedShort": "Failed to fetch plans",
     "noPlansAvailable": "No plans available",
     "trialStart": "Try free for 7 days",
-    "premiumStart": "Start Premium"
+    "premiumStart": "Start Premium",
+    "trialNote": "After the 7-day free trial, your selected plan will auto-renew. Cancel anytime.",
+    "cancelNote": "You can cancel your subscription at any time.\nManage it from App Store settings.",
+    "alreadyPremium": "You are already on the Premium plan",
+    "title": "Upgrade to Premium",
+    "subtitle": "Unlock every feature without limits.",
+    "trialDaysRemaining": "Trial: {days} days left",
+    "annualPlan": "Annual plan",
+    "monthlyPlan": "Monthly plan",
+    "savingsLabel": "Save {percent}%",
+    "pricePerYear": "{price} / year",
+    "pricePerMonth": "{price} / month",
+    "pricePerMonthApprox": "~{price} {currency}/month"
   },
   "recordMobile": {
     "loading": "Loading competition records...",
@@ -3039,6 +3282,7 @@
     "poolTypeShortDetail": "Short Course (25m)",
     "poolTypeLongDetail": "Long Course (50m)",
     "filterAllStyles": "All events",
+    "entryTimeInfo": "Entry time: {time}",
     "filterAllPeriods": "All periods",
     "filterYearFormat": "FY {year}",
     "tabAll": "All",

@@ -137,13 +137,13 @@ export const TeamsScreen: React.FC = () => {
           style={[styles.actionButton, styles.createButton]}
           onPress={() => setIsCreateModalOpen(true)}
         >
-          <Text style={styles.createButtonText}>+ チームを作成</Text>
+          <Text style={styles.createButtonText}>{t("teams.mobile.createTeamAction")}</Text>
         </Pressable>
         <Pressable
           style={[styles.actionButton, styles.joinButton]}
           onPress={() => setIsJoinModalOpen(true)}
         >
-          <Text style={styles.joinButtonText}>招待コードで参加</Text>
+          <Text style={styles.joinButtonText}>{t("teams.mobile.joinByInviteCodeAction")}</Text>
         </Pressable>
       </View>
 
@@ -164,14 +164,14 @@ export const TeamsScreen: React.FC = () => {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>チームがありません</Text>
+              <Text style={styles.emptyText}>{t("teams.mobile.noTeams")}</Text>
             </View>
           }
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>チームがありません</Text>
-          <Text style={styles.emptySubtext}>チームを作成するか、招待コードで参加してください</Text>
+          <Text style={styles.emptyText}>{t("teams.mobile.noTeams")}</Text>
+          <Text style={styles.emptySubtext}>{t("teams.mobile.noTeamsSubtext")}</Text>
         </View>
       )}
 

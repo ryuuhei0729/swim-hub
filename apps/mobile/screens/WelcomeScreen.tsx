@@ -46,6 +46,7 @@ export const WelcomeScreen: React.FC = () => {
           onPress={() => navigation.navigate("LoginMethod")}
           accessibilityRole="button"
           accessibilityLabel={loginLabel}
+          testID="welcome-login-button"
         >
           <Text style={styles.secondaryButtonText}>{loginLabel}</Text>
         </Pressable>

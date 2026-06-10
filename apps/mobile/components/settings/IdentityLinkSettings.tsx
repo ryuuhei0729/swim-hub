@@ -262,7 +262,7 @@ export const IdentityLinkSettings: React.FC = () => {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>ログイン連携</Text>
+        <Text style={styles.sectionTitle}>{t("settings.identity.title")}</Text>
       </View>
 
       {error && (

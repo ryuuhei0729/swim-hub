@@ -82,7 +82,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         <Pressable style={styles.modalOverlay} onPress={() => setShowMonthSelector(false)}>
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t("dashboard.mobile.calendarView.selectMonth")}</Text>
+              <Text style={styles.modalTitle}>{t("dashboard.calendarView.selectMonth")}</Text>
               <Pressable
                 style={styles.modalCloseButton}
                 onPress={() => setShowMonthSelector(false)}
@@ -94,7 +94,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <ScrollView style={styles.modalBody}>
               {/* 年選択 */}
               <View style={styles.selectorSection}>
-                <Text style={styles.selectorLabel}>{t("dashboard.mobile.calendarView.yearLabel")}</Text>
+                <Text style={styles.selectorLabel}>{t("dashboard.calendarView.yearLabel")}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={styles.yearList}>
                     {years.map((year) => (
@@ -112,7 +112,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                             currentYear === year && styles.yearOptionTextSelected,
                           ]}
                         >
-                          {t("dashboard.mobile.calendarView.yearUnit", { year })}
+                          {t("dashboard.calendarView.yearUnit", { year })}
                         </Text>
                       </Pressable>
                     ))}
@@ -122,7 +122,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 
               {/* 月選択 */}
               <View style={styles.selectorSection}>
-                <Text style={styles.selectorLabel}>{t("dashboard.mobile.calendarView.monthLabel")}</Text>
+                <Text style={styles.selectorLabel}>{t("dashboard.calendarView.monthLabel")}</Text>
                 <View style={styles.monthGrid}>
                   {Array.from({ length: 12 }, (_, i) => i).map((month) => (
                     <Pressable
@@ -139,7 +139,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                           currentMonth === month && styles.monthOptionTextSelected,
                         ]}
                       >
-                        {t("dashboard.mobile.calendarView.monthUnit", { month: month + 1 })}
+                        {t("dashboard.calendarView.monthUnit", { month: month + 1 })}
                       </Text>
                     </Pressable>
                   ))}

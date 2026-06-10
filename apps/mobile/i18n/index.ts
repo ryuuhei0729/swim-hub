@@ -57,6 +57,10 @@ void i18next.use(initReactI18next).init({
   compatibilityJSON: "v4",
   interpolation: {
     escapeValue: false,
+    // JSON は next-intl 互換の {var} 単一波括弧形式。react-i18next の既定
+    // ({{var}}) と揃わないため、prefix/suffix を上書きして合わせる。
+    prefix: "{",
+    suffix: "}",
   },
   returnNull: false,
   react: {

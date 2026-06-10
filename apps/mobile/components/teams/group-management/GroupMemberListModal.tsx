@@ -113,7 +113,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
             {/* メンバー数 */}
             <View style={styles.countRow}>
               <Feather name="users" size={14} color="#6B7280" />
-              <Text style={styles.countText}>{members.length}人のメンバー</Text>
+              <Text style={styles.countText}>{t("teams.mobile.groupManagement.memberCount", { count: members.length })}</Text>
             </View>
 
             {loading ? (
@@ -123,7 +123,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
             ) : members.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Feather name="users" size={40} color="#D1D5DB" />
-                <Text style={styles.emptyText}>メンバーが登録されていません</Text>
+                <Text style={styles.emptyText}>{t("teams.mobile.groupManagement.membersEmpty")}</Text>
               </View>
             ) : (
               <FlatList

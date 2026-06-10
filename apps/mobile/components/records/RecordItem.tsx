@@ -5,6 +5,7 @@ import { toZonedTime } from "date-fns-tz";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@apps/shared/utils/date";
 import { formatTime } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
 import type { BestTime } from "@apps/shared/types/ui";
@@ -45,8 +46,8 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress, preco
   }, [recordDate, t, locale]);
 
   const styleDisplay = useMemo(() => {
-    return record.style?.name_jp || t("recordMobile.unknownValue");
-  }, [record.style?.name_jp, t]);
+    return localizedStyleName(record.style, t) || t("recordMobile.unknownValue");
+  }, [record.style, t]);
 
   // タイムをフォーマット
   const formattedTime = useMemo(() => formatTime(record.time), [record.time]);

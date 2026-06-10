@@ -174,7 +174,11 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
               </View>
             );
           })}
-          {remainingCount > 0 && <Text style={styles.moreEntriesText}>+{remainingCount}件</Text>}
+          {remainingCount > 0 && (
+            <Text style={styles.moreEntriesText}>
+              +{remainingCount}{t("common.units.items")}
+            </Text>
+          )}
         </View>
       )}
     </Pressable>

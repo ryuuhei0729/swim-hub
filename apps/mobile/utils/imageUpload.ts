@@ -8,6 +8,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { base64ToArrayBuffer } from "./base64";
 import { canUploadImage } from "@swim-hub/shared/utils/premium";
 import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import i18n from "@/i18n";
 import { env } from "@/lib/env";
 
 export type ImageBucket = "practice-images" | "competition-images";
@@ -92,7 +93,7 @@ export async function uploadImage({
 
   if (uploadError) {
     console.error("画像アップロードエラー:", uploadError);
-    throw new Error(`画像のアップロードに失敗しました: ${uploadError.message}`);
+    throw new Error(i18n.t("common.upload.imageUploadFailedDetail", { detail: uploadError.message }));
   }
 
   // 公開URLを取得
@@ -164,7 +165,7 @@ export async function deleteImage(
 
   if (error) {
     console.error("画像削除エラー:", error);
-    throw new Error(`画像の削除に失敗しました: ${error.message}`);
+    throw new Error(i18n.t("common.upload.imageDeleteFailedDetail", { detail: error.message }));
   }
 }
 
@@ -182,7 +183,7 @@ export async function deleteImages(
 
   if (error) {
     console.error("画像削除エラー:", error);
-    throw new Error(`画像の削除に失敗しました: ${error.message}`);
+    throw new Error(i18n.t("common.upload.imageDeleteFailedDetail", { detail: error.message }));
   }
 }
 
@@ -269,7 +270,7 @@ export async function uploadImageViaApi(
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-    throw new Error(data.message ?? data.error ?? "画像のアップロードに失敗しました");
+    throw new Error(data.message ?? data.error ?? i18n.t("common.upload.imageUploadFailedSimple"));
   }
 
   return (await res.json()) as { path: string };
@@ -298,7 +299,7 @@ export async function deleteImageViaApi(
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? "画像の削除に失敗しました");
+    throw new Error(data.error ?? i18n.t("common.upload.imageDeleteFailedSimple"));
   }
 }
 

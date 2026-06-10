@@ -216,8 +216,8 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         {/* ヘッダー */}
         <View style={styles.headerRow}>
           <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>グループ管理</Text>
-            <Text style={styles.headerSubtitle}>メンバーをカテゴリ別にグループ分けできます</Text>
+            <Text style={styles.headerTitle}>{t("teams.mobile.groupManagement.title")}</Text>
+            <Text style={styles.headerSubtitle}>{t("teams.mobile.groupManagement.subtitle")}</Text>
           </View>
           {isCurrentUserAdmin && (
             <Pressable
@@ -227,7 +227,7 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
               accessibilityLabel={t("teams.mobile.groupAddAria")}
             >
               <Feather name="plus" size={16} color="#FFFFFF" />
-              <Text style={styles.addButtonText}>追加</Text>
+              <Text style={styles.addButtonText}>{t("common.add")}</Text>
             </Pressable>
           )}
         </View>
@@ -243,9 +243,9 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         {groups.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Feather name="layers" size={48} color="#D1D5DB" />
-            <Text style={styles.emptyText}>まだグループがありません</Text>
+            <Text style={styles.emptyText}>{t("teams.mobile.groupManagement.emptyTitle")}</Text>
             {isCurrentUserAdmin && (
-              <Text style={styles.emptyHint}>「追加」からカテゴリとグループを作成しましょう</Text>
+              <Text style={styles.emptyHint}>{t("teams.mobile.groupManagement.emptyHint")}</Text>
             )}
           </View>
         ) : (

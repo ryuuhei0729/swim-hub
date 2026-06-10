@@ -2,6 +2,7 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import type { TabParamList } from "./types";
 import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PracticesScreen } from "@/screens/PracticesScreen";
@@ -18,6 +19,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
  */
 export const TabNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <Tab.Navigator
@@ -48,7 +50,8 @@ export const TabNavigator: React.FC = () => {
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          tabBarLabel: "ホーム",
+          tabBarLabel: t("navigation.mobile.tabs.home"),
+          tabBarButtonTestID: "tab-dashboard",
           tabBarIcon: ({ color }) => <Feather name="home" size={20} color={color} />,
         }}
       />
@@ -56,7 +59,8 @@ export const TabNavigator: React.FC = () => {
         name="Practices"
         component={PracticesScreen}
         options={{
-          tabBarLabel: "練習",
+          tabBarLabel: t("navigation.mobile.tabs.practices"),
+          tabBarButtonTestID: "tab-practices",
           tabBarIcon: ({ color }) => <Feather name="bar-chart-2" size={20} color={color} />,
         }}
       />
@@ -64,7 +68,8 @@ export const TabNavigator: React.FC = () => {
         name="Competitions"
         component={CompetitionsScreen}
         options={{
-          tabBarLabel: "大会",
+          tabBarLabel: t("navigation.mobile.tabs.competitions"),
+          tabBarButtonTestID: "tab-competitions",
           tabBarIcon: ({ color }) => <Feather name="award" size={20} color={color} />,
         }}
       />
@@ -72,7 +77,8 @@ export const TabNavigator: React.FC = () => {
         name="Teams"
         component={TeamsScreen}
         options={{
-          tabBarLabel: "チーム",
+          tabBarLabel: t("navigation.mobile.tabs.teams"),
+          tabBarButtonTestID: "tab-teams",
           tabBarIcon: ({ color }) => <Feather name="users" size={20} color={color} />,
         }}
       />
@@ -80,7 +86,8 @@ export const TabNavigator: React.FC = () => {
         name="MyPage"
         component={MyPageScreen}
         options={{
-          tabBarLabel: "マイページ",
+          tabBarLabel: t("navigation.mobile.tabs.myPage"),
+          tabBarButtonTestID: "tab-mypage",
           tabBarIcon: ({ color }) => <Feather name="user" size={20} color={color} />,
         }}
       />

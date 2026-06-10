@@ -102,6 +102,7 @@ export const LoginMethodScreen: React.FC = () => {
             disabled={isLoading}
             accessibilityRole="button"
             accessibilityLabel={emailMethodLabel}
+            testID="login-email-method-button"
           >
             <View style={styles.emailButtonContent}>
               <Feather name="mail" size={20} color="#374151" />

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { cn } from "@/utils/cn";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts";
 import { RecordAPI } from "@apps/shared/api/records";
@@ -122,7 +123,17 @@ function canRelay(styleCode: string, distance: number): boolean {
   if (styleCode === "ba" || styleCode === "im") return false;
   // 200m以上は自由形のみリレイング可能
   if (distance >= 200 && styleCode !== "fr") return false;
+  // 400/800/1500m 自由形のリレーは実競技に存在しない(4x50/4x100/4x200 のみ)
+  if (styleCode === "fr" && distance > 200) return false;
   return true;
+}
+
+/**
+ * 引き継ぎ(リレイング)入力列を表示する種目か
+ * 背泳ぎ・個人メドレーは対象外
+ */
+function hasRelayingColumns(styleTab: StyleTab): boolean {
+  return styleTab !== "ba" && styleTab !== "im";
 }
 
 // =============================================================================
@@ -142,6 +153,7 @@ interface BulkBestTimeClientProps {
 
 export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps) {
   const t = useTranslations("bulkBestTime");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { supabase } = useAuth();
   const [activeTab, setActiveTab] = useState<StyleTab>("fr");
@@ -176,9 +188,15 @@ export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps
 
       // タイムが変更された場合、バリデーション
       if (field === "time") {
-        if (value.trim()) {
-          const timeInSeconds = parseTime(value);
-          if (timeInSeconds <= 0) {
+        const raw = value.trim();
+        if (raw) {
+          // 文書化された2形式のみ許可:
+          //  従来形式  \d+(:\d+)?(\.\d+)?  → "1:23.45" "1:30" "23.45" "30"
+          //  クイック式 \d+(-\d+){1,2}     → "31-2" "1-05-3"
+          // 末尾 s は許容。多重ドット("1.23.45")・多重コロン("1:2:3")・連続区切り・letters を構造的に弾く。
+          const hasInvalidChars = !/^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i.test(raw);
+          const timeInSeconds = parseTime(raw);
+          if (hasInvalidChars || timeInSeconds <= 0) {
             updated.error = t("error.invalidTimeFormat");
             updated.timeInSeconds = undefined;
           } else {
@@ -278,9 +296,10 @@ export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center space-x-4">
           <button
+            type="button"
             onClick={handleBack}
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="戻る"
+            aria-label={tCommon("back")}
           >
             <ArrowLeftIcon className="h-5 w-5" />
           </button>
@@ -329,10 +348,11 @@ export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps
 
         {/* 種目タブ */}
         <div className="border-b border-gray-200">
-          <nav className="flex -mb-px overflow-x-auto" aria-label="種目タブ">
+          <nav className="flex -mb-px overflow-x-auto" aria-label={t("tabsAriaLabel")}>
             {STYLE_TAB_IDS.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`
                   whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors
@@ -349,14 +369,24 @@ export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps
           </nav>
         </div>
 
-        {/* テーブル */}
+        {/* テーブル / モバイルビュー */}
         <div className="p-6">
-          <BestTimeTable
-            styleTab={activeTab}
-            inputs={inputs}
-            onInputChange={handleInputChange}
-            getInputKey={getInputKey}
-          />
+          <div className="hidden md:block">
+            <BestTimeTable
+              styleTab={activeTab}
+              inputs={inputs}
+              onInputChange={handleInputChange}
+              getInputKey={getInputKey}
+            />
+          </div>
+          <div className="block md:hidden">
+            <BestTimeMobileView
+              styleTab={activeTab}
+              inputs={inputs}
+              onInputChange={handleInputChange}
+              getInputKey={getInputKey}
+            />
+          </div>
         </div>
 
         {/* フッター */}
@@ -366,6 +396,7 @@ export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps
               {t("footer.inputLabel")} <strong className="text-gray-900">{t("footer.inputCount", { count: validInputCount })}</strong>
             </p>
             <button
+              type="button"
               onClick={handleBulkRegister}
               disabled={loading || validInputCount === 0}
               className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -433,7 +464,7 @@ function BestTimeTable({ styleTab, inputs, onInputChange, getInputKey }: BestTim
   };
 
   // リレイング列を表示するか
-  const showRelaying = styleTab !== "ba" && styleTab !== "im";
+  const showRelaying = hasRelayingColumns(styleTab);
 
   return (
     <div className="overflow-x-auto">
@@ -671,5 +702,272 @@ function NoteInputCell({
         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
       />
     </td>
+  );
+}
+
+// =============================================================================
+// サブコンポーネント: プールセグメント切替 (モバイル用)
+// =============================================================================
+
+interface PoolSegmentToggleProps {
+  activePool: 0 | 1;
+  onChange: (pool: 0 | 1) => void;
+}
+
+function PoolSegmentToggle({ activePool, onChange }: PoolSegmentToggleProps) {
+  const t = useTranslations("bulkBestTime");
+  const tCommon = useTranslations("common");
+
+  return (
+    <div
+      role="group"
+      aria-label={t("mobile.poolToggleLabel")}
+      className="inline-flex rounded-lg bg-gray-200 p-1"
+    >
+      <button
+        type="button"
+        onClick={() => onChange(0)}
+        aria-pressed={activePool === 0}
+        className={cn(
+          "px-5 py-2 rounded-lg font-medium text-sm transition-colors",
+          activePool === 0
+            ? "bg-white text-gray-900 shadow"
+            : "text-gray-600 hover:text-gray-900",
+        )}
+      >
+        {tCommon("poolTypeShort")}
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange(1)}
+        aria-pressed={activePool === 1}
+        className={cn(
+          "px-5 py-2 rounded-lg font-medium text-sm transition-colors",
+          activePool === 1
+            ? "bg-white text-gray-900 shadow"
+            : "text-gray-600 hover:text-gray-900",
+        )}
+      >
+        {tCommon("poolTypeLong")}
+      </button>
+    </div>
+  );
+}
+
+// =============================================================================
+// サブコンポーネント: ベストタイムカード (モバイル用)
+// =============================================================================
+
+interface BestTimeCardProps {
+  styleTab: StyleTab;
+  distance: number;
+  styleId: number;
+  poolType: 0 | 1;
+  showRelaying: boolean;
+  inputs: Map<string, BestTimeInput>;
+  onInputChange: (
+    styleId: number,
+    poolType: number,
+    isRelaying: boolean,
+    field: "time" | "note",
+    value: string,
+  ) => void;
+  getInputKey: (styleId: number, poolType: number, isRelaying: boolean) => string;
+}
+
+function BestTimeCard({
+  styleTab,
+  distance,
+  styleId,
+  poolType,
+  showRelaying,
+  inputs,
+  onInputChange,
+  getInputKey,
+}: BestTimeCardProps) {
+  const t = useTranslations("bulkBestTime");
+
+  const [showRelayingSection, setShowRelayingSection] = useState<boolean>(() => {
+    const relayKey = getInputKey(styleId, poolType, true);
+    return !!inputs.get(relayKey)?.time;
+  });
+
+  const normalKey = getInputKey(styleId, poolType, false);
+  const relayKey = getInputKey(styleId, poolType, true);
+  const normalInput = inputs.get(normalKey);
+  const relayInput = inputs.get(relayKey);
+  const hasNormalInput = !!normalInput?.time && !normalInput?.error;
+  const hasRelayInput = !!relayInput?.time && !relayInput?.error;
+
+  const showRelayButton = showRelaying && canRelay(styleTab, distance);
+
+  return (
+    <div
+      className={cn(
+        "bg-white rounded-lg p-4",
+        (hasNormalInput || hasRelayInput)
+          ? "border-l-4 border-l-blue-500 border-y border-y-gray-200 border-r border-r-gray-200"
+          : "border border-gray-200",
+      )}
+    >
+      {/* カードヘッダー */}
+      <p className="text-sm font-semibold text-gray-700 mb-3">{distance}m</p>
+
+      {/* 通常タイム入力 */}
+      <div className="space-y-2">
+        <label htmlFor={`time-${styleId}-${poolType}`} className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
+          {t("table.time")}
+        </label>
+        <input
+          id={`time-${styleId}-${poolType}`}
+          type="text"
+          inputMode="text"
+          autoCorrect="off"
+          autoCapitalize="none"
+          value={normalInput?.time || ""}
+          onChange={(e) => onInputChange(styleId, poolType, false, "time", e.target.value)}
+          placeholder="1:23.45"
+          className={cn(
+            "w-full min-h-[44px] px-3 py-2 text-base border rounded focus:outline-none focus:ring-2 placeholder-gray-400",
+            normalInput?.error
+              ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+              : "border-gray-300 focus:ring-blue-500 focus:border-blue-500",
+          )}
+        />
+        {normalInput?.error && (
+          <p className="text-xs text-red-600">{normalInput.error}</p>
+        )}
+      </div>
+
+      {/* 備考入力 */}
+      <div className="space-y-2 mt-3">
+        <label htmlFor={`note-${styleId}-${poolType}`} className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
+          {t("table.note")}
+        </label>
+        <input
+          id={`note-${styleId}-${poolType}`}
+          type="text"
+          value={normalInput?.note || ""}
+          onChange={(e) => onInputChange(styleId, poolType, false, "note", e.target.value)}
+          placeholder={t("table.notePlaceholder")}
+          className="w-full min-h-[44px] px-3 py-2 text-base border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+        />
+      </div>
+
+      {/* 引き継ぎセクション */}
+      {showRelayButton && !showRelayingSection && (
+        <button
+          type="button"
+          onClick={() => setShowRelayingSection(true)}
+          className="mt-3 text-sm text-blue-600 hover:text-blue-800"
+        >
+          {t("mobile.addRelaying")}
+        </button>
+      )}
+
+      {showRelaying && showRelayingSection && (
+        <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            {t("mobile.relayingLabel")}
+          </p>
+
+          {/* 引き継ぎタイム */}
+          <div className="space-y-2">
+            <label htmlFor={`relay-time-${styleId}-${poolType}`} className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
+              {t("table.time")}
+            </label>
+            <input
+              id={`relay-time-${styleId}-${poolType}`}
+              type="text"
+              inputMode="text"
+              autoCorrect="off"
+              autoCapitalize="none"
+              value={relayInput?.time || ""}
+              onChange={(e) => onInputChange(styleId, poolType, true, "time", e.target.value)}
+              placeholder="1:23.45"
+              className={cn(
+                "w-full min-h-[44px] px-3 py-2 text-base border rounded focus:outline-none focus:ring-2 placeholder-gray-400",
+                relayInput?.error
+                  ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300 focus:ring-blue-500 focus:border-blue-500",
+              )}
+            />
+            {relayInput?.error && (
+              <p className="text-xs text-red-600">{relayInput.error}</p>
+            )}
+          </div>
+
+          {/* 引き継ぎ備考 */}
+          <div className="space-y-2">
+            <label htmlFor={`relay-note-${styleId}-${poolType}`} className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
+              {t("table.note")}
+            </label>
+            <input
+              id={`relay-note-${styleId}-${poolType}`}
+              type="text"
+              value={relayInput?.note || ""}
+              onChange={(e) => onInputChange(styleId, poolType, true, "note", e.target.value)}
+              placeholder={t("table.notePlaceholder")}
+              className="w-full min-h-[44px] px-3 py-2 text-base border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowRelayingSection(false)}
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            {t("mobile.hideRelaying")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// サブコンポーネント: モバイルビュー
+// =============================================================================
+
+function BestTimeMobileView({ styleTab, inputs, onInputChange, getInputKey }: BestTimeTableProps) {
+  const [activePool, setActivePool] = useState<0 | 1>(0);
+
+  const distances = DISTANCES_BY_STYLE[styleTab];
+  const showRelaying = hasRelayingColumns(styleTab);
+
+  return (
+    <div className="space-y-4">
+      {/* プール切替 */}
+      <div className="flex justify-center">
+        <PoolSegmentToggle activePool={activePool} onChange={setActivePool} />
+      </div>
+
+      {/* カード一覧 */}
+      <div className="space-y-3">
+        {distances.map((distance) => {
+          // 長水路で無効な種目はカードを非表示
+          if (activePool === 1 && !isValidForLongCourse(styleTab, distance)) {
+            return null;
+          }
+
+          const styleId = getStyleId(styleTab, distance);
+          if (!styleId) return null;
+
+          return (
+            <BestTimeCard
+              key={`${styleTab}_${distance}_${activePool}`}
+              styleTab={styleTab}
+              distance={distance}
+              styleId={styleId}
+              poolType={activePool}
+              showRelaying={showRelaying}
+              inputs={inputs}
+              onInputChange={onInputChange}
+              getInputKey={getInputKey}
+            />
+          );
+        })}
+      </div>
+    </div>
   );
 }

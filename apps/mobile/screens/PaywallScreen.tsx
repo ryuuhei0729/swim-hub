@@ -151,7 +151,7 @@ export const PaywallScreen: React.FC = () => {
           <Text style={styles.closeButtonText}>✕</Text>
         </TouchableOpacity>
         <View style={styles.loadingContainer}>
-          <Text style={{ fontSize: 16, color: "#374151" }}>すでに Premium プランをご利用中です</Text>
+          <Text style={{ fontSize: 16, color: "#374151" }}>{t("paywallMobile.alreadyPremium")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -173,17 +173,15 @@ export const PaywallScreen: React.FC = () => {
         {/* ヘッダー */}
         <View style={styles.header}>
           <Text style={styles.headerIcon}>★</Text>
-          <Text style={styles.title}>Premium にアップグレード</Text>
-          <Text style={styles.subtitle}>
-            すべての機能を制限なくご利用いただけます
-          </Text>
+          <Text style={styles.title}>{t("paywallMobile.title")}</Text>
+          <Text style={styles.subtitle}>{t("paywallMobile.subtitle")}</Text>
         </View>
 
         {/* トライアル中の表示 */}
         {isTrialing && (
           <View style={styles.trialBanner}>
             <Text style={styles.trialBannerText}>
-              トライアル残り {trialDaysRemaining} 日
+              {t("paywallMobile.trialDaysRemaining", { days: trialDaysRemaining })}
             </Text>
           </View>
         )}
@@ -204,7 +202,7 @@ export const PaywallScreen: React.FC = () => {
                 : t("paywallMobile.noPlansAvailable")}
             </Text>
             <TouchableOpacity style={styles.retryButton} onPress={fetchOfferings}>
-              <Text style={styles.retryButtonText}>再試行</Text>
+              <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -227,21 +225,23 @@ export const PaywallScreen: React.FC = () => {
                 </View>
                 <View style={styles.planInfo}>
                   <View style={styles.planTitleRow}>
-                    <Text style={styles.planTitle}>年額プラン</Text>
+                    <Text style={styles.planTitle}>{t("paywallMobile.annualPlan")}</Text>
                     {annualSavingsPercent > 0 && (
                       <View style={styles.savingsBadge}>
                         <Text style={styles.savingsBadgeText}>
-                          {annualSavingsPercent}%お得
+                          {t("paywallMobile.savingsLabel", { percent: annualSavingsPercent })}
                         </Text>
                       </View>
                     )}
                   </View>
                   <Text style={styles.planPrice}>
-                    {annualPackage.product.priceString} / 年
+                    {t("paywallMobile.pricePerYear", { price: annualPackage.product.priceString })}
                   </Text>
                   <Text style={styles.planSubprice}>
-                    約 {(annualPackage.product.price / 12).toFixed(0)}{" "}
-                    {annualPackage.product.currencyCode}/月
+                    {t("paywallMobile.pricePerMonthApprox", {
+                      price: (annualPackage.product.price / 12).toFixed(0),
+                      currency: annualPackage.product.currencyCode,
+                    })}
                   </Text>
                 </View>
               </View>
@@ -263,9 +263,9 @@ export const PaywallScreen: React.FC = () => {
                   {selectedPeriod === "monthly" && <View style={styles.planRadioInner} />}
                 </View>
                 <View style={styles.planInfo}>
-                  <Text style={styles.planTitle}>月額プラン</Text>
+                  <Text style={styles.planTitle}>{t("paywallMobile.monthlyPlan")}</Text>
                   <Text style={styles.planPrice}>
-                    {monthlyPackage.product.priceString} / 月
+                    {t("paywallMobile.pricePerMonth", { price: monthlyPackage.product.priceString })}
                   </Text>
                 </View>
               </View>
@@ -292,12 +292,12 @@ export const PaywallScreen: React.FC = () => {
 
         {!hasTrialed && (
           <Text style={styles.trialNote}>
-            7日間の無料トライアル後、選択したプランで自動更新されます。いつでもキャンセル可能です。
+            {t("paywallMobile.trialNote")}
           </Text>
         )}
 
         <Text style={styles.cancelNote}>
-          サブスクリプションはいつでもキャンセルできます。{"\n"}App Store の設定から管理できます。
+          {t("paywallMobile.cancelNote")}
         </Text>
 
         {/* リストアボタン */}
@@ -309,7 +309,7 @@ export const PaywallScreen: React.FC = () => {
           {restoring ? (
             <ActivityIndicator color="#2563EB" size="small" />
           ) : (
-            <Text style={styles.restoreButtonText}>購入を復元する</Text>
+            <Text style={styles.restoreButtonText}>{t("settings.mobile.restoreButton")}</Text>
           )}
         </TouchableOpacity>
 
@@ -319,14 +319,14 @@ export const PaywallScreen: React.FC = () => {
             style={styles.legalLink}
             onPress={() => Linking.openURL("https://swim-hub.app/terms")}
           >
-            利用規約
+            {t("settings.mobile.termsLink")}
           </Text>
           <Text style={styles.legalDivider}> | </Text>
           <Text
             style={styles.legalLink}
             onPress={() => Linking.openURL("https://swim-hub.app/privacy")}
           >
-            プライバシーポリシー
+            {t("settings.mobile.privacyLink")}
           </Text>
         </View>
       </ScrollView>

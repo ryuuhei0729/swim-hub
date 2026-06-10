@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordByIdQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
 import { formatTime } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
@@ -254,7 +255,7 @@ export const RecordDetailScreen: React.FC = () => {
   const competitionName = record.competition?.title || t("recordMobile.fallbackTitle");
   const recordDate = record.competition?.date || record.created_at;
   const formattedDate = formatDate(recordDate, "longWithWeekday", locale);
-  const styleName = record.style?.name || record.style?.name_jp || t("recordMobile.unknownValue");
+  const styleName = localizedStyleName(record.style, t) || t("recordMobile.unknownValue");
   const formattedTime = formatTime(record.time);
   const poolType =
     record.competition?.pool_type === 0

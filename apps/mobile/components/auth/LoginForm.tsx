@@ -169,6 +169,7 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
               keyboardType="email-address"
               textContentType="emailAddress"
               editable={!loading}
+              testID="login-email-input"
             />
           </View>
 
@@ -185,6 +186,7 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
               autoComplete="password"
               textContentType="password"
               editable={!loading}
+              testID="login-password-input"
             />
           </View>
 
@@ -195,6 +197,7 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
             accessibilityRole="button"
             accessibilityLabel={t("auth.signin.title")}
             accessibilityState={{ disabled: loading }}
+            testID="login-submit-button"
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />

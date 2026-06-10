@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
 import { EntryAPI } from "@apps/shared/api/entries";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import { styles } from "../styles";
@@ -51,7 +52,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
           style_id,
           entry_time,
           note,
-          style:styles!inner(id, name_jp)
+          style:styles!inner(id, name_jp, style)
         `,
         )
         .eq("competition_id", competitionId)
@@ -65,7 +66,9 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
           style_id: number;
           entry_time: number | null;
           note: string | null;
-          style: { id: number; name_jp: string } | { id: number; name_jp: string }[];
+          style:
+            | { id: number; name_jp: string; style: string }
+            | { id: number; name_jp: string; style: string }[];
         };
 
         const mapped = (entryData as EntryRow[]).map((row) => {
@@ -73,7 +76,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
           return {
             id: row.id,
             styleId: row.style_id,
-            styleName: style?.name_jp || "",
+            styleName: localizedStyleName(style, t),
             entryTime: row.entry_time,
             note: row.note,
           };
@@ -88,8 +91,8 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
             styleId:
               typeof style === "object" && style !== null && "id" in style ? Number(style.id) : 0,
             styleName:
-              typeof style === "object" && style !== null && "name_jp" in style
-                ? String(style.name_jp)
+              typeof style === "object" && style !== null
+                ? localizedStyleName(style as { style?: string; name_jp?: string }, t)
                 : "",
             entryTime: entry.metadata?.entry_time || null,
             note: entry.note || null,
@@ -110,8 +113,8 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
 
   const getPoolTypeText = (poolType: number) => {
     return poolType === 1
-      ? t("dashboard.mobile.competition.poolTypeLong")
-      : t("dashboard.mobile.competition.poolTypeShort");
+      ? t("dashboard.competition.poolTypeLong")
+      : t("dashboard.competition.poolTypeShort");
   };
 
   // エントリーが0件で読み込み完了した場合は、コンポーネント全体を非表示にする
@@ -187,7 +190,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
       <View style={styles.entrySection}>
         <View style={styles.entrySectionHeader}>
           <Text style={styles.entrySectionHeaderEmoji}>📝</Text>
-          <Text style={styles.entrySectionHeaderTitle}>{t("dashboard.mobile.dayDetail.entryAlreadyTitle")}</Text>
+          <Text style={styles.entrySectionHeaderTitle}>{t("dashboard.dayDetail.entryAlreadyTitle")}</Text>
           {onEditEntry && (
             <Pressable
               style={styles.entrySectionHeaderActionButton}
@@ -218,9 +221,9 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
         </View>
 
         {loading ? (
-          <Text style={styles.entryLoadingText}>{t("dashboard.mobile.dayDetail.entryLoadingText")}</Text>
+          <Text style={styles.entryLoadingText}>{t("dashboard.dayDetail.entryLoadingText")}</Text>
         ) : actualEntries.length === 0 ? (
-          <Text style={styles.entryEmptyText}>{t("dashboard.mobile.dayDetail.entryEmptyText")}</Text>
+          <Text style={styles.entryEmptyText}>{t("dashboard.dayDetail.entryEmptyText")}</Text>
         ) : (
           <View style={styles.entryList}>
             {actualEntries.map((entry) => (
@@ -228,12 +231,12 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                 <View style={styles.entryCardContent}>
                   <View style={styles.entryCardInfo}>
                     <View style={styles.entryCardInfoRow}>
-                      <Text style={styles.entryCardInfoLabel}>{t("dashboard.mobile.dayDetail.fieldStyle")}</Text>
+                      <Text style={styles.entryCardInfoLabel}>{t("dashboard.dayDetail.fieldStyle")}</Text>
                       <Text style={styles.entryCardInfoValue}>{entry.styleName}</Text>
                     </View>
                     {entry.entryTime && entry.entryTime > 0 && (
                       <View style={styles.entryCardInfoRow}>
-                        <Text style={styles.entryCardInfoLabel}>{t("dashboard.mobile.dayDetail.fieldEntryTime")}</Text>
+                        <Text style={styles.entryCardInfoLabel}>{t("dashboard.dayDetail.fieldEntryTime")}</Text>
                         <Text style={styles.entryCardInfoValueTime}>
                           {formatTime(entry.entryTime)}
                         </Text>
@@ -241,7 +244,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                     )}
                     {entry.note && entry.note.trim().length > 0 && (
                       <View style={styles.entryCardInfoRow}>
-                        <Text style={styles.entryCardInfoLabel}>{t("dashboard.mobile.dayDetail.fieldMemo")}</Text>
+                        <Text style={styles.entryCardInfoLabel}>{t("dashboard.dayDetail.fieldMemo")}</Text>
                         <Text style={styles.entryCardInfoValue}>{entry.note}</Text>
                       </View>
                     )}
@@ -251,8 +254,8 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                       style={styles.entryCardDeleteButton}
                       onPress={async () => {
                         Alert.alert(
-                          t("dashboard.mobile.dayDetail.entryDeleteConfirmTitle"),
-                          t("dashboard.mobile.dayDetail.entryDeleteConfirmMessage"),
+                          t("dashboard.dayDetail.entryDeleteConfirmTitle"),
+                          t("dashboard.dayDetail.entryDeleteConfirmMessage"),
                           [
                             {
                               text: t("common.cancel"),
@@ -278,7 +281,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                                     t("common.alertErrorTitle"),
                                     error instanceof Error
                                       ? error.message
-                                      : t("dashboard.mobile.dayDetail.entryDeleteFailed"),
+                                      : t("dashboard.dayDetail.entryDeleteFailed"),
                                     [{ text: "OK" }],
                                   );
                                 } finally {
@@ -314,7 +317,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
           }}
         >
           <Feather name="plus" size={20} color="#FFFFFF" />
-          <Text style={styles.addCompetitionRecordButtonText}>{t("dashboard.mobile.dayDetail.addCompetitionRecord")}</Text>
+          <Text style={styles.addCompetitionRecordButtonText}>{t("dashboard.dayDetail.addCompetitionRecord")}</Text>
         </Pressable>
       )}
     </View>

@@ -10,6 +10,7 @@ import type { Database } from "@swim-hub/shared/types";
 import type { AuthState, AuthContextType, SubscriptionInfo } from "@swim-hub/shared/types/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getQueryClient } from "@/providers/QueryProvider";
+import i18n from "@/i18n";
 
 /**
  * Mobile 固有の AuthState 拡張
@@ -95,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateOnboardingCompleted = useCallback(
     async (value: boolean): Promise<{ error: Error | null }> => {
       if (!supabase) {
-        return { error: new Error("Supabaseクライアントが初期化されていません") };
+        return { error: new Error(i18n.t("common.app.supabaseClientNotInitialized")) };
       }
       if (!authState.user) {
         return { error: new Error("User not authenticated") };
@@ -158,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         data: null,
         error: new Error(
-          "Supabaseクライアントが初期化されていません",
+          i18n.t("common.app.supabaseClientNotInitialized"),
         ) as import("@supabase/supabase-js").AuthError,
       };
     }
@@ -185,7 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         data: null,
         error: new Error(
-          "Supabaseクライアントが初期化されていません",
+          i18n.t("common.app.supabaseClientNotInitialized"),
         ) as import("@supabase/supabase-js").AuthError,
       };
     }
@@ -212,7 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 確認メールも実際には送信されないため、ユーザーに明示的に伝える。
       if (data?.user && (data.user.identities?.length ?? 0) === 0) {
         const alreadyRegisteredError = Object.assign(
-          new Error("このメールアドレスはすでに登録されています。"),
+          new Error(i18n.t("common.app.emailAlreadyRegistered")),
           { status: 422, code: "user_already_exists" },
         ) as import("@supabase/supabase-js").AuthError;
         return { data: null, error: alreadyRegisteredError };
@@ -234,7 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!supabase) {
         return {
           error: new Error(
-            "Supabaseクライアントが初期化されていません",
+            i18n.t("common.app.supabaseClientNotInitialized"),
           ) as import("@supabase/supabase-js").AuthError,
         };
       }
@@ -269,7 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!supabase) {
       return {
         error: new Error(
-          "Supabaseクライアントが初期化されていません",
+          i18n.t("common.app.supabaseClientNotInitialized"),
         ) as import("@supabase/supabase-js").AuthError,
       };
     }
@@ -326,7 +327,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         data: null,
         error: new Error(
-          "Supabaseクライアントが初期化されていません",
+          i18n.t("common.app.supabaseClientNotInitialized"),
         ) as import("@supabase/supabase-js").AuthError,
       };
     }
@@ -354,7 +355,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         data: null,
         error: new Error(
-          "Supabaseクライアントが初期化されていません",
+          i18n.t("common.app.supabaseClientNotInitialized"),
         ) as import("@supabase/supabase-js").AuthError,
       };
     }
@@ -380,7 +381,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!supabase) {
         return {
           error: new Error(
-            "Supabaseクライアントが初期化されていません",
+            i18n.t("common.app.supabaseClientNotInitialized"),
           ) as import("@supabase/supabase-js").AuthError,
         };
       }
@@ -452,7 +453,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Supabaseクライアントが初期化されていない場合の処理
     if (!supabase) {
-      console.error("Supabaseクライアントが初期化されていません");
+      console.error(i18n.t("common.app.supabaseClientNotInitialized"));
       setAuthState({
         user: null,
         session: null,

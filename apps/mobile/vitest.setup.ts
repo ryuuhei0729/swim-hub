@@ -179,15 +179,49 @@ vi.mock("react-i18next", () => ({
 }));
 
 // i18next のモック (initReactI18next 経由の init を no-op に)
-vi.mock("i18next", () => ({
-  default: {
-    use: () => ({ init: () => Promise.resolve() }),
-    init: () => Promise.resolve(),
-    changeLanguage: vi.fn(async () => undefined),
-    language: "ja",
-    t: (key: string) => key,
-  },
-}));
+// t は ja.json を直接解決する。これにより i18n.t(...) を直接呼ぶ
+// 非 React コード (utils, services 等) のテストも実値で検証できる。
+// 注: vi.mock のファクトリは hoist されるため、外部の tMock を直接参照すると
+// undefined になる。await import で動的に解決する。
+vi.mock("i18next", async () => {
+  const jaModule = (await import("../shared/messages/ja.json")) as {
+    default: Record<string, unknown>;
+  };
+  const ja = jaModule.default ?? jaModule;
+  const resolve = (key: string): string | undefined => {
+    const parts = key.split(".");
+    let cur: unknown = ja;
+    for (const p of parts) {
+      if (cur && typeof cur === "object" && p in (cur as Record<string, unknown>)) {
+        cur = (cur as Record<string, unknown>)[p];
+      } else {
+        return undefined;
+      }
+    }
+    return typeof cur === "string" ? cur : undefined;
+  };
+  const interp = (template: string, values: Record<string, unknown>): string =>
+    template.replace(/\{(\w+)\}/g, (_, name) =>
+      name in values ? String(values[name]) : `{${name}}`,
+    );
+  const t = (key: string, options?: Record<string, unknown> & { defaultValue?: string }): string => {
+    const raw = resolve(key);
+    if (raw === undefined) {
+      return options?.defaultValue !== undefined ? String(options.defaultValue) : key;
+    }
+    if (options && Object.keys(options).length > 0) return interp(raw, options);
+    return raw;
+  };
+  return {
+    default: {
+      use: () => ({ init: () => Promise.resolve() }),
+      init: () => Promise.resolve(),
+      changeLanguage: vi.fn(async () => undefined),
+      language: "ja",
+      t,
+    },
+  };
+});
 
 // React Navigation のモック
 vi.mock("@react-navigation/native", () => ({

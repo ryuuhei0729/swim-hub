@@ -33,6 +33,7 @@ function formatSignupError(t: TFunction, err: unknown): string {
   if (
     errorObj.code === "user_already_exists" ||
     msg.includes("user already registered") ||
+    msg.includes("already registered") ||
     msg.includes("すでに登録されています")
   ) {
     return t("auth.errorMap.emailAlreadyExists");

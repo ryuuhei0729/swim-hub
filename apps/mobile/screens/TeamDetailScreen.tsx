@@ -99,14 +99,11 @@ export const TeamDetailScreen: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.pendingContainer}>
           <Feather name="clock" size={48} color="#F59E0B" />
-          <Text style={styles.pendingTitle}>承認待ち</Text>
-          <Text style={styles.pendingMessage}>
-            チームへの参加リクエストは管理者の承認待ちです。{"\n"}
-            承認されるまでしばらくお待ちください。
-          </Text>
+          <Text style={styles.pendingTitle}>{t("teams.mobile.statusPending")}</Text>
+          <Text style={styles.pendingMessage}>{t("teams.mobile.pendingMessage")}</Text>
           <Pressable style={styles.pendingRetryButton} onPress={() => refetch()}>
             <Feather name="refresh-cw" size={16} color="#FFFFFF" />
-            <Text style={styles.pendingRetryText}>状態を更新</Text>
+            <Text style={styles.pendingRetryText}>{t("teams.mobile.pendingRetry")}</Text>
           </Pressable>
         </View>
       </View>
@@ -140,7 +137,7 @@ export const TeamDetailScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>チームが見つかりません</Text>
+          <Text style={styles.errorText}>{t("teams.mobile.teamNotFound")}</Text>
         </View>
       </View>
     );
@@ -176,10 +173,10 @@ export const TeamDetailScreen: React.FC = () => {
                   ? t("teams.mobile.tabPracticeManagement")
                   : t("teams.mobile.tabCompetitionManagement")}
             </Text>
-            <Text style={styles.webGuideText}>チーム管理機能に関してはWEB版をご利用ください。</Text>
+            <Text style={styles.webGuideText}>{t("teams.mobile.webGuide")}</Text>
             <Pressable style={styles.webGuideButton} onPress={handleOpenWebApp}>
               <Feather name="external-link" size={16} color="#FFFFFF" />
-              <Text style={styles.webGuideButtonText}>WEB版を開く</Text>
+              <Text style={styles.webGuideButtonText}>{t("teams.mobile.webGuideButton")}</Text>
             </Pressable>
             <Text style={styles.webGuideUrl}>{WEB_APP_URL}</Text>
           </View>

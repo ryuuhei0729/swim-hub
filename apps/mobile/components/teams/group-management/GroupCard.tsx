@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface GroupCardProps {
@@ -20,12 +21,13 @@ export const GroupCard: React.FC<GroupCardProps> = ({
   onDelete,
   onManageMembers,
 }) => {
+  const { t } = useTranslation();
   return (
     <Pressable
       style={styles.card}
       onPress={() => onPress(group)}
       accessibilityRole="button"
-      accessibilityLabel={`${group.name} のメンバー一覧を表示`}
+      accessibilityLabel={t("teams.mobile.groupManagement.cardViewMembersAria", { name: group.name })}
     >
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
@@ -42,7 +44,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
             style={styles.actionButton}
             onPress={() => onManageMembers(group)}
             accessibilityRole="button"
-            accessibilityLabel={`${group.name} のメンバーを編集`}
+            accessibilityLabel={t("teams.mobile.groupManagement.cardEditMembersAria", { name: group.name })}
           >
             <Feather name="user-plus" size={16} color="#9CA3AF" />
           </Pressable>
@@ -50,7 +52,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
             style={styles.actionButton}
             onPress={() => onEdit(group)}
             accessibilityRole="button"
-            accessibilityLabel={`${group.name} を編集`}
+            accessibilityLabel={t("teams.mobile.groupManagement.cardEditAria", { name: group.name })}
           >
             <Feather name="edit-2" size={16} color="#9CA3AF" />
           </Pressable>
@@ -58,7 +60,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
             style={styles.actionButton}
             onPress={() => onDelete(group)}
             accessibilityRole="button"
-            accessibilityLabel={`${group.name} を削除`}
+            accessibilityLabel={t("teams.mobile.groupManagement.cardDeleteAria", { name: group.name })}
           >
             <Feather name="trash-2" size={16} color="#9CA3AF" />
           </Pressable>

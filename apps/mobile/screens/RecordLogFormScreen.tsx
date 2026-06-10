@@ -28,6 +28,7 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { formatTime } from "@/utils/formatters";
+import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader } from "@/components/shared/VideoUploader";
@@ -722,7 +723,7 @@ export const RecordLogFormScreen: React.FC = () => {
                   <Text style={styles.entryInfoText}>
                     {entryInfo.styleName}
                     {entryInfo.entryTime &&
-                      ` (エントリータイム: ${formatTime(entryInfo.entryTime)})`}
+                      ` (${t("recordMobile.entryTimeInfo", { time: formatTime(entryInfo.entryTime) })})`}
                   </Text>
                 </View>
               )}
@@ -751,8 +752,10 @@ export const RecordLogFormScreen: React.FC = () => {
                       ]}
                     >
                       {formData.styleId
-                        ? swimStyles.find((s) => s.id.toString() === formData.styleId)?.name_jp ||
-                          t("recordMobile.form.stylePlaceholder")
+                        ? localizedStyleName(
+                            swimStyles.find((s) => s.id.toString() === formData.styleId),
+                            t,
+                          ) || t("recordMobile.form.stylePlaceholder")
                         : t("recordMobile.form.stylePlaceholder")}
                     </Text>
                     <Feather name="chevron-down" size={20} color="#6B7280" />
@@ -994,7 +997,7 @@ export const RecordLogFormScreen: React.FC = () => {
                         isSelected && styles.dropdownOptionTextSelected,
                       ]}
                     >
-                      {style.name_jp}
+                      {localizedStyleName(style, t)}
                     </Text>
                     {isSelected && <Feather name="check" size={16} color="#2563EB" />}
                   </Pressable>
