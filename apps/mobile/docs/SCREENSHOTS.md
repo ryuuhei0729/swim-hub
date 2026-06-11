@@ -1,27 +1,38 @@
-# App Store スクショ自動化（EN / JA）
+# App Store スクショ自動化
 
-iOS シミュレータ上で **Maestro** がアプリを操作してスクショを撮り、**fastlane frameit** で
-デバイス枠＋訴求テキストを合成し、**fastlane deliver** で App Store Connect (en-US / ja) に
-アップロードするパイプライン。
+iOS シミュレータ上で **Maestro** がアプリを操作してスクショを撮り、App Store Connect の
+ローカライズ用ディレクトリ (`fastlane/screenshots/en-US/`) に保存するパイプライン。
+（任意で fastlane frameit による枠+テキスト合成 / fastlane deliver による自動アップロードも可）
 
 対象アプリ: **SwimHub** (`app.swimhub` / App Store ID `6756808731`)
+
+---
+
+## 🎯 今回のスコープ（英語ローカライズ用・4画面・生スクショ）
+
+- **言語**: EN のみ（`capture.sh` の `LOCALES` は en のみ。JA を足すなら1行追加）
+- **画面**: Dashboard / Practices / Competitions(=レース記録) / My Page の **4枚**
+- **出力**: `fastlane/screenshots/en-US/` に生 PNG（枠加工なし → ASC にそのまま貼れる）
+- **ASC 反映**: 手動（スクショをドラッグ＆ドロップ＋英語概要を貼り付け）。英語メタデータの
+  ドラフトは `fastlane/metadata/en-US/`（name / subtitle / keywords / promotional_text / description）
+
+実行手順は §1〜§3 のみ（§4 frameit・§5 deliver は今回は任意）。
 
 ```
 build-sim.sh        seed-demo.sh              capture.sh                fastlane frame      fastlane upload_screenshots
  .app を生成   →   デモ垢+データ投入   →   EN/JA × iPhone/iPad 撮影  →  枠+テキスト合成  →  ASC へアップロード
 ```
 
-## 撮影対象（5画面 × 2サイズ × 2言語 = 20枚）
+## 撮影対象（4画面）
 
 | # | 画面 | testID |
 |---|------|--------|
 | 01 | Dashboard（カレンダー） | `tab-dashboard` |
 | 02 | Practices（練習一覧） | `tab-practices` |
-| 03 | Competitions（大会一覧） | `tab-competitions` |
-| 04 | Teams（チーム一覧） | `tab-teams` |
-| 05 | MyPage（プロフィール/ベストタイム） | `tab-mypage` |
+| 03 | Competitions（大会＝レース記録） | `tab-competitions` |
+| 04 | MyPage（プロフィール/ベストタイム） | `tab-mypage` |
 
-サイズ: iPhone 17 Pro Max (6.9") / iPad Pro 13"（App Store 必須2サイズ）
+サイズ: iPhone 17 Pro Max (6.9") / iPad Pro 13"（App Store 必須2サイズ。iPhone のみで良ければ capture.sh の DEVICES から iPad 行を削除）
 
 ---
 

@@ -29,7 +29,6 @@ import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/Ima
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 
 type CompetitionFormScreenRouteProp = RouteProp<MainStackParamList, "CompetitionForm">;
@@ -576,7 +575,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
               label={t("competition.form.imagesLabel")}
             />
           ) : (
-            <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+            <PremiumBadge feature="image_upload" />
           )}
         </View>
       </ScrollView>

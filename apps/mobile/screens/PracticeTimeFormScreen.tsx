@@ -16,7 +16,7 @@ import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { TimeEntry } from "@apps/shared/types/ui";
 import { formatTime } from "@/utils/formatters";
@@ -180,7 +180,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
         </Text>
         {practiceTimeLimitExceeded && (
           <View style={{ marginTop: 12 }}>
-            <PremiumBadge message={PREMIUM_MESSAGES.practice_time_limit} />
+            <PremiumBadge feature="practice_time_limit" />
           </View>
         )}
       </View>

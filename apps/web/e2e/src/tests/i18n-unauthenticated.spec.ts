@@ -157,12 +157,9 @@ test.describe("LanguageSwitcher でのロケール切り替え (unauthenticated)
     await page.goto("/ja/");
     await page.waitForLoadState("networkidle");
 
-    // LanguageSwitcher の EN ボタンを探してクリック
-    const enSwitcher = page
-      .locator(
-        '[data-testid="language-switcher-en"], button:has-text("EN"), a:has-text("EN")',
-      )
-      .first();
+    // LanguageSwitcher (プルダウン) を開いて EN 項目をクリック
+    await page.locator('[data-testid="language-switcher-trigger"]').first().click();
+    const enSwitcher = page.locator('[data-testid="language-switcher-en"]').first();
     await enSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await enSwitcher.click();
 
@@ -180,12 +177,9 @@ test.describe("LanguageSwitcher でのロケール切り替え (unauthenticated)
     await page.goto("/en/");
     await page.waitForLoadState("networkidle");
 
-    // LanguageSwitcher の JA ボタンを探してクリック
-    const jaSwitcher = page
-      .locator(
-        '[data-testid="language-switcher-ja"], button:has-text("JA"), a:has-text("JA")',
-      )
-      .first();
+    // LanguageSwitcher (プルダウン) を開いて JA 項目をクリック
+    await page.locator('[data-testid="language-switcher-trigger"]').first().click();
+    const jaSwitcher = page.locator('[data-testid="language-switcher-ja"]').first();
     await jaSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await jaSwitcher.click();
 
@@ -203,11 +197,8 @@ test.describe("LanguageSwitcher でのロケール切り替え (unauthenticated)
     await page.goto("/ja/login");
     await page.waitForLoadState("networkidle");
 
-    const enSwitcher = page
-      .locator(
-        '[data-testid="language-switcher-en"], button:has-text("EN"), a:has-text("EN")',
-      )
-      .first();
+    await page.locator('[data-testid="language-switcher-trigger"]').first().click();
+    const enSwitcher = page.locator('[data-testid="language-switcher-en"]').first();
     await enSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await enSwitcher.click();
 
@@ -225,8 +216,14 @@ test.describe("[V-35] MISSING_MESSAGE コンソールエラーなし", () => {
   const pagesToCheck = [
     { path: "/ja/", label: "ja LP" },
     { path: "/en/", label: "en LP" },
+    { path: "/zh/", label: "zh LP" },
+    { path: "/ko/", label: "ko LP" },
+    { path: "/de/", label: "de LP" },
     { path: "/ja/login", label: "ja login" },
     { path: "/en/login", label: "en login" },
+    { path: "/zh/login", label: "zh login" },
+    { path: "/ko/login", label: "ko login" },
+    { path: "/de/login", label: "de login" },
     { path: "/ja/signup", label: "ja signup" },
     { path: "/en/signup", label: "en signup" },
     { path: "/ja/reset-password", label: "ja reset-password" },

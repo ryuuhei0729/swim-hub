@@ -38,7 +38,7 @@ import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } fr
 import { uploadVideo } from "@/utils/videoUpload";
 import { localizedStyleName } from "@/utils/styleName";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, Competition } from "@apps/shared/types";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
@@ -988,7 +988,7 @@ export const RecordFormScreen: React.FC = () => {
             ))}
             {splitTimeLimitReached && (
               <View style={{ marginTop: 8 }}>
-                <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} compact />
+                <PremiumBadge feature="split_time_limit" compact />
               </View>
             )}
           </View>
@@ -1020,7 +1020,7 @@ export const RecordFormScreen: React.FC = () => {
                 label={t("recordMobile.form.imagesLabel")}
               />
             ) : (
-              <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+              <PremiumBadge feature="image_upload" />
             )}
           </View>
 

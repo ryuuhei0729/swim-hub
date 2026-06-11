@@ -50,13 +50,9 @@ vi.mock("expo-image-picker", () => ({
   launchCameraAsync: mocks.launchCameraAsync,
 }));
 
-vi.mock("@swim-hub/shared/constants/premium", () => ({
-  PREMIUM_MESSAGES: { video_upload: "動画アップロードはプレミアム会員限定" },
-}));
-
 vi.mock("@/components/shared/PremiumBadge", () => ({
-  PremiumBadge: ({ message }: { message: string }) =>
-    React.createElement("div", { "data-testid": "premium-badge" }, message),
+  PremiumBadge: ({ feature }: { feature: string }) =>
+    React.createElement("div", { "data-testid": "premium-badge" }, feature),
 }));
 
 vi.mock("@/components/shared/VideoPlayer", () => ({
@@ -225,7 +221,7 @@ describe("VideoUploader — 既存動作の回帰テスト", () => {
   it("isPremium=false かつ idle 状態のとき PremiumBadge が表示される", () => {
     render(<VideoUploader {...BASE_PROPS} isPremium={false} />);
     expect(screen.getByTestId("premium-badge")).toBeTruthy();
-    expect(screen.getByText("動画アップロードはプレミアム会員限定")).toBeTruthy();
+    expect(screen.getByText("video_upload")).toBeTruthy();
   });
 
   it("保留状態（selected）のとき「動画を選択済み」テキストが表示される", async () => {

@@ -1,0 +1,3673 @@
+{
+  "navigation": {
+    "mobile": {
+      "tabs": {
+        "home": "Start",
+        "practices": "Training",
+        "competitions": "Wettkämpfe",
+        "teams": "Teams",
+        "myPage": "Mein Bereich"
+      },
+      "titles": {
+        "practiceDetail": "Trainingsdetails",
+        "practiceEdit": "Training bearbeiten",
+        "practiceCreate": "Neues Training",
+        "practiceLogEdit": "Trainingsprotokoll bearbeiten",
+        "practiceLogCreate": "Neues Trainingsprotokoll",
+        "practiceTimeInput": "Zeiteingabe",
+        "recordDetail": "Wettkampfdetails",
+        "recordEdit": "Wettkampf bearbeiten",
+        "recordCreate": "Neuer Wettkampf",
+        "competitionInfo": "Wettkampfinfos",
+        "entryRegister": "Meldung eintragen",
+        "recordInput": "Ergebnisse eingeben",
+        "teamDetail": "Teamdetails",
+        "settings": "Einstellungen",
+        "bulkBestTime": "Bestzeiten-Sammeleingabe"
+      }
+    }
+  },
+  "metadata": {
+    "title": "SwimHub - Plattform für Schwimmzeiten & Training",
+    "description": "Erfassen Sie Trainings, Wettkämpfe und die Teamverwaltung. Eine kostenlose Plattform für Schwimmzeiten für Athletinnen und Athleten aller Niveaus.",
+    "shortDescription": "Plattform für Schwimmzeiten & Training",
+    "ogLocale": "de_DE",
+    "ogImageAlt": "SwimHub - Schwimmzeiten fürs Leben",
+    "keywords": [
+      "Schwimmen",
+      "Datenverwaltung",
+      "Schwimmsport",
+      "Trainingsprotokoll",
+      "Wettkampfergebnisse",
+      "Zeitenverwaltung",
+      "SwimHub",
+      "Schwimmer",
+      "Masters-Schwimmer"
+    ],
+    "planFree": "Free-Plan",
+    "planPremiumMonthly": "Premium-Plan (Monatlich)",
+    "planPremiumYearly": "Premium-Plan (Jährlich)"
+  },
+  "common": {
+    "appName": "SwimHub",
+    "language": "Sprache",
+    "alertErrorTitle": "Fehler",
+    "loading": "Wird geladen...",
+    "error": "Ein Fehler ist aufgetreten",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "back": "Zurück",
+    "close": "Schließen",
+    "ok": "OK",
+    "submit": "Senden",
+    "submitting": "Wird gesendet...",
+    "processing": "Wird verarbeitet...",
+    "updating": "Wird aktualisiert...",
+    "required": "Erforderlich",
+    "user": "Benutzer",
+    "poolTypeLong": "Langbahn",
+    "poolTypeShort": "Kurzbahn",
+    "inviteCode": "Einladungscode",
+    "none": "Keine",
+    "retry": "Erneut versuchen",
+    "copy": "Kopieren",
+    "add": "Hinzufügen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "new": "Neu",
+    "draft": "Entwurf",
+    "notSet": "Nicht festgelegt",
+    "yearMonth": "{year}-{month}",
+    "units": {
+      "items": "Einträge",
+      "people": "Personen",
+      "reps": "Wdh.",
+      "sets": "Sätze"
+    },
+    "app": {
+      "setupErrorTitle": "Einrichtungsfehler",
+      "supabaseConfigError": "Supabase ist nicht korrekt konfiguriert.\n\nBitte überprüfen Sie die App-Einstellungen.",
+      "supabaseClientNotInitialized": "Supabase-Client ist nicht initialisiert",
+      "supabaseEnvNotSet": "Supabase-Umgebungsvariablen sind nicht gesetzt.\nBitte konfigurieren Sie EXPO_PUBLIC_SUPABASE_URL und EXPO_PUBLIC_SUPABASE_ANON_KEY.",
+      "emailAlreadyRegistered": "Diese E-Mail-Adresse ist bereits registriert.",
+      "urlParseFailed": "URL konnte nicht verarbeitet werden",
+      "bulkSyncFailedWithStatus": "Sammel-Synchronisierung fehlgeschlagen ({status})",
+      "bulkSyncFailed": "Sammel-Synchronisierung fehlgeschlagen",
+      "iosCalendarNotFound": "Kalender nicht gefunden",
+      "iosEventCreateFailed": "Termin konnte nicht erstellt werden",
+      "iosEventUpdateFailed": "Termin konnte nicht aktualisiert werden",
+      "iosEventDeleteFailed": "Termin konnte nicht gelöscht werden",
+      "defaultPracticeTitle": "Training",
+      "defaultCompetitionTitle": "Wettkampf"
+    },
+    "premiumBadge": {
+      "upgradeAction": "Upgraden"
+    },
+    "tag": {
+      "addTag": "Tag hinzufügen"
+    },
+    "imageUploader": {
+      "newBadge": "Neu",
+      "addButton": "Hinzufügen",
+      "maxReached": "Maximale Anzahl erreicht"
+    },
+    "offlineBanner": "📡 Sie sind offline. Einige Funktionen sind eingeschränkt.",
+    "aria": {
+      "close": "Schließen",
+      "previousImage": "Vorheriges Bild",
+      "nextImage": "Nächstes Bild",
+      "previousPage": "Vorherige Seite",
+      "nextPage": "Nächste Seite",
+      "pageN": "Seite {page}",
+      "switchLanguage": "Sprache wechseln"
+    },
+    "pagination": {
+      "prev": "Zurück",
+      "next": "Weiter"
+    },
+    "errorBoundary": {
+      "title": "Ein Fehler ist aufgetreten",
+      "unknownError": "Unbekannter Fehler",
+      "retry": "Erneut versuchen",
+      "reload": "Seite neu laden",
+      "helpText": "Falls das Problem weiterhin besteht, laden Sie die Seite neu oder wenden Sie sich an den Support."
+    },
+    "video": {
+      "loading": "Video wird geladen...",
+      "loadFailed": "Video konnte nicht geladen werden",
+      "urlFetchFailed": "URL konnte nicht abgerufen werden"
+    },
+    "upload": {
+      "imageLabel": "Bild",
+      "imageOnlyError": "Bitte wählen Sie eine Bilddatei aus",
+      "imageSizeError": "Das Bild muss kleiner als {maxMb} MB sein",
+      "imageLoadFailed": "Bild konnte nicht geladen werden",
+      "imageDataFetchFailed": "Bilddaten konnten nicht abgerufen werden",
+      "imageSelectFailed": "Bild konnte nicht ausgewählt werden",
+      "imageDeleteFailed": "Bild konnte nicht gelöscht werden",
+      "permissionRequiredTitle": "Berechtigung erforderlich",
+      "photoLibraryPermissionRequired": "Für die Auswahl von Bildern ist Zugriff auf die Fotobibliothek erforderlich.",
+      "removeConfirmTitle": "Löschen bestätigen",
+      "imageRemoveConfirm": "Dieses Bild löschen?",
+      "avatarRemoveConfirm": "Profilbild löschen?",
+      "removeChoice": "Löschen",
+      "uploadFailed": "Upload fehlgeschlagen",
+      "imageUploadFailedDetail": "Bild-Upload fehlgeschlagen: {detail}",
+      "imageUploadFailedSimple": "Bild-Upload fehlgeschlagen",
+      "imageDeleteFailedDetail": "Bild konnte nicht gelöscht werden: {detail}",
+      "imageDeleteFailedSimple": "Bild konnte nicht gelöscht werden",
+      "videoUploadUrlFailed": "Upload-URL konnte nicht abgerufen werden",
+      "videoReadFailed": "Videodatei konnte nicht gelesen werden: {uri}",
+      "videoReadHttpFailed": "Videodatei konnte nicht gelesen werden: HTTP {status} ({uri})",
+      "videoUploadHttpFailed": "Video-Upload fehlgeschlagen: HTTP {status}{detail}",
+      "thumbnailUploadHttpFailed": "Thumbnail-Upload fehlgeschlagen: HTTP {status}",
+      "videoDbUpdateFailed": "Datenbank konnte nicht aktualisiert werden",
+      "videoSignedUrlFailed": "Signierte URL konnte nicht abgerufen werden",
+      "videoDeleteFailedSimple": "Video konnte nicht gelöscht werden",
+      "sessionInvalid": "Ihre Sitzung ist ungültig. Bitte melden Sie sich erneut an.",
+      "authNotFound": "Anmeldedaten nicht gefunden. Bitte melden Sie sich erneut an.",
+      "videoSizeError": "Die Videogröße überschreitet {maxMb} MB",
+      "videoAddTitle": "Video hinzufügen",
+      "videoSourceSelectMessage": "Wählen Sie eine Videoquelle aus",
+      "cameraOption": "Video aufnehmen",
+      "libraryOption": "Aus Bibliothek auswählen",
+      "videoRemoveTitle": "Video löschen",
+      "videoRemoveConfirm": "Dieses Video löschen?",
+      "deleteFailed": "Löschen fehlgeschlagen",
+      "videoSelected": "Video ausgewählt (wird beim Speichern hochgeladen)",
+      "videoSelectedRemove": "Rückgängig",
+      "videoUploading": "Wird hochgeladen... {progress}%",
+      "videoClosePlayer": "Schließen",
+      "videoDelete": "Löschen",
+      "videoTapToPlay": "Zum Abspielen tippen",
+      "videoReplace": "Ersetzen"
+    },
+    "datePicker": {
+      "placeholder": "Datum auswählen",
+      "clearDate": "Datum löschen",
+      "calendarAriaLabel": "Kalender zur Datumsauswahl",
+      "prevMonth": "Vorheriger Monat",
+      "nextMonth": "Nächster Monat",
+      "today": "Heute",
+      "close": "Schließen",
+      "weekdays": [
+        "So",
+        "Mo",
+        "Di",
+        "Mi",
+        "Do",
+        "Fr",
+        "Sa"
+      ]
+    },
+    "formStepper": {
+      "ariaLabel": "Formularfortschritt",
+      "stepIndicator": "Schritt {current} / {total}"
+    },
+    "placeCombobox": {
+      "placeholder": "Ort eingeben oder auswählen"
+    },
+    "birthdayInput": {
+      "yearLabel": "Geburtsjahr",
+      "monthLabel": "Geburtsmonat",
+      "dayLabel": "Geburtstag",
+      "yearUnit": "",
+      "monthUnit": "",
+      "dayUnit": "",
+      "invalidDate": "Dieses Datum existiert nicht",
+      "outOfRange": "Bitte geben Sie ein Jahr zwischen {min} und {max} ein"
+    },
+    "loadingSpinner": {
+      "fullScreenMessage": "Anwendung wird geladen..."
+    },
+    "imageGallery": {
+      "attachedImages": "Angehängte Bilder",
+      "imageAlt": "Bild {index}"
+    },
+    "validation": {
+      "required": "Dieses Feld ist erforderlich",
+      "email": "Bitte geben Sie eine gültige E-Mail-Adresse ein"
+    },
+    "videoUploader": {
+      "uploadUrlFailed": "Upload-URL konnte nicht abgerufen werden",
+      "videoUploadFailed": "Video-Upload fehlgeschlagen: HTTP {status}",
+      "videoNetworkError": "Beim Hochladen des Videos ist ein Netzwerkfehler aufgetreten",
+      "thumbnailUploadFailed": "Thumbnail-Upload fehlgeschlagen: HTTP {status}",
+      "dbUpdateFailed": "Datenbank konnte nicht aktualisiert werden",
+      "uploadFailed": "Upload fehlgeschlagen",
+      "deleteFailed": "Löschen fehlgeschlagen",
+      "deleteConfirm": "Dieses Video löschen?",
+      "uploading": "Wird hochgeladen... {progress}%",
+      "selected": "Video ausgewählt (wird beim Speichern hochgeladen)",
+      "cancelPending": "Rückgängig",
+      "deleteVideo": "Video löschen",
+      "addVideo": "Video hinzufügen",
+      "deleteVideoAriaLabel": "Video löschen"
+    },
+    "videoPlayer": {
+      "loading": "Video wird geladen...",
+      "urlFetchFailed": "URL konnte nicht abgerufen werden",
+      "loadFailed": "Video konnte nicht geladen werden",
+      "fullscreen": "Vollbild",
+      "download": "Herunterladen"
+    },
+    "videoEditor": {
+      "title": "Video bearbeiten",
+      "trimming": "Zuschneiden",
+      "zoom": "Zoom: {value}x",
+      "secondsUnit": "s",
+      "hardwareSupported": "✓ Hardware-Kodierung unterstützt",
+      "engineLoading": "Videokonvertierungs-Engine wird geladen...",
+      "engineReady": "✓ Bereit",
+      "cancel": "Abbrechen",
+      "applyAndUpload": "Anwenden & hochladen",
+      "processing": "Wird konvertiert... {progress}%",
+      "processingError": "Beim Konvertieren des Videos ist ein Fehler aufgetreten."
+    },
+    "shareCardModal": {
+      "closeOverlay": "Modal schließen",
+      "close": "Schließen",
+      "save": "Speichern",
+      "share": "Teilen",
+      "competitionTitle": "Ergebnis teilen",
+      "practiceTitle": "Training teilen",
+      "competitionShareText": "【Swimhub】\nIch habe mein Wettkampfergebnis geteilt!\n\nVerwalten Sie Ihre Zeiten mit der Schwimm-App „SwimHub“!\nhttps://swim-hub.app",
+      "practiceShareText": "【Swimhub】\nIch habe mein Trainingsprotokoll geteilt!\n\nProtokollieren Sie Ihr Training mit der Schwimm-App „SwimHub“!\nhttps://swim-hub.app"
+    }
+  },
+  "nav": {
+    "practice": "Trainingsprotokoll",
+    "competition": "Wettkampfergebnisse",
+    "proxy": "Stellvertretende Eingabe",
+    "pricing": "Preise",
+    "signup": "Kostenlos registrieren",
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "profile": "Profil",
+    "settings": "Einstellungen",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen",
+    "dashboard": "Dashboard",
+    "practiceHistory": "Trainingsverlauf",
+    "competitionHistory": "Wettkampfverlauf",
+    "mypage": "Mein Bereich",
+    "team": "Team"
+  },
+  "lp": {
+    "hero": {
+      "badge": "Mühelose Teamverwaltung direkt vom Handy",
+      "title1": "Für Einzelschwimmer und Teams gleichermaßen –",
+      "title2": "jede Schwimmzeit erfassen",
+      "title3": "alles an einem Ort.",
+      "description": "Verwalten Sie Trainingsprotokolle, Wettkampfergebnisse, stellvertretende Eingaben und Wettkampfmeldungen – alles in einer App. Starten Sie sofort auf dem Handy oder im Browser.",
+      "appStoreLabel": "Im App Store herunterladen",
+      "comingSoon": "Coming Soon"
+    },
+    "features": {
+      "feature1Title": "Trainingszeiten & Sätze erfassen",
+      "feature1Badge": "Funktion 1",
+      "feature1Desc": "Erfassen Sie Intervalle, Wiederholungen, Sätze und Zeiten. Setzen Sie sich klare Ziele für das nächste Training – eine Wiederholung mehr, das Intervall um 5 Sekunden verkürzen oder die Durchschnittszeit verbessern.",
+      "feature1Item1": "Intervalle, Wiederholungen und Sätze protokollieren",
+      "feature1Item2": "Durchschnittszeit wird automatisch berechnet",
+      "feature1Item3": "Nach Tags filtern",
+      "feature2Title": "Wettkampfergebnisse erfassen",
+      "feature2Badge": "Funktion 2",
+      "feature2Desc": "Erfassen Sie Disziplin, Zeit, Bahnlänge und Zwischenzeiten. Ihre Bestzeiten-Tabelle wird automatisch aktualisiert. Kurzbahn, Langbahn und Staffeldaten werden alle erfasst.",
+      "feature2Item1": "Bahnen automatisch aus Zwischenzeiten berechnen",
+      "feature2Item2": "Bestzeiten-Tabelle wird automatisch aktualisiert",
+      "feature2Item3": "Auch Wettkampfmeldungen verwalten",
+      "feature3Title": "Trainer und Manager können stellvertretend für Athleten eingeben",
+      "feature3Badge": "Funktion 3",
+      "feature3Desc": "Trainings- und Wettkampfdaten können nicht nur von Athleten, sondern auch von Trainern oder Managern gesammelt eingetragen werden. Die Daten sind der einzelnen Person zugeordnet und werden auch nach dem Verlassen des Teams weiter gesammelt.",
+      "feature3Item1": "Sammeleingabe durch Trainer und Manager",
+      "feature3Item2": "Daten bleiben für immer bei der Athletin oder dem Athleten",
+      "feature3Item3": "Eine App fürs Leben",
+      "scannerTitle": "Unsere herausragende Funktion",
+      "scannerDesc": "Lassen Sie die KI Ihre handgeschriebenen Trainingspläne lesen und sparen Sie sich die manuelle Eingabe.",
+      "scannerLongDesc1": "Das nachträgliche Protokollieren des Trainings ist mühsam. Mit SwimHub Scanner fotografieren Sie einfach Ihren handgeschriebenen Trainingsplan, und die KI digitalisiert ihn für Sie.",
+      "scannerLongDesc2": "Egal ob Plan vom Trainer oder selbst notierte Aufzeichnungen – Sie können sie unverändert importieren und sparen sich so eine Menge Tipparbeit.",
+      "scannerCta": "SwimHub Scanner ausprobieren",
+      "altPractice": "Bildschirm Trainingsprotokoll",
+      "altCompetition": "Bildschirm Wettkampfergebnisse",
+      "altProxy": "Bildschirm Teamverwaltung & stellvertretende Eingabe",
+      "altScanner": "Bildschirm SwimHub Scanner"
+    },
+    "pricing": {
+      "title": "Preise",
+      "subtitle": "Zwei einfache Tarife. Starten Sie kostenlos, ohne Kreditkarte.",
+      "viewDetail": "Preisdetails ansehen"
+    },
+    "cta": {
+      "title": "Starten Sie noch heute mit der Erfassung Ihrer Schwimmzeiten",
+      "subtitle": "Die Kontoerstellung ist kostenlos. Legen Sie sofort los.",
+      "body": "Kein Team? Kein Problem. Starten Sie allein und fügen Sie Teamfunktionen hinzu, sobald Sie bereit sind."
+    },
+    "family": {
+      "title": "SwimHub App-Familie",
+      "subtitle": "Eine Reihe von Tools, die das Schwimmen einfacher machen",
+      "tryIt": "Ausprobieren",
+      "timerTagline": "Zeiten über Ihre Videos legen",
+      "timerDesc": "Spielen Sie Schwimmvideos mit eingeblendeter Stoppuhr ab. Perfekt für Technikanalyse und Bahnkontrolle.",
+      "scannerTagline": "KI liest handgeschriebene Trainingspläne",
+      "scannerDesc": "Die KI digitalisiert Ihre handgeschriebenen Trainingsaufzeichnungen und reduziert die Dateneingabe erheblich."
+    },
+    "footer": {
+      "tagline": "Die All-in-one-Plattform zur Datenverwaltung für Schwimmer",
+      "terms": "Nutzungsbedingungen",
+      "privacy": "Datenschutzerklärung",
+      "blog": "Blog",
+      "about": "Über uns"
+    },
+    "deviceMockup": {
+      "mobileAlt": "SwimHub Dashboard (Mobil)",
+      "desktopAlt": "SwimHub Teammitglieder (Desktop)",
+      "mobilePlaceholder": "Dashboard-Vorschau (in Kürze)",
+      "desktopPlaceholder": "Teammitglieder-Vorschau (in Kürze)"
+    }
+  },
+  "auth": {
+    "signin": {
+      "title": "Anmelden",
+      "subtitle": "Willkommen zurück bei SwimHub",
+      "submitButton": "Anmelden",
+      "loadingButton": "Wird verarbeitet...",
+      "loadingMessage": "Anmeldedaten werden überprüft...",
+      "errorTitle": "Anmeldefehler aufgetreten",
+      "emailMethodTitle": "Mit E-Mail anmelden",
+      "emailMethodButton": "Mit E-Mail fortfahren"
+    },
+    "signup": {
+      "title": "Konto erstellen",
+      "subtitle": "Neues Konto erstellen",
+      "submitButton": "Konto erstellen",
+      "emailMethodTitle": "Mit E-Mail registrieren",
+      "emailMethodButton": "Mit E-Mail fortfahren",
+      "welcomeTagline": "Starten Sie mit SwimHub",
+      "startButton": "Jetzt loslegen"
+    },
+    "resetPassword": {
+      "title": "Passwort zurücksetzen",
+      "subtitle": "Geben Sie Ihre E-Mail-Adresse ein, um einen Link zum Zurücksetzen zu erhalten",
+      "submitButton": "Zurücksetzungs-E-Mail senden",
+      "loadingButton": "Wird gesendet...",
+      "successMessage": "Eine E-Mail zum Zurücksetzen des Passworts wurde gesendet. Bitte überprüfen Sie Ihr Postfach."
+    },
+    "updatePassword": {
+      "title": "Passwort ändern",
+      "subtitle": "Legen Sie ein neues Passwort fest",
+      "submitButton": "Passwort aktualisieren",
+      "loadingButton": "Wird aktualisiert...",
+      "backToLogin": "Zurück zur Anmeldung",
+      "successMessage": "Ihr Passwort wurde erfolgreich aktualisiert.",
+      "notLoggedIn": "Sie müssen angemeldet sein, um Ihr Passwort zu aktualisieren."
+    },
+    "fields": {
+      "email": "E-Mail-Adresse",
+      "password": "Passwort",
+      "name": "Name",
+      "gender": "Geschlecht",
+      "birthday": "Geburtsdatum",
+      "genderMale": "Männlich",
+      "genderFemale": "Weiblich",
+      "newPassword": "Neues Passwort",
+      "confirmPassword": "Passwort bestätigen",
+      "emailPlaceholder": "your@email.com",
+      "namePlaceholder": "Max Mustermann",
+      "passwordPlaceholder": "Passwort (mindestens 6 Zeichen)",
+      "newPasswordPlaceholder": "Neues Passwort (mindestens 6 Zeichen)",
+      "confirmPasswordPlaceholder": "Passwort bestätigen"
+    },
+    "forgotPassword": "Passwort vergessen?",
+    "switchToSignup": "Noch kein Konto? Hier registrieren",
+    "switchToSignin": "Sie haben bereits ein Konto? Hier anmelden",
+    "googleSignin": "Mit Google anmelden",
+    "googleSignup": "Mit Google erstellen",
+    "appleSignin": "Mit Apple anmelden",
+    "appleSignup": "Mit Apple erstellen",
+    "orSeparator": "oder",
+    "validation": {
+      "nameRequired": "Bitte geben Sie Ihren Namen ein.",
+      "emailRequired": "Bitte geben Sie Ihre E-Mail-Adresse ein.",
+      "passwordRequired": "Bitte geben Sie Ihr Passwort ein.",
+      "newPasswordRequired": "Bitte geben Sie ein neues Passwort ein.",
+      "passwordMinLength": "Das Passwort muss mindestens 6 Zeichen lang sein.",
+      "passwordLowercase": "Das Passwort muss einen Kleinbuchstaben enthalten.",
+      "passwordUppercase": "Das Passwort muss einen Großbuchstaben enthalten.",
+      "passwordDigit": "Das Passwort muss eine Zahl enthalten.",
+      "passwordSymbol": "Das Passwort muss ein Sonderzeichen enthalten.",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein."
+    },
+    "passwordRequirements": {
+      "title": "Passwortanforderungen",
+      "minLength": "Mindestens 6 Zeichen",
+      "lowercase": "Enthält Kleinbuchstaben",
+      "uppercase": "Enthält Großbuchstaben",
+      "digit": "Enthält Zahl",
+      "symbol": "Enthält Sonderzeichen"
+    },
+    "ui": {
+      "tagline": "Anmelden oder Konto erstellen",
+      "authenticating": "Authentifizierung läuft...",
+      "clientNotInitialized": "Supabase-Client ist nicht initialisiert",
+      "browserOnly": "Bitte in einer Browser-Umgebung ausführen"
+    },
+    "errors": {
+      "googleFailed": "Google-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "appleFailed": "Apple-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "unexpected": "Ein unerwarteter Fehler ist aufgetreten.",
+      "invalidCredentials": "E-Mail-Adresse oder Passwort ist nicht korrekt. Bitte überprüfen Sie Ihre Eingaben und versuchen Sie es erneut.",
+      "tooManyRequests": "Die maximale Anzahl an Anmeldeversuchen wurde erreicht. Bitte warten Sie einen Moment und versuchen Sie es erneut.",
+      "userAlreadyRegistered": "Konto konnte nicht erstellt werden. Bitte überprüfen Sie Ihre Eingaben und versuchen Sie es erneut.",
+      "weakPassword": "Das Passwort ist zu schwach. Bitte wählen Sie ein stärkeres Passwort.",
+      "captchaRequired": "Eine Captcha-Verifizierung ist erforderlich. Bitte schließen Sie das Captcha ab und versuchen Sie es erneut.",
+      "rateLimitExceeded": "Anfragelimit erreicht. Bitte warten Sie einen Moment und versuchen Sie es erneut.",
+      "networkError": "Ein Netzwerkfehler ist aufgetreten. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+      "resetFailed": "Die E-Mail zum Zurücksetzen des Passworts konnte nicht gesendet werden.",
+      "updateFailed": "Das Passwort konnte nicht aktualisiert werden."
+    },
+    "supabaseErrors": {
+      "generic": "Ein Anmeldefehler ist aufgetreten. Bitte versuchen Sie es erneut",
+      "genericWithDetail": "Anmeldefehler aufgetreten: {detail}",
+      "cancelled": "Die Authentifizierung wurde abgebrochen",
+      "invalidLoginCredentials": "E-Mail-Adresse oder Passwort ist nicht korrekt",
+      "invalidCredentials": "Die Anmeldedaten sind nicht korrekt",
+      "emailNotConfirmed": "Die E-Mail-Adresse wurde nicht bestätigt. Bitte überprüfen Sie Ihre Bestätigungs-E-Mail",
+      "userNotFound": "Benutzer nicht gefunden",
+      "userAlreadyRegistered": "Diese E-Mail-Adresse ist bereits registriert",
+      "emailAlreadyInUse": "Diese E-Mail-Adresse wird bereits verwendet",
+      "providerNotEnabled": "Dieser Authentifizierungsanbieter ist nicht aktiviert",
+      "oauthError": "Bei der OAuth-Authentifizierung ist ein Fehler aufgetreten",
+      "accessDenied": "Zugriff verweigert",
+      "invalidGrant": "Die Authentifizierung ist abgelaufen. Bitte versuchen Sie es erneut",
+      "invalidRequest": "Die Anfrage ist ungültig",
+      "unauthorizedClient": "Die Authentifizierung ist nicht zulässig",
+      "unsupportedGrantType": "Nicht unterstützter Authentifizierungstyp",
+      "invalidToken": "Das Authentifizierungs-Token ist ungültig",
+      "tokenExpired": "Das Authentifizierungs-Token ist abgelaufen",
+      "invalidRefreshToken": "Das Refresh-Token ist ungültig",
+      "refreshTokenNotFound": "Das Refresh-Token wurde nicht gefunden",
+      "invalidIdToken": "Das ID-Token ist ungültig",
+      "idTokenExpired": "Das ID-Token ist abgelaufen",
+      "sessionNotFound": "Sitzung nicht gefunden. Bitte melden Sie sich erneut an",
+      "sessionExpired": "Die Sitzung ist abgelaufen. Bitte melden Sie sich erneut an",
+      "invalidSession": "Die Sitzung ist ungültig",
+      "tooManyRequests": "Die maximale Anzahl an Anfragen wurde erreicht. Bitte warten Sie einen Moment",
+      "rateLimitExceeded": "Anfragelimit überschritten. Bitte warten Sie einen Moment",
+      "networkError": "Ein Netzwerkfehler ist aufgetreten. Bitte überprüfen Sie Ihre Verbindung",
+      "connectionRefused": "Die Verbindung wurde abgelehnt. Bitte versuchen Sie es später erneut",
+      "timeout": "Zeitüberschreitung der Verbindung. Bitte versuchen Sie es erneut",
+      "appleAuthFailed": "Apple-Authentifizierung fehlgeschlagen",
+      "appleSignInFailed": "Anmeldung mit Apple fehlgeschlagen",
+      "googleAuthFailed": "Google-Authentifizierung fehlgeschlagen",
+      "googleSignInFailed": "Anmeldung mit Google fehlgeschlagen",
+      "internalServerError": "Ein Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut",
+      "serviceUnavailable": "Der Dienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut",
+      "badGateway": "Bei der Kommunikation mit dem Server ist ein Problem aufgetreten"
+    },
+    "mobile": {
+      "oauthUrlGenerationFailed": "Die OAuth-URL konnte nicht generiert werden",
+      "googleCalendarPermissionDenied": "Die Zugriffsberechtigung für Google Kalender konnte nicht erteilt werden. Bitte versuchen Sie es erneut.",
+      "calendarConnectionSaveFailed": "Die Kalenderverbindung konnte nicht gespeichert werden",
+      "tokensNotReceived": "Die Authentifizierungs-Token konnten nicht empfangen werden",
+      "cancelled": "Die Authentifizierung wurde abgebrochen",
+      "dismissed": "Die Authentifizierung wurde unterbrochen",
+      "authFailed": "Authentifizierung fehlgeschlagen",
+      "unknownError": "Ein unbekannter Fehler ist aufgetreten",
+      "appleAuthIosOnly": "Die Apple-Anmeldung ist nur unter iOS verfügbar",
+      "appleAuthTimeout": "Zeitüberschreitung der Authentifizierung. Bitte versuchen Sie es erneut.",
+      "appleAuthDeviceUnavailable": "Die Apple-Anmeldung ist auf diesem Gerät nicht verfügbar",
+      "appleTokenNotReceived": "Das Apple-Authentifizierungs-Token konnte nicht empfangen werden"
+    },
+    "success": {
+      "emailConfirmTitle": "Bestätigungs-E-Mail gesendet",
+      "emailConfirmation": "Wir haben eine Bestätigungs-E-Mail an Ihre Adresse gesendet. Klicken Sie auf den Link in der E-Mail, um Ihre Registrierung abzuschließen."
+    },
+    "backToLogin": "Zurück zur Anmeldung",
+    "logoutConfirmMessage": "Möchten Sie sich wirklich abmelden?",
+    "redirecting": "Weiterleitung läuft...",
+    "legal": {
+      "agreePrefix": "Indem Sie fortfahren, stimmen Sie unseren ",
+      "termsOfService": "Nutzungsbedingungen",
+      "conjunction": " und der ",
+      "privacyPolicy": "Datenschutzrichtlinie",
+      "agreeSuffix": " zu."
+    },
+    "errorMap": {
+      "accessDenied": "Zugriff verweigert.",
+      "invalidRequest": "Ungültige Anfrage.",
+      "serverError": "Ein Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
+      "temporarilyUnavailable": "Der Dienst ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.",
+      "sessionNotFound": "Sitzung nicht gefunden. Bitte melden Sie sich erneut an.",
+      "emailNotConfirmed": "Ihre E-Mail-Adresse wurde nicht bestätigt. Bitte überprüfen Sie Ihre Bestätigungs-E-Mail.",
+      "userNotFound": "Benutzer nicht gefunden.",
+      "emailAlreadyExists": "Diese E-Mail-Adresse ist bereits registriert.",
+      "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+      "invalidOtp": "Der Bestätigungscode ist ungültig.",
+      "expiredOtp": "Der Bestätigungscode ist abgelaufen. Bitte versuchen Sie es erneut.",
+      "defaultError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
+      "loginFailed": "Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben und versuchen Sie es erneut.",
+      "genericError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut."
+    }
+  },
+  "pricing": {
+    "metaTitle": "Preise | SwimHub",
+    "metaDesc": "Sehen Sie sich die Preispläne von SwimHub an. Auch der kostenlose Plan bietet die Grundfunktionen. Der Premium-Plan kostet ¥500 pro Monat bzw. ¥5,000 pro Jahr und schaltet alle Funktionen unbegrenzt frei. Inklusive 7-tägiger kostenloser Testphase.",
+    "ogDescription": "Preispläne von SwimHub. Kostenlos starten und mit Premium alle Funktionen freischalten. ¥500/Monat / ¥5,000/Jahr.",
+    "title": "Preise",
+    "subtitle": "Starten Sie zunächst kostenlos und steigen Sie bei Bedarf auf Premium um. In der 7-tägigen kostenlosen Testphase können Sie alle Funktionen ausprobieren.",
+    "monthSuffix": "/Monat",
+    "freePlan": {
+      "name": "Free",
+      "startButton": "Kostenlos starten",
+      "feature1": "Trainings- und Wettkampfaufzeichnungen",
+      "feature2": "Bestzeitentabelle",
+      "feature3": "Team-Funktionen und Zielverwaltung",
+      "feature4": "Split-time: max. 3 pro Aufzeichnung",
+      "feature5": "PracticeTime: max. 18 pro Trainingsprotokoll",
+      "exclude1": "Bild- und Video-Uploads"
+    },
+    "premiumPlan": {
+      "name": "Premium",
+      "trialBadge": "7-tägige kostenlose Testphase",
+      "annualNote": "Jährliche Zahlung: ¥5,000/Jahr",
+      "annualSaving": "2 Monate sparen",
+      "startButton": "Kostenlose Testphase starten",
+      "feature1": "Alle Funktionen unbegrenzt",
+      "feature2": "Split-time: unbegrenzt",
+      "feature3": "PracticeTime: unbegrenzt",
+      "feature4": "Bild- und Video-Uploads",
+      "feature5": "Inklusive 7-tägiger kostenloser Testphase"
+    },
+    "planTable": {
+      "current": "Aktuell",
+      "free": "Free",
+      "premium": "Premium",
+      "rowSplitTime": "Splitzeit",
+      "rowPracticeTime": "Trainingszeit",
+      "rowImageUpload": "Bild-Upload",
+      "rowVideoUpload": "Video-Upload",
+      "rowAiAnalysis": "KI-Menüanalyse",
+      "rowAds": "Werbung",
+      "valueSplit3PerRecord": "3/Aufzeichnung",
+      "value18PerLog": "18/Protokoll",
+      "valueUnlimited": "Unbegrenzt",
+      "valueOncePerDay": "1×/Tag"
+    },
+    "comparison": {
+      "title": "Funktionsvergleich",
+      "featureColumn": "Funktion",
+      "rowPractice": "Trainingsaufzeichnungen",
+      "rowCompetition": "Wettkampfaufzeichnungen",
+      "rowBestTime": "Bestzeitentabelle",
+      "rowTeam": "Team-Funktionen",
+      "rowGoals": "Zielverwaltung",
+      "rowSplitTime": "Split-time",
+      "rowPracticeTime": "PracticeTime",
+      "rowImageUpload": "Bild- und Video-Uploads",
+      "rowScanner": "SwimHub Scanner-Integration",
+      "rowTimer": "SwimHub Timer-Integration",
+      "valueLimitedSplit": "max. 3 pro Aufzeichnung",
+      "valueLimitedPractice": "max. 18 pro Trainingsprotokoll",
+      "valueUnlimited": "Unbegrenzt"
+    },
+    "faq": {
+      "title": "Häufig gestellte Fragen",
+      "q1": "Werde ich während der kostenlosen Testphase belastet?",
+      "a1": "Nein. Während der 7-tägigen kostenlosen Testphase fallen keinerlei Gebühren an. Wenn Sie vor Ablauf der Testphase kündigen, entstehen keine Kosten.",
+      "q2": "Was ist der Unterschied zwischen jährlicher und monatlicher Zahlung?",
+      "a2": "Die jährliche Zahlung kostet ¥5,000/Jahr und ist damit im Vergleich zur monatlichen Zahlung (¥500/Monat = ¥6,000/Jahr) um zwei Monate (¥1,000) günstiger.",
+      "q3": "Kann ich meinen Plan später ändern?",
+      "a3": "Ja. Sie können jederzeit ein Upgrade oder Downgrade durchführen. Ihren Plan können Sie über den Einstellungsbildschirm verwalten.",
+      "q4": "Kann ich auch SwimHub Scanner und SwimHub Timer nutzen?",
+      "a4": "Ja. Mit dem Premium-Plan von SwimHub können Sie auch die kostenpflichtigen Funktionen von SwimHub Scanner und SwimHub Timer über ein einheitliches Abonnement nutzen."
+    },
+    "cta": {
+      "title": "Jetzt kostenlos loslegen",
+      "subtitle": "Die Kontoerstellung ist kostenlos. In der 7-tägigen kostenlosen Testphase können Sie alle Funktionen ausprobieren."
+    }
+  },
+  "about": {
+    "title": "Betreiberinformationen und Serviceübersicht",
+    "metaTitle": "Betreiberinformationen und Serviceübersicht | SwimHub",
+    "metaDesc": "Hier stellen wir die Betreiberinformationen, die Serviceübersicht und die Entwicklungsgeschichte von SwimHub vor. Erfahren Sie mehr über SwimHub, den Aufzeichnungsverwaltungsdienst für Schwimmer, Trainer und Teamverwalter.",
+    "headerDescription": "Wir informieren Sie über die Betreiberinformationen, die Servicedetails und die Beweggründe hinter der Entwicklung von SwimHub."
+  },
+  "contact": {
+    "title": "Kontakt",
+    "metaTitle": "Kontakt | SwimHub",
+    "description": "Ob Fragen, Anregungen oder Fehlerberichte – kontaktieren Sie uns gern jederzeit. Wir bemühen uns, so schnell wie möglich zu reagieren.",
+    "name": "Ihr Name",
+    "namePlaceholder": "Max Mustermann",
+    "email": "E-Mail-Adresse",
+    "emailPlaceholder": "example@email.com",
+    "subject": "Betreff",
+    "message": "Ihre Nachricht",
+    "messagePlaceholder": "Bitte beschreiben Sie Ihr Anliegen ausführlich",
+    "submitButton": "Senden",
+    "submitting": "Wird gesendet...",
+    "successMessage": "Ihre Anfrage ist bei uns eingegangen. Vielen Dank.",
+    "errorMessage": "Senden fehlgeschlagen. Bitte versuchen Sie es später erneut.",
+    "subjectOptions": {
+      "placeholder": "Bitte auswählen",
+      "question": "Frage zu einer Funktion",
+      "bug": "Fehlerbericht",
+      "suggestion": "Funktionswunsch",
+      "account": "Konto-bezogen",
+      "other": "Sonstiges"
+    },
+    "aboutTitle": "Hinweise zur Kontaktaufnahme",
+    "aboutItem1": "Die Beantwortung Ihrer Anfrage kann einige Tage in Anspruch nehmen",
+    "aboutItem2": "In dringenden Fällen nutzen Sie bitte die Benachrichtigungsfunktion in der App",
+    "aboutItem3Prefix": "Häufig gestellte Fragen finden Sie auf der ",
+    "aboutItem3LinkText": "Support-Seite",
+    "aboutItem3Suffix": ""
+  },
+  "dashboard": {
+    "mobile": {
+      "calendarFetchFailed": "Kalenderdaten konnten nicht abgerufen werden",
+      "calendarLoading": "Kalender wird geladen ...",
+      "competitionNotFound": "Wettkampf nicht gefunden",
+      "deleteFailed": "Löschen fehlgeschlagen",
+      "deletePracticeConfirmTitle": "Löschen bestätigen",
+      "deletePracticeConfirmMessage": "Möchten Sie diesen Trainingseintrag löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "deleteMenuConfirmMessage": "Möchten Sie dieses Trainingsmenü löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "deleteRecordConfirmMessage": "Möchten Sie diesen Wettkampfeintrag löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "deleteCompetitionConfirmMessage": "Möchten Sie diesen Wettkampf löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "deleteButton": "Löschen"
+    },
+    "stats": {
+      "monthlyPractice": {
+        "title": "Training diesen Monat",
+        "unit": "Einheiten"
+      },
+      "competitionRecord": {
+        "title": "Wettkampfergebnisse",
+        "unit": "Einträge"
+      },
+      "practiceDays": {
+        "title": "Trainingstage",
+        "unit": "Tage"
+      }
+    },
+    "calendar": {
+      "title": "Kalender",
+      "today": "Heute",
+      "prevMonth": "Vorheriger Monat",
+      "nextMonth": "Nächster Monat"
+    },
+    "announcements": {
+      "title": "Mitteilungen",
+      "adminRole": "Administrator",
+      "unansweredAttendance": "Sie haben im letzten Monat unbeantwortete An-/Abwesenheiten für Trainings oder Wettkämpfe. ({count} Einträge)",
+      "unsubmittedEntries": "Nicht eingereichte Meldungen ({count} Einträge)"
+    },
+    "dayDetail": {
+      "headerTitleSuffix": " – Einträge",
+      "addRecordShort": "Wettkampfergebnis",
+      "addPracticeShort": "Training",
+      "addRecord": "Wettkampfergebnis hinzufügen",
+      "addPractice": "Training hinzufügen",
+      "addSection": "Eintrag hinzufügen",
+      "close": "Schließen",
+      "entryTypeLabel": {
+        "practice": "Training",
+        "teamPractice": "Mannschaftstraining",
+        "practiceLog": "Trainingsprotokoll",
+        "competition": "Wettkampf",
+        "teamCompetition": "Mannschaftswettkampf",
+        "entry": "Meldung",
+        "record": "Eintrag",
+        "other": "Sonstiges"
+      },
+      "deletingMessage": "Wird gelöscht ...",
+      "entryAlreadyTitle": "Gemeldet (noch kein Ergebnis)",
+      "entryLoadingText": "Wird geladen ...",
+      "entryEmptyText": "Keine Meldungsinformationen gefunden",
+      "entryDeleteConfirmTitle": "Löschen bestätigen",
+      "entryDeleteConfirmMessage": "Möchten Sie diese Meldung löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "entryDeleteFailed": "Löschen fehlgeschlagen",
+      "fieldStyle": "Disziplin:",
+      "fieldEntryTime": "Meldezeit:",
+      "fieldMemo": "Notiz:",
+      "addCompetitionRecord": "Wettkampfergebnis hinzufügen",
+      "recordStyleLabel": "Disziplin",
+      "recordTimeLabel": "Zeit",
+      "recordMemoLabel": "Notiz",
+      "recordsLoading": "Einträge werden geladen ...",
+      "recordsEmpty": "Noch keine Einträge",
+      "entryTypeCompetition": "Wettkampf"
+    },
+    "deleteConfirm": {
+      "title": "Eintrag löschen",
+      "message": "Möchten Sie diesen Eintrag wirklich löschen?",
+      "confirm": "Löschen",
+      "cancel": "Abbrechen"
+    },
+    "calendarView": {
+      "title": "Trainings- und Wettkampfkalender",
+      "loadFailed": "Daten konnten nicht geladen werden",
+      "noData": "Kalenderdaten konnten nicht geladen werden. Bitte prüfen Sie Ihre Netzwerkverbindung und versuchen Sie es erneut.",
+      "refreshPage": "Seite aktualisieren",
+      "selectMonth": "Jahr und Monat auswählen",
+      "yearLabel": "Jahr",
+      "monthLabel": "Monat",
+      "yearUnit": "{year}",
+      "monthUnit": "{month}"
+    },
+    "calendarGrid": {
+      "addRecord": "Eintrag hinzufügen",
+      "moreItems": "+{count} weitere",
+      "teamDefault": "Mannschaft",
+      "competitionDefault": "Wettkampf"
+    },
+    "attendance": {
+      "title": "Anwesenheit",
+      "checkTitle": "Anwesenheit prüfen",
+      "loading": "Wird geladen ...",
+      "fetchFailed": "Anwesenheitsdaten konnten nicht abgerufen werden",
+      "present": "Anwesend",
+      "absent": "Abwesend",
+      "other": "Sonstiges",
+      "pending": "Keine Antwort",
+      "nameCol": "Name",
+      "statusCol": "Status",
+      "noteCol": "Anmerkungen",
+      "unknownUser": "Unbekannt",
+      "changeButton": "Anwesenheit ändern",
+      "closeButton": "Schließen"
+    },
+    "competition": {
+      "editTitle": "Wettkampf bearbeiten",
+      "deleteTitle": "Wettkampf löschen",
+      "shareRecord": "Ergebnis teilen",
+      "editRecord": "Ergebnis bearbeiten",
+      "deleteRecord": "Ergebnis löschen",
+      "poolTypeLong": "Langbahn (50m)",
+      "poolTypeShort": "Kurzbahn (25m)",
+      "defaultName": "Wettkampf",
+      "loadTimeout": "Zeitüberschreitung beim Laden. Bitte versuchen Sie es erneut.",
+      "splitLoading": "Splits werden geladen ...",
+      "splitFetchError": "Splits konnten nicht abgerufen werden"
+    },
+    "entry": {
+      "loading": "Wird geladen ...",
+      "notFound": "Keine Meldungsinformationen gefunden",
+      "styleLabel": "Disziplin:",
+      "entryLabel": "Meldung:",
+      "entryTimeLabel": "Meldezeit:",
+      "memoLabel": "Notiz:",
+      "entered": "Gemeldet",
+      "enteredNoRecord": "Gemeldet (noch kein Ergebnis)",
+      "editCompetition": "Wettkampf bearbeiten",
+      "deleteCompetition": "Wettkampf löschen",
+      "editEntry": "Meldung bearbeiten",
+      "deleteEntry": "Diese Meldung löschen",
+      "addRecord": "Wettkampfergebnis hinzufügen",
+      "memoSection": "Notizen",
+      "authRequired": "Authentifizierung erforderlich. Bitte melden Sie sich an.",
+      "statusBefore": "Noch nicht geöffnet",
+      "statusClosed": "Geschlossen",
+      "statusAlert": "Die Meldung ist {status}, daher ist keine Registrierung möglich. Es wird mit der Ergebniseingabe fortgefahren."
+    },
+    "practice": {
+      "editTitle": "Training bearbeiten",
+      "deleteTitle": "Training löschen",
+      "shareTitle": "Training teilen",
+      "editMenuTitle": "Trainingsmenü bearbeiten",
+      "deleteMenuTitle": "Trainingsmenü löschen",
+      "defaultTitle": "Training",
+      "loadTimeout": "Zeitüberschreitung beim Laden"
+    },
+    "error": {
+      "title": "Ein Fehler ist aufgetreten",
+      "description": "Beim Laden des Dashboards ist ein Problem aufgetreten.",
+      "unknown": "Unbekannter Fehler"
+    },
+    "handlers": {
+      "fetchPracticeFailed": "Trainingsdaten konnten nicht abgerufen werden: {detail}",
+      "updateImagePathFailed": "Bildpfad konnte nicht aktualisiert werden: {detail}",
+      "practiceCreatedButImageFailed": "Das Training wurde erstellt, aber der Bild-Upload ist fehlgeschlagen",
+      "authRequired": "Ein authentifizierter Benutzer ist erforderlich",
+      "insertPracticeTagFailed": "Trainingsprotokoll-Tag konnte nicht eingefügt werden: {detail}",
+      "videoUploadPartialPractice": "Der Trainingseintrag wurde gespeichert, aber der Video-Upload ist fehlgeschlagen. Bitte fügen Sie es über die Detailansicht erneut hinzu.",
+      "fetchCompetitionFailed": "Wettkampfdaten konnten nicht abgerufen werden: {detail}",
+      "competitionCreatedButImageFailed": "Der Wettkampf wurde erstellt, aber der Bild-Upload ist fehlgeschlagen",
+      "unknownStyle": "Unbekannt",
+      "styleAlreadyEntered": "Für die Disziplin „{name}“ liegt bereits eine Meldung vor",
+      "fetchCompetitionInfoFailed": "Wettkampfinformationen konnten nicht abgerufen werden",
+      "videoUploadPartialCompetition": "Wettkampf und Ergebnis wurden erstellt, aber der Video-Upload ist fehlgeschlagen. Bitte fügen Sie es über die Detailansicht erneut hinzu.",
+      "statusBefore": "Noch nicht geöffnet",
+      "statusClosed": "Geschlossen",
+      "statusAlert": "Die Meldung ist {status}, daher ist keine Registrierung möglich. Es wird mit der Ergebniseingabe fortgefahren.",
+      "dataLoadError": "Daten konnten nicht abgerufen werden. Bitte versuchen Sie es später erneut."
+    }
+  },
+  "practice": {
+    "errorPage": {
+      "title": "Ein Fehler ist aufgetreten",
+      "description": "Beim Laden der Trainingseinträge-Seite ist ein Problem aufgetreten.",
+      "unknownError": "Unbekannter Fehler",
+      "retry": "Erneut versuchen",
+      "reload": "Seite neu laden",
+      "helpText": "Falls das Problem weiterhin besteht, laden Sie die Seite neu oder wenden Sie sich an den Support."
+    },
+    "client": {
+      "saveFailedWithVideo": "Der Trainingseintrag wurde gespeichert, aber der Video-Upload ist fehlgeschlagen. Bitte fügen Sie es über die Detailansicht erneut hinzu.",
+      "saveFailed": "Trainingseintrag konnte nicht gespeichert werden",
+      "saveError": "Fehler: {message}",
+      "deleteConfirm": "Möchten Sie diesen Trainingseintrag löschen?",
+      "deleteFailed": "Löschen fehlgeschlagen",
+      "practiceTitle": "Training",
+      "viewDetailAriaLabel": "Trainingsdetails anzeigen"
+    },
+    "modal": {
+      "loading": "Trainingsdetails werden geladen ...",
+      "loadError": "Trainingsdetails konnten nicht geladen werden",
+      "title": "Trainingsprotokoll",
+      "content": "Inhalt",
+      "memo": "Notiz",
+      "time": "Zeiten",
+      "setLabel": "Satz {n}",
+      "repLabel": "Wiederholung {n}",
+      "setAverage": "Satz-Durchschnitt",
+      "overallAverage": "Gesamtdurchschnitt",
+      "overallFastest": "Schnellste gesamt",
+      "reaction": "Reaktion",
+      "recordNotFound": "Eintragsdetails nicht gefunden",
+      "addPracticeMenu": "Trainingsmenü hinzufügen",
+      "noPracticeMenus": "Keine Trainingsmenüs"
+    },
+    "page": {
+      "description": "Erfassen und analysieren Sie Ihre täglichen Trainingseinheiten. Neue Trainingseinträge fügen Sie über den Dashboard-Kalender hinzu.",
+      "filterByTag": "Nach Tag filtern",
+      "clearFilter": "Zurücksetzen",
+      "filteringWith": "Gefiltert nach {n} Tag(s)",
+      "emptyTitle": "Keine Trainingseinträge",
+      "emptyDesc": "Sie können Trainingseinträge über den Dashboard-Kalender hinzufügen.",
+      "goToDashboard": "Zum Dashboard",
+      "colDate": "Datum",
+      "colPlace": "Ort",
+      "colDistReps": "Distanz / Wiederholungen / Sätze",
+      "colCircle": "Abgangszeit",
+      "colStyle": "Disziplin",
+      "colTags": "Tags",
+      "colAvgTime": "Durchschnittszeit",
+      "avgTimeLabel": "Durchschnittszeit:",
+      "share": "Teilen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleting": "Wird gelöscht ...",
+      "distanceFormat": "{distance}m × {reps} Wdh. × {sets} Sätze"
+    },
+    "details": {
+      "badge": "Trainingsprotokoll",
+      "loading": "Trainingsdetails werden geladen ...",
+      "error": "Trainingsdetails konnten nicht geladen werden",
+      "addMenu": "Menü hinzufügen",
+      "contentLabel": "Inhalt",
+      "timeLabel": "Zeiten",
+      "setLabel": "Satz {n}",
+      "repLabel": "Wiederholung {n}",
+      "setAverage": "Satz-Durchschnitt",
+      "overallAverage": "Gesamtdurchschnitt",
+      "overallFastest": "Schnellste gesamt",
+      "memoLabel": "Notiz"
+    },
+    "styles": {
+      "Fr": "Freistil",
+      "Ba": "Rücken",
+      "Br": "Brust",
+      "Fly": "Schmetterling",
+      "IM": "Lagen"
+    },
+    "styleAbbrev": {
+      "Fr": "Fr",
+      "Ba": "Ba",
+      "Br": "Br",
+      "Fly": "Fly",
+      "IM": "IM"
+    },
+    "categories": {
+      "Swim": "Schwimmen",
+      "Pull": "Pull",
+      "Kick": "Kick"
+    },
+    "form": {
+      "dateLabel": "Datum",
+      "datePlaceholder": "JJJJ-MM-TT",
+      "dateRequired": "Bitte geben Sie ein Datum ein",
+      "dateInvalidFormat": "Das Datum muss im Format JJJJ-MM-TT angegeben werden",
+      "dateInvalid": "Bitte geben Sie ein gültiges Datum ein",
+      "titleLabel": "Titel",
+      "titlePlaceholder": "Trainingstitel (optional)",
+      "placeLabel": "Ort",
+      "placePlaceholder": "Trainingsort (optional)",
+      "memoPlaceholder": "Notiz (optional)",
+      "imagesLabel": "Bilder",
+      "videoLabel": "Video",
+      "continueToLog": "Weiter zum Trainingsprotokoll",
+      "menuSection": "Trainingsmenü",
+      "menuNumber": "Menü {index}",
+      "tagsLabel": "Tags",
+      "styleLabel": "Disziplin",
+      "categoryLabel": "Kategorie",
+      "distanceLabel": "Distanz (m)",
+      "repsLabel": "Wiederholungen",
+      "setsLabel": "Sätze",
+      "circleMinLabel": "Abgangszeit (Min.)",
+      "circleSecLabel": "Abgangszeit (Sek.)",
+      "editTimes": "Zeiten bearbeiten ({count} erfasst)",
+      "inputTimes": "Zeiten eingeben",
+      "registeredTimes": "Erfasste Zeiten",
+      "timeInputTitle": "Zeiten eingeben",
+      "timeInputSubtitle": "Geben Sie die Zeiten für {setCount} Sätze × {repCount} Wiederholungen ein",
+      "setNumberLabel": "Satz {setNumber}",
+      "setAverageDetail": "Durchschnitt: {avg} ({count} Wdh.)",
+      "noInput": "Nicht eingegeben",
+      "overallAverage": "Gesamtdurchschnitt:",
+      "fastest": "Schnellste:",
+      "premiumLimited": "Nur Premium",
+      "timeInputPlaceholder": "z. B. 31-2",
+      "reauthRequired": "Authentifizierung erforderlich. Bitte melden Sie sich erneut an.",
+      "styleRequired": "Bitte wählen Sie eine Disziplin",
+      "distanceRequired": "Bitte geben Sie eine Distanz ein",
+      "repsRequired": "Bitte geben Sie die Wiederholungen ein",
+      "setsRequired": "Bitte geben Sie die Sätze ein"
+    },
+    "mobile": {
+      "loading": "Trainingseinträge werden geladen ...",
+      "loadingLogs": "Trainingsprotokolle werden geladen ...",
+      "notFound": "Trainingseintrag nicht gefunden",
+      "deleteConfirmTitle": "Löschen bestätigen",
+      "deleteConfirmMessage": "Möchten Sie diesen Trainingseintrag löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "deleteConfirmButton": "Löschen",
+      "deleteFailed": "Löschen fehlgeschlagen",
+      "fetchFailed": "Trainingseintrag konnte nicht abgerufen werden",
+      "fetchLogFailed": "Trainingsprotokoll konnte nicht abgerufen werden",
+      "practiceLogsSection": "Trainingsprotokolle",
+      "noPracticeLogs": "Keine Trainingsprotokolle",
+      "sessionInvalid": "Ihre Sitzung ist ungültig. Bitte melden Sie sich erneut an.",
+      "calendarSyncFailedTitle": "Kalendersynchronisierung fehlgeschlagen",
+      "calendarSyncFailedMessage": "Der Trainingseintrag wurde gespeichert, aber die Synchronisierung mit Ihrem Kalender ist fehlgeschlagen.",
+      "saveFailed": "Speichern fehlgeschlagen",
+      "tagSaveFailed": "Tag konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "tagDeleteFailed": "Tag konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+      "videoUploadFailedTitle": "Video-Upload fehlgeschlagen",
+      "videoUploadFailedSession": "Das Video konnte nicht hochgeladen werden, da Ihre Sitzung ungültig ist.",
+      "videoUploadFailedSaved": "Das Trainingsprotokoll wurde gespeichert, aber der Video-Upload ist fehlgeschlagen."
+    }
+  },
+  "mypage": {
+    "mobile": {
+      "dataFetchFailed": "Daten konnten nicht abgerufen werden",
+      "loadingData": "Daten werden geladen...",
+      "bestTimesFetchFailed": "Bestzeiten konnten nicht abgerufen werden",
+      "settingsButtonAria": "Einstellungen öffnen",
+      "profileSectionTitle": "Profil",
+      "editButton": "Bearbeiten",
+      "settingsButton": "Einstellungen",
+      "profileNotFound": "Profil nicht gefunden",
+      "bulkInput": "Sammeleingabe",
+      "bulkInputAria": "Bestzeiten in einem Vorgang erfassen"
+    },
+    "title": "Meine Seite",
+    "subtitle": "Verwalten Sie Ihr Profil und Ihre Bestzeiten",
+    "settingsLink": "Einstellungen",
+    "bulkInput": "Sammeleingabe",
+    "profile": {
+      "title": "Profil",
+      "editButton": "Bearbeiten"
+    },
+    "bestTime": {
+      "title": "Bestzeit"
+    },
+    "profileEdit": {
+      "title": "Profil bearbeiten",
+      "close": "Schließen",
+      "nameLabel": "Name",
+      "namePlaceholder": "Name eingeben",
+      "birthdayLabel": "Geburtsdatum",
+      "genderLabel": "Geschlecht",
+      "genderMale": "Männlich",
+      "genderFemale": "Weiblich",
+      "bioLabel": "Über mich",
+      "bioPlaceholder": "Schreiben Sie etwas über sich",
+      "bioCount": "{count}/500 Zeichen",
+      "nameRequired": "Name ist erforderlich",
+      "updating": "Die Aktualisierung dauert etwas. Bitte warten Sie...",
+      "updateFailed": "Profil konnte nicht aktualisiert werden. Bitte versuchen Sie es später erneut.",
+      "publicUrlFailed": "Öffentliche URL konnte nicht abgerufen werden",
+      "imageUploadFailed": "Bild konnte nicht hochgeladen werden",
+      "cancel": "Abbrechen",
+      "submitUpdating": "Wird aktualisiert...",
+      "submit": "Aktualisieren"
+    },
+    "avatarUpload": {
+      "loginRequired": "Anmeldung erforderlich",
+      "fileInvalid": "Ungültige Datei",
+      "fileReadFailed": "Datei konnte nicht gelesen werden",
+      "deleteImageFailed": "Bild konnte nicht gelöscht werden",
+      "uploadImageFailed": "Bild konnte nicht hochgeladen werden",
+      "profileImageAlt": "Profilbild",
+      "deleteAvatarAriaLabel": "Avatar löschen"
+    },
+    "passwordChange": {
+      "title": "Passwort ändern",
+      "newPasswordLabel": "Neues Passwort",
+      "newPasswordPlaceholder": "Neues Passwort (mindestens 6 Zeichen)",
+      "confirmPasswordLabel": "Passwort bestätigen",
+      "confirmPasswordPlaceholder": "Passwort bestätigen",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein",
+      "passwordMinLength": "Das Passwort muss mindestens 6 Zeichen lang sein",
+      "updateFailed": "Passwort konnte nicht aktualisiert werden",
+      "updateSuccess": "Passwort erfolgreich aktualisiert",
+      "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten",
+      "updating": "Wird aktualisiert...",
+      "submitButton": "Passwort aktualisieren"
+    },
+    "profileDisplay": {
+      "notSet": "Nicht festgelegt",
+      "genderMale": "Männlich",
+      "genderFemale": "Weiblich",
+      "birthdayLabel": "Geburtsdatum",
+      "genderLabel": "Geschlecht",
+      "teamsLabel": "Teams",
+      "unknownTeam": "Unbekanntes Team",
+      "addTeam": "Hinzufügen",
+      "createTeam": "Team erstellen",
+      "joinTeam": "Team beitreten",
+      "noTeams": "Sie sind in keinem Team",
+      "bioLabel": "Über mich"
+    },
+    "imageCrop": {
+      "title": "Profilbild zuschneiden",
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "zoomLabel": "Zoom",
+      "processing": "Wird verarbeitet...",
+      "save": "Speichern"
+    },
+    "bestTimesTable": {
+      "noRecords": "Keine Einträge",
+      "noRecordsDetail": "Sie haben noch keine Einträge erfasst",
+      "shortCourse": "Kurzbahn",
+      "longCourse": "Langbahn",
+      "includeRelay": "Staffelwechselzeiten einbeziehen",
+      "includeRelayShort": "Inkl. Wechsel",
+      "bulkEntryNote": "Sammeleintrag",
+      "distanceHeader": "Distanz",
+      "legend": {
+        "longCourse": "L: Langbahn",
+        "relaying": "R: Staffelwechsel"
+      }
+    },
+    "error": {
+      "title": "Ein Fehler ist aufgetreten",
+      "description": "Beim Laden von „Meine Seite“ ist ein Problem aufgetreten.",
+      "retry": "Erneut versuchen",
+      "reload": "Seite neu laden",
+      "helpText": "Wenn das Problem weiterhin besteht, laden Sie die Seite neu oder wenden Sie sich an den Support."
+    }
+  },
+  "onboarding": {
+    "guide": {
+      "headerTitle": "So verwenden Sie SwimHub",
+      "headerSubtitle": "Alles bereit! Hier sind die wichtigsten Funktionen.",
+      "startButton": "SwimHub starten",
+      "backButton": "Zurück",
+      "practiceTitle": "Training protokollieren",
+      "practiceDescription": "Verwenden Sie „Trainingsprotokoll“ im Dashboard, um Ihr tägliches Training zu erfassen. Verwalten Sie Sätze, Distanzen und Zeiten im Detail.",
+      "competitionTitle": "Wettkampfergebnisse verwalten",
+      "competitionDescription": "Erfassen Sie Anmeldungen und Ergebnisse für jeden Wettkampf. Verfolgen Sie die Entwicklung Ihrer Bestzeiten in Diagrammen.",
+      "teamTitle": "Einem Team beitreten",
+      "teamDescription": "Erstellen Sie ein Team oder treten Sie mit Trainern und Mitstreitern bei. Teilen Sie Mitteilungen und Ergebnisse, um gemeinsam zu wachsen.",
+      "mypageTitle": "„Meine Seite“ ansehen",
+      "mypageDescription": "Verwalten Sie Ihr Profil, Ihr Abonnement und Ihre Einstellungen jederzeit über „Meine Seite“.",
+      "startAriaLabel": "SwimHub starten",
+      "backAriaLabel": "Zurück"
+    },
+    "unsavedChanges": {
+      "title": "Sie haben nicht gespeicherte Änderungen",
+      "messageBack": "Die Einrichtung ist nicht abgeschlossen. Beim Zurückgehen gehen Ihre Eingaben verloren.",
+      "messageLeave": "Die Einrichtung ist nicht abgeschlossen. Beim Verlassen gehen Ihre Eingaben verloren.",
+      "confirmBack": "Zurück",
+      "confirmLeave": "Verlassen",
+      "cancel": "Weiter bearbeiten"
+    },
+    "step1": {
+      "title": "Willkommen bei SwimHub!",
+      "description": "Ein Tool zur Datenverwaltung für Schwimmer. Verfolgen Sie Ihr Training, verwalten Sie Wettkämpfe und vernetzen Sie sich mit Ihrem Team – alles an einem Ort.",
+      "tagline": "Eine All-in-one-Plattform für Schwimmer",
+      "timeHint": "Schnelle Einrichtung für den Einstieg (etwa 1 Minute)",
+      "feature": {
+        "practice": {
+          "title": "Trainingsprotokoll",
+          "description": "Erfassen und visualisieren Sie Ihr tägliches Training"
+        },
+        "competition": {
+          "title": "Wettkampfverwaltung",
+          "description": "Rennergebnisse erfassen und Bestzeiten automatisch aktualisieren"
+        },
+        "team": {
+          "title": "Teamfunktionen",
+          "description": "Anwesenheitsverwaltung, Anmeldungserfassung und stellvertretende Eingabe"
+        }
+      },
+      "startButton": "Loslegen"
+    },
+    "step2": {
+      "title": "Richten Sie Ihr Profil ein",
+      "subtitle": "Diese Informationen sind für andere Mitglieder sichtbar",
+      "nameLabel": "Name",
+      "namePlaceholder": "Erika Mustermann",
+      "emailNameWarning": "Sieht aus wie eine E-Mail-Adresse. Bitte geben Sie stattdessen einen Anzeigenamen ein.",
+      "genderLabel": "Geschlecht",
+      "genderMale": "Männlich",
+      "genderFemale": "Weiblich",
+      "birthdayLabel": "Geburtsdatum",
+      "birthdayLabelOptional": "Geburtsdatum (optional)",
+      "bioLabel": "Über mich",
+      "bioLabelOptional": "Über mich (optional)",
+      "bioPlaceholder": "Erzählen Sie uns von Ihren Lieblingsdisziplinen oder Zielen",
+      "bioCharCount": "{count}/500 Zeichen",
+      "validation": {
+        "nameRequired": "Name ist erforderlich",
+        "nameEmailFormat": "Bitte geben Sie Ihren Namen ein, keine E-Mail-Adresse",
+        "nameTooLong": "Der Name darf höchstens {max} Zeichen lang sein"
+      },
+      "saveError": "Profil konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "skipFailed": "Überspringen fehlgeschlagen",
+      "saving": "Wird gespeichert...",
+      "nextButton": "Weiter",
+      "skipButton": "Überspringen",
+      "backButton": "Zurück"
+    },
+    "step3": {
+      "title": "Erfassen Sie Ihre Bestzeiten",
+      "subtitle": "Sie können diese jederzeit später hinzufügen oder bearbeiten",
+      "addStylePlaceholder": "Disziplin hinzufügen...",
+      "addStyleButton": "Disziplin hinzufügen",
+      "styleModalTitle": "Disziplin auswählen",
+      "removeStyleAria": "{styleName} entfernen",
+      "timePlaceholder": "z. B. 1:23.45",
+      "timeAriaLabel": "Zeit für {styleName}",
+      "poolTypeShort": "Kurzbahn",
+      "poolTypeLong": "Langbahn",
+      "relay": "Staffelwechsel",
+      "duplicateError": "Doppelte Disziplinen erkannt",
+      "partialFailure": "Einige Einträge konnten nicht erfasst werden: {errors}",
+      "saveError": "Erfassung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "skipError": "Vorgang fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "skipButton": "Vorerst überspringen",
+      "saveButton": "Speichern und starten",
+      "saving": "Wird erfasst...",
+      "completing": "Wird vorbereitet...",
+      "backButton": "Zurück",
+      "inputHintTitle": "Als Zahlen eingeben",
+      "inputHintBody": "Sie können Formate wie 1:23.45, 23.45, 23-45 oder 1-23-45 eingeben"
+    },
+    "completionFailed": "Einrichtung konnte nicht abgeschlossen werden",
+    "stepLabels": {
+      "welcome": "Willkommen",
+      "profile": "Profil",
+      "bestTime": "Bestzeiten"
+    }
+  },
+  "sidebar": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "practice": "Trainingsverlauf",
+      "competition": "Wettkampfverlauf",
+      "mypage": "Meine Seite",
+      "team": "Team",
+      "dashboardDesc": "Mitteilungen und Termine",
+      "practiceDesc": "Trainingsinhalte und Zeiten",
+      "competitionDesc": "Wettkampfergebnisse und Zeiten",
+      "mypageDesc": "Profil und Bestzeiten",
+      "teamDesc": "Teams beitreten und verwalten",
+      "teamAdmin": "Teamverwaltung",
+      "teamAdminDesc": "Nur für Administratoren"
+    },
+    "settings": "Einstellungen",
+    "logout": "Abmelden",
+    "logoutConfirm": "Möchten Sie sich wirklich abmelden?",
+    "cancel": "Abbrechen",
+    "relatedServices": "Verwandte Dienste"
+  },
+  "footer": {
+    "description": "Datenverwaltungsdienst für Schwimmer",
+    "madeWith": "Mit Herzblut erstellt",
+    "forSwimmers": "für Schwimmer",
+    "supportTitle": "Support & Informationen",
+    "links": {
+      "privacy": "Datenschutz",
+      "terms": "Nutzungsbedingungen",
+      "support": "Support",
+      "contact": "Kontakt",
+      "blog": "Blog",
+      "about": "Über SwimHub",
+      "tokushoho": "Angaben gemäß dem japanischen Gesetz über kommerzielle Transaktionen"
+    },
+    "services": {
+      "title": "SwimHub App-Familie",
+      "currentBadge": "Aktiv",
+      "swimhubDesc": "All-in-one-Verwaltung für Schwimmteams",
+      "timerDesc": "Zeiten in Ihre Videos einblenden",
+      "scannerDesc": "KI liest handschriftliche Trainingsblätter"
+    }
+  },
+  "legal": {
+    "privacy": {
+      "title": "Datenschutzerklärung",
+      "metaTitle": "Datenschutzerklärung | SwimHub",
+      "metaDesc": "Datenschutzerklärung von SwimHub",
+      "lastUpdated": "Zuletzt aktualisiert"
+    },
+    "terms": {
+      "title": "Nutzungsbedingungen",
+      "metaTitle": "Nutzungsbedingungen | SwimHub",
+      "metaDesc": "Nutzungsbedingungen von SwimHub",
+      "lastUpdated": "Zuletzt aktualisiert"
+    },
+    "tokushoho": {
+      "title": "Angaben gemäß dem japanischen Gesetz über kommerzielle Transaktionen",
+      "metaTitle": "Angaben gemäß dem japanischen Gesetz über kommerzielle Transaktionen | SwimHub",
+      "metaDesc": "Angaben von SwimHub gemäß dem japanischen Gesetz über kommerzielle Transaktionen, einschließlich Betreiberinformationen, Preisen, Zahlungsmethoden und Rückgaberichtlinien.",
+      "lastUpdated": "Zuletzt aktualisiert",
+      "relatedPagesTitle": "Verwandte Seiten"
+    },
+    "support": {
+      "title": "Support & FAQ",
+      "metaTitle": "Support & FAQ | SwimHub",
+      "metaDesc": "Support-Informationen und häufig gestellte Fragen zu SwimHub – zu Konten, Trainingsdaten, Wettkampfergebnissen, Teamfunktionen, Bestzeiten, Datenverwaltung und Preisen.",
+      "headerDescription": "So verwenden Sie SwimHub und Antworten auf häufig gestellte Fragen. Sehen Sie hier nach, wenn Sie Hilfe benötigen.",
+      "contactButton": "Kontaktieren Sie uns",
+      "stillNotSolved": "Brauchen Sie weiterhin Hilfe?",
+      "stillNotSolvedDesc": "Wenn die obigen FAQ Ihre Frage nicht beantwortet haben, kontaktieren Sie uns gerne."
+    }
+  },
+  "competition": {
+    "header": {
+      "title": "Wettkampfergebnisse",
+      "description": "Verwalten und analysieren Sie Ihre Wettkampfergebnisse."
+    },
+    "loading": "Wird geladen...",
+    "error": "Ein Fehler ist aufgetreten",
+    "errorPage": {
+      "title": "Ein Fehler ist aufgetreten",
+      "description": "Beim Laden der Wettkampfergebnis-Seite ist ein Problem aufgetreten.",
+      "unknownError": "Unbekannter Fehler",
+      "retry": "Erneut versuchen",
+      "reload": "Seite neu laden",
+      "helpText": "Wenn das Problem weiterhin besteht, laden Sie die Seite neu oder wenden Sie sich an den Support."
+    },
+    "client": {
+      "deleteConfirm": "Dieses Wettkampfergebnis löschen?",
+      "recordNotFound": "Ergebnisdaten nicht gefunden",
+      "viewDetailAriaLabel": "Details zum Wettkampfergebnis anzeigen",
+      "competitionFallback": "Wettkampf",
+      "styleFallback": "Ergebnis"
+    },
+    "filter": {
+      "periodLabel": "Zeitraum",
+      "allPeriods": "Alle Zeiträume",
+      "fiscalYearSuffix": "Saison {year}",
+      "styleLabel": "Disziplin",
+      "allStyles": "Alle Disziplinen",
+      "poolTypeLabel": "Bahnlänge",
+      "allPoolTypes": "Alle",
+      "relayLabel": "Wechsel",
+      "includeRelay": "Einbeziehen",
+      "clearLabel": "Zurücksetzen",
+      "resetButton": "Filter zurücksetzen"
+    },
+    "empty": {
+      "noRecordsTitle": "Keine Wettkampfergebnisse",
+      "noRecordsDesc": "Erstellen Sie Ihr erstes Wettkampfergebnis.",
+      "noMatchTitle": "Keine passenden Ergebnisse",
+      "noMatchDesc": "Es wurden keine Wettkampfergebnisse gefunden, die den ausgewählten Filtern entsprechen."
+    },
+    "table": {
+      "date": "Datum",
+      "competitionName": "Wettkampf",
+      "place": "Ort",
+      "style": "Disziplin",
+      "time": "Zeit",
+      "pool": "Becken"
+    },
+    "poolType": {
+      "long": "Langbahn (50m)",
+      "short": "Kurzbahn (25m)"
+    },
+    "actions": {
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleting": "Wird gelöscht..."
+    },
+    "detail": {
+      "title": "Details zum Wettkampfergebnis",
+      "recordSection": "Wettkampfergebnis",
+      "share": "Teilen",
+      "close": "Schließen"
+    },
+    "mobile": {
+      "loadingInfo": "Wettkampfinformationen werden geladen...",
+      "loading": "Wettkampfergebnisse werden geladen...",
+      "loadingData": "Daten werden geladen...",
+      "recordLoading": "Ergebnis wird geladen...",
+      "stylesLoading": "Disziplinen werden geladen...",
+      "entryLoading": "Meldungen werden geladen...",
+      "notFound": "Wettkampf nicht gefunden",
+      "fetchFailed": "Wettkampfinformationen konnten nicht abgerufen werden",
+      "competitionFetchFailed": "Wettkampfinformationen konnten nicht abgerufen werden",
+      "recordFetchFailed": "Wettkampfergebnis konnte nicht abgerufen werden",
+      "calendarSyncFailedTitle": "Kalendersynchronisierung fehlgeschlagen",
+      "calendarSyncFailedMessage": "Die Wettkampfinformationen wurden gespeichert, aber die Synchronisierung mit Ihrem Kalender ist fehlgeschlagen.",
+      "saveFailed": "Speichern fehlgeschlagen",
+      "deleteFailed": "Löschen fehlgeschlagen",
+      "continueToRecord": "Weiter zur Ergebniseingabe",
+      "continueToEntry": "Weiter zur Meldung",
+      "noCompetitions": "Keine Wettkämpfe",
+      "selectCompetition": "Wettkampf auswählen",
+      "deleteConfirmTitle": "Löschen bestätigen",
+      "deleteConfirmMessage": "Dieses Wettkampfergebnis löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "deleteConfirmButton": "Löschen",
+      "fallbackTitle": "Wettkampf",
+      "videoUploadFailedTitle": "Video-Upload fehlgeschlagen",
+      "videoUploadFailedSession": "Video-Upload fehlgeschlagen: Ihre Sitzung ist ungültig. Bitte melden Sie sich erneut an.",
+      "videoUploadFailedSaved": "Das Wettkampfergebnis wurde gespeichert, aber der Video-Upload ist fehlgeschlagen.",
+      "imageProcessingFailedTitle": "Warnung",
+      "imageProcessingFailed": "Das Ergebnis wurde gespeichert, aber die Bildverarbeitung ist fehlgeschlagen"
+    },
+    "form": {
+      "startDateLabel": "Startdatum",
+      "endDateLabel": "Enddatum",
+      "multiDayHint": "(bei mehreren Tagen)",
+      "nameLabel": "Wettkampfname",
+      "namePlaceholder": "z. B. Deutsche Meisterschaft, Vergleichswettkampf, Zeitlauf",
+      "placeLabel": "Ort",
+      "placePlaceholder": "z. B. Schwimm- und Sprunghalle im Europasportpark",
+      "poolTypeLabel": "Bahnlänge",
+      "memoLabel": "Notiz",
+      "memoPlaceholder": "Notiz zu diesem Wettkampf (optional)",
+      "imagesLabel": "Bilder",
+      "poolTypeShort": "Kurzbahn (25m)",
+      "poolTypeLong": "Langbahn (50m)",
+      "dateRequired": "Bitte geben Sie ein Datum ein",
+      "dateFormatInvalid": "Das Datum muss im Format JJJJ-MM-TT angegeben werden",
+      "dateInvalid": "Bitte geben Sie ein gültiges Datum ein",
+      "endBeforeStart": "Das Enddatum muss am oder nach dem Startdatum liegen"
+    },
+    "entry": {
+      "title": "Gemeldete Disziplinen",
+      "addStyle": "Disziplin hinzufügen",
+      "styleNumber": "Disziplin {index}",
+      "styleLabel": "Disziplin",
+      "selectStyle": "Disziplin auswählen",
+      "entryTimeLabel": "Meldezeit",
+      "entryTimePlaceholder": "z. B. 2:05.00 oder 2-05-00",
+      "memoLabel": "Notiz",
+      "memoPlaceholder": "Notiz (optional)",
+      "skipButton": "Überspringen",
+      "continueToRecord": "Weiter zum Wettkampfergebnis",
+      "selectStyleRequired": "Bitte wählen Sie eine Disziplin aus",
+      "addAtLeastOne": "Bitte fügen Sie mindestens eine Meldung hinzu",
+      "duplicateStyle": "Disziplin „{styleName}“ ist bereits gemeldet",
+      "timeFormatInvalid": "Ungültiges Zeitformat (z. B. 1:23.45 oder 83.45)",
+      "stylesFetchFailed": "Disziplinen konnten nicht abgerufen werden",
+      "entryNotFound": "Meldung nicht gefunden",
+      "entryDataNotFound": "Meldedaten nicht gefunden",
+      "entryFetchFailed": "Meldung konnte nicht abgerufen werden",
+      "registrationFailed": "Meldung fehlgeschlagen",
+      "inputValueHint": "Eingabe: {time}"
+    },
+    "records": {
+      "metaTitle": "{title} - Ergebniseingabe | SwimHub",
+      "metaTitleFallback": "Ergebniseingabe | SwimHub",
+      "fetchMembersFailed": "Teammitglieder konnten nicht abgerufen werden",
+      "teamFallback": "Team",
+      "relayLegLabel": "{num}. Schwimmer ({style})",
+      "freeRelaySuffix": "Freistilstaffel",
+      "medleyRelaySuffix": "Lagenstaffel",
+      "relayTimePlaceholder": "z. B. 1:52.10",
+      "splitTimePlaceholder": "z. B. 30.50",
+      "subtitle": "Geben Sie für jede Disziplin die Ergebnisse der Mitglieder ein",
+      "competitionFallback": "Wettkampf",
+      "entryHeader": "Disziplin {num}",
+      "eventLabel": "Disziplin",
+      "selectPlaceholder": "Bitte auswählen",
+      "individualEvents": "Einzeldisziplinen",
+      "selectSwimmer": "Schwimmer auswählen",
+      "timePlaceholder": "z. B. 1:30.50",
+      "distancePlaceholder": "Distanz",
+      "notePlaceholder": "Notiz",
+      "videoHas": "Video vorhanden",
+      "videoSelect": "Video auswählen",
+      "selectMembersTitle": "Mitglieder auswählen",
+      "validation": {
+        "relayFullTeam": "Bitte wählen Sie für Staffeldisziplinen alle 4 Mitglieder aus",
+        "relayAllTimes": "Bitte geben Sie für Staffeldisziplinen die Zeiten aller Schwimmer ein",
+        "cumulativeTimeInverted": "Die kumulierte Zeit ist invertiert. Die kumulierte Zeit des {current}. Schwimmers muss größer sein als die des {prev}. Schwimmers.",
+        "atLeastOneRecord": "Bitte geben Sie mindestens ein Ergebnis ein"
+      },
+      "error": {
+        "splitDeleteFailed": "Zwischenzeiten konnten nicht gelöscht werden: {detail}",
+        "recordDeleteFailed": "Vorhandene Datensätze konnten nicht gelöscht werden: {detail}",
+        "saveFailed": "Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+      }
+    }
+  },
+  "settings": {
+    "mobile": {
+      "loading": "Einstellungen werden geladen...",
+      "logoutTitle": "Abmelden",
+      "logoutConfirmMessage": "Möchten Sie sich wirklich abmelden?",
+      "logoutButtonText": "Abmelden",
+      "logoutLoading": "Wird abgemeldet...",
+      "logoutFailed": "Abmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "logoutAriaLabel": "Abmelden",
+      "logoutAriaHint": "Von Ihrem Konto abmelden",
+      "upgradeAria": "Auf Premium upgraden",
+      "restoreAria": "Käufe wiederherstellen",
+      "manageSubAria": "Abonnement verwalten",
+      "restoreSuccessTitle": "Wiederherstellung abgeschlossen",
+      "restoreSuccessMessage": "Ihre Käufe wurden wiederhergestellt.",
+      "restoreFailed": "Käufe konnten nicht wiederhergestellt werden.",
+      "subscriptionSectionTitle": "Abonnement",
+      "currentPlanLabel": "Aktueller Tarif",
+      "trialPeriodUntil": "Testzeitraum: bis {date}",
+      "cancelScheduledOn": "Kündigung geplant für {date}",
+      "upgradeButton": "Auf Premium upgraden",
+      "restoreButton": "Käufe wiederherstellen",
+      "manageSubButton": "Abonnement verwalten",
+      "termsLink": "Nutzungsbedingungen",
+      "privacyLink": "Datenschutzerklärung"
+    },
+    "header": {
+      "title": "Einstellungen",
+      "description": "Verwalten Sie Ihr Konto und verbundene Dienste"
+    },
+    "subscription": {
+      "title": "Abonnement",
+      "loading": "Wird geladen...",
+      "currentPlanLabel": "Aktueller Tarif:",
+      "badge": {
+        "trialing": "Kostenlose Testversion",
+        "pastDue": "Premium (Zahlung überfällig)",
+        "premium": "Premium",
+        "free": "Free"
+      },
+      "trialDaysRemaining": "Noch {days} Tage in der Testphase (bis {date})",
+      "nextRenewal": "Nächste Verlängerung: {date}",
+      "cancelScheduled": "Kündigung geplant (wechselt am Periodenende zurück zu Free)",
+      "pastDueBanner": {
+        "title": "Zahlung fehlgeschlagen",
+        "description": "Bitte aktualisieren Sie Ihre Zahlungsmethode. Andernfalls werden die Premium-Funktionen ausgesetzt.",
+        "updatePayment": "Zahlungsmethode aktualisieren →"
+      },
+      "monthlyPlan": {
+        "title": "Monatstarif",
+        "period": "/Monat"
+      },
+      "yearlyPlan": {
+        "title": "Jahrestarif",
+        "period": "/Jahr",
+        "badge": "2 Monate sparen"
+      },
+      "premiumFeature": {
+        "aiUnlimited": "Unbegrenzte KI-Analyse",
+        "noAds": "Werbefrei",
+        "freeTrial": "7-tägige kostenlose Testversion"
+      },
+      "pricingCard": {
+        "selectButton": "Diesen Tarif auswählen",
+        "currentPlanButton": "Aktueller Tarif",
+        "processingButton": "Wird verarbeitet..."
+      },
+      "managePlanButton": "Tarif verwalten",
+      "managePlanProcessing": "Wird verarbeitet..."
+    },
+    "googleCalendar": {
+      "title": "Google Kalender-Integration",
+      "connectedBadge": "Verbunden",
+      "disconnected": {
+        "description": "Verbinden Sie Google Kalender, um Ihre Trainings- und Wettkampfergebnisse automatisch zu Ihrem Kalender hinzuzufügen.",
+        "connectButton": "Mit Google Kalender verbinden"
+      },
+      "connected": {
+        "syncPracticesLabel": "Trainingsergebnisse automatisch synchronisieren",
+        "syncCompetitionsLabel": "Wettkampfergebnisse automatisch synchronisieren"
+      },
+      "bulkSync": {
+        "description": "Synchronisieren Sie Ihre bereits vorhandenen Trainings- und Wettkampfergebnisse mit Google Kalender.",
+        "button": "Vorhandene Daten synchronisieren",
+        "syncing": "Wird synchronisiert...",
+        "successTitle": "Synchronisierung abgeschlossen",
+        "practicesSuccess": "Trainingsergebnisse: {count} synchronisiert",
+        "competitionsSuccess": "Wettkampfergebnisse: {count} synchronisiert",
+        "practicesNoneNeeded": "Trainingsergebnisse: nichts zu synchronisieren (bereits aktuell)",
+        "competitionsNoneNeeded": "Wettkampfergebnisse: nichts zu synchronisieren (bereits aktuell)",
+        "errorCount": "Fehler: {practiceErrors} Trainingsergebnisse, {competitionErrors} Wettkampfergebnisse"
+      },
+      "disconnectButton": "Verbindung trennen",
+      "confirmTitle": "Bestätigen",
+      "confirmDisconnect": "Verbindung zu Google Kalender trennen?",
+      "disconnectChoice": "Trennen",
+      "sessionInvalid": "Ihre Sitzung ist ungültig. Bitte melden Sie sich erneut an.",
+      "connectAriaLabel": "Mit Google Kalender verbinden",
+      "syncExistingAriaLabel": "Vorhandene Daten synchronisieren",
+      "disconnectAriaLabel": "Verbindung trennen",
+      "errors": {
+        "authFailed": "Google-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+        "disconnectFailed": "Trennen der Verbindung fehlgeschlagen.",
+        "syncSettingFailed": "Aktualisierung der Einstellungen fehlgeschlagen.",
+        "bulkSyncFailed": "Sammelsynchronisierung fehlgeschlagen."
+      }
+    },
+    "iosCalendar": {
+      "title": "iOS Kalender-Integration",
+      "connectedBadge": "Verbunden",
+      "disconnectedDescription": "Verbinden Sie den iOS Kalender, um Ihre Trainings- und Wettkampfergebnisse zum Kalender Ihres Geräts hinzuzufügen.",
+      "connectButton": "Mit iOS Kalender verbinden",
+      "syncPracticesLabel": "Trainingsergebnisse automatisch synchronisieren",
+      "syncCompetitionsLabel": "Wettkampfergebnisse automatisch synchronisieren",
+      "connectedDescription": "Wenn Sie Trainings und Wettkämpfe erstellen oder aktualisieren, werden diese automatisch in den iOS Kalender übernommen.",
+      "disconnectButton": "Verbindung trennen",
+      "confirmTitle": "Bestätigen",
+      "confirmDisconnect": "Verbindung zum iOS Kalender trennen?",
+      "disconnectChoice": "Trennen",
+      "connectAriaLabel": "Mit iOS Kalender verbinden",
+      "disconnectAriaLabel": "Verbindung trennen",
+      "errors": {
+        "authRequired": "Anmeldung erforderlich",
+        "calendarPermissionRequired": "Zugriffsberechtigung für den Kalender erforderlich",
+        "disconnectFailed": "Deaktivieren der Verbindung fehlgeschlagen",
+        "settingsUpdateFailed": "Aktualisierung der Einstellungen fehlgeschlagen",
+        "dbUpdateError": "Datenbank-Aktualisierungsfehler: {message}",
+        "enableSyncFailed": "Aktivieren der Synchronisierung fehlgeschlagen: {message}"
+      }
+    },
+    "email": {
+      "title": "E-Mail-Adresse",
+      "notRegistered": "Keine E-Mail-Adresse registriert",
+      "registerButton": "Registrieren",
+      "changeButton": "Ändern",
+      "modal": {
+        "registerTitle": "E-Mail-Adresse registrieren",
+        "registerLabel": "Zu registrierende E-Mail-Adresse",
+        "registerSubmit": "Registrieren",
+        "changeTitle": "E-Mail-Adresse ändern",
+        "currentEmail": "Aktuelle E-Mail-Adresse: {email}",
+        "currentEmailLabel": "Aktuelle E-Mail-Adresse: ",
+        "changeLabel": "Neue E-Mail-Adresse",
+        "changeSubmit": "Ändern",
+        "sending": "Wird gesendet...",
+        "successMessage": "Eine Bestätigungs-E-Mail wurde gesendet. Klicken Sie auf den Link in der E-Mail, um die Änderung abzuschließen.",
+        "cancelButton": "Abbrechen",
+        "closeButton": "Schließen",
+        "closeAriaLabel": "Dialog schließen",
+        "registerAria": "E-Mail-Adresse registrieren",
+        "changeAria": "E-Mail-Adresse ändern",
+        "cancelAriaLabel": "Abbrechen",
+        "errors": {
+          "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+          "sameEmail": "Dies ist dieselbe wie Ihre aktuelle E-Mail-Adresse",
+          "changeFailed": "Ändern der E-Mail-Adresse fehlgeschlagen. Bitte versuchen Sie es erneut."
+        }
+      }
+    },
+    "identity": {
+      "title": "Anmeldeverknüpfungen",
+      "linked": "Verknüpft",
+      "notLinked": "Nicht verknüpft",
+      "unlinkConfirmText": "Verknüpfung wirklich aufheben?",
+      "unlinkConfirmButton": "Bestätigen",
+      "unlinkCancelButton": "Abbrechen",
+      "unlinkButton": "Verknüpfung aufheben",
+      "unlinking": "Wird aufgehoben...",
+      "linkButton": "Verknüpfen",
+      "linking": "Wird verknüpft...",
+      "minOneRequired": "* Mindestens eine Anmeldemethode ist erforderlich. Sie können nicht alle Verknüpfungen aufheben.",
+      "minOneRequiredTitle": "Mindestens eine Anmeldemethode ist erforderlich",
+      "unlinkConfirmTitle": "Verknüpfung aufheben",
+      "unlinkConfirmMessage": "Verknüpfung mit {providerName} aufheben?",
+      "linkedWithEmail": "Verknüpft ({email})",
+      "unlinkProviderAria": "Verknüpfung mit {providerName} aufheben",
+      "linkProviderAria": "Mit {providerName} verknüpfen",
+      "errors": {
+        "fetchFailed": "Verknüpfungsinformationen konnten nicht abgerufen werden",
+        "linkFailed": "Verknüpfung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+        "unlinkFailed": "Aufheben der Verknüpfung fehlgeschlagen. Bitte versuchen Sie es erneut."
+      }
+    },
+    "errors": {
+      "checkoutFailed": "Erstellen der Checkout-Sitzung fehlgeschlagen",
+      "genericFailed": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+      "portalFailed": "Erstellen der Abrechnungsportal-Sitzung fehlgeschlagen",
+      "planSyncFailed": "Der Tarif konnte nicht übernommen werden. Wenn er nach einigen Minuten nicht erscheint, wenden Sie sich bitte an den Support.",
+      "planSyncError": "Beim Übernehmen Ihres Tarifs ist ein Fehler aufgetreten. Wenn er nach einigen Minuten nicht erscheint, wenden Sie sich bitte an den Support."
+    },
+    "accountDelete": {
+      "title": "Konto löschen",
+      "description": "Wenn Sie Ihr Konto löschen, werden alle persönlichen Daten (Trainingsergebnisse, Wettkampfergebnisse, Bilder usw.) endgültig entfernt und können nicht wiederhergestellt werden. Trainings- und Wettkampfdaten des Teams verbleiben beim Team.",
+      "deleteButton": "Konto löschen",
+      "deleting": "Wird gelöscht...",
+      "deleteButtonAriaLabel": "Konto löschen",
+      "deleteButtonAriaHint": "Ihr Konto und alle Daten endgültig löschen",
+      "authNotFound": "Authentifizierungsinformationen nicht gefunden. Bitte melden Sie sich erneut an.",
+      "mobileConfirmTitle": "Ihr Konto löschen?",
+      "mobileConfirmMessage": "Dieser Vorgang kann nicht rückgängig gemacht werden. Alle Trainingsergebnisse, Wettkampfergebnisse, Teaminformationen und Bilddaten werden endgültig gelöscht.\n\nHinweis: Trainings- und Wettkampfdaten des Teams verbleiben beim Team.",
+      "confirmDialog": {
+        "title": "Ihr Konto endgültig löschen?",
+        "message": "Dieser Vorgang kann nicht rückgängig gemacht werden. Alle Trainingsergebnisse, Wettkampfergebnisse und Bilddaten werden endgültig gelöscht. Trainings- und Wettkampfdaten des Teams verbleiben beim Team.",
+        "confirmLabel": "Löschen",
+        "cancelLabel": "Abbrechen"
+      },
+      "errors": {
+        "deleteFailed": "Löschen des Kontos fehlgeschlagen",
+        "genericFailed": "Ein Fehler ist aufgetreten"
+      }
+    },
+    "error": {
+      "title": "Ein Fehler ist aufgetreten",
+      "description": "Beim Laden der Einstellungen ist ein Problem aufgetreten.",
+      "retry": "Erneut versuchen",
+      "reload": "Seite neu laden"
+    },
+    "client": {
+      "backToMyPage": "Zurück zu Meine Seite"
+    },
+    "practiceLogTemplates": {
+      "backAriaLabel": "Zurück"
+    }
+  },
+  "practiceLogTemplates": {
+    "page": {
+      "title": "Vorlagenverwaltung"
+    },
+    "distanceFormat": "{distance}m × {reps} Wdh. × {sets} Sätze",
+    "circleFormat": "Sendezeit {circle}",
+    "list": {
+      "savedCount": "Gespeichert: {count}/{max}",
+      "emptyText": "Keine Vorlagen",
+      "emptyCreateButton": "Neue Vorlage erstellen",
+      "favoritesTitle": "Häufig verwendet",
+      "allTemplatesTitle": "Alle Vorlagen",
+      "atLimitButton": "Limit erreicht",
+      "createNewButton": "Neue Vorlage erstellen",
+      "loadError": "Vorlagen konnten nicht geladen werden"
+    },
+    "card": {
+      "menuEdit": "Bearbeiten",
+      "menuAddFavorite": "Zu Favoriten hinzufügen",
+      "menuRemoveFavorite": "Aus Favoriten entfernen",
+      "menuDelete": "Löschen",
+      "useCount": "{count}-mal",
+      "openMenuAriaLabel": "Menü öffnen",
+      "closeMenuAriaLabel": "Menü schließen",
+      "deleteConfirm": {
+        "title": "Vorlage löschen",
+        "message": "„{name}“ löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+        "confirmLabel": "Löschen"
+      }
+    },
+    "createModal": {
+      "createTitle": "Neue Vorlage erstellen",
+      "editTitle": "Vorlage bearbeiten",
+      "nameLabel": "Vorlagenname",
+      "namePlaceholder": "z. B. Morgentraining Beinschlag",
+      "styleLabel": "Schwimmart",
+      "categoryLabel": "Kategorie",
+      "distanceLabel": "Distanz (m)",
+      "repLabel": "Wiederholungen",
+      "setLabel": "Sätze",
+      "circleLabel": "Sendezeit",
+      "circleMinUnit": "Min.",
+      "circleSecUnit": "Sek.",
+      "tagLabel": "Tags",
+      "tagPlaceholder": "Tags auswählen oder erstellen",
+      "noteLabel": "Notiz (optional)",
+      "notePlaceholder": "Notiz eingeben...",
+      "createButton": "Erstellen",
+      "editButton": "Aktualisieren",
+      "creatingButton": "Wird erstellt...",
+      "updatingButton": "Wird aktualisiert...",
+      "cancelButton": "Abbrechen",
+      "closeAriaLabel": "Schließen"
+    },
+    "selectModal": {
+      "title": "Vorlage auswählen",
+      "emptyText": "Keine Vorlagen",
+      "emptyCreateLink": "Vorlage erstellen",
+      "favoritesTitle": "Häufig verwendet",
+      "allTemplatesTitle": "Alle Vorlagen",
+      "manageButton": "Vorlagen verwalten",
+      "closeAriaLabel": "Schließen",
+      "templateAriaLabel": "Vorlage: {name}"
+    }
+  },
+  "bulkBestTime": {
+    "header": {
+      "title": "Bestzeiten-Sammeleingabe",
+      "description": "Geben Sie Ihre Bestzeiten für jede Disziplin direkt ein"
+    },
+    "tabs": {
+      "fr": "Freistil",
+      "br": "Brust",
+      "ba": "Rücken",
+      "fly": "Schmetterling",
+      "im": "Lagen"
+    },
+    "table": {
+      "distance": "Distanz",
+      "time": "Zeit",
+      "note": "Bemerkung",
+      "relay": "Wechsel",
+      "notePlaceholder": "z. B. Wettkampfname"
+    },
+    "error": {
+      "noData": "Keine Daten zum Speichern vorhanden",
+      "invalidTimeFormat": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
+      "partialFailure": "Einige Einträge sind fehlgeschlagen: {errors}",
+      "registerFailed": "Sammeleingabe fehlgeschlagen"
+    },
+    "success": {
+      "registered": "{n} Ergebnisse gespeichert"
+    },
+    "footer": {
+      "inputLabel": "Eingegeben:",
+      "inputCount": "{count} Einträge"
+    },
+    "button": {
+      "register": "Alle speichern",
+      "registering": "Wird gespeichert..."
+    },
+    "returnToOnboarding": "Zurück zum Onboarding",
+    "tabsAriaLabel": "Disziplin auswählen",
+    "mobile": {
+      "description": "Fügen Sie Disziplinen hinzu und speichern Sie Ihre Bestzeiten auf einmal.",
+      "emptyTitle": "Bestzeiten hinzufügen",
+      "emptyBody": "Tippen Sie auf „Disziplin hinzufügen“, um die zu speichernden Disziplinen auszuwählen.",
+      "successTitle": "Gespeichert",
+      "addRelaying": "+ Wechselzeit hinzufügen",
+      "hideRelaying": "Wechselzeit ausblenden",
+      "relayingLabel": "Wechselzeit",
+      "poolToggleLabel": "Bahnlänge auswählen"
+    }
+  },
+  "goals": {
+    "page": {
+      "title": "Zielverwaltung",
+      "description": "Legen Sie Wettkampfziele fest und verfolgen Sie den Fortschritt mit Meilensteinen",
+      "createButton": "Neues Ziel",
+      "selectHint": "Bitte wählen Sie ein Ziel aus der Liste links aus"
+    },
+    "list": {
+      "loadError": "Ziele konnten nicht geladen werden",
+      "retry": "Erneut laden",
+      "empty": "Keine Ziele vorhanden",
+      "emptyDesc": "Erstellen Sie ein Ziel über die Schaltfläche oben rechts",
+      "achievedBadge": "Erreicht!",
+      "targetTimePrefix": "Ziel:",
+      "deleteConfirm": "Dieses Ziel löschen?",
+      "deleteFailed": "Ziel konnte nicht gelöscht werden",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "competitionFallback": "Wettkampf",
+      "styleFallback": "Disziplin"
+    },
+    "detail": {
+      "loadError": "Zieldetails konnten nicht geladen werden",
+      "retry": "Erneut laden",
+      "targetTime": "Zielzeit",
+      "initialTime": "Ausgangszeit",
+      "notSet": "Nicht festgelegt",
+      "achievement": "Zielerreichung",
+      "milestoneSection": "Meilensteine",
+      "milestoneRatio": "Meilenstein-Erreichung",
+      "milestoneAdd": "Hinzufügen"
+    },
+    "create": {
+      "title": "Neues Ziel",
+      "submitButton": "Erstellen",
+      "cancelButton": "Abbrechen",
+      "closeAriaLabel": "Schließen",
+      "bestTimeNotFound": "Für diese Disziplin wurde keine Bestzeit gefunden",
+      "bestTimeFetchFailed": "Bestzeit konnte nicht abgerufen werden",
+      "targetTimeInvalid": "Bitte geben Sie eine gültige Zielzeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
+      "startTimeInvalid": "Bitte geben Sie eine gültige Ausgangszeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
+      "competitionRequired": "Bitte wählen Sie einen Wettkampf aus",
+      "createFailed": "Ziel konnte nicht erstellt werden"
+    },
+    "edit": {
+      "title": "Ziel bearbeiten",
+      "submitButton": "Aktualisieren",
+      "cancelButton": "Abbrechen",
+      "closeAriaLabel": "Schließen",
+      "bestTimeNotFound": "Für diese Disziplin wurde keine Bestzeit gefunden",
+      "bestTimeFetchFailed": "Bestzeit konnte nicht abgerufen werden",
+      "updateFailed": "Ziel konnte nicht aktualisiert werden",
+      "validation": {
+        "targetTimeInvalid": "Bitte geben Sie eine gültige Zielzeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
+        "startTimeInvalid": "Bitte geben Sie eine gültige Ausgangszeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
+        "styleNotSelected": "Keine Lage ausgewählt."
+      }
+    },
+    "goalReflection": {
+      "title": "Wettkampfziel-Rückblick",
+      "expiredDesc": "Das folgende Wettkampfziel hat seine Frist erreicht",
+      "targetLabel": "Ziel:",
+      "initialTimeLabel": "Ausgangszeit:",
+      "competitionDateLabel": "Wettkampfdatum:",
+      "milestoneAchievedText": "Erreichte Meilensteine: {achieved}/{total}",
+      "achievedQuestion": "Haben Sie Ihr Ziel erreicht?",
+      "achievedButton": "Erreicht!",
+      "notAchievedButton": "Nicht erreicht",
+      "reflectionLabel": "Rückblick (Mehrfachauswahl möglich)",
+      "options": {
+        "goalTooHigh": "Zielzeit war zu ehrgeizig",
+        "periodTooShort": "Vorbereitungszeit war zu kurz",
+        "practiceInsufficient": "Zu wenig Training",
+        "conditionPoor": "Schlechte körperliche Verfassung",
+        "other": "Sonstiges"
+      },
+      "otherLabel": "Sonstiges (Freitext)",
+      "otherPlaceholder": "Details eingeben",
+      "skipButton": "Überspringen",
+      "saveButton": "Speichern",
+      "otherPrefix": "Sonstiges: {note}",
+      "updateFailed": "Ziel konnte nicht aktualisiert werden",
+      "undecided": "Offen",
+      "competitionFallback": "Wettkampf",
+      "styleFallback": "Disziplin"
+    },
+    "milestone": {
+      "empty": "Keine Meilensteine vorhanden",
+      "emptyDesc": "Erstellen Sie einen über die Schaltfläche „Hinzufügen“ oben rechts",
+      "deadlineLabel": "Frist:",
+      "achievedDateLabel": "Erreicht am:",
+      "achievedBadge": "Erreicht!",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "deleteConfirm": "Diesen Meilenstein löschen?",
+      "deleteFailed": "Meilenstein konnte nicht gelöscht werden"
+    },
+    "milestoneCreate": {
+      "title": "Neuer Meilenstein",
+      "addToTemplateLabel": "Auch zu Vorlagen hinzufügen",
+      "addToTemplateSubtext": "(beim Erstellen von Trainingseinheiten verwendet)",
+      "submitButton": "Erstellen",
+      "cancelButton": "Abbrechen",
+      "goalSetDefaultTitle": "Goal Set",
+      "closeAriaLabel": "Schließen",
+      "createFailed": "Meilenstein konnte nicht erstellt werden"
+    },
+    "milestoneEdit": {
+      "title": "Meilenstein bearbeiten",
+      "submitButton": "Aktualisieren",
+      "cancelButton": "Abbrechen",
+      "closeAriaLabel": "Schließen",
+      "updateFailed": "Meilenstein konnte nicht aktualisiert werden"
+    },
+    "milestoneSelector": {
+      "title": "Aus Meilenstein erstellen",
+      "loading": "Wird geladen ...",
+      "empty": "Keine Meilensteine verfügbar"
+    },
+    "goalSetCalculator": {
+      "closeAriaLabel": "Schließen",
+      "title": "Goal-Set-Zielzeitrechner",
+      "autoFetchTitle": "Automatisch abgerufene Informationen",
+      "targetLabel": "Ziel:",
+      "poolTypeLabel": "Wettkampfbahn:",
+      "ageLabel": "Alter:",
+      "genderLabel": "Geschlecht:",
+      "loading": "Wird geladen ...",
+      "ageNotSetError": "Das Alter ist nicht festgelegt. Bitte legen Sie es in Ihrem Profil fest.",
+      "genderNotSetError": "Das Geschlecht ist nicht festgelegt. Bitte legen Sie es in Ihrem Profil fest.",
+      "profileSettingHint": "Bitte geben Sie Ihr Geburtsdatum in den Profileinstellungen ein.",
+      "practicePoolTypeLabel": "Goal-Set-Bahn",
+      "poolTypeShort": "Kurzbahn (25m)",
+      "poolTypeLong": "Langbahn (50m)",
+      "resultLabel": "Goal-Set-Ziel",
+      "resultDescription": "50m-Durchschnitt (50m × 6 Wdh. × 3 Sätze)",
+      "calculating": "Wird berechnet ...",
+      "warningText": "⚠️ Das Berechnungsergebnis ist möglicherweise nicht realistisch",
+      "confirmButton": "Diesen Wert verwenden",
+      "cancelButton": "Abbrechen",
+      "poolTypeLongDisplay": "Langbahn",
+      "poolTypeShortDisplay": "Kurzbahn",
+      "genderMale": "Männlich",
+      "genderFemale": "Weiblich",
+      "ageUnit": " Jahre",
+      "descriptionLinkText": "Regressionsformel des Schwimmforschungslabors der Juntendo-Universität",
+      "descriptionBody": " wird verwendet, um die durchschnittliche Zielzeit zu berechnen, die im Goal Set (50m × 6 Wdh. × 3 Sätze) erforderlich ist, um Ihre Zielzeit zu erreichen.",
+      "subjectiveNote": "* Der subjektive Erreichungsgrad (Stufe 1–5) wird für diese Berechnung auf „3“ festgelegt."
+    },
+    "reflection": {
+      "title": "Meilenstein-Rückblick",
+      "expiredDesc": "Der folgende Meilenstein hat seine Frist erreicht",
+      "reflectionLabel": "Rückblick (Mehrfachauswahl möglich)",
+      "options": {
+        "goalTooHigh": "Ziel war zu ehrgeizig",
+        "periodTooShort": "Zeitraum war zu kurz",
+        "practiceInsufficient": "Zu wenig Training",
+        "conditionPoor": "Schlechte körperliche Verfassung",
+        "other": "Sonstiges"
+      },
+      "otherLabel": "Sonstiges (Freitext)",
+      "otherPlaceholder": "Details eingeben",
+      "nextActionLabel": "Nächster Schritt",
+      "createMilestoneButton": "Neuen Meilenstein erstellen",
+      "skipButton": "Überspringen",
+      "saveButton": "Speichern",
+      "deadlineLabel": "Frist:",
+      "otherPrefix": "Sonstiges: {note}",
+      "saveFailed": "Rückblicknotiz konnte nicht gespeichert werden",
+      "actionFailed": "Aktion fehlgeschlagen"
+    },
+    "form": {
+      "competitionLabel": "Wettkampf",
+      "existingCompetitionRadio": "Aus bestehenden Wettkämpfen auswählen",
+      "newCompetitionRadio": "Neuen Wettkampf erstellen",
+      "selectCompetitionPlaceholder": "Wettkampf auswählen",
+      "competitionNamePlaceholder": "Wettkampfname",
+      "competitionPlacePlaceholder": "Ort (optional)",
+      "competitionDateLabel": "Wettkampfdatum",
+      "competitionFallback": "Wettkampf",
+      "styleLabel": "Lage",
+      "selectStylePlaceholder": "Lage auswählen",
+      "targetTimeLabel": "Zielzeit",
+      "targetTimePlaceholder": "z. B. 1:23.45 oder 83.45",
+      "startTimeLabel": "Ausgangszeit (optional)",
+      "startTimePlaceholder": "z. B. 1:25.00 oder 85.00",
+      "getBestTimeButton": "Aus Bestzeit übernehmen"
+    },
+    "milestoneForm": {
+      "templateLabel": "Vorlage (optional)",
+      "templatePlaceholder": "Vorlage auswählen (leer lassen für manuelle Eingabe)",
+      "typeLabel": "Typ",
+      "typeAriaLabel": "Auswahl des Meilensteintyps",
+      "type": {
+        "time": {
+          "label": "Zeitziel",
+          "description": "Legen Sie eine Zielzeit für Training oder Zeitlauf fest. Sie können auch die Zwischenzeit der ersten Hälfte als Meilenstein festlegen."
+        },
+        "repsTime": {
+          "label": "Durchschnittszeit-Ziel",
+          "description": "Legen Sie eine durchschnittliche Zielzeit für eine Anzahl von Wiederholungen und Sätzen fest. Empfohlen für Disziplinen ab 100m."
+        },
+        "set": {
+          "label": "Circle-in-Ziel",
+          "description": "Legen Sie eine Zielanzahl von Wiederholungen und Sätzen innerhalb eines Intervalls fest. Empfohlen für Disziplinen ab 200m."
+        }
+      },
+      "templateAppliedNote": "Vorlage angewendet: Typ kann nicht geändert werden",
+      "titleLabel": "Titel (optional, wird automatisch generiert, wenn leer)"
+    },
+    "paramsForm": {
+      "distanceLabel": "Distanz (m)",
+      "styleLabel": "Lage",
+      "swimCategoryLabel": "S/P/K",
+      "targetTimeLabel": "Zielzeit",
+      "timeRequired": "Bitte geben Sie eine Zielzeit ein",
+      "timeInvalid": "Bitte geben Sie ein gültiges Zeitformat ein (z. B. 1:14.28 oder 74.28)",
+      "repsLabel": "Wiederholungen",
+      "setsLabel": "Sätze",
+      "averageTimeLabel": "Durchschn. Zielzeit",
+      "circleMinLabel": "Intervall (Min.)",
+      "circleSecLabel": "Intervall (Sek.)",
+      "averageTimeRequired": "Bitte geben Sie eine durchschnittliche Zielzeit ein"
+    },
+    "deadlineInput": {
+      "defaultLabel": "Frist (optional)",
+      "alignButton": "An Zielfrist angleichen"
+    },
+    "error": {
+      "title": "Ein Fehler ist aufgetreten",
+      "description": "Beim Laden der Zieldaten ist ein Problem aufgetreten.",
+      "unknownError": "Unbekannter Fehler",
+      "retry": "Erneut versuchen",
+      "reload": "Seite neu laden"
+    },
+    "client": {
+      "fetchFailed": "Zieldetails konnten nicht abgerufen werden"
+    },
+    "template": {
+      "timeTrial": "Zeitlauf",
+      "timeTrialDesc": "Zeiten aus Training und Wettkämpfen automatisch erfassen",
+      "goalSet": "Goal Set",
+      "goalSetDesc": "50m × 6 Wdh. × 3 Sätze (aus der 100m-Zielzeit berechnet)"
+    }
+  },
+  "teams": {
+    "mobile": {
+      "fetchListFailed": "Teamliste konnte nicht geladen werden",
+      "loadingList": "Teamliste wird geladen...",
+      "fetchTeamFailed": "Teaminformationen konnten nicht geladen werden",
+      "loadingTeam": "Teaminformationen werden geladen...",
+      "copyFailed": "Kopieren fehlgeschlagen",
+      "tabGroupManagement": "Gruppenverwaltung",
+      "tabPracticeManagement": "Trainingsverwaltung",
+      "tabCompetitionManagement": "Wettkampfverwaltung",
+      "createTitle": "Team erstellen",
+      "joinTitle": "Team beitreten",
+      "nameLabel": "Teamname *",
+      "namePlaceholder": "Teamname eingeben",
+      "descriptionLabel": "Beschreibung",
+      "descriptionPlaceholder": "Teambeschreibung eingeben (optional)",
+      "inviteCodeLabel": "Einladungscode *",
+      "inviteCodePlaceholder": "Einladungscode eingeben",
+      "loginRequired": "Anmeldung erforderlich",
+      "nameRequired": "Bitte geben Sie einen Teamnamen ein",
+      "inviteCodeRequired": "Bitte geben Sie den Einladungscode ein",
+      "createFailed": "Team konnte nicht erstellt werden",
+      "creating": "Wird erstellt...",
+      "createButton": "Erstellen",
+      "teamIdFetchFailed": "Team-ID konnte nicht abgerufen werden",
+      "joinFailed": "Beitritt zum Team fehlgeschlagen",
+      "joining": "Tritt bei...",
+      "joinButton": "Beitreten",
+      "inviteCodeHint": "Geben Sie den von Ihrem Teamadministrator bereitgestellten Einladungscode ein",
+      "tabMembers": "Mitglieder",
+      "tabGroups": "Gruppen",
+      "tabPractices": "Trainings",
+      "tabCompetitions": "Wettkämpfe",
+      "tabAttendance": "Anwesenheit",
+      "memberLoading": "Mitglieder werden geladen...",
+      "memberFetchFailed": "Mitglieder konnten nicht geladen werden",
+      "bestTimeFetchFailed": "Bestzeiten konnten nicht geladen werden",
+      "roleChangeFailed": "Rolle konnte nicht geändert werden",
+      "memberDeleteFailed": "Mitglied konnte nicht entfernt werden",
+      "deleteConfirmTitle": "Löschen bestätigen",
+      "deleteConfirmText": "Löschen",
+      "fallbackMemberName": "dieses Mitglied",
+      "unnamedMember": "Kein Name",
+      "fallbackTeamName": "Team",
+      "roleAdmin": "Administrator",
+      "roleMember": "Mitglied",
+      "statusPending": "Ausstehend",
+      "createTeamAction": "+ Team erstellen",
+      "joinByInviteCodeAction": "Mit Einladungscode beitreten",
+      "noTeams": "Keine Teams",
+      "noTeamsSubtext": "Erstellen Sie ein Team oder treten Sie mit einem Einladungscode bei.",
+      "pendingRetry": "Status aktualisieren",
+      "teamNotFound": "Team nicht gefunden",
+      "webGuide": "Für Funktionen zur Teamverwaltung verwenden Sie bitte die Web-Version.",
+      "webGuideButton": "Web-Version öffnen",
+      "pendingMessage": "Ihre Beitrittsanfrage wartet auf die Genehmigung des Administrators.\nBitte warten Sie, bis sie genehmigt wird.",
+      "memberRemoveConfirm": "{name} aus dem Team entfernen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "announcementListCreateButton": "+ Ankündigung erstellen",
+      "announcementListEmpty": "Keine Ankündigungen",
+      "announcementListEmptyCreate": "Ankündigung erstellen",
+      "announcementPublishPeriod": "Veröffentlichungszeitraum: {start} – {end}",
+      "monthlyAttendance": {
+        "statusOpen": "Einreichung möglich",
+        "statusClosed": "Einreichung geschlossen",
+        "noMonths": "Keine Monate zum Anzeigen",
+        "noEvents": "Keine Termine in diesem Monat"
+      },
+      "groupManagement": {
+        "title": "Gruppenverwaltung",
+        "subtitle": "Organisieren Sie Mitglieder in Kategorien und Gruppen.",
+        "emptyTitle": "Noch keine Gruppen",
+        "emptyHint": "Verwenden Sie „Hinzufügen“, um Kategorien und Gruppen zu erstellen.",
+        "memberCount": "{count} Mitglieder",
+        "membersEmpty": "Keine Mitglieder registriert",
+        "groupCount": "({count} Gruppen)",
+        "cardViewMembersAria": "Mitglieder von {name} anzeigen",
+        "cardEditMembersAria": "Mitglieder von {name} bearbeiten",
+        "cardEditAria": "{name} bearbeiten",
+        "cardDeleteAria": "{name} löschen"
+      },
+      "bulkRegister": {
+        "errorDateRequired": "Zeile {row}: Datum ist erforderlich",
+        "errorStartDateRequired": "Zeile {row}: Startdatum ist erforderlich",
+        "errorEndDateAfterStart": "Zeile {row}: Enddatum muss am oder nach dem Startdatum liegen",
+        "rowTitlePractice": "Training {n}",
+        "rowTitleCompetition": "Wettkampf {n}",
+        "deleteButton": "Löschen",
+        "labelDate": "Datum *",
+        "labelTitle": "Titel",
+        "labelPlace": "Ort",
+        "labelNote": "Anmerkungen",
+        "addRowButton": "+ Zeile hinzufügen",
+        "labelStartDate": "Startdatum *",
+        "labelEndDate": "Enddatum",
+        "labelCompetitionName": "Wettkampfname",
+        "labelPoolType": "Beckenart",
+        "previewTitle": "Vorschau",
+        "previewSectionPractices": "Trainings: {count}",
+        "previewSectionCompetitions": "Wettkämpfe: {count}",
+        "previewMore": "{count} weitere",
+        "resultTitle": "Registrierungsergebnis",
+        "resultPracticesCreated": "Trainings: {count} erstellt",
+        "resultCompetitionsCreated": "Wettkämpfe: {count} erstellt",
+        "modeTabPractice": "Trainings",
+        "modeTabCompetition": "Wettkämpfe",
+        "resultErrorPrefix": "Fehler: {detail}"
+      },
+      "statusApproved": "Genehmigt",
+      "statusRejected": "Abgelehnt",
+      "groupFetchFailed": "Gruppeninformationen konnten nicht geladen werden",
+      "fallbackCompetitionName": "Wettkampf",
+      "groupCreateFailed": "Gruppe konnte nicht erstellt werden",
+      "groupUpdateFailed": "Gruppe konnte nicht aktualisiert werden",
+      "groupDeleteFailed": "Gruppe konnte nicht gelöscht werden",
+      "groupDuplicateError": "In dieser Kategorie existiert bereits eine Gruppe mit demselben Namen",
+      "groupCreateFailedSimple": "Erstellung fehlgeschlagen",
+      "groupAlreadyExists": "„{name}“ existiert bereits",
+      "groupCreateError": "„{name}“: {message}",
+      "groupMemberFetchFailed": "Mitgliederinformationen konnten nicht geladen werden",
+      "groupMemberAssignFailed": "Mitglieder konnten nicht zugewiesen werden",
+      "memberListTitle": "Mitglieder",
+      "memberListEmpty": "Keine Mitglieder",
+      "memberListTotal": "Gesamt: {count}",
+      "memberListAdmin": "Administratoren: {count}",
+      "memberListMember": "Mitglieder: {count}",
+      "bestTimeLoading": "Bestzeiten werden geladen...",
+      "memberColLabel": "Mitglied",
+      "youLabel": "Sie",
+      "announcementLoading": "Ankündigungen werden geladen...",
+      "announcementFetchFailed": "Ankündigungen konnten nicht geladen werden",
+      "announcementCreateTitle": "Neue Ankündigung",
+      "announcementEditTitle": "Ankündigung bearbeiten",
+      "announcementTitleRequired": "Bitte geben Sie einen Titel ein",
+      "announcementContentRequired": "Bitte geben Sie einen Inhalt ein",
+      "announcementSaveFailed": "Ankündigung konnte nicht gespeichert werden",
+      "announcementTitleLabel": "Titel *",
+      "announcementContentLabel": "Inhalt *",
+      "announcementPublishLabel": "Veröffentlichen",
+      "announcementTitlePlaceholder": "Titel der Ankündigung eingeben",
+      "announcementContentPlaceholder": "Inhalt der Ankündigung eingeben",
+      "saveLoading": "Wird gespeichert...",
+      "saveButton": "Speichern",
+      "attendanceListFetchFailed": "Monatsliste konnte nicht geladen werden",
+      "attendanceFetchFailed": "Anwesenheit konnte nicht geladen werden",
+      "attendanceSaveSuccessTitle": "Gespeichert",
+      "attendanceSaveSuccessMessage": "Anwesenheit wurde gespeichert",
+      "attendanceSaveFailed": "Anwesenheit konnte nicht gespeichert werden",
+      "attendanceUnanswered": "Unbeantwortet",
+      "attendanceAllAnswered": "Alle beantwortet",
+      "attendanceNotePlaceholder": "Anmerkung (optional)",
+      "attendanceSaveMonth": "Alle für {label} speichern",
+      "bulkPracticeEmpty": "Keine Trainingsdaten zum Registrieren",
+      "bulkCompetitionEmpty": "Keine Wettkampfdaten zum Registrieren",
+      "bulkRegisterFailed": "Sammelregistrierung fehlgeschlagen",
+      "bulkRegisterLoading": "Wird registriert...",
+      "bulkRegisterSubmit": "Sammelregistrierung",
+      "bulkPracticeTitlePlaceholder": "z. B. Morgentraining",
+      "bulkPlacePlaceholder": "z. B. Stadtbad",
+      "bulkMemoPlaceholder": "Notiz",
+      "bulkCompetitionNamePlaceholder": "Wettkampfname",
+      "roleUser": "Mitglied",
+      "roleChangeTitle": "Rollenänderung bestätigen",
+      "roleChangeButton": "Ändern",
+      "memberRemoveLoading": "Wird entfernt...",
+      "memberRemoveButton": "Aus Team entfernen",
+      "memberDetailTitle": "Mitgliederdetails",
+      "memberRoleChangeMessage": "Rolle von {name} in „{role}“ ändern?",
+      "memberRemoveMessage": "{name} aus dem Team entfernen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+      "bestTimeSection": "Best Time",
+      "youBadge": "Sie",
+      "birthdayLabel": "Geburtsdatum: {date}",
+      "adminControlsTitle": "Administratorfunktionen",
+      "bestTimesEmpty": "Noch keine Einträge",
+      "bestTimesEmptySubText": "Dieses Mitglied hat noch keine Einträge registriert",
+      "bestTimesIncludeRelaying": "Staffelzeiten einbeziehen",
+      "bestTimesAnnotation": "L: Langbahn, R: Staffelübernahme",
+      "groupDisplayLabel": "Gruppieren nach:",
+      "groupAddAria": "Gruppe hinzufügen",
+      "groupConfirmTitle": "Bestätigen",
+      "groupDeleteConfirmMessage": "„{name}“ löschen?\nDie Zuordnung der diesem Gruppe zugewiesenen Mitglieder geht ebenfalls verloren.",
+      "groupAddTitle": "Gruppe hinzufügen",
+      "groupEditTitle": "Gruppe bearbeiten",
+      "groupCategoryPlaceholder": "z. B. Jahrgang, Distanz, S1",
+      "groupNamesPlaceholderNew": "z. B. Sprint, Distanz, Mittel",
+      "groupNamesPlaceholderEdit": "z. B. Sprint",
+      "groupSaveButtonCreate": "Erstellen",
+      "groupSaveButtonUpdate": "Aktualisieren",
+      "groupCategoryLabel": "Kategorie",
+      "groupCategoryExisting": "Vorhandene auswählen",
+      "groupCategoryNew": "Neue Kategorie",
+      "groupCategoryNone": "Keine Kategorie",
+      "groupCategoryHint": "Name zum Zusammenfassen verwandter Gruppen",
+      "groupNameLabel": "Gruppenname",
+      "groupNameMultiHint": "Mit Kommas trennen, um mehrere Gruppen gleichzeitig zu erstellen",
+      "uncategorized": "Nicht kategorisiert",
+      "expandAria": "Aufklappen",
+      "collapseAria": "Zuklappen",
+      "categoryToggleAria": "{name} {action}",
+      "categoryGroupCount": "({count} Gruppen)",
+      "bulkAssignButton": "Sammelzuweisung",
+      "bulkAssignAria": "Sammelzuweisung für {name}",
+      "unassigned": "Nicht zugewiesen",
+      "unassignedLabel": "Nicht zugewiesen",
+      "memberSearchPlaceholder": "Mitglieder suchen...",
+      "noMatchingMembers": "Keine passenden Mitglieder",
+      "noMembers": "Keine Mitglieder",
+      "groupMembersTitle": "Mitglieder von {name}",
+      "selectionCount": "{selected} / {total} ausgewählt",
+      "selectAll": "Alle auswählen",
+      "deselectAll": "Alle abwählen",
+      "loadingShort": "Wird geladen...",
+      "bulkAssignTitle": "{category} — Sammelzuweisung",
+      "bulkAssignHint": "Lange drücken und ziehen, um Mitglieder zu verschieben",
+      "dropHere": "Hier ablegen",
+      "fallbackPractice": "Training",
+      "fallbackCompetitionTitle": "Wettkampf",
+      "poolTypeShort": "Kurzbahn",
+      "poolTypeLong": "Langbahn",
+      "genderCategoryLabel": "Geschlecht",
+      "genderMale": "Männlich",
+      "genderFemale": "Weiblich"
+    },
+    "page": {
+      "title": "Meine Teams",
+      "description": "Liste der Teams, denen Sie beigetreten sind"
+    },
+    "pending": {
+      "sectionTitle": "Ausstehende Genehmigung ({count})",
+      "loading": "Wird geladen...",
+      "inviteCodeLabel": "Einladungscode:",
+      "waitingWithCode": "Ihre Anfrage wartet auf Genehmigung",
+      "waitingNoCode": "Ihre Anfrage wartet auf Genehmigung",
+      "appliedAtLabel": "Beantragt:"
+    },
+    "empty": {
+      "title": "Sie sind noch keinem Team beigetreten",
+      "description": "Erstellen Sie ein Team oder treten Sie mit einem Einladungscode bei",
+      "createButton": "Team erstellen",
+      "joinButton": "Team beitreten"
+    },
+    "badge": {
+      "admin": "Administrator"
+    },
+    "detail": {
+      "notFound": {
+        "title": "Team nicht gefunden",
+        "description": "Das angegebene Team existiert nicht oder Sie haben keinen Zugriff."
+      },
+      "inviteCodeLabel": "Einladungscode:"
+    },
+    "error": {
+      "title": "Ein Fehler ist aufgetreten",
+      "description": "Beim Laden der Teamseite ist ein Problem aufgetreten.",
+      "retry": "Erneut versuchen",
+      "unknown": "Unbekannter Fehler",
+      "helpText": "Falls das Problem weiterhin besteht, laden Sie die Seite neu oder wenden Sie sich an den Support."
+    },
+    "loading": {
+      "text": "Wird geladen..."
+    },
+    "tabs": {
+      "attendance": "Anwesenheit",
+      "members": "Mitglieder",
+      "practices": "Trainings",
+      "competitions": "Wettkämpfe"
+    },
+    "createModal": {
+      "errorTitle": "Ein Fehler ist aufgetreten",
+      "errorClose": "Schließen",
+      "loginRequired": "Anmeldung erforderlich",
+      "createFailed": "Team konnte nicht erstellt werden"
+    },
+    "joinModal": {
+      "title": "Team beitreten",
+      "loginRequired": "Anmeldung erforderlich",
+      "joinFailed": "Beitritt zum Team fehlgeschlagen",
+      "teamIdFailed": "Team-ID konnte nicht abgerufen werden"
+    },
+    "members": {
+      "title": "Mitglieder ({count})",
+      "inviteButton": "Mitglieder einladen",
+      "joinedAt": "Beigetreten:",
+      "empty": "Keine Mitglieder",
+      "error": "Mitgliederinformationen konnten nicht geladen werden",
+      "retry": "Erneut versuchen",
+      "inviteModal": {
+        "title": "Zum Team einladen",
+        "description": "Teilen Sie diesen Einladungscode, um Mitglieder einzuladen",
+        "codeLabel": "Einladungscode:",
+        "copyButton": "Kopieren",
+        "closeButton": "Schließen"
+      }
+    },
+    "practices": {
+      "title": "Teamtrainings ({count})",
+      "addButton": "Training hinzufügen",
+      "empty": "Keine Trainingseinträge",
+      "error": "Teamtrainingsinformationen konnten nicht geladen werden",
+      "retry": "Erneut versuchen",
+      "card": {
+        "detailButton": "Details",
+        "manageButton": "Verwalten",
+        "noLogs": "Keine Protokolle",
+        "logsCount": "{count} Satz/Sätze erfasst",
+        "noLogsLabel": "Keine Trainingseinträge",
+        "clickToEdit": "Zum Bearbeiten klicken",
+        "clickToAdd": "Zum Hinzufügen klicken",
+        "editAriaLabel": "Trainingseintrag für {date} bearbeiten",
+        "addAriaLabel": "Trainingseintrag für {date} hinzufügen",
+        "viewAriaLabel": "Trainingseintrag für {date} anzeigen"
+      }
+    },
+    "practiceDetail": {
+      "title": "Trainingsdetails",
+      "close": "Schließen",
+      "placeLabel": "Ort:",
+      "noteLabel": "Anmerkung:",
+      "logsTitle": "Trainingsprotokolle",
+      "styleLabel": "Lage",
+      "distanceLabel": "Distanz",
+      "noLogs": "Keine Trainingsprotokolle"
+    },
+    "competitions": {
+      "title": "Teamwettkämpfe ({count})",
+      "addButton": "Wettkampf hinzufügen",
+      "empty": "Keine Wettkämpfe",
+      "error": "Teamwettkampfinformationen konnten nicht geladen werden",
+      "retry": "Erneut versuchen",
+      "fallbackTitle": "Wettkampf",
+      "card": {
+        "entryButton": "Anmeldung",
+        "recordsButton": "Einträge",
+        "manageButton": "Verwalten"
+      },
+      "entryStatus": {
+        "before": "Noch nicht geöffnet",
+        "open": "Geöffnet",
+        "closed": "Geschlossen"
+      }
+    },
+    "entrySection": {
+      "title": "Wettkämpfe mit offener Anmeldung"
+    },
+    "competitionEntry": {
+      "title": "Anmeldung",
+      "close": "Schließen",
+      "styleLabel": "Lage",
+      "entryTimeLabel": "Meldezeit (optional)",
+      "registerButton": "Anmelden",
+      "updateButton": "Aktualisieren",
+      "deleteButton": "Löschen",
+      "cancelButton": "Abbrechen",
+      "processing": "Wird gesendet..."
+    },
+    "competitionRecords": {
+      "title": "Einträge",
+      "close": "Schließen",
+      "empty": "Noch keine Einträge registriert",
+      "col": {
+        "member": "Name",
+        "time": "Zeit"
+      }
+    },
+    "records": {
+      "title": "Teameinträge",
+      "empty": "Keine Einträge",
+      "error": "Einträge konnten nicht geladen werden",
+      "allStyles": "Alle Disziplinen",
+      "retry": "Erneut versuchen",
+      "col": {
+        "style": "Lage",
+        "distance": "Distanz",
+        "time": "Zeit",
+        "competition": "Wettkampf",
+        "date": "Datum"
+      }
+    },
+    "memberDetail": {
+      "title": "Mitgliederdetails",
+      "close": "Schließen",
+      "bestTimesTitle": "Best Time",
+      "bestTimesEmpty": "Keine Einträge",
+      "noRecords": "Dieses Mitglied hat noch keine Einträge registriert",
+      "col": {
+        "style": "Lage",
+        "distance": "Distanz",
+        "time": "Zeit",
+        "date": "Datum"
+      },
+      "role": {
+        "admin": "Administrator",
+        "member": "Mitglied"
+      },
+      "leaveButton": "Team verlassen",
+      "removeButton": "Mitglied entfernen",
+      "adminControls": {
+        "sectionTitle": "Administratorfunktionen",
+        "roleUser": "Benutzer",
+        "roleAdmin": "Administrator",
+        "removing": "Wird entfernt...",
+        "removeFromTeam": "Aus Team entfernen"
+      },
+      "roleChange": {
+        "title": "Rollenänderung bestätigen",
+        "message": "Rolle von {name} in „{role}“ ändern?",
+        "roleAdmin": "Administrator",
+        "roleUser": "Benutzer",
+        "cancel": "Abbrechen",
+        "confirm": "Ändern"
+      },
+      "profileSection": {
+        "roleAdmin": "Administrator",
+        "roleUser": "Benutzer",
+        "you": "Sie",
+        "birthdayLabel": "Geburtsdatum:",
+        "bioTitle": "Über mich",
+        "noBio": "Für {name} wurde noch kein Profiltext festgelegt."
+      },
+      "bestTimesTable": {
+        "noRecords": "Keine Einträge",
+        "noRecordsDetail": "Dieses Mitglied hat noch keine Einträge registriert",
+        "shortCourse": "Kurzbahn",
+        "longCourse": "Langbahn",
+        "includeRelay": "Staffelzeiten einbeziehen",
+        "bulkEntryNote": "Sammeleingabe",
+        "distanceHeader": "Distanz",
+        "legend": {
+          "longCourse": "L: Langbahn",
+          "relaying": "R: Staffel"
+        }
+      }
+    },
+    "attendance": {
+      "statusOpen": "Geöffnet",
+      "statusClosed": "Geschlossen",
+      "statusUnset": "Nicht festgelegt",
+      "none": "Keine",
+      "loading": "Wird geladen...",
+      "error": "Ein Fehler ist aufgetreten",
+      "monthLabel": "{month}/{year}"
+    },
+    "pendingMembers": {
+      "sectionTitle": "Ausstehende Genehmigung ({count})",
+      "approveButton": "Genehmigen",
+      "rejectButton": "Ablehnen",
+      "empty": "Keine ausstehenden Mitglieder"
+    },
+    "memberStats": {
+      "title": "Mitgliederverwaltung ({count})",
+      "includeRelay": "Staffel einbeziehen",
+      "totalLabel": "Mitglieder gesamt: {count}",
+      "adminLabel": "Administratoren: {count}",
+      "userLabel": "Benutzer: {count}"
+    },
+    "membersTimeTable": {
+      "col": {
+        "name": "Mitglied",
+        "totalDistance": "Gesamtdistanz"
+      },
+      "empty": "Keine Mitglieder",
+      "sortAriaLabel": "Nach {style} {distance}m sortieren",
+      "sortAscSuffix": " (aufsteigend)",
+      "sortDescSuffix": " (absteigend)",
+      "viewDetailAriaLabel": "Details von {name} anzeigen",
+      "youLabel": "Sie",
+      "sortClickTitle": "Zum Sortieren klicken",
+      "unknownUser": "Unbekannter Benutzer"
+    },
+    "memberGroupSorter": {
+      "label": "Gruppieren nach:"
+    },
+    "membershipActions": {
+      "approveSuccess": "Genehmigt",
+      "approveError": "Genehmigung fehlgeschlagen",
+      "rejectSuccess": "Abgelehnt",
+      "rejectError": "Ablehnung fehlgeschlagen"
+    },
+    "membersHook": {
+      "loadError": "Mitgliederinformationen konnten nicht geladen werden"
+    },
+    "pendingMembersHook": {
+      "loadError": "Informationen zu ausstehenden Mitgliedern konnten nicht geladen werden"
+    },
+    "monthList": {
+      "title": "Monatliche Anwesenheit",
+      "empty": "Keine Monate zum Anzeigen",
+      "attendanceRateLabel": "Anwesenheit: {rate}%"
+    },
+    "recentAttendance": {
+      "title": "Aktuelle Anwesenheit",
+      "empty": "Keine Termine",
+      "saveButton": "Speichern",
+      "thisMonth": "Dieser Monat",
+      "nextMonth": "Nächster Monat",
+      "notePlaceholder": "Anmerkung hinzufügen (optional)"
+    },
+    "monthDetail": {
+      "title": "Monatliche Anwesenheit",
+      "close": "Schließen",
+      "saveButton": "Speichern",
+      "saving": "Wird gespeichert...",
+      "error": "Ein Fehler ist aufgetreten",
+      "loading": "Wird geladen...",
+      "practiceLabel": "Training",
+      "notePlaceholder": "Anmerkung hinzufügen (optional)"
+    },
+    "attendanceStatus": {
+      "present": "Anwesend",
+      "absent": "Abwesend",
+      "late": "Verspätet",
+      "early": "Früher gegangen",
+      "unknown": "Keine Antwort"
+    },
+    "attendanceStatusModal": {
+      "title": "Anwesenheitsstatus",
+      "close": "Schließen",
+      "col": {
+        "member": "Mitglied",
+        "status": "Status"
+      }
+    },
+    "attendanceGrouping": {
+      "categoryLabel": "Mitglieder"
+    },
+    "attendanceEditHook": {
+      "saveError": "Anwesenheitsinformationen konnten nicht gespeichert werden",
+      "confirmEditAfterDeadline": "Sie bearbeiten nach Ablauf der Frist ({dates}). Der Bearbeitungszeitpunkt wird automatisch der Anmerkung hinzugefügt. Trotzdem speichern?",
+      "authRequired": "Authentifizierung erforderlich"
+    },
+    "attendanceStatusHook": {
+      "loadError": "Anwesenheitsinformationen konnten nicht geladen werden"
+    },
+    "monthDetailHook": {
+      "loadError": "Anwesenheitsinformationen konnten nicht geladen werden"
+    },
+    "monthListHook": {
+      "loadError": "Monatsliste konnte nicht geladen werden"
+    },
+    "recentAttendanceHook": {
+      "loadError": "Aktuelle Anwesenheitsinformationen konnten nicht geladen werden",
+      "saveSuccess": "Gespeichert",
+      "confirmEditAfterDeadline": "Sie bearbeiten nach Ablauf der Frist ({date}). Der Bearbeitungszeitpunkt wird automatisch der Anmerkung hinzugefügt. Trotzdem speichern?",
+      "authRequired": "Authentifizierung erforderlich"
+    },
+    "entryCompetitionCard": {
+      "placeLabel": "Ort:",
+      "statusBefore": "Noch nicht geöffnet",
+      "statusOpen": "Geöffnet",
+      "statusClosed": "Geschlossen"
+    },
+    "entryForm": {
+      "editButton": "✏️ Bearbeiten",
+      "addButton": "➕ Hinzufügen",
+      "styleLabel": "Lage",
+      "styleSelectPlaceholder": "Auswählen",
+      "entryTimeLabel": "Meldezeit (optional)",
+      "entryTimePlaceholder": "z. B. 1:23.45",
+      "timeFormatHint": "Format: Min:Sek.Millisek (z. B. 1:23.45) oder Sek.Millisek (z. B. 65.23)",
+      "memoLabel": "Anmerkung (optional)",
+      "memoPlaceholder": "Geben Sie ggf. zusätzliche Informationen ein",
+      "registerButton": "Anmelden",
+      "updateButton": "Aktualisieren",
+      "deleteButton": "Löschen",
+      "cancelButton": "Abbrechen",
+      "processing": "Wird gesendet..."
+    },
+    "entryItem": {
+      "enteredLabel": "Meldezeit:"
+    },
+    "entryList": {
+      "empty": "Keine Anmeldungen",
+      "userEntriesTitle": "✅ Ihre Anmeldungen"
+    },
+    "memberBestTimesHook": {
+      "loadError": "Bestzeiten konnten nicht geladen werden"
+    },
+    "timeValidation": {
+      "required": "Bitte geben Sie eine Zeit ein",
+      "invalid": "Ungültiges Zeitformat (z. B. 1:23.45 oder 23.45)"
+    },
+    "record": {
+      "pageTitle": "Teamwettkampfeinträge",
+      "backButton": "Zurück zur Wettkampfliste",
+      "participantsHeader": "Teilnehmer",
+      "timesHeader": "Zeiteinträge",
+      "addSplitButton": "Zwischenzeit hinzufügen",
+      "saveButton": "Eintrag speichern",
+      "saving": "Wird gespeichert...",
+      "deleteButton": "Eintrag löschen",
+      "deleting": "Wird gelöscht...",
+      "freePlanLimitNotice": "Der kostenlose Tarif hat eine Begrenzung der Anzahl der Einträge",
+      "relayLabel": "Staffeldisziplin",
+      "zoneLabel": "Zonenaufteilung",
+      "description": "Geben Sie Einträge für jede Disziplin nach Mitglied ein",
+      "competitionFallback": "Wettkampf",
+      "eventLabel": "Disziplin",
+      "eventPlaceholder": "Auswählen",
+      "individualEvents": "Einzeldisziplinen",
+      "eventNumber": "Disziplin {n}",
+      "selectMemberButton": "Mitglieder auswählen",
+      "selectedMemberCount": "{n} ausgewählt",
+      "relaySwimmerPlaceholder": "Schwimmer auswählen",
+      "totalTime": "Gesamtzeit",
+      "totalTimePlaceholder": "z. B. 1:52.10",
+      "timeLabel": "Zeit",
+      "timePlaceholder": "z. B. 1:30.50",
+      "reactionTime": "Reaktionszeit",
+      "relay": "Staffel",
+      "memoLabel": "Anmerkung",
+      "memoPlaceholder": "Anmerkung",
+      "splitTimeLabel": "Zwischenzeiten",
+      "splitDistancePlaceholder": "Distanz",
+      "splitTimePlaceholder": "z. B. 30.50",
+      "videoWithFile": "Video angehängt",
+      "videoSelect": "Video auswählen",
+      "addEventButton": "Disziplin hinzufügen",
+      "cancelButton": "Abbrechen",
+      "addSplit25m": "Hinzufügen (alle 25m)",
+      "addSplit50m": "Hinzufügen (alle 50m)",
+      "addSplitManual": "Hinzufügen",
+      "memberSelectTitle": "Mitglieder auswählen",
+      "selectAll": "Alle auswählen",
+      "clearSelection": "Auswahl aufheben",
+      "confirmSelection": "Bestätigen",
+      "relayAllMembersRequired": "Für Staffeldisziplinen müssen alle 4 Mitglieder ausgewählt werden",
+      "relayAllTimesRequired": "Für Staffeldisziplinen müssen die Zeiten aller Schwimmer eingegeben werden",
+      "relayTimeReversed": "Die kumulierten Zeiten sind vertauscht. Die kumulierte Zeit von Schwimmer {next} muss größer als die von Schwimmer {prev} sein.",
+      "noRecordsError": "Bitte geben Sie mindestens einen Eintrag ein",
+      "saveFailed": "Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+      "adminBadge": "Administrator"
+    },
+    "practiceForm": {
+      "title": "Training hinzufügen",
+      "description": "Einen Teamtrainingseintrag erstellen",
+      "closeAriaLabel": "Modal schließen",
+      "errorTitle": "Ein Fehler ist aufgetreten",
+      "dateRequired": "Datum ist erforderlich",
+      "authRequired": "Authentifizierung erforderlich",
+      "createFailed": "Teamtrainingseintrag konnte nicht erstellt werden",
+      "dateLabel": "Trainingsdatum",
+      "titleLabel": "Trainingstitel",
+      "titlePlaceholder": "z. B. Grundlagenübungen, Sprinttraining (leer lassen für „Teamtraining“)",
+      "placeLabel": "Trainingsort",
+      "placePlaceholder": "z. B. Stadtbad, Schulbad",
+      "noteLabel": "Anmerkung",
+      "notePlaceholder": "Trainingsinhalte oder Kommentare",
+      "cancelButton": "Abbrechen",
+      "creating": "Wird erstellt...",
+      "createButton": "Erstellen"
+    },
+    "competitionForm": {
+      "title": "Wettkampf hinzufügen",
+      "description": "Einen Teamwettkampfeintrag erstellen",
+      "errorTitle": "Ein Fehler ist aufgetreten",
+      "dateRequired": "Datum ist erforderlich",
+      "endDateBeforeStart": "Enddatum muss am oder nach dem Startdatum liegen",
+      "authRequired": "Authentifizierung erforderlich",
+      "createFailed": "Teamwettkampf konnte nicht erstellt werden",
+      "competitionNameLabel": "Wettkampfname",
+      "competitionNamePlaceholder": "z. B. Landesmeisterschaften (leer lassen für „Wettkampf“)",
+      "startDateLabel": "Startdatum",
+      "endDateLabel": "Enddatum",
+      "endDateHelperText": "Für mehrtägige Veranstaltungen",
+      "placeLabel": "Ort",
+      "placePlaceholder": "z. B. Landesbad",
+      "poolTypeLabel": "Beckenart",
+      "poolTypeShort": "Kurzbahn (25m)",
+      "poolTypeLong": "Langbahn (50m)",
+      "noteLabel": "Anmerkung",
+      "notePlaceholder": "Wettkampfdetails oder Hinweise",
+      "cancelButton": "Abbrechen",
+      "creating": "Wird erstellt...",
+      "createButton": "Erstellen"
+    },
+    "practiceDetailModal": {
+      "title": "Teamtrainingseintrag",
+      "loading": "Wird geladen...",
+      "noLogs": "Noch keine Trainingsprotokolle registriert",
+      "practiceContentLabel": "Trainingsinhalt",
+      "memoLabel": "Anmerkung",
+      "noTimeRecorded": "Keine Zeit erfasst",
+      "setRepLabel": "Wdh. {rep}",
+      "setHeader": "Satz {set}",
+      "setAvgLabel": "Satz {set} Ø",
+      "setAvgSingleLabel": "Satzdurchschnitt",
+      "overallFastest": "Schnellste insgesamt",
+      "overallAverage": "Durchschnitt insgesamt",
+      "loadError": "Trainingsdetails konnten nicht geladen werden",
+      "dataNotFound": "Trainingsdaten nicht gefunden",
+      "unknownUser": "Unbekannt",
+      "swimStyles": {
+        "Fr": "Freistil",
+        "Ba": "Rücken",
+        "Br": "Brust",
+        "Fly": "Schmetterling",
+        "IM": "Lagen"
+      }
+    },
+    "competitionRecordsModal": {
+      "titleSuffix": " - Einträge",
+      "loading": "Wird geladen...",
+      "loadError": "Wettkampfeinträge konnten nicht geladen werden",
+      "empty": "Noch keine Einträge registriert",
+      "poolTypeLong": "Langbahn",
+      "poolTypeShort": "Kurzbahn",
+      "unknownUser": "Unbekannt",
+      "rankLabel": "Platz",
+      "nameLabel": "Name",
+      "timeLabel": "Zeit",
+      "rtLabel": "RT",
+      "noteLabel": "Anmerkung",
+      "relay": "Staffel",
+      "splitTimesLabel": "Zwischenzeiten ({count})"
+    },
+    "competitionEntryModal": {
+      "titleSuffix": " - Anmeldungsverwaltung",
+      "totalEntries": "Gesamt: {count} Anmeldungen",
+      "loading": "Wird geladen...",
+      "entryStatusLabel": "Anmeldungsstatus",
+      "emptyNoEntry": "Noch keine Anmeldungen",
+      "emptyOpenHint": "Anmeldungen werden hier angezeigt, sobald Mitglieder sie einreichen",
+      "entryTimeLabel": "Meldezeit:",
+      "close": "Schließen",
+      "unknownUser": "Unbekannter Benutzer",
+      "unknownStyle": "Unbekannte Lage",
+      "authRequired": "Authentifizierung erforderlich",
+      "competitionNotFound": "Wettkampf nicht gefunden",
+      "notTeamCompetition": "Kein Teamwettkampf",
+      "adminRequired": "Administratorberechtigungen erforderlich",
+      "fetchFailed": "Anmeldungsinformationen konnten nicht geladen werden",
+      "statusChangeFailed": "Status konnte nicht aktualisiert werden"
+    },
+    "attendanceList": {
+      "outsidePeriod": "Die Anwesenheitseinreichung ist derzeit geschlossen. Bitte warten Sie, bis der Administrator den Einreichungszeitraum öffnet.",
+      "statsPresent": "Anwesend",
+      "statsAbsent": "Abwesend",
+      "statsOther": "Sonstige",
+      "statsPending": "Keine Antwort",
+      "statsTotal": "Gesamt",
+      "colName": "Name",
+      "colStatus": "Status",
+      "colNote": "Anmerkung",
+      "statusPresent": "Anwesend",
+      "statusAbsent": "Abwesend",
+      "statusOther": "Sonstige",
+      "statusPending": "Keine Antwort",
+      "notePlaceholder": "Anmerkung hinzufügen...",
+      "saveButton": "Speichern",
+      "cancelButton": "Abbrechen",
+      "editButton": "Bearbeiten",
+      "noteNone": "Keine",
+      "unknownUser": "Unbekannt",
+      "loadFailed": "Anwesenheitsinformationen konnten nicht geladen werden"
+    },
+    "statsCards": {
+      "members": "Mitglieder",
+      "practiceCount": "Trainings",
+      "recordCount": "Einträge",
+      "lastActivity": "Letzte Aktivität",
+      "lastActivityNone": "Keine",
+      "yesterday": "Gestern"
+    },
+    "managers": {
+      "scheduleTitle": "Terminverwaltung",
+      "scheduleComingSoon": "Diese Funktion befindet sich derzeit in Entwicklung.",
+      "scheduleDesc": "Die Verwaltung von Teamterminen ist in Vorbereitung.",
+      "practiceTitle": "Trainingsverwaltung",
+      "practiceComingSoon": "Diese Funktion befindet sich derzeit in Entwicklung.",
+      "practiceDesc": "Die Verwaltung von Teamtrainings ist in Vorbereitung.",
+      "competitionTitle": "Wettkampfverwaltung",
+      "competitionComingSoon": "Diese Funktion befindet sich derzeit in Entwicklung.",
+      "competitionDesc": "Die Verwaltung von Teamwettkämpfen ist in Vorbereitung."
+    },
+    "memberGroupSort": {
+      "genderCategory": "Geschlecht",
+      "male": "Männlich",
+      "female": "Weiblich",
+      "unassigned": "Nicht zugewiesen"
+    },
+    "membershipActionsModal": {
+      "rejectConfirm": "Diese Beitrittsanfrage ablehnen?"
+    },
+    "timeInputModal": {
+      "titleWithMenu": "Teamzeiteingabe für Menü {menu}",
+      "titleDefault": "Teamzeiteingabe"
+    },
+    "actions": {
+      "joinFailed": "Beitritt zum Team fehlgeschlagen",
+      "reactivateFailed": "Mitgliedschaft konnte nicht reaktiviert werden",
+      "approveFailed": "Mitgliedschaft konnte nicht genehmigt werden",
+      "rejectFailed": "Mitgliedschaft konnte nicht abgelehnt werden"
+    }
+  },
+  "teamsAdmin": {
+    "page": {
+      "title": "Teamverwaltung",
+      "description": "Teams, für die Sie Administratorrechte besitzen",
+      "emptyTitle": "Keine Teams mit Administratorrechten",
+      "emptyDescription": "Wenn Sie ein Team erstellen, erhalten Sie automatisch Administratorrechte"
+    },
+    "badge": {
+      "admin": "Administrator"
+    },
+    "client": {
+      "notFound": {
+        "title": "Team nicht gefunden",
+        "description": "Das angegebene Team existiert nicht oder Sie haben keine Zugriffsberechtigung."
+      },
+      "unauthorized": {
+        "title": "Kein Zugriff",
+        "description": "Für den Zugriff auf diese Seite benötigen Sie Administratorrechte."
+      },
+      "inviteCodeLabel": "Einladungscode:"
+    },
+    "tabs": {
+      "attendance": "Anwesenheit",
+      "announcements": "Ankündigungen",
+      "members": "Mitglieder",
+      "groups": "Gruppen",
+      "practices": "Trainings",
+      "competitions": "Wettkämpfe",
+      "bulkRegister": "Sammelregistrierung",
+      "settings": "Einstellungen"
+    },
+    "settings": {
+      "title": "Teameinstellungen",
+      "nameLabel": "Teamname",
+      "descriptionLabel": "Beschreibung",
+      "noDescription": "Keine Beschreibung vorhanden",
+      "nameRequired": "Teamname ist erforderlich",
+      "updateFailed": "Aktualisierung der Teaminformationen fehlgeschlagen",
+      "saveButton": "Speichern",
+      "saving": "Wird gespeichert...",
+      "cancelButton": "Abbrechen",
+      "editButton": "Bearbeiten"
+    },
+    "announcementList": {
+      "title": "Ankündigungen",
+      "createButton": "Neu erstellen",
+      "empty": "Keine Ankündigungen vorhanden",
+      "draftBadge": "Entwurf",
+      "updatedAtLabel": "Aktualisiert:",
+      "editButton": "Bearbeiten",
+      "deleteButton": "Löschen",
+      "deleting": "Wird gelöscht...",
+      "loadError": "Ankündigungen konnten nicht geladen werden",
+      "retry": "Erneut versuchen",
+      "deleteConfirm": {
+        "title": "Ankündigung löschen",
+        "message": "Möchten Sie diese Ankündigung löschen?",
+        "confirmButton": "Löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "announcementForm": {
+      "createTitle": "Neue Ankündigung",
+      "editTitle": "Ankündigung bearbeiten",
+      "closeButton": "Schließen",
+      "titleLabel": "Titel",
+      "titlePlaceholder": "Titel der Ankündigung eingeben",
+      "contentLabel": "Inhalt",
+      "contentPlaceholder": "Inhalt der Ankündigung eingeben",
+      "startAtLabel": "Startdatum und -uhrzeit",
+      "endAtLabel": "Enddatum und -uhrzeit",
+      "endAtPastError": "Das Anzeige-Enddatum muss nach dem aktuellen Zeitpunkt liegen",
+      "endAtBeforeStartError": "Das Anzeige-Enddatum muss nach dem Anzeige-Startdatum liegen",
+      "saveDraftButton": "Als Entwurf speichern",
+      "cancelButton": "Abbrechen",
+      "publishCreateButton": "Veröffentlichen und erstellen",
+      "publishUpdateButton": "Veröffentlichen und aktualisieren",
+      "saving": "Wird gespeichert...",
+      "authRequired": "Authentifizierung erforderlich"
+    },
+    "announcementDetail": {
+      "title": "Ankündigungsdetails",
+      "editButton": "Bearbeiten",
+      "deleteButton": "Löschen",
+      "deleting": "Wird gelöscht...",
+      "closeButton": "Schließen",
+      "loadError": "Ankündigung konnte nicht geladen werden",
+      "draftBadge": "Entwurf",
+      "createdAtLabel": "Erstellt:",
+      "updatedAtLabel": "Aktualisiert:",
+      "periodLabel": "Anzeigezeitraum",
+      "startLabel": "Start:",
+      "endLabel": "Ende:",
+      "noLimit": "Keine Begrenzung",
+      "outOfPeriodWarning": "⚠️ Derzeit außerhalb des Anzeigezeitraums",
+      "deleteConfirm": {
+        "title": "Ankündigung löschen",
+        "message": "Möchten Sie diese Ankündigung löschen?",
+        "confirmButton": "Löschen",
+        "cancelButton": "Abbrechen"
+      }
+    },
+    "ocr": {
+      "stepTitle": {
+        "upload": "Trainingsprotokolle aus Bild auslesen",
+        "analyzing": "Bild wird analysiert",
+        "results": "Analyseergebnisse prüfen"
+      },
+      "upload": {
+        "dropzoneText": "Bild per Drag & Drop ablegen oder zur Auswahl klicken",
+        "dropzoneHint": "JPEG / PNG, bis zu 5MB",
+        "invalidTypeError": "Es werden nur Bilder im Format JPEG oder PNG unterstützt",
+        "fileSizeError": "Die Bildgröße darf höchstens 5MB betragen",
+        "analyzeButton": "Analysieren",
+        "cancelButton": "Abbrechen"
+      },
+      "analyzing": {
+        "message": "Bild wird analysiert...",
+        "cancelButton": "Abbrechen"
+      },
+      "results": {
+        "sectionTitle": "Analyseergebnisse",
+        "distanceLabel": "Distanz:",
+        "repsLabel": "Wiederholungen:",
+        "circleLabel": "Abgangszeit:",
+        "col": {
+          "no": "Nr.",
+          "member": "Mitglied",
+          "style": "Disziplin",
+          "average": "Durchschn.",
+          "repN": "Wiederholung {n}"
+        },
+        "unselectedOption": "Nicht ausgewählt",
+        "alreadySelectedSuffix": " (ausgewählt)",
+        "unassignedWarning": "Nicht zugewiesene Datensätze werden verworfen",
+        "retryButton": "Wiederholen",
+        "cancelButton": "Abbrechen",
+        "applyButton": "In Formular übernehmen"
+      },
+      "discardConfirm": {
+        "title": "Nicht zugewiesene Datensätze gefunden",
+        "message": "{count} Datensätze ohne zugewiesenes Mitglied werden verworfen. Möchten Sie fortfahren?",
+        "confirmButton": "Verwerfen und übernehmen",
+        "cancelButton": "Zurück"
+      },
+      "errors": {
+        "serverError": "Ein Serverfehler ist aufgetreten",
+        "invalidFormat": "Das Format der Analyseergebnisse ist ungültig. Bitte versuchen Sie es erneut.",
+        "analyzeError": "Bei der Analyse ist ein Fehler aufgetreten"
+      }
+    },
+    "adminAttendance": {
+      "loading": "Wird geladen...",
+      "error": "Beim Laden der Daten ist ein Fehler aufgetreten",
+      "empty": "Keine bevorstehenden Ereignisse",
+      "bulkChangeButton": "Anwesenheitsstatus gesammelt ändern",
+      "eventDefault": {
+        "competition": "Wettkampf",
+        "practice": "Training"
+      },
+      "eventDetailAriaLabel": "Details zu {date} {title} anzeigen"
+    },
+    "groupManagement": {
+      "title": "Gruppenverwaltung",
+      "description": "Mitglieder können nach Kategorien in Gruppen eingeteilt werden",
+      "addButton": "Gruppe hinzufügen",
+      "emptyTitle": "Noch keine Gruppen vorhanden",
+      "emptyDescription": "Erstellen Sie über „Gruppe hinzufügen“ Kategorien und Gruppen",
+      "memberCount": "{count} Personen",
+      "deleteConfirm": {
+        "title": "Gruppe löschen",
+        "message": "Möchten Sie „{name}“ löschen? Die der Gruppe zugewiesenen Mitgliederinformationen werden ebenfalls gelöscht.",
+        "confirmButton": "Löschen",
+        "cancelButton": "Abbrechen"
+      },
+      "errors": {
+        "fetchFailed": "Gruppeninformationen konnten nicht abgerufen werden",
+        "createFailed": "Gruppe konnte nicht erstellt werden",
+        "createFailedGeneric": "Erstellung fehlgeschlagen",
+        "duplicateName": "In derselben Kategorie existiert bereits eine Gruppe mit demselben Namen",
+        "duplicateNameSpecific": "„{name}“ existiert bereits",
+        "updateFailed": "Gruppe konnte nicht aktualisiert werden",
+        "deleteFailed": "Gruppe konnte nicht gelöscht werden",
+        "fetchMembersFailed": "Mitgliederinformationen konnten nicht abgerufen werden",
+        "assignFailed": "Mitglieder konnten nicht zugewiesen werden"
+      }
+    },
+    "groupForm": {
+      "createTitle": "Gruppe hinzufügen",
+      "editTitle": "Gruppe bearbeiten",
+      "categoryLabel": "Kategorie",
+      "selectExistingButton": "Aus vorhandenen auswählen",
+      "newCategoryButton": "Neue Kategorie",
+      "noCategoryOption": "Keine Kategorie",
+      "categoryPlaceholder": "z. B. Jahrgang, Distanz, S1",
+      "categoryHint": "Ein Name, um Gruppen derselben Klassifizierung zusammenzufassen",
+      "nameLabel": "Gruppenname",
+      "namePlaceholderCreate": "z. B. Sprint, Distanz, Mittel",
+      "namePlaceholderEdit": "z. B. Sprint",
+      "multipleHint": "Mit Kommas getrennt können mehrere Gruppen gleichzeitig erstellt werden",
+      "cancelButton": "Abbrechen",
+      "saving": "Wird gespeichert...",
+      "updateButton": "Aktualisieren",
+      "createButton": "Erstellen"
+    },
+    "bulkAssign": {
+      "title": "{category} — Sammelzuweisung",
+      "unassignedLabel": "Nicht zugewiesen",
+      "cancelButton": "Abbrechen",
+      "saveButton": "Speichern",
+      "saving": "Wird gespeichert..."
+    },
+    "categorySection": {
+      "uncategorized": "Nicht kategorisiert",
+      "groupCount": "({count} Gruppen)",
+      "bulkAssignButton": "Sammelzuweisung"
+    },
+    "groupMember": {
+      "title": "Mitglieder von {groupName}",
+      "searchPlaceholder": "Mitglieder suchen...",
+      "selectedCount": "{selected} / {total} Personen ausgewählt",
+      "selectAll": "Alle auswählen",
+      "deselectAll": "Alle abwählen",
+      "loading": "Wird geladen...",
+      "empty": "Keine Mitglieder vorhanden",
+      "noSearchResult": "Keine passenden Mitglieder",
+      "cancelButton": "Abbrechen",
+      "saveButton": "Speichern",
+      "saving": "Wird gespeichert..."
+    },
+    "groupMemberList": {
+      "memberCount": "{count} Mitglieder",
+      "empty": "Keine Mitglieder registriert",
+      "noNameLabel": "Kein Name festgelegt",
+      "viewDetailAriaLabel": "Details von {name} anzeigen"
+    },
+    "groupCard": {
+      "viewMembersAriaLabel": "Mitgliederliste von {name} anzeigen",
+      "manageAriaLabel": "Mitglieder von {name} bearbeiten",
+      "editAriaLabel": "{name} bearbeiten",
+      "deleteAriaLabel": "{name} löschen"
+    },
+    "eventListItem": {
+      "openButton": "Geöffnet",
+      "closedButton": "Geschlossen",
+      "saveButton": "Speichern",
+      "saving": "Wird gespeichert..."
+    },
+    "bulkChange": {
+      "title": "Anwesenheitsstatus gesammelt ändern",
+      "empty": "Keine Ereignisse vorhanden",
+      "statusOpen": "Geöffnet",
+      "statusClosed": "Geschlossen",
+      "statusUnset": "Nicht festgelegt",
+      "competitionLabel": "(Wettkampf)",
+      "openButton": "Auf Geöffnet setzen",
+      "closedButton": "Auf Geschlossen setzen"
+    },
+    "attendanceStatus": {
+      "loading": "Wird geladen...",
+      "titleSuffix": " – Anwesenheitsstatus"
+    },
+    "attendanceGrouping": {
+      "present": "Anwesend ({count})",
+      "absent": "Abwesend ({count})",
+      "other": "Sonstige ({count})",
+      "unanswered": "Keine Antwort ({count})",
+      "none": "Keine"
+    },
+    "templateDownload": {
+      "title": "Excel-Vorlagen herunterladen",
+      "practice": {
+        "title": "Sammelregistrierung von Trainings",
+        "downloadButton": "Herunterladen",
+        "columnHint": "Spalten: Datum | Wochentag | Titel | Ort | Anmerkungen",
+        "downloadError": "Download der Trainingsvorlage fehlgeschlagen"
+      },
+      "competition": {
+        "title": "Sammelregistrierung von Wettkämpfen",
+        "downloadButton": "Herunterladen",
+        "columnHint": "Spalten: Startdatum | Enddatum | Wettkampfname | Ort | Beckentyp | Anmerkungen",
+        "downloadError": "Download der Wettkampfvorlage fehlgeschlagen"
+      }
+    },
+    "fileUpload": {
+      "title": "Datei importieren",
+      "selectButton": "Datei auswählen",
+      "hint": "Erstellen Sie eine Datei anhand der obigen Vorlage und laden Sie sie hoch",
+      "loading": "Datei wird geladen..."
+    },
+    "dataPreview": {
+      "title": "Vorschau",
+      "practiceType": "Training",
+      "competitionType": "Wettkampf",
+      "errorTitle": "Fehler ({count})",
+      "practiceCount": "Trainings ({count})",
+      "competitionCount": "Wettkämpfe ({count})",
+      "practice": {
+        "col": {
+          "date": "Datum",
+          "title": "Titel",
+          "place": "Ort",
+          "note": "Anmerkungen"
+        }
+      },
+      "competition": {
+        "col": {
+          "startDate": "Startdatum",
+          "endDate": "Enddatum",
+          "name": "Wettkampfname",
+          "place": "Ort",
+          "poolType": "Beckentyp",
+          "note": "Anmerkungen"
+        }
+      },
+      "moreItems": "{count} weitere Einträge",
+      "registerButton": " sammelregistrieren",
+      "registering": "Wird registriert...",
+      "poolShort": "25m",
+      "poolLong": "50m"
+    },
+    "practiceLog": {
+      "backButton": "Zurück zur Trainingsliste",
+      "participantsSection": "Zielbenutzer",
+      "timesSection": "Zeiteingabe",
+      "addMenuButton": "Menü hinzufügen",
+      "addSplitButton": "Zwischenzeit hinzufügen",
+      "saveButton": "Team-Trainingsprotokoll speichern",
+      "saving": "Wird gespeichert...",
+      "deleteButton": "Löschen",
+      "deleting": "Wird gelöscht...",
+      "ocrButton": "Mit KI aus Bild auslesen",
+      "pageTitle": "Trainingsprotokoll",
+      "titleAdd": "Team-Trainingsprotokoll hinzufügen",
+      "titleEdit": "Team-Trainingsprotokoll bearbeiten",
+      "subtitle": "Sie können die Aufzeichnungen der Trainingsteilnehmer stellvertretend gesammelt eingeben",
+      "printButton": "Protokollblatt drucken",
+      "closeError": "Schließen",
+      "cancelButton": "Abbrechen",
+      "menuTitle": "Menü {index}",
+      "style1Label": "Disziplin ①",
+      "style2Label": "Disziplin ②",
+      "distanceLabel": "Distanz (m)",
+      "repsLabel": "Wiederholungen",
+      "setsLabel": "Sätze",
+      "circleMinLabel": "Abgangszeit (Min.)",
+      "circleSecLabel": "Abgangszeit (Sek.)",
+      "selectUsersButton": "Benutzer auswählen",
+      "selectedCount": "{count} Personen ausgewählt",
+      "videoLabel": "Video",
+      "videoHas": "Video vorhanden",
+      "videoSelect": "Video auswählen",
+      "tagLabel": "Tags",
+      "memoLabel": "Notiz",
+      "memoPlaceholder": "Details oder Hinweise zum Menü",
+      "timeInputSummary": "{sets} Sätze × {reps} Wiederholungen = {total} Zeiteingaben",
+      "timeInputOptional": "(Die Zeiteingabe ist optional)",
+      "timeInputButton": "Zeiteingabe",
+      "recordedTimesTitle": "Erfasste Zeiten",
+      "recordedCount": "{count} erfasst",
+      "setRepLabel": "Satz {set}-Wiederholung {rep}",
+      "userSelectModalTitle": "Zielbenutzer auswählen",
+      "selectAllButton": "Alle auswählen",
+      "selectPresentButton": "Nur Anwesende ({count})",
+      "deselectButton": "Auswahl aufheben",
+      "userSelectFooterCount": "{count} Personen ausgewählt",
+      "confirmButton": "Bestätigen",
+      "attendingBadge": "Anwesend",
+      "adminBadge": "Administrator",
+      "morePeopleCount": "+{count} Personen",
+      "overwriteConfirm": {
+        "title": "Umgang mit vorhandenen Menüs",
+        "message": "Es sind bereits Menüs eingegeben. Möchten Sie diese überschreiben? Wenn Sie „Hinzufügen“ drücken, werden sie nach den vorhandenen Menüs angefügt.",
+        "confirmLabel": "Überschreiben",
+        "cancelLabel": "Abbrechen",
+        "tertiaryLabel": "Hinzufügen"
+      },
+      "errorAtLeastOne": "Bitte geben Sie mindestens eine Aufzeichnung ein",
+      "errorSave": "Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+      "errorSaveWithMessage": "Beim Speichern ist ein Fehler aufgetreten: {message}",
+      "errorVideoUploadUrlFailed": "{name}: Abrufen der Upload-URL fehlgeschlagen ({status})",
+      "errorVideoUploadFailed": "{name}: Hochladen des Videos fehlgeschlagen ({status})",
+      "errorVideoThumbnailFailed": "{name}: Hochladen des Vorschaubilds fehlgeschlagen ({status})",
+      "errorVideoConfirmFailed": "{name}: Bestätigung des Videos fehlgeschlagen ({status})",
+      "errorVideoAssignFailed": "{name}: Zuweisung zum Team fehlgeschlagen ({status})",
+      "errorVideoGenericFailed": "{name}: Beim Hochladen des Videos ist ein Fehler aufgetreten",
+      "errorVideoUpload": "Einige Video-Uploads sind fehlgeschlagen:\n{errors}"
+    },
+    "bulkRegister": {
+      "wrapperTitle": "Zeitplan-Sammelregistrierung",
+      "unauthorized": {
+        "title": "Sammelregistrierung",
+        "description": "Für die Nutzung der Sammelregistrierung benötigen Sie Administratorrechte."
+      },
+      "result": {
+        "title": "Registrierungsergebnis",
+        "practicesCreated": "Training: {count} Einträge registriert",
+        "competitionsCreated": "Wettkampf: {count} Einträge registriert",
+        "errors": "Fehler: {errors}"
+      }
+    },
+    "common": {
+      "close": "Schließen",
+      "copyTitle": "Kopieren"
+    }
+  },
+  "paywallMobile": {
+    "purchaseSuccessTitle": "Kauf abgeschlossen",
+    "purchaseSuccessMessage": "Sie können Premium jetzt nutzen.",
+    "purchaseFailed": "Kauf fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "restoreSuccessTitle": "Wiederherstellung abgeschlossen",
+    "restoreSuccessMessage": "Ihr Kauf wurde wiederhergestellt.",
+    "restoreFailed": "Käufe konnten nicht wiederhergestellt werden.",
+    "closeAria": "Schließen",
+    "fetchPlansFailedShort": "Tarife konnten nicht abgerufen werden",
+    "noPlansAvailable": "Keine Tarife verfügbar",
+    "trialStart": "7 Tage kostenlos testen",
+    "premiumStart": "Premium starten",
+    "trialNote": "Nach der 7-tägigen kostenlosen Testphase verlängert sich Ihr gewählter Tarif automatisch. Jederzeit kündbar.",
+    "cancelNote": "Sie können Ihr Abonnement jederzeit kündigen.\nVerwalten Sie es über die App-Store-Einstellungen.",
+    "alreadyPremium": "Sie nutzen bereits den Premium-Tarif",
+    "title": "Auf Premium upgraden",
+    "subtitle": "Schalten Sie alle Funktionen ohne Einschränkungen frei.",
+    "trialDaysRemaining": "Testphase: noch {days} Tage",
+    "annualPlan": "Jahrestarif",
+    "monthlyPlan": "Monatstarif",
+    "savingsLabel": "{percent}% sparen",
+    "pricePerYear": "{price} / Jahr",
+    "pricePerMonth": "{price} / Monat",
+    "pricePerMonthApprox": "~{price} {currency}/Monat"
+  },
+  "recordMobile": {
+    "loading": "Wettkampfergebnisse werden geladen ...",
+    "loadingData": "Daten werden geladen ...",
+    "recordLoading": "Eintrag wird geladen ...",
+    "stylesLoading": "Disziplinen werden geladen ...",
+    "notFound": "Wettkampfeintrag nicht gefunden",
+    "recordNotFound": "Eintrag nicht gefunden",
+    "recordDataNotFound": "Eintragsdaten nicht gefunden",
+    "recordFetchFailed": "Eintrag konnte nicht abgerufen werden",
+    "fetchFailed": "Wettkampfergebnisse konnten nicht abgerufen werden",
+    "competitionFetchFailed": "Wettkampfinformationen konnten nicht abgerufen werden",
+    "deleteConfirmTitle": "Löschen bestätigen",
+    "deleteConfirmMessage": "Möchten Sie diesen Wettkampfeintrag löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
+    "deleteConfirmButton": "Löschen",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "videoUploadFailedTitle": "Video-Upload fehlgeschlagen",
+    "videoUploadFailedSession": "Video-Upload fehlgeschlagen: Ihre Sitzung ist ungültig. Bitte melden Sie sich erneut an.",
+    "videoUploadFailedSaved": "Der Wettkampfeintrag wurde gespeichert, aber der Video-Upload ist fehlgeschlagen.",
+    "imageProcessingFailedTitle": "Warnung",
+    "imageProcessingFailed": "Der Eintrag wurde gespeichert, aber die Bildverarbeitung ist fehlgeschlagen",
+    "fallbackTitle": "Wettkampf",
+    "poolTypeShort": "Kurzbahn",
+    "poolTypeLong": "Langbahn",
+    "poolTypeShortDetail": "Kurzbahn (25m)",
+    "poolTypeLongDetail": "Langbahn (50m)",
+    "filterAllStyles": "Alle Disziplinen",
+    "entryTimeInfo": "Meldezeit: {time}",
+    "filterAllPeriods": "Alle Zeiträume",
+    "filterYearFormat": "Saison {year}",
+    "tabAll": "Alle",
+    "tabIncludeRelay": "Inkl. Staffel",
+    "buttonReset": "Zurücksetzen",
+    "tabSplit": "Nach Distanz",
+    "tabAllLap": "All Lap",
+    "tableHeaderStyle": "Disziplin",
+    "tableHeaderTime": "Zeit",
+    "tableHeaderRT": "RT",
+    "tableHeaderDistance": "Distanz",
+    "tableHeaderSplit": "Split",
+    "tableHeaderLapColumn": "{interval}m Lap",
+    "tableHeaderSection": "Abschnitt",
+    "tableHeaderLapTime": "Lap Time",
+    "sectionRange": "{from}m → {to}m",
+    "distanceDisplay": "{distance}m",
+    "memoIcon": "📝 Notiz",
+    "attachedImages": "Angehängte Bilder",
+    "editButton": "Bearbeiten",
+    "deleteButton": "Löschen",
+    "deletingButton": "Wird gelöscht ...",
+    "bestTimeBadge": "🏆 Best Time!!",
+    "bestTimeAria": "Persönliche Bestzeit",
+    "bestTimeDiffAria": "+{diff} langsamer als die Best Time",
+    "dateUnknown": "Datum unbekannt",
+    "unknownValue": "Unbekannt",
+    "recordNumber": "Eintrag {index}",
+    "noRecords": "Keine Wettkampfergebnisse",
+    "form": {
+      "competitionLabel": "Wettkampf",
+      "competitionPlaceholder": "Wettkampf auswählen",
+      "styleLabel": "Disziplin",
+      "stylePlaceholder": "Disziplin auswählen",
+      "timeLabel": "Zeit",
+      "timePlaceholder": "z. B. 1:23.45 oder 31-2",
+      "timePlaceholder2": "z. B. 2:00.00 oder 2-0-0",
+      "reactionTimeLabel": "Reaktionszeit (Sek.)",
+      "reactionTimePlaceholder": "0,40–1,00",
+      "splitTimeLabel": "Split-Zeit",
+      "relayStyleLabel": "Staffeldisziplin",
+      "memoLabel": "Notiz",
+      "memoPlaceholder": "Notiz (optional)",
+      "videoLabel": "Video",
+      "imagesLabel": "Bilder",
+      "distancePlaceholder": "Distanz (m)",
+      "addEvery25m": "Hinzufügen (alle 25m)",
+      "addEvery50m": "Hinzufügen (alle 50m)",
+      "addButton": "Hinzufügen",
+      "splitPlaceholder": "z. B. 28-0",
+      "styleRequired": "Bitte wählen Sie eine Disziplin",
+      "competitionRequired": "Bitte wählen Sie einen Wettkampf",
+      "timeRequired": "Bitte geben Sie eine Zeit ein",
+      "timePositive": "Die Zeit muss eine positive Zahl sein",
+      "reactionTimeRange": "Die Reaktionszeit muss zwischen 0,40 und 1,00 Sekunden liegen",
+      "timeFormatInvalid": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
+      "timeFormatInvalid2": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)"
+    }
+  },
+  "forms": {
+    "unsavedChanges": {
+      "title": "Nicht gespeicherte Änderungen",
+      "messageBack": "Sie haben nicht gespeicherte Änderungen. Trotzdem zurückgehen?",
+      "messageClose": "Sie haben nicht gespeicherte Änderungen. Trotzdem schließen?",
+      "confirmBack": "Zurück",
+      "confirmClose": "Schließen",
+      "cancel": "Weiter bearbeiten"
+    },
+    "practice": {
+      "steps": {
+        "basic": {
+          "label": "Grundinformationen",
+          "description": "Datum & Ort"
+        },
+        "log": {
+          "label": "Trainingsprotokoll",
+          "description": "Menü & Zeiten"
+        }
+      },
+      "title_create": "Termin erstellen",
+      "title_edit": "Termin bearbeiten",
+      "subtitle_create": "Trainingstermin für {date} erstellen",
+      "subtitle_edit": "Trainingstermin für {date} bearbeiten",
+      "date_label": "Trainingsdatum",
+      "date_placeholder": "Trainingsdatum auswählen",
+      "title_field": "Trainingstitel",
+      "title_placeholder": "z. B. Swim, AM, 16:00",
+      "place_label": "Trainingsort",
+      "place_placeholder": "z. B. städtisches Schwimmbad, Schulschwimmbad",
+      "note_label": "Notizen",
+      "note_placeholder": "Zusätzliche Hinweise zum Training (Wetter, körperliche Verfassung usw.)",
+      "save": "Speichern",
+      "saving": "Wird gespeichert ...",
+      "update": "Aktualisieren",
+      "updating": "Wird aktualisiert ...",
+      "save_close": "Speichern & schließen",
+      "save_next": "Speichern & weiter",
+      "cancel": "Abbrechen"
+    },
+    "competition": {
+      "steps": {
+        "basic": {
+          "label": "Wettkampfinfo",
+          "description": "Datum & Ort"
+        },
+        "entry": {
+          "label": "Meldung",
+          "description": "Disziplinen & Zeiten"
+        },
+        "record": {
+          "label": "Ergebniserfassung",
+          "description": "Ergebnisse & Zwischenzeiten"
+        }
+      },
+      "title_create": "Wettkampf registrieren",
+      "title_edit": "Wettkampf bearbeiten",
+      "start_date_label": "Startdatum",
+      "end_date_label": "Enddatum (optional)",
+      "end_date_error": "Das Enddatum muss am oder nach dem Startdatum liegen",
+      "name_label": "Wettkampfname",
+      "name_placeholder": "z. B. Nationale Meisterschaft, Vergleichswettkampf",
+      "place_label": "Ort",
+      "pool_type_label": "Bahn",
+      "pool_short": "Kurzbahn (25m)",
+      "pool_long": "Langbahn (50m)",
+      "note_label": "Notizen",
+      "note_placeholder": "Notizen zum Wettkampf (optional)",
+      "save": "Speichern",
+      "saving": "Wird gespeichert ...",
+      "update": "Aktualisieren",
+      "updating": "Wird aktualisiert ...",
+      "save_close": "Speichern & schließen",
+      "next_entry": "Weiter (Meldung registrieren)",
+      "next_record": "Weiter (Ergebniserfassung)",
+      "cancel": "Abbrechen"
+    },
+    "practiceLog": {
+      "title_create": "Trainingsprotokoll hinzufügen",
+      "title_edit": "Trainingsprotokoll bearbeiten",
+      "close_aria": "Trainingsprotokoll schließen",
+      "templateFrom": "Vorlage",
+      "templateFromLong": "Aus Vorlage erstellen",
+      "addMenu": "Menü hinzufügen",
+      "saveAsTemplate": "Als Vorlage speichern",
+      "templateSaveTitle": "Als Vorlage speichern",
+      "templateNameLabel": "Vorlagenname",
+      "templateNamePlaceholder": "z. B. 100m × 10 Fr",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Wird gespeichert ...",
+      "update": "Aktualisieren",
+      "updating": "Wird aktualisiert ...",
+      "videoLabel": "Video"
+    },
+    "practiceMenu": {
+      "header": "Menü {n}",
+      "removeAria": "Menü {n} entfernen",
+      "tagLabel": "Tags",
+      "tagPlaceholder": "Tags auswählen oder erstellen",
+      "style1Label": "Lage ①",
+      "style2Label": "Lage ②",
+      "distanceLabel": "Distanz (m)",
+      "repsLabel": "Wiederholungen",
+      "setsLabel": "Sätze",
+      "circleMinLabel": "Intervall (Min.)",
+      "circleSecLabel": "Intervall (Sek.)",
+      "timeLabel": "Trainingszeiten",
+      "timeEdit": "Zeiten bearbeiten ({count} erfasst)",
+      "timeAdd": "Zeiten eingeben",
+      "noteLabel": "Notizen",
+      "notePlaceholder": "Notizen zu diesem Menü",
+      "timesHeader": "Erfasste Zeiten",
+      "setHeader": "Satz {n}",
+      "repHeader": "Wdh. {n}",
+      "avgRow": "Durchschn.",
+      "overallAvg": "Gesamtdurchschnitt",
+      "overallFastest": "Gesamtbestzeit"
+    },
+    "timeInput": {
+      "title": "Zeiten für Menü {n} eingeben",
+      "titleGeneric": "Zeiten eingeben",
+      "subtitle": "Bitte geben Sie die Zeiten für {sets} Sätze × {reps} Wiederholungen ein",
+      "setHeader": "Satz {n}",
+      "repLabel": "Wdh. {n}",
+      "average": "Durchschn.:",
+      "notEntered": "Nicht eingegeben",
+      "overallAvg": "Gesamtdurchschnitt:",
+      "save": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "record": {
+      "title_create": "Ergebnis hinzufügen",
+      "title_edit": "Ergebnis bearbeiten",
+      "closeAria": "Schließen",
+      "recordsHeader": "Ergebnisse",
+      "addEvent": "Disziplin hinzufügen",
+      "competitionNoteLabel": "Wettkampfnotizen",
+      "competitionNotePlaceholder": "Zusätzliche Hinweise zum Wettkampf",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Wird gespeichert ...",
+      "update": "Aktualisieren",
+      "dateLabel": "Wettkampfdatum",
+      "placeLabel": "Austragungsort",
+      "placePlaceholder": "z. B. Schwimmbad Tokio",
+      "nameLabel": "Wettkampfname",
+      "namePlaceholder": "z. B. 3. Schwimmwettkampf",
+      "poolTypeLabel": "Bahnart",
+      "poolShort": "Kurzbahn (25m)",
+      "poolLong": "Langbahn (50m)",
+      "eventHeader": "Disziplin {n}",
+      "removeEventAria": "Disziplin entfernen",
+      "styleLabel": "Disziplin",
+      "stylePlaceholder": "Disziplin auswählen",
+      "timeLabel": "Zeit",
+      "time_placeholder": "z. B. 1:30.50",
+      "distance_placeholder": "Distanz (m)",
+      "reactionTimeLabel": "Reaktionszeit",
+      "relayLabel": "Staffel",
+      "splitTimeLabel": "Zwischenzeiten",
+      "splitAdd25m": "Hinzufügen (alle 25m)",
+      "splitAdd50m": "Hinzufügen (alle 50m)",
+      "splitAdd": "Hinzufügen",
+      "videoLabel": "Video",
+      "noteLabel": "Notizen",
+      "notePlaceholder": "Zusätzliche Hinweise",
+      "validation": {
+        "dateRequired": "Bitte geben Sie das Wettkampfdatum ein",
+        "dateInvalid": "Bitte geben Sie ein gültiges Datum ein"
+      }
+    },
+    "entry": {
+      "title": "Meldedisziplinen",
+      "subtitle": "Bitte geben Sie die Disziplinen und Meldezeiten für den Wettkampf ein.\nSie können die Meldung überspringen und nur Ergebnisse erfassen.",
+      "eventsHeader": "Meldedisziplinen",
+      "addEvent": "Disziplin hinzufügen",
+      "eventHeader": "Disziplin {n}",
+      "styleLabel": "Meldedisziplin",
+      "styleLabelShort": "Disziplin",
+      "stylePlaceholder": "Disziplin auswählen",
+      "timeLabel": "Meldezeit",
+      "timeLabelShort": "Meldung",
+      "noteLabel": "Notizen",
+      "notePlaceholder": "Zusätzliche Hinweise",
+      "skip": "Meldung überspringen",
+      "submit": "Meldung registrieren",
+      "submitting": "Wird registriert ...",
+      "cancel": "Abbrechen"
+    },
+    "recordLog": {
+      "eventHeader": "Disziplin {n}",
+      "entryTimeLabel": "Meldezeit:",
+      "bestTimeLabel": "Bestzeit",
+      "bestTimeRelay": "Bestzeit (Ablösung)",
+      "bestTimeLong": "Bestzeit (Langbahn)",
+      "bestTimeLongRelay": "Bestzeit (Langbahn Ablösung)",
+      "bestTimeShort": "Bestzeit (Kurzbahn)",
+      "bestTimeShortRelay": "Bestzeit (Kurzbahn Ablösung)",
+      "styleLabel": "Disziplin",
+      "stylePlaceholder": "Disziplin auswählen",
+      "relayLabel": "Staffel",
+      "timeLabel": "Zeit",
+      "time_placeholder": "z. B. 1:23.45   32.45",
+      "reactionTime_placeholder": "z. B. 28.50",
+      "distance_placeholder": "Distanz (m)",
+      "reactionTimeLabelShort": "RT",
+      "reactionTimeLabelFull": "Reaktionszeit",
+      "splitTimeLabel": "Zwischenzeiten",
+      "splitAdd25m": "Hinzufügen (alle 25m)",
+      "splitAdd50m": "Hinzufügen (alle 50m)",
+      "splitAdd": "Hinzufügen",
+      "videoLabel": "Video",
+      "noteLabel": "Notizen",
+      "notePlaceholder": "Notizen zum Ergebnis (optional)",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Wird gespeichert ...",
+      "update": "Aktualisieren",
+      "formError_noStyle": "Bitte wählen Sie eine Disziplin aus",
+      "formError_noTime": "Bitte geben Sie eine Zeit ein (Format: Min:Sek.Dezimal oder Sek.Dezimal)"
+    },
+    "tag": {
+      "placeholder": "Tags auswählen oder erstellen",
+      "searchPlaceholder": "Tags suchen oder erstellen ...",
+      "noTags": "Keine Tags verfügbar",
+      "noMatch": "Keine passenden Tags gefunden",
+      "createHint": "Mit der Eingabetaste „{name}“ neu erstellen",
+      "addHint": "+ Hinzufügen",
+      "manageTip": "Tag verwalten",
+      "manageTipTitle": "Tag verwalten",
+      "nameLabel": "Tag-Name",
+      "namePlaceholder": "Tag-Namen eingeben",
+      "colorLabel": "Farbe",
+      "previewLabel": "Vorschau",
+      "previewDefault": "Tag-Name",
+      "selectModalTitle": "Tags auswählen",
+      "actionPrompt": "Bitte wählen Sie eine Aktion für dieses Tag",
+      "actionEdit": "Bearbeiten",
+      "actionDelete": "Löschen",
+      "deleteConfirmTitle": "Tag löschen",
+      "deleteConfirmMessage": "„{name}“ löschen?\nDieses Tag wird auch aus allen Trainingsprotokollen entfernt, denen es zugewiesen wurde.",
+      "emptyTitle": "Keine Tags",
+      "emptySubtext": "Erstellen Sie ein neues Tag über die Schaltfläche unten",
+      "createNewButton": "Neues Tag erstellen",
+      "selectedCount": "{count} ausgewählt",
+      "doneButton": "Fertig",
+      "newTagTitle": "Neues Tag",
+      "editTagTitle": "Tag bearbeiten",
+      "namePlaceholderExample": "z. B. Intervall",
+      "errorNameRequired": "Bitte geben Sie einen Tag-Namen ein",
+      "errorSaveFailed": "Tag konnte nicht gespeichert werden",
+      "errorDeleteFailed": "Tag konnte nicht gelöscht werden",
+      "deleteTitle": "Tag löschen",
+      "deleteConfirm": "„{name}“ löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+      "update": "Aktualisieren",
+      "updating": "Wird aktualisiert ...",
+      "delete": "Löschen",
+      "deleting": "Wird gelöscht ...",
+      "cancel": "Abbrechen",
+      "duplicateError": "Ein Tag mit demselben Namen existiert bereits",
+      "updateError": "Tag konnte nicht aktualisiert werden",
+      "authRequired": "Authentifizierung erforderlich",
+      "createFailed": "Tag konnte nicht erstellt werden",
+      "deleteFailed": "Tag konnte nicht gelöscht werden"
+    },
+    "teamCreate": {
+      "title": "Neues Team erstellen",
+      "nameLabel": "Teamname",
+      "namePlaceholder": "z. B. Schwimmclub A",
+      "nameRequired": "Teamname ist erforderlich",
+      "nameTooLong": "Der Teamname darf höchstens 50 Zeichen lang sein",
+      "nameCounter": "{current}/50 Zeichen",
+      "descLabel": "Beschreibung",
+      "descPlaceholder": "Geben Sie eine Beschreibung für Ihr Team ein (optional)",
+      "descTooLong": "Die Beschreibung darf höchstens 200 Zeichen lang sein",
+      "descCounter": "{current}/200 Zeichen",
+      "submit": "Team erstellen",
+      "submitting": "Wird erstellt ...",
+      "cancel": "Abbrechen"
+    },
+    "teamJoin": {
+      "codeLabel": "Einladungscode",
+      "codePlaceholder": "Geben Sie den Einladungscode des Teams ein",
+      "codeHint": "Geben Sie den vom Teamadministrator bereitgestellten Einladungscode ein",
+      "errorTitle": "Ein Fehler ist aufgetreten",
+      "joining": "Tritt bei ...",
+      "submit": "Team beitreten"
+    },
+    "lapTime": {
+      "raceLapTab": "Lap nach Distanz",
+      "allLapTab": "All Lap",
+      "noSplits": "Bitte geben Sie Zwischenzeiten ein",
+      "noStyle": "Bitte wählen Sie eine Disziplin aus",
+      "noLap": "Lap-Zeiten können nicht berechnet werden",
+      "distanceHeader": "Distanz",
+      "splitTimeHeader": "Split Time"
+    },
+    "imageUploader": {
+      "label": "Bilder anhängen",
+      "formatDescription": "JPEG, PNG, WebP, HEIC (je bis zu 10MB)",
+      "countDisplay": "{current} / {max}",
+      "new": "Neu",
+      "removeImageAria": "Bild entfernen",
+      "uploadAria": "Bilder hochladen",
+      "clickToSelect": "Zum Auswählen klicken",
+      "orDragDrop": " oder per Drag & Drop",
+      "maxReached": "Maximal {max} Bilder ausgewählt",
+      "remainingSlotsError": "Sie können noch {remaining} Bilder hinzufügen (max. {max})",
+      "invalidFile": "Ungültige Datei"
+    },
+    "premium": {
+      "upgradeText": "Auf Premium upgraden",
+      "imageUpload": "Bildanhänge sind eine Premium-Funktion",
+      "videoUpload": "Videoanhänge sind eine Premium-Funktion",
+      "splitTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte",
+      "practiceTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte"
+    }
+  }
+}

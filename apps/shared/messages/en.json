@@ -40,10 +40,14 @@
       "swim meet",
       "swim team",
       "SwimHub"
-    ]
+    ],
+    "planFree": "Free Plan",
+    "planPremiumMonthly": "Premium Plan (Monthly)",
+    "planPremiumYearly": "Premium Plan (Annual)"
   },
   "common": {
     "appName": "SwimHub",
+    "language": "Language",
     "alertErrorTitle": "Error",
     "loading": "Loading...",
     "error": "An error occurred",
@@ -120,7 +124,10 @@
     },
     "errorBoundary": {
       "title": "An error occurred",
-      "unknownError": "An unknown error occurred"
+      "unknownError": "Unknown error",
+      "retry": "Retry",
+      "reload": "Reload page",
+      "helpText": "If the problem persists, try reloading the page or contact support."
     },
     "video": {
       "loading": "Loading video...",
@@ -180,7 +187,15 @@
       "nextMonth": "Next month",
       "today": "Today",
       "close": "Close",
-      "weekdays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+      "weekdays": [
+        "Sun",
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat"
+      ]
     },
     "formStepper": {
       "ariaLabel": "Form progress",
@@ -209,13 +224,6 @@
     "validation": {
       "required": "This field is required",
       "email": "Please enter a valid email address"
-    },
-    "errorBoundary": {
-      "title": "An error occurred",
-      "unknownError": "Unknown error",
-      "retry": "Retry",
-      "reload": "Reload page",
-      "helpText": "If the problem persists, try reloading the page or contact support."
     },
     "videoUploader": {
       "uploadUrlFailed": "Failed to get upload URL",
@@ -2189,7 +2197,6 @@
       "bulkPlacePlaceholder": "e.g. City Pool",
       "bulkMemoPlaceholder": "Memo",
       "bulkCompetitionNamePlaceholder": "Competition name",
-      "roleAdmin": "Admin",
       "roleUser": "Member",
       "roleChangeTitle": "Confirm role change",
       "roleChangeButton": "Change",
@@ -2199,7 +2206,6 @@
       "memberRoleChangeMessage": "Change {name}'s role to \"{role}\"?",
       "memberRemoveMessage": "Remove {name} from the team?\nThis cannot be undone.",
       "bestTimeSection": "Best Time",
-      "bestTimeLoading": "Loading best times...",
       "youBadge": "You",
       "birthdayLabel": "Birthday: {date}",
       "adminControlsTitle": "Admin controls",

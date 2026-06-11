@@ -9,8 +9,10 @@ import { authenticateApiRequest } from "@/lib/auth-api";
 import { isR2Enabled, uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { NextRequest, NextResponse } from "next/server";
 import nodePath from "path";
+import { getTranslations } from "next-intl/server";
+import { localeFromReferer } from "@/i18n/routing";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_ERROR_CODE, PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import { PREMIUM_ERROR_CODE } from "@swim-hub/shared/constants/premium";
 import type { PremiumRequiredError } from "@swim-hub/shared/constants/premium";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -49,9 +51,13 @@ export async function POST(request: NextRequest) {
       : null;
 
     if (!checkIsPremium(subscription)) {
+      const t = await getTranslations({
+        locale: localeFromReferer(request.headers.get("referer")),
+        namespace: "forms.premium",
+      });
       const errorResponse: PremiumRequiredError = {
         error: PREMIUM_ERROR_CODE,
-        message: PREMIUM_MESSAGES.image_upload,
+        message: t("imageUpload"),
         feature: "image_upload",
       };
       return NextResponse.json(errorResponse, { status: 403 });

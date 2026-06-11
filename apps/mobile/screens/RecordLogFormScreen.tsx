@@ -34,7 +34,7 @@ import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
@@ -948,7 +948,7 @@ export const RecordLogFormScreen: React.FC = () => {
                 )}
                 {isSplitTimeLimitReached(index) && (
                   <View style={{ marginTop: 8 }}>
-                    <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} compact />
+                    <PremiumBadge feature="split_time_limit" compact />
                   </View>
                 )}
               </View>

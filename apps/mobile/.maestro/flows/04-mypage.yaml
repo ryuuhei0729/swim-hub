@@ -6,4 +6,4 @@ appId: ${APP_ID}
     id: "tab-mypage"
 - waitForAnimationToEnd:
     timeout: 5000
-- takeScreenshot: ${OUTPUT_DIR}/${DEVICE_TAG}_05_mypage
+- takeScreenshot: ${OUTPUT_DIR}/${DEVICE_TAG}_04_mypage

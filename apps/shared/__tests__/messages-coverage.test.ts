@@ -17,6 +17,9 @@ import { describe, it, expect } from "vitest";
 
 import jaMessages from "../messages/ja.json";
 import enMessages from "../messages/en.json";
+import zhMessages from "../messages/zh.json";
+import koMessages from "../messages/ko.json";
+import deMessages from "../messages/de.json";
 
 // ---------------------------------------------------------------------------
 // ヘルパー
@@ -48,10 +51,17 @@ function getValue(obj: Record<string, unknown>, dottedKey: string): unknown {
   return cur;
 }
 
+/**
+ * 日本語ハードコード検出 Regex。
+ * en.json はひらがな/カタカナ/漢字をすべて排除すべき。
+ * zh/ko/de はひらがな・カタカナのみ禁止（漢字は中国語・韓国語でも正当に使用される）。
+ */
 const JA_REGEX = /[ぁ-んァ-ヶー一-龯]/;
+// zh/ko/de 向け: ひらがな・カタカナのみ禁止（CJK漢字は中国語・韓国語でも正当）
+const JA_KANA_ONLY_REGEX = /[ぁ-んァ-ヶー]/;
 
 describe("shared/messages global coverage", () => {
-  // [V-01] キー構造一致
+  // [V-01] キー構造一致 (ja vs en)
   it("[V-01] ja.json and en.json have identical key structures", () => {
     const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>).sort();
     const enKeys = flattenKeys(enMessages as unknown as Record<string, unknown>).sort();
@@ -66,6 +76,58 @@ describe("shared/messages global coverage", () => {
     expect(
       missingInJa,
       `Keys present in en.json but missing from ja.json:\n  ${missingInJa.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  // [V-01-ext] zh/ko/de も ja と同じキー構造を持つ
+  it("[V-01-ext] zh.json has identical key structure to ja.json", () => {
+    const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>).sort();
+    const zhKeys = flattenKeys(zhMessages as unknown as Record<string, unknown>).sort();
+
+    const missingInZh = jaKeys.filter((k) => !zhKeys.includes(k));
+    const extraInZh = zhKeys.filter((k) => !jaKeys.includes(k));
+
+    expect(
+      missingInZh,
+      `Keys present in ja.json but missing from zh.json:\n  ${missingInZh.join("\n  ")}`,
+    ).toEqual([]);
+    expect(
+      extraInZh,
+      `Keys present in zh.json but missing from ja.json:\n  ${extraInZh.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  it("[V-01-ext] ko.json has identical key structure to ja.json", () => {
+    const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>).sort();
+    const koKeys = flattenKeys(koMessages as unknown as Record<string, unknown>).sort();
+
+    const missingInKo = jaKeys.filter((k) => !koKeys.includes(k));
+    const extraInKo = koKeys.filter((k) => !jaKeys.includes(k));
+
+    expect(
+      missingInKo,
+      `Keys present in ja.json but missing from ko.json:\n  ${missingInKo.join("\n  ")}`,
+    ).toEqual([]);
+    expect(
+      extraInKo,
+      `Keys present in ko.json but missing from ja.json:\n  ${extraInKo.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  it("[V-01-ext] de.json has identical key structure to ja.json", () => {
+    const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>).sort();
+    const deKeys = flattenKeys(deMessages as unknown as Record<string, unknown>).sort();
+
+    const missingInDe = jaKeys.filter((k) => !deKeys.includes(k));
+    const extraInDe = deKeys.filter((k) => !jaKeys.includes(k));
+
+    expect(
+      missingInDe,
+      `Keys present in ja.json but missing from de.json:\n  ${missingInDe.join("\n  ")}`,
+    ).toEqual([]);
+    expect(
+      extraInDe,
+      `Keys present in de.json but missing from ja.json:\n  ${extraInDe.join("\n  ")}`,
     ).toEqual([]);
   });
 
@@ -86,6 +148,140 @@ describe("shared/messages global coverage", () => {
       `English translations contain Japanese characters:\n${violators
         .map((v) => `  ${v.key}: ${v.value}`)
         .join("\n")}`,
+    ).toEqual([]);
+  });
+
+  // [V-04-ext] zh/ko/de 側にも日本語ハードコードがないこと
+  it("[V-04-ext] zh.json values do not contain hiragana/katakana (Japanese kana leak)", () => {
+    // zh は漢字を正当に使用するため、ひらがな・カタカナのみ禁止
+    const zhKeys = flattenKeys(zhMessages as unknown as Record<string, unknown>);
+    const violators: { key: string; value: string }[] = [];
+
+    for (const key of zhKeys) {
+      const value = getValue(zhMessages as unknown as Record<string, unknown>, key);
+      if (typeof value === "string" && JA_KANA_ONLY_REGEX.test(value)) {
+        violators.push({ key, value });
+      }
+    }
+
+    expect(
+      violators,
+      `zh translations contain Japanese hiragana/katakana:\n${violators
+        .map((v) => `  ${v.key}: ${v.value}`)
+        .join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("[V-04-ext] ko.json values do not contain hiragana/katakana (Japanese kana leak)", () => {
+    // ko は漢字(한자)を正当に使用するため、ひらがな・カタカナのみ禁止
+    const koKeys = flattenKeys(koMessages as unknown as Record<string, unknown>);
+    const violators: { key: string; value: string }[] = [];
+
+    for (const key of koKeys) {
+      const value = getValue(koMessages as unknown as Record<string, unknown>, key);
+      if (typeof value === "string" && JA_KANA_ONLY_REGEX.test(value)) {
+        violators.push({ key, value });
+      }
+    }
+
+    expect(
+      violators,
+      `ko translations contain Japanese hiragana/katakana:\n${violators
+        .map((v) => `  ${v.key}: ${v.value}`)
+        .join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("[V-04-ext] de.json values do not contain any Japanese characters", () => {
+    // de は CJK 文字を含まないため、従来通り JA_REGEX で全チェック
+    const deKeys = flattenKeys(deMessages as unknown as Record<string, unknown>);
+    const violators: { key: string; value: string }[] = [];
+
+    for (const key of deKeys) {
+      const value = getValue(deMessages as unknown as Record<string, unknown>, key);
+      if (typeof value === "string" && JA_REGEX.test(value)) {
+        violators.push({ key, value });
+      }
+    }
+
+    expect(
+      violators,
+      `de translations contain Japanese characters:\n${violators
+        .map((v) => `  ${v.key}: ${v.value}`)
+        .join("\n")}`,
+    ).toEqual([]);
+  });
+
+  // [V-05] プレースホルダの一致確認 (zh/ko/de で {var} 形式を保持)
+  it("[V-05] zh.json placeholder variables match ja.json", () => {
+    const PLACEHOLDER_REGEX = /\{(\w+)\}/g;
+    const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>);
+    const mismatches: string[] = [];
+
+    for (const key of jaKeys) {
+      const jaVal = getValue(jaMessages as unknown as Record<string, unknown>, key);
+      const zhVal = getValue(zhMessages as unknown as Record<string, unknown>, key);
+      if (typeof jaVal !== "string" || typeof zhVal !== "string") continue;
+
+      const jaVars = [...jaVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
+      const zhVars = [...zhVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
+
+      if (JSON.stringify(jaVars) !== JSON.stringify(zhVars)) {
+        mismatches.push(`${key}: ja=${JSON.stringify(jaVars)} zh=${JSON.stringify(zhVars)}`);
+      }
+    }
+
+    expect(
+      mismatches,
+      `zh.json placeholder mismatch with ja.json:\n  ${mismatches.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  it("[V-05] ko.json placeholder variables match ja.json", () => {
+    const PLACEHOLDER_REGEX = /\{(\w+)\}/g;
+    const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>);
+    const mismatches: string[] = [];
+
+    for (const key of jaKeys) {
+      const jaVal = getValue(jaMessages as unknown as Record<string, unknown>, key);
+      const koVal = getValue(koMessages as unknown as Record<string, unknown>, key);
+      if (typeof jaVal !== "string" || typeof koVal !== "string") continue;
+
+      const jaVars = [...jaVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
+      const koVars = [...koVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
+
+      if (JSON.stringify(jaVars) !== JSON.stringify(koVars)) {
+        mismatches.push(`${key}: ja=${JSON.stringify(jaVars)} ko=${JSON.stringify(koVars)}`);
+      }
+    }
+
+    expect(
+      mismatches,
+      `ko.json placeholder mismatch with ja.json:\n  ${mismatches.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  it("[V-05] de.json placeholder variables match ja.json", () => {
+    const PLACEHOLDER_REGEX = /\{(\w+)\}/g;
+    const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>);
+    const mismatches: string[] = [];
+
+    for (const key of jaKeys) {
+      const jaVal = getValue(jaMessages as unknown as Record<string, unknown>, key);
+      const deVal = getValue(deMessages as unknown as Record<string, unknown>, key);
+      if (typeof jaVal !== "string" || typeof deVal !== "string") continue;
+
+      const jaVars = [...jaVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
+      const deVars = [...deVal.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]).sort();
+
+      if (JSON.stringify(jaVars) !== JSON.stringify(deVars)) {
+        mismatches.push(`${key}: ja=${JSON.stringify(jaVars)} de=${JSON.stringify(deVars)}`);
+      }
+    }
+
+    expect(
+      mismatches,
+      `de.json placeholder mismatch with ja.json:\n  ${mismatches.join("\n  ")}`,
     ).toEqual([]);
   });
 

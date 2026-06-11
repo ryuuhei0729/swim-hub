@@ -40,9 +40,9 @@ DEVICES=(
   "iPad Pro 13-inch (M5)|ipad13"
 )
 # maestro locale | App Store ロケールフォルダ | region
+# 今回は英語ローカライズ用に EN のみ。JA を追加するなら下に "ja|ja|JP" を足す。
 LOCALES=(
   "en|en-US|US"
-  "ja|ja|JP"
 )
 
 udid_for() {

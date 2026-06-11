@@ -42,10 +42,5 @@ export interface PremiumRequiredError {
   current?: number;
 }
 
-/** Free ユーザー向けの制限メッセージ */
-export const PREMIUM_MESSAGES: Record<PremiumFeature, string> = {
-  image_upload: "画像の添付は Premium 会員限定です",
-  video_upload: "動画の添付は Premium 会員限定です",
-  split_time_limit: `Freeプランでは${FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD}個まで登録できます。Premiumにアップグレードすると無制限に`,
-  practice_time_limit: `Freeプランでは${FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG}個まで登録できます。Premiumにアップグレードすると無制限に`,
-};
+// 制限メッセージ文言は i18n (forms.premium.*) で管理する。
+// 表示は PremiumBadge (mobile) / 各 API ルートの getTranslations で解決される。

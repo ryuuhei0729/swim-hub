@@ -5,7 +5,6 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { uploadVideo, deleteVideo, type VideoType } from "@/utils/videoUpload";
-import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import { PremiumBadge } from "./PremiumBadge";
 import { VideoPlayer } from "./VideoPlayer";
 
@@ -220,7 +219,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
 
   // Premium 制限
   if (!isPremium && uploadState === "idle") {
-    return <PremiumBadge message={PREMIUM_MESSAGES.video_upload} compact />;
+    return <PremiumBadge feature="video_upload" compact />;
   }
 
   // 動画選択済み（ID待ち — 保存後に自動アップロード）

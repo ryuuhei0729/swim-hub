@@ -43,10 +43,14 @@
       "SwimHub",
       "水泳選手",
       "マスターズスイマー"
-    ]
+    ],
+    "planFree": "Free プラン",
+    "planPremiumMonthly": "Premium プラン（月額）",
+    "planPremiumYearly": "Premium プラン（年額）"
   },
   "common": {
     "appName": "SwimHub",
+    "language": "言語",
     "alertErrorTitle": "エラー",
     "loading": "読み込み中...",
     "error": "エラーが発生しました",
@@ -123,7 +127,10 @@
     },
     "errorBoundary": {
       "title": "エラーが発生しました",
-      "unknownError": "不明なエラーが発生しました"
+      "unknownError": "不明なエラー",
+      "retry": "再試行",
+      "reload": "ページを再読み込み",
+      "helpText": "問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。"
     },
     "video": {
       "loading": "動画を読み込み中...",
@@ -183,7 +190,15 @@
       "nextMonth": "次月",
       "today": "今日",
       "close": "閉じる",
-      "weekdays": ["日", "月", "火", "水", "木", "金", "土"]
+      "weekdays": [
+        "日",
+        "月",
+        "火",
+        "水",
+        "木",
+        "金",
+        "土"
+      ]
     },
     "formStepper": {
       "ariaLabel": "フォームの進捗",
@@ -212,13 +227,6 @@
     "validation": {
       "required": "必須項目です",
       "email": "有効なメールアドレスを入力してください"
-    },
-    "errorBoundary": {
-      "title": "エラーが発生しました",
-      "unknownError": "不明なエラー",
-      "retry": "再試行",
-      "reload": "ページを再読み込み",
-      "helpText": "問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。"
     },
     "videoUploader": {
       "uploadUrlFailed": "アップロードURLの取得に失敗しました",
@@ -2192,7 +2200,6 @@
       "bulkPlacePlaceholder": "例: 市民プール",
       "bulkMemoPlaceholder": "メモ",
       "bulkCompetitionNamePlaceholder": "大会名",
-      "roleAdmin": "管理者",
       "roleUser": "ユーザー",
       "roleChangeTitle": "権限変更の確認",
       "roleChangeButton": "変更する",
@@ -2202,7 +2209,6 @@
       "memberRoleChangeMessage": "{name}さんの権限を「{role}」に変更しますか？",
       "memberRemoveMessage": "{name}をチームから削除しますか？\nこの操作は取り消せません。",
       "bestTimeSection": "Best Time",
-      "bestTimeLoading": "ベストタイム読込中...",
       "youBadge": "あなた",
       "birthdayLabel": "生年月日: {date}",
       "adminControlsTitle": "管理者機能",
