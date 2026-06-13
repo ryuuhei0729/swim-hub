@@ -180,7 +180,9 @@
       "videoClosePlayer": "Schließen",
       "videoDelete": "Löschen",
       "videoTapToPlay": "Zum Abspielen tippen",
-      "videoReplace": "Ersetzen"
+      "videoReplace": "Ersetzen",
+      "cameraPermissionDenied": "Kamerazugriff ist nicht erlaubt. Bitte in den Einstellungen aktivieren.",
+      "mediaPermissionDenied": "Zugriff auf die Fotomediathek ist nicht erlaubt. Bitte in den Einstellungen aktivieren."
     },
     "datePicker": {
       "placeholder": "Datum auswählen",

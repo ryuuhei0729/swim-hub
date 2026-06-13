@@ -180,7 +180,9 @@
       "videoClosePlayer": "닫기",
       "videoDelete": "삭제",
       "videoTapToPlay": "탭하여 재생",
-      "videoReplace": "교체"
+      "videoReplace": "교체",
+      "cameraPermissionDenied": "카메라 접근이 허용되지 않았습니다. 설정 앱에서 허용해 주세요.",
+      "mediaPermissionDenied": "사진 라이브러리 접근이 허용되지 않았습니다. 설정 앱에서 허용해 주세요."
     },
     "datePicker": {
       "placeholder": "날짜 선택",

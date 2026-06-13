@@ -18,7 +18,15 @@
         }
       ],
       "expo-video",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "プロフィール画像や動画を選択するためにフォトライブラリへのアクセスが必要です",
+          "cameraPermission": "プロフィール画像や動画を撮影するためにカメラへのアクセスが必要です",
+          "microphonePermission": "動画を撮影する際に音声を録音するためにマイクへのアクセスが必要です"
+        }
+      ]
     ],
     "splash": {
       "image": "./assets/splash/splash.png",

@@ -177,7 +177,9 @@
       "videoClosePlayer": "Close",
       "videoDelete": "Delete",
       "videoTapToPlay": "Tap to play",
-      "videoReplace": "Replace"
+      "videoReplace": "Replace",
+      "cameraPermissionDenied": "Camera access is not allowed. Please enable it in the Settings app.",
+      "mediaPermissionDenied": "Photo library access is not allowed. Please enable it in the Settings app."
     },
     "datePicker": {
       "placeholder": "Select date",

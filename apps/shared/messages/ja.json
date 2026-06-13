@@ -180,7 +180,9 @@
       "videoClosePlayer": "閉じる",
       "videoDelete": "削除",
       "videoTapToPlay": "タップして再生",
-      "videoReplace": "差し替え"
+      "videoReplace": "差し替え",
+      "cameraPermissionDenied": "カメラへのアクセスが許可されていません。設定アプリから許可してください。",
+      "mediaPermissionDenied": "フォトライブラリへのアクセスが許可されていません。設定アプリから許可してください。"
     },
     "datePicker": {
       "placeholder": "日付を選択",

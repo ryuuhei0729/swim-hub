@@ -11,6 +11,7 @@ export const env = {
   webApiUrl: process.env.EXPO_PUBLIC_WEB_API_URL || "https://swim-hub.app",
   r2PublicUrl: process.env.EXPO_PUBLIC_R2_PUBLIC_URL ?? "",
   revenuecatIosApiKey: process.env.EXPO_PUBLIC_REVENUCAT_IOS_API_KEY ?? "",
+  revenuecatAndroidApiKey: process.env.EXPO_PUBLIC_REVENUCAT_ANDROID_API_KEY ?? "",
   environment: process.env.EXPO_PUBLIC_ENVIRONMENT || "development",
   webAppResetPasswordUrl: process.env.EXPO_PUBLIC_WEB_APP_RESET_PASSWORD_URL || "https://swim-hub.app/reset-password",
 } as const;

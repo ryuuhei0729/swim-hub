@@ -108,6 +108,21 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   const pickVideo = useCallback(
     async (source: "library" | "camera") => {
       try {
+        // 権限要求（Android はカメラ撮影に CAMERA 権限が必須。iOS も初回に確認ダイアログを表示）
+        const { status } =
+          source === "camera"
+            ? await ImagePicker.requestCameraPermissionsAsync()
+            : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            t("common.alertErrorTitle"),
+            source === "camera"
+              ? t("common.upload.cameraPermissionDenied")
+              : t("common.upload.mediaPermissionDenied"),
+          );
+          return;
+        }
+
         const pickerFn =
           source === "camera"
             ? ImagePicker.launchCameraAsync

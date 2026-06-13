@@ -59,10 +59,18 @@ export async function requestUploadUrl(
   return (await res.json()) as UploadUrlResponse;
 }
 
+/** contentType から一時ファイルの拡張子を導出する */
+function extensionFromContentType(contentType: string): string {
+  if (contentType.includes("quicktime")) return "mov";
+  if (contentType.includes("x-matroska")) return "mkv";
+  if (contentType.includes("webm")) return "webm";
+  return "mp4";
+}
+
 /**
  * 動画ファイルをR2へ直接PUT (fetch + file URI)
- * iOS の ph:// URI は React Native の fetch が扱えないため、
- * expo-file-system で一時ファイルにコピーしてから PUT する。
+ * React Native の fetch は iOS の ph:// / Android の content:// を直接扱えないため、
+ * これらの URI は expo-file-system で一時ファイル (file://) にコピーしてから PUT する。
  */
 export async function uploadVideoToR2(
   presignedUrl: string,
@@ -70,14 +78,14 @@ export async function uploadVideoToR2(
   contentType: string,
   onProgress?: (progress: number) => void,
 ): Promise<void> {
-  // iOS ph:// URI を file:// にコピー（React Native fetch が ph:// を扱えないため）
+  // ph:// (iOS フォトライブラリ) / content:// (Android) を file:// にコピー
   let uri = fileUri;
   let tempUri: string | null = null;
-  if (fileUri.startsWith("ph://")) {
+  if (fileUri.startsWith("ph://") || fileUri.startsWith("content://")) {
     // expo-file-system/legacy を動的 import（テスト環境での NativeModule 問題を回避）
     const FileSystemLegacy = await import("expo-file-system/legacy");
     const cache = FileSystemLegacy.cacheDirectory ?? "";
-    tempUri = `${cache}video-${Date.now()}.mov`;
+    tempUri = `${cache}video-${Date.now()}.${extensionFromContentType(contentType)}`;
     await FileSystemLegacy.copyAsync({ from: fileUri, to: tempUri });
     uri = tempUri;
   }

@@ -180,7 +180,9 @@
       "videoClosePlayer": "关闭",
       "videoDelete": "删除",
       "videoTapToPlay": "点击播放",
-      "videoReplace": "替换"
+      "videoReplace": "替换",
+      "cameraPermissionDenied": "未允许访问相机。请在“设置”应用中开启权限。",
+      "mediaPermissionDenied": "未允许访问照片库。请在“设置”应用中开启权限。"
     },
     "datePicker": {
       "placeholder": "选择日期",

@@ -49,6 +49,8 @@ vi.mock("@/utils/videoUpload", () => ({
 vi.mock("expo-image-picker", () => ({
   launchImageLibraryAsync: mocks.launchImageLibraryAsync,
   launchCameraAsync: mocks.launchCameraAsync,
+  requestCameraPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
+  requestMediaLibraryPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
 }));
 
 vi.mock("@/components/shared/PremiumBadge", () => ({
