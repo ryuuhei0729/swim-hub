@@ -80,56 +80,31 @@ describe("shared/messages global coverage", () => {
   });
 
   // [V-01-ext] zh/ko/de も ja と同じキー構造を持つ
-  it("[V-01-ext] zh.json has identical key structure to ja.json", () => {
-    const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>).sort();
-    const zhKeys = flattenKeys(zhMessages as unknown as Record<string, unknown>).sort();
+  const localeMessages: Record<string, Record<string, unknown>> = {
+    zh: zhMessages as unknown as Record<string, unknown>,
+    ko: koMessages as unknown as Record<string, unknown>,
+    de: deMessages as unknown as Record<string, unknown>,
+  };
 
-    const missingInZh = jaKeys.filter((k) => !zhKeys.includes(k));
-    const extraInZh = zhKeys.filter((k) => !jaKeys.includes(k));
+  it.each(["zh", "ko", "de"])(
+    "[V-01-ext] %s.json has identical key structure to ja.json",
+    (locale) => {
+      const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>).sort();
+      const localeKeys = flattenKeys(localeMessages[locale]).sort();
 
-    expect(
-      missingInZh,
-      `Keys present in ja.json but missing from zh.json:\n  ${missingInZh.join("\n  ")}`,
-    ).toEqual([]);
-    expect(
-      extraInZh,
-      `Keys present in zh.json but missing from ja.json:\n  ${extraInZh.join("\n  ")}`,
-    ).toEqual([]);
-  });
+      const missingInLocale = jaKeys.filter((k) => !localeKeys.includes(k));
+      const extraInLocale = localeKeys.filter((k) => !jaKeys.includes(k));
 
-  it("[V-01-ext] ko.json has identical key structure to ja.json", () => {
-    const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>).sort();
-    const koKeys = flattenKeys(koMessages as unknown as Record<string, unknown>).sort();
-
-    const missingInKo = jaKeys.filter((k) => !koKeys.includes(k));
-    const extraInKo = koKeys.filter((k) => !jaKeys.includes(k));
-
-    expect(
-      missingInKo,
-      `Keys present in ja.json but missing from ko.json:\n  ${missingInKo.join("\n  ")}`,
-    ).toEqual([]);
-    expect(
-      extraInKo,
-      `Keys present in ko.json but missing from ja.json:\n  ${extraInKo.join("\n  ")}`,
-    ).toEqual([]);
-  });
-
-  it("[V-01-ext] de.json has identical key structure to ja.json", () => {
-    const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>).sort();
-    const deKeys = flattenKeys(deMessages as unknown as Record<string, unknown>).sort();
-
-    const missingInDe = jaKeys.filter((k) => !deKeys.includes(k));
-    const extraInDe = deKeys.filter((k) => !jaKeys.includes(k));
-
-    expect(
-      missingInDe,
-      `Keys present in ja.json but missing from de.json:\n  ${missingInDe.join("\n  ")}`,
-    ).toEqual([]);
-    expect(
-      extraInDe,
-      `Keys present in de.json but missing from ja.json:\n  ${extraInDe.join("\n  ")}`,
-    ).toEqual([]);
-  });
+      expect(
+        missingInLocale,
+        `Keys present in ja.json but missing from ${locale}.json:\n  ${missingInLocale.join("\n  ")}`,
+      ).toEqual([]);
+      expect(
+        extraInLocale,
+        `Keys present in ${locale}.json but missing from ja.json:\n  ${extraInLocale.join("\n  ")}`,
+      ).toEqual([]);
+    },
+  );
 
   // [V-04] 英語側に日本語ハードコードゼロ
   it("[V-04] en.json values do not contain any Japanese characters", () => {

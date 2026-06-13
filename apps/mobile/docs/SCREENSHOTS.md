@@ -136,3 +136,26 @@ fastlane upload_screenshots
 - **JA に切り替わらない**: 端末言語が反映されない場合、シミュレータを一度 erase してから再実行、または `Settings > General > Language` を手動で日本語にして撮り直す。
 - **frameit のサイズ拒否**: App Store は 6.9"/13" の正確な解像度を要求。フレーム合成後の解像度が要件に合わない場合は `Framefile.json` の `padding` を調整。
 - **deliver がサイズ違いと言う**: 1ロケールフォルダに iPhone と iPad が混在していてOK（deliver は画像解像度でサイズを判定）。
+
+---
+
+## 他アプリ（swimhub-timer / swimhub-scanner）への展開
+
+3アプリは独立 git リポジトリのため、この `apps/mobile/{.maestro,fastlane,scripts/screenshots,docs/SCREENSHOTS.md}`
+一式を各リポジトリの `apps/mobile/` に**コピーして、下記のアプリ固有値だけ差し替える**。汎用ロジック
+（capture.sh / build-sim.sh / fastlane frame・deliver レーン）はそのまま使える。
+
+| 差し替える箇所 | swim-hub | 各アプリで変更 |
+|---|---|---|
+| `capture.sh` の `APP_ID` | `app.swimhub` | 各 app.config の bundleIdentifier |
+| `Fastfile`/`Deliverfile` の `app_identifier` | `app.swimhub` | 同上 |
+| ASC App ID（手動アップロード/deliver） | `6756808731` | 各 eas.json submit の `ascAppId` |
+| `Fastfile` の ASC キー (`ASC_KEY_PATH`/`ASC_KEY_ID`) | `QKK8K4ST76.p8` | 各リポジトリの API キー |
+| `.maestro/flows/*` と testID | 4タブ | **各アプリの画面・タブ・testID に作り直す**（timer はタブ無し・ゲストモード有、scanner も別構成） |
+| `.maestro/subflows/login.yaml` | email ログイン必須 | timer は**ゲストモードでログイン不要**等、認証導線が違う |
+| `seed-demo.sh` / シードデータ | `supabase/test-data-2025.sql` | 各アプリの Supabase・データモデル |
+| `fastlane/metadata/en-US/*` | SwimHub 用文言 | 各アプリの訴求文言 |
+
+> 注意: timer は **ゲストモード有り（ログイン不要）** なので、login subflow は不要かタップ1回で済む。
+> 各アプリの画面構成・testID 付与は個別作業（タブ名・bundle id が違うため flows は使い回せない）。
+> 共有しているのは「撮影→保存→（任意で）枠付け→アップロード」の**手順とランナー**まで。

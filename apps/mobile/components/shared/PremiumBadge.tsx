@@ -21,24 +21,18 @@ export const PremiumBadge: React.FC<PremiumBadgeProps> = ({ feature, compact = f
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { t } = useTranslation();
 
-  // feature ごとに対応する i18n キーを literal で参照する（react-i18next の
-  // 型補完を効かせるため動的キーは使わず switch で網羅する）。
-  const message = ((): string => {
-    switch (feature) {
-      case "image_upload":
-        return t("forms.premium.imageUpload");
-      case "video_upload":
-        return t("forms.premium.videoUpload");
-      case "split_time_limit":
-        return t("forms.premium.splitTimeLimit", {
-          limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD,
-        });
-      case "practice_time_limit":
-        return t("forms.premium.practiceTimeLimit", {
-          limit: FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG,
-        });
-    }
-  })();
+  // exhaustive: 新 PremiumFeature 追加時にここでコンパイルエラーを出す
+  const messages: Record<PremiumFeature, string> = {
+    image_upload: t("forms.premium.imageUpload"),
+    video_upload: t("forms.premium.videoUpload"),
+    split_time_limit: t("forms.premium.splitTimeLimit", {
+      limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD,
+    }),
+    practice_time_limit: t("forms.premium.practiceTimeLimit", {
+      limit: FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG,
+    }),
+  };
+  const message = messages[feature];
 
   const handlePress = () => {
     navigation.navigate("Paywall");

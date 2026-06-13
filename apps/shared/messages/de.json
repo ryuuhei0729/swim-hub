@@ -3668,8 +3668,8 @@
       "upgradeText": "Auf Premium upgraden",
       "imageUpload": "Bildanhänge sind eine Premium-Funktion",
       "videoUpload": "Videoanhänge sind eine Premium-Funktion",
-      "splitTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte",
-      "practiceTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte"
+      "splitTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte Einträge",
+      "practiceTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte Einträge"
     }
   }
 }

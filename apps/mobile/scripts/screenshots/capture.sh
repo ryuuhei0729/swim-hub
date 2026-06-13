@@ -25,8 +25,12 @@ MAESTRO_FLOWS="$MOBILE_DIR/.maestro/flows"
 OUT_ROOT="$MOBILE_DIR/fastlane/screenshots"
 
 : "${APP_PATH:?APP_PATH (シミュレータ用 .app の絶対パス) を指定してください}"
-: "${APP_EMAIL:?APP_EMAIL (デモアカウント) を指定してください}"
-: "${APP_PASSWORD:?APP_PASSWORD (デモアカウント) を指定してください}"
+# APP_EMAIL/APP_PASSWORD は任意。
+#  - 指定あり: 未ログイン時に Maestro が email/password で自動ログイン（email+password 認証の垢のみ）
+#  - 指定なし: 事前に手動ログイン（Google/Apple 等でもOK）した状態で実行する。login subflow は
+#             既にログイン済みなら welcome 画面をスキップしてそのまま撮影に進む。
+APP_EMAIL="${APP_EMAIL:-}"
+APP_PASSWORD="${APP_PASSWORD:-}"
 
 command -v maestro >/dev/null 2>&1 || {
   echo "ERROR: maestro が見つかりません。 curl -Ls 'https://get.maestro.mobile.dev' | bash" >&2
