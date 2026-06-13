@@ -26,7 +26,9 @@
           "cameraPermission": "プロフィール画像や動画を撮影するためにカメラへのアクセスが必要です",
           "microphonePermission": "動画を撮影する際に音声を録音するためにマイクへのアクセスが必要です"
         }
-      ]
+      ],
+      "./plugins/withAndroidCamera",
+      "./plugins/withAndroidLintFix"
     ],
     "splash": {
       "image": "./assets/splash/splash.png",
