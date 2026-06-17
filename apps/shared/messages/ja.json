@@ -2109,6 +2109,30 @@
         "noMonths": "表示できる月がありません",
         "noEvents": "この月にはイベントがありません"
       },
+      "adminAttendance": {
+        "title": "出欠受付管理",
+        "statusOpen": "受付中",
+        "statusClosed": "締切",
+        "empty": "今後のイベントがありません",
+        "fetchFailed": "イベント情報の取得に失敗しました",
+        "saveFailed": "ステータスの保存に失敗しました",
+        "openButton": "受付を開始",
+        "closeButton": "受付を締切",
+        "confirmTitle": "確認",
+        "confirmOpen": "出欠の受付を開始しますか？",
+        "confirmClose": "出欠の受付を締め切りますか？",
+        "defaultPractice": "練習",
+        "defaultCompetition": "大会",
+        "toggleStatusAria": "{title} の受付ステータスを切り替え",
+        "memberAttendanceTitle": "メンバー別出欠状況",
+        "memberStatusPresent": "出席",
+        "memberStatusAbsent": "欠席",
+        "memberStatusOther": "その他",
+        "memberStatusUnanswered": "未回答",
+        "memberAttendanceFetchFailed": "出欠情報の取得に失敗しました",
+        "memberAttendanceEmpty": "出欠回答がありません",
+        "memberAttendanceLoading": "読み込み中..."
+      },
       "groupManagement": {
         "title": "グループ管理",
         "subtitle": "メンバーをカテゴリ別にグループ分けできます",
@@ -2262,7 +2286,40 @@
       "poolTypeLong": "長水路",
       "genderCategoryLabel": "性別",
       "genderMale": "男性",
-      "genderFemale": "女性"
+      "genderFemale": "女性",
+      "tabAnnouncements": "お知らせ",
+      "adminToggle": {
+        "label": "表示切替",
+        "admin": "管理者ビュー",
+        "user": "利用者ビュー"
+      },
+      "pendingApproveConfirmTitle": "承認確認",
+      "pendingApproveConfirmMessage": "{name}を承認しますか？",
+      "pendingRejectConfirmTitle": "拒否確認",
+      "pendingRejectConfirmMessage": "{name}を拒否しますか？",
+      "pendingApproveFailed": "承認に失敗しました",
+      "pendingRejectFailed": "拒否に失敗しました",
+      "pendingLoading": "承認待ちメンバーを読み込み中...",
+      "pendingFetchFailed": "承認待ちメンバーの取得に失敗しました",
+      "teamPracticeList": {
+        "title": "チーム練習 ({count}件)",
+        "addButton": "練習を追加",
+        "empty": "チームの練習記録がありません",
+        "fetchFailed": "練習記録の取得に失敗しました",
+        "deleteConfirm": "この練習記録を削除しますか？この操作は取り消せません。",
+        "deleteFailed": "練習記録の削除に失敗しました",
+        "addLog": "ログを記入"
+      },
+      "teamCompetitionList": {
+        "title": "チーム大会 ({count}件)",
+        "addButton": "大会を追加",
+        "empty": "チームの大会がありません",
+        "fetchFailed": "大会の取得に失敗しました",
+        "deleteConfirm": "この大会を削除しますか？この操作は取り消せません。",
+        "deleteFailed": "大会の削除に失敗しました",
+        "entryButton": "エントリー",
+        "recordButton": "記録"
+      }
     },
     "page": {
       "title": "マイチーム",

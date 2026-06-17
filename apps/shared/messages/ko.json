@@ -2109,6 +2109,30 @@
         "noMonths": "표시할 수 있는 월이 없습니다",
         "noEvents": "이 달에는 이벤트가 없습니다"
       },
+      "adminAttendance": {
+        "title": "출결 접수 관리",
+        "statusOpen": "접수 중",
+        "statusClosed": "마감",
+        "empty": "예정된 이벤트가 없습니다",
+        "fetchFailed": "이벤트 정보를 불러오지 못했습니다",
+        "saveFailed": "상태 저장에 실패했습니다",
+        "openButton": "접수 시작",
+        "closeButton": "접수 마감",
+        "confirmTitle": "확인",
+        "confirmOpen": "이 이벤트의 출결 접수를 시작하시겠습니까?",
+        "confirmClose": "이 이벤트의 출결 접수를 마감하시겠습니까?",
+        "defaultPractice": "연습",
+        "defaultCompetition": "대회",
+        "toggleStatusAria": "{title} 접수 상태 전환",
+        "memberAttendanceTitle": "멤버별 출결 현황",
+        "memberStatusPresent": "출석",
+        "memberStatusAbsent": "결석",
+        "memberStatusOther": "기타",
+        "memberStatusUnanswered": "미응답",
+        "memberAttendanceFetchFailed": "출결 정보를 불러오지 못했습니다",
+        "memberAttendanceEmpty": "출결 응답이 없습니다",
+        "memberAttendanceLoading": "불러오는 중..."
+      },
       "groupManagement": {
         "title": "그룹 관리",
         "subtitle": "멤버를 카테고리별로 그룹화할 수 있습니다",
@@ -2262,7 +2286,40 @@
       "poolTypeLong": "장수로",
       "genderCategoryLabel": "성별",
       "genderMale": "남성",
-      "genderFemale": "여성"
+      "genderFemale": "여성",
+      "tabAnnouncements": "공지사항",
+      "adminToggle": {
+        "label": "보기 전환",
+        "admin": "관리자 보기",
+        "user": "이용자 보기"
+      },
+      "pendingApproveConfirmTitle": "승인 확인",
+      "pendingApproveConfirmMessage": "{name}을(를) 승인하시겠습니까?",
+      "pendingRejectConfirmTitle": "거부 확인",
+      "pendingRejectConfirmMessage": "{name}을(를) 거부하시겠습니까?",
+      "pendingApproveFailed": "승인에 실패했습니다",
+      "pendingRejectFailed": "거부에 실패했습니다",
+      "pendingLoading": "승인 대기 멤버를 불러오는 중...",
+      "pendingFetchFailed": "승인 대기 멤버를 가져오지 못했습니다",
+      "teamPracticeList": {
+        "title": "팀 훈련 ({count}건)",
+        "addButton": "훈련 추가",
+        "empty": "팀 훈련 기록이 없습니다",
+        "fetchFailed": "훈련 기록을 불러오지 못했습니다",
+        "deleteConfirm": "이 훈련 기록을 삭제하시겠습니까? 되돌릴 수 없습니다.",
+        "deleteFailed": "훈련 기록 삭제에 실패했습니다",
+        "addLog": "로그 작성"
+      },
+      "teamCompetitionList": {
+        "title": "팀 대회 ({count}건)",
+        "addButton": "대회 추가",
+        "empty": "팀 대회가 없습니다",
+        "fetchFailed": "대회 정보를 불러오지 못했습니다",
+        "deleteConfirm": "이 대회를 삭제하시겠습니까? 되돌릴 수 없습니다.",
+        "deleteFailed": "대회 삭제에 실패했습니다",
+        "entryButton": "엔트리",
+        "recordButton": "기록"
+      }
     },
     "page": {
       "title": "내 팀",

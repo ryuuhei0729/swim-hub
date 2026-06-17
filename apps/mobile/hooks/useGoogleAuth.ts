@@ -5,7 +5,7 @@
 import { useState, useCallback } from "react";
 import * as WebBrowser from "expo-web-browser";
 import { useTranslation } from "react-i18next";
-import { getRedirectUri, extractTokensFromUrl, type GoogleAuthOptions } from "@/lib/google-auth";
+import { getRedirectUri, extractTokensFromUrl, oauthSessionGuard, type GoogleAuthOptions } from "@/lib/google-auth";
 import { supabase } from "@/lib/supabase";
 import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
 
@@ -89,24 +89,40 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
           };
         }
 
-        // システムブラウザで認証画面を開く
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+        // openAuthSessionAsync 進行中は AuthProvider のグローバル Linking ハンドラを無効化する
+        oauthSessionGuard.active = true;
+        let result: Awaited<ReturnType<typeof WebBrowser.openAuthSessionAsync>>;
+        try {
+          result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+        } catch (browserErr) {
+          // ブラウザ起動失敗時もガードを解除する
+          oauthSessionGuard.active = false;
+          throw browserErr;
+        }
 
         if (result.type === "success" && result.url) {
-          // コールバックURLからトークンを抽出
+          // コールバック URL からトークンを抽出
           const tokens = extractTokensFromUrl(result.url);
 
           if (tokens.error) {
+            oauthSessionGuard.active = false;
             setError(tokens.error);
             return { success: false, error: new Error(tokens.error) };
           }
 
           if (tokens.accessToken && tokens.refreshToken) {
-            // Supabaseセッションを設定
-            const { error: sessionError } = await supabase.auth.setSession({
-              access_token: tokens.accessToken,
-              refresh_token: tokens.refreshToken,
-            });
+            // Supabase セッションを設定し、完了後にガードを解除する
+            let sessionError: import("@supabase/supabase-js").AuthError | null = null;
+            try {
+              const { error } = await supabase.auth.setSession({
+                access_token: tokens.accessToken,
+                refresh_token: tokens.refreshToken,
+              });
+              sessionError = error;
+            } finally {
+              // setSession の成否によらずガードを解除する
+              oauthSessionGuard.active = false;
+            }
 
             if (sessionError) {
               setError(localizeSupabaseAuthError(sessionError));
@@ -147,10 +163,15 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             return { success: true };
           }
 
+          // access_token / refresh_token が揃わなかった場合
+          oauthSessionGuard.active = false;
           const tokensMsg = t("auth.mobile.tokensNotReceived");
           setError(tokensMsg);
           return { success: false, error: new Error(tokensMsg) };
         }
+
+        // cancel / dismiss / その他 — ガードを解除してから返す
+        oauthSessionGuard.active = false;
 
         if (result.type === "cancel") {
           const msg = t("auth.mobile.cancelled");
@@ -168,6 +189,8 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         setError(failedMsg);
         return { success: false, error: new Error(failedMsg) };
       } catch (err) {
+        // 例外時もガードが残らないよう解除する
+        oauthSessionGuard.active = false;
         const rawMessage = err instanceof Error ? err.message : t("auth.mobile.unknownError");
         const localizedMessage = localizeSupabaseAuthError({ message: rawMessage });
         setError(localizedMessage);

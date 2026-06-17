@@ -25,7 +25,7 @@ import {
   useUpdatePracticeTagMutation,
   useDeletePracticeTagMutation,
 } from "@apps/shared/hooks/queries/practices";
-import { practiceKeys } from "@apps/shared/hooks/queries/keys";
+import { practiceKeys, teamKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { TagChips, TagSelectModal, TagManageModal, VideoUploader } from "@/components/shared";
@@ -67,7 +67,7 @@ interface PracticeMenu {
 export const PracticeLogFormScreen: React.FC = () => {
   const route = useRoute<PracticeLogFormScreenRouteProp>();
   const navigation = useNavigation<PracticeLogFormScreenNavigationProp>();
-  const { practiceId, practiceLogId, returnTo } = route.params;
+  const { practiceId, practiceLogId, returnTo, teamId } = route.params;
   const { supabase, subscription, getAccessToken } = useAuth();
   const queryClient = useQueryClient();
   const isEditMode = practiceLogId !== undefined;
@@ -523,10 +523,12 @@ export const PracticeLogFormScreen: React.FC = () => {
         }
       }
 
-      // カレンダーのクエリを無効化してリフレッシュ
       // カレンダーと練習一覧のクエリを無効化してリフレッシュ
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
+      if (teamId) {
+        queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
+      }
 
       // 成功: 遷移元に応じて戻る
       if (returnTo === "dashboard") {

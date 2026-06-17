@@ -2109,6 +2109,30 @@
         "noMonths": "Keine Monate zum Anzeigen",
         "noEvents": "Keine Termine in diesem Monat"
       },
+      "adminAttendance": {
+        "title": "Anwesenheits-Verwaltung",
+        "statusOpen": "Offen",
+        "statusClosed": "Geschlossen",
+        "empty": "Keine bevorstehenden Termine",
+        "fetchFailed": "Termine konnten nicht geladen werden",
+        "saveFailed": "Status konnte nicht gespeichert werden",
+        "openButton": "Einreichung öffnen",
+        "closeButton": "Einreichung schließen",
+        "confirmTitle": "Bestätigung",
+        "confirmOpen": "Anwesenheitseinreichung für diesen Termin öffnen?",
+        "confirmClose": "Anwesenheitseinreichung für diesen Termin schließen?",
+        "defaultPractice": "Training",
+        "defaultCompetition": "Wettkampf",
+        "toggleStatusAria": "Status für {title} umschalten",
+        "memberAttendanceTitle": "Anwesenheit der Mitglieder",
+        "memberStatusPresent": "Anwesend",
+        "memberStatusAbsent": "Abwesend",
+        "memberStatusOther": "Sonstiges",
+        "memberStatusUnanswered": "Keine Antwort",
+        "memberAttendanceFetchFailed": "Anwesenheitsdaten konnten nicht geladen werden",
+        "memberAttendanceEmpty": "Noch keine Antworten",
+        "memberAttendanceLoading": "Wird geladen..."
+      },
       "groupManagement": {
         "title": "Gruppenverwaltung",
         "subtitle": "Organisieren Sie Mitglieder in Kategorien und Gruppen.",
@@ -2262,7 +2286,40 @@
       "poolTypeLong": "Langbahn",
       "genderCategoryLabel": "Geschlecht",
       "genderMale": "Männlich",
-      "genderFemale": "Weiblich"
+      "genderFemale": "Weiblich",
+      "tabAnnouncements": "Ankündigungen",
+      "adminToggle": {
+        "label": "Ansicht",
+        "admin": "Admin-Ansicht",
+        "user": "Nutzeransicht"
+      },
+      "pendingApproveConfirmTitle": "Genehmigung bestätigen",
+      "pendingApproveConfirmMessage": "{name} genehmigen?",
+      "pendingRejectConfirmTitle": "Ablehnung bestätigen",
+      "pendingRejectConfirmMessage": "{name} ablehnen?",
+      "pendingApproveFailed": "Genehmigung fehlgeschlagen",
+      "pendingRejectFailed": "Ablehnung fehlgeschlagen",
+      "pendingLoading": "Ausstehende Mitglieder werden geladen...",
+      "pendingFetchFailed": "Ausstehende Mitglieder konnten nicht geladen werden",
+      "teamPracticeList": {
+        "title": "Teamtraining ({count})",
+        "addButton": "Training hinzufügen",
+        "empty": "Noch keine Teamtrainings",
+        "fetchFailed": "Trainingsaufzeichnungen konnten nicht geladen werden",
+        "deleteConfirm": "Dieses Training löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "deleteFailed": "Training konnte nicht gelöscht werden",
+        "addLog": "Log eintragen"
+      },
+      "teamCompetitionList": {
+        "title": "Teamwettkämpfe ({count})",
+        "addButton": "Wettkampf hinzufügen",
+        "empty": "Noch keine Teamwettkämpfe",
+        "fetchFailed": "Wettkampfinformationen konnten nicht geladen werden",
+        "deleteConfirm": "Diesen Wettkampf löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "deleteFailed": "Wettkampf konnte nicht gelöscht werden",
+        "entryButton": "Anmelden",
+        "recordButton": "Ergebnis"
+      }
     },
     "page": {
       "title": "Meine Teams",

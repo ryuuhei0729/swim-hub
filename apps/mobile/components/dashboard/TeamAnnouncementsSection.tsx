@@ -194,8 +194,9 @@ const AnnouncementItem: React.FC<{ announcement: TeamAnnouncement }> = ({ announ
 
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
+    gap: 6,
     marginTop: 16,
+    marginBottom: 6,
   },
   card: {
     backgroundColor: "#FFFFFF",

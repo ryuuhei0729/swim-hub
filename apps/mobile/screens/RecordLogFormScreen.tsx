@@ -26,6 +26,7 @@ import {
   useUpdateRecordMutation,
   useReplaceSplitTimesMutation,
 } from "@apps/shared/hooks/queries/records";
+import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
@@ -65,7 +66,7 @@ interface RecordFormData {
 export const RecordLogFormScreen: React.FC = () => {
   const route = useRoute<RecordLogFormScreenRouteProp>();
   const navigation = useNavigation<RecordLogFormScreenNavigationProp>();
-  const { competitionId, recordId, date: _date } = route.params;
+  const { competitionId, recordId, date: _date, teamId } = route.params;
   const entryDataList = useMemo(
     () => route.params.entryDataList ?? [],
     [route.params.entryDataList],
@@ -582,6 +583,7 @@ export const RecordLogFormScreen: React.FC = () => {
 
           const recordData: Omit<RecordInsert, "user_id"> = {
             competition_id: competitionId,
+            team_id: teamId ?? null,
             style_id: parseInt(formData.styleId),
             time: formData.time,
             reaction_time:
@@ -666,6 +668,9 @@ export const RecordLogFormScreen: React.FC = () => {
 
       // カレンダーのクエリを無効化してリフレッシュ
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      if (teamId) {
+        queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
+      }
 
       // 成功: ダッシュボードに戻る
       navigation.popToTop();

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { Alert, Linking } from "react-native";
 import { supabase } from "@/lib/supabase";
 import {
   initRevenueCat,
@@ -11,6 +12,8 @@ import type { AuthState, AuthContextType, SubscriptionInfo } from "@swim-hub/sha
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getQueryClient } from "@/providers/QueryProvider";
 import i18n from "@/i18n";
+import { getRedirectUri, extractTokensFromUrl, oauthSessionGuard } from "@/lib/google-auth";
+import { isEmailAuthCallback } from "@/lib/auth-deep-link";
 
 /**
  * Mobile 固有の AuthState 拡張
@@ -191,8 +194,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
     try {
-      // モバイルアプリでは、メール認証のリダイレクトURLは後で実装（Phase 2.2で対応）
-      // 現時点では空文字列を使用
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -200,7 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             name: name || "",
           },
-          // メール認証のリダイレクトURLは後で実装
+          emailRedirectTo: getRedirectUri(),
         },
       });
 
@@ -332,11 +333,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
     try {
-      // モバイルアプリでは、パスワードリセットのリダイレクトURLは後で実装（Phase 2.3で対応）
-      // 現時点では空文字列を使用
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        // リダイレクトURLは後で実装
-      });
+      // パスワードリセットの redirectTo (recovery ディープリンク対応) は別スプリントで実装する
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {});
 
       if (error) {
         return { data: null, error: error as import("@supabase/supabase-js").AuthError };
@@ -554,12 +552,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
+    // ---- グローバルディープリンクハンドラ ----
+    // メール確認リンクはメールアプリから直接タップされるため Linking で受け取る必要がある。
+    // oauthSessionGuard.active が true のときは useGoogleAuth / IdentityLinkSettings に委ね、二重 setSession を防ぐ。
+
+    const handleDeepLink = async (url: string) => {
+      if (!isMounted) return;
+      if (!isEmailAuthCallback(url)) return;
+      // OAuth (openAuthSessionAsync) 進行中はスキップ
+      if (oauthSessionGuard.active) return;
+      if (!supabase) return;
+
+      const tokens = extractTokensFromUrl(url);
+
+      if (tokens.error) {
+        if (!isMounted) return;
+        Alert.alert(
+          i18n.t("common.alertErrorTitle"),
+          i18n.t("auth.supabaseErrors.tokenExpired"),
+        );
+        return;
+      }
+
+      if (tokens.accessToken && tokens.refreshToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: tokens.accessToken,
+          refresh_token: tokens.refreshToken,
+        });
+        // setSession 完了後にマウント状態を確認してから UI 操作
+        if (!isMounted) return;
+        if (sessionError) {
+          Alert.alert(
+            i18n.t("common.alertErrorTitle"),
+            i18n.t("auth.supabaseErrors.invalidToken"),
+          );
+        }
+        // 成功時は onAuthStateChange が発火し自動でルート切替する
+        return;
+      }
+
+      if (!isMounted) return;
+      // access_token / refresh_token 双方が取れなかった場合
+      Alert.alert(
+        i18n.t("common.alertErrorTitle"),
+        i18n.t("auth.mobile.tokensNotReceived"),
+      );
+    };
+
+    // コールドスタート: アプリが閉じた状態からリンクで起動したケース
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink(url);
+    }).catch(() => {
+      // getInitialURL の失敗はウォームスタートで補完されるため無視する
+    });
+
+    // ウォームスタート: アプリが起動中にリンクをタップしたケース
+    const linkingSubscription = Linking.addEventListener("url", ({ url }) => {
+      handleDeepLink(url);
+    });
+
     // クリーンアップ関数
     return () => {
       isMounted = false;
       clearTimeout(timeoutId);
       clearTimeout(hardTimeoutId);
       subscription.unsubscribe();
+      linkingSubscription.remove();
     };
   }, []);
 

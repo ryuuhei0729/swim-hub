@@ -1,19 +1,30 @@
 import React, { useState, useMemo } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Platform, Linking } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert, Platform } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Feather } from "@expo/vector-icons";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
+import {
+  useTeamsQuery,
+  useDeleteAnnouncementMutation,
+} from "@apps/shared/hooks/queries/teams";
 import {
   TeamTabs,
   TeamMemberList,
   MyMonthlyAttendance,
+  PendingMembersSection,
+  TeamGroupManagement,
   type TeamTabType,
 } from "@/components/teams";
+import { AdminMonthlyAttendance } from "@/components/teams/AdminMonthlyAttendance";
+import { TeamAnnouncementList } from "@/components/teams/TeamAnnouncementList";
+import { TeamAnnouncementForm } from "@/components/teams/TeamAnnouncementForm";
+import { TeamPracticeList } from "@/components/teams/TeamPracticeList";
+import { TeamCompetitionList } from "@/components/teams/TeamCompetitionList";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 
 type TeamDetailScreenRouteProp = RouteProp<MainStackParamList, "TeamDetail">;
@@ -29,9 +40,12 @@ export const TeamDetailScreen: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TeamTabType>("members");
   const [isCopied, setIsCopied] = useState(false);
+  const [isAdminView, setIsAdminView] = useState(false);
+  const [announcementFormVisible, setAnnouncementFormVisible] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<TeamAnnouncement | undefined>(undefined);
 
   // チームデータ取得
-  const { currentTeam, members, isLoading, isError, error, refetch } = useTeamsQuery(supabase, {
+  const { currentTeam, members, announcements, isLoading, isError, error, refetch } = useTeamsQuery(supabase, {
     teamId,
     enableRealtime: false, // モバイルでは一旦無効化
   });
@@ -42,12 +56,7 @@ export const TeamDetailScreen: React.FC = () => {
     return members.some((m) => m.user_id === user.id && m.role === "admin");
   }, [user, members]);
 
-  const WEB_APP_URL = "https://www.swim-hub.app/dashboard";
-
-  // Web版を開く
-  const handleOpenWebApp = () => {
-    Linking.openURL(WEB_APP_URL);
-  };
+  const deleteAnnouncementMutation = useDeleteAnnouncementMutation(supabase);
 
   // 招待コードをコピー
   const handleCopyInviteCode = async () => {
@@ -143,46 +152,99 @@ export const TeamDetailScreen: React.FC = () => {
     );
   }
 
+  const handleAnnouncementDelete = (announcementId: string) => {
+    Alert.alert(
+      t("teams.mobile.deleteConfirmTitle"),
+      t("teams.mobile.deleteConfirmText"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAnnouncementMutation.mutateAsync(announcementId);
+            } catch {
+              Alert.alert(t("common.error"), t("teams.mobile.announcementSaveFailed"), [
+                { text: "OK" },
+              ]);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   // タブコンテンツのレンダリング
   const renderTabContent = () => {
     switch (activeTab) {
       case "members":
         return (
-          <TeamMemberList
-            members={members || []}
-            teamId={teamId}
-            isLoading={isLoading}
-            isError={isError}
-            error={error || null}
-            currentUserId={user?.id || ""}
-            isCurrentUserAdmin={isCurrentUserAdmin}
-            onRetry={() => refetch()}
-            onMemberChange={() => refetch()}
-          />
-        );
-      case "groups":
-      case "practices":
-      case "competitions":
-        return (
-          <View style={styles.webGuideContainer}>
-            <Feather name="monitor" size={48} color="#9CA3AF" />
-            <Text style={styles.webGuideTitle}>
-              {activeTab === "groups"
-                ? t("teams.mobile.tabGroupManagement")
-                : activeTab === "practices"
-                  ? t("teams.mobile.tabPracticeManagement")
-                  : t("teams.mobile.tabCompetitionManagement")}
-            </Text>
-            <Text style={styles.webGuideText}>{t("teams.mobile.webGuide")}</Text>
-            <Pressable style={styles.webGuideButton} onPress={handleOpenWebApp}>
-              <Feather name="external-link" size={16} color="#FFFFFF" />
-              <Text style={styles.webGuideButtonText}>{t("teams.mobile.webGuideButton")}</Text>
-            </Pressable>
-            <Text style={styles.webGuideUrl}>{WEB_APP_URL}</Text>
+          <View style={styles.membersTabContent}>
+            {isAdminView && <PendingMembersSection teamId={teamId} />}
+            <TeamMemberList
+              members={members || []}
+              teamId={teamId}
+              isLoading={isLoading}
+              isError={isError}
+              error={error || null}
+              currentUserId={user?.id || ""}
+              isCurrentUserAdmin={isCurrentUserAdmin}
+              onRetry={() => refetch()}
+              onMemberChange={() => refetch()}
+            />
           </View>
         );
+      case "groups":
+        return (
+          <TeamGroupManagement
+            teamId={teamId}
+            members={members ?? []}
+            isCurrentUserAdmin={isCurrentUserAdmin}
+          />
+        );
+      case "practices":
+        return <TeamPracticeList teamId={teamId} isAdmin={isAdminView} />;
+      case "competitions":
+        return <TeamCompetitionList teamId={teamId} isAdmin={isAdminView} />;
       case "attendance":
-        return <MyMonthlyAttendance teamId={teamId} />;
+        return isAdminView ? (
+          <AdminMonthlyAttendance teamId={teamId} />
+        ) : (
+          <MyMonthlyAttendance teamId={teamId} />
+        );
+      case "announcements":
+        return (
+          <View style={styles.announcementsTabContent}>
+            <TeamAnnouncementList
+              announcements={announcements || []}
+              isLoading={isLoading}
+              isError={isError}
+              error={error || null}
+              isAdmin={isAdminView}
+              onRetry={() => refetch()}
+              onCreateNew={() => {
+                setEditingAnnouncement(undefined);
+                setAnnouncementFormVisible(true);
+              }}
+              onEdit={(announcement) => {
+                setEditingAnnouncement(announcement);
+                setAnnouncementFormVisible(true);
+              }}
+              onDelete={handleAnnouncementDelete}
+            />
+            <TeamAnnouncementForm
+              visible={announcementFormVisible}
+              onClose={() => {
+                setAnnouncementFormVisible(false);
+                setEditingAnnouncement(undefined);
+              }}
+              teamId={teamId}
+              editData={editingAnnouncement}
+              onSuccess={() => refetch()}
+            />
+          </View>
+        );
       default:
         return null;
     }
@@ -196,18 +258,49 @@ export const TeamDetailScreen: React.FC = () => {
           <Text style={styles.teamName} numberOfLines={1}>
             {currentTeam.name}
           </Text>
-          {currentTeam.invite_code && (
-            <View style={styles.inviteCodeContent}>
-              <Text style={styles.inviteCode}>{currentTeam.invite_code}</Text>
-              <Pressable style={styles.copyButton} onPress={handleCopyInviteCode}>
+          <View style={styles.teamInfoRight}>
+            {currentTeam.invite_code && (
+              <View style={styles.inviteCodeContent}>
+                <Text style={styles.inviteCode}>{currentTeam.invite_code}</Text>
+                <Pressable style={styles.copyButton} onPress={handleCopyInviteCode}>
+                  <Feather
+                    name={isCopied ? "check" : "clipboard"}
+                    size={14}
+                    color={isCopied ? "#10B981" : "#9CA3AF"}
+                  />
+                </Pressable>
+              </View>
+            )}
+            {isCurrentUserAdmin && (
+              <Pressable
+                style={[styles.adminToggleButton, isAdminView && styles.adminToggleButtonActive]}
+                onPress={() => {
+                  setIsAdminView((prev) => {
+                    const next = !prev;
+                    // announcements タブは管理者専用のため利用者ビューへの切替時にリセット。
+                    // attendance タブは利用者ビューでも有効(MyMonthlyAttendance が表示される)ためリセット不要。
+                    if (!next && activeTab === "announcements") {
+                      setActiveTab("members");
+                    }
+                    return next;
+                  });
+                }}
+              >
                 <Feather
-                  name={isCopied ? "check" : "clipboard"}
-                  size={14}
-                  color={isCopied ? "#10B981" : "#9CA3AF"}
+                  name="settings"
+                  size={13}
+                  color={isAdminView ? "#FFFFFF" : "#6B7280"}
                 />
+                <Text
+                  style={[styles.adminToggleText, isAdminView && styles.adminToggleTextActive]}
+                >
+                  {isAdminView
+                    ? t("teams.mobile.adminToggle.admin")
+                    : t("teams.mobile.adminToggle.user")}
+                </Text>
               </Pressable>
-            </View>
-          )}
+            )}
+          </View>
         </View>
         {currentTeam.description && (
           <Text style={styles.teamDescription}>{currentTeam.description}</Text>
@@ -215,7 +308,7 @@ export const TeamDetailScreen: React.FC = () => {
       </View>
 
       {/* タブ（固定） */}
-      <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} isAdmin={isAdminView} />
 
       {/* タブコンテンツ（スクロール可能） */}
       <View style={styles.tabContent}>{renderTabContent()}</View>
@@ -248,6 +341,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 8,
   },
+  teamInfoRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
   teamName: {
     fontSize: 17,
     fontWeight: "bold",
@@ -278,51 +377,35 @@ const styles = StyleSheet.create({
   copyButton: {
     padding: 2,
   },
+  adminToggleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  adminToggleButtonActive: {
+    backgroundColor: "#2563EB",
+  },
+  adminToggleText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  adminToggleTextActive: {
+    color: "#FFFFFF",
+  },
   tabContent: {
     flex: 1,
     minHeight: 400,
   },
-  webGuideContainer: {
+  membersTabContent: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-    backgroundColor: "#FFFFFF",
-    margin: 16,
-    borderRadius: 12,
   },
-  webGuideTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#374151",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  webGuideText: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  webGuideButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#2563EB",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  webGuideButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  webGuideUrl: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginTop: 12,
+  announcementsTabContent: {
+    flex: 1,
   },
   pendingContainer: {
     flex: 1,

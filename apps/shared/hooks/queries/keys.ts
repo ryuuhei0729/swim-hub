@@ -49,9 +49,16 @@ export const teamKeys = {
   list: () => [...teamKeys.lists()] as const,
   detail: (id: string) => [...teamKeys.all, "detail", id] as const,
   members: (teamId: string) => [...teamKeys.detail(teamId), "members"] as const,
+  pendingMembers: (teamId: string) => [...teamKeys.detail(teamId), "pendingMembers"] as const,
   announcements: (teamId: string) => [...teamKeys.detail(teamId), "announcements"] as const,
   announcementDetail: (teamId: string, id: string) =>
     [...teamKeys.announcements(teamId), "detail", id] as const,
+  practices: (teamId: string) => [...teamKeys.detail(teamId), "practices"] as const,
+  competitions: (teamId: string) => [...teamKeys.detail(teamId), "competitions"] as const,
+  attendanceByPractice: (practiceId: string) =>
+    [...teamKeys.all, "attendance", "practice", practiceId] as const,
+  attendanceByCompetition: (competitionId: string) =>
+    [...teamKeys.all, "attendance", "competition", competitionId] as const,
 } as const;
 
 /**

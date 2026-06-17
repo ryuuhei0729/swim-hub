@@ -22,11 +22,13 @@ import {
   useUpdateCompetitionMutation,
 } from "@apps/shared/hooks/queries/records";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
+import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { useCompetitionFormStore } from "@/stores/competitionFormStore";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -47,7 +49,7 @@ const POOL_TYPES: PoolTypeOption[] = [
 export const CompetitionBasicFormScreen: React.FC = () => {
   const route = useRoute<CompetitionFormScreenRouteProp>();
   const navigation = useNavigation<CompetitionFormScreenNavigationProp>();
-  const { competitionId, date: initialDateParam } = route.params;
+  const { competitionId, date: initialDateParam, teamId } = route.params;
   const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
@@ -83,6 +85,21 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     setNewImageFiles(newFiles);
     setDeletedImageIds(deletedIds);
   }, []);
+
+  // 開始日変更時のハンドラー
+  // 既存の終了日が新しい開始日より前になった場合はクリアする
+  // （終了日ピッカーの minDate は開く時点でしか効かず、不正値が value に残るため）
+  const handleStartDateChange = useCallback(
+    (newDate: string) => {
+      setDate(newDate);
+      const parsedNew = parseISO(newDate);
+      const parsedEnd = parseISO(endDate);
+      if (endDate && isValid(parsedEnd) && isValid(parsedNew) && isBefore(parsedEnd, parsedNew)) {
+        setEndDate("");
+      }
+    },
+    [endDate],
+  );
 
   // Zustandストア
   const setCreatedCompetitionId = useCompetitionFormStore((state) => state.setCreatedCompetitionId);
@@ -240,6 +257,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         .map((img) => img.id);
       const updatedImagePaths = [...currentPaths, ...newImagePaths];
 
+      // team_id は除外: RLS UPDATE ポリシーが is_team_admin ガードを持ち、team_id は不変のため
       const formData = {
         date,
         end_date: endDate && endDate.trim() !== "" ? endDate : null,
@@ -290,6 +308,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         place: place && place.trim() !== "" ? place.trim() : null,
         pool_type: poolType,
         note: note && note.trim() !== "" ? note.trim() : null,
+        ...(teamId ? { team_id: teamId } : {}),
       };
 
       const newCompetition = await createMutation.mutateAsync(formData);
@@ -356,6 +375,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     try {
       await saveCompetitionData();
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      if (teamId) {
+        queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
+      }
       navigation.popToTop();
     } catch (error) {
       console.error("保存エラー:", error);
@@ -385,6 +407,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         setCreatedCompetitionId(resultId);
       }
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      if (teamId) {
+        queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
+      }
       navigation.navigate("EntryForm", {
         competitionId: resultId,
         date,
@@ -417,6 +442,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         setCreatedCompetitionId(resultId);
       }
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      if (teamId) {
+        queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
+      }
       navigation.navigate("RecordLogForm", {
         competitionId: resultId,
         entryDataList: [],
@@ -470,14 +498,13 @@ export const CompetitionBasicFormScreen: React.FC = () => {
               <Text style={styles.label}>
                 {t("competition.form.startDateLabel")} <Text style={styles.required}>*</Text>
               </Text>
-              <TextInput
-                style={[styles.input, styles.dateInput, errors.date && styles.inputError]}
+              <DatePickerField
                 value={date}
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
-                editable={!loading}
+                onChange={handleStartDateChange}
+                required
+                disabled={loading}
+                error={errors.date}
               />
-              {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
             </View>
 
             <View style={styles.dateColumn}>
@@ -485,14 +512,14 @@ export const CompetitionBasicFormScreen: React.FC = () => {
                 {t("competition.form.endDateLabel")}{" "}
                 <Text style={styles.optional}>{t("competition.form.multiDayHint")}</Text>
               </Text>
-              <TextInput
-                style={[styles.input, styles.dateInput, errors.endDate && styles.inputError]}
+              <DatePickerField
                 value={endDate}
-                onChangeText={setEndDate}
-                placeholder="YYYY-MM-DD"
-                editable={!loading}
+                onChange={setEndDate}
+                allowClear
+                disabled={loading}
+                error={errors.endDate}
+                minDate={isValid(parseISO(date)) ? parseISO(date) : undefined}
               />
-              {errors.endDate && <Text style={styles.errorText}>{errors.endDate}</Text>}
             </View>
           </View>
         </View>
@@ -679,20 +706,9 @@ const styles = StyleSheet.create({
     color: "#111827",
     backgroundColor: "#FFFFFF",
   },
-  dateInput: {
-    width: "100%",
-  },
-  inputError: {
-    borderColor: "#EF4444",
-  },
   textArea: {
     minHeight: 80,
     textAlignVertical: "top",
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#EF4444",
-    marginTop: 4,
   },
   pickerContainer: {
     flexDirection: "row",

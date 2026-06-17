@@ -6,6 +6,13 @@ import { makeRedirectUri } from "expo-auth-session";
 import i18n from "@/i18n";
 
 /**
+ * openAuthSessionAsync 進行中に AuthProvider のグローバル Linking ハンドラが
+ * 同一 URL を二重処理しないよう抑制するフラグ。
+ * setSession 完了後に解除すること。
+ */
+export const oauthSessionGuard = { active: false };
+
+/**
  * リダイレクトURIを生成
  * カスタムスキーム(swimhub://)を使用
  */

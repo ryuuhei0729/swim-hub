@@ -1,0 +1,461 @@
+import React, { useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  FlatList,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import { format } from "date-fns";
+import { Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
+import { useAuth } from "@/contexts/AuthProvider";
+import {
+  useTeamCompetitionsQuery,
+  useDeleteTeamCompetitionMutation,
+} from "@apps/shared/hooks/queries/teams";
+import type { Competition } from "@swim-hub/shared/types";
+import type { MainStackParamList } from "@/navigation/types";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { formatDate } from "@apps/shared/utils/date";
+
+type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
+
+interface TeamCompetitionListProps {
+  teamId: string;
+  isAdmin: boolean;
+}
+
+const CompetitionItem = React.memo(function CompetitionItem({
+  competition,
+  isAdmin,
+  onEdit,
+  onDelete,
+  onEntry,
+  onRecord,
+}: {
+  competition: Competition;
+  isAdmin: boolean;
+  onEdit: (competition: Competition) => void;
+  onDelete: (competition: Competition) => void;
+  onEntry: (competition: Competition) => void;
+  onRecord: (competition: Competition) => void;
+}) {
+  const { t } = useTranslation();
+  const dateLocale = useDateLocale();
+  const poolLabel =
+    competition.pool_type === 1
+      ? t("teams.mobile.poolTypeLong")
+      : t("teams.mobile.poolTypeShort");
+
+  return (
+    <View style={styles.item}>
+      <Pressable
+        onPress={() => isAdmin && onEdit(competition)}
+        accessibilityRole={isAdmin ? "button" : undefined}
+      >
+        <View style={styles.itemHeader}>
+          <View style={styles.itemTitleRow}>
+            <Feather name="award" size={14} color="#2563EB" />
+            <Text style={styles.itemTitle} numberOfLines={1}>
+              {competition.title || t("teams.mobile.fallbackCompetitionTitle")}
+            </Text>
+          </View>
+          {isAdmin && (
+            <View style={styles.itemActions}>
+              <Pressable
+                style={styles.editButton}
+                onPress={() => onEdit(competition)}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.edit")}
+              >
+                <Feather name="edit-2" size={14} color="#2563EB" />
+              </Pressable>
+              <Pressable
+                style={styles.deleteButton}
+                onPress={() => onDelete(competition)}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.delete")}
+              >
+                <Feather name="trash-2" size={14} color="#DC2626" />
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.itemRow}>
+          <Feather name="calendar" size={12} color="#9CA3AF" />
+          <Text style={styles.itemDate}>{formatDate(competition.date, "longWithWeekday", dateLocale)}</Text>
+        </View>
+
+        {competition.place && (
+          <View style={styles.itemRow}>
+            <Feather name="map-pin" size={12} color="#9CA3AF" />
+            <Text style={styles.itemPlace}>{competition.place}</Text>
+          </View>
+        )}
+
+        <View style={styles.itemRow}>
+          <Feather name="droplet" size={12} color="#9CA3AF" />
+          <Text style={styles.itemMeta}>{poolLabel}</Text>
+        </View>
+
+        {competition.note && (
+          <Text style={styles.itemNote} numberOfLines={2}>{competition.note}</Text>
+        )}
+      </Pressable>
+      <View style={styles.entryRecordRow}>
+        <Pressable
+          style={styles.entryButton}
+          onPress={() => onEntry(competition)}
+          accessibilityRole="button"
+          accessibilityLabel={t("teams.mobile.teamCompetitionList.entryButton")}
+        >
+          <Feather name="log-in" size={13} color="#2563EB" />
+          <Text style={styles.entryButtonText}>{t("teams.mobile.teamCompetitionList.entryButton")}</Text>
+        </Pressable>
+        <Pressable
+          style={styles.recordButton}
+          onPress={() => onRecord(competition)}
+          accessibilityRole="button"
+          accessibilityLabel={t("teams.mobile.teamCompetitionList.recordButton")}
+        >
+          <Feather name="clock" size={13} color="#059669" />
+          <Text style={styles.recordButtonText}>{t("teams.mobile.teamCompetitionList.recordButton")}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+});
+
+export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProps) {
+  const { supabase } = useAuth();
+  const navigation = useNavigation<NavigationProp>();
+  const { t } = useTranslation();
+
+  const { data: competitions, isLoading, isError, error, refetch } = useTeamCompetitionsQuery(supabase, teamId);
+  const deleteMutation = useDeleteTeamCompetitionMutation(supabase);
+
+  const handleAdd = useCallback(() => {
+    navigation.navigate("CompetitionForm", {
+      teamId,
+      date: format(new Date(), "yyyy-MM-dd"),
+    });
+  }, [navigation, teamId]);
+
+  const handleEdit = useCallback((competition: Competition) => {
+    navigation.navigate("CompetitionForm", {
+      competitionId: competition.id,
+      date: competition.date,
+      teamId,
+    });
+  }, [navigation, teamId]);
+
+  const handleEntry = useCallback((competition: Competition) => {
+    navigation.navigate("EntryForm", {
+      competitionId: competition.id,
+      date: competition.date,
+      teamId,
+    });
+  }, [navigation, teamId]);
+
+  const handleRecord = useCallback((competition: Competition) => {
+    navigation.navigate("RecordLogForm", {
+      competitionId: competition.id,
+      date: competition.date,
+      teamId,
+    });
+  }, [navigation, teamId]);
+
+  const handleDelete = useCallback((competition: Competition) => {
+    Alert.alert(
+      t("teams.mobile.deleteConfirmTitle"),
+      t("teams.mobile.teamCompetitionList.deleteConfirm"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteMutation.mutateAsync({ id: competition.id, teamId });
+            } catch {
+              Alert.alert(t("common.error"), t("teams.mobile.teamCompetitionList.deleteFailed"), [
+                { text: "OK" },
+              ]);
+            }
+          },
+        },
+      ],
+    );
+  }, [deleteMutation, teamId, t]);
+
+  const renderItem = useCallback(({ item }: { item: Competition }) => (
+    <CompetitionItem
+      competition={item}
+      isAdmin={isAdmin}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      onEntry={handleEntry}
+      onRecord={handleRecord}
+    />
+  ), [isAdmin, handleEdit, handleDelete, handleEntry, handleRecord]);
+
+  const keyExtractor = useCallback((item: Competition) => item.id, []);
+
+  if (isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={styles.loadingText}>{t("teams.mobile.loadingShort")}</Text>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.centerContainer}>
+        <Feather name="alert-circle" size={40} color="#DC2626" />
+        <Text style={styles.errorText}>
+          {error?.message || t("teams.mobile.teamCompetitionList.fetchFailed")}
+        </Text>
+        <Pressable style={styles.retryButton} onPress={() => refetch()}>
+          <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const items = competitions ?? [];
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          {t("teams.mobile.teamCompetitionList.title", { count: items.length })}
+        </Text>
+        {isAdmin && (
+          <Pressable style={styles.addButton} onPress={handleAdd} accessibilityRole="button">
+            <Feather name="plus" size={16} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>
+              {t("teams.mobile.teamCompetitionList.addButton")}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
+      {items.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Feather name="award" size={40} color="#D1D5DB" />
+          <Text style={styles.emptyText}>{t("teams.mobile.teamCompetitionList.empty")}</Text>
+          {isAdmin && (
+            <Pressable style={styles.emptyAddButton} onPress={handleAdd}>
+              <Text style={styles.emptyAddButtonText}>
+                {t("teams.mobile.teamCompetitionList.addButton")}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      ) : (
+        <FlatList
+          data={items}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#EFF6FF",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  addButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  listContent: {
+    padding: 12,
+    gap: 8,
+  },
+  item: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    padding: 12,
+    gap: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  itemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  itemTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  itemTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+    flex: 1,
+  },
+  itemActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  editButton: {
+    padding: 4,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  itemDate: {
+    fontSize: 13,
+    color: "#374151",
+  },
+  itemPlace: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  itemMeta: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  itemNote: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginTop: 4,
+  },
+  entryRecordRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+  },
+  entryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2563EB",
+  },
+  entryButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+  recordButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#059669",
+  },
+  recordButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#059669",
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  errorText: {
+    fontSize: 14,
+    color: "#DC2626",
+    textAlign: "center",
+  },
+  retryButton: {
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    textAlign: "center",
+  },
+  emptyAddButton: {
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  emptyAddButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+});

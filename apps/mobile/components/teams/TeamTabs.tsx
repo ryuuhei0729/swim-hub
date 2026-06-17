@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
-export type TeamTabType = "members" | "groups" | "practices" | "competitions" | "attendance";
+export type TeamTabType = "members" | "groups" | "practices" | "competitions" | "attendance" | "announcements";
 
 export interface TeamTabsProps {
   activeTab: TeamTabType;
@@ -11,22 +11,23 @@ export interface TeamTabsProps {
   isAdmin?: boolean;
 }
 
-const tabs: { id: TeamTabType; nameKey: string; icon: keyof typeof Feather.glyphMap }[] = [
+const BASE_TABS: { id: TeamTabType; nameKey: string; icon: keyof typeof Feather.glyphMap; adminOnly?: boolean }[] = [
   { id: "members", nameKey: "teams.mobile.tabMembers", icon: "users" },
   { id: "groups", nameKey: "teams.mobile.tabGroups", icon: "layers" },
   { id: "practices", nameKey: "teams.mobile.tabPractices", icon: "clock" },
   { id: "competitions", nameKey: "teams.mobile.tabCompetitions", icon: "award" },
   { id: "attendance", nameKey: "teams.mobile.tabAttendance", icon: "clipboard" },
+  { id: "announcements", nameKey: "teams.mobile.tabAnnouncements", icon: "bell", adminOnly: true },
 ];
 
 /**
  * チームタブコンポーネント
- * メンバー、練習、大会、出欠のタブ切り替え（閲覧専用）
+ * メンバー、練習、大会、出欠、お知らせのタブ切り替え
+ * お知らせタブは管理者ビュー時のみ表示
  */
-export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange }) => {
+export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange, isAdmin = false }) => {
   const { t } = useTranslation();
-  // 一般ページは閲覧専用のため、全てのタブを表示
-  const visibleTabs = tabs;
+  const visibleTabs = BASE_TABS.filter((tab) => !tab.adminOnly || isAdmin);
 
   return (
     <View style={styles.container}>

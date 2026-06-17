@@ -3,8 +3,22 @@
 // =============================================================================
 
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { PracticeLogItem } from "../PracticeLogItem";
+
+// expo-auth-session / expo-modules-core: App Developer が google-auth.ts を AuthProvider に
+// 追加したことで間接的に引き込まれた依存チェーンをスタブ化する。
+// PracticeLogItem.tsx 自体は expo-auth-session を使わないが、
+// vitest のモジュール解決過程で expo-auth-session → expo-modules-core が評価されるため必要。
+vi.mock("expo-auth-session", () => ({
+  makeRedirectUri: vi.fn(() => "swimhub://auth/callback"),
+  ResponseType: { Token: "token", Code: "code" },
+}));
+
+vi.mock("expo-web-browser", () => ({
+  maybeCompleteAuthSession: vi.fn(),
+  openAuthSessionAsync: vi.fn(),
+}));
 import type { PracticeLogWithTags } from "@swim-hub/shared/types";
 
 describe("PracticeLogItem", () => {

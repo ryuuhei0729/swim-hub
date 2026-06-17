@@ -2109,6 +2109,30 @@
         "noMonths": "没有可显示的月份",
         "noEvents": "本月没有活动"
       },
+      "adminAttendance": {
+        "title": "出勤接收管理",
+        "statusOpen": "受理中",
+        "statusClosed": "已截止",
+        "empty": "没有即将到来的活动",
+        "fetchFailed": "获取活动信息失败",
+        "saveFailed": "保存状态失败",
+        "openButton": "开始受理",
+        "closeButton": "截止受理",
+        "confirmTitle": "确认",
+        "confirmOpen": "是否开始接受该活动的出勤申报？",
+        "confirmClose": "是否截止该活动的出勤申报？",
+        "defaultPractice": "训练",
+        "defaultCompetition": "比赛",
+        "toggleStatusAria": "切换 {title} 的受理状态",
+        "memberAttendanceTitle": "成员出勤状况",
+        "memberStatusPresent": "出席",
+        "memberStatusAbsent": "缺席",
+        "memberStatusOther": "其他",
+        "memberStatusUnanswered": "未回复",
+        "memberAttendanceFetchFailed": "获取出勤信息失败",
+        "memberAttendanceEmpty": "暂无出勤回复",
+        "memberAttendanceLoading": "加载中..."
+      },
       "groupManagement": {
         "title": "分组管理",
         "subtitle": "可按类别对成员进行分组",
@@ -2262,7 +2286,40 @@
       "poolTypeLong": "长池",
       "genderCategoryLabel": "性别",
       "genderMale": "男",
-      "genderFemale": "女"
+      "genderFemale": "女",
+      "tabAnnouncements": "公告",
+      "adminToggle": {
+        "label": "切换视图",
+        "admin": "管理员视图",
+        "user": "用户视图"
+      },
+      "pendingApproveConfirmTitle": "确认审批",
+      "pendingApproveConfirmMessage": "是否审批通过 {name}？",
+      "pendingRejectConfirmTitle": "确认拒绝",
+      "pendingRejectConfirmMessage": "是否拒绝 {name}？",
+      "pendingApproveFailed": "审批失败",
+      "pendingRejectFailed": "拒绝失败",
+      "pendingLoading": "正在加载待审批成员...",
+      "pendingFetchFailed": "获取待审批成员失败",
+      "teamPracticeList": {
+        "title": "团队训练 ({count}件)",
+        "addButton": "添加训练",
+        "empty": "暂无团队训练记录",
+        "fetchFailed": "训练记录加载失败",
+        "deleteConfirm": "确定删除此训练记录？此操作无法撤销。",
+        "deleteFailed": "训练记录删除失败",
+        "addLog": "填写日志"
+      },
+      "teamCompetitionList": {
+        "title": "团队比赛 ({count}件)",
+        "addButton": "添加比赛",
+        "empty": "暂无团队比赛",
+        "fetchFailed": "比赛信息加载失败",
+        "deleteConfirm": "确定删除此比赛？此操作无法撤销。",
+        "deleteFailed": "比赛删除失败",
+        "entryButton": "报名",
+        "recordButton": "成绩"
+      }
     },
     "page": {
       "title": "我的团队",

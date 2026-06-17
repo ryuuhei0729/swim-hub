@@ -2108,6 +2108,30 @@
         "noMonths": "No months to display",
         "noEvents": "No events this month"
       },
+      "adminAttendance": {
+        "title": "Attendance Status Management",
+        "statusOpen": "Open",
+        "statusClosed": "Closed",
+        "empty": "No upcoming events",
+        "fetchFailed": "Failed to load events",
+        "saveFailed": "Failed to save status",
+        "openButton": "Open for Submissions",
+        "closeButton": "Close Submissions",
+        "confirmTitle": "Confirm",
+        "confirmOpen": "Open attendance submissions for this event?",
+        "confirmClose": "Close attendance submissions for this event?",
+        "defaultPractice": "Practice",
+        "defaultCompetition": "Competition",
+        "toggleStatusAria": "Toggle submission status for {title}",
+        "memberAttendanceTitle": "Member Attendance",
+        "memberStatusPresent": "Present",
+        "memberStatusAbsent": "Absent",
+        "memberStatusOther": "Other",
+        "memberStatusUnanswered": "No Response",
+        "memberAttendanceFetchFailed": "Failed to load attendance data",
+        "memberAttendanceEmpty": "No attendance responses yet",
+        "memberAttendanceLoading": "Loading..."
+      },
       "groupManagement": {
         "title": "Group management",
         "subtitle": "Organize members into categories and groups.",
@@ -2259,7 +2283,40 @@
       "poolTypeLong": "Long Course",
       "genderCategoryLabel": "Gender",
       "genderMale": "Male",
-      "genderFemale": "Female"
+      "genderFemale": "Female",
+      "tabAnnouncements": "Announcements",
+      "adminToggle": {
+        "label": "View",
+        "admin": "Admin View",
+        "user": "User View"
+      },
+      "pendingApproveConfirmTitle": "Confirm Approval",
+      "pendingApproveConfirmMessage": "Approve {name}?",
+      "pendingRejectConfirmTitle": "Confirm Rejection",
+      "pendingRejectConfirmMessage": "Reject {name}?",
+      "pendingApproveFailed": "Failed to approve member",
+      "pendingRejectFailed": "Failed to reject member",
+      "pendingLoading": "Loading pending members...",
+      "pendingFetchFailed": "Failed to fetch pending members",
+      "teamPracticeList": {
+        "title": "Team Practices ({count})",
+        "addButton": "Add Practice",
+        "empty": "No team practices yet",
+        "fetchFailed": "Failed to load practice records",
+        "deleteConfirm": "Delete this practice record? This cannot be undone.",
+        "deleteFailed": "Failed to delete practice record",
+        "addLog": "Add Log"
+      },
+      "teamCompetitionList": {
+        "title": "Team Competitions ({count})",
+        "addButton": "Add Competition",
+        "empty": "No team competitions yet",
+        "fetchFailed": "Failed to load competitions",
+        "deleteConfirm": "Delete this competition? This cannot be undone.",
+        "deleteFailed": "Failed to delete competition",
+        "entryButton": "Entry",
+        "recordButton": "Record"
+      }
     },
     "page": {
       "title": "My Teams",

@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { EntryAPI } from "@apps/shared/api/entries";
+import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
 import { formatTime } from "@/utils/formatters";
@@ -48,7 +49,7 @@ interface EntryData {
 export const EntryLogFormScreen: React.FC = () => {
   const route = useRoute<EntryFormScreenRouteProp>();
   const navigation = useNavigation<EntryFormScreenNavigationProp>();
-  const { competitionId, entryId, date } = route.params;
+  const { competitionId, entryId, date, teamId } = route.params;
   const { supabase } = useAuth();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -330,6 +331,7 @@ export const EntryLogFormScreen: React.FC = () => {
     competitionIdParam: string,
     styles: Style[],
     entryAPIInstance: EntryAPI,
+    teamIdParam?: string,
   ): Promise<EntryInfo[]> => {
     // 認証チェック
     const {
@@ -414,8 +416,20 @@ export const EntryLogFormScreen: React.FC = () => {
             note: entryData.note && entryData.note.trim() !== "" ? entryData.note.trim() : null,
           });
           processedEntryIds.add(existingEntry.id);
+        } else if (teamIdParam) {
+          // チームエントリーとして新規作成
+          entry = await entryAPIInstance.createTeamEntry(
+            teamIdParam,
+            user.id,
+            {
+              competition_id: competitionIdParam,
+              style_id: styleIdNum,
+              entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+              note: entryData.note && entryData.note.trim() !== "" ? entryData.note.trim() : null,
+            },
+          );
         } else {
-          // 新規作成
+          // 個人エントリーとして新規作成
           entry = await entryAPIInstance.createPersonalEntry({
             competition_id: competitionIdParam,
             style_id: styleIdNum,
@@ -451,6 +465,9 @@ export const EntryLogFormScreen: React.FC = () => {
 
     // カレンダーのクエリを無効化してリフレッシュ
     queryClient.invalidateQueries({ queryKey: ["calendar"] });
+    if (teamIdParam) {
+      queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamIdParam) });
+    }
 
     return createdEntriesList;
   };
@@ -469,8 +486,7 @@ export const EntryLogFormScreen: React.FC = () => {
     setStoreLoading(true);
 
     try {
-      const entryAPI = new EntryAPI(supabase);
-      await saveOrUpdateEntries(entries, supabase, competitionId, swimStyles, entryAPI);
+      await saveOrUpdateEntries(entries, supabase, competitionId, swimStyles, entryApi, teamId);
 
       // 成功: ダッシュボードに戻る
       navigation.popToTop();
@@ -502,13 +518,13 @@ export const EntryLogFormScreen: React.FC = () => {
     setStoreLoading(true);
 
     try {
-      const entryAPI = new EntryAPI(supabase);
       const createdEntriesList = await saveOrUpdateEntries(
         entries,
         supabase,
         competitionId,
         swimStyles,
-        entryAPI,
+        entryApi,
+        teamId,
       );
 
       // 記録入力フォームに遷移
@@ -516,6 +532,7 @@ export const EntryLogFormScreen: React.FC = () => {
         competitionId,
         entryDataList: createdEntriesList,
         date,
+        teamId,
       });
     } catch (error) {
       console.error("エントリー登録エラー:", error);
@@ -538,6 +555,7 @@ export const EntryLogFormScreen: React.FC = () => {
       competitionId,
       entryDataList: [],
       date,
+      teamId,
     });
   };
 

@@ -20,6 +20,36 @@ import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
 import { render, screen, act, waitFor } from "@testing-library/react";
 
+// expo-auth-session が expo-modules-core の CodedError を必要とするが、
+// vitest.setup.ts のモックに含まれていない。ここで補完する。
+// AuthProvider → google-auth.ts → expo-auth-session → expo-modules-core の順で
+// import されるため、CodedError が解決できないとクラッシュする。
+vi.mock("expo-modules-core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("expo-modules-core")>();
+  class CodedError extends Error {
+    code: string;
+    constructor(code: string, message: string) {
+      super(message);
+      this.code = code;
+    }
+  }
+  return { ...actual, CodedError };
+});
+
+// expo-auth-session を stub (AuthProvider → google-auth.ts → makeRedirectUri)
+vi.mock("expo-auth-session", () => ({
+  makeRedirectUri: vi.fn(
+    ({ native }: { native?: string }) => native ?? "swimhub://auth/callback",
+  ),
+  ResponseType: { Token: "token", Code: "code" },
+}));
+
+// expo-web-browser を stub (useGoogleAuth が import)
+vi.mock("expo-web-browser", () => ({
+  maybeCompleteAuthSession: vi.fn(),
+  openAuthSessionAsync: vi.fn(),
+}));
+
 // vi.hoisted でモック関数を先に定義（hoisting 問題を回避）
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -34,6 +64,9 @@ const mocks = vi.hoisted(() => ({
     clear: vi.fn(),
     invalidateQueries: vi.fn(),
   })),
+  // Linking: AuthProvider のディープリンクハンドラが使用する
+  getInitialURL: vi.fn(async () => null),
+  addEventListener: vi.fn(() => ({ remove: vi.fn() })),
 }));
 
 // supabase クライアントモック
@@ -47,6 +80,19 @@ vi.mock("@/lib/supabase", () => ({
     from: mocks.fromFn,
   },
 }));
+
+// react-native: Linking を AuthProvider のディープリンクハンドラ用に追加
+// (__mocks__/react-native.ts の alias に加えて Linking を補完)
+vi.mock("react-native", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("react-native");
+  return {
+    ...actual,
+    Linking: {
+      getInitialURL: mocks.getInitialURL,
+      addEventListener: mocks.addEventListener,
+    },
+  };
+});
 
 // RevenueCat モック
 vi.mock("@/lib/revenucat", () => ({
