@@ -376,23 +376,28 @@ export const EntryLogFormScreen: React.FC = () => {
         const originalEntry = existingEntriesByIdMap.get(entryData.id);
         const isStyleChanged = originalEntry && originalEntry.style_id !== styleIdNum;
 
-        if (isStyleChanged) {
-          // 変更後の種目が既に他のエントリーで使用されていないかチェック
-          const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum));
-          if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
-            const styleName =
-              localizedStyleName(styles.find((s) => s.id === styleIdNum), t) ||
-              t("recordMobile.unknownValue");
-            throw new Error(t("competition.entry.duplicateStyle", { styleName }));
-          }
-        }
+        // 変更後の種目が既に他のエントリーで使用されている場合、
+        // エラーにせず既存エントリーをフォーム値で上書き更新する（web useTeamEntry.ts:230-242 と同じ「既存あれば update」挙動）。
+        // 重複判定キーは style_id。行重複を作らないため、この既存エントリーを update して処理済みとする。
+        const conflictingEntry = isStyleChanged
+          ? existingEntriesMap.get(String(styleIdNum))
+          : undefined;
 
-        entry = await entryAPIInstance.updateEntry(entryData.id, {
-          style_id: styleIdNum,
-          entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
-          note: entryData.note && entryData.note.trim() !== "" ? entryData.note.trim() : null,
-        });
-        processedEntryIds.add(entryData.id);
+        if (conflictingEntry && conflictingEntry.id !== entryData.id) {
+          entry = await entryAPIInstance.updateEntry(conflictingEntry.id, {
+            style_id: styleIdNum,
+            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+            note: entryData.note && entryData.note.trim() !== "" ? entryData.note.trim() : null,
+          });
+          processedEntryIds.add(conflictingEntry.id);
+        } else {
+          entry = await entryAPIInstance.updateEntry(entryData.id, {
+            style_id: styleIdNum,
+            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+            note: entryData.note && entryData.note.trim() !== "" ? entryData.note.trim() : null,
+          });
+          processedEntryIds.add(entryData.id);
+        }
       } else if (existingEntryForStyle) {
         // 編集モードで既存エントリーがある場合は更新
         entry = await entryAPIInstance.updateEntry(existingEntryForStyle.id, {

@@ -15,7 +15,7 @@ import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { getMonthDateRange, formatDate, toISODateString } from "@swim-hub/shared/utils/date";
-import { startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { startOfMonth, endOfMonth, addMonths, format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useDateLocale } from "@/hooks/useDateLocale";
 
@@ -27,6 +27,13 @@ interface AttendanceEditState {
   status: AttendanceStatus | null;
   note: string;
 }
+
+// 備考の最大文字数（web useAttendanceEdit と統一）
+const NOTE_MAX_LENGTH = 500;
+
+// 既存の締切後編集マークを除去するための正規表現
+// shared AttendanceAPI.addEditMark / web useAttendanceEdit と同一の挙動（重複付与防止）
+const EDIT_MARK_REGEX = /\s*\(\d{2}\/\d{2}\s+\d{2}:\d{2}締切後編集\)/g;
 
 interface MonthItem {
   year: number;
@@ -360,6 +367,53 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         return;
       }
 
+      // 締切後の編集を含む場合は確認ダイアログを表示（web useAttendanceEdit:152-167 と同一挙動）。
+      // 保存対象 event のうち attendance_status === "closed" のものを抽出する。
+      const savedEventIds = new Set(
+        events
+          .filter((event) => {
+            const editState = editStates[event.id];
+            if (!editState) return false;
+            const existingAttendance = attendances.find(
+              (a) => (a.practice_id || a.competition_id) === event.id,
+            );
+            if (existingAttendance) {
+              return !(
+                existingAttendance.status === editState.status &&
+                (existingAttendance.note || "") === editState.note
+              );
+            }
+            return !(editState.status === null && editState.note === "");
+          })
+          .map((event) => event.id),
+      );
+      const closedEvents = events.filter(
+        (event) => savedEventIds.has(event.id) && event.attendance_status === "closed",
+      );
+      if (closedEvents.length > 0) {
+        const dates = closedEvents
+          .map((event) => {
+            const date = parseISO(event.date);
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+          })
+          .join("、");
+        const confirmed = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            t("teams.mobile.adminAttendance.confirmTitle"),
+            t("teams.mobile.attendanceConfirmEditAfterDeadline", { dates }),
+            [
+              { text: t("common.cancel"), style: "cancel", onPress: () => resolve(false) },
+              { text: t("common.ok"), onPress: () => resolve(true) },
+            ],
+            { cancelable: true, onDismiss: () => resolve(false) },
+          );
+        });
+        if (!confirmed) {
+          setSaving(false);
+          return;
+        }
+      }
+
       // 新規作成が必要な出欠情報を特定
       const {
         data: { user },
@@ -377,12 +431,27 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         })
         .map((event) => {
           const editState = editStates[event.id];
+          let note: string | null = editState.note || null;
+
+          // 締切後の新規登録には締切後編集マークを付与（web useAttendanceEdit:191-208 と同一ロジック）。
+          // update 経路は shared bulkUpdateMyAttendances→addEditMark が付与するため、ここでは insert のみ対象（二重付与防止）。
+          if (event.attendance_status === "closed") {
+            const editMark = `(${format(new Date(), "MM/dd HH:mm")}締切後編集)`;
+            if (note) {
+              const cleaned = note.replace(EDIT_MARK_REGEX, "").trim();
+              const combined = cleaned ? `${cleaned} ${editMark}` : editMark;
+              note = combined.length > NOTE_MAX_LENGTH ? combined.substring(0, NOTE_MAX_LENGTH) : combined;
+            } else {
+              note = editMark;
+            }
+          }
+
           return {
             user_id: user.id,
             practice_id: event.type === "practice" ? event.id : null,
             competition_id: event.type === "competition" ? event.id : null,
             status: editState.status,
-            note: editState.note || null,
+            note,
           };
         });
 
@@ -621,7 +690,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                                     styles.attendanceButtonTextActive,
                                 ]}
                               >
-                                出席
+                                {t("teams.mobile.attendanceStatusPresent")}
                               </Text>
                             </Pressable>
                             <Pressable
@@ -639,7 +708,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                                     styles.attendanceButtonTextActive,
                                 ]}
                               >
-                                欠席
+                                {t("teams.mobile.attendanceStatusAbsent")}
                               </Text>
                             </Pressable>
                             <Pressable
@@ -655,7 +724,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                                   editState.status === "other" && styles.attendanceButtonTextActive,
                                 ]}
                               >
-                                その他
+                                {t("teams.mobile.attendanceStatusOther")}
                               </Text>
                             </Pressable>
                           </View>

@@ -233,7 +233,8 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   }, [getAccessToken, type, id, onDelete, onPendingVideoAsset, onPendingVideoUri, pendingVideoUri, t]);
 
   // Premium 制限
-  if (!isPremium && uploadState === "idle") {
+  // idle に加え error 状態でも非 Premium にはバッジを表示し、追加ボタンの再表示を防ぐ（Web と一致）
+  if (!isPremium && (uploadState === "idle" || uploadState === "error")) {
     return <PremiumBadge feature="video_upload" compact />;
   }
 

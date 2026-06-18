@@ -87,6 +87,14 @@ export type MainStackParamList = {
     date: string;
     teamId?: string;
   };
+  TeamRecordBulkForm: {
+    competitionId: string;
+    teamId: string;
+  };
+  TeamPracticeLogBulkForm: {
+    practiceId: string;
+    teamId: string;
+  };
   TeamDetail: {
     teamId: string;
   };

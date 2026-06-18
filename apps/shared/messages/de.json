@@ -52,6 +52,7 @@
     "appName": "SwimHub",
     "language": "Sprache",
     "alertErrorTitle": "Fehler",
+    "notice": "Hinweis",
     "loading": "Wird geladen...",
     "error": "Ein Fehler ist aufgetreten",
     "save": "Speichern",
@@ -1010,7 +1011,8 @@
       "settingsButton": "Einstellungen",
       "profileNotFound": "Profil nicht gefunden",
       "bulkInput": "Sammeleingabe",
-      "bulkInputAria": "Bestzeiten in einem Vorgang erfassen"
+      "bulkInputAria": "Bestzeiten in einem Vorgang erfassen",
+      "pageTitle": "Meine Seite"
     },
     "title": "Meine Seite",
     "subtitle": "Verwalten Sie Ihr Profil und Ihre Bestzeiten",
@@ -1456,7 +1458,15 @@
         "splitDeleteFailed": "Zwischenzeiten konnten nicht gelöscht werden: {detail}",
         "recordDeleteFailed": "Vorhandene Datensätze konnten nicht gelöscht werden: {detail}",
         "saveFailed": "Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
-      }
+      },
+      "errorVideoUploadUrlFailed": "{name}: Abrufen der Upload-URL fehlgeschlagen ({status})",
+      "errorVideoUploadFailed": "{name}: Hochladen des Videos fehlgeschlagen ({status})",
+      "errorVideoThumbnailFailed": "{name}: Hochladen des Vorschaubilds fehlgeschlagen ({status})",
+      "errorVideoConfirmFailed": "{name}: Bestätigung des Videos fehlgeschlagen ({status})",
+      "errorVideoAssignFailed": "{name}: Zuweisung zum Team fehlgeschlagen ({status})",
+      "errorVideoGenericFailed": "{name}: Beim Hochladen des Videos ist ein Fehler aufgetreten",
+      "errorVideoNoThumbnail": "{name}: Das Video konnte nicht angehängt werden, da kein Vorschaubild erstellt werden konnte",
+      "videoPartialFailureSaved": "Die Einträge wurden gespeichert, aber einige Videos konnten nicht angehängt werden:\n{errors}"
     }
   },
   "settings": {
@@ -2131,7 +2141,18 @@
         "memberStatusUnanswered": "Keine Antwort",
         "memberAttendanceFetchFailed": "Anwesenheitsdaten konnten nicht geladen werden",
         "memberAttendanceEmpty": "Noch keine Antworten",
-        "memberAttendanceLoading": "Wird geladen..."
+        "memberAttendanceLoading": "Wird geladen...",
+        "bulkChange": {
+          "title": "Anwesenheitsstatus gesammelt ändern",
+          "empty": "Keine Ereignisse vorhanden",
+          "statusOpen": "Geöffnet",
+          "statusClosed": "Geschlossen",
+          "statusUnset": "Nicht festgelegt",
+          "competitionLabel": "(Wettkampf)",
+          "selectAll": "Alle auswählen",
+          "openButton": "Auf Geöffnet setzen",
+          "closedButton": "Auf Geschlossen setzen"
+        }
       },
       "groupManagement": {
         "title": "Gruppenverwaltung",
@@ -2319,7 +2340,35 @@
         "deleteFailed": "Wettkampf konnte nicht gelöscht werden",
         "entryButton": "Anmelden",
         "recordButton": "Ergebnis"
-      }
+      },
+      "teamCompetitionEntryModal": {
+        "title": "Anmeldungen für {title}",
+        "totalEntries": "Anmeldungen gesamt: {count}",
+        "entryStatusLabel": "Anmeldestatus",
+        "statusBefore": "Vor Anmeldung",
+        "statusOpen": "Geoeffnet",
+        "statusClosed": "Geschlossen",
+        "selfEntryButton": "Disziplinen anmelden",
+        "confirmTitle": "Anmeldestatus aendern",
+        "confirmBefore": "Anmeldestatus auf \"Vor Anmeldung\" aendern?",
+        "confirmOpen": "Anmeldestatus auf \"Geoeffnet\" aendern?",
+        "confirmClosed": "Anmeldestatus auf \"Geschlossen\" aendern?",
+        "changeStatusAria": "Anmeldestatus auf {status} aendern",
+        "saveFailed": "Aendern des Anmeldestatus fehlgeschlagen",
+        "loading": "Anmeldeinformationen werden geladen...",
+        "fetchFailed": "Anmeldeinformationen konnten nicht geladen werden",
+        "emptyNoEntry": "Noch keine Anmeldungen",
+        "emptyOpenHint": "Anmeldungen sind derzeit geoeffnet",
+        "unknownStyle": "Unbekannte Disziplin",
+        "unknownUser": "Unbekannter Benutzer",
+        "entryTimeLabel": "Meldezeit:",
+        "close": "Schliessen"
+      },
+      "announcementDeleteFailed": "Ankündigung konnte nicht gelöscht werden",
+      "attendanceConfirmEditAfterDeadline": "Sie bearbeiten nach Ablauf der Frist ({dates}). Der Bearbeitungszeitpunkt wird automatisch der Anmerkung hinzugefügt. Trotzdem speichern?",
+      "attendanceStatusPresent": "Anwesend",
+      "attendanceStatusAbsent": "Abwesend",
+      "attendanceStatusOther": "Sonstige"
     },
     "page": {
       "title": "Meine Teams",
@@ -2641,7 +2690,8 @@
       "loadError": "Aktuelle Anwesenheitsinformationen konnten nicht geladen werden",
       "saveSuccess": "Gespeichert",
       "confirmEditAfterDeadline": "Sie bearbeiten nach Ablauf der Frist ({date}). Der Bearbeitungszeitpunkt wird automatisch der Anmerkung hinzugefügt. Trotzdem speichern?",
-      "authRequired": "Authentifizierung erforderlich"
+      "authRequired": "Authentifizierung erforderlich",
+      "saveError": "Anwesenheitsinformationen konnten nicht gespeichert werden"
     },
     "entryCompetitionCard": {
       "placeLabel": "Ort:",
@@ -3278,7 +3328,10 @@
       "errorVideoConfirmFailed": "{name}: Bestätigung des Videos fehlgeschlagen ({status})",
       "errorVideoAssignFailed": "{name}: Zuweisung zum Team fehlgeschlagen ({status})",
       "errorVideoGenericFailed": "{name}: Beim Hochladen des Videos ist ein Fehler aufgetreten",
-      "errorVideoUpload": "Einige Video-Uploads sind fehlgeschlagen:\n{errors}"
+      "errorVideoNoThumbnail": "{name}: Das Video konnte nicht angehängt werden, da kein Vorschaubild erstellt werden konnte",
+      "errorVideoLogResolveFailed": "{name}: Das Video konnte nicht angehängt werden, da keine Zuordnung zu einem gespeicherten Eintrag möglich war",
+      "errorVideoUpload": "Einige Video-Uploads sind fehlgeschlagen:\n{errors}",
+      "videoPartialFailureSaved": "Die Einträge wurden gespeichert, aber einige Videos konnten nicht angehängt werden:\n{errors}"
     },
     "bulkRegister": {
       "wrapperTitle": "Zeitplan-Sammelregistrierung",
@@ -3408,6 +3461,15 @@
       "reactionTimeRange": "Die Reaktionszeit muss zwischen 0,40 und 1,00 Sekunden liegen",
       "timeFormatInvalid": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
       "timeFormatInvalid2": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)"
+    },
+    "lapTime": {
+      "raceLapTab": "Lap nach Distanz",
+      "allLapTab": "All Lap",
+      "noSplits": "Bitte geben Sie Zwischenzeiten ein",
+      "noStyle": "Bitte wählen Sie eine Disziplin aus",
+      "noLap": "Lap-Zeiten können nicht berechnet werden",
+      "distanceHeader": "Distanz",
+      "splitTimeHeader": "Split Time"
     }
   },
   "forms": {

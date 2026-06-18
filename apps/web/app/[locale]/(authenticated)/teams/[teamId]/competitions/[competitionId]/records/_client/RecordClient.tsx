@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthProvider";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import Button from "@/components/ui/Button";
 import dynamic from "next/dynamic";
 import {
@@ -113,7 +114,7 @@ export default function RecordClient({
   const tRecords = useTranslations("competition.records");
   const tStyles = useTranslations("practice.styles");
   const { supabase, subscription } = useAuth();
-  const isPremium = subscription?.plan === "premium";
+  const isPremium = checkIsPremium(subscription);
 
   const relayEvents = useMemo(
     () =>
@@ -1045,6 +1046,9 @@ export default function RecordClient({
       }
 
       // 動画アップロード（保存されたrecordの各メンバーへ）
+      // PracticeLogClient と同様に、partial-failure を集約してユーザーに通知する。
+      // 各ステップの戻り値を確認し、無音破棄 (continue / catch console.error) を排する。
+      const videoUploadErrors: string[] = [];
       for (const entry of styleEntries) {
         for (const mr of entry.memberRecords) {
           if (!mr.videoFile || !mr.id) continue;
@@ -1054,7 +1058,12 @@ export default function RecordClient({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ type: "record", id: mr.id, contentType: "video/mp4" }),
             });
-            if (!uploadUrlRes.ok) continue;
+            if (!uploadUrlRes.ok) {
+              videoUploadErrors.push(
+                tRecords("errorVideoUploadUrlFailed", { name: mr.memberName, status: uploadUrlRes.status }),
+              );
+              continue;
+            }
             const { videoUploadUrl, thumbnailUploadUrl, videoPath: vPath, thumbnailPath: tPath } =
               await uploadUrlRes.json() as {
                 videoUploadUrl: string;
@@ -1062,9 +1071,21 @@ export default function RecordClient({
                 videoPath: string;
                 thumbnailPath: string;
               };
-            await fetch(videoUploadUrl, { method: "PUT", body: mr.videoFile });
+            const putRes = await fetch(videoUploadUrl, { method: "PUT", body: mr.videoFile });
+            if (!putRes.ok) {
+              videoUploadErrors.push(
+                tRecords("errorVideoUploadFailed", { name: mr.memberName, status: putRes.status }),
+              );
+              continue;
+            }
             if (mr.videoThumbnailBlob) {
-              await fetch(thumbnailUploadUrl, { method: "PUT", body: mr.videoThumbnailBlob });
+              const thumbRes = await fetch(thumbnailUploadUrl, { method: "PUT", body: mr.videoThumbnailBlob });
+              if (!thumbRes.ok) {
+                videoUploadErrors.push(
+                  tRecords("errorVideoThumbnailFailed", { name: mr.memberName, status: thumbRes.status }),
+                );
+                continue;
+              }
             }
             const confirmFormData = new FormData();
             confirmFormData.append("type", "record");
@@ -1074,11 +1095,27 @@ export default function RecordClient({
             if (mr.videoThumbnailBlob) {
               confirmFormData.append(
                 "thumbnailBlob",
-                new File([mr.videoThumbnailBlob], "thumbnail.webp", { type: "image/webp" }),
+                new File([mr.videoThumbnailBlob], "thumbnail.jpg", { type: "image/jpeg" }),
               );
             }
-            await fetch("/api/storage/videos/confirm", { method: "POST", body: confirmFormData });
-            await fetch("/api/storage/videos/team-assign", {
+            const confirmRes = await fetch("/api/storage/videos/confirm", {
+              method: "POST",
+              body: confirmFormData,
+            });
+            if (!confirmRes.ok) {
+              videoUploadErrors.push(
+                tRecords("errorVideoConfirmFailed", { name: mr.memberName, status: confirmRes.status }),
+              );
+              continue;
+            }
+            // team-assign はサムネイル必須 (サーバー側で thumbnails/.../{sourceId}.jpg を
+            // コピーする)。サムネイル未生成の場合に team-assign を呼ぶと R2 に存在しない
+            // オブジェクトをコピーしようとして失敗するため、呼ばず通知する。
+            if (!mr.videoThumbnailBlob) {
+              videoUploadErrors.push(tRecords("errorVideoNoThumbnail", { name: mr.memberName }));
+              continue;
+            }
+            const assignRes = await fetch("/api/storage/videos/team-assign", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -1090,10 +1127,25 @@ export default function RecordClient({
                 tempThumbnailPath: tPath,
               }),
             });
+            if (!assignRes.ok) {
+              videoUploadErrors.push(
+                tRecords("errorVideoAssignFailed", { name: mr.memberName, status: assignRes.status }),
+              );
+            }
           } catch (videoErr) {
             console.error("動画アップロードエラー:", videoErr);
+            videoUploadErrors.push(tRecords("errorVideoGenericFailed", { name: mr.memberName }));
           }
         }
+      }
+
+      if (videoUploadErrors.length > 0) {
+        // 記録の保存自体は成功しているが、一部の動画添付に失敗した。
+        // この直後に router.push で遷移するため、ブロッキングな通知 (alert) で
+        // 「保存成功 + 一部動画失敗」を必ず伝えてから遷移する (PracticeLogClient と同じ扱い)。
+        window.alert(
+          tRecords("videoPartialFailureSaved", { errors: videoUploadErrors.join("\n") }),
+        );
       }
 
       router.push(`/teams/${teamId}?tab=competitions`);
@@ -1800,6 +1852,7 @@ export default function RecordClient({
         <TeamVideoUploader
           targetUserId={videoUploadModal.memberUserId}
           targetUserName={videoUploadModal.memberName}
+          isPremium={isPremium}
           onVideoReady={(file, thumbnail) =>
             handleVideoReady(
               videoUploadModal.entryId,

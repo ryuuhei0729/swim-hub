@@ -127,11 +127,19 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
   }, [navigation, teamId]);
 
   const handleAddLog = useCallback((practice: Practice) => {
+    // admin はチーム全体の一括代理入力画面へ、非 admin は従来の本人入力フローへ分岐
+    if (isAdmin) {
+      navigation.navigate("TeamPracticeLogBulkForm", {
+        practiceId: practice.id,
+        teamId,
+      });
+      return;
+    }
     navigation.navigate("PracticeLogForm", {
       practiceId: practice.id,
       teamId,
     });
-  }, [navigation, teamId]);
+  }, [navigation, teamId, isAdmin]);
 
   const handleDelete = useCallback((practice: Practice) => {
     Alert.alert(

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/contexts/AuthProvider";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import Button from "@/components/ui/Button";
 import {
   ArrowLeftIcon,
@@ -124,7 +125,8 @@ export default function PracticeLogClient({
   const tPractice = useTranslations("practice");
   const locale = useLocale();
   const router = useRouter();
-  const { supabase } = useAuth();
+  const { supabase, subscription } = useAuth();
+  const isPremium = checkIsPremium(subscription);
 
   const SWIM_STYLES = useMemo(() => [
     { value: "Fr", label: tPractice("styles.Fr") },
@@ -347,6 +349,7 @@ export default function PracticeLogClient({
         rep_count: number;
         set_count: number;
         distance: number;
+        circle: number | null;
         note: string;
         practice_times: Array<{
           set_number: number;
@@ -363,6 +366,8 @@ export default function PracticeLogClient({
         for (const member of targetMembers) {
           const memberTimes = menu.times.find((t) => t.memberId === member.id)?.times || [];
 
+          const circleSeconds = (Number(menu.circleMin) || 0) * 60 + (Number(menu.circleSec) || 0);
+
           logsData.push({
             user_id: member.user_id,
             style: menu.style,
@@ -370,6 +375,7 @@ export default function PracticeLogClient({
             rep_count: Number(menu.reps) || 1,
             set_count: Number(menu.sets) || 1,
             distance: Number(menu.distance) || 100,
+            circle: circleSeconds > 0 ? circleSeconds : null,
             note: menu.note || "",
             practice_times: memberTimes.map((timeEntry) => ({
               set_number: timeEntry.setNumber,
@@ -441,7 +447,13 @@ export default function PracticeLogClient({
             if (!videoFile) continue;
             const thumbnail = menu.videoThumbnails?.[memberId];
             const logId = logIdMap.get(`${i}_${memberId}`);
-            if (!logId) continue;
+            if (!logId) {
+              // 動画は添付されているが保存済みログと突き合わせできなかった
+              // (RPC の log_ids 不足や順序不整合)。無音破棄せず通知する。
+              const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
+              videoUploadErrors.push(t("practiceLog.errorVideoLogResolveFailed", { name: memberName }));
+              continue;
+            }
             try {
               const uploadUrlRes = await fetch("/api/storage/videos/upload-url", {
                 method: "POST",
@@ -482,13 +494,22 @@ export default function PracticeLogClient({
               if (thumbnail) {
                 confirmFormData.append(
                   "thumbnailBlob",
-                  new File([thumbnail], "thumbnail.webp", { type: "image/webp" }),
+                  new File([thumbnail], "thumbnail.jpg", { type: "image/jpeg" }),
                 );
               }
               const confirmRes = await fetch("/api/storage/videos/confirm", { method: "POST", body: confirmFormData });
               if (!confirmRes.ok) {
                 const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
                 videoUploadErrors.push(t("practiceLog.errorVideoConfirmFailed", { name: memberName, status: confirmRes.status }));
+                continue;
+              }
+              // team-assign はサムネイル必須 (サーバー側で thumbnails/.../{sourceId}.jpg を
+              // コピーする)。サムネイル未生成の場合に空でない tPath を渡すと R2 に存在しない
+              // オブジェクトをコピーしようとして失敗するため、team-assign を呼ばず通知する
+              // (mobile の MissingThumbnailError と同じ扱い)。
+              if (!thumbnail) {
+                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
+                videoUploadErrors.push(t("practiceLog.errorVideoNoThumbnail", { name: memberName }));
                 continue;
               }
               // team-assign APIでターゲットユーザーに移動
@@ -516,7 +537,13 @@ export default function PracticeLogClient({
           }
         }
         if (videoUploadErrors.length > 0) {
-          setSubmitError(t("practiceLog.errorVideoUpload", { errors: videoUploadErrors.join("\n") }));
+          // 練習ログの保存自体は成功しているが、一部の動画添付に失敗した。
+          // この直後に router.push で遷移するとインラインのエラー表示が見えないため、
+          // ブロッキングな通知 (alert) で「保存成功 + 一部動画失敗」を必ず伝えてから遷移する
+          // (mobile の partial-failure 通知と同じ扱い)。
+          window.alert(
+            t("practiceLog.videoPartialFailureSaved", { errors: videoUploadErrors.join("\n") }),
+          );
         }
       }
 
@@ -1188,6 +1215,7 @@ export default function PracticeLogClient({
         <TeamVideoUploader
           targetUserId={videoUploadModal.memberId}
           targetUserName={getMemberName(videoUploadModal.memberId)}
+          isPremium={isPremium}
           onVideoReady={(file, thumbnail) =>
             handleVideoReady(videoUploadModal.menuId, videoUploadModal.memberId, file, thumbnail)
           }

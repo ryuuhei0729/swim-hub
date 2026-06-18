@@ -13,7 +13,7 @@ export interface TeamTabsProps {
 
 const BASE_TABS: { id: TeamTabType; nameKey: string; icon: keyof typeof Feather.glyphMap; adminOnly?: boolean }[] = [
   { id: "members", nameKey: "teams.mobile.tabMembers", icon: "users" },
-  { id: "groups", nameKey: "teams.mobile.tabGroups", icon: "layers" },
+  { id: "groups", nameKey: "teams.mobile.tabGroups", icon: "layers", adminOnly: true },
   { id: "practices", nameKey: "teams.mobile.tabPractices", icon: "clock" },
   { id: "competitions", nameKey: "teams.mobile.tabCompetitions", icon: "award" },
   { id: "attendance", nameKey: "teams.mobile.tabAttendance", icon: "clipboard" },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Pressable,
   Alert,
+  Modal,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -240,6 +241,228 @@ const EventCard: React.FC<EventCardProps> = ({
   );
 };
 
+// 月ごとにイベントをグルーピング（web BulkChangeModal.groupEventsByMonth 相当）
+interface EventMonthGroup {
+  year: number;
+  month: number;
+  events: TeamEvent[];
+}
+
+function groupEventsByMonth(events: TeamEvent[]): EventMonthGroup[] {
+  const grouped: Record<string, EventMonthGroup> = {};
+  events.forEach((event) => {
+    const date = new Date(event.date);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const key = `${year}-${month}`;
+    if (!grouped[key]) {
+      grouped[key] = { year, month, events: [] };
+    }
+    grouped[key].events.push(event);
+  });
+  return Object.values(grouped).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.month - b.month;
+  });
+}
+
+interface BulkChangeSheetProps {
+  visible: boolean;
+  events: TeamEvent[];
+  isSaving: boolean;
+  onClose: () => void;
+  onBulkUpdate: (selectedEventIds: Set<string>, status: "open" | "closed") => Promise<void>;
+  t: TFunction;
+  locale: SupportedLocale;
+}
+
+// 一括ステータス変更ボトムシート（web BulkChangeModal 相当）。
+// TeamCompetitionEntryModal のシート UI パターンに揃える。
+const BulkChangeSheet: React.FC<BulkChangeSheetProps> = ({
+  visible,
+  events,
+  isSaving,
+  onClose,
+  onBulkUpdate,
+  t,
+  locale,
+}) => {
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+
+  const groupedEvents = useMemo(() => groupEventsByMonth(events), [events]);
+
+  const handleToggleMonth = (monthEvents: TeamEvent[]) => {
+    const monthEventIds = monthEvents.map((e) => e.id);
+    const allSelected = monthEventIds.every((id) => selectedEventIds.has(id));
+    setSelectedEventIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        monthEventIds.forEach((id) => next.delete(id));
+      } else {
+        monthEventIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleToggleEvent = (eventId: string) => {
+    setSelectedEventIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  };
+
+  const isMonthAllSelected = (monthEvents: TeamEvent[]) =>
+    monthEvents.length > 0 && monthEvents.every((e) => selectedEventIds.has(e.id));
+
+  const getStatusLabel = (status: "open" | "closed" | null | undefined) => {
+    if (status === "open") return t("teams.mobile.adminAttendance.bulkChange.statusOpen");
+    if (status === "closed") return t("teams.mobile.adminAttendance.bulkChange.statusClosed");
+    return t("teams.mobile.adminAttendance.bulkChange.statusUnset");
+  };
+
+  const getStatusTextStyle = (status: "open" | "closed" | null | undefined) => {
+    if (status === "open") return styles.bulkStatusOpen;
+    if (status === "closed") return styles.bulkStatusClosed;
+    return styles.bulkStatusUnset;
+  };
+
+  const handleUpdate = async (status: "open" | "closed") => {
+    await onBulkUpdate(selectedEventIds, status);
+    setSelectedEventIds(new Set());
+  };
+
+  const handleClose = () => {
+    setSelectedEventIds(new Set());
+    onClose();
+  };
+
+  const hasSelection = selectedEventIds.size > 0;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <View style={styles.bulkOverlay}>
+        <View style={styles.bulkSheet}>
+          <View style={styles.bulkHeader}>
+            <Text style={styles.bulkTitle} numberOfLines={1}>
+              {t("teams.mobile.adminAttendance.bulkChange.title")}
+            </Text>
+            <Pressable onPress={handleClose} style={styles.bulkCloseIcon} accessibilityRole="button">
+              <Feather name="x" size={22} color="#6B7280" />
+            </Pressable>
+          </View>
+
+          {groupedEvents.length === 0 ? (
+            <View style={styles.bulkEmptyBlock}>
+              <Text style={styles.bulkEmptyText}>
+                {t("teams.mobile.adminAttendance.bulkChange.empty")}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.bulkBody} showsVerticalScrollIndicator={false}>
+              {groupedEvents.map((group) => {
+                const allSelected = isMonthAllSelected(group.events);
+                return (
+                  <View key={`${group.year}-${group.month}`} style={styles.bulkMonthGroup}>
+                    <Pressable
+                      style={styles.bulkMonthHeader}
+                      onPress={() => handleToggleMonth(group.events)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: allSelected }}
+                    >
+                      <Feather
+                        name={allSelected ? "check-square" : "square"}
+                        size={18}
+                        color={allSelected ? "#2563EB" : "#9CA3AF"}
+                      />
+                      <Text style={styles.bulkMonthLabel}>
+                        {t("common.yearMonth", { year: group.year, month: group.month })}
+                      </Text>
+                      <Text style={styles.bulkSelectAllHint}>
+                        {t("teams.mobile.adminAttendance.bulkChange.selectAll")}
+                      </Text>
+                    </Pressable>
+
+                    {group.events.map((event) => {
+                      const isSelected = selectedEventIds.has(event.id);
+                      const title =
+                        event.type === "competition"
+                          ? (event.title ??
+                            t("teams.mobile.adminAttendance.defaultCompetition"))
+                          : t("teams.mobile.adminAttendance.defaultPractice");
+                      return (
+                        <Pressable
+                          key={event.id}
+                          style={styles.bulkEventRow}
+                          onPress={() => handleToggleEvent(event.id)}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: isSelected }}
+                        >
+                          <Feather
+                            name={isSelected ? "check-square" : "square"}
+                            size={16}
+                            color={isSelected ? "#2563EB" : "#9CA3AF"}
+                          />
+                          <View style={styles.bulkEventInfo}>
+                            <Text style={styles.bulkEventDate}>
+                              {formatDate(event.date, "shortWithWeekday", locale)}
+                            </Text>
+                            {event.type === "competition" && (
+                              <Text style={styles.bulkCompetitionLabel}>
+                                {t("teams.mobile.adminAttendance.bulkChange.competitionLabel")}
+                              </Text>
+                            )}
+                            <Text style={styles.bulkEventTitle} numberOfLines={1}>
+                              {title}
+                            </Text>
+                            <Text style={[styles.bulkEventStatus, getStatusTextStyle(event.attendance_status)]}>
+                              [{getStatusLabel(event.attendance_status)}]
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {groupedEvents.length > 0 && (
+            <View style={styles.bulkFooter}>
+              <Pressable
+                style={[styles.bulkActionButton, styles.bulkOpenButton, (!hasSelection || isSaving) && styles.bulkActionDisabled]}
+                onPress={() => handleUpdate("open")}
+                disabled={!hasSelection || isSaving}
+                accessibilityRole="button"
+              >
+                <Text style={styles.bulkActionText}>
+                  {t("teams.mobile.adminAttendance.bulkChange.openButton")}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.bulkActionButton, styles.bulkClosedButton, (!hasSelection || isSaving) && styles.bulkActionDisabled]}
+                onPress={() => handleUpdate("closed")}
+                disabled={!hasSelection || isSaving}
+                accessibilityRole="button"
+              >
+                <Text style={styles.bulkActionText}>
+                  {t("teams.mobile.adminAttendance.bulkChange.closedButton")}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ teamId }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
@@ -248,6 +471,8 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
   const [events, setEvents] = useState<TeamEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [bulkSheetVisible, setBulkSheetVisible] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const updateStatusMutation = useUpdateAttendanceStatusMutation(supabase);
 
@@ -352,6 +577,35 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
     [t, updateStatusMutation, events],
   );
 
+  // 選択イベントに対して受付ステータスを一括変更（web useAdminAttendance:131-179 相当）。
+  // 選択 event を順に mutateAsync し、完了後に再読込してシートを閉じる。
+  const handleBulkUpdate = useCallback(
+    async (selectedEventIds: Set<string>, status: "open" | "closed") => {
+      if (selectedEventIds.size === 0) return;
+      setBulkSaving(true);
+      try {
+        const targets = events.filter((e) => selectedEventIds.has(e.id));
+        for (const event of targets) {
+          await updateStatusMutation.mutateAsync({
+            eventId: event.id,
+            eventType: event.type,
+            status,
+          });
+        }
+        await loadFutureEvents();
+        setBulkSheetVisible(false);
+      } catch (err) {
+        console.error("AdminMonthlyAttendance: failed to bulk update status", err);
+        const msg =
+          err instanceof Error ? err.message : t("teams.mobile.adminAttendance.saveFailed");
+        Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);
+      } finally {
+        setBulkSaving(false);
+      }
+    },
+    [events, updateStatusMutation, loadFutureEvents, t],
+  );
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -390,26 +644,50 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
           <Text style={styles.emptyText}>{t("teams.mobile.adminAttendance.empty")}</Text>
         </View>
       ) : (
-        <View style={styles.eventList}>
-          {events.map((event) => {
-            const isSaving =
-              updateStatusMutation.isPending &&
-              updateStatusMutation.variables?.eventId === event.id;
+        <>
+          <Pressable
+            style={styles.bulkChangeButton}
+            onPress={() => setBulkSheetVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("teams.mobile.adminAttendance.bulkChange.title")}
+          >
+            <Feather name="check-square" size={15} color="#2563EB" />
+            <Text style={styles.bulkChangeButtonText}>
+              {t("teams.mobile.adminAttendance.bulkChange.title")}
+            </Text>
+          </Pressable>
 
-            return (
-              <EventCard
-                key={`${event.type}-${event.id}`}
-                event={event}
-                isSaving={isSaving}
-                onToggleStatus={handleToggleStatus}
-                t={t}
-                locale={locale}
-                supabase={supabase}
-              />
-            );
-          })}
-        </View>
+          <View style={styles.eventList}>
+            {events.map((event) => {
+              const isSaving =
+                updateStatusMutation.isPending &&
+                updateStatusMutation.variables?.eventId === event.id;
+
+              return (
+                <EventCard
+                  key={`${event.type}-${event.id}`}
+                  event={event}
+                  isSaving={isSaving}
+                  onToggleStatus={handleToggleStatus}
+                  t={t}
+                  locale={locale}
+                  supabase={supabase}
+                />
+              );
+            })}
+          </View>
+        </>
       )}
+
+      <BulkChangeSheet
+        visible={bulkSheetVisible}
+        events={events}
+        isSaving={bulkSaving}
+        onClose={() => setBulkSheetVisible(false)}
+        onBulkUpdate={handleBulkUpdate}
+        t={t}
+        locale={locale}
+      />
     </ScrollView>
   );
 };
@@ -666,5 +944,156 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
     fontWeight: "500",
+  },
+  bulkChangeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    backgroundColor: "#EFF6FF",
+    marginBottom: 12,
+  },
+  bulkChangeButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+  bulkOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  bulkSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: "88%",
+    overflow: "hidden",
+  },
+  bulkHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    gap: 8,
+  },
+  bulkTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  bulkCloseIcon: {
+    padding: 4,
+  },
+  bulkBody: {
+    padding: 16,
+    gap: 16,
+  },
+  bulkEmptyBlock: {
+    padding: 32,
+    alignItems: "center",
+  },
+  bulkEmptyText: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  bulkMonthGroup: {
+    gap: 6,
+  },
+  bulkMonthHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  bulkMonthLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+    flex: 1,
+  },
+  bulkSelectAllHint: {
+    fontSize: 12,
+    color: "#2563EB",
+    fontWeight: "500",
+  },
+  bulkEventRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+    paddingLeft: 8,
+  },
+  bulkEventInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  bulkEventDate: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  bulkCompetitionLabel: {
+    fontSize: 11,
+    color: "#7C3AED",
+  },
+  bulkEventTitle: {
+    fontSize: 13,
+    color: "#374151",
+    flexShrink: 1,
+  },
+  bulkEventStatus: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  bulkStatusOpen: {
+    color: "#2563EB",
+  },
+  bulkStatusClosed: {
+    color: "#DC2626",
+  },
+  bulkStatusUnset: {
+    color: "#6B7280",
+  },
+  bulkFooter: {
+    flexDirection: "row",
+    gap: 12,
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  bulkActionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  bulkOpenButton: {
+    backgroundColor: "#2563EB",
+  },
+  bulkClosedButton: {
+    backgroundColor: "#DC2626",
+  },
+  bulkActionDisabled: {
+    opacity: 0.5,
+  },
+  bulkActionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });

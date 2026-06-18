@@ -13,6 +13,7 @@
  */
 
 import React from "react";
+import { Text, Pressable } from "react-native";
 import { describe, it, vi, beforeEach, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
@@ -21,6 +22,10 @@ const mocks = vi.hoisted(() => ({
   useDeleteTeamCompetitionMutation: vi.fn(),
   navigate: vi.fn(),
   supabase: {},
+  // モーダルが描画する子コンポーネントを差し替えて、TeamCompetitionList 単体の
+  // 「エントリーボタン押下でモーダルが開く」挙動だけを検証する。
+  // (モーダル本体の検証は TeamCompetitionEntryModal.test.tsx)
+  entryModalSpy: vi.fn(),
 }));
 
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
@@ -34,6 +39,23 @@ vi.mock("@/contexts/AuthProvider", () => ({
 
 vi.mock("@react-navigation/native", () => ({
   useNavigation: vi.fn(() => ({ navigate: mocks.navigate })),
+}));
+
+// モーダルはスタブ化: props を記録するだけ。visible のときだけ testID を描画する。
+vi.mock("../TeamCompetitionEntryModal", () => ({
+  TeamCompetitionEntryModal: (props: Record<string, unknown>) => {
+    mocks.entryModalSpy(props);
+    if (!props.visible) return null;
+    return React.createElement(
+      Pressable,
+      {
+        accessibilityRole: "button",
+        accessibilityLabel: "modal-self-entry",
+        onPress: props.onSelfEntry as () => void,
+      },
+      React.createElement(Text, null, "ENTRY_MODAL_OPEN"),
+    );
+  },
 }));
 
 import { TeamCompetitionList } from "../TeamCompetitionList";
@@ -228,9 +250,15 @@ describe("TeamCompetitionList", () => {
     expect(screen.getByText("記録")).toBeDefined();
   });
 
-  // [S3-V-B1] エントリーボタン押下で EntryForm + { competitionId, date, teamId } で navigate される
-  it("[S3-V-B1] エントリーボタンを押すと EntryForm に { competitionId, date, teamId } で navigate される", () => {
-    const comp = makeCompetition({ id: "c-ent", date: "2026-09-01", title: "秋季大会" });
+  // 仕様変更 (Web パリティ): エントリーボタンは直接 EntryForm へ遷移せず、受付状況管理モーダルを開く。
+  // [V-02 / Sprint Contract] エントリーボタン押下でモーダルが開き、対象大会の props が渡る
+  it("エントリーボタンを押すと受付状況モーダルが開き、対象大会の props が渡る", () => {
+    const comp = makeCompetition({
+      id: "c-ent",
+      date: "2026-09-01",
+      title: "秋季大会",
+      entry_status: "open",
+    });
     mocks.useTeamCompetitionsQuery.mockReturnValue({
       data: [comp],
       isLoading: false,
@@ -239,18 +267,76 @@ describe("TeamCompetitionList", () => {
       refetch: vi.fn(),
     });
 
-    render(<TeamCompetitionList teamId="team-ent" isAdmin={false} />);
+    render(<TeamCompetitionList teamId="team-ent" isAdmin={true} />);
+
+    // 押下前はモーダル未表示
+    expect(screen.queryByText("ENTRY_MODAL_OPEN")).toBeNull();
 
     const entryButton = screen.getByRole("button", { name: "エントリー" });
     fireEvent.click(entryButton);
 
+    // モーダルが開く (visible=true で testID が描画される)
+    expect(screen.getByText("ENTRY_MODAL_OPEN")).toBeDefined();
+
+    // 直接 EntryForm へ navigate していないこと (旧挙動の回帰防止)
+    expect(mocks.navigate).not.toHaveBeenCalledWith("EntryForm", expect.anything());
+
+    // 正しい props がモーダルへ渡されること
+    expect(mocks.entryModalSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visible: true,
+        competitionId: "c-ent",
+        competitionTitle: "秋季大会",
+        teamId: "team-ent",
+        entryStatus: "open",
+        isAdmin: true,
+      }),
+    );
+  });
+
+  // [V-06 / Sprint Contract] モーダル内「種目をエントリー」(onSelfEntry) で EntryForm へ遷移する (セルフエントリー機能維持)
+  it("モーダルの onSelfEntry で EntryForm に { competitionId, date, teamId } で navigate される", () => {
+    const comp = makeCompetition({ id: "c-self", date: "2026-09-01", title: "秋季大会" });
+    mocks.useTeamCompetitionsQuery.mockReturnValue({
+      data: [comp],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamCompetitionList teamId="team-self" isAdmin={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
+    // モーダル内のセルフエントリー導線を押下 (スタブの onSelfEntry を発火)
+    fireEvent.click(screen.getByText("ENTRY_MODAL_OPEN"));
+
     expect(mocks.navigate).toHaveBeenCalledWith(
       "EntryForm",
       expect.objectContaining({
-        competitionId: "c-ent",
+        competitionId: "c-self",
         date: "2026-09-01",
-        teamId: "team-ent",
+        teamId: "team-self",
       }),
+    );
+  });
+
+  // entry_status が null/未定義でもモーダルへ "before" 相当で渡る (安全表示)
+  it("entry_status が未指定のときモーダルへ entryStatus='before' が渡る", () => {
+    const comp = makeCompetition({ id: "c-null", title: "状態なし大会", entry_status: undefined });
+    mocks.useTeamCompetitionsQuery.mockReturnValue({
+      data: [comp],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamCompetitionList teamId="team-null" isAdmin={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
+
+    expect(mocks.entryModalSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ entryStatus: "before" }),
     );
   });
 

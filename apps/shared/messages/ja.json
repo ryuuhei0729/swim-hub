@@ -52,6 +52,7 @@
     "appName": "SwimHub",
     "language": "言語",
     "alertErrorTitle": "エラー",
+    "notice": "お知らせ",
     "loading": "読み込み中...",
     "error": "エラーが発生しました",
     "save": "保存",
@@ -1010,7 +1011,8 @@
       "settingsButton": "設定",
       "profileNotFound": "プロフィールが見つかりません",
       "bulkInput": "一括入力",
-      "bulkInputAria": "ベストタイムを一括入力する"
+      "bulkInputAria": "ベストタイムを一括入力する",
+      "pageTitle": "マイページ"
     },
     "title": "マイページ",
     "subtitle": "プロフィールとベストタイムを管理します",
@@ -1456,7 +1458,15 @@
         "splitDeleteFailed": "スプリットタイムの削除に失敗しました: {detail}",
         "recordDeleteFailed": "既存レコードの削除に失敗しました: {detail}",
         "saveFailed": "保存中にエラーが発生しました。もう一度お試しください。"
-      }
+      },
+      "errorVideoUploadUrlFailed": "{name}: アップロードURL取得に失敗しました ({status})",
+      "errorVideoUploadFailed": "{name}: 動画のアップロードに失敗しました ({status})",
+      "errorVideoThumbnailFailed": "{name}: サムネイルのアップロードに失敗しました ({status})",
+      "errorVideoConfirmFailed": "{name}: 動画の確認処理に失敗しました ({status})",
+      "errorVideoAssignFailed": "{name}: チーム割り当てに失敗しました ({status})",
+      "errorVideoGenericFailed": "{name}: 動画アップロード中にエラーが発生しました",
+      "errorVideoNoThumbnail": "{name}: サムネイルを生成できなかったため動画を添付できませんでした",
+      "videoPartialFailureSaved": "記録は保存されましたが、一部の動画を添付できませんでした:\n{errors}"
     }
   },
   "settings": {
@@ -2131,7 +2141,18 @@
         "memberStatusUnanswered": "未回答",
         "memberAttendanceFetchFailed": "出欠情報の取得に失敗しました",
         "memberAttendanceEmpty": "出欠回答がありません",
-        "memberAttendanceLoading": "読み込み中..."
+        "memberAttendanceLoading": "読み込み中...",
+        "bulkChange": {
+          "title": "まとめて出欠状態を変更",
+          "empty": "イベントがありません",
+          "statusOpen": "受付中",
+          "statusClosed": "締切",
+          "statusUnset": "未設定",
+          "competitionLabel": "（大会）",
+          "selectAll": "全選択",
+          "openButton": "受付中にする",
+          "closedButton": "締切にする"
+        }
       },
       "groupManagement": {
         "title": "グループ管理",
@@ -2319,7 +2340,35 @@
         "deleteFailed": "大会の削除に失敗しました",
         "entryButton": "エントリー",
         "recordButton": "記録"
-      }
+      },
+      "teamCompetitionEntryModal": {
+        "title": "{title} のエントリー",
+        "totalEntries": "エントリー総数: {count}件",
+        "entryStatusLabel": "エントリー受付状況",
+        "statusBefore": "受付前",
+        "statusOpen": "受付中",
+        "statusClosed": "受付終了",
+        "selfEntryButton": "種目をエントリー",
+        "confirmTitle": "受付状況を変更",
+        "confirmBefore": "エントリー受付状況を「受付前」に変更しますか？",
+        "confirmOpen": "エントリー受付状況を「受付中」に変更しますか？",
+        "confirmClosed": "エントリー受付状況を「受付終了」に変更しますか？",
+        "changeStatusAria": "受付状況を{status}に変更",
+        "saveFailed": "受付状況の変更に失敗しました",
+        "loading": "エントリー情報を読み込み中...",
+        "fetchFailed": "エントリー情報の取得に失敗しました",
+        "emptyNoEntry": "まだエントリーがありません",
+        "emptyOpenHint": "現在エントリー受付中です",
+        "unknownStyle": "種目不明",
+        "unknownUser": "不明なユーザー",
+        "entryTimeLabel": "エントリータイム:",
+        "close": "閉じる"
+      },
+      "announcementDeleteFailed": "お知らせの削除に失敗しました",
+      "attendanceConfirmEditAfterDeadline": "提出締め切り後の編集になります（{dates}）。備考に編集日時が自動的に追加されます。保存しますか？",
+      "attendanceStatusPresent": "出席",
+      "attendanceStatusAbsent": "欠席",
+      "attendanceStatusOther": "その他"
     },
     "page": {
       "title": "マイチーム",
@@ -2641,7 +2690,8 @@
       "loadError": "直近の出欠情報の取得に失敗しました",
       "saveSuccess": "保存しました",
       "confirmEditAfterDeadline": "提出締め切り後の編集になります（{date}）。備考に編集日時が自動的に追加されます。保存しますか？",
-      "authRequired": "認証が必要です"
+      "authRequired": "認証が必要です",
+      "saveError": "出欠情報の保存に失敗しました"
     },
     "entryCompetitionCard": {
       "placeLabel": "場所:",
@@ -3278,7 +3328,10 @@
       "errorVideoConfirmFailed": "{name}: 動画の確認処理に失敗しました ({status})",
       "errorVideoAssignFailed": "{name}: チーム割り当てに失敗しました ({status})",
       "errorVideoGenericFailed": "{name}: 動画アップロード中にエラーが発生しました",
-      "errorVideoUpload": "一部の動画アップロードに失敗しました:\n{errors}"
+      "errorVideoNoThumbnail": "{name}: サムネイルを生成できなかったため動画を添付できませんでした",
+      "errorVideoLogResolveFailed": "{name}: 保存済みログとの突き合わせに失敗したため動画を添付できませんでした",
+      "errorVideoUpload": "一部の動画アップロードに失敗しました:\n{errors}",
+      "videoPartialFailureSaved": "記録は保存されましたが、一部の動画を添付できませんでした:\n{errors}"
     },
     "bulkRegister": {
       "wrapperTitle": "スケジュール一括登録",
@@ -3408,6 +3461,15 @@
       "reactionTimeRange": "反応時間は0.40〜1.00秒の範囲で入力してください",
       "timeFormatInvalid": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
       "timeFormatInvalid2": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）"
+    },
+    "lapTime": {
+      "raceLapTab": "距離別 Lap",
+      "allLapTab": "All Lap",
+      "noSplits": "スプリットタイムを入力してください",
+      "noStyle": "種目を選択してください",
+      "noLap": "ラップタイムを計算できません",
+      "distanceHeader": "距離",
+      "splitTimeHeader": "Split Time"
     }
   },
   "forms": {

@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -22,8 +22,17 @@ import type { Competition } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { formatDate } from "@apps/shared/utils/date";
+import { TeamCompetitionEntryModal } from "./TeamCompetitionEntryModal";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
+
+type EntryStatus = "before" | "open" | "closed";
+
+const ENTRY_STATUS_BADGE: Record<EntryStatus, { container: object; text: object }> = {
+  before: { container: { backgroundColor: "#F3F4F6" }, text: { color: "#374151" } },
+  open: { container: { backgroundColor: "#DCFCE7" }, text: { color: "#166534" } },
+  closed: { container: { backgroundColor: "#FEE2E2" }, text: { color: "#991B1B" } },
+};
 
 interface TeamCompetitionListProps {
   teamId: string;
@@ -51,6 +60,8 @@ const CompetitionItem = React.memo(function CompetitionItem({
     competition.pool_type === 1
       ? t("teams.mobile.poolTypeLong")
       : t("teams.mobile.poolTypeShort");
+  const entryStatus = (competition.entry_status ?? "before") as EntryStatus;
+  const badge = ENTRY_STATUS_BADGE[entryStatus];
 
   return (
     <View style={styles.item}>
@@ -64,6 +75,13 @@ const CompetitionItem = React.memo(function CompetitionItem({
             <Text style={styles.itemTitle} numberOfLines={1}>
               {competition.title || t("teams.mobile.fallbackCompetitionTitle")}
             </Text>
+            {competition.entry_status && (
+              <View style={[styles.entryStatusBadge, badge.container]}>
+                <Text style={[styles.entryStatusBadgeText, badge.text]}>
+                  {t(`teams.competitions.entryStatus.${entryStatus}`)}
+                </Text>
+              </View>
+            )}
           </View>
           {isAdmin && (
             <View style={styles.itemActions}>
@@ -140,6 +158,9 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
   const { data: competitions, isLoading, isError, error, refetch } = useTeamCompetitionsQuery(supabase, teamId);
   const deleteMutation = useDeleteTeamCompetitionMutation(supabase);
 
+  // エントリー受付状況モーダルの対象大会
+  const [entryModalCompetition, setEntryModalCompetition] = useState<Competition | null>(null);
+
   const handleAdd = useCallback(() => {
     navigation.navigate("CompetitionForm", {
       teamId,
@@ -155,7 +176,17 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     });
   }, [navigation, teamId]);
 
+  // 「エントリー」ボタン: Web パリティで受付状況管理モーダルを開く
   const handleEntry = useCallback((competition: Competition) => {
+    setEntryModalCompetition(competition);
+  }, []);
+
+  // モーダル内の「種目をエントリー」: 既存の選手セルフエントリー画面へ遷移（機能維持）。
+  // web は受付中(open)の大会のみセルフエントリーに到達するため(useTeamEntry.ts:59-64)、
+  // 受付中以外では導線を出さない（モーダル側で非表示だが二重ガード）。
+  const handleSelfEntry = useCallback((competition: Competition) => {
+    if ((competition.entry_status ?? "before") !== "open") return;
+    setEntryModalCompetition(null);
     navigation.navigate("EntryForm", {
       competitionId: competition.id,
       date: competition.date,
@@ -164,12 +195,20 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
   }, [navigation, teamId]);
 
   const handleRecord = useCallback((competition: Competition) => {
+    // admin は一括代理入力画面へ、非 admin は従来の本人入力フローへ分岐
+    if (isAdmin) {
+      navigation.navigate("TeamRecordBulkForm", {
+        competitionId: competition.id,
+        teamId,
+      });
+      return;
+    }
     navigation.navigate("RecordLogForm", {
       competitionId: competition.id,
       date: competition.date,
       teamId,
     });
-  }, [navigation, teamId]);
+  }, [navigation, teamId, isAdmin]);
 
   const handleDelete = useCallback((competition: Competition) => {
     Alert.alert(
@@ -269,6 +308,21 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {entryModalCompetition && (
+        <TeamCompetitionEntryModal
+          visible={entryModalCompetition !== null}
+          onClose={() => setEntryModalCompetition(null)}
+          competitionId={entryModalCompetition.id}
+          competitionTitle={
+            entryModalCompetition.title || t("teams.mobile.fallbackCompetitionTitle")
+          }
+          teamId={teamId}
+          entryStatus={entryModalCompetition.entry_status ?? "before"}
+          isAdmin={isAdmin}
+          onSelfEntry={() => handleSelfEntry(entryModalCompetition)}
+        />
+      )}
     </View>
   );
 }
@@ -339,6 +393,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
     flex: 1,
+  },
+  entryStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    flexShrink: 0,
+  },
+  entryStatusBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   itemActions: {
     flexDirection: "row",

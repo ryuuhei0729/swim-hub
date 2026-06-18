@@ -12,6 +12,8 @@ import { RecordFormScreen } from "@/screens/RecordFormScreen";
 import { CompetitionBasicFormScreen } from "@/screens/CompetitionBasicFormScreen";
 import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
 import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
+import { TeamRecordBulkFormScreen } from "@/screens/TeamRecordBulkFormScreen";
+import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
 import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { BulkBestTimeScreen } from "@/screens/BulkBestTimeScreen";
@@ -121,6 +123,22 @@ export const MainStack: React.FC = () => {
         options={{
           ...baseHeaderOptions,
           title: t("navigation.mobile.titles.recordInput"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamRecordBulkForm"
+        component={TeamRecordBulkFormScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("teams.record.pageTitle"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamPracticeLogBulkForm"
+        component={TeamPracticeLogBulkFormScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("teamsAdmin.practiceLog.pageTitle"),
         }}
       />
       <Stack.Screen

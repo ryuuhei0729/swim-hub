@@ -1,4 +1,5 @@
 export { MemberDetailModal } from "./member-detail";
+export { MemberSelectModal } from "./MemberSelectModal";
 export { MyMonthlyAttendance } from "./MyMonthlyAttendance";
 export { PendingMembersSection } from "./PendingMembersSection";
 export { TeamCreateModal } from "./TeamCreateModal";

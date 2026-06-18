@@ -52,6 +52,7 @@
     "appName": "SwimHub",
     "language": "언어",
     "alertErrorTitle": "오류",
+    "notice": "알림",
     "loading": "불러오는 중...",
     "error": "오류가 발생했습니다",
     "save": "저장",
@@ -1010,7 +1011,8 @@
       "settingsButton": "설정",
       "profileNotFound": "프로필을 찾을 수 없습니다",
       "bulkInput": "일괄 입력",
-      "bulkInputAria": "베스트 타임을 일괄 입력하기"
+      "bulkInputAria": "베스트 타임을 일괄 입력하기",
+      "pageTitle": "마이페이지"
     },
     "title": "마이페이지",
     "subtitle": "프로필과 베스트 타임을 관리합니다",
@@ -1456,7 +1458,15 @@
         "splitDeleteFailed": "스플릿 기록 삭제에 실패했습니다: {detail}",
         "recordDeleteFailed": "기존 기록 삭제에 실패했습니다: {detail}",
         "saveFailed": "저장 중 오류가 발생했습니다. 다시 시도해 주세요."
-      }
+      },
+      "errorVideoUploadUrlFailed": "{name}: 업로드 URL 가져오기에 실패했습니다 ({status})",
+      "errorVideoUploadFailed": "{name}: 동영상 업로드에 실패했습니다 ({status})",
+      "errorVideoThumbnailFailed": "{name}: 썸네일 업로드에 실패했습니다 ({status})",
+      "errorVideoConfirmFailed": "{name}: 동영상 확인 처리에 실패했습니다 ({status})",
+      "errorVideoAssignFailed": "{name}: 팀 할당에 실패했습니다 ({status})",
+      "errorVideoGenericFailed": "{name}: 동영상 업로드 중 오류가 발생했습니다",
+      "errorVideoNoThumbnail": "{name}: 썸네일을 생성하지 못해 동영상을 첨부하지 못했습니다",
+      "videoPartialFailureSaved": "기록은 저장되었지만 일부 동영상을 첨부하지 못했습니다:\n{errors}"
     }
   },
   "settings": {
@@ -2131,7 +2141,18 @@
         "memberStatusUnanswered": "미응답",
         "memberAttendanceFetchFailed": "출결 정보를 불러오지 못했습니다",
         "memberAttendanceEmpty": "출결 응답이 없습니다",
-        "memberAttendanceLoading": "불러오는 중..."
+        "memberAttendanceLoading": "불러오는 중...",
+        "bulkChange": {
+          "title": "출석 상태 일괄 변경",
+          "empty": "이벤트가 없습니다",
+          "statusOpen": "접수 중",
+          "statusClosed": "마감",
+          "statusUnset": "미설정",
+          "competitionLabel": "（대회）",
+          "selectAll": "전체 선택",
+          "openButton": "접수 중으로 변경",
+          "closedButton": "마감으로 변경"
+        }
       },
       "groupManagement": {
         "title": "그룹 관리",
@@ -2319,7 +2340,35 @@
         "deleteFailed": "대회 삭제에 실패했습니다",
         "entryButton": "엔트리",
         "recordButton": "기록"
-      }
+      },
+      "teamCompetitionEntryModal": {
+        "title": "{title} 엔트리",
+        "totalEntries": "총 엔트리: {count}건",
+        "entryStatusLabel": "엔트리 접수 상태",
+        "statusBefore": "접수 전",
+        "statusOpen": "접수 중",
+        "statusClosed": "접수 마감",
+        "selfEntryButton": "종목 엔트리",
+        "confirmTitle": "접수 상태 변경",
+        "confirmBefore": "엔트리 접수 상태를 \"접수 전\"으로 변경하시겠습니까?",
+        "confirmOpen": "엔트리 접수 상태를 \"접수 중\"으로 변경하시겠습니까?",
+        "confirmClosed": "엔트리 접수 상태를 \"접수 마감\"으로 변경하시겠습니까?",
+        "changeStatusAria": "접수 상태를 {status}(으)로 변경",
+        "saveFailed": "접수 상태 변경에 실패했습니다",
+        "loading": "엔트리 정보를 불러오는 중...",
+        "fetchFailed": "엔트리 정보를 가져오지 못했습니다",
+        "emptyNoEntry": "아직 엔트리가 없습니다",
+        "emptyOpenHint": "현재 엔트리 접수 중입니다",
+        "unknownStyle": "종목 불명",
+        "unknownUser": "알 수 없는 사용자",
+        "entryTimeLabel": "엔트리 기록:",
+        "close": "닫기"
+      },
+      "announcementDeleteFailed": "공지사항 삭제에 실패했습니다",
+      "attendanceConfirmEditAfterDeadline": "제출 마감 후의 편집입니다 ({dates}). 비고에 편집 일시가 자동으로 추가됩니다. 저장하시겠습니까?",
+      "attendanceStatusPresent": "출석",
+      "attendanceStatusAbsent": "결석",
+      "attendanceStatusOther": "기타"
     },
     "page": {
       "title": "내 팀",
@@ -2641,7 +2690,8 @@
       "loadError": "최근 출결 정보를 불러오지 못했습니다",
       "saveSuccess": "저장했습니다",
       "confirmEditAfterDeadline": "제출 마감 후의 편집입니다 ({date}). 비고에 편집 일시가 자동으로 추가됩니다. 저장하시겠습니까?",
-      "authRequired": "인증이 필요합니다"
+      "authRequired": "인증이 필요합니다",
+      "saveError": "출석 정보 저장에 실패했습니다"
     },
     "entryCompetitionCard": {
       "placeLabel": "장소:",
@@ -3278,7 +3328,10 @@
       "errorVideoConfirmFailed": "{name}: 동영상 확인 처리에 실패했습니다 ({status})",
       "errorVideoAssignFailed": "{name}: 팀 할당에 실패했습니다 ({status})",
       "errorVideoGenericFailed": "{name}: 동영상 업로드 중 오류가 발생했습니다",
-      "errorVideoUpload": "일부 동영상 업로드에 실패했습니다:\n{errors}"
+      "errorVideoNoThumbnail": "{name}: 썸네일을 생성하지 못해 동영상을 첨부하지 못했습니다",
+      "errorVideoLogResolveFailed": "{name}: 저장된 로그와 매칭하지 못해 동영상을 첨부하지 못했습니다",
+      "errorVideoUpload": "일부 동영상 업로드에 실패했습니다:\n{errors}",
+      "videoPartialFailureSaved": "기록은 저장되었지만 일부 동영상을 첨부하지 못했습니다:\n{errors}"
     },
     "bulkRegister": {
       "wrapperTitle": "일정 일괄 등록",
@@ -3408,6 +3461,15 @@
       "reactionTimeRange": "반응 시간은 0.40〜1.00초 범위로 입력해 주세요",
       "timeFormatInvalid": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 31-2)",
       "timeFormatInvalid2": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 31-2)"
+    },
+    "lapTime": {
+      "raceLapTab": "거리별 Lap",
+      "allLapTab": "All Lap",
+      "noSplits": "스플릿 기록을 입력해 주세요",
+      "noStyle": "종목을 선택해 주세요",
+      "noLap": "랩 타임을 계산할 수 없습니다",
+      "distanceHeader": "거리",
+      "splitTimeHeader": "Split Time"
     }
   },
   "forms": {

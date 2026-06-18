@@ -321,7 +321,7 @@ export const useRecentAttendance = (
         await onMonthStatusUpdate(eventYear, eventMonth);
       } catch (err) {
         console.error("出欠情報の保存に失敗:", err);
-        setError(t("recentAttendanceHook.saveSuccess"));
+        setError(t("recentAttendanceHook.saveError"));
       } finally {
         setSavingEventIds((prev) => {
           const next = new Set(prev);

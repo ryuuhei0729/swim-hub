@@ -52,6 +52,7 @@
     "appName": "SwimHub",
     "language": "语言",
     "alertErrorTitle": "错误",
+    "notice": "提示",
     "loading": "加载中...",
     "error": "发生错误",
     "save": "保存",
@@ -1010,7 +1011,8 @@
       "settingsButton": "设置",
       "profileNotFound": "未找到个人资料",
       "bulkInput": "批量录入",
-      "bulkInputAria": "批量录入最佳成绩"
+      "bulkInputAria": "批量录入最佳成绩",
+      "pageTitle": "我的主页"
     },
     "title": "我的页面",
     "subtitle": "管理你的个人资料和最佳成绩",
@@ -1456,7 +1458,15 @@
         "splitDeleteFailed": "删除分段成绩失败：{detail}",
         "recordDeleteFailed": "删除现有成绩失败：{detail}",
         "saveFailed": "保存时发生错误。请重试。"
-      }
+      },
+      "errorVideoUploadUrlFailed": "{name}：获取上传 URL 失败（{status}）",
+      "errorVideoUploadFailed": "{name}：视频上传失败（{status}）",
+      "errorVideoThumbnailFailed": "{name}：缩略图上传失败（{status}）",
+      "errorVideoConfirmFailed": "{name}：视频确认处理失败（{status}）",
+      "errorVideoAssignFailed": "{name}：团队分配失败（{status}）",
+      "errorVideoGenericFailed": "{name}：视频上传过程中发生错误",
+      "errorVideoNoThumbnail": "{name}：由于无法生成缩略图，未能附加视频",
+      "videoPartialFailureSaved": "记录已保存，但部分视频未能附加：\n{errors}"
     }
   },
   "settings": {
@@ -2131,7 +2141,18 @@
         "memberStatusUnanswered": "未回复",
         "memberAttendanceFetchFailed": "获取出勤信息失败",
         "memberAttendanceEmpty": "暂无出勤回复",
-        "memberAttendanceLoading": "加载中..."
+        "memberAttendanceLoading": "加载中...",
+        "bulkChange": {
+          "title": "批量修改出勤状态",
+          "empty": "暂无活动",
+          "statusOpen": "报名中",
+          "statusClosed": "已截止",
+          "statusUnset": "未设置",
+          "competitionLabel": "（比赛）",
+          "selectAll": "全选",
+          "openButton": "设为报名中",
+          "closedButton": "设为已截止"
+        }
       },
       "groupManagement": {
         "title": "分组管理",
@@ -2319,7 +2340,35 @@
         "deleteFailed": "比赛删除失败",
         "entryButton": "报名",
         "recordButton": "成绩"
-      }
+      },
+      "teamCompetitionEntryModal": {
+        "title": "{title} 的报名",
+        "totalEntries": "报名总数: {count}",
+        "entryStatusLabel": "报名受理状态",
+        "statusBefore": "未开始",
+        "statusOpen": "受理中",
+        "statusClosed": "已截止",
+        "selfEntryButton": "报名项目",
+        "confirmTitle": "更改受理状态",
+        "confirmBefore": "将报名受理状态更改为\"未开始\"吗？",
+        "confirmOpen": "将报名受理状态更改为\"受理中\"吗？",
+        "confirmClosed": "将报名受理状态更改为\"已截止\"吗？",
+        "changeStatusAria": "将受理状态更改为{status}",
+        "saveFailed": "更改受理状态失败",
+        "loading": "正在加载报名信息...",
+        "fetchFailed": "获取报名信息失败",
+        "emptyNoEntry": "暂无报名",
+        "emptyOpenHint": "当前正在受理报名",
+        "unknownStyle": "项目不明",
+        "unknownUser": "未知用户",
+        "entryTimeLabel": "报名成绩:",
+        "close": "关闭"
+      },
+      "announcementDeleteFailed": "删除通知失败",
+      "attendanceConfirmEditAfterDeadline": "这将是在提交截止后的编辑（{dates}）。编辑时间将自动添加到备注中。要保存吗？",
+      "attendanceStatusPresent": "出席",
+      "attendanceStatusAbsent": "缺席",
+      "attendanceStatusOther": "其他"
     },
     "page": {
       "title": "我的团队",
@@ -2641,7 +2690,8 @@
       "loadError": "获取近期出勤信息失败",
       "saveSuccess": "已保存",
       "confirmEditAfterDeadline": "这将是在提交截止后的编辑（{date}）。编辑时间将自动添加到备注中。要保存吗？",
-      "authRequired": "需要身份验证"
+      "authRequired": "需要身份验证",
+      "saveError": "保存出勤信息失败"
     },
     "entryCompetitionCard": {
       "placeLabel": "地点：",
@@ -3278,7 +3328,10 @@
       "errorVideoConfirmFailed": "{name}：视频确认处理失败（{status}）",
       "errorVideoAssignFailed": "{name}：团队分配失败（{status}）",
       "errorVideoGenericFailed": "{name}：视频上传过程中发生错误",
-      "errorVideoUpload": "部分视频上传失败：\n{errors}"
+      "errorVideoNoThumbnail": "{name}：由于无法生成缩略图，未能附加视频",
+      "errorVideoLogResolveFailed": "{name}：由于无法与已保存的记录匹配，未能附加视频",
+      "errorVideoUpload": "部分视频上传失败：\n{errors}",
+      "videoPartialFailureSaved": "记录已保存，但部分视频未能附加：\n{errors}"
     },
     "bulkRegister": {
       "wrapperTitle": "日程批量登记",
@@ -3408,6 +3461,15 @@
       "reactionTimeRange": "反应时间请输入0.40〜1.00秒范围内的值",
       "timeFormatInvalid": "成绩格式不正确（例: 1:23.45 或 31-2）",
       "timeFormatInvalid2": "成绩格式不正确（例: 1:23.45 或 31-2）"
+    },
+    "lapTime": {
+      "raceLapTab": "分距 Lap",
+      "allLapTab": "All Lap",
+      "noSplits": "请输入分段成绩",
+      "noStyle": "请选择项目",
+      "noLap": "无法计算分段成绩",
+      "distanceHeader": "距离",
+      "splitTimeHeader": "Split Time"
     }
   },
   "forms": {

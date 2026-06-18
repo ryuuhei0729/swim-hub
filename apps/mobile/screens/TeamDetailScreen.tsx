@@ -165,7 +165,7 @@ export const TeamDetailScreen: React.FC = () => {
             try {
               await deleteAnnouncementMutation.mutateAsync(announcementId);
             } catch {
-              Alert.alert(t("common.error"), t("teams.mobile.announcementSaveFailed"), [
+              Alert.alert(t("common.error"), t("teams.mobile.announcementDeleteFailed"), [
                 { text: "OK" },
               ]);
             }
@@ -277,9 +277,9 @@ export const TeamDetailScreen: React.FC = () => {
                 onPress={() => {
                   setIsAdminView((prev) => {
                     const next = !prev;
-                    // announcements タブは管理者専用のため利用者ビューへの切替時にリセット。
+                    // announcements / groups タブは管理者専用のため利用者ビューへの切替時にリセット。
                     // attendance タブは利用者ビューでも有効(MyMonthlyAttendance が表示される)ためリセット不要。
-                    if (!next && activeTab === "announcements") {
+                    if (!next && (activeTab === "announcements" || activeTab === "groups")) {
                       setActiveTab("members");
                     }
                     return next;

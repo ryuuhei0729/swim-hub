@@ -4,6 +4,10 @@
  */
 import { authenticateApiRequest } from "@/lib/auth-api";
 import { generateVideoPutUrl, isVideoR2Enabled } from "@/lib/r2-video";
+import {
+  authorizeRecordVideoMutation,
+  authorizePracticeLogVideoMutation,
+} from "@/lib/video-authz";
 import { NextRequest, NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { localeFromReferer } from "@/i18n/routing";
@@ -73,33 +77,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "動画機能は現在利用できません" }, { status: 503 });
     }
 
-    // 所有者確認
-    if (type === "record") {
-      const { data: record, error } = await supabase
-        .from("records")
-        .select("id, user_id, video_path, video_thumbnail_path")
-        .eq("id", id)
-        .single();
+    // 所有者確認（本人 OR 当該チームの active admin による代理）
+    const authz =
+      type === "record"
+        ? await authorizeRecordVideoMutation(supabase, id, user.id)
+        : await authorizePracticeLogVideoMutation(supabase, id, user.id);
 
-      if (error || !record) {
-        return NextResponse.json({ error: "記録が見つかりません" }, { status: 404 });
-      }
-      if (record.user_id !== user.id) {
-        return NextResponse.json({ error: "権限がありません" }, { status: 403 });
-      }
-    } else {
-      const { data: log, error } = await supabase
-        .from("practice_logs")
-        .select("id, user_id, video_path, video_thumbnail_path")
-        .eq("id", id)
-        .single();
-
-      if (error || !log) {
-        return NextResponse.json({ error: "練習ログが見つかりません" }, { status: 404 });
-      }
-      if (log.user_id !== user.id) {
-        return NextResponse.json({ error: "権限がありません" }, { status: 403 });
-      }
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status });
     }
 
     // R2 パス生成
