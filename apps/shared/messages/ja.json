@@ -43,11 +43,16 @@
       "SwimHub",
       "水泳選手",
       "マスターズスイマー"
-    ]
+    ],
+    "planFree": "Free プラン",
+    "planPremiumMonthly": "Premium プラン（月額）",
+    "planPremiumYearly": "Premium プラン（年額）"
   },
   "common": {
     "appName": "SwimHub",
+    "language": "言語",
     "alertErrorTitle": "エラー",
+    "notice": "お知らせ",
     "loading": "読み込み中...",
     "error": "エラーが発生しました",
     "save": "保存",
@@ -123,7 +128,10 @@
     },
     "errorBoundary": {
       "title": "エラーが発生しました",
-      "unknownError": "不明なエラーが発生しました"
+      "unknownError": "不明なエラー",
+      "retry": "再試行",
+      "reload": "ページを再読み込み",
+      "helpText": "問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。"
     },
     "video": {
       "loading": "動画を読み込み中...",
@@ -173,7 +181,9 @@
       "videoClosePlayer": "閉じる",
       "videoDelete": "削除",
       "videoTapToPlay": "タップして再生",
-      "videoReplace": "差し替え"
+      "videoReplace": "差し替え",
+      "cameraPermissionDenied": "カメラへのアクセスが許可されていません。設定アプリから許可してください。",
+      "mediaPermissionDenied": "フォトライブラリへのアクセスが許可されていません。設定アプリから許可してください。"
     },
     "datePicker": {
       "placeholder": "日付を選択",
@@ -183,7 +193,15 @@
       "nextMonth": "次月",
       "today": "今日",
       "close": "閉じる",
-      "weekdays": ["日", "月", "火", "水", "木", "金", "土"]
+      "weekdays": [
+        "日",
+        "月",
+        "火",
+        "水",
+        "木",
+        "金",
+        "土"
+      ]
     },
     "formStepper": {
       "ariaLabel": "フォームの進捗",
@@ -212,13 +230,6 @@
     "validation": {
       "required": "必須項目です",
       "email": "有効なメールアドレスを入力してください"
-    },
-    "errorBoundary": {
-      "title": "エラーが発生しました",
-      "unknownError": "不明なエラー",
-      "retry": "再試行",
-      "reload": "ページを再読み込み",
-      "helpText": "問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。"
     },
     "videoUploader": {
       "uploadUrlFailed": "アップロードURLの取得に失敗しました",
@@ -1000,7 +1011,8 @@
       "settingsButton": "設定",
       "profileNotFound": "プロフィールが見つかりません",
       "bulkInput": "一括入力",
-      "bulkInputAria": "ベストタイムを一括入力する"
+      "bulkInputAria": "ベストタイムを一括入力する",
+      "pageTitle": "マイページ"
     },
     "title": "マイページ",
     "subtitle": "プロフィールとベストタイムを管理します",
@@ -1446,7 +1458,15 @@
         "splitDeleteFailed": "スプリットタイムの削除に失敗しました: {detail}",
         "recordDeleteFailed": "既存レコードの削除に失敗しました: {detail}",
         "saveFailed": "保存中にエラーが発生しました。もう一度お試しください。"
-      }
+      },
+      "errorVideoUploadUrlFailed": "{name}: アップロードURL取得に失敗しました ({status})",
+      "errorVideoUploadFailed": "{name}: 動画のアップロードに失敗しました ({status})",
+      "errorVideoThumbnailFailed": "{name}: サムネイルのアップロードに失敗しました ({status})",
+      "errorVideoConfirmFailed": "{name}: 動画の確認処理に失敗しました ({status})",
+      "errorVideoAssignFailed": "{name}: チーム割り当てに失敗しました ({status})",
+      "errorVideoGenericFailed": "{name}: 動画アップロード中にエラーが発生しました",
+      "errorVideoNoThumbnail": "{name}: サムネイルを生成できなかったため動画を添付できませんでした",
+      "videoPartialFailureSaved": "記録は保存されましたが、一部の動画を添付できませんでした:\n{errors}"
     }
   },
   "settings": {
@@ -2099,6 +2119,41 @@
         "noMonths": "表示できる月がありません",
         "noEvents": "この月にはイベントがありません"
       },
+      "adminAttendance": {
+        "title": "出欠受付管理",
+        "statusOpen": "受付中",
+        "statusClosed": "締切",
+        "empty": "今後のイベントがありません",
+        "fetchFailed": "イベント情報の取得に失敗しました",
+        "saveFailed": "ステータスの保存に失敗しました",
+        "openButton": "受付を開始",
+        "closeButton": "受付を締切",
+        "confirmTitle": "確認",
+        "confirmOpen": "出欠の受付を開始しますか？",
+        "confirmClose": "出欠の受付を締め切りますか？",
+        "defaultPractice": "練習",
+        "defaultCompetition": "大会",
+        "toggleStatusAria": "{title} の受付ステータスを切り替え",
+        "memberAttendanceTitle": "メンバー別出欠状況",
+        "memberStatusPresent": "出席",
+        "memberStatusAbsent": "欠席",
+        "memberStatusOther": "その他",
+        "memberStatusUnanswered": "未回答",
+        "memberAttendanceFetchFailed": "出欠情報の取得に失敗しました",
+        "memberAttendanceEmpty": "出欠回答がありません",
+        "memberAttendanceLoading": "読み込み中...",
+        "bulkChange": {
+          "title": "まとめて出欠状態を変更",
+          "empty": "イベントがありません",
+          "statusOpen": "受付中",
+          "statusClosed": "締切",
+          "statusUnset": "未設定",
+          "competitionLabel": "（大会）",
+          "selectAll": "全選択",
+          "openButton": "受付中にする",
+          "closedButton": "締切にする"
+        }
+      },
       "groupManagement": {
         "title": "グループ管理",
         "subtitle": "メンバーをカテゴリ別にグループ分けできます",
@@ -2192,7 +2247,6 @@
       "bulkPlacePlaceholder": "例: 市民プール",
       "bulkMemoPlaceholder": "メモ",
       "bulkCompetitionNamePlaceholder": "大会名",
-      "roleAdmin": "管理者",
       "roleUser": "ユーザー",
       "roleChangeTitle": "権限変更の確認",
       "roleChangeButton": "変更する",
@@ -2202,7 +2256,6 @@
       "memberRoleChangeMessage": "{name}さんの権限を「{role}」に変更しますか？",
       "memberRemoveMessage": "{name}をチームから削除しますか？\nこの操作は取り消せません。",
       "bestTimeSection": "Best Time",
-      "bestTimeLoading": "ベストタイム読込中...",
       "youBadge": "あなた",
       "birthdayLabel": "生年月日: {date}",
       "adminControlsTitle": "管理者機能",
@@ -2254,7 +2307,68 @@
       "poolTypeLong": "長水路",
       "genderCategoryLabel": "性別",
       "genderMale": "男性",
-      "genderFemale": "女性"
+      "genderFemale": "女性",
+      "tabAnnouncements": "お知らせ",
+      "adminToggle": {
+        "label": "表示切替",
+        "admin": "管理者ビュー",
+        "user": "利用者ビュー"
+      },
+      "pendingApproveConfirmTitle": "承認確認",
+      "pendingApproveConfirmMessage": "{name}を承認しますか？",
+      "pendingRejectConfirmTitle": "拒否確認",
+      "pendingRejectConfirmMessage": "{name}を拒否しますか？",
+      "pendingApproveFailed": "承認に失敗しました",
+      "pendingRejectFailed": "拒否に失敗しました",
+      "pendingLoading": "承認待ちメンバーを読み込み中...",
+      "pendingFetchFailed": "承認待ちメンバーの取得に失敗しました",
+      "teamPracticeList": {
+        "title": "チーム練習 ({count}件)",
+        "addButton": "練習を追加",
+        "empty": "チームの練習記録がありません",
+        "fetchFailed": "練習記録の取得に失敗しました",
+        "deleteConfirm": "この練習記録を削除しますか？この操作は取り消せません。",
+        "deleteFailed": "練習記録の削除に失敗しました",
+        "addLog": "ログを記入"
+      },
+      "teamCompetitionList": {
+        "title": "チーム大会 ({count}件)",
+        "addButton": "大会を追加",
+        "empty": "チームの大会がありません",
+        "fetchFailed": "大会の取得に失敗しました",
+        "deleteConfirm": "この大会を削除しますか？この操作は取り消せません。",
+        "deleteFailed": "大会の削除に失敗しました",
+        "entryButton": "エントリー",
+        "recordButton": "記録"
+      },
+      "teamCompetitionEntryModal": {
+        "title": "{title} のエントリー",
+        "totalEntries": "エントリー総数: {count}件",
+        "entryStatusLabel": "エントリー受付状況",
+        "statusBefore": "受付前",
+        "statusOpen": "受付中",
+        "statusClosed": "受付終了",
+        "selfEntryButton": "種目をエントリー",
+        "confirmTitle": "受付状況を変更",
+        "confirmBefore": "エントリー受付状況を「受付前」に変更しますか？",
+        "confirmOpen": "エントリー受付状況を「受付中」に変更しますか？",
+        "confirmClosed": "エントリー受付状況を「受付終了」に変更しますか？",
+        "changeStatusAria": "受付状況を{status}に変更",
+        "saveFailed": "受付状況の変更に失敗しました",
+        "loading": "エントリー情報を読み込み中...",
+        "fetchFailed": "エントリー情報の取得に失敗しました",
+        "emptyNoEntry": "まだエントリーがありません",
+        "emptyOpenHint": "現在エントリー受付中です",
+        "unknownStyle": "種目不明",
+        "unknownUser": "不明なユーザー",
+        "entryTimeLabel": "エントリータイム:",
+        "close": "閉じる"
+      },
+      "announcementDeleteFailed": "お知らせの削除に失敗しました",
+      "attendanceConfirmEditAfterDeadline": "提出締め切り後の編集になります（{dates}）。備考に編集日時が自動的に追加されます。保存しますか？",
+      "attendanceStatusPresent": "出席",
+      "attendanceStatusAbsent": "欠席",
+      "attendanceStatusOther": "その他"
     },
     "page": {
       "title": "マイチーム",
@@ -2576,7 +2690,8 @@
       "loadError": "直近の出欠情報の取得に失敗しました",
       "saveSuccess": "保存しました",
       "confirmEditAfterDeadline": "提出締め切り後の編集になります（{date}）。備考に編集日時が自動的に追加されます。保存しますか？",
-      "authRequired": "認証が必要です"
+      "authRequired": "認証が必要です",
+      "saveError": "出欠情報の保存に失敗しました"
     },
     "entryCompetitionCard": {
       "placeLabel": "場所:",
@@ -3213,7 +3328,10 @@
       "errorVideoConfirmFailed": "{name}: 動画の確認処理に失敗しました ({status})",
       "errorVideoAssignFailed": "{name}: チーム割り当てに失敗しました ({status})",
       "errorVideoGenericFailed": "{name}: 動画アップロード中にエラーが発生しました",
-      "errorVideoUpload": "一部の動画アップロードに失敗しました:\n{errors}"
+      "errorVideoNoThumbnail": "{name}: サムネイルを生成できなかったため動画を添付できませんでした",
+      "errorVideoLogResolveFailed": "{name}: 保存済みログとの突き合わせに失敗したため動画を添付できませんでした",
+      "errorVideoUpload": "一部の動画アップロードに失敗しました:\n{errors}",
+      "videoPartialFailureSaved": "記録は保存されましたが、一部の動画を添付できませんでした:\n{errors}"
     },
     "bulkRegister": {
       "wrapperTitle": "スケジュール一括登録",
@@ -3343,6 +3461,15 @@
       "reactionTimeRange": "反応時間は0.40〜1.00秒の範囲で入力してください",
       "timeFormatInvalid": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
       "timeFormatInvalid2": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）"
+    },
+    "lapTime": {
+      "raceLapTab": "距離別 Lap",
+      "allLapTab": "All Lap",
+      "noSplits": "スプリットタイムを入力してください",
+      "noStyle": "種目を選択してください",
+      "noLap": "ラップタイムを計算できません",
+      "distanceHeader": "距離",
+      "splitTimeHeader": "スプリットタイム"
     }
   },
   "forms": {
@@ -3641,7 +3768,7 @@
       "noStyle": "種目を選択してください",
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
-      "splitTimeHeader": "Split Time"
+      "splitTimeHeader": "スプリットタイム"
     },
     "imageUploader": {
       "label": "画像を添付",

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { View, ScrollView, StyleSheet, RefreshControl, Alert, Platform } from "react-native";
+import { ScrollView, StyleSheet, RefreshControl, Alert, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -29,7 +29,7 @@ type DashboardScreenNavigationProp = NativeStackNavigationProp<MainStackParamLis
 
 /**
  * ダッシュボード画面
- * カレンダービューで練習・大会を表示
+ * チームのお知らせとカレンダー(練習・大会)を表示
  */
 export const DashboardScreen: React.FC = () => {
   const navigation = useNavigation<DashboardScreenNavigationProp>();
@@ -416,18 +416,6 @@ export const DashboardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <View style={styles.calendarContainer}>
-        <CalendarView
-          currentDate={currentDate}
-          entries={entries}
-          isLoading={isLoading}
-          onDateClick={handleDateClick}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          onTodayClick={handleTodayClick}
-          onMonthYearSelect={handleMonthYearSelect}
-        />
-      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -441,6 +429,16 @@ export const DashboardScreen: React.FC = () => {
         }
       >
         <TeamAnnouncementsSection teams={teams} />
+        <CalendarView
+          currentDate={currentDate}
+          entries={entries}
+          isLoading={isLoading}
+          onDateClick={handleDateClick}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          onTodayClick={handleTodayClick}
+          onMonthYearSelect={handleMonthYearSelect}
+        />
       </ScrollView>
 
       {/* 日付詳細モーダル */}
@@ -481,11 +479,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#EFF6FF",
   },
-  calendarContainer: {},
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 8,
     paddingBottom: 16,
   },
 });

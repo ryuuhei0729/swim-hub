@@ -1,0 +1,25 @@
+SwimHub is the all-in-one app for swimmers and coaches to track training, races, and team activity in one place.
+
+Whether you swim for a club, a school team, or on your own, SwimHub turns every practice and meet into clear, comparable data so you can see your progress at a glance.
+
+PRACTICE & RACE LOG
+• Record every practice session with sets, distances, and notes
+• Log race results and split times for each stroke and distance
+• Keep your best times up to date automatically
+
+SEE YOUR PROGRESS
+• A calendar dashboard shows practices and competitions at a glance
+• Track how your times improve over the season
+• Review detailed splits for any race
+
+BUILT FOR TEAMS
+• Manage rosters and team membership
+• Track attendance and aggregate entries for competitions
+• Share schedules so everyone stays in sync
+
+MADE FOR SWIMMERS
+• Times shown in clean minutes:seconds.hundredths format
+• Standard event names and distances
+• Works offline so you can log poolside, anywhere
+
+Start logging your practices and races today and watch your best times grow with SwimHub.

@@ -106,27 +106,10 @@ export const useAttendanceEdit = (
               return null;
             }
 
-            let noteToSanitize = editState.note;
-
-            // 既存の出席記録を更新する場合で、締切後の編集の場合はタイムスタンプを追加
-            if (existingAttendance && event.attendance_status === "closed") {
-              const now = new Date();
-              const editTimestamp = format(now, "MM/dd HH:mm");
-              const editNote = `(${editTimestamp}締切後編集)`;
-
-              if (noteToSanitize) {
-                // 既存のタイムスタンプを削除
-                noteToSanitize = noteToSanitize
-                  .replace(/\s*\(\d{2}\/\d{2}\s+\d{2}:\d{2}締切後編集\)/g, "")
-                  .trim();
-                noteToSanitize = noteToSanitize ? `${noteToSanitize} ${editNote}` : editNote;
-              } else {
-                noteToSanitize = editNote;
-              }
-            }
-
-            const sanitizedNote = noteToSanitize
-              ? sanitizeTextInput(noteToSanitize, NOTE_MAX_LENGTH)
+            // 既存更新経路では締切後マークの付与を行わない（bulkUpdateMyAttendances の
+            // addEditMark が closed 時に付与する）。ここでは raw note をそのまま渡す。
+            const sanitizedNote = editState.note
+              ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH)
               : null;
 
             return {

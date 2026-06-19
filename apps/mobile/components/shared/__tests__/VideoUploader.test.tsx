@@ -48,15 +48,13 @@ vi.mock("@/utils/videoUpload", () => ({
 vi.mock("expo-image-picker", () => ({
   launchImageLibraryAsync: mocks.launchImageLibraryAsync,
   launchCameraAsync: mocks.launchCameraAsync,
-}));
-
-vi.mock("@swim-hub/shared/constants/premium", () => ({
-  PREMIUM_MESSAGES: { video_upload: "動画アップロードはプレミアム会員限定" },
+  requestCameraPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
+  requestMediaLibraryPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
 }));
 
 vi.mock("@/components/shared/PremiumBadge", () => ({
-  PremiumBadge: ({ message }: { message: string }) =>
-    React.createElement("div", { "data-testid": "premium-badge" }, message),
+  PremiumBadge: ({ feature }: { feature: string }) =>
+    React.createElement("div", { "data-testid": "premium-badge" }, feature),
 }));
 
 vi.mock("@/components/shared/VideoPlayer", () => ({
@@ -222,10 +220,14 @@ describe("VideoUploader — 既存動作の回帰テスト", () => {
     vi.clearAllMocks();
   });
 
-  it("isPremium=false かつ idle 状態のとき PremiumBadge が表示される", () => {
+  it("isPremium=false かつ idle 状態のとき video_upload 用の PremiumBadge が表示される", () => {
     render(<VideoUploader {...BASE_PROPS} isPremium={false} />);
-    expect(screen.getByTestId("premium-badge")).toBeTruthy();
-    expect(screen.getByText("動画アップロードはプレミアム会員限定")).toBeTruthy();
+    const badge = screen.getByTestId("premium-badge");
+    expect(badge).toBeTruthy();
+    // feature="video_upload" で PremiumBadge が描画されていることを確認する。
+    // モックの PremiumBadge は feature prop の値をテキストとして出力するため、
+    // data-testid と組み合わせて「video_upload 用の誘導バッジ」であることを検証する。
+    expect(badge.textContent).toBe("video_upload");
   });
 
   it("保留状態（selected）のとき「動画を選択済み」テキストが表示される", async () => {

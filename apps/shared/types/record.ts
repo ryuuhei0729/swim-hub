@@ -17,6 +17,7 @@ export interface RecordBase {
   id: string;
   user_id: string;
   competition_id: string | null;
+  team_id?: string | null;
   style_id: number;
   time: number;
   video_path?: string | null;

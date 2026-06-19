@@ -40,11 +40,16 @@
       "swim meet",
       "swim team",
       "SwimHub"
-    ]
+    ],
+    "planFree": "Free Plan",
+    "planPremiumMonthly": "Premium Plan (Monthly)",
+    "planPremiumYearly": "Premium Plan (Annual)"
   },
   "common": {
     "appName": "SwimHub",
+    "language": "Language",
     "alertErrorTitle": "Error",
+    "notice": "Notice",
     "loading": "Loading...",
     "error": "An error occurred",
     "save": "Save",
@@ -120,7 +125,10 @@
     },
     "errorBoundary": {
       "title": "An error occurred",
-      "unknownError": "An unknown error occurred"
+      "unknownError": "Unknown error",
+      "retry": "Retry",
+      "reload": "Reload page",
+      "helpText": "If the problem persists, try reloading the page or contact support."
     },
     "video": {
       "loading": "Loading video...",
@@ -170,7 +178,9 @@
       "videoClosePlayer": "Close",
       "videoDelete": "Delete",
       "videoTapToPlay": "Tap to play",
-      "videoReplace": "Replace"
+      "videoReplace": "Replace",
+      "cameraPermissionDenied": "Camera access is not allowed. Please enable it in the Settings app.",
+      "mediaPermissionDenied": "Photo library access is not allowed. Please enable it in the Settings app."
     },
     "datePicker": {
       "placeholder": "Select date",
@@ -180,7 +190,15 @@
       "nextMonth": "Next month",
       "today": "Today",
       "close": "Close",
-      "weekdays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+      "weekdays": [
+        "Sun",
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat"
+      ]
     },
     "formStepper": {
       "ariaLabel": "Form progress",
@@ -209,13 +227,6 @@
     "validation": {
       "required": "This field is required",
       "email": "Please enter a valid email address"
-    },
-    "errorBoundary": {
-      "title": "An error occurred",
-      "unknownError": "Unknown error",
-      "retry": "Retry",
-      "reload": "Reload page",
-      "helpText": "If the problem persists, try reloading the page or contact support."
     },
     "videoUploader": {
       "uploadUrlFailed": "Failed to get upload URL",
@@ -997,7 +1008,8 @@
       "settingsButton": "Settings",
       "profileNotFound": "Profile not found",
       "bulkInput": "Bulk input",
-      "bulkInputAria": "Bulk register best times"
+      "bulkInputAria": "Bulk register best times",
+      "pageTitle": "My Page"
     },
     "title": "My Page",
     "subtitle": "Manage your profile and best times",
@@ -1443,7 +1455,15 @@
         "splitDeleteFailed": "Failed to delete split times: {detail}",
         "recordDeleteFailed": "Failed to delete existing records: {detail}",
         "saveFailed": "An error occurred while saving. Please try again."
-      }
+      },
+      "errorVideoUploadUrlFailed": "{name}: Failed to get upload URL ({status})",
+      "errorVideoUploadFailed": "{name}: Failed to upload video ({status})",
+      "errorVideoThumbnailFailed": "{name}: Failed to upload thumbnail ({status})",
+      "errorVideoConfirmFailed": "{name}: Failed to confirm video ({status})",
+      "errorVideoAssignFailed": "{name}: Failed to assign to team ({status})",
+      "errorVideoGenericFailed": "{name}: An error occurred during video upload",
+      "errorVideoNoThumbnail": "{name}: Could not attach video because the thumbnail could not be generated",
+      "videoPartialFailureSaved": "The records were saved, but some videos could not be attached:\n{errors}"
     }
   },
   "settings": {
@@ -2098,6 +2118,41 @@
         "noMonths": "No months to display",
         "noEvents": "No events this month"
       },
+      "adminAttendance": {
+        "title": "Attendance Status Management",
+        "statusOpen": "Open",
+        "statusClosed": "Closed",
+        "empty": "No upcoming events",
+        "fetchFailed": "Failed to load events",
+        "saveFailed": "Failed to save status",
+        "openButton": "Open for Submissions",
+        "closeButton": "Close Submissions",
+        "confirmTitle": "Confirm",
+        "confirmOpen": "Open attendance submissions for this event?",
+        "confirmClose": "Close attendance submissions for this event?",
+        "defaultPractice": "Practice",
+        "defaultCompetition": "Competition",
+        "toggleStatusAria": "Toggle submission status for {title}",
+        "memberAttendanceTitle": "Member Attendance",
+        "memberStatusPresent": "Present",
+        "memberStatusAbsent": "Absent",
+        "memberStatusOther": "Other",
+        "memberStatusUnanswered": "No Response",
+        "memberAttendanceFetchFailed": "Failed to load attendance data",
+        "memberAttendanceEmpty": "No attendance responses yet",
+        "memberAttendanceLoading": "Loading...",
+        "bulkChange": {
+          "title": "Bulk update attendance status",
+          "empty": "No events",
+          "statusOpen": "Open",
+          "statusClosed": "Closed",
+          "statusUnset": "Not set",
+          "competitionLabel": "(Competition)",
+          "selectAll": "Select all",
+          "openButton": "Set to Open",
+          "closedButton": "Set to Closed"
+        }
+      },
       "groupManagement": {
         "title": "Group management",
         "subtitle": "Organize members into categories and groups.",
@@ -2189,7 +2244,6 @@
       "bulkPlacePlaceholder": "e.g. City Pool",
       "bulkMemoPlaceholder": "Memo",
       "bulkCompetitionNamePlaceholder": "Competition name",
-      "roleAdmin": "Admin",
       "roleUser": "Member",
       "roleChangeTitle": "Confirm role change",
       "roleChangeButton": "Change",
@@ -2199,7 +2253,6 @@
       "memberRoleChangeMessage": "Change {name}'s role to \"{role}\"?",
       "memberRemoveMessage": "Remove {name} from the team?\nThis cannot be undone.",
       "bestTimeSection": "Best Time",
-      "bestTimeLoading": "Loading best times...",
       "youBadge": "You",
       "birthdayLabel": "Birthday: {date}",
       "adminControlsTitle": "Admin controls",
@@ -2251,7 +2304,68 @@
       "poolTypeLong": "Long Course",
       "genderCategoryLabel": "Gender",
       "genderMale": "Male",
-      "genderFemale": "Female"
+      "genderFemale": "Female",
+      "tabAnnouncements": "Announcements",
+      "adminToggle": {
+        "label": "View",
+        "admin": "Admin View",
+        "user": "User View"
+      },
+      "pendingApproveConfirmTitle": "Confirm Approval",
+      "pendingApproveConfirmMessage": "Approve {name}?",
+      "pendingRejectConfirmTitle": "Confirm Rejection",
+      "pendingRejectConfirmMessage": "Reject {name}?",
+      "pendingApproveFailed": "Failed to approve member",
+      "pendingRejectFailed": "Failed to reject member",
+      "pendingLoading": "Loading pending members...",
+      "pendingFetchFailed": "Failed to fetch pending members",
+      "teamPracticeList": {
+        "title": "Team Practices ({count})",
+        "addButton": "Add Practice",
+        "empty": "No team practices yet",
+        "fetchFailed": "Failed to load practice records",
+        "deleteConfirm": "Delete this practice record? This cannot be undone.",
+        "deleteFailed": "Failed to delete practice record",
+        "addLog": "Add Log"
+      },
+      "teamCompetitionList": {
+        "title": "Team Competitions ({count})",
+        "addButton": "Add Competition",
+        "empty": "No team competitions yet",
+        "fetchFailed": "Failed to load competitions",
+        "deleteConfirm": "Delete this competition? This cannot be undone.",
+        "deleteFailed": "Failed to delete competition",
+        "entryButton": "Entry",
+        "recordButton": "Record"
+      },
+      "teamCompetitionEntryModal": {
+        "title": "Entries for {title}",
+        "totalEntries": "Total entries: {count}",
+        "entryStatusLabel": "Entry acceptance status",
+        "statusBefore": "Before",
+        "statusOpen": "Open",
+        "statusClosed": "Closed",
+        "selfEntryButton": "Enter events",
+        "confirmTitle": "Change acceptance status",
+        "confirmBefore": "Change entry acceptance status to \"Before\"?",
+        "confirmOpen": "Change entry acceptance status to \"Open\"?",
+        "confirmClosed": "Change entry acceptance status to \"Closed\"?",
+        "changeStatusAria": "Change acceptance status to {status}",
+        "saveFailed": "Failed to change acceptance status",
+        "loading": "Loading entry information...",
+        "fetchFailed": "Failed to load entry information",
+        "emptyNoEntry": "No entries yet",
+        "emptyOpenHint": "Entries are currently open",
+        "unknownStyle": "Unknown event",
+        "unknownUser": "Unknown user",
+        "entryTimeLabel": "Entry time:",
+        "close": "Close"
+      },
+      "announcementDeleteFailed": "Failed to delete announcement",
+      "attendanceConfirmEditAfterDeadline": "You are editing after the deadline ({dates}). The edit timestamp will be automatically added to the note. Save anyway?",
+      "attendanceStatusPresent": "Present",
+      "attendanceStatusAbsent": "Absent",
+      "attendanceStatusOther": "Other"
     },
     "page": {
       "title": "My Teams",
@@ -2570,7 +2684,8 @@
       "loadError": "Failed to load recent attendance information",
       "saveSuccess": "Saved",
       "confirmEditAfterDeadline": "You are editing after the deadline ({date}). The edit timestamp will be automatically added to the note. Save anyway?",
-      "authRequired": "Authentication required"
+      "authRequired": "Authentication required",
+      "saveError": "Failed to save attendance information"
     },
     "entryCompetitionCard": {
       "placeLabel": "Location:",
@@ -3210,7 +3325,10 @@
       "errorVideoConfirmFailed": "{name}: Failed to confirm video ({status})",
       "errorVideoAssignFailed": "{name}: Failed to assign to team ({status})",
       "errorVideoGenericFailed": "{name}: An error occurred during video upload",
-      "errorVideoUpload": "Some video uploads failed:\n{errors}"
+      "errorVideoNoThumbnail": "{name}: Could not attach video because the thumbnail could not be generated",
+      "errorVideoLogResolveFailed": "{name}: Could not attach video because it could not be matched to a saved log",
+      "errorVideoUpload": "Some video uploads failed:\n{errors}",
+      "videoPartialFailureSaved": "The records were saved, but some videos could not be attached:\n{errors}"
     },
     "bulkRegister": {
       "wrapperTitle": "Schedule Bulk Register",
@@ -3340,6 +3458,15 @@
       "reactionTimeRange": "Reaction time must be between 0.40 and 1.00 seconds",
       "timeFormatInvalid": "Invalid time format (e.g. 1:23.45 or 31-2)",
       "timeFormatInvalid2": "Invalid time format (e.g. 1:23.45 or 31-2)"
+    },
+    "lapTime": {
+      "raceLapTab": "Race Lap",
+      "allLapTab": "All Lap",
+      "noSplits": "Please enter split times",
+      "noStyle": "Please select an event",
+      "noLap": "Cannot calculate lap times",
+      "distanceHeader": "Distance",
+      "splitTimeHeader": "Split Time"
     }
   },
   "forms": {

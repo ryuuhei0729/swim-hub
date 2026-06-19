@@ -16,28 +16,34 @@ import { initReactI18next } from "react-i18next";
 import * as Localization from "expo-localization";
 import ja from "@apps/shared/messages/ja.json";
 import en from "@apps/shared/messages/en.json";
+import zh from "@apps/shared/messages/zh.json";
+import ko from "@apps/shared/messages/ko.json";
+import de from "@apps/shared/messages/de.json";
 
-export const SUPPORTED_LOCALES = ["ja", "en"] as const;
+export const SUPPORTED_LOCALES = ["ja", "en", "zh", "ko", "de"] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 // 翻訳キー欠損時の i18next フォールバック (SSOT)。ja.json が最も網羅的なため ja。
 export const DEFAULT_LOCALE: SupportedLocale = "ja";
 
-// 端末 OS 言語がサポート外 (ja/en 以外) のときに表示するロケール。
+// 端末 OS 言語がサポート外 (SUPPORTED_LOCALES 以外) のときに表示するロケール。
 // 国際ユーザーが日本語アプリに迷い込まないよう en を採用。
 export const DEVICE_FALLBACK_LOCALE: SupportedLocale = "en";
 
 export const resources = {
   ja: { translation: ja },
   en: { translation: en },
+  zh: { translation: zh },
+  ko: { translation: ko },
+  de: { translation: de },
 } as const;
 
 export function isSupportedLocale(value: string | null | undefined): value is SupportedLocale {
-  return value === "ja" || value === "en";
+  return (SUPPORTED_LOCALES as readonly string[]).includes(value ?? "");
 }
 
 /**
- * 端末の OS ロケール設定から ja/en のいずれかを返す。
+ * 端末の OS ロケール設定から SUPPORTED_LOCALES (ja/en/zh/ko/de) のいずれかを返す。
  * 取得不能・サポート外言語の場合は DEVICE_FALLBACK_LOCALE (en) を返す。
  */
 export function getDeviceLocale(): SupportedLocale {

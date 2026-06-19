@@ -1,27 +1,38 @@
-# App Store スクショ自動化（EN / JA）
+# App Store スクショ自動化
 
-iOS シミュレータ上で **Maestro** がアプリを操作してスクショを撮り、**fastlane frameit** で
-デバイス枠＋訴求テキストを合成し、**fastlane deliver** で App Store Connect (en-US / ja) に
-アップロードするパイプライン。
+iOS シミュレータ上で **Maestro** がアプリを操作してスクショを撮り、App Store Connect の
+ローカライズ用ディレクトリ (`fastlane/screenshots/en-US/`) に保存するパイプライン。
+（任意で fastlane frameit による枠+テキスト合成 / fastlane deliver による自動アップロードも可）
 
 対象アプリ: **SwimHub** (`app.swimhub` / App Store ID `6756808731`)
 
-```
+---
+
+## 🎯 今回のスコープ（英語ローカライズ用・4画面・生スクショ）
+
+- **言語**: EN のみ（`capture.sh` の `LOCALES` は en のみ。JA を足すなら1行追加）
+- **画面**: Dashboard / Practices / Competitions(=レース記録) / My Page の **4枚**
+- **出力**: `fastlane/screenshots/en-US/` に生 PNG（枠加工なし → ASC にそのまま貼れる）
+- **ASC 反映**: 手動（スクショをドラッグ＆ドロップ＋英語概要を貼り付け）。英語メタデータの
+  ドラフトは `fastlane/metadata/en-US/`（name / subtitle / keywords / promotional_text / description）
+
+実行手順は §1〜§3 のみ（§4 frameit・§5 deliver は今回は任意）。
+
+```text
 build-sim.sh        seed-demo.sh              capture.sh                fastlane frame      fastlane upload_screenshots
  .app を生成   →   デモ垢+データ投入   →   EN/JA × iPhone/iPad 撮影  →  枠+テキスト合成  →  ASC へアップロード
 ```
 
-## 撮影対象（5画面 × 2サイズ × 2言語 = 20枚）
+## 撮影対象（4画面）
 
 | # | 画面 | testID |
 |---|------|--------|
 | 01 | Dashboard（カレンダー） | `tab-dashboard` |
 | 02 | Practices（練習一覧） | `tab-practices` |
-| 03 | Competitions（大会一覧） | `tab-competitions` |
-| 04 | Teams（チーム一覧） | `tab-teams` |
-| 05 | MyPage（プロフィール/ベストタイム） | `tab-mypage` |
+| 03 | Competitions（大会＝レース記録） | `tab-competitions` |
+| 04 | MyPage（プロフィール/ベストタイム） | `tab-mypage` |
 
-サイズ: iPhone 17 Pro Max (6.9") / iPad Pro 13"（App Store 必須2サイズ）
+サイズ: iPhone 17 Pro Max (6.9") / iPad Pro 13"（App Store 必須2サイズ。iPhone のみで良ければ capture.sh の DEVICES から iPad 行を削除）
 
 ---
 
@@ -125,3 +136,26 @@ fastlane upload_screenshots
 - **JA に切り替わらない**: 端末言語が反映されない場合、シミュレータを一度 erase してから再実行、または `Settings > General > Language` を手動で日本語にして撮り直す。
 - **frameit のサイズ拒否**: App Store は 6.9"/13" の正確な解像度を要求。フレーム合成後の解像度が要件に合わない場合は `Framefile.json` の `padding` を調整。
 - **deliver がサイズ違いと言う**: 1ロケールフォルダに iPhone と iPad が混在していてOK（deliver は画像解像度でサイズを判定）。
+
+---
+
+## 他アプリ（swimhub-timer / swimhub-scanner）への展開
+
+3アプリは独立 git リポジトリのため、この `apps/mobile/{.maestro,fastlane,scripts/screenshots,docs/SCREENSHOTS.md}`
+一式を各リポジトリの `apps/mobile/` に**コピーして、下記のアプリ固有値だけ差し替える**。汎用ロジック
+（capture.sh / build-sim.sh / fastlane frame・deliver レーン）はそのまま使える。
+
+| 差し替える箇所 | swim-hub | 各アプリで変更 |
+|---|---|---|
+| `capture.sh` の `APP_ID` | `app.swimhub` | 各 app.config の bundleIdentifier |
+| `Fastfile`/`Deliverfile` の `app_identifier` | `app.swimhub` | 同上 |
+| ASC App ID（手動アップロード/deliver） | `6756808731` | 各 eas.json submit の `ascAppId` |
+| `Fastfile` の ASC キー (`ASC_KEY_PATH`/`ASC_KEY_ID`) | `QKK8K4ST76.p8` | 各リポジトリの API キー |
+| `.maestro/flows/*` と testID | 4タブ | **各アプリの画面・タブ・testID に作り直す**（timer はタブ無し・ゲストモード有、scanner も別構成） |
+| `.maestro/subflows/login.yaml` | email ログイン必須 | timer は**ゲストモードでログイン不要**等、認証導線が違う |
+| `seed-demo.sh` / シードデータ | `supabase/test-data-2025.sql` | 各アプリの Supabase・データモデル |
+| `fastlane/metadata/en-US/*` | SwimHub 用文言 | 各アプリの訴求文言 |
+
+> 注意: timer は **ゲストモード有り（ログイン不要）** なので、login subflow は不要かタップ1回で済む。
+> 各アプリの画面構成・testID 付与は個別作業（タブ名・bundle id が違うため flows は使い回せない）。
+> 共有しているのは「撮影→保存→（任意で）枠付け→アップロード」の**手順とランナー**まで。

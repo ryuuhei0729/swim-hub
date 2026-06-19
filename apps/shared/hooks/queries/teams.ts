@@ -13,7 +13,13 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { TeamAnnouncementsAPI, TeamCoreAPI, TeamMembersAPI } from "../../api/teams";
+import { TeamPracticesAPI } from "../../api/teams/practices";
+import { TeamRecordsAPI } from "../../api/teams/records";
+import { TeamAttendancesAPI } from "../../api/teams/attendances";
+import type { AttendanceStatusType } from "../../types";
 import type {
+  Competition,
+  Practice,
   Team,
   TeamAnnouncement,
   TeamAnnouncementInsert,
@@ -350,6 +356,58 @@ export function useRemoveMemberMutation(
   });
 }
 
+export function useListPendingMembersQuery(supabase: SupabaseClient, teamId?: string, api?: TeamMembersAPI) {
+  const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
+
+  return useQuery({
+    queryKey: teamKeys.pendingMembers(teamId!),
+    queryFn: async () => {
+      if (!teamId) throw new Error("teamId is required");
+      return await membersApi.listPending(teamId);
+    },
+    enabled: !!teamId,
+    staleTime: 5 * 60 * 1000, // 5分
+  });
+}
+
+export function useApproveMemberMutation(
+  supabase: SupabaseClient,
+  api?: TeamMembersAPI,
+): UseMutationResult<TeamMembership, Error, { membershipId: string; teamId: string }> {
+  const queryClient = useQueryClient();
+  const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
+
+  return useMutation({
+    mutationFn: async ({ membershipId }: { membershipId: string; teamId: string }) => {
+      return await membersApi.approve(membershipId);
+    },
+    onSuccess: (_, variables: { membershipId: string; teamId: string }) => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.members(variables.teamId) });
+      queryClient.invalidateQueries({ queryKey: teamKeys.pendingMembers(variables.teamId) });
+      queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
+    },
+  });
+}
+
+export function useRejectMemberMutation(
+  supabase: SupabaseClient,
+  api?: TeamMembersAPI,
+): UseMutationResult<TeamMembership, Error, { membershipId: string; teamId: string }> {
+  const queryClient = useQueryClient();
+  const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
+
+  return useMutation({
+    mutationFn: async ({ membershipId }: { membershipId: string; teamId: string }) => {
+      return await membersApi.reject(membershipId);
+    },
+    onSuccess: (_, variables: { membershipId: string; teamId: string }) => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.members(variables.teamId) });
+      queryClient.invalidateQueries({ queryKey: teamKeys.pendingMembers(variables.teamId) });
+      queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
+    },
+  });
+}
+
 /**
  * お知らせ作成ミューテーション
  */
@@ -430,6 +488,152 @@ export function useDeleteAnnouncementMutation(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamKeys.all });
+    },
+  });
+}
+
+export function useTeamPracticesQuery(supabase: SupabaseClient, teamId?: string, api?: TeamPracticesAPI) {
+  const practicesApi = useMemo(() => api ?? new TeamPracticesAPI(supabase), [supabase, api]);
+
+  return useQuery({
+    queryKey: teamKeys.practices(teamId!),
+    queryFn: async () => {
+      if (!teamId) throw new Error("teamId is required");
+      return await practicesApi.list(teamId);
+    },
+    enabled: !!teamId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useDeleteTeamPracticeMutation(
+  supabase: SupabaseClient,
+  api?: TeamPracticesAPI,
+): UseMutationResult<void, Error, { id: string; teamId: string }> {
+  const queryClient = useQueryClient();
+  const practicesApi = useMemo(() => api ?? new TeamPracticesAPI(supabase), [supabase, api]);
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; teamId: string }) => {
+      await practicesApi.remove(id);
+    },
+    onSuccess: (_: void, variables: { id: string; teamId: string }) => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.practices(variables.teamId) });
+    },
+  });
+}
+
+export function useTeamCompetitionsQuery(supabase: SupabaseClient, teamId?: string, api?: TeamRecordsAPI) {
+  const recordsApi = useMemo(() => api ?? new TeamRecordsAPI(supabase), [supabase, api]);
+
+  return useQuery({
+    queryKey: teamKeys.competitions(teamId!),
+    queryFn: async () => {
+      if (!teamId) throw new Error("teamId is required");
+      return await recordsApi.list(teamId);
+    },
+    enabled: !!teamId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useDeleteTeamCompetitionMutation(
+  supabase: SupabaseClient,
+  api?: TeamRecordsAPI,
+): UseMutationResult<void, Error, { id: string; teamId: string }> {
+  const queryClient = useQueryClient();
+  const recordsApi = useMemo(() => api ?? new TeamRecordsAPI(supabase), [supabase, api]);
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; teamId: string }) => {
+      await recordsApi.remove(id);
+    },
+    onSuccess: (_: void, variables: { id: string; teamId: string }) => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.competitions(variables.teamId) });
+    },
+  });
+}
+
+export function useAttendanceByPracticeQuery(
+  supabase: SupabaseClient,
+  practiceId?: string,
+  api?: TeamAttendancesAPI,
+) {
+  const attendancesApi = useMemo(() => api ?? new TeamAttendancesAPI(supabase), [supabase, api]);
+
+  return useQuery({
+    queryKey: teamKeys.attendanceByPractice(practiceId!),
+    queryFn: async () => {
+      if (!practiceId) throw new Error("practiceId is required");
+      return await attendancesApi.listByPractice(practiceId);
+    },
+    enabled: !!practiceId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAttendanceByCompetitionQuery(
+  supabase: SupabaseClient,
+  competitionId?: string,
+  api?: TeamAttendancesAPI,
+) {
+  const attendancesApi = useMemo(() => api ?? new TeamAttendancesAPI(supabase), [supabase, api]);
+
+  return useQuery({
+    queryKey: teamKeys.attendanceByCompetition(competitionId!),
+    queryFn: async () => {
+      if (!competitionId) throw new Error("competitionId is required");
+      return await attendancesApi.listByCompetition(competitionId);
+    },
+    enabled: !!competitionId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUpdateAttendanceStatusMutation(
+  supabase: SupabaseClient,
+  api?: TeamAttendancesAPI,
+): UseMutationResult<
+  void,
+  Error,
+  { eventId: string; eventType: "practice" | "competition"; status: AttendanceStatusType | null }
+> {
+  const queryClient = useQueryClient();
+  const attendancesApi = useMemo(() => api ?? new TeamAttendancesAPI(supabase), [supabase, api]);
+
+  return useMutation({
+    mutationFn: async ({
+      eventId,
+      eventType,
+      status,
+    }: {
+      eventId: string;
+      eventType: "practice" | "competition";
+      status: AttendanceStatusType | null;
+    }) => {
+      if (eventType === "practice") {
+        await attendancesApi.updatePracticeAttendanceStatus(eventId, status);
+      } else {
+        await attendancesApi.updateCompetitionAttendanceStatus(eventId, status);
+      }
+    },
+    onSuccess: (
+      _: void,
+      variables: {
+        eventId: string;
+        eventType: "practice" | "competition";
+        status: AttendanceStatusType | null;
+      },
+    ) => {
+      if (variables.eventType === "practice") {
+        queryClient.invalidateQueries({
+          queryKey: teamKeys.attendanceByPractice(variables.eventId),
+        });
+      } else {
+        queryClient.invalidateQueries({
+          queryKey: teamKeys.attendanceByCompetition(variables.eventId),
+        });
+      }
     },
   });
 }

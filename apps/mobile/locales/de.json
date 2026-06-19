@@ -1,0 +1,10 @@
+{
+  "CFBundleDisplayName": "SwimHub",
+  "NSCameraUsageDescription": "Kamerazugriff wird benötigt, um Ihr Profilbild aufzunehmen.",
+  "NSPhotoLibraryUsageDescription": "Zugriff auf die Fotobibliothek wird benötigt, um Ihr Profilbild auszuwählen.",
+  "NSCalendarsUsageDescription": "Wird verwendet, um Ihre Trainings und Wettkämpfe mit Ihrem Kalender zu synchronisieren.",
+  "NSCalendarsWriteOnlyAccessUsageDescription": "Wird verwendet, um Ihre Trainings und Wettkämpfe zu Ihrem Kalender hinzuzufügen.",
+  "NSCalendarsFullAccessUsageDescription": "Wird verwendet, um Ihre Trainings und Wettkämpfe mit Ihrem Kalender zu synchronisieren.",
+  "NSRemindersUsageDescription": "Wird verwendet, um auf Ihre Erinnerungen zuzugreifen.",
+  "NSRemindersFullAccessUsageDescription": "Wird verwendet, um Ihre Erinnerungen zu verwalten."
+}

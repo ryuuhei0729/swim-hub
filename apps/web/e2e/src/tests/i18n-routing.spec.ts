@@ -106,7 +106,7 @@ test.describe("i18n ルーティング基盤 (Issue #32 Phase 1-A)", () => {
   // -------------------------------------------------------------------------
   // [V-03] hreflang タグ
   // -------------------------------------------------------------------------
-  test("TC-I18N-005: /ja/ の HTML に hreflang 3種 (ja / en / x-default) が含まれる", async ({
+  test("TC-I18N-005: /ja/ の HTML に hreflang 6種 (ja/en/zh/ko/de/x-default) が含まれる", async ({
     page,
   }) => {
     await page.goto("/ja/");
@@ -119,6 +119,18 @@ test.describe("i18n ルーティング基盤 (Issue #32 Phase 1-A)", () => {
     // <link rel="alternate" hreflang="en"> の存在確認
     const hreflangEn = await page.locator('link[rel="alternate"][hreflang="en"]').count();
     expect(hreflangEn).toBeGreaterThan(0);
+
+    // <link rel="alternate" hreflang="zh"> の存在確認 (Phase 1-C zh/ko/de 追加)
+    const hreflangZh = await page.locator('link[rel="alternate"][hreflang="zh"]').count();
+    expect(hreflangZh).toBeGreaterThan(0);
+
+    // <link rel="alternate" hreflang="ko"> の存在確認
+    const hreflangKo = await page.locator('link[rel="alternate"][hreflang="ko"]').count();
+    expect(hreflangKo).toBeGreaterThan(0);
+
+    // <link rel="alternate" hreflang="de"> の存在確認
+    const hreflangDe = await page.locator('link[rel="alternate"][hreflang="de"]').count();
+    expect(hreflangDe).toBeGreaterThan(0);
 
     // <link rel="alternate" hreflang="x-default"> の存在確認
     const hreflangXDefault = await page
@@ -148,13 +160,9 @@ test.describe("i18n ルーティング基盤 (Issue #32 Phase 1-A)", () => {
     await loginUser(page, testEnv.credentials.email, testEnv.credentials.password);
     await page.waitForLoadState("networkidle");
 
-    // LanguageSwitcher を探してクリック
-    // data-testid="language-switcher-en" または aria-label を含むボタン/リンク
-    const enSwitcher = page
-      .locator(
-        '[data-testid="language-switcher-en"], [aria-label*="English"], button:has-text("EN"), a:has-text("EN")',
-      )
-      .first();
+    // LanguageSwitcher (プルダウン) を開いて en 項目をクリック
+    await page.locator('[data-testid="language-switcher-trigger"]').first().click();
+    const enSwitcher = page.locator('[data-testid="language-switcher-en"]').first();
     await enSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await enSwitcher.click();
 
@@ -173,11 +181,8 @@ test.describe("i18n ルーティング基盤 (Issue #32 Phase 1-A)", () => {
     await page.goto("/en/dashboard");
     await page.waitForLoadState("networkidle");
 
-    const jaSwitcher = page
-      .locator(
-        '[data-testid="language-switcher-ja"], [aria-label*="日本語"], button:has-text("JA"), a:has-text("JA")',
-      )
-      .first();
+    await page.locator('[data-testid="language-switcher-trigger"]').first().click();
+    const jaSwitcher = page.locator('[data-testid="language-switcher-ja"]').first();
     await jaSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await jaSwitcher.click();
 

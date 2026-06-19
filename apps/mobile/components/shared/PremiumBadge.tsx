@@ -4,10 +4,11 @@ import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { MainStackParamList } from "@/navigation/types";
+import { FREE_PLAN_LIMITS, type PremiumFeature } from "@swim-hub/shared/constants/premium";
 
 interface PremiumBadgeProps {
-  /** 表示メッセージ */
-  message: string;
+  /** 制限対象の Premium 機能。表示文言は i18n (forms.premium.*) から解決する */
+  feature: PremiumFeature;
   /** コンパクト表示（インライン用） */
   compact?: boolean;
 }
@@ -16,9 +17,22 @@ interface PremiumBadgeProps {
  * Premium 誘導バッジコンポーネント
  * Free ユーザーに Premium 機能の制限を案内し、アプリ内ペイウォール画面へ遷移する
  */
-export const PremiumBadge: React.FC<PremiumBadgeProps> = ({ message, compact = false }) => {
+export const PremiumBadge: React.FC<PremiumBadgeProps> = ({ feature, compact = false }) => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { t } = useTranslation();
+
+  // exhaustive: 新 PremiumFeature 追加時にここでコンパイルエラーを出す
+  const messages: Record<PremiumFeature, string> = {
+    image_upload: t("forms.premium.imageUpload"),
+    video_upload: t("forms.premium.videoUpload"),
+    split_time_limit: t("forms.premium.splitTimeLimit", {
+      limit: FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD,
+    }),
+    practice_time_limit: t("forms.premium.practiceTimeLimit", {
+      limit: FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG,
+    }),
+  };
+  const message = messages[feature];
 
   const handlePress = () => {
     navigation.navigate("Paywall");

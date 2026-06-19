@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_JP } from "next/font/google";
+import { Inter, Noto_Sans_JP, Noto_Sans_KR, Noto_Sans_SC } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
@@ -21,6 +21,23 @@ const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
   variable: "--font-noto-sans-jp",
   weight: ["400", "500", "700"],
+});
+
+// 韓国語 (ハングル) / 簡体字中国語のグリフ用。日本語フォントには無い字形を補う。
+// globals.css の html:lang(ko) / html:lang(zh) でそれぞれ優先する。
+// preload: false — :lang() で条件適用のため全ユーザーへの preload は不要
+const notoSansKR = Noto_Sans_KR({
+  subsets: ["latin"],
+  variable: "--font-noto-sans-kr",
+  weight: ["400", "500", "700"],
+  preload: false,
+});
+
+const notoSansSC = Noto_Sans_SC({
+  subsets: ["latin"],
+  variable: "--font-noto-sans-sc",
+  weight: ["400", "500", "700"],
+  preload: false,
 });
 
 type Locale = (typeof routing.locales)[number];
@@ -47,9 +64,8 @@ export async function generateMetadata({
     alternates: {
       canonical: `${SITE_URL}/${locale}`,
       languages: {
-        ja: `${SITE_URL}/ja`,
-        en: `${SITE_URL}/en`,
-        "x-default": `${SITE_URL}/ja`,
+        ...Object.fromEntries(routing.locales.map((l) => [l, `${SITE_URL}/${l}`])),
+        "x-default": `${SITE_URL}/${routing.defaultLocale}`,
       },
     },
     manifest: "/manifest.json",
@@ -118,20 +134,20 @@ export default async function LocaleLayout({
       offers: [
         {
           "@type": "Offer",
-          name: "Free プラン",
+          name: tMeta("planFree"),
           price: "0",
           priceCurrency: "JPY",
         },
         {
           "@type": "Offer",
-          name: "Premium プラン（月額）",
+          name: tMeta("planPremiumMonthly"),
           price: "500",
           priceCurrency: "JPY",
           billingIncrement: "P1M",
         },
         {
           "@type": "Offer",
-          name: "Premium プラン（年額）",
+          name: tMeta("planPremiumYearly"),
           price: "5000",
           priceCurrency: "JPY",
           billingIncrement: "P1Y",
@@ -164,7 +180,9 @@ export default async function LocaleLayout({
           href="/blog/feed.xml"
         />
       </head>
-      <body className={`${inter.variable} ${notoSansJP.variable} font-sans`}>
+      <body
+        className={`${inter.variable} ${notoSansJP.variable} ${notoSansKR.variable} ${notoSansSC.variable} font-sans`}
+      >
         {jsonLd.map((data, i) => (
           <script
             key={i}

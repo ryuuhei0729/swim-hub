@@ -1,0 +1,10 @@
+{
+  "CFBundleDisplayName": "SwimHub",
+  "NSCameraUsageDescription": "需要访问相机以拍摄个人头像。",
+  "NSPhotoLibraryUsageDescription": "需要访问照片图库以选择个人头像。",
+  "NSCalendarsUsageDescription": "用于将练习和比赛日程同步到日历。",
+  "NSCalendarsWriteOnlyAccessUsageDescription": "用于将练习和比赛日程添加到日历。",
+  "NSCalendarsFullAccessUsageDescription": "用于将练习和比赛日程同步到日历。",
+  "NSRemindersUsageDescription": "用于访问提醒事项。",
+  "NSRemindersFullAccessUsageDescription": "用于管理提醒事项。"
+}

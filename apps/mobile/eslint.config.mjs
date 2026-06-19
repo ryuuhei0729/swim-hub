@@ -74,6 +74,7 @@ export default [
       "*.config.ts",
       "coverage/**",
       "scripts/**",
+      "plugins/**",
     ],
   },
 ];
