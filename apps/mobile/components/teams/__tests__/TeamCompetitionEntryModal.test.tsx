@@ -245,16 +245,38 @@ describe("TeamCompetitionEntryModal", () => {
     );
   });
 
-  // [V-06] セルフエントリー導線が押下で onSelfEntry を発火する
-  it("「種目をエントリー」押下で onSelfEntry が呼ばれる", async () => {
+  // [V-06 / #7] セルフエントリー導線は entry_status === "open" のときのみ表示され、押下で onSelfEntry を発火する
+  it("entryStatus='open' のとき「種目をエントリー」押下で onSelfEntry が呼ばれる", async () => {
     const onSelfEntry = vi.fn();
     render(
-      <TeamCompetitionEntryModal {...baseProps} isAdmin={false} onSelfEntry={onSelfEntry} />,
+      <TeamCompetitionEntryModal
+        {...baseProps}
+        isAdmin={false}
+        entryStatus="open"
+        onSelfEntry={onSelfEntry}
+      />,
     );
     await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
 
     fireEvent.click(screen.getByText("種目をエントリー"));
     expect(onSelfEntry).toHaveBeenCalledTimes(1);
+  });
+
+  // [#7] entry_status が open 以外（before）のときはセルフエントリー導線を表示しない
+  it("entryStatus='before' のときセルフエントリー導線は表示されない", async () => {
+    const onSelfEntry = vi.fn();
+    render(
+      <TeamCompetitionEntryModal
+        {...baseProps}
+        isAdmin={false}
+        entryStatus="before"
+        onSelfEntry={onSelfEntry}
+      />,
+    );
+    await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
+
+    expect(screen.queryByText("種目をエントリー")).toBeNull();
+    expect(onSelfEntry).not.toHaveBeenCalled();
   });
 
   // visible=false のとき何も描画しない

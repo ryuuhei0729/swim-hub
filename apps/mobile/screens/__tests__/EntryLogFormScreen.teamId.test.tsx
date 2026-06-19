@@ -1,89 +1,25 @@
 /**
- * EntryLogFormScreen — Sprint 3 teamId ロジックテスト
+ * EntryLogFormScreen — Sprint 3 teamId ナビゲーション/invalidate ロジックテスト
  *
  * Sprint Contract 検証観点:
- * [S3-V-05] teamId あり + 新規: createTeamEntry が正しいシグネチャで呼ばれる
- * [S3-V-06] teamId なし + 新規: createPersonalEntry が呼ばれ createTeamEntry は呼ばれない
  * [S3-V-07] handleSkip で RecordLogForm 遷移時に teamId が引き継がれる
  * [S3-V-08] handleContinueToRecord で RecordLogForm 遷移時に teamId が引き継がれる
  * [S3-V-09] teamId あり: 保存後 teamKeys.competitions(teamId) が invalidate される
  *
  * 実装アプローチ:
  * EntryLogFormScreen は RN の Dimensions / Modal / Keyboard / KeyboardAvoidingView 等が
- * 未モックなため直接 render 不可。EntryLogFormScreen.tsx のコアロジック
- * (saveOrUpdateEntries / handleSkip) をロジック抽出テストで検証する。
- * TeamPracticeList / TeamCompetitionList のテストと同様のピュアロジックパターン。
+ * 未モックなため直接 render 不可。ナビゲーション引数生成 / invalidate のピュアロジックのみ検証する。
+ *
+ * NOTE (C-2 解消):
+ * 旧テストにあった saveOrUpdateEntries の create/update 分岐 (ローカル resolveCreateEntry)
+ * は「実装を import せず再実装した」トートロジーであり、かつ現行の screen は
+ * checkExistingEntry ベースの分岐を使わず resolveEntryMutations に一元化されたため削除した。
+ * 保存ロジック (create/update/delete 解決) の検証は
+ * utils/__tests__/entryMutations.test.ts で実物 resolveEntryMutations を import して行う。
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
-
-// ============================================================
-// saveOrUpdateEntries ロジック抽出
-// EntryLogFormScreen.tsx lines 419-439 相当の分岐
-//
-// 分岐:
-//   1. 既存エントリーがある → updateEntry
-//   2. 既存なし + teamId あり → createTeamEntry
-//   3. 既存なし + teamId なし → createPersonalEntry
-// ============================================================
-
-interface EntryAPILike {
-  createTeamEntry: (
-    teamId: string,
-    userId: string,
-    entry: Record<string, unknown>,
-  ) => Promise<{ id: string; style_id: number; team_id: string | null }>;
-  createPersonalEntry: (
-    entry: Record<string, unknown>,
-  ) => Promise<{ id: string; style_id: number; team_id: null }>;
-  checkExistingEntry: (
-    competitionId: string,
-    userId: string,
-    styleId: number,
-  ) => Promise<{ id: string } | null>;
-  updateEntry: (
-    id: string,
-    updates: Record<string, unknown>,
-  ) => Promise<{ id: string; style_id: number; team_id: string | null }>;
-}
-
-/**
- * 新規作成パスの分岐ロジック (saveOrUpdateEntries lines 404-438 抽出)
- */
-async function resolveCreateEntry(
-  entryAPI: EntryAPILike,
-  competitionId: string,
-  userId: string,
-  styleId: number,
-  entryTime: number | null,
-  note: string | null,
-  teamId: string | undefined,
-): Promise<{ id: string; style_id: number; team_id: string | null }> {
-  // 既存エントリーチェック
-  const existingEntry = await entryAPI.checkExistingEntry(competitionId, userId, styleId);
-
-  if (existingEntry) {
-    return entryAPI.updateEntry(existingEntry.id, {
-      entry_time: entryTime,
-      note,
-    });
-  } else if (teamId) {
-    return entryAPI.createTeamEntry(teamId, userId, {
-      competition_id: competitionId,
-      style_id: styleId,
-      entry_time: entryTime,
-      note,
-    });
-  } else {
-    return entryAPI.createPersonalEntry({
-      competition_id: competitionId,
-      style_id: styleId,
-      entry_time: entryTime,
-      note,
-    });
-  }
-}
 
 /**
  * handleSkip のナビゲーション引数生成ロジック
@@ -141,138 +77,6 @@ function simulateEntrySaveInvalidation(
 // ============================================================
 // テスト
 // ============================================================
-
-describe("EntryLogFormScreen — Sprint 3 saveOrUpdateEntries 分岐テスト", () => {
-  // [S3-V-05] teamId あり + 既存なし → createTeamEntry が呼ばれる
-  it("[S3-V-05] teamId あり + 既存エントリーなし: createTeamEntry が正しい引数で呼ばれる", async () => {
-    const entryAPI: EntryAPILike = {
-      createTeamEntry: vi.fn().mockResolvedValue({
-        id: "new-team-entry",
-        style_id: 1,
-        team_id: "team-1",
-      }),
-      createPersonalEntry: vi.fn(),
-      checkExistingEntry: vi.fn().mockResolvedValue(null),
-      updateEntry: vi.fn().mockResolvedValue({ id: "upd", style_id: 1, team_id: null }),
-    };
-
-    await resolveCreateEntry(
-      entryAPI,
-      "comp-1",
-      "user-1",
-      1,
-      null,
-      null,
-      "team-1",
-    );
-
-    expect(entryAPI.createTeamEntry).toHaveBeenCalledWith(
-      "team-1",
-      "user-1",
-      expect.objectContaining({
-        competition_id: "comp-1",
-        style_id: 1,
-      }),
-    );
-    expect(entryAPI.createPersonalEntry).not.toHaveBeenCalled();
-  });
-
-  // [S3-V-05] createTeamEntry の戻り値に team_id が含まれる
-  it("[S3-V-05] createTeamEntry の戻り値: team_id が正しくセットされている", async () => {
-    const entryAPI: EntryAPILike = {
-      createTeamEntry: vi.fn().mockResolvedValue({
-        id: "entry-t1",
-        style_id: 1,
-        team_id: "team-xyz",
-      }),
-      createPersonalEntry: vi.fn(),
-      checkExistingEntry: vi.fn().mockResolvedValue(null),
-      updateEntry: vi.fn().mockResolvedValue({ id: "upd", style_id: 1, team_id: null }),
-    };
-
-    const result = await resolveCreateEntry(
-      entryAPI,
-      "comp-1",
-      "user-1",
-      1,
-      null,
-      null,
-      "team-xyz",
-    );
-
-    expect(result.team_id).toBe("team-xyz");
-  });
-
-  // [S3-V-06] teamId なし + 既存なし → createPersonalEntry が呼ばれる
-  it("[S3-V-06] teamId なし + 既存エントリーなし: createPersonalEntry が呼ばれる", async () => {
-    const entryAPI: EntryAPILike = {
-      createTeamEntry: vi.fn(),
-      createPersonalEntry: vi.fn().mockResolvedValue({
-        id: "new-personal-entry",
-        style_id: 1,
-        team_id: null,
-      }),
-      checkExistingEntry: vi.fn().mockResolvedValue(null),
-      updateEntry: vi.fn().mockResolvedValue({ id: "upd", style_id: 1, team_id: null }),
-    };
-
-    await resolveCreateEntry(
-      entryAPI,
-      "comp-2",
-      "user-2",
-      2,
-      null,
-      null,
-      undefined,
-    );
-
-    expect(entryAPI.createPersonalEntry).toHaveBeenCalledWith(
-      expect.objectContaining({
-        competition_id: "comp-2",
-        style_id: 2,
-      }),
-    );
-    expect(entryAPI.createTeamEntry).not.toHaveBeenCalled();
-  });
-
-  // [S3-V-06 境界値] teamId が空文字列 → falsy なので createPersonalEntry が呼ばれる
-  it("[S3-V-06 境界値] teamId が空文字列: createPersonalEntry が呼ばれる", async () => {
-    const entryAPI: EntryAPILike = {
-      createTeamEntry: vi.fn(),
-      createPersonalEntry: vi.fn().mockResolvedValue({
-        id: "entry-empty",
-        style_id: 1,
-        team_id: null,
-      }),
-      checkExistingEntry: vi.fn().mockResolvedValue(null),
-      updateEntry: vi.fn().mockResolvedValue({ id: "upd", style_id: 1, team_id: null }),
-    };
-
-    await resolveCreateEntry(entryAPI, "comp-3", "user-3", 1, null, null, "");
-
-    expect(entryAPI.createPersonalEntry).toHaveBeenCalled();
-    expect(entryAPI.createTeamEntry).not.toHaveBeenCalled();
-  });
-
-  // 既存エントリーがある場合は updateEntry が呼ばれる (teamId の有無問わず)
-  it("[回帰] 既存エントリーがある場合: teamId があっても updateEntry が呼ばれる", async () => {
-    const entryAPI: EntryAPILike = {
-      createTeamEntry: vi.fn(),
-      createPersonalEntry: vi.fn(),
-      checkExistingEntry: vi.fn().mockResolvedValue({ id: "existing-entry" }),
-      updateEntry: vi.fn().mockResolvedValue({ id: "existing-entry", style_id: 1 }),
-    };
-
-    await resolveCreateEntry(entryAPI, "comp-4", "user-4", 1, 60.0, null, "team-1");
-
-    expect(entryAPI.updateEntry).toHaveBeenCalledWith(
-      "existing-entry",
-      expect.objectContaining({ entry_time: 60.0 }),
-    );
-    expect(entryAPI.createTeamEntry).not.toHaveBeenCalled();
-    expect(entryAPI.createPersonalEntry).not.toHaveBeenCalled();
-  });
-});
 
 describe("EntryLogFormScreen — Sprint 3 handleSkip / handleContinueToRecord テスト", () => {
   // [S3-V-07] handleSkip → RecordLogForm 遷移時に teamId が引き継がれる

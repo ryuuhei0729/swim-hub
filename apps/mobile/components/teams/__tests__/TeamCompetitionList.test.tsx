@@ -46,12 +46,16 @@ vi.mock("../TeamCompetitionEntryModal", () => ({
   TeamCompetitionEntryModal: (props: Record<string, unknown>) => {
     mocks.entryModalSpy(props);
     if (!props.visible) return null;
+    // #7: 実モーダルは onSelfEntry に「モーダル内の現在 status (楽観的更新後)」を渡す。
+    // ここではモーダルの現在 status として prop の entryStatus を転送して同セマンティクスを再現する
+    // (dead-click 防止ガードが現在 status で判定されることを検証可能にする)。
+    const currentStatus = props.entryStatus;
     return React.createElement(
       Pressable,
       {
         accessibilityRole: "button",
         accessibilityLabel: "modal-self-entry",
-        onPress: props.onSelfEntry as () => void,
+        onPress: () => (props.onSelfEntry as (s: unknown) => void)(currentStatus),
       },
       React.createElement(Text, null, "ENTRY_MODAL_OPEN"),
     );
@@ -296,7 +300,14 @@ describe("TeamCompetitionList", () => {
 
   // [V-06 / Sprint Contract] モーダル内「種目をエントリー」(onSelfEntry) で EntryForm へ遷移する (セルフエントリー機能維持)
   it("モーダルの onSelfEntry で EntryForm に { competitionId, date, teamId } で navigate される", () => {
-    const comp = makeCompetition({ id: "c-self", date: "2026-09-01", title: "秋季大会" });
+    // #7: セルフエントリー導線は entry_status === "open" のときのみ有効。
+    // 受付中の大会でのみ EntryForm へ遷移できることを検証する。
+    const comp = makeCompetition({
+      id: "c-self",
+      date: "2026-09-01",
+      title: "秋季大会",
+      entry_status: "open",
+    });
     mocks.useTeamCompetitionsQuery.mockReturnValue({
       data: [comp],
       isLoading: false,
@@ -319,6 +330,31 @@ describe("TeamCompetitionList", () => {
         teamId: "team-self",
       }),
     );
+  });
+
+  // [#7 dead-click 防止] 現在 status が "open" でないときは onSelfEntry が発火しても navigate しない
+  it("entry_status が closed のとき onSelfEntry が発火しても EntryForm へ navigate しない", () => {
+    const comp = makeCompetition({
+      id: "c-closed",
+      date: "2026-09-01",
+      title: "受付終了大会",
+      entry_status: "closed",
+    });
+    mocks.useTeamCompetitionsQuery.mockReturnValue({
+      data: [comp],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamCompetitionList teamId="team-self" isAdmin={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
+    fireEvent.click(screen.getByText("ENTRY_MODAL_OPEN"));
+
+    // 現在 status (closed) でガードされ、navigate は呼ばれない
+    expect(mocks.navigate).not.toHaveBeenCalledWith("EntryForm", expect.anything());
   });
 
   // entry_status が null/未定義でもモーダルへ "before" 相当で渡る (安全表示)

@@ -96,6 +96,18 @@ export const Image = ({
 export const TextInput = ({ ...props }: Record<string, unknown>) =>
   React.createElement("input", { type: "text", ...props });
 
+// Modal API
+// React Native の <Modal visible> は visible=false のとき内容を描画しない。
+// テストではこの挙動を再現し、visible=true のときのみ children を描画する。
+export const Modal = ({
+  children,
+  visible = true,
+  ...props
+}: { children?: React.ReactNode; visible?: boolean } & Record<string, unknown>) => {
+  if (!visible) return null;
+  return React.createElement("div", props, children);
+};
+
 // StyleSheet API
 // React NativeのStyleSheetは数値や文字列のスタイルを返すが、
 // DOM要素ではオブジェクト形式が必要なため、変換を行う
@@ -149,6 +161,7 @@ const ReactNative = {
   Pressable,
   ScrollView,
   FlatList,
+  Modal,
   ActivityIndicator,
   RefreshControl,
   Image,

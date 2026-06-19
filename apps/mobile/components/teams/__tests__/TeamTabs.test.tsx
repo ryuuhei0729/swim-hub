@@ -31,16 +31,22 @@ describe("TeamTabs", () => {
     expect(screen.getByTestId("icon-bell")).toBeTruthy();
   });
 
-  // S1-V-04: 非管理者には管理者専用タブ以外の 5 タブが表示される
-  it("非管理者には 5 タブが表示される（members/groups/practices/competitions/attendance）", () => {
+  // S1-V-04 / #1: 非管理者には管理者専用タブ (groups / announcements) 以外の 4 タブのみ表示される
+  it("非管理者には 4 タブが表示される（members/practices/competitions/attendance）", () => {
     render(<TeamTabs {...makeProps({ isAdmin: false })} />);
-    // announcements を除く 5 タブ
+    // groups と announcements を除く 4 タブ
     expect(screen.getByTestId("icon-users")).toBeTruthy();     // members
-    expect(screen.getByTestId("icon-layers")).toBeTruthy();    // groups
     expect(screen.getByTestId("icon-clock")).toBeTruthy();     // practices
     expect(screen.getByTestId("icon-award")).toBeTruthy();     // competitions
     expect(screen.getByTestId("icon-clipboard")).toBeTruthy(); // attendance
-    expect(screen.queryByTestId("icon-bell")).toBeNull();      // announcements (非表示)
+    expect(screen.queryByTestId("icon-layers")).toBeNull();    // groups (adminOnly: 非表示)
+    expect(screen.queryByTestId("icon-bell")).toBeNull();      // announcements (adminOnly: 非表示)
+  });
+
+  // #1: groups タブは管理者のみ表示される
+  it("isAdmin=true のとき groups タブが表示される", () => {
+    render(<TeamTabs {...makeProps({ isAdmin: true })} />);
+    expect(screen.getByTestId("icon-layers")).toBeTruthy();
   });
 
   // S1-V-05: 管理者には 6 タブすべてが表示される

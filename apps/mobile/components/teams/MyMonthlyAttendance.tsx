@@ -16,6 +16,7 @@ import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendanc
 import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { getMonthDateRange, formatDate, toISODateString } from "@swim-hub/shared/utils/date";
 import { startOfMonth, endOfMonth, addMonths, format, parseISO } from "date-fns";
+import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
 import { useTranslation } from "react-i18next";
 import { useDateLocale } from "@/hooks/useDateLocale";
 
@@ -431,7 +432,11 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         })
         .map((event) => {
           const editState = editStates[event.id];
-          let note: string | null = editState.note || null;
+          // web useAttendanceEdit:191 / useRecentAttendance:199 と同順: 先にユーザー入力を sanitize し、
+          // その後に締切後編集マーク（システム生成・サニタイズ不要）を付与する。
+          let note: string | null = editState.note
+            ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH)
+            : null;
 
           // 締切後の新規登録には締切後編集マークを付与（web useAttendanceEdit:191-208 と同一ロジック）。
           // update 経路は shared bulkUpdateMyAttendances→addEditMark が付与するため、ここでは insert のみ対象（二重付与防止）。

@@ -596,6 +596,9 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
         setBulkSheetVisible(false);
       } catch (err) {
         console.error("AdminMonthlyAttendance: failed to bulk update status", err);
+        // 逐次 mutateAsync が途中で失敗した場合、確定済みの変更が UI と乖離する。
+        // 再読込してサーバー状態に同期する（確定分を正しく反映）。
+        await loadFutureEvents();
         const msg =
           err instanceof Error ? err.message : t("teams.mobile.adminAttendance.saveFailed");
         Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);

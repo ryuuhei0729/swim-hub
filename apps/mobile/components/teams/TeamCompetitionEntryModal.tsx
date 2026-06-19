@@ -30,7 +30,9 @@ interface TeamCompetitionEntryModalProps {
   teamId: string;
   entryStatus: EntryStatus;
   isAdmin: boolean;
-  onSelfEntry: () => void;
+  // 現在のモーダル内 status（楽観的更新後の値）を渡し、呼び出し側ガードが
+  // prop の stale な entry_status ではなく同一ソースで判定できるようにする（dead-click 防止）。
+  onSelfEntry: (currentStatus: EntryStatus) => void;
 }
 
 interface EntryGroup {
@@ -229,7 +231,7 @@ export function TeamCompetitionEntryModal({
             {status === "open" && (
               <Pressable
                 style={styles.selfEntryButton}
-                onPress={onSelfEntry}
+                onPress={() => onSelfEntry(status)}
                 accessibilityRole="button"
                 accessibilityLabel={t("teams.mobile.teamCompetitionEntryModal.selfEntryButton")}
               >

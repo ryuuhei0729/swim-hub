@@ -184,8 +184,10 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
   // モーダル内の「種目をエントリー」: 既存の選手セルフエントリー画面へ遷移（機能維持）。
   // web は受付中(open)の大会のみセルフエントリーに到達するため(useTeamEntry.ts:59-64)、
   // 受付中以外では導線を出さない（モーダル側で非表示だが二重ガード）。
-  const handleSelfEntry = useCallback((competition: Competition) => {
-    if ((competition.entry_status ?? "before") !== "open") return;
+  const handleSelfEntry = useCallback((competition: Competition, currentStatus: EntryStatus) => {
+    // モーダル内の現在 status（楽観的更新後の値）でガードする。
+    // prop の competition.entry_status は再フェッチ前は stale なため使わない（dead-click 防止）。
+    if (currentStatus !== "open") return;
     setEntryModalCompetition(null);
     navigation.navigate("EntryForm", {
       competitionId: competition.id,
@@ -320,7 +322,7 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
           teamId={teamId}
           entryStatus={entryModalCompetition.entry_status ?? "before"}
           isAdmin={isAdmin}
-          onSelfEntry={() => handleSelfEntry(entryModalCompetition)}
+          onSelfEntry={(currentStatus) => handleSelfEntry(entryModalCompetition, currentStatus)}
         />
       )}
     </View>
