@@ -168,9 +168,12 @@ jobs:
       env:
         SUPABASE_DB_PASSWORD: postgres
 
+    # `supabase functions test` は CLI から廃止されたため Deno で直接テストを実行する。
+    # 実テストファイル（*.test.ts / *_test.ts）が存在する場合のみ実行する。
+    # テストを追加する際は別途 Deno のセットアップ step が必要。
     - name: Test Edge Functions
-      if: ${{ hashFiles('supabase/functions/**/*.ts') != '' || hashFiles('supabase/functions/**/*.js') != '' }}
-      run: supabase functions test --workdir supabase
+      if: ${{ hashFiles('supabase/functions/**/*.test.ts', 'supabase/functions/**/*_test.ts') != '' }}
+      run: deno test --allow-all supabase/functions/
 
     - name: Stop Supabase stack
       if: always()
