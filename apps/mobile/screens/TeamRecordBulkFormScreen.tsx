@@ -976,7 +976,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           <Feather name="lock" size={40} color="#DC2626" />
           <Text style={styles.permissionText}>{t("teams.mobile.webGuide")}</Text>
           <Pressable style={styles.permissionButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.permissionButtonText}>{t("record.backButton", { defaultValue: t("teams.record.backButton") })}</Text>
+            <Text style={styles.permissionButtonText}>{t("teams.record.backButton")}</Text>
           </Pressable>
         </View>
       </View>

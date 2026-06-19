@@ -18,7 +18,7 @@ iOS シミュレータ上で **Maestro** がアプリを操作してスクショ
 
 実行手順は §1〜§3 のみ（§4 frameit・§5 deliver は今回は任意）。
 
-```
+```text
 build-sim.sh        seed-demo.sh              capture.sh                fastlane frame      fastlane upload_screenshots
  .app を生成   →   デモ垢+データ投入   →   EN/JA × iPhone/iPad 撮影  →  枠+テキスト合成  →  ASC へアップロード
 ```

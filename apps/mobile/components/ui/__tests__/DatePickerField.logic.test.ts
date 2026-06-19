@@ -17,6 +17,7 @@ import {
   endOfMonth,
   eachDayOfInterval,
   getDay,
+  startOfDay,
   format,
 } from "date-fns";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
@@ -34,10 +35,12 @@ function buildMonthGrid(month: Date): (Date | null)[] {
   return [...leadingEmptyDays, ...days];
 }
 
-/** isDateDisabled (DatePickerField.tsx L88-92 と等価) */
+/** isDateDisabled (DatePickerField.tsx L88-94 と等価) */
 function isDateDisabled(date: Date, minDate?: Date, maxDate?: Date): boolean {
-  if (minDate && date < minDate) return true;
-  if (maxDate && date > maxDate) return true;
+  // min/max は日付のみで比較する（時刻が混入しても境界の日が選べるよう正規化）
+  const day = startOfDay(date);
+  if (minDate && day < startOfDay(minDate)) return true;
+  if (maxDate && day > startOfDay(maxDate)) return true;
   return false;
 }
 
@@ -125,6 +128,18 @@ describe("isDateDisabled - min/max 制約", () => {
   it("min/max 未指定なら常に false", () => {
     expect(isDateDisabled(parseISO("1900-01-01"))).toBe(false);
     expect(isDateDisabled(parseISO("2999-12-31"))).toBe(false);
+  });
+
+  it("minDate に時刻成分があっても日付のみで比較される", () => {
+    const minDateWithTime = new Date("2026-06-10T15:30:00");
+    expect(isDateDisabled(parseISO("2026-06-10"), minDateWithTime)).toBe(false);
+    expect(isDateDisabled(parseISO("2026-06-09"), minDateWithTime)).toBe(true);
+  });
+
+  it("maxDate に時刻成分があっても日付のみで比較される", () => {
+    const maxDateWithTime = new Date("2026-06-20T15:30:00");
+    expect(isDateDisabled(parseISO("2026-06-20"), undefined, maxDateWithTime)).toBe(false);
+    expect(isDateDisabled(parseISO("2026-06-21"), undefined, maxDateWithTime)).toBe(true);
   });
 });
 

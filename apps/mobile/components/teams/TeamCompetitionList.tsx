@@ -66,7 +66,8 @@ const CompetitionItem = React.memo(function CompetitionItem({
   return (
     <View style={styles.item}>
       <Pressable
-        onPress={() => isAdmin && onEdit(competition)}
+        onPress={isAdmin ? () => onEdit(competition) : undefined}
+        disabled={!isAdmin}
         accessibilityRole={isAdmin ? "button" : undefined}
       >
         <View style={styles.itemHeader}>

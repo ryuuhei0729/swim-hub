@@ -138,6 +138,7 @@ describe("useApproveMemberMutation", () => {
     const { result, queryClient } = renderQueryHook(() =>
       useApproveMemberMutation(mockSupabase, mockMembersApi as unknown as TeamMembersAPI),
     );
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     let returnedData;
     await act(async () => {
@@ -149,6 +150,10 @@ describe("useApproveMemberMutation", () => {
 
     expect(mockMembersApi.approve).toHaveBeenCalledWith("m-1");
     expect(returnedData).toEqual(approved);
+    // onSuccess で members / pendingMembers / detail のキャッシュが無効化される
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: teamKeys.members("team-1") });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: teamKeys.pendingMembers("team-1") });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: teamKeys.detail("team-1") });
   });
 
   it("API エラー時に例外が投げられる", async () => {

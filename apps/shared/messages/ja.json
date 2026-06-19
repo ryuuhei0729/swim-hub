@@ -3469,7 +3469,7 @@
       "noStyle": "種目を選択してください",
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
-      "splitTimeHeader": "Split Time"
+      "splitTimeHeader": "スプリットタイム"
     }
   },
   "forms": {
@@ -3768,7 +3768,7 @@
       "noStyle": "種目を選択してください",
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
-      "splitTimeHeader": "Split Time"
+      "splitTimeHeader": "スプリットタイム"
     },
     "imageUploader": {
       "label": "画像を添付",

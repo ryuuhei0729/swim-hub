@@ -34,7 +34,7 @@ const NOTE_MAX_LENGTH = 500;
 
 // 既存の締切後編集マークを除去するための正規表現
 // shared AttendanceAPI.addEditMark / web useAttendanceEdit と同一の挙動（重複付与防止）
-const EDIT_MARK_REGEX = /\s*\(\d{2}\/\d{2}\s+\d{2}:\d{2}締切後編集\)/g;
+const EDIT_MARK_REGEX = /\s*\(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}(?:締切後)?編集\)\s*/g;
 
 interface MonthItem {
   year: number;

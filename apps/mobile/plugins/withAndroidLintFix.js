@@ -33,7 +33,8 @@ module.exports = function withAndroidLintFix(config) {
     }
 
     // 先頭の `android {` ブロック直後に lint 設定を挿入する
-    const androidBlock = /\nandroid\s*\{/;
+    // (行頭インデントや改行差で取りこぼさないよう許容的にマッチする)
+    const androidBlock = /^[ \t]*android\s*\{/m;
     if (!androidBlock.test(contents)) {
       throw new Error("withAndroidLintFix: app/build.gradle に android {} ブロックが見つかりません");
     }
