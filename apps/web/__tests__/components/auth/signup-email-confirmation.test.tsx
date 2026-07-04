@@ -542,7 +542,7 @@ describe("[V-05] email_confirmed_at=null のとき isAuthenticated=true でも /
     });
 
     // サインアップフォームが引き続き表示されている (early return null も発動しない)
-    expect(screen.queryByTestId("signup-button")).not.toBeNull();
+    expect(screen.queryByTestId("email-signup-button")).not.toBeNull();
   });
 
   it("email_confirmed_at=null かつ confirmed_at=undefined でも /onboarding へリダイレクトされない", async () => {
@@ -564,7 +564,7 @@ describe("[V-05] email_confirmed_at=null のとき isAuthenticated=true でも /
     });
 
     // フォームが表示されている (return null が発動しない)
-    expect(screen.queryByTestId("signup-button")).not.toBeNull();
+    expect(screen.queryByTestId("email-signup-button")).not.toBeNull();
   });
 
   it("user=null かつ session=null（未認証）の場合もリダイレクトされず通常のサインアップフォームが表示される", async () => {
@@ -576,7 +576,7 @@ describe("[V-05] email_confirmed_at=null のとき isAuthenticated=true でも /
       expect(mockRouterPush).not.toHaveBeenCalled();
     });
 
-    expect(screen.queryByTestId("signup-button")).not.toBeNull();
+    expect(screen.queryByTestId("email-signup-button")).not.toBeNull();
   });
 });
 
@@ -629,7 +629,7 @@ describe("[V-06] email_confirmed_at がセット済みのとき /onboarding に�
     });
 
     // フォームが引き続き表示されている
-    expect(screen.queryByTestId("signup-button")).not.toBeNull();
+    expect(screen.queryByTestId("email-signup-button")).not.toBeNull();
   });
 
   it("early return null: email 確認済みユーザーでは SignupPage は null を返す", async () => {
@@ -647,9 +647,9 @@ describe("[V-06] email_confirmed_at がセット済みのとき /onboarding に�
 
     render(<SignupPage />);
 
-    // return null により signup フォームは表示されない
+    // return null により signup ページの内容は表示されない
     await waitFor(() => {
-      expect(screen.queryByTestId("signup-button")).toBeNull();
+      expect(screen.queryByTestId("email-signup-button")).toBeNull();
     });
   });
 });
