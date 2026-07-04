@@ -13,6 +13,10 @@ import type { CreatePracticeLogTemplateInput, PracticeLogTemplate } from "@swim-
 import type { PracticeTag } from "@swim-hub/shared/types";
 import TagInput from "@/components/forms/TagInput";
 import Button from "@/components/ui/Button";
+import NumberStepper from "@/components/ui/NumberStepper";
+import { SelectChips, chipClass } from "@/components/forms/practice-log/components/SelectChips";
+import { SWIM_STYLES, SWIM_CATEGORIES, DISTANCE_PRESETS } from "@/components/forms/practice-log/types";
+import { cn } from "@/utils/cn";
 
 interface PracticeLogTemplateCreateModalProps {
   isOpen: boolean;
@@ -20,16 +24,15 @@ interface PracticeLogTemplateCreateModalProps {
   editData?: PracticeLogTemplate | null;
 }
 
-const STYLES = ["Fr", "Ba", "Br", "Fly", "IM"];
-const SWIM_CATEGORIES: Array<"Swim" | "Pull" | "Kick"> = ["Swim", "Pull", "Kick"];
-const DISTANCES = [25, 50, 100, 200, 400, 800, 1500];
-
 export function PracticeLogTemplateCreateModal({
   isOpen,
   onClose,
   editData,
 }: PracticeLogTemplateCreateModalProps) {
   const t = useTranslations("practiceLogTemplates.createModal");
+  const tPM = useTranslations("forms.practiceMenu");
+  const tPractice = useTranslations("practice");
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -41,20 +44,25 @@ export function PracticeLogTemplateCreateModal({
 
   const isEditMode = !!editData;
 
-  const [formData, setFormData] = useState<CreatePracticeLogTemplateInput>({
-    name: "",
-    style: "Fr",
-    swim_category: "Swim",
-    distance: 50,
-    rep_count: 1,
-    set_count: 1,
-    circle: 90,
-    note: "",
-    tag_ids: [],
-  });
+  // 固定フィールド（name / style / swim_category / note / tag_ids）
+  const [name, setName] = useState("");
+  const [style, setStyle] = useState("Fr");
+  const [swimCategory, setSwimCategory] = useState<"Swim" | "Pull" | "Kick">("Swim");
+  const [note, setNote] = useState("");
 
-  const [circleMinutes, setCircleMinutes] = useState(1);
-  const [circleSeconds, setCircleSeconds] = useState(30);
+  // 距離: PracticeMenuItem と同じく number | "" で唯一の真実として保持
+  // showCustomDistance=false のとき値はプリセット確定値、true のとき input 直結
+  const [distance, setDistance] = useState<number | "">(50);
+  const [showCustomDistance, setShowCustomDistance] = useState(false);
+
+  // Critical 2: rep_count / set_count も number | "" で保持（入力途中の空を許容）
+  const [repCount, setRepCount] = useState<number | "">(1);
+  const [setCount, setSetCount] = useState<number | "">(1);
+
+  // circle 分/秒: 既存どおり number | ""
+  const [circleMinutes, setCircleMinutes] = useState<number | "">(1);
+  const [circleSeconds, setCircleSeconds] = useState<number | "">(30);
+
   const [availableTags, setAvailableTags] = useState<PracticeTag[]>([]);
   const [selectedTags, setSelectedTags] = useState<PracticeTag[]>([]);
 
@@ -65,45 +73,46 @@ export function PracticeLogTemplateCreateModal({
     }
   }, [tagsData]);
 
-  // 編集モード時にフォームにデータを設定
+  // モーダル開閉 / editData 変更時にフォームを初期化
   useEffect(() => {
     if (isOpen && editData) {
-      const circleTime = editData.circle || 90;
+      const circleTime = editData.circle || 0;
       const min = Math.floor(circleTime / 60);
       const sec = circleTime % 60;
 
-      setFormData({
-        name: editData.name,
-        style: editData.style,
-        swim_category: editData.swim_category,
-        distance: editData.distance,
-        rep_count: editData.rep_count,
-        set_count: editData.set_count,
-        circle: circleTime,
-        note: editData.note || "",
-        tag_ids: editData.tag_ids || [],
-      });
+      const distanceIsPreset = (DISTANCE_PRESETS as readonly number[]).includes(editData.distance);
+
+      setName(editData.name);
+      setStyle(editData.style);
+      setSwimCategory(editData.swim_category);
+      setNote(editData.note || "");
+      setRepCount(editData.rep_count);
+      setSetCount(editData.set_count);
       setCircleMinutes(min);
       setCircleSeconds(sec);
 
-      // 既存のタグを選択状態に
+      if (!distanceIsPreset) {
+        // プリセット外（400/800/1500 等）→ 「その他」モードで値をセット
+        setDistance(editData.distance);
+        setShowCustomDistance(true);
+      } else {
+        setDistance(editData.distance);
+        setShowCustomDistance(false);
+      }
+
       if (editData.tag_ids && tagsData) {
         const selected = tagsData.filter((tag) => editData.tag_ids.includes(tag.id));
         setSelectedTags(selected);
       }
     } else if (isOpen && !editData) {
-      // 新規作成時はフォームをリセット
-      setFormData({
-        name: "",
-        style: "Fr",
-        swim_category: "Swim",
-        distance: 50,
-        rep_count: 1,
-        set_count: 1,
-        circle: 90,
-        note: "",
-        tag_ids: [],
-      });
+      setName("");
+      setStyle("Fr");
+      setSwimCategory("Swim");
+      setNote("");
+      setDistance(50);
+      setShowCustomDistance(false);
+      setRepCount(1);
+      setSetCount(1);
       setCircleMinutes(1);
       setCircleSeconds(30);
       setSelectedTags([]);
@@ -114,11 +123,27 @@ export function PracticeLogTemplateCreateModal({
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      const circleInSeconds = circleMinutes * 60 + circleSeconds;
+      // Critical 1: カスタム距離が空なら保存をブロック（required HTML バリデーションが通れば
+      // ここには来ないが、念のため JS 側でもガード）
+      const distanceNum = Number(distance);
+      if (!distanceNum || distanceNum <= 0) return;
+
+      // Critical 2: submit 時に rep/set を確定（空 → 1）
+      const repCountNum = Math.max(1, Number(repCount) || 1);
+      const setCountNum = Math.max(1, Number(setCount) || 1);
+
+      // circle: 0分0秒 → 0（null にしない）
+      const circleInSeconds = (Number(circleMinutes) || 0) * 60 + (Number(circleSeconds) || 0);
+
       const input: CreatePracticeLogTemplateInput = {
-        ...formData,
+        name,
+        style,
+        swim_category: swimCategory,
+        distance: distanceNum,
+        rep_count: repCountNum,
+        set_count: setCountNum,
         circle: circleInSeconds,
-        note: formData.note || null,
+        note: note || null,
         tag_ids: selectedTags.map((tag) => tag.id),
       };
 
@@ -137,9 +162,15 @@ export function PracticeLogTemplateCreateModal({
       }
     },
     [
-      formData,
+      name,
+      style,
+      swimCategory,
+      distance,
+      repCount,
+      setCount,
       circleMinutes,
       circleSeconds,
+      note,
       selectedTags,
       isEditMode,
       editData,
@@ -200,7 +231,7 @@ export function PracticeLogTemplateCreateModal({
               type="button"
               onClick={onClose}
               className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
-              aria-label="閉じる"
+              aria-label={t("closeAriaLabel")}
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -219,8 +250,8 @@ export function PracticeLogTemplateCreateModal({
               <input
                 id="template-name"
                 type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder={t("namePlaceholder")}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
@@ -228,149 +259,169 @@ export function PracticeLogTemplateCreateModal({
               />
             </div>
 
-            {/* 種目 & カテゴリ */}
+            {/* 種目 */}
+            <div>
+              <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
+                {t("styleLabel")} <span className="text-red-500">*</span>
+              </label>
+              <SelectChips
+                options={SWIM_STYLES.map((s) => ({
+                  value: s.value,
+                  label: tPractice(`styles.${s.value}` as Parameters<typeof tPractice>[0]),
+                }))}
+                value={style}
+                onChange={setStyle}
+                testIdPrefix="template-style"
+              />
+            </div>
+
+            {/* カテゴリ */}
+            <div>
+              <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
+                {t("categoryLabel")} <span className="text-red-500">*</span>
+              </label>
+              <SelectChips
+                options={SWIM_CATEGORIES.map((category) => ({
+                  value: category.value,
+                  label: category.label,
+                }))}
+                value={swimCategory}
+                onChange={(value) => setSwimCategory(value as "Swim" | "Pull" | "Kick")}
+                testIdPrefix="template-swim-category"
+              />
+            </div>
+
+            {/* 距離 — PracticeMenuItem と同一挙動 */}
+            <div>
+              <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
+                {t("distanceLabel")} <span className="text-red-500">*</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {DISTANCE_PRESETS.map((preset) => {
+                  const selected = !showCustomDistance && Number(distance) === preset;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setShowCustomDistance(false);
+                        setDistance(preset);
+                      }}
+                      className={cn(chipClass(selected), "min-w-12")}
+                      aria-pressed={selected}
+                      data-testid={`template-distance-preset-${preset}`}
+                    >
+                      {preset}
+                    </button>
+                  );
+                })}
+                {showCustomDistance ? (
+                  // Critical 1: distance state に直接反映。空のまま送信 → required が確実に効く
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={distance}
+                    onChange={(e) => setDistance(e.target.value === "" ? "" : Number(e.target.value))}
+                    placeholder="400"
+                    min={1}
+                    required
+                    autoFocus
+                    aria-label={t("distanceLabel")}
+                    data-testid="template-distance-custom"
+                    className="h-8 sm:h-10 w-20 px-3 rounded-md border border-blue-600 bg-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDistance("");
+                      setShowCustomDistance(true);
+                    }}
+                    className={chipClass(false)}
+                    data-testid="template-distance-other"
+                  >
+                    {tPM("distanceOther")}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 本数 × セット数 — Critical 2: number | "" で保持 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label
-                  htmlFor="template-style"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  {t("styleLabel")}
+                <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
+                  {tPM("repsLabel")} <span className="text-red-500">*</span>
                 </label>
-                <select
-                  id="template-style"
-                  value={formData.style}
-                  onChange={(e) => setFormData({ ...formData, style: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {STYLES.map((style) => (
-                    <option key={style} value={style}>
-                      {style}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label
-                  htmlFor="template-category"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  {t("categoryLabel")}
-                </label>
-                <select
-                  id="template-category"
-                  value={formData.swim_category}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      swim_category: e.target.value as "Swim" | "Pull" | "Kick",
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {SWIM_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* 距離 × 本数 × セット */}
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label
-                  htmlFor="template-distance"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  {t("distanceLabel")}
-                </label>
-                <select
-                  id="template-distance"
-                  value={formData.distance}
-                  onChange={(e) => setFormData({ ...formData, distance: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {DISTANCES.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label
-                  htmlFor="template-rep"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  {t("repLabel")}
-                </label>
-                <input
-                  id="template-rep"
-                  type="number"
+                <NumberStepper
+                  value={repCount}
+                  onChange={(v) => setRepCount(v === "" ? "" : Number(v))}
                   min={1}
-                  max={99}
-                  value={formData.rep_count}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      rep_count: Number(e.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  step={1}
+                  placeholder="4"
+                  ariaLabel={tPM("repsLabel")}
+                  fieldLabel={tPM("repsLabel")}
+                  decreaseLabel={tPM("decrease")}
+                  increaseLabel={tPM("increase")}
+                  data-testid="template-rep-count"
                 />
               </div>
+
               <div>
-                <label
-                  htmlFor="template-set"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  {t("setLabel")}
+                <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
+                  {tPM("setsLabel")} <span className="text-red-500">*</span>
                 </label>
-                <input
-                  id="template-set"
-                  type="number"
+                <NumberStepper
+                  value={setCount}
+                  onChange={(v) => setSetCount(v === "" ? "" : Number(v))}
                   min={1}
-                  max={99}
-                  value={formData.set_count}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      set_count: Number(e.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  step={1}
+                  placeholder="1"
+                  ariaLabel={tPM("setsLabel")}
+                  fieldLabel={tPM("setsLabel")}
+                  decreaseLabel={tPM("decrease")}
+                  increaseLabel={tPM("increase")}
+                  data-testid="template-set-count"
                 />
               </div>
             </div>
 
-            {/* サークル（必須） */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t("circleLabel")} <span className="text-red-500">*</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={59}
+            {/* サークル（分 / 秒）— Critical 3: circleMinutes の max={59} を削除 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
+                  {tPM("circleMinLabel")}
+                </label>
+                <NumberStepper
                   value={circleMinutes}
-                  onChange={(e) => setCircleMinutes(Number(e.target.value))}
-                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
-                  aria-label={`${t("circleLabel")} ${t("circleMinUnit")}`}
+                  onChange={(v) => setCircleMinutes(v === "" ? "" : Number(v))}
+                  min={0}
+                  step={1}
+                  placeholder="1"
+                  ariaLabel={tPM("circleMinLabel")}
+                  fieldLabel={tPM("circleMinLabel")}
+                  decreaseLabel={tPM("decrease")}
+                  increaseLabel={tPM("increase")}
+                  data-testid="template-circle-min"
                 />
-                <span className="text-gray-600">{t("circleMinUnit")}</span>
-                <input
-                  type="number"
+              </div>
+
+              <div>
+                <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
+                  {tPM("circleSecLabel")}
+                </label>
+                <NumberStepper
+                  value={circleSeconds}
+                  onChange={(v) => setCircleSeconds(v === "" ? "" : Number(v))}
                   min={0}
                   max={59}
-                  value={circleSeconds}
-                  onChange={(e) => setCircleSeconds(Number(e.target.value))}
-                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center"
-                  aria-label={`${t("circleLabel")} ${t("circleSecUnit")}`}
+                  step={10}
+                  placeholder="30"
+                  ariaLabel={tPM("circleSecLabel")}
+                  fieldLabel={tPM("circleSecLabel")}
+                  decreaseLabel={tPM("decrease")}
+                  increaseLabel={tPM("increase")}
+                  data-testid="template-circle-sec"
                 />
-                <span className="text-gray-600">{t("circleSecUnit")}</span>
               </div>
             </div>
 
@@ -396,8 +447,8 @@ export function PracticeLogTemplateCreateModal({
               </label>
               <textarea
                 id="template-note"
-                value={formData.note || ""}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
                 placeholder={t("notePlaceholder")}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
@@ -409,7 +460,7 @@ export function PracticeLogTemplateCreateModal({
               <Button type="button" variant="outline" onClick={onClose}>
                 {t("cancelButton")}
               </Button>
-              <Button type="submit" disabled={!formData.name || isPending}>
+              <Button type="submit" disabled={!name || isPending}>
                 {isPending
                   ? isEditMode
                     ? t("updatingButton")

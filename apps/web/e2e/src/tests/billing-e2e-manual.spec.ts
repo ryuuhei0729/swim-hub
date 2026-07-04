@@ -336,9 +336,9 @@ test.describe("Free プランの機能制限", () => {
     // カレンダーの日付をクリック（openDateModal内で/dashboardに遷移する）
     await openDateModal(page);
 
-    // 「練習予定を追加」or「練習記録」ボタンをクリック
-    // 空の日付: "練習予定を追加"、データがある日付: "練習記録" (data-testid="add-practice-button")
-    const emptyPracticeBtn = page.getByText("練習予定を追加");
+    // 「練習記録を追加」or「練習記録」ボタンをクリック
+    // 空の日付: "練習記録を追加"、データがある日付: "練習記録" (data-testid="add-practice-button")
+    const emptyPracticeBtn = page.getByText("練習記録を追加");
     const addPracticeBtn = page.locator('[data-testid="add-practice-button"]');
     if (await emptyPracticeBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await emptyPracticeBtn.click();
@@ -1181,9 +1181,9 @@ test.describe("Premium プランの機能確認", () => {
     // カレンダーの日付をクリック（openDateModal内で/dashboardに遷移する）
     await openDateModal(page);
 
-    // 「練習予定を追加」or「練習記録」ボタンをクリック
-    // 空の日付: "練習予定を追加"、データがある日付: "練習記録" (data-testid="add-practice-button")
-    const emptyPracticeBtn = page.getByText("練習予定を追加");
+    // 「練習記録を追加」or「練習記録」ボタンをクリック
+    // 空の日付: "練習記録を追加"、データがある日付: "練習記録" (data-testid="add-practice-button")
+    const emptyPracticeBtn = page.getByText("練習記録を追加");
     const addPracticeBtn = page.locator('[data-testid="add-practice-button"]');
     if (await emptyPracticeBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false)) {
       await emptyPracticeBtn.click();

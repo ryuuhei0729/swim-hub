@@ -1,25 +1,43 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowLeftIcon, EnvelopeIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
 
 const SUBJECT_OPTIONS = ["question", "bug", "suggestion", "account", "other"] as const;
+const APP_OPTIONS = ["swimhub", "timer", "scanner"] as const;
+const PLATFORM_OPTIONS = ["web", "ios", "android"] as const;
+
+type AppOption = (typeof APP_OPTIONS)[number];
 
 export default function ContactPage() {
   const t = useTranslations("contact");
   const tCommon = useTranslations("common");
   const tSubject = useTranslations("contact.subjectOptions");
+  const tApp = useTranslations("contact.appOptions");
+  const tPlatform = useTranslations("contact.platformOptions");
+  const locale = useLocale();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     subject: "",
     message: "",
   });
+  // 利用アプリはリンク元の ?app= から自動プリセット（既定は swimhub）、環境は既定 web
+  const [sourceApp, setSourceApp] = useState<AppOption>("swimhub");
+  const [platform, setPlatform] = useState<(typeof PLATFORM_OPTIONS)[number]>("web");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
+
+  // リンク元アプリ（?app=timer / ?app=scanner）を読み取ってプリセット
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get("app");
+    if (param && (APP_OPTIONS as readonly string[]).includes(param)) {
+      setSourceApp(param as AppOption);
+    }
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -37,7 +55,14 @@ export default function ContactPage() {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          sourceApp,
+          platform,
+          locale,
+          pageUrl: window.location.href,
+          referrer: document.referrer || null,
+        }),
       });
 
       if (!response.ok) {
@@ -130,6 +155,49 @@ export default function ContactPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* 利用アプリ・ご利用環境 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="sourceApp" className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("appLabel")}
+                </label>
+                <select
+                  id="sourceApp"
+                  name="sourceApp"
+                  value={sourceApp}
+                  onChange={(e) => setSourceApp(e.target.value as AppOption)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {APP_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {tApp(opt)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("platformLabel")}
+                </label>
+                <select
+                  id="platform"
+                  name="platform"
+                  value={platform}
+                  onChange={(e) =>
+                    setPlatform(e.target.value as (typeof PLATFORM_OPTIONS)[number])
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {PLATFORM_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {tPlatform(opt)}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* メッセージ */}

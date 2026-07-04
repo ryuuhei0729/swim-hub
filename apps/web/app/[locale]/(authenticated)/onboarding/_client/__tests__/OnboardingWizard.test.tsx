@@ -142,7 +142,8 @@ describe("OnboardingWizard", () => {
       await user.selectOptions(styleSelect, "2"); // 50m 自由形
 
       // Step 3 に行が 1 件あることを確認 (削除ボタンの存在で検証)
-      expect(screen.getByRole("button", { name: "50m 自由形を削除" })).toBeInTheDocument();
+      // ja ロケール + buildSwimStyleLabel → "50m自由形" (スペースなし・DB形式と一致)
+      expect(screen.getByRole("button", { name: "50m自由形を削除" })).toBeInTheDocument();
 
       // Step 2 に戻る
       await user.click(screen.getByRole("button", { name: "戻る" }));
@@ -153,7 +154,7 @@ describe("OnboardingWizard", () => {
 
       // エントリーが保持されているべき
       expect(
-        await screen.findByRole("button", { name: "50m 自由形を削除" }),
+        await screen.findByRole("button", { name: "50m自由形を削除" }),
       ).toBeInTheDocument();
     });
   });

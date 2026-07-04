@@ -40,7 +40,13 @@ export const PracticeDetailScreen: React.FC = () => {
   const [viewerIndex, setViewerIndex] = useState(0);
 
   const handleEdit = () => {
-    navigation.navigate("PracticeForm", { practiceId });
+    if (practice?.team_id) {
+      // チームフロー(team_id あり): 旧画面へ
+      navigation.navigate("PracticeForm", { practiceId, teamId: practice.team_id });
+    } else {
+      // 個人フロー(team_id なし): 新タブ画面へ
+      navigation.navigate("PracticeTabForm", { practiceId });
+    }
   };
 
   const handleDelete = () => {

@@ -365,15 +365,15 @@ test.describe("個人練習記録のテスト", () => {
 
     // ステップ3: 既存の値が表示されていることを確認
     await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 10000 });
-    const distanceValue = await page.locator('[data-testid="practice-distance"]').inputValue();
+    // 距離はプリセットチップ式。チップ群が表示されていることを確認
+    await expect(page.locator('[data-testid="practice-distance-preset-100"]')).toBeVisible();
     const repCountValue = await page.locator('[data-testid="practice-rep-count"]').inputValue();
     const setCountValue = await page.locator('[data-testid="practice-set-count"]').inputValue();
-    expect(distanceValue).toBeTruthy();
     expect(repCountValue).toBeTruthy();
     expect(setCountValue).toBeTruthy();
 
-    // ステップ4: 距離を変更
-    await page.fill('[data-testid="practice-distance"]', "200");
+    // ステップ4: 距離を変更（プリセットチップをクリック）
+    await page.click('[data-testid="practice-distance-preset-200"]');
 
     // ステップ5: 本数を変更
     await page.fill('[data-testid="practice-rep-count"]', "3");
@@ -401,11 +401,11 @@ test.describe("個人練習記録のテスト", () => {
       }
     });
 
-    // ステップ9: 種目を変更
-    await page.selectOption('[data-testid="practice-style"]', "Fly");
+    // ステップ9: 種目を変更（チップをクリック）
+    await page.click('[data-testid="practice-style-Fly"]');
 
-    // ステップ9-1: 泳法カテゴリを変更
-    await page.selectOption('[data-testid="practice-swim-category"]', "Pull");
+    // ステップ9-1: 泳法カテゴリを変更（チップをクリック）
+    await page.click('[data-testid="practice-swim-category-Pull"]');
 
     // ステップ10: 「練習記録を更新」ボタンをクリック
     await page.click('[data-testid="update-practice-log-button"]');

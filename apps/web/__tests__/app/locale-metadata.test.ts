@@ -21,8 +21,12 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("next/font/google", () => ({
   Inter: () => ({ variable: "--font-inter", className: "" }),
   Noto_Sans_JP: () => ({ variable: "--font-noto-sans-jp", className: "" }),
-  Noto_Sans_KR: (_opts?: { preload?: boolean }) => ({ variable: "--font-noto-sans-kr", className: "" }),
-  Noto_Sans_SC: (_opts?: { preload?: boolean }) => ({ variable: "--font-noto-sans-sc", className: "" }),
+  Noto_Sans_KR: (_opts?: object) => ({ variable: "--font-noto-sans-kr", className: "" }),
+  Noto_Sans_SC: (_opts?: object) => ({ variable: "--font-noto-sans-sc", className: "" }),
+  Poiret_One: (_opts?: object) => ({ variable: "--font-poiret-one", className: "" }),
+  Josefin_Sans: (_opts?: object) => ({ variable: "--font-josefin-sans", className: "" }),
+  Chakra_Petch: (_opts?: object) => ({ variable: "--font-chakra-petch", className: "" }),
+  Zen_Kaku_Gothic_New: (_opts?: object) => ({ variable: "--font-zen-kaku-gothic-new", className: "" }),
 }));
 
 // next-intl/server をモック: Node テスト環境では server context が無いため

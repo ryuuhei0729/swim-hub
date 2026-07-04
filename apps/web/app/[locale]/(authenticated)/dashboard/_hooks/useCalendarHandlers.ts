@@ -15,6 +15,8 @@ import type { Database } from "@swim-hub/shared/types";
 import { parseISO, startOfDay } from "date-fns";
 import { useCallback } from "react";
 import { useTranslations } from "next-intl";
+import type { PracticeTabId, CompetitionTabId } from "@/stores/types";
+import { isDateTodayOrPast } from "@/utils/tabModalUtils";
 
 // スプリットタイム型（編集時に使用）
 export interface RecordSplitTime {
@@ -40,9 +42,13 @@ export interface RecordForEdit {
 interface UseCalendarHandlersProps {
   supabase: SupabaseClient<Database>;
   // Form store actions
-  openPracticeBasicForm: (date?: Date, item?: CalendarItem) => void;
-  openPracticeLogForm: (practiceId?: string, editData?: EditingData) => void;
-  openCompetitionBasicForm: (date?: Date, item?: CalendarItem) => void;
+  openPracticeTabModal: (date?: Date, editData?: EditingData, tab?: PracticeTabId) => void;
+  openCompetitionTabModal: (
+    date?: Date,
+    editData?: EditingData,
+    tab?: CompetitionTabId,
+    entryLocked?: boolean,
+  ) => void;
   openEntryLogForm: (competitionId?: string, editData?: EditingData) => void;
   openRecordLogForm: (
     competitionId: string | undefined,
@@ -60,11 +66,8 @@ interface UseCalendarHandlersProps {
  */
 export function useCalendarHandlers({
   supabase,
-  openPracticeBasicForm,
-  openPracticeLogForm,
-  openCompetitionBasicForm,
-  openEntryLogForm,
-  openRecordLogForm,
+  openPracticeTabModal,
+  openCompetitionTabModal,
   setSelectedDate,
   setEditingData,
   handleDeleteItem,
@@ -86,14 +89,14 @@ export function useCalendarHandlers({
   const onAddItem = useCallback(
     (date: Date, type: "practice" | "record") => {
       if (type === "practice") {
-        openPracticeBasicForm(date);
+        openPracticeTabModal(date);
       } else {
         setSelectedDate(date);
         setEditingData(null);
-        openCompetitionBasicForm(date);
+        openCompetitionTabModal(date);
       }
     },
-    [openPracticeBasicForm, openCompetitionBasicForm, setSelectedDate, setEditingData],
+    [openPracticeTabModal, openCompetitionTabModal, setSelectedDate, setEditingData],
   );
 
   // アイテム編集ハンドラー
@@ -102,22 +105,28 @@ export function useCalendarHandlers({
       const dateObj = parseDateString(item.date);
 
       if (item.type === "practice" || item.type === "team_practice") {
-        // 練習編集時は画像情報を取得（practices.image_pathsから）
-        let itemWithImages = item;
+        // 練習編集時は実データ（タイトル・場所・メモ・画像）を practices から取得する。
+        // カレンダー表示用の item.title は practice_log 由来の自動要約（例: "100m × 4本"）や
+        // COALESCE の "練習" の場合があるため、編集フォームには使わず DB の実値を用いる。
+        let editingData: EditingData = item as EditingData;
         if (item.id) {
           try {
             const { data: practiceData } = await supabase
               .from("practices")
-              .select("image_paths")
+              .select("date, title, place, note, image_paths")
               .eq("id", item.id)
               .single();
 
-            const practice = practiceData as { image_paths?: string[] | null } | null;
-            const imagePaths = (
-              Array.isArray(practice?.image_paths) ? practice.image_paths : []
-            ) as string[];
+            const practice = practiceData as {
+              date?: string | null;
+              title?: string | null;
+              place?: string | null;
+              note?: string | null;
+              image_paths?: string[] | null;
+            } | null;
 
-            if (imagePaths.length > 0) {
+            if (practice) {
+              const imagePaths = Array.isArray(practice.image_paths) ? practice.image_paths : [];
               const formattedImages = imagePaths.map((path, index) => ({
                 id: path,
                 thumbnailUrl: supabase.storage.from("practice-images").getPublicUrl(path).data
@@ -127,26 +136,85 @@ export function useCalendarHandlers({
                 fileName: path.split("/").pop() || `image-${index}`,
               }));
 
-              // itemに画像情報を追加
-              itemWithImages = {
-                ...item,
-                editData: {
-                  ...(item.editData || {}),
-                  images: formattedImages,
-                },
-              };
+              editingData = {
+                id: item.id,
+                type: "practice",
+                date: practice.date || item.date,
+                title: practice.title || "",
+                place: practice.place || "",
+                note: practice.note || "",
+                ...(formattedImages.length > 0 ? { images: formattedImages } : {}),
+              } as EditingData;
             }
           } catch (error) {
-            console.error("画像情報の取得エラー:", error);
+            console.error("練習情報の取得エラー:", error);
           }
         }
-        openPracticeBasicForm(dateObj, itemWithImages);
+        openPracticeTabModal(dateObj, editingData);
       } else if (item.type === "practice_log") {
-        openPracticeLogForm(undefined, item);
+        // #7: 練習ログ単体編集 → 親練習のeditingDataで練習タブモーダルを開く
+        const practiceId =
+          item.metadata?.practice?.id ||
+          item.metadata?.practice_id ||
+          (item.editData &&
+          typeof item.editData === "object" &&
+          "practiceId" in item.editData
+            ? (item.editData as { practiceId?: string }).practiceId
+            : undefined);
+
+        if (practiceId) {
+          try {
+            const { data: practiceRow } = await supabase
+              .from("practices")
+              .select("id, date, title, place, note, image_paths")
+              .eq("id", practiceId)
+              .single();
+
+            if (practiceRow) {
+              const pRow = practiceRow as {
+                id: string;
+                date: string;
+                title?: string | null;
+                place?: string | null;
+                note?: string | null;
+                image_paths?: string[] | null;
+              };
+              const practiceDate = parseDateString(pRow.date);
+
+              const imagePaths = Array.isArray(pRow.image_paths) ? pRow.image_paths : [];
+              const formattedImages = imagePaths.map((path: string, index: number) => ({
+                id: path,
+                thumbnailUrl: supabase.storage
+                  .from("practice-images")
+                  .getPublicUrl(path).data.publicUrl,
+                originalUrl: supabase.storage
+                  .from("practice-images")
+                  .getPublicUrl(path).data.publicUrl,
+                fileName: path.split("/").pop() || `image-${index}`,
+              }));
+
+              const practiceEditingData: EditingData = {
+                id: pRow.id,
+                type: "practice",
+                date: pRow.date,
+                title: pRow.title || "",
+                place: pRow.place || "",
+                note: pRow.note || "",
+                ...(formattedImages.length > 0 ? { images: formattedImages } : {}),
+              } as EditingData;
+
+              openPracticeTabModal(practiceDate, practiceEditingData, "practiceLog");
+              return;
+            }
+          } catch (error) {
+            console.error("練習情報の取得エラー:", error);
+          }
+        }
+        // practiceId取得失敗時はフォールバック: 日付のみで練習タブモーダルを開く
+        openPracticeTabModal(dateObj, undefined, "practiceLog");
       } else if (item.type === "entry") {
         // editDataからcompetitionIdを取得（DayDetailModalから渡される場合）
         let competitionId: string | undefined;
-        let editData: EditingData | undefined;
         let isTeamCompetition = false;
 
         if (item.editData && typeof item.editData === "object") {
@@ -154,8 +222,6 @@ export function useCalendarHandlers({
           if ("competitionId" in item.editData) {
             competitionId = item.editData.competitionId as string;
           }
-          // editDataをEditingDataとして使用
-          editData = item.editData as EditingData;
           // competitionオブジェクトからteam_idを取得
           if ("competition" in item.editData && item.editData.competition) {
             const competition = item.editData.competition as { team_id?: string | null };
@@ -174,45 +240,76 @@ export function useCalendarHandlers({
         }
 
         if (competitionId) {
-          // チームcompetitionの場合、entry_statusをチェック
+          // チームcompetitionのエントリー編集: タブモーダルに移行。
+          // entry_status が open でない場合はエントリータブをロックし記録入力のみ許可する。
           if (isTeamCompetition) {
-            // entry_statusを取得してチェック
+            const competitionMeta = item.metadata?.competition;
+            let fetched = false;
+            let status = "before";
+            let dateStr = competitionMeta?.date || item.date;
+            let title = competitionMeta?.title || item.title || "";
+            let place = competitionMeta?.place || "";
+
             try {
               const { data: competitionData, error: competitionError } = await supabase
                 .from("competitions")
-                .select("entry_status")
+                .select("entry_status, date, title, place")
                 .eq("id", competitionId)
                 .single();
 
               if (!competitionError && competitionData) {
-                const status =
-                  (competitionData as { entry_status?: string | null }).entry_status || "before";
-                if (status !== "open") {
-                  // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
-                  const statusLabel = status === "before" ? t("statusBefore") : t("statusClosed");
-                  window.alert(t("statusAlert", { status: statusLabel }));
-
-                  // record入力モーダルに遷移
-                  if (editData && "entryDataList" in editData && editData.entryDataList) {
-                    openRecordLogForm(competitionId, undefined, {
-                      entryDataList: editData.entryDataList,
-                    });
-                  } else {
-                    openRecordLogForm(competitionId);
-                  }
-                  return;
-                }
+                const cd = competitionData as {
+                  entry_status?: string | null;
+                  date?: string | null;
+                  title?: string | null;
+                  place?: string | null;
+                };
+                fetched = true;
+                status = cd.entry_status || "before";
+                dateStr = cd.date || dateStr;
+                title = cd.title || title;
+                place = cd.place || place;
               }
-              // entry_statusが'open'の場合は通常通りエントリー登録フォームを開く
-              openEntryLogForm(competitionId, editData);
             } catch (err: unknown) {
               console.error("エントリーステータスの取得エラー:", err);
-              // エラー時は通常通りエントリー登録フォームを開く
-              openEntryLogForm(competitionId, editData);
             }
+
+            const entryDate = dateStr ? parseDateString(dateStr) : dateObj;
+            const competitionEditingData: EditingData = {
+              id: competitionId,
+              type: "competition",
+              date: dateStr,
+              title,
+              place,
+            } as EditingData;
+
+            // フェッチ失敗時は従来どおりエントリー編集を許可する
+            const entryOpen = !fetched || status === "open";
+            if (!entryOpen) {
+              // 受付期間外: 通知して記録タブを開き、エントリー編集はロック
+              const statusLabel = status === "before" ? t("statusBefore") : t("statusClosed");
+              window.alert(t("statusAlert", { status: statusLabel }));
+              openCompetitionTabModal(entryDate, competitionEditingData, "record", true);
+              return;
+            }
+            // 受付中: entryタブで大会タブモーダルを開く
+            openCompetitionTabModal(entryDate, competitionEditingData, "entry", false);
           } else {
-            // 個人competitionの場合は通常通りエントリー登録フォームを開く
-            openEntryLogForm(competitionId, editData);
+            // #8: 個人competitionのエントリー編集 → 大会タブモーダル(entryタブ)
+            const competitionMeta = item.metadata?.competition;
+            const entryDate = competitionMeta?.date
+              ? parseDateString(competitionMeta.date)
+              : dateObj;
+
+            const competitionEditingData: EditingData = {
+              id: competitionId,
+              type: "competition",
+              date: competitionMeta?.date || item.date,
+              title: competitionMeta?.title || item.title || "",
+              place: competitionMeta?.place || "",
+            } as EditingData;
+
+            openCompetitionTabModal(entryDate, competitionEditingData, "entry");
           }
         }
       } else if (item.type === "competition" || item.type === "team_competition") {
@@ -252,19 +349,10 @@ export function useCalendarHandlers({
             console.error("画像情報の取得エラー:", error);
           }
         }
-        openCompetitionBasicForm(dateObj, itemWithImages);
+        openCompetitionTabModal(dateObj, itemWithImages as EditingData);
       }
     },
-    [
-      parseDateString,
-      openPracticeBasicForm,
-      openPracticeLogForm,
-      openEntryLogForm,
-      openCompetitionBasicForm,
-      openRecordLogForm,
-      supabase,
-      t,
-    ],
+    [parseDateString, openPracticeTabModal, openCompetitionTabModal, supabase, t],
   );
 
   // アイテム削除ハンドラー（handleDeleteItemを使用）
@@ -275,17 +363,88 @@ export function useCalendarHandlers({
     [handleDeleteItem],
   );
 
-  // 練習ログ追加ハンドラー
+  // #13: 既存練習への「練習ログ追加」 → 練習タブモーダル(練習ログタブ)
   const onAddPracticeLog = useCallback(
-    (practiceId: string) => {
-      openPracticeLogForm(practiceId);
+    async (practiceId: string) => {
+      try {
+        const { data: practiceRow } = await supabase
+          .from("practices")
+          .select("id, date, title, place, note")
+          .eq("id", practiceId)
+          .single();
+
+        if (practiceRow) {
+          const pRow = practiceRow as {
+            id: string;
+            date: string;
+            title?: string | null;
+            place?: string | null;
+            note?: string | null;
+          };
+          const practiceDate = parseDateString(pRow.date);
+          const practiceEditingData: EditingData = {
+            id: pRow.id,
+            type: "practice",
+            date: pRow.date,
+            title: pRow.title || "",
+            place: pRow.place || "",
+            note: pRow.note || "",
+          } as EditingData;
+          openPracticeTabModal(practiceDate, practiceEditingData, "practiceLog");
+          return;
+        }
+      } catch (error) {
+        console.error("練習情報の取得エラー:", error);
+      }
+      // フォールバック: editingDataなしで練習ログタブを開く
+      openPracticeTabModal(undefined, undefined, "practiceLog");
     },
-    [openPracticeLogForm],
+    [supabase, parseDateString, openPracticeTabModal],
   );
 
-  // テンプレートから練習ログ追加ハンドラー
+  // #14: テンプレートから練習ログ追加 → 練習タブモーダル(練習ログタブ)
+  // テンプレート内容は editingData に含めて渡す（タブモーダル側でログ初期値として利用）
   const onAddPracticeLogFromTemplate = useCallback(
-    (practiceId: string, template: PracticeLogTemplate) => {
+    async (practiceId: string, template: PracticeLogTemplate) => {
+      try {
+        const { data: practiceRow } = await supabase
+          .from("practices")
+          .select("id, date, title, place, note")
+          .eq("id", practiceId)
+          .single();
+
+        if (practiceRow) {
+          const pRow = practiceRow as {
+            id: string;
+            date: string;
+            title?: string | null;
+            place?: string | null;
+            note?: string | null;
+          };
+          const practiceDate = parseDateString(pRow.date);
+          const practiceEditingData: EditingData = {
+            id: pRow.id,
+            type: "practice",
+            date: pRow.date,
+            title: pRow.title || "",
+            place: pRow.place || "",
+            // テンプレート内容を練習ログ初期値として渡す（noteはテンプレート優先）
+            note: template.note || pRow.note || undefined,
+            style: template.style,
+            swim_category: template.swim_category,
+            distance: template.distance,
+            rep_count: template.rep_count,
+            set_count: template.set_count,
+            circle: template.circle,
+            tag_ids: template.tag_ids,
+          } as EditingData;
+          openPracticeTabModal(practiceDate, practiceEditingData, "practiceLog");
+          return;
+        }
+      } catch (error) {
+        console.error("練習情報の取得エラー:", error);
+      }
+      // フォールバック
       const editData: EditingData = {
         practiceId,
         style: template.style,
@@ -297,47 +456,57 @@ export function useCalendarHandlers({
         note: template.note || undefined,
         tag_ids: template.tag_ids,
       };
-      openPracticeLogForm(practiceId, editData);
+      openPracticeTabModal(undefined, editData, "practiceLog");
     },
-    [openPracticeLogForm],
+    [supabase, parseDateString, openPracticeTabModal],
   );
 
-  // 練習ログ編集ハンドラー
+  // 練習ログ編集ハンドラー（DayDetailModal から呼ばれる旧API — onEditItem の practice_log 分岐で代替）
   const onEditPracticeLog = useCallback(
-    (
+    async (
       log: (PracticeLogWithTimes & { tags?: PracticeTag[] }) & {
         practiceId?: string;
         times?: Array<{ memberId: string; times: TimeEntry[] }> | TimeEntry[];
       },
     ) => {
-      // timesの構造を確認して変換
-      let times: Array<{ memberId: string; times: TimeEntry[] }> = [];
-      if (log.times && Array.isArray(log.times)) {
-        // DayDetailModalから渡される形式: [{ memberId: '', times: [...] }]
-        if (log.times.length > 0 && "times" in log.times[0]) {
-          times = log.times as Array<{ memberId: string; times: TimeEntry[] }>;
-        } else {
-          // 既存の形式: TimeEntry[]
-          times = [{ memberId: "", times: log.times as TimeEntry[] }];
+      const practiceId = log.practice_id || log.practiceId;
+
+      if (practiceId) {
+        try {
+          const { data: practiceRow } = await supabase
+            .from("practices")
+            .select("id, date, title, place, note")
+            .eq("id", practiceId)
+            .single();
+
+          if (practiceRow) {
+            const pRow = practiceRow as {
+              id: string;
+              date: string;
+              title?: string | null;
+              place?: string | null;
+              note?: string | null;
+            };
+            const practiceDate = parseDateString(pRow.date);
+            const practiceEditingData: EditingData = {
+              id: pRow.id,
+              type: "practice",
+              date: pRow.date,
+              title: pRow.title || "",
+              place: pRow.place || "",
+              note: pRow.note || "",
+            } as EditingData;
+            openPracticeTabModal(practiceDate, practiceEditingData, "practiceLog");
+            return;
+          }
+        } catch (error) {
+          console.error("練習情報の取得エラー:", error);
         }
       }
-
-      const editData: EditingData = {
-        id: log.id,
-        practiceId: log.practice_id || log.practiceId,
-        style: log.style || "Fr",
-        swim_category: log.swim_category || "Swim",
-        distance: log.distance,
-        rep_count: log.rep_count,
-        set_count: log.set_count,
-        circle: log.circle,
-        note: log.note || undefined,
-        tags: log.tags,
-        times: times,
-      };
-      openPracticeLogForm(undefined, editData);
+      // フォールバック: 日付なしで練習ログタブを開く
+      openPracticeTabModal(undefined, undefined, "practiceLog");
     },
-    [openPracticeLogForm],
+    [supabase, parseDateString, openPracticeTabModal],
   );
 
   // 練習ログ削除ハンドラー
@@ -356,7 +525,7 @@ export function useCalendarHandlers({
     [supabase, refreshCalendar],
   );
 
-  // 記録追加ハンドラー
+  // #10/#11: 記録追加ハンドラー
   const onAddRecord = useCallback(
     async (params: {
       competitionId?: string;
@@ -366,99 +535,135 @@ export function useCalendarHandlers({
       const { competitionId, entryData, entryDataList } = params;
 
       if (!competitionId || competitionId.trim() === "") {
-        openCompetitionBasicForm();
+        openCompetitionTabModal();
         return;
       }
 
-      if (entryDataList && entryDataList.length > 0) {
-        const editData: EditingData = { entryDataList };
-        openRecordLogForm(competitionId || undefined, undefined, editData);
-        return;
-      }
+      // エントリーカードの「大会記録を追加」など、明示的な記録追加操作かどうか。
+      // この場合は日付に関わらず個人フローでは record タブを開く。
+      const isExplicitAddRecord = (!!entryDataList && entryDataList.length > 0) || !!entryData;
 
-      if (entryData) {
-        const editData: EditingData = { entryData };
-        openRecordLogForm(competitionId || undefined, undefined, editData);
-      } else if (competitionId) {
-        // 大会情報を取得してチームcompetitionかどうか、日付が過去かどうかをチェック
+      // 大会情報を取得してチームcompetitionかどうか、日付が過去かどうかをチェック
+      try {
+        const { data: competitionData, error: competitionError } = await supabase
+          .from("competitions")
+          .select("entry_status, team_id, date, title, place, pool_type")
+          .eq("id", competitionId)
+          .single();
+
+        if (!competitionError && competitionData) {
+          const cd = competitionData as {
+            team_id?: string | null;
+            date?: string | null;
+            title?: string | null;
+            place?: string | null;
+            pool_type?: number | null;
+            entry_status?: string | null;
+          };
+          const isTeamCompetition = !!cd.team_id;
+          const competitionDate = cd.date;
+
+          // 大会のeditingDataを構築（タブモーダルに渡す）
+          const competitionEditingData: EditingData = {
+            id: competitionId,
+            type: "competition",
+            date: cd.date || "",
+            title: cd.title || "",
+            place: cd.place || "",
+          } as EditingData;
+
+          const compDateObj = competitionDate ? parseDateString(competitionDate) : new Date();
+
+          // チームフロー: タブモーダルに移行。entry_status が open でない場合は
+          // エントリータブをロックし、記録入力のみ許可する。
+          if (isTeamCompetition) {
+            const status = cd.entry_status || "before";
+            const entryOpen = status === "open";
+
+            // 受付期間外の通知（旧フローのアラートを踏襲）。
+            // 明示的な記録追加・今日/過去の記録入力時は通知しない。
+            if (!entryOpen && !isExplicitAddRecord && !isDateTodayOrPast(competitionDate)) {
+              const statusLabel = status === "before" ? t("statusBefore") : t("statusClosed");
+              window.alert(t("statusAlert", { status: statusLabel }));
+            }
+
+            // 明示的な記録追加 / 今日・過去 / 受付期間外 → recordタブ、未来かつ受付中 → entryタブ
+            const teamTab: CompetitionTabId =
+              isExplicitAddRecord || isDateTodayOrPast(competitionDate) || !entryOpen
+                ? "record"
+                : "entry";
+            openCompetitionTabModal(compDateObj, competitionEditingData, teamTab, !entryOpen);
+            return;
+          }
+
+          // 個人フロー: 明示的な記録追加 or 今日/過去 → recordタブで大会タブモーダルを開く
+          // （エントリー・記録は competitionId から自動取得される）
+          if (isExplicitAddRecord || isDateTodayOrPast(competitionDate)) {
+            openCompetitionTabModal(compDateObj, competitionEditingData, "record");
+            return;
+          }
+
+          // #11 個人フロー: 未来大会 → entryタブで大会タブモーダルを開く
+          openCompetitionTabModal(compDateObj, competitionEditingData, "entry");
+          return;
+        }
+      } catch (err: unknown) {
+        console.error("エントリーステータスの取得エラー:", err);
+      }
+      // フォールバック: recordタブで大会タブモーダルを開く
+      openCompetitionTabModal(undefined, { id: competitionId } as EditingData, "record");
+    },
+    [openCompetitionTabModal, supabase, parseDateString, t],
+  );
+
+  // #15: 記録編集ハンドラー → 大会タブモーダル(recordタブ)
+  const onEditRecord = useCallback(
+    async (record: RecordForEdit) => {
+      const competitionId = record.competition_id ?? undefined;
+
+      if (competitionId) {
         try {
-          const { data: competitionData, error: competitionError } = await supabase
+          const { data: competitionRow } = await supabase
             .from("competitions")
-            .select("entry_status, team_id, date")
+            .select("id, date, title, place")
             .eq("id", competitionId)
             .single();
 
-          if (!competitionError && competitionData) {
-            const isTeamCompetition = !!(competitionData as { team_id?: string | null }).team_id;
-            const competitionDate = (competitionData as { date?: string | null }).date;
-
-            // 日付が今日以前かどうかを判定（parseDateStringを使用してUTCパース問題を回避）
-            const isDateTodayOrPast = () => {
-              if (!competitionDate) return false;
-              const compDate = parseDateString(competitionDate);
-              const today = startOfDay(new Date());
-              return compDate <= today;
+          if (competitionRow) {
+            const cr = competitionRow as {
+              id: string;
+              date: string;
+              title?: string | null;
+              place?: string | null;
             };
-
-            // 今日/過去の日付の場合は直接RecordLogFormに遷移（エントリーをスキップ）
-            if (isDateTodayOrPast()) {
-              openRecordLogForm(competitionId, []);
-              return;
-            }
-
-            // チームcompetitionの場合、entry_statusをチェック
-            if (isTeamCompetition) {
-              const status =
-                (competitionData as { entry_status?: string | null }).entry_status || "before";
-              if (status !== "open") {
-                // entry_statusが'open'でない場合はalertを表示してrecord入力モーダルに遷移
-                const statusLabel = status === "before" ? t("statusBefore") : t("statusClosed");
-                window.alert(t("statusAlert", { status: statusLabel }));
-
-                // record入力モーダルに遷移
-                openRecordLogForm(competitionId);
-                return;
-              }
-            }
+            const compDate = parseDateString(cr.date);
+            const competitionEditingData: EditingData = {
+              id: cr.id,
+              type: "competition",
+              date: cr.date,
+              title: cr.title || "",
+              place: cr.place || "",
+            } as EditingData;
+            openCompetitionTabModal(compDate, competitionEditingData, "record");
+            return;
           }
-          // entry_statusが'open'または個人competitionの場合は通常通りエントリー登録フォームを開く
-          openEntryLogForm(competitionId);
-        } catch (err: unknown) {
-          console.error("エントリーステータスの取得エラー:", err);
-          // エラー時は通常通りエントリー登録フォームを開く
-          openEntryLogForm(competitionId);
+        } catch (error) {
+          console.error("大会情報の取得エラー:", error);
         }
       }
+
+      // フォールバック: competitionIdのみでタブモーダルを開く
+      if (competitionId) {
+        openCompetitionTabModal(
+          undefined,
+          { id: competitionId } as EditingData,
+          "record",
+        );
+      } else {
+        openCompetitionTabModal(undefined, undefined, "record");
+      }
     },
-    [openCompetitionBasicForm, openRecordLogForm, openEntryLogForm, supabase, parseDateString, t],
-  );
-
-  // 記録編集ハンドラー
-  const onEditRecord = useCallback(
-    (record: RecordForEdit) => {
-      const splitTimes = record.split_times || [];
-      const convertedSplitTimes: Array<{ distance: number; splitTime: number }> = splitTimes.map(
-        (st: RecordSplitTime) => ({
-          distance: st.distance,
-          splitTime: st.split_time,
-        }),
-      );
-
-      const editData: EditingData = {
-        id: record.id,
-        styleId: record.style_id ?? record.style?.id,
-        time: record.time ?? record.time_result,
-        isRelaying: record.is_relaying,
-        note: record.note ?? undefined,
-        videoPath: record.video_path ?? undefined,
-        reactionTime: record.reaction_time ?? undefined,
-        splitTimes: convertedSplitTimes,
-        competitionId: record.competition_id ?? undefined,
-      };
-
-      openRecordLogForm(record.competition_id ?? undefined, undefined, editData);
-    },
-    [openRecordLogForm],
+    [supabase, parseDateString, openCompetitionTabModal],
   );
 
   // 記録削除ハンドラー

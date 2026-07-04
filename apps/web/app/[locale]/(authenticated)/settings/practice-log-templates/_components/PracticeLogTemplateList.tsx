@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@supabase/ssr";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import Button from "@/components/ui/Button";
 import {
   usePracticeLogTemplatesQuery,
   usePracticeLogTemplateCountQuery,
@@ -81,14 +82,14 @@ export function PracticeLogTemplateList({ onCreateNew, onEdit }: PracticeLogTemp
       {templates?.length === 0 && (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <p className="text-gray-500 mb-4">{t("list.emptyText")}</p>
-          <button
+          <Button
             type="button"
             onClick={onCreateNew}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2"
           >
             <PlusIcon className="h-5 w-5" />
             {t("list.emptyCreateButton")}
-          </button>
+          </Button>
         </div>
       )}
 

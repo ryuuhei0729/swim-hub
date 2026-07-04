@@ -1,5 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_JP, Noto_Sans_KR, Noto_Sans_SC } from "next/font/google";
+import {
+  Inter,
+  Noto_Sans_JP,
+  Noto_Sans_KR,
+  Noto_Sans_SC,
+  Poiret_One,
+  Josefin_Sans,
+  Chakra_Petch,
+  Zen_Kaku_Gothic_New,
+} from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
@@ -37,6 +46,36 @@ const notoSansSC = Noto_Sans_SC({
   subsets: ["latin"],
   variable: "--font-noto-sans-sc",
   weight: ["400", "500", "700"],
+  preload: false,
+});
+
+// LP v4.2 Deco Dynamic — フォント変数 (next/font セルフホスト)
+// preload: false — LP ページのみで使用するためグローバル preload は不要
+const poiretOne = Poiret_One({
+  subsets: ["latin"],
+  variable: "--font-poiret-one",
+  weight: "400",
+  preload: false,
+});
+
+const josefinSans = Josefin_Sans({
+  subsets: ["latin"],
+  variable: "--font-josefin-sans",
+  weight: ["300", "400", "500", "600", "700"],
+  preload: false,
+});
+
+const chakraPetch = Chakra_Petch({
+  subsets: ["latin"],
+  variable: "--font-chakra-petch",
+  weight: ["600", "700"],
+  preload: false,
+});
+
+const zenKakuGothicNew = Zen_Kaku_Gothic_New({
+  subsets: ["latin"],
+  variable: "--font-zen-kaku-gothic-new",
+  weight: ["400", "500", "700", "900"],
   preload: false,
 });
 
@@ -172,16 +211,9 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className="h-full">
-      <head>
-        <link
-          rel="alternate"
-          type="application/rss+xml"
-          title="SwimHub Blog RSS"
-          href="/blog/feed.xml"
-        />
-      </head>
+      <head />
       <body
-        className={`${inter.variable} ${notoSansJP.variable} ${notoSansKR.variable} ${notoSansSC.variable} font-sans`}
+        className={`${inter.variable} ${notoSansJP.variable} ${notoSansKR.variable} ${notoSansSC.variable} ${poiretOne.variable} ${josefinSans.variable} ${chakraPetch.variable} ${zenKakuGothicNew.variable} font-sans`}
       >
         {jsonLd.map((data, i) => (
           <script

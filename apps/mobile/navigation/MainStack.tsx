@@ -6,10 +6,12 @@ import { TabNavigator } from "./TabNavigator";
 import { PracticeDetailScreen } from "@/screens/PracticeDetailScreen";
 import { PracticeFormScreen } from "@/screens/PracticeFormScreen";
 import { PracticeLogFormScreen } from "@/screens/PracticeLogFormScreen";
+import { PracticeTabFormScreen } from "@/screens/PracticeTabFormScreen";
 import { PracticeTimeFormScreen } from "@/screens/PracticeTimeFormScreen";
 import { RecordDetailScreen } from "@/screens/RecordDetailScreen";
 import { RecordFormScreen } from "@/screens/RecordFormScreen";
 import { CompetitionBasicFormScreen } from "@/screens/CompetitionBasicFormScreen";
+import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
 import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
 import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
 import { TeamRecordBulkFormScreen } from "@/screens/TeamRecordBulkFormScreen";
@@ -65,6 +67,16 @@ export const MainStack: React.FC = () => {
         })}
       />
       <Stack.Screen
+        name="PracticeTabForm"
+        component={PracticeTabFormScreen}
+        options={({ route }) => ({
+          ...baseHeaderOptions,
+          title: route.params?.practiceId
+            ? t("navigation.mobile.titles.practiceEdit")
+            : t("navigation.mobile.titles.practiceCreate"),
+        })}
+      />
+      <Stack.Screen
         name="PracticeLogForm"
         component={PracticeLogFormScreen}
         options={({ route }) => ({
@@ -108,6 +120,16 @@ export const MainStack: React.FC = () => {
           ...baseHeaderOptions,
           title: t("navigation.mobile.titles.competitionInfo"),
         }}
+      />
+      <Stack.Screen
+        name="CompetitionTabForm"
+        component={CompetitionTabFormScreen}
+        options={({ route }) => ({
+          ...baseHeaderOptions,
+          title: route.params?.competitionId
+            ? t("navigation.mobile.titles.competitionInfo")
+            : t("navigation.mobile.titles.competitionInfo"),
+        })}
       />
       <Stack.Screen
         name="EntryForm"

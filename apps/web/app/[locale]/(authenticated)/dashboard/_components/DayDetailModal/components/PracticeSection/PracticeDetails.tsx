@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { PencilIcon, TrashIcon, ShareIcon } from "@heroicons/react/24/outline";
+import {
+  PencilIcon,
+  TrashIcon,
+  ShareIcon,
+  MapPinIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
 import { BoltIcon } from "@heroicons/react/24/solid";
 import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -231,7 +237,7 @@ export function PracticeDetails({
                 }`}
               >
                 <BoltIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                {t("details.badge")}
+                {practice.title || t("details.badge")}
                 {isTeamPractice && teamName && <span className="text-sm">({teamName})</span>}
               </span>
               {isTeamPractice && teamId && onShowAttendance && (
@@ -239,21 +245,15 @@ export function PracticeDetails({
               )}
             </div>
             <div className="flex items-center gap-4 mb-2 flex-wrap">
-              {practice.title && (
-                <p className="text-sm text-gray-700 flex items-center gap-1">
-                  <span className="text-gray-500">🏷️</span>
-                  {practice.title}
-                </p>
-              )}
               {place && (
                 <p className="text-sm text-gray-700 flex items-center gap-1">
-                  <span className="text-gray-500">📍</span>
+                  <MapPinIcon className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
                   {place}
                 </p>
               )}
               {practice.note && (
                 <p className="text-sm text-gray-700 flex items-center gap-1 break-all">
-                  <span className="shrink-0">📝</span>
+                  <DocumentTextIcon className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
                   {practice.note}
                 </p>
               )}
@@ -350,6 +350,10 @@ export function PracticeDetails({
                             time: t.time,
                           })),
                           note: log.note ?? undefined,
+                          tags: (log.tags || []).map((tag) => ({
+                            name: tag.name,
+                            color: tag.color,
+                          })),
                         }));
 
                         const totalDistance = practiceLogs.reduce(
@@ -370,8 +374,9 @@ export function PracticeDetails({
 
                         setSharePracticeData({
                           date: formattedDate,
-                          title: practice.note || tDash("practice.defaultTitle"),
+                          title: practice.title || tDash("practice.defaultTitle"),
                           place: place ?? undefined,
+                          note: practice.note ?? undefined,
                           menuItems,
                           totalDistance,
                           totalSets,

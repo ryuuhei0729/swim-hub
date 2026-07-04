@@ -154,7 +154,7 @@ export default function AvatarUpload({
   };
 
   return (
-    <div className="relative">
+    <div className="relative flex flex-col items-center">
       {/* アバター表示 */}
       <div
         className={`

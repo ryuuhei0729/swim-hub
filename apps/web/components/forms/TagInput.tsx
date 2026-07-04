@@ -9,6 +9,32 @@ import { useTranslations } from "next-intl";
 
 type Tag = PracticeTag;
 
+/** タグのパステルカラーパレット */
+const TAG_COLORS = [
+  "#93C5FD", // 青
+  "#7DD3FC", // 水色
+  "#86EFAC", // 緑
+  "#A3E635", // 黄緑
+  "#FCA5A5", // 赤
+  "#F9A8D4", // ピンク
+  "#FDBA74", // オレンジ
+  "#FDE047", // 黄色
+  "#C4B5FD", // 紫
+  "#D1D5DB", // グレー
+];
+
+/**
+ * タグ名から決定的に色を導出する。
+ * 候補プレビューと作成後の色を一致させるため、ランダムではなく名前ベースで決める。
+ */
+function getColorForName(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  return TAG_COLORS[hash % TAG_COLORS.length];
+}
+
 interface TagInputProps {
   selectedTags: Tag[];
   availableTags: Tag[];
@@ -54,6 +80,12 @@ export default function TagInput({
       !selectedTags.some((selected) => selected.id === tag.id),
   );
 
+  // 新規作成の対象（同名タグが既にあれば作成行は出さない）
+  const trimmedInput = inputValue.trim();
+  const canCreate =
+    trimmedInput.length > 0 &&
+    !availableTags.some((tag) => tag.name.toLowerCase() === trimmedInput.toLowerCase());
+
   // タグの選択/解除
   const handleTagToggle = (tag: Tag) => {
     const isSelected = selectedTags.some((t) => t.id === tag.id);
@@ -62,23 +94,6 @@ export default function TagInput({
     } else {
       onTagsChange([...selectedTags, tag]);
     }
-  };
-
-  // パステルカラーを取得する関数
-  const getRandomColor = () => {
-    const colors = [
-      "#93C5FD", // 青
-      "#7DD3FC", // 水色
-      "#86EFAC", // 緑
-      "#A3E635", // 黄緑
-      "#FCA5A5", // 赤
-      "#F9A8D4", // ピンク
-      "#FDBA74", // オレンジ
-      "#FDE047", // 黄色
-      "#C4B5FD", // 紫
-      "#D1D5DB", // グレー
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
   };
 
   // 新規タグ作成（リアルタイムDB反映）
@@ -91,8 +106,8 @@ export default function TagInput({
       } = await supabase.auth.getUser();
       if (!user) throw new Error(t("authRequired"));
 
-      // ランダム色を設定
-      const randomColor = getRandomColor();
+      // 候補プレビューと同じ色を割り当てる（名前から決定的に導出）
+      const color = getColorForName(tagName.trim());
 
       // DBに直接挿入
       const { data, error } = await supabase
@@ -100,7 +115,7 @@ export default function TagInput({
         .insert({
           user_id: user.id,
           name: tagName.trim(),
-          color: randomColor,
+          color,
         })
         .select()
         .single();
@@ -237,8 +252,8 @@ export default function TagInput({
     <>
       <div className="relative" ref={dropdownRef}>
         {/* タグ入力エリア */}
-        <div className="min-h-[32px] sm:min-h-[40px] border border-gray-300 rounded-md p-0.5 sm:p-2 hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all bg-white">
-          <div className="flex flex-wrap gap-1 items-center">
+        <div className="flex items-center min-h-[32px] sm:min-h-[40px] border border-gray-300 rounded-md hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all bg-white">
+          <div className="flex flex-1 min-w-0 flex-wrap gap-1 items-center">
             {/* 選択済みタグ */}
             {selectedTags.map((tag, index) => (
               <span
@@ -276,7 +291,7 @@ export default function TagInput({
               onKeyPress={handleKeyPress}
               onFocus={() => setIsOpen(true)}
               placeholder={selectedTags.length === 0 ? (placeholder ?? t("placeholder")) : t("searchPlaceholder")}
-              className="flex-1 min-w-[120px] text-sm border-none outline-none bg-transparent"
+              className="flex-1 min-w-[120px] pr-6 text-sm border-none outline-none bg-transparent"
               data-testid="tag-input"
             />
           </div>
@@ -295,52 +310,71 @@ export default function TagInput({
             className="absolute z-70 w-full top-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
             data-testid="tag-dropdown"
           >
-            {/* タグ一覧 */}
+            {/* タグ一覧（背景色付きピルで表示） */}
             <div className="py-1">
-              {filteredTags.length > 0 ? (
-                filteredTags.map((tag) => (
-                  <div
-                    key={tag.id}
-                    className="flex items-center justify-between px-3 py-2 hover:bg-blue-50 cursor-pointer transition-colors group"
-                    onClick={() => handleTagToggle(tag)}
-                    data-testid={`tag-row-${tag.id}`}
+              {filteredTags.map((tag) => (
+                <div
+                  key={tag.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${t("addHint")} ${tag.name}`}
+                  className="flex items-center justify-between px-3 py-2 hover:bg-blue-50 cursor-pointer transition-colors group"
+                  onClick={() => handleTagToggle(tag)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleTagToggle(tag);
+                    }
+                  }}
+                  data-testid={`tag-row-${tag.id}`}
+                >
+                  <span
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
+                    style={{ backgroundColor: tag.color }}
                   >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full ring-2 ring-transparent group-hover:ring-blue-200 transition-all"
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      <span className="text-sm text-gray-900 group-hover:text-blue-900 transition-colors">
-                        {tag.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                        {t("addHint")}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => handleTagManagement(tag, e)}
-                        className="p-1 hover:bg-blue-100 rounded transition-colors"
-                        title={t("manageTip")}
-                        data-testid={`manage-tag-button-${tag.id}`}
-                      >
-                        <EllipsisVerticalIcon className="h-4 w-4 text-gray-500 hover:text-blue-600 transition-colors" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="px-3 py-2 text-sm text-gray-500 text-center">
-                  {inputValue ? t("noMatch") : t("noTags")}
+                    {tag.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => handleTagManagement(tag, e)}
+                    className="p-1 hover:bg-blue-100 rounded transition-colors"
+                    title={t("manageTip")}
+                    data-testid={`manage-tag-button-${tag.id}`}
+                  >
+                    <EllipsisVerticalIcon className="h-4 w-4 text-gray-500 hover:text-blue-600 transition-colors" />
+                  </button>
+                </div>
+              ))}
+
+              {/* 新規作成：背景色付きピルで作成対象を表示 */}
+              {canCreate && (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${t("createLabel")} ${trimmedInput}`}
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
+                  onClick={() => void handleCreateTag(inputValue)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      void handleCreateTag(inputValue);
+                    }
+                  }}
+                  data-testid="tag-create-row"
+                >
+                  <span className="shrink-0 text-sm text-gray-500">{t("createLabel")}</span>
+                  <span
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
+                    style={{ backgroundColor: getColorForName(trimmedInput) }}
+                  >
+                    {trimmedInput}
+                  </span>
                 </div>
               )}
 
-              {/* 新規タグ作成のヒント */}
-              {inputValue && filteredTags.length === 0 && (
-                <div className="px-3 py-2 text-sm text-blue-600 text-center border-t border-gray-200 bg-blue-50">
-                  {t("createHint", { name: inputValue })}
-                </div>
+              {/* 空状態（候補も作成対象も無い） */}
+              {filteredTags.length === 0 && !canCreate && (
+                <div className="px-3 py-2 text-sm text-gray-500 text-center">{t("noTags")}</div>
               )}
             </div>
           </div>

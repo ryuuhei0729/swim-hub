@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/contexts/AuthProvider";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import Button from "@/components/ui/Button";
@@ -22,6 +22,7 @@ import { FREE_PLAN_LIMITS } from "@apps/shared/constants/premium";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatTimeBest, parseTimeToSeconds } from "@/utils/formatters";
+import { styleIdToCodeKey, buildSwimStyleLabel } from "@/utils/swimStyle";
 import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
 import {
   buildRelayEvents,
@@ -113,7 +114,17 @@ export default function RecordClient({
   const tCommon = useTranslations("common");
   const tRecords = useTranslations("competition.records");
   const tStyles = useTranslations("practice.styles");
+  const locale = useLocale();
   const { supabase, subscription } = useAuth();
+
+  /** style_id から翻訳済み種目ラベルを組み立てる。未知種目は name_jp をそのまま返す */
+  const styleOptionLabel = (style: Style): string => {
+    const codeKey = styleIdToCodeKey(style.id);
+    if (codeKey) {
+      return buildSwimStyleLabel(style.distance, tStyles(codeKey), locale);
+    }
+    return style.name_jp;
+  };
   const isPremium = checkIsPremium(subscription);
 
   const relayEvents = useMemo(
@@ -1245,7 +1256,7 @@ export default function RecordClient({
                   <optgroup label={tRecords("individualEvents")}>
                     {styles.map((style) => (
                       <option key={style.id} value={style.id}>
-                        {style.name_jp}
+                        {styleOptionLabel(style)}
                       </option>
                     ))}
                   </optgroup>

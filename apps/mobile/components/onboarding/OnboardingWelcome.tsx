@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontFamily: "ChakraPetch_700Bold",
     color: "#111827",
     textAlign: "center",
   },

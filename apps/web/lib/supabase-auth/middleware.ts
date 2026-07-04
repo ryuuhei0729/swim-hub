@@ -117,12 +117,16 @@ export async function updateSession(request: NextRequest) {
   ];
 
   // 認証が不要なルート（認証済みユーザーがアクセスした場合はリダイレクト）
-  const authRoutes = ["/login", "/signup", "/reset-password"];
+  // /login/email・/signup/email を明示追加（isAuthRoute は startsWith で判定するため
+  // /login・/signup だけでもカバーできるが、意図を明示するために列挙する）
+  const authRoutes = ["/login/email", "/login", "/signup/email", "/signup", "/reset-password"];
 
   // パブリックルート（認証不要）
   const publicRoutes = [
     "/",
+    "/login/email",
     "/login",
+    "/signup/email",
     "/signup",
     "/reset-password",
     "/auth",
@@ -132,7 +136,6 @@ export async function updateSession(request: NextRequest) {
     "/support",
     "/about",
     "/tokushoho",
-    "/blog",
     "/pricing",
     "/api",
     "/_next",

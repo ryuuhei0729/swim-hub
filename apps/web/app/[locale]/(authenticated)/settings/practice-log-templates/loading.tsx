@@ -1,25 +1,25 @@
 export default function PracticeLogTemplatesLoading() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-10 bg-white border-b">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="w-9 h-9 bg-gray-200 rounded-lg animate-pulse"></div>
-          <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+    <div className="space-y-4 sm:space-y-6">
+      {/* ヘッダースケルトン（lg以上） */}
+      <div className="hidden lg:block bg-white rounded-lg shadow p-4 sm:p-6 animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gray-200 rounded-md"></div>
+          <div className="h-7 w-40 bg-gray-200 rounded"></div>
         </div>
-      </header>
+      </div>
 
-      {/* コンテンツ */}
-      <main className="max-w-2xl mx-auto px-4 py-6">
-        {/* 新規作成ボタンスケルトン */}
+      {/* コンテンツカードスケルトン */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6 animate-pulse">
+        {/* 件数表示スケルトン */}
         <div className="mb-6">
-          <div className="h-10 w-full bg-gray-200 rounded-lg animate-pulse"></div>
+          <div className="h-4 w-24 bg-gray-200 rounded"></div>
         </div>
 
         {/* テンプレートカードスケルトン */}
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-lg shadow p-4 animate-pulse">
+            <div key={i} className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="h-5 w-32 bg-gray-200 rounded"></div>
                 <div className="h-5 w-5 bg-gray-200 rounded"></div>
@@ -34,7 +34,7 @@ export default function PracticeLogTemplatesLoading() {
             </div>
           ))}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

@@ -9,11 +9,6 @@ import { authenticateApiRequest } from "@/lib/auth-api";
 import { isR2Enabled, uploadToR2, deleteFromR2 } from "@/lib/r2";
 import { NextRequest, NextResponse } from "next/server";
 import nodePath from "path";
-import { getTranslations } from "next-intl/server";
-import { localeFromReferer } from "@/i18n/routing";
-import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_ERROR_CODE } from "@swim-hub/shared/constants/premium";
-import type { PremiumRequiredError } from "@swim-hub/shared/constants/premium";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -33,36 +28,7 @@ export async function POST(request: NextRequest) {
     }
     const { user, supabase } = auth;
 
-    // Premium チェック: 画像アップロードは Premium 会員限定
-    const { data: subscriptionData } = await supabase
-      .from("user_subscriptions")
-      .select("plan, status, cancel_at_period_end, premium_expires_at, trial_end")
-      .eq("id", user.id)
-      .single();
-
-    const subscription = subscriptionData
-      ? {
-          plan: subscriptionData.plan as "free" | "premium",
-          status: subscriptionData.status as import("@swim-hub/shared/types/auth").SubscriptionStatus | null,
-          cancelAtPeriodEnd: subscriptionData.cancel_at_period_end ?? false,
-          premiumExpiresAt: subscriptionData.premium_expires_at ?? null,
-          trialEnd: subscriptionData.trial_end ?? null,
-        }
-      : null;
-
-    if (!checkIsPremium(subscription)) {
-      const t = await getTranslations({
-        locale: localeFromReferer(request.headers.get("referer")),
-        namespace: "forms.premium",
-      });
-      const errorResponse: PremiumRequiredError = {
-        error: PREMIUM_ERROR_CODE,
-        message: t("imageUpload"),
-        feature: "image_upload",
-      };
-      return NextResponse.json(errorResponse, { status: 403 });
-    }
-
+    // 画像アップロードは Free / Premium 双方で許可（動画のみ Premium 限定）
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const competitionId = formData.get("competitionId") as string | null;

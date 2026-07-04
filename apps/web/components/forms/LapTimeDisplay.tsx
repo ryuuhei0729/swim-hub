@@ -112,30 +112,30 @@ export function LapTimeDisplay({ splitTimes, raceDistance }: LapTimeDisplayProps
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <tr className="divide-x divide-gray-100">
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 tracking-wider">
                         {t("distanceHeader")}
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 tracking-wider">
                         {t("splitTimeHeader")}
                       </th>
                       {visibleLapIntervals.map((interval) => (
                         <th
                           key={interval}
-                          className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
+                          className="px-3 py-2 text-left text-xs font-medium text-gray-700 tracking-wider"
                         >
-                          {interval}m Lap
+                          {interval}m lap
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {raceLapTimesTable.map((row, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
+                      <tr key={index} className="divide-x divide-gray-100 hover:bg-gray-50">
                         <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                           {row.distance}m
                         </td>
-                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-3 py-2 whitespace-nowrap text-base font-bold text-blue-600">
                           {row.splitTime !== null ? formatTimeBest(row.splitTime) : "-"}
                         </td>
                         {visibleLapIntervals.map((interval) => (

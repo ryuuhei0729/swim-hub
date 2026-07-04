@@ -164,8 +164,8 @@ export default function RecordSetItem({
               <Input
                 type="number"
                 step="0.01"
-                min="0.40"
-                max="1.00"
+                min="-1"
+                max="2"
                 value={record.reactionTime}
                 onChange={(e) => onUpdate({ reactionTime: e.target.value })}
                 placeholder="0.65"

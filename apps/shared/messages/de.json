@@ -355,10 +355,9 @@
       "scannerDesc": "Die KI digitalisiert Ihre handgeschriebenen Trainingsaufzeichnungen und reduziert die Dateneingabe erheblich."
     },
     "footer": {
-      "tagline": "Die All-in-one-Plattform zur Datenverwaltung für Schwimmer",
+      "tagline": "Die All-in-one-Plattform zur Datenverwaltung für Wettkampfschwimmer",
       "terms": "Nutzungsbedingungen",
       "privacy": "Datenschutzerklärung",
-      "blog": "Blog",
       "about": "Über uns"
     },
     "deviceMockup": {
@@ -366,18 +365,160 @@
       "desktopAlt": "SwimHub Teammitglieder (Desktop)",
       "mobilePlaceholder": "Dashboard-Vorschau (in Kürze)",
       "desktopPlaceholder": "Teammitglieder-Vorschau (in Kürze)"
+    },
+    "v42": {
+      "nav": {
+        "practice": "Training",
+        "competition": "Wettkampf",
+        "proxy": "Stellvertretung",
+        "pricing": "Preise"
+      },
+      "hero": {
+        "ghostText": "SWIMHUB",
+        "h1Line1": "Für Einzelsportler und Teams,",
+        "h1Line2": "Schwimmaufzeichnungen verwalten",
+        "h1Line3": "alles in einer App.",
+        "lead": "Trainingsprotokolle, Wettkampfergebnisse, Stellvertretereingabe und Teamanmeldung – alles in einer App. Sofort auf dem Handy oder im Browser starten.",
+        "badge": "Einfaches Teammanagement auf dem Handy",
+        "cta": {
+          "signup": "Kostenlos registrieren",
+          "login": "Anmelden"
+        },
+        "store": {
+          "appStore": "App Store",
+          "googlePlay": "Google Play",
+          "comingSoon": "Demnächst"
+        },
+        "deviceCaption": "SwimHub App ◆ PC & Mobile",
+        "h1Line3Blue": "alles in einer App",
+        "h1Line3Suffix": ".",
+        "downloadOn": "Laden im"
+      },
+      "marquee": {
+        "text": "Practice Log ◆ Race Result ◆ Proxy Entry ◆ AI Scanner ◆ Best Times"
+      },
+      "features": {
+        "f1": {
+          "label": "Practice Log",
+          "title": "Trainingsdaten & Zeiten verwalten",
+          "desc": "Zyklen, Wiederholungen, Sätze und Zeiten aufzeichnen und Trainingshistorie aufbauen. Einfach Ziele für die nächste Einheit setzen.",
+          "items": [
+            "Zyklen, Wiederholungen und Sätze erfassen",
+            "Durchschnittszeiten automatisch berechnen",
+            "Nach Tags filtern"
+          ]
+        },
+        "f2": {
+          "label": "Race Result",
+          "title": "Wettkampfergebnisse erfassen",
+          "desc": "Disziplin, Zeit, Beckenlänge und Zwischenzeiten aufzeichnen. Die Bestzeittabelle wird automatisch aktualisiert.",
+          "items": [
+            "Splits aus Zwischenzeiten automatisch berechnen",
+            "Bestzeittabelle automatisch aktualisieren",
+            "Wettkampfanmeldungen verwalten"
+          ]
+        },
+        "f3": {
+          "label": "Team / Coach",
+          "title": "Trainer & Manager können Daten stellvertretend eingeben",
+          "desc": "Trainings- und Wettkampfaufzeichnungen können nicht nur von Athleten, sondern auch von Trainern oder Managern in großen Mengen eingetragen werden. Die Daten bleiben an die Person gebunden.",
+          "items": [
+            "Masseneingabe durch Trainer/Manager",
+            "Daten bleiben an die Person gebunden",
+            "Eine App fürs Leben"
+          ]
+        },
+        "introLabel": "Features",
+        "introH2": "Drei Funktionen, die Aufzeichnungen zu Werten machen"
+      },
+      "scanner": {
+        "label": "Highlight-Funktion — Scanner",
+        "h2": "Handgeschriebene Trainingsprotokolle mit KI scannen.",
+        "desc1": "Nervige Dateneingabe nach dem Training? Mit SwimHub Scanner fotografieren Sie einfach Ihren handgeschriebenen Trainingsplan und die KI liest ihn automatisch ein.",
+        "desc2": "Funktioniert mit vom Trainer verteilten Plänen oder eigenen Notizen und reduziert den Eingabeaufwand erheblich.",
+        "cta": "SwimHub Scanner ausprobieren"
+      },
+      "pricing": {
+        "label": "Pricing",
+        "h2": "Preisübersicht",
+        "lead": "Zwei einfache Pläne. Kostenlos starten.",
+        "detailLink": "Preisdetails anzeigen",
+        "free": {
+          "name": "Free",
+          "price": "¥0",
+          "note": "Für immer kostenlos",
+          "items": [
+            "Trainings- und Wettkampfaufzeichnungen",
+            "Split-time: max. 3 pro Aufzeichnung",
+            "PracticeTime: max. 18 pro Trainingslog",
+            "Bild-Upload (kein Video)"
+          ],
+          "cta": "Kostenlos starten"
+        },
+        "premium": {
+          "name": "Premium",
+          "price": "¥500",
+          "badge": "7 Tage kostenlos testen",
+          "annualNote": "Jahresplan: ¥5.000/Jahr (2 Monate gratis)",
+          "items": [
+            "Alle Funktionen unbegrenzt",
+            "Split-time: unbegrenzt",
+            "PracticeTime: unbegrenzt",
+            "Bild- und Video-Upload",
+            "Inkl. 7-tägige kostenlose Testversion"
+          ],
+          "cta": "Kostenlose Testversion starten"
+        }
+      },
+      "services": {
+        "label": "SwimHub Services",
+        "h2": "SwimHub Dienste",
+        "lead": "Tools, um das Schwimmen komfortabler zu machen",
+        "timer": {
+          "name": "SwimHub Timer",
+          "tagline": "Zeiten auf Video einblenden",
+          "desc": "Schwimmvideos mit Stoppuhr-Überlagerung abspielen. Ideal für Technikanalyse und Rundenüberprüfung.",
+          "cta": "Ausprobieren →"
+        },
+        "scanner": {
+          "name": "SwimHub Scanner",
+          "tagline": "Handgeschriebene Aufzeichnungen per KI scannen",
+          "desc": "KI liest handgeschriebene Trainingsprotokolle und wandelt sie in digitale Daten um – erhebliche Einsparung beim manuellen Eingeben.",
+          "cta": "Ausprobieren →"
+        }
+      },
+      "finalCta": {
+        "label": "Begin your record",
+        "h2": "Jetzt mit der Aufzeichnung beginnen",
+        "desc": "Konto kostenlos erstellen und sofort loslegen. Kein Team erforderlich – starten Sie solo und fügen Sie später Teamfunktionen hinzu."
+      },
+      "footer": {
+        "tagline": "Die Aufzeichnungsmanagement-Plattform für Wettkampfschwimmer",
+        "copyright": "© 2025 SwimHub. All rights reserved.",
+        "slogan": "Records for Life"
+      },
+      "stopwatch": {
+        "ariaLabel": "Seitenverweilzeit-Timer"
+      },
+      "lapBar": {
+        "ariaLabel": "Scroll-Fortschrittsanzeige"
+      }
     }
   },
   "auth": {
     "signin": {
       "title": "Anmelden",
       "subtitle": "Willkommen zurück bei SwimHub",
+      "entrySubtitle": "Willkommen bei SwimHub",
       "submitButton": "Anmelden",
       "loadingButton": "Wird verarbeitet...",
       "loadingMessage": "Anmeldedaten werden überprüft...",
       "errorTitle": "Anmeldefehler aufgetreten",
       "emailMethodTitle": "Mit E-Mail anmelden",
-      "emailMethodButton": "Mit E-Mail fortfahren"
+      "emailMethodButton": "Mit E-Mail fortfahren",
+      "emailPageTitle": "Mit E-Mail anmelden",
+      "emailPageSubtitle": "Geben Sie Ihre E-Mail-Adresse und Ihr Passwort ein",
+      "otherMethods": "Andere Anmeldemethoden"
     },
     "signup": {
       "title": "Konto erstellen",
@@ -386,7 +527,9 @@
       "emailMethodTitle": "Mit E-Mail registrieren",
       "emailMethodButton": "Mit E-Mail fortfahren",
       "welcomeTagline": "Starten Sie mit SwimHub",
-      "startButton": "Jetzt loslegen"
+      "startButton": "Jetzt loslegen",
+      "continueWithEmail": "Mit E-Mail registrieren",
+      "otherMethods": "Andere Optionen"
     },
     "resetPassword": {
       "title": "Passwort zurücksetzen",
@@ -424,9 +567,9 @@
     "switchToSignup": "Noch kein Konto? Hier registrieren",
     "switchToSignin": "Sie haben bereits ein Konto? Hier anmelden",
     "googleSignin": "Mit Google anmelden",
-    "googleSignup": "Mit Google erstellen",
+    "googleSignup": "Mit Google registrieren",
     "appleSignin": "Mit Apple anmelden",
-    "appleSignup": "Mit Apple erstellen",
+    "appleSignup": "Mit Apple registrieren",
     "orSeparator": "oder",
     "validation": {
       "nameRequired": "Bitte geben Sie Ihren Namen ein.",
@@ -567,7 +710,8 @@
       "feature3": "Team-Funktionen und Zielverwaltung",
       "feature4": "Split-time: max. 3 pro Aufzeichnung",
       "feature5": "PracticeTime: max. 18 pro Trainingsprotokoll",
-      "exclude1": "Bild- und Video-Uploads"
+      "feature6": "Bild-Upload",
+      "exclude1": "Video-Upload"
     },
     "premiumPlan": {
       "name": "Premium",
@@ -606,7 +750,8 @@
       "rowGoals": "Zielverwaltung",
       "rowSplitTime": "Split-time",
       "rowPracticeTime": "PracticeTime",
-      "rowImageUpload": "Bild- und Video-Uploads",
+      "rowImageUpload": "Bild-Upload",
+      "rowVideoUpload": "Video-Upload",
       "rowScanner": "SwimHub Scanner-Integration",
       "rowTimer": "SwimHub Timer-Integration",
       "valueLimitedSplit": "max. 3 pro Aufzeichnung",
@@ -650,6 +795,18 @@
     "submitting": "Wird gesendet...",
     "successMessage": "Ihre Anfrage ist bei uns eingegangen. Vielen Dank.",
     "errorMessage": "Senden fehlgeschlagen. Bitte versuchen Sie es später erneut.",
+    "appLabel": "Verwendete App",
+    "appOptions": {
+      "swimhub": "SwimHub",
+      "timer": "SwimHub Timer",
+      "scanner": "SwimHub Scanner"
+    },
+    "platformLabel": "Umgebung",
+    "platformOptions": {
+      "web": "Web (Browser)",
+      "ios": "iOS-App",
+      "android": "Android-App"
+    },
     "subjectOptions": {
       "placeholder": "Bitte auswählen",
       "question": "Frage zu einer Funktion",
@@ -709,7 +866,7 @@
       "addRecordShort": "Wettkampfergebnis",
       "addPracticeShort": "Training",
       "addRecord": "Wettkampfergebnis hinzufügen",
-      "addPractice": "Training hinzufügen",
+      "addPractice": "Trainingsergebnis hinzufügen",
       "addSection": "Eintrag hinzufügen",
       "close": "Schließen",
       "entryTypeLabel": {
@@ -914,7 +1071,8 @@
       "setAverage": "Satz-Durchschnitt",
       "overallAverage": "Gesamtdurchschnitt",
       "overallFastest": "Schnellste gesamt",
-      "memoLabel": "Notiz"
+      "memoLabel": "Notiz",
+      "menuNumber": "Menü {n}"
     },
     "styles": {
       "Fr": "Freistil",
@@ -1044,7 +1202,8 @@
       "imageUploadFailed": "Bild konnte nicht hochgeladen werden",
       "cancel": "Abbrechen",
       "submitUpdating": "Wird aktualisiert...",
-      "submit": "Aktualisieren"
+      "submit": "Aktualisieren",
+      "bioTooLong": "Die Beschreibung darf höchstens {max} Zeichen lang sein"
     },
     "avatarUpload": {
       "loginRequired": "Anmeldung erforderlich",
@@ -1157,7 +1316,24 @@
           "description": "Anwesenheitsverwaltung, Anmeldungserfassung und stellvertretende Eingabe"
         }
       },
-      "startButton": "Loslegen"
+      "startButton": "Loslegen",
+      "personalLabel": "Persönlich",
+      "teamLabel": "Team",
+      "teamFeature": {
+        "proxy": {
+          "title": "Stellvertretende Eingabe",
+          "badge": "Beliebt",
+          "description": "Trainer und Eltern können Ergebnisse und Wettkampfanmeldungen für Mitglieder eintragen"
+        },
+        "attendance": {
+          "title": "Anwesenheit",
+          "description": "Anwesenheit bei Training und Wettkämpfen zentral verwalten"
+        },
+        "entry": {
+          "title": "Anmeldungserfassung",
+          "description": "Wettkampfanmeldungen automatisch zusammenfassen"
+        }
+      }
     },
     "step2": {
       "title": "Richten Sie Ihr Profil ein",
@@ -1177,7 +1353,8 @@
       "validation": {
         "nameRequired": "Name ist erforderlich",
         "nameEmailFormat": "Bitte geben Sie Ihren Namen ein, keine E-Mail-Adresse",
-        "nameTooLong": "Der Name darf höchstens {max} Zeichen lang sein"
+        "nameTooLong": "Der Name darf höchstens {max} Zeichen lang sein",
+        "bioTooLong": "Die Beschreibung darf höchstens {max} Zeichen lang sein"
       },
       "saveError": "Profil konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
       "skipFailed": "Überspringen fehlgeschlagen",
@@ -1248,7 +1425,6 @@
       "terms": "Nutzungsbedingungen",
       "support": "Support",
       "contact": "Kontakt",
-      "blog": "Blog",
       "about": "Über SwimHub",
       "tokushoho": "Angaben gemäß dem japanischen Gesetz über kommerzielle Transaktionen"
     },
@@ -3460,7 +3636,8 @@
       "timePositive": "Die Zeit muss eine positive Zahl sein",
       "reactionTimeRange": "Die Reaktionszeit muss zwischen 0,40 und 1,00 Sekunden liegen",
       "timeFormatInvalid": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
-      "timeFormatInvalid2": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)"
+      "timeFormatInvalid2": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
+      "recordNumber": "Eintrag {n}"
     },
     "lapTime": {
       "raceLapTab": "Lap nach Distanz",
@@ -3482,6 +3659,10 @@
       "cancel": "Weiter bearbeiten"
     },
     "practice": {
+      "tabs": {
+        "practice": "Training",
+        "log": "Trainingsprotokoll"
+      },
       "steps": {
         "basic": {
           "label": "Grundinformationen",
@@ -3492,8 +3673,8 @@
           "description": "Menü & Zeiten"
         }
       },
-      "title_create": "Termin erstellen",
-      "title_edit": "Termin bearbeiten",
+      "title_create": "Trainingseintrag erfassen",
+      "title_edit": "Trainingseintrag bearbeiten",
       "subtitle_create": "Trainingstermin für {date} erstellen",
       "subtitle_edit": "Trainingstermin für {date} bearbeiten",
       "date_label": "Trainingsdatum",
@@ -3513,6 +3694,11 @@
       "cancel": "Abbrechen"
     },
     "competition": {
+      "tabs": {
+        "competition": "Wettkampf",
+        "entry": "Meldung",
+        "record": "Rennergebnis"
+      },
       "steps": {
         "basic": {
           "label": "Wettkampfinfo",
@@ -3527,10 +3713,10 @@
           "description": "Ergebnisse & Zwischenzeiten"
         }
       },
-      "title_create": "Wettkampf registrieren",
-      "title_edit": "Wettkampf bearbeiten",
+      "title_create": "Wettkampfergebnis erfassen",
+      "title_edit": "Wettkampfergebnis bearbeiten",
       "start_date_label": "Startdatum",
-      "end_date_label": "Enddatum (optional)",
+      "end_date_label": "Enddatum",
       "end_date_error": "Das Enddatum muss am oder nach dem Startdatum liegen",
       "name_label": "Wettkampfname",
       "name_placeholder": "z. B. Nationale Meisterschaft, Vergleichswettkampf",
@@ -3565,7 +3751,8 @@
       "saving": "Wird gespeichert ...",
       "update": "Aktualisieren",
       "updating": "Wird aktualisiert ...",
-      "videoLabel": "Video"
+      "videoLabel": "Video",
+      "menuHeader": "Menü {n}"
     },
     "practiceMenu": {
       "header": "Menü {n}",
@@ -3589,7 +3776,10 @@
       "repHeader": "Wdh. {n}",
       "avgRow": "Durchschn.",
       "overallAvg": "Gesamtdurchschnitt",
-      "overallFastest": "Gesamtbestzeit"
+      "overallFastest": "Gesamtbestzeit",
+      "distanceOther": "Andere",
+      "decrease": "Verringern",
+      "increase": "Erhöhen"
     },
     "timeInput": {
       "title": "Zeiten für Menü {n} eingeben",
@@ -3601,7 +3791,9 @@
       "notEntered": "Nicht eingegeben",
       "overallAvg": "Gesamtdurchschnitt:",
       "save": "Speichern",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "helpTitle": "Tipps zur Zeiteingabe",
+      "helpBody": "Trenne Zahlen mit einem beliebigen Zeichen, das keine Ziffer ist (- . : usw.). Beispiele: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.\n\nWenn du in einer Zelle \"33-2\" eingibst, genügt in der nächsten \"3-2\" und es wird automatisch zu \"33.2\" ergänzt (Übernahme der Zehnerstelle). Das Leeren einer Zelle setzt die Übernahme zurück."
     },
     "record": {
       "title_create": "Ergebnis hinzufügen",
@@ -3660,7 +3852,8 @@
       "skip": "Meldung überspringen",
       "submit": "Meldung registrieren",
       "submitting": "Wird registriert ...",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "relayLabel": "Staffel"
     },
     "recordLog": {
       "eventHeader": "Disziplin {n}",
@@ -3676,7 +3869,7 @@
       "relayLabel": "Staffel",
       "timeLabel": "Zeit",
       "time_placeholder": "z. B. 1:23.45   32.45",
-      "reactionTime_placeholder": "z. B. 28.50",
+      "reactionTime_placeholder": "z. B. 0.58  -0.01",
       "distance_placeholder": "Distanz (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "Reaktionszeit",
@@ -3692,7 +3885,9 @@
       "saving": "Wird gespeichert ...",
       "update": "Aktualisieren",
       "formError_noStyle": "Bitte wählen Sie eine Disziplin aus",
-      "formError_noTime": "Bitte geben Sie eine Zeit ein (Format: Min:Sek.Dezimal oder Sek.Dezimal)"
+      "formError_noTime": "Bitte geben Sie eine Zeit ein (Format: Min:Sek.Dezimal oder Sek.Dezimal)",
+      "addRecord": "Eintrag hinzufügen",
+      "recordNumber": "Eintrag {n}"
     },
     "tag": {
       "placeholder": "Tags auswählen oder erstellen",
@@ -3736,7 +3931,8 @@
       "updateError": "Tag konnte nicht aktualisiert werden",
       "authRequired": "Authentifizierung erforderlich",
       "createFailed": "Tag konnte nicht erstellt werden",
-      "deleteFailed": "Tag konnte nicht gelöscht werden"
+      "deleteFailed": "Tag konnte nicht gelöscht werden",
+      "createLabel": "Erstellen:"
     },
     "teamCreate": {
       "title": "Neues Team erstellen",
@@ -3768,7 +3964,7 @@
       "noStyle": "Bitte wählen Sie eine Disziplin aus",
       "noLap": "Lap-Zeiten können nicht berechnet werden",
       "distanceHeader": "Distanz",
-      "splitTimeHeader": "Split Time"
+      "splitTimeHeader": "split"
     },
     "imageUploader": {
       "label": "Bilder anhängen",
@@ -3782,6 +3978,23 @@
       "maxReached": "Maximal {max} Bilder ausgewählt",
       "remainingSlotsError": "Sie können noch {remaining} Bilder hinzufügen (max. {max})",
       "invalidFile": "Ungültige Datei"
+    },
+    "tabModal": {
+      "save": "Speichern",
+      "saving": "Wird gespeichert ...",
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "fieldRequired": "ist ein Pflichtfeld",
+      "partialSaveError": "Grunddaten wurden gespeichert. Details konnten nicht gespeichert werden. Bitte erneut versuchen.",
+      "duplicateEntryStyle": "Doppelte Disziplinen gefunden. Bitte ändern Sie die Disziplin jedes Eintrags.",
+      "discardWarning": {
+        "title": "Nicht gespeicherte Änderungen",
+        "message": "Sie haben nicht gespeicherte Änderungen. Trotzdem schließen?",
+        "confirm": "Schließen",
+        "cancel": "Weiter bearbeiten"
+      },
+      "proceedToRecord": "Weiter zur Eintragung",
+      "recordFutureGuard": "Für zukünftige Daten können keine Rennergebnisse eingetragen werden."
     },
     "premium": {
       "upgradeText": "Auf Premium upgraden",

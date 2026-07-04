@@ -158,7 +158,8 @@ export default function PlaceCombobox({
           ref={listRef}
           id={listId}
           role="listbox"
-          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+          className="absolute z-10 max-h-60 w-full overflow-auto rounded-b-md bg-white py-1 text-sm shadow-lg focus:outline-none"
+          onMouseLeave={() => setHighlightedIndex(-1)}
         >
           {filteredSuggestions.map((suggestion, index) => (
             <li
@@ -167,12 +168,9 @@ export default function PlaceCombobox({
               role="option"
               aria-selected={highlightedIndex === index}
               onClick={() => handleSelect(suggestion)}
-              onMouseEnter={() => setHighlightedIndex(index)}
               className={cn(
-                "cursor-pointer select-none px-4 py-2",
-                highlightedIndex === index
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-900 hover:bg-gray-100",
+                "cursor-pointer select-none px-4 py-2 text-gray-900 hover:bg-blue-50 hover:text-blue-700",
+                highlightedIndex === index && "bg-blue-50 text-blue-700",
               )}
             >
               {suggestion}

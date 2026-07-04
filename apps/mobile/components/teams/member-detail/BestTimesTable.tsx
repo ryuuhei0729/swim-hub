@@ -4,20 +4,13 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { differenceInDays, parseISO } from "date-fns";
 import { formatTime } from "@/utils/formatters";
+import { STYLE_KEY_MAP } from "@/utils/styleName";
 import type { BestTime } from "@apps/shared/types/ui";
 
 type TabType = "all" | "short" | "long";
 
 const DISTANCES = [50, 100, 200, 400, 800];
 const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"];
-
-const STYLE_SHORT_LABELS: Record<string, string> = {
-  自由形: "Fr",
-  平泳ぎ: "Br",
-  背泳ぎ: "Ba",
-  バタフライ: "Fly",
-  個人メドレー: "IM",
-};
 
 const styleColors: Record<string, { bg: string; text: string }> = {
   自由形: { bg: "#FEF3C7", text: "#92400E" },
@@ -180,7 +173,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                 ]}
               >
                 <Text style={[styles.headerText, { color: styleColors[style].text }]}>
-                  {STYLE_SHORT_LABELS[style]}
+                  {t(`practice.styleAbbrev.${STYLE_KEY_MAP[style]}`)}
                 </Text>
               </View>
             ))}

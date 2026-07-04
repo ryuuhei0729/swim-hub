@@ -31,7 +31,7 @@ import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/Ima
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
-import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import type { MainStackParamList } from "@/navigation/types";
 
 type PracticeFormScreenRouteProp = RouteProp<MainStackParamList, "PracticeForm">;
@@ -457,10 +457,19 @@ export const PracticeFormScreen: React.FC = () => {
           queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
         }
         reset();
-        navigation.navigate("PracticeLogForm", {
-          practiceId: practiceId,
-          returnTo: "dashboard",
-        });
+        if (teamId) {
+          // チームフロー: 旧画面へ
+          navigation.navigate("PracticeLogForm", {
+            practiceId: practiceId,
+            returnTo: "dashboard",
+          });
+        } else {
+          // 個人フロー: 新タブ画面(練習ログタブ)へ
+          navigation.navigate("PracticeTabForm", {
+            practiceId: practiceId,
+            initialTab: "log",
+          });
+        }
       } else {
         // 作成
         const formData = {
@@ -521,12 +530,19 @@ export const PracticeFormScreen: React.FC = () => {
         if (teamId) {
           queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
         }
-        // 成功: PracticeLogFormScreenへ遷移
+        // 成功: 個人フローは新タブ画面へ、チームフローは旧画面へ
         reset();
-        navigation.navigate("PracticeLogForm", {
-          practiceId: createdPractice.id,
-          returnTo: "dashboard",
-        });
+        if (teamId) {
+          navigation.navigate("PracticeLogForm", {
+            practiceId: createdPractice.id,
+            returnTo: "dashboard",
+          });
+        } else {
+          navigation.navigate("PracticeTabForm", {
+            practiceId: createdPractice.id,
+            initialTab: "log",
+          });
+        }
       }
     } catch (error) {
       console.error("保存エラー:", error);
@@ -625,7 +641,7 @@ export const PracticeFormScreen: React.FC = () => {
 
         {/* 画像 */}
         <View style={styles.field}>
-          {isPremium ? (
+          {canUploadImage(isPremium) ? (
             <ImageUploader
               existingImages={existingImages}
               onImagesChange={handleImagesChange}

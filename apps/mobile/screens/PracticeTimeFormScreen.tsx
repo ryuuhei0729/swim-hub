@@ -12,6 +12,7 @@ import {
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
+import { Feather } from "@expo/vector-icons";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -51,6 +52,9 @@ export const PracticeTimeFormScreen: React.FC = () => {
 
   // クイック入力フック
   const { parseInput, resetContext } = useQuickTimeInput();
+
+  // ヘルプ表示トグル
+  const [showHelp, setShowHelp] = useState(false);
 
   // タイムエントリー
   const [times, setTimes] = useState<TimeEntryWithDisplay[]>([]);
@@ -96,10 +100,24 @@ export const PracticeTimeFormScreen: React.FC = () => {
           : t,
       ),
     );
+    // フィールドを空にしたらコンテキストをリセットする。
+    // これをしないと、前回入力（例: 1:12.2）の「分」がクイック入力コンテキストに残り、
+    // 削除後に「33-3」を入力すると「1:33.3」に化けてしまう。
+    if (!value.trim()) {
+      resetContext();
+    }
   };
 
   // タイム入力の確定（フォーカスアウト時 or Enter時）
   const handleTimeConfirm = (id: string, value: string) => {
+    if (!value.trim()) {
+      // 空のまま blur / Enter したケースのフォールバック。
+      // 通常は handleTimeChange 側の resetContext で解除済みだが、こちらでも
+      // 分引き継ぎコンテキストを確実に解除する（setContextState は冪等）。
+      resetContext();
+      setTimes((prev) => prev.map((t) => (t.id === id ? { ...t, displayValue: "", time: 0 } : t)));
+      return;
+    }
     const { time, displayValue } = parseInput(value);
     setTimes((prev) =>
       prev.map((t) =>
@@ -178,6 +196,26 @@ export const PracticeTimeFormScreen: React.FC = () => {
         <Text style={styles.subtitle}>
           {t("practice.form.timeInputSubtitle", { setCount, repCount })}
         </Text>
+        <Pressable
+          onPress={() => setShowHelp((prev) => !prev)}
+          style={styles.hintRow}
+          accessibilityRole="button"
+          accessibilityLabel={t("forms.timeInput.helpTitle")}
+        >
+          <Feather
+            name="info"
+            size={14}
+            color={showHelp ? "#2563EB" : "#6B7280"}
+          />
+          <Text style={[styles.hintLabel, showHelp && styles.hintLabelActive]}>
+            {t("forms.timeInput.helpTitle")}
+          </Text>
+        </Pressable>
+        {showHelp && (
+          <View style={styles.helpPanel}>
+            <Text style={styles.helpBody}>{t("forms.timeInput.helpBody")}</Text>
+          </View>
+        )}
         {practiceTimeLimitExceeded && (
           <View style={{ marginTop: 12 }}>
             <PremiumBadge feature="practice_time_limit" />
@@ -288,7 +326,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     color: "#111827",
-    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
@@ -396,5 +433,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  hintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 8,
+    alignSelf: "flex-start",
+  },
+  hintLabel: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+  hintLabelActive: {
+    color: "#2563EB",
+  },
+  helpPanel: {
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  helpBody: {
+    fontSize: 13,
+    color: "#374151",
+    lineHeight: 20,
   },
 });

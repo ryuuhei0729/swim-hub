@@ -13,8 +13,8 @@ export const FREE_PLAN_LIMITS = {
   /** 1日あたりのAIトークン使用上限 */
   DAILY_TOKEN_LIMIT: 1,
 
-  /** 画像アップロード可否 */
-  IMAGE_UPLOAD_ENABLED: false,
+  /** 画像アップロード可否（Free でも画像は許可。動画のみ Premium 限定） */
+  IMAGE_UPLOAD_ENABLED: true,
 
   /** 動画アップロード可否 */
   VIDEO_UPLOAD_ENABLED: false,

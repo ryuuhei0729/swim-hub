@@ -4,14 +4,22 @@
 
 import { create } from "zustand";
 import type { Style } from "@apps/shared/types";
-import type { EditingData, EntryWithStyle } from "../types";
+import type { EditingData, EntryWithStyle, CompetitionTabId } from "../types";
 
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
 
 interface CompetitionFormState {
-  // モーダル状態（3段階）
+  // タブモーダル状態
+  isOpen: boolean;
+  activeTab: CompetitionTabId;
+  /** エントリー編集をロックする（チーム大会で entry_status が open でない場合など） */
+  entryLocked: boolean;
+  /** 編集時の既存大会ID（新規作成完了後も内部的に保持: 子INSERT失敗時の再送信で親重複INSERT防止）*/
+  editingCompetitionId: string | null;
+
+  // 後方互換: 旧来のオープン状態（TeamCompetitionForm 等の旧経路が参照）
   isBasicFormOpen: boolean;
   isEntryFormOpen: boolean;
   isRecordFormOpen: boolean;
@@ -35,7 +43,18 @@ interface CompetitionFilterState {
 }
 
 interface CompetitionFormActions {
-  // モーダル操作
+  // タブモーダル操作
+  openTabModal: (
+    date?: Date,
+    editData?: EditingData,
+    tab?: CompetitionTabId,
+    entryLocked?: boolean,
+  ) => void;
+  closeTabModal: () => void;
+  setActiveTab: (tab: CompetitionTabId) => void;
+  setEditingCompetitionId: (id: string | null) => void;
+
+  // 後方互換: 旧来のモーダル操作
   openBasicForm: (date?: Date, editData?: EditingData) => void;
   openEntryForm: (competitionId?: string, editData?: EditingData) => void;
   openRecordForm: (
@@ -79,6 +98,10 @@ type CompetitionActions = CompetitionFormActions &
 // -----------------------------------------------------------------------------
 
 const initialFormState: CompetitionFormState = {
+  isOpen: false,
+  activeTab: "competition",
+  entryLocked: false,
+  editingCompetitionId: null,
   isBasicFormOpen: false,
   isEntryFormOpen: false,
   isRecordFormOpen: false,
@@ -110,7 +133,44 @@ export const useCompetitionStore = create<CompetitionState & CompetitionActions>
   ...initialState,
 
   // ---------------------------------------------------------------------------
-  // Form: モーダル操作
+  // タブモーダル操作
+  // ---------------------------------------------------------------------------
+  openTabModal: (date, editData, tab = "competition", entryLocked = false) => {
+    set({
+      isOpen: true,
+      activeTab: tab,
+      entryLocked,
+      editingCompetitionId: editData?.id || null,
+      selectedDate: date || null,
+      editingData: editData || null,
+      createdCompetitionId: null,
+      createdEntries: [],
+      // 後方互換フィールドも更新
+      isBasicFormOpen: false,
+      isEntryFormOpen: false,
+      isRecordFormOpen: false,
+    });
+  },
+
+  closeTabModal: () => {
+    set({
+      isOpen: false,
+      activeTab: "competition",
+      entryLocked: false,
+      editingCompetitionId: null,
+      selectedDate: null,
+      editingData: null,
+      createdCompetitionId: null,
+      createdEntries: [],
+    });
+  },
+
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
+  setEditingCompetitionId: (id) => set({ editingCompetitionId: id }),
+
+  // ---------------------------------------------------------------------------
+  // 後方互換: 旧来のモーダル操作
   // ---------------------------------------------------------------------------
   openBasicForm: (date, editData) =>
     set({
@@ -170,6 +230,9 @@ export const useCompetitionStore = create<CompetitionState & CompetitionActions>
 
   closeAll: () =>
     set({
+      isOpen: false,
+      activeTab: "competition",
+      editingCompetitionId: null,
       isBasicFormOpen: false,
       isEntryFormOpen: false,
       isRecordFormOpen: false,
@@ -180,7 +243,7 @@ export const useCompetitionStore = create<CompetitionState & CompetitionActions>
     }),
 
   // ---------------------------------------------------------------------------
-  // Form: データ操作
+  // データ操作
   // ---------------------------------------------------------------------------
   setSelectedDate: (date) => set({ selectedDate: date }),
   setEditingData: (data) => set({ editingData: data }),

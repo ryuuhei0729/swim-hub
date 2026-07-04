@@ -24,7 +24,8 @@ export interface CompetitionShareData {
   splitTimes?: SplitTime[]; // スプリットタイム
 
   // 自己ベスト関連
-  isBestTime?: boolean;
+  /** その種目の初記録（過去記録なし）— true のとき「初」バッジを表示 */
+  isFirstRecord?: boolean;
   previousBest?: number;
 
   // ユーザー情報
@@ -38,6 +39,7 @@ export interface PracticeShareData {
   date: string;
   title: string;
   place?: string;
+  note?: string; // 練習メモ
 
   // メニュー詳細
   menuItems: PracticeMenuItem[];
@@ -61,6 +63,7 @@ export interface PracticeMenuItem {
   circle?: number; // サークル（秒）
   times?: PracticeTimeItem[]; // タイム一覧
   note?: string;
+  tags?: Array<{ name: string; color: string }>; // 種目タグ
 }
 
 // 練習タイム項目

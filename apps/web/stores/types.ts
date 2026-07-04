@@ -66,7 +66,7 @@ export interface PracticeMenuFormData {
   circleTime?: number | null;
   tags?: PracticeTag[];
   times?: TimeEntry[];
-  /** フォーム内の一時的なメニューID（新規作成時のみ使用、DB UUIDではない） */
+  /** メニューID。新規ログは一時ID、編集中の既存ログは DB UUID が入る。`computePracticeLogDiff` の toUpdate 判定に使用。 */
   tempMenuId?: string;
   /** 新規作成時の保留動画データ（mutate 成功後に親が直接アップロードする） */
   pendingVideo?: PendingVideoData;
@@ -77,6 +77,7 @@ export interface EntryFormData {
   styleId: string;
   entryTime: number;
   note: string;
+  isRelaying: boolean;
 }
 
 // 入力型（フォームで使用） - distanceはstring
@@ -147,3 +148,82 @@ export interface EntryWithStyle {
   teamId?: string | null;
   styleName?: string;
 }
+
+// =============================================================================
+// タブモーダル用ドラフト型定義
+// =============================================================================
+
+/** 練習タブモーダルのドラフト state */
+export interface PracticeModalDraft {
+  /** 練習基本情報 */
+  basic: {
+    date: string;
+    title: string;
+    place: string;
+    note: string;
+  };
+  /** 練習ログ一覧（ドラフト中）*/
+  logs: PracticeMenuFormData[];
+  /** 画像データ */
+  imageData?: {
+    newFiles: Array<{ file: File; previewUrl: string; id: string }>;
+    deletedIds: string[];
+  };
+}
+
+/** 大会タブモーダルのドラフト state */
+export interface CompetitionModalDraft {
+  /** 大会基本情報 */
+  basic: {
+    date: string;
+    endDate: string;
+    title: string;
+    place: string;
+    poolType: number;
+    note: string;
+  };
+  /** エントリー一覧（ドラフト中）*/
+  entries: EntryFormData[];
+  /** レコード一覧（ドラフト中）*/
+  records: RecordFormDataInput[];
+  /** 画像データ */
+  imageData?: {
+    newFiles: Array<{ file: File; previewUrl: string; id: string }>;
+    deletedIds: string[];
+  };
+}
+
+// =============================================================================
+// タブモーダル用ストア型定義
+// =============================================================================
+
+/** 練習タブ識別子 */
+export type PracticeTabId = "practice" | "practiceLog";
+
+/** 大会タブ識別子 */
+export type CompetitionTabId = "competition" | "entry" | "record";
+
+/** 練習タブモーダルのフォーム状態 */
+export interface PracticeTabModalState {
+  isOpen: boolean;
+  activeTab: PracticeTabId;
+  /** 編集時の既存練習ID（新規作成完了後も内部的に保持） */
+  editingPracticeId: string | null;
+  selectedDate: Date | null;
+  editingData: EditingData | null;
+  isLoading: boolean;
+}
+
+/** 大会タブモーダルのフォーム状態 */
+export interface CompetitionTabModalState {
+  isOpen: boolean;
+  activeTab: CompetitionTabId;
+  /** 編集時の既存大会ID（新規作成完了後も内部的に保持） */
+  editingCompetitionId: string | null;
+  selectedDate: Date | null;
+  editingData: EditingData | null;
+  isLoading: boolean;
+  /** 保存済みエントリー（レコードタブで参照）*/
+  savedEntries: EntryWithStyle[];
+}
+

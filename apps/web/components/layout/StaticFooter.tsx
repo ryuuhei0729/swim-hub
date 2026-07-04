@@ -26,7 +26,7 @@ export default async function StaticFooter() {
               />
             </div>
           </div>
-          <h3 className="text-gray-100 text-xl font-semibold mb-2">SwimHub</h3>
+          <h3 className="text-gray-100 text-xl font-semibold mb-2 font-(family-name:--font-chakra-petch)">SwimHub</h3>
           <p className="text-gray-100 mb-6 text-sm">{t("tagline")}</p>
           <div className="flex justify-center gap-3 sm:gap-6 mb-8 text-[10px] sm:text-sm text-gray-400 whitespace-nowrap">
             <Link
@@ -40,12 +40,6 @@ export default async function StaticFooter() {
               className="hover:text-white text-gray-400 font-bold transition-colors"
             >
               {t("privacy")}
-            </Link>
-            <Link
-              href="/blog"
-              className="hover:text-white text-gray-400 font-bold transition-colors"
-            >
-              {t("blog")}
             </Link>
             <Link
               href="/about"

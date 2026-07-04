@@ -5,7 +5,6 @@ import {
   formatNumber,
   formatPercentage,
   formatRole,
-  formatStroke,
   formatTime,
 } from "../../utils/formatters";
 
@@ -100,21 +99,6 @@ describe("formatPercentage", () => {
 
   it("合計より大きい値を処理できる", () => {
     expect(formatPercentage(150, 100)).toBe("150.0%");
-  });
-});
-
-describe("formatStroke", () => {
-  it("ストローク名を日本語にフォーマットできる", () => {
-    expect(formatStroke("freestyle")).toBe("自由形");
-    expect(formatStroke("backstroke")).toBe("背泳ぎ");
-    expect(formatStroke("breaststroke")).toBe("平泳ぎ");
-    expect(formatStroke("butterfly")).toBe("バタフライ");
-    expect(formatStroke("individual_medley")).toBe("個人メドレー");
-  });
-
-  it("不明なストロークに対して元の文字列を返す", () => {
-    expect(formatStroke("unknown")).toBe("unknown");
-    expect(formatStroke("relay")).toBe("relay");
   });
 });
 

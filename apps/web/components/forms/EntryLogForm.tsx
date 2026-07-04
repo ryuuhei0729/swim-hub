@@ -11,6 +11,7 @@ import { formatTimeBest, formatTimeShort, parseTime } from "@apps/shared/utils/t
 import { format } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
 import { useBestTimes } from "@/hooks/useBestTimes";
+import type { EntryFormData } from "@/stores/types";
 import { useAuth } from "@/contexts";
 
 interface EntryData {
@@ -43,7 +44,7 @@ type EditEntryData = {
 interface EntryLogFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (entries: EntryData[]) => Promise<void>;
+  onSubmit: (entries: EntryFormData[]) => Promise<void>;
   onSkip: () => void; // SKIP機能
   competitionId: string;
   competitionTitle?: string; // 大会名（nullの場合は「大会」と表示）
@@ -352,7 +353,16 @@ export default function EntryLogForm({
 
     setIsSubmitted(true);
     try {
-      await onSubmit(entries);
+      // この旧フォームはリレー未対応のため isRelaying は false 固定で送る
+      await onSubmit(
+        entries.map((e) => ({
+          id: e.id,
+          styleId: e.styleId,
+          entryTime: e.entryTime,
+          note: e.note,
+          isRelaying: false,
+        })),
+      );
       setHasUnsavedChanges(false);
       // onClose()は呼ばない - handleEntrySubmitが適切にモーダルを管理する
       // (closeEntryLogForm() → openRecordLogForm())

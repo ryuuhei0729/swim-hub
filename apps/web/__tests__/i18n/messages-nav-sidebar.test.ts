@@ -114,7 +114,7 @@ describe("[V-C1-01] Phase 1-C-1 追加 namespace の存在確認", () => {
 //   DashboardStats.tsx       → stats の title / unit
 //   CalendarHeader.tsx       → "カレンダー" / "今日" ボタン
 //   TeamAnnouncementsSection → "のお知らせ" / "管理者" / "直近1ヶ月..." / "エントリー未提出"
-//   DayDetailModal.tsx       → "の記録" / "大会記録を追加" / "練習予定を追加" 等
+//   DayDetailModal.tsx       → "の記録" / "大会記録を追加" / "練習記録を追加" 等
 //   DeleteConfirmModal.tsx   → "記録を削除" / "本当に削除しますか？" / "削除" / "キャンセル"
 // ---------------------------------------------------------------------------
 
@@ -387,7 +387,6 @@ describe("[V-C1-02f] footer namespace の必須キー確認", () => {
     "footer.links.terms",
     "footer.links.support",
     "footer.links.contact",
-    "footer.links.blog",
     "footer.links.about",
     "footer.links.tokushoho",
     "footer.services.title",

@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 32,
-    fontWeight: "bold",
+    fontFamily: "ChakraPetch_700Bold",
     color: "#111827",
   },
   bottomContainer: {

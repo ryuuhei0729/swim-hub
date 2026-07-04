@@ -12,7 +12,8 @@ import React, {
 import { useAuth } from "@/contexts";
 import { DashboardAPI } from "@apps/shared/api/dashboard";
 import { CalendarItem, MonthlySummary } from "@apps/shared/types/ui";
-import { endOfMonth, format, startOfMonth, isSameMonth } from "date-fns";
+import { format, isSameMonth } from "date-fns";
+import { getCalendarGridRange } from "../_utils/calendarGridRange";
 
 interface CalendarContextType {
   // 状態
@@ -110,12 +111,8 @@ export function CalendarProvider({
         setLoading(true);
         setError(null);
 
-        // 月の開始日と終了日を計算
-        // 注意: 認証済みレイアウト内で使用されるため、ユーザー認証チェックは不要
-        const monthStart = startOfMonth(targetDate);
-        const monthEnd = endOfMonth(targetDate);
-        const startDate = format(monthStart, "yyyy-MM-dd");
-        const endDate = format(monthEnd, "yyyy-MM-dd");
+        // グリッドの可視範囲（日曜起点、前月末〜翌月初を含む）を計算
+        const { startDate, endDate } = getCalendarGridRange(targetDate);
 
         // カレンダーエントリーと月間サマリーを並行取得
         const [entries, summary] = await Promise.all([

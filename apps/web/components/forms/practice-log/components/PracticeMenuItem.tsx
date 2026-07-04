@@ -1,14 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
+import NumberStepper from "@/components/ui/NumberStepper";
 import { TrashIcon, ClockIcon } from "@heroicons/react/24/outline";
 import TagInput from "../../TagInput";
 import type { PracticeMenu, Tag } from "../types";
-import { SWIM_STYLES, SWIM_CATEGORIES } from "../types";
+import { SWIM_STYLES, SWIM_CATEGORIES, DISTANCE_PRESETS } from "../types";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
+import { cn } from "@/utils/cn";
+import { SelectChips, chipClass } from "./SelectChips";
 
 interface PracticeMenuItemProps {
   menu: PracticeMenu;
@@ -21,6 +23,12 @@ interface PracticeMenuItemProps {
   onTagsChange: (tags: Tag[]) => void;
   onAvailableTagsUpdate: (tags: Tag[]) => void;
   onOpenTimeModal: () => void;
+  /** メニュー見出し(「メニュー N」)を表示するか。タブ名で項目を識別する場合は false */
+  showTitle?: boolean;
+  /** 外枠カード(緑背景・枠線)を外し、フィールドを直接並べる。外側で枠を持つ場合に使用 */
+  bare?: boolean;
+  /** タグ入力と同じ行の右側に表示する要素(例: テンプレートから作成ボタン) */
+  tagRowAction?: React.ReactNode;
 }
 
 /**
@@ -37,17 +45,33 @@ export default function PracticeMenuItem({
   onTagsChange,
   onAvailableTagsUpdate,
   onOpenTimeModal,
+  showTitle = true,
+  bare = false,
+  tagRowAction,
 }: PracticeMenuItemProps) {
   const t = useTranslations("forms.practiceMenu");
   const tPractice = useTranslations("practice");
+  // 距離がプリセット外(空含む)なら「その他」入力モードで開始
+  const [showCustomDistance, setShowCustomDistance] = useState(
+    () =>
+      menu.distance === "" ||
+      !(DISTANCE_PRESETS as readonly number[]).includes(Number(menu.distance)),
+  );
   return (
     <div
-      className="border border-gray-200 rounded-lg p-2 sm:p-4 space-y-2 sm:space-y-4 bg-green-50"
+      className={
+        bare
+          ? "space-y-2 sm:space-y-4"
+          : "border border-gray-200 rounded-lg p-2 sm:p-4 space-y-2 sm:space-y-4 bg-green-50"
+      }
       data-testid="practice-menu-container"
     >
       {/* メニューヘッダー */}
+      {(showTitle || canRemove) && (
       <div className="flex items-center justify-between">
-        <h5 className="font-medium text-gray-700">{t("header", { n: menuIndex + 1 })}</h5>
+        {showTitle && (
+          <h5 className="font-medium text-gray-700">{t("header", { n: menuIndex + 1 })}</h5>
+        )}
         {canRemove && (
           <button
             type="button"
@@ -61,90 +85,130 @@ export default function PracticeMenuItem({
           </button>
         )}
       </div>
+      )}
 
       {/* メニュー入力フィールド */}
       <div className="space-y-2 sm:space-y-4">
         {/* 1行目：タグ */}
         <div>
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">{t("tagLabel")}</label>
-          <TagInput
-            selectedTags={menu.tags}
-            availableTags={availableTags}
-            onTagsChange={onTagsChange}
-            onAvailableTagsUpdate={onAvailableTagsUpdate}
-            placeholder={t("tagPlaceholder")}
-          />
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <TagInput
+                selectedTags={menu.tags}
+                availableTags={availableTags}
+                onTagsChange={onTagsChange}
+                onAvailableTagsUpdate={onAvailableTagsUpdate}
+                placeholder={t("tagPlaceholder")}
+              />
+            </div>
+            {tagRowAction && <div className="shrink-0">{tagRowAction}</div>}
+          </div>
         </div>
 
-        {/* 2行目：種目と泳法カテゴリ */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-4">
+        {/* 2行目：種目と泳法カテゴリ（チップ選択） */}
+        <div className="space-y-2 sm:space-y-4">
           <div>
             <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
               {t("style1Label")} <span className="text-red-500">*</span>
             </label>
-            <select
+            <SelectChips
+              options={SWIM_STYLES.map((style) => ({
+                value: style.value,
+                label: tPractice(`styles.${style.value}` as Parameters<typeof tPractice>[0]),
+              }))}
               value={menu.style}
-              onChange={(e) => onUpdate("style", e.target.value)}
-              className="w-full h-8 sm:h-10 px-2 sm:px-3 py-1 sm:py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-              data-testid="practice-style"
-            >
-              {SWIM_STYLES.map((style) => (
-                <option key={style.value} value={style.value}>
-                  {tPractice(`styles.${style.value}` as Parameters<typeof tPractice>[0])}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => onUpdate("style", value)}
+              testIdPrefix="practice-style"
+            />
           </div>
           <div>
             <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
               {t("style2Label")} <span className="text-red-500">*</span>
             </label>
-            <select
+            <SelectChips
+              options={SWIM_CATEGORIES.map((category) => ({
+                value: category.value,
+                label: category.label,
+              }))}
               value={menu.swimCategory}
-              onChange={(e) =>
-                onUpdate("swimCategory", e.target.value as "Swim" | "Pull" | "Kick")
-              }
-              className="w-full h-8 sm:h-10 px-2 sm:px-3 py-1 sm:py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              data-testid="practice-swim-category"
-            >
-              {SWIM_CATEGORIES.map((category) => (
-                <option key={category.value} value={category.value}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => onUpdate("swimCategory", value as "Swim" | "Pull" | "Kick")}
+              testIdPrefix="practice-swim-category"
+            />
           </div>
         </div>
 
-        {/* 3行目：距離、本数、セット数（モバイル）/ 距離、本数、セット数、サークル（PC）*/}
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4">
-          <div>
-            <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
-              {t("distanceLabel")} <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="number"
-              value={menu.distance}
-              onChange={(e) => onUpdate("distance", e.target.value)}
-              placeholder="100"
-              min="1"
-              required
-              data-testid="practice-distance"
-            />
+        {/* 3行目：距離（プリセットチップ + その他で直接入力）*/}
+        <div>
+          <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
+            {t("distanceLabel")} <span className="text-red-500">*</span>
+          </label>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {DISTANCE_PRESETS.map((preset) => {
+              const selected = !showCustomDistance && Number(menu.distance) === preset;
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => {
+                    setShowCustomDistance(false);
+                    onUpdate("distance", String(preset));
+                  }}
+                  className={cn(chipClass(selected), "min-w-12")}
+                  aria-pressed={selected}
+                  data-testid={`practice-distance-preset-${preset}`}
+                >
+                  {preset}
+                </button>
+              );
+            })}
+            {showCustomDistance ? (
+              // 「その他」ボタンがその場で入力欄に変化する
+              <input
+                type="number"
+                inputMode="numeric"
+                value={menu.distance}
+                onChange={(e) => onUpdate("distance", e.target.value)}
+                placeholder="100"
+                min={1}
+                required
+                autoFocus
+                aria-label={t("distanceLabel")}
+                data-testid="practice-distance"
+                className="h-8 sm:h-10 w-20 px-3 rounded-md border border-blue-600 bg-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdate("distance", "");
+                  setShowCustomDistance(true);
+                }}
+                className={chipClass(false)}
+                data-testid="practice-distance-other"
+              >
+                {t("distanceOther")}
+              </button>
+            )}
           </div>
+        </div>
 
+        {/* 4行目：本数、セット数、サークル（分/秒）— ステッパー */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
           <div>
             <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
               {t("repsLabel")}<span className="text-red-500">*</span>
             </label>
-            <Input
-              type="number"
+            <NumberStepper
               value={menu.reps}
-              onChange={(e) => onUpdate("reps", e.target.value)}
+              onChange={(v) => onUpdate("reps", v)}
+              min={1}
+              step={1}
               placeholder="4"
-              min="1"
-              required
+              ariaLabel={t("repsLabel")}
+              fieldLabel={t("repsLabel")}
+              decreaseLabel={t("decrease")}
+              increaseLabel={t("increase")}
               data-testid="practice-rep-count"
             />
           </div>
@@ -153,66 +217,49 @@ export default function PracticeMenuItem({
             <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
               {t("setsLabel")} <span className="text-red-500">*</span>
             </label>
-            <Input
-              type="number"
+            <NumberStepper
               value={menu.sets}
-              onChange={(e) => onUpdate("sets", e.target.value)}
+              onChange={(v) => onUpdate("sets", v)}
+              min={1}
+              step={1}
               placeholder="1"
-              min="1"
-              required
+              ariaLabel={t("setsLabel")}
+              fieldLabel={t("setsLabel")}
+              decreaseLabel={t("decrease")}
+              increaseLabel={t("increase")}
               data-testid="practice-set-count"
             />
           </div>
 
-          <div className="hidden sm:block">
-            <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">{t("circleMinLabel")}</label>
-            <Input
-              type="number"
-              value={menu.circleMin}
-              onChange={(e) => onUpdate("circleMin", e.target.value)}
-              placeholder="1"
-              min="0"
-              data-testid="practice-circle-min-pc"
-            />
-          </div>
-
-          <div className="hidden sm:block">
-            <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">{t("circleSecLabel")}</label>
-            <Input
-              type="number"
-              value={menu.circleSec}
-              onChange={(e) => onUpdate("circleSec", e.target.value)}
-              placeholder="30"
-              min="0"
-              max="59"
-              data-testid="practice-circle-sec-pc"
-            />
-          </div>
-        </div>
-
-        {/* 4行目：サークル（モバイルのみ） */}
-        <div className="grid grid-cols-2 gap-2 sm:hidden">
           <div>
             <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">{t("circleMinLabel")}</label>
-            <Input
-              type="number"
+            <NumberStepper
               value={menu.circleMin}
-              onChange={(e) => onUpdate("circleMin", e.target.value)}
+              onChange={(v) => onUpdate("circleMin", v)}
+              min={0}
+              step={1}
               placeholder="1"
-              min="0"
+              ariaLabel={t("circleMinLabel")}
+              fieldLabel={t("circleMinLabel")}
+              decreaseLabel={t("decrease")}
+              increaseLabel={t("increase")}
               data-testid="practice-circle-min"
             />
           </div>
 
           <div>
             <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">{t("circleSecLabel")}</label>
-            <Input
-              type="number"
+            <NumberStepper
               value={menu.circleSec}
-              onChange={(e) => onUpdate("circleSec", e.target.value)}
+              onChange={(v) => onUpdate("circleSec", v)}
+              min={0}
+              max={59}
+              step={10}
               placeholder="30"
-              min="0"
-              max="59"
+              ariaLabel={t("circleSecLabel")}
+              fieldLabel={t("circleSecLabel")}
+              decreaseLabel={t("decrease")}
+              increaseLabel={t("increase")}
               data-testid="practice-circle-sec"
             />
           </div>

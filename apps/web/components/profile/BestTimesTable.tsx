@@ -47,15 +47,6 @@ const DISTANCES = [50, 100, 200, 400, 800];
 // 静的種目リスト
 const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"];
 
-// スマホ用の短縮種目名
-const STYLES_SHORT: Record<string, string> = {
-  自由形: "Fr",
-  平泳ぎ: "Br",
-  背泳ぎ: "Ba",
-  バタフライ: "Fly",
-  個人メドレー: "IM",
-};
-
 // DB照合用の日本語名 → 翻訳キーマップ
 type StyleTranslationKey = "Fr" | "Br" | "Ba" | "Fly" | "IM";
 
@@ -70,6 +61,7 @@ const STYLE_KEY_MAP: Partial<Record<string, StyleTranslationKey>> = {
 export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
   const t = useTranslations("mypage.bestTimesTable");
   const tStyles = useTranslations("practice.styles");
+  const tStyleAbbrev = useTranslations("practice.styleAbbrev");
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false);
 
@@ -298,7 +290,7 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                     key={style}
                     className={`px-0.5 sm:px-3 py-0.5 sm:py-2 text-center text-[9px] sm:text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 h-[24px] sm:h-[44px] ${styleHeaderBgClass[style]}`}
                   >
-                    <span className="sm:hidden">{STYLES_SHORT[style]}</span>
+                    <span className="sm:hidden">{styleKey ? tStyleAbbrev(styleKey) : style}</span>
                     <span className="hidden sm:inline">{styleKey ? tStyles(styleKey) : style}</span>
                   </th>
                 );

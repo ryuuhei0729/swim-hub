@@ -17,6 +17,8 @@ import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 interface UseRecordLogFormOptions {
   isOpen: boolean;
   editData?: RecordLogEditData | null;
+  /** 編集モードで複数レコードを一括初期化する場合に使用 (initialRecords が優先される) */
+  initialRecords?: RecordLogEditData[];
   entryDataList?: EntryInfo[];
   styles?: StyleOption[];
   isPremium?: boolean;
@@ -29,6 +31,8 @@ interface UseRecordLogFormReturn {
   setIsSubmitted: (value: boolean) => void;
   resetUnsavedChanges: () => void;
   resetFormData: () => void;
+  addFormData: () => void;
+  removeFormData: (index: number) => void;
   handleTimeChange: (index: number, value: string) => void;
   handleToggleRelaying: (index: number, checked: boolean) => void;
   handleNoteChange: (index: number, value: string) => void;
@@ -64,12 +68,20 @@ function createDefaultState(styleId: string): RecordLogFormState {
   };
 }
 
+/** 新規レコードのデフォルト種目: 50m自由形 (なければ先頭) */
+function findDefaultStyleId(styles: StyleOption[]): string {
+  const fifty = styles.find((s) => s.distance === 50 && /自由形|free|^fr/i.test(s.nameJp));
+  const target = fifty ?? styles[0];
+  return target?.id != null ? String(target.id) : "";
+}
+
 /**
  * RecordLogForm の状態管理フック
  */
 export const useRecordLogForm = ({
   isOpen,
   editData,
+  initialRecords,
   entryDataList = [],
   styles = [],
   isPremium = false,
@@ -88,7 +100,41 @@ export const useRecordLogForm = ({
     }
   }, [isOpen]);
 
-  // 初期化
+  // 複数レコード一括初期化: initialRecords が到着したら isInitialized を無視して上書き
+  useEffect(() => {
+    if (!isOpen || !initialRecords || initialRecords.length === 0) return;
+
+    setFormDataList(
+      initialRecords.map((rec, index) => {
+        const splitTimes =
+          rec.splitTimes?.map((st: SplitTimeRow, i: number) => ({
+            distance: st.distance,
+            splitTime: st.splitTime,
+            splitTimeDisplayValue: formatSecondsToDisplay(st.splitTime),
+            uiKey: `split-${index}-${i}`,
+          })) ?? [];
+        const styleId =
+          rec.styleId?.toString() ||
+          entryDataList[index]?.styleId?.toString() ||
+          (styles[0]?.id ? styles[0].id.toString() : "");
+        return {
+          styleId,
+          time: rec.time ?? 0,
+          timeDisplayValue: formatSecondsToDisplay(rec.time),
+          isRelaying: rec.isRelaying || false,
+          splitTimes,
+          note: rec.note || "",
+          videoPath: rec.videoPath ?? null,
+          videoThumbnailPath: null,
+          reactionTime: rec.reactionTime?.toString() || "",
+        };
+      }),
+    );
+    setIsInitialized(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialRecords]);
+
+  // 通常初期化 (単一 editData またはエントリーリストから)
   useEffect(() => {
     if (!isOpen || isInitialized) return;
 
@@ -130,7 +176,7 @@ export const useRecordLogForm = ({
       );
       setIsInitialized(true);
     } else {
-      setFormDataList([createDefaultState(styles[0]?.id ? String(styles[0].id) : "")]);
+      setFormDataList([createDefaultState(findDefaultStyleId(styles))]);
       setIsInitialized(true);
     }
   }, [isOpen, editData, entryDataList, isInitialized, styles]);
@@ -147,8 +193,7 @@ export const useRecordLogForm = ({
     (index: number, value: string) => {
       updateFormData(index, (prev) => {
         const newTime = parseTimeToSeconds(value);
-        const entryInfo = entryDataList[index];
-        const styleId = entryInfo ? String(entryInfo.styleId) : prev.styleId;
+        const styleId = prev.styleId;
         const style = styles.find((s) => s.id.toString() === styleId);
         const raceDistance = style?.distance;
 
@@ -190,7 +235,7 @@ export const useRecordLogForm = ({
         };
       });
     },
-    [updateFormData, entryDataList, styles],
+    [updateFormData, styles],
   );
 
   const handleToggleRelaying = useCallback(
@@ -244,8 +289,7 @@ export const useRecordLogForm = ({
   // 最終タイム（種目距離と同じ距離のsplit-time）を除いた、課金対象のsplit-time数を返す
   const countBillableSplitTimes = useCallback(
     (entryIndex: number, splitTimes: SplitTimeDraft[]): number => {
-      const entryInfo = entryDataList[entryIndex];
-      const styleId = entryInfo ? String(entryInfo.styleId) : formDataList[entryIndex]?.styleId;
+      const styleId = formDataList[entryIndex]?.styleId;
       const style = styles.find((s) => s.id.toString() === styleId);
       const raceDistance = style?.distance;
       if (!raceDistance) return splitTimes.length;
@@ -253,7 +297,7 @@ export const useRecordLogForm = ({
         (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
       ).length;
     },
-    [entryDataList, formDataList, styles],
+    [formDataList, styles],
   );
 
   const handleAddSplitTime = useCallback(
@@ -282,8 +326,7 @@ export const useRecordLogForm = ({
   const handleAddSplitTimesEvery25m = useCallback(
     (entryIndex: number) => {
       updateFormData(entryIndex, (prev) => {
-        const entryInfo = entryDataList[entryIndex];
-        const styleId = entryInfo ? String(entryInfo.styleId) : prev.styleId;
+        const styleId = prev.styleId;
         const style = styles.find((s) => s.id.toString() === styleId);
         if (!style || !style.distance) return prev;
 
@@ -346,14 +389,13 @@ export const useRecordLogForm = ({
         };
       });
     },
-    [updateFormData, entryDataList, styles, isPremium, countBillableSplitTimes],
+    [updateFormData, styles, isPremium, countBillableSplitTimes],
   );
 
   const handleAddSplitTimesEvery50m = useCallback(
     (entryIndex: number) => {
       updateFormData(entryIndex, (prev) => {
-        const entryInfo = entryDataList[entryIndex];
-        const styleId = entryInfo ? String(entryInfo.styleId) : prev.styleId;
+        const styleId = prev.styleId;
         const style = styles.find((s) => s.id.toString() === styleId);
         if (!style || !style.distance) return prev;
 
@@ -416,7 +458,7 @@ export const useRecordLogForm = ({
         };
       });
     },
-    [updateFormData, entryDataList, styles, isPremium, countBillableSplitTimes],
+    [updateFormData, styles, isPremium, countBillableSplitTimes],
   );
 
   const handleRemoveSplitTime = useCallback(
@@ -432,8 +474,7 @@ export const useRecordLogForm = ({
   const handleSplitTimeChange = useCallback(
     (entryIndex: number, splitIndex: number, field: "distance" | "splitTime", value: string) => {
       updateFormData(entryIndex, (prev) => {
-        const entryInfo = entryDataList[entryIndex];
-        const styleId = entryInfo ? String(entryInfo.styleId) : prev.styleId;
+        const styleId = prev.styleId;
         const style = styles.find((s) => s.id.toString() === styleId);
         const raceDistance = style?.distance;
 
@@ -475,7 +516,7 @@ export const useRecordLogForm = ({
         };
       });
     },
-    [updateFormData, entryDataList, styles],
+    [updateFormData, styles],
   );
 
   const resetUnsavedChanges = useCallback(() => {
@@ -486,15 +527,27 @@ export const useRecordLogForm = ({
     setFormDataList([]);
   }, []);
 
+  const addFormData = useCallback(() => {
+    setFormDataList((prev) => [
+      ...prev,
+      createDefaultState(findDefaultStyleId(styles)),
+    ]);
+    setHasUnsavedChanges(true);
+  }, [styles]);
+
+  const removeFormData = useCallback((index: number) => {
+    setFormDataList((prev) => prev.filter((_, i) => i !== index));
+    setHasUnsavedChanges(true);
+  }, []);
+
   const prepareSubmitData = useCallback((): {
     hasStyleError: boolean;
     submitList: RecordLogFormData[];
   } => {
     let hasStyleError = false;
     const submitList: RecordLogFormData[] = formDataList.reduce<RecordLogFormData[]>(
-      (acc, data, index) => {
-        const entryInfo = entryDataList[index];
-        const styleId = entryInfo ? String(entryInfo.styleId) : data.styleId;
+      (acc, data) => {
+        const styleId = data.styleId;
 
         if (!styleId) {
           hasStyleError = true;
@@ -538,7 +591,7 @@ export const useRecordLogForm = ({
     );
 
     return { hasStyleError, submitList };
-  }, [formDataList, entryDataList, styles]);
+  }, [formDataList, styles]);
 
   const isSplitTimeLimitReached = useCallback(
     (entryIndex: number): boolean => {
@@ -557,6 +610,8 @@ export const useRecordLogForm = ({
     setIsSubmitted,
     resetUnsavedChanges,
     resetFormData,
+    addFormData,
+    removeFormData,
     handleTimeChange,
     handleToggleRelaying,
     handleNoteChange,

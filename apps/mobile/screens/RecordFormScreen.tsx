@@ -37,7 +37,7 @@ import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { localizedStyleName } from "@/utils/styleName";
-import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, Competition } from "@apps/shared/types";
@@ -1011,7 +1011,7 @@ export const RecordFormScreen: React.FC = () => {
 
           {/* 画像 */}
           <View style={styles.field}>
-            {isPremium ? (
+            {canUploadImage(isPremium) ? (
               <ImageUploader
                 existingImages={existingImages}
                 onImagesChange={handleImagesChange}

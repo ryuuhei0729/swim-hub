@@ -40,6 +40,14 @@ export type MainStackParamList = {
     date?: string;
     teamId?: string;
   };
+  /** 練習タブ統合フォーム(個人フロー) */
+  PracticeTabForm: {
+    practiceId?: string;
+    date?: string;
+    teamId?: string;
+    /** 初期タブ。省略時は "practice" */
+    initialTab?: "practice" | "log";
+  };
   PracticeLogForm: {
     practiceId: string;
     practiceLogId?: string;
@@ -69,6 +77,14 @@ export type MainStackParamList = {
     competitionId?: string;
     date: string;
     teamId?: string;
+  };
+  /** 大会タブ統合フォーム(個人フロー) */
+  CompetitionTabForm: {
+    competitionId?: string;
+    date: string;
+    teamId?: string;
+    /** 初期タブ。省略時は "competition" */
+    initialTab?: "competition" | "entry" | "record";
   };
   EntryForm: {
     competitionId: string;

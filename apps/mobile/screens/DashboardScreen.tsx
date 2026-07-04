@@ -131,32 +131,33 @@ export const DashboardScreen: React.FC = () => {
     }
   };
 
-  // 練習追加
+  // 練習追加（個人フロー → タブ統合画面）
   const handleAddPractice = (date: Date) => {
     const dateParam = formatDate(date, "yyyy-MM-dd");
-    navigation.navigate("PracticeForm", { date: dateParam });
+    navigation.navigate("PracticeTabForm", { date: dateParam });
   };
 
-  // 大会記録追加
+  // 大会記録追加（個人フロー → タブ統合画面）
   const handleAddRecord = (dateOrCompetitionId: Date | string, dateParam?: string) => {
     // EntryDetailから呼ばれた場合（competitionIdとdateが渡される）
     if (typeof dateOrCompetitionId === "string" && dateParam) {
-      navigation.navigate("RecordLogForm", {
+      navigation.navigate("CompetitionTabForm", {
         competitionId: dateOrCompetitionId,
         date: dateParam,
+        initialTab: "record",
       });
     } else if (dateOrCompetitionId instanceof Date) {
       // 通常の呼び出し（dateのみ）
       const formattedDate = formatDate(dateOrCompetitionId, "yyyy-MM-dd");
-      navigation.navigate("CompetitionForm", { date: formattedDate });
+      navigation.navigate("CompetitionTabForm", { date: formattedDate });
     }
   };
 
-  // 練習編集
+  // 練習編集（個人フロー → タブ統合画面）
   const handleEditPractice = (item: CalendarItem) => {
     const practiceId = item.metadata?.practice_id || item.id;
     const dateParam = item.date;
-    navigation.navigate("PracticeForm", { practiceId, date: dateParam });
+    navigation.navigate("PracticeTabForm", { practiceId, date: dateParam });
   };
 
   // 練習削除
@@ -206,17 +207,16 @@ export const DashboardScreen: React.FC = () => {
     ]);
   };
 
-  // 練習ログ追加
+  // 練習ログ追加（個人フロー → タブ統合画面のログタブへ）
   const handleAddPracticeLog = (practiceId: string) => {
-    navigation.navigate("PracticeLogForm", { practiceId, returnTo: "dashboard" });
+    navigation.navigate("PracticeTabForm", { practiceId, initialTab: "log" });
   };
 
-  // 練習ログ編集
+  // 練習ログ編集（個人フロー → タブ統合画面のログタブへ）
   const handleEditPracticeLog = (item: CalendarItem) => {
     const practiceId = item.metadata?.practice_id || item.metadata?.practice?.id;
-    const practiceLogId = item.id;
     if (practiceId) {
-      navigation.navigate("PracticeLogForm", { practiceId, practiceLogId, returnTo: "dashboard" });
+      navigation.navigate("PracticeTabForm", { practiceId, initialTab: "log" });
     }
   };
 
@@ -249,7 +249,7 @@ export const DashboardScreen: React.FC = () => {
     ]);
   };
 
-  // 記録編集
+  // 記録編集（個人フロー → タブ統合画面のレコードタブへ）
   const handleEditRecord = (item: CalendarItem) => {
     const competitionId =
       item.metadata?.competition?.id || item.metadata?.record?.competition_id;
@@ -259,10 +259,10 @@ export const DashboardScreen: React.FC = () => {
       return;
     }
 
-    navigation.navigate("RecordLogForm", {
+    navigation.navigate("CompetitionTabForm", {
       competitionId,
-      recordId: item.id,
       date: item.date,
+      initialTab: "record",
     });
   };
 
@@ -295,31 +295,27 @@ export const DashboardScreen: React.FC = () => {
     ]);
   };
 
-  // エントリー編集
+  // エントリー編集（個人フロー → タブ統合画面のエントリータブへ）
   const handleEditEntry = (item: CalendarItem) => {
-    const entryId = item.id;
     const competitionId = item.metadata?.entry?.competition_id || item.metadata?.competition?.id;
     const dateParam = item.date;
 
     if (competitionId) {
-      navigation.navigate("EntryForm", {
+      navigation.navigate("CompetitionTabForm", {
         competitionId,
-        entryId,
         date: dateParam,
+        initialTab: "entry",
       });
     }
   };
 
-  // 大会記録を追加（過去の大会は直接RecordLogFormへ、それ以外はEntryFormへ）
+  // 大会エントリー追加（個人フロー → タブ統合画面、isEntryTabVisible に従いタブ決定）
   const handleAddEntry = (competitionId: string, date: string) => {
-    const competitionDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (competitionDate < today) {
-      navigation.navigate("RecordLogForm", { competitionId, date });
-    } else {
-      navigation.navigate("EntryForm", { competitionId, date });
-    }
+    navigation.navigate("CompetitionTabForm", {
+      competitionId,
+      date,
+      initialTab: "entry",
+    });
   };
 
   // エントリー削除
@@ -330,11 +326,11 @@ export const DashboardScreen: React.FC = () => {
     refetch();
   };
 
-  // 大会編集
+  // 大会編集（個人フロー → タブ統合画面）
   const handleEditCompetition = (item: CalendarItem) => {
     const competitionId = item.metadata?.competition?.id || item.id;
     const dateParam = item.date;
-    navigation.navigate("CompetitionForm", {
+    navigation.navigate("CompetitionTabForm", {
       competitionId,
       date: dateParam,
     });

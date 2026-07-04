@@ -280,6 +280,8 @@ describe("[V-CD-02] forms 必須キー存在チェック", () => {
     "forms.timeInput.overallAvg",
     "forms.timeInput.save",
     "forms.timeInput.cancel",
+    "forms.timeInput.helpTitle",
+    "forms.timeInput.helpBody",
 
     // --------------------------------------------------------
     // forms.record (record/RecordForm + RecordBasicInfo + RecordSetItem)

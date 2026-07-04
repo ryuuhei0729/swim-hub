@@ -135,8 +135,8 @@ describe("canAddPracticeTimes", () => {
 // canUploadImage
 // ---------------------------------------------------------------------------
 describe("canUploadImage", () => {
-  it("should return false for free user", () => {
-    expect(canUploadImage(false)).toBe(false);
+  it("should return true for free user (画像は Free でも許可)", () => {
+    expect(canUploadImage(false)).toBe(true);
   });
 
   it("should return true for premium user", () => {

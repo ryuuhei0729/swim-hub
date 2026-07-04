@@ -6,13 +6,12 @@ import { useTranslations } from "next-intl";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import {
   format,
-  startOfMonth,
-  endOfMonth,
+  parseISO,
   eachDayOfInterval,
   addMonths,
   subMonths,
-  getDay,
 } from "date-fns";
+import { getCalendarGridRange } from "../_utils/calendarGridRange";
 import { useCalendar } from "../_providers/CalendarProvider";
 import DayDetailModal from "./DayDetailModal";
 import CalendarHeader from "./CalendarHeader";
@@ -70,13 +69,10 @@ export default function CalendarView({
   const entries = calendarItems;
   const isLoading = propLoading || dataLoading;
 
-  // 月の日付を取得
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const calendarStart = new Date(monthStart);
-  calendarStart.setDate(calendarStart.getDate() - getDay(monthStart));
-  const calendarEnd = new Date(monthEnd);
-  calendarEnd.setDate(calendarEnd.getDate() + (6 - getDay(monthEnd)));
+  // グリッドの可視範囲を単一の真実源から取得（データ取得範囲と完全一致させる）
+  const { startDate: gridStartDate, endDate: gridEndDate } = getCalendarGridRange(currentDate);
+  const calendarStart = parseISO(gridStartDate);
+  const calendarEnd = parseISO(gridEndDate);
 
   const calendarDays = eachDayOfInterval({
     start: calendarStart,

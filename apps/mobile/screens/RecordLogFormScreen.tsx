@@ -722,54 +722,46 @@ export const RecordLogFormScreen: React.FC = () => {
                 </Text>
               )}
 
-              {/* 種目表示（エントリー情報がある場合） */}
-              {entryInfo && (
-                <View style={styles.entryInfo}>
-                  <Text style={styles.entryInfoText}>
-                    {entryInfo.styleName}
-                    {entryInfo.entryTime &&
-                      ` (${t("recordMobile.entryTimeInfo", { time: formatTime(entryInfo.entryTime) })})`}
-                  </Text>
-                </View>
-              )}
-
-              {/* 種目選択（エントリー情報がない場合） */}
-              {!entryInfo && (
-                <View style={styles.field}>
-                  <Text style={styles.label}>
-                    {t("recordMobile.form.styleLabel")} <Text style={styles.required}>*</Text>
-                  </Text>
-                  <Pressable
-                    ref={(ref) => {
-                      if (ref) styleButtonRefs.current.set(index, ref);
-                    }}
+              {/* 種目選択（常に操作可能。エントリー情報があればヒントとして表示） */}
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  {t("recordMobile.form.styleLabel")} <Text style={styles.required}>*</Text>
+                </Text>
+                <Pressable
+                  ref={(ref) => {
+                    if (ref) styleButtonRefs.current.set(index, ref);
+                  }}
+                  style={[
+                    styles.pickerButton,
+                    errors[`style-${index}`] && styles.pickerButtonError,
+                  ]}
+                  onPress={() => openStylePicker(index)}
+                  disabled={loading}
+                >
+                  <Text
                     style={[
-                      styles.pickerButton,
-                      errors[`style-${index}`] && styles.pickerButtonError,
+                      styles.pickerButtonText,
+                      !formData.styleId && styles.pickerButtonPlaceholder,
                     ]}
-                    onPress={() => openStylePicker(index)}
-                    disabled={loading}
                   >
-                    <Text
-                      style={[
-                        styles.pickerButtonText,
-                        !formData.styleId && styles.pickerButtonPlaceholder,
-                      ]}
-                    >
-                      {formData.styleId
-                        ? localizedStyleName(
-                            swimStyles.find((s) => s.id.toString() === formData.styleId),
-                            t,
-                          ) || t("recordMobile.form.stylePlaceholder")
-                        : t("recordMobile.form.stylePlaceholder")}
-                    </Text>
-                    <Feather name="chevron-down" size={20} color="#6B7280" />
-                  </Pressable>
-                  {errors[`style-${index}`] && (
-                    <Text style={styles.errorText}>{errors[`style-${index}`]}</Text>
-                  )}
-                </View>
-              )}
+                    {formData.styleId
+                      ? localizedStyleName(
+                          swimStyles.find((s) => s.id.toString() === formData.styleId),
+                          t,
+                        ) || t("recordMobile.form.stylePlaceholder")
+                      : t("recordMobile.form.stylePlaceholder")}
+                  </Text>
+                  <Feather name="chevron-down" size={20} color="#6B7280" />
+                </Pressable>
+                {errors[`style-${index}`] && (
+                  <Text style={styles.errorText}>{errors[`style-${index}`]}</Text>
+                )}
+                {entryInfo?.entryTime != null && (
+                  <Text style={styles.entryInfoText}>
+                    {t("recordMobile.entryTimeInfo", { time: formatTime(entryInfo.entryTime) })}
+                  </Text>
+                )}
+              </View>
 
               {/* タイム入力 */}
               <View style={styles.field}>

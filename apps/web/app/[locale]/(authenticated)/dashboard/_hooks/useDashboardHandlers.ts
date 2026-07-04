@@ -4,6 +4,13 @@
 
 import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
+import type { PracticeTabSaveParams } from "@/components/forms/PracticeTabModal";
+import type { CompetitionTabSaveParams } from "@/components/forms/CompetitionTabModal";
+import {
+  computePracticeLogDiff,
+  computeEntryDiff,
+  computeRecordDiff,
+} from "@/utils/tabModalDiff";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type {
@@ -51,6 +58,9 @@ interface UseDashboardHandlersProps {
   ) => Promise<import("@swim-hub/shared/types").PracticeTime>;
   deletePracticeTime: (id: string) => Promise<void>;
   deletePractice: (id: string) => Promise<void>;
+  deletePracticeLog?: (id: string) => Promise<void>;
+  deleteRecord: (id: string) => Promise<void>;
+  deleteEntry: (id: string) => Promise<void>;
   // Record hooks（実際の型に合わせる）
   createRecord: (
     record: Omit<import("@swim-hub/shared/types").RecordInsert, "user_id">,
@@ -96,7 +106,13 @@ interface UseDashboardHandlersProps {
     editData?: EditingData,
   ) => void;
   refreshCalendar: () => void;
+  // タブモーダル用
+  closePracticeTabModal: () => void;
+  closeCompetitionTabModal: () => void;
+  setEditingPracticeId: (id: string | null) => void;
+  setEditingCompetitionId: (id: string | null) => void;
 }
+
 
 /**
  * ダッシュボードのハンドラー関数を提供するカスタムフック
@@ -109,11 +125,14 @@ export function useDashboardHandlers({
   updatePractice,
   createPracticeLog,
   updatePracticeLog,
+  deletePracticeLog,
   createPracticeTime,
   deletePracticeTime,
   deletePractice,
   createRecord,
   updateRecord,
+  deleteRecord,
+  deleteEntry,
   createCompetition,
   updateCompetition,
   deleteCompetition,
@@ -135,6 +154,10 @@ export function useDashboardHandlers({
   openEntryLogForm,
   openRecordLogForm,
   refreshCalendar,
+  closePracticeTabModal,
+  closeCompetitionTabModal,
+  setEditingPracticeId,
+  setEditingCompetitionId,
 }: UseDashboardHandlersProps) {
   const t = useTranslations("dashboard.handlers");
   // 練習予定作成・更新
@@ -807,6 +830,7 @@ export function useDashboardHandlers({
               style_id: styleIdNum,
               entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
               note: entryData.note || null,
+              is_relaying: entryData.isRelaying ?? false,
             });
             processedEntryIds.add(entryData.id);
           } else {
@@ -820,6 +844,7 @@ export function useDashboardHandlers({
               entry = await entryAPI.updateEntry(existingEntry.id, {
                 entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
                 note: entryData.note || null,
+                is_relaying: entryData.isRelaying ?? false,
               });
               processedEntryIds.add(existingEntry.id);
             } else {
@@ -830,6 +855,7 @@ export function useDashboardHandlers({
                   style_id: parseInt(entryData.styleId),
                   entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
                   note: entryData.note || null,
+                  is_relaying: entryData.isRelaying ?? false,
                 });
               } else {
                 entry = await entryAPI.createPersonalEntry({
@@ -837,6 +863,7 @@ export function useDashboardHandlers({
                   style_id: parseInt(entryData.styleId),
                   entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
                   note: entryData.note || null,
+                  is_relaying: entryData.isRelaying ?? false,
                 });
               }
             }
@@ -1054,6 +1081,453 @@ export function useDashboardHandlers({
     ],
   );
 
+  // ===========================================================================
+  // タブモーダル: 練習一括保存
+  // 親 INSERT → 子 INSERT の順に実行。親成功・子失敗時は editingPracticeId を
+  // セットして編集モードに落とし込み、エラーを再スローする（モーダルは閉じない）。
+  // ===========================================================================
+  const handlePracticeTabSave = useCallback(
+    async (params: PracticeTabSaveParams) => {
+      if (!user?.id) throw new Error(t("authRequired"));
+
+      const { basicData, imageData, logs, editingPracticeId: paramEditingId, originalLogIds } = params;
+
+      setPracticeLoading(true);
+      let practiceId: string | null = paramEditingId;
+
+      try {
+        // ── 1. 練習本体 (parent) INSERT / UPDATE ──
+        if (!practiceId) {
+          const payload = {
+            date: basicData.date,
+            title: basicData.title || null,
+            place: basicData.place || null,
+            note: basicData.note || null,
+          };
+          const created = await createPractice(payload);
+          practiceId = created.id;
+          // 子 INSERT 失敗時に再送信できるよう ID を保持
+          setEditingPracticeId(practiceId);
+        } else {
+          await updatePractice(practiceId, {
+            date: basicData.date,
+            title: basicData.title || null,
+            place: basicData.place || null,
+            note: basicData.note || null,
+          });
+        }
+
+        // ── 2. 画像処理 ──
+        if (practiceId && imageData) {
+          const practiceAPI = new PracticeAPI(supabase);
+          const uploadedPaths: string[] = [];
+          try {
+            if (imageData.newFiles.length > 0) {
+              const { processPracticeImage } = await import("@/utils/imageUtils");
+              const processed = await Promise.all(
+                imageData.newFiles.map(async (f) => (await processPracticeImage(f.file)).thumbnail),
+              );
+              for (const file of processed) {
+                uploadedPaths.push(await practiceAPI.uploadPracticeImage(practiceId!, file));
+              }
+            }
+            const { data: cur } = await supabase
+              .from("practices")
+              .select("image_paths")
+              .eq("id", practiceId)
+              .single();
+            const existing: string[] = (cur as { image_paths?: string[] | null } | null)?.image_paths ?? [];
+            await supabase
+              .from("practices")
+              .update({ image_paths: [...existing.filter((p) => !imageData.deletedIds.includes(p)), ...uploadedPaths] })
+              .eq("id", practiceId);
+            for (const path of imageData.deletedIds) {
+              await practiceAPI.deletePracticeImage(path).catch(() => {});
+            }
+          } catch {
+            for (const path of uploadedPaths) {
+              await practiceAPI.deletePracticeImage(path).catch(() => {});
+            }
+            throw new Error(t("practiceCreatedButImageFailed"));
+          }
+        }
+      } catch (err) {
+        setPracticeLoading(false);
+        throw err;
+      }
+
+      // ── 3. 練習ログ (children) diff INSERT / UPDATE / DELETE ──
+      const diff = computePracticeLogDiff(
+        logs.map((l) => ({ ...l, tempMenuId: l.tempMenuId })),
+        originalLogIds,
+      );
+
+      // DELETE
+      for (const id of diff.toDelete) {
+        if (deletePracticeLog) await deletePracticeLog(id);
+      }
+
+      // ADD
+      for (const menu of diff.toAdd) {
+        const logInput = {
+          practice_id: practiceId!,
+          style: menu.style || "fr",
+          swim_category: menu.swimCategory || "Swim",
+          rep_count: Number(menu.reps) || 1,
+          set_count: Number(menu.sets) || 1,
+          distance: Number(menu.distance) || 100,
+          circle: menu.circleTime || null,
+          note: menu.note || "",
+        };
+        const createdLog = await createPracticeLog(logInput);
+        if (menu.tags?.length && createdLog) {
+          const qb = supabase.from("practice_log_tags") as unknown as {
+            insert: (v: import("@apps/shared/types").PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>;
+          };
+          for (const tag of menu.tags) {
+            const { error } = await qb.insert({ practice_log_id: createdLog.id, practice_tag_id: tag.id });
+            if (error) throw new Error(t("insertPracticeTagFailed", { detail: error.message }));
+          }
+        }
+        if (menu.times?.length && createdLog) {
+          await Promise.all(
+            menu.times
+              .filter((te) => te.time > 0)
+              .map((te) =>
+                createPracticeTime({
+                  user_id: user.id,
+                  practice_log_id: createdLog.id,
+                  set_number: te.setNumber,
+                  rep_number: te.repNumber,
+                  time: te.time,
+                } as import("@swim-hub/shared/types").PracticeTimeInsert),
+              ),
+          );
+        }
+        if (menu.pendingVideo && createdLog) {
+          await uploadVideoClient({ type: "practice-log", id: createdLog.id, file: menu.pendingVideo.file, thumbnail: menu.pendingVideo.thumbnail }).catch(() => {
+            alert(t("videoUploadPartialPractice"));
+          });
+        }
+      }
+
+      // UPDATE
+      for (const { id, data: menu } of diff.toUpdate) {
+        await updatePracticeLog(id, {
+          style: menu.style || "fr",
+          swim_category: menu.swimCategory || "Swim",
+          rep_count: Number(menu.reps) || 1,
+          set_count: Number(menu.sets) || 1,
+          distance: Number(menu.distance) || 100,
+          circle: menu.circleTime || null,
+          note: menu.note || "",
+        });
+        // タグ再同期
+        await supabase.from("practice_log_tags").delete().eq("practice_log_id", id);
+        if (menu.tags?.length) {
+          const qb = supabase.from("practice_log_tags") as unknown as {
+            insert: (v: import("@apps/shared/types").PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>;
+          };
+          for (const tag of menu.tags) {
+            const { error } = await qb.insert({ practice_log_id: id, practice_tag_id: tag.id });
+            if (error) throw new Error(t("insertPracticeTagFailed", { detail: error.message }));
+          }
+        }
+        // 時間再同期
+        const { data: existingTimes } = await supabase
+          .from("practice_times")
+          .select("id")
+          .eq("practice_log_id", id);
+        if (existingTimes?.length) {
+          await Promise.all(
+            (existingTimes as Array<{ id: string }>).map((t) => deletePracticeTime(t.id)),
+          );
+        }
+        if (menu.times?.length) {
+          await Promise.all(
+            menu.times
+              .filter((te) => te.time > 0)
+              .map((te) =>
+                createPracticeTime({
+                  user_id: user.id,
+                  practice_log_id: id,
+                  set_number: te.setNumber,
+                  rep_number: te.repNumber,
+                  time: te.time,
+                } as import("@swim-hub/shared/types").PracticeTimeInsert),
+              ),
+          );
+        }
+      }
+
+      // 全成功 → モーダルを閉じる
+      setEditingPracticeId(null);
+      closePracticeTabModal();
+      refreshCalendar();
+      setPracticeLoading(false);
+    },
+    [
+      user,
+      supabase,
+      createPractice,
+      updatePractice,
+      createPracticeLog,
+      updatePracticeLog,
+      deletePracticeLog,
+      createPracticeTime,
+      deletePracticeTime,
+      setPracticeLoading,
+      setEditingPracticeId,
+      closePracticeTabModal,
+      refreshCalendar,
+      t,
+    ],
+  );
+
+  // ===========================================================================
+  // タブモーダル: 大会一括保存
+  // ===========================================================================
+  const handleCompetitionTabSave = useCallback(
+    async (params: CompetitionTabSaveParams) => {
+      if (!user?.id) throw new Error(t("authRequired"));
+
+      const { basicData, imageData, entries, records, editingCompetitionId: paramEditingId, originalEntryIds, originalRecordIds } = params;
+
+      setCompetitionLoading(true);
+      let competitionId: string | null = paramEditingId;
+
+      try {
+        // ── 1. 大会本体 (parent) INSERT / UPDATE ──
+        const endDate = basicData.endDate || null;
+        if (!competitionId) {
+          const created = await createCompetition({
+            date: basicData.date,
+            end_date: endDate,
+            title: basicData.title || null,
+            place: basicData.place || null,
+            pool_type: basicData.poolType,
+            note: basicData.note || null,
+          });
+          competitionId = created.id;
+          setEditingCompetitionId(competitionId);
+        } else {
+          await updateCompetition(competitionId, {
+            date: basicData.date,
+            end_date: endDate,
+            title: basicData.title || null,
+            place: basicData.place || null,
+            pool_type: basicData.poolType,
+            note: basicData.note || null,
+          });
+        }
+
+        // ── 2. 画像処理 ──
+        if (competitionId && imageData) {
+          const competitionAPI = new CompetitionAPI(supabase);
+          const uploadedPaths: string[] = [];
+          try {
+            if (imageData.newFiles.length > 0) {
+              const { processCompetitionImage } = await import("@/utils/imageUtils");
+              const processed = await Promise.all(
+                imageData.newFiles.map(async (f) => (await processCompetitionImage(f.file)).thumbnail),
+              );
+              for (const file of processed) {
+                uploadedPaths.push(await competitionAPI.uploadCompetitionImage(competitionId!, file));
+              }
+            }
+            const { data: cur } = await supabase
+              .from("competitions")
+              .select("image_paths")
+              .eq("id", competitionId)
+              .single();
+            const existing: string[] = (cur as { image_paths?: string[] | null } | null)?.image_paths ?? [];
+            await supabase
+              .from("competitions")
+              .update({ image_paths: [...existing.filter((p) => !imageData.deletedIds.includes(p)), ...uploadedPaths] })
+              .eq("id", competitionId);
+            for (const path of imageData.deletedIds) {
+              await competitionAPI.deleteCompetitionImage(path).catch(() => {});
+            }
+          } catch {
+            for (const path of uploadedPaths) {
+              await competitionAPI.deleteCompetitionImage(path).catch(() => {});
+            }
+            throw new Error(t("competitionCreatedButImageFailed"));
+          }
+        }
+      } catch (err) {
+        setCompetitionLoading(false);
+        throw err;
+      }
+
+      // ── 3. エントリー (children) diff ADD / UPDATE / DELETE ──
+      const entryAPI = new EntryAPI(supabase);
+      const createdEntriesList: EntryWithStyle[] = [];
+      const entryDiff = computeEntryDiff(entries, originalEntryIds);
+
+      // DELETE removed entries
+      for (const id of entryDiff.toDelete) {
+        await deleteEntry(id);
+      }
+
+      if (entryDiff.toAdd.length > 0 || entryDiff.toUpdate.length > 0) {
+        const { data: compData } = await supabase
+          .from("competitions")
+          .select("team_id")
+          .eq("id", competitionId!)
+          .single();
+        const isTeam = (compData as { team_id: string | null } | null)?.team_id != null;
+        const teamId = (compData as { team_id: string | null } | null)?.team_id ?? null;
+
+        // UPDATE existing entries
+        for (const { id, data: entryData } of entryDiff.toUpdate) {
+          const entry = await entryAPI.updateEntry(id, {
+            style_id: parseInt(entryData.styleId),
+            entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+            note: entryData.note || null,
+            is_relaying: entryData.isRelaying ?? false,
+          });
+          if (entry) {
+            const style = styles.find((s) => s.id === entry.style_id);
+            createdEntriesList.push({
+              id: entry.id,
+              competitionId: entry.competition_id,
+              userId: entry.user_id,
+              styleId: entry.style_id,
+              entryTime: entry.entry_time,
+              note: entry.note,
+              teamId: entry.team_id,
+              styleName: style?.name_jp ?? "",
+            });
+          }
+        }
+
+        // ADD new entries
+        for (const entryData of entryDiff.toAdd) {
+          let entry;
+          if (isTeam && teamId) {
+            entry = await entryAPI.createTeamEntry(teamId, user.id, {
+              competition_id: competitionId!,
+              style_id: parseInt(entryData.styleId),
+              entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+              note: entryData.note || null,
+              is_relaying: entryData.isRelaying ?? false,
+            });
+          } else {
+            entry = await entryAPI.createPersonalEntry({
+              competition_id: competitionId!,
+              style_id: parseInt(entryData.styleId),
+              entry_time: entryData.entryTime > 0 ? entryData.entryTime : null,
+              note: entryData.note || null,
+              is_relaying: entryData.isRelaying ?? false,
+            });
+          }
+          if (entry) {
+            const style = styles.find((s) => s.id === entry!.style_id);
+            createdEntriesList.push({
+              id: entry.id,
+              competitionId: entry.competition_id,
+              userId: entry.user_id,
+              styleId: entry.style_id,
+              entryTime: entry.entry_time,
+              note: entry.note,
+              teamId: entry.team_id,
+              styleName: style?.name_jp ?? "",
+            });
+          }
+        }
+
+        if (createdEntriesList.length > 0) setCreatedEntries(createdEntriesList);
+      }
+
+      // ── 4. レコード (children) diff ADD / UPDATE / DELETE ──
+      const { data: competition } = await supabase
+        .from("competitions")
+        .select("pool_type")
+        .eq("id", competitionId!)
+        .single();
+      const poolType = (competition as { pool_type: 0 | 1 } | null)?.pool_type ?? 0;
+
+      const recordDiff = computeRecordDiff(records, originalRecordIds);
+
+      // DELETE removed records
+      for (const id of recordDiff.toDelete) {
+        await deleteRecord(id);
+      }
+
+      // UPDATE existing records
+      for (const { id, data: formData } of recordDiff.toUpdate) {
+        await updateRecord(id, {
+          style_id: parseInt(formData.styleId),
+          time: formData.time,
+          video_path: formData.videoPath || null,
+          note: formData.note || null,
+          is_relaying: formData.isRelaying || false,
+          reaction_time: formData.reactionTime?.trim() ? parseFloat(formData.reactionTime) : null,
+        });
+        if (formData.splitTimes?.length) {
+          await replaceSplitTimes({
+            recordId: id,
+            splitTimes: formData.splitTimes.map((st) => ({
+              distance: typeof st.distance === "string" ? parseFloat(st.distance) : st.distance,
+              split_time: st.splitTime,
+            })) as Array<Omit<import("@swim-hub/shared/types").SplitTimeInsert, "record_id">>,
+          });
+        }
+      }
+
+      // ADD new records
+      for (const formData of recordDiff.toAdd) {
+        const newRecord = await createRecord({
+          style_id: parseInt(formData.styleId),
+          time: formData.time,
+          video_path: formData.videoPath || null,
+          note: formData.note || null,
+          is_relaying: formData.isRelaying || false,
+          competition_id: competitionId!,
+          pool_type: poolType,
+          reaction_time: formData.reactionTime?.trim() ? parseFloat(formData.reactionTime) : null,
+        });
+        if (formData.splitTimes?.length) {
+          await createSplitTimes({
+            recordId: newRecord.id,
+            splitTimes: formData.splitTimes.map((st) => ({ distance: st.distance, split_time: st.splitTime })) as Array<{ distance: number; split_time?: number; splitTime?: number }>,
+          });
+        }
+        if (formData.pendingVideo) {
+          await uploadVideoClient({ type: "record", id: newRecord.id, file: formData.pendingVideo.file, thumbnail: formData.pendingVideo.thumbnail }).catch(() => {
+            alert(t("videoUploadPartialCompetition"));
+          });
+        }
+      }
+
+      // 全成功 → モーダルを閉じる
+      setEditingCompetitionId(null);
+      closeCompetitionTabModal();
+      refreshCalendar();
+      setCompetitionLoading(false);
+    },
+    [
+      user,
+      supabase,
+      styles,
+      createCompetition,
+      updateCompetition,
+      createRecord,
+      updateRecord,
+      deleteRecord,
+      deleteEntry,
+      createSplitTimes,
+      replaceSplitTimes,
+      setCompetitionLoading,
+      setEditingCompetitionId,
+      setCreatedEntries,
+      closeCompetitionTabModal,
+      refreshCalendar,
+      t,
+    ],
+  );
+
   return {
     handlePracticeBasicSubmit,
     handlePracticeLogSubmit,
@@ -1062,5 +1536,7 @@ export function useDashboardHandlers({
     handleEntrySubmit,
     handleEntrySkip,
     handleRecordLogSubmit,
+    handlePracticeTabSave,
+    handleCompetitionTabSave,
   };
 }

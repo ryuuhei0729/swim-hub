@@ -30,7 +30,7 @@ import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/Ima
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
-import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import type { MainStackParamList } from "@/navigation/types";
 
 type CompetitionFormScreenRouteProp = RouteProp<MainStackParamList, "CompetitionForm">;
@@ -410,10 +410,20 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       if (teamId) {
         queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
       }
-      navigation.navigate("EntryForm", {
-        competitionId: resultId,
-        date,
-      });
+      if (teamId) {
+        // チームフロー: 旧画面へ
+        navigation.navigate("EntryForm", {
+          competitionId: resultId,
+          date,
+        });
+      } else {
+        // 個人フロー: 新タブ画面(エントリータブ)へ
+        navigation.navigate("CompetitionTabForm", {
+          competitionId: resultId,
+          date,
+          initialTab: "entry",
+        });
+      }
     } catch (error) {
       console.error("保存エラー:", error);
       Alert.alert(t("common.error"), error instanceof Error ? error.message : t("competition.mobile.saveFailed"), [
@@ -445,11 +455,21 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       if (teamId) {
         queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
       }
-      navigation.navigate("RecordLogForm", {
-        competitionId: resultId,
-        entryDataList: [],
-        date,
-      });
+      if (teamId) {
+        // チームフロー: 旧画面へ
+        navigation.navigate("RecordLogForm", {
+          competitionId: resultId,
+          entryDataList: [],
+          date,
+        });
+      } else {
+        // 個人フロー: 新タブ画面(レースレコードタブ)へ
+        navigation.navigate("CompetitionTabForm", {
+          competitionId: resultId,
+          date,
+          initialTab: "record",
+        });
+      }
     } catch (error) {
       console.error("保存エラー:", error);
       Alert.alert(t("common.error"), error instanceof Error ? error.message : t("competition.mobile.saveFailed"), [
@@ -593,7 +613,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
 
         {/* 画像 */}
         <View style={styles.section}>
-          {isPremium ? (
+          {canUploadImage(isPremium) ? (
             <ImageUploader
               existingImages={existingImages}
               onImagesChange={handleImagesChange}

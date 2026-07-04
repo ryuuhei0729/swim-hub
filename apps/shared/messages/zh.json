@@ -355,10 +355,9 @@
       "scannerDesc": "用 AI 读取手写训练记录并转换为数字数据，大幅减少录入工作。"
     },
     "footer": {
-      "tagline": "为游泳运动员打造的成绩管理平台",
+      "tagline": "为竞技游泳运动员打造的成绩管理平台",
       "terms": "用户协议",
       "privacy": "隐私政策",
-      "blog": "博客",
       "about": "关于我们"
     },
     "deviceMockup": {
@@ -366,18 +365,160 @@
       "desktopAlt": "SwimHub 团队成员界面（电脑）",
       "mobilePlaceholder": "仪表盘界面（图片准备中）",
       "desktopPlaceholder": "团队成员界面（图片准备中）"
+    },
+    "v42": {
+      "nav": {
+        "practice": "训练记录",
+        "competition": "比赛记录",
+        "proxy": "代理输入",
+        "pricing": "价格方案"
+      },
+      "hero": {
+        "ghostText": "SWIMHUB",
+        "h1Line1": "无论个人还是团队，",
+        "h1Line2": "游泳记录管理",
+        "h1Line3": "一站搞定。",
+        "lead": "训练记录、比赛成绩、代理输入、报名管理，全部集中管理。手机或浏览器，随时开始。",
+        "badge": "手机轻松管理团队",
+        "cta": {
+          "signup": "免费注册",
+          "login": "登录"
+        },
+        "store": {
+          "appStore": "App Store",
+          "googlePlay": "Google Play",
+          "comingSoon": "即将推出"
+        },
+        "deviceCaption": "SwimHub App ◆ PC & Mobile",
+        "h1Line3Blue": "一站搞定",
+        "h1Line3Suffix": "。",
+        "downloadOn": "下载于"
+      },
+      "marquee": {
+        "text": "Practice Log ◆ Race Result ◆ Proxy Entry ◆ AI Scanner ◆ Best Times"
+      },
+      "features": {
+        "f1": {
+          "label": "Practice Log",
+          "title": "管理训练记录与时间",
+          "desc": "记录划臂周期、次数、组数和时间，积累训练历史。轻松制定下次训练目标。",
+          "items": [
+            "记录划臂周期、次数和组数",
+            "自动计算平均时间",
+            "按标签筛选"
+          ]
+        },
+        "f2": {
+          "label": "Race Result",
+          "title": "记录比赛成绩",
+          "desc": "记录项目、时间、泳池长度及分段时间。最佳成绩表自动更新，短池/长池及接力均可记录。",
+          "items": [
+            "从中间时间自动计算分段",
+            "自动更新最佳成绩表",
+            "可管理比赛报名"
+          ]
+        },
+        "f3": {
+          "label": "Team / Coach",
+          "title": "教练或管理员可代为输入记录",
+          "desc": "训练和比赛记录不仅限于运动员本人，教练或管理员可批量录入。记录始终与个人绑定，即使离队后也持续积累。",
+          "items": [
+            "教练/管理员可批量录入",
+            "记录与个人绑定",
+            "终身使用的应用"
+          ]
+        },
+        "introLabel": "Features",
+        "introH2": "将记录转化为资产的三大功能"
+      },
+      "scanner": {
+        "label": "推荐功能 — Scanner",
+        "h2": "用AI解析手写训练记录。",
+        "desc1": "训练结束后输入记录很麻烦？使用SwimHub Scanner，只需用手机拍摄手写练习表，AI即可自动读取并数字化。",
+        "desc2": "支持教练发放的练习表或自己的笔记，大幅减少手动输入工作量。",
+        "cta": "试用 SwimHub Scanner"
+      },
+      "pricing": {
+        "label": "Pricing",
+        "h2": "价格方案",
+        "lead": "两个简单方案。免费开始。",
+        "detailLink": "查看价格详情",
+        "free": {
+          "name": "Free",
+          "price": "¥0",
+          "note": "永久免费",
+          "items": [
+            "训练记录与比赛记录",
+            "分段时间：每次最多3个",
+            "训练时间：每日志最多18个",
+            "图片上传（不含视频）"
+          ],
+          "cta": "免费开始"
+        },
+        "premium": {
+          "name": "Premium",
+          "price": "¥500",
+          "badge": "7天免费试用",
+          "annualNote": "年付方案：¥5,000/年（节省2个月费用）",
+          "items": [
+            "所有功能无限制",
+            "分段时间：无限制",
+            "训练时间：无限制",
+            "图片和视频上传",
+            "含7天免费试用"
+          ],
+          "cta": "开始免费试用"
+        }
+      },
+      "services": {
+        "label": "SwimHub Services",
+        "h2": "SwimHub 服务一览",
+        "lead": "让游泳更便捷的工具集",
+        "timer": {
+          "name": "SwimHub Timer",
+          "tagline": "在视频上叠加计时",
+          "desc": "在游泳视频上叠加秒表播放，适合动作分析和圈速确认。",
+          "cta": "立即试用 →"
+        },
+        "scanner": {
+          "name": "SwimHub Scanner",
+          "tagline": "AI解析手写记录",
+          "desc": "AI读取手写训练记录并转换为数字数据，大幅减少手动输入。",
+          "cta": "立即试用 →"
+        }
+      },
+      "finalCta": {
+        "label": "Begin your record",
+        "h2": "立即开始记录",
+        "desc": "免费创建账户，立即开始使用。无需加入团队，先个人使用，后续可添加团队功能。"
+      },
+      "footer": {
+        "tagline": "专为竞技游泳运动员打造的记录管理平台",
+        "copyright": "© 2025 SwimHub. All rights reserved.",
+        "slogan": "Records for Life"
+      },
+      "stopwatch": {
+        "ariaLabel": "页面停留计时器"
+      },
+      "lapBar": {
+        "ariaLabel": "滚动进度条"
+      }
     }
   },
   "auth": {
     "signin": {
       "title": "登录",
       "subtitle": "欢迎回到 SwimHub",
+      "entrySubtitle": "欢迎来到 SwimHub",
       "submitButton": "登录",
       "loadingButton": "处理中...",
       "loadingMessage": "正在验证登录信息...",
       "errorTitle": "身份验证出错",
       "emailMethodTitle": "使用邮箱登录",
-      "emailMethodButton": "使用邮箱继续"
+      "emailMethodButton": "使用邮箱继续",
+      "emailPageTitle": "使用邮箱登录",
+      "emailPageSubtitle": "请输入您的邮箱地址和密码",
+      "otherMethods": "其他登录方式"
     },
     "signup": {
       "title": "创建账户",
@@ -386,7 +527,9 @@
       "emailMethodTitle": "使用邮箱注册",
       "emailMethodButton": "使用邮箱继续",
       "welcomeTagline": "开始使用 SwimHub 吧",
-      "startButton": "立即开始"
+      "startButton": "立即开始",
+      "continueWithEmail": "使用邮箱注册",
+      "otherMethods": "其他注册方式"
     },
     "resetPassword": {
       "title": "重置密码",
@@ -567,7 +710,8 @@
       "feature3": "团队功能与目标管理",
       "feature4": "分段计时：每条记录最多 3 个",
       "feature5": "练习用时：每条训练日志最多 18 个",
-      "exclude1": "图片与视频上传"
+      "feature6": "图片上传",
+      "exclude1": "视频上传"
     },
     "premiumPlan": {
       "name": "Premium",
@@ -606,7 +750,8 @@
       "rowGoals": "目标管理",
       "rowSplitTime": "分段计时",
       "rowPracticeTime": "练习用时",
-      "rowImageUpload": "图片与视频上传",
+      "rowImageUpload": "图片上传",
+      "rowVideoUpload": "视频上传",
       "rowScanner": "SwimHub Scanner 联动",
       "rowTimer": "SwimHub Timer 联动",
       "valueLimitedSplit": "每条记录最多 3 个",
@@ -650,6 +795,18 @@
     "submitting": "发送中...",
     "successMessage": "我们已收到您的咨询，感谢您的反馈。",
     "errorMessage": "发送失败。请稍后重试。",
+    "appLabel": "使用的应用",
+    "appOptions": {
+      "swimhub": "SwimHub",
+      "timer": "SwimHub Timer",
+      "scanner": "SwimHub Scanner"
+    },
+    "platformLabel": "使用环境",
+    "platformOptions": {
+      "web": "网页（浏览器）",
+      "ios": "iOS 应用",
+      "android": "Android 应用"
+    },
     "subjectOptions": {
       "placeholder": "请选择",
       "question": "功能相关问题",
@@ -709,7 +866,7 @@
       "addRecordShort": "比赛记录",
       "addPracticeShort": "训练记录",
       "addRecord": "添加比赛记录",
-      "addPractice": "添加训练计划",
+      "addPractice": "添加训练记录",
       "addSection": "添加记录",
       "close": "关闭",
       "entryTypeLabel": {
@@ -914,7 +1071,8 @@
       "setAverage": "本组平均",
       "overallAverage": "整体平均",
       "overallFastest": "整体最快",
-      "memoLabel": "备注"
+      "memoLabel": "备注",
+      "menuNumber": "菜单 {n}"
     },
     "styles": {
       "Fr": "自由泳",
@@ -1044,7 +1202,8 @@
       "imageUploadFailed": "图片上传失败",
       "cancel": "取消",
       "submitUpdating": "更新中...",
-      "submit": "更新"
+      "submit": "更新",
+      "bioTooLong": "个人简介请控制在 {max} 字以内"
     },
     "avatarUpload": {
       "loginRequired": "需要登录",
@@ -1157,7 +1316,24 @@
           "description": "团队成员出勤管理、报名汇总与代录入"
         }
       },
-      "startButton": "开始"
+      "startButton": "开始",
+      "personalLabel": "个人功能",
+      "teamLabel": "团队功能",
+      "teamFeature": {
+        "proxy": {
+          "title": "代录入",
+          "badge": "推荐",
+          "description": "教练或家长可代替成员录入记录与比赛报名"
+        },
+        "attendance": {
+          "title": "出勤管理",
+          "description": "统一管理训练与比赛的出勤"
+        },
+        "entry": {
+          "title": "报名汇总",
+          "description": "自动汇总比赛报名"
+        }
+      }
     },
     "step2": {
       "title": "设置你的个人资料",
@@ -1177,7 +1353,8 @@
       "validation": {
         "nameRequired": "姓名为必填项",
         "nameEmailFormat": "请输入姓名，而非邮箱地址",
-        "nameTooLong": "姓名请控制在 {max} 字以内"
+        "nameTooLong": "姓名请控制在 {max} 字以内",
+        "bioTooLong": "个人简介请控制在 {max} 字以内"
       },
       "saveError": "个人资料保存失败，请重试。",
       "skipFailed": "跳过失败",
@@ -1248,7 +1425,6 @@
       "terms": "使用条款",
       "support": "支持",
       "contact": "联系我们",
-      "blog": "博客",
       "about": "关于 SwimHub",
       "tokushoho": "基于特定商业交易法的标示"
     },
@@ -3460,7 +3636,8 @@
       "timePositive": "成绩请输入正数",
       "reactionTimeRange": "反应时间请输入0.40〜1.00秒范围内的值",
       "timeFormatInvalid": "成绩格式不正确（例: 1:23.45 或 31-2）",
-      "timeFormatInvalid2": "成绩格式不正确（例: 1:23.45 或 31-2）"
+      "timeFormatInvalid2": "成绩格式不正确（例: 1:23.45 或 31-2）",
+      "recordNumber": "记录 {n}"
     },
     "lapTime": {
       "raceLapTab": "分距 Lap",
@@ -3482,6 +3659,10 @@
       "cancel": "继续编辑"
     },
     "practice": {
+      "tabs": {
+        "practice": "训练",
+        "log": "训练日志"
+      },
       "steps": {
         "basic": {
           "label": "基本信息",
@@ -3492,8 +3673,8 @@
           "description": "菜单·成绩"
         }
       },
-      "title_create": "创建计划",
-      "title_edit": "编辑计划",
+      "title_create": "登记练习记录",
+      "title_edit": "编辑练习记录",
       "subtitle_create": "创建 {date} 的训练计划",
       "subtitle_edit": "编辑 {date} 的训练计划",
       "date_label": "训练日期",
@@ -3513,6 +3694,11 @@
       "cancel": "取消"
     },
     "competition": {
+      "tabs": {
+        "competition": "比赛",
+        "entry": "报名",
+        "record": "赛事记录"
+      },
       "steps": {
         "basic": {
           "label": "比赛信息",
@@ -3527,10 +3713,10 @@
           "description": "成绩·分段"
         }
       },
-      "title_create": "登记比赛信息",
-      "title_edit": "编辑比赛信息",
+      "title_create": "登记比赛记录",
+      "title_edit": "编辑比赛记录",
       "start_date_label": "开始日期",
-      "end_date_label": "结束日期（可选）",
+      "end_date_label": "结束日期",
       "end_date_error": "结束日期必须不早于开始日期",
       "name_label": "比赛名称",
       "name_placeholder": "全国大赛、对抗赛",
@@ -3565,7 +3751,8 @@
       "saving": "保存中…",
       "update": "更新",
       "updating": "更新中…",
-      "videoLabel": "视频"
+      "videoLabel": "视频",
+      "menuHeader": "菜单 {n}"
     },
     "practiceMenu": {
       "header": "菜单 {n}",
@@ -3589,7 +3776,10 @@
       "repHeader": "第 {n} 组",
       "avgRow": "平均",
       "overallAvg": "总平均",
-      "overallFastest": "总最快"
+      "overallFastest": "总最快",
+      "distanceOther": "其他",
+      "decrease": "减少",
+      "increase": "增加"
     },
     "timeInput": {
       "title": "菜单 {n} 的成绩输入",
@@ -3601,7 +3791,9 @@
       "notEntered": "未输入",
       "overallAvg": "总平均：",
       "save": "保存",
-      "cancel": "取消"
+      "cancel": "取消",
+      "helpTitle": "成绩输入技巧",
+      "helpBody": "用非数字字符（- . : 等）分隔数字进行输入。例如：\"31-2\" → 31.2，\"1:23.4\" → 1:23.4，\"1分12秒3\" → 1:12.3。\n\n在前一格输入\"33-2\"后，下一格只需输入\"3-2\"即可自动补全为\"33.2\"（继承十位数字）。清空该格后继承将被重置。"
     },
     "record": {
       "title_create": "添加记录",
@@ -3660,7 +3852,8 @@
       "skip": "跳过报名",
       "submit": "报名登记",
       "submitting": "登记中…",
-      "cancel": "取消"
+      "cancel": "取消",
+      "relayLabel": "接力"
     },
     "recordLog": {
       "eventHeader": "项目 {n}",
@@ -3676,7 +3869,7 @@
       "relayLabel": "接力",
       "timeLabel": "成绩",
       "time_placeholder": "例：1:23.45   32.45",
-      "reactionTime_placeholder": "例：28.50",
+      "reactionTime_placeholder": "例：0.58  -0.01",
       "distance_placeholder": "距离 (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "出发反应时间",
@@ -3692,7 +3885,9 @@
       "saving": "保存中…",
       "update": "更新",
       "formError_noStyle": "请选择项目",
-      "formError_noTime": "请输入成绩（格式：分:秒.小数 或 秒.小数）"
+      "formError_noTime": "请输入成绩（格式：分:秒.小数 或 秒.小数）",
+      "addRecord": "添加记录",
+      "recordNumber": "记录 {n}"
     },
     "tag": {
       "placeholder": "选择或创建标签",
@@ -3736,7 +3931,8 @@
       "updateError": "更新标签失败",
       "authRequired": "需要登录认证",
       "createFailed": "创建标签失败",
-      "deleteFailed": "删除标签失败"
+      "deleteFailed": "删除标签失败",
+      "createLabel": "新建："
     },
     "teamCreate": {
       "title": "创建新团队",
@@ -3768,7 +3964,7 @@
       "noStyle": "请选择项目",
       "noLap": "无法计算分段成绩",
       "distanceHeader": "距离",
-      "splitTimeHeader": "Split Time"
+      "splitTimeHeader": "split"
     },
     "imageUploader": {
       "label": "添加图片",
@@ -3782,6 +3978,23 @@
       "maxReached": "已选择最多 {max} 张图片",
       "remainingSlotsError": "最多还可添加 {remaining} 张（最多 {max} 张）",
       "invalidFile": "无效的文件"
+    },
+    "tabModal": {
+      "save": "保存",
+      "saving": "保存中…",
+      "cancel": "取消",
+      "close": "关闭",
+      "fieldRequired": "为必填项",
+      "partialSaveError": "基本信息已保存。详细信息保存失败，请重试。",
+      "duplicateEntryStyle": "存在重复的泳姿，请修改各参赛项目的泳姿。",
+      "discardWarning": {
+        "title": "输入内容尚未保存",
+        "message": "输入内容尚未保存。仍要关闭吗？",
+        "confirm": "关闭",
+        "cancel": "继续编辑"
+      },
+      "proceedToRecord": "继续填写记录",
+      "recordFutureGuard": "未来日期无法录入比赛记录。"
     },
     "premium": {
       "upgradeText": "升级到 Premium",

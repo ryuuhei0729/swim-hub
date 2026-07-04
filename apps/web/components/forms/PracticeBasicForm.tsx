@@ -15,7 +15,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
 import PracticeImageUploader, { PracticeImageFile, ExistingImage } from "./PracticeImageUploader";
 import { useAuth } from "@/contexts";
-import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 
 export interface PracticeBasicData {
@@ -420,9 +420,9 @@ export default function PracticeBasicForm({
                 />
               </div>
 
-              {/* 画像添付 */}
+              {/* 画像添付（Free でも画像は許可。動画のみ Premium 限定） */}
               <div>
-                {isPremium ? (
+                {canUploadImage(isPremium) ? (
                   <PracticeImageUploader
                     existingImages={editData?.images}
                     onImagesChange={handleImagesChange}

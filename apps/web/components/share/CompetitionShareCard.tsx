@@ -2,7 +2,8 @@
 
 import { forwardRef, useMemo } from "react";
 import type { CompetitionShareData } from "./types";
-import { formatTime, formatReactionTime } from "./utils";
+import { formatTime, formatReactionTime, getShareBadgeState } from "./utils";
+import { BestBadge } from "./BestBadge";
 import {
   calculateRaceLapTimesTable,
   getLapIntervalsForRace,
@@ -76,85 +77,91 @@ export const CompetitionShareCard = forwardRef<HTMLDivElement, CompetitionShareC
       return getLapIntervalsForRace(data.raceDistance);
     }, [data.raceDistance]);
 
+    // データが1つもないintervalは列ごと非表示にする（モーダルの LapTimeDisplay と挙動を揃える）
+    const visibleLapIntervals = useMemo(() => {
+      return lapIntervals.filter((interval) =>
+        raceLapTimesTable.some((row) => row.lapTimes[interval] != null),
+      );
+    }, [lapIntervals, raceLapTimesTable]);
+
+    // 自己ベストバッジの状態: 初記録 / ベスト(±0含む=青) / ベストより遅い(赤) / 非表示
+    const bestBadge = getShareBadgeState(data.time, data.previousBest, data.isFirstRecord);
+
     return (
       <div ref={ref} className={`relative w-[480px] overflow-hidden bg-white ${className}`}>
         {/* コンテンツ */}
         <div className="flex flex-col p-5">
-          {/* 1行目: 日付(左) / 大会名(中) / 場所(右) */}
-          <div className="grid grid-cols-3 gap-4 items-end pb-3 border-b border-gray-700">
-            <p className="text-gray-800 text-sm">{data.date}</p>
-            <h2 className="text-gray-900 text-base font-medium text-center">
-              {data.competitionName}
-            </h2>
-            <p className="text-gray-500 text-[8px] text-right">
-              📍
-              {data.place}
-            </p>
+          {/* メタ行: 日付 ・ 場所 (プール種別) */}
+          <p className="text-gray-500 text-sm">
+            {data.date}
+            {data.place ? ` ・ ${data.place}` : ""}
+            {` (${data.poolType === "short" ? "25m" : "50m"})`}
+          </p>
+
+          {/* 大会名 */}
+          <p className="mt-2 text-sm text-gray-500">{data.competitionName}</p>
+
+          {/* 種目名 */}
+          <h2 className="mt-1 text-3xl font-bold text-gray-900">{data.eventName}</h2>
+
+          {/* 記録: リアクションタイム(左) / 記録(大)+自己ベスト差分(右) */}
+          <div className="mt-4 flex items-end gap-4">
+            {data.reactionTime != null && (
+              <span className="text-gray-400 text-sm pb-1.5">
+                RT {formatReactionTime(data.reactionTime)}
+              </span>
+            )}
+            <div className="ml-auto flex items-center gap-3">
+              <span className="text-blue-600 text-6xl font-bold leading-none tracking-tight">
+                {formatTime(data.time)}
+              </span>
+              <BestBadge state={bestBadge} />
+            </div>
           </div>
 
-          {/* 2行目: 種目名(左) / 記録(中) / 短水路・長水路(右) */}
-          <div className="grid grid-cols-3 items-baseline gap-4 py-3">
-            <span className="text-blue-700 text-xl font-bold">{data.eventName}</span>
-            <span className="text-2xl font-bold text-blue-700 text-center">
-              {formatTime(data.time)}
-            </span>
-            <span className="text-sm text-gray-600 font-normal text-right">
-              {data.poolType === "short" ? "短水路(25m)" : "長水路(50m)"}
-            </span>
-          </div>
-
-          {/* 3行目以降: 距離別Lapテーブル */}
+          {/* スプリットテーブル */}
           {raceLapTimesTable.length > 0 && (
-            <div className="mt-2">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-medium text-gray-700">距離別 Lap</span>
-                {data.reactionTime && (
-                  <span className="text-xs text-gray-600">
-                    （RT {formatReactionTime(data.reactionTime)}）
-                  </span>
-                )}
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-gray-100">
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">
-                        距離
+            <div className="mt-6 overflow-x-auto rounded-lg bg-gray-50 px-4 py-2">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-800">
+                    <th className="py-2 pr-4 text-left text-xs font-medium text-gray-400">距離</th>
+                    <th className="py-2 pr-4 text-left text-xs font-medium text-gray-400">
+                      スプリット
+                    </th>
+                    {visibleLapIntervals.map((interval) => (
+                      <th
+                        key={interval}
+                        className="py-2 pr-4 text-left text-xs font-medium text-gray-400 whitespace-nowrap"
+                      >
+                        {interval}m lap
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">
-                        Split
-                      </th>
-                      {lapIntervals.map((interval) => (
-                        <th
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {raceLapTimesTable.map((row, index) => (
+                    <tr key={index} className="border-b border-gray-200 last:border-b-0">
+                      <td className="py-2.5 pr-4 text-sm font-bold text-gray-900 whitespace-nowrap">
+                        {row.distance}m
+                      </td>
+                      <td className="py-2.5 pr-4 text-sm font-bold text-gray-900 whitespace-nowrap">
+                        {row.splitTime !== null ? formatTime(row.splitTime) : "–"}
+                      </td>
+                      {visibleLapIntervals.map((interval) => (
+                        <td
                           key={interval}
-                          className="px-3 py-2 text-left text-xs font-medium text-gray-700"
+                          className="py-2.5 pr-4 text-sm text-gray-400 whitespace-nowrap"
                         >
-                          {interval}m
-                        </th>
+                          {row.lapTimes[interval] != null
+                            ? formatTime(row.lapTimes[interval]!)
+                            : "–"}
+                        </td>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {raceLapTimesTable.map((row, index) => (
-                      <tr key={index} className="border-b border-gray-200 last:border-b-0">
-                        <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                          {row.distance}m
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-900">
-                          {row.splitTime !== null ? formatTime(row.splitTime) : "-"}
-                        </td>
-                        {lapIntervals.map((interval) => (
-                          <td key={interval} className="px-3 py-2 text-sm text-gray-900">
-                            {row.lapTimes[interval] !== null && row.lapTimes[interval] !== undefined
-                              ? formatTime(row.lapTimes[interval]!)
-                              : "-"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 

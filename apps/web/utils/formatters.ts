@@ -25,18 +25,6 @@ export const formatPercentage = (value: number, total: number): string => {
   return `${percentage.toFixed(1)}%`;
 };
 
-// 泳法の日本語表示
-export const formatStroke = (stroke: string): string => {
-  const strokeMap: Record<string, string> = {
-    freestyle: "自由形",
-    backstroke: "背泳ぎ",
-    breaststroke: "平泳ぎ",
-    butterfly: "バタフライ",
-    individual_medley: "個人メドレー",
-  };
-  return strokeMap[stroke] || stroke;
-};
-
 // 役割の日本語表示（roleカラムが削除されたため、デフォルトで「メンバー」を返す）
 export const formatRole = (): string => {
   return "メンバー";

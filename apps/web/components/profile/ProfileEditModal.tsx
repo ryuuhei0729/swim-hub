@@ -9,6 +9,8 @@ import BirthdayInput from "@/components/ui/BirthdayInput";
 import AvatarUpload from "./AvatarUpload";
 import type { UserProfile } from "@apps/shared/types";
 
+const BIO_MAX_LENGTH = 500;
+
 interface ProfileEditModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,6 +35,7 @@ export default function ProfileEditModal({
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const bioTooLong = formData.bio.length > BIO_MAX_LENGTH;
 
   // プロフィールが変更されたときにフォームデータを更新
   useEffect(() => {
@@ -51,6 +54,11 @@ export default function ProfileEditModal({
 
     if (!formData.name.trim()) {
       setError(t("nameRequired"));
+      return;
+    }
+
+    if (bioTooLong) {
+      setError(t("bioTooLong", { max: BIO_MAX_LENGTH }));
       return;
     }
 
@@ -184,22 +192,45 @@ export default function ProfileEditModal({
                   </div>
                   {/* 性別 */}
                   <div>
-                    <label
-                      htmlFor="gender"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
+                    <span className="block text-sm font-medium text-gray-700 mb-2">
                       {t("genderLabel")}
-                    </label>
-                    <select
-                      id="gender"
-                      value={formData.gender}
-                      onChange={handleChange("gender")}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                      disabled={isUpdating}
+                    </span>
+                    <div
+                      className="grid grid-cols-2 h-10 rounded-lg border border-gray-300 overflow-hidden"
+                      role="group"
+                      aria-label={t("genderLabel")}
                     >
-                      <option value={0}>{t("genderMale")}</option>
-                      <option value={1}>{t("genderFemale")}</option>
-                    </select>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, gender: 0 }))
+                        }
+                        disabled={isUpdating}
+                        aria-pressed={formData.gender === 0}
+                        className={`px-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                          formData.gender === 0
+                            ? "bg-blue-600 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {t("genderMale")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, gender: 1 }))
+                        }
+                        disabled={isUpdating}
+                        aria-pressed={formData.gender === 1}
+                        className={`px-3 text-sm transition-colors border-l border-gray-300 disabled:cursor-not-allowed disabled:opacity-50 ${
+                          formData.gender === 1
+                            ? "bg-blue-600 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {t("genderFemale")}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -215,11 +246,23 @@ export default function ProfileEditModal({
                   onChange={handleChange("bio")}
                   placeholder={t("bioPlaceholder")}
                   rows={5}
-                  maxLength={500}
                   disabled={isUpdating}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  aria-invalid={bioTooLong}
+                  aria-describedby={bioTooLong ? "bio-error" : undefined}
+                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 disabled:bg-gray-50 disabled:cursor-not-allowed ${
+                    bioTooLong
+                      ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
                 />
-                <p className="mt-1 text-sm text-gray-500">{t("bioCount", { count: formData.bio.length })}</p>
+                <p className={`mt-1 text-sm ${bioTooLong ? "text-red-600" : "text-gray-500"}`}>
+                  {t("bioCount", { count: formData.bio.length })}
+                </p>
+                {bioTooLong && (
+                  <p id="bio-error" className="mt-1 text-sm text-red-600" role="alert">
+                    {t("bioTooLong", { max: BIO_MAX_LENGTH })}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -228,7 +271,7 @@ export default function ProfileEditModal({
               <Button type="button" variant="secondary" onClick={handleClose} disabled={isUpdating}>
                 {t("cancel")}
               </Button>
-              <Button type="submit" disabled={isUpdating || !formData.name.trim()}>
+              <Button type="submit" disabled={isUpdating || !formData.name.trim() || bioTooLong}>
                 {isUpdating ? t("submitUpdating") : t("submit")}
               </Button>
             </div>

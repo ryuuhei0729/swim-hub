@@ -42,7 +42,7 @@ export function PlanComparisonTable({ currentPlan }: PlanComparisonTableProps) {
     },
     {
       label: t("pricing.planTable.rowImageUpload"),
-      free: false,
+      free: true,
       premium: true,
     },
     {

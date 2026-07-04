@@ -912,4 +912,99 @@ describe("usePracticeLogForm", () => {
       expect(result.current.menus[0].circleSec).toBe(59);
     });
   });
+
+  describe("hasUnsavedChanges", () => {
+    it("新規モード(editData: null)で何も操作しないとfalseである", () => {
+      const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
+
+      expect(result.current.hasUnsavedChanges).toBe(false);
+    });
+
+    it("updateMenuで値を変更するとtrueになる", () => {
+      const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
+
+      const menuId = result.current.menus[0].id;
+
+      act(() => {
+        result.current.updateMenu(menuId, "style", "Ba");
+      });
+
+      expect(result.current.hasUnsavedChanges).toBe(true);
+    });
+
+    it("handleTimeSaveでタイムを入力するとtrueになる", () => {
+      const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
+
+      const menuId = result.current.menus[0].id;
+      const times: TimeEntry[] = [{ setNumber: 1, repNumber: 1, time: 65.5 }];
+
+      act(() => {
+        result.current.openTimeModal(menuId);
+      });
+
+      act(() => {
+        result.current.handleTimeSave(times);
+      });
+
+      expect(result.current.hasUnsavedChanges).toBe(true);
+    });
+
+    it("addMenuで行を追加するとtrueになる", () => {
+      const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
+
+      act(() => {
+        result.current.addMenu();
+      });
+
+      expect(result.current.hasUnsavedChanges).toBe(true);
+    });
+
+    it("isOpen=falseになるとfalseにリセットされる", () => {
+      const { result, rerender } = renderHook(
+        ({ isOpen }) => usePracticeLogForm({ isOpen, editData: null }),
+        { initialProps: { isOpen: true } },
+      );
+
+      const menuId = result.current.menus[0].id;
+
+      act(() => {
+        result.current.updateMenu(menuId, "style", "Ba");
+      });
+
+      expect(result.current.hasUnsavedChanges).toBe(true);
+
+      rerender({ isOpen: false });
+
+      expect(result.current.hasUnsavedChanges).toBe(false);
+    });
+
+    it("編集モードで初期値と同値に戻すとfalseになる", () => {
+      const editData: PracticeLogEditData = {
+        id: "edit-1",
+        style: "Ba",
+        swim_category: "Swim",
+        distance: 50,
+        rep_count: 4,
+        set_count: 1,
+      };
+
+      const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
+
+      const menuId = result.current.menus[0].id;
+
+      // 値を変更する
+      act(() => {
+        result.current.updateMenu(menuId, "distance", 200);
+      });
+
+      expect(result.current.hasUnsavedChanges).toBe(true);
+
+      // 初期値に戻す
+      act(() => {
+        result.current.updateMenu(menuId, "distance", 50);
+      });
+
+      expect(result.current.hasUnsavedChanges).toBe(false);
+    });
+  });
 });

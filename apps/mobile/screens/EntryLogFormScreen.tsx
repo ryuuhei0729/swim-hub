@@ -391,6 +391,7 @@ export const EntryLogFormScreen: React.FC = () => {
           style_id: create.styleId,
           entry_time: create.entryTime,
           note: create.note,
+          is_relaying: false,
         });
       } else {
         entry = await entryAPIInstance.createPersonalEntry({
@@ -398,6 +399,7 @@ export const EntryLogFormScreen: React.FC = () => {
           style_id: create.styleId,
           entry_time: create.entryTime,
           note: create.note,
+          is_relaying: false,
         });
       }
       pushCreatedEntry(entry.style_id, entry.entry_time);

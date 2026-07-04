@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { TrophyIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/solid";
@@ -25,6 +25,12 @@ import {
 } from "./components";
 import type { DeleteConfirmState, AttendanceModalState } from "./types";
 
+// モジュールスコープの純関数 — practiceId 抽出ロジックを一元化
+function getPracticeIdFromItem(item: CalendarItem): string | null {
+  if (!isPracticeMetadata(item.metadata)) return null;
+  return item.metadata.practice?.id || item.metadata.practice_id || null;
+}
+
 export default function DayDetailModal({
   isOpen,
   onClose,
@@ -47,11 +53,51 @@ export default function DayDetailModal({
   const [deletedEntryIds, setDeletedEntryIds] = useState<string[]>([]);
   const [showAttendanceModal, setShowAttendanceModal] = useState<AttendanceModalState | null>(null);
 
+  // practice_log 型アイテムのリスト（重複排除・updateKey 算出の入力）
+  const practiceLogItems = useMemo(
+    () => entries.filter((e) => e.type === "practice_log"),
+    [entries],
+  );
+
+  // 同一 practiceId の PracticeLog を1件に絞り込んだ代表アイテム一覧。
+  // null の責任はここで一本化し、後続 map 側のガードは不要にする。
+  const uniquePracticeLogItems = useMemo(() => {
+    const seenPracticeIds = new Set<string>();
+    return practiceLogItems.filter((item) => {
+      const pid = getPracticeIdFromItem(item);
+      if (!pid || seenPracticeIds.has(pid)) return false;
+      seenPracticeIds.add(pid);
+      return true;
+    });
+  }, [practiceLogItems]);
+
+  // practiceId → updateKey のマップを一度だけ構築（O(n+m)）。
+  // updateKey は同一 practiceId の全ログ（全件）の id:updated_at をソート連結した文字列。
+  const practiceLogUpdateKeyMap = useMemo(() => {
+    const keyMap = new Map<string, string[]>();
+    for (const p of practiceLogItems) {
+      const pid = getPracticeIdFromItem(p);
+      if (!pid) continue;
+      const practiceLog = (p.metadata as { practice_log?: PracticeLog })?.practice_log;
+      const entry = `${p.id}:${practiceLog?.updated_at || p.id}`;
+      const arr = keyMap.get(pid);
+      if (arr) {
+        arr.push(entry);
+      } else {
+        keyMap.set(pid, [entry]);
+      }
+    }
+    const result = new Map<string, string>();
+    for (const [pid, arr] of keyMap) {
+      result.set(pid, arr.sort().join(","));
+    }
+    return result;
+  }, [practiceLogItems]);
+
   if (!isOpen) return null;
 
   // エントリーの分類
   const practiceItems = entries.filter((e) => e.type === "practice" || e.type === "team_practice");
-  const practiceLogItems = entries.filter((e) => e.type === "practice_log");
   const recordItems = entries.filter((e) => e.type === "record");
   const competitionItems = entries.filter(
     (e) => e.type === "competition" || e.type === "team_competition",
@@ -261,26 +307,10 @@ export default function DayDetailModal({
                     />
                   ))}
 
-                  {practiceLogItems.map((item) => {
-                    const practiceId = isPracticeMetadata(item.metadata)
-                      ? item.metadata.practice?.id || item.metadata.practice_id
-                      : null;
-                    if (!practiceId) return null;
-
-                    const practiceLogUpdateKey = practiceLogItems
-                      .filter((p) => {
-                        const pid = isPracticeMetadata(p.metadata)
-                          ? p.metadata.practice?.id || p.metadata.practice_id
-                          : null;
-                        return pid === practiceId;
-                      })
-                      .map((p) => {
-                        const practiceLog = (p.metadata as { practice_log?: PracticeLog })
-                          ?.practice_log;
-                        return `${p.id}:${practiceLog?.updated_at || p.id}`;
-                      })
-                      .sort()
-                      .join(",");
+                  {uniquePracticeLogItems.map((item) => {
+                    // getPracticeIdFromItem で null を保証済みなので map 内で再チェック不要
+                    const practiceId = getPracticeIdFromItem(item) as string;
+                    const practiceLogUpdateKey = practiceLogUpdateKeyMap.get(practiceId) ?? practiceId;
 
                     return (
                       <PracticeDetails

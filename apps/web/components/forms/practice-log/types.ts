@@ -86,3 +86,6 @@ export const SWIM_CATEGORIES = [
   { value: "Pull", label: "Pull" },
   { value: "Kick", label: "Kick" },
 ] as const;
+
+/** よく泳ぐ距離プリセット。これ以外は「その他」で直接入力する */
+export const DISTANCE_PRESETS = [25, 50, 100, 200] as const;

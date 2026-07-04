@@ -282,6 +282,88 @@ describe("shared/messages global coverage", () => {
     }
   });
 
+  // ---------------------------------------------------------------------------
+  // [SC-01] forms.timeInput.helpTitle / helpBody — 全5言語に非空文字列で存在
+  // [SC-02] helpTitle/helpBody にプレースホルダー({var})が含まれないこと
+  // ---------------------------------------------------------------------------
+
+  describe("forms.timeInput help keys (QA Sprint: i アイコンヘルプ)", () => {
+    const allMessages: Record<string, Record<string, unknown>> = {
+      ja: jaMessages as unknown as Record<string, unknown>,
+      en: enMessages as unknown as Record<string, unknown>,
+      zh: zhMessages as unknown as Record<string, unknown>,
+      ko: koMessages as unknown as Record<string, unknown>,
+      de: deMessages as unknown as Record<string, unknown>,
+    };
+
+    it.each(["ja", "en", "ko", "zh", "de"])(
+      "[SC-01] %s.json has non-empty forms.timeInput.helpTitle",
+      (locale) => {
+        const val = getValue(allMessages[locale], "forms.timeInput.helpTitle");
+        expect(val, `${locale}: forms.timeInput.helpTitle is missing`).toBeDefined();
+        expect(typeof val, `${locale}: forms.timeInput.helpTitle is not a string`).toBe("string");
+        expect((val as string).trim().length, `${locale}: forms.timeInput.helpTitle is empty`).toBeGreaterThan(0);
+      },
+    );
+
+    it.each(["ja", "en", "ko", "zh", "de"])(
+      "[SC-01] %s.json has non-empty forms.timeInput.helpBody",
+      (locale) => {
+        const val = getValue(allMessages[locale], "forms.timeInput.helpBody");
+        expect(val, `${locale}: forms.timeInput.helpBody is missing`).toBeDefined();
+        expect(typeof val, `${locale}: forms.timeInput.helpBody is not a string`).toBe("string");
+        expect((val as string).trim().length, `${locale}: forms.timeInput.helpBody is empty`).toBeGreaterThan(0);
+      },
+    );
+
+    it.each(["ja", "en", "ko", "zh", "de"])(
+      "[SC-02] %s.json forms.timeInput.helpTitle has no {placeholder} variables",
+      (locale) => {
+        const val = getValue(allMessages[locale], "forms.timeInput.helpTitle") as string;
+        const placeholders = [...(val ?? "").matchAll(/\{(\w+)\}/g)].map((m) => m[0]);
+        expect(
+          placeholders,
+          `${locale}: forms.timeInput.helpTitle unexpectedly contains placeholder variables: ${placeholders.join(", ")}`,
+        ).toEqual([]);
+      },
+    );
+
+    it.each(["ja", "en", "ko", "zh", "de"])(
+      "[SC-02] %s.json forms.timeInput.helpBody has no {placeholder} variables",
+      (locale) => {
+        const val = getValue(allMessages[locale], "forms.timeInput.helpBody") as string;
+        const placeholders = [...(val ?? "").matchAll(/\{(\w+)\}/g)].map((m) => m[0]);
+        expect(
+          placeholders,
+          `${locale}: forms.timeInput.helpBody unexpectedly contains placeholder variables: ${placeholders.join(", ")}`,
+        ).toEqual([]);
+      },
+    );
+
+    // helpTitle は全言語で内容が異なること（翻訳されていること）= 全て同じ文字列ではない
+    it("[SC-01] helpTitle is translated (not identical across all 5 locales)", () => {
+      const values = ["ja", "en", "ko", "zh", "de"].map(
+        (loc) => getValue(allMessages[loc], "forms.timeInput.helpTitle") as string,
+      );
+      const uniqueValues = new Set(values);
+      expect(
+        uniqueValues.size,
+        `All 5 locales have identical helpTitle — translation was not applied: ${values[0]}`,
+      ).toBeGreaterThan(1);
+    });
+
+    it("[SC-01] helpBody is translated (not identical across all 5 locales)", () => {
+      const values = ["ja", "en", "ko", "zh", "de"].map(
+        (loc) => getValue(allMessages[loc], "forms.timeInput.helpBody") as string,
+      );
+      const uniqueValues = new Set(values);
+      expect(
+        uniqueValues.size,
+        `All 5 locales have identical helpBody — translation was not applied: ${values[0]}`,
+      ).toBeGreaterThan(1);
+    });
+  });
+
   // Phase M3-M8 で導入した mobile-specific サブ namespace が存在することを確認
   it("mobile-specific sub-namespaces exist (regression guard for Phase M3-M8)", () => {
     const ja = jaMessages as unknown as Record<string, Record<string, unknown>>;

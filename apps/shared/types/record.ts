@@ -72,6 +72,7 @@ export interface Entry {
   style_id: number;
   entry_time: number | null; // エントリータイム（秒）
   note: string | null;
+  is_relaying: boolean; // リレー区分（true=リレー、false=個人）
   created_at: string;
   updated_at: string;
 }
