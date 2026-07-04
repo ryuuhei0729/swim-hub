@@ -8,7 +8,7 @@
 import { test, expect, Page } from "@playwright/test";
 
 const BASE_URL = "http://localhost:3000";
-const SCRATCHPAD = "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots";
+const SCRATCHPAD = "test-results/lp-screenshots";
 
 // ---- helpers ----
 
@@ -80,6 +80,54 @@ async function getNavState(page: Page) {
   });
 }
 
+// ≤960px ではヘッダー CTA が非表示になり、ハンバーガーメニュー内に導線が移る。
+async function getMenuCtaState(page: Page) {
+  return page.evaluate(() => {
+    const menu = document.querySelector<HTMLElement>("#nav-menu");
+    if (!menu) return null;
+    const isVisible = (el: HTMLElement | null) => {
+      if (!el) return false;
+      const s = window.getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return s.display !== "none" && s.visibility !== "hidden" && r.width > 0 && r.height > 0;
+    };
+    const links = [...menu.querySelectorAll<HTMLAnchorElement>("a")];
+    const login = links.find((a) => a.href.includes("/login")) ?? null;
+    const signup = links.find((a) => a.href.includes("/signup")) ?? null;
+    return {
+      loginVisible: isVisible(login),
+      signupVisible: isVisible(signup),
+      loginText: login?.textContent?.trim() ?? null,
+      signupText: signup?.textContent?.trim() ?? null,
+    };
+  });
+}
+
+// ハンバーガーメニュー内の無料登録ボタンの nowrap/改行状態を取得する。
+async function getMenuSignupState(page: Page) {
+  return page.evaluate(() => {
+    const menu = document.querySelector<HTMLElement>("#nav-menu");
+    if (!menu) return null;
+    const signup =
+      [...menu.querySelectorAll<HTMLAnchorElement>("a")].find((a) => a.href.includes("/signup")) ??
+      null;
+    if (!signup) return null;
+    const s = window.getComputedStyle(signup);
+    const r = signup.getBoundingClientRect();
+    const pt = parseFloat(s.paddingTop) || 0;
+    const pb = parseFloat(s.paddingBottom) || 0;
+    const fs = parseFloat(s.fontSize);
+    const lhRaw = parseFloat(s.lineHeight);
+    const lh = isNaN(lhRaw) ? fs * 1.3 : lhRaw;
+    return {
+      text: signup.textContent?.trim() ?? null,
+      whiteSpace: s.whiteSpace,
+      wrapped: r.height > (lh + pt + pb) * 1.8,
+      visible: s.display !== "none" && s.visibility !== "hidden" && r.width > 0 && r.height > 0,
+    };
+  });
+}
+
 async function checkPageOverflow(page: Page) {
   return page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,
@@ -91,28 +139,39 @@ async function checkPageOverflow(page: Page) {
 // ---- W-01: signup nowrap 再確認 ----
 
 test.describe("W-01: nav signup ボタン nowrap", () => {
-  test("[W-01] 375px ja: 無料登録ボタンが nowrap で改行なし", async ({ page }) => {
+  test("[W-01] 375px ja: ハンバーガー内の無料登録ボタンが nowrap で改行なし", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`${BASE_URL}/ja`, { waitUntil: "domcontentloaded" });
 
+    // モバイルではヘッダーの signup は非表示、導線はハンバーガー内
     const nav = await getNavState(page);
+    expect(nav.signupVisible, "375px: ヘッダーの無料登録は非表示").toBe(false);
 
-    expect(nav.signupWhiteSpace, "signup whiteSpace:nowrap").toBe("nowrap");
-    expect(nav.signupWrapped, `signup 改行なし (text="${nav.signupText}")`).toBe(false);
-    expect(nav.signupVisible, "signup 表示").toBe(true);
+    await page.click("#nav-burger");
+    await page.waitForTimeout(200);
+    const menuSignup = await getMenuSignupState(page);
+    expect(menuSignup, "メニュー内 signup 検出").not.toBeNull();
+    expect(menuSignup!.visible, "メニュー内 signup 表示").toBe(true);
+    expect(menuSignup!.whiteSpace, "signup whiteSpace:nowrap").toBe("nowrap");
+    expect(menuSignup!.wrapped, `signup 改行なし (text="${menuSignup!.text}")`).toBe(false);
 
     await page.screenshot({ path: `${SCRATCHPAD}/w01-375-ja.png`, timeout: 15000 });
   });
 
-  test("[W-01] 375px de: Kostenlos registrieren が nowrap で改行なし", async ({ page }) => {
+  test("[W-01] 375px de: ハンバーガー内 Kostenlos registrieren が nowrap で改行なし", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`${BASE_URL}/de`, { waitUntil: "domcontentloaded" });
 
     const nav = await getNavState(page);
+    expect(nav.signupVisible, "de 375px: ヘッダーの無料登録は非表示").toBe(false);
 
-    expect(nav.signupWhiteSpace, "de signup whiteSpace:nowrap").toBe("nowrap");
-    expect(nav.signupWrapped, `de signup 改行なし (text="${nav.signupText}")`).toBe(false);
-    expect(nav.signupVisible, "de signup 表示").toBe(true);
+    await page.click("#nav-burger");
+    await page.waitForTimeout(200);
+    const menuSignup = await getMenuSignupState(page);
+    expect(menuSignup, "de メニュー内 signup 検出").not.toBeNull();
+    expect(menuSignup!.visible, "de メニュー内 signup 表示").toBe(true);
+    expect(menuSignup!.whiteSpace, "de signup whiteSpace:nowrap").toBe("nowrap");
+    expect(menuSignup!.wrapped, `de signup 改行なし (text="${menuSignup!.text}")`).toBe(false);
 
     await page.screenshot({ path: `${SCRATCHPAD}/w01-375-de.png`, timeout: 15000 });
   });
@@ -137,43 +196,46 @@ test.describe("W-01: nav signup ボタン nowrap", () => {
 
 // ---- W-02: 320px/375px 両方表示・重なりなし ----
 
-test.describe("W-02: 320px/375px login+signup 両方表示・重なりなし", () => {
+test.describe("W-02: 320px/375px ハンバーガー内に login+signup 両方表示・横スクロールなし", () => {
   for (const { width, locale } of [
     { width: 320, locale: "ja" },
     { width: 320, locale: "de" },
     { width: 375, locale: "ja" },
     { width: 375, locale: "de" },
   ]) {
-    test(`[W-02] ${width}px ${locale}: login と signup が両方表示され重なり・見切れなし`, async ({
+    test(`[W-02] ${width}px ${locale}: ハンバーガー内に login と signup が両方表示され横スクロールなし`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 812 });
       await page.goto(`${BASE_URL}/${locale}`, { waitUntil: "domcontentloaded" });
 
+      // モバイルではヘッダー CTA は非表示・横スクロールなし
       const nav = await getNavState(page);
-
       expect(
         nav.loginVisible,
-        `${width}px ${locale}: login 表示 (text="${nav.loginText}")`,
-      ).toBe(true);
+        `${width}px ${locale}: ヘッダーの login は非表示`,
+      ).toBe(false);
       expect(
         nav.signupVisible,
-        `${width}px ${locale}: signup 表示 (text="${nav.signupText}")`,
+        `${width}px ${locale}: ヘッダーの signup は非表示`,
+      ).toBe(false);
+      expect(
+        nav.hasHorizontalOverflow,
+        `${width}px ${locale}: 横スクロールなし`,
+      ).toBe(false);
+
+      // ハンバーガーを開くと login/signup が両方表示される
+      await page.click("#nav-burger");
+      await page.waitForTimeout(200);
+      const menu = await getMenuCtaState(page);
+      expect(
+        menu?.loginVisible,
+        `${width}px ${locale}: メニュー内 login 表示 (text="${menu?.loginText}")`,
       ).toBe(true);
-
       expect(
-        nav.overlap,
-        `${width}px ${locale}: login/signup 重なりなし (login=${JSON.stringify(nav.loginRect)} signup=${JSON.stringify(nav.signupRect)})`,
-      ).toBe(false);
-
-      expect(
-        nav.loginClipped,
-        `${width}px ${locale}: login がビューポート外にはみ出していない`,
-      ).toBe(false);
-      expect(
-        nav.signupClipped,
-        `${width}px ${locale}: signup がビューポート外にはみ出していない`,
-      ).toBe(false);
+        menu?.signupVisible,
+        `${width}px ${locale}: メニュー内 signup 表示 (text="${menu?.signupText}")`,
+      ).toBe(true);
 
       await page.screenshot({ path: `${SCRATCHPAD}/w02-${width}-${locale}.png`, timeout: 15000 });
     });

@@ -55,6 +55,30 @@ async function getNavState(page: Page) {
   });
 }
 
+// ≤960px ではヘッダーのログイン/無料登録は非表示になり、ハンバーガーメニュー内に導線が移る。
+// メニューを開いた状態でメニュー内 CTA の表示状態を取得する。
+async function getMenuCtaState(page: Page) {
+  return page.evaluate(() => {
+    const menu = document.querySelector<HTMLElement>("#nav-menu");
+    if (!menu) return null;
+    const isVisible = (el: HTMLElement | null) => {
+      if (!el) return false;
+      const s = window.getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return s.display !== "none" && s.visibility !== "hidden" && r.width > 0 && r.height > 0;
+    };
+    const links = [...menu.querySelectorAll<HTMLAnchorElement>("a")];
+    const login = links.find((a) => a.href.includes("/login")) ?? null;
+    const signup = links.find((a) => a.href.includes("/signup")) ?? null;
+    return {
+      loginVisible: isVisible(login),
+      signupVisible: isVisible(signup),
+      loginText: login?.textContent?.trim() ?? null,
+      signupText: signup?.textContent?.trim() ?? null,
+    };
+  });
+}
+
 async function getPricingButtonState(page: Page) {
   return page.evaluate(() => {
     const pricingSection = document.querySelector<HTMLElement>("#pricing");
@@ -165,12 +189,12 @@ test.describe("LP レスポンシブ修正 検証", () => {
     expect(nav.hasHorizontalOverflow, "横スクロールが発生していないこと").toBe(false);
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v01-1280-ja.png",
+      path: "test-results/lp-screenshots/v01-1280-ja.png",
     });
   });
 
-  // V-02: Tablet 960px
-  test("[V-02] Tablet 960px: ヘッダーにログイン/無料登録が表示され、ハンバーガーも表示される", async ({
+  // V-02: Tablet 960px — ヘッダー CTA は非表示、導線はハンバーガー内
+  test("[V-02] Tablet 960px: ヘッダーCTAは非表示・ハンバーガー内にログイン/無料登録", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 960, height: 800 });
@@ -178,21 +202,27 @@ test.describe("LP レスポンシブ修正 検証", () => {
 
     const nav = await getNavState(page);
 
-    expect(nav.loginVisible, "ログインリンクが表示されていること").toBe(true);
-
-    const signupVisible = nav.ctaItems.some((i) => i.visible && i.text === "無料登録");
-    expect(signupVisible, "無料登録ボタンが表示されていること").toBe(true);
+    expect(nav.loginVisible, "960px: ヘッダーのログインは非表示").toBe(false);
+    const headerSignupVisible = nav.ctaItems.some((i) => i.visible && i.text === "無料登録");
+    expect(headerSignupVisible, "960px: ヘッダーの無料登録は非表示").toBe(false);
 
     expect(nav.burgerVisible, "ハンバーガーボタンが表示されていること").toBe(true);
     expect(nav.hasHorizontalOverflow, "横スクロールなし").toBe(false);
 
+    // ハンバーガーを開くと導線が現れる
+    await page.click("#nav-burger");
+    await page.waitForTimeout(200);
+    const menu = await getMenuCtaState(page);
+    expect(menu?.loginVisible, "メニュー内ログイン表示").toBe(true);
+    expect(menu?.signupVisible, "メニュー内無料登録表示").toBe(true);
+
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v02-960-ja.png",
+      path: "test-results/lp-screenshots/v02-960-ja.png",
     });
   });
 
-  // V-03: Mobile 375px
-  test("[V-03] Mobile 375px: ヘッダーにログイン/無料登録が両方表示される", async ({
+  // V-03: Mobile 375px — ヘッダー CTA は非表示、導線はハンバーガー内
+  test("[V-03] Mobile 375px: ヘッダーCTAは非表示・ハンバーガー内にログイン/無料登録", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -200,15 +230,22 @@ test.describe("LP レスポンシブ修正 検証", () => {
 
     const nav = await getNavState(page);
 
-    expect(nav.loginVisible, "ログインリンクが375pxで表示されていること").toBe(true);
+    expect(nav.loginVisible, "375px: ヘッダーのログインは非表示").toBe(false);
+    const headerSignupVisible = nav.ctaItems.some((i) => i.visible && i.text === "無料登録");
+    expect(headerSignupVisible, "375px: ヘッダーの無料登録は非表示").toBe(false);
 
-    const signupVisible = nav.ctaItems.some((i) => i.visible && i.text === "無料登録");
-    expect(signupVisible, "無料登録ボタンが375pxで表示されていること").toBe(true);
-
+    expect(nav.burgerVisible, "375px: ハンバーガー表示").toBe(true);
     expect(nav.hasHorizontalOverflow, "横スクロールなし").toBe(false);
 
+    // ハンバーガーを開くと導線が現れる
+    await page.click("#nav-burger");
+    await page.waitForTimeout(200);
+    const menu = await getMenuCtaState(page);
+    expect(menu?.loginVisible, "メニュー内ログイン表示").toBe(true);
+    expect(menu?.signupVisible, "メニュー内無料登録表示").toBe(true);
+
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v03-375-ja.png",
+      path: "test-results/lp-screenshots/v03-375-ja.png",
     });
   });
 
@@ -224,7 +261,7 @@ test.describe("LP レスポンシブ修正 検証", () => {
     ).toBe(false);
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v04-320-ja.png",
+      path: "test-results/lp-screenshots/v04-320-ja.png",
     });
   });
 
@@ -264,24 +301,25 @@ test.describe("LP レスポンシブ修正 検証", () => {
       expect(nav.hasHorizontalOverflow, `${locale}: 横スクロールなし`).toBe(false);
 
       await page.screenshot({
-        path: `/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v05-1280-${locale}.png`,
+        path: `test-results/lp-screenshots/v05-1280-${locale}.png`,
       });
     });
   }
 
-  // V-05 de at 375px
-  test("[V-05] de Mobile 375px: ヘッダーCTAが表示され横スクロールなし", async ({
+  // V-05 de at 375px — 最長ロケールでもヘッダーが破綻せず横スクロールなし
+  test("[V-05] de Mobile 375px: ヘッダーCTAは非表示・横スクロールなし", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`${BASE_URL}/de`, { waitUntil: "domcontentloaded" });
 
     const nav = await getNavState(page);
-    expect(nav.loginVisible, "de 375px: Anmeldenが表示").toBe(true);
+    expect(nav.loginVisible, "de 375px: ヘッダーのログインは非表示").toBe(false);
+    expect(nav.burgerVisible, "de 375px: ハンバーガー表示").toBe(true);
     expect(nav.hasHorizontalOverflow, "de 375px: 横スクロールなし").toBe(false);
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v05-375-de.png",
+      path: "test-results/lp-screenshots/v05-375-de.png",
     });
   });
 
@@ -322,7 +360,7 @@ test.describe("LP レスポンシブ修正 検証", () => {
     }
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v06-pricing-1280-ja.png",
+      path: "test-results/lp-screenshots/v06-pricing-1280-ja.png",
     });
   });
 
@@ -363,7 +401,7 @@ test.describe("LP レスポンシブ修正 検証", () => {
     }
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v06-pricing-1280-de.png",
+      path: "test-results/lp-screenshots/v06-pricing-1280-de.png",
     });
   });
 
@@ -389,7 +427,7 @@ test.describe("LP レスポンシブ修正 検証", () => {
     }
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v09-finalcta-1280-de.png",
+      path: "test-results/lp-screenshots/v09-finalcta-1280-de.png",
     });
   });
 
@@ -409,7 +447,7 @@ test.describe("LP レスポンシブ修正 検証", () => {
     }
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v09-finalcta-1280-ja.png",
+      path: "test-results/lp-screenshots/v09-finalcta-1280-ja.png",
     });
   });
 
@@ -431,7 +469,7 @@ test.describe("LP レスポンシブ修正 検証", () => {
     expect(menuAfterOpen, "クリック後: メニューが開いている").toBe(1);
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v10-burger-open.png",
+      path: "test-results/lp-screenshots/v10-burger-open.png",
     });
 
     // Close
@@ -441,22 +479,40 @@ test.describe("LP レスポンシブ修正 検証", () => {
     expect(menuAfterClose, "再クリック後: メニューが閉じている").toBe(0);
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v10-burger-close.png",
+      path: "test-results/lp-screenshots/v10-burger-close.png",
     });
   });
 
-  // V-11: No duplicate login in hamburger, header login still exists
-  test("[V-11] 回帰: ハンバーガー内ログイン重複削除後、ヘッダーにログイン導線が1つ残存", async ({
+  // V-11: モバイルではヘッダー CTA を非表示にし、ログイン/無料登録の導線はハンバーガー内に1つずつ提供する
+  test("[V-11] 回帰: モバイルではハンバーガー内にログイン/無料登録があり、ヘッダーCTAは非表示", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`${BASE_URL}/ja`, { waitUntil: "domcontentloaded" });
 
-    // Open hamburger
+    // ヘッダーの CTA (.lp-nav-cta 内の login/signup) はモバイルで非表示
+    const headerCtaVisible = await page.evaluate(() => {
+      return [
+        ...document.querySelectorAll<HTMLAnchorElement>(".lp-nav-cta a"),
+      ]
+        .filter((a) => a.href.includes("/login") || a.href.includes("/signup"))
+        .map((a) => ({
+          text: a.textContent?.trim(),
+          visible:
+            window.getComputedStyle(a).display !== "none" &&
+            a.getBoundingClientRect().width > 0,
+        }));
+    });
+    expect(
+      headerCtaVisible.every((c) => !c.visible),
+      `モバイルではヘッダー CTA が全て非表示 (found: ${JSON.stringify(headerCtaVisible)})`,
+    ).toBe(true);
+
+    // ハンバーガーを開く
     await page.click("#nav-burger");
     await page.waitForTimeout(200);
 
-    // Check no login link inside hamburger menu
+    // メニュー内にログイン導線が1つ存在する
     const loginLinksInMenu = await page.evaluate(() => {
       const menu = document.querySelector<HTMLElement>("#nav-menu");
       if (!menu) return [];
@@ -466,30 +522,24 @@ test.describe("LP レスポンシブ修正 検証", () => {
     });
     expect(
       loginLinksInMenu.length,
-      `ハンバーガー内ログインリンク数=0 (found: ${JSON.stringify(loginLinksInMenu)})`,
-    ).toBe(0);
+      `ハンバーガー内ログインリンク数=1 (found: ${JSON.stringify(loginLinksInMenu)})`,
+    ).toBe(1);
 
-    // Check header login still exists (in .lp-nav-cta)
-    const headerLoginLinks = await page.evaluate(() => {
-      return [...document.querySelectorAll<HTMLAnchorElement>(".lp-nav-cta a")]
-        .filter((a) => a.href.includes("/login"))
-        .map((a) => ({
-          text: a.textContent?.trim(),
-          visible:
-            window.getComputedStyle(a).display !== "none" &&
-            a.getBoundingClientRect().width > 0,
-        }));
+    // メニュー内に無料登録導線が1つ存在する
+    const signupLinksInMenu = await page.evaluate(() => {
+      const menu = document.querySelector<HTMLElement>("#nav-menu");
+      if (!menu) return [];
+      return [...menu.querySelectorAll<HTMLAnchorElement>("a")]
+        .filter((a) => a.href.includes("/signup"))
+        .map((a) => a.textContent?.trim());
     });
     expect(
-      headerLoginLinks.length,
-      `ヘッダーにログインリンクが1つあること (found: ${JSON.stringify(headerLoginLinks)})`,
+      signupLinksInMenu.length,
+      `ハンバーガー内無料登録リンク数=1 (found: ${JSON.stringify(signupLinksInMenu)})`,
     ).toBe(1);
-    expect(headerLoginLinks[0].visible, "ヘッダーのログインリンクが表示されている").toBe(
-      true,
-    );
 
     await page.screenshot({
-      path: "/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/a1c4c781-35f1-4a42-a997-2aaabadaed1b/scratchpad/screenshots/v11-no-dup-login.png",
+      path: "test-results/lp-screenshots/v11-mobile-menu-cta.png",
     });
   });
 });
