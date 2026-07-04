@@ -532,6 +532,7 @@ describe("EntryAPI", () => {
         style_id: 1,
         entry_time: 60.5,
         note: "テストエントリー",
+        is_relaying: false,
       };
 
       const result = await api.createTeamEntry("team-1", "other-user-id", entryData);
@@ -585,6 +586,7 @@ describe("EntryAPI", () => {
         style_id: 1,
         entry_time: 60.5,
         note: "テストエントリー",
+        is_relaying: false,
       };
 
       const result = await api.createTeamEntry("team-1", "test-user-id", entryData);
@@ -617,6 +619,7 @@ describe("EntryAPI", () => {
         style_id: 1,
         entry_time: 60.5,
         note: "テストエントリー",
+        is_relaying: false,
       };
 
       await expect(api.createTeamEntry("team-1", "other-user-id", entryData)).rejects.toThrow(
@@ -644,6 +647,7 @@ describe("EntryAPI", () => {
         style_id: 1,
         entry_time: 60.5,
         note: "テストエントリー",
+        is_relaying: false,
       };
 
       await expect(api.createTeamEntry("team-1", "test-user-id", entryData)).rejects.toThrow(
@@ -660,6 +664,7 @@ describe("EntryAPI", () => {
         style_id: 1,
         entry_time: 60.5,
         note: "テストエントリー",
+        is_relaying: false,
       };
 
       await expect(api.createTeamEntry("team-1", "test-user-id", entryData)).rejects.toThrow(
@@ -703,6 +708,7 @@ describe("EntryAPI", () => {
         style_id: 1,
         entry_time: 60.5,
         note: "テストエントリー",
+        is_relaying: false,
       };
 
       await expect(api.createTeamEntry("team-1", "other-user-id", entryData)).rejects.toThrow(
@@ -1541,6 +1547,7 @@ describe("EntryAPI", () => {
         style_id: 1,
         entry_time: 60.5,
         note: "テストエントリー",
+        is_relaying: false,
       };
 
       const result = await api.createPersonalEntry(entryData);
@@ -1557,6 +1564,7 @@ describe("EntryAPI", () => {
         style_id: 1,
         entry_time: 60.5,
         note: "テストエントリー",
+        is_relaying: false,
       };
 
       await expect(api.createPersonalEntry(entryData)).rejects.toThrow("認証が必要です");
