@@ -16,10 +16,14 @@
 --   攻撃例: UPDATE team_memberships SET role='admin' WHERE user_id=auth.uid() が通っていた。
 --   修正方針:
 --     - USING は既存のまま（行の読み取り許可条件）。
---     - WITH CHECK の自己更新枝に「role は更新前と変わらないこと」を追加。
---       RLS は列単位制御ができないため、サブクエリで現在の role を取得して比較する。
+--     - WITH CHECK の自己更新枝を「role = 'user' であること」に変更。
+--       role の取りうる値は {admin, user} のみなので、role='user' 固定 = admin 昇格禁止と等価。
+--     - 旧案のインラインサブクエリ (SELECT role FROM team_memberships WHERE id=...) は
+--       RLS の再帰適用 (infinite recursion) を引き起こすため廃止。
+--       is_team_admin() が再帰しないのは SECURITY DEFINER で RLS をバイパスするから。
 --     - 正規の自己更新操作 (leave=is_active→false, 再申請=status→pending, 再活性化=status→approved)
---       はいずれも role を変更しないため、引き続き動作する。
+--       はいずれも role を 'user' のまま維持するため引き続き動作する。
+--     - admin が自分の行を更新する場合は is_team_admin 枝を通るため影響なし。
 --     - is_team_admin 枝と teams.created_by 枝は role 変更を含む UPDATE を許可（従来どおり）。
 --
 -- H-1 (High): competitions SELECT — 未認証 (anon) で全件読める
@@ -101,16 +105,18 @@ WITH CHECK (
     )
   )
   OR
-  -- 自己更新枝: role の昇格を禁止する。
-  -- leave() / 再申請 / reactivateMembership() はいずれも role を変更しないため影響なし。
-  -- サブクエリで現在の role を取得し、UPDATE 後の role と一致することを要求する。
+  -- 自己更新枝: role が 'user' であることを要求することで admin 昇格を禁止する。
+  -- role の取りうる値は {admin, user} のみ（CHECK 制約）なので、
+  -- role='user' の強制 = role='admin' への昇格不可、と等価。
+  -- leave() (is_active→false), 再申請 (status→pending), reactivateMembership (status→approved/is_active→true)
+  -- はいずれも role を 'user' のまま維持するため引き続き通る。
+  -- admin が自分自身の行を更新する場合は is_team_admin 枝 (SECURITY DEFINER) を通るため影響なし。
+  -- 【再帰しない理由】: 旧実装のインラインサブクエリ (SELECT role FROM team_memberships WHERE id=...) は
+  -- team_memberships への SELECT を発生させ RLS ポリシーが再帰適用されていた。
+  -- この枝は team_memberships を参照しない定数比較のみなので再帰は発生しない。
   (
     "user_id" = (SELECT "auth"."uid"())
-    AND "role" = (
-      SELECT tm_current."role"
-      FROM "public"."team_memberships" tm_current
-      WHERE tm_current."id" = "team_memberships"."id"
-    )
+    AND "role" = 'user'
   )
 );
 
