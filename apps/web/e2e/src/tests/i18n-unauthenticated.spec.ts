@@ -44,7 +44,8 @@ test.describe("login ページのロケール別 UI", () => {
   test("TC-I18N-B-001: /ja/login でフォームラベルが日本語", async ({ page }) => {
     const getErrors = setupMissingMessageListener(page);
 
-    await page.goto("/ja/login");
+    // ログインフォームは OAuth 優先の再設計により /login/email に分離された
+    await page.goto("/ja/login/email");
     await page.waitForLoadState("networkidle");
 
     // html lang 属性
@@ -69,7 +70,8 @@ test.describe("login ページのロケール別 UI", () => {
   test("TC-I18N-B-002: /en/login でフォームラベルが英語", async ({ page }) => {
     const getErrors = setupMissingMessageListener(page);
 
-    await page.goto("/en/login");
+    // ログインフォームは OAuth 優先の再設計により /login/email に分離された
+    await page.goto("/en/login/email");
     await page.waitForLoadState("networkidle");
 
     // html lang 属性
@@ -110,8 +112,10 @@ test.describe("LP (トップページ) のロケール別 UI", () => {
     expect(await page.getAttribute("html", "lang")).toBe("ja");
 
     // hero section に日本語テキストが存在する
+    // NOTE: textContent は <style> 内の CSS(日本語コメント含む)まで拾うため、
+    // 画面に表示されるテキストのみを見る innerText を使う
     const heroSection = page.locator("section").first();
-    const heroText = await heroSection.textContent();
+    const heroText = await heroSection.innerText();
     expect(heroText).toMatch(/[ぁ-ん]/);
 
     // 無料登録ボタンが日本語
@@ -132,8 +136,10 @@ test.describe("LP (トップページ) のロケール別 UI", () => {
 
     // hero section に英語テキストが存在する (日本語が含まれない)
     // NOTE: 固有名詞 "SwimHub" は両言語に含まれる
+    // NOTE: textContent は <style> 内の CSS(日本語コメント含む)まで拾うため、
+    // 画面に表示されるテキストのみを見る innerText を使う
     const heroSection = page.locator("section").first();
-    const heroText = await heroSection.textContent();
+    const heroText = await heroSection.innerText();
     // ひらがな/カタカナが含まれないこと
     expect(heroText).not.toMatch(/[ぁ-んァ-ン]/);
 

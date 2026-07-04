@@ -49,7 +49,8 @@ async function createFreeUser(page: Page, suffix: string = "") {
   const email = `billing-free-${timestamp}${suffix}@swimhub.com`;
   const password = "TestPass123!";
 
-  await page.goto(URLS.SIGNUP);
+  // サインアップフォームは OAuth 優先の再設計により /signup/email に分離された
+  await page.goto(`${URLS.SIGNUP}/email`);
   await page.fill('[data-testid="signup-name-input"]', `テスト太郎${suffix}`);
   await page.fill('[data-testid="email-input"]', email);
   await page.fill('[data-testid="password-input"]', password);
@@ -126,7 +127,8 @@ async function createPremiumUser(
 
 /** ログインする */
 async function loginUser(page: Page, email: string, password: string) {
-  await page.goto(URLS.LOGIN);
+  // ログインフォームは OAuth 優先の再設計により /login/email に分離された
+  await page.goto(`${URLS.LOGIN}/email`);
   await page.fill('[data-testid="email-input"]', email);
   await page.fill('[data-testid="password-input"]', password);
   await page.click('[data-testid="login-button"]');

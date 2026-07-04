@@ -33,7 +33,8 @@ try {
 
 /** ログイン状態にするヘルパー */
 async function loginUser(page: Page, email: string, password: string) {
-  await page.goto(URLS.LOGIN);
+  // ログインフォームは OAuth 優先の再設計により /login/email に分離された
+  await page.goto(`${URLS.LOGIN}/email`);
   await page.waitForLoadState("networkidle");
   await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 });
   await page.fill('[data-testid="email-input"]', email);
@@ -234,7 +235,8 @@ test.describe("i18n ルーティング基盤 (Issue #32 Phase 1-A)", () => {
   test("TC-I18N-011: /ja/login からログインして /ja/dashboard に遷移できる", async ({ page }) => {
     if (!testEnv) throw new Error("テスト環境が設定されていません");
 
-    await page.goto("/ja/login");
+    // ログインフォームは OAuth 優先の再設計により /login/email に分離された
+    await page.goto("/ja/login/email");
     await page.waitForLoadState("networkidle");
 
     // ログインフォームが表示されること
