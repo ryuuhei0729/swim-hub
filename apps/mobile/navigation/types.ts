@@ -119,6 +119,8 @@ export type MainStackParamList = {
     teamId: string;
   };
   Settings: undefined;
+  /** 練習ログテンプレート管理 */
+  PracticeLogTemplates: undefined;
   BulkBestTime: undefined;
   Paywall: undefined;
 };

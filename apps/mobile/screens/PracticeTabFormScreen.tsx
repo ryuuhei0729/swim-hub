@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -37,17 +38,22 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
+import { NumberStepper } from "@/components/ui/NumberStepper";
 import { TagChips, TagSelectModal, TagManageModal, VideoUploader } from "@/components/shared";
 import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
 import { ItemTabs } from "@/components/forms/ItemTabs";
+import { DistanceChips } from "@/components/practices/DistanceChips";
+import { PracticeLogTemplateSelectModal } from "@/components/practices/PracticeLogTemplateSelectModal";
+import { useCreatePracticeLogTemplateMutation } from "@apps/shared/hooks/queries/practiceLogTemplates";
 import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
-import { formatTime, SWIM_STYLES } from "@/utils/formatters";
+import { formatTime, formatTimeAverage, SWIM_STYLES } from "@/utils/formatters";
 import { hasUnsavedChanges, diffPracticeLogDraft } from "@/utils/tabFormUtils";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
 import type { MainStackParamList } from "@/navigation/types";
 import type { PracticeTag } from "@apps/shared/types";
+import type { PracticeLogTemplate, CreatePracticeLogTemplateInput } from "@apps/shared/types/practiceLogTemplate";
 import type { TimeEntry } from "@apps/shared/types/ui";
 
 type PracticeTabFormRouteProp = RouteProp<MainStackParamList, "PracticeTabForm">;
@@ -76,21 +82,30 @@ interface PracticeMenu {
   times: Array<TimeEntry & { id?: string }>;
   /** 既存ログのDBのid (編集時) */
   existingLogId?: string;
+  /** 既存ログの動画パス (メニュー単位。web PracticeMenu と同じ構造) */
+  videoPath?: string | null;
+  videoThumbnailPath?: string | null;
 }
 
-function createEmptyMenu(): PracticeMenu {
+/**
+ * 新規メニューのデフォルト値 (web usePracticeLogForm.createDefaultMenu と同一: 100m×4本×1セット サークル1:30)。
+ * 未編集のままなら保存時にスキップされる (opt-in)。
+ */
+function createDefaultMenu(): PracticeMenu {
   return {
     id: `menu-${Date.now()}-${Math.random()}`,
     style: "Fr",
     swimCategory: "Swim",
-    distance: "",
-    reps: "",
-    sets: "",
-    circleMin: "",
-    circleSec: "",
+    distance: 100,
+    reps: 4,
+    sets: 1,
+    circleMin: 1,
+    circleSec: 30,
     note: "",
     tags: [],
     times: [],
+    videoPath: null,
+    videoThumbnailPath: null,
   };
 }
 
@@ -151,7 +166,7 @@ export const PracticeTabFormScreen: React.FC = () => {
   }, []);
 
   // ---- 練習ログタブ state ----
-  const [menus, setMenus] = useState<PracticeMenu[]>([createEmptyMenu()]);
+  const [menus, setMenus] = useState<PracticeMenu[]>([createDefaultMenu()]);
   const [showTagSelectModal, setShowTagSelectModal] = useState(false);
   const [showTagManageModal, setShowTagManageModal] = useState(false);
   const [editingTag, setEditingTag] = useState<PracticeTag | null>(null);
@@ -190,9 +205,24 @@ export const PracticeTabFormScreen: React.FC = () => {
 
   // ---- 動画 (練習ログタブ) ----
   // メニューIDをキーに保留動画アセットを管理
+  // 既存動画のパスはメニュー単位で menu.videoPath / menu.videoThumbnailPath に保持する (web と同じ構造)
   const pendingVideoAssetRef = useRef<Map<string, { uri: string; mimeType?: string }>>(new Map());
-  const [existingLogVideoPath, setExistingLogVideoPath] = useState<string | null>(null);
-  const [existingLogThumbnailPath, setExistingLogThumbnailPath] = useState<string | null>(null);
+
+  // ---- テンプレート ----
+  const [showTemplateSelectModal, setShowTemplateSelectModal] = useState(false);
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+  const [showTemplateSaveModal, setShowTemplateSaveModal] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const createTemplateMutation = useCreatePracticeLogTemplateMutation(supabase);
+
+  // ---- 場所サジェスト ----
+  const [placeSuggestions, setPlaceSuggestions] = useState<string[]>([]);
+  const [placeFocused, setPlaceFocused] = useState(false);
+  useEffect(() => {
+    const api = new PracticeAPI(supabase);
+    api.getUniquePlaces().then(setPlaceSuggestions).catch(() => {});
+  }, [supabase]);
 
   // ---- 既存データ取得 (練習一覧) ----
   const { data: practices = [], isLoading: loadingPractices } = usePracticesQuery(supabase, {
@@ -232,7 +262,7 @@ export const PracticeTabFormScreen: React.FC = () => {
             const logs = practiceWithLogs?.practice_logs ?? [];
             if (logs.length === 0) {
               // ログなし: 空ドラフト1件
-              const emptyMenus = [createEmptyMenu()];
+              const emptyMenus = [createDefaultMenu()];
               setMenus(emptyMenus);
               snapshotRef.current = { practice: practiceState, menus: emptyMenus };
               return;
@@ -266,6 +296,9 @@ export const PracticeTabFormScreen: React.FC = () => {
                 note: log.note || "",
                 tags,
                 times,
+                // 動画パスはメニュー単位で保持 (編集時に既存動画を表示するため)
+                videoPath: log.video_path ?? null,
+                videoThumbnailPath: log.video_thumbnail_path ?? null,
               } satisfies PracticeMenu;
             });
 
@@ -276,7 +309,7 @@ export const PracticeTabFormScreen: React.FC = () => {
           .catch((err) => {
             console.error("練習ログ取得エラー:", err);
             // fetch 失敗時は空ドラフトにフォールバック
-            const emptyMenus = [createEmptyMenu()];
+            const emptyMenus = [createDefaultMenu()];
             setMenus(emptyMenus);
             snapshotRef.current = { practice: practiceState, menus: emptyMenus };
           })
@@ -295,7 +328,7 @@ export const PracticeTabFormScreen: React.FC = () => {
         place: "",
         note: "",
       };
-      const emptyMenus = [createEmptyMenu()];
+      const emptyMenus = [createDefaultMenu()];
       setPracticeTab(initPractice);
       setMenus(emptyMenus);
       initializedRef.current = true;
@@ -386,56 +419,26 @@ export const PracticeTabFormScreen: React.FC = () => {
     return Object.keys(errors).length === 0;
   }, [practiceTab.date, t]);
 
-  // ---- 練習ログタブ バリデーション (空のとき valid) ----
-  const validateLogTab = useCallback((): boolean => {
-    // ログタブはアイテム0件でも valid
-    for (const menu of menus) {
-      if (menu.distance === "" && menu.reps === "" && menu.sets === "") continue;
-      if (!menu.style || menu.style.trim() === "") {
-        Alert.alert(t("common.error"), t("practice.form.styleRequired"));
-        return false;
-      }
-      if (!menu.distance || Number(menu.distance) <= 0) {
-        Alert.alert(t("common.error"), t("practice.form.distanceRequired"));
-        return false;
-      }
-      if (!menu.reps || Number(menu.reps) <= 0) {
-        Alert.alert(t("common.error"), t("practice.form.repsRequired"));
-        return false;
-      }
-      if (!menu.sets || Number(menu.sets) <= 0) {
-        Alert.alert(t("common.error"), t("practice.form.setsRequired"));
-        return false;
-      }
-    }
-    return true;
-  }, [menus, t]);
-
   // ---- 全タブ横断バリデーション ----
+  // 練習ログタブは web と同じく部分入力でもブロックしない
+  // (保存時に距離→100 / 本数→1 / セット→1 へフォールバックする)
   const validateAll = useCallback((): boolean => {
     const practiceValid = validatePracticeTab();
-    const logValid = validateLogTab();
 
     const errors: Partial<Record<PracticeTab, boolean>> = {};
     if (!practiceValid) errors.practice = true;
-    if (!logValid) errors.log = true;
     setTabErrors(errors);
 
     if (!practiceValid) {
       setActiveTab("practice");
       return false;
     }
-    if (!logValid) {
-      setActiveTab("log");
-      return false;
-    }
     return true;
-  }, [validatePracticeTab, validateLogTab]);
+  }, [validatePracticeTab]);
 
   // ---- 保存ハンドラ ----
-  const handleSave = useCallback(async () => {
+  const executeSave = useCallback(async () => {
     if (isSubmittingRef.current) return;
-    if (!validateAll()) return;
 
     isSubmittingRef.current = true;
     setIsSaving(true);
@@ -551,10 +554,13 @@ export const PracticeTabFormScreen: React.FC = () => {
 
       // --- 練習ログ INSERT / UPDATE / DELETE ---
       // diffPracticeLogDraft が単一の権威となり creates/updates/deletes を決定する。
-      // 有効なメニューのみ保存（全フィールド空はスキップ）
-      const validMenus = menus.filter(
-        (m) => m.distance !== "" || m.reps !== "" || m.sets !== "",
-      );
+      // 練習ログは opt-in (web と同じ): 既存ログが無く、メニューがスナップショット (デフォルト値)
+      // から一切変更されていない場合は、デフォルトメニュー (100m×4本) を保存しない。
+      const snapshotMenus = snapshotRef.current?.menus ?? [];
+      const menusChanged = JSON.stringify(menus) !== JSON.stringify(snapshotMenus);
+      const snapshotHasExistingLogs = snapshotMenus.some((m) => m.existingLogId);
+      const skipUntouchedDefaultLogs = !menusChanged && !snapshotHasExistingLogs;
+      const validMenus = skipUntouchedDefaultLogs ? [] : menus;
 
       if (savedPracticeId) {
         const api = new PracticeAPI(supabase);
@@ -581,13 +587,14 @@ export const PracticeTabFormScreen: React.FC = () => {
           const circleMin = Number(menu.circleMin) || 0;
           const circleSec = Number(menu.circleSec) || 0;
           const circleTime = circleMin * 60 + circleSec;
+          // 空・不正値は web と同じフォールバック (距離100 / 本数1 / セット1)
           const logData = {
             practice_id: savedPracticeId,
             style: menu.style,
             swim_category: menu.swimCategory,
-            distance: Number(menu.distance),
-            rep_count: Number(menu.reps),
-            set_count: Number(menu.sets),
+            distance: Number(menu.distance) || 100,
+            rep_count: Number(menu.reps) || 1,
+            set_count: Number(menu.sets) || 1,
             circle: circleTime > 0 ? circleTime : null,
             note: menu.note.trim() || null,
           };
@@ -614,13 +621,14 @@ export const PracticeTabFormScreen: React.FC = () => {
           const circleMin = Number(menu.circleMin) || 0;
           const circleSec = Number(menu.circleSec) || 0;
           const circleTime = circleMin * 60 + circleSec;
+          // 空・不正値は web と同じフォールバック (距離100 / 本数1 / セット1)
           const logData = {
             practice_id: savedPracticeId,
             style: menu.style,
             swim_category: menu.swimCategory,
-            distance: Number(menu.distance),
-            rep_count: Number(menu.reps),
-            set_count: Number(menu.sets),
+            distance: Number(menu.distance) || 100,
+            rep_count: Number(menu.reps) || 1,
+            set_count: Number(menu.sets) || 1,
             circle: circleTime > 0 ? circleTime : null,
             note: menu.note.trim() || null,
           };
@@ -683,7 +691,6 @@ export const PracticeTabFormScreen: React.FC = () => {
       setIsSaving(false);
     }
   }, [
-    validateAll,
     getAccessToken,
     resolvedPracticeId,
     isEditMode,
@@ -706,10 +713,89 @@ export const PracticeTabFormScreen: React.FC = () => {
     navigation,
   ]);
 
+  // ---- 保存ハンドラ ----
+  const handleSave = useCallback(async () => {
+    if (isSubmittingRef.current) return;
+    if (!validateAll()) return;
+
+    // 「テンプレートとして保存する」チェック時は名前入力モーダルを先に表示 (web と同じ)
+    if (saveAsTemplate) {
+      setShowTemplateSaveModal(true);
+      return;
+    }
+
+    await executeSave();
+  }, [validateAll, saveAsTemplate, executeSave]);
+
+  // ---- テンプレート保存 (名前入力モーダルの保存ボタン) ----
+  const handleTemplateSave = useCallback(async () => {
+    if (!templateName.trim()) return;
+    setIsSavingTemplate(true);
+    try {
+      const firstMenu = menus[0];
+      if (!firstMenu) return;
+      const circleTime =
+        (Number(firstMenu.circleMin) || 0) * 60 + (Number(firstMenu.circleSec) || 0);
+      const input: CreatePracticeLogTemplateInput = {
+        name: templateName.trim(),
+        style: firstMenu.style,
+        swim_category: firstMenu.swimCategory,
+        distance: Number(firstMenu.distance) || 0,
+        rep_count: Number(firstMenu.reps) || 1,
+        set_count: Number(firstMenu.sets) || 1,
+        circle: circleTime > 0 ? circleTime : null,
+        note: firstMenu.note || null,
+        tag_ids: firstMenu.tags.map((tag) => tag.id),
+      };
+      await createTemplateMutation.mutateAsync(input);
+      setShowTemplateSaveModal(false);
+      setTemplateName("");
+      setSaveAsTemplate(false);
+
+      await executeSave();
+    } catch (error) {
+      console.error("テンプレート保存エラー:", error);
+      Alert.alert(
+        t("common.error"),
+        error instanceof Error ? error.message : t("practice.mobile.saveFailed"),
+      );
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  }, [templateName, menus, createTemplateMutation, executeSave, t]);
+
+  // ---- テンプレートから作成 (web handleTemplateSelect と同じ: メニューをテンプレート1件で置き換え) ----
+  const handleTemplateSelect = useCallback(
+    (template: PracticeLogTemplate) => {
+      const circleTime = template.circle || 0;
+      const templateTags = template.tag_ids
+        ? availableTags.filter((tag) => template.tag_ids.includes(tag.id))
+        : [];
+      const templateMenu: PracticeMenu = {
+        id: `menu-${Date.now()}-${Math.random()}`,
+        style: template.style,
+        swimCategory: template.swim_category,
+        distance: template.distance,
+        reps: template.rep_count,
+        sets: template.set_count,
+        circleMin: Math.floor(circleTime / 60),
+        circleSec: circleTime % 60,
+        note: template.note || "",
+        tags: templateTags,
+        times: [],
+        videoPath: null,
+        videoThumbnailPath: null,
+      };
+      setMenus([templateMenu]);
+      setActiveMenuIndex(0);
+    },
+    [availableTags],
+  );
+
   // ---- メニュー操作 ----
   const addMenu = useCallback(() => {
     setMenus((prev) => {
-      const next = [...prev, createEmptyMenu()];
+      const next = [...prev, createDefaultMenu()];
       setActiveMenuIndex(next.length - 1);
       return next;
     });
@@ -917,10 +1003,46 @@ export const PracticeTabFormScreen: React.FC = () => {
                 style={styles.input}
                 value={practiceTab.place}
                 onChangeText={(v) => setPracticeTab((prev) => ({ ...prev, place: v }))}
+                onFocus={() => setPlaceFocused(true)}
+                onBlur={() => setPlaceFocused(false)}
                 placeholder={t("practice.form.placePlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 editable={!isSaving}
               />
+              {/* 過去に使った場所のサジェスト (web PlaceCombobox 相当) */}
+              {placeFocused &&
+                (() => {
+                  const query = practiceTab.place.trim().toLowerCase();
+                  const filtered = placeSuggestions
+                    .filter(
+                      (p) =>
+                        p.toLowerCase() !== query &&
+                        (query === "" || p.toLowerCase().includes(query)),
+                    )
+                    .slice(0, 5);
+                  if (filtered.length === 0) return null;
+                  return (
+                    <View style={styles.placeSuggestions}>
+                      {filtered.map((p) => (
+                        <Pressable
+                          key={p}
+                          style={styles.placeSuggestionItem}
+                          onPress={() => {
+                            setPracticeTab((prev) => ({ ...prev, place: p }));
+                            setPlaceFocused(false);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={p}
+                        >
+                          <Feather name="map-pin" size={13} color="#6B7280" />
+                          <Text style={styles.placeSuggestionText} numberOfLines={1}>
+                            {p}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  );
+                })()}
             </View>
 
             {/* メモ */}
@@ -984,9 +1106,22 @@ export const PracticeTabFormScreen: React.FC = () => {
                   >
                     {menu != null && (
                       <View key={menu.id}>
-                  {/* タグ */}
+                  {/* タグ + テンプレートから作成 */}
                   <View style={styles.menuField}>
-                    <Text style={styles.label}>{t("practice.form.tagsLabel")}</Text>
+                    <View style={styles.tagRowHeader}>
+                      <Text style={styles.label}>{t("practice.form.tagsLabel")}</Text>
+                      <Pressable
+                        style={styles.templateButton}
+                        onPress={() => setShowTemplateSelectModal(true)}
+                        disabled={isSaving}
+                        accessibilityRole="button"
+                      >
+                        <Feather name="clipboard" size={14} color="#374151" />
+                        <Text style={styles.templateButtonText}>
+                          {t("forms.practiceLog.templateFromLong")}
+                        </Text>
+                      </Pressable>
+                    </View>
                     <TagChips
                       tags={menu.tags}
                       onPress={() => openTagSelectModal(index)}
@@ -1057,86 +1192,80 @@ export const PracticeTabFormScreen: React.FC = () => {
                     </View>
                   </View>
 
-                  {/* 距離・本数・セット数 */}
+                  {/* 距離 (プリセットチップ + その他で直接入力) */}
+                  <View style={styles.menuField}>
+                    <Text style={styles.label}>
+                      {t("practice.form.distanceLabel")} <Text style={styles.required}>*</Text>
+                    </Text>
+                    <DistanceChips
+                      value={menu.distance}
+                      onChange={(v) => updateMenu(menu.id, "distance", v)}
+                      disabled={isSaving}
+                      testID="practice-distance"
+                    />
+                  </View>
+
+                  {/* 本数・セット数 (ステッパー) */}
                   <View style={styles.row}>
-                    <View style={styles.fieldThird}>
-                      <Text style={styles.label}>
-                        {t("practice.form.distanceLabel")} <Text style={styles.required}>*</Text>
-                      </Text>
-                      <TextInput
-                        style={styles.input}
-                        value={menu.distance.toString()}
-                        onChangeText={(text) => {
-                          const num = text === "" ? "" : Number(text);
-                          updateMenu(menu.id, "distance", num);
-                        }}
-                        placeholder="100"
-                        keyboardType="numeric"
-                        editable={!isSaving}
-                      />
-                    </View>
-                    <View style={styles.fieldThird}>
+                    <View style={styles.fieldHalf}>
                       <Text style={styles.label}>
                         {t("practice.form.repsLabel")} <Text style={styles.required}>*</Text>
                       </Text>
-                      <TextInput
-                        style={styles.input}
-                        value={menu.reps.toString()}
-                        onChangeText={(text) => {
-                          const num = text === "" ? "" : Number(text);
-                          updateMenu(menu.id, "reps", num);
-                        }}
+                      <NumberStepper
+                        value={menu.reps}
+                        onChange={(v) => updateMenu(menu.id, "reps", v)}
+                        min={1}
+                        step={1}
                         placeholder="4"
-                        keyboardType="numeric"
-                        editable={!isSaving}
+                        disabled={isSaving}
+                        accessibilityLabel={t("practice.form.repsLabel")}
+                        testID="practice-rep-count"
                       />
                     </View>
-                    <View style={styles.fieldThird}>
+                    <View style={styles.fieldHalf}>
                       <Text style={styles.label}>
                         {t("practice.form.setsLabel")} <Text style={styles.required}>*</Text>
                       </Text>
-                      <TextInput
-                        style={styles.input}
-                        value={menu.sets.toString()}
-                        onChangeText={(text) => {
-                          const num = text === "" ? "" : Number(text);
-                          updateMenu(menu.id, "sets", num);
-                        }}
+                      <NumberStepper
+                        value={menu.sets}
+                        onChange={(v) => updateMenu(menu.id, "sets", v)}
+                        min={1}
+                        step={1}
                         placeholder="1"
-                        keyboardType="numeric"
-                        editable={!isSaving}
+                        disabled={isSaving}
+                        accessibilityLabel={t("practice.form.setsLabel")}
+                        testID="practice-set-count"
                       />
                     </View>
                   </View>
 
-                  {/* サークル */}
+                  {/* サークル (分: step1 / 秒: step10, max59) */}
                   <View style={styles.row}>
                     <View style={styles.fieldHalf}>
                       <Text style={styles.label}>{t("practice.form.circleMinLabel")}</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={menu.circleMin.toString()}
-                        onChangeText={(text) => {
-                          const num = text === "" ? "" : Number(text);
-                          updateMenu(menu.id, "circleMin", num);
-                        }}
+                      <NumberStepper
+                        value={menu.circleMin}
+                        onChange={(v) => updateMenu(menu.id, "circleMin", v)}
+                        min={0}
+                        step={1}
                         placeholder="1"
-                        keyboardType="numeric"
-                        editable={!isSaving}
+                        disabled={isSaving}
+                        accessibilityLabel={t("practice.form.circleMinLabel")}
+                        testID="practice-circle-min"
                       />
                     </View>
                     <View style={styles.fieldHalf}>
                       <Text style={styles.label}>{t("practice.form.circleSecLabel")}</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={menu.circleSec.toString()}
-                        onChangeText={(text) => {
-                          const num = text === "" ? "" : Number(text);
-                          updateMenu(menu.id, "circleSec", num);
-                        }}
+                      <NumberStepper
+                        value={menu.circleSec}
+                        onChange={(v) => updateMenu(menu.id, "circleSec", v)}
+                        min={0}
+                        max={59}
+                        step={10}
                         placeholder="30"
-                        keyboardType="numeric"
-                        editable={!isSaving}
+                        disabled={isSaving}
+                        accessibilityLabel={t("practice.form.circleSecLabel")}
+                        testID="practice-circle-sec"
                       />
                     </View>
                   </View>
@@ -1170,6 +1299,10 @@ export const PracticeTabFormScreen: React.FC = () => {
                           );
                           const setFastest =
                             setTimes.length > 0 ? Math.min(...setTimes.map((ti) => ti.time)) : 0;
+                          const setAverage =
+                            setTimes.length > 0
+                              ? setTimes.reduce((sum, ti) => sum + ti.time, 0) / setTimes.length
+                              : 0;
                           return (
                             <View key={setNumber} style={styles.setRow}>
                               <Text style={styles.setLabel}>
@@ -1204,9 +1337,51 @@ export const PracticeTabFormScreen: React.FC = () => {
                                   },
                                 )}
                               </View>
+                              {/* セット平均 (web の平均行に相当) */}
+                              <View style={styles.setAvgRow}>
+                                <Text style={styles.setAvgLabel}>
+                                  {t("forms.practiceMenu.avgRow")}
+                                </Text>
+                                <Text style={styles.setAvgValue}>
+                                  {setAverage > 0 ? formatTimeAverage(setAverage) : "-"}
+                                </Text>
+                              </View>
                             </View>
                           );
                         })}
+                        {/* 全体平均・全体最速 (web と同じサマリー行) */}
+                        {(() => {
+                          const allValidTimes = menu.times.filter((ti) => ti.time > 0);
+                          const overallAverage =
+                            allValidTimes.length > 0
+                              ? allValidTimes.reduce((sum, ti) => sum + ti.time, 0) /
+                                allValidTimes.length
+                              : 0;
+                          const overallFastest =
+                            allValidTimes.length > 0
+                              ? Math.min(...allValidTimes.map((ti) => ti.time))
+                              : 0;
+                          return (
+                            <View style={styles.overallSummary}>
+                              <View style={styles.overallRow}>
+                                <Text style={styles.overallLabel}>
+                                  {t("forms.practiceMenu.overallAvg")}
+                                </Text>
+                                <Text style={styles.overallValue}>
+                                  {overallAverage > 0 ? formatTimeAverage(overallAverage) : "-"}
+                                </Text>
+                              </View>
+                              <View style={styles.overallRow}>
+                                <Text style={styles.overallLabel}>
+                                  {t("forms.practiceMenu.overallFastest")}
+                                </Text>
+                                <Text style={styles.overallValue}>
+                                  {overallFastest > 0 ? formatTime(overallFastest) : "-"}
+                                </Text>
+                              </View>
+                            </View>
+                          );
+                        })()}
                       </View>
                     </View>
                   )}
@@ -1227,24 +1402,32 @@ export const PracticeTabFormScreen: React.FC = () => {
                     />
                   </View>
 
-                  {/* 動画 */}
+                  {/* 動画 (メニュー単位で既存動画パスを保持。web と同じ構造) */}
                   <View style={styles.menuField}>
                     <Text style={styles.label}>{t("practice.form.videoLabel")}</Text>
                     <VideoUploader
                       type="practice-log"
                       id={menu.existingLogId}
-                      existingVideoPath={menu.existingLogId ? existingLogVideoPath : null}
-                      existingThumbnailPath={
-                        menu.existingLogId ? existingLogThumbnailPath : null
-                      }
+                      existingVideoPath={menu.videoPath ?? null}
+                      existingThumbnailPath={menu.videoThumbnailPath ?? null}
                       isPremium={isPremium}
                       onUploadComplete={(vPath, tPath) => {
-                        setExistingLogVideoPath(vPath);
-                        setExistingLogThumbnailPath(tPath);
+                        setMenus((prev) =>
+                          prev.map((m) =>
+                            m.id === menu.id
+                              ? { ...m, videoPath: vPath, videoThumbnailPath: tPath }
+                              : m,
+                          ),
+                        );
                       }}
                       onDelete={() => {
-                        setExistingLogVideoPath(null);
-                        setExistingLogThumbnailPath(null);
+                        setMenus((prev) =>
+                          prev.map((m) =>
+                            m.id === menu.id
+                              ? { ...m, videoPath: null, videoThumbnailPath: null }
+                              : m,
+                          ),
+                        );
                       }}
                       onPendingVideoAsset={(asset) => {
                         if (asset) {
@@ -1289,8 +1472,93 @@ export const PracticeTabFormScreen: React.FC = () => {
         )}
       </ScrollView>
 
+      {/* テンプレート選択モーダル */}
+      <PracticeLogTemplateSelectModal
+        visible={showTemplateSelectModal}
+        onClose={() => setShowTemplateSelectModal(false)}
+        onSelect={handleTemplateSelect}
+        onManage={() => {
+          setShowTemplateSelectModal(false);
+          navigation.navigate("PracticeLogTemplates");
+        }}
+      />
+
+      {/* テンプレート名入力モーダル (テンプレートとして保存) */}
+      <Modal
+        visible={showTemplateSaveModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowTemplateSaveModal(false)}
+      >
+        <View style={styles.templateModalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowTemplateSaveModal(false)}
+          />
+          <View style={styles.templateModal}>
+            <Text style={styles.templateModalTitle}>
+              {t("forms.practiceLog.templateSaveTitle")}
+            </Text>
+            <Text style={styles.label}>{t("forms.practiceLog.templateNameLabel")}</Text>
+            <TextInput
+              style={styles.input}
+              value={templateName}
+              onChangeText={setTemplateName}
+              placeholder={t("forms.practiceLog.templateNamePlaceholder")}
+              placeholderTextColor="#9CA3AF"
+              autoFocus
+              editable={!isSavingTemplate}
+            />
+            <View style={styles.templateModalActions}>
+              <Pressable
+                style={styles.templateModalCancel}
+                onPress={() => setShowTemplateSaveModal(false)}
+                disabled={isSavingTemplate}
+              >
+                <Text style={styles.templateModalCancelText}>
+                  {t("forms.practiceLog.cancel")}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.templateModalSave,
+                  (!templateName.trim() || isSavingTemplate) && styles.buttonDisabled,
+                ]}
+                onPress={() => void handleTemplateSave()}
+                disabled={!templateName.trim() || isSavingTemplate}
+              >
+                {isSavingTemplate ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.templateModalSaveText}>
+                    {t("forms.practiceLog.save")}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* 保存ボタン (画面下部固定) */}
       <View style={styles.footer}>
+        {/* テンプレートとして保存 (新規作成時のみ。web と同じ) */}
+        {!isEditMode && activeTab === "log" && (
+          <Pressable
+            style={styles.templateCheckboxRow}
+            onPress={() => setSaveAsTemplate((prev) => !prev)}
+            disabled={isSaving}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: saveAsTemplate }}
+          >
+            <View style={[styles.checkbox, saveAsTemplate && styles.checkboxChecked]}>
+              {saveAsTemplate && <Feather name="check" size={13} color="#FFFFFF" />}
+            </View>
+            <Text style={styles.templateCheckboxLabel}>
+              {t("forms.practiceLog.saveAsTemplate")}
+            </Text>
+          </Pressable>
+        )}
         <Pressable
           style={[styles.saveButton, isSaving && styles.buttonDisabled]}
           onPress={handleSave}
@@ -1536,5 +1804,174 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+
+  // 場所サジェスト
+  placeSuggestions: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  placeSuggestionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#F3F4F6",
+  },
+  placeSuggestionText: {
+    fontSize: 14,
+    color: "#374151",
+    flex: 1,
+  },
+
+  // タグ行 (テンプレートボタン付き)
+  tagRowHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  templateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+  },
+  templateButtonText: {
+    fontSize: 12,
+    color: "#374151",
+    fontWeight: "500",
+  },
+
+  // セット平均・全体サマリー
+  setAvgRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#E5E7EB",
+  },
+  setAvgLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  setAvgValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  overallSummary: {
+    backgroundColor: "#EFF6FF",
+    borderRadius: 8,
+    padding: 12,
+    gap: 8,
+  },
+  overallRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  overallLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1E40AF",
+  },
+  overallValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1E40AF",
+  },
+
+  // テンプレート保存チェックボックス
+  templateCheckboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: "#16A34A",
+    borderColor: "#16A34A",
+  },
+  templateCheckboxLabel: {
+    fontSize: 14,
+    color: "#374151",
+  },
+
+  // テンプレート名入力モーダル
+  templateModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  templateModal: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    width: "100%",
+    maxWidth: 400,
+    gap: 8,
+  },
+  templateModalTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  templateModalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 12,
+  },
+  templateModalCancel: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+  },
+  templateModalCancelText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  templateModalSave: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#16A34A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  templateModalSaveText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });
