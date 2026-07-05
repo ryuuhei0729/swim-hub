@@ -3917,6 +3917,8 @@
       "previewLabel": "Vorschau",
       "previewDefault": "Tag-Name",
       "selectModalTitle": "Tags auswählen",
+      "searchPlaceholder": "Tags suchen",
+      "noSearchResults": "Keine passenden Tags",
       "actionPrompt": "Bitte wählen Sie eine Aktion für dieses Tag",
       "actionEdit": "Bearbeiten",
       "actionDelete": "Löschen",

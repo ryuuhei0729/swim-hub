@@ -13,7 +13,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { PracticeTag } from "@apps/shared/types";
-import { PRESET_TAG_COLORS, getRandomTagColor } from "@/constants/tagColors";
+import { PRESET_TAG_COLORS, getColorForName } from "@/constants/tagColors";
 
 interface TagManageModalProps {
   visible: boolean;
@@ -36,6 +36,8 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [color, setColor] = useState(PRESET_TAG_COLORS[0]);
+  // 新規作成時、ユーザーが手動で色を選ぶまでは名前から色を自動導出する (Web と同一の決定的割当)
+  const [colorManuallySet, setColorManuallySet] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -46,12 +48,27 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
       if (tag) {
         setName(tag.name);
         setColor(tag.color);
+        setColorManuallySet(true);
       } else {
         setName("");
-        setColor(getRandomTagColor());
+        setColor(getColorForName(""));
+        setColorManuallySet(false);
       }
     }
   }, [visible, tag]);
+
+  const handleNameChange = (text: string) => {
+    setName(text);
+    // 新規作成 & 手動選択前は名前ベースの色に追従させる
+    if (!isEditMode && !colorManuallySet) {
+      setColor(getColorForName(text.trim()));
+    }
+  };
+
+  const handleColorSelect = (presetColor: string) => {
+    setColor(presetColor);
+    setColorManuallySet(true);
+  };
 
   const handleSave = async () => {
     const trimmedName = name.trim();
@@ -138,7 +155,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
             <TextInput
               style={styles.input}
               value={name}
-              onChangeText={setName}
+              onChangeText={handleNameChange}
               placeholder={t("forms.tag.namePlaceholderExample")}
               placeholderTextColor="#9CA3AF"
               maxLength={20}
@@ -159,7 +176,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
                     { backgroundColor: presetColor },
                     color === presetColor && styles.colorOptionSelected,
                   ]}
-                  onPress={() => setColor(presetColor)}
+                  onPress={() => handleColorSelect(presetColor)}
                   disabled={isLoading}
                 >
                   {color === presetColor && <Feather name="check" size={18} color="#374151" />}

@@ -3917,6 +3917,8 @@
       "previewLabel": "预览",
       "previewDefault": "标签名称",
       "selectModalTitle": "选择标签",
+      "searchPlaceholder": "搜索标签",
+      "noSearchResults": "没有匹配的标签",
       "actionPrompt": "请选择对标签的操作",
       "actionEdit": "编辑",
       "actionDelete": "删除",

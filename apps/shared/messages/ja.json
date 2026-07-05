@@ -3917,6 +3917,8 @@
       "previewLabel": "プレビュー",
       "previewDefault": "タグ名",
       "selectModalTitle": "タグを選択",
+      "searchPlaceholder": "タグを検索",
+      "noSearchResults": "一致するタグがありません",
       "actionPrompt": "タグの操作を選択してください",
       "actionEdit": "編集",
       "actionDelete": "削除",

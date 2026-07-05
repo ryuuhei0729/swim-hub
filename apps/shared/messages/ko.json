@@ -3917,6 +3917,8 @@
       "previewLabel": "미리보기",
       "previewDefault": "태그 이름",
       "selectModalTitle": "태그 선택",
+      "searchPlaceholder": "태그 검색",
+      "noSearchResults": "일치하는 태그가 없습니다",
       "actionPrompt": "태그 작업을 선택해 주세요",
       "actionEdit": "편집",
       "actionDelete": "삭제",

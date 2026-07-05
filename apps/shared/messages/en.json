@@ -3914,6 +3914,8 @@
       "previewLabel": "Preview",
       "previewDefault": "Tag name",
       "selectModalTitle": "Select tags",
+      "searchPlaceholder": "Search tags",
+      "noSearchResults": "No matching tags",
       "actionPrompt": "Choose an action for this tag",
       "actionEdit": "Edit",
       "actionDelete": "Delete",
