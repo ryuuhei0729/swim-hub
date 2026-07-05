@@ -8,6 +8,8 @@ import { validatePassword, type PasswordChecks } from "@/utils/validatePassword"
 
 interface SignupFormProps {
   onSuccess?: () => void;
+  /** 登録成功パネルの「ログイン画面へ」導線 */
+  onBackToLogin?: () => void;
 }
 
 type AuthError = {
@@ -65,7 +67,7 @@ function formatSignupError(t: TFunction, err: unknown): string {
     : t("auth.errorMap.defaultError");
 }
 
-export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
+export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -150,6 +152,33 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     }
   };
 
+  // 登録成功時はフォームを隠し、確認メール案内 + ログインへの導線を表示する (Web と同挙動)
+  if (message) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.formContainer}>
+          <View style={styles.header}>
+            <Ionicons name="mail-outline" size={40} color="#2563EB" />
+            <Text style={styles.successTitle}>{t("auth.success.emailConfirmTitle")}</Text>
+          </View>
+          <View style={styles.messageContainer}>
+            <Text style={styles.messageText}>{message}</Text>
+          </View>
+          {onBackToLogin && (
+            <Pressable
+              style={styles.button}
+              onPress={onBackToLogin}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.backToLogin")}
+            >
+              <Text style={styles.buttonText}>{t("auth.backToLogin")}</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.formContainer}>
@@ -160,12 +189,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {message && (
-          <View style={styles.messageContainer}>
-            <Text style={styles.messageText}>{message}</Text>
           </View>
         )}
 
@@ -300,6 +323,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#111827",
     marginBottom: 8,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+    marginTop: 12,
+    textAlign: "center",
   },
   errorContainer: {
     backgroundColor: "#FEF2F2",
