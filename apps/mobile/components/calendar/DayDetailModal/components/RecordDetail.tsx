@@ -438,6 +438,9 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         if (accessToken) {
           const images = await resolveGalleryImages("competition-images", imagePaths, accessToken);
           setCompetitionImages(images);
+        } else {
+          // トークンが取得できない場合、古い private 画像を表示し続けないよう空にする
+          setCompetitionImages([]);
         }
 
         if (error) throw error;

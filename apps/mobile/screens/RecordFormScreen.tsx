@@ -133,6 +133,9 @@ export const RecordFormScreen: React.FC = () => {
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
+  // 保存用の生パス一覧（表示専用の resolveGalleryImages 結果は署名URL取得に失敗した
+  // パスを除外するため、保存に使う image_paths はこちらを source of truth とする）
+  const [existingImagePaths, setExistingImagePaths] = useState<string[]>([]);
 
   // 動画の状態管理
   const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
@@ -205,19 +208,28 @@ export const RecordFormScreen: React.FC = () => {
   useEffect(() => {
     if (!currentCompetitionId || competitions.length === 0) {
       setExistingImages([]);
+      setExistingImagePaths([]);
       return;
     }
 
     const selectedCompetition = competitions.find((c) => c.id === currentCompetitionId);
     if (!selectedCompetition) {
       setExistingImages([]);
+      setExistingImagePaths([]);
       return;
     }
+
+    // 保存用の生パスは表示用の解決結果と独立して常に保持する
+    setExistingImagePaths(selectedCompetition.image_paths ?? []);
 
     // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
     let isMounted = true;
     getAccessToken().then((accessToken) => {
-      if (!isMounted || !accessToken) return;
+      if (!isMounted) return;
+      if (!accessToken) {
+        setExistingImages([]);
+        return;
+      }
       resolveGalleryImages(
         "competition-images",
         selectedCompetition.image_paths,
@@ -463,10 +475,10 @@ export const RecordFormScreen: React.FC = () => {
             uploadedImagePaths = uploadResults.map((r) => r.path);
           }
 
-          // 既存画像パスから削除されたものを除外し、新規画像パスを追加
-          const currentPaths = existingImages
-            .filter((img) => !deletedImageIds.includes(img.id))
-            .map((img) => img.id); // idがパス
+          // 既存画像パス（生パス。表示専用の resolveGalleryImages 結果は署名URL取得に
+          // 失敗したパスを除外してしまうため保存には使わない）から削除されたものを除外し、
+          // 新規画像パスを追加
+          const currentPaths = existingImagePaths.filter((path) => !deletedImageIds.includes(path));
           const updatedImagePaths = [...currentPaths, ...uploadedImagePaths];
 
           // 大会の画像パスを更新

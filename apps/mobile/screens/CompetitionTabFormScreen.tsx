@@ -173,6 +173,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
+  // 保存用の生パス一覧（表示専用の resolveGalleryImages 結果は署名URL取得に失敗した
+  // パスを除外するため、保存に使う image_paths はこちらを source of truth とする）
+  const [savedImagePaths, setSavedImagePaths] = useState<string[]>([]);
   const handleImagesChange = useCallback((newFiles: ImageFile[], deletedIds: string[]) => {
     setNewImageFiles(newFiles);
     setDeletedImageIds(deletedIds);
@@ -310,6 +313,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
         setPlace(competition.place || "");
         setPoolType(competition.pool_type ?? 0);
         setCompetitionNote(competition.note || "");
+        // 保存用の生パスは表示用の解決結果と独立して常に保持する
+        setSavedImagePaths(competition.image_paths ?? []);
         // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
         const accessToken = await getAccessToken();
         if (accessToken) {
@@ -319,6 +324,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
             accessToken,
           );
           setExistingImages(images);
+        } else {
+          setExistingImages([]);
         }
 
         // エントリーデータ取得
@@ -616,9 +623,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
           );
           newImagePaths = uploadResults.map((r) => r.path);
         }
-        const currentPaths = existingImages
-          .filter((img) => !deletedImageIds.includes(img.id))
-          .map((img) => img.id);
+        // 既存画像パス（生パス。表示専用の resolveGalleryImages 結果は署名URL取得に
+        // 失敗したパスを除外してしまうため保存には使わない）から削除されたものを除外
+        const currentPaths = savedImagePaths.filter((path) => !deletedImageIds.includes(path));
         const updatedImagePaths = [...currentPaths, ...newImagePaths];
 
         const formData = {
@@ -911,7 +918,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     poolType,
     competitionNote,
     newImageFiles,
-    existingImages,
+    savedImagePaths,
     deletedImageIds,
     showEntryTab,
     showRecordTab,

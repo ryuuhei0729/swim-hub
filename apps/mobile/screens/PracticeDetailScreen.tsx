@@ -110,7 +110,13 @@ export const PracticeDetailScreen: React.FC = () => {
       return;
     }
     getAccessToken().then((accessToken) => {
-      if (!isMounted || !accessToken) return;
+      if (!isMounted) return;
+      if (!accessToken) {
+        // トークンが取得できない場合、別の練習/セッション切れ後に古い private 画像を
+        // 表示し続けないよう空にする
+        setPracticeImages([]);
+        return;
+      }
       resolveGalleryImages("practice-images", practice.image_paths, accessToken).then((images) => {
         if (isMounted) setPracticeImages(images);
       });

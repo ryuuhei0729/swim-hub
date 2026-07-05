@@ -160,6 +160,9 @@ export const PracticeTabFormScreen: React.FC = () => {
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
+  // 保存用の生パス一覧（表示専用の resolveGalleryImages 結果は署名URL取得に失敗した
+  // パスを除外するため、保存に使う image_paths はこちらを source of truth とする）
+  const [savedImagePaths, setSavedImagePaths] = useState<string[]>([]);
   const handleImagesChange = useCallback((newFiles: ImageFile[], deletedIds: string[]) => {
     setNewImageFiles(newFiles);
     setDeletedImageIds(deletedIds);
@@ -247,9 +250,14 @@ export const PracticeTabFormScreen: React.FC = () => {
           note: practice.note || "",
         };
         setPracticeTab(practiceState);
+        // 保存用の生パスは表示用の解決結果と独立して常に保持する
+        setSavedImagePaths(practice.image_paths ?? []);
         // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
         getAccessToken().then((accessToken) => {
-          if (!accessToken) return;
+          if (!accessToken) {
+            setExistingImages([]);
+            return;
+          }
           resolveGalleryImages("practice-images", practice.image_paths, accessToken).then(
             setExistingImages,
           );
@@ -468,9 +476,9 @@ export const PracticeTabFormScreen: React.FC = () => {
           );
           newImagePaths = uploadResults.map((r) => r.path);
         }
-        const currentPaths = existingImages
-          .filter((img) => !deletedImageIds.includes(img.id))
-          .map((img) => img.id);
+        // 既存画像パス（生パス。表示専用の resolveGalleryImages 結果は署名URL取得に
+        // 失敗したパスを除外してしまうため保存には使わない）から削除されたものを除外
+        const currentPaths = savedImagePaths.filter((path) => !deletedImageIds.includes(path));
         const updatedImagePaths = [...currentPaths, ...newImagePaths];
 
         const formData = {
@@ -700,7 +708,7 @@ export const PracticeTabFormScreen: React.FC = () => {
     isEditMode,
     practiceTab,
     newImageFiles,
-    existingImages,
+    savedImagePaths,
     deletedImageIds,
     menus,
     teamId,

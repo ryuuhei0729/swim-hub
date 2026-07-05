@@ -100,7 +100,12 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
       // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
       const accessToken = await getAccessToken();
       if (accessToken) {
-        resolveGalleryImages("practice-images", imagePaths, accessToken).then(setPracticeImages);
+        try {
+          const images = await resolveGalleryImages("practice-images", imagePaths, accessToken);
+          setPracticeImages(images);
+        } catch (err) {
+          console.warn("練習画像の取得に失敗:", err);
+        }
       }
 
       const formattedLogs = (data.practice_logs || []).map(

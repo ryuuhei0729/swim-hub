@@ -27,9 +27,11 @@ export function useSignedImageUrl(
 
     if (!path) {
       setUrl(null);
+      setIsLoading(false);
       return;
     }
     if (!session?.access_token) {
+      setIsLoading(false);
       return;
     }
 
@@ -37,6 +39,10 @@ export function useSignedImageUrl(
     getSignedImageUrl(bucket, path, session.access_token)
       .then((resolved) => {
         if (!cancelled) setUrl(resolved);
+      })
+      .catch((err) => {
+        if (!cancelled) setUrl(null);
+        console.error("署名付き画像URLの取得に失敗:", err);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);

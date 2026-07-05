@@ -79,6 +79,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
+  // 保存用の生パス一覧（表示専用の resolveGalleryImages は失敗したパスを除外するため、
+  // 保存に使う image_paths はこちらを source of truth とする）
+  const [savedImagePaths, setSavedImagePaths] = useState<string[]>([]);
 
   // 画像変更のハンドラー
   const handleImagesChange = useCallback((newFiles: ImageFile[], deletedIds: string[]) => {
@@ -151,6 +154,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           setPoolType(competition.pool_type ?? 0);
           setNote(competition.note || "");
           // 既存画像を読み込み（competition-images は private バケットのため署名付きURLを解決する。Issue #36）
+          setSavedImagePaths(competition.image_paths ?? []);
           const accessToken = await getAccessToken();
           if (accessToken) {
             const images = await resolveGalleryImages(
@@ -254,10 +258,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         newImagePaths = uploadResults.map((r) => r.path);
       }
 
-      // 2. 既存画像パスから削除されたものを除外し、新規画像パスを追加
-      const currentPaths = existingImages
-        .filter((img) => !deletedImageIds.includes(img.id))
-        .map((img) => img.id);
+      // 2. 既存画像パス（生パス。表示専用の resolveGalleryImages 結果は失敗したパスを
+      //    除外してしまうため保存には使わない）から削除されたものを除外し、新規画像パスを追加
+      const currentPaths = savedImagePaths.filter((path) => !deletedImageIds.includes(path));
       const updatedImagePaths = [...currentPaths, ...newImagePaths];
 
       // team_id は除外: RLS UPDATE ポリシーが is_team_admin ガードを持ち、team_id は不変のため
