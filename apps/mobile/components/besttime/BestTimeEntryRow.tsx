@@ -145,17 +145,24 @@ export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
       </View>
 
       {/* タイム + 備考を1行 */}
-      <View style={styles.inputRow}>
-        <TextInput
-          style={[styles.timeInput, styles.timeCell, timeInvalid && styles.inputError, disabled && styles.inputDisabled]}
-          value={entry.time}
-          onChangeText={(text) => onUpdate(entry.key, { time: text })}
-          placeholder={t("onboarding.step3.timePlaceholder")}
-          placeholderTextColor="#9CA3AF"
-          keyboardType="numbers-and-punctuation"
-          editable={!disabled}
-          accessibilityLabel={t("onboarding.step3.timeAriaLabel", { styleName })}
-        />
+      <View style={[styles.inputRow, styles.inputRowTop]}>
+        <View style={styles.timeCell}>
+          <TextInput
+            style={[styles.timeInput, timeInvalid && styles.inputError, disabled && styles.inputDisabled]}
+            value={entry.time}
+            onChangeText={(text) => onUpdate(entry.key, { time: text })}
+            placeholder={t("onboarding.step3.timePlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numbers-and-punctuation"
+            editable={!disabled}
+            accessibilityLabel={t("onboarding.step3.timeAriaLabel", { styleName })}
+          />
+          {timeInvalid && (
+            <Text style={styles.errorText} accessibilityRole="alert">
+              {t("bulkBestTime.error.invalidTimeFormat")}
+            </Text>
+          )}
+        </View>
         <TextInput
           style={[styles.noteInput, styles.noteCell, disabled && styles.inputDisabled]}
           value={entry.note}
@@ -204,6 +211,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  inputRowTop: {
+    alignItems: "flex-start",
   },
   controlsRow: {
     flexDirection: "row",
@@ -303,6 +313,12 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: "#FCA5A5",
+  },
+  errorText: {
+    marginTop: 4,
+    fontSize: 11,
+    color: "#DC2626",
+    lineHeight: 14,
   },
   inputDisabled: {
     backgroundColor: "#F3F4F6",

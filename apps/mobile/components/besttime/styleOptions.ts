@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { parseTime } from "@apps/shared/utils/time";
 
 // =============================================================================
@@ -74,10 +75,19 @@ export function getStyleOption(styleId: number): StyleOption | undefined {
 
 /**
  * `StyleOption` を locale-aware な表示文字列に変換。
- * 例: ja → "50m 自由形", en → "50m Freestyle"
+ * Web 版 buildSwimStyleLabel と同じく、ja のみスペースなし。
+ * 例: ja → "50m自由形", en → "50m Freestyle"
+ *
+ * @param locale 省略時は i18next の現在言語を使う
  */
-export function formatStyleDisplay(style: StyleOption, t: (key: string) => string): string {
-  return `${style.distance}m ${t(`practice.styles.${style.styleKey}`)}`;
+export function formatStyleDisplay(
+  style: StyleOption,
+  t: (key: string) => string,
+  locale?: string,
+): string {
+  const lang = (locale ?? i18next.language ?? "").toLowerCase();
+  const separator = lang.startsWith("ja") ? "" : " ";
+  return `${style.distance}m${separator}${t(`practice.styles.${style.styleKey}`)}`;
 }
 
 export function genKey(): string {
@@ -95,13 +105,95 @@ export function isValidForLongCourse(style: StyleOption): boolean {
 }
 
 /**
- * 引き継ぎ (リレー) タイムを入力できる種目かどうか。
+ * 引き継ぎ (リレー) タイムを入力できる種目かどうか (Web 版 canRelay と同一)。
  * 背泳ぎ・個人メドレーは不可。200m 以上は自由形のみ可。
+ * 400/800/1500m 自由形のリレーは実競技に存在しない (4x50/4x100/4x200 のみ)。
  */
 export function canRelay(style: StyleOption): boolean {
   if (style.styleKey === "Ba" || style.styleKey === "IM") return false;
   if (style.distance >= 200 && style.styleKey !== "Fr") return false;
+  if (style.styleKey === "Fr" && style.distance > 200) return false;
   return true;
+}
+
+// =============================================================================
+// 一括入力マトリクス (Web 版 BulkBestTimeClient の 種目タブ × 距離 × 水路 と同期)
+// =============================================================================
+
+/** 種目タブ ID。i18n キーは `bulkBestTime.tabs.${id}` */
+export type StyleTabId = "fr" | "br" | "ba" | "fly" | "im";
+
+export const STYLE_TAB_IDS: StyleTabId[] = ["fr", "br", "ba", "fly", "im"];
+
+const TAB_TO_STYLE_KEY: Record<StyleTabId, StyleKey> = {
+  fr: "Fr",
+  br: "Br",
+  ba: "Ba",
+  fly: "Fly",
+  im: "IM",
+};
+
+/** タブに属する種目 (STYLES の定義順 = 距離昇順) */
+export function getStylesForTab(tab: StyleTabId): StyleOption[] {
+  const key = TAB_TO_STYLE_KEY[tab];
+  return STYLES.filter((s) => s.styleKey === key);
+}
+
+/** マトリクスのセルキー (Web 版 getInputKey と同一形式: `styleId_poolType_relay`) */
+export function getCellKey(styleId: number, poolType: 0 | 1, isRelaying: boolean): string {
+  return `${styleId}_${poolType}_${isRelaying ? "1" : "0"}`;
+}
+
+/** マトリクスの1セル入力値 (タイム + 備考) */
+export interface CellInput {
+  time: string;
+  note: string;
+}
+
+/** セルキー → 入力値 のマップ。キーが構造を一意に決めるため重複は起こり得ない */
+export type BestTimeInputMap = Record<string, CellInput>;
+
+/** 入力マップから保存用レコード配列を計算する (Web 版と同じく不正・空セルは除外) */
+export function computeMatrixRecords(inputs: BestTimeInputMap): BestTimeRecordDraft[] {
+  const records: BestTimeRecordDraft[] = [];
+  for (const [key, input] of Object.entries(inputs)) {
+    const seconds = parseTimeStrict(input.time);
+    if (seconds === null) continue;
+    const [styleIdStr, poolTypeStr, relayStr] = key.split("_");
+    records.push({
+      styleId: Number(styleIdStr),
+      poolType: Number(poolTypeStr) === 1 ? 1 : 0,
+      isRelaying: relayStr === "1",
+      time: seconds,
+      note: input.note.trim() || null,
+    });
+  }
+  return records;
+}
+
+// =============================================================================
+// タイム形式バリデーション (Web 版 BulkBestTimeClient と同一)
+// =============================================================================
+
+/**
+ * タイム入力の許容形式 (Web 版 BulkBestTimeClient.handleInputChange と同じ正規表現):
+ *  従来形式  \d+(:\d+)?(\.\d+)?  → "1:23.45" "1:30" "23.45" "30"
+ *  クイック式 \d+(-\d+){1,2}     → "31-2" "1-05-3"
+ * 末尾 s は許容。多重ドット ("1.23.45")・多重コロン ("1:2:3")・連続区切り・英字を構造的に弾く。
+ */
+export const TIME_FORMAT_REGEX = /^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i;
+
+/**
+ * 構造チェック (TIME_FORMAT_REGEX) + parseTime > 0 を通過した秒数を返す。
+ * 不正な形式・空文字は null。"1.23.45" のような typo が parseFloat で
+ * 1.23 秒として誤保存されるのを防ぐ。
+ */
+export function parseTimeStrict(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (!TIME_FORMAT_REGEX.test(trimmed)) return null;
+  const seconds = parseTime(trimmed);
+  return seconds > 0 ? seconds : null;
 }
 
 // =============================================================================
@@ -136,20 +228,20 @@ export function getDuplicateKeys(entries: BestTimeEntry[]): Set<string> {
   return keys;
 }
 
-/** 保存可能か (オンボーディング): 1件以上 / 重複なし / 全タイムが妥当 */
+/** 保存可能か (オンボーディング): 1件以上 / 重複なし / 全タイムが妥当 (形式チェック込み) */
 export function canSave(entries: BestTimeEntry[]): boolean {
   if (entries.length === 0) return false;
   if (hasDuplicates(entries)) return false;
-  return entries.every((e) => parseTime(e.time) > 0);
+  return entries.every((e) => parseTimeStrict(e.time) !== null);
 }
 
 // =============================================================================
 // バリデーションロジック (一括入力: 通常 + 引き継ぎ)
 // =============================================================================
 
-/** 入力値が「入力済みだが不正」か (空は不正扱いしない) */
+/** 入力値が「入力済みだが不正」か (空は不正扱いしない / 形式チェック込み) */
 export function isEnteredButInvalid(raw: string): boolean {
-  return raw.trim() !== "" && parseTime(raw) <= 0;
+  return raw.trim() !== "" && parseTimeStrict(raw) === null;
 }
 
 export interface BulkBestTimeState {
@@ -157,7 +249,7 @@ export interface BulkBestTimeState {
   records: BestTimeRecordDraft[];
   /** 重複しているエントリーの key 集合 */
   duplicateKeys: Set<string>;
-  /** 入力済みだが不正なタイムが存在するか */
+  /** 入力済みだが不正なタイムが存在するか (保存自体はブロックしない) */
   hasInvalidTime: boolean;
   /** 保存ボタンを活性化してよいか */
   canSave: boolean;
@@ -169,6 +261,8 @@ export interface BulkBestTimeState {
  * 一括入力エントリーを保存用レコードへ変換し、保存可否・重複・件数を計算する。
  * 各エントリーは1レコード (isRelaying で通常/引き継ぎを区別)。
  * 重複判定は 種目 × 水路 × 引き継ぎ区分 で行う。
+ * Web 版と同じく、不正なタイムは保存対象から除外するだけで保存はブロックしない
+ * (有効な入力が1件以上 + 重複なし で保存可)。
  */
 export function computeBulkState(entries: BestTimeEntry[]): BulkBestTimeState {
   const records: BestTimeRecordDraft[] = [];
@@ -179,8 +273,8 @@ export function computeBulkState(entries: BestTimeEntry[]): BulkBestTimeState {
   for (const e of entries) {
     const trimmed = e.time.trim();
     if (!trimmed) continue;
-    const seconds = parseTime(trimmed);
-    if (seconds <= 0) {
+    const seconds = parseTimeStrict(trimmed);
+    if (seconds === null) {
       hasInvalidTime = true;
       continue;
     }
@@ -202,6 +296,7 @@ export function computeBulkState(entries: BestTimeEntry[]): BulkBestTimeState {
   }
 
   const validCount = records.length;
-  const canSave = validCount >= 1 && !hasInvalidTime && duplicateKeys.size === 0;
+  // Web 版セマンティクス: 不正セルは除外するだけで、有効1件以上 + 重複なし なら保存可
+  const canSave = validCount >= 1 && duplicateKeys.size === 0;
   return { records, duplicateKeys, hasInvalidTime, canSave, validCount };
 }
