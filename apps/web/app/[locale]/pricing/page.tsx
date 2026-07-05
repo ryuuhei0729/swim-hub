@@ -16,6 +16,7 @@ const COMPARISON_ROWS: {
     | "rowSplitTime"
     | "rowPracticeTime"
     | "rowImageUpload"
+    | "rowVideoUpload"
     | "rowScanner"
     | "rowTimer";
   free: boolean | "valueLimitedSplit" | "valueLimitedPractice";
@@ -28,13 +29,14 @@ const COMPARISON_ROWS: {
   { labelKey: "rowGoals", free: true, premium: true },
   { labelKey: "rowSplitTime", free: "valueLimitedSplit", premium: "valueUnlimited" },
   { labelKey: "rowPracticeTime", free: "valueLimitedPractice", premium: "valueUnlimited" },
-  { labelKey: "rowImageUpload", free: false, premium: true },
+  { labelKey: "rowImageUpload", free: true, premium: true },
+  { labelKey: "rowVideoUpload", free: false, premium: true },
   { labelKey: "rowScanner", free: true, premium: true },
   { labelKey: "rowTimer", free: true, premium: true },
 ];
 
 const FAQ_KEYS = ["q1", "q2", "q3", "q4"] as const;
-const FREE_FEATURE_KEYS = ["feature1", "feature2", "feature3", "feature4", "feature5"] as const;
+const FREE_FEATURE_KEYS = ["feature1", "feature2", "feature3", "feature4", "feature5", "feature6"] as const;
 const PREMIUM_FEATURE_KEYS = ["feature1", "feature2", "feature3", "feature4", "feature5"] as const;
 
 export async function generateMetadata({

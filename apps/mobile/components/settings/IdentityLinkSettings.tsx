@@ -13,7 +13,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import Svg, { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
-import { getRedirectUri, extractTokensFromUrl } from "@/lib/google-auth";
+import { getRedirectUri, extractTokensFromUrl, oauthSessionGuard } from "@/lib/google-auth";
 import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
 import type { UserIdentity } from "@supabase/supabase-js";
 
@@ -123,31 +123,51 @@ export const IdentityLinkSettings: React.FC = () => {
         return;
       }
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+      oauthSessionGuard.active = true;
+      let result: Awaited<ReturnType<typeof WebBrowser.openAuthSessionAsync>>;
+      try {
+        result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+      } catch (browserErr) {
+        // ブラウザ起動失敗時もガードを解除する
+        oauthSessionGuard.active = false;
+        throw browserErr;
+      }
 
       if (result.type === "success" && result.url) {
         const tokens = extractTokensFromUrl(result.url);
         if (tokens.error) {
+          oauthSessionGuard.active = false;
           setError(tokens.error);
           return;
         }
         if (tokens.accessToken && tokens.refreshToken) {
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token: tokens.accessToken,
-            refresh_token: tokens.refreshToken,
-          });
+          // setSession 完了後にガードを解除する
+          let sessionError: import("@supabase/supabase-js").AuthError | null = null;
+          try {
+            const { error } = await supabase.auth.setSession({
+              access_token: tokens.accessToken,
+              refresh_token: tokens.refreshToken,
+            });
+            sessionError = error;
+          } finally {
+            oauthSessionGuard.active = false;
+          }
           if (sessionError) {
             setError(localizeSupabaseAuthError(sessionError));
             return;
           }
           await fetchIdentities();
         } else {
+          oauthSessionGuard.active = false;
           setError(t("auth.mobile.tokensNotReceived"));
         }
-      } else if (result.type === "cancel" || result.type === "dismiss") {
-        // ユーザーがキャンセル：エラー表示不要
+      } else {
+        // cancel / dismiss / その他
+        oauthSessionGuard.active = false;
       }
     } catch (err) {
+      // 例外時もガードが残らないよう解除する
+      oauthSessionGuard.active = false;
       const rawMessage = err instanceof Error ? err.message : t("auth.mobile.unknownError");
       setError(localizeSupabaseAuthError({ message: rawMessage }));
     } finally {

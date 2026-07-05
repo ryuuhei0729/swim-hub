@@ -6,8 +6,8 @@ import React from "react";
 import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
 import { DashboardAPI } from "@apps/shared/api/dashboard";
 import { getStyles, getUserTags, getUserTeams } from "@/lib/data-loaders/common";
-import { endOfMonth, startOfMonth } from "date-fns";
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { toZonedTime } from "date-fns-tz";
+import { getCalendarGridRange } from "../_utils/calendarGridRange";
 import DashboardClient from "../_client/DashboardClient";
 import type { Style, PracticeTag, TeamMembership, Team } from "@apps/shared/types";
 import type { CalendarItem, MonthlySummary } from "@apps/shared/types/ui";
@@ -32,11 +32,8 @@ async function getCalendarData(
   const TIMEZONE = "Asia/Tokyo";
   const zonedDate = toZonedTime(currentDate, TIMEZONE);
 
-  // 月の開始日と終了日を計算（タイムゾーン考慮済み）
-  const monthStart = startOfMonth(zonedDate);
-  const monthEnd = endOfMonth(zonedDate);
-  const startDate = formatInTimeZone(monthStart, TIMEZONE, "yyyy-MM-dd");
-  const endDate = formatInTimeZone(monthEnd, TIMEZONE, "yyyy-MM-dd");
+  // グリッドの可視範囲（日曜起点、前月末〜翌月初を含む）をタイムゾーン考慮済みの日付で計算
+  const { startDate, endDate } = getCalendarGridRange(zonedDate);
 
   // 並行取得でパフォーマンス最適化
   const [calendarItems, monthlySummary] = await Promise.all([

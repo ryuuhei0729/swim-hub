@@ -407,7 +407,7 @@ export class AttendanceAPI {
    */
   private getEditMark(): string {
     const now = new Date();
-    return `(${format(now, "MM/dd HH:mm")}編集)`;
+    return `(${format(now, "MM/dd HH:mm")}締切後編集)`;
   }
 
   /**
@@ -416,7 +416,10 @@ export class AttendanceAPI {
   private addEditMark(note: string): string {
     const editMark = this.getEditMark();
     // 既存の編集マークを削除（重複を防ぐ）
-    const cleanedNote = note.replace(/\s*\(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}編集\)\s*/g, "").trim();
+    // 旧形式「編集」と新形式・Web由来「締切後編集」の両方に対応
+    const cleanedNote = note
+      .replace(/\s*\(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}(?:締切後)?編集\)\s*/g, "")
+      .trim();
     return cleanedNote ? `${cleanedNote} ${editMark}` : editMark;
   }
 

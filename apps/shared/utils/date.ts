@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { addMonths, endOfMonth, format, isValid, parseISO, startOfMonth } from "date-fns";
-import { enUS, ja } from "date-fns/locale";
+import { de, enUS, ja, ko, zhCN } from "date-fns/locale";
 import type { Locale } from "date-fns";
 
 // =============================================================================
@@ -11,12 +11,15 @@ import type { Locale } from "date-fns";
 // =============================================================================
 
 /** サポートロケール (i18next の言語コードと一致) */
-export type SupportedLocale = "ja" | "en";
+export type SupportedLocale = "ja" | "en" | "zh" | "ko" | "de";
 
-/** date-fns Locale オブジェクトのマップ */
+/** date-fns Locale オブジェクトのマップ。zh は簡体字 (zh-CN) を採用。 */
 const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
   ja,
   en: enUS,
+  zh: zhCN,
+  ko,
+  de,
 };
 
 // =============================================================================
@@ -35,14 +38,38 @@ export type DateStyle =
   | "yearMonth";
 
 const DATE_PATTERNS: Record<DateStyle, Record<SupportedLocale, string>> = {
-  iso: { ja: "yyyy-MM-dd", en: "yyyy-MM-dd" },
-  short: { ja: "M月d日", en: "MMM d" },
-  shortWithWeekday: { ja: "M月d日(E)", en: "EEE, MMM d" },
-  long: { ja: "yyyy年M月d日", en: "MMM d, yyyy" },
-  longWithWeekday: { ja: "yyyy年M月d日(E)", en: "EEE, MMM d, yyyy" },
-  longPadded: { ja: "yyyy年MM月dd日", en: "MMMM d, yyyy" },
-  numeric: { ja: "yyyy/MM/dd", en: "yyyy/MM/dd" },
-  yearMonth: { ja: "yyyy年M月", en: "MMMM yyyy" },
+  iso: { ja: "yyyy-MM-dd", en: "yyyy-MM-dd", zh: "yyyy-MM-dd", ko: "yyyy-MM-dd", de: "yyyy-MM-dd" },
+  short: { ja: "M月d日", en: "MMM d", zh: "M月d日", ko: "M월 d일", de: "d. MMM" },
+  shortWithWeekday: {
+    ja: "M月d日(E)",
+    en: "EEE, MMM d",
+    zh: "M月d日(E)",
+    ko: "M월 d일 (E)",
+    de: "EEE, d. MMM",
+  },
+  long: {
+    ja: "yyyy年M月d日",
+    en: "MMM d, yyyy",
+    zh: "yyyy年M月d日",
+    ko: "yyyy년 M월 d일",
+    de: "d. MMMM yyyy",
+  },
+  longWithWeekday: {
+    ja: "yyyy年M月d日(E)",
+    en: "EEE, MMM d, yyyy",
+    zh: "yyyy年M月d日(E)",
+    ko: "yyyy년 M월 d일 (E)",
+    de: "EEE, d. MMMM yyyy",
+  },
+  longPadded: {
+    ja: "yyyy年MM月dd日",
+    en: "MMMM d, yyyy",
+    zh: "yyyy年MM月dd日",
+    ko: "yyyy년 MM월 dd일",
+    de: "dd. MMMM yyyy",
+  },
+  numeric: { ja: "yyyy/MM/dd", en: "yyyy/MM/dd", zh: "yyyy/MM/dd", ko: "yyyy/MM/dd", de: "dd.MM.yyyy" },
+  yearMonth: { ja: "yyyy年M月", en: "MMMM yyyy", zh: "yyyy年M月", ko: "yyyy년 M월", de: "MMMM yyyy" },
 };
 
 /**
@@ -86,9 +113,21 @@ export function addMonthsImmutable(date: Date, months: number): Date {
 export type DateTimeStyle = "long" | "short" | "shortDate";
 
 const DATETIME_PATTERNS: Record<DateTimeStyle, Record<SupportedLocale, string>> = {
-  long: { ja: "yyyy年M月d日 HH:mm", en: "MMM d, yyyy HH:mm" },
-  short: { ja: "M/d HH:mm", en: "M/d HH:mm" },
-  shortDate: { ja: "M月d日 HH:mm", en: "MMM d HH:mm" },
+  long: {
+    ja: "yyyy年M月d日 HH:mm",
+    en: "MMM d, yyyy HH:mm",
+    zh: "yyyy年M月d日 HH:mm",
+    ko: "yyyy년 M월 d일 HH:mm",
+    de: "d. MMMM yyyy HH:mm",
+  },
+  short: { ja: "M/d HH:mm", en: "M/d HH:mm", zh: "M/d HH:mm", ko: "M/d HH:mm", de: "d.M. HH:mm" },
+  shortDate: {
+    ja: "M月d日 HH:mm",
+    en: "MMM d HH:mm",
+    zh: "M月d日 HH:mm",
+    ko: "M월 d일 HH:mm",
+    de: "d. MMM HH:mm",
+  },
 };
 
 /**

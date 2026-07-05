@@ -1,0 +1,10 @@
+{
+  "CFBundleDisplayName": "SwimHub",
+  "NSCameraUsageDescription": "프로필 사진을 촬영하기 위해 카메라 접근 권한이 필요합니다.",
+  "NSPhotoLibraryUsageDescription": "프로필 사진을 선택하기 위해 사진 라이브러리 접근 권한이 필요합니다.",
+  "NSCalendarsUsageDescription": "연습 및 대회 일정을 캘린더에 동기화하기 위해 사용합니다.",
+  "NSCalendarsWriteOnlyAccessUsageDescription": "연습 및 대회 일정을 캘린더에 추가하기 위해 사용합니다.",
+  "NSCalendarsFullAccessUsageDescription": "연습 및 대회 일정을 캘린더에 동기화하기 위해 사용합니다.",
+  "NSRemindersUsageDescription": "미리 알림에 접근하기 위해 사용합니다.",
+  "NSRemindersFullAccessUsageDescription": "미리 알림을 관리하기 위해 사용합니다."
+}

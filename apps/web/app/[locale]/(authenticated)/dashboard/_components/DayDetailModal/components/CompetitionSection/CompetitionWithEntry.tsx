@@ -2,7 +2,12 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+  PencilIcon,
+  TrashIcon,
+  MapPinIcon,
+  ClipboardDocumentListIcon,
+} from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@/utils/formatters";
 import { useAuth } from "@/contexts";
 import { EntryAPI } from "@swim-hub/shared/api/entries";
@@ -245,8 +250,12 @@ export function CompetitionWithEntry({
           </div>
         </div>
         {place && (
-          <p className="text-sm text-gray-600 mt-1" data-testid="competition-place-display">
-            📍 {place}
+          <p
+            className="text-sm text-gray-600 mt-1 flex items-center gap-1"
+            data-testid="competition-place-display"
+          >
+            <MapPinIcon className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
+            {place}
           </p>
         )}
         {authError && (
@@ -264,7 +273,10 @@ export function CompetitionWithEntry({
         >
           <div className="flex items-center justify-between mb-1.5 sm:mb-3">
             <div className="flex items-center gap-1 sm:gap-2">
-              <span className="text-sm sm:text-lg">📝</span>
+              <ClipboardDocumentListIcon
+                className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700 shrink-0"
+                aria-hidden="true"
+              />
               <h6 className="text-xs sm:text-sm font-semibold text-orange-900">
                 <span className="sm:hidden">{t("entry.entered")}</span>
                 <span className="hidden sm:inline">{t("entry.enteredNoRecord")}</span>

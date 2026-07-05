@@ -2,17 +2,19 @@
  * Issue #32 Phase 1-A: LanguageSwitcher コンポーネント単体テスト
  *
  * Sprint Contract 検証観点:
- *   [V-09-LS] ja ボタンクリック → /ja/<current-path> に遷移
- *   [V-09-LS] en ボタンクリック → /en/<current-path> に遷移
- *   [V-09-LS] 現在のロケールボタンに aria-current="page" が付くこと
+ *   [V-09-LS] トリガークリックでメニューが開き、各ロケール項目が表示される
+ *   [V-09-LS] en 項目クリック → /en/<current-path> に遷移
+ *   [V-09-LS] ja 項目クリック → /ja/<current-path> に遷移
+ *   [V-09-LS] 現在のロケール項目に aria-current が付くこと
  *   [V-14] LanguageSwitcher が Header / Sidebar に存在すること (smoke test)
  *
- * テスト対象: components/ui/LanguageSwitcher.tsx (Phase 1-A で新規作成)
+ * テスト対象: components/ui/LanguageSwitcher.tsx
+ *   2026-06-10: 言語数増加 (ja/en/zh/ko) に伴いインライントグル → プルダウンに変更。
+ *   トリガーは common.language ラベル、メニュー項目はネイティブ表記 + data-testid。
  *
  * モックパターン:
- *   実装は useLocale を "next-intl" から、useRouter / usePathname / Link を
- *   "@/i18n/navigation" (createNavigation の返り値) から import する。
- *   テストもこれに合わせて両方の module を mock する。
+ *   実装は useLocale / useTranslations を "next-intl" から import する。
+ *   t("language") / t("aria.switchLanguage") は mock がキー文字列をそのまま返す。
  */
 
 import { render, screen } from "@testing-library/react";
@@ -23,57 +25,52 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 // モック設定
 // ---------------------------------------------------------------------------
 
-const { mockRouterPush, mockRouterReplace } = vi.hoisted(() => ({
-  mockRouterPush: vi.fn(),
-  mockRouterReplace: vi.fn(),
-}));
-
 vi.mock("next-intl", () => ({
   useLocale: vi.fn(() => "ja"),
   useTranslations: vi.fn(() => (key: string) => key),
 }));
 
-// 実装は @/i18n/navigation (createNavigation の返り値) を使う
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: vi.fn(() => ({
-    push: mockRouterPush,
-    replace: mockRouterReplace,
-    prefetch: vi.fn(),
-  })),
-  usePathname: vi.fn(() => "/dashboard"),
-  Link: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
-  redirect: vi.fn(),
-}));
+// 実装は @/i18n/routing の stripLocale のみ利用 (純関数なので実体を使う)
 
 // ---------------------------------------------------------------------------
 // テスト本体
 // ---------------------------------------------------------------------------
 
-describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
+describe("LanguageSwitcher コンポーネント (Issue #32 / プルダウン版)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   // -------------------------------------------------------------------------
-  // [V-09-LS] 基本レンダリング
+  // [V-09-LS] トリガーとメニュー展開
   // -------------------------------------------------------------------------
   describe("基本レンダリング", () => {
-    it("ja と en の2つのボタン/リンクが表示される", async () => {
+    it("初期状態ではトリガーのみ表示され、メニュー項目は閉じている", async () => {
       const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
 
       render(<LanguageSwitcher />);
 
-      // "ja" または "JA" または "日本語" のいずれかが表示されること
-      const jaElement = screen.queryByText(/^(ja|JA|日本語)$/i);
-      expect(jaElement).not.toBeNull();
+      // トリガーボタンが存在する
+      const trigger = screen.getByTestId("language-switcher-trigger");
+      expect(trigger).not.toBeNull();
+      // disclosure パターン: 閉じた状態では aria-expanded が false
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      // メニュー項目はまだ表示されていない
+      expect(screen.queryByTestId("language-switcher-en")).toBeNull();
+    });
 
-      // "en" または "EN" または "English" のいずれかが表示されること
-      const enElement = screen.queryByText(/^(en|EN|English)$/i);
-      expect(enElement).not.toBeNull();
+    it("トリガークリックで ja/en/zh/ko/de の5項目が表示される", async () => {
+      const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
+
+      render(<LanguageSwitcher />);
+
+      await userEvent.click(screen.getByTestId("language-switcher-trigger"));
+
+      expect(screen.getByTestId("language-switcher-ja")).not.toBeNull();
+      expect(screen.getByTestId("language-switcher-en")).not.toBeNull();
+      expect(screen.getByTestId("language-switcher-zh")).not.toBeNull();
+      expect(screen.getByTestId("language-switcher-ko")).not.toBeNull();
+      expect(screen.getByTestId("language-switcher-de")).not.toBeNull();
     });
   });
 
@@ -81,11 +78,10 @@ describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
   // [V-09-LS] ロケール切り替え動作
   // -------------------------------------------------------------------------
   describe("ロケール切り替え", () => {
-    it("現在ロケールが ja のとき、en をクリックすると window.location.assign('/en/...') が呼ばれる", async () => {
+    it("現在ロケールが ja のとき、en 項目クリックで window.location.assign('/en/...') が呼ばれる", async () => {
       const { useLocale } = await import("next-intl");
       vi.mocked(useLocale).mockReturnValue("ja");
 
-      // window.location.pathname を /ja/dashboard に固定し、assign を mock
       const assignMock = vi.fn();
       Object.defineProperty(window, "location", {
         writable: true,
@@ -96,16 +92,14 @@ describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
 
       render(<LanguageSwitcher />);
 
-      const enButton =
-        screen.queryByRole("button", { name: /en/i }) ?? screen.getByText(/^(en|EN|English)$/i);
-      await userEvent.click(enButton);
+      await userEvent.click(screen.getByTestId("language-switcher-trigger"));
+      await userEvent.click(screen.getByTestId("language-switcher-en"));
 
-      // 実装は window.location.assign("/en/dashboard") を呼ぶ。
       expect(assignMock).toHaveBeenCalledWith("/en/dashboard");
       expect(assignMock).toHaveBeenCalledTimes(1);
     });
 
-    it("現在ロケールが en のとき、ja をクリックすると window.location.assign('/ja/...') が呼ばれる", async () => {
+    it("現在ロケールが en のとき、ja 項目クリックで window.location.assign('/ja/...') が呼ばれる", async () => {
       const { useLocale } = await import("next-intl");
       vi.mocked(useLocale).mockReturnValue("en");
 
@@ -119,12 +113,71 @@ describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
 
       render(<LanguageSwitcher />);
 
-      const jaButton =
-        screen.queryByRole("button", { name: /ja/i }) ?? screen.getByText(/^(ja|JA|日本語)$/i);
-      await userEvent.click(jaButton);
+      await userEvent.click(screen.getByTestId("language-switcher-trigger"));
+      await userEvent.click(screen.getByTestId("language-switcher-ja"));
 
       expect(assignMock).toHaveBeenCalledWith("/ja/dashboard");
       expect(assignMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("zh 項目クリックで window.location.assign('/zh/...') が呼ばれる", async () => {
+      const { useLocale } = await import("next-intl");
+      vi.mocked(useLocale).mockReturnValue("ja");
+
+      const assignMock = vi.fn();
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: { pathname: "/ja/settings", search: "", assign: assignMock },
+      });
+
+      const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
+
+      render(<LanguageSwitcher />);
+
+      await userEvent.click(screen.getByTestId("language-switcher-trigger"));
+      await userEvent.click(screen.getByTestId("language-switcher-zh"));
+
+      expect(assignMock).toHaveBeenCalledWith("/zh/settings");
+    });
+
+    it("ko 項目クリックで window.location.assign('/ko/...') が呼ばれる", async () => {
+      const { useLocale } = await import("next-intl");
+      vi.mocked(useLocale).mockReturnValue("ja");
+
+      const assignMock = vi.fn();
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: { pathname: "/ja/dashboard", search: "", assign: assignMock },
+      });
+
+      const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
+
+      render(<LanguageSwitcher />);
+
+      await userEvent.click(screen.getByTestId("language-switcher-trigger"));
+      await userEvent.click(screen.getByTestId("language-switcher-ko"));
+
+      expect(assignMock).toHaveBeenCalledWith("/ko/dashboard");
+    });
+
+    it("de 項目クリックで window.location.assign('/de/...') が呼ばれる", async () => {
+      const { useLocale } = await import("next-intl");
+      vi.mocked(useLocale).mockReturnValue("ja");
+
+      const assignMock = vi.fn();
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: { pathname: "/ja/dashboard", search: "", assign: assignMock },
+      });
+
+      const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
+
+      render(<LanguageSwitcher />);
+
+      await userEvent.click(screen.getByTestId("language-switcher-trigger"));
+      await userEvent.click(screen.getByTestId("language-switcher-de"));
+
+      expect(assignMock).toHaveBeenCalledWith("/de/dashboard");
     });
   });
 
@@ -132,7 +185,7 @@ describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
   // [V-09-LS] aria-current による現在ロケールの表示
   // -------------------------------------------------------------------------
   describe("アクセシビリティ — 現在ロケールの aria-current", () => {
-    it("現在ロケールが ja のとき、ja ボタンに aria-current='page' が付く", async () => {
+    it("現在ロケールが ja のとき、ja 項目に aria-current が付く", async () => {
       const { useLocale } = await import("next-intl");
       vi.mocked(useLocale).mockReturnValue("ja");
 
@@ -140,36 +193,51 @@ describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
 
       render(<LanguageSwitcher />);
 
-      // aria-current="page" または aria-current="true" のいずれかの実装を許容
-      const currentElements = document.querySelectorAll(
-        '[aria-current="page"], [aria-current="true"]',
-      );
-      expect(currentElements.length).toBeGreaterThan(0);
+      await userEvent.click(screen.getByTestId("language-switcher-trigger"));
 
-      // 現在のロケール要素が ja であること
-      const currentElement = Array.from(currentElements).find((el) =>
-        el.textContent?.match(/^(ja|JA|日本語)$/i),
-      );
-      expect(currentElement).toBeDefined();
+      const jaItem = screen.getByTestId("language-switcher-ja");
+      expect(jaItem.getAttribute("aria-current")).toBe("true");
+      // 他ロケールには付かない
+      expect(screen.getByTestId("language-switcher-en").getAttribute("aria-current")).toBeNull();
     });
+  });
 
-    it("現在ロケールが en のとき、en ボタンに aria-current='page' が付く", async () => {
-      const { useLocale } = await import("next-intl");
-      vi.mocked(useLocale).mockReturnValue("en");
-
+  // -------------------------------------------------------------------------
+  // [C1] Escape キーでメニューが閉じ、トリガーにフォーカスが戻る (disclosure パターン)
+  // -------------------------------------------------------------------------
+  describe("Escape キーによるメニュー閉鎖 (disclosure パターン)", () => {
+    it("メニューが開いた状態で Escape を押すと項目が非表示になる", async () => {
       const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
 
       render(<LanguageSwitcher />);
 
-      const currentElements = document.querySelectorAll(
-        '[aria-current="page"], [aria-current="true"]',
-      );
-      expect(currentElements.length).toBeGreaterThan(0);
+      // メニューを開く
+      await userEvent.click(screen.getByTestId("language-switcher-trigger"));
+      expect(screen.getByTestId("language-switcher-en")).not.toBeNull();
 
-      const currentElement = Array.from(currentElements).find((el) =>
-        el.textContent?.match(/^(en|EN|English)$/i),
-      );
-      expect(currentElement).toBeDefined();
+      // Escape キーを押す
+      await userEvent.keyboard("{Escape}");
+
+      // メニューが閉じている
+      expect(screen.queryByTestId("language-switcher-en")).toBeNull();
+    });
+
+    it("Escape 後にトリガーボタンがフォーカスを持つ", async () => {
+      const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
+
+      render(<LanguageSwitcher />);
+
+      const trigger = screen.getByTestId("language-switcher-trigger");
+
+      // メニューを開く
+      await userEvent.click(trigger);
+      expect(screen.getByTestId("language-switcher-en")).not.toBeNull();
+
+      // Escape キーを押す
+      await userEvent.keyboard("{Escape}");
+
+      // トリガーにフォーカスが戻る
+      expect(document.activeElement).toBe(trigger);
     });
   });
 
@@ -177,25 +245,24 @@ describe("LanguageSwitcher コンポーネント (Issue #32 Phase 1-A)", () => {
   // [V-09-LS] 現在と同じロケールをクリックしても遷移しない (UX)
   // -------------------------------------------------------------------------
   describe("同一ロケールクリック時の挙動", () => {
-    it("現在ロケールが ja のとき ja をクリックしても router.push は呼ばれない", async () => {
+    it("現在ロケールが ja のとき ja 項目をクリックしても window.location.assign は呼ばれない", async () => {
       const { useLocale } = await import("next-intl");
       vi.mocked(useLocale).mockReturnValue("ja");
+
+      const assignMock = vi.fn();
+      Object.defineProperty(window, "location", {
+        writable: true,
+        value: { pathname: "/ja/dashboard", search: "", assign: assignMock },
+      });
 
       const { default: LanguageSwitcher } = await import("@/components/ui/LanguageSwitcher");
 
       render(<LanguageSwitcher />);
 
-      const jaButton =
-        screen.queryByRole("button", { name: /^(ja|JA)$/i }) ??
-        screen.queryByText(/^(ja|JA|日本語)$/i);
+      await userEvent.click(screen.getByTestId("language-switcher-trigger"));
+      await userEvent.click(screen.getByTestId("language-switcher-ja"));
 
-      // ボタンが見つからない場合は構造変更を検出するためテスト失敗にする
-      expect(jaButton).not.toBeNull();
-
-      await userEvent.click(jaButton!);
-      // 同一ロケールへの遷移は行わない
-      expect(mockRouterPush).not.toHaveBeenCalled();
-      expect(mockRouterReplace).not.toHaveBeenCalled();
+      expect(assignMock).not.toHaveBeenCalled();
     });
   });
 });

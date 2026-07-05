@@ -1,8 +1,9 @@
 "use client";
 
 import { forwardRef } from "react";
+import { MapPinIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import type { PracticeShareData } from "./types";
-import { formatTime, formatCircle, getStyleNameJp, getCategoryNameJp } from "./utils";
+import { formatTime, formatCircle, getStyleNameJp, getTagTextColor } from "./utils";
 
 interface PracticeShareCardProps {
   data: PracticeShareData;
@@ -20,14 +21,34 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
         {/* コンテンツ */}
         <div className="flex flex-col p-5">
           {/* ヘッダー：日付と練習情報 */}
-          <div className="mb-4 pb-4 border-b-2 border-sky-100">
+          <div>
             <p className="text-slate-500 text-sm mb-1">{data.date}</p>
-            <h2 className="text-slate-800 text-xl font-bold tracking-wide">{data.title}</h2>
-            {data.place && <p className="text-slate-500 text-sm mt-1">{data.place}</p>}
+            <h2 className="text-slate-900 text-2xl font-bold tracking-wide wrap-break-word">
+              {data.title}
+            </h2>
+            {(data.place || data.note) && (
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-500 text-sm">
+                {data.place && (
+                  <span className="flex items-center gap-1">
+                    <MapPinIcon className="h-4 w-4 text-slate-400 shrink-0" aria-hidden="true" />
+                    {data.place}
+                  </span>
+                )}
+                {data.note && (
+                  <span className="flex items-center gap-1">
+                    <DocumentTextIcon
+                      className="h-4 w-4 text-slate-400 shrink-0"
+                      aria-hidden="true"
+                    />
+                    {data.note}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* メニュー一覧 */}
-          <div className="space-y-3">
+          <div className="mt-3 space-y-3">
             {data.menuItems.map((item, index) => {
               const allTimes = item.times || [];
 
@@ -37,16 +58,30 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
                   <div className="mb-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-slate-800 font-semibold">
-                        {item.distance}m × {item.repCount} × {item.setCount}
+                        {item.distance}m × {item.repCount}本
+                        {item.setCount > 1 ? ` × ${item.setCount}セット` : ""}
                       </span>
                       <span className="text-green-700 text-sm">{getStyleNameJp(item.style)}</span>
                       <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-xs">
-                        {getCategoryNameJp(item.category)}
+                        {item.category}
                       </span>
                       {item.circle && (
                         <span className="text-slate-500 text-sm">@{formatCircle(item.circle)}</span>
                       )}
                     </div>
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {item.tags.map((tag, tagIndex) => (
+                          <span
+                            key={tagIndex}
+                            className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full"
+                            style={{ backgroundColor: tag.color, color: getTagTextColor(tag.color) }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* タイム表示テーブル */}
@@ -168,7 +203,7 @@ export const PracticeShareCard = forwardRef<HTMLDivElement, PracticeShareCardPro
           </div>
 
           {/* フッター：ブランディング */}
-          <div className="pt-4 mt-4 border-t border-slate-100">
+          <div className="mt-3">
             <div className="flex items-center justify-center gap-2">
               <img src="/favicon.png" alt="SwimHub" className="w-5 h-5 object-contain" />
               <span className="text-slate-700 text-sm font-semibold tracking-wide">SwimHub</span>

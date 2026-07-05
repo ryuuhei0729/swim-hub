@@ -59,10 +59,18 @@ export async function requestUploadUrl(
   return (await res.json()) as UploadUrlResponse;
 }
 
+/** contentType から一時ファイルの拡張子を導出する */
+function extensionFromContentType(contentType: string): string {
+  if (contentType.includes("quicktime")) return "mov";
+  if (contentType.includes("x-matroska")) return "mkv";
+  if (contentType.includes("webm")) return "webm";
+  return "mp4";
+}
+
 /**
  * 動画ファイルをR2へ直接PUT (fetch + file URI)
- * iOS の ph:// URI は React Native の fetch が扱えないため、
- * expo-file-system で一時ファイルにコピーしてから PUT する。
+ * React Native の fetch は iOS の ph:// / Android の content:// を直接扱えないため、
+ * これらの URI は expo-file-system で一時ファイル (file://) にコピーしてから PUT する。
  */
 export async function uploadVideoToR2(
   presignedUrl: string,
@@ -70,14 +78,14 @@ export async function uploadVideoToR2(
   contentType: string,
   onProgress?: (progress: number) => void,
 ): Promise<void> {
-  // iOS ph:// URI を file:// にコピー（React Native fetch が ph:// を扱えないため）
+  // ph:// (iOS フォトライブラリ) / content:// (Android) を file:// にコピー
   let uri = fileUri;
   let tempUri: string | null = null;
-  if (fileUri.startsWith("ph://")) {
+  if (fileUri.startsWith("ph://") || fileUri.startsWith("content://")) {
     // expo-file-system/legacy を動的 import（テスト環境での NativeModule 問題を回避）
     const FileSystemLegacy = await import("expo-file-system/legacy");
     const cache = FileSystemLegacy.cacheDirectory ?? "";
-    tempUri = `${cache}video-${Date.now()}.mov`;
+    tempUri = `${cache}video-${Date.now()}.${extensionFromContentType(contentType)}`;
     await FileSystemLegacy.copyAsync({ from: fileUri, to: tempUri });
     uri = tempUri;
   }
@@ -221,6 +229,114 @@ export async function deleteVideo(
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(data.error ?? i18n.t("common.upload.videoDeleteFailedSimple"));
   }
+}
+
+/**
+ * チーム管理者による動画アサイン（team-assign）
+ * confirm 済みの一時動画（操作者ユーザー配下）を対象メンバーのパスへ再割当する。
+ * Web の `/api/storage/videos/team-assign` フローと一致。
+ *
+ * tempVideoPath / tempThumbnailPath は requestUploadUrl / confirmUpload が返す
+ * videoPath / thumbnailPath をそのまま渡す（サーバー側が操作者 user.id で生成・検証する）。
+ */
+export async function assignTeamVideo(params: {
+  type: VideoType;
+  sourceId: string;
+  targetUserId: string;
+  teamId: string;
+  tempVideoPath: string;
+  tempThumbnailPath: string;
+  accessToken: string;
+}): Promise<{ finalVideoPath: string; finalThumbnailPath: string }> {
+  const { type, sourceId, targetUserId, teamId, tempVideoPath, tempThumbnailPath, accessToken } =
+    params;
+
+  const res = await fetch(`${WEB_API_URL}/api/storage/videos/team-assign`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      type,
+      sourceId,
+      targetUserId,
+      teamId,
+      tempVideoPath,
+      tempThumbnailPath,
+    }),
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    throw new Error(data.message ?? data.error ?? i18n.t("common.upload.videoDbUpdateFailed"));
+  }
+
+  return (await res.json()) as { finalVideoPath: string; finalThumbnailPath: string };
+}
+
+/** サムネイル未生成のため team-assign に進めなかったことを表すエラー。 */
+export class MissingThumbnailError extends Error {
+  constructor(message = "thumbnail was not generated") {
+    super(message);
+    this.name = "MissingThumbnailError";
+  }
+}
+
+/**
+ * チームメンバーへの代理動画アップロード全フロー
+ * upload-url → R2 PUT → confirm（操作者配下に一時保存）→ team-assign（対象メンバーへ再割当）。
+ * Web の RecordClient（team-assign）フローと一致。
+ *
+ * team-assign API はサムネイル必須（tempThumbnailPath の必須チェック + サーバー側で
+ * `thumbnails/.../{sourceId}.jpg` のコピーを行う）。一方 uploadVideo はサムネイル生成に
+ * 失敗すると thumbnailPath を空文字で返す。空文字を team-assign に渡すと 400 になるため、
+ * サムネイル未生成の場合は team-assign を呼ばず MissingThumbnailError を投げる
+ * （動画自体は操作者配下に confirm 済みだが対象メンバーには割り当てない）。
+ * 呼び出し側はこのエラーを捕捉し、ユーザーに「サムネ未生成で添付不可」を通知する。
+ */
+export async function uploadVideoForTeamMember(params: {
+  type: VideoType;
+  /** 一時保存先の sourceId（= 作成済み record の id） */
+  id: string;
+  targetUserId: string;
+  teamId: string;
+  videoUri: string;
+  accessToken: string;
+  mimeType?: string;
+  onProgress?: (progress: number) => void;
+}): Promise<{ finalVideoPath: string; finalThumbnailPath: string }> {
+  const { type, id, targetUserId, teamId, videoUri, accessToken, mimeType, onProgress } = params;
+
+  // upload-url → R2 PUT → confirm（操作者配下へ一時保存）
+  const { videoPath, thumbnailPath } = await uploadVideo({
+    type,
+    id,
+    videoUri,
+    accessToken,
+    mimeType,
+    onProgress: (p) => onProgress?.(p * 0.8),
+  });
+
+  // サムネイル未生成（uploadVideo が空文字を返す）の場合は team-assign を呼ばない。
+  // 空の tempThumbnailPath は team-assign の必須チェック / パス検証で 400 になるため。
+  if (thumbnailPath === "") {
+    throw new MissingThumbnailError();
+  }
+
+  // team-assign（対象メンバーへ再割当）
+  const result = await assignTeamVideo({
+    type,
+    sourceId: id,
+    targetUserId,
+    teamId,
+    tempVideoPath: videoPath,
+    tempThumbnailPath: thumbnailPath,
+    accessToken,
+  });
+  onProgress?.(100);
+
+  return result;
 }
 
 /**

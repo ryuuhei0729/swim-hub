@@ -56,7 +56,8 @@ try {
 
 /** ログイン状態にするヘルパー */
 async function loginUser(page: Page, email: string, password: string) {
-  await page.goto(URLS.LOGIN);
+  // ログインフォームは OAuth 優先の再設計により /login/email に分離された
+  await page.goto(`${URLS.LOGIN}/email`);
   await page.waitForLoadState("networkidle");
   await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 });
   await page.fill('[data-testid="email-input"]', email);

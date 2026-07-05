@@ -17,7 +17,7 @@ import CompetitionImageUploader, {
   ExistingImage,
 } from "./CompetitionImageUploader";
 import { useAuth } from "@/contexts";
-import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 
 interface CompetitionBasicFormData {
@@ -486,9 +486,9 @@ export default function CompetitionBasicForm({
                 />
               </div>
 
-              {/* 画像添付 */}
+              {/* 画像添付（Free でも画像は許可。動画のみ Premium 限定） */}
               <div>
-                {isPremium ? (
+                {canUploadImage(isPremium) ? (
                   <CompetitionImageUploader
                     existingImages={editData?.images}
                     onImagesChange={handleImagesChange}

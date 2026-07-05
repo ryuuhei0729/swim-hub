@@ -92,7 +92,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900 sm:text-2xl">SwimHub</h1>
+                <h1 className="text-lg font-bold text-gray-900 sm:text-2xl font-(family-name:--font-chakra-petch)">SwimHub</h1>
               </div>
             </Link>
           </div>

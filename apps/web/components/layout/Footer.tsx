@@ -4,12 +4,10 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  HeartIcon,
   ShieldCheckIcon,
   DocumentTextIcon,
   QuestionMarkCircleIcon,
   EnvelopeIcon,
-  NewspaperIcon,
   InformationCircleIcon,
   ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
@@ -66,11 +64,6 @@ export default function Footer() {
       icon: EnvelopeIcon,
     },
     {
-      name: t("links.blog"),
-      href: "/blog",
-      icon: NewspaperIcon,
-    },
-    {
       name: t("links.about"),
       href: "/about",
       icon: InformationCircleIcon,
@@ -98,16 +91,10 @@ export default function Footer() {
                   className="w-full h-full object-contain"
                 />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">SwimHub</h3>
+              <h3 className="text-lg font-semibold text-gray-900 font-(family-name:--font-chakra-petch)">SwimHub</h3>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              {t("description")}
-            </p>
-            <div className="flex items-center text-sm text-gray-500">
-              <span>{t("madeWith")}</span>
-              <HeartIcon className="h-4 w-4 text-red-500 mx-1" />
-              <span>{t("forSwimmers")}</span>
-            </div>
+            {/* ブランドタグライン: ロケールに関わらず常に英語表記 */}
+            <p className="text-sm text-gray-600 leading-relaxed">Record for life</p>
           </div>
 
           {/* 右側：法的情報とサポート */}
@@ -151,7 +138,7 @@ export default function Footer() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-blue-700">{service.nameKey}</span>
+                      <span className="text-sm font-semibold text-blue-700 font-(family-name:--font-chakra-petch)">{service.nameKey}</span>
                       <span className="text-[10px] font-medium text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
                         {t("services.currentBadge")}
                       </span>
@@ -176,7 +163,7 @@ export default function Footer() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                      <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900 font-(family-name:--font-chakra-petch)">
                         {service.nameKey}
                       </span>
                       <ArrowTopRightOnSquareIcon className="w-3 h-3 text-gray-400 group-hover:text-gray-500" />

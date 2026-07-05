@@ -38,11 +38,21 @@ export type MainStackParamList = {
   PracticeForm: {
     practiceId?: string;
     date?: string;
+    teamId?: string;
+  };
+  /** 練習タブ統合フォーム(個人フロー) */
+  PracticeTabForm: {
+    practiceId?: string;
+    date?: string;
+    teamId?: string;
+    /** 初期タブ。省略時は "practice" */
+    initialTab?: "practice" | "log";
   };
   PracticeLogForm: {
     practiceId: string;
     practiceLogId?: string;
     returnTo?: "dashboard";
+    teamId?: string;
   };
   PracticeTimeForm: {
     practiceLogId?: string;
@@ -66,11 +76,21 @@ export type MainStackParamList = {
   CompetitionForm: {
     competitionId?: string;
     date: string;
+    teamId?: string;
+  };
+  /** 大会タブ統合フォーム(個人フロー) */
+  CompetitionTabForm: {
+    competitionId?: string;
+    date: string;
+    teamId?: string;
+    /** 初期タブ。省略時は "competition" */
+    initialTab?: "competition" | "entry" | "record";
   };
   EntryForm: {
     competitionId: string;
     entryId?: string;
     date: string;
+    teamId?: string;
   };
   RecordLogForm: {
     competitionId: string;
@@ -81,6 +101,15 @@ export type MainStackParamList = {
       entryTime?: number;
     }>;
     date: string;
+    teamId?: string;
+  };
+  TeamRecordBulkForm: {
+    competitionId: string;
+    teamId: string;
+  };
+  TeamPracticeLogBulkForm: {
+    practiceId: string;
+    teamId: string;
   };
   TeamDetail: {
     teamId: string;

@@ -17,6 +17,7 @@ export interface RecordBase {
   id: string;
   user_id: string;
   competition_id: string | null;
+  team_id?: string | null;
   style_id: number;
   time: number;
   video_path?: string | null;
@@ -71,6 +72,7 @@ export interface Entry {
   style_id: number;
   entry_time: number | null; // エントリータイム（秒）
   note: string | null;
+  is_relaying: boolean; // リレー区分（true=リレー、false=個人）
   created_at: string;
   updated_at: string;
 }

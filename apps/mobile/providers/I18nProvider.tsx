@@ -2,8 +2,8 @@
 // I18nProvider - OS 言語追従の i18n コンテキスト
 // =============================================================================
 //
-// 端末 OS のロケール設定を起動時とランタイムで監視し、ja/en のいずれかに
-// 揃えて i18next の言語を切り替える。明示的な言語選択 UI は持たない。
+// 端末 OS のロケール設定を起動時とランタイムで監視し、SUPPORTED_LOCALES
+// (ja/en/zh/ko/de) のいずれかに揃えて i18next の言語を切り替える。明示的な言語選択 UI は持たない。
 
 import React, { useEffect } from "react";
 import { I18nextProvider } from "react-i18next";

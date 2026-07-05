@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { CompetitionShareCard } from "./CompetitionShareCard";
 import { PracticeShareCard } from "./PracticeShareCard";
 import type { CompetitionShareData, PracticeShareData } from "./types";
-import { elementToImage, downloadImage } from "./utils";
+import { elementToImage, elementToBlob, downloadImage } from "./utils";
 
 type ShareCardType = "competition" | "practice";
 
@@ -55,8 +55,13 @@ export function ShareCardModal({ isOpen, onClose, type, data }: ShareCardModalPr
 
     setIsGenerating(true);
     try {
-      const dataUrl = await elementToImage(cardRef.current, 3);
-      const blob = await (await fetch(dataUrl)).blob();
+      // CSP の connect-src が data: を許可しないため fetch(dataUrl) は使わず、直接 Blob を取得する
+      const blob = await elementToBlob(cardRef.current, 3);
+      if (!blob) {
+        // Blob 生成に失敗した場合はダウンロードにフォールバック
+        handleDownload();
+        return;
+      }
       const file = new File([blob], "swimhub-share.png", { type: "image/png" });
 
       if (navigator.canShare({ files: [file] })) {

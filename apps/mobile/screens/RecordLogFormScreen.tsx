@@ -26,6 +26,7 @@ import {
   useUpdateRecordMutation,
   useReplaceSplitTimesMutation,
 } from "@apps/shared/hooks/queries/records";
+import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
@@ -34,7 +35,7 @@ import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
@@ -65,7 +66,7 @@ interface RecordFormData {
 export const RecordLogFormScreen: React.FC = () => {
   const route = useRoute<RecordLogFormScreenRouteProp>();
   const navigation = useNavigation<RecordLogFormScreenNavigationProp>();
-  const { competitionId, recordId, date: _date } = route.params;
+  const { competitionId, recordId, date: _date, teamId } = route.params;
   const entryDataList = useMemo(
     () => route.params.entryDataList ?? [],
     [route.params.entryDataList],
@@ -582,6 +583,7 @@ export const RecordLogFormScreen: React.FC = () => {
 
           const recordData: Omit<RecordInsert, "user_id"> = {
             competition_id: competitionId,
+            team_id: teamId ?? null,
             style_id: parseInt(formData.styleId),
             time: formData.time,
             reaction_time:
@@ -666,6 +668,9 @@ export const RecordLogFormScreen: React.FC = () => {
 
       // カレンダーのクエリを無効化してリフレッシュ
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      if (teamId) {
+        queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
+      }
 
       // 成功: ダッシュボードに戻る
       navigation.popToTop();
@@ -717,54 +722,46 @@ export const RecordLogFormScreen: React.FC = () => {
                 </Text>
               )}
 
-              {/* 種目表示（エントリー情報がある場合） */}
-              {entryInfo && (
-                <View style={styles.entryInfo}>
-                  <Text style={styles.entryInfoText}>
-                    {entryInfo.styleName}
-                    {entryInfo.entryTime &&
-                      ` (${t("recordMobile.entryTimeInfo", { time: formatTime(entryInfo.entryTime) })})`}
-                  </Text>
-                </View>
-              )}
-
-              {/* 種目選択（エントリー情報がない場合） */}
-              {!entryInfo && (
-                <View style={styles.field}>
-                  <Text style={styles.label}>
-                    {t("recordMobile.form.styleLabel")} <Text style={styles.required}>*</Text>
-                  </Text>
-                  <Pressable
-                    ref={(ref) => {
-                      if (ref) styleButtonRefs.current.set(index, ref);
-                    }}
+              {/* 種目選択（常に操作可能。エントリー情報があればヒントとして表示） */}
+              <View style={styles.field}>
+                <Text style={styles.label}>
+                  {t("recordMobile.form.styleLabel")} <Text style={styles.required}>*</Text>
+                </Text>
+                <Pressable
+                  ref={(ref) => {
+                    if (ref) styleButtonRefs.current.set(index, ref);
+                  }}
+                  style={[
+                    styles.pickerButton,
+                    errors[`style-${index}`] && styles.pickerButtonError,
+                  ]}
+                  onPress={() => openStylePicker(index)}
+                  disabled={loading}
+                >
+                  <Text
                     style={[
-                      styles.pickerButton,
-                      errors[`style-${index}`] && styles.pickerButtonError,
+                      styles.pickerButtonText,
+                      !formData.styleId && styles.pickerButtonPlaceholder,
                     ]}
-                    onPress={() => openStylePicker(index)}
-                    disabled={loading}
                   >
-                    <Text
-                      style={[
-                        styles.pickerButtonText,
-                        !formData.styleId && styles.pickerButtonPlaceholder,
-                      ]}
-                    >
-                      {formData.styleId
-                        ? localizedStyleName(
-                            swimStyles.find((s) => s.id.toString() === formData.styleId),
-                            t,
-                          ) || t("recordMobile.form.stylePlaceholder")
-                        : t("recordMobile.form.stylePlaceholder")}
-                    </Text>
-                    <Feather name="chevron-down" size={20} color="#6B7280" />
-                  </Pressable>
-                  {errors[`style-${index}`] && (
-                    <Text style={styles.errorText}>{errors[`style-${index}`]}</Text>
-                  )}
-                </View>
-              )}
+                    {formData.styleId
+                      ? localizedStyleName(
+                          swimStyles.find((s) => s.id.toString() === formData.styleId),
+                          t,
+                        ) || t("recordMobile.form.stylePlaceholder")
+                      : t("recordMobile.form.stylePlaceholder")}
+                  </Text>
+                  <Feather name="chevron-down" size={20} color="#6B7280" />
+                </Pressable>
+                {errors[`style-${index}`] && (
+                  <Text style={styles.errorText}>{errors[`style-${index}`]}</Text>
+                )}
+                {entryInfo?.entryTime != null && (
+                  <Text style={styles.entryInfoText}>
+                    {t("recordMobile.entryTimeInfo", { time: formatTime(entryInfo.entryTime) })}
+                  </Text>
+                )}
+              </View>
 
               {/* タイム入力 */}
               <View style={styles.field}>
@@ -948,7 +945,7 @@ export const RecordLogFormScreen: React.FC = () => {
                 )}
                 {isSplitTimeLimitReached(index) && (
                   <View style={{ marginTop: 8 }}>
-                    <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} compact />
+                    <PremiumBadge feature="split_time_limit" compact />
                   </View>
                 )}
               </View>

@@ -219,6 +219,7 @@ export function useTeamEntry(supabase: SupabaseClient, teamId: string) {
           style_id: parseInt(form.styleId),
           entry_time: entryTime,
           note: form.note || null,
+          is_relaying: false,
         };
 
         const updatePayload = {

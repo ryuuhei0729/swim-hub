@@ -43,11 +43,16 @@
       "SwimHub",
       "水泳選手",
       "マスターズスイマー"
-    ]
+    ],
+    "planFree": "Free プラン",
+    "planPremiumMonthly": "Premium プラン（月額）",
+    "planPremiumYearly": "Premium プラン（年額）"
   },
   "common": {
     "appName": "SwimHub",
+    "language": "言語",
     "alertErrorTitle": "エラー",
+    "notice": "お知らせ",
     "loading": "読み込み中...",
     "error": "エラーが発生しました",
     "save": "保存",
@@ -123,7 +128,10 @@
     },
     "errorBoundary": {
       "title": "エラーが発生しました",
-      "unknownError": "不明なエラーが発生しました"
+      "unknownError": "不明なエラー",
+      "retry": "再試行",
+      "reload": "ページを再読み込み",
+      "helpText": "問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。"
     },
     "video": {
       "loading": "動画を読み込み中...",
@@ -173,7 +181,9 @@
       "videoClosePlayer": "閉じる",
       "videoDelete": "削除",
       "videoTapToPlay": "タップして再生",
-      "videoReplace": "差し替え"
+      "videoReplace": "差し替え",
+      "cameraPermissionDenied": "カメラへのアクセスが許可されていません。設定アプリから許可してください。",
+      "mediaPermissionDenied": "フォトライブラリへのアクセスが許可されていません。設定アプリから許可してください。"
     },
     "datePicker": {
       "placeholder": "日付を選択",
@@ -183,7 +193,15 @@
       "nextMonth": "次月",
       "today": "今日",
       "close": "閉じる",
-      "weekdays": ["日", "月", "火", "水", "木", "金", "土"]
+      "weekdays": [
+        "日",
+        "月",
+        "火",
+        "水",
+        "木",
+        "金",
+        "土"
+      ]
     },
     "formStepper": {
       "ariaLabel": "フォームの進捗",
@@ -212,13 +230,6 @@
     "validation": {
       "required": "必須項目です",
       "email": "有効なメールアドレスを入力してください"
-    },
-    "errorBoundary": {
-      "title": "エラーが発生しました",
-      "unknownError": "不明なエラー",
-      "retry": "再試行",
-      "reload": "ページを再読み込み",
-      "helpText": "問題が解決しない場合は、ページを再読み込みするか、サポートにお問い合わせください。"
     },
     "videoUploader": {
       "uploadUrlFailed": "アップロードURLの取得に失敗しました",
@@ -344,10 +355,9 @@
       "scannerDesc": "手書きの練習記録をAIで読み取り、デジタルデータに変換します。入力の手間を大幅に削減。"
     },
     "footer": {
-      "tagline": "水泳アスリートのための記録管理プラットフォーム",
+      "tagline": "競泳選手のための記録管理プラットフォーム",
       "terms": "利用規約",
       "privacy": "プライバシーポリシー",
-      "blog": "ブログ",
       "about": "運営者情報"
     },
     "deviceMockup": {
@@ -355,18 +365,160 @@
       "desktopAlt": "SwimHub チームメンバー画面(PC)",
       "mobilePlaceholder": "ダッシュボード画面(画像準備中)",
       "desktopPlaceholder": "チームメンバー画面(画像準備中)"
+    },
+    "v42": {
+      "nav": {
+        "practice": "練習記録",
+        "competition": "大会記録",
+        "proxy": "代理入力",
+        "pricing": "料金プラン"
+      },
+      "hero": {
+        "ghostText": "SWIMHUB",
+        "h1Line1": "個人でもチームでも、",
+        "h1Line2": "水泳の記録管理を",
+        "h1Line3": "これひとつで。",
+        "lead": "練習記録・大会記録・代理入力、エントリー収集までまとめて管理。スマホでもブラウザでも、すぐに始められます。",
+        "badge": "スマホでらくらくチーム管理",
+        "cta": {
+          "signup": "無料登録",
+          "login": "ログイン"
+        },
+        "store": {
+          "appStore": "App Store",
+          "googlePlay": "Google Play",
+          "comingSoon": "Coming soon"
+        },
+        "deviceCaption": "SwimHub App ◆ PC & Mobile",
+        "h1Line3Blue": "これひとつ",
+        "h1Line3Suffix": "で。",
+        "downloadOn": "ダウンロード"
+      },
+      "marquee": {
+        "text": "Practice Log ◆ Race Result ◆ Proxy Entry ◆ AI Scanner ◆ Best Times"
+      },
+      "features": {
+        "f1": {
+          "label": "Practice Log",
+          "title": "練習記録・タイムを管理",
+          "desc": "サークル・本数・セット数、タイムの記録を蓄積。次回はもう1本多く回る、サークルを5秒短くする、平均タイムを上げるなど、次回の練習目標を立てやすくします。",
+          "items": [
+            "サークル・本数・セット数を記録",
+            "平均タイムも自動で計算",
+            "タグでフィルタリング可能"
+          ]
+        },
+        "f2": {
+          "label": "Race Result",
+          "title": "レース結果を記録",
+          "desc": "種目、タイム、長水路/短水路、途中タイムなどを記録。記録に合わせてベストタイム表も自動更新。短水路/長水路、引き継ぎあり/なしまでデータに反映されます。",
+          "items": [
+            "途中タイムからラップを自動計算",
+            "ベストタイム表の自動更新",
+            "大会エントリーも管理可能"
+          ]
+        },
+        "f3": {
+          "label": "Team / Coach",
+          "title": "コーチやマネージャーが代理で記録を入力",
+          "desc": "練習記録や大会記録は、選手本人だけでなく、コーチやマネージャーが一括で登録できます。記録はあくまでも個人に紐付くので、そのチームを引退した後も記録は蓄積され続けます。",
+          "items": [
+            "コーチ・マネージャーが一括登録",
+            "記録は個人に紐付いて蓄積",
+            "一生使えるアプリ"
+          ]
+        },
+        "introLabel": "Features",
+        "introH2": "記録を資産に変える3つの機能"
+      },
+      "scanner": {
+        "label": "イチオシ便利機能 — Scanner",
+        "h2": "手書きの練習記録を、AIで解析。",
+        "desc1": "練習が終わった後の記録入力、面倒ですよね。SwimHub Scanner なら、手書きの練習表をスマホで撮影するだけで、AIが内容を読み取って自動でデータ化します。",
+        "desc2": "コーチが配布する練習表や、自分でメモした記録もそのまま取り込めるので、入力の手間を大幅に削減できます。",
+        "cta": "SwimHub Scanner を試す"
+      },
+      "pricing": {
+        "label": "Pricing",
+        "h2": "料金表",
+        "lead": "シンプルな2プラン。まずは無料で始められます。",
+        "detailLink": "料金プランの詳細を見る",
+        "free": {
+          "name": "Free",
+          "price": "¥0",
+          "note": "ずっと無料で使える",
+          "items": [
+            "練習記録・大会記録",
+            "Split-time: 最大3個/記録",
+            "PracticeTime: 最大18個/練習ログ",
+            "画像アップロード（動画は不可）"
+          ],
+          "cta": "無料で始める"
+        },
+        "premium": {
+          "name": "Premium",
+          "price": "¥500",
+          "badge": "7日間無料トライアル",
+          "annualNote": "年払い: ¥5,000/年（2ヶ月分お得）",
+          "items": [
+            "全機能無制限",
+            "Split-time: 無制限",
+            "PracticeTime: 無制限",
+            "画像・動画アップロード",
+            "7日間の無料トライアル付き"
+          ],
+          "cta": "無料トライアルを始める"
+        }
+      },
+      "services": {
+        "label": "SwimHub Services",
+        "h2": "SwimHub サービス一覧",
+        "lead": "水泳をもっと便利にするツール群",
+        "timer": {
+          "name": "SwimHub Timer",
+          "tagline": "動画にタイムをオーバーレイ",
+          "desc": "水泳の動画にストップウォッチを重ねて再生できるサービスです。フォーム解析やラップ確認に最適。",
+          "cta": "試してみる →"
+        },
+        "scanner": {
+          "name": "SwimHub Scanner",
+          "tagline": "手書きの記録表をAIで解析",
+          "desc": "手書きの練習記録をAIで読み取り、デジタルデータに変換します。入力の手間を大幅に削減。",
+          "cta": "試してみる →"
+        }
+      },
+      "finalCta": {
+        "label": "Begin your record",
+        "h2": "今すぐ記録を始めよう",
+        "desc": "アカウント作成は無料。すぐに使い始められます。チームに所属していなくても大丈夫。まずは個人で始めて、後からチーム機能を追加することもできます。"
+      },
+      "footer": {
+        "tagline": "競泳選手のための記録管理プラットフォーム",
+        "copyright": "© 2025 SwimHub. All rights reserved.",
+        "slogan": "Records for Life"
+      },
+      "stopwatch": {
+        "ariaLabel": "ページ滞在タイム"
+      },
+      "lapBar": {
+        "ariaLabel": "スクロール進捗バー"
+      }
     }
   },
   "auth": {
     "signin": {
       "title": "ログイン",
       "subtitle": "SwimHubへようこそ",
+      "entrySubtitle": "SwimHubへようこそ",
       "submitButton": "ログイン",
       "loadingButton": "処理中...",
       "loadingMessage": "認証情報を確認中...",
       "errorTitle": "認証エラーが発生しました",
       "emailMethodTitle": "メールでログイン",
-      "emailMethodButton": "Emailでログイン"
+      "emailMethodButton": "Emailでログイン",
+      "emailPageTitle": "メールでログイン",
+      "emailPageSubtitle": "メールアドレスとパスワードを入力してください",
+      "otherMethods": "他の方法でログイン"
     },
     "signup": {
       "title": "アカウント作成",
@@ -375,7 +527,9 @@
       "emailMethodTitle": "メールで登録",
       "emailMethodButton": "Emailで作成",
       "welcomeTagline": "SwimHubを始めましょう",
-      "startButton": "さっそく始める"
+      "startButton": "さっそく始める",
+      "continueWithEmail": "メールアドレスで新規登録",
+      "otherMethods": "他の方法で登録"
     },
     "resetPassword": {
       "title": "パスワードリセット",
@@ -413,9 +567,9 @@
     "switchToSignup": "アカウントをお持ちでない方はこちら",
     "switchToSignin": "すでにアカウントをお持ちの方はこちら",
     "googleSignin": "Googleでログイン",
-    "googleSignup": "Googleで作成",
+    "googleSignup": "Googleで新規登録",
     "appleSignin": "Appleでログイン",
-    "appleSignup": "Appleで作成",
+    "appleSignup": "Appleで新規登録",
     "orSeparator": "または",
     "validation": {
       "nameRequired": "名前を入力してください。",
@@ -556,7 +710,8 @@
       "feature3": "チーム機能・目標管理",
       "feature4": "Split-time: 最大3個/記録",
       "feature5": "PracticeTime: 最大18個/練習ログ",
-      "exclude1": "画像・動画アップロード"
+      "feature6": "画像アップロード",
+      "exclude1": "動画アップロード"
     },
     "premiumPlan": {
       "name": "Premium",
@@ -595,7 +750,8 @@
       "rowGoals": "目標管理",
       "rowSplitTime": "Split-time",
       "rowPracticeTime": "PracticeTime",
-      "rowImageUpload": "画像・動画アップロード",
+      "rowImageUpload": "画像アップロード",
+      "rowVideoUpload": "動画アップロード",
       "rowScanner": "SwimHub Scanner 連携",
       "rowTimer": "SwimHub Timer 連携",
       "valueLimitedSplit": "最大3個/記録",
@@ -639,6 +795,18 @@
     "submitting": "送信中...",
     "successMessage": "お問い合わせを受け付けました。ありがとうございます。",
     "errorMessage": "送信に失敗しました。しばらく時間をおいて再度お試しください。",
+    "appLabel": "ご利用のアプリ",
+    "appOptions": {
+      "swimhub": "SwimHub",
+      "timer": "SwimHub Timer",
+      "scanner": "SwimHub Scanner"
+    },
+    "platformLabel": "ご利用環境",
+    "platformOptions": {
+      "web": "Web（ブラウザ）",
+      "ios": "iOSアプリ",
+      "android": "Androidアプリ"
+    },
     "subjectOptions": {
       "placeholder": "選択してください",
       "question": "機能についての質問",
@@ -698,7 +866,7 @@
       "addRecordShort": "大会記録",
       "addPracticeShort": "練習記録",
       "addRecord": "大会記録を追加",
-      "addPractice": "練習予定を追加",
+      "addPractice": "練習記録を追加",
       "addSection": "記録を追加",
       "close": "閉じる",
       "entryTypeLabel": {
@@ -903,7 +1071,8 @@
       "setAverage": "セット平均",
       "overallAverage": "全体平均",
       "overallFastest": "全体最速",
-      "memoLabel": "メモ"
+      "memoLabel": "メモ",
+      "menuNumber": "メニュー {n}"
     },
     "styles": {
       "Fr": "自由形",
@@ -1000,7 +1169,8 @@
       "settingsButton": "設定",
       "profileNotFound": "プロフィールが見つかりません",
       "bulkInput": "一括入力",
-      "bulkInputAria": "ベストタイムを一括入力する"
+      "bulkInputAria": "ベストタイムを一括入力する",
+      "pageTitle": "マイページ"
     },
     "title": "マイページ",
     "subtitle": "プロフィールとベストタイムを管理します",
@@ -1032,7 +1202,8 @@
       "imageUploadFailed": "画像のアップロードに失敗しました",
       "cancel": "キャンセル",
       "submitUpdating": "更新中...",
-      "submit": "更新"
+      "submit": "更新",
+      "bioTooLong": "自己紹介は{max}文字以内で入力してください"
     },
     "avatarUpload": {
       "loginRequired": "ログインが必要です",
@@ -1145,7 +1316,24 @@
           "description": "チームメンバーの出欠管理・エントリー集計・代理入力"
         }
       },
-      "startButton": "始める"
+      "startButton": "始める",
+      "personalLabel": "個人機能",
+      "teamLabel": "チーム機能",
+      "teamFeature": {
+        "proxy": {
+          "title": "代理入力",
+          "badge": "イチオシ",
+          "description": "コーチや保護者がメンバーの記録・大会エントリーを代わりに入力できます"
+        },
+        "attendance": {
+          "title": "出欠管理",
+          "description": "練習・大会の出欠をまとめて管理"
+        },
+        "entry": {
+          "title": "エントリー集計",
+          "description": "大会エントリーを自動で集計"
+        }
+      }
     },
     "step2": {
       "title": "プロフィールを設定しよう",
@@ -1165,7 +1353,8 @@
       "validation": {
         "nameRequired": "名前は必須です",
         "nameEmailFormat": "メールアドレス形式ではなく、お名前を入力してください",
-        "nameTooLong": "名前は{max}文字以内で入力してください"
+        "nameTooLong": "名前は{max}文字以内で入力してください",
+        "bioTooLong": "自己紹介は{max}文字以内で入力してください"
       },
       "saveError": "プロフィールの保存に失敗しました。もう一度お試しください。",
       "skipFailed": "スキップに失敗しました",
@@ -1236,7 +1425,6 @@
       "terms": "利用規約",
       "support": "サポート",
       "contact": "お問い合わせ",
-      "blog": "ブログ",
       "about": "SwimHubについて",
       "tokushoho": "特定商取引法に基づく表記"
     },
@@ -1446,7 +1634,15 @@
         "splitDeleteFailed": "スプリットタイムの削除に失敗しました: {detail}",
         "recordDeleteFailed": "既存レコードの削除に失敗しました: {detail}",
         "saveFailed": "保存中にエラーが発生しました。もう一度お試しください。"
-      }
+      },
+      "errorVideoUploadUrlFailed": "{name}: アップロードURL取得に失敗しました ({status})",
+      "errorVideoUploadFailed": "{name}: 動画のアップロードに失敗しました ({status})",
+      "errorVideoThumbnailFailed": "{name}: サムネイルのアップロードに失敗しました ({status})",
+      "errorVideoConfirmFailed": "{name}: 動画の確認処理に失敗しました ({status})",
+      "errorVideoAssignFailed": "{name}: チーム割り当てに失敗しました ({status})",
+      "errorVideoGenericFailed": "{name}: 動画アップロード中にエラーが発生しました",
+      "errorVideoNoThumbnail": "{name}: サムネイルを生成できなかったため動画を添付できませんでした",
+      "videoPartialFailureSaved": "記録は保存されましたが、一部の動画を添付できませんでした:\n{errors}"
     }
   },
   "settings": {
@@ -2099,6 +2295,41 @@
         "noMonths": "表示できる月がありません",
         "noEvents": "この月にはイベントがありません"
       },
+      "adminAttendance": {
+        "title": "出欠受付管理",
+        "statusOpen": "受付中",
+        "statusClosed": "締切",
+        "empty": "今後のイベントがありません",
+        "fetchFailed": "イベント情報の取得に失敗しました",
+        "saveFailed": "ステータスの保存に失敗しました",
+        "openButton": "受付を開始",
+        "closeButton": "受付を締切",
+        "confirmTitle": "確認",
+        "confirmOpen": "出欠の受付を開始しますか？",
+        "confirmClose": "出欠の受付を締め切りますか？",
+        "defaultPractice": "練習",
+        "defaultCompetition": "大会",
+        "toggleStatusAria": "{title} の受付ステータスを切り替え",
+        "memberAttendanceTitle": "メンバー別出欠状況",
+        "memberStatusPresent": "出席",
+        "memberStatusAbsent": "欠席",
+        "memberStatusOther": "その他",
+        "memberStatusUnanswered": "未回答",
+        "memberAttendanceFetchFailed": "出欠情報の取得に失敗しました",
+        "memberAttendanceEmpty": "出欠回答がありません",
+        "memberAttendanceLoading": "読み込み中...",
+        "bulkChange": {
+          "title": "まとめて出欠状態を変更",
+          "empty": "イベントがありません",
+          "statusOpen": "受付中",
+          "statusClosed": "締切",
+          "statusUnset": "未設定",
+          "competitionLabel": "（大会）",
+          "selectAll": "全選択",
+          "openButton": "受付中にする",
+          "closedButton": "締切にする"
+        }
+      },
       "groupManagement": {
         "title": "グループ管理",
         "subtitle": "メンバーをカテゴリ別にグループ分けできます",
@@ -2192,7 +2423,6 @@
       "bulkPlacePlaceholder": "例: 市民プール",
       "bulkMemoPlaceholder": "メモ",
       "bulkCompetitionNamePlaceholder": "大会名",
-      "roleAdmin": "管理者",
       "roleUser": "ユーザー",
       "roleChangeTitle": "権限変更の確認",
       "roleChangeButton": "変更する",
@@ -2202,7 +2432,6 @@
       "memberRoleChangeMessage": "{name}さんの権限を「{role}」に変更しますか？",
       "memberRemoveMessage": "{name}をチームから削除しますか？\nこの操作は取り消せません。",
       "bestTimeSection": "Best Time",
-      "bestTimeLoading": "ベストタイム読込中...",
       "youBadge": "あなた",
       "birthdayLabel": "生年月日: {date}",
       "adminControlsTitle": "管理者機能",
@@ -2254,7 +2483,68 @@
       "poolTypeLong": "長水路",
       "genderCategoryLabel": "性別",
       "genderMale": "男性",
-      "genderFemale": "女性"
+      "genderFemale": "女性",
+      "tabAnnouncements": "お知らせ",
+      "adminToggle": {
+        "label": "表示切替",
+        "admin": "管理者ビュー",
+        "user": "利用者ビュー"
+      },
+      "pendingApproveConfirmTitle": "承認確認",
+      "pendingApproveConfirmMessage": "{name}を承認しますか？",
+      "pendingRejectConfirmTitle": "拒否確認",
+      "pendingRejectConfirmMessage": "{name}を拒否しますか？",
+      "pendingApproveFailed": "承認に失敗しました",
+      "pendingRejectFailed": "拒否に失敗しました",
+      "pendingLoading": "承認待ちメンバーを読み込み中...",
+      "pendingFetchFailed": "承認待ちメンバーの取得に失敗しました",
+      "teamPracticeList": {
+        "title": "チーム練習 ({count}件)",
+        "addButton": "練習を追加",
+        "empty": "チームの練習記録がありません",
+        "fetchFailed": "練習記録の取得に失敗しました",
+        "deleteConfirm": "この練習記録を削除しますか？この操作は取り消せません。",
+        "deleteFailed": "練習記録の削除に失敗しました",
+        "addLog": "ログを記入"
+      },
+      "teamCompetitionList": {
+        "title": "チーム大会 ({count}件)",
+        "addButton": "大会を追加",
+        "empty": "チームの大会がありません",
+        "fetchFailed": "大会の取得に失敗しました",
+        "deleteConfirm": "この大会を削除しますか？この操作は取り消せません。",
+        "deleteFailed": "大会の削除に失敗しました",
+        "entryButton": "エントリー",
+        "recordButton": "記録"
+      },
+      "teamCompetitionEntryModal": {
+        "title": "{title} のエントリー",
+        "totalEntries": "エントリー総数: {count}件",
+        "entryStatusLabel": "エントリー受付状況",
+        "statusBefore": "受付前",
+        "statusOpen": "受付中",
+        "statusClosed": "受付終了",
+        "selfEntryButton": "種目をエントリー",
+        "confirmTitle": "受付状況を変更",
+        "confirmBefore": "エントリー受付状況を「受付前」に変更しますか？",
+        "confirmOpen": "エントリー受付状況を「受付中」に変更しますか？",
+        "confirmClosed": "エントリー受付状況を「受付終了」に変更しますか？",
+        "changeStatusAria": "受付状況を{status}に変更",
+        "saveFailed": "受付状況の変更に失敗しました",
+        "loading": "エントリー情報を読み込み中...",
+        "fetchFailed": "エントリー情報の取得に失敗しました",
+        "emptyNoEntry": "まだエントリーがありません",
+        "emptyOpenHint": "現在エントリー受付中です",
+        "unknownStyle": "種目不明",
+        "unknownUser": "不明なユーザー",
+        "entryTimeLabel": "エントリータイム:",
+        "close": "閉じる"
+      },
+      "announcementDeleteFailed": "お知らせの削除に失敗しました",
+      "attendanceConfirmEditAfterDeadline": "提出締め切り後の編集になります（{dates}）。備考に編集日時が自動的に追加されます。保存しますか？",
+      "attendanceStatusPresent": "出席",
+      "attendanceStatusAbsent": "欠席",
+      "attendanceStatusOther": "その他"
     },
     "page": {
       "title": "マイチーム",
@@ -2576,7 +2866,8 @@
       "loadError": "直近の出欠情報の取得に失敗しました",
       "saveSuccess": "保存しました",
       "confirmEditAfterDeadline": "提出締め切り後の編集になります（{date}）。備考に編集日時が自動的に追加されます。保存しますか？",
-      "authRequired": "認証が必要です"
+      "authRequired": "認証が必要です",
+      "saveError": "出欠情報の保存に失敗しました"
     },
     "entryCompetitionCard": {
       "placeLabel": "場所:",
@@ -3213,7 +3504,10 @@
       "errorVideoConfirmFailed": "{name}: 動画の確認処理に失敗しました ({status})",
       "errorVideoAssignFailed": "{name}: チーム割り当てに失敗しました ({status})",
       "errorVideoGenericFailed": "{name}: 動画アップロード中にエラーが発生しました",
-      "errorVideoUpload": "一部の動画アップロードに失敗しました:\n{errors}"
+      "errorVideoNoThumbnail": "{name}: サムネイルを生成できなかったため動画を添付できませんでした",
+      "errorVideoLogResolveFailed": "{name}: 保存済みログとの突き合わせに失敗したため動画を添付できませんでした",
+      "errorVideoUpload": "一部の動画アップロードに失敗しました:\n{errors}",
+      "videoPartialFailureSaved": "記録は保存されましたが、一部の動画を添付できませんでした:\n{errors}"
     },
     "bulkRegister": {
       "wrapperTitle": "スケジュール一括登録",
@@ -3342,7 +3636,17 @@
       "timePositive": "タイムは正の数値を入力してください",
       "reactionTimeRange": "反応時間は0.40〜1.00秒の範囲で入力してください",
       "timeFormatInvalid": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
-      "timeFormatInvalid2": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）"
+      "timeFormatInvalid2": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
+      "recordNumber": "記録 {n}"
+    },
+    "lapTime": {
+      "raceLapTab": "距離別 Lap",
+      "allLapTab": "All Lap",
+      "noSplits": "スプリットタイムを入力してください",
+      "noStyle": "種目を選択してください",
+      "noLap": "ラップタイムを計算できません",
+      "distanceHeader": "距離",
+      "splitTimeHeader": "スプリットタイム"
     }
   },
   "forms": {
@@ -3355,6 +3659,10 @@
       "cancel": "編集を続ける"
     },
     "practice": {
+      "tabs": {
+        "practice": "練習",
+        "log": "練習ログ"
+      },
       "steps": {
         "basic": {
           "label": "基本情報",
@@ -3365,8 +3673,8 @@
           "description": "メニュー・タイム"
         }
       },
-      "title_create": "予定を作成",
-      "title_edit": "予定を編集",
+      "title_create": "練習記録を登録",
+      "title_edit": "練習記録を編集",
       "subtitle_create": "{date}の練習予定を作成します",
       "subtitle_edit": "{date}の練習予定を編集します",
       "date_label": "練習日",
@@ -3386,6 +3694,11 @@
       "cancel": "キャンセル"
     },
     "competition": {
+      "tabs": {
+        "competition": "大会",
+        "entry": "エントリー",
+        "record": "レースレコード"
+      },
       "steps": {
         "basic": {
           "label": "大会情報",
@@ -3400,10 +3713,10 @@
           "description": "結果・スプリット"
         }
       },
-      "title_create": "大会情報登録",
-      "title_edit": "大会情報編集",
+      "title_create": "大会記録を登録",
+      "title_edit": "大会記録を編集",
       "start_date_label": "開始日",
-      "end_date_label": "終了日(任意)",
+      "end_date_label": "終了日",
       "end_date_error": "終了日は開始日以降の日付を指定してください",
       "name_label": "大会名",
       "name_placeholder": "全国大会, 対抗戦",
@@ -3438,7 +3751,8 @@
       "saving": "保存中...",
       "update": "更新",
       "updating": "更新中...",
-      "videoLabel": "動画"
+      "videoLabel": "動画",
+      "menuHeader": "メニュー {n}"
     },
     "practiceMenu": {
       "header": "メニュー {n}",
@@ -3462,7 +3776,10 @@
       "repHeader": "{n}本目",
       "avgRow": "平均",
       "overallAvg": "全体平均",
-      "overallFastest": "全体最速"
+      "overallFastest": "全体最速",
+      "distanceOther": "その他",
+      "decrease": "減らす",
+      "increase": "増やす"
     },
     "timeInput": {
       "title": "メニュー{n}のタイム入力",
@@ -3474,7 +3791,9 @@
       "notEntered": "未入力",
       "overallAvg": "全体平均:",
       "save": "保存",
-      "cancel": "キャンセル"
+      "cancel": "キャンセル",
+      "helpTitle": "タイム入力のコツ",
+      "helpBody": "数字のあいだを数字以外の文字（- . : など）で区切って入力します。例:「31-2」→ 31.2、「1：23、4」→ 1:23.4、「1分12秒3」→ 1:12.3。\n\n前のセルで「33-2」と入力すると、次のセルは「3-2」と入力するだけで「33.2」に自動補完されます（十の位を引き継ぐ）。セルを空にすると引き継ぎはリセットされます。"
     },
     "record": {
       "title_create": "記録を追加",
@@ -3533,7 +3852,8 @@
       "skip": "エントリーをスキップ",
       "submit": "エントリー登録",
       "submitting": "登録中...",
-      "cancel": "キャンセル"
+      "cancel": "キャンセル",
+      "relayLabel": "リレー"
     },
     "recordLog": {
       "eventHeader": "種目 {n}",
@@ -3549,7 +3869,7 @@
       "relayLabel": "リレー",
       "timeLabel": "タイム",
       "time_placeholder": "例: 1:23.45   32.45",
-      "reactionTime_placeholder": "例: 28.50",
+      "reactionTime_placeholder": "例: 0.58  -0.01",
       "distance_placeholder": "距離 (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "リアクションタイム",
@@ -3565,7 +3885,9 @@
       "saving": "保存中...",
       "update": "更新",
       "formError_noStyle": "種目を選択してください",
-      "formError_noTime": "タイムを入力してください（形式: 分:秒.小数 または 秒.小数）"
+      "formError_noTime": "タイムを入力してください（形式: 分:秒.小数 または 秒.小数）",
+      "addRecord": "記録を追加",
+      "recordNumber": "記録 {n}"
     },
     "tag": {
       "placeholder": "タグを選択または作成",
@@ -3609,7 +3931,8 @@
       "updateError": "タグの更新に失敗しました",
       "authRequired": "認証が必要です",
       "createFailed": "タグの作成に失敗しました",
-      "deleteFailed": "タグの削除に失敗しました"
+      "deleteFailed": "タグの削除に失敗しました",
+      "createLabel": "新規作成："
     },
     "teamCreate": {
       "title": "新しいチームを作成",
@@ -3641,7 +3964,7 @@
       "noStyle": "種目を選択してください",
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
-      "splitTimeHeader": "Split Time"
+      "splitTimeHeader": "split"
     },
     "imageUploader": {
       "label": "画像を添付",
@@ -3655,6 +3978,23 @@
       "maxReached": "最大{max}枚の画像が選択されています",
       "remainingSlotsError": "あと{remaining}枚まで追加できます（最大{max}枚）",
       "invalidFile": "無効なファイルです"
+    },
+    "tabModal": {
+      "save": "保存",
+      "saving": "保存中...",
+      "cancel": "キャンセル",
+      "close": "閉じる",
+      "fieldRequired": "は必須です",
+      "partialSaveError": "基本情報は保存しました。詳細の保存に失敗しました。再試行してください。",
+      "duplicateEntryStyle": "同じ種目が複数入力されています。種目を変更してください。",
+      "discardWarning": {
+        "title": "入力内容が保存されていません",
+        "message": "入力内容が保存されていません。このまま閉じますか？",
+        "confirm": "閉じる",
+        "cancel": "編集を続ける"
+      },
+      "proceedToRecord": "レコードの入力に進む",
+      "recordFutureGuard": "未来の日付でレースレコードを登録することはできません"
     },
     "premium": {
       "upgradeText": "Premium にアップグレード",

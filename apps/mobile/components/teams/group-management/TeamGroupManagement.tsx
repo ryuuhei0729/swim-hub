@@ -64,6 +64,7 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
 
   // チームメンバー一覧（メンバー割り当て用）
   const [teamMembers, setTeamMembers] = useState<TeamMemberForSelection[]>([]);
+  const [memberError, setMemberError] = useState<string | null>(null);
 
   // モーダル状態
   const [showGroupForm, setShowGroupForm] = useState(false);
@@ -98,12 +99,18 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         .eq("team_id", teamId)
         .eq("status", "approved")
         .eq("is_active", true);
-      if (!fetchError && data) {
+      if (fetchError) {
+        console.error("Failed to fetch team members:", fetchError);
+        setMemberError(t("teams.mobile.memberFetchFailed"));
+        return;
+      }
+      if (data) {
+        setMemberError(null);
         setTeamMembers(data as unknown as TeamMemberForSelection[]);
       }
     };
     loadTeamMembers();
-  }, [teamId, supabase]);
+  }, [teamId, supabase, t]);
 
   // グループ作成/編集ハンドラ
   const handleFormSubmit = useCallback(
@@ -233,9 +240,9 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         </View>
 
         {/* エラー */}
-        {(error || actionError) && (
+        {(error || actionError || memberError) && (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error || actionError}</Text>
+            <Text style={styles.errorText}>{error || actionError || memberError}</Text>
           </View>
         )}
 

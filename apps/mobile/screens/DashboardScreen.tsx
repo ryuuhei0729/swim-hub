@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { View, ScrollView, StyleSheet, RefreshControl, Alert, Platform } from "react-native";
+import { ScrollView, StyleSheet, RefreshControl, Alert, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -29,7 +29,7 @@ type DashboardScreenNavigationProp = NativeStackNavigationProp<MainStackParamLis
 
 /**
  * ダッシュボード画面
- * カレンダービューで練習・大会を表示
+ * チームのお知らせとカレンダー(練習・大会)を表示
  */
 export const DashboardScreen: React.FC = () => {
   const navigation = useNavigation<DashboardScreenNavigationProp>();
@@ -131,32 +131,33 @@ export const DashboardScreen: React.FC = () => {
     }
   };
 
-  // 練習追加
+  // 練習追加（個人フロー → タブ統合画面）
   const handleAddPractice = (date: Date) => {
     const dateParam = formatDate(date, "yyyy-MM-dd");
-    navigation.navigate("PracticeForm", { date: dateParam });
+    navigation.navigate("PracticeTabForm", { date: dateParam });
   };
 
-  // 大会記録追加
+  // 大会記録追加（個人フロー → タブ統合画面）
   const handleAddRecord = (dateOrCompetitionId: Date | string, dateParam?: string) => {
     // EntryDetailから呼ばれた場合（competitionIdとdateが渡される）
     if (typeof dateOrCompetitionId === "string" && dateParam) {
-      navigation.navigate("RecordLogForm", {
+      navigation.navigate("CompetitionTabForm", {
         competitionId: dateOrCompetitionId,
         date: dateParam,
+        initialTab: "record",
       });
     } else if (dateOrCompetitionId instanceof Date) {
       // 通常の呼び出し（dateのみ）
       const formattedDate = formatDate(dateOrCompetitionId, "yyyy-MM-dd");
-      navigation.navigate("CompetitionForm", { date: formattedDate });
+      navigation.navigate("CompetitionTabForm", { date: formattedDate });
     }
   };
 
-  // 練習編集
+  // 練習編集（個人フロー → タブ統合画面）
   const handleEditPractice = (item: CalendarItem) => {
     const practiceId = item.metadata?.practice_id || item.id;
     const dateParam = item.date;
-    navigation.navigate("PracticeForm", { practiceId, date: dateParam });
+    navigation.navigate("PracticeTabForm", { practiceId, date: dateParam });
   };
 
   // 練習削除
@@ -206,17 +207,16 @@ export const DashboardScreen: React.FC = () => {
     ]);
   };
 
-  // 練習ログ追加
+  // 練習ログ追加（個人フロー → タブ統合画面のログタブへ）
   const handleAddPracticeLog = (practiceId: string) => {
-    navigation.navigate("PracticeLogForm", { practiceId, returnTo: "dashboard" });
+    navigation.navigate("PracticeTabForm", { practiceId, initialTab: "log" });
   };
 
-  // 練習ログ編集
+  // 練習ログ編集（個人フロー → タブ統合画面のログタブへ）
   const handleEditPracticeLog = (item: CalendarItem) => {
     const practiceId = item.metadata?.practice_id || item.metadata?.practice?.id;
-    const practiceLogId = item.id;
     if (practiceId) {
-      navigation.navigate("PracticeLogForm", { practiceId, practiceLogId, returnTo: "dashboard" });
+      navigation.navigate("PracticeTabForm", { practiceId, initialTab: "log" });
     }
   };
 
@@ -249,7 +249,7 @@ export const DashboardScreen: React.FC = () => {
     ]);
   };
 
-  // 記録編集
+  // 記録編集（個人フロー → タブ統合画面のレコードタブへ）
   const handleEditRecord = (item: CalendarItem) => {
     const competitionId =
       item.metadata?.competition?.id || item.metadata?.record?.competition_id;
@@ -259,10 +259,10 @@ export const DashboardScreen: React.FC = () => {
       return;
     }
 
-    navigation.navigate("RecordLogForm", {
+    navigation.navigate("CompetitionTabForm", {
       competitionId,
-      recordId: item.id,
       date: item.date,
+      initialTab: "record",
     });
   };
 
@@ -295,31 +295,27 @@ export const DashboardScreen: React.FC = () => {
     ]);
   };
 
-  // エントリー編集
+  // エントリー編集（個人フロー → タブ統合画面のエントリータブへ）
   const handleEditEntry = (item: CalendarItem) => {
-    const entryId = item.id;
     const competitionId = item.metadata?.entry?.competition_id || item.metadata?.competition?.id;
     const dateParam = item.date;
 
     if (competitionId) {
-      navigation.navigate("EntryForm", {
+      navigation.navigate("CompetitionTabForm", {
         competitionId,
-        entryId,
         date: dateParam,
+        initialTab: "entry",
       });
     }
   };
 
-  // 大会記録を追加（過去の大会は直接RecordLogFormへ、それ以外はEntryFormへ）
+  // 大会エントリー追加（個人フロー → タブ統合画面、isEntryTabVisible に従いタブ決定）
   const handleAddEntry = (competitionId: string, date: string) => {
-    const competitionDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (competitionDate < today) {
-      navigation.navigate("RecordLogForm", { competitionId, date });
-    } else {
-      navigation.navigate("EntryForm", { competitionId, date });
-    }
+    navigation.navigate("CompetitionTabForm", {
+      competitionId,
+      date,
+      initialTab: "entry",
+    });
   };
 
   // エントリー削除
@@ -330,11 +326,11 @@ export const DashboardScreen: React.FC = () => {
     refetch();
   };
 
-  // 大会編集
+  // 大会編集（個人フロー → タブ統合画面）
   const handleEditCompetition = (item: CalendarItem) => {
     const competitionId = item.metadata?.competition?.id || item.id;
     const dateParam = item.date;
-    navigation.navigate("CompetitionForm", {
+    navigation.navigate("CompetitionTabForm", {
       competitionId,
       date: dateParam,
     });
@@ -416,18 +412,6 @@ export const DashboardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      <View style={styles.calendarContainer}>
-        <CalendarView
-          currentDate={currentDate}
-          entries={entries}
-          isLoading={isLoading}
-          onDateClick={handleDateClick}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          onTodayClick={handleTodayClick}
-          onMonthYearSelect={handleMonthYearSelect}
-        />
-      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -441,6 +425,16 @@ export const DashboardScreen: React.FC = () => {
         }
       >
         <TeamAnnouncementsSection teams={teams} />
+        <CalendarView
+          currentDate={currentDate}
+          entries={entries}
+          isLoading={isLoading}
+          onDateClick={handleDateClick}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          onTodayClick={handleTodayClick}
+          onMonthYearSelect={handleMonthYearSelect}
+        />
       </ScrollView>
 
       {/* 日付詳細モーダル */}
@@ -481,11 +475,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#EFF6FF",
   },
-  calendarContainer: {},
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 8,
     paddingBottom: 16,
   },
 });

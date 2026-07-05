@@ -36,15 +36,18 @@ export function getPlanLimits(isPremium: boolean) {
   return {
     splitTimesPerRecord: isPremium ? Infinity : FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD,
     practiceTimesPerLog: isPremium ? Infinity : FREE_PLAN_LIMITS.PRACTICE_TIMES_PER_LOG,
-    imageUploadEnabled: isPremium,
+    imageUploadEnabled: canUploadImage(isPremium),
   };
 }
 
 /**
  * 画像アップロードが許可されているかチェック
+ *
+ * 画像は Free / Premium 双方で許可される（動画のみ Premium 限定）。
+ * 判定は FREE_PLAN_LIMITS.IMAGE_UPLOAD_ENABLED を単一の source of truth とする。
  */
 export function canUploadImage(isPremium: boolean): boolean {
-  return isPremium;
+  return FREE_PLAN_LIMITS.IMAGE_UPLOAD_ENABLED || isPremium;
 }
 
 /**

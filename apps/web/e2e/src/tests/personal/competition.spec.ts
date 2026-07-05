@@ -555,26 +555,14 @@ test.describe("個人大会記録のテスト", () => {
     const entryTime1 = await page.locator('[data-testid="entry-time-1"]').inputValue();
     expect(entryTime1).toBeTruthy();
 
-    const styleSelect1 = page.locator('[data-testid="entry-style-1"]');
-    const options1 = await styleSelect1.locator("option").allTextContents();
-    let selectedStyleId1 = "";
-    for (const optionText of options1) {
-      if (
-        optionText.includes("バタフライ") ||
-        optionText.includes("Fly") ||
-        optionText.includes("200")
-      ) {
-        const optionValue = await styleSelect1
-          .locator(`option:has-text("${optionText}")`)
-          .getAttribute("value");
-        if (optionValue) {
-          selectedStyleId1 = optionValue;
-          break;
-        }
+    // 種目はチップ式（距離 × 泳法）。200m バタフライ を選択
+    const distanceChip200 = page.locator('[data-testid="entry-style-1-distance-200"]');
+    if (await distanceChip200.count()) {
+      await distanceChip200.click();
+      const flyChip = page.locator('[data-testid="entry-style-1-stroke-バタフライ"]');
+      if (await flyChip.count()) {
+        await flyChip.click();
       }
-    }
-    if (selectedStyleId1) {
-      await styleSelect1.selectOption(selectedStyleId1);
     }
 
     await page.fill('[data-testid="entry-time-1"]', "2:03.50");

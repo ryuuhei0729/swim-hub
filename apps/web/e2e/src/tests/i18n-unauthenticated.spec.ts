@@ -44,7 +44,8 @@ test.describe("login ページのロケール別 UI", () => {
   test("TC-I18N-B-001: /ja/login でフォームラベルが日本語", async ({ page }) => {
     const getErrors = setupMissingMessageListener(page);
 
-    await page.goto("/ja/login");
+    // ログインフォームは OAuth 優先の再設計により /login/email に分離された
+    await page.goto("/ja/login/email");
     await page.waitForLoadState("networkidle");
 
     // html lang 属性
@@ -69,7 +70,8 @@ test.describe("login ページのロケール別 UI", () => {
   test("TC-I18N-B-002: /en/login でフォームラベルが英語", async ({ page }) => {
     const getErrors = setupMissingMessageListener(page);
 
-    await page.goto("/en/login");
+    // ログインフォームは OAuth 優先の再設計により /login/email に分離された
+    await page.goto("/en/login/email");
     await page.waitForLoadState("networkidle");
 
     // html lang 属性
@@ -110,8 +112,10 @@ test.describe("LP (トップページ) のロケール別 UI", () => {
     expect(await page.getAttribute("html", "lang")).toBe("ja");
 
     // hero section に日本語テキストが存在する
+    // NOTE: textContent は <style> 内の CSS(日本語コメント含む)まで拾うため、
+    // 画面に表示されるテキストのみを見る innerText を使う
     const heroSection = page.locator("section").first();
-    const heroText = await heroSection.textContent();
+    const heroText = await heroSection.innerText();
     expect(heroText).toMatch(/[ぁ-ん]/);
 
     // 無料登録ボタンが日本語
@@ -132,8 +136,10 @@ test.describe("LP (トップページ) のロケール別 UI", () => {
 
     // hero section に英語テキストが存在する (日本語が含まれない)
     // NOTE: 固有名詞 "SwimHub" は両言語に含まれる
+    // NOTE: textContent は <style> 内の CSS(日本語コメント含む)まで拾うため、
+    // 画面に表示されるテキストのみを見る innerText を使う
     const heroSection = page.locator("section").first();
-    const heroText = await heroSection.textContent();
+    const heroText = await heroSection.innerText();
     // ひらがな/カタカナが含まれないこと
     expect(heroText).not.toMatch(/[ぁ-んァ-ン]/);
 
@@ -157,12 +163,9 @@ test.describe("LanguageSwitcher でのロケール切り替え (unauthenticated)
     await page.goto("/ja/");
     await page.waitForLoadState("networkidle");
 
-    // LanguageSwitcher の EN ボタンを探してクリック
-    const enSwitcher = page
-      .locator(
-        '[data-testid="language-switcher-en"], button:has-text("EN"), a:has-text("EN")',
-      )
-      .first();
+    // LanguageSwitcher (プルダウン) を開いて EN 項目をクリック
+    await page.locator('[data-testid="language-switcher-trigger"]').first().click();
+    const enSwitcher = page.locator('[data-testid="language-switcher-en"]').first();
     await enSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await enSwitcher.click();
 
@@ -180,12 +183,9 @@ test.describe("LanguageSwitcher でのロケール切り替え (unauthenticated)
     await page.goto("/en/");
     await page.waitForLoadState("networkidle");
 
-    // LanguageSwitcher の JA ボタンを探してクリック
-    const jaSwitcher = page
-      .locator(
-        '[data-testid="language-switcher-ja"], button:has-text("JA"), a:has-text("JA")',
-      )
-      .first();
+    // LanguageSwitcher (プルダウン) を開いて JA 項目をクリック
+    await page.locator('[data-testid="language-switcher-trigger"]').first().click();
+    const jaSwitcher = page.locator('[data-testid="language-switcher-ja"]').first();
     await jaSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await jaSwitcher.click();
 
@@ -203,11 +203,8 @@ test.describe("LanguageSwitcher でのロケール切り替え (unauthenticated)
     await page.goto("/ja/login");
     await page.waitForLoadState("networkidle");
 
-    const enSwitcher = page
-      .locator(
-        '[data-testid="language-switcher-en"], button:has-text("EN"), a:has-text("EN")',
-      )
-      .first();
+    await page.locator('[data-testid="language-switcher-trigger"]').first().click();
+    const enSwitcher = page.locator('[data-testid="language-switcher-en"]').first();
     await enSwitcher.waitFor({ state: "visible", timeout: 10000 });
     await enSwitcher.click();
 
@@ -225,8 +222,14 @@ test.describe("[V-35] MISSING_MESSAGE コンソールエラーなし", () => {
   const pagesToCheck = [
     { path: "/ja/", label: "ja LP" },
     { path: "/en/", label: "en LP" },
+    { path: "/zh/", label: "zh LP" },
+    { path: "/ko/", label: "ko LP" },
+    { path: "/de/", label: "de LP" },
     { path: "/ja/login", label: "ja login" },
     { path: "/en/login", label: "en login" },
+    { path: "/zh/login", label: "zh login" },
+    { path: "/ko/login", label: "ko login" },
+    { path: "/de/login", label: "de login" },
     { path: "/ja/signup", label: "ja signup" },
     { path: "/en/signup", label: "en signup" },
     { path: "/ja/reset-password", label: "ja reset-password" },

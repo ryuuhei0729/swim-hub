@@ -4,14 +4,20 @@
 
 import { create } from "zustand";
 import type { PracticeTag } from "@apps/shared/types";
-import type { EditingData } from "../types";
+import type { EditingData, PracticeTabId } from "../types";
 
 // -----------------------------------------------------------------------------
 // Types
 // -----------------------------------------------------------------------------
 
 interface PracticeFormState {
-  // モーダル状態
+  // タブモーダル状態
+  isOpen: boolean;
+  activeTab: PracticeTabId;
+  /** 編集時の既存練習ID（新規作成完了後も内部的に保持: 子INSERT失敗時の再送信で親重複INSERT防止）*/
+  editingPracticeId: string | null;
+
+  // 後方互換: 旧来のオープン状態（TeamPracticeForm 等の旧経路が参照）
   isBasicFormOpen: boolean;
   isLogFormOpen: boolean;
 
@@ -31,7 +37,13 @@ interface PracticeFilterState {
 }
 
 interface PracticeFormActions {
-  // モーダル操作
+  // タブモーダル操作
+  openTabModal: (date?: Date, editData?: EditingData, tab?: PracticeTabId) => void;
+  closeTabModal: () => void;
+  setActiveTab: (tab: PracticeTabId) => void;
+  setEditingPracticeId: (id: string | null) => void;
+
+  // 後方互換: 旧来のモーダル操作（TeamPracticeForm 等の旧経路が参照）
   openBasicForm: (date?: Date, editData?: EditingData) => void;
   openLogForm: (practiceId?: string, editData?: EditingData) => void;
   closeBasicForm: () => void;
@@ -66,6 +78,9 @@ type PracticeActions = PracticeFormActions &
 // -----------------------------------------------------------------------------
 
 const initialFormState: PracticeFormState = {
+  isOpen: false,
+  activeTab: "practice",
+  editingPracticeId: null,
   isBasicFormOpen: false,
   isLogFormOpen: false,
   selectedDate: null,
@@ -93,7 +108,39 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
   ...initialState,
 
   // ---------------------------------------------------------------------------
-  // Form: モーダル操作
+  // タブモーダル操作
+  // ---------------------------------------------------------------------------
+  openTabModal: (date, editData, tab = "practice") => {
+    set({
+      isOpen: true,
+      activeTab: tab,
+      editingPracticeId: editData?.id || null,
+      selectedDate: date || null,
+      editingData: editData || null,
+      createdPracticeId: null,
+      // 後方互換フィールドも更新
+      isBasicFormOpen: false,
+      isLogFormOpen: false,
+    });
+  },
+
+  closeTabModal: () => {
+    set({
+      isOpen: false,
+      activeTab: "practice",
+      editingPracticeId: null,
+      selectedDate: null,
+      editingData: null,
+      createdPracticeId: null,
+    });
+  },
+
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
+  setEditingPracticeId: (id) => set({ editingPracticeId: id }),
+
+  // ---------------------------------------------------------------------------
+  // 後方互換: 旧来のモーダル操作
   // ---------------------------------------------------------------------------
   openBasicForm: (date, editData) => {
     set({
@@ -134,6 +181,9 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
 
   closeAll: () => {
     set({
+      isOpen: false,
+      activeTab: "practice",
+      editingPracticeId: null,
       isBasicFormOpen: false,
       isLogFormOpen: false,
       selectedDate: null,
@@ -143,7 +193,7 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
   },
 
   // ---------------------------------------------------------------------------
-  // Form: データ操作
+  // データ操作
   // ---------------------------------------------------------------------------
   setSelectedDate: (date) => set({ selectedDate: date }),
   setEditingData: (data) => set({ editingData: data }),

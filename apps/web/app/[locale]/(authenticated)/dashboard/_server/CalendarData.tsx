@@ -6,8 +6,8 @@ import React from "react";
 import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { DashboardAPI } from "@apps/shared/api/dashboard";
 import { CalendarItem, MonthlySummary } from "@apps/shared/types/ui";
-import { endOfMonth, startOfMonth } from "date-fns";
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { toZonedTime } from "date-fns-tz";
+import { getCalendarGridRange } from "../_utils/calendarGridRange";
 
 interface CalendarDataProps {
   currentDate?: Date;
@@ -33,12 +33,8 @@ export default async function CalendarData({
   // currentDate をUTCとして扱い、日本時間に変換
   const zonedDate = toZonedTime(currentDate, TIMEZONE);
 
-  // 月の開始日と終了日を計算（タイムゾーン考慮済み）
-  const monthStart = startOfMonth(zonedDate);
-  const monthEnd = endOfMonth(zonedDate);
-  // 日本時間でフォーマット
-  const startDate = formatInTimeZone(monthStart, TIMEZONE, "yyyy-MM-dd");
-  const endDate = formatInTimeZone(monthEnd, TIMEZONE, "yyyy-MM-dd");
+  // グリッドの可視範囲（日曜起点、前月末〜翌月初を含む）をタイムゾーン考慮済みの日付で計算
+  const { startDate, endDate } = getCalendarGridRange(zonedDate);
 
   // 並行取得でパフォーマンス最適化
   const [calendarItems, monthlySummary] = await Promise.all([

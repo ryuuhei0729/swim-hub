@@ -160,6 +160,21 @@ export const MyPageScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      {/* ページヘッダー (スクロール固定) */}
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageHeaderTitle}>{t("mypage.mobile.pageTitle")}</Text>
+        <Pressable
+          style={styles.pageHeaderSettings}
+          onPress={() => navigation.navigate("Settings")}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t("mypage.mobile.settingsButtonAria")}
+        >
+          <Feather name="settings" size={18} color="#6B7280" />
+          <Text style={styles.pageHeaderSettingsText}>{t("mypage.mobile.settingsButton")}</Text>
+        </Pressable>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -207,17 +222,6 @@ export const MyPageScreen: React.FC = () => {
             <BestTimesTable bestTimes={bestTimes} />
           )}
         </View>
-
-        {/* 設定 */}
-        <Pressable
-          style={styles.settingsButton}
-          onPress={() => navigation.navigate("Settings")}
-          accessibilityRole="button"
-          accessibilityLabel={t("mypage.mobile.settingsButtonAria")}
-        >
-          <Feather name="settings" size={18} color="#6B7280" />
-          <Text style={styles.settingsButtonText}>{t("mypage.mobile.settingsButton")}</Text>
-        </Pressable>
       </ScrollView>
 
       {/* プロフィール編集モーダル */}
@@ -300,6 +304,31 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#374151",
   },
+  pageHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  pageHeaderTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  pageHeaderSettings: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  pageHeaderSettingsText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#6B7280",
+  },
   passwordButton: {
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -313,24 +342,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#374151",
-  },
-  settingsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  settingsButtonText: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#6B7280",
   },
   errorContainer: {
     padding: 20,

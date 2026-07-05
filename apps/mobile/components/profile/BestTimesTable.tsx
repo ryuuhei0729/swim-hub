@@ -4,6 +4,7 @@ import { differenceInDays, parseISO } from "date-fns";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { formatTime } from "@/utils/formatters";
+import { STYLE_KEY_MAP } from "@/utils/styleName";
 import type { BestTime } from "@apps/shared/types/ui";
 
 interface BestTimesTableProps {
@@ -17,15 +18,6 @@ const DISTANCES = [50, 100, 200, 400, 800];
 
 // 静的種目リスト
 const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"];
-
-// テーブルヘッダー用の短縮名
-const STYLE_SHORT_LABELS: Record<string, string> = {
-  自由形: "Fr",
-  平泳ぎ: "Br",
-  背泳ぎ: "Ba",
-  バタフライ: "Fly",
-  個人メドレー: "IM",
-};
 
 // 種目ごとの色
 const styleColors: Record<string, { bg: string; text: string }> = {
@@ -203,7 +195,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                 ]}
               >
                 <Text style={[styles.headerText, { color: styleColors[style]?.text || "#111827" }]}>
-                  {STYLE_SHORT_LABELS[style] || style}
+                  {t(`practice.styleAbbrev.${STYLE_KEY_MAP[style]}`)}
                 </Text>
               </View>
             ))}

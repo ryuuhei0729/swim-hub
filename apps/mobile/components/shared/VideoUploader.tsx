@@ -5,7 +5,6 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { uploadVideo, deleteVideo, type VideoType } from "@/utils/videoUpload";
-import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
 import { PremiumBadge } from "./PremiumBadge";
 import { VideoPlayer } from "./VideoPlayer";
 
@@ -109,6 +108,21 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   const pickVideo = useCallback(
     async (source: "library" | "camera") => {
       try {
+        // 権限要求（Android はカメラ撮影に CAMERA 権限が必須。iOS も初回に確認ダイアログを表示）
+        const { status } =
+          source === "camera"
+            ? await ImagePicker.requestCameraPermissionsAsync()
+            : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            t("common.alertErrorTitle"),
+            source === "camera"
+              ? t("common.upload.cameraPermissionDenied")
+              : t("common.upload.mediaPermissionDenied"),
+          );
+          return;
+        }
+
         const pickerFn =
           source === "camera"
             ? ImagePicker.launchCameraAsync
@@ -219,8 +233,9 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   }, [getAccessToken, type, id, onDelete, onPendingVideoAsset, onPendingVideoUri, pendingVideoUri, t]);
 
   // Premium 制限
-  if (!isPremium && uploadState === "idle") {
-    return <PremiumBadge message={PREMIUM_MESSAGES.video_upload} compact />;
+  // idle に加え error 状態でも非 Premium にはバッジを表示し、追加ボタンの再表示を防ぐ（Web と一致）
+  if (!isPremium && (uploadState === "idle" || uploadState === "error")) {
+    return <PremiumBadge feature="video_upload" compact />;
   }
 
   // 動画選択済み（ID待ち — 保存後に自動アップロード）

@@ -322,7 +322,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 height={48}
                 className="mr-3 w-10 h-10 shrink-0"
               />
-              <span className="flex-1 truncate">SwimHub Timer</span>
+              <span className="flex-1 truncate font-(family-name:--font-chakra-petch)">SwimHub Timer</span>
               <ArrowTopRightOnSquareIcon className="h-3 w-3 text-gray-300 group-hover:text-gray-400 shrink-0" />
             </a>
             <a
@@ -338,7 +338,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 height={48}
                 className="mr-3 w-10 h-10 shrink-0"
               />
-              <span className="flex-1 truncate">SwimHub Scanner</span>
+              <span className="flex-1 truncate font-(family-name:--font-chakra-petch)">SwimHub Scanner</span>
               <ArrowTopRightOnSquareIcon className="h-3 w-3 text-gray-300 group-hover:text-gray-400 shrink-0" />
             </a>
           </div>

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { RecordAPI } from "@apps/shared/api/records";
+import { styleIdToCodeKey, buildSwimStyleLabel } from "@/utils/swimStyle";
 import { parseTime } from "@apps/shared/utils/time";
 import { QuestionMarkCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
@@ -84,7 +85,23 @@ export default function Step3BestTime({
   completeError,
 }: Step3BestTimeProps) {
   const t = useTranslations("onboarding.step3");
+  const tStyles = useTranslations("practice.styles");
+  const locale = useLocale();
   const { supabase } = useAuth();
+
+  /** style_id から翻訳済み種目ラベル (例: ja="100m自由形", en="100m Freestyle") */
+  const styleLabel = (styleId: number): string => {
+    const style = STYLES.find((s) => s.id === styleId);
+    if (!style) return "";
+    const codeKey = styleIdToCodeKey(styleId);
+    if (codeKey) {
+      // nameJp は "100m 自由形" のようにスペースあり → distance を抽出
+      const distMatch = style.nameJp.match(/^(\d+)/);
+      const distance = distMatch ? parseInt(distMatch[1], 10) : 0;
+      if (distance) return buildSwimStyleLabel(distance, tStyles(codeKey), locale);
+    }
+    return style.nameJp;
+  };
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -173,7 +190,7 @@ export default function Step3BestTime({
         const result = await recordAPI.createBulkRecords(records);
 
         if (result.errors.length > 0) {
-          setSaveError(`一部の登録に失敗しました: ${result.errors.join(", ")}`);
+          setSaveError(t("partialFailure", { errors: result.errors.join(", ") }));
           setSaving(false);
           return;
         }
@@ -219,12 +236,11 @@ export default function Step3BestTime({
       {/* 登録済みエントリー */}
       <div className="space-y-3">
         {entries.map((entry) => {
-          const style = STYLES.find((s) => s.id === entry.styleId);
           return (
             <EntryRow
               key={entry.key}
               entry={entry}
-              styleName={style?.nameJp ?? ""}
+              styleName={styleLabel(entry.styleId)}
               onUpdate={updateEntry}
               onRemove={removeEntry}
               disabled={isProcessing}
@@ -244,7 +260,7 @@ export default function Step3BestTime({
         <option value={0}>{t("addStylePlaceholder")}</option>
         {STYLES.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.nameJp}
+            {styleLabel(s.id)}
           </option>
         ))}
       </select>
@@ -321,15 +337,30 @@ function EntryRow({ entry, styleName, onUpdate, onRemove, disabled, isDuplicate 
       <div className="space-y-1.5 sm:space-y-0 sm:grid sm:gap-1.5 sm:items-center" style={{ gridTemplateColumns: "1fr 1fr 1fr 2fr" }}>
         {/* 1行目 (スマホ): 水路 + 引き継ぎ / デスクトップ: そのまま */}
         <div className="grid grid-cols-2 gap-1.5 sm:contents">
-          <select
-            value={entry.poolType}
-            onChange={(e) => onUpdate(entry.key, { poolType: Number(e.target.value) })}
-            disabled={disabled}
-            className="w-full px-1.5 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value={0}>{t("poolTypeShort")}</option>
-            <option value={1}>{t("poolTypeLong")}</option>
-          </select>
+          <div className="grid grid-cols-2 rounded border border-gray-300 overflow-hidden" role="group" aria-label={`${t("poolTypeShort")} / ${t("poolTypeLong")}`}>
+            <button
+              type="button"
+              onClick={() => onUpdate(entry.key, { poolType: 0 })}
+              disabled={disabled}
+              aria-pressed={entry.poolType === 0}
+              className={`px-1.5 py-1 text-xs transition-colors disabled:opacity-50 ${
+                entry.poolType === 0 ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {t("poolTypeShort")}
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdate(entry.key, { poolType: 1 })}
+              disabled={disabled}
+              aria-pressed={entry.poolType === 1}
+              className={`px-1.5 py-1 text-xs transition-colors disabled:opacity-50 border-l border-gray-300 ${
+                entry.poolType === 1 ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {t("poolTypeLong")}
+            </button>
+          </div>
 
           <label className="flex items-center justify-center gap-1 text-xs text-gray-600 cursor-pointer">
             <input

@@ -22,7 +22,7 @@ concurrency:
 jobs:
   type-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
     - name: Checkout code
@@ -38,8 +38,35 @@ jobs:
       with:
         version: latest
 
+    - name: Configure Supabase for CI environment
+      run: |
+        # CI環境ではGoogle OAuthを無効化（ダミー値で警告を抑制）
+        sed -i '/\[auth\.external\.google\]/,/^\[/ s/^enabled = true/enabled = false/' supabase/config.toml || {
+          echo "⚠️ Google OAuthの無効化に失敗しました。"
+          exit 1
+        }
+      env:
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "dummy-client-id"
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
+
+    - name: Start Supabase stack
+      # `supabase start` が migrations を適用する。edge-runtime は不要なため除外
+      run: supabase start --workdir supabase --exclude edge-runtime
+      timeout-minutes: 8
+      env:
+        SUPABASE_DB_PASSWORD: postgres
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "dummy-client-id"
+        SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "dummy-secret"
+
     - name: Type check migrations
-      run: supabase db type-check --workdir supabase
+      # `supabase db type-check` は CLI から廃止されたため `db lint` を使用。
+      # 起動済みローカルDBに対して plpgsql の型エラーを検査する
+      run: supabase db lint --workdir supabase --level error --fail-on error
+
+    - name: Stop Supabase stack
+      if: always()
+      run: supabase stop --workdir supabase
+      continue-on-error: true
 
   migration-test:
     needs: type-check
@@ -141,9 +168,12 @@ jobs:
       env:
         SUPABASE_DB_PASSWORD: postgres
 
+    # `supabase functions test` は CLI から廃止されたため Deno で直接テストを実行する。
+    # 実テストファイル（*.test.ts / *_test.ts）が存在する場合のみ実行する。
+    # テストを追加する際は別途 Deno のセットアップ step が必要。
     - name: Test Edge Functions
-      if: ${{ hashFiles('supabase/functions/**/*.ts') != '' || hashFiles('supabase/functions/**/*.js') != '' }}
-      run: supabase functions test --workdir supabase
+      if: ${{ hashFiles('supabase/functions/**/*.test.ts', 'supabase/functions/**/*_test.ts') != '' }}
+      run: deno test --allow-all supabase/functions/
 
     - name: Stop Supabase stack
       if: always()

@@ -451,6 +451,79 @@ export class RecordAPI {
     return result;
   }
 
+  /**
+   * 指定記録を除外した、その種目・水路のユーザー自己ベスト(秒)。無ければ null。
+   * beforeDate より厳密に前の記録のみ対象（当時の自己ベストとの比較）。
+   * 大会記録は competitions.date、一括登録は created_at で日付比較する2クエリ方式。
+   * 埋め込みリレーションへの `.lt("competition.date", ...)` フィルタは BestTimeBadge.tsx で
+   * 実運用されている PostgREST の `!inner` join + ドット記法フィルタと同一パターン。
+   */
+  async getPreviousBestTime(
+    styleId: number,
+    poolType: number,
+    excludeRecordId: string,
+    isRelaying: boolean,
+    beforeDate: string,
+  ): Promise<number | null> {
+    if (!Number.isFinite(styleId) || !beforeDate) return null;
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
+    if (!user) return null;
+
+    // YYYY-MM-DD 形式の場合は当日 00:00:00.000Z に正規化して created_at 比較に使う
+    const normalized = /^\d{4}-\d{2}-\d{2}$/.test(beforeDate)
+      ? `${beforeDate}T00:00:00.000Z`
+      : beforeDate;
+
+    // 1. 大会記録（competition_id あり）: competitions.date で比較
+    const competitionQuery = this.supabase
+      .from("records")
+      .select("time, competition:competitions!inner(date)")
+      .eq("user_id", user.id)
+      .eq("style_id", styleId)
+      .eq("pool_type", poolType)
+      .eq("is_relaying", isRelaying)
+      .neq("id", excludeRecordId)
+      .gt("time", 0)
+      .lt("competition.date", beforeDate)
+      .order("time", { ascending: true })
+      .limit(1);
+
+    // 2. 一括登録（competition_id = null）: created_at で比較
+    const bulkQuery = this.supabase
+      .from("records")
+      .select("time")
+      .eq("user_id", user.id)
+      .eq("style_id", styleId)
+      .eq("pool_type", poolType)
+      .eq("is_relaying", isRelaying)
+      .is("competition_id", null)
+      .neq("id", excludeRecordId)
+      .gt("time", 0)
+      .lt("created_at", normalized)
+      .order("time", { ascending: true })
+      .limit(1);
+
+    const [compRes, bulkRes] = await Promise.all([competitionQuery, bulkQuery]);
+    if (compRes.error) {
+      console.error("getPreviousBestTime failed:", compRes.error);
+      throw compRes.error;
+    }
+    if (bulkRes.error) {
+      console.error("getPreviousBestTime failed:", bulkRes.error);
+      throw bulkRes.error;
+    }
+
+    const compBest = (compRes.data?.[0] as { time?: number } | undefined)?.time;
+    const bulkBest = (bulkRes.data?.[0] as { time?: number } | undefined)?.time;
+
+    if (compBest != null && bulkBest != null) return Math.min(compBest, bulkBest);
+    if (compBest != null) return compBest;
+    if (bulkBest != null) return bulkBest;
+    return null; // その日より前に記録なし = その時点で初記録
+  }
+
   // =========================================================================
   // 大会の操作
   // =========================================================================

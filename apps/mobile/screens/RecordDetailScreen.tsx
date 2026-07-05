@@ -43,13 +43,15 @@ export const RecordDetailScreen: React.FC = () => {
   const [viewerIndex, setViewerIndex] = useState(0);
 
   const handleEdit = () => {
-    if (record?.competition_id && record?.competition?.date) {
-      navigation.navigate("RecordLogForm", {
+    if (record?.competition_id && record?.competition?.date && !record?.team_id) {
+      // 個人フロー(team_id なし): 新タブ画面(レースレコードタブ)へ
+      navigation.navigate("CompetitionTabForm", {
         competitionId: record.competition_id,
-        recordId,
         date: record.competition.date,
+        initialTab: "record",
       });
     } else {
+      // チームフロー(team_id あり)または competition なし: 旧画面へ
       navigation.navigate("RecordForm", { recordId });
     }
   };

@@ -6,6 +6,7 @@ import {
   formatDateTime,
   getMonthDateRange,
   toISODateString,
+  type SupportedLocale,
 } from "../../utils/date";
 
 describe("date utilities", () => {
@@ -99,6 +100,64 @@ describe("date utilities", () => {
       const original = new Date(2024, 5, 15); // 6月
       const result = addMonthsImmutable(original, -2);
       expect(result.getMonth()).toBe(3); // 4月
+    });
+  });
+
+  describe("ロケール別フォーマット (zh / ko / de)", () => {
+    describe("formatDate — zh (簡体字)", () => {
+      it("short スタイルで zh=1月29日", () => {
+        expect(formatDate("2024-01-29", "short", "zh" as SupportedLocale)).toBe("1月29日");
+      });
+
+      it("long スタイルで zh=2024年1月29日", () => {
+        expect(formatDate("2024-01-29", "long", "zh" as SupportedLocale)).toBe("2024年1月29日");
+      });
+    });
+
+    describe("formatDate — ko (韓国語)", () => {
+      it("short スタイルで ko=1월 29일", () => {
+        expect(formatDate("2024-01-29", "short", "ko" as SupportedLocale)).toBe("1월 29일");
+      });
+
+      it("long スタイルで ko=2024년 1월 29일", () => {
+        expect(formatDate("2024-01-29", "long", "ko" as SupportedLocale)).toBe("2024년 1월 29일");
+      });
+    });
+
+    describe("formatDate — de (ドイツ語)", () => {
+      it("short スタイルで de=29. Jan.", () => {
+        expect(formatDate("2024-01-29", "short", "de" as SupportedLocale)).toBe("29. Jan.");
+      });
+
+      it("long スタイルで de=29. Januar 2024", () => {
+        expect(formatDate("2024-01-29", "long", "de" as SupportedLocale)).toBe("29. Januar 2024");
+      });
+
+      it("numeric スタイルで de=29.01.2024", () => {
+        expect(formatDate("2024-01-29", "numeric", "de" as SupportedLocale)).toBe("29.01.2024");
+      });
+    });
+
+    describe("formatDateTime — zh (簡体字)", () => {
+      it("long スタイルで zh=2024年1月29日 14:30", () => {
+        expect(formatDateTime("2024-01-29T14:30:00", "long", "zh" as SupportedLocale)).toBe(
+          "2024年1月29日 14:30",
+        );
+      });
+    });
+
+    describe("formatDateTime — de (ドイツ語)", () => {
+      it("long スタイルで de=29. Januar 2024 14:30", () => {
+        expect(formatDateTime("2024-01-29T14:30:00", "long", "de" as SupportedLocale)).toBe(
+          "29. Januar 2024 14:30",
+        );
+      });
+
+      it("short スタイルで de=29.1. 14:30", () => {
+        expect(formatDateTime("2024-01-29T14:30:00", "short", "de" as SupportedLocale)).toBe(
+          "29.1. 14:30",
+        );
+      });
     });
   });
 

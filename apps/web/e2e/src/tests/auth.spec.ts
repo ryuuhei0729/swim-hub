@@ -18,7 +18,7 @@ import { generateTestEmail, generateTestPassword } from "../utils/test-data";
  * ログインヘルパー関数
  */
 async function loginWithCredentials(page: Page, email: string, password: string) {
-  await page.goto(URLS.LOGIN);
+  await page.goto(`${URLS.LOGIN}/email`);
   await page.waitForLoadState("networkidle");
 
   await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 });
@@ -52,7 +52,7 @@ test.describe("認証フローのテスト", () => {
     if (!testEnv) throw new Error("テスト環境が設定されていません");
 
     // ステップ1: ログインページに移動
-    await page.goto(URLS.LOGIN);
+    await page.goto(`${URLS.LOGIN}/email`);
     await page.waitForLoadState("networkidle");
 
     // ステップ2: ログインフォームが表示されることを確認
@@ -81,7 +81,7 @@ test.describe("認証フローのテスト", () => {
     if (!testEnv) throw new Error("テスト環境が設定されていません");
 
     // ステップ1: ログインページに移動
-    await page.goto(URLS.LOGIN);
+    await page.goto(`${URLS.LOGIN}/email`);
     await page.waitForLoadState("networkidle");
 
     // ステップ2: 間違った認証情報を入力
@@ -132,9 +132,10 @@ test.describe("認証フローのテスト", () => {
     // ステップ3: ログインページにリダイレクトされることを確認
     expect(page.url()).toContain("/ja/login");
 
-    // ステップ4: ログインフォームが表示されることを確認
-    await page.waitForSelector('[data-testid="email-input"]', { timeout: 10000 });
-    await expect(page.locator('[data-testid="email-input"]')).toBeVisible();
+    // ステップ4: ログインページ (OAuth 優先) のメールログイン導線が表示されることを確認
+    // ※ メール/パスワードフォーム自体は /login/email に分離された
+    await page.waitForSelector('[data-testid="email-signin-button"]', { timeout: 10000 });
+    await expect(page.locator('[data-testid="email-signin-button"]')).toBeVisible();
   });
 
   /**
@@ -160,8 +161,8 @@ test.describe("認証フローのテスト", () => {
    * 新規ユーザー登録フロー
    */
   test("TC-AUTH-005: サインアップ", async ({ page }) => {
-    // ステップ1: サインアップページに移動
-    await page.goto(URLS.SIGNUP);
+    // ステップ1: サインアップページに移動 (OAuth 優先の再設計によりフォームは /signup/email)
+    await page.goto(`${URLS.SIGNUP}/email`);
     await page.waitForLoadState("networkidle");
 
     // ステップ2: サインアップフォームが表示されることを確認
@@ -195,7 +196,7 @@ test.describe("認証フローのテスト", () => {
     if (!testEnv) throw new Error("テスト環境が設定されていません");
 
     // ステップ1: ログインページに移動
-    await page.goto(URLS.LOGIN);
+    await page.goto(`${URLS.LOGIN}/email`);
     await page.waitForLoadState("networkidle");
 
     // ステップ2: パスワードリセットリンクをクリック
@@ -234,7 +235,7 @@ test.describe("認証フローのテスト", () => {
    */
   test("TC-AUTH-007: ログインモード切り替え", async ({ page }) => {
     // ステップ1: ログインページに移動
-    await page.goto(URLS.LOGIN);
+    await page.goto(`${URLS.LOGIN}/email`);
     await page.waitForLoadState("networkidle");
 
     // ステップ2: ログインフォームが表示されることを確認

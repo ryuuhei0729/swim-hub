@@ -6,12 +6,16 @@ import { TabNavigator } from "./TabNavigator";
 import { PracticeDetailScreen } from "@/screens/PracticeDetailScreen";
 import { PracticeFormScreen } from "@/screens/PracticeFormScreen";
 import { PracticeLogFormScreen } from "@/screens/PracticeLogFormScreen";
+import { PracticeTabFormScreen } from "@/screens/PracticeTabFormScreen";
 import { PracticeTimeFormScreen } from "@/screens/PracticeTimeFormScreen";
 import { RecordDetailScreen } from "@/screens/RecordDetailScreen";
 import { RecordFormScreen } from "@/screens/RecordFormScreen";
 import { CompetitionBasicFormScreen } from "@/screens/CompetitionBasicFormScreen";
+import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
 import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
 import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
+import { TeamRecordBulkFormScreen } from "@/screens/TeamRecordBulkFormScreen";
+import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
 import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { BulkBestTimeScreen } from "@/screens/BulkBestTimeScreen";
@@ -55,6 +59,16 @@ export const MainStack: React.FC = () => {
       <Stack.Screen
         name="PracticeForm"
         component={PracticeFormScreen}
+        options={({ route }) => ({
+          ...baseHeaderOptions,
+          title: route.params?.practiceId
+            ? t("navigation.mobile.titles.practiceEdit")
+            : t("navigation.mobile.titles.practiceCreate"),
+        })}
+      />
+      <Stack.Screen
+        name="PracticeTabForm"
+        component={PracticeTabFormScreen}
         options={({ route }) => ({
           ...baseHeaderOptions,
           title: route.params?.practiceId
@@ -108,6 +122,16 @@ export const MainStack: React.FC = () => {
         }}
       />
       <Stack.Screen
+        name="CompetitionTabForm"
+        component={CompetitionTabFormScreen}
+        options={({ route }) => ({
+          ...baseHeaderOptions,
+          title: route.params?.competitionId
+            ? t("navigation.mobile.titles.competitionInfo")
+            : t("navigation.mobile.titles.competitionInfo"),
+        })}
+      />
+      <Stack.Screen
         name="EntryForm"
         component={EntryLogFormScreen}
         options={{
@@ -121,6 +145,22 @@ export const MainStack: React.FC = () => {
         options={{
           ...baseHeaderOptions,
           title: t("navigation.mobile.titles.recordInput"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamRecordBulkForm"
+        component={TeamRecordBulkFormScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("teams.record.pageTitle"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamPracticeLogBulkForm"
+        component={TeamPracticeLogBulkFormScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("teamsAdmin.practiceLog.pageTitle"),
         }}
       />
       <Stack.Screen

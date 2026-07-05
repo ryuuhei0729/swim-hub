@@ -37,8 +37,8 @@ import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { localizedStyleName } from "@/utils/styleName";
-import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_MESSAGES, FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
+import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, Competition } from "@apps/shared/types";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
@@ -988,7 +988,7 @@ export const RecordFormScreen: React.FC = () => {
             ))}
             {splitTimeLimitReached && (
               <View style={{ marginTop: 8 }}>
-                <PremiumBadge message={PREMIUM_MESSAGES.split_time_limit} compact />
+                <PremiumBadge feature="split_time_limit" compact />
               </View>
             )}
           </View>
@@ -1011,7 +1011,7 @@ export const RecordFormScreen: React.FC = () => {
 
           {/* 画像 */}
           <View style={styles.field}>
-            {isPremium ? (
+            {canUploadImage(isPremium) ? (
               <ImageUploader
                 existingImages={existingImages}
                 onImagesChange={handleImagesChange}
@@ -1020,7 +1020,7 @@ export const RecordFormScreen: React.FC = () => {
                 label={t("recordMobile.form.imagesLabel")}
               />
             ) : (
-              <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+              <PremiumBadge feature="image_upload" />
             )}
           </View>
 

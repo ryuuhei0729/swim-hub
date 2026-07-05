@@ -40,11 +40,16 @@
       "swim meet",
       "swim team",
       "SwimHub"
-    ]
+    ],
+    "planFree": "Free Plan",
+    "planPremiumMonthly": "Premium Plan (Monthly)",
+    "planPremiumYearly": "Premium Plan (Annual)"
   },
   "common": {
     "appName": "SwimHub",
+    "language": "Language",
     "alertErrorTitle": "Error",
+    "notice": "Notice",
     "loading": "Loading...",
     "error": "An error occurred",
     "save": "Save",
@@ -120,7 +125,10 @@
     },
     "errorBoundary": {
       "title": "An error occurred",
-      "unknownError": "An unknown error occurred"
+      "unknownError": "Unknown error",
+      "retry": "Retry",
+      "reload": "Reload page",
+      "helpText": "If the problem persists, try reloading the page or contact support."
     },
     "video": {
       "loading": "Loading video...",
@@ -170,7 +178,9 @@
       "videoClosePlayer": "Close",
       "videoDelete": "Delete",
       "videoTapToPlay": "Tap to play",
-      "videoReplace": "Replace"
+      "videoReplace": "Replace",
+      "cameraPermissionDenied": "Camera access is not allowed. Please enable it in the Settings app.",
+      "mediaPermissionDenied": "Photo library access is not allowed. Please enable it in the Settings app."
     },
     "datePicker": {
       "placeholder": "Select date",
@@ -180,7 +190,15 @@
       "nextMonth": "Next month",
       "today": "Today",
       "close": "Close",
-      "weekdays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+      "weekdays": [
+        "Sun",
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat"
+      ]
     },
     "formStepper": {
       "ariaLabel": "Form progress",
@@ -209,13 +227,6 @@
     "validation": {
       "required": "This field is required",
       "email": "Please enter a valid email address"
-    },
-    "errorBoundary": {
-      "title": "An error occurred",
-      "unknownError": "Unknown error",
-      "retry": "Retry",
-      "reload": "Reload page",
-      "helpText": "If the problem persists, try reloading the page or contact support."
     },
     "videoUploader": {
       "uploadUrlFailed": "Failed to get upload URL",
@@ -341,10 +352,9 @@
       "scannerDesc": "AI digitizes your handwritten practice records, drastically reducing data entry."
     },
     "footer": {
-      "tagline": "The all-in-one record management platform for swimmers",
+      "tagline": "The all-in-one record management platform for competitive swimmers",
       "terms": "Terms of Service",
       "privacy": "Privacy Policy",
-      "blog": "Blog",
       "about": "About"
     },
     "deviceMockup": {
@@ -352,18 +362,160 @@
       "desktopAlt": "SwimHub team members (desktop)",
       "mobilePlaceholder": "Dashboard preview (coming soon)",
       "desktopPlaceholder": "Team members preview (coming soon)"
+    },
+    "v42": {
+      "nav": {
+        "practice": "Practice",
+        "competition": "Competition",
+        "proxy": "Proxy Entry",
+        "pricing": "Pricing"
+      },
+      "hero": {
+        "ghostText": "SWIMHUB",
+        "h1Line1": "For individuals and teams,",
+        "h1Line2": "manage your swimming records",
+        "h1Line3": "all in one place.",
+        "lead": "Practice logs, race results, proxy entry, and team entry management — all in one app. Start now on mobile or browser.",
+        "badge": "Easy team management on mobile",
+        "cta": {
+          "signup": "Sign Up Free",
+          "login": "Log In"
+        },
+        "store": {
+          "appStore": "App Store",
+          "googlePlay": "Google Play",
+          "comingSoon": "Coming soon"
+        },
+        "deviceCaption": "SwimHub App ◆ PC & Mobile",
+        "h1Line3Blue": "all in one place",
+        "h1Line3Suffix": ".",
+        "downloadOn": "Download on the"
+      },
+      "marquee": {
+        "text": "Practice Log ◆ Race Result ◆ Proxy Entry ◆ AI Scanner ◆ Best Times"
+      },
+      "features": {
+        "f1": {
+          "label": "Practice Log",
+          "title": "Manage Practice Records & Times",
+          "desc": "Record cycles, reps, sets, and times to build your training history. Easily set goals for your next session — more reps, shorter cycle, better average time.",
+          "items": [
+            "Record cycles, reps, and sets",
+            "Auto-calculate average times",
+            "Filter by tags"
+          ]
+        },
+        "f2": {
+          "label": "Race Result",
+          "title": "Record Race Results",
+          "desc": "Log events, times, pool length, and split times. Your best-time table updates automatically. Short-course/long-course and relay splits are all reflected.",
+          "items": [
+            "Auto-calculate splits from intermediate times",
+            "Auto-update best-time table",
+            "Manage meet entries"
+          ]
+        },
+        "f3": {
+          "label": "Team / Coach",
+          "title": "Coaches & Managers Can Enter Records on Behalf of Athletes",
+          "desc": "Practice and race records can be registered in bulk by coaches or managers — not just athletes. Records stay linked to the individual, even after they leave the team.",
+          "items": [
+            "Bulk entry by coach or manager",
+            "Records stay with the individual",
+            "A lifetime app"
+          ]
+        },
+        "introLabel": "Features",
+        "introH2": "Three features that turn records into assets"
+      },
+      "scanner": {
+        "label": "Featured Tool — Scanner",
+        "h2": "Scan handwritten practice records with AI.",
+        "desc1": "Tired of typing in records after practice? With SwimHub Scanner, just take a photo of your handwritten practice sheet and AI reads and digitizes it automatically.",
+        "desc2": "Works with coach-distributed practice sheets or your own notes — drastically cutting down manual entry time.",
+        "cta": "Try SwimHub Scanner"
+      },
+      "pricing": {
+        "label": "Pricing",
+        "h2": "Pricing",
+        "lead": "Two simple plans. Start for free.",
+        "detailLink": "View pricing details",
+        "free": {
+          "name": "Free",
+          "price": "¥0",
+          "note": "Free forever",
+          "items": [
+            "Practice & race records",
+            "Split-time: up to 3 per record",
+            "PracticeTime: up to 18 per log",
+            "Image upload (no video)"
+          ],
+          "cta": "Get Started Free"
+        },
+        "premium": {
+          "name": "Premium",
+          "price": "¥500",
+          "badge": "7-day free trial",
+          "annualNote": "Annual plan: ¥5,000/year (2 months free)",
+          "items": [
+            "All features unlimited",
+            "Split-time: unlimited",
+            "PracticeTime: unlimited",
+            "Image & video upload",
+            "Includes 7-day free trial"
+          ],
+          "cta": "Start Free Trial"
+        }
+      },
+      "services": {
+        "label": "SwimHub Services",
+        "h2": "SwimHub Services",
+        "lead": "Tools to make swimming more convenient",
+        "timer": {
+          "name": "SwimHub Timer",
+          "tagline": "Overlay times on video",
+          "desc": "Play swimming videos with a stopwatch overlay. Perfect for form analysis and lap review.",
+          "cta": "Try it →"
+        },
+        "scanner": {
+          "name": "SwimHub Scanner",
+          "tagline": "AI-powered handwritten record scanning",
+          "desc": "AI reads handwritten practice records and converts them to digital data — drastically reducing manual entry.",
+          "cta": "Try it →"
+        }
+      },
+      "finalCta": {
+        "label": "Begin your record",
+        "h2": "Start recording now",
+        "desc": "Create an account for free and get started right away. No team required — start solo and add team features later."
+      },
+      "footer": {
+        "tagline": "The record management platform for competitive swimmers",
+        "copyright": "© 2025 SwimHub. All rights reserved.",
+        "slogan": "Records for Life"
+      },
+      "stopwatch": {
+        "ariaLabel": "Page session timer"
+      },
+      "lapBar": {
+        "ariaLabel": "Scroll progress bar"
+      }
     }
   },
   "auth": {
     "signin": {
       "title": "Log In",
       "subtitle": "Welcome back to SwimHub",
+      "entrySubtitle": "Welcome to SwimHub",
       "submitButton": "Log In",
       "loadingButton": "Logging in...",
       "loadingMessage": "Checking authentication...",
       "errorTitle": "Authentication error",
       "emailMethodTitle": "Log in with email",
-      "emailMethodButton": "Continue with email"
+      "emailMethodButton": "Continue with email",
+      "emailPageTitle": "Log in with email",
+      "emailPageSubtitle": "Enter your email address and password",
+      "otherMethods": "Other sign-in options"
     },
     "signup": {
       "title": "Create Account",
@@ -372,7 +524,9 @@
       "emailMethodTitle": "Sign up with email",
       "emailMethodButton": "Continue with email",
       "welcomeTagline": "Let's get started with SwimHub",
-      "startButton": "Get started"
+      "startButton": "Get started",
+      "continueWithEmail": "Sign up with email",
+      "otherMethods": "Other sign-up options"
     },
     "resetPassword": {
       "title": "Reset Password",
@@ -553,7 +707,8 @@
       "feature3": "Team & goal management",
       "feature4": "Split-time: up to 3 per record",
       "feature5": "PracticeTime: up to 18 per practice log",
-      "exclude1": "Image & video uploads"
+      "feature6": "Image upload",
+      "exclude1": "Video upload"
     },
     "premiumPlan": {
       "name": "Premium",
@@ -592,7 +747,8 @@
       "rowGoals": "Goal management",
       "rowSplitTime": "Split-time",
       "rowPracticeTime": "PracticeTime",
-      "rowImageUpload": "Image & video uploads",
+      "rowImageUpload": "Image upload",
+      "rowVideoUpload": "Video upload",
       "rowScanner": "SwimHub Scanner integration",
       "rowTimer": "SwimHub Timer integration",
       "valueLimitedSplit": "Up to 3 per record",
@@ -636,6 +792,18 @@
     "submitting": "Sending...",
     "successMessage": "Your message has been received. Thank you for reaching out.",
     "errorMessage": "Failed to send your message. Please try again later.",
+    "appLabel": "Which app",
+    "appOptions": {
+      "swimhub": "SwimHub",
+      "timer": "SwimHub Timer",
+      "scanner": "SwimHub Scanner"
+    },
+    "platformLabel": "Environment",
+    "platformOptions": {
+      "web": "Web (browser)",
+      "ios": "iOS app",
+      "android": "Android app"
+    },
     "subjectOptions": {
       "placeholder": "Select a subject",
       "question": "Question about features",
@@ -695,7 +863,7 @@
       "addRecordShort": "Race record",
       "addPracticeShort": "Practice",
       "addRecord": "Add Race Record",
-      "addPractice": "Add Practice",
+      "addPractice": "Add Practice Record",
       "addSection": "Add Record",
       "close": "Close",
       "entryTypeLabel": {
@@ -900,7 +1068,8 @@
       "setAverage": "Set Avg",
       "overallAverage": "Overall Avg",
       "overallFastest": "Overall Fastest",
-      "memoLabel": "Note"
+      "memoLabel": "Note",
+      "menuNumber": "Menu {n}"
     },
     "styles": {
       "Fr": "Freestyle",
@@ -997,7 +1166,8 @@
       "settingsButton": "Settings",
       "profileNotFound": "Profile not found",
       "bulkInput": "Bulk input",
-      "bulkInputAria": "Bulk register best times"
+      "bulkInputAria": "Bulk register best times",
+      "pageTitle": "My Page"
     },
     "title": "My Page",
     "subtitle": "Manage your profile and best times",
@@ -1029,7 +1199,8 @@
       "imageUploadFailed": "Failed to upload image",
       "cancel": "Cancel",
       "submitUpdating": "Updating...",
-      "submit": "Update"
+      "submit": "Update",
+      "bioTooLong": "Bio must be {max} characters or fewer"
     },
     "avatarUpload": {
       "loginRequired": "Login required",
@@ -1142,7 +1313,24 @@
           "description": "Attendance tracking, entry collection, and proxy entry"
         }
       },
-      "startButton": "Get Started"
+      "startButton": "Get Started",
+      "personalLabel": "Personal",
+      "teamLabel": "Team",
+      "teamFeature": {
+        "proxy": {
+          "title": "Proxy Entry",
+          "badge": "Popular",
+          "description": "Coaches and parents can enter records and meet entries on behalf of members"
+        },
+        "attendance": {
+          "title": "Attendance",
+          "description": "Manage practice and meet attendance in one place"
+        },
+        "entry": {
+          "title": "Entry Collection",
+          "description": "Automatically aggregate meet entries"
+        }
+      }
     },
     "step2": {
       "title": "Set up your profile",
@@ -1162,7 +1350,8 @@
       "validation": {
         "nameRequired": "Name is required",
         "nameEmailFormat": "Please enter your name, not an email address",
-        "nameTooLong": "Name must be {max} characters or fewer"
+        "nameTooLong": "Name must be {max} characters or fewer",
+        "bioTooLong": "Bio must be {max} characters or fewer"
       },
       "saveError": "Failed to save profile. Please try again.",
       "skipFailed": "Failed to skip",
@@ -1233,7 +1422,6 @@
       "terms": "Terms",
       "support": "Support",
       "contact": "Contact",
-      "blog": "Blog",
       "about": "About SwimHub",
       "tokushoho": "Specified Commercial Transactions Act"
     },
@@ -1443,7 +1631,15 @@
         "splitDeleteFailed": "Failed to delete split times: {detail}",
         "recordDeleteFailed": "Failed to delete existing records: {detail}",
         "saveFailed": "An error occurred while saving. Please try again."
-      }
+      },
+      "errorVideoUploadUrlFailed": "{name}: Failed to get upload URL ({status})",
+      "errorVideoUploadFailed": "{name}: Failed to upload video ({status})",
+      "errorVideoThumbnailFailed": "{name}: Failed to upload thumbnail ({status})",
+      "errorVideoConfirmFailed": "{name}: Failed to confirm video ({status})",
+      "errorVideoAssignFailed": "{name}: Failed to assign to team ({status})",
+      "errorVideoGenericFailed": "{name}: An error occurred during video upload",
+      "errorVideoNoThumbnail": "{name}: Could not attach video because the thumbnail could not be generated",
+      "videoPartialFailureSaved": "The records were saved, but some videos could not be attached:\n{errors}"
     }
   },
   "settings": {
@@ -2098,6 +2294,41 @@
         "noMonths": "No months to display",
         "noEvents": "No events this month"
       },
+      "adminAttendance": {
+        "title": "Attendance Status Management",
+        "statusOpen": "Open",
+        "statusClosed": "Closed",
+        "empty": "No upcoming events",
+        "fetchFailed": "Failed to load events",
+        "saveFailed": "Failed to save status",
+        "openButton": "Open for Submissions",
+        "closeButton": "Close Submissions",
+        "confirmTitle": "Confirm",
+        "confirmOpen": "Open attendance submissions for this event?",
+        "confirmClose": "Close attendance submissions for this event?",
+        "defaultPractice": "Practice",
+        "defaultCompetition": "Competition",
+        "toggleStatusAria": "Toggle submission status for {title}",
+        "memberAttendanceTitle": "Member Attendance",
+        "memberStatusPresent": "Present",
+        "memberStatusAbsent": "Absent",
+        "memberStatusOther": "Other",
+        "memberStatusUnanswered": "No Response",
+        "memberAttendanceFetchFailed": "Failed to load attendance data",
+        "memberAttendanceEmpty": "No attendance responses yet",
+        "memberAttendanceLoading": "Loading...",
+        "bulkChange": {
+          "title": "Bulk update attendance status",
+          "empty": "No events",
+          "statusOpen": "Open",
+          "statusClosed": "Closed",
+          "statusUnset": "Not set",
+          "competitionLabel": "(Competition)",
+          "selectAll": "Select all",
+          "openButton": "Set to Open",
+          "closedButton": "Set to Closed"
+        }
+      },
       "groupManagement": {
         "title": "Group management",
         "subtitle": "Organize members into categories and groups.",
@@ -2189,7 +2420,6 @@
       "bulkPlacePlaceholder": "e.g. City Pool",
       "bulkMemoPlaceholder": "Memo",
       "bulkCompetitionNamePlaceholder": "Competition name",
-      "roleAdmin": "Admin",
       "roleUser": "Member",
       "roleChangeTitle": "Confirm role change",
       "roleChangeButton": "Change",
@@ -2199,7 +2429,6 @@
       "memberRoleChangeMessage": "Change {name}'s role to \"{role}\"?",
       "memberRemoveMessage": "Remove {name} from the team?\nThis cannot be undone.",
       "bestTimeSection": "Best Time",
-      "bestTimeLoading": "Loading best times...",
       "youBadge": "You",
       "birthdayLabel": "Birthday: {date}",
       "adminControlsTitle": "Admin controls",
@@ -2251,7 +2480,68 @@
       "poolTypeLong": "Long Course",
       "genderCategoryLabel": "Gender",
       "genderMale": "Male",
-      "genderFemale": "Female"
+      "genderFemale": "Female",
+      "tabAnnouncements": "Announcements",
+      "adminToggle": {
+        "label": "View",
+        "admin": "Admin View",
+        "user": "User View"
+      },
+      "pendingApproveConfirmTitle": "Confirm Approval",
+      "pendingApproveConfirmMessage": "Approve {name}?",
+      "pendingRejectConfirmTitle": "Confirm Rejection",
+      "pendingRejectConfirmMessage": "Reject {name}?",
+      "pendingApproveFailed": "Failed to approve member",
+      "pendingRejectFailed": "Failed to reject member",
+      "pendingLoading": "Loading pending members...",
+      "pendingFetchFailed": "Failed to fetch pending members",
+      "teamPracticeList": {
+        "title": "Team Practices ({count})",
+        "addButton": "Add Practice",
+        "empty": "No team practices yet",
+        "fetchFailed": "Failed to load practice records",
+        "deleteConfirm": "Delete this practice record? This cannot be undone.",
+        "deleteFailed": "Failed to delete practice record",
+        "addLog": "Add Log"
+      },
+      "teamCompetitionList": {
+        "title": "Team Competitions ({count})",
+        "addButton": "Add Competition",
+        "empty": "No team competitions yet",
+        "fetchFailed": "Failed to load competitions",
+        "deleteConfirm": "Delete this competition? This cannot be undone.",
+        "deleteFailed": "Failed to delete competition",
+        "entryButton": "Entry",
+        "recordButton": "Record"
+      },
+      "teamCompetitionEntryModal": {
+        "title": "Entries for {title}",
+        "totalEntries": "Total entries: {count}",
+        "entryStatusLabel": "Entry acceptance status",
+        "statusBefore": "Before",
+        "statusOpen": "Open",
+        "statusClosed": "Closed",
+        "selfEntryButton": "Enter events",
+        "confirmTitle": "Change acceptance status",
+        "confirmBefore": "Change entry acceptance status to \"Before\"?",
+        "confirmOpen": "Change entry acceptance status to \"Open\"?",
+        "confirmClosed": "Change entry acceptance status to \"Closed\"?",
+        "changeStatusAria": "Change acceptance status to {status}",
+        "saveFailed": "Failed to change acceptance status",
+        "loading": "Loading entry information...",
+        "fetchFailed": "Failed to load entry information",
+        "emptyNoEntry": "No entries yet",
+        "emptyOpenHint": "Entries are currently open",
+        "unknownStyle": "Unknown event",
+        "unknownUser": "Unknown user",
+        "entryTimeLabel": "Entry time:",
+        "close": "Close"
+      },
+      "announcementDeleteFailed": "Failed to delete announcement",
+      "attendanceConfirmEditAfterDeadline": "You are editing after the deadline ({dates}). The edit timestamp will be automatically added to the note. Save anyway?",
+      "attendanceStatusPresent": "Present",
+      "attendanceStatusAbsent": "Absent",
+      "attendanceStatusOther": "Other"
     },
     "page": {
       "title": "My Teams",
@@ -2570,7 +2860,8 @@
       "loadError": "Failed to load recent attendance information",
       "saveSuccess": "Saved",
       "confirmEditAfterDeadline": "You are editing after the deadline ({date}). The edit timestamp will be automatically added to the note. Save anyway?",
-      "authRequired": "Authentication required"
+      "authRequired": "Authentication required",
+      "saveError": "Failed to save attendance information"
     },
     "entryCompetitionCard": {
       "placeLabel": "Location:",
@@ -3210,7 +3501,10 @@
       "errorVideoConfirmFailed": "{name}: Failed to confirm video ({status})",
       "errorVideoAssignFailed": "{name}: Failed to assign to team ({status})",
       "errorVideoGenericFailed": "{name}: An error occurred during video upload",
-      "errorVideoUpload": "Some video uploads failed:\n{errors}"
+      "errorVideoNoThumbnail": "{name}: Could not attach video because the thumbnail could not be generated",
+      "errorVideoLogResolveFailed": "{name}: Could not attach video because it could not be matched to a saved log",
+      "errorVideoUpload": "Some video uploads failed:\n{errors}",
+      "videoPartialFailureSaved": "The records were saved, but some videos could not be attached:\n{errors}"
     },
     "bulkRegister": {
       "wrapperTitle": "Schedule Bulk Register",
@@ -3339,7 +3633,17 @@
       "timePositive": "Time must be a positive number",
       "reactionTimeRange": "Reaction time must be between 0.40 and 1.00 seconds",
       "timeFormatInvalid": "Invalid time format (e.g. 1:23.45 or 31-2)",
-      "timeFormatInvalid2": "Invalid time format (e.g. 1:23.45 or 31-2)"
+      "timeFormatInvalid2": "Invalid time format (e.g. 1:23.45 or 31-2)",
+      "recordNumber": "Record {n}"
+    },
+    "lapTime": {
+      "raceLapTab": "Race Lap",
+      "allLapTab": "All Lap",
+      "noSplits": "Please enter split times",
+      "noStyle": "Please select an event",
+      "noLap": "Cannot calculate lap times",
+      "distanceHeader": "Distance",
+      "splitTimeHeader": "Split Time"
     }
   },
   "forms": {
@@ -3352,6 +3656,10 @@
       "cancel": "Continue editing"
     },
     "practice": {
+      "tabs": {
+        "practice": "Practice",
+        "log": "Practice Log"
+      },
       "steps": {
         "basic": {
           "label": "Basic Info",
@@ -3362,8 +3670,8 @@
           "description": "Menu & Times"
         }
       },
-      "title_create": "Create Schedule",
-      "title_edit": "Edit Schedule",
+      "title_create": "Register Practice Record",
+      "title_edit": "Edit Practice Record",
       "subtitle_create": "Create a practice schedule for {date}",
       "subtitle_edit": "Edit the practice schedule for {date}",
       "date_label": "Practice Date",
@@ -3383,6 +3691,11 @@
       "cancel": "Cancel"
     },
     "competition": {
+      "tabs": {
+        "competition": "Competition",
+        "entry": "Entry",
+        "record": "Race Record"
+      },
       "steps": {
         "basic": {
           "label": "Competition Info",
@@ -3397,10 +3710,10 @@
           "description": "Results & Splits"
         }
       },
-      "title_create": "Register Competition",
-      "title_edit": "Edit Competition",
+      "title_create": "Register Competition Record",
+      "title_edit": "Edit Competition Record",
       "start_date_label": "Start Date",
-      "end_date_label": "End Date (optional)",
+      "end_date_label": "End Date",
       "end_date_error": "End date must be on or after the start date",
       "name_label": "Competition Name",
       "name_placeholder": "e.g. National Championship, Dual Meet",
@@ -3435,7 +3748,8 @@
       "saving": "Saving...",
       "update": "Update",
       "updating": "Updating...",
-      "videoLabel": "Video"
+      "videoLabel": "Video",
+      "menuHeader": "Menu {n}"
     },
     "practiceMenu": {
       "header": "Menu {n}",
@@ -3459,7 +3773,10 @@
       "repHeader": "Rep {n}",
       "avgRow": "Avg",
       "overallAvg": "Overall Avg",
-      "overallFastest": "Overall Best"
+      "overallFastest": "Overall Best",
+      "distanceOther": "Other",
+      "decrease": "Decrease",
+      "increase": "Increase"
     },
     "timeInput": {
       "title": "Enter Times for Menu {n}",
@@ -3471,7 +3788,9 @@
       "notEntered": "Not entered",
       "overallAvg": "Overall avg:",
       "save": "Save",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "helpTitle": "Time Entry Tips",
+      "helpBody": "Separate numbers with any non-digit character (- . : etc.). Examples: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.\n\nAfter typing \"33-2\" in one cell, just enter \"3-2\" in the next and it auto-fills to \"33.2\" (carrying over the tens digit). Clearing a cell resets the carry-over."
     },
     "record": {
       "title_create": "Add Record",
@@ -3530,7 +3849,8 @@
       "skip": "Skip Entry",
       "submit": "Register Entry",
       "submitting": "Registering...",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "relayLabel": "Relay"
     },
     "recordLog": {
       "eventHeader": "Event {n}",
@@ -3546,7 +3866,7 @@
       "relayLabel": "Relay",
       "timeLabel": "Time",
       "time_placeholder": "e.g. 1:23.45   32.45",
-      "reactionTime_placeholder": "e.g. 28.50",
+      "reactionTime_placeholder": "e.g. 0.58  -0.01",
       "distance_placeholder": "Distance (m)",
       "reactionTimeLabelShort": "RT",
       "reactionTimeLabelFull": "Reaction Time",
@@ -3562,7 +3882,9 @@
       "saving": "Saving...",
       "update": "Update",
       "formError_noStyle": "Please select an event",
-      "formError_noTime": "Please enter a time (format: min:sec.decimal or sec.decimal)"
+      "formError_noTime": "Please enter a time (format: min:sec.decimal or sec.decimal)",
+      "addRecord": "Add Record",
+      "recordNumber": "Record {n}"
     },
     "tag": {
       "placeholder": "Select or create tags",
@@ -3606,7 +3928,8 @@
       "updateError": "Failed to update the tag",
       "authRequired": "Authentication required",
       "createFailed": "Failed to create tag",
-      "deleteFailed": "Failed to delete tag"
+      "deleteFailed": "Failed to delete tag",
+      "createLabel": "Create:"
     },
     "teamCreate": {
       "title": "Create New Team",
@@ -3638,7 +3961,7 @@
       "noStyle": "Please select an event",
       "noLap": "Cannot calculate lap times",
       "distanceHeader": "Distance",
-      "splitTimeHeader": "Split Time"
+      "splitTimeHeader": "split"
     },
     "imageUploader": {
       "label": "Attach Images",
@@ -3652,6 +3975,23 @@
       "maxReached": "Maximum of {max} images selected",
       "remainingSlotsError": "You can add {remaining} more images (max {max})",
       "invalidFile": "Invalid file"
+    },
+    "tabModal": {
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "close": "Close",
+      "fieldRequired": "is required",
+      "partialSaveError": "Basic info was saved. Details could not be saved. Please try again.",
+      "duplicateEntryStyle": "Duplicate event styles found. Please change the style for each entry.",
+      "discardWarning": {
+        "title": "Unsaved changes",
+        "message": "You have unsaved changes. Close anyway?",
+        "confirm": "Close",
+        "cancel": "Continue editing"
+      },
+      "proceedToRecord": "Continue to records",
+      "recordFutureGuard": "Race records cannot be registered for future dates."
     },
     "premium": {
       "upgradeText": "Upgrade to Premium",

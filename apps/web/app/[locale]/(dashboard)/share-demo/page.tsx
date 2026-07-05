@@ -25,7 +25,6 @@ const sampleCompetitionData: CompetitionShareData = {
     { id: "1", record_id: "demo", distance: 50, split_time: 26.15, created_at: "" },
     { id: "2", record_id: "demo", distance: 100, split_time: 54.32, created_at: "" },
   ],
-  isBestTime: true,
   previousBest: 55.01,
   userName: "山田 太郎",
   teamName: "東京スイミングクラブ",

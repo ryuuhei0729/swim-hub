@@ -55,6 +55,28 @@ interface TeamCompetitionRecordsModalProps {
   competitionTitle: string;
 }
 
+export function buildDisplaySplits(
+  splitTimes: SplitTimeEntry[],
+  raceDistance: number,
+  recordTime: number,
+): Array<{ distance: number; splitTime: number }> {
+  const baseSplits = [...splitTimes]
+    .sort((a, b) => a.distance - b.distance)
+    .map((st) => ({ distance: st.distance, splitTime: st.split_time }));
+
+  if (baseSplits.length === 0) return baseSplits;
+
+  // ゴールタイムを最終splitとして追加（種目の距離と同じ距離のsplitがない場合）
+  if (raceDistance && recordTime && recordTime > 0) {
+    const hasGoalSplit = baseSplits.some((st) => st.distance === raceDistance);
+    if (!hasGoalSplit) {
+      return [...baseSplits, { distance: raceDistance, splitTime: recordTime }];
+    }
+  }
+
+  return baseSplits;
+}
+
 function getUserName(users: RecordUser | RecordUser[] | null | undefined, unknownLabel: string): string {
   if (!users) return unknownLabel;
   if (Array.isArray(users)) return users[0]?.name || unknownLabel;
@@ -70,20 +92,18 @@ function getStyle(styles: StyleInfo | StyleInfo[] | null | undefined): StyleInfo
 function ExpandableSplitTimes({
   splitTimes,
   raceDistance,
+  recordTime,
 }: {
   splitTimes: SplitTimeEntry[];
   raceDistance: number;
+  recordTime: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const t = useTranslations("teams.competitionRecordsModal");
 
   const formattedSplits = useMemo(
-    () =>
-      splitTimes
-        .filter((st) => st.distance > 0 && st.split_time > 0)
-        .sort((a, b) => a.distance - b.distance)
-        .map((st) => ({ distance: st.distance, splitTime: st.split_time })),
-    [splitTimes],
+    () => buildDisplaySplits(splitTimes, raceDistance, recordTime),
+    [splitTimes, raceDistance, recordTime],
   );
 
   if (formattedSplits.length === 0) return null;
@@ -311,6 +331,7 @@ export default function TeamCompetitionRecordsModal({
                                           <ExpandableSplitTimes
                                             splitTimes={record.split_times}
                                             raceDistance={styleInfo.distance}
+                                            recordTime={record.time}
                                           />
                                         )}
                                     </td>
@@ -359,6 +380,7 @@ export default function TeamCompetitionRecordsModal({
                                               <ExpandableSplitTimes
                                                 splitTimes={record.split_times}
                                                 raceDistance={styleInfo.distance}
+                                                recordTime={record.time}
                                               />
                                             )}
                                         </td>

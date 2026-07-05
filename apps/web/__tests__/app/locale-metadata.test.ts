@@ -16,10 +16,17 @@
 
 import { describe, it, expect, vi } from "vitest";
 
-// next/font/google を mock (Inter / Noto_Sans_JP は実関数を呼ぶとエラーになる)
+// next/font/google を mock (実関数を呼ぶとエラーになる)
+// W1: Noto_Sans_KR/Noto_Sans_SC に preload:false が追加されたため、モック側も定義に揃える
 vi.mock("next/font/google", () => ({
   Inter: () => ({ variable: "--font-inter", className: "" }),
   Noto_Sans_JP: () => ({ variable: "--font-noto-sans-jp", className: "" }),
+  Noto_Sans_KR: (_opts?: object) => ({ variable: "--font-noto-sans-kr", className: "" }),
+  Noto_Sans_SC: (_opts?: object) => ({ variable: "--font-noto-sans-sc", className: "" }),
+  Poiret_One: (_opts?: object) => ({ variable: "--font-poiret-one", className: "" }),
+  Josefin_Sans: (_opts?: object) => ({ variable: "--font-josefin-sans", className: "" }),
+  Chakra_Petch: (_opts?: object) => ({ variable: "--font-chakra-petch", className: "" }),
+  Zen_Kaku_Gothic_New: (_opts?: object) => ({ variable: "--font-zen-kaku-gothic-new", className: "" }),
 }));
 
 // next-intl/server をモック: Node テスト環境では server context が無いため
@@ -29,6 +36,9 @@ vi.mock("next-intl/server", async () => {
   const messagesByLocale: Record<string, Record<string, unknown>> = {
     ja: (await import("@apps/shared/messages/ja.json")).default as Record<string, unknown>,
     en: (await import("@apps/shared/messages/en.json")).default as Record<string, unknown>,
+    zh: (await import("@apps/shared/messages/zh.json")).default as Record<string, unknown>,
+    ko: (await import("@apps/shared/messages/ko.json")).default as Record<string, unknown>,
+    de: (await import("@apps/shared/messages/de.json")).default as Record<string, unknown>,
   };
 
   const getValue = (obj: Record<string, unknown>, path: string): unknown => {
@@ -101,33 +111,68 @@ describe("[V-20][V-21] ルート locale layout の generateMetadata", () => {
 });
 
 // ---------------------------------------------------------------------------
+// zh / ko / de ロケールの title / description 検証
+// ---------------------------------------------------------------------------
+
+describe("zh/ko/de ロケールの title 検証", () => {
+  it("zh ロケールで title が SwimHub を含み中国語文字を含む", async () => {
+    const metadata = await generateLocaleMetadata({
+      params: Promise.resolve({ locale: "zh" }),
+    });
+
+    const title = typeof metadata.title === "string" ? metadata.title : "";
+    expect(title).toContain("SwimHub");
+    // 中国語: 汉字が含まれること
+    expect(title).toMatch(/[一-鿿]/);
+  });
+
+  it("ko ロケールで title が SwimHub を含みハングルを含む", async () => {
+    const metadata = await generateLocaleMetadata({
+      params: Promise.resolve({ locale: "ko" }),
+    });
+
+    const title = typeof metadata.title === "string" ? metadata.title : "";
+    expect(title).toContain("SwimHub");
+    // 韓国語: ハングルが含まれること
+    expect(title).toMatch(/[가-힣]/);
+  });
+
+  it("de ロケールで title が SwimHub を含みラテン文字のみ", async () => {
+    const metadata = await generateLocaleMetadata({
+      params: Promise.resolve({ locale: "de" }),
+    });
+
+    const title = typeof metadata.title === "string" ? metadata.title : "";
+    expect(title).toContain("SwimHub");
+    // 日本語・中国語・ハングルが含まれないこと
+    expect(title).not.toMatch(/[぀-ヿ一-鿿]/);
+    expect(title).not.toMatch(/[가-힣]/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // [V-22] alternates.languages に ja / en / x-default が含まれる
 // ---------------------------------------------------------------------------
 
-describe("[V-22] alternates.languages の3言語確認", () => {
-  it("ja ロケールで alternates.languages に ja / en / x-default が存在する", async () => {
-    const metadata = await generateLocaleMetadata({
-      params: Promise.resolve({ locale: "ja" }),
+describe("[V-22] alternates.languages の5言語確認 (ja/en/zh/ko/de + x-default)", () => {
+  const ALL_LOCALES = ["ja", "en", "zh", "ko", "de"] as const;
+
+  for (const locale of ALL_LOCALES) {
+    it(`${locale} ロケールで alternates.languages に ja/en/zh/ko/de/x-default が存在する`, async () => {
+      const metadata = await generateLocaleMetadata({
+        params: Promise.resolve({ locale }),
+      });
+
+      const languages = metadata.alternates?.languages as Record<string, string> | undefined;
+      expect(languages).toBeDefined();
+      expect(languages?.["ja"]).toBeDefined();
+      expect(languages?.["en"]).toBeDefined();
+      expect(languages?.["zh"]).toBeDefined();
+      expect(languages?.["ko"]).toBeDefined();
+      expect(languages?.["de"]).toBeDefined();
+      expect(languages?.["x-default"]).toBeDefined();
     });
-
-    const languages = metadata.alternates?.languages as Record<string, string> | undefined;
-    expect(languages).toBeDefined();
-    expect(languages?.["ja"]).toBeDefined();
-    expect(languages?.["en"]).toBeDefined();
-    expect(languages?.["x-default"]).toBeDefined();
-  });
-
-  it("en ロケールでも alternates.languages に ja / en / x-default が存在する", async () => {
-    const metadata = await generateLocaleMetadata({
-      params: Promise.resolve({ locale: "en" }),
-    });
-
-    const languages = metadata.alternates?.languages as Record<string, string> | undefined;
-    expect(languages).toBeDefined();
-    expect(languages?.["ja"]).toBeDefined();
-    expect(languages?.["en"]).toBeDefined();
-    expect(languages?.["x-default"]).toBeDefined();
-  });
+  }
 });
 
 // ---------------------------------------------------------------------------

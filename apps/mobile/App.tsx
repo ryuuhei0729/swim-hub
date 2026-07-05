@@ -5,6 +5,8 @@ import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
+import * as Font from "expo-font";
+import { ChakraPetch_700Bold } from "@expo-google-fonts/chakra-petch";
 import { AuthProvider, useAuth } from "./contexts/AuthProvider";
 import QueryProvider from "./providers/QueryProvider";
 import { NetworkProvider, useNetwork } from "./providers/NetworkProvider";
@@ -16,6 +18,10 @@ import { OnboardingStack } from "./navigation/OnboardingStack";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { supabase } from "./lib/supabase";
 import { env } from "./lib/env";
+
+// ChakraPetch_700Bold is used for the brand wordmark on the welcome/onboarding screens.
+// Best-effort: failures fall back to the system font.
+Font.loadAsync({ ChakraPetch_700Bold }).catch(() => {});
 
 enableScreens();
 

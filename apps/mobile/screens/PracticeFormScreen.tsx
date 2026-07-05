@@ -22,16 +22,16 @@ import {
   usePracticesQuery,
 } from "@apps/shared/hooks/queries/practices";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
-import { practiceKeys } from "@apps/shared/hooks/queries/keys";
+import { practiceKeys, teamKeys } from "@apps/shared/hooks/queries/keys";
 import { usePracticeFormStore } from "@/stores/practiceFormStore";
 import { useShallow } from "zustand/react/shallow";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
+import { DatePickerField } from "@/components/ui/DatePickerField";
 import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
-import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { PREMIUM_MESSAGES } from "@swim-hub/shared/constants/premium";
+import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import type { MainStackParamList } from "@/navigation/types";
 
 type PracticeFormScreenRouteProp = RouteProp<MainStackParamList, "PracticeForm">;
@@ -44,7 +44,7 @@ type PracticeFormScreenNavigationProp = NativeStackNavigationProp<MainStackParam
 export const PracticeFormScreen: React.FC = () => {
   const route = useRoute<PracticeFormScreenRouteProp>();
   const navigation = useNavigation<PracticeFormScreenNavigationProp>();
-  const { practiceId, date: initialDateParam } = route.params || {};
+  const { practiceId, date: initialDateParam, teamId } = route.params || {};
   const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
@@ -237,6 +237,7 @@ export const PracticeFormScreen: React.FC = () => {
           .map((img) => img.id); // idがパス
         const updatedImagePaths = [...currentPaths, ...newImagePaths];
 
+        // team_id は除外: RLS UPDATE ポリシーが is_team_admin ガードを持ち、team_id は不変のため
         const formData = {
           date,
           title: title && title.trim() !== "" ? title.trim() : null,
@@ -281,6 +282,9 @@ export const PracticeFormScreen: React.FC = () => {
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ["calendar"] });
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
+        if (teamId) {
+          queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
+        }
         // 成功: 前の画面に戻る
         reset();
         navigation.goBack();
@@ -291,6 +295,7 @@ export const PracticeFormScreen: React.FC = () => {
           title: title && title.trim() !== "" ? title.trim() : null,
           place: place && place.trim() !== "" ? place.trim() : null,
           note: note && note.trim() !== "" ? note.trim() : null,
+          ...(teamId ? { team_id: teamId } : {}),
         };
 
         const createdPractice = await createMutation.mutateAsync(formData);
@@ -340,6 +345,9 @@ export const PracticeFormScreen: React.FC = () => {
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ["calendar"] });
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
+        if (teamId) {
+          queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
+        }
         // 成功: 前の画面に戻る（練習タブから来た場合は練習タブに戻る）
         reset();
         navigation.goBack();
@@ -401,6 +409,7 @@ export const PracticeFormScreen: React.FC = () => {
           .map((img) => img.id);
         const updatedImagePaths = [...currentPaths, ...newImagePaths];
 
+        // team_id は除外: RLS UPDATE ポリシーが is_team_admin ガードを持ち、team_id は不変のため
         const formData = {
           date,
           title: title && title.trim() !== "" ? title.trim() : null,
@@ -444,11 +453,23 @@ export const PracticeFormScreen: React.FC = () => {
 
         queryClient.invalidateQueries({ queryKey: ["calendar"] });
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
+        if (teamId) {
+          queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
+        }
         reset();
-        navigation.navigate("PracticeLogForm", {
-          practiceId: practiceId,
-          returnTo: "dashboard",
-        });
+        if (teamId) {
+          // チームフロー: 旧画面へ
+          navigation.navigate("PracticeLogForm", {
+            practiceId: practiceId,
+            returnTo: "dashboard",
+          });
+        } else {
+          // 個人フロー: 新タブ画面(練習ログタブ)へ
+          navigation.navigate("PracticeTabForm", {
+            practiceId: practiceId,
+            initialTab: "log",
+          });
+        }
       } else {
         // 作成
         const formData = {
@@ -456,6 +477,7 @@ export const PracticeFormScreen: React.FC = () => {
           title: title && title.trim() !== "" ? title.trim() : null,
           place: place && place.trim() !== "" ? place.trim() : null,
           note: note && note.trim() !== "" ? note.trim() : null,
+          ...(teamId ? { team_id: teamId } : {}),
         };
 
         const createdPractice = await createMutation.mutateAsync(formData);
@@ -505,12 +527,22 @@ export const PracticeFormScreen: React.FC = () => {
         // カレンダーと練習一覧のクエリを無効化してリフレッシュ
         queryClient.invalidateQueries({ queryKey: ["calendar"] });
         queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
-        // 成功: PracticeLogFormScreenへ遷移
+        if (teamId) {
+          queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
+        }
+        // 成功: 個人フローは新タブ画面へ、チームフローは旧画面へ
         reset();
-        navigation.navigate("PracticeLogForm", {
-          practiceId: createdPractice.id,
-          returnTo: "dashboard",
-        });
+        if (teamId) {
+          navigation.navigate("PracticeLogForm", {
+            practiceId: createdPractice.id,
+            returnTo: "dashboard",
+          });
+        } else {
+          navigation.navigate("PracticeTabForm", {
+            practiceId: createdPractice.id,
+            initialTab: "log",
+          });
+        }
       }
     } catch (error) {
       console.error("保存エラー:", error);
@@ -550,20 +582,19 @@ export const PracticeFormScreen: React.FC = () => {
           <Text style={styles.label}>
             {t("practice.form.dateLabel")} <Text style={styles.required}>*</Text>
           </Text>
-          <TextInput
-            style={[styles.input, errors.date && styles.inputError]}
+          <DatePickerField
             value={date}
-            onChangeText={(text) => {
-              setDate(text);
+            onChange={(next) => {
+              setDate(next);
               if (errors.date) {
                 clearErrors();
               }
             }}
+            required
+            disabled={storeLoading}
+            error={errors.date}
             placeholder={t("practice.form.datePlaceholder")}
-            placeholderTextColor="#9CA3AF"
-            editable={!storeLoading}
           />
-          {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
         </View>
 
         {/* タイトル */}
@@ -610,7 +641,7 @@ export const PracticeFormScreen: React.FC = () => {
 
         {/* 画像 */}
         <View style={styles.field}>
-          {isPremium ? (
+          {canUploadImage(isPremium) ? (
             <ImageUploader
               existingImages={existingImages}
               onImagesChange={handleImagesChange}
@@ -619,7 +650,7 @@ export const PracticeFormScreen: React.FC = () => {
               label={t("practice.form.imagesLabel")}
             />
           ) : (
-            <PremiumBadge message={PREMIUM_MESSAGES.image_upload} />
+            <PremiumBadge feature="image_upload" />
           )}
         </View>
 
@@ -695,17 +726,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#111827",
   },
-  inputError: {
-    borderColor: "#DC2626",
-  },
   textArea: {
     minHeight: 100,
     paddingTop: 12,
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#DC2626",
-    marginTop: 4,
   },
   buttonContainer: {
     flexDirection: "row",

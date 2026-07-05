@@ -708,6 +708,43 @@ describe("[C3] DB復元: 4×100メドレーリレーの復元対称性", () => {
 // 修正した条件式と同等のピュア関数として抽出して検証する。
 // =============================================================================
 
+// =============================================================================
+// [V-GUARD-01] Sprint Contract: buildStyleEntriesFromExisting の styleName フィールドが
+// name_jp の生値 (日本語) を保持する。翻訳後フィールドではないことを確認する。
+// =============================================================================
+
+describe("[V-GUARD-01] buildStyleEntriesFromExisting: styleName フィールドが name_jp 生値を保持する", () => {
+  it("style_id=2 (50m 自由形) の record → result[0].styleName === '50m 自由形'", () => {
+    const records = [makeRecord({ style_id: 2, time: 27.5 })];
+    const result = buildStyleEntriesFromExisting(records, STYLES);
+    expect(result[0].styleName).toBe("50m 自由形");
+  });
+
+  it("style_id=13 (50m 背泳ぎ) の record → result[0].styleName === '50m 背泳ぎ'", () => {
+    const records = [makeRecord({ style_id: 13, time: 32.1 })];
+    const result = buildStyleEntriesFromExisting(records, STYLES);
+    expect(result[0].styleName).toBe("50m 背泳ぎ");
+  });
+
+  it("styles に存在しない style_id=99 → result[0].styleName === ''", () => {
+    const records = [makeRecord({ style_id: 99, time: 30.0 })];
+    const result = buildStyleEntriesFromExisting(records, STYLES);
+    expect(result[0].styleName).toBe("");
+  });
+
+  it("空配列 → result[0].styleName === '' (空エントリーのフォールバック)", () => {
+    const result = buildStyleEntriesFromExisting([], STYLES);
+    expect(result[0].styleName).toBe("");
+  });
+
+  it("styleName が翻訳後フィールドでないことを確認: '50m 自由形' に 'Freestyle' が含まれない", () => {
+    const records = [makeRecord({ style_id: 2, time: 27.5 })];
+    const result = buildStyleEntriesFromExisting(records, STYLES);
+    expect(result[0].styleName).not.toContain("Freestyle");
+    expect(result[0].styleName).not.toContain("Free");
+  });
+});
+
 describe("[Warning-1] cumTime の ?? フォールバック修正の検証", () => {
   // 修正後ロジックと同等の純粋関数
   function resolveCumTime(newCum: number, existingCum: number | null | undefined): number {

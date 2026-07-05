@@ -24,6 +24,7 @@ import {
 import type { Record, Competition, Style } from "@apps/shared/types";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import { useCompetitionRecordStore } from "@/stores/form/competitionRecordStore";
+import { RecordAPI } from "@apps/shared/api/records";
 
 interface CompetitionClientProps {
   styles: Style[];
@@ -40,6 +41,8 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
   const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePreviousBest, setSharePreviousBest] = useState<number | null>(null);
+  const [shareIsFirstRecord, setShareIsFirstRecord] = useState(false);
   const [_isPending, startTransition] = useTransition();
 
   // Zustandストア
@@ -808,7 +811,37 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
                 <button
                   type="button"
                   className="w-full inline-flex justify-center items-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-800 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto sm:text-sm"
-                  onClick={() => setShowShareModal(true)}
+                  onClick={async () => {
+                    let previousBest: number | null = null;
+                    let isFirstRecord = false;
+                    if (selectedRecord) {
+                      const styleId = selectedRecord.style_id;
+                      const poolTypeNum = selectedRecord.pool_type ?? 0;
+                      const recordId = selectedRecord.id;
+                      const recordDate = selectedRecord.competition?.date;
+                      if (styleId != null && recordId && recordDate) {
+                        try {
+                          const prevBest = await new RecordAPI(supabase).getPreviousBestTime(
+                            styleId,
+                            poolTypeNum,
+                            recordId,
+                            selectedRecord.is_relaying ?? false,
+                            recordDate,
+                          );
+                          if (prevBest === null) {
+                            isFirstRecord = true; // 記録なし＝初記録
+                          } else {
+                            previousBest = prevBest;
+                          }
+                        } catch {
+                          // 取得失敗時はバッジ非表示（初記録の誤表示を防ぐ）
+                        }
+                      }
+                    }
+                    setSharePreviousBest(previousBest);
+                    setShareIsFirstRecord(isFirstRecord);
+                    setShowShareModal(true);
+                  }}
                 >
                   <ShareIcon className="h-4 w-4 mr-2" />
                   {t("detail.share")}
@@ -832,7 +865,11 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
       {showShareModal && selectedRecord && (
         <ShareCardModal
           isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
+          onClose={() => {
+            setShowShareModal(false);
+            setSharePreviousBest(null);
+            setShareIsFirstRecord(false);
+          }}
           type="competition"
           data={
             {
@@ -847,8 +884,9 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
               time: selectedRecord.time,
               reactionTime: selectedRecord.reaction_time ?? undefined,
               splitTimes: selectedRecord.split_times,
-              isBestTime: false, // TODO: ベストタイム判定を追加
-              userName: "", // TODO: ユーザー名を取得
+              isFirstRecord: shareIsFirstRecord,
+              previousBest: sharePreviousBest ?? undefined,
+              userName: "",
               teamName: undefined,
             } as CompetitionShareData
           }

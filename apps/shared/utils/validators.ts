@@ -337,19 +337,6 @@ export function validatePracticeTimeLimit(count: number, isPremium: boolean): Va
   return success();
 }
 
-/**
- * 画像アップロード権限のバリデーション（Premium 制限）
- *
- * @param isPremium - Premium ユーザーかどうか
- * @returns バリデーション結果
- */
-export function validateImageUpload(isPremium: boolean): ValidationResult {
-  if (!isPremium) {
-    return failure("画像の添付は Premium 会員限定です");
-  }
-  return success();
-}
-
 // =============================================================================
 // 複合バリデーション
 // =============================================================================

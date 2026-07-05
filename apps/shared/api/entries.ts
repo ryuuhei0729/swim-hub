@@ -214,6 +214,7 @@ export class EntryAPI {
       styleId: number;
       entryTime?: number | null;
       note?: string | null;
+      isRelaying?: boolean;
     }>,
   ): Promise<Entry[]> {
     await requireTeamAdmin(this.supabase, teamId);
@@ -225,6 +226,7 @@ export class EntryAPI {
       style_id: entry.styleId,
       entry_time: entry.entryTime || null,
       note: entry.note || null,
+      is_relaying: entry.isRelaying ?? false,
     }));
 
     const { data, error } = await this.supabase.from("entries").insert(insertData).select();

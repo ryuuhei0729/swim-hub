@@ -31,7 +31,6 @@
     "test:web:remote": "E2E_SUPABASE_MODE=remote dotenvx run -f .env.development -- pnpm exec playwright test --config e2e/src/config/playwright.config.ts"
   },
   "dependencies": {
-    "aws4fetch": "^1.0.20",
     "@dnd-kit/core": "^6.3.1",
     "@dotenvx/dotenvx": "^1.51.1",
     "@ffmpeg/ffmpeg": "^0.12.15",
@@ -44,12 +43,12 @@
     "@swim-hub/shared": "*",
     "@tailwindcss/postcss": "^4.1.17",
     "@tanstack/react-query": "^5.90.10",
+    "aws4fetch": "^1.0.20",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "dseg": "^0.46.0",
     "exceljs": "^4.4.0",
-    "gray-matter": "^4.0.3",
     "html-to-image": "^1.11.13",
-    "marked": "^17.0.3",
     "mp4-muxer": "^5.2.2",
     "next": "16.2.6",
     "next-intl": "^3.26.3",
@@ -91,6 +90,7 @@
     "tailwindcss": "^4.1.16",
     "typescript": "^5",
     "typescript-eslint": "^8.34.0",
+    "vite": "6.4.3",
     "vitest": "^3.2.6",
     "wrangler": "^4.73.0"
   }

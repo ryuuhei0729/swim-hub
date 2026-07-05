@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-server";
 import { sendContactNotification } from "@/lib/resend";
 
+const SOURCE_APPS = ["swimhub", "timer", "scanner"] as const;
+const PLATFORMS = ["web", "ios", "android"] as const;
+
+/** ホワイトリストに一致する値のみ返す（不正値は null 化） */
+function sanitizeEnum<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+): T | null {
+  return typeof value === "string" && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : null;
+}
+
+/** 任意の文字列メタデータを長さ制限付きで正規化 */
+function sanitizeText(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  return trimmed.slice(0, maxLength);
+}
+
 /**
  * POST /api/contact
  * 問い合わせフォーム送信API（未認証アクセス可）
@@ -13,6 +34,11 @@ export async function POST(request: NextRequest) {
       email?: string;
       subject?: string;
       message?: string;
+      sourceApp?: string;
+      platform?: string;
+      referrer?: string;
+      pageUrl?: string;
+      locale?: string;
     };
     const { name, email, subject, message } = body;
 
@@ -48,6 +74,15 @@ export async function POST(request: NextRequest) {
       request.headers.get("x-real-ip") ??
       null;
 
+    // 利用コンテキスト（利用アプリ / 環境 / 端末情報）の正規化
+    // User-Agent はクライアント値より改ざんされにくいサーバーヘッダを採用
+    const sourceApp = sanitizeEnum(body.sourceApp, SOURCE_APPS);
+    const platform = sanitizeEnum(body.platform, PLATFORMS);
+    const userAgent = sanitizeText(request.headers.get("user-agent"), 512);
+    const referrer = sanitizeText(body.referrer, 1000);
+    const pageUrl = sanitizeText(body.pageUrl, 1000);
+    const locale = sanitizeText(body.locale, 10);
+
     // Supabase に保存（contact_messages は Database 型に未定義のため型アサーション）
     const adminClient = createAdminClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,6 +92,12 @@ export async function POST(request: NextRequest) {
       subject: subject.trim(),
       message: message.trim(),
       ip_address: ipAddress,
+      source_app: sourceApp,
+      platform,
+      user_agent: userAgent,
+      referrer,
+      page_url: pageUrl,
+      locale,
     });
 
     if (dbError) {
@@ -71,6 +112,12 @@ export async function POST(request: NextRequest) {
         email: email.trim(),
         subject: subject.trim(),
         message: message.trim(),
+        sourceApp,
+        platform,
+        userAgent,
+        referrer,
+        pageUrl,
+        locale,
       });
     } catch (emailError) {
       console.error("メール送信エラー:", emailError);

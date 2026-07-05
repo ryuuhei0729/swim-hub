@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@/utils/formatters";
+import { styleIdToCodeKey, canStyleRelay, type StyleCodeKey } from "@/utils/swimStyle";
 import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
 import type { RecordLogFormState, StyleOption } from "../types";
@@ -48,6 +49,10 @@ interface RecordLogEntryProps {
   isPremium?: boolean;
   /** 新規作成時に動画が選択／取消しされた場合の通知（id が undefined の場合のみ使用） */
   onPendingFile?: (file: File | null, thumbnail: Blob | null) => void;
+  /** 種目見出し(「種目 N」)を表示するか。タブ名で項目を識別する場合は false */
+  showTitle?: boolean;
+  /** 外枠カード(枠線・背景)を外し、フィールドを直接並べる。外側で枠を持つ場合に使用 */
+  bare?: boolean;
 }
 
 /**
@@ -79,32 +84,45 @@ export default function RecordLogEntry({
   isSplitTimeLimitReached = false,
   isPremium = false,
   onPendingFile,
+  showTitle = true,
+  bare = false,
 }: RecordLogEntryProps) {
   const t = useTranslations("forms.recordLog");
   const tPremium = useTranslations("forms.premium");
+  const tStyles = useTranslations("practice.styles");
   const sectionIndex = index + 1;
-  const styleOptions = styles.map((style) => ({
-    id: style.id.toString(),
-    label: style.nameJp,
-  }));
 
-  const currentStyleId = entryInfo ? String(entryInfo.styleId) : formData.styleId;
+  const currentStyleId = formData.styleId;
   const currentStyle = styles.find((s) => s.id.toString() === currentStyleId);
   const raceDistance = currentStyle?.distance;
+  const currentCodeKey = currentStyle ? styleIdToCodeKey(currentStyle.id) : undefined;
 
-  // リレー種目として選択可能かどうか（nameJpから泳法を判定）
-  const canRelay = (() => {
-    if (!currentStyle) return false;
-    const { nameJp, distance } = currentStyle;
-    const name = nameJp.toLowerCase();
-    const isFr = name.includes("自由形") || name.includes("fr");
-    const isBr = name.includes("平泳ぎ") || name.includes("br");
-    const isFly = name.includes("バタフライ") || name.includes("fly");
-    if (isFr && [25, 50, 100, 200].includes(distance)) return true;
-    if (isBr && [25, 50, 100].includes(distance)) return true;
-    if (isFly && [25, 50, 100].includes(distance)) return true;
-    return false;
-  })();
+  // 種目を「距離」×「CodeKey」でグルーピング (locale 非依存)
+  const distanceOptions = Array.from(new Set(styles.map((s) => s.distance))).sort(
+    (a, b) => a - b,
+  );
+
+  // CodeKey の出現順を保持
+  const codeKeyOrder: StyleCodeKey[] = [];
+  styles.forEach((s) => {
+    const ck = styleIdToCodeKey(s.id);
+    if (ck && !codeKeyOrder.includes(ck)) codeKeyOrder.push(ck);
+  });
+
+  const findStyleIdByCodeKey = (d: number | undefined, ck: StyleCodeKey | undefined): string | undefined => {
+    if (d === undefined || ck === undefined) return undefined;
+    const found = styles.find((s) => s.distance === d && styleIdToCodeKey(s.id) === ck);
+    return found ? found.id.toString() : undefined;
+  };
+
+  // 選択中の距離で入力可能な CodeKey のみ
+  const codeKeysForCurrentDistance = codeKeyOrder.filter((ck) =>
+    styles.some((s) => s.distance === raceDistance && styleIdToCodeKey(s.id) === ck),
+  );
+
+  // リレー種目として選択可能かどうか (canStyleRelay に委譲)
+  const canRelay =
+    currentStyle != null && canStyleRelay(currentStyle.id, currentStyle.distance);
 
   // 現在の種目・プールタイプ・リレーフラグに基づいてベストタイムを取得（優先順位付き）
   // リレーOFFの場合: 1. 同じ水路・非リレー → 2. 同じ水路・リレー → 3. 異なる水路・非リレー → 4. 異なる水路・リレー
@@ -208,11 +226,20 @@ export default function RecordLogEntry({
 
   return (
     <div
-      className="rounded-xl border border-gray-200 bg-gray-50/60 p-3 sm:p-6 space-y-2 sm:space-y-4"
+      className={
+        bare
+          ? "space-y-2 sm:space-y-4"
+          : "rounded-xl border border-gray-200 bg-gray-50/60 p-3 sm:p-6 space-y-2 sm:space-y-4"
+      }
       data-testid={`record-entry-section-${sectionIndex}`}
     >
+      {(showTitle ||
+        (entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0) ||
+        currentBestTime) && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <h4 className="text-base font-semibold text-gray-900">{t("eventHeader", { n: sectionIndex })}</h4>
+        {showTitle && (
+          <h4 className="text-base font-semibold text-gray-900">{t("eventHeader", { n: sectionIndex })}</h4>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           {entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0 && (
             <div className="text-xs text-blue-800 bg-blue-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
@@ -230,45 +257,89 @@ export default function RecordLogEntry({
           )}
         </div>
       </div>
+      )}
 
       {/* 種目とリレー */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {t("styleLabel")} <span className="text-red-500">*</span>
         </label>
-        <div className="flex items-center gap-1.5 sm:gap-3">
-          <select
-            value={entryInfo ? String(entryInfo.styleId) : formData.styleId}
-            onChange={(e) => onStyleChange(e.target.value)}
-            className="min-w-0 flex-1 max-w-[70%] sm:max-w-none h-8 sm:h-10 px-1.5 sm:px-3 py-1 sm:py-2 text-xs sm:text-base border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            required
-            disabled={!!entryInfo}
-            data-testid={`record-style-${sectionIndex}`}
-          >
-            <option value="">{t("stylePlaceholder")}</option>
-            {styleOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+        <div className="space-y-1.5" data-testid={`record-style-${sectionIndex}`}>
+          {/* 距離 */}
+          <div className="flex flex-wrap gap-1">
+            {distanceOptions.map((d) => {
+              const isActive = raceDistance === d;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => {
+                    const id =
+                      findStyleIdByCodeKey(d, currentCodeKey ?? undefined) ??
+                      findStyleIdByCodeKey(d, codeKeyOrder.find((ck) => findStyleIdByCodeKey(d, ck)));
+                    if (id) onStyleChange(id);
+                  }}
+                  aria-pressed={isActive}
+                  className={`px-2.5 py-1 rounded-md border text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    isActive
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                  data-testid={`record-style-distance-${sectionIndex}-${d}`}
+                >
+                  {d}m
+                </button>
+              );
+            })}
+          </div>
+          {/* 泳法 — ラベルは practice.styles 翻訳 */}
+          <div className="flex flex-wrap gap-1">
+            {codeKeysForCurrentDistance.map((ck) => {
+              const isActive = currentCodeKey === ck;
+              return (
+                <button
+                  key={ck}
+                  type="button"
+                  onClick={() => {
+                    const id = findStyleIdByCodeKey(raceDistance, ck);
+                    if (id) onStyleChange(id);
+                  }}
+                  aria-pressed={isActive}
+                  className={`px-2.5 py-1 rounded-md border text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    isActive
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                  data-testid={`record-style-stroke-${sectionIndex}-${ck}`}
+                >
+                  {tStyles(ck)}
+                </button>
+              );
+            })}
+          </div>
+          {/* リレー (3行目: オンオフトグル) */}
           {canRelay && (
-            <div className="flex items-center shrink-0">
-              <input
-                type="checkbox"
-                id={`isRelaying-${sectionIndex}`}
-                checked={formData.isRelaying}
-                onChange={(e) => onToggleRelaying(e.target.checked)}
-                className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                data-testid={`record-relay-${sectionIndex}`}
-              />
-              <label
-                htmlFor={`isRelaying-${sectionIndex}`}
-                className="ml-1 sm:ml-2 text-[10px] sm:text-sm text-gray-700 whitespace-nowrap"
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.isRelaying}
+              onClick={() => onToggleRelaying(!formData.isRelaying)}
+              className="flex items-center gap-2 focus:outline-none"
+              data-testid={`record-relay-${sectionIndex}`}
+            >
+              <span
+                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+                  formData.isRelaying ? "bg-blue-600" : "bg-gray-300"
+                }`}
               >
-                {t("relayLabel")}
-              </label>
-            </div>
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    formData.isRelaying ? "translate-x-[18px]" : "translate-x-0.5"
+                  }`}
+                />
+              </span>
+              <span className="text-[10px] sm:text-sm text-gray-700">{t("relayLabel")}</span>
+            </button>
           )}
         </div>
       </div>
@@ -296,8 +367,8 @@ export default function RecordLogEntry({
           <Input
             type="number"
             step="0.01"
-            min="0.40"
-            max="1.00"
+            min="-1"
+            max="2"
             value={formData.reactionTime}
             onChange={(e) => onReactionTimeChange(e.target.value)}
             placeholder={t("reactionTime_placeholder")}
@@ -371,7 +442,7 @@ export default function RecordLogEntry({
                   type="text"
                   value={st.splitTimeDisplayValue || ""}
                   onChange={(e) => onSplitTimeChange(originalIndex, "splitTime", e.target.value)}
-                  placeholder={t("reactionTime_placeholder")}
+                  placeholder={t("time_placeholder")}
                   className="flex-1"
                   data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}
                 />

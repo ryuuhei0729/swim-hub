@@ -22,6 +22,16 @@
     @apply scroll-smooth;
   }
 
+  /* 言語ごとに CJK フォントを切り替える。日本語フォントにはハングルや
+     簡体字固有の字形が無いため、html lang 属性に応じて優先フォントを差し替える。 */
+  html:lang(ko) {
+    --font-sans: var(--font-inter), var(--font-noto-sans-kr), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  html:lang(zh) {
+    --font-sans: var(--font-inter), var(--font-noto-sans-sc), ui-sans-serif, system-ui, sans-serif;
+  }
+
   body {
     @apply antialiased bg-gray-50 text-gray-900;
   }
@@ -434,4 +444,104 @@
     transform: translateX(0);
     opacity: 1;
   }
+}
+
+/* ============================================================
+   LP v4.2 Deco Dynamic — CSS カスタムプロパティ (--lp-* 名前空間)
+   既存の @theme / .bg-gradient-* は変更しない。
+   ============================================================ */
+:root {
+  --lp-bg: #eef1f6;
+  --lp-panel: #ffffff;
+  --lp-navy: #0b1424;
+  --lp-navy2: #111d33;
+  --lp-royal: #2b5fa8;
+  --lp-ice: #7ea8dd;
+  --lp-silver: #bac4d3;
+  --lp-ink: #0b1424;
+  --lp-line: rgba(11, 20, 36, 0.14);
+  --lp-line-strong: rgba(11, 20, 36, 0.34);
+  --lp-dim: rgba(11, 20, 36, 0.62);
+  --lp-dim2: rgba(11, 20, 36, 0.38);
+  --lp-w-white: #f4f6fa;
+  --lp-w-line: rgba(244, 246, 250, 0.2);
+  --lp-w-line-strong: rgba(244, 246, 250, 0.45);
+  --lp-w-dim: rgba(244, 246, 250, 0.66);
+  --lp-w-dim2: rgba(244, 246, 250, 0.4);
+  --lp-photo-clip: polygon(
+    36px 0,
+    calc(100% - 36px) 0,
+    100% 36px,
+    100% calc(100% - 36px),
+    calc(100% - 36px) 100%,
+    36px 100%,
+    0 calc(100% - 36px),
+    0 36px
+  );
+  --lp-pad-x: clamp(20px, 5vw, 80px);
+}
+
+/* LP v4.2 — モバイルで八角形クリップのコーナーサイズを縮小 */
+@media (max-width: 560px) {
+  :root {
+    --lp-photo-clip: polygon(
+      22px 0,
+      calc(100% - 22px) 0,
+      100% 22px,
+      100% calc(100% - 22px),
+      calc(100% - 22px) 100%,
+      22px 100%,
+      0 calc(100% - 22px),
+      0 22px
+    );
+  }
+}
+
+/* LP v4.2 — キーフレーム */
+@keyframes lpMqDeco {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes lpDecoBlink {
+  50% { opacity: 0.25; }
+}
+@keyframes lpDecoFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+@keyframes lpDiaPulse {
+  0%, 100% { transform: rotate(45deg) scale(1); }
+  50%      { transform: rotate(45deg) scale(1.4); }
+}
+@keyframes lpScanDeco {
+  0%, 100% { top: 10%; }
+  50%       { top: 88%; }
+}
+@keyframes lpWipeIn {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+@keyframes lpRiseUp {
+  from { transform: translateY(112%); }
+}
+@keyframes lpRvIn {
+  from { opacity: 0; transform: translateY(18px); }
+}
+@keyframes lpSwimBob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%       { transform: translateY(-2px) rotate(-5deg); }
+}
+@keyframes lpSwimBobBack {
+  0%, 100% { transform: scaleX(-1) translateY(0) rotate(0deg); }
+  50%       { transform: scaleX(-1) translateY(-2px) rotate(-5deg); }
+}
+
+/* LP v4.2 — @font-face DSEG7Classic (セルフホスト) */
+@font-face {
+  font-family: "DSEG7Classic";
+  src: url("/fonts/dseg/DSEG7Classic-BoldItalic.woff2") format("woff2"),
+       url("/fonts/dseg/DSEG7Classic-BoldItalic.woff") format("woff");
+  font-weight: 700;
+  font-style: italic;
+  font-display: block;
 }

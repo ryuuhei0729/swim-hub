@@ -15,18 +15,21 @@ import {
   useDeletePracticeMutation,
   useCreatePracticeLogMutation,
   useUpdatePracticeLogMutation,
+  useDeletePracticeLogMutation,
   useCreatePracticeTimeMutation,
   useDeletePracticeTimeMutation,
 } from "@apps/shared/hooks/queries/practices";
 import {
   useCreateRecordMutation,
   useUpdateRecordMutation,
+  useDeleteRecordMutation,
   useCreateCompetitionMutation,
   useUpdateCompetitionMutation,
   useDeleteCompetitionMutation,
   useCreateSplitTimesMutation,
   useReplaceSplitTimesMutation,
 } from "@apps/shared/hooks/queries/records";
+import { EntryAPI } from "@apps/shared/api";
 import type { TeamMembership, Team, Style, PracticeTag } from "@apps/shared/types";
 import type { CalendarItem, MonthlySummary } from "@apps/shared/types/ui";
 import { notificationKeys } from "@apps/shared/hooks/queries/keys";
@@ -66,41 +69,34 @@ export default function DashboardClient({
   const { calendarRefreshKey, refreshCalendar } = useUIStore();
 
   const {
-    isBasicFormOpen: _isPracticeBasicFormOpen,
-    isLogFormOpen: _isPracticeLogFormOpen,
-    selectedDate: _selectedDate,
     editingData,
     createdPracticeId,
-    isLoading: _isLoading,
-    availableTags: _availableTags,
-    openBasicForm: openPracticeBasicForm,
+    openTabModal: openPracticeTabModal,
     openLogForm: openPracticeLogForm,
     closeBasicForm: closePracticeBasicForm,
     closeLogForm: closePracticeLogForm,
+    closeTabModal: closePracticeTabModal,
     setSelectedDate,
     setEditingData,
-    setCreatedPracticeId: _setCreatedPracticeId,
     setAvailableTags,
     setLoading: setPracticeLoading,
+    setEditingPracticeId,
   } = usePracticeStore();
 
   const {
-    isBasicFormOpen: _isCompetitionBasicFormOpen,
-    isEntryFormOpen: _isEntryLogFormOpen,
-    isRecordFormOpen: _isRecordLogFormOpen,
     createdCompetitionId,
-    createdEntries: _createdEntries,
     editingData: competitionEditingData,
-    openBasicForm: openCompetitionBasicForm,
+    openTabModal: openCompetitionTabModal,
     openEntryForm: openEntryLogForm,
     openRecordForm: openRecordLogForm,
     closeBasicForm: closeCompetitionBasicForm,
     closeEntryForm: closeEntryLogForm,
     closeRecordForm: closeRecordLogForm,
-    setCreatedCompetitionId: _setCreatedCompetitionId,
+    closeTabModal: closeCompetitionTabModal,
     setCreatedEntries,
     setStyles: setCompetitionStyles,
     setLoading: setCompetitionLoading,
+    setEditingCompetitionId,
   } = useCompetitionStore();
 
   // サーバー側から取得したデータをストアに設定（初回のみ）
@@ -149,12 +145,14 @@ export default function DashboardClient({
   const deletePracticeMutation = useDeletePracticeMutation(supabase);
   const createPracticeLogMutation = useCreatePracticeLogMutation(supabase);
   const updatePracticeLogMutation = useUpdatePracticeLogMutation(supabase);
+  const deletePracticeLogMutation = useDeletePracticeLogMutation(supabase);
   const createPracticeTimeMutation = useCreatePracticeTimeMutation(supabase);
   const deletePracticeTimeMutation = useDeletePracticeTimeMutation(supabase);
 
   // 大会記録用のミューテーションフック
   const createRecordMutation = useCreateRecordMutation(supabase);
   const updateRecordMutation = useUpdateRecordMutation(supabase);
+  const deleteRecordMutation = useDeleteRecordMutation(supabase);
   const createCompetitionMutation = useCreateCompetitionMutation(supabase);
   const updateCompetitionMutation = useUpdateCompetitionMutation(supabase);
   const deleteCompetitionMutation = useDeleteCompetitionMutation(supabase);
@@ -195,6 +193,17 @@ export default function DashboardClient({
   const deletePractice = async (id: string) => {
     return await deletePracticeMutation.mutateAsync(id);
   };
+  const deletePracticeLog = async (id: string) => {
+    return await deletePracticeLogMutation.mutateAsync(id);
+  };
+
+  const deleteRecord = async (id: string) => {
+    return await deleteRecordMutation.mutateAsync(id);
+  };
+  const deleteEntry = async (id: string) => {
+    const entryAPI = new EntryAPI(supabase);
+    await entryAPI.deleteEntry(id);
+  };
 
   const createRecord = async (record: Parameters<typeof createRecordMutation.mutateAsync>[0]) => {
     return await createRecordMutation.mutateAsync(record);
@@ -232,13 +241,13 @@ export default function DashboardClient({
 
   // ハンドラー関数は useDashboardHandlers カスタムフックから取得
   const {
-    handlePracticeBasicSubmit,
     handlePracticeLogSubmit,
     handleDeleteItem: originalHandleDeleteItem,
-    handleCompetitionBasicSubmit,
     handleEntrySubmit: originalHandleEntrySubmit,
     handleEntrySkip,
     handleRecordLogSubmit,
+    handlePracticeTabSave,
+    handleCompetitionTabSave,
   } = useDashboardHandlers({
     supabase,
     user,
@@ -247,11 +256,14 @@ export default function DashboardClient({
     updatePractice,
     createPracticeLog,
     updatePracticeLog,
+    deletePracticeLog,
     createPracticeTime,
     deletePracticeTime,
     deletePractice,
     createRecord,
     updateRecord,
+    deleteRecord,
+    deleteEntry,
     createCompetition,
     updateCompetition,
     deleteCompetition,
@@ -273,6 +285,10 @@ export default function DashboardClient({
     openEntryLogForm,
     openRecordLogForm,
     refreshCalendar,
+    closePracticeTabModal,
+    closeCompetitionTabModal,
+    setEditingPracticeId,
+    setEditingCompetitionId,
   });
 
   // エントリー完了時に通知を再読み込み
@@ -316,9 +332,8 @@ export default function DashboardClient({
     onDeleteRecord,
   } = useCalendarHandlers({
     supabase,
-    openPracticeBasicForm,
-    openPracticeLogForm,
-    openCompetitionBasicForm,
+    openPracticeTabModal,
+    openCompetitionTabModal,
     openEntryLogForm,
     openRecordLogForm,
     setSelectedDate,
@@ -353,12 +368,12 @@ export default function DashboardClient({
 
         {/* フォームモーダル */}
         <FormModals
-          onPracticeBasicSubmit={handlePracticeBasicSubmit}
           onPracticeLogSubmit={handlePracticeLogSubmit}
-          onCompetitionBasicSubmit={handleCompetitionBasicSubmit}
           onEntrySubmit={handleEntrySubmit}
           onEntrySkip={handleEntrySkip}
           onRecordLogSubmit={handleRecordLogSubmit}
+          onPracticeTabSave={handlePracticeTabSave}
+          onCompetitionTabSave={handleCompetitionTabSave}
           styles={styles}
         />
 

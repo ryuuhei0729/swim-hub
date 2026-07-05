@@ -49,15 +49,13 @@ vi.mock("@/utils/videoUpload", () => ({
 vi.mock("expo-image-picker", () => ({
   launchImageLibraryAsync: mocks.launchImageLibraryAsync,
   launchCameraAsync: mocks.launchCameraAsync,
-}));
-
-vi.mock("@swim-hub/shared/constants/premium", () => ({
-  PREMIUM_MESSAGES: { video_upload: "動画アップロードはプレミアム会員限定" },
+  requestCameraPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
+  requestMediaLibraryPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
 }));
 
 vi.mock("@/components/shared/PremiumBadge", () => ({
-  PremiumBadge: ({ message }: { message: string }) =>
-    React.createElement("div", { "data-testid": "premium-badge" }, message),
+  PremiumBadge: ({ feature }: { feature: string }) =>
+    React.createElement("div", { "data-testid": "premium-badge" }, feature),
 }));
 
 vi.mock("@/components/shared/VideoPlayer", () => ({

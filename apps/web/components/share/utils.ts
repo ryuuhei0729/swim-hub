@@ -25,6 +25,44 @@ export function formatReactionTime(seconds: number): string {
   return seconds.toFixed(2);
 }
 
+/** 自己ベストと同記録とみなす許容誤差（秒）＝コンマ秒未満の浮動小数点誤差を吸収 */
+const BEST_EPSILON = 0.005;
+
+/** 自己ベストとの差分を符号付きでフォーマット（改善=マイナス, 同記録=±0, 悪化=プラス） */
+export function formatBestDelta(time: number, previousBest: number): string {
+  const delta = time - previousBest;
+  if (Math.abs(delta) < BEST_EPSILON) return `±${formatTime(0)}`;
+  const sign = delta < 0 ? "-" : "+";
+  return `${sign}${formatTime(Math.abs(delta))}`;
+}
+
+/** シェアカードの自己ベストバッジ状態 */
+export type ShareBadgeState =
+  | { kind: "first" }
+  | { kind: "best"; label: string }
+  | { kind: "slower"; label: string }
+  | { kind: "none" };
+
+/**
+ * 自己ベストバッジの状態を判定する純粋関数。
+ * - isFirstRecord=true → 初記録（「初」バッジ）
+ * - previousBest が不明 (null/undefined) → 非表示（エラー等で判定不能なとき誤表示を防ぐ）
+ * - time <= previousBest(+誤差) → ベスト（±0含む、青）
+ * - それ以外 → ベストより遅い（赤）
+ */
+export function getShareBadgeState(
+  time: number,
+  previousBest: number | null | undefined,
+  isFirstRecord?: boolean,
+): ShareBadgeState {
+  if (isFirstRecord) return { kind: "first" };
+  if (previousBest == null) return { kind: "none" };
+  const label = formatBestDelta(time, previousBest);
+  return time - previousBest <= BEST_EPSILON
+    ? { kind: "best", label }
+    : { kind: "slower", label };
+}
+
 /**
  * ラップタイムを計算（スプリットタイムから）
  */
@@ -97,6 +135,20 @@ export async function elementToImage(element: HTMLElement, scale: number = 2): P
 }
 
 /**
+ * HTML要素を画像 Blob に変換
+ * Web Share API 用。CSP の connect-src が data: URL を許可しないため、
+ * data URL を fetch して Blob 化する方法は使えない。html-to-image の toBlob で直接取得する。
+ */
+export async function elementToBlob(element: HTMLElement, scale: number = 2): Promise<Blob | null> {
+  const { toBlob } = await import("html-to-image");
+
+  return toBlob(element, {
+    pixelRatio: scale,
+    cacheBust: true,
+  });
+}
+
+/**
  * 画像をダウンロード
  */
 export function downloadImage(dataUrl: string, filename: string): void {
@@ -104,6 +156,19 @@ export function downloadImage(dataUrl: string, filename: string): void {
   link.download = filename;
   link.href = dataUrl;
   link.click();
+}
+
+/**
+ * 背景色の明度からタグ文字色（黒/白）を決定する
+ */
+export function getTagTextColor(backgroundColor: string): string {
+  const hex = backgroundColor.replace("#", "");
+  if (hex.length < 6) return "#FFFFFF";
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 128 ? "#000000" : "#FFFFFF";
 }
 
 /**

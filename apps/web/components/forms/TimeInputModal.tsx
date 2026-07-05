@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 import { formatTime, formatTimeAverage } from "@apps/shared/utils/time";
 import { useQuickTimeInput } from "@/components/forms/shared/TimeInput/hooks";
 
@@ -42,6 +42,7 @@ export default function TimeInputModal({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmContext, setConfirmContext] = useState<"close" | "back">("close");
+  const [showHelp, setShowHelp] = useState(false);
   const isInitializedRef = useRef(false);
   const ignorePopStateRef = useRef(false);
   const { parseInput, resetContext } = useQuickTimeInput();
@@ -86,6 +87,7 @@ export default function TimeInputModal({
       setHasUnsavedChanges(false);
       setIsSubmitted(false);
       setShowConfirmDialog(false);
+      setShowHelp(false);
       isInitializedRef.current = false;
     }
   }, [isOpen]);
@@ -164,6 +166,12 @@ export default function TimeInputModal({
           : t,
       ),
     );
+    // フィールドを空にしたらコンテキストをリセットする。
+    // これをしないと、前回入力（例: 1:12.2）の「分」がクイック入力コンテキストに残り、
+    // 削除後に「33-3」を入力すると「1:33.3」に化けてしまう。
+    if (!value.trim()) {
+      resetContext();
+    }
     // 初期化完了後の変更のみ追跡
     if (isInitializedRef.current) {
       setHasUnsavedChanges(true);
@@ -173,7 +181,10 @@ export default function TimeInputModal({
   // 入力確定時にパース（Enter または フォーカスアウト）
   const handleTimeConfirm = (id: string, value: string) => {
     if (!value.trim()) {
-      // 空入力の場合はクリア
+      // 空のまま blur / Enter したケースのフォールバック。
+      // 通常は handleTimeChange 側の resetContext で解除済みだが、こちらでも
+      // 分引き継ぎコンテキストを確実に解除する（setContextState は冪等）。
+      resetContext();
       setTimes((prev) => prev.map((t) => (t.id === id ? { ...t, displayValue: "", time: 0 } : t)));
       return;
     }
@@ -251,9 +262,33 @@ export default function TimeInputModal({
           {/* ヘッダー */}
           <div className="bg-white px-3 sm:px-6 py-2 sm:py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm sm:text-lg leading-6 font-medium text-gray-900">
-                {menuNumber ? t("title", { n: menuNumber }) : t("titleGeneric")}
-              </h3>
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm sm:text-lg leading-6 font-medium text-gray-900">
+                  {menuNumber ? t("title", { n: menuNumber }) : t("titleGeneric")}
+                </h3>
+                {/* ヒントラベル + ポップオーバー */}
+                <div className="relative group/help">
+                  <button
+                    type="button"
+                    onClick={() => setShowHelp((v) => !v)}
+                    onBlur={() => setShowHelp(false)}
+                    className="sm:pointer-events-none flex items-center gap-0.5 text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    <InformationCircleIcon className="h-4 w-4 shrink-0" />
+                    <span>{t("helpTitle")}</span>
+                  </button>
+                  {/* デスクトップ: ホバーで表示 */}
+                  <div className="hidden group-hover/help:sm:block absolute top-full mt-1.5 left-0 w-72 max-w-[calc(100vw-2rem)] p-3 bg-gray-800 text-white text-xs rounded shadow-lg z-50 leading-relaxed">
+                    <p className="whitespace-pre-line">{t("helpBody")}</p>
+                  </div>
+                  {/* スマホ: タップトグル */}
+                  {showHelp && (
+                    <div className="sm:hidden absolute top-full mt-1.5 left-0 w-72 max-w-[calc(100vw-2rem)] p-3 bg-gray-800 text-white text-xs rounded shadow-lg z-50 leading-relaxed">
+                      <p className="whitespace-pre-line">{t("helpBody")}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
               <button
                 type="button"
                 className="text-gray-400 hover:text-gray-500"

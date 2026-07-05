@@ -11,84 +11,70 @@ import type {
   RecordFormDataInternal,
   EntryWithStyle,
 } from "@/stores/types";
-import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
-import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
 import { convertRecordFormData } from "@/stores/types";
 import { getCompetitionId } from "../_utils/dashboardHelpers";
 import { useAuth } from "@/contexts";
 import { useCompetitionInfoQuery } from "@apps/shared/hooks/queries/records";
-import PracticeBasicForm from "@/components/forms/PracticeBasicForm";
 import PracticeLogForm from "@/components/forms/PracticeLogForm";
-import CompetitionBasicForm from "@/components/forms/CompetitionBasicForm";
 import EntryLogForm from "@/components/forms/EntryLogForm";
 import RecordLogForm from "@/components/forms/RecordLogForm";
-
-interface CompetitionSubmitOptions {
-  continueToNext?: boolean;
-  skipEntry?: boolean;
-}
+import PracticeTabModal from "@/components/forms/PracticeTabModal";
+import CompetitionTabModal from "@/components/forms/CompetitionTabModal";
+import type { PracticeTabSaveParams } from "@/components/forms/PracticeTabModal";
+import type { CompetitionTabSaveParams } from "@/components/forms/CompetitionTabModal";
 
 interface FormModalsProps {
-  onPracticeBasicSubmit: (
-    basicData: { date: string; title: string; place: string; note: string },
-    imageData?: PracticeImageData,
-    continueToNext?: boolean,
-  ) => Promise<void>;
   onPracticeLogSubmit: (formDataArray: PracticeMenuFormData[]) => Promise<void>;
-  onCompetitionBasicSubmit: (
-    basicData: {
-      date: string;
-      endDate: string;
-      title: string;
-      place: string;
-      poolType: number;
-      note: string;
-    },
-    imageData?: CompetitionImageData,
-    options?: CompetitionSubmitOptions,
-  ) => Promise<void>;
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>;
   onEntrySkip: () => void;
   onRecordLogSubmit: (formDataList: RecordFormDataInternal[]) => Promise<void>;
+  onPracticeTabSave: (params: PracticeTabSaveParams) => Promise<void>;
+  onCompetitionTabSave: (params: CompetitionTabSaveParams) => Promise<void>;
   styles: Style[];
 }
 
 export function FormModals({
-  onPracticeBasicSubmit,
   onPracticeLogSubmit,
-  onCompetitionBasicSubmit,
   onEntrySubmit,
   onEntrySkip,
   onRecordLogSubmit,
+  onPracticeTabSave,
+  onCompetitionTabSave,
   styles,
 }: FormModalsProps) {
   const { supabase } = useAuth();
 
   const {
-    isBasicFormOpen: isPracticeBasicFormOpen,
     isLogFormOpen: isPracticeLogFormOpen,
+    isOpen: isPracticeTabModalOpen,
     selectedDate,
     editingData,
     createdPracticeId,
+    editingPracticeId,
     isLoading,
     availableTags,
-    closeBasicForm: closePracticeBasicForm,
+    activeTab: practiceActiveTab,
     closeLogForm: closePracticeLogForm,
+    closeTabModal: closePracticeTabModal,
     setAvailableTags,
   } = usePracticeStore();
 
   const {
-    isBasicFormOpen: isCompetitionBasicFormOpen,
     isEntryFormOpen: isEntryLogFormOpen,
     isRecordFormOpen: isRecordLogFormOpen,
+    isOpen: isCompetitionTabModalOpen,
     selectedDate: competitionSelectedDate,
     createdCompetitionId,
     createdEntries,
     editingData: competitionEditingData,
+    editingCompetitionId,
     isLoading: competitionIsLoading,
-    closeBasicForm: closeCompetitionBasicForm,
+    activeTab: competitionActiveTab,
+    entryLocked: competitionEntryLocked,
+    styles: competitionStyles,
     closeEntryForm: closeEntryLogForm,
     closeRecordForm: closeRecordLogForm,
+    closeTabModal: closeCompetitionTabModal,
   } = useCompetitionStore();
 
   // competitionIdを計算（createdCompetitionIdまたはcompetitionEditingDataから取得）
@@ -346,79 +332,7 @@ export function FormModals({
 
   return (
     <>
-      {/* 第1段階: 練習基本情報フォーム */}
-      <>
-        <PracticeBasicForm
-          isOpen={isPracticeBasicFormOpen}
-          onClose={closePracticeBasicForm}
-          onSubmit={onPracticeBasicSubmit}
-          selectedDate={selectedDate || new Date()}
-          editData={(() => {
-            if (!editingData || typeof editingData !== "object") {
-              return undefined;
-            }
-
-            // CalendarItem型の場合
-            if (
-              "type" in editingData &&
-              (editingData.type === "practice" || editingData.type === "team_practice")
-            ) {
-              const item = editingData as {
-                date?: string;
-                title?: string;
-                place?: string;
-                note?: string;
-                metadata?: { practice?: { place?: string } };
-                editData?: {
-                  images?: Array<{
-                    id: string;
-                    thumbnailUrl: string;
-                    originalUrl: string;
-                    fileName: string;
-                  }>;
-                };
-              };
-              return {
-                date: item.date,
-                title: item.title || "",
-                place: item.place || item.metadata?.practice?.place || "",
-                note: item.note || "",
-                images: item.editData?.images,
-              };
-            }
-
-            // EditingData型の場合（旧フォーマット）
-            if ("metadata" in editingData && editingData.metadata) {
-              const item = editingData as {
-                date?: string;
-                title?: string;
-                note?: string;
-                metadata?: { practice?: { place?: string } };
-                editData?: {
-                  images?: Array<{
-                    id: string;
-                    thumbnailUrl: string;
-                    originalUrl: string;
-                    fileName: string;
-                  }>;
-                };
-              };
-              return {
-                date: item.date,
-                title: item.title || "",
-                place: item.metadata?.practice?.place || "",
-                note: item.note || "",
-                images: item.editData?.images,
-              };
-            }
-
-            return undefined;
-          })()}
-          isLoading={isLoading}
-        />
-      </>
-
-      {/* 第2段階: 練習メニューフォーム */}
+      {/* 練習メニューフォーム (個別ログ追加・編集) */}
       <>
         <PracticeLogForm
           isOpen={isPracticeLogFormOpen}
@@ -468,53 +382,7 @@ export function FormModals({
         />
       </>
 
-      {/* 第1段階: 大会基本情報フォーム */}
-      <>
-        <CompetitionBasicForm
-          isOpen={isCompetitionBasicFormOpen}
-          onClose={closeCompetitionBasicForm}
-          onSubmit={onCompetitionBasicSubmit}
-          selectedDate={competitionSelectedDate || new Date()}
-          editData={(() => {
-            if (
-              !competitionEditingData ||
-              typeof competitionEditingData !== "object" ||
-              !("title" in competitionEditingData)
-            ) {
-              return undefined;
-            }
-
-            const data = competitionEditingData as {
-              date?: string;
-              title?: string;
-              place?: string;
-              note?: string;
-              metadata?: { competition?: { title?: string; place?: string; pool_type?: number } };
-              editData?: {
-                images?: Array<{
-                  id: string;
-                  thumbnailUrl: string;
-                  originalUrl: string;
-                  fileName: string;
-                }>;
-              };
-            };
-
-            return {
-              date: data.date,
-              title: data.title,
-              competition_name: data.metadata?.competition?.title,
-              place: data.place || data.metadata?.competition?.place || "",
-              pool_type: data.metadata?.competition?.pool_type,
-              note: data.note || "",
-              images: data.editData?.images,
-            };
-          })()}
-          isLoading={competitionIsLoading}
-        />
-      </>
-
-      {/* 第2段階: エントリー登録フォーム（SKIP可能） */}
+      {/* エントリー登録フォーム（個別エントリー編集・チーム大会） */}
       <>
         <EntryLogForm
           isOpen={isEntryLogFormOpen}
@@ -631,6 +499,39 @@ export function FormModals({
           entryDataList={getEntryDataListForRecord(competitionEditingData, createdEntries)}
         />
       </>
+
+      {/* タブモーダル: 練習 (2タブ統合) */}
+      <PracticeTabModal
+        isOpen={isPracticeTabModalOpen}
+        onClose={closePracticeTabModal}
+        onSave={onPracticeTabSave}
+        selectedDate={selectedDate || new Date()}
+        editingData={editingData}
+        editingPracticeId={editingPracticeId}
+        isLoading={isLoading}
+        availableTags={availableTags}
+        setAvailableTags={setAvailableTags}
+        initialTab={practiceActiveTab}
+      />
+
+      {/* タブモーダル: 大会 (3タブ統合) */}
+      <CompetitionTabModal
+        isOpen={isCompetitionTabModalOpen}
+        onClose={closeCompetitionTabModal}
+        onSave={onCompetitionTabSave}
+        selectedDate={competitionSelectedDate || new Date()}
+        editingData={competitionEditingData}
+        editingCompetitionId={editingCompetitionId}
+        styles={competitionStyles.map((s) => ({
+          id: s.id.toString(),
+          nameJp: s.name_jp,
+          distance: s.distance,
+        }))}
+        existingEntries={getEntryDataListForRecord(competitionEditingData, createdEntries)}
+        isLoading={competitionIsLoading}
+        initialTab={competitionActiveTab}
+        entryLocked={competitionEntryLocked}
+      />
     </>
   );
 }

@@ -6,7 +6,6 @@ export {
   formatDate,
   formatNumber,
   formatPercentage,
-  formatStroke,
   formatRole,
   formatAttendanceStatus,
 } from "./formatters";

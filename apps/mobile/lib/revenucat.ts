@@ -1,6 +1,8 @@
 /**
  * RevenueCat SDK ラッパー
- * iOS のみ対応。Android では全操作をスキップする。
+ * iOS は App Store (appl_ キー)、Android は Google Play (goog_ キー) を使用する。
+ * プラットフォームに対応する有効なAPIキーが設定されている場合のみ初期化する。
+ * キー未設定（または無効）の場合は全操作を no-op とし、課金UIを無効化する。
  */
 import { Platform } from "react-native";
 import Purchases, {
@@ -10,23 +12,29 @@ import Purchases, {
 } from "react-native-purchases";
 import { env } from "@/lib/env";
 
-const IOS_API_KEY = env.revenuecatIosApiKey || "appl_PLACEHOLDER_KEY";
+/** プラットフォームごとの API キーと、その期待されるプレフィックス */
+const API_KEY = Platform.select({
+  ios: env.revenuecatIosApiKey,
+  android: env.revenuecatAndroidApiKey,
+  default: "",
+});
+const EXPECTED_PREFIX = Platform.select({ ios: "appl_", android: "goog_", default: "" });
 
-const isValidApiKey = IOS_API_KEY !== "appl_PLACEHOLDER_KEY" && IOS_API_KEY.startsWith("appl_");
+const isValidApiKey =
+  !!API_KEY && !!EXPECTED_PREFIX && API_KEY.startsWith(EXPECTED_PREFIX);
 
 let isInitialized = false;
 
-/** SDK を初期化する（iOS のみ、有効なAPIキーがある場合のみ） */
+/** SDK を初期化する（対応プラットフォームの有効なAPIキーがある場合のみ） */
 export async function initRevenueCat(): Promise<void> {
-  if (Platform.OS !== "ios") return;
   if (isInitialized) return;
   if (!isValidApiKey) {
-    console.log("RevenueCat: APIキー未設定のため初期化をスキップします");
+    console.log(`RevenueCat: ${Platform.OS} 用APIキー未設定のため初期化をスキップします`);
     return;
   }
 
   try {
-    Purchases.configure({ apiKey: IOS_API_KEY });
+    Purchases.configure({ apiKey: API_KEY! });
     isInitialized = true;
   } catch (err) {
     console.error("RevenueCat 初期化エラー:", err);
@@ -35,7 +43,7 @@ export async function initRevenueCat(): Promise<void> {
 
 /** Supabase user.id で RevenueCat にログインする */
 export async function loginRevenueCat(userId: string): Promise<void> {
-  if (Platform.OS !== "ios" || !isInitialized) return;
+  if (!isInitialized) return;
 
   try {
     await Purchases.logIn(userId);
@@ -46,7 +54,7 @@ export async function loginRevenueCat(userId: string): Promise<void> {
 
 /** RevenueCat からログアウトする */
 export async function logoutRevenueCat(): Promise<void> {
-  if (Platform.OS !== "ios" || !isInitialized) return;
+  if (!isInitialized) return;
 
   try {
     await Purchases.logOut();
@@ -57,7 +65,7 @@ export async function logoutRevenueCat(): Promise<void> {
 
 /** 利用可能なオファリングを取得する */
 export async function getOfferings(): Promise<PurchasesOfferings | null> {
-  if (Platform.OS !== "ios" || !isInitialized) return null;
+  if (!isInitialized) return null;
 
   try {
     const offerings = await Purchases.getOfferings();
@@ -72,7 +80,7 @@ export async function getOfferings(): Promise<PurchasesOfferings | null> {
 export async function purchasePackage(
   pkg: PurchasesPackage,
 ): Promise<CustomerInfo | null> {
-  if (Platform.OS !== "ios" || !isInitialized) return null;
+  if (!isInitialized) return null;
 
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
@@ -88,7 +96,7 @@ export async function purchasePackage(
 
 /** 購入をリストアする */
 export async function restorePurchases(): Promise<CustomerInfo | null> {
-  if (Platform.OS !== "ios" || !isInitialized) return null;
+  if (!isInitialized) return null;
 
   try {
     const customerInfo = await Purchases.restorePurchases();
@@ -101,7 +109,7 @@ export async function restorePurchases(): Promise<CustomerInfo | null> {
 
 /** 顧客情報を取得する */
 export async function getCustomerInfo(): Promise<CustomerInfo | null> {
-  if (Platform.OS !== "ios" || !isInitialized) return null;
+  if (!isInitialized) return null;
 
   try {
     const customerInfo = await Purchases.getCustomerInfo();
@@ -116,7 +124,7 @@ export async function getCustomerInfo(): Promise<CustomerInfo | null> {
 export function addCustomerInfoListener(
   listener: (info: CustomerInfo) => void,
 ): () => void {
-  if (Platform.OS !== "ios" || !isInitialized) {
+  if (!isInitialized) {
     return () => {};
   }
 
