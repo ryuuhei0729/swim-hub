@@ -2476,6 +2476,9 @@
       "loadingShort": "불러오는 중...",
       "bulkAssignTitle": "{category} — 일괄 배정",
       "bulkAssignHint": "길게 눌러 드래그하여 멤버를 이동",
+      "bulkAssignSaveFailed": "그룹 배정 저장에 실패했습니다",
+      "charCounter": "{current}/{max}자",
+      "announcementTimeInvalid": "시간은 HH:MM 형식으로 입력해 주세요",
       "dropHere": "여기에 놓기",
       "fallbackPractice": "연습",
       "fallbackCompetitionTitle": "대회",
@@ -2702,6 +2705,12 @@
       }
     },
     "memberDetail": {
+      "hook": {
+        "roleChangeFailed": "권한 변경에 실패했습니다",
+        "cannotRemoveSelf": "자기 자신을 팀에서 삭제할 수 없습니다",
+        "removeConfirm": "{name}님을 팀에서 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+        "removeFailed": "멤버 삭제에 실패했습니다"
+      },
       "title": "멤버 상세",
       "close": "닫기",
       "bestTimesTitle": "Best Time",

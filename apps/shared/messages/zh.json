@@ -2476,6 +2476,9 @@
       "loadingShort": "正在加载...",
       "bulkAssignTitle": "{category} — 批量分配",
       "bulkAssignHint": "长按 + 拖动以移动成员",
+      "bulkAssignSaveFailed": "保存分组分配失败",
+      "charCounter": "{current}/{max}字",
+      "announcementTimeInvalid": "请以 HH:MM 格式输入时间",
       "dropHere": "拖放到此处",
       "fallbackPractice": "训练",
       "fallbackCompetitionTitle": "比赛",
@@ -2702,6 +2705,12 @@
       }
     },
     "memberDetail": {
+      "hook": {
+        "roleChangeFailed": "更改权限失败",
+        "cannotRemoveSelf": "无法将自己从团队中移除",
+        "removeConfirm": "确定将{name}从团队中移除吗？此操作无法撤销。",
+        "removeFailed": "移除成员失败"
+      },
       "title": "成员详情",
       "close": "关闭",
       "bestTimesTitle": "Best Time",

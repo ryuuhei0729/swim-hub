@@ -2473,6 +2473,9 @@
       "loadingShort": "Loading...",
       "bulkAssignTitle": "{category} — Bulk assign",
       "bulkAssignHint": "Long-press and drag to move members",
+      "bulkAssignSaveFailed": "Failed to save group assignments",
+      "charCounter": "{current}/{max}",
+      "announcementTimeInvalid": "Please enter the time in HH:MM format",
       "dropHere": "Drop here",
       "fallbackPractice": "Practice",
       "fallbackCompetitionTitle": "Competition",
@@ -2696,6 +2699,12 @@
       }
     },
     "memberDetail": {
+      "hook": {
+        "roleChangeFailed": "Failed to change the role",
+        "cannotRemoveSelf": "You cannot remove yourself from the team",
+        "removeConfirm": "Remove {name} from the team? This action cannot be undone.",
+        "removeFailed": "Failed to remove the member"
+      },
       "title": "Member Details",
       "close": "Close",
       "bestTimesTitle": "Best Times",

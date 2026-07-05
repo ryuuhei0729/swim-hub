@@ -9,6 +9,8 @@ export interface TeamTabsProps {
   activeTab: TeamTabType;
   onTabChange: (tab: TeamTabType) => void;
   isAdmin?: boolean;
+  /** 承認待ちメンバー数（メンバータブにバッジ表示。web TeamAdminTabs の pendingCount 相当） */
+  pendingCount?: number;
 }
 
 const BASE_TABS: { id: TeamTabType; nameKey: string; icon: keyof typeof Feather.glyphMap; adminOnly?: boolean }[] = [
@@ -25,7 +27,12 @@ const BASE_TABS: { id: TeamTabType; nameKey: string; icon: keyof typeof Feather.
  * メンバー、練習、大会、出欠、お知らせのタブ切り替え
  * お知らせタブは管理者ビュー時のみ表示
  */
-export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange, isAdmin = false }) => {
+export const TeamTabs: React.FC<TeamTabsProps> = ({
+  activeTab,
+  onTabChange,
+  isAdmin = false,
+  pendingCount = 0,
+}) => {
   const { t } = useTranslation();
   const visibleTabs = BASE_TABS.filter((tab) => !tab.adminOnly || isAdmin);
 
@@ -34,6 +41,7 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange, isAd
       <View style={styles.tabList}>
         {visibleTabs.map((tab) => {
           const isActive = activeTab === tab.id;
+          const showBadge = tab.id === "members" && pendingCount > 0;
 
           return (
             <Pressable
@@ -43,6 +51,11 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({ activeTab, onTabChange, isAd
             >
               <Feather name={tab.icon} size={14} color={isActive ? "#2563EB" : "#6B7280"} />
               <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{t(tab.nameKey)}</Text>
+              {showBadge && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{pendingCount > 99 ? "99+" : pendingCount}</Text>
+                </View>
+              )}
               {isActive && <View style={styles.tabIndicator} />}
             </Pressable>
           );
@@ -91,6 +104,20 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: "#2563EB",
     fontWeight: "600",
+  },
+  badge: {
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: "#DC2626",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   tabIndicator: {
     position: "absolute",

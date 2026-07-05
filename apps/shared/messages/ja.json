@@ -2476,6 +2476,9 @@
       "loadingShort": "読み込み中...",
       "bulkAssignTitle": "{category} — 一括振り分け",
       "bulkAssignHint": "長押し + ドラッグでメンバーを移動",
+      "bulkAssignSaveFailed": "グループ割り当ての保存に失敗しました",
+      "charCounter": "{current}/{max}文字",
+      "announcementTimeInvalid": "時刻は HH:MM 形式で入力してください",
       "dropHere": "ここにドロップ",
       "fallbackPractice": "練習",
       "fallbackCompetitionTitle": "大会",
@@ -2702,6 +2705,12 @@
       }
     },
     "memberDetail": {
+      "hook": {
+        "roleChangeFailed": "権限の変更に失敗しました",
+        "cannotRemoveSelf": "自分自身をチームから削除することはできません",
+        "removeConfirm": "{name}さんをチームから削除しますか？この操作は取り消せません。",
+        "removeFailed": "メンバーの削除に失敗しました"
+      },
       "title": "メンバー詳細",
       "close": "閉じる",
       "bestTimesTitle": "Best Time",

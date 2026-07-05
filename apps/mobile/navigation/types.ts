@@ -114,6 +114,10 @@ export type MainStackParamList = {
   TeamDetail: {
     teamId: string;
   };
+  /** チーム練習・大会一括登録（管理者専用） */
+  TeamBulkRegister: {
+    teamId: string;
+  };
   Settings: undefined;
   BulkBestTime: undefined;
   Paywall: undefined;

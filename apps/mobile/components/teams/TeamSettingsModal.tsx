@@ -1,126 +1,83 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  Modal,
-  Pressable,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Platform,
-} from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useCreateTeamMutation } from "@apps/shared/hooks/queries/teams";
-import type { TeamInsert } from "@swim-hub/shared/types";
+import { useUpdateTeamMutation } from "@apps/shared/hooks/queries/teams";
 
-interface TeamCreateModalProps {
+interface TeamSettingsModalProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess?: (teamId: string) => void;
+  teamId: string;
+  teamName: string;
+  teamDescription?: string | null;
+  onSuccess?: () => void;
 }
 
-// web TeamCreateForm.tsx と同一の上限（チーム名50 / 説明200）
+// web TeamCreateForm / TeamSettings と揃えた上限（チーム名50 / 説明200）
 const NAME_MAX_LENGTH = 50;
 const DESCRIPTION_MAX_LENGTH = 200;
 
 /**
- * チーム作成モーダルコンポーネント
- * web TeamCreateForm.tsx 準拠: 文字数上限 + カウンター + 未保存クローズ確認
+ * チーム設定モーダル（管理者専用）
+ * web TeamSettings.tsx 準拠: チーム名・説明の編集
  */
-export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
+export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
   visible,
   onClose,
+  teamId,
+  teamName,
+  teamDescription,
   onSuccess,
 }) => {
-  const { supabase, user } = useAuth();
-  const createTeamMutation = useCreateTeamMutation(supabase);
+  const { supabase } = useAuth();
   const { t } = useTranslation();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const updateTeamMutation = useUpdateTeamMutation(supabase);
+  const [name, setName] = useState(teamName);
+  const [description, setDescription] = useState(teamDescription || "");
   const [error, setError] = useState<string | null>(null);
 
-  const isLoading = createTeamMutation.isPending;
-  const hasUnsavedChanges = name.trim().length > 0 || description.trim().length > 0;
+  const isLoading = updateTeamMutation.isPending;
 
-  const cleanupAndClose = () => {
-    setName("");
-    setDescription("");
+  // モーダルが開かれるたびに現在値へリセット
+  useEffect(() => {
+    if (visible) {
+      setName(teamName);
+      setDescription(teamDescription || "");
+      setError(null);
+    }
+  }, [visible, teamName, teamDescription]);
+
+  const handleClose = () => {
+    if (isLoading) return;
     setError(null);
     onClose();
   };
 
-  const handleClose = () => {
-    if (isLoading) return;
-
-    // 入力途中の場合は破棄確認（web TeamCreateForm の未保存確認と同挙動）
-    if (hasUnsavedChanges) {
-      if (Platform.OS === "web") {
-        if (window.confirm(t("forms.unsavedChanges.messageClose"))) {
-          cleanupAndClose();
-        }
-      } else {
-        Alert.alert(t("forms.unsavedChanges.title"), t("forms.unsavedChanges.messageClose"), [
-          { text: t("forms.unsavedChanges.cancel"), style: "cancel" },
-          {
-            text: t("forms.unsavedChanges.confirmClose"),
-            style: "destructive",
-            onPress: cleanupAndClose,
-          },
-        ]);
-      }
-      return;
-    }
-
-    cleanupAndClose();
-  };
-
-  const handleSubmit = async () => {
-    if (!user) {
-      setError(t("teams.mobile.loginRequired"));
-      return;
-    }
-
+  const handleSave = async () => {
     if (!name.trim()) {
-      setError(t("teams.mobile.nameRequired"));
-      return;
-    }
-
-    if (name.length > NAME_MAX_LENGTH) {
-      setError(t("forms.teamCreate.nameTooLong"));
-      return;
-    }
-
-    if (description.length > DESCRIPTION_MAX_LENGTH) {
-      setError(t("forms.teamCreate.descTooLong"));
+      setError(t("teamsAdmin.settings.nameRequired"));
       return;
     }
 
     setError(null);
 
     try {
-      const teamData: TeamInsert = {
-        name: name.trim(),
-        description: description.trim() || null,
-      };
-
-      const newTeam = await createTeamMutation.mutateAsync(teamData);
+      await updateTeamMutation.mutateAsync({
+        id: teamId,
+        updates: {
+          name: name.trim(),
+          description: description.trim() || null,
+        },
+      });
 
       if (onSuccess) {
-        onSuccess(newTeam.id);
+        onSuccess();
       }
 
-      cleanupAndClose();
+      onClose();
     } catch (err) {
-      console.error("チーム作成エラー:", err);
-      let errorMessage = t("teams.mobile.createFailed");
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err && typeof err === "object" && "message" in err) {
-        errorMessage = String(err.message);
-      }
-      setError(errorMessage);
+      console.error("チーム更新エラー:", err);
+      setError(t("teamsAdmin.settings.updateFailed"));
     }
   };
 
@@ -129,7 +86,7 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
       <Pressable style={styles.overlay} onPress={handleClose}>
         <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <Text style={styles.title}>{t("teams.mobile.createTitle")}</Text>
+            <Text style={styles.title}>{t("teamsAdmin.settings.title")}</Text>
             <Pressable style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>×</Text>
             </Pressable>
@@ -143,28 +100,29 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
             )}
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("teams.mobile.nameLabel")}</Text>
+              <Text style={styles.label}>
+                {t("teamsAdmin.settings.nameLabel")}
+                <Text style={styles.required}> *</Text>
+              </Text>
               <TextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder={t("teams.mobile.namePlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 maxLength={NAME_MAX_LENGTH}
                 editable={!isLoading}
               />
               <Text style={styles.counterText}>
-                {t("forms.teamCreate.nameCounter", { current: name.length })}
+                {t("teams.mobile.charCounter", { current: name.length, max: NAME_MAX_LENGTH })}
               </Text>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("teams.mobile.descriptionLabel")}</Text>
+              <Text style={styles.label}>{t("teamsAdmin.settings.descriptionLabel")}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder={t("teams.mobile.descriptionPlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={4}
@@ -173,7 +131,10 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
                 editable={!isLoading}
               />
               <Text style={styles.counterText}>
-                {t("forms.teamCreate.descCounter", { current: description.length })}
+                {t("teams.mobile.charCounter", {
+                  current: description.length,
+                  max: DESCRIPTION_MAX_LENGTH,
+                })}
               </Text>
             </View>
           </ScrollView>
@@ -184,15 +145,19 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
               onPress={handleClose}
               disabled={isLoading}
             >
-              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
+              <Text style={styles.cancelButtonText}>{t("teamsAdmin.settings.cancelButton")}</Text>
             </Pressable>
             <Pressable
-              style={[styles.button, styles.submitButton, isLoading && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
+              style={[
+                styles.button,
+                styles.submitButton,
+                (isLoading || !name.trim()) && styles.submitButtonDisabled,
+              ]}
+              onPress={handleSave}
               disabled={isLoading || !name.trim()}
             >
               <Text style={styles.submitButtonText}>
-                {isLoading ? t("teams.mobile.creating") : t("teams.mobile.createButton")}
+                {isLoading ? t("teamsAdmin.settings.saving") : t("teamsAdmin.settings.saveButton")}
               </Text>
             </Pressable>
           </View>
@@ -267,6 +232,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#374151",
     marginBottom: 8,
+  },
+  required: {
+    color: "#DC2626",
   },
   input: {
     borderWidth: 1,

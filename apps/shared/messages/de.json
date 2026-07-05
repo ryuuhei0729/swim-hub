@@ -2476,6 +2476,9 @@
       "loadingShort": "Wird geladen...",
       "bulkAssignTitle": "{category} — Sammelzuweisung",
       "bulkAssignHint": "Lange drücken und ziehen, um Mitglieder zu verschieben",
+      "bulkAssignSaveFailed": "Speichern der Gruppenzuweisungen fehlgeschlagen",
+      "charCounter": "{current}/{max} Zeichen",
+      "announcementTimeInvalid": "Bitte die Uhrzeit im Format HH:MM eingeben",
       "dropHere": "Hier ablegen",
       "fallbackPractice": "Training",
       "fallbackCompetitionTitle": "Wettkampf",
@@ -2702,6 +2705,12 @@
       }
     },
     "memberDetail": {
+      "hook": {
+        "roleChangeFailed": "Rollenänderung fehlgeschlagen",
+        "cannotRemoveSelf": "Du kannst dich nicht selbst aus dem Team entfernen",
+        "removeConfirm": "{name} aus dem Team entfernen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "removeFailed": "Entfernen des Mitglieds fehlgeschlagen"
+      },
       "title": "Mitgliederdetails",
       "close": "Schließen",
       "bestTimesTitle": "Best Time",
