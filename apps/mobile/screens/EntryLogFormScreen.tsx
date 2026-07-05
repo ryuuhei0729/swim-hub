@@ -24,7 +24,6 @@ import { EntryAPI } from "@apps/shared/api/entries";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
-import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { parseTime, formatTimeBest } from "@apps/shared/utils/time";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -163,7 +162,7 @@ export const EntryLogFormScreen: React.FC = () => {
           id: entry.id,
           styleId: String(entry.style_id),
           entryTime: entry.entry_time || 0,
-          entryTimeDisplayValue: entry.entry_time ? formatTime(entry.entry_time) : "",
+          entryTimeDisplayValue: entry.entry_time ? formatTimeBest(entry.entry_time) : "",
           note: entry.note || "",
         }));
         setEntries(entriesData);
@@ -629,7 +628,7 @@ export const EntryLogFormScreen: React.FC = () => {
               )}
               {entry.entryTime > 0 && !errors[`entryTime-${index}`] && (
                 <Text style={styles.timeHint}>
-                  {t("competition.entry.inputValueHint", { time: formatTime(entry.entryTime) })}
+                  {t("competition.entry.inputValueHint", { time: formatTimeBest(entry.entryTime) })}
                 </Text>
               )}
             </View>

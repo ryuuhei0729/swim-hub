@@ -11,6 +11,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { ErrorView } from "@/components/layout/ErrorView";
 import {
   usePracticeLogTemplatesQuery,
   useUsePracticeLogTemplateMutation,
@@ -46,7 +47,12 @@ export const PracticeLogTemplateSelectModal: React.FC<PracticeLogTemplateSelectM
   const { t } = useTranslation();
   const { supabase } = useAuth();
 
-  const { data: templates, isLoading } = usePracticeLogTemplatesQuery(supabase);
+  const {
+    data: templates,
+    isLoading,
+    isError,
+    refetch,
+  } = usePracticeLogTemplatesQuery(supabase);
   const useTemplateMutation = useUsePracticeLogTemplateMutation(supabase);
 
   const handleSelect = useCallback(
@@ -116,6 +122,11 @@ export const PracticeLogTemplateSelectModal: React.FC<PracticeLogTemplateSelectM
           <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
             {isLoading ? (
               <ActivityIndicator size="small" color="#2563EB" style={styles.loading} />
+            ) : isError ? (
+              <ErrorView
+                message={t("practiceLogTemplates.list.loadError")}
+                onRetry={() => refetch()}
+              />
             ) : templates?.length === 0 ? (
               <View style={styles.empty}>
                 <Text style={styles.emptyText}>

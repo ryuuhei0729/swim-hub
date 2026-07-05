@@ -105,9 +105,10 @@ BEGIN
   END IF;
 
   -- 招待コードでチームを検索（一致するチームが無い場合は情報を絞ったエラーにする）
+  -- 空白判定 (btrim = '') と揃えるため、照合も btrim 済みの値で行う
   SELECT t.id INTO v_team_id
   FROM public.teams t
-  WHERE t.invite_code = p_invite_code
+  WHERE t.invite_code = btrim(p_invite_code)
   LIMIT 1;
 
   IF NOT FOUND THEN
@@ -168,7 +169,10 @@ BEGIN
 
 EXCEPTION
   WHEN OTHERS THEN
-    RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+    -- SQLERRM をそのままクライアントに返すと内部実装の詳細が漏えいするため、
+    -- 汎用メッセージのみ返し、詳細はサーバーログ (RAISE WARNING) に残す
+    RAISE WARNING 'request_join_team failed: %', SQLERRM;
+    RETURN jsonb_build_object('success', false, 'error', '処理中にエラーが発生しました');
 END;
 $$;
 
@@ -240,7 +244,10 @@ BEGIN
 
 EXCEPTION
   WHEN OTHERS THEN
-    RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+    -- SQLERRM をそのままクライアントに返すと内部実装の詳細が漏えいするため、
+    -- 汎用メッセージのみ返し、詳細はサーバーログ (RAISE WARNING) に残す
+    RAISE WARNING 'reactivate_own_membership failed: %', SQLERRM;
+    RETURN jsonb_build_object('success', false, 'error', '処理中にエラーが発生しました');
 END;
 $$;
 

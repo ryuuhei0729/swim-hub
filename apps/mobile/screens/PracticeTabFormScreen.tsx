@@ -371,10 +371,11 @@ export const PracticeTabFormScreen: React.FC = () => {
       if (isSaved) return;
       const snapshot = snapshotRef.current;
       if (!snapshot) return;
-      const changed = hasUnsavedChanges(
-        { practice: practiceTab, menus },
-        { practice: snapshot.practice, menus: snapshot.menus },
-      );
+      const changed =
+        hasUnsavedChanges(
+          { practice: practiceTab, menus },
+          { practice: snapshot.practice, menus: snapshot.menus },
+        ) || pendingVideoAssetRef.current.size > 0;
       if (!changed) return;
 
       e.preventDefault();
@@ -560,7 +561,9 @@ export const PracticeTabFormScreen: React.FC = () => {
       const snapshotMenus = snapshotRef.current?.menus ?? [];
       const menusChanged = JSON.stringify(menus) !== JSON.stringify(snapshotMenus);
       const snapshotHasExistingLogs = snapshotMenus.some((m) => m.existingLogId);
-      const skipUntouchedDefaultLogs = !menusChanged && !snapshotHasExistingLogs;
+      // 保留動画のみが追加されたデフォルトログも「変更あり」として保存対象に含める
+      const hasPendingVideo = menus.some((m) => pendingVideoAssetRef.current.has(m.id));
+      const skipUntouchedDefaultLogs = !menusChanged && !snapshotHasExistingLogs && !hasPendingVideo;
       const validMenus = skipUntouchedDefaultLogs ? [] : menus;
 
       if (savedPracticeId) {

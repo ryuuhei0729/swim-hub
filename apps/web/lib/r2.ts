@@ -130,6 +130,15 @@ function getImageBucketName(): string {
 }
 
 /**
+ * R2/S3キーをURLパス用にエンコードする。
+ * encodeURIComponent(key) をキー全体に使うと "/" も "%2F" になり、
+ * "{userId}/{fileName}" のようなキー階層が壊れるため、セグメント単位でエンコードする。
+ */
+function encodeR2Key(key: string): string {
+  return key.split("/").map(encodeURIComponent).join("/");
+}
+
+/**
  * 画像表示用署名付きGET URLを発行する (デフォルト1時間有効)
  * @param key R2オブジェクトキー (例: "profile-images/{userId}/{fileName}")
  * @param expiresInSeconds 有効期限 (秒)
@@ -140,7 +149,7 @@ export async function generateImageGetUrl(
 ): Promise<string> {
   const aws = getImageAwsClient();
   const bucket = getImageBucketName();
-  const url = new URL(`${getImageEndpoint()}/${bucket}/${encodeURIComponent(key)}`);
+  const url = new URL(`${getImageEndpoint()}/${bucket}/${encodeR2Key(key)}`);
   url.searchParams.set("X-Amz-Expires", String(expiresInSeconds));
 
   const signed = await aws.sign(url.toString(), {

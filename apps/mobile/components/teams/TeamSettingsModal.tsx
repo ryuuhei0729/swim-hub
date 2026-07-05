@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Modal,
+  Pressable,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Platform,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUpdateTeamMutation } from "@apps/shared/hooks/queries/teams";
@@ -37,6 +47,8 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const isLoading = updateTeamMutation.isPending;
+  // 現在値から変更があるか（web/TeamCreateModal と同じく未保存確認に使用）
+  const hasUnsavedChanges = name !== teamName || description !== (teamDescription || "");
 
   // モーダルが開かれるたびに現在値へリセット
   useEffect(() => {
@@ -47,10 +59,34 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
     }
   }, [visible, teamName, teamDescription]);
 
-  const handleClose = () => {
-    if (isLoading) return;
+  const cleanupAndClose = () => {
     setError(null);
     onClose();
+  };
+
+  const handleClose = () => {
+    if (isLoading) return;
+
+    // 編集中の場合は破棄確認（TeamCreateModal と同挙動）
+    if (hasUnsavedChanges) {
+      if (Platform.OS === "web") {
+        if (window.confirm(t("forms.unsavedChanges.messageClose"))) {
+          cleanupAndClose();
+        }
+      } else {
+        Alert.alert(t("forms.unsavedChanges.title"), t("forms.unsavedChanges.messageClose"), [
+          { text: t("forms.unsavedChanges.cancel"), style: "cancel" },
+          {
+            text: t("forms.unsavedChanges.confirmClose"),
+            style: "destructive",
+            onPress: cleanupAndClose,
+          },
+        ]);
+      }
+      return;
+    }
+
+    cleanupAndClose();
   };
 
   const handleSave = async () => {

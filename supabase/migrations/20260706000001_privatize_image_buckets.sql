@@ -135,3 +135,20 @@ WHERE profile_image_path ~ '^https?://[^/]+(/storage/v1/object/public)?/profile-
 
 -- 上記パターンに一致しない (未知ドメイン形式等の) フルURLが残っている場合は、
 -- このマイグレーションでは変換せず現状維持する。本番適用前に実データで要確認。
+--
+-- 注意 (Supabase Storage 実体パスの移設について):
+--   上記UPDATEは users.profile_image_path の「文字列」を書き換えるのみで、
+--   Supabase Storage フォールバック利用時に過去 "avatars/{userId}/{file}" として
+--   保存された実体オブジェクト (storage.objects の name / 実ファイル) 自体は
+--   移動しない。storage.objects.name を UPDATE 文で書き換えても、それは
+--   メタデータ行を書き換えるだけで、S3互換バックエンドが実際に保持している
+--   オブジェクトキーは追従しないため、新しい name で GET しようとすると
+--   バックエンド側で 404 になる (SQLのみでの実体移設は不可)。
+--   実体を移すには Supabase Storage の move/copy API (例: supabase-js の
+--   storage.from('profile-images').move(oldPath, newPath)) を管理者権限で
+--   個別に呼ぶ必要があり、これは Postgres マイグレーションの範囲外である。
+--   本番の画像は主に R2 を利用しており、R2 側の "avatars/" 配下の実体も
+--   同様に SQL では移せない (R2 API 側での移設が必要)。
+--   → 本番適用前に、Supabase Storage フォールバックおよび R2 に残る
+--     "avatars/{userId}/{file}" 実体オブジェクトの move を運用手順として
+--     別途実施すること (対象件数が少なければ手動、多ければスクリプト化)。

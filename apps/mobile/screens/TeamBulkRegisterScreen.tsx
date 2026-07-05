@@ -10,6 +10,7 @@ import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { TeamBulkRegisterForm } from "@/components/teams/TeamBulkRegisterForm";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { ErrorView } from "@/components/layout/ErrorView";
 import type { MainStackParamList } from "@/navigation/types";
 
 type RouteProps = RouteProp<MainStackParamList, "TeamBulkRegister">;
@@ -29,7 +30,7 @@ export const TeamBulkRegisterScreen: React.FC = () => {
   const queryClient = useQueryClient();
 
   // メンバー一覧（権限判定に使用）
-  const { members, isLoading } = useTeamsQuery(supabase, {
+  const { members, isLoading, isError, error, refetch } = useTeamsQuery(supabase, {
     teamId,
     enableRealtime: false,
   });
@@ -50,6 +51,19 @@ export const TeamBulkRegisterScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <LoadingSpinner fullScreen message={t("common.loading")} />
+      </View>
+    );
+  }
+
+  // 取得エラー（権限なしと誤表示しないよう専用のエラー表示に分岐）
+  if (isError) {
+    return (
+      <View style={styles.container}>
+        <ErrorView
+          message={error?.message || t("teams.mobile.fetchTeamFailed")}
+          onRetry={() => refetch()}
+          fullScreen
+        />
       </View>
     );
   }

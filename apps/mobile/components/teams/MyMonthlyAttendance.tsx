@@ -72,6 +72,8 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const [saving, setSaving] = useState(false);
   // イベント単位保存中の eventId 集合（web useRecentAttendance.savingEventIds 相当）
   const [savingEventIds, setSavingEventIds] = useState<Set<string>>(new Set());
+  // 個別保存とまとめて保存の同時実行を防ぐための共通フラグ
+  const isAnySaving = saving || savingEventIds.size > 0;
 
   // 各月のステータスを計算
   const calculateMonthStatus = useCallback(
@@ -908,11 +910,11 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                       );
                     })}
 
-                    {/* まとめて保存ボタン */}
+                    {/* まとめて保存ボタン（個別保存進行中も disabled にし、二重書き込みを防止） */}
                     <Pressable
-                      style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                      style={[styles.saveButton, isAnySaving && styles.saveButtonDisabled]}
                       onPress={handleSaveAll}
-                      disabled={saving}
+                      disabled={isAnySaving}
                     >
                       <Text style={styles.saveButtonText}>
                         {saving
