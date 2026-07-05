@@ -666,6 +666,12 @@
       "emailConfirmation": "We sent a confirmation email to your address. Click the link in the email to complete your registration."
     },
     "backToLogin": "Back to login",
+    "crossLink": {
+      "noAccountPrompt": "Don't have an account?",
+      "signupLink": "Sign up",
+      "haveAccountPrompt": "Already have an account?",
+      "loginLink": "Log in"
+    },
     "logoutConfirmMessage": "Are you sure you want to log out?",
     "redirecting": "Redirecting...",
     "legal": {

@@ -669,6 +669,12 @@
       "emailConfirmation": "ご登録のメールアドレスに確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。"
     },
     "backToLogin": "ログイン画面に戻る",
+    "crossLink": {
+      "noAccountPrompt": "アカウントをお持ちでない方",
+      "signupLink": "新規登録",
+      "haveAccountPrompt": "すでにアカウントをお持ちの方",
+      "loginLink": "ログイン"
+    },
     "logoutConfirmMessage": "ログアウトしますか？",
     "redirecting": "リダイレクト中...",
     "legal": {

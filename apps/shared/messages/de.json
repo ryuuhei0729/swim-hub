@@ -669,6 +669,12 @@
       "emailConfirmation": "Wir haben eine Bestätigungs-E-Mail an Ihre Adresse gesendet. Klicken Sie auf den Link in der E-Mail, um Ihre Registrierung abzuschließen."
     },
     "backToLogin": "Zurück zur Anmeldung",
+    "crossLink": {
+      "noAccountPrompt": "Noch kein Konto?",
+      "signupLink": "Registrieren",
+      "haveAccountPrompt": "Bereits ein Konto?",
+      "loginLink": "Anmelden"
+    },
     "logoutConfirmMessage": "Möchten Sie sich wirklich abmelden?",
     "redirecting": "Weiterleitung läuft...",
     "legal": {

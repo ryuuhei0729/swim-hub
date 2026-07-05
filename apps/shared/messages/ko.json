@@ -669,6 +669,12 @@
       "emailConfirmation": "등록하신 이메일 주소로 확인 메일을 보냈습니다. 메일 내 링크를 클릭하여 등록을 완료해 주세요."
     },
     "backToLogin": "로그인 화면으로 돌아가기",
+    "crossLink": {
+      "noAccountPrompt": "계정이 없으신가요?",
+      "signupLink": "회원가입",
+      "haveAccountPrompt": "이미 계정이 있으신가요?",
+      "loginLink": "로그인"
+    },
     "logoutConfirmMessage": "로그아웃하시겠습니까?",
     "redirecting": "리디렉션 중...",
     "legal": {

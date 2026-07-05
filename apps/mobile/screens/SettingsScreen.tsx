@@ -13,6 +13,7 @@ import { IOSCalendarSyncSettings } from "@/components/settings/IOSCalendarSyncSe
 import { EmailChangeSettings } from "@/components/settings/EmailChangeSettings";
 import { IdentityLinkSettings } from "@/components/settings/IdentityLinkSettings";
 import { AccountDeleteSettings } from "@/components/settings/AccountDeleteSettings";
+import { PasswordChangeModal } from "@/components/profile";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -28,6 +29,7 @@ export const SettingsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const {
     profile,
@@ -182,6 +184,17 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* 練習ログテンプレート管理 */}
+        <Pressable
+          style={styles.navRow}
+          onPress={() => navigation.navigate("PracticeLogTemplates")}
+          accessibilityRole="button"
+          accessibilityLabel={t("practiceLogTemplates.page.title")}
+        >
+          <Text style={styles.navRowLabel}>{t("practiceLogTemplates.page.title")}</Text>
+          <Text style={styles.navRowChevron}>›</Text>
+        </Pressable>
+
         {/* Googleカレンダー連携セクション */}
         <GoogleCalendarSyncSettings profile={profile} onUpdate={refetchProfile} />
 
@@ -193,6 +206,17 @@ export const SettingsScreen: React.FC = () => {
 
         {/* ログイン連携セクション */}
         <IdentityLinkSettings />
+
+        {/* パスワード変更 */}
+        <Pressable
+          style={styles.navRow}
+          onPress={() => setShowPasswordModal(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t("mypage.passwordChange.title")}
+        >
+          <Text style={styles.navRowLabel}>{t("mypage.passwordChange.title")}</Text>
+          <Text style={styles.navRowChevron}>›</Text>
+        </Pressable>
 
         {/* アカウント削除セクション */}
         <AccountDeleteSettings />
@@ -230,6 +254,11 @@ export const SettingsScreen: React.FC = () => {
           </Pressable>
         </View>
       </ScrollView>
+
+      <PasswordChangeModal
+        visible={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -253,6 +282,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
     overflow: "hidden",
+  },
+  navRow: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  navRowLabel: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  navRowChevron: {
+    fontSize: 20,
+    color: "#9CA3AF",
+    fontWeight: "400",
   },
   sectionTitle: {
     fontSize: 14,
