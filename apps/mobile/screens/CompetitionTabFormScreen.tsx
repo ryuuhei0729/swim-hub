@@ -42,7 +42,7 @@ import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
 import { ItemTabs } from "@/components/forms/ItemTabs";
 import { StyleChipSelector } from "@/components/forms/StyleChipSelector";
 import { LapTimeDisplay, getBestTimeForEntry } from "@/components/records";
-import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadImagesViaApi, deleteImages, resolveGalleryImages } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
@@ -310,12 +310,16 @@ export const CompetitionTabFormScreen: React.FC = () => {
         setPlace(competition.place || "");
         setPoolType(competition.pool_type ?? 0);
         setCompetitionNote(competition.note || "");
-        const images = getExistingImagesFromPaths(
-          supabase,
-          competition.image_paths,
-          "competition-images",
-        );
-        setExistingImages(images);
+        // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
+        const accessToken = await getAccessToken();
+        if (accessToken) {
+          const images = await resolveGalleryImages(
+            "competition-images",
+            competition.image_paths,
+            accessToken,
+          );
+          setExistingImages(images);
+        }
 
         // エントリーデータ取得
         const allEntries = await entryApi.getEntriesByCompetition(resolvedCompetitionId);

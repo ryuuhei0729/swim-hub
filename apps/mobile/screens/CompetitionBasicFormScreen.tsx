@@ -29,7 +29,7 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
-import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadImagesViaApi, deleteImages, resolveGalleryImages } from "@/utils/imageUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -150,13 +150,16 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           setPlace(competition.place || "");
           setPoolType(competition.pool_type ?? 0);
           setNote(competition.note || "");
-          // 既存画像を読み込み
-          const images = getExistingImagesFromPaths(
-            supabase,
-            competition.image_paths,
-            "competition-images",
-          );
-          setExistingImages(images);
+          // 既存画像を読み込み（competition-images は private バケットのため署名付きURLを解決する。Issue #36）
+          const accessToken = await getAccessToken();
+          if (accessToken) {
+            const images = await resolveGalleryImages(
+              "competition-images",
+              competition.image_paths,
+              accessToken,
+            );
+            setExistingImages(images);
+          }
         }
       } catch (error) {
         if (!isMounted) return;
@@ -175,7 +178,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [competitionId, supabase, navigation, t]);
+  }, [competitionId, supabase, navigation, getAccessToken, t]);
 
   // バリデーション
   const validate = (): boolean => {

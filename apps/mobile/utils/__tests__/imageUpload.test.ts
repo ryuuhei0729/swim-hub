@@ -14,15 +14,7 @@ vi.mock("../base64", () => ({
   base64ToArrayBuffer: vi.fn(() => new ArrayBuffer(8)),
 }));
 
-import {
-  generateUUID,
-  uploadImage,
-  uploadImages,
-  deleteImage,
-  deleteImages,
-  getImagePublicUrl,
-  getExistingImagesFromPaths,
-} from "../imageUpload";
+import { generateUUID, uploadImage, uploadImages, deleteImage, deleteImages } from "../imageUpload";
 import { randomUUID } from "expo-crypto";
 
 // Supabaseクライアントのモック作成ヘルパー
@@ -311,214 +303,185 @@ describe("deleteImages", () => {
   });
 });
 
-describe("getImagePublicUrl", () => {
-  it("画像のpublicUrlを正しく返す", () => {
-    const expectedUrl = "https://storage.example.com/bucket/user1/image.jpg";
-    const getPublicUrlMock = vi.fn(() => ({ data: { publicUrl: expectedUrl } }));
-    const mockSupabase = {
-      storage: {
-        from: vi.fn(() => ({
-          getPublicUrl: getPublicUrlMock,
-        })),
-      },
-    } as unknown as Parameters<typeof getImagePublicUrl>[0];
-
-    const result = getImagePublicUrl(mockSupabase, "user1/image.jpg", "practice-images");
-
-    expect(mockSupabase.storage.from).toHaveBeenCalledWith("practice-images");
-    expect(getPublicUrlMock).toHaveBeenCalledWith("user1/image.jpg");
-    expect(result).toBe(expectedUrl);
-  });
-});
-
-describe("getExistingImagesFromPaths", () => {
-  it("パス配列からid/url付きオブジェクト配列を返す", () => {
-    const getPublicUrlMock = vi.fn((path: string) => ({
-      data: { publicUrl: `https://storage.example.com/${path}` },
-    }));
-    const mockSupabase = {
-      storage: {
-        from: vi.fn(() => ({
-          getPublicUrl: getPublicUrlMock,
-        })),
-      },
-    } as unknown as Parameters<typeof getExistingImagesFromPaths>[0];
-
-    const paths = ["user1/image1.jpg", "user1/image2.png"];
-    const result = getExistingImagesFromPaths(mockSupabase, paths, "practice-images");
-
-    expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({
-      id: "user1/image1.jpg",
-      url: "https://storage.example.com/user1/image1.jpg",
-    });
-    expect(result[1]).toEqual({
-      id: "user1/image2.png",
-      url: "https://storage.example.com/user1/image2.png",
-    });
-  });
-
-  it("nullを渡すと空の配列を返す", () => {
-    const mockSupabase = createMockSupabaseClient();
-    const result = getExistingImagesFromPaths(mockSupabase, null, "practice-images");
-    expect(result).toEqual([]);
-  });
-
-  it("undefinedを渡すと空の配列を返す", () => {
-    const mockSupabase = createMockSupabaseClient();
-    const result = getExistingImagesFromPaths(mockSupabase, undefined, "practice-images");
-    expect(result).toEqual([]);
-  });
-
-  it("空の配列を渡すと空の配列を返す", () => {
-    const mockSupabase = createMockSupabaseClient();
-    const result = getExistingImagesFromPaths(mockSupabase, [], "practice-images");
-    expect(result).toEqual([]);
-  });
-});
-
 // =============================================================================
-// Bug 3(a) — getImageUrlFromPath テスト
+// Issue #36 (mobile): getSignedImageUrl / resolveGalleryImages テスト
+//
+// private バケット化に伴い、公開URL生成 (getImagePublicUrl/getExistingImagesFromPaths/
+// getImageUrlFromPath) は削除され、Web API (/api/storage/images/presigned-url) 経由で
+// 署名付きURLを取得する getSignedImageUrl / resolveGalleryImages に置き換わった。
 //
 // テスト観点:
-//   - EXPO_PUBLIC_R2_PUBLIC_URL が設定されている場合、R2 の公開 URL を返す
-//   - EXPO_PUBLIC_R2_PUBLIC_URL が未設定の場合、Supabase Storage の publicUrl を返す
-//   - path が空文字のとき空文字を返す（空文字境界値）
-//   - bucket 引数が "practice-images" / "competition-images" 両方で正しく動作する
-//
-// トートロジー防止メモ:
-//   - 「R2 URL が設定されていれば R2 URL を返す」という仕様から期待値を導く
-//   - env モジュールを vi.mock でモックし、テストごとに r2PublicUrl を制御する
+//   - 相対パスの場合、bucket/path を付けて presigned-url API を GET し、
+//     Authorization: Bearer <accessToken> ヘッダを付与する
+//   - path が http(s):// で始まる場合はそのまま返す（fetch を呼ばない後方互換）
+//   - path が null/undefined の場合は null を返す（fetch を呼ばない）
+//   - API が non-ok（401/403等）を返した場合は null を返す
+//   - fetch 自体が例外を投げた場合も null を返す（catch される）
+//   - resolveGalleryImages は複数パスを並列で解決し、失敗した要素は除外する
 // =============================================================================
 
-// getImageUrlFromPath は env に依存するためここで動的にインポート
-import { getImageUrlFromPath } from "../imageUpload";
+import { getSignedImageUrl, resolveGalleryImages } from "../imageUpload";
 
-// env モジュールのモック（テスト内で書き換えてR2の有無をシミュレート）
 vi.mock("@/lib/env", () => ({
   env: {
-    supabaseUrl: "https://test.supabase.co",
-    supabaseAnonKey: "test-anon-key",
-    googleWebClientId: "",
     webApiUrl: "https://swim-hub.app",
-    r2PublicUrl: "", // デフォルトは空（R2 なし）
-    revenuecatIosApiKey: "",
-    environment: "test",
-    webAppResetPasswordUrl: "https://swim-hub.app/reset-password",
   },
 }));
 
-function createMockSupabaseForUrl(publicUrl: string) {
-  return {
-    storage: {
-      from: vi.fn(() => ({
-        getPublicUrl: vi.fn(() => ({ data: { publicUrl } })),
-      })),
-    },
-  } as unknown as Parameters<typeof getImageUrlFromPath>[0];
-}
+const ACCESS_TOKEN = "test-access-token";
 
-describe("getImageUrlFromPath (Bug 3(a))", () => {
+describe("getSignedImageUrl", () => {
+  const originalFetch = global.fetch;
+  const fetchMock = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    global.fetch = fetchMock as unknown as typeof fetch;
   });
 
-  afterEach(async () => {
-    // テスト間の状態漏れを防ぐため、afterEach でも r2PublicUrl を必ずリセットする
-    const envModule = await import("@/lib/env");
-    // @ts-expect-error テスト用にリセット
-    envModule.env.r2PublicUrl = "";
+  afterEach(() => {
+    global.fetch = originalFetch;
   });
 
-  describe("R2 URL が設定されている場合", () => {
-    it("EXPO_PUBLIC_R2_PUBLIC_URL + bucket + path を結合した URL を返す", async () => {
-      // env モジュールを動的に差し替えて r2PublicUrl を設定
-      const envModule = await import("@/lib/env");
-      // @ts-expect-error テスト用に r2PublicUrl を書き換え
-      envModule.env.r2PublicUrl = "https://r2.example.com";
-
-      const mockSupabase = createMockSupabaseForUrl("https://supabase.example.com/practice-images/user1/img.jpg");
-      const result = getImageUrlFromPath(mockSupabase, "user1/img.jpg", "practice-images");
-
-      // R2 URL が設定されている → R2 URL + bucket + path
-      expect(result).toBe("https://r2.example.com/practice-images/user1/img.jpg");
-
-      // 後片付け
-      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
-      envModule.env.r2PublicUrl = "";
-    });
-
-    it("bucket 引数に関わらず R2 URL を優先して返す", async () => {
-      const envModule = await import("@/lib/env");
-      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
-      envModule.env.r2PublicUrl = "https://r2.example.com";
-
-      const mockSupabase = createMockSupabaseForUrl("https://supabase.example.com/competition-images/user1/img.jpg");
-      const result = getImageUrlFromPath(mockSupabase, "user1/comp.jpg", "competition-images");
-
-      expect(result).toBe("https://r2.example.com/competition-images/user1/comp.jpg");
-
-      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
-      envModule.env.r2PublicUrl = "";
-    });
+  it("path が null の場合は null を返し、fetch を呼ばない", async () => {
+    const result = await getSignedImageUrl("practice-images", null, ACCESS_TOKEN);
+    expect(result).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  describe("R2 URL が未設定の場合（Supabase フォールバック）", () => {
-    it("supabase.storage.from(bucket).getPublicUrl(path) の結果を返す", async () => {
-      const envModule = await import("@/lib/env");
-      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
-      envModule.env.r2PublicUrl = "";
-
-      const supabaseUrl = "https://supabase.example.com/storage/v1/object/public/practice-images/user1/img.jpg";
-      const mockSupabase = createMockSupabaseForUrl(supabaseUrl);
-
-      const result = getImageUrlFromPath(mockSupabase, "user1/img.jpg", "practice-images");
-
-      expect(result).toBe(supabaseUrl);
-      expect(mockSupabase.storage.from).toHaveBeenCalledWith("practice-images");
-    });
-
-    it("bucket='competition-images' でも正しく動作する", async () => {
-      const envModule = await import("@/lib/env");
-      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
-      envModule.env.r2PublicUrl = "";
-
-      const supabaseUrl = "https://supabase.example.com/storage/v1/object/public/competition-images/user1/comp.jpg";
-      const mockSupabase = createMockSupabaseForUrl(supabaseUrl);
-
-      const result = getImageUrlFromPath(mockSupabase, "user1/comp.jpg", "competition-images");
-
-      expect(result).toBe(supabaseUrl);
-      expect(mockSupabase.storage.from).toHaveBeenCalledWith("competition-images");
-    });
+  it("path が undefined の場合は null を返し、fetch を呼ばない", async () => {
+    const result = await getSignedImageUrl("practice-images", undefined, ACCESS_TOKEN);
+    expect(result).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  describe("境界値・異常系", () => {
-    it("path が空文字のとき空文字を返す（クラッシュしない）", async () => {
-      const envModule = await import("@/lib/env");
-      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
-      envModule.env.r2PublicUrl = "";
+  it("path が http:// で始まる場合はそのまま返す（後方互換、fetch を呼ばない）", async () => {
+    const legacyUrl = "http://127.0.0.1:54321/storage/v1/object/public/profile-images/user1/photo.jpg";
+    const result = await getSignedImageUrl("profile-images", legacyUrl, ACCESS_TOKEN);
+    expect(result).toBe(legacyUrl);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 
-      const mockSupabase = createMockSupabaseForUrl("https://supabase.example.com/");
+  it("path が https:// で始まる場合はそのまま返す（後方互換、fetch を呼ばない）", async () => {
+    const legacyUrl = "https://xxx.supabase.co/storage/v1/object/public/profile-images/user1/photo.jpg";
+    const result = await getSignedImageUrl("profile-images", legacyUrl, ACCESS_TOKEN);
+    expect(result).toBe(legacyUrl);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 
-      // path が空文字のとき実装は "" を返す
-      const result = getImageUrlFromPath(mockSupabase, "", "practice-images");
-      expect(result).toBe("");
+  it("相対パスの場合、presigned-url API を bucket/path 付きで GET し、署名付きURLを返す", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ url: "https://signed.example.com/photo.jpg", expiresAt: 123456 }),
     });
 
-    it("path が空文字のとき R2 URL 設定時も空文字を返す", async () => {
-      const envModule = await import("@/lib/env");
-      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
-      envModule.env.r2PublicUrl = "https://r2.example.com";
+    const result = await getSignedImageUrl("practice-images", "user1/practice1/photo.jpg", ACCESS_TOKEN);
 
-      const mockSupabase = createMockSupabaseForUrl("https://supabase.example.com/");
+    expect(result).toBe("https://signed.example.com/photo.jpg");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      "https://swim-hub.app/api/storage/images/presigned-url?bucket=practice-images&path=user1%2Fpractice1%2Fphoto.jpg",
+    );
+    expect((options.headers as Record<string, string>)["Authorization"]).toBe(
+      `Bearer ${ACCESS_TOKEN}`,
+    );
+  });
 
-      const result = getImageUrlFromPath(mockSupabase, "", "practice-images");
-      // 実装: if (!path) return "" なので空文字を返す
-      expect(result).toBe("");
+  it("API が 401 を返した場合は null を返す", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 401 });
 
-      // @ts-expect-error -- env は const as const だが、テスト用に書き換える
-      envModule.env.r2PublicUrl = "";
-    });
+    const result = await getSignedImageUrl("profile-images", "user1/photo.jpg", "expired-token");
+    expect(result).toBeNull();
+  });
+
+  it("API が 403 を返した場合は null を返す", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 403 });
+
+    const result = await getSignedImageUrl("competition-images", "other-user/comp1/photo.jpg", ACCESS_TOKEN);
+    expect(result).toBeNull();
+  });
+
+  it("fetch が例外を投げた場合は null を返す（クラッシュしない）", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("network error"));
+
+    const result = await getSignedImageUrl("practice-images", "user1/practice1/photo.jpg", ACCESS_TOKEN);
+    expect(result).toBeNull();
+  });
+});
+
+describe("resolveGalleryImages", () => {
+  const originalFetch = global.fetch;
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("paths が null の場合は空の配列を返し、fetch を呼ばない", async () => {
+    const result = await resolveGalleryImages("practice-images", null, ACCESS_TOKEN);
+    expect(result).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("paths が undefined の場合は空の配列を返す", async () => {
+    const result = await resolveGalleryImages("practice-images", undefined, ACCESS_TOKEN);
+    expect(result).toEqual([]);
+  });
+
+  it("paths が空配列の場合は空の配列を返す", async () => {
+    const result = await resolveGalleryImages("practice-images", [], ACCESS_TOKEN);
+    expect(result).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("複数パスを並列で解決し、id=path・url=署名付きURLの配列を返す", async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ url: "https://signed.example.com/1.jpg" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ url: "https://signed.example.com/2.jpg" }) });
+
+    const paths = ["user1/practice1/1.jpg", "user1/practice1/2.jpg"];
+    const result = await resolveGalleryImages("practice-images", paths, ACCESS_TOKEN);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result).toEqual([
+      { id: "user1/practice1/1.jpg", url: "https://signed.example.com/1.jpg" },
+      { id: "user1/practice1/2.jpg", url: "https://signed.example.com/2.jpg" },
+    ]);
+  });
+
+  it("一部のパスの解決に失敗した場合、その要素だけ結果から除外する", async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ url: "https://signed.example.com/1.jpg" }) })
+      .mockResolvedValueOnce({ ok: false, status: 403 })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ url: "https://signed.example.com/3.jpg" }) });
+
+    const paths = ["user1/1.jpg", "other-user/2.jpg", "user1/3.jpg"];
+    const result = await resolveGalleryImages("competition-images", paths, ACCESS_TOKEN);
+
+    expect(result).toHaveLength(2);
+    expect(result).toEqual([
+      { id: "user1/1.jpg", url: "https://signed.example.com/1.jpg" },
+      { id: "user1/3.jpg", url: "https://signed.example.com/3.jpg" },
+    ]);
+  });
+
+  it("http(s) の旧データパスが混在していても正しく解決する（fetch を呼ばず、そのまま返す）", async () => {
+    const legacyUrl = "https://xxx.supabase.co/storage/v1/object/public/practice-images/user1/legacy.jpg";
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ url: "https://signed.example.com/new.jpg" }) });
+
+    const paths = [legacyUrl, "user1/new.jpg"];
+    const result = await resolveGalleryImages("practice-images", paths, ACCESS_TOKEN);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1); // legacy はfetchされない
+    expect(result).toEqual([
+      { id: legacyUrl, url: legacyUrl },
+      { id: "user1/new.jpg", url: "https://signed.example.com/new.jpg" },
+    ]);
   });
 });

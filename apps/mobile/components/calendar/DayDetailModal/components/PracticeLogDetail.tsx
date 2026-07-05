@@ -8,7 +8,7 @@ import { formatTime, formatCircleTime, getStyleLabel } from "@/utils/formatters"
 import type { PracticeTime, PracticeTag } from "@apps/shared/types";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
-import { getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { resolveGalleryImages } from "@/utils/imageUpload";
 import { styles } from "../styles";
 import { MemoizedTimeTable } from "./TimeTable";
 import type {
@@ -47,7 +47,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   onPracticeTimeLoaded,
 }) => {
   const { t } = useTranslation();
-  const { supabase } = useAuth();
+  const { supabase, getAccessToken } = useAuth();
   const [recordDetail, setRecordDetail] = useState<{
     time: number;
     note: string;
@@ -97,7 +97,11 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
       if (!data) return;
 
       const imagePaths = (data as { image_paths?: string[] | null } | null)?.image_paths ?? [];
-      setPracticeImages(getExistingImagesFromPaths(supabase, imagePaths, "practice-images"));
+      // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
+      const accessToken = await getAccessToken();
+      if (accessToken) {
+        resolveGalleryImages("practice-images", imagePaths, accessToken).then(setPracticeImages);
+      }
 
       const formattedLogs = (data.practice_logs || []).map(
         (
@@ -129,7 +133,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [isPractice, practiceId, supabase]);
+  }, [isPractice, practiceId, supabase, getAccessToken]);
 
   useEffect(() => {
     if (isPractice && practiceId) {
@@ -219,7 +223,12 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           if (!practiceError && practiceData) {
             const imagePaths =
               (practiceData as { image_paths?: string[] | null } | null)?.image_paths ?? [];
-            setPracticeLogImages(getExistingImagesFromPaths(supabase, imagePaths, "practice-images"));
+            // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
+            const accessToken = await getAccessToken();
+            if (accessToken) {
+              const images = await resolveGalleryImages("practice-images", imagePaths, accessToken);
+              setPracticeLogImages(images);
+            }
           }
         } catch (err) {
           console.warn("practice_log 画像取得に失敗:", err);
@@ -234,7 +243,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
     } finally {
       setLoadingLogDetail(false);
     }
-  }, [isPracticeLog, item.id, supabase, onPracticeTimeLoaded]);
+  }, [isPracticeLog, item.id, supabase, getAccessToken, onPracticeTimeLoaded]);
 
   useEffect(() => {
     if (isPracticeLog && item.id) {

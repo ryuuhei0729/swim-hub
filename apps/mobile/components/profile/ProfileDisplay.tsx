@@ -7,6 +7,7 @@ import { parseISO, isValid } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
+import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 import type { TeamMembershipWithUser, UserProfile } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -24,6 +25,8 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
   const { t } = useTranslation();
   const locale = useDateLocale();
   const navigation = useNavigation<ProfileDisplayNavigationProp>();
+  // profile-images は private バケットのため、パスから署名付きURLを解決して表示する（Issue #36）
+  const { url: resolvedAvatarUrl } = useSignedImageUrl("profile-images", profile.profile_image_path);
 
   const formatBirthday = (birthday: string | null | undefined): string => {
     if (!birthday) return t("mypage.profileDisplay.notSet");
@@ -41,10 +44,10 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
 
   // プロフィール画像の表示（デフォルトは名前の頭文字）
   const renderAvatar = () => {
-    if (profile.profile_image_path) {
+    if (resolvedAvatarUrl) {
       return (
         <Image
-          source={{ uri: profile.profile_image_path }}
+          source={{ uri: resolvedAvatarUrl }}
           style={styles.avatarImage}
           contentFit="cover"
         />

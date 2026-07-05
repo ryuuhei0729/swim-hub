@@ -34,7 +34,7 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
-import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadImagesViaApi, deleteImagesViaApi, resolveGalleryImages } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { localizedStyleName } from "@/utils/styleName";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
@@ -209,17 +209,27 @@ export const RecordFormScreen: React.FC = () => {
     }
 
     const selectedCompetition = competitions.find((c) => c.id === currentCompetitionId);
-    if (selectedCompetition) {
-      const images = getExistingImagesFromPaths(
-        supabase,
-        selectedCompetition.image_paths,
-        "competition-images",
-      );
-      setExistingImages(images);
-    } else {
+    if (!selectedCompetition) {
       setExistingImages([]);
+      return;
     }
-  }, [currentCompetitionId, competitions, supabase]);
+
+    // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
+    let isMounted = true;
+    getAccessToken().then((accessToken) => {
+      if (!isMounted || !accessToken) return;
+      resolveGalleryImages(
+        "competition-images",
+        selectedCompetition.image_paths,
+        accessToken,
+      ).then((images) => {
+        if (isMounted) setExistingImages(images);
+      });
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [currentCompetitionId, competitions, getAccessToken]);
 
   const hasInitializedForEdit = useRef(false);
 

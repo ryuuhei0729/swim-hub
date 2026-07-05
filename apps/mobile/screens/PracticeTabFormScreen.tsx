@@ -45,7 +45,7 @@ import { ItemTabs } from "@/components/forms/ItemTabs";
 import { DistanceChips } from "@/components/practices/DistanceChips";
 import { PracticeLogTemplateSelectModal } from "@/components/practices/PracticeLogTemplateSelectModal";
 import { useCreatePracticeLogTemplateMutation } from "@apps/shared/hooks/queries/practiceLogTemplates";
-import { uploadImagesViaApi, deleteImagesViaApi, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { uploadImagesViaApi, deleteImagesViaApi, resolveGalleryImages } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { formatTime, formatTimeAverage, SWIM_STYLES } from "@/utils/formatters";
@@ -247,12 +247,13 @@ export const PracticeTabFormScreen: React.FC = () => {
           note: practice.note || "",
         };
         setPracticeTab(practiceState);
-        const images = getExistingImagesFromPaths(
-          supabase,
-          practice.image_paths,
-          "practice-images",
-        );
-        setExistingImages(images);
+        // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
+        getAccessToken().then((accessToken) => {
+          if (!accessToken) return;
+          resolveGalleryImages("practice-images", practice.image_paths, accessToken).then(
+            setExistingImages,
+          );
+        });
 
         // 既存の練習ログを fetch して menus を初期化 (C-4: getPracticeById で一括取得)
         const api = new PracticeAPI(supabase);
@@ -338,7 +339,7 @@ export const PracticeTabFormScreen: React.FC = () => {
       snapshotRef.current = { practice: initPractice, menus: emptyMenus };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode, resolvedPracticeId, loadingPractices, practices, supabase]);
+  }, [isEditMode, resolvedPracticeId, loadingPractices, practices, supabase, getAccessToken]);
 
   // ---- タイムストア (PracticeTimeForm から戻ったとき) ----
   const getTimes = usePracticeTimeStore((state) => state.getTimes);

@@ -15,7 +15,7 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
-import { getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { resolveGalleryImages } from "@/utils/imageUpload";
 import { BestTimeBadge } from "@/components/records";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -29,7 +29,7 @@ export const RecordDetailScreen: React.FC = () => {
   const route = useRoute<RecordDetailScreenRouteProp>();
   const navigation = useNavigation<RecordDetailScreenNavigationProp>();
   const { recordId } = route.params;
-  const { supabase } = useAuth();
+  const { supabase, getAccessToken } = useAuth();
   const { t } = useTranslation();
   const locale = useDateLocale();
 
@@ -115,13 +115,17 @@ export const RecordDetailScreen: React.FC = () => {
         .single();
       if (!isMounted) return;
       const imagePaths = (data as { image_paths?: string[] | null } | null)?.image_paths ?? [];
-      setCompetitionImages(getExistingImagesFromPaths(supabase, imagePaths, "competition-images"));
+      // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
+      const accessToken = await getAccessToken();
+      if (!isMounted || !accessToken) return;
+      const images = await resolveGalleryImages("competition-images", imagePaths, accessToken);
+      if (isMounted) setCompetitionImages(images);
     };
     loadImages();
     return () => {
       isMounted = false;
     };
-  }, [record?.competition_id, supabase]);
+  }, [record?.competition_id, supabase, getAccessToken]);
 
   // スプリットタイムを距離順にソート
   const sortedSplitTimes = useMemo(() => {

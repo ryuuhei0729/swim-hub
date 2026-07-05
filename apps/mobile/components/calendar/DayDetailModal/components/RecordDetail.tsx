@@ -8,7 +8,7 @@ import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
-import { getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { resolveGalleryImages } from "@/utils/imageUpload";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import { styles } from "../styles";
 import type { RecordDetailProps, RecordData } from "../types";
@@ -370,7 +370,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
-  const { supabase, user } = useAuth();
+  const { supabase, user, getAccessToken } = useAuth();
   const [actualRecords, setActualRecords] = useState<RecordData[]>([]);
   const [competitionImages, setCompetitionImages] = useState<Array<{ id: string; url: string }>>(
     [],
@@ -433,7 +433,12 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
 
         const imagePaths =
           (competitionData as { image_paths?: string[] | null } | null)?.image_paths ?? [];
-        setCompetitionImages(getExistingImagesFromPaths(supabase, imagePaths, "competition-images"));
+        // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
+        const accessToken = await getAccessToken();
+        if (accessToken) {
+          const images = await resolveGalleryImages("competition-images", imagePaths, accessToken);
+          setCompetitionImages(images);
+        }
 
         if (error) throw error;
 
@@ -489,7 +494,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     };
 
     loadRecords();
-  }, [_competitionId, supabase, user?.id, isTeamCompetition, t]);
+  }, [_competitionId, supabase, user?.id, isTeamCompetition, getAccessToken, t]);
 
   // スプリットタイムを取得
   useEffect(() => {

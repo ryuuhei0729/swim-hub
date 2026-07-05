@@ -12,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface MemberInfo {
@@ -24,6 +25,52 @@ interface MemberInfo {
     profile_image_path: string | null;
   };
 }
+
+interface GroupMemberRowProps {
+  item: MemberInfo;
+  memberName: string;
+  onPress?: () => void;
+}
+
+/**
+ * グループメンバー1行分の表示
+ * profile-images は private バケットのため、行単位で署名付きURLを解決する（Issue #36）
+ */
+const GroupMemberRow: React.FC<GroupMemberRowProps> = ({ item, memberName, onPress }) => {
+  const { t } = useTranslation();
+  const { url: resolvedAvatarUrl } = useSignedImageUrl(
+    "profile-images",
+    item.users?.profile_image_path,
+  );
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.memberRow, pressed && styles.memberRowPressed]}
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t("teamsAdmin.groupMemberList.viewDetailAriaLabel", {
+        name: memberName,
+      })}
+    >
+      {resolvedAvatarUrl ? (
+        <Image source={{ uri: resolvedAvatarUrl }} style={styles.avatarImage} contentFit="cover" />
+      ) : (
+        <View style={styles.avatarPlaceholder}>
+          <Text style={styles.avatarText}>{memberName.charAt(0).toUpperCase()}</Text>
+        </View>
+      )}
+      <Text style={styles.memberName} numberOfLines={1}>
+        {memberName}
+      </Text>
+      {item.role === "admin" && (
+        <View style={styles.adminBadge}>
+          <Text style={styles.adminBadgeText}>{t("teams.mobile.roleAdmin")}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+};
 
 interface GroupMemberListModalProps {
   visible: boolean;
@@ -137,37 +184,11 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
                 renderItem={({ item }) => {
                   const memberName = item.users?.name || t("teams.mobile.unnamedMember");
                   return (
-                    <Pressable
-                      style={({ pressed }) => [styles.memberRow, pressed && styles.memberRowPressed]}
-                      onPress={() => onMemberClick?.(item.user_id)}
-                      disabled={!onMemberClick}
-                      accessibilityRole="button"
-                      accessibilityLabel={t("teamsAdmin.groupMemberList.viewDetailAriaLabel", {
-                        name: memberName,
-                      })}
-                    >
-                      {item.users?.profile_image_path ? (
-                        <Image
-                          source={{ uri: item.users.profile_image_path }}
-                          style={styles.avatarImage}
-                          contentFit="cover"
-                        />
-                      ) : (
-                        <View style={styles.avatarPlaceholder}>
-                          <Text style={styles.avatarText}>
-                            {memberName.charAt(0).toUpperCase()}
-                          </Text>
-                        </View>
-                      )}
-                      <Text style={styles.memberName} numberOfLines={1}>
-                        {memberName}
-                      </Text>
-                      {item.role === "admin" && (
-                        <View style={styles.adminBadge}>
-                          <Text style={styles.adminBadgeText}>{t("teams.mobile.roleAdmin")}</Text>
-                        </View>
-                      )}
-                    </Pressable>
+                    <GroupMemberRow
+                      item={item}
+                      memberName={memberName}
+                      onPress={onMemberClick ? () => onMemberClick(item.user_id) : undefined}
+                    />
                   );
                 }}
               />

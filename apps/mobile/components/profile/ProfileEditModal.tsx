@@ -75,7 +75,8 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       // 選択した画像がある場合はアップロード
       if (selectedImageData && user) {
         try {
-          const userFolderPath = `avatars/${user.id}`;
+          // パス規約: "{userId}/{fileName}"（旧 "avatars/{userId}/..." は移行済み。Issue #36）
+          const userFolderPath = user.id;
 
           // 既存画像の削除（WEBの実装と同様）
           try {
@@ -124,16 +125,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
             throw uploadError;
           }
 
-          // 公開URLを取得（WEBの実装と同様）
-          const { data } = supabase.storage.from("profile-images").getPublicUrl(filePath);
-          const publicUrl = data?.publicUrl;
-
-          if (!publicUrl) {
-            throw new Error(t("mypage.profileEdit.publicUrlFailed"));
-          }
-
-          // データベースのusersテーブルを更新（WEBの実装と同様）
-          await onAvatarChange(publicUrl);
+          // profile-images は private バケットのため、公開URLではなく
+          // バケット内相対パスをDBに保存する（表示時は署名付きURLを解決する。Issue #36）
+          await onAvatarChange(filePath);
         } catch (err) {
           console.error("画像アップロードエラー:", err);
           const errorMessage =

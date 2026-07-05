@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Platform } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,7 +16,7 @@ import { PracticeLogItem } from "@/components/practices";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { ImageViewerModal } from "@/components/shared";
-import { getExistingImagesFromPaths } from "@/utils/imageUpload";
+import { resolveGalleryImages, type ResolvedGalleryImage } from "@/utils/imageUpload";
 import type { MainStackParamList } from "@/navigation/types";
 
 type PracticeDetailScreenRouteProp = RouteProp<MainStackParamList, "PracticeDetail">;
@@ -30,7 +30,7 @@ export const PracticeDetailScreen: React.FC = () => {
   const route = useRoute<PracticeDetailScreenRouteProp>();
   const navigation = useNavigation<PracticeDetailScreenNavigationProp>();
   const { practiceId } = route.params;
-  const { supabase } = useAuth();
+  const { supabase, getAccessToken } = useAuth();
   const { t } = useTranslation();
   const locale = useDateLocale();
 
@@ -38,6 +38,7 @@ export const PracticeDetailScreen: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [practiceImages, setPracticeImages] = useState<ResolvedGalleryImage[]>([]);
 
   const handleEdit = () => {
     // 個人・チームとも統合タブ画面へ (web が PracticeTabModal に統一されているのと同じ)
@@ -101,6 +102,24 @@ export const PracticeDetailScreen: React.FC = () => {
     enableRealtime: true,
   });
 
+  // 画像ギャラリー: practice-images は private バケットのため署名付きURLを解決する（Issue #36）
+  useEffect(() => {
+    let isMounted = true;
+    if (!practice?.image_paths || practice.image_paths.length === 0) {
+      setPracticeImages([]);
+      return;
+    }
+    getAccessToken().then((accessToken) => {
+      if (!isMounted || !accessToken) return;
+      resolveGalleryImages("practice-images", practice.image_paths, accessToken).then((images) => {
+        if (isMounted) setPracticeImages(images);
+      });
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [practice?.image_paths, getAccessToken]);
+
   if (error) {
     const errorMessage = error instanceof Error ? error.message : t("practice.mobile.fetchFailed");
     return (
@@ -132,8 +151,6 @@ export const PracticeDetailScreen: React.FC = () => {
 
   const formattedDate = formatDate(practice.date, "longWithWeekday", locale);
   const title = practice.title || t("practice.client.practiceTitle");
-
-  const practiceImages = getExistingImagesFromPaths(supabase, practice.image_paths, "practice-images");
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

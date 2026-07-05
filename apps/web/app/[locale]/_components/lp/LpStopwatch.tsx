@@ -15,7 +15,7 @@ interface LpStopwatchProps {
  *   LIVE  → window.__stopStopwatch() 呼び出し → FINISH
  *
  * DSEG7Classic フォントで ice 色の LED 風表示。
- * prefers-reduced-motion: reduce のとき静的最終状態 (00:52.86) を表示する。
+ * prefers-reduced-motion: reduce のときはアニメーションさせず READY (00:00.00) のまま静止表示する。
  */
 export default function LpStopwatch({ ariaLabel }: LpStopwatchProps) {
   const [state, setState] = useState<StopwatchState>({ status: "READY", elapsedMs: 0 });
@@ -37,10 +37,9 @@ export default function LpStopwatch({ ariaLabel }: LpStopwatchProps) {
   }, []);
 
   useEffect(() => {
-    // reduced-motion: 静的な最終状態を表示
+    // reduced-motion: アニメーションさせず READY (00:00.00) のまま静止表示
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       reducedMotion.current = true;
-      setDisplayTime("00:52.86");
       return;
     }
 
