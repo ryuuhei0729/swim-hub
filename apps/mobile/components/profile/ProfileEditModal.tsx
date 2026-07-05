@@ -3,6 +3,7 @@ import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 
 import { useTranslation } from "react-i18next";
 import { AvatarUpload } from "./AvatarUpload";
 import { BirthdayInput } from "@/components/ui/BirthdayInput";
+import { GenderToggle } from "@/components/ui/GenderToggle";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { base64ToArrayBuffer } from "@/utils/base64";
@@ -31,6 +32,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     name: "",
     birthday: "",
     bio: "",
+    gender: 0,
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         name: profile.name || "",
         birthday: birthdayStr,
         bio: profile.bio || "",
+        gender: profile.gender !== undefined ? profile.gender : 0,
       });
     }
     setError(null);
@@ -146,6 +149,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         name: formData.name.trim(),
         birthday,
         bio: formData.bio.trim() || null,
+        gender: formData.gender,
       });
 
       // 成功時は即時にモーダルを閉じる
@@ -213,6 +217,16 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 editable={!isUpdating}
               />
             </View>
+
+            {/* 性別 */}
+            <GenderToggle
+              value={formData.gender}
+              onChange={(gender) => {
+                setFormData((prev) => ({ ...prev, gender }));
+                setError(null);
+              }}
+              disabled={isUpdating}
+            />
 
             {/* 生年月日 */}
             <BirthdayInput
