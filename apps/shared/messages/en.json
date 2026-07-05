@@ -265,6 +265,8 @@
       "processingError": "An error occurred while converting the video."
     },
     "shareCardModal": {
+      "shareUnavailable": "Sharing is not available on this device",
+      "generateFailed": "Failed to generate the image",
       "closeOverlay": "Close modal",
       "close": "Close",
       "save": "Save",

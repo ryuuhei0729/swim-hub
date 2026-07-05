@@ -1,5 +1,14 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Platform } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Pressable,
+  Alert,
+  Platform,
+  ActivityIndicator,
+} from "react-native";
 import { Image } from "expo-image";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -17,6 +26,8 @@ import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
 import { resolveGalleryImages } from "@/utils/imageUpload";
 import { BestTimeBadge } from "@/components/records";
+import { ShareCardModal, type CompetitionShareData } from "@/components/share";
+import { RecordAPI } from "@apps/shared/api/records";
 import type { MainStackParamList } from "@/navigation/types";
 
 type RecordDetailScreenRouteProp = RouteProp<MainStackParamList, "RecordDetail">;
@@ -41,6 +52,42 @@ export const RecordDetailScreen: React.FC = () => {
   );
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [showShare, setShowShare] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [sharePreviousBest, setSharePreviousBest] = useState<number | null>(null);
+  const [shareIsFirstRecord, setShareIsFirstRecord] = useState(false);
+
+  // シェアカードを開く: 記録日より前の自己ベストを取得して初/更新判定を確定してから表示
+  const handleShare = async () => {
+    if (!record || shareLoading) return;
+    setShareLoading(true);
+    let previousBest: number | null = null;
+    let isFirstRecord = false;
+    const styleId = record.style_id;
+    const shareDate = record.competition?.date ?? record.created_at;
+    if (styleId != null && record.id && shareDate) {
+      try {
+        const prev = await new RecordAPI(supabase).getPreviousBestTime(
+          styleId,
+          record.pool_type ?? 0,
+          record.id,
+          record.is_relaying ?? false,
+          shareDate,
+        );
+        if (prev === null) {
+          isFirstRecord = true; // 過去記録なし＝初記録
+        } else {
+          previousBest = prev;
+        }
+      } catch {
+        // 取得失敗時はバッジ非表示（初記録の誤表示を防ぐ）
+      }
+    }
+    setSharePreviousBest(previousBest);
+    setShareIsFirstRecord(isFirstRecord);
+    setShareLoading(false);
+    setShowShare(true);
+  };
 
   const handleEdit = () => {
     if (record?.competition_id && record?.competition?.date && !record?.team_id) {
@@ -454,6 +501,46 @@ export const RecordDetailScreen: React.FC = () => {
         onClose={() => setViewerVisible(false)}
       />
 
+      <ShareCardModal
+        visible={showShare}
+        onClose={() => setShowShare(false)}
+        data={
+          {
+            competitionName,
+            date: formattedDate,
+            place: record.competition?.place || "",
+            poolType: record.pool_type === 1 ? "long" : "short",
+            eventName: styleName,
+            raceDistance: record.style?.distance || 0,
+            time: record.time,
+            reactionTime: record.reaction_time ?? undefined,
+            splitTimes: record.split_times,
+            isFirstRecord: shareIsFirstRecord,
+            previousBest: sharePreviousBest ?? undefined,
+          } as CompetitionShareData
+        }
+      />
+
+      {/* 記録をシェア */}
+      <Pressable
+        style={[styles.shareRecordButton, (shareLoading || isDeleting) && styles.shareRecordButtonDisabled]}
+        onPress={handleShare}
+        disabled={shareLoading || isDeleting}
+        accessibilityRole="button"
+        accessibilityLabel={t("common.shareCardModal.competitionTitle")}
+      >
+        {shareLoading ? (
+          <ActivityIndicator color="#FFFFFF" size="small" />
+        ) : (
+          <>
+            <Feather name="share-2" size={16} color="#FFFFFF" />
+            <Text style={styles.shareRecordButtonText}>
+              {t("common.shareCardModal.competitionTitle")}
+            </Text>
+          </>
+        )}
+      </Pressable>
+
       {/* アクションボタン */}
       <View style={styles.actionContainer}>
         <Pressable
@@ -673,6 +760,24 @@ const styles = StyleSheet.create({
   },
 
   // アクションボタン
+  shareRecordButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#1D4ED8",
+    paddingVertical: 14,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  shareRecordButtonDisabled: {
+    opacity: 0.6,
+  },
+  shareRecordButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
   actionContainer: {
     flexDirection: "row",
     gap: 12,

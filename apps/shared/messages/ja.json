@@ -268,6 +268,8 @@
       "processingError": "動画の変換中にエラーが発生しました。"
     },
     "shareCardModal": {
+      "shareUnavailable": "この端末では共有がご利用いただけません",
+      "generateFailed": "画像の生成に失敗しました",
       "closeOverlay": "モーダルを閉じる",
       "close": "閉じる",
       "save": "保存",

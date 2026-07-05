@@ -19,6 +19,7 @@
       ],
       "expo-video",
       "expo-image",
+      "expo-sharing",
       [
         "expo-image-picker",
         {
