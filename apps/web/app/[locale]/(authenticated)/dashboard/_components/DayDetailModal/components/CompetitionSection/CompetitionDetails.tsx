@@ -36,6 +36,7 @@ import { useLocale } from "next-intl";
 import { useAuth } from "@/contexts";
 import RecordBestBadge from "@/components/ui/RecordBestBadge";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
+import { resolveGalleryImages } from "@/lib/image-url";
 import type {
   CalendarItem,
   Record as RecordType,
@@ -175,20 +176,9 @@ export function CompetitionDetails({
           image_paths?: string[] | null;
         } | null;
         const imagePaths = competition?.image_paths || [];
-        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-        const images: GalleryImage[] = imagePaths.map(
-          (path: string, index: number) => {
-            const imageUrl = r2PublicUrl
-              ? `${r2PublicUrl}/competition-images/${path}`
-              : supabase.storage.from("competition-images").getPublicUrl(path)
-                  .data.publicUrl;
-            return {
-              id: path,
-              thumbnailUrl: imageUrl,
-              originalUrl: imageUrl,
-              fileName: path.split("/").pop() || `image-${index + 1}`,
-            };
-          },
+        const images: GalleryImage[] = await resolveGalleryImages(
+          "competition-images",
+          imagePaths,
         );
         setCompetitionImages(images);
 

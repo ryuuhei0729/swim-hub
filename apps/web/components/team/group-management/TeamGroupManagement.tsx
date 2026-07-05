@@ -311,6 +311,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         isOpen={selectedMember !== null}
         onClose={() => setSelectedMember(null)}
         member={selectedMember}
+        teamId={teamId}
         currentUserId={user?.id || ""}
         isCurrentUserAdmin={true}
         onMembershipChange={loadGroups}

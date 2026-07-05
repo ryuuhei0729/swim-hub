@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts";
 import { EntryAPI } from "@swim-hub/shared/api/entries";
 import { useRouter } from "next/navigation";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
+import { resolveGalleryImages } from "@/lib/image-url";
 import type { CompetitionWithEntryProps, CompetitionEntryDisplay } from "../../types";
 
 export function CompetitionWithEntry({
@@ -79,20 +80,12 @@ export function CompetitionWithEntry({
         if (!competitionError && competitionData) {
           setEntryStatus(competitionData.entry_status || "before");
 
-          // 画像データを変換
+          // 画像データを変換（署名付きURLを並列取得）
           const imagePaths = (competitionData as { image_paths?: string[] }).image_paths || [];
-          const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-          const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
-            const imageUrl = r2PublicUrl
-              ? `${r2PublicUrl}/competition-images/${path}`
-              : supabase.storage.from("competition-images").getPublicUrl(path).data.publicUrl;
-            return {
-              id: path,
-              thumbnailUrl: imageUrl,
-              originalUrl: imageUrl,
-              fileName: path.split("/").pop() || `image-${index + 1}`,
-            };
-          });
+          const images: GalleryImage[] = await resolveGalleryImages(
+            "competition-images",
+            imagePaths,
+          );
           setCompetitionImages(images);
         }
 

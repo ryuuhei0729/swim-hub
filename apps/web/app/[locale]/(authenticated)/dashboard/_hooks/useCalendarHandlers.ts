@@ -17,6 +17,7 @@ import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import type { PracticeTabId, CompetitionTabId } from "@/stores/types";
 import { isDateTodayOrPast } from "@/utils/tabModalUtils";
+import { resolveGalleryImages } from "@/lib/image-url";
 
 // スプリットタイム型（編集時に使用）
 export interface RecordSplitTime {
@@ -127,14 +128,7 @@ export function useCalendarHandlers({
 
             if (practice) {
               const imagePaths = Array.isArray(practice.image_paths) ? practice.image_paths : [];
-              const formattedImages = imagePaths.map((path, index) => ({
-                id: path,
-                thumbnailUrl: supabase.storage.from("practice-images").getPublicUrl(path).data
-                  .publicUrl,
-                originalUrl: supabase.storage.from("practice-images").getPublicUrl(path).data
-                  .publicUrl,
-                fileName: path.split("/").pop() || `image-${index}`,
-              }));
+              const formattedImages = await resolveGalleryImages("practice-images", imagePaths);
 
               editingData = {
                 id: item.id,
@@ -182,16 +176,7 @@ export function useCalendarHandlers({
               const practiceDate = parseDateString(pRow.date);
 
               const imagePaths = Array.isArray(pRow.image_paths) ? pRow.image_paths : [];
-              const formattedImages = imagePaths.map((path: string, index: number) => ({
-                id: path,
-                thumbnailUrl: supabase.storage
-                  .from("practice-images")
-                  .getPublicUrl(path).data.publicUrl,
-                originalUrl: supabase.storage
-                  .from("practice-images")
-                  .getPublicUrl(path).data.publicUrl,
-                fileName: path.split("/").pop() || `image-${index}`,
-              }));
+              const formattedImages = await resolveGalleryImages("practice-images", imagePaths);
 
               const practiceEditingData: EditingData = {
                 id: pRow.id,
@@ -327,14 +312,7 @@ export function useCalendarHandlers({
             const imagePaths = competition?.image_paths || [];
 
             if (imagePaths.length > 0) {
-              const formattedImages = imagePaths.map((path, index) => ({
-                id: path, // パスをIDとして使用
-                thumbnailUrl: supabase.storage.from("competition-images").getPublicUrl(path).data
-                  .publicUrl,
-                originalUrl: supabase.storage.from("competition-images").getPublicUrl(path).data
-                  .publicUrl,
-                fileName: path.split("/").pop() || `image-${index}`,
-              }));
+              const formattedImages = await resolveGalleryImages("competition-images", imagePaths);
 
               // itemに画像情報を追加
               itemWithImages = {

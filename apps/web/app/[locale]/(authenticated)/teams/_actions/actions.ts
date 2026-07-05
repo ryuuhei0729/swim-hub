@@ -46,14 +46,14 @@ export async function joinTeam(inviteCode: string) {
 }
 
 /**
- * 非アクティブなメンバーシップを再アクティブ化するServer Action
+ * 退会済みメンバーシップを再アクティブ化するServer Action
  */
-export async function reactivateTeamMembership(membershipId: string, joinedAt: string) {
+export async function reactivateTeamMembership(teamId: string) {
   const { supabase } = await getAuthenticatedUser();
   const api = new TeamMembersAPI(supabase);
 
   try {
-    const membership = await api.reactivateMembership(membershipId, joinedAt);
+    const membership = await api.reactivateMembership(teamId);
 
     after(() => {
       revalidatePath("/teams");

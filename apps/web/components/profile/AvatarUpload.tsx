@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { CameraIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { validateImageFile } from "@/utils/imageUtils";
+import { getSignedImageUrl } from "@/lib/image-url";
 
 // react-easy-cropを含むImageCropModalを動的インポート（バンドルサイズ削減）
 const ImageCropModal = dynamic(() => import("./ImageCropModal"), { ssr: false });
 
 interface AvatarUploadProps {
+  /** プロフィール画像のバケット内相対パス（"{userId}/{fileName}"）。旧データはフルURLの場合もある */
   currentAvatarUrl?: string | null;
   userName: string;
+  /** アップロード/削除成功時に、保存すべき値（バケット内相対パス、削除時はnull）を渡す */
   onAvatarChange: (newAvatarUrl: string | null) => void;
   disabled?: boolean;
   /** アバターサイズの Tailwind クラス (デフォルト: "h-40 w-40") */
@@ -34,7 +37,23 @@ export default function AvatarUpload({
   const [selectedImage, setSelectedImage] = useState<{ src: string; fileName: string } | null>(
     null,
   );
+  const [resolvedAvatarUrl, setResolvedAvatarUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // profile-images は private バケットのため、パスから署名付きURLを取得して表示する
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentAvatarUrl) {
+      setResolvedAvatarUrl(null);
+      return;
+    }
+    getSignedImageUrl("profile-images", currentAvatarUrl).then((url) => {
+      if (!cancelled) setResolvedAvatarUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentAvatarUrl]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -117,8 +136,8 @@ export default function AvatarUpload({
         throw new Error(data.error || t("uploadImageFailed"));
       }
 
-      const { url } = (await response.json()) as { url: string };
-      onAvatarChange(url);
+      const { path } = (await response.json()) as { path: string };
+      onAvatarChange(path);
     } catch (err) {
       console.error("アップロードエラー:", err);
       setError(err instanceof Error ? err.message : t("uploadImageFailed"));
@@ -160,14 +179,14 @@ export default function AvatarUpload({
         className={`
           relative ${sizeClassName} rounded-full flex items-center justify-center cursor-pointer
           ${disabled || isUploading ? "opacity-50 cursor-not-allowed" : "hover:opacity-80"}
-          ${currentAvatarUrl ? "bg-gray-100" : "bg-blue-500"}
+          ${resolvedAvatarUrl ? "bg-gray-100" : "bg-blue-500"}
           transition-opacity duration-200
         `}
         onClick={handleClick}
       >
-        {currentAvatarUrl ? (
+        {resolvedAvatarUrl ? (
           <img
-            src={currentAvatarUrl}
+            src={resolvedAvatarUrl}
             alt={t("profileImageAlt")}
             className="w-full h-full rounded-full object-cover"
           />

@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
-import { TeamMembership, TeamMembershipInsert, TeamMembershipWithUser } from "../../types";
+import { TeamMembership, TeamMembershipWithUser } from "../../types";
 import { requireAuth, requireTeamAdmin } from "../auth-utils";
 
 export class TeamMembersAPI {
@@ -22,85 +22,28 @@ export class TeamMembersAPI {
   }
 
   async join(inviteCode: string): Promise<TeamMembership> {
-    const userId = await requireAuth(this.supabase);
+    await requireAuth(this.supabase);
 
-    // 招待コードでチームを安全に検索（RPC関数を使用）
-    const { data: team, error: teamError } = await this.supabase
-      .rpc("find_team_by_invite_code", { p_invite_code: inviteCode })
-      .single<{ id: string; invite_code: string }>();
+    // 招待コードの検証・既存メンバーシップの状態判定・INSERT/UPDATE を
+    // すべて SECURITY DEFINER RPC 内で完結させる（招待コード無しでの
+    // pending 行乱造 (#42) を RLS 層で防止するため、自己 INSERT は不可）。
+    const { data, error } = await this.supabase.rpc("request_join_team", {
+      p_invite_code: inviteCode,
+    });
 
-    if (teamError) {
-      if (teamError.code === "PGRST116") {
-        throw new Error("招待コードが正しくありません");
-      }
-      throw teamError;
-    }
+    if (error) throw error;
 
-    if (!team || !team.id) throw new Error("招待コードが無効です");
-
-    // 既に参加しているかチェック
-    const { data: existingMembership, error: membershipError } = await this.supabase
-      .from("team_memberships")
-      .select("id, is_active, status")
-      .eq("team_id", team.id)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (membershipError && membershipError.code !== "PGRST116") {
-      throw membershipError;
-    }
-
-    // 既存のメンバーシップがある場合
-    if (existingMembership) {
-      // 承認済みでアクティブな場合は既に参加している
-      if (existingMembership.status === "approved" && existingMembership.is_active) {
-        throw new Error("既にこのチームに参加しています");
-      }
-      // 承認待ちの場合は既に申請済み
-      if (existingMembership.status === "pending") {
-        throw new Error("既に参加申請中です。承認をお待ちください");
-      }
-      // 拒否された場合は再申請（pendingに更新）
-      if (existingMembership.status === "rejected") {
-        const { data: updated, error: updateError } = await this.supabase
-          .from("team_memberships")
-          .update({
-            status: "pending",
-            is_active: false,
-            joined_at: new Date().toISOString(),
-            left_at: null,
-          })
-          .eq("id", existingMembership.id)
-          .select("*")
-          .single();
-        if (updateError) throw updateError;
-        return updated as TeamMembership;
-      }
-      // 非アクティブな承認済みメンバーシップを再アクティブ化
-      if (existingMembership.status === "approved" && !existingMembership.is_active) {
-        const joinedAt = new Date().toISOString().split("T")[0];
-        return await this.reactivateMembership(existingMembership.id, joinedAt);
-      }
-    }
-
-    // 新しいメンバーシップを作成（承認待ち）
-    const input: TeamMembershipInsert = {
-      team_id: team.id,
-      user_id: userId,
-      role: "user",
-      status: "pending",
-      is_active: false,
-      joined_at: new Date().toISOString(),
-      left_at: null,
+    const result = data as {
+      success: boolean;
+      error?: string;
+      membership?: TeamMembership;
     };
 
-    const { data: membership, error } = await this.supabase
-      .from("team_memberships")
-      .insert(input)
-      .select("*")
-      .single();
-    if (error) throw error;
-    return membership as TeamMembership;
+    if (!result.success) {
+      throw new Error(result.error || "参加申請に失敗しました");
+    }
+
+    return result.membership as TeamMembership;
   }
 
   async leave(teamId: string): Promise<void> {
@@ -118,6 +61,8 @@ export class TeamMembersAPI {
     userId: string,
     role: "admin" | "user",
   ): Promise<TeamMembership> {
+    await requireTeamAdmin(this.supabase, teamId);
+
     const { data, error } = await this.supabase
       .from("team_memberships")
       .update({ role })
@@ -139,39 +84,33 @@ export class TeamMembersAPI {
   }
 
   /**
-   * 非アクティブなメンバーシップを再アクティブ化
+   * 退会済み（approved かつ is_active=false）メンバーシップを再アクティブ化
+   *
+   * SECURITY DEFINER RPC (reactivate_own_membership) 経由。
+   * 「approved かつ is_active=false かつ left_at が記録済み（= leave()/remove()
+   * を経由して実際に退会した）」行のみ再アクティブ化できる。left_at が NULL の
+   * pending 行はこのガードで弾かれるため、自己承認スキップ（#38 A2b）は起きない。
    */
-  async reactivateMembership(membershipId: string, joinedAt: string): Promise<TeamMembership> {
-    const userId = await requireAuth(this.supabase);
+  async reactivateMembership(teamId: string): Promise<TeamMembership> {
+    await requireAuth(this.supabase);
 
-    // メンバーシップが存在し、現在のユーザーのものであることを確認
-    const { data: membership, error: fetchError } = await this.supabase
-      .from("team_memberships")
-      .select("id, user_id, team_id")
-      .eq("id", membershipId)
-      .single();
-
-    if (fetchError) throw fetchError;
-    if (!membership) throw new Error("メンバーシップが見つかりません");
-    if (membership.user_id !== userId) {
-      throw new Error("自分のメンバーシップのみ再アクティブ化できます");
-    }
-
-    // 再アクティブ化
-    const { data: updated, error } = await this.supabase
-      .from("team_memberships")
-      .update({
-        status: "approved",
-        is_active: true,
-        joined_at: joinedAt,
-        left_at: null,
-      })
-      .eq("id", membershipId)
-      .select("*")
-      .single();
+    const { data, error } = await this.supabase.rpc("reactivate_own_membership", {
+      p_team_id: teamId,
+    });
 
     if (error) throw error;
-    return updated as TeamMembership;
+
+    const result = data as {
+      success: boolean;
+      error?: string;
+      membership?: TeamMembership;
+    };
+
+    if (!result.success) {
+      throw new Error(result.error || "再アクティブ化に失敗しました");
+    }
+
+    return result.membership as TeamMembership;
   }
 
   /**

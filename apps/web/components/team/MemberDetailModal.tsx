@@ -20,6 +20,7 @@ export interface MemberDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   member: MemberDetail | null;
+  teamId: string;
   currentUserId: string;
   isCurrentUserAdmin: boolean;
   onMembershipChange?: () => void;
@@ -29,6 +30,7 @@ export default function MemberDetailModal({
   isOpen,
   onClose,
   member,
+  teamId,
   currentUserId,
   isCurrentUserAdmin,
   onMembershipChange,
@@ -41,6 +43,7 @@ export default function MemberDetailModal({
   const { error, isRemoving, handleRoleChange, handleRemoveMember } = useMemberDetail(
     supabase,
     currentUserId,
+    teamId,
     onMembershipChange,
   );
   const { bestTimes, loading, error: bestTimesError, loadBestTimes } = useBestTimes(supabase);

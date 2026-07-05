@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { useTranslations } from "next-intl";
+import { TeamMembersAPI } from "@apps/shared/api/teams/members";
 import type { MemberDetail } from "@/types/member-detail";
 
 export function useMemberDetail(
   supabase: SupabaseClient,
   currentUserId: string,
+  teamId: string,
   onMembershipChange?: () => void,
 ) {
+  const t = useTranslations("teams.memberDetail.hook");
   const [error, setError] = useState<string | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const membersApi = useMemo(() => new TeamMembersAPI(supabase), [supabase]);
 
   const handleRoleChange = useCallback(
     async (member: MemberDetail, newRole: "admin" | "user") => {
@@ -21,21 +26,16 @@ export function useMemberDetail(
       try {
         setError(null);
 
-        const { error: updateError } = await supabase
-          .from("team_memberships")
-          .update({ role: newRole })
-          .eq("id", member.id);
-
-        if (updateError) throw updateError;
+        await membersApi.updateRole(teamId, member.user_id, newRole);
 
         onMembershipChange?.();
       } catch (err) {
         console.error("権限変更エラー:", err);
-        setError("権限の変更に失敗しました");
+        setError(t("roleChangeFailed"));
         throw err;
       }
     },
-    [supabase, onMembershipChange],
+    [membersApi, teamId, onMembershipChange, t],
   );
 
   const handleRemoveMember = useCallback(
@@ -46,35 +46,29 @@ export function useMemberDetail(
 
         // 自分自身を削除しようとしている場合は拒否
         if (member.user_id === currentUserId) {
-          setError("自分自身をチームから削除することはできません");
+          setError(t("cannotRemoveSelf"));
           return;
         }
 
         // 確認ダイアログ
-        if (
-          !confirm(`${member.users?.name}さんをチームから削除しますか？この操作は取り消せません。`)
-        ) {
+        if (!confirm(t("removeConfirm", { name: member.users?.name ?? "" }))) {
           return;
         }
 
-        const { error: deleteError } = await supabase
-          .from("team_memberships")
-          .update({ is_active: false })
-          .eq("id", member.id);
-
-        if (deleteError) throw deleteError;
+        // shared API 経由で is_active=false + left_at を記録する（updateRole と同経路）
+        await membersApi.remove(teamId, member.user_id);
 
         onMembershipChange?.();
         return true;
       } catch (err) {
         console.error("メンバー削除エラー:", err);
-        setError("メンバーの削除に失敗しました");
+        setError(t("removeFailed"));
         return false;
       } finally {
         setIsRemoving(false);
       }
     },
-    [supabase, currentUserId, onMembershipChange],
+    [membersApi, teamId, currentUserId, onMembershipChange, t],
   );
 
   return {

@@ -24,6 +24,7 @@ import type { PracticeShareData, PracticeMenuItem } from "@/components/share";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import { useAuth } from "@/contexts";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
+import { resolveGalleryImages } from "@/lib/image-url";
 import type {
   Practice,
   PracticeLogWithTimes,
@@ -178,20 +179,9 @@ export function PracticeDetails({
           ),
         };
 
-        // 画像データを変換
-        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+        // 画像データを変換（署名付きURLを並列取得）
         const imagePaths = practiceData.image_paths || [];
-        const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
-          const imageUrl = r2PublicUrl
-            ? `${r2PublicUrl}/practice-images/${path}`
-            : supabase.storage.from("practice-images").getPublicUrl(path).data.publicUrl;
-          return {
-            id: path,
-            thumbnailUrl: imageUrl,
-            originalUrl: imageUrl,
-            fileName: path.split("/").pop() || `image-${index + 1}`,
-          };
-        });
+        const images: GalleryImage[] = await resolveGalleryImages("practice-images", imagePaths);
 
         setPractice(formattedPractice);
         setPracticeImages(images);

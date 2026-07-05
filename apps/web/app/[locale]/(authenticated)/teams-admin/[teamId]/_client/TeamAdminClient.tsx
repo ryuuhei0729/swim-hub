@@ -272,6 +272,7 @@ export default function TeamAdminClient({
         isOpen={isMemberModalOpen}
         onClose={handleCloseMemberModal}
         member={selectedMember}
+        teamId={teamId}
         currentUserId={user?.id || ""}
         isCurrentUserAdmin={true}
         onMembershipChange={() => {

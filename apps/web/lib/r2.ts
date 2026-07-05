@@ -6,6 +6,8 @@
 
 /// <reference types="@cloudflare/workers-types" />
 
+import { AwsClient } from "aws4fetch";
+
 // CloudflareEnvを拡張してR2_BUCKETバインディングを追加
 declare global {
   interface CloudflareEnv {
@@ -106,4 +108,45 @@ export async function deleteMultipleFromR2(keys: string[]): Promise<void> {
  */
 export function getR2PublicUrl(key: string): string {
   return `${getPublicUrl()}/${key}`;
+}
+
+// =============================================================================
+// 画像表示用 署名付きGET URL (private バケット対応)
+// r2-video.ts の generateVideoGetUrl と同じ aws4fetch 方式 (S3互換API直接署名)
+// =============================================================================
+
+const getImageAwsClient = () =>
+  new AwsClient({
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    service: "s3",
+    region: "auto",
+  });
+
+const getImageEndpoint = () => `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+
+function getImageBucketName(): string {
+  return process.env.R2_BUCKET_NAME ?? "swim-hub-images-prod";
+}
+
+/**
+ * 画像表示用署名付きGET URLを発行する (デフォルト1時間有効)
+ * @param key R2オブジェクトキー (例: "profile-images/{userId}/{fileName}")
+ * @param expiresInSeconds 有効期限 (秒)
+ */
+export async function generateImageGetUrl(
+  key: string,
+  expiresInSeconds = 3600,
+): Promise<string> {
+  const aws = getImageAwsClient();
+  const bucket = getImageBucketName();
+  const url = new URL(`${getImageEndpoint()}/${bucket}/${encodeURIComponent(key)}`);
+  url.searchParams.set("X-Amz-Expires", String(expiresInSeconds));
+
+  const signed = await aws.sign(url.toString(), {
+    method: "GET",
+    aws: { signQuery: true },
+  });
+
+  return signed.url;
 }
