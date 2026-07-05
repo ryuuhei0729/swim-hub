@@ -2,19 +2,47 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { RecordAPI } from "@apps/shared/api/records";
 import { formatTimeBest } from "@/utils/formatters";
 import type { BestTime } from "@apps/shared/types/ui";
 
+/** 自己ベストと同記録とみなす許容誤差（秒）＝web share/utils.ts BEST_EPSILON と同値 */
+const BEST_EPSILON = 0.005;
+
+/** 自己ベストバッジ状態（web ShareBadgeState と同一の3状態+非表示） */
+type BadgeState =
+  | { kind: "first" }
+  | { kind: "best"; label: string }
+  | { kind: "slower"; label: string }
+  | { kind: "none" };
+
+/** 自己ベストとの差分を符号付きでフォーマット（改善=マイナス, 同記録=±0, 悪化=プラス） */
+function formatBestDelta(time: number, previousBest: number): string {
+  const delta = time - previousBest;
+  if (Math.abs(delta) < BEST_EPSILON) return `±${formatTimeBest(0)}`;
+  const sign = delta < 0 ? "-" : "+";
+  return `${sign}${formatTimeBest(Math.abs(delta))}`;
+}
+
 /**
- * YYYY-MM-DD 形式の日付を bulkQuery の created_at 比較用に正規化する。
- * YYYY-MM-DD (10文字) は当日 00:00:00.000Z に拡張し、当日以前のみ対象とする。
- * ISO タイムスタンプの場合はそのまま返す。
+ * 自己ベストバッジの状態を判定する純粋関数。
+ * web apps/web/components/share/utils.ts getShareBadgeState のポート。
+ * - isFirstRecord=true → 初記録（「初」バッジ, amber）
+ * - previousBest が不明 (null/undefined) → 非表示（判定不能時の誤表示防止）
+ * - time <= previousBest(+誤差) → ベスト更新（±0含む, blue）
+ * - それ以外 → ベストより遅い（red）
  */
-function normalizeRecordDateForBulkComparison(recordDate: string): string {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(recordDate)) {
-    return `${recordDate}T00:00:00.000Z`;
-  }
-  return recordDate;
+export function getBadgeState(
+  time: number,
+  previousBest: number | null | undefined,
+  isFirstRecord?: boolean,
+): BadgeState {
+  if (isFirstRecord) return { kind: "first" };
+  if (previousBest == null) return { kind: "none" };
+  const label = formatBestDelta(time, previousBest);
+  return time - previousBest <= BEST_EPSILON
+    ? { kind: "best", label }
+    : { kind: "slower", label };
 }
 
 interface BestTimeBadgeProps {
@@ -24,14 +52,21 @@ interface BestTimeBadgeProps {
   recordDate?: string | null;
   poolType?: number | null;
   isRelaying?: boolean;
+  /** @deprecated 3状態モデルでは差分を常に表示するため未使用（後方互換のために残置） */
   showDiff?: boolean;
   precomputedBestTimes?: BestTime[];
 }
 
 /**
- * ベストタイム更新チェックバッジ
- * 記録が過去のベストタイムを更新した場合に表示される
- * showDiff=true の場合、ベストでない時も差分を表示
+ * 自己ベスト3状態バッジ（web RecordBestBadge / BestBadge のポート）。
+ * - 初記録: 「初」(amber)
+ * - 自己ベスト更新 (±0含む): 「自己ベスト」+ 差分 (blue)
+ * - ベストより遅い: 「自己ベスト」+ 差分 (red)
+ * - 判定不能 (styleId なし / time 0 / エラー): 非表示
+ *
+ * precomputedBestTimes が渡された場合（一覧の N+1 回避）は同期判定を行う。
+ * この場合、対象記録自身が現行ベストのときは「過去ベスト」を算出できないため
+ * 非表示とする（判定不能扱い。誤った「初」表示を防ぐ）。
  */
 const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
   recordId,
@@ -40,21 +75,17 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
   recordDate,
   poolType,
   isRelaying,
-  showDiff = false,
   precomputedBestTimes,
 }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
-  const [isBestTime, setIsBestTime] = useState<boolean | null>(null);
-  const [bestTimeDiff, setBestTimeDiff] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<BadgeState>({ kind: "none" });
 
   useEffect(() => {
     // precomputedBestTimes が渡された場合: 同期的に判定（Supabase クエリ不要）
     if (precomputedBestTimes !== undefined) {
-      if (styleId === undefined || styleId === null) {
-        setIsBestTime(null);
-        setLoading(false);
+      if (styleId === undefined || styleId === null || !currentTime) {
+        setState({ kind: "none" });
         return;
       }
       const match = precomputedBestTimes.find(
@@ -62,183 +93,143 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
       );
 
       let relevantBestTime: number | undefined;
+      let relevantBestId: string | undefined;
       if (match) {
         if (isRelaying ?? false) {
-          // リレー記録の表示: 主エントリの relayingTime.time を優先、フォールバックエントリなら time を使う
-          relevantBestTime = match.is_relaying ? match.time : match.relayingTime?.time;
+          // リレー記録の表示: 主エントリの relayingTime を優先、フォールバックエントリなら本体を使う
+          if (match.is_relaying) {
+            relevantBestTime = match.time;
+            relevantBestId = match.id;
+          } else {
+            relevantBestTime = match.relayingTime?.time;
+            relevantBestId = match.relayingTime?.id;
+          }
         } else {
-          // 非リレー記録の表示: 主エントリの time のみ（フォールバックエントリは非リレー記録がないことを意味するので無視）
-          relevantBestTime = match.is_relaying ? undefined : match.time;
+          // 非リレー記録の表示: 主エントリが非リレーのときのみ有効
+          if (!match.is_relaying) {
+            relevantBestTime = match.time;
+            relevantBestId = match.id;
+          }
         }
       }
 
-      const isBest = relevantBestTime === undefined || currentTime < relevantBestTime;
-      setIsBestTime(isBest);
-      if (!isBest && relevantBestTime !== undefined) {
-        setBestTimeDiff(currentTime - relevantBestTime);
+      if (relevantBestTime === undefined) {
+        // 同条件 (種目×水路×リレー区分) の記録が他に存在しない = 初記録
+        setState({ kind: "first" });
+      } else if (relevantBestId === recordId) {
+        // 自身が現行ベスト: 過去ベストを同期判定できないため非表示（判定不能）
+        setState({ kind: "none" });
       } else {
-        setBestTimeDiff(null);
+        setState(getBadgeState(currentTime, relevantBestTime));
       }
-      setLoading(false);
       return;
     }
 
+    // 通常パス: 記録日より前の自己ベストを取得して判定（web RecordBestBadge と同一）
     let cancelled = false;
 
-    const checkBestTime = async () => {
-      if (!styleId || !recordDate) {
-        if (!cancelled) setLoading(false);
+    const check = async () => {
+      // recordDate が無ければ「初」の誤表示防止のため非表示にする
+      if (styleId == null || Number.isNaN(styleId) || !recordId || !currentTime || !recordDate) {
+        if (!cancelled) setState({ kind: "none" });
         return;
       }
-
       try {
-        if (!cancelled) setLoading(true);
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-
-        // 1. 大会記録（competition_id あり）: competitions.date で比較
-        let competitionQuery = supabase
-          .from("records")
-          .select(
-            `
-            id,
-            time,
-            competition:competitions!inner(date)
-          `,
-          )
-          .eq("user_id", user.id)
-          .eq("style_id", styleId)
-          .eq("is_relaying", isRelaying ?? false)
-          .neq("id", recordId)
-          .lt("competition.date", recordDate)
-          .order("time", { ascending: true })
-          .limit(1);
-
-        if (poolType !== null && poolType !== undefined) {
-          competitionQuery = competitionQuery.eq("pool_type", poolType);
-        }
-
-        // recordDate を正規化: YYYY-MM-DD → YYYY-MM-DDT00:00:00.000Z
-        // 当日の一括登録記録が除外されないよう created_at との型混用を解消する
-        const normalizedRecordDate = normalizeRecordDateForBulkComparison(recordDate);
-        let bulkQuery = supabase
-          .from("records")
-          .select(
-            `
-            id,
-            time,
-            created_at
-          `,
-          )
-          .eq("user_id", user.id)
-          .eq("style_id", styleId)
-          .eq("is_relaying", isRelaying ?? false)
-          .is("competition_id", null)
-          .neq("id", recordId)
-          .lt("created_at", normalizedRecordDate)
-          .order("time", { ascending: true })
-          .limit(1);
-
-        if (poolType !== null && poolType !== undefined) {
-          bulkQuery = bulkQuery.eq("pool_type", poolType);
-        }
-
-        const [competitionResult, bulkResult] = await Promise.all([competitionQuery, bulkQuery]);
-
-        if (competitionResult.error) throw competitionResult.error;
-        if (bulkResult.error) throw bulkResult.error;
-
-        const competitionBest = competitionResult.data?.[0]?.time;
-        const bulkBest = bulkResult.data?.[0]?.time;
-
-        let previousBestTime: number | null = null;
-        if (competitionBest !== undefined && bulkBest !== undefined) {
-          previousBestTime = Math.min(competitionBest, bulkBest);
-        } else if (competitionBest !== undefined) {
-          previousBestTime = competitionBest;
-        } else if (bulkBest !== undefined) {
-          previousBestTime = bulkBest;
-        }
-
-        const isBest = previousBestTime === null || currentTime < previousBestTime;
-        if (!cancelled) setIsBestTime(isBest);
-
-        if (!isBest && previousBestTime !== null) {
-          if (!cancelled) setBestTimeDiff(currentTime - previousBestTime);
-        } else {
-          if (!cancelled) setBestTimeDiff(null);
-        }
+        const prev = await new RecordAPI(supabase).getPreviousBestTime(
+          styleId,
+          poolType ?? 0,
+          recordId,
+          isRelaying ?? false,
+          recordDate,
+        );
+        const next = getBadgeState(
+          currentTime,
+          prev === null ? undefined : prev,
+          prev === null,
+        );
+        if (!cancelled) setState(next);
       } catch (err) {
         console.error("ベストタイムチェックエラー:", err);
-        if (!cancelled) setIsBestTime(null);
-      } finally {
-        if (!cancelled) setLoading(false);
+        // 取得失敗時は非表示（初の誤表示防止）
+        if (!cancelled) setState({ kind: "none" });
       }
     };
 
-    checkBestTime();
+    check();
     return () => {
       cancelled = true;
     };
   }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase, precomputedBestTimes]);
 
-  if (loading || isBestTime === null) {
+  if (state.kind === "none") {
     return null;
   }
 
-  if (isBestTime) {
+  if (state.kind === "first") {
     return (
       <View
-        style={styles.badge}
+        style={[styles.badge, styles.badgeFirst]}
         accessible={true}
         accessibilityRole="text"
-        accessibilityLabel={t("recordMobile.bestTimeAria")}
+        accessibilityLabel={t("recordMobile.bestBadge.first")}
       >
-        <Text style={styles.badgeText}>{t("recordMobile.bestTimeBadge")}</Text>
+        <Text style={[styles.badgeText, styles.badgeTextFirst]}>
+          {t("recordMobile.bestBadge.first")}
+        </Text>
       </View>
     );
   }
 
-  if (showDiff && bestTimeDiff !== null && bestTimeDiff > 0) {
-    return (
-      <Text
-        style={styles.diffText}
-        accessible={true}
-        accessibilityRole="text"
-        accessibilityLabel={t("recordMobile.bestTimeDiffAria", { diff: formatTimeBest(bestTimeDiff) })}
-      >
-        {`Best +${formatTimeBest(bestTimeDiff)}`}
+  const isBest = state.kind === "best";
+  return (
+    <View
+      style={[styles.badge, isBest ? styles.badgeBest : styles.badgeSlower]}
+      accessible={true}
+      accessibilityRole="text"
+      accessibilityLabel={`${t("recordMobile.bestBadge.personalBest")} ${state.label}`}
+    >
+      <Text style={styles.badgeLabel}>{t("recordMobile.bestBadge.personalBest")}</Text>
+      <Text style={[styles.badgeText, isBest ? styles.badgeTextBest : styles.badgeTextSlower]}>
+        {state.label}
       </Text>
-    );
-  }
-
-  return null;
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
   badge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FEF9C3",
-    borderWidth: 1,
-    borderColor: "#FACC15",
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    gap: 4,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeFirst: {
+    backgroundColor: "#FFFBEB", // amber-50
+  },
+  badgeBest: {
+    backgroundColor: "#EFF6FF", // blue-50
+  },
+  badgeSlower: {
+    backgroundColor: "#FEF2F2", // red-50
+  },
+  badgeLabel: {
+    fontSize: 10,
+    color: "#6B7280", // gray-500
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    color: "#854D0E",
   },
-  diffText: {
-    fontSize: 11,
-    color: "#6B7280",
+  badgeTextFirst: {
+    color: "#D97706", // amber-600
+  },
+  badgeTextBest: {
+    color: "#2563EB", // blue-600
+  },
+  badgeTextSlower: {
+    color: "#DC2626", // red-600
   },
 });
 

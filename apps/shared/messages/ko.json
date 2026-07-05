@@ -3634,7 +3634,7 @@
       "competitionRequired": "대회를 선택해 주세요",
       "timeRequired": "기록을 입력해 주세요",
       "timePositive": "기록은 양수로 입력해 주세요",
-      "reactionTimeRange": "반응 시간은 0.40〜1.00초 범위로 입력해 주세요",
+      "reactionTimeRange": "반응 시간은 -1.00~2.00초 범위로 입력해 주세요",
       "timeFormatInvalid": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 31-2)",
       "timeFormatInvalid2": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 31-2)",
       "recordNumber": "기록 {n}"
@@ -3647,6 +3647,10 @@
       "noLap": "랩 타임을 계산할 수 없습니다",
       "distanceHeader": "거리",
       "splitTimeHeader": "Split Time"
+    },
+    "bestBadge": {
+      "first": "첫 기록",
+      "personalBest": "개인 최고 기록"
     }
   },
   "forms": {

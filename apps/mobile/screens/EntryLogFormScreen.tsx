@@ -26,7 +26,7 @@ import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
 import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTime, formatTimeBest } from "@apps/shared/utils/time";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
@@ -292,6 +292,22 @@ export const EntryLogFormScreen: React.FC = () => {
         }
 
         return updated;
+      }),
+    );
+  };
+
+  // エントリータイム blur 時の再フォーマット (web CompetitionTabModal onBlur :1083-1090 と同一)
+  const handleEntryTimeBlur = (entryId: string) => {
+    setEntries((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== entryId) return entry;
+        const parsed = parseTime(entry.entryTimeDisplayValue);
+        return {
+          ...entry,
+          entryTime: parsed,
+          entryTimeDisplayValue:
+            parsed > 0 ? formatTimeBest(parsed) : entry.entryTimeDisplayValue,
+        };
       }),
     );
   };
@@ -602,6 +618,7 @@ export const EntryLogFormScreen: React.FC = () => {
                 style={[styles.input, errors[`entryTime-${index}`] && styles.inputError]}
                 value={entry.entryTimeDisplayValue}
                 onChangeText={(text) => updateEntry(entry.id, { entryTimeDisplayValue: text })}
+                onBlur={() => handleEntryTimeBlur(entry.id)}
                 placeholder={t("competition.entry.entryTimePlaceholder")}
                 placeholderTextColor="#9CA3AF"
                 keyboardType="default"

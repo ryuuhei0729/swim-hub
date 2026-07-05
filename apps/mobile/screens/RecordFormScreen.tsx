@@ -39,9 +39,10 @@ import { uploadVideo } from "@/utils/videoUpload";
 import { localizedStyleName } from "@/utils/styleName";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { LapTimeDisplay } from "@/components/records";
+import { parseTime } from "@apps/shared/utils/time";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, Competition } from "@apps/shared/types";
-import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
 
 type RecordFormScreenRouteProp = RouteProp<MainStackParamList, "RecordForm">;
 type RecordFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
@@ -59,10 +60,6 @@ export const RecordFormScreen: React.FC = () => {
   const { t } = useTranslation();
   const isEditMode = !!recordId;
   const isPremium = checkIsPremium(subscription);
-
-  // クイック入力フック（メインタイム用、スプリットタイム用）
-  const { parseInput: parseMainTime } = useQuickTimeInput();
-  const { parseInput: parseSplitTime } = useQuickTimeInput();
 
   // Zustandストア
   const {
@@ -312,9 +309,9 @@ export const RecordFormScreen: React.FC = () => {
       isValid = false;
     }
 
-    // 反応時間のバリデーション
+    // 反応時間のバリデーション (web RecordLogEntry: min=-1 / max=2)
     if (reactionTime !== null && reactionTime !== undefined) {
-      if (reactionTime < 0.4 || reactionTime > 1.0) {
+      if (reactionTime < -1 || reactionTime > 2) {
         setError("reactionTime", t("recordMobile.form.reactionTimeRange"));
         isValid = false;
       }
@@ -654,7 +651,8 @@ export const RecordFormScreen: React.FC = () => {
       return;
     }
 
-    const { time: parsed } = parseMainTime(text);
+    // shared parseTime:「:」=分 (web RecordSetItem onBlur と同一エンジン)
+    const parsed = parseTime(text);
     if (parsed <= 0) {
       setError("time", t("recordMobile.form.timeFormatInvalid"));
       setTime(null);
@@ -937,7 +935,7 @@ export const RecordFormScreen: React.FC = () => {
                       });
                       return;
                     }
-                    const { time: parsed } = parseSplitTime(text);
+                    const parsed = parseTime(text);
                     if (parsed > 0) {
                       updateSplitTime(originalIndex, { splitTime: parsed });
                       setSplitTimeDisplayValues((prev) => ({
@@ -965,27 +963,57 @@ export const RecordFormScreen: React.FC = () => {
                   placeholderTextColor="#9CA3AF"
                   editable={!storeLoading}
                 />
-                <Pressable
-                  style={styles.removeButton}
-                  onPress={() => {
-                    removeSplitTime(originalIndex);
-                    // スプリットタイム表示値のインデックスを再マッピング
-                    setSplitTimeDisplayValues((prev) => {
-                      const next: Record<number, string> = {};
-                      Object.entries(prev).forEach(([k, v]) => {
-                        const key = parseInt(k, 10);
-                        if (key < originalIndex) next[key] = v;
-                        else if (key > originalIndex) next[key - 1] = v;
+                {/* ゴール地点スプリット (distance === raceDistance) は削除不可 (web RecordLogEntry :449-461) */}
+                {!(
+                  typeof st.distance === "number" && st.distance === selectedStyleDistance
+                ) ? (
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() => {
+                      removeSplitTime(originalIndex);
+                      // スプリットタイム表示値のインデックスを再マッピング
+                      setSplitTimeDisplayValues((prev) => {
+                        const next: Record<number, string> = {};
+                        Object.entries(prev).forEach(([k, v]) => {
+                          const key = parseInt(k, 10);
+                          if (key < originalIndex) next[key] = v;
+                          else if (key > originalIndex) next[key - 1] = v;
+                        });
+                        return next;
                       });
-                      return next;
-                    });
-                  }}
-                  disabled={storeLoading}
-                >
-                  <Feather name="trash-2" size={16} color="#FFFFFF" />
-                </Pressable>
+                    }}
+                    disabled={storeLoading}
+                  >
+                    <Feather name="trash-2" size={16} color="#FFFFFF" />
+                  </Pressable>
+                ) : (
+                  <View style={styles.removeButtonSpacer} />
+                )}
               </View>
             ))}
+
+            {/* ラップタイムプレビュー (web RecordLogEntry :468) */}
+            {(() => {
+              const validSplitTimes = splitTimes
+                .map((st) => {
+                  const distance =
+                    typeof st.distance === "number"
+                      ? st.distance
+                      : parseFloat(String(st.distance));
+                  if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
+                    return { distance, splitTime: st.splitTime };
+                  }
+                  return null;
+                })
+                .filter((st): st is { distance: number; splitTime: number } => st !== null);
+              if (validSplitTimes.length === 0) return null;
+              return (
+                <LapTimeDisplay
+                  splitTimes={validSplitTimes}
+                  raceDistance={selectedStyleDistance ?? undefined}
+                />
+              );
+            })()}
             {splitTimeLimitReached && (
               <View style={{ marginTop: 8 }}>
                 <PremiumBadge feature="split_time_limit" compact />
@@ -1357,6 +1385,10 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#DC2626",
     borderRadius: 6,
+  },
+  removeButtonSpacer: {
+    padding: 8,
+    width: 32,
   },
   removeButtonText: {
     fontSize: 12,

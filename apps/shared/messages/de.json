@@ -3634,7 +3634,7 @@
       "competitionRequired": "Bitte wählen Sie einen Wettkampf",
       "timeRequired": "Bitte geben Sie eine Zeit ein",
       "timePositive": "Die Zeit muss eine positive Zahl sein",
-      "reactionTimeRange": "Die Reaktionszeit muss zwischen 0,40 und 1,00 Sekunden liegen",
+      "reactionTimeRange": "Die Reaktionszeit muss zwischen -1,00 und 2,00 Sekunden liegen",
       "timeFormatInvalid": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
       "timeFormatInvalid2": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
       "recordNumber": "Eintrag {n}"
@@ -3647,6 +3647,10 @@
       "noLap": "Lap-Zeiten können nicht berechnet werden",
       "distanceHeader": "Distanz",
       "splitTimeHeader": "Split Time"
+    },
+    "bestBadge": {
+      "first": "Debüt",
+      "personalBest": "Persönliche Bestzeit"
     }
   },
   "forms": {

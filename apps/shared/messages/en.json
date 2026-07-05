@@ -3631,7 +3631,7 @@
       "competitionRequired": "Please select a competition",
       "timeRequired": "Please enter a time",
       "timePositive": "Time must be a positive number",
-      "reactionTimeRange": "Reaction time must be between 0.40 and 1.00 seconds",
+      "reactionTimeRange": "Reaction time must be between -1.00 and 2.00 seconds",
       "timeFormatInvalid": "Invalid time format (e.g. 1:23.45 or 31-2)",
       "timeFormatInvalid2": "Invalid time format (e.g. 1:23.45 or 31-2)",
       "recordNumber": "Record {n}"
@@ -3644,6 +3644,10 @@
       "noLap": "Cannot calculate lap times",
       "distanceHeader": "Distance",
       "splitTimeHeader": "Split Time"
+    },
+    "bestBadge": {
+      "first": "1st",
+      "personalBest": "Personal Best"
     }
   },
   "forms": {

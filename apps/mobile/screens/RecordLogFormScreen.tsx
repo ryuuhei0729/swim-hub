@@ -25,20 +25,22 @@ import {
   useCreateRecordMutation,
   useUpdateRecordMutation,
   useReplaceSplitTimesMutation,
+  useBestTimesQuery,
+  useCompetitionInfoQuery,
 } from "@apps/shared/hooks/queries/records";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
-import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader } from "@/components/shared/VideoUploader";
+import { LapTimeDisplay, getBestTimeForEntry } from "@/components/records";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { parseTime, formatTimeBest } from "@apps/shared/utils/time";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
-import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
 
 type RecordLogFormScreenRouteProp = RouteProp<MainStackParamList, "RecordLogForm">;
 type RecordLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
@@ -76,8 +78,12 @@ export const RecordLogFormScreen: React.FC = () => {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
 
-  // クイック入力フック
-  const { parseInput } = useQuickTimeInput();
+  // ベストタイム参照バッジ用 (web useBestTimes 相当)
+  const { data: bestTimesData } = useBestTimesQuery(supabase, {});
+  const bestTimes = useMemo(() => bestTimesData ?? [], [bestTimesData]);
+  // ベストタイムの水路判定用に大会のプール種別を取得
+  const { data: competitionInfo } = useCompetitionInfoQuery(supabase, competitionId);
+  const competitionPoolType = competitionInfo?.poolType ?? 0;
 
   // 動画の状態管理
   const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
@@ -245,11 +251,10 @@ export const RecordLogFormScreen: React.FC = () => {
     }
   }, [entryDataList, swimStyles, loadingStyles, recordId]);
 
-  // タイム文字列を秒数に変換（クイック入力対応）
+  // タイム文字列を秒数に変換 (shared parseTime:「:」=分。web parseTimeToSeconds と同一)
   const parseTimeToSeconds = (timeStr: string): number => {
     if (!timeStr || timeStr.trim() === "") return 0;
-    const { time } = parseInput(timeStr);
-    return time;
+    return parseTime(timeStr);
   };
 
   // フォームデータ更新
@@ -302,10 +307,49 @@ export const RecordLogFormScreen: React.FC = () => {
     });
   };
 
+  // blur 時に確定値へ再フォーマット (web formatTimeBest と同一表示)
+  const handleTimeBlur = (index: number) => {
+    const formData = formDataList[index];
+    if (!formData) return;
+    const parsed = parseTime(formData.timeDisplayValue);
+    updateFormData(index, {
+      time: parsed,
+      timeDisplayValue: parsed > 0 ? formatTimeBest(parsed) : formData.timeDisplayValue,
+    });
+  };
+
+  // 反応時間: web RecordLogEntry (step=0.01 min=-1 max=2) に合わせて blur 時にクランプ
+  const handleReactionTimeBlur = (index: number) => {
+    const formData = formDataList[index];
+    if (!formData) return;
+    const trimmed = formData.reactionTime.trim();
+    if (trimmed === "") return;
+    const parsed = parseFloat(trimmed);
+    if (isNaN(parsed)) {
+      updateFormData(index, { reactionTime: "" });
+      return;
+    }
+    const clamped = Math.min(2, Math.max(-1, Math.round(parsed * 100) / 100));
+    updateFormData(index, { reactionTime: String(clamped) });
+  };
+
+  // Free プランの課金対象カウントはゴール地点スプリット (distance === raceDistance) を
+  // 除外する (web useRecordLogForm.countBillableSplitTimes と同一)
+  const countBillableSplitTimes = (formData: RecordFormData): number => {
+    const style = swimStyles.find((s) => String(s.id) === formData.styleId);
+    const raceDistance = style?.distance;
+    if (!raceDistance) return formData.splitTimes.length;
+    return formData.splitTimes.filter(
+      (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+    ).length;
+  };
+
   // スプリットタイムの追加可否判定
   const isSplitTimeLimitReached = (formIndex: number): boolean => {
     if (isPremium) return false;
-    return formDataList[formIndex]?.splitTimes.length >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
+    const formData = formDataList[formIndex];
+    if (!formData) return false;
+    return countBillableSplitTimes(formData) >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
   };
 
   // スプリットタイム追加（空の1行）
@@ -348,11 +392,20 @@ export const RecordLogFormScreen: React.FC = () => {
 
     if (newSplits.length === 0) return;
 
-    // Free ユーザーの場合、追加後の合計が制限を超えないようにカット
+    // Free ユーザーの場合、制限内に収まるようカット（ゴール地点スプリットは常に許可）
     if (!isPremium) {
-      const remaining = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - formData.splitTimes.length;
-      if (remaining <= 0) return;
-      newSplits = newSplits.slice(0, remaining);
+      const maxNewBillable =
+        FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - countBillableSplitTimes(formData);
+      let billableAdded = 0;
+      newSplits = newSplits.filter((st) => {
+        if (typeof st.distance === "number" && st.distance === raceDistance) return true;
+        if (billableAdded < maxNewBillable) {
+          billableAdded++;
+          return true;
+        }
+        return false;
+      });
+      if (newSplits.length === 0) return;
     }
 
     updateFormData(index, {
@@ -384,11 +437,20 @@ export const RecordLogFormScreen: React.FC = () => {
 
     if (newSplits.length === 0) return;
 
-    // Free ユーザーの場合、追加後の合計が制限を超えないようにカット
+    // Free ユーザーの場合、制限内に収まるようカット（ゴール地点スプリットは常に許可）
     if (!isPremium) {
-      const remaining = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - formData.splitTimes.length;
-      if (remaining <= 0) return;
-      newSplits = newSplits.slice(0, remaining);
+      const maxNewBillable =
+        FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - countBillableSplitTimes(formData);
+      let billableAdded = 0;
+      newSplits = newSplits.filter((st) => {
+        if (typeof st.distance === "number" && st.distance === raceDistance) return true;
+        if (billableAdded < maxNewBillable) {
+          billableAdded++;
+          return true;
+        }
+        return false;
+      });
+      if (newSplits.length === 0) return;
     }
 
     updateFormData(index, {
@@ -713,6 +775,30 @@ export const RecordLogFormScreen: React.FC = () => {
         {formDataList.map((formData, index) => {
           const entryInfo = entryDataList[index];
           const sectionIndex = index + 1;
+          const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
+          const raceDistance = selectedStyle?.distance;
+          // ベストタイム参照バッジ (web RecordLogEntry currentBestTime 相当。水路フォールバック付き)
+          const currentBestTime = getBestTimeForEntry(
+            selectedStyle?.name_jp ?? "",
+            competitionPoolType,
+            formData.isRelaying,
+            bestTimes,
+          );
+          // ラップタイムプレビュー用の有効スプリット (web RecordLogEntry :211-225)
+          const validSplitTimes = formData.splitTimes
+            .map((st) => {
+              const distance =
+                typeof st.distance === "number"
+                  ? st.distance
+                  : st.distance === ""
+                    ? NaN
+                    : parseFloat(String(st.distance));
+              if (!isNaN(distance) && distance > 0 && st.splitTime > 0) {
+                return { distance, splitTime: st.splitTime };
+              }
+              return null;
+            })
+            .filter((st): st is { distance: number; splitTime: number } => st !== null);
 
           return (
             <View key={index} style={styles.section}>
@@ -720,6 +806,26 @@ export const RecordLogFormScreen: React.FC = () => {
                 <Text style={styles.sectionTitle}>
                   {t("recordMobile.recordNumber", { index: sectionIndex })}
                 </Text>
+              )}
+
+              {/* 参照バッジ: エントリータイム (blue) + ベストタイム (green) */}
+              {((entryInfo?.entryTime != null && entryInfo.entryTime > 0) || currentBestTime) && (
+                <View style={styles.badgeRow}>
+                  {entryInfo?.entryTime != null && entryInfo.entryTime > 0 && (
+                    <View style={styles.entryTimeBadge}>
+                      <Text style={styles.entryTimeBadgeText}>
+                        {t("forms.recordLog.entryTimeLabel")} {formatTimeBest(entryInfo.entryTime)}
+                      </Text>
+                    </View>
+                  )}
+                  {currentBestTime && (
+                    <View style={styles.bestTimeBadge}>
+                      <Text style={styles.bestTimeBadgeText}>
+                        {t(currentBestTime.labelKey)}: {formatTimeBest(currentBestTime.time)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               )}
 
               {/* 種目選択（常に操作可能。エントリー情報があればヒントとして表示） */}
@@ -756,11 +862,6 @@ export const RecordLogFormScreen: React.FC = () => {
                 {errors[`style-${index}`] && (
                   <Text style={styles.errorText}>{errors[`style-${index}`]}</Text>
                 )}
-                {entryInfo?.entryTime != null && (
-                  <Text style={styles.entryInfoText}>
-                    {t("recordMobile.entryTimeInfo", { time: formatTime(entryInfo.entryTime) })}
-                  </Text>
-                )}
               </View>
 
               {/* タイム入力 */}
@@ -772,6 +873,7 @@ export const RecordLogFormScreen: React.FC = () => {
                   style={[styles.input, errors[`time-${index}`] && styles.inputError]}
                   value={formData.timeDisplayValue}
                   onChangeText={(text) => handleTimeChange(index, text)}
+                  onBlur={() => handleTimeBlur(index)}
                   placeholder={t("recordMobile.form.timePlaceholder2")}
                   keyboardType="default"
                   editable={!loading}
@@ -800,8 +902,9 @@ export const RecordLogFormScreen: React.FC = () => {
                   style={styles.input}
                   value={formData.reactionTime}
                   onChangeText={(text) => updateFormData(index, { reactionTime: text })}
+                  onBlur={() => handleReactionTimeBlur(index)}
                   placeholder={t("recordMobile.form.reactionTimePlaceholder")}
-                  keyboardType="decimal-pad"
+                  keyboardType="numbers-and-punctuation"
                   editable={!loading}
                 />
               </View>
@@ -933,16 +1036,30 @@ export const RecordLogFormScreen: React.FC = () => {
                         keyboardType="default"
                         editable={!loading}
                       />
-                      <Pressable
-                        style={styles.removeButton}
-                        onPress={() => handleRemoveSplitTime(index, splitIndex)}
-                        disabled={loading}
-                      >
-                        <Feather name="trash-2" size={16} color="#EF4444" />
-                      </Pressable>
+                      {/* ゴール地点スプリット (distance === raceDistance) は削除不可 (web :449-461) */}
+                      {!(
+                        typeof splitTime.distance === "number" &&
+                        splitTime.distance === raceDistance
+                      ) ? (
+                        <Pressable
+                          style={styles.removeButton}
+                          onPress={() => handleRemoveSplitTime(index, splitIndex)}
+                          disabled={loading}
+                        >
+                          <Feather name="trash-2" size={16} color="#EF4444" />
+                        </Pressable>
+                      ) : (
+                        <View style={styles.removeButtonSpacer} />
+                      )}
                     </View>
                   ),
                 )}
+
+                {/* ラップタイムプレビュー (web RecordLogEntry :468) */}
+                {validSplitTimes.length > 0 && (
+                  <LapTimeDisplay splitTimes={validSplitTimes} raceDistance={raceDistance} />
+                )}
+
                 {isSplitTimeLimitReached(index) && (
                   <View style={{ marginTop: 8 }}>
                     <PremiumBadge feature="split_time_limit" compact />
@@ -1046,16 +1163,37 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 16,
   },
-  entryInfo: {
-    backgroundColor: "#EFF6FF",
-    padding: 12,
-    borderRadius: 8,
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     marginBottom: 16,
   },
-  entryInfoText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#2563EB",
+  bestTimeBadge: {
+    backgroundColor: "#DCFCE7", // green-100
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+  },
+  bestTimeBadgeText: {
+    fontSize: 12,
+    color: "#15803D", // green-700
+  },
+  entryTimeBadge: {
+    backgroundColor: "#DBEAFE", // blue-100
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+  },
+  entryTimeBadgeText: {
+    fontSize: 12,
+    color: "#1D4ED8", // blue-700
+  },
+  removeButtonSpacer: {
+    padding: 4,
+    width: 24,
   },
   field: {
     marginBottom: 20,

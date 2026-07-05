@@ -3634,7 +3634,7 @@
       "competitionRequired": "大会を選択してください",
       "timeRequired": "タイムを入力してください",
       "timePositive": "タイムは正の数値を入力してください",
-      "reactionTimeRange": "反応時間は0.40〜1.00秒の範囲で入力してください",
+      "reactionTimeRange": "反応時間は-1.00〜2.00秒の範囲で入力してください",
       "timeFormatInvalid": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
       "timeFormatInvalid2": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
       "recordNumber": "記録 {n}"
@@ -3647,6 +3647,10 @@
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
       "splitTimeHeader": "スプリットタイム"
+    },
+    "bestBadge": {
+      "first": "初",
+      "personalBest": "自己ベスト"
     }
   },
   "forms": {

@@ -3634,7 +3634,7 @@
       "competitionRequired": "请选择比赛",
       "timeRequired": "请输入成绩",
       "timePositive": "成绩请输入正数",
-      "reactionTimeRange": "反应时间请输入0.40〜1.00秒范围内的值",
+      "reactionTimeRange": "反应时间必须在-1.00至2.00秒之间",
       "timeFormatInvalid": "成绩格式不正确（例: 1:23.45 或 31-2）",
       "timeFormatInvalid2": "成绩格式不正确（例: 1:23.45 或 31-2）",
       "recordNumber": "记录 {n}"
@@ -3647,6 +3647,10 @@
       "noLap": "无法计算分段成绩",
       "distanceHeader": "距离",
       "splitTimeHeader": "Split Time"
+    },
+    "bestBadge": {
+      "first": "首次",
+      "personalBest": "个人最好成绩"
     }
   },
   "forms": {
