@@ -38,7 +38,7 @@ import { LapTimeDisplay, getBestTimeForEntry } from "@/components/records";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
-import { parseTime, formatTimeBest } from "@apps/shared/utils/time";
+import { parseTime, parseTimeStrict, formatTimeBest } from "@apps/shared/utils/time";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
 
@@ -307,14 +307,39 @@ export const RecordLogFormScreen: React.FC = () => {
     });
   };
 
-  // blur 時に確定値へ再フォーマット (web formatTimeBest と同一表示)
+  // blur 時に確定値へ再フォーマット (web formatTimeBest と同一表示)。
+  // parseTimeStrict で構造ガードし、"1.23.45" のような不正形式が 1.23 秒として
+  // 静かに確定されるのを防ぐ（確定拒否 + エラー表示。クイック入力 "31-2" は通す）
   const handleTimeBlur = (index: number) => {
     const formData = formDataList[index];
     if (!formData) return;
-    const parsed = parseTime(formData.timeDisplayValue);
+    const raw = formData.timeDisplayValue.trim();
+    if (raw === "") {
+      setErrors((prevErrors) => {
+        const next = { ...prevErrors };
+        delete next[`time-${index}`];
+        return next;
+      });
+      updateFormData(index, { time: 0 });
+      return;
+    }
+    const parsed = parseTimeStrict(raw);
+    if (parsed === null) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        [`time-${index}`]: t("recordMobile.form.timeFormatInvalid"),
+      }));
+      updateFormData(index, { time: 0 });
+      return;
+    }
+    setErrors((prevErrors) => {
+      const next = { ...prevErrors };
+      delete next[`time-${index}`];
+      return next;
+    });
     updateFormData(index, {
       time: parsed,
-      timeDisplayValue: parsed > 0 ? formatTimeBest(parsed) : formData.timeDisplayValue,
+      timeDisplayValue: formatTimeBest(parsed),
     });
   };
 
@@ -543,7 +568,11 @@ export const RecordLogFormScreen: React.FC = () => {
       if (!formData.styleId) {
         newErrors[`style-${index}`] = t("recordMobile.form.styleRequired");
       }
-      if (formData.time <= 0) {
+      // blur を経ずに保存された場合の不正形式 ("1.23.45" 等) を確定拒否する
+      const rawTime = formData.timeDisplayValue.trim();
+      if (rawTime !== "" && parseTimeStrict(rawTime) === null) {
+        newErrors[`time-${index}`] = t("recordMobile.form.timeFormatInvalid");
+      } else if (formData.time <= 0) {
         newErrors[`time-${index}`] = t("recordMobile.form.timeRequired");
       }
     });

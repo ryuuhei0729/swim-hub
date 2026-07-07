@@ -1,5 +1,5 @@
 import i18next from "i18next";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTimeStrict } from "@apps/shared/utils/time";
 
 // =============================================================================
 // 型定義
@@ -172,31 +172,6 @@ export function computeMatrixRecords(inputs: BestTimeInputMap): BestTimeRecordDr
 }
 
 // =============================================================================
-// タイム形式バリデーション (Web 版 BulkBestTimeClient と同一)
-// =============================================================================
-
-/**
- * タイム入力の許容形式 (Web 版 BulkBestTimeClient.handleInputChange と同じ正規表現):
- *  従来形式  \d+(:\d+)?(\.\d+)?  → "1:23.45" "1:30" "23.45" "30"
- *  クイック式 \d+(-\d+){1,2}     → "31-2" "1-05-3"
- * 末尾 s は許容。多重ドット ("1.23.45")・多重コロン ("1:2:3")・連続区切り・英字を構造的に弾く。
- */
-export const TIME_FORMAT_REGEX = /^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i;
-
-/**
- * 構造チェック (TIME_FORMAT_REGEX) + parseTime > 0 を通過した秒数を返す。
- * 不正な形式・空文字は null。"1.23.45" のような typo が parseFloat で
- * 1.23 秒として誤保存されるのを防ぐ。
- */
-export function parseTimeStrict(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  if (!TIME_FORMAT_REGEX.test(trimmed)) return null;
-  const seconds = parseTime(trimmed);
-  return seconds > 0 ? seconds : null;
-}
-
-// =============================================================================
 // バリデーションロジック (オンボーディング: 通常タイムのみ)
 // =============================================================================
 
@@ -242,61 +217,4 @@ export function canSave(entries: BestTimeEntry[]): boolean {
 /** 入力値が「入力済みだが不正」か (空は不正扱いしない / 形式チェック込み) */
 export function isEnteredButInvalid(raw: string): boolean {
   return raw.trim() !== "" && parseTimeStrict(raw) === null;
-}
-
-export interface BulkBestTimeState {
-  /** 保存対象のレコード下書き (有効なタイムのみ) */
-  records: BestTimeRecordDraft[];
-  /** 重複しているエントリーの key 集合 */
-  duplicateKeys: Set<string>;
-  /** 入力済みだが不正なタイムが存在するか (保存自体はブロックしない) */
-  hasInvalidTime: boolean;
-  /** 保存ボタンを活性化してよいか */
-  canSave: boolean;
-  /** 有効なタイム入力件数 */
-  validCount: number;
-}
-
-/**
- * 一括入力エントリーを保存用レコードへ変換し、保存可否・重複・件数を計算する。
- * 各エントリーは1レコード (isRelaying で通常/引き継ぎを区別)。
- * 重複判定は 種目 × 水路 × 引き継ぎ区分 で行う。
- * Web 版と同じく、不正なタイムは保存対象から除外するだけで保存はブロックしない
- * (有効な入力が1件以上 + 重複なし で保存可)。
- */
-export function computeBulkState(entries: BestTimeEntry[]): BulkBestTimeState {
-  const records: BestTimeRecordDraft[] = [];
-  const duplicateKeys = new Set<string>();
-  const seen = new Map<string, string>();
-  let hasInvalidTime = false;
-
-  for (const e of entries) {
-    const trimmed = e.time.trim();
-    if (!trimmed) continue;
-    const seconds = parseTimeStrict(trimmed);
-    if (seconds === null) {
-      hasInvalidTime = true;
-      continue;
-    }
-    records.push({
-      styleId: e.styleId,
-      poolType: e.poolType,
-      isRelaying: e.isRelaying,
-      time: seconds,
-      note: e.note.trim() || null,
-    });
-    const composite = `${e.styleId}-${e.poolType}-${e.isRelaying ? 1 : 0}`;
-    const existing = seen.get(composite);
-    if (existing) {
-      duplicateKeys.add(existing);
-      duplicateKeys.add(e.key);
-    } else {
-      seen.set(composite, e.key);
-    }
-  }
-
-  const validCount = records.length;
-  // Web 版セマンティクス: 不正セルは除外するだけで、有効1件以上 + 重複なし なら保存可
-  const canSave = validCount >= 1 && duplicateKeys.size === 0;
-  return { records, duplicateKeys, hasInvalidTime, canSave, validCount };
 }

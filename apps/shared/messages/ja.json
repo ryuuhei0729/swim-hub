@@ -1393,7 +1393,8 @@
       "completing": "準備中...",
       "backButton": "戻る",
       "inputHintTitle": "半角数字で入力",
-      "inputHintBody": "1:23.45 / 23.45 / 23-45 / 1-23-45 など自由な形式で入力できます"
+      "inputHintBody": "1:23.45 / 23.45 / 23-45 / 1-23-45 など自由な形式で入力できます",
+      "notePlaceholder": "日付、大会名など"
     },
     "completionFailed": "完了処理に失敗しました",
     "stepLabels": {
@@ -1982,8 +1983,6 @@
     "tabsAriaLabel": "種目を選択",
     "mobile": {
       "description": "種目を追加して、ベストタイムをまとめて登録できます。",
-      "emptyTitle": "ベストタイムを追加",
-      "emptyBody": "「種目を追加」から登録したい種目を選んでください。",
       "successTitle": "登録完了",
       "addRelaying": "＋ 引き継ぎタイムを追加",
       "hideRelaying": "引き継ぎタイムを非表示",
@@ -2290,6 +2289,7 @@
       "pendingRetry": "状態を更新",
       "teamNotFound": "チームが見つかりません",
       "webGuide": "チーム管理機能に関してはWEB版をご利用ください。",
+      "bulkRegisterAdminRequired": "この機能を利用するには管理者権限が必要です。",
       "webGuideButton": "WEB版を開く",
       "pendingMessage": "チームへの参加リクエストは管理者の承認待ちです。\n承認されるまでしばらくお待ちください。",
       "memberRemoveConfirm": "{name}をチームから削除しますか？\nこの操作は取り消せません。",
@@ -3635,7 +3635,7 @@
       "timePlaceholder": "例: 1:23.45 または 31-2",
       "timePlaceholder2": "例: 2:00.00 または 2-0-0",
       "reactionTimeLabel": "反応時間（秒）",
-      "reactionTimePlaceholder": "0.40〜1.00",
+      "reactionTimePlaceholder": "-1.00〜2.00",
       "splitTimeLabel": "スプリットタイム",
       "relayStyleLabel": "リレー種目",
       "memoLabel": "メモ",
@@ -3925,7 +3925,7 @@
       "previewLabel": "プレビュー",
       "previewDefault": "タグ名",
       "selectModalTitle": "タグを選択",
-      "searchPlaceholder": "タグを検索",
+      "selectSearchPlaceholder": "タグを検索",
       "noSearchResults": "一致するタグがありません",
       "actionPrompt": "タグの操作を選択してください",
       "actionEdit": "編集",

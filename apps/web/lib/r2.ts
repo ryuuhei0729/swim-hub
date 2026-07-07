@@ -125,8 +125,27 @@ const getImageAwsClient = () =>
 
 const getImageEndpoint = () => `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 
+/**
+ * 署名付きGET URLの署名先バケット名を取得する。
+ *
+ * 注意: アップロードは Workers バインディング `R2_BUCKET` に対して行われる一方、
+ * 署名付きGETはこの環境変数のバケット名に対して S3 互換 API で署名する。
+ * 両者が別バケットを指すと「アップロードは成功するのに署名GETが404」または
+ * 意図しないバケットからの配信が起きる。コード上でバインディング実体との
+ * 名前一致を実行時に検証することはできないため、デプロイ手順で
+ * wrangler の `R2_BUCKET` バインディング先バケットと `R2_BUCKET_NAME` の
+ * 値が同一であることを必ず突合すること。
+ */
 function getImageBucketName(): string {
-  return process.env.R2_BUCKET_NAME ?? "swim-hub-images-prod";
+  const bucketName = process.env.R2_BUCKET_NAME;
+  if (!bucketName) {
+    throw new Error(
+      "R2_BUCKET_NAME が設定されていません。" +
+        "アップロード先の R2_BUCKET バインディングと同一のバケットを指すよう、" +
+        "R2_BUCKET_NAME 環境変数にバケット名を設定してください。",
+    );
+  }
+  return bucketName;
 }
 
 /**

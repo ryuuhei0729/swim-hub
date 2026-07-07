@@ -11,6 +11,7 @@ import {
   formatTimeShort,
   parseTime,
   parseTimeStrict,
+  TIME_FORMAT_REGEX,
   type TimeEntryLike,
 } from "../../utils/time";
 
@@ -376,6 +377,39 @@ describe("time utilities", () => {
 
       it("Infinityを含む場合はnullを返す", () => {
         expect(parseTimeStrict("Infinity")).toBeNull();
+      });
+    });
+
+    describe("TIME_FORMAT_REGEX 構造ガード (mobile styleOptions / web BulkBestTimeClient から集約)", () => {
+      it("クイック入力形式を正しい秒数として受理する（旧実装の '31-2'→31秒 誤解釈を排除）", () => {
+        expect(parseTimeStrict("31-2")).toBe(31.2);
+        expect(parseTimeStrict("1-05-3")).toBe(65.3);
+      });
+
+      it("M:SS形式・整数秒・末尾sを受理する", () => {
+        expect(parseTimeStrict("1:30")).toBe(90);
+        expect(parseTimeStrict("30")).toBe(30);
+        expect(parseTimeStrict("23.45s")).toBe(23.45);
+      });
+
+      it("多重ドットはnullを返す（'1.23.45'が1.23秒として誤保存されない）", () => {
+        expect(parseTimeStrict("1.23.45")).toBeNull();
+      });
+
+      it("混合区切り・連続区切りはnullを返す", () => {
+        expect(parseTimeStrict("1:05-3")).toBeNull();
+        expect(parseTimeStrict("31--2")).toBeNull();
+        expect(parseTimeStrict("1-2-3-4")).toBeNull();
+      });
+
+      it("0以下のタイムはnullを返す", () => {
+        expect(parseTimeStrict("0")).toBeNull();
+        expect(parseTimeStrict("0:00.00")).toBeNull();
+      });
+
+      it("TIME_FORMAT_REGEXが単体でexportされている", () => {
+        expect(TIME_FORMAT_REGEX.test("1:23.45")).toBe(true);
+        expect(TIME_FORMAT_REGEX.test("1.23.45")).toBe(false);
       });
     });
   });

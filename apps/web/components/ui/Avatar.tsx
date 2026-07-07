@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { getSignedImageUrl } from "@/lib/image-url";
 
 interface AvatarProps {
@@ -21,6 +22,7 @@ const sizeClasses = {
 };
 
 export default function Avatar({ avatarUrl, userName, size = "md", className = "" }: AvatarProps) {
+  const t = useTranslations("mypage.avatarUpload");
   const sizeClass = sizeClasses[size];
   const initials = userName.charAt(0) || "?";
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function Avatar({ avatarUrl, userName, size = "md", className = "
       {resolvedUrl ? (
         <Image
           src={resolvedUrl}
-          alt={`${userName}のプロフィール画像`}
+          alt={t("profileImageAlt")}
           width={
             size === "sm" ? 32 : size === "md" ? 40 : size === "lg" ? 96 : size === "xl" ? 128 : 160
           }

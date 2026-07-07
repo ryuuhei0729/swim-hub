@@ -324,6 +324,13 @@ WITH CHECK (
   -- 自己更新枝: leave() (is_active=false, left_at=today への自己更新) のみを許可する。
   --   - role='user' : admin への自己昇格を禁止（20260705000000 から継続）。
   --   - is_active=false : 自己 UPDATE での activate（承認済み化）を禁止。
+  --   - status='approved' : leave() は status を変更しない (アクティブメンバーは
+  --     常に approved) ため、更新後も approved のままであることを要求する。
+  --     これが無いとアクティブメンバーが自分の行を status='pending' に書き換え、
+  --     管理者の承認待ち一覧に偽の申請を注入できる (グリーフィング)。
+  --   - left_at IS NOT NULL : leave() は必ず left_at を記録する。これが無いと
+  --     left_at=NULL のまま退会状態を作れてしまい、reactivate_own_membership の
+  --     「left_at IS NOT NULL = 実際に退会した行のみ」ガードとの整合が崩れる。
   --   - is_team_member(team_id, auth.uid()) : 「今 DB 上で is_active=true な
   --     行を持つ(=更新前は承認済みアクティブメンバーだった)」ことを要求する。
   --     SECURITY DEFINER 関数なので RLS を再帰させずに評価できる
@@ -342,6 +349,8 @@ WITH CHECK (
     "user_id" = (SELECT "auth"."uid"())
     AND "role" = 'user'
     AND "is_active" = false
+    AND "status" = 'approved'
+    AND "left_at" IS NOT NULL
     AND public.is_team_member("team_memberships"."team_id", (SELECT "auth"."uid"()))
   )
 );

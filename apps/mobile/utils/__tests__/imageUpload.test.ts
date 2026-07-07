@@ -9,35 +9,22 @@ vi.mock("expo-crypto", () => ({
   randomUUID: vi.fn(() => "mocked-uuid-1234-5678-90ab-cdef12345678"),
 }));
 
-// base64ToArrayBuffer をモック
-vi.mock("../base64", () => ({
-  base64ToArrayBuffer: vi.fn(() => new ArrayBuffer(8)),
-}));
-
-import { generateUUID, uploadImage, uploadImages, deleteImage, deleteImages } from "../imageUpload";
+import { generateUUID, deleteImage, deleteImages } from "../imageUpload";
 import { randomUUID } from "expo-crypto";
 
 // Supabaseクライアントのモック作成ヘルパー
 function createMockSupabaseClient(options?: {
-  uploadError?: Error | null;
   removeError?: Error | null;
-  publicUrl?: string;
 }) {
-  const {
-    uploadError = null,
-    removeError = null,
-    publicUrl = "https://example.com/storage/test.jpg",
-  } = options ?? {};
+  const { removeError = null } = options ?? {};
 
   return {
     storage: {
       from: vi.fn(() => ({
-        upload: vi.fn().mockResolvedValue({ error: uploadError }),
         remove: vi.fn().mockResolvedValue({ error: removeError }),
-        getPublicUrl: vi.fn(() => ({ data: { publicUrl } })),
       })),
     },
-  } as unknown as Parameters<typeof uploadImage>[0]["supabase"];
+  } as unknown as Parameters<typeof deleteImage>[0];
 }
 
 describe("generateUUID", () => {
@@ -60,166 +47,6 @@ describe("generateUUID", () => {
     // UUID形式: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     expect(result).toMatch(uuidRegex);
-  });
-});
-
-describe("uploadImage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("画像を正常にアップロードできる", async () => {
-    const mockSupabase = createMockSupabaseClient({
-      publicUrl: "https://storage.example.com/user1/record1/mocked-uuid.jpg",
-    });
-
-    const result = await uploadImage({
-      supabase: mockSupabase,
-      userId: "user1",
-      recordId: "record1",
-      base64: "base64encodeddata",
-      fileExtension: "jpg",
-      bucket: "practice-images",
-    });
-
-    expect(mockSupabase.storage.from).toHaveBeenCalledWith("practice-images");
-    expect(result.path).toBe("user1/record1/mocked-uuid-1234-5678-90ab-cdef12345678.jpg");
-    expect(result.publicUrl).toBe("https://storage.example.com/user1/record1/mocked-uuid.jpg");
-  });
-
-  it("アップロードエラー時に例外をスローする", async () => {
-    const mockSupabase = createMockSupabaseClient({
-      uploadError: { message: "Upload failed" } as Error,
-    });
-
-    await expect(
-      uploadImage({
-        supabase: mockSupabase,
-        userId: "user1",
-        recordId: "record1",
-        base64: "base64encodeddata",
-        fileExtension: "jpg",
-        bucket: "practice-images",
-      }),
-    ).rejects.toThrow("画像のアップロードに失敗しました: Upload failed");
-  });
-
-  it("異なるバケットを正しく使用する", async () => {
-    const mockSupabase = createMockSupabaseClient();
-
-    await uploadImage({
-      supabase: mockSupabase,
-      userId: "user1",
-      recordId: "record1",
-      base64: "base64encodeddata",
-      fileExtension: "png",
-      bucket: "competition-images",
-    });
-
-    expect(mockSupabase.storage.from).toHaveBeenCalledWith("competition-images");
-  });
-
-  it("各ファイル拡張子に正しいcontent-typeを設定する", async () => {
-    const testCases: Array<{ ext: string; expectedType: string }> = [
-      { ext: "jpg", expectedType: "image/jpeg" },
-      { ext: "jpeg", expectedType: "image/jpeg" },
-      { ext: "png", expectedType: "image/png" },
-      { ext: "gif", expectedType: "image/gif" },
-      { ext: "webp", expectedType: "image/webp" },
-      { ext: "unknown", expectedType: "image/jpeg" }, // default
-    ];
-
-    for (const { ext, expectedType } of testCases) {
-      const uploadMock = vi.fn().mockResolvedValue({ error: null });
-      const mockSupabase = {
-        storage: {
-          from: vi.fn(() => ({
-            upload: uploadMock,
-            getPublicUrl: vi.fn(() => ({ data: { publicUrl: "https://example.com/test.jpg" } })),
-          })),
-        },
-      } as unknown as Parameters<typeof uploadImage>[0]["supabase"];
-
-      await uploadImage({
-        supabase: mockSupabase,
-        userId: "user1",
-        recordId: "record1",
-        base64: "data",
-        fileExtension: ext,
-        bucket: "practice-images",
-      });
-
-      expect(uploadMock).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(ArrayBuffer),
-        expect.objectContaining({ contentType: expectedType }),
-      );
-    }
-  });
-});
-
-describe("uploadImages", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("複数の画像を正常にアップロードできる", async () => {
-    const mockSupabase = createMockSupabaseClient();
-    const images = [
-      { base64: "data1", fileExtension: "jpg" },
-      { base64: "data2", fileExtension: "png" },
-    ];
-
-    const results = await uploadImages(mockSupabase, "user1", "record1", images, "practice-images");
-
-    expect(results).toHaveLength(2);
-    expect(results[0].path).toContain("user1/record1/");
-    expect(results[1].path).toContain("user1/record1/");
-  });
-
-  it("空の配列を渡すと空の配列を返す", async () => {
-    const mockSupabase = createMockSupabaseClient();
-    const results = await uploadImages(mockSupabase, "user1", "record1", [], "practice-images");
-    expect(results).toEqual([]);
-  });
-
-  it("エラー発生時に成功済み画像をロールバックする", async () => {
-    const removeMock = vi.fn().mockResolvedValue({ error: null });
-    let uploadCount = 0;
-    const uploadMock = vi.fn().mockImplementation(() => {
-      uploadCount++;
-      if (uploadCount >= 2) {
-        return Promise.resolve({ error: { message: "Second upload failed" } });
-      }
-      return Promise.resolve({ error: null });
-    });
-
-    const mockSupabase = {
-      storage: {
-        from: vi.fn(() => ({
-          upload: uploadMock,
-          remove: removeMock,
-          getPublicUrl: vi.fn(() => ({ data: { publicUrl: "https://example.com/test.jpg" } })),
-        })),
-      },
-    } as unknown as Parameters<typeof uploadImage>[0]["supabase"];
-
-    const images = [
-      { base64: "data1", fileExtension: "jpg" },
-      { base64: "data2", fileExtension: "png" },
-      { base64: "data3", fileExtension: "gif" },
-    ];
-
-    await expect(
-      uploadImages(mockSupabase, "user1", "record1", images, "practice-images"),
-    ).rejects.toThrow();
-
-    // ロールバック検証: 成功した1件分だけ削除が呼ばれること
-    expect(removeMock).toHaveBeenCalledTimes(1);
-    // 1件目の成功パス（uuid はモックにより固定値）のみロールバックされること
-    expect(removeMock).toHaveBeenCalledWith([
-      "user1/record1/mocked-uuid-1234-5678-90ab-cdef12345678.jpg",
-    ]);
   });
 });
 

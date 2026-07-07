@@ -34,13 +34,18 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
-import { uploadImagesViaApi, deleteImagesViaApi, resolveGalleryImages } from "@/utils/imageUpload";
+import {
+  uploadImagesViaApi,
+  deleteImagesViaApi,
+  resolveGalleryImages,
+  mergeImagePaths,
+} from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { localizedStyleName } from "@/utils/styleName";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { LapTimeDisplay } from "@/components/records";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTimeStrict } from "@apps/shared/utils/time";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, Competition } from "@apps/shared/types";
 
@@ -475,11 +480,12 @@ export const RecordFormScreen: React.FC = () => {
             uploadedImagePaths = uploadResults.map((r) => r.path);
           }
 
-          // 既存画像パス（生パス。表示専用の resolveGalleryImages 結果は署名URL取得に
-          // 失敗したパスを除外してしまうため保存には使わない）から削除されたものを除外し、
-          // 新規画像パスを追加
-          const currentPaths = existingImagePaths.filter((path) => !deletedImageIds.includes(path));
-          const updatedImagePaths = [...currentPaths, ...uploadedImagePaths];
+          // 生パス (source of truth) から削除分を除外し新規分を追加（mergeImagePaths 参照）
+          const updatedImagePaths = mergeImagePaths(
+            existingImagePaths,
+            deletedImageIds,
+            uploadedImagePaths,
+          );
 
           // 大会の画像パスを更新
           await updateCompetitionMutation.mutateAsync({
@@ -673,9 +679,10 @@ export const RecordFormScreen: React.FC = () => {
       return;
     }
 
-    // shared parseTime:「:」=分 (web RecordSetItem onBlur と同一エンジン)
-    const parsed = parseTime(text);
-    if (parsed <= 0) {
+    // shared parseTimeStrict:「:」=分 + 構造ガード。"1.23.45" のような不正形式が
+    // 1.23 秒として静かに確定されるのを防ぐ（クイック入力 "31-2" は通す）
+    const parsed = parseTimeStrict(text);
+    if (parsed === null) {
       setError("time", t("recordMobile.form.timeFormatInvalid"));
       setTime(null);
     } else {
@@ -957,8 +964,9 @@ export const RecordFormScreen: React.FC = () => {
                       });
                       return;
                     }
-                    const parsed = parseTime(text);
-                    if (parsed > 0) {
+                    // 構造ガード付きパース: 不正形式は確定しない（生文字列を残す）
+                    const parsed = parseTimeStrict(text);
+                    if (parsed !== null) {
                       updateSplitTime(originalIndex, { splitTime: parsed });
                       setSplitTimeDisplayValues((prev) => ({
                         ...prev,

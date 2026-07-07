@@ -261,46 +261,37 @@ function parseQuickFormat(cleaned: string): number {
 }
 
 /**
- * 時間文字列を秒数に変換（nullを返すバージョン、バリデーション用）
+ * タイム入力の許容形式（構造ガード用正規表現、web/mobile 共通の正典）:
+ *
+ *  従来形式  \d+(:\d+)?(\.\d+)?  → "1:23.45" "1:30" "23.45" "30"
+ *  クイック式 \d+(-\d+){1,2}     → "31-2" "1-05-3"
+ *
+ * 末尾 s は許容。多重ドット ("1.23.45")・多重コロン ("1:2:3")・
+ * 連続区切り・英字・負値を構造的に弾く。
+ */
+export const TIME_FORMAT_REGEX = /^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i;
+
+/**
+ * 時間文字列を秒数に変換（TIME_FORMAT_REGEX で構造ガードした厳格版、バリデーション用）
+ *
+ * "1.23.45" が 1.23 秒、"31-2" が 31 秒として誤解釈・誤保存されるのを防ぐ。
+ * 構造チェックを通過した入力のみ parseTime に委譲し、0 以下は null を返す。
  *
  * @param timeString - 時間文字列
  * @returns 秒数、または無効な場合はnull
  * @example parseTimeStrict("1:23.45") => 83.45
+ * @example parseTimeStrict("31-2") => 31.2 (クイック入力形式)
+ * @example parseTimeStrict("1.23.45") => null
+ * @example parseTimeStrict("1:2:3") => null
  * @example parseTimeStrict("invalid") => null
  */
 export function parseTimeStrict(timeString: string): number | null {
-  if (!timeString || timeString.trim() === "") return null;
-
+  if (!timeString) return null;
   const trimmed = timeString.trim();
-
-  try {
-    const parts = trimmed.split(":");
-    // コロンが2つ以上ある場合は不正な形式
-    if (parts.length > 2) return null;
-
-    if (parts.length === 2) {
-      // "MM:SS.ms" 形式
-      const minutes = parseInt(parts[0].trim(), 10);
-      const seconds = parseFloat(parts[1].trim());
-
-      if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) return null;
-      if (Number.isNaN(minutes) || Number.isNaN(seconds)) return null;
-      if (minutes < 0 || seconds < 0) return null;
-
-      return minutes * 60 + seconds;
-    } else {
-      // "SS.ms" 形式
-      const seconds = parseFloat(trimmed);
-
-      if (!Number.isFinite(seconds) || Number.isNaN(seconds) || seconds < 0) {
-        return null;
-      }
-
-      return seconds;
-    }
-  } catch {
-    return null;
-  }
+  if (!trimmed) return null;
+  if (!TIME_FORMAT_REGEX.test(trimmed)) return null;
+  const seconds = parseTime(trimmed);
+  return seconds > 0 ? seconds : null;
 }
 
 // =============================================================================

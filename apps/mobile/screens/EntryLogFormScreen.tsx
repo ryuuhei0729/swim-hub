@@ -25,7 +25,7 @@ import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
 import { localizedStyleName } from "@/utils/styleName";
-import { parseTime, formatTimeBest } from "@apps/shared/utils/time";
+import { parseTime, parseTimeStrict, formatTimeBest } from "@apps/shared/utils/time";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
@@ -223,6 +223,11 @@ export const EntryLogFormScreen: React.FC = () => {
       if (!entry.styleId) {
         newErrors[`style-${index}`] = t("competition.entry.selectStyleRequired");
       }
+      // blur を経ずに保存された場合の不正形式 ("1.23.45" 等) を確定拒否する
+      const rawTime = entry.entryTimeDisplayValue.trim();
+      if (rawTime !== "" && parseTimeStrict(rawTime) === null) {
+        newErrors[`entryTime-${index}`] = t("competition.entry.timeFormatInvalid");
+      }
     });
 
     setErrors(newErrors);
@@ -295,17 +300,39 @@ export const EntryLogFormScreen: React.FC = () => {
     );
   };
 
-  // エントリータイム blur 時の再フォーマット (web CompetitionTabModal onBlur :1083-1090 と同一)
+  // エントリータイム blur 時の確定・再フォーマット。
+  // parseTimeStrict で構造ガードし、"1.23.45" のような不正形式が 1.23 秒として
+  // 静かに確定されるのを防ぐ（確定拒否 + エラー表示。クイック入力 "31-2" は通す）
   const handleEntryTimeBlur = (entryId: string) => {
     setEntries((prev) =>
-      prev.map((entry) => {
+      prev.map((entry, index) => {
         if (entry.id !== entryId) return entry;
-        const parsed = parseTime(entry.entryTimeDisplayValue);
+        const raw = entry.entryTimeDisplayValue.trim();
+        if (raw === "") {
+          setErrors((prevErrors) => {
+            const next = { ...prevErrors };
+            delete next[`entryTime-${index}`];
+            return next;
+          });
+          return { ...entry, entryTime: 0 };
+        }
+        const parsed = parseTimeStrict(raw);
+        if (parsed === null) {
+          setErrors((prevErrors) => ({
+            ...prevErrors,
+            [`entryTime-${index}`]: t("competition.entry.timeFormatInvalid"),
+          }));
+          return { ...entry, entryTime: 0 };
+        }
+        setErrors((prevErrors) => {
+          const next = { ...prevErrors };
+          delete next[`entryTime-${index}`];
+          return next;
+        });
         return {
           ...entry,
           entryTime: parsed,
-          entryTimeDisplayValue:
-            parsed > 0 ? formatTimeBest(parsed) : entry.entryTimeDisplayValue,
+          entryTimeDisplayValue: formatTimeBest(parsed),
         };
       }),
     );

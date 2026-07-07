@@ -65,13 +65,14 @@ describe("useTimeValidation", () => {
         expect(result.current.parseTime("1:30")).toBe(90);
       });
 
-      it("0秒をパースできる", () => {
+      it("0秒はnullを返す（正のタイムのみ有効）", () => {
         const { result } = renderHook(() => useTimeValidation());
 
-        expect(result.current.parseTime("0")).toBe(0);
-        expect(result.current.parseTime("0.0")).toBe(0);
-        expect(result.current.parseTime("0:00")).toBe(0);
-        expect(result.current.parseTime("0:00.00")).toBe(0);
+        // parseTime は parseTimeStrict に委譲。0 以下は無効なタイムとして null
+        expect(result.current.parseTime("0")).toBeNull();
+        expect(result.current.parseTime("0.0")).toBeNull();
+        expect(result.current.parseTime("0:00")).toBeNull();
+        expect(result.current.parseTime("0:00.00")).toBeNull();
       });
     });
 
@@ -125,10 +126,10 @@ describe("useTimeValidation", () => {
     });
 
     describe("境界値", () => {
-      it("0分0秒をパースできる", () => {
+      it("0分0秒はnullを返す（正のタイムのみ有効）", () => {
         const { result } = renderHook(() => useTimeValidation());
 
-        expect(result.current.parseTime("0:00.00")).toBe(0);
+        expect(result.current.parseTime("0:00.00")).toBeNull();
       });
 
       it("59分59.99秒をパースできる", () => {
@@ -436,14 +437,15 @@ describe("useTimeValidation", () => {
       expect(parsed).toBeNull();
     });
 
-    it("parseTimeで0を返す場合、validateTimeは無効", () => {
+    it("0秒はparseTimeがnull・validateTimeは値域エラー（形式は正しい）", () => {
       const { result } = renderHook(() => useTimeValidation());
 
       const timeStr = "0:00.00";
       const parsed = result.current.parseTime(timeStr);
       const validation = result.current.validateTime(timeStr);
 
-      expect(parsed).toBe(0);
+      // 形式は正しいため validateTime は「0より大きい」の値域エラーを返す
+      expect(parsed).toBeNull();
       expect(validation.isValid).toBe(false);
       expect(validation.error).toBe("タイムは0より大きい必要があります");
     });

@@ -8,20 +8,18 @@ import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
-import type { BestTime } from "@apps/shared/types/ui";
 import BestTimeBadge from "./BestTimeBadge";
 
 interface RecordItemProps {
   record: RecordWithDetails;
   onPress?: (record: RecordWithDetails) => void;
-  precomputedBestTimes?: BestTime[];
 }
 
 /**
  * 大会記録アイテムコンポーネント
  * 大会記録の1件を表示
  */
-const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress, precomputedBestTimes }) => {
+const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
   // 大会名（null の場合は「大会」フォールバック）
@@ -100,7 +98,6 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress, preco
               poolType={record.pool_type}
               isRelaying={record.is_relaying}
               showDiff={false}
-              precomputedBestTimes={precomputedBestTimes}
             />
           </View>
         </View>
@@ -196,7 +193,6 @@ export const RecordItem = React.memo(RecordItemComponent, (prevProps, nextProps)
     prevStyle?.id === nextStyle?.id &&
     prevStyle?.name_jp === nextStyle?.name_jp &&
     prevStyle?.distance === nextStyle?.distance &&
-    prevProps.onPress === nextProps.onPress &&
-    prevProps.precomputedBestTimes === nextProps.precomputedBestTimes
+    prevProps.onPress === nextProps.onPress
   );
 });

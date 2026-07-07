@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { parseTimeStrict } from "@apps/shared/utils/time";
+import { parseTime as parseRawTime, parseTimeStrict, TIME_FORMAT_REGEX } from "@apps/shared/utils/time";
 import { validateSwimTime, validateTimeString } from "@apps/shared/utils/validators";
 
 /**
@@ -49,17 +49,17 @@ export const useTimeValidation = () => {
       };
     }
 
-    // パースしてバリデーション
-    const parsedTime = parseTimeStrict(timeStr);
-    if (parsedTime === null) {
+    // 形式チェック（"1.23.45" のような不正形式を弾く）
+    const trimmed = timeStr.trim();
+    if (!TIME_FORMAT_REGEX.test(trimmed)) {
       return {
         isValid: false,
         error: t("invalid"),
       };
     }
 
-    // 競泳タイムとしてのバリデーション（1時間以内）
-    const swimResult = validateSwimTime(parsedTime);
+    // 形式は正しいので値域（0 より大きく1時間以内）を検証し、具体的なメッセージを返す
+    const swimResult = validateSwimTime(parseRawTime(trimmed));
     if (!swimResult.valid) {
       return {
         isValid: false,

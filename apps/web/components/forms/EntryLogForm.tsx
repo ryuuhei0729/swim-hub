@@ -7,7 +7,7 @@ import Input from "@/components/ui/Input";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { formatTimeBest, formatTimeShort, parseTime } from "@apps/shared/utils/time";
+import { formatTimeBest, formatTimeShort, parseTimeStrict } from "@apps/shared/utils/time";
 import { format } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
 import { useBestTimes } from "@/hooks/useBestTimes";
@@ -78,6 +78,7 @@ export default function EntryLogForm({
   const tCompetition = useTranslations("forms.competition");
   const tRecordLog = useTranslations("forms.recordLog");
   const tUnsaved = useTranslations("forms.unsavedChanges");
+  const tTimeError = useTranslations("bulkBestTime.error");
   const locale = useLocale();
   const dateFnsLocale = locale === "ja" ? ja : enUS;
 
@@ -351,6 +352,12 @@ export default function EntryLogForm({
       return;
     }
 
+    // バリデーション: 未確定の不正形式タイムが残っていないか（入力欄にエラー表示済み）
+    const hasInvalidTime = entries.some((entry) => isInvalidTimeInput(entry.entryTimeDisplayValue));
+    if (hasInvalidTime) {
+      return;
+    }
+
     setIsSubmitted(true);
     try {
       // この旧フォームはリレー未対応のため isRelaying は false 固定で送る
@@ -399,9 +406,11 @@ export default function EntryLogForm({
     return formatTimeShort(seconds);
   };
 
-  const parseTimeString = (timeString: string): number => {
-    return parseTime(timeString);
-  };
+  // 不正形式（"1.23.45" 等）は blur で確定されず入力値が残るため、入力欄でエラー表示する
+  const isInvalidTimeInput = (displayValue: string | undefined): boolean =>
+    displayValue !== undefined &&
+    displayValue.trim() !== "" &&
+    parseTimeStrict(displayValue) === null;
 
   return (
     <div className="fixed inset-0 z-70 overflow-y-auto" data-testid="entry-form-modal">
@@ -544,8 +553,14 @@ export default function EntryLogForm({
                                   entryTime: 0,
                                   entryTimeDisplayValue: undefined,
                                 });
+                                return;
+                              }
+                              // 構造ガード: 不正形式（"1.23.45" 等）を誤値として確定させない。
+                              // 入力値を残してエラー表示する
+                              const time = parseTimeStrict(timeStr);
+                              if (time === null) {
+                                updateEntry(entry.id, { entryTime: 0 });
                               } else {
-                                const time = parseTimeString(timeStr);
                                 updateEntry(entry.id, {
                                   entryTime: time,
                                   entryTimeDisplayValue: undefined,
@@ -557,6 +572,14 @@ export default function EntryLogForm({
                             data-testid={`entry-time-${index + 1}`}
                             className="w-full"
                           />
+                          {isInvalidTimeInput(entry.entryTimeDisplayValue) && (
+                            <p
+                              className="mt-1 text-xs text-red-600"
+                              data-testid={`entry-time-error-${index + 1}`}
+                            >
+                              {tTimeError("invalidTimeFormat")}
+                            </p>
+                          )}
                           {getBestTimeForStyle(entry.styleId) && (
                             <p className="text-xs text-gray-500 mt-1">
                               {getBestTimeForStyle(entry.styleId)!.label}:{" "}

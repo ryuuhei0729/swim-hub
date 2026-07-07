@@ -29,7 +29,12 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
-import { uploadImagesViaApi, deleteImages, resolveGalleryImages } from "@/utils/imageUpload";
+import {
+  uploadImagesViaApi,
+  deleteImages,
+  resolveGalleryImages,
+  mergeImagePaths,
+} from "@/utils/imageUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -258,10 +263,8 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         newImagePaths = uploadResults.map((r) => r.path);
       }
 
-      // 2. 既存画像パス（生パス。表示専用の resolveGalleryImages 結果は失敗したパスを
-      //    除外してしまうため保存には使わない）から削除されたものを除外し、新規画像パスを追加
-      const currentPaths = savedImagePaths.filter((path) => !deletedImageIds.includes(path));
-      const updatedImagePaths = [...currentPaths, ...newImagePaths];
+      // 2. 生パス (source of truth) から削除分を除外し新規分を追加（mergeImagePaths 参照）
+      const updatedImagePaths = mergeImagePaths(savedImagePaths, deletedImageIds, newImagePaths);
 
       // team_id は除外: RLS UPDATE ポリシーが is_team_admin ガードを持ち、team_id は不変のため
       const formData = {

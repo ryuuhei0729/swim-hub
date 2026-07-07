@@ -1393,7 +1393,8 @@
       "completing": "Wird vorbereitet...",
       "backButton": "Zurück",
       "inputHintTitle": "Als Zahlen eingeben",
-      "inputHintBody": "Sie können Formate wie 1:23.45, 23.45, 23-45 oder 1-23-45 eingeben"
+      "inputHintBody": "Sie können Formate wie 1:23.45, 23.45, 23-45 oder 1-23-45 eingeben",
+      "notePlaceholder": "Datum, Wettkampfname usw."
     },
     "completionFailed": "Einrichtung konnte nicht abgeschlossen werden",
     "stepLabels": {
@@ -1982,8 +1983,6 @@
     "tabsAriaLabel": "Disziplin auswählen",
     "mobile": {
       "description": "Fügen Sie Disziplinen hinzu und speichern Sie Ihre Bestzeiten auf einmal.",
-      "emptyTitle": "Bestzeiten hinzufügen",
-      "emptyBody": "Tippen Sie auf „Disziplin hinzufügen“, um die zu speichernden Disziplinen auszuwählen.",
       "successTitle": "Gespeichert",
       "addRelaying": "+ Wechselzeit hinzufügen",
       "hideRelaying": "Wechselzeit ausblenden",
@@ -2290,6 +2289,7 @@
       "pendingRetry": "Status aktualisieren",
       "teamNotFound": "Team nicht gefunden",
       "webGuide": "Für Funktionen zur Teamverwaltung verwenden Sie bitte die Web-Version.",
+      "bulkRegisterAdminRequired": "Für diese Funktion sind Administratorrechte erforderlich.",
       "webGuideButton": "Web-Version öffnen",
       "pendingMessage": "Ihre Beitrittsanfrage wartet auf die Genehmigung des Administrators.\nBitte warten Sie, bis sie genehmigt wird.",
       "memberRemoveConfirm": "{name} aus dem Team entfernen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
@@ -3635,7 +3635,7 @@
       "timePlaceholder": "z. B. 1:23.45 oder 31-2",
       "timePlaceholder2": "z. B. 2:00.00 oder 2-0-0",
       "reactionTimeLabel": "Reaktionszeit (Sek.)",
-      "reactionTimePlaceholder": "0,40–1,00",
+      "reactionTimePlaceholder": "-1,00 bis 2,00",
       "splitTimeLabel": "Split-Zeit",
       "relayStyleLabel": "Staffeldisziplin",
       "memoLabel": "Notiz",
@@ -3925,7 +3925,7 @@
       "previewLabel": "Vorschau",
       "previewDefault": "Tag-Name",
       "selectModalTitle": "Tags auswählen",
-      "searchPlaceholder": "Tags suchen",
+      "selectSearchPlaceholder": "Tags suchen",
       "noSearchResults": "Keine passenden Tags",
       "actionPrompt": "Bitte wählen Sie eine Aktion für dieses Tag",
       "actionEdit": "Bearbeiten",

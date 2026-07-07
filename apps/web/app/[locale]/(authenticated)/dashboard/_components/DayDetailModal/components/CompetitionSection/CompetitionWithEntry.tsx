@@ -58,11 +58,13 @@ export function CompetitionWithEntry({
   const [entryStatus, setEntryStatus] = useState<"before" | "open" | "closed" | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchEntryData = async () => {
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
+        if (cancelled) return;
         if (!user) {
           setLoading(false);
           setAuthError(t("entry.authRequired"));
@@ -77,16 +79,18 @@ export function CompetitionWithEntry({
           .eq("id", competitionId)
           .single();
 
+        if (cancelled) return;
         if (!competitionError && competitionData) {
           setEntryStatus(competitionData.entry_status || "before");
 
-          // 画像データを変換（署名付きURLを並列取得）
+          // 画像の署名URL解決は本文表示をブロックしない（fire-and-forget）
           const imagePaths = (competitionData as { image_paths?: string[] }).image_paths || [];
-          const images: GalleryImage[] = await resolveGalleryImages(
-            "competition-images",
-            imagePaths,
+          resolveGalleryImages("competition-images", imagePaths).then(
+            (images: GalleryImage[]) => {
+              if (cancelled) return;
+              setCompetitionImages(images);
+            },
           );
-          setCompetitionImages(images);
         }
 
         // EntryAPIを使用してエントリーを取得
@@ -95,6 +99,7 @@ export function CompetitionWithEntry({
         // 現在のユーザーのエントリーのみをフィルタリング
         const userEntries = allEntries.filter((entry) => entry.user_id === user.id);
 
+        if (cancelled) return;
         if (userEntries && userEntries.length > 0) {
           const mapped = userEntries.map((entry) => {
             const style = entry.style;
@@ -120,13 +125,16 @@ export function CompetitionWithEntry({
         }
       } catch (err) {
         console.error("エントリーデータの取得エラー:", err);
-        setCompetitionImages([]);
+        if (!cancelled) setCompetitionImages([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchEntryData();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [competitionId, entryApi, deletedEntryIds?.length]);
 

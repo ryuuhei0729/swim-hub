@@ -74,12 +74,23 @@ export class TeamMembersAPI {
     return data as TeamMembership;
   }
 
+  /**
+   * メンバーを退会させる（管理者による除名）
+   *
+   * 自己退会は leave() が別経路で担うため、remove() は管理者権限を要求する。
+   * .select().single() を付けることで、RLS 拒否や対象メンバー不在による
+   * 0行更新をサイレント成功にせず、エラー (PGRST116) として throw させる。
+   */
   async remove(teamId: string, userId: string): Promise<void> {
+    await requireTeamAdmin(this.supabase, teamId);
+
     const { error } = await this.supabase
       .from("team_memberships")
       .update({ is_active: false, left_at: new Date().toISOString() })
       .eq("team_id", teamId)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select("*")
+      .single();
     if (error) throw error;
   }
 

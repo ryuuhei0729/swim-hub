@@ -1393,7 +1393,8 @@
       "completing": "准备中...",
       "backButton": "返回",
       "inputHintTitle": "请用半角数字输入",
-      "inputHintBody": "可使用 1:23.45 / 23.45 / 23-45 / 1-23-45 等自由格式输入"
+      "inputHintBody": "可使用 1:23.45 / 23.45 / 23-45 / 1-23-45 等自由格式输入",
+      "notePlaceholder": "日期、比赛名称等"
     },
     "completionFailed": "完成处理失败",
     "stepLabels": {
@@ -1982,8 +1983,6 @@
     "tabsAriaLabel": "选择项目",
     "mobile": {
       "description": "可添加项目，批量登记最好成绩。",
-      "emptyTitle": "添加最好成绩",
-      "emptyBody": "请从「添加项目」中选择要登记的项目。",
       "successTitle": "登记完成",
       "addRelaying": "＋ 添加接力成绩",
       "hideRelaying": "隐藏接力成绩",
@@ -2290,6 +2289,7 @@
       "pendingRetry": "刷新状态",
       "teamNotFound": "未找到团队",
       "webGuide": "团队管理功能请使用网页版。",
+      "bulkRegisterAdminRequired": "使用此功能需要管理员权限。",
       "webGuideButton": "打开网页版",
       "pendingMessage": "您的加入申请正在等待管理员审核。\n请耐心等待审核通过。",
       "memberRemoveConfirm": "确定要将{name}从团队中移除吗？\n此操作无法撤销。",
@@ -3635,7 +3635,7 @@
       "timePlaceholder": "例: 1:23.45 或 31-2",
       "timePlaceholder2": "例: 2:00.00 或 2-0-0",
       "reactionTimeLabel": "反应时间（秒）",
-      "reactionTimePlaceholder": "0.40〜1.00",
+      "reactionTimePlaceholder": "-1.00至2.00",
       "splitTimeLabel": "分段成绩",
       "relayStyleLabel": "接力项目",
       "memoLabel": "备注",
@@ -3925,7 +3925,7 @@
       "previewLabel": "预览",
       "previewDefault": "标签名称",
       "selectModalTitle": "选择标签",
-      "searchPlaceholder": "搜索标签",
+      "selectSearchPlaceholder": "搜索标签",
       "noSearchResults": "没有匹配的标签",
       "actionPrompt": "请选择对标签的操作",
       "actionEdit": "编辑",

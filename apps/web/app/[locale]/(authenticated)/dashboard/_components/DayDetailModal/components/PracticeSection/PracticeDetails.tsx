@@ -88,7 +88,9 @@ export function PracticeDetails({
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const timeoutId = setTimeout(() => {
+      if (cancelled) return;
       setLoading(false);
       setError(new Error(tDash("practice.loadTimeout")));
     }, 15000);
@@ -179,25 +181,29 @@ export function PracticeDetails({
           ),
         };
 
-        // 画像データを変換（署名付きURLを並列取得）
-        const imagePaths = practiceData.image_paths || [];
-        const images: GalleryImage[] = await resolveGalleryImages("practice-images", imagePaths);
-
+        if (cancelled) return;
+        // 本文を先に表示し、画像の署名URL解決はブロックしない（fire-and-forget）
         setPractice(formattedPractice);
-        setPracticeImages(images);
         clearTimeout(timeoutId);
+
+        const imagePaths = practiceData.image_paths || [];
+        resolveGalleryImages("practice-images", imagePaths).then((images: GalleryImage[]) => {
+          if (cancelled) return;
+          setPracticeImages(images);
+        });
       } catch (err) {
         clearTimeout(timeoutId);
         console.error("練習詳細の取得エラー:", err);
-        setError(err as Error);
+        if (!cancelled) setError(err as Error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadPractice();
 
     return () => {
+      cancelled = true;
       clearTimeout(timeoutId);
     };
   }, [practiceId, supabase, practiceLogUpdateKey, isTeamPractice, userId, tDash]);

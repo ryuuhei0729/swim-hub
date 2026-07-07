@@ -13,8 +13,35 @@ interface SignedImageUrlResponse {
   expiresAt: number;
 }
 
+// 署名付きURLのキャッシュ（key = "{bucket}/{path}"）。
+// expiresAt（エポックms、APIが返すTTL）まで再取得しない。
+// 失効直前のURLで画像ロードが失敗しないよう、マージン分早めに失効扱いにする。
+const EXPIRY_MARGIN_MS = 60 * 1000;
+const signedUrlCache = new Map<string, SignedImageUrlResponse>();
+// 同一 path の同時リクエストを1本のfetchに集約するための in-flight Promise
+const inflightRequests = new Map<string, Promise<string | null>>();
+
+async function fetchSignedImageUrl(bucket: ImageBucket, path: string): Promise<string | null> {
+  try {
+    const params = new URLSearchParams({ bucket, path });
+    const res = await fetch(`/api/storage/images/presigned-url?${params.toString()}`);
+    if (!res.ok) {
+      return null;
+    }
+    const data = (await res.json()) as SignedImageUrlResponse;
+    signedUrlCache.set(`${bucket}/${path}`, data);
+    return data.url;
+  } catch (error) {
+    console.error("画像URL取得エラー:", error);
+    return null;
+  }
+}
+
 /**
  * 画像の署名付きURLを取得する
+ *
+ * 取得結果は失効時刻までモジュールレベルでキャッシュし、
+ * 同一パスへの同時リクエストは1本に集約する（一覧表示でのN+1リクエスト防止）。
  *
  * @param bucket バケットID
  * @param path バケット内相対パス。移行期の互換のため、既にフルURL（旧データ）の場合はそのまま返す
@@ -31,18 +58,23 @@ export async function getSignedImageUrl(
     return path;
   }
 
-  try {
-    const params = new URLSearchParams({ bucket, path });
-    const res = await fetch(`/api/storage/images/presigned-url?${params.toString()}`);
-    if (!res.ok) {
-      return null;
-    }
-    const data = (await res.json()) as SignedImageUrlResponse;
-    return data.url;
-  } catch (error) {
-    console.error("画像URL取得エラー:", error);
-    return null;
+  const key = `${bucket}/${path}`;
+
+  const cached = signedUrlCache.get(key);
+  if (cached && cached.expiresAt - EXPIRY_MARGIN_MS > Date.now()) {
+    return cached.url;
   }
+
+  const inflight = inflightRequests.get(key);
+  if (inflight) {
+    return inflight;
+  }
+
+  const request = fetchSignedImageUrl(bucket, path).finally(() => {
+    inflightRequests.delete(key);
+  });
+  inflightRequests.set(key, request);
+  return request;
 }
 
 export interface ResolvedGalleryImage {

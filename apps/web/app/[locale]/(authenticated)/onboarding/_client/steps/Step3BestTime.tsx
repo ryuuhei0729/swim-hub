@@ -315,7 +315,6 @@ interface EntryRowProps {
 
 function EntryRow({ entry, styleName, onUpdate, onRemove, disabled, isDuplicate }: EntryRowProps) {
   const t = useTranslations("onboarding.step3");
-  const tBulk = useTranslations("bulkBestTime");
   const [showTimeHint, setShowTimeHint] = useState(false);
 
   return (
@@ -414,7 +413,7 @@ function EntryRow({ entry, styleName, onUpdate, onRemove, disabled, isDuplicate 
             type="text"
             value={entry.note}
             onChange={(e) => onUpdate(entry.key, { note: e.target.value })}
-            placeholder={tBulk("table.notePlaceholder")}
+            placeholder={t("notePlaceholder")}
             disabled={disabled}
             className="w-full px-1.5 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
           />

@@ -2,7 +2,7 @@
  * Mobile: 画像パス保存ロジック テスト (Issue #36 CodeRabbit指摘 データ損失修正)
  *
  * Sprint Contract 検証観点:
- *   [IMG-01] 保存時の currentPaths は「生パス (savedImagePaths/existingImagePaths)」から
+ *   [IMG-01] 保存時の image_paths は「生パス (savedImagePaths/existingImagePaths)」から
  *            計算され、表示専用の resolveGalleryImages 結果 (署名URL取得失敗パスを除外
  *            した配列) からは計算されないこと。
  *   [IMG-02] 署名URL取得が一部/全部失敗しても、画像を追加・削除せず保存すれば
@@ -10,36 +10,17 @@
  *   [IMG-03] 削除フロー (deletedImageIds) が生パスに対して正しく効くこと。
  *
  * 対象: CompetitionBasicFormScreen / RecordFormScreen / PracticeTabFormScreen /
- *       CompetitionTabFormScreen の4画面で共通のパターン。
- *
- * NOTE: 4画面のコンポーネントはレンダリングせず、保存時の currentPaths 計算ロジックを
- *       ピュア関数として再現して検証する（tabFormScreen.saveLogic.test.ts と同型）。
- *       実装をコピーするのではなく、Sprint Contract の仕様
- *       「保存する image_paths は生パス由来、表示専用配列は保存に使わない」から
- *       期待値を導く。
+ *       CompetitionTabFormScreen の4画面の保存ハンドラが共通で呼ぶ実装
+ *       `mergeImagePaths` (apps/mobile/utils/imageUpload.ts) を直接検証する。
  */
 
 import { describe, it, expect } from "vitest";
-
-/**
- * 4画面の保存ハンドラに共通する currentPaths 計算ロジック。
- * 実装 (例: CompetitionBasicFormScreen.tsx):
- *   const currentPaths = savedImagePaths.filter((path) => !deletedImageIds.includes(path));
- *   const updatedImagePaths = [...currentPaths, ...newImagePaths];
- */
-function computeUpdatedImagePaths(
-  savedImagePaths: string[],
-  deletedImageIds: string[],
-  newImagePaths: string[],
-): string[] {
-  const currentPaths = savedImagePaths.filter((path) => !deletedImageIds.includes(path));
-  return [...currentPaths, ...newImagePaths];
-}
+import { mergeImagePaths } from "@/utils/imageUpload";
 
 /**
  * 表示専用の resolveGalleryImages 相当のシミュレーション。
  * 署名URL取得に失敗したパスは結果配列から除外される（apps/mobile/utils/imageUpload.ts
- * の resolveGalleryImages の実装通り）。
+ * の resolveGalleryImages の実装通り）。実装対比の反証デモにのみ使用する。
  */
 function simulateResolveGalleryImages(
   paths: string[],
@@ -50,8 +31,8 @@ function simulateResolveGalleryImages(
     .map((p) => ({ id: p, url: `https://signed.example.com/${p}` }));
 }
 
-describe("[IMG-01] currentPaths は生パス由来であり、表示専用配列とは独立している", () => {
-  it("表示専用配列 (existingImages) が空でも、生パス (savedImagePaths) が保持されていれば currentPaths は失われない", () => {
+describe("[IMG-01] mergeImagePaths は生パス由来であり、表示専用配列とは独立している", () => {
+  it("表示専用配列 (existingImages) が空でも、生パス (savedImagePaths) が保持されていれば保存パスは失われない", () => {
     const savedImagePaths = ["user1/comp1/photo1.jpg", "user1/comp1/photo2.jpg"];
     // 署名URL取得が全部失敗した場合、表示専用配列は空になる
     const existingImages = simulateResolveGalleryImages(
@@ -60,26 +41,28 @@ describe("[IMG-01] currentPaths は生パス由来であり、表示専用配列
     );
     expect(existingImages).toEqual([]); // 表示は空
 
-    // しかし保存時の currentPaths は savedImagePaths から計算されるため保持される
-    const result = computeUpdatedImagePaths(savedImagePaths, [], []);
+    // しかし保存時のパスは savedImagePaths から計算されるため保持される
+    const result = mergeImagePaths(savedImagePaths, [], []);
     expect(result).toEqual(savedImagePaths);
   });
 
-  it("誤って表示専用配列 (existingImages) から currentPaths を計算した場合はデータ損失が起きる（回帰防止の反証）", () => {
+  it("誤って表示専用配列 (existingImages) から保存パスを計算した場合はデータ損失が起きる（回帰防止の反証）", () => {
     const savedImagePaths = ["user1/comp1/photo1.jpg", "user1/comp1/photo2.jpg"];
     const existingImages = simulateResolveGalleryImages(
       savedImagePaths,
       new Set(savedImagePaths), // 全部失敗 → 表示専用配列は空
     );
 
-    // 【誤実装のシミュレーション】表示専用配列の id から currentPaths を計算すると...
-    const buggyCurrentPaths = existingImages
-      .filter((img) => !([] as string[]).includes(img.id))
-      .map((img) => img.id);
+    // 【誤実装のシミュレーション】表示専用配列の id を生パスの代わりに渡すと...
+    const buggyResult = mergeImagePaths(
+      existingImages.map((img) => img.id),
+      [],
+      [],
+    );
 
     // 画像が1枚も無かったことになり、保存すると全画像が消える（Critical バグ）
-    expect(buggyCurrentPaths).toEqual([]);
-    expect(buggyCurrentPaths).not.toEqual(savedImagePaths);
+    expect(buggyResult).toEqual([]);
+    expect(buggyResult).not.toEqual(savedImagePaths);
   });
 });
 
@@ -92,7 +75,7 @@ describe("[IMG-02] 署名URL取得が一部/全部失敗しても、未編集保
     expect(existingImages).toHaveLength(2); // 表示は2枚のみ
 
     // 変更なしで保存 (deletedImageIds=[], newImagePaths=[])
-    const result = computeUpdatedImagePaths(savedImagePaths, [], []);
+    const result = mergeImagePaths(savedImagePaths, [], []);
     expect(result).toHaveLength(3); // 3枚とも保持される（b.jpgも失われない）
     expect(result).toEqual(savedImagePaths);
   });
@@ -102,22 +85,22 @@ describe("[IMG-02] 署名URL取得が一部/全部失敗しても、未編集保
     const existingImages = simulateResolveGalleryImages(savedImagePaths, new Set(savedImagePaths));
     expect(existingImages).toEqual([]);
 
-    const result = computeUpdatedImagePaths(savedImagePaths, [], []);
+    const result = mergeImagePaths(savedImagePaths, [], []);
     expect(result).toEqual(savedImagePaths);
   });
 
   it("既存パスが空の場合、変更なし保存では空のまま（新規追加なしと区別される）", () => {
-    const result = computeUpdatedImagePaths([], [], []);
+    const result = mergeImagePaths([], [], []);
     expect(result).toEqual([]);
   });
 });
 
 describe("[IMG-03] 削除フロー (deletedImageIds) が生パスに対して正しく効く", () => {
-  it("deletedImageIds に含まれるパスが currentPaths から除外される", () => {
+  it("deletedImageIds に含まれるパスが保存パスから除外される", () => {
     const savedImagePaths = ["user1/comp1/a.jpg", "user1/comp1/b.jpg", "user1/comp1/c.jpg"];
     const deletedImageIds = ["user1/comp1/b.jpg"];
 
-    const result = computeUpdatedImagePaths(savedImagePaths, deletedImageIds, []);
+    const result = mergeImagePaths(savedImagePaths, deletedImageIds, []);
     expect(result).toEqual(["user1/comp1/a.jpg", "user1/comp1/c.jpg"]);
   });
 
@@ -127,7 +110,7 @@ describe("[IMG-03] 削除フロー (deletedImageIds) が生パスに対して正
     const savedImagePaths = ["user1/comp1/a.jpg", "user1/comp1/b.jpg"];
     const deletedImageIds = ["user1/comp1/b.jpg"];
 
-    const result = computeUpdatedImagePaths(savedImagePaths, deletedImageIds, []);
+    const result = mergeImagePaths(savedImagePaths, deletedImageIds, []);
     expect(result).toEqual(["user1/comp1/a.jpg"]);
   });
 
@@ -136,7 +119,7 @@ describe("[IMG-03] 削除フロー (deletedImageIds) が生パスに対して正
     const deletedImageIds = ["user1/comp1/a.jpg"];
     const newImagePaths = ["user1/comp1/new-uuid.jpg"];
 
-    const result = computeUpdatedImagePaths(savedImagePaths, deletedImageIds, newImagePaths);
+    const result = mergeImagePaths(savedImagePaths, deletedImageIds, newImagePaths);
     expect(result).toEqual(["user1/comp1/b.jpg", "user1/comp1/new-uuid.jpg"]);
   });
 
@@ -144,7 +127,7 @@ describe("[IMG-03] 削除フロー (deletedImageIds) が生パスに対して正
     const savedImagePaths = ["user1/comp1/a.jpg", "user1/comp1/b.jpg"];
     const deletedImageIds = ["user1/comp1/a.jpg", "user1/comp1/b.jpg"];
 
-    const result = computeUpdatedImagePaths(savedImagePaths, deletedImageIds, []);
+    const result = mergeImagePaths(savedImagePaths, deletedImageIds, []);
     expect(result).toEqual([]);
   });
 
@@ -152,7 +135,7 @@ describe("[IMG-03] 削除フロー (deletedImageIds) が生パスに対して正
     const savedImagePaths = ["user1/comp1/a.jpg"];
     const deletedImageIds = ["user1/comp1/nonexistent.jpg"];
 
-    const result = computeUpdatedImagePaths(savedImagePaths, deletedImageIds, []);
+    const result = mergeImagePaths(savedImagePaths, deletedImageIds, []);
     expect(result).toEqual(["user1/comp1/a.jpg"]);
   });
 });

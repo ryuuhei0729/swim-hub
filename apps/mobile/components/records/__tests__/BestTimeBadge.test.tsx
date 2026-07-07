@@ -1,22 +1,26 @@
 // =============================================================================
-// BestTimeBadge.test.tsx - 自己ベスト3状態バッジのテスト
+// BestTimeBadge.test.tsx - 自己ベストバッジのテスト
 // =============================================================================
-// 新3状態モデル (web ShareBadgeState ポート) の仕様に基づく検証:
+// 3状態モデル (web ShareBadgeState ポート。詳細画面・シェアカード向け) の検証:
 // - 初記録: 「初」(first)
 // - ベスト更新 (±0含む, BEST_EPSILON=0.005): 「自己ベスト」+ 符号付き差分 (best)
 // - ベストより遅い: 「自己ベスト」+ 符号付き差分 (slower)
-// - 判定不能 (previousBest 不明 / ガード / エラー / 自身が現行ベスト): 非表示 (none)
+// - 判定不能 (previousBest 不明 / ガード / エラー): 非表示 (none)
+//
+// 一覧パス (showDiff=false。web components/ui/BestTimeBadge.tsx と同一アルゴリズム) の検証:
+// - 「その記録の記録日時点で自己ベストだったか」を2クエリ (大会/一括) の min で判定
+// - ベストのときのみ「自己ベスト」バッジ (差分なし)、それ以外・判定不能は非表示
 //
 // i18n は vitest.setup.ts のモックが実 ja.json を解決するため、
 // "初" / "自己ベスト" の実値でアサートする。
 // =============================================================================
 
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createMockSupabaseClient } from "@/__mocks__/supabase";
-import type { MockSupabaseClient } from "@/__mocks__/supabase";
-import type { BestTime } from "@apps/shared/types/ui";
+import type { Mock } from "vitest";
+import { createMockSupabaseClient, createMockQueryBuilder } from "@/__mocks__/supabase";
+import type { MockSupabaseClient, MockQueryBuilder } from "@/__mocks__/supabase";
 
 // --- AuthProvider モック ---
 const mockUseAuth = vi.hoisted(() => vi.fn());
@@ -59,23 +63,9 @@ function renderBadge(
         recordDate={"recordDate" in props ? props.recordDate : "2025-03-01"}
         poolType={"poolType" in props ? props.poolType : 1}
         isRelaying={props.isRelaying ?? false}
-        precomputedBestTimes={props.precomputedBestTimes}
+        showDiff={props.showDiff}
       />,
     ),
-  };
-}
-
-/** precomputedBestTimes 用エントリ生成 */
-function makeBestTime(overrides: Partial<BestTime> = {}): BestTime {
-  return {
-    id: "bt-other",
-    time: 60.0,
-    created_at: "2025-01-01T00:00:00.000Z",
-    pool_type: 1,
-    is_relaying: false,
-    style_id: 1,
-    style: { name_jp: "自由形", distance: 100 },
-    ...overrides,
   };
 }
 
@@ -129,141 +119,205 @@ describe("BestTimeBadge", () => {
   });
 
   // ------------------------------------------------------------------
-  // 2. precomputedBestTimes パス（同期判定・Supabase 不使用）
+  // 2. 一覧パス（showDiff=false: web 一覧 BestTimeBadge と同一の非同期履歴判定）
   // ------------------------------------------------------------------
 
-  describe("precomputedBestTimes パス", () => {
-    it("同条件の記録が存在しないとき「初」を表示し Supabase クエリが走らない", () => {
-      const { supabase } = renderBadge({
-        currentTime: 55.0,
-        precomputedBestTimes: [], // マッチなし = 初記録
+  describe("一覧パス (showDiff=false)", () => {
+    /**
+     * 一覧パス用の Supabase モックを生成する。
+     * from() の呼び出し順 = 実装のクエリ構築順（1回目: 大会記録, 2回目: 一括登録）。
+     */
+    function createListSupabase(
+      options: {
+        userId?: string;
+        competitionRows?: Array<{ id: string; time: number }>;
+        bulkRows?: Array<{ id: string; time: number }>;
+        queryError?: unknown;
+      } = {},
+    ) {
+      const supabase = createMockSupabaseClient({ userId: options.userId ?? "user-1" });
+      const builders: MockQueryBuilder<unknown>[] = [];
+      (supabase.from as unknown as Mock).mockImplementation(() => {
+        const data =
+          builders.length === 0 ? (options.competitionRows ?? []) : (options.bulkRows ?? []);
+        const builder = createMockQueryBuilder<unknown>(data, options.queryError ?? null);
+        builders.push(builder);
+        return builder;
       });
+      return { supabase, builders };
+    }
 
-      expect(screen.getByText(FIRST_LABEL)).toBeTruthy();
-      expect(supabase.from).not.toHaveBeenCalled();
+    /** 2クエリ (大会/一括) の実行完了と state 反映を待つ */
+    async function waitForListQueries(supabase: MockSupabaseClient) {
+      await waitFor(() => {
+        expect(supabase.from).toHaveBeenCalledTimes(2);
+      });
+      // Promise.all → setState のマイクロタスクを flush する
+      await act(async () => {});
+    }
+
+    it("過去記録がないとき（記録日時点で初ベスト）「自己ベスト」バッジのみ表示する", async () => {
+      const { supabase } = createListSupabase();
+
+      renderBadge({ currentTime: 55.0, showDiff: false }, supabase);
+
+      expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
+      // 一覧パスは「初」バッジ・差分ラベルを出さない (web 一覧に存在しないため)
+      expect(screen.queryByText(FIRST_LABEL)).toBeNull();
+      expect(supabase.from).toHaveBeenCalledTimes(2);
+      expect(supabase.from).toHaveBeenCalledWith("records");
+      // 一覧パスは RecordAPI.getPreviousBestTime を使わない
       expect(mockGetPreviousBestTime).not.toHaveBeenCalled();
     });
 
-    it("style_id は一致しても pool_type が異なるならマッチせず「初」を表示する", () => {
-      renderBadge({
-        currentTime: 55.0,
-        poolType: 1,
-        precomputedBestTimes: [makeBestTime({ pool_type: 0, time: 50.0 })],
+    it("過去ベスト (大会/一括の min) より速いとき「自己ベスト」を表示する", async () => {
+      const { supabase } = createListSupabase({
+        competitionRows: [{ id: "other-1", time: 55.0 }],
+        bulkRows: [{ id: "other-2", time: 50.0 }],
       });
 
-      expect(screen.getByText(FIRST_LABEL)).toBeTruthy();
+      renderBadge({ currentTime: 49.5, showDiff: false }, supabase);
+
+      expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
     });
 
-    it("自身が現行ベスト（マッチした id === recordId）のとき何も表示しない", () => {
-      const { supabase } = renderBadge({
-        recordId: "record-1",
-        currentTime: 55.0,
-        precomputedBestTimes: [makeBestTime({ id: "record-1", time: 55.0 })],
+    it("過去ベスト (min=一括 50.0) 以上のタイムのとき何も表示しない", async () => {
+      // 大会ベスト 55.0 よりは速いが一括ベスト 50.0 より遅い → min 比較で非表示
+      const { supabase } = createListSupabase({
+        competitionRows: [{ id: "other-1", time: 55.0 }],
+        bulkRows: [{ id: "other-2", time: 50.0 }],
       });
 
+      renderBadge({ currentTime: 52.0, showDiff: false }, supabase);
+
+      await waitForListQueries(supabase);
+      expectNoBadge();
+    });
+
+    it("同タイムのとき何も表示しない (web と同じ currentTime < previousBest 判定)", async () => {
+      const { supabase } = createListSupabase({
+        competitionRows: [{ id: "other-1", time: 55.0 }],
+      });
+
+      renderBadge({ currentTime: 55.0, showDiff: false }, supabase);
+
+      await waitForListQueries(supabase);
+      expectNoBadge();
+    });
+
+    it("クエリ条件が web 一覧判定と一致する (自己除外・水路・リレー・記録日比較)", async () => {
+      const { supabase, builders } = createListSupabase();
+
+      renderBadge(
+        {
+          recordId: "record-1",
+          styleId: 1,
+          currentTime: 55.0,
+          recordDate: "2025-03-01",
+          poolType: 1,
+          isRelaying: true,
+          showDiff: false,
+        },
+        supabase,
+      );
+
+      await waitForListQueries(supabase);
+      const [competitionQuery, bulkQuery] = builders;
+
+      // 1. 大会記録クエリ: competitions.date < recordDate
+      expect(competitionQuery.select).toHaveBeenCalledWith(
+        "id, time, competition:competitions!inner(date)",
+      );
+      expect(competitionQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(competitionQuery.eq).toHaveBeenCalledWith("style_id", 1);
+      expect(competitionQuery.eq).toHaveBeenCalledWith("is_relaying", true);
+      expect(competitionQuery.eq).toHaveBeenCalledWith("pool_type", 1);
+      expect(competitionQuery.neq).toHaveBeenCalledWith("id", "record-1");
+      expect(competitionQuery.lt).toHaveBeenCalledWith("competition.date", "2025-03-01");
+      expect(competitionQuery.order).toHaveBeenCalledWith("time", { ascending: true });
+      expect(competitionQuery.limit).toHaveBeenCalledWith(1);
+
+      // 2. 一括登録クエリ: created_at < 正規化 recordDate (YYYY-MM-DD → T00:00:00.000Z)
+      expect(bulkQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(bulkQuery.eq).toHaveBeenCalledWith("style_id", 1);
+      expect(bulkQuery.eq).toHaveBeenCalledWith("is_relaying", true);
+      expect(bulkQuery.eq).toHaveBeenCalledWith("pool_type", 1);
+      expect(bulkQuery.is).toHaveBeenCalledWith("competition_id", null);
+      expect(bulkQuery.neq).toHaveBeenCalledWith("id", "record-1");
+      expect(bulkQuery.lt).toHaveBeenCalledWith("created_at", "2025-03-01T00:00:00.000Z");
+      expect(bulkQuery.order).toHaveBeenCalledWith("time", { ascending: true });
+      expect(bulkQuery.limit).toHaveBeenCalledWith(1);
+    });
+
+    it("poolType が null のとき pool_type フィルタを適用しない (web と同一の分岐)", async () => {
+      const { supabase, builders } = createListSupabase();
+
+      renderBadge({ currentTime: 55.0, poolType: null, showDiff: false }, supabase);
+
+      await waitForListQueries(supabase);
+      const [competitionQuery, bulkQuery] = builders;
+      expect(competitionQuery.eq).not.toHaveBeenCalledWith("pool_type", expect.anything());
+      expect(bulkQuery.eq).not.toHaveBeenCalledWith("pool_type", expect.anything());
+    });
+
+    it("recordDate が ISO タイムスタンプのときはそのまま created_at と比較する", async () => {
+      const { supabase, builders } = createListSupabase();
+
+      renderBadge(
+        { currentTime: 55.0, recordDate: "2025-03-01T10:00:00.000Z", showDiff: false },
+        supabase,
+      );
+
+      await waitForListQueries(supabase);
+      const [, bulkQuery] = builders;
+      expect(bulkQuery.lt).toHaveBeenCalledWith("created_at", "2025-03-01T10:00:00.000Z");
+    });
+
+    it("styleId がないとき何も表示せずクエリも実行しない", async () => {
+      const { supabase } = createListSupabase();
+
+      renderBadge({ styleId: undefined, showDiff: false }, supabase);
+
+      await act(async () => {});
       expectNoBadge();
       expect(supabase.from).not.toHaveBeenCalled();
     });
 
-    it("既存ベストより速いとき「自己ベスト」+ マイナス差分を表示する", () => {
-      const { supabase } = renderBadge({
-        currentTime: 58.77,
-        precomputedBestTimes: [makeBestTime({ time: 60.0 })],
-      });
+    it("recordDate がないとき何も表示せずクエリも実行しない", async () => {
+      const { supabase } = createListSupabase();
 
-      expect(screen.getByText(PERSONAL_BEST_LABEL)).toBeTruthy();
-      expect(screen.getByText("-1.23")).toBeTruthy();
+      renderBadge({ recordDate: null, showDiff: false }, supabase);
+
+      await act(async () => {});
+      expectNoBadge();
       expect(supabase.from).not.toHaveBeenCalled();
     });
 
-    it("既存ベストより遅いとき「自己ベスト」+ プラス差分を表示する", () => {
-      renderBadge({
-        currentTime: 62.5,
-        precomputedBestTimes: [makeBestTime({ time: 60.0 })],
+    it("未認証のとき何も表示せずクエリも実行しない", async () => {
+      const { supabase } = createListSupabase({ userId: "" });
+
+      renderBadge({ currentTime: 55.0, showDiff: false }, supabase);
+
+      await waitFor(() => {
+        expect(supabase.auth.getUser).toHaveBeenCalled();
       });
-
-      expect(screen.getByText(PERSONAL_BEST_LABEL)).toBeTruthy();
-      expect(screen.getByText("+2.50")).toBeTruthy();
-    });
-
-    it("poolType 未指定 (null) は pool_type=0 のエントリとマッチする", () => {
-      renderBadge({
-        currentTime: 62.5,
-        poolType: null,
-        precomputedBestTimes: [makeBestTime({ pool_type: 0, time: 60.0 })],
-      });
-
-      expect(screen.getByText(PERSONAL_BEST_LABEL)).toBeTruthy();
-      expect(screen.getByText("+2.50")).toBeTruthy();
-    });
-
-    // --- リレー区分の選択ロジック ---
-
-    it("isRelaying=true + 主エントリ非リレーのとき relayingTime.time と比較する（time=60 ではなく 50）", () => {
-      // relayingTime.time=50 と比較: 55 > 50 → slower "+5.00"
-      // 誤って match.time=60 と比較すると 55 < 60 → best になりテストが FAIL する
-      renderBadge({
-        currentTime: 55.0,
-        isRelaying: true,
-        precomputedBestTimes: [
-          makeBestTime({
-            time: 60.0,
-            is_relaying: false,
-            relayingTime: { id: "bt-r-1", time: 50.0, created_at: "2025-01-01T00:00:00.000Z" },
-          }),
-        ],
-      });
-
-      expect(screen.getByText(PERSONAL_BEST_LABEL)).toBeTruthy();
-      expect(screen.getByText("+5.00")).toBeTruthy();
-    });
-
-    it("isRelaying=true + 主エントリ非リレーで relayingTime がないとき「初」を表示する", () => {
-      renderBadge({
-        currentTime: 55.0,
-        isRelaying: true,
-        precomputedBestTimes: [makeBestTime({ time: 50.0, is_relaying: false })],
-      });
-
-      expect(screen.getByText(FIRST_LABEL)).toBeTruthy();
-    });
-
-    it("isRelaying=true + フォールバックエントリ（is_relaying=true）のとき本体 time と比較する", () => {
-      renderBadge({
-        currentTime: 55.0,
-        isRelaying: true,
-        precomputedBestTimes: [makeBestTime({ time: 50.0, is_relaying: true })],
-      });
-
-      expect(screen.getByText(PERSONAL_BEST_LABEL)).toBeTruthy();
-      expect(screen.getByText("+5.00")).toBeTruthy();
-    });
-
-    it("isRelaying=false + エントリがリレー記録（is_relaying=true）のとき「初」を表示する", () => {
-      renderBadge({
-        currentTime: 55.0,
-        isRelaying: false,
-        precomputedBestTimes: [makeBestTime({ time: 50.0, is_relaying: true })],
-      });
-
-      expect(screen.getByText(FIRST_LABEL)).toBeTruthy();
-    });
-
-    it("isRelaying=true で relayingTime.id === recordId（自身が現行リレーベスト）のとき何も表示しない", () => {
-      renderBadge({
-        recordId: "record-1",
-        currentTime: 50.0,
-        isRelaying: true,
-        precomputedBestTimes: [
-          makeBestTime({
-            time: 60.0,
-            is_relaying: false,
-            relayingTime: { id: "record-1", time: 50.0, created_at: "2025-01-01T00:00:00.000Z" },
-          }),
-        ],
-      });
-
+      await act(async () => {});
       expectNoBadge();
+      expect(supabase.from).not.toHaveBeenCalled();
+    });
+
+    it("クエリエラー時は console.error を呼び何も表示しない", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { supabase } = createListSupabase({ queryError: new Error("DB error") });
+
+      renderBadge({ currentTime: 55.0, showDiff: false }, supabase);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith("ベストタイムチェックエラー:", expect.any(Error));
+      });
+      expectNoBadge();
+
+      consoleSpy.mockRestore();
     });
   });
 
@@ -366,15 +420,6 @@ describe("BestTimeBadge", () => {
 
       expectNoBadge();
       expect(mockGetPreviousBestTime).not.toHaveBeenCalled();
-    });
-
-    it("precomputed パスでも currentTime=0 なら何も表示しない", () => {
-      renderBadge({
-        currentTime: 0,
-        precomputedBestTimes: [makeBestTime({ time: 60.0 })],
-      });
-
-      expectNoBadge();
     });
   });
 });

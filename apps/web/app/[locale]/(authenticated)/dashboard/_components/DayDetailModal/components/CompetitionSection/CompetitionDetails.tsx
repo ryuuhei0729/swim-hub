@@ -133,7 +133,9 @@ export function CompetitionDetails({
     useState<CompetitionShareData | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const timeoutId = window.setTimeout(() => {
+      if (cancelled) return;
       setLoading(false);
       setLoadError(t("competition.loadTimeout"));
     }, 15000);
@@ -172,17 +174,19 @@ export function CompetitionDetails({
           recordQuery,
         ]);
 
+        if (error) throw error;
+
+        // 画像の署名URL解決は本文表示をブロックしない（fire-and-forget）
         const competition = competitionData as {
           image_paths?: string[] | null;
         } | null;
         const imagePaths = competition?.image_paths || [];
-        const images: GalleryImage[] = await resolveGalleryImages(
-          "competition-images",
-          imagePaths,
+        resolveGalleryImages("competition-images", imagePaths).then(
+          (images: GalleryImage[]) => {
+            if (cancelled) return;
+            setCompetitionImages(images);
+          },
         );
-        setCompetitionImages(images);
-
-        if (error) throw error;
 
         // calendar_view形式に変換
         type RecordFromDB = {
@@ -251,21 +255,24 @@ export function CompetitionDetails({
           }),
         );
 
+        if (cancelled) return;
         setActualRecords(formattedRecords);
         clearTimeout(timeoutId);
       } catch (err) {
         clearTimeout(timeoutId);
         console.error("記録の取得エラー:", err);
+        if (cancelled) return;
         setActualRecords([]);
         setCompetitionImages([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadRecords();
 
     return () => {
+      cancelled = true;
       clearTimeout(timeoutId);
     };
   }, [competitionId, supabase, isTeamCompetition, user?.id, t]);

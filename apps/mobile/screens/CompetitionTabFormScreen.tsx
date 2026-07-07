@@ -42,11 +42,16 @@ import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
 import { ItemTabs } from "@/components/forms/ItemTabs";
 import { StyleChipSelector } from "@/components/forms/StyleChipSelector";
 import { LapTimeDisplay, getBestTimeForEntry } from "@/components/records";
-import { uploadImagesViaApi, deleteImages, resolveGalleryImages } from "@/utils/imageUpload";
+import {
+  uploadImagesViaApi,
+  deleteImages,
+  resolveGalleryImages,
+  mergeImagePaths,
+} from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
-import { parseTime, formatTimeBest } from "@apps/shared/utils/time";
+import { parseTime, parseTimeStrict, formatTimeBest } from "@apps/shared/utils/time";
 import { hasUnsavedChanges, isEntryTabVisible, diffRecordDraft } from "@/utils/tabFormUtils";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
@@ -192,8 +197,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const [records, setRecords] = useState<RecordDraftRow[]>([createEmptyRecord()]);
   const [activeRecordIndex, setActiveRecordIndex] = useState(0);
   const [recordErrors, setRecordErrors] = useState<Record<string, string>>({});
-  // 動画保留 (record index → asset)
-  const pendingVideoAssetRef = useRef<Map<number, { uri: string; mimeType?: string }>>(
+  // 動画保留 (record.draftId → asset)
+  // 配列 index キーだとレコード削除で index がずれ、動画の消失/誤添付が起きるため
+  // PracticeTabFormScreen (menu.id キー) と同じく安定 ID で管理する
+  const pendingVideoAssetRef = useRef<Map<string, { uri: string; mimeType?: string }>>(
     new Map(),
   );
 
@@ -540,6 +547,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
       if (!entry.styleId) {
         newErrors[`style-${index}`] = t("competition.entry.selectStyleRequired");
       }
+      // blur を経ずに保存された場合の不正形式 ("1.23.45" 等) を確定拒否する
+      const rawTime = entry.entryTimeDisplayValue.trim();
+      if (rawTime !== "" && parseTimeStrict(rawTime) === null) {
+        newErrors[`entryTime-${index}`] = t("competition.entry.timeFormatInvalid");
+      }
     });
     // 種目重複チェック (web CompetitionTabModal validateAll と同一)
     const styleIds = entries.filter((e) => e.styleId).map((e) => e.styleId);
@@ -559,6 +571,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
       if (!record.styleId && record.time === 0) return;
       if (!record.styleId) {
         newErrors[`style-${index}`] = t("recordMobile.form.styleRequired");
+      }
+      // blur を経ずに保存された場合の不正形式 ("1.23.45" 等) を確定拒否する
+      const rawTime = record.timeDisplayValue.trim();
+      if (rawTime !== "" && parseTimeStrict(rawTime) === null) {
+        newErrors[`time-${index}`] = t("recordMobile.form.timeFormatInvalid");
       }
     });
     setRecordErrors(newErrors);
@@ -623,10 +640,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
           );
           newImagePaths = uploadResults.map((r) => r.path);
         }
-        // 既存画像パス（生パス。表示専用の resolveGalleryImages 結果は署名URL取得に
-        // 失敗したパスを除外してしまうため保存には使わない）から削除されたものを除外
-        const currentPaths = savedImagePaths.filter((path) => !deletedImageIds.includes(path));
-        const updatedImagePaths = [...currentPaths, ...newImagePaths];
+        // 生パス (source of truth) から削除分を除外し新規分を追加（mergeImagePaths 参照）
+        const updatedImagePaths = mergeImagePaths(savedImagePaths, deletedImageIds, newImagePaths);
 
         const formData = {
           date,
@@ -856,9 +871,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
               splitTimes: validSplitTimes,
             });
           }
-          // 動画アップロード (pending asset は元の records 配列のインデックスで管理)
-          const originalIdx = records.indexOf(record);
-          const pendingAsset = pendingVideoAssetRef.current.get(originalIdx);
+          // 動画アップロード (pending asset は record.draftId で管理)
+          const pendingAsset = pendingVideoAssetRef.current.get(record.draftId);
           if (pendingAsset && savedRecord) {
             const videoToken = await getAccessToken();
             if (!videoToken) {
@@ -884,7 +898,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                 );
               }
             }
-            pendingVideoAssetRef.current.delete(originalIdx);
+            pendingVideoAssetRef.current.delete(record.draftId);
           }
         }
       }
@@ -1003,23 +1017,45 @@ export const CompetitionTabFormScreen: React.FC = () => {
     );
   }, [t]);
 
-  // ---- エントリータイム blur 時の再フォーマット (web CompetitionTabModal onBlur と同一) ----
+  // ---- エントリータイム blur 時の確定・再フォーマット ----
+  // parseTimeStrict で構造ガードし、"1.23.45" のような不正形式が 1.23 秒として
+  // 静かに確定されるのを防ぐ（確定拒否 + エラー表示。クイック入力 "31-2" は通す）
   const handleEntryTimeBlur = useCallback(
     (draftId: string) => {
       setEntries((prev) =>
-        prev.map((entry) => {
+        prev.map((entry, index) => {
           if (entry.draftId !== draftId) return entry;
-          const parsed = parseTime(entry.entryTimeDisplayValue);
+          const raw = entry.entryTimeDisplayValue.trim();
+          if (raw === "") {
+            setEntryErrors((prevErrors) => {
+              const next = { ...prevErrors };
+              delete next[`entryTime-${index}`];
+              return next;
+            });
+            return { ...entry, entryTime: 0 };
+          }
+          const parsed = parseTimeStrict(raw);
+          if (parsed === null) {
+            setEntryErrors((prevErrors) => ({
+              ...prevErrors,
+              [`entryTime-${index}`]: t("competition.entry.timeFormatInvalid"),
+            }));
+            return { ...entry, entryTime: 0 };
+          }
+          setEntryErrors((prevErrors) => {
+            const next = { ...prevErrors };
+            delete next[`entryTime-${index}`];
+            return next;
+          });
           return {
             ...entry,
             entryTime: parsed,
-            entryTimeDisplayValue:
-              parsed > 0 ? formatTimeBest(parsed) : entry.entryTimeDisplayValue,
+            entryTimeDisplayValue: formatTimeBest(parsed),
           };
         }),
       );
     },
-    [],
+    [t],
   );
 
   // ---- レコード操作 ----
@@ -1046,11 +1082,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
     });
   }, [swimStyles]);
 
-  const removeRecord = useCallback((draftId: string, index: number) => {
+  const removeRecord = useCallback((draftId: string) => {
     setRecords((prev) => {
       if (prev.length <= 1) return prev;
       const removedIndex = prev.findIndex((r) => r.draftId === draftId);
-      pendingVideoAssetRef.current.delete(index);
+      pendingVideoAssetRef.current.delete(draftId);
       const next = prev.filter((r) => r.draftId !== draftId);
       setActiveRecordIndex((cur) => {
         const newLen = next.length;
@@ -1162,20 +1198,45 @@ export const CompetitionTabFormScreen: React.FC = () => {
     [swimStyles],
   );
 
-  // blur 時に確定値へ再フォーマット (web formatTimeBest と同一表示)
-  const handleRecordTimeBlur = useCallback((draftId: string) => {
-    setRecords((prev) =>
-      prev.map((r) => {
-        if (r.draftId !== draftId) return r;
-        const parsed = parseTime(r.timeDisplayValue);
-        return {
-          ...r,
-          time: parsed,
-          timeDisplayValue: parsed > 0 ? formatTimeBest(parsed) : r.timeDisplayValue,
-        };
-      }),
-    );
-  }, []);
+  // blur 時に確定値へ再フォーマット (web formatTimeBest と同一表示)。
+  // parseTimeStrict で構造ガードし、不正形式は確定せずエラー表示する
+  const handleRecordTimeBlur = useCallback(
+    (draftId: string) => {
+      setRecords((prev) =>
+        prev.map((r, index) => {
+          if (r.draftId !== draftId) return r;
+          const raw = r.timeDisplayValue.trim();
+          if (raw === "") {
+            setRecordErrors((prevErrors) => {
+              const next = { ...prevErrors };
+              delete next[`time-${index}`];
+              return next;
+            });
+            return { ...r, time: 0 };
+          }
+          const parsed = parseTimeStrict(raw);
+          if (parsed === null) {
+            setRecordErrors((prevErrors) => ({
+              ...prevErrors,
+              [`time-${index}`]: t("recordMobile.form.timeFormatInvalid"),
+            }));
+            return { ...r, time: 0 };
+          }
+          setRecordErrors((prevErrors) => {
+            const next = { ...prevErrors };
+            delete next[`time-${index}`];
+            return next;
+          });
+          return {
+            ...r,
+            time: parsed,
+            timeDisplayValue: formatTimeBest(parsed),
+          };
+        }),
+      );
+    },
+    [t],
+  );
 
   // ---- 反応時間: web RecordLogEntry (step=0.01 min=-1 max=2) に合わせて blur 時にクランプ ----
   const handleReactionTimeBlur = useCallback((draftId: string) => {
@@ -1714,7 +1775,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                   onAdd={addRecord}
                   onRemove={(i) => {
                     const target = records[i];
-                    if (target) removeRecord(target.draftId, i);
+                    if (target) removeRecord(target.draftId);
                   }}
                   label={(i) => t("recordMobile.form.recordNumber", { n: i + 1 })}
                   accent="blue"
@@ -1840,9 +1901,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       }
                       onPendingVideoAsset={(asset) => {
                         if (asset) {
-                          pendingVideoAssetRef.current.set(index, asset);
+                          pendingVideoAssetRef.current.set(record.draftId, asset);
                         } else {
-                          pendingVideoAssetRef.current.delete(index);
+                          pendingVideoAssetRef.current.delete(record.draftId);
                         }
                       }}
                     />

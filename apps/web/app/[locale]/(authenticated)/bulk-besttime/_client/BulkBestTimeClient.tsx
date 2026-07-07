@@ -6,7 +6,7 @@ import { cn } from "@/utils/cn";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts";
 import { RecordAPI } from "@apps/shared/api/records";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTimeStrict } from "@apps/shared/utils/time";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -190,13 +190,10 @@ export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps
       if (field === "time") {
         const raw = value.trim();
         if (raw) {
-          // 文書化された2形式のみ許可:
-          //  従来形式  \d+(:\d+)?(\.\d+)?  → "1:23.45" "1:30" "23.45" "30"
-          //  クイック式 \d+(-\d+){1,2}     → "31-2" "1-05-3"
-          // 末尾 s は許容。多重ドット("1.23.45")・多重コロン("1:2:3")・連続区切り・letters を構造的に弾く。
-          const hasInvalidChars = !/^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i.test(raw);
-          const timeInSeconds = parseTime(raw);
-          if (hasInvalidChars || timeInSeconds <= 0) {
+          // parseTimeStrict が TIME_FORMAT_REGEX で構造ガード済み
+          // （"1.23.45" 等の不正形式・0以下は null）
+          const timeInSeconds = parseTimeStrict(raw);
+          if (timeInSeconds === null) {
             updated.error = t("error.invalidTimeFormat");
             updated.timeInSeconds = undefined;
           } else {

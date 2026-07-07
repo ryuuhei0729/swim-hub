@@ -13,17 +13,15 @@ export interface BestTimeEntryRowProps {
   isDuplicate: boolean;
   /** true の場合、長水路ボタンを非活性にする (25m / 100m IM 等) */
   longCourseDisabled?: boolean;
-  /** true の場合、備考欄と引き継ぎチェックボックスを表示する (一括入力モード) */
+  /** true の場合、備考欄を表示する (一括入力モード) */
   showNote?: boolean;
-  /** true の場合、引き継ぎチェックボックスを表示する (引き継ぎ可能な種目) */
-  relayEnabled?: boolean;
   t: TFunction;
 }
 
 /**
  * ベストタイム一括入力の1エントリー (カード)。
  * オンボーディング (showNote なし): 水路トグル + タイムを横並び。
- * 一括入力 (showNote): 水路トグル + 引き継ぎチェックボックス / タイム + 備考を1行。
+ * 一括入力 (showNote): 水路トグル / タイム + 備考を1行。
  */
 export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
   entry,
@@ -34,7 +32,6 @@ export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
   isDuplicate,
   longCourseDisabled = false,
   showNote = false,
-  relayEnabled = false,
   t,
 }) => {
   const timeInvalid = showNote && isEnteredButInvalid(entry.time);
@@ -114,7 +111,7 @@ export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
     );
   }
 
-  // --- 一括入力: 水路トグル + 引き継ぎチェックボックス / タイム + 備考を1行 ---
+  // --- 一括入力: 水路トグル / タイム + 備考を1行 ---
   return (
     <View style={[styles.card, isDuplicate && styles.cardDuplicate]}>
       <View style={styles.cardHeader}>
@@ -122,27 +119,8 @@ export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
         {removeButton}
       </View>
 
-      {/* コントロール行: 水路トグル + 引き継ぎチェックボックス */}
-      <View style={styles.controlsRow}>
-        {poolToggle}
-        {relayEnabled && (
-          <Pressable
-            style={styles.checkbox}
-            onPress={() => onUpdate(entry.key, { isRelaying: !entry.isRelaying })}
-            disabled={disabled}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: entry.isRelaying }}
-            accessibilityLabel={`${styleName} ${t("bulkBestTime.table.relay")}`}
-          >
-            <View style={[styles.checkboxBox, entry.isRelaying && styles.checkboxBoxChecked]}>
-              {entry.isRelaying && <Feather name="check" size={12} color="#FFFFFF" />}
-            </View>
-            <Text style={[styles.checkboxLabel, entry.isRelaying && styles.checkboxLabelChecked]}>
-              {t("bulkBestTime.table.relay")}
-            </Text>
-          </Pressable>
-        )}
-      </View>
+      {/* コントロール行: 水路トグル */}
+      <View style={styles.controlsRow}>{poolToggle}</View>
 
       {/* タイム + 備考を1行 */}
       <View style={[styles.inputRow, styles.inputRowTop]}>
@@ -260,35 +238,6 @@ const styles = StyleSheet.create({
   },
   poolButtonTextDisabled: {
     color: "#D1D5DB",
-  },
-  checkbox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 4,
-  },
-  checkboxBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkboxBoxChecked: {
-    backgroundColor: "#2563EB",
-    borderColor: "#2563EB",
-  },
-  checkboxLabel: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  checkboxLabelChecked: {
-    color: "#2563EB",
-    fontWeight: "600",
   },
   timeInput: {
     height: 36,

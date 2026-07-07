@@ -1390,7 +1390,8 @@
       "completing": "Setting up...",
       "backButton": "Back",
       "inputHintTitle": "Enter as numbers",
-      "inputHintBody": "You can enter formats like 1:23.45, 23.45, 23-45, or 1-23-45"
+      "inputHintBody": "You can enter formats like 1:23.45, 23.45, 23-45, or 1-23-45",
+      "notePlaceholder": "Date, competition name, etc."
     },
     "completionFailed": "Failed to complete setup",
     "stepLabels": {
@@ -1979,8 +1980,6 @@
     "tabsAriaLabel": "Select event",
     "mobile": {
       "description": "Add events and register your best times all at once.",
-      "emptyTitle": "Add best times",
-      "emptyBody": "Tap \"Add event\" to choose the events you want to register.",
       "successTitle": "Registered",
       "addRelaying": "+ Add relay time",
       "hideRelaying": "Hide relay time",
@@ -2289,6 +2288,7 @@
       "pendingRetry": "Refresh status",
       "teamNotFound": "Team not found",
       "webGuide": "For team management features, please use the web version.",
+      "bulkRegisterAdminRequired": "Admin privileges are required to use this feature.",
       "webGuideButton": "Open web version",
       "pendingMessage": "Your team join request is awaiting admin approval.\nPlease wait until it is approved.",
       "memberRemoveConfirm": "Remove {name} from the team?\nThis cannot be undone.",
@@ -3632,7 +3632,7 @@
       "timePlaceholder": "e.g. 1:23.45 or 31-2",
       "timePlaceholder2": "e.g. 2:00.00 or 2-0-0",
       "reactionTimeLabel": "Reaction time (sec)",
-      "reactionTimePlaceholder": "0.40-1.00",
+      "reactionTimePlaceholder": "-1.00 to 2.00",
       "splitTimeLabel": "Split time",
       "relayStyleLabel": "Relay event",
       "memoLabel": "Memo",
@@ -3922,7 +3922,7 @@
       "previewLabel": "Preview",
       "previewDefault": "Tag name",
       "selectModalTitle": "Select tags",
-      "searchPlaceholder": "Search tags",
+      "selectSearchPlaceholder": "Search tags",
       "noSearchResults": "No matching tags",
       "actionPrompt": "Choose an action for this tag",
       "actionEdit": "Edit",

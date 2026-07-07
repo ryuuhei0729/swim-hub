@@ -45,7 +45,12 @@ import { ItemTabs } from "@/components/forms/ItemTabs";
 import { DistanceChips } from "@/components/practices/DistanceChips";
 import { PracticeLogTemplateSelectModal } from "@/components/practices/PracticeLogTemplateSelectModal";
 import { useCreatePracticeLogTemplateMutation } from "@apps/shared/hooks/queries/practiceLogTemplates";
-import { uploadImagesViaApi, deleteImagesViaApi, resolveGalleryImages } from "@/utils/imageUpload";
+import {
+  uploadImagesViaApi,
+  deleteImagesViaApi,
+  resolveGalleryImages,
+  mergeImagePaths,
+} from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { formatTime, formatTimeAverage, SWIM_STYLES } from "@/utils/formatters";
@@ -476,10 +481,8 @@ export const PracticeTabFormScreen: React.FC = () => {
           );
           newImagePaths = uploadResults.map((r) => r.path);
         }
-        // 既存画像パス（生パス。表示専用の resolveGalleryImages 結果は署名URL取得に
-        // 失敗したパスを除外してしまうため保存には使わない）から削除されたものを除外
-        const currentPaths = savedImagePaths.filter((path) => !deletedImageIds.includes(path));
-        const updatedImagePaths = [...currentPaths, ...newImagePaths];
+        // 生パス (source of truth) から削除分を除外し新規分を追加（mergeImagePaths 参照）
+        const updatedImagePaths = mergeImagePaths(savedImagePaths, deletedImageIds, newImagePaths);
 
         const formData = {
           date: practiceTab.date,

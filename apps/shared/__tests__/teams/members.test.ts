@@ -195,10 +195,28 @@ describe("TeamMembersAPI", () => {
   });
 
   describe("remove", () => {
-    it("指定メンバーを退会させることができる", async () => {
+    // remove() は管理者による除名。requireTeamAdmin ガード + .select().single() により
+    // 「RLS 拒否や対象不在で0行更新でもサイレント成功する」問題を防ぐ。
+    it("管理者は指定メンバーを退会させることができる", async () => {
+      const adminMembership = { role: "admin" };
+      const removedMembership = {
+        id: "membership-2",
+        team_id: "team-1",
+        user_id: "member-1",
+        is_active: false,
+      };
+
       supabaseMock.queueTable("team_memberships", [
         {
-          data: null,
+          // 1つ目: requireTeamAdmin による管理者権限チェック
+          data: adminMembership,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null });
+          },
+        },
+        {
+          // 2つ目: 退会 UPDATE（.select().single() が更新後の1行を返す）
+          data: removedMembership,
           configure: (builder) => {
             builder.update.mockReturnValue(builder);
           },
@@ -207,15 +225,84 @@ describe("TeamMembersAPI", () => {
 
       await api.remove("team-1", "member-1");
 
-      const builder = supabaseMock.getBuilderHistory("team_memberships")[0];
-      expect(builder.update).toHaveBeenCalled();
-      expect(builder.eq).toHaveBeenCalledWith("team_id", "team-1");
-      expect(builder.eq).toHaveBeenCalledWith("user_id", "member-1");
+      const adminBuilder = supabaseMock.getBuilderHistory("team_memberships")[0];
+      expect(adminBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+      expect(adminBuilder.eq).toHaveBeenCalledWith("user_id", "test-user-id");
+      expect(adminBuilder.eq).toHaveBeenCalledWith("role", "admin");
+      const updateBuilder = supabaseMock.getBuilderHistory("team_memberships")[1];
+      expect(updateBuilder.update).toHaveBeenCalled();
+      const updateArg = updateBuilder.update.mock.calls[0][0];
+      expect(updateArg.is_active).toBe(false);
+      expect(updateArg.left_at).toEqual(new Date("2025-01-01T00:00:00Z").toISOString());
+      expect(updateBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+      expect(updateBuilder.eq).toHaveBeenCalledWith("user_id", "member-1");
+      // 0行更新検知のために .select().single() が必ず呼ばれること
+      expect(updateBuilder.select).toHaveBeenCalledWith("*");
+      expect(updateBuilder.single).toHaveBeenCalled();
+    });
+
+    it("管理者でない場合は requireTeamAdmin で弾かれ、UPDATE は実行されない", async () => {
+      supabaseMock.queueTable("team_memberships", [
+        {
+          // requireTeamAdmin: admin メンバーシップなし（PGRST116 = 0行）
+          data: null,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({
+              data: null,
+              error: { code: "PGRST116", message: "no rows returned" },
+            });
+          },
+        },
+      ]);
+
+      await expect(api.remove("team-1", "member-1")).rejects.toThrow("管理者権限が必要です");
+      // 権限チェックで止まり、UPDATE 用のクエリビルダーは作られていない
+      expect(supabaseMock.getBuilderHistory("team_memberships")).toHaveLength(1);
+    });
+
+    it("0行更新（RLS 拒否/対象メンバー不在）の場合は例外を投げる", async () => {
+      const adminMembership = { role: "admin" };
+      // PostgREST は .single() で0行の場合 PGRST116 エラーを返す
+      const noRowsError = {
+        code: "PGRST116",
+        message: "JSON object requested, multiple (or no) rows returned",
+      };
+
+      supabaseMock.queueTable("team_memberships", [
+        {
+          data: adminMembership,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null });
+          },
+        },
+        {
+          // UPDATE が0行 → .single() がエラーを返す → throw されること
+          data: null,
+          configure: (builder) => {
+            builder.update.mockReturnValue(builder);
+            builder.single.mockResolvedValue({ data: null, error: noRowsError });
+          },
+        },
+      ]);
+
+      await expect(api.remove("team-1", "member-1")).rejects.toMatchObject({
+        code: "PGRST116",
+      });
     });
 
     it("退会処理でエラーが発生した場合は例外を投げる", async () => {
+      const adminMembership = { role: "admin" };
       const error = new Error("remove failed");
-      supabaseMock.queueTable("team_memberships", [{ data: null, error }]);
+
+      supabaseMock.queueTable("team_memberships", [
+        {
+          data: adminMembership,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null });
+          },
+        },
+        { data: null, error },
+      ]);
 
       await expect(api.remove("team-1", "member-1")).rejects.toThrow(error);
     });
