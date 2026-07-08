@@ -1,6 +1,11 @@
 import { useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { parseTime as parseRawTime, parseTimeStrict, TIME_FORMAT_REGEX } from "@apps/shared/utils/time";
+import {
+  normalizeTimeSeparators,
+  parseTime as parseRawTime,
+  parseTimeStrict,
+  TIME_FORMAT_REGEX,
+} from "@apps/shared/utils/time";
 import { validateSwimTime, validateTimeString } from "@apps/shared/utils/validators";
 
 /**
@@ -49,8 +54,8 @@ export const useTimeValidation = () => {
       };
     }
 
-    // 形式チェック（"1.23.45" のような不正形式を弾く）
-    const trimmed = timeStr.trim();
+    // 形式チェック（"1.23.45" のような不正形式を弾く。全角区切りは ASCII に正規化して許容）
+    const trimmed = normalizeTimeSeparators(timeStr.trim());
     if (!TIME_FORMAT_REGEX.test(trimmed)) {
       return {
         isValid: false,

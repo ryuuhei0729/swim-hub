@@ -16,6 +16,9 @@ const EXPIRY_MARGIN_MS = 60 * 1000;
 /** 再取得スケジュールの下限（サーバー時刻ズレ等による即時再取得ループを防ぐ） */
 const MIN_REFRESH_DELAY_MS = 10 * 1000;
 
+/** urlCache の上限。長時間セッションで多数の画像パスを扱ってもメモリが単調増加しないようにする */
+const URL_CACHE_MAX_ENTRIES = 200;
+
 /**
  * `bucket:path` → 解決済み署名URL のモジュールキャッシュ。
  * 一覧（GroupMemberListModal 等）で行ごとの再取得・リマウント時の再取得を防ぐ。
@@ -32,6 +35,21 @@ function isFresh(entry: SignedImageUrlResponse): boolean {
   return entry.expiresAt - EXPIRY_MARGIN_MS > Date.now();
 }
 
+/**
+ * 失効済みエントリを掃除し、上限超過時は最も古い挿入分から追い出す。
+ * (Map は挿入順を保持するため、先頭から削除する簡易 LRU)
+ */
+function pruneUrlCache(): void {
+  for (const [key, entry] of urlCache) {
+    if (!isFresh(entry)) urlCache.delete(key);
+  }
+  while (urlCache.size >= URL_CACHE_MAX_ENTRIES) {
+    const oldestKey = urlCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    urlCache.delete(oldestKey);
+  }
+}
+
 async function resolveSignedImageUrl(
   bucket: ImageBucket,
   path: string,
@@ -46,7 +64,10 @@ async function resolveSignedImageUrl(
 
   const request = getSignedImageUrlWithExpiry(bucket, path, accessToken)
     .then((entry) => {
-      if (entry) urlCache.set(key, entry);
+      if (entry) {
+        pruneUrlCache();
+        urlCache.set(key, entry);
+      }
       return entry;
     })
     .finally(() => {

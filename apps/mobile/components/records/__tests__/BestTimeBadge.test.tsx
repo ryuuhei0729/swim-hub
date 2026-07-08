@@ -50,8 +50,10 @@ const PERSONAL_BEST_LABEL = "自己ベスト"; // recordMobile.bestBadge.persona
 function renderBadge(
   props: Partial<React.ComponentProps<typeof BestTimeBadge>> = {},
   supabase: MockSupabaseClient = createMockSupabaseClient(),
+  user: { id: string } | null = { id: "user-1" },
 ) {
-  mockUseAuth.mockReturnValue({ supabase });
+  // 一覧パスは supabase.auth.getUser() ではなく AuthProvider の user を参照する
+  mockUseAuth.mockReturnValue({ supabase, user });
 
   return {
     supabase,
@@ -296,14 +298,13 @@ describe("BestTimeBadge", () => {
     it("未認証のとき何も表示せずクエリも実行しない", async () => {
       const { supabase } = createListSupabase({ userId: "" });
 
-      renderBadge({ currentTime: 55.0, showDiff: false }, supabase);
+      renderBadge({ currentTime: 55.0, showDiff: false }, supabase, null);
 
-      await waitFor(() => {
-        expect(supabase.auth.getUser).toHaveBeenCalled();
-      });
       await act(async () => {});
       expectNoBadge();
       expect(supabase.from).not.toHaveBeenCalled();
+      // AuthProvider の user を使うため、行ごとの getUser() は発行しない
+      expect(supabase.auth.getUser).not.toHaveBeenCalled();
     });
 
     it("クエリエラー時は console.error を呼び何も表示しない", async () => {

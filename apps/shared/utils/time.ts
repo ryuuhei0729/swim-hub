@@ -272,6 +272,18 @@ function parseQuickFormat(cleaned: string): number {
 export const TIME_FORMAT_REGEX = /^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i;
 
 /**
+ * 日本語IME由来の全角区切りを ASCII 相当に正規化する（：→: 、。／．→. 、ー等→-）。
+ * parseTime は任意の非数字を区切りとして受理するが、TIME_FORMAT_REGEX は
+ * ASCII 区切りしか通さないため、構造ガード前にこれを通して全角入力を落とさない。
+ */
+export function normalizeTimeSeparators(timeString: string): string {
+  return timeString
+    .replace(/：/g, ":")
+    .replace(/[。．]/g, ".")
+    .replace(/[ー－−‐]/g, "-");
+}
+
+/**
  * 時間文字列を秒数に変換（TIME_FORMAT_REGEX で構造ガードした厳格版、バリデーション用）
  *
  * "1.23.45" が 1.23 秒、"31-2" が 31 秒として誤解釈・誤保存されるのを防ぐ。
@@ -281,17 +293,26 @@ export const TIME_FORMAT_REGEX = /^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i;
  * @returns 秒数、または無効な場合はnull
  * @example parseTimeStrict("1:23.45") => 83.45
  * @example parseTimeStrict("31-2") => 31.2 (クイック入力形式)
+ * @example parseTimeStrict("1：05。30") => 65.3 (全角区切りは ASCII に正規化)
  * @example parseTimeStrict("1.23.45") => null
  * @example parseTimeStrict("1:2:3") => null
  * @example parseTimeStrict("invalid") => null
  */
 export function parseTimeStrict(timeString: string): number | null {
   if (!timeString) return null;
-  const trimmed = timeString.trim();
+  const trimmed = normalizeTimeSeparators(timeString.trim());
   if (!trimmed) return null;
   if (!TIME_FORMAT_REGEX.test(trimmed)) return null;
   const seconds = parseTime(trimmed);
   return seconds > 0 ? seconds : null;
+}
+
+/**
+ * タイム入力欄の「不正形式のまま残っている」判定（web 各フォーム共通）。
+ * 空・未入力は不正扱いしない。"1.23.45" 等、parseTimeStrict が弾く形式のみ true。
+ */
+export function isInvalidTimeInput(displayValue: string | undefined): boolean {
+  return !!displayValue?.trim() && parseTimeStrict(displayValue) === null;
 }
 
 // =============================================================================

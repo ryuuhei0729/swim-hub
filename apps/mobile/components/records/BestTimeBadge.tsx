@@ -105,10 +105,12 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
   isRelaying,
   showDiff,
 }) => {
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const [state, setState] = useState<BadgeState>({ kind: "none" });
   const isListVariant = showDiff === false;
+  // user オブジェクトはトークン更新等で参照が変わり得るため id だけを依存に使う
+  const userId = user?.id;
 
   useEffect(() => {
     if (isListVariant) {
@@ -124,10 +126,9 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
           return;
         }
         try {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (!user) {
+          // 一覧では行ごとに supabase.auth.getUser() (ネットワーク呼び出し) を発行しない。
+          // AuthProvider が保持する user で N+1 のうち認証分の往復を回避する
+          if (!userId) {
             return;
           }
 
@@ -136,7 +137,7 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
           let competitionQuery = supabase
             .from("records")
             .select("id, time, competition:competitions!inner(date)")
-            .eq("user_id", user.id)
+            .eq("user_id", userId)
             .eq("style_id", styleId)
             .eq("is_relaying", isRelaying ?? false)
             .neq("id", recordId)
@@ -156,7 +157,7 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
           let bulkQuery = supabase
             .from("records")
             .select("id, time, created_at")
-            .eq("user_id", user.id)
+            .eq("user_id", userId)
             .eq("style_id", styleId)
             .eq("is_relaying", isRelaying ?? false)
             .is("competition_id", null)
@@ -244,7 +245,7 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase, isListVariant]);
+  }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase, isListVariant, userId]);
 
   if (state.kind === "none") {
     return null;

@@ -9,6 +9,8 @@ import {
   formatTimeDiff,
   formatTimeFull,
   formatTimeShort,
+  isInvalidTimeInput,
+  normalizeTimeSeparators,
   parseTime,
   parseTimeStrict,
   TIME_FORMAT_REGEX,
@@ -347,6 +349,18 @@ describe("time utilities", () => {
       it("前後の空白をトリムする", () => {
         expect(parseTimeStrict("  1:23.45  ")).toBe(83.45);
       });
+
+      it("全角区切り（IME入力）をASCIIに正規化して受理する", () => {
+        expect(parseTimeStrict("1：05。30")).toBe(65.3);
+        expect(parseTimeStrict("31ー2")).toBe(31.2);
+        expect(parseTimeStrict("1ー05ー3")).toBe(65.3);
+      });
+
+      it("全角の多重区切りもASCII同様にnullを返す", () => {
+        // "。" は "." に正規化されるため "1.23.45" と同じ多重ドット扱い
+        expect(parseTimeStrict("1。23。45")).toBeNull();
+        expect(parseTimeStrict("1：2：3")).toBeNull();
+      });
     });
 
     describe("異常系", () => {
@@ -411,6 +425,35 @@ describe("time utilities", () => {
         expect(TIME_FORMAT_REGEX.test("1:23.45")).toBe(true);
         expect(TIME_FORMAT_REGEX.test("1.23.45")).toBe(false);
       });
+    });
+  });
+
+  describe("normalizeTimeSeparators", () => {
+    it("全角区切りをASCIIに変換する", () => {
+      expect(normalizeTimeSeparators("1：05。30")).toBe("1:05.30");
+      expect(normalizeTimeSeparators("31ー2")).toBe("31-2");
+      expect(normalizeTimeSeparators("31－2")).toBe("31-2");
+      expect(normalizeTimeSeparators("31−2")).toBe("31-2");
+      expect(normalizeTimeSeparators("1．23")).toBe("1.23");
+    });
+
+    it("ASCII入力はそのまま返す", () => {
+      expect(normalizeTimeSeparators("1:23.45")).toBe("1:23.45");
+    });
+  });
+
+  describe("isInvalidTimeInput", () => {
+    it("空・未入力は不正扱いしない", () => {
+      expect(isInvalidTimeInput(undefined)).toBe(false);
+      expect(isInvalidTimeInput("")).toBe(false);
+      expect(isInvalidTimeInput("   ")).toBe(false);
+    });
+
+    it("parseTimeStrict が弾く形式のみ true を返す", () => {
+      expect(isInvalidTimeInput("1.23.45")).toBe(true);
+      expect(isInvalidTimeInput("abc")).toBe(true);
+      expect(isInvalidTimeInput("1:23.45")).toBe(false);
+      expect(isInvalidTimeInput("31-2")).toBe(false);
     });
   });
 

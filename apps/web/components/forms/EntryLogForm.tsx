@@ -7,7 +7,12 @@ import Input from "@/components/ui/Input";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { formatTimeBest, formatTimeShort, parseTimeStrict } from "@apps/shared/utils/time";
+import {
+  formatTimeBest,
+  formatTimeShort,
+  isInvalidTimeInput,
+  parseTimeStrict,
+} from "@apps/shared/utils/time";
 import { format } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
 import { useBestTimes } from "@/hooks/useBestTimes";
@@ -405,12 +410,6 @@ export default function EntryLogForm({
   const formatTimeDisplay = (seconds: number): string => {
     return formatTimeShort(seconds);
   };
-
-  // 不正形式（"1.23.45" 等）は blur で確定されず入力値が残るため、入力欄でエラー表示する
-  const isInvalidTimeInput = (displayValue: string | undefined): boolean =>
-    displayValue !== undefined &&
-    displayValue.trim() !== "" &&
-    parseTimeStrict(displayValue) === null;
 
   return (
     <div className="fixed inset-0 z-70 overflow-y-auto" data-testid="entry-form-modal">

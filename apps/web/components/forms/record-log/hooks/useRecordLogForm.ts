@@ -11,7 +11,7 @@ import type {
   StyleOption,
 } from "../types";
 import type { PendingVideoData } from "@/stores/types";
-import { parseTimeStrict } from "@apps/shared/utils/time";
+import { isInvalidTimeInput, parseTimeStrict } from "@apps/shared/utils/time";
 import { formatSecondsToDisplay } from "../utils/formatters";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
@@ -554,8 +554,6 @@ export const useRecordLogForm = ({
     let hasStyleError = false;
     // 不正形式のタイム入力（"1.23.45" 等）が残っている場合は保存をブロックする
     // （time=0 として静かにレコードを落とさない）
-    const isInvalidTimeInput = (displayValue: string | undefined): boolean =>
-      !!displayValue?.trim() && parseTimeStrict(displayValue) === null;
     const hasTimeFormatError = formDataList.some(
       (data) =>
         isInvalidTimeInput(data.timeDisplayValue) ||

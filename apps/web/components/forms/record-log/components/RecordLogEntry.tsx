@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@/utils/formatters";
-import { parseTimeStrict } from "@apps/shared/utils/time";
+import { isInvalidTimeInput } from "@apps/shared/utils/time";
 import { styleIdToCodeKey, canStyleRelay, type StyleCodeKey } from "@/utils/swimStyle";
 import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
@@ -95,8 +95,6 @@ export default function RecordLogEntry({
   const sectionIndex = index + 1;
 
   // 不正形式（"1.23.45" 等）は time=0 のまま確定されないため、入力欄でエラー表示する
-  const isInvalidTimeInput = (displayValue: string | undefined): boolean =>
-    !!displayValue?.trim() && parseTimeStrict(displayValue) === null;
   const timeFormatInvalid = isInvalidTimeInput(formData.timeDisplayValue);
 
   const currentStyleId = formData.styleId;
@@ -460,7 +458,12 @@ export default function RecordLogEntry({
                     data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}
                   />
                   {isInvalidTimeInput(st.splitTimeDisplayValue) && (
-                    <p className="mt-1 text-xs text-red-600">{tTimeError("invalidTimeFormat")}</p>
+                    <p
+                      className="mt-1 text-xs text-red-600"
+                      data-testid={`record-split-time-error-${sectionIndex}-${originalIndex + 1}`}
+                    >
+                      {tTimeError("invalidTimeFormat")}
+                    </p>
                   )}
                 </div>
                 {!(typeof st.distance === "number" && st.distance === raceDistance) ? (

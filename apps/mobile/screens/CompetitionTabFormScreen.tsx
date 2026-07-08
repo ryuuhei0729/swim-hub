@@ -1862,7 +1862,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       onChangeText={(text) => updateRecord(record.draftId, { reactionTime: text })}
                       onBlur={() => handleReactionTimeBlur(record.draftId)}
                       placeholder={t("recordMobile.form.reactionTimePlaceholder")}
-                      keyboardType="decimal-pad"
+                      keyboardType="numbers-and-punctuation"
                       editable={!isSaving}
                     />
                   </View>
