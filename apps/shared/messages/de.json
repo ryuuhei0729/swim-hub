@@ -659,6 +659,7 @@
       "oauthUrlGenerationFailed": "Die OAuth-URL konnte nicht generiert werden",
       "googleCalendarPermissionDenied": "Die Zugriffsberechtigung für Google Kalender konnte nicht erteilt werden. Bitte versuchen Sie es erneut.",
       "calendarConnectionSaveFailed": "Die Kalenderverbindung konnte nicht gespeichert werden",
+      "calendarConnectionSuccess": "Die Verbindung mit Google Kalender wurde hergestellt",
       "tokensNotReceived": "Die Authentifizierungs-Token konnten nicht empfangen werden",
       "cancelled": "Die Authentifizierung wurde abgebrochen",
       "dismissed": "Die Authentifizierung wurde unterbrochen",

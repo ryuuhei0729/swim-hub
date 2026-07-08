@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert, Linking, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert, Linking, ActivityIndicator, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -175,7 +175,13 @@ export const SettingsScreen: React.FC = () => {
             {/* サブスクリプション管理 */}
             <Pressable
               style={styles.manageSubButton}
-              onPress={() => Linking.openURL("https://apps.apple.com/account/subscriptions")}
+              onPress={() =>
+                Linking.openURL(
+                  Platform.OS === "ios"
+                    ? "https://apps.apple.com/account/subscriptions"
+                    : "https://play.google.com/store/account/subscriptions",
+                )
+              }
               accessibilityRole="link"
               accessibilityLabel={t("settings.mobile.manageSubAria")}
             >

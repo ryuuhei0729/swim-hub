@@ -656,6 +656,7 @@
       "oauthUrlGenerationFailed": "Failed to generate OAuth URL",
       "googleCalendarPermissionDenied": "Could not obtain Google Calendar access. Please try again.",
       "calendarConnectionSaveFailed": "Failed to save calendar connection",
+      "calendarConnectionSuccess": "Google Calendar connection completed",
       "tokensNotReceived": "Authentication tokens were not received",
       "cancelled": "Authentication was cancelled",
       "dismissed": "Authentication was dismissed",

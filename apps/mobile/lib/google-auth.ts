@@ -3,6 +3,7 @@
  * Expo + Supabase でのGoogle認証フローを管理
  */
 import { makeRedirectUri } from "expo-auth-session";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import i18n from "@/i18n";
 
 /**
@@ -13,17 +14,84 @@ import i18n from "@/i18n";
 export const oauthSessionGuard = { active: false };
 
 /**
+ * Googleカレンダー連携の OAuth ブラウザ操作が進行中であることを示す永続フラグのキー。
+ * Android の Custom Tabs は別プロセスで開くため、同意画面操作中に OS がアプリ
+ * プロセスを kill しうる。その場合 oauthSessionGuard はインメモリのため失われるが、
+ * このフラグは AsyncStorage 永続化されているため、コールドスタート後の
+ * ディープリンクハンドラ (AuthProvider) が「連携が中断していた」ことを検知できる。
+ */
+const CALENDAR_CONNECT_PENDING_KEY = "swimhub:googleCalendarConnectPending";
+
+/** フラグの有効期限（この時間を超えたら誤検知防止のため通常のコールバックとして扱う） */
+const CALENDAR_CONNECT_PENDING_TTL_MS = 10 * 60 * 1000;
+
+/** カレンダー連携用の OAuth ブラウザを開く直前に呼び出す */
+export const markCalendarConnectPending = async (): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(CALENDAR_CONNECT_PENDING_KEY, String(Date.now()));
+  } catch (err) {
+    // 保存に失敗してもコールドスタート検知ができなくなるだけで致命的ではない
+    console.error("markCalendarConnectPending 失敗:", err);
+  }
+};
+
+/** warm path（ブラウザ操作がプロセス継続中に完了）で正常終了した際にフラグを消す */
+export const clearCalendarConnectPending = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(CALENDAR_CONNECT_PENDING_KEY);
+  } catch (err) {
+    console.error("clearCalendarConnectPending 失敗:", err);
+  }
+};
+
+/**
+ * フラグを読み取った直後に削除する。
+ * 注意: getItem → removeItem の間はアトミックではないため、理論上ごく短時間に
+ * 連続で呼び出された場合は両方が同じ値を読める可能性がある。ディープリンク
+ * ハンドラの実際の呼び出しパターン（同一 URL に対して短時間に多重発火しても
+ * ミリ秒単位のごく僅かな窓）ではこの競合は実質問題にならない想定だが、
+ * 「呼び出し側の排他制御」を代替するものではない点に留意すること。
+ * 有効期限切れの場合は false を返し、通常のメール確認コールバックとして処理させる。
+ */
+export const consumeCalendarConnectPending = async (): Promise<boolean> => {
+  try {
+    const value = await AsyncStorage.getItem(CALENDAR_CONNECT_PENDING_KEY);
+    await AsyncStorage.removeItem(CALENDAR_CONNECT_PENDING_KEY);
+    if (!value) return false;
+    const timestamp = Number(value);
+    if (!Number.isFinite(timestamp)) return false;
+    return Date.now() - timestamp < CALENDAR_CONNECT_PENDING_TTL_MS;
+  } catch (err) {
+    console.error("consumeCalendarConnectPending 失敗:", err);
+    return false;
+  }
+};
+
+/**
+ * カレンダー連携フローであることを示すコールバック URL のクエリパラメータ。
+ * `getRedirectUri({ forCalendarConnect: true })` が生成する redirectTo にのみ付与され、
+ * Supabase はこれを保持したままフラグメント(#)でトークンを付加して返す。
+ * AuthProvider のディープリンクハンドラがコールドスタート復帰時にこのフラグを見て、
+ * 無関係な認証コールバック（メール確認・通常ログイン）との誤判定を防ぐ。
+ */
+export const CALENDAR_CONNECT_FLOW_PARAM = "flow=calendar-connect";
+
+/**
  * リダイレクトURIを生成
  * カスタムスキーム(swimhub://)を使用
  */
-export const getRedirectUri = (): string => {
+export const getRedirectUri = (options?: { forCalendarConnect?: boolean }): string => {
+  const nativeUri = options?.forCalendarConnect
+    ? `swimhub://auth/callback?${CALENDAR_CONNECT_FLOW_PARAM}`
+    : "swimhub://auth/callback";
+
   // iOS/Androidのスタンドアロンビルドでは`native`パラメータで
   // 明示的にカスタムスキームURIを指定する必要がある
   return makeRedirectUri({
     scheme: "swimhub",
     path: "auth/callback",
     // プロダクションビルドで正しいリダイレクトURIを生成するため
-    native: "swimhub://auth/callback",
+    native: nativeUri,
   });
 };
 

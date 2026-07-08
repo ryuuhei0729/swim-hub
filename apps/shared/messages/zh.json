@@ -659,6 +659,7 @@
       "oauthUrlGenerationFailed": "生成 OAuth URL 失败",
       "googleCalendarPermissionDenied": "未能获取 Google 日历的访问权限。请重试。",
       "calendarConnectionSaveFailed": "保存日历关联失败",
+      "calendarConnectionSuccess": "Google 日历关联已完成",
       "tokensNotReceived": "未能获取身份验证令牌",
       "cancelled": "身份验证已取消",
       "dismissed": "身份验证已中断",

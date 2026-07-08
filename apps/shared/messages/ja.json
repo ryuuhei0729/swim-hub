@@ -659,6 +659,7 @@
       "oauthUrlGenerationFailed": "OAuth URLの生成に失敗しました",
       "googleCalendarPermissionDenied": "Googleカレンダーのアクセス権限が取得できませんでした。再度お試しください。",
       "calendarConnectionSaveFailed": "カレンダー連携の保存に失敗しました",
+      "calendarConnectionSuccess": "Googleカレンダー連携が完了しました",
       "tokensNotReceived": "認証トークンが取得できませんでした",
       "cancelled": "認証がキャンセルされました",
       "dismissed": "認証が中断されました",
