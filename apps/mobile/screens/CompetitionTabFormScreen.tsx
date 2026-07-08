@@ -228,7 +228,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const isSubmittingRef = useRef(false);
 
   // ---- 保存完了フラグ ----
-  const [isSaved, setIsSaved] = useState(false);
+  // 保存完了フラグは ref で保持する。beforeRemove リスナーはクロージャに
+  // state を閉じ込めるため、setIsSaved(true) 直後に goBack() すると
+  // リスナー再登録が間に合わず古い値 (false) を読んで破棄ダイアログが誤発火する
+  // (動画アップロードの await で保存処理が長引くと特に再現しやすい)。
+  // ref なら常に最新値を読めるためこの競合を回避できる。
+  const isSavedRef = useRef(false);
 
   // ---- 未保存変更スナップショット ----
   const snapshotRef = useRef<{
@@ -461,7 +466,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // ---- beforeRemove 警告 ----
   useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      if (isSaved) return;
+      if (isSavedRef.current) return;
       const snapshot = snapshotRef.current;
       if (!snapshot) return;
       const changed = hasUnsavedChanges(
@@ -496,7 +501,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
     return unsubscribe;
   }, [
     navigation,
-    isSaved,
     date,
     endDate,
     title,
@@ -909,7 +913,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
       }
 
-      setIsSaved(true);
+      isSavedRef.current = true;
       navigation.goBack();
     } catch (error) {
       console.error("保存エラー:", error);
@@ -1677,7 +1681,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       onBlur={() => handleEntryTimeBlur(entry.draftId)}
                       placeholder={t("competition.entry.entryTimePlaceholder")}
                       placeholderTextColor="#9CA3AF"
-                      keyboardType="default"
+                      keyboardType="decimal-pad"
                       editable={!isSaving}
                     />
                     {entryErrors[`entryTime-${index}`] && (
@@ -1841,7 +1845,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       onChangeText={(text) => handleRecordTimeChange(record.draftId, text)}
                       onBlur={() => handleRecordTimeBlur(record.draftId)}
                       placeholder={t("recordMobile.form.timePlaceholder2")}
-                      keyboardType="default"
+                      keyboardType="decimal-pad"
                       editable={!isSaving}
                     />
                     {recordErrors[`time-${index}`] && (
@@ -1858,7 +1862,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       onChangeText={(text) => updateRecord(record.draftId, { reactionTime: text })}
                       onBlur={() => handleReactionTimeBlur(record.draftId)}
                       placeholder={t("recordMobile.form.reactionTimePlaceholder")}
-                      keyboardType="numbers-and-punctuation"
+                      keyboardType="decimal-pad"
                       editable={!isSaving}
                     />
                   </View>
@@ -1987,7 +1991,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                             handleSplitTimeChange(record.draftId, splitIndex, "splitTime", text)
                           }
                           placeholder={t("recordMobile.form.splitPlaceholder")}
-                          keyboardType="default"
+                          keyboardType="decimal-pad"
                           editable={!isSaving}
                         />
                         {/* ゴール地点スプリット (distance === raceDistance) は削除不可 (web :449-461) */}

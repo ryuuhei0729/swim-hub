@@ -266,7 +266,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
                           focusNextInput(globalIndex);
                         }}
                         placeholder={isDisabledByLimit ? t("practice.form.premiumLimited") : t("practice.form.timeInputPlaceholder")}
-                        keyboardType="default"
+                        keyboardType="decimal-pad"
                         autoCapitalize="none"
                         returnKeyType={isLastInput ? "done" : "next"}
                         blurOnSubmit={false}

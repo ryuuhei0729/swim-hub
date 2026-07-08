@@ -275,7 +275,10 @@
       "practiceTitle": "Share your practice",
       "competitionShareText": "I swam {event} in {time}! #SwimHub",
       "practiceShareText": "Completed today's practice! #SwimHub"
-    }
+    },
+    "discardTitle": "Unsaved changes",
+    "discardMessage": "You have unsaved changes. Close anyway?",
+    "discard": "Discard"
   },
   "nav": {
     "practice": "Practice Log",
@@ -1138,7 +1141,9 @@
       "styleRequired": "Please select a style",
       "distanceRequired": "Please enter a distance",
       "repsRequired": "Please enter reps",
-      "setsRequired": "Please enter sets"
+      "setsRequired": "Please enter sets",
+      "tabPractice": "Practice",
+      "tabLog": "Practice Log"
     },
     "mobile": {
       "loading": "Loading practice records...",
@@ -1582,7 +1587,10 @@
       "dateRequired": "Please enter a date",
       "dateFormatInvalid": "Date must be in YYYY-MM-DD format",
       "dateInvalid": "Please enter a valid date",
-      "endBeforeStart": "End date must be on or after the start date"
+      "endBeforeStart": "End date must be on or after the start date",
+      "tabCompetition": "Competition",
+      "tabEntry": "Entry",
+      "tabRecord": "Race Record"
     },
     "entry": {
       "title": "Entry events",
@@ -3651,7 +3659,8 @@
       "reactionTimeRange": "Reaction time must be between -1.00 and 2.00 seconds",
       "timeFormatInvalid": "Invalid time format (e.g. 1:23.45 or 31-2)",
       "timeFormatInvalid2": "Invalid time format (e.g. 1:23.45 or 31-2)",
-      "recordNumber": "Record {n}"
+      "recordNumber": "Record {n}",
+      "sectionTitle": "Race Record"
     },
     "lapTime": {
       "raceLapTab": "Race Lap",

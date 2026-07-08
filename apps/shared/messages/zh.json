@@ -278,7 +278,10 @@
       "practiceTitle": "分享训练菜单",
       "competitionShareText": "【Swimhub】\n我分享了比赛记录！\n\n用游泳记录管理应用「SwimHub」来管理你的成绩吧！\nhttps://swim-hub.app",
       "practiceShareText": "【Swimhub】\n我分享了训练记录！\n\n用游泳记录管理应用「SwimHub」来记录你的训练吧！\nhttps://swim-hub.app"
-    }
+    },
+    "discardTitle": "输入内容尚未保存",
+    "discardMessage": "输入内容尚未保存。仍要关闭吗？",
+    "discard": "放弃"
   },
   "nav": {
     "practice": "训练记录",
@@ -1141,7 +1144,9 @@
       "styleRequired": "请选择项目",
       "distanceRequired": "请输入距离",
       "repsRequired": "请输入趟数",
-      "setsRequired": "请输入组数"
+      "setsRequired": "请输入组数",
+      "tabPractice": "训练",
+      "tabLog": "训练日志"
     },
     "mobile": {
       "loading": "正在加载训练记录...",
@@ -1585,7 +1590,10 @@
       "dateRequired": "请输入日期",
       "dateFormatInvalid": "日期请按 YYYY-MM-DD 格式输入",
       "dateInvalid": "请输入有效的日期",
-      "endBeforeStart": "结束日期请设置为开始日期当天或之后"
+      "endBeforeStart": "结束日期请设置为开始日期当天或之后",
+      "tabCompetition": "比赛",
+      "tabEntry": "报名",
+      "tabRecord": "赛事记录"
     },
     "entry": {
       "title": "报名项目",
@@ -3654,7 +3662,8 @@
       "reactionTimeRange": "反应时间必须在-1.00至2.00秒之间",
       "timeFormatInvalid": "成绩格式不正确（例: 1:23.45 或 31-2）",
       "timeFormatInvalid2": "成绩格式不正确（例: 1:23.45 或 31-2）",
-      "recordNumber": "记录 {n}"
+      "recordNumber": "记录 {n}",
+      "sectionTitle": "赛事记录"
     },
     "lapTime": {
       "raceLapTab": "分距 Lap",

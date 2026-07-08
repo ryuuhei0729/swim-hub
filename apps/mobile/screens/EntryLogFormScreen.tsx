@@ -647,7 +647,7 @@ export const EntryLogFormScreen: React.FC = () => {
                 onBlur={() => handleEntryTimeBlur(entry.id)}
                 placeholder={t("competition.entry.entryTimePlaceholder")}
                 placeholderTextColor="#9CA3AF"
-                keyboardType="default"
+                keyboardType="decimal-pad"
                 editable={!loading}
               />
               {errors[`entryTime-${index}`] && (

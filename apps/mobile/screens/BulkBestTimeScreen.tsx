@@ -287,7 +287,7 @@ const MatrixDistanceCard: React.FC<MatrixDistanceCardProps> = ({
           onChangeText={(text) => onUpdateCell(normalKey, "time", text)}
           placeholder={t("onboarding.step3.timePlaceholder")}
           placeholderTextColor="#9CA3AF"
-          keyboardType="numbers-and-punctuation"
+          keyboardType="decimal-pad"
           autoCorrect={false}
           autoCapitalize="none"
           editable={!disabled}
@@ -339,7 +339,7 @@ const MatrixDistanceCard: React.FC<MatrixDistanceCardProps> = ({
               onChangeText={(text) => onUpdateCell(relayKey, "time", text)}
               placeholder={t("onboarding.step3.timePlaceholder")}
               placeholderTextColor="#9CA3AF"
-              keyboardType="numbers-and-punctuation"
+              keyboardType="decimal-pad"
               autoCorrect={false}
               autoCapitalize="none"
               editable={!disabled}

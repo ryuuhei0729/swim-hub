@@ -190,7 +190,11 @@ export const PracticeTabFormScreen: React.FC = () => {
   const initializedRef = useRef(false);
 
   // ---- 保存完了フラグ (beforeRemove 警告制御) ----
-  const [isSaved, setIsSaved] = useState(false);
+  // ref で保持する。beforeRemove リスナーはクロージャに state を閉じ込めるため、
+  // setIsSaved(true) 直後に goBack() するとリスナー再登録が間に合わず古い値 (false) を
+  // 読んで破棄ダイアログが誤発火する (動画アップロードの await で保存処理が長引くと
+  // 特に再現しやすい)。ref なら常に最新値を読めるためこの競合を回避できる。
+  const isSavedRef = useRef(false);
 
   // ---- 未保存変更検知用スナップショット ----
   const snapshotRef = useRef<{ practice: PracticeTabState; menus: PracticeMenu[] } | null>(null);
@@ -381,7 +385,7 @@ export const PracticeTabFormScreen: React.FC = () => {
   // ---- beforeRemove 警告 ----
   useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      if (isSaved) return;
+      if (isSavedRef.current) return;
       const snapshot = snapshotRef.current;
       if (!snapshot) return;
       const changed =
@@ -406,7 +410,7 @@ export const PracticeTabFormScreen: React.FC = () => {
       );
     });
     return unsubscribe;
-  }, [navigation, isSaved, practiceTab, menus, t]);
+  }, [navigation, practiceTab, menus, t]);
 
   // ---- 練習タブ バリデーション ----
   const validatePracticeTab = useCallback((): boolean => {
@@ -694,7 +698,7 @@ export const PracticeTabFormScreen: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
       }
 
-      setIsSaved(true);
+      isSavedRef.current = true;
       navigation.goBack();
     } catch (error) {
       console.error("保存エラー:", error);

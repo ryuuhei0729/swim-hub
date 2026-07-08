@@ -278,7 +278,10 @@
       "practiceTitle": "연습 메뉴 공유",
       "competitionShareText": "【Swimhub】\n대회 기록을 공유했습니다!\n\n수영 기록 관리 앱 「SwimHub」로 기록을 관리하세요!\nhttps://swim-hub.app",
       "practiceShareText": "【Swimhub】\n연습 기록을 공유했습니다!\n\n수영 기록 관리 앱 「SwimHub」로 연습을 기록하세요!\nhttps://swim-hub.app"
-    }
+    },
+    "discardTitle": "입력 내용이 저장되지 않았습니다",
+    "discardMessage": "입력 내용이 저장되지 않았습니다. 이대로 닫으시겠습니까?",
+    "discard": "나가기"
   },
   "nav": {
     "practice": "연습 기록",
@@ -1141,7 +1144,9 @@
       "styleRequired": "종목을 선택해 주세요",
       "distanceRequired": "거리를 입력해 주세요",
       "repsRequired": "횟수를 입력해 주세요",
-      "setsRequired": "세트 수를 입력해 주세요"
+      "setsRequired": "세트 수를 입력해 주세요",
+      "tabPractice": "연습",
+      "tabLog": "연습 로그"
     },
     "mobile": {
       "loading": "연습 기록을 불러오는 중...",
@@ -1585,7 +1590,10 @@
       "dateRequired": "날짜를 입력해 주세요",
       "dateFormatInvalid": "날짜는 YYYY-MM-DD 형식으로 입력해 주세요",
       "dateInvalid": "유효한 날짜를 입력해 주세요",
-      "endBeforeStart": "종료일은 시작일 이후의 날짜로 지정해 주세요"
+      "endBeforeStart": "종료일은 시작일 이후의 날짜로 지정해 주세요",
+      "tabCompetition": "대회",
+      "tabEntry": "엔트리",
+      "tabRecord": "레이스 기록"
     },
     "entry": {
       "title": "엔트리 종목",
@@ -3654,7 +3662,8 @@
       "reactionTimeRange": "반응 시간은 -1.00~2.00초 범위로 입력해 주세요",
       "timeFormatInvalid": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 31-2)",
       "timeFormatInvalid2": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 31-2)",
-      "recordNumber": "기록 {n}"
+      "recordNumber": "기록 {n}",
+      "sectionTitle": "레이스 기록"
     },
     "lapTime": {
       "raceLapTab": "거리별 Lap",

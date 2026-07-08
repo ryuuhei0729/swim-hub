@@ -102,7 +102,7 @@ export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
             onChangeText={(text) => onUpdate(entry.key, { time: text })}
             placeholder={t("onboarding.step3.timePlaceholder")}
             placeholderTextColor="#9CA3AF"
-            keyboardType="numbers-and-punctuation"
+            keyboardType="decimal-pad"
             editable={!disabled}
             accessibilityLabel={t("onboarding.step3.timeAriaLabel", { styleName })}
           />
@@ -131,7 +131,7 @@ export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
             onChangeText={(text) => onUpdate(entry.key, { time: text })}
             placeholder={t("onboarding.step3.timePlaceholder")}
             placeholderTextColor="#9CA3AF"
-            keyboardType="numbers-and-punctuation"
+            keyboardType="decimal-pad"
             editable={!disabled}
             accessibilityLabel={t("onboarding.step3.timeAriaLabel", { styleName })}
           />

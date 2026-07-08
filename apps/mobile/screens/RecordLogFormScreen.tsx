@@ -904,7 +904,7 @@ export const RecordLogFormScreen: React.FC = () => {
                   onChangeText={(text) => handleTimeChange(index, text)}
                   onBlur={() => handleTimeBlur(index)}
                   placeholder={t("recordMobile.form.timePlaceholder2")}
-                  keyboardType="default"
+                  keyboardType="decimal-pad"
                   editable={!loading}
                 />
                 {errors[`time-${index}`] && (
@@ -933,7 +933,7 @@ export const RecordLogFormScreen: React.FC = () => {
                   onChangeText={(text) => updateFormData(index, { reactionTime: text })}
                   onBlur={() => handleReactionTimeBlur(index)}
                   placeholder={t("recordMobile.form.reactionTimePlaceholder")}
-                  keyboardType="numbers-and-punctuation"
+                  keyboardType="decimal-pad"
                   editable={!loading}
                 />
               </View>
@@ -1062,7 +1062,7 @@ export const RecordLogFormScreen: React.FC = () => {
                           handleSplitTimeChange(index, splitIndex, "splitTime", text)
                         }
                         placeholder={t("recordMobile.form.splitPlaceholder")}
-                        keyboardType="default"
+                        keyboardType="decimal-pad"
                         editable={!loading}
                       />
                       {/* ゴール地点スプリット (distance === raceDistance) は削除不可 (web :449-461) */}

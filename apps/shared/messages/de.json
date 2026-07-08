@@ -278,7 +278,10 @@
       "practiceTitle": "Training teilen",
       "competitionShareText": "【Swimhub】\nIch habe mein Wettkampfergebnis geteilt!\n\nVerwalten Sie Ihre Zeiten mit der Schwimm-App „SwimHub“!\nhttps://swim-hub.app",
       "practiceShareText": "【Swimhub】\nIch habe mein Trainingsprotokoll geteilt!\n\nProtokollieren Sie Ihr Training mit der Schwimm-App „SwimHub“!\nhttps://swim-hub.app"
-    }
+    },
+    "discardTitle": "Nicht gespeicherte Änderungen",
+    "discardMessage": "Sie haben nicht gespeicherte Änderungen. Trotzdem schließen?",
+    "discard": "Verwerfen"
   },
   "nav": {
     "practice": "Trainingsprotokoll",
@@ -1141,7 +1144,9 @@
       "styleRequired": "Bitte wählen Sie eine Disziplin",
       "distanceRequired": "Bitte geben Sie eine Distanz ein",
       "repsRequired": "Bitte geben Sie die Wiederholungen ein",
-      "setsRequired": "Bitte geben Sie die Sätze ein"
+      "setsRequired": "Bitte geben Sie die Sätze ein",
+      "tabPractice": "Training",
+      "tabLog": "Trainingsprotokoll"
     },
     "mobile": {
       "loading": "Trainingseinträge werden geladen ...",
@@ -1585,7 +1590,10 @@
       "dateRequired": "Bitte geben Sie ein Datum ein",
       "dateFormatInvalid": "Das Datum muss im Format JJJJ-MM-TT angegeben werden",
       "dateInvalid": "Bitte geben Sie ein gültiges Datum ein",
-      "endBeforeStart": "Das Enddatum muss am oder nach dem Startdatum liegen"
+      "endBeforeStart": "Das Enddatum muss am oder nach dem Startdatum liegen",
+      "tabCompetition": "Wettkampf",
+      "tabEntry": "Meldung",
+      "tabRecord": "Rennergebnis"
     },
     "entry": {
       "title": "Gemeldete Disziplinen",
@@ -3654,7 +3662,8 @@
       "reactionTimeRange": "Die Reaktionszeit muss zwischen -1,00 und 2,00 Sekunden liegen",
       "timeFormatInvalid": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
       "timeFormatInvalid2": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
-      "recordNumber": "Eintrag {n}"
+      "recordNumber": "Eintrag {n}",
+      "sectionTitle": "Rennergebnis"
     },
     "lapTime": {
       "raceLapTab": "Lap nach Distanz",
