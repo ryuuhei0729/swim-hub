@@ -18,6 +18,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
 import { RecordAPI } from "@apps/shared/api/records";
 import { recordKeys } from "@apps/shared/hooks/queries/keys";
+import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import type { MainStackParamList } from "@/navigation/types";
 import {
   STYLE_TAB_IDS,
@@ -129,6 +131,8 @@ export const BulkBestTimeScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.description}>{t("bulkBestTime.header.description")}</Text>
+
+        <TimeInputHelp />
 
         {saveError && (
           <View style={styles.errorBanner}>
@@ -272,6 +276,15 @@ const MatrixDistanceCard: React.FC<MatrixDistanceCardProps> = ({
     (!!normal.time && !normalInvalid) || (!!relay.time && !relayInvalid);
   const showRelayButton = canRelay(style);
 
+  // blur 時に確定値へ再フォーマット (練習タイム・大会レコード入力と同じ UX)。
+  // 不正形式は生値のまま残し、既存のインラインエラー表示に任せる
+  const handleTimeBlur = (key: string, raw: string) => {
+    const parsed = parseTimeFlexible(raw);
+    if (parsed !== null) {
+      onUpdateCell(key, "time", formatTimeBest(parsed));
+    }
+  };
+
   const distanceLabel = `${style.distance}m`;
 
   return (
@@ -285,6 +298,7 @@ const MatrixDistanceCard: React.FC<MatrixDistanceCardProps> = ({
           style={[styles.timeInput, normalInvalid && styles.inputError, disabled && styles.inputDisabled]}
           value={normal.time}
           onChangeText={(text) => onUpdateCell(normalKey, "time", text)}
+          onBlur={() => handleTimeBlur(normalKey, normal.time)}
           placeholder={t("onboarding.step3.timePlaceholder")}
           placeholderTextColor="#9CA3AF"
           keyboardType="decimal-pad"
@@ -337,6 +351,7 @@ const MatrixDistanceCard: React.FC<MatrixDistanceCardProps> = ({
               style={[styles.timeInput, relayInvalid && styles.inputError, disabled && styles.inputDisabled]}
               value={relay.time}
               onChangeText={(text) => onUpdateCell(relayKey, "time", text)}
+              onBlur={() => handleTimeBlur(relayKey, relay.time)}
               placeholder={t("onboarding.step3.timePlaceholder")}
               placeholderTextColor="#9CA3AF"
               keyboardType="decimal-pad"

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -18,6 +18,13 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
 
   return (
     <View style={styles.container}>
+      {/* 小画面・フォント拡大時もフッターの「始める」ボタンが隠れないよう、
+          紹介コンテンツのみスクロール領域に入れる (Step2/3 と同パターン) */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.heroSection}>
         <Image
           source={require("@/assets/icons/app-icon.png")}
@@ -45,6 +52,7 @@ export const OnboardingWelcome: React.FC<OnboardingWelcomeProps> = ({ onNext }) 
           description={t("onboarding.step1.feature.team.description")}
         />
       </View>
+      </ScrollView>
 
       <View style={styles.footer}>
         <Text style={styles.stepHint}>{t("onboarding.step1.timeHint")}</Text>
@@ -113,7 +121,13 @@ const featureStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
     gap: 32,
+    paddingBottom: 8,
   },
   heroSection: {
     alignItems: "center",
@@ -147,7 +161,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: 12,
-    marginTop: "auto",
+    paddingTop: 12,
   },
   stepHint: {
     fontSize: 13,

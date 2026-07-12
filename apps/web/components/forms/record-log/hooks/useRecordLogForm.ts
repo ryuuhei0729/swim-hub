@@ -11,7 +11,7 @@ import type {
   StyleOption,
 } from "../types";
 import type { PendingVideoData } from "@/stores/types";
-import { isInvalidTimeInput, parseTimeStrict } from "@apps/shared/utils/time";
+import { isInvalidTimeInput, parseTimeFlexible } from "@apps/shared/utils/time";
 import { formatSecondsToDisplay } from "../utils/formatters";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
@@ -197,8 +197,9 @@ export const useRecordLogForm = ({
   const handleTimeChange = useCallback(
     (index: number, value: string) => {
       updateFormData(index, (prev) => {
-        // 構造ガード: "1.23.45" 等の不正形式を誤値（1.23秒）として確定させない
-        const newTime = parseTimeStrict(value) ?? 0;
+        // 構造ガード: "1.23.45" 等はクイック解釈 (1:23.45=83.45秒) で受理し、
+        // 解釈不能な入力のみ 0 のままにする
+        const newTime = parseTimeFlexible(value) ?? 0;
         const styleId = prev.styleId;
         const style = styles.find((s) => s.id.toString() === styleId);
         const raceDistance = style?.distance;
@@ -492,7 +493,7 @@ export const useRecordLogForm = ({
             const numValue = parseFloat(value);
             return { ...st, distance: isNaN(numValue) ? value : numValue };
           }
-          const parsedTime = parseTimeStrict(value) ?? 0;
+          const parsedTime = parseTimeFlexible(value) ?? 0;
           return {
             ...st,
             splitTimeDisplayValue: value,

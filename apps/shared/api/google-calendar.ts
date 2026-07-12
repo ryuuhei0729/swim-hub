@@ -6,7 +6,6 @@ import type { Competition, Practice } from "../types";
 
 // グローバル変数でWeb API URLを設定可能にする（React Native用）
 declare global {
-  // eslint-disable-next-line no-var
   var __SWIM_HUB_WEB_API_URL__: string | undefined;
 }
 

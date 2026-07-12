@@ -7,9 +7,13 @@
 // - ベストより遅い: 「自己ベスト」+ 符号付き差分 (slower)
 // - 判定不能 (previousBest 不明 / ガード / エラー): 非表示 (none)
 //
-// 一覧パス (showDiff=false。web components/ui/BestTimeBadge.tsx と同一アルゴリズム) の検証:
-// - 「その記録の記録日時点で自己ベストだったか」を2クエリ (大会/一括) の min で判定
+// 一覧パス (showDiff=false。web components/ui/BestTimeBadge.tsx と同一判定) の検証:
+// - グループ単位の共有キャッシュクエリ (useListBestCandidatesQuery →
+//   RecordAPI.getListBestCandidates) で候補を一括取得し、
+//   computeListPreviousBest (shared/utils/bestTimeBadge、純関数テストは shared 側)
+//   が「記録日時点で自己ベストだったか」をメモリ上で判定
 // - ベストのときのみ「自己ベスト」バッジ (差分なし)、それ以外・判定不能は非表示
+// - 同一グループの複数行でフェッチが1回に集約される (N+1 回避)
 //
 // i18n は vitest.setup.ts のモックが実 ja.json を解決するため、
 // "初" / "自己ベスト" の実値でアサートする。
@@ -18,9 +22,10 @@
 import React from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Mock } from "vitest";
-import { createMockSupabaseClient, createMockQueryBuilder } from "@/__mocks__/supabase";
-import type { MockSupabaseClient, MockQueryBuilder } from "@/__mocks__/supabase";
+import { createMockSupabaseClient } from "@/__mocks__/supabase";
+import type { MockSupabaseClient } from "@/__mocks__/supabase";
+import { createQueryWrapper } from "@/__tests__/helpers/testUtils";
+import type { ListBestCandidates } from "@apps/shared/api/records";
 
 // --- AuthProvider モック ---
 const mockUseAuth = vi.hoisted(() => vi.fn());
@@ -29,11 +34,13 @@ vi.mock("@/contexts/AuthProvider", () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// --- RecordAPI モック (非 precomputed パスの getPreviousBestTime) ---
+// --- RecordAPI モック (3状態パス: getPreviousBestTime / 一覧パス: getListBestCandidates) ---
 const mockGetPreviousBestTime = vi.hoisted(() => vi.fn());
+const mockGetListBestCandidates = vi.hoisted(() => vi.fn());
 vi.mock("@apps/shared/api/records", () => ({
   RecordAPI: vi.fn().mockImplementation(() => ({
     getPreviousBestTime: mockGetPreviousBestTime,
+    getListBestCandidates: mockGetListBestCandidates,
   })),
 }));
 
@@ -45,6 +52,11 @@ import BestTimeBadge, { getBadgeState } from "../BestTimeBadge";
 
 const FIRST_LABEL = "初"; // recordMobile.bestBadge.first
 const PERSONAL_BEST_LABEL = "自己ベスト"; // recordMobile.bestBadge.personalBest
+
+/** 一覧パス用の候補フィクスチャ */
+function candidates(partial: Partial<ListBestCandidates> = {}): ListBestCandidates {
+  return { competitionRows: [], bulkRows: [], ...partial };
+}
 
 /** BestTimeBadge をデフォルト props でレンダリングする */
 function renderBadge(
@@ -67,6 +79,7 @@ function renderBadge(
         isRelaying={props.isRelaying ?? false}
         showDiff={props.showDiff}
       />,
+      { wrapper: createQueryWrapper() },
     ),
   };
 }
@@ -121,197 +134,170 @@ describe("BestTimeBadge", () => {
   });
 
   // ------------------------------------------------------------------
-  // 2. 一覧パス（showDiff=false: web 一覧 BestTimeBadge と同一の非同期履歴判定）
+  // 2. 一覧パス（showDiff=false: グループ共有クエリ + メモリ上判定）
+  //    computeListPreviousBest 純関数の詳細は shared/__tests__/utils/bestTimeBadge.test.ts
   // ------------------------------------------------------------------
 
   describe("一覧パス (showDiff=false)", () => {
-    /**
-     * 一覧パス用の Supabase モックを生成する。
-     * from() の呼び出し順 = 実装のクエリ構築順（1回目: 大会記録, 2回目: 一括登録）。
-     */
-    function createListSupabase(
-      options: {
-        userId?: string;
-        competitionRows?: Array<{ id: string; time: number }>;
-        bulkRows?: Array<{ id: string; time: number }>;
-        queryError?: unknown;
-      } = {},
-    ) {
-      const supabase = createMockSupabaseClient({ userId: options.userId ?? "user-1" });
-      const builders: MockQueryBuilder<unknown>[] = [];
-      (supabase.from as unknown as Mock).mockImplementation(() => {
-        const data =
-          builders.length === 0 ? (options.competitionRows ?? []) : (options.bulkRows ?? []);
-        const builder = createMockQueryBuilder<unknown>(data, options.queryError ?? null);
-        builders.push(builder);
-        return builder;
-      });
-      return { supabase, builders };
-    }
-
-    /** 2クエリ (大会/一括) の実行完了と state 反映を待つ */
-    async function waitForListQueries(supabase: MockSupabaseClient) {
-      await waitFor(() => {
-        expect(supabase.from).toHaveBeenCalledTimes(2);
-      });
-      // Promise.all → setState のマイクロタスクを flush する
-      await act(async () => {});
-    }
-
     it("過去記録がないとき（記録日時点で初ベスト）「自己ベスト」バッジのみ表示する", async () => {
-      const { supabase } = createListSupabase();
+      mockGetListBestCandidates.mockResolvedValue(candidates());
 
-      renderBadge({ currentTime: 55.0, showDiff: false }, supabase);
+      renderBadge({ currentTime: 55.0, showDiff: false });
 
       expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
       // 一覧パスは「初」バッジ・差分ラベルを出さない (web 一覧に存在しないため)
       expect(screen.queryByText(FIRST_LABEL)).toBeNull();
-      expect(supabase.from).toHaveBeenCalledTimes(2);
-      expect(supabase.from).toHaveBeenCalledWith("records");
+      // (userId, styleId, isRelaying, poolType) のグループ単位で候補を一括取得する
+      expect(mockGetListBestCandidates).toHaveBeenCalledWith("user-1", 1, false, 1);
       // 一覧パスは RecordAPI.getPreviousBestTime を使わない
       expect(mockGetPreviousBestTime).not.toHaveBeenCalled();
     });
 
     it("過去ベスト (大会/一括の min) より速いとき「自己ベスト」を表示する", async () => {
-      const { supabase } = createListSupabase({
-        competitionRows: [{ id: "other-1", time: 55.0 }],
-        bulkRows: [{ id: "other-2", time: 50.0 }],
-      });
+      mockGetListBestCandidates.mockResolvedValue(
+        candidates({
+          competitionRows: [{ id: "other-1", time: 55.0, date: "2025-02-01" }],
+          bulkRows: [{ id: "other-2", time: 50.0, created_at: "2025-02-15T00:00:00.000Z" }],
+        }),
+      );
 
-      renderBadge({ currentTime: 49.5, showDiff: false }, supabase);
+      renderBadge({ currentTime: 49.5, showDiff: false });
 
       expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
     });
 
     it("過去ベスト (min=一括 50.0) 以上のタイムのとき何も表示しない", async () => {
       // 大会ベスト 55.0 よりは速いが一括ベスト 50.0 より遅い → min 比較で非表示
-      const { supabase } = createListSupabase({
-        competitionRows: [{ id: "other-1", time: 55.0 }],
-        bulkRows: [{ id: "other-2", time: 50.0 }],
-      });
+      mockGetListBestCandidates.mockResolvedValue(
+        candidates({
+          competitionRows: [{ id: "other-1", time: 55.0, date: "2025-02-01" }],
+          bulkRows: [{ id: "other-2", time: 50.0, created_at: "2025-02-15T00:00:00.000Z" }],
+        }),
+      );
 
-      renderBadge({ currentTime: 52.0, showDiff: false }, supabase);
+      renderBadge({ currentTime: 52.0, showDiff: false });
 
-      await waitForListQueries(supabase);
+      await waitFor(() => expect(mockGetListBestCandidates).toHaveBeenCalled());
+      await act(async () => {});
       expectNoBadge();
     });
 
     it("同タイムのとき何も表示しない (web と同じ currentTime < previousBest 判定)", async () => {
-      const { supabase } = createListSupabase({
-        competitionRows: [{ id: "other-1", time: 55.0 }],
+      mockGetListBestCandidates.mockResolvedValue(
+        candidates({
+          competitionRows: [{ id: "other-1", time: 55.0, date: "2025-02-01" }],
+        }),
+      );
+
+      renderBadge({ currentTime: 55.0, showDiff: false });
+
+      await waitFor(() => expect(mockGetListBestCandidates).toHaveBeenCalled());
+      await act(async () => {});
+      expectNoBadge();
+    });
+
+    it("記録日以降の候補と自分自身はメモリ上のフィルタで除外される", async () => {
+      mockGetListBestCandidates.mockResolvedValue(
+        candidates({
+          competitionRows: [
+            { id: "record-1", time: 40.0, date: "2025-02-01" }, // 自分自身
+            { id: "other-1", time: 45.0, date: "2025-03-01" }, // 記録日と同日
+          ],
+          bulkRows: [
+            { id: "other-2", time: 48.0, created_at: "2025-04-01T00:00:00.000Z" }, // 記録日より後
+          ],
+        }),
+      );
+
+      // 全候補が除外される = 記録日時点で初ベスト → バッジ表示
+      renderBadge({ recordId: "record-1", currentTime: 55.0, showDiff: false });
+
+      expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
+    });
+
+    it("poolType が null のとき poolType なし (null) のグループとして取得する", async () => {
+      mockGetListBestCandidates.mockResolvedValue(candidates());
+
+      renderBadge({ currentTime: 55.0, poolType: null, showDiff: false });
+
+      await waitFor(() => {
+        expect(mockGetListBestCandidates).toHaveBeenCalledWith("user-1", 1, false, null);
+      });
+    });
+
+    it("同一グループの複数バッジでフェッチが1回に集約される (N+1 回避)", async () => {
+      mockGetListBestCandidates.mockResolvedValue(
+        candidates({
+          competitionRows: [{ id: "other-1", time: 55.0, date: "2025-02-01" }],
+        }),
+      );
+      mockUseAuth.mockReturnValue({
+        supabase: createMockSupabaseClient(),
+        user: { id: "user-1" },
       });
 
-      renderBadge({ currentTime: 55.0, showDiff: false }, supabase);
-
-      await waitForListQueries(supabase);
-      expectNoBadge();
-    });
-
-    it("クエリ条件が web 一覧判定と一致する (自己除外・水路・リレー・記録日比較)", async () => {
-      const { supabase, builders } = createListSupabase();
-
-      renderBadge(
-        {
-          recordId: "record-1",
-          styleId: 1,
-          currentTime: 55.0,
-          recordDate: "2025-03-01",
-          poolType: 1,
-          isRelaying: true,
-          showDiff: false,
-        },
-        supabase,
+      render(
+        <>
+          <BestTimeBadge
+            recordId="record-1"
+            styleId={1}
+            currentTime={50.0}
+            recordDate="2025-03-01"
+            poolType={1}
+            isRelaying={false}
+            showDiff={false}
+          />
+          <BestTimeBadge
+            recordId="record-2"
+            styleId={1}
+            currentTime={60.0}
+            recordDate="2025-03-05"
+            poolType={1}
+            isRelaying={false}
+            showDiff={false}
+          />
+        </>,
+        { wrapper: createQueryWrapper() },
       );
 
-      await waitForListQueries(supabase);
-      const [competitionQuery, bulkQuery] = builders;
-
-      // 1. 大会記録クエリ: competitions.date < recordDate
-      expect(competitionQuery.select).toHaveBeenCalledWith(
-        "id, time, competition:competitions!inner(date)",
-      );
-      expect(competitionQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-      expect(competitionQuery.eq).toHaveBeenCalledWith("style_id", 1);
-      expect(competitionQuery.eq).toHaveBeenCalledWith("is_relaying", true);
-      expect(competitionQuery.eq).toHaveBeenCalledWith("pool_type", 1);
-      expect(competitionQuery.neq).toHaveBeenCalledWith("id", "record-1");
-      expect(competitionQuery.lt).toHaveBeenCalledWith("competition.date", "2025-03-01");
-      expect(competitionQuery.order).toHaveBeenCalledWith("time", { ascending: true });
-      expect(competitionQuery.limit).toHaveBeenCalledWith(1);
-
-      // 2. 一括登録クエリ: created_at < 正規化 recordDate (YYYY-MM-DD → T00:00:00.000Z)
-      expect(bulkQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
-      expect(bulkQuery.eq).toHaveBeenCalledWith("style_id", 1);
-      expect(bulkQuery.eq).toHaveBeenCalledWith("is_relaying", true);
-      expect(bulkQuery.eq).toHaveBeenCalledWith("pool_type", 1);
-      expect(bulkQuery.is).toHaveBeenCalledWith("competition_id", null);
-      expect(bulkQuery.neq).toHaveBeenCalledWith("id", "record-1");
-      expect(bulkQuery.lt).toHaveBeenCalledWith("created_at", "2025-03-01T00:00:00.000Z");
-      expect(bulkQuery.order).toHaveBeenCalledWith("time", { ascending: true });
-      expect(bulkQuery.limit).toHaveBeenCalledWith(1);
+      // record-1 は過去ベスト 55.0 より速い → バッジ表示 / record-2 は遅い → 非表示
+      expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
+      expect(screen.getAllByText(PERSONAL_BEST_LABEL)).toHaveLength(1);
+      // 同一 (userId, styleId, isRelaying, poolType) グループなのでフェッチは1回
+      expect(mockGetListBestCandidates).toHaveBeenCalledTimes(1);
     });
 
-    it("poolType が null のとき pool_type フィルタを適用しない (web と同一の分岐)", async () => {
-      const { supabase, builders } = createListSupabase();
-
-      renderBadge({ currentTime: 55.0, poolType: null, showDiff: false }, supabase);
-
-      await waitForListQueries(supabase);
-      const [competitionQuery, bulkQuery] = builders;
-      expect(competitionQuery.eq).not.toHaveBeenCalledWith("pool_type", expect.anything());
-      expect(bulkQuery.eq).not.toHaveBeenCalledWith("pool_type", expect.anything());
-    });
-
-    it("recordDate が ISO タイムスタンプのときはそのまま created_at と比較する", async () => {
-      const { supabase, builders } = createListSupabase();
-
-      renderBadge(
-        { currentTime: 55.0, recordDate: "2025-03-01T10:00:00.000Z", showDiff: false },
-        supabase,
-      );
-
-      await waitForListQueries(supabase);
-      const [, bulkQuery] = builders;
-      expect(bulkQuery.lt).toHaveBeenCalledWith("created_at", "2025-03-01T10:00:00.000Z");
-    });
-
-    it("styleId がないとき何も表示せずクエリも実行しない", async () => {
-      const { supabase } = createListSupabase();
-
-      renderBadge({ styleId: undefined, showDiff: false }, supabase);
+    it("styleId がないとき何も表示せずフェッチもしない", async () => {
+      renderBadge({ styleId: undefined, showDiff: false });
 
       await act(async () => {});
       expectNoBadge();
-      expect(supabase.from).not.toHaveBeenCalled();
+      expect(mockGetListBestCandidates).not.toHaveBeenCalled();
     });
 
-    it("recordDate がないとき何も表示せずクエリも実行しない", async () => {
-      const { supabase } = createListSupabase();
-
-      renderBadge({ recordDate: null, showDiff: false }, supabase);
+    it("recordDate がないとき何も表示せずフェッチもしない", async () => {
+      renderBadge({ recordDate: null, showDiff: false });
 
       await act(async () => {});
       expectNoBadge();
-      expect(supabase.from).not.toHaveBeenCalled();
+      expect(mockGetListBestCandidates).not.toHaveBeenCalled();
     });
 
-    it("未認証のとき何も表示せずクエリも実行しない", async () => {
-      const { supabase } = createListSupabase({ userId: "" });
-
-      renderBadge({ currentTime: 55.0, showDiff: false }, supabase, null);
+    it("未認証のとき何も表示せずフェッチもしない", async () => {
+      const { supabase } = renderBadge({ currentTime: 55.0, showDiff: false }, undefined, null);
 
       await act(async () => {});
       expectNoBadge();
-      expect(supabase.from).not.toHaveBeenCalled();
+      expect(mockGetListBestCandidates).not.toHaveBeenCalled();
       // AuthProvider の user を使うため、行ごとの getUser() は発行しない
       expect(supabase.auth.getUser).not.toHaveBeenCalled();
     });
 
     it("クエリエラー時は console.error を呼び何も表示しない", async () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const { supabase } = createListSupabase({ queryError: new Error("DB error") });
+      mockGetListBestCandidates.mockRejectedValue(new Error("DB error"));
 
-      renderBadge({ currentTime: 55.0, showDiff: false }, supabase);
+      renderBadge({ currentTime: 55.0, showDiff: false });
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith("ベストタイムチェックエラー:", expect.any(Error));
@@ -323,7 +309,7 @@ describe("BestTimeBadge", () => {
   });
 
   // ------------------------------------------------------------------
-  // 3. 非 precomputed パス（RecordAPI.getPreviousBestTime 経由）
+  // 3. 非一覧パス（RecordAPI.getPreviousBestTime 経由）
   // ------------------------------------------------------------------
 
   describe("getPreviousBestTime パス", () => {
@@ -375,6 +361,7 @@ describe("BestTimeBadge", () => {
           recordDate="2025-03-01"
           poolType={null}
         />,
+        { wrapper: createQueryWrapper() },
       );
 
       await waitFor(() => {

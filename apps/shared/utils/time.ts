@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { TimeEntry } from "../types/ui";
+import { parseQuickTime } from "./quickTimeParser";
 
 // 型を再エクスポート
 export type { TimeEntry };
@@ -309,10 +310,41 @@ export function parseTimeStrict(timeString: string): number | null {
 
 /**
  * タイム入力欄の「不正形式のまま残っている」判定（web 各フォーム共通）。
- * 空・未入力は不正扱いしない。"1.23.45" 等、parseTimeStrict が弾く形式のみ true。
+ * 空・未入力は不正扱いしない。parseTimeFlexible が解釈できない形式のみ true
+ * （"1.23.45" 等はクイック解釈で受理されるため不正扱いしない）。
  */
 export function isInvalidTimeInput(displayValue: string | undefined): boolean {
-  return !!displayValue?.trim() && parseTimeStrict(displayValue) === null;
+  return !!displayValue?.trim() && parseTimeFlexible(displayValue) === null;
+}
+
+/**
+ * 柔軟版タイムパース（単発タイム入力欄用: ベストタイム・大会レコード・エントリータイム）。
+ *
+ * まず parseTimeStrict を試し、弾かれた場合はクイック入力と同じ
+ * 「数字の間を任意の非数字で区切る」解釈にフォールバックする。
+ * 練習タイム入力 (useQuickTimeInput) と同じ入力を受理しつつ、
+ * 引き継ぎコンテキスト（十の位・分の引き継ぎ）は使わない。
+ *
+ * parseTimeStrict が通る入力の解釈は従来と完全に同一。
+ * "1.23.45" が 1.23 秒として誤確定される事故は起こらない
+ * （クイック解釈で 1:23.45 = 83.45 秒になる）。
+ *
+ * @example parseTimeFlexible("1:23.45") => 83.45
+ * @example parseTimeFlexible("1.23.45") => 83.45 (クイック解釈)
+ * @example parseTimeFlexible("1、23、4") => 83.4 (クイック解釈)
+ * @example parseTimeFlexible("1分12秒3") => 72.3 (クイック解釈)
+ * @example parseTimeFlexible("-23.45") => null (負値の試みは区切り扱いしない)
+ * @example parseTimeFlexible("invalid") => null
+ */
+export function parseTimeFlexible(timeString: string): number | null {
+  if (!timeString || !timeString.trim()) return null;
+  const trimmed = normalizeTimeSeparators(timeString.trim());
+  // 先頭の "-" は「負のタイムの試み」であって区切りではない (parseTime と同じガード)
+  if (trimmed.startsWith("-")) return null;
+  const strict = parseTimeStrict(trimmed);
+  if (strict !== null) return strict;
+  const quick = parseQuickTime(trimmed);
+  return quick && quick.time > 0 ? quick.time : null;
 }
 
 // =============================================================================

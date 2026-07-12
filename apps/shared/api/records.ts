@@ -16,9 +16,21 @@ import {
   SplitTimeInsert,
 } from "../types";
 import type { BestTime } from "../types/ui";
+import { normalizeRecordDateForBulkComparison } from "../utils/bestTimeBadge";
 
 // Supabaseリアルタイム購読の設定型
 type RealtimeSubscriptionConfig = RealtimePostgresChangesFilter<"*">;
+
+/**
+ * 一覧ベストバッジ判定用の記録候補（getListBestCandidates の戻り値）。
+ * 日付フィルタ・自己除外は呼び出し側がメモリ上で行う。
+ */
+export interface ListBestCandidates {
+  /** 大会記録（competition_id あり）。date は competitions.date */
+  competitionRows: Array<{ id: string; time: number; date: string }>;
+  /** 一括登録（competition_id なし）。created_at で日付比較する */
+  bulkRows: Array<{ id: string; time: number; created_at: string }>;
+}
 
 export class RecordAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -472,9 +484,7 @@ export class RecordAPI {
     if (!user) return null;
 
     // YYYY-MM-DD 形式の場合は当日 00:00:00.000Z に正規化して created_at 比較に使う
-    const normalized = /^\d{4}-\d{2}-\d{2}$/.test(beforeDate)
-      ? `${beforeDate}T00:00:00.000Z`
-      : beforeDate;
+    const normalized = normalizeRecordDateForBulkComparison(beforeDate);
 
     // 1. 大会記録（competition_id あり）: competitions.date で比較
     const competitionQuery = this.supabase
@@ -522,6 +532,74 @@ export class RecordAPI {
     if (compBest != null) return compBest;
     if (bulkBest != null) return bulkBest;
     return null; // その日より前に記録なし = その時点で初記録
+  }
+
+  /**
+   * 一覧ベストバッジ用: 種目・リレー区分（poolType 指定時は水路も）のグループ単位で、
+   * ユーザーの記録候補を軽量フィールドのみ一括取得する。
+   * 一覧の行ごとに getPreviousBestTime 相当の2クエリを発行すると N+1 になるため、
+   * グループ単位の2クエリに集約し、「記録日時点で自己ベストだったか」の日付フィルタと
+   * 自己除外は呼び出し側 (BestTimeBadge computeListPreviousBest) がメモリ上で行う。
+   * time 昇順 + 上限 1000 行のため、万一切り詰められても最速側の候補は保持される。
+   */
+  async getListBestCandidates(
+    userId: string,
+    styleId: number,
+    isRelaying: boolean,
+    poolType?: number | null,
+  ): Promise<ListBestCandidates> {
+    // 1. 大会記録（competition_id あり）: 日付比較用に competitions.date を含める
+    let competitionQuery = this.supabase
+      .from("records")
+      .select("id, time, competition:competitions!inner(date)")
+      .eq("user_id", userId)
+      .eq("style_id", styleId)
+      .eq("is_relaying", isRelaying);
+
+    // 2. 一括登録（competition_id = null）: 日付比較用に created_at を含める
+    let bulkQuery = this.supabase
+      .from("records")
+      .select("id, time, created_at")
+      .eq("user_id", userId)
+      .eq("style_id", styleId)
+      .eq("is_relaying", isRelaying)
+      .is("competition_id", null);
+
+    if (poolType !== null && poolType !== undefined) {
+      competitionQuery = competitionQuery.eq("pool_type", poolType);
+      bulkQuery = bulkQuery.eq("pool_type", poolType);
+    }
+
+    const [compRes, bulkRes] = await Promise.all([
+      competitionQuery.order("time", { ascending: true }).limit(1000),
+      bulkQuery.order("time", { ascending: true }).limit(1000),
+    ]);
+    if (compRes.error) {
+      console.error("getListBestCandidates failed:", compRes.error);
+      throw compRes.error;
+    }
+    if (bulkRes.error) {
+      console.error("getListBestCandidates failed:", bulkRes.error);
+      throw bulkRes.error;
+    }
+
+    // 埋め込みリレーションは型付きクライアントでは配列に推論されるため両形状を吸収する
+    const competitionRows = (
+      (compRes.data ?? []) as Array<{
+        id: string;
+        time: number;
+        competition: { date: string } | { date: string }[] | null;
+      }>
+    ).flatMap((row) => {
+      const competition = Array.isArray(row.competition) ? row.competition[0] : row.competition;
+      return competition?.date ? [{ id: row.id, time: row.time, date: competition.date }] : [];
+    });
+
+    const bulkRows = ((bulkRes.data ?? []) as Array<{ id: string; time: number; created_at: string }>).map(
+      (row) => ({ id: row.id, time: row.time, created_at: row.created_at }),
+    );
+
+    return { competitionRows, bulkRows };
   }
 
   // =========================================================================

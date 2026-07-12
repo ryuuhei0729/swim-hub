@@ -11,7 +11,7 @@ import {
   formatTimeBest,
   formatTimeShort,
   isInvalidTimeInput,
-  parseTimeStrict,
+  parseTimeFlexible,
 } from "@apps/shared/utils/time";
 import { format } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
@@ -554,9 +554,9 @@ export default function EntryLogForm({
                                 });
                                 return;
                               }
-                              // 構造ガード: 不正形式（"1.23.45" 等）を誤値として確定させない。
-                              // 入力値を残してエラー表示する
-                              const time = parseTimeStrict(timeStr);
+                              // 構造ガード: "1.23.45" 等はクイック解釈 (1:23.45) で確定。
+                              // 解釈不能な入力のみ値を残してエラー表示する
+                              const time = parseTimeFlexible(timeStr);
                               if (time === null) {
                                 updateEntry(entry.id, { entryTime: 0 });
                               } else {

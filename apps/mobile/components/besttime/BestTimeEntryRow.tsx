@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, Pressable, TextInput, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import type { TFunction } from "i18next";
+import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
 import { isEnteredButInvalid, type BestTimeEntry } from "./styleOptions";
 
 export interface BestTimeEntryRowProps {
@@ -35,6 +36,15 @@ export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
   t,
 }) => {
   const timeInvalid = showNote && isEnteredButInvalid(entry.time);
+
+  // blur 時に確定値へ再フォーマット (練習タイム・大会レコード入力と同じ UX)。
+  // 不正形式は生値のまま残し、エラー表示 / canSave の無効化に任せる
+  const handleTimeBlur = () => {
+    const parsed = parseTimeFlexible(entry.time);
+    if (parsed !== null) {
+      onUpdate(entry.key, { time: formatTimeBest(parsed) });
+    }
+  };
 
   const poolToggle = (
     <View style={styles.poolToggle}>
@@ -100,6 +110,7 @@ export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
             style={[styles.timeInput, styles.flex1, disabled && styles.inputDisabled]}
             value={entry.time}
             onChangeText={(text) => onUpdate(entry.key, { time: text })}
+            onBlur={handleTimeBlur}
             placeholder={t("onboarding.step3.timePlaceholder")}
             placeholderTextColor="#9CA3AF"
             keyboardType="decimal-pad"
@@ -129,6 +140,7 @@ export const BestTimeEntryRow: React.FC<BestTimeEntryRowProps> = ({
             style={[styles.timeInput, timeInvalid && styles.inputError, disabled && styles.inputDisabled]}
             value={entry.time}
             onChangeText={(text) => onUpdate(entry.key, { time: text })}
+            onBlur={handleTimeBlur}
             placeholder={t("onboarding.step3.timePlaceholder")}
             placeholderTextColor="#9CA3AF"
             keyboardType="decimal-pad"

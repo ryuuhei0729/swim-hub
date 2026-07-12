@@ -1,5 +1,15 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -180,7 +190,16 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.formContainer}>
         <View style={styles.header}>
           <Text style={styles.title}>{t("auth.signup.emailMethodTitle")}</Text>
@@ -256,7 +275,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin
           </Pressable>
         </View>
       </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -292,8 +312,14 @@ function PasswordRequirementsList({ checks }: { checks: PasswordChecks }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scroll: {
     flex: 1,
+    backgroundColor: "#EFF6FF",
+  },
+  container: {
+    // flexGrow (not flex) keeps the card centered on tall screens while
+    // letting short screens / keyboard-open viewports scroll to the button
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,

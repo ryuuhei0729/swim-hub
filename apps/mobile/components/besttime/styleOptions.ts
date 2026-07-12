@@ -1,5 +1,5 @@
 import i18next from "i18next";
-import { parseTimeStrict } from "@apps/shared/utils/time";
+import { parseTimeFlexible } from "@apps/shared/utils/time";
 
 // =============================================================================
 // 型定義
@@ -157,7 +157,7 @@ export type BestTimeInputMap = Record<string, CellInput>;
 export function computeMatrixRecords(inputs: BestTimeInputMap): BestTimeRecordDraft[] {
   const records: BestTimeRecordDraft[] = [];
   for (const [key, input] of Object.entries(inputs)) {
-    const seconds = parseTimeStrict(input.time);
+    const seconds = parseTimeFlexible(input.time);
     if (seconds === null) continue;
     const [styleIdStr, poolTypeStr, relayStr] = key.split("_");
     records.push({
@@ -207,7 +207,7 @@ export function getDuplicateKeys(entries: BestTimeEntry[]): Set<string> {
 export function canSave(entries: BestTimeEntry[]): boolean {
   if (entries.length === 0) return false;
   if (hasDuplicates(entries)) return false;
-  return entries.every((e) => parseTimeStrict(e.time) !== null);
+  return entries.every((e) => parseTimeFlexible(e.time) !== null);
 }
 
 // =============================================================================
@@ -216,5 +216,5 @@ export function canSave(entries: BestTimeEntry[]): boolean {
 
 /** 入力値が「入力済みだが不正」か (空は不正扱いしない / 形式チェック込み) */
 export function isEnteredButInvalid(raw: string): boolean {
-  return raw.trim() !== "" && parseTimeStrict(raw) === null;
+  return raw.trim() !== "" && parseTimeFlexible(raw) === null;
 }

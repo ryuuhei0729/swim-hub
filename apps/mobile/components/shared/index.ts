@@ -6,3 +6,4 @@ export { VideoPlayer } from "./VideoPlayer";
 export { TagChips } from "./TagChips";
 export { TagSelectModal } from "./TagSelectModal";
 export { TagManageModal } from "./TagManageModal";
+export { TimeInputHelp } from "./TimeInputHelp";

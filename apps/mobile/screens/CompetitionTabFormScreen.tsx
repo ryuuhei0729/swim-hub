@@ -38,6 +38,7 @@ import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/Ima
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { VideoUploader } from "@/components/shared/VideoUploader";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
 import { ItemTabs } from "@/components/forms/ItemTabs";
 import { StyleChipSelector } from "@/components/forms/StyleChipSelector";
@@ -51,7 +52,7 @@ import {
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
-import { parseTime, parseTimeStrict, formatTimeBest } from "@apps/shared/utils/time";
+import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
 import { hasUnsavedChanges, isEntryTabVisible, diffRecordDraft } from "@/utils/tabFormUtils";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
@@ -551,9 +552,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
       if (!entry.styleId) {
         newErrors[`style-${index}`] = t("competition.entry.selectStyleRequired");
       }
-      // blur を経ずに保存された場合の不正形式 ("1.23.45" 等) を確定拒否する
+      // blur を経ずに保存された場合の解釈不能な形式を確定拒否する
       const rawTime = entry.entryTimeDisplayValue.trim();
-      if (rawTime !== "" && parseTimeStrict(rawTime) === null) {
+      if (rawTime !== "" && parseTimeFlexible(rawTime) === null) {
         newErrors[`entryTime-${index}`] = t("competition.entry.timeFormatInvalid");
       }
     });
@@ -576,9 +577,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
       if (!record.styleId) {
         newErrors[`style-${index}`] = t("recordMobile.form.styleRequired");
       }
-      // blur を経ずに保存された場合の不正形式 ("1.23.45" 等) を確定拒否する
+      // blur を経ずに保存された場合の解釈不能な形式を確定拒否する
       const rawTime = record.timeDisplayValue.trim();
-      if (rawTime !== "" && parseTimeStrict(rawTime) === null) {
+      if (rawTime !== "" && parseTimeFlexible(rawTime) === null) {
         newErrors[`time-${index}`] = t("recordMobile.form.timeFormatInvalid");
       }
     });
@@ -1001,7 +1002,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         const updated = { ...entry, ...updates };
         if ("entryTimeDisplayValue" in updates) {
           const tv = updates.entryTimeDisplayValue || "";
-          const parsed = tv.trim() !== "" ? parseTime(tv) : 0;
+          const parsed = tv.trim() !== "" ? (parseTimeFlexible(tv) ?? 0) : 0;
           updated.entryTime = parsed;
           if (tv.trim() !== "" && parsed <= 0) {
             setEntryErrors((prev) => ({
@@ -1022,8 +1023,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
   }, [t]);
 
   // ---- エントリータイム blur 時の確定・再フォーマット ----
-  // parseTimeStrict で構造ガードし、"1.23.45" のような不正形式が 1.23 秒として
-  // 静かに確定されるのを防ぐ（確定拒否 + エラー表示。クイック入力 "31-2" は通す）
+  // parseTimeFlexible で構造ガードし、"1.23.45" のような入力もクイック解釈
+  // (1:23.45) で確定する。解釈不能な入力のみ確定拒否 + エラー表示
   const handleEntryTimeBlur = useCallback(
     (draftId: string) => {
       setEntries((prev) =>
@@ -1038,7 +1039,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
             });
             return { ...entry, entryTime: 0 };
           }
-          const parsed = parseTimeStrict(raw);
+          const parsed = parseTimeFlexible(raw);
           if (parsed === null) {
             setEntryErrors((prevErrors) => ({
               ...prevErrors,
@@ -1157,11 +1158,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
   );
 
   // ---- タイム入力 ----
-  // 入力中は生文字列を保持し、shared parseTime (「:」=分) でパースする。
-  // web useRecordLogForm.handleTimeChange と同一の挙動 (quick-carry コンテキストなし)。
+  // 入力中は生文字列を保持し、blur / 保存時の確定値と同じ parseTimeFlexible で
+  // パースする (quick-carry コンテキストなし)。
   const handleRecordTimeChange = useCallback(
     (draftId: string, value: string) => {
-      const newTime = parseTime(value);
+      const newTime = parseTimeFlexible(value) ?? 0;
       setRecords((prev) =>
         prev.map((r) => {
           if (r.draftId !== draftId) return r;
@@ -1203,7 +1204,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
   );
 
   // blur 時に確定値へ再フォーマット (web formatTimeBest と同一表示)。
-  // parseTimeStrict で構造ガードし、不正形式は確定せずエラー表示する
+  // parseTimeFlexible で構造ガードし、解釈不能な入力のみ確定せずエラー表示する
   const handleRecordTimeBlur = useCallback(
     (draftId: string) => {
       setRecords((prev) =>
@@ -1218,7 +1219,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
             });
             return { ...r, time: 0 };
           }
-          const parsed = parseTimeStrict(raw);
+          const parsed = parseTimeFlexible(raw);
           if (parsed === null) {
             setRecordErrors((prevErrors) => ({
               ...prevErrors,
@@ -1373,8 +1374,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
               const numValue = parseFloat(value);
               return { ...st, distance: isNaN(numValue) ? value : numValue };
             }
-            // shared parseTime (「:」=分)。入力中は生文字列を保持する
-            const parsedTime = value.trim() === "" ? 0 : parseTime(value);
+            // blur / 保存時の確定値と同じ parseTimeFlexible 解釈。入力中は生文字列を保持する
+            const parsedTime = value.trim() === "" ? 0 : (parseTimeFlexible(value) ?? 0);
             return {
               ...st,
               splitTimeDisplayValue: value,
@@ -1396,6 +1397,29 @@ export const CompetitionTabFormScreen: React.FC = () => {
       }),
     );
   }, []);
+
+  // スプリットタイムの blur 時に確定値へ再フォーマット (タイム欄と同じ UX)
+  const handleSplitTimeBlur = useCallback(
+    (draftId: string, splitIndex: number) => {
+      setRecords((prev) =>
+        prev.map((r) => {
+          if (r.draftId !== draftId) return r;
+          const updatedSplitTimes = r.splitTimes.map((st, i) => {
+            if (i !== splitIndex) return st;
+            const parsed = parseTimeFlexible(st.splitTimeDisplayValue);
+            if (parsed === null) return st;
+            return {
+              ...st,
+              splitTimeDisplayValue: formatTimeBest(parsed),
+              splitTime: parsed,
+            };
+          });
+          return { ...r, splitTimes: updatedSplitTimes };
+        }),
+      );
+    },
+    [],
+  );
 
   // スプリットタイムを距離昇順でソートして元インデックスを保持 (web RecordLogEntry :190-209)
   const getSortedSplitIndices = useCallback((splitTimes: SplitTimeData[]) => {
@@ -1592,6 +1616,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
               <Text style={styles.sectionTitle}>{t("competition.entry.title")}</Text>
             </View>
 
+            <TimeInputHelp style={{ marginBottom: 12 }} />
+
             {/* 種目重複エラーバナー (web CompetitionTabModal entryValidationError と同一) */}
             {entryErrors.duplicate && (
               <View style={styles.errorBanner}>
@@ -1724,6 +1750,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{t("recordMobile.form.sectionTitle")}</Text>
             </View>
+
+            {showRecordTab && <TimeInputHelp style={{ marginBottom: 12 }} />}
 
             {!showRecordTab && (
               <View style={styles.guardMessage}>
@@ -1990,6 +2018,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                           onChangeText={(text) =>
                             handleSplitTimeChange(record.draftId, splitIndex, "splitTime", text)
                           }
+                          onBlur={() => handleSplitTimeBlur(record.draftId, splitIndex)}
                           placeholder={t("recordMobile.form.splitPlaceholder")}
                           keyboardType="decimal-pad"
                           editable={!isSaving}

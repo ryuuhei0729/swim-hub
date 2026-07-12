@@ -29,7 +29,7 @@ import { isEntryTabVisible } from "@/utils/tabModalUtils";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { formatTimeBest } from "@/utils/formatters";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
-import { parseTimeStrict } from "@apps/shared/utils/time";
+import { parseTimeFlexible } from "@apps/shared/utils/time";
 import type { CompetitionImageFile, ExistingImage } from "@/components/forms/CompetitionImageUploader";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
 import type { RecordLogFormData } from "@/components/forms/record-log/types";
@@ -559,9 +559,9 @@ export default function CompetitionTabModal({
     if (showEntryTab) {
       const styleIds = entries.filter((e) => e.styleId).map((e) => e.styleId);
       const hasDuplicate = styleIds.length !== new Set(styleIds).size;
-      // 不正形式（"1.23.45" 等）は entryTime=0 のまま静かに保存しない
+      // 解釈不能な形式は entryTime=0 のまま静かに保存しない
       const hasInvalidEntryTime = entries.some(
-        (e) => e.entryTimeDisplayValue.trim() !== "" && parseTimeStrict(e.entryTimeDisplayValue) === null,
+        (e) => e.entryTimeDisplayValue.trim() !== "" && parseTimeFlexible(e.entryTimeDisplayValue) === null,
       );
       if (hasDuplicate) {
         errors.entry = true;
@@ -1084,15 +1084,15 @@ export default function CompetitionTabModal({
                                   type="text"
                                   value={entry.entryTimeDisplayValue}
                                   onChange={(e) => {
-                                    // 構造ガード: 不正形式（"1.23.45" 等）を誤値として確定させない
-                                    const parsed = parseTimeStrict(e.target.value);
+                                    // 構造ガード: "1.23.45" 等はクイック解釈で受理。解釈不能なら 0 のまま
+                                    const parsed = parseTimeFlexible(e.target.value);
                                     updateEntry(entry.id, {
                                       entryTimeDisplayValue: e.target.value,
                                       entryTime: parsed ?? 0,
                                     });
                                   }}
                                   onBlur={(e) => {
-                                    const parsed = parseTimeStrict(e.target.value);
+                                    const parsed = parseTimeFlexible(e.target.value);
                                     updateEntry(entry.id, {
                                       // 不正形式は入力値を残してエラー表示する（誤値で整形しない）
                                       entryTimeDisplayValue:
@@ -1106,7 +1106,7 @@ export default function CompetitionTabModal({
                                   data-testid={`entry-time-${clampedIndex + 1}`}
                                 />
                                 {entry.entryTimeDisplayValue.trim() !== "" &&
-                                  parseTimeStrict(entry.entryTimeDisplayValue) === null && (
+                                  parseTimeFlexible(entry.entryTimeDisplayValue) === null && (
                                     <p
                                       className="mt-1 text-xs text-red-600"
                                       data-testid={`entry-time-error-${clampedIndex + 1}`}

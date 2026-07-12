@@ -255,8 +255,9 @@ export const RecordsScreen: React.FC = () => {
   );
 
   // アイテムをレンダリング（メモ化）
-  // ベストバッジは RecordItem 内 BestTimeBadge が web と同じ per-record 非同期クエリで
-  // 「記録日時点で自己ベストだったか」を判定する（判定完了まで非表示）
+  // ベストバッジは RecordItem 内 BestTimeBadge が「記録日時点で自己ベストだったか」を
+  // 判定する（判定完了まで非表示）。候補取得は種目グループ単位の共有キャッシュクエリ
+  // (useListBestCandidatesQuery) に集約されるため、行ごとのクエリは発行されない
   const renderItem = useCallback(
     ({ item }: { item: RecordWithDetails }) => {
       return <RecordItem record={item} onPress={handleRecordPress} />;

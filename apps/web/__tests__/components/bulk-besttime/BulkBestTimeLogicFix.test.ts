@@ -9,37 +9,29 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTimeFlexible } from "@apps/shared/utils/time";
 
 // =============================================================================
-// Fix1 検証: handleInputChange の不正文字ガード
+// Fix1 検証: handleInputChange のタイムバリデーション (parseTimeFlexible 移行後)
 // =============================================================================
 
 /**
- * BulkBestTimeClient の handleInputChange 内の不正文字チェックを
+ * BulkBestTimeClient の handleInputChange 内のタイムバリデーションを
  * 仕様ベースで再現する純粋関数
  *
- * 実装: !/^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i.test(raw)  (Fix1 後の正規表現)
+ * 実装: parseTimeFlexible(raw) === null → error (BulkBestTimeClient.tsx handleInputChange)
  *
- * IMPORTANT: この正規表現は BulkBestTimeClient.tsx L197 と完全一致させること。
+ * IMPORTANT: BulkBestTimeClient.tsx の time バリデーションと完全一致させること。
  * 本体変更時はここも必ず同期すること。
  *
- * 文書化2形式のみ許可:
- *   従来形式  \d+(:\d+)?(\.\d+)?  → "1:23.45" "1:30" "23.45" "30"
- *   クイック式 \d+(-\d+){1,2}     → "31-2" "1-05-3"
- * 末尾 s は許容。多重ドット("1.23.45")・多重コロン("1:2:3")・連続区切り・letters を構造的に弾く。
+ * parseTimeFlexible の受理仕様:
+ *   従来形式  "1:23.45" "1:30" "23.45" "30" (+末尾s)
+ *   クイック式 数字の間を任意の非数字で区切る2〜3パーツ → "31-2" "1-05-3" "1.23.45" "1:2:3"
+ * 解釈不能 (数字パーツ1つの区切り付き・4パーツ以上・数字なし)・先頭マイナス・0以下は null。
  *
- * 旧正規表現 /^\d+([:.-]\d+)*s?$/i との差異:
- *   旧: 任意長の「区切り+数字」繰り返しを許容 → "1.23.45" "1:2:3" "1-2-3-4" を通してしまう
- *   新: 2形式限定の文法で多重ドット・多重コロン・過剰ハイフンを構造的に弾く
- */
-function hasInvalidChars(raw: string): boolean {
-  return !/^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i.test(raw);
-}
-
-/**
- * Fix1 統合: time フィールドのバリデーション結果を返す
- * (実装の handleInputChange から time バリデーション部分を抽出)
+ * 旧実装 (TIME_FORMAT_REGEX + parseTimeStrict) との差異:
+ *   旧: "1.23.45" "1:2:3" を不正形式として拒否
+ *   新: クイック解釈 (1:23.45 / 1:02.30) で受理 — 練習タイム入力・mobile と同一 UX
  */
 function validateTime(value: string): { error: boolean; timeInSeconds?: number } {
   const raw = value.trim();
@@ -48,31 +40,17 @@ function validateTime(value: string): { error: boolean; timeInSeconds?: number }
     return { error: false, timeInSeconds: undefined };
   }
 
-  const invalid = hasInvalidChars(raw);
-  const timeInSeconds = parseTime(raw);
-
-  if (invalid || timeInSeconds <= 0) {
+  const timeInSeconds = parseTimeFlexible(raw);
+  if (timeInSeconds === null) {
     return { error: true, timeInSeconds: undefined };
   }
   return { error: false, timeInSeconds };
 }
 
-describe("Fix1: 不正文字ガード + エラー表示ロジック", () => {
+describe("Fix1: タイムバリデーション (parseTimeFlexible) + エラー表示ロジック", () => {
   describe("不正入力 → error=true, timeInSeconds=undefined", () => {
-    it("'1:ab.cd' はエラー (アルファベット混入)", () => {
-      const result = validateTime("1:ab.cd");
-      expect(result.error).toBe(true);
-      expect(result.timeInSeconds).toBeUndefined();
-    });
-
-    it("'abc' はエラー (全アルファベット)", () => {
+    it("'abc' はエラー (数字を含まない)", () => {
       const result = validateTime("abc");
-      expect(result.error).toBe(true);
-      expect(result.timeInSeconds).toBeUndefined();
-    });
-
-    it("'1:23.xx' はエラー (小数部にアルファベット)", () => {
-      const result = validateTime("1:23.xx");
       expect(result.error).toBe(true);
       expect(result.timeInSeconds).toBeUndefined();
     });
@@ -83,31 +61,19 @@ describe("Fix1: 不正文字ガード + エラー表示ロジック", () => {
       expect(result.timeInSeconds).toBeUndefined();
     });
 
-    it("'--12' はエラー (先頭が数字でない)", () => {
+    it("'--12' はエラー (先頭マイナス = 負値の試みは区切り扱いしない)", () => {
       const result = validateTime("--12");
       expect(result.error).toBe(true);
       expect(result.timeInSeconds).toBeUndefined();
     });
 
-    it("'1.23.45' はエラー (多重ドット: サイレント誤保存ホールを閉じる)", () => {
-      const result = validateTime("1.23.45");
+    it("'-23.45' はエラー (先頭マイナス)", () => {
+      const result = validateTime("-23.45");
       expect(result.error).toBe(true);
       expect(result.timeInSeconds).toBeUndefined();
     });
 
-    it("'1.2.3' はエラー (多重ドット)", () => {
-      const result = validateTime("1.2.3");
-      expect(result.error).toBe(true);
-      expect(result.timeInSeconds).toBeUndefined();
-    });
-
-    it("'1:2:3' はエラー (多重コロン)", () => {
-      const result = validateTime("1:2:3");
-      expect(result.error).toBe(true);
-      expect(result.timeInSeconds).toBeUndefined();
-    });
-
-    it("'1-2-3-4' はエラー (3つのハイフン: クイック式は2つまで)", () => {
+    it("'1-2-3-4' はエラー (数字4パーツ: クイック式は2〜3パーツまで)", () => {
       const result = validateTime("1-2-3-4");
       expect(result.error).toBe(true);
       expect(result.timeInSeconds).toBeUndefined();
@@ -170,6 +136,24 @@ describe("Fix1: 不正文字ガード + エラー表示ロジック", () => {
       expect(result.timeInSeconds).toBeGreaterThan(0);
       expect(result.timeInSeconds).toBeCloseTo(30, 1);
     });
+
+    it("'1.23.45' は有効 (クイック解釈: 1:23.45 = 83.45秒。旧実装では拒否)", () => {
+      const result = validateTime("1.23.45");
+      expect(result.error).toBe(false);
+      expect(result.timeInSeconds).toBeCloseTo(83.45, 2);
+    });
+
+    it("'1:2:3' は有効 (クイック解釈: 1分02秒30 = 62.3秒。旧実装では拒否)", () => {
+      const result = validateTime("1:2:3");
+      expect(result.error).toBe(false);
+      expect(result.timeInSeconds).toBeCloseTo(62.3, 2);
+    });
+
+    it("'1、23、4' は有効 (任意の非数字区切り: 83.4秒)", () => {
+      const result = validateTime("1、23、4");
+      expect(result.error).toBe(false);
+      expect(result.timeInSeconds).toBeCloseTo(83.4, 2);
+    });
   });
 
   describe("空文字 → エラークリア", () => {
@@ -183,94 +167,6 @@ describe("Fix1: 不正文字ガード + エラー表示ロジック", () => {
       const result = validateTime("   ");
       expect(result.error).toBe(false);
       expect(result.timeInSeconds).toBeUndefined();
-    });
-  });
-
-  describe("不正文字フラグの単体確認 (hasInvalidChars) - Fix1 正規表現 /^(\\d+(:\\d+)?(\\.\\d+)?|\\d+(-\\d+){1,2})s?$/i", () => {
-    // --- 弾くべきケース (hasInvalidChars === true) ---
-    it("'1.23.45' は不正文字あり (多重ドット: 旧 regex のサイレント誤保存ホール)", () => {
-      expect(hasInvalidChars("1.23.45")).toBe(true);
-    });
-
-    it("'1.2.3' は不正文字あり (多重ドット)", () => {
-      expect(hasInvalidChars("1.2.3")).toBe(true);
-    });
-
-    it("'1:2:3' は不正文字あり (多重コロン: 今回 regex 自体で弾けるようになった)", () => {
-      expect(hasInvalidChars("1:2:3")).toBe(true);
-    });
-
-    it("'1-2-3-4' は不正文字あり (3つのハイフン: クイック式は{1,2}まで)", () => {
-      expect(hasInvalidChars("1-2-3-4")).toBe(true);
-    });
-
-    it("'1:ab.cd' は不正文字あり (letters 混入)", () => {
-      expect(hasInvalidChars("1:ab.cd")).toBe(true);
-    });
-
-    it("'abc' は不正文字あり (全アルファベット)", () => {
-      expect(hasInvalidChars("abc")).toBe(true);
-    });
-
-    it("'-5' は不正文字あり (先頭が区切り文字)", () => {
-      expect(hasInvalidChars("-5")).toBe(true);
-    });
-
-    it("':30' は不正文字あり (先頭がコロン)", () => {
-      expect(hasInvalidChars(":30")).toBe(true);
-    });
-
-    it("'30-' は不正文字あり (末尾が区切り文字)", () => {
-      expect(hasInvalidChars("30-")).toBe(true);
-    });
-
-    it("'1:-23' は不正文字あり (連続区切り: コロン+マイナス)", () => {
-      expect(hasInvalidChars("1:-23")).toBe(true);
-    });
-
-    it("'1-:23' は不正文字あり (連続区切り: マイナス+コロン)", () => {
-      expect(hasInvalidChars("1-:23")).toBe(true);
-    });
-
-    it("'1:.-2' は不正文字あり (連続区切り: コロン+ピリオド+マイナス)", () => {
-      expect(hasInvalidChars("1:.-2")).toBe(true);
-    });
-
-    // --- 通すべきケース (hasInvalidChars === false) ---
-    it("'1:23.45' は不正文字なし (標準形式)", () => {
-      expect(hasInvalidChars("1:23.45")).toBe(false);
-    });
-
-    it("'1:30' は不正文字なし (コンマなし)", () => {
-      expect(hasInvalidChars("1:30")).toBe(false);
-    });
-
-    it("'23.45' は不正文字なし (秒.コンマ)", () => {
-      expect(hasInvalidChars("23.45")).toBe(false);
-    });
-
-    it("'30' は不正文字なし (純粋な秒数)", () => {
-      expect(hasInvalidChars("30")).toBe(false);
-    });
-
-    it("'31-2' は不正文字なし (クイック入力: ハイフン区切り)", () => {
-      expect(hasInvalidChars("31-2")).toBe(false);
-    });
-
-    it("'1-05-3' は不正文字なし (クイック入力: 複数ハイフン)", () => {
-      expect(hasInvalidChars("1-05-3")).toBe(false);
-    });
-
-    it("'30s' は不正文字なし (末尾 s は許可)", () => {
-      expect(hasInvalidChars("30s")).toBe(false);
-    });
-
-    it("'30S' は不正文字なし (末尾 S は許可, case insensitive)", () => {
-      expect(hasInvalidChars("30S")).toBe(false);
-    });
-
-    it("'16:23.45' は不正文字なし (長距離標準形式)", () => {
-      expect(hasInvalidChars("16:23.45")).toBe(false);
     });
   });
 });

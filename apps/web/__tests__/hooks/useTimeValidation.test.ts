@@ -68,7 +68,7 @@ describe("useTimeValidation", () => {
       it("0秒はnullを返す（正のタイムのみ有効）", () => {
         const { result } = renderHook(() => useTimeValidation());
 
-        // parseTime は parseTimeStrict に委譲。0 以下は無効なタイムとして null
+        // parseTime は parseTimeFlexible に委譲。0 以下は無効なタイムとして null
         expect(result.current.parseTime("0")).toBeNull();
         expect(result.current.parseTime("0.0")).toBeNull();
         expect(result.current.parseTime("0:00")).toBeNull();
@@ -89,39 +89,37 @@ describe("useTimeValidation", () => {
 
         expect(result.current.parseTime("abc")).toBeNull();
         expect(result.current.parseTime("invalid")).toBeNull();
-        expect(result.current.parseTime("1:2:3")).toBeNull(); // コロンが2つ
       });
 
-      it("負の値はnullを返す", () => {
+      it("先頭マイナス（負値の試み）はnullを返す", () => {
         const { result } = renderHook(() => useTimeValidation());
 
         expect(result.current.parseTime("-1:23.45")).toBeNull();
         expect(result.current.parseTime("-23.45")).toBeNull();
-        expect(result.current.parseTime("1:-23.45")).toBeNull();
       });
 
-      it("NaNを含む入力はnullを返す", () => {
+      it("数字を含まない入力はnullを返す", () => {
         const { result } = renderHook(() => useTimeValidation());
 
         expect(result.current.parseTime("NaN")).toBeNull();
-        expect(result.current.parseTime("NaN:30.00")).toBeNull();
-        expect(result.current.parseTime("1:NaN")).toBeNull();
-      });
-
-      it("Infinityを含む入力はnullを返す", () => {
-        const { result } = renderHook(() => useTimeValidation());
-
         expect(result.current.parseTime("Infinity")).toBeNull();
-        expect(result.current.parseTime("Infinity:30.00")).toBeNull();
-        expect(result.current.parseTime("1:Infinity")).toBeNull();
       });
 
-      it("コロンが2つ以上ある場合はnullを返す", () => {
+      it("数字パーツが1つ・4つ以上のクイック形式はnullを返す", () => {
         const { result } = renderHook(() => useTimeValidation());
 
-        expect(result.current.parseTime("1:2:3")).toBeNull();
-        expect(result.current.parseTime("1:2:3.45")).toBeNull();
-        expect(result.current.parseTime("1:2:3:4")).toBeNull();
+        expect(result.current.parseTime("1:NaN")).toBeNull(); // 数字パーツ1つ
+        expect(result.current.parseTime("1:Infinity")).toBeNull(); // 数字パーツ1つ
+        expect(result.current.parseTime("1:2:3.45")).toBeNull(); // 数字パーツ4つ
+        expect(result.current.parseTime("1:2:3:4")).toBeNull(); // 数字パーツ4つ
+      });
+
+      it("クイック入力形式（任意の非数字区切り）を受理する", () => {
+        const { result } = renderHook(() => useTimeValidation());
+
+        expect(result.current.parseTime("31-2")).toBe(31.2);
+        expect(result.current.parseTime("1.23.45")).toBe(83.45); // M.SS.cc
+        expect(result.current.parseTime("1:2:3")).toBe(62.3); // 1分02秒30 のクイック解釈
       });
     });
 
@@ -219,13 +217,21 @@ describe("useTimeValidation", () => {
         expect(validation.error).toBe("タイムの形式が正しくありません（例: 1:23.45 または 23.45）");
       });
 
-      it("コロンが2つ以上はエラー", () => {
+      it("数字パーツが4つ以上はエラー", () => {
         const { result } = renderHook(() => useTimeValidation());
 
-        const validation = result.current.validateTime("1:2:3");
+        const validation = result.current.validateTime("1:2:3:4");
 
         expect(validation.isValid).toBe(false);
         expect(validation.error).toBe("タイムの形式が正しくありません（例: 1:23.45 または 23.45）");
+      });
+
+      it("クイック入力形式（\"1:2:3\" = 1分02秒30 等）は有効", () => {
+        const { result } = renderHook(() => useTimeValidation());
+
+        expect(result.current.validateTime("1:2:3").isValid).toBe(true);
+        expect(result.current.validateTime("1.23.45").isValid).toBe(true);
+        expect(result.current.validateTime("31-2").isValid).toBe(true);
       });
 
       it("負の値はエラー", () => {

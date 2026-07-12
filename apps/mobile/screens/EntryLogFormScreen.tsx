@@ -25,8 +25,9 @@ import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
 import { localizedStyleName } from "@/utils/styleName";
-import { parseTime, parseTimeStrict, formatTimeBest } from "@apps/shared/utils/time";
+import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
 import type { MainStackParamList } from "@/navigation/types";
@@ -197,15 +198,16 @@ export const EntryLogFormScreen: React.FC = () => {
     }
   }, [entryId, swimStyles, loadingStyles, entries]);
 
-  // タイム文字列を秒数に変換（共有パーサー使用：-でも:でも.でも区切り対応）
+  // タイム文字列を秒数に変換 (blur / 保存時の確定値と同じ parseTimeFlexible 解釈)
   const parseTimeString = (timeString: string): number => {
-    return parseTime(timeString);
+    if (!timeString || timeString.trim() === "") return 0;
+    return parseTimeFlexible(timeString) ?? 0;
   };
 
   // タイム文字列が有効かどうかを検証
   const isValidTimeString = (timeString: string): boolean => {
     if (!timeString || timeString.trim() === "") return true; // 空は有効（任意入力）
-    return parseTime(timeString) > 0;
+    return parseTimeFlexible(timeString) !== null;
   };
 
   // バリデーション
@@ -223,9 +225,9 @@ export const EntryLogFormScreen: React.FC = () => {
       if (!entry.styleId) {
         newErrors[`style-${index}`] = t("competition.entry.selectStyleRequired");
       }
-      // blur を経ずに保存された場合の不正形式 ("1.23.45" 等) を確定拒否する
+      // blur を経ずに保存された場合の解釈不能な形式を確定拒否する
       const rawTime = entry.entryTimeDisplayValue.trim();
-      if (rawTime !== "" && parseTimeStrict(rawTime) === null) {
+      if (rawTime !== "" && parseTimeFlexible(rawTime) === null) {
         newErrors[`entryTime-${index}`] = t("competition.entry.timeFormatInvalid");
       }
     });
@@ -301,8 +303,8 @@ export const EntryLogFormScreen: React.FC = () => {
   };
 
   // エントリータイム blur 時の確定・再フォーマット。
-  // parseTimeStrict で構造ガードし、"1.23.45" のような不正形式が 1.23 秒として
-  // 静かに確定されるのを防ぐ（確定拒否 + エラー表示。クイック入力 "31-2" は通す）
+  // parseTimeFlexible で構造ガードし、"1.23.45" のような入力もクイック解釈
+  // (1:23.45) で確定する。解釈不能な入力のみ確定拒否 + エラー表示
   const handleEntryTimeBlur = (entryId: string) => {
     setEntries((prev) =>
       prev.map((entry, index) => {
@@ -316,7 +318,7 @@ export const EntryLogFormScreen: React.FC = () => {
           });
           return { ...entry, entryTime: 0 };
         }
-        const parsed = parseTimeStrict(raw);
+        const parsed = parseTimeFlexible(raw);
         if (parsed === null) {
           setErrors((prevErrors) => ({
             ...prevErrors,
@@ -579,6 +581,7 @@ export const EntryLogFormScreen: React.FC = () => {
               <Text style={styles.addButtonText}>{t("competition.entry.addStyle")}</Text>
             </Pressable>
           </View>
+          <TimeInputHelp />
         </View>
 
         {/* エントリー一覧 */}

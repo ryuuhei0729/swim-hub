@@ -1,25 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { RecordAPI } from "@apps/shared/api/records";
+import { useListBestCandidatesQuery } from "@apps/shared/hooks/queries/records";
+import { computeListPreviousBest } from "@apps/shared/utils/bestTimeBadge";
 import { formatTimeBest } from "@/utils/formatters";
 
 /** 自己ベストと同記録とみなす許容誤差（秒）＝web share/utils.ts BEST_EPSILON と同値 */
 const BEST_EPSILON = 0.005;
-
-/**
- * YYYY-MM-DD 形式の日付を bulkQuery の created_at 比較用に正規化する。
- * YYYY-MM-DD (10文字) は当日 00:00:00.000Z に拡張し、当日以前のみ対象とする。
- * ISO タイムスタンプの場合はそのまま返す。
- * (web components/ui/BestTimeBadge.tsx normalizeRecordDateForBulkComparison と同一)
- */
-function normalizeRecordDateForBulkComparison(recordDate: string): string {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(recordDate)) {
-    return `${recordDate}T00:00:00.000Z`;
-  }
-  return recordDate;
-}
 
 /** 自己ベストバッジ状態（web ShareBadgeState と同一の3状態+非表示） */
 type ShareBadgeState =
@@ -89,10 +78,11 @@ interface BestTimeBadgeProps {
  * - ベストより遅い: 「自己ベスト」+ 差分 (red)
  * - 判定不能 (styleId なし / time 0 / エラー): 非表示
  *
- * 一覧表示 (showDiff === false。web components/ui/BestTimeBadge.tsx と同一アルゴリズム):
- * - 同一 user_id / style_id / is_relaying / (poolType 指定時) pool_type で
- *   自分自身を除外した過去記録を「大会記録 (competitions.date < recordDate)」と
- *   「一括登録 (created_at < 正規化 recordDate)」の2クエリで取得し min を過去ベストとする
+ * 一覧表示 (showDiff === false。web components/ui/BestTimeBadge.tsx と同一の判定):
+ * - 同一 user_id / style_id / is_relaying / (poolType 指定時) pool_type の記録候補を
+ *   グループ単位の共有キャッシュクエリ (useListBestCandidatesQuery) で一括取得し、
+ *   「大会記録 (competitions.date < recordDate)」と「一括登録 (created_at < 正規化
+ *   recordDate)」の自己除外済み min を過去ベストとする (computeListPreviousBest)
  * - 過去ベストなし or currentTime がそれより速い → 「自己ベスト」バッジ (blue、差分なし)
  * - それ以外・ロード中・判定不能 (styleId / recordDate なし)・エラー → 非表示
  */
@@ -107,109 +97,46 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
 }) => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
-  const [state, setState] = useState<BadgeState>({ kind: "none" });
+  const [state, setState] = useState<ShareBadgeState>({ kind: "none" });
   const isListVariant = showDiff === false;
   // user オブジェクトはトークン更新等で参照が変わり得るため id だけを依存に使う
   const userId = user?.id;
 
+  // 一覧パス: web components/ui/BestTimeBadge.tsx checkBestTime と同一アルゴリズム。
+  // 候補は (userId, styleId, isRelaying, poolType) グループ単位の共有キャッシュクエリで
+  // 一括取得し（行ごとの 2 クエリ = N+1 を回避）、日付フィルタ・自己除外は
+  // computeListPreviousBest がメモリ上で行う。
+  // ガード条件: styleId または recordDate が falsy な場合はフェッチせず非表示（web と同一）
+  const canJudgeList = isListVariant && !!userId && !!styleId && !!recordDate;
+  const listQuery = useListBestCandidatesQuery(supabase, {
+    userId,
+    styleId,
+    isRelaying: isRelaying ?? false,
+    poolType,
+    enabled: canJudgeList,
+  });
+
   useEffect(() => {
-    if (isListVariant) {
-      // 一覧パス: web components/ui/BestTimeBadge.tsx checkBestTime と同一アルゴリズム。
-      // 「その記録の記録日時点で自己ベストだったか」を非同期クエリで判定し、
-      // 判定完了までは非表示（web の loading 中非表示と同じ単一パス）。
-      let listCancelled = false;
-      setState({ kind: "none" });
-
-      const checkListBest = async () => {
-        // ガード条件: styleId または recordDate が falsy な場合は非表示（web と同一）
-        if (!styleId || !recordDate) {
-          return;
-        }
-        try {
-          // 一覧では行ごとに supabase.auth.getUser() (ネットワーク呼び出し) を発行しない。
-          // AuthProvider が保持する user で N+1 のうち認証分の往復を回避する
-          if (!userId) {
-            return;
-          }
-
-          // その記録日より前の同じ条件（種目・リレー区分・poolType 指定時は水路）の記録を取得
-          // 1. 大会記録（competition_id あり）: competitions.date で比較
-          let competitionQuery = supabase
-            .from("records")
-            .select("id, time, competition:competitions!inner(date)")
-            .eq("user_id", userId)
-            .eq("style_id", styleId)
-            .eq("is_relaying", isRelaying ?? false)
-            .neq("id", recordId)
-            .lt("competition.date", recordDate)
-            .order("time", { ascending: true })
-            .limit(1);
-
-          if (poolType !== null && poolType !== undefined) {
-            competitionQuery = competitionQuery.eq("pool_type", poolType);
-          }
-
-          // recordDate を正規化: YYYY-MM-DD → YYYY-MM-DDT00:00:00.000Z
-          // 当日の一括登録記録が除外されないよう created_at との型混用を解消する
-          const normalizedRecordDate = normalizeRecordDateForBulkComparison(recordDate);
-
-          // 2. 一括登録（competition_id = null）: created_at で比較
-          let bulkQuery = supabase
-            .from("records")
-            .select("id, time, created_at")
-            .eq("user_id", userId)
-            .eq("style_id", styleId)
-            .eq("is_relaying", isRelaying ?? false)
-            .is("competition_id", null)
-            .neq("id", recordId)
-            .lt("created_at", normalizedRecordDate)
-            .order("time", { ascending: true })
-            .limit(1);
-
-          if (poolType !== null && poolType !== undefined) {
-            bulkQuery = bulkQuery.eq("pool_type", poolType);
-          }
-
-          // 両方のクエリを並列実行
-          const [competitionResult, bulkResult] = await Promise.all([
-            competitionQuery,
-            bulkQuery,
-          ]);
-
-          if (competitionResult.error) throw competitionResult.error;
-          if (bulkResult.error) throw bulkResult.error;
-
-          // 両方の結果から最速タイムを取得
-          const competitionBest = (
-            competitionResult.data?.[0] as { time?: number } | undefined
-          )?.time;
-          const bulkBest = (bulkResult.data?.[0] as { time?: number } | undefined)?.time;
-
-          let previousBestTime: number | null = null;
-          if (competitionBest !== undefined && bulkBest !== undefined) {
-            previousBestTime = Math.min(competitionBest, bulkBest);
-          } else if (competitionBest !== undefined) {
-            previousBestTime = competitionBest;
-          } else if (bulkBest !== undefined) {
-            previousBestTime = bulkBest;
-          }
-
-          // 以前の記録がない、または現在のタイムが以前のベストより速い場合のみ表示
-          const isBest = previousBestTime === null || currentTime < previousBestTime;
-          if (!listCancelled) {
-            setState(isBest ? { kind: "listBest" } : { kind: "none" });
-          }
-        } catch (err) {
-          console.error("ベストタイムチェックエラー:", err);
-          if (!listCancelled) setState({ kind: "none" });
-        }
-      };
-
-      checkListBest();
-      return () => {
-        listCancelled = true;
-      };
+    if (isListVariant && listQuery.error) {
+      console.error("ベストタイムチェックエラー:", listQuery.error);
     }
+  }, [isListVariant, listQuery.error]);
+
+  // 「その記録の記録日時点で自己ベストだったか」。判定完了までは非表示
+  // （web の loading 中非表示と同じ単一パス）。エラー時も非表示。
+  const listState: BadgeState = useMemo(() => {
+    if (!isListVariant || !userId || !styleId || !recordDate || !listQuery.data) {
+      return { kind: "none" };
+    }
+    const previousBest = computeListPreviousBest(listQuery.data, recordId, recordDate);
+    // 以前の記録がない、または現在のタイムが以前のベストより速い場合のみ表示
+    return previousBest === null || currentTime < previousBest
+      ? { kind: "listBest" }
+      : { kind: "none" };
+  }, [isListVariant, userId, styleId, recordDate, listQuery.data, recordId, currentTime]);
+
+  useEffect(() => {
+    if (isListVariant) return;
 
     // 通常パス: 記録日より前の自己ベストを取得して判定（web RecordBestBadge と同一）
     let cancelled = false;
@@ -245,13 +172,15 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase, isListVariant, userId]);
+  }, [recordId, styleId, currentTime, recordDate, poolType, isRelaying, supabase, isListVariant]);
 
-  if (state.kind === "none") {
+  const badgeState: BadgeState = isListVariant ? listState : state;
+
+  if (badgeState.kind === "none") {
     return null;
   }
 
-  if (state.kind === "listBest") {
+  if (badgeState.kind === "listBest") {
     return (
       <View
         style={[styles.badge, styles.badgeBest]}
@@ -266,7 +195,7 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
     );
   }
 
-  if (state.kind === "first") {
+  if (badgeState.kind === "first") {
     return (
       <View
         style={[styles.badge, styles.badgeFirst]}
@@ -281,17 +210,17 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
     );
   }
 
-  const isBest = state.kind === "best";
+  const isBest = badgeState.kind === "best";
   return (
     <View
       style={[styles.badge, isBest ? styles.badgeBest : styles.badgeSlower]}
       accessible={true}
       accessibilityRole="text"
-      accessibilityLabel={`${t("recordMobile.bestBadge.personalBest")} ${state.label}`}
+      accessibilityLabel={`${t("recordMobile.bestBadge.personalBest")} ${badgeState.label}`}
     >
       <Text style={styles.badgeLabel}>{t("recordMobile.bestBadge.personalBest")}</Text>
       <Text style={[styles.badgeText, isBest ? styles.badgeTextBest : styles.badgeTextSlower]}>
-        {state.label}
+        {badgeState.label}
       </Text>
     </View>
   );

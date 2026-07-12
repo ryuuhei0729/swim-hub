@@ -8,6 +8,12 @@ import { differenceInDays, parseISO } from "date-fns";
 import type { BestTime } from "../../shared/hooks/useMemberBestTimes";
 import type { TeamMember } from "../hooks/useMembers";
 import { useTranslations } from "next-intl";
+import {
+  STYLES,
+  STYLE_KEY_MAP,
+  isInvalidCombination,
+  getDistancesForStyle,
+} from "@apps/shared/utils/swimStyles";
 
 interface MembersTimeTableProps {
   members: TeamMember[];
@@ -23,48 +29,22 @@ interface MembersTimeTableProps {
   getBestTimeForMember: (memberId: string, style: string, distance: number) => BestTime | null;
 }
 
-// 静的距離リスト
-const DISTANCES = [50, 100, 200, 400, 800];
-
-// 静的種目リスト (英語内部キー)
-const STYLES = ["Fr", "Ba", "Br", "Fly", "IM"];
-
 // 種目ヘッダーの背景色
 const styleHeaderBgClass: Record<string, string> = {
-  Fr: "bg-yellow-100",
-  Ba: "bg-red-100",
-  Br: "bg-green-100",
-  Fly: "bg-blue-100",
-  IM: "bg-pink-100",
+  自由形: "bg-yellow-100",
+  背泳ぎ: "bg-red-100",
+  平泳ぎ: "bg-green-100",
+  バタフライ: "bg-blue-100",
+  個人メドレー: "bg-pink-100",
 };
 
 // セルの背景色
 const styleCellBgClass: Record<string, string> = {
-  Fr: "bg-yellow-50",
-  Ba: "bg-red-50",
-  Br: "bg-green-50",
-  Fly: "bg-blue-50",
-  IM: "bg-pink-50",
-};
-
-/**
- * ありえない種目/距離の組み合わせかチェック
- */
-const isInvalidCombination = (style: string, distance: number): boolean => {
-  if (style === "IM" && (distance === 50 || distance === 800)) return true;
-  if (
-    (style === "Br" || style === "Ba" || style === "Fly") &&
-    (distance === 400 || distance === 800)
-  )
-    return true;
-  return false;
-};
-
-/**
- * 各種目の有効な距離リストを取得
- */
-const getDistancesForStyle = (style: string): number[] => {
-  return DISTANCES.filter((distance) => !isInvalidCombination(style, distance));
+  自由形: "bg-yellow-50",
+  背泳ぎ: "bg-red-50",
+  平泳ぎ: "bg-green-50",
+  バタフライ: "bg-blue-50",
+  個人メドレー: "bg-pink-50",
 };
 
 /**
@@ -150,7 +130,7 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                   colSpan={distances.length}
                   className={`px-1 py-1.5 text-center text-[11px] font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 ${styleHeaderBgClass[style]}`}
                 >
-                  {tPractice(`styles.${style}` as Parameters<typeof tPractice>[0])}
+                  {tPractice(`styles.${STYLE_KEY_MAP[style]}` as Parameters<typeof tPractice>[0])}
                 </th>
               );
             })}
@@ -159,6 +139,9 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
           <tr>
             {STYLES.map((style) => {
               const distances = getDistancesForStyle(style);
+              const styleLabel = tPractice(
+                `styles.${STYLE_KEY_MAP[style]}` as Parameters<typeof tPractice>[0],
+              );
               return distances.map((distance) => {
                 const isSorted = sortStyle === style && sortDistance === distance;
                 return (
@@ -177,7 +160,7 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                       }}
                       className={`w-full px-1 py-1 text-center text-[11px] font-semibold text-gray-700 cursor-pointer hover:bg-opacity-80 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${isSorted ? "ring-2 ring-blue-500 ring-inset" : ""}`}
                       title={t("membersTimeTable.sortClickTitle")}
-                      aria-label={`${t("membersTimeTable.sortAriaLabel", { style, distance })}${isSorted ? (sortOrder === "asc" ? t("membersTimeTable.sortAscSuffix") : t("membersTimeTable.sortDescSuffix")) : ""}`}
+                      aria-label={`${t("membersTimeTable.sortAriaLabel", { style: styleLabel, distance })}${isSorted ? (sortOrder === "asc" ? t("membersTimeTable.sortAscSuffix") : t("membersTimeTable.sortDescSuffix")) : ""}`}
                     >
                       <div className="flex items-center justify-center space-x-1">
                         <span>{distance}m</span>

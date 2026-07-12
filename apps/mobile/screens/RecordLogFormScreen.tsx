@@ -34,11 +34,12 @@ import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader } from "@/components/shared/VideoUploader";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { LapTimeDisplay, getBestTimeForEntry } from "@/components/records";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
-import { parseTime, parseTimeStrict, formatTimeBest } from "@apps/shared/utils/time";
+import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
 
@@ -251,10 +252,11 @@ export const RecordLogFormScreen: React.FC = () => {
     }
   }, [entryDataList, swimStyles, loadingStyles, recordId]);
 
-  // タイム文字列を秒数に変換 (shared parseTime:「:」=分。web parseTimeToSeconds と同一)
+  // タイム文字列を秒数に変換 (「:」=分)。blur / 保存時の確定値 (parseTimeFlexible) と
+  // 同じ解釈に揃え、"1.23.45" が入力中だけ 1.23 秒扱いになる食い違いを防ぐ
   const parseTimeToSeconds = (timeStr: string): number => {
     if (!timeStr || timeStr.trim() === "") return 0;
-    return parseTime(timeStr);
+    return parseTimeFlexible(timeStr) ?? 0;
   };
 
   // フォームデータ更新
@@ -308,8 +310,8 @@ export const RecordLogFormScreen: React.FC = () => {
   };
 
   // blur 時に確定値へ再フォーマット (web formatTimeBest と同一表示)。
-  // parseTimeStrict で構造ガードし、"1.23.45" のような不正形式が 1.23 秒として
-  // 静かに確定されるのを防ぐ（確定拒否 + エラー表示。クイック入力 "31-2" は通す）
+  // parseTimeFlexible で構造ガードし、"1.23.45" のような入力もクイック解釈
+  // (1:23.45) で確定する。解釈不能な入力のみ確定拒否 + エラー表示
   const handleTimeBlur = (index: number) => {
     const formData = formDataList[index];
     if (!formData) return;
@@ -323,7 +325,7 @@ export const RecordLogFormScreen: React.FC = () => {
       updateFormData(index, { time: 0 });
       return;
     }
-    const parsed = parseTimeStrict(raw);
+    const parsed = parseTimeFlexible(raw);
     if (parsed === null) {
       setErrors((prevErrors) => ({
         ...prevErrors,
@@ -337,10 +339,9 @@ export const RecordLogFormScreen: React.FC = () => {
       delete next[`time-${index}`];
       return next;
     });
-    updateFormData(index, {
-      time: parsed,
-      timeDisplayValue: formatTimeBest(parsed),
-    });
+    // handleTimeChange 経由で確定することで、入力中のパース値と食い違った場合も
+    // ゴール地点スプリットを確定値で同期し直す
+    handleTimeChange(index, formatTimeBest(parsed));
   };
 
   // 反応時間: web RecordLogEntry (step=0.01 min=-1 max=2) に合わせて blur 時にクランプ
@@ -537,6 +538,17 @@ export const RecordLogFormScreen: React.FC = () => {
     updateFormData(index, { splitTimes: updatedSplitTimes });
   };
 
+  // スプリットタイムの blur 時に確定値へ再フォーマット (タイム欄と同じ UX)
+  const handleSplitTimeBlur = (index: number, splitIndex: number) => {
+    const formData = formDataList[index];
+    const splitTime = formData?.splitTimes[splitIndex];
+    if (!splitTime) return;
+    const parsed = parseTimeFlexible(splitTime.splitTimeDisplayValue);
+    if (parsed !== null) {
+      handleSplitTimeChange(index, splitIndex, "splitTime", formatTimeBest(parsed));
+    }
+  };
+
   // ドロップダウンを開く
   const screenHeight = Dimensions.get("window").height;
   const DROPDOWN_MAX_HEIGHT = 260;
@@ -568,9 +580,9 @@ export const RecordLogFormScreen: React.FC = () => {
       if (!formData.styleId) {
         newErrors[`style-${index}`] = t("recordMobile.form.styleRequired");
       }
-      // blur を経ずに保存された場合の不正形式 ("1.23.45" 等) を確定拒否する
+      // blur を経ずに保存された場合の解釈不能な形式を確定拒否する
       const rawTime = formData.timeDisplayValue.trim();
-      if (rawTime !== "" && parseTimeStrict(rawTime) === null) {
+      if (rawTime !== "" && parseTimeFlexible(rawTime) === null) {
         newErrors[`time-${index}`] = t("recordMobile.form.timeFormatInvalid");
       } else if (formData.time <= 0) {
         newErrors[`time-${index}`] = t("recordMobile.form.timeRequired");
@@ -801,6 +813,7 @@ export const RecordLogFormScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
+        <TimeInputHelp style={{ marginBottom: 16 }} />
         {formDataList.map((formData, index) => {
           const entryInfo = entryDataList[index];
           const sectionIndex = index + 1;
@@ -1061,6 +1074,7 @@ export const RecordLogFormScreen: React.FC = () => {
                         onChangeText={(text) =>
                           handleSplitTimeChange(index, splitIndex, "splitTime", text)
                         }
+                        onBlur={() => handleSplitTimeBlur(index, splitIndex)}
                         placeholder={t("recordMobile.form.splitPlaceholder")}
                         keyboardType="decimal-pad"
                         editable={!loading}

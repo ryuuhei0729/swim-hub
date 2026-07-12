@@ -5,7 +5,6 @@ import {
   createMockSupabaseClient,
   createMockRecordWithDetails,
   createMockRecord,
-  createMockCompetition,
 } from "../../__mocks__/supabase";
 import type { MockSupabaseClient } from "../../__mocks__/types";
 import { RecordAPI } from "../../api/records";

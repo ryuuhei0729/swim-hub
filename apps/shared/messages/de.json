@@ -3824,6 +3824,7 @@
       "save": "Speichern",
       "cancel": "Abbrechen",
       "helpTitle": "Tipps zur Zeiteingabe",
+      "helpBodyBasic": "Trenne Zahlen mit einem beliebigen Zeichen, das keine Ziffer ist (- . : usw.). Beispiele: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.",
       "helpBody": "Trenne Zahlen mit einem beliebigen Zeichen, das keine Ziffer ist (- . : usw.). Beispiele: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.\n\nWenn du in einer Zelle \"33-2\" eingibst, genügt in der nächsten \"3-2\" und es wird automatisch zu \"33.2\" ergänzt (Übernahme der Zehnerstelle). Das Leeren einer Zelle setzt die Übernahme zurück."
     },
     "record": {

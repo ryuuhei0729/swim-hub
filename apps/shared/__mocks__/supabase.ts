@@ -126,7 +126,7 @@ export const createMockSupabaseClient = (
         error: null,
       }),
     },
-    from: vi.fn((table: string) => {
+    from: vi.fn((_table: string) => {
       return createMockQueryBuilder(queryData, queryError);
     }),
     rpc: vi.fn().mockResolvedValue({ data: queryData, error: queryError }),

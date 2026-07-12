@@ -24,13 +24,6 @@ const JP_PART_TO_ABBREV: Record<string, StyleAbbrev> = {
   個人メドレー: "IM",
 };
 
-/**
- * 種目の日本語名 → practice.styleAbbrev.* 翻訳キーのマッピング。
- * BestTimesTable のヘッダー表示で t(`practice.styleAbbrev.${STYLE_KEY_MAP[style]}`) に使う。
- * DB 照合キー (STYLES 配列の日本語値) は変更しないこと。
- */
-export const STYLE_KEY_MAP: Record<string, StyleAbbrev> = JP_PART_TO_ABBREV;
-
 export interface StyleLike {
   style?: string | null;
   name_jp?: string | null;

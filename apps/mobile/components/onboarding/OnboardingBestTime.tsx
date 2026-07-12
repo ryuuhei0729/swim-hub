@@ -4,7 +4,8 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { RecordAPI } from "@apps/shared/api/records";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTimeFlexible } from "@apps/shared/utils/time";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import {
   BestTimeEntryRow,
   StylePickerModal,
@@ -83,9 +84,11 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({
     setSaving(true);
     setSaveError(null);
     try {
+      // canSave (parseTimeFlexible) が通した入力と同じ解釈で保存する。
+      // parseTime だと "1.23.45" が 1.23 秒として誤保存されるため使わない
       const records = entries.map((e) => ({
         style_id: e.styleId,
-        time: parseTime(e.time),
+        time: parseTimeFlexible(e.time) ?? 0,
         is_relaying: e.isRelaying,
         note: e.note?.trim() ? e.note.trim() : null,
         pool_type: e.poolType,
@@ -130,6 +133,7 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({
         </View>
         <Text style={styles.title}>{t("onboarding.step3.title")}</Text>
         <Text style={styles.subtitle}>{t("onboarding.step3.subtitle")}</Text>
+        <TimeInputHelp style={styles.helpSection} />
       </View>
 
       {/* エラー表示 */}
@@ -288,6 +292,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     lineHeight: 20,
+  },
+  helpSection: {
+    marginTop: 4,
   },
   errorBanner: {
     padding: 12,

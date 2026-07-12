@@ -3821,6 +3821,7 @@
       "save": "Save",
       "cancel": "Cancel",
       "helpTitle": "Time Entry Tips",
+      "helpBodyBasic": "Separate numbers with any non-digit character (- . : etc.). Examples: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.",
       "helpBody": "Separate numbers with any non-digit character (- . : etc.). Examples: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.\n\nAfter typing \"33-2\" in one cell, just enter \"3-2\" in the next and it auto-fills to \"33.2\" (carrying over the tens digit). Clearing a cell resets the carry-over."
     },
     "record": {

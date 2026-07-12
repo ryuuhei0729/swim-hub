@@ -19,6 +19,12 @@ import {
   useUpdateMemberRoleMutation,
   useRemoveMemberMutation,
 } from "@apps/shared/hooks/queries/teams";
+import {
+  STYLES,
+  STYLE_KEY_MAP,
+  isInvalidCombination,
+  getDistancesForStyle,
+} from "@apps/shared/utils/swimStyles";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
@@ -36,48 +42,13 @@ interface MemberBestTime {
   hasCompetition: boolean;
 }
 
-// 種目リスト（WEBと同様）
-// DB 照合用の日本語キー (バックエンドの style.name_jp と一致させるため翻訳しない)
-const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"] as const;
-
-// 日本語 style キー → practice.styles の翻訳キー (表示用)
-type StyleTranslationKey = "Fr" | "Br" | "Ba" | "Fly" | "IM";
-const STYLE_KEY_MAP: Record<(typeof STYLES)[number], StyleTranslationKey> = {
-  自由形: "Fr",
-  平泳ぎ: "Br",
-  背泳ぎ: "Ba",
-  バタフライ: "Fly",
-  個人メドレー: "IM",
-};
-const DISTANCES = [50, 100, 200, 400, 800] as const;
-
-// 種目の色定義
+// 種目の色定義（プラットフォーム固有のためこのファイルに残す）
 const STYLE_COLORS: Record<string, { bg: string; header: string; text: string }> = {
   自由形: { bg: "#FEFCE8", header: "#FEF9C3", text: "#854D0E" },
   平泳ぎ: { bg: "#F0FDF4", header: "#DCFCE7", text: "#166534" },
   背泳ぎ: { bg: "#FEF2F2", header: "#FEE2E2", text: "#991B1B" },
   バタフライ: { bg: "#EFF6FF", header: "#DBEAFE", text: "#1E40AF" },
   個人メドレー: { bg: "#FDF2F8", header: "#FCE7F3", text: "#9D174D" },
-};
-
-/**
- * 種目×距離の有効な組み合わせかチェック
- */
-const isInvalidCombination = (style: string, distance: number): boolean => {
-  if (style === "個人メドレー" && (distance === 50 || distance === 800)) return true;
-  if (
-    (style === "平泳ぎ" || style === "背泳ぎ" || style === "バタフライ") &&
-    (distance === 400 || distance === 800)
-  )
-    return true;
-  return false;
-};
-
-/**
- * 各種目の有効な距離リスト
- */
-const getDistancesForStyle = (style: string): number[] => {
-  return DISTANCES.filter((d) => !isInvalidCombination(style, d));
 };
 
 // セル幅定数
@@ -145,23 +116,31 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     [],
   );
 
-  // ソート状態（WEB版 useMemberSort 準拠）
+  // ソート状態（WEB版 useMemberSort 準拠、昇順→降順→解除の3状態サイクル）
   const [sortStyle, setSortStyle] = useState<string | null>(null);
   const [sortDistance, setSortDistance] = useState<number | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const handleSort = useCallback(
     (style: string, distance: number) => {
       if (sortStyle === style && sortDistance === distance) {
-        // 同じセルをタップ → ソート解除
-        setSortStyle(null);
-        setSortDistance(null);
+        if (sortOrder === "asc") {
+          // 昇順中の同じセル再タップは降順へ
+          setSortOrder("desc");
+        } else {
+          // 降順中の同じセル再タップはソートを解除
+          setSortStyle(null);
+          setSortDistance(null);
+          setSortOrder("asc");
+        }
       } else {
         // 新しいセル → 昇順ソート
         setSortStyle(style);
         setSortDistance(distance);
+        setSortOrder("asc");
       }
     },
-    [sortStyle, sortDistance],
+    [sortStyle, sortDistance, sortOrder],
   );
 
   // ベストタイムデータ
@@ -292,7 +271,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       if (!timeA && !timeB) return 0;
       if (!timeA) return 1;
       if (!timeB) return -1;
-      return timeA.time - timeB.time;
+      const comparison = timeA.time - timeB.time;
+      return sortOrder === "asc" ? comparison : -comparison;
     };
 
     // グループがある場合はグループ内でソート
@@ -321,7 +301,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       sortedMembers: [...groupedMembers].sort(compareFn),
       sortedGroupHeaders: groupHeaders,
     };
-  }, [groupedMembers, groupHeaders, sortStyle, sortDistance, getBestTime]);
+  }, [groupedMembers, groupHeaders, sortStyle, sortDistance, sortOrder, getBestTime]);
 
   // ロール変更処理
   const _handleRoleChange = async (member: TeamMembershipWithUser, newRole: "admin" | "user") => {
@@ -539,7 +519,9 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                               {distance}m
                             </Text>
                             {isSorted && (
-                              <Text style={[styles.sortIndicator, { color: colors.text }]}>↑</Text>
+                              <Text style={[styles.sortIndicator, { color: colors.text }]}>
+                                {sortOrder === "asc" ? "↑" : "↓"}
+                              </Text>
                             )}
                           </View>
                         </Pressable>

@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@/utils/formatters";
-import { isInvalidTimeInput } from "@apps/shared/utils/time";
+import { isInvalidTimeInput, parseTimeFlexible } from "@apps/shared/utils/time";
 import { styleIdToCodeKey, canStyleRelay, type StyleCodeKey } from "@/utils/swimStyle";
 import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
@@ -359,6 +359,11 @@ export default function RecordLogEntry({
             type="text"
             value={formData.timeDisplayValue}
             onChange={(e) => onTimeChange(e.target.value)}
+            onBlur={(e) => {
+              // blur 時に確定値へ再フォーマット (mobile 版と同じ UX)
+              const parsed = parseTimeFlexible(e.target.value);
+              if (parsed !== null) onTimeChange(formatTimeBest(parsed));
+            }}
             placeholder={t("time_placeholder")}
             className="w-full"
             data-testid={`record-time-${sectionIndex}`}
@@ -453,6 +458,12 @@ export default function RecordLogEntry({
                     type="text"
                     value={st.splitTimeDisplayValue || ""}
                     onChange={(e) => onSplitTimeChange(originalIndex, "splitTime", e.target.value)}
+                    onBlur={(e) => {
+                      const parsed = parseTimeFlexible(e.target.value);
+                      if (parsed !== null) {
+                        onSplitTimeChange(originalIndex, "splitTime", formatTimeBest(parsed));
+                      }
+                    }}
                     placeholder={t("time_placeholder")}
                     className="w-full"
                     data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}

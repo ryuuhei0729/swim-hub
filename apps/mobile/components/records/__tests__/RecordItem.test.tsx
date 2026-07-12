@@ -12,6 +12,7 @@ import {
   createMockStyle,
   createMockSupabaseClient,
 } from "@/__mocks__/supabase";
+import { createQueryWrapper } from "@/__tests__/helpers/testUtils";
 
 // BestTimeBadge が useAuth を使用するため AuthProvider をモック
 const mockUseAuth = vi.hoisted(() => vi.fn());
@@ -19,6 +20,11 @@ vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: mockUseAuth,
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
+
+/** BestTimeBadge が React Query を使うため QueryClientProvider でラップして描画する */
+function renderItem(ui: React.ReactElement) {
+  return render(ui, { wrapper: createQueryWrapper() });
+}
 
 describe("RecordItem", () => {
   // 各テスト前に useAuth モックをセットアップ (BestTimeBadge が useAuth を呼ぶため)
@@ -47,7 +53,7 @@ describe("RecordItem", () => {
   });
 
   it("大会記録データが正しく表示される", () => {
-    render(<RecordItem record={mockRecord} />);
+    renderItem(<RecordItem record={mockRecord} />);
 
     // 日付が表示される（フォーマットされた形式）
     expect(screen.getByText(/2025年1月15日/)).toBeTruthy();
@@ -68,13 +74,13 @@ describe("RecordItem", () => {
       },
     });
 
-    render(<RecordItem record={recordWithoutTitle} />);
+    renderItem(<RecordItem record={recordWithoutTitle} />);
 
     expect(screen.getByText("大会")).toBeTruthy();
   });
 
   it("タイムが正しくフォーマットされて表示される", () => {
-    render(<RecordItem record={mockRecord} />);
+    renderItem(<RecordItem record={mockRecord} />);
 
     // formatTime(60.5) = "1:00.50"
     expect(screen.getByText("1:00.50")).toBeTruthy();
@@ -89,7 +95,7 @@ describe("RecordItem", () => {
       },
     });
 
-    render(<RecordItem record={shortCourseRecord} />);
+    renderItem(<RecordItem record={shortCourseRecord} />);
 
     expect(screen.getByText("短水路")).toBeTruthy();
   });
@@ -103,7 +109,7 @@ describe("RecordItem", () => {
       },
     });
 
-    render(<RecordItem record={recordWithoutPlace} />);
+    renderItem(<RecordItem record={recordWithoutPlace} />);
 
     expect(screen.queryByText("テスト会場")).toBeNull();
     expect(screen.queryByTestId("icon-map-pin")).toBeNull();
@@ -111,7 +117,7 @@ describe("RecordItem", () => {
 
   it("onPressが提供された場合、タップでコールバックが呼ばれる", () => {
     const onPress = vi.fn();
-    render(<RecordItem record={mockRecord} onPress={onPress} />);
+    renderItem(<RecordItem record={mockRecord} onPress={onPress} />);
 
     // Pressableをタップ（button要素としてレンダリングされる）
     const pressable = screen.getByText("テスト大会").closest("button");
@@ -123,7 +129,7 @@ describe("RecordItem", () => {
   });
 
   it("onPressが提供されない場合でもエラーが発生しない", () => {
-    render(<RecordItem record={mockRecord} />);
+    renderItem(<RecordItem record={mockRecord} />);
 
     // エラーなくレンダリングされる
     expect(screen.getByText("テスト大会")).toBeTruthy();
