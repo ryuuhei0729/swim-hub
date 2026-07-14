@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@/utils/formatters";
+import { isInvalidTimeInput, parseTimeFlexible } from "@apps/shared/utils/time";
 import { styleIdToCodeKey, canStyleRelay, type StyleCodeKey } from "@/utils/swimStyle";
 import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
@@ -90,7 +91,11 @@ export default function RecordLogEntry({
   const t = useTranslations("forms.recordLog");
   const tPremium = useTranslations("forms.premium");
   const tStyles = useTranslations("practice.styles");
+  const tTimeError = useTranslations("bulkBestTime.error");
   const sectionIndex = index + 1;
+
+  // 不正形式（"1.23.45" 等）は time=0 のまま確定されないため、入力欄でエラー表示する
+  const timeFormatInvalid = isInvalidTimeInput(formData.timeDisplayValue);
 
   const currentStyleId = formData.styleId;
   const currentStyle = styles.find((s) => s.id.toString() === currentStyleId);
@@ -354,10 +359,20 @@ export default function RecordLogEntry({
             type="text"
             value={formData.timeDisplayValue}
             onChange={(e) => onTimeChange(e.target.value)}
+            onBlur={(e) => {
+              // blur 時に確定値へ再フォーマット (mobile 版と同じ UX)
+              const parsed = parseTimeFlexible(e.target.value);
+              if (parsed !== null) onTimeChange(formatTimeBest(parsed));
+            }}
             placeholder={t("time_placeholder")}
             className="w-full"
             data-testid={`record-time-${sectionIndex}`}
           />
+          {timeFormatInvalid && (
+            <p className="mt-1 text-xs text-red-600" data-testid={`record-time-error-${sectionIndex}`}>
+              {tTimeError("invalidTimeFormat")}
+            </p>
+          )}
         </div>
         <div className="w-20 sm:w-36">
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -438,14 +453,30 @@ export default function RecordLogEntry({
                   className="w-24"
                   data-testid={`record-split-distance-${sectionIndex}-${originalIndex + 1}`}
                 />
-                <Input
-                  type="text"
-                  value={st.splitTimeDisplayValue || ""}
-                  onChange={(e) => onSplitTimeChange(originalIndex, "splitTime", e.target.value)}
-                  placeholder={t("time_placeholder")}
-                  className="flex-1"
-                  data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}
-                />
+                <div className="flex-1">
+                  <Input
+                    type="text"
+                    value={st.splitTimeDisplayValue || ""}
+                    onChange={(e) => onSplitTimeChange(originalIndex, "splitTime", e.target.value)}
+                    onBlur={(e) => {
+                      const parsed = parseTimeFlexible(e.target.value);
+                      if (parsed !== null) {
+                        onSplitTimeChange(originalIndex, "splitTime", formatTimeBest(parsed));
+                      }
+                    }}
+                    placeholder={t("time_placeholder")}
+                    className="w-full"
+                    data-testid={`record-split-time-${sectionIndex}-${originalIndex + 1}`}
+                  />
+                  {isInvalidTimeInput(st.splitTimeDisplayValue) && (
+                    <p
+                      className="mt-1 text-xs text-red-600"
+                      data-testid={`record-split-time-error-${sectionIndex}-${originalIndex + 1}`}
+                    >
+                      {tTimeError("invalidTimeFormat")}
+                    </p>
+                  )}
+                </div>
                 {!(typeof st.distance === "number" && st.distance === raceDistance) ? (
                   <button
                     type="button"

@@ -20,10 +20,15 @@ export const useMemberSort = (
   const handleSort = useCallback(
     (style: string, distance: number) => {
       if (sortStyle === style && sortDistance === distance) {
-        // 同じセルをクリックした場合はソートを解除
-        setSortStyle(null);
-        setSortDistance(null);
-        setSortOrder("asc");
+        if (sortOrder === "asc") {
+          // 昇順中の同じセル再クリックは降順へ
+          setSortOrder("desc");
+        } else {
+          // 降順中の同じセル再クリックはソートを解除
+          setSortStyle(null);
+          setSortDistance(null);
+          setSortOrder("asc");
+        }
       } else {
         // 新しいセルをクリックした場合は昇順でソート
         setSortStyle(style);
@@ -31,7 +36,7 @@ export const useMemberSort = (
         setSortOrder("asc");
       }
     },
-    [sortStyle, sortDistance],
+    [sortStyle, sortDistance, sortOrder],
   );
 
   const { sortedMembers, groupHeaders } = useMemo(() => {

@@ -18,8 +18,6 @@ import { TeamRecordsAPI } from "../../api/teams/records";
 import { TeamAttendancesAPI } from "../../api/teams/attendances";
 import type { AttendanceStatusType } from "../../types";
 import type {
-  Competition,
-  Practice,
   Team,
   TeamAnnouncement,
   TeamAnnouncementInsert,

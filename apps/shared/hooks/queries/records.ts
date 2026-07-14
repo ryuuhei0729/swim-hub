@@ -13,7 +13,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { RecordAPI } from "../../api/records";
+import { RecordAPI, type ListBestCandidates } from "../../api/records";
 import { GoalAPI } from "../../api/goals";
 import type {
   Competition,
@@ -614,6 +614,45 @@ export function useBestTimesQuery(
       return await api.getBestTimes(userId);
     },
     enabled: true,
+    staleTime: 5 * 60 * 1000, // 5分
+  });
+}
+
+export interface UseListBestCandidatesQueryOptions {
+  userId?: string;
+  styleId?: number;
+  isRelaying?: boolean;
+  poolType?: number | null;
+  enabled?: boolean;
+  api?: RecordAPI;
+}
+
+/**
+ * 一覧ベストバッジ用の記録候補取得クエリ。
+ * (userId, styleId, isRelaying, poolType) 単位でキャッシュを共有するため、
+ * 一覧の行ごとに呼んでも同一グループのフェッチは1回に集約される（N+1 回避）。
+ */
+export function useListBestCandidatesQuery(
+  supabase: SupabaseClient,
+  options: UseListBestCandidatesQueryOptions = {},
+): UseQueryResult<ListBestCandidates, Error> {
+  const {
+    userId,
+    styleId,
+    isRelaying = false,
+    poolType = null,
+    enabled = true,
+    api: providedApi,
+  } = options;
+
+  const api = useMemo(() => providedApi ?? new RecordAPI(supabase), [supabase, providedApi]);
+
+  return useQuery({
+    queryKey: recordKeys.listBestCandidates({ userId, styleId, isRelaying, poolType }),
+    queryFn: async () => {
+      return await api.getListBestCandidates(userId as string, styleId as number, isRelaying, poolType);
+    },
+    enabled: enabled && !!userId && !!styleId,
     staleTime: 5 * 60 * 1000, // 5分
   });
 }

@@ -319,7 +319,7 @@ export class AttendanceAPI {
       existingAttendance.competition_id,
     );
 
-    let finalUpdates = { ...updates };
+    const finalUpdates = { ...updates };
 
     // close後の編集の場合、noteに編集日時を追加
     if (isClosed && updates.note) {

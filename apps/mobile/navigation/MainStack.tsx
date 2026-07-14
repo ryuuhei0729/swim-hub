@@ -17,7 +17,9 @@ import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
 import { TeamRecordBulkFormScreen } from "@/screens/TeamRecordBulkFormScreen";
 import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
 import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
+import { TeamBulkRegisterScreen } from "@/screens/TeamBulkRegisterScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
+import { PracticeLogTemplatesScreen } from "@/screens/PracticeLogTemplatesScreen";
 import { BulkBestTimeScreen } from "@/screens/BulkBestTimeScreen";
 import { PaywallScreen } from "@/screens/PaywallScreen";
 
@@ -172,11 +174,27 @@ export const MainStack: React.FC = () => {
         }}
       />
       <Stack.Screen
+        name="TeamBulkRegister"
+        component={TeamBulkRegisterScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("teamsAdmin.tabs.bulkRegister"),
+        }}
+      />
+      <Stack.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
           ...baseHeaderOptions,
           title: t("navigation.mobile.titles.settings"),
+        }}
+      />
+      <Stack.Screen
+        name="PracticeLogTemplates"
+        component={PracticeLogTemplatesScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("practiceLogTemplates.page.title"),
         }}
       />
       <Stack.Screen

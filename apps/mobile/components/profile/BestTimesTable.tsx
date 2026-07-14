@@ -4,7 +4,7 @@ import { differenceInDays, parseISO } from "date-fns";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { formatTime } from "@/utils/formatters";
-import { STYLE_KEY_MAP } from "@/utils/styleName";
+import { STYLES, DISTANCES, isInvalidCombination, STYLE_KEY_MAP } from "@apps/shared/utils/swimStyles";
 import type { BestTime } from "@apps/shared/types/ui";
 
 interface BestTimesTableProps {
@@ -12,12 +12,6 @@ interface BestTimesTableProps {
 }
 
 type TabType = "all" | "short" | "long";
-
-// 静的距離リスト（50m, 100m, 200m, 400m, 800m）
-const DISTANCES = [50, 100, 200, 400, 800];
-
-// 静的種目リスト
-const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"];
 
 // 種目ごとの色
 const styleColors: Record<string, { bg: string; text: string }> = {
@@ -46,17 +40,6 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
       return bestTimes;
     }
   }, [bestTimes, activeTab]);
-
-  const isInvalidCombination = (style: string, distance: number): boolean => {
-    // ありえない種目/距離の組み合わせ
-    if (style === "個人メドレー" && (distance === 50 || distance === 800)) return true;
-    if (
-      (style === "平泳ぎ" || style === "背泳ぎ" || style === "バタフライ") &&
-      (distance === 400 || distance === 800)
-    )
-      return true;
-    return false;
-  };
 
   const getBestTime = (style: string, distance: number): BestTime | null => {
     // データベースの種目名形式（例：50m自由形）で検索

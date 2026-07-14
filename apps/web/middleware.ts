@@ -39,6 +39,9 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   [
     "img-src 'self' data: blob: https://*.supabase.co https://*.r2.dev https://*.r2.cloudflarestorage.com",
+    // ローカル Supabase (http://127.0.0.1:54321) の署名付き画像URLは *.supabase.co に
+    // マッチしないため origin を動的注入する（画像 private 化に伴う署名URL方式対応）
+    SUPABASE_ORIGIN,
     R2_PUBLIC_ORIGIN,
   ]
     .filter(Boolean)

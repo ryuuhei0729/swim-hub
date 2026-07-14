@@ -83,6 +83,7 @@ export const MyPageScreen: React.FC = () => {
         if (updatedProfile.name !== undefined) dbUpdate.name = updatedProfile.name;
         if (updatedProfile.birthday !== undefined) dbUpdate.birthday = updatedProfile.birthday;
         if (updatedProfile.bio !== undefined) dbUpdate.bio = updatedProfile.bio;
+        if (updatedProfile.gender !== undefined) dbUpdate.gender = updatedProfile.gender;
         if (updatedProfile.profile_image_path !== undefined)
           dbUpdate.profile_image_path = updatedProfile.profile_image_path;
 

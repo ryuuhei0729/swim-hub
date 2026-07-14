@@ -283,6 +283,7 @@ vi.mock("react-native-safe-area-context", () => {
       left: 0,
       right: 0,
     }),
+    initialWindowMetrics: null,
     SafeAreaProvider: ({ children }: { children?: React.ReactNode }) => children,
     SafeAreaView: ({
       children,

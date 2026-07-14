@@ -13,10 +13,11 @@ import type { CalendarItem, EntryInfo, TimeEntry } from "@apps/shared/types/ui";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
 import { parseISO, startOfDay } from "date-fns";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import type { PracticeTabId, CompetitionTabId } from "@/stores/types";
 import { isDateTodayOrPast } from "@/utils/tabModalUtils";
+import { resolveGalleryImages } from "@/lib/image-url";
 
 // スプリットタイム型（編集時に使用）
 export interface RecordSplitTime {
@@ -57,6 +58,8 @@ interface UseCalendarHandlersProps {
   ) => void;
   setSelectedDate: (date: Date) => void;
   setEditingData: (data: EditingData | null) => void;
+  /** 大会タブモーダル用の editingData 更新（画像解決後の反映に使用） */
+  setCompetitionEditingData: (data: EditingData | null) => void;
   handleDeleteItem: (itemId: string, itemType?: CalendarItemType) => Promise<void>;
   refreshCalendar: () => void;
 }
@@ -70,10 +73,13 @@ export function useCalendarHandlers({
   openCompetitionTabModal,
   setSelectedDate,
   setEditingData,
+  setCompetitionEditingData,
   handleDeleteItem,
   refreshCalendar,
 }: UseCalendarHandlersProps) {
   const t = useTranslations("dashboard.entry");
+  // 編集クリックごとにインクリメントし、解決済み画像の反映が古いクリックのものなら破棄する
+  const editImageRequestIdRef = useRef(0);
   // タイムゾーンを考慮した日付パース
   const parseDateString = useCallback((dateString: string): Date => {
     const parsedDate = parseISO(dateString);
@@ -103,12 +109,22 @@ export function useCalendarHandlers({
   const onEditItem = useCallback(
     async (item: CalendarItem) => {
       const dateObj = parseDateString(item.date);
+      const requestId = ++editImageRequestIdRef.current;
 
       if (item.type === "practice" || item.type === "team_practice") {
-        // 練習編集時は実データ（タイトル・場所・メモ・画像）を practices から取得する。
+        // 練習編集時は実データ（タイトル・場所・メモ）を practices から取得する。
         // カレンダー表示用の item.title は practice_log 由来の自動要約（例: "100m × 4本"）や
         // COALESCE の "練習" の場合があるため、編集フォームには使わず DB の実値を用いる。
         let editingData: EditingData = item as EditingData;
+        let imagePaths: string[] = [];
+        let practiceFields: {
+          id: string;
+          type: "practice";
+          date: string;
+          title: string;
+          place: string;
+          note: string;
+        } | null = null;
         if (item.id) {
           try {
             const { data: practiceData } = await supabase
@@ -126,31 +142,32 @@ export function useCalendarHandlers({
             } | null;
 
             if (practice) {
-              const imagePaths = Array.isArray(practice.image_paths) ? practice.image_paths : [];
-              const formattedImages = imagePaths.map((path, index) => ({
-                id: path,
-                thumbnailUrl: supabase.storage.from("practice-images").getPublicUrl(path).data
-                  .publicUrl,
-                originalUrl: supabase.storage.from("practice-images").getPublicUrl(path).data
-                  .publicUrl,
-                fileName: path.split("/").pop() || `image-${index}`,
-              }));
-
-              editingData = {
+              imagePaths = Array.isArray(practice.image_paths) ? practice.image_paths : [];
+              practiceFields = {
                 id: item.id,
                 type: "practice",
                 date: practice.date || item.date,
                 title: practice.title || "",
                 place: practice.place || "",
                 note: practice.note || "",
-                ...(formattedImages.length > 0 ? { images: formattedImages } : {}),
-              } as EditingData;
+              };
+              editingData = practiceFields as EditingData;
             }
           } catch (error) {
             console.error("練習情報の取得エラー:", error);
           }
         }
+        // 画像の署名URL解決を待たずにモーダルを開き、解決後に editingData へ反映する
         openPracticeTabModal(dateObj, editingData);
+        if (practiceFields && imagePaths.length > 0) {
+          const baseFields = practiceFields;
+          resolveGalleryImages("practice-images", imagePaths).then((formattedImages) => {
+            if (editImageRequestIdRef.current !== requestId) return;
+            if (formattedImages.length > 0) {
+              setEditingData({ ...baseFields, images: formattedImages } as EditingData);
+            }
+          });
+        }
       } else if (item.type === "practice_log") {
         // #7: 練習ログ単体編集 → 親練習のeditingDataで練習タブモーダルを開く
         const practiceId =
@@ -182,28 +199,28 @@ export function useCalendarHandlers({
               const practiceDate = parseDateString(pRow.date);
 
               const imagePaths = Array.isArray(pRow.image_paths) ? pRow.image_paths : [];
-              const formattedImages = imagePaths.map((path: string, index: number) => ({
-                id: path,
-                thumbnailUrl: supabase.storage
-                  .from("practice-images")
-                  .getPublicUrl(path).data.publicUrl,
-                originalUrl: supabase.storage
-                  .from("practice-images")
-                  .getPublicUrl(path).data.publicUrl,
-                fileName: path.split("/").pop() || `image-${index}`,
-              }));
-
-              const practiceEditingData: EditingData = {
+              const practiceFields = {
                 id: pRow.id,
-                type: "practice",
+                type: "practice" as const,
                 date: pRow.date,
                 title: pRow.title || "",
                 place: pRow.place || "",
                 note: pRow.note || "",
-                ...(formattedImages.length > 0 ? { images: formattedImages } : {}),
-              } as EditingData;
+              };
 
-              openPracticeTabModal(practiceDate, practiceEditingData, "practiceLog");
+              // 画像の署名URL解決を待たずにモーダルを開き、解決後に editingData へ反映する
+              openPracticeTabModal(practiceDate, practiceFields as EditingData, "practiceLog");
+              if (imagePaths.length > 0) {
+                resolveGalleryImages("practice-images", imagePaths).then((formattedImages) => {
+                  if (editImageRequestIdRef.current !== requestId) return;
+                  if (formattedImages.length > 0) {
+                    setEditingData({
+                      ...practiceFields,
+                      images: formattedImages,
+                    } as EditingData);
+                  }
+                });
+              }
               return;
             }
           } catch (error) {
@@ -313,46 +330,49 @@ export function useCalendarHandlers({
           }
         }
       } else if (item.type === "competition" || item.type === "team_competition") {
-        // 大会編集時は画像情報を取得（image_pathsから）
-        let itemWithImages = item;
+        // 画像の署名URL解決を待たずにモーダルを開き、解決後に editingData へ反映する
+        openCompetitionTabModal(dateObj, item as EditingData);
         if (item.id) {
-          try {
-            const { data: competitionData } = await supabase
-              .from("competitions")
-              .select("image_paths")
-              .eq("id", item.id)
-              .single();
+          void (async () => {
+            try {
+              const { data: competitionData } = await supabase
+                .from("competitions")
+                .select("image_paths")
+                .eq("id", item.id)
+                .single();
 
-            const competition = competitionData as { image_paths?: string[] | null } | null;
-            const imagePaths = competition?.image_paths || [];
+              const competition = competitionData as { image_paths?: string[] | null } | null;
+              const imagePaths = competition?.image_paths || [];
+              if (imagePaths.length === 0) return;
 
-            if (imagePaths.length > 0) {
-              const formattedImages = imagePaths.map((path, index) => ({
-                id: path, // パスをIDとして使用
-                thumbnailUrl: supabase.storage.from("competition-images").getPublicUrl(path).data
-                  .publicUrl,
-                originalUrl: supabase.storage.from("competition-images").getPublicUrl(path).data
-                  .publicUrl,
-                fileName: path.split("/").pop() || `image-${index}`,
-              }));
+              const formattedImages = await resolveGalleryImages("competition-images", imagePaths);
+              if (editImageRequestIdRef.current !== requestId) return;
+              if (formattedImages.length === 0) return;
 
-              // itemに画像情報を追加
-              itemWithImages = {
+              // itemに画像情報を追加してストアの editingData を更新
+              setCompetitionEditingData({
                 ...item,
                 editData: {
                   ...(item.editData || {}),
                   images: formattedImages,
                 },
-              };
+              } as EditingData);
+            } catch (error) {
+              console.error("画像情報の取得エラー:", error);
             }
-          } catch (error) {
-            console.error("画像情報の取得エラー:", error);
-          }
+          })();
         }
-        openCompetitionTabModal(dateObj, itemWithImages as EditingData);
       }
     },
-    [parseDateString, openPracticeTabModal, openCompetitionTabModal, supabase, t],
+    [
+      parseDateString,
+      openPracticeTabModal,
+      openCompetitionTabModal,
+      setEditingData,
+      setCompetitionEditingData,
+      supabase,
+      t,
+    ],
   );
 
   // アイテム削除ハンドラー（handleDeleteItemを使用）

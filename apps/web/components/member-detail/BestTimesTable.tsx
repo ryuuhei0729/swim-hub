@@ -7,20 +7,12 @@ import { TrophyIcon, CalendarIcon } from "@heroicons/react/24/outline";
 import { differenceInDays, parseISO } from "date-fns";
 import { formatTimeBest, formatDate } from "@/utils/formatters";
 import type { BestTime, TabType } from "@/types/member-detail";
-
-const DISTANCES = [50, 100, 200, 400, 800];
-// DB 照合用の日本語キー (バックエンドの style.name_jp と一致させるため翻訳しない)
-const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"];
-
-// 日本語 style キー → practice.styles の翻訳キー
-type StyleTranslationKey = "Fr" | "Br" | "Ba" | "Fly" | "IM";
-const STYLE_KEY_MAP: Partial<Record<string, StyleTranslationKey>> = {
-  自由形: "Fr",
-  平泳ぎ: "Br",
-  背泳ぎ: "Ba",
-  バタフライ: "Fly",
-  個人メドレー: "IM",
-};
+import {
+  DISTANCES,
+  STYLES,
+  STYLE_KEY_MAP,
+  isInvalidCombination,
+} from "@apps/shared/utils/swimStyles";
 
 const styleHeaderBgClass: Record<string, string> = {
   自由形: "bg-yellow-100",
@@ -37,16 +29,6 @@ const styleCellBgClass: Record<string, string> = {
   バタフライ: "bg-blue-50",
   個人メドレー: "bg-pink-50",
 };
-
-function isInvalidCombination(style: string, distance: number): boolean {
-  if (style === "個人メドレー" && (distance === 50 || distance === 800)) return true;
-  if (
-    (style === "平泳ぎ" || style === "背泳ぎ" || style === "バタフライ") &&
-    (distance === 400 || distance === 800)
-  )
-    return true;
-  return false;
-}
 
 interface BestTimesTableProps {
   bestTimes: BestTime[];
@@ -216,17 +198,14 @@ export function BestTimesTable({ bestTimes }: BestTimesTableProps) {
               <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-700 border-r border-gray-300 min-w-[48px] w-[56px] h-[36px] tracking-wide">
                 {t("distanceHeader")}
               </th>
-              {STYLES.map((style) => {
-                const styleKey = STYLE_KEY_MAP[style];
-                return (
-                  <th
-                    key={style}
-                    className={`px-2 py-1.5 text-center text-xs font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[90px] h-[36px] ${styleHeaderBgClass[style]}`}
-                  >
-                    {styleKey ? tStyles(styleKey) : style}
-                  </th>
-                );
-              })}
+              {STYLES.map((style) => (
+                <th
+                  key={style}
+                  className={`px-2 py-1.5 text-center text-xs font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 min-w-[90px] h-[36px] ${styleHeaderBgClass[style]}`}
+                >
+                  {tStyles(STYLE_KEY_MAP[style])}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="bg-white">

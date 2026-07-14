@@ -10,8 +10,8 @@
  * [IM-03] uploadImagesViaApi — 複数画像を順番にアップロードし、結果の配列を返す
  * [IM-04] uploadImagesViaApi — 途中失敗時に成功済み画像を DELETE でロールバックする
  * [IM-05] uploadImageViaApi — access_token が空文字の場合は Authorization ヘッダが "Bearer " になる（問題の顕在化）
- * [IM-06] getImageUrlFromPath — R2_PUBLIC_URL が設定されている場合は R2 URL を返す
- * [IM-07] getImageUrlFromPath — R2_PUBLIC_URL が未設定の場合は Supabase Storage の publicUrl を返す
+ * [IM-06] getSignedImageUrl — 相対パスの場合、presigned-url API を Bearer 認証で GET し署名付きURLを返す
+ * [IM-07] getSignedImageUrl — path が空文字/http(s)の場合の挙動（Issue #36: private バケット対応）
  * [IM-08] uploadImagesViaApi — 401 レスポンス時に「認証が必要」エラーが throw される (既存仕様の確認)
  */
 
@@ -21,7 +21,6 @@ import { describe, it, vi, beforeEach, expect } from "vitest";
 vi.mock("@/lib/env", () => ({
   env: {
     webApiUrl: "https://api.swimhub.example.com",
-    r2PublicUrl: "",
   },
 }));
 
@@ -29,25 +28,14 @@ vi.mock("@/lib/env", () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-import { uploadImageViaApi, uploadImagesViaApi, getImageUrlFromPath } from "@/utils/imageUpload";
+import { uploadImageViaApi, uploadImagesViaApi, getSignedImageUrl } from "@/utils/imageUpload";
 import type { ImageBucket } from "@/utils/imageUpload";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 // テスト用ファイルデータ
 const MOCK_FILE = { base64: "dGVzdA==", fileExtension: "jpg" };
 const MOCK_ACCESS_TOKEN = "valid-access-token-xyz";
 const PRACTICE_BUCKET: ImageBucket = "practice-images";
 const COMPETITION_BUCKET: ImageBucket = "competition-images";
-
-// supabase クライアントのモック (getImageUrlFromPath 用)
-const mockGetPublicUrl = vi.fn();
-const mockSupabase = {
-  storage: {
-    from: vi.fn(() => ({
-      getPublicUrl: mockGetPublicUrl,
-    })),
-  },
-} as unknown as SupabaseClient;
 
 describe("[IM-01] uploadImageViaApi — 正常系", () => {
   beforeEach(() => {
@@ -236,30 +224,59 @@ describe("[IM-05] uploadImageViaApi — access_token の境界値", () => {
   });
 });
 
-describe("[IM-06~07] getImageUrlFromPath — URL 解決", () => {
+describe("[IM-06~07] getSignedImageUrl — 署名付きURL解決 (Issue #36: private バケット対応)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("env.r2PublicUrl が空文字の場合は Supabase Storage の getPublicUrl 結果を返す", () => {
-    // デフォルトモックでは r2PublicUrl = "" なので Supabase URL パスを使う
-    mockGetPublicUrl.mockReturnValueOnce({
-      data: {
-        publicUrl:
-          "https://supabase.co/storage/v1/object/public/practice-images/user1/img.jpg",
-      },
+  it("[IM-06] 相対パスの場合、presigned-url API を Bearer 認証付きで GET し、署名付きURLを返す", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ url: "https://signed.example.com/user1/img.jpg", expiresAt: 999 }),
     });
 
-    const result = getImageUrlFromPath(mockSupabase, "user1/img.jpg", PRACTICE_BUCKET);
+    const result = await getSignedImageUrl(PRACTICE_BUCKET, "user1/img.jpg", MOCK_ACCESS_TOKEN);
 
-    // Supabase の getPublicUrl が呼ばれ、その結果が返ること
-    expect(mockGetPublicUrl).toHaveBeenCalledWith("user1/img.jpg");
-    expect(result).toContain("user1/img.jpg");
+    expect(result).toBe("https://signed.example.com/user1/img.jpg");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://api.swimhub.example.com/api/storage/images/presigned-url?bucket=practice-images&path=user1%2Fimg.jpg",
+      expect.objectContaining({
+        headers: { Authorization: `Bearer ${MOCK_ACCESS_TOKEN}` },
+      }),
+    );
   });
 
-  it("path が空文字のとき空文字を返す（境界値）", () => {
-    const result = getImageUrlFromPath(mockSupabase, "", PRACTICE_BUCKET);
-    expect(result).toBe("");
+  it("[IM-06] competition バケットでも bucket パラメータが正しく渡る", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ url: "https://signed.example.com/user1/comp.jpg" }),
+    });
+
+    await getSignedImageUrl(COMPETITION_BUCKET, "user1/comp.jpg", MOCK_ACCESS_TOKEN);
+
+    const [url] = mockFetch.mock.calls[0] as [string];
+    expect(url).toContain("bucket=competition-images");
+  });
+
+  it("[IM-07] path が null/undefined のとき null を返す（境界値、fetch を呼ばない）", async () => {
+    expect(await getSignedImageUrl(PRACTICE_BUCKET, null, MOCK_ACCESS_TOKEN)).toBeNull();
+    expect(await getSignedImageUrl(PRACTICE_BUCKET, undefined, MOCK_ACCESS_TOKEN)).toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("[IM-07] path が http(s) で始まる場合はそのまま返す（旧データとの後方互換、fetch を呼ばない）", async () => {
+    const legacyUrl = "https://supabase.co/storage/v1/object/public/practice-images/user1/img.jpg";
+    const result = await getSignedImageUrl(PRACTICE_BUCKET, legacyUrl, MOCK_ACCESS_TOKEN);
+
+    expect(result).toBe(legacyUrl);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("[IM-07] API が 401/403 を返した場合は null を返す（認可なしユーザーが他人の画像を要求した場合を想定）", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 403 });
+
+    const result = await getSignedImageUrl(COMPETITION_BUCKET, "other-user/comp.jpg", MOCK_ACCESS_TOKEN);
+    expect(result).toBeNull();
   });
 });
 

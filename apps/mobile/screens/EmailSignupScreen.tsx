@@ -2,14 +2,16 @@ import React from "react";
 import { View, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { SignupForm } from "@/components/auth/SignupForm";
+import type { AuthStackParamList } from "@/navigation/types";
 
 export const EmailSignupScreen: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const { t } = useTranslation();
 
   // 認証情報を確認中
@@ -40,8 +42,10 @@ export const EmailSignupScreen: React.FC = () => {
       </View>
       <SignupForm
         onSuccess={() => {
-          // AuthProviderが状態変更を検知してMainStackに自動切り替え
+          // メール確認が有効な場合は自動ログインされないため、SignupForm 側で
+          // 確認メール案内パネルを表示する (AuthProvider が確認後に MainStack へ切替)
         }}
+        onBackToLogin={() => navigation.navigate("EmailLogin")}
       />
     </SafeAreaView>
   );

@@ -327,7 +327,7 @@ function EntryRow({ entry, styleName, onUpdate, onRemove, disabled, isDuplicate 
           onClick={() => onRemove(entry.key)}
           disabled={disabled}
           className="p-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
-          aria-label={`${styleName}を削除`}
+          aria-label={t("removeStyleAria", { styleName })}
         >
           <XMarkIcon className="w-4 h-4" />
         </button>
@@ -413,7 +413,7 @@ function EntryRow({ entry, styleName, onUpdate, onRemove, disabled, isDuplicate 
             type="text"
             value={entry.note}
             onChange={(e) => onUpdate(entry.key, { note: e.target.value })}
-            placeholder="日付、大会名など"
+            placeholder={t("notePlaceholder")}
             disabled={disabled}
             className="w-full px-1.5 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
           />

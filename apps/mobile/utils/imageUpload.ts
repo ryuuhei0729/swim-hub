@@ -5,28 +5,10 @@
 
 import { randomUUID } from "expo-crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { base64ToArrayBuffer } from "./base64";
-import { canUploadImage } from "@swim-hub/shared/utils/premium";
 import i18n from "@/i18n";
 import { env } from "@/lib/env";
 
-export type ImageBucket = "practice-images" | "competition-images";
-
-export interface UploadImageParams {
-  supabase: SupabaseClient;
-  userId: string;
-  recordId: string;
-  base64: string;
-  fileExtension: string;
-  bucket: ImageBucket;
-  /** Premium ユーザーかどうか（防御的チェック用、省略時はチェックしない） */
-  isPremium?: boolean;
-}
-
-export interface UploadResult {
-  path: string;
-  publicUrl: string;
-}
+export type ImageBucket = "profile-images" | "practice-images" | "competition-images";
 
 /**
  * UUIDを生成（暗号学的に安全なexpo-cryptoを使用）
@@ -55,101 +37,20 @@ function getContentType(fileExtension: string): string {
 }
 
 /**
- * 単一の画像をアップロード
- * @returns アップロードされた画像のパスとpublicUrl
+ * 保存する image_paths を「生パス (source of truth)」から算出する。
+ *
+ * savedImagePaths から削除対象 (deletedImageIds) を除外し、新規アップロード分
+ * (newImagePaths) を末尾に追加する。表示専用の resolveGalleryImages 結果は
+ * 署名URL取得に失敗したパスを除外するため、保存の計算には使わないこと
+ * （失敗パスが image_paths から静かに消えるデータ損失を防ぐ）。
  */
-export async function uploadImage({
-  supabase,
-  userId,
-  recordId,
-  base64,
-  fileExtension,
-  bucket,
-  isPremium,
-}: UploadImageParams): Promise<UploadResult> {
-  // Premium チェック（防御的: isPremium が明示的に false の場合のみブロック）
-  if (isPremium === false && !canUploadImage(false)) {
-    throw new Error(i18n.t("forms.premium.imageUpload"));
-  }
-
-  // base64をArrayBufferに変換
-  const arrayBuffer = base64ToArrayBuffer(base64);
-
-  // ファイル名を生成
-  const uuid = generateUUID();
-  const fileName = `${uuid}.${fileExtension}`;
-  const filePath = `${userId}/${recordId}/${fileName}`;
-
-  // コンテンツタイプを決定
-  const contentType = getContentType(fileExtension);
-
-  // Supabase Storageにアップロード
-  const { error: uploadError } = await supabase.storage.from(bucket).upload(filePath, arrayBuffer, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType,
-  });
-
-  if (uploadError) {
-    console.error("画像アップロードエラー:", uploadError);
-    throw new Error(i18n.t("common.upload.imageUploadFailedDetail", { detail: uploadError.message }));
-  }
-
-  // 公開URLを取得
-  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-
-  return {
-    path: filePath,
-    publicUrl: data.publicUrl,
-  };
-}
-
-/**
- * 複数の画像をアップロード
- * エラー発生時は成功済みの画像をロールバック
- */
-export async function uploadImages(
-  supabase: SupabaseClient,
-  userId: string,
-  recordId: string,
-  images: Array<{ base64: string; fileExtension: string }>,
-  bucket: ImageBucket,
-  isPremium?: boolean,
-): Promise<UploadResult[]> {
-  // Premium チェック（防御的: isPremium が明示的に false の場合のみブロック）
-  if (isPremium === false && !canUploadImage(false)) {
-    throw new Error(i18n.t("forms.premium.imageUpload"));
-  }
-
-  const results: UploadResult[] = [];
-
-  try {
-    for (const image of images) {
-      const result = await uploadImage({
-        supabase,
-        userId,
-        recordId,
-        base64: image.base64,
-        fileExtension: image.fileExtension,
-        bucket,
-      });
-      results.push(result);
-    }
-    return results;
-  } catch (error) {
-    // ロールバック: 成功済みの画像をすべて削除
-    console.error("画像アップロード中にエラーが発生。ロールバックを開始:", error);
-
-    for (const result of results) {
-      try {
-        await deleteImage(supabase, result.path, bucket);
-      } catch (deleteError) {
-        console.error(`画像 ${result.path} の削除に失敗:`, deleteError);
-      }
-    }
-
-    throw error;
-  }
+export function mergeImagePaths(
+  savedImagePaths: string[],
+  deletedImageIds: string[],
+  newImagePaths: string[],
+): string[] {
+  const currentPaths = savedImagePaths.filter((path) => !deletedImageIds.includes(path));
+  return [...currentPaths, ...newImagePaths];
 }
 
 /**
@@ -187,48 +88,94 @@ export async function deleteImages(
 }
 
 /**
- * 画像のpublicUrlを取得
+ * 画像表示用の署名付きURLレスポンス
  */
-export function getImagePublicUrl(
-  supabase: SupabaseClient,
-  path: string,
-  bucket: ImageBucket,
-): string {
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+export interface SignedImageUrlResponse {
+  url: string;
+  expiresAt: number;
 }
 
 /**
- * 画像パスの配列からpublicUrl付きの情報を取得
+ * Web API (/api/storage/images/presigned-url) 経由で画像の署名付きURLを失効時刻付きで取得する
+ *
+ * profile-images / practice-images / competition-images は private バケットのため、
+ * 公開URLを直接組み立てず、このAPI経由でのみ表示用URLを取得できる。
+ *
+ * @param bucket バケットID
+ * @param path バケット内相対パス。移行期の互換のため、既にフルURL（旧データ）の場合は
+ *             失効しない (expiresAt=Infinity) レスポンスとしてそのまま返す
+ * @param accessToken Supabase access token
+ * @returns 署名付きURLと expiresAt (epoch ms)、取得に失敗した場合はnull
  */
-export function getExistingImagesFromPaths(
-  supabase: SupabaseClient,
-  paths: string[] | undefined | null,
+export async function getSignedImageUrlWithExpiry(
   bucket: ImageBucket,
-): Array<{ id: string; url: string }> {
+  path: string | null | undefined,
+  accessToken: string,
+): Promise<SignedImageUrlResponse | null> {
+  if (!path) return null;
+
+  // 移行期の後方互換: 署名URL化前の旧データはフルURLのまま保存されている場合がある
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return { url: path, expiresAt: Number.POSITIVE_INFINITY };
+  }
+
+  try {
+    const params = new URLSearchParams({ bucket, path });
+    const res = await fetch(
+      `${env.webApiUrl}/api/storage/images/presigned-url?${params.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+    if (!res.ok) {
+      return null;
+    }
+    return (await res.json()) as SignedImageUrlResponse;
+  } catch (error) {
+    console.error("画像URL取得エラー:", error);
+    return null;
+  }
+}
+
+/**
+ * 画像の署名付きURLを取得する（URL文字列のみ版）
+ */
+export async function getSignedImageUrl(
+  bucket: ImageBucket,
+  path: string | null | undefined,
+  accessToken: string,
+): Promise<string | null> {
+  const resolved = await getSignedImageUrlWithExpiry(bucket, path, accessToken);
+  return resolved?.url ?? null;
+}
+
+export interface ResolvedGalleryImage {
+  id: string;
+  url: string;
+}
+
+/**
+ * 画像パスの配列から、署名付きURLを解決したギャラリー用画像配列を作る。
+ * 取得に失敗したパスは結果から除外する（壊れた画像を表示しないことを優先）。
+ * 並列取得（Promise.all）により、パスの本数分だけ直列に待つウォーターフォールを避ける。
+ */
+export async function resolveGalleryImages(
+  bucket: ImageBucket,
+  paths: string[] | undefined | null,
+  accessToken: string,
+): Promise<ResolvedGalleryImage[]> {
   if (!paths || paths.length === 0) return [];
 
-  return paths.map((path) => ({
-    id: path, // pathをIDとして使用（削除時に必要）
-    url: getImageUrlFromPath(supabase, path, bucket),
-  }));
-}
-
-/**
- * R2またはSupabase StorageからパスのURLを解決する
- * EXPO_PUBLIC_R2_PUBLIC_URL が設定されている場合はR2、未設定の場合はSupabaseを使用
- */
-export function getImageUrlFromPath(
-  supabase: SupabaseClient,
-  path: string,
-  bucket: ImageBucket,
-): string {
-  if (!path) return "";
-  const r2PublicUrl = env.r2PublicUrl;
-  if (r2PublicUrl) {
-    return `${r2PublicUrl}/${bucket}/${path}`;
-  }
-  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+  const resolved = await Promise.all(
+    paths.map(async (path): Promise<ResolvedGalleryImage | null> => {
+      const url = await getSignedImageUrl(bucket, path, accessToken);
+      if (!url) return null;
+      return { id: path, url }; // pathをIDとして使用（削除時に必要）
+    }),
+  );
+  return resolved.filter((image): image is ResolvedGalleryImage => image !== null);
 }
 
 /**

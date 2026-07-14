@@ -268,6 +268,8 @@
       "processingError": "動画の変換中にエラーが発生しました。"
     },
     "shareCardModal": {
+      "shareUnavailable": "この端末では共有がご利用いただけません",
+      "generateFailed": "画像の生成に失敗しました",
       "closeOverlay": "モーダルを閉じる",
       "close": "閉じる",
       "save": "保存",
@@ -276,7 +278,10 @@
       "practiceTitle": "練習メニューをシェア",
       "competitionShareText": "【Swimhub】\n大会記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で記録を管理しよう!\nhttps://swim-hub.app",
       "practiceShareText": "【Swimhub】\n練習記録をシェアしました！\n\n水泳記録管理アプリ「SwimHub」で練習を記録しよう!\nhttps://swim-hub.app"
-    }
+    },
+    "discardTitle": "入力内容が保存されていません",
+    "discardMessage": "入力内容が保存されていません。このまま閉じますか？",
+    "discard": "破棄"
   },
   "nav": {
     "practice": "練習記録",
@@ -654,6 +659,7 @@
       "oauthUrlGenerationFailed": "OAuth URLの生成に失敗しました",
       "googleCalendarPermissionDenied": "Googleカレンダーのアクセス権限が取得できませんでした。再度お試しください。",
       "calendarConnectionSaveFailed": "カレンダー連携の保存に失敗しました",
+      "calendarConnectionSuccess": "Googleカレンダー連携が完了しました",
       "tokensNotReceived": "認証トークンが取得できませんでした",
       "cancelled": "認証がキャンセルされました",
       "dismissed": "認証が中断されました",
@@ -669,6 +675,12 @@
       "emailConfirmation": "ご登録のメールアドレスに確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。"
     },
     "backToLogin": "ログイン画面に戻る",
+    "crossLink": {
+      "noAccountPrompt": "アカウントをお持ちでない方",
+      "signupLink": "新規登録",
+      "haveAccountPrompt": "すでにアカウントをお持ちの方",
+      "loginLink": "ログイン"
+    },
     "logoutConfirmMessage": "ログアウトしますか？",
     "redirecting": "リダイレクト中...",
     "legal": {
@@ -1133,7 +1145,9 @@
       "styleRequired": "種目を選択してください",
       "distanceRequired": "距離を入力してください",
       "repsRequired": "本数を入力してください",
-      "setsRequired": "セット数を入力してください"
+      "setsRequired": "セット数を入力してください",
+      "tabPractice": "練習",
+      "tabLog": "練習ログ"
     },
     "mobile": {
       "loading": "練習記録を読み込み中...",
@@ -1385,7 +1399,8 @@
       "completing": "準備中...",
       "backButton": "戻る",
       "inputHintTitle": "半角数字で入力",
-      "inputHintBody": "1:23.45 / 23.45 / 23-45 / 1-23-45 など自由な形式で入力できます"
+      "inputHintBody": "1:23.45 / 23.45 / 23-45 / 1-23-45 など自由な形式で入力できます",
+      "notePlaceholder": "日付、大会名など"
     },
     "completionFailed": "完了処理に失敗しました",
     "stepLabels": {
@@ -1576,7 +1591,10 @@
       "dateRequired": "日付を入力してください",
       "dateFormatInvalid": "日付はYYYY-MM-DD形式で入力してください",
       "dateInvalid": "有効な日付を入力してください",
-      "endBeforeStart": "終了日は開始日以降の日付を指定してください"
+      "endBeforeStart": "終了日は開始日以降の日付を指定してください",
+      "tabCompetition": "大会",
+      "tabEntry": "エントリー",
+      "tabRecord": "レースレコード"
     },
     "entry": {
       "title": "エントリー種目",
@@ -1974,8 +1992,6 @@
     "tabsAriaLabel": "種目を選択",
     "mobile": {
       "description": "種目を追加して、ベストタイムをまとめて登録できます。",
-      "emptyTitle": "ベストタイムを追加",
-      "emptyBody": "「種目を追加」から登録したい種目を選んでください。",
       "successTitle": "登録完了",
       "addRelaying": "＋ 引き継ぎタイムを追加",
       "hideRelaying": "引き継ぎタイムを非表示",
@@ -2282,6 +2298,7 @@
       "pendingRetry": "状態を更新",
       "teamNotFound": "チームが見つかりません",
       "webGuide": "チーム管理機能に関してはWEB版をご利用ください。",
+      "bulkRegisterAdminRequired": "この機能を利用するには管理者権限が必要です。",
       "webGuideButton": "WEB版を開く",
       "pendingMessage": "チームへの参加リクエストは管理者の承認待ちです。\n承認されるまでしばらくお待ちください。",
       "memberRemoveConfirm": "{name}をチームから削除しますか？\nこの操作は取り消せません。",
@@ -2476,6 +2493,9 @@
       "loadingShort": "読み込み中...",
       "bulkAssignTitle": "{category} — 一括振り分け",
       "bulkAssignHint": "長押し + ドラッグでメンバーを移動",
+      "bulkAssignSaveFailed": "グループ割り当ての保存に失敗しました",
+      "charCounter": "{current}/{max}文字",
+      "announcementTimeInvalid": "時刻は HH:MM 形式で入力してください",
       "dropHere": "ここにドロップ",
       "fallbackPractice": "練習",
       "fallbackCompetitionTitle": "大会",
@@ -2702,6 +2722,12 @@
       }
     },
     "memberDetail": {
+      "hook": {
+        "roleChangeFailed": "権限の変更に失敗しました",
+        "cannotRemoveSelf": "自分自身をチームから削除することはできません",
+        "removeConfirm": "{name}さんをチームから削除しますか？この操作は取り消せません。",
+        "removeFailed": "メンバーの削除に失敗しました"
+      },
       "title": "メンバー詳細",
       "close": "閉じる",
       "bestTimesTitle": "Best Time",
@@ -3618,7 +3644,7 @@
       "timePlaceholder": "例: 1:23.45 または 31-2",
       "timePlaceholder2": "例: 2:00.00 または 2-0-0",
       "reactionTimeLabel": "反応時間（秒）",
-      "reactionTimePlaceholder": "0.40〜1.00",
+      "reactionTimePlaceholder": "-1.00〜2.00",
       "splitTimeLabel": "スプリットタイム",
       "relayStyleLabel": "リレー種目",
       "memoLabel": "メモ",
@@ -3634,10 +3660,11 @@
       "competitionRequired": "大会を選択してください",
       "timeRequired": "タイムを入力してください",
       "timePositive": "タイムは正の数値を入力してください",
-      "reactionTimeRange": "反応時間は0.40〜1.00秒の範囲で入力してください",
+      "reactionTimeRange": "反応時間は-1.00〜2.00秒の範囲で入力してください",
       "timeFormatInvalid": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
       "timeFormatInvalid2": "タイムの形式が正しくありません（例: 1:23.45 または 31-2）",
-      "recordNumber": "記録 {n}"
+      "recordNumber": "記録 {n}",
+      "sectionTitle": "レースレコード"
     },
     "lapTime": {
       "raceLapTab": "距離別 Lap",
@@ -3647,6 +3674,10 @@
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
       "splitTimeHeader": "スプリットタイム"
+    },
+    "bestBadge": {
+      "first": "初",
+      "personalBest": "自己ベスト"
     }
   },
   "forms": {
@@ -3793,6 +3824,7 @@
       "save": "保存",
       "cancel": "キャンセル",
       "helpTitle": "タイム入力のコツ",
+      "helpBodyBasic": "数字のあいだを数字以外の文字（- . : など）で区切って入力します。例:「31-2」→ 31.2、「1：23、4」→ 1:23.4、「1分12秒3」→ 1:12.3。",
       "helpBody": "数字のあいだを数字以外の文字（- . : など）で区切って入力します。例:「31-2」→ 31.2、「1：23、4」→ 1:23.4、「1分12秒3」→ 1:12.3。\n\n前のセルで「33-2」と入力すると、次のセルは「3-2」と入力するだけで「33.2」に自動補完されます（十の位を引き継ぐ）。セルを空にすると引き継ぎはリセットされます。"
     },
     "record": {
@@ -3904,6 +3936,8 @@
       "previewLabel": "プレビュー",
       "previewDefault": "タグ名",
       "selectModalTitle": "タグを選択",
+      "selectSearchPlaceholder": "タグを検索",
+      "noSearchResults": "一致するタグがありません",
       "actionPrompt": "タグの操作を選択してください",
       "actionEdit": "編集",
       "actionDelete": "削除",

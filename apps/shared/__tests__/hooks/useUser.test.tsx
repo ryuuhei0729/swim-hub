@@ -71,7 +71,7 @@ describe("useUserQuery", () => {
       if (table === "users") return profileBuilder;
       if (table === "team_memberships") return teamsBuilder;
       return profileBuilder;
-    }) as any;
+    }) as unknown as typeof mockClient.from;
 
     const { result } = renderHook(
       () =>
@@ -112,7 +112,7 @@ describe("useUserQuery", () => {
       if (table === "users") return profileBuilder;
       if (table === "team_memberships") return teamsBuilder;
       return profileBuilder;
-    }) as any;
+    }) as unknown as typeof mockClient.from;
 
     const { result } = renderHook(() => useUserQuery(mockClient, { initialProfile: mockProfile }), {
       wrapper: createWrapper(),
@@ -143,7 +143,7 @@ describe("useUserQuery", () => {
     mockClient.from = vi.fn((table: string) => {
       if (table === "users") return profileBuilder;
       return profileBuilder;
-    }) as any;
+    }) as unknown as typeof mockClient.from;
 
     const { result } = renderHook(() => useUserQuery(mockClient, { userId: "user-1" }), {
       wrapper: createWrapper(),
@@ -174,7 +174,7 @@ describe("useUserProfileQuery", () => {
     mockClient.from = vi.fn((table: string) => {
       if (table === "users") return profileBuilder;
       return profileBuilder;
-    }) as any;
+    }) as unknown as typeof mockClient.from;
 
     const { result } = renderHook(() => useUserProfileQuery(mockClient, "user-1"), {
       wrapper: createWrapper(),
@@ -197,7 +197,7 @@ describe("useUserProfileQuery", () => {
     mockClient.from = vi.fn((table: string) => {
       if (table === "users") return profileBuilder;
       return profileBuilder;
-    }) as any;
+    }) as unknown as typeof mockClient.from;
 
     const { result } = renderHook(() => useUserProfileQuery(mockClient), {
       wrapper: createWrapper(),
@@ -221,7 +221,7 @@ describe("useUserProfileQuery", () => {
     mockClient.from = vi.fn((table: string) => {
       if (table === "users") return profileBuilder;
       return profileBuilder;
-    }) as any;
+    }) as unknown as typeof mockClient.from;
 
     const { result } = renderHook(() => useUserProfileQuery(mockClient, "user-1"), {
       wrapper: createWrapper(),

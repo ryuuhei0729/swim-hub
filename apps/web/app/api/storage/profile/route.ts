@@ -45,10 +45,14 @@ export async function POST(request: NextRequest) {
     const ext = ALLOWED_EXTENSIONS.has(rawExt) ? rawExt : "webp";
     // 衝突耐性のあるUUIDを使用
     const fileName = `${randomUUID()}.${ext}`;
-    const key = `profile-images/${user.id}/${fileName}`;
+    // バケット内相対パス（DBに保存する形式。practice-images/competition-images と同じ規約:
+    // "{userId}/{fileName}"。R2キー / Supabaseバケット内パスの両方でこの相対パスをそのまま用いる）
+    const relativePath = `${user.id}/${fileName}`;
 
     // R2が有効な場合はR2を使用
     if (isR2Enabled()) {
+      const key = `profile-images/${relativePath}`;
+
       // 既存の画像を削除（新旧両方のプレフィックスを対象・並行取得）
       const [newPrefixFiles, legacyPrefixFiles] = await Promise.all([
         listR2Objects(`profile-images/${user.id}/`),
@@ -59,16 +63,16 @@ export async function POST(request: NextRequest) {
         await deleteMultipleFromR2(allExistingFiles);
       }
 
-      // 新しい画像をアップロード
+      // 新しい画像をアップロード（private バケットのため公開URLは使わない）
       const buffer = Buffer.from(await file.arrayBuffer());
-      const publicUrl = await uploadToR2(buffer, key, file.type);
+      await uploadToR2(buffer, key, file.type);
 
-      return NextResponse.json({ url: publicUrl });
+      return NextResponse.json({ path: relativePath });
     }
 
     // フォールバック: Supabase Storage
     const supabase = await createAuthenticatedServerClient();
-    const userFolderPath = `avatars/${user.id}`;
+    const userFolderPath = user.id;
 
     // 既存の画像を削除
     const { data: files } = await supabase.storage.from("profile-images").list(userFolderPath);
@@ -79,10 +83,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 新しい画像をアップロード
-    const filePath = `${userFolderPath}/${fileName}`;
     const { error: uploadError } = await supabase.storage
       .from("profile-images")
-      .upload(filePath, file, {
+      .upload(relativePath, file, {
         contentType: file.type,
         upsert: false,
       });
@@ -92,9 +95,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "画像のアップロードに失敗しました" }, { status: 500 });
     }
 
-    const { data: urlData } = supabase.storage.from("profile-images").getPublicUrl(filePath);
-
-    return NextResponse.json({ url: urlData.publicUrl });
+    return NextResponse.json({ path: relativePath });
   } catch (error) {
     console.error("プロフィール画像アップロードエラー:", error);
     return NextResponse.json({ error: "予期しないエラーが発生しました" }, { status: 500 });
@@ -127,7 +128,7 @@ export async function DELETE() {
 
     // フォールバック: Supabase Storage
     const supabase = await createAuthenticatedServerClient();
-    const userFolderPath = `avatars/${user.id}`;
+    const userFolderPath = user.id;
 
     const { data: files } = await supabase.storage.from("profile-images").list(userFolderPath);
 

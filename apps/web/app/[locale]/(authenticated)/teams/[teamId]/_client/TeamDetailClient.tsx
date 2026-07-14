@@ -196,6 +196,7 @@ export default function TeamDetailClient({
         isOpen={isMemberModalOpen}
         onClose={handleCloseMemberModal}
         member={selectedMember}
+        teamId={teamId}
         currentUserId={user?.id || ""}
         isCurrentUserAdmin={false}
         onMembershipChange={() => {

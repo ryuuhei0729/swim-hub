@@ -30,3 +30,19 @@ export const isEmailAuthCallback = (url: string): boolean => {
 
   return params.has("access_token") || params.has("error");
 };
+
+/**
+ * URL が Googleカレンダー連携の OAuth コールバックであることを示す
+ * `flow=calendar-connect` クエリパラメータを持つかを判定する。
+ * `getRedirectUri({ forCalendarConnect: true })` が生成する redirectTo にのみ付与される。
+ * コールドスタート復帰時、AsyncStorage の永続フラグと合わせて使うことで、
+ * 無関係な認証コールバック（メール確認・通常のGoogleログイン）を
+ * 誤ってカレンダー連携の復旧処理として扱わないようにする。
+ */
+export const hasCalendarConnectFlowFlag = (url: string): boolean => {
+  try {
+    return new URL(url).searchParams.get("flow") === "calendar-connect";
+  } catch {
+    return false;
+  }
+};

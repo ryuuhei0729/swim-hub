@@ -116,6 +116,20 @@ export const GetStartedScreen: React.FC = () => {
               </View>
             )}
           </Pressable>
+
+          {/* ログインへの導線 */}
+          <View style={styles.crossLinkRow}>
+            <Text style={styles.crossLinkPrompt}>{t("auth.crossLink.haveAccountPrompt")}</Text>
+            <Pressable
+              onPress={() => navigation.navigate("LoginMethod")}
+              disabled={isLoading}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.crossLink.loginLink")}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            >
+              <Text style={styles.crossLinkAction}>{t("auth.crossLink.loginLink")}</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -144,6 +158,22 @@ export const GetStartedScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  crossLinkRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 20,
+  },
+  crossLinkPrompt: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  crossLinkAction: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
   container: {
     flex: 1,
     backgroundColor: "#EFF6FF",

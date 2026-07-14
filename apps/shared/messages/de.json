@@ -268,6 +268,8 @@
       "processingError": "Beim Konvertieren des Videos ist ein Fehler aufgetreten."
     },
     "shareCardModal": {
+      "shareUnavailable": "Teilen ist auf diesem Gerät nicht verfügbar",
+      "generateFailed": "Bild konnte nicht erstellt werden",
       "closeOverlay": "Modal schließen",
       "close": "Schließen",
       "save": "Speichern",
@@ -276,7 +278,10 @@
       "practiceTitle": "Training teilen",
       "competitionShareText": "【Swimhub】\nIch habe mein Wettkampfergebnis geteilt!\n\nVerwalten Sie Ihre Zeiten mit der Schwimm-App „SwimHub“!\nhttps://swim-hub.app",
       "practiceShareText": "【Swimhub】\nIch habe mein Trainingsprotokoll geteilt!\n\nProtokollieren Sie Ihr Training mit der Schwimm-App „SwimHub“!\nhttps://swim-hub.app"
-    }
+    },
+    "discardTitle": "Nicht gespeicherte Änderungen",
+    "discardMessage": "Sie haben nicht gespeicherte Änderungen. Trotzdem schließen?",
+    "discard": "Verwerfen"
   },
   "nav": {
     "practice": "Trainingsprotokoll",
@@ -654,6 +659,7 @@
       "oauthUrlGenerationFailed": "Die OAuth-URL konnte nicht generiert werden",
       "googleCalendarPermissionDenied": "Die Zugriffsberechtigung für Google Kalender konnte nicht erteilt werden. Bitte versuchen Sie es erneut.",
       "calendarConnectionSaveFailed": "Die Kalenderverbindung konnte nicht gespeichert werden",
+      "calendarConnectionSuccess": "Die Verbindung mit Google Kalender wurde hergestellt",
       "tokensNotReceived": "Die Authentifizierungs-Token konnten nicht empfangen werden",
       "cancelled": "Die Authentifizierung wurde abgebrochen",
       "dismissed": "Die Authentifizierung wurde unterbrochen",
@@ -669,6 +675,12 @@
       "emailConfirmation": "Wir haben eine Bestätigungs-E-Mail an Ihre Adresse gesendet. Klicken Sie auf den Link in der E-Mail, um Ihre Registrierung abzuschließen."
     },
     "backToLogin": "Zurück zur Anmeldung",
+    "crossLink": {
+      "noAccountPrompt": "Noch kein Konto?",
+      "signupLink": "Registrieren",
+      "haveAccountPrompt": "Bereits ein Konto?",
+      "loginLink": "Anmelden"
+    },
     "logoutConfirmMessage": "Möchten Sie sich wirklich abmelden?",
     "redirecting": "Weiterleitung läuft...",
     "legal": {
@@ -1133,7 +1145,9 @@
       "styleRequired": "Bitte wählen Sie eine Disziplin",
       "distanceRequired": "Bitte geben Sie eine Distanz ein",
       "repsRequired": "Bitte geben Sie die Wiederholungen ein",
-      "setsRequired": "Bitte geben Sie die Sätze ein"
+      "setsRequired": "Bitte geben Sie die Sätze ein",
+      "tabPractice": "Training",
+      "tabLog": "Trainingsprotokoll"
     },
     "mobile": {
       "loading": "Trainingseinträge werden geladen ...",
@@ -1385,7 +1399,8 @@
       "completing": "Wird vorbereitet...",
       "backButton": "Zurück",
       "inputHintTitle": "Als Zahlen eingeben",
-      "inputHintBody": "Sie können Formate wie 1:23.45, 23.45, 23-45 oder 1-23-45 eingeben"
+      "inputHintBody": "Sie können Formate wie 1:23.45, 23.45, 23-45 oder 1-23-45 eingeben",
+      "notePlaceholder": "Datum, Wettkampfname usw."
     },
     "completionFailed": "Einrichtung konnte nicht abgeschlossen werden",
     "stepLabels": {
@@ -1576,7 +1591,10 @@
       "dateRequired": "Bitte geben Sie ein Datum ein",
       "dateFormatInvalid": "Das Datum muss im Format JJJJ-MM-TT angegeben werden",
       "dateInvalid": "Bitte geben Sie ein gültiges Datum ein",
-      "endBeforeStart": "Das Enddatum muss am oder nach dem Startdatum liegen"
+      "endBeforeStart": "Das Enddatum muss am oder nach dem Startdatum liegen",
+      "tabCompetition": "Wettkampf",
+      "tabEntry": "Meldung",
+      "tabRecord": "Rennergebnis"
     },
     "entry": {
       "title": "Gemeldete Disziplinen",
@@ -1974,8 +1992,6 @@
     "tabsAriaLabel": "Disziplin auswählen",
     "mobile": {
       "description": "Fügen Sie Disziplinen hinzu und speichern Sie Ihre Bestzeiten auf einmal.",
-      "emptyTitle": "Bestzeiten hinzufügen",
-      "emptyBody": "Tippen Sie auf „Disziplin hinzufügen“, um die zu speichernden Disziplinen auszuwählen.",
       "successTitle": "Gespeichert",
       "addRelaying": "+ Wechselzeit hinzufügen",
       "hideRelaying": "Wechselzeit ausblenden",
@@ -2282,6 +2298,7 @@
       "pendingRetry": "Status aktualisieren",
       "teamNotFound": "Team nicht gefunden",
       "webGuide": "Für Funktionen zur Teamverwaltung verwenden Sie bitte die Web-Version.",
+      "bulkRegisterAdminRequired": "Für diese Funktion sind Administratorrechte erforderlich.",
       "webGuideButton": "Web-Version öffnen",
       "pendingMessage": "Ihre Beitrittsanfrage wartet auf die Genehmigung des Administrators.\nBitte warten Sie, bis sie genehmigt wird.",
       "memberRemoveConfirm": "{name} aus dem Team entfernen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
@@ -2476,6 +2493,9 @@
       "loadingShort": "Wird geladen...",
       "bulkAssignTitle": "{category} — Sammelzuweisung",
       "bulkAssignHint": "Lange drücken und ziehen, um Mitglieder zu verschieben",
+      "bulkAssignSaveFailed": "Speichern der Gruppenzuweisungen fehlgeschlagen",
+      "charCounter": "{current}/{max} Zeichen",
+      "announcementTimeInvalid": "Bitte die Uhrzeit im Format HH:MM eingeben",
       "dropHere": "Hier ablegen",
       "fallbackPractice": "Training",
       "fallbackCompetitionTitle": "Wettkampf",
@@ -2702,6 +2722,12 @@
       }
     },
     "memberDetail": {
+      "hook": {
+        "roleChangeFailed": "Rollenänderung fehlgeschlagen",
+        "cannotRemoveSelf": "Du kannst dich nicht selbst aus dem Team entfernen",
+        "removeConfirm": "{name} aus dem Team entfernen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "removeFailed": "Entfernen des Mitglieds fehlgeschlagen"
+      },
       "title": "Mitgliederdetails",
       "close": "Schließen",
       "bestTimesTitle": "Best Time",
@@ -3618,7 +3644,7 @@
       "timePlaceholder": "z. B. 1:23.45 oder 31-2",
       "timePlaceholder2": "z. B. 2:00.00 oder 2-0-0",
       "reactionTimeLabel": "Reaktionszeit (Sek.)",
-      "reactionTimePlaceholder": "0,40–1,00",
+      "reactionTimePlaceholder": "-1,00 bis 2,00",
       "splitTimeLabel": "Split-Zeit",
       "relayStyleLabel": "Staffeldisziplin",
       "memoLabel": "Notiz",
@@ -3634,10 +3660,11 @@
       "competitionRequired": "Bitte wählen Sie einen Wettkampf",
       "timeRequired": "Bitte geben Sie eine Zeit ein",
       "timePositive": "Die Zeit muss eine positive Zahl sein",
-      "reactionTimeRange": "Die Reaktionszeit muss zwischen 0,40 und 1,00 Sekunden liegen",
+      "reactionTimeRange": "Die Reaktionszeit muss zwischen -1,00 und 2,00 Sekunden liegen",
       "timeFormatInvalid": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
       "timeFormatInvalid2": "Ungültiges Zeitformat (z. B. 1:23.45 oder 31-2)",
-      "recordNumber": "Eintrag {n}"
+      "recordNumber": "Eintrag {n}",
+      "sectionTitle": "Rennergebnis"
     },
     "lapTime": {
       "raceLapTab": "Lap nach Distanz",
@@ -3647,6 +3674,10 @@
       "noLap": "Lap-Zeiten können nicht berechnet werden",
       "distanceHeader": "Distanz",
       "splitTimeHeader": "Split Time"
+    },
+    "bestBadge": {
+      "first": "Debüt",
+      "personalBest": "Persönliche Bestzeit"
     }
   },
   "forms": {
@@ -3793,6 +3824,7 @@
       "save": "Speichern",
       "cancel": "Abbrechen",
       "helpTitle": "Tipps zur Zeiteingabe",
+      "helpBodyBasic": "Trenne Zahlen mit einem beliebigen Zeichen, das keine Ziffer ist (- . : usw.). Beispiele: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.",
       "helpBody": "Trenne Zahlen mit einem beliebigen Zeichen, das keine Ziffer ist (- . : usw.). Beispiele: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.\n\nWenn du in einer Zelle \"33-2\" eingibst, genügt in der nächsten \"3-2\" und es wird automatisch zu \"33.2\" ergänzt (Übernahme der Zehnerstelle). Das Leeren einer Zelle setzt die Übernahme zurück."
     },
     "record": {
@@ -3904,6 +3936,8 @@
       "previewLabel": "Vorschau",
       "previewDefault": "Tag-Name",
       "selectModalTitle": "Tags auswählen",
+      "selectSearchPlaceholder": "Tags suchen",
+      "noSearchResults": "Keine passenden Tags",
       "actionPrompt": "Bitte wählen Sie eine Aktion für dieses Tag",
       "actionEdit": "Bearbeiten",
       "actionDelete": "Löschen",

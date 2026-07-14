@@ -29,7 +29,7 @@ import { isEntryTabVisible } from "@/utils/tabModalUtils";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { formatTimeBest } from "@/utils/formatters";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTimeFlexible } from "@apps/shared/utils/time";
 import type { CompetitionImageFile, ExistingImage } from "@/components/forms/CompetitionImageUploader";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
 import type { RecordLogFormData } from "@/components/forms/record-log/types";
@@ -159,6 +159,7 @@ export default function CompetitionTabModal({
   const tRecord = useTranslations("forms.recordLog");
   const tTabModal = useTranslations("forms.tabModal");
   const tPremium = useTranslations("forms.premium");
+  const tTimeError = useTranslations("bulkBestTime.error");
   const { subscription, user, supabase } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const { bestTimes, loadBestTimes } = useBestTimes(supabase);
@@ -554,13 +555,20 @@ export default function CompetitionTabModal({
     if (!basicData.date) errors.competition = true;
     if (basicData.endDate && basicData.endDate < basicData.date) errors.competition = true;
 
-    // エントリータブ: style_id 重複チェック
+    // エントリータブ: style_id 重複チェック + タイム形式チェック
     if (showEntryTab) {
       const styleIds = entries.filter((e) => e.styleId).map((e) => e.styleId);
       const hasDuplicate = styleIds.length !== new Set(styleIds).size;
+      // 解釈不能な形式は entryTime=0 のまま静かに保存しない
+      const hasInvalidEntryTime = entries.some(
+        (e) => e.entryTimeDisplayValue.trim() !== "" && parseTimeFlexible(e.entryTimeDisplayValue) === null,
+      );
       if (hasDuplicate) {
         errors.entry = true;
         setEntryValidationError(tTabModal("duplicateEntryStyle"));
+      } else if (hasInvalidEntryTime) {
+        errors.entry = true;
+        setEntryValidationError(tTimeError("invalidTimeFormat"));
       } else {
         setEntryValidationError(null);
       }
@@ -586,7 +594,7 @@ export default function CompetitionTabModal({
       return false;
     }
     return true;
-  }, [basicData.date, basicData.endDate, showEntryTab, entries, t, tTabModal]);
+  }, [basicData.date, basicData.endDate, showEntryTab, entries, t, tTabModal, tTimeError]);
 
   // ---------------------------------------------------------------------------
   // Submit
@@ -614,8 +622,9 @@ export default function CompetitionTabModal({
       let recordListWithIds: Array<RecordLogFormData & { id?: string }> = [];
       let effectiveOriginalRecordIds: string[] = [];
       if (showRecordTab) {
-        const { hasStyleError, submitList: recordList } = prepareRecordSubmitData();
-        if (hasStyleError) {
+        const { hasStyleError, hasTimeFormatError, submitList: recordList } =
+          prepareRecordSubmitData();
+        if (hasStyleError || hasTimeFormatError) {
           setTabErrors((prev) => ({ ...prev, record: true }));
           setActiveTab("record");
           isSubmittingRef.current = false;
@@ -1070,29 +1079,42 @@ export default function CompetitionTabModal({
                                 <span className="sm:hidden">{tEntry("timeLabelShort")}</span>
                                 <span className="hidden sm:inline">{tEntry("timeLabel")}</span>
                               </label>
-                              <Input
-                                type="text"
-                                value={entry.entryTimeDisplayValue}
-                                onChange={(e) => {
-                                  const parsed = parseTime(e.target.value);
-                                  updateEntry(entry.id, {
-                                    entryTimeDisplayValue: e.target.value,
-                                    entryTime: parsed,
-                                  });
-                                }}
-                                onBlur={(e) => {
-                                  const parsed = parseTime(e.target.value);
-                                  updateEntry(entry.id, {
-                                    entryTimeDisplayValue:
-                                      parsed > 0 ? formatTimeBest(parsed) : e.target.value,
-                                    entryTime: parsed,
-                                  });
-                                }}
-                                placeholder="1:23.45"
-                                className="flex-1 min-w-0 h-8 sm:h-10"
-                                disabled={isLoading}
-                                data-testid={`entry-time-${clampedIndex + 1}`}
-                              />
+                              <div className="flex-1 min-w-0">
+                                <Input
+                                  type="text"
+                                  value={entry.entryTimeDisplayValue}
+                                  onChange={(e) => {
+                                    // 構造ガード: "1.23.45" 等はクイック解釈で受理。解釈不能なら 0 のまま
+                                    const parsed = parseTimeFlexible(e.target.value);
+                                    updateEntry(entry.id, {
+                                      entryTimeDisplayValue: e.target.value,
+                                      entryTime: parsed ?? 0,
+                                    });
+                                  }}
+                                  onBlur={(e) => {
+                                    const parsed = parseTimeFlexible(e.target.value);
+                                    updateEntry(entry.id, {
+                                      // 不正形式は入力値を残してエラー表示する（誤値で整形しない）
+                                      entryTimeDisplayValue:
+                                        parsed !== null ? formatTimeBest(parsed) : e.target.value,
+                                      entryTime: parsed ?? 0,
+                                    });
+                                  }}
+                                  placeholder="1:23.45"
+                                  className="w-full h-8 sm:h-10"
+                                  disabled={isLoading}
+                                  data-testid={`entry-time-${clampedIndex + 1}`}
+                                />
+                                {entry.entryTimeDisplayValue.trim() !== "" &&
+                                  parseTimeFlexible(entry.entryTimeDisplayValue) === null && (
+                                    <p
+                                      className="mt-1 text-xs text-red-600"
+                                      data-testid={`entry-time-error-${clampedIndex + 1}`}
+                                    >
+                                      {tTimeError("invalidTimeFormat")}
+                                    </p>
+                                  )}
+                              </div>
                             </div>
 
                             {/* Note */}

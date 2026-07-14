@@ -1,5 +1,15 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -8,6 +18,8 @@ import { validatePassword, type PasswordChecks } from "@/utils/validatePassword"
 
 interface SignupFormProps {
   onSuccess?: () => void;
+  /** 登録成功パネルの「ログイン画面へ」導線 */
+  onBackToLogin?: () => void;
 }
 
 type AuthError = {
@@ -65,7 +77,7 @@ function formatSignupError(t: TFunction, err: unknown): string {
     : t("auth.errorMap.defaultError");
 }
 
-export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
+export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -150,8 +162,44 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
     }
   };
 
+  // 登録成功時はフォームを隠し、確認メール案内 + ログインへの導線を表示する (Web と同挙動)
+  if (message) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.formContainer}>
+          <View style={styles.header}>
+            <Ionicons name="mail-outline" size={40} color="#2563EB" />
+            <Text style={styles.successTitle}>{t("auth.success.emailConfirmTitle")}</Text>
+          </View>
+          <View style={styles.messageContainer}>
+            <Text style={styles.messageText}>{message}</Text>
+          </View>
+          {onBackToLogin && (
+            <Pressable
+              style={styles.button}
+              onPress={onBackToLogin}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.backToLogin")}
+            >
+              <Text style={styles.buttonText}>{t("auth.backToLogin")}</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.formContainer}>
         <View style={styles.header}>
           <Text style={styles.title}>{t("auth.signup.emailMethodTitle")}</Text>
@@ -160,12 +208,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {message && (
-          <View style={styles.messageContainer}>
-            <Text style={styles.messageText}>{message}</Text>
           </View>
         )}
 
@@ -233,7 +275,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {
           </Pressable>
         </View>
       </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -269,8 +312,14 @@ function PasswordRequirementsList({ checks }: { checks: PasswordChecks }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scroll: {
     flex: 1,
+    backgroundColor: "#EFF6FF",
+  },
+  container: {
+    // flexGrow (not flex) keeps the card centered on tall screens while
+    // letting short screens / keyboard-open viewports scroll to the button
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -300,6 +349,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#111827",
     marginBottom: 8,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+    marginTop: 12,
+    textAlign: "center",
   },
   errorContainer: {
     backgroundColor: "#FEF2F2",

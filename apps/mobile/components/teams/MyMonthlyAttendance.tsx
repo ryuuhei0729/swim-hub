@@ -70,6 +70,10 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   // 編集状態（ローカル）
   const [editStates, setEditStates] = useState<Record<string, AttendanceEditState>>({});
   const [saving, setSaving] = useState(false);
+  // イベント単位保存中の eventId 集合（web useRecentAttendance.savingEventIds 相当）
+  const [savingEventIds, setSavingEventIds] = useState<Set<string>>(new Set());
+  // 個別保存とまとめて保存の同時実行を防ぐための共通フラグ
+  const isAnySaving = saving || savingEventIds.size > 0;
 
   // 各月のステータスを計算
   const calculateMonthStatus = useCallback(
@@ -318,6 +322,136 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         note,
       },
     }));
+  };
+
+  // イベントの編集状態が保存済みデータと異なるか（web useRecentAttendance.saveEvent の変更判定と同一）
+  const isEventChanged = (eventId: string): boolean => {
+    const editState = editStates[eventId];
+    if (!editState) return false;
+    const existingAttendance = attendances.find(
+      (a) => (a.practice_id || a.competition_id) === eventId,
+    );
+    if (existingAttendance) {
+      return !(
+        existingAttendance.status === editState.status &&
+        (existingAttendance.note || "") === editState.note
+      );
+    }
+    return !(editState.status === null && editState.note === "");
+  };
+
+  // イベント単位保存（web useRecentAttendance.saveEvent 相当）
+  const handleSaveEvent = async (eventId: string) => {
+    const event = events.find((e) => e.id === eventId);
+    const editState = editStates[eventId];
+    if (!event || !editState) return;
+    if (!isEventChanged(eventId)) return;
+
+    const existingAttendance = attendances.find(
+      (a) => (a.practice_id || a.competition_id) === eventId,
+    );
+
+    // 締切後編集の確認（handleSaveAll と同一挙動）
+    if (event.attendance_status === "closed") {
+      const date = parseISO(event.date);
+      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+      const confirmed = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          t("teams.mobile.adminAttendance.confirmTitle"),
+          t("teams.mobile.attendanceConfirmEditAfterDeadline", { dates: dateStr }),
+          [
+            { text: t("common.cancel"), style: "cancel", onPress: () => resolve(false) },
+            { text: t("common.ok"), onPress: () => resolve(true) },
+          ],
+          { cancelable: true, onDismiss: () => resolve(false) },
+        );
+      });
+      if (!confirmed) return;
+    }
+
+    try {
+      setSavingEventIds((prev) => new Set(prev).add(eventId));
+      setError(null);
+
+      if (existingAttendance) {
+        // 更新: shared bulkUpdateMyAttendances が締切後編集マークを付与する（handleSaveAll と同経路）
+        await attendanceAPI.bulkUpdateMyAttendances([
+          {
+            attendanceId: existingAttendance.id,
+            status: editState.status,
+            note: editState.note || null,
+          },
+        ]);
+      } else {
+        // 新規作成: handleSaveAll の insert 経路と同一ロジック
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+
+        let note: string | null = editState.note
+          ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH)
+          : null;
+
+        if (event.attendance_status === "closed") {
+          const editMark = `(${format(new Date(), "MM/dd HH:mm")}締切後編集)`;
+          if (note) {
+            const cleaned = note.replace(EDIT_MARK_REGEX, "").trim();
+            const combined = cleaned ? `${cleaned} ${editMark}` : editMark;
+            note =
+              combined.length > NOTE_MAX_LENGTH ? combined.substring(0, NOTE_MAX_LENGTH) : combined;
+          } else {
+            note = editMark;
+          }
+        }
+
+        const { error: insertError } = await supabase.from("team_attendance").insert({
+          user_id: user.id,
+          practice_id: event.type === "practice" ? event.id : null,
+          competition_id: event.type === "competition" ? event.id : null,
+          status: editState.status,
+          note,
+        });
+
+        if (insertError) throw insertError;
+      }
+
+      // 出欠情報を再取得し、保存したイベントの編集状態のみ確定値へ同期する
+      // （loadAttendances は editStates 全体を初期化するため、他イベントの未保存編集を消さないようここでは使わない）
+      if (selectedMonth) {
+        const attendanceData = await attendanceAPI.getMyAttendancesByMonth(
+          teamId,
+          selectedMonth.year,
+          selectedMonth.month,
+        );
+        setAttendances(attendanceData);
+        const saved = attendanceData.find(
+          (a) => (a.practice_id || a.competition_id) === eventId,
+        );
+        setEditStates((prev) => ({
+          ...prev,
+          [eventId]: {
+            status: saved?.status ?? null,
+            note: saved?.note || "",
+          },
+        }));
+      }
+      // 月リストのステータスも更新（モーダルは開いたまま）
+      await loadMonthList();
+    } catch (err) {
+      console.error("出欠情報の保存に失敗:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : t("teams.mobile.attendanceSaveFailed");
+      // NOTE: setError はコンポーネント全体をエラー表示に切り替えてモーダルが消えるため、
+      // イベント単位保存では Alert のみで通知し、編集状態を保持する
+      Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
+    } finally {
+      setSavingEventIds((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+    }
   };
 
   // まとめて保存
@@ -653,6 +787,8 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                   <>
                     {events.map((event) => {
                       const editState = editStates[event.id] || { status: null, note: "" };
+                      const changed = isEventChanged(event.id);
+                      const savingEvent = savingEventIds.has(event.id);
 
                       return (
                         <View
@@ -743,15 +879,42 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                             multiline
                             numberOfLines={2}
                           />
+
+                          {/* イベント単位保存（web の per-event save 相当。変更がある場合のみ有効） */}
+                          <View style={styles.eventSaveRow}>
+                            <Pressable
+                              style={[
+                                styles.eventSaveButton,
+                                (!changed || savingEvent || saving) &&
+                                  styles.eventSaveButtonDisabled,
+                              ]}
+                              onPress={() => handleSaveEvent(event.id)}
+                              disabled={!changed || savingEvent || saving}
+                              accessibilityRole="button"
+                              accessibilityLabel={t("teams.mobile.saveButton")}
+                            >
+                              <Text
+                                style={[
+                                  styles.eventSaveButtonText,
+                                  (!changed || savingEvent || saving) &&
+                                    styles.eventSaveButtonTextDisabled,
+                                ]}
+                              >
+                                {savingEvent
+                                  ? t("teams.mobile.saveLoading")
+                                  : t("teams.mobile.saveButton")}
+                              </Text>
+                            </Pressable>
+                          </View>
                         </View>
                       );
                     })}
 
-                    {/* まとめて保存ボタン */}
+                    {/* まとめて保存ボタン（個別保存進行中も disabled にし、二重書き込みを防止） */}
                     <Pressable
-                      style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                      style={[styles.saveButton, isAnySaving && styles.saveButtonDisabled]}
                       onPress={handleSaveAll}
-                      disabled={saving}
+                      disabled={isAnySaving}
                     >
                       <Text style={styles.saveButtonText}>
                         {saving
@@ -1000,6 +1163,30 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     minHeight: 60,
     textAlignVertical: "top",
+  },
+  eventSaveRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 8,
+  },
+  eventSaveButton: {
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  eventSaveButtonDisabled: {
+    borderColor: "#D1D5DB",
+  },
+  eventSaveButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+  eventSaveButtonTextDisabled: {
+    color: "#9CA3AF",
   },
   saveButton: {
     backgroundColor: "#2563EB",

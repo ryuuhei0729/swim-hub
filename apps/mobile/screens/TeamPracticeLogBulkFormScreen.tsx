@@ -31,6 +31,7 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader, TagChips, TagSelectModal, TagManageModal } from "@/components/shared";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { MemberSelectModal } from "@/components/teams/MemberSelectModal";
 import { uploadVideoForTeamMember, MissingThumbnailError } from "@/utils/videoUpload";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
@@ -687,6 +688,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
               <Text style={styles.placeText}>{practice.place}</Text>
             </View>
           ) : null}
+          <TimeInputHelp showCarryOver style={{ marginTop: 8 }} />
         </View>
 
         {menus.map((menu, index) => {

@@ -268,6 +268,8 @@
       "processingError": "视频转码时发生错误。"
     },
     "shareCardModal": {
+      "shareUnavailable": "此设备不支持分享",
+      "generateFailed": "图片生成失败",
       "closeOverlay": "关闭弹窗",
       "close": "关闭",
       "save": "保存",
@@ -276,7 +278,10 @@
       "practiceTitle": "分享训练菜单",
       "competitionShareText": "【Swimhub】\n我分享了比赛记录！\n\n用游泳记录管理应用「SwimHub」来管理你的成绩吧！\nhttps://swim-hub.app",
       "practiceShareText": "【Swimhub】\n我分享了训练记录！\n\n用游泳记录管理应用「SwimHub」来记录你的训练吧！\nhttps://swim-hub.app"
-    }
+    },
+    "discardTitle": "输入内容尚未保存",
+    "discardMessage": "输入内容尚未保存。仍要关闭吗？",
+    "discard": "放弃"
   },
   "nav": {
     "practice": "训练记录",
@@ -654,6 +659,7 @@
       "oauthUrlGenerationFailed": "生成 OAuth URL 失败",
       "googleCalendarPermissionDenied": "未能获取 Google 日历的访问权限。请重试。",
       "calendarConnectionSaveFailed": "保存日历关联失败",
+      "calendarConnectionSuccess": "Google 日历关联已完成",
       "tokensNotReceived": "未能获取身份验证令牌",
       "cancelled": "身份验证已取消",
       "dismissed": "身份验证已中断",
@@ -669,6 +675,12 @@
       "emailConfirmation": "我们已向您的邮箱发送确认邮件。请点击邮件中的链接以完成注册。"
     },
     "backToLogin": "返回登录页面",
+    "crossLink": {
+      "noAccountPrompt": "还没有账号？",
+      "signupLink": "注册",
+      "haveAccountPrompt": "已有账号？",
+      "loginLink": "登录"
+    },
     "logoutConfirmMessage": "确定要退出登录吗？",
     "redirecting": "跳转中...",
     "legal": {
@@ -1133,7 +1145,9 @@
       "styleRequired": "请选择项目",
       "distanceRequired": "请输入距离",
       "repsRequired": "请输入趟数",
-      "setsRequired": "请输入组数"
+      "setsRequired": "请输入组数",
+      "tabPractice": "训练",
+      "tabLog": "训练日志"
     },
     "mobile": {
       "loading": "正在加载训练记录...",
@@ -1385,7 +1399,8 @@
       "completing": "准备中...",
       "backButton": "返回",
       "inputHintTitle": "请用半角数字输入",
-      "inputHintBody": "可使用 1:23.45 / 23.45 / 23-45 / 1-23-45 等自由格式输入"
+      "inputHintBody": "可使用 1:23.45 / 23.45 / 23-45 / 1-23-45 等自由格式输入",
+      "notePlaceholder": "日期、比赛名称等"
     },
     "completionFailed": "完成处理失败",
     "stepLabels": {
@@ -1576,7 +1591,10 @@
       "dateRequired": "请输入日期",
       "dateFormatInvalid": "日期请按 YYYY-MM-DD 格式输入",
       "dateInvalid": "请输入有效的日期",
-      "endBeforeStart": "结束日期请设置为开始日期当天或之后"
+      "endBeforeStart": "结束日期请设置为开始日期当天或之后",
+      "tabCompetition": "比赛",
+      "tabEntry": "报名",
+      "tabRecord": "赛事记录"
     },
     "entry": {
       "title": "报名项目",
@@ -1974,8 +1992,6 @@
     "tabsAriaLabel": "选择项目",
     "mobile": {
       "description": "可添加项目，批量登记最好成绩。",
-      "emptyTitle": "添加最好成绩",
-      "emptyBody": "请从「添加项目」中选择要登记的项目。",
       "successTitle": "登记完成",
       "addRelaying": "＋ 添加接力成绩",
       "hideRelaying": "隐藏接力成绩",
@@ -2282,6 +2298,7 @@
       "pendingRetry": "刷新状态",
       "teamNotFound": "未找到团队",
       "webGuide": "团队管理功能请使用网页版。",
+      "bulkRegisterAdminRequired": "使用此功能需要管理员权限。",
       "webGuideButton": "打开网页版",
       "pendingMessage": "您的加入申请正在等待管理员审核。\n请耐心等待审核通过。",
       "memberRemoveConfirm": "确定要将{name}从团队中移除吗？\n此操作无法撤销。",
@@ -2476,6 +2493,9 @@
       "loadingShort": "正在加载...",
       "bulkAssignTitle": "{category} — 批量分配",
       "bulkAssignHint": "长按 + 拖动以移动成员",
+      "bulkAssignSaveFailed": "保存分组分配失败",
+      "charCounter": "{current}/{max}字",
+      "announcementTimeInvalid": "请以 HH:MM 格式输入时间",
       "dropHere": "拖放到此处",
       "fallbackPractice": "训练",
       "fallbackCompetitionTitle": "比赛",
@@ -2702,6 +2722,12 @@
       }
     },
     "memberDetail": {
+      "hook": {
+        "roleChangeFailed": "更改权限失败",
+        "cannotRemoveSelf": "无法将自己从团队中移除",
+        "removeConfirm": "确定将{name}从团队中移除吗？此操作无法撤销。",
+        "removeFailed": "移除成员失败"
+      },
       "title": "成员详情",
       "close": "关闭",
       "bestTimesTitle": "Best Time",
@@ -3618,7 +3644,7 @@
       "timePlaceholder": "例: 1:23.45 或 31-2",
       "timePlaceholder2": "例: 2:00.00 或 2-0-0",
       "reactionTimeLabel": "反应时间（秒）",
-      "reactionTimePlaceholder": "0.40〜1.00",
+      "reactionTimePlaceholder": "-1.00至2.00",
       "splitTimeLabel": "分段成绩",
       "relayStyleLabel": "接力项目",
       "memoLabel": "备注",
@@ -3634,10 +3660,11 @@
       "competitionRequired": "请选择比赛",
       "timeRequired": "请输入成绩",
       "timePositive": "成绩请输入正数",
-      "reactionTimeRange": "反应时间请输入0.40〜1.00秒范围内的值",
+      "reactionTimeRange": "反应时间必须在-1.00至2.00秒之间",
       "timeFormatInvalid": "成绩格式不正确（例: 1:23.45 或 31-2）",
       "timeFormatInvalid2": "成绩格式不正确（例: 1:23.45 或 31-2）",
-      "recordNumber": "记录 {n}"
+      "recordNumber": "记录 {n}",
+      "sectionTitle": "赛事记录"
     },
     "lapTime": {
       "raceLapTab": "分距 Lap",
@@ -3647,6 +3674,10 @@
       "noLap": "无法计算分段成绩",
       "distanceHeader": "距离",
       "splitTimeHeader": "Split Time"
+    },
+    "bestBadge": {
+      "first": "首次",
+      "personalBest": "个人最好成绩"
     }
   },
   "forms": {
@@ -3793,6 +3824,7 @@
       "save": "保存",
       "cancel": "取消",
       "helpTitle": "成绩输入技巧",
+      "helpBodyBasic": "用非数字字符（- . : 等）分隔数字进行输入。例如：\"31-2\" → 31.2，\"1:23.4\" → 1:23.4，\"1分12秒3\" → 1:12.3。",
       "helpBody": "用非数字字符（- . : 等）分隔数字进行输入。例如：\"31-2\" → 31.2，\"1:23.4\" → 1:23.4，\"1分12秒3\" → 1:12.3。\n\n在前一格输入\"33-2\"后，下一格只需输入\"3-2\"即可自动补全为\"33.2\"（继承十位数字）。清空该格后继承将被重置。"
     },
     "record": {
@@ -3904,6 +3936,8 @@
       "previewLabel": "预览",
       "previewDefault": "标签名称",
       "selectModalTitle": "选择标签",
+      "selectSearchPlaceholder": "搜索标签",
+      "noSearchResults": "没有匹配的标签",
       "actionPrompt": "请选择对标签的操作",
       "actionEdit": "编辑",
       "actionDelete": "删除",

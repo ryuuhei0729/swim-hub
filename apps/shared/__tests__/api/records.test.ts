@@ -95,7 +95,7 @@ describe("RecordAPI", () => {
         video_thumbnail_path: null,
         note: "テストメモ",
         is_relaying: false,
-        pool_type: 0 as 0,
+        pool_type: 0 as const,
         reaction_time: null,
       };
       const createdRecord = createMockRecord(newRecord);
@@ -128,7 +128,7 @@ describe("RecordAPI", () => {
         video_thumbnail_path: null,
           note: "テストメモ",
           is_relaying: false,
-          pool_type: 0 as 0,
+          pool_type: 0 as const,
           reaction_time: null,
         }),
       ).rejects.toThrow("認証が必要です");
@@ -640,6 +640,111 @@ describe("RecordAPI", () => {
       api = new RecordAPI(mockClient);
 
       await expect(api.getBestTimes()).rejects.toThrow("認証が必要です");
+    });
+  });
+
+  describe("一覧ベスト候補取得 (getListBestCandidates)", () => {
+    /** order().limit() まで chain して await できる thenable ビルダーを作る */
+    function createCandidateBuilder(data: unknown[], error: unknown = null) {
+      const builder = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        is: vi.fn(),
+        order: vi.fn(),
+        limit: vi.fn(),
+        then: vi.fn(),
+      };
+      builder.select.mockReturnValue(builder);
+      builder.eq.mockReturnValue(builder);
+      builder.is.mockReturnValue(builder);
+      builder.order.mockReturnValue(builder);
+      builder.limit.mockReturnValue(builder);
+      builder.then.mockImplementation((onFulfilled: (value: unknown) => unknown) =>
+        Promise.resolve({ data, error }).then(onFulfilled),
+      );
+      return builder;
+    }
+
+    /** from() の呼び出し順 = 実装のクエリ構築順（1回目: 大会記録, 2回目: 一括登録） */
+    function mockCandidateQueries(
+      competitionData: unknown[],
+      bulkData: unknown[],
+      options: { competitionError?: unknown; bulkError?: unknown } = {},
+    ) {
+      const competitionBuilder = createCandidateBuilder(
+        competitionData,
+        options.competitionError ?? null,
+      );
+      const bulkBuilder = createCandidateBuilder(bulkData, options.bulkError ?? null);
+      let call = 0;
+      mockClient.from = vi
+        .fn()
+        .mockImplementation(() =>
+          call++ === 0 ? competitionBuilder : bulkBuilder,
+        ) as unknown as typeof mockClient.from;
+      return { competitionBuilder, bulkBuilder };
+    }
+
+    it("大会/一括の2クエリをグループ条件で構築し軽量フィールドへ整形する", async () => {
+      const { competitionBuilder, bulkBuilder } = mockCandidateQueries(
+        [{ id: "c1", time: 55.0, competition: { date: "2025-02-01" } }],
+        [{ id: "b1", time: 53.0, created_at: "2025-02-15T00:00:00.000Z" }],
+      );
+
+      const result = await api.getListBestCandidates("user-1", 1, true, 1);
+
+      expect(mockClient.from).toHaveBeenCalledTimes(2);
+      expect(mockClient.from).toHaveBeenCalledWith("records");
+
+      // 大会側: competitions.date を埋め込む。日付フィルタ・自己除外は行わない
+      // (呼び出し側 computeListPreviousBest がメモリ上で行う)
+      expect(competitionBuilder.select).toHaveBeenCalledWith(
+        "id, time, competition:competitions!inner(date)",
+      );
+      expect(competitionBuilder.eq).toHaveBeenCalledWith("user_id", "user-1");
+      expect(competitionBuilder.eq).toHaveBeenCalledWith("style_id", 1);
+      expect(competitionBuilder.eq).toHaveBeenCalledWith("is_relaying", true);
+      expect(competitionBuilder.eq).toHaveBeenCalledWith("pool_type", 1);
+      expect(competitionBuilder.order).toHaveBeenCalledWith("time", { ascending: true });
+      expect(competitionBuilder.limit).toHaveBeenCalledWith(1000);
+
+      // 一括側: competition_id = null で created_at を含める
+      expect(bulkBuilder.select).toHaveBeenCalledWith("id, time, created_at");
+      expect(bulkBuilder.is).toHaveBeenCalledWith("competition_id", null);
+      expect(bulkBuilder.eq).toHaveBeenCalledWith("pool_type", 1);
+      expect(bulkBuilder.order).toHaveBeenCalledWith("time", { ascending: true });
+      expect(bulkBuilder.limit).toHaveBeenCalledWith(1000);
+
+      expect(result).toEqual({
+        competitionRows: [{ id: "c1", time: 55.0, date: "2025-02-01" }],
+        bulkRows: [{ id: "b1", time: 53.0, created_at: "2025-02-15T00:00:00.000Z" }],
+      });
+    });
+
+    it("poolType 未指定 (null) のとき pool_type フィルタを適用しない", async () => {
+      const { competitionBuilder, bulkBuilder } = mockCandidateQueries([], []);
+
+      await api.getListBestCandidates("user-1", 1, false, null);
+
+      expect(competitionBuilder.eq).not.toHaveBeenCalledWith("pool_type", expect.anything());
+      expect(bulkBuilder.eq).not.toHaveBeenCalledWith("pool_type", expect.anything());
+    });
+
+    it("埋め込みリレーションが配列で返っても date を取り出せる", async () => {
+      mockCandidateQueries([{ id: "c1", time: 55.0, competition: [{ date: "2025-02-01" }] }], []);
+
+      const result = await api.getListBestCandidates("user-1", 1, false, 0);
+
+      expect(result.competitionRows).toEqual([{ id: "c1", time: 55.0, date: "2025-02-01" }]);
+    });
+
+    it("クエリエラーのとき例外を投げる", async () => {
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockCandidateQueries([], [], { competitionError: new Error("DB error") });
+
+      await expect(api.getListBestCandidates("user-1", 1, false, 0)).rejects.toThrow("DB error");
+
+      consoleSpy.mockRestore();
     });
   });
 

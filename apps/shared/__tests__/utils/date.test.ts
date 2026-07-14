@@ -290,7 +290,7 @@ describe("date utilities", () => {
       });
 
       it("月と日が1桁の場合もゼロパディングされる", () => {
-        const [start, end] = getMonthDateRange(2024, 1);
+        const [start, _end] = getMonthDateRange(2024, 1);
         expect(start).toBe("2024-01-01");
       });
     });

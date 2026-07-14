@@ -42,6 +42,12 @@ describe("TeamMembersAPI", () => {
   });
 
   describe("join", () => {
+    // join() は招待コード検証・既存メンバーシップ判定・INSERT/UPDATE をすべて
+    // SECURITY DEFINER RPC (request_join_team) 内で完結させる実装に変更された
+    // (#42: 招待コード無しでの pending 行乱造を RLS 層で禁止するため)。
+    // そのため TeamMembersAPI.join() は supabase.rpc("request_join_team", ...) を
+    // 呼び出すだけの薄いラッパーになっており、テストも RPC の戻り値(jsonb)を
+    // モックする形に統一する。
     it("招待コードを使ってチームに参加申請できる（承認待ち）", async () => {
       const membership = {
         id: "membership-1",
@@ -54,74 +60,37 @@ describe("TeamMembersAPI", () => {
         left_at: null,
       };
 
-      // 1. RPC関数でチームを取得（find_team_by_invite_code）
       const rpcMock = vi.fn().mockResolvedValue({
-        data: { id: "team-1", invite_code: "CODE" },
+        data: { success: true, membership },
         error: null,
       });
-      const rpcBuilder = {
-        single: vi
-          .fn()
-          .mockResolvedValue({ data: { id: "team-1", invite_code: "CODE" }, error: null }),
-      };
-      rpcMock.mockReturnValue(rpcBuilder);
       supabaseMock.client.rpc = rpcMock;
-      // 2. team_membershipsテーブルへの2つのクエリを順番に設定
-      //    - 1つ目: maybeSingle()で既存メンバーシップをチェック（存在しない場合はnull）
-      //    - 2つ目: insert().select().single()で新しいメンバーシップを挿入
-      supabaseMock.queueTable("team_memberships", [
-        {
-          // 1つ目: maybeSingle()用 - 既存メンバーシップがない場合
-          data: null,
-          error: null,
-          configure: (builder) => {
-            builder.maybeSingle.mockResolvedValue({ data: null, error: null });
-          },
-        },
-        {
-          // 2つ目: insert().select().single()用
-          data: membership,
-          configure: (builder) => {
-            builder.insert.mockReturnValue(builder);
-            builder.select.mockReturnValue(builder);
-            builder.single.mockResolvedValue({ data: membership, error: null });
-          },
-        },
-      ]);
 
       const result = await api.join("CODE");
 
       expect(result).toEqual(membership);
-      // maybeSingle()の呼び出しを確認
-      const maybeSingleBuilder = supabaseMock.getBuilderHistory("team_memberships")[0];
-      expect(maybeSingleBuilder.maybeSingle).toHaveBeenCalled();
-      // insert()の呼び出しを確認
-      const insertBuilder = supabaseMock.getBuilderHistory("team_memberships")[1];
-      expect(insertBuilder.insert).toHaveBeenCalledTimes(1);
-      const inserted = insertBuilder.insert.mock.calls[0][0];
-      expect(inserted).toMatchObject({
-        team_id: "team-1",
-        user_id: "test-user-id",
-        role: "user",
-        status: "pending",
-        is_active: false,
-        left_at: null,
-      });
-      expect(inserted.joined_at).toBeDefined();
+      expect(rpcMock).toHaveBeenCalledWith("request_join_team", { p_invite_code: "CODE" });
     });
 
     it("招待コードが無効な場合はエラーとなる", async () => {
       const rpcMock = vi.fn().mockResolvedValue({
-        data: null,
+        data: { success: false, error: "招待コードが正しくありません" },
         error: null,
       });
-      const rpcBuilder = {
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      };
-      rpcMock.mockReturnValue(rpcBuilder);
       supabaseMock.client.rpc = rpcMock;
 
-      await expect(api.join("INVALID")).rejects.toThrow("招待コードが無効です");
+      await expect(api.join("INVALID")).rejects.toThrow("招待コードが正しくありません");
+    });
+
+    it("RPC呼び出し自体がエラーになった場合は例外を投げる", async () => {
+      const rpcError = new Error("rpc call failed");
+      const rpcMock = vi.fn().mockResolvedValue({
+        data: null,
+        error: rpcError,
+      });
+      supabaseMock.client.rpc = rpcMock;
+
+      await expect(api.join("CODE")).rejects.toThrow(rpcError);
     });
 
     it("未認証の場合はエラーとなる", async () => {
@@ -164,6 +133,7 @@ describe("TeamMembersAPI", () => {
 
   describe("updateRole", () => {
     it("メンバーのロールを更新できる", async () => {
+      const adminMembership = { role: "admin" };
       const updated = {
         id: "membership-1",
         team_id: "team-1",
@@ -173,6 +143,14 @@ describe("TeamMembersAPI", () => {
 
       supabaseMock.queueTable("team_memberships", [
         {
+          // 1つ目: requireTeamAdmin による管理者権限チェック
+          data: adminMembership,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null });
+          },
+        },
+        {
+          // 2つ目: ロール更新 UPDATE
           data: updated,
           configure: (builder) => {
             builder.update.mockReturnValue(builder);
@@ -183,25 +161,62 @@ describe("TeamMembersAPI", () => {
       const result = await api.updateRole("team-1", "member-1", "admin");
 
       expect(result).toEqual(updated);
-      const builder = supabaseMock.getBuilderHistory("team_memberships")[0];
-      expect(builder.update).toHaveBeenCalledWith({ role: "admin" });
-      expect(builder.eq).toHaveBeenCalledWith("team_id", "team-1");
-      expect(builder.eq).toHaveBeenCalledWith("user_id", "member-1");
+      const adminBuilder = supabaseMock.getBuilderHistory("team_memberships")[0];
+      expect(adminBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+      expect(adminBuilder.eq).toHaveBeenCalledWith("user_id", "test-user-id");
+      expect(adminBuilder.eq).toHaveBeenCalledWith("is_active", true);
+      const updateBuilder = supabaseMock.getBuilderHistory("team_memberships")[1];
+      expect(updateBuilder.update).toHaveBeenCalledWith({ role: "admin" });
+      expect(updateBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+      expect(updateBuilder.eq).toHaveBeenCalledWith("user_id", "member-1");
     });
 
     it("更新時にエラーが発生した場合は例外を投げる", async () => {
-      const error = new Error("update failed");
-      supabaseMock.queueTable("team_memberships", [{ data: null, error }]);
+      const adminMembership = { role: "admin" };
+      const updateError = new Error("update failed");
 
-      await expect(api.updateRole("team-1", "member-1", "admin")).rejects.toThrow(error);
+      supabaseMock.queueTable("team_memberships", [
+        {
+          // 1つ目: requireTeamAdmin 通過（admin あり）
+          data: adminMembership,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null });
+          },
+        },
+        {
+          // 2つ目: UPDATE でエラー発生
+          data: null,
+          error: updateError,
+        },
+      ]);
+
+      await expect(api.updateRole("team-1", "member-1", "admin")).rejects.toThrow(updateError);
     });
   });
 
   describe("remove", () => {
-    it("指定メンバーを退会させることができる", async () => {
+    // remove() は管理者による除名。requireTeamAdmin ガード + .select().single() により
+    // 「RLS 拒否や対象不在で0行更新でもサイレント成功する」問題を防ぐ。
+    it("管理者は指定メンバーを退会させることができる", async () => {
+      const adminMembership = { role: "admin" };
+      const removedMembership = {
+        id: "membership-2",
+        team_id: "team-1",
+        user_id: "member-1",
+        is_active: false,
+      };
+
       supabaseMock.queueTable("team_memberships", [
         {
-          data: null,
+          // 1つ目: requireTeamAdmin による管理者権限チェック
+          data: adminMembership,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null });
+          },
+        },
+        {
+          // 2つ目: 退会 UPDATE（.select().single() が更新後の1行を返す）
+          data: removedMembership,
           configure: (builder) => {
             builder.update.mockReturnValue(builder);
           },
@@ -210,15 +225,84 @@ describe("TeamMembersAPI", () => {
 
       await api.remove("team-1", "member-1");
 
-      const builder = supabaseMock.getBuilderHistory("team_memberships")[0];
-      expect(builder.update).toHaveBeenCalled();
-      expect(builder.eq).toHaveBeenCalledWith("team_id", "team-1");
-      expect(builder.eq).toHaveBeenCalledWith("user_id", "member-1");
+      const adminBuilder = supabaseMock.getBuilderHistory("team_memberships")[0];
+      expect(adminBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+      expect(adminBuilder.eq).toHaveBeenCalledWith("user_id", "test-user-id");
+      expect(adminBuilder.eq).toHaveBeenCalledWith("role", "admin");
+      const updateBuilder = supabaseMock.getBuilderHistory("team_memberships")[1];
+      expect(updateBuilder.update).toHaveBeenCalled();
+      const updateArg = updateBuilder.update.mock.calls[0][0];
+      expect(updateArg.is_active).toBe(false);
+      expect(updateArg.left_at).toEqual(new Date("2025-01-01T00:00:00Z").toISOString());
+      expect(updateBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+      expect(updateBuilder.eq).toHaveBeenCalledWith("user_id", "member-1");
+      // 0行更新検知のために .select().single() が必ず呼ばれること
+      expect(updateBuilder.select).toHaveBeenCalledWith("*");
+      expect(updateBuilder.single).toHaveBeenCalled();
+    });
+
+    it("管理者でない場合は requireTeamAdmin で弾かれ、UPDATE は実行されない", async () => {
+      supabaseMock.queueTable("team_memberships", [
+        {
+          // requireTeamAdmin: admin メンバーシップなし（PGRST116 = 0行）
+          data: null,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({
+              data: null,
+              error: { code: "PGRST116", message: "no rows returned" },
+            });
+          },
+        },
+      ]);
+
+      await expect(api.remove("team-1", "member-1")).rejects.toThrow("管理者権限が必要です");
+      // 権限チェックで止まり、UPDATE 用のクエリビルダーは作られていない
+      expect(supabaseMock.getBuilderHistory("team_memberships")).toHaveLength(1);
+    });
+
+    it("0行更新（RLS 拒否/対象メンバー不在）の場合は例外を投げる", async () => {
+      const adminMembership = { role: "admin" };
+      // PostgREST は .single() で0行の場合 PGRST116 エラーを返す
+      const noRowsError = {
+        code: "PGRST116",
+        message: "JSON object requested, multiple (or no) rows returned",
+      };
+
+      supabaseMock.queueTable("team_memberships", [
+        {
+          data: adminMembership,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null });
+          },
+        },
+        {
+          // UPDATE が0行 → .single() がエラーを返す → throw されること
+          data: null,
+          configure: (builder) => {
+            builder.update.mockReturnValue(builder);
+            builder.single.mockResolvedValue({ data: null, error: noRowsError });
+          },
+        },
+      ]);
+
+      await expect(api.remove("team-1", "member-1")).rejects.toMatchObject({
+        code: "PGRST116",
+      });
     });
 
     it("退会処理でエラーが発生した場合は例外を投げる", async () => {
+      const adminMembership = { role: "admin" };
       const error = new Error("remove failed");
-      supabaseMock.queueTable("team_memberships", [{ data: null, error }]);
+
+      supabaseMock.queueTable("team_memberships", [
+        {
+          data: adminMembership,
+          configure: (builder) => {
+            builder.single.mockResolvedValue({ data: adminMembership, error: null });
+          },
+        },
+        { data: null, error },
+      ]);
 
       await expect(api.remove("team-1", "member-1")).rejects.toThrow(error);
     });
@@ -478,64 +562,86 @@ describe("TeamMembersAPI", () => {
   });
 
   describe("join - 再申請", () => {
+    // 再申請(rejected→pending)の判定・UPDATE も request_join_team RPC 内で完結する。
     it("拒否されたメンバーシップは再申請できる", async () => {
-      const rejectedMembership = {
+      const updatedMembership = {
         id: "membership-1",
         team_id: "team-1",
         user_id: "test-user-id",
-        status: "rejected",
-        is_active: false,
-      };
-
-      const updatedMembership = {
-        ...rejectedMembership,
         status: "pending",
         is_active: false,
       };
 
-      // 1. RPC関数でチームを取得
       const rpcMock = vi.fn().mockResolvedValue({
-        data: { id: "team-1", invite_code: "CODE" },
+        data: { success: true, membership: updatedMembership },
         error: null,
       });
-      const rpcBuilder = {
-        single: vi
-          .fn()
-          .mockResolvedValue({ data: { id: "team-1", invite_code: "CODE" }, error: null }),
-      };
-      rpcMock.mockReturnValue(rpcBuilder);
       supabaseMock.client.rpc = rpcMock;
-
-      // 2. 既存メンバーシップを取得（拒否済み）
-      supabaseMock.queueTable("team_memberships", [
-        {
-          data: rejectedMembership,
-          configure: (builder) => {
-            builder.maybeSingle.mockResolvedValue({ data: rejectedMembership, error: null });
-          },
-        },
-        {
-          // 3. 更新（pendingに変更）
-          data: updatedMembership,
-          configure: (builder) => {
-            builder.update.mockReturnValue(builder);
-            builder.eq.mockReturnValue(builder);
-            builder.select.mockReturnValue(builder);
-            builder.single.mockResolvedValue({ data: updatedMembership, error: null });
-          },
-        },
-      ]);
 
       const result = await api.join("CODE");
 
       expect(result).toEqual(updatedMembership);
-      const updateBuilder = supabaseMock.getBuilderHistory("team_memberships")[1];
-      expect(updateBuilder.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: "pending",
-          is_active: false,
-        }),
+      expect(result.status).toBe("pending");
+      expect(rpcMock).toHaveBeenCalledWith("request_join_team", { p_invite_code: "CODE" });
+    });
+  });
+
+  describe("reactivateMembership", () => {
+    // reactivateMembership() は reactivate_own_membership RPC (SECURITY DEFINER) の
+    // 薄いラッパー。「approved かつ is_active=false かつ left_at 記録済み」の行のみ
+    // 再アクティブ化できるガードは RPC 側(SQL)の責務であり、ここでは API 層が
+    // RPC の戻り値を正しく解釈すること（success:true→membership を返す、
+    // success:false→エラーを投げる）を検証する。
+    it("退会済みメンバーシップを再アクティブ化できる", async () => {
+      const reactivated = {
+        id: "membership-1",
+        team_id: "team-1",
+        user_id: "test-user-id",
+        status: "approved",
+        is_active: true,
+        left_at: null,
+      };
+
+      const rpcMock = vi.fn().mockResolvedValue({
+        data: { success: true, membership: reactivated },
+        error: null,
+      });
+      supabaseMock.client.rpc = rpcMock;
+
+      const result = await api.reactivateMembership("team-1");
+
+      expect(result).toEqual(reactivated);
+      expect(rpcMock).toHaveBeenCalledWith("reactivate_own_membership", { p_team_id: "team-1" });
+    });
+
+    it("再アクティブ化できないメンバーシップ（例: pending）の場合はエラーとなる", async () => {
+      const rpcMock = vi.fn().mockResolvedValue({
+        data: { success: false, error: "再アクティブ化できるメンバーシップではありません" },
+        error: null,
+      });
+      supabaseMock.client.rpc = rpcMock;
+
+      await expect(api.reactivateMembership("team-1")).rejects.toThrow(
+        "再アクティブ化できるメンバーシップではありません",
       );
+    });
+
+    it("RPC呼び出し自体がエラーになった場合は例外を投げる", async () => {
+      const rpcError = new Error("rpc call failed");
+      const rpcMock = vi.fn().mockResolvedValue({
+        data: null,
+        error: rpcError,
+      });
+      supabaseMock.client.rpc = rpcMock;
+
+      await expect(api.reactivateMembership("team-1")).rejects.toThrow(rpcError);
+    });
+
+    it("未認証の場合はエラーとなる", async () => {
+      supabaseMock = createSupabaseMock({ userId: "" });
+      api = new TeamMembersAPI(supabaseMock.client);
+
+      await expect(api.reactivateMembership("team-1")).rejects.toThrow("認証が必要です");
     });
   });
 });

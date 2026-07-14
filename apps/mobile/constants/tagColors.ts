@@ -21,3 +21,15 @@ export const PRESET_TAG_COLORS = [
 export const getRandomTagColor = (): string => {
   return PRESET_TAG_COLORS[Math.floor(Math.random() * PRESET_TAG_COLORS.length)];
 };
+
+/**
+ * タグ名から決定的に色を導出する (Web の TagInput.getColorForName と同一アルゴリズム)。
+ * 同名タグが Web/モバイル間で同じ色になるよう、ランダムではなく名前ベースで決める。
+ */
+export const getColorForName = (name: string): string => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  return PRESET_TAG_COLORS[hash % PRESET_TAG_COLORS.length];
+};

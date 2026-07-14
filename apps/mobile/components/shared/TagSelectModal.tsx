@@ -1,7 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   Pressable,
   Modal,
   ScrollView,
@@ -42,6 +43,18 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const selectedIds = useMemo(() => new Set(selectedTags.map((t) => t.id)), [selectedTags]);
+  const [query, setQuery] = useState("");
+
+  // モーダルを開き直すたびに検索語をリセット
+  useEffect(() => {
+    if (!visible) setQuery("");
+  }, [visible]);
+
+  const filteredTags = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return availableTags;
+    return availableTags.filter((tag) => tag.name.toLowerCase().includes(q));
+  }, [availableTags, query]);
 
   const handleTagToggle = (tag: PracticeTag) => {
     if (selectedIds.has(tag.id)) {
@@ -107,20 +120,50 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
             </Pressable>
           </View>
 
+          {/* 検索フィールド (タグが存在する場合のみ) */}
+          {availableTags.length > 0 && (
+            <View style={styles.searchContainer}>
+              <Feather name="search" size={16} color="#9CA3AF" />
+              <TextInput
+                style={styles.searchInput}
+                value={query}
+                onChangeText={setQuery}
+                placeholder={t("forms.tag.selectSearchPlaceholder")}
+                placeholderTextColor="#9CA3AF"
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+              />
+              {query.length > 0 && (
+                <Pressable
+                  onPress={() => setQuery("")}
+                  hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                >
+                  <Feather name="x-circle" size={16} color="#9CA3AF" />
+                </Pressable>
+              )}
+            </View>
+          )}
+
           {/* タグ一覧 */}
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.tagsContainer}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             {availableTags.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>{t("forms.tag.emptyTitle")}</Text>
                 <Text style={styles.emptySubText}>{t("forms.tag.emptySubtext")}</Text>
               </View>
+            ) : filteredTags.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>{t("forms.tag.noSearchResults")}</Text>
+              </View>
             ) : (
               <View style={styles.tagsGrid}>
-                {availableTags.map((tag) => {
+                {filteredTags.map((tag) => {
                   const isSelected = selectedIds.has(tag.id);
                   return (
                     <View
@@ -219,6 +262,25 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    backgroundColor: "#F9FAFB",
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#111827",
+    padding: 0,
   },
   scrollView: {
     flexGrow: 0,

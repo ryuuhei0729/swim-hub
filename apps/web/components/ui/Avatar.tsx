@@ -1,9 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
+import { getSignedImageUrl } from "@/lib/image-url";
 
 interface AvatarProps {
+  /** プロフィール画像のバケット内相対パス（"{userId}/{fileName}"）。旧データはフルURLの場合もある */
   avatarUrl?: string | null;
   userName: string;
   size?: "sm" | "md" | "lg" | "xl" | "xxl";
@@ -19,19 +22,36 @@ const sizeClasses = {
 };
 
 export default function Avatar({ avatarUrl, userName, size = "md", className = "" }: AvatarProps) {
+  const t = useTranslations("mypage.avatarUpload");
   const sizeClass = sizeClasses[size];
   const initials = userName.charAt(0) || "?";
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+
+  // profile-images は private バケットのため、パスから署名付きURLを取得して表示する
+  useEffect(() => {
+    let cancelled = false;
+    if (!avatarUrl) {
+      setResolvedUrl(null);
+      return;
+    }
+    getSignedImageUrl("profile-images", avatarUrl).then((url) => {
+      if (!cancelled) setResolvedUrl(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [avatarUrl]);
 
   return (
     <div
       className={`${sizeClass} ${className} rounded-full flex items-center justify-center shrink-0 overflow-hidden ${
-        avatarUrl ? "bg-gray-100" : "bg-blue-500"
+        resolvedUrl ? "bg-gray-100" : "bg-blue-500"
       }`}
     >
-      {avatarUrl ? (
+      {resolvedUrl ? (
         <Image
-          src={avatarUrl}
-          alt={`${userName}のプロフィール画像`}
+          src={resolvedUrl}
+          alt={t("profileImageAlt")}
           width={
             size === "sm" ? 32 : size === "md" ? 40 : size === "lg" ? 96 : size === "xl" ? 128 : 160
           }

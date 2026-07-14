@@ -23,7 +23,10 @@
 
   "vars": {
     "NEXT_PUBLIC_ENVIRONMENT": "production",
-    "NEXT_PUBLIC_APP_URL": "https://swim-hub.app"
+    "NEXT_PUBLIC_APP_URL": "https://swim-hub.app",
+    // 署名付き GET URL の署名先バケット。上の R2_BUCKET バインディング先と必ず同名にすること
+    // (本番デプロイは dotenvx を通さないため、ここで runtime に明示注入する)
+    "R2_BUCKET_NAME": "swim-hub-images-prod"
   },
 
   // R2 バケット（本番）
@@ -53,7 +56,9 @@
   "env": {
     "preview": {
       "vars": {
-        "NEXT_PUBLIC_ENVIRONMENT": "development"
+        "NEXT_PUBLIC_ENVIRONMENT": "development",
+        // 署名先バケット。下の preview 用 R2_BUCKET バインディング先(dev)と同名
+        "R2_BUCKET_NAME": "swim-hub-images-dev"
       },
       // R2 バケット（開発用）
       "r2_buckets": [

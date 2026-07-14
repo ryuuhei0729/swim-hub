@@ -9,8 +9,10 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface MemberInfo {
@@ -24,12 +26,60 @@ interface MemberInfo {
   };
 }
 
+interface GroupMemberRowProps {
+  item: MemberInfo;
+  memberName: string;
+  onPress?: () => void;
+}
+
+/**
+ * グループメンバー1行分の表示
+ * profile-images は private バケットのため、行単位で署名付きURLを解決する（Issue #36）
+ */
+const GroupMemberRow: React.FC<GroupMemberRowProps> = ({ item, memberName, onPress }) => {
+  const { t } = useTranslation();
+  const { url: resolvedAvatarUrl } = useSignedImageUrl(
+    "profile-images",
+    item.users?.profile_image_path,
+  );
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.memberRow, pressed && styles.memberRowPressed]}
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t("teamsAdmin.groupMemberList.viewDetailAriaLabel", {
+        name: memberName,
+      })}
+    >
+      {resolvedAvatarUrl ? (
+        <Image source={{ uri: resolvedAvatarUrl }} style={styles.avatarImage} contentFit="cover" />
+      ) : (
+        <View style={styles.avatarPlaceholder}>
+          <Text style={styles.avatarText}>{memberName.charAt(0).toUpperCase()}</Text>
+        </View>
+      )}
+      <Text style={styles.memberName} numberOfLines={1}>
+        {memberName}
+      </Text>
+      {item.role === "admin" && (
+        <View style={styles.adminBadge}>
+          <Text style={styles.adminBadgeText}>{t("teams.mobile.roleAdmin")}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+};
+
 interface GroupMemberListModalProps {
   visible: boolean;
   onClose: () => void;
   group: TeamGroupWithCount | null;
   teamId: string;
   supabase: SupabaseClient;
+  /** メンバー行タップでメンバー詳細を開く（web GroupMemberListModal の onMemberClick 相当） */
+  onMemberClick?: (userId: string) => void;
 }
 
 export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
@@ -38,6 +88,7 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
   group,
   teamId,
   supabase,
+  onMemberClick,
 }) => {
   const { t } = useTranslation();
   const [members, setMembers] = useState<MemberInfo[]>([]);
@@ -130,18 +181,16 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
                 data={members}
                 keyExtractor={(item) => item.id}
                 style={styles.memberList}
-                renderItem={({ item }) => (
-                  <View style={styles.memberRow}>
-                    <Text style={styles.memberName} numberOfLines={1}>
-                      {item.users?.name || t("teams.mobile.unnamedMember")}
-                    </Text>
-                    {item.role === "admin" && (
-                      <View style={styles.adminBadge}>
-                        <Text style={styles.adminBadgeText}>{t("teams.mobile.roleAdmin")}</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
+                renderItem={({ item }) => {
+                  const memberName = item.users?.name || t("teams.mobile.unnamedMember");
+                  return (
+                    <GroupMemberRow
+                      item={item}
+                      memberName={memberName}
+                      onPress={onMemberClick ? () => onMemberClick(item.user_id) : undefined}
+                    />
+                  );
+                }}
               />
             )}
           </View>
@@ -227,10 +276,32 @@ const styles = StyleSheet.create({
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
+  },
+  memberRowPressed: {
+    backgroundColor: "#F9FAFB",
+  },
+  avatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#E5E7EB",
+  },
+  avatarPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#D1D5DB",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
   },
   memberName: {
     fontSize: 14,

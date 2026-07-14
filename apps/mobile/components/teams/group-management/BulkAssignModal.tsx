@@ -52,6 +52,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
   const [assignments, setAssignments] = useState<Map<string, string | null>>(new Map());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
 
@@ -161,6 +162,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
   // 保存
   const handleSave = useCallback(async () => {
     setSaving(true);
+    setSaveError(null);
     try {
       const api = new TeamGroupsAPI(supabase);
       for (const group of groups) {
@@ -171,14 +173,20 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
       onSaved();
       onClose();
     } catch (err) {
+      // エラーはユーザーに通知し、モーダルは開いたまま再試行可能にする
+      // （再保存は全グループを set し直すため、途中失敗の部分保存も再試行で収束する）
       console.error("保存に失敗:", err);
+      const detail = err instanceof Error ? err.message : null;
+      const base = t("teams.mobile.bulkAssignSaveFailed");
+      setSaveError(detail ? `${base}: ${detail}` : base);
     } finally {
       setSaving(false);
     }
-  }, [supabase, groups, membersByGroup, onSaved, onClose]);
+  }, [supabase, groups, membersByGroup, onSaved, onClose, t]);
 
   const handleClose = () => {
     if (saving) return;
+    setSaveError(null);
     onClose();
   };
 
@@ -332,6 +340,12 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
 
           <Text style={styles.hint}>{t("teams.mobile.bulkAssignHint")}</Text>
 
+          {saveError && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{saveError}</Text>
+            </View>
+          )}
+
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#2563EB" />
@@ -460,6 +474,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  /* 保存エラーバナー */
+  errorBanner: {
+    backgroundColor: "#FEF2F2",
+    borderBottomWidth: 1,
+    borderBottomColor: "#FECACA",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  errorBannerText: {
+    fontSize: 12,
+    color: "#DC2626",
   },
 
   /* 左右2カラム */

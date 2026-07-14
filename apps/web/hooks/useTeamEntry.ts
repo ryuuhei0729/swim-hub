@@ -13,11 +13,11 @@ import type {
   EntryFormErrors,
 } from "@/types/team-entry";
 import { formatTimeBest } from "@/utils/formatters";
-import { parseTimeStrict as parseTime } from "@apps/shared/utils/time";
+import { parseTimeFlexible as parseTime } from "@apps/shared/utils/time";
 import { normalizeRelation } from "@apps/shared/utils/supabase-helpers";
 
 // parseTime を re-export（後方互換性のため）
-export { parseTimeStrict as parseTime } from "@apps/shared/utils/time";
+export { parseTimeFlexible as parseTime } from "@apps/shared/utils/time";
 
 const DEFAULT_FORM_DATA: EntryFormData = {
   styleId: "",
