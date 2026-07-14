@@ -265,6 +265,8 @@
       "processingError": "An error occurred while converting the video."
     },
     "shareCardModal": {
+      "shareUnavailable": "Sharing is not available on this device",
+      "generateFailed": "Failed to generate the image",
       "closeOverlay": "Close modal",
       "close": "Close",
       "save": "Save",
@@ -273,7 +275,10 @@
       "practiceTitle": "Share your practice",
       "competitionShareText": "I swam {event} in {time}! #SwimHub",
       "practiceShareText": "Completed today's practice! #SwimHub"
-    }
+    },
+    "discardTitle": "Unsaved changes",
+    "discardMessage": "You have unsaved changes. Close anyway?",
+    "discard": "Discard"
   },
   "nav": {
     "practice": "Practice Log",
@@ -651,6 +656,7 @@
       "oauthUrlGenerationFailed": "Failed to generate OAuth URL",
       "googleCalendarPermissionDenied": "Could not obtain Google Calendar access. Please try again.",
       "calendarConnectionSaveFailed": "Failed to save calendar connection",
+      "calendarConnectionSuccess": "Google Calendar connection completed",
       "tokensNotReceived": "Authentication tokens were not received",
       "cancelled": "Authentication was cancelled",
       "dismissed": "Authentication was dismissed",
@@ -666,6 +672,12 @@
       "emailConfirmation": "We sent a confirmation email to your address. Click the link in the email to complete your registration."
     },
     "backToLogin": "Back to login",
+    "crossLink": {
+      "noAccountPrompt": "Don't have an account?",
+      "signupLink": "Sign up",
+      "haveAccountPrompt": "Already have an account?",
+      "loginLink": "Log in"
+    },
     "logoutConfirmMessage": "Are you sure you want to log out?",
     "redirecting": "Redirecting...",
     "legal": {
@@ -1130,7 +1142,9 @@
       "styleRequired": "Please select a style",
       "distanceRequired": "Please enter a distance",
       "repsRequired": "Please enter reps",
-      "setsRequired": "Please enter sets"
+      "setsRequired": "Please enter sets",
+      "tabPractice": "Practice",
+      "tabLog": "Practice Log"
     },
     "mobile": {
       "loading": "Loading practice records...",
@@ -1382,7 +1396,8 @@
       "completing": "Setting up...",
       "backButton": "Back",
       "inputHintTitle": "Enter as numbers",
-      "inputHintBody": "You can enter formats like 1:23.45, 23.45, 23-45, or 1-23-45"
+      "inputHintBody": "You can enter formats like 1:23.45, 23.45, 23-45, or 1-23-45",
+      "notePlaceholder": "Date, competition name, etc."
     },
     "completionFailed": "Failed to complete setup",
     "stepLabels": {
@@ -1573,7 +1588,10 @@
       "dateRequired": "Please enter a date",
       "dateFormatInvalid": "Date must be in YYYY-MM-DD format",
       "dateInvalid": "Please enter a valid date",
-      "endBeforeStart": "End date must be on or after the start date"
+      "endBeforeStart": "End date must be on or after the start date",
+      "tabCompetition": "Competition",
+      "tabEntry": "Entry",
+      "tabRecord": "Race Record"
     },
     "entry": {
       "title": "Entry events",
@@ -1971,8 +1989,6 @@
     "tabsAriaLabel": "Select event",
     "mobile": {
       "description": "Add events and register your best times all at once.",
-      "emptyTitle": "Add best times",
-      "emptyBody": "Tap \"Add event\" to choose the events you want to register.",
       "successTitle": "Registered",
       "addRelaying": "+ Add relay time",
       "hideRelaying": "Hide relay time",
@@ -2281,6 +2297,7 @@
       "pendingRetry": "Refresh status",
       "teamNotFound": "Team not found",
       "webGuide": "For team management features, please use the web version.",
+      "bulkRegisterAdminRequired": "Admin privileges are required to use this feature.",
       "webGuideButton": "Open web version",
       "pendingMessage": "Your team join request is awaiting admin approval.\nPlease wait until it is approved.",
       "memberRemoveConfirm": "Remove {name} from the team?\nThis cannot be undone.",
@@ -2473,6 +2490,9 @@
       "loadingShort": "Loading...",
       "bulkAssignTitle": "{category} — Bulk assign",
       "bulkAssignHint": "Long-press and drag to move members",
+      "bulkAssignSaveFailed": "Failed to save group assignments",
+      "charCounter": "{current}/{max}",
+      "announcementTimeInvalid": "Please enter the time in HH:MM format",
       "dropHere": "Drop here",
       "fallbackPractice": "Practice",
       "fallbackCompetitionTitle": "Competition",
@@ -2696,6 +2716,12 @@
       }
     },
     "memberDetail": {
+      "hook": {
+        "roleChangeFailed": "Failed to change the role",
+        "cannotRemoveSelf": "You cannot remove yourself from the team",
+        "removeConfirm": "Remove {name} from the team? This action cannot be undone.",
+        "removeFailed": "Failed to remove the member"
+      },
       "title": "Member Details",
       "close": "Close",
       "bestTimesTitle": "Best Times",
@@ -3615,7 +3641,7 @@
       "timePlaceholder": "e.g. 1:23.45 or 31-2",
       "timePlaceholder2": "e.g. 2:00.00 or 2-0-0",
       "reactionTimeLabel": "Reaction time (sec)",
-      "reactionTimePlaceholder": "0.40-1.00",
+      "reactionTimePlaceholder": "-1.00 to 2.00",
       "splitTimeLabel": "Split time",
       "relayStyleLabel": "Relay event",
       "memoLabel": "Memo",
@@ -3631,10 +3657,11 @@
       "competitionRequired": "Please select a competition",
       "timeRequired": "Please enter a time",
       "timePositive": "Time must be a positive number",
-      "reactionTimeRange": "Reaction time must be between 0.40 and 1.00 seconds",
+      "reactionTimeRange": "Reaction time must be between -1.00 and 2.00 seconds",
       "timeFormatInvalid": "Invalid time format (e.g. 1:23.45 or 31-2)",
       "timeFormatInvalid2": "Invalid time format (e.g. 1:23.45 or 31-2)",
-      "recordNumber": "Record {n}"
+      "recordNumber": "Record {n}",
+      "sectionTitle": "Race Record"
     },
     "lapTime": {
       "raceLapTab": "Race Lap",
@@ -3644,6 +3671,10 @@
       "noLap": "Cannot calculate lap times",
       "distanceHeader": "Distance",
       "splitTimeHeader": "Split Time"
+    },
+    "bestBadge": {
+      "first": "1st",
+      "personalBest": "Personal Best"
     }
   },
   "forms": {
@@ -3790,6 +3821,7 @@
       "save": "Save",
       "cancel": "Cancel",
       "helpTitle": "Time Entry Tips",
+      "helpBodyBasic": "Separate numbers with any non-digit character (- . : etc.). Examples: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.",
       "helpBody": "Separate numbers with any non-digit character (- . : etc.). Examples: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.\n\nAfter typing \"33-2\" in one cell, just enter \"3-2\" in the next and it auto-fills to \"33.2\" (carrying over the tens digit). Clearing a cell resets the carry-over."
     },
     "record": {
@@ -3901,6 +3933,8 @@
       "previewLabel": "Preview",
       "previewDefault": "Tag name",
       "selectModalTitle": "Select tags",
+      "selectSearchPlaceholder": "Search tags",
+      "noSearchResults": "No matching tags",
       "actionPrompt": "Choose an action for this tag",
       "actionEdit": "Edit",
       "actionDelete": "Delete",

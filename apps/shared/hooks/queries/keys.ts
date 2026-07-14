@@ -32,6 +32,13 @@ export const recordKeys = {
   }) => [...recordKeys.lists(), filters] as const,
   count: (filters?: { startDate?: string; endDate?: string; styleId?: number }) =>
     [...recordKeys.all, "count", filters] as const,
+  // lists() 配下に置き、記録の追加・更新時の lists() invalidate / realtime に追随させる
+  listBestCandidates: (filters?: {
+    userId?: string;
+    styleId?: number;
+    isRelaying?: boolean;
+    poolType?: number | null;
+  }) => [...recordKeys.lists(), "bestCandidates", filters] as const,
   detail: (id: string) => [...recordKeys.all, "detail", id] as const,
   competitions: () => [...recordKeys.all, "competitions"] as const,
   competitionsList: (filters?: { startDate?: string; endDate?: string }) =>

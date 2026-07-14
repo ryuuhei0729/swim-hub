@@ -13,11 +13,25 @@
  * [DLH-07] setSession error — setSession が error を返すとき Alert が表示される
  * [DLH-08] 無関係 URL は無視される
  * [DLH-09] getInitialURL reject — Promise が reject してもクラッシュしない
+ *
+ * --- Round2 (Reviewer Critical #2 対応): カレンダー連携コールドスタート復旧 統合テスト ---
+ * [DLH-10] 正常復旧 — 永続フラグあり + flow=calendar-connect + provider_refresh_token あり
+ *          → saveGoogleCalendarRefreshToken が呼ばれ、成功 Alert が表示される
+ * [DLH-11] 誤爆防止 — 永続フラグあり(TTL内) だが無関係なメール確認 URL (flow なし・
+ *          provider_refresh_token なし) → 復旧処理に入らず、通常の setSession のみ実行され、
+ *          カレンダー関連の Alert / API 呼び出しは発生しない
+ * [DLH-12] token 欠落 — 永続フラグあり + flow=calendar-connect だが refresh_token なし
+ *          → googleCalendarPermissionDenied の Alert が表示され、保存 API は呼ばれない
+ * [DLH-13] 保存 API 失敗 — 正常復旧条件は揃うが saveGoogleCalendarRefreshToken が失敗を返す
+ *          → エラー Alert が表示され、リトライやフラグ復活は起きない (再度 consume しても false)
+ * [DLH-14] Warning3 — 復旧中の #error= コールバックは googleCalendarPermissionDenied を表示し、
+ *          フラグが無い通常のメール確認の #error= は従来どおり tokenExpired を表示する (回帰防止)
  */
 
 import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
 import { render, act } from "@testing-library/react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // expo-auth-session が expo-modules-core の CodedError を必要とするが、
 // vitest.setup.ts のモックに含まれていない。ここで補完する。
@@ -90,6 +104,9 @@ const mocks = vi.hoisted(() => {
 
     // oauthSessionGuard (mutable)
     oauthGuardActive: false as boolean,
+
+    // Googleカレンダー連携復旧 (Round2)
+    saveGoogleCalendarRefreshToken: vi.fn(),
   };
 });
 
@@ -140,6 +157,10 @@ vi.mock("@/lib/google-auth", async () => {
     },
   };
 });
+
+vi.mock("@/lib/google-calendar-api", () => ({
+  saveGoogleCalendarRefreshToken: mocks.saveGoogleCalendarRefreshToken,
+}));
 
 vi.mock("@/lib/revenucat", () => ({
   initRevenueCat: mocks.initRevenueCat,
@@ -487,5 +508,241 @@ describe("[DLH-09] getInitialURL reject — Promise が reject してもクラ�
       access_token: "at-warm",
       refresh_token: "rt-warm",
     });
+  });
+});
+
+// =============================================================================
+// Round2: Googleカレンダー連携コールドスタート復旧 統合テスト
+// (Reviewer Critical #2 — 誤爆判定を「永続フラグ AND (flow クエリ OR provider_refresh_token)」
+//  に強化したことの検証。AsyncStorage のデフォルトモックは getItem→null のため、
+//  「フラグあり」を再現するケースでは明示的に mockResolvedValueOnce で上書きする)
+// =============================================================================
+
+describe("[DLH-10] 正常復旧 — フラグあり + flow=calendar-connect + provider_refresh_token あり", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.oauthGuardActive = false;
+    mocks.setInitialUrl(null);
+    mocks.setSession.mockResolvedValue({ error: null });
+    mocks.saveGoogleCalendarRefreshToken.mockResolvedValue({ success: true });
+    setupImmediateInitialSession();
+  });
+
+  it("saveGoogleCalendarRefreshToken が呼ばれ、成功 Alert が表示される", async () => {
+    // 永続フラグが「有効期限内」で存在する状態を再現する
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl(
+        "swimhub://auth/callback?flow=calendar-connect#access_token=at-recover&refresh_token=rt-recover&provider_refresh_token=prt-recover",
+      );
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.setSession).toHaveBeenCalledWith({
+      access_token: "at-recover",
+      refresh_token: "rt-recover",
+    });
+    expect(mocks.saveGoogleCalendarRefreshToken).toHaveBeenCalledWith(
+      "at-recover",
+      "prt-recover",
+    );
+    expect(mocks.alertFn).toHaveBeenCalled();
+    const [title, message] = mocks.alertFn.mock.calls[0] as [string, string];
+    expect(title).toBe("お知らせ");
+    expect(message).toBe("Googleカレンダー連携が完了しました");
+  });
+});
+
+describe("[DLH-11] 誤爆防止 — フラグあり(TTL内) だが無関係なメール確認 URL", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.oauthGuardActive = false;
+    mocks.setInitialUrl(null);
+    mocks.setSession.mockResolvedValue({ error: null });
+    setupImmediateInitialSession();
+  });
+
+  it("flow クエリも provider_refresh_token も無いメール確認 URL では復旧処理に入らず、通常の setSession のみ実行される", async () => {
+    // 別の中断済みカレンダー連携から残った、TTL内の永続フラグを再現する
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl(
+        "swimhub://auth/callback#access_token=at-mail&refresh_token=rt-mail",
+      );
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.setSession).toHaveBeenCalledWith({
+      access_token: "at-mail",
+      refresh_token: "rt-mail",
+    });
+    // 誤爆していれば saveGoogleCalendarRefreshToken 呼び出しや成功/失敗 Alert が発生するはずだが、
+    // 通常のメール確認完了時は何の Alert も出さない (onAuthStateChange 側に処理を委ねる)
+    expect(mocks.saveGoogleCalendarRefreshToken).not.toHaveBeenCalled();
+    expect(mocks.alertFn).not.toHaveBeenCalled();
+  });
+});
+
+describe("[DLH-12] token 欠落 — フラグあり + flow=calendar-connect だが refresh_token なし", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.oauthGuardActive = false;
+    mocks.setInitialUrl(null);
+    setupImmediateInitialSession();
+  });
+
+  it("googleCalendarPermissionDenied の Alert が表示され、保存 API は呼ばれない", async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      // access_token はあるが refresh_token が無いため setSession 分岐に入らない
+      mocks.fireLinkingUrl("swimhub://auth/callback?flow=calendar-connect#access_token=at-only");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.setSession).not.toHaveBeenCalled();
+    expect(mocks.saveGoogleCalendarRefreshToken).not.toHaveBeenCalled();
+    expect(mocks.alertFn).toHaveBeenCalled();
+    const [, message] = mocks.alertFn.mock.calls[0] as [string, string];
+    // auth.mobile.googleCalendarPermissionDenied (ja.json 実値)
+    expect(message).toContain("Googleカレンダーのアクセス権限が取得できませんでした");
+  });
+});
+
+describe("[DLH-13] 保存 API 失敗 — エラー Alert のみでリトライ・フラグ復活が無い", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.oauthGuardActive = false;
+    mocks.setInitialUrl(null);
+    mocks.setSession.mockResolvedValue({ error: null });
+    setupImmediateInitialSession();
+  });
+
+  it("保存 API が失敗を返すとローカライズ済みエラー Alert が表示される (POST は1回のみ)", async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    mocks.saveGoogleCalendarRefreshToken.mockResolvedValueOnce({
+      success: false,
+      error: "quota exceeded for calendar api",
+    });
+
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl(
+        "swimhub://auth/callback?flow=calendar-connect#access_token=at-fail&refresh_token=rt-fail&provider_refresh_token=prt-fail",
+      );
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.saveGoogleCalendarRefreshToken).toHaveBeenCalledTimes(1);
+    expect(mocks.alertFn).toHaveBeenCalledTimes(1);
+    const [title, message] = mocks.alertFn.mock.calls[0] as [string, string];
+    expect(title).toBe("エラー");
+    // localizeAuthError が未知のメッセージを genericWithDetail 経由でラップする
+    expect(message).toBe("認証エラーが発生しました: quota exceeded for calendar api");
+  });
+
+  it("フラグは consume 済みのため、直後に無関係なディープリンクが来ても復旧処理は再発火しない", async () => {
+    vi.mocked(AsyncStorage.getItem)
+      .mockResolvedValueOnce(String(Date.now())) // 1回目 (このテストの復旧フロー)
+      .mockResolvedValueOnce(null); // 2回目以降はフラグ無し (consume 済み)
+    mocks.saveGoogleCalendarRefreshToken.mockResolvedValueOnce({
+      success: false,
+      error: "quota exceeded for calendar api",
+    });
+
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl(
+        "swimhub://auth/callback?flow=calendar-connect#access_token=at-fail&refresh_token=rt-fail&provider_refresh_token=prt-fail",
+      );
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    mocks.alertFn.mockClear();
+    mocks.saveGoogleCalendarRefreshToken.mockClear();
+
+    await act(async () => {
+      // 通常のメール確認リンクが直後に届いても、フラグは既に消費済みなので
+      // カレンダー復旧処理は再実行されない
+      mocks.fireLinkingUrl(
+        "swimhub://auth/callback#access_token=at-later&refresh_token=rt-later",
+      );
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.saveGoogleCalendarRefreshToken).not.toHaveBeenCalled();
+    expect(mocks.alertFn).not.toHaveBeenCalled();
+  });
+});
+
+describe("[DLH-14] Warning3 — 復旧中に #error= が付いたコールバックを受けた場合", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.oauthGuardActive = false;
+    mocks.setInitialUrl(null);
+    setupImmediateInitialSession();
+  });
+
+  it("フラグあり + flow=calendar-connect + error の場合、tokenExpired ではなく googleCalendarPermissionDenied が表示される", async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl("swimhub://auth/callback?flow=calendar-connect#error=access_denied");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.setSession).not.toHaveBeenCalled();
+    expect(mocks.saveGoogleCalendarRefreshToken).not.toHaveBeenCalled();
+    expect(mocks.alertFn).toHaveBeenCalled();
+    const [, message] = mocks.alertFn.mock.calls[0] as [string, string];
+    expect(message).toContain("Googleカレンダーのアクセス権限が取得できませんでした");
+    expect(message).not.toContain("有効期限");
+  });
+
+  it("フラグなしの通常メール確認で #error= を受けた場合は、従来どおり tokenExpired が表示される (回帰防止)", async () => {
+    // AsyncStorage.getItem のデフォルト (null) を使用 = フラグ無し
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl("swimhub://auth/callback#error=access_denied");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.alertFn).toHaveBeenCalled();
+    const [, message] = mocks.alertFn.mock.calls[0] as [string, string];
+    expect(message).toContain("有効期限");
   });
 });

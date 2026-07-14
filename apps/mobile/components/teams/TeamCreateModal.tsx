@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Modal,
+  Pressable,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Platform,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCreateTeamMutation } from "@apps/shared/hooks/queries/teams";
@@ -11,8 +21,13 @@ interface TeamCreateModalProps {
   onSuccess?: (teamId: string) => void;
 }
 
+// web TeamCreateForm.tsx と同一の上限（チーム名50 / 説明200）
+const NAME_MAX_LENGTH = 50;
+const DESCRIPTION_MAX_LENGTH = 200;
+
 /**
  * チーム作成モーダルコンポーネント
+ * web TeamCreateForm.tsx 準拠: 文字数上限 + カウンター + 未保存クローズ確認
  */
 export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
   visible,
@@ -27,13 +42,38 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const isLoading = createTeamMutation.isPending;
+  const hasUnsavedChanges = name.trim().length > 0 || description.trim().length > 0;
 
-  const handleClose = () => {
-    if (isLoading) return;
+  const cleanupAndClose = () => {
     setName("");
     setDescription("");
     setError(null);
     onClose();
+  };
+
+  const handleClose = () => {
+    if (isLoading) return;
+
+    // 入力途中の場合は破棄確認（web TeamCreateForm の未保存確認と同挙動）
+    if (hasUnsavedChanges) {
+      if (Platform.OS === "web") {
+        if (window.confirm(t("forms.unsavedChanges.messageClose"))) {
+          cleanupAndClose();
+        }
+      } else {
+        Alert.alert(t("forms.unsavedChanges.title"), t("forms.unsavedChanges.messageClose"), [
+          { text: t("forms.unsavedChanges.cancel"), style: "cancel" },
+          {
+            text: t("forms.unsavedChanges.confirmClose"),
+            style: "destructive",
+            onPress: cleanupAndClose,
+          },
+        ]);
+      }
+      return;
+    }
+
+    cleanupAndClose();
   };
 
   const handleSubmit = async () => {
@@ -44,6 +84,16 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
 
     if (!name.trim()) {
       setError(t("teams.mobile.nameRequired"));
+      return;
+    }
+
+    if (name.length > NAME_MAX_LENGTH) {
+      setError(t("forms.teamCreate.nameTooLong"));
+      return;
+    }
+
+    if (description.length > DESCRIPTION_MAX_LENGTH) {
+      setError(t("forms.teamCreate.descTooLong"));
       return;
     }
 
@@ -61,7 +111,7 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
         onSuccess(newTeam.id);
       }
 
-      handleClose();
+      cleanupAndClose();
     } catch (err) {
       console.error("チーム作成エラー:", err);
       let errorMessage = t("teams.mobile.createFailed");
@@ -100,8 +150,12 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
                 onChangeText={setName}
                 placeholder={t("teams.mobile.namePlaceholder")}
                 placeholderTextColor="#9CA3AF"
+                maxLength={NAME_MAX_LENGTH}
                 editable={!isLoading}
               />
+              <Text style={styles.counterText}>
+                {t("forms.teamCreate.nameCounter", { current: name.length })}
+              </Text>
             </View>
 
             <View style={styles.formGroup}>
@@ -115,8 +169,12 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
+                maxLength={DESCRIPTION_MAX_LENGTH}
                 editable={!isLoading}
               />
+              <Text style={styles.counterText}>
+                {t("forms.teamCreate.descCounter", { current: description.length })}
+              </Text>
             </View>
           </ScrollView>
 
@@ -222,6 +280,12 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 100,
     paddingTop: 12,
+  },
+  counterText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 4,
+    textAlign: "right",
   },
   footer: {
     flexDirection: "row",

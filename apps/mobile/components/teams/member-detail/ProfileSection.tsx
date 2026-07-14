@@ -6,6 +6,7 @@ import { parseISO, isValid } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
+import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 interface ProfileSectionProps {
@@ -18,6 +19,8 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ member, currentU
   const locale = useDateLocale();
   const user = member.users;
   const isCurrentUser = member.user_id === currentUserId;
+  // profile-images は private バケットのため、パスから署名付きURLを解決して表示する（Issue #36）
+  const { url: resolvedAvatarUrl } = useSignedImageUrl("profile-images", user?.profile_image_path);
 
   const formatBirthday = (birthday: string | null | undefined): string | null => {
     if (!birthday) return null;
@@ -32,9 +35,9 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ member, currentU
       <View style={styles.profileRow}>
         {/* アバター */}
         <View style={styles.avatarContainer}>
-          {user?.profile_image_path ? (
+          {resolvedAvatarUrl ? (
             <Image
-              source={{ uri: user.profile_image_path }}
+              source={{ uri: resolvedAvatarUrl }}
               style={styles.avatarImage}
               contentFit="cover"
             />

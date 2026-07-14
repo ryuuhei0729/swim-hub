@@ -12,10 +12,10 @@ import {
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
-import { Feather } from "@expo/vector-icons";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
 import { useAuth } from "@/contexts/AuthProvider";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import type { MainStackParamList } from "@/navigation/types";
@@ -52,9 +52,6 @@ export const PracticeTimeFormScreen: React.FC = () => {
 
   // クイック入力フック
   const { parseInput, resetContext } = useQuickTimeInput();
-
-  // ヘルプ表示トグル
-  const [showHelp, setShowHelp] = useState(false);
 
   // タイムエントリー
   const [times, setTimes] = useState<TimeEntryWithDisplay[]>([]);
@@ -196,26 +193,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
         <Text style={styles.subtitle}>
           {t("practice.form.timeInputSubtitle", { setCount, repCount })}
         </Text>
-        <Pressable
-          onPress={() => setShowHelp((prev) => !prev)}
-          style={styles.hintRow}
-          accessibilityRole="button"
-          accessibilityLabel={t("forms.timeInput.helpTitle")}
-        >
-          <Feather
-            name="info"
-            size={14}
-            color={showHelp ? "#2563EB" : "#6B7280"}
-          />
-          <Text style={[styles.hintLabel, showHelp && styles.hintLabelActive]}>
-            {t("forms.timeInput.helpTitle")}
-          </Text>
-        </Pressable>
-        {showHelp && (
-          <View style={styles.helpPanel}>
-            <Text style={styles.helpBody}>{t("forms.timeInput.helpBody")}</Text>
-          </View>
-        )}
+        <TimeInputHelp showCarryOver style={styles.helpSection} />
         {practiceTimeLimitExceeded && (
           <View style={{ marginTop: 12 }}>
             <PremiumBadge feature="practice_time_limit" />
@@ -266,7 +244,7 @@ export const PracticeTimeFormScreen: React.FC = () => {
                           focusNextInput(globalIndex);
                         }}
                         placeholder={isDisabledByLimit ? t("practice.form.premiumLimited") : t("practice.form.timeInputPlaceholder")}
-                        keyboardType="default"
+                        keyboardType="decimal-pad"
                         autoCapitalize="none"
                         returnKeyType={isLastInput ? "done" : "next"}
                         blurOnSubmit={false}
@@ -434,31 +412,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
   },
-  hintRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+  helpSection: {
     marginTop: 8,
-    alignSelf: "flex-start",
-  },
-  hintLabel: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
-  hintLabelActive: {
-    color: "#2563EB",
-  },
-  helpPanel: {
-    backgroundColor: "#EFF6FF",
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 8,
-  },
-  helpBody: {
-    fontSize: 13,
-    color: "#374151",
-    lineHeight: 20,
   },
 });

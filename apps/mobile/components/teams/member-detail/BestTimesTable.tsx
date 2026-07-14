@@ -4,13 +4,10 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { differenceInDays, parseISO } from "date-fns";
 import { formatTime } from "@/utils/formatters";
-import { STYLE_KEY_MAP } from "@/utils/styleName";
+import { STYLES, DISTANCES, isInvalidCombination, STYLE_KEY_MAP } from "@apps/shared/utils/swimStyles";
 import type { BestTime } from "@apps/shared/types/ui";
 
 type TabType = "all" | "short" | "long";
-
-const DISTANCES = [50, 100, 200, 400, 800];
-const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"];
 
 const styleColors: Record<string, { bg: string; text: string }> = {
   自由形: { bg: "#FEF3C7", text: "#92400E" },
@@ -19,16 +16,6 @@ const styleColors: Record<string, { bg: string; text: string }> = {
   バタフライ: { bg: "#DBEAFE", text: "#1E40AF" },
   個人メドレー: { bg: "#FCE7F3", text: "#9F1239" },
 };
-
-function isInvalidCombination(style: string, distance: number): boolean {
-  if (style === "個人メドレー" && (distance === 50 || distance === 800)) return true;
-  if (
-    (style === "平泳ぎ" || style === "背泳ぎ" || style === "バタフライ") &&
-    (distance === 400 || distance === 800)
-  )
-    return true;
-  return false;
-}
 
 const BORDER_COLOR = "#D1D5DB";
 

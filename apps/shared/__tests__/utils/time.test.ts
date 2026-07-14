@@ -9,8 +9,12 @@ import {
   formatTimeDiff,
   formatTimeFull,
   formatTimeShort,
+  isInvalidTimeInput,
+  normalizeTimeSeparators,
   parseTime,
+  parseTimeFlexible,
   parseTimeStrict,
+  TIME_FORMAT_REGEX,
   type TimeEntryLike,
 } from "../../utils/time";
 
@@ -346,6 +350,18 @@ describe("time utilities", () => {
       it("前後の空白をトリムする", () => {
         expect(parseTimeStrict("  1:23.45  ")).toBe(83.45);
       });
+
+      it("全角区切り（IME入力）をASCIIに正規化して受理する", () => {
+        expect(parseTimeStrict("1：05。30")).toBe(65.3);
+        expect(parseTimeStrict("31ー2")).toBe(31.2);
+        expect(parseTimeStrict("1ー05ー3")).toBe(65.3);
+      });
+
+      it("全角の多重区切りもASCII同様にnullを返す", () => {
+        // "。" は "." に正規化されるため "1.23.45" と同じ多重ドット扱い
+        expect(parseTimeStrict("1。23。45")).toBeNull();
+        expect(parseTimeStrict("1：2：3")).toBeNull();
+      });
     });
 
     describe("異常系", () => {
@@ -377,6 +393,105 @@ describe("time utilities", () => {
       it("Infinityを含む場合はnullを返す", () => {
         expect(parseTimeStrict("Infinity")).toBeNull();
       });
+    });
+
+    describe("TIME_FORMAT_REGEX 構造ガード (mobile styleOptions / web BulkBestTimeClient から集約)", () => {
+      it("クイック入力形式を正しい秒数として受理する（旧実装の '31-2'→31秒 誤解釈を排除）", () => {
+        expect(parseTimeStrict("31-2")).toBe(31.2);
+        expect(parseTimeStrict("1-05-3")).toBe(65.3);
+      });
+
+      it("M:SS形式・整数秒・末尾sを受理する", () => {
+        expect(parseTimeStrict("1:30")).toBe(90);
+        expect(parseTimeStrict("30")).toBe(30);
+        expect(parseTimeStrict("23.45s")).toBe(23.45);
+      });
+
+      it("多重ドットはnullを返す（'1.23.45'が1.23秒として誤保存されない）", () => {
+        expect(parseTimeStrict("1.23.45")).toBeNull();
+      });
+
+      it("混合区切り・連続区切りはnullを返す", () => {
+        expect(parseTimeStrict("1:05-3")).toBeNull();
+        expect(parseTimeStrict("31--2")).toBeNull();
+        expect(parseTimeStrict("1-2-3-4")).toBeNull();
+      });
+
+      it("0以下のタイムはnullを返す", () => {
+        expect(parseTimeStrict("0")).toBeNull();
+        expect(parseTimeStrict("0:00.00")).toBeNull();
+      });
+
+      it("TIME_FORMAT_REGEXが単体でexportされている", () => {
+        expect(TIME_FORMAT_REGEX.test("1:23.45")).toBe(true);
+        expect(TIME_FORMAT_REGEX.test("1.23.45")).toBe(false);
+      });
+    });
+  });
+
+  describe("normalizeTimeSeparators", () => {
+    it("全角区切りをASCIIに変換する", () => {
+      expect(normalizeTimeSeparators("1：05。30")).toBe("1:05.30");
+      expect(normalizeTimeSeparators("31ー2")).toBe("31-2");
+      expect(normalizeTimeSeparators("31－2")).toBe("31-2");
+      expect(normalizeTimeSeparators("31−2")).toBe("31-2");
+      expect(normalizeTimeSeparators("1．23")).toBe("1.23");
+    });
+
+    it("ASCII入力はそのまま返す", () => {
+      expect(normalizeTimeSeparators("1:23.45")).toBe("1:23.45");
+    });
+  });
+
+  describe("parseTimeFlexible", () => {
+    it("parseTimeStrict が通る入力は同じ値を返す", () => {
+      expect(parseTimeFlexible("1:23.45")).toBe(83.45);
+      expect(parseTimeFlexible("31-2")).toBe(31.2);
+      expect(parseTimeFlexible("1-05-3")).toBe(65.3);
+      expect(parseTimeFlexible("83.45")).toBe(83.45);
+      expect(parseTimeFlexible("1.23")).toBe(1.23);
+      expect(parseTimeFlexible("30")).toBe(30);
+    });
+
+    it("strict が弾く多重ドットをクイック解釈で受理する（decimal-pad の主要入力経路）", () => {
+      expect(parseTimeFlexible("1.23.45")).toBe(83.45);
+    });
+
+    it("任意の非数字区切り（読点・日本語単位・混合）をクイック解釈で受理する", () => {
+      expect(parseTimeFlexible("1、23、4")).toBe(83.4);
+      expect(parseTimeFlexible("1分12秒3")).toBe(72.3);
+      expect(parseTimeFlexible("1:05-3")).toBe(65.3);
+    });
+
+    it("解釈できない入力・0以下は null を返す", () => {
+      expect(parseTimeFlexible("invalid")).toBeNull();
+      expect(parseTimeFlexible("")).toBeNull();
+      expect(parseTimeFlexible("   ")).toBeNull();
+      expect(parseTimeFlexible("0")).toBeNull();
+      expect(parseTimeFlexible("1-2-3-4")).toBeNull();
+    });
+
+    it("先頭マイナス（負値の試み）は区切り扱いせず null を返す", () => {
+      expect(parseTimeFlexible("-23.45")).toBeNull();
+      expect(parseTimeFlexible("-1:23.45")).toBeNull();
+      expect(parseTimeFlexible("－23.45")).toBeNull(); // 全角マイナスも正規化して拒否
+    });
+  });
+
+  describe("isInvalidTimeInput", () => {
+    it("空・未入力は不正扱いしない", () => {
+      expect(isInvalidTimeInput(undefined)).toBe(false);
+      expect(isInvalidTimeInput("")).toBe(false);
+      expect(isInvalidTimeInput("   ")).toBe(false);
+    });
+
+    it("parseTimeFlexible が解釈できない形式のみ true を返す", () => {
+      expect(isInvalidTimeInput("abc")).toBe(true);
+      expect(isInvalidTimeInput("-23.45")).toBe(true);
+      expect(isInvalidTimeInput("1:23.45")).toBe(false);
+      expect(isInvalidTimeInput("31-2")).toBe(false);
+      // "1.23.45" はクイック解釈 (1:23.45) で受理されるため不正扱いしない
+      expect(isInvalidTimeInput("1.23.45")).toBe(false);
     });
   });
 

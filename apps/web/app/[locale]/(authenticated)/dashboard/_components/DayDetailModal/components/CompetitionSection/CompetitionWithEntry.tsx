@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts";
 import { EntryAPI } from "@swim-hub/shared/api/entries";
 import { useRouter } from "next/navigation";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
+import { resolveGalleryImages } from "@/lib/image-url";
 import type { CompetitionWithEntryProps, CompetitionEntryDisplay } from "../../types";
 
 export function CompetitionWithEntry({
@@ -57,11 +58,13 @@ export function CompetitionWithEntry({
   const [entryStatus, setEntryStatus] = useState<"before" | "open" | "closed" | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchEntryData = async () => {
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
+        if (cancelled) return;
         if (!user) {
           setLoading(false);
           setAuthError(t("entry.authRequired"));
@@ -76,24 +79,18 @@ export function CompetitionWithEntry({
           .eq("id", competitionId)
           .single();
 
+        if (cancelled) return;
         if (!competitionError && competitionData) {
           setEntryStatus(competitionData.entry_status || "before");
 
-          // 画像データを変換
+          // 画像の署名URL解決は本文表示をブロックしない（fire-and-forget）
           const imagePaths = (competitionData as { image_paths?: string[] }).image_paths || [];
-          const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-          const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
-            const imageUrl = r2PublicUrl
-              ? `${r2PublicUrl}/competition-images/${path}`
-              : supabase.storage.from("competition-images").getPublicUrl(path).data.publicUrl;
-            return {
-              id: path,
-              thumbnailUrl: imageUrl,
-              originalUrl: imageUrl,
-              fileName: path.split("/").pop() || `image-${index + 1}`,
-            };
-          });
-          setCompetitionImages(images);
+          resolveGalleryImages("competition-images", imagePaths).then(
+            (images: GalleryImage[]) => {
+              if (cancelled) return;
+              setCompetitionImages(images);
+            },
+          );
         }
 
         // EntryAPIを使用してエントリーを取得
@@ -102,6 +99,7 @@ export function CompetitionWithEntry({
         // 現在のユーザーのエントリーのみをフィルタリング
         const userEntries = allEntries.filter((entry) => entry.user_id === user.id);
 
+        if (cancelled) return;
         if (userEntries && userEntries.length > 0) {
           const mapped = userEntries.map((entry) => {
             const style = entry.style;
@@ -127,13 +125,16 @@ export function CompetitionWithEntry({
         }
       } catch (err) {
         console.error("エントリーデータの取得エラー:", err);
-        setCompetitionImages([]);
+        if (!cancelled) setCompetitionImages([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchEntryData();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [competitionId, entryApi, deletedEntryIds?.length]);
 

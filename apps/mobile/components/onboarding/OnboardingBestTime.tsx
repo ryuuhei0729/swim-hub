@@ -4,12 +4,14 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { RecordAPI } from "@apps/shared/api/records";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTimeFlexible } from "@apps/shared/utils/time";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import {
   BestTimeEntryRow,
   StylePickerModal,
   getStyleOption,
   formatStyleDisplay,
+  isValidForLongCourse,
   genKey,
   getDuplicateKeys,
   canSave,
@@ -19,16 +21,23 @@ import {
 export interface OnboardingBestTimeProps {
   onComplete: () => Promise<void>;
   onBack: () => void;
+  /** ステップ間を跨いでも保持できるよう親で state を持つ (戻る操作での入力消失を防ぐ) */
+  entries: BestTimeEntry[];
+  setEntries: React.Dispatch<React.SetStateAction<BestTimeEntry[]>>;
 }
 
 // =============================================================================
 // メインコンポーネント
 // =============================================================================
 
-export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComplete, onBack }) => {
+export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({
+  onComplete,
+  onBack,
+  entries,
+  setEntries,
+}) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
-  const [entries, setEntries] = useState<BestTimeEntry[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showStyleModal, setShowStyleModal] = useState(false);
@@ -50,22 +59,24 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
       {
         key: genKey(),
         styleId,
-        poolType: 1,
+        // Web オンボーディングと同じく短水路 (0) をデフォルト。全種目で有効なため
+        // 25m / 100m個人メドレー のような長水路が存在しない種目でも不正記録にならない。
+        poolType: 0,
         time: "",
         note: "",
         isRelaying: false,
       },
     ]);
     setShowStyleModal(false);
-  }, []);
+  }, [setEntries]);
 
   const removeEntry = useCallback((key: string) => {
     setEntries((prev) => prev.filter((e) => e.key !== key));
-  }, []);
+  }, [setEntries]);
 
   const updateEntry = useCallback((key: string, patch: Partial<BestTimeEntry>) => {
     setEntries((prev) => prev.map((e) => (e.key === key ? { ...e, ...patch } : e)));
-  }, []);
+  }, [setEntries]);
 
   const handleSave = useCallback(async () => {
     if (!recordAPI || savingRef.current) return;
@@ -73,11 +84,13 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
     setSaving(true);
     setSaveError(null);
     try {
+      // canSave (parseTimeFlexible) が通した入力と同じ解釈で保存する。
+      // parseTime だと "1.23.45" が 1.23 秒として誤保存されるため使わない
       const records = entries.map((e) => ({
         style_id: e.styleId,
-        time: parseTime(e.time),
-        is_relaying: false,
-        note: null,
+        time: parseTimeFlexible(e.time) ?? 0,
+        is_relaying: e.isRelaying,
+        note: e.note?.trim() ? e.note.trim() : null,
         pool_type: e.poolType,
       }));
 
@@ -120,6 +133,7 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
         </View>
         <Text style={styles.title}>{t("onboarding.step3.title")}</Text>
         <Text style={styles.subtitle}>{t("onboarding.step3.subtitle")}</Text>
+        <TimeInputHelp style={styles.helpSection} />
       </View>
 
       {/* エラー表示 */}
@@ -155,6 +169,8 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({ onComple
               onRemove={removeEntry}
               disabled={saving}
               isDuplicate={duplicateKeys.has(entry.key)}
+              longCourseDisabled={styleOption ? !isValidForLongCourse(styleOption) : false}
+              showNote
               t={t}
             />
           );
@@ -276,6 +292,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     lineHeight: 20,
+  },
+  helpSection: {
+    marginTop: 4,
   },
   errorBanner: {
     padding: 12,

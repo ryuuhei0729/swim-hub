@@ -24,6 +24,15 @@ function getBucketName(): string {
   return process.env.R2_VIDEO_BUCKET_NAME ?? "swim-hub-videos-prod";
 }
 
+/**
+ * R2/S3キーをURLパス用にエンコードする。
+ * encodeURIComponent(key) をキー全体に使うと "/" も "%2F" になり、
+ * "{userId}/{fileName}" のようなキー階層が壊れるため、セグメント単位でエンコードする。
+ */
+function encodeR2Key(key: string): string {
+  return key.split("/").map(encodeURIComponent).join("/");
+}
+
 // Workers バインディング経由でバケット取得
 async function getVideoR2Bucket() {
   const { getCloudflareContext } = await import("@opennextjs/cloudflare");
@@ -37,7 +46,7 @@ async function getVideoR2Bucket() {
 export async function generateVideoGetUrl(key: string): Promise<string> {
   const aws = getAwsClient();
   const bucket = getBucketName();
-  const url = new URL(`${getEndpoint()}/${bucket}/${encodeURIComponent(key)}`);
+  const url = new URL(`${getEndpoint()}/${bucket}/${encodeR2Key(key)}`);
   url.searchParams.set("X-Amz-Expires", "86400");
 
   const signed = await aws.sign(url.toString(), {
@@ -52,7 +61,7 @@ export async function generateVideoGetUrl(key: string): Promise<string> {
 export async function generateVideoPutUrl(key: string, contentType: string): Promise<string> {
   const aws = getAwsClient();
   const bucket = getBucketName();
-  const url = new URL(`${getEndpoint()}/${bucket}/${encodeURIComponent(key)}`);
+  const url = new URL(`${getEndpoint()}/${bucket}/${encodeR2Key(key)}`);
   url.searchParams.set("X-Amz-Expires", "3600");
 
   const signed = await aws.sign(url.toString(), {
@@ -89,7 +98,7 @@ export async function uploadThumbnailToR2(
   const bucket = getBucketName();
   // Buffer / Uint8Array は tsconfig の BodyInit と一致しないため ArrayBuffer に変換
   const arrayBuffer = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
-  const res = await aws.fetch(`${getEndpoint()}/${bucket}/${encodeURIComponent(key)}`, {
+  const res = await aws.fetch(`${getEndpoint()}/${bucket}/${encodeR2Key(key)}`, {
     method: "PUT",
     body: arrayBuffer as BodyInit,
     headers: { "content-type": "image/jpeg" },
@@ -111,9 +120,9 @@ export async function deleteVideosFromR2(keys: string[]): Promise<void> {
 export async function copyVideoInR2(sourceKey: string, destKey: string): Promise<void> {
   const aws = getAwsClient();
   const bucket = getBucketName();
-  const res = await aws.fetch(`${getEndpoint()}/${bucket}/${encodeURIComponent(destKey)}`, {
+  const res = await aws.fetch(`${getEndpoint()}/${bucket}/${encodeR2Key(destKey)}`, {
     method: "PUT",
-    headers: { "x-amz-copy-source": `/${bucket}/${encodeURIComponent(sourceKey)}` },
+    headers: { "x-amz-copy-source": `/${bucket}/${encodeR2Key(sourceKey)}` },
   });
 
   if (!res.ok) {

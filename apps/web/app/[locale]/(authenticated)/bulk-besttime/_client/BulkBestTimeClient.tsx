@@ -6,7 +6,7 @@ import { cn } from "@/utils/cn";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts";
 import { RecordAPI } from "@apps/shared/api/records";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -190,13 +190,10 @@ export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps
       if (field === "time") {
         const raw = value.trim();
         if (raw) {
-          // 文書化された2形式のみ許可:
-          //  従来形式  \d+(:\d+)?(\.\d+)?  → "1:23.45" "1:30" "23.45" "30"
-          //  クイック式 \d+(-\d+){1,2}     → "31-2" "1-05-3"
-          // 末尾 s は許容。多重ドット("1.23.45")・多重コロン("1:2:3")・連続区切り・letters を構造的に弾く。
-          const hasInvalidChars = !/^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i.test(raw);
-          const timeInSeconds = parseTime(raw);
-          if (hasInvalidChars || timeInSeconds <= 0) {
+          // parseTimeFlexible が構造ガード済み ("1.23.45" 等はクイック解釈で
+          // 受理。解釈不能・0以下のみ null)
+          const timeInSeconds = parseTimeFlexible(raw);
+          if (timeInSeconds === null) {
             updated.error = t("error.invalidTimeFormat");
             updated.timeInSeconds = undefined;
           } else {
@@ -632,6 +629,13 @@ function TimeInputCell({
         type="text"
         value={input?.time || ""}
         onChange={(e) => onInputChange(styleId, poolType, isRelaying, "time", e.target.value)}
+        onBlur={(e) => {
+          // blur 時に確定値へ再フォーマット (mobile 版と同じ UX)
+          const parsed = parseTimeFlexible(e.target.value);
+          if (parsed !== null) {
+            onInputChange(styleId, poolType, isRelaying, "time", formatTimeBest(parsed));
+          }
+        }}
         placeholder="1:23.45"
         className={`
           w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 placeholder-gray-400
@@ -826,6 +830,12 @@ function BestTimeCard({
           autoCapitalize="none"
           value={normalInput?.time || ""}
           onChange={(e) => onInputChange(styleId, poolType, false, "time", e.target.value)}
+          onBlur={(e) => {
+            const parsed = parseTimeFlexible(e.target.value);
+            if (parsed !== null) {
+              onInputChange(styleId, poolType, false, "time", formatTimeBest(parsed));
+            }
+          }}
           placeholder="1:23.45"
           className={cn(
             "w-full min-h-[44px] px-3 py-2 text-base border rounded focus:outline-none focus:ring-2 placeholder-gray-400",
@@ -884,6 +894,12 @@ function BestTimeCard({
               autoCapitalize="none"
               value={relayInput?.time || ""}
               onChange={(e) => onInputChange(styleId, poolType, true, "time", e.target.value)}
+              onBlur={(e) => {
+                const parsed = parseTimeFlexible(e.target.value);
+                if (parsed !== null) {
+                  onInputChange(styleId, poolType, true, "time", formatTimeBest(parsed));
+                }
+              }}
               placeholder="1:23.45"
               className={cn(
                 "w-full min-h-[44px] px-3 py-2 text-base border rounded focus:outline-none focus:ring-2 placeholder-gray-400",

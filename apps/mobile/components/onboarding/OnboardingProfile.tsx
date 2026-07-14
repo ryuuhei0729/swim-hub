@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { BirthdayInput } from "@/components/ui/BirthdayInput";
+import { GenderToggle } from "@/components/ui/GenderToggle";
 import type { UserProfile } from "@swim-hub/shared/types";
 
 interface OnboardingProfileProps {
@@ -42,6 +43,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
     name: "",
     birthday: "",
     bio: "",
+    gender: 0,
   });
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -60,6 +62,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
         name: initialProfile.name || "",
         birthday: birthdayStr,
         bio: initialProfile.bio || "",
+        gender: initialProfile.gender !== undefined ? initialProfile.gender : 0,
       });
     }
   }, [initialProfile]);
@@ -78,6 +81,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
         name: formData.name.trim(),
         birthday,
         bio: formData.bio.trim() || null,
+        gender: formData.gender,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("onboarding.step2.saveError"));
@@ -143,6 +147,13 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
           autoCapitalize="words"
         />
       </View>
+
+      {/* 性別 */}
+      <GenderToggle
+        value={formData.gender}
+        onChange={(gender) => setFormData((prev) => ({ ...prev, gender }))}
+        disabled={isSaving}
+      />
 
       {/* 生年月日 */}
       <BirthdayInput

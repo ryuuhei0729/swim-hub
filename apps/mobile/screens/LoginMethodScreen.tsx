@@ -109,6 +109,20 @@ export const LoginMethodScreen: React.FC = () => {
               <Text style={styles.emailButtonText}>{emailMethodLabel}</Text>
             </View>
           </Pressable>
+
+          {/* 新規登録への導線 */}
+          <View style={styles.crossLinkRow}>
+            <Text style={styles.crossLinkPrompt}>{t("auth.crossLink.noAccountPrompt")}</Text>
+            <Pressable
+              onPress={() => navigation.navigate("GetStarted")}
+              disabled={isLoading}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.crossLink.signupLink")}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            >
+              <Text style={styles.crossLinkAction}>{t("auth.crossLink.signupLink")}</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -133,6 +147,22 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: "center",
+  },
+  crossLinkRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 20,
+  },
+  crossLinkPrompt: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  crossLinkAction: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   titleContainer: {
     alignItems: "center",

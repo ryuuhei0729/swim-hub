@@ -12,8 +12,15 @@ import type { AuthState, AuthContextType, SubscriptionInfo } from "@swim-hub/sha
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getQueryClient } from "@/providers/QueryProvider";
 import i18n from "@/i18n";
-import { getRedirectUri, extractTokensFromUrl, oauthSessionGuard } from "@/lib/google-auth";
-import { isEmailAuthCallback } from "@/lib/auth-deep-link";
+import {
+  getRedirectUri,
+  extractTokensFromUrl,
+  oauthSessionGuard,
+  consumeCalendarConnectPending,
+} from "@/lib/google-auth";
+import { saveGoogleCalendarRefreshToken } from "@/lib/google-calendar-api";
+import { isEmailAuthCallback, hasCalendarConnectFlowFlag } from "@/lib/auth-deep-link";
+import { localizeAuthError } from "@/utils/authErrorLocalizer";
 
 /**
  * Mobile 固有の AuthState 拡張
@@ -33,6 +40,43 @@ type MobileAuthContextType = AuthContextType & {
 };
 
 const AuthContext = createContext<MobileAuthContextType | undefined>(undefined);
+
+/**
+ * コールドスタート復帰時（Android で Custom Tabs 操作中にアプリプロセスが kill され、
+ * ディープリンクがコールドスタートとして届いたケース）に、
+ * Googleカレンダー連携の provider_refresh_token 保存を取りこぼさず完了させる。
+ * useGoogleAuth の warm path と同じ API 呼び出し (saveGoogleCalendarRefreshToken) を使い、
+ * 成否を Alert でユーザーに明示する（サイレント失敗を防ぐ）。
+ */
+const completeCalendarConnectRecovery = async (
+  accessToken: string,
+  providerRefreshToken: string | null,
+): Promise<void> => {
+  if (!providerRefreshToken) {
+    // Supabase の設定や flow type によっては provider_refresh_token が
+    // 付与されないことがあるため、サイレントに握りつぶさず再試行を促す
+    Alert.alert(
+      i18n.t("common.alertErrorTitle"),
+      i18n.t("auth.mobile.googleCalendarPermissionDenied"),
+    );
+    return;
+  }
+
+  const saveResult = await saveGoogleCalendarRefreshToken(accessToken, providerRefreshToken);
+
+  if (!saveResult.success) {
+    const message = saveResult.error
+      ? localizeAuthError(saveResult.error)
+      : i18n.t("auth.mobile.calendarConnectionSaveFailed");
+    Alert.alert(
+      i18n.t("common.alertErrorTitle"),
+      message,
+    );
+    return;
+  }
+
+  Alert.alert(i18n.t("common.notice"), i18n.t("auth.mobile.calendarConnectionSuccess"));
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<MobileAuthState>({
@@ -563,13 +607,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (oauthSessionGuard.active) return;
       if (!supabase) return;
 
+      // Android の Custom Tabs は別プロセスで開くため、Googleカレンダー連携の同意画面
+      // 操作中にアプリプロセスが kill され、このハンドラにコールドスタートとして
+      // 届くケースがある。永続フラグはあくまで「カレンダー連携中に中断した可能性がある」
+      // という手がかりに過ぎず、TTL(10分)内に無関係な認証コールバック(メール確認・
+      // 通常のGoogleログインのコールドスタート)が届くケースもあるため、
+      // 必ず URL 自体の証跡(flow=calendar-connect クエリ、または
+      // provider_refresh_token フラグメント)と AND で判定する。
+      const isPendingFlagSet = await consumeCalendarConnectPending();
+
       const tokens = extractTokensFromUrl(url);
+
+      const isCalendarConnectRecovery =
+        isPendingFlagSet && (hasCalendarConnectFlowFlag(url) || !!tokens.providerRefreshToken);
 
       if (tokens.error) {
         if (!isMounted) return;
         Alert.alert(
           i18n.t("common.alertErrorTitle"),
-          i18n.t("auth.supabaseErrors.tokenExpired"),
+          isCalendarConnectRecovery
+            ? i18n.t("auth.mobile.googleCalendarPermissionDenied")
+            : i18n.t("auth.supabaseErrors.tokenExpired"),
         );
         return;
       }
@@ -586,6 +644,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             i18n.t("common.alertErrorTitle"),
             i18n.t("auth.supabaseErrors.invalidToken"),
           );
+          return;
+        }
+
+        // コールドスタート復帰でカレンダー連携が中断していた場合、
+        // provider_refresh_token の保存をここで完了させる（取りこぼし防止）。
+        // isCalendarConnectRecovery が false の場合（無関係な認証コールバックへの
+        // 誤爆判定回避）は、通常のメール確認/ログイン処理のみで完了する。
+        if (isCalendarConnectRecovery) {
+          await completeCalendarConnectRecovery(tokens.accessToken, tokens.providerRefreshToken);
         }
         // 成功時は onAuthStateChange が発火し自動でルート切替する
         return;
@@ -593,6 +660,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!isMounted) return;
       // access_token / refresh_token 双方が取れなかった場合
+      if (isCalendarConnectRecovery) {
+        // カレンダー連携中断からの復帰なのにトークンが無い場合もサイレントに
+        // 握りつぶさず、再試行を促すエラーを表示する
+        Alert.alert(
+          i18n.t("common.alertErrorTitle"),
+          i18n.t("auth.mobile.googleCalendarPermissionDenied"),
+        );
+        return;
+      }
       Alert.alert(
         i18n.t("common.alertErrorTitle"),
         i18n.t("auth.mobile.tokensNotReceived"),

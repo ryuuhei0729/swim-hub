@@ -24,10 +24,10 @@ import { EntryAPI } from "@apps/shared/api/entries";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
-import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
-import { parseTime } from "@apps/shared/utils/time";
+import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
 import type { MainStackParamList } from "@/navigation/types";
@@ -163,7 +163,7 @@ export const EntryLogFormScreen: React.FC = () => {
           id: entry.id,
           styleId: String(entry.style_id),
           entryTime: entry.entry_time || 0,
-          entryTimeDisplayValue: entry.entry_time ? formatTime(entry.entry_time) : "",
+          entryTimeDisplayValue: entry.entry_time ? formatTimeBest(entry.entry_time) : "",
           note: entry.note || "",
         }));
         setEntries(entriesData);
@@ -198,15 +198,16 @@ export const EntryLogFormScreen: React.FC = () => {
     }
   }, [entryId, swimStyles, loadingStyles, entries]);
 
-  // タイム文字列を秒数に変換（共有パーサー使用：-でも:でも.でも区切り対応）
+  // タイム文字列を秒数に変換 (blur / 保存時の確定値と同じ parseTimeFlexible 解釈)
   const parseTimeString = (timeString: string): number => {
-    return parseTime(timeString);
+    if (!timeString || timeString.trim() === "") return 0;
+    return parseTimeFlexible(timeString) ?? 0;
   };
 
   // タイム文字列が有効かどうかを検証
   const isValidTimeString = (timeString: string): boolean => {
     if (!timeString || timeString.trim() === "") return true; // 空は有効（任意入力）
-    return parseTime(timeString) > 0;
+    return parseTimeFlexible(timeString) !== null;
   };
 
   // バリデーション
@@ -223,6 +224,11 @@ export const EntryLogFormScreen: React.FC = () => {
     entries.forEach((entry, index) => {
       if (!entry.styleId) {
         newErrors[`style-${index}`] = t("competition.entry.selectStyleRequired");
+      }
+      // blur を経ずに保存された場合の解釈不能な形式を確定拒否する
+      const rawTime = entry.entryTimeDisplayValue.trim();
+      if (rawTime !== "" && parseTimeFlexible(rawTime) === null) {
+        newErrors[`entryTime-${index}`] = t("competition.entry.timeFormatInvalid");
       }
     });
 
@@ -292,6 +298,44 @@ export const EntryLogFormScreen: React.FC = () => {
         }
 
         return updated;
+      }),
+    );
+  };
+
+  // エントリータイム blur 時の確定・再フォーマット。
+  // parseTimeFlexible で構造ガードし、"1.23.45" のような入力もクイック解釈
+  // (1:23.45) で確定する。解釈不能な入力のみ確定拒否 + エラー表示
+  const handleEntryTimeBlur = (entryId: string) => {
+    setEntries((prev) =>
+      prev.map((entry, index) => {
+        if (entry.id !== entryId) return entry;
+        const raw = entry.entryTimeDisplayValue.trim();
+        if (raw === "") {
+          setErrors((prevErrors) => {
+            const next = { ...prevErrors };
+            delete next[`entryTime-${index}`];
+            return next;
+          });
+          return { ...entry, entryTime: 0 };
+        }
+        const parsed = parseTimeFlexible(raw);
+        if (parsed === null) {
+          setErrors((prevErrors) => ({
+            ...prevErrors,
+            [`entryTime-${index}`]: t("competition.entry.timeFormatInvalid"),
+          }));
+          return { ...entry, entryTime: 0 };
+        }
+        setErrors((prevErrors) => {
+          const next = { ...prevErrors };
+          delete next[`entryTime-${index}`];
+          return next;
+        });
+        return {
+          ...entry,
+          entryTime: parsed,
+          entryTimeDisplayValue: formatTimeBest(parsed),
+        };
       }),
     );
   };
@@ -537,6 +581,7 @@ export const EntryLogFormScreen: React.FC = () => {
               <Text style={styles.addButtonText}>{t("competition.entry.addStyle")}</Text>
             </Pressable>
           </View>
+          <TimeInputHelp />
         </View>
 
         {/* エントリー一覧 */}
@@ -602,9 +647,10 @@ export const EntryLogFormScreen: React.FC = () => {
                 style={[styles.input, errors[`entryTime-${index}`] && styles.inputError]}
                 value={entry.entryTimeDisplayValue}
                 onChangeText={(text) => updateEntry(entry.id, { entryTimeDisplayValue: text })}
+                onBlur={() => handleEntryTimeBlur(entry.id)}
                 placeholder={t("competition.entry.entryTimePlaceholder")}
                 placeholderTextColor="#9CA3AF"
-                keyboardType="default"
+                keyboardType="decimal-pad"
                 editable={!loading}
               />
               {errors[`entryTime-${index}`] && (
@@ -612,7 +658,7 @@ export const EntryLogFormScreen: React.FC = () => {
               )}
               {entry.entryTime > 0 && !errors[`entryTime-${index}`] && (
                 <Text style={styles.timeHint}>
-                  {t("competition.entry.inputValueHint", { time: formatTime(entry.entryTime) })}
+                  {t("competition.entry.inputValueHint", { time: formatTimeBest(entry.entryTime) })}
                 </Text>
               )}
             </View>

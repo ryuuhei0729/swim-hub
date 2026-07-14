@@ -7,45 +7,56 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
 import { RecordAPI } from "@apps/shared/api/records";
 import { recordKeys } from "@apps/shared/hooks/queries/keys";
+import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
 import type { MainStackParamList } from "@/navigation/types";
 import {
-  BestTimeEntryRow,
-  StylePickerModal,
-  getStyleOption,
-  formatStyleDisplay,
-  genKey,
+  STYLE_TAB_IDS,
+  getStylesForTab,
+  getCellKey,
+  computeMatrixRecords,
   isValidForLongCourse,
   canRelay,
-  computeBulkState,
-  type BestTimeEntry,
+  isEnteredButInvalid,
+  type StyleTabId,
+  type StyleOption,
+  type BestTimeInputMap,
+  type CellInput,
 } from "@/components/besttime";
+
+const EMPTY_CELL: CellInput = { time: "", note: "" };
 
 /**
  * ベストタイム一括手動登録画面 (マイページから遷移)。
- * 種目を追加し、短水路/長水路ごとにベストタイムをまとめて入力して一括登録する。
- * Web 版 /bulk-besttime のモバイル相当。既存ベストの上書きは行わず INSERT のみ。
+ * Web 版 /bulk-besttime の BestTimeMobileView と同じ固定マトリクス
+ * (種目タブ × 水路トグル × 距離カード) 方式。構造上、重複登録は起こり得ない。
+ * 不正なタイムはインラインエラーで示し保存対象から除外するだけで、
+ * 有効な入力が1件以上あれば登録できる (Web 版と同一セマンティクス)。
+ * 既存ベストの上書きは行わず INSERT のみ。
  */
 export const BulkBestTimeScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const insets = useSafeAreaInsets();
+  const insets = useSafeInsets();
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
-  const [entries, setEntries] = useState<BestTimeEntry[]>([]);
+  const [activeTab, setActiveTab] = useState<StyleTabId>("fr");
+  const [activePool, setActivePool] = useState<0 | 1>(0);
+  const [inputs, setInputs] = useState<BestTimeInputMap>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [showStyleModal, setShowStyleModal] = useState(false);
   const savingRef = useRef(false);
 
   const recordAPI = useMemo(() => {
@@ -53,35 +64,23 @@ export const BulkBestTimeScreen: React.FC = () => {
     return new RecordAPI(supabase);
   }, [supabase]);
 
-  const bulkState = useMemo(() => computeBulkState(entries), [entries]);
-  const { records, duplicateKeys, canSave: isSaveable, validCount } = bulkState;
-  const isDuplicate = duplicateKeys.size > 0;
-  const hasEntries = entries.length > 0;
+  const records = useMemo(() => computeMatrixRecords(inputs), [inputs]);
+  const validCount = records.length;
+  const isSaveable = validCount >= 1;
 
-  // 種目追加: 長水路で無効な種目は短水路を初期値にする
-  const addEntry = useCallback((styleId: number) => {
-    const style = getStyleOption(styleId);
-    const initialPoolType: 0 | 1 = style && !isValidForLongCourse(style) ? 0 : 1;
-    setEntries((prev) => [
-      ...prev,
-      {
-        key: genKey(),
-        styleId,
-        poolType: initialPoolType,
-        time: "",
-        note: "",
-        isRelaying: false,
-      },
-    ]);
-    setShowStyleModal(false);
-  }, []);
-
-  const removeEntry = useCallback((key: string) => {
-    setEntries((prev) => prev.filter((e) => e.key !== key));
-  }, []);
-
-  const updateEntry = useCallback((key: string, patch: Partial<BestTimeEntry>) => {
-    setEntries((prev) => prev.map((e) => (e.key === key ? { ...e, ...patch } : e)));
+  const updateCell = useCallback((key: string, field: "time" | "note", value: string) => {
+    setInputs((prev) => {
+      const current = prev[key] ?? EMPTY_CELL;
+      const updated = { ...current, [field]: value };
+      const next = { ...prev };
+      // Web 版と同じく、タイム・備考とも空になったセルはマップから除去する
+      if (!updated.time && !updated.note) {
+        delete next[key];
+      } else {
+        next[key] = updated;
+      }
+      return next;
+    });
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -121,6 +120,8 @@ export const BulkBestTimeScreen: React.FC = () => {
     }
   }, [records, recordAPI, isSaveable, queryClient, user?.id, t, navigation]);
 
+  const tabStyles = getStylesForTab(activeTab);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -129,7 +130,9 @@ export const BulkBestTimeScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.description}>{t("bulkBestTime.mobile.description")}</Text>
+        <Text style={styles.description}>{t("bulkBestTime.header.description")}</Text>
+
+        <TimeInputHelp />
 
         {saveError && (
           <View style={styles.errorBanner}>
@@ -137,58 +140,75 @@ export const BulkBestTimeScreen: React.FC = () => {
           </View>
         )}
 
-        {isDuplicate && (
-          <View style={styles.warningBanner}>
-            <Text style={styles.warningText}>{t("onboarding.step3.duplicateError")}</Text>
-          </View>
-        )}
+        {/* 種目タブ (Web 版と同じ 5 泳法) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabBar}
+          contentContainerStyle={styles.tabBarContent}
+          accessibilityLabel={t("bulkBestTime.tabsAriaLabel")}
+        >
+          {STYLE_TAB_IDS.map((tabId) => {
+            const active = tabId === activeTab;
+            return (
+              <Pressable
+                key={tabId}
+                style={[styles.tab, active && styles.tabActive]}
+                onPress={() => setActiveTab(tabId)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={t(`bulkBestTime.tabs.${tabId}`)}
+              >
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                  {t(`bulkBestTime.tabs.${tabId}`)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
-        {!hasEntries && (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Feather name="clock" size={24} color="#9CA3AF" />
-            </View>
-            <Text style={styles.emptyTitle}>{t("bulkBestTime.mobile.emptyTitle")}</Text>
-            <Text style={styles.emptyBody}>{t("bulkBestTime.mobile.emptyBody")}</Text>
+        {/* 水路トグル (短水路 / 長水路) */}
+        <View
+          style={styles.poolToggleWrapper}
+          accessibilityLabel={t("bulkBestTime.mobile.poolToggleLabel")}
+        >
+          <View style={styles.poolToggle}>
+            {([0, 1] as const).map((pool) => {
+              const active = activePool === pool;
+              const label = pool === 0 ? t("common.poolTypeShort") : t("common.poolTypeLong");
+              return (
+                <Pressable
+                  key={pool}
+                  style={[styles.poolButton, active && styles.poolButtonActive]}
+                  onPress={() => setActivePool(pool)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={label}
+                >
+                  <Text style={[styles.poolButtonText, active && styles.poolButtonTextActive]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
-        )}
+        </View>
 
-        {entries.map((entry) => {
-          const styleOption = getStyleOption(entry.styleId);
-          const styleName = styleOption ? formatStyleDisplay(styleOption, t) : "";
+        {/* 距離カード一覧 (長水路で存在しない種目は非表示 = Web 版と同じ) */}
+        {tabStyles.map((style) => {
+          if (activePool === 1 && !isValidForLongCourse(style)) return null;
           return (
-            <BestTimeEntryRow
-              key={entry.key}
-              entry={entry}
-              styleName={styleName}
-              onUpdate={updateEntry}
-              onRemove={removeEntry}
+            <MatrixDistanceCard
+              key={`${activeTab}_${style.id}_${activePool}`}
+              style={style}
+              poolType={activePool}
+              inputs={inputs}
+              onUpdateCell={updateCell}
               disabled={saving}
-              isDuplicate={duplicateKeys.has(entry.key)}
-              longCourseDisabled={styleOption ? !isValidForLongCourse(styleOption) : false}
-              relayEnabled={styleOption ? canRelay(styleOption) : false}
-              showNote
               t={t}
             />
           );
         })}
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.addButton,
-            pressed && styles.addButtonPressed,
-            saving && styles.addButtonDisabled,
-          ]}
-          onPress={() => setShowStyleModal(true)}
-          disabled={saving}
-          accessibilityRole="button"
-          accessibilityLabel={t("onboarding.step3.addStyleButton")}
-        >
-          <Feather name="plus" size={16} color={saving ? "#9CA3AF" : "#2563EB"} />
-          <Text style={[styles.addButtonText, saving && styles.addButtonTextDisabled]}>
-            {t("onboarding.step3.addStyleButton")}
-          </Text>
-        </Pressable>
       </ScrollView>
 
       {/* フッター: 一括登録 */}
@@ -217,13 +237,160 @@ export const BulkBestTimeScreen: React.FC = () => {
           )}
         </Pressable>
       </View>
+    </View>
+  );
+};
 
-      <StylePickerModal
-        visible={showStyleModal}
-        onClose={() => setShowStyleModal(false)}
-        onSelect={addEntry}
-        t={t}
-      />
+// =============================================================================
+// 距離カード (Web 版 BestTimeCard のモバイル移植)
+// =============================================================================
+
+interface MatrixDistanceCardProps {
+  style: StyleOption;
+  poolType: 0 | 1;
+  inputs: BestTimeInputMap;
+  onUpdateCell: (key: string, field: "time" | "note", value: string) => void;
+  disabled: boolean;
+  t: TFunction;
+}
+
+const MatrixDistanceCard: React.FC<MatrixDistanceCardProps> = ({
+  style,
+  poolType,
+  inputs,
+  onUpdateCell,
+  disabled,
+  t,
+}) => {
+  const normalKey = getCellKey(style.id, poolType, false);
+  const relayKey = getCellKey(style.id, poolType, true);
+  const normal = inputs[normalKey] ?? EMPTY_CELL;
+  const relay = inputs[relayKey] ?? EMPTY_CELL;
+
+  // Web 版と同じく、既に引き継ぎタイムが入力済みならセクションを開いた状態で表示する
+  const [showRelaySection, setShowRelaySection] = useState<boolean>(() => !!relay.time);
+
+  const normalInvalid = isEnteredButInvalid(normal.time);
+  const relayInvalid = isEnteredButInvalid(relay.time);
+  const hasValidInput =
+    (!!normal.time && !normalInvalid) || (!!relay.time && !relayInvalid);
+  const showRelayButton = canRelay(style);
+
+  // blur 時に確定値へ再フォーマット (練習タイム・大会レコード入力と同じ UX)。
+  // 不正形式は生値のまま残し、既存のインラインエラー表示に任せる
+  const handleTimeBlur = (key: string, raw: string) => {
+    const parsed = parseTimeFlexible(raw);
+    if (parsed !== null) {
+      onUpdateCell(key, "time", formatTimeBest(parsed));
+    }
+  };
+
+  const distanceLabel = `${style.distance}m`;
+
+  return (
+    <View style={[styles.card, hasValidInput && styles.cardFilled]}>
+      <Text style={styles.cardTitle}>{distanceLabel}</Text>
+
+      {/* 通常タイム */}
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>{t("bulkBestTime.table.time")}</Text>
+        <TextInput
+          style={[styles.timeInput, normalInvalid && styles.inputError, disabled && styles.inputDisabled]}
+          value={normal.time}
+          onChangeText={(text) => onUpdateCell(normalKey, "time", text)}
+          onBlur={() => handleTimeBlur(normalKey, normal.time)}
+          placeholder={t("onboarding.step3.timePlaceholder")}
+          placeholderTextColor="#9CA3AF"
+          keyboardType="decimal-pad"
+          autoCorrect={false}
+          autoCapitalize="none"
+          editable={!disabled}
+          accessibilityLabel={`${distanceLabel} ${t("bulkBestTime.table.time")}`}
+        />
+        {normalInvalid && (
+          <Text style={styles.fieldErrorText} accessibilityRole="alert">
+            {t("bulkBestTime.error.invalidTimeFormat")}
+          </Text>
+        )}
+      </View>
+
+      {/* 備考 */}
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>{t("bulkBestTime.table.note")}</Text>
+        <TextInput
+          style={[styles.noteInput, disabled && styles.inputDisabled]}
+          value={normal.note}
+          onChangeText={(text) => onUpdateCell(normalKey, "note", text)}
+          placeholder={t("bulkBestTime.table.notePlaceholder")}
+          placeholderTextColor="#9CA3AF"
+          editable={!disabled}
+          accessibilityLabel={`${distanceLabel} ${t("bulkBestTime.table.note")}`}
+        />
+      </View>
+
+      {/* 引き継ぎセクション */}
+      {showRelayButton && !showRelaySection && (
+        <Pressable
+          onPress={() => setShowRelaySection(true)}
+          disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel={t("bulkBestTime.mobile.addRelaying")}
+          style={({ pressed }) => [styles.relayToggle, pressed && styles.relayTogglePressed]}
+        >
+          <Text style={styles.relayToggleText}>{t("bulkBestTime.mobile.addRelaying")}</Text>
+        </Pressable>
+      )}
+
+      {showRelayButton && showRelaySection && (
+        <View style={styles.relaySection}>
+          <Text style={styles.relaySectionTitle}>{t("bulkBestTime.mobile.relayingLabel")}</Text>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>{t("bulkBestTime.table.time")}</Text>
+            <TextInput
+              style={[styles.timeInput, relayInvalid && styles.inputError, disabled && styles.inputDisabled]}
+              value={relay.time}
+              onChangeText={(text) => onUpdateCell(relayKey, "time", text)}
+              onBlur={() => handleTimeBlur(relayKey, relay.time)}
+              placeholder={t("onboarding.step3.timePlaceholder")}
+              placeholderTextColor="#9CA3AF"
+              keyboardType="decimal-pad"
+              autoCorrect={false}
+              autoCapitalize="none"
+              editable={!disabled}
+              accessibilityLabel={`${distanceLabel} ${t("bulkBestTime.mobile.relayingLabel")} ${t("bulkBestTime.table.time")}`}
+            />
+            {relayInvalid && (
+              <Text style={styles.fieldErrorText} accessibilityRole="alert">
+                {t("bulkBestTime.error.invalidTimeFormat")}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>{t("bulkBestTime.table.note")}</Text>
+            <TextInput
+              style={[styles.noteInput, disabled && styles.inputDisabled]}
+              value={relay.note}
+              onChangeText={(text) => onUpdateCell(relayKey, "note", text)}
+              placeholder={t("bulkBestTime.table.notePlaceholder")}
+              placeholderTextColor="#9CA3AF"
+              editable={!disabled}
+              accessibilityLabel={`${distanceLabel} ${t("bulkBestTime.mobile.relayingLabel")} ${t("bulkBestTime.table.note")}`}
+            />
+          </View>
+
+          <Pressable
+            onPress={() => setShowRelaySection(false)}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel={t("bulkBestTime.mobile.hideRelaying")}
+            style={({ pressed }) => [styles.relayToggle, pressed && styles.relayTogglePressed]}
+          >
+            <Text style={styles.relayHideText}>{t("bulkBestTime.mobile.hideRelaying")}</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 };
@@ -257,68 +424,155 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#DC2626",
   },
-  warningBanner: {
-    padding: 12,
-    backgroundColor: "#FFFBEB",
+  tabBar: {
+    flexGrow: 0,
+    marginHorizontal: -16,
+  },
+  tabBarContent: {
+    paddingHorizontal: 16,
+    gap: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  tab: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  tabActive: {
+    borderBottomColor: "#2563EB",
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#6B7280",
+  },
+  tabTextActive: {
+    color: "#2563EB",
+    fontWeight: "600",
+  },
+  poolToggleWrapper: {
+    alignItems: "center",
+    marginVertical: 4,
+  },
+  poolToggle: {
+    flexDirection: "row",
+    backgroundColor: "#E5E7EB",
+    borderRadius: 10,
+    padding: 3,
+  },
+  poolButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#FDE68A",
   },
-  warningText: {
+  poolButtonActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000000",
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  poolButtonText: {
     fontSize: 13,
-    color: "#92400E",
+    fontWeight: "500",
+    color: "#6B7280",
   },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 32,
-    gap: 8,
+  poolButtonTextActive: {
+    color: "#111827",
+    fontWeight: "600",
   },
-  emptyIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    gap: 10,
   },
-  emptyTitle: {
-    fontSize: 15,
+  cardFilled: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#2563EB",
+  },
+  cardTitle: {
+    fontSize: 14,
     fontWeight: "600",
     color: "#374151",
   },
-  emptyBody: {
-    fontSize: 13,
-    color: "#9CA3AF",
-    textAlign: "center",
-    lineHeight: 18,
+  fieldGroup: {
+    gap: 4,
   },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#6B7280",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  timeInput: {
+    minHeight: 44,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
-    borderRadius: 10,
-    borderStyle: "dashed",
-    backgroundColor: "#F0F9FF",
+    borderColor: "#D1D5DB",
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
+    fontVariant: ["tabular-nums"],
   },
-  addButtonPressed: {
-    backgroundColor: "#DBEAFE",
+  noteInput: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: "#111827",
+    backgroundColor: "#FFFFFF",
   },
-  addButtonDisabled: {
-    borderColor: "#E5E7EB",
-    backgroundColor: "#F9FAFB",
+  inputError: {
+    borderColor: "#FCA5A5",
   },
-  addButtonText: {
-    fontSize: 14,
+  inputDisabled: {
+    backgroundColor: "#F3F4F6",
+    color: "#9CA3AF",
+  },
+  fieldErrorText: {
+    fontSize: 11,
+    color: "#DC2626",
+    lineHeight: 14,
+  },
+  relayToggle: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+  },
+  relayTogglePressed: {
+    opacity: 0.6,
+  },
+  relayToggleText: {
+    fontSize: 13,
     color: "#2563EB",
     fontWeight: "500",
   },
-  addButtonTextDisabled: {
-    color: "#9CA3AF",
+  relayHideText: {
+    fontSize: 13,
+    color: "#6B7280",
+    textDecorationLine: "underline",
+  },
+  relaySection: {
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    paddingTop: 10,
+    gap: 10,
+  },
+  relaySectionTitle: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#6B7280",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   footer: {
     flexDirection: "row",

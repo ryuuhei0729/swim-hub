@@ -7,6 +7,7 @@ import { Stepper } from "@/components/shared/Stepper";
 import { OnboardingWelcome } from "@/components/onboarding/OnboardingWelcome";
 import { OnboardingProfile } from "@/components/onboarding/OnboardingProfile";
 import { OnboardingBestTime } from "@/components/onboarding/OnboardingBestTime";
+import type { BestTimeEntry } from "@/components/besttime";
 import { ONBOARDING_TOTAL_STEPS } from "@/constants/onboarding";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { supabase } from "@/lib/supabase";
@@ -22,6 +23,8 @@ export const OnboardingScreen: React.FC = () => {
   const [profileCache, setProfileCache] = useState<Partial<UserProfile> | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
+  // ベストタイム入力はステップを跨いでも保持する (Step3 で戻る→再表示しても入力が消えない)
+  const [bestTimeEntries, setBestTimeEntries] = useState<BestTimeEntry[]>([]);
 
   // 現在のユーザープロフィールを取得
   useEffect(() => {
@@ -123,7 +126,12 @@ export const OnboardingScreen: React.FC = () => {
             )}
 
             {currentStep === 3 && (
-              <OnboardingBestTime onComplete={handleComplete} onBack={goBack} />
+              <OnboardingBestTime
+                onComplete={handleComplete}
+                onBack={goBack}
+                entries={bestTimeEntries}
+                setEntries={setBestTimeEntries}
+              />
             )}
 
           </View>

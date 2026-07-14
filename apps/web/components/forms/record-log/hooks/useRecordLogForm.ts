@@ -11,7 +11,8 @@ import type {
   StyleOption,
 } from "../types";
 import type { PendingVideoData } from "@/stores/types";
-import { formatSecondsToDisplay, parseTimeToSeconds } from "../utils/formatters";
+import { isInvalidTimeInput, parseTimeFlexible } from "@apps/shared/utils/time";
+import { formatSecondsToDisplay } from "../utils/formatters";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
 interface UseRecordLogFormOptions {
@@ -50,7 +51,11 @@ interface UseRecordLogFormReturn {
     field: "distance" | "splitTime",
     value: string,
   ) => void;
-  prepareSubmitData: () => { hasStyleError: boolean; submitList: RecordLogFormData[] };
+  prepareSubmitData: () => {
+    hasStyleError: boolean;
+    hasTimeFormatError: boolean;
+    submitList: RecordLogFormData[];
+  };
   isSplitTimeLimitReached: (entryIndex: number) => boolean;
 }
 
@@ -192,7 +197,9 @@ export const useRecordLogForm = ({
   const handleTimeChange = useCallback(
     (index: number, value: string) => {
       updateFormData(index, (prev) => {
-        const newTime = parseTimeToSeconds(value);
+        // 構造ガード: "1.23.45" 等はクイック解釈 (1:23.45=83.45秒) で受理し、
+        // 解釈不能な入力のみ 0 のままにする
+        const newTime = parseTimeFlexible(value) ?? 0;
         const styleId = prev.styleId;
         const style = styles.find((s) => s.id.toString() === styleId);
         const raceDistance = style?.distance;
@@ -486,7 +493,7 @@ export const useRecordLogForm = ({
             const numValue = parseFloat(value);
             return { ...st, distance: isNaN(numValue) ? value : numValue };
           }
-          const parsedTime = value.trim() === "" ? 0 : parseTimeToSeconds(value);
+          const parsedTime = parseTimeFlexible(value) ?? 0;
           return {
             ...st,
             splitTimeDisplayValue: value,
@@ -542,9 +549,17 @@ export const useRecordLogForm = ({
 
   const prepareSubmitData = useCallback((): {
     hasStyleError: boolean;
+    hasTimeFormatError: boolean;
     submitList: RecordLogFormData[];
   } => {
     let hasStyleError = false;
+    // 不正形式のタイム入力（"1.23.45" 等）が残っている場合は保存をブロックする
+    // （time=0 として静かにレコードを落とさない）
+    const hasTimeFormatError = formDataList.some(
+      (data) =>
+        isInvalidTimeInput(data.timeDisplayValue) ||
+        data.splitTimes.some((st) => isInvalidTimeInput(st.splitTimeDisplayValue)),
+    );
     const submitList: RecordLogFormData[] = formDataList.reduce<RecordLogFormData[]>(
       (acc, data) => {
         const styleId = data.styleId;
@@ -590,7 +605,7 @@ export const useRecordLogForm = ({
       [],
     );
 
-    return { hasStyleError, submitList };
+    return { hasStyleError, hasTimeFormatError, submitList };
   }, [formDataList, styles]);
 
   const isSplitTimeLimitReached = useCallback(

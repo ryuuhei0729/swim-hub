@@ -3,6 +3,7 @@ import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from 
 import { useTranslation } from "react-i18next";
 import { AvatarUpload } from "./AvatarUpload";
 import { BirthdayInput } from "@/components/ui/BirthdayInput";
+import { GenderToggle } from "@/components/ui/GenderToggle";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { base64ToArrayBuffer } from "@/utils/base64";
@@ -31,6 +32,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
     name: "",
     birthday: "",
     bio: "",
+    gender: 0,
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         name: profile.name || "",
         birthday: birthdayStr,
         bio: profile.bio || "",
+        gender: profile.gender !== undefined ? profile.gender : 0,
       });
     }
     setError(null);
@@ -72,7 +75,8 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       // 選択した画像がある場合はアップロード
       if (selectedImageData && user) {
         try {
-          const userFolderPath = `avatars/${user.id}`;
+          // パス規約: "{userId}/{fileName}"（旧 "avatars/{userId}/..." は移行済み。Issue #36）
+          const userFolderPath = user.id;
 
           // 既存画像の削除（WEBの実装と同様）
           try {
@@ -121,16 +125,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
             throw uploadError;
           }
 
-          // 公開URLを取得（WEBの実装と同様）
-          const { data } = supabase.storage.from("profile-images").getPublicUrl(filePath);
-          const publicUrl = data?.publicUrl;
-
-          if (!publicUrl) {
-            throw new Error(t("mypage.profileEdit.publicUrlFailed"));
-          }
-
-          // データベースのusersテーブルを更新（WEBの実装と同様）
-          await onAvatarChange(publicUrl);
+          // profile-images は private バケットのため、公開URLではなく
+          // バケット内相対パスをDBに保存する（表示時は署名付きURLを解決する。Issue #36）
+          await onAvatarChange(filePath);
         } catch (err) {
           console.error("画像アップロードエラー:", err);
           const errorMessage =
@@ -146,6 +143,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         name: formData.name.trim(),
         birthday,
         bio: formData.bio.trim() || null,
+        gender: formData.gender,
       });
 
       // 成功時は即時にモーダルを閉じる
@@ -213,6 +211,16 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 editable={!isUpdating}
               />
             </View>
+
+            {/* 性別 */}
+            <GenderToggle
+              value={formData.gender}
+              onChange={(gender) => {
+                setFormData((prev) => ({ ...prev, gender }));
+                setError(null);
+              }}
+              disabled={isUpdating}
+            />
 
             {/* 生年月日 */}
             <BirthdayInput

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { parseTimeStrict } from "@apps/shared/utils/time";
+import { parseTimeFlexible } from "@apps/shared/utils/time";
 import { validateSwimTime, validateTimeString } from "@apps/shared/utils/validators";
 
 /**
@@ -22,15 +22,15 @@ export const useTimeValidation = () => {
   /**
    * タイムをパースする
    *
-   * 対応形式:
-   * - "MM:SS.ms" (例: "1:23.45")
-   * - "SS.ms" (例: "23.45")
+   * 対応形式 (parseTimeFlexible):
+   * - "MM:SS.ms" / "SS.ms" (例: "1:23.45", "23.45")
+   * - クイック入力形式 = 数字の間を任意の非数字で区切る (例: "31-2", "1.23.45")
    *
    * @param timeStr タイム文字列
    * @returns パースされた秒数、または無効な場合はnull
    */
   const parseTime = useCallback((timeStr: string): number | null => {
-    return parseTimeStrict(timeStr);
+    return parseTimeFlexible(timeStr);
   }, []);
 
   /**
@@ -40,26 +40,36 @@ export const useTimeValidation = () => {
    * @returns バリデーション結果
    */
   const validateTime = useCallback((timeStr: string): ValidationResult => {
-    // 空チェック
-    const stringResult = validateTimeString(timeStr);
-    if (!stringResult.valid) {
+    // 空チェック (validateTimeString の空エラーメッセージを流用。
+    // 形式チェックは parseTimeFlexible に委譲するため、ここでは空のみ判定する)
+    if (!timeStr || timeStr.trim() === "") {
+      const stringResult = validateTimeString(timeStr);
       return {
         isValid: false,
         error: stringResult.error,
       };
     }
 
-    // パースしてバリデーション
-    const parsedTime = parseTimeStrict(timeStr);
-    if (parsedTime === null) {
+    // 形式チェック ("1.23.45" 等はクイック解釈で受理。解釈不能・0以下のみ弾く)
+    const parsed = parseTimeFlexible(timeStr);
+    if (parsed === null) {
+      // 0 秒ちょうどの入力 ("0:00.00" 等) は形式として正しいため、
+      // validateSwimTime の値域エラー ("0より大きい") を返す
+      const zeroLike = /^[0:.\s]+$/.test(timeStr.trim());
+      if (zeroLike) {
+        const swimResult = validateSwimTime(0);
+        if (!swimResult.valid) {
+          return { isValid: false, error: swimResult.error };
+        }
+      }
       return {
         isValid: false,
         error: t("invalid"),
       };
     }
 
-    // 競泳タイムとしてのバリデーション（1時間以内）
-    const swimResult = validateSwimTime(parsedTime);
+    // 値域（0 より大きく1時間以内）を検証し、具体的なメッセージを返す
+    const swimResult = validateSwimTime(parsed);
     if (!swimResult.valid) {
       return {
         isValid: false,

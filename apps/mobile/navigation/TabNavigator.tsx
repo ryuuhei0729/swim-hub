@@ -1,9 +1,9 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TabParamList } from "./types";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PracticesScreen } from "@/screens/PracticesScreen";
 import { CompetitionsScreen } from "@/screens/CompetitionsScreen";
@@ -18,7 +18,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
  * ダッシュボード、練習、大会、チーム、マイページの5つのタブ
  */
 export const TabNavigator: React.FC = () => {
-  const insets = useSafeAreaInsets();
+  const insets = useSafeInsets();
   const { t } = useTranslation();
 
   return (

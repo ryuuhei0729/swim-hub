@@ -31,6 +31,7 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader } from "@/components/shared/VideoUploader";
+import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { MemberSelectModal } from "@/components/teams/MemberSelectModal";
 import { uploadVideoForTeamMember, MissingThumbnailError } from "@/utils/videoUpload";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
@@ -1001,6 +1002,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             {competition?.title || t("competition.records.competitionFallback")}
           </Text>
           <Text style={styles.compSubtitle}>{t("teams.record.description")}</Text>
+          <TimeInputHelp showCarryOver style={{ marginTop: 8 }} />
         </View>
 
         {styleEntries.map((entry, entryIndex) => {

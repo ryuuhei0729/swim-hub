@@ -46,28 +46,6 @@ export async function joinTeam(inviteCode: string) {
 }
 
 /**
- * 非アクティブなメンバーシップを再アクティブ化するServer Action
- */
-export async function reactivateTeamMembership(membershipId: string, joinedAt: string) {
-  const { supabase } = await getAuthenticatedUser();
-  const api = new TeamMembersAPI(supabase);
-
-  try {
-    const membership = await api.reactivateMembership(membershipId, joinedAt);
-
-    after(() => {
-      revalidatePath("/teams");
-    });
-
-    return { success: true, membership };
-  } catch (error) {
-    const t = await getActionsT();
-    const message = error instanceof Error ? error.message : t("reactivateFailed");
-    return { success: false, error: message };
-  }
-}
-
-/**
  * メンバーシップを承認するServer Action
  */
 export async function approveMembership(membershipId: string, teamId: string) {

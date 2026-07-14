@@ -36,6 +36,7 @@ import { useLocale } from "next-intl";
 import { useAuth } from "@/contexts";
 import RecordBestBadge from "@/components/ui/RecordBestBadge";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
+import { resolveGalleryImages } from "@/lib/image-url";
 import type {
   CalendarItem,
   Record as RecordType,
@@ -132,7 +133,9 @@ export function CompetitionDetails({
     useState<CompetitionShareData | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const timeoutId = window.setTimeout(() => {
+      if (cancelled) return;
       setLoading(false);
       setLoadError(t("competition.loadTimeout"));
     }, 15000);
@@ -171,28 +174,19 @@ export function CompetitionDetails({
           recordQuery,
         ]);
 
+        if (error) throw error;
+
+        // 画像の署名URL解決は本文表示をブロックしない（fire-and-forget）
         const competition = competitionData as {
           image_paths?: string[] | null;
         } | null;
         const imagePaths = competition?.image_paths || [];
-        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-        const images: GalleryImage[] = imagePaths.map(
-          (path: string, index: number) => {
-            const imageUrl = r2PublicUrl
-              ? `${r2PublicUrl}/competition-images/${path}`
-              : supabase.storage.from("competition-images").getPublicUrl(path)
-                  .data.publicUrl;
-            return {
-              id: path,
-              thumbnailUrl: imageUrl,
-              originalUrl: imageUrl,
-              fileName: path.split("/").pop() || `image-${index + 1}`,
-            };
+        resolveGalleryImages("competition-images", imagePaths).then(
+          (images: GalleryImage[]) => {
+            if (cancelled) return;
+            setCompetitionImages(images);
           },
         );
-        setCompetitionImages(images);
-
-        if (error) throw error;
 
         // calendar_view形式に変換
         type RecordFromDB = {
@@ -261,21 +255,24 @@ export function CompetitionDetails({
           }),
         );
 
+        if (cancelled) return;
         setActualRecords(formattedRecords);
         clearTimeout(timeoutId);
       } catch (err) {
         clearTimeout(timeoutId);
         console.error("記録の取得エラー:", err);
+        if (cancelled) return;
         setActualRecords([]);
         setCompetitionImages([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadRecords();
 
     return () => {
+      cancelled = true;
       clearTimeout(timeoutId);
     };
   }, [competitionId, supabase, isTeamCompetition, user?.id, t]);

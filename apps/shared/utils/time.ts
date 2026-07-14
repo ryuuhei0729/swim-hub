@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { TimeEntry } from "../types/ui";
+import { parseQuickTime } from "./quickTimeParser";
 
 // 型を再エクスポート
 export type { TimeEntry };
@@ -261,46 +262,89 @@ function parseQuickFormat(cleaned: string): number {
 }
 
 /**
- * 時間文字列を秒数に変換（nullを返すバージョン、バリデーション用）
+ * タイム入力の許容形式（構造ガード用正規表現、web/mobile 共通の正典）:
+ *
+ *  従来形式  \d+(:\d+)?(\.\d+)?  → "1:23.45" "1:30" "23.45" "30"
+ *  クイック式 \d+(-\d+){1,2}     → "31-2" "1-05-3"
+ *
+ * 末尾 s は許容。多重ドット ("1.23.45")・多重コロン ("1:2:3")・
+ * 連続区切り・英字・負値を構造的に弾く。
+ */
+export const TIME_FORMAT_REGEX = /^(\d+(:\d+)?(\.\d+)?|\d+(-\d+){1,2})s?$/i;
+
+/**
+ * 日本語IME由来の全角区切りを ASCII 相当に正規化する（：→: 、。／．→. 、ー等→-）。
+ * parseTime は任意の非数字を区切りとして受理するが、TIME_FORMAT_REGEX は
+ * ASCII 区切りしか通さないため、構造ガード前にこれを通して全角入力を落とさない。
+ */
+export function normalizeTimeSeparators(timeString: string): string {
+  return timeString
+    .replace(/：/g, ":")
+    .replace(/[。．]/g, ".")
+    .replace(/[ー－−‐]/g, "-");
+}
+
+/**
+ * 時間文字列を秒数に変換（TIME_FORMAT_REGEX で構造ガードした厳格版、バリデーション用）
+ *
+ * "1.23.45" が 1.23 秒、"31-2" が 31 秒として誤解釈・誤保存されるのを防ぐ。
+ * 構造チェックを通過した入力のみ parseTime に委譲し、0 以下は null を返す。
  *
  * @param timeString - 時間文字列
  * @returns 秒数、または無効な場合はnull
  * @example parseTimeStrict("1:23.45") => 83.45
+ * @example parseTimeStrict("31-2") => 31.2 (クイック入力形式)
+ * @example parseTimeStrict("1：05。30") => 65.3 (全角区切りは ASCII に正規化)
+ * @example parseTimeStrict("1.23.45") => null
+ * @example parseTimeStrict("1:2:3") => null
  * @example parseTimeStrict("invalid") => null
  */
 export function parseTimeStrict(timeString: string): number | null {
-  if (!timeString || timeString.trim() === "") return null;
+  if (!timeString) return null;
+  const trimmed = normalizeTimeSeparators(timeString.trim());
+  if (!trimmed) return null;
+  if (!TIME_FORMAT_REGEX.test(trimmed)) return null;
+  const seconds = parseTime(trimmed);
+  return seconds > 0 ? seconds : null;
+}
 
-  const trimmed = timeString.trim();
+/**
+ * タイム入力欄の「不正形式のまま残っている」判定（web 各フォーム共通）。
+ * 空・未入力は不正扱いしない。parseTimeFlexible が解釈できない形式のみ true
+ * （"1.23.45" 等はクイック解釈で受理されるため不正扱いしない）。
+ */
+export function isInvalidTimeInput(displayValue: string | undefined): boolean {
+  return !!displayValue?.trim() && parseTimeFlexible(displayValue) === null;
+}
 
-  try {
-    const parts = trimmed.split(":");
-    // コロンが2つ以上ある場合は不正な形式
-    if (parts.length > 2) return null;
-
-    if (parts.length === 2) {
-      // "MM:SS.ms" 形式
-      const minutes = parseInt(parts[0].trim(), 10);
-      const seconds = parseFloat(parts[1].trim());
-
-      if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) return null;
-      if (Number.isNaN(minutes) || Number.isNaN(seconds)) return null;
-      if (minutes < 0 || seconds < 0) return null;
-
-      return minutes * 60 + seconds;
-    } else {
-      // "SS.ms" 形式
-      const seconds = parseFloat(trimmed);
-
-      if (!Number.isFinite(seconds) || Number.isNaN(seconds) || seconds < 0) {
-        return null;
-      }
-
-      return seconds;
-    }
-  } catch {
-    return null;
-  }
+/**
+ * 柔軟版タイムパース（単発タイム入力欄用: ベストタイム・大会レコード・エントリータイム）。
+ *
+ * まず parseTimeStrict を試し、弾かれた場合はクイック入力と同じ
+ * 「数字の間を任意の非数字で区切る」解釈にフォールバックする。
+ * 練習タイム入力 (useQuickTimeInput) と同じ入力を受理しつつ、
+ * 引き継ぎコンテキスト（十の位・分の引き継ぎ）は使わない。
+ *
+ * parseTimeStrict が通る入力の解釈は従来と完全に同一。
+ * "1.23.45" が 1.23 秒として誤確定される事故は起こらない
+ * （クイック解釈で 1:23.45 = 83.45 秒になる）。
+ *
+ * @example parseTimeFlexible("1:23.45") => 83.45
+ * @example parseTimeFlexible("1.23.45") => 83.45 (クイック解釈)
+ * @example parseTimeFlexible("1、23、4") => 83.4 (クイック解釈)
+ * @example parseTimeFlexible("1分12秒3") => 72.3 (クイック解釈)
+ * @example parseTimeFlexible("-23.45") => null (負値の試みは区切り扱いしない)
+ * @example parseTimeFlexible("invalid") => null
+ */
+export function parseTimeFlexible(timeString: string): number | null {
+  if (!timeString || !timeString.trim()) return null;
+  const trimmed = normalizeTimeSeparators(timeString.trim());
+  // 先頭の "-" は「負のタイムの試み」であって区切りではない (parseTime と同じガード)
+  if (trimmed.startsWith("-")) return null;
+  const strict = parseTimeStrict(trimmed);
+  if (strict !== null) return strict;
+  const quick = parseQuickTime(trimmed);
+  return quick && quick.time > 0 ? quick.time : null;
 }
 
 // =============================================================================

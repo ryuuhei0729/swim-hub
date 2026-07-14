@@ -5,8 +5,10 @@ import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 
 interface AvatarUploadProps {
+  /** プロフィール画像のバケット内相対パス（"{userId}/{fileName}"）。旧データはフルURLの場合もある */
   currentAvatarUrl?: string | null;
   userName: string;
   onAvatarChange: (newAvatarUrl: string | null) => void;
@@ -80,6 +82,8 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const previousBlobUrlRef = useRef<string | null>(null);
+  // profile-images は private バケットのため、パスから署名付きURLを解決して表示する
+  const { url: resolvedAvatarUrl } = useSignedImageUrl("profile-images", currentAvatarUrl);
 
   // blob URLのクリーンアップ
   useEffect(() => {
@@ -234,7 +238,8 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
     if (!confirmed) return;
 
     try {
-      const userFolderPath = `avatars/${user.id}`;
+      // パス規約: "{userId}/{fileName}"（旧 "avatars/{userId}/..." は移行済み。Issue #36）
+      const userFolderPath = user.id;
 
       const { data: files } = await supabase.storage.from("profile-images").list(userFolderPath);
 
@@ -271,10 +276,10 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
               style={styles.avatarImage}
               contentFit="cover"
             />
-          ) : currentAvatarUrl ? (
-            // 既存のアバター画像
+          ) : resolvedAvatarUrl ? (
+            // 既存のアバター画像（署名付きURL解決済み）
             <Image
-              source={{ uri: currentAvatarUrl }}
+              source={{ uri: resolvedAvatarUrl }}
               style={styles.avatarImage}
               contentFit="cover"
             />

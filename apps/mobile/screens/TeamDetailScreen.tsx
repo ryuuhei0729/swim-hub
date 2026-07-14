@@ -2,12 +2,14 @@ import React, { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Alert, Platform } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Feather } from "@expo/vector-icons";
-import { useRoute, RouteProp } from "@react-navigation/native";
+import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useTeamsQuery,
   useDeleteAnnouncementMutation,
+  useListPendingMembersQuery,
 } from "@apps/shared/hooks/queries/teams";
 import {
   TeamTabs,
@@ -18,6 +20,7 @@ import {
   type TeamTabType,
 } from "@/components/teams";
 import { AdminMonthlyAttendance } from "@/components/teams/AdminMonthlyAttendance";
+import { TeamSettingsModal } from "@/components/teams/TeamSettingsModal";
 import { TeamAnnouncementList } from "@/components/teams/TeamAnnouncementList";
 import { TeamAnnouncementForm } from "@/components/teams/TeamAnnouncementForm";
 import { TeamPracticeList } from "@/components/teams/TeamPracticeList";
@@ -28,6 +31,7 @@ import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 
 type TeamDetailScreenRouteProp = RouteProp<MainStackParamList, "TeamDetail">;
+type TeamDetailNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 /**
  * チーム詳細画面
@@ -35,6 +39,7 @@ type TeamDetailScreenRouteProp = RouteProp<MainStackParamList, "TeamDetail">;
  */
 export const TeamDetailScreen: React.FC = () => {
   const route = useRoute<TeamDetailScreenRouteProp>();
+  const navigation = useNavigation<TeamDetailNavigationProp>();
   const { teamId } = route.params;
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
@@ -43,6 +48,7 @@ export const TeamDetailScreen: React.FC = () => {
   const [isAdminView, setIsAdminView] = useState(false);
   const [announcementFormVisible, setAnnouncementFormVisible] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<TeamAnnouncement | undefined>(undefined);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
   // チームデータ取得
   const { currentTeam, members, announcements, isLoading, isError, error, refetch } = useTeamsQuery(supabase, {
@@ -55,6 +61,13 @@ export const TeamDetailScreen: React.FC = () => {
     if (!user || !members) return false;
     return members.some((m) => m.user_id === user.id && m.role === "admin");
   }, [user, members]);
+
+  // 承認待ちメンバー数（管理者のみ取得可。web TeamAdminClient の countPending 相当）
+  const { data: pendingMembers } = useListPendingMembersQuery(
+    supabase,
+    isCurrentUserAdmin ? teamId : undefined,
+  );
+  const pendingCount = pendingMembers?.length ?? 0;
 
   const deleteAnnouncementMutation = useDeleteAnnouncementMutation(supabase);
 
@@ -175,6 +188,21 @@ export const TeamDetailScreen: React.FC = () => {
     );
   };
 
+  // 一括登録画面への導線（管理者ビューの練習/大会タブ。web admin タブの bulk-register 相当）
+  const renderBulkRegisterButton = () => (
+    <View style={styles.bulkRegisterRow}>
+      <Pressable
+        style={styles.bulkRegisterButton}
+        onPress={() => navigation.navigate("TeamBulkRegister", { teamId })}
+        accessibilityRole="button"
+        accessibilityLabel={t("teamsAdmin.tabs.bulkRegister")}
+      >
+        <Feather name="upload" size={14} color="#2563EB" />
+        <Text style={styles.bulkRegisterButtonText}>{t("teamsAdmin.tabs.bulkRegister")}</Text>
+      </Pressable>
+    </View>
+  );
+
   // タブコンテンツのレンダリング
   const renderTabContent = () => {
     switch (activeTab) {
@@ -204,9 +232,19 @@ export const TeamDetailScreen: React.FC = () => {
           />
         );
       case "practices":
-        return <TeamPracticeList teamId={teamId} isAdmin={isAdminView} />;
+        return (
+          <View style={styles.eventTabContent}>
+            {isAdminView && renderBulkRegisterButton()}
+            <TeamPracticeList teamId={teamId} isAdmin={isAdminView} />
+          </View>
+        );
       case "competitions":
-        return <TeamCompetitionList teamId={teamId} isAdmin={isAdminView} />;
+        return (
+          <View style={styles.eventTabContent}>
+            {isAdminView && renderBulkRegisterButton()}
+            <TeamCompetitionList teamId={teamId} isAdmin={isAdminView} />
+          </View>
+        );
       case "attendance":
         return isAdminView ? (
           <AdminMonthlyAttendance teamId={teamId} />
@@ -271,6 +309,16 @@ export const TeamDetailScreen: React.FC = () => {
                 </Pressable>
               </View>
             )}
+            {isCurrentUserAdmin && isAdminView && (
+              <Pressable
+                style={styles.settingsButton}
+                onPress={() => setSettingsModalVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t("teamsAdmin.settings.title")}
+              >
+                <Feather name="edit-2" size={13} color="#6B7280" />
+              </Pressable>
+            )}
             {isCurrentUserAdmin && (
               <Pressable
                 style={[styles.adminToggleButton, isAdminView && styles.adminToggleButtonActive]}
@@ -308,10 +356,25 @@ export const TeamDetailScreen: React.FC = () => {
       </View>
 
       {/* タブ（固定） */}
-      <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} isAdmin={isAdminView} />
+      <TeamTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isAdmin={isAdminView}
+        pendingCount={isCurrentUserAdmin ? pendingCount : 0}
+      />
 
       {/* タブコンテンツ（スクロール可能） */}
       <View style={styles.tabContent}>{renderTabContent()}</View>
+
+      {/* チーム設定モーダル（管理者専用） */}
+      <TeamSettingsModal
+        visible={settingsModalVisible}
+        onClose={() => setSettingsModalVisible(false)}
+        teamId={teamId}
+        teamName={currentTeam.name}
+        teamDescription={currentTeam.description}
+        onSuccess={() => refetch()}
+      />
     </View>
   );
 };
@@ -400,6 +463,37 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
     minHeight: 400,
+  },
+  eventTabContent: {
+    flex: 1,
+  },
+  bulkRegisterRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  bulkRegisterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+  },
+  bulkRegisterButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+  settingsButton: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
   },
   membersTabContent: {
     flex: 1,

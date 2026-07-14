@@ -29,7 +29,12 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
-import { uploadImagesViaApi, deleteImages, getExistingImagesFromPaths } from "@/utils/imageUpload";
+import {
+  uploadImagesViaApi,
+  deleteImages,
+  resolveGalleryImages,
+  mergeImagePaths,
+} from "@/utils/imageUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -79,6 +84,9 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
+  // 保存用の生パス一覧（表示専用の resolveGalleryImages は失敗したパスを除外するため、
+  // 保存に使う image_paths はこちらを source of truth とする）
+  const [savedImagePaths, setSavedImagePaths] = useState<string[]>([]);
 
   // 画像変更のハンドラー
   const handleImagesChange = useCallback((newFiles: ImageFile[], deletedIds: string[]) => {
@@ -150,13 +158,17 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           setPlace(competition.place || "");
           setPoolType(competition.pool_type ?? 0);
           setNote(competition.note || "");
-          // 既存画像を読み込み
-          const images = getExistingImagesFromPaths(
-            supabase,
-            competition.image_paths,
-            "competition-images",
-          );
-          setExistingImages(images);
+          // 既存画像を読み込み（competition-images は private バケットのため署名付きURLを解決する。Issue #36）
+          setSavedImagePaths(competition.image_paths ?? []);
+          const accessToken = await getAccessToken();
+          if (accessToken) {
+            const images = await resolveGalleryImages(
+              "competition-images",
+              competition.image_paths,
+              accessToken,
+            );
+            setExistingImages(images);
+          }
         }
       } catch (error) {
         if (!isMounted) return;
@@ -175,7 +187,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [competitionId, supabase, navigation, t]);
+  }, [competitionId, supabase, navigation, getAccessToken, t]);
 
   // バリデーション
   const validate = (): boolean => {
@@ -251,11 +263,8 @@ export const CompetitionBasicFormScreen: React.FC = () => {
         newImagePaths = uploadResults.map((r) => r.path);
       }
 
-      // 2. 既存画像パスから削除されたものを除外し、新規画像パスを追加
-      const currentPaths = existingImages
-        .filter((img) => !deletedImageIds.includes(img.id))
-        .map((img) => img.id);
-      const updatedImagePaths = [...currentPaths, ...newImagePaths];
+      // 2. 生パス (source of truth) から削除分を除外し新規分を追加（mergeImagePaths 参照）
+      const updatedImagePaths = mergeImagePaths(savedImagePaths, deletedImageIds, newImagePaths);
 
       // team_id は除外: RLS UPDATE ポリシーが is_team_admin ガードを持ち、team_id は不変のため
       const formData = {

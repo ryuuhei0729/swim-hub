@@ -18,6 +18,7 @@ import { GroupFormModal } from "./GroupFormModal";
 import { GroupMemberModal } from "./GroupMemberModal";
 import { GroupMemberListModal } from "./GroupMemberListModal";
 import { BulkAssignModal } from "./BulkAssignModal";
+import { MemberDetailModal } from "../member-detail";
 
 interface TeamGroupManagementProps {
   teamId: string;
@@ -37,10 +38,10 @@ interface TeamMemberForSelection {
 
 export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   teamId,
-  members: _members,
+  members,
   isCurrentUserAdmin,
 }) => {
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const { t } = useTranslation();
 
   // グループデータ
@@ -74,6 +75,8 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [viewMembersGroup, setViewMembersGroup] = useState<TeamGroupWithCount | null>(null);
   const [bulkAssignCategory, setBulkAssignCategory] = useState<string | null>(null);
+  // メンバー詳細モーダル（web TeamGroupManagement.tsx:186-189 の onMemberClick 相当）
+  const [detailMember, setDetailMember] = useState<TeamMembershipWithUser | null>(null);
 
   // 初期読み込み
   useEffect(() => {
@@ -201,6 +204,20 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
     setBulkAssignCategory(category);
   }, []);
 
+  // グループメンバー一覧の行タップ → メンバー詳細を開く
+  // NOTE: iOS では兄弟 Modal の同時表示が不安定なため、一覧モーダルを閉じてから詳細を開く
+  const handleMemberClick = useCallback(
+    (userId: string) => {
+      const membership = members.find((m) => m.user_id === userId);
+      if (membership) {
+        setViewMembersGroup(null);
+        // 一覧モーダルの dismiss 完了を待ってから詳細を開く（既存のモーダル切替パターン踏襲）
+        setTimeout(() => setDetailMember(membership), 100);
+      }
+    },
+    [members],
+  );
+
   // ローディング
   if (loading) {
     return (
@@ -314,6 +331,16 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
         group={viewMembersGroup}
         teamId={teamId}
         supabase={supabase}
+        onMemberClick={handleMemberClick}
+      />
+
+      {/* メンバー詳細モーダル */}
+      <MemberDetailModal
+        isOpen={detailMember !== null}
+        onClose={() => setDetailMember(null)}
+        member={detailMember}
+        currentUserId={user?.id || ""}
+        isCurrentUserAdmin={isCurrentUserAdmin}
       />
 
       {/* 一括振り分けモーダル */}

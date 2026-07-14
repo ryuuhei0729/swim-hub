@@ -40,6 +40,7 @@ export default function RecordLogForm({
   const t = useTranslations("forms.recordLog");
   const tCompetition = useTranslations("forms.competition");
   const tUnsaved = useTranslations("forms.unsavedChanges");
+  const tTimeError = useTranslations("bulkBestTime.error");
   const locale = useLocale();
   const dateFnsLocale = locale === "ja" ? ja : enUS;
 
@@ -151,10 +152,16 @@ export default function RecordLogForm({
     setFormError(null);
     setIsSubmitted(true);
 
-    const { hasStyleError, submitList } = prepareSubmitData();
+    const { hasStyleError, hasTimeFormatError, submitList } = prepareSubmitData();
 
     if (hasStyleError) {
       setFormError(t("formError_noStyle"));
+      setIsSubmitted(false);
+      return;
+    }
+
+    if (hasTimeFormatError) {
+      setFormError(tTimeError("invalidTimeFormat"));
       setIsSubmitted(false);
       return;
     }

@@ -96,6 +96,7 @@ export default function DashboardClient({
     setCreatedEntries,
     setStyles: setCompetitionStyles,
     setLoading: setCompetitionLoading,
+    setEditingData: setCompetitionEditingData,
     setEditingCompetitionId,
   } = useCompetitionStore();
 
@@ -338,6 +339,7 @@ export default function DashboardClient({
     openRecordLogForm,
     setSelectedDate,
     setEditingData,
+    setCompetitionEditingData,
     handleDeleteItem,
     refreshCalendar,
   });

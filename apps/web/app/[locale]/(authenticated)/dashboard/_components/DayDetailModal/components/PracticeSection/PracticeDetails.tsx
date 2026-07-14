@@ -24,6 +24,7 @@ import type { PracticeShareData, PracticeMenuItem } from "@/components/share";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import { useAuth } from "@/contexts";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
+import { resolveGalleryImages } from "@/lib/image-url";
 import type {
   Practice,
   PracticeLogWithTimes,
@@ -87,7 +88,9 @@ export function PracticeDetails({
   const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const timeoutId = setTimeout(() => {
+      if (cancelled) return;
       setLoading(false);
       setError(new Error(tDash("practice.loadTimeout")));
     }, 15000);
@@ -178,36 +181,29 @@ export function PracticeDetails({
           ),
         };
 
-        // 画像データを変換
-        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-        const imagePaths = practiceData.image_paths || [];
-        const images: GalleryImage[] = imagePaths.map((path: string, index: number) => {
-          const imageUrl = r2PublicUrl
-            ? `${r2PublicUrl}/practice-images/${path}`
-            : supabase.storage.from("practice-images").getPublicUrl(path).data.publicUrl;
-          return {
-            id: path,
-            thumbnailUrl: imageUrl,
-            originalUrl: imageUrl,
-            fileName: path.split("/").pop() || `image-${index + 1}`,
-          };
-        });
-
+        if (cancelled) return;
+        // 本文を先に表示し、画像の署名URL解決はブロックしない（fire-and-forget）
         setPractice(formattedPractice);
-        setPracticeImages(images);
         clearTimeout(timeoutId);
+
+        const imagePaths = practiceData.image_paths || [];
+        resolveGalleryImages("practice-images", imagePaths).then((images: GalleryImage[]) => {
+          if (cancelled) return;
+          setPracticeImages(images);
+        });
       } catch (err) {
         clearTimeout(timeoutId);
         console.error("練習詳細の取得エラー:", err);
-        setError(err as Error);
+        if (!cancelled) setError(err as Error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadPractice();
 
     return () => {
+      cancelled = true;
       clearTimeout(timeoutId);
     };
   }, [practiceId, supabase, practiceLogUpdateKey, isTeamPractice, userId, tDash]);

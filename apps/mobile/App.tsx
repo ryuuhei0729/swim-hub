@@ -3,7 +3,7 @@ import { enableScreens } from "react-native-screens";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import * as Font from "expo-font";
 import { ChakraPetch_700Bold } from "@expo-google-fonts/chakra-petch";
@@ -106,7 +106,7 @@ const AppNavigator: React.FC = () => {
  */
 export default function App() {
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <I18nProvider>
         <ErrorBoundary>
           <QueryProvider>

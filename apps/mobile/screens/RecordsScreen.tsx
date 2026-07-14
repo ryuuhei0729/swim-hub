@@ -17,7 +17,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useRecordsQuery, useBestTimesQuery } from "@apps/shared/hooks/queries/records";
+import { useRecordsQuery } from "@apps/shared/hooks/queries/records";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
@@ -45,7 +45,7 @@ const getFiscalYear = (date: Date): number => {
  */
 export const RecordsScreen: React.FC = () => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
-  const { supabase, user } = useAuth();
+  const { supabase } = useAuth();
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
@@ -119,14 +119,6 @@ export const RecordsScreen: React.FC = () => {
     pageSize: 20,
     enableRealtime: true,
   });
-
-  // ベストタイムを 1 回だけ取得（FlatList N+1 解消）
-  const { data: bestTimesData, isError: bestTimesIsError, isLoading: bestTimesIsLoading } = useBestTimesQuery(supabase, { userId: user?.id });
-  // エラー時・ローディング中は undefined を渡し BestTimeBadge を Supabase フォールバックに切り替える
-  const precomputedBestTimes = useMemo(() => {
-    if (bestTimesIsError || bestTimesIsLoading || !bestTimesData) return undefined;
-    return bestTimesData;
-  }, [bestTimesData, bestTimesIsError, bestTimesIsLoading]);
 
   // クエリ結果をページごとに蓄積（フィルターとは独立）
   useEffect(() => {
@@ -263,11 +255,14 @@ export const RecordsScreen: React.FC = () => {
   );
 
   // アイテムをレンダリング（メモ化）
+  // ベストバッジは RecordItem 内 BestTimeBadge が「記録日時点で自己ベストだったか」を
+  // 判定する（判定完了まで非表示）。候補取得は種目グループ単位の共有キャッシュクエリ
+  // (useListBestCandidatesQuery) に集約されるため、行ごとのクエリは発行されない
   const renderItem = useCallback(
     ({ item }: { item: RecordWithDetails }) => {
-      return <RecordItem record={item} onPress={handleRecordPress} precomputedBestTimes={precomputedBestTimes} />;
+      return <RecordItem record={item} onPress={handleRecordPress} />;
     },
-    [handleRecordPress, precomputedBestTimes],
+    [handleRecordPress],
   );
 
   // ドロップダウンを開く
