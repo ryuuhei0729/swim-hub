@@ -110,7 +110,11 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
             </Pressable>
           </View>
 
-          <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            testID="password-change-body-scroll"
+          >
             {error && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
@@ -225,7 +229,9 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   body: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minHeight: 0,
   },
   bodyContent: {
     padding: 20,

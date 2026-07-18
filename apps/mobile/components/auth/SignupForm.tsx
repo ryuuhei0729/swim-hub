@@ -192,7 +192,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
         style={styles.scroll}

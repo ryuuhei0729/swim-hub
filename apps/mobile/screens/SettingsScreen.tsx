@@ -8,6 +8,8 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { restorePurchases } from "@/lib/revenucat";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { formatDate } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import { GoogleCalendarSyncSettings } from "@/components/settings/GoogleCalendarSyncSettings";
 import { IOSCalendarSyncSettings } from "@/components/settings/IOSCalendarSyncSettings";
 import { EmailChangeSettings } from "@/components/settings/EmailChangeSettings";
@@ -26,6 +28,7 @@ export const SettingsScreen: React.FC = () => {
   const { supabase, signOut, subscription, refreshSubscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const { t } = useTranslation();
+  const dateLocale = useDateLocale();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -135,14 +138,14 @@ export const SettingsScreen: React.FC = () => {
             {subscription?.status === "trialing" && subscription.trialEnd && (
               <Text style={styles.subscriptionNote}>
                 {t("settings.mobile.trialPeriodUntil", {
-                  date: new Date(subscription.trialEnd).toLocaleDateString(),
+                  date: formatDate(subscription.trialEnd, "long", dateLocale),
                 })}
               </Text>
             )}
             {subscription?.cancelAtPeriodEnd && subscription.premiumExpiresAt && (
               <Text style={styles.subscriptionNote}>
                 {t("settings.mobile.cancelScheduledOn", {
-                  date: new Date(subscription.premiumExpiresAt).toLocaleDateString(),
+                  date: formatDate(subscription.premiumExpiresAt, "long", dateLocale),
                 })}
               </Text>
             )}

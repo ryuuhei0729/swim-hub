@@ -53,7 +53,12 @@ import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
-import { hasUnsavedChanges, isEntryTabVisible, diffRecordDraft } from "@/utils/tabFormUtils";
+import {
+  hasUnsavedChanges,
+  isEntryTabVisible,
+  diffRecordDraft,
+  isDefaultUntouchedEntry,
+} from "@/utils/tabFormUtils";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
 import type { MainStackParamList } from "@/navigation/types";
@@ -228,6 +233,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // ---- 二重送信防止 ----
   const isSubmittingRef = useRef(false);
 
+  // ---- エントリー1行目に自動セットされたデフォルト種目ID (未編集判定用) ----
+  const defaultEntryStyleIdRef = useRef("");
+
   // ---- 保存完了フラグ ----
   // 保存完了フラグは ref で保持する。beforeRemove リスナーはクロージャに
   // state を閉じ込めるため、setIsSaved(true) 直後に goBack() すると
@@ -271,6 +279,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
         // 最初のエントリー行にデフォルト種目をセット
         if (stylesData.length > 0) {
+          defaultEntryStyleIdRef.current = String(stylesData[0].id);
           setEntries((prev) =>
             prev.map((e, i) =>
               i === 0 && !e.styleId ? { ...e, styleId: String(stylesData[0].id) } : e,
@@ -736,7 +745,15 @@ export const CompetitionTabFormScreen: React.FC = () => {
       }
 
       // --- エントリー保存 (大会日付が未来のときのみ) ---
-      if (savedCompetitionId && showEntryTab && entries.length > 0) {
+      // 未編集のデフォルト行 (種目取得後に自動セットされた1行目が未操作のまま) は
+      // 保存対象から除外する。編集モードの既存行 (existingEntryId あり) は対象外。
+      const effectiveEntries = entries.filter(
+        (e) => !isDefaultUntouchedEntry(e, defaultEntryStyleIdRef.current),
+      );
+
+      // effectiveEntries が空 (全行が未編集デフォルト or 全削除) でも、既存エントリーの
+      // 全件削除を resolveEntryMutations に委ねる必要があるためブロック自体はスキップしない。
+      if (savedCompetitionId && showEntryTab) {
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -748,7 +765,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           .filter((e) => e.user_id === user.id)
           .map((e) => ({ id: e.id, styleId: e.style_id }));
 
-        const formEntries: ResolveFormEntry[] = entries.map((e) => ({
+        const formEntries: ResolveFormEntry[] = effectiveEntries.map((e) => ({
           formId: e.draftId,
           styleId: parseInt(e.styleId, 10),
           entryTime: e.entryTime > 0 ? e.entryTime : null,
@@ -758,7 +775,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         // resolveEntryMutations は isRelaying を扱わないため、styleId → isRelaying の
         // 対応表を別途構築する (同一 style は後勝ち。resolveEntryMutations の集約規則と同じ)
         const relayByStyleId = new Map<number, boolean>();
-        for (const e of entries) {
+        for (const e of effectiveEntries) {
           const sid = parseInt(e.styleId, 10);
           if (Number.isInteger(sid) && sid > 0) relayByStyleId.set(sid, e.isRelaying);
         }
@@ -1470,7 +1487,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* タブバー */}
       <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="competition" />

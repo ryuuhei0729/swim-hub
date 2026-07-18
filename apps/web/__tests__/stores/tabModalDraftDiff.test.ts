@@ -22,6 +22,7 @@ import {
   computeRecordDiff,
 } from "../../utils/tabModalDiff";
 import type { PracticeMenuFormData, EntryFormData, RecordFormDataInput } from "../../stores/types";
+import { isDefaultUntouchedEntry } from "../../utils/tabModalDiff";
 
 // ============================================================
 // テスト用フィクスチャ
@@ -346,5 +347,247 @@ describe("[V-05-CW-record / C-R2-1/C-R2-2] RecordLogFormState 型での computeR
     const result = computeRecordDiff([newRecord], []);
     expect(result.toAdd).toHaveLength(1);
     expect((result.toAdd[0] as unknown as Record<string, unknown>).id).toBeUndefined();
+  });
+});
+
+// ============================================================
+// [V-01〜V-05-WEB] isDefaultUntouchedEntry — 未編集デフォルトエントリー行の判定
+//
+// Sprint Contract 検証観点 (バグ: 未来大会でエントリータブ未操作のまま保存すると
+// 25m Fr の未編集デフォルト行まで登録されてしまう):
+//   [V-01] エントリータブ未操作のまま保存 → エントリーは0件
+//   [V-02] 種目・タイム・メモ・リレーいずれかを編集した行は保存される
+//   [V-03] 複数行のうち未編集デフォルト行のみ除外、編集済み行は保存 (行数無関係の per-row フィルタ)
+//   [V-04] 種目だけ変更しタイム空のまま → シードタイム未定エントリーとして保存される
+//   [V-05] 編集モードの既存エントリーは、値がデフォルトと一致していても除外されない
+//
+// テスト対象: isDefaultUntouchedEntry (apps/web/utils/tabModalDiff.ts)
+//
+// 注意:
+//   - web の EntryDraft は existingEntryId を持たず、id が DB UUID かどうか (isDbUuid) で
+//     「新規行か既存DB行か」を判定する (computeEntryDiff と同じ規約)。
+//   - このテストは実装をローカルに再定義しない。期待値はすべて仕様から手で記述する。
+//   - 呼び出し側での使用イメージ (CompetitionTabModal.tsx handleSave 内、実装済み):
+//       const entriesToSave = entries.filter(
+//         (e) => !isDefaultUntouchedEntry(e, defaultStyleId),
+//       );
+// ============================================================
+
+const DEFAULT_STYLE_ID_WEB = "1"; // styles[0]?.id?.toString() 相当 (先頭種目)
+
+/** isDefaultUntouchedEntry に渡す想定のエントリー行 (web EntryDraft 相当)。 */
+interface EntryDraftFixture {
+  id: string;
+  styleId: string;
+  entryTime: number;
+  entryTimeDisplayValue: string;
+  note: string;
+  isRelaying: boolean;
+}
+
+/** 未編集のデフォルト行 (id は非UUIDのローカルID = 新規行を表す)。 */
+function makeUntouchedDefaultEntryWeb(
+  overrides: Partial<EntryDraftFixture> = {},
+): EntryDraftFixture {
+  return {
+    id: "entry-1",
+    styleId: DEFAULT_STYLE_ID_WEB,
+    entryTime: 0,
+    entryTimeDisplayValue: "",
+    note: "",
+    isRelaying: false,
+    ...overrides,
+  };
+}
+
+// フィクスチャ自体の健全性確認 (production コード非依存。it.todo が有効化されるまでの
+// unused-var 対策も兼ねる)。
+describe("テストフィクスチャ: makeUntouchedDefaultEntryWeb", () => {
+  it("デフォルト値は id=非UUID(新規行), styleId=デフォルト種目, 他は空/0/false を返す", () => {
+    const entry = makeUntouchedDefaultEntryWeb();
+    expect(entry).toEqual({
+      id: "entry-1",
+      styleId: DEFAULT_STYLE_ID_WEB,
+      entryTime: 0,
+      entryTimeDisplayValue: "",
+      note: "",
+      isRelaying: false,
+    });
+  });
+
+  it("overrides で個別フィールドを上書きできる", () => {
+    const entry = makeUntouchedDefaultEntryWeb({ note: "メモ" });
+    expect(entry.note).toBe("メモ");
+    expect(entry.styleId).toBe(DEFAULT_STYLE_ID_WEB);
+  });
+});
+
+describe("isDefaultUntouchedEntry — 単一行の判定 (web)", () => {
+  it("未編集デフォルト行 (styleId=デフォルト, entryTime=0, displayValue='', note='', isRelaying=false, id=非UUID) は true (除外される)", () => {
+    const entry = makeUntouchedDefaultEntryWeb();
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(true);
+  });
+
+  it("[V-04] 種目のみデフォルトから変更した行 (styleId が defaultStyleId と不一致) は false (保存対象・シードタイム未定エントリー)", () => {
+    const entry = makeUntouchedDefaultEntryWeb({ styleId: "2" });
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(false);
+  });
+
+  it("[V-02] タイムのみ入力した行 (entryTime>0 かつ displayValue 非空、styleId はデフォルトのまま) は false (保存対象)", () => {
+    const entry = makeUntouchedDefaultEntryWeb({
+      entryTime: 65.2,
+      entryTimeDisplayValue: "1:05.20",
+    });
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(false);
+  });
+
+  it("[V-02] メモのみ入力した行 (note 非空、他はデフォルトのまま) は false (保存対象)", () => {
+    const entry = makeUntouchedDefaultEntryWeb({ note: "自己ベスト更新目標" });
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(false);
+  });
+
+  it("[V-02] isRelaying のみ true にした行 (他はデフォルトのまま) は false (保存対象)", () => {
+    const entry = makeUntouchedDefaultEntryWeb({ isRelaying: true });
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(false);
+  });
+});
+
+describe("isDefaultUntouchedEntry — 既存 DB エントリーの非退行確認 (web)", () => {
+  it("[V-05] id が DB UUID (既存行) の場合、他の値がすべてデフォルトと一致していても false (誤って保存除外・削除されない)", () => {
+    // 既存編集行がたまたま「未編集デフォルト」と同じ値に見えるケース
+    // (例: ユーザーが一度入力してから全部消して保存した既存行)。
+    // id が isDbUuid(true) であるという事実だけで除外対象から外れなければならない。
+    const entry = makeUntouchedDefaultEntryWeb({ id: "11111111-1111-1111-1111-111111111111" });
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(false);
+  });
+});
+
+describe("isDefaultUntouchedEntry — 境界値 (web)", () => {
+  it("entryTimeDisplayValue が空白のみ ('   ') の行は空文字と同等に扱われ true (trim() 前提)", () => {
+    const entry = makeUntouchedDefaultEntryWeb({ entryTimeDisplayValue: "   " });
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(true);
+  });
+
+  it("note が空白のみ ('   ') の行は空文字と同等に扱われ true (trim() 前提)", () => {
+    const entry = makeUntouchedDefaultEntryWeb({ note: "   " });
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(true);
+  });
+
+  it("デフォルト styleId に手動で戻した行は区別できず true (仕様上の既知の限界。値ベース判定のため意図的に除外される)", () => {
+    // 値ベースの純粋関数は「一度も触られていない」と「他の値に変更後デフォルトへ戻した」を
+    // 区別できない。PM 確定の仕様により、この false negative (誤って除外) は許容する。
+    const entry = makeUntouchedDefaultEntryWeb(); // 見た目上は case1 と同一
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(true);
+  });
+
+  it("styles 未取得で defaultStyleId='' かつ styleId='' の行 (初期状態) は true (除外される)", () => {
+    const entry = makeUntouchedDefaultEntryWeb({ styleId: "" });
+    expect(isDefaultUntouchedEntry(entry, "")).toBe(true);
+  });
+
+  it("entryTime が負数の行 (異常値) は false (0 と等価でないため保存対象・上位バリデーションに委ねる)", () => {
+    const entry = makeUntouchedDefaultEntryWeb({ entryTime: -1 });
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID_WEB)).toBe(false);
+  });
+});
+
+describe("isDefaultUntouchedEntry — 複数行 per-row フィルタ適用 (web)", () => {
+  it("[V-03] 1行のみ (未編集デフォルト) → filter 適用後の配列は空 (保存0件)", () => {
+    const entries = [makeUntouchedDefaultEntryWeb()];
+    const result = entries.filter((e) => !isDefaultUntouchedEntry(e, DEFAULT_STYLE_ID_WEB));
+    expect(result).toHaveLength(0);
+  });
+
+  it("[V-03] 3行 (先頭のみ未編集デフォルト、2/3行目は編集済み) → filter 適用後は編集済み2行のみ残る (順序維持)", () => {
+    const entries = [
+      makeUntouchedDefaultEntryWeb(), // 1行目: 未編集デフォルト → 除外
+      makeUntouchedDefaultEntryWeb({ id: "entry-2", styleId: "2", entryTime: 60, entryTimeDisplayValue: "1:00.00" }),
+      makeUntouchedDefaultEntryWeb({ id: "entry-3", styleId: "3", note: "メモ" }),
+    ];
+    const result = entries.filter((e) => !isDefaultUntouchedEntry(e, DEFAULT_STYLE_ID_WEB));
+    expect(result).toHaveLength(2);
+    expect(result.map((e) => e.styleId)).toEqual(["2", "3"]);
+  });
+
+  it("[V-03] 全行が未編集デフォルト (同一 styleId で重複) → filter 適用後は空 (0件保存)", () => {
+    const entries = [makeUntouchedDefaultEntryWeb(), makeUntouchedDefaultEntryWeb({ id: "entry-2" })];
+    const result = entries.filter((e) => !isDefaultUntouchedEntry(e, DEFAULT_STYLE_ID_WEB));
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ============================================================
+// [V-05 非退行の保証] isDefaultUntouchedEntry フィルタ → computeEntryDiff 連結
+//
+// web の handleSave は元々 entryFormData を無条件で onSave に渡す設計 (entries.length に
+// よるガードは存在しない) だが、mobile 側で Reviewer Critical (effectiveEntries.length > 0
+// ガードによる delete 抜け) が見つかったため、web でも同種の退行が無いことを
+// フィルタ→computeEntryDiff の連結で明示的に保証する。
+// ============================================================
+
+describe("isDefaultUntouchedEntry → computeEntryDiff 連結 (web)", () => {
+  it("[V-05 非退行の保証] 編集モードで既存エントリーを全削除し未編集の空行のみ残して保存 → 全既存エントリーが toDelete に含まれる", () => {
+    // シナリオ: 編集画面で既存2エントリーの行を両方削除し、
+    // フォームには未編集の空行 (isDefaultUntouchedEntry=true) だけが残った状態で保存する。
+    const originalEntryIds = [UUID_1, UUID_2];
+    const draftEntries = [makeUntouchedDefaultEntryWeb({ id: "entry-1" })];
+
+    // Step 1: CompetitionTabModal.tsx handleSave と同じ per-row フィルタ
+    const effectiveDraftEntries = draftEntries.filter(
+      (e) => !isDefaultUntouchedEntry(e, DEFAULT_STYLE_ID_WEB),
+    );
+    expect(effectiveDraftEntries).toHaveLength(0); // 未編集行はフィルタで除外される
+
+    // Step 2: フィルタ後の行を EntryFormData に変換 (handleSave と同一ロジック)
+    const entryFormData: EntryFormData[] = effectiveDraftEntries.map((e) => ({
+      id: e.id,
+      styleId: e.styleId,
+      entryTime: e.entryTime,
+      note: e.note,
+      isRelaying: e.isRelaying,
+    }));
+
+    // Step 3: computeEntryDiff に渡す (useDashboardHandlers.ts の一括保存ハンドラーと同一)
+    const result = computeEntryDiff(entryFormData, originalEntryIds);
+
+    // フィルタ後 entryFormData=[] でも、既存2件は「フォームから消えた」として全件 toDelete される
+    expect(result.toAdd).toEqual([]);
+    expect(result.toUpdate).toEqual([]);
+    expect(result.toDelete).toEqual([UUID_1, UUID_2]);
+  });
+
+  it("[V-05 非退行の保証・対比] 編集済み行が1件残っていれば、その既存エントリーは toDelete されず toUpdate される", () => {
+    // 対比ケース: 未編集の空行に加えて、既存 UUID_1 を編集した行も残っている場合、
+    // UUID_1 は toUpdate、UUID_2 のみ toDelete される。
+    const originalEntryIds = [UUID_1, UUID_2];
+    const draftEntries = [
+      makeUntouchedDefaultEntryWeb({ id: "entry-new" }), // 未編集の新規空行 → 除外される
+      makeUntouchedDefaultEntryWeb({
+        id: UUID_1,
+        styleId: "5",
+        entryTime: 3000,
+        entryTimeDisplayValue: "30.00",
+      }), // 既存エントリーの編集 → 残る
+    ];
+
+    const effectiveDraftEntries = draftEntries.filter(
+      (e) => !isDefaultUntouchedEntry(e, DEFAULT_STYLE_ID_WEB),
+    );
+    expect(effectiveDraftEntries).toHaveLength(1);
+
+    const entryFormData: EntryFormData[] = effectiveDraftEntries.map((e) => ({
+      id: e.id,
+      styleId: e.styleId,
+      entryTime: e.entryTime,
+      note: e.note,
+      isRelaying: e.isRelaying,
+    }));
+
+    const result = computeEntryDiff(entryFormData, originalEntryIds);
+
+    expect(result.toAdd).toEqual([]);
+    expect(result.toUpdate).toHaveLength(1);
+    expect(result.toUpdate[0].id).toBe(UUID_1);
+    expect(result.toDelete).toEqual([UUID_2]);
   });
 });

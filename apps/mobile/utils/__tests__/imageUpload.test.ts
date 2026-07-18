@@ -312,3 +312,227 @@ describe("resolveGalleryImages", () => {
     ]);
   });
 });
+
+// =============================================================================
+// Bug1 (Android): プロフィール画像アップロード失敗の修正 — Sprint Contract D1-b
+//
+// uploadProfileImageViaApi / deleteProfileImageViaApi (新規実装予定) のテストスケルトン。
+// 既存の uploadImageViaApi / deleteImageViaApi (practice-images / competition-images 用) と
+// 同型だが、profile-images は以下の点で異なるため、そのまま流用はできない:
+//   - POST に practiceId/competitionId のような id パラメータが不要
+//     (user.id はサーバー側で認証トークンから解決される)
+//   - DELETE は特定の path を指定せず、そのユーザーの profile-images フォルダを丸ごと削除する
+//     (クエリパラメータなし。他バケットの deleteImageViaApi(path, bucket, accessToken) とは
+//     シグネチャが異なる)
+//
+// 前提 (QA が Sprint Contract Phase A で検証済み):
+//   apps/web/app/api/storage/profile/route.ts は現状 getServerUser() / createAuthenticatedServerClient()
+//   (Cookie 専用認証、@supabase/ssr + next/headers cookies()) のみを使用しており、mobile からの
+//   Authorization: Bearer トークンのみのリクエスト (Cookie なし) を受け付けない (401 になる)。
+//   images/practice, images/competition の route.ts は authenticateApiRequest()
+//   (Cookie 認証 → 失敗時 Bearer トークンにフォールバック) を使用しており、mobile から現に
+//   正常に呼べている。
+//   → D1-b の実装には apps/web/app/api/storage/profile/route.ts を authenticateApiRequest() に
+//     変更する web 側の修正が対になって必要 (Sprint Contract 参照。Web Developer 側の作業)。
+//     この web 側修正自体の可否検証は本テストファイルの範囲外
+//     (mobile 側の fetch モックでは web 側の実際の認証可否は検証できないため、
+//     Web 側 CI / 実機・dev server 経由の疎通確認で別途確認すること)。
+//
+// 関数名・シグネチャは Developer の裁量に委ねるが、以下を推奨する:
+//   uploadProfileImageViaApi(file: { base64: string; fileExtension: string }, accessToken: string): Promise<{ path: string }>
+//   deleteProfileImageViaApi(accessToken: string): Promise<void>
+//
+// トートロジー防止メモ:
+//   - 期待するエンドポイント・ヘッダー・ペイロード形状は Sprint Contract
+//     (apps/web/app/api/storage/profile/route.ts の実装と、既存 uploadImageViaApi の慣習) から
+//     QA が独立に定義したものであり、Developer の diff を見て書いたものではない。
+// =============================================================================
+
+import { uploadProfileImageViaApi, deleteProfileImageViaApi } from "../imageUpload";
+
+describe("uploadProfileImageViaApi", () => {
+  const originalFetch = global.fetch;
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it(
+    "[V-P-01] POST {webApiUrl}/api/storage/profile を Authorization: Bearer <accessToken> ヘッダー付きで呼ぶ",
+    async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ path: "user1/new.jpg" }),
+      });
+
+      await uploadProfileImageViaApi({ base64: "abc123", fileExtension: "jpg" }, ACCESS_TOKEN);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("https://swim-hub.app/api/storage/profile");
+      expect(options.method).toBe("POST");
+      expect((options.headers as Record<string, string>)["Authorization"]).toBe(
+        `Bearer ${ACCESS_TOKEN}`,
+      );
+    },
+  );
+
+  it(
+    "[V-P-02] FormData の 'file' フィールドに base64 から組み立てた data URI " +
+      "(fileExtension から導出した MIME タイプ) を付与する",
+    async () => {
+      // jsdom の FormData はスペック準拠で Blob 以外を append すると文字列化するため、
+      // get() での読み戻しではなく append() 自体への呼び出し引数を spy で検証する
+      const appendSpy = vi.spyOn(FormData.prototype, "append");
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ path: "user1/new.png" }) });
+
+      await uploadProfileImageViaApi({ base64: "pngdata", fileExtension: "png" }, ACCESS_TOKEN);
+
+      expect(appendSpy).toHaveBeenCalledWith(
+        "file",
+        expect.objectContaining({
+          uri: "data:image/png;base64,pngdata",
+          type: "image/png",
+          name: "image.png",
+        }),
+      );
+      appendSpy.mockRestore();
+    },
+  );
+
+  it(
+    "[V-P-03] practiceId/competitionId に相当する id パラメータを送らない " +
+      "(profile は user.id をサーバー側で解決するため、FormData に file 以外のフィールドが無い)",
+    async () => {
+      const appendSpy = vi.spyOn(FormData.prototype, "append");
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ path: "user1/new.jpg" }) });
+
+      await uploadProfileImageViaApi({ base64: "abc", fileExtension: "jpg" }, ACCESS_TOKEN);
+
+      expect(appendSpy).toHaveBeenCalledTimes(1); // "file" 以外のフィールドを append していない
+      appendSpy.mockRestore();
+    },
+  );
+
+  it("[V-P-04] レスポンスが ok のとき { path } をそのまま返す", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ path: "user1/avatar-123.jpg" }),
+    });
+
+    const result = await uploadProfileImageViaApi(
+      { base64: "abc", fileExtension: "jpg" },
+      ACCESS_TOKEN,
+    );
+
+    expect(result).toEqual({ path: "user1/avatar-123.jpg" });
+  });
+
+  it(
+    "[V-P-05] レスポンスが non-ok のとき、レスポンス body の message/error を含むエラーを throw する",
+    async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: "ファイルサイズは5MB以下にしてください" }),
+      });
+
+      await expect(
+        uploadProfileImageViaApi({ base64: "abc", fileExtension: "jpg" }, ACCESS_TOKEN),
+      ).rejects.toThrow("ファイルサイズは5MB以下にしてください");
+    },
+  );
+
+  it(
+    "[V-P-06] レスポンスが non-ok かつ JSON パース自体も失敗する場合、" +
+      "デフォルトのエラーメッセージで throw する (クラッシュしない)",
+    async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        json: async () => {
+          throw new Error("invalid json");
+        },
+      });
+
+      await expect(
+        uploadProfileImageViaApi({ base64: "abc", fileExtension: "jpg" }, ACCESS_TOKEN),
+      ).rejects.toThrow("画像のアップロードに失敗しました");
+    },
+  );
+});
+
+describe("deleteProfileImageViaApi", () => {
+  const originalFetch = global.fetch;
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    global.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it(
+    "[V-P-07] DELETE {webApiUrl}/api/storage/profile を Authorization: Bearer <accessToken> ヘッダー付きで呼ぶ",
+    async () => {
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) });
+
+      await deleteProfileImageViaApi(ACCESS_TOKEN);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("https://swim-hub.app/api/storage/profile");
+      expect(options.method).toBe("DELETE");
+      expect((options.headers as Record<string, string>)["Authorization"]).toBe(
+        `Bearer ${ACCESS_TOKEN}`,
+      );
+    },
+  );
+
+  it(
+    "[V-P-08] path クエリパラメータを付与しない " +
+      "(プロフィール画像はユーザーフォルダ丸ごと削除のため、他バケットの deleteImageViaApi(path, ...) とは" +
+      "シグネチャが異なる)",
+    async () => {
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) });
+
+      await deleteProfileImageViaApi(ACCESS_TOKEN);
+
+      const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).not.toContain("?");
+      expect(url).not.toContain("path=");
+    },
+  );
+
+  it("[V-P-09] レスポンスが ok のとき正常終了する (戻り値なし)", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) });
+
+    await expect(deleteProfileImageViaApi(ACCESS_TOKEN)).resolves.toBeUndefined();
+  });
+
+  it("[V-P-10] レスポンスが non-ok のとき、レスポンス body の error を含むエラーを throw する", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: "認証が必要です" }),
+    });
+
+    await expect(deleteProfileImageViaApi(ACCESS_TOKEN)).rejects.toThrow("認証が必要です");
+  });
+
+  it(
+    "[V-P-11] 削除対象のファイルが元々存在しない場合でも成功として扱われる " +
+      "(route.ts の files.length===0 分岐に対応。呼び出し側からは 200 { success: true } として観測される)",
+    async () => {
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) });
+
+      await expect(deleteProfileImageViaApi(ACCESS_TOKEN)).resolves.not.toThrow();
+    },
+  );
+});

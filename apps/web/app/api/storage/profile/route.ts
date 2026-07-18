@@ -2,7 +2,7 @@
  * プロフィール画像のアップロード/削除 API
  * R2優先、Supabase Storageフォールバック
  */
-import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
+import { authenticateApiRequest } from "@/lib/auth-api";
 import { isR2Enabled, uploadToR2, listR2Objects, deleteMultipleFromR2 } from "@/lib/r2";
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
@@ -16,10 +16,11 @@ const ALLOWED_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await getServerUser();
-    if (!user) {
+    const auth = await authenticateApiRequest(request);
+    if (!auth) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+    const { user, supabase } = auth;
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -53,36 +54,38 @@ export async function POST(request: NextRequest) {
     if (isR2Enabled()) {
       const key = `profile-images/${relativePath}`;
 
-      // 既存の画像を削除（新旧両方のプレフィックスを対象・並行取得）
+      // 削除対象の旧ファイルをアップロード前にキャプチャ（新旧両方のプレフィックスを対象・並行取得）。
+      // 新ファイル名はUUIDで衝突しないため、後で削除してもこの後アップロードする新ファイルを巻き込まない
       const [newPrefixFiles, legacyPrefixFiles] = await Promise.all([
         listR2Objects(`profile-images/${user.id}/`),
         listR2Objects(`profiles/avatars/${user.id}/`),
       ]);
-      const allExistingFiles = [...newPrefixFiles, ...legacyPrefixFiles];
-      if (allExistingFiles.length > 0) {
-        await deleteMultipleFromR2(allExistingFiles);
-      }
+      const existingFilesToDelete = [...newPrefixFiles, ...legacyPrefixFiles];
 
       // 新しい画像をアップロード（private バケットのため公開URLは使わない）
+      // ここで失敗した場合は旧画像に一切触れずエラーを返す
       const buffer = Buffer.from(await file.arrayBuffer());
       await uploadToR2(buffer, key, file.type);
+
+      // アップロード成功後に旧ファイルを削除。失敗は非致命
+      // （次回アップロード時のキャプチャに残骸が含まれ自己修復されるため、レスポンスには影響させない）
+      if (existingFilesToDelete.length > 0) {
+        await deleteMultipleFromR2(existingFilesToDelete).catch((cleanupError) => {
+          console.error("旧プロフィール画像(R2)の削除に失敗しました:", cleanupError);
+        });
+      }
 
       return NextResponse.json({ path: relativePath });
     }
 
     // フォールバック: Supabase Storage
-    const supabase = await createAuthenticatedServerClient();
     const userFolderPath = user.id;
 
-    // 既存の画像を削除
+    // 削除対象の旧ファイルをアップロード前にキャプチャ
+    // （新ファイル名はUUIDで衝突しないため、後で削除してもこの後アップロードする新ファイルを巻き込まない）
     const { data: files } = await supabase.storage.from("profile-images").list(userFolderPath);
 
-    if (files && files.length > 0) {
-      const filePaths = files.map((f) => `${userFolderPath}/${f.name}`);
-      await supabase.storage.from("profile-images").remove(filePaths);
-    }
-
-    // 新しい画像をアップロード
+    // 新しい画像をアップロード。ここで失敗した場合は旧画像に一切触れずエラーを返す
     const { error: uploadError } = await supabase.storage
       .from("profile-images")
       .upload(relativePath, file, {
@@ -95,6 +98,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "画像のアップロードに失敗しました" }, { status: 500 });
     }
 
+    // アップロード成功後に旧ファイルを削除。失敗は非致命
+    // （次回アップロード時のキャプチャに残骸が含まれ自己修復されるため、レスポンスには影響させない）
+    if (files && files.length > 0) {
+      const filePaths = files.map((f) => `${userFolderPath}/${f.name}`);
+      try {
+        const { error: removeError } = await supabase.storage
+          .from("profile-images")
+          .remove(filePaths);
+        if (removeError) throw removeError;
+      } catch (cleanupError) {
+        console.error("旧プロフィール画像(Supabase Storage)の削除に失敗しました:", cleanupError);
+      }
+    }
+
     return NextResponse.json({ path: relativePath });
   } catch (error) {
     console.error("プロフィール画像アップロードエラー:", error);
@@ -105,12 +122,13 @@ export async function POST(request: NextRequest) {
 /**
  * DELETE: プロフィール画像を削除
  */
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
-    const user = await getServerUser();
-    if (!user) {
+    const auth = await authenticateApiRequest(request);
+    if (!auth) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
+    const { user, supabase } = auth;
 
     // R2が有効な場合はR2を使用
     if (isR2Enabled()) {
@@ -127,7 +145,6 @@ export async function DELETE() {
     }
 
     // フォールバック: Supabase Storage
-    const supabase = await createAuthenticatedServerClient();
     const userFolderPath = user.id;
 
     const { data: files } = await supabase.storage.from("profile-images").list(userFolderPath);

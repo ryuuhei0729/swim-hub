@@ -10,6 +10,7 @@ import type { CalendarItem } from "@apps/shared/types/ui";
 import { styles } from "./styles";
 import { MemoizedPracticeLogDetail, RecordDetail, EntryDetail } from "./components";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { computeDayDetailMinHeight } from "./minHeight";
 import type { DayDetailModalProps } from "./types";
 
 /**
@@ -110,6 +111,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   // PracticeLogのPracticeTimeの有無を追跡
   const [practiceLogsWithTimes, setPracticeLogsWithTimes] = useState<Set<string>>(new Set());
+  // エントリーの画像/動画メディアの有無を追跡
+  const [entriesWithMedia, setEntriesWithMedia] = useState<Set<string>>(new Set());
 
   // PracticeTimeの有無を更新するコールバック
   const handlePracticeTimeLoaded = useCallback((practiceLogId: string, hasTimes: boolean) => {
@@ -124,30 +127,24 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     });
   }, []);
 
-  // エントリー数と種類に応じて最小高さを動的に計算
-  const minHeight = useMemo(() => {
-    const hasPracticeLog = entries.some((entry) => entry.type === "practice_log");
-    const hasPracticeLogWithTimes = entries.some(
-      (entry) => entry.type === "practice_log" && practiceLogsWithTimes.has(entry.id),
-    );
-    const hasRecords = entries.some((entry) => entry.type === "record");
+  // メディア（画像/動画）の有無を更新するコールバック
+  const handleMediaLoaded = useCallback((entryId: string, hasMedia: boolean) => {
+    setEntriesWithMedia((prev) => {
+      const next = new Set(prev);
+      if (hasMedia) {
+        next.add(entryId);
+      } else {
+        next.delete(entryId);
+      }
+      return next;
+    });
+  }, []);
 
-    if (entries.length === 0) return 300;
-    if (entries.length === 1) {
-      if (hasRecords) return 600;
-      if (!hasPracticeLog) return 400;
-      if (hasPracticeLogWithTimes) return 600;
-      return 350;
-    }
-    if (entries.length === 2) {
-      if (hasRecords) return 700;
-      if (hasPracticeLogWithTimes) return 600;
-      return hasPracticeLog ? 600 : 375;
-    }
-    if (hasRecords) return 750;
-    if (hasPracticeLogWithTimes) return 700;
-    return 500;
-  }, [entries, practiceLogsWithTimes]);
+  // エントリー数と種類、メディアの有無に応じて最小高さを動的に計算
+  const minHeight = useMemo(
+    () => computeDayDetailMinHeight(entries, practiceLogsWithTimes, entriesWithMedia),
+    [entries, practiceLogsWithTimes, entriesWithMedia],
+  );
 
   // 動的なスタイルを生成
   const modalContentStyle = useMemo(() => [styles.modalContent, { minHeight }], [minHeight]);
@@ -220,7 +217,11 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               </Pressable>
             </View>
 
-            <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+            <ScrollView
+              style={styles.body}
+              contentContainerStyle={styles.bodyContent}
+              nestedScrollEnabled={true}
+            >
               {/* エントリーがない場合 */}
               {entries.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -313,6 +314,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           onEditCompetition={onEditCompetition}
                           onDeleteCompetition={onDeleteCompetition}
                           onPracticeTimeLoaded={handlePracticeTimeLoaded}
+                          onMediaLoaded={handleMediaLoaded}
                         />
                       );
                     })}
@@ -434,6 +436,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           onEditRecord={onEditRecord}
                           onDeleteRecord={onDeleteRecord}
                           onClose={onClose}
+                          onMediaLoaded={handleMediaLoaded}
                         />
                       );
                     })}

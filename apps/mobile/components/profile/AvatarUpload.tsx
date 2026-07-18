@@ -6,6 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
+import { deleteProfileImageViaApi } from "@/utils/imageUpload";
 
 interface AvatarUploadProps {
   /** プロフィール画像のバケット内相対パス（"{userId}/{fileName}"）。旧データはフルURLの場合もある */
@@ -78,7 +79,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   disabled = false,
 }) => {
   const { t } = useTranslation();
-  const { supabase, user } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const previousBlobUrlRef = useRef<string | null>(null);
@@ -175,11 +176,16 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         // 画像を選択（base64データも取得）
         // WEBの実装と同様に画質を落とす（quality: 0.7 = 70%）
         const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          mediaTypes: ["images"],
           allowsEditing: true,
           aspect: [1, 1],
           quality: 0.7, // WEBと同様に70%に設定
           base64: true, // base64データを取得
+          // legacy: true は必須。HEIC/HEIFをJPEGに変換するためだけでなく、
+          // 新（非legacy）pickerは allowsEditing/aspect によるクロップをサポートしないため、
+          // 正方形クロップ（aspect: [1, 1]）を成立させるにも legacy: true が必要。
+          // 「HEIC対応は不要」等の理由でこれを消すとクロップが壊れるので注意。
+          legacy: true,
         });
 
         if (result.canceled) {
@@ -238,15 +244,12 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
     if (!confirmed) return;
 
     try {
-      // パス規約: "{userId}/{fileName}"（旧 "avatars/{userId}/..." は移行済み。Issue #36）
-      const userFolderPath = user.id;
-
-      const { data: files } = await supabase.storage.from("profile-images").list(userFolderPath);
-
-      if (files && files.length > 0) {
-        const filePathsToDelete = files.map((f) => `${userFolderPath}/${f.name}`);
-        await supabase.storage.from("profile-images").remove(filePathsToDelete);
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        throw new Error(t("common.upload.sessionInvalid"));
       }
+
+      await deleteProfileImageViaApi(accessToken);
 
       onAvatarChange(null);
     } catch (err) {

@@ -97,6 +97,40 @@ export function computeEntryDiff(
   return { toAdd, toUpdate, toDelete };
 }
 
+/** isDefaultUntouchedEntry の判定対象行 (web CompetitionTabModal の EntryDraft 相当)。 */
+export interface UntouchedEntryCandidate {
+  id: string;
+  styleId: string;
+  entryTime: number;
+  entryTimeDisplayValue: string;
+  note: string;
+  isRelaying: boolean;
+}
+
+/**
+ * 未編集のデフォルトエントリー行かどうかを判定する純粋関数。
+ *
+ * 新規行 (id が DB UUID でない = computeEntryDiff と同じ既存判定規約) であり、かつ
+ * 種目がデフォルトのまま・タイム未入力・メモ空・リレーOFF の場合のみ true を返す。
+ * 既存 DB エントリー (id が DB UUID) は値が一致していても常に false (誤削除防止)。
+ *
+ * @param entry - 判定対象のエントリー行
+ * @param defaultStyleId - 初期表示される種目 ID (styles[0]?.id?.toString() ?? "")
+ */
+export function isDefaultUntouchedEntry(
+  entry: UntouchedEntryCandidate,
+  defaultStyleId: string,
+): boolean {
+  if (isDbUuid(entry.id)) return false;
+  return (
+    entry.entryTime === 0 &&
+    entry.entryTimeDisplayValue.trim() === "" &&
+    entry.note.trim() === "" &&
+    !entry.isRelaying &&
+    entry.styleId === defaultStyleId
+  );
+}
+
 // =============================================================================
 // レコード差分
 // =============================================================================

@@ -1,0 +1,88 @@
+Was ist SwimHub?
+
+Trainingsnotizen, Wettkampfergebnisse, Teamkommunikation – Schwimm-Aufzeichnungen verteilen sich schnell über viele Orte. SwimHub führt alles zusammen: eine App für Trainings- und Wettkampfaufzeichnungen. Ihre Einträge bleiben auch nach einem Teamwechsel erhalten – von der Einzelnutzung bis zur Verwaltung ganzer Teams.
+
+[Hauptfunktionen]
+
+■ 1. Trainingsaufzeichnungen
+Erfassen Sie Ihr Training nach Datum und verfolgen Sie Abgangszeiten und Trainingszeiten im Diagramm. Ihr Fortschritt auf einen Blick – das hält die Motivation hoch.
+
+・Trainingssets erfassen (Distanz, Wiederholungen, Sets, Abgangszeit)
+・Trainingszeiten erfassen (25 m, 50 m sowie feine Abstände wie 5 m, 12,5 m, 15 m)
+・Einheiten mit Trainings-Tags organisieren
+・Monatsübersicht in der Kalenderansicht
+
+■ 2. Wettkampfergebnisse
+Verfolgen Sie Ihre Zeiten je Disziplin und finden Sie per Zwischenzeiten-Analyse Verbesserungspotenzial. Bestzeiten werden automatisch aktualisiert.
+
+・Alle Disziplinen (Freistil, Brust, Rücken, Schmetterling, Lagen)
+・Kurzbahn, Langbahn und Staffel (mit oder ohne Ablösung)
+・Flexible Zwischenzeiten (alle 25 m, alle 50 m oder 5 m / 12,5 m / 15 m)
+・Entwicklungsdiagramme je Disziplin
+・Schwimmvideos per YouTube-Link mit Einträgen verknüpfen
+
+■ 3. Teamverwaltung
+Ideal für Schwimmvereine und Schulteams. Alle Aufzeichnungen des Teams an einem Ort.
+
+・Stellvertretende Eingabe: Trainer und Betreuer erfassen alle Ergebnisse auf einmal
+・Anwesenheit: Teilnahme an Training und Wettkämpfen verwalten
+・Meldungsübersicht: Meldedisziplinen und -zeiten automatisch zusammenfassen
+・Mitteilungen: Teaminfos einfach teilen
+・Mehrere Teams: gleichzeitige Mitgliedschaft, z. B. Schulteam und Verein
+・Excel-Import: Teamtermine gesammelt aus einer Excel-Datei übernehmen
+
+[Drei Wege, SwimHub zu nutzen]
+
+◆ 1: Für sich selbst
+Tragen Sie Trainings- und Wettkampfergebnisse selbst ein. Ideal für Masters-Schwimmer und alle, die allein trainieren.
+
+◆ 2: Im Verein oder Schulteam
+Teilen Sie Aufzeichnungen im Team. Trainer und Betreuer tragen alle Ergebnisse stellvertretend ein, Anwesenheit und Meldungen laufen effizient.
+
+◆ 3: Mit Freunden
+Die Teamfunktionen eignen sich auch für Freundesgruppen. Wer die Zeiten der anderen sieht, spornt sich gegenseitig an.
+
+[Funktionen, die den Unterschied machen]
+
+◇ Einträge bleiben – auch nach dem Teamwechsel
+Alle Aufzeichnungen sind an Ihre Person gebunden. Ob Schul- oder Vereinswechsel: Ihre Entwicklung bleibt lückenlos erhalten.
+
+◇ Kurzbahn, Langbahn und Ablösung im Blick
+„Kurzbahn oder Langbahn? Mit Staffelablösung?“ Auch diese Bedingungen werden gespeichert, damit Vergleiche später korrekt bleiben.
+
+◇ Flexible Zwischenzeiten
+Neben 25 m und 50 m auch feine Abstände wie 5 m, 12,5 m und 15 m – ganz wie es zu Ihnen passt.
+
+◇ Meldungsübersicht für Wettkämpfe
+Meldezeiten werden je Disziplin automatisch zusammengefasst – das spart Zeit und vermeidet Übertragungsfehler.
+
+◇ Videos und Einträge per YouTube-Link verbinden
+Videos bleiben auf YouTube. Link mit dem Eintrag verknüpfen und Technik und Zeit mit einem Tipp vergleichen.
+
+◇ Excel-Import
+Teamtermine gesammelt aus einer Excel-Datei übernehmen – das spart viel Tipparbeit.
+
+[Bedienkomfort]
+
+・Schlichte Oberfläche: intuitiv und sofort einsatzbereit
+・Kalenderansicht: Training und Wettkämpfe im Monatskalender
+・Offline-Zugriff: Aufzeichnungen auch ohne Internet einsehen
+・Datensicherheit: persönliche Daten werden sicher verwaltet
+
+[Für wen ist SwimHub?]
+
+・Alle, die privat schwimmen
+・Aktive in Schwimmvereinen und Schulteams
+・Trainer und Betreuer von Teams
+・Freundesgruppen, die sich gegenseitig anspornen wollen
+・Alle, die ihre Entwicklung festhalten möchten
+
+[Erste Schritte]
+
+Konto erstellen (nur eine E-Mail-Adresse nötig)
+Trainings- oder Wettkampfergebnisse eintragen
+Fortschritt verfolgen
+Wer zu einem Team gehört, tritt ihm einfach bei und nutzt sofort die Teamfunktionen.
+
+Nutzungsbedingungen: https://swim-hub.app/terms
+Datenschutzerklärung: https://swim-hub.app/privacy

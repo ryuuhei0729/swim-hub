@@ -80,11 +80,17 @@ describe("KeyboardAvoidingView 適用確認 (Sprint Contract #31)", () => {
       },
     );
 
+    // NOTE (2026-07-18): Android の behavior は 'height' から undefined に統一済み
+    // (Hermes 環境における高さ計算ズレの回避のため)。behavior 未指定時は
+    // AndroidManifest.xml の android:windowSoftInputMode (adjustResize) による
+    // ネイティブ側のリサイズ挙動に委譲する。
     it.todo(
-      "[V-20] LoginForm の KAV behavior が Android では 'height' であること",
+      "[V-20] LoginForm の KAV behavior が Android では undefined であること (adjustResize に委譲)",
       async () => {
         // TODO: Developer 実装後に有効化
         // Platform.OS を 'android' にモックして behavior prop を確認
+        // const kav = UNSAFE_getByType(KeyboardAvoidingView);
+        // expect(kav.props.behavior).toBeUndefined();
       },
     );
   });
