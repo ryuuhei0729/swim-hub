@@ -51,6 +51,7 @@ export interface PracticeLogDetailProps {
   onEditCompetition?: (item: CalendarItem) => void;
   onDeleteCompetition?: (competitionId: string) => void;
   onPracticeTimeLoaded?: (practiceLogId: string, hasTimes: boolean) => void;
+  onMediaLoaded?: (entryId: string, hasMedia: boolean) => void;
 }
 
 // TimeTableのProps
@@ -75,6 +76,7 @@ export interface RecordDetailProps {
   onEditRecord?: (item: CalendarItem) => void;
   onDeleteRecord?: (recordId: string) => void;
   onClose?: () => void;
+  onMediaLoaded?: (entryId: string, hasMedia: boolean) => void;
 }
 
 // EntryDetailのProps

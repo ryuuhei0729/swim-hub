@@ -113,7 +113,7 @@ export const EmailChangeSettings: React.FC = () => {
       <Modal visible={isModalOpen} animationType="fade" transparent onRequestClose={closeModal}>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable style={styles.modalBackdrop} onPress={closeModal} />
           <View style={styles.modalContent}>

@@ -962,7 +962,7 @@ export const PracticeTabFormScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* タブバー */}
       <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="practice" />

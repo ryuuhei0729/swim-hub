@@ -28,6 +28,39 @@ export function isEntryTabVisible(date: string | null | undefined): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// isDefaultUntouchedEntry
+// ---------------------------------------------------------------------------
+/**
+ * エントリー行が「未編集のデフォルト行」かどうかを判定する純粋関数。
+ * 未来大会の新規作成時、種目取得完了後にデフォルト種目が自動セットされた
+ * 1行目が、ユーザーが一切操作しないまま保存されてしまうバグを防ぐために使う。
+ *
+ * @param entry 判定対象のエントリー行 (EntryDraftRow の判定に必要な部分集合)
+ * @param defaultStyleId 種目取得後に自動セットされたデフォルト種目 ID。未取得時は空文字。
+ * @returns 既存DBエントリーではなく、かつ全項目が未編集のデフォルト値のとき true
+ */
+export interface EntryRowForDefaultCheck {
+  existingEntryId?: string;
+  styleId: string;
+  entryTime: number;
+  entryTimeDisplayValue: string;
+  note: string;
+  isRelaying: boolean;
+}
+
+export function isDefaultUntouchedEntry(
+  entry: EntryRowForDefaultCheck,
+  defaultStyleId: string,
+): boolean {
+  if (entry.existingEntryId) return false;
+  if (entry.entryTime !== 0) return false;
+  if (entry.entryTimeDisplayValue.trim() !== "") return false;
+  if (entry.note.trim() !== "") return false;
+  if (entry.isRelaying) return false;
+  return entry.styleId === defaultStyleId;
+}
+
+// ---------------------------------------------------------------------------
 // hasUnsavedChanges
 // ---------------------------------------------------------------------------
 /**

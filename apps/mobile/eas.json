@@ -20,6 +20,22 @@
         "EXPO_PUBLIC_R2_PUBLIC_URL": "https://images.swim-hub.app"
       }
     },
+    "screenshot": {
+      "extends": "production",
+      "autoIncrement": false,
+      "environment": "production",
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Release",
+        "image": "sdk-55"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_WEB_API_URL": "https://swim-hub.app",
+        "EXPO_PUBLIC_R2_PUBLIC_URL": "https://images.swim-hub.app",
+        "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
+      }
+    },
     "preview": {
       "channel": "preview",
       "ios": {

@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { View, Text, Modal, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import {
-  View,
-  Text,
-  Modal,
-  Pressable,
+  GestureHandlerRootView,
+  GestureDetector,
+  Gesture,
   ScrollView,
-  ActivityIndicator,
-  StyleSheet,
-} from "react-native";
-import { GestureHandlerRootView, GestureDetector, Gesture } from "react-native-gesture-handler";
+} from "react-native-gesture-handler";
 import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";

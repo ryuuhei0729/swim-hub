@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { CompetitionAPI } from "@apps/shared/api";
 import { isEntryTabVisible } from "@/utils/tabModalUtils";
+import { isDefaultUntouchedEntry } from "@/utils/tabModalDiff";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { formatTimeBest } from "@/utils/formatters";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
@@ -219,6 +220,10 @@ export default function CompetitionTabModal({
       isRelaying: false,
     },
   ]);
+  // 1行目のエントリーに自動セットされたデフォルト種目ID (未編集判定用)。
+  // 上の useState 初期値と同一の式・同一タイミングで固定し、以後 styles prop が
+  // 変化しても handleSave 時の判定基準がズレないようにする。
+  const defaultEntryStyleIdRef = useRef(styles[0]?.id?.toString() || "");
   const [entryValidationError, setEntryValidationError] = useState<string | null>(null);
   const [originalEntryIds, setOriginalEntryIds] = useState<string[]>([]);
   const [originalRecordIds, setOriginalRecordIds] = useState<string[]>([]);
@@ -609,13 +614,17 @@ export default function CompetitionTabModal({
     try {
       const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0;
 
-      const entryFormData: EntryFormData[] = entries.map((e) => ({
-        id: e.id,
-        styleId: e.styleId,
-        entryTime: e.entryTime,
-        note: e.note,
-        isRelaying: e.isRelaying,
-      }));
+      // 未編集のデフォルト行(種目・タイム・メモ・リレーいずれも初期値のまま)は
+      // ユーザーが一度も触れていない行として保存対象から除外する(行数に関係ない per-row 判定)。
+      const entryFormData: EntryFormData[] = entries
+        .filter((e) => !isDefaultUntouchedEntry(e, defaultEntryStyleIdRef.current))
+        .map((e) => ({
+          id: e.id,
+          styleId: e.styleId,
+          entryTime: e.entryTime,
+          note: e.note,
+          isRelaying: e.isRelaying,
+        }));
 
       // レコードタブ: 未来日ガード中はレコードを一切変更しない。
       // records と originalRecordIds の両方を空にして diff を no-op にする（既存レコードの誤削除防止）。
@@ -713,14 +722,14 @@ export default function CompetitionTabModal({
       ...prev,
       {
         id: `entry-${Date.now()}`,
-        styleId: styles[0]?.id?.toString() || "",
+        styleId: defaultEntryStyleIdRef.current,
         entryTime: 0,
         entryTimeDisplayValue: "",
         note: "",
         isRelaying: false,
       },
     ]);
-  }, [styles]);
+  }, []);
 
   const removeEntry = useCallback((id: string) => {
     setEntries((prev) => prev.filter((e) => e.id !== id));

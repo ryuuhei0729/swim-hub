@@ -1,0 +1,5 @@
+- Zeiten und Ergebnisse lassen sich jetzt einfacher eingeben
+- Wettkampfergebnisse als Bildkarte teilen
+- Geschlecht im Profil festlegen
+- Stabilere Google-Kalender-Synchronisierung
+- Sicherheitsverbesserungen und zahlreiche Fehlerbehebungen

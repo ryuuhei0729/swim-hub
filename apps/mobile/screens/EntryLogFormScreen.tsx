@@ -569,7 +569,7 @@ export const EntryLogFormScreen: React.FC = () => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* エントリー種目セクション */}

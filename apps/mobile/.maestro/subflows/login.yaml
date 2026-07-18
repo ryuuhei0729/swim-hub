@@ -32,9 +32,30 @@ appId: ${APP_ID}
       - tapOn:
           id: "login-password-input"
       - inputText: ${APP_PASSWORD}
-      - hideKeyboard
+      # hideKeyboard は入れない: iPad で直後の submit タップを不安定にする。
+      # 送信ボタンはキーボード表示中でもタップ可能（画面中央）。
+      # 送信ボタン。押下直後にログインが進んで要素が消える／iOS のパスワード保存
+      # ダイアログが被るため、タップ後確認で not-found になり得る。optional で継続する。
       - tapOn:
           id: "login-submit-button"
+          optional: true
+      # ログインの通信完了（セッションが AsyncStorage/Keychain に保存される）を待つ。
+      # 成功後は tab-dashboard がツリーに現れる（iOS のパスワード保存ダイアログが前面に
+      # 被っていても要素自体は存在）。最大 20 秒待ってから再起動する。
+      - extendedWaitUntil:
+          visible:
+            id: "tab-dashboard"
+          timeout: 20000
+          optional: true
+      # アプリを再起動して、Maestro からは操作できない iOS システムの
+      # 「パスワードを保存しますか?」ダイアログを消し、ダッシュボードに揃える。
+      # セッションは保存済みのため、再起動後はログイン済みで開く（scanner と同じ手法）。
+      - launchApp:
+          appId: ${APP_ID}
+          arguments:
+            "-AppleLanguages": "(${LOCALE})"
+            "-AppleLocale": "${LOCALE}_${REGION}"
+          clearState: false
 
 # メイン画面（タブバー）が出るまで待つ。オンボーディング済みのデモユーザー前提。
 - extendedWaitUntil:

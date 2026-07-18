@@ -6,7 +6,7 @@ import { BirthdayInput } from "@/components/ui/BirthdayInput";
 import { GenderToggle } from "@/components/ui/GenderToggle";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { UserProfile } from "@swim-hub/shared/types";
-import { base64ToArrayBuffer } from "@/utils/base64";
+import { uploadProfileImageViaApi } from "@/utils/imageUpload";
 
 interface ProfileEditModalProps {
   visible: boolean;
@@ -27,7 +27,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   onAvatarChange,
 }) => {
   const { t } = useTranslation();
-  const { supabase, user } = useAuth();
+  const { user, getAccessToken } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     birthday: "",
@@ -75,59 +75,22 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
       // 選択した画像がある場合はアップロード
       if (selectedImageData && user) {
         try {
-          // パス規約: "{userId}/{fileName}"（旧 "avatars/{userId}/..." は移行済み。Issue #36）
-          const userFolderPath = user.id;
-
-          // 既存画像の削除（WEBの実装と同様）
-          try {
-            const { data: files, error: listError } = await supabase.storage
-              .from("profile-images")
-              .list(userFolderPath);
-
-            // 404エラーは「ディレクトリが存在しない（削除するものがない）」として扱う
-            const errorStatusCode = (listError as { statusCode?: string | number } | null)
-              ?.statusCode;
-            if (!listError || errorStatusCode === "404" || errorStatusCode === 404) {
-              if (files && files.length > 0) {
-                // すべてのファイルを削除
-                const filePathsToDelete = files.map((f) => `${userFolderPath}/${f.name}`);
-
-                await supabase.storage.from("profile-images").remove(filePathsToDelete);
-              }
-            }
-          } catch {
-            // エラーが発生しても続行（新規ユーザーなど、フォルダが存在しない場合もある）
+          const accessToken = await getAccessToken();
+          if (!accessToken) {
+            throw new Error(t("common.upload.sessionInvalid"));
           }
 
-          // base64をArrayBufferに変換（React Native対応）
-          const base64Data = selectedImageData.base64;
-          const arrayBuffer = base64ToArrayBuffer(base64Data);
-
-          // ファイル名を生成
-          const fileExt = selectedImageData.fileExtension || "jpg";
-          const fileName = `${Date.now()}.${fileExt}`;
-          const filePath = `${userFolderPath}/${fileName}`;
-
-          // コンテンツタイプを決定
-          const contentType = fileExt === "png" ? "image/png" : "image/jpeg";
-
-          // Supabase Storageにアップロード（React NativeではArrayBufferを使用）
-          const { error: uploadError } = await supabase.storage
-            .from("profile-images")
-            .upload(filePath, arrayBuffer, {
-              cacheControl: "3600",
-              upsert: false,
-              contentType,
-            });
-
-          if (uploadError) {
-            console.error("アップロードエラー:", uploadError);
-            throw uploadError;
-          }
+          const { path } = await uploadProfileImageViaApi(
+            {
+              base64: selectedImageData.base64,
+              fileExtension: selectedImageData.fileExtension || "jpg",
+            },
+            accessToken,
+          );
 
           // profile-images は private バケットのため、公開URLではなく
           // バケット内相対パスをDBに保存する（表示時は署名付きURLを解決する。Issue #36）
-          await onAvatarChange(filePath);
+          await onAvatarChange(path);
         } catch (err) {
           console.error("画像アップロードエラー:", err);
           const errorMessage =

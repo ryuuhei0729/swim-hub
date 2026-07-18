@@ -304,3 +304,62 @@ export async function uploadImagesViaApi(
     throw error;
   }
 }
+
+/**
+ * Web API (/api/storage/profile) 経由でプロフィール画像をアップロード
+ *
+ * practice-images / competition-images 用の uploadImageViaApi とは異なり、
+ * practiceId/competitionId に相当する id パラメータは送らない
+ * (プロフィール画像は user.id をサーバー側で認証トークンから解決するため)
+ */
+export async function uploadProfileImageViaApi(
+  file: { base64: string; fileExtension: string },
+  accessToken: string,
+): Promise<{ path: string }> {
+  const endpoint = `${env.webApiUrl}/api/storage/profile`;
+
+  const formData = new FormData();
+  const mimeType = getContentType(file.fileExtension);
+  formData.append("file", {
+    uri: `data:${mimeType};base64,${file.base64}`,
+    type: mimeType,
+    name: `image.${file.fileExtension}`,
+  } as unknown as Blob);
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    throw new Error(data.message ?? data.error ?? i18n.t("common.upload.imageUploadFailedSimple"));
+  }
+
+  return (await res.json()) as { path: string };
+}
+
+/**
+ * Web API (/api/storage/profile) 経由でプロフィール画像を削除
+ *
+ * ユーザーの profile-images フォルダを丸ごと削除するため、他バケットの
+ * deleteImageViaApi(path, bucket, accessToken) と異なり path クエリパラメータは送らない
+ */
+export async function deleteProfileImageViaApi(accessToken: string): Promise<void> {
+  const endpoint = `${env.webApiUrl}/api/storage/profile`;
+
+  const res = await fetch(endpoint, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? i18n.t("common.upload.imageDeleteFailedSimple"));
+  }
+}
