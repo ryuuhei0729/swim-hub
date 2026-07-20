@@ -33,7 +33,6 @@ interface PracticeFormState {
 
 interface PracticeFilterState {
   selectedTagIds: string[];
-  showTagFilter: boolean;
 }
 
 interface PracticeFormActions {
@@ -63,7 +62,6 @@ interface PracticeFormActions {
 
 interface PracticeFilterActions {
   setSelectedTags: (tagIds: string[]) => void;
-  toggleTagFilter: () => void;
   resetFilter: () => void;
 }
 
@@ -92,7 +90,6 @@ const initialFormState: PracticeFormState = {
 
 const initialFilterState: PracticeFilterState = {
   selectedTagIds: [],
-  showTagFilter: false,
 };
 
 const initialState: PracticeState = {
@@ -210,7 +207,6 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
   // Filter: 操作
   // ---------------------------------------------------------------------------
   setSelectedTags: (tagIds) => set({ selectedTagIds: tagIds }),
-  toggleTagFilter: () => set((state) => ({ showTagFilter: !state.showTagFilter })),
   resetFilter: () => set(initialFilterState),
 
   // ---------------------------------------------------------------------------

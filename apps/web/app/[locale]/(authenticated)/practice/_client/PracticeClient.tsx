@@ -54,7 +54,7 @@ export default function PracticeClient({ initialPractices, styles, tags }: Pract
   const [, startTransition] = useTransition();
 
   // Zustandストア
-  const { selectedTagIds, showTagFilter, setSelectedTags, toggleTagFilter } = usePracticeStore();
+  const { selectedTagIds, setSelectedTags } = usePracticeStore();
 
   const {
     isFormOpen,
@@ -537,28 +537,22 @@ export default function PracticeClient({ initialPractices, styles, tags }: Pract
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* ヘッダー */}
-      <div className="hidden lg:block bg-white rounded-lg shadow p-5 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{t("details.badge")}</h1>
-            <p className="text-sm sm:text-base text-gray-600">
-              {t("page.description")}
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-            <Button
-              onClick={() => toggleTagFilter()}
-              variant="outline"
-              className="flex items-center space-x-2 w-full sm:w-auto justify-center"
-            >
-              <span>{t("page.filterByTag")}</span>
-            </Button>
-          </div>
+      <div
+        className={`bg-white rounded-lg shadow p-5 sm:p-6 ${
+          tags.length === 0 ? "hidden lg:block" : ""
+        }`}
+      >
+        {/* ページヘッダー（デスクトップのみ） */}
+        <div className="hidden lg:block mb-4 pb-4 border-b border-gray-200">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{t("details.badge")}</h1>
+          <p className="text-sm sm:text-base text-gray-600">
+            {t("page.description")}
+          </p>
         </div>
 
-        {/* タグフィルタリングUI */}
-        {showTagFilter && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
+        {/* タグフィルタリングUI（常時表示） */}
+        {tags.length > 0 && (
+          <>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag: PracticeTag) => (
                 <button
@@ -596,7 +590,7 @@ export default function PracticeClient({ initialPractices, styles, tags }: Pract
                 {t("page.filteringWith", { n: selectedTagIds.length })}
               </p>
             )}
-          </div>
+          </>
         )}
       </div>
 

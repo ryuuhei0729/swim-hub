@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
 } from "react-native";
-import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format, parseISO, isValid, isBefore } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -192,15 +192,21 @@ export const CompetitionTabFormScreen: React.FC = () => {
     setDeletedImageIds(deletedIds);
   }, []);
 
+  // ---- 新規作成モードの初期エントリー/レコード (state と snapshot で同一参照を共有する) ----
+  // 別々に createEmptyEntry()/createEmptyRecord() を呼ぶと draftId (Date.now()+Math.random())
+  // が毎回異なり、無変更でも hasUnsavedChanges の JSON 比較が常に changed=true になってしまう。
+  const initialEntriesRef = useRef<EntryDraftRow[]>([createEmptyEntry()]);
+  const initialRecordsRef = useRef<RecordDraftRow[]>([createEmptyRecord()]);
+
   // ---- エントリータブ state ----
-  const [entries, setEntries] = useState<EntryDraftRow[]>([createEmptyEntry()]);
+  const [entries, setEntries] = useState<EntryDraftRow[]>(initialEntriesRef.current);
   const [activeEntryIndex, setActiveEntryIndex] = useState(0);
   const [swimStyles, setSwimStyles] = useState<Style[]>([]);
   const [loadingStyles, setLoadingStyles] = useState(true);
   const [entryErrors, setEntryErrors] = useState<Record<string, string>>({});
 
   // ---- レースレコードタブ state ----
-  const [records, setRecords] = useState<RecordDraftRow[]>([createEmptyRecord()]);
+  const [records, setRecords] = useState<RecordDraftRow[]>(initialRecordsRef.current);
   const [activeRecordIndex, setActiveRecordIndex] = useState(0);
   const [recordErrors, setRecordErrors] = useState<Record<string, string>>({});
   // 動画保留 (record.draftId → asset)
@@ -209,6 +215,13 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const pendingVideoAssetRef = useRef<Map<string, { uri: string; mimeType?: string }>>(
     new Map(),
   );
+  // 保留動画の有無 (shouldPreventRemove 用のリアクティブなミラー)。
+  // pendingVideoAssetRef 自体は Map の実データ置き場として維持しつつ、
+  // 件数が変わるたびにこの state も同期させることで shouldPreventRemove に反映させる。
+  const [pendingVideoCount, setPendingVideoCount] = useState(0);
+  const syncPendingVideoCount = useCallback(() => {
+    setPendingVideoCount(pendingVideoAssetRef.current.size);
+  }, []);
 
   // ---- タブ state ----
   // エントリータブ表示制御: 大会日付が未来のときのみ true
@@ -236,13 +249,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // ---- エントリー1行目に自動セットされたデフォルト種目ID (未編集判定用) ----
   const defaultEntryStyleIdRef = useRef("");
 
-  // ---- 保存完了フラグ ----
-  // 保存完了フラグは ref で保持する。beforeRemove リスナーはクロージャに
-  // state を閉じ込めるため、setIsSaved(true) 直後に goBack() すると
-  // リスナー再登録が間に合わず古い値 (false) を読んで破棄ダイアログが誤発火する
-  // (動画アップロードの await で保存処理が長引くと特に再現しやすい)。
-  // ref なら常に最新値を読めるためこの競合を回避できる。
-  const isSavedRef = useRef(false);
+  // ---- 保存完了フラグ (usePreventRemove 制御) ----
+  // usePreventRemove(preventRemove, ...) の preventRemove は render のたびに評価される
+  // ただの boolean のため、ref (isSavedRef.current 等) で持つと値を変えても再レンダーが
+  // 起きず preventRemove が更新されない。state で持つことで変化が確実に再レンダーへ反映される。
+  const [isSaved, setIsSaved] = useState(false);
 
   // ---- 未保存変更スナップショット ----
   const snapshotRef = useRef<{
@@ -279,17 +290,28 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
         // 最初のエントリー行にデフォルト種目をセット
         if (stylesData.length > 0) {
-          defaultEntryStyleIdRef.current = String(stylesData[0].id);
+          const defaultStyleId = String(stylesData[0].id);
+          defaultEntryStyleIdRef.current = defaultStyleId;
           setEntries((prev) =>
-            prev.map((e, i) =>
-              i === 0 && !e.styleId ? { ...e, styleId: String(stylesData[0].id) } : e,
-            ),
+            prev.map((e, i) => (i === 0 && !e.styleId ? { ...e, styleId: defaultStyleId } : e)),
           );
           setRecords((prev) =>
-            prev.map((r, i) =>
-              i === 0 && !r.styleId ? { ...r, styleId: String(stylesData[0].id) } : r,
-            ),
+            prev.map((r, i) => (i === 0 && !r.styleId ? { ...r, styleId: defaultStyleId } : r)),
           );
+          // 新規作成モードのみ: snapshot 側の1行目にも同じデフォルト種目を反映し、
+          // 「自動セットされただけ」の行が編集扱いにならないようにする
+          // (編集モードは既存データが真実のため触らない)。
+          if (!isEditMode && snapshotRef.current) {
+            snapshotRef.current = {
+              ...snapshotRef.current,
+              entries: snapshotRef.current.entries.map((e, i) =>
+                i === 0 && !e.styleId ? { ...e, styleId: defaultStyleId } : e,
+              ),
+              records: snapshotRef.current.records.map((r, i) =>
+                i === 0 && !r.styleId ? { ...r, styleId: defaultStyleId } : r,
+              ),
+            };
+          }
         }
       } catch (error) {
         console.error("種目取得エラー:", error);
@@ -299,6 +321,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
       }
     };
     fetchStyles();
+    // isEditMode は保存完了で resolvedCompetitionId が変わると同じ effect 内で
+    // 再評価されてほしくない (初回種目取得のみでよい) ため意図的に依存から除外する。
+    // isEditMode はこの effect のクロージャに mount 時点の値で固定されるため、
+    // 保存完了後に true に変わっても (この effect 自体は再実行されないので) 影響しない。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, t]);
 
   // ---- 既存データ初期化 (編集モード) ----
@@ -435,6 +462,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
   useEffect(() => {
     if (isEditMode) return;
     const initDate = initialDateParam || format(new Date(), "yyyy-MM-dd");
+    // entries/records は state 初期値 (initialEntriesRef/initialRecordsRef) と同一参照を使う。
+    // 別々に createEmptyEntry()/createEmptyRecord() を呼ぶと draftId が食い違い、
+    // 無変更でも hasUnsavedChanges が常に changed=true を返してしまう。
     snapshotRef.current = {
       date: initDate,
       endDate: "",
@@ -442,8 +472,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
       place: "",
       poolType: 0,
       note: "",
-      entries: [createEmptyEntry()],
-      records: [createEmptyRecord()],
+      entries: initialEntriesRef.current,
+      records: initialRecordsRef.current,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -473,54 +503,51 @@ export const CompetitionTabFormScreen: React.FC = () => {
     [endDate],
   );
 
-  // ---- beforeRemove 警告 ----
+  // ---- 保存完了 → 前画面へ戻る ----
+  // setIsSaved(true) の直後に navigation.goBack() を同期で呼ぶと、preventRemove=false を
+  // 反映したレンダーが commit される前に REMOVE アクションが発行されてしまう。isSaved の
+  // 変化で再レンダーが commit されるのを待ってからこの effect 経由で goBack() することで、
+  // preventRemove=false が確定した状態で REMOVE を発行する。
   useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      if (isSavedRef.current) return;
-      const snapshot = snapshotRef.current;
-      if (!snapshot) return;
-      const changed = hasUnsavedChanges(
-        { date, endDate, title, place, poolType, note: competitionNote, entries, records },
-        {
-          date: snapshot.date,
-          endDate: snapshot.endDate,
-          title: snapshot.title,
-          place: snapshot.place,
-          poolType: snapshot.poolType,
-          note: snapshot.note,
-          entries: snapshot.entries,
-          records: snapshot.records,
-        },
-      );
-      if (!changed) return;
+    if (isSaved) {
+      navigation.goBack();
+    }
+  }, [isSaved, navigation]);
 
-      e.preventDefault();
-      Alert.alert(
-        t("common.discardTitle"),
-        t("common.discardMessage"),
-        [
-          { text: t("common.cancel"), style: "cancel" },
-          {
-            text: t("common.discard"),
-            style: "destructive",
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-    return unsubscribe;
-  }, [
-    navigation,
-    date,
-    endDate,
-    title,
-    place,
-    poolType,
-    competitionNote,
-    entries,
-    records,
-    t,
-  ]);
+  // ---- 破棄確認 ----
+  // snapshotRef の更新は必ず対応する state 変更を伴わせること (伴わないと memo が再計算されず stale になる)
+  const changedFromSnapshot = useMemo(() => {
+    if (!snapshotRef.current) return false;
+    return hasUnsavedChanges(
+      { date, endDate, title, place, poolType, note: competitionNote, entries, records },
+      {
+        date: snapshotRef.current.date,
+        endDate: snapshotRef.current.endDate,
+        title: snapshotRef.current.title,
+        place: snapshotRef.current.place,
+        poolType: snapshotRef.current.poolType,
+        note: snapshotRef.current.note,
+        entries: snapshotRef.current.entries,
+        records: snapshotRef.current.records,
+      },
+    );
+  }, [date, endDate, title, place, poolType, competitionNote, entries, records]);
+  const shouldPreventRemove = !isSaved && (changedFromSnapshot || pendingVideoCount > 0);
+
+  usePreventRemove(shouldPreventRemove, ({ data }) => {
+    Alert.alert(
+      t("common.discardTitle"),
+      t("common.discardMessage"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.discard"),
+          style: "destructive",
+          onPress: () => navigation.dispatch(data.action),
+        },
+      ],
+    );
+  });
 
   // ---- 大会タブ バリデーション ----
   const validateCompetitionTab = useCallback((): boolean => {
@@ -921,6 +948,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
               }
             }
             pendingVideoAssetRef.current.delete(record.draftId);
+            syncPendingVideoCount();
           }
         }
       }
@@ -931,8 +959,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
       }
 
-      isSavedRef.current = true;
-      navigation.goBack();
+      // navigation.goBack() はここで直接呼ばず、isSaved を state 化してレンダーを
+      // 経由させる (usePreventRemove が preventRemove=false を読んだ後に goBack() する)
+      setIsSaved(true);
     } catch (error) {
       console.error("保存エラー:", error);
       const msg = error instanceof Error ? error.message : t("competition.mobile.saveFailed");
@@ -973,8 +1002,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
     entryApi,
     profile,
     syncCompetition,
+    syncPendingVideoCount,
     t,
-    navigation,
   ]);
 
   // ---- エントリー操作 ----
@@ -1104,21 +1133,35 @@ export const CompetitionTabFormScreen: React.FC = () => {
     });
   }, [swimStyles]);
 
-  const removeRecord = useCallback((draftId: string) => {
-    setRecords((prev) => {
-      if (prev.length <= 1) return prev;
-      const removedIndex = prev.findIndex((r) => r.draftId === draftId);
-      pendingVideoAssetRef.current.delete(draftId);
-      const next = prev.filter((r) => r.draftId !== draftId);
-      setActiveRecordIndex((cur) => {
-        const newLen = next.length;
-        if (cur >= newLen) return newLen - 1;
-        if (cur > removedIndex) return cur - 1;
-        return cur;
+  const removeRecord = useCallback(
+    (draftId: string) => {
+      // setRecords の updater は純粋に保つ。ref の mutation と非 React state の同期は
+      // updater の外で行うが、実行するかどうかの判定は updater 内の
+      // `prev.length <= 1` チェックのみを唯一の権威とする。render スコープの
+      // records.length (クロージャ固定値) で判定すると、同一 tick 内で連続削除された
+      // 場合に古いクロージャの判定が権威と乖離し、行は残るのに保留動画だけ消える
+      // データロスが起きうる。
+      let didRemove = false;
+      setRecords((prev) => {
+        if (prev.length <= 1) return prev;
+        didRemove = true;
+        const removedIndex = prev.findIndex((r) => r.draftId === draftId);
+        const next = prev.filter((r) => r.draftId !== draftId);
+        setActiveRecordIndex((cur) => {
+          const newLen = next.length;
+          if (cur >= newLen) return newLen - 1;
+          if (cur > removedIndex) return cur - 1;
+          return cur;
+        });
+        return next;
       });
-      return next;
-    });
-  }, []);
+      if (didRemove) {
+        pendingVideoAssetRef.current.delete(draftId);
+        syncPendingVideoCount();
+      }
+    },
+    [syncPendingVideoCount],
+  );
 
   const updateRecord = useCallback(
     (draftId: string, updates: Partial<RecordDraftRow>) => {
@@ -1954,6 +1997,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                         } else {
                           pendingVideoAssetRef.current.delete(record.draftId);
                         }
+                        syncPendingVideoCount();
                       }}
                     />
                   </View>

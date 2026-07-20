@@ -83,6 +83,111 @@ function validateRedirectPath(redirectTo: string | null, origin?: string): strin
 }
 
 /**
+ * メール確認 (signup / recovery / email_change 等) の token_hash + type で
+ * 使用可能な OTP 種別。Supabase の EmailOtpType のサブセット（invite は対象外）。
+ */
+type OtpType = "signup" | "recovery" | "email_change" | "email" | "magiclink";
+
+const OTP_TYPES: readonly OtpType[] = ["signup", "recovery", "email_change", "email", "magiclink"];
+
+function isOtpType(value: string | null): value is OtpType {
+  return value !== null && (OTP_TYPES as readonly string[]).includes(value);
+}
+
+/**
+ * OTP種別からデフォルトの遷移先パスを導出する
+ * - signup: オンボーディングへ
+ * - recovery: パスワード更新画面へ（resetPasswordForEmailの遷移先を維持）
+ * - email_change / email: 設定画面へ（EmailChangeSettingsの遷移先を維持）
+ * - magiclink: ダッシュボードへ
+ */
+function getDefaultRedirectForOtpType(type: OtpType): string {
+  switch (type) {
+    case "signup":
+      return "/onboarding";
+    case "recovery":
+      return "/update-password";
+    case "email_change":
+    case "email":
+      return "/settings";
+    case "magiclink":
+      return "/dashboard";
+  }
+}
+
+/**
+ * token_hash + type を使ったメール確認フロー（PKCEを使わない）
+ * signup / recovery / email_change のメールリンクはこちらで処理する
+ */
+async function handleVerifyOtpFlow(
+  request: NextRequest,
+  requestUrl: URL,
+  tokenHash: string,
+  typeParam: string | null,
+): Promise<NextResponse> {
+  if (!isOtpType(typeParam)) {
+    console.error("メール確認コールバックエラー: 不明なtypeパラメータ", { typeParam });
+    return NextResponse.redirect(requestUrl.origin + "/login?error=invalid_request");
+  }
+
+  // redirect_toが明示的に指定されている場合のみ検証して優先する（後方互換）
+  const redirectToParam = requestUrl.searchParams.get("redirect_to");
+  const redirectTo = redirectToParam
+    ? validateRedirectPath(redirectToParam, requestUrl.origin)
+    : getDefaultRedirectForOtpType(typeParam);
+
+  let setCookiesOnResponse: ((response: NextResponse) => void) | null = null;
+
+  try {
+    const cookieStore = await cookies();
+    // 明示的にgetAll()を呼び出して、すべてのCookieを読み込む
+    cookieStore.getAll();
+
+    const { client: supabase, setCookiesOnResponse: setCookies } = createRouteHandlerClient(
+      request,
+      cookieStore,
+    );
+    setCookiesOnResponse = setCookies;
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      type: typeParam,
+      token_hash: tokenHash,
+    });
+
+    if (error) {
+      // 内部エラー詳細はサーバーログにのみ記録し、実エラーコードのみURLに載せる
+      console.error("メール確認コールバックエラー:", error);
+      const errorCode = error.code ?? "auth_failed";
+      const errorResponse = NextResponse.redirect(
+        requestUrl.origin + `/login?error=${encodeURIComponent(errorCode)}`,
+      );
+      setCookiesOnResponse(errorResponse);
+      return errorResponse;
+    }
+
+    if (!data.session) {
+      console.error("メール確認コールバックエラー: セッションが作成されませんでした");
+      const errorResponse = NextResponse.redirect(
+        requestUrl.origin + "/login?error=session_creation_failed",
+      );
+      setCookiesOnResponse(errorResponse);
+      return errorResponse;
+    }
+
+    const successResponse = NextResponse.redirect(requestUrl.origin + redirectTo);
+    setCookiesOnResponse(successResponse);
+    return successResponse;
+  } catch (error) {
+    console.error("メール確認コールバックエラー:", error);
+    const errorResponse = NextResponse.redirect(requestUrl.origin + "/login?error=auth_failed");
+    if (setCookiesOnResponse) {
+      setCookiesOnResponse(errorResponse);
+    }
+    return errorResponse;
+  }
+}
+
+/**
  * OAuth認証後のカレンダー連携を処理
  * Google: provider_refresh_tokenを暗号化保存 + google_calendar_enabled = true
  */
@@ -126,6 +231,13 @@ async function handleCalendarConnection(
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
+
+  // token_hash + type がある場合は verifyOtp フローを優先する（PM裁定: codeより優先）
+  const tokenHash = requestUrl.searchParams.get("token_hash");
+  if (tokenHash) {
+    return handleVerifyOtpFlow(request, requestUrl, tokenHash, requestUrl.searchParams.get("type"));
+  }
+
   const code = requestUrl.searchParams.get("code");
   // オープンリダイレクト対策: originを渡して同一オリジン検証を実施
   const redirectTo = validateRedirectPath(
