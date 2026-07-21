@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, Pressable, StyleSheet, Alert, Platform } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert, Platform, Image as RNImage } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -66,6 +67,26 @@ function getFileExtensionFromAsset(asset: ImagePicker.ImagePickerAsset): string 
 
   // 3. どちらもない場合は安全なデフォルト
   return "jpg";
+}
+
+/**
+ * 画像アセットの幅・高さを解決する
+ * asset.width/height が取得できない（0の）場合は RNImage.getSize で解決する
+ */
+function resolveAssetDimensions(
+  asset: ImagePicker.ImagePickerAsset,
+): Promise<{ width: number; height: number }> {
+  if (asset.width > 0 && asset.height > 0) {
+    return Promise.resolve({ width: asset.width, height: asset.height });
+  }
+
+  return new Promise<{ width: number; height: number }>((resolve, reject) => {
+    RNImage.getSize(
+      asset.uri,
+      (width, height) => resolve({ width, height }),
+      (err) => reject(err),
+    );
+  });
 }
 
 /**
@@ -159,8 +180,70 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         }
       };
       input.click();
+    } else if (Platform.OS === "android") {
+      // Android版: システムの Photo Picker（権限不要）を使用し、選択後に自前で正方形クロップする
+      try {
+        // 新（非legacy）Picker は権限不要。requestMediaLibraryPermissionsAsync を呼ぶと
+        // 未宣言権限で denied を返す機種があり、Picker 自体を開けなくなる致命的リグレッションになるため呼ばない。
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          quality: 1,
+          base64: false,
+        });
+
+        if (result.canceled) {
+          return;
+        }
+
+        const asset = result.assets[0];
+        if (!asset) {
+          return;
+        }
+
+        // Photo Picker は allowsEditing/aspect によるクロップをサポートしないため、
+        // 選択後に自前で中央正方形クロップ + JPEG 変換（HEIC/HEIF対応）を行う
+        const { width, height } = await resolveAssetDimensions(asset);
+        const size = Math.min(width, height);
+        const originX = Math.round((width - size) / 2);
+        const originY = Math.round((height - size) / 2);
+
+        const rendered = await ImageManipulator.manipulate(asset.uri)
+          .crop({ originX, originY, width: size, height: size })
+          .renderAsync();
+        const cropped = await rendered.saveAsync({
+          compress: 0.7,
+          format: SaveFormat.JPEG,
+          base64: true,
+        });
+
+        // base64データのチェック
+        if (!cropped.base64) {
+          Alert.alert(t("common.alertErrorTitle"), t("common.upload.imageDataFetchFailed"), [{ text: "OK" }]);
+          return;
+        }
+
+        // ファイルサイズのチェック（5MB以下）。ImageResult に fileSize がないため base64 長から概算する
+        const estimatedBytes = cropped.base64.length * 0.75;
+        if (estimatedBytes > 5 * 1024 * 1024) {
+          Alert.alert(t("common.alertErrorTitle"), t("common.upload.imageSizeError", { maxMb: 5 }), [{ text: "OK" }]);
+          return;
+        }
+
+        // 選択した画像をアバター表示エリアにプレビューとして表示
+        setSelectedImageUri(cropped.uri);
+
+        // 親コンポーネントに選択した画像を通知（Android は常に JPEG 出力）
+        if (onImageSelected) {
+          onImageSelected(cropped.uri, cropped.base64, "jpg");
+        }
+      } catch (err) {
+        console.error("画像選択エラー:", err);
+        const errorMessage = err instanceof Error ? err.message : t("common.upload.imageSelectFailed");
+        setError(errorMessage);
+        Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
+      }
     } else {
-      // ネイティブ版: expo-image-pickerを使用
+      // iOS版: expo-image-pickerを使用
       try {
         // 権限をリクエスト
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

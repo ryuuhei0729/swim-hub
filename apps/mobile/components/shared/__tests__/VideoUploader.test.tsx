@@ -22,7 +22,7 @@
 
 import React from "react";
 import { render, fireEvent, screen, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // vi.hoisted で変数を事前定義（hoisting 問題を回避）
 const mocks = vi.hoisted(() => ({
@@ -31,6 +31,8 @@ const mocks = vi.hoisted(() => ({
   launchImageLibraryAsync: vi.fn(),
   launchCameraAsync: vi.fn(),
   alertFn: vi.fn(),
+  requestCameraPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
+  requestMediaLibraryPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -48,8 +50,8 @@ vi.mock("@/utils/videoUpload", () => ({
 vi.mock("expo-image-picker", () => ({
   launchImageLibraryAsync: mocks.launchImageLibraryAsync,
   launchCameraAsync: mocks.launchCameraAsync,
-  requestCameraPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
-  requestMediaLibraryPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
+  requestCameraPermissionsAsync: mocks.requestCameraPermissionsAsync,
+  requestMediaLibraryPermissionsAsync: mocks.requestMediaLibraryPermissionsAsync,
 }));
 
 vi.mock("@/components/shared/PremiumBadge", () => ({
@@ -278,4 +280,83 @@ describe("VideoUploader — 既存動作の回帰テスト", () => {
 
     expect(onUploadComplete).toHaveBeenCalledWith(expectedVideoPath, expectedThumbnailPath);
   });
+});
+
+/**
+ * Android READ_MEDIA_* 権限撤去に伴う分岐 (Sprint Contract):
+ * ライブラリ選択は Android では新（非legacy）Photo Picker を使うため
+ * requestMediaLibraryPermissionsAsync を呼ばない。カメラ撮影は CAMERA 権限が
+ * 別途必須のため、Android でも常に requestCameraPermissionsAsync を呼ぶ。
+ */
+async function setPlatformOS(os: "android" | "ios" | "web") {
+  const RN = await import("react-native");
+  (RN.Platform as unknown as { OS: string }).OS = os;
+}
+
+describe("VideoUploader — Android の権限分岐 (READ_MEDIA_* 撤去)", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    await setPlatformOS("android");
+    mocks.requestMediaLibraryPermissionsAsync.mockResolvedValue({ status: "granted" });
+    mocks.requestCameraPermissionsAsync.mockResolvedValue({ status: "granted" });
+  });
+
+  afterEach(async () => {
+    await setPlatformOS("web");
+  });
+
+  it(
+    "ライブラリ選択 (id あり) では requestMediaLibraryPermissionsAsync を呼ばずに" +
+      "launchImageLibraryAsync が呼ばれ、通常どおりアップロードされる",
+    async () => {
+      const onUploadComplete = vi.fn();
+      mockAlertSelectLibrary();
+      mocks.launchImageLibraryAsync.mockResolvedValueOnce({
+        canceled: false,
+        assets: [{ uri: "file:///video/android.mp4", fileSize: 1024 * 1024, mimeType: "video/mp4" }],
+      });
+      mocks.uploadVideo.mockResolvedValueOnce({
+        videoPath: "videos/rec1.mp4",
+        thumbnailPath: "thumbs/rec1.jpg",
+      });
+
+      render(<VideoUploader {...BASE_PROPS} id="record1" onUploadComplete={onUploadComplete} />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText("動画を追加"));
+      });
+
+      expect(mocks.requestMediaLibraryPermissionsAsync).not.toHaveBeenCalled();
+      expect(mocks.launchImageLibraryAsync).toHaveBeenCalledTimes(1);
+      expect(onUploadComplete).toHaveBeenCalledWith("videos/rec1.mp4", "thumbs/rec1.jpg");
+    },
+  );
+
+  it(
+    "カメラ撮影は Android でも requestCameraPermissionsAsync が呼ばれ、denied のとき" +
+      "launchCameraAsync は呼ばれない",
+    async () => {
+      mocks.requestCameraPermissionsAsync.mockResolvedValueOnce({ status: "denied" });
+      mocks.alertFn.mockImplementation(
+        (
+          _title: string,
+          _message: string,
+          buttons?: Array<{ text?: string; onPress?: () => void }>,
+        ) => {
+          const cameraButton = buttons?.find((b) => b?.text === "カメラで撮影");
+          cameraButton?.onPress?.();
+        },
+      );
+
+      render(<VideoUploader {...BASE_PROPS} id="record1" />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText("動画を追加"));
+      });
+
+      expect(mocks.requestCameraPermissionsAsync).toHaveBeenCalled();
+      expect(mocks.launchCameraAsync).not.toHaveBeenCalled();
+      expect(mocks.uploadVideo).not.toHaveBeenCalled();
+    },
+  );
 });
