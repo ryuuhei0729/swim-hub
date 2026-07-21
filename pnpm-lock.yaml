@@ -6,7 +6,10 @@ settings:
 
 overrides:
   jsdom: ^26.1.0
-  tar: ^7.5.4
+  tar: ^7.5.19
+  brace-expansion: ^5.0.7
+  js-yaml@3: ^3.15.0
+  js-yaml@4: ^4.3.0
   diff: ^5.2.2
   '@aws-sdk/client-cloudfront': ^3.750.0
   '@aws-sdk/client-sts': ^3.750.0
@@ -30,7 +33,7 @@ overrides:
   react-dom: 19.2.4
   '@xmldom/xmldom': ^0.8.13
   expo-image-loader: ~55.0.1
-  shell-quote: '>=1.8.4'
+  shell-quote: '>=1.9.0'
   tmp: '>=0.2.6'
 
 importers:
@@ -3570,8 +3573,8 @@ packages:
     resolution: {integrity: sha512-apC2+fspHGI3mMKj+dGevkGo/tCqVB8jMb6i+OX+E29p0Iposz07fABkRIfVUPNd5A5VbuOz1bZbnmkKLYF+wQ==}
     engines: {node: '>= 5.10.0'}
 
-  brace-expansion@5.0.4:
-    resolution: {integrity: sha512-h+DEnpVvxmfVefa4jFbCf5HdH5YMDXRsmKflpf1pILZWRFlTbJpxeU55nJl4Smt5HQaGzg1o6RHFPJaOqnmBDg==}
+  brace-expansion@5.0.7:
+    resolution: {integrity: sha512-7oFy703dxfY3/NLxC1fh2SUCQ0H9rmAY+5EpDVfXjUTTs+HEwR2nYaqLv+GWcTsumwxPfiz6CzCNkwXwBUwqCA==}
     engines: {node: 18 || 20 || >=22}
 
   braces@3.0.3:
@@ -5204,12 +5207,12 @@ packages:
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
 
-  js-yaml@3.14.2:
-    resolution: {integrity: sha512-PMSmkqxr106Xa156c2M265Z+FTrPl+oxd/rgOQy2tijQeK5TxQ43psO1ZCwhVOSdnn+RzkzlRz/eY4BgJBYVpg==}
+  js-yaml@3.15.0:
+    resolution: {integrity: sha512-ttBQIIQPDeLjpPOohtUdXuXUVoA2uIB6fEH9HyJ7234s5mBJ5wTx20njxplLZQgLaOfpmPQA7X2t5AX6tIPbog==}
     hasBin: true
 
-  js-yaml@4.1.1:
-    resolution: {integrity: sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA==}
+  js-yaml@4.3.0:
+    resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
     hasBin: true
 
   jsc-safe-url@0.2.4:
@@ -6574,8 +6577,8 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.8.4:
-    resolution: {integrity: sha512-VsC6n6vz1ihYYyZZwX7YZSF5l5x36ca17OC+a69h94YqB7X6XLwf+5MOgynYir2SLFUbl8gIYvBo8K8RoNQ6bQ==}
+  shell-quote@1.10.0:
+    resolution: {integrity: sha512-w1aiOKwKuRgtwAReIIj89puqg+I7GvX4IbLrvmhXbzQsj1+Zwi4VO3+fa6ZF91TWSjIxoEkKnMeHcLEODK5ZXA==}
     engines: {node: '>= 0.4'}
 
   side-channel-list@1.0.0:
@@ -6837,8 +6840,8 @@ packages:
     resolution: {integrity: sha512-ujeqbceABgwMZxEJnk2HDY2DlnUZ+9oEcb1KzTVfYHio0UE6dG71n60d8D2I4qNvleWrrXpmjpt7vZeF1LnMZQ==}
     engines: {node: '>=6'}
 
-  tar@7.5.11:
-    resolution: {integrity: sha512-ChjMH33/KetonMTAtpYdgUFr0tbz69Fp2v7zWxQfYZX4g5ZN2nOBXm1R2xyA+lMIKrLKIoKAwFj93jE/avX9cQ==}
+  tar@7.5.20:
+    resolution: {integrity: sha512-9FcyK4PA6+WbzlTM9WhQm6vB5W7cP7dUiPsv1g7YDwEQnQ1CGpK3MGlKk/ITVWMk05kHZuBhmVhiv8LZoy/PFQ==}
     engines: {node: '>=18'}
 
   terminal-link@2.1.1:
@@ -9067,7 +9070,7 @@ snapshots:
       globals: 14.0.0
       ignore: 5.3.2
       import-fresh: 3.3.1
-      js-yaml: 4.1.1
+      js-yaml: 4.3.0
       minimatch: 10.2.4
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
@@ -9426,7 +9429,7 @@ snapshots:
     dependencies:
       '@babel/code-frame': 7.29.0
       chalk: 4.1.2
-      js-yaml: 4.1.1
+      js-yaml: 4.3.0
 
   '@fast-csv/format@4.3.5':
     dependencies:
@@ -9620,7 +9623,7 @@ snapshots:
       camelcase: 5.3.1
       find-up: 4.1.0
       get-package-type: 0.1.0
-      js-yaml: 3.14.2
+      js-yaml: 3.15.0
       resolve-from: 5.0.0
 
   '@istanbuljs/schema@0.1.3': {}
@@ -11508,7 +11511,7 @@ snapshots:
     dependencies:
       big-integer: 1.6.52
 
-  brace-expansion@5.0.4:
+  brace-expansion@5.0.7:
     dependencies:
       balanced-match: 4.0.4
 
@@ -13432,12 +13435,12 @@ snapshots:
 
   js-tokens@9.0.1: {}
 
-  js-yaml@3.14.2:
+  js-yaml@3.15.0:
     dependencies:
       argparse: 1.0.10
       esprima: 4.0.1
 
-  js-yaml@4.1.1:
+  js-yaml@4.3.0:
     dependencies:
       argparse: 2.0.1
 
@@ -13992,7 +13995,7 @@ snapshots:
 
   minimatch@10.2.4:
     dependencies:
-      brace-expansion: 5.0.4
+      brace-expansion: 5.0.7
 
   minimist@1.2.8: {}
 
@@ -14454,7 +14457,7 @@ snapshots:
 
   react-devtools-core@6.1.5:
     dependencies:
-      shell-quote: 1.8.4
+      shell-quote: 1.10.0
       ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
@@ -14988,7 +14991,7 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.8.4: {}
+  shell-quote@1.10.0: {}
 
   side-channel-list@1.0.0:
     dependencies:
@@ -15217,7 +15220,7 @@ snapshots:
       bin-links: 6.0.0
       https-proxy-agent: 7.0.6
       node-fetch: 3.3.2
-      tar: 7.5.11
+      tar: 7.5.20
     transitivePeerDependencies:
       - supports-color
 
@@ -15256,7 +15259,7 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.2
 
-  tar@7.5.11:
+  tar@7.5.20:
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0
