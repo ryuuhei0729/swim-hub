@@ -2,7 +2,7 @@
   "expo": {
     "name": "SwimHub",
     "slug": "swim-hub-mobile",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "水泳選手の練習記録・大会記録を管理するアプリ",
     "scheme": "swimhub",
     "orientation": "portrait",
@@ -66,12 +66,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "app.swimhub",
-      "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
-      ]
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/icons/app-icon.png"

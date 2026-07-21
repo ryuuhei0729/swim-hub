@@ -21,7 +21,7 @@
  */
 
 import React from "react";
-import { describe, it, vi, beforeEach, expect } from "vitest";
+import { describe, it, vi, beforeEach, afterEach, expect } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 
 // vi.hoisted で変数を事前定義（モジュール hoisting 問題を回避）
@@ -32,6 +32,8 @@ const mocks = vi.hoisted(() => ({
   launchCameraAsync: vi.fn(),
   alertFn: vi.fn(),
   getAccessToken: vi.fn(),
+  requestCameraPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
+  requestMediaLibraryPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
 }));
 
 // useAuth モック — getAccessToken 関数を含む形に修正
@@ -49,8 +51,8 @@ vi.mock("@/utils/videoUpload", () => ({
 vi.mock("expo-image-picker", () => ({
   launchImageLibraryAsync: mocks.launchImageLibraryAsync,
   launchCameraAsync: mocks.launchCameraAsync,
-  requestCameraPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
-  requestMediaLibraryPermissionsAsync: vi.fn(() => Promise.resolve({ status: "granted" })),
+  requestCameraPermissionsAsync: mocks.requestCameraPermissionsAsync,
+  requestMediaLibraryPermissionsAsync: mocks.requestMediaLibraryPermissionsAsync,
 }));
 
 vi.mock("@/components/shared/PremiumBadge", () => ({
@@ -382,5 +384,49 @@ describe("[VC-14] ファイルサイズ超過", () => {
       typeof msg === "string" && msg.includes("200MB"),
     );
     expect(sizeAlerts).toHaveLength(0);
+  });
+});
+
+/**
+ * Android READ_MEDIA_* 権限撤去 (Sprint Contract):
+ * ライブラリ選択は Android では新（非legacy）Photo Picker を使うため
+ * requestMediaLibraryPermissionsAsync を呼ばない。
+ */
+async function setPlatformOS(os: "android" | "ios" | "web") {
+  const RN = await import("react-native");
+  (RN.Platform as unknown as { OS: string }).OS = os;
+}
+
+describe("[Android] pickVideo — READ_MEDIA_* 撤去後のライブラリ選択", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mocks.getAccessToken.mockResolvedValue("valid-token");
+    await setPlatformOS("android");
+    mocks.requestMediaLibraryPermissionsAsync.mockResolvedValue({ status: "granted" });
+  });
+
+  afterEach(async () => {
+    await setPlatformOS("web");
+  });
+
+  it("Android でライブラリから選択しても requestMediaLibraryPermissionsAsync は呼ばれない", async () => {
+    mockAlertSelectLibrary();
+    mocks.launchImageLibraryAsync.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: "file:///video/android.mp4", fileSize: 1024 * 1024, mimeType: "video/mp4" }],
+    });
+    mocks.uploadVideo.mockResolvedValueOnce({
+      videoPath: "videos/rec1.mp4",
+      thumbnailPath: "thumbs/rec1.jpg",
+    });
+
+    render(<VideoUploader {...BASE_PROPS} id="record1" />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("動画を追加"));
+    });
+
+    expect(mocks.requestMediaLibraryPermissionsAsync).not.toHaveBeenCalled();
+    expect(mocks.uploadVideo).toHaveBeenCalled();
   });
 });

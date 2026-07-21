@@ -79,7 +79,10 @@
     "onlyBuiltDependencies": ["esbuild", "sharp", "unrs-resolver"],
     "overrides": {
       "jsdom": "^26.1.0",
-      "tar": "^7.5.4",
+      "tar": "^7.5.19",
+      "brace-expansion": "^5.0.7",
+      "js-yaml@3": "^3.15.0",
+      "js-yaml@4": "^4.3.0",
       "diff": "^5.2.2",
       "@aws-sdk/client-cloudfront": "^3.750.0",
       "@aws-sdk/client-sts": "^3.750.0",
@@ -103,7 +106,7 @@
       "react-dom": "19.2.4",
       "@xmldom/xmldom": "^0.8.13",
       "expo-image-loader": "~55.0.1",
-      "shell-quote": ">=1.8.4",
+      "shell-quote": ">=1.9.0",
       "tmp": ">=0.2.6"
     }
   },

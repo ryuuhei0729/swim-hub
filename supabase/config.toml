@@ -214,6 +214,20 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# メール確認は token_hash + verifyOtp フローに統一（PKCE code verifierを使わない）
+# テンプレート内リンクは {{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=... 形式
+[auth.email.template.confirmation]
+subject = "メールアドレスの確認"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "パスワードの再設定"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "メールアドレスの変更確認"
+content_path = "./supabase/templates/email_change.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

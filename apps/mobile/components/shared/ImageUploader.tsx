@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, Alert, Platform, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
@@ -163,8 +164,64 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         }
       };
       input.click();
+    } else if (Platform.OS === "android") {
+      // Android版: システムの Photo Picker（権限不要）を使用
+      try {
+        // 新（非legacy）Picker は権限不要。requestMediaLibraryPermissionsAsync を呼ぶと
+        // 未宣言権限で denied を返す機種があり、Picker 自体を開けなくなる致命的リグレッションになるため呼ばない。
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsMultipleSelection: false,
+          allowsEditing: false,
+          quality: 1,
+          base64: false,
+        });
+
+        if (result.canceled) return;
+
+        const asset = result.assets[0];
+        if (!asset) return;
+
+        // Photo Picker は元フォーマット（PNG/WEBP/HEIC等）のまま返すため、
+        // 常に JPEG へ再エンコードして拡張子/Content-Type とのパリティを取る
+        // （legacy Picker が常に JPEG 変換していた従来挙動と同等にする）
+        const rendered = await ImageManipulator.manipulate(asset.uri).renderAsync();
+        const jpeg = await rendered.saveAsync({
+          compress: 0.7,
+          format: SaveFormat.JPEG,
+          base64: true,
+        });
+
+        if (!jpeg.base64) {
+          setError(t("common.upload.imageDataFetchFailed"));
+          return;
+        }
+
+        // ファイルサイズチェック（再エンコード後のbase64長から概算）
+        const estimatedBytes = jpeg.base64.length * 0.75;
+        if (estimatedBytes > 10 * 1024 * 1024) {
+          setError(t("common.upload.imageSizeError", { maxMb: 10 }));
+          return;
+        }
+
+        const newImage: ImageFile = {
+          uri: jpeg.uri,
+          base64: jpeg.base64,
+          fileExtension: "jpg",
+        };
+        setNewFiles((prev) => {
+          const updated = [...prev, newImage];
+          onImagesChange(updated, deletedIds);
+          return updated;
+        });
+      } catch (err) {
+        console.error("画像選択エラー:", err);
+        const errorMessage = err instanceof Error ? err.message : t("common.upload.imageSelectFailed");
+        setError(errorMessage);
+        Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
+      }
     } else {
-      // ネイティブ版: expo-image-pickerを使用
+      // iOS版: expo-image-pickerを使用
       try {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {

@@ -475,20 +475,49 @@ export default function CompetitionTabModal({
       const ids = rows.map((r) => r.id);
       setOriginalRecordIds(ids);
 
-      const records: import("@/components/forms/record-log/types").RecordLogEditData[] = rows.map((r) => ({
-        id: r.id,
-        styleId: r.style_id,
-        time: r.time,
-        isRelaying: r.is_relaying,
-        note: r.note ?? undefined,
-        videoPath: r.video_path ?? null,
-        reactionTime: r.reaction_time ?? null,
-      }));
+      // 各レコードのスプリットタイムを別テーブルから取得する
+      // (records テーブルに split は含まれないため、別途 in() でまとめて取得)
+      const { data: splitData } = await supabase
+        .from("split_times")
+        .select("record_id, distance, split_time")
+        .in("record_id", ids)
+        .order("distance", { ascending: true });
+
+      const splitsByRecord = new Map<string, Array<{ distance: number; splitTime: number }>>();
+      ((splitData ?? []) as Array<{ record_id: string; distance: number; split_time: number }>).forEach(
+        (s) => {
+          const arr = splitsByRecord.get(s.record_id) ?? [];
+          arr.push({ distance: s.distance, splitTime: s.split_time });
+          splitsByRecord.set(s.record_id, arr);
+        },
+      );
+
+      const records: import("@/components/forms/record-log/types").RecordLogEditData[] = rows.map((r) => {
+        // DB の split はゴールタイム(種目距離=タイム)を保存しないため、表示用に補完する
+        // (詳細表示 RecordSplitTimes と同じ扱い。保存時は prepareSubmitData が再度除外する)
+        const dbSplits = splitsByRecord.get(r.id) ?? [];
+        const style = styles.find((s) => s.id?.toString() === String(r.style_id));
+        const raceDistance = style?.distance;
+        const splitTimes = [...dbSplits];
+        if (raceDistance && r.time > 0 && !splitTimes.some((st) => st.distance === raceDistance)) {
+          splitTimes.push({ distance: raceDistance, splitTime: r.time });
+        }
+        return {
+          id: r.id,
+          styleId: r.style_id,
+          time: r.time,
+          isRelaying: r.is_relaying,
+          note: r.note ?? undefined,
+          videoPath: r.video_path ?? null,
+          reactionTime: r.reaction_time ?? null,
+          splitTimes,
+        };
+      });
       setInitialRecords(records);
     };
 
     fetchRecords().catch(() => {});
-  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalRecordIds.length, supabase]);
+  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalRecordIds.length, supabase, styles]);
 
   // initialRecords が hook に反映されて recordFormDataList が populate された後に snapshot を取る
   // 長さが一致 かつ 先頭 styleId が initialRecords 由来の値と一致した時点で hook の反映が完了している

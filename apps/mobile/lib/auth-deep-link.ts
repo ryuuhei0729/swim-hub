@@ -8,20 +8,46 @@
 const EMAIL_CALLBACK_BASE = "swimhub://auth/callback";
 
 /**
+ * Supabase メールテンプレートの `token_hash` 形式で使われる検証タイプ。
+ * `invite` は本アプリのフローで使わないため対象外とする。
+ */
+export type EmailOtpLinkType = "signup" | "recovery" | "email_change" | "email" | "magiclink";
+
+const EMAIL_OTP_LINK_TYPES: readonly EmailOtpLinkType[] = [
+  "signup",
+  "recovery",
+  "email_change",
+  "email",
+  "magiclink",
+];
+
+const isEmailOtpLinkType = (value: string | null): value is EmailOtpLinkType =>
+  value !== null && (EMAIL_OTP_LINK_TYPES as readonly string[]).includes(value);
+
+/**
  * URL がメール確認コールバックであるかを判定する。
  *
  * 判定条件:
  *   1. フラグメント/クエリを除いたベース部分が `swimhub://auth/callback` と完全一致する
- *   2. フラグメントに `access_token` または `error` が含まれる
- *   3. フラグメントの `type` が `recovery` の場合は対象外
- *      (パスワードリセットのリカバリーリンク対応は別スプリントで実装する)
+ *   2. (新形式) クエリに `token_hash` が含まれる。`type` が `recovery` の場合は対象外
+ *   3. (旧形式) フラグメントに `access_token` または `error` が含まれる。
+ *      フラグメントの `type` が `recovery` の場合は対象外
+ *      (いずれの形式でもパスワードリセットのリカバリーリンク対応は別スプリントで実装する)
  */
 export const isEmailAuthCallback = (url: string): boolean => {
   // フラグメント・クエリを除いたベース URL を抽出し完全一致チェック
   const base = url.split("#")[0].split("?")[0];
   if (base !== EMAIL_CALLBACK_BASE) return false;
 
-  // フラグメント部分を解析
+  // 新形式: クエリの token_hash + type (Supabase メールテンプレート更新後)
+  const query = url.split("#")[0].split("?")[1] ?? "";
+  const queryParams = new URLSearchParams(query);
+  if (queryParams.has("token_hash")) {
+    // recovery (パスワードリセット) リンクは対象外 — recovery の深リンク対応は別スプリント
+    return queryParams.get("type") !== "recovery";
+  }
+
+  // 旧形式: フラグメント部分を解析
   const hash = url.split("#")[1] ?? "";
   const params = new URLSearchParams(hash);
 
@@ -29,6 +55,24 @@ export const isEmailAuthCallback = (url: string): boolean => {
   if (params.get("type") === "recovery") return false;
 
   return params.has("access_token") || params.has("error");
+};
+
+/**
+ * URL から Supabase メールテンプレートの `token_hash`/`type` を抽出する。
+ * 抽出できない、または `type` が想定外の値の場合は `null` を返す。
+ */
+export const extractTokenHashFromUrl = (
+  url: string,
+): { tokenHash: string; type: EmailOtpLinkType } | null => {
+  try {
+    const urlObj = new URL(url);
+    const tokenHash = urlObj.searchParams.get("token_hash");
+    const type = urlObj.searchParams.get("type");
+    if (!tokenHash || !isEmailOtpLinkType(type)) return null;
+    return { tokenHash, type };
+  } catch {
+    return null;
+  }
 };
 
 /**

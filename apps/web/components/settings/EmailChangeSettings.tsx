@@ -89,12 +89,14 @@ export default function EmailChangeSettings() {
     setSuccess(false);
 
     try {
+      // token_hash + verifyOtp フローに切り替え: 遷移先(/settings)は
+      // route側のtype=email_changeからの導出に委譲するため、クエリなしURLを渡す
       const { error: updateError } = await supabase.auth.updateUser(
         {
           email: newEmail,
         },
         {
-          emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/settings`,
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
         },
       );
 

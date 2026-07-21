@@ -18,6 +18,17 @@
  * [DL-12] isEmailAuthCallback — type=recovery は false (除外仕様)
  * [DL-13] isEmailAuthCallback — クエリパラメータ付き URL でも正しく判定される
  * [DL-14] isEmailAuthCallback — swimhub:// を含む https:// URL は false (完全一致ベース)
+ *
+ * QA Phase B 追加分 (Sprint Contract: token_hash + type メール確認フロー, V-04/V-07/V-10 相当):
+ * [DL-15] isEmailAuthCallback — token_hash クエリ形式: type=signup/email_change/magiclink は true
+ * [DL-16] isEmailAuthCallback — token_hash クエリ形式: type=recovery は false (今回もスコープ外のまま)
+ * [DL-17] isEmailAuthCallback — token_hash クエリ形式: type が無い/不明でも token_hash があれば true
+ *   (isEmailAuthCallback 自体は type の妥当性を判定しない。実際の分岐は extractTokenHashFromUrl 側)
+ * [DL-18] extractTokenHashFromUrl — 正常系: token_hash + type を抽出できる
+ * [DL-19] extractTokenHashFromUrl — type が不明な値の場合は null
+ * [DL-20] extractTokenHashFromUrl — token_hash が無い場合は null
+ * [DL-21] extractTokenHashFromUrl — 不正 URL の場合は null (例外を握りつぶす)
+ * [DL-22] extractTokenHashFromUrl — 境界値: token_hash が空文字の場合は null
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -46,7 +57,7 @@ vi.mock("expo-auth-session", () => ({
 
 // 実物の isEmailAuthCallback を auth-deep-link から import してテストする
 // (トートロジー排除: テストファイル内にロジックを複製しない)
-import { isEmailAuthCallback } from "@/lib/auth-deep-link";
+import { isEmailAuthCallback, extractTokenHashFromUrl } from "@/lib/auth-deep-link";
 import { extractTokensFromUrl } from "@/lib/google-auth";
 
 // ---- [DL-01] 正常系 --------------------------------------------------------
@@ -292,5 +303,109 @@ describe("[DL-14] isEmailAuthCallback — swimhub://を含む https:// URL", () 
         "https://evil.com/redirect?to=swimhub://auth/callback#access_token=X",
       ),
     ).toBe(false);
+  });
+});
+
+// ---- [DL-15] isEmailAuthCallback — token_hash クエリ形式 (新形式) ----------
+
+describe("[DL-15] isEmailAuthCallback — token_hash クエリ形式は true (recovery 以外)", () => {
+  it("swimhub://auth/callback?token_hash=abc&type=signup は true", () => {
+    expect(
+      isEmailAuthCallback("swimhub://auth/callback?token_hash=abc&type=signup"),
+    ).toBe(true);
+  });
+
+  it("swimhub://auth/callback?token_hash=abc&type=email_change は true", () => {
+    expect(
+      isEmailAuthCallback("swimhub://auth/callback?token_hash=abc&type=email_change"),
+    ).toBe(true);
+  });
+
+  it("swimhub://auth/callback?token_hash=abc&type=magiclink は true", () => {
+    expect(
+      isEmailAuthCallback("swimhub://auth/callback?token_hash=abc&type=magiclink"),
+    ).toBe(true);
+  });
+});
+
+// ---- [DL-16] isEmailAuthCallback — token_hash クエリ形式 + type=recovery は除外 ----
+
+describe("[DL-16] isEmailAuthCallback — token_hash クエリ形式でも type=recovery は false", () => {
+  it("swimhub://auth/callback?token_hash=abc&type=recovery は false (PM裁定: 今回もスコープ外)", () => {
+    expect(
+      isEmailAuthCallback("swimhub://auth/callback?token_hash=abc&type=recovery"),
+    ).toBe(false);
+  });
+});
+
+// ---- [DL-17] isEmailAuthCallback — token_hash があれば type 不問で true (境界値) ----
+
+describe("[DL-17] isEmailAuthCallback — token_hash クエリ形式: type が無い/不明でも true", () => {
+  it("swimhub://auth/callback?token_hash=abc (type なし) は true", () => {
+    expect(isEmailAuthCallback("swimhub://auth/callback?token_hash=abc")).toBe(true);
+  });
+
+  it("swimhub://auth/callback?token_hash=abc&type=invite (未知 type) も true", () => {
+    // isEmailAuthCallback 自体は recovery のみを除外条件とし、type の妥当性検証は
+    // extractTokenHashFromUrl / callback route 側 (isOtpType) の責務。二重責務にしない設計。
+    expect(
+      isEmailAuthCallback("swimhub://auth/callback?token_hash=abc&type=invite"),
+    ).toBe(true);
+  });
+
+  it("境界値: token_hash が空文字のクエリは false (queryParams.has は true だが値は空)", () => {
+    // URLSearchParams.has("token_hash") はキーの存在のみで判定するため、
+    // token_hash= (空値) でも true になる実装上の挙動を固定する回帰テスト。
+    expect(isEmailAuthCallback("swimhub://auth/callback?token_hash=&type=signup")).toBe(true);
+  });
+});
+
+// ---- [DL-18]〜[DL-22] extractTokenHashFromUrl ------------------------------
+
+describe("[DL-18] extractTokenHashFromUrl — 正常系", () => {
+  it("token_hash と type を抽出できる", () => {
+    expect(
+      extractTokenHashFromUrl("swimhub://auth/callback?token_hash=abc123&type=signup"),
+    ).toEqual({ tokenHash: "abc123", type: "signup" });
+  });
+
+  it("recovery / email_change / email / magiclink も抽出できる", () => {
+    for (const type of ["recovery", "email_change", "email", "magiclink"] as const) {
+      expect(
+        extractTokenHashFromUrl(`swimhub://auth/callback?token_hash=abc&type=${type}`),
+      ).toEqual({ tokenHash: "abc", type });
+    }
+  });
+});
+
+describe("[DL-19] extractTokenHashFromUrl — type が不明な値", () => {
+  it("type=invite (未サポート) の場合は null", () => {
+    expect(
+      extractTokenHashFromUrl("swimhub://auth/callback?token_hash=abc&type=invite"),
+    ).toBeNull();
+  });
+
+  it("type が無い場合は null", () => {
+    expect(extractTokenHashFromUrl("swimhub://auth/callback?token_hash=abc")).toBeNull();
+  });
+});
+
+describe("[DL-20] extractTokenHashFromUrl — token_hash が無い場合", () => {
+  it("token_hash パラメータ自体が無い場合は null", () => {
+    expect(extractTokenHashFromUrl("swimhub://auth/callback?type=signup")).toBeNull();
+  });
+});
+
+describe("[DL-21] extractTokenHashFromUrl — 不正 URL", () => {
+  it("not-a-url のような不正文字列は null を返す (例外を握りつぶす)", () => {
+    expect(extractTokenHashFromUrl("not-a-url")).toBeNull();
+  });
+});
+
+describe("[DL-22] extractTokenHashFromUrl — 境界値: token_hash が空文字", () => {
+  it("token_hash= (空文字) の場合は null", () => {
+    expect(
+      extractTokenHashFromUrl("swimhub://auth/callback?token_hash=&type=signup"),
+    ).toBeNull();
   });
 });

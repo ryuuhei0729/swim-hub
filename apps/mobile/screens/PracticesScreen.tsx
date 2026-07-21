@@ -30,15 +30,12 @@ export const PracticesScreen: React.FC = () => {
   const { t } = useTranslation();
 
   // タグフィルターストア
-  const { selectedTagIds, showTagFilter, setSelectedTags, toggleTagFilter } =
-    usePracticeFilterStore(
-      useShallow((state) => ({
-        selectedTagIds: state.selectedTagIds,
-        showTagFilter: state.showTagFilter,
-        setSelectedTags: state.setSelectedTags,
-        toggleTagFilter: state.toggleTagFilter,
-      })),
-    );
+  const { selectedTagIds, setSelectedTags } = usePracticeFilterStore(
+    useShallow((state) => ({
+      selectedTagIds: state.selectedTagIds,
+      setSelectedTags: state.setSelectedTags,
+    })),
+  );
 
   // デフォルトの日付範囲（過去1年間）- 初期化時に一度だけ計算
   const [isUserRefreshing, setIsUserRefreshing] = useState(false);
@@ -193,55 +190,48 @@ export const PracticesScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* タグフィルターUI */}
-      <View style={styles.filterContainer}>
-        <Pressable style={styles.filterToggleButton} onPress={toggleTagFilter}>
-          <Text style={styles.filterToggleButtonText}>{t("practice.page.filterByTag")}</Text>
-        </Pressable>
-
-        {/* タグフィルタリングUI */}
-        {showTagFilter && (
-          <View style={styles.tagsContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tagsScrollContent}
-            >
-              {tags.map((tag: PracticeTag) => (
-                <Pressable
-                  key={tag.id}
-                  onPress={() => handleTagToggle(tag.id)}
+      {/* タグフィルターUI（常時表示） */}
+      {tags.length > 0 && (
+        <View style={styles.filterContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tagsScrollContent}
+          >
+            {tags.map((tag: PracticeTag) => (
+              <Pressable
+                key={tag.id}
+                onPress={() => handleTagToggle(tag.id)}
+                style={[
+                  styles.tagButton,
+                  selectedTagIds.includes(tag.id) && {
+                    backgroundColor: tag.color,
+                  },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.tagButton,
-                    selectedTagIds.includes(tag.id) && {
-                      backgroundColor: tag.color,
-                    },
+                    styles.tagButtonText,
+                    selectedTagIds.includes(tag.id) && styles.tagButtonTextSelected,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.tagButtonText,
-                      selectedTagIds.includes(tag.id) && styles.tagButtonTextSelected,
-                    ]}
-                  >
-                    {tag.name}
-                  </Text>
-                </Pressable>
-              ))}
-              {selectedTagIds.length > 0 && (
-                <Pressable style={styles.clearButton} onPress={handleClearTags}>
-                  <Text style={styles.clearButtonText}>{t("practice.page.clearFilter")}</Text>
-                </Pressable>
-              )}
-            </ScrollView>
+                  {tag.name}
+                </Text>
+              </Pressable>
+            ))}
             {selectedTagIds.length > 0 && (
-              <Text style={styles.filterInfoText}>
-                {t("practice.page.filteringWith", { n: selectedTagIds.length })}
-              </Text>
+              <Pressable style={styles.clearButton} onPress={handleClearTags}>
+                <Text style={styles.clearButtonText}>{t("practice.page.clearFilter")}</Text>
+              </Pressable>
             )}
-          </View>
-        )}
-      </View>
+          </ScrollView>
+          {selectedTagIds.length > 0 && (
+            <Text style={styles.filterInfoText}>
+              {t("practice.page.filteringWith", { n: selectedTagIds.length })}
+            </Text>
+          )}
+        </View>
+      )}
 
       <FlashList
         data={filteredPractices}
@@ -285,24 +275,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
-  },
-  filterToggleButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 8,
-    alignSelf: "flex-start",
-  },
-  filterToggleButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-  },
-  tagsContainer: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
   },
   tagsScrollContent: {
     gap: 8,

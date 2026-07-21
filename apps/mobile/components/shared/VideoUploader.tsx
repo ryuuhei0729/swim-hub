@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -108,19 +108,25 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   const pickVideo = useCallback(
     async (source: "library" | "camera") => {
       try {
-        // 権限要求（Android はカメラ撮影に CAMERA 権限が必須。iOS も初回に確認ダイアログを表示）
-        const { status } =
-          source === "camera"
-            ? await ImagePicker.requestCameraPermissionsAsync()
-            : await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert(
-            t("common.alertErrorTitle"),
+        // 権限要求（CAMERA は別権限・撮影に必須のため常に要求する）。
+        // ライブラリ選択は Android ではシステムの Photo Picker（権限不要）を使うため、
+        // requestMediaLibraryPermissionsAsync を呼ばない（呼ぶと未宣言権限で denied を
+        // 返す機種があり、Picker を開けなくする致命的リグレッションになる）。
+        const isAndroidLibrary = source === "library" && Platform.OS === "android";
+        if (!isAndroidLibrary) {
+          const { status } =
             source === "camera"
-              ? t("common.upload.cameraPermissionDenied")
-              : t("common.upload.mediaPermissionDenied"),
-          );
-          return;
+              ? await ImagePicker.requestCameraPermissionsAsync()
+              : await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== "granted") {
+            Alert.alert(
+              t("common.alertErrorTitle"),
+              source === "camera"
+                ? t("common.upload.cameraPermissionDenied")
+                : t("common.upload.mediaPermissionDenied"),
+            );
+            return;
+          }
         }
 
         const pickerFn =

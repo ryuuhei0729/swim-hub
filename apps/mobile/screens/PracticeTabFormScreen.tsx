@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
   Modal,
 } from "react-native";
-import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -189,12 +189,16 @@ export const PracticeTabFormScreen: React.FC = () => {
   const isSubmittingRef = useRef(false);
   const initializedRef = useRef(false);
 
-  // ---- 保存完了フラグ (beforeRemove 警告制御) ----
-  // ref で保持する。beforeRemove リスナーはクロージャに state を閉じ込めるため、
-  // setIsSaved(true) 直後に goBack() するとリスナー再登録が間に合わず古い値 (false) を
-  // 読んで破棄ダイアログが誤発火する (動画アップロードの await で保存処理が長引くと
-  // 特に再現しやすい)。ref なら常に最新値を読めるためこの競合を回避できる。
-  const isSavedRef = useRef(false);
+  // ---- 保存完了フラグ (usePreventRemove 制御) ----
+  // usePreventRemove(preventRemove, ...) の preventRemove は render のたびに評価される
+  // ただの boolean のため、ref (isSavedRef.current 等) で持つと値を変えても再レンダーが
+  // 起きず preventRemove が更新されない。state で持つことで変化が確実に再レンダーへ反映される。
+  const [isSaved, setIsSaved] = useState(false);
+
+  // ---- 保留動画の有無 (shouldPrevent 用のリアクティブなミラー) ----
+  // pendingVideoAssetRef 自体は Map の実データ置き場として維持しつつ、
+  // 件数が変わるたびにこの state も同期させることで shouldPrevent に反映させる。
+  const [pendingVideoCount, setPendingVideoCount] = useState(0);
 
   // ---- 未保存変更検知用スナップショット ----
   const snapshotRef = useRef<{ practice: PracticeTabState; menus: PracticeMenu[] } | null>(null);
@@ -219,6 +223,10 @@ export const PracticeTabFormScreen: React.FC = () => {
   // メニューIDをキーに保留動画アセットを管理
   // 既存動画のパスはメニュー単位で menu.videoPath / menu.videoThumbnailPath に保持する (web と同じ構造)
   const pendingVideoAssetRef = useRef<Map<string, { uri: string; mimeType?: string }>>(new Map());
+  // Map の件数を pendingVideoCount state に反映する (shouldPrevent 用)
+  const syncPendingVideoCount = useCallback(() => {
+    setPendingVideoCount(pendingVideoAssetRef.current.size);
+  }, []);
 
   // ---- テンプレート ----
   const [showTemplateSelectModal, setShowTemplateSelectModal] = useState(false);
@@ -382,35 +390,42 @@ export const PracticeTabFormScreen: React.FC = () => {
     return unsubscribe;
   }, [navigation, getTimes, setCurrentMenuId]);
 
-  // ---- beforeRemove 警告 ----
+  // ---- 保存完了 → 前画面へ戻る ----
+  // setIsSaved(true) の直後に navigation.goBack() を同期で呼ぶと、preventRemove=false を
+  // 反映したレンダーが commit される前に REMOVE アクションが発行されてしまう。isSaved の
+  // 変化で再レンダーが commit されるのを待ってからこの effect 経由で goBack() することで、
+  // preventRemove=false が確定した状態で REMOVE を発行する。
   useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      if (isSavedRef.current) return;
-      const snapshot = snapshotRef.current;
-      if (!snapshot) return;
-      const changed =
-        hasUnsavedChanges(
-          { practice: practiceTab, menus },
-          { practice: snapshot.practice, menus: snapshot.menus },
-        ) || pendingVideoAssetRef.current.size > 0;
-      if (!changed) return;
+    if (isSaved) {
+      navigation.goBack();
+    }
+  }, [isSaved, navigation]);
 
-      e.preventDefault();
-      Alert.alert(
-        t("common.discardTitle"),
-        t("common.discardMessage"),
-        [
-          { text: t("common.cancel"), style: "cancel" },
-          {
-            text: t("common.discard"),
-            style: "destructive",
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-    return unsubscribe;
-  }, [navigation, practiceTab, menus, t]);
+  // ---- 破棄確認 ----
+  // snapshotRef の更新は必ず対応する state 変更を伴わせること (伴わないと memo が再計算されず stale になる)
+  const changedFromSnapshot = useMemo(() => {
+    if (!snapshotRef.current) return false;
+    return hasUnsavedChanges(
+      { practice: practiceTab, menus },
+      { practice: snapshotRef.current.practice, menus: snapshotRef.current.menus },
+    );
+  }, [practiceTab, menus]);
+  const shouldPreventRemove = !isSaved && (changedFromSnapshot || pendingVideoCount > 0);
+
+  usePreventRemove(shouldPreventRemove, ({ data }) => {
+    Alert.alert(
+      t("common.discardTitle"),
+      t("common.discardMessage"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.discard"),
+          style: "destructive",
+          onPress: () => navigation.dispatch(data.action),
+        },
+      ],
+    );
+  });
 
   // ---- 練習タブ バリデーション ----
   const validatePracticeTab = useCallback((): boolean => {
@@ -687,6 +702,7 @@ export const PracticeTabFormScreen: React.FC = () => {
               );
             }
             pendingVideoAssetRef.current.delete(menu.id);
+            syncPendingVideoCount();
           }
         }
       }
@@ -698,8 +714,9 @@ export const PracticeTabFormScreen: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
       }
 
-      isSavedRef.current = true;
-      navigation.goBack();
+      // navigation.goBack() はここで直接呼ばず、isSaved を state 化してレンダーを
+      // 経由させる (usePreventRemove が preventRemove=false を読んだ後に goBack() する)
+      setIsSaved(true);
     } catch (error) {
       console.error("保存エラー:", error);
       const msg = error instanceof Error ? error.message : t("practice.mobile.saveFailed");
@@ -728,8 +745,8 @@ export const PracticeTabFormScreen: React.FC = () => {
     profile,
     practices,
     syncPractice,
+    syncPendingVideoCount,
     t,
-    navigation,
   ]);
 
   // ---- 保存ハンドラ ----
@@ -820,21 +837,35 @@ export const PracticeTabFormScreen: React.FC = () => {
     });
   }, []);
 
-  const removeMenu = useCallback((id: string) => {
-    setMenus((prev) => {
-      if (prev.length <= 1) return prev;
-      const removedIndex = prev.findIndex((m) => m.id === id);
-      pendingVideoAssetRef.current.delete(id);
-      const next = prev.filter((m) => m.id !== id);
-      setActiveMenuIndex((cur) => {
-        const newLen = next.length;
-        if (cur >= newLen) return newLen - 1;
-        if (cur > removedIndex) return cur - 1;
-        return cur;
+  const removeMenu = useCallback(
+    (id: string) => {
+      // setMenus の updater は純粋に保つ。ref の mutation と非 React state の同期は
+      // updater の外で行うが、実行するかどうかの判定は updater 内の
+      // `prev.length <= 1` チェックのみを唯一の権威とする。render スコープの
+      // menus.length (クロージャ固定値) で判定すると、同一 tick 内で連続削除された
+      // 場合に古いクロージャの判定が権威と乖離し、行は残るのに保留動画だけ消える
+      // データロスが起きうる。
+      let didRemove = false;
+      setMenus((prev) => {
+        if (prev.length <= 1) return prev;
+        didRemove = true;
+        const removedIndex = prev.findIndex((m) => m.id === id);
+        const next = prev.filter((m) => m.id !== id);
+        setActiveMenuIndex((cur) => {
+          const newLen = next.length;
+          if (cur >= newLen) return newLen - 1;
+          if (cur > removedIndex) return cur - 1;
+          return cur;
+        });
+        return next;
       });
-      return next;
-    });
-  }, []);
+      if (didRemove) {
+        pendingVideoAssetRef.current.delete(id);
+        syncPendingVideoCount();
+      }
+    },
+    [syncPendingVideoCount],
+  );
 
   const updateMenu = useCallback(
     (
@@ -1454,6 +1485,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                         } else {
                           pendingVideoAssetRef.current.delete(menu.id);
                         }
+                        syncPendingVideoCount();
                       }}
                     />
                   </View>

@@ -51,6 +51,10 @@ const ERROR_CODE_TO_KEY: Record<string, ErrorMapKey> = {
   phone_not_found: "userNotFound",
   invalid_otp: "invalidOtp",
   expired_otp: "expiredOtp",
+  // Supabase実エラーコード（verifyOtp失敗時）。既存の expired_otp は語順が逆で
+  // 実コードと一致しないため、こちらを実際に返るコードとして追加する
+  otp_expired: "expiredOtp",
+  otp_disabled: "invalidOtp",
   too_many_requests: "serverError",
   rate_limit_exceeded: "serverError",
 };

@@ -104,7 +104,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               gender: gender ?? 0,
               birthday: birthday || null,
             },
-            emailRedirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/onboarding`,
+            // token_hash + verifyOtp フローに切り替え: メールテンプレートが
+            // {{ .RedirectTo }}?token_hash=...&type=signup を組み立てるため
+            // クエリなしURLを渡す必要がある（クエリ付きだと ? が重複しリンクが壊れる）
+            emailRedirectTo: `${window.location.origin}/api/auth/callback`,
           },
         });
 
@@ -280,8 +283,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
         }
 
+        // token_hash + verifyOtp フローに切り替え: 遷移先(/update-password)は
+        // route側のtype=recoveryからの導出に委譲するため、クエリなしURLを渡す
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/api/auth/callback?redirect_to=/update-password`,
+          redirectTo: `${window.location.origin}/api/auth/callback`,
         });
 
         if (error) {

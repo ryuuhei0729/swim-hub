@@ -19,7 +19,11 @@ import {
   consumeCalendarConnectPending,
 } from "@/lib/google-auth";
 import { saveGoogleCalendarRefreshToken } from "@/lib/google-calendar-api";
-import { isEmailAuthCallback, hasCalendarConnectFlowFlag } from "@/lib/auth-deep-link";
+import {
+  isEmailAuthCallback,
+  hasCalendarConnectFlowFlag,
+  extractTokenHashFromUrl,
+} from "@/lib/auth-deep-link";
 import { localizeAuthError } from "@/utils/authErrorLocalizer";
 
 /**
@@ -606,6 +610,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // OAuth (openAuthSessionAsync) 進行中はスキップ
       if (oauthSessionGuard.active) return;
       if (!supabase) return;
+
+      // 新形式: Supabase メールテンプレートの token_hash + type
+      // (isEmailAuthCallback が type=recovery を除外済みのため、ここに来るのは
+      // signup / email_change / email / magiclink のいずれか)
+      const tokenHashResult = extractTokenHashFromUrl(url);
+      if (tokenHashResult) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          type: tokenHashResult.type,
+          token_hash: tokenHashResult.tokenHash,
+        });
+        if (!isMounted) return;
+        if (otpError) {
+          Alert.alert(
+            i18n.t("common.alertErrorTitle"),
+            i18n.t("auth.supabaseErrors.invalidToken"),
+          );
+          return;
+        }
+        // 成功時は onAuthStateChange が発火し自動でルート切替する
+        return;
+      }
 
       // Android の Custom Tabs は別プロセスで開くため、Googleカレンダー連携の同意画面
       // 操作中にアプリプロセスが kill され、このハンドラにコールドスタートとして
