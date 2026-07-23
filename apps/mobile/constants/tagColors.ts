@@ -1,35 +1,12 @@
+import { TAG_COLORS, getColorForName, getRandomTagColor } from "@apps/shared/constants/tagColors";
+
 /**
  * タグ用プリセットカラー定義
- * Web版と同じ10色を使用
+ * 実体は apps/shared/constants/tagColors.ts に集約 (Web/カレンダー記録色カスタマイズと共有)。
+ * getRandomTagColor / getColorForName も同一アルゴリズムのため shared 実装を再利用する。
  */
-export const PRESET_TAG_COLORS = [
-  "#93C5FD", // 青
-  "#7DD3FC", // 水色
-  "#86EFAC", // 緑
-  "#A3E635", // 黄緑
-  "#FCA5A5", // 赤
-  "#F9A8D4", // ピンク
-  "#FDBA74", // オレンジ
-  "#FDE047", // 黄色
-  "#C4B5FD", // 紫
-  "#D1D5DB", // グレー
-];
+// TAG_COLORS は readonly タプル (as const) のため、既存の呼び出し側 (useState<string> 等) を
+// 壊さないよう string[] に明示的に広げる。
+export const PRESET_TAG_COLORS: string[] = [...TAG_COLORS];
 
-/**
- * ランダムなタグカラーを取得
- */
-export const getRandomTagColor = (): string => {
-  return PRESET_TAG_COLORS[Math.floor(Math.random() * PRESET_TAG_COLORS.length)];
-};
-
-/**
- * タグ名から決定的に色を導出する (Web の TagInput.getColorForName と同一アルゴリズム)。
- * 同名タグが Web/モバイル間で同じ色になるよう、ランダムではなく名前ベースで決める。
- */
-export const getColorForName = (name: string): string => {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
-  }
-  return PRESET_TAG_COLORS[hash % PRESET_TAG_COLORS.length];
-};
+export { getRandomTagColor, getColorForName };

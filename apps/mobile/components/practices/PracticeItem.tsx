@@ -1,11 +1,14 @@
 import React, { useMemo, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { format } from "date-fns";
+import { parseISO } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
+import { formatDate } from "@apps/shared/utils/date";
 import type { PracticeWithLogs } from "@swim-hub/shared/types";
 import { formatCircleTime } from "@/utils/formatters";
+import { useDateLocale } from "@/hooks/useDateLocale";
 
 interface PracticeItemProps {
   practice: PracticeWithLogs;
@@ -31,9 +34,14 @@ const getStyleName = (t: TFunction, style: string): string => {
  */
 const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress }) => {
   const { t } = useTranslation();
+  const locale = useDateLocale();
 
-  // 日付をフォーマット（M/d形式、年と曜日なし）
-  const formattedDate = useMemo(() => format(new Date(practice.date), "M/d"), [practice.date]);
+  // 日付をフォーマット（大会記録カードと同じ流儀: ゾーン変換 + long スタイル・ロケール依存）
+  const formattedDate = useMemo(() => {
+    const parsed = parseISO(practice.date);
+    const zoned = toZonedTime(parsed, Intl.DateTimeFormat().resolvedOptions().timeZone);
+    return formatDate(zoned, "long", locale);
+  }, [practice.date, locale]);
 
   // タイトル（null の場合は既存 client.practiceTitle = "練習" を流用）
   const title = useMemo(

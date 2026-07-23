@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { CalendarHeader } from "./CalendarHeader";
 import { CalendarDay } from "./CalendarDay";
 import type { CalendarItem } from "@apps/shared/types/ui";
+import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 
 interface CalendarViewProps {
   currentDate: Date;
@@ -15,6 +16,7 @@ interface CalendarViewProps {
   onNextMonth: () => void;
   onTodayClick: () => void;
   onMonthYearSelect: (year: number, month: number) => void;
+  colorSettings: CalendarColorSettings;
 }
 
 /**
@@ -30,6 +32,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onNextMonth,
   onTodayClick,
   onMonthYearSelect,
+  colorSettings,
 }) => {
   const { t } = useTranslation();
   const weekdays = t("common.datePicker.weekdays", { returnObjects: true }) as string[];
@@ -128,6 +131,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 onPress={onDateClick}
                 isFirstColumn={isFirstColumn}
                 isLastColumn={isLastColumn}
+                colorSettings={colorSettings}
               />
             </View>
           );

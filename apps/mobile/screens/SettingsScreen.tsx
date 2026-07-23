@@ -12,6 +12,7 @@ import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { GoogleCalendarSyncSettings } from "@/components/settings/GoogleCalendarSyncSettings";
 import { IOSCalendarSyncSettings } from "@/components/settings/IOSCalendarSyncSettings";
+import { CalendarColorSettings } from "@/components/settings/CalendarColorSettings";
 import { EmailChangeSettings } from "@/components/settings/EmailChangeSettings";
 import { IdentityLinkSettings } from "@/components/settings/IdentityLinkSettings";
 import { AccountDeleteSettings } from "@/components/settings/AccountDeleteSettings";
@@ -209,6 +210,9 @@ export const SettingsScreen: React.FC = () => {
 
         {/* iOSカレンダー連携セクション */}
         <IOSCalendarSyncSettings profile={profile} onUpdate={refetchProfile} />
+
+        {/* ダッシュボード記録色カスタマイズセクション */}
+        <CalendarColorSettings />
 
         {/* メールアドレス変更セクション */}
         <EmailChangeSettings />

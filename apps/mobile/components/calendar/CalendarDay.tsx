@@ -4,6 +4,13 @@ import { format, isSameMonth, isToday, getDay } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { isHoliday } from "@apps/shared/utils/holiday";
 import type { CalendarItem } from "@apps/shared/types/ui";
+import {
+  resolveCalendarItemColor,
+  getDefaultColorForType,
+} from "@apps/shared/utils/calendarColorResolver";
+import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
+import type { CalendarItemType } from "@apps/shared/types/common";
+import { darkenHex } from "@/utils/colorTone";
 
 interface CalendarDayProps {
   date: Date;
@@ -12,7 +19,47 @@ interface CalendarDayProps {
   onPress: (date: Date) => void;
   isFirstColumn?: boolean;
   isLastColumn?: boolean;
+  colorSettings: CalendarColorSettings;
 }
+
+// 未カスタマイズ(resolver がデフォルト色を返した)ユーザーの見た目をピクセル一致で維持する
+// ための旧来のハードコード値。背景色・枠線色・文字色の3点セットで従来の見た目を再現する。
+const LEGACY_PRACTICE = {
+  bg: "#D1FAE5", // 黄緑色 (green-100)
+  border: "#10B981", // 緑色 (green-500)
+  text: "#065F46", // 濃い緑色のテキスト (green-800)
+};
+const LEGACY_COMPETITION = {
+  bg: "#DBEAFE", // 水色 (blue-100)
+  border: "#2563EB", // 青色 (blue-600)
+  text: "#1E40AF", // 濃い青色のテキスト (blue-800)
+};
+
+/**
+ * resolver の戻り値から、背景色・枠線色・文字色の3点を決める。
+ * 未カスタマイズ(resolveCalendarItemColor の戻り値がその type のデフォルト色と一致)なら
+ * 背景色も含めて旧来のハードコード値をそのまま使い、既存ユーザーの見た目を完全に維持する
+ * (C1 対応: 従来は枠線・文字色のみガードしており背景色が resolver の生値に変わっていた)。
+ * カスタム色時のみ、resolver の戻り値を背景色として使い、枠線・文字色は暗くした派生色にする。
+ */
+const getResolvedStyle = (
+  itemType: CalendarItemType,
+  metadata: CalendarItem["metadata"],
+  colorSettings: CalendarColorSettings,
+  legacy: { bg: string; border: string; text: string },
+): { backgroundColor: string; borderColor: string; textColor: string } => {
+  const resolvedColor = resolveCalendarItemColor(itemType, metadata, colorSettings);
+  const isDefaultColor = resolvedColor === getDefaultColorForType(itemType);
+
+  if (isDefaultColor) {
+    return { backgroundColor: legacy.bg, borderColor: legacy.border, textColor: legacy.text };
+  }
+  return {
+    backgroundColor: resolvedColor,
+    borderColor: darkenHex(resolvedColor, 0.35),
+    textColor: darkenHex(resolvedColor, 0.65),
+  };
+};
 
 /**
  * カレンダーの1日を表示するコンポーネント
@@ -24,6 +71,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   onPress,
   isFirstColumn = false,
   isLastColumn = false,
+  colorSettings,
 }) => {
   const { t } = useTranslation();
   const isCurrentMonth = isSameMonth(date, currentDate);
@@ -50,43 +98,37 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       item.type === "record";
 
     if (isPracticeType) {
-      // Practice系
-      if (item.type === "practice_log" || hasPracticeLog) {
-        // Practice_Logがある場合: 緑色の枠線 + 黄緑色の背景
-        return {
-          backgroundColor: "#D1FAE5", // 黄緑色 (green-100)
-          borderWidth: 1,
-          borderColor: "#10B981", // 緑色 (green-500)
-          textColor: "#065F46", // 濃い緑色のテキスト (green-800)
-        };
-      } else {
-        // Practiceのみ: 黄緑色の背景のみ
-        return {
-          backgroundColor: "#D1FAE5", // 黄緑色 (green-100)
-          borderWidth: 0,
-          borderColor: "transparent",
-          textColor: "#065F46", // 濃い緑色のテキスト (green-800)
-        };
-      }
+      // Practice系: ユーザー設定色 (未設定なら旧来の黄緑をピクセル一致で維持)
+      const { backgroundColor, borderColor, textColor } = getResolvedStyle(
+        item.type,
+        item.metadata,
+        colorSettings,
+        LEGACY_PRACTICE,
+      );
+      // 同日に Practice_Log がある場合のみ枠線を付ける独自ロジックは維持
+      const highlighted = item.type === "practice_log" || hasPracticeLog;
+      return {
+        backgroundColor,
+        borderWidth: highlighted ? 1 : 0,
+        borderColor: highlighted ? borderColor : "transparent",
+        textColor,
+      };
     } else if (isCompetitionType) {
-      // Competition/Entry/Record系
-      if (item.type === "record" || hasRecord) {
-        // Recordがある場合: 青色の枠線 + 水色の背景
-        return {
-          backgroundColor: "#DBEAFE", // 水色 (blue-100)
-          borderWidth: 1,
-          borderColor: "#2563EB", // 青色 (blue-600)
-          textColor: "#1E40AF", // 濃い青色のテキスト (blue-800)
-        };
-      } else {
-        // Competition/Entryのみ: 水色の背景のみ
-        return {
-          backgroundColor: "#DBEAFE", // 水色 (blue-100)
-          borderWidth: 0,
-          borderColor: "transparent",
-          textColor: "#1E40AF", // 濃い青色のテキスト (blue-800)
-        };
-      }
+      // Competition/Entry/Record系: ユーザー設定色 (未設定なら旧来の水色をピクセル一致で維持)
+      const { backgroundColor, borderColor, textColor } = getResolvedStyle(
+        item.type,
+        item.metadata,
+        colorSettings,
+        LEGACY_COMPETITION,
+      );
+      // 同日に Record がある場合のみ枠線を付ける独自ロジックは維持
+      const highlighted = item.type === "record" || hasRecord;
+      return {
+        backgroundColor,
+        borderWidth: highlighted ? 1 : 0,
+        borderColor: highlighted ? borderColor : "transparent",
+        textColor,
+      };
     } else {
       // その他
       return {

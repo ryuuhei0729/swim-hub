@@ -7,6 +7,7 @@ import Input from "@/components/ui/Input";
 import { useTranslations } from "next-intl";
 
 import { PracticeTag } from "@apps/shared/types";
+import { TAG_COLORS } from "@apps/shared/constants/tagColors";
 
 type Tag = PracticeTag;
 
@@ -18,19 +19,8 @@ interface TagManagementModalProps {
   onDeleteTag: (id: string) => Promise<void>;
 }
 
-// パステルカラー（固定10種類）
-const PRESET_COLORS = [
-  "#93C5FD", // 青
-  "#7DD3FC", // 水色
-  "#86EFAC", // 緑
-  "#A3E635", // 黄緑
-  "#FCA5A5", // 赤
-  "#F9A8D4", // ピンク
-  "#FDBA74", // オレンジ
-  "#FDE047", // 黄色
-  "#C4B5FD", // 紫
-  "#D1D5DB", // グレー
-];
+// パステルカラー（固定10種類、web/mobile/カレンダー記録色と共通）
+const PRESET_COLORS: readonly string[] = TAG_COLORS;
 
 // カラー正規化関数
 const normalizeColor = (color: string): string => {

@@ -32,9 +32,6 @@ export type TabParamList = {
 // メインスタックのパラメータ型
 export type MainStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList>;
-  PracticeDetail: {
-    practiceId: string;
-  };
   PracticeForm: {
     practiceId?: string;
     date?: string;
@@ -64,9 +61,6 @@ export type MainStackParamList = {
       repNumber: number;
       time: number;
     }>;
-  };
-  RecordDetail: {
-    recordId: string;
   };
   RecordForm: {
     recordId?: string;

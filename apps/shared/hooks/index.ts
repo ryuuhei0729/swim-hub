@@ -19,3 +19,4 @@ export * from "./queries/goals";
 export * from "./queries/practiceLogTemplates";
 export * from "./queries/dashboard";
 export * from "./queries/notifications";
+export * from "./queries/calendarColors";

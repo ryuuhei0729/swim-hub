@@ -5,35 +5,10 @@ import { ChevronDownIcon, XMarkIcon, EllipsisVerticalIcon } from "@heroicons/rea
 import TagManagementModal from "./TagManagementModal";
 import { useAuth } from "@/contexts";
 import { PracticeTag } from "@apps/shared/types";
+import { getColorForName } from "@apps/shared/constants/tagColors";
 import { useTranslations } from "next-intl";
 
 type Tag = PracticeTag;
-
-/** タグのパステルカラーパレット */
-const TAG_COLORS = [
-  "#93C5FD", // 青
-  "#7DD3FC", // 水色
-  "#86EFAC", // 緑
-  "#A3E635", // 黄緑
-  "#FCA5A5", // 赤
-  "#F9A8D4", // ピンク
-  "#FDBA74", // オレンジ
-  "#FDE047", // 黄色
-  "#C4B5FD", // 紫
-  "#D1D5DB", // グレー
-];
-
-/**
- * タグ名から決定的に色を導出する。
- * 候補プレビューと作成後の色を一致させるため、ランダムではなく名前ベースで決める。
- */
-function getColorForName(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
-  }
-  return TAG_COLORS[hash % TAG_COLORS.length];
-}
 
 interface TagInputProps {
   selectedTags: Tag[];
@@ -60,9 +35,19 @@ export default function TagInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const { supabase } = useAuth();
 
+  // タグ管理モーダルはドロップダウン(dropdownRef)の外側に描画されるため、モーダル内クリックを
+  // 「外側クリック」と誤検知してドロップダウンが閉じてしまう。開いている間は閉じないよう ref で参照する。
+  const isManagementOpenRef = useRef(false);
+  useEffect(() => {
+    isManagementOpenRef.current = showTagManagement;
+  }, [showTagManagement]);
+
   // ドロップダウン外クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // タグ管理モーダルを操作中(更新/削除/キャンセル等)はドロップダウンを閉じない。
+      // 閉じると削除・更新後に一覧が消え、リアルタイム更新されていないように見えるため。
+      if (isManagementOpenRef.current) return;
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setInputValue("");

@@ -2,9 +2,8 @@ import React, { useMemo, useCallback, useState } from "react";
 import { View, Text, StyleSheet, Pressable, RefreshControl, ScrollView } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { parseISO, isValid } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
 import { practiceKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
@@ -14,20 +13,23 @@ import { ErrorView } from "@/components/layout/ErrorView";
 import { usePracticeFilterStore } from "@/stores/practiceFilterStore";
 import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "react-i18next";
-import type { MainStackParamList } from "@/navigation/types";
+import { DayDetailModal } from "@/components/calendar";
+import { useDayEntriesQuery } from "@/hooks/useDayEntriesQuery";
+import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import type { PracticeWithLogs, PracticeTag } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
-
-type PracticesScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 /**
  * 練習記録一覧画面
  * 練習記録の一覧を表示し、日付フィルター、プルリフレッシュ、無限スクロール機能を提供
  */
 export const PracticesScreen: React.FC = () => {
-  const navigation = useNavigation<PracticesScreenNavigationProp>();
   const { supabase } = useAuth();
   const { t } = useTranslation();
+
+  // 行タップで開く日付詳細モーダル（ダッシュボードと同一のDayDetailModal）
+  const [modalDate, setModalDate] = useState<Date | null>(null);
+  const [showDayDetail, setShowDayDetail] = useState(false);
 
   // タグフィルターストア
   const { selectedTagIds, setSelectedTags } = usePracticeFilterStore(
@@ -85,6 +87,47 @@ export const PracticesScreen: React.FC = () => {
   });
 
   const allPractices = useMemo(() => data?.pages.flat() ?? [], [data]);
+
+  // 選択した日付のカレンダーエントリー（DayDetailModal表示用）
+  const { data: dayEntries = [], refetch: refetchDayEntries } = useDayEntriesQuery(
+    supabase,
+    modalDate,
+  );
+
+  // 削除/変更後は一覧とモーダルの両方を再取得する
+  const refetchAfterMutation = useCallback(() => {
+    refetch();
+    refetchDayEntries();
+  }, [refetch, refetchDayEntries]);
+
+  // DayDetailModal の編集/削除/追加ハンドラ（ダッシュボードと共通）
+  const {
+    isDeleting,
+    setIsDeleting,
+    handleEntryPress,
+    handleAddPractice,
+    handleAddRecord,
+    handleEditPractice,
+    handleDeletePractice,
+    handleAddPracticeLog,
+    handleEditPracticeLog,
+    handleDeletePracticeLog,
+    handleEditRecord,
+    handleDeleteRecord,
+    handleEditEntry,
+    handleDeleteEntry,
+    handleAddEntry,
+    handleEditCompetition,
+    handleDeleteCompetition,
+  } = useDayDetailHandlers(supabase, refetchAfterMutation);
+
+  // 行タップで該当日のDayDetailModalを開く
+  const handlePracticePress = useCallback((practice: PracticeWithLogs) => {
+    const parsedDate = parseISO(practice.date);
+    if (!isValid(parsedDate)) return;
+    setModalDate(parsedDate);
+    setShowDayDetail(true);
+  }, []);
 
   // タグフィルタリング
   const filteredPractices = useMemo(() => {
@@ -145,14 +188,9 @@ export const PracticesScreen: React.FC = () => {
   // ⚠️ 重要: すべてのフックは条件付きレンダリングの前に定義する必要がある
   const renderItem = useCallback(
     ({ item }: { item: PracticeWithLogs }) => (
-      <PracticeItem
-        practice={item}
-        onPress={(practice) => {
-          navigation.navigate("PracticeDetail", { practiceId: practice.id });
-        }}
-      />
+      <PracticeItem practice={item} onPress={handlePracticePress} />
     ),
-    [navigation],
+    [handlePracticePress],
   );
 
   // エラー状態
@@ -261,6 +299,36 @@ export const PracticesScreen: React.FC = () => {
           </View>
         }
       />
+
+      {/* 日付詳細モーダル（ダッシュボードと同一のDayDetailModal） */}
+      {modalDate && (
+        <DayDetailModal
+          visible={showDayDetail}
+          date={modalDate}
+          entries={dayEntries}
+          onClose={() => {
+            setShowDayDetail(false);
+            setModalDate(null);
+          }}
+          onEntryPress={handleEntryPress}
+          onAddPractice={handleAddPractice}
+          onAddRecord={handleAddRecord}
+          onEditPractice={handleEditPractice}
+          onDeletePractice={handleDeletePractice}
+          onAddPracticeLog={handleAddPracticeLog}
+          onEditPracticeLog={handleEditPracticeLog}
+          onDeletePracticeLog={handleDeletePracticeLog}
+          onEditRecord={handleEditRecord}
+          onDeleteRecord={handleDeleteRecord}
+          onEditEntry={handleEditEntry}
+          onDeleteEntry={handleDeleteEntry}
+          onAddEntry={handleAddEntry}
+          onEditCompetition={handleEditCompetition}
+          onDeleteCompetition={handleDeleteCompetition}
+          isDeleting={isDeleting}
+          onDeletingChange={setIsDeleting}
+        />
+      )}
     </SafeAreaView>
   );
 };

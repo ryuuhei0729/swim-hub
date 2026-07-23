@@ -5,6 +5,7 @@
 import { create } from "zustand";
 import type { Style } from "@apps/shared/types";
 import type { EditingData, EntryWithStyle, CompetitionTabId } from "../types";
+import type { SortOrder } from "@/hooks/useTableSort";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -35,11 +36,25 @@ interface CompetitionFormState {
   isLoading: boolean;
 }
 
+// 大会記録一覧のソート対象カラム(2026-07-22b: 4プリセット化に伴い日付/記録の2軸のみに縮小)
+export type CompetitionSortColumn = "date" | "time";
+
+// 記録(タイム)カラムの単一select フィルタ: すべて / リレー除く / リレーのみ
+export type RelayFilterMode = "all" | "excludeRelay" | "onlyRelay";
+
 interface CompetitionFilterState {
-  filterStyle: string;
-  includeRelay: boolean;
+  /** 距離フィルタ(複数select, 文字列化した距離。例: ["50","100"]。グループ内OR) */
+  filterDistances: string[];
+  /** 種目(泳法)フィルタ(複数select, SwimStyle コード。例: ["fr","br"]。グループ内OR) */
+  filterStyles: string[];
   filterPoolType: string;
-  filterFiscalYear: string;
+  filterRelayMode: RelayFilterMode;
+  /** 大会名フィルタ(複数select, distinct, OR) */
+  filterCompetitionNames: string[];
+  /** 場所フィルタ(複数select, distinct + "未設定" = null行, OR) */
+  filterPlaces: string[];
+  sortColumn: CompetitionSortColumn | null;
+  sortOrder: SortOrder;
 }
 
 interface CompetitionFormActions {
@@ -80,10 +95,14 @@ interface CompetitionFormActions {
 }
 
 interface CompetitionFilterActions {
-  setFilterStyle: (style: string) => void;
-  setIncludeRelay: (include: boolean) => void;
+  setFilterDistances: (distances: string[]) => void;
+  setFilterStyles: (styles: string[]) => void;
   setFilterPoolType: (poolType: string) => void;
-  setFilterFiscalYear: (year: string) => void;
+  setFilterRelayMode: (mode: RelayFilterMode) => void;
+  setFilterCompetitionNames: (names: string[]) => void;
+  setFilterPlaces: (places: string[]) => void;
+  setSortColumn: (column: CompetitionSortColumn | null) => void;
+  setSortOrder: (order: SortOrder) => void;
   resetFilter: () => void;
 }
 
@@ -114,10 +133,14 @@ const initialFormState: CompetitionFormState = {
 };
 
 const initialFilterState: CompetitionFilterState = {
-  filterStyle: "",
-  includeRelay: true,
+  filterDistances: [],
+  filterStyles: [],
   filterPoolType: "",
-  filterFiscalYear: "",
+  filterRelayMode: "all",
+  filterCompetitionNames: [],
+  filterPlaces: [],
+  sortColumn: null,
+  sortOrder: "asc",
 };
 
 const initialState: CompetitionState = {
@@ -257,10 +280,14 @@ export const useCompetitionStore = create<CompetitionState & CompetitionActions>
   // ---------------------------------------------------------------------------
   // Filter: 操作
   // ---------------------------------------------------------------------------
-  setFilterStyle: (style) => set({ filterStyle: style }),
-  setIncludeRelay: (include) => set({ includeRelay: include }),
+  setFilterDistances: (distances) => set({ filterDistances: distances }),
+  setFilterStyles: (styles) => set({ filterStyles: styles }),
   setFilterPoolType: (poolType) => set({ filterPoolType: poolType }),
-  setFilterFiscalYear: (year) => set({ filterFiscalYear: year }),
+  setFilterRelayMode: (mode) => set({ filterRelayMode: mode }),
+  setFilterCompetitionNames: (names) => set({ filterCompetitionNames: names }),
+  setFilterPlaces: (places) => set({ filterPlaces: places }),
+  setSortColumn: (column) => set({ sortColumn: column }),
+  setSortOrder: (order) => set({ sortOrder: order }),
   resetFilter: () => set(initialFilterState),
 
   // ---------------------------------------------------------------------------

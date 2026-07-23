@@ -281,7 +281,25 @@
     },
     "discardTitle": "입력 내용이 저장되지 않았습니다",
     "discardMessage": "입력 내용이 저장되지 않았습니다. 이대로 닫으시겠습니까?",
-    "discard": "나가기"
+    "discard": "나가기",
+    "listToolbar": {
+      "itemCount": "{count}건",
+      "sortButton": "정렬",
+      "filterButton": "필터"
+    },
+    "bottomSheet": {
+      "clearGroup": "지우기",
+      "clearAll": "모두 지우기",
+      "apply": "적용",
+      "close": "닫기"
+    },
+    "loadMore": {
+      "button": "더 보기",
+      "remaining": "{n}건 더 보기"
+    },
+    "bestBadge": {
+      "first": "첫 기록"
+    }
   },
   "nav": {
     "practice": "연습 기록",
@@ -1030,7 +1048,8 @@
       "deleteConfirm": "이 연습 기록을 삭제하시겠습니까?",
       "deleteFailed": "삭제에 실패했습니다",
       "practiceTitle": "연습",
-      "viewDetailAriaLabel": "연습 상세 보기"
+      "viewDetailAriaLabel": "연습 상세 보기",
+      "viewDetailAriaLabelWithInfo": "연습 상세 보기 ({date} {place} {style})"
     },
     "modal": {
       "loading": "연습 상세를 불러오는 중...",
@@ -1057,19 +1076,19 @@
       "emptyTitle": "연습 기록이 없습니다",
       "emptyDesc": "대시보드 캘린더에서 연습 기록을 추가할 수 있습니다.",
       "goToDashboard": "대시보드로 이동",
-      "colDate": "날짜",
       "colPlace": "장소",
-      "colDistReps": "거리·횟수·세트",
-      "colCircle": "써클",
       "colStyle": "종목",
       "colTags": "태그",
-      "colAvgTime": "평균 기록",
       "avgTimeLabel": "평균 기록:",
       "share": "공유",
       "edit": "편집",
       "delete": "삭제",
       "deleting": "삭제 중...",
-      "distanceFormat": "{distance}m × {reps}회 × {sets}세트"
+      "distanceFormat": "{distance}m × {reps}회 × {sets}세트",
+      "noMatchTitle": "해당하는 기록이 없습니다",
+      "noMatchDesc": "선택한 조건에 일치하는 연습 기록이 없습니다.",
+      "sortOptionDateDesc": "날짜(최신순)",
+      "sortOptionDateAsc": "날짜(오래된순)"
     },
     "details": {
       "badge": "연습 기록",
@@ -1170,6 +1189,23 @@
       "videoUploadFailedTitle": "동영상 업로드 실패",
       "videoUploadFailedSession": "세션이 유효하지 않아 동영상을 업로드할 수 없습니다.",
       "videoUploadFailedSaved": "연습 로그는 저장되었지만 동영상 업로드에 실패했습니다."
+    },
+    "sortSheet": {
+      "title": "정렬",
+      "placeAsc": "장소(오름차순)",
+      "placeDesc": "장소(내림차순)",
+      "distanceAsc": "거리(오름차순)",
+      "distanceDesc": "거리(내림차순)",
+      "circleAsc": "써클(오름차순)",
+      "circleDesc": "써클(내림차순)",
+      "styleAsc": "종목(오름차순)",
+      "styleDesc": "종목(내림차순)",
+      "avgTimeAsc": "평균 기록(빠른순)",
+      "avgTimeDesc": "평균 기록(느린순)"
+    },
+    "filterSheet": {
+      "title": "필터",
+      "tagsAndNote": "(선택한 모든 태그를 포함하는 기록만 표시)"
     }
   },
   "mypage": {
@@ -1501,20 +1537,16 @@
       "recordNotFound": "기록 데이터를 찾을 수 없습니다",
       "viewDetailAriaLabel": "대회 기록 상세 보기",
       "competitionFallback": "대회",
-      "styleFallback": "기록"
+      "styleFallback": "기록",
+      "bulkInputLabel": "일괄 입력",
+      "viewDetailAriaLabelWithInfo": "대회 기록 상세 보기 ({date} {name})"
     },
     "filter": {
-      "periodLabel": "기간",
-      "allPeriods": "전체 기간",
-      "fiscalYearSuffix": "{year}년도",
-      "styleLabel": "종목",
       "allStyles": "전체 종목",
-      "poolTypeLabel": "수영장 종류",
       "allPoolTypes": "전체",
-      "relayLabel": "인계",
-      "includeRelay": "포함",
-      "clearLabel": "지우기",
-      "resetButton": "필터 초기화"
+      "resetButton": "필터 초기화",
+      "excludeRelay": "계영 제외",
+      "onlyRelay": "계영만"
     },
     "empty": {
       "noRecordsTitle": "대회 기록이 없습니다",
@@ -1661,6 +1693,27 @@
       "errorVideoGenericFailed": "{name}: 동영상 업로드 중 오류가 발생했습니다",
       "errorVideoNoThumbnail": "{name}: 썸네일을 생성하지 못해 동영상을 첨부하지 못했습니다",
       "videoPartialFailureSaved": "기록은 저장되었지만 일부 동영상을 첨부하지 못했습니다:\n{errors}"
+    },
+    "sortSheet": {
+      "title": "정렬",
+      "dateDesc": "날짜(최신순)",
+      "dateAsc": "날짜(오래된순)",
+      "timeAsc": "기록 빠른순",
+      "timeDesc": "기록 느린순",
+      "competitionNameAsc": "대회명(오름차순)",
+      "competitionNameDesc": "대회명(내림차순)",
+      "placeAsc": "장소(오름차순)",
+      "placeDesc": "장소(내림차순)",
+      "poolAsc": "수영장(오름차순)",
+      "poolDesc": "수영장(내림차순)",
+      "styleAsc": "종목(오름차순)",
+      "styleDesc": "종목(내림차순)"
+    },
+    "filterSheet": {
+      "title": "필터",
+      "distanceLabel": "거리",
+      "strokeLabel": "종목",
+      "relayLabel": "계영"
     }
   },
   "settings": {
@@ -1885,6 +1938,21 @@
     },
     "practiceLogTemplates": {
       "backAriaLabel": "뒤로"
+    },
+    "calendarColors": {
+      "title": "캘린더 기록 색상",
+      "description": "대시보드의 연습·대회 기록 표시 색상을 사용자 지정할 수 있습니다. 팀별로 색상을 다르게 설정할 수도 있습니다.",
+      "personalSectionTitle": "개인 색상",
+      "teamSectionTitle": "팀별 색상",
+      "practiceLabel": "연습",
+      "competitionLabel": "대회",
+      "resetToDefault": "기본값으로 재설정",
+      "resetTeamToDefault": "기본값으로 재설정",
+      "sameColorWarning": "연습과 대회 색상이 동일합니다. 구분이 어려우면 색상을 변경해 주세요."
+    },
+    "password": {
+      "title": "비밀번호",
+      "openButton": "비밀번호 변경"
     }
   },
   "practiceLogTemplates": {
@@ -2653,8 +2721,11 @@
         "clickToAdd": "클릭하여 추가",
         "editAriaLabel": "{date}의 연습 기록 편집",
         "addAriaLabel": "{date}의 연습 기록 추가",
-        "viewAriaLabel": "{date}의 연습 기록 보기"
-      }
+        "viewAriaLabel": "{date}의 연습 기록 보기",
+        "editButton": "편집",
+        "deleteButton": "삭제"
+      },
+      "selfLogButton": "내 기록 추가"
     },
     "practiceDetail": {
       "title": "연습 상세",
@@ -2675,14 +2746,18 @@
       "fallbackTitle": "대회",
       "card": {
         "entryButton": "엔트리",
-        "recordsButton": "기록 목록",
-        "manageButton": "관리"
+        "recordsButton": "기록 입력",
+        "manageButton": "관리",
+        "editButton": "편집",
+        "deleteButton": "삭제"
       },
       "entryStatus": {
         "before": "접수 전",
         "open": "접수 중",
         "closed": "접수 종료"
-      }
+      },
+      "selfRecordButton": "내 기록 추가",
+      "selfRecordSaveFailed": "내 기록 저장에 실패했습니다"
     },
     "entrySection": {
       "title": "엔트리 접수 중인 대회"
@@ -2999,7 +3074,9 @@
       "notePlaceholder": "연습 내용이나 소감 등",
       "cancelButton": "취소",
       "creating": "생성 중...",
-      "createButton": "만들기"
+      "createButton": "만들기",
+      "updateFailed": "팀 연습 기록 업데이트에 실패했습니다",
+      "deleteFailed": "팀 연습 기록 삭제에 실패했습니다"
     },
     "competitionForm": {
       "title": "대회 추가",
@@ -3009,6 +3086,8 @@
       "endDateBeforeStart": "종료일은 시작일 이후의 날짜를 지정하세요",
       "authRequired": "인증이 필요합니다",
       "createFailed": "팀 대회 생성에 실패했습니다",
+      "updateFailed": "팀 대회 수정에 실패했습니다",
+      "deleteFailed": "팀 대회 삭제에 실패했습니다",
       "competitionNameLabel": "대회명",
       "competitionNamePlaceholder": "예: 도 대회 (비워두면 '대회'로 표시됩니다)",
       "startDateLabel": "시작일",
@@ -3546,7 +3625,39 @@
         "practicesCreated": "연습: {count}건 등록",
         "competitionsCreated": "대회: {count}건 등록",
         "errors": "오류: {errors}"
-      }
+      },
+      "manual": {
+        "tabPractice": "연습",
+        "tabCompetition": "대회",
+        "rowTitlePractice": "연습 {n}",
+        "rowTitleCompetition": "대회 {n}",
+        "labelDate": "날짜 *",
+        "labelStartDate": "시작일 *",
+        "labelEndDate": "종료일",
+        "labelTitle": "제목",
+        "labelCompetitionName": "대회명",
+        "labelPlace": "장소",
+        "labelPoolType": "수로",
+        "labelNote": "비고",
+        "poolShort": "단수로 (25m)",
+        "poolLong": "장수로 (50m)",
+        "addPracticeRowButton": "+ 연습 추가",
+        "addCompetitionRowButton": "+ 대회 추가",
+        "deleteRowButton": "삭제",
+        "submitButton": "등록하기",
+        "submitting": "등록 중...",
+        "errorDateRequired": "{row}번째 줄: 날짜는 필수입니다",
+        "errorStartDateRequired": "{row}번째 줄: 시작일은 필수입니다",
+        "errorEndDateAfterStart": "{row}번째 줄: 종료일은 시작일 이후여야 합니다",
+        "practiceEmpty": "등록할 연습이 없습니다",
+        "competitionEmpty": "등록할 대회가 없습니다",
+        "titlePlaceholder": "예: 아침 연습",
+        "competitionNamePlaceholder": "예: ◯◯대회",
+        "placePlaceholder": "장소명",
+        "notePlaceholder": "메모"
+      },
+      "modeTabFile": "파일 가져오기",
+      "modeTabManual": "직접 입력"
     },
     "common": {
       "close": "닫기",

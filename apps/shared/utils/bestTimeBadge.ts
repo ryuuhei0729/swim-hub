@@ -4,6 +4,44 @@
 // =============================================================================
 
 import type { ListBestCandidates } from "../api/records";
+import { formatTimeBest } from "./time";
+
+/** 自己ベストと同記録とみなす許容誤差（秒）＝ web share/utils.ts BEST_EPSILON と同値 */
+export const BEST_EPSILON = 0.005;
+
+/** 一覧ベストバッジの状態（web/mobile 共用） */
+export type BestBadgeState =
+  | { kind: "first" }
+  | { kind: "best"; label: string }
+  | { kind: "slower"; label: string }
+  | { kind: "none" };
+
+/** 自己ベストとの差分を符号付きでフォーマット（改善=マイナス, 同記録=±0, 悪化=プラス） */
+export function formatBestDelta(time: number, previousBest: number): string {
+  const delta = time - previousBest;
+  if (Math.abs(delta) <= BEST_EPSILON) return `Best±${formatTimeBest(0)}`;
+  const sign = delta < 0 ? "-" : "+";
+  return `Best${sign}${formatTimeBest(Math.abs(delta))}`;
+}
+
+/**
+ * 一覧ベストバッジの状態を判定する純粋関数。
+ * - isFirstRecord=true（previousBest が null）→ 初記録
+ * - previousBest が数値かつ改善（同値含む: time - previousBest <= EPSILON）→ ベスト更新
+ * - previousBest が数値かつ悪化（time - previousBest > EPSILON）→ ベストより遅い
+ * - 判定不能（time <= 0 等）→ 非表示
+ */
+export function getBestBadgeState(
+  time: number,
+  previousBest: number | null | undefined,
+  isFirstRecord: boolean,
+): BestBadgeState {
+  if (!Number.isFinite(time) || time <= 0) return { kind: "none" };
+  if (isFirstRecord) return { kind: "first" };
+  if (previousBest == null) return { kind: "none" };
+  const label = formatBestDelta(time, previousBest);
+  return time - previousBest <= BEST_EPSILON ? { kind: "best", label } : { kind: "slower", label };
+}
 
 /**
  * YYYY-MM-DD 形式の日付を created_at 比較用に正規化する。

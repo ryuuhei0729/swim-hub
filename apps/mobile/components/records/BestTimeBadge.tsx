@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { RecordAPI } from "@apps/shared/api/records";
 import { useListBestCandidatesQuery } from "@apps/shared/hooks/queries/records";
-import { computeListPreviousBest } from "@apps/shared/utils/bestTimeBadge";
+import { computeListPreviousBest, getBestBadgeState } from "@apps/shared/utils/bestTimeBadge";
 import { formatTimeBest } from "@/utils/formatters";
 
 /** 自己ベストと同記録とみなす許容誤差（秒）＝web share/utils.ts BEST_EPSILON と同値 */
@@ -17,12 +17,8 @@ type ShareBadgeState =
   | { kind: "slower"; label: string }
   | { kind: "none" };
 
-/**
- * コンポーネント内部状態: 3状態に加えて一覧向けベスト。
- * listBest は showDiff=false の一覧表示専用（「記録日時点で自己ベストだったか」を
- * 差分なしで表示。web 一覧 BestTimeBadge 相当）で、getBadgeState からは返らない。
- */
-type BadgeState = ShareBadgeState | { kind: "listBest" };
+/** コンポーネント内部状態: 3状態パス・一覧パスとも同一の形（kind 構造は shared BestBadgeState と同一） */
+type BadgeState = ShareBadgeState;
 
 /** 自己ベストとの差分を符号付きでフォーマット（改善=マイナス, 同記録=±0, 悪化=プラス） */
 function formatBestDelta(time: number, previousBest: number): string {
@@ -61,10 +57,10 @@ interface BestTimeBadgeProps {
   poolType?: number | null;
   isRelaying?: boolean;
   /**
-   * false の場合、一覧向けの2状態表示にする（web 一覧 BestTimeBadge と同一判定）。
-   * 「その記録の記録日時点で自己ベストだったか」を非同期クエリで判定し、
-   * ベストのときのみバッジを表示する（差分・「初」・遅い記録の赤バッジは出さない）。
-   * true / 未指定の場合は3状態表示（詳細画面・シェアカード向け）。
+   * false の場合、一覧向けの3状態表示にする（web 一覧 BestTimeBadge と同一判定・常時表示）。
+   * 「その記録の記録日時点で初/自己ベスト更新/ベストより遅い」を非同期クエリで判定し、
+   * コンパクトな1行バッジで常時表示する。
+   * true / 未指定の場合は詳細画面・シェアカード向けの3状態表示（ラベル+値の2要素）。
    */
   showDiff?: boolean;
 }
@@ -78,13 +74,14 @@ interface BestTimeBadgeProps {
  * - ベストより遅い: 「自己ベスト」+ 差分 (red)
  * - 判定不能 (styleId なし / time 0 / エラー): 非表示
  *
- * 一覧表示 (showDiff === false。web components/ui/BestTimeBadge.tsx と同一の判定):
+ * 一覧表示 (showDiff === false。web components/ui/BestTimeBadge.tsx と同一の判定・3状態常時表示):
  * - 同一 user_id / style_id / is_relaying / (poolType 指定時) pool_type の記録候補を
  *   グループ単位の共有キャッシュクエリ (useListBestCandidatesQuery) で一括取得し、
  *   「大会記録 (competitions.date < recordDate)」と「一括登録 (created_at < 正規化
  *   recordDate)」の自己除外済み min を過去ベストとする (computeListPreviousBest)
- * - 過去ベストなし or currentTime がそれより速い → 「自己ベスト」バッジ (blue、差分なし)
- * - それ以外・ロード中・判定不能 (styleId / recordDate なし)・エラー → 非表示
+ * - shared getBestBadgeState で判定: 初記録 / 自己ベスト更新 (±0含む) / ベストより遅い
+ *   をコンパクトな1行バッジで常時表示 (first=amber, best=blue, slower=red)
+ * - ロード中・判定不能 (styleId / recordDate なし)・エラー・time<=0 → 非表示
  */
 const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
   recordId,
@@ -122,17 +119,14 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
     }
   }, [isListVariant, listQuery.error]);
 
-  // 「その記録の記録日時点で自己ベストだったか」。判定完了までは非表示
-  // （web の loading 中非表示と同じ単一パス）。エラー時も非表示。
+  // 「その記録の記録日時点で初/自己ベスト更新/ベストより遅い」の3状態を shared ロジックで判定。
+  // 判定完了までは非表示（web の loading 中非表示と同じ単一パス）。エラー時も非表示。
   const listState: BadgeState = useMemo(() => {
     if (!isListVariant || !userId || !styleId || !recordDate || !listQuery.data) {
       return { kind: "none" };
     }
     const previousBest = computeListPreviousBest(listQuery.data, recordId, recordDate);
-    // 以前の記録がない、または現在のタイムが以前のベストより速い場合のみ表示
-    return previousBest === null || currentTime < previousBest
-      ? { kind: "listBest" }
-      : { kind: "none" };
+    return getBestBadgeState(currentTime, previousBest, previousBest === null);
   }, [isListVariant, userId, styleId, recordDate, listQuery.data, recordId, currentTime]);
 
   useEffect(() => {
@@ -180,21 +174,6 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
     return null;
   }
 
-  if (badgeState.kind === "listBest") {
-    return (
-      <View
-        style={[styles.badge, styles.badgeBest]}
-        accessible={true}
-        accessibilityRole="text"
-        accessibilityLabel={t("recordMobile.bestBadge.personalBest")}
-      >
-        <Text style={[styles.badgeText, styles.badgeTextBest]}>
-          {t("recordMobile.bestBadge.personalBest")}
-        </Text>
-      </View>
-    );
-  }
-
   if (badgeState.kind === "first") {
     return (
       <View
@@ -211,17 +190,35 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
   }
 
   const isBest = badgeState.kind === "best";
+
+  // 一覧はコンパクトな1行表示（label のみ。"Best" 接頭辞込みで web pill と同一トーン）。
+  // 一覧の best は「初」と同じ amber（ユーザー要望。3状態パスの best=blue とは異なる）。
+  if (isListVariant) {
+    const listToneStyle = isBest ? styles.badgeFirst : styles.badgeSlower;
+    const listTextToneStyle = isBest ? styles.badgeTextFirst : styles.badgeTextSlower;
+    return (
+      <View
+        style={[styles.badge, listToneStyle]}
+        accessible={true}
+        accessibilityRole="text"
+        accessibilityLabel={badgeState.label}
+      >
+        <Text style={[styles.badgeText, listTextToneStyle]}>{badgeState.label}</Text>
+      </View>
+    );
+  }
+
+  const toneStyle = isBest ? styles.badgeBest : styles.badgeSlower;
+  const textToneStyle = isBest ? styles.badgeTextBest : styles.badgeTextSlower;
   return (
     <View
-      style={[styles.badge, isBest ? styles.badgeBest : styles.badgeSlower]}
+      style={[styles.badge, toneStyle]}
       accessible={true}
       accessibilityRole="text"
       accessibilityLabel={`${t("recordMobile.bestBadge.personalBest")} ${badgeState.label}`}
     >
       <Text style={styles.badgeLabel}>{t("recordMobile.bestBadge.personalBest")}</Text>
-      <Text style={[styles.badgeText, isBest ? styles.badgeTextBest : styles.badgeTextSlower]}>
-        {badgeState.label}
-      </Text>
+      <Text style={[styles.badgeText, textToneStyle]}>{badgeState.label}</Text>
     </View>
   );
 };

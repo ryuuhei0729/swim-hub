@@ -659,7 +659,7 @@ describe("[V-C2C1-03] Phase 1-C-1 / 1-C-2-A / 1-C-2-B 必須キーのリグレ�
     "footer.links.privacy",
     // Phase 1-C-2-A: competition
     "competition.header.title",
-    "competition.filter.periodLabel",
+    "competition.filter.allStyles",
     "competition.table.date",
     "competition.detail.title",
     // Phase 1-C-2-A: settings

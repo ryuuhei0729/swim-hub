@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  Suspense,
+} from "react";
 import { useRouter } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -13,6 +19,7 @@ import {
   PencilSquareIcon,
   ClipboardDocumentListIcon,
   EyeIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -21,10 +28,24 @@ import type { CompetitionImageData } from "@/components/forms/CompetitionBasicFo
 import TeamCompetitionEntryModal from "./TeamCompetitionEntryModal";
 import TeamCompetitionRecordsModal from "./TeamCompetitionRecordsModal";
 import Pagination from "@/components/ui/Pagination";
+import DeleteConfirmModal from "@/components/ui/DeleteConfirmModal";
+import { TeamRecordsAPI } from "@apps/shared/api/teams/records";
+import { StyleAPI } from "@apps/shared/api/styles";
+import { RecordAPI } from "@apps/shared/api/records";
+import RecordLogForm from "@/components/forms/record-log/RecordLogForm";
+import type {
+  RecordLogFormData,
+  StyleOption,
+} from "@/components/forms/record-log/types";
+import type { EntryInfo } from "@apps/shared/types/ui";
+import type { EditingData } from "@/stores/types";
 
-const CompetitionBasicForm = dynamic(() => import("@/components/forms/CompetitionBasicForm"), {
-  ssr: false,
-});
+const CompetitionBasicForm = dynamic(
+  () => import("@/components/forms/CompetitionBasicForm"),
+  {
+    ssr: false,
+  },
+);
 
 export interface TeamCompetition {
   id: string;
@@ -33,6 +54,7 @@ export interface TeamCompetition {
   title: string;
   date: string;
   place: string | null;
+  pool_type: number;
   entry_status?: "before" | "open" | "closed";
   note: string | null;
   created_at: string;
@@ -88,6 +110,7 @@ interface RawCompetitionData {
   title: string;
   date: string;
   place: string | null;
+  pool_type?: number | null;
   entry_status: string | null;
   note: string | null;
   created_at: string;
@@ -114,7 +137,9 @@ function normalizeUser(
 /**
  * Supabaseのクエリ結果をTeamCompetition[]に変換するマッパー関数
  */
-function mapToTeamCompetitions(data: RawCompetitionData[] | null): TeamCompetition[] {
+function mapToTeamCompetitions(
+  data: RawCompetitionData[] | null,
+): TeamCompetition[] {
   if (!data) return [];
 
   return data.map(
@@ -125,7 +150,10 @@ function mapToTeamCompetitions(data: RawCompetitionData[] | null): TeamCompetiti
       title: item.title,
       date: item.date,
       place: item.place,
-      entry_status: isValidEntryStatus(item.entry_status) ? item.entry_status : undefined,
+      pool_type: item.pool_type ?? 0,
+      entry_status: isValidEntryStatus(item.entry_status)
+        ? item.entry_status
+        : undefined,
       note: item.note,
       created_at: item.created_at,
       created_by: item.created_by,
@@ -147,7 +175,9 @@ function mapToTeamCompetitions(data: RawCompetitionData[] | null): TeamCompetiti
   );
 }
 
-function isValidEntryStatus(status: string | null): status is "before" | "open" | "closed" {
+function isValidEntryStatus(
+  status: string | null,
+): status is "before" | "open" | "closed" {
   return status === "before" || status === "open" || status === "closed";
 }
 
@@ -156,25 +186,37 @@ export interface TeamCompetitionsProps {
   isAdmin?: boolean;
 }
 
-export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompetitionsProps) {
+export default function TeamCompetitions({
+  teamId,
+  isAdmin = false,
+}: TeamCompetitionsProps) {
   const { supabase, user } = useAuth();
   const router = useRouter();
   const t = useTranslations("teams");
   const [competitions, setCompetitions] = useState<TeamCompetition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCompetition, setSelectedCompetition] = useState<TeamCompetition | null>(null);
+  const [selectedCompetition, setSelectedCompetition] =
+    useState<TeamCompetition | null>(null);
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [showRecordsModal, setShowRecordsModal] = useState(false);
   const [selectedCompetitionForRecords, setSelectedCompetitionForRecords] =
     useState<TeamCompetition | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [selfRecordCompetition, setSelfRecordCompetition] =
+    useState<TeamCompetition | null>(null);
+  const [showSelfRecordForm, setShowSelfRecordForm] = useState(false);
+  const [selfRecordStyles, setSelfRecordStyles] = useState<StyleOption[]>([]);
+  const [selfRecordLoading, setSelfRecordLoading] = useState(false);
   const pageSize = 20;
 
   const {
     isBasicFormOpen,
     selectedDate,
+    editingData,
     isLoading: formLoading,
     openBasicForm,
     closeBasicForm,
@@ -207,6 +249,7 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
             title,
             date,
             place,
+            pool_type,
             entry_status,
             note,
             created_at,
@@ -245,7 +288,9 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
 
       setTotalCount(countResult.count || 0);
       setCompetitions(
-        mapToTeamCompetitions(competitionsResult.data as RawCompetitionData[] | null),
+        mapToTeamCompetitions(
+          competitionsResult.data as RawCompetitionData[] | null,
+        ),
       );
     } catch (err) {
       console.error("チーム大会情報の取得に失敗:", err);
@@ -264,6 +309,22 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
     openBasicForm(new Date());
   };
 
+  // 管理者向け: 既存の大会を編集(CompetitionBasicForm を editData 付きで開く)
+  const handleEditCompetition = (
+    e: React.MouseEvent,
+    competition: TeamCompetition,
+  ) => {
+    e.stopPropagation();
+    openBasicForm(new Date(competition.date), {
+      id: competition.id,
+      type: "competition",
+      date: competition.date,
+      title: competition.title,
+      place: competition.place || "",
+      note: competition.note || "",
+    } as EditingData);
+  };
+
   const handleCompetitionBasicSubmit = async (
     basicData: {
       date: string;
@@ -277,26 +338,35 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
     _options?: { continueToNext?: boolean; skipEntry?: boolean },
   ) => {
     if (!user) {
-      console.error("大会の作成に失敗: ユーザーがログインしていません");
+      setError(t("competitionForm.authRequired"));
+      closeBasicForm();
       return;
     }
 
     setFormLoading(true);
     try {
-      const { error } = await supabase.from("competitions").insert({
-        user_id: user.id,
-        team_id: teamId,
-        date: basicData.date,
-        end_date: basicData.endDate || null,
-        title: basicData.title || null,
-        place: basicData.place || null,
-        pool_type: basicData.poolType,
-        note: basicData.note || null,
-      });
+      const api = new TeamRecordsAPI(supabase);
 
-      if (error) {
-        console.error("大会の作成に失敗:", error);
-        return;
+      if (editingData?.id) {
+        await api.update(editingData.id, {
+          date: basicData.date,
+          end_date: basicData.endDate || null,
+          title: basicData.title || null,
+          place: basicData.place || null,
+          pool_type: basicData.poolType,
+          note: basicData.note || null,
+        });
+      } else {
+        await api.create({
+          user_id: user.id,
+          team_id: teamId,
+          date: basicData.date,
+          end_date: basicData.endDate || null,
+          title: basicData.title || null,
+          place: basicData.place || null,
+          pool_type: basicData.poolType,
+          note: basicData.note || null,
+        });
       }
 
       closeBasicForm();
@@ -306,9 +376,43 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         await loadTeamCompetitions();
       }
     } catch (err) {
-      console.error("大会の作成に失敗:", err);
+      console.error(
+        editingData?.id ? "大会の更新に失敗:" : "大会の作成に失敗:",
+        err,
+      );
+      setError(
+        editingData?.id
+          ? t("competitionForm.updateFailed")
+          : t("competitionForm.createFailed"),
+      );
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  // 管理者向け: 削除確認モーダルを開く
+  const handleRequestDelete = (e: React.MouseEvent, competitionId: string) => {
+    e.stopPropagation();
+    setPendingDeleteId(competitionId);
+  };
+
+  const handleCancelDelete = () => {
+    setPendingDeleteId(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteId || deleting) return;
+    setDeleting(true);
+    try {
+      const api = new TeamRecordsAPI(supabase);
+      await api.remove(pendingDeleteId);
+      setPendingDeleteId(null);
+      await loadTeamCompetitions();
+    } catch (err) {
+      console.error("大会の削除に失敗:", err);
+      setError(t("competitionForm.deleteFailed"));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -324,7 +428,10 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
   };
 
   // エントリー管理モーダルを開く
-  const handleEntryClick = (e: React.MouseEvent, competition: TeamCompetition) => {
+  const handleEntryClick = (
+    e: React.MouseEvent,
+    competition: TeamCompetition,
+  ) => {
     e.stopPropagation();
     setSelectedCompetition(competition);
     setShowEntryModal(true);
@@ -336,45 +443,99 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
     setShowRecordsModal(true);
   };
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-32 mb-4"></div>
-          <div className="space-y-3">
-            {[...Array(3)].map((_, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-32 mb-1"></div>
-                <div className="h-3 bg-gray-200 rounded w-20"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // 一般メンバー含む全員向け: 自分の記録を追加(RecordLogForm を competitionId 付きで開く)
+  const handleOpenSelfRecord = (
+    e: React.MouseEvent,
+    competition: TeamCompetition,
+  ) => {
+    e.stopPropagation();
+    setSelfRecordCompetition(competition);
+    setShowSelfRecordForm(true);
+    // 種目一覧を非同期取得(モーダルは即座に開く。失敗しても致命的ではない)
+    (async () => {
+      try {
+        const styleAPI = new StyleAPI(supabase);
+        const styles = await styleAPI.getStyles();
+        setSelfRecordStyles(
+          styles.map((style) => ({
+            id: style.id.toString(),
+            nameJp: style.name_jp,
+            distance: style.distance,
+          })),
+        );
+      } catch (err) {
+        console.error("種目一覧の取得に失敗:", err);
+      }
+    })();
+  };
 
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="text-center py-8">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={() => router.refresh()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-          >
-            {t("competitions.retry")}
-          </button>
-        </div>
-      </div>
+  const handleCloseSelfRecordForm = () => {
+    setShowSelfRecordForm(false);
+    setSelfRecordCompetition(null);
+  };
+
+  // 自分の記録が対象大会にエントリー済みの場合、エントリー内容をフォームの初期値として渡す
+  const selfRecordEntryDataList = useMemo<EntryInfo[]>(() => {
+    if (!selfRecordCompetition || !user) return [];
+    const styleNameById = new Map(
+      selfRecordStyles.map((style) => [String(style.id), style.nameJp]),
     );
-  }
+    return (selfRecordCompetition.entries || [])
+      .filter((entry) => entry.user_id === user.id)
+      .map((entry) => ({
+        styleId: entry.style_id,
+        styleName: styleNameById.get(String(entry.style_id)) || "",
+        entryTime: entry.entry_time,
+      }));
+  }, [selfRecordCompetition, selfRecordStyles, user]);
+
+  const handleSelfRecordSubmit = async (formDataList: RecordLogFormData[]) => {
+    if (!user || !selfRecordCompetition) return;
+    setSelfRecordLoading(true);
+    try {
+      const recordAPI = new RecordAPI(supabase);
+      for (const formData of formDataList) {
+        const newRecord = await recordAPI.createRecord({
+          competition_id: selfRecordCompetition.id,
+          team_id: teamId,
+          style_id: parseInt(formData.styleId, 10),
+          time: formData.time,
+          video_path: formData.videoPath || null,
+          video_thumbnail_path: null,
+          note: formData.note || null,
+          is_relaying: formData.isRelaying || false,
+          reaction_time:
+            formData.reactionTime && formData.reactionTime.trim() !== ""
+              ? parseFloat(formData.reactionTime)
+              : null,
+          pool_type: selfRecordCompetition.pool_type === 1 ? 1 : 0,
+        });
+
+        if (formData.splitTimes.length > 0) {
+          await recordAPI.createSplitTimes(
+            formData.splitTimes.map((splitTime) => ({
+              record_id: newRecord.id,
+              distance: splitTime.distance,
+              split_time: splitTime.splitTime,
+            })),
+          );
+        }
+      }
+
+      handleCloseSelfRecordForm();
+      await loadTeamCompetitions();
+    } catch (err) {
+      console.error("記録の登録に失敗:", err);
+      setError(t("competitions.selfRecordSaveFailed"));
+    } finally {
+      setSelfRecordLoading(false);
+    }
+  };
 
   return (
     <>
       <div className="bg-white rounded-lg shadow p-6">
-        {/* ヘッダー */}
+        {/* ヘッダー(データ読み込み中/エラー時も常に描画し、大会追加ボタンを即座に操作可能にする) */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
             {t("competitions.title", { count: competitions.length })}
@@ -390,169 +551,259 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
           )}
         </div>
 
-        {/* 大会一覧 */}
-        <div className="space-y-4">
-          {competitions.map((competition) => {
-            const hasRecords = competition.records && competition.records.length > 0;
-            const canViewRecords = isAdmin && hasRecords;
-            return (
-              <div
-                key={competition.id}
-                onClick={() => (canViewRecords ? handleOpenRecords(competition) : undefined)}
-                onKeyDown={(e) => {
-                  if (canViewRecords && (e.key === "Enter" || e.key === " ")) {
-                    e.preventDefault();
-                    handleOpenRecords(competition);
+        {loading ? (
+          <div className="animate-pulse">
+            <div className="space-y-3">
+              {[...Array(3)].map((_, index) => (
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-4"
+                >
+                  <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-32 mb-1"></div>
+                  <div className="h-3 bg-gray-200 rounded w-20"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8">
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={() => router.refresh()}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            >
+              {t("competitions.retry")}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {competitions.map((competition) => {
+              const hasRecords =
+                competition.records && competition.records.length > 0;
+              const canViewRecords = isAdmin && hasRecords;
+              return (
+                <div
+                  key={competition.id}
+                  onClick={() =>
+                    canViewRecords ? handleOpenRecords(competition) : undefined
                   }
-                }}
-                aria-label={
-                  canViewRecords ? `${competition.title || t("competitions.fallbackTitle")}の記録を閲覧` : undefined
-                }
-                tabIndex={canViewRecords ? 0 : undefined}
-                role={canViewRecords ? "button" : undefined}
-                className={`w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 ${
-                  canViewRecords
-                    ? "cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    : "cursor-default"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <TrophyIcon className="h-5 w-5 text-blue-500" />
-                      <span className="text-lg font-medium text-gray-900">
-                        {competition.title || t("competitions.fallbackTitle")}
-                      </span>
-                      {/* エントリーステータスバッジ */}
-                      {competition.entry_status && (
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            competition.entry_status === "open"
-                              ? "bg-green-100 text-green-800"
+                  onKeyDown={(e) => {
+                    if (
+                      canViewRecords &&
+                      (e.key === "Enter" || e.key === " ")
+                    ) {
+                      e.preventDefault();
+                      handleOpenRecords(competition);
+                    }
+                  }}
+                  aria-label={
+                    canViewRecords
+                      ? `${competition.title || t("competitions.fallbackTitle")}の記録を閲覧`
+                      : undefined
+                  }
+                  tabIndex={canViewRecords ? 0 : undefined}
+                  role={canViewRecords ? "button" : undefined}
+                  className={`w-full text-left border border-gray-200 rounded-lg p-4 transition-colors duration-200 ${
+                    canViewRecords
+                      ? "cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      : "cursor-default"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <TrophyIcon className="h-5 w-5 text-blue-500" />
+                        <span className="text-lg font-medium text-gray-900">
+                          {competition.title || t("competitions.fallbackTitle")}
+                        </span>
+                        {/* エントリーステータスバッジ */}
+                        {competition.entry_status && (
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              competition.entry_status === "open"
+                                ? "bg-green-100 text-green-800"
+                                : competition.entry_status === "closed"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {competition.entry_status === "open"
+                              ? t("competitions.entryStatus.open")
                               : competition.entry_status === "closed"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {competition.entry_status === "open"
-                            ? t("competitions.entryStatus.open")
-                            : competition.entry_status === "closed"
-                              ? t("competitions.entryStatus.closed")
-                              : t("competitions.entryStatus.before")}
-                        </span>
-                      )}
-                    </div>
+                                ? t("competitions.entryStatus.closed")
+                                : t("competitions.entryStatus.before")}
+                          </span>
+                        )}
+                      </div>
 
-                    <div className="flex items-center space-x-2 mb-1">
-                      <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-600">
-                        {format(new Date(competition.date + "T00:00:00"), "yyyy年M月d日(EEE)", {
-                          locale: ja,
-                        })}
-                      </span>
-                    </div>
-
-                    {competition.place && (
                       <div className="flex items-center space-x-2 mb-1">
-                        <MapPinIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">{competition.place}</span>
-                      </div>
-                    )}
-
-                    {competition.note && (
-                      <p className="text-sm text-gray-600 mb-2 mt-2">{competition.note}</p>
-                    )}
-
-                    {/* 記録情報（管理者のみ表示） */}
-                    {isAdmin &&
-                      (competition.records && competition.records.length > 0 ? (
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="text-sm text-green-600 font-medium">
-                            📊 登録記録: {competition.records.length}件
-                          </span>
-                          <span className="text-xs text-gray-500 flex items-center">
-                            <EyeIcon className="h-3 w-3 mr-1" />
-                            タップで詳細
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="text-sm text-gray-500">📊 登録記録なし</span>
-                          <span className="text-xs text-blue-600 flex items-center">
-                            <PlusIcon className="h-3 w-3 mr-1" />
-                            追加可能
-                          </span>
-                        </div>
-                      ))}
-
-                    {/* エントリー情報 */}
-                    {competition.entries && competition.entries.length > 0 && (
-                      <div className="mt-1">
-                        <span className="text-sm text-blue-600">
-                          📝 エントリー: {competition.entries.length}件
+                        <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-600">
+                          {format(
+                            new Date(competition.date + "T00:00:00"),
+                            "yyyy年M月d日(EEE)",
+                            {
+                              locale: ja,
+                            },
+                          )}
                         </span>
                       </div>
-                    )}
 
-                    <div className="mt-2">
-                      <span className="text-xs text-gray-500">
-                        作成者:{" "}
-                        {competition.users?.name || competition.created_by_user?.name || "Unknown"}
-                      </span>
+                      {competition.place && (
+                        <div className="flex items-center space-x-2 mb-1">
+                          <MapPinIcon className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            {competition.place}
+                          </span>
+                        </div>
+                      )}
+
+                      {competition.note && (
+                        <p className="text-sm text-gray-600 mb-2 mt-2">
+                          {competition.note}
+                        </p>
+                      )}
+
+                      {/* 記録情報（管理者のみ表示） */}
+                      {isAdmin &&
+                        (competition.records &&
+                        competition.records.length > 0 ? (
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-sm text-green-600 font-medium">
+                              📊 登録記録: {competition.records.length}件
+                            </span>
+                            <span className="text-xs text-gray-500 flex items-center">
+                              <EyeIcon className="h-3 w-3 mr-1" />
+                              タップで詳細
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-sm text-gray-500">
+                              📊 登録記録なし
+                            </span>
+                            <span className="text-xs text-blue-600 flex items-center">
+                              <PlusIcon className="h-3 w-3 mr-1" />
+                              追加可能
+                            </span>
+                          </div>
+                        ))}
+
+                      {/* エントリー情報 */}
+                      {competition.entries &&
+                        competition.entries.length > 0 && (
+                          <div className="mt-1">
+                            <span className="text-sm text-blue-600">
+                              📝 エントリー: {competition.entries.length}件
+                            </span>
+                          </div>
+                        )}
+
+                      <div className="mt-2">
+                        <span className="text-xs text-gray-500">
+                          作成者:{" "}
+                          {competition.users?.name ||
+                            competition.created_by_user?.name ||
+                            "Unknown"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-col items-end gap-2">
-                    <p className="text-xs text-gray-500">
-                      {format(new Date(competition.created_at), "M/d HH:mm")}
-                    </p>
+                    <div className="flex flex-col items-end gap-2">
+                      <p className="text-xs text-gray-500">
+                        {format(new Date(competition.created_at), "M/d HH:mm")}
+                      </p>
 
-                    {/* アクションボタン */}
-                    <div className="flex gap-2">
-                      {/* エントリー管理ボタン */}
-                      <button
-                        onClick={(e) => handleEntryClick(e, competition)}
-                        className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                      >
-                        <ClipboardDocumentListIcon className="h-4 w-4 mr-1" />
-                        {t("competitions.card.entryButton")}
-                      </button>
-
-                      {/* 記録入力ボタン（adminのみ） */}
-                      {isAdmin && (
+                      {/* アクションボタン */}
+                      <div className="flex gap-2 flex-wrap justify-end">
+                        {/* エントリー管理ボタン */}
                         <button
-                          onClick={(e) => handleRecordClick(e, competition.id)}
-                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                          onClick={(e) => handleEntryClick(e, competition)}
+                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                         >
-                          <PencilSquareIcon className="h-4 w-4 mr-1" />
-                          {t("competitions.card.recordsButton")}
+                          <ClipboardDocumentListIcon className="h-4 w-4 mr-1" />
+                          {t("competitions.card.entryButton")}
                         </button>
+
+                        {/* 一般メンバー含む全員向け: 自分の記録を追加 */}
+                        <button
+                          onClick={(e) => handleOpenSelfRecord(e, competition)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                        >
+                          <PlusIcon className="h-4 w-4 mr-1" />
+                          {t("competitions.selfRecordButton")}
+                        </button>
+
+                        {/* 記録入力ボタン（adminのみ） */}
+                        {isAdmin && (
+                          <button
+                            onClick={(e) =>
+                              handleRecordClick(e, competition.id)
+                            }
+                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                          >
+                            <PencilSquareIcon className="h-4 w-4 mr-1" />
+                            {t("competitions.card.recordsButton")}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* 編集・削除ボタン（adminのみ） */}
+                      {isAdmin && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={(e) =>
+                              handleEditCompetition(e, competition)
+                            }
+                            onKeyDown={(e) => e.stopPropagation()}
+                            data-testid="team-competition-edit-button"
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                            aria-label={t("competitions.card.editButton")}
+                          >
+                            <PencilSquareIcon className="h-3.5 w-3.5 mr-1" />
+                            {t("competitions.card.editButton")}
+                          </button>
+                          <button
+                            onClick={(e) =>
+                              handleRequestDelete(e, competition.id)
+                            }
+                            onKeyDown={(e) => e.stopPropagation()}
+                            data-testid="team-competition-delete-button"
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+                            aria-label={t("competitions.card.deleteButton")}
+                          >
+                            <TrashIcon className="h-3.5 w-3.5 mr-1" />
+                            {t("competitions.card.deleteButton")}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
 
-          {competitions.length === 0 && !loading && (
-            <div className="text-center py-8">
-              <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">{t("competitions.empty")}</p>
-              {isAdmin && (
-                <button
-                  onClick={handleAddCompetition}
-                  className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                >
-                  {t("competitions.addButton")}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+            {competitions.length === 0 && (
+              <div className="text-center py-8">
+                <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">{t("competitions.empty")}</p>
+                {isAdmin && (
+                  <button
+                    onClick={handleAddCompetition}
+                    className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                  >
+                    {t("competitions.addButton")}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ページング */}
-        {totalCount > 0 && (
+        {!loading && !error && totalCount > 0 && (
           <div className="mt-4 pt-4 px-4 sm:px-6 pb-6 border-t border-gray-200">
             <Pagination
               currentPage={currentPage}
@@ -565,13 +816,25 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
         )}
       </div>
 
-      {/* チーム大会作成モーダル */}
+      {/* チーム大会作成・編集モーダル */}
       <Suspense fallback={null}>
         <CompetitionBasicForm
           isOpen={isBasicFormOpen}
           onClose={closeBasicForm}
           onSubmit={handleCompetitionBasicSubmit}
           selectedDate={selectedDate || new Date()}
+          editData={
+            editingData
+              ? {
+                  date: (editingData as { date?: string }).date,
+                  title:
+                    (editingData as { title?: string | null }).title ??
+                    undefined,
+                  place: (editingData as { place?: string }).place,
+                  note: (editingData as { note?: string }).note,
+                }
+              : undefined
+          }
           isLoading={formLoading}
           teamMode={true}
         />
@@ -588,7 +851,9 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
             loadTeamCompetitions();
           }}
           competitionId={selectedCompetition.id}
-          competitionTitle={selectedCompetition.title || t("competitions.fallbackTitle")}
+          competitionTitle={
+            selectedCompetition.title || t("competitions.fallbackTitle")
+          }
           teamId={teamId}
         />
       )}
@@ -602,9 +867,37 @@ export default function TeamCompetitions({ teamId, isAdmin = false }: TeamCompet
             setSelectedCompetitionForRecords(null);
           }}
           competitionId={selectedCompetitionForRecords.id}
-          competitionTitle={selectedCompetitionForRecords.title || t("competitions.fallbackTitle")}
+          competitionTitle={
+            selectedCompetitionForRecords.title ||
+            t("competitions.fallbackTitle")
+          }
         />
       )}
+
+      {/* 自分の記録を追加(記録登録フォーム) */}
+      {showSelfRecordForm && selfRecordCompetition && (
+        <RecordLogForm
+          isOpen={showSelfRecordForm}
+          onClose={handleCloseSelfRecordForm}
+          onSubmit={handleSelfRecordSubmit}
+          competitionId={selfRecordCompetition.id}
+          competitionTitle={
+            selfRecordCompetition.title || t("competitions.fallbackTitle")
+          }
+          competitionDate={selfRecordCompetition.date}
+          poolType={selfRecordCompetition.pool_type === 1 ? 1 : 0}
+          isLoading={selfRecordLoading}
+          styles={selfRecordStyles}
+          entryDataList={selfRecordEntryDataList}
+        />
+      )}
+
+      {/* 削除確認モーダル（管理者のみ） */}
+      <DeleteConfirmModal
+        isOpen={!!pendingDeleteId}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </>
   );
 }

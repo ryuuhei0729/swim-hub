@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import type { CalendarItem } from "@apps/shared/types/ui";
+import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
+import { resolveCalendarItemColor, getDefaultColorForType } from "@apps/shared/utils/calendarColorResolver";
 import { styles } from "./styles";
 import { MemoizedPracticeLogDetail, RecordDetail, EntryDetail } from "./components";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -33,23 +35,51 @@ const buildEntryTitle = (
   return displayTitle;
 };
 
+// 未設定(resolver がデフォルト色を返した)ユーザーの見た目を維持するための、
+// 旧来のエントリー識別色(バッジ・左枠線・カード外枠のアクセント)。
+// NOTE: この2色 (#10B981 / #2563EB) はタグ/記録色パレット (TAG_COLORS) に含まれない値
+// なので、カスタム色との衝突判定に安全に使える。
+const LEGACY_PRACTICE_ACCENT = "#10B981"; // 緑色 (green-500)
+const LEGACY_COMPETITION_ACCENT = "#2563EB"; // 青色 (blue-600)
+
 /**
- * エントリーの種類に応じた色を取得
+ * 未カスタマイズ時のフォールバック色。practice 系/competition 系の判定は
+ * getDefaultColorForType の分類(resolveCategory)と揃える。
  */
-const getEntryColor = (type: CalendarItem["type"]): string => {
+const getLegacyAccentColor = (type: CalendarItem["type"]): string => {
   switch (type) {
     case "practice":
     case "team_practice":
     case "practice_log":
-      return "#10B981"; // 緑色
+      return LEGACY_PRACTICE_ACCENT;
     case "competition":
     case "team_competition":
     case "entry":
     case "record":
-      return "#2563EB"; // 青色
+      return LEGACY_COMPETITION_ACCENT;
     default:
       return "#6B7280"; // グレー
   }
+};
+
+const EMPTY_COLOR_SETTINGS: CalendarColorSettings = {
+  personal: { practice_color: null, competition_color: null },
+  byTeam: {},
+};
+
+/**
+ * エントリーの種類に応じた表示色を取得する。
+ * 未カスタマイズ(resolver 戻り値がデフォルト色と一致)の場合は、旧来のバッジ/枠線色を
+ * そのまま返して既存ユーザーの見た目をピクセル一致で維持する。カスタム色時のみ
+ * resolveCalendarItemColor の戻り値(ユーザー設定色)を返す。
+ */
+const getEntryDisplayColor = (
+  item: CalendarItem,
+  colorSettings: CalendarColorSettings,
+): string => {
+  const resolved = resolveCalendarItemColor(item.type, item.metadata, colorSettings);
+  const isDefault = resolved === getDefaultColorForType(item.type);
+  return isDefault ? getLegacyAccentColor(item.type) : resolved;
 };
 
 /**
@@ -84,6 +114,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   visible,
   date,
   entries,
+  colorSettings = EMPTY_COLOR_SETTINGS,
   onClose,
   onEntryPress,
   onAddPractice,
@@ -108,6 +139,20 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const formattedDate = formatDate(date, "shortWithWeekday", locale);
   const fallbackTeamName = t("teams.mobile.fallbackTeamName");
   const fallbackCompetitionName = t("teams.mobile.fallbackCompetitionName");
+
+  // 「記録を追加」チューザー(空状態の大きい2ボタン)のアイコン色。
+  // 個人の練習/大会色を resolver で解決し、未カスタマイズ(デフォルト色)ならピクセル一致で
+  // 現状のアイコン色を維持、カスタム色時のみ選択色そのままアイコンを塗る。
+  const resolvedPersonalCompetitionColor = resolveCalendarItemColor("competition", null, colorSettings);
+  const chooserRecordIconColor =
+    resolvedPersonalCompetitionColor === getDefaultColorForType("competition")
+      ? "#3B82F6"
+      : resolvedPersonalCompetitionColor;
+  const resolvedPersonalPracticeColor = resolveCalendarItemColor("practice", null, colorSettings);
+  const chooserPracticeIconColor =
+    resolvedPersonalPracticeColor === getDefaultColorForType("practice")
+      ? "#10B981"
+      : resolvedPersonalPracticeColor;
 
   // PracticeLogのPracticeTimeの有無を追跡
   const [practiceLogsWithTimes, setPracticeLogsWithTimes] = useState<Set<string>>(new Set());
@@ -237,7 +282,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         <Feather
                           name="droplet"
                           size={28}
-                          color="#3B82F6"
+                          color={chooserRecordIconColor}
                           style={styles.addButtonCardIcon}
                         />
                         <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addRecord")}</Text>
@@ -254,7 +299,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         <Feather
                           name="activity"
                           size={28}
-                          color="#10B981"
+                          color={chooserPracticeIconColor}
                           style={styles.addButtonCardIcon}
                         />
                         <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addPractice")}</Text>
@@ -268,7 +313,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                     {/* 記録以外のエントリー */}
                     {otherItems.map((item) => {
                       const title = buildEntryTitle(item, fallbackTeamName, fallbackCompetitionName);
-                      const color = getEntryColor(item.type);
+                      const color = getEntryDisplayColor(item, colorSettings);
                       const typeLabel = t(getEntryTypeLabelKey(item.type));
                       const isPractice = item.type === "practice" || item.type === "team_practice";
                       const isPracticeLog = item.type === "practice_log";
@@ -341,6 +386,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             poolType={poolType}
                             note={note}
                             entries={entryList}
+                            color={getEntryDisplayColor(firstEntry, colorSettings)}
                             onEditCompetition={(item) => {
                               if (onEditCompetition) {
                                 onEditCompetition(item);
@@ -393,6 +439,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           note={note}
                           records={records}
                           isTeamCompetition={isTeamCompetition}
+                          color={getEntryDisplayColor(firstRecord, colorSettings)}
                           onEditCompetition={() => {
                             if (!onEditCompetition) return;
                             const firstRecord = records[0];
@@ -454,7 +501,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             onClose();
                           }}
                         >
-                          <Feather name="droplet" size={20} color="#3B82F6" />
+                          <Feather name="droplet" size={20} color={chooserRecordIconColor} />
                           <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addRecordShort")}</Text>
                         </Pressable>
                       )}
@@ -466,7 +513,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             onClose();
                           }}
                         >
-                          <Feather name="activity" size={20} color="#10B981" />
+                          <Feather name="activity" size={20} color={chooserPracticeIconColor} />
                           <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addPracticeShort")}</Text>
                         </Pressable>
                       )}

@@ -3,12 +3,10 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import type { MainStackParamList } from "./types";
 import { TabNavigator } from "./TabNavigator";
-import { PracticeDetailScreen } from "@/screens/PracticeDetailScreen";
 import { PracticeFormScreen } from "@/screens/PracticeFormScreen";
 import { PracticeLogFormScreen } from "@/screens/PracticeLogFormScreen";
 import { PracticeTabFormScreen } from "@/screens/PracticeTabFormScreen";
 import { PracticeTimeFormScreen } from "@/screens/PracticeTimeFormScreen";
-import { RecordDetailScreen } from "@/screens/RecordDetailScreen";
 import { RecordFormScreen } from "@/screens/RecordFormScreen";
 import { CompetitionBasicFormScreen } from "@/screens/CompetitionBasicFormScreen";
 import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
@@ -51,14 +49,6 @@ export const MainStack: React.FC = () => {
     >
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen
-        name="PracticeDetail"
-        component={PracticeDetailScreen}
-        options={{
-          ...baseHeaderOptions,
-          title: t("navigation.mobile.titles.practiceDetail"),
-        }}
-      />
-      <Stack.Screen
         name="PracticeForm"
         component={PracticeFormScreen}
         options={({ route }) => ({
@@ -95,14 +85,6 @@ export const MainStack: React.FC = () => {
         options={{
           ...baseHeaderOptions,
           title: t("navigation.mobile.titles.practiceTimeInput"),
-        }}
-      />
-      <Stack.Screen
-        name="RecordDetail"
-        component={RecordDetailScreen}
-        options={{
-          ...baseHeaderOptions,
-          title: t("navigation.mobile.titles.recordDetail"),
         }}
       />
       <Stack.Screen

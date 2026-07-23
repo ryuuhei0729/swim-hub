@@ -281,7 +281,25 @@
     },
     "discardTitle": "Nicht gespeicherte Änderungen",
     "discardMessage": "Sie haben nicht gespeicherte Änderungen. Trotzdem schließen?",
-    "discard": "Verwerfen"
+    "discard": "Verwerfen",
+    "listToolbar": {
+      "itemCount": "{count} Einträge",
+      "sortButton": "Sortieren",
+      "filterButton": "Filtern"
+    },
+    "bottomSheet": {
+      "clearGroup": "Zurücksetzen",
+      "clearAll": "Alle zurücksetzen",
+      "apply": "Anwenden",
+      "close": "Schließen"
+    },
+    "loadMore": {
+      "button": "Mehr anzeigen",
+      "remaining": "Noch {n}"
+    },
+    "bestBadge": {
+      "first": "Debüt"
+    }
   },
   "nav": {
     "practice": "Trainingsprotokoll",
@@ -1030,7 +1048,8 @@
       "deleteConfirm": "Möchten Sie diesen Trainingseintrag löschen?",
       "deleteFailed": "Löschen fehlgeschlagen",
       "practiceTitle": "Training",
-      "viewDetailAriaLabel": "Trainingsdetails anzeigen"
+      "viewDetailAriaLabel": "Trainingsdetails anzeigen",
+      "viewDetailAriaLabelWithInfo": "Trainingsdetails anzeigen ({date} {place} {style})"
     },
     "modal": {
       "loading": "Trainingsdetails werden geladen ...",
@@ -1057,19 +1076,19 @@
       "emptyTitle": "Keine Trainingseinträge",
       "emptyDesc": "Sie können Trainingseinträge über den Dashboard-Kalender hinzufügen.",
       "goToDashboard": "Zum Dashboard",
-      "colDate": "Datum",
       "colPlace": "Ort",
-      "colDistReps": "Distanz / Wiederholungen / Sätze",
-      "colCircle": "Abgangszeit",
       "colStyle": "Disziplin",
       "colTags": "Tags",
-      "colAvgTime": "Durchschnittszeit",
       "avgTimeLabel": "Durchschnittszeit:",
       "share": "Teilen",
       "edit": "Bearbeiten",
       "delete": "Löschen",
       "deleting": "Wird gelöscht ...",
-      "distanceFormat": "{distance}m × {reps} Wdh. × {sets} Sätze"
+      "distanceFormat": "{distance}m × {reps} Wdh. × {sets} Sätze",
+      "noMatchTitle": "Keine passenden Einträge",
+      "noMatchDesc": "Keine Trainingseinträge entsprechen den ausgewählten Filtern.",
+      "sortOptionDateDesc": "Datum (neueste zuerst)",
+      "sortOptionDateAsc": "Datum (älteste zuerst)"
     },
     "details": {
       "badge": "Trainingsprotokoll",
@@ -1170,6 +1189,23 @@
       "videoUploadFailedTitle": "Video-Upload fehlgeschlagen",
       "videoUploadFailedSession": "Das Video konnte nicht hochgeladen werden, da Ihre Sitzung ungültig ist.",
       "videoUploadFailedSaved": "Das Trainingsprotokoll wurde gespeichert, aber der Video-Upload ist fehlgeschlagen."
+    },
+    "sortSheet": {
+      "title": "Sortieren",
+      "placeAsc": "Ort (A-Z)",
+      "placeDesc": "Ort (Z-A)",
+      "distanceAsc": "Distanz (aufsteigend)",
+      "distanceDesc": "Distanz (absteigend)",
+      "circleAsc": "Abgangszeit (aufsteigend)",
+      "circleDesc": "Abgangszeit (absteigend)",
+      "styleAsc": "Disziplin (aufsteigend)",
+      "styleDesc": "Disziplin (absteigend)",
+      "avgTimeAsc": "Durchschnittszeit (schnellste)",
+      "avgTimeDesc": "Durchschnittszeit (langsamste)"
+    },
+    "filterSheet": {
+      "title": "Filtern",
+      "tagsAndNote": "(Nur Einträge mit allen ausgewählten Tags)"
     }
   },
   "mypage": {
@@ -1501,20 +1537,16 @@
       "recordNotFound": "Ergebnisdaten nicht gefunden",
       "viewDetailAriaLabel": "Details zum Wettkampfergebnis anzeigen",
       "competitionFallback": "Wettkampf",
-      "styleFallback": "Ergebnis"
+      "styleFallback": "Ergebnis",
+      "bulkInputLabel": "Sammeleintrag",
+      "viewDetailAriaLabelWithInfo": "Wettkampfergebnis-Details anzeigen ({date} {name})"
     },
     "filter": {
-      "periodLabel": "Zeitraum",
-      "allPeriods": "Alle Zeiträume",
-      "fiscalYearSuffix": "Saison {year}",
-      "styleLabel": "Disziplin",
       "allStyles": "Alle Disziplinen",
-      "poolTypeLabel": "Bahnlänge",
       "allPoolTypes": "Alle",
-      "relayLabel": "Wechsel",
-      "includeRelay": "Einbeziehen",
-      "clearLabel": "Zurücksetzen",
-      "resetButton": "Filter zurücksetzen"
+      "resetButton": "Filter zurücksetzen",
+      "excludeRelay": "Ohne Staffel",
+      "onlyRelay": "Nur Staffel"
     },
     "empty": {
       "noRecordsTitle": "Keine Wettkampfergebnisse",
@@ -1661,6 +1693,27 @@
       "errorVideoGenericFailed": "{name}: Beim Hochladen des Videos ist ein Fehler aufgetreten",
       "errorVideoNoThumbnail": "{name}: Das Video konnte nicht angehängt werden, da kein Vorschaubild erstellt werden konnte",
       "videoPartialFailureSaved": "Die Einträge wurden gespeichert, aber einige Videos konnten nicht angehängt werden:\n{errors}"
+    },
+    "sortSheet": {
+      "title": "Sortieren",
+      "dateDesc": "Datum (neueste zuerst)",
+      "dateAsc": "Datum (älteste zuerst)",
+      "timeAsc": "Schnellste Zeit",
+      "timeDesc": "Langsamste Zeit",
+      "competitionNameAsc": "Wettkampf (A-Z)",
+      "competitionNameDesc": "Wettkampf (Z-A)",
+      "placeAsc": "Ort (A-Z)",
+      "placeDesc": "Ort (Z-A)",
+      "poolAsc": "Becken (aufsteigend)",
+      "poolDesc": "Becken (absteigend)",
+      "styleAsc": "Disziplin (aufsteigend)",
+      "styleDesc": "Disziplin (absteigend)"
+    },
+    "filterSheet": {
+      "title": "Filtern",
+      "distanceLabel": "Distanz",
+      "strokeLabel": "Lage",
+      "relayLabel": "Staffel"
     }
   },
   "settings": {
@@ -1885,6 +1938,21 @@
     },
     "practiceLogTemplates": {
       "backAriaLabel": "Zurück"
+    },
+    "calendarColors": {
+      "title": "Kalenderfarben",
+      "description": "Passe die Anzeigefarben für Trainings- und Wettkampfeinträge im Dashboard an. Du kannst auch pro Team unterschiedliche Farben festlegen.",
+      "personalSectionTitle": "Persönliche Farben",
+      "teamSectionTitle": "Teamfarben",
+      "practiceLabel": "Training",
+      "competitionLabel": "Wettkampf",
+      "resetToDefault": "Auf Standard zurücksetzen",
+      "resetTeamToDefault": "Auf Standard zurücksetzen",
+      "sameColorWarning": "Trainings- und Wettkampffarbe sind identisch. Wähle ggf. unterschiedliche Farben zur besseren Unterscheidung."
+    },
+    "password": {
+      "title": "Passwort",
+      "openButton": "Passwort ändern"
     }
   },
   "practiceLogTemplates": {
@@ -2653,8 +2721,11 @@
         "clickToAdd": "Zum Hinzufügen klicken",
         "editAriaLabel": "Trainingseintrag für {date} bearbeiten",
         "addAriaLabel": "Trainingseintrag für {date} hinzufügen",
-        "viewAriaLabel": "Trainingseintrag für {date} anzeigen"
-      }
+        "viewAriaLabel": "Trainingseintrag für {date} anzeigen",
+        "editButton": "Bearbeiten",
+        "deleteButton": "Löschen"
+      },
+      "selfLogButton": "Eigenes Protokoll hinzufügen"
     },
     "practiceDetail": {
       "title": "Trainingsdetails",
@@ -2675,14 +2746,18 @@
       "fallbackTitle": "Wettkampf",
       "card": {
         "entryButton": "Anmeldung",
-        "recordsButton": "Einträge",
-        "manageButton": "Verwalten"
+        "recordsButton": "Ergebnisse eingeben",
+        "manageButton": "Verwalten",
+        "editButton": "Bearbeiten",
+        "deleteButton": "Löschen"
       },
       "entryStatus": {
         "before": "Noch nicht geöffnet",
         "open": "Geöffnet",
         "closed": "Geschlossen"
-      }
+      },
+      "selfRecordButton": "Eigenes Ergebnis hinzufügen",
+      "selfRecordSaveFailed": "Eigenes Ergebnis konnte nicht gespeichert werden"
     },
     "entrySection": {
       "title": "Wettkämpfe mit offener Anmeldung"
@@ -2999,7 +3074,9 @@
       "notePlaceholder": "Trainingsinhalte oder Kommentare",
       "cancelButton": "Abbrechen",
       "creating": "Wird erstellt...",
-      "createButton": "Erstellen"
+      "createButton": "Erstellen",
+      "updateFailed": "Aktualisieren des Team-Trainingseintrags fehlgeschlagen.",
+      "deleteFailed": "Löschen des Team-Trainingseintrags fehlgeschlagen."
     },
     "competitionForm": {
       "title": "Wettkampf hinzufügen",
@@ -3009,6 +3086,8 @@
       "endDateBeforeStart": "Enddatum muss am oder nach dem Startdatum liegen",
       "authRequired": "Authentifizierung erforderlich",
       "createFailed": "Teamwettkampf konnte nicht erstellt werden",
+      "updateFailed": "Teamwettkampf konnte nicht aktualisiert werden",
+      "deleteFailed": "Teamwettkampf konnte nicht gelöscht werden",
       "competitionNameLabel": "Wettkampfname",
       "competitionNamePlaceholder": "z. B. Landesmeisterschaften (leer lassen für „Wettkampf“)",
       "startDateLabel": "Startdatum",
@@ -3546,7 +3625,39 @@
         "practicesCreated": "Training: {count} Einträge registriert",
         "competitionsCreated": "Wettkampf: {count} Einträge registriert",
         "errors": "Fehler: {errors}"
-      }
+      },
+      "manual": {
+        "tabPractice": "Training",
+        "tabCompetition": "Wettkampf",
+        "rowTitlePractice": "Training {n}",
+        "rowTitleCompetition": "Wettkampf {n}",
+        "labelDate": "Datum *",
+        "labelStartDate": "Startdatum *",
+        "labelEndDate": "Enddatum",
+        "labelTitle": "Titel",
+        "labelCompetitionName": "Wettkampfname",
+        "labelPlace": "Ort",
+        "labelPoolType": "Becken",
+        "labelNote": "Notiz",
+        "poolShort": "Kurzbahn (25m)",
+        "poolLong": "Langbahn (50m)",
+        "addPracticeRowButton": "+ Training hinzufügen",
+        "addCompetitionRowButton": "+ Wettkampf hinzufügen",
+        "deleteRowButton": "Löschen",
+        "submitButton": "Registrieren",
+        "submitting": "Wird registriert...",
+        "errorDateRequired": "Zeile {row}: Datum ist erforderlich",
+        "errorStartDateRequired": "Zeile {row}: Startdatum ist erforderlich",
+        "errorEndDateAfterStart": "Zeile {row}: Enddatum muss am oder nach dem Startdatum liegen",
+        "practiceEmpty": "Keine Trainings zum Registrieren",
+        "competitionEmpty": "Keine Wettkämpfe zum Registrieren",
+        "titlePlaceholder": "z. B. Morgentraining",
+        "competitionNamePlaceholder": "z. B. Stadtmeisterschaft",
+        "placePlaceholder": "Veranstaltungsort",
+        "notePlaceholder": "Notiz"
+      },
+      "modeTabFile": "Datei-Import",
+      "modeTabManual": "Manuelle Eingabe"
     },
     "common": {
       "close": "Schließen",

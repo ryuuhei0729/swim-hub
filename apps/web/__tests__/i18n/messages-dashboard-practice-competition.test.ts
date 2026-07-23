@@ -150,17 +150,14 @@ describe("[V-C2A-01] competition namespace の必須キー確認", () => {
     // ローディング・エラー
     "competition.loading",
     "competition.error",
-    // フィルター
-    "competition.filter.periodLabel",
-    "competition.filter.allPeriods",
-    "competition.filter.fiscalYearSuffix",
-    "competition.filter.styleLabel",
+    // フィルター(2026-07-21 Sprint: 年度フィルタ廃止 + カラム別ソート/フィルターに刷新。
+    // periodLabel/allPeriods/fiscalYearSuffix/relayLabel/includeRelay/clearLabel/styleLabel/
+    // poolTypeLabel は旧フィルターパネル(グリッドの select 群)ごと削除されたため対象から除外し、
+    // 新設の記録(タイム)カラム用フィルター文言を追加する)
     "competition.filter.allStyles",
-    "competition.filter.poolTypeLabel",
     "competition.filter.allPoolTypes",
-    "competition.filter.relayLabel",
-    "competition.filter.includeRelay",
-    "competition.filter.clearLabel",
+    "competition.filter.excludeRelay",
+    "competition.filter.onlyRelay",
     "competition.filter.resetButton",
     // 空状態（記録なし）
     "competition.empty.noRecordsTitle",
@@ -168,7 +165,10 @@ describe("[V-C2A-01] competition namespace の必須キー確認", () => {
     // 空状態（条件一致なし）
     "competition.empty.noMatchTitle",
     "competition.empty.noMatchDesc",
-    // テーブルヘッダー
+    // テーブルヘッダー(2026-07-22 Sprint: カード化後もフィルターシートの
+    // グループ見出しとして competitionName/place/pool/style は引き続き参照する。
+    // date/time は参照元(SortableHeader)が消滅したが、他 namespace テストとの
+    // リグレッション回避のためキー自体は残す)
     "competition.table.date",
     "competition.table.competitionName",
     "competition.table.place",
@@ -187,6 +187,30 @@ describe("[V-C2A-01] competition namespace の必須キー確認", () => {
     "competition.detail.recordSection",
     "competition.detail.share",
     "competition.detail.close",
+    // 2026-07-22 Sprint: カード化 + ボトムシート化(SortableHeader/ColumnFilterDropdown 廃止)
+    "common.listToolbar.itemCount",
+    "common.listToolbar.sortButton",
+    "common.listToolbar.filterButton",
+    "common.bottomSheet.clearGroup",
+    "common.bottomSheet.clearAll",
+    "common.bottomSheet.close",
+    "common.loadMore.button",
+    "common.loadMore.remaining",
+    "competition.sortSheet.title",
+    "competition.sortSheet.dateDesc",
+    "competition.sortSheet.dateAsc",
+    "competition.sortSheet.timeAsc",
+    "competition.sortSheet.timeDesc",
+    "competition.sortSheet.competitionNameAsc",
+    "competition.sortSheet.competitionNameDesc",
+    "competition.sortSheet.placeAsc",
+    "competition.sortSheet.placeDesc",
+    "competition.sortSheet.poolAsc",
+    "competition.sortSheet.poolDesc",
+    "competition.sortSheet.styleAsc",
+    "competition.sortSheet.styleDesc",
+    "competition.filterSheet.title",
+    "competition.filterSheet.relayLabel",
   ] as const;
 
   for (const key of COMPETITION_REQUIRED_KEYS) {
@@ -692,8 +716,9 @@ describe("[V-C2A-07] Phase 1-C-1 必須キーのリグレッション防止", ()
 
 describe("[V-C2A-08] ICU Message Format プレースホルダーの ja/en 対称確認", () => {
   const ICU_KEYS_TO_CHECK = [
-    // competition
-    "competition.filter.fiscalYearSuffix",
+    // common (2026-07-22: N件表示 / もっと見るの残り件数)
+    "common.listToolbar.itemCount",
+    "common.loadMore.remaining",
     // settings
     "settings.subscription.trialDaysRemaining",
     "settings.googleCalendar.bulkSync.practicesSuccess",

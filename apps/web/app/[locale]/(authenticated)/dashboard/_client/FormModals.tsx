@@ -2,17 +2,17 @@
 
 import React from "react";
 import type { PracticeTag, Style } from "@apps/shared/types";
-import type { TimeEntry, EntryInfo } from "@apps/shared/types/ui";
+import type { TimeEntry } from "@apps/shared/types/ui";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import type {
   PracticeMenuFormData,
   EntryFormData,
   RecordFormDataInternal,
-  EntryWithStyle,
 } from "@/stores/types";
 import { convertRecordFormData } from "@/stores/types";
 import { getCompetitionId } from "../_utils/dashboardHelpers";
+import { getEntryDataListForRecord } from "@/utils/getEntryDataListForRecord";
 import { useAuth } from "@/contexts";
 import { useCompetitionInfoQuery } from "@apps/shared/hooks/queries/records";
 import PracticeLogForm from "@/components/forms/PracticeLogForm";
@@ -259,76 +259,6 @@ export function FormModals({
     () => getEntryInitialEntries(competitionEditingData),
     [competitionEditingData],
   );
-
-  // Recordフォーム用 EntryInfo一覧を取得するヘルパー
-  const getEntryDataListForRecord = (
-    editingData: unknown,
-    createdEntries: EntryWithStyle[],
-  ): EntryInfo[] => {
-    if (
-      editingData &&
-      typeof editingData === "object" &&
-      "entryDataList" in editingData &&
-      Array.isArray((editingData as { entryDataList?: EntryInfo[] }).entryDataList)
-    ) {
-      return (editingData as { entryDataList: EntryInfo[] }).entryDataList;
-    }
-
-    if (
-      editingData &&
-      typeof editingData === "object" &&
-      "editData" in editingData &&
-      editingData.editData &&
-      typeof editingData.editData === "object"
-    ) {
-      const editPayload = editingData.editData as { entries?: Array<Record<string, unknown>> };
-      if (Array.isArray(editPayload.entries) && editPayload.entries.length > 0) {
-        return editPayload.entries.map((entry) => {
-          const style =
-            entry.style && typeof entry.style === "object" && "name_jp" in entry.style
-              ? (entry.style as { name_jp?: string })
-              : null;
-          return {
-            styleId: Number(entry.styleId ?? entry.style_id),
-            styleName: style?.name_jp ?? String(entry.styleName ?? ""),
-            entryTime:
-              typeof entry.entryTime === "number"
-                ? entry.entryTime
-                : typeof entry.entry_time === "number"
-                  ? entry.entry_time
-                  : undefined,
-          };
-        });
-      }
-    }
-
-    if (
-      editingData &&
-      typeof editingData === "object" &&
-      "entryData" in editingData &&
-      editingData.entryData &&
-      typeof editingData.entryData === "object"
-    ) {
-      const entryData = (editingData as { entryData: EntryInfo }).entryData;
-      return [
-        {
-          styleId: Number(entryData.styleId),
-          styleName: entryData.styleName,
-          entryTime: entryData.entryTime,
-        },
-      ];
-    }
-
-    if (createdEntries.length > 0) {
-      return createdEntries.map((entry) => ({
-        styleId: entry.styleId,
-        styleName: String(entry.styleName || ""),
-        entryTime: entry.entryTime ?? undefined,
-      }));
-    }
-
-    return [];
-  };
 
   return (
     <>

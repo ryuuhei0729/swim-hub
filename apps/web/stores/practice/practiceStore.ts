@@ -5,6 +5,7 @@
 import { create } from "zustand";
 import type { PracticeTag } from "@apps/shared/types";
 import type { EditingData, PracticeTabId } from "../types";
+import type { SortOrder } from "@/hooks/useTableSort";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -31,8 +32,17 @@ interface PracticeFormState {
   isLoading: boolean;
 }
 
+// 練習履歴テーブルのソート対象カラム(V-W-PSF: タグを除く6列がソート可能)
+export type PracticeSortColumn = "date" | "place" | "distance" | "circle" | "style" | "avgTime";
+
 interface PracticeFilterState {
   selectedTagIds: string[];
+  /** 場所フィルタ(複数select, distinct, OR。lg以上のみUI表示) */
+  filterPlaces: string[];
+  /** 種目フィルタ(単一select。lg以上のみUI表示) */
+  filterStyle: string;
+  sortColumn: PracticeSortColumn | null;
+  sortOrder: SortOrder;
 }
 
 interface PracticeFormActions {
@@ -62,6 +72,10 @@ interface PracticeFormActions {
 
 interface PracticeFilterActions {
   setSelectedTags: (tagIds: string[]) => void;
+  setFilterPlaces: (places: string[]) => void;
+  setFilterStyle: (style: string) => void;
+  setSortColumn: (column: PracticeSortColumn | null) => void;
+  setSortOrder: (order: SortOrder) => void;
   resetFilter: () => void;
 }
 
@@ -90,6 +104,10 @@ const initialFormState: PracticeFormState = {
 
 const initialFilterState: PracticeFilterState = {
   selectedTagIds: [],
+  filterPlaces: [],
+  filterStyle: "",
+  sortColumn: null,
+  sortOrder: "asc",
 };
 
 const initialState: PracticeState = {
@@ -207,6 +225,10 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
   // Filter: 操作
   // ---------------------------------------------------------------------------
   setSelectedTags: (tagIds) => set({ selectedTagIds: tagIds }),
+  setFilterPlaces: (places) => set({ filterPlaces: places }),
+  setFilterStyle: (style) => set({ filterStyle: style }),
+  setSortColumn: (column) => set({ sortColumn: column }),
+  setSortOrder: (order) => set({ sortOrder: order }),
   resetFilter: () => set(initialFilterState),
 
   // ---------------------------------------------------------------------------

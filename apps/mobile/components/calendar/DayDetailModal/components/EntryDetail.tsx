@@ -7,8 +7,20 @@ import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { EntryAPI } from "@apps/shared/api/entries";
 import type { CalendarItem } from "@apps/shared/types/ui";
+import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
+import { darkenHex } from "@/utils/colorTone";
 import { styles } from "../styles";
 import type { EntryDetailProps, EntryData } from "../types";
+
+// DayDetailModal から渡ってくる未カスタマイズ時のフォールバック色 (旧デフォルト青)。
+// RecordDetail と同一の判定・フォールバック値を使う(見た目のパリティのため)。
+const LEGACY_COMPETITION_ACCENT = "#2563EB";
+const LEGACY_WRAPPER_BACKGROUND = "#EFF6FF";
+const LEGACY_WRAPPER_BORDER = "#DBEAFE";
+// 「エントリー済み」ボックスの旧デフォルト値(オレンジ系)。
+const LEGACY_ENTRY_BOX_BACKGROUND = "#FFF7ED";
+const LEGACY_ENTRY_BOX_BORDER = "#FED7AA";
+const LEGACY_ENTRY_BOX_TEXT = "#9A3412";
 
 /**
  * エントリー詳細表示コンポーネント（大会ごとにグループ化、記録未登録）
@@ -20,6 +32,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   poolType,
   note,
   entries,
+  color = LEGACY_COMPETITION_ACCENT,
   onEditCompetition,
   onDeleteCompetition,
   onEditEntry,
@@ -28,6 +41,26 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   onClose,
   onDeletingChange,
 }) => {
+  // 未カスタマイズなら旧来のカード外枠を維持。カスタム色時は「濃すぎる」フィードバックを
+  // 受け、枠線はベタ塗りではなく淡いアルファ合成にする。
+  // 外枠の背景ウォッシュは mixWithWhite(不透明の混色)を使い、入れ子背景との
+  // アルファ合成による濃淡変化(2段階問題)を避ける(web と実装を揃える)。
+  const isDefaultAccent = color === LEGACY_COMPETITION_ACCENT;
+  const wrapperBackgroundColor = isDefaultAccent
+    ? LEGACY_WRAPPER_BACKGROUND
+    : mixWithWhite(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND);
+  const wrapperBorderColor = isDefaultAccent
+    ? LEGACY_WRAPPER_BORDER
+    : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
+  // 「エントリー済み(記録未登録)」ボックスは元々オレンジ固定だったが、識別色に揃える
+  // ユーザー要望により追従させる。デフォルト時はピクセル一致で従来のオレンジを維持。
+  const entryBoxBackgroundColor = isDefaultAccent
+    ? LEGACY_ENTRY_BOX_BACKGROUND
+    : mixWithWhite(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND);
+  const entryBoxBorderColor = isDefaultAccent
+    ? LEGACY_ENTRY_BOX_BORDER
+    : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
+  const entryBoxTextColor = isDefaultAccent ? LEGACY_ENTRY_BOX_TEXT : darkenHex(color, 0.65);
   const { t } = useTranslation();
   const { supabase } = useAuth();
   const [actualEntries, setActualEntries] = useState<EntryData[]>([]);
@@ -123,7 +156,12 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   }
 
   return (
-    <View style={styles.competitionRecordContainer}>
+    <View
+      style={[
+        styles.competitionRecordContainer,
+        { backgroundColor: wrapperBackgroundColor, borderColor: wrapperBorderColor },
+      ]}
+    >
       {/* 大会ヘッダー */}
       <View style={styles.competitionHeader}>
         <View style={styles.competitionHeaderTopRow}>
@@ -187,10 +225,17 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
       )}
 
       {/* エントリー済み（記録未登録）セクション */}
-      <View style={styles.entrySection}>
+      <View
+        style={[
+          styles.entrySection,
+          { backgroundColor: entryBoxBackgroundColor, borderColor: entryBoxBorderColor },
+        ]}
+      >
         <View style={styles.entrySectionHeader}>
           <Text style={styles.entrySectionHeaderEmoji}>📝</Text>
-          <Text style={styles.entrySectionHeaderTitle}>{t("dashboard.dayDetail.entryAlreadyTitle")}</Text>
+          <Text style={[styles.entrySectionHeaderTitle, { color: entryBoxTextColor }]}>
+            {t("dashboard.dayDetail.entryAlreadyTitle")}
+          </Text>
           {onEditEntry && (
             <Pressable
               style={styles.entrySectionHeaderActionButton}
@@ -227,16 +272,20 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
         ) : (
           <View style={styles.entryList}>
             {actualEntries.map((entry) => (
-              <View key={entry.id} style={styles.entryCard}>
+              <View key={entry.id} style={[styles.entryCard, { borderColor: entryBoxBorderColor }]}>
                 <View style={styles.entryCardContent}>
                   <View style={styles.entryCardInfo}>
                     <View style={styles.entryCardInfoRow}>
-                      <Text style={styles.entryCardInfoLabel}>{t("dashboard.dayDetail.fieldStyle")}</Text>
+                      <Text style={[styles.entryCardInfoLabel, { color: entryBoxTextColor }]}>
+                        {t("dashboard.dayDetail.fieldStyle")}
+                      </Text>
                       <Text style={styles.entryCardInfoValue}>{entry.styleName}</Text>
                     </View>
                     {entry.entryTime && entry.entryTime > 0 && (
                       <View style={styles.entryCardInfoRow}>
-                        <Text style={styles.entryCardInfoLabel}>{t("dashboard.dayDetail.fieldEntryTime")}</Text>
+                        <Text style={[styles.entryCardInfoLabel, { color: entryBoxTextColor }]}>
+                          {t("dashboard.dayDetail.fieldEntryTime")}
+                        </Text>
                         <Text style={styles.entryCardInfoValueTime}>
                           {formatTime(entry.entryTime)}
                         </Text>
@@ -244,7 +293,9 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                     )}
                     {entry.note && entry.note.trim().length > 0 && (
                       <View style={styles.entryCardInfoRow}>
-                        <Text style={styles.entryCardInfoLabel}>{t("dashboard.dayDetail.fieldMemo")}</Text>
+                        <Text style={[styles.entryCardInfoLabel, { color: entryBoxTextColor }]}>
+                          {t("dashboard.dayDetail.fieldMemo")}
+                        </Text>
                         <Text style={styles.entryCardInfoValue}>{entry.note}</Text>
                       </View>
                     )}

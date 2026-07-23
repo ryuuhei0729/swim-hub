@@ -3,3 +3,4 @@ export { SplitTimeItem } from "./SplitTimeItem";
 export { default as BestTimeBadge } from "./BestTimeBadge";
 export { LapTimeDisplay } from "./LapTimeDisplay";
 export { getBestTimeForEntry } from "./bestTimeForEntry";
+export { StandaloneRecordDetailModal } from "./StandaloneRecordDetailModal";

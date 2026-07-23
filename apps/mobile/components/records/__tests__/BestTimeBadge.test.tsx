@@ -11,8 +11,11 @@
 // - グループ単位の共有キャッシュクエリ (useListBestCandidatesQuery →
 //   RecordAPI.getListBestCandidates) で候補を一括取得し、
 //   computeListPreviousBest (shared/utils/bestTimeBadge、純関数テストは shared 側)
-//   が「記録日時点で自己ベストだったか」をメモリ上で判定
-// - ベストのときのみ「自己ベスト」バッジ (差分なし)、それ以外・判定不能は非表示
+//   が「記録日時点の過去ベスト」をメモリ上で判定
+// - 2026-07-22 Sprint: shared getBestBadgeState により「初/Best-X.XX/Best+X.XX」の
+//   3状態を常時表示する(以前は「自己ベストのときのみ表示・それ以外は非表示」の2状態だった)。
+//   「Best」「±」はASCII固定・i18n しない。i18n されるのは「初」(recordMobile.bestBadge.first
+//   を流用)のみ。判定不能・ガード・エラー時のみ非表示のまま。
 // - 同一グループの複数行でフェッチが1回に集約される (N+1 回避)
 //
 // i18n は vitest.setup.ts のモックが実 ja.json を解決するため、
@@ -84,10 +87,16 @@ function renderBadge(
   };
 }
 
-/** バッジが一切表示されていないことを確認 */
+/**
+ * バッジが一切表示されていないことを確認。
+ * 2026-07-22 3状態化: 一覧パスは「Best-X.XX」/「Best+X.XX」/「Best±0.00」も新たに
+ * 表示され得るため、FIRST_LABEL/PERSONAL_BEST_LABEL だけでなく "Best" 接頭辞パターンの
+ * 不在も確認する(でないと一覧パスの新表示を見逃して偽陽性 pass になる)。
+ */
 function expectNoBadge() {
   expect(screen.queryByText(FIRST_LABEL)).toBeNull();
   expect(screen.queryByText(PERSONAL_BEST_LABEL)).toBeNull();
+  expect(screen.queryByText(/^Best[-+±]/)).toBeNull();
 }
 
 // ---------------------------------------------------------------------------
@@ -139,21 +148,21 @@ describe("BestTimeBadge", () => {
   // ------------------------------------------------------------------
 
   describe("一覧パス (showDiff=false)", () => {
-    it("過去記録がないとき（記録日時点で初ベスト）「自己ベスト」バッジのみ表示する", async () => {
+    it("過去記録がないとき（記録日時点で初ベスト）「初」バッジを表示する", async () => {
       mockGetListBestCandidates.mockResolvedValue(candidates());
 
       renderBadge({ currentTime: 55.0, showDiff: false });
 
-      expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
-      // 一覧パスは「初」バッジ・差分ラベルを出さない (web 一覧に存在しないため)
-      expect(screen.queryByText(FIRST_LABEL)).toBeNull();
+      expect(await screen.findByText(FIRST_LABEL)).toBeTruthy();
+      // 「自己ベスト」(3状態パス専用ラベル)は一覧パスには出ない
+      expect(screen.queryByText(PERSONAL_BEST_LABEL)).toBeNull();
       // (userId, styleId, isRelaying, poolType) のグループ単位で候補を一括取得する
       expect(mockGetListBestCandidates).toHaveBeenCalledWith("user-1", 1, false, 1);
       // 一覧パスは RecordAPI.getPreviousBestTime を使わない
       expect(mockGetPreviousBestTime).not.toHaveBeenCalled();
     });
 
-    it("過去ベスト (大会/一括の min) より速いとき「自己ベスト」を表示する", async () => {
+    it("過去ベスト (大会/一括の min) より速いとき「Best-X.XX」(改善・マイナス符号) を表示する", async () => {
       mockGetListBestCandidates.mockResolvedValue(
         candidates({
           competitionRows: [{ id: "other-1", time: 55.0, date: "2025-02-01" }],
@@ -161,42 +170,50 @@ describe("BestTimeBadge", () => {
         }),
       );
 
+      // min(55.0, 50.0)=50.0 が過去ベスト。49.5 - 50.0 = -0.5 改善
       renderBadge({ currentTime: 49.5, showDiff: false });
 
-      expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
+      expect(await screen.findByText("Best-0.50")).toBeTruthy();
     });
 
-    it("過去ベスト (min=一括 50.0) 以上のタイムのとき何も表示しない", async () => {
-      // 大会ベスト 55.0 よりは速いが一括ベスト 50.0 より遅い → min 比較で非表示
-      mockGetListBestCandidates.mockResolvedValue(
-        candidates({
-          competitionRows: [{ id: "other-1", time: 55.0, date: "2025-02-01" }],
-          bulkRows: [{ id: "other-2", time: 50.0, created_at: "2025-02-15T00:00:00.000Z" }],
-        }),
-      );
+    it(
+      "[2026-07-22 3状態化] 過去ベスト (min=一括 50.0) 以上のタイムのとき「Best+X.XX」" +
+        "(悪化・プラス符号) を表示する(旧仕様の非表示から変更)",
+      async () => {
+        // 大会ベスト 55.0 よりは速いが一括ベスト 50.0 より遅い → min=50.0 が過去ベスト
+        mockGetListBestCandidates.mockResolvedValue(
+          candidates({
+            competitionRows: [{ id: "other-1", time: 55.0, date: "2025-02-01" }],
+            bulkRows: [{ id: "other-2", time: 50.0, created_at: "2025-02-15T00:00:00.000Z" }],
+          }),
+        );
 
-      renderBadge({ currentTime: 52.0, showDiff: false });
+        // 52.0 - 50.0 = +2.0 悪化
+        renderBadge({ currentTime: 52.0, showDiff: false });
 
-      await waitFor(() => expect(mockGetListBestCandidates).toHaveBeenCalled());
-      await act(async () => {});
-      expectNoBadge();
-    });
+        expect(await screen.findByText("Best+2.00")).toBeTruthy();
+        expect(screen.queryByText(FIRST_LABEL)).toBeNull();
+      },
+    );
 
-    it("同タイムのとき何も表示しない (web と同じ currentTime < previousBest 判定)", async () => {
-      mockGetListBestCandidates.mockResolvedValue(
-        candidates({
-          competitionRows: [{ id: "other-1", time: 55.0, date: "2025-02-01" }],
-        }),
-      );
+    it(
+      "[2026-07-22 3状態化] 同タイムのとき「Best±0.00」(同値=ベスト扱い・amber。" +
+        "2026-07-22追加変更: best配色はblue→amberに変更され初と同色になった) を表示する" +
+        "(旧仕様の非表示から変更)",
+      async () => {
+        mockGetListBestCandidates.mockResolvedValue(
+          candidates({
+            competitionRows: [{ id: "other-1", time: 55.0, date: "2025-02-01" }],
+          }),
+        );
 
-      renderBadge({ currentTime: 55.0, showDiff: false });
+        renderBadge({ currentTime: 55.0, showDiff: false });
 
-      await waitFor(() => expect(mockGetListBestCandidates).toHaveBeenCalled());
-      await act(async () => {});
-      expectNoBadge();
-    });
+        expect(await screen.findByText("Best±0.00")).toBeTruthy();
+      },
+    );
 
-    it("記録日以降の候補と自分自身はメモリ上のフィルタで除外される", async () => {
+    it("記録日以降の候補と自分自身はメモリ上のフィルタで除外される(=記録日時点で初ベスト→「初」表示)", async () => {
       mockGetListBestCandidates.mockResolvedValue(
         candidates({
           competitionRows: [
@@ -209,10 +226,10 @@ describe("BestTimeBadge", () => {
         }),
       );
 
-      // 全候補が除外される = 記録日時点で初ベスト → バッジ表示
+      // 全候補が除外される = 記録日時点で初ベスト → 「初」バッジ表示
       renderBadge({ recordId: "record-1", currentTime: 55.0, showDiff: false });
 
-      expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
+      expect(await screen.findByText(FIRST_LABEL)).toBeTruthy();
     });
 
     it("poolType が null のとき poolType なし (null) のグループとして取得する", async () => {
@@ -260,9 +277,11 @@ describe("BestTimeBadge", () => {
         { wrapper: createQueryWrapper() },
       );
 
-      // record-1 は過去ベスト 55.0 より速い → バッジ表示 / record-2 は遅い → 非表示
-      expect(await screen.findByText(PERSONAL_BEST_LABEL)).toBeTruthy();
-      expect(screen.getAllByText(PERSONAL_BEST_LABEL)).toHaveLength(1);
+      // record-1 は過去ベスト 55.0 より速い(50.0 - 55.0 = -5.0) → 「Best-5.00」
+      // record-2 は過去ベスト 55.0 より遅い(60.0 - 55.0 = +5.0) → 「Best+5.00」
+      // 2026-07-22 3状態化: 以前は非ベストの record-2 は非表示だったが、今は両方常時表示される
+      expect(await screen.findByText("Best-5.00")).toBeTruthy();
+      expect(screen.getByText("Best+5.00")).toBeTruthy();
       // 同一 (userId, styleId, isRelaying, poolType) グループなのでフェッチは1回
       expect(mockGetListBestCandidates).toHaveBeenCalledTimes(1);
     });

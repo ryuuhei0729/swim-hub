@@ -8,6 +8,7 @@ import {
   Modal,
   FlatList,
   Dimensions,
+  Alert,
 } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,14 +18,17 @@ import { format, parseISO, isValid } from "date-fns";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useRecordsQuery } from "@apps/shared/hooks/queries/records";
+import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
-import { RecordItem } from "@/components/records";
+import { RecordItem, StandaloneRecordDetailModal } from "@/components/records";
 import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { DayDetailModal } from "@/components/calendar";
+import { useDayEntriesQuery } from "@/hooks/useDayEntriesQuery";
+import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import type { MainStackParamList } from "@/navigation/types";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
 import type { Style } from "@swim-hub/shared/types";
@@ -57,6 +61,14 @@ export const RecordsScreen: React.FC = () => {
   const yearButtonRef = useRef<View>(null);
   const styleButtonRef = useRef<View>(null);
   const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 });
+
+  // 行タップで開く日付詳細モーダル（ダッシュボードと同一のDayDetailModal）
+  const [modalDate, setModalDate] = useState<Date | null>(null);
+  const [showDayDetail, setShowDayDetail] = useState(false);
+
+  // 大会未紐付けレコード（一括入力）単体の詳細モーダル
+  const [standaloneRecord, setStandaloneRecord] = useState<RecordWithDetails | null>(null);
+  const [isDeletingStandalone, setIsDeletingStandalone] = useState(false);
 
   // フィルターストア
   const {
@@ -183,7 +195,7 @@ export const RecordsScreen: React.FC = () => {
     // プールタイプフィルター
     if (filterPoolType !== null) {
       filtered = filtered.filter((record) => {
-        const poolType = record.competition?.pool_type;
+        const poolType = record.pool_type;
         return poolType === filterPoolType;
       });
     }
@@ -246,10 +258,98 @@ export const RecordsScreen: React.FC = () => {
     }
   }, [loadingMore, hasMore, isLoading]);
 
+  // 選択した日付のカレンダーエントリー（DayDetailModal表示用）
+  const { data: dayEntries = [], refetch: refetchDayEntries } = useDayEntriesQuery(
+    supabase,
+    modalDate,
+  );
+
+  // 削除/変更後は一覧とモーダルの両方を再取得する
+  const refetchAfterMutation = useCallback(() => {
+    refetch();
+    refetchDayEntries();
+  }, [refetch, refetchDayEntries]);
+
+  // DayDetailModal の編集/削除/追加ハンドラ（ダッシュボードと共通）
+  const {
+    isDeleting,
+    setIsDeleting,
+    handleEntryPress,
+    handleAddPractice,
+    handleAddRecord,
+    handleEditPractice,
+    handleDeletePractice,
+    handleAddPracticeLog,
+    handleEditPracticeLog,
+    handleDeletePracticeLog,
+    handleEditRecord,
+    handleDeleteRecord,
+    handleEditEntry,
+    handleDeleteEntry,
+    handleAddEntry,
+    handleEditCompetition,
+    handleDeleteCompetition,
+  } = useDayDetailHandlers(supabase, refetchAfterMutation);
+
   // 記録アイテムのタップ処理
-  const handleRecordPress = useCallback(
+  // - 大会に紐づく記録: 該当日の DayDetailModal(calendar_view 単位)を開く
+  // - 大会未紐付けレコード（一括入力。competition が存在しない）: 単体の詳細モーダルを開く。
+  //   calendar_view には現れないため created_at 等へフォールバックしない
+  const handleRecordPress = useCallback((record: RecordWithDetails) => {
+    if (!record.competition) {
+      setStandaloneRecord(record);
+      return;
+    }
+    const dateStr = record.competition.date;
+    if (!dateStr) return;
+    const parsedDate = parseISO(dateStr);
+    if (!isValid(parsedDate)) return;
+    setModalDate(parsedDate);
+    setShowDayDetail(true);
+  }, []);
+
+  // 大会未紐付けレコードの削除（ダッシュボードと同一の Alert.alert 確認、Platform分岐なし）
+  const deleteStandaloneRecordMutation = useDeleteRecordMutation(supabase);
+  const handleDeleteStandaloneRecord = useCallback(
+    (recordId: string) => {
+      Alert.alert(
+        t("dashboard.mobile.deletePracticeConfirmTitle"),
+        t("dashboard.mobile.deleteRecordConfirmMessage"),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("dashboard.mobile.deleteButton"),
+            style: "destructive",
+            onPress: async () => {
+              setIsDeletingStandalone(true);
+              try {
+                await deleteStandaloneRecordMutation.mutateAsync(recordId);
+                setStandaloneRecord(null);
+                refetch();
+              } catch (error) {
+                console.error("削除エラー:", error);
+                Alert.alert(
+                  t("common.error"),
+                  error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"),
+                  [{ text: "OK" }],
+                );
+              } finally {
+                setIsDeletingStandalone(false);
+              }
+            },
+          },
+        ],
+      );
+    },
+    [deleteStandaloneRecordMutation, refetch, t],
+  );
+
+  // 大会未紐付けレコードの編集: 大会が無いので CompetitionTabForm は使わず、
+  // 単体レコード編集の既存パス(RecordForm、competitionId を渡さない編集モード)へ遷移する
+  const handleEditStandaloneRecord = useCallback(
     (record: RecordWithDetails) => {
-      navigation.navigate("RecordDetail", { recordId: record.id });
+      setStandaloneRecord(null);
+      navigation.navigate("RecordForm", { recordId: record.id });
     },
     [navigation],
   );
@@ -490,6 +590,46 @@ export const RecordsScreen: React.FC = () => {
           </View>
         </Pressable>
       </Modal>
+
+      {/* 日付詳細モーダル（ダッシュボードと同一のDayDetailModal） */}
+      {modalDate && (
+        <DayDetailModal
+          visible={showDayDetail}
+          date={modalDate}
+          entries={dayEntries}
+          onClose={() => {
+            setShowDayDetail(false);
+            setModalDate(null);
+          }}
+          onEntryPress={handleEntryPress}
+          onAddPractice={handleAddPractice}
+          onAddRecord={handleAddRecord}
+          onEditPractice={handleEditPractice}
+          onDeletePractice={handleDeletePractice}
+          onAddPracticeLog={handleAddPracticeLog}
+          onEditPracticeLog={handleEditPracticeLog}
+          onDeletePracticeLog={handleDeletePracticeLog}
+          onEditRecord={handleEditRecord}
+          onDeleteRecord={handleDeleteRecord}
+          onEditEntry={handleEditEntry}
+          onDeleteEntry={handleDeleteEntry}
+          onAddEntry={handleAddEntry}
+          onEditCompetition={handleEditCompetition}
+          onDeleteCompetition={handleDeleteCompetition}
+          isDeleting={isDeleting}
+          onDeletingChange={setIsDeleting}
+        />
+      )}
+
+      {/* 大会未紐付けレコード（一括入力）単体の詳細モーダル */}
+      <StandaloneRecordDetailModal
+        visible={!!standaloneRecord}
+        record={standaloneRecord}
+        onClose={() => setStandaloneRecord(null)}
+        onEdit={handleEditStandaloneRecord}
+        onDelete={handleDeleteStandaloneRecord}
+        isDeleting={isDeletingStandalone}
+      />
     </SafeAreaView>
   );
 };

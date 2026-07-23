@@ -1,11 +1,14 @@
 import type { CalendarItem } from "@apps/shared/types/ui";
 import type { PracticeTime, PracticeTag } from "@apps/shared/types";
+import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 
 // DayDetailModalのProps
 export interface DayDetailModalProps {
   visible: boolean;
   date: Date;
   entries: CalendarItem[];
+  /** ダッシュボードの記録色カスタマイズ設定。未指定時はデフォルト色として解決される */
+  colorSettings?: CalendarColorSettings;
   onClose: () => void;
   onEntryPress?: (item: CalendarItem) => void;
   onAddPractice?: (date: Date) => void;
@@ -70,6 +73,8 @@ export interface RecordDetailProps {
   note?: string;
   records: CalendarItem[];
   isTeamCompetition?: boolean;
+  /** 識別色(記録色カスタマイズ)。未指定時は旧来のデフォルト青(#2563EB)を使う */
+  color?: string;
   onEditCompetition?: () => void;
   onDeleteCompetition?: () => void;
   onAddRecord?: () => void;
@@ -87,6 +92,8 @@ export interface EntryDetailProps {
   poolType?: number;
   note?: string;
   entries: CalendarItem[];
+  /** 識別色(記録色カスタマイズ)。未指定時は旧来のデフォルト青(#2563EB)を使う */
+  color?: string;
   onEditCompetition?: (item: CalendarItem) => void;
   onDeleteCompetition?: () => void;
   onEditEntry?: (item: CalendarItem) => void;

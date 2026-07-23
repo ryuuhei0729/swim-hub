@@ -46,8 +46,9 @@ describe("PracticeItem", () => {
   it("練習記録データが正しく表示される", () => {
     render(<PracticeItem practice={mockPractice} />);
 
-    // 日付が表示される（M/d形式、例: 1/15）
-    expect(screen.getByText(/1\/15/)).toBeTruthy();
+    // 日付が表示される（2026-07-22 大会 RecordItem とのパリティ対応で
+    // long形式・年込み・ロケール依存に変更。例: "2025年1月15日"）
+    expect(screen.getByText(/2025年1月15日/)).toBeTruthy();
     // タイトルが表示される
     expect(screen.getByText("テスト練習")).toBeTruthy();
     // 場所が表示される（アイコンとテキストが含まれる）

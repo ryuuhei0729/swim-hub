@@ -15,6 +15,18 @@ import { useRouter } from "next/navigation";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
 import { resolveGalleryImages } from "@/lib/image-url";
 import type { CompetitionWithEntryProps, CompetitionEntryDisplay } from "../../types";
+import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
+import { DEFAULT_COMPETITION_COLOR } from "@apps/shared/utils/calendarColorResolver";
+
+// 色の明度に基づいてテキスト色を決定する関数(PracticeDetails.tsx/CompetitionDetails.tsx と同一アルゴリズム)
+const getTextColor = (backgroundColor: string) => {
+  const hex = backgroundColor.replace("#", "");
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 128 ? "#000000" : "#FFFFFF";
+};
 
 export function CompetitionWithEntry({
   entryId: _entryId,
@@ -33,10 +45,15 @@ export function CompetitionWithEntry({
   onEditEntry,
   onDeleteEntry,
   onClose,
+  color,
 }: CompetitionWithEntryProps) {
   const router = useRouter();
   const { supabase } = useAuth();
   const t = useTranslations("dashboard");
+  const wrapperColor = color ?? DEFAULT_COMPETITION_COLOR;
+  // 未カスタマイズ(デフォルト色のまま)なら旧 Tailwind クラスをそのまま使い、
+  // 既存ユーザーの見た目をピクセル一致で維持する。カスタム色時のみ動的着色する(C2/C5対応)。
+  const isDefaultColor = wrapperColor === DEFAULT_COMPETITION_COLOR;
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
   const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>([]);
   const [entries, setEntries] = useState<CompetitionEntryDisplay[]>(() => {
@@ -213,9 +230,29 @@ export function CompetitionWithEntry({
   };
 
   return (
-    <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
+    <div
+      className={`bg-white border rounded-lg overflow-hidden ${isDefaultColor ? "border-blue-200" : ""}`}
+      style={
+        isDefaultColor
+          ? undefined
+          : { borderColor: hexToRgba(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER) }
+      }
+    >
       {/* 大会情報ヘッダー */}
-      <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
+      <div
+        className={`px-4 py-3 border-b ${isDefaultColor ? "bg-blue-50 border-blue-200" : ""}`}
+        style={
+          isDefaultColor
+            ? undefined
+            : {
+                backgroundColor: mixWithWhite(
+                  wrapperColor,
+                  CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND,
+                ),
+                borderColor: hexToRgba(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER),
+              }
+        }
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h5 className="font-semibold text-gray-900" data-testid="competition-title-display">
@@ -269,16 +306,33 @@ export function CompetitionWithEntry({
       {/* エントリー情報ボックス */}
       <div className="p-2 sm:p-4">
         <div
-          className="bg-orange-50 border border-orange-200 rounded-lg p-2 sm:p-4 mb-2 sm:mb-3"
+          className={`border rounded-lg p-2 sm:p-4 mb-2 sm:mb-3 ${
+            isDefaultColor ? "bg-orange-50 border-orange-200" : ""
+          }`}
+          style={
+            isDefaultColor
+              ? undefined
+              : {
+                  backgroundColor: mixWithWhite(
+                    wrapperColor,
+                    CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND,
+                  ),
+                  borderColor: hexToRgba(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER),
+                }
+          }
           data-testid="entry-section"
         >
           <div className="flex items-center justify-between mb-1.5 sm:mb-3">
             <div className="flex items-center gap-1 sm:gap-2">
               <ClipboardDocumentListIcon
-                className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700 shrink-0"
+                className={`h-4 w-4 sm:h-5 sm:w-5 shrink-0 ${isDefaultColor ? "text-orange-700" : ""}`}
+                style={isDefaultColor ? undefined : { color: wrapperColor }}
                 aria-hidden="true"
               />
-              <h6 className="text-xs sm:text-sm font-semibold text-orange-900">
+              <h6
+                className={`text-xs sm:text-sm font-semibold ${isDefaultColor ? "text-orange-900" : ""}`}
+                style={isDefaultColor ? undefined : { color: getTextColor(wrapperColor) }}
+              >
                 <span className="sm:hidden">{t("entry.entered")}</span>
                 <span className="hidden sm:inline">{t("entry.enteredNoRecord")}</span>
               </h6>
@@ -305,18 +359,37 @@ export function CompetitionWithEntry({
               entries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex flex-col gap-0.5 sm:gap-1 rounded-md border border-orange-200 bg-white/70 px-2 sm:px-3 py-1.5 sm:py-2 shadow-sm"
+                  className={`flex flex-col gap-0.5 sm:gap-1 rounded-md border bg-white/70 px-2 sm:px-3 py-1.5 sm:py-2 shadow-sm ${
+                    isDefaultColor ? "border-orange-200" : ""
+                  }`}
+                  style={
+                    isDefaultColor
+                      ? undefined
+                      : { borderColor: hexToRgba(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER) }
+                  }
                   data-testid={`entry-summary-${entry.id}`}
                 >
                   <div className="flex items-start justify-between gap-1 sm:gap-2">
                     <div>
                       <div className="flex items-baseline gap-1 sm:gap-2">
-                        <span className="font-semibold text-orange-900 min-w-[40px] sm:min-w-[72px]">{t("entry.styleLabel")}</span>
+                        <span
+                          className={`font-semibold min-w-[40px] sm:min-w-[72px] ${
+                            isDefaultColor ? "text-orange-900" : ""
+                          }`}
+                          style={isDefaultColor ? undefined : { color: getTextColor(wrapperColor) }}
+                        >
+                          {t("entry.styleLabel")}
+                        </span>
                         <span className="text-gray-900 font-medium">{entry.styleName}</span>
                       </div>
                       {entry.entryTime && entry.entryTime > 0 && (
                         <div className="flex items-baseline gap-1 sm:gap-2">
-                          <span className="font-semibold text-orange-900 min-w-[40px] sm:min-w-[72px]">
+                          <span
+                            className={`font-semibold min-w-[40px] sm:min-w-[72px] ${
+                              isDefaultColor ? "text-orange-900" : ""
+                            }`}
+                            style={isDefaultColor ? undefined : { color: getTextColor(wrapperColor) }}
+                          >
                             <span className="sm:hidden">{t("entry.entryLabel")}</span>
                             <span className="hidden sm:inline">{t("entry.entryTimeLabel")}</span>
                           </span>
@@ -327,7 +400,14 @@ export function CompetitionWithEntry({
                       )}
                       {entry.note && entry.note.trim().length > 0 && (
                         <div className="flex items-baseline gap-1 sm:gap-2">
-                          <span className="font-semibold text-orange-900 min-w-[40px] sm:min-w-[72px]">{t("entry.memoLabel")}</span>
+                          <span
+                            className={`font-semibold min-w-[40px] sm:min-w-[72px] ${
+                              isDefaultColor ? "text-orange-900" : ""
+                            }`}
+                            style={isDefaultColor ? undefined : { color: getTextColor(wrapperColor) }}
+                          >
+                            {t("entry.memoLabel")}
+                          </span>
                           <span className="text-gray-700">{entry.note}</span>
                         </div>
                       )}

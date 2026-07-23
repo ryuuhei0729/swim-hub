@@ -37,6 +37,8 @@ export interface PracticeDetailsProps {
   teamId?: string | null;
   teamName?: string | undefined;
   onShowAttendance?: () => void;
+  /** カレンダー記録色設定から解決された練習の表示色(hex)。未指定時はデフォルト緑 */
+  color?: string;
 }
 
 // CompetitionDetailsのProps
@@ -60,6 +62,8 @@ export interface CompetitionDetailsProps {
   teamId?: string | null;
   teamName?: string | undefined;
   onShowAttendance?: () => void;
+  /** カレンダー記録色設定から解決された大会の表示色(hex)。未指定時はデフォルト青 */
+  color?: string;
 }
 
 // RecordSplitTimesのProps
@@ -91,6 +95,8 @@ export interface CompetitionWithEntryProps {
   onEditEntry?: () => void;
   onDeleteEntry?: (entryId: string) => void;
   onClose?: () => void;
+  /** カレンダー記録色設定から解決された大会の表示色(hex)。未指定時はデフォルト青 */
+  color?: string;
 }
 
 // AttendanceModalのProps
@@ -107,12 +113,7 @@ export interface AttendanceButtonProps {
   onClick: () => void;
 }
 
-// DeleteConfirmModalのProps
-export interface DeleteConfirmModalProps {
-  isOpen: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
+// NOTE: DeleteConfirmModalProps は @/components/ui/DeleteConfirmModal に移設済み。
 
 // エントリー表示用の型
 export interface CompetitionEntryDisplay {

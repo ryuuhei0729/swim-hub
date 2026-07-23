@@ -25,6 +25,8 @@ import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import { useAuth } from "@/contexts";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
 import { resolveGalleryImages } from "@/lib/image-url";
+import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
+import { DEFAULT_PRACTICE_COLOR } from "@apps/shared/utils/calendarColorResolver";
 import type {
   Practice,
   PracticeLogWithTimes,
@@ -66,8 +68,13 @@ export function PracticeDetails({
   teamId,
   teamName,
   onShowAttendance,
+  color,
 }: PracticeDetailsProps) {
   const { supabase, user } = useAuth();
+  const wrapperColor = color ?? DEFAULT_PRACTICE_COLOR;
+  // 未カスタマイズ(デフォルト色のまま)なら旧 Tailwind クラスをそのまま使い、
+  // 既存ユーザーの見た目をピクセル一致で維持する。カスタム色時のみ動的着色する(C2/C5対応)。
+  const isDefaultColor = wrapperColor === DEFAULT_PRACTICE_COLOR;
   const t = useTranslations("practice");
   const tDash = useTranslations("dashboard");
   const userId = user?.id;
@@ -222,15 +229,38 @@ export function PracticeDetails({
 
   return (
     <div className="mt-3">
-      <div className="bg-green-50 rounded-xl px-1 py-3 sm:p-3" data-testid="practice-detail-modal">
+      <div
+        className={`rounded-xl px-1 py-3 sm:p-3 ${isDefaultColor ? "bg-green-50" : ""}`}
+        style={
+          isDefaultColor
+            ? undefined
+            : { backgroundColor: mixWithWhite(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND) }
+        }
+        data-testid="practice-detail-modal"
+      >
         {/* Practice全体のヘッダー */}
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2" data-testid="practice-log-summary">
               <span
                 className={`text-sm sm:text-lg font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg flex items-center gap-1 sm:gap-2 ${
-                  isTeamPractice ? "text-emerald-800 bg-emerald-200" : "text-green-800 bg-green-200"
+                  isDefaultColor
+                    ? isTeamPractice
+                      ? "text-emerald-800 bg-emerald-200"
+                      : "text-green-800 bg-green-200"
+                    : ""
                 }`}
+                style={
+                  isDefaultColor
+                    ? undefined
+                    : {
+                        backgroundColor: hexToRgba(
+                          wrapperColor,
+                          CALENDAR_COLOR_ALPHA.DAY_DETAIL_BADGE_BACKGROUND,
+                        ),
+                        color: getTextColor(wrapperColor),
+                      }
+                }
               >
                 <BoltIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 {practice.title || t("details.badge")}
@@ -299,7 +329,12 @@ export function PracticeDetails({
             return (
               <div
                 key={formattedLog.id}
-                className="bg-green-50 rounded-lg px-1 py-4 sm:p-4"
+                className={`rounded-lg px-1 py-4 sm:p-4 ${isDefaultColor ? "bg-green-50" : ""}`}
+                style={
+                  isDefaultColor
+                    ? undefined
+                    : { backgroundColor: mixWithWhite(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND) }
+                }
                 data-testid={`practice-log-item-${index + 1}`}
               >
                 {/* 練習メニューのヘッダー */}
@@ -328,7 +363,16 @@ export function PracticeDetails({
                 </div>
 
                 {/* 練習内容 */}
-                <div className="bg-white rounded-lg p-2 sm:p-3 mb-2 sm:mb-3 border border-green-300 relative">
+                <div
+                  className={`bg-white rounded-lg p-2 sm:p-3 mb-2 sm:mb-3 border relative ${
+                    isDefaultColor ? "border-green-300" : ""
+                  }`}
+                  style={
+                    isDefaultColor
+                      ? undefined
+                      : { borderColor: hexToRgba(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER) }
+                  }
+                >
                   {/* シェア・編集・削除ボタン（右上） */}
                   <div className="absolute top-1 right-1 sm:top-3 sm:right-3 flex items-center space-x-0.5 sm:space-x-2">
                     <button
@@ -495,10 +539,36 @@ export function PracticeDetails({
                 {allTimes.length > 0 && (
                   <div className="mt-3">
                     <div className="flex items-center gap-2 mb-1.5 sm:mb-3">
-                      <div className="w-1 h-4 bg-green-500 rounded-full"></div>
-                      <p className="text-xs sm:text-sm font-medium text-green-700">{t("details.timeLabel")}</p>
+                      <div
+                        className={`w-1 h-4 rounded-full ${isDefaultColor ? "bg-green-500" : ""}`}
+                        style={
+                          isDefaultColor
+                            ? undefined
+                            : {
+                                backgroundColor: hexToRgba(
+                                  wrapperColor,
+                                  CALENDAR_COLOR_ALPHA.DAY_DETAIL_ACCENT_BAR,
+                                ),
+                              }
+                        }
+                      ></div>
+                      <p
+                        className={`text-xs sm:text-sm font-medium ${isDefaultColor ? "text-green-700" : ""}`}
+                        style={isDefaultColor ? undefined : { color: wrapperColor }}
+                      >
+                        {t("details.timeLabel")}
+                      </p>
                     </div>
-                    <div className="bg-white rounded-lg p-1.5 sm:p-3 border border-green-300 overflow-x-auto">
+                    <div
+                      className={`bg-white rounded-lg p-1.5 sm:p-3 border overflow-x-auto ${
+                        isDefaultColor ? "border-green-300" : ""
+                      }`}
+                      style={
+                        isDefaultColor
+                          ? undefined
+                          : { borderColor: hexToRgba(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER) }
+                      }
+                    >
                       <table className="w-full text-[10px] sm:text-sm">
                         <thead>
                           <tr className="border-b border-green-300">

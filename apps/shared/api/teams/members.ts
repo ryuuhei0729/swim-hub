@@ -46,6 +46,29 @@ export class TeamMembersAPI {
     return result.membership as TeamMembership;
   }
 
+  /**
+   * 指定ユーザーの当該チームのカレンダー記録色カスタマイズ設定を削除する(孤児データ防止)。
+   *
+   * leave()（自己脱退）/ remove()（管理者除名）の両方から呼ぶ共通処理。
+   * RLS の DELETE ポリシーは `(SELECT auth.uid()) = user_id` のみを許可するため、
+   * leave() (userId = 呼び出し本人) では確実に削除されるが、remove() (userId = 除名対象の
+   * 別ユーザー) では呼び出し元が管理者の auth.uid() のため RLS 上 0 行 削除(エラーにはならない
+   * が孤児データは残る)。除名対象者本人のデータを確実に消すには将来的に SECURITY DEFINER RPC 化が
+   * 必要(現状は低リスク Warning 対応としてこの制約付きで共通化のみ実施)。
+   * 失敗しても脱退/除名自体は成立させたいノンブロッキングなクリーンアップだが、
+   * 空catchで握りつぶさずログには残す。
+   */
+  private async deleteTeamCalendarColors(teamId: string, userId: string): Promise<void> {
+    const { error: colorError } = await this.supabase
+      .from("user_team_calendar_colors")
+      .delete()
+      .eq("team_id", teamId)
+      .eq("user_id", userId);
+    if (colorError) {
+      console.error("チーム脱退時のカレンダー記録色設定削除に失敗しました:", colorError);
+    }
+  }
+
   async leave(teamId: string): Promise<void> {
     const userId = await requireAuth(this.supabase);
     const { error } = await this.supabase
@@ -54,6 +77,9 @@ export class TeamMembersAPI {
       .eq("team_id", teamId)
       .eq("user_id", userId);
     if (error) throw error;
+
+    // 脱退したチームのカレンダー記録色カスタマイズ設定を削除する(自分の行のみ、RLSで安全)。
+    await this.deleteTeamCalendarColors(teamId, userId);
   }
 
   async updateRole(
@@ -92,6 +118,12 @@ export class TeamMembersAPI {
       .select("*")
       .single();
     if (error) throw error;
+
+    // 除名されたユーザーのカレンダー記録色カスタマイズ設定を削除する。
+    // 注意: RLS 上、削除できるのは呼び出し本人の行のみのため、管理者がここで呼んでも
+    // 除名対象者本人の行は RLS により削除されない(0行删除・エラーなし)。leave() との
+    // 対称性のため呼び出しは共通化するが、実際のクリーンアップは leave() 経由のみ有効。
+    await this.deleteTeamCalendarColors(teamId, userId);
   }
 
   /**

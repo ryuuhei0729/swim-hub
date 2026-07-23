@@ -278,7 +278,25 @@
     },
     "discardTitle": "Unsaved changes",
     "discardMessage": "You have unsaved changes. Close anyway?",
-    "discard": "Discard"
+    "discard": "Discard",
+    "listToolbar": {
+      "itemCount": "{count} items",
+      "sortButton": "Sort",
+      "filterButton": "Filter"
+    },
+    "bottomSheet": {
+      "clearGroup": "Clear",
+      "clearAll": "Clear all",
+      "apply": "Apply",
+      "close": "Close"
+    },
+    "loadMore": {
+      "button": "Show more",
+      "remaining": "{n} more"
+    },
+    "bestBadge": {
+      "first": "1st"
+    }
   },
   "nav": {
     "practice": "Practice Log",
@@ -1027,7 +1045,8 @@
       "deleteConfirm": "Delete this practice record?",
       "deleteFailed": "Failed to delete",
       "practiceTitle": "Practice",
-      "viewDetailAriaLabel": "View practice details"
+      "viewDetailAriaLabel": "View practice details",
+      "viewDetailAriaLabelWithInfo": "View practice details ({date} {place} {style})"
     },
     "modal": {
       "loading": "Loading practice details...",
@@ -1054,19 +1073,19 @@
       "emptyTitle": "No practice records",
       "emptyDesc": "You can add practice records from the dashboard calendar.",
       "goToDashboard": "Go to Dashboard",
-      "colDate": "Date",
       "colPlace": "Place",
-      "colDistReps": "Distance / Reps / Sets",
-      "colCircle": "Circle",
       "colStyle": "Style",
       "colTags": "Tags",
-      "colAvgTime": "Avg Time",
       "avgTimeLabel": "Avg Time:",
       "share": "Share",
       "edit": "Edit",
       "delete": "Delete",
       "deleting": "Deleting...",
-      "distanceFormat": "{distance}m × {reps} reps × {sets} sets"
+      "distanceFormat": "{distance}m × {reps} reps × {sets} sets",
+      "noMatchTitle": "No matching records",
+      "noMatchDesc": "No practice records match the selected filters.",
+      "sortOptionDateDesc": "Date (newest)",
+      "sortOptionDateAsc": "Date (oldest)"
     },
     "details": {
       "badge": "Practice Log",
@@ -1167,6 +1186,23 @@
       "videoUploadFailedTitle": "Video upload failed",
       "videoUploadFailedSession": "Could not upload video because your session is invalid.",
       "videoUploadFailedSaved": "The practice log was saved, but the video failed to upload."
+    },
+    "sortSheet": {
+      "title": "Sort",
+      "placeAsc": "Place (A-Z)",
+      "placeDesc": "Place (Z-A)",
+      "distanceAsc": "Distance (ascending)",
+      "distanceDesc": "Distance (descending)",
+      "circleAsc": "Circle (ascending)",
+      "circleDesc": "Circle (descending)",
+      "styleAsc": "Style (ascending)",
+      "styleDesc": "Style (descending)",
+      "avgTimeAsc": "Avg time (fastest)",
+      "avgTimeDesc": "Avg time (slowest)"
+    },
+    "filterSheet": {
+      "title": "Filter",
+      "tagsAndNote": "(Matches all selected tags)"
     }
   },
   "mypage": {
@@ -1498,20 +1534,16 @@
       "recordNotFound": "Record data not found",
       "viewDetailAriaLabel": "View race record details",
       "competitionFallback": "Meet",
-      "styleFallback": "Record"
+      "styleFallback": "Record",
+      "bulkInputLabel": "Bulk entry",
+      "viewDetailAriaLabelWithInfo": "View meet record details ({date} {name})"
     },
     "filter": {
-      "periodLabel": "Period",
-      "allPeriods": "All periods",
-      "fiscalYearSuffix": "{year} Season",
-      "styleLabel": "Event",
       "allStyles": "All events",
-      "poolTypeLabel": "Pool type",
       "allPoolTypes": "All",
-      "relayLabel": "Relay",
-      "includeRelay": "Include",
-      "clearLabel": "Clear",
-      "resetButton": "Reset filters"
+      "resetButton": "Reset filters",
+      "excludeRelay": "Exclude relay",
+      "onlyRelay": "Relay only"
     },
     "empty": {
       "noRecordsTitle": "No race records",
@@ -1658,6 +1690,27 @@
       "errorVideoGenericFailed": "{name}: An error occurred during video upload",
       "errorVideoNoThumbnail": "{name}: Could not attach video because the thumbnail could not be generated",
       "videoPartialFailureSaved": "The records were saved, but some videos could not be attached:\n{errors}"
+    },
+    "sortSheet": {
+      "title": "Sort",
+      "dateDesc": "Date (newest)",
+      "dateAsc": "Date (oldest)",
+      "timeAsc": "Fastest time",
+      "timeDesc": "Slowest time",
+      "competitionNameAsc": "Meet name (A-Z)",
+      "competitionNameDesc": "Meet name (Z-A)",
+      "placeAsc": "Venue (A-Z)",
+      "placeDesc": "Venue (Z-A)",
+      "poolAsc": "Pool (ascending)",
+      "poolDesc": "Pool (descending)",
+      "styleAsc": "Event (ascending)",
+      "styleDesc": "Event (descending)"
+    },
+    "filterSheet": {
+      "title": "Filter",
+      "distanceLabel": "Distance",
+      "strokeLabel": "Stroke",
+      "relayLabel": "Relay"
     }
   },
   "settings": {
@@ -1882,6 +1935,21 @@
     },
     "practiceLogTemplates": {
       "backAriaLabel": "Go back"
+    },
+    "calendarColors": {
+      "title": "Calendar Colors",
+      "description": "Customize the display colors for practice and competition records on the dashboard. You can also set different colors per team.",
+      "personalSectionTitle": "Personal Colors",
+      "teamSectionTitle": "Team Colors",
+      "practiceLabel": "Practice",
+      "competitionLabel": "Competition",
+      "resetToDefault": "Reset to default",
+      "resetTeamToDefault": "Reset to default",
+      "sameColorWarning": "Practice and competition colors are the same. Consider using different colors for clarity."
+    },
+    "password": {
+      "title": "Password",
+      "openButton": "Change Password"
     }
   },
   "practiceLogTemplates": {
@@ -2650,8 +2718,11 @@
         "clickToAdd": "Click to add",
         "editAriaLabel": "Edit practice record for {date}",
         "addAriaLabel": "Add practice record for {date}",
-        "viewAriaLabel": "View practice record for {date}"
-      }
+        "viewAriaLabel": "View practice record for {date}",
+        "editButton": "Edit",
+        "deleteButton": "Delete"
+      },
+      "selfLogButton": "Add My Log"
     },
     "practiceDetail": {
       "title": "Practice Details",
@@ -2672,14 +2743,18 @@
       "fallbackTitle": "Competition",
       "card": {
         "entryButton": "Entry",
-        "recordsButton": "Records",
-        "manageButton": "Manage"
+        "recordsButton": "Enter Records",
+        "manageButton": "Manage",
+        "editButton": "Edit",
+        "deleteButton": "Delete"
       },
       "entryStatus": {
         "before": "Not Open",
         "open": "Open",
         "closed": "Closed"
-      }
+      },
+      "selfRecordButton": "Add My Record",
+      "selfRecordSaveFailed": "Failed to save your record"
     },
     "competitionEntry": {
       "title": "Entry",
@@ -2996,7 +3071,9 @@
       "notePlaceholder": "Practice details or comments",
       "cancelButton": "Cancel",
       "creating": "Creating...",
-      "createButton": "Create"
+      "createButton": "Create",
+      "updateFailed": "Failed to update the team practice record.",
+      "deleteFailed": "Failed to delete the team practice record."
     },
     "competitionForm": {
       "title": "Add Competition",
@@ -3006,6 +3083,8 @@
       "endDateBeforeStart": "End date must be on or after start date",
       "authRequired": "Authentication required",
       "createFailed": "Failed to create team competition",
+      "updateFailed": "Failed to update team competition",
+      "deleteFailed": "Failed to delete team competition",
       "competitionNameLabel": "Competition Name",
       "competitionNamePlaceholder": "e.g. Prefectural Championships (leave blank to show \"Competition\")",
       "startDateLabel": "Start Date",
@@ -3543,7 +3622,39 @@
         "practicesCreated": "Practice: {count, plural, one {# entry} other {# entries}} registered",
         "competitionsCreated": "Competition: {count, plural, one {# entry} other {# entries}} registered",
         "errors": "Errors: {errors}"
-      }
+      },
+      "manual": {
+        "tabPractice": "Practice",
+        "tabCompetition": "Competition",
+        "rowTitlePractice": "Practice {n}",
+        "rowTitleCompetition": "Competition {n}",
+        "labelDate": "Date *",
+        "labelStartDate": "Start Date *",
+        "labelEndDate": "End Date",
+        "labelTitle": "Title",
+        "labelCompetitionName": "Competition Name",
+        "labelPlace": "Location",
+        "labelPoolType": "Pool",
+        "labelNote": "Note",
+        "poolShort": "Short course (25m)",
+        "poolLong": "Long course (50m)",
+        "addPracticeRowButton": "+ Add Practice",
+        "addCompetitionRowButton": "+ Add Competition",
+        "deleteRowButton": "Delete",
+        "submitButton": "Register",
+        "submitting": "Registering...",
+        "errorDateRequired": "Row {row}: Date is required",
+        "errorStartDateRequired": "Row {row}: Start date is required",
+        "errorEndDateAfterStart": "Row {row}: End date must be on or after the start date",
+        "practiceEmpty": "No practices to register",
+        "competitionEmpty": "No competitions to register",
+        "titlePlaceholder": "e.g. Morning practice",
+        "competitionNamePlaceholder": "e.g. City Meet",
+        "placePlaceholder": "Venue",
+        "notePlaceholder": "Note"
+      },
+      "modeTabFile": "File Import",
+      "modeTabManual": "Manual Entry"
     },
     "common": {
       "close": "Close",

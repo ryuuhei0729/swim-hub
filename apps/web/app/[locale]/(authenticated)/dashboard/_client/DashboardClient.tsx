@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts";
 import CalendarContainer from "../_components/CalendarContainer";
@@ -76,6 +76,7 @@ export default function DashboardClient({
     closeBasicForm: closePracticeBasicForm,
     closeLogForm: closePracticeLogForm,
     closeTabModal: closePracticeTabModal,
+    closeAll: closePracticeStoreAll,
     setSelectedDate,
     setEditingData,
     setAvailableTags,
@@ -93,6 +94,7 @@ export default function DashboardClient({
     closeEntryForm: closeEntryLogForm,
     closeRecordForm: closeRecordLogForm,
     closeTabModal: closeCompetitionTabModal,
+    closeAll: closeCompetitionStoreAll,
     setCreatedEntries,
     setStyles: setCompetitionStyles,
     setLoading: setCompetitionLoading,
@@ -107,6 +109,22 @@ export default function DashboardClient({
     setCompetitionStyles(styles);
     initializedRef.current = true;
   }
+
+  // usePracticeStore/useCompetitionStore は Dashboard/practice/competition の3画面で共有される
+  // module-level singleton。マウント時・アンマウント時にタブモーダル状態を必ず閉じておかないと、
+  // 他画面(/practice, /competition)で開いたまま遷移してきた場合に isOpen=true が残り、
+  // Dashboard に来た瞬間に意図せず TabModal が開いてしまう
+  // (逆方向: Dashboard で編集中に他画面へ遷移した場合の状態リークも防ぐ)。
+  // 描画前(useLayoutEffect)でリセットすることで、古い TabModal が一瞬でも表示されるのを防ぐ。
+  useLayoutEffect(() => {
+    closePracticeStoreAll();
+    closeCompetitionStoreAll();
+    return () => {
+      closePracticeStoreAll();
+      closeCompetitionStoreAll();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 期限切れ目標・マイルストーンチェック（ログイン時・1回のみ）
   // 目標を優先してチェックし、目標がなければマイルストーンをチェック
