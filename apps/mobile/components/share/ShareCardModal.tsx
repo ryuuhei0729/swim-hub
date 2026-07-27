@@ -14,6 +14,8 @@ import { Feather } from "@expo/vector-icons";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { CompetitionShareCard, type CompetitionShareData } from "./CompetitionShareCard";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 
 interface ShareCardModalProps {
   visible: boolean;
@@ -27,6 +29,7 @@ interface ShareCardModalProps {
  */
 export const ShareCardModal: React.FC<ShareCardModalProps> = ({ visible, onClose, data }) => {
   const { t } = useTranslation();
+  const insets = useSafeInsets();
   const cardRef = useRef<View>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -68,7 +71,7 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({ visible, onClose
           accessibilityRole="button"
           accessibilityLabel={t("common.shareCardModal.closeOverlay")}
         />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: getSafeFooterPadding(34, insets.bottom) }]}>
           <View style={styles.header}>
             <Text style={styles.title}>{t("common.shareCardModal.competitionTitle")}</Text>
             <Pressable
@@ -123,7 +126,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: "88%",
-    paddingBottom: 34,
   },
   header: {
     flexDirection: "row",

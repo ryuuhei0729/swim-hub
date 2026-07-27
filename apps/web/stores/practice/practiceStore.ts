@@ -32,8 +32,10 @@ interface PracticeFormState {
   isLoading: boolean;
 }
 
-// 練習履歴テーブルのソート対象カラム(V-W-PSF: タグを除く6列がソート可能)
-export type PracticeSortColumn = "date" | "place" | "distance" | "circle" | "style" | "avgTime";
+// 練習履歴一覧のソート対象カラム(2026-07-23 Sprint: day-level 化に伴い date/place の2列に縮小。
+// distance/circle/style/avgTime は log 単位の値であり、1練習日に複数ログが混在し得る
+// day-level カードでは一意に定まらないため対象から外した)
+export type PracticeSortColumn = "date" | "place";
 
 interface PracticeFilterState {
   selectedTagIds: string[];

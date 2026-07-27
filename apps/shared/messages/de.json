@@ -1193,19 +1193,11 @@
     "sortSheet": {
       "title": "Sortieren",
       "placeAsc": "Ort (A-Z)",
-      "placeDesc": "Ort (Z-A)",
-      "distanceAsc": "Distanz (aufsteigend)",
-      "distanceDesc": "Distanz (absteigend)",
-      "circleAsc": "Abgangszeit (aufsteigend)",
-      "circleDesc": "Abgangszeit (absteigend)",
-      "styleAsc": "Disziplin (aufsteigend)",
-      "styleDesc": "Disziplin (absteigend)",
-      "avgTimeAsc": "Durchschnittszeit (schnellste)",
-      "avgTimeDesc": "Durchschnittszeit (langsamste)"
+      "placeDesc": "Ort (Z-A)"
     },
     "filterSheet": {
       "title": "Filtern",
-      "tagsAndNote": "(Nur Einträge mit allen ausgewählten Tags)"
+      "tagsAndNote": "(Zeigt nur Tage mit einem Eintrag, der alle ausgewählten Tags enthält)"
     }
   },
   "mypage": {
@@ -3277,6 +3269,8 @@
       "deleting": "Wird gelöscht...",
       "loadError": "Ankündigungen konnten nicht geladen werden",
       "retry": "Erneut versuchen",
+      "showMore": "Vollständigen Text anzeigen",
+      "showLess": "Weniger anzeigen",
       "deleteConfirm": {
         "title": "Ankündigung löschen",
         "message": "Möchten Sie diese Ankündigung löschen?",
@@ -4129,6 +4123,9 @@
       "saving": "Wird gespeichert ...",
       "cancel": "Abbrechen",
       "close": "Schließen",
+      "saveAndClose": "Speichern & Schließen",
+      "next": "Weiter",
+      "back": "Zurück",
       "fieldRequired": "ist ein Pflichtfeld",
       "partialSaveError": "Grunddaten wurden gespeichert. Details konnten nicht gespeichert werden. Bitte erneut versuchen.",
       "duplicateEntryStyle": "Doppelte Disziplinen gefunden. Bitte ändern Sie die Disziplin jedes Eintrags.",
@@ -4138,7 +4135,6 @@
         "confirm": "Schließen",
         "cancel": "Weiter bearbeiten"
       },
-      "proceedToRecord": "Weiter zur Eintragung",
       "recordFutureGuard": "Für zukünftige Daten können keine Rennergebnisse eingetragen werden."
     },
     "premium": {

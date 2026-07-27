@@ -19,6 +19,9 @@
  *   forms.tabModal.cancel              — キャンセルボタン
  *   forms.tabModal.close               — 閉じるボタン
  *   forms.tabModal.fieldRequired       — 必須フィールドエラー
+ *   forms.tabModal.saveAndClose        — フッター「保存して終了」ボタン
+ *   forms.tabModal.next                — フッター「次に進む」ボタン
+ *   forms.tabModal.back                — フッター「前に戻る」ボタン
  *   forms.tabModal.discardWarning.title    — 破棄確認タイトル
  *   forms.tabModal.discardWarning.message  — 破棄確認本文
  *   forms.tabModal.discardWarning.confirm  — 破棄確認ボタン
@@ -83,6 +86,10 @@ const REQUIRED_TAB_MODAL_KEYS = [
   "forms.tabModal.cancel",
   "forms.tabModal.close",
   "forms.tabModal.fieldRequired",
+  // フッターボタン切り替え (次に進む/前に戻る/保存して終了)
+  "forms.tabModal.saveAndClose",
+  "forms.tabModal.next",
+  "forms.tabModal.back",
   // 破棄警告ダイアログ
   "forms.tabModal.discardWarning.title",
   "forms.tabModal.discardWarning.message",

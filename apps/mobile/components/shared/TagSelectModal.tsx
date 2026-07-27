@@ -13,6 +13,8 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { PracticeTag } from "@apps/shared/types";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -42,6 +44,7 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
   onDeleteTag,
 }) => {
   const { t } = useTranslation();
+  const insets = useSafeInsets();
   const selectedIds = useMemo(() => new Set(selectedTags.map((t) => t.id)), [selectedTags]);
   const [query, setQuery] = useState("");
 
@@ -102,7 +105,7 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
         <Pressable style={styles.backdrop} onPress={onClose} />
 
         {/* ボトムシート */}
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: getSafeFooterPadding(34, insets.bottom) }]}>
           {/* ハンドル */}
           <View style={styles.handleContainer}>
             <View style={styles.handle} />
@@ -234,7 +237,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: SCREEN_HEIGHT * 0.55,
-    paddingBottom: 34, // Safe area bottom
   },
   handleContainer: {
     alignItems: "center",

@@ -1,29 +1,31 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  RefreshControl,
-  Modal,
-  FlatList,
-  Dimensions,
-  Alert,
-} from "react-native";
+import React, { useState, useMemo, useCallback } from "react";
+import { View, Text, StyleSheet, RefreshControl, Alert, Pressable } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format, parseISO, isValid } from "date-fns";
-import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
-import { StyleAPI } from "@apps/shared/api/styles";
+import { STYLE_CODE_TO_ABBREV } from "@apps/shared/utils/swimStyles";
 import { RecordItem, StandaloneRecordDetailModal } from "@/components/records";
-import { localizedStyleName } from "@/utils/styleName";
+import { ListToolbar, SortBottomSheet, FilterBottomSheet } from "@/components/history";
+import type { SortPreset, FilterGroup } from "@/components/history";
+import {
+  filterRecords,
+  sortRecords,
+  countActiveRecordFilters,
+  getParticipatedDistances,
+  getParticipatedStyleCodes,
+  getParticipatedCompetitionNames,
+  getParticipatedPlaces,
+  UNSET_PLACE_VALUE,
+  type RecordFilterValues,
+  type RecordSortBy,
+} from "@/utils/recordFilter";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { DayDetailModal } from "@/components/calendar";
@@ -31,36 +33,37 @@ import { useDayEntriesQuery } from "@/hooks/useDayEntriesQuery";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import type { MainStackParamList } from "@/navigation/types";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
-import type { Style } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 
 type RecordsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
-/** 日付から年度を取得（4月〜翌3月） */
-const getFiscalYear = (date: Date): number => {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  return month >= 4 ? year : year - 1;
-};
+// 一覧の初期表示件数、および「もっと見る」(onEndReached)1回あたりの増分
+const PAGE_INCREMENT = 20;
 
 /**
  * 大会記録一覧画面
- * 大会記録の一覧を表示し、フィルター、ソート、プルリフレッシュ、無限スクロール機能を提供
+ * 大会記録の一覧を全幅カード + ボトムシート(並べ替え/絞り込み)で表示する。
+ * 絞り込み/並べ替え/表示件数はすべてクライアント側(useMemo)で処理し、
+ * サーバーからは十分大きい件数(pageSize=1000)を一括取得する(web CompetitionClient と同型)。
  */
 export const RecordsScreen: React.FC = () => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
   const { supabase } = useAuth();
-  const { t } = useTranslation();
-  const [page, setPage] = useState(1);
+  const { t, i18n } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
-  const [allRecords, setAllRecords] = useState<RecordWithDetails[]>([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [styleList, setStyleList] = useState<Style[]>([]);
-  const [pickerModal, setPickerModal] = useState<"year" | "style" | null>(null);
-  const yearButtonRef = useRef<View>(null);
-  const styleButtonRef = useRef<View>(null);
-  const [dropdownLayout, setDropdownLayout] = useState({ top: 0, left: 0, width: 0 });
+  const [displayCount, setDisplayCount] = useState(PAGE_INCREMENT);
+
+  // 並べ替え/絞り込みボトムシートの開閉状態(排他制御: 同時に開かない)
+  const [isSortSheetOpen, setIsSortSheetOpen] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const openSortSheet = useCallback(() => {
+    setIsFilterSheetOpen(false);
+    setIsSortSheetOpen(true);
+  }, []);
+  const openFilterSheet = useCallback(() => {
+    setIsSortSheetOpen(false);
+    setIsFilterSheetOpen(true);
+  }, []);
 
   // 行タップで開く日付詳細モーダル（ダッシュボードと同一のDayDetailModal）
   const [modalDate, setModalDate] = useState<Date | null>(null);
@@ -70,53 +73,145 @@ export const RecordsScreen: React.FC = () => {
   const [standaloneRecord, setStandaloneRecord] = useState<RecordWithDetails | null>(null);
   const [isDeletingStandalone, setIsDeletingStandalone] = useState(false);
 
-  // フィルターストア
+  // フィルター/ソートストア
   const {
-    filterStyleId,
-    filterFiscalYear,
+    filterDistances,
+    filterStyles,
+    filterCompetitionNames,
+    filterPlaces,
     filterPoolType,
-    includeRelay,
+    filterRelayMode,
     sortBy,
     sortOrder,
-    setFilterStyleId,
-    setFilterFiscalYear,
+    setFilterDistances,
+    setFilterStyles,
+    setFilterCompetitionNames,
+    setFilterPlaces,
     setFilterPoolType,
-    setIncludeRelay,
+    setFilterRelayMode,
+    setSortBy,
+    setSortOrder,
     resetFilter,
   } = useRecordStore(
     useShallow((state) => ({
-      filterStyleId: state.filterStyleId,
-      filterFiscalYear: state.filterFiscalYear,
+      filterDistances: state.filterDistances,
+      filterStyles: state.filterStyles,
+      filterCompetitionNames: state.filterCompetitionNames,
+      filterPlaces: state.filterPlaces,
       filterPoolType: state.filterPoolType,
-      includeRelay: state.includeRelay,
+      filterRelayMode: state.filterRelayMode,
       sortBy: state.sortBy,
       sortOrder: state.sortOrder,
-      setFilterStyleId: state.setFilterStyleId,
-      setFilterFiscalYear: state.setFilterFiscalYear,
-      setFilterPoolType: state.setFilterPoolType,
-      setIncludeRelay: state.setIncludeRelay,
       resetFilter: state.resetFilter,
+      setFilterDistances: state.setFilterDistances,
+      setFilterStyles: state.setFilterStyles,
+      setFilterCompetitionNames: state.setFilterCompetitionNames,
+      setFilterPlaces: state.setFilterPlaces,
+      setFilterPoolType: state.setFilterPoolType,
+      setFilterRelayMode: state.setFilterRelayMode,
+      setSortBy: state.setSortBy,
+      setSortOrder: state.setSortOrder,
     })),
   );
 
-  // 種目一覧を取得
-  useEffect(() => {
-    const fetchStyles = async () => {
-      try {
-        const styleApi = new StyleAPI(supabase);
-        const stylesData = await styleApi.getStyles();
-        setStyleList(stylesData);
-      } catch (error) {
-        console.error("種目取得エラー:", error);
-      }
-    };
-    fetchStyles();
-  }, [supabase]);
+  // ---------------------------------------------------------------------------
+  // 絞り込みシートのドラフト状態: チップ操作はこのローカル state のみを更新し、
+  // 「適用」を押した時にのみストアへ一括コミットする。X/backdrop/Android戻る/シート排他
+  // で閉じた場合は再初期化されずそのまま破棄される。シートを開いた瞬間にストアの
+  // 現在値で再構築する。
+  // ---------------------------------------------------------------------------
+  const buildFilterDraftFromStore = useCallback(
+    (): RecordFilterValues => ({
+      filterDistances,
+      filterStyles,
+      filterCompetitionNames,
+      filterPlaces,
+      filterPoolType,
+      filterRelayMode,
+    }),
+    [filterDistances, filterStyles, filterCompetitionNames, filterPlaces, filterPoolType, filterRelayMode],
+  );
+
+  const [filterDraft, setFilterDraft] = useState<RecordFilterValues>(buildFilterDraftFromStore);
+
+  const handleOpenFilterSheet = useCallback(() => {
+    setFilterDraft(buildFilterDraftFromStore());
+    openFilterSheet();
+  }, [buildFilterDraftFromStore, openFilterSheet]);
+
+  const handleDraftDistancesChange = useCallback(
+    (values: string[]) => setFilterDraft((prev) => ({ ...prev, filterDistances: values })),
+    [],
+  );
+  const handleDraftStylesChange = useCallback(
+    (values: string[]) => setFilterDraft((prev) => ({ ...prev, filterStyles: values })),
+    [],
+  );
+  const handleDraftCompetitionNamesChange = useCallback(
+    (values: string[]) => setFilterDraft((prev) => ({ ...prev, filterCompetitionNames: values })),
+    [],
+  );
+  const handleDraftPlacesChange = useCallback(
+    (values: string[]) => setFilterDraft((prev) => ({ ...prev, filterPlaces: values })),
+    [],
+  );
+  const handleDraftPoolTypeChange = useCallback(
+    (value: string) => setFilterDraft((prev) => ({ ...prev, filterPoolType: value })),
+    [],
+  );
+  const handleDraftRelayModeChange = useCallback(
+    (value: string) =>
+      setFilterDraft((prev) => ({
+        ...prev,
+        filterRelayMode: (value || "all") as RecordFilterValues["filterRelayMode"],
+      })),
+    [],
+  );
+
+  // 絞り込みシートの「すべてクリア」: ドラフトのみを未選択に戻す(シートは閉じない・ストアは不変)
+  const handleClearDraftFilters = useCallback(() => {
+    setFilterDraft({
+      filterDistances: [],
+      filterStyles: [],
+      filterCompetitionNames: [],
+      filterPlaces: [],
+      filterPoolType: "",
+      filterRelayMode: "all",
+    });
+  }, []);
+
+  // 絞り込みシートの「適用」: ドラフトをストアへ一括コミットし、displayCount をリセットしてシートを閉じる
+  const handleApplyFilters = useCallback(() => {
+    setFilterDistances(filterDraft.filterDistances);
+    setFilterStyles(filterDraft.filterStyles);
+    setFilterCompetitionNames(filterDraft.filterCompetitionNames);
+    setFilterPlaces(filterDraft.filterPlaces);
+    setFilterPoolType(filterDraft.filterPoolType);
+    setFilterRelayMode(filterDraft.filterRelayMode);
+    setDisplayCount(PAGE_INCREMENT);
+    setIsFilterSheetOpen(false);
+  }, [
+    filterDraft,
+    setFilterDistances,
+    setFilterStyles,
+    setFilterCompetitionNames,
+    setFilterPlaces,
+    setFilterPoolType,
+    setFilterRelayMode,
+  ]);
+
+  // 0件空状態(絞り込み条件に一致なし)の「フィルタをリセット」導線: ドラフトを経由せず
+  // 即時に全解除する(ソートも含めて全リセットする web と同じ仕様)
+  const handleResetAllFilters = useCallback(() => {
+    resetFilter();
+    setDisplayCount(PAGE_INCREMENT);
+  }, [resetFilter]);
 
   // endDate をメモ化して不要な再フェッチを防止
   const endDate = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
-  // 大会記録データ取得（全期間、種目はサーバーサイドフィルター）
+  // 大会記録データ取得: 絞り込み/並べ替え/表示件数は全てクライアント側で処理するため
+  // 十分大きい件数(pageSize=1000)を一括取得する
   const {
     records = [],
     isLoading,
@@ -126,114 +221,174 @@ export const RecordsScreen: React.FC = () => {
   } = useRecordsQuery(supabase, {
     startDate: "2000-01-01",
     endDate,
-    styleId: filterStyleId || undefined,
-    page,
-    pageSize: 20,
+    pageSize: 1000,
     enableRealtime: true,
   });
 
-  // クエリ結果をページごとに蓄積（フィルターとは独立）
-  useEffect(() => {
-    if (records.length > 0) {
-      if (page === 1) {
-        setAllRecords(records);
-        setHasMore(records.length === 20);
-      } else {
-        setAllRecords((prev) => {
-          const existingIds = new Set(prev.map((r) => r.id));
-          const newRecords = records.filter((r) => !existingIds.has(r.id));
-          return [...prev, ...newRecords];
-        });
-        setHasMore(records.length === 20);
-      }
-      setLoadingMore(false);
-    } else if (!isLoading) {
-      if (page === 1) {
-        setAllRecords([]);
-      }
-      setHasMore(false);
-      setLoadingMore(false);
-    }
-  }, [records, page, isLoading]);
+  // 距離/種目/大会名/場所フィルタの選択肢生成(全件ベース)
+  const participatedDistances = useMemo(() => getParticipatedDistances(records), [records]);
+  const participatedStyleCodes = useMemo(() => getParticipatedStyleCodes(records), [records]);
+  const participatedCompetitionNames = useMemo(
+    () => getParticipatedCompetitionNames(records, i18n.language),
+    [records, i18n.language],
+  );
+  const { places: participatedPlaces, hasUnsetPlace } = useMemo(
+    () => getParticipatedPlaces(records, i18n.language),
+    [records, i18n.language],
+  );
 
-  // サーバーサイドフィルター（種目）変更時のみページリセット
-  useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-  }, [filterStyleId]);
+  // 絞り込み → 並べ替え(useMemoで即座に反映)
+  const filteredRecords = useMemo(
+    () =>
+      filterRecords(records, {
+        filterDistances,
+        filterStyles,
+        filterCompetitionNames,
+        filterPlaces,
+        filterPoolType,
+        filterRelayMode,
+      }),
+    [records, filterDistances, filterStyles, filterCompetitionNames, filterPlaces, filterPoolType, filterRelayMode],
+  );
 
-  // 蓄積データから参加済み年度リストを生成
-  const participatedFiscalYears = useMemo(() => {
-    const years = new Set<number>();
-    allRecords.forEach((record) => {
-      const dateStr = record.competition?.date;
-      if (dateStr) {
-        const parsed = parseISO(dateStr);
-        if (isValid(parsed)) {
-          years.add(getFiscalYear(parsed));
-        }
-      }
-    });
-    return Array.from(years).sort((a, b) => b - a);
-  }, [allRecords]);
+  const sortedRecords = useMemo(
+    () => sortRecords(filteredRecords, sortBy, sortOrder),
+    [filteredRecords, sortBy, sortOrder],
+  );
 
-  // 蓄積データから参加済み種目リストを生成
-  const participatedStyles = useMemo(() => {
-    const styleIds = new Set<number>();
-    allRecords.forEach((record) => {
-      if (record.style_id) {
-        styleIds.add(record.style_id);
-      }
-    });
-    return styleList.filter((style) => styleIds.has(style.id));
-  }, [allRecords, styleList]);
+  // 「もっと見る」(FlashList onEndReached): 絞り込み後・並べ替え後の総件数のうち displayCount 件のみ表示
+  const displayRecords = useMemo(
+    () => sortedRecords.slice(0, displayCount),
+    [sortedRecords, displayCount],
+  );
 
-  // クライアントサイドフィルター適用（useMemoで即座に反映）
-  const displayRecords = useMemo(() => {
-    let filtered = [...allRecords];
+  // 有効な絞り込み条件の数(ストア適用済み値ベース。バッジ表示用)
+  const activeFilterCount = useMemo(
+    () =>
+      countActiveRecordFilters({
+        filterDistances,
+        filterStyles,
+        filterCompetitionNames,
+        filterPlaces,
+        filterPoolType,
+        filterRelayMode,
+      }),
+    [filterDistances, filterStyles, filterCompetitionNames, filterPlaces, filterPoolType, filterRelayMode],
+  );
 
-    // プールタイプフィルター
-    if (filterPoolType !== null) {
-      filtered = filtered.filter((record) => {
-        const poolType = record.pool_type;
-        return poolType === filterPoolType;
-      });
-    }
+  // 絞り込みシート内の「有効な絞り込み条件の数」(ドラフト値ベース。「すべてクリア」の有効/無効判定に使う)
+  const draftActiveFilterCount = useMemo(() => countActiveRecordFilters(filterDraft), [filterDraft]);
 
-    // 年度フィルター
-    if (filterFiscalYear) {
-      const fy = parseInt(filterFiscalYear);
-      filtered = filtered.filter((record) => {
-        const recordDateStr = record.competition?.date || record.created_at;
-        if (!recordDateStr) return false;
-        const parsed = parseISO(recordDateStr);
-        if (!isValid(parsed)) return false;
-        return getFiscalYear(parsed) === fy;
-      });
-    }
+  // 並べ替えボトムシートのプリセット(日付新/古 + 記録速い/遅いの4択)
+  const sortPresets: SortPreset<RecordSortBy>[] = useMemo(
+    () => [
+      { id: "dateDesc", label: t("competition.sortSheet.dateDesc"), column: "date", order: "desc" },
+      { id: "dateAsc", label: t("competition.sortSheet.dateAsc"), column: "date", order: "asc" },
+      { id: "timeAsc", label: t("competition.sortSheet.timeAsc"), column: "time", order: "asc" },
+      { id: "timeDesc", label: t("competition.sortSheet.timeDesc"), column: "time", order: "desc" },
+    ],
+    [t],
+  );
 
-    // 引き継ぎ記録フィルター
-    if (!includeRelay) {
-      filtered = filtered.filter((record) => !record.is_relaying);
-    }
+  const handleSortSelect = useCallback(
+    (preset: SortPreset<RecordSortBy>) => {
+      setSortBy(preset.column);
+      setSortOrder(preset.order);
+      setDisplayCount(PAGE_INCREMENT);
+      setIsSortSheetOpen(false);
+    },
+    [setSortBy, setSortOrder],
+  );
 
-    // ソート
-    filtered.sort((a, b) => {
-      if (sortBy === "date") {
-        const dateA = parseISO(a.competition?.date || a.created_at).getTime();
-        const dateB = parseISO(b.competition?.date || b.created_at).getTime();
-        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-      } else {
-        return sortOrder === "asc" ? a.time - b.time : b.time - a.time;
-      }
-    });
-
-    return filtered;
-  }, [allRecords, filterPoolType, filterFiscalYear, includeRelay, sortBy, sortOrder]);
-
-  // フィルターが適用中かチェック
-  const hasActiveFilter =
-    filterStyleId !== null || filterFiscalYear !== "" || filterPoolType !== null || !includeRelay;
+  // 絞り込みボトムシートのグループ定義(ドラフト state を参照する)
+  const filterGroups: FilterGroup[] = useMemo(
+    () => [
+      {
+        id: "competitionName",
+        label: t("competition.table.competitionName"),
+        mode: "multi",
+        options: participatedCompetitionNames.map((name) => ({ value: name, label: name })),
+        selectedValues: filterDraft.filterCompetitionNames,
+        onChange: handleDraftCompetitionNamesChange,
+        onClearGroup: () => handleDraftCompetitionNamesChange([]),
+      },
+      {
+        id: "place",
+        label: t("competition.table.place"),
+        mode: "multi",
+        options: [
+          ...(hasUnsetPlace ? [{ value: UNSET_PLACE_VALUE, label: t("common.notSet") }] : []),
+          ...participatedPlaces.map((place) => ({ value: place, label: place })),
+        ],
+        selectedValues: filterDraft.filterPlaces,
+        onChange: handleDraftPlacesChange,
+        onClearGroup: () => handleDraftPlacesChange([]),
+      },
+      {
+        id: "pool",
+        label: t("competition.table.pool"),
+        mode: "single",
+        options: [
+          { value: "short", label: t("recordMobile.poolTypeShort") },
+          { value: "long", label: t("recordMobile.poolTypeLong") },
+        ],
+        selectedValues: filterDraft.filterPoolType ? [filterDraft.filterPoolType] : [],
+        onChange: (values: string[]) => handleDraftPoolTypeChange(values[0] ?? ""),
+        onClearGroup: () => handleDraftPoolTypeChange(""),
+      },
+      {
+        id: "distance",
+        label: t("competition.filterSheet.distanceLabel"),
+        mode: "multi",
+        options: participatedDistances.map((distance) => ({
+          value: distance.toString(),
+          label: `${distance}m`,
+        })),
+        selectedValues: filterDraft.filterDistances,
+        onChange: handleDraftDistancesChange,
+        onClearGroup: () => handleDraftDistancesChange([]),
+      },
+      {
+        id: "style",
+        label: t("competition.filterSheet.strokeLabel"),
+        mode: "multi",
+        options: participatedStyleCodes.map((code) => ({
+          value: code,
+          label: t(`practice.styleAbbrev.${STYLE_CODE_TO_ABBREV[code]}`),
+        })),
+        selectedValues: filterDraft.filterStyles,
+        onChange: handleDraftStylesChange,
+        onClearGroup: () => handleDraftStylesChange([]),
+      },
+      {
+        id: "relay",
+        label: t("competition.filterSheet.relayLabel"),
+        mode: "single",
+        options: [
+          { value: "excludeRelay", label: t("competition.filter.excludeRelay") },
+          { value: "onlyRelay", label: t("competition.filter.onlyRelay") },
+        ],
+        selectedValues: filterDraft.filterRelayMode === "all" ? [] : [filterDraft.filterRelayMode],
+        onChange: (values: string[]) => handleDraftRelayModeChange(values[0] ?? "all"),
+        onClearGroup: () => handleDraftRelayModeChange("all"),
+      },
+    ],
+    [
+      t,
+      participatedCompetitionNames,
+      participatedPlaces,
+      hasUnsetPlace,
+      participatedDistances,
+      participatedStyleCodes,
+      filterDraft,
+      handleDraftCompetitionNamesChange,
+      handleDraftPlacesChange,
+      handleDraftPoolTypeChange,
+      handleDraftDistancesChange,
+      handleDraftStylesChange,
+      handleDraftRelayModeChange,
+    ],
+  );
 
   // タブ遷移時にデータ再取得
   useRefreshOnFocus(refetch);
@@ -241,8 +396,6 @@ export const RecordsScreen: React.FC = () => {
   // プルリフレッシュ処理
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    setPage(1);
-    setHasMore(true);
     try {
       await refetch();
     } finally {
@@ -250,13 +403,13 @@ export const RecordsScreen: React.FC = () => {
     }
   }, [refetch]);
 
-  // 無限スクロール処理
+  // 無限スクロール(displayCount を増やすのみ。ネットワーク再フェッチは行わない)。
+  // 既に全件表示済みの場合は onEndReached の連続発火で無駄な再レンダーを起こさないよう
+  // ガードする
   const handleLoadMore = useCallback(() => {
-    if (!loadingMore && hasMore && !isLoading) {
-      setLoadingMore(true);
-      setPage((prev) => prev + 1);
-    }
-  }, [loadingMore, hasMore, isLoading]);
+    if (displayCount >= sortedRecords.length) return;
+    setDisplayCount((count) => count + PAGE_INCREMENT);
+  }, [displayCount, sortedRecords.length]);
 
   // 選択した日付のカレンダーエントリー（DayDetailModal表示用）
   const { data: dayEntries = [], refetch: refetchDayEntries } = useDayEntriesQuery(
@@ -365,49 +518,6 @@ export const RecordsScreen: React.FC = () => {
     [handleRecordPress],
   );
 
-  // ドロップダウンを開く
-  const screenHeight = Dimensions.get("window").height;
-  const DROPDOWN_MAX_HEIGHT = 260;
-
-  const openYearPicker = useCallback(() => {
-    yearButtonRef.current?.measureInWindow((x, y, width, height) => {
-      const top = y + height + 4;
-      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40;
-      setDropdownLayout({
-        top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
-        left: x,
-        width,
-      });
-      setPickerModal("year");
-    });
-  }, [screenHeight]);
-
-  const openStylePicker = useCallback(() => {
-    styleButtonRef.current?.measureInWindow((x, y, width, height) => {
-      const top = y + height + 4;
-      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40;
-      setDropdownLayout({
-        top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
-        left: x,
-        width,
-      });
-      setPickerModal("style");
-    });
-  }, [screenHeight]);
-
-  // 選択済み種目名を取得
-  const selectedStyleName = useMemo(() => {
-    if (!filterStyleId) return t("recordMobile.filterAllStyles");
-    const style = styleList.find((s) => s.id === filterStyleId);
-    return localizedStyleName(style, t) || t("recordMobile.filterAllStyles");
-  }, [filterStyleId, styleList, t]);
-
-  // 選択済み年度名を取得
-  const selectedYearName = useMemo(() => {
-    if (!filterFiscalYear) return t("recordMobile.filterAllPeriods");
-    return t("recordMobile.filterYearFormat", { year: filterFiscalYear });
-  }, [filterFiscalYear, t]);
-
   // エラー状態
   if (isError && error) {
     return (
@@ -422,7 +532,7 @@ export const RecordsScreen: React.FC = () => {
   }
 
   // ローディング状態（初回のみ）
-  if (isLoading && displayRecords.length === 0 && allRecords.length === 0) {
+  if (isLoading && records.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <LoadingSpinner fullScreen message={t("recordMobile.loading")} />
@@ -432,66 +542,12 @@ export const RecordsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* フィルターUI */}
-      <View style={styles.filterContainer}>
-        {/* 1行目: 年度 + 種目 */}
-        <View style={styles.filterRow}>
-          <Pressable ref={yearButtonRef} style={styles.selectButton} onPress={openYearPicker}>
-            <Text style={styles.selectButtonText} numberOfLines={1}>
-              {selectedYearName}
-            </Text>
-            <Feather name="chevron-down" size={14} color="#6B7280" />
-          </Pressable>
-          <Pressable ref={styleButtonRef} style={styles.selectButton} onPress={openStylePicker}>
-            <Text style={styles.selectButtonText} numberOfLines={1}>
-              {selectedStyleName}
-            </Text>
-            <Feather name="chevron-down" size={14} color="#6B7280" />
-          </Pressable>
-        </View>
-
-        {/* 2行目: プール種別タブ + 引き継ぎ + リセット */}
-        <View style={styles.filterRow}>
-          <View style={styles.poolTabs}>
-            {(
-              [
-                { value: null, label: t("recordMobile.tabAll") },
-                { value: 0, label: t("recordMobile.poolTypeShort") },
-                { value: 1, label: t("recordMobile.poolTypeLong") },
-              ] as const
-            ).map((tab) => (
-              <Pressable
-                key={String(tab.value)}
-                style={[styles.poolTab, filterPoolType === tab.value && styles.poolTabActive]}
-                onPress={() => setFilterPoolType(tab.value)}
-              >
-                <Text
-                  style={[
-                    styles.poolTabText,
-                    filterPoolType === tab.value && styles.poolTabTextActive,
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <Pressable
-            style={styles.checkboxContainer}
-            onPress={() => setIncludeRelay(!includeRelay)}
-          >
-            <View style={[styles.checkbox, includeRelay && styles.checkboxChecked]}>
-              {includeRelay && <Text style={styles.checkboxMark}>✓</Text>}
-            </View>
-            <Text style={styles.checkboxLabel}>{t("recordMobile.tabIncludeRelay")}</Text>
-          </Pressable>
-          {hasActiveFilter && (
-            <Pressable style={styles.resetButton} onPress={resetFilter}>
-              <Text style={styles.resetButtonText}>{t("recordMobile.buttonReset")}</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
+      <ListToolbar
+        itemCount={sortedRecords.length}
+        onSortClick={openSortSheet}
+        onFilterClick={handleOpenFilterSheet}
+        activeFilterCount={activeFilterCount}
+      />
 
       <FlashList
         data={displayRecords}
@@ -511,85 +567,43 @@ export const RecordsScreen: React.FC = () => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>{t("recordMobile.noRecords")}</Text>
+            {/* データ自体は存在するが絞り込み条件に一致が無い場合のみ、フィルタ全解除の導線を出す
+                (web PracticeClient/CompetitionClient と同様、「データが0件」とは区別する) */}
+            {records.length > 0 && activeFilterCount > 0 && (
+              <Pressable
+                style={styles.resetFilterButton}
+                onPress={handleResetAllFilters}
+                accessibilityRole="button"
+              >
+                <Text style={styles.resetFilterButtonText}>{t("competition.filter.resetButton")}</Text>
+              </Pressable>
+            )}
           </View>
-        }
-        ListFooterComponent={
-          loadingMore ? (
-            <View style={styles.footerLoader}>
-              <LoadingSpinner size="small" />
-            </View>
-          ) : null
         }
       />
 
-      {/* ドロップダウンピッカー */}
-      <Modal
-        visible={pickerModal !== null}
-        transparent
-        animationType="none"
-        onRequestClose={() => setPickerModal(null)}
-      >
-        <Pressable style={styles.dropdownOverlay} onPress={() => setPickerModal(null)}>
-          <View
-            style={[
-              styles.dropdownContainer,
-              { top: dropdownLayout.top, left: dropdownLayout.left, width: dropdownLayout.width },
-            ]}
-          >
-            <FlatList
-              data={
-                pickerModal === "year"
-                  ? [
-                      { id: "", label: t("recordMobile.filterAllPeriods") },
-                      ...participatedFiscalYears.map((y) => ({
-                        id: y.toString(),
-                        label: t("recordMobile.filterYearFormat", { year: y }),
-                      })),
-                    ]
-                  : [
-                      { id: "", label: t("recordMobile.filterAllStyles") },
-                      ...participatedStyles.map((s) => ({
-                        id: s.id.toString(),
-                        label: localizedStyleName(s, t),
-                      })),
-                    ]
-              }
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => {
-                const isSelected =
-                  pickerModal === "year"
-                    ? filterFiscalYear === item.id
-                    : filterStyleId === (item.id ? Number(item.id) : null);
+      {/* 並べ替えボトムシート */}
+      <SortBottomSheet<RecordSortBy>
+        isOpen={isSortSheetOpen}
+        onClose={() => setIsSortSheetOpen(false)}
+        title={t("competition.sortSheet.title")}
+        presets={sortPresets}
+        activeColumn={sortBy}
+        activeOrder={sortOrder}
+        onSelect={handleSortSelect}
+      />
 
-                return (
-                  <Pressable
-                    style={[styles.dropdownOption, isSelected && styles.dropdownOptionSelected]}
-                    onPress={() => {
-                      if (pickerModal === "year") {
-                        setFilterFiscalYear(item.id);
-                      } else {
-                        setFilterStyleId(item.id ? Number(item.id) : null);
-                      }
-                      setPickerModal(null);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.dropdownOptionText,
-                        isSelected && styles.dropdownOptionTextSelected,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                    {isSelected && <Feather name="check" size={16} color="#2563EB" />}
-                  </Pressable>
-                );
-              }}
-              style={styles.dropdownScroll}
-            />
-          </View>
-        </Pressable>
-      </Modal>
+      {/* 絞り込みボトムシート(ドラフト化: X/backdrop/Android戻る/シート排他で閉じるとドラフトは
+          破棄され、ストア(一覧・件数バッジ)には影響しない。「適用」でのみコミットされる) */}
+      <FilterBottomSheet
+        isOpen={isFilterSheetOpen}
+        onClose={() => setIsFilterSheetOpen(false)}
+        title={t("competition.filterSheet.title")}
+        groups={filterGroups}
+        activeCount={draftActiveFilterCount}
+        onClearAll={handleClearDraftFilters}
+        onApply={handleApplyFilters}
+      />
 
       {/* 日付詳細モーダル（ダッシュボードと同一のDayDetailModal） */}
       {modalDate && (
@@ -597,6 +611,7 @@ export const RecordsScreen: React.FC = () => {
           visible={showDayDetail}
           date={modalDate}
           entries={dayEntries}
+          scope="competition"
           onClose={() => {
             setShowDayDetail(false);
             setModalDate(null);
@@ -639,99 +654,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#EFF6FF",
   },
-  filterContainer: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    gap: 8,
-  },
-  filterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  selectButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  selectButtonText: {
-    fontSize: 13,
-    color: "#111827",
-    flex: 1,
-  },
-  poolTabs: {
-    flexDirection: "row",
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    overflow: "hidden",
-  },
-  poolTab: {
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    backgroundColor: "#FFFFFF",
-  },
-  poolTabActive: {
-    backgroundColor: "#2563EB",
-  },
-  poolTabText: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#6B7280",
-  },
-  poolTabTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  checkbox: {
-    width: 16,
-    height: 16,
-    borderWidth: 2,
-    borderColor: "#D1D5DB",
-    borderRadius: 3,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  checkboxChecked: {
-    backgroundColor: "#2563EB",
-    borderColor: "#2563EB",
-  },
-  checkboxMark: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-  checkboxLabel: {
-    fontSize: 11,
-    color: "#374151",
-  },
-  resetButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    backgroundColor: "#F3F4F6",
-    borderRadius: 4,
-  },
-  resetButtonText: {
-    fontSize: 11,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
   listContent: {
     paddingVertical: 8,
   },
@@ -743,48 +665,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6B7280",
   },
-  footerLoader: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-  // ドロップダウン
-  dropdownOverlay: {
-    flex: 1,
-  },
-  dropdownContainer: {
-    position: "absolute",
-    backgroundColor: "#FFFFFF",
+  resetFilterButton: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#D1D5DB",
-    maxHeight: 260,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    backgroundColor: "#FFFFFF",
   },
-  dropdownScroll: {
-    maxHeight: 260,
-  },
-  dropdownOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E5E7EB",
-  },
-  dropdownOptionSelected: {
-    backgroundColor: "#EFF6FF",
-  },
-  dropdownOptionText: {
-    fontSize: 15,
-    color: "#111827",
-  },
-  dropdownOptionTextSelected: {
-    color: "#2563EB",
+  resetFilterButtonText: {
+    fontSize: 13,
     fontWeight: "600",
+    color: "#374151",
   },
 });

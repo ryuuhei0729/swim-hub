@@ -31,7 +31,7 @@
  *   - "@/contexts" (useAuth) をモックし、実 AuthProvider / 実 supabase クライアントを
  *     生成しない
  *   - PracticeTabModal / PracticeDetailModal / SortBottomSheet / FilterBottomSheet /
- *     ListToolbar / PracticeLogCard など子の重量コンポーネントは軽量スタブに差し替える
+ *     ListToolbar / PracticeCard など子の重量コンポーネントは軽量スタブに差し替える
  * を行う。それでも Phase B で実装差し替え後に environment error (ハング/OOM) が再発する場合は、
  * このテストを削除し、PracticeClient 側で「クエリオプション構築」を
  * `getPracticeQueryOptions()` のような純粋関数として抽出したうえで、その関数だけを
@@ -84,8 +84,8 @@ vi.mock("next-intl", async (importOriginal) => {
 
 // 子の重量コンポーネントはこのテストの関心事(usePracticesQueryの呼び出し引数)ではないため
 // 軽量スタブに差し替える。
-vi.mock("../../../app/[locale]/(authenticated)/practice/_components/PracticeLogCard", () => ({
-  default: () => <div data-testid="practice-log-card-stub" />,
+vi.mock("../../../app/[locale]/(authenticated)/practice/_components/PracticeCard", () => ({
+  default: () => <div data-testid="practice-card-stub" />,
 }));
 vi.mock("../../../app/[locale]/(authenticated)/practice/_components/PracticeDetailModal", () => ({
   default: () => null,

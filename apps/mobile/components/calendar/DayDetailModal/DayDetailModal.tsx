@@ -12,7 +12,9 @@ import { resolveCalendarItemColor, getDefaultColorForType } from "@apps/shared/u
 import { styles } from "./styles";
 import { MemoizedPracticeLogDetail, RecordDetail, EntryDetail } from "./components";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { ErrorView } from "@/components/layout/ErrorView";
 import { computeDayDetailMinHeight } from "./minHeight";
+import { filterEntriesByScope } from "./domainFilter";
 import type { DayDetailModalProps } from "./types";
 
 /**
@@ -114,6 +116,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   visible,
   date,
   entries,
+  scope = "day",
+  isLoading = false,
+  isError = false,
+  onRetry,
   colorSettings = EMPTY_COLOR_SETTINGS,
   onClose,
   onEntryPress,
@@ -185,10 +191,13 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     });
   }, []);
 
+  // scope に応じて表示対象のエントリーを絞り込む(scope="day"は非破壊でそのまま)
+  const scopedEntries = useMemo(() => filterEntriesByScope(entries, scope), [entries, scope]);
+
   // エントリー数と種類、メディアの有無に応じて最小高さを動的に計算
   const minHeight = useMemo(
-    () => computeDayDetailMinHeight(entries, practiceLogsWithTimes, entriesWithMedia),
-    [entries, practiceLogsWithTimes, entriesWithMedia],
+    () => computeDayDetailMinHeight(scopedEntries, practiceLogsWithTimes, entriesWithMedia),
+    [scopedEntries, practiceLogsWithTimes, entriesWithMedia],
   );
 
   // 動的なスタイルを生成
@@ -196,8 +205,8 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
 
   // エントリータイプをフィルタリング・グループ化
   const { otherItems, entriesByCompetition, recordsByCompetition } = useMemo(() => {
-    const recordItems = entries.filter((e) => e.type === "record");
-    const entryItems = entries.filter((e) => e.type === "entry");
+    const recordItems = scopedEntries.filter((e) => e.type === "record");
+    const entryItems = scopedEntries.filter((e) => e.type === "entry");
 
     // 記録を大会IDでグループ化
     const recordsByComp = new Map<string, CalendarItem[]>();
@@ -233,7 +242,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     });
 
     // その他のアイテム
-    const others = entries.filter((e) => {
+    const others = scopedEntries.filter((e) => {
       if (e.type === "record" || e.type === "entry") return false;
       if (e.type === "competition" || e.type === "team_competition") {
         return !competitionsWithEntriesOrRecords.has(e.id);
@@ -246,7 +255,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       entriesByCompetition: entriesByComp,
       recordsByCompetition: recordsByComp,
     };
-  }, [entries]);
+  }, [scopedEntries]);
 
   return (
     <Modal visible={visible} transparent onRequestClose={onClose}>
@@ -267,45 +276,53 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
               contentContainerStyle={styles.bodyContent}
               nestedScrollEnabled={true}
             >
-              {/* エントリーがない場合 */}
-              {entries.length === 0 ? (
+              {/* エントリーがない場合(ロード中/エラー中を含む) */}
+              {scopedEntries.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                  <View style={styles.addButtonContainer}>
-                    {onAddRecord && (
-                      <Pressable
-                        style={[styles.addButton, styles.addRecordCardButton]}
-                        onPress={() => {
-                          onAddRecord(date);
-                          onClose();
-                        }}
-                      >
-                        <Feather
-                          name="droplet"
-                          size={28}
-                          color={chooserRecordIconColor}
-                          style={styles.addButtonCardIcon}
-                        />
-                        <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addRecord")}</Text>
-                      </Pressable>
-                    )}
-                    {onAddPractice && (
-                      <Pressable
-                        style={[styles.addButton, styles.addPracticeCardButton]}
-                        onPress={() => {
-                          onAddPractice(date);
-                          onClose();
-                        }}
-                      >
-                        <Feather
-                          name="activity"
-                          size={28}
-                          color={chooserPracticeIconColor}
-                          style={styles.addButtonCardIcon}
-                        />
-                        <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addPractice")}</Text>
-                      </Pressable>
-                    )}
-                  </View>
+                  {isLoading ? (
+                    <LoadingSpinner message={t("common.loading")} />
+                  ) : isError ? (
+                    <ErrorView message={t("common.error")} onRetry={onRetry} />
+                  ) : scope === "day" ? (
+                    <View style={styles.addButtonContainer}>
+                      {onAddRecord && (
+                        <Pressable
+                          style={[styles.addButton, styles.addRecordCardButton]}
+                          onPress={() => {
+                            onAddRecord(date);
+                            onClose();
+                          }}
+                        >
+                          <Feather
+                            name="droplet"
+                            size={28}
+                            color={chooserRecordIconColor}
+                            style={styles.addButtonCardIcon}
+                          />
+                          <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addRecord")}</Text>
+                        </Pressable>
+                      )}
+                      {onAddPractice && (
+                        <Pressable
+                          style={[styles.addButton, styles.addPracticeCardButton]}
+                          onPress={() => {
+                            onAddPractice(date);
+                            onClose();
+                          }}
+                        >
+                          <Feather
+                            name="activity"
+                            size={28}
+                            color={chooserPracticeIconColor}
+                            style={styles.addButtonCardIcon}
+                          />
+                          <Text style={styles.addButtonCardText}>{t("dashboard.dayDetail.addPractice")}</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  ) : (
+                    <Text style={styles.emptyTextMain}>{t("dashboard.dayDetail.entryEmptyText")}</Text>
+                  )}
                 </View>
               ) : (
                 <>
@@ -324,7 +341,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                       const competitionId = isCompetition ? item.id : null;
                       const hasEntriesOrRecords =
                         isCompetition && competitionId
-                          ? entries.some(
+                          ? scopedEntries.some(
                               (e) =>
                                 (e.type === "entry" || e.type === "record") &&
                                 (e.metadata?.competition?.id === competitionId ||
@@ -490,35 +507,37 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   </View>
 
                   {/* 記録追加セクション */}
-                  <View style={styles.addRecordSection}>
-                    <Text style={styles.addRecordSectionTitle}>{t("dashboard.dayDetail.addSection")}</Text>
-                    <View style={styles.addRecordButtonContainer}>
-                      {onAddRecord && (
-                        <Pressable
-                          style={styles.addRecordButtonRow}
-                          onPress={() => {
-                            onAddRecord(date);
-                            onClose();
-                          }}
-                        >
-                          <Feather name="droplet" size={20} color={chooserRecordIconColor} />
-                          <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addRecordShort")}</Text>
-                        </Pressable>
-                      )}
-                      {onAddPractice && (
-                        <Pressable
-                          style={styles.addRecordButtonRow}
-                          onPress={() => {
-                            onAddPractice(date);
-                            onClose();
-                          }}
-                        >
-                          <Feather name="activity" size={20} color={chooserPracticeIconColor} />
-                          <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addPracticeShort")}</Text>
-                        </Pressable>
-                      )}
+                  {scope === "day" && (
+                    <View style={styles.addRecordSection}>
+                      <Text style={styles.addRecordSectionTitle}>{t("dashboard.dayDetail.addSection")}</Text>
+                      <View style={styles.addRecordButtonContainer}>
+                        {onAddRecord && (
+                          <Pressable
+                            style={styles.addRecordButtonRow}
+                            onPress={() => {
+                              onAddRecord(date);
+                              onClose();
+                            }}
+                          >
+                            <Feather name="droplet" size={20} color={chooserRecordIconColor} />
+                            <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addRecordShort")}</Text>
+                          </Pressable>
+                        )}
+                        {onAddPractice && (
+                          <Pressable
+                            style={styles.addRecordButtonRow}
+                            onPress={() => {
+                              onAddPractice(date);
+                              onClose();
+                            }}
+                          >
+                            <Feather name="activity" size={20} color={chooserPracticeIconColor} />
+                            <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addPracticeShort")}</Text>
+                          </Pressable>
+                        )}
+                      </View>
                     </View>
-                  </View>
+                  )}
                 </>
               )}
             </ScrollView>

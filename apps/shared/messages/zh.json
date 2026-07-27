@@ -1193,19 +1193,11 @@
     "sortSheet": {
       "title": "排序",
       "placeAsc": "地点(升序)",
-      "placeDesc": "地点(降序)",
-      "distanceAsc": "距离(升序)",
-      "distanceDesc": "距离(降序)",
-      "circleAsc": "出发间隔(升序)",
-      "circleDesc": "出发间隔(降序)",
-      "styleAsc": "项目(升序)",
-      "styleDesc": "项目(降序)",
-      "avgTimeAsc": "平均成绩(从快到慢)",
-      "avgTimeDesc": "平均成绩(从慢到快)"
+      "placeDesc": "地点(降序)"
     },
     "filterSheet": {
       "title": "筛选",
-      "tagsAndNote": "(仅显示包含所有已选标签的记录)"
+      "tagsAndNote": "(仅显示存在包含所有已选标签记录的日期)"
     }
   },
   "mypage": {
@@ -3277,6 +3269,8 @@
       "deleting": "删除中…",
       "loadError": "加载通知失败",
       "retry": "重试",
+      "showMore": "显示全文",
+      "showLess": "收起",
       "deleteConfirm": {
         "title": "删除通知",
         "message": "确定要删除此通知吗？",
@@ -4129,6 +4123,9 @@
       "saving": "保存中…",
       "cancel": "取消",
       "close": "关闭",
+      "saveAndClose": "保存并关闭",
+      "next": "下一步",
+      "back": "上一步",
       "fieldRequired": "为必填项",
       "partialSaveError": "基本信息已保存。详细信息保存失败，请重试。",
       "duplicateEntryStyle": "存在重复的泳姿，请修改各参赛项目的泳姿。",
@@ -4138,7 +4135,6 @@
         "confirm": "关闭",
         "cancel": "继续编辑"
       },
-      "proceedToRecord": "继续填写记录",
       "recordFutureGuard": "未来日期无法录入比赛记录。"
     },
     "premium": {

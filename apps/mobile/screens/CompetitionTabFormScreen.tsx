@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format, parseISO, isValid, isBefore } from "date-fns";
@@ -58,6 +59,7 @@ import {
   isEntryTabVisible,
   diffRecordDraft,
   isDefaultUntouchedEntry,
+  getTabNavAdjacency,
 } from "@/utils/tabFormUtils";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
@@ -1518,6 +1520,24 @@ export const CompetitionTabFormScreen: React.FC = () => {
     return result;
   }, [t, tabErrors, showEntryTab]);
 
+  // ---- フッターボタン用の前後タブ ----
+  // record タブは showRecordTab=false (=未来日でエントリー表示中) のときガードする
+  // (「次に進む」で無意味な非表示タブへ誘導しないため)
+  const visibleTabs = useMemo((): CompetitionTab[] => {
+    const result: CompetitionTab[] = ["competition"];
+    if (showEntryTab) result.push("entry");
+    result.push("record");
+    return result;
+  }, [showEntryTab]);
+  const { prevTab, nextTab } = useMemo(
+    () =>
+      getTabNavAdjacency<CompetitionTab>(visibleTabs, activeTab, {
+        guardedNextTab: "record",
+        isGuarded: !showRecordTab,
+      }),
+    [visibleTabs, activeTab, showRecordTab],
+  );
+
   // ---- ローディング ----
   if (loadingExisting || loadingStyles) {
     return (
@@ -2127,19 +2147,66 @@ export const CompetitionTabFormScreen: React.FC = () => {
       </ScrollView>
 
       {/* 保存ボタン (画面下部固定) */}
-      <View style={styles.footer}>
-        <Pressable
-          style={[styles.saveButton, isSaving && styles.buttonDisabled]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.saveButtonText}>{t("common.save")}</Text>
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
+        <View style={styles.footerButtonRow}>
+          {prevTab && (
+            <Pressable
+              style={[styles.outlineButton, isSaving && styles.buttonDisabled]}
+              onPress={() => setActiveTab(prevTab)}
+              disabled={isSaving}
+              testID="competition-tab-form-back"
+            >
+              <Text
+                style={styles.outlineButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {t("forms.tabModal.back")}
+              </Text>
+            </Pressable>
           )}
-        </Pressable>
-      </View>
+          <Pressable
+            style={[
+              nextTab ? styles.outlineButton : styles.saveButton,
+              isSaving && styles.buttonDisabled,
+            ]}
+            onPress={handleSave}
+            disabled={isSaving}
+            testID="competition-tab-form-save"
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color={nextTab ? "#2563EB" : "#FFFFFF"} />
+            ) : (
+              <Text
+                style={nextTab ? styles.outlineButtonText : styles.saveButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {t("forms.tabModal.saveAndClose")}
+              </Text>
+            )}
+          </Pressable>
+          {nextTab && (
+            <Pressable
+              style={[styles.saveButton, isSaving && styles.buttonDisabled]}
+              onPress={() => setActiveTab(nextTab)}
+              disabled={isSaving}
+              testID="competition-tab-form-next"
+            >
+              <Text
+                style={styles.saveButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {t("forms.tabModal.next")}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 };
@@ -2451,7 +2518,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
   },
+  footerButtonRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
   saveButton: {
+    flex: 1,
     backgroundColor: "#2563EB",
     paddingVertical: 14,
     borderRadius: 8,
@@ -2462,6 +2534,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  outlineButton: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  outlineButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   buttonDisabled: {
     opacity: 0.6,

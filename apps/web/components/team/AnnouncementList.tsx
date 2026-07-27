@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   useTeamAnnouncementsQuery,
@@ -39,9 +39,66 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
   const deleteAnnouncementMutation = useDeleteTeamAnnouncementMutation(supabase);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [truncatedIds, setTruncatedIds] = useState<Set<string>>(new Set());
+  const contentRefs = useRef<Map<string, HTMLParagraphElement>>(new Map());
+  const expandedIdsRef = useRef(expandedIds);
+  expandedIdsRef.current = expandedIds;
 
   // サーバー側でフィルタリング済みなので、そのまま使用
   const filteredAnnouncements = announcements;
+
+  const registerContentRef = useCallback(
+    (id: string) => (el: HTMLParagraphElement | null) => {
+      if (el) {
+        contentRefs.current.set(id, el);
+      } else {
+        contentRefs.current.delete(id);
+      }
+    },
+    [],
+  );
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    const measureTruncation = () => {
+      setTruncatedIds((prev) => {
+        const next = new Set<string>();
+        contentRefs.current.forEach((el, id) => {
+          // 展開中のアイテムは line-clamp が外れているため計測できない。
+          // 展開前の判定結果を引き継ぐ (折りたたむとトグルが消えるのを防ぐ)。
+          if (expandedIdsRef.current.has(id)) {
+            if (prev.has(id)) {
+              next.add(id);
+            }
+            return;
+          }
+          if (el.scrollHeight > el.clientHeight) {
+            next.add(id);
+          }
+        });
+        if (prev.size === next.size && [...prev].every((id) => next.has(id))) {
+          return prev;
+        }
+        return next;
+      });
+    };
+
+    measureTruncation();
+    window.addEventListener("resize", measureTruncation);
+    return () => window.removeEventListener("resize", measureTruncation);
+  }, [filteredAnnouncements]);
 
   const handleDeleteConfirm = async () => {
     if (!confirmDeleteId) return;
@@ -116,7 +173,27 @@ export const AnnouncementList: React.FC<AnnouncementListProps> = ({
                       </span>
                     )}
                   </div>
-                  <p className="text-gray-600 text-sm mb-2 line-clamp-2">{announcement.content}</p>
+                  <p
+                    ref={registerContentRef(announcement.id)}
+                    className={`text-gray-600 text-sm mb-2 ${
+                      expandedIds.has(announcement.id) ? "" : "line-clamp-2"
+                    }`}
+                  >
+                    {announcement.content}
+                  </p>
+                  {truncatedIds.has(announcement.id) && (
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(announcement.id)}
+                      aria-expanded={expandedIds.has(announcement.id)}
+                      data-testid={`announcement-toggle-${announcement.id}`}
+                      className="text-blue-600 hover:text-blue-800 text-sm mb-2"
+                    >
+                      {expandedIds.has(announcement.id)
+                        ? t("announcementList.showLess")
+                        : t("announcementList.showMore")}
+                    </button>
+                  )}
                   <div className="text-xs text-gray-500">
                     <span>{t("announcementList.updatedAtLabel")} {formatDateTime(announcement.updated_at)}</span>
                   </div>

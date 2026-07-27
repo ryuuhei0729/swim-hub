@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
@@ -19,7 +20,6 @@ import { RecordAPI } from "@apps/shared/api/records";
 import { recordKeys } from "@apps/shared/hooks/queries/keys";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
 import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
-import { useSafeInsets } from "@/hooks/useSafeInsets";
 import type { MainStackParamList } from "@/navigation/types";
 import {
   STYLE_TAB_IDS,
@@ -47,7 +47,6 @@ const EMPTY_CELL: CellInput = { time: "", note: "" };
  */
 export const BulkBestTimeScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const insets = useSafeInsets();
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -212,7 +211,7 @@ export const BulkBestTimeScreen: React.FC = () => {
       </ScrollView>
 
       {/* フッター: 一括登録 */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
         <Text style={styles.footerCount}>
           {t("bulkBestTime.footer.inputLabel")}{" "}
           <Text style={styles.footerCountStrong}>
@@ -236,7 +235,7 @@ export const BulkBestTimeScreen: React.FC = () => {
             <Text style={styles.primaryButtonText}>{t("bulkBestTime.button.register")}</Text>
           )}
         </Pressable>
-      </View>
+      </SafeAreaView>
     </View>
   );
 };
@@ -581,6 +580,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 12,
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { View, Text, Modal, Pressable, ActivityIndicator, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   GestureHandlerRootView,
   GestureDetector,
@@ -387,7 +388,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
 
           {/* フッター */}
           {!loading && (
-            <View style={styles.footer}>
+            <SafeAreaView edges={["bottom"]} style={styles.footer}>
               <Pressable
                 style={[styles.btn, styles.btnCancel]}
                 onPress={handleClose}
@@ -404,7 +405,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                   {saving ? t("teams.mobile.saveLoading") : t("teams.mobile.saveButton")}
                 </Text>
               </Pressable>
-            </View>
+            </SafeAreaView>
           )}
         </View>
 

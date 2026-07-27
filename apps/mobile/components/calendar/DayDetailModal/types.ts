@@ -1,12 +1,24 @@
 import type { CalendarItem } from "@apps/shared/types/ui";
 import type { PracticeTime, PracticeTag } from "@apps/shared/types";
 import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
+import type { DayDetailScope } from "./domainFilter";
 
 // DayDetailModalのProps
 export interface DayDetailModalProps {
   visible: boolean;
   date: Date;
   entries: CalendarItem[];
+  /**
+   * 表示スコープ。未指定時は "day"（ダッシュボードの全種別混在挙動）。
+   * "practice"/"competition" は該当する種別のみ表示し、汎用追加チューザーを非表示にする。
+   */
+  scope?: DayDetailScope;
+  /** entries の取得がまだ完了していない（初回ロード中）かどうか。未指定時は false */
+  isLoading?: boolean;
+  /** entries の取得に失敗したかどうか。未指定時は false */
+  isError?: boolean;
+  /** isError 時に再試行ボタンを表示する場合のハンドラ */
+  onRetry?: () => void;
   /** ダッシュボードの記録色カスタマイズ設定。未指定時はデフォルト色として解決される */
   colorSettings?: CalendarColorSettings;
   onClose: () => void;

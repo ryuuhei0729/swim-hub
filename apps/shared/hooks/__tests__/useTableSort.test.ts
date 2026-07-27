@@ -1,7 +1,8 @@
 /**
  * useTableSort テスト（実装 / Phase B・Critical 2 再検証で tuple 比較に修正）
  *
- * テスト対象: apps/web/hooks/useTableSort.ts
+ * テスト対象: apps/shared/hooks/useTableSort.ts (2026-07-23: apps/web/hooks/useTableSort.ts から移設。
+ * mobile からも @apps/shared/hooks/useTableSort として再利用するため)
  *
  * Sprint Contract 検証観点（大会履歴・練習履歴タブのカラムソート機能）:
  *   [V-W-CSF-01/02/03] ヘッダークリック3状態: 未ソート→昇順→降順→解除
@@ -30,7 +31,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { useState } from "react";
-import { useTableSort, type SortOrder, type SortValue } from "../../hooks/useTableSort";
+import { useTableSort, type SortOrder, type SortValue } from "../useTableSort";
 
 type Column = "name" | "score" | "style" | "time" | "date";
 

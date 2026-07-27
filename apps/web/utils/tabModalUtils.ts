@@ -46,3 +46,39 @@ export function isDateTodayOrPast(date: string | null | undefined): boolean {
   parsed.setHours(0, 0, 0, 0);
   return parsed <= today;
 }
+
+// =============================================================================
+// getTabNavAdjacency — タブ前後遷移の隣接タブ算出
+// =============================================================================
+
+export interface TabNavAdjacency<T extends string> {
+  prevTab?: T;
+  nextTab?: T;
+}
+
+/**
+ * 現在アクティブなタブに対する「前」「次」タブを算出する純粋関数。
+ *
+ * - `activeTab` が `visibleTabs` の先頭 → prevTab は undefined
+ * - `activeTab` が `visibleTabs` の末尾 → nextTab は undefined
+ * - `activeTab` が `visibleTabs` に含まれない不正な状態 → prev/next とも undefined
+ * - `options.guardedNextTab` が算出された nextTab と一致し、かつ `options.isGuarded` が true の場合、
+ *   nextTab は undefined になる (例: 未来日でレースレコードタブがガードされている場合)
+ *
+ * @param visibleTabs - 現在表示されているタブ ID の配列 (表示順)
+ * @param activeTab - 現在アクティブなタブ ID
+ * @param options - ガード対象タブとガード有無
+ */
+export function getTabNavAdjacency<T extends string>(
+  visibleTabs: T[],
+  activeTab: T,
+  options?: { guardedNextTab?: T; isGuarded?: boolean },
+): TabNavAdjacency<T> {
+  const idx = visibleTabs.indexOf(activeTab);
+  const prevTab = idx > 0 ? visibleTabs[idx - 1] : undefined;
+  let nextTab = idx >= 0 && idx < visibleTabs.length - 1 ? visibleTabs[idx + 1] : undefined;
+  if (nextTab && options?.guardedNextTab === nextTab && options.isGuarded) {
+    nextTab = undefined;
+  }
+  return { prevTab, nextTab };
+}

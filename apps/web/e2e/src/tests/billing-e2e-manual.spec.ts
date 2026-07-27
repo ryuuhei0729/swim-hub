@@ -170,8 +170,9 @@ async function openCompetitionModal(page: Page) {
  *
  * PR #239 以降: 大会登録フォームは CompetitionTabModal の「大会」タブ→「記録」タブの流れ。
  * - 大会名: [data-testid="competition-tab-title"]
- * - 記録タブへの遷移: フッターの [data-testid="competition-tab-modal-proceed-record"] ボタン
- *   (activeTab !== "record" && showRecordTab=true のとき表示)
+ * - タブ間遷移: フッターの [data-testid="competition-tab-modal-next"] ボタン
+ *   (アクティブタブに応じて隣接タブへ進む汎用ボタン。エントリータブが表示される場合は
+ *   大会→エントリー→レコードと2回、表示されない場合は大会→レコードと1回で到達する)
  * - 記録タブ内: RecordLogEntry が index=0 でレンダリングされ、sectionIndex=1 のテストidが使われる
  */
 async function createCompetitionAndOpenRecordForm(page: Page) {
@@ -186,16 +187,25 @@ async function createCompetitionAndOpenRecordForm(page: Page) {
   await titleInput.waitFor({ state: "visible", timeout: 5000 });
   await titleInput.fill("E2Eテスト大会");
 
-  // 「記録タブへ進む」フッターボタンをクリック。
-  // 過去/今日の日付では showRecordTab=true になりこのボタンが表示される。
-  // 未来日の場合は表示されないので、代わりにタブバーの「記録」タブを直接クリック。
-  const proceedBtn = page.locator('[data-testid="competition-tab-modal-proceed-record"]');
-  const proceedVisible = await proceedBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
-  if (proceedVisible) {
-    await proceedBtn.click();
-  } else {
-    // タブバーの「記録」タブ (role="tab") を直接クリック
-    await page.locator('[role="tab"]').filter({ hasText: /記録/ }).click();
+  // 「次に進む」フッターボタンをレコードタブに到達するまでクリックする。
+  // 未来日でレコードタブがガードされている場合など「次に進む」が表示されないケースでは、
+  // 代わりにタブバーの「記録」タブを直接クリックする。
+  for (let i = 0; i < 2; i++) {
+    const alreadyOnRecordTab = await page
+      .locator('[data-testid="record-split-add-button-1"]')
+      .isVisible()
+      .catch(() => false);
+    if (alreadyOnRecordTab) break;
+
+    const nextBtn = page.locator('[data-testid="competition-tab-modal-next"]');
+    const nextVisible = await nextBtn.waitFor({ state: "visible", timeout: 3000 }).then(() => true).catch(() => false);
+    if (nextVisible) {
+      await nextBtn.click();
+    } else {
+      // タブバーの「記録」タブ (role="tab") を直接クリック
+      await page.locator('[role="tab"]').filter({ hasText: /記録/ }).click();
+      break;
+    }
   }
 
   // 記録タブ内に RecordLogEntry (sectionIndex=1) のスプリット追加ボタンが表示されるまで待つ

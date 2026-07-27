@@ -8,6 +8,7 @@ import {
   Alert,
   Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -434,7 +435,7 @@ const BulkChangeSheet: React.FC<BulkChangeSheetProps> = ({
           )}
 
           {groupedEvents.length > 0 && (
-            <View style={styles.bulkFooter}>
+            <SafeAreaView edges={["bottom"]} style={styles.bulkFooter}>
               <Pressable
                 style={[styles.bulkActionButton, styles.bulkOpenButton, (!hasSelection || isSaving) && styles.bulkActionDisabled]}
                 onPress={() => handleUpdate("open")}
@@ -455,7 +456,7 @@ const BulkChangeSheet: React.FC<BulkChangeSheetProps> = ({
                   {t("teams.mobile.adminAttendance.bulkChange.closedButton")}
                 </Text>
               </Pressable>
-            </View>
+            </SafeAreaView>
           )}
         </View>
       </View>

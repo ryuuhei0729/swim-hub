@@ -1190,19 +1190,11 @@
     "sortSheet": {
       "title": "Sort",
       "placeAsc": "Place (A-Z)",
-      "placeDesc": "Place (Z-A)",
-      "distanceAsc": "Distance (ascending)",
-      "distanceDesc": "Distance (descending)",
-      "circleAsc": "Circle (ascending)",
-      "circleDesc": "Circle (descending)",
-      "styleAsc": "Style (ascending)",
-      "styleDesc": "Style (descending)",
-      "avgTimeAsc": "Avg time (fastest)",
-      "avgTimeDesc": "Avg time (slowest)"
+      "placeDesc": "Place (Z-A)"
     },
     "filterSheet": {
       "title": "Filter",
-      "tagsAndNote": "(Matches all selected tags)"
+      "tagsAndNote": "(Only shows days with a log matching all selected tags)"
     }
   },
   "mypage": {
@@ -3274,6 +3266,8 @@
       "deleting": "Deleting...",
       "loadError": "Failed to load announcements",
       "retry": "Retry",
+      "showMore": "Show full text",
+      "showLess": "Show less",
       "deleteConfirm": {
         "title": "Delete Announcement",
         "message": "Are you sure you want to delete this announcement?",
@@ -4126,6 +4120,9 @@
       "saving": "Saving...",
       "cancel": "Cancel",
       "close": "Close",
+      "saveAndClose": "Save & Close",
+      "next": "Next",
+      "back": "Back",
       "fieldRequired": "is required",
       "partialSaveError": "Basic info was saved. Details could not be saved. Please try again.",
       "duplicateEntryStyle": "Duplicate event styles found. Please change the style for each entry.",
@@ -4135,7 +4132,6 @@
         "confirm": "Close",
         "cancel": "Continue editing"
       },
-      "proceedToRecord": "Continue to records",
       "recordFutureGuard": "Race records cannot be registered for future dates."
     },
     "premium": {

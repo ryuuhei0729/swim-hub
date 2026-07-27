@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import ListToolbar from "@/components/history/ListToolbar";
 import SortBottomSheet, { type SortPreset } from "@/components/history/SortBottomSheet";
 import FilterBottomSheet, { type FilterGroup } from "@/components/history/FilterBottomSheet";
-import PracticeLogCard from "../_components/PracticeLogCard";
+import PracticeCard from "../_components/PracticeCard";
 import PracticeTabModal from "@/components/forms/PracticeTabModal";
 import PracticeDetailModal from "../_components/PracticeDetailModal";
 import { isAfter, parseISO, startOfDay } from "date-fns";
@@ -23,16 +23,19 @@ import {
   useCreatePracticeTimeMutation,
   useDeletePracticeTimeMutation,
 } from "@apps/shared/hooks/queries/practices";
-import type { PracticeTag, PracticeLogWithTags, Style } from "@apps/shared/types";
+import type { PracticeTag, PracticeWithLogs, Style } from "@apps/shared/types";
 import { getStyleOrderIndex } from "@apps/shared/utils/swimStyles";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type { PracticeSortColumn } from "@/stores/practice/practiceStore";
 import type { EditingData } from "@/stores/types";
 import type { GalleryImage } from "@/components/ui/ImageGallery";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
-import { useTableSort, type SortValue } from "@/hooks/useTableSort";
-import { calculateOverallAverage } from "../_utils/practiceLogFormat";
-import type { PracticeLogWithFormattedData } from "../_utils/practiceLogFormat";
+import { useTableSort } from "@/hooks/useTableSort";
+import {
+  groupLogsByPracticeDay,
+  dayHasLogMatchingAllTags,
+  getPracticeDaySortValue,
+} from "../_utils/practiceDayGrouping";
 
 interface PracticeClientProps {
   styles: Style[];
@@ -49,36 +52,12 @@ interface PracticeClientProps {
 // 一覧の初期表示件数、および「もっと見る」1回あたりの増分
 const PAGE_INCREMENT = 20;
 
-/**
- * 練習履歴カード一覧のソート値抽出(useTableSort 用)。
- *
- * - 距離: [距離(distance), 本数(rep_count), セット(set_count)] のタプルを返す
- *   (distance 主キー、rep_count→set_count はタイブレーク)。rep_count/set_count に
- *   上限バリデーションが無いため、桁あふれのリスクがある数値合成(distance*1e6+...)はしない。
- * - 種目: PracticeLog.style は自由入力ではなく公式略称キー(Fr/Ba/Br/Fly/IM)が保存されるため、
- *   getStyleOrderIndex で STYLES 定義順のインデックスに変換する(マップ外は末尾)
- */
-function getPracticeSortValue(log: PracticeLogWithFormattedData, column: PracticeSortColumn): SortValue {
-  switch (column) {
-    case "date": {
-      const dateStr = log.practice?.date || log.created_at;
-      return dateStr ? new Date(dateStr) : null;
-    }
-    case "place":
-      return log.practice?.place || null;
-    case "distance":
-      return [log.distance, log.rep_count, log.set_count];
-    case "circle":
-      return log.circle ?? null;
-    case "style": {
-      const styleIndex = getStyleOrderIndex(log.style);
-      return styleIndex === -1 ? null : styleIndex;
-    }
-    case "avgTime":
-      return calculateOverallAverage(log.practice_times);
-    default:
-      return null;
-  }
+// 絞り込みボトムシートのドラフト状態(適用ボタンを押すまでストアに反映しない値の入れ物。
+// CompetitionClient.tsx の FilterDraft と同型)
+interface FilterDraft {
+  tags: string[];
+  places: string[];
+  style: string;
 }
 
 /**
@@ -89,7 +68,9 @@ function getPracticeSortValue(log: PracticeLogWithFormattedData, column: Practic
  * - 編集: dashboard と同じ PracticeTabModal
  * - 削除確認: dashboard と同じ DeleteConfirmModal (PracticeDetailModal 内で使用)
  *
- * 一覧UI(2026-07-22 Sprint): テーブルを廃止し、全幅カード + ボトムシート(並べ替え/絞り込み)に刷新した。
+ * 一覧UI(2026-07-23 Sprint): 1練習ログ=1カードの log-level 表示を廃止し、1練習日(=1 practice)
+ * =1カードの day-level 表示に刷新した(mobile PracticeItem.tsx とのパリティ)。
+ * 絞り込みシートも CompetitionClient.tsx と同型の draft/apply 方式に変更した。
  */
 export default function PracticeClient({
   styles: _styles,
@@ -157,8 +138,66 @@ export default function PracticeClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 詳細モーダルで表示中の練習ログ（行クリックで選択される代表ログ。日付・場所・タイトル等の表示に使う）
-  const [selectedLog, setSelectedLog] = useState<PracticeLogWithFormattedData | null>(null);
+  // ---------------------------------------------------------------------------
+  // 絞り込みシートのドラフト状態(CompetitionClient.tsx と同型: シート全体をドラフト化)
+  // チップ操作はこのローカル state のみを更新し、ストア(一覧・件数バッジ)には反映しない。
+  // 「適用」を押した時にのみストアへ一括コミットする。シートを開く瞬間にストアの現在値で
+  // 初期化し、X/backdrop/Escape/シート排他で閉じた場合は再初期化されずそのまま破棄される。
+  // ---------------------------------------------------------------------------
+  const buildFilterDraftFromStore = (): FilterDraft => ({
+    tags: selectedTagIds,
+    places: filterPlaces,
+    style: filterStyle,
+  });
+
+  const [filterDraft, setFilterDraft] = useState<FilterDraft>(buildFilterDraftFromStore);
+
+  // シートが開かれた瞬間(false→true)にのみストアの現在値で再初期化する。
+  // filterDraft を書き換えている最中の再レンダーでは張り直さない(選択中のチップが消えないように)。
+  // useLayoutEffect: プレーンな useEffect だと開いた瞬間に前回のドラフト値のまま1フレーム描画されて
+  // から正しい値に更新される(ちらつき)ため、コミット前(描画前)に同期的に再初期化する。
+  useLayoutEffect(() => {
+    if (isFilterSheetOpen) {
+      setFilterDraft(buildFilterDraftFromStore());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFilterSheetOpen]);
+
+  const handleDraftTagsChange = (values: string[]) =>
+    setFilterDraft((prev) => ({ ...prev, tags: values }));
+  const handleDraftPlacesChange = (values: string[]) =>
+    setFilterDraft((prev) => ({ ...prev, places: values }));
+  const handleDraftStyleChange = (value: string) =>
+    setFilterDraft((prev) => ({ ...prev, style: value }));
+
+  // 絞り込みシートの「すべてクリア」: ドラフトのみを未選択に戻す(シートは閉じない・ストアは不変)
+  const handleClearDraftFilters = () => {
+    setFilterDraft({ tags: [], places: [], style: "" });
+  };
+
+  // 絞り込みシートの「適用」: ドラフトをストアへ一括コミットし、displayCount をリセットしてシートを閉じる
+  const handleApplyFilters = () => {
+    startTransition(() => {
+      setSelectedTags(filterDraft.tags);
+      setFilterPlaces(filterDraft.places);
+      setFilterStyle(filterDraft.style);
+      setDisplayCount(PAGE_INCREMENT);
+    });
+    setIsFilterSheetOpen(false);
+  };
+
+  // 0件空状態(条件一致なし)の「フィルタをクリア」導線: ドラフトを経由せず即時に全解除する
+  // (ソートも含めて全リセットする既存仕様を維持)
+  const handleResetAllFilters = () => {
+    startTransition(() => {
+      resetFilter();
+      setDisplayCount(PAGE_INCREMENT);
+    });
+  };
+
+  // 詳細モーダルで表示中の練習日(行クリックで選択される練習日。day-level カードなので
+  // 選択単位は log ではなく practice そのもの)
+  const [selectedPractice, setSelectedPractice] = useState<PracticeWithLogs | null>(null);
   // 詳細モーダル内で個別ログを削除した際、PracticeDetails (dashboard 由来) の内部フェッチを
   // 強制的にやり直させるための remount キー
   const [modalNonce, setModalNonce] = useState(0);
@@ -212,137 +251,125 @@ export default function PracticeClient({
   // React Queryのキャッシュを使用
   const displayPractices = practices;
 
-  // practice_logsを平坦化し、タグデータを整形
-  const practiceLogs = useMemo<PracticeLogWithFormattedData[]>(
-    () =>
-      displayPractices.flatMap((practice) =>
-        (practice.practice_logs || []).map(
-          (log: PracticeLogWithTags): PracticeLogWithFormattedData => {
-            // タグデータを整形（practice_log_tags -> tags に変換）
-            const tags: PracticeTag[] = log.practice_log_tags.map((plt) => plt.practice_tags);
-
-            return {
-              ...log,
-              tags, // 整形したタグを追加
-              practice: {
-                id: practice.id,
-                date: practice.date,
-                title: practice.title,
-                place: practice.place,
-                note: practice.note,
-                team_id: practice.team_id,
-              },
-              practiceId: practice.id,
-            };
-          },
-        ),
-      ),
-    [displayPractices],
-  );
+  // day-level 一覧のベース(practice.id で去重。通常は恒等に近いが防御的に適用する)
+  const practiceDays = useMemo(() => groupLogsByPracticeDay(displayPractices), [displayPractices]);
 
   // 今日の日付（時刻を0時0分0秒にリセット）
   const today = useMemo(() => startOfDay(new Date()), []);
 
   // 場所/種目フィルタの選択肢生成対象: 未来日の練習は「選んでも常に0件」になる候補になるため、
-  // filteredPracticeLogs と同じ未来日ガードを適用した集合(=表示対象になり得るログのみ)から distinct を生成する
-  const pastOrTodayPracticeLogs = useMemo(() => {
-    return practiceLogs.filter((log) => {
-      if (!log.practice?.date) return true;
-      return !isAfter(startOfDay(new Date(log.practice.date)), today);
+  // filteredPracticeDays と同じ未来日ガードを適用した集合(=表示対象になり得る練習日のみ)から
+  // distinct を生成する
+  const pastOrTodayPracticeDays = useMemo(() => {
+    return practiceDays.filter((practice) => {
+      if (!practice.date) return true;
+      return !isAfter(startOfDay(new Date(practice.date)), today);
     });
-  }, [practiceLogs, today]);
+  }, [practiceDays, today]);
 
-  // 場所フィルタの選択肢（distinct, ロケール順）
+  // 場所フィルタの選択肢（distinct, ロケール順。day-level のフィールドのため練習日を直接走査する）
   const participatedPlaces = useMemo(() => {
     const places = new Set<string>();
-    pastOrTodayPracticeLogs.forEach((log) => {
-      if (log.practice?.place) places.add(log.practice.place);
+    pastOrTodayPracticeDays.forEach((practice) => {
+      if (practice.place) places.add(practice.place);
     });
     return Array.from(places).sort((a, b) => a.localeCompare(b, locale));
-  }, [pastOrTodayPracticeLogs, locale]);
+  }, [pastOrTodayPracticeDays, locale]);
 
-  // 種目フィルタの選択肢（distinct, STYLES定義順）
+  // 種目フィルタの選択肢（distinct, STYLES定義順。log 単位のフィールドのため
+  // displayPractices.flatMap(p => p.practice_logs) を走査元にする）
   const participatedStyleKeys = useMemo(() => {
     const keys = new Set<string>();
-    pastOrTodayPracticeLogs.forEach((log) => {
-      if (log.style) keys.add(log.style);
-    });
+    pastOrTodayPracticeDays
+      .flatMap((practice) => practice.practice_logs || [])
+      .forEach((log) => {
+        if (log.style) keys.add(log.style);
+      });
     return Array.from(keys).sort((a, b) => getStyleOrderIndex(a) - getStyleOrderIndex(b));
-  }, [pastOrTodayPracticeLogs]);
+  }, [pastOrTodayPracticeDays]);
 
-  // タグ/場所/種目フィルタリングロジック + 日付フィルタリング（今日以前のみ）。カラム間 AND
-  const filteredPracticeLogs = useMemo(
+  // タグ/場所/種目フィルタリングロジック + 日付フィルタリング（今日以前のみ）。カラム間 AND。
+  // day-level 化: タグは「選択した全タグを含むログが、その日の practice_logs に少なくとも1件
+  // 存在すれば表示」(per-log は AND、日全体は OR-exists)。場所は day 直接比較、種目は
+  // その日のログのいずれか1件が一致すれば表示(ANY-log match)。
+  const filteredPracticeDays = useMemo(
     () =>
-      practiceLogs.filter((log) => {
+      practiceDays.filter((practice) => {
         // 日付フィルタリング：今日より未来の日付は除外
-        if (log.practice?.date) {
-          const practiceDate = startOfDay(new Date(log.practice.date));
+        if (practice.date) {
+          const practiceDate = startOfDay(new Date(practice.date));
           if (isAfter(practiceDate, today)) {
             return false;
           }
         }
 
-        // タグフィルタリング（複数AND: 選択した全タグを持つログのみ表示）
-        if (selectedTagIds.length > 0) {
-          const logTagIds = (log.tags || []).map((tag) => tag.id);
-          if (!selectedTagIds.every((tagId) => logTagIds.includes(tagId))) {
-            return false;
-          }
-        }
-
-        // 場所フィルタリング（複数OR）
-        if (filterPlaces.length > 0) {
-          const place = log.practice?.place || null;
-          if (!place || !filterPlaces.includes(place)) {
-            return false;
-          }
-        }
-
-        // 種目フィルタリング（単一select）
-        if (filterStyle && log.style !== filterStyle) {
+        // タグフィルタリング（選択した全タグを含むログが1件でも存在する日のみ表示）
+        if (!dayHasLogMatchingAllTags(practice, selectedTagIds)) {
           return false;
+        }
+
+        // 場所フィルタリング（複数OR、day-level の直接比較）
+        if (filterPlaces.length > 0) {
+          if (!practice.place || !filterPlaces.includes(practice.place)) {
+            return false;
+          }
+        }
+
+        // 種目フィルタリング（単一select。その日のログのいずれか1件が一致すれば表示）
+        if (filterStyle) {
+          const hasMatchingStyle = (practice.practice_logs || []).some(
+            (log) => log.style === filterStyle,
+          );
+          if (!hasMatchingStyle) {
+            return false;
+          }
         }
 
         return true;
       }),
-    [practiceLogs, selectedTagIds, filterPlaces, filterStyle, today],
+    [practiceDays, selectedTagIds, filterPlaces, filterStyle, today],
   );
 
   // 日付の降順を既定順とし、useTableSort に渡す（sortColumn が null の間はこの順序を維持する）
-  const dateDescPracticeLogs = useMemo(() => {
-    return [...filteredPracticeLogs].sort((a, b) => {
-      const dateA = new Date(a.practice?.date || a.created_at);
-      const dateB = new Date(b.practice?.date || b.created_at);
+  const dateDescPracticeDays = useMemo(() => {
+    return [...filteredPracticeDays].sort((a, b) => {
+      const dateA = new Date(a.date || a.created_at);
+      const dateB = new Date(b.date || b.created_at);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [filteredPracticeLogs]);
+  }, [filteredPracticeDays]);
 
-  const { sortedItems: sortedPracticeLogs } = useTableSort<
-    PracticeLogWithFormattedData,
-    PracticeSortColumn
-  >(dateDescPracticeLogs, sortColumn, sortOrder, setSortColumn, setSortOrder, getPracticeSortValue, locale);
+  const { sortedItems: sortedPracticeDays } = useTableSort<PracticeWithLogs, PracticeSortColumn>(
+    dateDescPracticeDays,
+    sortColumn,
+    sortOrder,
+    setSortColumn,
+    setSortOrder,
+    getPracticeDaySortValue,
+    locale,
+  );
 
-  // 絞り込みバッジ/フッターの「有効な絞り込み条件の数」(グループ単位でカウントする)
+  // 絞り込みバッジ/フッターの「有効な絞り込み条件の数」(ストアへ適用済みの値ベース。
+  // グループ単位でカウントする)
   const activeFilterCount = [
     selectedTagIds.length > 0,
     filterPlaces.length > 0,
     filterStyle !== "",
   ].filter(Boolean).length;
 
-  // 並べ替えボトムシートのプリセット(旧 lg 未満セレクトの12択を1:1移植)
+  // 絞り込みシート内の「有効な絞り込み条件の数」(ドラフト値ベース。「すべてクリア」の有効/無効判定に使う)
+  const draftActiveFilterCount = [
+    filterDraft.tags.length > 0,
+    filterDraft.places.length > 0,
+    filterDraft.style !== "",
+  ].filter(Boolean).length;
+
+  // 並べ替えボトムシートのプリセット(2026-07-23 Sprint: day-level 化に伴い date/place の4択に縮小)
   const sortPresets: SortPreset<PracticeSortColumn>[] = [
     { id: "dateDesc", label: t("page.sortOptionDateDesc"), column: "date", order: "desc", isDefault: true },
     { id: "dateAsc", label: t("page.sortOptionDateAsc"), column: "date", order: "asc" },
     { id: "placeAsc", label: t("sortSheet.placeAsc"), column: "place", order: "asc" },
     { id: "placeDesc", label: t("sortSheet.placeDesc"), column: "place", order: "desc" },
-    { id: "distanceAsc", label: t("sortSheet.distanceAsc"), column: "distance", order: "asc" },
-    { id: "distanceDesc", label: t("sortSheet.distanceDesc"), column: "distance", order: "desc" },
-    { id: "circleAsc", label: t("sortSheet.circleAsc"), column: "circle", order: "asc" },
-    { id: "circleDesc", label: t("sortSheet.circleDesc"), column: "circle", order: "desc" },
-    { id: "styleAsc", label: t("sortSheet.styleAsc"), column: "style", order: "asc" },
-    { id: "styleDesc", label: t("sortSheet.styleDesc"), column: "style", order: "desc" },
-    { id: "avgTimeAsc", label: t("sortSheet.avgTimeAsc"), column: "avgTime", order: "asc" },
-    { id: "avgTimeDesc", label: t("sortSheet.avgTimeDesc"), column: "avgTime", order: "desc" },
   ];
 
   const handleSortSelect = (preset: SortPreset<PracticeSortColumn>) => {
@@ -354,56 +381,17 @@ export default function PracticeClient({
     setIsSortSheetOpen(false);
   };
 
-  // タグフィルター変更ハンドラー（useTransitionでUI応答性を維持 + もっと見る表示件数リセット）
-  const handleTagFilterChange = (newTagIds: string[]) => {
-    startTransition(() => {
-      setSelectedTags(newTagIds);
-      setDisplayCount(PAGE_INCREMENT);
-    });
-  };
-
-  const handleFilterPlacesChange = (values: string[]) => {
-    startTransition(() => {
-      setFilterPlaces(values);
-      setDisplayCount(PAGE_INCREMENT);
-    });
-  };
-
-  const handleFilterStyleChange = (value: string) => {
-    startTransition(() => {
-      setFilterStyle(value);
-      setDisplayCount(PAGE_INCREMENT);
-    });
-  };
-
-  // 絞り込みシートの「すべてクリア」: フィルタ(タグ/場所/種目)のみをクリアし、ソート状態は保持する
-  // (resetFilter() はストアの FilterState 全体=sortColumn/sortOrder も含むため、ここでは使わない)
-  const handleClearFiltersOnly = () => {
-    startTransition(() => {
-      setSelectedTags([]);
-      setFilterPlaces([]);
-      setFilterStyle("");
-      setDisplayCount(PAGE_INCREMENT);
-    });
-  };
-  // フィルタ結果0件の空状態の「フィルタをクリア」導線: ソートも含めて全リセットする
-  const handleResetAllFilters = () => {
-    startTransition(() => {
-      resetFilter();
-      setDisplayCount(PAGE_INCREMENT);
-    });
-  };
-
-  // 絞り込みボトムシートのグループ定義(場所=multi/OR、種目=single、タグ=multi/AND)
+  // 絞り込みボトムシートのグループ定義(ドラフト state を参照する。場所=multi/OR、種目=single、
+  // タグ=multi/AND)
   const filterGroups: FilterGroup[] = [
     {
       id: "place",
       label: t("page.colPlace"),
       mode: "multi",
       options: participatedPlaces.map((place) => ({ value: place, label: place })),
-      selectedValues: filterPlaces,
-      onChange: handleFilterPlacesChange,
-      onClearGroup: () => handleFilterPlacesChange([]),
+      selectedValues: filterDraft.places,
+      onChange: handleDraftPlacesChange,
+      onClearGroup: () => handleDraftPlacesChange([]),
     },
     {
       id: "style",
@@ -413,9 +401,9 @@ export default function PracticeClient({
         value: key,
         label: t(`styles.${key}` as Parameters<typeof t>[0]),
       })),
-      selectedValues: filterStyle ? [filterStyle] : [],
-      onChange: (values) => handleFilterStyleChange(values[0] ?? ""),
-      onClearGroup: () => handleFilterStyleChange(""),
+      selectedValues: filterDraft.style ? [filterDraft.style] : [],
+      onChange: (values) => handleDraftStyleChange(values[0] ?? ""),
+      onClearGroup: () => handleDraftStyleChange(""),
     },
     {
       id: "tags",
@@ -423,28 +411,28 @@ export default function PracticeClient({
       mode: "multi",
       note: t("filterSheet.tagsAndNote"),
       options: tags.map((tag) => ({ value: tag.id, label: tag.name, color: tag.color })),
-      selectedValues: selectedTagIds,
-      onChange: handleTagFilterChange,
-      onClearGroup: () => handleTagFilterChange([]),
+      selectedValues: filterDraft.tags,
+      onChange: handleDraftTagsChange,
+      onClearGroup: () => handleDraftTagsChange([]),
     },
   ];
 
   // もっと見る: 絞り込み後・並べ替え後の総件数のうち displayCount 件のみ表示する
-  const visiblePracticeLogs = useMemo(() => {
-    return sortedPracticeLogs.slice(0, displayCount);
-  }, [sortedPracticeLogs, displayCount]);
+  const visiblePracticeDays = useMemo(() => {
+    return sortedPracticeDays.slice(0, displayCount);
+  }, [sortedPracticeDays, displayCount]);
 
   const handleLoadMore = () => {
     setDisplayCount((count) => count + PAGE_INCREMENT);
   };
 
   // 行クリック: ダッシュボードと同じ PracticeDetails を表示する詳細モーダルを開く
-  const handleRowClick = (log: PracticeLogWithFormattedData) => {
-    setSelectedLog(log);
+  const handleRowClick = (practice: PracticeWithLogs) => {
+    setSelectedPractice(practice);
   };
 
   const handleCloseDetailModal = () => {
-    setSelectedLog(null);
+    setSelectedPractice(null);
   };
 
   // 練習タブモーダル一括保存（ダッシュボードと共通ロジック）
@@ -469,18 +457,17 @@ export default function PracticeClient({
 
   // 練習全体を編集（PracticeTabModal の practice タブを開く）
   const handleEditPractice = (images?: GalleryImage[]) => {
-    if (!selectedLog?.practice) return;
-    const practice = selectedLog.practice;
-    const dateObj = startOfDay(parseISO(practice.date));
+    if (!selectedPractice) return;
+    const dateObj = startOfDay(parseISO(selectedPractice.date));
     openPracticeTabModal(
       dateObj,
       {
-        id: selectedLog.practiceId,
+        id: selectedPractice.id,
         type: "practice",
-        date: practice.date,
-        title: practice.title || "",
-        place: practice.place || "",
-        note: practice.note || "",
+        date: selectedPractice.date,
+        title: selectedPractice.title || "",
+        place: selectedPractice.place || "",
+        note: selectedPractice.note || "",
         editData: images ? { images } : undefined,
       } as EditingData,
       "practice",
@@ -489,18 +476,17 @@ export default function PracticeClient({
 
   // 練習ログタブを開く（追加・編集共通。PracticeTabModal 側が practiceId から全ログを再取得する）
   const handleOpenPracticeLogTab = () => {
-    if (!selectedLog?.practice) return;
-    const practice = selectedLog.practice;
-    const dateObj = startOfDay(parseISO(practice.date));
+    if (!selectedPractice) return;
+    const dateObj = startOfDay(parseISO(selectedPractice.date));
     openPracticeTabModal(
       dateObj,
       {
-        id: selectedLog.practiceId,
+        id: selectedPractice.id,
         type: "practice",
-        date: practice.date,
-        title: practice.title || "",
-        place: practice.place || "",
-        note: practice.note || "",
+        date: selectedPractice.date,
+        title: selectedPractice.title || "",
+        place: selectedPractice.place || "",
+        note: selectedPractice.note || "",
       } as EditingData,
       "practiceLog",
     );
@@ -508,10 +494,10 @@ export default function PracticeClient({
 
   // 練習全体の削除（DeleteConfirmModal 経由で呼ばれる）
   const handleDeletePractice = async () => {
-    if (!selectedLog) return;
+    if (!selectedPractice) return;
     try {
-      await deletePracticeMutation.mutateAsync(selectedLog.practiceId);
-      setSelectedLog(null);
+      await deletePracticeMutation.mutateAsync(selectedPractice.id);
+      setSelectedPractice(null);
       await refetch();
     } catch (error) {
       console.error("練習記録の削除に失敗しました:", error);
@@ -523,19 +509,22 @@ export default function PracticeClient({
   // 個別の練習ログ削除（カスケード: 削除後に残りログが0件なら親 practice も削除する）
   // NOTE: この既存挙動（V-W-P05/06）は必ず維持すること
   const handleDeletePracticeLog = async (logId: string) => {
-    if (!selectedLog) return;
-    const practiceId = selectedLog.practiceId;
+    if (!selectedPractice) return;
+    const practiceId = selectedPractice.id;
     try {
       await deletePracticeLogMutation.mutateAsync(logId);
 
-      const remainingLogs = practiceLogs.filter(
-        (log) => log.practiceId === practiceId && log.id !== logId,
+      // 直近(削除前)の displayPractices から、削除対象の practiceId に紐づく現在の
+      // practice_logs を引き、削除したログを除いた残りログ数でカスケード判定する
+      const currentPractice = displayPractices.find((practice) => practice.id === practiceId);
+      const remainingLogs = (currentPractice?.practice_logs || []).filter(
+        (log) => log.id !== logId,
       );
 
       if (remainingLogs.length === 0) {
         try {
           await deletePracticeMutation.mutateAsync(practiceId);
-          setSelectedLog(null);
+          setSelectedPractice(null);
         } catch (practiceDeleteError) {
           console.error("Practiceの削除に失敗しました:", practiceDeleteError);
           const errorMessage =
@@ -603,11 +592,11 @@ export default function PracticeClient({
         <p className="text-sm sm:text-base text-gray-600">{t("page.description")}</p>
       </div>
 
-      {/* 練習記録一覧（全幅カード + ボトムシート）。
+      {/* 練習記録一覧（全幅カード + ボトムシート、day-level）。
           スマホ幅はページラッパー(DashboardLayout)が既に px-0 のため、
           角丸を落として画面端まで貼り付ける(sm以上は従来の rounded-lg inset 見た目) */}
       <div className="bg-white rounded-none sm:rounded-lg shadow">
-        {practiceLogs.length === 0 ? (
+        {practiceDays.length === 0 ? (
           <div className="p-12 text-center">
             <CalendarDaysIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">{t("page.emptyTitle")}</h3>
@@ -623,7 +612,7 @@ export default function PracticeClient({
               </Button>
             </div>
           </div>
-        ) : sortedPracticeLogs.length === 0 ? (
+        ) : sortedPracticeDays.length === 0 ? (
           <div className="p-12 text-center">
             <CalendarDaysIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">{t("page.noMatchTitle")}</h3>
@@ -637,25 +626,25 @@ export default function PracticeClient({
         ) : (
           <>
             <ListToolbar
-              itemCount={sortedPracticeLogs.length}
+              itemCount={sortedPracticeDays.length}
               onSortClick={openSortSheet}
               onFilterClick={openFilterSheet}
               activeFilterCount={activeFilterCount}
             />
 
             <div className="space-y-2 sm:space-y-3 px-0 sm:px-6 pb-4">
-              {visiblePracticeLogs.map((log) => (
-                <PracticeLogCard key={log.id} log={log} onClick={handleRowClick} />
+              {visiblePracticeDays.map((practice) => (
+                <PracticeCard key={practice.id} practice={practice} onClick={handleRowClick} />
               ))}
             </div>
 
-            {sortedPracticeLogs.length > displayCount && (
+            {sortedPracticeDays.length > displayCount && (
               <div className="px-4 sm:px-6 pb-6 flex flex-col items-center gap-1">
                 <Button variant="outline" onClick={handleLoadMore}>
                   {tCommon("loadMore.button")}
                 </Button>
                 <span className="text-xs text-gray-500">
-                  {tCommon("loadMore.remaining", { n: sortedPracticeLogs.length - displayCount })}
+                  {tCommon("loadMore.remaining", { n: sortedPracticeDays.length - displayCount })}
                 </span>
               </div>
             )}
@@ -674,27 +663,29 @@ export default function PracticeClient({
         onSelect={handleSortSelect}
       />
 
-      {/* 絞り込みボトムシート */}
+      {/* 絞り込みボトムシート(ドラフト化: X/backdrop/Escape で閉じるとドラフトは破棄され、
+          ストア(一覧・件数バッジ)には影響しない。「適用」でのみコミットされる) */}
       <FilterBottomSheet
         isOpen={isFilterSheetOpen}
         onClose={() => setIsFilterSheetOpen(false)}
         title={t("filterSheet.title")}
         groups={filterGroups}
-        activeCount={activeFilterCount}
-        onClearAll={handleClearFiltersOnly}
+        activeCount={draftActiveFilterCount}
+        onClearAll={handleClearDraftFilters}
+        onApply={handleApplyFilters}
       />
 
       {/* 詳細モーダル（dashboard の PracticeDetails / AttendanceModal / DeleteConfirmModal を再利用） */}
-      {selectedLog && (
+      {selectedPractice && (
         <PracticeDetailModal
-          key={`${selectedLog.practiceId}-${modalNonce}`}
-          isOpen={!!selectedLog}
+          key={`${selectedPractice.id}-${modalNonce}`}
+          isOpen={!!selectedPractice}
           onClose={handleCloseDetailModal}
-          practiceId={selectedLog.practiceId}
-          date={selectedLog.practice?.date || ""}
-          place={selectedLog.practice?.place || undefined}
-          isTeamPractice={!!selectedLog.practice?.team_id}
-          teamId={selectedLog.practice?.team_id}
+          practiceId={selectedPractice.id}
+          date={selectedPractice.date || ""}
+          place={selectedPractice.place || undefined}
+          isTeamPractice={!!selectedPractice.team_id}
+          teamId={selectedPractice.team_id}
           onEditPractice={handleEditPractice}
           onDeletePractice={handleDeletePractice}
           onOpenPracticeLogTab={handleOpenPracticeLogTab}

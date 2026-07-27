@@ -3,6 +3,8 @@ import { View, Text, Pressable, Modal, FlatList, StyleSheet } from "react-native
 import { Feather } from "@expo/vector-icons";
 import type { TFunction } from "i18next";
 import { STYLES, formatStyleDisplay } from "./styleOptions";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 
 export interface StylePickerModalProps {
   visible: boolean;
@@ -21,10 +23,11 @@ export const StylePickerModal: React.FC<StylePickerModalProps> = ({
   onSelect,
   t,
 }) => {
+  const insets = useSafeInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <View style={styles.modalSheet}>
+        <View style={[styles.modalSheet, { paddingBottom: getSafeFooterPadding(32, insets.bottom) }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{t("onboarding.step3.styleModalTitle")}</Text>
             <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t("common.close")}>
@@ -65,7 +68,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingBottom: 32,
     maxHeight: "70%",
   },
   modalHeader: {

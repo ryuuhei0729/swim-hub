@@ -8,6 +8,7 @@ import {
   ScrollView,
   Switch,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TeamMembershipWithUser } from "@apps/shared/types";
@@ -121,7 +122,7 @@ export function MemberSelectModal({
           </ScrollView>
 
           {/* フッター */}
-          <View style={styles.footer}>
+          <SafeAreaView edges={["bottom"]} style={styles.footer}>
             <Text style={styles.countText}>
               {t("teams.record.selectedMemberCount", { n: tempSelected.length })}
             </Text>
@@ -136,7 +137,7 @@ export function MemberSelectModal({
                 <Text style={styles.confirmButtonText}>{t("teams.record.confirmSelection")}</Text>
               </Pressable>
             </View>
-          </View>
+          </SafeAreaView>
         </View>
       </View>
     </Modal>

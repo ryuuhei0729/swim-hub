@@ -78,13 +78,13 @@ export const CalendarColorSettings: React.FC = () => {
   const { supabase, user } = useAuth();
 
   const { teams = [] } = useTeamsQuery(supabase, { enableRealtime: false });
-  const { settings, isLoading, updatePersonalColors, upsertTeamColors, deleteTeamColors } =
+  const { settings, isLoading, updatePersonalColors, upsertTeamColors } =
     useCalendarColorSettingsQuery(supabase, user?.id);
 
   // 承認待ち(pending)メンバーシップはチーム色設定の対象外
   const approvedTeams = teams.filter((membership) => membership.status === "approved" && membership.is_active === true);
 
-  const isMutating = updatePersonalColors.isPending || upsertTeamColors.isPending || deleteTeamColors.isPending;
+  const isMutating = updatePersonalColors.isPending || upsertTeamColors.isPending;
 
   const handlePersonalChange = (field: ColorField, color: string | null) => {
     updatePersonalColors.mutate({
@@ -104,10 +104,6 @@ export const CalendarColorSettings: React.FC = () => {
         ? color
         : current.competition_color) as PaletteColor | null,
     });
-  };
-
-  const handleTeamResetAll = (teamId: string) => {
-    deleteTeamColors.mutate(teamId);
   };
 
   const effectivePersonalPractice = settings.personal.practice_color ?? DEFAULT_PRACTICE_COLOR;
@@ -166,22 +162,11 @@ export const CalendarColorSettings: React.FC = () => {
               practice_color: null,
               competition_color: null,
             };
-            const hasCustom = teamColors.practice_color !== null || teamColors.competition_color !== null;
 
             return (
               <View key={membership.team_id} style={styles.teamBlock}>
                 <View style={styles.teamHeaderRow}>
                   <Text style={styles.teamName}>{membership.teams.name}</Text>
-                  {hasCustom && (
-                    <Pressable
-                      onPress={() => handleTeamResetAll(membership.team_id)}
-                      disabled={isMutating}
-                      accessibilityRole="button"
-                      accessibilityLabel={t("settings.calendarColors.resetTeamToDefault")}
-                    >
-                      <Text style={styles.resetLink}>{t("settings.calendarColors.resetTeamToDefault")}</Text>
-                    </Pressable>
-                  )}
                 </View>
                 <ColorSwatchRow
                   label={t("settings.calendarColors.practiceLabel")}

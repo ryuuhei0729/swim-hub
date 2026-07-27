@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,7 +55,7 @@ import {
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { formatTime, formatTimeAverage, SWIM_STYLES } from "@/utils/formatters";
-import { hasUnsavedChanges, diffPracticeLogDraft } from "@/utils/tabFormUtils";
+import { hasUnsavedChanges, diffPracticeLogDraft, getTabNavAdjacency } from "@/utils/tabFormUtils";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
 import type { MainStackParamList } from "@/navigation/types";
 import type { PracticeTag } from "@apps/shared/types";
@@ -65,6 +66,9 @@ type PracticeTabFormRouteProp = RouteProp<MainStackParamList, "PracticeTabForm">
 type PracticeTabFormNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 type PracticeTab = "practice" | "log";
+
+// タブ切替(前に戻る/次に進む)フッターボタン用の表示順序。ガード対象なし。
+const PRACTICE_VISIBLE_TABS: PracticeTab[] = ["practice", "log"];
 
 // ---- 練習ログメニュー型 ----
 const SWIM_CATEGORIES = [
@@ -981,6 +985,12 @@ export const PracticeTabFormScreen: React.FC = () => {
     [t, tabErrors],
   );
 
+  // ---- フッターボタン用の前後タブ (ガードなし) ----
+  const { prevTab, nextTab } = useMemo(
+    () => getTabNavAdjacency<PracticeTab>(PRACTICE_VISIBLE_TABS, activeTab),
+    [activeTab],
+  );
+
   // ---- ローディング ----
   if (loadingExisting) {
     return (
@@ -1592,7 +1602,7 @@ export const PracticeTabFormScreen: React.FC = () => {
       </Modal>
 
       {/* 保存ボタン (画面下部固定) */}
-      <View style={styles.footer}>
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
         {/* テンプレートとして保存 (新規作成時のみ。web と同じ) */}
         {!isEditMode && activeTab === "log" && (
           <Pressable
@@ -1610,18 +1620,65 @@ export const PracticeTabFormScreen: React.FC = () => {
             </Text>
           </Pressable>
         )}
-        <Pressable
-          style={[styles.saveButton, isSaving && styles.buttonDisabled]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.saveButtonText}>{t("common.save")}</Text>
+        <View style={styles.footerButtonRow}>
+          {prevTab && (
+            <Pressable
+              style={[styles.outlineButton, isSaving && styles.buttonDisabled]}
+              onPress={() => setActiveTab(prevTab)}
+              disabled={isSaving}
+              testID="practice-tab-form-back"
+            >
+              <Text
+                style={styles.outlineButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {t("forms.tabModal.back")}
+              </Text>
+            </Pressable>
           )}
-        </Pressable>
-      </View>
+          <Pressable
+            style={[
+              nextTab ? styles.outlineButton : styles.saveButton,
+              isSaving && styles.buttonDisabled,
+            ]}
+            onPress={handleSave}
+            disabled={isSaving}
+            testID="practice-tab-form-save"
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color={nextTab ? "#2563EB" : "#FFFFFF"} />
+            ) : (
+              <Text
+                style={nextTab ? styles.outlineButtonText : styles.saveButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {t("forms.tabModal.saveAndClose")}
+              </Text>
+            )}
+          </Pressable>
+          {nextTab && (
+            <Pressable
+              style={[styles.saveButton, isSaving && styles.buttonDisabled]}
+              onPress={() => setActiveTab(nextTab)}
+              disabled={isSaving}
+              testID="practice-tab-form-next"
+            >
+              <Text
+                style={styles.saveButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+              >
+                {t("forms.tabModal.next")}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 };
@@ -1841,7 +1898,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
   },
+  footerButtonRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
   saveButton: {
+    flex: 1,
     backgroundColor: "#2563EB",
     paddingVertical: 14,
     borderRadius: 8,
@@ -1852,6 +1914,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  outlineButton: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  outlineButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   buttonDisabled: {
     opacity: 0.6,

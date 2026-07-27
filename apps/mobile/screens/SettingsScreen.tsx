@@ -114,6 +114,17 @@ export const SettingsScreen: React.FC = () => {
           />
         }
       >
+        {/* 練習ログテンプレート管理 */}
+        <Pressable
+          style={styles.navRow}
+          onPress={() => navigation.navigate("PracticeLogTemplates")}
+          accessibilityRole="button"
+          accessibilityLabel={t("practiceLogTemplates.page.title")}
+        >
+          <Text style={styles.navRowLabel}>{t("practiceLogTemplates.page.title")}</Text>
+          <Text style={styles.navRowChevron}>›</Text>
+        </Pressable>
+
         {/* サブスクリプション管理セクション */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("settings.mobile.subscriptionSectionTitle")}</Text>
@@ -194,31 +205,8 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* 練習ログテンプレート管理 */}
-        <Pressable
-          style={styles.navRow}
-          onPress={() => navigation.navigate("PracticeLogTemplates")}
-          accessibilityRole="button"
-          accessibilityLabel={t("practiceLogTemplates.page.title")}
-        >
-          <Text style={styles.navRowLabel}>{t("practiceLogTemplates.page.title")}</Text>
-          <Text style={styles.navRowChevron}>›</Text>
-        </Pressable>
-
-        {/* Googleカレンダー連携セクション */}
-        <GoogleCalendarSyncSettings profile={profile} onUpdate={refetchProfile} />
-
-        {/* iOSカレンダー連携セクション */}
-        <IOSCalendarSyncSettings profile={profile} onUpdate={refetchProfile} />
-
-        {/* ダッシュボード記録色カスタマイズセクション */}
-        <CalendarColorSettings />
-
         {/* メールアドレス変更セクション */}
         <EmailChangeSettings />
-
-        {/* ログイン連携セクション */}
-        <IdentityLinkSettings />
 
         {/* パスワード変更 */}
         <Pressable
@@ -230,6 +218,18 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.navRowLabel}>{t("mypage.passwordChange.title")}</Text>
           <Text style={styles.navRowChevron}>›</Text>
         </Pressable>
+
+        {/* ログイン連携セクション */}
+        <IdentityLinkSettings />
+
+        {/* Googleカレンダー連携セクション */}
+        <GoogleCalendarSyncSettings profile={profile} onUpdate={refetchProfile} />
+
+        {/* iOSカレンダー連携セクション */}
+        <IOSCalendarSyncSettings profile={profile} onUpdate={refetchProfile} />
+
+        {/* ダッシュボード記録色カスタマイズセクション */}
+        <CalendarColorSettings />
 
         {/* アカウント削除セクション */}
         <AccountDeleteSettings />

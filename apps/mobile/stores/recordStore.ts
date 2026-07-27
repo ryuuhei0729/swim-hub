@@ -4,6 +4,7 @@
 
 import type { RecordWithDetails } from "@swim-hub/shared/types";
 import { create } from "zustand";
+import type { RecordRelayFilterMode, RecordSortBy, RecordSortOrder } from "@/utils/recordFilter";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -36,15 +37,18 @@ interface RecordFormState {
 }
 
 interface RecordFilterState {
-  // フィルター条件
-  filterStyleId: number | null;
-  filterFiscalYear: string;
-  filterPoolType: number | null; // 0: 短水路, 1: 長水路
-  includeRelay: boolean;
+  // フィルター条件(グループ間 AND・グループ内 OR。ボトムシートでドラフト編集→適用でコミットされる)
+  filterDistances: string[];
+  filterStyles: string[];
+  filterCompetitionNames: string[];
+  filterPlaces: string[];
+  /** "" = すべて, "short" | "long" */
+  filterPoolType: string;
+  filterRelayMode: RecordRelayFilterMode;
 
   // ソート設定
-  sortBy: "date" | "time";
-  sortOrder: "asc" | "desc";
+  sortBy: RecordSortBy;
+  sortOrder: RecordSortOrder;
 }
 
 interface RecordFormActions {
@@ -69,14 +73,16 @@ interface RecordFormActions {
 
 interface RecordFilterActions {
   // フィルター操作
-  setFilterStyleId: (styleId: number | null) => void;
-  setFilterFiscalYear: (fiscalYear: string) => void;
-  setFilterPoolType: (poolType: number | null) => void;
-  setIncludeRelay: (includeRelay: boolean) => void;
+  setFilterDistances: (distances: string[]) => void;
+  setFilterStyles: (styles: string[]) => void;
+  setFilterCompetitionNames: (names: string[]) => void;
+  setFilterPlaces: (places: string[]) => void;
+  setFilterPoolType: (poolType: string) => void;
+  setFilterRelayMode: (mode: RecordRelayFilterMode) => void;
 
   // ソート操作
-  setSortBy: (sortBy: "date" | "time") => void;
-  setSortOrder: (sortOrder: "asc" | "desc") => void;
+  setSortBy: (sortBy: RecordSortBy) => void;
+  setSortOrder: (sortOrder: RecordSortOrder) => void;
 
   resetFilter: () => void;
 }
@@ -103,10 +109,12 @@ const initialFormState: RecordFormState = {
 };
 
 const initialFilterState: RecordFilterState = {
-  filterStyleId: null,
-  filterFiscalYear: "",
-  filterPoolType: null,
-  includeRelay: true,
+  filterDistances: [],
+  filterStyles: [],
+  filterCompetitionNames: [],
+  filterPlaces: [],
+  filterPoolType: "",
+  filterRelayMode: "all",
   sortBy: "date",
   sortOrder: "desc",
 };
@@ -185,10 +193,12 @@ export const useRecordStore = create<RecordState & RecordActions>()((set) => ({
   // ---------------------------------------------------------------------------
   // Filter: 操作
   // ---------------------------------------------------------------------------
-  setFilterStyleId: (styleId) => set({ filterStyleId: styleId }),
-  setFilterFiscalYear: (fiscalYear) => set({ filterFiscalYear: fiscalYear }),
+  setFilterDistances: (distances) => set({ filterDistances: distances }),
+  setFilterStyles: (styles) => set({ filterStyles: styles }),
+  setFilterCompetitionNames: (names) => set({ filterCompetitionNames: names }),
+  setFilterPlaces: (places) => set({ filterPlaces: places }),
   setFilterPoolType: (poolType) => set({ filterPoolType: poolType }),
-  setIncludeRelay: (includeRelay) => set({ includeRelay }),
+  setFilterRelayMode: (mode) => set({ filterRelayMode: mode }),
   setSortBy: (sortBy) => set({ sortBy }),
   setSortOrder: (sortOrder) => set({ sortOrder }),
 

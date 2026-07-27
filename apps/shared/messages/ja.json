@@ -1193,19 +1193,11 @@
     "sortSheet": {
       "title": "並べ替え",
       "placeAsc": "場所(昇順)",
-      "placeDesc": "場所(降順)",
-      "distanceAsc": "距離(昇順)",
-      "distanceDesc": "距離(降順)",
-      "circleAsc": "サークル(昇順)",
-      "circleDesc": "サークル(降順)",
-      "styleAsc": "種目(昇順)",
-      "styleDesc": "種目(降順)",
-      "avgTimeAsc": "平均タイム(速い順)",
-      "avgTimeDesc": "平均タイム(遅い順)"
+      "placeDesc": "場所(降順)"
     },
     "filterSheet": {
       "title": "絞り込み",
-      "tagsAndNote": "(選択した全てのタグを含む記録のみ表示)"
+      "tagsAndNote": "(選択した全てのタグを含む練習ログがある日のみ表示)"
     }
   },
   "mypage": {
@@ -3277,6 +3269,8 @@
       "deleting": "削除中...",
       "loadError": "お知らせの読み込みに失敗しました",
       "retry": "再試行",
+      "showMore": "…全文を表示",
+      "showLess": "省略",
       "deleteConfirm": {
         "title": "お知らせを削除",
         "message": "このお知らせを削除しますか？",
@@ -4129,6 +4123,9 @@
       "saving": "保存中...",
       "cancel": "キャンセル",
       "close": "閉じる",
+      "saveAndClose": "保存して終了",
+      "next": "次に進む",
+      "back": "前に戻る",
       "fieldRequired": "は必須です",
       "partialSaveError": "基本情報は保存しました。詳細の保存に失敗しました。再試行してください。",
       "duplicateEntryStyle": "同じ種目が複数入力されています。種目を変更してください。",
@@ -4138,7 +4135,6 @@
         "confirm": "閉じる",
         "cancel": "編集を続ける"
       },
-      "proceedToRecord": "レコードの入力に進む",
       "recordFutureGuard": "未来の日付でレースレコードを登録することはできません"
     },
     "premium": {

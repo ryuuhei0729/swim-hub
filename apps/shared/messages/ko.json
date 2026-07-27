@@ -1193,19 +1193,11 @@
     "sortSheet": {
       "title": "정렬",
       "placeAsc": "장소(오름차순)",
-      "placeDesc": "장소(내림차순)",
-      "distanceAsc": "거리(오름차순)",
-      "distanceDesc": "거리(내림차순)",
-      "circleAsc": "써클(오름차순)",
-      "circleDesc": "써클(내림차순)",
-      "styleAsc": "종목(오름차순)",
-      "styleDesc": "종목(내림차순)",
-      "avgTimeAsc": "평균 기록(빠른순)",
-      "avgTimeDesc": "평균 기록(느린순)"
+      "placeDesc": "장소(내림차순)"
     },
     "filterSheet": {
       "title": "필터",
-      "tagsAndNote": "(선택한 모든 태그를 포함하는 기록만 표시)"
+      "tagsAndNote": "(선택한 모든 태그를 포함하는 기록이 있는 날짜만 표시)"
     }
   },
   "mypage": {
@@ -3277,6 +3269,8 @@
       "deleting": "삭제 중...",
       "loadError": "공지사항을 불러오지 못했습니다",
       "retry": "다시 시도",
+      "showMore": "전체 보기",
+      "showLess": "간략히 보기",
       "deleteConfirm": {
         "title": "공지사항 삭제",
         "message": "이 공지사항을 삭제하시겠습니까?",
@@ -4129,6 +4123,9 @@
       "saving": "저장 중...",
       "cancel": "취소",
       "close": "닫기",
+      "saveAndClose": "저장하고 종료",
+      "next": "다음으로",
+      "back": "이전으로",
       "fieldRequired": "은(는) 필수입니다",
       "partialSaveError": "기본 정보는 저장되었습니다. 세부 정보 저장에 실패했습니다. 다시 시도해 주세요.",
       "duplicateEntryStyle": "중복된 종목이 있습니다. 각 엔트리의 종목을 변경해 주세요.",
@@ -4138,7 +4135,6 @@
         "confirm": "닫기",
         "cancel": "편집 계속하기"
       },
-      "proceedToRecord": "기록 입력으로 진행",
       "recordFutureGuard": "미래 날짜에는 레이스 기록을 등록할 수 없습니다."
     },
     "premium": {

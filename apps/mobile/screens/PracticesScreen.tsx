@@ -1,13 +1,25 @@
 import React, { useMemo, useCallback, useState } from "react";
-import { View, Text, StyleSheet, Pressable, RefreshControl, ScrollView } from "react-native";
+import { View, Text, StyleSheet, RefreshControl, Pressable } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { parseISO, isValid } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
 import { practiceKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
+import { STYLE_CODE_TO_ABBREV } from "@apps/shared/utils/swimStyles";
 import { PracticeItem } from "@/components/practices";
+import { ListToolbar, SortBottomSheet, FilterBottomSheet } from "@/components/history";
+import type { SortPreset, FilterGroup } from "@/components/history";
+import {
+  filterPractices,
+  sortPractices,
+  countActivePracticeFilters,
+  getParticipatedPracticePlaces,
+  getParticipatedPracticeStyleCodes,
+  type PracticeFilterValues,
+  type PracticeSortColumn,
+} from "@/utils/practiceDayFilter";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { usePracticeFilterStore } from "@/stores/practiceFilterStore";
@@ -19,25 +31,117 @@ import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import type { PracticeWithLogs, PracticeTag } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 
+// 一覧の初期表示件数、および「もっと見る」(onEndReached)1回あたりの増分
+const PAGE_INCREMENT = 20;
+
 /**
  * 練習記録一覧画面
- * 練習記録の一覧を表示し、日付フィルター、プルリフレッシュ、無限スクロール機能を提供
+ * 練習記録(日単位)の一覧を全幅カード + ボトムシート(並べ替え/絞り込み)で表示する。
+ * 絞り込み/並べ替え/表示件数はすべてクライアント側(useMemo)で処理し、
+ * サーバーからは過去1年分を一括取得する(pageSize=1000 相当。日付範囲ロジックは既存を維持)。
  */
 export const PracticesScreen: React.FC = () => {
   const { supabase } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // 行タップで開く日付詳細モーダル（ダッシュボードと同一のDayDetailModal）
   const [modalDate, setModalDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
 
-  // タグフィルターストア
-  const { selectedTagIds, setSelectedTags } = usePracticeFilterStore(
+  const [displayCount, setDisplayCount] = useState(PAGE_INCREMENT);
+
+  // 並べ替え/絞り込みボトムシートの開閉状態(排他制御: 同時に開かない)
+  const [isSortSheetOpen, setIsSortSheetOpen] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const openSortSheet = useCallback(() => {
+    setIsFilterSheetOpen(false);
+    setIsSortSheetOpen(true);
+  }, []);
+  const openFilterSheetRaw = useCallback(() => {
+    setIsSortSheetOpen(false);
+    setIsFilterSheetOpen(true);
+  }, []);
+
+  // フィルター/ソートストア
+  const {
+    selectedTagIds,
+    filterPlaces,
+    filterStyle,
+    sortColumn,
+    sortOrder,
+    setSelectedTags,
+    setFilterPlaces,
+    setFilterStyle,
+    setSortColumn,
+    setSortOrder,
+    resetFilters,
+  } = usePracticeFilterStore(
     useShallow((state) => ({
       selectedTagIds: state.selectedTagIds,
+      filterPlaces: state.filterPlaces,
+      filterStyle: state.filterStyle,
+      sortColumn: state.sortColumn,
+      sortOrder: state.sortOrder,
       setSelectedTags: state.setSelectedTags,
+      setFilterPlaces: state.setFilterPlaces,
+      setFilterStyle: state.setFilterStyle,
+      setSortColumn: state.setSortColumn,
+      setSortOrder: state.setSortOrder,
+      resetFilters: state.reset,
     })),
   );
+
+  // ---------------------------------------------------------------------------
+  // 絞り込みシートのドラフト状態: チップ操作はこのローカル state のみを更新し、
+  // 「適用」を押した時にのみストアへ一括コミットする。
+  // ---------------------------------------------------------------------------
+  const buildFilterDraftFromStore = useCallback(
+    (): PracticeFilterValues => ({
+      filterPlaces,
+      filterStyle,
+      selectedTagIds,
+    }),
+    [filterPlaces, filterStyle, selectedTagIds],
+  );
+
+  const [filterDraft, setFilterDraft] = useState<PracticeFilterValues>(buildFilterDraftFromStore);
+
+  const openFilterSheet = useCallback(() => {
+    setFilterDraft(buildFilterDraftFromStore());
+    openFilterSheetRaw();
+  }, [buildFilterDraftFromStore, openFilterSheetRaw]);
+
+  const handleDraftPlacesChange = useCallback(
+    (values: string[]) => setFilterDraft((prev) => ({ ...prev, filterPlaces: values })),
+    [],
+  );
+  const handleDraftStyleChange = useCallback(
+    (value: string) => setFilterDraft((prev) => ({ ...prev, filterStyle: value })),
+    [],
+  );
+  const handleDraftTagIdsChange = useCallback(
+    (values: string[]) => setFilterDraft((prev) => ({ ...prev, selectedTagIds: values })),
+    [],
+  );
+
+  const handleClearDraftFilters = useCallback(() => {
+    setFilterDraft({ filterPlaces: [], filterStyle: "", selectedTagIds: [] });
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    setFilterPlaces(filterDraft.filterPlaces);
+    setFilterStyle(filterDraft.filterStyle);
+    setSelectedTags(filterDraft.selectedTagIds);
+    setDisplayCount(PAGE_INCREMENT);
+    setIsFilterSheetOpen(false);
+  }, [filterDraft, setFilterPlaces, setFilterStyle, setSelectedTags]);
+
+  // 0件空状態(絞り込み条件に一致なし)の「フィルタをリセット」導線: ドラフトを経由せず
+  // 即時に全解除する(ソートも含めて全リセットする web と同じ仕様)
+  const handleResetAllFilters = useCallback(() => {
+    resetFilters();
+    setDisplayCount(PAGE_INCREMENT);
+  }, [resetFilters]);
 
   // デフォルトの日付範囲（過去1年間）- 初期化時に一度だけ計算
   const [isUserRefreshing, setIsUserRefreshing] = useState(false);
@@ -62,31 +166,126 @@ export const PracticesScreen: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // 練習記録データ取得: 絞り込み/並べ替え/表示件数は全てクライアント側で処理するため
+  // 十分大きい件数(pageSize=1000)を一括取得する(日付範囲=過去1年は既存ロジックを維持)
   const {
-    data,
+    data: allPractices = [],
     error,
     isLoading,
-    isRefetching: _isRefetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
     refetch,
-  } = useInfiniteQuery({
-    queryKey: practiceKeys.list({
-      startDate: defaultStartDate,
-      endDate: defaultEndDate,
-      pageSize: 20,
-    }),
-    queryFn: async ({ pageParam = 1 }) => {
-      const offset = (pageParam - 1) * 20;
-      return await practiceApi.getPractices(defaultStartDate, defaultEndDate, 20, offset);
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, pages) => (lastPage.length === 20 ? pages.length + 1 : undefined),
+  } = useQuery({
+    queryKey: practiceKeys.list({ startDate: defaultStartDate, endDate: defaultEndDate, pageSize: 1000 }),
+    queryFn: async () => practiceApi.getPractices(defaultStartDate, defaultEndDate, 1000, 0),
     staleTime: 5 * 60 * 1000,
   });
 
-  const allPractices = useMemo(() => data?.pages.flat() ?? [], [data]);
+  // 場所/種目フィルタの選択肢生成(全件ベース)
+  const participatedPlaces = useMemo(
+    () => getParticipatedPracticePlaces(allPractices, i18n.language),
+    [allPractices, i18n.language],
+  );
+  const participatedStyleCodes = useMemo(
+    () => getParticipatedPracticeStyleCodes(allPractices),
+    [allPractices],
+  );
+
+  // 絞り込み → 並べ替え(useMemoで即座に反映)
+  const filteredPractices = useMemo(
+    () => filterPractices(allPractices, { filterPlaces, filterStyle, selectedTagIds }),
+    [allPractices, filterPlaces, filterStyle, selectedTagIds],
+  );
+
+  const sortedPractices = useMemo(
+    () => sortPractices(filteredPractices, sortColumn, sortOrder, i18n.language),
+    [filteredPractices, sortColumn, sortOrder, i18n.language],
+  );
+
+  // 「もっと見る」(FlashList onEndReached): 絞り込み後・並べ替え後の総件数のうち displayCount 件のみ表示
+  const displayPractices = useMemo(
+    () => sortedPractices.slice(0, displayCount),
+    [sortedPractices, displayCount],
+  );
+
+  const activeFilterCount = useMemo(
+    () => countActivePracticeFilters({ filterPlaces, filterStyle, selectedTagIds }),
+    [filterPlaces, filterStyle, selectedTagIds],
+  );
+
+  const draftActiveFilterCount = useMemo(() => countActivePracticeFilters(filterDraft), [filterDraft]);
+
+  // 並べ替えボトムシートのプリセット(日付新/古 + 場所昇/降の4択。日付新しい順が既定)
+  const sortPresets: SortPreset<Exclude<PracticeSortColumn, null>>[] = useMemo(
+    () => [
+      {
+        id: "dateDesc",
+        label: t("practice.page.sortOptionDateDesc"),
+        column: "date",
+        order: "desc",
+        isDefault: true,
+      },
+      { id: "dateAsc", label: t("practice.page.sortOptionDateAsc"), column: "date", order: "asc" },
+      { id: "placeAsc", label: t("practice.sortSheet.placeAsc"), column: "place", order: "asc" },
+      { id: "placeDesc", label: t("practice.sortSheet.placeDesc"), column: "place", order: "desc" },
+    ],
+    [t],
+  );
+
+  const handleSortSelect = useCallback(
+    (preset: SortPreset<Exclude<PracticeSortColumn, null>>) => {
+      setSortColumn(preset.column);
+      setSortOrder(preset.order);
+      setDisplayCount(PAGE_INCREMENT);
+      setIsSortSheetOpen(false);
+    },
+    [setSortColumn, setSortOrder],
+  );
+
+  // 絞り込みボトムシートのグループ定義(ドラフト state を参照する)
+  const filterGroups: FilterGroup[] = useMemo(
+    () => [
+      {
+        id: "place",
+        label: t("practice.page.colPlace"),
+        mode: "multi",
+        options: participatedPlaces.map((place) => ({ value: place, label: place })),
+        selectedValues: filterDraft.filterPlaces,
+        onChange: handleDraftPlacesChange,
+        onClearGroup: () => handleDraftPlacesChange([]),
+      },
+      {
+        id: "style",
+        label: t("practice.page.colStyle"),
+        mode: "single",
+        options: participatedStyleCodes.map((code) => ({
+          value: code,
+          label: t(`practice.styleAbbrev.${STYLE_CODE_TO_ABBREV[code]}`),
+        })),
+        selectedValues: filterDraft.filterStyle ? [filterDraft.filterStyle] : [],
+        onChange: (values: string[]) => handleDraftStyleChange(values[0] ?? ""),
+        onClearGroup: () => handleDraftStyleChange(""),
+      },
+      {
+        id: "tags",
+        label: t("practice.page.colTags"),
+        mode: "multi",
+        note: t("practice.filterSheet.tagsAndNote"),
+        options: tags.map((tag: PracticeTag) => ({ value: tag.id, label: tag.name, color: tag.color })),
+        selectedValues: filterDraft.selectedTagIds,
+        onChange: handleDraftTagIdsChange,
+        onClearGroup: () => handleDraftTagIdsChange([]),
+      },
+    ],
+    [
+      t,
+      participatedPlaces,
+      participatedStyleCodes,
+      tags,
+      filterDraft,
+      handleDraftPlacesChange,
+      handleDraftStyleChange,
+      handleDraftTagIdsChange,
+    ],
+  );
 
   // 選択した日付のカレンダーエントリー（DayDetailModal表示用）
   const { data: dayEntries = [], refetch: refetchDayEntries } = useDayEntriesQuery(
@@ -129,41 +328,6 @@ export const PracticesScreen: React.FC = () => {
     setShowDayDetail(true);
   }, []);
 
-  // タグフィルタリング
-  const filteredPractices = useMemo(() => {
-    if (selectedTagIds.length === 0) {
-      return allPractices;
-    }
-
-    return allPractices.filter((practice) => {
-      // 練習ログのタグを取得
-      const logTags =
-        practice.practice_logs?.flatMap(
-          (log) => log.practice_log_tags?.map((plt) => plt.practice_tags?.id).filter(Boolean) || [],
-        ) || [];
-
-      // 選択されたタグIDのいずれかがログのタグに含まれているかチェック
-      return selectedTagIds.some((tagId) => logTags.includes(tagId));
-    });
-  }, [allPractices, selectedTagIds]);
-
-  // タグの選択/解除をトグル
-  const handleTagToggle = useCallback(
-    (tagId: string) => {
-      if (selectedTagIds.includes(tagId)) {
-        setSelectedTags(selectedTagIds.filter((id) => id !== tagId));
-      } else {
-        setSelectedTags([...selectedTagIds, tagId]);
-      }
-    },
-    [selectedTagIds, setSelectedTags],
-  );
-
-  // タグフィルターをクリア
-  const handleClearTags = useCallback(() => {
-    setSelectedTags([]);
-  }, [setSelectedTags]);
-
   // タブ遷移時にデータ再取得
   useRefreshOnFocus(refetch);
 
@@ -177,15 +341,15 @@ export const PracticesScreen: React.FC = () => {
     }
   }, [refetch]);
 
-  // 次のページを読み込む
+  // 無限スクロール(displayCount を増やすのみ。ネットワーク再フェッチは行わない)。
+  // 既に全件表示済みの場合は onEndReached の連続発火で無駄な再レンダーを起こさないよう
+  // ガードする
   const handleLoadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage && !isLoading) {
-      fetchNextPage();
-    }
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isLoading]);
+    if (displayCount >= sortedPractices.length) return;
+    setDisplayCount((count) => count + PAGE_INCREMENT);
+  }, [displayCount, sortedPractices.length]);
 
   // 練習記録アイテムのレンダリング（メモ化）
-  // ⚠️ 重要: すべてのフックは条件付きレンダリングの前に定義する必要がある
   const renderItem = useCallback(
     ({ item }: { item: PracticeWithLogs }) => (
       <PracticeItem practice={item} onPress={handlePracticePress} />
@@ -215,7 +379,7 @@ export const PracticesScreen: React.FC = () => {
     );
   }
 
-  // データが空の場合
+  // データが空の場合（絞り込み前の全件が0件）
   if (allPractices.length === 0 && !isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
@@ -228,51 +392,15 @@ export const PracticesScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* タグフィルターUI（常時表示） */}
-      {tags.length > 0 && (
-        <View style={styles.filterContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tagsScrollContent}
-          >
-            {tags.map((tag: PracticeTag) => (
-              <Pressable
-                key={tag.id}
-                onPress={() => handleTagToggle(tag.id)}
-                style={[
-                  styles.tagButton,
-                  selectedTagIds.includes(tag.id) && {
-                    backgroundColor: tag.color,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.tagButtonText,
-                    selectedTagIds.includes(tag.id) && styles.tagButtonTextSelected,
-                  ]}
-                >
-                  {tag.name}
-                </Text>
-              </Pressable>
-            ))}
-            {selectedTagIds.length > 0 && (
-              <Pressable style={styles.clearButton} onPress={handleClearTags}>
-                <Text style={styles.clearButtonText}>{t("practice.page.clearFilter")}</Text>
-              </Pressable>
-            )}
-          </ScrollView>
-          {selectedTagIds.length > 0 && (
-            <Text style={styles.filterInfoText}>
-              {t("practice.page.filteringWith", { n: selectedTagIds.length })}
-            </Text>
-          )}
-        </View>
-      )}
+      <ListToolbar
+        itemCount={sortedPractices.length}
+        onSortClick={openSortSheet}
+        onFilterClick={openFilterSheet}
+        activeFilterCount={activeFilterCount}
+      />
 
       <FlashList
-        data={filteredPractices}
+        data={displayPractices}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
@@ -286,18 +414,45 @@ export const PracticesScreen: React.FC = () => {
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View style={styles.footerLoader}>
-              <LoadingSpinner size="small" message={t("common.loading")} />
-            </View>
-          ) : null
-        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>{t("practice.page.emptyTitle")}</Text>
+            <Text style={styles.emptyText}>{t("practice.page.noMatchTitle")}</Text>
+            {/* データ自体は存在するが絞り込み条件に一致が無い場合のみ、フィルタ全解除の導線を出す
+                (web PracticeClient と同様、「データが0件」とは区別する) */}
+            {allPractices.length > 0 && activeFilterCount > 0 && (
+              <Pressable
+                style={styles.resetFilterButton}
+                onPress={handleResetAllFilters}
+                accessibilityRole="button"
+              >
+                <Text style={styles.resetFilterButtonText}>{t("competition.filter.resetButton")}</Text>
+              </Pressable>
+            )}
           </View>
         }
+      />
+
+      {/* 並べ替えボトムシート */}
+      <SortBottomSheet<Exclude<PracticeSortColumn, null>>
+        isOpen={isSortSheetOpen}
+        onClose={() => setIsSortSheetOpen(false)}
+        title={t("practice.sortSheet.title")}
+        presets={sortPresets}
+        activeColumn={sortColumn}
+        activeOrder={sortOrder}
+        onSelect={handleSortSelect}
+      />
+
+      {/* 絞り込みボトムシート(ドラフト化: X/backdrop/Android戻る/シート排他で閉じるとドラフトは
+          破棄され、ストア(一覧・件数バッジ)には影響しない。「適用」でのみコミットされる) */}
+      <FilterBottomSheet
+        isOpen={isFilterSheetOpen}
+        onClose={() => setIsFilterSheetOpen(false)}
+        title={t("practice.filterSheet.title")}
+        groups={filterGroups}
+        activeCount={draftActiveFilterCount}
+        onClearAll={handleClearDraftFilters}
+        onApply={handleApplyFilters}
       />
 
       {/* 日付詳細モーダル（ダッシュボードと同一のDayDetailModal） */}
@@ -306,6 +461,7 @@ export const PracticesScreen: React.FC = () => {
           visible={showDayDetail}
           date={modalDate}
           entries={dayEntries}
+          scope="practice"
           onClose={() => {
             setShowDayDetail(false);
             setModalDate(null);
@@ -338,53 +494,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#EFF6FF",
   },
-  filterContainer: {
-    backgroundColor: "#FFFFFF",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  tagsScrollContent: {
-    gap: 8,
-    paddingRight: 16,
-  },
-  tagButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: "#F3F4F6",
-    minHeight: 32,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  tagButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#374151",
-  },
-  tagButtonTextSelected: {
-    color: "#FFFFFF",
-  },
-  clearButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: "#F3F4F6",
-    minHeight: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 4,
-  },
-  clearButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  filterInfoText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: "#6B7280",
-  },
   listContent: {
     paddingVertical: 8,
   },
@@ -400,13 +509,18 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: 8,
   },
-  emptySubtext: {
-    fontSize: 14,
-    color: "#9CA3AF",
-    textAlign: "center",
+  resetFilterButton: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
   },
-  footerLoader: {
-    paddingVertical: 20,
-    alignItems: "center",
+  resetFilterButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
   },
 });

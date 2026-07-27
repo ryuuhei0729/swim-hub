@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useLayoutEffect } from "react";
 import { View, Text, StyleSheet, Pressable, Alert, Platform } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Feather } from "@expo/vector-icons";
@@ -20,6 +20,7 @@ import {
   type TeamTabType,
 } from "@/components/teams";
 import { AdminMonthlyAttendance } from "@/components/teams/AdminMonthlyAttendance";
+import { AdminViewToggle } from "@/components/teams/AdminViewToggle";
 import { TeamSettingsModal } from "@/components/teams/TeamSettingsModal";
 import { TeamAnnouncementList } from "@/components/teams/TeamAnnouncementList";
 import { TeamAnnouncementForm } from "@/components/teams/TeamAnnouncementForm";
@@ -27,6 +28,7 @@ import { TeamPracticeList } from "@/components/teams/TeamPracticeList";
 import { TeamCompetitionList } from "@/components/teams/TeamCompetitionList";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
 import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -70,6 +72,21 @@ export const TeamDetailScreen: React.FC = () => {
   const pendingCount = pendingMembers?.length ?? 0;
 
   const deleteAnnouncementMutation = useDeleteAnnouncementMutation(supabase);
+
+  // 管理者ビュー/利用者ビューの切替
+  const handleAdminViewChange = useCallback((next: boolean) => {
+    setIsAdminView(next);
+    setActiveTab((prev) => resolveActiveTabOnAdminViewToggle(prev, next));
+  }, []);
+
+  // ヘッダー右側に管理者ビュー切替スイッチを配置（管理者のみ）
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: isCurrentUserAdmin
+        ? () => <AdminViewToggle value={isAdminView} onValueChange={handleAdminViewChange} />
+        : undefined,
+    });
+  }, [navigation, isCurrentUserAdmin, isAdminView, handleAdminViewChange]);
 
   // 招待コードをコピー
   const handleCopyInviteCode = async () => {
@@ -319,35 +336,6 @@ export const TeamDetailScreen: React.FC = () => {
                 <Feather name="edit-2" size={13} color="#6B7280" />
               </Pressable>
             )}
-            {isCurrentUserAdmin && (
-              <Pressable
-                style={[styles.adminToggleButton, isAdminView && styles.adminToggleButtonActive]}
-                onPress={() => {
-                  setIsAdminView((prev) => {
-                    const next = !prev;
-                    // announcements / groups タブは管理者専用のため利用者ビューへの切替時にリセット。
-                    // attendance タブは利用者ビューでも有効(MyMonthlyAttendance が表示される)ためリセット不要。
-                    if (!next && (activeTab === "announcements" || activeTab === "groups")) {
-                      setActiveTab("members");
-                    }
-                    return next;
-                  });
-                }}
-              >
-                <Feather
-                  name="settings"
-                  size={13}
-                  color={isAdminView ? "#FFFFFF" : "#6B7280"}
-                />
-                <Text
-                  style={[styles.adminToggleText, isAdminView && styles.adminToggleTextActive]}
-                >
-                  {isAdminView
-                    ? t("teams.mobile.adminToggle.admin")
-                    : t("teams.mobile.adminToggle.user")}
-                </Text>
-              </Pressable>
-            )}
           </View>
         </View>
         {currentTeam.description && (
@@ -439,26 +427,6 @@ const styles = StyleSheet.create({
   },
   copyButton: {
     padding: 2,
-  },
-  adminToggleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  adminToggleButtonActive: {
-    backgroundColor: "#2563EB",
-  },
-  adminToggleText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  adminToggleTextActive: {
-    color: "#FFFFFF",
   },
   tabContent: {
     flex: 1,

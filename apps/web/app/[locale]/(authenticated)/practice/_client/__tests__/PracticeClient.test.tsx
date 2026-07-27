@@ -6,6 +6,14 @@
  * 薄いスタブに差し替え、PracticeClient 自身が持つ「配線」ロジック
  * (行クリック→詳細モーダル open、編集→タブモーダル open、カスケード削除判定) を検証する。
  *
+ * 2026-07-23 Sprint (day-level 化) 再検証: 1練習ログ=1カード(log-level)から
+ * 1練習日(=1 practice)=1カード(day-level, 先頭ログのみ表示)に刷新されたことに伴い、
+ * 「同一 practice に複数ログを持たせて複数カードを期待する」前提のテストを全面的に
+ * day-level 前提に書き換えた(Web Developer 申し送り: 旧版はここで14件 FAIL していた)。
+ * distance/circle/style/avgTime のソートプリセットは廃止されたため、それらに依存する
+ * テストは date/place の2列に置き換えた。tags の ANY-log-exists 判定・draft/apply の
+ * 深い検証は `PracticeClient.filterSort.test.tsx` に分離した(このファイルは配線の非退行に集中する)。
+ *
  * Sprint Contract 検証観点:
  *   [V-W-P01] 行クリックで詳細モーダルが開き、正しい practiceId/date が渡る
  *   [V-W-P07] シェアボタンのクリックは行クリック(詳細モーダルopen)を発火させない (stopPropagation)
@@ -15,12 +23,10 @@
  *   [V-W-P06] 練習ログを削除しても同じ practice に他のログが残る場合、親 practice は削除されない
  *   [V-W-P02] 詳細モーダルの onEditPractice から PracticeTabModal の practice タブが開く
  *   [V-W-P03] 詳細モーダルの onOpenPracticeLogTab から PracticeTabModal の practiceLog タブが開く
+ *   [V-WP-01/02] day-level カード化: 1 practice = 1 カード、先頭ログのみ表示
+ *   [V-WP-04] ソートプリセットは date/place の4択のみ(distance/circle/style/avgTime は表示されない)
  *   [store リーク回帰] usePracticeStore は Dashboard/practice/competition の3画面で共有される
- *             module-level singleton。他画面で TabModal を開いたまま /practice に遷移してきた
- *             場合に isOpen=true 等が残っていないか (mount 時 closeAll)、逆にこの画面で開いたまま
- *             離脱した場合に閉じ忘れないか (unmount 時 closeAll) を検証する。
- *             ※ beforeEach の強制リセットに頼らず、各テスト内で明示的に「他画面が残した状態」を
- *             再現してから mount することがポイント (beforeEach の後に敢えて汚す)。
+ *             module-level singleton。
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
@@ -166,6 +172,17 @@ const renderClient = (practices: PracticeWithLogs[], tags: PracticeTag[] = []) =
   );
 };
 
+// day-level カードの行取得ヘルパー: PracticeCard は role="button" + aria-label
+// ("練習詳細を表示(07/01 市民プール Fr)" のように個体情報付きの動的文言)を持つ
+const getCardRows = (): HTMLElement[] => screen.queryAllByRole("button", { name: /^練習詳細を表示\(/ });
+
+// 絞り込みシートの「場所」グループには各場所と同じ文字列のチップが並ぶため、
+// シートが開いたまま(または閉じるアニメーション中)の状態で screen.getByText(place) を
+// 使うと二重ヒットする。カード行(role="button" + aria-label)側のみに絞って場所の
+// 有無を判定する(CompetitionClient.filterSort.test.tsx の cardHasTitle と同型)。
+const cardHasPlace = (place: string): boolean =>
+  getCardRows().some((row) => row.textContent?.includes(place));
+
 describe("PracticeClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -175,14 +192,19 @@ describe("PracticeClient", () => {
     usePracticeStore.setState({ availableTags: [] });
   });
 
+  it("[V-WP-01/02] day-level カード: 同一日(1 practice)に2件のログがあっても1カードのみ描画され、先頭ログの内容のみ表示される", () => {
+    renderClient([makePractice()]);
+
+    expect(getCardRows()).toHaveLength(1);
+    expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
+    expect(screen.queryByText(/50m × 2本 × 1セット/)).not.toBeInTheDocument();
+  });
+
   it("[V-W-P08] 詳細モーダルを閉じると非表示になり、選択状態がリセットされる", async () => {
     const user = userEvent.setup();
     renderClient([makePractice()]);
 
-    // カード化(2026-07-22 Sprint)により種目("Fr")は circle 表示と同じ <div> 内で
-    // 複数テキストノードに分割されるため exact match できない。行を一意に特定できる
-    // 距離フォーマット文言(i18n 単一呼び出しで単一テキストノードになる)でクリックする。
-    await user.click(screen.getByText("100m × 4本 × 1セット"));
+    await user.click(getCardRows()[0]);
     expect(screen.getByTestId("practice-detail-modal-stub")).toBeInTheDocument();
 
     await user.click(screen.getByText("詳細を閉じる"));
@@ -195,7 +217,7 @@ describe("PracticeClient", () => {
 
     expect(screen.queryByTestId("practice-detail-modal-stub")).not.toBeInTheDocument();
 
-    await user.click(screen.getByText("100m × 4本 × 1セット"));
+    await user.click(getCardRows()[0]);
 
     const modal = screen.getByTestId("practice-detail-modal-stub");
     expect(modal).toBeInTheDocument();
@@ -221,7 +243,7 @@ describe("PracticeClient", () => {
     mocks.deletePracticeLogMutateAsync.mockResolvedValue(undefined);
     renderClient([makePractice()]);
 
-    await user.click(screen.getByText("100m × 4本 × 1セット"));
+    await user.click(getCardRows()[0]);
     await user.click(screen.getByText("ログAを削除"));
 
     await waitFor(() => {
@@ -236,10 +258,6 @@ describe("PracticeClient", () => {
     mocks.deletePracticeLogMutateAsync.mockResolvedValue(undefined);
     mocks.deletePracticeMutateAsync.mockResolvedValue(undefined);
 
-    // ログが1件だけの practice にして、削除後に残り0件になるケースを再現
-    // スタブは固定で "log-a" を削除する導線しか持たないため、practice 側にも
-    // ログを id="log-a" の1件だけ持たせ、削除後の残りログが実際に0件になる
-    // ケースを正確に再現する
     const singleLogPractice = makePractice({
       practice_logs: [
         {
@@ -263,7 +281,7 @@ describe("PracticeClient", () => {
 
     renderClient([singleLogPractice]);
 
-    await user.click(screen.getByText("100m × 4本 × 1セット"));
+    await user.click(getCardRows()[0]);
     await user.click(screen.getByText("ログAを削除"));
 
     await waitFor(() => {
@@ -275,7 +293,7 @@ describe("PracticeClient", () => {
     const user = userEvent.setup();
     renderClient([makePractice()]);
 
-    await user.click(screen.getByText("100m × 4本 × 1セット"));
+    await user.click(getCardRows()[0]);
     await user.click(screen.getByText("詳細から編集"));
 
     const tabModal = screen.getByTestId("practice-tab-modal-stub");
@@ -288,7 +306,7 @@ describe("PracticeClient", () => {
     const user = userEvent.setup();
     renderClient([makePractice()]);
 
-    await user.click(screen.getByText("100m × 4本 × 1セット"));
+    await user.click(getCardRows()[0]);
     await user.click(screen.getByText("詳細からログ編集"));
 
     expect(screen.getByTestId("tab-initial-tab")).toHaveTextContent("practiceLog");
@@ -299,40 +317,30 @@ describe("PracticeClient", () => {
     expect(screen.getByText("練習記録がありません")).toBeInTheDocument();
   });
 
-  // ---------------------------------------------------------------------------
-  // Critical 2 実証(2026-07-22 修正): PracticeLogCard の日付 format に isValid()
-  // ガードが入り、不正な日付文字列でもクラッシュせず "-" 表示になる。
-  // ---------------------------------------------------------------------------
-  describe("Critical 2 実証: 不正な練習日付でもクラッシュせず「-」表示になる", () => {
+  describe("不正な練習日付でもクラッシュせず「-」表示になる", () => {
     it("practice.date が不正な文字列でもクラッシュせず、日付欄が「-」表示になる", async () => {
       const invalidDatePractice = makePractice({ date: "invalid-date-string" });
 
       expect(() => renderClient([invalidDatePractice])).not.toThrow();
 
-      // 距離フォーマット等は正常に描画され、カードがクラッシュしていないこと
-      expect(screen.getByText("100m × 4本 × 1セット")).toBeInTheDocument();
-      // 日付欄は不正日付を "-" にフォールバックする(isValid ガード)
-      const cards = screen.getAllByRole("button", { name: /^練習詳細を表示\(/ });
+      expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
+      const cards = getCardRows();
       expect(cards[0].textContent).toContain("-");
     });
   });
 
   describe("store リーク回帰 (usePracticeStore は3画面共有の singleton)", () => {
     it("他画面が TabModal を開いたまま残した状態でマウントしても、mount 時に closeAll され TabModal は開かない", () => {
-      // beforeEach 実行後に、あえて「他画面 (dashboard 等) が残した」状態を再現する。
-      // beforeEach の closeTabModal() 呼び出しに検証結果を依存させないための明示的な汚染。
       usePracticeStore.setState({
         isOpen: true,
         activeTab: "practiceLog",
         editingPracticeId: "leaked-from-other-page",
         selectedDate: new Date("2026-01-01"),
       });
-      expect(usePracticeStore.getState().isOpen).toBe(true); // 前提条件の確認
+      expect(usePracticeStore.getState().isOpen).toBe(true);
 
       renderClient([makePractice()]);
 
-      // mount 時の useLayoutEffect による closeAll() で、他画面由来の isOpen/activeTab/
-      // editingPracticeId がリセットされ、TabModal が意図せず開いた状態で描画されないこと
       expect(screen.queryByTestId("practice-tab-modal-stub")).not.toBeInTheDocument();
       expect(usePracticeStore.getState().isOpen).toBe(false);
       expect(usePracticeStore.getState().activeTab).toBe("practice");
@@ -343,38 +351,27 @@ describe("PracticeClient", () => {
       const user = userEvent.setup();
       const { unmount } = renderClient([makePractice()]);
 
-      // この画面内で詳細→編集導線から TabModal を開く
-      await user.click(screen.getByText("100m × 4本 × 1セット"));
+      await user.click(getCardRows()[0]);
       await user.click(screen.getByText("詳細から編集"));
       expect(screen.getByTestId("practice-tab-modal-stub")).toBeInTheDocument();
       expect(usePracticeStore.getState().isOpen).toBe(true);
 
       unmount();
 
-      // アンマウント時の useLayoutEffect クリーンアップで closeAll() が呼ばれ、
-      // 他画面 (dashboard/competition) に isOpen=true 等がリークしないこと
       expect(usePracticeStore.getState().isOpen).toBe(false);
       expect(usePracticeStore.getState().editingPracticeId).toBeNull();
     });
   });
 
   // ---------------------------------------------------------------------------
-  // カラムソート機能 (2026-07-22 Sprint 再検証: テーブル/Pagination/モバイルセレクト廃止
-  // → カード + SortBottomSheet + もっと見る(displayCount) に全面刷新)
-  // 再検証観点: Critical 2 (距離ソートの桁あふれ) が新カードUIでも効いているか、
-  // ページング1リセットの仕様が「もっと見るのdisplayCount 20リセット」に置き換わったこと、
-  // 旧モバイルセレクトの代わりに SortBottomSheet のプリセット選択チェック表示が
-  // 実際の sortColumn/sortOrder を反映することを確認する。
+  // カラムソート機能 (2026-07-23 Sprint 再検証: day-level 化により distance/circle/style/
+  // avgTime のプリセットが廃止され、date/place の4択のみになった)
   // ---------------------------------------------------------------------------
-  describe("[V-W-PSF 再検証] カラムソート(カード + SortBottomSheet)", () => {
-    const makeSingleLogPractice = (overrides: {
+  describe("[V-WP-04/05/06 再検証] カラムソート(day-level, date/placeのみ)", () => {
+    const makeSingleLogPracticeDay = (overrides: {
       id: string;
       date: string;
-      place: string;
-      distance: number;
-      repCount: number;
-      setCount: number;
-      style: string;
+      place: string | null;
     }): PracticeWithLogs =>
       makePractice({
         id: overrides.id,
@@ -385,11 +382,11 @@ describe("PracticeClient", () => {
             id: `${overrides.id}-log`,
             user_id: "user-1",
             practice_id: overrides.id,
-            style: overrides.style,
+            style: "Fr",
             swim_category: "Swim",
-            rep_count: overrides.repCount,
-            set_count: overrides.setCount,
-            distance: overrides.distance,
+            rep_count: 4,
+            set_count: 1,
+            distance: 100,
             circle: 60,
             note: null,
             created_at: `${overrides.date}T00:00:00Z`,
@@ -400,166 +397,131 @@ describe("PracticeClient", () => {
         ],
       });
 
-    // カード一覧の行取得ヘルパー: PracticeLogCard は role="button" + aria-label を持つ。
-    // (2026-07-22 Warning3対応: t("client.viewDetailAriaLabelWithInfo", {date, place, style}) =
-    // "練習詳細を表示(07/01 市民プール Fr)" のように個体情報付きの動的文言になったため
-    // 前方一致の正規表現で取得する。
-    const getCardRows = (): HTMLElement[] =>
-      screen.getAllByRole("button", { name: /^練習詳細を表示\(/ });
+    it("[V-WP-04] 並べ替えシートに date/place の4項目のみが表示され、旧 distance/circle/style/avgTime のプリセットは表示されない", async () => {
+      const user = userEvent.setup();
+      renderClient([makeSingleLogPracticeDay({ id: "p1", date: "2026-01-01", place: "テストプール" })]);
 
-    it(
-      "[Critical 2 再検証] 距離ヘッダークリックで、rep_count が極端に大きい行でも" +
-        "distance を primary key として正しくソートされる(桁あふれしない)",
-      async () => {
-        const user = userEvent.setup();
-        // rep_count=999 という大きな値を持たせても、distance(100) が distance(101) より
-        // 優先されて先に来ることを確認する(distance*1000+rep_count のような数値合成だと
-        // 100*1000+999=100999 > 101*1000+0=101000 は成立しないため一見問題なさそうに見えるが、
-        // rep_count や set_count に更に大きな値が入ると容易に逆転しうる。タプル比較なら
-        // distance の大小だけで確定するため、桁の選び方に依存しない)
-        const practiceLow = makeSingleLogPractice({
-          id: "practice-low",
-          date: "2026-01-01",
-          place: "低距離プール",
-          distance: 100,
-          repCount: 999,
-          setCount: 9,
-          style: "Fr",
-        });
-        const practiceHigh = makeSingleLogPractice({
-          id: "practice-high",
-          date: "2026-02-01",
-          place: "高距離プール",
-          distance: 101,
-          repCount: 0,
-          setCount: 0,
-          style: "Br",
-        });
+      await user.click(screen.getByRole("button", { name: "並べ替え" }));
 
-        renderClient([practiceLow, practiceHigh]);
+      const dialog = screen.getByRole("dialog");
+      expect(screen.getByRole("button", { name: "日付(新しい順)" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "日付(古い順)" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "場所(昇順)" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "場所(降順)" })).toBeInTheDocument();
 
-        // 前提条件: 既定順(日付降順)では高距離プール(2月)が先
-        let rows = getCardRows();
-        expect(rows[0].textContent).toContain("高距離プール");
-        expect(rows[1].textContent).toContain("低距離プール");
+      expect(dialog).not.toHaveTextContent("距離(昇順)");
+      expect(dialog).not.toHaveTextContent("サークル(昇順)");
+      expect(dialog).not.toHaveTextContent("種目(昇順)");
+      expect(dialog).not.toHaveTextContent("平均タイム");
+    });
 
-        // SortBottomSheet を開き「距離(昇順)」プリセットを選択する
-        await user.click(screen.getByRole("button", { name: "並べ替え" }));
-        await user.click(screen.getByRole("button", { name: "距離(昇順)" }));
+    it("[V-WP-05] 「場所(昇順)」を選択すると一覧が place 昇順に再描画される", async () => {
+      const user = userEvent.setup();
+      const practiceA = makeSingleLogPracticeDay({ id: "p-a", date: "2026-01-01", place: "Aプール" });
+      const practiceB = makeSingleLogPracticeDay({ id: "p-b", date: "2026-02-01", place: "Bプール" });
+      renderClient([practiceB, practiceA]);
 
-        rows = getCardRows();
-        expect(rows[0].textContent, "distance=100 の行が distance=101 より先に来ていない").toContain(
-          "低距離プール",
-        );
-        expect(rows[1].textContent).toContain("高距離プール");
-      },
-    );
+      // 既定(日付新しい順)では2月のBプールが先
+      let rows = getCardRows();
+      expect(rows[0].textContent).toContain("Bプール");
 
-    it(
-      "[Critical 3 再検証・displayCount版] 並べ替えプリセット選択で displayCount が20にリセットされ、" +
-        "もっと見るボタンが再度表示される",
-      async () => {
-        const user = userEvent.setup();
-        const practices = Array.from({ length: 25 }, (_, i) =>
-          makeSingleLogPractice({
-            id: `practice-${i}`,
-            date: `2026-01-${String((i % 28) + 1).padStart(2, "0")}`,
-            place: `プール${i}`,
-            distance: 100,
-            repCount: 4,
-            setCount: 1,
-            style: "Fr",
-          }),
-        );
+      await user.click(screen.getByRole("button", { name: "並べ替え" }));
+      await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
 
-        renderClient(practices);
+      rows = getCardRows();
+      expect(rows[0].textContent).toContain("Aプール");
+      expect(rows[1].textContent).toContain("Bプール");
+    });
 
-        // 初期表示は20件、「もっと見る」ボタンが表示される
+    it("[V-WP-06] place が未設定(null)の日は、場所ソートの昇順・降順いずれでも末尾固定される", async () => {
+      const user = userEvent.setup();
+      const withPlace = makeSingleLogPracticeDay({ id: "p-has", date: "2026-01-01", place: "設定済みプール" });
+      const withoutPlace = makeSingleLogPracticeDay({ id: "p-none", date: "2026-01-02", place: null });
+      renderClient([withPlace, withoutPlace]);
+
+      // place が未設定の場合、PracticeCard は場所の <span> 自体を描画しない(aria-label の
+      // 内部表現でのみ "-" になる)。そのため可視テキストではなく、どちらの practice が
+      // 末尾に来ているか(date で判別)を確認する。
+      await user.click(screen.getByRole("button", { name: "並べ替え" }));
+      await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
+      let rows = getCardRows();
+      expect(rows[rows.length - 1].textContent).toContain("2026/01/02"); // place=null の日
+      expect(rows[0].textContent).toContain("2026/01/01");
+
+      await user.click(screen.getByRole("button", { name: "並べ替え" }));
+      await user.click(screen.getByRole("button", { name: "場所(降順)" }));
+      rows = getCardRows();
+      expect(rows[rows.length - 1].textContent).toContain("2026/01/02"); // desc でも末尾のまま
+      expect(rows[0].textContent).toContain("2026/01/01");
+    });
+
+    it("並べ替えプリセット選択で displayCount が20にリセットされ、もっと見るボタンが再度表示される", async () => {
+      const user = userEvent.setup();
+      const practices = Array.from({ length: 25 }, (_, i) =>
+        makeSingleLogPracticeDay({
+          id: `practice-${i}`,
+          date: `2026-01-${String((i % 28) + 1).padStart(2, "0")}`,
+          place: `プール${i}`,
+        }),
+      );
+
+      renderClient(practices);
+
+      expect(getCardRows()).toHaveLength(20);
+      expect(screen.getByRole("button", { name: "もっと見る" })).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "もっと見る" }));
+      expect(getCardRows()).toHaveLength(25);
+      expect(screen.queryByRole("button", { name: "もっと見る" })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "並べ替え" }));
+      await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
+
+      await waitFor(() => {
         expect(getCardRows()).toHaveLength(20);
-        expect(screen.getByRole("button", { name: "もっと見る" })).toBeInTheDocument();
+      });
+      expect(screen.getByRole("button", { name: "もっと見る" })).toBeInTheDocument();
+    });
 
-        // もっと見るを押して40件(=25件全件)表示にする
-        await user.click(screen.getByRole("button", { name: "もっと見る" }));
-        expect(getCardRows()).toHaveLength(25);
-        expect(screen.queryByRole("button", { name: "もっと見る" })).not.toBeInTheDocument();
+    it("プリセット選択で実際の sortColumn/sortOrder が反映され、シートを再度開くと選択中のプリセットにチェックマークが表示される", async () => {
+      const user = userEvent.setup();
+      const practiceA = makeSingleLogPracticeDay({ id: "practice-a", date: "2026-01-01", place: "Aプール" });
+      const practiceB = makeSingleLogPracticeDay({ id: "practice-b", date: "2026-02-01", place: "Bプール" });
 
-        // 並べ替えプリセットを選択(ソート変更) → displayCount が20にリセットされる
-        await user.click(screen.getByRole("button", { name: "並べ替え" }));
-        await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
+      renderClient([practiceA, practiceB]);
 
-        await waitFor(() => {
-          expect(getCardRows()).toHaveLength(20);
-        });
-        expect(screen.getByRole("button", { name: "もっと見る" })).toBeInTheDocument();
-      },
-    );
+      await user.click(screen.getByRole("button", { name: "並べ替え" }));
+      const dateDescRow = screen.getByRole("button", { name: "日付(新しい順)" });
+      expect(dateDescRow.querySelector("svg")).toBeInTheDocument();
+      const placeDescRowInitial = screen.getByRole("button", { name: "場所(降順)" });
+      expect(placeDescRowInitial.querySelector("svg")).not.toBeInTheDocument();
 
-    it(
-      "[Warning 再検証・SortBottomSheet版] プリセット選択で実際の sortColumn/sortOrder が反映され、" +
-        "シートを再度開くと選択中のプリセットにチェックマークが表示される(旧モバイルセレクトの代替検証)",
-      async () => {
-        const user = userEvent.setup();
-        const practiceA = makeSingleLogPractice({
-          id: "practice-a",
-          date: "2026-01-01",
-          place: "Aプール",
-          distance: 50,
-          repCount: 4,
-          setCount: 1,
-          style: "Fr",
-        });
-        const practiceB = makeSingleLogPractice({
-          id: "practice-b",
-          date: "2026-02-01",
-          place: "Bプール",
-          distance: 200,
-          repCount: 2,
-          setCount: 1,
-          style: "Br",
-        });
+      await user.click(screen.getByRole("button", { name: "場所(降順)" }));
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
 
-        renderClient([practiceA, practiceB]);
+      let rows = getCardRows();
+      expect(rows[0].textContent).toContain("Bプール");
+      expect(rows[1].textContent).toContain("Aプール");
 
-        // 初期状態: シートを開くと既定の「日付(新しい順)」にチェックマーク(svg)が付いている
-        await user.click(screen.getByRole("button", { name: "並べ替え" }));
-        const dateDescRow = screen.getByRole("button", { name: "日付(新しい順)" });
-        expect(dateDescRow.querySelector("svg")).toBeInTheDocument();
-        const distanceDescRowInitial = screen.getByRole("button", { name: "距離(降順)" });
-        expect(distanceDescRowInitial.querySelector("svg")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "並べ替え" }));
+      expect(screen.getByRole("button", { name: "場所(降順)" }).querySelector("svg")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "日付(新しい順)" }).querySelector("svg")).not.toBeInTheDocument();
 
-        // 「距離(降順)」を選択(即時反映・シートは閉じるモーション(300ms)後に unmount される)
-        await user.click(screen.getByRole("button", { name: "距離(降順)" }));
-        await waitFor(() => {
-          expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-        });
-
-        // 並び順に実際に反映されている(distance=200 の Bプールが先)
-        let rows = getCardRows();
-        expect(rows[0].textContent).toContain("Bプール");
-        expect(rows[1].textContent).toContain("Aプール");
-
-        // シートを再度開くと「距離(降順)」にチェックマークが移動し、「日付(新しい順)」は外れている
-        await user.click(screen.getByRole("button", { name: "並べ替え" }));
-        expect(screen.getByRole("button", { name: "距離(降順)" }).querySelector("svg")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "日付(新しい順)" }).querySelector("svg")).not.toBeInTheDocument();
-
-        // 「距離(昇順)」を選び直すと並び順も反転する
-        await user.click(screen.getByRole("button", { name: "距離(昇順)" }));
-        rows = getCardRows();
-        expect(rows[0].textContent).toContain("Aプール"); // distance=50 が先(昇順)
-        expect(rows[1].textContent).toContain("Bプール"); // distance=200 が後
-      },
-    );
+      await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
+      rows = getCardRows();
+      expect(rows[0].textContent).toContain("Aプール");
+      expect(rows[1].textContent).toContain("Bプール");
+    });
   });
 
   // ---------------------------------------------------------------------------
-  // タグフィルター (OR → AND 変更の回帰防止テスト)
-  // 変更点: filteredPracticeLogs のタグ条件が `selectedTagIds.some(...)` (OR) から
-  // `selectedTagIds.every((tagId) => logTagIds.includes(tagId))` (AND) に変更された。
-  // 「選択した全タグを持つログのみ表示」になる。場所/種目とのカラム間 AND は従来どおり。
-  // 以前この挙動(複数タグ選択時の絞り込み)を検証するテストは存在しなかった。
+  // タグフィルター(複数選択時はAND)。各 practice は1ログのみのため、day-level 化後も
+  // 「1ログ内でAND」の判定と結果は log-level 時代と同一になる(day-level 固有の
+  // OR-exists across logs の検証は PracticeClient.filterSort.test.tsx に分離)
   // ---------------------------------------------------------------------------
-  describe("タグフィルター(複数選択時は AND)", () => {
+  describe("タグフィルター(複数選択時は AND、単一ログ practice での非退行)", () => {
     const tagA: PracticeTag = {
       id: "tag-a",
       user_id: "user-1",
@@ -577,8 +539,6 @@ describe("PracticeClient", () => {
       updated_at: "2026-01-01T00:00:00Z",
     };
 
-    // makePractice のデフォルトログ(Fr/Br)を使わず、タグ構成を明示した単一ログの
-    // practice を組み立てるヘルパー(place/style で行を識別する)
     const makeTaggedPractice = (overrides: {
       id: string;
       place: string;
@@ -612,12 +572,6 @@ describe("PracticeClient", () => {
         ],
       });
 
-    // 2026-07-22 Sprint(Warning2対応): 常時表示のタグピル行は撤去され、タグ絞り込みは
-    // FilterBottomSheet の「タグ」グループのチップに一本化された。シートが閉じていれば
-    // 「絞り込み」ボタン(絞り込み件数バッジが付くと "絞り込み1" 等になるため正規表現で
-    // 部分一致させる)で開いてからチップ(tag.name)をクリックする。multi グループは
-    // クリックのたびに即時反映されるがシートは自動で閉じない仕様のため、複数タグを
-    // 連続選択する場合は2回目以降は開いたままチップだけクリックすればよい。
     const clickTagFilterButton = async (
       user: ReturnType<typeof userEvent.setup>,
       tagName: string,
@@ -628,16 +582,7 @@ describe("PracticeClient", () => {
       await user.click(screen.getByRole("button", { name: tagName }));
     };
 
-    // FilterBottomSheet は選択後も開いたままなので(適用ボタンなし即時反映の仕様)、
-    // シート内の「場所」グループのチップ(place 値と同じテキスト)とカード本体の place
-    // テキストが重複しないよう、絞り込み結果を確認する前に必ず「閉じる」を押して
-    // 閉じてから(waitFor で unmount を待って)アサーションする(各テスト内でインライン化)。
-
-    // カード化(2026-07-22 Sprint)によりテーブル/モバイルカードの二重描画は解消されたため、
-    // 表示有無は screen.queryByText/getByText を直接使う(place はカード内で単一テキスト
-    // ノードとして描画されるため exact match で一意に検索できる)。
-
-    it("[AND] タグA・タグBの両方を選択すると、両方を持つログのみ表示され、片方だけのログは除外される", async () => {
+    it("[AND] タグA・タグBの両方を選択して適用すると、両方を持つ日のみ表示され、片方だけの日は除外される", async () => {
       const user = userEvent.setup();
       const practiceOnlyA = makeTaggedPractice({
         id: "practice-only-a",
@@ -660,26 +605,20 @@ describe("PracticeClient", () => {
 
       renderClient([practiceOnlyA, practiceOnlyB, practiceBoth], [tagA, tagB]);
 
-      // 前提: フィルタ前は3件とも表示される
-      expect(screen.getByText(/プールOnlyA/)).toBeInTheDocument();
-      expect(screen.getByText(/プールOnlyB/)).toBeInTheDocument();
-      expect(screen.getByText(/プールBoth/)).toBeInTheDocument();
+      expect(cardHasPlace("プールOnlyA")).toBe(true);
+      expect(cardHasPlace("プールOnlyB")).toBe(true);
+      expect(cardHasPlace("プールBoth")).toBe(true);
 
-      // タグA・タグB を両方選択
       await clickTagFilterButton(user, "タグA");
       await clickTagFilterButton(user, "タグB");
-      await user.click(screen.getByRole("button", { name: "閉じる" }));
-      await waitFor(() => {
-        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      });
+      await user.click(screen.getByRole("button", { name: "適用" }));
 
-      // 両方のタグを持つ "プールBoth" のみ表示され、片方だけの行は除外される(AND)
-      expect(screen.getByText(/プールBoth/)).toBeInTheDocument();
-      expect(screen.queryByText(/プールOnlyA/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/プールOnlyB/)).not.toBeInTheDocument();
+      expect(cardHasPlace("プールBoth")).toBe(true);
+      expect(cardHasPlace("プールOnlyA")).toBe(false);
+      expect(cardHasPlace("プールOnlyB")).toBe(false);
     });
 
-    it("[単一選択] タグを1つだけ選択した場合は、そのタグを持つログが従来どおり表示される(単一選択はOR/AND同値)", async () => {
+    it("[単一選択] タグを1つだけ選択して適用した場合は、そのタグを持つ日が従来どおり表示される", async () => {
       const user = userEvent.setup();
       const practiceOnlyA = makeTaggedPractice({
         id: "practice-only-a",
@@ -702,22 +641,16 @@ describe("PracticeClient", () => {
 
       renderClient([practiceOnlyA, practiceOnlyB, practiceBoth], [tagA, tagB]);
 
-      // タグA のみ選択
       await clickTagFilterButton(user, "タグA");
-      await user.click(screen.getByRole("button", { name: "閉じる" }));
-      await waitFor(() => {
-        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      });
+      await user.click(screen.getByRole("button", { name: "適用" }));
 
-      // タグA を持つ "プールOnlyA" と "プールBoth" は表示され、タグA を持たない "プールOnlyB" は除外される
-      expect(screen.getByText(/プールOnlyA/)).toBeInTheDocument();
-      expect(screen.getByText(/プールBoth/)).toBeInTheDocument();
-      expect(screen.queryByText(/プールOnlyB/)).not.toBeInTheDocument();
+      expect(cardHasPlace("プールOnlyA")).toBe(true);
+      expect(cardHasPlace("プールBoth")).toBe(true);
+      expect(cardHasPlace("プールOnlyB")).toBe(false);
     });
 
-    it("[カラム間AND] タグ(AND)と場所フィルターを併用すると、両条件を満たす行のみ表示される", async () => {
+    it("[カラム間AND] タグ(AND)と場所フィルターを併用すると、両条件を満たす日のみ表示される", async () => {
       const user = userEvent.setup();
-      // 両方のタグを持つログを異なる場所に2件用意する
       const comboAtPoolX = makeTaggedPractice({
         id: "practice-combo-x",
         place: "プールX",
@@ -733,88 +666,81 @@ describe("PracticeClient", () => {
 
       renderClient([comboAtPoolX, comboAtPoolY], [tagA, tagB]);
 
-      // タグA・タグBを両方選択(タグ内AND) → まだ両方の場所が表示される
       await clickTagFilterButton(user, "タグA");
       await clickTagFilterButton(user, "タグB");
-      await user.click(screen.getByRole("button", { name: "閉じる" }));
-      await waitFor(() => {
-        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      });
-      expect(screen.getByText(/プールX/)).toBeInTheDocument();
-      expect(screen.getByText(/プールY/)).toBeInTheDocument();
-
-      // 場所フィルターで「プールX」のみを選択(カラム間AND)。FilterBottomSheet を再度開き、
-      // 「場所」グループのチップ(プールX)をクリックする(ColumnFilterDropdown 廃止に伴う置換)。
-      // タグが2件アクティブなため絞り込みボタンのアクセシブルネームは件数バッジ込みで
-      // "絞り込み1" になる。正規表現で部分一致させる。
-      await user.click(screen.getByRole("button", { name: /絞り込み/ }));
       await user.click(screen.getByRole("button", { name: "プールX" }));
-      await user.click(screen.getByRole("button", { name: "閉じる" }));
-      await waitFor(() => {
-        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      });
+      await user.click(screen.getByRole("button", { name: "適用" }));
 
-      // タグ(AND)を満たし、かつ場所がプールXの行のみ表示される
-      expect(screen.getByText(/プールX/)).toBeInTheDocument();
-      expect(screen.queryByText(/プールY/)).not.toBeInTheDocument();
+      expect(cardHasPlace("プールX")).toBe(true);
+      expect(cardHasPlace("プールY")).toBe(false);
     });
   });
 
   // ---------------------------------------------------------------------------
-  // 絞り込みチップのトグル解除(2026-07-22 追加修正: FilterBottomSheet.tsx のみ変更)
-  // single グループ(種目)で選択中のチップを再クリックすると未選択(=すべて)に戻り、
-  // 一覧が全件表示に戻ることを実データのフィルタリングまで通して検証する。
+  // 絞り込みチップのトグル解除(single グループ: 種目)
+  // day-level 化により、1 practice=1カード=先頭ログのみ表示となったため、旧テスト
+  // (「1つの practice に Fr/Br 2ログを持たせ、フィルタで片方の“行”が消える」)は
+  // 前提が成立しない(2件目のログはフィルタ前から非表示のため)。
+  // 種目フィルタは ANY-log-match(その日のいずれかのログが一致すれば日全体を表示)なので、
+  // 「異なる種目の日を2つ用意し、種目フィルタでどちらかの日が非表示になる」形に書き換える。
   // ---------------------------------------------------------------------------
-  describe("絞り込みチップのトグル解除(single グループ: 種目)", () => {
-    it("種目チップを選択→再クリックで未選択に戻り、一覧が全件表示に戻る", async () => {
+  describe("絞り込みチップのトグル解除(single グループ: 種目、day-level)", () => {
+    const makeStylePractice = (id: string, place: string, style: string): PracticeWithLogs =>
+      makePractice({
+        id,
+        date: "2026-01-01",
+        place,
+        practice_logs: [
+          {
+            id: `${id}-log`,
+            user_id: "user-1",
+            practice_id: id,
+            style,
+            swim_category: "Swim",
+            rep_count: 4,
+            set_count: 1,
+            distance: 100,
+            circle: 60,
+            note: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            practice_times: [],
+            practice_log_tags: [],
+          },
+        ],
+      });
+
+    it("種目チップを選択して適用→再選択して適用で未選択に戻り、一覧が全件表示に戻る", async () => {
       const user = userEvent.setup();
-      // デフォルトの makePractice() は Fr(100m×4本×1セット) / Br(50m×2本×1セット) の
-      // 2ログを持つ単一 practice
-      renderClient([makePractice()]);
+      const freestyleDay = makeStylePractice("p-fr", "自由形プール", "Fr");
+      const breastDay = makeStylePractice("p-br", "平泳ぎプール", "Br");
+      renderClient([freestyleDay, breastDay]);
 
-      // 前提: 絞り込み前は2ログとも表示される
-      expect(screen.getByText("100m × 4本 × 1セット")).toBeInTheDocument();
-      expect(screen.getByText("50m × 2本 × 1セット")).toBeInTheDocument();
+      expect(cardHasPlace("自由形プール")).toBe(true);
+      expect(cardHasPlace("平泳ぎプール")).toBe(true);
 
-      // 「絞り込み」を開いて「自由形」チップを選択する
       await user.click(screen.getByRole("button", { name: "絞り込み" }));
       await user.click(screen.getByRole("button", { name: "自由形" }));
-      await user.click(screen.getByRole("button", { name: "閉じる" }));
-      await waitFor(() => {
-        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      });
+      await user.click(screen.getByRole("button", { name: "適用" }));
 
-      // 自由形(Fr)のみに絞り込まれる
-      expect(screen.getByText("100m × 4本 × 1セット")).toBeInTheDocument();
-      expect(screen.queryByText("50m × 2本 × 1セット")).not.toBeInTheDocument();
+      expect(cardHasPlace("自由形プール")).toBe(true);
+      expect(cardHasPlace("平泳ぎプール")).toBe(false);
 
-      // 絞り込みを再度開き、選択中の「自由形」チップを再クリック(トグル解除)
+      // 絞り込みを再度開き、選択中の「自由形」チップを再クリック(トグル解除)して適用
       await user.click(screen.getByRole("button", { name: /絞り込み/ }));
       await user.click(screen.getByRole("button", { name: "自由形" }));
-      await user.click(screen.getByRole("button", { name: "閉じる" }));
-      await waitFor(() => {
-        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      });
+      await user.click(screen.getByRole("button", { name: "適用" }));
 
-      // 未選択(=すべて)に戻り、一覧が全件表示に戻る
-      expect(screen.getByText("100m × 4本 × 1セット")).toBeInTheDocument();
-      expect(screen.getByText("50m × 2本 × 1セット")).toBeInTheDocument();
+      expect(cardHasPlace("自由形プール")).toBe(true);
+      expect(cardHasPlace("平泳ぎプール")).toBe(true);
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // スマホ幅調整(2026-07-22 Sprint: 大会一覧とのパリティ)
-  // 一覧セクションの全幅化+カード間隔縮小(CompetitionClient.tsx と同一パターン)
-  // ---------------------------------------------------------------------------
   describe("スマホ幅調整: 一覧セクションの全幅化(rounded-none)+左右paddingゼロ+カード間隔縮小(大会タブとのパリティ)", () => {
     it("一覧セクションのラッパーが rounded-none sm:rounded-lg を持つ(スマホ幅で角丸を無くし全幅に見せる)", async () => {
       renderClient([makePractice()]);
 
-      // makePractice() は Fr/Br の2ログを持つため、ログ単位でカードが2枚描画される。
-      // どちらも同一の一覧セクション配下にあるため先頭の1枚で検証すれば十分。
-      const [card] = screen.getAllByRole("button", { name: /^練習詳細を表示\(/ });
-      // 一覧セクションのラッパー(bg-white rounded-none sm:rounded-lg shadow)を辿る。
-      // カードの祖先要素から rounded-none を持つ要素を探す。
+      const [card] = getCardRows();
       const sectionWrapper = card.closest(".rounded-none");
       expect(sectionWrapper).not.toBeNull();
       expect(sectionWrapper?.className).toContain("rounded-none");
@@ -827,7 +753,7 @@ describe("PracticeClient", () => {
       () => {
         renderClient([makePractice()]);
 
-        const [card] = screen.getAllByRole("button", { name: /^練習詳細を表示\(/ });
+        const [card] = getCardRows();
         const listWrapper = card.parentElement;
         expect(listWrapper?.className).toContain("px-0");
         expect(listWrapper?.className).toContain("sm:px-6");
