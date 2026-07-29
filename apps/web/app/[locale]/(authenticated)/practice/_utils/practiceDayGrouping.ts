@@ -1,4 +1,4 @@
-import type { PracticeWithLogs } from "@apps/shared/types";
+import type { PracticeLogWithTags, PracticeTag, PracticeWithLogs } from "@apps/shared/types";
 import type { PracticeSortColumn } from "@/stores/practice/practiceStore";
 import type { SortValue } from "@/hooks/useTableSort";
 
@@ -72,4 +72,65 @@ export function getPracticeDaySortValue(
     default:
       return null;
   }
+}
+
+/** サークルタイム(秒)を "1'30"" 形式にフォーマットする(mm'ss" 表記)。 */
+export function formatCircleTime(circleSeconds: number): string {
+  const minutes = Math.floor(circleSeconds / 60);
+  const seconds = Math.floor(circleSeconds % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${minutes}'${seconds}"`;
+}
+
+/** 1件の練習ログを一覧カードの1行として表示するための情報 */
+export interface PracticeLogLine {
+  logId: string;
+  secondLineInfo: string;
+  tags: PracticeTag[];
+}
+
+/**
+ * 練習日(practice)に紐づく practice_logs を、1ログ=1行として表示するための情報に変換する。
+ *
+ * 2026-07-23 Sprint で先頭ログ(firstLog)のみを表示していたのを、2026-07-28 のユーザー判断
+ * (「1つの練習に複数の練習ログがあれば全部見せてほしい」)により全ログ展開に戻す一般化。
+ * ログの並び順は practice_logs の配列順をそのまま用いる(取得元のクエリ順を尊重し、
+ * ここで独自の並べ替えは行わない)。タグはログごと(practice_log_tags は log 単位の関連)。
+ *
+ * @param logs practice.practice_logs
+ * @param getStyleLabel 種目コードをローカライズラベルに変換する関数(呼び出し側の t に依存するため注入)
+ * @param formatDistance 距離×本数×セットの表示文字列を組み立てる関数(呼び出し側の t に依存するため注入)
+ */
+export function buildPracticeLogLines(
+  logs: PracticeLogWithTags[] | undefined,
+  getStyleLabel: (style: string) => string,
+  formatDistance: (distance: number, reps: number, sets: number) => string,
+): PracticeLogLine[] {
+  if (!logs || logs.length === 0) return [];
+
+  return logs.map((log) => {
+    const parts: string[] = [];
+
+    if (log.distance && log.rep_count && log.set_count) {
+      parts.push(formatDistance(log.distance, log.rep_count, log.set_count));
+    }
+    if (log.circle) {
+      parts.push(formatCircleTime(log.circle));
+    }
+    if (log.style) {
+      parts.push(getStyleLabel(log.style));
+    }
+
+    const tags: PracticeTag[] =
+      log.practice_log_tags
+        ?.map((plt) => plt.practice_tags)
+        .filter((tag): tag is NonNullable<typeof tag> => tag != null) ?? [];
+
+    return {
+      logId: log.id,
+      secondLineInfo: parts.join(" / "),
+      tags,
+    };
+  });
 }

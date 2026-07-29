@@ -42,10 +42,10 @@ type TeamDetailNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 export const TeamDetailScreen: React.FC = () => {
   const route = useRoute<TeamDetailScreenRouteProp>();
   const navigation = useNavigation<TeamDetailNavigationProp>();
-  const { teamId } = route.params;
+  const { teamId, initialTab } = route.params;
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<TeamTabType>("members");
+  const [activeTab, setActiveTab] = useState<TeamTabType>(initialTab ?? "members");
   const [isCopied, setIsCopied] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
   const [announcementFormVisible, setAnnouncementFormVisible] = useState(false);

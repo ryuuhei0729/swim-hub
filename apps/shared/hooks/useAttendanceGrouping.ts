@@ -20,8 +20,12 @@ export function useAttendanceGrouping(
   teamMembers: TeamMember[],
 ) {
   return useMemo(() => {
-    // 回答済みのユーザーIDセット
-    const answeredUserIds = new Set(attendanceData.map((a) => a.user_id));
+    // 回答済みのユーザーIDセット（status が実際に設定されている行のみ「回答済み」とみなす。
+    // DBトリガーはイベント作成時に status=NULL の team_attendance 行を全メンバー分自動生成するため、
+    // 行の存在有無だけでは判定できない）
+    const answeredUserIds = new Set(
+      attendanceData.filter((a) => a.status != null).map((a) => a.user_id),
+    );
 
     // 未回答のメンバー（チームメンバー全員から回答済みを除外）
     const unansweredMembers = teamMembers.filter((m) => !answeredUserIds.has(m.id));

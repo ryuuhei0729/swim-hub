@@ -527,7 +527,14 @@ describe("[V-C2C1-01] teams namespace の必須キー確認", () => {
     "teams.attendanceStatusModal.col.status",
 
     // monthly-attendance/components/AttendanceGroupingDisplay.tsx
+    // (旧 teamsAdmin 側の同名グループから移設: ロール中立な共有UIのため present/absent/
+    // other/unanswered/none も admin-attendance/AttendanceGroupingDisplay.tsx と共通で使用)
     "teams.attendanceGrouping.categoryLabel",
+    "teams.attendanceGrouping.present",
+    "teams.attendanceGrouping.absent",
+    "teams.attendanceGrouping.other",
+    "teams.attendanceGrouping.unanswered",
+    "teams.attendanceGrouping.none",
 
     // monthly-attendance/hooks/useAttendanceEdit.ts
     "teams.attendanceEditHook.saveError",
@@ -723,6 +730,12 @@ describe("[V-C2C1-04] ICU Message Format プレースホルダーの ja/en 対�
     "teams.attendance.monthLabel",
     // 出欠率: {rate}% 等
     "teams.monthList.attendanceRateLabel",
+    // AttendanceGroupingDisplay カテゴリヘッダー: 出席 ({count}名) 等
+    // (旧 teamsAdmin 側の同名グループから移設)
+    "teams.attendanceGrouping.present",
+    "teams.attendanceGrouping.absent",
+    "teams.attendanceGrouping.other",
+    "teams.attendanceGrouping.unanswered",
   ] as const;
 
   for (const key of ICU_KEYS_TO_CHECK) {

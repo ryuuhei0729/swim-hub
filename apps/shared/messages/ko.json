@@ -2393,6 +2393,7 @@
         "memberStatusOther": "기타",
         "memberStatusUnanswered": "미응답",
         "memberAttendanceFetchFailed": "출결 정보를 불러오지 못했습니다",
+        "teamMembersFetchFailed": "멤버 목록을 불러오지 못했습니다",
         "memberAttendanceEmpty": "출결 응답이 없습니다",
         "memberAttendanceLoading": "불러오는 중...",
         "bulkChange": {
@@ -2939,7 +2940,12 @@
       }
     },
     "attendanceGrouping": {
-      "categoryLabel": "명"
+      "categoryLabel": "명",
+      "present": "출석 ({count}명)",
+      "absent": "결석 ({count}명)",
+      "other": "기타 ({count}명)",
+      "unanswered": "미응답 ({count}명)",
+      "none": "없음"
     },
     "attendanceEditHook": {
       "saveError": "출결 정보 저장에 실패했습니다",
@@ -3478,13 +3484,6 @@
     "attendanceStatus": {
       "loading": "불러오는 중...",
       "titleSuffix": "의 출석 현황"
-    },
-    "attendanceGrouping": {
-      "present": "출석 ({count}명)",
-      "absent": "결석 ({count}명)",
-      "other": "기타 ({count}명)",
-      "unanswered": "미응답 ({count}명)",
-      "none": "없음"
     },
     "templateDownload": {
       "title": "Excel 템플릿 다운로드",

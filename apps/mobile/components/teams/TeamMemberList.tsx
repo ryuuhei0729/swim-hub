@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Switch,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
@@ -29,6 +30,7 @@ import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { formatTime } from "@/utils/formatters";
+import { selectBestTime, formatBestTimeSuffix } from "@/utils/bestTimeSelection";
 import { TeamMemberGroupFilter } from "./TeamMemberGroupFilter";
 import { MemberDetailModal } from "./member-detail";
 
@@ -246,17 +248,34 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     }
   }, [members, loadBestTimes]);
 
+  // 引き継ぎタイムを含めて表示するか（WEB版 useMemberBestTimes 準拠、初期値false）
+  const [includeRelaying, setIncludeRelaying] = useState(false);
+
   // 特定メンバーの種目×距離のベストタイムを取得
   const getBestTime = useCallback(
-    (memberId: string, styleName: string, distance: number): MemberBestTime | null => {
+    (
+      memberId: string,
+      styleName: string,
+      distance: number,
+      relayingIncluded: boolean = includeRelaying,
+    ): MemberBestTime | null => {
       const times = bestTimesMap.get(memberId) || [];
       const dbStyleName = `${distance}m${styleName}`;
 
-      const candidates = times.filter((bt) => bt.styleName === dbStyleName && !bt.isRelaying);
-      if (candidates.length === 0) return null;
-      return candidates.reduce((best, current) => (current.time < best.time ? current : best));
+      const matching = times.filter((bt) => bt.styleName === dbStyleName);
+      const best = selectBestTime(
+        matching.map((bt, idx) => ({
+          id: String(idx),
+          time: bt.time,
+          poolType: bt.poolType as 0 | 1,
+          isRelaying: bt.isRelaying,
+        })),
+        relayingIncluded,
+      );
+      if (!best) return null;
+      return matching.find((bt) => bt.time === best.time && bt.isRelaying === best.isRelaying)!;
     },
-    [bestTimesMap],
+    [bestTimesMap, includeRelaying],
   );
 
   // ソート適用済みメンバーリスト
@@ -266,8 +285,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     }
 
     const compareFn = (a: TeamMembershipWithUser, b: TeamMembershipWithUser): number => {
-      const timeA = getBestTime(a.id, sortStyle, sortDistance);
-      const timeB = getBestTime(b.id, sortStyle, sortDistance);
+      const timeA = getBestTime(a.id, sortStyle, sortDistance, includeRelaying);
+      const timeB = getBestTime(b.id, sortStyle, sortDistance, includeRelaying);
       if (!timeA && !timeB) return 0;
       if (!timeA) return 1;
       if (!timeB) return -1;
@@ -301,7 +320,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       sortedMembers: [...groupedMembers].sort(compareFn),
       sortedGroupHeaders: groupHeaders,
     };
-  }, [groupedMembers, groupHeaders, sortStyle, sortDistance, sortOrder, getBestTime]);
+  }, [groupedMembers, groupHeaders, sortStyle, sortDistance, sortOrder, getBestTime, includeRelaying]);
 
   // ロール変更処理
   const _handleRoleChange = async (member: TeamMembershipWithUser, newRole: "admin" | "user") => {
@@ -428,7 +447,22 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       <View style={styles.fixedTop}>
         {/* メンバー統計ヘッダー */}
         <View style={styles.statsHeader}>
-          <Text style={styles.statsTitle}>{t("teams.mobile.memberListTitle")}</Text>
+          <View style={styles.statsHeaderTop}>
+            <Text style={styles.statsTitle}>{t("teams.mobile.memberListTitle")}</Text>
+            <View style={styles.includeRelayToggle}>
+              <Text style={styles.includeRelayLabel} numberOfLines={1}>
+                {t("teams.memberStats.includeRelay")}
+              </Text>
+              <Switch
+                value={includeRelaying}
+                onValueChange={setIncludeRelaying}
+                trackColor={{ false: "#D1D5DB", true: "#93C5FD" }}
+                thumbColor={includeRelaying ? "#2563EB" : "#F3F4F6"}
+                accessibilityRole="switch"
+                accessibilityLabel={t("teams.memberStats.includeRelay")}
+              />
+            </View>
+          </View>
           <View style={styles.statsRow}>
             <Text style={styles.statsText}>
               {t("teams.mobile.memberListTotal", { count: members.length })}
@@ -620,10 +654,21 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                         >
                           {styleColumns.map(({ style, distances, colors }) =>
                             distances.map((distance) => {
-                              const bestTime = getBestTime(item.id, style, distance);
+                              const bestTime = getBestTime(
+                                item.id,
+                                style,
+                                distance,
+                                includeRelaying,
+                              );
                               const isNew = bestTime?.hasCompetition
                                 ? differenceInDays(new Date(), parseISO(bestTime.createdAt)) <= 30
                                 : false;
+                              const suffix = bestTime
+                                ? formatBestTimeSuffix({
+                                    poolType: bestTime.poolType as 0 | 1,
+                                    isRelaying: bestTime.isRelaying,
+                                  })
+                                : "";
                               return (
                                 <View
                                   key={`${item.id}-${style}-${distance}`}
@@ -645,8 +690,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                                       ]}
                                     >
                                       {formatTime(bestTime.time)}
-                                      {bestTime.poolType === 1 && (
-                                        <Text style={styles.timeCellSuffix}> L</Text>
+                                      {suffix !== "" && (
+                                        <Text style={styles.timeCellSuffix}> {suffix}</Text>
                                       )}
                                     </Text>
                                   ) : (
@@ -700,11 +745,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
+  statsHeaderTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   statsTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: "#111827",
     marginBottom: 4,
+  },
+  includeRelayToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  includeRelayLabel: {
+    fontSize: 11,
+    color: "#374151",
+    flexShrink: 1,
   },
   statsRow: {
     flexDirection: "row",

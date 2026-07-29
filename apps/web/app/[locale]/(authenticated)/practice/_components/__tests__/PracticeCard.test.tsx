@@ -3,14 +3,25 @@
  *
  * 対象: `_components/PracticeCard.tsx` (day-level カード、旧 PracticeLogCard の置き換え)
  *
- * Sprint Contract 検証観点:
- *   [V-WP-02] day-level カードは先頭ログ(practice_logs[0])のみを表示し、2件目以降は表示しない
- *   [V-WP-mobile parity] 表示項目は mobile PracticeItem.tsx の firstLog/secondLineInfo/tags と
- *     同一の組み立て方針(日付+タイトル+場所 / 距離×本数×セット・サークル・種目 / タグ)
+ * 2026-07-28 更新（C-3: 全ログ展開）:
+ *   2026-07-23 時点では「day-level カードは先頭ログ(practice_logs[0])のみを表示」が
+ *   Sprint Contract だったが、ユーザー判断（「1つの練習に2つの練習ログが登録されていた場合、
+ *   どちらも表示させたい」）によりこの決定を上書きし、practice_logs 全件を表示する方式に
+ *   変更された（`_utils/practiceDayGrouping.ts` の `buildPracticeLogLines` 参照）。
+ *   本ファイルの「先頭ログのみ表示」を検証していた2テストは、QA が「全ログ表示」前提の
+ *   内容に書き換えた（単に複数要素を許容する緩いアサーションにはせず、2件目の内容が
+ *   実際に見えていることを積極的に検証する）。C-3 の追加観点（3件以上・空配列・
+ *   パリティ等）は ./PracticeCard.allLogs.test.tsx を参照。
  *
- * トートロジー防止メモ: PracticeCard.tsx 内の secondLineParts 組み立てロジックをなぞらず、
- * 「2ログ持つ practice を渡したときに2件目の内容がDOM上に一切現れない」という
- * Sprint Contract の要求から逆算したアサーションにする。
+ * Sprint Contract 検証観点:
+ *   [V-26] 内容の異なる2件のログを持つ practice を渡すと、両方の内容(距離・種目・タグ)が
+ *          DOM 上に表示される（旧: 先頭ログのみ表示、から意図的に反転）
+ *   [V-WP-mobile parity] 表示項目は mobile PracticeItem.tsx の logRows/secondLineInfo/tags と
+ *     同一の組み立て方針(日付+タイトル+場所 / ログごとの距離×本数×セット・サークル・種目・タグ)
+ *
+ * トートロジー防止メモ: PracticeCard.tsx 内の buildPracticeLogLines 組み立てロジックをなぞらず、
+ * 「内容の異なる2ログを持つ practice を渡したときに両方の内容がDOM上に見えている」という
+ * Sprint Contract C-3 の要求から逆算したアサーションにする。
  */
 
 import { render, screen } from "@testing-library/react";
@@ -77,8 +88,8 @@ describe("PracticeCard", () => {
   });
 
   it(
-    "[V-WP-02 最重要] 2件のログを持つ practice を渡しても、2件目のログの内容(距離・種目)は" +
-      "DOM上に一切現れない(先頭ログのみ表示)",
+    "[V-26] 2件のログを持つ practice を渡すと、2件目のログの内容(距離・種目)も" +
+      "DOM上に表示される(全ログ展開。旧: 先頭ログのみ表示、からの意図的な反転)",
     () => {
       const practice = makePractice({
         practice_logs: [
@@ -89,8 +100,8 @@ describe("PracticeCard", () => {
       renderWithIntl(<PracticeCard practice={practice} onClick={vi.fn()} />);
 
       expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
-      expect(screen.queryByText(/50m × 2本 × 1セット/)).not.toBeInTheDocument();
-      expect(screen.queryByText(/平泳ぎ/)).not.toBeInTheDocument();
+      expect(screen.getByText(/50m × 2本 × 1セット/)).toBeInTheDocument();
+      expect(screen.getByText(/平泳ぎ/)).toBeInTheDocument();
     },
   );
 
@@ -100,7 +111,7 @@ describe("PracticeCard", () => {
     expect(screen.queryByText(/自由形/)).not.toBeInTheDocument();
   });
 
-  it("先頭ログのタグのみが表示される(2件目のログのタグは現れない)", () => {
+  it("[V-30] 各ログのタグがそれぞれ表示される(ログ1・ログ2のタグが両方見える)", () => {
     const tagA = { id: "tag-a", name: "タグA", color: "#111", user_id: "u", created_at: "", updated_at: "" };
     const tagB = { id: "tag-b", name: "タグB", color: "#222", user_id: "u", created_at: "", updated_at: "" };
     const practice = makePractice({
@@ -118,7 +129,7 @@ describe("PracticeCard", () => {
     renderWithIntl(<PracticeCard practice={practice} onClick={vi.fn()} />);
 
     expect(screen.getByText("タグA")).toBeInTheDocument();
-    expect(screen.queryByText("タグB")).not.toBeInTheDocument();
+    expect(screen.getByText("タグB")).toBeInTheDocument();
   });
 
   it("カードクリックで onClick に practice(日単位オブジェクト。ログではない)が渡される", async () => {

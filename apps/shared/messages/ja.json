@@ -2393,6 +2393,7 @@
         "memberStatusOther": "その他",
         "memberStatusUnanswered": "未回答",
         "memberAttendanceFetchFailed": "出欠情報の取得に失敗しました",
+        "teamMembersFetchFailed": "メンバー一覧を取得できませんでした",
         "memberAttendanceEmpty": "出欠回答がありません",
         "memberAttendanceLoading": "読み込み中...",
         "bulkChange": {
@@ -2939,7 +2940,12 @@
       }
     },
     "attendanceGrouping": {
-      "categoryLabel": "名"
+      "categoryLabel": "名",
+      "present": "出席 ({count}名)",
+      "absent": "欠席 ({count}名)",
+      "other": "その他 ({count}名)",
+      "unanswered": "未回答 ({count}名)",
+      "none": "なし"
     },
     "attendanceEditHook": {
       "saveError": "出欠情報の保存に失敗しました",
@@ -3478,13 +3484,6 @@
     "attendanceStatus": {
       "loading": "読み込み中...",
       "titleSuffix": "の出欠状況"
-    },
-    "attendanceGrouping": {
-      "present": "出席 ({count}名)",
-      "absent": "欠席 ({count}名)",
-      "other": "その他 ({count}名)",
-      "unanswered": "未回答 ({count}名)",
-      "none": "なし"
     },
     "templateDownload": {
       "title": "Excelテンプレートのダウンロード",

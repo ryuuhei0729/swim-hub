@@ -445,6 +445,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                       const isTeamCompetition =
                         !!firstRecord.metadata?.team_id ||
                         !!firstRecord.metadata?.competition?.team_id;
+                      const recordTeamId =
+                        firstRecord.metadata?.team_id ??
+                        firstRecord.metadata?.competition?.team_id ??
+                        null;
 
                       return (
                         <RecordDetail
@@ -456,6 +460,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           note={note}
                           records={records}
                           isTeamCompetition={isTeamCompetition}
+                          teamId={recordTeamId}
                           color={getEntryDisplayColor(firstRecord, colorSettings)}
                           onEditCompetition={() => {
                             if (!onEditCompetition) return;

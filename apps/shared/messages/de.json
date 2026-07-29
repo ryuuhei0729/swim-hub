@@ -2393,6 +2393,7 @@
         "memberStatusOther": "Sonstiges",
         "memberStatusUnanswered": "Keine Antwort",
         "memberAttendanceFetchFailed": "Anwesenheitsdaten konnten nicht geladen werden",
+        "teamMembersFetchFailed": "Mitgliederliste konnte nicht geladen werden",
         "memberAttendanceEmpty": "Noch keine Antworten",
         "memberAttendanceLoading": "Wird geladen...",
         "bulkChange": {
@@ -2939,7 +2940,12 @@
       }
     },
     "attendanceGrouping": {
-      "categoryLabel": "Mitglieder"
+      "categoryLabel": "Mitglieder",
+      "present": "Anwesend ({count})",
+      "absent": "Abwesend ({count})",
+      "other": "Sonstige ({count})",
+      "unanswered": "Keine Antwort ({count})",
+      "none": "Keine"
     },
     "attendanceEditHook": {
       "saveError": "Anwesenheitsinformationen konnten nicht gespeichert werden",
@@ -3478,13 +3484,6 @@
     "attendanceStatus": {
       "loading": "Wird geladen...",
       "titleSuffix": " – Anwesenheitsstatus"
-    },
-    "attendanceGrouping": {
-      "present": "Anwesend ({count})",
-      "absent": "Abwesend ({count})",
-      "other": "Sonstige ({count})",
-      "unanswered": "Keine Antwort ({count})",
-      "none": "Keine"
     },
     "templateDownload": {
       "title": "Excel-Vorlagen herunterladen",

@@ -2393,6 +2393,7 @@
         "memberStatusOther": "其他",
         "memberStatusUnanswered": "未回复",
         "memberAttendanceFetchFailed": "获取出勤信息失败",
+        "teamMembersFetchFailed": "无法获取成员列表",
         "memberAttendanceEmpty": "暂无出勤回复",
         "memberAttendanceLoading": "加载中...",
         "bulkChange": {
@@ -2939,7 +2940,12 @@
       }
     },
     "attendanceGrouping": {
-      "categoryLabel": "名"
+      "categoryLabel": "名",
+      "present": "出席（{count}名）",
+      "absent": "缺席（{count}名）",
+      "other": "其他（{count}名）",
+      "unanswered": "未回复（{count}名）",
+      "none": "无"
     },
     "attendanceEditHook": {
       "saveError": "保存出勤信息失败",
@@ -3478,13 +3484,6 @@
     "attendanceStatus": {
       "loading": "加载中…",
       "titleSuffix": "的出勤情况"
-    },
-    "attendanceGrouping": {
-      "present": "出席（{count}名）",
-      "absent": "缺席（{count}名）",
-      "other": "其他（{count}名）",
-      "unanswered": "未回复（{count}名）",
-      "none": "无"
     },
     "templateDownload": {
       "title": "下载 Excel 模板",

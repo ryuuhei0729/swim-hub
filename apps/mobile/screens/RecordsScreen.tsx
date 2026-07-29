@@ -4,6 +4,7 @@ import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery } from "@tanstack/react-query";
 import { format, parseISO, isValid } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -11,7 +12,7 @@ import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/que
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { STYLE_CODE_TO_ABBREV } from "@apps/shared/utils/swimStyles";
-import { RecordItem, StandaloneRecordDetailModal } from "@/components/records";
+import { RecordItem, StandaloneRecordDetailModal, EntryOnlySection, EntryOnlyDetailModal } from "@/components/records";
 import { ListToolbar, SortBottomSheet, FilterBottomSheet } from "@/components/history";
 import type { SortPreset, FilterGroup } from "@/components/history";
 import {
@@ -26,6 +27,7 @@ import {
   type RecordFilterValues,
   type RecordSortBy,
 } from "@/utils/recordFilter";
+import { buildEntryOnlyItems, type EntryOnlyEntryRow, type EntryOnlyItem } from "@/utils/entryOnlyFilter";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { DayDetailModal } from "@/components/calendar";
@@ -48,7 +50,7 @@ const PAGE_INCREMENT = 20;
  */
 export const RecordsScreen: React.FC = () => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const { t, i18n } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [displayCount, setDisplayCount] = useState(PAGE_INCREMENT);
@@ -225,6 +227,102 @@ export const RecordsScreen: React.FC = () => {
     enableRealtime: true,
   });
 
+  // ---------------------------------------------------------------------------
+  // エントリー済み（記録未登録）の大会一覧（T-1）
+  // records に載らない「エントリー済みだが記録がまだ無い」大会を web と同じ粒度
+  // (大会単位で1件でも記録があれば除外) で別途取得する。
+  // ---------------------------------------------------------------------------
+  const {
+    data: entryOnlyItems = [],
+    isLoading: isEntryOnlyLoading,
+    isError: isEntryOnlyError,
+    refetch: refetchEntryOnly,
+  } = useQuery({
+    queryKey: ["entryOnlyItems", user?.id],
+    queryFn: async (): Promise<EntryOnlyItem[]> => {
+      if (!user) return [];
+
+      type EntryRowRaw = {
+        id: string;
+        style_id: number | null;
+        entry_time: number | null;
+        competition_id: string;
+        style: { id: number; name_jp: string } | null;
+        competition: {
+          id: string;
+          title: string | null;
+          date: string;
+          place: string | null;
+          pool_type: number;
+          team_id: string | null;
+          team: { name: string } | null;
+        } | null;
+      };
+
+      const [{ data: entryRows, error: entryError }, { data: recordRows, error: recordError }] =
+        await Promise.all([
+          supabase
+            .from("entries")
+            .select(
+              `
+              id, style_id, entry_time, competition_id,
+              style:styles(id, name_jp),
+              competition:competitions(id, title, date, place, pool_type, team_id, team:teams(name))
+            `,
+            )
+            .eq("user_id", user.id),
+          supabase.from("records").select("competition_id").eq("user_id", user.id),
+        ]);
+
+      if (entryError) throw entryError;
+      if (recordError) throw recordError;
+
+      const rows: EntryOnlyEntryRow[] = ((entryRows ?? []) as unknown as EntryRowRaw[]).map(
+        (row) => ({
+          id: row.id,
+          competitionId: row.competition_id,
+          styleId: row.style_id,
+          styleName: row.style?.name_jp ?? null,
+          entryTime: row.entry_time,
+          competition: row.competition
+            ? {
+                id: row.competition.id,
+                title: row.competition.title,
+                date: row.competition.date,
+                place: row.competition.place,
+                poolType: row.competition.pool_type,
+                teamId: row.competition.team_id,
+                teamName: row.competition.team?.name ?? null,
+              }
+            : null,
+        }),
+      );
+
+      const recordedCompetitionIds = new Set(
+        ((recordRows ?? []) as Array<{ competition_id: string | null }>)
+          .map((r) => r.competition_id)
+          .filter((id): id is string => !!id),
+      );
+
+      return buildEntryOnlyItems(
+        rows,
+        recordedCompetitionIds,
+        new Date(),
+        t("competition.client.competitionFallback"),
+      );
+    },
+    enabled: !!user,
+  });
+
+  // エントリー済み(記録未登録)セクションの詳細モーダル
+  const [selectedEntryOnlyItem, setSelectedEntryOnlyItem] = useState<EntryOnlyItem | null>(null);
+  const handleEntryOnlyPress = useCallback((item: EntryOnlyItem) => {
+    setSelectedEntryOnlyItem(item);
+  }, []);
+  const handleCloseEntryOnlyDetail = useCallback(() => {
+    setSelectedEntryOnlyItem(null);
+  }, []);
+
   // 距離/種目/大会名/場所フィルタの選択肢生成(全件ベース)
   const participatedDistances = useMemo(() => getParticipatedDistances(records), [records]);
   const participatedStyleCodes = useMemo(() => getParticipatedStyleCodes(records), [records]);
@@ -390,18 +488,22 @@ export const RecordsScreen: React.FC = () => {
     ],
   );
 
-  // タブ遷移時にデータ再取得
-  useRefreshOnFocus(refetch);
+  // タブ遷移時にデータ再取得(記録一覧 + エントリー済み(記録未登録)セクション)
+  const refetchAll = useCallback(() => {
+    refetch();
+    refetchEntryOnly();
+  }, [refetch, refetchEntryOnly]);
+  useRefreshOnFocus(refetchAll);
 
   // プルリフレッシュ処理
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await refetch();
+      await Promise.all([refetch(), refetchEntryOnly()]);
     } finally {
       setRefreshing(false);
     }
-  }, [refetch]);
+  }, [refetch, refetchEntryOnly]);
 
   // 無限スクロール(displayCount を増やすのみ。ネットワーク再フェッチは行わない)。
   // 既に全件表示済みの場合は onEndReached の連続発火で無駄な再レンダーを起こさないよう
@@ -417,11 +519,12 @@ export const RecordsScreen: React.FC = () => {
     modalDate,
   );
 
-  // 削除/変更後は一覧とモーダルの両方を再取得する
+  // 削除/変更後は一覧とモーダルの両方を再取得する(エントリー済み(記録未登録)セクションも対象)
   const refetchAfterMutation = useCallback(() => {
     refetch();
+    refetchEntryOnly();
     refetchDayEntries();
-  }, [refetch, refetchDayEntries]);
+  }, [refetch, refetchEntryOnly, refetchDayEntries]);
 
   // DayDetailModal の編集/削除/追加ハンドラ（ダッシュボードと共通）
   const {
@@ -518,6 +621,20 @@ export const RecordsScreen: React.FC = () => {
     [handleRecordPress],
   );
 
+  // エントリー済み(記録未登録)セクション(FlashList ListHeaderComponent としてメモ化して渡す)
+  const listHeaderComponent = useMemo(
+    () => (
+      <EntryOnlySection
+        items={entryOnlyItems}
+        isLoading={isEntryOnlyLoading}
+        isError={isEntryOnlyError}
+        onRetry={refetchEntryOnly}
+        onItemPress={handleEntryOnlyPress}
+      />
+    ),
+    [entryOnlyItems, isEntryOnlyLoading, isEntryOnlyError, refetchEntryOnly, handleEntryOnlyPress],
+  );
+
   // エラー状態
   if (isError && error) {
     return (
@@ -554,6 +671,7 @@ export const RecordsScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={listHeaderComponent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -644,6 +762,13 @@ export const RecordsScreen: React.FC = () => {
         onEdit={handleEditStandaloneRecord}
         onDelete={handleDeleteStandaloneRecord}
         isDeleting={isDeletingStandalone}
+      />
+
+      {/* エントリー済み(記録未登録)大会の読み取り専用簡易詳細モーダル */}
+      <EntryOnlyDetailModal
+        visible={!!selectedEntryOnlyItem}
+        item={selectedEntryOnlyItem}
+        onClose={handleCloseEntryOnlyDetail}
       />
     </SafeAreaView>
   );

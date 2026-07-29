@@ -1,5 +1,10 @@
 # App Store 公開用テキスト
 
+> **注意**: このファイルは Markdown なので、ストアの説明欄にそのまま貼ると `###` や `**` が文字として表示される。
+> Google Play / App Store Connect へ貼る本番テキストは以下のプレーンテキストを使う。
+> - 日本語: [play-store/ja-JP/full_description.txt](play-store/ja-JP/full_description.txt) / [short_description.txt](play-store/ja-JP/short_description.txt)
+> - ko / zh-Hans / de-DE: `apps/mobile/fastlane/metadata/<locale>/description.txt`
+
 ## プロモーション用テキスト（最大170文字）
 
 個人でもチームでも使える、水泳記録管理アプリ。練習記録・大会記録を一元管理し、サークルタイムの変遷や種目別タイムの推移を可視化。チーム機能で出欠管理やエントリー集計も効率化。あなたの成長をずっと記録し続けます。

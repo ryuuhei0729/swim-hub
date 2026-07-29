@@ -20,11 +20,14 @@ import {
   useAttendanceByPracticeQuery,
   useAttendanceByCompetitionQuery,
 } from "@apps/shared/hooks/queries/teams";
+import { useAttendanceGrouping } from "@apps/shared/hooks/useAttendanceGrouping";
+import { fetchTeamMembers, type TeamMember } from "@apps/shared/utils/team";
 import type { TeamEvent } from "@swim-hub/shared/types";
-import type { AttendanceStatusType, AttendanceStatus } from "@swim-hub/shared/types";
+import type { AttendanceStatusType } from "@swim-hub/shared/types";
 import type { SupportedLocale } from "@apps/shared/utils/date";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
+import { AttendanceGroupSection } from "./AttendanceGroupSection";
 
 export interface AdminMonthlyAttendanceProps {
   teamId: string;
@@ -37,6 +40,12 @@ interface EventCardProps {
   t: TFunction;
   locale: SupportedLocale;
   supabase: SupabaseClient;
+  /** チーム全メンバー（親で teamId 単位に1回だけ取得し、EventCard ごとの再フェッチを避ける） */
+  teamMembers: TeamMember[];
+  teamMembersLoading: boolean;
+  teamMembersError: boolean;
+  /** 名簿取得の再試行（loadFutureEvents の再試行ボタンと同一パターン） */
+  onRetryTeamMembers: () => void;
 }
 
 // イベントカードの展開状態とメンバー別出欠パネルを管理するサブコンポーネント
@@ -47,6 +56,10 @@ const EventCard: React.FC<EventCardProps> = ({
   t,
   locale,
   supabase,
+  teamMembers,
+  teamMembersLoading,
+  teamMembersError,
+  onRetryTeamMembers,
 }) => {
   const [expanded, setExpanded] = useState(false);
 
@@ -74,6 +87,9 @@ const EventCard: React.FC<EventCardProps> = ({
   const attendanceQuery =
     event.type === "practice" ? practiceAttendanceQuery : competitionAttendanceQuery;
 
+  // 出席/欠席/その他/未回答の4グループに分類（web AttendanceGroupingDisplay と同一の共有フック）
+  const grouping = useAttendanceGrouping(attendanceQuery.data ?? [], teamMembers);
+
   const renderReceiptStatusBadge = (status: AttendanceStatusType | null | undefined) => {
     switch (status) {
       case "open":
@@ -100,45 +116,6 @@ const EventCard: React.FC<EventCardProps> = ({
             </Text>
           </View>
         );
-    }
-  };
-
-  const getMemberStatusLabel = (status: AttendanceStatus | null): string => {
-    switch (status) {
-      case "present":
-        return t("teams.mobile.adminAttendance.memberStatusPresent");
-      case "absent":
-        return t("teams.mobile.adminAttendance.memberStatusAbsent");
-      case "other":
-        return t("teams.mobile.adminAttendance.memberStatusOther");
-      default:
-        return t("teams.mobile.adminAttendance.memberStatusUnanswered");
-    }
-  };
-
-  const getMemberStatusBadgeStyle = (status: AttendanceStatus | null) => {
-    switch (status) {
-      case "present":
-        return styles.memberStatusPresent;
-      case "absent":
-        return styles.memberStatusAbsent;
-      case "other":
-        return styles.memberStatusOther;
-      default:
-        return styles.memberStatusUnanswered;
-    }
-  };
-
-  const getMemberStatusTextStyle = (status: AttendanceStatus | null) => {
-    switch (status) {
-      case "present":
-        return styles.memberStatusTextPresent;
-      case "absent":
-        return styles.memberStatusTextAbsent;
-      case "other":
-        return styles.memberStatusTextOther;
-      default:
-        return styles.memberStatusTextUnanswered;
     }
   };
 
@@ -215,25 +192,65 @@ const EventCard: React.FC<EventCardProps> = ({
               {t("teams.mobile.adminAttendance.memberAttendanceFetchFailed")}
             </Text>
           )}
-          {attendanceQuery.isSuccess && attendanceQuery.data.length === 0 && (
-            <Text style={styles.memberAttendanceInfoText}>
-              {t("teams.mobile.adminAttendance.memberAttendanceEmpty")}
-            </Text>
-          )}
-          {attendanceQuery.isSuccess && attendanceQuery.data.length > 0 && (
-            <View style={styles.memberList}>
-              {attendanceQuery.data.map((att) => (
-                <View key={att.id} style={styles.memberRow}>
-                  <Text style={styles.memberName} numberOfLines={1}>
-                    {att.user?.name ?? att.user_id}
+          {attendanceQuery.isSuccess && (
+            <View style={styles.memberGroups}>
+              <AttendanceGroupSection
+                title={t("teams.attendanceGrouping.present", {
+                  count: grouping.presentMembers.length,
+                })}
+                titleStyle={styles.memberStatusTextPresent}
+                members={grouping.presentMembers}
+                emptyText={t("teams.attendanceGrouping.none")}
+              />
+              <AttendanceGroupSection
+                title={t("teams.attendanceGrouping.absent", {
+                  count: grouping.absentMembers.length,
+                })}
+                titleStyle={styles.memberStatusTextAbsent}
+                members={grouping.absentMembers}
+                emptyText={t("teams.attendanceGrouping.none")}
+              />
+              <AttendanceGroupSection
+                title={t("teams.attendanceGrouping.other", {
+                  count: grouping.otherMembers.length,
+                })}
+                titleStyle={styles.memberStatusTextOther}
+                members={grouping.otherMembers}
+                emptyText={t("teams.attendanceGrouping.none")}
+              />
+
+              {/* 未回答: 名簿(teamMembers)取得の成否に応じて表示を分岐（PM 裁定:
+                  取得失敗時に0件表示・非表示にせず、控えめなエラー行を出す） */}
+              {teamMembersLoading ? (
+                <View style={styles.memberGroupSection}>
+                  <Text style={styles.memberAttendanceInfoText}>
+                    {t("teams.mobile.adminAttendance.memberAttendanceLoading")}
                   </Text>
-                  <View style={getMemberStatusBadgeStyle(att.status)}>
-                    <Text style={getMemberStatusTextStyle(att.status)}>
-                      {getMemberStatusLabel(att.status)}
-                    </Text>
-                  </View>
                 </View>
-              ))}
+              ) : teamMembersError ? (
+                <View style={styles.memberGroupSection}>
+                  <Text style={styles.memberAttendanceErrorText}>
+                    {t("teams.mobile.adminAttendance.teamMembersFetchFailed")}
+                  </Text>
+                  <Pressable
+                    style={[styles.retryButton, styles.retryButtonInline]}
+                    onPress={onRetryTeamMembers}
+                    accessibilityRole="button"
+                  >
+                    <Feather name="refresh-cw" size={14} color="#FFFFFF" />
+                    <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <AttendanceGroupSection
+                  title={t("teams.attendanceGrouping.unanswered", {
+                    count: grouping.unansweredMembers.length,
+                  })}
+                  titleStyle={styles.memberStatusTextUnanswered}
+                  members={grouping.unansweredMembers}
+                  emptyText={t("teams.attendanceGrouping.none")}
+                />
+              )}
             </View>
           )}
         </View>
@@ -477,6 +494,32 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
 
   const updateStatusMutation = useUpdateAttendanceStatusMutation(supabase);
 
+  // チーム全メンバー（名簿）を teamId 単位に1回だけ取得する。EventCard 展開のたびに
+  // 再フェッチしないよう、親コンポーネントで一括取得して EventCard へ prop 配布する
+  // （下の loadFutureEvents と同じ直接 Supabase クエリ + useCallback/useEffect パターン。
+  // 失敗時に再試行できるよう loadFutureEvents 同様 useCallback で切り出す）。
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamMembersLoading, setTeamMembersLoading] = useState(true);
+  const [teamMembersError, setTeamMembersError] = useState(false);
+
+  const loadTeamMembers = useCallback(async () => {
+    try {
+      setTeamMembersLoading(true);
+      setTeamMembersError(false);
+      const members = await fetchTeamMembers(supabase, teamId);
+      setTeamMembers(members);
+    } catch (err) {
+      console.error("AdminMonthlyAttendance: failed to fetch team members", err);
+      setTeamMembersError(true);
+    } finally {
+      setTeamMembersLoading(false);
+    }
+  }, [teamId, supabase]);
+
+  useEffect(() => {
+    loadTeamMembers();
+  }, [loadTeamMembers]);
+
   // NOTE: イベント一覧は直接 Supabase クエリで取得する。MyMonthlyAttendance パターンと同様に、
   // チーム全体の未来イベントを一括取得する用途には useTeamPracticesQuery/useTeamCompetitionsQuery
   // が過去データも含むため適さず、直接クエリの方が date フィルタを簡潔に適用できる。
@@ -676,6 +719,10 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
                   t={t}
                   locale={locale}
                   supabase={supabase}
+                  teamMembers={teamMembers}
+                  teamMembersLoading={teamMembersLoading}
+                  teamMembersError={teamMembersError}
+                  onRetryTeamMembers={loadTeamMembers}
                 />
               );
             })}
@@ -744,6 +791,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
+  },
+  // 未回答セクション内などの狭い領域で使う場合、親の stretch を打ち消してボタンを
+  // コンテンツ幅に留める（retryButton 自体の見た目・色は変えない）
+  retryButtonInline: {
+    alignSelf: "flex-start",
   },
   retryButtonText: {
     color: "#FFFFFF",
@@ -887,6 +939,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#DC2626",
   },
+  memberGroups: {
+    gap: 12,
+  },
+  memberGroupSection: {
+    gap: 4,
+  },
+  memberGroupTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
   memberList: {
     gap: 6,
   },
@@ -901,53 +963,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#111827",
   },
-  memberStatusPresent: {
-    backgroundColor: "#DCFCE7",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    flexShrink: 0,
-  },
+  // 4グループ見出しの色（旧・メンバー行ごとのステータスバッジ色を転用）
   memberStatusTextPresent: {
-    fontSize: 12,
     color: "#166534",
-    fontWeight: "500",
-  },
-  memberStatusAbsent: {
-    backgroundColor: "#FEE2E2",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    flexShrink: 0,
   },
   memberStatusTextAbsent: {
-    fontSize: 12,
     color: "#991B1B",
-    fontWeight: "500",
-  },
-  memberStatusOther: {
-    backgroundColor: "#FEF3C7",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    flexShrink: 0,
   },
   memberStatusTextOther: {
-    fontSize: 12,
     color: "#92400E",
-    fontWeight: "500",
-  },
-  memberStatusUnanswered: {
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    flexShrink: 0,
   },
   memberStatusTextUnanswered: {
-    fontSize: 12,
     color: "#6B7280",
-    fontWeight: "500",
   },
   bulkChangeButton: {
     flexDirection: "row",

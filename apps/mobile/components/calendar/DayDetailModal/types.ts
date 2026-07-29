@@ -85,6 +85,8 @@ export interface RecordDetailProps {
   note?: string;
   records: CalendarItem[];
   isTeamCompetition?: boolean;
+  /** チームID（isTeamCompetition時のみ）。出欠確認ボタンの表示・データ取得に使用 */
+  teamId?: string | null;
   /** 識別色(記録色カスタマイズ)。未指定時は旧来のデフォルト青(#2563EB)を使う */
   color?: string;
   onEditCompetition?: () => void;
@@ -120,6 +122,8 @@ export interface PracticeLogData {
   id: string;
   practiceId: string;
   style: string;
+  /** 種目カテゴリ（Swim/Pull/Kick）。未設定の記録もあるため optional */
+  swim_category?: "Swim" | "Pull" | "Kick" | null;
   repCount: number;
   setCount: number;
   distance: number;
@@ -138,6 +142,8 @@ export interface PracticeLogData {
 export interface PracticeLogDetailData {
   id: string;
   style: string;
+  /** 種目カテゴリ（Swim/Pull/Kick）。未設定の記録もあるため optional */
+  swim_category?: "Swim" | "Pull" | "Kick" | null;
   repCount: number;
   setCount: number;
   distance: number;
@@ -177,6 +183,8 @@ export interface PracticeLogFromDB {
   id: string;
   practice_id: string;
   style: string;
+  /** 種目カテゴリ（Swim/Pull/Kick）。未設定の記録もあるため optional */
+  swim_category?: "Swim" | "Pull" | "Kick" | null;
   rep_count: number;
   set_count: number;
   distance: number;

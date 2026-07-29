@@ -4,7 +4,8 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { format, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
-import type { PracticeTag, PracticeWithLogs } from "@apps/shared/types";
+import type { PracticeWithLogs } from "@apps/shared/types";
+import { buildPracticeLogLines } from "../_utils/practiceDayGrouping";
 
 // 種目コードの一覧（ラベルは翻訳キー経由で取得。PracticeDetails.tsx と同じ方式）
 const SWIM_STYLE_VALUES = ["Fr", "Ba", "Br", "Fly", "IM"] as const;
@@ -20,8 +21,11 @@ export interface PracticeCardProps {
  *
  * 旧 PracticeLogCard(1練習ログ=1カード)を廃止し、1練習日(=1 practice)につき1枚に変更した。
  * 表示項目は mobile `apps/mobile/components/practices/PracticeItem.tsx` の secondLineInfo/
- * firstLog/tags 抽出ロジックと同一にし、web/mobile の見た目を一致させている
- * (日付+タイトル+場所 / 先頭ログの距離×本数×セット+サークル+種目 / タグ)。
+ * tags 抽出ロジックと同一にし、web/mobile の見た目を一致させている
+ * (日付+タイトル+場所 / ログごとの距離×本数×セット+サークル+種目+タグ)。
+ * 2026-07-28: 先頭ログのみの表示は「複数ログがあれば全部見せてほしい」というユーザー判断により
+ * 撤回し、practice_logs 全件をそれぞれ1行として列挙する形に戻した
+ * (`_utils/practiceDayGrouping.ts` の `buildPracticeLogLines` 参照)。
  * 旧カードにあった web 独自のヒーロー平均タイム表示(右側の大きな数字)は撤去した
  * (mobile 側に存在しない表示のため、パリティを優先した)。
  */
@@ -38,48 +42,21 @@ export default function PracticeCard({ practice, onClick }: PracticeCardProps) {
 
   const handleClick = () => onClick(practice);
 
-  // 先頭ログ(代表ログ)。mobile PracticeItem.tsx の firstLog と同じ扱い
-  // (複数ログがある場合は最初のものだけを2行目に表示する)
-  const firstLog = practice.practice_logs?.[0];
-
   const parsedDate = practice.date ? new Date(practice.date) : null;
   const formattedDate =
     parsedDate && isValid(parsedDate) ? format(parsedDate, "yyyy/MM/dd", { locale: ja }) : "-";
 
   const title = practice.title || t("client.practiceTitle");
 
-  // 2行目: 距離×本数×セット / サークル / 種目 (mobile secondLineInfo と同じ組み立て・区切り " / ")
-  const secondLineParts: string[] = [];
-  if (firstLog) {
-    if (firstLog.distance && firstLog.rep_count && firstLog.set_count) {
-      secondLineParts.push(
-        t("page.distanceFormat", {
-          distance: firstLog.distance,
-          reps: firstLog.rep_count,
-          sets: firstLog.set_count,
-        }),
-      );
-    }
-    if (firstLog.circle) {
-      secondLineParts.push(
-        `${Math.floor(firstLog.circle / 60)}'${Math.floor(firstLog.circle % 60)
-          .toString()
-          .padStart(2, "0")}"`,
-      );
-    }
-    if (firstLog.style) {
-      secondLineParts.push(getStyleLabel(firstLog.style));
-    }
-  }
-  const secondLineInfo = secondLineParts.join(" / ");
-
-  // タグ情報(先頭ログ由来。mobile PracticeItem.tsx の tags 抽出と同じ)
-  const tags: PracticeTag[] = firstLog?.practice_log_tags?.map((plt) => plt.practice_tags) ?? [];
+  // 練習ログごとの行(距離×本数×セット / サークル / 種目 / タグ)。1件のみなら旧来と同じ見た目。
+  const logLines = buildPracticeLogLines(practice.practice_logs, getStyleLabel, (distance, reps, sets) =>
+    t("page.distanceFormat", { distance, reps, sets }),
+  );
 
   const cardAriaLabel = t("client.viewDetailAriaLabelWithInfo", {
     date: formattedDate,
     place: practice.place || "-",
-    style: firstLog?.style || "-",
+    style: practice.practice_logs?.[0]?.style || "-",
   });
 
   return (
@@ -103,25 +80,30 @@ export default function PracticeCard({ practice, onClick }: PracticeCardProps) {
         {practice.place && <span className="text-xs text-gray-500">{practice.place}</span>}
       </div>
 
-      {/* 2行目: 距離×本数×セット・サークル・種目、タグ */}
-      {(secondLineInfo || tags.length > 0) && (
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-          {secondLineInfo && <span className="text-sm text-gray-600">{secondLineInfo}</span>}
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {tags.map((tag) => (
-                <span
-                  key={tag.id}
-                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
-                  style={{ backgroundColor: tag.color }}
-                >
-                  {tag.name}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* 2行目以降: 練習ログごとに 距離×本数×セット・サークル・種目、タグ を1行で列挙 */}
+      {logLines.map((line) => {
+        if (!line.secondLineInfo && line.tags.length === 0) return null;
+        return (
+          <div key={line.logId} className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {line.secondLineInfo && (
+              <span className="text-sm text-gray-600">{line.secondLineInfo}</span>
+            )}
+            {line.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {line.tags.map((tag) => (
+                  <span
+                    key={tag.id}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
+                    style={{ backgroundColor: tag.color }}
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -49,51 +49,50 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
     [practice.title, t],
   );
 
-  // 最初のログの情報を取得（複数ログがある場合は最初のものを表示）
-  const firstLog = useMemo(() => practice.practice_logs?.[0], [practice.practice_logs]);
+  // 練習に属する全ログをそれぞれ1行分の表示情報に変換する（1件のみの練習でも
+  // 従来通り1行だけになり、退行なし）。ユーザー指示により、以前の firstLog のみの
+  // 表示（2件目以降が一覧から見えない）から全ログ列挙へ一般化した。
+  const logRows = useMemo(() => {
+    return (practice.practice_logs || []).map((log) => {
+      const parts: string[] = [];
 
-  // 2行目の情報を構築（タグ以外）
-  const secondLineInfo = useMemo(() => {
-    if (!firstLog) return "";
-
-    const parts: string[] = [];
-
-    // 距離・本数・セット
-    if (firstLog.distance && firstLog.rep_count && firstLog.set_count) {
-      parts.push(
-        t("practice.page.distanceFormat", {
-          distance: firstLog.distance,
-          reps: firstLog.rep_count,
-          sets: firstLog.set_count,
-        }),
-      );
-    }
-
-    // サークル
-    if (firstLog.circle) {
-      const circleTime = formatCircleTime(firstLog.circle);
-      // 共有実装は null の場合に '-' を返すため、'-' の場合は除外
-      if (circleTime && circleTime !== "-") {
-        parts.push(circleTime);
+      // 距離・本数・セット
+      if (log.distance && log.rep_count && log.set_count) {
+        parts.push(
+          t("practice.page.distanceFormat", {
+            distance: log.distance,
+            reps: log.rep_count,
+            sets: log.set_count,
+          }),
+        );
       }
-    }
 
-    // 種目
-    if (firstLog.style) {
-      parts.push(getStyleName(t, firstLog.style));
-    }
+      // サークル
+      if (log.circle) {
+        const circleTime = formatCircleTime(log.circle);
+        // 共有実装は null の場合に '-' を返すため、'-' の場合は除外
+        if (circleTime && circleTime !== "-") {
+          parts.push(circleTime);
+        }
+      }
 
-    return parts.join(" / ");
-  }, [firstLog, t]);
+      // 種目
+      if (log.style) {
+        parts.push(getStyleName(t, log.style));
+      }
 
-  // タグ情報を取得
-  const tags = useMemo(() => {
-    return (
-      firstLog?.practice_log_tags
-        ?.map((lt) => lt.practice_tags)
-        .filter((tag): tag is NonNullable<typeof tag> => tag != null) || []
-    );
-  }, [firstLog]);
+      const tags =
+        log.practice_log_tags
+          ?.map((lt) => lt.practice_tags)
+          .filter((tag): tag is NonNullable<typeof tag> => tag != null) || [];
+
+      return {
+        id: log.id,
+        secondLineInfo: parts.join(" / "),
+        tags,
+      };
+    });
+  }, [practice.practice_logs, t]);
 
   const handlePress = useCallback(() => {
     onPress?.(practice);
@@ -121,27 +120,30 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
           )}
         </View>
 
-        {/* 2行目: 距離・本数・セット、サークル、種目、タグ */}
-        {(secondLineInfo || tags.length > 0) && (
-          <View style={styles.secondRow}>
-            {secondLineInfo && (
-              <Text style={styles.secondLine} numberOfLines={1}>
-                {secondLineInfo}
-              </Text>
-            )}
-            {tags.length > 0 && (
-              <View style={styles.tagsContainer}>
-                {tags.map((tag) => (
-                  <View
-                    key={tag.id}
-                    style={[styles.tag, { backgroundColor: tag.color || "#6B7280" }]}
-                  >
-                    <Text style={styles.tagText}>{tag.name}</Text>
+        {/* 2行目以降: ログごとに距離・本数・セット、サークル、種目、タグを列挙 */}
+        {logRows.map(
+          (row) =>
+            (row.secondLineInfo || row.tags.length > 0) && (
+              <View key={row.id} style={styles.secondRow}>
+                {row.secondLineInfo && (
+                  <Text style={styles.secondLine} numberOfLines={1}>
+                    {row.secondLineInfo}
+                  </Text>
+                )}
+                {row.tags.length > 0 && (
+                  <View style={styles.tagsContainer}>
+                    {row.tags.map((tag) => (
+                      <View
+                        key={tag.id}
+                        style={[styles.tag, { backgroundColor: tag.color || "#6B7280" }]}
+                      >
+                        <Text style={styles.tagText}>{tag.name}</Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
+                )}
               </View>
-            )}
-          </View>
+            ),
         )}
       </View>
     </Pressable>

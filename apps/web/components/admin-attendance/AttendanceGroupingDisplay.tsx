@@ -15,7 +15,9 @@ export function AttendanceGroupingDisplay({
   attendanceData,
   teamMembers,
 }: AttendanceGroupingDisplayProps) {
-  const t = useTranslations("teamsAdmin");
+  // attendanceGrouping はロール中立な共有UI(一般メンバー向け閲覧とAdmin両方で使用)のため
+  // ロール中立な "teams" 名前空間を参照する(旧 teamsAdmin 側の同名グループは削除済み)
+  const t = useTranslations("teams");
   const { presentMembers, absentMembers, otherMembers, unansweredMembers } = useAttendanceGrouping(
     attendanceData,
     teamMembers,

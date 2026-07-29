@@ -7,12 +7,18 @@
  * (行クリック→詳細モーダル open、編集→タブモーダル open、カスケード削除判定) を検証する。
  *
  * 2026-07-23 Sprint (day-level 化) 再検証: 1練習ログ=1カード(log-level)から
- * 1練習日(=1 practice)=1カード(day-level, 先頭ログのみ表示)に刷新されたことに伴い、
+ * 1練習日(=1 practice)=1カード(day-level)に刷新されたことに伴い、
  * 「同一 practice に複数ログを持たせて複数カードを期待する」前提のテストを全面的に
  * day-level 前提に書き換えた(Web Developer 申し送り: 旧版はここで14件 FAIL していた)。
  * distance/circle/style/avgTime のソートプリセットは廃止されたため、それらに依存する
  * テストは date/place の2列に置き換えた。tags の ANY-log-exists 判定・draft/apply の
  * 深い検証は `PracticeClient.filterSort.test.tsx` に分離した(このファイルは配線の非退行に集中する)。
+ *
+ * 2026-07-28 更新 (C-3: 全ログ展開): 上記の「day-level カードは先頭ログのみ表示」は
+ * ユーザー判断（「1つの練習に2つの練習ログが登録されていた場合、どちらも表示させたい」）
+ * により撤回され、1カード内で practice_logs 全件を表示する方式に変わった。
+ * [V-WP-01/02] のうち「1 practice = 1 カード」は不変(day-level のカード単位は維持)だが、
+ * 「先頭ログのみ表示」の部分は反転したため、該当テストを全ログ表示前提に書き換えた。
  *
  * Sprint Contract 検証観点:
  *   [V-W-P01] 行クリックで詳細モーダルが開き、正しい practiceId/date が渡る
@@ -23,7 +29,8 @@
  *   [V-W-P06] 練習ログを削除しても同じ practice に他のログが残る場合、親 practice は削除されない
  *   [V-W-P02] 詳細モーダルの onEditPractice から PracticeTabModal の practice タブが開く
  *   [V-W-P03] 詳細モーダルの onOpenPracticeLogTab から PracticeTabModal の practiceLog タブが開く
- *   [V-WP-01/02] day-level カード化: 1 practice = 1 カード、先頭ログのみ表示
+ *   [V-WP-01] day-level カード化: 1 practice = 1 カード
+ *   [V-26] 1カード内に practice_logs 全件(先頭ログ以外も含む)が表示される
  *   [V-WP-04] ソートプリセットは date/place の4択のみ(distance/circle/style/avgTime は表示されない)
  *   [store リーク回帰] usePracticeStore は Dashboard/practice/competition の3画面で共有される
  *             module-level singleton。
@@ -192,12 +199,12 @@ describe("PracticeClient", () => {
     usePracticeStore.setState({ availableTags: [] });
   });
 
-  it("[V-WP-01/02] day-level カード: 同一日(1 practice)に2件のログがあっても1カードのみ描画され、先頭ログの内容のみ表示される", () => {
+  it("[V-WP-01][V-26] day-level カード: 同一日(1 practice)に2件のログがあっても1カードのみ描画され、両方のログの内容が表示される", () => {
     renderClient([makePractice()]);
 
     expect(getCardRows()).toHaveLength(1);
     expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
-    expect(screen.queryByText(/50m × 2本 × 1セット/)).not.toBeInTheDocument();
+    expect(screen.getByText(/50m × 2本 × 1セット/)).toBeInTheDocument();
   });
 
   it("[V-W-P08] 詳細モーダルを閉じると非表示になり、選択状態がリセットされる", async () => {

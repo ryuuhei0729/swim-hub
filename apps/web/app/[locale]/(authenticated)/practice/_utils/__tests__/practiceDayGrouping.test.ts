@@ -17,6 +17,8 @@ import {
   groupLogsByPracticeDay,
   dayHasLogMatchingAllTags,
   getPracticeDaySortValue,
+  buildPracticeLogLines,
+  formatCircleTime,
 } from "../practiceDayGrouping";
 
 function makeLog(overrides: Partial<PracticeLogWithTags> & { id: string }): PracticeLogWithTags {
@@ -180,6 +182,89 @@ describe("getPracticeDaySortValue (V-WP-04/05/06: day-level ソート値・2列�
       expect(getPracticeDaySortValue(practice, "distance" as any)).toBeNull();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(getPracticeDaySortValue(practice, "style" as any)).toBeNull();
+    },
+  );
+});
+
+describe("formatCircleTime", () => {
+  it("60秒以上は m'ss\" 形式になる", () => {
+    expect(formatCircleTime(90)).toBe("1'30\"");
+  });
+
+  it("60秒未満は 0'ss\" 形式になる", () => {
+    expect(formatCircleTime(45)).toBe("0'45\"");
+  });
+
+  it("0秒は 0'00\" になる(クラッシュしない)", () => {
+    expect(formatCircleTime(0)).toBe("0'00\"");
+  });
+});
+
+describe("buildPracticeLogLines (C-3: 全ログ展開の中核純関数)", () => {
+  it("[V-26] 2件のログを渡すと、2件分の行がそのままの順序で返る(先頭だけに絞り込まない)", () => {
+    const logs = [
+      makeLog({ id: "log-a", distance: 100, rep_count: 4, set_count: 1, style: "Fr" }),
+      makeLog({ id: "log-b", distance: 50, rep_count: 2, set_count: 1, style: "Br" }),
+    ];
+    const lines = buildPracticeLogLines(
+      logs,
+      (style) => (style === "Fr" ? "自由形" : style === "Br" ? "平泳ぎ" : style),
+      (distance, reps, sets) => `${distance}m × ${reps}本 × ${sets}セット`,
+    );
+
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatchObject({ logId: "log-a", secondLineInfo: "100m × 4本 × 1セット / 1'30\" / 自由形" });
+    expect(lines[1]).toMatchObject({ logId: "log-b", secondLineInfo: "50m × 2本 × 1セット / 1'30\" / 平泳ぎ" });
+  });
+
+  it("[V-29] logs が undefined のとき、空配列を返す(クラッシュしない)", () => {
+    expect(buildPracticeLogLines(undefined, (s) => s, (d, r, s) => `${d}/${r}/${s}`)).toEqual([]);
+  });
+
+  it("[V-29] logs が空配列のとき、空配列を返す", () => {
+    expect(buildPracticeLogLines([], (s) => s, (d, r, s) => `${d}/${r}/${s}`)).toEqual([]);
+  });
+
+  it("[V-30] 各行の tags はそのログ自身の practice_log_tags 由来で、他のログのタグと混ざらない", () => {
+    const tagA = { id: "tag-a", name: "タグA", color: "#111", user_id: "u", created_at: "", updated_at: "" };
+    const tagB = { id: "tag-b", name: "タグB", color: "#222", user_id: "u", created_at: "", updated_at: "" };
+    const logs = [
+      makeLog({ id: "log-a", practice_log_tags: [{ practice_tag_id: "tag-a", practice_tags: tagA }] }),
+      makeLog({ id: "log-b", practice_log_tags: [{ practice_tag_id: "tag-b", practice_tags: tagB }] }),
+    ];
+    const lines = buildPracticeLogLines(logs, (s) => s, (d, r, s) => `${d}/${r}/${s}`);
+
+    expect(lines[0].tags).toEqual([tagA]);
+    expect(lines[1].tags).toEqual([tagB]);
+  });
+
+  it("distance/rep_count/set_count のいずれかが0/未設定のとき、距離部分を省略する(クラッシュしない)", () => {
+    const logs = [makeLog({ id: "log-a", distance: 0, rep_count: 4, set_count: 1, circle: null, style: "" })];
+    const lines = buildPracticeLogLines(logs, (s) => s, (d, r, s) => `${d}/${r}/${s}`);
+
+    expect(lines[0].secondLineInfo).toBe("");
+  });
+
+  it(
+    "[Reviewer W-4 対応] practice_log_tags の joined practice_tags が null のエントリを含んでも" +
+      "クラッシュせず、null を除外した tags を返す(mobile PracticeItem.tsx の logRows と同じ" +
+      "null ガード。データ不整合(タグが後から削除された等)への耐性)",
+    () => {
+      const tagA = { id: "tag-a", name: "タグA", color: "#111", user_id: "u", created_at: "", updated_at: "" };
+      const logs = [
+        makeLog({
+          id: "log-a",
+          practice_log_tags: [
+            { practice_tag_id: "tag-a", practice_tags: tagA },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 意図的にDB不整合(joined tag削除済み)を再現する
+            { practice_tag_id: "tag-deleted", practice_tags: null as any },
+          ],
+        }),
+      ];
+
+      expect(() => buildPracticeLogLines(logs, (s) => s, (d, r, s) => `${d}/${r}/${s}`)).not.toThrow();
+      const lines = buildPracticeLogLines(logs, (s) => s, (d, r, s) => `${d}/${r}/${s}`);
+      expect(lines[0].tags).toEqual([tagA]);
     },
   );
 });

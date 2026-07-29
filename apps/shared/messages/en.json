@@ -2392,6 +2392,7 @@
         "memberStatusOther": "Other",
         "memberStatusUnanswered": "No Response",
         "memberAttendanceFetchFailed": "Failed to load attendance data",
+        "teamMembersFetchFailed": "Failed to load member list",
         "memberAttendanceEmpty": "No attendance responses yet",
         "memberAttendanceLoading": "Loading...",
         "bulkChange": {
@@ -2933,7 +2934,12 @@
       }
     },
     "attendanceGrouping": {
-      "categoryLabel": "members"
+      "categoryLabel": "members",
+      "present": "Present ({count})",
+      "absent": "Absent ({count})",
+      "other": "Other ({count})",
+      "unanswered": "No Response ({count})",
+      "none": "None"
     },
     "attendanceEditHook": {
       "saveError": "Failed to save attendance information",
@@ -3475,13 +3481,6 @@
     "attendanceStatus": {
       "loading": "Loading...",
       "titleSuffix": "Attendance Status"
-    },
-    "attendanceGrouping": {
-      "present": "Present ({count})",
-      "absent": "Absent ({count})",
-      "other": "Other ({count})",
-      "unanswered": "No Response ({count})",
-      "none": "None"
     },
     "templateDownload": {
       "title": "Download Excel Templates",

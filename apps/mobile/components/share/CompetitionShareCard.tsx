@@ -8,23 +8,10 @@ import {
   getLapIntervalsForRace,
   type SplitTime,
 } from "@/utils/lapTimeCalculator";
+import type { CompetitionShareData } from "./types";
 
-/** 大会記録シェアカード用データ（web CompetitionShareData のモバイル版） */
-export interface CompetitionShareData {
-  competitionName: string;
-  /** 表示用に整形済みの日付文字列 */
-  date: string;
-  place: string;
-  poolType: "short" | "long";
-  eventName: string;
-  raceDistance: number;
-  time: number;
-  reactionTime?: number;
-  splitTimes?: Array<{ distance: number; split_time: number }>;
-  /** その種目の初記録（過去記録なし）→「初」バッジ */
-  isFirstRecord?: boolean;
-  previousBest?: number;
-}
+// CompetitionShareData は types.ts に集約済み。後方互換のため re-export する。
+export type { CompetitionShareData } from "./types";
 
 /** キャプチャ時の固定幅（web の 480px 相当をモバイル向けに縮小） */
 export const SHARE_CARD_WIDTH = 360;
