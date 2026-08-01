@@ -120,6 +120,13 @@ const mocks = vi.hoisted(() => {
     updateCompetitionMutateAsync: vi.fn(),
     getStyles: vi.fn(),
     getAccessToken: vi.fn(),
+    // useRecordByIdQuery モックの分岐制御用フラグ (V-04: ローディング/エラー/不存在の3状態検証)
+    recordByIdError: false,
+    recordByIdLoading: false,
+    // エラー状態からのリトライ中 (isFetching=true) を模すためのフラグ。
+    // デフォルト false (react-query の初回ロード以外は isFetching=false が通常)
+    recordByIdFetching: false,
+    refetchRecordById: vi.fn(),
   };
 });
 
@@ -143,11 +150,65 @@ vi.mock("@apps/shared/api/styles", () => ({
 }));
 
 vi.mock("@apps/shared/hooks/queries/records", () => ({
+  // 大会選択ドロップダウン用の一覧のみを提供する (編集対象レコードの解決には使わない。
+  // App Developer による B-1 修正で、編集対象レコードの解決は useRecordsQuery の一覧
+  // キャッシュへの依存をやめ、useRecordByIdQuery (recordId から直接解決) に置き換わった)
   useRecordsQuery: () => ({
-    records: mocks.recordsFixture,
     competitions: mocks.competitionsFixture,
     isLoading: false,
   }),
+  // W-05 修正 (2026-08-01): RecordFormScreen は大会選択ドロップダウンのために
+  // useRecordsQuery (records 一覧まで不要にフェッチする) ではなく、大会一覧専用の
+  // useCompetitionsListQuery を使うよう置換された。react-query の UseQueryResult
+  // 形状 (data/isLoading/isError 等) を模したモックを提供する。
+  useCompetitionsListQuery: () => ({
+    data: mocks.competitionsFixture,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  // recordId を引数として受け取り、recordsFixture から直接解決する
+  // (「どの画面を先に訪問したか」に依存しないことを実際の関数シグネチャで模する)
+  useRecordByIdQuery: (_supabase: unknown, recordId: string) => {
+    if (!recordId) {
+      return {
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        isError: false,
+        refetch: mocks.refetchRecordById,
+      };
+    }
+    if (mocks.recordByIdError) {
+      return {
+        data: null,
+        isLoading: false,
+        // リトライ中 (再フェッチ中) かどうかは isFetching で表現する (react-query の
+        // isLoading は初回ロード専用で、リトライ中は false のまま)
+        isFetching: mocks.recordByIdFetching,
+        isError: true,
+        refetch: mocks.refetchRecordById,
+      };
+    }
+    if (mocks.recordByIdLoading) {
+      return {
+        data: undefined,
+        isLoading: true,
+        isFetching: true,
+        isError: false,
+        refetch: mocks.refetchRecordById,
+      };
+    }
+    const found = mocks.recordsFixture.find((r) => r.id === recordId) ?? null;
+    return {
+      data: found,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: mocks.refetchRecordById,
+    };
+  },
   useCreateRecordMutation: () => ({ mutateAsync: mocks.createMutateAsync, isPending: false }),
   useUpdateRecordMutation: () => ({ mutateAsync: mocks.updateMutateAsync, isPending: false }),
   useReplaceSplitTimesMutation: () => ({
@@ -192,6 +253,9 @@ describe("RecordFormScreen — 大会未紐付けレコード(一括入力)の�
     vi.clearAllMocks();
     useRecordStore.getState().reset();
     mocks.routeParams.recordId = "record-1";
+    mocks.recordByIdError = false;
+    mocks.recordByIdLoading = false;
+    mocks.recordByIdFetching = false;
     mocks.getStyles.mockResolvedValue(mocks.stylesFixture);
     mocks.getAccessToken.mockResolvedValue("test-access-token");
     mocks.updateMutateAsync.mockResolvedValue({ id: "record-1" });
@@ -244,6 +308,9 @@ describe("RecordFormScreen — 大会紐付けレコードの通常編集フロ�
     vi.clearAllMocks();
     useRecordStore.getState().reset();
     mocks.routeParams.recordId = "record-2"; // linkedRecord (competition_id="comp-1")
+    mocks.recordByIdError = false;
+    mocks.recordByIdLoading = false;
+    mocks.recordByIdFetching = false;
     mocks.getStyles.mockResolvedValue(mocks.stylesFixture);
     mocks.getAccessToken.mockResolvedValue("test-access-token");
     mocks.updateMutateAsync.mockResolvedValue({ id: "record-2" });
@@ -282,5 +349,88 @@ describe("RecordFormScreen — 大会紐付けレコードの通常編集フロ�
     expect(updates.pool_type).toBe(1);
     expect(updates.style_id).toBe(2);
     expect(updates.time).toBe(40.0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [QA 追加 / V-04] useRecordByIdQuery によるレコード解決が失敗する3状態
+// (ローディング中 / 取得エラー / 対象レコード不存在) それぞれで、無限スピナーや
+// 白紙にならず、利用者が状況を認識できる表示になっていることを検証する。
+// これまでのモックは recordByIdError/recordByIdLoading フラグを一切参照しない
+// 死んだ分岐 (常に false 相当) だったため、この3状態は実質未検証だった。
+// ---------------------------------------------------------------------------
+describe("RecordFormScreen — 編集対象レコード解決の3状態 (V-04)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useRecordStore.getState().reset();
+    mocks.routeParams.recordId = "record-1";
+    mocks.recordByIdError = false;
+    mocks.recordByIdLoading = false;
+    mocks.recordByIdFetching = false;
+    mocks.getStyles.mockResolvedValue(mocks.stylesFixture);
+    mocks.getAccessToken.mockResolvedValue("test-access-token");
+  });
+
+  it("[V-04: ローディング] 取得中は無限に固まらず、ローディング表示になる", async () => {
+    mocks.recordByIdLoading = true;
+
+    render(<RecordFormScreen />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText("データを読み込み中...")).toBeDefined();
+    });
+    // ローディング中は編集フォーム本体 (保存ボタン) が表示されない
+    expect(screen.queryByText("保存")).toBeNull();
+  });
+
+  it("[V-04: エラー] 取得エラー時は白紙にならず、エラーメッセージとリトライ導線が表示される", async () => {
+    mocks.recordByIdError = true;
+
+    render(<RecordFormScreen />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText("記録の取得に失敗しました")).toBeDefined();
+    });
+    expect(screen.queryByText("保存")).toBeNull();
+
+    // リトライ導線が refetch を呼び出す
+    fireEvent.click(screen.getByText("再試行"));
+    expect(mocks.refetchRecordById).toHaveBeenCalledTimes(1);
+  });
+
+  it(
+    "[V-04: エラー後のリトライ中] エラー状態のままリトライ (再フェッチ) 中は、" +
+      "静的なエラー表示に留まらずローディングインジケータに切り替わる (isError && isFetching)",
+    async () => {
+      // エラーからのリトライ中: isError は true のまま、isFetching だけが true になる
+      // (react-query の isLoading は初回ロード専用のため、リトライ中は isLoading=false のまま)
+      mocks.recordByIdError = true;
+      mocks.recordByIdFetching = true;
+
+      render(<RecordFormScreen />, { wrapper: createWrapper() });
+
+      await waitFor(() => {
+        expect(screen.getByText("データを読み込み中...")).toBeDefined();
+      });
+      // リトライ中は静的なエラーメッセージ・リトライボタンには留まらない
+      expect(screen.queryByText("記録の取得に失敗しました")).toBeNull();
+      expect(screen.queryByText("再試行")).toBeNull();
+      expect(screen.queryByText("保存")).toBeNull();
+    },
+  );
+
+  it("[V-04: 不存在] エラーではないが対象レコードが見つからない場合、専用メッセージが表示され保存導線は出ない (リトライボタンは無し)", async () => {
+    // recordByIdError=false かつ data=null (recordsFixture に無い id) を再現するため、
+    // 存在しない recordId を指定する
+    mocks.routeParams.recordId = "record-does-not-exist";
+
+    render(<RecordFormScreen />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText("記録データが見つかりませんでした")).toBeDefined();
+    });
+    expect(screen.queryByText("保存")).toBeNull();
+    // エラーではないためリトライボタンは表示されない (onRetry undefined)
+    expect(screen.queryByText("再試行")).toBeNull();
   });
 });

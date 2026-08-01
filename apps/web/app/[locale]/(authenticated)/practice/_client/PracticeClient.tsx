@@ -32,10 +32,11 @@ import type { GalleryImage } from "@/components/ui/ImageGallery";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
 import { useTableSort } from "@/hooks/useTableSort";
 import {
-  groupLogsByPracticeDay,
-  dayHasLogMatchingAllTags,
-  getPracticeDaySortValue,
-} from "../_utils/practiceDayGrouping";
+  buildPracticeLogRows,
+  logMatchesAllTags,
+  type PracticeLogRow,
+} from "@apps/shared/utils/practiceLogRows";
+import { getPracticeLogRowSortValue } from "../_utils/practiceLogGrouping";
 
 interface PracticeClientProps {
   styles: Style[];
@@ -68,9 +69,12 @@ interface FilterDraft {
  * - 編集: dashboard と同じ PracticeTabModal
  * - 削除確認: dashboard と同じ DeleteConfirmModal (PracticeDetailModal 内で使用)
  *
- * 一覧UI(2026-07-23 Sprint): 1練習ログ=1カードの log-level 表示を廃止し、1練習日(=1 practice)
- * =1カードの day-level 表示に刷新した(mobile PracticeItem.tsx とのパリティ)。
- * 絞り込みシートも CompetitionClient.tsx と同型の draft/apply 方式に変更した。
+ * 一覧UI(2026-08-01): カードの粒度を 1練習ログ=1カード (log-level) とする。大会タブ
+ * (CompetitionClient: 1記録=1カード) と粒度を揃えるためで、2026-07-23 に導入した
+ * day-level(1練習=1カードに全ログを行として詰め込む)表示はユーザー指摘により撤回した。
+ * クリック先は従来どおり練習全体 (PracticeDetailModal) なので、同じ練習のどのログの
+ * カードを押しても全ログが載った同一モーダルが開く(mobile PracticesScreen とパリティ)。
+ * 絞り込みシートは CompetitionClient.tsx と同型の draft/apply 方式。
  */
 export default function PracticeClient({
   styles: _styles,
@@ -251,50 +255,49 @@ export default function PracticeClient({
   // React Queryのキャッシュを使用
   const displayPractices = practices;
 
-  // day-level 一覧のベース(practice.id で去重。通常は恒等に近いが防御的に適用する)
-  const practiceDays = useMemo(() => groupLogsByPracticeDay(displayPractices), [displayPractices]);
+  // 一覧のベース: 1練習ログ = 1カード行へ平坦化する(practice.id で去重。大会タブと同じ粒度)
+  const practiceLogRows = useMemo(() => buildPracticeLogRows(displayPractices), [displayPractices]);
 
   // 今日の日付（時刻を0時0分0秒にリセット）
   const today = useMemo(() => startOfDay(new Date()), []);
 
   // 場所/種目フィルタの選択肢生成対象: 未来日の練習は「選んでも常に0件」になる候補になるため、
-  // filteredPracticeDays と同じ未来日ガードを適用した集合(=表示対象になり得る練習日のみ)から
+  // filteredRows と同じ未来日ガードを適用した集合(=表示対象になり得る行のみ)から
   // distinct を生成する
-  const pastOrTodayPracticeDays = useMemo(() => {
-    return practiceDays.filter((practice) => {
-      if (!practice.date) return true;
-      return !isAfter(startOfDay(new Date(practice.date)), today);
+  const pastOrTodayRows = useMemo(() => {
+    return practiceLogRows.filter((row) => {
+      if (!row.practice.date) return true;
+      return !isAfter(startOfDay(new Date(row.practice.date)), today);
     });
-  }, [practiceDays, today]);
+  }, [practiceLogRows, today]);
 
-  // 場所フィルタの選択肢（distinct, ロケール順。day-level のフィールドのため練習日を直接走査する）
+  // 場所フィルタの選択肢（distinct, ロケール順。practice 単位のフィールドを行経由で走査する）
   const participatedPlaces = useMemo(() => {
     const places = new Set<string>();
-    pastOrTodayPracticeDays.forEach((practice) => {
-      if (practice.place) places.add(practice.place);
+    pastOrTodayRows.forEach((row) => {
+      if (row.practice.place) places.add(row.practice.place);
     });
     return Array.from(places).sort((a, b) => a.localeCompare(b, locale));
-  }, [pastOrTodayPracticeDays, locale]);
+  }, [pastOrTodayRows, locale]);
 
-  // 種目フィルタの選択肢（distinct, STYLES定義順。log 単位のフィールドのため
-  // displayPractices.flatMap(p => p.practice_logs) を走査元にする）
+  // 種目フィルタの選択肢（distinct, STYLES定義順。log 単位のフィールド）
   const participatedStyleKeys = useMemo(() => {
     const keys = new Set<string>();
-    pastOrTodayPracticeDays
-      .flatMap((practice) => practice.practice_logs || [])
-      .forEach((log) => {
-        if (log.style) keys.add(log.style);
-      });
+    pastOrTodayRows.forEach((row) => {
+      if (row.log?.style) keys.add(row.log.style);
+    });
     return Array.from(keys).sort((a, b) => getStyleOrderIndex(a) - getStyleOrderIndex(b));
-  }, [pastOrTodayPracticeDays]);
+  }, [pastOrTodayRows]);
 
   // タグ/場所/種目フィルタリングロジック + 日付フィルタリング（今日以前のみ）。カラム間 AND。
-  // day-level 化: タグは「選択した全タグを含むログが、その日の practice_logs に少なくとも1件
-  // 存在すれば表示」(per-log は AND、日全体は OR-exists)。場所は day 直接比較、種目は
-  // その日のログのいずれか1件が一致すれば表示(ANY-log match)。
-  const filteredPracticeDays = useMemo(
+  // log-level 化: 場所は親 practice、タグ(選択タグを全て持つか=AND)と種目はその行のログ自身を
+  // 見る。day-level 時代の「条件に合うログが1件でもあれば日全体を表示」(OR-exists)は、
+  // 条件に合わないログのカードまで一緒に出てしまうため撤回した。
+  const filteredRows = useMemo(
     () =>
-      practiceDays.filter((practice) => {
+      practiceLogRows.filter((row) => {
+        const { practice, log } = row;
+
         // 日付フィルタリング：今日より未来の日付は除外
         if (practice.date) {
           const practiceDate = startOfDay(new Date(practice.date));
@@ -303,49 +306,48 @@ export default function PracticeClient({
           }
         }
 
-        // タグフィルタリング（選択した全タグを含むログが1件でも存在する日のみ表示）
-        if (!dayHasLogMatchingAllTags(practice, selectedTagIds)) {
+        // タグフィルタリング（そのログが選択タグを全て持つ場合のみ表示）
+        if (!logMatchesAllTags(log, selectedTagIds)) {
           return false;
         }
 
-        // 場所フィルタリング（複数OR、day-level の直接比較）
+        // 場所フィルタリング（複数OR、practice の直接比較）
         if (filterPlaces.length > 0) {
           if (!practice.place || !filterPlaces.includes(practice.place)) {
             return false;
           }
         }
 
-        // 種目フィルタリング（単一select。その日のログのいずれか1件が一致すれば表示）
+        // 種目フィルタリング（単一select。そのログの種目が一致する場合のみ表示）
         if (filterStyle) {
-          const hasMatchingStyle = (practice.practice_logs || []).some(
-            (log) => log.style === filterStyle,
-          );
-          if (!hasMatchingStyle) {
+          if (log?.style !== filterStyle) {
             return false;
           }
         }
 
         return true;
       }),
-    [practiceDays, selectedTagIds, filterPlaces, filterStyle, today],
+    [practiceLogRows, selectedTagIds, filterPlaces, filterStyle, today],
   );
 
-  // 日付の降順を既定順とし、useTableSort に渡す（sortColumn が null の間はこの順序を維持する）
-  const dateDescPracticeDays = useMemo(() => {
-    return [...filteredPracticeDays].sort((a, b) => {
-      const dateA = new Date(a.date || a.created_at);
-      const dateB = new Date(b.date || b.created_at);
+  // 日付の降順を既定順とし、useTableSort に渡す（sortColumn が null の間はこの順序を維持する）。
+  // ソートキーは practice 単位なので、同じ練習のログ同士は常にタイ。Array.prototype.sort は
+  // 安定ソートのため、同一練習のログは buildPracticeLogRows が並べた順序のまま隣り合う。
+  const dateDescRows = useMemo(() => {
+    return [...filteredRows].sort((a, b) => {
+      const dateA = new Date(a.practice.date || a.practice.created_at);
+      const dateB = new Date(b.practice.date || b.practice.created_at);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [filteredPracticeDays]);
+  }, [filteredRows]);
 
-  const { sortedItems: sortedPracticeDays } = useTableSort<PracticeWithLogs, PracticeSortColumn>(
-    dateDescPracticeDays,
+  const { sortedItems: sortedRows } = useTableSort<PracticeLogRow, PracticeSortColumn>(
+    dateDescRows,
     sortColumn,
     sortOrder,
     setSortColumn,
     setSortOrder,
-    getPracticeDaySortValue,
+    getPracticeLogRowSortValue,
     locale,
   );
 
@@ -418,9 +420,9 @@ export default function PracticeClient({
   ];
 
   // もっと見る: 絞り込み後・並べ替え後の総件数のうち displayCount 件のみ表示する
-  const visiblePracticeDays = useMemo(() => {
-    return sortedPracticeDays.slice(0, displayCount);
-  }, [sortedPracticeDays, displayCount]);
+  const visibleRows = useMemo(() => {
+    return sortedRows.slice(0, displayCount);
+  }, [sortedRows, displayCount]);
 
   const handleLoadMore = () => {
     setDisplayCount((count) => count + PAGE_INCREMENT);
@@ -592,11 +594,11 @@ export default function PracticeClient({
         <p className="text-sm sm:text-base text-gray-600">{t("page.description")}</p>
       </div>
 
-      {/* 練習記録一覧（全幅カード + ボトムシート、day-level）。
+      {/* 練習記録一覧（全幅カード + ボトムシート、1練習ログ=1カード）。
           スマホ幅はページラッパー(DashboardLayout)が既に px-0 のため、
           角丸を落として画面端まで貼り付ける(sm以上は従来の rounded-lg inset 見た目) */}
       <div className="bg-white rounded-none sm:rounded-lg shadow">
-        {practiceDays.length === 0 ? (
+        {practiceLogRows.length === 0 ? (
           <div className="p-12 text-center">
             <CalendarDaysIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">{t("page.emptyTitle")}</h3>
@@ -612,7 +614,7 @@ export default function PracticeClient({
               </Button>
             </div>
           </div>
-        ) : sortedPracticeDays.length === 0 ? (
+        ) : sortedRows.length === 0 ? (
           <div className="p-12 text-center">
             <CalendarDaysIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">{t("page.noMatchTitle")}</h3>
@@ -626,25 +628,30 @@ export default function PracticeClient({
         ) : (
           <>
             <ListToolbar
-              itemCount={sortedPracticeDays.length}
+              itemCount={sortedRows.length}
               onSortClick={openSortSheet}
               onFilterClick={openFilterSheet}
               activeFilterCount={activeFilterCount}
             />
 
             <div className="space-y-2 sm:space-y-3 px-0 sm:px-6 pb-4">
-              {visiblePracticeDays.map((practice) => (
-                <PracticeCard key={practice.id} practice={practice} onClick={handleRowClick} />
+              {visibleRows.map((row) => (
+                <PracticeCard
+                  key={row.id}
+                  practice={row.practice}
+                  log={row.log}
+                  onClick={handleRowClick}
+                />
               ))}
             </div>
 
-            {sortedPracticeDays.length > displayCount && (
+            {sortedRows.length > displayCount && (
               <div className="px-4 sm:px-6 pb-6 flex flex-col items-center gap-1">
                 <Button variant="outline" onClick={handleLoadMore}>
                   {tCommon("loadMore.button")}
                 </Button>
                 <span className="text-xs text-gray-500">
-                  {tCommon("loadMore.remaining", { n: sortedPracticeDays.length - displayCount })}
+                  {tCommon("loadMore.remaining", { n: sortedRows.length - displayCount })}
                 </span>
               </div>
             )}

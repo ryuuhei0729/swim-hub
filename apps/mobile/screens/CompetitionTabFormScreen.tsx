@@ -29,6 +29,7 @@ import {
   useBestTimesQuery,
 } from "@apps/shared/hooks/queries/records";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
+import { useTeamMembersQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
@@ -162,7 +163,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     teamId,
     initialTab,
   } = route.params;
-  const { supabase, subscription, getAccessToken } = useAuth();
+  const { supabase, user, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -172,6 +173,15 @@ export const CompetitionTabFormScreen: React.FC = () => {
     initialCompetitionId,
   );
   const isEditMode = !!resolvedCompetitionId;
+
+  // ---- 大会の所有者・所属チーム (編集権限判定用) ----
+  // route.params.teamId は TeamCompetitionList からの遷移時のみ渡され、
+  // useDayDetailHandlers.handleEditRecord からの遷移では渡らない。そのため
+  // 既存データ取得時に competitions.team_id (source of truth) で上書きする。
+  // handleSave 以降はこの competitionTeamId を唯一の参照先とし、route.params.teamId を
+  // 直接参照しない (新規作成モードでは競技データ未取得のためこの初期値がそのまま使われる)。
+  const [competitionOwnerId, setCompetitionOwnerId] = useState<string | null>(null);
+  const [competitionTeamId, setCompetitionTeamId] = useState<string | null>(teamId ?? null);
 
   // ---- 大会タブ state ----
   const [date, setDate] = useState(initialDateParam || format(new Date(), "yyyy-MM-dd"));
@@ -275,6 +285,27 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const deleteRecordMutation = useDeleteRecordMutation(supabase);
   const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase);
 
+  // ---- 大会の編集権限判定 ----
+  // competitions UPDATE RLS (user_id = auth.uid() OR is_team_admin(team_id, auth.uid())) と
+  // 同じ条件をクライアント側でも判定する。チーム大会でない場合は自分の大会なので常に true。
+  // メンバー一覧の取得・管理者判定は TeamDetailScreen (members.some(m => m.user_id === user.id
+  // && m.role === "admin")) と同じパターンを踏襲する。
+  const { data: competitionTeamMembers, isLoading: isCompetitionTeamMembersLoading } =
+    useTeamMembersQuery(supabase, competitionTeamId ?? undefined);
+  const isCurrentUserCompetitionTeamAdmin = useMemo(() => {
+    if (!user || !competitionTeamId || !competitionTeamMembers) return false;
+    return competitionTeamMembers.some((m) => m.user_id === user.id && m.role === "admin");
+  }, [user, competitionTeamId, competitionTeamMembers]);
+  const canEditCompetitionDetails = useMemo(() => {
+    if (!isEditMode) return true; // 新規作成は常に自分の大会
+    if (!competitionTeamId) return true; // 個人の大会は常に自分のもの
+    if (user && competitionOwnerId === user.id) return true;
+    return isCurrentUserCompetitionTeamAdmin;
+  }, [isEditMode, competitionTeamId, competitionOwnerId, user, isCurrentUserCompetitionTeamAdmin]);
+  // チーム大会の編集権限確定待ち (未確定のまま編集可能 UI を出さないためのローディングガード)
+  const isResolvingCompetitionPermission =
+    isEditMode && !!competitionTeamId && isCompetitionTeamMembersLoading;
+
   // ---- EntryAPI ----
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
 
@@ -364,6 +395,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
         setPlace(competition.place || "");
         setPoolType(competition.pool_type ?? 0);
         setCompetitionNote(competition.note || "");
+        // 編集権限判定 (competitions UPDATE RLS と同条件をクライアントでも反映する)
+        setCompetitionOwnerId(competition.user_id);
+        setCompetitionTeamId(competition.team_id ?? null);
         // 保存用の生パスは表示用の解決結果と独立して常に保持する
         setSavedImagePaths(competition.image_paths ?? []);
         // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
@@ -672,52 +706,57 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
       // --- 大会 INSERT or UPDATE ---
       if (isEditMode && savedCompetitionId) {
-        // 更新
-        let newImagePaths: string[] = [];
-        if (newImageFiles.length > 0) {
-          const uploadResults = await uploadImagesViaApi(
-            newImageFiles.map((f) => ({ base64: f.base64, fileExtension: f.fileExtension })),
-            savedCompetitionId,
-            "competition-images",
-            accessToken,
-          );
-          newImagePaths = uploadResults.map((r) => r.path);
-        }
-        // 生パス (source of truth) から削除分を除外し新規分を追加（mergeImagePaths 参照）
-        const updatedImagePaths = mergeImagePaths(savedImagePaths, deletedImageIds, newImagePaths);
-
-        const formData = {
-          date,
-          end_date: endDate.trim() || null,
-          title: title.trim() || null,
-          place: place.trim() || null,
-          pool_type: poolType,
-          note: competitionNote.trim() || null,
-          image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
-        };
-        const updatedCompetition = await updateCompetitionMutation.mutateAsync({
-          id: savedCompetitionId,
-          updates: formData,
-        });
-
-        if (deletedImageIds.length > 0) {
-          await deleteImages(supabase, deletedImageIds, "competition-images");
-        }
-
-        if (
-          Platform.OS === "ios" &&
-          profile?.ios_calendar_enabled &&
-          profile?.ios_calendar_sync_competitions
-        ) {
-          try {
-            await syncCompetition(updatedCompetition, "update");
-          } catch (syncError) {
-            console.warn("カレンダー同期エラー:", syncError);
-            Alert.alert(
-              t("competition.mobile.calendarSyncFailedTitle"),
-              t("competition.mobile.calendarSyncFailedMessage"),
-              [{ text: "OK" }],
+        // 更新: チーム大会かつ自分がオーナーでも管理者でもない場合は competitions
+        // UPDATE RLS (user_id = auth.uid() OR is_team_admin) を満たさず 0 行ヒットで
+        // 例外になる。その場合は大会本体の更新をスキップし、エントリー/レコード
+        // (records の RLS は本人所有で許可される) の保存へ進む。
+        if (canEditCompetitionDetails) {
+          let newImagePaths: string[] = [];
+          if (newImageFiles.length > 0) {
+            const uploadResults = await uploadImagesViaApi(
+              newImageFiles.map((f) => ({ base64: f.base64, fileExtension: f.fileExtension })),
+              savedCompetitionId,
+              "competition-images",
+              accessToken,
             );
+            newImagePaths = uploadResults.map((r) => r.path);
+          }
+          // 生パス (source of truth) から削除分を除外し新規分を追加（mergeImagePaths 参照）
+          const updatedImagePaths = mergeImagePaths(savedImagePaths, deletedImageIds, newImagePaths);
+
+          const formData = {
+            date,
+            end_date: endDate.trim() || null,
+            title: title.trim() || null,
+            place: place.trim() || null,
+            pool_type: poolType,
+            note: competitionNote.trim() || null,
+            image_paths: updatedImagePaths.length > 0 ? updatedImagePaths : [],
+          };
+          const updatedCompetition = await updateCompetitionMutation.mutateAsync({
+            id: savedCompetitionId,
+            updates: formData,
+          });
+
+          if (deletedImageIds.length > 0) {
+            await deleteImages(supabase, deletedImageIds, "competition-images");
+          }
+
+          if (
+            Platform.OS === "ios" &&
+            profile?.ios_calendar_enabled &&
+            profile?.ios_calendar_sync_competitions
+          ) {
+            try {
+              await syncCompetition(updatedCompetition, "update");
+            } catch (syncError) {
+              console.warn("カレンダー同期エラー:", syncError);
+              Alert.alert(
+                t("competition.mobile.calendarSyncFailedTitle"),
+                t("competition.mobile.calendarSyncFailedMessage"),
+                [{ text: "OK" }],
+              );
+            }
           }
         }
       } else {
@@ -729,7 +768,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           place: place.trim() || null,
           pool_type: poolType,
           note: competitionNote.trim() || null,
-          ...(teamId ? { team_id: teamId } : {}),
+          ...(competitionTeamId ? { team_id: competitionTeamId } : {}),
         };
         const newCompetition = await createCompetitionMutation.mutateAsync(formData);
         savedCompetitionId = newCompetition.id;
@@ -824,8 +863,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
           });
         }
         for (const create of creates) {
-          if (teamId) {
-            await entryApi.createTeamEntry(teamId, user.id, {
+          if (competitionTeamId) {
+            await entryApi.createTeamEntry(competitionTeamId, user.id, {
               competition_id: savedCompetitionId,
               style_id: create.styleId,
               entry_time: create.entryTime,
@@ -906,7 +945,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           if (!createRecordSet.has(record.draftId)) continue;
           const recordData: Omit<RecordInsert, "user_id"> = {
             competition_id: savedCompetitionId,
-            team_id: teamId ?? null,
+            team_id: competitionTeamId,
             style_id: parseInt(record.styleId),
             time: record.time,
             reaction_time: record.reactionTime.trim() !== "" ? parseFloat(record.reactionTime) : null,
@@ -957,8 +996,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
       // クエリ無効化
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
-      if (teamId) {
-        queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
+      if (competitionTeamId) {
+        queryClient.invalidateQueries({ queryKey: teamKeys.competitions(competitionTeamId) });
       }
 
       // navigation.goBack() はここで直接呼ばず、isSaved を state 化してレンダーを
@@ -978,6 +1017,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     getAccessToken,
     resolvedCompetitionId,
     isEditMode,
+    canEditCompetitionDetails,
     date,
     endDate,
     title,
@@ -992,7 +1032,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     entries,
     records,
     swimStyles,
-    teamId,
+    competitionTeamId,
     supabase,
     queryClient,
     createCompetitionMutation,
@@ -1539,7 +1579,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
   );
 
   // ---- ローディング ----
-  if (loadingExisting || loadingStyles) {
+  if (loadingExisting || loadingStyles || isResolvingCompetitionPermission) {
     return (
       <View style={styles.container}>
         <LoadingSpinner fullScreen message={t("competition.mobile.loadingInfo")} />
@@ -1571,6 +1611,15 @@ export const CompetitionTabFormScreen: React.FC = () => {
         {/* ---- 大会タブ ---- */}
         {activeTab === "competition" && (
           <View style={styles.form}>
+            {/* 編集権限なし (チーム大会の非管理者かつ非オーナー) の場合は読み取り専用にする */}
+            {!canEditCompetitionDetails && (
+              <View style={styles.guardMessage}>
+                <Text style={styles.guardMessageText}>
+                  {t("forms.tabModal.competitionEditRestricted")}
+                </Text>
+              </View>
+            )}
+
             {/* 日付 */}
             <View style={styles.section}>
               <View style={styles.dateRow}>
@@ -1583,7 +1632,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     value={date}
                     onChange={handleStartDateChange}
                     required
-                    disabled={isSaving}
+                    disabled={isSaving || !canEditCompetitionDetails}
                     error={competitionErrors.date}
                   />
                 </View>
@@ -1596,7 +1645,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     value={endDate}
                     onChange={setEndDate}
                     allowClear
-                    disabled={isSaving}
+                    disabled={isSaving || !canEditCompetitionDetails}
                     error={competitionErrors.endDate}
                     minDate={isValid(parseISO(date)) ? parseISO(date) : undefined}
                   />
@@ -1608,11 +1657,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
             <View style={styles.section}>
               <Text style={styles.label}>{t("competition.form.nameLabel")}</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, !canEditCompetitionDetails && styles.inputDisabled]}
                 value={title}
                 onChangeText={setTitle}
                 placeholder={t("competition.form.namePlaceholder")}
-                editable={!isSaving}
+                editable={!isSaving && canEditCompetitionDetails}
               />
             </View>
 
@@ -1620,11 +1669,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
             <View style={styles.section}>
               <Text style={styles.label}>{t("competition.form.placeLabel")}</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, !canEditCompetitionDetails && styles.inputDisabled]}
                 value={place}
                 onChangeText={setPlace}
                 placeholder={t("competition.form.placePlaceholder")}
-                editable={!isSaving}
+                editable={!isSaving && canEditCompetitionDetails}
               />
             </View>
 
@@ -1641,9 +1690,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     style={[
                       styles.pickerOption,
                       poolType === type.value && styles.pickerOptionSelected,
+                      !canEditCompetitionDetails && styles.pickerOptionDisabled,
                     ]}
                     onPress={() => setPoolType(type.value)}
-                    disabled={isSaving}
+                    disabled={isSaving || !canEditCompetitionDetails}
                   >
                     <Text
                       style={[
@@ -1662,13 +1712,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
             <View style={styles.section}>
               <Text style={styles.label}>{t("competition.form.memoLabel")}</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  !canEditCompetitionDetails && styles.inputDisabled,
+                ]}
                 value={competitionNote}
                 onChangeText={setCompetitionNote}
                 placeholder={t("competition.form.memoPlaceholder")}
                 multiline
                 numberOfLines={3}
-                editable={!isSaving}
+                editable={!isSaving && canEditCompetitionDetails}
               />
             </View>
 
@@ -1679,7 +1733,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                   existingImages={existingImages}
                   onImagesChange={handleImagesChange}
                   maxImages={3}
-                  disabled={isSaving}
+                  disabled={isSaving || !canEditCompetitionDetails}
                   label={t("competition.form.imagesLabel")}
                 />
               ) : (
@@ -2311,6 +2365,10 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: "#EF4444",
   },
+  inputDisabled: {
+    backgroundColor: "#F3F4F6",
+    color: "#9CA3AF",
+  },
   textArea: {
     minHeight: 80,
     textAlignVertical: "top",
@@ -2344,6 +2402,9 @@ const styles = StyleSheet.create({
   pickerOptionTextSelected: {
     color: "#2563EB",
     fontWeight: "600",
+  },
+  pickerOptionDisabled: {
+    opacity: 0.5,
   },
   entryCard: {
     backgroundColor: "#F9FAFB",

@@ -4134,7 +4134,8 @@
         "confirm": "关闭",
         "cancel": "继续编辑"
       },
-      "recordFutureGuard": "未来日期无法录入比赛记录。"
+      "recordFutureGuard": "未来日期无法录入比赛记录。",
+      "competitionEditRestricted": "此比赛信息仅团队管理员可编辑。"
     },
     "premium": {
       "upgradeText": "升级到 Premium",

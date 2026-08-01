@@ -4134,7 +4134,8 @@
         "confirm": "Schließen",
         "cancel": "Weiter bearbeiten"
       },
-      "recordFutureGuard": "Für zukünftige Daten können keine Rennergebnisse eingetragen werden."
+      "recordFutureGuard": "Für zukünftige Daten können keine Rennergebnisse eingetragen werden.",
+      "competitionEditRestricted": "Nur Team-Admins können die Angaben zu diesem Wettkampf bearbeiten."
     },
     "premium": {
       "upgradeText": "Auf Premium upgraden",

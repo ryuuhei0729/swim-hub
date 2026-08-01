@@ -21,7 +21,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
-import { teamKeys } from "@apps/shared/hooks/queries/keys";
+import { teamKeys, recordKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
@@ -927,6 +927,10 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
 
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
       queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
+      // この操作を行った管理者自身のローカルキャッシュ上の記録一覧（大会タブ）を最新化する。
+      // invalidateQueries はこの端末のキャッシュにしか作用せず、代理登録された各メンバー
+      // 本人の端末には影響しない（別デバイスのキャッシュはクロスデバイスでは無効化できない）
+      queryClient.invalidateQueries({ queryKey: recordKeys.lists() });
 
       // 記録保存は成功済み。動画の部分失敗のみの場合は「保存成功 + 一部動画失敗」を通知して戻る。
       if (videoErrors.length > 0) {

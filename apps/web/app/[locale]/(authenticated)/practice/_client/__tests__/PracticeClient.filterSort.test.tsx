@@ -1,15 +1,16 @@
 /**
- * PracticeClient テスト (Sprint Contract Phase B)
- * 練習履歴タブ「day-level 化 + draft/apply 化」(2026-07-23) 専用の新規テストファイル。
+ * PracticeClient テスト
+ * 練習履歴タブの一覧(カード粒度 + draft/apply 化)専用のテストファイル。
  *
  * `CompetitionClient.filterSort.test.tsx` と同型の構成で、以下に集中する:
+ *   - 一覧のカード粒度(2026-08-01: 1 practice_log = 1カード)
  *   - draft/apply の破棄挙動(X/backdrop/Escape/シート排他)
- *   - tags フィルタの day-level 固有の意味論(同一日の複数ログにタグが分散しているケース)
+ *   - tags/種目フィルタの log-level 意味論(同一練習の複数ログにタグが分散しているケース)
  *   - 絞り込み境界値・データ不整合耐性
  *
  * トートロジー防止メモ: PracticeClient.tsx の実装(handleApplyFilters 等の関数名)を
- * そのまま踏襲した assertion にせず、Sprint Contract の Success Criteria から
- * 導いたユーザー可視の挙動(表示されるカードの場所、ボタンの有無)を検証する。
+ * そのまま踏襲した assertion にせず、ユーザー可視の挙動(一覧に出るカードの枚数と中身、
+ * ボタンの有無)を検証する。
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
@@ -45,9 +46,13 @@ vi.mock("@/components/forms/PracticeTabModal", () => ({
   default: () => null,
 }));
 
+// 詳細モーダルは中身をレンダリングせず、「どの練習に対して開かれたか」だけを露出させる。
+// カード粒度が log 単位になっても、開く対象は練習単位のままであることを検証するため。
 vi.mock("@/app/[locale]/(authenticated)/practice/_components/PracticeDetailModal", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ practiceId }: { practiceId: string }) => (
+    <div data-testid="practice-detail-modal" data-practice-id={practiceId} />
+  ),
 }));
 
 import PracticeClient from "../PracticeClient";
@@ -73,6 +78,8 @@ interface MakeLogOptions {
   id: string;
   style?: string;
   tags?: PracticeTag[];
+  /** カードを一覧上で見分けるために、ログごとに変えられるようにしている */
+  distance?: number;
 }
 
 function makeLog(practiceId: string, opts: MakeLogOptions) {
@@ -84,7 +91,7 @@ function makeLog(practiceId: string, opts: MakeLogOptions) {
     swim_category: "Swim",
     rep_count: 4,
     set_count: 1,
-    distance: 100,
+    distance: opts.distance ?? 100,
     circle: 60,
     note: null,
     created_at: "2026-01-01T00:00:00Z",
@@ -134,12 +141,16 @@ const renderClient = (practices: PracticeWithLogs[], tags: PracticeTag[] = [tagA
   );
 };
 
-const cardHasPlace = (place: string): boolean =>
-  screen
-    .queryAllByRole("button", { name: /^練習詳細を表示\(/ })
-    .some((row) => row.textContent?.includes(place));
+const practiceCards = (): HTMLElement[] =>
+  screen.queryAllByRole("button", { name: /^練習詳細を表示\(/ });
 
-describe("PracticeClient (day-level tags 意味論 + draft/apply)", () => {
+const cardHasPlace = (place: string): boolean =>
+  practiceCards().some((row) => row.textContent?.includes(place));
+
+/** 一覧に出ている全カードの本文(距離表記でログを見分けるのに使う) */
+const cardTexts = (): string[] => practiceCards().map((card) => card.textContent ?? "");
+
+describe("PracticeClient (log-level カード粒度 + フィルタ意味論 + draft/apply)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     usePracticeStore.getState().closeTabModal();
@@ -147,10 +158,95 @@ describe("PracticeClient (day-level tags 意味論 + draft/apply)", () => {
     usePracticeStore.setState({ availableTags: [] });
   });
 
-  describe("[V-WP-13/14 最重要] tags フィルタの day-level 意味論(複数ログに分散)", () => {
+  describe("[最重要] 一覧のカード粒度: 1 practice_log = 1カード", () => {
     it(
-      "同一日の2ログにタグA・タグBがそれぞれ分散している場合、両方を選択して適用すると" +
-        "その日は除外される(合算ANDになっていないことの確認。1ログ内AND成立が必要)",
+      "1つの練習に2件の練習ログが登録されている場合、カードは2枚に分かれて表示される" +
+        "(2026-07-23〜07-28 の day-level 表示=1枚のカードに全ログを詰め込む形への退行防止)",
+      () => {
+        renderClient([
+          makePracticeDay({
+            id: "p-im",
+            date: "2026-06-23",
+            place: "市民プール",
+            logs: [
+              makeLog("p-im", { id: "log-200im", distance: 200, style: "IM" }),
+              makeLog("p-im", { id: "log-50fly", distance: 50, style: "Fly" }),
+            ],
+          }),
+        ]);
+
+        const texts = cardTexts();
+        expect(texts).toHaveLength(2);
+        expect(texts.filter((text) => text.includes("200m"))).toHaveLength(1);
+        expect(texts.filter((text) => text.includes("50m"))).toHaveLength(1);
+      },
+    );
+
+    it(
+      "[ユーザー要求の核心] 2枚目(50m)のカードをクリックしても、開くのは練習全体の詳細モーダル。" +
+        "1枚目(200m)をクリックした場合と同じ練習が対象になる(=モーダルには両方のログが載る)",
+      async () => {
+        const user = userEvent.setup();
+        const practices = [
+          makePracticeDay({
+            id: "p-im",
+            date: "2026-06-23",
+            place: "市民プール",
+            logs: [
+              makeLog("p-im", { id: "log-200im", distance: 200, style: "IM" }),
+              makeLog("p-im", { id: "log-50fly", distance: 50, style: "Fly" }),
+            ],
+          }),
+        ];
+
+        const user1 = userEvent.setup();
+        const { unmount } = renderClient(practices);
+        await user1.click(practiceCards().find((c) => c.textContent?.includes("200m")) as HTMLElement);
+        expect(screen.getByTestId("practice-detail-modal")).toHaveAttribute(
+          "data-practice-id",
+          "p-im",
+        );
+        unmount();
+
+        renderClient(practices);
+        await user.click(practiceCards().find((c) => c.textContent?.includes("50m")) as HTMLElement);
+        expect(screen.getByTestId("practice-detail-modal")).toHaveAttribute(
+          "data-practice-id",
+          "p-im",
+        );
+      },
+    );
+
+    it("練習ログの表示順は practice_logs のクエリ順のまま(日付ソート後も同じ練習のログは隣接する)", () => {
+      renderClient([
+        makePracticeDay({
+          id: "p-june",
+          date: "2026-06-23",
+          place: "市民プール",
+          logs: [
+            makeLog("p-june", { id: "june-1", distance: 200 }),
+            makeLog("p-june", { id: "june-2", distance: 50 }),
+          ],
+        }),
+        makePracticeDay({
+          id: "p-may",
+          date: "2026-05-04",
+          place: "県営プール",
+          logs: [makeLog("p-may", { id: "may-1", distance: 400 })],
+        }),
+      ]);
+
+      const texts = cardTexts();
+      expect(texts[0]).toContain("200m");
+      expect(texts[1]).toContain("50m");
+      expect(texts[2]).toContain("400m");
+    });
+  });
+
+  describe("[V-WP-13/14 最重要] tags フィルタの log-level 意味論(複数ログに分散)", () => {
+    it(
+      "同一練習の2ログにタグA・タグBがそれぞれ分散している場合、両方を選択して適用すると" +
+        "どちらのログのカードも除外される(合算ANDになっていないことの確認。1ログ内AND成立が必要)",
       async () => {
         const user = userEvent.setup();
         const scatteredDay = makePracticeDay({
@@ -185,30 +281,58 @@ describe("PracticeClient (day-level tags 意味論 + draft/apply)", () => {
     );
 
     it(
-      "選択した全タグを含むログが1件あれば、同じ日の他のログが無関係でもその日は表示される" +
-        "(OR-exists: 他ログの内容は判定に影響しない)",
+      "[log-level 化の要] 同じ練習の中でも、選択タグを持つログのカードだけが残り、" +
+        "タグを持たない兄弟ログのカードは消える(day-level 時代の OR-exists では両方残っていた)",
       async () => {
         const user = userEvent.setup();
-        const day = makePracticeDay({
-          id: "p-mixed",
-          date: "2026-01-01",
-          place: "プール混在",
-          logs: [
-            makeLog("p-mixed", { id: "log-1", tags: [] }),
-            makeLog("p-mixed", { id: "log-2", tags: [tagA, tagB] }),
-          ],
-        });
+        renderClient([
+          makePracticeDay({
+            id: "p-mixed",
+            date: "2026-01-01",
+            place: "プール混在",
+            logs: [
+              makeLog("p-mixed", { id: "log-untagged", distance: 400, tags: [] }),
+              makeLog("p-mixed", { id: "log-tagged", distance: 200, tags: [tagA, tagB] }),
+            ],
+          }),
+        ]);
 
-        renderClient([day]);
+        expect(cardTexts()).toHaveLength(2);
 
         await user.click(screen.getByRole("button", { name: "絞り込み" }));
         await user.click(screen.getByRole("button", { name: "タグA" }));
         await user.click(screen.getByRole("button", { name: "タグB" }));
         await user.click(screen.getByRole("button", { name: "適用" }));
 
-        expect(cardHasPlace("プール混在")).toBe(true);
+        const texts = cardTexts();
+        expect(texts).toHaveLength(1);
+        expect(texts[0]).toContain("200m");
+        expect(texts[0]).not.toContain("400m");
       },
     );
+
+    it("種目フィルタも同様に、一致するログのカードだけが残る", async () => {
+      const user = userEvent.setup();
+      renderClient([
+        makePracticeDay({
+          id: "p-mixed-style",
+          date: "2026-01-01",
+          place: "プール種目混在",
+          logs: [
+            makeLog("p-mixed-style", { id: "log-fr", distance: 100, style: "Fr" }),
+            makeLog("p-mixed-style", { id: "log-br", distance: 50, style: "Br" }),
+          ],
+        }),
+      ]);
+
+      await user.click(screen.getByRole("button", { name: "絞り込み" }));
+      await user.click(screen.getByRole("button", { name: "平泳ぎ" }));
+      await user.click(screen.getByRole("button", { name: "適用" }));
+
+      const texts = cardTexts();
+      expect(texts).toHaveLength(1);
+      expect(texts[0]).toContain("平泳ぎ");
+    });
   });
 
   describe("絞り込みシートのドラフト状態管理(適用ボタン)", () => {

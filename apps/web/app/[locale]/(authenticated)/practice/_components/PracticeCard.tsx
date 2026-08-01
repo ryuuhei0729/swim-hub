@@ -4,8 +4,8 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import { format, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
-import type { PracticeWithLogs } from "@apps/shared/types";
-import { buildPracticeLogLines } from "../_utils/practiceDayGrouping";
+import type { PracticeLogWithTags, PracticeWithLogs } from "@apps/shared/types";
+import { buildPracticeLogLine } from "../_utils/practiceLogGrouping";
 
 // 種目コードの一覧（ラベルは翻訳キー経由で取得。PracticeDetails.tsx と同じ方式）
 const SWIM_STYLE_VALUES = ["Fr", "Ba", "Br", "Fly", "IM"] as const;
@@ -13,23 +13,25 @@ type SwimStyleValue = (typeof SWIM_STYLE_VALUES)[number];
 
 export interface PracticeCardProps {
   practice: PracticeWithLogs;
+  /** このカードが表示する練習ログ。ログ未登録の練習は null(ヘッダー行のみのカードになる) */
+  log: PracticeLogWithTags | null;
   onClick: (practice: PracticeWithLogs) => void;
 }
 
 /**
- * 練習履歴一覧の全幅カード(day-level, 2026-07-23 Sprint)。
+ * 練習履歴一覧の全幅カード(log-level, 2026-08-01)。
  *
- * 旧 PracticeLogCard(1練習ログ=1カード)を廃止し、1練習日(=1 practice)につき1枚に変更した。
- * 表示項目は mobile `apps/mobile/components/practices/PracticeItem.tsx` の secondLineInfo/
- * tags 抽出ロジックと同一にし、web/mobile の見た目を一致させている
- * (日付+タイトル+場所 / ログごとの距離×本数×セット+サークル+種目+タグ)。
- * 2026-07-28: 先頭ログのみの表示は「複数ログがあれば全部見せてほしい」というユーザー判断により
- * 撤回し、practice_logs 全件をそれぞれ1行として列挙する形に戻した
- * (`_utils/practiceDayGrouping.ts` の `buildPracticeLogLines` 参照)。
- * 旧カードにあった web 独自のヒーロー平均タイム表示(右側の大きな数字)は撤去した
- * (mobile 側に存在しない表示のため、パリティを優先した)。
+ * 1枚 = 1練習ログ。大会タブ (CompetitionRecordCard: 1記録=1カード) と同じ粒度で、
+ * 1つの練習に複数ログがある場合は同じヘッダー(日付/タイトル/場所)のカードが
+ * ログの数だけ並ぶ。2026-07-23〜07-28 の day-level 表示(1練習=1カードに全ログを
+ * 行として詰め込む)は、大会タブとの粒度不一致というユーザー指摘により撤回した。
+ * カードのクリック先は従来どおり練習全体 (PracticeDetailModal) なので、どのログの
+ * カードから開いても同じ練習の全ログが載ったモーダルが開く。
+ *
+ * 表示項目は mobile `apps/mobile/components/practices/PracticeItem.tsx` と同一
+ * (日付+タイトル+場所 / そのログの距離×本数×セット+サークル+種目+タグ)。
  */
-export default function PracticeCard({ practice, onClick }: PracticeCardProps) {
+export default function PracticeCard({ practice, log, onClick }: PracticeCardProps) {
   const t = useTranslations("practice");
 
   // 種目コードをローカライズラベルに変換(PracticeDetails.tsx の getStyleLabel と同方式)
@@ -48,15 +50,15 @@ export default function PracticeCard({ practice, onClick }: PracticeCardProps) {
 
   const title = practice.title || t("client.practiceTitle");
 
-  // 練習ログごとの行(距離×本数×セット / サークル / 種目 / タグ)。1件のみなら旧来と同じ見た目。
-  const logLines = buildPracticeLogLines(practice.practice_logs, getStyleLabel, (distance, reps, sets) =>
+  // このカードが担当する1ログ分の行(距離×本数×セット / サークル / 種目 / タグ)
+  const logLine = buildPracticeLogLine(log, getStyleLabel, (distance, reps, sets) =>
     t("page.distanceFormat", { distance, reps, sets }),
   );
 
   const cardAriaLabel = t("client.viewDetailAriaLabelWithInfo", {
     date: formattedDate,
     place: practice.place || "-",
-    style: practice.practice_logs?.[0]?.style || "-",
+    style: log?.style || "-",
   });
 
   return (
@@ -80,30 +82,27 @@ export default function PracticeCard({ practice, onClick }: PracticeCardProps) {
         {practice.place && <span className="text-xs text-gray-500">{practice.place}</span>}
       </div>
 
-      {/* 2行目以降: 練習ログごとに 距離×本数×セット・サークル・種目、タグ を1行で列挙 */}
-      {logLines.map((line) => {
-        if (!line.secondLineInfo && line.tags.length === 0) return null;
-        return (
-          <div key={line.logId} className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            {line.secondLineInfo && (
-              <span className="text-sm text-gray-600">{line.secondLineInfo}</span>
-            )}
-            {line.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {line.tags.map((tag) => (
-                  <span
-                    key={tag.id}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
-                    style={{ backgroundColor: tag.color }}
-                  >
-                    {tag.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {/* 2行目: このカードのログの 距離×本数×セット・サークル・種目、タグ */}
+      {logLine && (logLine.secondLineInfo || logLine.tags.length > 0) && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {logLine.secondLineInfo && (
+            <span className="text-sm text-gray-600">{logLine.secondLineInfo}</span>
+          )}
+          {logLine.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {logLine.tags.map((tag) => (
+                <span
+                  key={tag.id}
+                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-black"
+                  style={{ backgroundColor: tag.color }}
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

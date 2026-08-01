@@ -4134,7 +4134,8 @@
         "confirm": "閉じる",
         "cancel": "編集を続ける"
       },
-      "recordFutureGuard": "未来の日付でレースレコードを登録することはできません"
+      "recordFutureGuard": "未来の日付でレースレコードを登録することはできません",
+      "competitionEditRestricted": "この大会の情報はチーム管理者のみ編集できます"
     },
     "premium": {
       "upgradeText": "Premium にアップグレード",

@@ -199,13 +199,18 @@ describe("PracticeClient", () => {
     usePracticeStore.setState({ availableTags: [] });
   });
 
-  it("[V-WP-01][V-26] day-level カード: 同一日(1 practice)に2件のログがあっても1カードのみ描画され、両方のログの内容が表示される", () => {
-    renderClient([makePractice()]);
+  it(
+    "[V-WP-01][2026-08-01 log-level 化] 1 practice に2件のログがあると、カードは2枚に" +
+      "分かれて描画され、それぞれのログの内容が別々のカードに表示される",
+    () => {
+      renderClient([makePractice()]);
 
-    expect(getCardRows()).toHaveLength(1);
-    expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
-    expect(screen.getByText(/50m × 2本 × 1セット/)).toBeInTheDocument();
-  });
+      const cards = getCardRows();
+      expect(cards).toHaveLength(2);
+      expect(cards.filter((card) => card.textContent?.includes("100m × 4本 × 1セット"))).toHaveLength(1);
+      expect(cards.filter((card) => card.textContent?.includes("50m × 2本 × 1セット"))).toHaveLength(1);
+    },
+  );
 
   it("[V-W-P08] 詳細モーダルを閉じると非表示になり、選択状態がリセットされる", async () => {
     const user = userEvent.setup();

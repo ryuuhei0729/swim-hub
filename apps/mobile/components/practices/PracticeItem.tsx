@@ -6,12 +6,14 @@ import { toZonedTime } from "date-fns-tz";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { formatDate } from "@apps/shared/utils/date";
-import type { PracticeWithLogs } from "@swim-hub/shared/types";
+import type { PracticeWithLogs, PracticeLogWithTags } from "@swim-hub/shared/types";
 import { formatCircleTime } from "@/utils/formatters";
 import { useDateLocale } from "@/hooks/useDateLocale";
 
 interface PracticeItemProps {
   practice: PracticeWithLogs;
+  /** このカードが表示する練習ログ。ログ未登録の練習は null(ヘッダー行のみのカードになる) */
+  log?: PracticeLogWithTags | null;
   onPress?: (practice: PracticeWithLogs) => void;
 }
 
@@ -30,17 +32,21 @@ const getStyleName = (t: TFunction, style: string): string => {
 
 /**
  * 練習記録アイテムコンポーネント
- * 練習記録の1件を表示
+ *
+ * 1枚 = 1練習ログ(2026-08-01)。1つの練習に複数ログがある場合は、同じヘッダー
+ * (日付/タイトル/場所)を持つカードがログの数だけ並ぶ。大会タブ (RecordItem: 1記録
+ * =1カード) と同じ粒度。タップ先は従来どおり練習全体(その日の DayDetailModal)で、
+ * どのログのカードから開いても同じ練習の全ログが載ったモーダルが開く。
  */
-const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress }) => {
+const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, log, onPress }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
 
-  // 日付をフォーマット（大会記録カードと同じ流儀: ゾーン変換 + long スタイル・ロケール依存）
+  // 日付をフォーマット（大会記録カードと同じ流儀: ゾーン変換 + numeric スタイル・ロケール依存）
   const formattedDate = useMemo(() => {
     const parsed = parseISO(practice.date);
     const zoned = toZonedTime(parsed, Intl.DateTimeFormat().resolvedOptions().timeZone);
-    return formatDate(zoned, "long", locale);
+    return formatDate(zoned, "numeric", locale);
   }, [practice.date, locale]);
 
   // タイトル（null の場合は既存 client.practiceTitle = "練習" を流用）
@@ -49,50 +55,47 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
     [practice.title, t],
   );
 
-  // 練習に属する全ログをそれぞれ1行分の表示情報に変換する（1件のみの練習でも
-  // 従来通り1行だけになり、退行なし）。ユーザー指示により、以前の firstLog のみの
-  // 表示（2件目以降が一覧から見えない）から全ログ列挙へ一般化した。
-  const logRows = useMemo(() => {
-    return (practice.practice_logs || []).map((log) => {
-      const parts: string[] = [];
+  // このカードが担当する1ログ分の表示情報（距離×本数×セット / サークル / 種目、タグ）
+  const logRow = useMemo(() => {
+    if (!log) return null;
 
-      // 距離・本数・セット
-      if (log.distance && log.rep_count && log.set_count) {
-        parts.push(
-          t("practice.page.distanceFormat", {
-            distance: log.distance,
-            reps: log.rep_count,
-            sets: log.set_count,
-          }),
-        );
+    const parts: string[] = [];
+
+    // 距離・本数・セット
+    if (log.distance && log.rep_count && log.set_count) {
+      parts.push(
+        t("practice.page.distanceFormat", {
+          distance: log.distance,
+          reps: log.rep_count,
+          sets: log.set_count,
+        }),
+      );
+    }
+
+    // サークル
+    if (log.circle) {
+      const circleTime = formatCircleTime(log.circle);
+      // 共有実装は null の場合に '-' を返すため、'-' の場合は除外
+      if (circleTime && circleTime !== "-") {
+        parts.push(circleTime);
       }
+    }
 
-      // サークル
-      if (log.circle) {
-        const circleTime = formatCircleTime(log.circle);
-        // 共有実装は null の場合に '-' を返すため、'-' の場合は除外
-        if (circleTime && circleTime !== "-") {
-          parts.push(circleTime);
-        }
-      }
+    // 種目
+    if (log.style) {
+      parts.push(getStyleName(t, log.style));
+    }
 
-      // 種目
-      if (log.style) {
-        parts.push(getStyleName(t, log.style));
-      }
+    const tags =
+      log.practice_log_tags
+        ?.map((lt) => lt.practice_tags)
+        .filter((tag): tag is NonNullable<typeof tag> => tag != null) || [];
 
-      const tags =
-        log.practice_log_tags
-          ?.map((lt) => lt.practice_tags)
-          .filter((tag): tag is NonNullable<typeof tag> => tag != null) || [];
-
-      return {
-        id: log.id,
-        secondLineInfo: parts.join(" / "),
-        tags,
-      };
-    });
-  }, [practice.practice_logs, t]);
+    return {
+      secondLineInfo: parts.join(" / "),
+      tags,
+    };
+  }, [log, t]);
 
   const handlePress = useCallback(() => {
     onPress?.(practice);
@@ -120,30 +123,27 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
           )}
         </View>
 
-        {/* 2行目以降: ログごとに距離・本数・セット、サークル、種目、タグを列挙 */}
-        {logRows.map(
-          (row) =>
-            (row.secondLineInfo || row.tags.length > 0) && (
-              <View key={row.id} style={styles.secondRow}>
-                {row.secondLineInfo && (
-                  <Text style={styles.secondLine} numberOfLines={1}>
-                    {row.secondLineInfo}
-                  </Text>
-                )}
-                {row.tags.length > 0 && (
-                  <View style={styles.tagsContainer}>
-                    {row.tags.map((tag) => (
-                      <View
-                        key={tag.id}
-                        style={[styles.tag, { backgroundColor: tag.color || "#6B7280" }]}
-                      >
-                        <Text style={styles.tagText}>{tag.name}</Text>
-                      </View>
-                    ))}
+        {/* 2行目: このカードのログの距離・本数・セット、サークル、種目、タグ */}
+        {logRow && (logRow.secondLineInfo || logRow.tags.length > 0) && (
+          <View style={styles.secondRow}>
+            {logRow.secondLineInfo && (
+              <Text style={styles.secondLine} numberOfLines={1}>
+                {logRow.secondLineInfo}
+              </Text>
+            )}
+            {logRow.tags.length > 0 && (
+              <View style={styles.tagsContainer}>
+                {logRow.tags.map((tag) => (
+                  <View
+                    key={tag.id}
+                    style={[styles.tag, { backgroundColor: tag.color || "#6B7280" }]}
+                  >
+                    <Text style={styles.tagText}>{tag.name}</Text>
                   </View>
-                )}
+                ))}
               </View>
-            ),
+            )}
+          </View>
         )}
       </View>
     </Pressable>
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
 
 // メモ化して再レンダリングを最適化
 export const PracticeItem = React.memo(PracticeItemComponent, (prevProps, nextProps) => {
-  // カスタム比較関数：practice.idが同じで、practiceの主要プロパティが変更されていない場合は再レンダリングしない
+  // カードのヘッダーが依存する practice の表示プロパティ
   const prev = prevProps.practice;
   const next = nextProps.practice;
 
@@ -249,38 +249,24 @@ export const PracticeItem = React.memo(PracticeItemComponent, (prevProps, nextPr
     prev.id !== next.id ||
     prev.date !== next.date ||
     prev.title !== next.title ||
-    prev.place !== next.place ||
-    prev.note !== next.note
+    prev.place !== next.place
   ) {
     return false;
   }
 
-  const prevLogs = prev.practice_logs;
-  const nextLogs = next.practice_logs;
+  // カード本文が依存するのは自分の1ログのみ(兄弟ログの変化は自分のカードに影響しない)
+  const prevLog = prevProps.log ?? null;
+  const nextLog = nextProps.log ?? null;
 
-  // 参照が同一なら変更なしとみなす
-  if (prevLogs === nextLogs) {
-    return true;
+  if (prevLog === nextLog) {
+    return prevProps.onPress === nextProps.onPress;
   }
-
-  // どちらかが未定義の場合の判定
-  if (!prevLogs || !nextLogs) {
-    return prevLogs === nextLogs;
+  if (!prevLog || !nextLog) {
+    return false;
   }
-
-  // 長さが異なれば変更あり
-  if (prevLogs.length !== nextLogs.length) {
+  if (prevLog.id !== nextLog.id || prevLog.updated_at !== nextLog.updated_at) {
     return false;
   }
 
-  // シャロー比較（id または updated_at が変われば再レンダリング）
-  for (let i = 0; i < prevLogs.length; i++) {
-    const prevLog = prevLogs[i];
-    const nextLog = nextLogs[i];
-    if (prevLog.id !== nextLog.id || prevLog.updated_at !== nextLog.updated_at) {
-      return false;
-    }
-  }
-
-  return true;
+  return prevProps.onPress === nextProps.onPress;
 });

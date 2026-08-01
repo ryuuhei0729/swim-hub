@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useLayoutEffect } from "react";
+import React, { useState, useMemo, useLayoutEffect, useRef } from "react";
 import { View, Text, StyleSheet, Pressable, Alert, Platform } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { Feather } from "@expo/vector-icons";
@@ -20,7 +20,7 @@ import {
   type TeamTabType,
 } from "@/components/teams";
 import { AdminMonthlyAttendance } from "@/components/teams/AdminMonthlyAttendance";
-import { AdminViewToggle } from "@/components/teams/AdminViewToggle";
+import { TeamDetailHeaderAdminToggle } from "@/components/teams/TeamDetailHeaderAdminToggle";
 import { TeamSettingsModal } from "@/components/teams/TeamSettingsModal";
 import { TeamAnnouncementList } from "@/components/teams/TeamAnnouncementList";
 import { TeamAnnouncementForm } from "@/components/teams/TeamAnnouncementForm";
@@ -29,6 +29,7 @@ import { TeamCompetitionList } from "@/components/teams/TeamCompetitionList";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
+import { useTeamAdminViewStore } from "@/stores/teamAdminViewStore";
 import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 
@@ -47,7 +48,10 @@ export const TeamDetailScreen: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TeamTabType>(initialTab ?? "members");
   const [isCopied, setIsCopied] = useState(false);
-  const [isAdminView, setIsAdminView] = useState(false);
+  // 管理者ビュー/利用者ビューの状態は、ヘッダー右側の TeamDetailHeaderAdminToggle と
+  // 共有購読するためストアで管理する（詳細は teamAdminViewStore.ts のコメント参照）
+  const isAdminView = useTeamAdminViewStore((state) => state.isAdminView);
+  const resetAdminView = useTeamAdminViewStore((state) => state.reset);
   const [announcementFormVisible, setAnnouncementFormVisible] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<TeamAnnouncement | undefined>(undefined);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -64,6 +68,13 @@ export const TeamDetailScreen: React.FC = () => {
     return members.some((m) => m.user_id === user.id && m.role === "admin");
   }, [user, members]);
 
+  // 実効的な管理者ビュー状態。isAdminView はストア（モジュールシングルトン）由来のため、
+  // 「別チームでは管理者だった」状態を引き継いだまま新しいチーム画面がマウントされる
+  // 瞬間が起こり得る。isCurrentUserAdmin との AND を1箇所で導出し、管理者専用要素の
+  // 表示判定は必ずこの値のみを参照する（isAdminView 単独で判定しない）ことで、
+  // reset() のタイミングに依存せず非管理者への漏れを構造的に防ぐ
+  const effectiveIsAdminView = isCurrentUserAdmin && isAdminView;
+
   // 承認待ちメンバー数（管理者のみ取得可。web TeamAdminClient の countPending 相当）
   const { data: pendingMembers } = useListPendingMembersQuery(
     supabase,
@@ -73,20 +84,38 @@ export const TeamDetailScreen: React.FC = () => {
 
   const deleteAnnouncementMutation = useDeleteAnnouncementMutation(supabase);
 
-  // 管理者ビュー/利用者ビューの切替
-  const handleAdminViewChange = useCallback((next: boolean) => {
-    setIsAdminView(next);
-    setActiveTab((prev) => resolveActiveTabOnAdminViewToggle(prev, next));
-  }, []);
+  // チーム切替・画面離脱時に管理者ビュー状態をリセットする
+  // （ストアはモジュール単位のシングルトンのため、画面スコープを明示的に区切る。
+  // ただしこれは補助的な対策であり、非管理者への露出防止は effectiveIsAdminView の
+  // 導出そのものが担う。post-paint の useEffect ではなく useLayoutEffect にして
+  // リセットが反映されるまでの窓をできる限り縮める）
+  useLayoutEffect(() => {
+    resetAdminView();
+    return () => {
+      resetAdminView();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId]);
 
-  // ヘッダー右側に管理者ビュー切替スイッチを配置（管理者のみ）
+  // 管理者ビュー切替に追随して、管理者専用タブ (announcements/groups) に
+  // 滞在していた場合は members タブへリセットする（実効値の変化を見る）
+  const prevEffectiveIsAdminViewRef = useRef(effectiveIsAdminView);
+  useLayoutEffect(() => {
+    if (prevEffectiveIsAdminViewRef.current !== effectiveIsAdminView) {
+      setActiveTab((prev) => resolveActiveTabOnAdminViewToggle(prev, effectiveIsAdminView));
+      prevEffectiveIsAdminViewRef.current = effectiveIsAdminView;
+    }
+  }, [effectiveIsAdminView]);
+
+  // ヘッダー右側に管理者ビュー切替スイッチを配置（管理者のみ）。
+  // スイッチの値自体は TeamDetailHeaderAdminToggle がストアを直接購読するため、
+  // ここでは isCurrentUserAdmin が変わったときのみ setOptions を呼べば良い
+  // （詳細は teamAdminViewStore.ts のコメント参照）
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: isCurrentUserAdmin
-        ? () => <AdminViewToggle value={isAdminView} onValueChange={handleAdminViewChange} />
-        : undefined,
+      headerRight: isCurrentUserAdmin ? () => <TeamDetailHeaderAdminToggle /> : undefined,
     });
-  }, [navigation, isCurrentUserAdmin, isAdminView, handleAdminViewChange]);
+  }, [navigation, isCurrentUserAdmin]);
 
   // 招待コードをコピー
   const handleCopyInviteCode = async () => {
@@ -226,7 +255,7 @@ export const TeamDetailScreen: React.FC = () => {
       case "members":
         return (
           <View style={styles.membersTabContent}>
-            {isAdminView && <PendingMembersSection teamId={teamId} />}
+            {effectiveIsAdminView && <PendingMembersSection teamId={teamId} />}
             <TeamMemberList
               members={members || []}
               teamId={teamId}
@@ -251,19 +280,19 @@ export const TeamDetailScreen: React.FC = () => {
       case "practices":
         return (
           <View style={styles.eventTabContent}>
-            {isAdminView && renderBulkRegisterButton()}
-            <TeamPracticeList teamId={teamId} isAdmin={isAdminView} />
+            {effectiveIsAdminView && renderBulkRegisterButton()}
+            <TeamPracticeList teamId={teamId} isAdmin={effectiveIsAdminView} />
           </View>
         );
       case "competitions":
         return (
           <View style={styles.eventTabContent}>
-            {isAdminView && renderBulkRegisterButton()}
-            <TeamCompetitionList teamId={teamId} isAdmin={isAdminView} />
+            {effectiveIsAdminView && renderBulkRegisterButton()}
+            <TeamCompetitionList teamId={teamId} isAdmin={effectiveIsAdminView} />
           </View>
         );
       case "attendance":
-        return isAdminView ? (
+        return effectiveIsAdminView ? (
           <AdminMonthlyAttendance teamId={teamId} />
         ) : (
           <MyMonthlyAttendance teamId={teamId} />
@@ -276,7 +305,7 @@ export const TeamDetailScreen: React.FC = () => {
               isLoading={isLoading}
               isError={isError}
               error={error || null}
-              isAdmin={isAdminView}
+              isAdmin={effectiveIsAdminView}
               onRetry={() => refetch()}
               onCreateNew={() => {
                 setEditingAnnouncement(undefined);
@@ -326,7 +355,7 @@ export const TeamDetailScreen: React.FC = () => {
                 </Pressable>
               </View>
             )}
-            {isCurrentUserAdmin && isAdminView && (
+            {effectiveIsAdminView && (
               <Pressable
                 style={styles.settingsButton}
                 onPress={() => setSettingsModalVisible(true)}
@@ -347,7 +376,7 @@ export const TeamDetailScreen: React.FC = () => {
       <TeamTabs
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        isAdmin={isAdminView}
+        isAdmin={effectiveIsAdminView}
         pendingCount={isCurrentUserAdmin ? pendingCount : 0}
       />
 

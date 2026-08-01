@@ -105,6 +105,9 @@ export const BulkBestTimeScreen: React.FC = () => {
 
       // マイページのベストタイム表を最新化
       await queryClient.invalidateQueries({ queryKey: recordKeys.bestTimes(user?.id) });
+      // 大会タブの記録一覧（大会未紐付けレコードとして表示される）を最新化
+      await queryClient.invalidateQueries({ queryKey: recordKeys.lists() });
+      await queryClient.invalidateQueries({ queryKey: ["calendar"] });
 
       Alert.alert(
         t("bulkBestTime.mobile.successTitle"),

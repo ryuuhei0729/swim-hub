@@ -62,8 +62,9 @@ describe("RecordItem", () => {
   it("大会記録データが正しく表示される", () => {
     renderItem(<RecordItem record={mockRecord} />);
 
-    // 日付が表示される（フォーマットされた形式）
-    expect(screen.getByText(/2025年1月15日/)).toBeTruthy();
+    // 日付が表示される（2026-08-01 ユーザー要望で numeric 形式に変更。
+    // ja/en/zh/ko は "yyyy/MM/dd"、de のみ "dd.MM.yyyy"。例: "2025/01/15"）
+    expect(screen.getByText(/2025\/01\/15/)).toBeTruthy();
     // 大会名が表示される
     expect(screen.getByText("テスト大会")).toBeTruthy();
     // 種目・距離が表示される(2026-07-22 Sprint: mobile はスマホ幅のため常時略称表示。

@@ -177,6 +177,33 @@ export function useRecordsQuery(supabase: SupabaseClient, options: UseRecordsQue
   };
 }
 
+export interface UseCompetitionsListQueryOptions {
+  startDate?: string;
+  endDate?: string;
+  api?: RecordAPI;
+}
+
+/**
+ * 大会一覧取得クエリ（大会選択ドロップダウン等、大会一覧のみが必要な画面向け）。
+ * useRecordsQuery 内の competitionsQuery と同一の queryKey/queryFn/staleTime を使うことで
+ * キャッシュを共有し、records 側の不要なフェッチを避ける。
+ */
+export function useCompetitionsListQuery(
+  supabase: SupabaseClient,
+  options: UseCompetitionsListQueryOptions = {},
+): UseQueryResult<Competition[], Error> {
+  const { startDate, endDate, api: providedApi } = options;
+  const api = useMemo(() => providedApi ?? new RecordAPI(supabase), [supabase, providedApi]);
+
+  return useQuery({
+    queryKey: recordKeys.competitionsList({ startDate, endDate }),
+    queryFn: async () => {
+      return await api.getCompetitions(startDate, endDate);
+    },
+    staleTime: 5 * 60 * 1000, // 5分
+  });
+}
+
 /**
  * 大会記録作成ミューテーション
  */
@@ -224,8 +251,12 @@ export function useUpdateRecordMutation(
     mutationFn: async ({ id, updates }: { id: string; updates: RecordUpdate }) => {
       return await recordApi.updateRecord(id, updates);
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: recordKeys.lists() });
+      // recordKeys.detail(id) は recordKeys.lists() の配下ではない兄弟ノードのため、
+      // 個別に invalidate しないと useRecordByIdQuery の staleTime 内は更新前の値が
+      // 残り続ける（編集画面を保存直後にもう一度開くと古い値が出る）
+      queryClient.invalidateQueries({ queryKey: recordKeys.detail(id) });
 
       // マイルストーンのステータスを自動更新
       try {

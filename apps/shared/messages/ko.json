@@ -4134,7 +4134,8 @@
         "confirm": "닫기",
         "cancel": "편집 계속하기"
       },
-      "recordFutureGuard": "미래 날짜에는 레이스 기록을 등록할 수 없습니다."
+      "recordFutureGuard": "미래 날짜에는 레이스 기록을 등록할 수 없습니다.",
+      "competitionEditRestricted": "이 대회 정보는 팀 관리자만 수정할 수 있습니다."
     },
     "premium": {
       "upgradeText": "Premium으로 업그레이드",

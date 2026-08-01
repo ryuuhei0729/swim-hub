@@ -1,27 +1,25 @@
 /**
- * PracticeCard テスト (Sprint Contract Phase B)
+ * PracticeCard テスト
  *
- * 対象: `_components/PracticeCard.tsx` (day-level カード、旧 PracticeLogCard の置き換え)
+ * 対象: `_components/PracticeCard.tsx` (log-level カード = 1 practice_log で1枚)
  *
- * 2026-07-28 更新（C-3: 全ログ展開）:
- *   2026-07-23 時点では「day-level カードは先頭ログ(practice_logs[0])のみを表示」が
- *   Sprint Contract だったが、ユーザー判断（「1つの練習に2つの練習ログが登録されていた場合、
- *   どちらも表示させたい」）によりこの決定を上書きし、practice_logs 全件を表示する方式に
- *   変更された（`_utils/practiceDayGrouping.ts` の `buildPracticeLogLines` 参照）。
- *   本ファイルの「先頭ログのみ表示」を検証していた2テストは、QA が「全ログ表示」前提の
- *   内容に書き換えた（単に複数要素を許容する緩いアサーションにはせず、2件目の内容が
- *   実際に見えていることを積極的に検証する）。C-3 の追加観点（3件以上・空配列・
- *   パリティ等）は ./PracticeCard.allLogs.test.tsx を参照。
+ * 2026-08-01 更新:
+ *   一覧のカード粒度が「1練習=1カード(全ログを行として詰め込む)」から
+ *   「1練習ログ=1カード」へ変わった(大会タブ CompetitionRecordCard と同じ粒度)。
+ *   本コンポーネントは渡された1ログ分だけを描画し、複数ログの並置は呼び出し側
+ *   (PracticeClient が buildPracticeLogRows で平坦化する)の責務になった。
+ *   カードが2枚に分かれること自体の検証は
+ *   `_client/__tests__/PracticeClient.filterSort.test.tsx` を参照。
  *
- * Sprint Contract 検証観点:
- *   [V-26] 内容の異なる2件のログを持つ practice を渡すと、両方の内容(距離・種目・タグ)が
- *          DOM 上に表示される（旧: 先頭ログのみ表示、から意図的に反転）
- *   [V-WP-mobile parity] 表示項目は mobile PracticeItem.tsx の logRows/secondLineInfo/tags と
- *     同一の組み立て方針(日付+タイトル+場所 / ログごとの距離×本数×セット・サークル・種目・タグ)
+ * 検証観点:
+ *   - 渡されたログの内容(距離×本数×セット・サークル・種目・タグ)が表示される
+ *   - [最重要] 渡していない兄弟ログの内容は表示されない(day-level 表示への退行防止)
+ *   - ヘッダー(日付/タイトル/場所)は practice 由来なので、どのログのカードにも出る
+ *   - log=null(ログ未登録の練習)でもクラッシュせず、ヘッダーのみのカードになる
+ *   - クリック/Enter で onClick に practice(ログではない)が渡る
  *
- * トートロジー防止メモ: PracticeCard.tsx 内の buildPracticeLogLines 組み立てロジックをなぞらず、
- * 「内容の異なる2ログを持つ practice を渡したときに両方の内容がDOM上に見えている」という
- * Sprint Contract C-3 の要求から逆算したアサーションにする。
+ * トートロジー防止メモ: 実装の組み立て手順をなぞらず、「そのカードに何が見えていて
+ * 何が見えていないか」から逆算したアサーションにする。
  */
 
 import { render, screen } from "@testing-library/react";
@@ -73,69 +71,109 @@ function makePractice(overrides: Partial<PracticeWithLogs> = {}): PracticeWithLo
   } as PracticeWithLogs;
 }
 
-describe("PracticeCard", () => {
-  it("[V-WP-02] 先頭ログの距離×本数×セット・種目が表示される", () => {
-    const practice = makePractice({
-      practice_logs: [makeLog({ id: "log-a", distance: 100, rep_count: 4, set_count: 1, style: "Fr" })],
-    });
-    renderWithIntl(<PracticeCard practice={practice} onClick={vi.fn()} />);
+const tagA = { id: "tag-a", name: "タグA", color: "#111111", user_id: "u", created_at: "", updated_at: "" };
+const tagB = { id: "tag-b", name: "タグB", color: "#222222", user_id: "u", created_at: "", updated_at: "" };
 
-    // 2行目は "100m × 4本 × 1セット / 1'30" / 自由形" のように " / " 区切りで1つの
-    // <span> に結合される(mobile PracticeItem.tsx の secondLineInfo と同じ組み立て方針)。
-    // 完全一致ではなく部分一致で検証する。
+// mobile PracticeItem.test.tsx の PARITY_FIXTURE_LOGS と対応するフィクスチャ
+// (distance/rep_count/set_count/circle/style/tags を意図的にログごとに変える)
+const PARITY_FIXTURE_LOGS: PracticeLogWithTags[] = [
+  makeLog({
+    id: "log-a",
+    distance: 100,
+    rep_count: 4,
+    set_count: 1,
+    circle: 90,
+    style: "Fr",
+    practice_log_tags: [{ practice_tag_id: "tag-a", practice_tags: tagA }],
+  }),
+  makeLog({
+    id: "log-b",
+    distance: 50,
+    rep_count: 8,
+    set_count: 2,
+    circle: 60,
+    style: "Br",
+    practice_log_tags: [{ practice_tag_id: "tag-b", practice_tags: tagB }],
+  }),
+];
+
+describe("PracticeCard", () => {
+  it("渡されたログの距離×本数×セット・サークル・種目が ' / ' 区切りで表示される", () => {
+    const practice = makePractice({ practice_logs: PARITY_FIXTURE_LOGS });
+    renderWithIntl(
+      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]} onClick={vi.fn()} />,
+    );
+
     expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
+    expect(screen.getByText(/1'30"/)).toBeInTheDocument();
     expect(screen.getByText(/自由形/)).toBeInTheDocument();
   });
 
   it(
-    "[V-26] 2件のログを持つ practice を渡すと、2件目のログの内容(距離・種目)も" +
-      "DOM上に表示される(全ログ展開。旧: 先頭ログのみ表示、からの意図的な反転)",
+    "[最重要] 複数ログを持つ練習でも、渡されたログ以外の内容は表示されない" +
+      "(1枚のカードに全ログを詰め込む day-level 表示への退行防止)",
     () => {
-      const practice = makePractice({
-        practice_logs: [
-          makeLog({ id: "log-a", distance: 100, rep_count: 4, set_count: 1, style: "Fr" }),
-          makeLog({ id: "log-b", distance: 50, rep_count: 2, set_count: 1, style: "Br" }),
-        ],
-      });
-      renderWithIntl(<PracticeCard practice={practice} onClick={vi.fn()} />);
+      const practice = makePractice({ practice_logs: PARITY_FIXTURE_LOGS });
+      renderWithIntl(
+        <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]} onClick={vi.fn()} />,
+      );
 
       expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
-      expect(screen.getByText(/50m × 2本 × 1セット/)).toBeInTheDocument();
-      expect(screen.getByText(/平泳ぎ/)).toBeInTheDocument();
+      expect(screen.queryByText(/50m × 8本 × 2セット/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/平泳ぎ/)).not.toBeInTheDocument();
     },
   );
 
-  it("practice_logs が空配列の場合、2行目(距離・種目)は表示されずクラッシュしない", () => {
-    const practice = makePractice({ practice_logs: [] });
-    expect(() => renderWithIntl(<PracticeCard practice={practice} onClick={vi.fn()} />)).not.toThrow();
-    expect(screen.queryByText(/自由形/)).not.toBeInTheDocument();
-  });
+  it("タグは渡されたログ自身のものだけが表示される(兄弟ログのタグは混入しない)", () => {
+    const practice = makePractice({ practice_logs: PARITY_FIXTURE_LOGS });
+    renderWithIntl(
+      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[1]} onClick={vi.fn()} />,
+    );
 
-  it("[V-30] 各ログのタグがそれぞれ表示される(ログ1・ログ2のタグが両方見える)", () => {
-    const tagA = { id: "tag-a", name: "タグA", color: "#111", user_id: "u", created_at: "", updated_at: "" };
-    const tagB = { id: "tag-b", name: "タグB", color: "#222", user_id: "u", created_at: "", updated_at: "" };
-    const practice = makePractice({
-      practice_logs: [
-        makeLog({
-          id: "log-a",
-          practice_log_tags: [{ practice_tag_id: "tag-a", practice_tags: tagA }],
-        }),
-        makeLog({
-          id: "log-b",
-          practice_log_tags: [{ practice_tag_id: "tag-b", practice_tags: tagB }],
-        }),
-      ],
-    });
-    renderWithIntl(<PracticeCard practice={practice} onClick={vi.fn()} />);
-
-    expect(screen.getByText("タグA")).toBeInTheDocument();
     expect(screen.getByText("タグB")).toBeInTheDocument();
+    expect(screen.queryByText("タグA")).not.toBeInTheDocument();
   });
 
-  it("カードクリックで onClick に practice(日単位オブジェクト。ログではない)が渡される", async () => {
+  it("ヘッダー(日付・タイトル・場所)は practice 由来なので、どのログのカードにも表示される", () => {
+    const practice = makePractice({ title: "IM練習", place: "市民プール", practice_logs: PARITY_FIXTURE_LOGS });
+
+    const { unmount } = renderWithIntl(
+      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]} onClick={vi.fn()} />,
+    );
+    expect(screen.getByText("IM練習")).toBeInTheDocument();
+    expect(screen.getByText("市民プール")).toBeInTheDocument();
+    unmount();
+
+    renderWithIntl(<PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[1]} onClick={vi.fn()} />);
+    expect(screen.getByText("IM練習")).toBeInTheDocument();
+    expect(screen.getByText("市民プール")).toBeInTheDocument();
+  });
+
+  it("log=null(ログ未登録の練習)の場合、2行目は表示されずクラッシュしない", () => {
+    const practice = makePractice({ practice_logs: [] });
+    expect(() =>
+      renderWithIntl(<PracticeCard practice={practice} log={null} onClick={vi.fn()} />),
+    ).not.toThrow();
+    expect(screen.queryByText(/自由形/)).not.toBeInTheDocument();
+    // ヘッダー(場所)は残るので、練習が一覧から消えることはない
+    expect(screen.getByText("市民プール")).toBeInTheDocument();
+  });
+
+  it("distance/rep_count/set_count が0のログでもクラッシュせず、距離表記だけが省略される", () => {
+    const log = makeLog({ id: "log-zero", distance: 0, rep_count: 4, set_count: 1, circle: null, style: "Fr" });
+    expect(() =>
+      renderWithIntl(<PracticeCard practice={makePractice()} log={log} onClick={vi.fn()} />),
+    ).not.toThrow();
+    expect(screen.queryByText(/× 4本/)).not.toBeInTheDocument();
+    expect(screen.getByText(/自由形/)).toBeInTheDocument();
+  });
+
+  it("カードクリックで onClick に practice(練習オブジェクト。ログではない)が渡される", () => {
     const onClick = vi.fn();
     const practice = makePractice({ id: "practice-xyz" });
-    renderWithIntl(<PracticeCard practice={practice} onClick={onClick} />);
+    renderWithIntl(
+      <PracticeCard practice={practice} log={practice.practice_logs[0]} onClick={onClick} />,
+    );
 
     screen.getByRole("button", { name: /^練習詳細を表示\(/ }).click();
 
@@ -145,7 +183,10 @@ describe("PracticeCard", () => {
 
   it("キーボード操作(Enter)でも onClick が発火する(a11y要件)", () => {
     const onClick = vi.fn();
-    renderWithIntl(<PracticeCard practice={makePractice()} onClick={onClick} />);
+    const practice = makePractice();
+    renderWithIntl(
+      <PracticeCard practice={practice} log={practice.practice_logs[0]} onClick={onClick} />,
+    );
 
     const card = screen.getByRole("button", { name: /^練習詳細を表示\(/ });
     card.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
@@ -155,7 +196,11 @@ describe("PracticeCard", () => {
 
   it("practice.date が不正な文字列でもクラッシュせず、日付欄が「-」表示になる", () => {
     const practice = makePractice({ date: "invalid-date-string" });
-    expect(() => renderWithIntl(<PracticeCard practice={practice} onClick={vi.fn()} />)).not.toThrow();
+    expect(() =>
+      renderWithIntl(
+        <PracticeCard practice={practice} log={practice.practice_logs[0]} onClick={vi.fn()} />,
+      ),
+    ).not.toThrow();
     const card = screen.getByRole("button", { name: /^練習詳細を表示\(/ });
     expect(card.textContent).toContain("-");
   });

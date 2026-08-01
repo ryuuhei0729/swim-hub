@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { create } from "zustand";
-import type { PracticeSortColumn, PracticeSortOrder } from "@/utils/practiceDayFilter";
+import type { PracticeSortColumn, PracticeSortOrder } from "@/utils/practiceLogFilter";
 
 interface PracticeFilterState {
   selectedTagIds: string[];

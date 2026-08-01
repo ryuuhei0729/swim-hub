@@ -29,7 +29,7 @@ export const EntryOnlyCard: React.FC<EntryOnlyCardProps> = ({ item, onPress }) =
       accessibilityLabel={t("competition.client.viewDetailAriaLabel")}
     >
       <View style={styles.row}>
-        <Text style={styles.date}>{formatDate(item.date, "short", locale)}</Text>
+        <Text style={styles.date}>{formatDate(item.date, "numeric", locale)}</Text>
         <Text style={styles.competitionName} numberOfLines={1}>
           {item.competitionName}
         </Text>

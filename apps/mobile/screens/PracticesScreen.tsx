@@ -12,14 +12,15 @@ import { PracticeItem } from "@/components/practices";
 import { ListToolbar, SortBottomSheet, FilterBottomSheet } from "@/components/history";
 import type { SortPreset, FilterGroup } from "@/components/history";
 import {
-  filterPractices,
-  sortPractices,
+  filterPracticeLogRows,
+  sortPracticeLogRows,
   countActivePracticeFilters,
   getParticipatedPracticePlaces,
   getParticipatedPracticeStyleCodes,
   type PracticeFilterValues,
   type PracticeSortColumn,
-} from "@/utils/practiceDayFilter";
+} from "@/utils/practiceLogFilter";
+import { buildPracticeLogRows, type PracticeLogRow } from "@apps/shared/utils/practiceLogRows";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { usePracticeFilterStore } from "@/stores/practiceFilterStore";
@@ -189,21 +190,24 @@ export const PracticesScreen: React.FC = () => {
     [allPractices],
   );
 
+  // 一覧のベース: 1練習ログ = 1カード行へ平坦化する(大会タブと同じ粒度)
+  const practiceLogRows = useMemo(() => buildPracticeLogRows(allPractices), [allPractices]);
+
   // 絞り込み → 並べ替え(useMemoで即座に反映)
-  const filteredPractices = useMemo(
-    () => filterPractices(allPractices, { filterPlaces, filterStyle, selectedTagIds }),
-    [allPractices, filterPlaces, filterStyle, selectedTagIds],
+  const filteredRows = useMemo(
+    () => filterPracticeLogRows(practiceLogRows, { filterPlaces, filterStyle, selectedTagIds }),
+    [practiceLogRows, filterPlaces, filterStyle, selectedTagIds],
   );
 
-  const sortedPractices = useMemo(
-    () => sortPractices(filteredPractices, sortColumn, sortOrder, i18n.language),
-    [filteredPractices, sortColumn, sortOrder, i18n.language],
+  const sortedRows = useMemo(
+    () => sortPracticeLogRows(filteredRows, sortColumn, sortOrder, i18n.language),
+    [filteredRows, sortColumn, sortOrder, i18n.language],
   );
 
   // 「もっと見る」(FlashList onEndReached): 絞り込み後・並べ替え後の総件数のうち displayCount 件のみ表示
-  const displayPractices = useMemo(
-    () => sortedPractices.slice(0, displayCount),
-    [sortedPractices, displayCount],
+  const displayRows = useMemo(
+    () => sortedRows.slice(0, displayCount),
+    [sortedRows, displayCount],
   );
 
   const activeFilterCount = useMemo(
@@ -345,14 +349,14 @@ export const PracticesScreen: React.FC = () => {
   // 既に全件表示済みの場合は onEndReached の連続発火で無駄な再レンダーを起こさないよう
   // ガードする
   const handleLoadMore = useCallback(() => {
-    if (displayCount >= sortedPractices.length) return;
+    if (displayCount >= sortedRows.length) return;
     setDisplayCount((count) => count + PAGE_INCREMENT);
-  }, [displayCount, sortedPractices.length]);
+  }, [displayCount, sortedRows.length]);
 
-  // 練習記録アイテムのレンダリング（メモ化）
+  // 練習記録アイテムのレンダリング（メモ化）。1行 = 1練習ログ
   const renderItem = useCallback(
-    ({ item }: { item: PracticeWithLogs }) => (
-      <PracticeItem practice={item} onPress={handlePracticePress} />
+    ({ item }: { item: PracticeLogRow }) => (
+      <PracticeItem practice={item.practice} log={item.log} onPress={handlePracticePress} />
     ),
     [handlePracticePress],
   );
@@ -393,14 +397,14 @@ export const PracticesScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <ListToolbar
-        itemCount={sortedPractices.length}
+        itemCount={sortedRows.length}
         onSortClick={openSortSheet}
         onFilterClick={openFilterSheet}
         activeFilterCount={activeFilterCount}
       />
 
       <FlashList
-        data={displayPractices}
+        data={displayRows}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}

@@ -376,8 +376,12 @@ describe("TeamCompetitionList", () => {
     );
   });
 
-  // [S3-V-B1] 記録ボタン押下で RecordLogForm + { competitionId, date, teamId } で navigate される
-  it("[S3-V-B1] 記録ボタンを押すと RecordLogForm に { competitionId, date, teamId } で navigate される", () => {
+  // [S3-V-B1 / W-01] 記録ボタン押下で CompetitionTabForm(initialTab:"record") + { competitionId, date, teamId } で navigate される。
+  // バグ修正 (2026-08-01): RecordLogForm は recordId 未指定だと既存レコードを検索せず
+  // 重複作成を招くため、useDayDetailHandlers.handleEditRecord と同じ CompetitionTabForm
+  // (competitionId 指定で既存レコードを読み込み編集対象にする) に統一された。
+  // 旧挙動 (RecordLogForm 直遷移) への回帰防止のため、RecordLogForm が呼ばれないことも検証する。
+  it("[S3-V-B1 / W-01] 記録ボタンを押すと CompetitionTabForm に { competitionId, date, teamId, initialTab: 'record' } で navigate される (重複レコード作成バグの回帰防止)", () => {
     const comp = makeCompetition({ id: "c-rec", date: "2026-10-15", title: "選手権大会" });
     mocks.useTeamCompetitionsQuery.mockReturnValue({
       data: [comp],
@@ -393,12 +397,17 @@ describe("TeamCompetitionList", () => {
     fireEvent.click(recordButton);
 
     expect(mocks.navigate).toHaveBeenCalledWith(
-      "RecordLogForm",
+      "CompetitionTabForm",
       expect.objectContaining({
         competitionId: "c-rec",
         date: "2026-10-15",
         teamId: "team-rec",
+        initialTab: "record",
       }),
     );
+
+    // 回帰防止: recordId 未指定のブランクフォーム (RecordLogForm) には遷移しないこと
+    // (既存レコードを無視した重複作成バグの再発防止)
+    expect(mocks.navigate).not.toHaveBeenCalledWith("RecordLogForm", expect.anything());
   });
 });

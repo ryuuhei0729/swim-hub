@@ -4131,7 +4131,8 @@
         "confirm": "Close",
         "cancel": "Continue editing"
       },
-      "recordFutureGuard": "Race records cannot be registered for future dates."
+      "recordFutureGuard": "Race records cannot be registered for future dates.",
+      "competitionEditRestricted": "Only team admins can edit this competition's details."
     },
     "premium": {
       "upgradeText": "Upgrade to Premium",

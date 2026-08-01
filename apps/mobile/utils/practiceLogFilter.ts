@@ -1,10 +1,14 @@
 // =============================================================================
 // 練習一覧(PracticesScreen)の純フィルタ/ソートロジック
 // =============================================================================
-// UI から分離したテスト可能な純関数群。1件 = 1日(practice)単位のフィルタ/ソートを扱う。
+// UI から分離したテスト可能な純関数群。
+// 2026-08-01: 一覧の粒度を day-level(1 practice = 1カード)から log-level
+// (1 practice_log = 1カード、大会タブと同じ粒度)へ変更したため、フィルタ/ソートも
+// PracticeLogRow(= カード1枚)単位で行う。行の生成は共有の buildPracticeLogRows。
 
 import { parseISO, isValid } from "date-fns";
-import type { PracticeWithLogs, SwimStyle } from "@swim-hub/shared/types";
+import type { PracticeWithLogs, PracticeLogWithTags, SwimStyle } from "@swim-hub/shared/types";
+import { logMatchesAllTags, type PracticeLogRow } from "@apps/shared/utils/practiceLogRows";
 import { compareWithNullsLast } from "./sortCompare";
 
 export type PracticeSortColumn = "date" | "place" | null;
@@ -23,26 +27,6 @@ function normalizeStyleCode(style: string | null | undefined): SwimStyle | null 
   return (STYLE_ORDER as readonly string[]).includes(lower) ? (lower as SwimStyle) : null;
 }
 
-/**
- * タグフィルタ: 「選択した全タグを含むログが、その日の practice_logs に
- * 少なくとも1件存在すれば一致」(per-log は AND、日全体は OR-exists)。
- * 選択0件は常に一致(全通過)。
- *
- * タグIDは JOIN 先の `practice_tags.id` ではなく、FK生カラムである
- * `practice_log_tags.practice_tag_id` を直接参照する(web `PracticeClient` と同じ
- * ソース。JOIN 結果に依存しないため、将来 practice_tags 側のJOINが欠落しても
- * タグ絞り込みは正しく機能する)。
- */
-export function practiceMatchesTags(practice: PracticeWithLogs, selectedTagIds: string[]): boolean {
-  if (selectedTagIds.length === 0) return true;
-
-  const logs = practice.practice_logs ?? [];
-  return logs.some((log) => {
-    const logTagIds = (log.practice_log_tags ?? []).map((plt) => plt.practice_tag_id);
-    return selectedTagIds.every((tagId) => logTagIds.includes(tagId));
-  });
-}
-
 /** 場所フィルタ(複数選択, OR。practice.place との直接比較)。選択0件は常に一致 */
 export function practiceMatchesPlaces(practice: PracticeWithLogs, selectedPlaces: string[]): boolean {
   if (selectedPlaces.length === 0) return true;
@@ -50,13 +34,14 @@ export function practiceMatchesPlaces(practice: PracticeWithLogs, selectedPlaces
 }
 
 /**
- * 種目フィルタ(単一選択)。その日の practice_logs のいずれか1件の種目キーが
- * 一致すれば日全体を表示対象にする(ANY-log match)。選択なし("")は常に一致
+ * 種目フィルタ(単一選択)。カードが log 単位になったため、そのログ自身の種目キーが
+ * 一致するかだけを見る(day-level 時代の ANY-log match は不要)。
+ * 選択なし("")は常に一致。ログ未登録(log=null)の行は種目を持たないため不一致。
  */
-export function practiceMatchesStyle(practice: PracticeWithLogs, selectedStyle: string): boolean {
+export function logMatchesStyle(log: PracticeLogWithTags | null, selectedStyle: string): boolean {
   if (!selectedStyle) return true;
-  const logs = practice.practice_logs ?? [];
-  return logs.some((log) => normalizeStyleCode(log.style) === selectedStyle);
+  if (!log) return false;
+  return normalizeStyleCode(log.style) === selectedStyle;
 }
 
 export interface PracticeFilterValues {
@@ -66,16 +51,19 @@ export interface PracticeFilterValues {
   selectedTagIds: string[];
 }
 
-/** グループ間 AND で練習(日)を絞り込む */
-export function filterPractices(
-  practices: PracticeWithLogs[],
+/**
+ * グループ間 AND でカード行を絞り込む。
+ * 場所は親 practice、種目/タグはその行のログを見る。
+ */
+export function filterPracticeLogRows(
+  rows: PracticeLogRow[],
   filters: PracticeFilterValues,
-): PracticeWithLogs[] {
-  return practices.filter(
-    (practice) =>
-      practiceMatchesPlaces(practice, filters.filterPlaces) &&
-      practiceMatchesStyle(practice, filters.filterStyle) &&
-      practiceMatchesTags(practice, filters.selectedTagIds),
+): PracticeLogRow[] {
+  return rows.filter(
+    (row) =>
+      practiceMatchesPlaces(row.practice, filters.filterPlaces) &&
+      logMatchesStyle(row.log, filters.filterStyle) &&
+      logMatchesAllTags(row.log, filters.selectedTagIds),
   );
 }
 
@@ -122,19 +110,27 @@ function getPracticeSortDate(practice: PracticeWithLogs): Date | null {
  * 呼び出し側が渡した順序(サーバー既定順=日付降順)をそのまま維持する。
  * 欠損値(日付パース失敗・place未設定)は asc/desc いずれでも常に末尾に固定する
  * (`compareWithNullsLast`。web `useTableSort` の null-last セマンティクスと同一)。
+ *
+ * ソートキーは date/place いずれも練習(親)単位のため、同一練習に属するログ同士は
+ * 常にタイになる。Array.prototype.sort は安定ソートなので、同じ練習のログは
+ * `buildPracticeLogRows` が並べた順序(= practice_logs のクエリ順)のまま隣り合う。
  */
-export function sortPractices(
-  practices: PracticeWithLogs[],
+export function sortPracticeLogRows(
+  rows: PracticeLogRow[],
   sortColumn: PracticeSortColumn,
   sortOrder: PracticeSortOrder,
   locale?: string,
-): PracticeWithLogs[] {
-  if (!sortColumn) return practices;
+): PracticeLogRow[] {
+  if (!sortColumn) return rows;
 
-  return [...practices].sort((a, b) => {
+  return [...rows].sort((a, b) => {
     if (sortColumn === "date") {
-      return compareWithNullsLast(getPracticeSortDate(a), getPracticeSortDate(b), sortOrder);
+      return compareWithNullsLast(
+        getPracticeSortDate(a.practice),
+        getPracticeSortDate(b.practice),
+        sortOrder,
+      );
     }
-    return compareWithNullsLast(a.place || null, b.place || null, sortOrder, locale);
+    return compareWithNullsLast(a.practice.place || null, b.practice.place || null, sortOrder, locale);
   });
 }

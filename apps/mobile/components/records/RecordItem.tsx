@@ -42,7 +42,7 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
     try {
       const parsed = typeof recordDate === "string" ? parseISO(recordDate) : new Date(recordDate);
       const zoned = toZonedTime(parsed, Intl.DateTimeFormat().resolvedOptions().timeZone);
-      return formatDate(zoned, "long", locale);
+      return formatDate(zoned, "numeric", locale);
     } catch {
       return t("recordMobile.dateUnknown");
     }
@@ -79,7 +79,7 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
       onPress={handlePress}
     >
       <View style={styles.content}>
-        {/* 1行目: 日付 + 大会名（大会未紐付けは「(一括入力)」） */}
+        {/* 1行目: 日付 + 大会名（大会未紐付けは「(一括入力)」） + ベストタイムバッジ(右寄せ) */}
         <View style={styles.row}>
           <Text style={styles.date}>{formattedDate}</Text>
           <Text
@@ -88,6 +88,15 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
           >
             {competitionName}
           </Text>
+          <BestTimeBadge
+            recordId={record.id}
+            styleId={record.style_id}
+            currentTime={record.time}
+            recordDate={record.competition?.date ?? record.created_at}
+            poolType={record.pool_type}
+            isRelaying={record.is_relaying}
+            showDiff={false}
+          />
         </View>
 
         {/* 2行目: 場所(左) + 水路・種目・タイム(右) */}
@@ -103,15 +112,6 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
             <Text style={styles.poolType}>{poolType}</Text>
             <Text style={styles.style}>{styleDisplay}</Text>
             <Text style={styles.time}>{formattedTime}</Text>
-            <BestTimeBadge
-              recordId={record.id}
-              styleId={record.style_id}
-              currentTime={record.time}
-              recordDate={record.competition?.date ?? record.created_at}
-              poolType={record.pool_type}
-              isRelaying={record.is_relaying}
-              showDiff={false}
-            />
           </View>
         </View>
       </View>
@@ -166,7 +166,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#111827",
-    flexShrink: 1,
+    // 残り幅を占有し、右端のベストタイムバッジを右寄せする
+    flex: 1,
   },
   place: {
     fontSize: 13,
