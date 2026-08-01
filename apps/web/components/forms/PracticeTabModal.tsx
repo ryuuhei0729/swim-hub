@@ -30,6 +30,7 @@ import { validatePracticeTimeLimit } from "@swim-hub/shared/utils/validators";
 import { useCreatePracticeLogTemplateMutation } from "@swim-hub/shared/hooks";
 import { PracticeAPI } from "@apps/shared/api";
 import { isDbUuid } from "@/utils/isDbUuid";
+import { getTabNavAdjacency } from "@/utils/tabModalUtils";
 import type { PracticeImageFile, ExistingImage } from "@/components/forms/PracticeImageUploader";
 import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
 import type { PracticeLogEditData, PracticeLogSubmitData, PracticeMenu } from "@/components/forms/practice-log/types";
@@ -632,6 +633,9 @@ export default function PracticeTabModal({
     { id: "practiceLog", label: t("tabs.log") },
   ];
 
+  const visibleTabIds: PracticeTabId[] = ["practice", "practiceLog"];
+  const { prevTab, nextTab } = getTabNavAdjacency(visibleTabIds, activeTab);
+
   return (
     <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="practice-tab-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
@@ -904,24 +908,39 @@ export default function PracticeTabModal({
             )}
 
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-              <Button
-                type="button"
-                onClick={handleClose}
-                variant="outline"
-                disabled={isLoading}
-                className="w-full sm:w-auto"
-              >
-                {tTabModal("cancel")}
-              </Button>
+              {prevTab && (
+                <Button
+                  type="button"
+                  onClick={() => setActiveTab(prevTab)}
+                  variant="outline"
+                  disabled={isLoading}
+                  className="w-full sm:w-auto"
+                  data-testid="practice-tab-modal-back"
+                >
+                  {tTabModal("back")}
+                </Button>
+              )}
               <Button
                 type="button"
                 onClick={() => void handleSave()}
+                variant={nextTab ? "outline" : "primary"}
                 disabled={isLoading || isPracticeTimeLimitReached}
                 className="w-full sm:w-auto"
                 data-testid="practice-tab-modal-save"
               >
-                {isLoading ? tTabModal("saving") : tTabModal("save")}
+                {isLoading ? tTabModal("saving") : tTabModal("saveAndClose")}
               </Button>
+              {nextTab && (
+                <Button
+                  type="button"
+                  onClick={() => setActiveTab(nextTab)}
+                  disabled={isLoading}
+                  className="w-full sm:w-auto"
+                  data-testid="practice-tab-modal-next"
+                >
+                  {tTabModal("next")}
+                </Button>
+              )}
             </div>
           </div>
         </div>

@@ -13,40 +13,58 @@ import { useTranslation } from "react-i18next";
 import { Feather } from "@expo/vector-icons";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
-import { CompetitionShareCard, type CompetitionShareData } from "./CompetitionShareCard";
+import { CompetitionShareCard } from "./CompetitionShareCard";
+import { PracticeShareCard } from "./PracticeShareCard";
+import type { CompetitionShareData, PracticeShareData } from "./types";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
+
+type ShareCardType = "competition" | "practice";
 
 interface ShareCardModalProps {
   visible: boolean;
   onClose: () => void;
-  data: CompetitionShareData | null;
+  type: ShareCardType;
+  data: CompetitionShareData | PracticeShareData | null;
 }
 
 /**
- * 記録シェアカードモーダル（web ShareCardModal のモバイル版）。
+ * シェアカードモーダル（web ShareCardModal のモバイル版）。
  * カードを画像化して OS の共有シートに渡す。
  */
-export const ShareCardModal: React.FC<ShareCardModalProps> = ({ visible, onClose, data }) => {
+export const ShareCardModal: React.FC<ShareCardModalProps> = ({
+  visible,
+  onClose,
+  type,
+  data,
+}) => {
   const { t } = useTranslation();
+  const insets = useSafeInsets();
   const cardRef = useRef<View>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const titleKey =
+    type === "competition"
+      ? "common.shareCardModal.competitionTitle"
+      : "common.shareCardModal.practiceTitle";
 
   const handleShare = async () => {
     if (!cardRef.current || isGenerating) return;
     setIsGenerating(true);
     try {
-      const uri = await captureRef(cardRef, {
-        format: "png",
-        quality: 1,
-        result: "tmpfile",
-      });
       const available = await Sharing.isAvailableAsync();
       if (!available) {
         Alert.alert(t("common.error"), t("common.shareCardModal.shareUnavailable"));
         return;
       }
+      const uri = await captureRef(cardRef, {
+        format: "png",
+        quality: 1,
+        result: "tmpfile",
+      });
       await Sharing.shareAsync(uri, {
         mimeType: "image/png",
-        dialogTitle: t("common.shareCardModal.competitionTitle"),
+        dialogTitle: t(titleKey),
         UTI: "public.png",
       });
     } catch (err) {
@@ -68,9 +86,9 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({ visible, onClose
           accessibilityRole="button"
           accessibilityLabel={t("common.shareCardModal.closeOverlay")}
         />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: getSafeFooterPadding(34, insets.bottom) }]}>
           <View style={styles.header}>
-            <Text style={styles.title}>{t("common.shareCardModal.competitionTitle")}</Text>
+            <Text style={styles.title}>{t(titleKey)}</Text>
             <Pressable
               onPress={onClose}
               hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
@@ -84,7 +102,11 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({ visible, onClose
           <ScrollView contentContainerStyle={styles.preview} showsVerticalScrollIndicator={false}>
             {/* collapsable={false}: Android で captureRef の対象ビューを確実に保持する */}
             <View ref={cardRef} collapsable={false} style={styles.captureWrap}>
-              <CompetitionShareCard data={data} t={t} />
+              {type === "competition" ? (
+                <CompetitionShareCard data={data as CompetitionShareData} t={t} />
+              ) : (
+                <PracticeShareCard data={data as PracticeShareData} t={t} />
+              )}
             </View>
           </ScrollView>
 
@@ -123,7 +145,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: "88%",
-    paddingBottom: 34,
   },
   header: {
     flexDirection: "row",

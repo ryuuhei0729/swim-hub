@@ -112,6 +112,39 @@ export function diffPracticeLogDraft(
 }
 
 // ---------------------------------------------------------------------------
+// getTabNavAdjacency
+// ---------------------------------------------------------------------------
+/**
+ * アクティブタブの前後タブ(フッターの「前に戻る」「次に進む」ボタン用)を
+ * 算出する純粋関数。web (apps/web/utils/tabModalUtils.ts) とシグネチャ・
+ * 挙動を同一にミラーする。
+ *
+ * @param visibleTabs 現在表示されているタブの並び順
+ * @param activeTab 現在アクティブなタブ
+ * @param options.guardedNextTab ガード対象のタブ (例: 大会の "record")
+ * @param options.isGuarded true のとき、nextTab が guardedNextTab と一致する場合に
+ *   nextTab を undefined に上書きする ("次に進む" ボタンを出さない)
+ */
+export interface TabNavAdjacency<T extends string> {
+  prevTab?: T;
+  nextTab?: T;
+}
+
+export function getTabNavAdjacency<T extends string>(
+  visibleTabs: T[],
+  activeTab: T,
+  options?: { guardedNextTab?: T; isGuarded?: boolean },
+): TabNavAdjacency<T> {
+  const idx = visibleTabs.indexOf(activeTab);
+  const prevTab = idx > 0 ? visibleTabs[idx - 1] : undefined;
+  let nextTab = idx >= 0 && idx < visibleTabs.length - 1 ? visibleTabs[idx + 1] : undefined;
+  if (nextTab && options?.guardedNextTab === nextTab && options.isGuarded) {
+    nextTab = undefined;
+  }
+  return { prevTab, nextTab };
+}
+
+// ---------------------------------------------------------------------------
 // diffRecordDraft
 // ---------------------------------------------------------------------------
 /**

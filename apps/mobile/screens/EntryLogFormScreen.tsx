@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
@@ -735,7 +736,7 @@ export const EntryLogFormScreen: React.FC = () => {
       </Modal>
 
       {/* フッター */}
-      <View style={styles.footer}>
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
         <View style={styles.buttonContainer}>
           <Pressable
             style={[styles.button, styles.cancelButton, loading && styles.buttonDisabled]}
@@ -771,7 +772,7 @@ export const EntryLogFormScreen: React.FC = () => {
             </Text>
           )}
         </Pressable>
-      </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 };

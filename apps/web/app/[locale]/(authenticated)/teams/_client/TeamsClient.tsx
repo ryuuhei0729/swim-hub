@@ -120,11 +120,31 @@ export default function TeamsClient({ initialTeams }: TeamsClientProps) {
 
   return (
     <div className="space-y-3 sm:space-y-6">
-      {/* ヘッダー */}
-      <div className="hidden lg:block bg-white rounded-lg shadow p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t("page.title")}</h1>
-          <p className="text-gray-600">{t("page.description")}</p>
+      {/* ヘッダー: タイトル + 常設の作成/参加ボタン */}
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
+              {t("page.title")}
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600">{t("page.description")}</p>
+          </div>
+          <div className="flex flex-row gap-2 shrink-0">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+            >
+              <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+              {t("empty.createButton")}
+            </button>
+            <button
+              onClick={() => setIsJoinModalOpen(true)}
+              className="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+            >
+              <UserPlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+              {t("empty.joinButton")}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -24,13 +24,15 @@ import {
   useCreateRecordMutation,
   useUpdateRecordMutation,
   useUpdateCompetitionMutation,
-  useRecordsQuery,
+  useCompetitionsListQuery,
+  useRecordByIdQuery,
   useReplaceSplitTimesMutation,
 } from "@apps/shared/hooks/queries/records";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { ErrorView } from "@/components/layout/ErrorView";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -123,6 +125,14 @@ export const RecordFormScreen: React.FC = () => {
   const [loadingStyles, setLoadingStyles] = useState(true);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
 
+  // 大会未紐付けレコード（一括入力）の編集かどうか。編集対象読み込み完了後に確定する
+  // (大会に紐づけない = CompetitionTabForm を使わず、この画面をそのまま再利用する)
+  const isStandaloneRecord =
+    isEditMode && !routeCompetitionId && !loadingRecord && storeCompetitionId === null;
+  // 大会未紐付けレコードは選択中の大会から pool_type を導出できないため、
+  // 読み込み時点の記録自身の pool_type を保持しておき、保存時にそのまま使う
+  const [standaloneOriginalPoolType, setStandaloneOriginalPoolType] = useState<PoolType>(0);
+
   // ドロップダウンピッカーの状態
   const [showStylePicker, setShowStylePicker] = useState(false);
   const [showCompetitionPicker, setShowCompetitionPicker] = useState(false);
@@ -162,16 +172,20 @@ export const RecordFormScreen: React.FC = () => {
     setDeletedImageIds(deletedIds);
   }, []);
 
-  // 編集モード時は、useRecordsQueryでデータを取得してから該当のものを検索
+  // 大会選択ドロップダウン用の大会一覧
+  const { data: competitionsData = [] } = useCompetitionsListQuery(supabase);
+
+  // 編集対象レコードは recordId から直接解決する。pageSize 制限のある一覧キャッシュ
+  // (recordKeys.list) に依存すると、大量レコード保有ユーザーで編集対象が取得ウィンドウの
+  // 外に出て見つからない、あるいは一括入力直後の invalidate 未反映で見つからないといった
+  // 「どの画面を先に訪問したか」に依存する不安定な挙動になるため使わない
   const {
-    records = [],
-    competitions: competitionsData = [],
-    isLoading: loadingRecords,
-  } = useRecordsQuery(supabase, {
-    page: 1,
-    pageSize: 1000, // 十分な件数を取得
-    enableRealtime: false, // 編集画面ではリアルタイム更新は不要
-  });
+    data: fetchedRecord,
+    isLoading: loadingFetchedRecord,
+    isFetching: isFetchingFetchedRecord,
+    isError: isFetchedRecordError,
+    refetch: refetchFetchedRecord,
+  } = useRecordByIdQuery(supabase, isEditMode && recordId ? recordId : "");
 
   // 種目一覧を取得
   useEffect(() => {
@@ -268,26 +282,28 @@ export const RecordFormScreen: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, recordId]);
 
-  // 編集モード時の初回初期化を一度だけ行う
+  // 編集モード時の初回初期化を一度だけ行う（recordId で直接解決したレコードを使う）
   useEffect(() => {
     if (!isEditMode || !recordId || hasInitializedForEdit.current) {
       return;
     }
+    if (loadingFetchedRecord) return;
 
-    const record = records.find((r) => r.id === recordId);
-    if (record) {
-      initialize(record);
+    if (fetchedRecord) {
+      initialize(fetchedRecord);
+      // 大会未紐付けレコードの場合、保存時に pool_type を維持できるよう保持しておく
+      setStandaloneOriginalPoolType((fetchedRecord.pool_type ?? 0) as PoolType);
       // 動画パスを初期化
-      setExistingVideoPath(record.video_path ?? null);
-      setExistingThumbnailPath(record.video_thumbnail_path ?? null);
+      setExistingVideoPath(fetchedRecord.video_path ?? null);
+      setExistingThumbnailPath(fetchedRecord.video_thumbnail_path ?? null);
       // 編集時にタイム表示値を初期化
-      if (record.time && record.time > 0) {
-        setTimeDisplayValue(formatSecondsToDisplay(record.time));
+      if (fetchedRecord.time && fetchedRecord.time > 0) {
+        setTimeDisplayValue(formatSecondsToDisplay(fetchedRecord.time));
       }
       // スプリットタイム表示値を初期化
-      if (record.split_times) {
+      if (fetchedRecord.split_times) {
         const displayValues: Record<number, string> = {};
-        record.split_times.forEach((st: { split_time: number }, idx: number) => {
+        fetchedRecord.split_times.forEach((st: { split_time: number }, idx: number) => {
           if (st.split_time > 0) {
             displayValues[idx] = formatSecondsToDisplay(st.split_time);
           }
@@ -296,12 +312,12 @@ export const RecordFormScreen: React.FC = () => {
       }
       hasInitializedForEdit.current = true;
       setLoadingRecord(false);
-    } else if (!loadingRecords) {
-      // データが見つからない場合もロード終了
+    } else {
+      // レコードが存在しない、または取得エラー。ロード終了しエラー/空状態を表示する
       setLoadingRecord(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [records, loadingRecords, isEditMode, recordId]);
+  }, [fetchedRecord, loadingFetchedRecord, isEditMode, recordId]);
 
   // ミューテーション
   const createMutation = useCreateRecordMutation(supabase);
@@ -314,11 +330,13 @@ export const RecordFormScreen: React.FC = () => {
     clearErrors();
     let isValid = true;
 
-    // 大会のバリデーション
-    const finalCompetitionId = routeCompetitionId || storeCompetitionId;
-    if (!finalCompetitionId || finalCompetitionId.trim() === "") {
-      setError("competitionId", t("recordMobile.form.competitionRequired"));
-      isValid = false;
+    // 大会のバリデーション（大会未紐付けレコードの編集時は大会選択を必須にしない）
+    if (!isStandaloneRecord) {
+      const finalCompetitionId = routeCompetitionId || storeCompetitionId;
+      if (!finalCompetitionId || finalCompetitionId.trim() === "") {
+        setError("competitionId", t("recordMobile.form.competitionRequired"));
+        isValid = false;
+      }
     }
 
     // 種目のバリデーション
@@ -377,10 +395,14 @@ export const RecordFormScreen: React.FC = () => {
         return;
       }
 
-      // 大会からプールタイプを取得
-      const finalCompetitionId = routeCompetitionId || storeCompetitionId;
+      // 大会未紐付けレコードは大会に紐付けない（competition_id は null のまま維持）
+      const finalCompetitionId = isStandaloneRecord ? null : routeCompetitionId || storeCompetitionId;
+      // 大会からプールタイプを取得。大会未紐付けレコードは大会が無いため、
+      // 読み込み時点の記録自身の pool_type をそのまま維持する
       const selectedCompetition = competitions.find((c) => c.id === finalCompetitionId);
-      const poolType: PoolType = (selectedCompetition?.pool_type ?? 0) as PoolType; // デフォルトは短水路
+      const poolType: PoolType = isStandaloneRecord
+        ? standaloneOriginalPoolType
+        : ((selectedCompetition?.pool_type ?? 0) as PoolType); // デフォルトは短水路
 
       const recordData = {
         competition_id: finalCompetitionId,
@@ -776,6 +798,35 @@ export const RecordFormScreen: React.FC = () => {
     );
   }
 
+  // 編集対象レコードが見つからない、または取得エラー
+  if (isEditMode && !fetchedRecord) {
+    // エラー表示からのリトライ中は isLoading (初回ロード専用) が false のままなので、
+    // isFetching で明示的にリトライ中インジケータへ切り替える
+    // (出さないと、リトライを押しても同じエラー表示が続き、成功した瞬間に唐突に
+    // フォームへ切り替わって見える)
+    if (isFetchedRecordError && isFetchingFetchedRecord) {
+      return (
+        <View style={styles.container}>
+          <LoadingSpinner fullScreen message={t("recordMobile.loadingData")} />
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.container}>
+        <ErrorView
+          fullScreen
+          message={
+            isFetchedRecordError
+              ? t("recordMobile.recordFetchFailed")
+              : t("recordMobile.recordDataNotFound")
+          }
+          onRetry={isFetchedRecordError ? () => refetchFetchedRecord() : undefined}
+        />
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -783,7 +834,17 @@ export const RecordFormScreen: React.FC = () => {
     >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.form}>
-          {/* 大会選択 */}
+          {/* 大会選択（大会未紐付けレコード=一括入力の編集時は選択不要のため静的表示に置き換え） */}
+          {isStandaloneRecord ? (
+            <View style={styles.field}>
+              <Text style={styles.label}>{t("recordMobile.form.competitionLabel")}</Text>
+              <View style={[styles.pickerButton, styles.pickerButtonDisabled]}>
+                <Text style={styles.pickerButtonPlaceholder}>
+                  ({t("competition.client.bulkInputLabel")})
+                </Text>
+              </View>
+            </View>
+          ) : (
           <View style={styles.field}>
             <Text style={styles.label}>
               {t("recordMobile.form.competitionLabel")} <Text style={styles.required}>*</Text>
@@ -806,6 +867,7 @@ export const RecordFormScreen: React.FC = () => {
             </Pressable>
             {errors.competitionId && <Text style={styles.errorText}>{errors.competitionId}</Text>}
           </View>
+          )}
 
           {/* 種目選択 */}
           <View style={styles.field}>
@@ -1067,7 +1129,8 @@ export const RecordFormScreen: React.FC = () => {
             />
           </View>
 
-          {/* 画像 */}
+          {/* 画像（大会未紐付けレコードは画像を紐付ける大会が無いため非表示） */}
+          {!isStandaloneRecord && (
           <View style={styles.field}>
             {canUploadImage(isPremium) ? (
               <ImageUploader
@@ -1081,6 +1144,7 @@ export const RecordFormScreen: React.FC = () => {
               <PremiumBadge feature="image_upload" />
             )}
           </View>
+          )}
 
           {/* 動画 */}
           <View style={styles.field}>
@@ -1302,6 +1366,9 @@ const styles = StyleSheet.create({
   },
   pickerButtonPlaceholder: {
     color: "#9CA3AF",
+  },
+  pickerButtonDisabled: {
+    backgroundColor: "#F3F4F6",
   },
   dropdownOverlay: {
     flex: 1,

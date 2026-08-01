@@ -31,6 +31,7 @@ import {
   styleIdToCodeKey,
   nameJpToCodeKey,
   buildSwimStyleLabel,
+  type StyleCodeKey,
 } from "@/utils/swimStyle";
 import { useLocale } from "next-intl";
 import { useAuth } from "@/contexts";
@@ -42,11 +43,36 @@ import type {
   Record as RecordType,
   SplitTime,
   PoolType,
+  SwimStyle,
 } from "@apps/shared/types";
 import { AttendanceButton } from "../AttendanceSection";
 import { RecordSplitTimes } from "./RecordSplitTimes";
 import type { CompetitionDetailsProps } from "../../types";
 import { RecordAPI } from "@apps/shared/api/records";
+import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
+import { DEFAULT_COMPETITION_COLOR } from "@apps/shared/utils/calendarColorResolver";
+import { formatStyleAbbrev } from "@apps/shared/utils/swimStyles";
+
+// StyleCodeKey ("Fr"/"Ba"/"Br"/"Fly"/"IM") → shared formatStyleAbbrev が要求する
+// SwimStyle コード ("fr"/"ba"/"br"/"fly"/"im")。カード(CompetitionRecordCard)と
+// 略称の組み立てロジックを一本化するための橋渡し。
+const CODE_KEY_TO_SWIM_STYLE: Record<StyleCodeKey, SwimStyle> = {
+  Fr: "fr",
+  Ba: "ba",
+  Br: "br",
+  Fly: "fly",
+  IM: "im",
+};
+
+// 色の明度に基づいてテキスト色を決定する関数(PracticeDetails.tsx と同一アルゴリズム)
+const getTextColor = (backgroundColor: string) => {
+  const hex = backgroundColor.replace("#", "");
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 128 ? "#000000" : "#FFFFFF";
+};
 
 export function CompetitionDetails({
   competitionId,
@@ -65,12 +91,16 @@ export function CompetitionDetails({
   teamId,
   teamName,
   onShowAttendance,
+  color,
 }: CompetitionDetailsProps) {
   const t = useTranslations("dashboard");
   const tPractice = useTranslations("practice");
+  const wrapperColor = color ?? DEFAULT_COMPETITION_COLOR;
+  // 未カスタマイズ(デフォルト色のまま)なら旧 Tailwind クラスをそのまま使い、
+  // 既存ユーザーの見た目をピクセル一致で維持する。カスタム色時のみ動的着色する(C2/C5対応)。
+  const isDefaultColor = wrapperColor === DEFAULT_COMPETITION_COLOR;
   const tCompetition = useTranslations("competition");
   const tStyles = useTranslations("practice.styles");
-  const tStyleAbbrev = useTranslations("practice.styleAbbrev");
   const locale = useLocale();
   const { supabase, user } = useAuth();
 
@@ -99,8 +129,10 @@ export function CompetitionDetails({
   };
 
   /**
-   * モバイル表示用: 距離 + 略称 (例: "200Fr", "100m Fr")
-   * 未知種目は name_jp から距離+略称を組み立てる。
+   * モバイル表示用: 距離 + 英略称 (例: "200mIM")。ロケール非依存。
+   * CompetitionRecordCard (大会記録一覧カード) と同じ shared
+   * `formatStyleAbbrev` に委譲し、略称の組み立てロジックを一本化する。
+   * 未知種目は name_jp をそのまま返す(formatStyleAbbrev のフォールバック)。
    */
   const localizedStyleAbbrev = (
     styleId: string | number | undefined,
@@ -115,11 +147,11 @@ export function CompetitionDetails({
         : nameJp
           ? nameJpToCodeKey(nameJp)
           : null;
-    if (codeKey && distance) {
-      return `${distance}${tStyleAbbrev(codeKey)}`;
-    }
-    // 未知種目: name_jp から距離部分を取り出して返す
-    return nameJp || fallback;
+    return formatStyleAbbrev({
+      style: codeKey ? CODE_KEY_TO_SWIM_STYLE[codeKey] : undefined,
+      distance,
+      name_jp: nameJp ?? fallback,
+    });
   };
   const [actualRecords, setActualRecords] = useState<CalendarItem[]>([]);
   const [competitionImages, setCompetitionImages] = useState<GalleryImage[]>(
@@ -287,7 +319,12 @@ export function CompetitionDetails({
     <div className="mt-3">
       {/* Competition全体の枠 */}
       <div
-        className="bg-blue-50 rounded-xl px-1 py-3 sm:p-3"
+        className={`rounded-xl px-1 py-3 sm:p-3 ${isDefaultColor ? "bg-blue-50" : ""}`}
+        style={
+          isDefaultColor
+            ? undefined
+            : { backgroundColor: mixWithWhite(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND) }
+        }
         data-testid="record-detail-modal"
       >
         {/* Competition全体のヘッダー */}
@@ -296,10 +333,23 @@ export function CompetitionDetails({
             <div className="flex items-center gap-2 mb-2">
               <span
                 className={`text-lg font-semibold px-3 py-1 rounded-lg flex items-center gap-2 ${
-                  isTeamCompetition
-                    ? "text-violet-800 bg-violet-200"
-                    : "text-blue-800 bg-blue-200"
+                  isDefaultColor
+                    ? isTeamCompetition
+                      ? "text-violet-800 bg-violet-200"
+                      : "text-blue-800 bg-blue-200"
+                    : ""
                 }`}
+                style={
+                  isDefaultColor
+                    ? undefined
+                    : {
+                        backgroundColor: hexToRgba(
+                          wrapperColor,
+                          CALENDAR_COLOR_ALPHA.DAY_DETAIL_BADGE_BACKGROUND,
+                        ),
+                        color: getTextColor(wrapperColor),
+                      }
+                }
                 data-testid="competition-title-display"
               >
                 <TrophyIcon className="h-5 w-5" />
@@ -466,10 +516,29 @@ export function CompetitionDetails({
               return (
                 <div
                   key={record.id}
-                  className="bg-blue-50 rounded-lg px-1 py-2 sm:p-3"
+                  className={`rounded-lg px-1 py-2 sm:p-3 ${isDefaultColor ? "bg-blue-50" : ""}`}
+                  style={
+                    isDefaultColor
+                      ? undefined
+                      : {
+                          backgroundColor: mixWithWhite(
+                            wrapperColor,
+                            CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND,
+                          ),
+                        }
+                  }
                 >
                   {/* 記録内容 */}
-                  <div className="bg-white rounded-lg p-2 sm:p-3 mb-1 border border-blue-300">
+                  <div
+                    className={`bg-white rounded-lg p-2 sm:p-3 mb-1 border ${
+                      isDefaultColor ? "border-blue-300" : ""
+                    }`}
+                    style={
+                      isDefaultColor
+                        ? undefined
+                        : { borderColor: hexToRgba(wrapperColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER) }
+                    }
+                  >
                     {/* 1行目：ラベルとアイコン */}
                     <div className="grid grid-cols-[1fr_2fr_1fr] sm:grid-cols-[2fr_2fr_1fr] gap-2 items-center mb-1">
                       <div className="text-xs font-medium text-gray-500">

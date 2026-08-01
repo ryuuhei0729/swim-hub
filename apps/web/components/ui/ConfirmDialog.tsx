@@ -9,6 +9,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { cn } from "@/utils/cn";
+import { lockBodyScroll } from "@/utils/scrollLock";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -70,15 +71,15 @@ export default function ConfirmDialog({
       }
     };
 
-    // body スクロールを無効化
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // body スクロールを無効化(参照カウント方式。他のオーバーレイ(BottomSheet等)と多重に
+    // 開閉されても、すべて閉じた時点でのみ復元される)
+    const unlockScroll = lockBodyScroll();
 
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = originalOverflow;
+      unlockScroll();
     };
   }, [isOpen, onCancel]);
 

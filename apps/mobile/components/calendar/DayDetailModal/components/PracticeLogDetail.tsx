@@ -3,12 +3,22 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime, formatCircleTime, getStyleLabel } from "@/utils/formatters";
 import type { PracticeTime, PracticeTag } from "@apps/shared/types";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
+import { ShareCardModal } from "@/components/share";
+import type { PracticeShareData, PracticeMenuItem } from "@/components/share";
 import { resolveGalleryImages } from "@/utils/imageUpload";
+import { formatDate } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
+import { darkenHex } from "@/utils/colorTone";
+import { AttendanceGroupModal } from "@/components/teams/AttendanceGroupModal";
+import type { MainStackParamList } from "@/navigation/types";
 import { styles } from "../styles";
 import { MemoizedTimeTable } from "./TimeTable";
 import type {
@@ -17,6 +27,12 @@ import type {
   PracticeLogDetailData,
   PracticeLogFromDB,
 } from "../types";
+
+// DayDetailModal から渡ってくる未カスタマイズ時のフォールバック色。
+// (このコンポーネントは練習/大会/エントリー/記録いずれのアイテムでも使われるため、
+// 練習系・大会系どちらのレガシー値とも一致判定する)
+const LEGACY_PRACTICE_ACCENT = "#10B981";
+const LEGACY_COMPETITION_ACCENT = "#2563EB";
 
 /**
  * Practice_Logの詳細表示コンポーネント
@@ -47,8 +63,34 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   onPracticeTimeLoaded,
   onMediaLoaded,
 }) => {
+  // 未カスタマイズ(渡された色が旧デフォルト値と一致)なら内側の識別色要素を旧来の
+  // 見た目に固定する。カスタム色時のみ、枠線/バッジ/アクセントを淡いアルファ合成にする
+  // (「濃すぎる」フィードバックを受けた RecordDetail/EntryDetail と同じ方針)。
+  const isDefaultAccent = color === LEGACY_PRACTICE_ACCENT || color === LEGACY_COMPETITION_ACCENT;
+  const badgeBackgroundColor = isDefaultAccent
+    ? color
+    : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BADGE_BACKGROUND);
+  const badgeTextColor = isDefaultAccent ? "#FFFFFF" : darkenHex(color, 0.65);
+  const borderLeftAccentColor = isDefaultAccent ? color : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
+  // 練習内容ボックス・タイム表の枠線は練習系のみ(このコンポーネント内で練習内容を
+  // 表示するのは isPractice/isPracticeLog の場合のみだが、判定用の色は共通で使い回す)
+  const practiceBoxBorderColor = isDefaultAccent ? LEGACY_PRACTICE_ACCENT : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
+  const practiceAccentBarColor = isDefaultAccent ? LEGACY_PRACTICE_ACCENT : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_ACCENT_BAR);
+  const practiceAccentTextColor = isDefaultAccent ? "#059669" : color;
+  // 展開済み練習メニュー1件分の背景ウォッシュ(入れ子で重なりうる背景面のため mixWithWhite を使う)
+  const practiceLogBoxBackgroundColor = isDefaultAccent
+    ? "#F0FDF4"
+    : mixWithWhite(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND);
   const { t } = useTranslation();
   const { supabase, getAccessToken } = useAuth();
+  const locale = useDateLocale();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  // チームの練習/大会のみ出欠確認ボタンを表示する（web PracticeDetails/CompetitionDetails の
+  // `isTeamPractice && teamId` 条件と同一。個人の練習には出さない）
+  const teamId = item.metadata?.team_id ?? null;
+  const isTeamEvent =
+    (item.type === "team_practice" || item.type === "team_competition") && !!teamId;
+  const [attendanceModalVisible, setAttendanceModalVisible] = useState(false);
   const [recordDetail, setRecordDetail] = useState<{
     time: number;
     note: string;
@@ -60,12 +102,52 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   const [practiceImages, setPracticeImages] = useState<Array<{ id: string; url: string }>>([]);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [shareVisible, setShareVisible] = useState(false);
+  const [sharePracticeData, setSharePracticeData] = useState<PracticeShareData | null>(null);
 
   const [practiceLogImages, setPracticeLogImages] = useState<Array<{ id: string; url: string }>>(
     [],
   );
   const [logViewerVisible, setLogViewerVisible] = useState(false);
   const [logViewerIndex, setLogViewerIndex] = useState(0);
+
+  // 共有ボタン押下: その日の practiceLogs 全件を menuItems に集約する
+  // （web PracticeDetails.tsx の share-practice-log-button と同一方針。押されたログに
+  // 関わらず常に全件集約する）
+  const handleSharePractice = useCallback(() => {
+    const menuItems: PracticeMenuItem[] = practiceLogs.map((log) => ({
+      style: log.style,
+      category: log.swim_category || "Swim",
+      distance: log.distance,
+      repCount: log.repCount,
+      setCount: log.setCount,
+      circle: log.circle ?? undefined,
+      times: log.times?.map((time) => ({
+        setNumber: time.setNumber,
+        repNumber: time.repNumber,
+        time: time.time,
+      })),
+      note: log.note ?? undefined,
+      tags: (log.tags || []).map((tag) => ({ name: tag.name, color: tag.color })),
+    }));
+
+    const totalDistance = practiceLogs.reduce(
+      (sum, log) => sum + log.distance * log.repCount * log.setCount,
+      0,
+    );
+    const totalSets = practiceLogs.reduce((sum, log) => sum + (log.setCount || 0), 0);
+
+    setSharePracticeData({
+      date: item.date ? formatDate(item.date, "longWithWeekday", locale) : "",
+      title,
+      place: item.place ?? undefined,
+      note: item.note ?? undefined,
+      menuItems,
+      totalDistance,
+      totalSets,
+    });
+    setShareVisible(true);
+  }, [practiceLogs, item.date, item.place, item.note, title, locale]);
 
   // isCancelled: 呼び出し元 effect のクリーンアップで true になるガード。
   // practiceId 切替時に 2 段 await (fetch → getAccessToken → resolveGalleryImages) の
@@ -128,6 +210,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
           id: log.id,
           practiceId: log.practice_id,
           style: log.style,
+          swim_category: log.swim_category,
           repCount: log.rep_count,
           setCount: log.set_count,
           distance: log.distance,
@@ -201,6 +284,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         id: string;
         practice_id: string | null;
         style: string;
+        swim_category?: "Swim" | "Pull" | "Kick" | null;
         rep_count: number;
         set_count: number;
         distance: number;
@@ -227,6 +311,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
       setPracticeLogDetail({
         id: log.id,
         style: log.style,
+        swim_category: log.swim_category,
         repCount: log.rep_count,
         setCount: log.set_count,
         distance: log.distance,
@@ -353,11 +438,11 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   if (isPracticeLog) {
     return (
       <>
-      <View style={[styles.entryItem, { borderLeftColor: color }]}>
+      <View style={[styles.entryItem, { borderLeftColor: borderLeftAccentColor }]}>
         <View style={styles.entryContent}>
           <View style={styles.entryHeader}>
-            <View style={[styles.entryTypeBadge, { backgroundColor: color }]}>
-              <Text style={styles.entryTypeText}>{typeLabel}</Text>
+            <View style={[styles.entryTypeBadge, { backgroundColor: badgeBackgroundColor }]}>
+              <Text style={[styles.entryTypeText, { color: badgeTextColor }]}>{typeLabel}</Text>
             </View>
             <View style={styles.actionButtons}>
               {onEditPracticeLog && (
@@ -402,7 +487,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
               )}
 
               {/* 練習内容 */}
-              <View style={styles.practiceContentContainer}>
+              <View style={[styles.practiceContentContainer, { borderColor: practiceBoxBorderColor }]}>
                 <Text style={styles.practiceContentLabel}>{t("practice.modal.content")}</Text>
                 <Text style={styles.practiceContentText}>
                   <Text style={styles.practiceContentValue}>{practiceLogDetail.distance}</Text>m ×{" "}
@@ -428,10 +513,12 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
               {practiceLogDetail.times.length > 0 && (
                 <View style={styles.timeContainer}>
                   <View style={styles.timeHeader}>
-                    <View style={styles.timeHeaderBar} />
-                    <Text style={styles.timeHeaderText}>{t("practice.modal.time")}</Text>
+                    <View style={[styles.timeHeaderBar, { backgroundColor: practiceAccentBarColor }]} />
+                    <Text style={[styles.timeHeaderText, { color: practiceAccentTextColor }]}>
+                      {t("practice.modal.time")}
+                    </Text>
                   </View>
-                  <View style={styles.timeTableContainer}>
+                  <View style={[styles.timeTableContainer, { borderColor: practiceBoxBorderColor }]}>
                     <MemoizedTimeTable
                       times={practiceLogDetail.times}
                       repCount={practiceLogDetail.repCount}
@@ -504,7 +591,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
   // Practiceの場合は展開可能
   return (
-    <View style={[styles.entryItem, { borderLeftColor: color }]}>
+    <View style={[styles.entryItem, { borderLeftColor: borderLeftAccentColor }]}>
       <Pressable
         style={styles.entryContentWrapper}
         onPress={() => {
@@ -515,8 +602,8 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
       >
         <View style={styles.entryContent}>
           <View style={styles.entryHeader}>
-            <View style={[styles.entryTypeBadge, { backgroundColor: color }]}>
-              <Text style={styles.entryTypeText}>{typeLabel}</Text>
+            <View style={[styles.entryTypeBadge, { backgroundColor: badgeBackgroundColor }]}>
+              <Text style={[styles.entryTypeText, { color: badgeTextColor }]}>{typeLabel}</Text>
             </View>
             <View style={styles.actionButtons}>
               {isPractice && onEditPractice && (
@@ -613,6 +700,19 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     <Feather name="trash-2" size={20} color="#EF4444" />
                   </Pressable>
                 )}
+              {isTeamEvent && (
+                <Pressable
+                  style={styles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setAttendanceModalVisible(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("dashboard.attendance.checkTitle")}
+                >
+                  <Feather name="clipboard" size={18} color="#2563EB" />
+                </Pressable>
+              )}
             </View>
           </View>
           <Text style={styles.entryTitle} numberOfLines={2}>
@@ -703,7 +803,10 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
             <Text style={styles.emptyText}>{t("practice.modal.noPracticeMenus")}</Text>
           ) : (
             practiceLogs.map((log) => (
-              <View key={log.id} style={styles.practiceLogDetail}>
+              <View
+                key={log.id}
+                style={[styles.practiceLogDetail, { backgroundColor: practiceLogBoxBackgroundColor }]}
+              >
                 {/* タグ表示 */}
                 {log.tags && log.tags.length > 0 && (
                   <View style={styles.tagsContainer}>
@@ -715,8 +818,25 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                   </View>
                 )}
 
-                {/* 練習内容 */}
-                <View style={styles.practiceContentContainer}>
+                {/* 練習内容（右上にシェアボタン） */}
+                <View
+                  style={[
+                    styles.practiceContentContainer,
+                    { borderColor: practiceBoxBorderColor },
+                    localStyles.practiceContentRelative,
+                    localStyles.practiceContentWithShareButton,
+                  ]}
+                >
+                  {/* シェアボタン（右上、web の share-practice-log-button と同じ配置） */}
+                  <Pressable
+                    style={localStyles.shareButton}
+                    onPress={handleSharePractice}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("dashboard.practice.shareTitle")}
+                  >
+                    <Feather name="share-2" size={16} color="#0891B2" />
+                  </Pressable>
+
                   <Text style={styles.practiceContentLabel}>{t("practice.modal.content")}</Text>
                   <Text style={styles.practiceContentText}>
                     <Text style={styles.practiceContentValue}>{log.distance}</Text>m ×{" "}
@@ -738,10 +858,12 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 {log.times.length > 0 && (
                   <View style={styles.timeContainer}>
                     <View style={styles.timeHeader}>
-                      <View style={styles.timeHeaderBar} />
-                      <Text style={styles.timeHeaderText}>{t("practice.modal.time")}</Text>
+                      <View style={[styles.timeHeaderBar, { backgroundColor: practiceAccentBarColor }]} />
+                      <Text style={[styles.timeHeaderText, { color: practiceAccentTextColor }]}>
+                        {t("practice.modal.time")}
+                      </Text>
                     </View>
-                    <View style={styles.timeTableContainer}>
+                    <View style={[styles.timeTableContainer, { borderColor: practiceBoxBorderColor }]}>
                       <MemoizedTimeTable
                         times={log.times}
                         repCount={log.repCount}
@@ -793,12 +915,54 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         initialIndex={viewerIndex}
         onClose={() => setViewerVisible(false)}
       />
+
+      <ShareCardModal
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        type="practice"
+        data={sharePracticeData}
+      />
+
+      {isTeamEvent && teamId && (
+        <AttendanceGroupModal
+          visible={attendanceModalVisible}
+          onClose={() => setAttendanceModalVisible(false)}
+          supabase={supabase}
+          teamId={teamId}
+          eventId={item.id}
+          eventType={item.type === "team_practice" ? "practice" : "competition"}
+          eventDate={item.date}
+          locale={locale}
+          showChangeLink
+          onChangeLinkPress={() => {
+            setAttendanceModalVisible(false);
+            onClose();
+            navigation.navigate("TeamDetail", { teamId, initialTab: "attendance" });
+          }}
+        />
+      )}
     </View>
   );
 };
 
 // PracticeLogDetailをメモ化して不要な再レンダリングを防ぐ
 export const MemoizedPracticeLogDetail = React.memo(PracticeLogDetail);
+
+const localStyles = StyleSheet.create({
+  practiceContentRelative: {
+    position: "relative",
+  },
+  practiceContentWithShareButton: {
+    paddingRight: 32,
+  },
+  shareButton: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    padding: 4,
+    zIndex: 1,
+  },
+});
 
 const imageGalleryStyles = StyleSheet.create({
   gallery: {

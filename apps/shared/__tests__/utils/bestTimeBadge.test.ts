@@ -9,7 +9,10 @@
 import { describe, expect, it } from "vitest";
 import type { ListBestCandidates } from "../../api/records";
 import {
+  BEST_EPSILON,
   computeListPreviousBest,
+  formatBestDelta,
+  getBestBadgeState,
   normalizeRecordDateForBulkComparison,
 } from "../../utils/bestTimeBadge";
 
@@ -71,5 +74,96 @@ describe("computeListPreviousBest", () => {
 
   it("候補が空のとき null（その時点で初記録）を返す", () => {
     expect(computeListPreviousBest(candidates(), "record-1", "2025-03-01")).toBeNull();
+  });
+});
+
+// =============================================================================
+// getBestBadgeState / formatBestDelta - 2026-07-22 Sprint 新規
+// web/mobile の一覧 BestTimeBadge が共用する「初/Best-X.XX/Best+X.XX」3状態判定。
+// 「Best」「±」はASCII固定・i18n しない（i18n されるのは「初」のみ、common.bestBadge.first）。
+// =============================================================================
+
+describe("BEST_EPSILON", () => {
+  it("web components/share/utils.ts / mobile BestTimeBadge.tsx の BEST_EPSILON と同値(0.005)である", () => {
+    expect(BEST_EPSILON).toBe(0.005);
+  });
+});
+
+describe("formatBestDelta", () => {
+  it("改善(現在 < 過去ベスト)のとき 'Best-X.XX' 形式(マイナス符号)を返す", () => {
+    expect(formatBestDelta(58.77, 60.0)).toBe("Best-1.23");
+  });
+
+  it("悪化(現在 > 過去ベスト)のとき 'Best+X.XX' 形式(プラス符号)を返す", () => {
+    expect(formatBestDelta(62.5, 60.0)).toBe("Best+2.50");
+  });
+
+  it("完全同値のとき 'Best±0.00' を返す", () => {
+    expect(formatBestDelta(60.0, 60.0)).toBe("Best±0.00");
+  });
+
+  it("BEST_EPSILON(0.005)未満の悪化(0.004)は 'Best±0.00' 扱い", () => {
+    // NOTE: `60.0 + BEST_EPSILON` のような浮動小数点演算でちょうど 0.005 を作ろうとすると
+    // IEEE754 の丸め誤差で 0.005000000000002558 のようにわずかに超過し、意図と異なり
+    // slower 判定になってしまう。境界値テストは丸め誤差の影響を受けない明確に
+    // epsilon 未満/超過の値(0.004 / 0.01)で行う。
+    expect(formatBestDelta(60.004, 60.0)).toBe("Best±0.00");
+  });
+
+  it("BEST_EPSILON をわずかに超える悪化(0.01)は 'Best+0.01' になる", () => {
+    expect(formatBestDelta(60.01, 60.0)).toBe("Best+0.01");
+  });
+
+  it("BEST_EPSILON をわずかに超える改善側も符号付きで正しく丸められる", () => {
+    expect(formatBestDelta(124.0, 125.0)).toBe("Best-1.00");
+  });
+
+  it("「Best」「±」がASCII固定であること(いかなる delta でも接頭辞が変わらない)", () => {
+    expect(formatBestDelta(58.77, 60.0)).toMatch(/^Best-/);
+    expect(formatBestDelta(62.5, 60.0)).toMatch(/^Best\+/);
+    expect(formatBestDelta(60.0, 60.0)).toMatch(/^Best±/);
+  });
+});
+
+describe("getBestBadgeState", () => {
+  it("time<=0 のとき isFirstRecord/previousBest に関係なく最優先で none を返す(誤表示防止)", () => {
+    expect(getBestBadgeState(0, 55.0, true)).toEqual({ kind: "none" });
+    expect(getBestBadgeState(0, null, true)).toEqual({ kind: "none" });
+    expect(getBestBadgeState(-1, 55.0, false)).toEqual({ kind: "none" });
+  });
+
+  it("time が非有限(NaN/Infinity)のとき none を返す", () => {
+    expect(getBestBadgeState(NaN, 55.0, false)).toEqual({ kind: "none" });
+    expect(getBestBadgeState(Infinity, 55.0, false)).toEqual({ kind: "none" });
+  });
+
+  it("isFirstRecord=true(かつ time>0)のとき previousBest に関係なく first を返す", () => {
+    expect(getBestBadgeState(60.0, null, true)).toEqual({ kind: "first" });
+    expect(getBestBadgeState(60.0, 55.0, true)).toEqual({ kind: "first" });
+  });
+
+  it("previousBest が null で isFirstRecord=false のとき none を返す(判定不能)", () => {
+    expect(getBestBadgeState(60.0, null, false)).toEqual({ kind: "none" });
+  });
+
+  it("previousBest より速い(改善)とき best + 'Best-X.XX' ラベルを返す", () => {
+    expect(getBestBadgeState(58.77, 60.0, false)).toEqual({ kind: "best", label: "Best-1.23" });
+  });
+
+  it("previousBest と完全同値のとき best + 'Best±0.00' ラベルを返す(悪化ではなくベスト扱い)", () => {
+    expect(getBestBadgeState(60.0, 60.0, false)).toEqual({ kind: "best", label: "Best±0.00" });
+  });
+
+  it("BEST_EPSILON(0.005)未満の悪化(0.004)は best + 'Best±0.00' 扱い", () => {
+    expect(getBestBadgeState(60.004, 60.0, false)).toEqual({
+      kind: "best",
+      label: "Best±0.00",
+    });
+  });
+
+  it("previousBest より遅い(BEST_EPSILON超の悪化)とき slower + 'Best+X.XX' ラベルを返す", () => {
+    expect(getBestBadgeState(62.5, 60.0, false)).toEqual({ kind: "slower", label: "Best+2.50" });
+    // 境界: epsilon をわずかに超える悪化は slower
+    expect(getBestBadgeState(60.01, 60.0, false)).toEqual({ kind: "slower", label: "Best+0.01" });
   });
 });

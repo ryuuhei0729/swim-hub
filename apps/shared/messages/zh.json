@@ -281,7 +281,25 @@
     },
     "discardTitle": "输入内容尚未保存",
     "discardMessage": "输入内容尚未保存。仍要关闭吗？",
-    "discard": "放弃"
+    "discard": "放弃",
+    "listToolbar": {
+      "itemCount": "{count}条",
+      "sortButton": "排序",
+      "filterButton": "筛选"
+    },
+    "bottomSheet": {
+      "clearGroup": "清除",
+      "clearAll": "清除全部",
+      "apply": "应用",
+      "close": "关闭"
+    },
+    "loadMore": {
+      "button": "查看更多",
+      "remaining": "还有{n}条"
+    },
+    "bestBadge": {
+      "first": "首次"
+    }
   },
   "nav": {
     "practice": "训练记录",
@@ -1030,7 +1048,8 @@
       "deleteConfirm": "确定删除该训练记录吗？",
       "deleteFailed": "删除失败",
       "practiceTitle": "训练",
-      "viewDetailAriaLabel": "查看训练详情"
+      "viewDetailAriaLabel": "查看训练详情",
+      "viewDetailAriaLabelWithInfo": "查看练习详情({date} {place} {style})"
     },
     "modal": {
       "loading": "正在加载训练详情...",
@@ -1057,19 +1076,19 @@
       "emptyTitle": "暂无训练记录",
       "emptyDesc": "可在仪表板日历中添加训练记录。",
       "goToDashboard": "前往仪表板",
-      "colDate": "日期",
       "colPlace": "地点",
-      "colDistReps": "距离・趟数・组数",
-      "colCircle": "出发间隔",
       "colStyle": "项目",
       "colTags": "标签",
-      "colAvgTime": "平均成绩",
       "avgTimeLabel": "平均成绩:",
       "share": "分享",
       "edit": "编辑",
       "delete": "删除",
       "deleting": "正在删除...",
-      "distanceFormat": "{distance}m × {reps}趟 × {sets}组"
+      "distanceFormat": "{distance}m × {reps}趟 × {sets}组",
+      "noMatchTitle": "没有符合条件的记录",
+      "noMatchDesc": "没有符合所选条件的练习记录。",
+      "sortOptionDateDesc": "日期(从新到旧)",
+      "sortOptionDateAsc": "日期(从旧到新)"
     },
     "details": {
       "badge": "训练记录",
@@ -1170,6 +1189,15 @@
       "videoUploadFailedTitle": "视频上传失败",
       "videoUploadFailedSession": "由于会话已失效，无法上传视频。",
       "videoUploadFailedSaved": "训练日志已保存，但视频上传失败。"
+    },
+    "sortSheet": {
+      "title": "排序",
+      "placeAsc": "地点(升序)",
+      "placeDesc": "地点(降序)"
+    },
+    "filterSheet": {
+      "title": "筛选",
+      "tagsAndNote": "(仅显示存在包含所有已选标签记录的日期)"
     }
   },
   "mypage": {
@@ -1501,20 +1529,16 @@
       "recordNotFound": "未找到成绩数据",
       "viewDetailAriaLabel": "查看比赛成绩详情",
       "competitionFallback": "比赛",
-      "styleFallback": "成绩"
+      "styleFallback": "成绩",
+      "bulkInputLabel": "批量录入",
+      "viewDetailAriaLabelWithInfo": "查看比赛记录详情({date} {name})"
     },
     "filter": {
-      "periodLabel": "期间",
-      "allPeriods": "全部期间",
-      "fiscalYearSuffix": "{year}赛季",
-      "styleLabel": "项目",
       "allStyles": "全部项目",
-      "poolTypeLabel": "泳池类型",
       "allPoolTypes": "全部",
-      "relayLabel": "接力",
-      "includeRelay": "包含",
-      "clearLabel": "清除",
-      "resetButton": "重置筛选"
+      "resetButton": "重置筛选",
+      "excludeRelay": "排除接力",
+      "onlyRelay": "仅接力"
     },
     "empty": {
       "noRecordsTitle": "暂无比赛成绩",
@@ -1661,6 +1685,27 @@
       "errorVideoGenericFailed": "{name}：视频上传过程中发生错误",
       "errorVideoNoThumbnail": "{name}：由于无法生成缩略图，未能附加视频",
       "videoPartialFailureSaved": "记录已保存，但部分视频未能附加：\n{errors}"
+    },
+    "sortSheet": {
+      "title": "排序",
+      "dateDesc": "日期(从新到旧)",
+      "dateAsc": "日期(从旧到新)",
+      "timeAsc": "成绩从快到慢",
+      "timeDesc": "成绩从慢到快",
+      "competitionNameAsc": "比赛名称(升序)",
+      "competitionNameDesc": "比赛名称(降序)",
+      "placeAsc": "地点(升序)",
+      "placeDesc": "地点(降序)",
+      "poolAsc": "泳池(升序)",
+      "poolDesc": "泳池(降序)",
+      "styleAsc": "项目(升序)",
+      "styleDesc": "项目(降序)"
+    },
+    "filterSheet": {
+      "title": "筛选",
+      "distanceLabel": "距离",
+      "strokeLabel": "泳姿",
+      "relayLabel": "接力"
     }
   },
   "settings": {
@@ -1885,6 +1930,21 @@
     },
     "practiceLogTemplates": {
       "backAriaLabel": "返回"
+    },
+    "calendarColors": {
+      "title": "日历记录颜色",
+      "description": "自定义仪表盘中训练和比赛记录的显示颜色，也可以按团队分别设置颜色。",
+      "personalSectionTitle": "个人颜色",
+      "teamSectionTitle": "团队颜色",
+      "practiceLabel": "训练",
+      "competitionLabel": "比赛",
+      "resetToDefault": "恢复默认",
+      "resetTeamToDefault": "恢复默认",
+      "sameColorWarning": "训练和比赛的颜色相同，如不易区分请更换颜色。"
+    },
+    "password": {
+      "title": "密码",
+      "openButton": "更改密码"
     }
   },
   "practiceLogTemplates": {
@@ -2333,6 +2393,7 @@
         "memberStatusOther": "其他",
         "memberStatusUnanswered": "未回复",
         "memberAttendanceFetchFailed": "获取出勤信息失败",
+        "teamMembersFetchFailed": "无法获取成员列表",
         "memberAttendanceEmpty": "暂无出勤回复",
         "memberAttendanceLoading": "加载中...",
         "bulkChange": {
@@ -2653,8 +2714,11 @@
         "clickToAdd": "点击添加",
         "editAriaLabel": "编辑{date}的训练记录",
         "addAriaLabel": "添加{date}的训练记录",
-        "viewAriaLabel": "查看{date}的训练记录"
-      }
+        "viewAriaLabel": "查看{date}的训练记录",
+        "editButton": "编辑",
+        "deleteButton": "删除"
+      },
+      "selfLogButton": "添加我的训练记录"
     },
     "practiceDetail": {
       "title": "训练详情",
@@ -2675,14 +2739,18 @@
       "fallbackTitle": "比赛",
       "card": {
         "entryButton": "报名",
-        "recordsButton": "记录列表",
-        "manageButton": "管理"
+        "recordsButton": "录入记录",
+        "manageButton": "管理",
+        "editButton": "编辑",
+        "deleteButton": "删除"
       },
       "entryStatus": {
         "before": "报名前",
         "open": "报名中",
         "closed": "报名截止"
-      }
+      },
+      "selfRecordButton": "添加我的记录",
+      "selfRecordSaveFailed": "保存我的记录失败"
     },
     "entrySection": {
       "title": "正在报名的比赛"
@@ -2872,7 +2940,12 @@
       }
     },
     "attendanceGrouping": {
-      "categoryLabel": "名"
+      "categoryLabel": "名",
+      "present": "出席（{count}名）",
+      "absent": "缺席（{count}名）",
+      "other": "其他（{count}名）",
+      "unanswered": "未回复（{count}名）",
+      "none": "无"
     },
     "attendanceEditHook": {
       "saveError": "保存出勤信息失败",
@@ -2999,7 +3072,9 @@
       "notePlaceholder": "训练内容或感想等",
       "cancelButton": "取消",
       "creating": "正在创建...",
-      "createButton": "创建"
+      "createButton": "创建",
+      "updateFailed": "更新团队训练记录失败",
+      "deleteFailed": "删除团队训练记录失败"
     },
     "competitionForm": {
       "title": "添加比赛",
@@ -3009,6 +3084,8 @@
       "endDateBeforeStart": "结束日期需指定为开始日期当天或之后",
       "authRequired": "需要身份验证",
       "createFailed": "创建团队比赛失败",
+      "updateFailed": "更新团队比赛失败",
+      "deleteFailed": "删除团队比赛失败",
       "competitionNameLabel": "比赛名称",
       "competitionNamePlaceholder": "例：省级比赛（留空时显示为「比赛」）",
       "startDateLabel": "开始日期",
@@ -3198,6 +3275,8 @@
       "deleting": "删除中…",
       "loadError": "加载通知失败",
       "retry": "重试",
+      "showMore": "显示全文",
+      "showLess": "收起",
       "deleteConfirm": {
         "title": "删除通知",
         "message": "确定要删除此通知吗？",
@@ -3406,13 +3485,6 @@
       "loading": "加载中…",
       "titleSuffix": "的出勤情况"
     },
-    "attendanceGrouping": {
-      "present": "出席（{count}名）",
-      "absent": "缺席（{count}名）",
-      "other": "其他（{count}名）",
-      "unanswered": "未回复（{count}名）",
-      "none": "无"
-    },
     "templateDownload": {
       "title": "下载 Excel 模板",
       "practice": {
@@ -3546,7 +3618,39 @@
         "practicesCreated": "训练：已登记 {count} 条",
         "competitionsCreated": "比赛：已登记 {count} 条",
         "errors": "错误：{errors}"
-      }
+      },
+      "manual": {
+        "tabPractice": "训练",
+        "tabCompetition": "比赛",
+        "rowTitlePractice": "训练 {n}",
+        "rowTitleCompetition": "比赛 {n}",
+        "labelDate": "日期 *",
+        "labelStartDate": "开始日期 *",
+        "labelEndDate": "结束日期",
+        "labelTitle": "标题",
+        "labelCompetitionName": "比赛名称",
+        "labelPlace": "地点",
+        "labelPoolType": "泳池",
+        "labelNote": "备注",
+        "poolShort": "短池 (25m)",
+        "poolLong": "长池 (50m)",
+        "addPracticeRowButton": "+ 添加训练",
+        "addCompetitionRowButton": "+ 添加比赛",
+        "deleteRowButton": "删除",
+        "submitButton": "登记",
+        "submitting": "登记中...",
+        "errorDateRequired": "第{row}行：日期为必填项",
+        "errorStartDateRequired": "第{row}行：开始日期为必填项",
+        "errorEndDateAfterStart": "第{row}行：结束日期必须不早于开始日期",
+        "practiceEmpty": "没有可登记的训练",
+        "competitionEmpty": "没有可登记的比赛",
+        "titlePlaceholder": "例如：晨练",
+        "competitionNamePlaceholder": "例如：◯◯比赛",
+        "placePlaceholder": "场馆名称",
+        "notePlaceholder": "备注"
+      },
+      "modeTabFile": "文件导入",
+      "modeTabManual": "手动输入"
     },
     "common": {
       "close": "关闭",
@@ -4018,6 +4122,9 @@
       "saving": "保存中…",
       "cancel": "取消",
       "close": "关闭",
+      "saveAndClose": "保存并关闭",
+      "next": "下一步",
+      "back": "上一步",
       "fieldRequired": "为必填项",
       "partialSaveError": "基本信息已保存。详细信息保存失败，请重试。",
       "duplicateEntryStyle": "存在重复的泳姿，请修改各参赛项目的泳姿。",
@@ -4027,8 +4134,8 @@
         "confirm": "关闭",
         "cancel": "继续编辑"
       },
-      "proceedToRecord": "继续填写记录",
-      "recordFutureGuard": "未来日期无法录入比赛记录。"
+      "recordFutureGuard": "未来日期无法录入比赛记录。",
+      "competitionEditRestricted": "此比赛信息仅团队管理员可编辑。"
     },
     "premium": {
       "upgradeText": "升级到 Premium",

@@ -1,61 +1,41 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { ScrollView, StyleSheet, RefreshControl, Alert, Platform } from "react-native";
+import { ScrollView, StyleSheet, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { addMonths, subMonths, format as formatDate } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCalendarQuery } from "@/hooks/useCalendarQuery";
-import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { CalendarView } from "@/components/calendar";
 import { DayDetailModal } from "@/components/calendar";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
-import { useDeletePracticeMutation, usePracticesQuery } from "@apps/shared/hooks/queries/practices";
-import {
-  useDeleteRecordMutation,
-  useDeleteCompetitionMutation,
-} from "@apps/shared/hooks/queries/records";
-import { PracticeAPI } from "@apps/shared/api/practices";
-import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
-import type { MainStackParamList } from "@/navigation/types";
+import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calendarColors";
+import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
+import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import { TeamAnnouncementsSection } from "@/components/dashboard/TeamAnnouncementsSection";
-import type { CalendarItem } from "@apps/shared/types/ui";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 
-type DashboardScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
+// 未設定 (取得前・未カスタマイズ) の色設定。resolver がデフォルト色にフォールバックするための空値。
+const DEFAULT_CALENDAR_COLOR_SETTINGS: CalendarColorSettings = {
+  personal: { practice_color: null, competition_color: null },
+  byTeam: {},
+};
 
 /**
  * ダッシュボード画面
  * チームのお知らせとカレンダー(練習・大会)を表示
  */
 export const DashboardScreen: React.FC = () => {
-  const navigation = useNavigation<DashboardScreenNavigationProp>();
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // ユーザープロフィール取得（iOSカレンダー設定確認用）
-  const { profile } = useUserQuery(supabase, { enableRealtime: false });
-
-  // iOSカレンダー同期フック
-  const { syncPractice, syncCompetition } = useIOSCalendarSync();
 
   // チーム一覧取得（お知らせ表示用）
   const { teams = [] } = useTeamsQuery(supabase, {
-    enableRealtime: false,
-  });
-
-  // 練習データ取得（削除時のiOSカレンダー同期用）
-  const { data: practices = [] } = usePracticesQuery(supabase, {
-    page: 1,
-    pageSize: 1000,
     enableRealtime: false,
   });
 
@@ -69,6 +49,12 @@ export const DashboardScreen: React.FC = () => {
   } = useCalendarQuery(supabase, {
     currentDate,
   });
+
+  // 記録色カスタマイズ設定 (未設定・取得前はデフォルト色を使うフォールバック値)
+  const { settings: colorSettings = DEFAULT_CALENDAR_COLOR_SETTINGS } = useCalendarColorSettingsQuery(
+    supabase,
+    user?.id,
+  );
 
   // 選択した日付のエントリーを取得
   const selectedDateEntries = useMemo(() => {
@@ -117,276 +103,26 @@ export const DashboardScreen: React.FC = () => {
     setShowDayDetail(true);
   };
 
-  // エントリータップ
-  const handleEntryPress = (item: CalendarItem) => {
-    if (item.type === "practice" || item.type === "team_practice") {
-      const practiceId = item.metadata?.practice_id || item.id;
-      navigation.navigate("PracticeDetail", { practiceId });
-    } else if (item.type === "record") {
-      const recordId = item.id;
-      navigation.navigate("RecordDetail", { recordId });
-    } else if (item.type === "competition" || item.type === "team_competition") {
-      // 大会の詳細画面は未実装のため、一旦スキップ
-      // TODO: CompetitionDetail画面を実装したら追加
-    }
-  };
-
-  // 練習追加（個人フロー → タブ統合画面）
-  const handleAddPractice = (date: Date) => {
-    const dateParam = formatDate(date, "yyyy-MM-dd");
-    navigation.navigate("PracticeTabForm", { date: dateParam });
-  };
-
-  // 大会記録追加（個人フロー → タブ統合画面）
-  const handleAddRecord = (dateOrCompetitionId: Date | string, dateParam?: string) => {
-    // EntryDetailから呼ばれた場合（competitionIdとdateが渡される）
-    if (typeof dateOrCompetitionId === "string" && dateParam) {
-      navigation.navigate("CompetitionTabForm", {
-        competitionId: dateOrCompetitionId,
-        date: dateParam,
-        initialTab: "record",
-      });
-    } else if (dateOrCompetitionId instanceof Date) {
-      // 通常の呼び出し（dateのみ）
-      const formattedDate = formatDate(dateOrCompetitionId, "yyyy-MM-dd");
-      navigation.navigate("CompetitionTabForm", { date: formattedDate });
-    }
-  };
-
-  // 練習編集（個人フロー → タブ統合画面）
-  const handleEditPractice = (item: CalendarItem) => {
-    const practiceId = item.metadata?.practice_id || item.id;
-    const dateParam = item.date;
-    navigation.navigate("PracticeTabForm", { practiceId, date: dateParam });
-  };
-
-  // 練習削除
-  const deleteMutation = useDeletePracticeMutation(supabase);
-  const handleDeletePractice = async (itemId: string) => {
-    Alert.alert(t("dashboard.mobile.deletePracticeConfirmTitle"), t("dashboard.mobile.deletePracticeConfirmMessage"), [
-      {
-        text: t("common.cancel"),
-        style: "cancel",
-      },
-      {
-        text: t("dashboard.mobile.deleteButton"),
-        style: "destructive",
-        onPress: async () => {
-          setIsDeleting(true);
-          try {
-            // iOSカレンダーから削除（iOS端末かつ連携が有効な場合）
-            // カレンダー同期エラーはDB削除をブロックしないようにする
-            if (
-              Platform.OS === "ios" &&
-              profile?.ios_calendar_enabled &&
-              profile?.ios_calendar_sync_practices
-            ) {
-              const practiceToDelete = practices.find((p) => p.id === itemId);
-              if (practiceToDelete) {
-                try {
-                  await syncPractice(practiceToDelete, "delete");
-                } catch (syncError) {
-                  console.warn("カレンダー同期エラー:", syncError);
-                  // カレンダー同期失敗はDB削除に影響しない
-                }
-              }
-            }
-
-            await deleteMutation.mutateAsync(itemId);
-            refetch(); // カレンダーをリフレッシュ
-          } catch (error) {
-            console.error("削除エラー:", error);
-            Alert.alert(t("common.error"), error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"), [
-              { text: "OK" },
-            ]);
-          } finally {
-            setIsDeleting(false);
-          }
-        },
-      },
-    ]);
-  };
-
-  // 練習ログ追加（個人フロー → タブ統合画面のログタブへ）
-  const handleAddPracticeLog = (practiceId: string) => {
-    navigation.navigate("PracticeTabForm", { practiceId, initialTab: "log" });
-  };
-
-  // 練習ログ編集（個人フロー → タブ統合画面のログタブへ）
-  const handleEditPracticeLog = (item: CalendarItem) => {
-    const practiceId = item.metadata?.practice_id || item.metadata?.practice?.id;
-    if (practiceId) {
-      navigation.navigate("PracticeTabForm", { practiceId, initialTab: "log" });
-    }
-  };
-
-  // 練習ログ削除
-  const handleDeletePracticeLog = async (logId: string) => {
-    Alert.alert(t("dashboard.mobile.deletePracticeConfirmTitle"), t("dashboard.mobile.deleteMenuConfirmMessage"), [
-      {
-        text: t("common.cancel"),
-        style: "cancel",
-      },
-      {
-        text: t("dashboard.mobile.deleteButton"),
-        style: "destructive",
-        onPress: async () => {
-          setIsDeleting(true);
-          try {
-            const api = new PracticeAPI(supabase);
-            await api.deletePracticeLog(logId);
-            refetch(); // カレンダーをリフレッシュ
-          } catch (error) {
-            console.error("削除エラー:", error);
-            Alert.alert(t("common.error"), error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"), [
-              { text: "OK" },
-            ]);
-          } finally {
-            setIsDeleting(false);
-          }
-        },
-      },
-    ]);
-  };
-
-  // 記録編集（個人フロー → タブ統合画面のレコードタブへ）
-  const handleEditRecord = (item: CalendarItem) => {
-    const competitionId =
-      item.metadata?.competition?.id || item.metadata?.record?.competition_id;
-
-    if (!competitionId) {
-      Alert.alert(t("common.error"), t("dashboard.mobile.competitionNotFound"));
-      return;
-    }
-
-    navigation.navigate("CompetitionTabForm", {
-      competitionId,
-      date: item.date,
-      initialTab: "record",
-    });
-  };
-
-  // 記録削除
-  const deleteRecordMutation = useDeleteRecordMutation(supabase);
-  const handleDeleteRecord = async (recordId: string) => {
-    Alert.alert(t("dashboard.mobile.deletePracticeConfirmTitle"), t("dashboard.mobile.deleteRecordConfirmMessage"), [
-      {
-        text: t("common.cancel"),
-        style: "cancel",
-      },
-      {
-        text: t("dashboard.mobile.deleteButton"),
-        style: "destructive",
-        onPress: async () => {
-          setIsDeleting(true);
-          try {
-            await deleteRecordMutation.mutateAsync(recordId);
-            refetch(); // カレンダーをリフレッシュ
-          } catch (error) {
-            console.error("削除エラー:", error);
-            Alert.alert(t("common.error"), error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"), [
-              { text: "OK" },
-            ]);
-          } finally {
-            setIsDeleting(false);
-          }
-        },
-      },
-    ]);
-  };
-
-  // エントリー編集（個人フロー → タブ統合画面のエントリータブへ）
-  const handleEditEntry = (item: CalendarItem) => {
-    const competitionId = item.metadata?.entry?.competition_id || item.metadata?.competition?.id;
-    const dateParam = item.date;
-
-    if (competitionId) {
-      navigation.navigate("CompetitionTabForm", {
-        competitionId,
-        date: dateParam,
-        initialTab: "entry",
-      });
-    }
-  };
-
-  // 大会エントリー追加（個人フロー → タブ統合画面、isEntryTabVisible に従いタブ決定）
-  const handleAddEntry = (competitionId: string, date: string) => {
-    navigation.navigate("CompetitionTabForm", {
-      competitionId,
-      date,
-      initialTab: "entry",
-    });
-  };
-
-  // エントリー削除
-  // EntryDetail内で削除確認と削除処理が完結しているため、
-  // ここでは削除成功後にカレンダーをリフレッシュするだけ
-  const handleDeleteEntry = async (_entryId: string) => {
-    // 削除はEntryDetail内で既に完了しているため、カレンダーのリフレッシュのみ実行
-    refetch();
-  };
-
-  // 大会編集（個人フロー → タブ統合画面）
-  const handleEditCompetition = (item: CalendarItem) => {
-    const competitionId = item.metadata?.competition?.id || item.id;
-    const dateParam = item.date;
-    navigation.navigate("CompetitionTabForm", {
-      competitionId,
-      date: dateParam,
-    });
-  };
-
-  // 大会削除
-  const deleteCompetitionMutation = useDeleteCompetitionMutation(supabase);
-  const handleDeleteCompetition = async (competitionId: string) => {
-    Alert.alert(t("dashboard.mobile.deletePracticeConfirmTitle"), t("dashboard.mobile.deleteCompetitionConfirmMessage"), [
-      {
-        text: t("common.cancel"),
-        style: "cancel",
-      },
-      {
-        text: t("dashboard.mobile.deleteButton"),
-        style: "destructive",
-        onPress: async () => {
-          setIsDeleting(true);
-          try {
-            // iOSカレンダーから削除（iOS端末かつ連携が有効な場合）
-            // カレンダー同期エラーはDB削除をブロックしないようにする
-            if (
-              Platform.OS === "ios" &&
-              profile?.ios_calendar_enabled &&
-              profile?.ios_calendar_sync_competitions
-            ) {
-              // 大会データを取得してiOSカレンダーから削除
-              try {
-                const { data: competitionToDelete } = await supabase
-                  .from("competitions")
-                  .select("*")
-                  .eq("id", competitionId)
-                  .single();
-                if (competitionToDelete) {
-                  await syncCompetition(competitionToDelete, "delete");
-                }
-              } catch (syncError) {
-                console.warn("カレンダー同期エラー:", syncError);
-                // カレンダー同期失敗はDB削除に影響しない
-              }
-            }
-
-            await deleteCompetitionMutation.mutateAsync(competitionId);
-            refetch(); // カレンダーをリフレッシュ
-          } catch (error) {
-            console.error("削除エラー:", error);
-            Alert.alert(t("common.error"), error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"), [
-              { text: "OK" },
-            ]);
-          } finally {
-            setIsDeleting(false);
-          }
-        },
-      },
-    ]);
-  };
+  // DayDetailModal の編集/削除/追加ハンドラ（練習履歴/大会記録履歴タブと共通）
+  const {
+    isDeleting,
+    setIsDeleting,
+    handleEntryPress,
+    handleAddPractice,
+    handleAddRecord,
+    handleEditPractice,
+    handleDeletePractice,
+    handleAddPracticeLog,
+    handleEditPracticeLog,
+    handleDeletePracticeLog,
+    handleEditRecord,
+    handleDeleteRecord,
+    handleEditEntry,
+    handleDeleteEntry,
+    handleAddEntry,
+    handleEditCompetition,
+    handleDeleteCompetition,
+  } = useDayDetailHandlers(supabase, refetch);
 
   // エラー状態
   if (isError && error) {
@@ -434,6 +170,7 @@ export const DashboardScreen: React.FC = () => {
           onNextMonth={handleNextMonth}
           onTodayClick={handleTodayClick}
           onMonthYearSelect={handleMonthYearSelect}
+          colorSettings={colorSettings}
         />
       </ScrollView>
 
@@ -443,6 +180,7 @@ export const DashboardScreen: React.FC = () => {
           visible={showDayDetail}
           date={selectedDate}
           entries={selectedDateEntries}
+          colorSettings={colorSettings}
           onClose={() => {
             setShowDayDetail(false);
             setSelectedDate(null);

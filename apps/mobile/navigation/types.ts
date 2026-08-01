@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from "@react-navigation/native";
+import type { TeamTabType } from "@/components/teams/TeamTabs";
 
 /**
  * ナビゲーションの型定義
@@ -32,9 +33,6 @@ export type TabParamList = {
 // メインスタックのパラメータ型
 export type MainStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList>;
-  PracticeDetail: {
-    practiceId: string;
-  };
   PracticeForm: {
     practiceId?: string;
     date?: string;
@@ -64,9 +62,6 @@ export type MainStackParamList = {
       repNumber: number;
       time: number;
     }>;
-  };
-  RecordDetail: {
-    recordId: string;
   };
   RecordForm: {
     recordId?: string;
@@ -113,6 +108,8 @@ export type MainStackParamList = {
   };
   TeamDetail: {
     teamId: string;
+    /** 起動時に開くタブ（未指定時は "members"）。DayDetailModal の出欠確認からの遷移で使用 */
+    initialTab?: TeamTabType;
   };
   /** チーム練習・大会一括登録（管理者専用） */
   TeamBulkRegister: {

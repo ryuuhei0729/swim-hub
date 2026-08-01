@@ -102,6 +102,14 @@ export default function RecordLogEntry({
   const raceDistance = currentStyle?.distance;
   const currentCodeKey = currentStyle ? styleIdToCodeKey(currentStyle.id) : undefined;
 
+  // entryInfo は呼び出し側で index ベースに渡されることがあり、必ずしもこのレコードの種目と
+  // 対応しているとは限らない（例: 別種目のレコードを追加した場合）。
+  // 種目が一致する場合のみエントリータイムバッジを表示するガード。
+  // 新規作成時の自動生成フロー（エントリー→レコードが種目一致の1:1で並ぶ）では常に一致するため、
+  // 従来通りバッジが表示される。
+  const entryMatchesCurrentStyle =
+    !!entryInfo && entryInfo.styleId != null && String(entryInfo.styleId) === currentStyleId;
+
   // 種目を「距離」×「CodeKey」でグルーピング (locale 非依存)
   const distanceOptions = Array.from(new Set(styles.map((s) => s.distance))).sort(
     (a, b) => a - b,
@@ -239,14 +247,14 @@ export default function RecordLogEntry({
       data-testid={`record-entry-section-${sectionIndex}`}
     >
       {(showTitle ||
-        (entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0) ||
+        (entryMatchesCurrentStyle && entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0) ||
         currentBestTime) && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         {showTitle && (
           <h4 className="text-base font-semibold text-gray-900">{t("eventHeader", { n: sectionIndex })}</h4>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          {entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0 && (
+          {entryMatchesCurrentStyle && entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0 && (
             <div className="text-xs text-blue-800 bg-blue-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
               <span className="text-blue-700">
                 {t("entryTimeLabel")} {formatTimeBest(entryInfo.entryTime)}

@@ -2,8 +2,19 @@
 
 import { useTranslations } from "next-intl";
 import { TrashIcon } from "@heroicons/react/24/outline";
-import type { DeleteConfirmModalProps } from "../types";
 
+export interface DeleteConfirmModalProps {
+  isOpen: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+/**
+ * 削除確認モーダル
+ *
+ * ダッシュボード (DayDetailModal) と練習/大会履歴タブ (PracticeDetailModal / CompetitionDetailModal)
+ * から共通で利用される。挙動・見た目を完全に一致させるための共通コンポーネント。
+ */
 export function DeleteConfirmModal({ isOpen, onConfirm, onCancel }: DeleteConfirmModalProps) {
   const t = useTranslations("dashboard");
 
@@ -54,3 +65,5 @@ export function DeleteConfirmModal({ isOpen, onConfirm, onCancel }: DeleteConfir
     </div>
   );
 }
+
+export default DeleteConfirmModal;

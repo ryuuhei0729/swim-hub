@@ -5,8 +5,39 @@ import { useTranslations } from "next-intl";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { format, isSameMonth, isSameDay, getDay } from "date-fns";
 import { isHoliday } from "@apps/shared/utils/holiday";
+import { hexToRgba, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
+import { getDefaultColorForType } from "@apps/shared/utils/calendarColorResolver";
 import type { CalendarItem } from "@apps/shared/types/ui";
-import type { CalendarItemType } from "@apps/shared/types/common";
+
+// 旧実装(記録色カスタマイズ導入前)の種目別 Tailwind クラス。
+// 未カスタマイズ(resolver がデフォルト色を返した)ユーザーはこのクラスをそのまま使い、
+// 既存ユーザーの見た目をピクセル一致で維持する。
+function legacyItemClassName(type: CalendarItem["type"]): string {
+  const colorClasses = (() => {
+    switch (type) {
+      case "practice":
+      case "team_practice":
+      case "practice_log":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "competition":
+      case "team_competition":
+      case "entry":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "record":
+        return "bg-blue-100 text-blue-800 border-blue-400";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  })();
+  // record/practice_log は強調のため border-2 + 濃い枠線色で上書き(旧実装のまま)
+  const borderOverride =
+    type === "record"
+      ? "border-2 border-blue-400"
+      : type === "practice_log"
+        ? "border-2 border-green-400"
+        : "border";
+  return `${colorClasses} ${borderOverride}`;
+}
 
 interface CalendarGridProps {
   calendarDays: Date[];
@@ -15,7 +46,8 @@ interface CalendarGridProps {
   isLoading: boolean;
   onDateClick: (date: Date) => void;
   onAddClick: (date: Date) => void;
-  getItemColor: (type: CalendarItemType) => string;
+  /** アイテムの表示色(hex)をユーザー設定から解決する。resolveCalendarItemColor に委譲 */
+  getItemColor: (item: CalendarItem) => string;
 }
 
 export default function CalendarGrid({
@@ -161,15 +193,38 @@ export default function CalendarGrid({
                         displayTitle = item.metadata?.competition?.title || item.title || tCalendarGrid("competitionDefault");
                       }
 
+                      // 表示色はユーザーのカスタム設定(個人/チーム別)から解決する。
+                      // 未カスタマイズ(resolver戻り値がデフォルト色と一致)なら旧 Tailwind
+                      // クラスをそのまま使いピクセル一致を維持し、カスタム色時のみ
+                      // inline style(背景=薄いアルファ合成、枠線=選択色そのもの)に切り替える。
+                      const itemColor = getItemColor(item);
+                      const isDefaultColor = itemColor === getDefaultColorForType(item.type);
+                      const hasEmphasizedBorder =
+                        item.type === "record" || item.type === "practice_log";
+
                       return (
                         <div
                           key={`${item.type}-${item.id}`}
                           className={`
                           text-[8px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 rounded-md truncate transition-all duration-200
-                          ${getItemColor(item.type)}
-                          ${item.type === "record" ? "border-2 border-blue-400" : item.type === "practice_log" ? "border-2 border-green-400" : "border"}
+                          ${
+                            isDefaultColor
+                              ? legacyItemClassName(item.type)
+                              : `text-gray-900 ${hasEmphasizedBorder ? "border-2" : "border"}`
+                          }
                           hover:opacity-80 hover:scale-105 cursor-pointer
                         `}
+                          style={
+                            isDefaultColor
+                              ? undefined
+                              : {
+                                  backgroundColor: hexToRgba(
+                                    itemColor,
+                                    CALENDAR_COLOR_ALPHA.GRID_ITEM_BACKGROUND,
+                                  ),
+                                  borderColor: itemColor,
+                                }
+                          }
                           title={displayTitle}
                           onClick={(e) => {
                             e.stopPropagation();

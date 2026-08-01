@@ -1,11 +1,26 @@
 import type { CalendarItem } from "@apps/shared/types/ui";
 import type { PracticeTime, PracticeTag } from "@apps/shared/types";
+import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
+import type { DayDetailScope } from "./domainFilter";
 
 // DayDetailModalのProps
 export interface DayDetailModalProps {
   visible: boolean;
   date: Date;
   entries: CalendarItem[];
+  /**
+   * 表示スコープ。未指定時は "day"（ダッシュボードの全種別混在挙動）。
+   * "practice"/"competition" は該当する種別のみ表示し、汎用追加チューザーを非表示にする。
+   */
+  scope?: DayDetailScope;
+  /** entries の取得がまだ完了していない（初回ロード中）かどうか。未指定時は false */
+  isLoading?: boolean;
+  /** entries の取得に失敗したかどうか。未指定時は false */
+  isError?: boolean;
+  /** isError 時に再試行ボタンを表示する場合のハンドラ */
+  onRetry?: () => void;
+  /** ダッシュボードの記録色カスタマイズ設定。未指定時はデフォルト色として解決される */
+  colorSettings?: CalendarColorSettings;
   onClose: () => void;
   onEntryPress?: (item: CalendarItem) => void;
   onAddPractice?: (date: Date) => void;
@@ -70,6 +85,10 @@ export interface RecordDetailProps {
   note?: string;
   records: CalendarItem[];
   isTeamCompetition?: boolean;
+  /** チームID（isTeamCompetition時のみ）。出欠確認ボタンの表示・データ取得に使用 */
+  teamId?: string | null;
+  /** 識別色(記録色カスタマイズ)。未指定時は旧来のデフォルト青(#2563EB)を使う */
+  color?: string;
   onEditCompetition?: () => void;
   onDeleteCompetition?: () => void;
   onAddRecord?: () => void;
@@ -87,6 +106,8 @@ export interface EntryDetailProps {
   poolType?: number;
   note?: string;
   entries: CalendarItem[];
+  /** 識別色(記録色カスタマイズ)。未指定時は旧来のデフォルト青(#2563EB)を使う */
+  color?: string;
   onEditCompetition?: (item: CalendarItem) => void;
   onDeleteCompetition?: () => void;
   onEditEntry?: (item: CalendarItem) => void;
@@ -101,6 +122,8 @@ export interface PracticeLogData {
   id: string;
   practiceId: string;
   style: string;
+  /** 種目カテゴリ（Swim/Pull/Kick）。未設定の記録もあるため optional */
+  swim_category?: "Swim" | "Pull" | "Kick" | null;
   repCount: number;
   setCount: number;
   distance: number;
@@ -119,6 +142,8 @@ export interface PracticeLogData {
 export interface PracticeLogDetailData {
   id: string;
   style: string;
+  /** 種目カテゴリ（Swim/Pull/Kick）。未設定の記録もあるため optional */
+  swim_category?: "Swim" | "Pull" | "Kick" | null;
   repCount: number;
   setCount: number;
   distance: number;
@@ -158,6 +183,8 @@ export interface PracticeLogFromDB {
   id: string;
   practice_id: string;
   style: string;
+  /** 種目カテゴリ（Swim/Pull/Kick）。未設定の記録もあるため optional */
+  swim_category?: "Swim" | "Pull" | "Kick" | null;
   rep_count: number;
   set_count: number;
   distance: number;

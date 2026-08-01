@@ -25,7 +25,7 @@ import StyleChipSelector from "@/components/forms/StyleChipSelector";
 import { useAuth } from "@/contexts";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { CompetitionAPI } from "@apps/shared/api";
-import { isEntryTabVisible } from "@/utils/tabModalUtils";
+import { isEntryTabVisible, getTabNavAdjacency } from "@/utils/tabModalUtils";
 import { isDefaultUntouchedEntry } from "@/utils/tabModalDiff";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { formatTimeBest } from "@/utils/formatters";
@@ -838,6 +838,16 @@ export default function CompetitionTabModal({
     { id: "record", label: t("tabs.record"), hidden: false },
   ];
 
+  const visibleTabIds: CompetitionTabId[] = [
+    "competition",
+    ...(showEntryTab ? (["entry"] as const) : []),
+    "record",
+  ];
+  const { prevTab, nextTab } = getTabNavAdjacency(visibleTabIds, activeTab, {
+    guardedNextTab: "record",
+    isGuarded: !showRecordTab,
+  });
+
   return (
     <div className="fixed inset-0 z-60 overflow-y-auto" data-testid="competition-tab-modal">
       <div className="flex min-h-screen items-center justify-center p-4">
@@ -1273,34 +1283,37 @@ export default function CompetitionTabModal({
 
           {/* Footer */}
           <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
-            <Button
-              type="button"
-              onClick={handleClose}
-              variant="outline"
-              disabled={isLoading}
-              className="w-full sm:w-auto"
-            >
-              {tTabModal("cancel")}
-            </Button>
+            {prevTab && (
+              <Button
+                type="button"
+                onClick={() => setActiveTab(prevTab)}
+                variant="outline"
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+                data-testid="competition-tab-modal-back"
+              >
+                {tTabModal("back")}
+              </Button>
+            )}
             <Button
               type="button"
               onClick={() => void handleSave()}
+              variant={nextTab ? "outline" : "primary"}
               disabled={isLoading}
               className="w-full sm:w-auto"
               data-testid="competition-tab-modal-save"
             >
-              {isLoading ? tTabModal("saving") : tTabModal("save")}
+              {isLoading ? tTabModal("saving") : tTabModal("saveAndClose")}
             </Button>
-            {activeTab !== "record" && showRecordTab && (
+            {nextTab && (
               <Button
                 type="button"
-                onClick={() => setActiveTab("record")}
-                variant="outline"
+                onClick={() => setActiveTab(nextTab)}
                 disabled={isLoading}
                 className="w-full sm:w-auto"
-                data-testid="competition-tab-modal-proceed-record"
+                data-testid="competition-tab-modal-next"
               >
-                {tTabModal("proceedToRecord")}
+                {tTabModal("next")}
               </Button>
             )}
           </div>

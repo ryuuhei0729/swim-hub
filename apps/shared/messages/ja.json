@@ -281,7 +281,25 @@
     },
     "discardTitle": "入力内容が保存されていません",
     "discardMessage": "入力内容が保存されていません。このまま閉じますか？",
-    "discard": "破棄"
+    "discard": "破棄",
+    "listToolbar": {
+      "itemCount": "{count}件",
+      "sortButton": "並べ替え",
+      "filterButton": "絞り込み"
+    },
+    "bottomSheet": {
+      "clearGroup": "クリア",
+      "clearAll": "すべてクリア",
+      "apply": "適用",
+      "close": "閉じる"
+    },
+    "loadMore": {
+      "button": "もっと見る",
+      "remaining": "あと{n}件"
+    },
+    "bestBadge": {
+      "first": "初"
+    }
   },
   "nav": {
     "practice": "練習記録",
@@ -1030,7 +1048,8 @@
       "deleteConfirm": "この練習記録を削除しますか？",
       "deleteFailed": "削除に失敗しました",
       "practiceTitle": "練習",
-      "viewDetailAriaLabel": "練習詳細を表示"
+      "viewDetailAriaLabel": "練習詳細を表示",
+      "viewDetailAriaLabelWithInfo": "練習詳細を表示({date} {place} {style})"
     },
     "modal": {
       "loading": "練習詳細を読み込み中...",
@@ -1057,19 +1076,19 @@
       "emptyTitle": "練習記録がありません",
       "emptyDesc": "ダッシュボードのカレンダーから練習記録を追加できます。",
       "goToDashboard": "ダッシュボードへ移動",
-      "colDate": "日付",
       "colPlace": "場所",
-      "colDistReps": "距離・本数・セット",
-      "colCircle": "サークル",
       "colStyle": "種目",
       "colTags": "タグ",
-      "colAvgTime": "平均タイム",
       "avgTimeLabel": "平均タイム:",
       "share": "シェア",
       "edit": "編集",
       "delete": "削除",
       "deleting": "削除中...",
-      "distanceFormat": "{distance}m × {reps}本 × {sets}セット"
+      "distanceFormat": "{distance}m × {reps}本 × {sets}セット",
+      "noMatchTitle": "該当する記録がありません",
+      "noMatchDesc": "選択した条件に一致する練習記録が見つかりませんでした。",
+      "sortOptionDateDesc": "日付(新しい順)",
+      "sortOptionDateAsc": "日付(古い順)"
     },
     "details": {
       "badge": "練習記録",
@@ -1170,6 +1189,15 @@
       "videoUploadFailedTitle": "動画アップロード失敗",
       "videoUploadFailedSession": "セッションが無効なため動画をアップロードできませんでした。",
       "videoUploadFailedSaved": "練習ログは保存されましたが、動画のアップロードに失敗しました。"
+    },
+    "sortSheet": {
+      "title": "並べ替え",
+      "placeAsc": "場所(昇順)",
+      "placeDesc": "場所(降順)"
+    },
+    "filterSheet": {
+      "title": "絞り込み",
+      "tagsAndNote": "(選択した全てのタグを含む練習ログがある日のみ表示)"
     }
   },
   "mypage": {
@@ -1501,20 +1529,16 @@
       "recordNotFound": "記録データが見つかりません",
       "viewDetailAriaLabel": "大会記録詳細を表示",
       "competitionFallback": "大会",
-      "styleFallback": "記録"
+      "styleFallback": "記録",
+      "bulkInputLabel": "一括入力",
+      "viewDetailAriaLabelWithInfo": "大会記録詳細を表示({date} {name})"
     },
     "filter": {
-      "periodLabel": "期間",
-      "allPeriods": "全期間",
-      "fiscalYearSuffix": "{year}年度",
-      "styleLabel": "種目",
       "allStyles": "全種目",
-      "poolTypeLabel": "プール種別",
       "allPoolTypes": "すべて",
-      "relayLabel": "引き継ぎ",
-      "includeRelay": "含める",
-      "clearLabel": "クリア",
-      "resetButton": "フィルタをリセット"
+      "resetButton": "フィルタをリセット",
+      "excludeRelay": "リレー除く",
+      "onlyRelay": "リレーのみ"
     },
     "empty": {
       "noRecordsTitle": "大会記録がありません",
@@ -1661,6 +1685,27 @@
       "errorVideoGenericFailed": "{name}: 動画アップロード中にエラーが発生しました",
       "errorVideoNoThumbnail": "{name}: サムネイルを生成できなかったため動画を添付できませんでした",
       "videoPartialFailureSaved": "記録は保存されましたが、一部の動画を添付できませんでした:\n{errors}"
+    },
+    "sortSheet": {
+      "title": "並べ替え",
+      "dateDesc": "日付(新しい順)",
+      "dateAsc": "日付(古い順)",
+      "timeAsc": "記録が速い順",
+      "timeDesc": "記録が遅い順",
+      "competitionNameAsc": "大会名(昇順)",
+      "competitionNameDesc": "大会名(降順)",
+      "placeAsc": "場所(昇順)",
+      "placeDesc": "場所(降順)",
+      "poolAsc": "プール(昇順)",
+      "poolDesc": "プール(降順)",
+      "styleAsc": "種目(昇順)",
+      "styleDesc": "種目(降順)"
+    },
+    "filterSheet": {
+      "title": "絞り込み",
+      "distanceLabel": "距離",
+      "strokeLabel": "種目",
+      "relayLabel": "リレー"
     }
   },
   "settings": {
@@ -1885,6 +1930,21 @@
     },
     "practiceLogTemplates": {
       "backAriaLabel": "戻る"
+    },
+    "calendarColors": {
+      "title": "カレンダー記録色",
+      "description": "ダッシュボードの練習・大会記録の表示色をカスタマイズします。チーム別に色を分けることもできます。",
+      "personalSectionTitle": "個人の記録色",
+      "teamSectionTitle": "チーム別の記録色",
+      "practiceLabel": "練習",
+      "competitionLabel": "大会",
+      "resetToDefault": "デフォルトに戻す",
+      "resetTeamToDefault": "デフォルトに戻す",
+      "sameColorWarning": "練習と大会の色が同じです。見分けにくい場合は色を変更してください。"
+    },
+    "password": {
+      "title": "パスワード",
+      "openButton": "パスワードを変更"
     }
   },
   "practiceLogTemplates": {
@@ -2333,6 +2393,7 @@
         "memberStatusOther": "その他",
         "memberStatusUnanswered": "未回答",
         "memberAttendanceFetchFailed": "出欠情報の取得に失敗しました",
+        "teamMembersFetchFailed": "メンバー一覧を取得できませんでした",
         "memberAttendanceEmpty": "出欠回答がありません",
         "memberAttendanceLoading": "読み込み中...",
         "bulkChange": {
@@ -2653,8 +2714,11 @@
         "clickToAdd": "クリックで追加",
         "editAriaLabel": "{date}の練習記録を編集",
         "addAriaLabel": "{date}の練習記録を追加",
-        "viewAriaLabel": "{date}の練習記録を閲覧"
-      }
+        "viewAriaLabel": "{date}の練習記録を閲覧",
+        "editButton": "編集",
+        "deleteButton": "削除"
+      },
+      "selfLogButton": "自分のログを追加"
     },
     "practiceDetail": {
       "title": "練習詳細",
@@ -2675,14 +2739,18 @@
       "fallbackTitle": "大会",
       "card": {
         "entryButton": "エントリー",
-        "recordsButton": "記録一覧",
-        "manageButton": "管理"
+        "recordsButton": "記録入力",
+        "manageButton": "管理",
+        "editButton": "編集",
+        "deleteButton": "削除"
       },
       "entryStatus": {
         "before": "受付前",
         "open": "受付中",
         "closed": "受付終了"
-      }
+      },
+      "selfRecordButton": "自分の記録を追加",
+      "selfRecordSaveFailed": "自分の記録の保存に失敗しました"
     },
     "entrySection": {
       "title": "エントリー受付中の大会"
@@ -2872,7 +2940,12 @@
       }
     },
     "attendanceGrouping": {
-      "categoryLabel": "名"
+      "categoryLabel": "名",
+      "present": "出席 ({count}名)",
+      "absent": "欠席 ({count}名)",
+      "other": "その他 ({count}名)",
+      "unanswered": "未回答 ({count}名)",
+      "none": "なし"
     },
     "attendanceEditHook": {
       "saveError": "出欠情報の保存に失敗しました",
@@ -2999,7 +3072,9 @@
       "notePlaceholder": "練習内容や感想など",
       "cancelButton": "キャンセル",
       "creating": "作成中...",
-      "createButton": "作成"
+      "createButton": "作成",
+      "updateFailed": "チーム練習記録の更新に失敗しました",
+      "deleteFailed": "チーム練習記録の削除に失敗しました"
     },
     "competitionForm": {
       "title": "大会を追加",
@@ -3009,6 +3084,8 @@
       "endDateBeforeStart": "終了日は開始日以降の日付を指定してください",
       "authRequired": "認証が必要です",
       "createFailed": "チーム大会の作成に失敗しました",
+      "updateFailed": "チーム大会の更新に失敗しました",
+      "deleteFailed": "チーム大会の削除に失敗しました",
       "competitionNameLabel": "大会名",
       "competitionNamePlaceholder": "例: 県大会（空欄の場合は「大会」と表示）",
       "startDateLabel": "開始日",
@@ -3198,6 +3275,8 @@
       "deleting": "削除中...",
       "loadError": "お知らせの読み込みに失敗しました",
       "retry": "再試行",
+      "showMore": "…全文を表示",
+      "showLess": "省略",
       "deleteConfirm": {
         "title": "お知らせを削除",
         "message": "このお知らせを削除しますか？",
@@ -3406,13 +3485,6 @@
       "loading": "読み込み中...",
       "titleSuffix": "の出欠状況"
     },
-    "attendanceGrouping": {
-      "present": "出席 ({count}名)",
-      "absent": "欠席 ({count}名)",
-      "other": "その他 ({count}名)",
-      "unanswered": "未回答 ({count}名)",
-      "none": "なし"
-    },
     "templateDownload": {
       "title": "Excelテンプレートのダウンロード",
       "practice": {
@@ -3546,7 +3618,39 @@
         "practicesCreated": "練習: {count}件登録",
         "competitionsCreated": "大会: {count}件登録",
         "errors": "エラー: {errors}"
-      }
+      },
+      "manual": {
+        "tabPractice": "練習",
+        "tabCompetition": "大会",
+        "rowTitlePractice": "練習 {n}",
+        "rowTitleCompetition": "大会 {n}",
+        "labelDate": "日付 *",
+        "labelStartDate": "開始日 *",
+        "labelEndDate": "終了日",
+        "labelTitle": "タイトル",
+        "labelCompetitionName": "大会名",
+        "labelPlace": "場所",
+        "labelPoolType": "水路",
+        "labelNote": "備考",
+        "poolShort": "短水路 (25m)",
+        "poolLong": "長水路 (50m)",
+        "addPracticeRowButton": "+ 練習を追加",
+        "addCompetitionRowButton": "+ 大会を追加",
+        "deleteRowButton": "削除",
+        "submitButton": "登録する",
+        "submitting": "登録中...",
+        "errorDateRequired": "{row}行目: 日付は必須です",
+        "errorStartDateRequired": "{row}行目: 開始日は必須です",
+        "errorEndDateAfterStart": "{row}行目: 終了日は開始日以降の日付を指定してください",
+        "practiceEmpty": "登録する練習がありません",
+        "competitionEmpty": "登録する大会がありません",
+        "titlePlaceholder": "朝練 など",
+        "competitionNamePlaceholder": "◯◯大会",
+        "placePlaceholder": "会場名",
+        "notePlaceholder": "メモ"
+      },
+      "modeTabFile": "ファイル取込",
+      "modeTabManual": "手動入力"
     },
     "common": {
       "close": "閉じる",
@@ -4018,6 +4122,9 @@
       "saving": "保存中...",
       "cancel": "キャンセル",
       "close": "閉じる",
+      "saveAndClose": "保存して終了",
+      "next": "次に進む",
+      "back": "前に戻る",
       "fieldRequired": "は必須です",
       "partialSaveError": "基本情報は保存しました。詳細の保存に失敗しました。再試行してください。",
       "duplicateEntryStyle": "同じ種目が複数入力されています。種目を変更してください。",
@@ -4027,8 +4134,8 @@
         "confirm": "閉じる",
         "cancel": "編集を続ける"
       },
-      "proceedToRecord": "レコードの入力に進む",
-      "recordFutureGuard": "未来の日付でレースレコードを登録することはできません"
+      "recordFutureGuard": "未来の日付でレースレコードを登録することはできません",
+      "competitionEditRestricted": "この大会の情報はチーム管理者のみ編集できます"
     },
     "premium": {
       "upgradeText": "Premium にアップグレード",

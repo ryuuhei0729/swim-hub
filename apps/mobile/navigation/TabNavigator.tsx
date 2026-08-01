@@ -1,9 +1,10 @@
 import React from "react";
+import { StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TabParamList } from "./types";
-import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PracticesScreen } from "@/screens/PracticesScreen";
 import { CompetitionsScreen } from "@/screens/CompetitionsScreen";
@@ -18,10 +19,17 @@ const Tab = createBottomTabNavigator<TabParamList>();
  * ダッシュボード、練習、大会、チーム、マイページの5つのタブ
  */
 export const TabNavigator: React.FC = () => {
-  const insets = useSafeInsets();
   const { t } = useTranslation();
 
+  // Android のシステムナビゲーションバー(3ボタン)ぶんの下部インセットは、
+  // JS の useSafeAreaInsets フックが一部端末で 0 を返す既知不具合
+  // (safe-area-context #546) があるため使わない。代わりにネイティブ経路で
+  // 信頼できる SafeAreaView(edges=["bottom"]) でナビゲーター全体を包み、
+  // タブバーはその上端に固定させる。これにより描画領域がシステムナビ
+  // ゲーションバーの上端までに収まり、タブと3ボタンが重ならない。
+  // タブバー自身は固定高さとし、フックの値に依存させない。
   return (
+    <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
@@ -32,9 +40,9 @@ export const TabNavigator: React.FC = () => {
           borderTopColor: "#E5E7EB",
           borderTopWidth: 1,
           paddingTop: 8,
-          paddingBottom: Math.max(insets.bottom, 4),
+          paddingBottom: 8,
           paddingHorizontal: 12,
-          height: 56 + Math.max(insets.bottom, 4),
+          height: 64,
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -92,5 +100,15 @@ export const TabNavigator: React.FC = () => {
         }}
       />
     </Tab.Navigator>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    // タブバーと下部インセット帯を同色にしてシステムナビゲーションバー
+    // 上端までを白で埋め、タブバーが浮いて見えないようにする。
+    backgroundColor: "#FFFFFF",
+  },
+});

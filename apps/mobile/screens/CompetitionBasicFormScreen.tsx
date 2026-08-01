@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format, parseISO, isValid, isBefore } from "date-fns";
@@ -637,7 +638,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       </ScrollView>
 
       {/* フッター */}
-      <View style={styles.footer}>
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
         <View style={styles.buttonContainer}>
           <Pressable
             style={[styles.button, styles.cancelButton, loading && styles.buttonDisabled]}
@@ -685,7 +686,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
             )}
           </Pressable>
         )}
-      </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 };

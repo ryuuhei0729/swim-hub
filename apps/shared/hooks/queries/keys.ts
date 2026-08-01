@@ -123,6 +123,14 @@ export const notificationKeys = {
 } as const;
 
 /**
+ * カレンダー記録色設定のクエリキー
+ */
+export const calendarColorKeys = {
+  all: ["calendarColors"] as const,
+  settings: (userId: string) => [...calendarColorKeys.all, "settings", userId] as const,
+} as const;
+
+/**
  * 練習ログテンプレートのクエリキー
  */
 export const practiceLogTemplateKeys = {

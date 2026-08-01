@@ -16,8 +16,10 @@ import { useCalendar } from "../_providers/CalendarProvider";
 import DayDetailModal from "./DayDetailModal";
 import CalendarHeader from "./CalendarHeader";
 import CalendarGrid from "./CalendarGrid";
+import { useAuth } from "@/contexts";
+import { useCalendarColorSettingsQuery } from "@apps/shared/hooks";
+import { resolveCalendarItemColor } from "@apps/shared/utils/calendarColorResolver";
 import type { CalendarItem, CalendarProps } from "@apps/shared/types/ui";
-import type { CalendarItemType } from "@apps/shared/types/common";
 
 // カレンダー表示コンポーネント（表示ロジック）
 export default function CalendarView({
@@ -34,10 +36,13 @@ export default function CalendarView({
   onEditRecord,
   onDeleteRecord,
   isLoading: propLoading = false,
-  userId: _userId,
+  userId: propUserId,
 }: Omit<CalendarProps, "currentDate" | "onCurrentDateChange">) {
   const router = useRouter();
   const t = useTranslations("dashboard");
+  const { supabase, user } = useAuth();
+  const userId = propUserId ?? user?.id;
+  const { settings: calendarColorSettings } = useCalendarColorSettingsQuery(supabase, userId);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showMonthSelector, setShowMonthSelector] = useState(false);
   const [showDayDetail, setShowDayDetail] = useState(false);
@@ -163,25 +168,12 @@ export default function CalendarView({
     return entriesByDate.get(dateKey) || [];
   };
 
-  const getItemColor = (type: CalendarItemType) => {
-    switch (type) {
-      case "practice":
-      case "team_practice":
-      case "practice_log":
-        // 練習系: 全て緑色
-        return "bg-green-100 text-green-800 border-green-200";
-      case "competition":
-      case "team_competition":
-      case "entry":
-        // 大会系: 全て青色
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "record":
-        // 記録: 青色（枠線は濃い青色）
-        return "bg-blue-100 text-blue-800 border-blue-400";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
+  // アイテムの表示色(hex)をユーザーのカスタム設定(個人/チーム別)から解決する。
+  // resolver は未設定ユーザーには既存の緑(練習)/青(大会)と同値のデフォルト hex を返す。
+  // 「デフォルトのまま = 旧 Tailwind クラスでピクセル一致を維持する」の実際の分岐は
+  // CalendarGrid 側で resolver 戻り値とデフォルト色を比較して行う。
+  const getItemColor = (item: CalendarItem) =>
+    resolveCalendarItemColor(item.type, item.metadata, calendarColorSettings);
 
   const handleMonthYearSelect = (year: number, month: number) => {
     const newDate = new Date(year, month, 1);

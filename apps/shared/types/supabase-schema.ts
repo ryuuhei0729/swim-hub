@@ -1223,6 +1223,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_team_calendar_colors: {
+        Row: {
+          competition_color: string | null;
+          created_at: string | null;
+          id: string;
+          practice_color: string | null;
+          team_id: string;
+          updated_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          competition_color?: string | null;
+          created_at?: string | null;
+          id?: string;
+          practice_color?: string | null;
+          team_id: string;
+          updated_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          competition_color?: string | null;
+          created_at?: string | null;
+          id?: string;
+          practice_color?: string | null;
+          team_id?: string;
+          updated_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "user_team_calendar_colors_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "user_team_calendar_colors_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       users: {
         Row: {
           bio: string | null;
@@ -1239,6 +1284,8 @@ export type Database = {
           ios_calendar_sync_practices: boolean;
           name: string;
           onboarding_completed: boolean;
+          personal_competition_color: string | null;
+          personal_practice_color: string | null;
           profile_image_path: string | null;
           updated_at: string | null;
         };
@@ -1257,6 +1304,8 @@ export type Database = {
           ios_calendar_sync_practices?: boolean;
           name: string;
           onboarding_completed?: boolean;
+          personal_competition_color?: string | null;
+          personal_practice_color?: string | null;
           profile_image_path?: string | null;
           updated_at?: string | null;
         };
@@ -1275,6 +1324,8 @@ export type Database = {
           ios_calendar_sync_practices?: boolean;
           name?: string;
           onboarding_completed?: boolean;
+          personal_competition_color?: string | null;
+          personal_practice_color?: string | null;
           profile_image_path?: string | null;
           updated_at?: string | null;
         };

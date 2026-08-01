@@ -3,13 +3,15 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { useUserQuery, userKeys } from "@apps/shared/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import GoogleCalendarSyncSettings from "@/components/settings/GoogleCalendarSyncSettings";
+import CalendarColorSettings from "@/components/settings/CalendarColorSettings";
 import EmailChangeSettings from "@/components/settings/EmailChangeSettings";
+import PasswordChangeSettings from "@/components/settings/PasswordChangeSettings";
 import IdentityLinkSettings from "@/components/settings/IdentityLinkSettings";
 import AccountDeleteSettings from "@/components/settings/AccountDeleteSettings";
 import SubscriptionSettings from "@/components/settings/SubscriptionSettings";
@@ -19,6 +21,7 @@ export default function SettingsClient() {
   const { user, supabase, refreshSubscription } = useAuth();
   const t = useTranslations("settings");
   const tErrors = useTranslations("settings.errors");
+  const tPracticeLogTemplates = useTranslations("practiceLogTemplates");
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // マウント時に subscription を最新化（null からの遅延ロード対策）
@@ -110,14 +113,31 @@ export default function SettingsClient() {
       {/* Googleカレンダー連携設定 */}
       <GoogleCalendarSyncSettings profile={profile} onUpdate={handleGoogleCalendarUpdate} />
 
+      {/* カレンダー記録色カスタマイズ */}
+      <CalendarColorSettings />
+
       {/* メールアドレス変更 */}
       <EmailChangeSettings />
 
       {/* ログイン連携 */}
       <IdentityLinkSettings />
 
+      {/* パスワード変更 */}
+      <PasswordChangeSettings />
+
       {/* アカウント削除 */}
       <AccountDeleteSettings />
+
+      {/* 練習ログテンプレート管理 */}
+      <Link
+        href="/settings/practice-log-templates"
+        className="flex items-center justify-between bg-white rounded-lg shadow p-4 sm:p-6 hover:bg-gray-50 transition-colors"
+      >
+        <span className="text-sm sm:text-base font-medium text-gray-900">
+          {tPracticeLogTemplates("page.title")}
+        </span>
+        <ChevronRightIcon className="h-4 w-4 text-gray-400" />
+      </Link>
     </div>
   );
 }

@@ -3,26 +3,49 @@ import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { VideoPlayer } from "@/components/shared/VideoPlayer";
 import { ImageViewerModal } from "@/components/shared";
+import { ShareCardModal } from "@/components/share";
+import type { CompetitionShareData } from "@/components/share";
 import { resolveGalleryImages } from "@/utils/imageUpload";
+import { RecordAPI } from "@apps/shared/api/records";
+import { formatDate } from "@apps/shared/utils/date";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import type { CalendarItem } from "@apps/shared/types/ui";
+import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
+import { darkenHex } from "@/utils/colorTone";
+import { AttendanceGroupModal } from "@/components/teams/AttendanceGroupModal";
+import type { MainStackParamList } from "@/navigation/types";
 import { styles } from "../styles";
 import type { RecordDetailProps, RecordData } from "../types";
 
+// DayDetailModal から渡ってくる未カスタマイズ時のフォールバック色 (旧デフォルト青)。
+// この値と一致する場合は旧来のカード外枠色(#EFF6FF / #DBEAFE)をそのまま使い、
+// 既存ユーザーの見た目をピクセル一致で維持する。
+const LEGACY_COMPETITION_ACCENT = "#2563EB";
+const LEGACY_WRAPPER_BACKGROUND = "#EFF6FF";
+const LEGACY_WRAPPER_BORDER = "#DBEAFE";
+
 /**
  * 個別記録カードコンポーネント（タブ付きスプリットタイム表示）
+ * 大会未紐付けレコード（一括入力）単体の詳細表示（StandaloneRecordDetailModal）でも再利用する
  */
-const RecordCard: React.FC<{
+export const RecordCard: React.FC<{
   record: RecordData;
   splits: Array<{ distance: number; split_time: number }>;
   records: CalendarItem[];
   place?: string;
   poolType?: number;
   competitionId: string;
+  /** 大会名（シェアカード用） */
+  competitionName?: string;
+  /** 識別色(記録色カスタマイズ)。未指定時は旧デフォルト青のまま(StandaloneRecordDetailModal 等の非対応呼び出し向け) */
+  color?: string;
   onEditRecord?: (item: CalendarItem) => void;
   onDeleteRecord?: (recordId: string) => void;
   onClose?: () => void;
@@ -33,12 +56,77 @@ const RecordCard: React.FC<{
   place,
   poolType,
   competitionId,
+  competitionName,
+  color = LEGACY_COMPETITION_ACCENT,
   onEditRecord,
   onDeleteRecord,
   onClose,
 }) => {
   const { t } = useTranslation();
+  const { supabase } = useAuth();
+  const locale = useDateLocale();
   const [splitTab, setSplitTab] = useState<"race" | "all">("race");
+  const [shareVisible, setShareVisible] = useState(false);
+  const [shareData, setShareData] = useState<CompetitionShareData | null>(null);
+
+  // 共有ボタン押下: previousBest を取得してシェアカードを開く（web CompetitionDetails.tsx の
+  // share-record-button ハンドラと同一方針。取得失敗時は catch し、バッジ非表示のまま進める）
+  const handleShare = async () => {
+    const competitionDateRaw = records[0]?.date;
+    const poolTypeNum = poolType ?? 0;
+    let previousBest: number | undefined;
+    let isFirstRecord = false;
+
+    if (
+      record.styleId != null &&
+      !Number.isNaN(record.styleId) &&
+      record.id &&
+      competitionDateRaw
+    ) {
+      try {
+        const prevBest = await new RecordAPI(supabase).getPreviousBestTime(
+          record.styleId,
+          poolTypeNum,
+          record.id,
+          record.isRelaying,
+          competitionDateRaw,
+        );
+        if (prevBest === null) {
+          isFirstRecord = true;
+        } else {
+          previousBest = prevBest;
+        }
+      } catch {
+        // 取得失敗時はバッジ非表示のまま進める（初記録の誤表示防止。web と同一方針）
+      }
+    }
+
+    setShareData({
+      competitionName: competitionName || t("dashboard.competition.defaultName"),
+      date: competitionDateRaw ? formatDate(competitionDateRaw, "long", locale) : "",
+      place: place || "",
+      poolType: poolTypeNum === 1 ? "long" : "short",
+      eventName: record.styleName,
+      raceDistance: record.styleDistance,
+      time: record.time,
+      reactionTime: record.reactionTime ?? undefined,
+      splitTimes: splits,
+      isFirstRecord,
+      previousBest,
+    });
+    setShareVisible(true);
+  };
+  // 未カスタマイズなら旧来のカード背景/枠線(styles.recordCard の静的 "#DBEAFE"/"#93C5FD")を
+  // ピクセル一致で維持する。カスタム色時は「濃すぎる」フィードバックを受け、背景は入れ子
+  // (competitionRecordContainer > recordCard)のため mixWithWhite(不透明)、枠線は
+  // hexToRgba(半透明)にする(RecordDetail の外枠と同じ方針)。
+  const isDefaultAccent = color === LEGACY_COMPETITION_ACCENT;
+  const cardBackgroundColor = isDefaultAccent
+    ? "#DBEAFE"
+    : mixWithWhite(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND);
+  const cardBorderColor = isDefaultAccent
+    ? "#93C5FD"
+    : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
 
   // ゴールタイムを含む表示用スプリットデータ
   const displaySplitTimes = useMemo(() => {
@@ -134,12 +222,22 @@ const RecordCard: React.FC<{
   }, [displaySplitTimes]);
 
   return (
-    <View style={styles.recordCard}>
+    <View
+      style={[styles.recordCard, { backgroundColor: cardBackgroundColor, borderColor: cardBorderColor }]}
+    >
       {/* 記録内容カード */}
-      <View style={styles.recordContentCard}>
-        {/* 編集・削除ボタン（右上） */}
+      <View style={[styles.recordContentCard, { borderColor: cardBorderColor }]}>
+        {/* シェア・編集・削除ボタン（右上） */}
         <View style={styles.recordCardActions}>
           <View style={styles.recordCardActionsRow}>
+            <Pressable
+              style={styles.recordCardActionButton}
+              onPress={handleShare}
+              accessibilityRole="button"
+              accessibilityLabel={t("dashboard.competition.shareRecord")}
+            >
+              <Feather name="share-2" size={18} color="#0891B2" />
+            </Pressable>
             {onEditRecord && (
               <Pressable
                 style={styles.recordCardActionButton}
@@ -339,6 +437,13 @@ const RecordCard: React.FC<{
           <Text style={styles.recordNoteText}>{record.note}</Text>
         </View>
       )}
+
+      <ShareCardModal
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        type="competition"
+        data={shareData}
+      />
     </View>
   );
 };
@@ -362,6 +467,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   note,
   records,
   isTeamCompetition = false,
+  teamId = null,
+  color = LEGACY_COMPETITION_ACCENT,
   onEditCompetition,
   onDeleteCompetition,
   onAddRecord,
@@ -370,8 +477,28 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   onClose,
   onMediaLoaded,
 }) => {
+  // 未カスタマイズ(渡された色が旧デフォルト青と一致)ならカード外枠・バッジを旧来の
+  // 見た目に固定する。カスタム色時は「濃すぎる」ユーザーフィードバックを受け、
+  // 枠線・バッジ背景はベタ塗りではなく淡いアルファ合成にする。
+  // 外枠の背景ウォッシュは mixWithWhite(不透明の混色)を使う: 半透明(hexToRgba)だと
+  // 入れ子の背景と重なった際にアルファ合成で濃く見える「2段階問題」が web で発覚したため、
+  // 常に同じ濃淡になる不透明色に統一する(web と実装を揃える)。
+  const isDefaultAccent = color === LEGACY_COMPETITION_ACCENT;
+  const wrapperBackgroundColor = isDefaultAccent
+    ? LEGACY_WRAPPER_BACKGROUND
+    : mixWithWhite(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND);
+  const wrapperBorderColor = isDefaultAccent
+    ? LEGACY_WRAPPER_BORDER
+    : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
+  const badgeBackgroundColor = isDefaultAccent
+    ? color // 旧デフォルト青のベタ塗り(既存の entryTypeText 白文字と対になる想定のまま)
+    : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BADGE_BACKGROUND);
+  const badgeTextColor = isDefaultAccent ? "#FFFFFF" : darkenHex(color, 0.65);
   const { t } = useTranslation();
   const { supabase, user, getAccessToken } = useAuth();
+  const locale = useDateLocale();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const [attendanceModalVisible, setAttendanceModalVisible] = useState(false);
   const [actualRecords, setActualRecords] = useState<RecordData[]>([]);
   const [competitionImages, setCompetitionImages] = useState<Array<{ id: string; url: string }>>(
     [],
@@ -578,14 +705,21 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   }, [actualRecords, supabase]);
 
   return (
-    <View style={styles.competitionRecordContainer}>
+    <View
+      style={[
+        styles.competitionRecordContainer,
+        { backgroundColor: wrapperBackgroundColor, borderColor: wrapperBorderColor },
+      ]}
+    >
       {/* 大会ヘッダー */}
       <View style={styles.competitionHeader}>
         <View style={styles.competitionHeaderContent}>
           <View style={styles.competitionHeaderLeft}>
             <View style={styles.competitionHeaderTitleRow}>
-              <View style={[styles.entryTypeBadge, { backgroundColor: "#2563EB" }]}>
-                <Text style={styles.entryTypeText}>{t("dashboard.dayDetail.entryTypeCompetition")}</Text>
+              <View style={[styles.entryTypeBadge, { backgroundColor: badgeBackgroundColor }]}>
+                <Text style={[styles.entryTypeText, { color: badgeTextColor }]}>
+                  {t("dashboard.dayDetail.entryTypeCompetition")}
+                </Text>
               </View>
               <Text style={styles.competitionHeaderTitle}>{competitionName}</Text>
             </View>
@@ -599,6 +733,16 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             {onDeleteCompetition && (
               <Pressable style={styles.competitionHeaderButton} onPress={onDeleteCompetition}>
                 <Feather name="trash-2" size={20} color="#EF4444" />
+              </Pressable>
+            )}
+            {isTeamCompetition && teamId && (
+              <Pressable
+                style={styles.competitionHeaderButton}
+                onPress={() => setAttendanceModalVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t("dashboard.attendance.checkTitle")}
+              >
+                <Feather name="clipboard" size={18} color="#2563EB" />
               </Pressable>
             )}
           </View>
@@ -654,6 +798,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
               place={place}
               poolType={poolType}
               competitionId={_competitionId}
+              competitionName={competitionName}
+              color={color}
               onEditRecord={onEditRecord}
               onDeleteRecord={onDeleteRecord}
               onClose={onClose}
@@ -706,6 +852,25 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         initialIndex={viewerIndex}
         onClose={() => setViewerVisible(false)}
       />
+
+      {isTeamCompetition && teamId && (
+        <AttendanceGroupModal
+          visible={attendanceModalVisible}
+          onClose={() => setAttendanceModalVisible(false)}
+          supabase={supabase}
+          teamId={teamId}
+          eventId={_competitionId}
+          eventType="competition"
+          eventDate={records[0]?.date ?? null}
+          locale={locale}
+          showChangeLink
+          onChangeLinkPress={() => {
+            setAttendanceModalVisible(false);
+            onClose?.();
+            navigation.navigate("TeamDetail", { teamId, initialTab: "attendance" });
+          }}
+        />
+      )}
     </View>
   );
 };

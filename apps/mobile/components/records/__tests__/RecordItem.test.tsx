@@ -34,8 +34,15 @@ describe("RecordItem", () => {
     mockUseAuth.mockReturnValue({ supabase: mockSupabase });
   });
 
+  // NOTE: 大会に紐づく記録は保存時に record.pool_type が必ず competition.pool_type と
+  // 同値でコピーされる (web useCompetitionTabSave.ts / mobile RecordFormScreen.tsx・
+  // RecordLogFormScreen.tsx いずれの保存パスも競技会の pool_type をそのまま記録へコピーする)。
+  // フィクスチャでこの不変条件を崩す (top-level pool_type と competition.pool_type が
+  // 食い違う) と、実データでは起こり得ない状態になり、表示ロジックの参照フィールドを
+  // 切り替えるリファクタで見かけ上のリグレッションを誤検知する。
   const mockRecord = createMockRecordWithDetails({
     time: 60.5,
+    pool_type: 1, // competition.pool_type (下記) と必ず一致させる
     competition: {
       ...createMockCompetition(),
       id: "comp-1",
@@ -55,12 +62,14 @@ describe("RecordItem", () => {
   it("大会記録データが正しく表示される", () => {
     renderItem(<RecordItem record={mockRecord} />);
 
-    // 日付が表示される（フォーマットされた形式）
-    expect(screen.getByText(/2025年1月15日/)).toBeTruthy();
+    // 日付が表示される（2026-08-01 ユーザー要望で numeric 形式に変更。
+    // ja/en/zh/ko は "yyyy/MM/dd"、de のみ "dd.MM.yyyy"。例: "2025/01/15"）
+    expect(screen.getByText(/2025\/01\/15/)).toBeTruthy();
     // 大会名が表示される
     expect(screen.getByText("テスト大会")).toBeTruthy();
-    // 種目・距離が表示される
-    expect(screen.getByText("100m自由形")).toBeTruthy();
+    // 種目・距離が表示される(2026-07-22 Sprint: mobile はスマホ幅のため常時略称表示。
+    // style="fr"/distance=100 → formatStyleAbbrev で "100mFr")
+    expect(screen.getByText("100mFr")).toBeTruthy();
     // プールタイプが表示される
     expect(screen.getByText("長水路")).toBeTruthy();
   });
@@ -89,6 +98,7 @@ describe("RecordItem", () => {
   it("短水路の場合、プールタイプが「短水路」と表示される", () => {
     const shortCourseRecord = createMockRecordWithDetails({
       ...mockRecord,
+      pool_type: 0, // competition.pool_type と一致させる (実データの不変条件)
       competition: {
         ...mockRecord.competition!,
         pool_type: 0,

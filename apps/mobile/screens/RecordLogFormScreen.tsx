@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1166,7 +1167,7 @@ export const RecordLogFormScreen: React.FC = () => {
       </Modal>
 
       {/* フッター */}
-      <View style={styles.footer}>
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
         <Pressable
           style={[styles.button, styles.primaryButton, loading && styles.buttonDisabled]}
           onPress={handleSave}
@@ -1178,7 +1179,7 @@ export const RecordLogFormScreen: React.FC = () => {
             <Text style={styles.primaryButtonText}>{t("common.save")}</Text>
           )}
         </Pressable>
-      </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 };

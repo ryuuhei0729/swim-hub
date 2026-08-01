@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -311,13 +312,13 @@ export function TeamCompetitionEntryModal({
           </ScrollView>
 
           {/* フッター */}
-          <View style={styles.footer}>
+          <SafeAreaView edges={["bottom"]} style={styles.footer}>
             <Pressable style={styles.footerButton} onPress={onClose} accessibilityRole="button">
               <Text style={styles.footerButtonText}>
                 {t("teams.mobile.teamCompetitionEntryModal.close")}
               </Text>
             </Pressable>
-          </View>
+          </SafeAreaView>
         </View>
       </View>
     </Modal>

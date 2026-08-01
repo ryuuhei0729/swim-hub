@@ -198,7 +198,10 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
   }, [navigation, teamId]);
 
   const handleRecord = useCallback((competition: Competition) => {
-    // admin は一括代理入力画面へ、非 admin は従来の本人入力フローへ分岐
+    // admin は一括代理入力画面へ、非 admin は個人フロー(CompetitionTabForm)へ分岐。
+    // team_id の有無に関わらず既存レコードを読み込む CompetitionTabForm に統一する
+    // (useDayDetailHandlers.handleEditRecord と同じ方針。RecordLogForm は recordId 未指定だと
+    // 既存レコードを検索せず重複作成を招くため使わない)。
     if (isAdmin) {
       navigation.navigate("TeamRecordBulkForm", {
         competitionId: competition.id,
@@ -206,10 +209,11 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
       });
       return;
     }
-    navigation.navigate("RecordLogForm", {
+    navigation.navigate("CompetitionTabForm", {
       competitionId: competition.id,
       date: competition.date,
       teamId,
+      initialTab: "record",
     });
   }, [navigation, teamId, isAdmin]);
 

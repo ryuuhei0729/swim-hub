@@ -93,8 +93,6 @@ export default function Footer() {
               </div>
               <h3 className="text-lg font-semibold text-gray-900 font-(family-name:--font-chakra-petch)">SwimHub</h3>
             </div>
-            {/* ブランドタグライン: ロケールに関わらず常に英語表記 */}
-            <p className="text-sm text-gray-600 leading-relaxed">Record for life</p>
           </div>
 
           {/* 右側：法的情報とサポート */}

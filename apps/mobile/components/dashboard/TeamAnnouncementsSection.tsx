@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -15,6 +15,13 @@ import {
 import { formatDate } from "@apps/shared/utils/date";
 import type { TeamMembershipWithUser, TeamAnnouncement } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
+import {
+  resolveIsTruncated,
+  resolveNumberOfLines,
+  shouldShowToggle,
+} from "@/utils/announcementTruncation";
+
+const ANNOUNCEMENT_CONTENT_MAX_LINES = 2;
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -173,20 +180,80 @@ const TeamCard: React.FC<TeamCardProps> = ({
 };
 
 const AnnouncementItem: React.FC<{ announcement: TeamAnnouncement }> = ({ announcement }) => {
+  const { t } = useTranslation();
   const locale = useDateLocale();
   const parsedUpdatedAt = announcement.updated_at ? parseISO(announcement.updated_at) : new Date(0);
   const updatedAt = isValid(parsedUpdatedAt)
     ? formatDateTime(parsedUpdatedAt, "shortDate", locale)
     : "-";
 
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  // content が変わったら (お知らせ編集後の再フェッチ等) 展開状態をリセットする。
+  // id が不変なため再マウントされないが、isTruncated は下記の非表示計測用 Text が
+  // content 変更のたびに再レイアウトされ onTextLayout で自動的に再判定される。
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [announcement.content]);
+
+  const toggleLabel = isExpanded
+    ? t("teamsAdmin.announcementList.showLess")
+    : t("teamsAdmin.announcementList.showMore");
+
   return (
     <View style={styles.announcementItem}>
       <Text style={styles.announcementTitle} numberOfLines={1}>
         {announcement.title}
       </Text>
-      <Text style={styles.announcementContent} numberOfLines={2}>
+      {/*
+        可視の本文 Text。常に numberOfLines でクランプするため初回から
+        高さが安定しており、計測に伴うレイアウトシフト (伸びて縮むジャンク) が
+        発生しない。行数の実測はこの Text では行わない。
+      */}
+      <Text
+        style={styles.announcementContent}
+        numberOfLines={resolveNumberOfLines({ isExpanded, maxLines: ANNOUNCEMENT_CONTENT_MAX_LINES })}
+        testID={`announcement-content-${announcement.id}`}
+      >
         {announcement.content}
       </Text>
+      {/*
+        非表示の計測専用 Text。同じ content を numberOfLines 無しで描画し、
+        絶対配置でレイアウトフローから外すことでカード高さに影響を与えずに
+        真の行数を取得する。可視 Text と同じ styles.announcementContent を
+        ベースにしてフォント指標を一致させ、行数のズレを防ぐ。
+        content 変更時は自然に再レイアウトされ onTextLayout が再発火する。
+      */}
+      <Text
+        style={[styles.announcementContent, styles.announcementContentMeasure]}
+        onTextLayout={(e) =>
+          setIsTruncated(
+            resolveIsTruncated({
+              measuredLines: e.nativeEvent.lines.length,
+              maxLines: ANNOUNCEMENT_CONTENT_MAX_LINES,
+              wasTruncated: false,
+            }),
+          )
+        }
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        testID={`announcement-content-measure-${announcement.id}`}
+      >
+        {announcement.content}
+      </Text>
+      {shouldShowToggle({ isTruncated, isExpanded }) && (
+        <Pressable
+          testID={`announcement-toggle-${announcement.id}`}
+          onPress={() => setIsExpanded((v) => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: isExpanded }}
+          accessibilityLabel={toggleLabel}
+        >
+          <Text style={styles.announcementToggle}>{toggleLabel}</Text>
+        </Pressable>
+      )}
       <Text style={styles.announcementDate}>{updatedAt}</Text>
     </View>
   );
@@ -268,6 +335,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#374151",
     lineHeight: 18,
+    marginBottom: 4,
+  },
+  announcementContentMeasure: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    opacity: 0,
+    zIndex: -1,
+  },
+  announcementToggle: {
+    fontSize: 13,
+    color: "#2563EB",
+    fontWeight: "600",
     marginBottom: 4,
   },
   announcementDate: {

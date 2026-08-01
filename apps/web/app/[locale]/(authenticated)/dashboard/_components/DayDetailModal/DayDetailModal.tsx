@@ -16,6 +16,9 @@ import {
   isTeamInfo,
 } from "@apps/shared/types/ui";
 import type { PracticeLog } from "@apps/shared/types";
+import { useCalendarColorSettingsQuery } from "@apps/shared/hooks";
+import { resolveCalendarItemColor, getDefaultColorForType } from "@apps/shared/utils/calendarColorResolver";
+import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
 import {
   PracticeDetails,
   CompetitionDetails,
@@ -47,11 +50,49 @@ export default function DayDetailModal({
   onEditRecord,
   onDeleteRecord,
 }: DayDetailModalProps) {
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const t = useTranslations("dashboard");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<DeleteConfirmState | null>(null);
   const [deletedEntryIds, setDeletedEntryIds] = useState<string[]>([]);
   const [showAttendanceModal, setShowAttendanceModal] = useState<AttendanceModalState | null>(null);
+  const { settings: calendarColorSettings } = useCalendarColorSettingsQuery(supabase, user?.id);
+  const getItemColor = (item: CalendarItem) =>
+    resolveCalendarItemColor(item.type, item.metadata, calendarColorSettings);
+
+  // 「記録を追加」チューザーのアイコン色。team_id なし(個人)の練習/大会色を解決する。
+  // デフォルト色時は現状のアイコン色(トロフィー=青/クリップボード=緑)をそのまま維持する。
+  const personalCompetitionColor = resolveCalendarItemColor("competition", null, calendarColorSettings);
+  const personalPracticeColor = resolveCalendarItemColor("practice", null, calendarColorSettings);
+  const isCompetitionColorDefault =
+    personalCompetitionColor === getDefaultColorForType("competition");
+  const isPracticeColorDefault = personalPracticeColor === getDefaultColorForType("practice");
+
+  // チューザーボタンの hover 中の枠線/背景をカスタム色に追従させるための state。
+  // 空状態(entries.length===0)と記録追加セクション(entries.length>0)は排他的にしか
+  // 描画されないため、それぞれ1組の state をボタン種別ごとに共有してよい。
+  const [isRecordButtonHovered, setIsRecordButtonHovered] = useState(false);
+  const [isPracticeButtonHovered, setIsPracticeButtonHovered] = useState(false);
+
+  const recordButtonHoverStyle =
+    isCompetitionColorDefault || !isRecordButtonHovered
+      ? undefined
+      : {
+          backgroundColor: mixWithWhite(
+            personalCompetitionColor,
+            CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND,
+          ),
+          borderColor: hexToRgba(personalCompetitionColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER),
+        };
+  const practiceButtonHoverStyle =
+    isPracticeColorDefault || !isPracticeButtonHovered
+      ? undefined
+      : {
+          backgroundColor: mixWithWhite(
+            personalPracticeColor,
+            CALENDAR_COLOR_ALPHA.DAY_DETAIL_WRAPPER_BACKGROUND,
+          ),
+          borderColor: hexToRgba(personalPracticeColor, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER),
+        };
 
   // practice_log 型アイテムのリスト（重複排除・updateKey 算出の入力）
   const practiceLogItems = useMemo(
@@ -259,18 +300,30 @@ export default function DayDetailModal({
                 <div className="flex gap-3">
                   <button
                     onClick={() => onAddItem?.(date, "record")}
+                    onMouseEnter={() => setIsRecordButtonHovered(true)}
+                    onMouseLeave={() => setIsRecordButtonHovered(false)}
                     className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 whitespace-nowrap"
+                    style={recordButtonHoverStyle}
                     data-testid="add-record-button"
                   >
-                    <TrophyIcon className="h-8 w-8 text-blue-500 mb-2" />
+                    <TrophyIcon
+                      className={`h-8 w-8 mb-2 ${isCompetitionColorDefault ? "text-blue-500" : ""}`}
+                      style={isCompetitionColorDefault ? undefined : { color: personalCompetitionColor }}
+                    />
                     {t("dayDetail.addRecord")}
                   </button>
                   <button
                     onClick={() => onAddItem?.(date, "practice")}
+                    onMouseEnter={() => setIsPracticeButtonHovered(true)}
+                    onMouseLeave={() => setIsPracticeButtonHovered(false)}
                     className="flex-1 flex flex-col items-center justify-center px-4 py-12 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500 whitespace-nowrap"
+                    style={practiceButtonHoverStyle}
                     data-testid="add-practice-button"
                   >
-                    <ClipboardDocumentListIcon className="h-8 w-8 text-green-500 mb-2" />
+                    <ClipboardDocumentListIcon
+                      className={`h-8 w-8 mb-2 ${isPracticeColorDefault ? "text-green-500" : ""}`}
+                      style={isPracticeColorDefault ? undefined : { color: personalPracticeColor }}
+                    />
                     {t("dayDetail.addPractice")}
                   </button>
                 </div>
@@ -304,6 +357,7 @@ export default function DayDetailModal({
                           ? () => handleShowAttendance(item.id, "practice", item.metadata!.team_id!)
                           : undefined
                       }
+                      color={getItemColor(item)}
                     />
                   ))}
 
@@ -357,6 +411,7 @@ export default function DayDetailModal({
                                 handleShowAttendance(practiceId, "practice", item.metadata.team_id!)
                             : undefined
                         }
+                        color={getItemColor(item)}
                       />
                     );
                   })}
@@ -398,6 +453,7 @@ export default function DayDetailModal({
                               handleShowAttendance(item.id, "competition", item.metadata!.team_id!)
                           : undefined
                       }
+                      color={getItemColor(item)}
                     />
                   ))}
 
@@ -452,6 +508,7 @@ export default function DayDetailModal({
                             setShowDeleteConfirm({ id: entryId, type: "entry", competitionId });
                           }}
                           onClose={onClose}
+                          color={getItemColor(item)}
                         />
                       );
                     })}
@@ -515,6 +572,7 @@ export default function DayDetailModal({
                                 )
                             : undefined
                         }
+                        color={getItemColor(record)}
                       />
                     );
                   })}
@@ -529,18 +587,30 @@ export default function DayDetailModal({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => onAddItem?.(date, "record")}
+                    onMouseEnter={() => setIsRecordButtonHovered(true)}
+                    onMouseLeave={() => setIsRecordButtonHovered(false)}
                     className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-blue-50 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={recordButtonHoverStyle}
                     data-testid="add-record-button"
                   >
-                    <TrophyIcon className="h-5 w-5 text-blue-500 mr-2" />
+                    <TrophyIcon
+                      className={`h-5 w-5 mr-2 ${isCompetitionColorDefault ? "text-blue-500" : ""}`}
+                      style={isCompetitionColorDefault ? undefined : { color: personalCompetitionColor }}
+                    />
                     {t("dayDetail.addRecord")}
                   </button>
                   <button
                     onClick={() => onAddItem?.(date, "practice")}
+                    onMouseEnter={() => setIsPracticeButtonHovered(true)}
+                    onMouseLeave={() => setIsPracticeButtonHovered(false)}
                     className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-green-50 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    style={practiceButtonHoverStyle}
                     data-testid="add-practice-button"
                   >
-                    <ClipboardDocumentListIcon className="h-5 w-5 text-green-500 mr-2" />
+                    <ClipboardDocumentListIcon
+                      className={`h-5 w-5 mr-2 ${isPracticeColorDefault ? "text-green-500" : ""}`}
+                      style={isPracticeColorDefault ? undefined : { color: personalPracticeColor }}
+                    />
                     {t("dayDetail.addPractice")}
                   </button>
                 </div>

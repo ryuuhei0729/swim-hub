@@ -85,14 +85,22 @@ describe("[Gate] TeamCompetitionList 記録ボタンの admin 分岐", () => {
     expect(mocks.navigate).not.toHaveBeenCalledWith("RecordLogForm", expect.anything());
   });
 
-  it("isAdmin=false: 記録ボタンで本人フロー RecordLogForm へ遷移 (代理導線なし)", () => {
+  // バグ修正 (2026-08-01): 非 admin の本人フローは RecordLogForm (recordId 未指定の
+  // ブランクフォーム。既存レコードを検索しないため重複作成を招く) から、
+  // useDayDetailHandlers.handleEditRecord と同じ CompetitionTabForm(initialTab:"record")
+  // (competitionId 指定で既存レコードを読み込み編集対象にする) へ統一された。
+  it("isAdmin=false: 記録ボタンで本人フロー CompetitionTabForm(initialTab:'record') へ遷移 (代理導線なし・重複レコード作成バグの回帰防止)", () => {
     render(<TeamCompetitionList teamId="team-1" isAdmin={false} />);
     fireEvent.click(screen.getByRole("button", { name: "記録" }));
     expect(mocks.navigate).toHaveBeenCalledWith(
-      "RecordLogForm",
-      expect.objectContaining({ competitionId: "c-1", teamId: "team-1" }),
+      "CompetitionTabForm",
+      expect.objectContaining({ competitionId: "c-1", teamId: "team-1", initialTab: "record" }),
     );
+    // 非 admin では代理入力画面 (TeamRecordBulkForm) へは遷移しない (非退行)
     expect(mocks.navigate).not.toHaveBeenCalledWith("TeamRecordBulkForm", expect.anything());
+    // 回帰防止: recordId 未指定のブランクフォーム (RecordLogForm) には遷移しないこと
+    // (既存レコードを無視した重複作成バグの再発防止)
+    expect(mocks.navigate).not.toHaveBeenCalledWith("RecordLogForm", expect.anything());
   });
 });
 

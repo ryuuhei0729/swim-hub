@@ -96,6 +96,39 @@ export const Image = ({
 export const TextInput = ({ ...props }: Record<string, unknown>) =>
   React.createElement("input", { type: "text", ...props });
 
+// Switch API
+// value/onValueChange のみを DOM の button + data 属性で観察可能にする。
+// AdminViewToggle.test.tsx は既にファイルローカルで同等のモックを定義しているため、
+// そちらは vi.mock の巻き上げにより本モックを上書きし続ける（衝突なし）。
+export const Switch = ({
+  value,
+  onValueChange,
+  accessibilityRole,
+  accessibilityLabel,
+  trackColor,
+  thumbColor,
+  disabled,
+  ...props
+}: {
+  value?: boolean;
+  onValueChange?: (next: boolean) => void;
+  accessibilityRole?: string;
+  accessibilityLabel?: string;
+  trackColor?: { false: string; true: string };
+  thumbColor?: string;
+  disabled?: boolean;
+} & Record<string, unknown>) =>
+  React.createElement("button", {
+    ...props,
+    role: accessibilityRole,
+    "aria-label": accessibilityLabel,
+    "data-value": String(value),
+    "data-track-color": trackColor ? JSON.stringify(trackColor) : undefined,
+    "data-thumb-color": thumbColor,
+    disabled,
+    onClick: () => onValueChange?.(!value),
+  });
+
 // Modal API
 // React Native の <Modal visible> は visible=false のとき内容を描画しない。
 // テストではこの挙動を再現し、visible=true のときのみ children を描画する。
@@ -166,6 +199,7 @@ const ReactNative = {
   RefreshControl,
   Image,
   TextInput,
+  Switch,
   StyleSheet,
   Platform,
   Alert,

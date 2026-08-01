@@ -354,6 +354,26 @@ export function useRemoveMemberMutation(
   });
 }
 
+/**
+ * チームメンバー一覧のみを取得する軽量クエリ（自分の役割判定など、チーム詳細/お知らせ等
+ * 他のデータを必要としない用途向け。useTeamsQuery({ teamId }) は teams 一覧・チーム詳細・
+ * お知らせも同時に取得してしまうため、それらが不要な画面ではこちらを使う。
+ * queryKey は useTeamsQuery 内の membersQuery と同一 (teamKeys.members) のためキャッシュを共有する。
+ */
+export function useTeamMembersQuery(supabase: SupabaseClient, teamId?: string, api?: TeamMembersAPI) {
+  const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
+
+  return useQuery({
+    queryKey: teamKeys.members(teamId!),
+    queryFn: async () => {
+      if (!teamId) throw new Error("teamId is required");
+      return await membersApi.list(teamId);
+    },
+    enabled: !!teamId,
+    staleTime: 5 * 60 * 1000, // 5分
+  });
+}
+
 export function useListPendingMembersQuery(supabase: SupabaseClient, teamId?: string, api?: TeamMembersAPI) {
   const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
 

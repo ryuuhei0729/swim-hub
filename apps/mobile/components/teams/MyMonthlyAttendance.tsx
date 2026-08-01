@@ -19,6 +19,7 @@ import { startOfMonth, endOfMonth, addMonths, format, parseISO } from "date-fns"
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
 import { useTranslation } from "react-i18next";
 import { useDateLocale } from "@/hooks/useDateLocale";
+import { AttendanceGroupModal } from "./AttendanceGroupModal";
 
 export interface MyMonthlyAttendanceProps {
   teamId: string;
@@ -74,6 +75,20 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const [savingEventIds, setSavingEventIds] = useState<Set<string>>(new Set());
   // 個別保存とまとめて保存の同時実行を防ぐための共通フラグ
   const isAnySaving = saving || savingEventIds.size > 0;
+
+  // T-5a: 即回答セクション（今月/来月タブ）用の独立した state。selectedMonth に依存させず、
+  // 月モーダルを開かなくても出欠を回答できるようにする（web useRecentAttendance 相当）。
+  const [quickTab, setQuickTab] = useState<"current" | "next">("current");
+  const [quickEvents, setQuickEvents] = useState<TeamEvent[]>([]);
+  const [quickAttendances, setQuickAttendances] = useState<TeamAttendanceWithDetails[]>([]);
+  const [quickEditStates, setQuickEditStates] = useState<Record<string, AttendanceEditState>>({});
+  const [quickLoading, setQuickLoading] = useState(true);
+  const [quickError, setQuickError] = useState<string | null>(null);
+  const [quickSavingEventIds, setQuickSavingEventIds] = useState<Set<string>>(new Set());
+
+  // T-5b: 「誰が来るか」閲覧モーダル用の state（一般メンバーは閲覧専用）
+  const [groupViewEvent, setGroupViewEvent] = useState<TeamEvent | null>(null);
+  const [groupViewVisible, setGroupViewVisible] = useState(false);
 
   // 各月のステータスを計算
   const calculateMonthStatus = useCallback(
@@ -206,6 +221,91 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       setLoadingMonthList(false);
     }
   }, [teamId, supabase, calculateMonthStatus, t]);
+
+  // T-5a: 即回答セクション用データ（今月〜来月分のイベント + 自分の出欠）を取得
+  // （web useRecentAttendance.loadRecentAttendances 相当）
+  const loadQuickAttendances = useCallback(async () => {
+    try {
+      setQuickLoading(true);
+      setQuickError(null);
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      const nextMonthDate = addMonths(now, 1);
+      const nextYear = nextMonthDate.getFullYear();
+      const nextMonth = nextMonthDate.getMonth() + 1;
+
+      const [currentStart] = getMonthDateRange(currentYear, currentMonth);
+      const [, nextEnd] = getMonthDateRange(nextYear, nextMonth);
+
+      const [practicesResult, competitionsResult] = await Promise.all([
+        supabase
+          .from("practices")
+          .select("*")
+          .eq("team_id", teamId)
+          .gte("date", currentStart)
+          .lte("date", nextEnd)
+          .order("date", { ascending: true }),
+        supabase
+          .from("competitions")
+          .select("*")
+          .eq("team_id", teamId)
+          .gte("date", currentStart)
+          .lte("date", nextEnd)
+          .order("date", { ascending: true }),
+      ]);
+
+      if (practicesResult.error) throw practicesResult.error;
+      if (competitionsResult.error) throw competitionsResult.error;
+
+      const practices: TeamEvent[] = (practicesResult.data || []).map((p) => ({
+        ...p,
+        type: "practice" as const,
+      }));
+      const competitions: TeamEvent[] = (competitionsResult.data || []).map((c) => ({
+        ...c,
+        type: "competition" as const,
+      }));
+      const allEvents = [...practices, ...competitions].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+      );
+      setQuickEvents(allEvents);
+
+      const [currentAttendances, nextAttendances] = await Promise.all([
+        attendanceAPI.getMyAttendancesByMonth(teamId, currentYear, currentMonth),
+        attendanceAPI.getMyAttendancesByMonth(teamId, nextYear, nextMonth),
+      ]);
+      const allAttendances = [...currentAttendances, ...nextAttendances];
+      setQuickAttendances(allAttendances);
+
+      const initialEditStates: Record<string, AttendanceEditState> = {};
+      allAttendances.forEach((attendance) => {
+        const eventId = attendance.practice_id || attendance.competition_id;
+        if (eventId) {
+          initialEditStates[eventId] = {
+            status: attendance.status,
+            note: attendance.note || "",
+          };
+        }
+      });
+      allEvents.forEach((event) => {
+        if (!initialEditStates[event.id]) {
+          initialEditStates[event.id] = { status: null, note: "" };
+        }
+      });
+      setQuickEditStates(initialEditStates);
+    } catch (err) {
+      console.error("直近の出欠情報の取得に失敗:", err);
+      setQuickError(t("teams.recentAttendanceHook.loadError"));
+    } finally {
+      setQuickLoading(false);
+    }
+  }, [teamId, supabase, attendanceAPI, t]);
+
+  useEffect(() => {
+    loadQuickAttendances();
+  }, [loadQuickAttendances]);
 
   // 月別の出欠情報を取得（モーダル用）
   const loadAttendances = useCallback(async () => {
@@ -340,7 +440,135 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     return !(editState.status === null && editState.note === "");
   };
 
-  // イベント単位保存（web useRecentAttendance.saveEvent 相当）
+  // 出欠1件分の保存処理（月モーダル・即回答セクションの両方から呼び出す共通ロジック）。
+  // 締切後編集の確認ダイアログ→更新/新規作成の分岐は web useRecentAttendance.saveEvent と同一。
+  // 確認ダイアログでキャンセルされた場合は null を返す。
+  const performAttendanceSave = useCallback(
+    async (
+      event: TeamEvent,
+      editState: AttendanceEditState,
+      existingAttendance: TeamAttendanceWithDetails | undefined,
+    ): Promise<{ status: AttendanceStatus | null; note: string } | null> => {
+      if (event.attendance_status === "closed") {
+        const date = parseISO(event.date);
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+        const confirmed = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            t("teams.mobile.adminAttendance.confirmTitle"),
+            t("teams.mobile.attendanceConfirmEditAfterDeadline", { dates: dateStr }),
+            [
+              { text: t("common.cancel"), style: "cancel", onPress: () => resolve(false) },
+              { text: t("common.ok"), onPress: () => resolve(true) },
+            ],
+            { cancelable: true, onDismiss: () => resolve(false) },
+          );
+        });
+        if (!confirmed) return null;
+      }
+
+      if (existingAttendance) {
+        // 更新: shared bulkUpdateMyAttendances が締切後編集マークを付与する
+        await attendanceAPI.bulkUpdateMyAttendances([
+          {
+            attendanceId: existingAttendance.id,
+            status: editState.status,
+            note: editState.note || null,
+          },
+        ]);
+        return { status: editState.status, note: editState.note || "" };
+      }
+
+      // 新規作成
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+
+      let note: string | null = editState.note
+        ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH)
+        : null;
+
+      if (event.attendance_status === "closed") {
+        const editMark = `(${format(new Date(), "MM/dd HH:mm")}締切後編集)`;
+        if (note) {
+          const cleaned = note.replace(EDIT_MARK_REGEX, "").trim();
+          const combined = cleaned ? `${cleaned} ${editMark}` : editMark;
+          note =
+            combined.length > NOTE_MAX_LENGTH ? combined.substring(0, NOTE_MAX_LENGTH) : combined;
+        } else {
+          note = editMark;
+        }
+      }
+
+      const { error: insertError } = await supabase.from("team_attendance").insert({
+        user_id: user.id,
+        practice_id: event.type === "practice" ? event.id : null,
+        competition_id: event.type === "competition" ? event.id : null,
+        status: editState.status,
+        note,
+      });
+      if (insertError) throw insertError;
+
+      return { status: editState.status, note: note || "" };
+    },
+    [supabase, attendanceAPI, t],
+  );
+
+  // 出欠保存の確定結果を即回答セクションの state にも反映する。反映対象は「保存された
+  // eventId 1件だけ」に限定し、他イベントの未保存編集(quickEditStates)には一切触れない。
+  // NOTE(Critical fix): 以前はここで loadQuickAttendances() を呼んでいたが、その内部の
+  // setQuickEditStates(initialEditStates) は quickEditStates を丸ごとサーバー値で
+  // 上書きするため、月モーダルでイベントAを保存した瞬間に即回答セクションで入力中の
+  // イベントBの未保存内容が警告なく消えるデータ損失があった。保存対象イベントの行だけを
+  // 差分更新することでこれを回避する。
+  const syncQuickStateAfterSave = useCallback(
+    async (
+      eventId: string,
+      event: TeamEvent,
+      saved: { status: AttendanceStatus | null; note: string },
+    ) => {
+      // 即回答セクションが表示していない(今月/来月以外の)イベントなら何もしない
+      if (!quickEvents.some((e) => e.id === eventId)) return;
+
+      const existingInQuick = quickAttendances.find(
+        (a) => (a.practice_id || a.competition_id) === eventId,
+      );
+
+      if (existingInQuick) {
+        setQuickAttendances((prev) =>
+          prev.map((a) =>
+            a.id === existingInQuick.id ? { ...a, status: saved.status, note: saved.note } : a,
+          ),
+        );
+      } else {
+        // 新規作成: 保存された行(id含む)を取り込むため、対象月分のみ再取得する
+        const eventDate = parseISO(event.date);
+        const refreshed = await attendanceAPI.getMyAttendancesByMonth(
+          teamId,
+          eventDate.getFullYear(),
+          eventDate.getMonth() + 1,
+        );
+        setQuickAttendances((prev) => {
+          const refreshedEventIds = new Set(
+            refreshed.map((a) => a.practice_id || a.competition_id),
+          );
+          const others = prev.filter(
+            (a) => !refreshedEventIds.has(a.practice_id || a.competition_id),
+          );
+          return [...others, ...refreshed];
+        });
+      }
+
+      // 保存が確定したイベントの編集状態だけをサーバー値に同期する（他イベントは触らない）
+      setQuickEditStates((prev) => ({
+        ...prev,
+        [eventId]: { status: saved.status, note: saved.note },
+      }));
+    },
+    [quickEvents, quickAttendances, attendanceAPI, teamId],
+  );
+
+  // イベント単位保存（月モーダル用。web useRecentAttendance.saveEvent 相当）
   const handleSaveEvent = async (eventId: string) => {
     const event = events.find((e) => e.id === eventId);
     const editState = editStates[eventId];
@@ -351,70 +579,12 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       (a) => (a.practice_id || a.competition_id) === eventId,
     );
 
-    // 締切後編集の確認（handleSaveAll と同一挙動）
-    if (event.attendance_status === "closed") {
-      const date = parseISO(event.date);
-      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-      const confirmed = await new Promise<boolean>((resolve) => {
-        Alert.alert(
-          t("teams.mobile.adminAttendance.confirmTitle"),
-          t("teams.mobile.attendanceConfirmEditAfterDeadline", { dates: dateStr }),
-          [
-            { text: t("common.cancel"), style: "cancel", onPress: () => resolve(false) },
-            { text: t("common.ok"), onPress: () => resolve(true) },
-          ],
-          { cancelable: true, onDismiss: () => resolve(false) },
-        );
-      });
-      if (!confirmed) return;
-    }
-
     try {
       setSavingEventIds((prev) => new Set(prev).add(eventId));
       setError(null);
 
-      if (existingAttendance) {
-        // 更新: shared bulkUpdateMyAttendances が締切後編集マークを付与する（handleSaveAll と同経路）
-        await attendanceAPI.bulkUpdateMyAttendances([
-          {
-            attendanceId: existingAttendance.id,
-            status: editState.status,
-            note: editState.note || null,
-          },
-        ]);
-      } else {
-        // 新規作成: handleSaveAll の insert 経路と同一ロジック
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
-
-        let note: string | null = editState.note
-          ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH)
-          : null;
-
-        if (event.attendance_status === "closed") {
-          const editMark = `(${format(new Date(), "MM/dd HH:mm")}締切後編集)`;
-          if (note) {
-            const cleaned = note.replace(EDIT_MARK_REGEX, "").trim();
-            const combined = cleaned ? `${cleaned} ${editMark}` : editMark;
-            note =
-              combined.length > NOTE_MAX_LENGTH ? combined.substring(0, NOTE_MAX_LENGTH) : combined;
-          } else {
-            note = editMark;
-          }
-        }
-
-        const { error: insertError } = await supabase.from("team_attendance").insert({
-          user_id: user.id,
-          practice_id: event.type === "practice" ? event.id : null,
-          competition_id: event.type === "competition" ? event.id : null,
-          status: editState.status,
-          note,
-        });
-
-        if (insertError) throw insertError;
-      }
+      const saved = await performAttendanceSave(event, editState, existingAttendance);
+      if (!saved) return; // 締切後編集の確認でキャンセルされた
 
       // 出欠情報を再取得し、保存したイベントの編集状態のみ確定値へ同期する
       // （loadAttendances は editStates 全体を初期化するため、他イベントの未保存編集を消さないようここでは使わない）
@@ -425,19 +595,21 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
           selectedMonth.month,
         );
         setAttendances(attendanceData);
-        const saved = attendanceData.find(
+        const savedRow = attendanceData.find(
           (a) => (a.practice_id || a.competition_id) === eventId,
         );
         setEditStates((prev) => ({
           ...prev,
           [eventId]: {
-            status: saved?.status ?? null,
-            note: saved?.note || "",
+            status: savedRow?.status ?? null,
+            note: savedRow?.note || "",
           },
         }));
       }
-      // 月リストのステータスも更新（モーダルは開いたまま）
+      // 月リストのステータスを更新（モーダルは開いたまま）。即回答セクションは
+      // 保存した eventId 1件分だけを差分反映し、他イベントの未保存編集は保持する。
       await loadMonthList();
+      await syncQuickStateAfterSave(eventId, event, saved);
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
       const errorMessage =
@@ -452,6 +624,103 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         return next;
       });
     }
+  };
+
+  // T-5a: 即回答セクション用の状態変更・保存ハンドラ
+
+  const quickFilteredEvents = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const nextMonthDate = addMonths(now, 1);
+    const nextYear = nextMonthDate.getFullYear();
+    const nextMonth = nextMonthDate.getMonth() + 1;
+
+    return quickEvents.filter((event) => {
+      const eventDate = parseISO(event.date);
+      const eventYear = eventDate.getFullYear();
+      const eventMonth = eventDate.getMonth() + 1;
+      if (quickTab === "current") {
+        return eventYear === currentYear && eventMonth === currentMonth;
+      }
+      return eventYear === nextYear && eventMonth === nextMonth;
+    });
+  }, [quickEvents, quickTab]);
+
+  const handleQuickStatusChange = (eventId: string, status: AttendanceStatus | null) => {
+    setQuickEditStates((prev) => ({
+      ...prev,
+      [eventId]: { ...prev[eventId], status },
+    }));
+  };
+
+  const handleQuickNoteChange = (eventId: string, note: string) => {
+    setQuickEditStates((prev) => ({
+      ...prev,
+      [eventId]: { ...prev[eventId], note },
+    }));
+  };
+
+  const isQuickEventChanged = (eventId: string): boolean => {
+    const editState = quickEditStates[eventId];
+    if (!editState) return false;
+    const existingAttendance = quickAttendances.find(
+      (a) => (a.practice_id || a.competition_id) === eventId,
+    );
+    if (existingAttendance) {
+      return !(
+        existingAttendance.status === editState.status &&
+        (existingAttendance.note || "") === editState.note
+      );
+    }
+    return !(editState.status === null && editState.note === "");
+  };
+
+  const handleSaveQuickEvent = async (eventId: string) => {
+    const event = quickEvents.find((e) => e.id === eventId);
+    const editState = quickEditStates[eventId];
+    if (!event || !editState) return;
+    if (!isQuickEventChanged(eventId)) return;
+
+    const existingAttendance = quickAttendances.find(
+      (a) => (a.practice_id || a.competition_id) === eventId,
+    );
+
+    try {
+      setQuickSavingEventIds((prev) => new Set(prev).add(eventId));
+      setQuickError(null);
+
+      const saved = await performAttendanceSave(event, editState, existingAttendance);
+      if (!saved) return;
+
+      // 保存対象の eventId 1件だけを差分反映（handleSaveEvent と共通のロジック）
+      await syncQuickStateAfterSave(eventId, event, saved);
+
+      // 月一覧のステータス(has_unanswered/all_answered)を即座に反映
+      await loadMonthList();
+    } catch (err) {
+      console.error("出欠情報の保存に失敗:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : t("teams.recentAttendanceHook.saveError");
+      Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
+    } finally {
+      setQuickSavingEventIds((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+    }
+  };
+
+  // T-5b: 「誰が来るか」閲覧モーダル（一般メンバーは閲覧専用）
+  const handleOpenGroupView = (event: TeamEvent) => {
+    setGroupViewEvent(event);
+    setGroupViewVisible(true);
+  };
+
+  const handleCloseGroupView = () => {
+    setGroupViewVisible(false);
+    setGroupViewEvent(null);
   };
 
   // まとめて保存
@@ -725,6 +994,180 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   return (
     <>
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        {/* T-5a: 即回答セクション（今月/来月タブ + 個別保存） */}
+        <View style={styles.quickSection}>
+          <Text style={styles.quickSectionTitle}>{t("teams.recentAttendance.title")}</Text>
+          <View style={styles.quickTabRow}>
+            <Pressable
+              style={[styles.quickTabButton, quickTab === "current" && styles.quickTabButtonActive]}
+              onPress={() => setQuickTab("current")}
+            >
+              <Text
+                style={[
+                  styles.quickTabText,
+                  quickTab === "current" && styles.quickTabTextActive,
+                ]}
+              >
+                {t("teams.recentAttendance.thisMonth")}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.quickTabButton, quickTab === "next" && styles.quickTabButtonActive]}
+              onPress={() => setQuickTab("next")}
+            >
+              <Text
+                style={[styles.quickTabText, quickTab === "next" && styles.quickTabTextActive]}
+              >
+                {t("teams.recentAttendance.nextMonth")}
+              </Text>
+            </Pressable>
+          </View>
+
+          {quickLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>{t("common.loading")}</Text>
+            </View>
+          ) : quickError ? (
+            <View style={styles.quickErrorContainer}>
+              <Text style={styles.errorText}>{quickError}</Text>
+              <Pressable
+                style={styles.retryButton}
+                onPress={loadQuickAttendances}
+                accessibilityRole="button"
+              >
+                <Feather name="refresh-cw" size={14} color="#FFFFFF" />
+                <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
+              </Pressable>
+            </View>
+          ) : quickFilteredEvents.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>{t("teams.recentAttendance.empty")}</Text>
+            </View>
+          ) : (
+            <View style={styles.eventsContainer}>
+              {quickFilteredEvents.map((event) => {
+                const editState = quickEditStates[event.id] || { status: null, note: "" };
+                const changed = isQuickEventChanged(event.id);
+                const savingEvent = quickSavingEventIds.has(event.id);
+
+                return (
+                  <View
+                    key={`quick-${event.type}-${event.id}`}
+                    style={[
+                      styles.eventCard,
+                      event.type === "competition" && styles.eventCardCompetition,
+                    ]}
+                  >
+                    <Pressable
+                      style={styles.eventHeader}
+                      onPress={() => handleOpenGroupView(event)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("teams.attendanceStatusModal.title")}
+                    >
+                      <View style={styles.eventInfo}>
+                        <Text style={styles.eventDate}>
+                          {formatDate(event.date, "shortWithWeekday", locale)}
+                        </Text>
+                        <Text style={styles.eventTitle}>
+                          {event.type === "competition"
+                            ? event.title
+                            : t("teams.mobile.fallbackPractice")}
+                        </Text>
+                        {event.place && <Text style={styles.eventPlace}>@{event.place}</Text>}
+                      </View>
+                      {getStatusBadge(event.attendance_status)}
+                    </Pressable>
+
+                    <View style={styles.attendanceButtons}>
+                      <Pressable
+                        style={[
+                          styles.attendanceButton,
+                          editState.status === "present" && styles.attendanceButtonActivePresent,
+                        ]}
+                        onPress={() => handleQuickStatusChange(event.id, "present")}
+                      >
+                        <Text
+                          style={[
+                            styles.attendanceButtonText,
+                            editState.status === "present" && styles.attendanceButtonTextActive,
+                          ]}
+                        >
+                          {t("teams.mobile.attendanceStatusPresent")}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[
+                          styles.attendanceButton,
+                          editState.status === "absent" && styles.attendanceButtonActiveAbsent,
+                        ]}
+                        onPress={() => handleQuickStatusChange(event.id, "absent")}
+                      >
+                        <Text
+                          style={[
+                            styles.attendanceButtonText,
+                            editState.status === "absent" && styles.attendanceButtonTextActive,
+                          ]}
+                        >
+                          {t("teams.mobile.attendanceStatusAbsent")}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={[
+                          styles.attendanceButton,
+                          editState.status === "other" && styles.attendanceButtonActiveOther,
+                        ]}
+                        onPress={() => handleQuickStatusChange(event.id, "other")}
+                      >
+                        <Text
+                          style={[
+                            styles.attendanceButtonText,
+                            editState.status === "other" && styles.attendanceButtonTextActive,
+                          ]}
+                        >
+                          {t("teams.mobile.attendanceStatusOther")}
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    <TextInput
+                      style={styles.noteInput}
+                      value={editState.note}
+                      onChangeText={(text) => handleQuickNoteChange(event.id, text)}
+                      placeholder={t("teams.recentAttendance.notePlaceholder")}
+                      multiline
+                      numberOfLines={2}
+                    />
+
+                    <View style={styles.eventSaveRow}>
+                      <Pressable
+                        style={[
+                          styles.eventSaveButton,
+                          (!changed || savingEvent) && styles.eventSaveButtonDisabled,
+                        ]}
+                        onPress={() => handleSaveQuickEvent(event.id)}
+                        disabled={!changed || savingEvent}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("teams.recentAttendance.saveButton")}
+                      >
+                        <Text
+                          style={[
+                            styles.eventSaveButtonText,
+                            (!changed || savingEvent) && styles.eventSaveButtonTextDisabled,
+                          ]}
+                        >
+                          {savingEvent
+                            ? t("teams.mobile.saveLoading")
+                            : t("teams.recentAttendance.saveButton")}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
         {/* 月リスト表示 */}
         {monthList.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -798,9 +1241,14 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                             event.type === "competition" && styles.eventCardCompetition,
                           ]}
                         >
-                          {/* イベント情報とステータスバッジ */}
+                          {/* イベント情報とステータスバッジ（タップで「誰が来るか」閲覧、T-5b） */}
                           <View style={styles.eventHeader}>
-                            <View style={styles.eventInfo}>
+                            <Pressable
+                              style={styles.eventInfo}
+                              onPress={() => handleOpenGroupView(event)}
+                              accessibilityRole="button"
+                              accessibilityLabel={t("teams.attendanceStatusModal.title")}
+                            >
                               <Text style={styles.eventDate}>
                                 {formatDate(event.date, "shortWithWeekday", locale)}
                               </Text>
@@ -810,7 +1258,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                                   : t("teams.mobile.fallbackPractice")}
                               </Text>
                               {event.place && <Text style={styles.eventPlace}>@{event.place}</Text>}
-                            </View>
+                            </Pressable>
                             {getStatusBadge(event.attendance_status)}
                           </View>
 
@@ -933,6 +1381,18 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
           </ScrollView>
         </View>
       </Modal>
+
+      {/* T-5b: 「誰が来るか」閲覧モーダル（閲覧専用、AdminMonthlyAttendance と共通実装） */}
+      <AttendanceGroupModal
+        visible={groupViewVisible}
+        onClose={handleCloseGroupView}
+        supabase={supabase}
+        teamId={teamId}
+        eventId={groupViewEvent?.id ?? null}
+        eventType={groupViewEvent?.type ?? null}
+        eventDate={groupViewEvent?.date ?? null}
+        locale={locale}
+      />
     </>
   );
 };
@@ -966,6 +1426,61 @@ const styles = StyleSheet.create({
   errorText: {
     color: "#DC2626",
     fontSize: 14,
+  },
+  quickErrorContainer: {
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 8,
+    padding: 16,
+    alignItems: "center",
+    gap: 12,
+  },
+  retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  quickSection: {
+    marginBottom: 20,
+  },
+  quickSectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#111827",
+    marginBottom: 12,
+  },
+  quickTabRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  quickTabButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
+  },
+  quickTabButtonActive: {
+    backgroundColor: "#DBEAFE",
+  },
+  quickTabText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6B7280",
+  },
+  quickTabTextActive: {
+    color: "#1E40AF",
+    fontWeight: "600",
   },
   monthListContainer: {
     gap: 8,

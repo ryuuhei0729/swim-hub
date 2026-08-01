@@ -35,6 +35,8 @@ export default async function CompetitionDataLoader() {
     }),
     // 大会記録をReact Queryキャッシュにprefetch
     // クライアント側のuseRecordsQueryと同じキー・パラメータに揃える
+    // (一覧はクライアント側で絞り込み/並べ替えするため全件取得。pageSize=20 だと
+    //  created_at 降順の先頭20件で切れ、登録が古い一括入力レコード等が欠落する)
     user
       ? queryClient.prefetchQuery({
           queryKey: recordKeys.list({
@@ -42,11 +44,17 @@ export default async function CompetitionDataLoader() {
             endDate: undefined,
             styleId: undefined,
             page: 1,
-            pageSize: 20,
+            pageSize: 1000,
           }),
+          retry: false,
           queryFn: async () => {
-            const recordAPI = new RecordAPI(supabase);
-            return await recordAPI.getRecords(undefined, undefined, undefined, 20, 0);
+            try {
+              const recordAPI = new RecordAPI(supabase);
+              return await recordAPI.getRecords(undefined, undefined, undefined, 1000, 0);
+            } catch (error) {
+              console.error("[CompetitionDataLoader] Records prefetch エラー:", error);
+              throw error;
+            }
           },
         })
       : Promise.resolve(),

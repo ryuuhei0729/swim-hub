@@ -560,15 +560,6 @@ describe("[V-C2C2-01] teamsAdmin namespace の必須キー確認", () => {
     "teamsAdmin.attendanceStatus.titleSuffix",
 
     // --------------------------------------------------------
-    // AttendanceGroupingDisplay.tsx
-    // --------------------------------------------------------
-    "teamsAdmin.attendanceGrouping.present",
-    "teamsAdmin.attendanceGrouping.absent",
-    "teamsAdmin.attendanceGrouping.other",
-    "teamsAdmin.attendanceGrouping.unanswered",
-    "teamsAdmin.attendanceGrouping.none",
-
-    // --------------------------------------------------------
     // TemplateDownload.tsx
     // --------------------------------------------------------
     "teamsAdmin.templateDownload.title",
@@ -782,7 +773,7 @@ describe("[V-C2C2-03] Phase 1-C-1 / 1-C-2-A / 1-C-2-B / 1-C-2-C-1 必須キー�
     "footer.links.privacy",
     // Phase 1-C-2-A: competition
     "competition.header.title",
-    "competition.filter.periodLabel",
+    "competition.filter.allStyles",
     "competition.table.date",
     "competition.detail.title",
     // Phase 1-C-2-A: settings
@@ -854,11 +845,6 @@ describe("[V-C2C2-04] ICU Message Format プレースホルダーの ja/en 対�
     "teamsAdmin.groupMember.selectedCount",
     // GroupMemberListModal メンバー数: {count}人のメンバー
     "teamsAdmin.groupMemberList.memberCount",
-    // AttendanceGroupingDisplay カテゴリヘッダー: 出席 ({count}名) 等
-    "teamsAdmin.attendanceGrouping.present",
-    "teamsAdmin.attendanceGrouping.absent",
-    "teamsAdmin.attendanceGrouping.other",
-    "teamsAdmin.attendanceGrouping.unanswered",
     // DataPreview エラー件数: {count}件
     "teamsAdmin.dataPreview.errorTitle",
     // DataPreview 練習/大会件数

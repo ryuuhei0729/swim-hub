@@ -1,14 +1,19 @@
 import React, { useMemo, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { format } from "date-fns";
+import { parseISO } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import type { PracticeWithLogs } from "@swim-hub/shared/types";
+import { formatDate } from "@apps/shared/utils/date";
+import type { PracticeWithLogs, PracticeLogWithTags } from "@swim-hub/shared/types";
 import { formatCircleTime } from "@/utils/formatters";
+import { useDateLocale } from "@/hooks/useDateLocale";
 
 interface PracticeItemProps {
   practice: PracticeWithLogs;
+  /** このカードが表示する練習ログ。ログ未登録の練習は null(ヘッダー行のみのカードになる) */
+  log?: PracticeLogWithTags | null;
   onPress?: (practice: PracticeWithLogs) => void;
 }
 
@@ -27,13 +32,22 @@ const getStyleName = (t: TFunction, style: string): string => {
 
 /**
  * 練習記録アイテムコンポーネント
- * 練習記録の1件を表示
+ *
+ * 1枚 = 1練習ログ(2026-08-01)。1つの練習に複数ログがある場合は、同じヘッダー
+ * (日付/タイトル/場所)を持つカードがログの数だけ並ぶ。大会タブ (RecordItem: 1記録
+ * =1カード) と同じ粒度。タップ先は従来どおり練習全体(その日の DayDetailModal)で、
+ * どのログのカードから開いても同じ練習の全ログが載ったモーダルが開く。
  */
-const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress }) => {
+const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, log, onPress }) => {
   const { t } = useTranslation();
+  const locale = useDateLocale();
 
-  // 日付をフォーマット（M/d形式、年と曜日なし）
-  const formattedDate = useMemo(() => format(new Date(practice.date), "M/d"), [practice.date]);
+  // 日付をフォーマット（大会記録カードと同じ流儀: ゾーン変換 + numeric スタイル・ロケール依存）
+  const formattedDate = useMemo(() => {
+    const parsed = parseISO(practice.date);
+    const zoned = toZonedTime(parsed, Intl.DateTimeFormat().resolvedOptions().timeZone);
+    return formatDate(zoned, "numeric", locale);
+  }, [practice.date, locale]);
 
   // タイトル（null の場合は既存 client.practiceTitle = "練習" を流用）
   const title = useMemo(
@@ -41,29 +55,26 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
     [practice.title, t],
   );
 
-  // 最初のログの情報を取得（複数ログがある場合は最初のものを表示）
-  const firstLog = useMemo(() => practice.practice_logs?.[0], [practice.practice_logs]);
-
-  // 2行目の情報を構築（タグ以外）
-  const secondLineInfo = useMemo(() => {
-    if (!firstLog) return "";
+  // このカードが担当する1ログ分の表示情報（距離×本数×セット / サークル / 種目、タグ）
+  const logRow = useMemo(() => {
+    if (!log) return null;
 
     const parts: string[] = [];
 
     // 距離・本数・セット
-    if (firstLog.distance && firstLog.rep_count && firstLog.set_count) {
+    if (log.distance && log.rep_count && log.set_count) {
       parts.push(
         t("practice.page.distanceFormat", {
-          distance: firstLog.distance,
-          reps: firstLog.rep_count,
-          sets: firstLog.set_count,
+          distance: log.distance,
+          reps: log.rep_count,
+          sets: log.set_count,
         }),
       );
     }
 
     // サークル
-    if (firstLog.circle) {
-      const circleTime = formatCircleTime(firstLog.circle);
+    if (log.circle) {
+      const circleTime = formatCircleTime(log.circle);
       // 共有実装は null の場合に '-' を返すため、'-' の場合は除外
       if (circleTime && circleTime !== "-") {
         parts.push(circleTime);
@@ -71,21 +82,20 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
     }
 
     // 種目
-    if (firstLog.style) {
-      parts.push(getStyleName(t, firstLog.style));
+    if (log.style) {
+      parts.push(getStyleName(t, log.style));
     }
 
-    return parts.join(" / ");
-  }, [firstLog, t]);
-
-  // タグ情報を取得
-  const tags = useMemo(() => {
-    return (
-      firstLog?.practice_log_tags
+    const tags =
+      log.practice_log_tags
         ?.map((lt) => lt.practice_tags)
-        .filter((tag): tag is NonNullable<typeof tag> => tag != null) || []
-    );
-  }, [firstLog]);
+        .filter((tag): tag is NonNullable<typeof tag> => tag != null) || [];
+
+    return {
+      secondLineInfo: parts.join(" / "),
+      tags,
+    };
+  }, [log, t]);
 
   const handlePress = useCallback(() => {
     onPress?.(practice);
@@ -113,17 +123,17 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, onPress 
           )}
         </View>
 
-        {/* 2行目: 距離・本数・セット、サークル、種目、タグ */}
-        {(secondLineInfo || tags.length > 0) && (
+        {/* 2行目: このカードのログの距離・本数・セット、サークル、種目、タグ */}
+        {logRow && (logRow.secondLineInfo || logRow.tags.length > 0) && (
           <View style={styles.secondRow}>
-            {secondLineInfo && (
+            {logRow.secondLineInfo && (
               <Text style={styles.secondLine} numberOfLines={1}>
-                {secondLineInfo}
+                {logRow.secondLineInfo}
               </Text>
             )}
-            {tags.length > 0 && (
+            {logRow.tags.length > 0 && (
               <View style={styles.tagsContainer}>
-                {tags.map((tag) => (
+                {logRow.tags.map((tag) => (
                   <View
                     key={tag.id}
                     style={[styles.tag, { backgroundColor: tag.color || "#6B7280" }]}
@@ -231,7 +241,7 @@ const styles = StyleSheet.create({
 
 // メモ化して再レンダリングを最適化
 export const PracticeItem = React.memo(PracticeItemComponent, (prevProps, nextProps) => {
-  // カスタム比較関数：practice.idが同じで、practiceの主要プロパティが変更されていない場合は再レンダリングしない
+  // カードのヘッダーが依存する practice の表示プロパティ
   const prev = prevProps.practice;
   const next = nextProps.practice;
 
@@ -239,38 +249,24 @@ export const PracticeItem = React.memo(PracticeItemComponent, (prevProps, nextPr
     prev.id !== next.id ||
     prev.date !== next.date ||
     prev.title !== next.title ||
-    prev.place !== next.place ||
-    prev.note !== next.note
+    prev.place !== next.place
   ) {
     return false;
   }
 
-  const prevLogs = prev.practice_logs;
-  const nextLogs = next.practice_logs;
+  // カード本文が依存するのは自分の1ログのみ(兄弟ログの変化は自分のカードに影響しない)
+  const prevLog = prevProps.log ?? null;
+  const nextLog = nextProps.log ?? null;
 
-  // 参照が同一なら変更なしとみなす
-  if (prevLogs === nextLogs) {
-    return true;
+  if (prevLog === nextLog) {
+    return prevProps.onPress === nextProps.onPress;
   }
-
-  // どちらかが未定義の場合の判定
-  if (!prevLogs || !nextLogs) {
-    return prevLogs === nextLogs;
+  if (!prevLog || !nextLog) {
+    return false;
   }
-
-  // 長さが異なれば変更あり
-  if (prevLogs.length !== nextLogs.length) {
+  if (prevLog.id !== nextLog.id || prevLog.updated_at !== nextLog.updated_at) {
     return false;
   }
 
-  // シャロー比較（id または updated_at が変われば再レンダリング）
-  for (let i = 0; i < prevLogs.length; i++) {
-    const prevLog = prevLogs[i];
-    const nextLog = nextLogs[i];
-    if (prevLog.id !== nextLog.id || prevLog.updated_at !== nextLog.updated_at) {
-      return false;
-    }
-  }
-
-  return true;
+  return prevProps.onPress === nextProps.onPress;
 });
