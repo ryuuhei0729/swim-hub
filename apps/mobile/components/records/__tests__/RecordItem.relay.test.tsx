@@ -8,7 +8,7 @@
 // まったく同じ見た目になっていた (web の CompetitionRecordCard は赤い "R" を
 // 出しており、パリティが破れていた)。
 
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
 import { RecordItem } from "../RecordItem";

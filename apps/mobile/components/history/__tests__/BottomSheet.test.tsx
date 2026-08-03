@@ -14,9 +14,10 @@
  */
 
 import { render, screen } from "@testing-library/react";
-import { Text, PanResponder, type MockGestureState } from "react-native";
+import { Text, PanResponder } from "react-native";
 import { describe, expect, it, vi } from "vitest";
 import { BottomSheet } from "../BottomSheet";
+import type { MockGestureState } from "../../../__mocks__/react-native";
 
 /**
  * BottomSheet が生成した PanResponder の設定を取り出す。
