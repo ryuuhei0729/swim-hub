@@ -29,6 +29,16 @@
  * [DL-20] extractTokenHashFromUrl — token_hash が無い場合は null
  * [DL-21] extractTokenHashFromUrl — 不正 URL の場合は null (例外を握りつぶす)
  * [DL-22] extractTokenHashFromUrl — 境界値: token_hash が空文字の場合は null
+ *
+ * Reviewer 指摘対応分 (C-5 PKCE: isEmailAuthCallback の第3判定条件 `code` クエリが未検証だった穴):
+ * [DL-23] isEmailAuthCallback — code クエリ (PKCE, Google OAuth コールバック) は true
+ * [DL-24] isEmailAuthCallback — token_hash と code が両方ある場合は token_hash が優先される
+ *   (type=recovery なら token_hash 枝で false になり、code 枝には落ちない)
+ * [DL-25] isEmailAuthCallback — code のみ (token_hash 無し) は type パラメータの値に関わらず true
+ *   (code 枝は type を見ない。実運用では recovery が code 形式で来ることは無い前提だが、
+ *   現在のコードの挙動をそのまま固定する)
+ * [DL-26] isEmailAuthCallback — 境界値: code が空文字でも true (queryParams.has は値を見ない)
+ * [DL-27] isEmailAuthCallback — code があってもベース URL 不一致なら false (完全一致が最優先)
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -407,5 +417,63 @@ describe("[DL-22] extractTokenHashFromUrl — 境界値: token_hash が空文字
     expect(
       extractTokenHashFromUrl("swimhub://auth/callback?token_hash=&type=signup"),
     ).toBeNull();
+  });
+});
+
+// ---- [DL-23]〜[DL-27] isEmailAuthCallback — code クエリ (PKCE) 形式 --------
+
+describe("[DL-23] isEmailAuthCallback — code クエリ (PKCE) は true", () => {
+  it("swimhub://auth/callback?code=abc123 は true (Google OAuth の認可コード)", () => {
+    expect(isEmailAuthCallback("swimhub://auth/callback?code=abc123")).toBe(true);
+  });
+
+  it("swimhub://auth/callback?flow=calendar-connect&code=abc123 は true (カレンダー連携復旧の PKCE コールバック)", () => {
+    expect(
+      isEmailAuthCallback("swimhub://auth/callback?flow=calendar-connect&code=abc123"),
+    ).toBe(true);
+  });
+});
+
+describe("[DL-24] isEmailAuthCallback — token_hash と code が両方ある場合は token_hash が優先される", () => {
+  it("token_hash + type=recovery + code が揃っていても false (token_hash 枝の recovery 除外が先に効く)", () => {
+    expect(
+      isEmailAuthCallback(
+        "swimhub://auth/callback?token_hash=abc&type=recovery&code=xyz",
+      ),
+    ).toBe(false);
+  });
+
+  it("token_hash + type=signup + code が揃っている場合は true (token_hash 枝が先に評価される)", () => {
+    expect(
+      isEmailAuthCallback(
+        "swimhub://auth/callback?token_hash=abc&type=signup&code=xyz",
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("[DL-25] isEmailAuthCallback — code のみ (token_hash 無し) は type の値に関わらず true", () => {
+  it("swimhub://auth/callback?code=abc&type=recovery は true (code 枝は type を見ない、現状挙動の固定)", () => {
+    expect(
+      isEmailAuthCallback("swimhub://auth/callback?code=abc&type=recovery"),
+    ).toBe(true);
+  });
+});
+
+describe("[DL-26] isEmailAuthCallback — 境界値: code が空文字でも true", () => {
+  it("swimhub://auth/callback?code= (空文字) は true (queryParams.has はキーの存在のみで判定)", () => {
+    expect(isEmailAuthCallback("swimhub://auth/callback?code=")).toBe(true);
+  });
+});
+
+describe("[DL-27] isEmailAuthCallback — code があってもベース URL 不一致なら false", () => {
+  it("swimhub://auth/callback-extra?code=abc はパス不一致なので false (完全一致が最優先)", () => {
+    expect(isEmailAuthCallback("swimhub://auth/callback-extra?code=abc")).toBe(false);
+  });
+
+  it("https://evil.com/...?code=abc (別スキーム) は false", () => {
+    expect(
+      isEmailAuthCallback("https://evil.com/redirect?to=swimhub://auth/callback&code=abc"),
+    ).toBe(false);
   });
 });

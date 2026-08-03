@@ -70,7 +70,9 @@ export const consumeCalendarConnectPending = async (): Promise<boolean> => {
 /**
  * カレンダー連携フローであることを示すコールバック URL のクエリパラメータ。
  * `getRedirectUri({ forCalendarConnect: true })` が生成する redirectTo にのみ付与され、
- * Supabase はこれを保持したままフラグメント(#)でトークンを付加して返す。
+ * Supabase はこれをクエリ文字列に保持したままコールバックを返す
+ * （flowType: "pkce" の現在は `?code=...` と併存するクエリパラメータ。
+ * implicit フォールバック時のみ、このクエリはフラグメント(#access_token=...)と併存する）。
  * AuthProvider のディープリンクハンドラがコールドスタート復帰時にこのフラグを見て、
  * 無関係な認証コールバック（メール確認・通常ログイン）との誤判定を防ぐ。
  */
@@ -103,17 +105,29 @@ export interface GoogleAuthOptions {
 }
 
 /**
- * コールバックURLからトークンを抽出
- * Supabaseは認証成功後、フラグメント(#)でトークンを返す
+ * コールバックURLからトークン (または PKCE の認可コード) を抽出する。
+ *
+ * Supabase クライアントは flowType: "pkce" で構成されているため、
+ * コールバックは通常クエリパラメータ `?code=...` で認可コードが返る。
+ * 呼び出し側 (useGoogleAuth / AuthProvider / IdentityLinkSettings) は
+ * code を優先して exchangeCodeForSession を試み、無ければ implicit の
+ * フラグメント (#access_token=...) にフォールバックする。
+ *
+ * provider_token / provider_refresh_token (Google 側のトークン) は、
+ * PKCE 経路では exchangeCodeForSession の結果セッションに含まれる想定であり、
+ * この URL 直読みの経路には現れない。implicit フォールバック時のみ
+ * フラグメントから読み取る。
  */
 export interface ExtractedTokens {
   accessToken: string | null;
   refreshToken: string | null;
   expiresIn: number | null;
   tokenType: string | null;
-  /** Googleのアクセストークン（Google API呼び出し用） */
+  /** PKCE フロー時にクエリパラメータで返る認可コード */
+  code: string | null;
+  /** Googleのアクセストークン（implicit フォールバック時のみ。Google API呼び出し用） */
   providerToken: string | null;
-  /** Googleのリフレッシュトークン（カレンダー連携用に保存が必要） */
+  /** Googleのリフレッシュトークン（implicit フォールバック時のみ。カレンダー連携用に保存が必要） */
   providerRefreshToken: string | null;
   error: string | null;
 }
@@ -122,29 +136,36 @@ export const extractTokensFromUrl = (url: string): ExtractedTokens => {
   try {
     const urlObj = new URL(url);
 
-    // フラグメント(#)からパラメータを取得
+    // フラグメント(#)とクエリパラメータの両方を確認する
     const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+    const queryParams = urlObj.searchParams;
 
-    // エラーチェック
-    const error = hashParams.get("error_description") || hashParams.get("error");
+    // OAuth プロバイダ / Supabase 側のエラーは PKCE (query) と implicit (hash) の
+    // どちらの形式で返ってくる可能性もあるため両方確認する
+    const error =
+      hashParams.get("error_description") ||
+      hashParams.get("error") ||
+      queryParams.get("error_description") ||
+      queryParams.get("error");
     if (error) {
       return {
         accessToken: null,
         refreshToken: null,
         expiresIn: null,
         tokenType: null,
+        code: null,
         providerToken: null,
         providerRefreshToken: null,
         error,
       };
     }
 
-    // トークンを抽出
+    // トークンを抽出 (implicit フォールバック用)
     const accessToken = hashParams.get("access_token");
     const refreshToken = hashParams.get("refresh_token");
     const expiresIn = hashParams.get("expires_in");
     const tokenType = hashParams.get("token_type");
-    // Googleのトークン（カレンダー連携用）
+    // Googleのトークン（カレンダー連携用。implicit フォールバック時のみここに現れる）
     const providerToken = hashParams.get("provider_token");
     const providerRefreshToken = hashParams.get("provider_refresh_token");
 
@@ -153,6 +174,7 @@ export const extractTokensFromUrl = (url: string): ExtractedTokens => {
       refreshToken,
       expiresIn: expiresIn ? parseInt(expiresIn, 10) : null,
       tokenType,
+      code: queryParams.get("code"),
       providerToken,
       providerRefreshToken,
       error: null,
@@ -163,6 +185,7 @@ export const extractTokensFromUrl = (url: string): ExtractedTokens => {
       refreshToken: null,
       expiresIn: null,
       tokenType: null,
+      code: null,
       providerToken: null,
       providerRefreshToken: null,
       error: i18n.t("common.app.urlParseFailed"),

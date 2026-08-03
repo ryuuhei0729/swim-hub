@@ -1049,7 +1049,8 @@
       "deleteFailed": "削除に失敗しました",
       "practiceTitle": "練習",
       "viewDetailAriaLabel": "練習詳細を表示",
-      "viewDetailAriaLabelWithInfo": "練習詳細を表示({date} {place} {style})"
+      "viewDetailAriaLabelWithInfo": "練習詳細を表示({date} {place} {style})",
+      "menuCount": "メニュー{count}件"
     },
     "modal": {
       "loading": "練習詳細を読み込み中...",

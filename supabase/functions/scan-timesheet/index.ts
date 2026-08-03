@@ -312,42 +312,36 @@ Deno.serve(async (req) => {
       const jstDate = new Date(now.getTime() + jstOffset);
       const today = jstDate.toISOString().split("T")[0];
 
-      // app_daily_usage の daily_tokens_used を +1
-      const { data: existing } = await supabase
-        .from("app_daily_usage")
-        .select("id, daily_tokens_used, usage_count")
-        .eq("user_id", user.id)
-        .eq("app", "swimhub")
-        .eq("usage_date", today)
-        .single();
+      // app_daily_usage への直接 INSERT/UPDATE は RLS で拒否される (直接書き込みは
+      // increment_daily_usage RPC に一本化済み)。auth.uid() 検証込みの RPC 経由で
+      // usage_count/daily_tokens_used をともに +1 する。
+      const { error: usageError } = await supabase.rpc("increment_daily_usage", {
+        p_user_id: user.id,
+        p_app: "swimhub",
+        p_usage_date: today,
+        p_last_used_at: now.toISOString(),
+      });
 
-      if (existing) {
-        await supabase
-          .from("app_daily_usage")
-          .update({
-            daily_tokens_used: (existing.daily_tokens_used || 0) + 1,
-            usage_count: (existing.usage_count || 0) + 1,
-            last_used_at: new Date().toISOString(),
-          })
-          .eq("id", existing.id);
-      } else {
-        await supabase.from("app_daily_usage").insert({
-          user_id: user.id,
-          app: "swimhub",
-          usage_date: today,
-          daily_tokens_used: 1,
-          usage_count: 1,
-          last_used_at: new Date().toISOString(),
-        });
+      if (usageError) {
+        console.error("increment_daily_usage failed:", usageError);
+        return errorResponse(
+          "利用回数の記録に失敗しました。再試行してください",
+          "API_ERROR",
+          500,
+        );
       }
 
       // token_consumption_log に記録
-      await supabase.from("token_consumption_log").insert({
+      const { error: logError } = await supabase.from("token_consumption_log").insert({
         user_id: user.id,
         app: "swimhub",
         token_source: "daily_free",
         action_type: "swimhub_image_analysis",
       });
+
+      if (logError) {
+        console.error("token_consumption_log insert failed:", logError);
+      }
     }
 
     return new Response(JSON.stringify(scanResult), {

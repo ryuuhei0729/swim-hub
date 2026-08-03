@@ -22,6 +22,8 @@ interface RecordFormState {
   styleId: number | null;
   time: number | null; // 秒数
   reactionTime: number | null; // 反応時間（秒）
+  /** リレー区分 (true = 引き継ぎタイム)。記録の is_relaying に対応 */
+  isRelaying: boolean;
   note: string | null;
   splitTimes: SplitTimeForm[];
 
@@ -57,6 +59,7 @@ interface RecordFormActions {
   setStyleId: (styleId: number | null) => void;
   setTime: (time: number | null) => void;
   setReactionTime: (reactionTime: number | null) => void;
+  setIsRelaying: (isRelaying: boolean) => void;
   setNote: (note: string | null) => void;
   setSplitTimes: (splitTimes: SplitTimeForm[]) => void;
   addSplitTime: (splitTime: SplitTimeForm) => void;
@@ -102,6 +105,7 @@ const initialFormState: RecordFormState = {
   styleId: null,
   time: null,
   reactionTime: null,
+  isRelaying: false,
   note: null,
   splitTimes: [],
   isLoading: false,
@@ -138,6 +142,7 @@ export const useRecordStore = create<RecordState & RecordActions>()((set) => ({
   setStyleId: (styleId) => set({ styleId }),
   setTime: (time) => set({ time }),
   setReactionTime: (reactionTime) => set({ reactionTime }),
+  setIsRelaying: (isRelaying) => set({ isRelaying }),
   setNote: (note) => set({ note }),
   setSplitTimes: (splitTimes) => set({ splitTimes }),
   addSplitTime: (splitTime) =>
@@ -171,6 +176,7 @@ export const useRecordStore = create<RecordState & RecordActions>()((set) => ({
         styleId: record.style_id,
         time: record.time,
         reactionTime: record.reaction_time || null,
+        isRelaying: record.is_relaying ?? false,
         note: record.note || null,
         splitTimes: (record.split_times || []).map((st) => ({
           distance: st.distance,

@@ -5,14 +5,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO, isValid } from "date-fns";
+import { parseISO, isValid } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { STYLE_CODE_TO_ABBREV } from "@apps/shared/utils/swimStyles";
-import { RecordItem, StandaloneRecordDetailModal, EntryOnlySection, EntryOnlyDetailModal } from "@/components/records";
+import { RecordItem, StandaloneRecordDetailModal, EntryOnlySection } from "@/components/records";
 import { ListToolbar, SortBottomSheet, FilterBottomSheet } from "@/components/history";
 import type { SortPreset, FilterGroup } from "@/components/history";
 import {
@@ -209,11 +209,12 @@ export const RecordsScreen: React.FC = () => {
     setDisplayCount(PAGE_INCREMENT);
   }, [resetFilter]);
 
-  // endDate をメモ化して不要な再フェッチを防止
-  const endDate = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
-
   // 大会記録データ取得: 絞り込み/並べ替え/表示件数は全てクライアント側で処理するため
-  // 十分大きい件数(pageSize=1000)を一括取得する
+  // 十分大きい件数(pageSize=1000)を一括取得する。
+  // startDate/endDate は渡さない (web CompetitionClient と同型)。RecordAPI.getRecords の
+  // 期間フィルタは大会日ではなく records.created_at に効くため、endDate="今日" を渡すと
+  // 'YYYY-MM-DD' が当日 00:00 UTC (= JST 09:00) に解釈され、今日登録した記録が
+  // サーバー側で除外されて一覧に永久に出てこない (翌日まで) 不具合になる。
   const {
     records = [],
     isLoading,
@@ -221,8 +222,6 @@ export const RecordsScreen: React.FC = () => {
     error,
     refetch,
   } = useRecordsQuery(supabase, {
-    startDate: "2000-01-01",
-    endDate,
     pageSize: 1000,
     enableRealtime: true,
   });
@@ -314,13 +313,14 @@ export const RecordsScreen: React.FC = () => {
     enabled: !!user,
   });
 
-  // エントリー済み(記録未登録)セクションの詳細モーダル
-  const [selectedEntryOnlyItem, setSelectedEntryOnlyItem] = useState<EntryOnlyItem | null>(null);
+  // エントリー済み(記録未登録)セクションのカードタップ:
+  // 記録カードと同じく該当日の DayDetailModal(ダッシュボードと同一)を開く。
+  // 編集/削除/「大会記録を追加」導線もダッシュボードと同じものが使える。
   const handleEntryOnlyPress = useCallback((item: EntryOnlyItem) => {
-    setSelectedEntryOnlyItem(item);
-  }, []);
-  const handleCloseEntryOnlyDetail = useCallback(() => {
-    setSelectedEntryOnlyItem(null);
+    const parsedDate = parseISO(item.date);
+    if (!isValid(parsedDate)) return;
+    setModalDate(parsedDate);
+    setShowDayDetail(true);
   }, []);
 
   // 距離/種目/大会名/場所フィルタの選択肢生成(全件ベース)
@@ -514,10 +514,12 @@ export const RecordsScreen: React.FC = () => {
   }, [displayCount, sortedRecords.length]);
 
   // 選択した日付のカレンダーエントリー（DayDetailModal表示用）
-  const { data: dayEntries = [], refetch: refetchDayEntries } = useDayEntriesQuery(
-    supabase,
-    modalDate,
-  );
+  const {
+    data: dayEntries = [],
+    isLoading: isDayEntriesLoading,
+    isError: isDayEntriesError,
+    refetch: refetchDayEntries,
+  } = useDayEntriesQuery(supabase, modalDate);
 
   // 削除/変更後は一覧とモーダルの両方を再取得する(エントリー済み(記録未登録)セクションも対象)
   const refetchAfterMutation = useCallback(() => {
@@ -730,6 +732,9 @@ export const RecordsScreen: React.FC = () => {
           date={modalDate}
           entries={dayEntries}
           scope="competition"
+          isLoading={isDayEntriesLoading}
+          isError={isDayEntriesError}
+          onRetry={refetchDayEntries}
           onClose={() => {
             setShowDayDetail(false);
             setModalDate(null);
@@ -762,13 +767,6 @@ export const RecordsScreen: React.FC = () => {
         onEdit={handleEditStandaloneRecord}
         onDelete={handleDeleteStandaloneRecord}
         isDeleting={isDeletingStandalone}
-      />
-
-      {/* エントリー済み(記録未登録)大会の読み取り専用簡易詳細モーダル */}
-      <EntryOnlyDetailModal
-        visible={!!selectedEntryOnlyItem}
-        item={selectedEntryOnlyItem}
-        onClose={handleCloseEntryOnlyDetail}
       />
     </SafeAreaView>
   );

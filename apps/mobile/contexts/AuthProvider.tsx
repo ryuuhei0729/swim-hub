@@ -643,6 +643,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const tokens = extractTokensFromUrl(url);
 
+      // PKCE 移行後、provider_refresh_token は URL (フラグメント) には現れず
+      // exchangeCodeForSession のセッション結果にのみ含まれる想定のため、
+      // ここでの判定は hasCalendarConnectFlowFlag が主たる根拠になる。
+      // tokens.providerRefreshToken は implicit フォールバック経路のための保険として残す。
       const isCalendarConnectRecovery =
         isPendingFlagSet && (hasCalendarConnectFlowFlag(url) || !!tokens.providerRefreshToken);
 
@@ -657,6 +661,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      // PKCE: クエリの認可コードを優先して exchangeCodeForSession で交換する。
+      // code_verifier は AsyncStorage に保存されているが、コールドスタートで
+      // 既に消費/期限切れの場合は AuthPKCECodeVerifierMissingError 等が
+      // error として返る（例外は投げない）ため、ここで通常のエラー表示に倒す。
+      if (tokens.code) {
+        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(
+          tokens.code,
+        );
+        if (!isMounted) return;
+
+        if (exchangeError || !data.session) {
+          Alert.alert(
+            i18n.t("common.alertErrorTitle"),
+            isCalendarConnectRecovery
+              ? i18n.t("auth.mobile.googleCalendarPermissionDenied")
+              : i18n.t("auth.supabaseErrors.invalidToken"),
+          );
+          return;
+        }
+
+        // コールドスタート復帰でカレンダー連携が中断していた場合、
+        // provider_refresh_token の保存をここで完了させる（取りこぼし防止）。
+        // isCalendarConnectRecovery が false の場合（無関係な認証コールバックへの
+        // 誤爆判定回避）は、通常のメール確認/ログイン処理のみで完了する。
+        if (isCalendarConnectRecovery) {
+          await completeCalendarConnectRecovery(
+            data.session.access_token,
+            data.session.provider_refresh_token ?? null,
+          );
+        }
+        // 成功時は onAuthStateChange が発火し自動でルート切替する
+        return;
+      }
+
+      // implicit フォールバック (flowType が pkce でない/フラグメント形式で返ってきた場合)
       if (tokens.accessToken && tokens.refreshToken) {
         const { error: sessionError } = await supabase.auth.setSession({
           access_token: tokens.accessToken,
@@ -684,7 +723,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!isMounted) return;
-      // access_token / refresh_token 双方が取れなかった場合
+      // code / access_token / refresh_token いずれも取れなかった場合
       if (isCalendarConnectRecovery) {
         // カレンダー連携中断からの復帰なのにトークンが無い場合もサイレントに
         // 握りつぶさず、再試行を促すエラーを表示する

@@ -1046,7 +1046,8 @@
       "deleteFailed": "Failed to delete",
       "practiceTitle": "Practice",
       "viewDetailAriaLabel": "View practice details",
-      "viewDetailAriaLabelWithInfo": "View practice details ({date} {place} {style})"
+      "viewDetailAriaLabelWithInfo": "View practice details ({date} {place} {style})",
+      "menuCount": "{count} menus"
     },
     "modal": {
       "loading": "Loading practice details...",

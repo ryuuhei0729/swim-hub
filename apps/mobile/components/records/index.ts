@@ -6,4 +6,3 @@ export { getBestTimeForEntry } from "./bestTimeForEntry";
 export { StandaloneRecordDetailModal } from "./StandaloneRecordDetailModal";
 export { EntryOnlyCard } from "./EntryOnlyCard";
 export { EntryOnlySection } from "./EntryOnlySection";
-export { EntryOnlyDetailModal } from "./EntryOnlyDetailModal";

@@ -1049,7 +1049,8 @@
       "deleteFailed": "삭제에 실패했습니다",
       "practiceTitle": "연습",
       "viewDetailAriaLabel": "연습 상세 보기",
-      "viewDetailAriaLabelWithInfo": "연습 상세 보기 ({date} {place} {style})"
+      "viewDetailAriaLabelWithInfo": "연습 상세 보기 ({date} {place} {style})",
+      "menuCount": "메뉴 {count}개"
     },
     "modal": {
       "loading": "연습 상세를 불러오는 중...",

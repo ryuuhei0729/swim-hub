@@ -55,6 +55,10 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, log, onP
     [practice.title, t],
   );
 
+  // この練習に紐づくメニュー(ログ)数。2件以上のときだけヘッダーにバッジを出し、
+  // 一覧上で「このカードの後ろにも同じ練習のログが続く」ことを視認できるようにする
+  const menuCount = practice.practice_logs.length;
+
   // このカードが担当する1ログ分の表示情報（距離×本数×セット / サークル / 種目、タグ）
   const logRow = useMemo(() => {
     if (!log) return null;
@@ -118,6 +122,13 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, log, onP
               <Feather name="map-pin" size={12} color="#6B7280" />
               <Text style={styles.place} numberOfLines={1}>
                 {practice.place}
+              </Text>
+            </View>
+          )}
+          {menuCount >= 2 && (
+            <View style={styles.menuCountBadge}>
+              <Text style={styles.menuCountText}>
+                {t("practice.client.menuCount", { count: menuCount })}
               </Text>
             </View>
           )}
@@ -203,6 +214,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
     lineHeight: 16,
+  },
+  menuCountBadge: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
+  menuCountText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#374151",
   },
   secondRow: {
     flexDirection: "row",

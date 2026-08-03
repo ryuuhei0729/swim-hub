@@ -1049,7 +1049,8 @@
       "deleteFailed": "Löschen fehlgeschlagen",
       "practiceTitle": "Training",
       "viewDetailAriaLabel": "Trainingsdetails anzeigen",
-      "viewDetailAriaLabelWithInfo": "Trainingsdetails anzeigen ({date} {place} {style})"
+      "viewDetailAriaLabelWithInfo": "Trainingsdetails anzeigen ({date} {place} {style})",
+      "menuCount": "{count} Einheiten"
     },
     "modal": {
       "loading": "Trainingsdetails werden geladen ...",

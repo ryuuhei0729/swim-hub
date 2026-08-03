@@ -67,6 +67,11 @@ if (supabaseUrl && supabaseAnonKey) {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
+        // OAuth (Google) の deep link を PKCE の `code` クエリで受け取り、
+        // exchangeCodeForSession で交換する（アクセストークンを URL 直渡ししない）。
+        // 既定の "implicit" のままだと同一スキームを主張する悪意あるアプリに
+        // コールバックを横取りされ、code_verifier 不要でセッションを奪取されうる。
+        flowType: "pkce",
       },
     });
   } catch (error) {

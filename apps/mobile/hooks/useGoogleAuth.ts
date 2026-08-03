@@ -126,12 +126,70 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             return { success: false, error: new Error(tokens.error) };
           }
 
+          // PKCE: クエリの認可コードを優先して exchangeCodeForSession で交換する。
+          // ガードは、カレンダー連携の場合は provider_refresh_token 保存 API 呼び出しが
+          // 完了するまで維持する（Android で openAuthSessionAsync の resolve と
+          // Linking の 'url' イベントが二重発火した場合に、AuthProvider 側の
+          // コールドスタート復旧パスと二重処理しないようにするため）。
+          if (tokens.code) {
+            let exchangeError: import("@supabase/supabase-js").AuthError | null = null;
+            let accessToken: string | null = null;
+            let providerRefreshToken: string | null = null;
+            try {
+              const { data, error } = await supabase.auth.exchangeCodeForSession(tokens.code);
+              exchangeError = error;
+              accessToken = data.session?.access_token ?? null;
+              providerRefreshToken = data.session?.provider_refresh_token ?? null;
+            } catch (exchangeErr) {
+              oauthSessionGuard.active = false;
+              throw exchangeErr;
+            }
+
+            // code_verifier が端末ストレージから読めなかった/既に消費済みの場合も
+            // exchangeCodeForSession は例外を投げず AuthError を返すため、ここで捕捉できる。
+            if (exchangeError || !accessToken) {
+              oauthSessionGuard.active = false;
+              const message = exchangeError
+                ? localizeSupabaseAuthError(exchangeError)
+                : t("auth.mobile.tokensNotReceived");
+              setError(message);
+              return { success: false, error: exchangeError ?? new Error(message) };
+            }
+
+            // カレンダー連携の場合、provider_refresh_tokenを保存してフラグを更新
+            if (forCalendarConnect) {
+              // provider_refresh_tokenがない場合でもエラーを表示（サイレントスキップ禁止）
+              if (!providerRefreshToken) {
+                oauthSessionGuard.active = false;
+                setError(t("auth.mobile.googleCalendarPermissionDenied"));
+                return { success: false, error: new Error("provider_refresh_token not received") };
+              }
+
+              const saveResult = await saveGoogleCalendarRefreshToken(
+                accessToken,
+                providerRefreshToken,
+              );
+
+              // 保存 API 呼び出し完了まで維持していたガードをここで解除する
+              oauthSessionGuard.active = false;
+
+              if (!saveResult.success) {
+                const message = saveResult.error
+                  ? localizeAuthError(saveResult.error)
+                  : t("auth.mobile.calendarConnectionSaveFailed");
+                setError(message);
+                return { success: false, error: new Error(message) };
+              }
+
+              return { success: true };
+            }
+
+            oauthSessionGuard.active = false;
+            return { success: true };
+          }
+
+          // implicit フォールバック (flowType が pkce でない/フラグメント形式で返ってきた場合)
           if (tokens.accessToken && tokens.refreshToken) {
-            // Supabase セッションを設定する。
-            // ガードは、カレンダー連携の場合は provider_refresh_token 保存 API 呼び出しが
-            // 完了するまで維持する（Android で openAuthSessionAsync の resolve と
-            // Linking の 'url' イベントが二重発火した場合に、AuthProvider 側の
-            // コールドスタート復旧パスと二重 POST しないようにするため）。
             let sessionError: import("@supabase/supabase-js").AuthError | null = null;
             try {
               const { error } = await supabase.auth.setSession({
@@ -182,7 +240,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             return { success: true };
           }
 
-          // access_token / refresh_token が揃わなかった場合
+          // code / access_token / refresh_token いずれも取れなかった場合
           oauthSessionGuard.active = false;
           const tokensMsg = t("auth.mobile.tokensNotReceived");
           setError(tokensMsg);

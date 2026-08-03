@@ -111,7 +111,11 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
           <View style={styles.row}>
             <Text style={styles.poolType}>{poolType}</Text>
             <Text style={styles.style}>{styleDisplay}</Text>
-            <Text style={styles.time}>{formattedTime}</Text>
+            {/* リレー(引き継ぎ)記録は web の記録カードと同じく赤い R を付けて区別する */}
+            <Text style={styles.time}>
+              {formattedTime}
+              {record.is_relaying && <Text style={styles.relayMark}> R</Text>}
+            </Text>
           </View>
         </View>
       </View>
@@ -191,6 +195,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#2563EB",
+  },
+  relayMark: {
+    fontWeight: "bold",
+    color: "#DC2626",
   },
 });
 

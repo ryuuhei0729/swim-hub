@@ -141,6 +141,66 @@ export const Modal = ({
   return React.createElement("div", props, children);
 };
 
+// Animated API
+// transform: [{ translateY: AnimatedValue }] のような RN 固有のスタイルは DOM に渡せないため
+// Animated.View では transform を落として描画する。
+class AnimatedValue {
+  _value: number;
+  constructor(value: number) {
+    this._value = value;
+  }
+  setValue(value: number) {
+    this._value = value;
+  }
+  getValue() {
+    return this._value;
+  }
+}
+
+const AnimatedView = ({
+  children,
+  style,
+  ...props
+}: { children?: React.ReactNode; style?: unknown } & Record<string, unknown>) => {
+  const flattened = Array.isArray(style)
+    ? Object.assign({}, ...style.filter(Boolean))
+    : ((style ?? {}) as Record<string, unknown>);
+  const { transform: _transform, ...domStyle } = flattened as Record<string, unknown>;
+  return React.createElement("div", { ...props, style: domStyle }, children);
+};
+
+export const Animated = {
+  View: AnimatedView,
+  Value: AnimatedValue,
+  spring: (_value: unknown, _config: unknown) => ({ start: vi.fn(), stop: vi.fn() }),
+  timing: (_value: unknown, _config: unknown) => ({ start: vi.fn(), stop: vi.fn() }),
+};
+
+// PanResponder API
+// パンハンドラは DOM イベントに対応付けられないため空オブジェクトを返す。
+// 生成時の設定は `__config` として公開し、テストからジェスチャーを直接駆動できるようにする。
+export interface MockPanResponderConfig {
+  onStartShouldSetPanResponder?: (...args: unknown[]) => boolean;
+  onMoveShouldSetPanResponder?: (event: unknown, gesture: MockGestureState) => boolean;
+  onPanResponderMove?: (event: unknown, gesture: MockGestureState) => void;
+  onPanResponderRelease?: (event: unknown, gesture: MockGestureState) => void;
+  onPanResponderTerminate?: (event: unknown, gesture: MockGestureState) => void;
+}
+
+export interface MockGestureState {
+  dx: number;
+  dy: number;
+  vx: number;
+  vy: number;
+}
+
+export const PanResponder = {
+  create: (config: MockPanResponderConfig) => ({
+    panHandlers: {},
+    __config: config,
+  }),
+};
+
 // StyleSheet API
 // React NativeのStyleSheetは数値や文字列のスタイルを返すが、
 // DOM要素ではオブジェクト形式が必要なため、変換を行う
@@ -166,6 +226,21 @@ export const StyleSheet = {
     }
     return style;
   },
+  absoluteFill: {
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  absoluteFillObject: {
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  hairlineWidth: 1,
 };
 
 // Platform API
@@ -204,6 +279,8 @@ const ReactNative = {
   Platform,
   Alert,
   AppState,
+  Animated,
+  PanResponder,
 };
 
 export default ReactNative;
