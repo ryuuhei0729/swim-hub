@@ -227,6 +227,50 @@ describe("recordFormStore", () => {
     expect(state.errors).toEqual({});
   });
 
+  // ---------------------------------------------------------------------------
+  // リレー区分 (is_relaying)
+  // ---------------------------------------------------------------------------
+  // 旧実装は RecordFormScreen が保存時に is_relaying: false を決め打ちしていたため、
+  // 大会タブからリレー記録を編集・保存すると黙って個人種目の記録に変わっていた。
+  // ストアが記録の is_relaying を往復で保持できることを固定する。
+
+  it("initializeで既存記録のリレー区分(is_relaying=true)を保持する", () => {
+    const { initialize } = useRecordStore.getState();
+
+    initialize(createMockRecordWithDetails({ style_id: 3, time: 60.5, is_relaying: true }));
+
+    expect(useRecordStore.getState().isRelaying).toBe(true);
+  });
+
+  it("initializeで既存記録が個人種目(is_relaying=false)ならfalseになる", () => {
+    const { initialize, setIsRelaying } = useRecordStore.getState();
+
+    // 直前の編集でONだった状態が残らないこと
+    setIsRelaying(true);
+    initialize(createMockRecordWithDetails({ style_id: 3, time: 60.5, is_relaying: false }));
+
+    expect(useRecordStore.getState().isRelaying).toBe(false);
+  });
+
+  it("setIsRelayingでリレー区分を切り替えられる", () => {
+    const { setIsRelaying } = useRecordStore.getState();
+
+    setIsRelaying(true);
+    expect(useRecordStore.getState().isRelaying).toBe(true);
+
+    setIsRelaying(false);
+    expect(useRecordStore.getState().isRelaying).toBe(false);
+  });
+
+  it("新規作成モードのinitialize()ではリレー区分がfalseに戻る", () => {
+    const { initialize, setIsRelaying } = useRecordStore.getState();
+
+    setIsRelaying(true);
+    initialize();
+
+    expect(useRecordStore.getState().isRelaying).toBe(false);
+  });
+
   it("resetでストアをリセットできる", () => {
     const { setCompetitionId, setStyleId, setTime, setSplitTimes, reset } =
       useRecordStore.getState();

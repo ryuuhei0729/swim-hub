@@ -13,6 +13,7 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -44,6 +45,7 @@ import {
 } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { localizedStyleName } from "@/utils/styleName";
+import { canRelay, getStyleOption } from "@/components/besttime/styleOptions";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { LapTimeDisplay } from "@/components/records";
@@ -74,6 +76,7 @@ export const RecordFormScreen: React.FC = () => {
     styleId,
     time,
     reactionTime,
+    isRelaying,
     note,
     splitTimes,
     isLoading: storeLoading,
@@ -82,6 +85,7 @@ export const RecordFormScreen: React.FC = () => {
     setStyleId,
     setTime,
     setReactionTime,
+    setIsRelaying,
     setNote,
     setSplitTimes,
     addSplitTime,
@@ -98,6 +102,7 @@ export const RecordFormScreen: React.FC = () => {
       styleId: state.styleId,
       time: state.time,
       reactionTime: state.reactionTime,
+      isRelaying: state.isRelaying,
       note: state.note,
       splitTimes: state.splitTimes,
       isLoading: state.isLoading,
@@ -106,6 +111,7 @@ export const RecordFormScreen: React.FC = () => {
       setStyleId: state.setStyleId,
       setTime: state.setTime,
       setReactionTime: state.setReactionTime,
+      setIsRelaying: state.setIsRelaying,
       setNote: state.setNote,
       setSplitTimes: state.setSplitTimes,
       addSplitTime: state.addSplitTime,
@@ -365,6 +371,18 @@ export const RecordFormScreen: React.FC = () => {
     return isValid;
   };
 
+  // 選択中の種目が引き継ぎ(リレー)タイムを持ちうるか (StyleChipSelector と同一判定)。
+  // 背泳ぎ・個人メドレー・200m超の自由形等では false になり、トグルを出さない
+  const canRelayCurrentStyle = useMemo(() => {
+    if (styleId === null || styleId === undefined) return false;
+    const option = getStyleOption(styleId);
+    return option != null && canRelay(option);
+  }, [styleId]);
+
+  // 保存に使うリレー区分。リレー不可の種目へ切り替えられた場合は、画面に見えていない
+  // true がそのまま保存されないよう false に落とす
+  const effectiveIsRelaying = canRelayCurrentStyle && isRelaying;
+
   // 保存処理
   const handleSave = async () => {
     // 二重送信防止
@@ -410,7 +428,7 @@ export const RecordFormScreen: React.FC = () => {
         time: time!,
         reaction_time: reactionTime,
         note: note && note.trim() !== "" ? note.trim() : null,
-        is_relaying: false, // デフォルトは個人種目
+        is_relaying: effectiveIsRelaying,
         pool_type: poolType,
       };
 
@@ -890,6 +908,18 @@ export const RecordFormScreen: React.FC = () => {
               </Text>
               <Feather name="chevron-down" size={20} color="#6B7280" />
             </Pressable>
+            {/* リレー (引き継ぎタイム) トグル。リレーが存在する種目のときのみ表示する */}
+            {canRelayCurrentStyle && (
+              <View style={styles.relayRow}>
+                <Switch
+                  value={isRelaying}
+                  onValueChange={setIsRelaying}
+                  disabled={storeLoading}
+                  testID="record-form-relay"
+                />
+                <Text style={styles.relayLabel}>{t("forms.recordLog.relayLabel")}</Text>
+              </View>
+            )}
             {errors.styleId && <Text style={styles.errorText}>{errors.styleId}</Text>}
           </View>
 
@@ -1348,6 +1378,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#DC2626",
     marginTop: 4,
+  },
+  // リレートグル (StyleChipSelector のリレー行と同一の見た目)
+  relayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+  },
+  relayLabel: {
+    fontSize: 13,
+    color: "#374151",
   },
   pickerButton: {
     flexDirection: "row",

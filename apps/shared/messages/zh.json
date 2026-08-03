@@ -1049,7 +1049,8 @@
       "deleteFailed": "删除失败",
       "practiceTitle": "训练",
       "viewDetailAriaLabel": "查看训练详情",
-      "viewDetailAriaLabelWithInfo": "查看练习详情({date} {place} {style})"
+      "viewDetailAriaLabelWithInfo": "查看练习详情({date} {place} {style})",
+      "menuCount": "{count} 个菜单"
     },
     "modal": {
       "loading": "正在加载训练详情...",

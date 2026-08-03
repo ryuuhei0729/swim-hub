@@ -140,7 +140,24 @@ export const IdentityLinkSettings: React.FC = () => {
           setError(tokens.error);
           return;
         }
-        if (tokens.accessToken && tokens.refreshToken) {
+        if (tokens.code) {
+          // PKCE: 認可コードを exchangeCodeForSession で交換する。
+          // code_verifier が読めない/既に消費済みの場合も例外ではなく
+          // AuthError として返るため、ここで通常のエラー表示に倒す。
+          let exchangeError: import("@supabase/supabase-js").AuthError | null = null;
+          try {
+            const { error } = await supabase.auth.exchangeCodeForSession(tokens.code);
+            exchangeError = error;
+          } finally {
+            oauthSessionGuard.active = false;
+          }
+          if (exchangeError) {
+            setError(localizeSupabaseAuthError(exchangeError));
+            return;
+          }
+          await fetchIdentities();
+        } else if (tokens.accessToken && tokens.refreshToken) {
+          // implicit フォールバック (flowType が pkce でない/フラグメント形式で返ってきた場合)
           // setSession 完了後にガードを解除する
           let sessionError: import("@supabase/supabase-js").AuthError | null = null;
           try {

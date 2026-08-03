@@ -30,7 +30,9 @@ const isEmailOtpLinkType = (value: string | null): value is EmailOtpLinkType =>
  * 判定条件:
  *   1. フラグメント/クエリを除いたベース部分が `swimhub://auth/callback` と完全一致する
  *   2. (新形式) クエリに `token_hash` が含まれる。`type` が `recovery` の場合は対象外
- *   3. (旧形式) フラグメントに `access_token` または `error` が含まれる。
+ *   3. (PKCE) クエリに `code` が含まれる (Google OAuth の認可コード。
+ *      email 確認/パスワードリセットは token_hash 方式のためここには来ない)
+ *   4. (旧形式=implicit フォールバック) フラグメントに `access_token` または `error` が含まれる。
  *      フラグメントの `type` が `recovery` の場合は対象外
  *      (いずれの形式でもパスワードリセットのリカバリーリンク対応は別スプリントで実装する)
  */
@@ -47,7 +49,12 @@ export const isEmailAuthCallback = (url: string): boolean => {
     return queryParams.get("type") !== "recovery";
   }
 
-  // 旧形式: フラグメント部分を解析
+  // PKCE: Google OAuth (通常ログイン・カレンダー連携・identity link) の認可コード。
+  // この base URL に対して code が付くのは OAuth コールバックのみ (email 確認・
+  // パスワードリセットは token_hash 方式で flowType に依存しない)。
+  if (queryParams.has("code")) return true;
+
+  // 旧形式 (implicit フォールバック): フラグメント部分を解析
   const hash = url.split("#")[1] ?? "";
   const params = new URLSearchParams(hash);
 

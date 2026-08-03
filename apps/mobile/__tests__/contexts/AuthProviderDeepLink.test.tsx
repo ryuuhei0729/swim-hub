@@ -26,6 +26,18 @@
  *          → エラー Alert が表示され、リトライやフラグ復活は起きない (再度 consume しても false)
  * [DLH-14] Warning3 — 復旧中の #error= コールバックは googleCalendarPermissionDenied を表示し、
  *          フラグが無い通常のメール確認の #error= は従来どおり tokenExpired を表示する (回帰防止)
+ *
+ * --- Round3 (Reviewer 指摘: C-5 PKCE の code 交換ロジックが0件だった穴) ---
+ * [DLH-15] PKCE 正常復旧 — 永続フラグあり + flow=calendar-connect + code (PKCE) あり
+ *          → exchangeCodeForSession が呼ばれ、provider_refresh_token 付きセッションなら
+ *          saveGoogleCalendarRefreshToken が呼ばれ成功 Alert が表示される
+ * [DLH-16] PKCE 最大リスク — exchangeCodeForSession が成功しても provider_refresh_token が
+ *          セッションに含まれない場合、saveGoogleCalendarRefreshToken を呼ばずサイレントに
+ *          スキップせず googleCalendarPermissionDenied の Alert を出す
+ * [DLH-17] PKCE エラー経路 — exchangeCodeForSession が error を返す (code_verifier 欠落等) 場合、
+ *          setSession は呼ばれず Alert が表示される (カレンダー復旧中か否かでメッセージが変わる)
+ * [DLH-18] PKCE 通常メール確認 (回帰) — flow=calendar-connect が無い通常の code コールバックは
+ *          exchangeCodeForSession のみ呼ばれ、カレンダー関連の Alert / API 呼び出しは発生しない
  */
 
 import React from "react";
@@ -89,6 +101,7 @@ const mocks = vi.hoisted(() => {
 
     // supabase auth
     setSession: vi.fn(),
+    exchangeCodeForSession: vi.fn(),
     onAuthStateChange: vi.fn(),
     getSession: vi.fn(),
     fromFn: vi.fn(),
@@ -132,6 +145,7 @@ vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
       setSession: mocks.setSession,
+      exchangeCodeForSession: mocks.exchangeCodeForSession,
       onAuthStateChange: mocks.onAuthStateChange,
       getSession: mocks.getSession,
     },
@@ -744,5 +758,162 @@ describe("[DLH-14] Warning3 — 復旧中に #error= が付いたコールバッ
     expect(mocks.alertFn).toHaveBeenCalled();
     const [, message] = mocks.alertFn.mock.calls[0] as [string, string];
     expect(message).toContain("有効期限");
+  });
+});
+
+describe("[DLH-15] PKCE 正常復旧 — フラグあり + flow=calendar-connect + code (PKCE) あり", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.oauthGuardActive = false;
+    mocks.setInitialUrl(null);
+    mocks.saveGoogleCalendarRefreshToken.mockResolvedValue({ success: true });
+    setupImmediateInitialSession();
+  });
+
+  it("exchangeCodeForSession が呼ばれ、provider_refresh_token 付きセッションなら saveGoogleCalendarRefreshToken が呼ばれ成功 Alert が表示される", async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    mocks.exchangeCodeForSession.mockResolvedValue({
+      data: {
+        session: { access_token: "at-pkce-recover", provider_refresh_token: "prt-pkce-recover" },
+      },
+      error: null,
+    });
+
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl("swimhub://auth/callback?flow=calendar-connect&code=auth-code-recover");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.exchangeCodeForSession).toHaveBeenCalledWith("auth-code-recover");
+    // implicit フォールバックの setSession は呼ばれない (PKCE 経路が優先される)
+    expect(mocks.setSession).not.toHaveBeenCalled();
+    expect(mocks.saveGoogleCalendarRefreshToken).toHaveBeenCalledWith(
+      "at-pkce-recover",
+      "prt-pkce-recover",
+    );
+    expect(mocks.alertFn).toHaveBeenCalled();
+    const [title, message] = mocks.alertFn.mock.calls[0] as [string, string];
+    expect(title).toBe("お知らせ");
+    expect(message).toBe("Googleカレンダー連携が完了しました");
+  });
+});
+
+describe("[DLH-16] PKCE 最大リスク — exchangeCodeForSession 成功でも provider_refresh_token がセッションに無い", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.oauthGuardActive = false;
+    mocks.setInitialUrl(null);
+    setupImmediateInitialSession();
+  });
+
+  it("saveGoogleCalendarRefreshToken を呼ばずサイレントスキップせず、googleCalendarPermissionDenied の Alert を出す", async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    // exchangeCodeForSession 自体は成功するが、セッションに provider_refresh_token が
+    // 含まれない (Google 側の consent 再表示スキップ等で起こりうる) ケース。
+    mocks.exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: "at-pkce-no-prt" } },
+      error: null,
+    });
+
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl("swimhub://auth/callback?flow=calendar-connect&code=auth-code-no-prt");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.exchangeCodeForSession).toHaveBeenCalledWith("auth-code-no-prt");
+    expect(mocks.saveGoogleCalendarRefreshToken).not.toHaveBeenCalled();
+    expect(mocks.alertFn).toHaveBeenCalled();
+    const [, message] = mocks.alertFn.mock.calls[0] as [string, string];
+    expect(message).toContain("Googleカレンダーのアクセス権限が取得できませんでした");
+  });
+});
+
+describe("[DLH-17] PKCE エラー経路 — exchangeCodeForSession が error を返す (code_verifier 欠落等)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.oauthGuardActive = false;
+    mocks.setInitialUrl(null);
+    setupImmediateInitialSession();
+    mocks.exchangeCodeForSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: "invalid_grant" },
+    });
+  });
+
+  it("カレンダー連携復旧中 (フラグ+flow=calendar-connect) のエラーは googleCalendarPermissionDenied を表示する", async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl("swimhub://auth/callback?flow=calendar-connect&code=bad-code");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.saveGoogleCalendarRefreshToken).not.toHaveBeenCalled();
+    expect(mocks.alertFn).toHaveBeenCalled();
+    const [, message] = mocks.alertFn.mock.calls[0] as [string, string];
+    expect(message).toContain("Googleカレンダーのアクセス権限が取得できませんでした");
+  });
+
+  it("通常のメール確認/ログイン (フラグ無し) のエラーは invalidToken を表示する", async () => {
+    // AsyncStorage.getItem のデフォルト (null) = フラグ無し
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl("swimhub://auth/callback?code=bad-code-2");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.saveGoogleCalendarRefreshToken).not.toHaveBeenCalled();
+    expect(mocks.alertFn).toHaveBeenCalled();
+    const [, message] = mocks.alertFn.mock.calls[0] as [string, string];
+    expect(message).not.toContain("Googleカレンダー");
+  });
+});
+
+describe("[DLH-18] PKCE 通常メール確認 (回帰) — flow=calendar-connect が無い通常の code コールバック", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.oauthGuardActive = false;
+    mocks.setInitialUrl(null);
+    setupImmediateInitialSession();
+    mocks.exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: "at-normal-code" } },
+      error: null,
+    });
+  });
+
+  it("exchangeCodeForSession のみ呼ばれ、カレンダー関連の Alert / API 呼び出しは発生しない", async () => {
+    // AsyncStorage.getItem のデフォルト (null) = フラグ無し
+    await act(async () => {
+      renderAuthProvider();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await act(async () => {
+      mocks.fireLinkingUrl("swimhub://auth/callback?code=auth-code-normal");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(mocks.exchangeCodeForSession).toHaveBeenCalledWith("auth-code-normal");
+    expect(mocks.saveGoogleCalendarRefreshToken).not.toHaveBeenCalled();
+    expect(mocks.alertFn).not.toHaveBeenCalled();
   });
 });
