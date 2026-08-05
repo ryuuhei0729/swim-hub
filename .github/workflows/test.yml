@@ -40,6 +40,9 @@ jobs:
     - name: Run web package tests
       run: pnpm --filter @swim-hub/web test
 
+    - name: Run oauth package tests
+      run: pnpm --filter @ryuuhei0729/swimhub-oauth test
+
     - name: Install Playwright browsers
       run: pnpm exec playwright install --with-deps
 

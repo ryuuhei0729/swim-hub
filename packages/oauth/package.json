@@ -1,0 +1,74 @@
+{
+  "name": "@ryuuhei0729/swimhub-oauth",
+  "version": "0.1.0",
+  "description": "SwimHub 3アプリ (swim-hub / swimhub-scanner / swimhub-timer) 共通の OAuth・メール確認コールバック処理。mobile (Expo + Supabase) と web (Next.js Route Handler + Supabase) の実装を集約する。",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./mobile": {
+      "types": "./dist/mobile/index.d.ts",
+      "default": "./dist/mobile/index.js"
+    },
+    "./web": {
+      "types": "./dist/web/index.d.ts",
+      "default": "./dist/web/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryuuhei0729/swim-hub.git",
+    "directory": "packages/oauth"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm run build",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "peerDependencies": {
+    "@supabase/supabase-js": "^2.80.0",
+    "next": "^16.0.0",
+    "@supabase/ssr": "^0.8.0",
+    "expo-auth-session": "~55.0.16",
+    "expo-web-browser": "~55.0.16"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    },
+    "@supabase/ssr": {
+      "optional": true
+    },
+    "expo-auth-session": {
+      "optional": true
+    },
+    "expo-web-browser": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.97.0",
+    "@types/node": "^25",
+    "expo-auth-session": "~55.0.16",
+    "expo-web-browser": "~55.0.16",
+    "next": "16.2.12",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.6"
+  }
+}

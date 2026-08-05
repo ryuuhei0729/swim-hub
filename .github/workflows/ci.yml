@@ -120,6 +120,9 @@ jobs:
     - name: Run web package tests
       run: pnpm --filter @swim-hub/web test
 
+    - name: Run oauth package tests
+      run: pnpm --filter @ryuuhei0729/swimhub-oauth test
+
   e2e-build:
     needs: [lint, type-check]
     runs-on: ubuntu-latest

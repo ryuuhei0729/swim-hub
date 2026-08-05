@@ -1,0 +1,13 @@
+{
+  "extends": "../../tools/typescript-config/library.json",
+  "compilerOptions": {
+    // library.json の "outDir": "./dist" は tools/typescript-config/ 基準で解決される
+    // (tsconfig の extends は継承元ファイルの場所を基準に相対パスを解決するため) ため、
+    // このパッケージ (packages/oauth/) 基準の dist に出力させるにはここで明示的に
+    // 上書きする必要がある。rootDir も同様の理由で明示する。
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "__tests__"]
+}
