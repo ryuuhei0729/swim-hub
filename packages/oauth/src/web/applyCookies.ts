@@ -1,5 +1,5 @@
-import type { NextResponse } from "next/server";
-import type { CookieToSet } from "./createCallbackSupabaseClient";
+import type { NextResponse } from "next/server.js";
+import type { CookieToSet } from "./createCallbackSupabaseClient.js";
 
 /**
  * createCallbackSupabaseClient / handleAuthCallback が蓄積した cookiesToSet を

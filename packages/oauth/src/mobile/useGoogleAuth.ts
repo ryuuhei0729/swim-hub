@@ -9,4 +9,4 @@
  * 直接 import しているため、テストファイルを変更せずに済むよう re-export のみ
  * 残す。新規の参照は "./signInWithGoogle" (または "./index" 経由) を使うこと。
  */
-export * from "./signInWithGoogle";
+export * from "./signInWithGoogle.js";

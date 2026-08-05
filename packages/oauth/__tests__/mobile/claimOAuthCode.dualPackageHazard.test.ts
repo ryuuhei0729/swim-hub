@@ -17,67 +17,126 @@
  * Vitest の単一モジュールグラフ内で自動的に重複排除されるため「別経路から
  * import しても同じインスタンスを指す」ことの証明にはならない (常に真になる
  * トートロジー)。dual package hazard は Node 本来のモジュール解決・キャッシュ
- * 機構 (require.cache) の話であり、ビルド後の dist/ に対して Node 本来の
- * require() を使わない限り再現も検証もできない。
+ * 機構の話であり、ビルド後の dist/ に対して Node 本来のモジュールローダーを
+ * 使わない限り再現も検証もできない。
  *
- * 検証方法:
- * - `node:module` の createRequire で Vitest を経由しない「素の Node の
- *   require()」を取得する。
+ * 検証方法 (v0.1.2: ESM 出力に合わせて全面更新):
  * - 経路A = パッケージ名の self-reference (`@ryuuhei0729/swimhub-oauth/mobile`)。
  *   package.json の "exports" マップを介して dist/mobile/index.js (バレル) に
  *   解決される — 外部消費者 (各アプリのグローバル Linking ハンドラ等) が
  *   claimOAuthCode を直接 import する経路を模す。
- * - 経路B = ビルド後 dist 内の相対パス直接 require (`../../dist/mobile/
- *   claimOAuthCode`)。dist/mobile/signInWithGoogle.js 自身が内部で
- *   `require("./claimOAuthCode")` と全く同じ解決方式 (拡張子なし相対パス) で
- *   claimOAuthCode に辿り着くのを模す。
- * - CJS 出力なら "require" 条件と "default" 条件が同一ファイルを指すため
- *   (dual package hazard が起きない構成)、経路A・経路Bは Node の
- *   require.cache 上で同一の module.exports を返すはずである。
+ * - 経路B = ビルド後 dist 内の相対パス直接 import (dist/mobile/claimOAuthCode.js
+ *   への絶対パス file: URL)。dist/mobile/signInWithGoogle.js 自身が内部で
+ *   `import { claimOAuthCode } from "./claimOAuthCode.js"` と全く同じ解決方式
+ *   (拡張子付き相対パス) で claimOAuthCode に辿り着くのを模す。
+ *
+ * v0.1.1 (CJS) 時代との実装上の違い (重要):
+ * v0.1.1 では `node:module` の createRequire で Vitest の変換パイプライン
+ * (vite-node) を経由しない「素の Node の require()」を直接このテストファイル内で
+ * 呼び出し、Node の require.cache 上で経路A・経路Bが同一の module.exports を
+ * 返すかを見ていた。v0.1.2 (ESM) では、このテストファイル内で動的 `import()` を
+ * 直接使うと Vitest 自身の SSR モジュールランナー (Vite/Rollup ベース) が
+ * dist/mobile/index.js 以下の依存グラフ (expo-web-browser → react-native 等) を
+ * "素の Node の import()" ではなく独自の変換パイプラインで解析しようとしてしまい、
+ * react-native 内の Flow 構文 (`import typeof * as X from "...flow"`) が
+ * パースできず即座に失敗することを実測で確認した (Vitest 経由では検証にならない
+ * という、まさにこのテストが避けようとしている問題そのもの)。
+ * そのため v0.1.2 では、判定ロジック全体を `node --input-type=module -e "..."` で
+ * 起動する**別プロセスの素の Node**の中で完結させ、その中で経路A・経路Bの
+ * `claimOAuthCode` の参照同一性 (===) や claim/resolve の相互作用を判定し、
+ * 判定結果 (真偽値・シリアライズ可能な値) のみを JSON で標準出力に書き出して
+ * テスト側で assert する。関数インスタンスの `===` 判定自体は必ず子プロセス内で
+ * 行われ (プロセスをまたいで関数参照を渡すことはできないため)、テスト側はその
+ * 判定結果を受け取るだけであることに注意 (検証の実体は変わらず、伝達方法のみが
+ * プロセス境界の制約により変わっている)。
  *
  * expo-web-browser / expo-auth-session のスタブについて:
  * dist/mobile/index.js (経路Aのバレル) は claimOAuthCode 以外に signInWithGoogle /
  * getRedirectUri も re-export しており、それらはモジュール読み込み時点で
- * expo-web-browser / expo-auth-session を require() する。この2つは Metro
- * (React Native バンドラ) 前提の解決 (react-native 条件つき exports・拡張子なし
- * ESM export・生の .ts ソースへの参照等) をしており、素の Node.js プロセスからは
- * 実測で読み込めない (このパッケージの CJS/ESM 化とは無関係な、expo 側の既知の
+ * expo-web-browser / expo-auth-session を import する。この2つは Metro
+ * (React Native バンドラ) 前提の解決をしており、素の Node.js プロセスからは
+ * 実測で読み込めない (このパッケージの ESM/CJS 化とは無関係な、expo 側の既知の
  * 制約。本番の Expo アプリは常に Metro 経由で読むためこの制約自体は問題にならない)。
- * signInWithGoogle.js・getRedirectUri.js はどちらもモジュール読み込み時点では
- * これらの named export を参照せず、実際に呼び出す関数本体の中でのみ参照するため、
- * Node の require.cache を空オブジェクトで事前に埋めるだけでバレルの読み込み自体は
- * 成立する (signInWithGoogle/getRedirectUri 自体の実際の動作は
- * signInWithGoogle.claimGuard.test.ts 等が Vitest の vi.mock 経由で別途検証済み)。
+ * v0.1.1 (CJS) 時代は `Module._cache` へダミーの module オブジェクトを直接注入して
+ * これらの読み込みを迂回していたが、ESM ではモジュールグラフの構築が Node の
+ * ネイティブモジュールローダー内部で完結し `Module._cache` を経由しないため、この
+ * 手法は使えない。代わりに子プロセス内で `node:module` の `register()` により
+ * モジュールカスタマイズフック (resolve/load) を登録し、"expo-web-browser" /
+ * "expo-auth-session" という指定子だけを実体を一切読みにいかずスタブソースに
+ * すり替える。signInWithGoogle.js・getRedirectUri.js はどちらもモジュール
+ * 読み込み時点ではこれらの named export を呼び出さず (関数本体の中でのみ参照する)、
+ * 実際の動作は signInWithGoogle.claimGuard.test.ts 等が Vitest の vi.mock 経由で
+ * 別途検証済みのため、スタブは「読み込みが構文的に成立する最小限の named export を
+ * 持つダミーモジュール」で十分である。
  */
 import { existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import Module, { createRequire } from "node:module";
+import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-
-type ClaimOAuthCodeModule = {
-  claimOAuthCode: typeof import("../../src/mobile/claimOAuthCode").claimOAuthCode;
-};
-
-interface FakeCjsModule {
-  id: string;
-  filename: string;
-  loaded: boolean;
-  exports: Record<string, never>;
-}
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { describe, it, expect, beforeAll } from "vitest";
 
 // このテストファイル自身から見た「素の Node require()」。Vitest の変換パイプライン
-// (vite-node) を経由しないため、self-reference 解決も require.cache も Node の
-// 実装そのものになる。
+// (vite-node) を経由しないため、tsc の起動は Node の実装そのものになる。
 const nodeRequire = createRequire(import.meta.url);
 
 const packageRoot = fileURLToPath(new URL("../../", import.meta.url));
 const distMobileIndexPath = path.join(packageRoot, "dist/mobile/index.js");
 const distMobileClaimOAuthCodePath = path.join(packageRoot, "dist/mobile/claimOAuthCode.js");
+const distMobileClaimOAuthCodeUrl = pathToFileURL(distMobileClaimOAuthCodePath).href;
 
-const NATIVE_ONLY_PEER_DEPENDENCIES = ["expo-web-browser", "expo-auth-session"] as const;
-const stubbedCacheKeys: string[] = [];
+// 子プロセス (素の Node) 内で expo-web-browser / expo-auth-session をスタブに
+// すり替えるモジュールカスタマイズフック本体。子プロセスのスクリプト文字列に
+// そのまま埋め込む。
+const EXPO_STUB_LOADER_HOOK_SOURCE = `
+const STUB_SPECIFIERS = {
+  "expo-web-browser": "swimhub-oauth-test-stub:expo-web-browser",
+  "expo-auth-session": "swimhub-oauth-test-stub:expo-auth-session",
+};
+const STUB_SOURCES = {
+  "swimhub-oauth-test-stub:expo-web-browser": "export function openAuthSessionAsync() {}; export default {};",
+  "swimhub-oauth-test-stub:expo-auth-session": "export function makeRedirectUri() {}; export default {};",
+};
+export async function resolve(specifier, context, nextResolve) {
+  const stubUrl = STUB_SPECIFIERS[specifier];
+  if (stubUrl) return { url: stubUrl, shortCircuit: true };
+  return nextResolve(specifier, context);
+}
+export async function load(url, context, nextLoad) {
+  const source = STUB_SOURCES[url];
+  if (source) return { format: "module", source, shortCircuit: true };
+  return nextLoad(url, context);
+}
+`;
+
+/**
+ * 子プロセス (素の Node、cwd=packageRoot) で `script` を実行し、
+ * その標準出力 (JSON 文字列1行) を parse して返す。
+ * script 内では `registerExpoStubs()` と `distMobileClaimOAuthCodeUrl` が
+ * 使える前提で組み立てる (下記 runDualPackageHazardProbe 参照)。
+ */
+function runDualPackageHazardProbe<T>(probeBody: string): T {
+  const script = `
+import { register } from "node:module";
+
+async function registerExpoStubs() {
+  register(
+    "data:text/javascript," + encodeURIComponent(${JSON.stringify(EXPO_STUB_LOADER_HOOK_SOURCE)}),
+    import.meta.url,
+  );
+}
+
+const distMobileClaimOAuthCodeUrl = ${JSON.stringify(distMobileClaimOAuthCodeUrl)};
+
+${probeBody}
+`;
+  const stdout = execFileSync(process.execPath, ["--input-type=module", "-e", script], {
+    cwd: packageRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  return JSON.parse(stdout) as T;
+}
 
 beforeAll(() => {
   if (!existsSync(distMobileIndexPath) || !existsSync(distMobileClaimOAuthCodePath)) {
@@ -98,62 +157,70 @@ beforeAll(() => {
       stdio: "pipe",
     });
   }
-
-  // require.cache への直接書き込みは @types/node に型が無い内部 API のため、
-  // このテストファイル内だけに閉じた最小限の型でキャストする (any は使わない)。
-  const cache = (Module as unknown as { _cache: Record<string, FakeCjsModule> })._cache;
-  for (const specifier of NATIVE_ONLY_PEER_DEPENDENCIES) {
-    const resolvedPath = nodeRequire.resolve(specifier);
-    cache[resolvedPath] = { id: resolvedPath, filename: resolvedPath, loaded: true, exports: {} };
-    stubbedCacheKeys.push(resolvedPath);
-  }
 }, 60_000);
 
-afterAll(() => {
-  // 素の Node.js の require.cache はこのファイル (createRequire) からのみ触っており
-  // 他のテストファイルは vi.mock 経由の別レジストリを使う (Vitest 側の SSR
-  // モジュールグラフ) ため他ファイルへの汚染リスクは無いが、念のため後始末する。
-  const cache = (Module as unknown as { _cache: Record<string, FakeCjsModule> })._cache;
-  for (const key of stubbedCacheKeys) {
-    delete cache[key];
-  }
-});
+describe("claimOAuthCode — dual package hazard 回帰テスト (パッケージ self-reference と dist 直接 import の同一性)", () => {
+  it("[V-95] @ryuuhei0729/swimhub-oauth/mobile 経由の claimOAuthCode と、dist 内相対パス直接 import の claimOAuthCode は同一の関数インスタンスである", () => {
+    const result = runDualPackageHazardProbe<{ typeofClaimOAuthCode: string; sameReference: boolean }>(`
+await registerExpoStubs();
+const viaPackageSelfReference = await import("@ryuuhei0729/swimhub-oauth/mobile");
+const viaDirectDistImport = await import(distMobileClaimOAuthCodeUrl);
+process.stdout.write(JSON.stringify({
+  typeofClaimOAuthCode: typeof viaPackageSelfReference.claimOAuthCode,
+  // 参照レベルで同一インスタンスであることの直接証明 (===)。
+  // これが崩れる = dual package hazard が発生し Map が2つに分裂している。
+  sameReference: viaPackageSelfReference.claimOAuthCode === viaDirectDistImport.claimOAuthCode,
+}));
+`);
 
-describe("claimOAuthCode — dual package hazard 回帰テスト (パッケージ self-reference と dist 直接 require の同一性)", () => {
-  it("[V-95] @ryuuhei0729/swimhub-oauth/mobile 経由の claimOAuthCode と、dist 内相対パス直接 require の claimOAuthCode は同一の関数インスタンスである", () => {
-    const viaPackageSelfReference = nodeRequire("@ryuuhei0729/swimhub-oauth/mobile") as ClaimOAuthCodeModule;
-    const viaDirectDistRequire = nodeRequire("../../dist/mobile/claimOAuthCode") as ClaimOAuthCodeModule;
-
-    expect(typeof viaPackageSelfReference.claimOAuthCode).toBe("function");
-    // 参照レベルで同一インスタンスであることの直接証明 (===)。
-    // これが崩れる = dual package hazard が発生し Map が2つに分裂している。
-    expect(viaPackageSelfReference.claimOAuthCode).toBe(viaDirectDistRequire.claimOAuthCode);
+    expect(result.typeofClaimOAuthCode).toBe("function");
+    expect(result.sameReference).toBe(true);
   });
 
   it("[V-96] 経路Aで claim した code を経路Bで claim しようとすると claimed:false になり、経路Aの実際の結果を共有する", async () => {
-    const viaPackageSelfReference = nodeRequire("@ryuuhei0729/swimhub-oauth/mobile") as ClaimOAuthCodeModule;
-    const viaDirectDistRequire = nodeRequire("../../dist/mobile/claimOAuthCode") as ClaimOAuthCodeModule;
+    const result = runDualPackageHazardProbe<{
+      winnerClaimed: boolean;
+      loserClaimedInitially: boolean;
+      loserResult: unknown;
+    }>(`
+await registerExpoStubs();
+const viaPackageSelfReference = await import("@ryuuhei0729/swimhub-oauth/mobile");
+const viaDirectDistImport = await import(distMobileClaimOAuthCodeUrl);
 
-    // dist 側は src 側 (claimOAuthCode.test.ts 等) とは完全に別ファイル・別
-    // Map インスタンスのため既存137件の code 文字列と衝突する心配は無いが、
-    // 本テストスイート内 (経路A/経路B) での一意性のため専用の code を使う。
-    const code = "dual-package-hazard-v95-v96-001";
+// dist 側は src 側 (claimOAuthCode.test.ts 等) とは完全に別ファイル・別
+// Map インスタンスのため既存137件の code 文字列と衝突する心配は無いが、
+// 本テストスイート内 (経路A/経路B) での一意性のため専用の code を使う。
+const code = "dual-package-hazard-v95-v96-001";
 
-    const winner = viaPackageSelfReference.claimOAuthCode(code);
-    if (!winner.claimed) {
-      throw new Error(
-        "test invariant violated: 経路Aは新規 code のため claimed:true になるはず (dist が汚染されている可能性)",
-      );
-    }
+const winner = viaPackageSelfReference.claimOAuthCode(code);
+if (!winner.claimed) {
+  throw new Error(
+    "test invariant violated: 経路Aは新規 code のため claimed:true になるはず (dist が汚染されている可能性)",
+  );
+}
 
-    // 経路Bが「別モジュールインスタンス」であれば、ここでも claimed:true に
-    // なってしまい二重交換バグが再現する。CJS 単一出力であれば経路Aと同じ
-    // Map を参照しているため claimed:false になるはず。
-    const loser = viaDirectDistRequire.claimOAuthCode(code);
-    expect(loser.claimed).toBe(false);
+// 経路Bが「別モジュールインスタンス」であれば、ここでも claimed:true に
+// なってしまい二重交換バグが再現する。ESM 単一出力であれば経路Aと同じ
+// Map を参照しているため claimed:false になるはず。
+const loser = viaDirectDistImport.claimOAuthCode(code);
+const loserClaimedInitially = loser.claimed;
 
-    winner.resolve({ success: true });
-    if (loser.claimed) throw new Error("unreachable");
-    await expect(loser.result).resolves.toEqual({ success: true });
+winner.resolve({ success: true });
+
+let loserResult = null;
+if (!loser.claimed) {
+  loserResult = await loser.result;
+}
+
+process.stdout.write(JSON.stringify({
+  winnerClaimed: winner.claimed,
+  loserClaimedInitially,
+  loserResult,
+}));
+`);
+
+    expect(result.winnerClaimed).toBe(true);
+    expect(result.loserClaimedInitially).toBe(false);
+    expect(result.loserResult).toEqual({ success: true });
   });
 });

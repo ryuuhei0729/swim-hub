@@ -1,7 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { cookies } from "next/headers";
-import type { NextRequest } from "next/server";
+import type { cookies } from "next/headers.js";
+import type { NextRequest } from "next/server.js";
 
 /**
  * createCallbackSupabaseClient の setAll() で蓄積される Cookie。
@@ -14,7 +13,18 @@ export type CookieToSet = {
 };
 
 export interface CallbackSupabaseClient<Database = unknown> {
-  supabase: SupabaseClient<Database>;
+  // ここは意図的に `SupabaseClient<Database>` を @supabase/supabase-js から
+  // 直接 import せず、@supabase/ssr の createServerClient の戻り値型から
+  // 導出する。@supabase/ssr は "exports" フィールドを持たない CJS パッケージ
+  // (main: "dist/main/index.js") のため、moduleResolution によって
+  // createServerClient の戻り値内部で参照される SupabaseClient と、この
+  // ファイルが独自に import する SupabaseClient が別々の宣言インスタンスとして
+  // 解決されることがあり (protected メンバーを持つクラスのため構造的に同一でも
+  // 代入不可になる)、type-check (tsconfig.json / bundler) と build
+  // (tsconfig.build.json / nodenext) で解決結果が食い違って一方だけでエラーに
+  // なる問題があった。createServerClient の戻り値型を単一の情報源にすることで
+  // moduleResolution の設定に依存しない解決結果になる。
+  supabase: ReturnType<typeof createServerClient<Database>>;
   cookiesToSet: CookieToSet[];
 }
 

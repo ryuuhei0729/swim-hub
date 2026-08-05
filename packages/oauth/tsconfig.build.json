@@ -11,15 +11,15 @@
     // "bundler" は「バンドラが処理する前提のアプリ側ソース」向けの設定であり、
     // tsc 単体で dist/ に出力して npm publish するこのライブラリのビルドには不適切
     // (拡張子なしの相対 import ("./claimOAuthCode" 等) が Node のネイティブ ESM
-    // ローダーで解決できず、消費側で Jest transformIgnorePatterns / Vitest
-    // deps.inline の回避策が必須になっていた)。CommonJS 出力に切り替えることで、
-    // 拡張子なし相対パスは Node の CJS require() が拡張子省略を自前で解決するため
-    // 問題にならず、Jest もそのまま require() できるので transform 自体が不要になる。
-    // "moduleResolution": "bundler" は "module" が "preserve"/"es2015"以降でないと
-    // 使えない (TS5095) ため、CommonJS 出力にする場合は "node10" に明示的に揃える
-    // 必要がある (実測済み)。
-    "module": "commonjs",
-    "moduleResolution": "node10"
+    // ローダーで解決できず、消費側で素の Node.js から `import()` できない・
+    // dist/mobile/index.js を実行時に import できないという欠陥になっていた)。
+    // "nodenext" は tsc に「Node のネイティブ ESM ローダーが実際に要求する
+    // 拡張子付き相対 import」を強制させる (拡張子を省略すると TS2835 でビルドが
+    // 落ちる) ための設定で、ESM 出力を維持したまま plain Node からの解決可能性を
+    // 担保する。"moduleResolution" は "module": "nodenext" と対にする必要があり
+    // (TS が要求する組み合わせ)、"nodenext" に揃える。
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "__tests__"]

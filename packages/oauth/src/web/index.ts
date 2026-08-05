@@ -2,7 +2,7 @@ export {
   createCallbackSupabaseClient,
   type CallbackSupabaseClient,
   type CookieToSet,
-} from "./createCallbackSupabaseClient";
-export { applyCookies } from "./applyCookies";
-export { validateRedirectPath } from "./validateRedirectPath";
-export { handleAuthCallback, type HandleAuthCallbackConfig } from "./handleAuthCallback";
+} from "./createCallbackSupabaseClient.js";
+export { applyCookies } from "./applyCookies.js";
+export { validateRedirectPath } from "./validateRedirectPath.js";
+export { handleAuthCallback, type HandleAuthCallbackConfig } from "./handleAuthCallback.js";

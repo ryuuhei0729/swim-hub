@@ -1,11 +1,11 @@
-import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { applyCookies } from "./applyCookies";
-import type { CookieToSet } from "./createCallbackSupabaseClient";
-import { createCallbackSupabaseClient } from "./createCallbackSupabaseClient";
-import { validateRedirectPath } from "./validateRedirectPath";
+import type { Session } from "@supabase/supabase-js";
+import { cookies } from "next/headers.js";
+import { NextResponse } from "next/server.js";
+import type { NextRequest } from "next/server.js";
+import { applyCookies } from "./applyCookies.js";
+import type { CallbackSupabaseClient, CookieToSet } from "./createCallbackSupabaseClient.js";
+import { createCallbackSupabaseClient } from "./createCallbackSupabaseClient.js";
+import { validateRedirectPath } from "./validateRedirectPath.js";
 
 /**
  * メール確認 (signup / recovery / email_change 等) の token_hash + type で
@@ -26,7 +26,13 @@ export interface HandleAuthCallbackConfig {
   getDefaultRedirectForOtpType?: (type: OtpType) => string;
   onSessionEstablished?: (
     session: Session,
-    context: { supabase: SupabaseClient; flow: "otp" | "code"; request: NextRequest },
+    // createCallbackSupabaseClient() が実際に返す型 (CallbackSupabaseClient["supabase"])
+    // をそのまま流用する。@supabase/supabase-js から独自に SupabaseClient を
+    // import すると、moduleResolution の設定によっては @supabase/ssr
+    // (createServerClient) 経由で解決される SupabaseClient と別の宣言インスタンス
+    // として扱われ代入不能になることがあるため (createCallbackSupabaseClient.ts
+    // 参照)、常にこちらを単一の情報源にする。
+    context: { supabase: CallbackSupabaseClient["supabase"]; flow: "otp" | "code"; request: NextRequest },
   ) => Promise<void> | void;
 }
 

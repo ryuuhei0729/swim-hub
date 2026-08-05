@@ -1,8 +1,8 @@
 import * as WebBrowser from "expo-web-browser";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { claimOAuthCode } from "./claimOAuthCode";
-import { extractTokensFromUrl, type ExtractedTokens } from "./extractTokensFromUrl";
-import { getRedirectUri } from "./getRedirectUri";
+import { claimOAuthCode } from "./claimOAuthCode.js";
+import { extractTokensFromUrl, type ExtractedTokens } from "./extractTokensFromUrl.js";
+import { getRedirectUri } from "./getRedirectUri.js";
 
 /**
  * signInWithGoogle は素の async 関数であり、React フックではない。
