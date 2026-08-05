@@ -22,6 +22,10 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
   const t = useTranslations("common");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // 退会済みメンバーの画像削除等で参照先が既に存在しない場合の壊れ画像対策。
+  // サムネイルと拡大表示は別URL (thumbnailUrl/originalUrl) なので個別に管理する。
+  const [brokenThumbnailIds, setBrokenThumbnailIds] = useState<Set<string>>(new Set());
+  const [isModalImageBroken, setIsModalImageBroken] = useState(false);
 
   // キーボードナビゲーション
   useEffect(() => {
@@ -50,6 +54,7 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
   const handleThumbnailClick = useCallback((index: number) => {
     setSelectedIndex(index);
     setIsLoading(true);
+    setIsModalImageBroken(false);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -61,6 +66,7 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
       e.stopPropagation();
       setSelectedIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : images.length - 1));
       setIsLoading(true);
+      setIsModalImageBroken(false);
     },
     [images.length],
   );
@@ -70,12 +76,22 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
       e.stopPropagation();
       setSelectedIndex((prev) => (prev !== null && prev < images.length - 1 ? prev + 1 : 0));
       setIsLoading(true);
+      setIsModalImageBroken(false);
     },
     [images.length],
   );
 
   const handleImageLoad = useCallback(() => {
     setIsLoading(false);
+  }, []);
+
+  const handleModalImageError = useCallback(() => {
+    setIsLoading(false);
+    setIsModalImageBroken(true);
+  }, []);
+
+  const handleThumbnailError = useCallback((imageId: string) => {
+    setBrokenThumbnailIds((prev) => (prev.has(imageId) ? prev : new Set(prev).add(imageId)));
   }, []);
 
   if (images.length === 0) {
@@ -100,13 +116,23 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
               onClick={() => handleThumbnailClick(index)}
               className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 hover:border-green-400 hover:ring-2 hover:ring-green-200 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 relative"
             >
-              <Image
-                src={image.thumbnailUrl}
-                alt={image.fileName || t("imageGallery.imageAlt", { index: index + 1 })}
-                fill
-                className="object-cover"
-                loading="lazy"
-              />
+              {brokenThumbnailIds.has(image.id) ? (
+                <div
+                  className="w-full h-full flex items-center justify-center bg-gray-100"
+                  aria-label={t("error")}
+                >
+                  <PhotoIcon className="h-6 w-6 text-gray-300" />
+                </div>
+              ) : (
+                <Image
+                  src={image.thumbnailUrl}
+                  alt={image.fileName || t("imageGallery.imageAlt", { index: index + 1 })}
+                  fill
+                  className="object-cover"
+                  loading="lazy"
+                  onError={() => handleThumbnailError(image.id)}
+                />
+              )}
             </button>
           ))}
         </div>
@@ -160,21 +186,29 @@ export default function ImageGallery({ images, className = "" }: ImageGalleryPro
           {/* 画像 */}
           <div className="relative w-[90vw] h-[90vh]" onClick={(e) => e.stopPropagation()}>
             {/* ローディング */}
-            {isLoading && (
+            {isLoading && !isModalImageBroken && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
               </div>
             )}
-            <Image
-              src={selectedImage.originalUrl}
-              alt={selectedImage.fileName || t("imageGallery.attachedImages")}
-              fill
-              className={`object-contain transition-opacity duration-200 ${
-                isLoading ? "opacity-0" : "opacity-100"
-              }`}
-              onLoad={handleImageLoad}
-              loading="lazy"
-            />
+            {isModalImageBroken ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/60">
+                <PhotoIcon className="h-16 w-16" />
+                <span className="text-sm">{t("error")}</span>
+              </div>
+            ) : (
+              <Image
+                src={selectedImage.originalUrl}
+                alt={selectedImage.fileName || t("imageGallery.attachedImages")}
+                fill
+                className={`object-contain transition-opacity duration-200 ${
+                  isLoading ? "opacity-0" : "opacity-100"
+                }`}
+                onLoad={handleImageLoad}
+                onError={handleModalImageError}
+                loading="lazy"
+              />
+            )}
           </div>
 
           {/* ファイル名 */}

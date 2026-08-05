@@ -1184,6 +1184,7 @@ export type Database = {
           plan: string;
           premium_expires_at: string | null;
           provider: string | null;
+          provider_environment: string | null;
           provider_subscription_id: string | null;
           status: string | null;
           stripe_customer_id: string | null;
@@ -1199,6 +1200,7 @@ export type Database = {
           plan?: string;
           premium_expires_at?: string | null;
           provider?: string | null;
+          provider_environment?: string | null;
           provider_subscription_id?: string | null;
           status?: string | null;
           stripe_customer_id?: string | null;
@@ -1214,6 +1216,7 @@ export type Database = {
           plan?: string;
           premium_expires_at?: string | null;
           provider?: string | null;
+          provider_environment?: string | null;
           provider_subscription_id?: string | null;
           status?: string | null;
           stripe_customer_id?: string | null;
