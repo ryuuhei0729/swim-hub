@@ -3,9 +3,15 @@
 // 境界値 (空文字 token_hash / 未知 type / type なし) を含む。
 //
 // トートロジー回避: route.ts のロジックを再実装せず、実ハンドラ (GET) をそのまま import し、
-// 依存 (next/headers の cookies / @/lib/supabase-server の createRouteHandlerClient) のみ
+// 依存 (next/headers の cookies / @supabase/ssr の createServerClient) のみ
 // vi.mock で差し替える。verifyOtp / exchangeCodeForSession の呼び出し有無・引数・
 // レスポンスの Location ヘッダーを観測する。
+//
+// 継ぎ目の移動 (Phase 4 Sprint 2): route.ts が共有パッケージ (@ryuuhei0729/swimhub-oauth/web
+// の handleAuthCallback) へ委譲するようになり、Supabase クライアントは
+// @/lib/supabase-server の createRouteHandlerClient ではなく共有パッケージ内部の
+// createCallbackSupabaseClient (@supabase/ssr の createServerClient) が生成する。
+// モック対象をそちらへ移す (timer/scanner の route.test.ts と同じ形)。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -17,16 +23,12 @@ const verifyOtp = vi.fn();
 const exchangeCodeForSession = vi.fn();
 const rpc = vi.fn();
 const fromMock = vi.fn();
-const setCookiesOnResponse = vi.fn();
 
-vi.mock("@/lib/supabase-server", () => ({
-  createRouteHandlerClient: vi.fn(() => ({
-    client: {
-      auth: { verifyOtp, exchangeCodeForSession },
-      rpc,
-      from: fromMock,
-    },
-    setCookiesOnResponse,
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: vi.fn(() => ({
+    auth: { verifyOtp, exchangeCodeForSession },
+    rpc,
+    from: fromMock,
   })),
 }));
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { Alert, Linking } from "react-native";
+import { claimOAuthCode } from "@ryuuhei0729/swimhub-oauth/mobile";
 import { supabase } from "@/lib/supabase";
 import {
   initRevenueCat,
@@ -17,6 +18,7 @@ import {
   extractTokensFromUrl,
   oauthSessionGuard,
   consumeCalendarConnectPending,
+  localizeOAuthErrorCode,
 } from "@/lib/google-auth";
 import { saveGoogleCalendarRefreshToken } from "@/lib/google-calendar-api";
 import {
@@ -602,12 +604,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // ---- グローバルディープリンクハンドラ ----
     // メール確認リンクはメールアプリから直接タップされるため Linking で受け取る必要がある。
-    // oauthSessionGuard.active が true のときは useGoogleAuth / IdentityLinkSettings に委ね、二重 setSession を防ぐ。
+    //
+    // ここには二重処理を防ぐガードが2つあり、守る対象が異なるため併存させている:
+    //
+    // 1. oauthSessionGuard (このすぐ下) = **時間窓ガード**。openAuthSessionAsync 実行中は
+    //    URL 種別 (PKCE の code / implicit のフラグメント) を問わず全ディープリンクを
+    //    ブロックし、warm path (useGoogleAuth / IdentityLinkSettings) に処理を委ねる。
+    //    implicit フロー (フラグメントのトークン) はこのガードでしか守れない。
+    // 2. claimOAuthCode (後段の code 交換部分) = **code 単位の恒久的 idempotency ガード**。
+    //    時間窓が閉じた後に重複配信された古い Linking イベントや、プロセス kill からの
+    //    コールドスタート復帰でも、同一 code の二重交換を防ぐ。PKCE の code 経路にのみ効く。
+    //
+    // 1 だけでは時間窓の外を守れず、2 だけでは implicit フローを守れないため、両方必要。
 
     const handleDeepLink = async (url: string) => {
       if (!isMounted) return;
       if (!isEmailAuthCallback(url)) return;
-      // OAuth (openAuthSessionAsync) 進行中はスキップ
+      // OAuth (openAuthSessionAsync) 進行中はスキップ (上記1: 時間窓ガード)
       if (oauthSessionGuard.active) return;
       if (!supabase) return;
 
@@ -641,7 +654,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // provider_refresh_token フラグメント)と AND で判定する。
       const isPendingFlagSet = await consumeCalendarConnectPending();
 
-      const tokens = extractTokensFromUrl(url);
+      const tokens = extractTokensFromUrl(url, { includeProviderTokens: true });
 
       // PKCE 移行後、provider_refresh_token は URL (フラグメント) には現れず
       // exchangeCodeForSession のセッション結果にのみ含まれる想定のため、
@@ -665,13 +678,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // code_verifier は AsyncStorage に保存されているが、コールドスタートで
       // 既に消費/期限切れの場合は AuthPKCECodeVerifierMissingError 等が
       // error として返る（例外は投げない）ため、ここで通常のエラー表示に倒す。
+      //
+      // 同一 code が useGoogleAuth / IdentityLinkSettings (warm path) にも届きうる
+      // (Android で Custom Tabs 復帰が新規 Intent になった場合や、ブラウザ表示中に
+      // プロセスが kill されコールドスタートした場合)。claimOAuthCode (共有パッケージ)
+      // で「最初に処理を claim した側だけが交換する」を保証し、負けた側は無条件で
+      // 成功扱いにはせず、勝った側の実際の交換結果を待って同期する。
       if (tokens.code) {
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(
-          tokens.code,
-        );
-        if (!isMounted) return;
+        const claim = claimOAuthCode(tokens.code);
 
-        if (exchangeError || !data.session) {
+        if (!claim.claimed) {
+          const otherResult = await claim.result;
+          if (!isMounted) return;
+          if (!otherResult.success) {
+            Alert.alert(
+              i18n.t("common.alertErrorTitle"),
+              isCalendarConnectRecovery
+                ? i18n.t("auth.mobile.googleCalendarPermissionDenied")
+                : localizeOAuthErrorCode("code_exchange_failed"),
+            );
+          }
+          // 成功時は勝った側 (warm path) が既にセッション確立・カレンダー保存まで
+          // 完了させている。session はここでは得られないため何もしない。
+          return;
+        }
+
+        type ExchangeCodeResult = Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>;
+        let exchangeData: ExchangeCodeResult["data"] | null = null;
+        let exchangeError: ExchangeCodeResult["error"] | null = null;
+        try {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(tokens.code);
+          exchangeData = data;
+          exchangeError = error;
+        } catch (exchangeException) {
+          claim.resolve({ success: false });
+          throw exchangeException;
+        }
+        const exchangedSession = exchangeData?.session ?? null;
+
+        if (!isMounted) {
+          claim.resolve({ success: !exchangeError && !!exchangedSession });
+          return;
+        }
+
+        if (exchangeError || !exchangedSession) {
+          claim.resolve({ success: false });
           Alert.alert(
             i18n.t("common.alertErrorTitle"),
             isCalendarConnectRecovery
@@ -681,14 +732,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
+        claim.resolve({ success: true });
+
         // コールドスタート復帰でカレンダー連携が中断していた場合、
         // provider_refresh_token の保存をここで完了させる（取りこぼし防止）。
         // isCalendarConnectRecovery が false の場合（無関係な認証コールバックへの
         // 誤爆判定回避）は、通常のメール確認/ログイン処理のみで完了する。
         if (isCalendarConnectRecovery) {
           await completeCalendarConnectRecovery(
-            data.session.access_token,
-            data.session.provider_refresh_token ?? null,
+            exchangedSession.access_token,
+            exchangedSession.provider_refresh_token ?? null,
           );
         }
         // 成功時は onAuthStateChange が発火し自動でルート切替する

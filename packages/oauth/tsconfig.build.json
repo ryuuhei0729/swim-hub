@@ -19,7 +19,13 @@
     // 担保する。"moduleResolution" は "module": "nodenext" と対にする必要があり
     // (TS が要求する組み合わせ)、"nodenext" に揃える。
     "module": "nodenext",
-    "moduleResolution": "nodenext"
+    "moduleResolution": "nodenext",
+    // base.json の "incremental": true をこのビルドでは無効化する。
+    // 有効なままだと、dist/ を手動削除しても tsbuildinfo が「変更なし」と判断して
+    // tsc が exit 0 のまま何も出力しない。dist は gitignore 対象で消えやすく、
+    // CI でも「ビルド成功したのに dist が無い」という無言の失敗になりうる。
+    // 型チェック用の tsconfig.json 側は incremental のままで恩恵を残す。
+    "incremental": false
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "__tests__"]

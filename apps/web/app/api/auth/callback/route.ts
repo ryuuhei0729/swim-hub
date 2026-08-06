@@ -1,98 +1,14 @@
-import { createRouteHandlerClient } from "@/lib/supabase-server";
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import { handleAuthCallback } from "@ryuuhei0729/swimhub-oauth/web";
+import { encrypt, isEncrypted } from "@/lib/encryption";
+import { NextRequest } from "next/server";
 import type { SupabaseClient, User, Session } from "@supabase/supabase-js";
 import type { Database } from "@apps/shared/types/supabase-schema";
 
 /**
- * redirectToパラメータを検証・サニタイズする
- * - '/'で始まる相対パスのみ許可（スキーム付きURLは拒否）
- * - プロトコル相対URL（//evil.com）を拒否
- * - CR/LFや制御文字を含まないことを確認
- * - 無効な値の場合は'/dashboard'にフォールバック
- * - デコード後の値に対してバリデーションを実行（二重エンコード攻撃を防止）
- * - URLコンストラクタで同一オリジン確認（オープンリダイレクト対策）
- */
-function validateRedirectPath(redirectTo: string | null, origin?: string): string {
-  const defaultPath = "/dashboard";
-
-  if (!redirectTo) {
-    return defaultPath;
-  }
-
-  // まずデコードを試みる（二重エンコード攻撃を防止するため）
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(redirectTo);
-  } catch {
-    // decodeURIComponentが失敗した場合は安全のためデフォルトパスを返す
-    return defaultPath;
-  }
-
-  // スキームを含むURLを拒否（http:, https:, javascript:, data: など）
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(decoded)) {
-    return defaultPath;
-  }
-
-  // プロトコル相対URL（//evil.com）を拒否
-  if (decoded.startsWith("//") || /^\/\//.test(decoded)) {
-    return defaultPath;
-  }
-
-  // パスが'/'で始まることを確認（デコード後の値でチェック）
-  if (!decoded.startsWith("/")) {
-    return defaultPath;
-  }
-
-  // CR/LFや制御文字を含まないことを確認（デコード後の値でチェック）
-  // 許可する文字: 英数字、パス区切り(/)、クエリパラメータ(?&)、ハッシュ(#)
-  // 禁止: CR(\r), LF(\n), タブ(\t), null文字(\0), その他の制御文字
-  for (let i = 0; i < decoded.length; i++) {
-    const charCode = decoded.charCodeAt(i);
-    // 制御文字（0x00-0x1F）、DEL（0x7F）、拡張制御文字（0x80-0x9F）をチェック
-    if (
-      (charCode >= 0x00 && charCode <= 0x1f) ||
-      charCode === 0x7f ||
-      (charCode >= 0x80 && charCode <= 0x9f)
-    ) {
-      return defaultPath;
-    }
-  }
-
-  // 相対パストラバーサル攻撃を防ぐ（../や..\\など）（デコード後の値でチェック）
-  if (decoded.includes("..")) {
-    return defaultPath;
-  }
-
-  // URLコンストラクタで同一オリジン確認（オープンリダイレクト対策の最終検証）
-  if (origin) {
-    try {
-      const resolvedUrl = new URL(decoded, origin);
-      // 解決後のURLが同一オリジンでない場合は拒否
-      if (resolvedUrl.origin !== origin) {
-        return defaultPath;
-      }
-    } catch {
-      // URL構築に失敗した場合は安全のためデフォルトパスを返す
-      return defaultPath;
-    }
-  }
-
-  // 検証を通過したデコード済みパスを返す
-  return decoded;
-}
-
-/**
  * メール確認 (signup / recovery / email_change 等) の token_hash + type で
- * 使用可能な OTP 種別。Supabase の EmailOtpType のサブセット（invite は対象外）。
+ * 使用可能な OTP 種別。共有パッケージ側の型と同じサブセット（invite は対象外）。
  */
 type OtpType = "signup" | "recovery" | "email_change" | "email" | "magiclink";
-
-const OTP_TYPES: readonly OtpType[] = ["signup", "recovery", "email_change", "email", "magiclink"];
-
-function isOtpType(value: string | null): value is OtpType {
-  return value !== null && (OTP_TYPES as readonly string[]).includes(value);
-}
 
 /**
  * OTP種別からデフォルトの遷移先パスを導出する
@@ -116,86 +32,18 @@ function getDefaultRedirectForOtpType(type: OtpType): string {
 }
 
 /**
- * token_hash + type を使ったメール確認フロー（PKCEを使わない）
- * signup / recovery / email_change のメールリンクはこちらで処理する
- */
-async function handleVerifyOtpFlow(
-  request: NextRequest,
-  requestUrl: URL,
-  tokenHash: string,
-  typeParam: string | null,
-): Promise<NextResponse> {
-  if (!isOtpType(typeParam)) {
-    console.error("メール確認コールバックエラー: 不明なtypeパラメータ", { typeParam });
-    return NextResponse.redirect(requestUrl.origin + "/login?error=invalid_request");
-  }
-
-  // redirect_toが明示的に指定されている場合のみ検証して優先する（後方互換）
-  const redirectToParam = requestUrl.searchParams.get("redirect_to");
-  const redirectTo = redirectToParam
-    ? validateRedirectPath(redirectToParam, requestUrl.origin)
-    : getDefaultRedirectForOtpType(typeParam);
-
-  let setCookiesOnResponse: ((response: NextResponse) => void) | null = null;
-
-  try {
-    const cookieStore = await cookies();
-    // 明示的にgetAll()を呼び出して、すべてのCookieを読み込む
-    cookieStore.getAll();
-
-    const { client: supabase, setCookiesOnResponse: setCookies } = createRouteHandlerClient(
-      request,
-      cookieStore,
-    );
-    setCookiesOnResponse = setCookies;
-
-    const { data, error } = await supabase.auth.verifyOtp({
-      type: typeParam,
-      token_hash: tokenHash,
-    });
-
-    if (error) {
-      // 内部エラー詳細はサーバーログにのみ記録し、実エラーコードのみURLに載せる
-      console.error("メール確認コールバックエラー:", error);
-      const errorCode = error.code ?? "auth_failed";
-      const errorResponse = NextResponse.redirect(
-        requestUrl.origin + `/login?error=${encodeURIComponent(errorCode)}`,
-      );
-      setCookiesOnResponse(errorResponse);
-      return errorResponse;
-    }
-
-    if (!data.session) {
-      console.error("メール確認コールバックエラー: セッションが作成されませんでした");
-      const errorResponse = NextResponse.redirect(
-        requestUrl.origin + "/login?error=session_creation_failed",
-      );
-      setCookiesOnResponse(errorResponse);
-      return errorResponse;
-    }
-
-    const successResponse = NextResponse.redirect(requestUrl.origin + redirectTo);
-    setCookiesOnResponse(successResponse);
-    return successResponse;
-  } catch (error) {
-    console.error("メール確認コールバックエラー:", error);
-    const errorResponse = NextResponse.redirect(requestUrl.origin + "/login?error=auth_failed");
-    if (setCookiesOnResponse) {
-      setCookiesOnResponse(errorResponse);
-    }
-    return errorResponse;
-  }
-}
-
-/**
  * OAuth認証後のカレンダー連携を処理
  * Google: provider_refresh_tokenを暗号化保存 + google_calendar_enabled = true
+ *
+ * 戻り値の `connected` は「実際に Google Calendar 連携が完了したか」を表す。
+ * Google 以外のプロバイダの場合は連携対象がないため error は null だが connected は false
+ * (呼び出し元が calendar_connected=true を付与するかどうかの判定に使う)。
  */
 async function handleCalendarConnection(
   supabase: SupabaseClient<Database>,
   user: User,
   session: Session,
-): Promise<{ error: Error | null }> {
+): Promise<{ error: Error | null; connected: boolean }> {
   const providers = user.app_metadata?.providers as string[] | undefined;
 
   if (providers?.includes("google")) {
@@ -204,17 +52,37 @@ async function handleCalendarConnection(
 
     if (!refreshToken) {
       // refreshToken がない場合は何も更新しない
-      return { error: new Error("No refresh token provided for Google Calendar") };
+      return { error: new Error("No refresh token provided for Google Calendar"), connected: false };
+    }
+
+    // 暗号化キーの確認（apps/web/app/api/google-calendar/connect/route.ts と対称）
+    if (!process.env.TOKEN_ENCRYPTION_KEY) {
+      console.error("TOKEN_ENCRYPTION_KEY is not set");
+      return { error: new Error("TOKEN_ENCRYPTION_KEY is not set"), connected: false };
+    }
+
+    // トークンを暗号化（二重暗号化を防ぐため、既に暗号化済みの場合はそのまま使う）
+    // encrypt() は TOKEN_ENCRYPTION_KEY 未設定時などに例外を投げるが、カレンダー連携の
+    // エラーは無視してログイン自体は成功させる設計のため、ここで捕捉してログに残す
+    let tokenToStore: string;
+    try {
+      tokenToStore = isEncrypted(refreshToken) ? refreshToken : encrypt(refreshToken);
+    } catch (encryptError) {
+      console.error("Googleカレンダートークンの暗号化に失敗しました:", encryptError);
+      return {
+        error: encryptError instanceof Error ? encryptError : new Error(String(encryptError)),
+        connected: false,
+      };
     }
 
     const { error: tokenError } = await supabase.rpc("set_google_refresh_token", {
       p_user_id: user.id,
-      p_token: refreshToken,
+      p_token: tokenToStore,
     });
 
     if (tokenError) {
       // RPC エラーの場合は google_calendar_enabled を更新しない
-      return { error: tokenError };
+      return { error: tokenError, connected: false };
     }
 
     // トークン保存成功時のみフラグを立てる
@@ -223,119 +91,68 @@ async function handleCalendarConnection(
       .update({ google_calendar_enabled: true })
       .eq("id", user.id);
 
-    return { error: updateError };
+    return { error: updateError, connected: !updateError };
   }
 
-  return { error: null };
+  return { error: null, connected: false };
 }
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
+  const isCalendarConnect = requestUrl.searchParams.get("calendar_connect") === "true";
 
-  // token_hash + type がある場合は verifyOtp フローを優先する（PM裁定: codeより優先）
-  const tokenHash = requestUrl.searchParams.get("token_hash");
-  if (tokenHash) {
-    return handleVerifyOtpFlow(request, requestUrl, tokenHash, requestUrl.searchParams.get("type"));
-  }
+  // onSessionEstablished の戻り値は handleAuthCallback 側で無視されるため、
+  // カレンダー連携が成功したかどうかをクロージャのローカル変数に記録し、
+  // レスポンス確定後に route.ts 側で Location ヘッダーへ calendar_connected=true を追記する。
+  // calendar_connected は連携の成否を反映する（handleCalendarConnection がエラーなく
+  // 完了し、かつ実際に Google Calendar 連携が行われた (connected === true) 場合のみ
+  // true にする。isCalendarConnect の指定だけでは付与しない）。
+  let shouldAppendCalendarConnected = false;
 
-  const code = requestUrl.searchParams.get("code");
-  // オープンリダイレクト対策: originを渡して同一オリジン検証を実施
-  const redirectTo = validateRedirectPath(
-    requestUrl.searchParams.get("redirect_to"),
-    requestUrl.origin,
-  );
-
-  if (!code) {
-    // codeパラメータがない場合はエラーページにリダイレクト
-    return NextResponse.redirect(requestUrl.origin + "/login?error=missing_code");
-  }
-
-  // setCookiesOnResponseをtryブロックの外で宣言し、catchブロックからもアクセス可能にする
-  let setCookiesOnResponse: ((response: NextResponse) => void) | null = null;
-
-  try {
-    // 重要: Next.js 14以降では、cookies()を明示的に呼び出してCookieを読み取る必要がある
-    // これにより、PKCE code verifierが確実に読み取られる
-    // cookies().getAll()を先に呼び出すことで、遅延評価を回避
-    const cookieStore = await cookies();
-    // 明示的にgetAll()を呼び出して、すべてのCookieを読み込む
-    const cookieStoreCookies = cookieStore.getAll();
-
-    // 開発環境のみ最小限の診断情報をログ出力（Cookie値やPKCE verifierは一切出力しない）
-    if (process.env.NODE_ENV !== "production") {
-      const requestCookies = request.cookies.getAll();
-      const hasCodeVerifier = cookieStoreCookies.some(
-        (c) => c.name.includes("code-verifier") || c.name.includes("pkce"),
-      );
-      console.log("OAuthコールバック - Cookie検出:", {
-        requestCookiesCount: requestCookies.length,
-        cookieStoreCookiesCount: cookieStoreCookies.length,
-        hasCodeVerifier: hasCodeVerifier,
-      });
-    }
-
-    // Route Handler用のクライアントを作成（Cookie操作を記録）
-    // cookies()から取得したCookieストアを優先的に使用
-    // これにより、Next.js 14+の遅延評価問題を回避
-    const { client: supabase, setCookiesOnResponse: setCookies } = createRouteHandlerClient(
-      request,
-      cookieStore,
-    );
-    setCookiesOnResponse = setCookies;
-
-    // コードをセッションに交換（Cookie操作は自動的に処理される）
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-    if (error) {
-      // 内部エラー詳細はサーバーログにのみ記録（URLには漏洩させない）
-      console.error("OAuthコールバックエラー:", error);
-      const errorResponse = NextResponse.redirect(requestUrl.origin + "/login?error=auth_failed");
-      setCookiesOnResponse(errorResponse);
-      return errorResponse;
-    }
-
-    if (!data.session) {
-      console.error("OAuthコールバックエラー: セッションが作成されませんでした");
-      const errorResponse = NextResponse.redirect(
-        requestUrl.origin + "/login?error=session_creation_failed",
-      );
-      setCookiesOnResponse(errorResponse);
-      return errorResponse;
-    }
-
-    // calendar_connectパラメータがある場合のみ、カレンダー連携を有効化
-    const isCalendarConnect = requestUrl.searchParams.get("calendar_connect") === "true";
-    if (isCalendarConnect && data.user && data.session) {
-      const { error: calendarError } = await handleCalendarConnection(
-        supabase,
-        data.user,
-        data.session,
-      );
-
-      if (calendarError) {
-        console.error("カレンダー連携エラー:", calendarError);
-        // エラーは無視（既に有効化されている可能性がある）
+  const response = await handleAuthCallback({
+    request,
+    defaultRedirectPath: "/dashboard",
+    loginPath: "/login",
+    getDefaultRedirectForOtpType,
+    onSessionEstablished: async (session, { supabase, flow }) => {
+      // カレンダー連携は code フロー (OAuth) の calendar_connect=true 指定時のみ行う。
+      // token_hash (メール確認) フローでは対象外。
+      if (flow !== "code" || !isCalendarConnect) {
+        return;
       }
-    }
 
-    // リダイレクト（Cookieを設定）
-    // exchangeCodeForSession() で既にセッション検証済みのため、追加の getSession() は不要
-    // redirectToは既に検証済みなので安全に結合
-    // カレンダー連携成功時は、リダイレクト先にパラメータを追加
-    const finalRedirectTo = isCalendarConnect
-      ? `${redirectTo}${redirectTo.includes("?") ? "&" : "?"}calendar_connected=true`
-      : redirectTo;
-    const successResponse = NextResponse.redirect(requestUrl.origin + finalRedirectTo);
-    setCookiesOnResponse(successResponse);
-    return successResponse;
-  } catch (error) {
-    // 内部エラー詳細はサーバーログにのみ記録（URLには漏洩させない）
-    console.error("OAuthコールバックエラー:", error);
-    const errorResponse = NextResponse.redirect(requestUrl.origin + "/login?error=auth_failed");
-    // setCookiesOnResponseが利用可能な場合は、他のエラーパスと同様にCookieを設定
-    if (setCookiesOnResponse) {
-      setCookiesOnResponse(errorResponse);
+      // handleAuthCallback は onSessionEstablished が例外を投げると確立済みセッションを
+      // 破棄して auth_failed にする。カレンダー連携のエラーは無視してログイン自体は
+      // 成功させる既存設計を維持するため、ここで必ず例外を捕捉し外へ投げない。
+      try {
+        const { error: calendarError, connected } = await handleCalendarConnection(
+          supabase as unknown as SupabaseClient<Database>,
+          session.user,
+          session,
+        );
+
+        if (calendarError) {
+          console.error("カレンダー連携エラー:", calendarError);
+          // エラーは無視（既に有効化されている可能性がある）。calendar_connected は付与しない。
+        } else if (connected) {
+          shouldAppendCalendarConnected = true;
+        }
+      } catch (calendarError) {
+        console.error("カレンダー連携エラー:", calendarError);
+      }
+    },
+  });
+
+  if (shouldAppendCalendarConnected) {
+    const location = response.headers.get("location");
+    if (location) {
+      // NextResponse の headers は可変な Headers インスタンスなので、
+      // レスポンス本体・Cookie はそのままに Location だけを書き換える。
+      const locationUrl = new URL(location);
+      locationUrl.searchParams.set("calendar_connected", "true");
+      response.headers.set("location", locationUrl.toString());
     }
-    return errorResponse;
   }
+
+  return response;
 }

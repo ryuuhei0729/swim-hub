@@ -60,6 +60,12 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
 
+    - name: Build oauth package
+      # apps/{web,mobile} は @ryuuhei0729/swimhub-oauth を exports 経由 (= dist/) で解決する。
+      # dist は gitignore 対象で checkout では復元されないため、依存する各ジョブで明示ビルドする。
+      # (lint/type-check は `pnpm -r` で turbo を経由しないため dependsOn:["^build"] が効かない)
+      run: pnpm --filter @ryuuhei0729/swimhub-oauth build
+
     - name: Run lint
       run: pnpm -r --if-present lint
       env:
@@ -83,6 +89,12 @@ jobs:
       uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
+
+    - name: Build oauth package
+      # apps/{web,mobile} は @ryuuhei0729/swimhub-oauth を exports 経由 (= dist/) で解決する。
+      # dist は gitignore 対象で checkout では復元されないため、依存する各ジョブで明示ビルドする。
+      # (lint/type-check は `pnpm -r` で turbo を経由しないため dependsOn:["^build"] が効かない)
+      run: pnpm --filter @ryuuhei0729/swimhub-oauth build
 
     - name: Run type check
       run: pnpm -r --if-present type-check
@@ -111,6 +123,12 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Build oauth package
+      # apps/{web,mobile} は @ryuuhei0729/swimhub-oauth を exports 経由 (= dist/) で解決する。
+      # dist は gitignore 対象で checkout では復元されないため、依存する各ジョブで明示ビルドする。
+      # (lint/type-check は `pnpm -r` で turbo を経由しないため dependsOn:["^build"] が効かない)
+      run: pnpm --filter @ryuuhei0729/swimhub-oauth build
+
     - name: Ensure Rollup native binaries are installed
       run: pnpm add -D @rollup/rollup-linux-x64-gnu --filter @swim-hub/web || true
 
@@ -119,6 +137,11 @@ jobs:
 
     - name: Run web package tests
       run: pnpm --filter @swim-hub/web test
+
+    - name: Run mobile package tests
+      # apps/mobile も @ryuuhei0729/swimhub-oauth に依存するようになったため、
+      # CI で退行を検知できるようにテストを実行する (従来 CI 未組込のギャップ)。
+      run: pnpm --filter @swim-hub/mobile test
 
     - name: Run oauth package tests
       run: pnpm --filter @ryuuhei0729/swimhub-oauth test
@@ -152,6 +175,12 @@ jobs:
         key: nextjs-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/**/*.{ts,tsx,js,jsx}') }}
         restore-keys: |
           nextjs-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+    - name: Build oauth package
+      # @ryuuhei0729/swimhub-oauth は exports が dist/** のみを指す npm パッケージで、
+      # dist は gitignore 対象。node_modules artifact にも含まれないため、
+      # next build / opennextjs-cloudflare build を直接叩くジョブでも明示ビルドが必要。
+      run: pnpm --filter @ryuuhei0729/swimhub-oauth build
 
     - name: Build Next.js for E2E tests
       working-directory: apps/web
@@ -382,6 +411,12 @@ jobs:
       uses: ./.github/actions/setup-node
       with:
         node-version: ${{ env.NODE_VERSION }}
+
+    - name: Build oauth package
+      # @ryuuhei0729/swimhub-oauth は exports が dist/** のみを指す npm パッケージで、
+      # dist は gitignore 対象。node_modules artifact にも含まれないため、
+      # next build / opennextjs-cloudflare build を直接叩くジョブでも明示ビルドが必要。
+      run: pnpm --filter @ryuuhei0729/swimhub-oauth build
 
     - name: Build for Cloudflare (OpenNext)
       working-directory: apps/web

@@ -31,6 +31,11 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Build oauth package
+      # apps/{web,mobile} は @ryuuhei0729/swimhub-oauth を exports 経由 (= dist/) で解決する。
+      # dist は gitignore 対象で checkout では復元されないため明示ビルドする。
+      run: pnpm --filter @ryuuhei0729/swimhub-oauth build
+
     - name: Ensure Rollup native binaries are installed
       run: pnpm add -D @rollup/rollup-linux-x64-gnu --filter @swim-hub/web || true
 

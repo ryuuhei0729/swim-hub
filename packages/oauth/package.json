@@ -1,6 +1,6 @@
 {
   "name": "@ryuuhei0729/swimhub-oauth",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "SwimHub 3アプリ (swim-hub / swimhub-scanner / swimhub-timer) 共通の OAuth・メール確認コールバック処理。mobile (Expo + Supabase) と web (Next.js Route Handler + Supabase) の実装を集約する。",
   "type": "module",
   "main": "./dist/index.js",
@@ -13,6 +13,10 @@
     "./mobile": {
       "types": "./dist/mobile/index.d.ts",
       "default": "./dist/mobile/index.js"
+    },
+    "./mobile/pure": {
+      "types": "./dist/mobile/pure.d.ts",
+      "default": "./dist/mobile/pure.js"
     },
     "./web": {
       "types": "./dist/web/index.d.ts",
