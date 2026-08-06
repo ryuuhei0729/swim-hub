@@ -38,6 +38,7 @@ jobs:
         path: |
           node_modules
           apps/*/node_modules
+          packages/*/node_modules
         retention-days: 1
         compression-level: 9
 
