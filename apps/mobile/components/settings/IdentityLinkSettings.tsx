@@ -12,8 +12,14 @@ import * as WebBrowser from "expo-web-browser";
 import * as AppleAuthentication from "expo-apple-authentication";
 import Svg, { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
+import { claimOAuthCode } from "@ryuuhei0729/swimhub-oauth/mobile";
 import { useAuth } from "@/contexts/AuthProvider";
-import { getRedirectUri, extractTokensFromUrl, oauthSessionGuard } from "@/lib/google-auth";
+import {
+  getRedirectUri,
+  extractTokensFromUrl,
+  oauthSessionGuard,
+  localizeOAuthErrorCode,
+} from "@/lib/google-auth";
 import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
 import type { UserIdentity } from "@supabase/supabase-js";
 
@@ -137,10 +143,27 @@ export const IdentityLinkSettings: React.FC = () => {
         const tokens = extractTokensFromUrl(result.url);
         if (tokens.error) {
           oauthSessionGuard.active = false;
-          setError(tokens.error);
+          setError(localizeOAuthErrorCode(tokens.error));
           return;
         }
         if (tokens.code) {
+          // 同一 code を AuthProvider のグローバル Linking ハンドラ安全網と二重に
+          // 交換しないよう claimOAuthCode (共有パッケージ) で調停する。
+          const claim = claimOAuthCode(tokens.code);
+
+          if (!claim.claimed) {
+            // 他所 (AuthProvider) が既にこの code を claim 済み。無条件で成功扱い
+            // にはせず、実際の交換結果を待って同期する。
+            oauthSessionGuard.active = false;
+            const otherResult = await claim.result;
+            if (!otherResult.success) {
+              setError(localizeOAuthErrorCode("code_exchange_failed"));
+              return;
+            }
+            await fetchIdentities();
+            return;
+          }
+
           // PKCE: 認可コードを exchangeCodeForSession で交換する。
           // code_verifier が読めない/既に消費済みの場合も例外ではなく
           // AuthError として返るため、ここで通常のエラー表示に倒す。
@@ -148,6 +171,10 @@ export const IdentityLinkSettings: React.FC = () => {
           try {
             const { error } = await supabase.auth.exchangeCodeForSession(tokens.code);
             exchangeError = error;
+            claim.resolve({ success: !error });
+          } catch (exchangeException) {
+            claim.resolve({ success: false });
+            throw exchangeException;
           } finally {
             oauthSessionGuard.active = false;
           }

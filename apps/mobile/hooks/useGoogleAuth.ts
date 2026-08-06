@@ -6,11 +6,17 @@ import { useState, useCallback } from "react";
 import * as WebBrowser from "expo-web-browser";
 import { useTranslation } from "react-i18next";
 import {
+  claimOAuthCode,
+  signInWithGoogle as sharedSignInWithGoogle,
+} from "@ryuuhei0729/swimhub-oauth/mobile";
+import {
   getRedirectUri,
   extractTokensFromUrl,
   oauthSessionGuard,
   markCalendarConnectPending,
   clearCalendarConnectPending,
+  localizeOAuthErrorCode,
+  APP_SCHEME,
   type GoogleAuthOptions,
 } from "@/lib/google-auth";
 import { saveGoogleCalendarRefreshToken } from "@/lib/google-calendar-api";
@@ -60,29 +66,61 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
       setLoading(true);
       setError(null);
 
-      try {
-        const { scopes = [], forCalendarConnect = false } = options || {};
-        const redirectUri = getRedirectUri({ forCalendarConnect });
+      const { scopes = [], forCalendarConnect = false } = options || {};
 
-        // スコープを構築
-        const allScopes = ["openid", "email", "profile", ...scopes];
-        if (forCalendarConnect) {
-          allScopes.push("https://www.googleapis.com/auth/calendar.events");
+      try {
+        if (!forCalendarConnect) {
+          // 通常ログイン: PKCE の交換・claimOAuthCode による二重処理ガード・
+          // implicit フォールバックは共有パッケージ (signInWithGoogle) の責務。
+          // oauthSessionGuard は AuthProvider のグローバル Linking ハンドラの
+          // 早期リターン判定 (このアプリ固有のセーフティネット) のために
+          // 呼び出し前後で維持する。
+          oauthSessionGuard.active = true;
+          let result: Awaited<ReturnType<typeof sharedSignInWithGoogle>>;
+          try {
+            result = await sharedSignInWithGoogle({
+              supabase,
+              scheme: APP_SCHEME,
+              additionalScopes: scopes,
+            });
+          } finally {
+            oauthSessionGuard.active = false;
+          }
+
+          if (!result.success) {
+            const message = localizeOAuthErrorCode(result.error?.message ?? "");
+            setError(message);
+            return { success: false, error: result.error ?? new Error(message) };
+          }
+
+          return { success: true };
         }
 
-        // Supabaseの signInWithOAuth を使用（skipBrowserRedirect: true）
+        // --- Googleカレンダー連携 ---
+        // 共有パッケージの signInWithGoogle は redirectUri を差し替えられないため
+        // (常に getRedirectUri(scheme) 固定)、このフローだけは従来通り自前で行う。
+        // `flow=calendar-connect` クエリ付きのリダイレクト URI は、コールドスタート
+        // (Android で Custom Tabs 操作中にプロセスが kill された場合) の復旧判定に
+        // AuthProvider が必須で使っているため、これを維持する。
+        const redirectUri = getRedirectUri({ forCalendarConnect: true });
+        const allScopes = [
+          "openid",
+          "email",
+          "profile",
+          ...scopes,
+          "https://www.googleapis.com/auth/calendar.events",
+        ];
+
         const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
           provider: "google",
           options: {
             redirectTo: redirectUri,
             scopes: allScopes.join(" "),
             skipBrowserRedirect: true,
-            queryParams: forCalendarConnect
-              ? {
-                  access_type: "offline",
-                  prompt: "consent",
-                }
-              : undefined,
+            queryParams: {
+              access_type: "offline",
+              prompt: "consent",
+            },
           },
         });
 
@@ -98,12 +136,10 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         }
 
         // カレンダー連携用ブラウザを開く直前に永続フラグを立てる。
-        // Android の Custom Tabs は別プロセスで開くため、同意画面操作中にプロセスが
+        // Android の Custom Tabs は別プロセスで開くため、同意画面操作中に プロセスが
         // kill されても、コールドスタート復帰時に AuthProvider がこのフラグを見て
         // provider_refresh_token の保存を取りこぼさないようにする。
-        if (forCalendarConnect) {
-          await markCalendarConnectPending();
-        }
+        await markCalendarConnectPending();
 
         // openAuthSessionAsync 進行中は AuthProvider のグローバル Linking ハンドラを無効化する
         oauthSessionGuard.active = true;
@@ -118,12 +154,13 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
 
         if (result.type === "success" && result.url) {
           // コールバック URL からトークンを抽出
-          const tokens = extractTokensFromUrl(result.url);
+          const tokens = extractTokensFromUrl(result.url, { includeProviderTokens: true });
 
           if (tokens.error) {
             oauthSessionGuard.active = false;
-            setError(tokens.error);
-            return { success: false, error: new Error(tokens.error) };
+            const message = localizeOAuthErrorCode(tokens.error);
+            setError(message);
+            return { success: false, error: new Error(message) };
           }
 
           // PKCE: クエリの認可コードを優先して exchangeCodeForSession で交換する。
@@ -131,7 +168,24 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
           // 完了するまで維持する（Android で openAuthSessionAsync の resolve と
           // Linking の 'url' イベントが二重発火した場合に、AuthProvider 側の
           // コールドスタート復旧パスと二重処理しないようにするため）。
+          // 同一 code の二重交換自体は claimOAuthCode (共有パッケージ) が防ぐ。
           if (tokens.code) {
+            const claim = claimOAuthCode(tokens.code);
+
+            if (!claim.claimed) {
+              // 他所 (AuthProvider のグローバル Linking ハンドラ安全網) が既にこの
+              // code を claim 済み。無条件で成功扱いにはせず、実際の交換結果を
+              // 待って同期する。
+              oauthSessionGuard.active = false;
+              const otherResult = await claim.result;
+              if (!otherResult.success) {
+                const message = localizeOAuthErrorCode("code_exchange_failed");
+                setError(message);
+                return { success: false, error: new Error(message) };
+              }
+              return { success: true };
+            }
+
             let exchangeError: import("@supabase/supabase-js").AuthError | null = null;
             let accessToken: string | null = null;
             let providerRefreshToken: string | null = null;
@@ -141,6 +195,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
               accessToken = data.session?.access_token ?? null;
               providerRefreshToken = data.session?.provider_refresh_token ?? null;
             } catch (exchangeErr) {
+              claim.resolve({ success: false });
               oauthSessionGuard.active = false;
               throw exchangeErr;
             }
@@ -148,6 +203,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             // code_verifier が端末ストレージから読めなかった/既に消費済みの場合も
             // exchangeCodeForSession は例外を投げず AuthError を返すため、ここで捕捉できる。
             if (exchangeError || !accessToken) {
+              claim.resolve({ success: false });
               oauthSessionGuard.active = false;
               const message = exchangeError
                 ? localizeSupabaseAuthError(exchangeError)
@@ -156,35 +212,32 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
               return { success: false, error: exchangeError ?? new Error(message) };
             }
 
+            claim.resolve({ success: true });
+
             // カレンダー連携の場合、provider_refresh_tokenを保存してフラグを更新
-            if (forCalendarConnect) {
-              // provider_refresh_tokenがない場合でもエラーを表示（サイレントスキップ禁止）
-              if (!providerRefreshToken) {
-                oauthSessionGuard.active = false;
-                setError(t("auth.mobile.googleCalendarPermissionDenied"));
-                return { success: false, error: new Error("provider_refresh_token not received") };
-              }
-
-              const saveResult = await saveGoogleCalendarRefreshToken(
-                accessToken,
-                providerRefreshToken,
-              );
-
-              // 保存 API 呼び出し完了まで維持していたガードをここで解除する
+            // provider_refresh_tokenがない場合でもエラーを表示（サイレントスキップ禁止）
+            if (!providerRefreshToken) {
               oauthSessionGuard.active = false;
-
-              if (!saveResult.success) {
-                const message = saveResult.error
-                  ? localizeAuthError(saveResult.error)
-                  : t("auth.mobile.calendarConnectionSaveFailed");
-                setError(message);
-                return { success: false, error: new Error(message) };
-              }
-
-              return { success: true };
+              setError(t("auth.mobile.googleCalendarPermissionDenied"));
+              return { success: false, error: new Error("provider_refresh_token not received") };
             }
 
+            const saveResult = await saveGoogleCalendarRefreshToken(
+              accessToken,
+              providerRefreshToken,
+            );
+
+            // 保存 API 呼び出し完了まで維持していたガードをここで解除する
             oauthSessionGuard.active = false;
+
+            if (!saveResult.success) {
+              const message = saveResult.error
+                ? localizeAuthError(saveResult.error)
+                : t("auth.mobile.calendarConnectionSaveFailed");
+              setError(message);
+              return { success: false, error: new Error(message) };
+            }
+
             return { success: true };
           }
 
@@ -209,34 +262,28 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             }
 
             // カレンダー連携の場合、provider_refresh_tokenを保存してフラグを更新
-            if (forCalendarConnect) {
-              // provider_refresh_tokenがない場合でもエラーを表示
-              if (!tokens.providerRefreshToken) {
-                oauthSessionGuard.active = false;
-                setError(t("auth.mobile.googleCalendarPermissionDenied"));
-                return { success: false, error: new Error("provider_refresh_token not received") };
-              }
-
-              const saveResult = await saveGoogleCalendarRefreshToken(
-                tokens.accessToken,
-                tokens.providerRefreshToken,
-              );
-
-              // 保存 API 呼び出し完了まで維持していたガードをここで解除する
+            if (!tokens.providerRefreshToken) {
               oauthSessionGuard.active = false;
-
-              if (!saveResult.success) {
-                const message = saveResult.error
-                  ? localizeAuthError(saveResult.error)
-                  : t("auth.mobile.calendarConnectionSaveFailed");
-                setError(message);
-                return { success: false, error: new Error(message) };
-              }
-
-              return { success: true };
+              setError(t("auth.mobile.googleCalendarPermissionDenied"));
+              return { success: false, error: new Error("provider_refresh_token not received") };
             }
 
+            const saveResult = await saveGoogleCalendarRefreshToken(
+              tokens.accessToken,
+              tokens.providerRefreshToken,
+            );
+
+            // 保存 API 呼び出し完了まで維持していたガードをここで解除する
             oauthSessionGuard.active = false;
+
+            if (!saveResult.success) {
+              const message = saveResult.error
+                ? localizeAuthError(saveResult.error)
+                : t("auth.mobile.calendarConnectionSaveFailed");
+              setError(message);
+              return { success: false, error: new Error(message) };
+            }
+
             return { success: true };
           }
 
@@ -277,7 +324,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
         // warm path（このプロセス内で openAuthSessionAsync が resolve/例外まで完了した）
         // 場合は必ずここでフラグをクリアする。コールドスタート（OS による kill）で
         // このコードが実行されなかった場合のみ、AuthProvider 側がフラグを検知して処理を引き継ぐ。
-        if (options?.forCalendarConnect) {
+        if (forCalendarConnect) {
           await clearCalendarConnectPending();
         }
       }

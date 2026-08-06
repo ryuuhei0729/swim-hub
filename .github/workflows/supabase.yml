@@ -168,9 +168,16 @@ jobs:
       env:
         SUPABASE_DB_PASSWORD: postgres
 
+    # supabase/setup-cli は Supabase CLI のみを導入し、deno バイナリは PATH に置かないため
+    # 別途セットアップする。ローカル検証で使用したバージョンとCIで揃えることで、
+    # 「ローカルでは通るがCIでは挙動が違う」ドリフトを防ぐ。
+    - name: Setup Deno
+      uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+      with:
+        deno-version: "2.9.4"
+
     # `supabase functions test` は CLI から廃止されたため Deno で直接テストを実行する。
     # 実テストファイル（*.test.ts / *_test.ts）が存在する場合のみ実行する。
-    # テストを追加する際は別途 Deno のセットアップ step が必要。
     - name: Test Edge Functions
       if: ${{ hashFiles('supabase/functions/**/*.test.ts', 'supabase/functions/**/*_test.ts') != '' }}
       run: deno test --allow-all supabase/functions/

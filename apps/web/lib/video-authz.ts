@@ -5,8 +5,8 @@
  * 代理動画 (チーム練習ログ / チーム記録) は、対象が属する team の active admin が操作可。
  * これにより、コーチがメンバーに代理添付する動画の upload-url / confirm が通る。
  *
- * 認可モデルは records / practice_logs の代理 UPDATE RLS と同型:
- *   操作対象の owner = caller
+ * 認可モデルの代理枝 (admin OR) は records / practice_logs の代理 UPDATE RLS と同型:
+ *   本人判定 (下記に注意)
  *   OR
  *   ( 当該 team が存在 (team_id NOT NULL)
  *     AND caller が当該 team の active admin (is_active=true AND role='admin')
@@ -16,9 +16,23 @@
  * 認可を一致させる。退会済みメンバーの過去行に admin が代理操作しようとした場合、
  * RLS では 0 行更新になるが、API 側で早期 403 にして loud に弾く (W-a)。
  *
- * - record: records.team_id が紐付く (チーム記録)。team_id が NULL の個人記録は本人のみ。
- * - practice-log: practice_logs.practice_id → practices.team_id を辿る。
- *   practices.team_id が NULL の個人練習ログは本人のみ。
+ * 「本人」判定は record と practice-log で同じ列を基準にしている:
+ * - record: records.user_id = caller。records は team_id を直接持つ (チーム記録)。
+ *   team_id が NULL の個人記録は本人のみ。
+ * - practice-log: authorizePracticeLogVideoMutation は practice_logs.user_id
+ *   (ログの所有者 = 動画が紐づくメンバー) === caller を「本人」として早期
+ *   ok:true を返す。RLS (20260803000002_practice_logs_owner_self_update.sql) も
+ *   同じ practice_logs.user_id を「本人」として UPDATE を許可する枝を持つため、
+ *   このヘルパーの判定と RLS は一致する (2026-08-03 のプロダクト判断で、選手が
+ *   コーチ代理入力ログの動画を自分で削除できるようにするため、practice_logs の
+ *   RLS に「本人 = practice_logs.user_id」の枝を追加した。従来は「本人」枝が
+ *   practices.user_id (練習の作成者) のみを見ており、選手本人でも代理入力された
+ *   ログを更新できない不一致があった)。
+ *   呼び出し側 (削除 API) は DB 更新を R2 削除より先に行い影響行数 0 を検知して
+ *   から R2 側を削除する多層防御を維持している。これはこのヘルパーと RLS の
+ *   一致が将来また崩れた場合や、その他の予期しない 0 行更新に対しても
+ *   「ファイルだけ消えて DB は不整合」という不可逆な破壊を避けるためであり、
+ *   現在の一致状態に依存しない安全策として意図的に残している。
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
@@ -99,7 +113,12 @@ export async function authorizeRecordVideoMutation(
 
 /**
  * practice-log に対する操作権限を判定する。
- * 本人所有、またはチーム練習 (practice.team_id あり) で caller が当該 team の active admin なら許可。
+ * 本人所有 (practice_logs.user_id = caller)、またはチーム練習 (practice.team_id あり)
+ * で caller が当該 team の active admin なら許可。
+ *
+ * ここでの「本人」(practice_logs.user_id) は、RLS の UPDATE ポリシー
+ * (20260803000002_practice_logs_owner_self_update.sql) が定義する
+ * ログ所有者本人の枝と一致する。ファイル冒頭のモジュール docstring 参照。
  */
 export async function authorizePracticeLogVideoMutation(
   supabase: SupabaseClient<Database>,

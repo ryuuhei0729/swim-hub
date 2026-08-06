@@ -10,6 +10,18 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    # .npmrc の `//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}` は、この環境変数が
+    # 「未定義」だと展開に失敗する。pnpm は展開に失敗した .npmrc を**ファイルごと丸ごと破棄**するため、
+    # 同じファイルに書かれている node-linker=hoisted / link-workspace-packages=true /
+    # auto-install-peers=true まで一緒に失われ、警告1行だけ出して isolated linker で
+    # インストールが「成功」してしまう (未宣言依存が解決できなくなり後続ジョブが謎の型エラーで落ちる)。
+    # 空文字列なら展開は成功するので、未設定時のフォールバックとして空文字を入れておく。
+    # swim-hub 自身は @ryuuhei0729/swimhub-oauth を workspace:* で参照しており
+    # GitHub Packages からの取得は不要なため、空でも install は成立する。
+    - name: Ensure NODE_AUTH_TOKEN is defined
+      shell: bash
+      run: echo "NODE_AUTH_TOKEN=${NODE_AUTH_TOKEN:-}" >> "$GITHUB_ENV"
+
     - name: Setup pnpm
       uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
@@ -18,6 +30,19 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: 'pnpm'
+
+    # 上のフォールバックが効かなくなった場合に「無言で isolated linker になる」のを防ぐガード。
+    # install の前に .npmrc が実際に適用されているかを実測して、駄目なら明示的に落とす。
+    - name: Verify .npmrc is applied
+      shell: bash
+      run: |
+        linker=$(pnpm config get node-linker)
+        if [ "$linker" != "hoisted" ]; then
+          echo "::error::.npmrc が pnpm に適用されていません (node-linker=$linker, 期待値=hoisted)。"
+          echo "::error::.npmrc 内の環境変数展開に失敗すると pnpm はファイル全体を破棄します。NODE_AUTH_TOKEN 等が未定義でないか確認してください。"
+          exit 1
+        fi
+        echo "node-linker=$linker (OK)"
 
     - name: Install dependencies
       shell: bash

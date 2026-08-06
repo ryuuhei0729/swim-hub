@@ -1,0 +1,32 @@
+{
+  "extends": "../../tools/typescript-config/library.json",
+  "compilerOptions": {
+    // library.json の "outDir": "./dist" は tools/typescript-config/ 基準で解決される
+    // (tsconfig の extends は継承元ファイルの場所を基準に相対パスを解決するため) ため、
+    // このパッケージ (packages/oauth/) 基準の dist に出力させるにはここで明示的に
+    // 上書きする必要がある。rootDir も同様の理由で明示する。
+    "rootDir": "./src",
+    "outDir": "./dist",
+    // library.json が継承する base.json の "module": "ESNext" / "moduleResolution":
+    // "bundler" は「バンドラが処理する前提のアプリ側ソース」向けの設定であり、
+    // tsc 単体で dist/ に出力して npm publish するこのライブラリのビルドには不適切
+    // (拡張子なしの相対 import ("./claimOAuthCode" 等) が Node のネイティブ ESM
+    // ローダーで解決できず、消費側で素の Node.js から `import()` できない・
+    // dist/mobile/index.js を実行時に import できないという欠陥になっていた)。
+    // "nodenext" は tsc に「Node のネイティブ ESM ローダーが実際に要求する
+    // 拡張子付き相対 import」を強制させる (拡張子を省略すると TS2835 でビルドが
+    // 落ちる) ための設定で、ESM 出力を維持したまま plain Node からの解決可能性を
+    // 担保する。"moduleResolution" は "module": "nodenext" と対にする必要があり
+    // (TS が要求する組み合わせ)、"nodenext" に揃える。
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    // base.json の "incremental": true をこのビルドでは無効化する。
+    // 有効なままだと、dist/ を手動削除しても tsbuildinfo が「変更なし」と判断して
+    // tsc が exit 0 のまま何も出力しない。dist は gitignore 対象で消えやすく、
+    // CI でも「ビルド成功したのに dist が無い」という無言の失敗になりうる。
+    // 型チェック用の tsconfig.json 側は incremental のままで恩恵を残す。
+    "incremental": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "__tests__"]
+}

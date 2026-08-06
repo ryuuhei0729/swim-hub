@@ -77,6 +77,16 @@ function errorResponse(error: string, code: ErrorResponse["code"], status: numbe
   });
 }
 
+/**
+ * 今日の日付を JST で "YYYY-MM-DD" として返す。
+ */
+function getTodayJST(): string {
+  const now = new Date();
+  const jstOffset = 9 * 60 * 60 * 1000;
+  const jstDate = new Date(now.getTime() + jstOffset);
+  return jstDate.toISOString().split("T")[0];
+}
+
 async function callGeminiApi(apiKey: string, image: string, mimeType: string): Promise<Response> {
   const url =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
@@ -134,9 +144,15 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
+    // reserve_user_daily_usage / release_user_daily_usage は service_role 限定
+    // (authenticated には EXECUTE 権限を付与していない。C-1 で塞いだ「RPC を
+    // 直接連打して daily_tokens_used を自己リセットする」穴が再び開くのを防ぐため)。
+    // JWT 検証済みの user.id のみを渡し、クライアント由来の値は一切渡さない。
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     const {
       data: { user },
@@ -146,82 +162,125 @@ Deno.serve(async (req) => {
       return errorResponse("認証に失敗しました", "AUTH_ERROR", 401);
     }
 
-    // --- トークンチェック ---
-    // user_subscriptions から plan, status を取得
-    const { data: subData } = await supabase
-      .from("user_subscriptions")
-      .select("plan, status")
-      .eq("id", user.id)
+    // --- 無料枠を原子的に予約する (Gemini 呼び出しの前) ---
+    // C-4: 従来は「読み取り(トークンチェック)→Gemini呼び出し(数秒)→加算」という
+    // 構造で、読み取りと加算の間に競合窓があった。同一ユーザーが同時に2リクエスト
+    // を送ると両方が「まだ枠が残っている」と判定して Gemini を呼べてしまう。
+    // reserve_user_daily_usage RPC (service_role 限定) は Premium 判定 (関数内部
+    // で user_subscriptions から導出。apps/shared/utils/premium.ts の
+    // checkIsPremium() と同一ロジック) と全アプリ横断の使用量加算を
+    // pg_advisory_xact_lock で直列化した単一トランザクションで行うため、
+    // この競合窓が閉じる。
+    const today = getTodayJST();
+
+    const { data: reserveData, error: reserveError } = await supabaseAdmin
+      .rpc("reserve_user_daily_usage", {
+        p_user_id: user.id,
+        p_app: "swimhub",
+        p_usage_date: today,
+      })
       .single();
 
-    const isPremium =
-      subData?.plan === "premium" &&
-      (subData?.status === "active" || subData?.status === "trialing");
+    if (reserveError) {
+      console.error("reserve_user_daily_usage failed:", reserveError);
+      return errorResponse("利用状況の確認に失敗しました。再試行してください", "API_ERROR", 500);
+    }
 
-    if (!isPremium) {
-      // 今日の日付 (JST)
-      const now = new Date();
-      const jstOffset = 9 * 60 * 60 * 1000;
-      const jstDate = new Date(now.getTime() + jstOffset);
-      const today = jstDate.toISOString().split("T")[0];
+    const reserveResult = reserveData as { allowed: boolean; is_premium: boolean } | null;
+    const isPremium = reserveResult?.is_premium ?? false;
 
-      // 全アプリ合計の今日のトークン使用数
-      const { data: usageData } = await supabase
-        .from("app_daily_usage")
-        .select("daily_tokens_used")
-        .eq("user_id", user.id)
-        .eq("usage_date", today);
-
-      const totalTokensUsed = (usageData || []).reduce(
-        (sum: number, row: { daily_tokens_used: number }) => sum + (row.daily_tokens_used || 0),
-        0,
+    if (!reserveResult?.allowed) {
+      return errorResponse(
+        "今日の利用回数に達しました。Premiumにアップグレードすると無制限に利用できます",
+        "AUTH_ERROR",
+        429,
       );
+    }
 
-      if (totalTokensUsed >= 1) {
-        return errorResponse(
-          "今日の利用回数に達しました。Premiumにアップグレードすると無制限に利用できます",
-          "AUTH_ERROR",
-          429,
-        );
+    // 予約成功後のあらゆる離脱経路 (バリデーション失敗・Gemini失敗・パース失敗・
+    // 想定外の例外) で、原子的に予約した枠を解放する。scanSucceeded は成功
+    // レスポンスを返す直前にのみ true にするため、finally はそれ以外の全ての
+    // return / throw で解放を実行する。呼び出しは releaseReservation() 内の
+    // released フラグで高々1回に限定する (冪等性)。
+    let scanSucceeded = false;
+    let released = false;
+    const releaseReservation = async () => {
+      if (released) return;
+      released = true;
+      const { error } = await supabaseAdmin.rpc("release_user_daily_usage", {
+        p_user_id: user.id,
+        p_app: "swimhub",
+        p_usage_date: today,
+      });
+      if (error) {
+        console.error("release_user_daily_usage failed:", error);
       }
-    }
+    };
 
-    // Parse request body
-    let body: ScanRequest;
     try {
-      body = await req.json();
-    } catch {
-      return errorResponse("画像形式はJPEGまたはPNGのみ対応しています", "IMAGE_ERROR", 400);
-    }
+      // Parse request body
+      let body: ScanRequest;
+      try {
+        body = await req.json();
+      } catch {
+        return errorResponse("画像形式はJPEGまたはPNGのみ対応しています", "IMAGE_ERROR", 400);
+      }
 
-    // Validate mimeType
-    if (!body.mimeType || !["image/jpeg", "image/png"].includes(body.mimeType)) {
-      return errorResponse("画像形式はJPEGまたはPNGのみ対応しています", "IMAGE_ERROR", 400);
-    }
+      // Validate mimeType
+      if (!body.mimeType || !["image/jpeg", "image/png"].includes(body.mimeType)) {
+        return errorResponse("画像形式はJPEGまたはPNGのみ対応しています", "IMAGE_ERROR", 400);
+      }
 
-    // Validate image
-    if (!body.image || typeof body.image !== "string") {
-      return errorResponse("画像データが必要です", "IMAGE_ERROR", 400);
-    }
+      // Validate image
+      if (!body.image || typeof body.image !== "string") {
+        return errorResponse("画像データが必要です", "IMAGE_ERROR", 400);
+      }
 
-    // Check base64 size (approximate: base64 is ~4/3 of original)
-    const estimatedSize = body.image.length * 0.75;
-    if (estimatedSize > 5 * 1024 * 1024) {
-      return errorResponse("画像サイズは5MB以下にしてください", "IMAGE_ERROR", 400);
-    }
+      // Check base64 size (approximate: base64 is ~4/3 of original)
+      const estimatedSize = body.image.length * 0.75;
+      if (estimatedSize > 5 * 1024 * 1024) {
+        return errorResponse("画像サイズは5MB以下にしてください", "IMAGE_ERROR", 400);
+      }
 
-    // Call Gemini API
-    const apiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!apiKey) {
-      return errorResponse("Gemini APIキーが設定されていません", "API_ERROR", 500);
-    }
+      // Call Gemini API
+      const apiKey = Deno.env.get("GEMINI_API_KEY");
+      if (!apiKey) {
+        return errorResponse("Gemini APIキーが設定されていません", "API_ERROR", 500);
+      }
 
-    let geminiResponse: Response;
-    try {
-      geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType);
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        // Timeout on first attempt — retry after delay
+      let geminiResponse: Response;
+      try {
+        geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          // Timeout on first attempt — retry after delay
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          try {
+            geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType);
+          } catch (retryErr) {
+            const isTimeout = retryErr instanceof DOMException && retryErr.name === "AbortError";
+            console.error(`Gemini API ${isTimeout ? "timeout" : "error"} on retry:`, retryErr);
+            if (isTimeout) {
+              return errorResponse(
+                "AI解析がタイムアウトしました。再試行してください",
+                "API_ERROR",
+                504,
+              );
+            }
+            return errorResponse(
+              "AI解析サービスでエラーが発生しました。再試行してください",
+              "API_ERROR",
+              502,
+            );
+          }
+        } else {
+          throw err;
+        }
+      }
+
+      // Retry once on non-ok response
+      if (!geminiResponse.ok) {
+        await geminiResponse.body?.cancel();
         await new Promise((resolve) => setTimeout(resolve, 1000));
         try {
           geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType);
@@ -241,113 +300,70 @@ Deno.serve(async (req) => {
             502,
           );
         }
-      } else {
-        throw err;
       }
-    }
 
-    // Retry once on non-ok response
-    if (!geminiResponse.ok) {
-      await geminiResponse.body?.cancel();
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!geminiResponse.ok) {
+        const errorText = await geminiResponse.text();
+        console.error("Gemini API error:", errorText);
+        return errorResponse("AI解析サービスでエラーが発生しました", "API_ERROR", 502);
+      }
+
+      const geminiData = await geminiResponse.json();
+
+      // Extract text from Gemini response
+      const responseText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!responseText) {
+        return errorResponse(
+          "画像を解析できませんでした。鮮明な画像で再試行してください",
+          "PARSE_ERROR",
+          422,
+        );
+      }
+
+      // Parse JSON from response
+      let scanResult;
       try {
-        geminiResponse = await callGeminiApi(apiKey, body.image, body.mimeType);
-      } catch (retryErr) {
-        const isTimeout = retryErr instanceof DOMException && retryErr.name === "AbortError";
-        console.error(`Gemini API ${isTimeout ? "timeout" : "error"} on retry:`, retryErr);
-        if (isTimeout) {
-          return errorResponse(
-            "AI解析がタイムアウトしました。再試行してください",
-            "API_ERROR",
-            504,
-          );
+        scanResult = JSON.parse(responseText);
+      } catch {
+        return errorResponse(
+          "解析結果の読み取りに失敗しました。再試行してください",
+          "PARSE_ERROR",
+          422,
+        );
+      }
+
+      // Basic structure validation
+      if (!scanResult.menu || !Array.isArray(scanResult.swimmers)) {
+        return errorResponse("解析結果の形式が不正です。再試行してください", "PARSE_ERROR", 422);
+      }
+
+      // スキャン成功時のトークン消費ログ記録（Free ユーザーのみ、監査用）。
+      // 使用量そのもの (usage_count/daily_tokens_used) は reserve_user_daily_usage
+      // が既に記録済みのため、このログ insert が失敗してもクォータ判定には
+      // 影響しない (握りつぶさずログのみ残す)。
+      if (!isPremium) {
+        const { error: logError } = await supabase.from("token_consumption_log").insert({
+          user_id: user.id,
+          app: "swimhub",
+          token_source: "daily_free",
+          action_type: "swimhub_image_analysis",
+        });
+
+        if (logError) {
+          console.error("token_consumption_log insert failed:", logError);
         }
-        return errorResponse(
-          "AI解析サービスでエラーが発生しました。再試行してください",
-          "API_ERROR",
-          502,
-        );
       }
-    }
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error("Gemini API error:", errorText);
-      return errorResponse("AI解析サービスでエラーが発生しました", "API_ERROR", 502);
-    }
-
-    const geminiData = await geminiResponse.json();
-
-    // Extract text from Gemini response
-    const responseText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!responseText) {
-      return errorResponse(
-        "画像を解析できませんでした。鮮明な画像で再試行してください",
-        "PARSE_ERROR",
-        422,
-      );
-    }
-
-    // Parse JSON from response
-    let scanResult;
-    try {
-      scanResult = JSON.parse(responseText);
-    } catch {
-      return errorResponse(
-        "解析結果の読み取りに失敗しました。再試行してください",
-        "PARSE_ERROR",
-        422,
-      );
-    }
-
-    // Basic structure validation
-    if (!scanResult.menu || !Array.isArray(scanResult.swimmers)) {
-      return errorResponse("解析結果の形式が不正です。再試行してください", "PARSE_ERROR", 422);
-    }
-
-    // スキャン成功時のトークン消費記録（Free ユーザーのみ）
-    if (!isPremium) {
-      const now = new Date();
-      const jstOffset = 9 * 60 * 60 * 1000;
-      const jstDate = new Date(now.getTime() + jstOffset);
-      const today = jstDate.toISOString().split("T")[0];
-
-      // app_daily_usage への直接 INSERT/UPDATE は RLS で拒否される (直接書き込みは
-      // increment_daily_usage RPC に一本化済み)。auth.uid() 検証込みの RPC 経由で
-      // usage_count/daily_tokens_used をともに +1 する。
-      const { error: usageError } = await supabase.rpc("increment_daily_usage", {
-        p_user_id: user.id,
-        p_app: "swimhub",
-        p_usage_date: today,
-        p_last_used_at: now.toISOString(),
+      scanSucceeded = true;
+      return new Response(JSON.stringify(scanResult), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-
-      if (usageError) {
-        console.error("increment_daily_usage failed:", usageError);
-        return errorResponse(
-          "利用回数の記録に失敗しました。再試行してください",
-          "API_ERROR",
-          500,
-        );
-      }
-
-      // token_consumption_log に記録
-      const { error: logError } = await supabase.from("token_consumption_log").insert({
-        user_id: user.id,
-        app: "swimhub",
-        token_source: "daily_free",
-        action_type: "swimhub_image_analysis",
-      });
-
-      if (logError) {
-        console.error("token_consumption_log insert failed:", logError);
+    } finally {
+      if (!scanSucceeded) {
+        await releaseReservation();
       }
     }
-
-    return new Response(JSON.stringify(scanResult), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (err) {
     console.error("Unexpected error:", err);
     return errorResponse("サーバーエラーが発生しました", "API_ERROR", 500);

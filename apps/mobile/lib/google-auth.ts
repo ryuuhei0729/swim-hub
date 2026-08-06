@@ -1,10 +1,41 @@
 /**
  * Google OAuth認証ユーティリティ
  * Expo + Supabase でのGoogle認証フローを管理
+ *
+ * 注意: このファイルは `lib/__tests__/google-auth.calendarConnectPending.test.ts` や
+ * `__tests__/lib/emailDeepLink.test.ts` など、expo-web-browser を一切モックしない
+ * テストからも直接 import される。共有パッケージ (@ryuuhei0729/swimhub-oauth/mobile)
+ * の `/mobile` エントリは signInWithGoogle.ts (expo-web-browser に依存) を含む
+ * 全submoduleを1つの index にまとめてバンドルしているため、ここでこのエントリを
+ * import すると (どの named export を使うかに関わらず) expo-web-browser が
+ * 無条件で読み込まれ、モックしていないテストがクラッシュする。
+ * そのため `claimOAuthCode` / `signInWithGoogle` は、既に expo-web-browser を
+ * 直接 import している (かつテストでモック済みの) hooks/useGoogleAuth.ts /
+ * contexts/AuthProvider.tsx / components/settings/IdentityLinkSettings.tsx から
+ * 共有パッケージを直接 import すること。
+ * `extractTokensFromUrl` だけは `@ryuuhei0729/swimhub-oauth/mobile/pure`
+ * (expo-web-browser / expo-auth-session のどちらにも依存しない純粋関数のみの
+ * サブパス) から import している。`getRedirectUri` は含めない: expo-auth-session
+ * の AuthSession.js が expo-web-browser を静的 import しているため、
+ * makeRedirectUri だけを使う場合でも expo-web-browser が読み込まれてしまう
+ * (実測確認済み)。そのためこの関数だけはローカル実装を維持する。
  */
 import { makeRedirectUri } from "expo-auth-session";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  extractTokensFromUrl as sharedExtractTokensFromUrl,
+  type ExtractedTokens,
+  type ExtractTokensOptions,
+} from "@ryuuhei0729/swimhub-oauth/mobile/pure";
 import i18n from "@/i18n";
+import { localizeAuthError } from "@/utils/authErrorLocalizer";
+
+/**
+ * このアプリのカスタム URL スキーム。共有パッケージの signInWithGoogle / getRedirectUri
+ * に渡す scheme と、AuthProvider / IdentityLinkSettings のディープリンク判定
+ * (swimhub://auth/callback) の両方が同じ値を前提にしている。
+ */
+export const APP_SCHEME = "swimhub";
 
 /**
  * openAuthSessionAsync 進行中に AuthProvider のグローバル Linking ハンドラが
@@ -106,6 +137,10 @@ export interface GoogleAuthOptions {
 
 /**
  * コールバックURLからトークン (または PKCE の認可コード) を抽出する。
+ * 実体は共有パッケージ (@ryuuhei0729/swimhub-oauth/mobile/pure) の実装で、
+ * expo-web-browser / expo-auth-session のどちらにも依存しない純粋関数のため、
+ * `google-auth.calendarConnectPending.test.ts` / `emailDeepLink.test.ts` など
+ * expo をモックしていないテストからも安全に import できる。
  *
  * Supabase クライアントは flowType: "pkce" で構成されているため、
  * コールバックは通常クエリパラメータ `?code=...` で認可コードが返る。
@@ -113,82 +148,59 @@ export interface GoogleAuthOptions {
  * code を優先して exchangeCodeForSession を試み、無ければ implicit の
  * フラグメント (#access_token=...) にフォールバックする。
  *
- * provider_token / provider_refresh_token (Google 側のトークン) は、
- * PKCE 経路では exchangeCodeForSession の結果セッションに含まれる想定であり、
- * この URL 直読みの経路には現れない。implicit フォールバック時のみ
- * フラグメントから読み取る。
+ * 共有パッケージの `includeProviderTokens` は既定 false (3アプリで汎用化した
+ * 仕様) だが、このアプリでは Google カレンダー連携で `provider_refresh_token`
+ * が必須のため、このラッパーでは既定 true に上書きする (移行前の挙動を維持)。
+ * `includeProviderTokens` を使わない呼び出し元 (IdentityLinkSettings 等) は
+ * 影響を受けない。呼び出し側で明示的に `{ includeProviderTokens: true }` を
+ * 渡している箇所 (useGoogleAuth / AuthProvider) は、既定値と同じだが意図を
+ * 明示するために残している。
+ *
+ * `error` フィールドは、Google/Supabase の生エラー文字列 (例: "access_denied")
+ * か、機械可読コード `invalid_url` (URL パース失敗) のいずれか。どちらも
+ * `localizeOAuthErrorCode` で処理すること (生の値をそのまま画面に出さないこと)。
  */
-export interface ExtractedTokens {
-  accessToken: string | null;
-  refreshToken: string | null;
-  expiresIn: number | null;
-  tokenType: string | null;
-  /** PKCE フロー時にクエリパラメータで返る認可コード */
-  code: string | null;
-  /** Googleのアクセストークン（implicit フォールバック時のみ。Google API呼び出し用） */
-  providerToken: string | null;
-  /** Googleのリフレッシュトークン（implicit フォールバック時のみ。カレンダー連携用に保存が必要） */
-  providerRefreshToken: string | null;
-  error: string | null;
-}
+export type { ExtractedTokens, ExtractTokensOptions };
+export const extractTokensFromUrl = (url: string, options?: ExtractTokensOptions): ExtractedTokens =>
+  sharedExtractTokensFromUrl(url, { includeProviderTokens: true, ...options });
 
-export const extractTokensFromUrl = (url: string): ExtractedTokens => {
-  try {
-    const urlObj = new URL(url);
+/**
+ * 共有パッケージ (@ryuuhei0729/swimhub-oauth) の signInWithGoogle / claimOAuthCode が
+ * Error.message に入れる機械可読コード (8種) と、上記 extractTokensFromUrl の
+ * `invalid_url` コードを、移行前と同じ文言になるよう先に完全一致で解決する。
+ * 一致しない場合 (Google/Supabase の生エラー文字列等) は既存のローカライザ
+ * (localizeAuthError) にフォールバックする。
+ *
+ * 対応表 (移行前に同じ分岐が使っていた i18n キーに対応させている):
+ * - invalid_url          … extractTokensFromUrl の URL パース失敗 (旧: catch 節で
+ *                          直接 i18n.t("common.app.urlParseFailed") を返していた)
+ * - auth_cancelled       … 旧: result.type === "cancel" の "auth.mobile.cancelled"
+ * - auth_dismissed       … 旧: result.type === "dismiss" の "auth.mobile.dismissed"
+ * - auth_failed          … 旧: 上記いずれでもない result.type の "auth.mobile.authFailed"
+ * - url_not_received     … 旧: signInWithOAuth 成功時に data.url が無い場合の
+ *                          "auth.mobile.oauthUrlGenerationFailed"
+ * - tokens_not_received  … 旧: code も access/refresh token も無かった場合の
+ *                          "auth.mobile.tokensNotReceived"
+ * - session_not_received … exchangeCodeForSession/setSession がエラー無しで
+ *                          session (access_token) を返さなかった場合。移行前の
+ *                          同値分岐 ("auth.mobile.tokensNotReceived") を割り当てる
+ * - code_exchange_failed … claimOAuthCode で負けた側が、勝った側の交換失敗を
+ *                          検知した場合 (移行前は claimOAuthCode 自体が無く
+ *                          該当分岐が無かった)。汎用の "auth.mobile.authFailed" を割り当てる
+ */
+const OAUTH_ERROR_CODE_TO_I18N_KEY: Readonly<Record<string, string>> = {
+  invalid_url: "common.app.urlParseFailed",
+  auth_cancelled: "auth.mobile.cancelled",
+  auth_dismissed: "auth.mobile.dismissed",
+  auth_failed: "auth.mobile.authFailed",
+  code_exchange_failed: "auth.mobile.authFailed",
+  session_not_received: "auth.mobile.tokensNotReceived",
+  tokens_not_received: "auth.mobile.tokensNotReceived",
+  url_not_received: "auth.mobile.oauthUrlGenerationFailed",
+};
 
-    // フラグメント(#)とクエリパラメータの両方を確認する
-    const hashParams = new URLSearchParams(urlObj.hash.substring(1));
-    const queryParams = urlObj.searchParams;
-
-    // OAuth プロバイダ / Supabase 側のエラーは PKCE (query) と implicit (hash) の
-    // どちらの形式で返ってくる可能性もあるため両方確認する
-    const error =
-      hashParams.get("error_description") ||
-      hashParams.get("error") ||
-      queryParams.get("error_description") ||
-      queryParams.get("error");
-    if (error) {
-      return {
-        accessToken: null,
-        refreshToken: null,
-        expiresIn: null,
-        tokenType: null,
-        code: null,
-        providerToken: null,
-        providerRefreshToken: null,
-        error,
-      };
-    }
-
-    // トークンを抽出 (implicit フォールバック用)
-    const accessToken = hashParams.get("access_token");
-    const refreshToken = hashParams.get("refresh_token");
-    const expiresIn = hashParams.get("expires_in");
-    const tokenType = hashParams.get("token_type");
-    // Googleのトークン（カレンダー連携用。implicit フォールバック時のみここに現れる）
-    const providerToken = hashParams.get("provider_token");
-    const providerRefreshToken = hashParams.get("provider_refresh_token");
-
-    return {
-      accessToken,
-      refreshToken,
-      expiresIn: expiresIn ? parseInt(expiresIn, 10) : null,
-      tokenType,
-      code: queryParams.get("code"),
-      providerToken,
-      providerRefreshToken,
-      error: null,
-    };
-  } catch {
-    return {
-      accessToken: null,
-      refreshToken: null,
-      expiresIn: null,
-      tokenType: null,
-      code: null,
-      providerToken: null,
-      providerRefreshToken: null,
-      error: i18n.t("common.app.urlParseFailed"),
-    };
-  }
+export const localizeOAuthErrorCode = (code: string): string => {
+  const key = OAUTH_ERROR_CODE_TO_I18N_KEY[code];
+  if (key) return i18n.t(key);
+  return localizeAuthError(code);
 };
