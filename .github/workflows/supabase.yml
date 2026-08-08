@@ -1,16 +1,28 @@
 name: Supabase Database
 
+# push トリガに develop を含める。開発は develop に直接 push される運用のため
+# main 限定だと Edge Function を変更しても main にマージされるまで一度も検証されず、
+# 壊れたまま develop に積み上がってしまう (実際に本ワークフローが走らないまま
+# Edge Function の変更が develop に入った)。
+#
+# paths には deno.lock とこのワークフロー自身も含める。テスト/型チェックは
+# deno.lock を --frozen で参照しており、lock だけの変更やワークフロー自体の変更でも
+# 結果が変わるため、これらを対象外にすると検証を素通りさせてしまう。
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
     paths:
       - 'supabase/migrations/**'
       - 'supabase/functions/**'
+      - 'deno.lock'
+      - '.github/workflows/supabase.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'supabase/migrations/**'
       - 'supabase/functions/**'
+      - 'deno.lock'
+      - '.github/workflows/supabase.yml'
 
 permissions:
   contents: read
@@ -209,6 +221,22 @@ jobs:
         done
         echo "::error::deno cache failed after 3 attempts (CDN 障害か deno.lock が古い)"
         exit 1
+
+    # デプロイされる Edge Function 本体の型チェック。Node 側の tsconfig は
+    # supabase/functions/ を対象外にしており、テストも delete-user-storage しか
+    # カバーしていないため、stripe/revenucat webhook や scan-timesheet の型崩れは
+    # 従来どこにも引っかからなかった (実際に 18 件の型エラーが潜んでいた)。
+    # Warm step で全依存をキャッシュ済みのためネットワークアクセスは発生しない。
+    - name: Type check Edge Functions
+      run: |
+        fn_files=()
+        while IFS= read -r f; do fn_files+=("$f"); done \
+          < <(find supabase/functions -name '*.ts' | sort)
+        if [ ${#fn_files[@]} -eq 0 ]; then
+          echo "supabase/functions 配下に .ts が無いためスキップ"
+          exit 0
+        fi
+        deno check --frozen "${fn_files[@]}"
 
     # `supabase functions test` は CLI から廃止されたため Deno で直接テストを実行する。
     # 実テストファイル（*.test.ts / *_test.ts）が存在する場合のみ実行する。
