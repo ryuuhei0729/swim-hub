@@ -388,6 +388,46 @@ Deno.test("2-2: IsTruncated=false の初回応答でループが1回で止まる
   }
 });
 
+Deno.test("2-3: R2 が同じ NextContinuationToken を返し続けても無限ループにならず、fail-closed になる", async () => {
+  const restoreEnv = withEnv({ ...BASE_ENV, R2_VIDEO_BUCKET_NAME: undefined });
+  const targetPrefix = "practice-images/userA/";
+  // R2/中間層の不具合で同一トークンが返り続けると、トークンの重複を検知しない限り
+  // do...while は永久に回り続け Edge Function が応答不能になる。7-5 (token 欠落) とは
+  // 別経路の無限ループであり、こちらは「トークンはあるが前進しない」ケース。
+  const repeatedTokenXml = buildListXml(["practice-images/userA/a.jpg"], {
+    truncated: true,
+    nextToken: "stuck-token",
+  });
+
+  let listCallCount = 0;
+  const { restore } = installFetchMock({
+    onList: (url) => {
+      if (url.searchParams.get("prefix") !== targetPrefix) return emptyListResponse();
+      listCallCount += 1;
+      if (listCallCount > 5) {
+        // 無限ループに陥っていないことの安全弁 (7-5 と同じ理由)。
+        throw new Error("list が5回を超えて呼ばれた。無限ループの疑いがある");
+      }
+      return new Response(repeatedTokenXml, { status: 200 });
+    },
+    onDelete: () => new Response(null, { status: 204 }),
+  });
+
+  try {
+    const handler = createDeleteUserStorageHandler();
+    const res = await handler(deleteRequest("userA"));
+    const body = await res.json();
+
+    // 1回目でトークンを記録し、2回目で重複を検知して中断するため list は2回で止まる。
+    assertEquals(listCallCount, 2, "重複トークンは2回目の list で検知して中断すること");
+    assertEquals(res.status, 500);
+    assertFailClosed(body, "2-3 (NextContinuationToken が前進しない)");
+  } finally {
+    restore();
+    restoreEnv();
+  }
+});
+
 // =====================================================================
 // 3. XML パーサー (正規表現ベース)
 // =====================================================================
@@ -704,7 +744,7 @@ Deno.test("4-3: 一部プレフィックスのみ list 失敗した場合でも�
     onList: (url) => {
       const prefix = url.searchParams.get("prefix");
       if (prefix === failingPrefix) {
-        return new Response("server error", { status: 500 === 500 ? 404 : 404 });
+        return new Response("server error", { status: 404 });
       }
       if (prefix === okPrefix) {
         return new Response(buildListXml(["profile-images/userA/ok.jpg"]), { status: 200 });
@@ -757,6 +797,32 @@ Deno.test("5-1: R2認証情報はあるが R2_BUCKET_NAME が未設定のとき�
     assert(
       body.errors.some((e: string) => e.includes("R2_BUCKET_NAME")),
       `errors に R2_BUCKET_NAME への言及が無い: ${JSON.stringify(body.errors)}`,
+    );
+    assertEquals(calls.length, 0, "設定不備は list/delete 呼び出し前に検出されること");
+  } finally {
+    restore();
+    restoreEnv();
+  }
+});
+
+Deno.test("5-1b: R2認証情報が3つ中1つだけ欠落しているとき、Storageフォールバックに倒れず明示的にエラー (success:false, 500) になり、一切 fetch されない", async () => {
+  const restoreEnv = withEnv({
+    ...BASE_ENV,
+    R2_ACCESS_KEY_ID: undefined,
+    R2_VIDEO_BUCKET_NAME: undefined,
+  });
+  const { calls, restore } = installFetchMock({});
+
+  try {
+    const handler = createDeleteUserStorageHandler();
+    const res = await handler(deleteRequest("userA"));
+    const body = await res.json();
+
+    assertEquals(res.status, 500);
+    assertEquals(body.success, false);
+    assert(
+      body.errors.some((e: string) => e.includes("R2_ACCESS_KEY_ID")),
+      `errors に R2_ACCESS_KEY_ID への言及が無い: ${JSON.stringify(body.errors)}`,
     );
     assertEquals(calls.length, 0, "設定不備は list/delete 呼び出し前に検出されること");
   } finally {
