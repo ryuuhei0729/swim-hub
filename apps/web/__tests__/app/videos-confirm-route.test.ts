@@ -72,11 +72,17 @@ function makeSupabase(updateRows: { id: string }[] | null, updateError: unknown 
   };
 }
 
+// makeSupabase 内で使う認証ユーザーは常に "coach"。
+// route.ts の期待パスは `videos/${user.id}/${prefix}/${id}.mp4` (M-4 のパス突合)
+// なので、type ごとに正しい prefix (record→records / practice-log→practice-logs) の
+// パスを組み立てる。ここは 0 行検出の分岐を検証するためのフィクスチャであり、
+// M-4 のパス突合自体は videos-confirm-path-validation.test.ts で別途検証する。
 function makeRequest(type: "record" | "practice-log") {
   const fd = new FormData();
   fd.append("type", type);
   fd.append("id", "target-id");
-  fd.append("videoPath", "videos/u/records/target-id.mp4");
+  const prefix = type === "record" ? "records" : "practice-logs";
+  fd.append("videoPath", `videos/coach/${prefix}/target-id.mp4`);
   // thumbnailPath 空 → サムネアップロードはスキップ (R2 呼び出し回避)
   fd.append("thumbnailPath", "");
   return {

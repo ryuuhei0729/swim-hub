@@ -337,6 +337,19 @@ Deno.serve(async (req) => {
         return errorResponse("解析結果の形式が不正です。再試行してください", "PARSE_ERROR", 422);
       }
 
+      // OCR が誤読した異常な数値が apps/web/utils/ocrTransform.ts の無制限 .map() に渡ると
+      // クライアントを壊すため、水泳ドメインの実態に基づく上限と整数性を検証する。
+      // 上限値は swimhub-scanner/apps/shared/validation/scan-result.ts と二重管理。
+      // 値を変更する場合は両方を揃えること。
+      const { distance, repCount, setCount } = scanResult.menu;
+      if (
+        !Number.isInteger(distance) || distance < 1 || distance > 4000 ||
+        !Number.isInteger(repCount) || repCount < 1 || repCount > 50 ||
+        !Number.isInteger(setCount) || setCount < 1 || setCount > 20
+      ) {
+        return errorResponse("解析結果の形式が不正です。再試行してください", "PARSE_ERROR", 422);
+      }
+
       // スキャン成功時のトークン消費ログ記録（Free ユーザーのみ、監査用）。
       // 使用量そのもの (usage_count/daily_tokens_used) は reserve_user_daily_usage
       // が既に記録済みのため、このログ insert が失敗してもクォータ判定には

@@ -66,6 +66,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "type, id, videoPath が必要です" }, { status: 400 });
     }
 
+    // パス検証（リクエストの videoPath/thumbnailPath を信用せず、サーバー側で期待パスと突合）
+    const prefix = type === "record" ? "records" : "practice-logs";
+    const expectedVideoPath = `videos/${user.id}/${prefix}/${id}.mp4`;
+    const expectedThumbnailPath = `thumbnails/${user.id}/${prefix}/${id}.jpg`;
+
+    if (
+      videoPath !== expectedVideoPath ||
+      (thumbnailPath !== null && thumbnailPath !== expectedThumbnailPath)
+    ) {
+      return NextResponse.json({ error: "不正なファイルパスです" }, { status: 400 });
+    }
+
     // 所有者確認（本人 OR 当該チームの active admin による代理）
     const authz =
       type === "record"

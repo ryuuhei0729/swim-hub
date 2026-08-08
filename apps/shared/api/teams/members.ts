@@ -50,11 +50,10 @@ export class TeamMembersAPI {
    * 指定ユーザーの当該チームのカレンダー記録色カスタマイズ設定を削除する(孤児データ防止)。
    *
    * leave()（自己脱退）/ remove()（管理者除名）の両方から呼ぶ共通処理。
-   * RLS の DELETE ポリシーは `(SELECT auth.uid()) = user_id` のみを許可するため、
-   * leave() (userId = 呼び出し本人) では確実に削除されるが、remove() (userId = 除名対象の
-   * 別ユーザー) では呼び出し元が管理者の auth.uid() のため RLS 上 0 行 削除(エラーにはならない
-   * が孤児データは残る)。除名対象者本人のデータを確実に消すには将来的に SECURITY DEFINER RPC 化が
-   * 必要(現状は低リスク Warning 対応としてこの制約付きで共通化のみ実施)。
+   * RLS の DELETE ポリシーは `(SELECT auth.uid()) = user_id OR is_team_admin(team_id, auth.uid())`
+   * を許可する (20260806000001_calendar_colors_team_membership.sql)。
+   * leave() (userId = 呼び出し本人) は本人分岐で削除され、remove() (userId = 除名対象の
+   * 別ユーザー、呼び出し元は管理者) は管理者分岐で削除される。いずれも実際にクリーンアップが効く。
    * 失敗しても脱退/除名自体は成立させたいノンブロッキングなクリーンアップだが、
    * 空catchで握りつぶさずログには残す。
    */
@@ -120,9 +119,8 @@ export class TeamMembersAPI {
     if (error) throw error;
 
     // 除名されたユーザーのカレンダー記録色カスタマイズ設定を削除する。
-    // 注意: RLS 上、削除できるのは呼び出し本人の行のみのため、管理者がここで呼んでも
-    // 除名対象者本人の行は RLS により削除されない(0行删除・エラーなし)。leave() との
-    // 対称性のため呼び出しは共通化するが、実際のクリーンアップは leave() 経由のみ有効。
+    // RLS の DELETE ポリシーに管理者分岐 (is_team_admin) があるため、呼び出し元が
+    // 管理者 (requireTeamAdmin で確認済み) であれば除名対象者本人の行も削除できる。
     await this.deleteTeamCalendarColors(teamId, userId);
   }
 

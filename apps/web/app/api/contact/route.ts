@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-server";
 import { sendContactNotification } from "@/lib/resend";
+import { getClientIp } from "@/lib/client-ip";
+import { reserveContactSubmission } from "@/lib/rate-limit";
 
 const SOURCE_APPS = ["swimhub", "timer", "scanner"] as const;
 const PLATFORMS = ["web", "ios", "android"] as const;
@@ -68,11 +70,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "お問い合わせ内容は5000文字以内で入力してください" }, { status: 400 });
     }
 
-    // IPアドレス取得（レート制限用）
-    const ipAddress =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      request.headers.get("x-real-ip") ??
-      null;
+    // IPアドレス取得（Cloudflare Workers 上では CF-Connecting-IP が最も信頼できる）
+    const ipAddress = getClientIp(request);
+
+    // レート制限（同一IPあたり1日10件）。IP が取得できない場合は制限を適用せず
+    // 通す（固定キーにフォールバックすると全ユーザーが1バケットを共有し相互DoS
+    // になるため、絶対にそうしない）。生IPはハッシュ化してから RPC に渡す
+    // （ip_address カラムへの生IP保存は既存動作なので変更しない）。
+    if (ipAddress) {
+      const { allowed } = await reserveContactSubmission(ipAddress);
+      if (!allowed) {
+        return NextResponse.json({ error: "送信回数の上限に達しました。しばらくしてから再度お試しください" }, { status: 429 });
+      }
+    }
 
     // 利用コンテキスト（利用アプリ / 環境 / 端末情報）の正規化
     // User-Agent はクライアント値より改ざんされにくいサーバーヘッダを採用
