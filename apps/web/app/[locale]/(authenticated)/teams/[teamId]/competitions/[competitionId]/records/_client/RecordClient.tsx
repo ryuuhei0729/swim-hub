@@ -33,10 +33,17 @@ import {
 } from "./relayEvents";
 import {
   buildStyleEntriesFromExisting,
+  applyEntryAdditionsToStyleEntries,
+  stampExistingEntryTimeReferences,
   type MemberRecord,
   type StyleEntry,
   type SplitTimeEntry,
 } from "./buildStyleEntries";
+import {
+  planEntryAdditionsForRecords,
+  buildEntryTimeReferenceLookup,
+  type EntryRowForRecordMerge,
+} from "@swim-hub/shared/utils/entryRecordMerge";
 
 // TeamVideoUploaderを動的インポート
 const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
@@ -90,6 +97,18 @@ interface RecordWithDetails {
 }
 
 
+interface EntryWithUser {
+  id: string;
+  user_id: string;
+  style_id: number;
+  entry_time: number | null;
+  note: string | null;
+  users: {
+    id: string;
+    name: string;
+  } | null;
+}
+
 interface RecordClientProps {
   teamId: string;
   competitionId: string;
@@ -98,6 +117,8 @@ interface RecordClientProps {
   members: TeamMember[];
   existingRecords: RecordWithDetails[];
   styles: Style[];
+  /** 大会エントリー（記録入力の初期反映用） */
+  entries: EntryWithUser[];
 }
 
 export default function RecordClient({
@@ -108,12 +129,16 @@ export default function RecordClient({
   members,
   existingRecords,
   styles,
+  entries,
 }: RecordClientProps) {
   const router = useRouter();
   const t = useTranslations("teams");
   const tCommon = useTranslations("common");
   const tRecords = useTranslations("competition.records");
   const tStyles = useTranslations("practice.styles");
+  // 参考ラベル「エントリータイム:」は mobile (RecordLogFormScreen 等) と同じ
+  // forms.recordLog.entryTimeLabel を再利用する (同義キーを増やさない)
+  const tRecordLog = useTranslations("forms.recordLog");
   const locale = useLocale();
   const { supabase, subscription } = useAuth();
 
@@ -151,9 +176,27 @@ export default function RecordClient({
     memberName: string;
   } | null>(null);
 
-  const [styleEntries, setStyleEntries] = useState<StyleEntry[]>(() =>
-    buildStyleEntriesFromExisting(existingRecords, styles),
-  );
+  const [styleEntries, setStyleEntries] = useState<StyleEntry[]>(() => {
+    const base = buildStyleEntriesFromExisting(existingRecords, styles);
+
+    // 大会エントリーのうち、既存記録が無い (user_id, style_id) の組だけを初期反映する
+    // (仕様: 既存記録を優先し、不足分だけエントリーから追加。リレーグループには触れない)
+    const entryRows: EntryRowForRecordMerge[] = entries.map((entry) => ({
+      id: entry.id,
+      user_id: entry.user_id,
+      style_id: entry.style_id,
+      entry_time: entry.entry_time,
+      note: entry.note,
+      userName: entry.users?.name || t("competitionRecordsModal.unknownUser"),
+    }));
+    const plans = planEntryAdditionsForRecords(entryRows, base, styles);
+    const merged = applyEntryAdditionsToStyleEntries(base, plans);
+
+    // 既存記録由来の行にも参考表示 (entryTimeReference) を後付けする (仕様#修正3:
+    // 重複排除で追加されなかった行でも、申告タイムと結果タイムを見比べられるようにする)
+    const entryTimeByUserStyle = buildEntryTimeReferenceLookup(entryRows);
+    return stampExistingEntryTimeReferences(merged, entryTimeByUserStyle);
+  });
   const isEditMode = existingRecords.length > 0;
 
   const addStyleEntry = () => {
@@ -1501,6 +1544,11 @@ export default function RecordClient({
                     <div key={mr.memberUserId} className="bg-gray-50 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-medium text-gray-900">{mr.memberName}</span>
+                        {mr.entryTimeReference != null && mr.entryTimeReference > 0 && (
+                          <span className="text-sm text-gray-500">
+                            {tRecordLog("entryTimeLabel")} {formatTimeBest(mr.entryTimeReference)}
+                          </span>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-3">

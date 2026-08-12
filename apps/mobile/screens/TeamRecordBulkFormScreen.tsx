@@ -25,6 +25,11 @@ import { teamKeys, recordKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import {
+  planEntryAdditionsForRecords,
+  buildEntryTimeReferenceLookup,
+  type EntryRowForRecordMerge,
+} from "@apps/shared/utils/entryRecordMerge";
 import { formatTimeBest } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
@@ -47,6 +52,8 @@ import {
 } from "./teamRecordBulk/relayEvents";
 import {
   buildStyleEntriesFromExisting,
+  applyEntryAdditionsToStyleEntries,
+  stampExistingEntryTimeReferences,
   type MemberRecord,
   type StyleEntry,
   type SplitTimeEntry,
@@ -144,7 +151,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         setLoadError(null);
 
         const styleApi = new StyleAPI(supabase);
-        const [stylesData, competitionRes, recordsRes] = await Promise.all([
+        const [stylesData, competitionRes, recordsRes, entriesRes] = await Promise.all([
           styleApi.getStyles(),
           supabase
             .from("competitions")
@@ -158,6 +165,17 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
               `id, user_id, style_id, time, is_relaying, reaction_time, note,
                split_times ( id, distance, split_time ),
                users:users!records_user_id_fkey ( id, name )`,
+            )
+            .eq("competition_id", competitionId)
+            .eq("team_id", teamId)
+            .order("created_at", { ascending: true }),
+          // エントリー（申告タイム）。記録の初期行反映と参照ラベル表示に使う（entry_time は
+          // 入力欄には絶対に入れない。仕様#1）
+          supabase
+            .from("entries")
+            .select(
+              `id, user_id, style_id, entry_time, note,
+               users:users!entries_user_id_fkey ( id, name )`,
             )
             .eq("competition_id", competitionId)
             .eq("team_id", teamId)
@@ -176,12 +194,45 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           pool_type: PoolType;
         };
         const records = (recordsRes.data || []) as unknown as ExistingRecord[];
+        // entries は補助データ（初期反映・参考表示専用）。取得失敗は記録入力をブロックせず、
+        // recordsRes と同様に空配列へフォールバックする（web RecordDataLoader.tsx と同じ設計。
+        // Reviewer 指摘: entries を fatal 扱いすると本機能追加前は無かった単一障害点が生まれる）。
+        if (entriesRes.error) {
+          console.error("エントリー取得エラー（記録入力は続行）:", entriesRes.error);
+        }
+        const rawEntries = (entriesRes.error ? [] : entriesRes.data || []) as unknown as Array<{
+          id: string;
+          user_id: string;
+          style_id: number;
+          entry_time: number | null;
+          note: string | null;
+          users?: { id: string; name: string | null } | null;
+        }>;
 
         setStyles(stylesData);
         setCompetition({ id: comp.id, title: comp.title, pool_type: comp.pool_type });
         setExistingRecords(records);
         setIsEditMode(records.length > 0);
-        setStyleEntries(buildStyleEntriesFromExisting(records, stylesData));
+
+        // 既存記録を優先し、不足分だけエントリーから初期行として追加する（仕様#2）。
+        // (user_id, style_id) の重複排除とリレーグループ不可侵は shared の
+        // planEntryAdditionsForRecords が保証する（mobile 側では再実装しない）。
+        const baseStyleEntries = buildStyleEntriesFromExisting(records, stylesData);
+        const entryRows: EntryRowForRecordMerge[] = rawEntries.map((e) => ({
+          id: e.id,
+          user_id: e.user_id,
+          style_id: e.style_id,
+          entry_time: e.entry_time,
+          note: e.note,
+          userName: e.users?.name || t("teams.competitionRecordsModal.unknownUser"),
+        }));
+        const plans = planEntryAdditionsForRecords(entryRows, baseStyleEntries, stylesData);
+        const merged = applyEntryAdditionsToStyleEntries(baseStyleEntries, plans);
+
+        // 既存記録由来の行にも参考表示 (entryTimeReference) を後付けする（仕様#修正3:
+        // 重複排除で追加されなかった行でも、申告タイムと結果タイムを見比べられるようにする）
+        const entryTimeByUserStyle = buildEntryTimeReferenceLookup(entryRows);
+        setStyleEntries(stampExistingEntryTimeReferences(merged, entryTimeByUserStyle));
       } catch (err) {
         if (!isMounted) return;
         console.error("チーム記録ロードエラー:", err);
@@ -1200,9 +1251,20 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
               {/* 個人種目: メンバーごとの入力 */}
               {!entry.relayEventId &&
                 entry.memberRecords.length > 0 &&
-                entry.memberRecords.map((mr) => (
+                entry.memberRecords.map((mr) => {
+                  return (
                   <View key={mr.memberUserId} style={styles.memberCard}>
                     <Text style={styles.memberName}>{mr.memberName}</Text>
+
+                    {/* エントリータイム参照ラベル（読み取り専用。記録タイムの入力欄には反映しない。仕様#1） */}
+                    {mr.entryTimeReference != null && mr.entryTimeReference > 0 && (
+                      <View style={styles.entryTimeBadge}>
+                        <Text style={styles.entryTimeBadgeText}>
+                          {t("forms.recordLog.entryTimeLabel")}{" "}
+                          {formatTimeBest(mr.entryTimeReference)}
+                        </Text>
+                      </View>
+                    )}
 
                     {/* タイム */}
                     <View style={styles.field}>
@@ -1378,7 +1440,8 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                       )}
                     </View>
                   </View>
-                ))}
+                  );
+                })}
             </View>
           );
         })}
@@ -1597,6 +1660,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   memberName: { fontSize: 15, fontWeight: "600", color: "#111827", marginBottom: 10 },
+  entryTimeBadge: {
+    backgroundColor: "#DBEAFE", // blue-100 (RecordLogFormScreen と同じ参照ラベル配色)
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+    marginBottom: 10,
+  },
+  entryTimeBadgeText: {
+    fontSize: 12,
+    color: "#1D4ED8", // blue-700
+  },
   inlineRow: { flexDirection: "row", gap: 12, marginBottom: 14, alignItems: "flex-end" },
   switchField: { gap: 4 },
   splitHeader: {

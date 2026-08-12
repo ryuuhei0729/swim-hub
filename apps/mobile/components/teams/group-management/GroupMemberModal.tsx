@@ -237,7 +237,6 @@ const styles = StyleSheet.create({
   },
   body: {
     padding: 16,
-    flex: 1,
   },
   searchInput: {
     borderWidth: 1,
