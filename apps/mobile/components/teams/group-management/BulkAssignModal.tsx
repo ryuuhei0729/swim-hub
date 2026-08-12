@@ -7,10 +7,16 @@ import {
   Gesture,
   ScrollView,
 } from "react-native-gesture-handler";
-import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from "react-native-reanimated";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  runOnJS,
+  type SharedValue,
+} from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface TeamMemberForSelection {
@@ -36,6 +42,153 @@ interface BulkAssignModalProps {
 
 const UNASSIGNED_ZONE = "unassigned";
 
+interface DraggableMemberChipProps {
+  member: TeamMemberForSelection;
+  isBeingDragged: boolean;
+  dragX: SharedValue<number>;
+  dragY: SharedValue<number>;
+  isDragging: SharedValue<boolean>;
+  onDragStart: (userId: string) => void;
+  onDragUpdate: (absX: number, absY: number) => void;
+  onDragEnd: (userId: string, absX: number, absY: number) => void;
+  onDragFinalize: () => void;
+}
+
+// モジュールスコープの通常のコンポーネント。関数参照がレンダーをまたいで不変であることが
+// 重要（親が useCallback のインライン定義で毎レンダー新しい型を作ると、ドラッグ中に
+// GestureDetector ごとアンマウント/リマウントされ、進行中の Gesture.Pan が破棄される）。
+const DraggableMemberChip = React.memo(function DraggableMemberChip({
+  member,
+  isBeingDragged,
+  dragX,
+  dragY,
+  isDragging,
+  onDragStart,
+  onDragUpdate,
+  onDragEnd,
+  onDragFinalize,
+}: DraggableMemberChipProps) {
+  const gesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .activateAfterLongPress(200)
+        .onStart((e) => {
+          isDragging.value = true;
+          dragX.value = e.absoluteX;
+          dragY.value = e.absoluteY;
+          runOnJS(onDragStart)(member.user_id);
+        })
+        .onUpdate((e) => {
+          dragX.value = e.absoluteX;
+          dragY.value = e.absoluteY;
+          runOnJS(onDragUpdate)(e.absoluteX, e.absoluteY);
+        })
+        .onEnd((e) => {
+          isDragging.value = false;
+          runOnJS(onDragEnd)(member.user_id, e.absoluteX, e.absoluteY);
+        })
+        .onFinalize(() => {
+          isDragging.value = false;
+          runOnJS(onDragFinalize)();
+        }),
+    [member.user_id, dragX, dragY, isDragging, onDragStart, onDragUpdate, onDragEnd, onDragFinalize],
+  );
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={[styles.chip, isBeingDragged && styles.chipDragging]}>
+        <Text style={styles.chipText} numberOfLines={1}>
+          {member.users.name}
+        </Text>
+      </Animated.View>
+    </GestureDetector>
+  );
+});
+
+interface DropZoneProps {
+  zoneId: string;
+  label: string;
+  members: TeamMemberForSelection[];
+  variant: "unassigned" | "group";
+  isHovered: boolean;
+  draggedUserId: string | null;
+  onRegisterZoneRef: (zoneId: string, ref: View | null) => void;
+  dragX: SharedValue<number>;
+  dragY: SharedValue<number>;
+  isDragging: SharedValue<boolean>;
+  onDragStart: (userId: string) => void;
+  onDragUpdate: (absX: number, absY: number) => void;
+  onDragEnd: (userId: string, absX: number, absY: number) => void;
+  onDragFinalize: () => void;
+}
+
+// DraggableMemberChip 同様、モジュールスコープの通常のコンポーネントとして定義する。
+const DropZone = React.memo(function DropZone({
+  zoneId,
+  label,
+  members: zoneMembers,
+  variant,
+  isHovered,
+  draggedUserId,
+  onRegisterZoneRef,
+  dragX,
+  dragY,
+  isDragging,
+  onDragStart,
+  onDragUpdate,
+  onDragEnd,
+  onDragFinalize,
+}: DropZoneProps) {
+  const { t } = useTranslation();
+  // zoneId が変わらない限り不変な ref コールバックをここで生成する。
+  // 親から呼び出し済みのカリー化関数を渡すと、呼ぶたびに新しい関数参照になり
+  // React.memo の浅い比較が常に不一致になってしまうため。
+  const handleRef = useCallback(
+    (ref: View | null) => onRegisterZoneRef(zoneId, ref),
+    [zoneId, onRegisterZoneRef],
+  );
+  return (
+    <View
+      ref={handleRef}
+      style={[
+        styles.zone,
+        variant === "unassigned" && styles.zoneUnassigned,
+        isHovered && styles.zoneHovered,
+      ]}
+      collapsable={false}
+    >
+      <View style={styles.zoneHeader}>
+        <Text
+          style={[styles.zoneLabel, variant === "unassigned" && styles.zoneLabelUnassigned]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+        <Text style={styles.zoneCount}>{zoneMembers.length}</Text>
+      </View>
+      <View style={styles.chips}>
+        {zoneMembers.map((m) => (
+          <DraggableMemberChip
+            key={m.user_id}
+            member={m}
+            isBeingDragged={draggedUserId === m.user_id}
+            dragX={dragX}
+            dragY={dragY}
+            isDragging={isDragging}
+            onDragStart={onDragStart}
+            onDragUpdate={onDragUpdate}
+            onDragEnd={onDragEnd}
+            onDragFinalize={onDragFinalize}
+          />
+        ))}
+        {zoneMembers.length === 0 && (
+          <Text style={styles.zoneEmpty}>{isHovered ? t("teams.mobile.dropHere") : ""}</Text>
+        )}
+      </View>
+    </View>
+  );
+});
+
 export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
   visible,
   onClose,
@@ -47,6 +200,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
   onSaved,
 }) => {
   const { t } = useTranslation();
+  const insets = useSafeInsets();
   const [assignments, setAssignments] = useState<Map<string, string | null>>(new Map());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -96,9 +250,21 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
     load();
   }, [visible, teamId, supabase, teamMembers, groupIds]);
 
-  // ゾーン位置を登録（measureInWindow で絶対座標取得）
-  const registerZoneRef = useCallback((zoneId: string, ref: View | null) => {
-    if (!ref) return;
+  // ゾーンのView refを保持
+  const zoneRefs = useRef<Map<string, View>>(new Map());
+
+  // ゾーン位置を登録（measureInWindow で絶対座標取得）。DropZone 内部の ref コールバック
+  // (zoneId ごとに安定) から直接渡される、常に同一参照の関数。
+  // ref が null で呼ばれる (アンマウント/差し替え) 場合は、zoneRefs / zoneRects の両方から
+  // 該当 zoneId を削除する。削除しないと、消えたグループの古い矩形が findZoneAtPosition に
+  // 拾われ続け、存在しないゾーンへのドロップ判定を起こしうる。
+  const handleRegisterZoneRef = useCallback((zoneId: string, ref: View | null) => {
+    if (!ref) {
+      zoneRefs.current.delete(zoneId);
+      zoneRects.current.delete(zoneId);
+      return;
+    }
+    zoneRefs.current.set(zoneId, ref);
     // measureInWindow は画面上の絶対座標を返す
     ref.measureInWindow((x, y, width, height) => {
       if (width > 0 && height > 0) {
@@ -204,20 +370,13 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
     }, 50);
   }, []);
 
-  // ゾーンのView refを保持
-  const zoneRefs = useRef<Map<string, View>>(new Map());
+  // UIスレッドから呼ばれるハンドラ（JS側で実行）。ドラッグ中に変化する state
+  // (draggedUserId / hoveredZone) を依存に含めないことで、DraggableMemberChip /
+  // DropZone に props として渡すコールバックの参照をドラッグ中も不変に保つ。
+  const handleDragStart = useCallback((userId: string) => {
+    setDraggedUserId(userId);
+  }, []);
 
-  const setZoneRef = useCallback(
-    (zoneId: string) => (ref: View | null) => {
-      if (ref) {
-        zoneRefs.current.set(zoneId, ref);
-        registerZoneRef(zoneId, ref);
-      }
-    },
-    [registerZoneRef],
-  );
-
-  // UIスレッドから呼ばれるハンドラ（JS側で実行）
   const handleDragUpdate = useCallback(
     (absX: number, absY: number) => {
       const zone = findZoneAtPosition(absX, absY);
@@ -234,100 +393,17 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
     [findZoneAtPosition, handleDrop],
   );
 
-  // ドラッグ可能なメンバーチップ
-  const DraggableMemberChip = useCallback(
-    ({ member }: { member: TeamMemberForSelection }) => {
-      const gesture = Gesture.Pan()
-        .activateAfterLongPress(200)
-        .onStart((e) => {
-          isDragging.value = true;
-          dragX.value = e.absoluteX;
-          dragY.value = e.absoluteY;
-          runOnJS(setDraggedUserId)(member.user_id);
-        })
-        .onUpdate((e) => {
-          dragX.value = e.absoluteX;
-          dragY.value = e.absoluteY;
-          runOnJS(handleDragUpdate)(e.absoluteX, e.absoluteY);
-        })
-        .onEnd((e) => {
-          isDragging.value = false;
-          runOnJS(handleDragEnd)(member.user_id, e.absoluteX, e.absoluteY);
-        })
-        .onFinalize(() => {
-          isDragging.value = false;
-          runOnJS(setDraggedUserId)(null);
-          runOnJS(setHoveredZone)(null);
-        });
-
-      const beingDragged = draggedUserId === member.user_id;
-
-      return (
-        <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.chip, beingDragged && styles.chipDragging]}>
-            <Text style={styles.chipText} numberOfLines={1}>
-              {member.users.name}
-            </Text>
-          </Animated.View>
-        </GestureDetector>
-      );
-    },
-    [draggedUserId, handleDragUpdate, handleDragEnd, isDragging, dragX, dragY],
-  );
-
-  // ドロップゾーン
-  const DropZone = useCallback(
-    ({
-      zoneId,
-      label,
-      members: zoneMembers,
-      variant,
-    }: {
-      zoneId: string;
-      label: string;
-      members: TeamMemberForSelection[];
-      variant: "unassigned" | "group";
-    }) => {
-      const isHovered = hoveredZone === zoneId;
-      return (
-        <View
-          ref={setZoneRef(zoneId)}
-          style={[
-            styles.zone,
-            variant === "unassigned" && styles.zoneUnassigned,
-            isHovered && styles.zoneHovered,
-          ]}
-          collapsable={false}
-        >
-          <View style={styles.zoneHeader}>
-            <Text
-              style={[styles.zoneLabel, variant === "unassigned" && styles.zoneLabelUnassigned]}
-              numberOfLines={1}
-            >
-              {label}
-            </Text>
-            <Text style={styles.zoneCount}>{zoneMembers.length}</Text>
-          </View>
-          <View style={styles.chips}>
-            {zoneMembers.map((m) => (
-              <DraggableMemberChip key={m.user_id} member={m} />
-            ))}
-            {zoneMembers.length === 0 && (
-              <Text style={styles.zoneEmpty}>{isHovered ? t("teams.mobile.dropHere") : ""}</Text>
-            )}
-          </View>
-        </View>
-      );
-    },
-    [hoveredZone, setZoneRef, DraggableMemberChip, t],
-  );
+  const handleDragFinalize = useCallback(() => {
+    setDraggedUserId(null);
+    setHoveredZone(null);
+  }, []);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <GestureHandlerRootView style={styles.gestureRoot}>
         <View style={styles.fullScreen}>
           {/* ヘッダー */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
             <Text style={styles.title} numberOfLines={1}>
               {t("teams.mobile.bulkAssignTitle", { category })}
             </Text>
@@ -357,12 +433,23 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                 contentContainerStyle={styles.columnContent}
                 onScrollEndDrag={remeasureAllZones}
                 onMomentumScrollEnd={remeasureAllZones}
+                scrollEnabled={!draggedUserId}
               >
                 <DropZone
                   zoneId={UNASSIGNED_ZONE}
                   label={t("teams.mobile.unassignedLabel")}
                   members={unassignedMembers}
                   variant="unassigned"
+                  isHovered={hoveredZone === UNASSIGNED_ZONE}
+                  draggedUserId={draggedUserId}
+                  onRegisterZoneRef={handleRegisterZoneRef}
+                  dragX={dragX}
+                  dragY={dragY}
+                  isDragging={isDragging}
+                  onDragStart={handleDragStart}
+                  onDragUpdate={handleDragUpdate}
+                  onDragEnd={handleDragEnd}
+                  onDragFinalize={handleDragFinalize}
                 />
               </ScrollView>
 
@@ -372,6 +459,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                 contentContainerStyle={styles.columnContent}
                 onScrollEndDrag={remeasureAllZones}
                 onMomentumScrollEnd={remeasureAllZones}
+                scrollEnabled={!draggedUserId}
               >
                 {groups.map((group) => (
                   <DropZone
@@ -380,6 +468,16 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                     label={group.name}
                     members={membersByGroup.get(group.id) || []}
                     variant="group"
+                    isHovered={hoveredZone === group.id}
+                    draggedUserId={draggedUserId}
+                    onRegisterZoneRef={handleRegisterZoneRef}
+                    dragX={dragX}
+                    dragY={dragY}
+                    isDragging={isDragging}
+                    onDragStart={handleDragStart}
+                    onDragUpdate={handleDragUpdate}
+                    onDragEnd={handleDragEnd}
+                    onDragFinalize={handleDragFinalize}
                   />
                 ))}
               </ScrollView>

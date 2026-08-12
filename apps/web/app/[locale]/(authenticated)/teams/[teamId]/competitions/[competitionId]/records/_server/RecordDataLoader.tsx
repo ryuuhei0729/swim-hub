@@ -27,6 +27,18 @@ interface CompetitionWithDetails extends Competition {
   } | null;
 }
 
+interface EntryWithUser {
+  id: string;
+  user_id: string;
+  style_id: number;
+  entry_time: number | null;
+  note: string | null;
+  users: {
+    id: string;
+    name: string;
+  } | null;
+}
+
 interface RecordWithDetails {
   id: string;
   user_id: string;
@@ -67,8 +79,14 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
   }
 
   // 並行でデータ取得
-  const [membershipResult, competitionResult, membersResult, recordsResult, stylesResult] =
-    await Promise.all([
+  const [
+    membershipResult,
+    competitionResult,
+    membersResult,
+    recordsResult,
+    stylesResult,
+    entriesResult,
+  ] = await Promise.all([
       // 現在ユーザーのメンバーシップを取得（admin権限チェック）
       supabase
         .from("team_memberships")
@@ -158,6 +176,26 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
 
       // 種目マスタを取得
       supabase.from("styles").select("id, name_jp, distance").order("id"),
+
+      // 既存のエントリーを取得（記録入力の初期反映用。entry_time は参考表示にのみ使う）
+      supabase
+        .from("entries")
+        .select(
+          `
+        id,
+        user_id,
+        style_id,
+        entry_time,
+        note,
+        users!entries_user_id_fkey (
+          id,
+          name
+        )
+      `,
+        )
+        .eq("competition_id", competitionId)
+        .eq("team_id", teamId)
+        .order("created_at", { ascending: true }),
     ]);
 
   // エラーチェック
@@ -184,6 +222,9 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
   const members = (membersResult.data || []) as unknown as TeamMember[];
   const records = (recordsResult.data || []) as unknown as RecordWithDetails[];
   const styles = (stylesResult.data || []) as Style[];
+  // entries は admin に全メンバー分の閲覧が RLS で許可済み（取得失敗時は
+  // 初期反映を諦めて空配列にフォールバックし、記録入力自体はブロックしない）
+  const entries = (entriesResult.data || []) as unknown as EntryWithUser[];
 
   return (
     <RecordClient
@@ -194,6 +235,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
       members={members}
       existingRecords={records}
       styles={styles}
+      entries={entries}
     />
   );
 }

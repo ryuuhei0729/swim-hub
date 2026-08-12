@@ -1,6 +1,7 @@
 // 既存レコード → StyleEntry 構築の純粋関数（Web 正準 buildStyleEntries.ts の移植）。
 // 相違点: mobile では File/Blob を扱わず、動画は { uri, mimeType } の保留アセットで保持する。
 import { formatTimeBest } from "@apps/shared/utils/time";
+import { userStylePairKey, type EntryAdditionPlan } from "@apps/shared/utils/entryRecordMerge";
 import {
   RELAY_EVENTS,
   RelayEventId,
@@ -44,6 +45,12 @@ export interface MemberRecord {
   relayLegStyleId?: number;
   relayLegLabel?: string;
   cumulativeTimeSeconds?: number;
+  /**
+   * エントリー由来行の参考表示専用フィールド (entries.entry_time, 秒)。
+   * 記録タイムの入力値 (time/timeDisplayValue) には絶対に使わないこと。
+   * 表示にのみ使う (formatTimeBest でラベル化)。既存記録由来の行では常に undefined。
+   */
+  entryTimeReference?: number | null;
 }
 
 export interface StyleEntry {
@@ -264,4 +271,106 @@ export function buildStyleEntriesFromExisting(
   }
 
   return [...resultEntries, ...Array.from(styleMap.values())];
+}
+
+/**
+ * `planEntryAdditionsForRecords` (shared) が返した追加計画を、実際の StyleEntry[] に反映する。
+ * Web 正準 `applyEntryAdditionsToStyleEntries` の移植（mobile の差分は videoAsset を
+ * 新規行に設定しない点のみ。File/Blob 相当のフィールドを持たないため web の
+ * videoFile/videoThumbnailBlob 初期化に相当する処理は不要）。
+ *
+ * - `plan.entry.id` (entries.id) をそのまま MemberRecord.id に使う。crypto.randomUUID 等の
+ *   非決定的な値に頼らないため、この関数は純粋関数として書ける
+ * - `entry_time` は `entryTimeReference` (参考表示専用) にのみ格納する。`time`/`timeDisplayValue`
+ *   (記録タイムの入力値) には絶対に入れない — entries.entry_time (申告タイム) と
+ *   records.time (結果タイム) を混同しないための仕様
+ * - 追加先が見つからない場合は `entry-style-${styleId}` を id とする新規 StyleEntry を作る
+ * - 種目未選択の初期プレースホルダー行 (`styleId === "" && memberRecords.length === 0`) は、
+ *   エントリー由来行が1件でも追加された場合は取り除く (空の行が紛れて表示されるのを防ぐ)
+ */
+export function applyEntryAdditionsToStyleEntries(
+  styleEntries: StyleEntry[],
+  plans: EntryAdditionPlan[],
+): StyleEntry[] {
+  if (plans.length === 0) return styleEntries;
+
+  const byId = new Map(styleEntries.map((entry) => [entry.id, entry]));
+  const newStyleEntryIds: string[] = [];
+
+  for (const plan of plans) {
+    const newRecord: MemberRecord = {
+      id: plan.entry.id,
+      memberUserId: plan.entry.user_id,
+      memberName: plan.entry.userName,
+      time: 0,
+      timeDisplayValue: "",
+      reactionTime: "",
+      isRelaying: false,
+      note: "",
+      splitTimes: [],
+      entryTimeReference: plan.entry.entry_time,
+    };
+
+    const targetId = plan.targetStyleEntryId ?? `entry-style-${plan.styleId}`;
+    const target = byId.get(targetId);
+    if (target) {
+      byId.set(targetId, { ...target, memberRecords: [...target.memberRecords, newRecord] });
+    } else {
+      byId.set(targetId, {
+        id: targetId,
+        styleId: plan.styleId,
+        styleName: plan.styleName,
+        memberRecords: [newRecord],
+      });
+      newStyleEntryIds.push(targetId);
+    }
+  }
+
+  const orderedExistingIds = styleEntries
+    .map((entry) => entry.id)
+    .filter((id) => {
+      const entry = byId.get(id)!;
+      return !(entry.styleId === "" && entry.memberRecords.length === 0);
+    });
+
+  return [...orderedExistingIds, ...newStyleEntryIds].map((id) => byId.get(id)!);
+}
+
+/**
+ * 既存記録由来の行を含む全 StyleEntry に、対応する entries.entry_time を参考表示専用の
+ * `entryTimeReference` として "後付け" でスタンプする純粋関数。Web 正準
+ * `stampExistingEntryTimeReferences` の移植（mobile 固有の差分は無し）。
+ *
+ * - 行を増減させない (`applyEntryAdditionsToStyleEntries` / 共有の
+ *   `planEntryAdditionsForRecords` の重複排除ロジックとは独立した関心)
+ * - リレーとして検出済みの StyleEntry (`relayEventId` が truthy) はスタンプ対象外。
+ *   リレー StyleEntry の `styleId` は先頭レグの style_id であり、エントリー
+ *   (常に個人種目, `entryDiff.ts` の `is_relaying: false` 固定) の style_id と
+ *   意味が異なるため、ここで突合すると誤ったスタンプにつながる。加えて仕様上も
+ *   リレー行に参考ラベルの表示スポットは無い (web/mobile とも)
+ * - `entry_time` は `entryTimeReference` にのみ格納する。`time`/`timeDisplayValue`
+ *   (記録タイムの入力値) には絶対に触れない
+ */
+export function stampExistingEntryTimeReferences(
+  styleEntries: StyleEntry[],
+  entryTimeByUserStyle: Map<string, number | null>,
+): StyleEntry[] {
+  return styleEntries.map((styleEntry) => {
+    if (styleEntry.relayEventId || styleEntry.styleId === "") return styleEntry;
+
+    const styleId = styleEntry.styleId;
+    let changed = false;
+    const memberRecords = styleEntry.memberRecords.map((memberRecord) => {
+      const entryTime = entryTimeByUserStyle.get(
+        userStylePairKey(memberRecord.memberUserId, styleId),
+      );
+      if (entryTime === undefined || memberRecord.entryTimeReference === entryTime) {
+        return memberRecord;
+      }
+      changed = true;
+      return { ...memberRecord, entryTimeReference: entryTime };
+    });
+
+    return changed ? { ...styleEntry, memberRecords } : styleEntry;
+  });
 }
