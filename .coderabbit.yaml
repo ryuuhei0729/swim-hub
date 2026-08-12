@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# デフォルトブランチ (develop) 以外を base とする PR は自動レビューが無効になるため、
+# main を明示的に対象に追加する (develop → main のリリース PR 用)。
+reviews:
+  auto_review:
+    base_branches:
+      - "^main$"
