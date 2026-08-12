@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { MapPinIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { format, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -82,9 +83,20 @@ export default function CompetitionRecordCard({ record, onClick }: CompetitionRe
 
         {/* 2行目: 場所(左) + プール・種目・タイム(右) */}
         <div className="flex items-center justify-between gap-2">
-          <span className="min-w-0 flex-1 truncate text-xs sm:text-sm text-gray-500">
-            {competition?.place ? `📍${competition.place}` : ""}
-          </span>
+          <div className="min-w-0 flex-1 flex items-center gap-1">
+            {competition?.place ? (
+              <>
+                <MapPinIcon
+                  className="h-4 w-4 shrink-0 text-gray-500"
+                  aria-hidden="true"
+                  data-testid="record-place-icon"
+                />
+                <span className="truncate text-xs sm:text-sm text-gray-500">
+                  {competition.place}
+                </span>
+              </>
+            ) : null}
+          </div>
           <div className="shrink-0 flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
             {/* 水路列: sm以上は固定幅の列内で pill を内容幅・右寄せにし、列頭を揃えつつ引き伸ばしを防ぐ */}
             <div className="shrink-0 sm:w-28 flex sm:justify-end">

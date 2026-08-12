@@ -1387,6 +1387,10 @@ export type Database = {
         Args: { p_logs_data: Json; p_practice_id: string };
         Returns: Json;
       };
+      reserve_contact_submission: {
+        Args: { p_ip_hash: string; p_usage_date: string };
+        Returns: { allowed: boolean; remaining: number }[];
+      };
       set_google_refresh_token: {
         Args: { p_token: string; p_user_id: string };
         Returns: undefined;

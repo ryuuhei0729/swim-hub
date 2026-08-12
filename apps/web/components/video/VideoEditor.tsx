@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { CheckIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { supportsWebCodecs } from "@/lib/cropVideo";
@@ -543,14 +544,20 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
         {/* Footer */}
         <div className="shrink-0 px-4 py-3 border-t border-gray-200 flex items-center justify-between gap-3">
           {/* 処理エンジン状態 */}
-          <span className="text-xs text-gray-400">
-            {webCodecsAvailable
-              ? t("hardwareSupported")
-              : ffmpegStatus === "loading"
-                ? t("engineLoading")
-                : ffmpegStatus === "ready"
-                  ? t("engineReady")
-                  : null}
+          <span className="flex items-center gap-1 text-xs text-gray-400">
+            {webCodecsAvailable ? (
+              <>
+                <CheckIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t("hardwareSupported")}
+              </>
+            ) : ffmpegStatus === "loading" ? (
+              t("engineLoading")
+            ) : ffmpegStatus === "ready" ? (
+              <>
+                <CheckIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t("engineReady")}
+              </>
+            ) : null}
           </span>
           <div className="flex gap-3">
             <button

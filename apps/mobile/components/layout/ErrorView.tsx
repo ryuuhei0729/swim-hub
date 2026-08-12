@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
 interface ErrorViewProps {
@@ -22,7 +23,9 @@ export const ErrorView: React.FC<ErrorViewProps> = ({
   const { t } = useTranslation();
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen]}>
-      {showIcon && <Text style={styles.icon}>⚠️</Text>}
+      {showIcon && (
+        <Feather name="alert-triangle" size={48} color="#DC2626" style={styles.icon} />
+      )}
       <Text style={styles.message}>{message}</Text>
       {onRetry && (
         <Pressable style={styles.retryButton} onPress={onRetry}>
@@ -45,7 +48,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
   },
   icon: {
-    fontSize: 48,
     marginBottom: 8,
   },
   message: {

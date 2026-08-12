@@ -106,6 +106,11 @@ export type MainStackParamList = {
     practiceId: string;
     teamId: string;
   };
+  /** チーム大会エントリー一括代理入力（管理者専用） */
+  TeamEntryBulkForm: {
+    competitionId: string;
+    teamId: string;
+  };
   TeamDetail: {
     teamId: string;
     /** 起動時に開くタブ（未指定時は "members"）。DayDetailModal の出欠確認からの遷移で使用 */

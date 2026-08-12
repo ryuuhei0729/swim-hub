@@ -16,13 +16,13 @@ describe("ErrorView", () => {
   it("デフォルトでアイコンが表示される", () => {
     render(<ErrorView message="エラー" />);
 
-    expect(screen.getByText("⚠️")).toBeTruthy();
+    expect(screen.getByTestId("icon-alert-triangle")).toBeTruthy();
   });
 
   it("showIcon=falseの場合、アイコンが表示されない", () => {
     render(<ErrorView message="エラー" showIcon={false} />);
 
-    expect(screen.queryByText("⚠️")).toBeNull();
+    expect(screen.queryByTestId("icon-alert-triangle")).toBeNull();
   });
 
   it("onRetryが提供された場合、リトライボタンが表示される", () => {

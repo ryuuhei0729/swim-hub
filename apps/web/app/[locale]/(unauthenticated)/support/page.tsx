@@ -11,8 +11,10 @@ import { BackButton } from "@/components/ui/BackButton";
 import { Link } from "@/i18n/navigation";
 import { SITE_URL } from "@/lib/constants";
 
-export const dynamic = "force-static";
-
+// CSP nonce (M-1) 対応: layout.tsx が headers() で nonce を読むようになったため、
+// force-static のままだとビルド時に nonce 無しの HTML が事前生成され、JSON-LD が
+// CSP でブロックされる (script-src が 'nonce-...' のみで 'unsafe-inline' を含まないため)。
+// リクエストごとに正しい nonce を HTML に埋め込むには動的レンダリングが必要。
 export async function generateMetadata({
   params,
 }: {

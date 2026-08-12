@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import type { TFunction } from "i18next";
 import {
@@ -231,7 +231,9 @@ export const PracticeShareCard: React.FC<PracticeShareCardProps> = ({ data, t })
 
       {/* フッター: ブランディング */}
       <View style={styles.footer}>
-        <Text style={styles.brand}>🏊 SwimHub</Text>
+        {/* "@/" エイリアスだと vitest 側でアセットを解決できないため相対パスで参照する */}
+        <Image source={require("../../assets/icons/app-icon.png")} style={styles.brandLogo} />
+        <Text style={styles.brand}>SwimHub</Text>
       </View>
     </View>
   );
@@ -455,7 +457,15 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  brandLogo: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
   },
   brand: {
     fontSize: 14,

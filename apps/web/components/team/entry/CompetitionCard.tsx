@@ -1,5 +1,11 @@
 import { memo } from "react";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import {
+  CalendarDaysIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  MapPinIcon,
+  TrophyIcon,
+} from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { formatDate } from "@apps/shared/utils/date";
 import type { CompetitionCardProps } from "@/types/team-entry";
@@ -27,13 +33,19 @@ function CompetitionCardComponent({
         className="w-full px-5 py-4 flex items-center justify-between hover:bg-orange-50 transition-colors"
       >
         <div className="flex items-center space-x-3">
-          <span className="text-xl">🏆</span>
+          <TrophyIcon className="h-6 w-6 text-orange-500" aria-hidden="true" />
           <div className="text-left">
             <h3 className="font-semibold text-gray-900">{competition.title || t("competitions.fallbackTitle")}</h3>
             <div className="flex items-center space-x-3 text-sm text-gray-600 mt-1">
-              <span>📅 {formatDate(competition.date, "numeric")}</span>
+              <span className="flex items-center gap-1">
+                <CalendarDaysIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {formatDate(competition.date, "numeric")}
+              </span>
               {competition.place && (
-                <span>📍 {t("entryCompetitionCard.placeLabel")} {competition.place}</span>
+                <span className="flex items-center gap-1">
+                  <MapPinIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {t("entryCompetitionCard.placeLabel")} {competition.place}
+                </span>
               )}
               <span className="text-xs font-medium text-orange-700">{entryStatusLabel}</span>
             </div>

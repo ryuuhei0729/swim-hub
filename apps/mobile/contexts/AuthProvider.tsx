@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { Alert, Linking } from "react-native";
 import { claimOAuthCode } from "@ryuuhei0729/swimhub-oauth/mobile";
-import { supabase } from "@/lib/supabase";
+import { supabase, clearMmkvCaches } from "@/lib/supabase";
 import {
   initRevenueCat,
   loginRevenueCat,
@@ -341,6 +341,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } finally {
       setAuthState((prev) => ({ ...prev, subscription: null }));
+      clearMmkvCaches();
 
       const queryClient = getQueryClient();
       queryClient.clear();

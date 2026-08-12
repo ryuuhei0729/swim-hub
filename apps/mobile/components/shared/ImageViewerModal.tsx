@@ -10,6 +10,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Image } from "expo-image";
+import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
 interface ImageViewerModalProps {
@@ -71,7 +72,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         <View style={styles.container}>
           <SafeAreaView style={styles.safeArea}>
             <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel={t("common.aria.close")}>
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Feather name="x" size={24} color="#FFFFFF" />
             </Pressable>
           </SafeAreaView>
         </View>
@@ -88,7 +89,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
               {currentIndex + 1} / {images.length}
             </Text>
             <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel={t("common.aria.close")}>
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Feather name="x" size={24} color="#FFFFFF" />
             </Pressable>
           </View>
         </SafeAreaView>
@@ -154,11 +155,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 16,
     padding: 8,
-  },
-  closeButtonText: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "600",
   },
   imageContainer: {
     width: SCREEN_WIDTH,

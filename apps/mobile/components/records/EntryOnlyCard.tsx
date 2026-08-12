@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
 import { Pressable, Text, View, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
@@ -36,9 +37,12 @@ export const EntryOnlyCard: React.FC<EntryOnlyCardProps> = ({ item, onPress }) =
       </View>
       <View style={styles.rowSpaceBetween}>
         {item.place ? (
-          <Text style={styles.place} numberOfLines={1}>
-            📍{item.place}
-          </Text>
+          <View style={styles.placeRow}>
+            <Feather name="map-pin" size={11} color="#7C3AED" />
+            <Text style={styles.place} numberOfLines={1}>
+              {item.place}
+            </Text>
+          </View>
         ) : (
           <View />
         )}
@@ -85,6 +89,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#4C1D95",
+    flexShrink: 1,
+  },
+  placeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
     flexShrink: 1,
   },
   place: {

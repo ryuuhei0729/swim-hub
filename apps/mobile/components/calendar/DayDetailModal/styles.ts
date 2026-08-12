@@ -668,9 +668,6 @@ export const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  entrySectionHeaderEmoji: {
-    fontSize: 18,
-  },
   entrySectionHeaderTitle: {
     flex: 1,
     fontSize: 14,
@@ -744,10 +741,15 @@ export const styles = StyleSheet.create({
   entryCardDeleteButton: {
     padding: 4,
   },
+  competitionHeaderPlaceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
   competitionHeaderPlace: {
     fontSize: 12,
     color: "#6B7280",
-    marginTop: 4,
   },
   competitionHeaderPoolType: {
     fontSize: 12,

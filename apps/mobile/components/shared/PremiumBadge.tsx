@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -41,7 +42,7 @@ export const PremiumBadge: React.FC<PremiumBadgeProps> = ({ feature, compact = f
   if (compact) {
     return (
       <Pressable style={styles.compactContainer} onPress={handlePress}>
-        <Text style={styles.compactIcon}>★</Text>
+        <Ionicons name="star" size={14} color="#D97706" />
         <Text style={styles.compactMessage} numberOfLines={2}>
           {message}
         </Text>
@@ -52,7 +53,7 @@ export const PremiumBadge: React.FC<PremiumBadgeProps> = ({ feature, compact = f
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.icon}>★</Text>
+        <Ionicons name="star" size={16} color="#D97706" />
         <Text style={styles.title}>Premium</Text>
       </View>
       <Text style={styles.message}>{message}</Text>
@@ -76,10 +77,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-  },
-  icon: {
-    fontSize: 16,
-    color: "#D97706",
   },
   title: {
     fontSize: 14,
@@ -114,10 +111,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 6,
-  },
-  compactIcon: {
-    fontSize: 14,
-    color: "#D97706",
   },
   compactMessage: {
     flex: 1,

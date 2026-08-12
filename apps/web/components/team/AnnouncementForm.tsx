@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import {
@@ -172,8 +173,9 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
                 onClick={handleClose}
                 disabled={isLoading}
                 className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                aria-label={t("announcementForm.closeButton")}
               >
-                ✕
+                <XMarkIcon className="h-6 w-6" aria-hidden="true" />
               </button>
             </div>
           </div>

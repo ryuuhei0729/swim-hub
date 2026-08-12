@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { useUserProfileQuery } from "@apps/shared/hooks/queries/user";
@@ -204,7 +204,8 @@ export default function GoalSetCalculatorModal({
                     </div>
                     <div className="text-xs text-gray-500">{t("goalSetCalculator.resultDescription")}</div>
                     {calculatedTargetTime.warning && (
-                      <div className="mt-2 text-xs text-yellow-700">
+                      <div className="mt-2 flex items-center justify-center gap-1 text-xs text-yellow-700">
+                        <ExclamationTriangleIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
                         {t("goalSetCalculator.warningText")}
                       </div>
                     )}

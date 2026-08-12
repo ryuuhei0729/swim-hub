@@ -1,5 +1,6 @@
 import { ArrowRightIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 
 import { Link } from "@/i18n/navigation";
@@ -97,6 +98,10 @@ export default async function PricingPage({
   const tCta = await getTranslations({ locale, namespace: "pricing.cta" });
   const tNav = await getTranslations({ locale, namespace: "nav" });
 
+  // CSP nonce (middleware.ts で生成 → リクエストヘッダーに載せて伝播)。
+  // layout.tsx とは別ファイルの JSON-LD なのでここでも個別に読む必要がある
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -122,10 +127,12 @@ export default async function PricingPage({
     <>
       <script
         type="application/ld+json"
+        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
       <script
         type="application/ld+json"
+        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
       />
 

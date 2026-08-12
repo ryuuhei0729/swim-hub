@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { UserPlan } from "@swim-hub/shared/types/auth";
 
@@ -18,9 +19,11 @@ type FeatureRow = {
 function CellContent({ value }: { value: CellValue }) {
   if (typeof value === "boolean") {
     return (
-      <Text style={[styles.cellIcon, value ? styles.cellIconCheck : styles.cellIconX]}>
-        {value ? "✓" : "✗"}
-      </Text>
+      <Feather
+        name={value ? "check" : "x"}
+        size={16}
+        color={value ? "#059669" : "#D1D5DB"}
+      />
     );
   }
   return <Text style={styles.cellText}>{value}</Text>;
@@ -202,15 +205,5 @@ const styles = StyleSheet.create({
     color: "#374151",
     textAlign: "center",
     fontWeight: "500",
-  },
-  cellIcon: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  cellIconCheck: {
-    color: "#059669",
-  },
-  cellIconX: {
-    color: "#D1D5DB",
   },
 });

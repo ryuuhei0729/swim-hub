@@ -194,18 +194,19 @@ describe("CompetitionRecordCard", () => {
       });
       renderWithIntl(<CompetitionRecordCard record={record} onClick={vi.fn()} />);
 
-      // 場所の絵文字マーカー(📍)ごと表示されない(空文字)
-      expect(screen.queryByText(/📍/)).not.toBeInTheDocument();
+      // 場所アイコン(MapPin)ごと表示されない
+      expect(screen.queryByTestId("record-place-icon")).not.toBeInTheDocument();
       // pool_type=0(短水路)・style 定義済みのフィクスチャのため、カード全体に他の "-" 由来は無く、
       // 単独の "-" テキストが(場所欄の旧フォールバックとして)出現しないことを確認できる
       expect(screen.queryByText("-")).not.toBeInTheDocument();
     });
 
-    it("competition.place がある場合は 📍 マーカー付きで表示される(mobile RecordItem と同一トーン)", () => {
+    it("competition.place がある場合は MapPin アイコン付きで表示される(mobile RecordItem と同一トーン)", () => {
       mocks.useListBestCandidatesQuery.mockReturnValue({ data: undefined, error: null });
       renderWithIntl(<CompetitionRecordCard record={makeRecord()} onClick={vi.fn()} />);
 
-      expect(screen.getByText("📍テストプール")).toBeInTheDocument();
+      expect(screen.getByTestId("record-place-icon")).toBeInTheDocument();
+      expect(screen.getByText("テストプール", { selector: "span" })).toBeInTheDocument();
     });
 
     it(
@@ -214,7 +215,7 @@ describe("CompetitionRecordCard", () => {
         mocks.useListBestCandidatesQuery.mockReturnValue({ data: undefined, error: null });
         renderWithIntl(<CompetitionRecordCard record={makeRecord()} onClick={vi.fn()} />);
 
-        const placeText = screen.getByText("📍テストプール");
+        const placeText = screen.getByText("テストプール", { selector: "span" });
         expect(placeText.className).toContain("text-xs");
         expect(placeText.className).toContain("sm:text-sm");
       },
@@ -452,8 +453,11 @@ describe("CompetitionRecordCard", () => {
           container.querySelector(".flex.items-center.sm\\:items-end.justify-between"),
         ).toBeNull();
 
+        // 場所テキストは MapPin アイコンと並ぶラッパー div の中にあるため、
+        // 親を直接辿らず closest() で2行目コンテナまで遡る
         const placeText = screen.getByText(/テストプール/);
-        const secondRow = placeText.parentElement;
+        const secondRow = placeText.closest(".justify-between");
+        expect(secondRow).not.toBeNull();
         expect(secondRow?.className).toContain("items-center");
         expect(secondRow?.className).toContain("justify-between");
         expect(secondRow?.className).not.toContain("sm:items-end");

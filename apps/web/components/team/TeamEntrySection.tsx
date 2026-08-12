@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamEntry } from "@/hooks/useTeamEntry";
 import { CompetitionCard, EntryList, EntryForm } from "./entry";
@@ -52,7 +53,7 @@ export default function TeamEntrySection({ teamId, isAdmin: _isAdmin }: TeamEntr
   return (
     <div className="bg-orange-50 border border-orange-200 rounded-lg shadow-md p-6">
       <div className="flex items-center mb-4">
-        <span className="text-2xl mr-2">📝</span>
+        <PencilSquareIcon className="h-7 w-7 mr-2 text-orange-700" aria-hidden="true" />
         <h2 className="text-xl font-bold text-orange-900">{t("entrySection.title")}</h2>
         <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-200 text-orange-800">
           {competitions.length}件

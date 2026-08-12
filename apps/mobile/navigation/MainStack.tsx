@@ -14,6 +14,7 @@ import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
 import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
 import { TeamRecordBulkFormScreen } from "@/screens/TeamRecordBulkFormScreen";
 import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
+import { TeamEntryBulkFormScreen } from "@/screens/TeamEntryBulkFormScreen";
 import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
 import { TeamBulkRegisterScreen } from "@/screens/TeamBulkRegisterScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
@@ -145,6 +146,14 @@ export const MainStack: React.FC = () => {
         options={{
           ...baseHeaderOptions,
           title: t("teamsAdmin.practiceLog.pageTitle"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamEntryBulkForm"
+        component={TeamEntryBulkFormScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("teams.mobile.entryBulk.pageTitle"),
         }}
       />
       <Stack.Screen

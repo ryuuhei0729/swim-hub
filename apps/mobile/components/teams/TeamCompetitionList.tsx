@@ -46,6 +46,7 @@ const CompetitionItem = React.memo(function CompetitionItem({
   onDelete,
   onEntry,
   onRecord,
+  onEntryBulk,
 }: {
   competition: Competition;
   isAdmin: boolean;
@@ -53,6 +54,7 @@ const CompetitionItem = React.memo(function CompetitionItem({
   onDelete: (competition: Competition) => void;
   onEntry: (competition: Competition) => void;
   onRecord: (competition: Competition) => void;
+  onEntryBulk: (competition: Competition) => void;
 }) {
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
@@ -146,6 +148,19 @@ const CompetitionItem = React.memo(function CompetitionItem({
           <Feather name="clock" size={13} color="#059669" />
           <Text style={styles.recordButtonText}>{t("teams.mobile.teamCompetitionList.recordButton")}</Text>
         </Pressable>
+        {isAdmin && (
+          <Pressable
+            style={styles.entryBulkButton}
+            onPress={() => onEntryBulk(competition)}
+            accessibilityRole="button"
+            accessibilityLabel={t("teams.mobile.teamCompetitionList.entryBulkButton")}
+          >
+            <Feather name="users" size={13} color="#7C3AED" />
+            <Text style={styles.entryBulkButtonText}>
+              {t("teams.mobile.teamCompetitionList.entryBulkButton")}
+            </Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -196,6 +211,18 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
       teamId,
     });
   }, [navigation, teamId]);
+
+  // 「エントリー代理入力」ボタン: admin 専用。管理者代理一括入力画面へ遷移する。
+  // handleEntry（受付状況管理モーダル）/ handleSelfEntry（本人用エントリー導線）とは
+  // 独立した新規ボタンであり、それらの既存動作には影響しない。
+  const handleEntryBulk = useCallback((competition: Competition) => {
+    if (isAdmin) {
+      navigation.navigate("TeamEntryBulkForm", {
+        competitionId: competition.id,
+        teamId,
+      });
+    }
+  }, [navigation, teamId, isAdmin]);
 
   const handleRecord = useCallback((competition: Competition) => {
     // admin は一括代理入力画面へ、非 admin は個人フロー(CompetitionTabForm)へ分岐。
@@ -248,8 +275,9 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
       onDelete={handleDelete}
       onEntry={handleEntry}
       onRecord={handleRecord}
+      onEntryBulk={handleEntryBulk}
     />
-  ), [isAdmin, handleEdit, handleDelete, handleEntry, handleRecord]);
+  ), [isAdmin, handleEdit, handleDelete, handleEntry, handleRecord, handleEntryBulk]);
 
   const keyExtractor = useCallback((item: Competition) => item.id, []);
 
@@ -477,6 +505,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#059669",
+  },
+  entryBulkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#7C3AED",
+  },
+  entryBulkButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#7C3AED",
   },
   centerContainer: {
     flex: 1,

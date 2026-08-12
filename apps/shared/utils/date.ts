@@ -150,6 +150,32 @@ export function formatDateTime(
   return format(d, DATETIME_PATTERNS[style][locale], { locale: DATE_FNS_LOCALES[locale] });
 }
 
+// =============================================================================
+// isCompetitionDateInPast — 大会日の過去判定
+// =============================================================================
+
+/**
+ * 大会日が過去かどうかを判定する純粋関数。
+ *
+ * - 過去 (date < today) → true
+ * - 今日・未来・null・undefined・空文字・無効な日付 → false (今日はガードしない)
+ *
+ * 既存の `isEntryTabVisible` (未来のみ true) / `isDateTodayOrPast` (今日以前を
+ * 過去扱い) はいずれも「今日は可・過去のみ不可」という要件を満たせないため、
+ * 個別に新設する。
+ *
+ * @param date - ISO 8601 形式の日付文字列 (YYYY-MM-DD) または null/undefined
+ */
+export function isCompetitionDateInPast(date: string | null | undefined): boolean {
+  if (!date) return false;
+  const parsed = parseISO(date);
+  if (!isValid(parsed)) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  parsed.setHours(0, 0, 0, 0);
+  return parsed < today;
+}
+
 /**
  * 指定された年月の開始日と終了日を'yyyy-MM-dd'形式の文字列で返す
  * @param year 年

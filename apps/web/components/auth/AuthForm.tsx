@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
@@ -527,7 +528,14 @@ function PasswordRequirementsList({ checks }: { checks: PasswordChecks }) {
                 met ? "text-emerald-600" : "text-gray-500"
               }`}
             >
-              <span aria-hidden="true">{met ? "✓" : "○"}</span>
+              {met ? (
+                <CheckCircleIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="h-4 w-4 shrink-0 rounded-full border border-gray-300"
+                />
+              )}
               <span>{label}</span>
             </li>
           );

@@ -9,6 +9,7 @@ import {
   Chakra_Petch,
   Zen_Kaku_Gothic_New,
 } from "next/font/google";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
@@ -162,6 +163,10 @@ export default async function LocaleLayout({
   const messages = await getMessages({ locale });
   const tMeta = await getTranslations({ locale, namespace: "metadata" });
 
+  // CSP nonce (middleware.ts で生成 → リクエストヘッダーに載せて伝播)。
+  // JSON-LD の inline <script> をこの nonce で許可する ('unsafe-inline' は使わない)
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   const jsonLd: Record<string, unknown>[] = [
     {
       "@context": "https://schema.org",
@@ -219,6 +224,7 @@ export default async function LocaleLayout({
           <script
             key={i}
             type="application/ld+json"
+            nonce={nonce}
             dangerouslySetInnerHTML={{ __html: safeJsonLd(data) }}
           />
         ))}

@@ -253,6 +253,8 @@ vi.mock("@expo/vector-icons", () => {
   const React = require("react");
 
   return {
+    // アイコンは data-testid="icon-<name>" だけを検証面として公開する。
+    // 文字を描画すると「テキストが出ている」ことでアイコンの存在を誤検知するため描画しない。
     Feather: ({
       name,
       ...props
@@ -260,17 +262,17 @@ vi.mock("@expo/vector-icons", () => {
       name: string;
       size?: number;
       color?: string;
-    } & Record<string, unknown>) => {
-      // map-pinアイコンを絵文字としてレンダリング
-      const iconMap: Record<string, string> = {
-        "map-pin": "📍",
-      };
-      return React.createElement(
-        "span",
-        { ...props, "data-testid": `icon-${name}` },
-        iconMap[name] || "",
-      );
-    },
+    } & Record<string, unknown>) =>
+      React.createElement("span", { ...props, "data-testid": `icon-${name}` }),
+    Ionicons: ({
+      name,
+      ...props
+    }: {
+      name: string;
+      size?: number;
+      color?: string;
+    } & Record<string, unknown>) =>
+      React.createElement("span", { ...props, "data-testid": `icon-${name}` }),
   };
 });
 

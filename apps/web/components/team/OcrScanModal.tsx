@@ -10,7 +10,7 @@ import { formatTimeShort, formatTimeAverage, parseTime } from "@apps/shared/util
 import { autoAssignMembers } from "@/utils/memberMatch";
 import { transformScanResultToMenus, type GeminiScanResult } from "@/utils/ocrTransform";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { CameraIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { CameraIcon, ArrowPathIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface TeamMember {
   id: string;
@@ -387,7 +387,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
             className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
             aria-label={t("ocr.upload.dropzoneText")}
           >
-            <span className="text-gray-500 text-sm">✕</span>
+            <XMarkIcon className="h-4 w-4 text-gray-500" aria-hidden="true" />
           </button>
         </div>
       )}
