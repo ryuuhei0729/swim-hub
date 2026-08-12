@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { parseISO } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { useTranslation } from "react-i18next";
@@ -102,9 +103,12 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
         {/* 2行目: 場所(左) + 水路・種目・タイム(右) */}
         <View style={styles.rowSpaceBetween}>
           {record.competition?.place ? (
-            <Text style={styles.place} numberOfLines={1}>
-              📍{record.competition.place}
-            </Text>
+            <View style={styles.placeRow}>
+              <Feather name="map-pin" size={12} color="#6B7280" />
+              <Text style={styles.place} numberOfLines={1}>
+                {record.competition.place}
+              </Text>
+            </View>
           ) : (
             <View />
           )}
@@ -172,6 +176,12 @@ const styles = StyleSheet.create({
     color: "#111827",
     // 残り幅を占有し、右端のベストタイムバッジを右寄せする
     flex: 1,
+  },
+  placeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    flexShrink: 1,
   },
   place: {
     fontSize: 13,

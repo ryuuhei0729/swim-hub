@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { PencilIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import type { EntryFormProps } from "@/types/team-entry";
 
@@ -16,7 +17,12 @@ function EntryFormComponent({
 
   return (
     <div className="mt-4">
-      <h4 className="text-sm font-semibold text-orange-900 mb-3">
+      <h4 className="flex items-center gap-1.5 text-sm font-semibold text-orange-900 mb-3">
+        {isEditing ? (
+          <PencilIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+        ) : (
+          <PlusIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+        )}
         {isEditing ? t("entryForm.editButton") : t("entryForm.addButton")}
       </h4>
       <div className="space-y-3">

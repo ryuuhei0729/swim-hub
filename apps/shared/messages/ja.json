@@ -112,7 +112,7 @@
       "addButton": "追加",
       "maxReached": "最大枚数に達しました"
     },
-    "offlineBanner": "📡 オフラインです。一部の機能が制限されます。",
+    "offlineBanner": "オフラインです。一部の機能が制限されます。",
     "aria": {
       "close": "閉じる",
       "previousImage": "前の画像",
@@ -259,9 +259,9 @@
       "trimming": "トリミング",
       "zoom": "ズーム: {value}x",
       "secondsUnit": "秒",
-      "hardwareSupported": "✓ ハードウェア変換対応",
+      "hardwareSupported": "ハードウェア変換対応",
       "engineLoading": "動画変換エンジンを読み込み中...",
-      "engineReady": "✓ 準備完了",
+      "engineReady": "準備完了",
       "cancel": "キャンセル",
       "applyAndUpload": "適用してアップロード",
       "processing": "変換中... {progress}%",
@@ -1687,6 +1687,33 @@
       "errorVideoNoThumbnail": "{name}: サムネイルを生成できなかったため動画を添付できませんでした",
       "videoPartialFailureSaved": "記録は保存されましたが、一部の動画を添付できませんでした:\n{errors}"
     },
+    "entries": {
+      "pageTitle": "チーム大会エントリー",
+      "competitionFallback": "大会",
+      "subtitle": "種目ごとにメンバーのエントリーを代理入力できます",
+      "pastDateBlocked": "この大会は開催日を過ぎているため代理入力できません",
+      "closedWarning": "エントリー受付は締め切られていますが、管理者は代理入力できます",
+      "bestTimePrefillButton": "ベストタイムを流用",
+      "bestTimePrefillBadge": "ベストタイム自動入力",
+      "duplicateMemberStyle": "同じ選手・種目の組み合わせが複数入力されています。行を確認してください。",
+      "confirmModal": {
+        "title": "保存内容の確認",
+        "statusNew": "新規",
+        "statusUpdate": "更新",
+        "statusDelete": "削除",
+        "statusUnchanged": "変更なし",
+        "unedittedBestTimeWarning": "⚠️ ベストタイムのまま未編集",
+        "toggleUnchanged": "表示",
+        "confirmButton": "確定"
+      },
+      "saveButton": "まとめて登録",
+      "noMembersToSelect": "選択できるメンバーがいません",
+      "retiredMemberFallback": "退会済みメンバー",
+      "noValidRowsError": "少なくとも1つの種目を選択してください",
+      "deleteConflictError": "{detail} は削除待ちの種目と重複しています。先に削除だけを保存してから、種目の変更を保存してください。",
+      "saveFailedDuplicate": "保存に失敗しました。種目の重複が原因の可能性があります。ページを再読み込みして最新の状態を確認してから、もう一度お試しください。",
+      "emptyState": "まだエントリーがありません。「対象メンバーを選択」から追加してください。"
+    },
     "sortSheet": {
       "title": "並べ替え",
       "dateDesc": "日付(新しい順)",
@@ -2197,7 +2224,7 @@
       "resultLabel": "ゴールセット目標",
       "resultDescription": "50m平均（50m×6本×3セット）",
       "calculating": "計算中...",
-      "warningText": "⚠️ 計算結果が現実的でない可能性があります",
+      "warningText": "計算結果が現実的でない可能性があります",
       "confirmButton": "この値を使用",
       "cancelButton": "キャンセル",
       "poolTypeLongDisplay": "長水路",
@@ -2348,6 +2375,7 @@
       "deleteConfirmText": "削除",
       "fallbackMemberName": "このメンバー",
       "unnamedMember": "名前未設定",
+      "retiredMemberBadge": "退会済み",
       "fallbackTeamName": "チーム",
       "roleAdmin": "管理者",
       "roleMember": "メンバー",
@@ -2597,7 +2625,8 @@
         "deleteConfirm": "この大会を削除しますか？この操作は取り消せません。",
         "deleteFailed": "大会の削除に失敗しました",
         "entryButton": "エントリー",
-        "recordButton": "記録"
+        "recordButton": "記録",
+        "entryBulkButton": "エントリー代理入力"
       },
       "teamCompetitionEntryModal": {
         "title": "{title} のエントリー",
@@ -2626,7 +2655,40 @@
       "attendanceConfirmEditAfterDeadline": "提出締め切り後の編集になります（{dates}）。備考に編集日時が自動的に追加されます。保存しますか？",
       "attendanceStatusPresent": "出席",
       "attendanceStatusAbsent": "欠席",
-      "attendanceStatusOther": "その他"
+      "attendanceStatusOther": "その他",
+      "entryBulk": {
+        "pageTitle": "エントリー代理入力",
+        "description": "選手を選択して、大会エントリーを代理入力できます。",
+        "memberSelectTitle": "エントリーする選手を選択",
+        "addMemberButton": "選手を追加",
+        "emptyMembersHint": "選手を追加してエントリーを入力してください。",
+        "addEventButton": "種目を追加",
+        "eventLabel": "種目",
+        "eventPlaceholder": "種目を選択",
+        "timeLabel": "エントリータイム",
+        "timePlaceholder": "例: 1:23.45",
+        "timeFormatInvalid": "タイムの形式が正しくありません",
+        "memoLabel": "メモ",
+        "memoPlaceholder": "メモ（任意）",
+        "prefillButton": "ベストタイムを流用",
+        "prefillUntouchedWarning": "⚠️ ベストタイムのまま未編集です",
+        "duplicateError": "同じ選手・種目の行が重複しています",
+        "closedStatusWarning": "エントリー受付は終了していますが、管理者は代理入力できます。",
+        "pastDateWarning": "大会日を過ぎているため、代理入力はできません。",
+        "saveButton": "まとめて登録",
+        "noValidRowsAlert": "少なくとも1件、選手と種目を選択したエントリーを入力してください。",
+        "confirmModalTitle": "登録内容の確認",
+        "confirmModalDescription": "以下の内容で登録します。内容をご確認のうえ「確定」を押してください。",
+        "categoryNew": "新規",
+        "categoryUpdated": "更新",
+        "categoryDeleted": "削除",
+        "categoryUnchanged": "変更なし",
+        "confirmButton": "確定",
+        "emptyDiffMessage": "変更点がありません",
+        "conflictingDeleteTitle": "削除待ちの種目と重複しています",
+        "conflictingDeleteMessage": "先に削除だけを保存してから、種目の変更を保存してください。\n{list}",
+        "saveFailedDuplicate": "保存に失敗しました。種目の重複が原因の可能性があります。もう一度お試しください。"
+      }
     },
     "page": {
       "title": "マイチーム",
@@ -2743,7 +2805,8 @@
         "recordsButton": "記録入力",
         "manageButton": "管理",
         "editButton": "編集",
-        "deleteButton": "削除"
+        "deleteButton": "削除",
+        "entryBulkInputButton": "エントリー入力"
       },
       "entryStatus": {
         "before": "受付前",
@@ -2976,8 +3039,8 @@
       "statusClosed": "受付終了"
     },
     "entryForm": {
-      "editButton": "✏️ 編集",
-      "addButton": "➕ 追加",
+      "editButton": "編集",
+      "addButton": "追加",
       "styleLabel": "種目",
       "styleSelectPlaceholder": "選択してください",
       "entryTimeLabel": "エントリータイム（任意）",
@@ -2996,7 +3059,7 @@
     },
     "entryList": {
       "empty": "エントリーがありません",
-      "userEntriesTitle": "✅ あなたのエントリー"
+      "userEntriesTitle": "あなたのエントリー"
     },
     "memberBestTimesHook": {
       "loadError": "ベストタイムの取得に失敗しました"
@@ -3318,7 +3381,7 @@
       "startLabel": "開始:",
       "endLabel": "終了:",
       "noLimit": "制限なし",
-      "outOfPeriodWarning": "⚠️ 現在は表示期間外です",
+      "outOfPeriodWarning": "現在は表示期間外です",
       "deleteConfirm": {
         "title": "お知らせを削除",
         "message": "このお知らせを削除しますか？",
@@ -3728,12 +3791,10 @@
     "tableHeaderLapTime": "Lap Time",
     "sectionRange": "{from}m → {to}m",
     "distanceDisplay": "{distance}m",
-    "memoIcon": "📝 メモ",
     "attachedImages": "添付画像",
     "editButton": "編集",
     "deleteButton": "削除",
     "deletingButton": "削除中...",
-    "bestTimeBadge": "🏆 Best Time!!",
     "bestTimeAria": "自己ベスト更新",
     "bestTimeDiffAria": "ベストタイムより +{diff} 遅い",
     "dateUnknown": "日付不明",

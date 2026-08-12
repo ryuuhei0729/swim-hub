@@ -1570,4 +1570,294 @@ describe("EntryAPI", () => {
       await expect(api.createPersonalEntry(entryData)).rejects.toThrow("認証が必要です");
     });
   });
+
+  // ===========================================================================
+  // Sprint Contract: チーム大会エントリーの管理者代理一括入力
+  //
+  // 実測 (2026-08-12, Phase B): `apps/shared/api/entries.ts` の createBulkEntries
+  // は `.upsert(upsertData, { onConflict: "competition_id,user_id,style_id" })`
+  // に置き換え済み。加えて Reviewer Critical#5 (チーム跨ぎの偽エントリー注入) の
+  // 修正として、entries 配列の各要素の competitionId が teamId の大会に属するか、
+  // userId が teamId のアクティブメンバーかを `competitions`/`team_memberships`
+  // への `.in()` バッチクエリで検証してから upsert する実装になっている
+  // (`entries.ts:247-275`)。deleteBulkEntries も `.eq("team_id", teamId)` を
+  // 明示するようになった (`entries.ts:315-321`)。
+  //
+  // このテストは EntryAPI を実装のまま (プロダクションコード変更なし) 呼び出し、
+  // 上記の実装が「他チームへの偽注入を防ぐ」という Sprint Contract 上の要求を
+  // 実際に満たしているかを検証する。
+  // ===========================================================================
+  describe("一括エントリー作成（管理者代理入力・upsert化）", () => {
+    /**
+     * `team_memberships` は同一メソッド内で2回 (1: requireTeamAdmin の権限確認
+     * `.single()`、2: メンバーシップ検証の `.in()`) 別チェーンで呼ばれるため、
+     * table名だけでは区別できない。呼び出し順に異なるレスポンスを返す
+     * シーケンス方式のモックを用意する。
+     */
+    function makeSequencedFrom(
+      sequence: Record<string, Array<{ data: unknown; error: unknown }>>,
+    ) {
+      const counters: Record<string, number> = {};
+      return vi.fn((table: string) => {
+        const idx = counters[table] ?? 0;
+        counters[table] = idx + 1;
+        const responses = sequence[table] ?? [];
+        const resp = responses[idx] ?? responses[responses.length - 1] ?? { data: null, error: null };
+        return createMockQueryBuilder(resp.data, resp.error);
+      });
+    }
+
+    const adminMembership = { data: { role: "admin" }, error: null };
+
+    it(
+      "管理者が複数選手×複数種目のエントリーを一括作成できる" +
+        "（人間の意図: 代理一括入力の基本動作。requireTeamAdmin通過 + " +
+        "競合・メンバーシップ検証通過後、.upsert が正しいペイロードで呼ばれること）",
+      async () => {
+        mockClient.from = makeSequencedFrom({
+          team_memberships: [adminMembership, { data: [{ user_id: "user-1" }, { user_id: "user-2" }], error: null }],
+          competitions: [{ data: [{ id: "comp-1" }], error: null }],
+          entries: [
+            {
+              data: [
+                { id: "e-1", user_id: "user-1", style_id: 3, entry_time: 60.5 },
+                { id: "e-2", user_id: "user-2", style_id: 9, entry_time: 40.0 },
+              ],
+              error: null,
+            },
+          ],
+        }) as unknown as typeof mockClient.from;
+
+        const entriesInput = [
+          { userId: "user-1", competitionId: "comp-1", styleId: 3, entryTime: 60.5 },
+          { userId: "user-2", competitionId: "comp-1", styleId: 9, entryTime: 40.0 },
+        ];
+
+        const result = await api.createBulkEntries("team-1", entriesInput);
+
+        expect(result).toHaveLength(2);
+      },
+    );
+
+    it(
+      "upsert が .insert ではなく .upsert (onConflict: competition_id,user_id,style_id) で" +
+        "呼ばれる（人間の意図: V-13の核心。既存の insert-only 実装だと一部選手が既にエントリー" +
+        "済みの場合UNIQUE制約違反でバッチ全体が失敗する既知バグの回帰防止）",
+      async () => {
+        const entriesFromCall = vi.fn(() =>
+          createMockQueryBuilder([{ id: "e-1" }], null),
+        );
+        mockClient.from = vi.fn((table: string) => {
+          if (table === "team_memberships") {
+            // 1回目: requireTeamAdmin, 2回目: メンバーシップ検証
+            const builder = createMockQueryBuilder(
+              [{ user_id: "user-1" }],
+              null,
+            );
+            builder.single.mockResolvedValue(adminMembership);
+            return builder;
+          }
+          if (table === "competitions") {
+            return createMockQueryBuilder([{ id: "comp-1" }], null);
+          }
+          if (table === "entries") {
+            return entriesFromCall();
+          }
+          return createMockQueryBuilder();
+        }) as unknown as typeof mockClient.from;
+
+        await api.createBulkEntries("team-1", [
+          { userId: "user-1", competitionId: "comp-1", styleId: 3, entryTime: 60.5 },
+        ]);
+
+        const entriesBuilder = entriesFromCall.mock.results[0]?.value;
+        expect(entriesBuilder.upsert).toHaveBeenCalledWith(
+          expect.arrayContaining([expect.objectContaining({ style_id: 3 })]),
+          { onConflict: "competition_id,user_id,style_id" },
+        );
+        expect(entriesBuilder.insert).not.toHaveBeenCalled();
+      },
+    );
+
+    it(
+      "teamId=team-A の admin として、team-B に属する大会IDを含むエントリーを一括作成しようと" +
+        "すると拒否される（人間の意図: Reviewer Critical#5 の再発防止。他チームへの" +
+        "偽エントリー注入を requireTeamAdmin だけでは防げないため、competitionId が" +
+        "teamId に属することの検証を回帰させないこと）",
+      async () => {
+        mockClient.from = makeSequencedFrom({
+          team_memberships: [adminMembership, { data: [{ user_id: "user-1" }], error: null }],
+          // competitions テーブルへの検証クエリが「team-Aに属する大会」を0件しか
+          // 返さない = comp-in-team-B は team-A に属していない
+          competitions: [{ data: [], error: null }],
+        }) as unknown as typeof mockClient.from;
+
+        await expect(
+          api.createBulkEntries("team-A", [
+            { userId: "user-1", competitionId: "comp-in-team-B", styleId: 3, entryTime: 60.5 },
+          ]),
+        ).rejects.toThrow("指定された大会はこのチームに属していません");
+      },
+    );
+
+    it(
+      "対象ユーザーが teamId のアクティブメンバーでない場合は拒否される" +
+        "（人間の意図: Reviewer Critical#5 の別経路。競合大会は自チームでも、対象ユーザーが" +
+        "他チームの人間である偽装エントリーを防ぐ）",
+      async () => {
+        mockClient.from = makeSequencedFrom({
+          team_memberships: [adminMembership, { data: [], error: null }], // メンバーシップ検証が0件
+          competitions: [{ data: [{ id: "comp-1" }], error: null }],
+        }) as unknown as typeof mockClient.from;
+
+        await expect(
+          api.createBulkEntries("team-1", [
+            { userId: "outsider-user", competitionId: "comp-1", styleId: 3, entryTime: 60.5 },
+          ]),
+        ).rejects.toThrow("指定されたユーザーはこのチームのメンバーではありません");
+      },
+    );
+
+    it(
+      "管理者権限を持たないユーザーが呼び出すとエラーになる（人間の意図: requireTeamAdmin " +
+        "ガードの回帰防止）",
+      async () => {
+        mockClient.from = vi.fn((table: string) => {
+          if (table === "team_memberships") {
+            const builder = createMockQueryBuilder(null, null);
+            builder.single.mockResolvedValue({ data: null, error: { code: "PGRST116" } });
+            return builder;
+          }
+          return createMockQueryBuilder();
+        }) as unknown as typeof mockClient.from;
+
+        await expect(
+          api.createBulkEntries("team-1", [
+            { userId: "user-1", competitionId: "comp-1", styleId: 3, entryTime: 60.5 },
+          ]),
+        ).rejects.toThrow("管理者権限が必要です");
+      },
+    );
+
+    it(
+      "entries 配列が空のとき何もせず空配列を返す（人間の意図: 境界値。0件バッチでAPIコールや" +
+        "エラーを発生させないこと）",
+      async () => {
+        const fromSpy = vi.fn(() => createMockQueryBuilder());
+        mockClient.from = fromSpy as unknown as typeof mockClient.from;
+
+        const result = await api.createBulkEntries("team-1", []);
+
+        expect(result).toEqual([]);
+        expect(fromSpy).not.toHaveBeenCalled();
+      },
+    );
+
+    it(
+      "entryTime が undefined の選手は entry_time: null として保存される（人間の意図: " +
+        "タイム未入力＝エントリーのみ先行登録というユースケースを壊さない）",
+      async () => {
+        const entriesFromCall = vi.fn(() => createMockQueryBuilder([{ id: "e-1" }], null));
+        mockClient.from = vi.fn((table: string) => {
+          if (table === "team_memberships") {
+            const builder = createMockQueryBuilder([{ user_id: "user-1" }], null);
+            builder.single.mockResolvedValue(adminMembership);
+            return builder;
+          }
+          if (table === "competitions") return createMockQueryBuilder([{ id: "comp-1" }], null);
+          if (table === "entries") return entriesFromCall();
+          return createMockQueryBuilder();
+        }) as unknown as typeof mockClient.from;
+
+        await api.createBulkEntries("team-1", [
+          { userId: "user-1", competitionId: "comp-1", styleId: 3 },
+        ]);
+
+        const entriesBuilder = entriesFromCall.mock.results[0]?.value;
+        expect(entriesBuilder.upsert).toHaveBeenCalledWith(
+          expect.arrayContaining([expect.objectContaining({ entry_time: null })]),
+          expect.anything(),
+        );
+      },
+    );
+
+    it(
+      "データベースエラー（ネットワークエラー含む）が発生したときエラーを呼び出し元に伝播する" +
+        "（人間の意図: 異常系。エラーを握り潰して成功したように見せない）",
+      async () => {
+        const dbError = new Error("Database connection failed");
+        mockClient.from = vi.fn((table: string) => {
+          if (table === "team_memberships") {
+            const builder = createMockQueryBuilder([{ user_id: "user-1" }], null);
+            builder.single.mockResolvedValue(adminMembership);
+            return builder;
+          }
+          if (table === "competitions") return createMockQueryBuilder([{ id: "comp-1" }], null);
+          if (table === "entries") return createMockQueryBuilder(null, dbError);
+          return createMockQueryBuilder();
+        }) as unknown as typeof mockClient.from;
+
+        await expect(
+          api.createBulkEntries("team-1", [
+            { userId: "user-1", competitionId: "comp-1", styleId: 3, entryTime: 60.5 },
+          ]),
+        ).rejects.toThrow(dbError);
+      },
+    );
+  });
+
+  describe("一括エントリー削除（管理者代理一括入力の差分保存）", () => {
+    it(
+      "entryIds が空のとき何もせず、requireTeamAdmin も呼ばれない（人間の意図: 境界値。" +
+        "削除対象が0件のときに不要な権限チェッククエリを発生させないこと）",
+      async () => {
+        const fromSpy = vi.fn(() => createMockQueryBuilder());
+        mockClient.from = fromSpy as unknown as typeof mockClient.from;
+
+        await api.deleteBulkEntries("team-1", []);
+
+        expect(fromSpy).not.toHaveBeenCalled();
+      },
+    );
+
+    it(
+      "削除クエリが .eq('team_id', teamId) を経由する（人間の意図: Reviewer申し送り#6。" +
+        "teamId に属さない entries.id が混在しても、このチームのエントリーだけが削除対象になる" +
+        "という契約をコードレベルで保証する多層防御。実際のクロスチームDB検証は" +
+        "RLSレベルの統合テストに委ねる、とこのテストのコメントで明示する）",
+      async () => {
+        const entriesBuilder = createMockQueryBuilder(null, null);
+        mockClient.from = vi.fn((table: string) => {
+          if (table === "team_memberships") {
+            const builder = createMockQueryBuilder([{ user_id: "user-1" }], null);
+            builder.single.mockResolvedValue({ data: { role: "admin" }, error: null });
+            return builder;
+          }
+          if (table === "entries") return entriesBuilder;
+          return createMockQueryBuilder();
+        }) as unknown as typeof mockClient.from;
+
+        await api.deleteBulkEntries("team-1", ["entry-1", "entry-2"]);
+
+        expect(entriesBuilder.delete).toHaveBeenCalled();
+        expect(entriesBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+        expect(entriesBuilder.in).toHaveBeenCalledWith("id", ["entry-1", "entry-2"]);
+      },
+    );
+
+    it("管理者権限を持たないユーザーが呼ぶとエラーになる", async () => {
+      mockClient.from = vi.fn((table: string) => {
+        if (table === "team_memberships") {
+          const builder = createMockQueryBuilder(null, null);
+          builder.single.mockResolvedValue({ data: null, error: { code: "PGRST116" } });
+          return builder;
+        }
+        return createMockQueryBuilder();
+      }) as unknown as typeof mockClient.from;
+
+      await expect(api.deleteBulkEntries("team-1", ["entry-1"])).rejects.toThrow(
+        "管理者権限が必要です",
+      );
+    });
+  });
 });

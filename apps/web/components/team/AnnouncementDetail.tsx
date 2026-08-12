@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import {
   useTeamAnnouncementQuery,
@@ -160,7 +161,10 @@ export const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({
                       const isOutOfPeriod = (startAt && startAt > now) || (endAt && endAt < now);
 
                       return isOutOfPeriod ? (
-                        <p className="text-xs text-orange-600 mt-1">{t("announcementDetail.outOfPeriodWarning")}</p>
+                        <p className="flex items-center gap-1 text-xs text-orange-600 mt-1">
+                          <ExclamationTriangleIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          {t("announcementDetail.outOfPeriodWarning")}
+                        </p>
                       ) : null;
                     })()}
                 </div>

@@ -112,7 +112,7 @@
       "addButton": "Hinzufügen",
       "maxReached": "Maximale Anzahl erreicht"
     },
-    "offlineBanner": "📡 Sie sind offline. Einige Funktionen sind eingeschränkt.",
+    "offlineBanner": "Sie sind offline. Einige Funktionen sind eingeschränkt.",
     "aria": {
       "close": "Schließen",
       "previousImage": "Vorheriges Bild",
@@ -259,9 +259,9 @@
       "trimming": "Zuschneiden",
       "zoom": "Zoom: {value}x",
       "secondsUnit": "s",
-      "hardwareSupported": "✓ Hardware-Kodierung unterstützt",
+      "hardwareSupported": "Hardware-Kodierung unterstützt",
       "engineLoading": "Videokonvertierungs-Engine wird geladen...",
-      "engineReady": "✓ Bereit",
+      "engineReady": "Bereit",
       "cancel": "Abbrechen",
       "applyAndUpload": "Anwenden & hochladen",
       "processing": "Wird konvertiert... {progress}%",
@@ -1687,6 +1687,33 @@
       "errorVideoNoThumbnail": "{name}: Das Video konnte nicht angehängt werden, da kein Vorschaubild erstellt werden konnte",
       "videoPartialFailureSaved": "Die Einträge wurden gespeichert, aber einige Videos konnten nicht angehängt werden:\n{errors}"
     },
+    "entries": {
+      "pageTitle": "Team-Wettkampfanmeldungen",
+      "competitionFallback": "Wettkampf",
+      "subtitle": "Sie können Anmeldungen für Mitglieder je Disziplin stellvertretend eingeben",
+      "pastDateBlocked": "Dieser Wettkampf liegt bereits in der Vergangenheit, daher können keine Anmeldungen mehr stellvertretend eingegeben werden",
+      "closedWarning": "Die Anmeldung ist geschlossen, Administratoren können jedoch weiterhin stellvertretend Anmeldungen eingeben",
+      "bestTimePrefillButton": "Bestzeit übernehmen",
+      "bestTimePrefillBadge": "Automatisch aus Bestzeit übernommen",
+      "duplicateMemberStyle": "Die gleiche Kombination aus Mitglied und Disziplin wurde mehrfach eingegeben. Bitte überprüfen Sie die Zeilen.",
+      "confirmModal": {
+        "title": "Änderungen bestätigen",
+        "statusNew": "Neu",
+        "statusUpdate": "Aktualisiert",
+        "statusDelete": "Gelöscht",
+        "statusUnchanged": "Unverändert",
+        "unedittedBestTimeWarning": "⚠️ Bestzeit unverändert übernommen",
+        "toggleUnchanged": "Anzeigen",
+        "confirmButton": "Bestätigen"
+      },
+      "saveButton": "Alle speichern",
+      "noMembersToSelect": "Keine Mitglieder zur Auswahl verfügbar",
+      "retiredMemberFallback": "Ehemaliges Mitglied",
+      "noValidRowsError": "Bitte wählen Sie mindestens eine Disziplin aus",
+      "deleteConflictError": "{detail} steht in Konflikt mit einer zur Löschung vorgesehenen Disziplin. Speichern Sie zuerst nur die Löschung und anschließend die Disziplinänderung.",
+      "saveFailedDuplicate": "Speichern fehlgeschlagen. Dies könnte an einer doppelten Disziplin liegen. Bitte laden Sie die Seite neu, um den aktuellen Stand zu prüfen, und versuchen Sie es erneut.",
+      "emptyState": "Noch keine Anmeldungen. Fügen Sie welche über „Mitglieder auswählen“ hinzu."
+    },
     "sortSheet": {
       "title": "Sortieren",
       "dateDesc": "Datum (neueste zuerst)",
@@ -2197,7 +2224,7 @@
       "resultLabel": "Goal-Set-Ziel",
       "resultDescription": "50m-Durchschnitt (50m × 6 Wdh. × 3 Sätze)",
       "calculating": "Wird berechnet ...",
-      "warningText": "⚠️ Das Berechnungsergebnis ist möglicherweise nicht realistisch",
+      "warningText": "Das Berechnungsergebnis ist möglicherweise nicht realistisch",
       "confirmButton": "Diesen Wert verwenden",
       "cancelButton": "Abbrechen",
       "poolTypeLongDisplay": "Langbahn",
@@ -2348,6 +2375,7 @@
       "deleteConfirmText": "Löschen",
       "fallbackMemberName": "dieses Mitglied",
       "unnamedMember": "Kein Name",
+      "retiredMemberBadge": "Ehemaliges Mitglied",
       "fallbackTeamName": "Team",
       "roleAdmin": "Administrator",
       "roleMember": "Mitglied",
@@ -2597,7 +2625,8 @@
         "deleteConfirm": "Diesen Wettkampf löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
         "deleteFailed": "Wettkampf konnte nicht gelöscht werden",
         "entryButton": "Anmelden",
-        "recordButton": "Ergebnis"
+        "recordButton": "Ergebnis",
+        "entryBulkButton": "Anmeldungen stellvertretend eingeben"
       },
       "teamCompetitionEntryModal": {
         "title": "Anmeldungen für {title}",
@@ -2626,7 +2655,40 @@
       "attendanceConfirmEditAfterDeadline": "Sie bearbeiten nach Ablauf der Frist ({dates}). Der Bearbeitungszeitpunkt wird automatisch der Anmerkung hinzugefügt. Trotzdem speichern?",
       "attendanceStatusPresent": "Anwesend",
       "attendanceStatusAbsent": "Abwesend",
-      "attendanceStatusOther": "Sonstige"
+      "attendanceStatusOther": "Sonstige",
+      "entryBulk": {
+        "pageTitle": "Anmeldungen stellvertretend eingeben",
+        "description": "Wählen Sie Schwimmer aus, um Wettkampfanmeldungen stellvertretend einzugeben.",
+        "memberSelectTitle": "Schwimmer für die Anmeldung auswählen",
+        "addMemberButton": "Schwimmer hinzufügen",
+        "emptyMembersHint": "Fügen Sie Schwimmer hinzu, um deren Anmeldungen einzugeben.",
+        "addEventButton": "Disziplin hinzufügen",
+        "eventLabel": "Disziplin",
+        "eventPlaceholder": "Disziplin auswählen",
+        "timeLabel": "Meldezeit",
+        "timePlaceholder": "z. B. 1:23.45",
+        "timeFormatInvalid": "Ungültiges Zeitformat",
+        "memoLabel": "Notiz",
+        "memoPlaceholder": "Notiz (optional)",
+        "prefillButton": "Bestzeit übernehmen",
+        "prefillUntouchedWarning": "⚠️ Bestzeit unverändert übernommen",
+        "duplicateError": "Die gleiche Schwimmer-/Disziplin-Zeile ist doppelt vorhanden",
+        "closedStatusWarning": "Die Anmeldung ist geschlossen, Administratoren können jedoch weiterhin stellvertretend Anmeldungen eingeben.",
+        "pastDateWarning": "Dieser Wettkampf liegt bereits in der Vergangenheit, daher können keine Anmeldungen mehr stellvertretend eingegeben werden.",
+        "saveButton": "Alle speichern",
+        "noValidRowsAlert": "Bitte geben Sie mindestens eine Anmeldung mit ausgewähltem Schwimmer und Disziplin ein.",
+        "confirmModalTitle": "Registrierungsdetails bestätigen",
+        "confirmModalDescription": "Die folgenden Angaben werden registriert. Bitte prüfen Sie die Details und tippen Sie auf „Bestätigen“.",
+        "categoryNew": "Neu",
+        "categoryUpdated": "Aktualisiert",
+        "categoryDeleted": "Gelöscht",
+        "categoryUnchanged": "Unverändert",
+        "confirmButton": "Bestätigen",
+        "emptyDiffMessage": "Keine Änderungen",
+        "conflictingDeleteTitle": "Konflikt mit einer zur Löschung vorgesehenen Disziplin",
+        "conflictingDeleteMessage": "Speichern Sie zuerst nur die Löschung und anschließend die Disziplinänderung.\n{list}",
+        "saveFailedDuplicate": "Speichern fehlgeschlagen. Dies könnte an einer doppelten Disziplin liegen. Bitte versuchen Sie es erneut."
+      }
     },
     "page": {
       "title": "Meine Teams",
@@ -2743,7 +2805,8 @@
         "recordsButton": "Ergebnisse eingeben",
         "manageButton": "Verwalten",
         "editButton": "Bearbeiten",
-        "deleteButton": "Löschen"
+        "deleteButton": "Löschen",
+        "entryBulkInputButton": "Anmeldungen eingeben"
       },
       "entryStatus": {
         "before": "Noch nicht geöffnet",
@@ -2976,8 +3039,8 @@
       "statusClosed": "Geschlossen"
     },
     "entryForm": {
-      "editButton": "✏️ Bearbeiten",
-      "addButton": "➕ Hinzufügen",
+      "editButton": "Bearbeiten",
+      "addButton": "Hinzufügen",
       "styleLabel": "Lage",
       "styleSelectPlaceholder": "Auswählen",
       "entryTimeLabel": "Meldezeit (optional)",
@@ -2996,7 +3059,7 @@
     },
     "entryList": {
       "empty": "Keine Anmeldungen",
-      "userEntriesTitle": "✅ Ihre Anmeldungen"
+      "userEntriesTitle": "Ihre Anmeldungen"
     },
     "memberBestTimesHook": {
       "loadError": "Bestzeiten konnten nicht geladen werden"
@@ -3318,7 +3381,7 @@
       "startLabel": "Start:",
       "endLabel": "Ende:",
       "noLimit": "Keine Begrenzung",
-      "outOfPeriodWarning": "⚠️ Derzeit außerhalb des Anzeigezeitraums",
+      "outOfPeriodWarning": "Derzeit außerhalb des Anzeigezeitraums",
       "deleteConfirm": {
         "title": "Ankündigung löschen",
         "message": "Möchten Sie diese Ankündigung löschen?",
@@ -3728,12 +3791,10 @@
     "tableHeaderLapTime": "Lap Time",
     "sectionRange": "{from}m → {to}m",
     "distanceDisplay": "{distance}m",
-    "memoIcon": "📝 Notiz",
     "attachedImages": "Angehängte Bilder",
     "editButton": "Bearbeiten",
     "deleteButton": "Löschen",
     "deletingButton": "Wird gelöscht ...",
-    "bestTimeBadge": "🏆 Best Time!!",
     "bestTimeAria": "Persönliche Bestzeit",
     "bestTimeDiffAria": "+{diff} langsamer als die Best Time",
     "dateUnknown": "Datum unbekannt",

@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  XMarkIcon,
+  TagIcon,
+  MapPinIcon,
+  PencilSquareIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import type { PracticeTag } from "@apps/shared/types";
@@ -444,19 +449,19 @@ export default function TeamPracticeDetailModal({
                   <div className="flex items-center gap-4 mb-4 flex-wrap">
                     {practice.title && (
                       <p className="text-sm text-gray-700 flex items-center gap-1">
-                        <span className="text-gray-500">🏷️</span>
+                        <TagIcon className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
                         {practice.title}
                       </p>
                     )}
                     {practice.place && (
                       <p className="text-sm text-gray-700 flex items-center gap-1">
-                        <span className="text-gray-500">📍</span>
+                        <MapPinIcon className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
                         {practice.place}
                       </p>
                     )}
                     {practice.note && (
                       <p className="text-sm text-gray-700 flex items-center gap-1">
-                        <span>📝</span>
+                        <PencilSquareIcon className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
                         {practice.note}
                       </p>
                     )}

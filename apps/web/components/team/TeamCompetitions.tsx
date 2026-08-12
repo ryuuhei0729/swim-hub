@@ -14,10 +14,12 @@ import { useTranslations } from "next-intl";
 import {
   PlusIcon,
   CalendarDaysIcon,
+  ChartBarIcon,
   MapPinIcon,
   TrophyIcon,
   PencilSquareIcon,
   ClipboardDocumentListIcon,
+  ClipboardDocumentCheckIcon,
   EyeIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
@@ -427,6 +429,12 @@ export default function TeamCompetitions({
     router.push(`/teams/${teamId}/competitions/${competitionId}/records`);
   };
 
+  // エントリー代理一括入力ページへ遷移
+  const handleEntryBulkInputClick = (e: React.MouseEvent, competitionId: string) => {
+    e.stopPropagation(); // 親要素のクリックイベントを停止
+    router.push(`/teams/${teamId}/competitions/${competitionId}/entries`);
+  };
+
   // エントリー管理モーダルを開く
   const handleEntryClick = (
     e: React.MouseEvent,
@@ -670,8 +678,9 @@ export default function TeamCompetitions({
                         (competition.records &&
                         competition.records.length > 0 ? (
                           <div className="mt-2 flex items-center gap-2">
-                            <span className="text-sm text-green-600 font-medium">
-                              📊 登録記録: {competition.records.length}件
+                            <span className="text-sm text-green-600 font-medium flex items-center gap-1">
+                              <ChartBarIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                              登録記録: {competition.records.length}件
                             </span>
                             <span className="text-xs text-gray-500 flex items-center">
                               <EyeIcon className="h-3 w-3 mr-1" />
@@ -680,8 +689,9 @@ export default function TeamCompetitions({
                           </div>
                         ) : (
                           <div className="mt-2 flex items-center gap-2">
-                            <span className="text-sm text-gray-500">
-                              📊 登録記録なし
+                            <span className="text-sm text-gray-500 flex items-center gap-1">
+                              <ChartBarIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                              登録記録なし
                             </span>
                             <span className="text-xs text-blue-600 flex items-center">
                               <PlusIcon className="h-3 w-3 mr-1" />
@@ -694,8 +704,9 @@ export default function TeamCompetitions({
                       {competition.entries &&
                         competition.entries.length > 0 && (
                           <div className="mt-1">
-                            <span className="text-sm text-blue-600">
-                              📝 エントリー: {competition.entries.length}件
+                            <span className="text-sm text-blue-600 flex items-center gap-1">
+                              <PencilSquareIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                              エントリー: {competition.entries.length}件
                             </span>
                           </div>
                         )}
@@ -735,6 +746,20 @@ export default function TeamCompetitions({
                           <PlusIcon className="h-4 w-4 mr-1" />
                           {t("competitions.selfRecordButton")}
                         </button>
+
+                        {/* エントリー代理一括入力ボタン（adminのみ。記録入力ボタンと構造的に対等な
+                            admin専用ページへの導線のため、同じプライマリ配色に揃える） */}
+                        {isAdmin && (
+                          <button
+                            onClick={(e) =>
+                              handleEntryBulkInputClick(e, competition.id)
+                            }
+                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                          >
+                            <ClipboardDocumentCheckIcon className="h-4 w-4 mr-1" />
+                            {t("competitions.card.entryBulkInputButton")}
+                          </button>
+                        )}
 
                         {/* 記録入力ボタン（adminのみ） */}
                         {isAdmin && (

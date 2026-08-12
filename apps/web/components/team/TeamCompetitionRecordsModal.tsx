@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { XMarkIcon, ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import {
+  XMarkIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  MapPinIcon,
+  PencilSquareIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTimeBest } from "@/utils/formatters";
 import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
@@ -253,11 +259,17 @@ export default function TeamCompetitionRecordsModal({
                 {competition && (
                   <div className="flex items-center gap-4 mb-4 flex-wrap text-sm text-gray-600">
                     {competition.place && (
-                      <span className="flex items-center gap-1">📍 {competition.place}</span>
+                      <span className="flex items-center gap-1">
+                        <MapPinIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        {competition.place}
+                      </span>
                     )}
-                    <span className="flex items-center gap-1">🏊 {poolTypeLabel}</span>
+                    <span>{poolTypeLabel}</span>
                     {competition.note && (
-                      <span className="flex items-center gap-1">📝 {competition.note}</span>
+                      <span className="flex items-center gap-1">
+                        <PencilSquareIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        {competition.note}
+                      </span>
                     )}
                   </div>
                 )}

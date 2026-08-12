@@ -4,7 +4,7 @@
  * テスト観点 (Sprint Contract Bug 2):
  *   - Modal の表示/非表示が visible prop で制御されること
  *   - 複数画像を渡したとき初期インデックスが 0 となり「1/N」と表示されること
- *   - 「✕」閉じるボタンを押すと onClose が呼ばれること
+ *   - 閉じる (Feather "x") ボタンを押すと onClose が呼ばれること
  *   - 画像が 0 枚のとき表示が壊れないこと（空配列境界値）
  *   - 画像が 1 枚のとき「1/1」と表示されること（最小境界値）
  *   - initialIndex が指定されたとき、そのインデックスから表示されること
@@ -161,10 +161,10 @@ describe("ImageViewerModal", () => {
   });
 
   describe("閉じるボタン", () => {
-    it("「✕」ボタンを押すと onClose が呼ばれる", () => {
+    it("閉じるボタンを押すと onClose が呼ばれる", () => {
       const onClose = vi.fn();
       render(<ImageViewerModal images={MOCK_IMAGES} visible={true} onClose={onClose} />);
-      fireEvent.click(screen.getByText("✕"));
+      fireEvent.click(screen.getByTestId("icon-x"));
       expect(onClose).toHaveBeenCalledTimes(1);
     });
 
@@ -174,7 +174,7 @@ describe("ImageViewerModal", () => {
         // @ts-expect-error テスト用に onClose を未指定（required だが防御動作を検証）
         <ImageViewerModal images={MOCK_IMAGES} visible={true} />,
       );
-      expect(() => fireEvent.click(screen.getByText("✕"))).not.toThrow();
+      expect(() => fireEvent.click(screen.getByTestId("icon-x"))).not.toThrow();
     });
   });
 

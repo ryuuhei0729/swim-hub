@@ -136,7 +136,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
           onPress={() => setIncludeRelaying(!includeRelaying)}
         >
           <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
-            {includeRelaying && <Text style={styles.checkboxMark}>✓</Text>}
+            {includeRelaying && <Feather name="check" size={10} color="#FFFFFF" />}
           </View>
           <Text style={styles.checkboxLabel}>{t("teams.mobile.bestTimesIncludeRelaying")}</Text>
         </Pressable>
@@ -290,11 +290,6 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: "#2563EB",
     borderColor: "#2563EB",
-  },
-  checkboxMark: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "bold",
   },
   checkboxLabel: {
     fontSize: 11,

@@ -14,6 +14,7 @@ import {
   Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { PurchasesPackage } from "react-native-purchases";
@@ -148,7 +149,7 @@ export const PaywallScreen: React.FC = () => {
           accessibilityRole="button"
           accessibilityLabel={t("paywallMobile.closeAria")}
         >
-          <Text style={styles.closeButtonText}>✕</Text>
+          <Feather name="x" size={22} color="#374151" />
         </TouchableOpacity>
         <View style={styles.loadingContainer}>
           <Text style={{ fontSize: 16, color: "#374151" }}>{t("paywallMobile.alreadyPremium")}</Text>
@@ -166,13 +167,13 @@ export const PaywallScreen: React.FC = () => {
         accessibilityRole="button"
         accessibilityLabel={t("common.aria.close")}
       >
-        <Text style={styles.closeButtonText}>✕</Text>
+        <Feather name="x" size={22} color="#374151" />
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* ヘッダー */}
         <View style={styles.header}>
-          <Text style={styles.headerIcon}>★</Text>
+          <Ionicons name="star" size={40} color="#F59E0B" />
           <Text style={styles.title}>{t("paywallMobile.title")}</Text>
           <Text style={styles.subtitle}>{t("paywallMobile.subtitle")}</Text>
         </View>
@@ -356,11 +357,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  closeButtonText: {
-    fontSize: 18,
-    color: "#374151",
-    fontWeight: "600",
-  },
   content: {
     padding: 24,
     paddingTop: 60,
@@ -368,10 +364,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     marginBottom: 24,
-  },
-  headerIcon: {
-    fontSize: 40,
-    color: "#F59E0B",
   },
   title: {
     fontSize: 24,

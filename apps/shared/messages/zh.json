@@ -112,7 +112,7 @@
       "addButton": "添加",
       "maxReached": "已达最大数量"
     },
-    "offlineBanner": "📡 当前处于离线状态。部分功能受限。",
+    "offlineBanner": "当前处于离线状态。部分功能受限。",
     "aria": {
       "close": "关闭",
       "previousImage": "上一张图片",
@@ -259,9 +259,9 @@
       "trimming": "裁剪",
       "zoom": "缩放：{value}x",
       "secondsUnit": "秒",
-      "hardwareSupported": "✓ 支持硬件转码",
+      "hardwareSupported": "支持硬件转码",
       "engineLoading": "视频转码引擎加载中...",
-      "engineReady": "✓ 准备就绪",
+      "engineReady": "准备就绪",
       "cancel": "取消",
       "applyAndUpload": "应用并上传",
       "processing": "转码中... {progress}%",
@@ -1687,6 +1687,33 @@
       "errorVideoNoThumbnail": "{name}：由于无法生成缩略图，未能附加视频",
       "videoPartialFailureSaved": "记录已保存，但部分视频未能附加：\n{errors}"
     },
+    "entries": {
+      "pageTitle": "团队比赛报名",
+      "competitionFallback": "比赛",
+      "subtitle": "可以按项目为成员代为录入报名信息",
+      "pastDateBlocked": "该比赛日期已过，无法代为录入报名信息",
+      "closedWarning": "报名已截止，但管理员仍可代为录入",
+      "bestTimePrefillButton": "使用最佳成绩",
+      "bestTimePrefillBadge": "已自动填入最佳成绩",
+      "duplicateMemberStyle": "同一选手・项目的组合被输入了多次，请检查各行。",
+      "confirmModal": {
+        "title": "确认保存内容",
+        "statusNew": "新增",
+        "statusUpdate": "更新",
+        "statusDelete": "删除",
+        "statusUnchanged": "无变化",
+        "unedittedBestTimeWarning": "⚠️ 仍为最佳成绩，未修改",
+        "toggleUnchanged": "显示",
+        "confirmButton": "确定"
+      },
+      "saveButton": "批量保存",
+      "noMembersToSelect": "没有可选择的成员",
+      "retiredMemberFallback": "已退出的成员",
+      "noValidRowsError": "请至少选择一个项目",
+      "deleteConflictError": "{detail} 与待删除的项目重复。请先单独保存删除操作，然后再保存项目变更。",
+      "saveFailedDuplicate": "保存失败。可能是由于项目重复导致的。请刷新页面确认最新状态后重试。",
+      "emptyState": "尚无报名信息。请点击“选择对象成员”添加。"
+    },
     "sortSheet": {
       "title": "排序",
       "dateDesc": "日期(从新到旧)",
@@ -2197,7 +2224,7 @@
       "resultLabel": "目标组目标",
       "resultDescription": "50m平均（50m×6组×3轮）",
       "calculating": "计算中…",
-      "warningText": "⚠️ 计算结果可能不切实际",
+      "warningText": "计算结果可能不切实际",
       "confirmButton": "使用该数值",
       "cancelButton": "取消",
       "poolTypeLongDisplay": "长池",
@@ -2348,6 +2375,7 @@
       "deleteConfirmText": "删除",
       "fallbackMemberName": "该成员",
       "unnamedMember": "未设置姓名",
+      "retiredMemberBadge": "已退出的成员",
       "fallbackTeamName": "团队",
       "roleAdmin": "管理员",
       "roleMember": "成员",
@@ -2597,7 +2625,8 @@
         "deleteConfirm": "确定删除此比赛？此操作无法撤销。",
         "deleteFailed": "比赛删除失败",
         "entryButton": "报名",
-        "recordButton": "成绩"
+        "recordButton": "成绩",
+        "entryBulkButton": "代为录入报名"
       },
       "teamCompetitionEntryModal": {
         "title": "{title} 的报名",
@@ -2626,7 +2655,40 @@
       "attendanceConfirmEditAfterDeadline": "这将是在提交截止后的编辑（{dates}）。编辑时间将自动添加到备注中。要保存吗？",
       "attendanceStatusPresent": "出席",
       "attendanceStatusAbsent": "缺席",
-      "attendanceStatusOther": "其他"
+      "attendanceStatusOther": "其他",
+      "entryBulk": {
+        "pageTitle": "代为录入报名",
+        "description": "选择选手，即可代为录入大会报名信息。",
+        "memberSelectTitle": "选择要报名的选手",
+        "addMemberButton": "添加选手",
+        "emptyMembersHint": "请添加选手后录入报名信息。",
+        "addEventButton": "添加项目",
+        "eventLabel": "项目",
+        "eventPlaceholder": "选择项目",
+        "timeLabel": "报名成绩",
+        "timePlaceholder": "例如：1:23.45",
+        "timeFormatInvalid": "成绩格式不正确",
+        "memoLabel": "备注",
+        "memoPlaceholder": "备注（可选）",
+        "prefillButton": "使用最佳成绩",
+        "prefillUntouchedWarning": "⚠️ 仍为最佳成绩，未修改",
+        "duplicateError": "同一选手・项目的行重复",
+        "closedStatusWarning": "报名已截止，但管理员仍可代为录入。",
+        "pastDateWarning": "由于已超过比赛日期，无法代为录入。",
+        "saveButton": "批量保存",
+        "noValidRowsAlert": "请至少输入1条已选择选手和项目的报名信息。",
+        "confirmModalTitle": "确认登记内容",
+        "confirmModalDescription": "将按以下内容登记，请确认后点击“确定”。",
+        "categoryNew": "新增",
+        "categoryUpdated": "更新",
+        "categoryDeleted": "删除",
+        "categoryUnchanged": "无变化",
+        "confirmButton": "确定",
+        "emptyDiffMessage": "没有变更内容",
+        "conflictingDeleteTitle": "与待删除的项目重复",
+        "conflictingDeleteMessage": "请先单独保存删除操作，然后再保存项目变更。\n{list}",
+        "saveFailedDuplicate": "保存失败。可能是由于项目重复导致的。请重试。"
+      }
     },
     "page": {
       "title": "我的团队",
@@ -2743,7 +2805,8 @@
         "recordsButton": "录入记录",
         "manageButton": "管理",
         "editButton": "编辑",
-        "deleteButton": "删除"
+        "deleteButton": "删除",
+        "entryBulkInputButton": "录入报名"
       },
       "entryStatus": {
         "before": "报名前",
@@ -2976,8 +3039,8 @@
       "statusClosed": "报名截止"
     },
     "entryForm": {
-      "editButton": "✏️ 编辑",
-      "addButton": "➕ 添加",
+      "editButton": "编辑",
+      "addButton": "添加",
       "styleLabel": "泳姿",
       "styleSelectPlaceholder": "请选择",
       "entryTimeLabel": "报名成绩（可选）",
@@ -2996,7 +3059,7 @@
     },
     "entryList": {
       "empty": "暂无报名",
-      "userEntriesTitle": "✅ 你的报名"
+      "userEntriesTitle": "你的报名"
     },
     "memberBestTimesHook": {
       "loadError": "获取最佳成绩失败"
@@ -3318,7 +3381,7 @@
       "startLabel": "开始：",
       "endLabel": "结束：",
       "noLimit": "无限制",
-      "outOfPeriodWarning": "⚠️ 当前不在显示期间内",
+      "outOfPeriodWarning": "当前不在显示期间内",
       "deleteConfirm": {
         "title": "删除通知",
         "message": "确定要删除此通知吗？",
@@ -3728,12 +3791,10 @@
     "tableHeaderLapTime": "Lap Time",
     "sectionRange": "{from}m → {to}m",
     "distanceDisplay": "{distance}m",
-    "memoIcon": "📝 备注",
     "attachedImages": "附加图片",
     "editButton": "编辑",
     "deleteButton": "删除",
     "deletingButton": "正在删除...",
-    "bestTimeBadge": "🏆 Best Time!!",
     "bestTimeAria": "刷新个人最好成绩",
     "bestTimeDiffAria": "比最好成绩慢 +{diff}",
     "dateUnknown": "日期不明",

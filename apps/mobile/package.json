@@ -23,6 +23,7 @@
     "ios:dev": "pnpm exec dotenvx run -f .env.development -- expo start --ios --dev-client",
     "ios:prod": "EXPO_NO_DOTENV=1 pnpm exec dotenvx run -f .env.production -- expo start --ios --dev-client",
     "web": "pnpm exec dotenvx run -f .env.local -- expo start --web",
+    "eas-build-post-install": "pnpm --filter @ryuuhei0729/swimhub-oauth build",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "clean": "pnpm exec expo clean",

@@ -204,7 +204,30 @@ export class EntryAPI {
   }
 
   /**
-   * 複数エントリーを一括作成（チーム用）
+   * 複数の「新規」エントリーを一括作成（チーム用・管理者代理一括入力）
+   *
+   * **注意: このメソッドは新規行 (existingEntryId が無い行) のみに使うこと。**
+   * 既存行の更新 (種目/タイム/メモの変更) には絶対に使わない。
+   *
+   * `.insert()` ではなく `.upsert()` (onConflict: competition_id,user_id,style_id) を使うのは、
+   * 「diff 計算時点ではスナップショットに存在しなかったが、保存直前の競合で既に
+   * 同じ (competition_id,user_id,style_id) の行が作成されていた」という稀な競合状態を
+   * 安全に処理するための防御であり、既存行の更新用途ではない。
+   *
+   * upsert の衝突判定は自然キー (competition_id,user_id,style_id) のみで行われ、
+   * entries.id は一切見ない。そのため「既存行 X の style_id を Y に変更した」パッチを
+   * ここに混ぜると、Postgres は X ではなく「変更後の自然キーに元から一致する別の行」を
+   * 衝突相手として上書きしてしまい、X 自体は古い style_id のまま残留する
+   * (サイレントなデータ破壊)。既存行の更新は必ず `updateEntry(id, patch)` を使うこと
+   * (mobile の TeamEntryBulkFormScreen.tsx と同じ id ベースの更新)。
+   *
+   * アプリケーション層バリデーション (セキュリティ):
+   * `requireTeamAdmin` は「呼び出し元が teamId の admin か」しか検証しないため、
+   * entries 配列の各要素の competitionId/userId が teamId に属することを
+   * 追加で検証する (他チームへの偽エントリー注入を防ぐ)。競合しうる ID を
+   * ユニーク化した上でそれぞれ1クエリで検証し、N+1 を避ける。
+   *
+   * 0件バッチのときは requireTeamAdmin を含め何も実行せず空配列を返す。
    */
   async createBulkEntries(
     teamId: string,
@@ -217,22 +240,86 @@ export class EntryAPI {
       isRelaying?: boolean;
     }>,
   ): Promise<Entry[]> {
+    if (entries.length === 0) return [];
+
     await requireTeamAdmin(this.supabase, teamId);
 
-    const insertData = entries.map((entry) => ({
+    const uniqueCompetitionIds = Array.from(new Set(entries.map((e) => e.competitionId)));
+    const uniqueUserIds = Array.from(new Set(entries.map((e) => e.userId)));
+
+    const [competitionsResult, membershipsResult] = await Promise.all([
+      this.supabase
+        .from("competitions")
+        .select("id")
+        .eq("team_id", teamId)
+        .in("id", uniqueCompetitionIds),
+      this.supabase
+        .from("team_memberships")
+        .select("user_id")
+        .eq("team_id", teamId)
+        .eq("is_active", true)
+        .in("user_id", uniqueUserIds),
+    ]);
+
+    if (competitionsResult.error) throw competitionsResult.error;
+    if (membershipsResult.error) throw membershipsResult.error;
+
+    const validCompetitionIds = new Set((competitionsResult.data ?? []).map((c) => c.id));
+    const validUserIds = new Set((membershipsResult.data ?? []).map((m) => m.user_id));
+
+    if (entries.some((e) => !validCompetitionIds.has(e.competitionId))) {
+      throw new Error("指定された大会はこのチームに属していません");
+    }
+    if (entries.some((e) => !validUserIds.has(e.userId))) {
+      throw new Error("指定されたユーザーはこのチームのメンバーではありません");
+    }
+
+    const upsertData = entries.map((entry) => ({
       team_id: teamId,
       user_id: entry.userId,
       competition_id: entry.competitionId,
       style_id: entry.styleId,
-      entry_time: entry.entryTime || null,
-      note: entry.note || null,
+      entry_time: entry.entryTime ?? null,
+      note: entry.note ?? null,
       is_relaying: entry.isRelaying ?? false,
     }));
 
-    const { data, error } = await this.supabase.from("entries").insert(insertData).select();
+    const { data, error } = await this.supabase
+      .from("entries")
+      .upsert(upsertData, { onConflict: "competition_id,user_id,style_id" })
+      .select();
 
     if (error) throw error;
     return data;
+  }
+
+  /**
+   * 複数エントリーを一括削除（チーム用・管理者代理一括入力の差分保存）
+   *
+   * 差分保存の削除フェーズ専用。全置換ではなく、呼び出し側が計算した
+   * 「削除対象のみ」の entries.id を削除する。
+   * `.eq("team_id", teamId)` を明示することで、関数の見た目上の契約
+   * (「teamId のエントリーだけを消す」) を実装でも保証する
+   * (RLS の DELETE ポリシーが最終防衛線として効くため実害は無かったが、多層防御として追加)。
+   *
+   * 呼び出し順序: createBulkEntries (upsert) / updateEntry を先に実行し、成功を確認した後に
+   * このメソッドを呼ぶこと。逆順は upsert/update 失敗時に「削除だけ実行され新規/更新が
+   * 失われる」データ損失を起こす。
+   *
+   * 0件のときは requireTeamAdmin を含め何も実行しない。
+   */
+  async deleteBulkEntries(teamId: string, entryIds: string[]): Promise<void> {
+    if (entryIds.length === 0) return;
+
+    await requireTeamAdmin(this.supabase, teamId);
+
+    const { error } = await this.supabase
+      .from("entries")
+      .delete()
+      .eq("team_id", teamId)
+      .in("id", entryIds);
+
+    if (error) throw error;
   }
 
   // =========================================================================

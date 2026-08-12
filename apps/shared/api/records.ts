@@ -8,6 +8,7 @@ import {
   Competition,
   CompetitionInsert,
   CompetitionUpdate,
+  PoolType,
   Record,
   RecordInsert,
   RecordUpdate,
@@ -460,6 +461,136 @@ export class RecordAPI {
       }
     });
 
+    return result;
+  }
+
+  /**
+   * 複数ユーザーの指定プール種別におけるベストタイムを1クエリで取得する。
+   *
+   * `getBestTimes(userId)` はユーザー1人専用のため、チームメンバー全員分を
+   * ループで呼ぶと N+1 クエリになる（ベストバッジ機能で前科あり）。
+   * エントリー代理入力画面のプリフィル用途では画面を開いた時点で対象になり得る
+   * 全メンバーの userId をまとめて1回だけ呼ぶこと (メンバー選択のたびに発火させない)。
+   *
+   * 個人種目のみを対象とする (仕様: リレー種目はスコープ外) ため、
+   * is_relaying=true の記録は集計から除外する。
+   *
+   * @param userIds 対象ユーザーIDの配列
+   * @param poolType プール種別 (0: 短水路, 1: 長水路)。competitions.pool_type と同じ型
+   * @returns userId → 種目ごとのベストタイム配列 の Map (記録が無いユーザーはキー自体が存在しない)
+   */
+  async getBestTimesForUsers(
+    userIds: string[],
+    poolType: PoolType,
+  ): Promise<Map<string, BestTime[]>> {
+    if (userIds.length === 0) return new Map();
+
+    // クラス内の他メソッド (getBestTimes 等) と同じ明示的な認証チェック規約に揃える
+    // (機能的には RLS が最終防衛線だが、規約からの逸脱を防ぐ)
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
+    if (!user) throw new Error("認証が必要です");
+
+    const { data, error } = await this.supabase
+      .from("records")
+      .select(
+        `
+        id,
+        user_id,
+        time,
+        created_at,
+        pool_type,
+        is_relaying,
+        note,
+        style_id,
+        styles!records_style_id_fkey (
+          name_jp,
+          distance
+        ),
+        competitions!records_competition_id_fkey (
+          title,
+          date
+        )
+      `,
+      )
+      .in("user_id", userIds)
+      .eq("pool_type", poolType)
+      .order("time", { ascending: true });
+
+    if (error) {
+      console.error("複数ユーザーのベストタイム取得エラー:", error);
+      throw error;
+    }
+
+    if (!data || !Array.isArray(data)) {
+      return new Map();
+    }
+
+    interface UserRecordWithRelations {
+      id: string;
+      user_id: string;
+      time: number;
+      created_at: string;
+      note?: string | null;
+      style_id: number;
+      styles?: { name_jp: string; distance: number } | null;
+      competitions?: { title: string; date: string } | null;
+    }
+
+    type UserRecordWithRelationsResponse = Omit<
+      UserRecordWithRelations,
+      "styles" | "competitions"
+    > & {
+      is_relaying: boolean;
+      styles?: UserRecordWithRelations["styles"] | UserRecordWithRelations["styles"][];
+      competitions?:
+        | UserRecordWithRelations["competitions"]
+        | UserRecordWithRelations["competitions"][];
+    };
+
+    // ユーザーごとに、種目別の最速タイム (非リレー) のみを1件保持する
+    const bestByUserAndStyle = new Map<string, Map<number, BestTime>>();
+
+    for (const raw of data as UserRecordWithRelationsResponse[]) {
+      if (raw.is_relaying) continue; // 個人種目のプリフィル用途のためリレーは対象外
+
+      const styleData = Array.isArray(raw.styles) ? raw.styles[0] : raw.styles;
+      const competitionData = Array.isArray(raw.competitions)
+        ? raw.competitions[0]
+        : raw.competitions;
+
+      let userMap = bestByUserAndStyle.get(raw.user_id);
+      if (!userMap) {
+        userMap = new Map<number, BestTime>();
+        bestByUserAndStyle.set(raw.user_id, userMap);
+      }
+
+      const existingBest = userMap.get(raw.style_id);
+      if (existingBest && existingBest.time <= raw.time) continue;
+
+      userMap.set(raw.style_id, {
+        id: raw.id,
+        time: raw.time,
+        created_at: raw.created_at,
+        pool_type: poolType,
+        is_relaying: false,
+        note: raw.note || undefined,
+        style_id: raw.style_id,
+        style: {
+          name_jp: styleData?.name_jp || "Unknown",
+          distance: styleData?.distance || 0,
+        },
+        competition: competitionData
+          ? { title: competitionData.title, date: competitionData.date }
+          : undefined,
+      });
+    }
+
+    const result = new Map<string, BestTime[]>();
+    for (const [userId, userMap] of bestByUserAndStyle) {
+      result.set(userId, Array.from(userMap.values()));
+    }
     return result;
   }
 

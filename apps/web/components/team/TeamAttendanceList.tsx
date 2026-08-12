@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
@@ -135,8 +136,9 @@ export default function TeamAttendanceList({
       {/* 提出期間外の警告 */}
       {!canSubmit && !isAdmin && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-yellow-800 text-sm">
-            ⚠️ {t("outsidePeriod")}
+          <p className="text-yellow-800 text-sm flex items-center gap-1.5">
+            <ExclamationTriangleIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {t("outsidePeriod")}
           </p>
         </div>
       )}

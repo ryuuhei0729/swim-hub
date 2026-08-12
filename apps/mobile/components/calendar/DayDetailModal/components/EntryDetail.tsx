@@ -212,7 +212,12 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
             )}
           </View>
         </View>
-        {place && <Text style={styles.competitionHeaderPlace}>📍 {place}</Text>}
+        {place && (
+          <View style={styles.competitionHeaderPlaceRow}>
+            <Feather name="map-pin" size={12} color="#6B7280" />
+            <Text style={styles.competitionHeaderPlace}>{place}</Text>
+          </View>
+        )}
         {poolType !== undefined && (
           <Text style={styles.competitionHeaderPoolType}>{getPoolTypeText(poolType)}</Text>
         )}
@@ -232,7 +237,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
         ]}
       >
         <View style={styles.entrySectionHeader}>
-          <Text style={styles.entrySectionHeaderEmoji}>📝</Text>
+          <Feather name="edit-3" size={16} color="#9A3412" />
           <Text style={[styles.entrySectionHeaderTitle, { color: entryBoxTextColor }]}>
             {t("dashboard.dayDetail.entryAlreadyTitle")}
           </Text>

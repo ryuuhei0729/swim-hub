@@ -109,7 +109,7 @@
       "addButton": "Add",
       "maxReached": "Maximum number reached"
     },
-    "offlineBanner": "📡 You are offline. Some features may be limited.",
+    "offlineBanner": "You are offline. Some features may be limited.",
     "aria": {
       "close": "Close",
       "previousImage": "Previous image",
@@ -256,9 +256,9 @@
       "trimming": "Trimming",
       "zoom": "Zoom: {value}x",
       "secondsUnit": "s",
-      "hardwareSupported": "✓ Hardware encoding supported",
+      "hardwareSupported": "Hardware encoding supported",
       "engineLoading": "Loading video conversion engine...",
-      "engineReady": "✓ Ready",
+      "engineReady": "Ready",
       "cancel": "Cancel",
       "applyAndUpload": "Apply & Upload",
       "processing": "Converting... {progress}%",
@@ -1684,6 +1684,33 @@
       "errorVideoNoThumbnail": "{name}: Could not attach video because the thumbnail could not be generated",
       "videoPartialFailureSaved": "The records were saved, but some videos could not be attached:\n{errors}"
     },
+    "entries": {
+      "pageTitle": "Team Competition Entries",
+      "competitionFallback": "Meet",
+      "subtitle": "You can enter entries on behalf of members for each event",
+      "pastDateBlocked": "This competition's date has already passed, so entries can no longer be entered on behalf of members",
+      "closedWarning": "Entry registration is closed, but admins can still enter entries on behalf of members",
+      "bestTimePrefillButton": "Use Best Time",
+      "bestTimePrefillBadge": "Auto-filled from best time",
+      "duplicateMemberStyle": "The same member/event combination is entered more than once. Please check the rows.",
+      "confirmModal": {
+        "title": "Confirm Changes",
+        "statusNew": "New",
+        "statusUpdate": "Updated",
+        "statusDelete": "Deleted",
+        "statusUnchanged": "Unchanged",
+        "unedittedBestTimeWarning": "⚠️ Best time left unedited",
+        "toggleUnchanged": "Show",
+        "confirmButton": "Confirm"
+      },
+      "saveButton": "Save All",
+      "noMembersToSelect": "No members available to select",
+      "retiredMemberFallback": "Former member",
+      "noValidRowsError": "Please select at least one event",
+      "deleteConflictError": "{detail} conflicts with an event pending deletion. Please save the deletion first, then save the event change.",
+      "saveFailedDuplicate": "Failed to save. This may be caused by a duplicate event. Please reload the page to check the latest state, then try again.",
+      "emptyState": "No entries yet. Use \"Select Members\" to add some."
+    },
     "sortSheet": {
       "title": "Sort",
       "dateDesc": "Date (newest)",
@@ -2194,7 +2221,7 @@
       "resultLabel": "Goal Set Target",
       "resultDescription": "50m average (50m x 6 reps x 3 sets)",
       "calculating": "Calculating...",
-      "warningText": "⚠️ The calculated result may not be realistic",
+      "warningText": "The calculated result may not be realistic",
       "confirmButton": "Use this value",
       "cancelButton": "Cancel",
       "poolTypeLongDisplay": "Long course",
@@ -2345,6 +2372,7 @@
       "deleteConfirmText": "Delete",
       "fallbackMemberName": "this member",
       "unnamedMember": "Unnamed",
+      "retiredMemberBadge": "Former member",
       "fallbackTeamName": "Team",
       "roleAdmin": "Admin",
       "roleMember": "Member",
@@ -2594,7 +2622,8 @@
         "deleteConfirm": "Delete this competition? This cannot be undone.",
         "deleteFailed": "Failed to delete competition",
         "entryButton": "Entry",
-        "recordButton": "Record"
+        "recordButton": "Record",
+        "entryBulkButton": "Enter Entries"
       },
       "teamCompetitionEntryModal": {
         "title": "Entries for {title}",
@@ -2623,7 +2652,40 @@
       "attendanceConfirmEditAfterDeadline": "You are editing after the deadline ({dates}). The edit timestamp will be automatically added to the note. Save anyway?",
       "attendanceStatusPresent": "Present",
       "attendanceStatusAbsent": "Absent",
-      "attendanceStatusOther": "Other"
+      "attendanceStatusOther": "Other",
+      "entryBulk": {
+        "pageTitle": "Enter Entries on Behalf of Members",
+        "description": "Select swimmers to enter competition entries on their behalf.",
+        "memberSelectTitle": "Select swimmers to enter",
+        "addMemberButton": "Add swimmer",
+        "emptyMembersHint": "Add swimmers to enter their entries.",
+        "addEventButton": "Add event",
+        "eventLabel": "Event",
+        "eventPlaceholder": "Select an event",
+        "timeLabel": "Entry time",
+        "timePlaceholder": "e.g. 1:23.45",
+        "timeFormatInvalid": "Invalid time format",
+        "memoLabel": "Memo",
+        "memoPlaceholder": "Memo (optional)",
+        "prefillButton": "Use Best Time",
+        "prefillUntouchedWarning": "⚠️ Best time left unedited",
+        "duplicateError": "The same swimmer/event combination is duplicated",
+        "closedStatusWarning": "Entry registration is closed, but admins can still enter entries on behalf of members.",
+        "pastDateWarning": "This competition's date has already passed, so entries can no longer be entered on behalf of members.",
+        "saveButton": "Save All",
+        "noValidRowsAlert": "Please enter at least one entry with both a swimmer and an event selected.",
+        "confirmModalTitle": "Confirm Registration Details",
+        "confirmModalDescription": "The following will be registered. Please review the details and tap \"Confirm\".",
+        "categoryNew": "New",
+        "categoryUpdated": "Updated",
+        "categoryDeleted": "Deleted",
+        "categoryUnchanged": "Unchanged",
+        "confirmButton": "Confirm",
+        "emptyDiffMessage": "No changes",
+        "conflictingDeleteTitle": "Conflicts with an event pending deletion",
+        "conflictingDeleteMessage": "Please save the deletion first, then save the event change.\n{list}",
+        "saveFailedDuplicate": "Failed to save. This may be caused by a duplicate event. Please try again."
+      }
     },
     "page": {
       "title": "My Teams",
@@ -2740,7 +2802,8 @@
         "recordsButton": "Enter Records",
         "manageButton": "Manage",
         "editButton": "Edit",
-        "deleteButton": "Delete"
+        "deleteButton": "Delete",
+        "entryBulkInputButton": "Enter Entries"
       },
       "entryStatus": {
         "before": "Not Open",
@@ -2970,8 +3033,8 @@
       "statusClosed": "Closed"
     },
     "entryForm": {
-      "editButton": "✏️ Edit",
-      "addButton": "➕ Add",
+      "editButton": "Edit",
+      "addButton": "Add",
       "styleLabel": "Stroke",
       "styleSelectPlaceholder": "Select",
       "entryTimeLabel": "Entry Time (optional)",
@@ -2990,7 +3053,7 @@
     },
     "entryList": {
       "empty": "No entries",
-      "userEntriesTitle": "✅ Your Entries"
+      "userEntriesTitle": "Your Entries"
     },
     "memberBestTimesHook": {
       "loadError": "Failed to load best times"
@@ -3315,7 +3378,7 @@
       "startLabel": "Start:",
       "endLabel": "End:",
       "noLimit": "No limit",
-      "outOfPeriodWarning": "⚠️ Currently outside the display period",
+      "outOfPeriodWarning": "Currently outside the display period",
       "deleteConfirm": {
         "title": "Delete Announcement",
         "message": "Are you sure you want to delete this announcement?",
@@ -3725,12 +3788,10 @@
     "tableHeaderLapTime": "Lap Time",
     "sectionRange": "{from}m → {to}m",
     "distanceDisplay": "{distance}m",
-    "memoIcon": "📝 Memo",
     "attachedImages": "Attached images",
     "editButton": "Edit",
     "deleteButton": "Delete",
     "deletingButton": "Deleting...",
-    "bestTimeBadge": "🏆 Best Time!!",
     "bestTimeAria": "Personal best",
     "bestTimeDiffAria": "+{diff} slower than best time",
     "dateUnknown": "Date unknown",
