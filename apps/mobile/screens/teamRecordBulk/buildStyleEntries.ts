@@ -15,6 +15,8 @@ import {
 export interface StyleLookup {
   id: number;
   name_jp: string;
+  /** 種目距離 (m)。ゴール地点スプリットの復元に使う。未知種目では undefined */
+  distance?: number;
 }
 
 export interface SplitTimeEntry {
@@ -76,8 +78,73 @@ export interface ExistingRecord {
 }
 
 /**
+ * リレーの leg 境界スプリット (= 各 leg の累計タイム) を relaySplitTimes に復元する。
+ * Web 正準 `restoreRelayBoundarySplits` の移植。
+ *
+ * 保存時、leg 境界スプリットは leg 内距離へ変換された結果その leg の種目距離と一致するため
+ * 「ゴールタイム = split ではない」フィルタで必ず捨てられ、DB には残らない。値は各 leg の
+ * `records.time` から算出した累計タイムと一致するのでここで再生成する。これをしないと、
+ * 入力済みのリレーラップタイムが再オープン時に全て空欄になる。
+ *
+ * - 既に同じ距離のスプリットが保存されている場合は上書きしない (保存値を正とする)
+ * - 最終境界 (合計距離) も含める。4 境界が揃って初めて leg タイムが再計算されるため
+ * - id は純粋関数を保つため距離から決定的に生成する
+ */
+function restoreRelayBoundarySplits(
+  relaySplitTimes: SplitTimeEntry[],
+  legBoundaries: number[],
+  cumulatives: number[],
+): SplitTimeEntry[] {
+  const existingDistances = new Set(relaySplitTimes.map((st) => st.distance));
+  const restored: SplitTimeEntry[] = [];
+
+  for (let idx = 0; idx < legBoundaries.length; idx++) {
+    const distance = legBoundaries[idx];
+    const cumulative = cumulatives[idx] ?? 0;
+    if (cumulative <= 0 || existingDistances.has(distance)) continue;
+    restored.push({
+      id: `boundary-${distance}`,
+      distance,
+      splitTime: cumulative,
+      displayValue: formatTimeBest(cumulative),
+    });
+  }
+
+  if (restored.length === 0) return relaySplitTimes;
+  return [...relaySplitTimes, ...restored].sort((a, b) => a.distance - b.distance);
+}
+
+/**
+ * 個人種目のゴール地点スプリット (距離 = 種目距離、タイム = 記録タイム) を復元する。
+ * Web 正準 `restoreGoalSplit` の移植。
+ *
+ * - ラップタイムを 1 件も持たない記録には追加しない
+ * - 保存時に同じフィルタで再び捨てられるので DB へ二重登録されない
+ */
+function restoreGoalSplit(
+  splitTimes: SplitTimeEntry[],
+  raceDistance: number | undefined,
+  recordTime: number,
+): SplitTimeEntry[] {
+  if (!raceDistance || recordTime <= 0) return splitTimes;
+  if (splitTimes.length === 0) return splitTimes;
+  if (splitTimes.some((st) => st.distance === raceDistance)) return splitTimes;
+
+  return [
+    ...splitTimes,
+    {
+      id: `goal-${raceDistance}`,
+      distance: raceDistance,
+      splitTime: recordTime,
+      displayValue: formatTimeBest(recordTime),
+    },
+  ];
+}
+
+/**
  * 既存レコード配列から StyleEntry 配列を構築する純粋関数。
  * 4 フェーズ: リレー検出 → リレー集約 → style_id 別グループ化 → フリーリレー二次検出。
+ * 最後に Phase 5 として、保存時に捨てられるラップタイム (リレー leg 境界 / 個人種目ゴール地点) を復元する。
  */
 export function buildStyleEntriesFromExisting(
   existingRecords: ExistingRecord[],
@@ -177,7 +244,7 @@ export function buildStyleEntriesFromExisting(
       styleName: "",
       memberRecords,
       relayEventId: detectedRelayId,
-      relaySplitTimes,
+      relaySplitTimes: restoreRelayBoundarySplits(relaySplitTimes, legBoundaries, cumulatives),
     });
   }
 
@@ -257,7 +324,11 @@ export function buildStyleEntriesFromExisting(
 
     entry.relayEventId = detectedRelayId;
     entry.styleName = "";
-    entry.relaySplitTimes = relaySplitTimes;
+    entry.relaySplitTimes = restoreRelayBoundarySplits(
+      relaySplitTimes,
+      legBoundaries,
+      cumulatives,
+    );
     entry.memberRecords = entry.memberRecords.map((mr, idx) => {
       const leg = relayDef.legs[idx];
       return {
@@ -270,7 +341,22 @@ export function buildStyleEntriesFromExisting(
     });
   }
 
-  return [...resultEntries, ...Array.from(styleMap.values())];
+  // Phase 5: 個人種目のゴール地点スプリットを復元する。
+  // Phase 4 でリレーへ昇格した StyleEntry は除外する — リレーでは leg 内スプリットが
+  // relaySplitTimes へ全体距離として畳み込まれており、ここで leg の記録タイムを
+  // ゴール地点として足すと累計タイムと取り違えた値が混入する。
+  const allEntries = [...resultEntries, ...Array.from(styleMap.values())];
+  for (const entry of allEntries) {
+    if (entry.relayEventId || entry.styleId === "") continue;
+    const raceDistance = styles.find((s) => s.id === entry.styleId)?.distance;
+    if (!raceDistance) continue;
+    entry.memberRecords = entry.memberRecords.map((mr) => {
+      const splitTimes = restoreGoalSplit(mr.splitTimes, raceDistance, mr.time);
+      return splitTimes === mr.splitTimes ? mr : { ...mr, splitTimes };
+    });
+  }
+
+  return allEntries;
 }
 
 /**

@@ -1407,8 +1407,8 @@ export default function RecordClient({
                           <input
                             type="number"
                             step="0.01"
-                            min="0.40"
-                            max="1.00"
+                            min="-1"
+                            max="2"
                             value={mr.reactionTime || ""}
                             onChange={(e) =>
                               updateMemberRecordByIndex(entry.id, mrIndex, {
@@ -1575,8 +1575,8 @@ export default function RecordClient({
                                 <input
                                   type="number"
                                   step="0.01"
-                                  min="0.40"
-                                  max="1.00"
+                                  min="-1"
+                                  max="2"
                                   value={mr.reactionTime || ""}
                                   onChange={(e) =>
                                     updateMemberRecord(entry.id, mr.memberUserId, {

@@ -55,6 +55,7 @@ import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
+import { normalizeReactionTime, toReactionTimeValue } from "@apps/shared/utils/reactionTime";
 import {
   hasUnsavedChanges,
   isEntryTabVisible,
@@ -924,7 +925,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           const updates = {
             style_id: parseInt(record.styleId),
             time: record.time,
-            reaction_time: record.reactionTime.trim() !== "" ? parseFloat(record.reactionTime) : null,
+            reaction_time: toReactionTimeValue(record.reactionTime),
             note: record.note.trim() || null,
             is_relaying: record.isRelaying,
           };
@@ -948,7 +949,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
             team_id: competitionTeamId,
             style_id: parseInt(record.styleId),
             time: record.time,
-            reaction_time: record.reactionTime.trim() !== "" ? parseFloat(record.reactionTime) : null,
+            reaction_time: toReactionTimeValue(record.reactionTime),
             note: record.note.trim() || null,
             is_relaying: record.isRelaying,
             pool_type: poolTypeValue,
@@ -1345,18 +1346,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
     [t],
   );
 
-  // ---- 反応時間: web RecordLogEntry (step=0.01 min=-1 max=2) に合わせて blur 時にクランプ ----
+  // ---- 反応時間: blur 時に shared/utils/reactionTime の範囲へクランプ ----
   const handleReactionTimeBlur = useCallback((draftId: string) => {
     setRecords((prev) =>
-      prev.map((r) => {
-        if (r.draftId !== draftId) return r;
-        const trimmed = r.reactionTime.trim();
-        if (trimmed === "") return { ...r, reactionTime: "" };
-        const parsed = parseFloat(trimmed);
-        if (isNaN(parsed)) return { ...r, reactionTime: "" };
-        const clamped = Math.min(2, Math.max(-1, Math.round(parsed * 100) / 100));
-        return { ...r, reactionTime: String(clamped) };
-      }),
+      prev.map((r) =>
+        r.draftId === draftId ? { ...r, reactionTime: normalizeReactionTime(r.reactionTime) } : r,
+      ),
     );
   }, []);
 

@@ -50,6 +50,7 @@ import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { LapTimeDisplay } from "@/components/records";
 import { parseTimeStrict } from "@apps/shared/utils/time";
+import { isReactionTimeInRange } from "@apps/shared/utils/reactionTime";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, Competition } from "@apps/shared/types";
 
@@ -360,9 +361,9 @@ export const RecordFormScreen: React.FC = () => {
       isValid = false;
     }
 
-    // 反応時間のバリデーション (web RecordLogEntry: min=-1 / max=2)
+    // 反応時間のバリデーション (範囲は shared/utils/reactionTime に集約)
     if (reactionTime !== null && reactionTime !== undefined) {
-      if (reactionTime < -1 || reactionTime > 2) {
+      if (!isReactionTimeInRange(reactionTime)) {
         setError("reactionTime", t("recordMobile.form.reactionTimeRange"));
         isValid = false;
       }
