@@ -48,11 +48,34 @@ jobs:
     - name: Run oauth package tests
       run: pnpm --filter @ryuuhei0729/swimhub-oauth test
 
-    - name: Install Playwright browsers
-      run: pnpm exec playwright install --with-deps
+    # playwright.config.ts の webServer は `next start` を使うため、production build が必須。
+    # ここが無いと "Could not find a production build in the '.next' directory" で落ちる。
+    - name: Build Next.js for E2E tests
+      working-directory: apps/web
+      run: pnpm run build
+      env:
+        # ローカルSupabaseのデフォルト値（E2Eテスト用）
+        NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+
+    # Playwright ブラウザ + ローカル Supabase (migration/テストユーザー込み) の用意。
+    # ci.yml の e2e-tests と同一手順のため複合アクションに集約している。
+    - name: Setup E2E environment
+      uses: ./.github/actions/setup-e2e
 
     - name: Run E2E tests
       run: pnpm --filter @swim-hub/web test:e2e
+      env:
+        CI: true
+        E2E_SUPABASE_MODE: local
+        E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+        E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+        RESEND_API_KEY: "re_dummy"
+
+    - name: Stop Supabase stack
+      if: always()
+      run: supabase stop --workdir supabase
+      continue-on-error: true
 
     - name: Generate coverage report
       if: ${{ matrix.node-version == '20.x' }}
