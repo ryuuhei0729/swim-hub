@@ -30,6 +30,7 @@ import {
   buildEntryTimeReferenceLookup,
   type EntryRowForRecordMerge,
 } from "@apps/shared/utils/entryRecordMerge";
+import { normalizeReactionTime, toReactionTimeValue } from "@apps/shared/utils/reactionTime";
 import { formatTimeBest } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
@@ -386,6 +387,16 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             },
       ),
     );
+  };
+
+  // 反応時間: 他の記録入力画面 (RecordLogFormScreen / CompetitionTabFormScreen) と同じく
+  // blur 時に -1〜2 へクランプする
+  const handleReactionTimeBlurByIndex = (entryId: string, legIndex: number, value: string) => {
+    updateMemberRecordByIndex(entryId, legIndex, { reactionTime: normalizeReactionTime(value) });
+  };
+
+  const handleReactionTimeBlur = (entryId: string, memberUserId: string, value: string) => {
+    updateMemberRecord(entryId, memberUserId, { reactionTime: normalizeReactionTime(value) });
   };
 
   const handleTimeChange = (entryId: string, memberUserId: string, value: string) => {
@@ -891,10 +902,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           note: record.note || null,
           is_relaying: record.isRelaying,
           pool_type: competition.pool_type,
-          reaction_time:
-            record.reactionTime && record.reactionTime.trim() !== ""
-              ? parseFloat(record.reactionTime)
-              : null,
+          reaction_time: toReactionTimeValue(record.reactionTime),
         };
         const { data: newRecord, error: recordError } = await supabase
           .from("records")
@@ -1153,6 +1161,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                           onChangeText={(text) =>
                             updateMemberRecordByIndex(entry.id, mrIndex, { reactionTime: text })
                           }
+                          onBlur={() =>
+                            handleReactionTimeBlurByIndex(entry.id, mrIndex, mr.reactionTime || "")
+                          }
                           placeholder="0.65"
                           keyboardType="decimal-pad"
                         />
@@ -1296,6 +1307,13 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                             value={mr.reactionTime || ""}
                             onChangeText={(text) =>
                               updateMemberRecord(entry.id, mr.memberUserId, { reactionTime: text })
+                            }
+                            onBlur={() =>
+                              handleReactionTimeBlur(
+                                entry.id,
+                                mr.memberUserId,
+                                mr.reactionTime || "",
+                              )
                             }
                             placeholder="0.65"
                             keyboardType="decimal-pad"

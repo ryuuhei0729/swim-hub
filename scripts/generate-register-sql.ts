@@ -85,7 +85,9 @@ INSERT INTO auth.users (
   email_change, phone_change
 ) VALUES
 ${values}
-ON CONFLICT (email) DO NOTHING;
+-- auth.users の email 一意性は部分ユニークインデックス (is_sso_user = false 条件付き) なので
+-- ON CONFLICT (email) では推論できず 42P10 になる。競合対象は指定せず全制約に委ねる。
+ON CONFLICT DO NOTHING;
 
 -- ② auth.identities を登録（メール/パスワードログインに必須）
 INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)

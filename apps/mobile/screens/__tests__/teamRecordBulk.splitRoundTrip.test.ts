@@ -141,6 +141,76 @@ describe("[T-2] リレー split 距離 round-trip (relay_4x100_free)", () => {
     expect(saved[2]).toEqual([]); // leg2 には入らない
 
     const reloaded = reloadGlobalDistances("relay_4x100_free", saved);
-    expect(reloaded).toEqual([{ distance: 200, splitTime: 115.5 }]);
+    // 全体距離 200 はちょうど 1 件、元のタイムのまま復元される
+    // (他の距離には leg タイムから復元された leg 境界スプリットが入る)
+    expect(reloaded.filter((s) => s.distance === 200)).toEqual([
+      { distance: 200, splitTime: 115.5 },
+    ]);
+  });
+});
+
+// =============================================================================
+// 上の saveSplitsPerLeg は「leg 内距離への変換」だけを再現しており、実際の保存処理にある
+// validSplitTimes フィルタ (種目距離と同じ distance の split は保存しない) を含んでいない。
+// 実データではこのフィルタにより leg 境界スプリットが全て捨てられるため、round-trip は
+// 上のテストが示すほど無損失ではない。ここでは保存側をフィルタ込みで再現し、
+// 失われた leg 境界が leg タイムから復元されることを検証する。
+// =============================================================================
+describe("[T-2b] 実際の保存フィルタ込みの round-trip", () => {
+  // reloadGlobalDistances が組み立てる leg タイムは [57, 58, 57, 56] (累計 = [57,115,172,228])
+  const RACE_DISTANCE = 100; // leg の種目 = 100m 自由形
+
+  function saveSplitsPerLegWithGoalFilter(
+    relayEventId: RelayEventId,
+    legCount: number,
+    relaySplits: SplitTimeEntry[],
+  ): Array<{ distance: number; split_time: number }[]> {
+    return saveSplitsPerLeg(relayEventId, legCount, relaySplits).map((legSplits) =>
+      legSplits.filter(
+        (st) => st.distance > 0 && st.split_time > 0 && st.distance !== RACE_DISTANCE,
+      ),
+    );
+  }
+
+  it("leg 境界スプリットは DB に残らないが、再ロード時に leg タイムから復元される", () => {
+    const original: SplitTimeEntry[] = [
+      { id: "1", distance: 100, splitTime: 57.0, displayValue: "" },
+      { id: "2", distance: 200, splitTime: 115.0, displayValue: "" },
+      { id: "3", distance: 300, splitTime: 172.0, displayValue: "" },
+      { id: "4", distance: 400, splitTime: 228.0, displayValue: "" },
+    ];
+    const saved = saveSplitsPerLegWithGoalFilter("relay_4x100_free", 4, original);
+    // 全 leg 境界が「ゴールタイム = split ではない」フィルタで捨てられ、DB は空になる
+    expect(saved).toEqual([[], [], [], []]);
+
+    const reloaded = reloadGlobalDistances("relay_4x100_free", saved);
+    // leg タイム [57,58,57,56] の累計 = [57,115,172,228] として元の値が復元される
+    expect(reloaded).toEqual([
+      { distance: 100, splitTime: 57 },
+      { distance: 200, splitTime: 115 },
+      { distance: 300, splitTime: 172 },
+      { distance: 400, splitTime: 228 },
+    ]);
+  });
+
+  it("leg 内中間スプリットは DB に残り、境界の復元と共存する", () => {
+    const original: SplitTimeEntry[] = [
+      { id: "a", distance: 50, splitTime: 27.0, displayValue: "" },
+      { id: "b", distance: 100, splitTime: 57.0, displayValue: "" },
+      { id: "c", distance: 250, splitTime: 144.0, displayValue: "" },
+    ];
+    const saved = saveSplitsPerLegWithGoalFilter("relay_4x100_free", 4, original);
+    // leg0 の 50m と leg2 の 250m(→50m) だけが残る
+    expect(saved).toEqual([
+      [{ distance: 50, split_time: 27.0 }],
+      [],
+      [{ distance: 50, split_time: 144.0 }],
+      [],
+    ]);
+
+    const reloaded = reloadGlobalDistances("relay_4x100_free", saved);
+    expect(reloaded.map((s) => s.distance)).toEqual([50, 100, 200, 250, 300, 400]);
+    expect(reloaded).toContainEqual({ distance: 50, splitTime: 27.0 });
+    expect(reloaded).toContainEqual({ distance: 250, splitTime: 144.0 });
   });
 });

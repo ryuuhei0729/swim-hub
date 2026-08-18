@@ -273,8 +273,27 @@ describe("[新機能] StyleEntry.relaySplitTimes フィールドの復元", () =
       }
     );
 
-    it("全 leg のスプリットが空の場合、relaySplitTimes は空配列になる", () => {
-      const records = makeRelayRecords4x100Free([[], [], [], []]);
+    it(
+      "保存された split_times が空でも、leg タイムから leg境界スプリット (100,200,300,400) が" +
+        "累計タイムとして復元される",
+      () => {
+        // 保存時に leg 境界スプリットは「ゴールタイム = split ではない」フィルタで必ず捨てられるため、
+        // DB 上は split_times が空になる。値は各 leg の time から復元できるので、再オープン時に
+        // 入力済みのラップタイムが空欄に戻ってはいけない。
+        const records = makeRelayRecords4x100Free([[], [], [], []]);
+        const result = buildStyleEntriesFromExisting(records, STYLES);
+        const entry = result.find((e) => e.relayEventId === "relay_4x100_free");
+        expect(entry).toBeDefined();
+
+        const relaySplits = entry!.relaySplitTimes ?? [];
+        // 累計: 57.0 / 115.5 / 173.3 / 230.0 (times = [57.0, 58.5, 57.8, 56.7])
+        expect(relaySplits.map((st) => st.distance)).toEqual([100, 200, 300, 400]);
+        expect(relaySplits.map((st) => st.splitTime)).toEqual([57.0, 115.5, 173.3, 230.0]);
+      },
+    );
+
+    it("leg タイムが全て 0 の場合、復元する累計タイムが無いので relaySplitTimes は空配列になる", () => {
+      const records = makeRelayRecords4x100Free([[], [], [], []]).map((r) => ({ ...r, time: 0 }));
       const result = buildStyleEntriesFromExisting(records, STYLES);
       const entry = result.find((e) => e.relayEventId === "relay_4x100_free");
       expect(entry).toBeDefined();
@@ -357,8 +376,11 @@ describe("[Risk-1] 旧データ互換性: leg内距離 vs リレー全体距離�
         const result = buildStyleEntriesFromExisting(records, STYLES);
         const entry = result.find((e) => e.relayEventId === "relay_4x100_free");
         const relaySplits = entry!.relaySplitTimes ?? [];
-        expect(relaySplits.find((st) => st.distance === 200)).toBeDefined();
-        expect(relaySplits.find((st) => st.distance === 100)).toBeUndefined();
+        // leg1 の 100m スプリットは leg 内距離と解釈され、全体距離 200 へ変換される。
+        // 保存済みの値が leg 境界の復元値より優先される (DB にある値を上書きしない)
+        expect(relaySplits.find((st) => st.distance === 200)?.splitTime).toBe(58.5);
+        // 距離 100 に入るのは leg0 の累計タイム (57.0) であって、未変換の leg1 の値ではない
+        expect(relaySplits.find((st) => st.distance === 100)?.splitTime).toBe(57.0);
       }
     );
 
@@ -466,8 +488,11 @@ describe("[Risk-1] 旧データ互換性: leg内距離 vs リレー全体距離�
         const entry = result.find((e) => e.relayEventId === "relay_4x100_free");
         const relaySplits = entry!.relaySplitTimes ?? [];
         // leg1 のオフセット = 100, distance=100 <= legDist=100 → global = 100 + 100 = 200
-        expect(relaySplits.find((st) => st.distance === 200)).toBeDefined();
-        expect(relaySplits.find((st) => st.distance === 100)).toBeUndefined();
+        // leg1 の 100m スプリットは leg 内距離と解釈され、全体距離 200 へ変換される。
+        // 保存済みの値が leg 境界の復元値より優先される (DB にある値を上書きしない)
+        expect(relaySplits.find((st) => st.distance === 200)?.splitTime).toBe(58.5);
+        // 距離 100 に入るのは leg0 の累計タイム (57.0) であって、未変換の leg1 の値ではない
+        expect(relaySplits.find((st) => st.distance === 100)?.splitTime).toBe(57.0);
       }
     );
   });
@@ -787,5 +812,114 @@ describe("[Warning-1] cumTime の ?? フォールバック修正の検証", () =
     expect(result[2]).toBe(172.8);
     // leg3 は新しい合計タイムで更新される
     expect(result[3]).toBe(230.0);
+  });
+});
+
+// =============================================================================
+// 保存 → 再オープンの往復でラップタイムが失われないことの回帰テスト
+//
+// 保存時、次の 2 種類のスプリットは「ゴールタイムは split ではない」フィルタで
+// 必ず捨てられる (RecordClient / TeamRecordBulkFormScreen の validSplitTimes):
+//   - リレー: leg 内距離へ変換した結果その leg の種目距離と一致する leg 境界スプリット
+//   - 個人種目: 種目距離と同じ距離のゴール地点スプリット
+// いずれも records.time から復元できるため、再オープン時に空欄へ戻してはいけない。
+// =============================================================================
+describe("保存→再オープンのラップタイム復元", () => {
+  describe("リレー", () => {
+    it("leg 内中間スプリットと復元された leg 境界スプリットが共存する", () => {
+      // 4×100 フリー (times = [57.0, 58.5, 57.8, 56.7], 累計 = [57.0, 115.5, 173.3, 230.0])
+      // leg0 に 50m 地点の中間スプリットのみ保存されている状態
+      const records = makeRelayRecords4x100Free([
+        [{ distance: 50, split_time: 27.2 }],
+        [],
+        [],
+        [],
+      ]);
+      const result = buildStyleEntriesFromExisting(records, STYLES);
+      const relaySplits = result.find((e) => e.relayEventId === "relay_4x100_free")!
+        .relaySplitTimes!;
+
+      // 距離昇順で 中間(50) + 境界(100,200,300,400)
+      expect(relaySplits.map((st) => st.distance)).toEqual([50, 100, 200, 300, 400]);
+      expect(relaySplits.find((st) => st.distance === 50)!.splitTime).toBe(27.2);
+      expect(relaySplits.find((st) => st.distance === 300)!.splitTime).toBe(173.3);
+    });
+
+    it("復元された境界スプリットの値が各 leg の cumulativeTimeSeconds と一致する", () => {
+      const records = makeRelayRecords4x50Free([[], [], [], []]);
+      const entry = buildStyleEntriesFromExisting(records, STYLES).find(
+        (e) => e.relayEventId === "relay_4x50_free",
+      )!;
+      const boundaries = [50, 100, 150, 200];
+
+      // 境界スプリットは各 leg の累計タイムそのもの。ズレると合計タイム欄と矛盾する
+      boundaries.forEach((distance, idx) => {
+        expect(entry.relaySplitTimes!.find((st) => st.distance === distance)!.splitTime).toBe(
+          entry.memberRecords[idx].cumulativeTimeSeconds,
+        );
+      });
+    });
+  });
+
+  describe("個人種目", () => {
+    it("ラップタイムを持つ記録には、ゴール地点スプリット (種目距離 = 記録タイム) が復元される", () => {
+      // 100m 自由形 (styleId=3, distance=100) で 50m 通過 26.0 / ゴール 54.0 を入力して保存すると、
+      // DB には 50m のみが残る
+      const records = [
+        makeRecord({
+          style_id: 3,
+          time: 54.0,
+          split_times: [{ id: "st-1", distance: 50, split_time: 26.0 }],
+        }),
+      ];
+      const splitTimes = buildStyleEntriesFromExisting(records, STYLES)[0].memberRecords[0]
+        .splitTimes;
+
+      expect(splitTimes.map((st) => st.distance)).toEqual([50, 100]);
+      expect(splitTimes.find((st) => st.distance === 100)!.splitTime).toBe(54.0);
+    });
+
+    it("ラップタイムを 1 件も持たない記録には、ゴール地点スプリットを追加しない", () => {
+      // ラップ未入力の行に空でない入力欄を勝手に生やさないため
+      const records = [makeRecord({ style_id: 3, time: 54.0, split_times: [] })];
+      const splitTimes = buildStyleEntriesFromExisting(records, STYLES)[0].memberRecords[0]
+        .splitTimes;
+
+      expect(splitTimes).toHaveLength(0);
+    });
+
+    it("既にゴール距離のスプリットが保存されている場合、重複追加しない", () => {
+      const records = [
+        makeRecord({
+          style_id: 3,
+          time: 54.0,
+          split_times: [
+            { id: "st-1", distance: 50, split_time: 26.0 },
+            { id: "st-2", distance: 100, split_time: 54.0 },
+          ],
+        }),
+      ];
+      const splitTimes = buildStyleEntriesFromExisting(records, STYLES)[0].memberRecords[0]
+        .splitTimes;
+
+      expect(splitTimes.filter((st) => st.distance === 100)).toHaveLength(1);
+    });
+
+    it("フリーリレーとして復元された StyleEntry の leg には、ゴール地点スプリットを足さない", () => {
+      // Phase 4 でリレー化した leg に「種目距離 = leg タイム」を足すと、
+      // relaySplitTimes 上では累計タイムと取り違えた値になる
+      const records = makeRelayRecords4x100Free([
+        [{ distance: 50, split_time: 27.2 }],
+        [],
+        [],
+        [],
+      ]);
+      const entry = buildStyleEntriesFromExisting(records, STYLES).find(
+        (e) => e.relayEventId === "relay_4x100_free",
+      )!;
+
+      // leg0 の splitTimes は保存済みの 50m のみ (100m = leg タイム 57.0 が足されていない)
+      expect(entry.memberRecords[0].splitTimes.map((st) => st.distance)).toEqual([50]);
+    });
   });
 });

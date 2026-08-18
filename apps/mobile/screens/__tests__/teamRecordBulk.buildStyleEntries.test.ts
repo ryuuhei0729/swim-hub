@@ -87,8 +87,10 @@ describe("[mobile] split の leg内距離⇄全体距離の自動判定 (Checkli
     const entry = buildStyleEntriesFromExisting(records, STYLES).find((e) => e.relayEventId === "relay_4x100_free")!;
     const splits = entry.relaySplitTimes ?? [];
     expect(splits.find((s) => s.distance === 200)).toBeDefined();
+    // 保存済みの値が leg 境界の復元値より優先される (DB にある値を上書きしない)
     expect(splits.find((s) => s.distance === 200)!.splitTime).toBe(58.5);
-    expect(splits.find((s) => s.distance === 100)).toBeUndefined();
+    // 距離 100 に入るのは leg0 の累計タイム (57.0) であって、未変換の leg1 の値ではない
+    expect(splits.find((s) => s.distance === 100)!.splitTime).toBe(57.0);
   });
 
   it("leg1 distance=200 (> legDist, 全体距離) は変換なし", () => {
@@ -116,5 +118,61 @@ describe("[mobile] Phase1 誤検出防止", () => {
     ];
     const result = buildStyleEntriesFromExisting(records, STYLES);
     expect(result.find((e) => e.relayEventId)).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// 保存 → 再オープンでラップタイムが失われないことの回帰テスト (web 正準と対称)
+// 個人種目のゴール地点スプリット (距離 = 種目距離) は保存時に捨てられるため、
+// records.time から復元する。styles に distance がある場合のみ働く。
+// =============================================================================
+describe("[mobile] 個人種目のゴール地点スプリット復元", () => {
+  const STYLES_WITH_DISTANCE = [{ id: 3, name_jp: "100m 自由形", distance: 100 }];
+
+  function makeIndividual(
+    time: number,
+    splits: Array<{ distance: number; split_time: number }>,
+  ): ExistingRecord {
+    return {
+      id: "r-1",
+      user_id: "user-1",
+      style_id: 3,
+      time,
+      is_relaying: false,
+      reaction_time: null,
+      note: null,
+      split_times: splits.map((s, i) => ({ id: `st-${i}`, ...s })),
+      users: { id: "user-1", name: "Swimmer" },
+    };
+  }
+
+  it("ラップタイムを持つ記録には、ゴール地点スプリット (100m = 記録タイム) が復元される", () => {
+    const records = [makeIndividual(54.0, [{ distance: 50, split_time: 26.0 }])];
+    const splits = buildStyleEntriesFromExisting(records, STYLES_WITH_DISTANCE)[0]
+      .memberRecords[0].splitTimes;
+
+    expect(splits.map((s) => s.distance)).toEqual([50, 100]);
+    expect(splits.find((s) => s.distance === 100)!.splitTime).toBe(54.0);
+  });
+
+  it("ラップタイムを 1 件も持たない記録には、ゴール地点スプリットを追加しない", () => {
+    const records = [makeIndividual(54.0, [])];
+    const splits = buildStyleEntriesFromExisting(records, STYLES_WITH_DISTANCE)[0]
+      .memberRecords[0].splitTimes;
+
+    expect(splits).toHaveLength(0);
+  });
+
+  it("既にゴール距離のスプリットが保存されている場合、重複追加しない", () => {
+    const records = [
+      makeIndividual(54.0, [
+        { distance: 50, split_time: 26.0 },
+        { distance: 100, split_time: 54.0 },
+      ]),
+    ];
+    const splits = buildStyleEntriesFromExisting(records, STYLES_WITH_DISTANCE)[0]
+      .memberRecords[0].splitTimes;
+
+    expect(splits.filter((s) => s.distance === 100)).toHaveLength(1);
   });
 });

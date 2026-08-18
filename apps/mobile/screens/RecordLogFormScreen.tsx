@@ -41,6 +41,7 @@ import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
+import { normalizeReactionTime, toReactionTimeValue } from "@apps/shared/utils/reactionTime";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
 
@@ -345,19 +346,11 @@ export const RecordLogFormScreen: React.FC = () => {
     handleTimeChange(index, formatTimeBest(parsed));
   };
 
-  // 反応時間: web RecordLogEntry (step=0.01 min=-1 max=2) に合わせて blur 時にクランプ
+  // 反応時間: blur 時に shared/utils/reactionTime の範囲へクランプ
   const handleReactionTimeBlur = (index: number) => {
     const formData = formDataList[index];
     if (!formData) return;
-    const trimmed = formData.reactionTime.trim();
-    if (trimmed === "") return;
-    const parsed = parseFloat(trimmed);
-    if (isNaN(parsed)) {
-      updateFormData(index, { reactionTime: "" });
-      return;
-    }
-    const clamped = Math.min(2, Math.max(-1, Math.round(parsed * 100) / 100));
-    updateFormData(index, { reactionTime: String(clamped) });
+    updateFormData(index, { reactionTime: normalizeReactionTime(formData.reactionTime) });
   };
 
   // Free プランの課金対象カウントはゴール地点スプリット (distance === raceDistance) を
@@ -633,10 +626,7 @@ export const RecordLogFormScreen: React.FC = () => {
         const updates = {
           style_id: parseInt(formData.styleId),
           time: formData.time,
-          reaction_time:
-            formData.reactionTime && formData.reactionTime.trim() !== ""
-              ? parseFloat(formData.reactionTime)
-              : null,
+          reaction_time: toReactionTimeValue(formData.reactionTime),
           note: formData.note && formData.note.trim() !== "" ? formData.note.trim() : null,
           is_relaying: formData.isRelaying,
         };
@@ -690,10 +680,7 @@ export const RecordLogFormScreen: React.FC = () => {
             team_id: teamId ?? null,
             style_id: parseInt(formData.styleId),
             time: formData.time,
-            reaction_time:
-              formData.reactionTime && formData.reactionTime.trim() !== ""
-                ? parseFloat(formData.reactionTime)
-                : null,
+            reaction_time: toReactionTimeValue(formData.reactionTime),
             note: formData.note && formData.note.trim() !== "" ? formData.note.trim() : null,
             is_relaying: formData.isRelaying,
             pool_type: poolType,

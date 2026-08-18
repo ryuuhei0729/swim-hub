@@ -2,6 +2,8 @@
 export interface StyleLookup {
   id: number;
   name_jp: string;
+  /** 種目距離 (m)。ゴール地点スプリットの復元に使う。未知種目では undefined */
+  distance?: number;
 }
 import { formatTimeBest } from "@/utils/formatters";
 import {
@@ -64,6 +66,76 @@ export interface ExistingRecord {
   note: string | null;
   split_times: { id: string; distance: number; split_time: number }[];
   users: { id: string; name: string } | null;
+}
+
+/**
+ * リレーの leg 境界スプリット (= 各 leg の累計タイム) を relaySplitTimes に復元する。
+ *
+ * 保存時、leg 境界スプリットは leg 内距離へ変換された結果その leg の種目距離と一致するため
+ * 「ゴールタイム = split ではない」フィルタ (RecordClient の validSplitTimes) で必ず捨てられる。
+ * つまり DB の split_times には leg 境界の値が存在しない。一方その値は各 leg の
+ * `records.time` から算出した累計タイム (`cumulatives`) と完全に一致するので、ここで再生成する。
+ * これをしないと、入力済みのリレーラップタイムが再オープン時に全て空欄になる。
+ *
+ * - 既に同じ距離のスプリットが保存されている場合は上書きしない (保存値を正とする)
+ * - 最終境界 (合計距離) も含める。RecordClient の `handleRelaySplitTimeChange` は
+ *   4 境界すべてが揃って初めて leg タイムを再計算するため、欠けていると編集が壊れる
+ * - id は純粋関数を保つため距離から決定的に生成する (crypto.randomUUID を使わない)
+ */
+function restoreRelayBoundarySplits(
+  relaySplitTimes: SplitTimeEntry[],
+  legBoundaries: number[],
+  cumulatives: number[],
+): SplitTimeEntry[] {
+  const existingDistances = new Set(relaySplitTimes.map((st) => st.distance));
+  const restored: SplitTimeEntry[] = [];
+
+  for (let idx = 0; idx < legBoundaries.length; idx++) {
+    const distance = legBoundaries[idx];
+    const cumulative = cumulatives[idx] ?? 0;
+    if (cumulative <= 0 || existingDistances.has(distance)) continue;
+    restored.push({
+      id: `boundary-${distance}`,
+      distance,
+      splitTime: cumulative,
+      displayValue: formatTimeBest(cumulative),
+    });
+  }
+
+  if (restored.length === 0) return relaySplitTimes;
+  return [...relaySplitTimes, ...restored].sort((a, b) => a.distance - b.distance);
+}
+
+/**
+ * 個人種目のゴール地点スプリット (距離 = 種目距離、タイム = 記録タイム) を復元する。
+ *
+ * 保存時に「種目距離と同じ距離の split は保存しない」フィルタで捨てられるため、
+ * ラップタイムを入力していた行でも再オープン時にゴール行だけが欠ける。値は
+ * `records.time` そのものなので再生成できる。
+ *
+ * - ラップタイムを 1 件も持たない記録には追加しない (元々ラップ未入力の行に
+ *   空でない入力欄を勝手に生やさないため)
+ * - 保存時に同じフィルタで再び捨てられるので DB へ二重登録されることはない
+ * - Free プランの上限計算 (`countBillableSplitTimes`) は種目距離の split を除外するため影響なし
+ */
+function restoreGoalSplit(
+  splitTimes: SplitTimeEntry[],
+  raceDistance: number | undefined,
+  recordTime: number,
+): SplitTimeEntry[] {
+  if (!raceDistance || recordTime <= 0) return splitTimes;
+  if (splitTimes.length === 0) return splitTimes;
+  if (splitTimes.some((st) => st.distance === raceDistance)) return splitTimes;
+
+  return [
+    ...splitTimes,
+    {
+      id: `goal-${raceDistance}`,
+      distance: raceDistance,
+      splitTime: recordTime,
+      displayValue: formatTimeBest(recordTime),
+    },
+  ];
 }
 
 /**
@@ -175,7 +247,7 @@ export function buildStyleEntriesFromExisting(
       styleName: "",
       memberRecords,
       relayEventId: detectedRelayId,
-      relaySplitTimes,
+      relaySplitTimes: restoreRelayBoundarySplits(relaySplitTimes, legBoundaries, cumulatives),
     });
   }
 
@@ -256,7 +328,11 @@ export function buildStyleEntriesFromExisting(
 
     entry.relayEventId = detectedRelayId;
     entry.styleName = "";
-    entry.relaySplitTimes = relaySplitTimes;
+    entry.relaySplitTimes = restoreRelayBoundarySplits(
+      relaySplitTimes,
+      legBoundaries,
+      cumulatives,
+    );
     entry.memberRecords = entry.memberRecords.map((mr, idx) => {
       const leg = relayDef.legs[idx];
       return {
@@ -269,7 +345,22 @@ export function buildStyleEntriesFromExisting(
     });
   }
 
-  return [...resultEntries, ...Array.from(styleMap.values())];
+  // Phase 5: 個人種目のゴール地点スプリットを復元する。
+  // Phase 4 でリレーへ昇格した StyleEntry は除外する — リレーでは leg 内スプリットが
+  // relaySplitTimes へ全体距離として畳み込まれており、ここで leg の記録タイムを
+  // ゴール地点として足すと累計タイムと取り違えた値が混入する。
+  const allEntries = [...resultEntries, ...Array.from(styleMap.values())];
+  for (const entry of allEntries) {
+    if (entry.relayEventId || entry.styleId === "") continue;
+    const raceDistance = styles.find((s) => s.id === entry.styleId)?.distance;
+    if (!raceDistance) continue;
+    entry.memberRecords = entry.memberRecords.map((mr) => {
+      const splitTimes = restoreGoalSplit(mr.splitTimes, raceDistance, mr.time);
+      return splitTimes === mr.splitTimes ? mr : { ...mr, splitTimes };
+    });
+  }
+
+  return allEntries;
 }
 
 /**
