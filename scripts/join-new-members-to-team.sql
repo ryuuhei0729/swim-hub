@@ -6,7 +6,9 @@
 --   2. public.users にも行がある (handle_new_user トリガーが作る。
 --      team_memberships.user_id は public.users(id) への FK なので必須)
 --
--- 冪等: team_memberships (team_id, user_id) の UNIQUE 制約により、既にメンバーの人はスキップされる
+-- 冪等: team_memberships (team_id, user_id) の UNIQUE 制約 + ON CONFLICT DO UPDATE により、
+--       何度実行しても3名が status='approved' / is_active=true に収束する。
+--       既存行が pending / rejected / 退部済み (is_active=false) でも承認済みへ揃える点に注意。
 --
 -- 注意: SQL Editor 実行 (= RLS バイパス) 前提で status='approved' / is_active=true を直接入れる。
 --       アプリの request_join_team() 経由の「招待コードで参加申請 → 管理者が承認」フローを
@@ -30,7 +32,16 @@ INSERT INTO public.team_memberships (team_id, user_id, role, status, is_active, 
 SELECT t.team_id, u.user_id, 'user', 'approved', true, CURRENT_DATE, NULL
 FROM team_ctx t
 CROSS JOIN target_users u
-ON CONFLICT (team_id, user_id) DO NOTHING;
+-- DO NOTHING だと、アプリで招待コードを入れて承認待ち (status='pending') になっている人や
+-- 過去に退部した人 (is_active=false) の行が残っているとき、そのまま放置され
+-- 「管理者承認済みの状態にする」という本スクリプトの目的を果たせない。
+-- 承認状態のみ上書きする。role は既存の admin を 'user' に降格させないため触らない。
+-- joined_at も初回参加日を保つため据え置く (再入部時は left_at を NULL に戻すだけ)。
+ON CONFLICT (team_id, user_id) DO UPDATE
+SET status = EXCLUDED.status,
+    is_active = EXCLUDED.is_active,
+    left_at = EXCLUDED.left_at,
+    updated_at = now();
 
 -- 確認: 3行返り、team_name と status='approved' / is_active=true が埋まっていれば成功。
 -- user_exists が false なら register-users.sql が未実行、team_name が NULL なら招待コード不一致。

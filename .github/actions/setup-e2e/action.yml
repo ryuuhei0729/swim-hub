@@ -115,9 +115,15 @@ runs:
 
         echo "📦 Applying migrations via psql"
 
+        # psql は既定でエラー後も後続文を実行し、終了コード 0 を返す。
+        # ON_ERROR_STOP=1 を付けないと壊れた migration がこのステップを通過し、
+        # 後段の E2E アサーション失敗という分かりにくい形で初めて露見する。
         for file in supabase/migrations/*.sql; do
           echo "➡️ Applying $file"
-          docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres < "$file"
+          if ! docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$file"; then
+            echo "::error::Migration failed: $file"
+            exit 1
+          fi
         done
       env:
         SUPABASE_DB_PASSWORD: postgres

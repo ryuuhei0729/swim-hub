@@ -12,6 +12,7 @@ import {
   REACTION_TIME_MIN,
   isReactionTimeInRange,
   normalizeReactionTime,
+  parseReactionTimeInput,
   toReactionTimeValue,
 } from "../../utils/reactionTime";
 
@@ -60,8 +61,57 @@ describe("normalizeReactionTime", () => {
     expect(normalizeReactionTime("Infinity")).toBe("");
   });
 
+  // Number.parseFloat は先頭だけ解釈して "0.65abc" → 0.65 を通してしまう。
+  // 数値の前置きを含むゴミ入力が DB へ書かれないことを固定する。
+  it("数値の前置きを含む混在入力を数値として受け付けない", () => {
+    expect(normalizeReactionTime("0.65abc")).toBe("");
+    expect(normalizeReactionTime("2e")).toBe("");
+    expect(normalizeReactionTime("1.2.3")).toBe("");
+    expect(normalizeReactionTime("0.5 0.6")).toBe("");
+    expect(normalizeReactionTime("--1")).toBe("");
+    expect(normalizeReactionTime("1,5")).toBe("");
+  });
+
+  it("末尾ドットの入力途中は 0 扱いにせず空欄へ戻す", () => {
+    expect(normalizeReactionTime("1.")).toBe("");
+    expect(normalizeReactionTime("-1.")).toBe("");
+  });
+
   it("前後の空白を無視する", () => {
     expect(normalizeReactionTime("  0.35  ")).toBe("0.35");
+  });
+});
+
+describe("parseReactionTimeInput", () => {
+  it("完全な数値表記を変換する", () => {
+    expect(parseReactionTimeInput("0.65")).toBe(0.65);
+    expect(parseReactionTimeInput("-0.2")).toBe(-0.2);
+    expect(parseReactionTimeInput(".5")).toBe(0.5);
+    expect(parseReactionTimeInput("  0.35  ")).toBe(0.35);
+  });
+
+  it("混在入力・入力途中・空値は null", () => {
+    expect(parseReactionTimeInput("0.65abc")).toBeNull();
+    expect(parseReactionTimeInput("2e")).toBeNull();
+    expect(parseReactionTimeInput("1.2.3")).toBeNull();
+    expect(parseReactionTimeInput("abc")).toBeNull();
+    expect(parseReactionTimeInput("0.")).toBeNull();
+    expect(parseReactionTimeInput("-")).toBeNull();
+    expect(parseReactionTimeInput("")).toBeNull();
+    expect(parseReactionTimeInput(null)).toBeNull();
+    expect(parseReactionTimeInput(undefined)).toBeNull();
+  });
+
+  // RecordFormScreen は範囲エラーを表示する必要があるため、
+  // normalizeReactionTime と違いクランプしてはいけない
+  it("範囲外の値をクランプせずそのまま返す", () => {
+    expect(parseReactionTimeInput("999")).toBe(999);
+    expect(parseReactionTimeInput("-999")).toBe(-999);
+    expect(isReactionTimeInRange(parseReactionTimeInput("2.01") as number)).toBe(false);
+  });
+
+  it("Infinity になる桁数の入力は null", () => {
+    expect(parseReactionTimeInput("9".repeat(400))).toBeNull();
   });
 });
 

@@ -50,7 +50,7 @@ import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { LapTimeDisplay } from "@/components/records";
 import { parseTimeStrict } from "@apps/shared/utils/time";
-import { isReactionTimeInRange } from "@apps/shared/utils/reactionTime";
+import { isReactionTimeInRange, parseReactionTimeInput } from "@apps/shared/utils/reactionTime";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, Competition } from "@apps/shared/types";
 
@@ -784,13 +784,11 @@ export const RecordFormScreen: React.FC = () => {
   }, [screenHeight]);
 
   // 反応時間入力の処理
+  // parseFloat は "0.65abc" → 0.65 と先頭だけ解釈するため、入力全体が数値の
+  // ときだけ受け付ける。クランプはせず範囲外は保持し、validateForm の
+  // isReactionTimeInRange で範囲エラーを出す。
   const handleReactionTimeChange = (text: string) => {
-    const parsed = parseFloat(text);
-    if (isNaN(parsed)) {
-      setReactionTime(null);
-    } else {
-      setReactionTime(parsed);
-    }
+    setReactionTime(parseReactionTimeInput(text));
   };
 
   // 大会選択の表示名を取得
