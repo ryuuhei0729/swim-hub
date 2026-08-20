@@ -226,6 +226,12 @@ export default function RecordClient({
     );
   };
 
+  /** リレーのレグラベルを relayEventId から導出する。復元経路では state の relayLegLabel が undefined のため */
+  const relayLegLabelOf = (entry: StyleEntry, legIndex: number): string | undefined =>
+    (entry.relayEventId
+      ? relayEvents.find((r) => r.id === entry.relayEventId)?.legs[legIndex]?.legLabel
+      : undefined) ?? entry.memberRecords[legIndex]?.relayLegLabel;
+
   const updateRelayEntry = (entryId: string, relayEventId: RelayEventId) => {
     const relayDef = relayEvents.find((r) => r.id === relayEventId);
     if (!relayDef) return;
@@ -1355,7 +1361,7 @@ export default function RecordClient({
                     {entry.memberRecords.map((mr, mrIndex) => (
                       <div key={`relay-leg-${mrIndex}`}>
                         <p className="text-xs font-medium text-blue-700 mb-1">
-                          {mr.relayLegLabel}
+                          {relayLegLabelOf(entry, mrIndex)}
                         </p>
                         <select
                           value={mr.memberUserId}
@@ -1402,7 +1408,7 @@ export default function RecordClient({
                       {entry.memberRecords.map((mr, mrIndex) => (
                         <div key={`relay-reaction-${mrIndex}`}>
                           <label className="block text-xs font-medium text-gray-600 mb-1">
-                            {mr.relayLegLabel?.split(" ")[0]} RT
+                            {tRecords("relayLegShort", { num: mrIndex + 1 })} {tRecordLog("reactionTimeLabelShort")}
                           </label>
                           <input
                             type="number"

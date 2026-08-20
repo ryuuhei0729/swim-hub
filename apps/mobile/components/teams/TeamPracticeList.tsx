@@ -95,10 +95,18 @@ const PracticeItem = React.memo(function PracticeItem({
         style={styles.logButton}
         onPress={() => onAddLog(practice)}
         accessibilityRole="button"
-        accessibilityLabel={t("teams.mobile.teamPracticeList.addLog")}
+        accessibilityLabel={
+          isAdmin
+            ? t("teams.mobile.teamPracticeList.recordBulkButton")
+            : t("teams.mobile.teamPracticeList.addLog")
+        }
       >
         <Feather name="edit-3" size={13} color="#2563EB" />
-        <Text style={styles.logButtonText}>{t("teams.mobile.teamPracticeList.addLog")}</Text>
+        <Text style={styles.logButtonText}>
+          {isAdmin
+            ? t("teams.mobile.teamPracticeList.recordBulkButton")
+            : t("teams.mobile.teamPracticeList.addLog")}
+        </Text>
       </Pressable>
     </View>
   );

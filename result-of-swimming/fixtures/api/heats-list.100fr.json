@@ -1,0 +1,46 @@
+{
+  "data": [
+    {
+      "division": {
+        "code": 4,
+        "name": "決勝(A-決勝)"
+      },
+      "heats": [
+        1
+      ]
+    },
+    {
+      "division": {
+        "code": 3,
+        "name": "B-決勝"
+      },
+      "heats": [
+        1
+      ]
+    },
+    {
+      "division": {
+        "code": 1,
+        "name": "予選"
+      },
+      "heats": [
+        100,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "division": {
+        "code": 5,
+        "name": "スイムオフ"
+      },
+      "heats": [
+        1
+      ]
+    }
+  ]
+}

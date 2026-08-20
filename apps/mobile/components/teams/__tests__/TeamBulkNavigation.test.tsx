@@ -75,9 +75,12 @@ describe("[Gate] TeamCompetitionList 記録ボタンの admin 分岐", () => {
     });
   });
 
-  it("isAdmin=true: 記録ボタンで TeamRecordBulkForm へ { competitionId, teamId } 遷移", () => {
+  // 仕様変更 (Sprint Contract SC-1/D-3): admin 時のボタンラベルは「記録」から
+  // 「記録代理入力」に変わった (遷移先 TeamRecordBulkForm は不変)。
+  // 旧ラベルでの検索は新仕様で必ず要素が見つからず失敗するため、QA が新ラベルに書き換えた。
+  it("isAdmin=true: 「記録代理入力」ボタンで TeamRecordBulkForm へ { competitionId, teamId } 遷移", () => {
     render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
-    fireEvent.click(screen.getByRole("button", { name: "記録" }));
+    fireEvent.click(screen.getByRole("button", { name: "記録代理入力" }));
     expect(mocks.navigate).toHaveBeenCalledWith("TeamRecordBulkForm", {
       competitionId: "c-1",
       teamId: "team-1",
@@ -117,9 +120,13 @@ describe("[Gate] TeamPracticeList ログボタンの admin 分岐", () => {
     });
   });
 
-  it("isAdmin=true: ログボタンで TeamPracticeLogBulkForm へ { practiceId, teamId } 遷移", () => {
+  // 仕様変更 (Sprint Contract SC-7 / D-2): admin 時のボタンラベルは「ログを記入」から
+  // 「記録代理入力」に変わった (遷移先 TeamPracticeLogBulkForm は不変)。
+  // 旧ラベルでの検索は新仕様で必ず要素が見つからず失敗するため、QA が新ラベルに書き換えた。
+  // ラベル自体の詳細な回帰防止テストは TeamPracticeList.test.tsx の [SC-7] に集約する。
+  it("isAdmin=true: 「記録代理入力」ボタンで TeamPracticeLogBulkForm へ { practiceId, teamId } 遷移", () => {
     render(<TeamPracticeList teamId="team-1" isAdmin={true} />);
-    fireEvent.click(screen.getByRole("button", { name: "ログを記入" }));
+    fireEvent.click(screen.getByRole("button", { name: "記録代理入力" }));
     expect(mocks.navigate).toHaveBeenCalledWith("TeamPracticeLogBulkForm", {
       practiceId: "p-1",
       teamId: "team-1",

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
+import { resolveAttendanceStatus } from "@swim-hub/shared/utils/attendanceStatus";
 import { format, parseISO } from "date-fns";
 
 export interface AttendanceEditState {
@@ -141,7 +142,7 @@ export const useAttendanceEdit = (
         const closedEvents = updates
           .filter((update) => {
             const event = events.find((e) => e.id === update.eventId);
-            return event && event.attendance_status === "closed";
+            return event && resolveAttendanceStatus(event.date, event.attendance_status) === "closed";
           })
           .map((update) => {
             const event = events.find((e) => e.id === update.eventId);
@@ -190,7 +191,7 @@ export const useAttendanceEdit = (
             const editState = editStates[event.id];
             let note = editState.note ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH) : null;
 
-            if (event.attendance_status === "closed") {
+            if (resolveAttendanceStatus(event.date, event.attendance_status) === "closed") {
               const now = new Date();
               const editTimestamp = format(now, "MM/dd HH:mm");
               const editNote = `(${editTimestamp}締切後編集)`;

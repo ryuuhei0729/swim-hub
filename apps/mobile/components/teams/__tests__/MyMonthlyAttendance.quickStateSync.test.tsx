@@ -108,7 +108,13 @@ describe("MyMonthlyAttendance - 即回答セクションの状態保護 (PM裁�
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
-  const eventDate = `${currentYear}-${String(currentMonth).padStart(2, "0")}-15`;
+  // イベント日は「今日」にする。過去日にすると resolveAttendanceStatus により
+  // 表示上「受付終了」になり、保存時に締切後編集の確認ダイアログ (Alert.alert) が
+  // 割り込んで本テストの検証対象 (未保存入力の保持) に到達できない。
+  // 当月固定日 (例: 15日) にすると月の後半だけ落ちるため日付は必ず相対で作る。
+  const eventDate = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(
+    now.getDate(),
+  ).padStart(2, "0")}`;
 
   const makePractice = (id: string, place: string) => ({
     id,

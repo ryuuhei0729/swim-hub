@@ -33,12 +33,15 @@ export const recordKeys = {
   count: (filters?: { startDate?: string; endDate?: string; styleId?: number }) =>
     [...recordKeys.all, "count", filters] as const,
   // lists() 配下に置き、記録の追加・更新時の lists() invalidate / realtime に追随させる
+  // filters 抜きのプレフィックスとして invalidateQueries から利用する (filters を含む
+  // listBestCandidates() の生成配列は従来と完全に同一のまま)
+  bestCandidates: () => [...recordKeys.lists(), "bestCandidates"] as const,
   listBestCandidates: (filters?: {
     userId?: string;
     styleId?: number;
     isRelaying?: boolean;
     poolType?: number | null;
-  }) => [...recordKeys.lists(), "bestCandidates", filters] as const,
+  }) => [...recordKeys.bestCandidates(), filters] as const,
   detail: (id: string) => [...recordKeys.all, "detail", id] as const,
   competitions: () => [...recordKeys.all, "competitions"] as const,
   competitionsList: (filters?: { startDate?: string; endDate?: string }) =>
@@ -139,4 +142,26 @@ export const practiceLogTemplateKeys = {
   list: () => [...practiceLogTemplateKeys.lists()] as const,
   detail: (id: string) => [...practiceLogTemplateKeys.all, "detail", id] as const,
   count: () => [...practiceLogTemplateKeys.all, "count"] as const,
+} as const;
+
+/**
+ * 理想LAP (race_pace_models) のクエリキー
+ * 全ユーザー共通の参照データなので userId を含めない
+ */
+export const racePaceKeys = {
+  all: ["racePaceModels"] as const,
+  models: (filters: {
+    gender: string;
+    poolType: number;
+    stroke: string;
+    distance: number;
+    ageCategory?: string;
+  }) => [...racePaceKeys.all, "models", filters] as const,
+  coverage: (filters: {
+    gender: string;
+    poolType: number;
+    stroke: string;
+    distance: number;
+    ageCategory?: string;
+  }) => [...racePaceKeys.all, "coverage", filters] as const,
 } as const;

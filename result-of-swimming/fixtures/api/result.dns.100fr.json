@@ -1,0 +1,60 @@
+{
+  "data": [
+    {
+      "result_id": 37446284,
+      "ranking": "棄権",
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 5,
+      "lane": 2,
+      "result_time": "",
+      "result_date": "2026-07-30",
+      "gap_with_top": "",
+      "reaction_times": [
+        "-"
+      ],
+      "fina_point": "",
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "50m_record": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "50m_record": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "100m_record": {
+            "record": "0:00.00",
+            "ranking": "-",
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 1,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          3
+        ]
+      }
+    }
+  ]
+}

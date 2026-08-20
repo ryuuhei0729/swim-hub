@@ -468,6 +468,11 @@ export const EntryLogFormScreen: React.FC = () => {
   };
 
   // 保存処理（保存してダッシュボードに戻る）
+  // 注意 (2026-08-19スプリント): チーム大会一覧のバッジ/ダッシュボードの未提出催促通知は
+  // resolveEntryStatus により過去日の大会を「受付終了」として除外するが、この保存パスと
+  // entries の RLS INSERT ポリシーは entry_status・大会日を強制していない。表示挙動の変更が
+  // 今スプリントのスコープであり、書き込みパス/RLS への波及は影響範囲が大きいため見送った
+  // 既知のリスクである（実装漏れではない）。
   const handleSave = async () => {
     // 二重送信防止
     if (isSubmittingRef.current) return;

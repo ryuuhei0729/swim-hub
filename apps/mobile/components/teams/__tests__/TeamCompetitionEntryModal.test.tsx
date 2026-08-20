@@ -12,6 +12,12 @@
  * [V-07] getEntriesByCompetition の結果が種目別にグルーピング表示される
  * [V-08] entry_status が null/未定義でも before 相当で安全表示
  *
+ * --- QA Phase B 追加 (Sprint Contract SC-5 本体。Phase A で申し送りしたギャップを解消) ---
+ * [SC-5-1] isPastDate=true でステータス変更セグメントが disabled になる (accessibilityState + 実際にクリック不能)
+ * [SC-5-2] isPastDate=true で pastDateNotice の説明文が表示される
+ * [SC-5-3] isPastDate=true でセグメントを押しても mutation (DB 更新) が呼ばれない (見た目だけでなく実際に書き込みが起きないこと)
+ * [SC-5-4] isPastDate 未指定 (省略) はデフォルト false として振る舞い、既存の変更操作 (mutation) が壊れていない
+ *
  * トートロジー防止:
  * - DOM に表示される文字列・要素の有無、外部 mock の呼び出し引数のみ検証する
  * - 実装の内部 state をそのままアサートしない。Sprint Contract の仕様に基づく
@@ -284,5 +290,117 @@ describe("TeamCompetitionEntryModal", () => {
     render(<TeamCompetitionEntryModal {...baseProps} visible={false} />);
     expect(mocks.getEntriesByCompetition).not.toHaveBeenCalled();
     expect(screen.queryByText("受付前")).toBeNull();
+  });
+
+  // -----------------------------------------------------------------------
+  // Sprint Contract [SC-5] 過去日 (isPastDate) のセグメント disabled 化 + 説明文 + 書き込み阻止
+  // -----------------------------------------------------------------------
+
+  describe("[SC-5] isPastDate によるステータス変更セグメントの無効化", () => {
+    // [SC-5-1] disabled 属性 (accessibilityState) が立つ
+    it("isPastDate=true のとき各ステータスセグメントの accessibilityState.disabled が true になる", async () => {
+      render(
+        <TeamCompetitionEntryModal
+          {...baseProps}
+          isAdmin={true}
+          entryStatus="before"
+          isPastDate={true}
+        />,
+      );
+      await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
+
+      // セグメントは accessibilityRole="button" + accessibilityState を持つ。
+      // モックは accessibilityState をそのまま DOM 属性として素通しするため、
+      // 各セグメント (受付前/受付中/受付終了) の button 要素で disabled 相当を確認する。
+      ["受付前", "受付中", "受付終了"].forEach((label) => {
+        const el = screen.getByText(label).closest("button");
+        expect(el, `${label} セグメントが button として見つからない`).not.toBeNull();
+        // React Native の disabled prop はテストハーネスで実際の HTML disabled 属性になる
+        expect((el as HTMLButtonElement).disabled).toBe(true);
+      });
+    });
+
+    // [SC-5-2] 過去日の説明文が表示される
+    it("isPastDate=true のとき pastDateNotice の説明文が表示される", async () => {
+      render(
+        <TeamCompetitionEntryModal
+          {...baseProps}
+          isAdmin={true}
+          entryStatus="closed"
+          isPastDate={true}
+        />,
+      );
+      await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
+
+      // ja.json: teams.mobile.teamCompetitionEntryModal.pastDateNotice
+      expect(
+        screen.getByText("大会日を過ぎたため、自動的に受付終了になっています"),
+      ).toBeDefined();
+    });
+
+    // isPastDate=false (明示指定) では説明文は出ない (回帰防止: 常時表示になっていないか)
+    it("isPastDate=false のとき pastDateNotice の説明文は表示されない", async () => {
+      render(
+        <TeamCompetitionEntryModal
+          {...baseProps}
+          isAdmin={true}
+          entryStatus="before"
+          isPastDate={false}
+        />,
+      );
+      await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
+
+      expect(
+        screen.queryByText("大会日を過ぎたため、自動的に受付終了になっています"),
+      ).toBeNull();
+    });
+
+    // [SC-5-3] 本質: 見た目の disabled だけでなく、実際にステータス変更の書き込み (mutation) が起きないこと
+    it("isPastDate=true のときセグメントを押しても確認 Alert も mutation も呼ばれない (DB 書き込みなし)", async () => {
+      render(
+        <TeamCompetitionEntryModal
+          {...baseProps}
+          isAdmin={true}
+          entryStatus="before"
+          isPastDate={true}
+        />,
+      );
+      await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
+
+      // 現在値(before)ではない別ステータスを押しても disabled のため何も起きないはず
+      fireEvent.click(screen.getByText("受付中"));
+      fireEvent.click(screen.getByText("受付終了"));
+
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(mocks.mutateAsync).not.toHaveBeenCalled();
+      expect(mocks.invalidateQueries).not.toHaveBeenCalled();
+    });
+
+    // [SC-5-4] isPastDate 未指定はデフォルト false として振る舞い、既存の変更操作は壊れていない
+    // (baseProps は isPastDate を含まない。他の V-02/V-03 系テストが green であること自体が
+    //  デフォルト値の後方互換性を示すが、ここでは「未指定でも通常通り mutation が走る」ことを
+    //  明示的に1本ピンする)
+    it("isPastDate を省略した場合、デフォルト false として通常通りステータス変更 (mutation) ができる", async () => {
+      render(<TeamCompetitionEntryModal {...baseProps} isAdmin={true} entryStatus="before" />);
+      await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
+
+      // pastDateNotice も出ない
+      expect(
+        screen.queryByText("大会日を過ぎたため、自動的に受付終了になっています"),
+      ).toBeNull();
+
+      fireEvent.click(screen.getByText("受付中")); // before -> open
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      const alertArgs = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
+      const buttons = alertArgs[2] as Array<{ text: string; onPress?: () => void }>;
+      buttons.find((b) => b.onPress)?.onPress?.();
+
+      await waitFor(() =>
+        expect(mocks.mutateAsync).toHaveBeenCalledWith({
+          id: "c-1",
+          updates: { entry_status: "open" },
+        }),
+      );
+    });
   });
 });

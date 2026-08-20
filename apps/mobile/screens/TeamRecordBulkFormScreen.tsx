@@ -1072,6 +1072,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         {styleEntries.map((entry, entryIndex) => {
           const selectedStyle = styles_.find((s) => s.id === entry.styleId);
           const hasDistance = !!selectedStyle?.distance;
+          const relayDef = entry.relayEventId
+            ? relayEvents.find((r) => r.id === entry.relayEventId)
+            : undefined;
           return (
             <View key={entry.id} style={styles.entryCard}>
               {/* 種目ヘッダー */}
@@ -1105,7 +1108,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                     ]}
                   >
                     {entry.relayEventId
-                      ? entry.styleName
+                      ? (relayDef?.label ?? entry.styleName)
                       : selectedStyle
                         ? localizedStyleName(selectedStyle, t)
                         : t("teams.record.eventPlaceholder")}
@@ -1141,7 +1144,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                   {/* 泳者選択 + RT */}
                   {entry.memberRecords.map((mr, mrIndex) => (
                     <View key={`leg-${mrIndex}`} style={styles.legCard}>
-                      <Text style={styles.legLabel}>{mr.relayLegLabel}</Text>
+                      <Text style={styles.legLabel}>
+                        {relayDef?.legs[mrIndex]?.legLabel ?? mr.relayLegLabel}
+                      </Text>
                       <Pressable
                         style={styles.pickerButton}
                         onPress={() => setLegPicker({ entryId: entry.id, legIndex: mrIndex })}

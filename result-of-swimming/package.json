@@ -1,0 +1,20 @@
+{
+  "name": "@swim-hub/result-of-swimming",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Result of Swimming のレースデータ収集・LAP統計集計パイプライン",
+  "comment": "ランタイム依存ゼロ (node 組み込みの fetch/fs のみ)。CJS として解決する (apps/shared に type:module が無く ESM からは named import できないため)。tsx は CLI 実行用の dev 依存。テスト/型検査は swim-hub ルートの vitest/tsc を借りる。",
+  "scripts": {
+    "test": "vitest run",
+    "type-check": "tsc --noEmit",
+    "ros:crawl": "tsx src/cli/crawl.ts",
+    "ros:parse": "tsx src/cli/parse.ts",
+    "ros:validate": "tsx src/cli/validate.ts",
+    "ros:aggregate": "tsx src/cli/aggregate.ts",
+    "ros:export": "tsx src/cli/export.ts",
+    "ros:probe": "tsx src/cli/probe.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
+  }
+}

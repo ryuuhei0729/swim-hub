@@ -30,6 +30,10 @@ interface TeamCompetitionEntryModalProps {
   competitionTitle: string;
   teamId: string;
   entryStatus: EntryStatus;
+  // 大会日が過去かどうか。true のときはステータス変更セグメントを disabled にし、
+  // 「大会日を過ぎたため自動的に受付終了」の説明を表示する (DB 値は書き換えない)。
+  // 既存呼び出し元との後方互換のため optional・デフォルト false。
+  isPastDate?: boolean;
   isAdmin: boolean;
   // 現在のモーダル内 status（楽観的更新後の値）を渡し、呼び出し側ガードが
   // prop の stale な entry_status ではなく同一ソースで判定できるようにする（dead-click 防止）。
@@ -67,6 +71,7 @@ export function TeamCompetitionEntryModal({
   competitionTitle,
   teamId,
   entryStatus,
+  isPastDate = false,
   isAdmin,
   onSelfEntry,
 }: TeamCompetitionEntryModalProps) {
@@ -190,33 +195,41 @@ export function TeamCompetitionEntryModal({
                 {t("teams.mobile.teamCompetitionEntryModal.entryStatusLabel")}
               </Text>
               {isAdmin ? (
-                <View style={styles.segmentRow}>
-                  {STATUS_ORDER.map((s) => {
-                    const active = s === status;
-                    return (
-                      <Pressable
-                        key={s}
-                        style={[
-                          styles.segment,
-                          active && segmentActiveStyle(s),
-                          isSaving && styles.segmentDisabled,
-                        ]}
-                        onPress={() => handleStatusChange(s)}
-                        disabled={isSaving}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: active, disabled: isSaving }}
-                        accessibilityLabel={t(
-                          "teams.mobile.teamCompetitionEntryModal.changeStatusAria",
-                          { status: getStatusLabel(s) },
-                        )}
-                      >
-                        <Text style={[styles.segmentText, active && segmentActiveTextStyle(s)]}>
-                          {getStatusLabel(s)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                <>
+                  <View style={styles.segmentRow}>
+                    {STATUS_ORDER.map((s) => {
+                      const active = s === status;
+                      const segmentDisabled = isSaving || isPastDate;
+                      return (
+                        <Pressable
+                          key={s}
+                          style={[
+                            styles.segment,
+                            active && segmentActiveStyle(s),
+                            segmentDisabled && styles.segmentDisabled,
+                          ]}
+                          onPress={() => handleStatusChange(s)}
+                          disabled={segmentDisabled}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active, disabled: segmentDisabled }}
+                          accessibilityLabel={t(
+                            "teams.mobile.teamCompetitionEntryModal.changeStatusAria",
+                            { status: getStatusLabel(s) },
+                          )}
+                        >
+                          <Text style={[styles.segmentText, active && segmentActiveTextStyle(s)]}>
+                            {getStatusLabel(s)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {isPastDate && (
+                    <Text style={styles.pastDateNotice}>
+                      {t("teams.mobile.teamCompetitionEntryModal.pastDateNotice")}
+                    </Text>
+                  )}
+                </>
               ) : (
                 <View style={[styles.readBadge, badgeStyle(status)]}>
                   <Text style={[styles.readBadgeText, badgeTextStyle(status)]}>
@@ -441,6 +454,10 @@ const styles = StyleSheet.create({
   },
   segmentDisabled: {
     opacity: 0.5,
+  },
+  pastDateNotice: {
+    fontSize: 12,
+    color: "#6B7280",
   },
   segmentText: {
     fontSize: 13,

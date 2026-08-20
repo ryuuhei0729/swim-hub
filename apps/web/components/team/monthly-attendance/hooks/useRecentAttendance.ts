@@ -8,6 +8,7 @@ import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendanc
 import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { getMonthDateRange } from "@swim-hub/shared/utils/date";
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
+import { resolveAttendanceStatus } from "@swim-hub/shared/utils/attendanceStatus";
 import { format, parseISO } from "date-fns";
 
 interface AttendanceEditState {
@@ -176,7 +177,7 @@ export const useRecentAttendance = (
         return;
       }
 
-      if (event.attendance_status === "closed") {
+      if (resolveAttendanceStatus(event.date, event.attendance_status) === "closed") {
         const date = parseISO(event.date);
         const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
         const confirmed = window.confirm(
@@ -198,7 +199,7 @@ export const useRecentAttendance = (
 
         let note = editState.note ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH) : null;
 
-        if (event.attendance_status === "closed") {
+        if (resolveAttendanceStatus(event.date, event.attendance_status) === "closed") {
           const now = new Date();
           const editTimestamp = format(now, "MM/dd HH:mm");
           const editNote = `(${editTimestamp}締切後編集)`;

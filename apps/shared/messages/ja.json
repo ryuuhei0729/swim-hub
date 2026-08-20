@@ -1650,6 +1650,7 @@
       "fetchMembersFailed": "チームメンバーの取得に失敗しました",
       "teamFallback": "チーム",
       "relayLegLabel": "第{num}泳者 ({style})",
+      "relayLegShort": "第{num}泳者",
       "freeRelaySuffix": "フリーリレー",
       "medleyRelaySuffix": "メドレーリレー",
       "relayTimePlaceholder": "例: 1:52.10",
@@ -2615,7 +2616,8 @@
         "fetchFailed": "練習記録の取得に失敗しました",
         "deleteConfirm": "この練習記録を削除しますか？この操作は取り消せません。",
         "deleteFailed": "練習記録の削除に失敗しました",
-        "addLog": "ログを記入"
+        "addLog": "ログを記入",
+        "recordBulkButton": "記録代理入力"
       },
       "teamCompetitionList": {
         "title": "チーム大会 ({count}件)",
@@ -2626,7 +2628,9 @@
         "deleteFailed": "大会の削除に失敗しました",
         "entryButton": "エントリー",
         "recordButton": "記録",
-        "entryBulkButton": "エントリー代理入力"
+        "entryBulkButton": "エントリー代理入力",
+        "recordBulkButton": "記録代理入力",
+        "entryStatusChangeAria": "エントリー受付状況: {status}。タップして変更"
       },
       "teamCompetitionEntryModal": {
         "title": "{title} のエントリー",
@@ -2649,7 +2653,8 @@
         "unknownStyle": "種目不明",
         "unknownUser": "不明なユーザー",
         "entryTimeLabel": "エントリータイム:",
-        "close": "閉じる"
+        "close": "閉じる",
+        "pastDateNotice": "大会日を過ぎたため、自動的に受付終了になっています"
       },
       "announcementDeleteFailed": "お知らせの削除に失敗しました",
       "attendanceConfirmEditAfterDeadline": "提出締め切り後の編集になります（{dates}）。備考に編集日時が自動的に追加されます。保存しますか？",

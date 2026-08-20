@@ -13,6 +13,7 @@ import {
   TeamAttendanceWithDetails,
 } from "../types";
 import { getMonthDateRange } from "../utils/date";
+import { resolveAttendanceStatus } from "../utils/attendanceStatus";
 import { requireAuth, requireTeamMembership, requireTeamAdmin } from "./auth-utils";
 
 export class AttendanceAPI {
@@ -492,34 +493,42 @@ export class AttendanceAPI {
 
   /**
    * イベントがclosed状態かチェック
+   *
+   * DB の attendance_status だけでなくイベント日も見る (resolveAttendanceStatus)。
+   * 過去日イベントは UI 側で「受付終了」と表示されるため、ここで DB 値のみを
+   * 見ると「画面は受付終了なのに締切後編集マークが付かない」食い違いが起きる。
+   * 境界は resolveAttendanceStatus に委譲するので端末ローカル日付。
    */
   private async isEventClosed(
     practiceId: string | null,
     competitionId: string | null,
   ): Promise<boolean> {
     let attendanceStatus: "open" | "closed" | null = null;
+    let eventDate: string | null = null;
 
     if (practiceId) {
       const { data, error } = await this.supabase
         .from("practices")
-        .select("attendance_status")
+        .select("attendance_status, date")
         .eq("id", practiceId)
         .single();
 
       if (error) throw error;
       attendanceStatus = data?.attendance_status ?? null;
+      eventDate = data?.date ?? null;
     } else if (competitionId) {
       const { data, error } = await this.supabase
         .from("competitions")
-        .select("attendance_status")
+        .select("attendance_status, date")
         .eq("id", competitionId)
         .single();
 
       if (error) throw error;
       attendanceStatus = data?.attendance_status ?? null;
+      eventDate = data?.date ?? null;
     }
 
-    return attendanceStatus === "closed";
+    return resolveAttendanceStatus(eventDate, attendanceStatus) === "closed";
   }
 
   /**

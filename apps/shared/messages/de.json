@@ -1650,6 +1650,7 @@
       "fetchMembersFailed": "Teammitglieder konnten nicht abgerufen werden",
       "teamFallback": "Team",
       "relayLegLabel": "{num}. Schwimmer ({style})",
+      "relayLegShort": "{num}. Schwimmer",
       "freeRelaySuffix": "Freistilstaffel",
       "medleyRelaySuffix": "Lagenstaffel",
       "relayTimePlaceholder": "z. B. 1:52.10",
@@ -2615,7 +2616,8 @@
         "fetchFailed": "Trainingsaufzeichnungen konnten nicht geladen werden",
         "deleteConfirm": "Dieses Training löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
         "deleteFailed": "Training konnte nicht gelöscht werden",
-        "addLog": "Log eintragen"
+        "addLog": "Log eintragen",
+        "recordBulkButton": "Ergebnisse stellvertretend eingeben"
       },
       "teamCompetitionList": {
         "title": "Teamwettkämpfe ({count})",
@@ -2626,7 +2628,9 @@
         "deleteFailed": "Wettkampf konnte nicht gelöscht werden",
         "entryButton": "Anmelden",
         "recordButton": "Ergebnis",
-        "entryBulkButton": "Anmeldungen stellvertretend eingeben"
+        "entryBulkButton": "Anmeldungen stellvertretend eingeben",
+        "recordBulkButton": "Ergebnisse stellvertretend eingeben",
+        "entryStatusChangeAria": "Anmeldestatus: {status}. Zum Aendern tippen"
       },
       "teamCompetitionEntryModal": {
         "title": "Anmeldungen für {title}",
@@ -2649,7 +2653,8 @@
         "unknownStyle": "Unbekannte Disziplin",
         "unknownUser": "Unbekannter Benutzer",
         "entryTimeLabel": "Meldezeit:",
-        "close": "Schliessen"
+        "close": "Schliessen",
+        "pastDateNotice": "Die Anmeldung wurde automatisch geschlossen, da der Wettkampftermin bereits vergangen ist."
       },
       "announcementDeleteFailed": "Ankündigung konnte nicht gelöscht werden",
       "attendanceConfirmEditAfterDeadline": "Sie bearbeiten nach Ablauf der Frist ({dates}). Der Bearbeitungszeitpunkt wird automatisch der Anmerkung hinzugefügt. Trotzdem speichern?",

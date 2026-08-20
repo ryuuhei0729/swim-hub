@@ -13,6 +13,7 @@ import { ErrorView } from "@/components/layout/ErrorView";
 import type { MainStackParamList } from "@/navigation/types";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 type TeamsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -24,7 +25,6 @@ export const TeamsScreen: React.FC = () => {
   const navigation = useNavigation<TeamsScreenNavigationProp>();
   const { supabase } = useAuth();
   const { t } = useTranslation();
-  const [refreshing, setRefreshing] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
 
@@ -58,18 +58,11 @@ export const TeamsScreen: React.FC = () => {
     };
   }, [teams]);
 
-  // タブ遷移時にデータ再取得
+  // タブ遷移時にデータ再取得(子孫なし。チーム一覧のみが対象)
   useRefreshOnFocus(refetch);
 
   // プルリフレッシュ処理
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch]);
+  const { refreshing, handleRefresh } = usePullToRefresh(refetch);
 
   // チームタップ処理
   const handleTeamPress = useCallback(

@@ -1650,6 +1650,7 @@
       "fetchMembersFailed": "获取团队成员失败",
       "teamFallback": "团队",
       "relayLegLabel": "第{num}棒 ({style})",
+      "relayLegShort": "第{num}棒",
       "freeRelaySuffix": "自由泳接力",
       "medleyRelaySuffix": "混合泳接力",
       "relayTimePlaceholder": "例如：1:52.10",
@@ -2615,7 +2616,8 @@
         "fetchFailed": "训练记录加载失败",
         "deleteConfirm": "确定删除此训练记录？此操作无法撤销。",
         "deleteFailed": "训练记录删除失败",
-        "addLog": "填写日志"
+        "addLog": "填写日志",
+        "recordBulkButton": "代为录入成绩"
       },
       "teamCompetitionList": {
         "title": "团队比赛 ({count}件)",
@@ -2626,7 +2628,9 @@
         "deleteFailed": "比赛删除失败",
         "entryButton": "报名",
         "recordButton": "成绩",
-        "entryBulkButton": "代为录入报名"
+        "entryBulkButton": "代为录入报名",
+        "recordBulkButton": "代为录入成绩",
+        "entryStatusChangeAria": "报名状态：{status}。点击更改"
       },
       "teamCompetitionEntryModal": {
         "title": "{title} 的报名",
@@ -2649,7 +2653,8 @@
         "unknownStyle": "项目不明",
         "unknownUser": "未知用户",
         "entryTimeLabel": "报名成绩:",
-        "close": "关闭"
+        "close": "关闭",
+        "pastDateNotice": "比赛日期已过，报名已自动截止。"
       },
       "announcementDeleteFailed": "删除通知失败",
       "attendanceConfirmEditAfterDeadline": "这将是在提交截止后的编辑（{dates}）。编辑时间将自动添加到备注中。要保存吗？",

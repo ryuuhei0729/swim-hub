@@ -351,7 +351,11 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
     <View style={styles.container}>
       <View style={styles.avatarWrapper}>
         <Pressable
-          style={[styles.avatarContainer, disabled && styles.avatarContainerDisabled]}
+          style={[
+            styles.avatarContainer,
+            !!(selectedImageUri || resolvedAvatarUrl) && styles.avatarContainerWithImage,
+            disabled && styles.avatarContainerDisabled,
+          ]}
           onPress={handleImageSelect}
           disabled={disabled}
         >
@@ -416,6 +420,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563EB",
     justifyContent: "center",
     alignItems: "center",
+  },
+  // 画像がある場合は透過PNGの背景として薄いグレーを敷く（青が透けるのを防ぐ / web の bg-gray-100 と一致）
+  avatarContainerWithImage: {
+    backgroundColor: "#F3F4F6",
   },
   avatarContainerDisabled: {
     opacity: 0.5,

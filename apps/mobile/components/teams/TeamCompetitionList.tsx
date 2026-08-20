@@ -21,14 +21,15 @@ import {
 import type { Competition } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
-import { formatDate } from "@apps/shared/utils/date";
+import { formatDate, isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { resolveEntryStatus } from "@apps/shared/utils/entryStatus";
 import { TeamCompetitionEntryModal } from "./TeamCompetitionEntryModal";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 type EntryStatus = "before" | "open" | "closed";
 
-const ENTRY_STATUS_BADGE: Record<EntryStatus, { container: object; text: object }> = {
+const ENTRY_STATUS_BADGE: Record<EntryStatus, { container: object; text: { color: string } }> = {
   before: { container: { backgroundColor: "#F3F4F6" }, text: { color: "#374151" } },
   open: { container: { backgroundColor: "#DCFCE7" }, text: { color: "#166534" } },
   closed: { container: { backgroundColor: "#FEE2E2" }, text: { color: "#991B1B" } },
@@ -62,8 +63,9 @@ const CompetitionItem = React.memo(function CompetitionItem({
     competition.pool_type === 1
       ? t("teams.mobile.poolTypeLong")
       : t("teams.mobile.poolTypeShort");
-  const entryStatus = (competition.entry_status ?? "before") as EntryStatus;
+  const entryStatus = resolveEntryStatus(competition.date, competition.entry_status);
   const badge = ENTRY_STATUS_BADGE[entryStatus];
+  const entryStatusLabel = t(`teams.competitions.entryStatus.${entryStatus}`);
 
   return (
     <View style={styles.item}>
@@ -78,13 +80,6 @@ const CompetitionItem = React.memo(function CompetitionItem({
             <Text style={styles.itemTitle} numberOfLines={1}>
               {competition.title || t("teams.mobile.fallbackCompetitionTitle")}
             </Text>
-            {competition.entry_status && (
-              <View style={[styles.entryStatusBadge, badge.container]}>
-                <Text style={[styles.entryStatusBadgeText, badge.text]}>
-                  {t(`teams.competitions.entryStatus.${entryStatus}`)}
-                </Text>
-              </View>
-            )}
           </View>
           {isAdmin && (
             <View style={styles.itemActions}>
@@ -129,37 +124,74 @@ const CompetitionItem = React.memo(function CompetitionItem({
           <Text style={styles.itemNote} numberOfLines={2}>{competition.note}</Text>
         )}
       </Pressable>
-      <View style={styles.entryRecordRow}>
-        <Pressable
-          style={styles.entryButton}
-          onPress={() => onEntry(competition)}
-          accessibilityRole="button"
-          accessibilityLabel={t("teams.mobile.teamCompetitionList.entryButton")}
-        >
-          <Feather name="log-in" size={13} color="#2563EB" />
-          <Text style={styles.entryButtonText}>{t("teams.mobile.teamCompetitionList.entryButton")}</Text>
-        </Pressable>
-        <Pressable
-          style={styles.recordButton}
-          onPress={() => onRecord(competition)}
-          accessibilityRole="button"
-          accessibilityLabel={t("teams.mobile.teamCompetitionList.recordButton")}
-        >
-          <Feather name="clock" size={13} color="#059669" />
-          <Text style={styles.recordButtonText}>{t("teams.mobile.teamCompetitionList.recordButton")}</Text>
-        </Pressable>
-        {isAdmin && (
+      <View style={styles.statusRow}>
+        {isAdmin ? (
           <Pressable
-            style={styles.entryBulkButton}
-            onPress={() => onEntryBulk(competition)}
+            style={[styles.entryStatusBadge, styles.entryStatusBadgeAdmin, badge.container]}
+            onPress={() => onEntry(competition)}
             accessibilityRole="button"
-            accessibilityLabel={t("teams.mobile.teamCompetitionList.entryBulkButton")}
+            accessibilityLabel={t("teams.mobile.teamCompetitionList.entryStatusChangeAria", {
+              status: entryStatusLabel,
+            })}
+            hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
           >
-            <Feather name="users" size={13} color="#7C3AED" />
-            <Text style={styles.entryBulkButtonText}>
-              {t("teams.mobile.teamCompetitionList.entryBulkButton")}
-            </Text>
+            <Text style={[styles.entryStatusBadgeText, badge.text]}>{entryStatusLabel}</Text>
+            <Feather name="chevron-down" size={12} color={badge.text.color} />
           </Pressable>
+        ) : (
+          <View style={[styles.entryStatusBadge, badge.container]}>
+            <Text style={[styles.entryStatusBadgeText, badge.text]}>{entryStatusLabel}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.entryRecordRow}>
+        {!isAdmin && (
+          <>
+            <Pressable
+              style={styles.entryButton}
+              onPress={() => onEntry(competition)}
+              accessibilityRole="button"
+              accessibilityLabel={t("teams.mobile.teamCompetitionList.entryButton")}
+            >
+              <Feather name="log-in" size={13} color="#2563EB" />
+              <Text style={styles.entryButtonText}>{t("teams.mobile.teamCompetitionList.entryButton")}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.recordButton}
+              onPress={() => onRecord(competition)}
+              accessibilityRole="button"
+              accessibilityLabel={t("teams.mobile.teamCompetitionList.recordButton")}
+            >
+              <Feather name="clock" size={13} color="#059669" />
+              <Text style={styles.recordButtonText}>{t("teams.mobile.teamCompetitionList.recordButton")}</Text>
+            </Pressable>
+          </>
+        )}
+        {isAdmin && (
+          <>
+            <Pressable
+              style={styles.recordButton}
+              onPress={() => onRecord(competition)}
+              accessibilityRole="button"
+              accessibilityLabel={t("teams.mobile.teamCompetitionList.recordBulkButton")}
+            >
+              <Feather name="clock" size={13} color="#059669" />
+              <Text style={styles.recordButtonText}>
+                {t("teams.mobile.teamCompetitionList.recordBulkButton")}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.entryBulkButton}
+              onPress={() => onEntryBulk(competition)}
+              accessibilityRole="button"
+              accessibilityLabel={t("teams.mobile.teamCompetitionList.entryBulkButton")}
+            >
+              <Feather name="users" size={13} color="#7C3AED" />
+              <Text style={styles.entryBulkButtonText}>
+                {t("teams.mobile.teamCompetitionList.entryBulkButton")}
+              </Text>
+            </Pressable>
+          </>
         )}
       </View>
     </View>
@@ -353,7 +385,11 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
             entryModalCompetition.title || t("teams.mobile.fallbackCompetitionTitle")
           }
           teamId={teamId}
-          entryStatus={entryModalCompetition.entry_status ?? "before"}
+          entryStatus={resolveEntryStatus(
+            entryModalCompetition.date,
+            entryModalCompetition.entry_status,
+          )}
+          isPastDate={isCompetitionDateInPast(entryModalCompetition.date)}
           isAdmin={isAdmin}
           onSelfEntry={(currentStatus) => handleSelfEntry(entryModalCompetition, currentStatus)}
         />
@@ -435,6 +471,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     flexShrink: 0,
   },
+  entryStatusBadgeAdmin: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   entryStatusBadgeText: {
     fontSize: 11,
     fontWeight: "600",
@@ -470,6 +511,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#9CA3AF",
     marginTop: 4,
+  },
+  statusRow: {
+    flexDirection: "row",
+    marginTop: 8,
   },
   entryRecordRow: {
     flexDirection: "row",

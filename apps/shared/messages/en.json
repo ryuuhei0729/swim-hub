@@ -1647,6 +1647,7 @@
       "fetchMembersFailed": "Failed to fetch team members",
       "teamFallback": "Team",
       "relayLegLabel": "Leg {num} ({style})",
+      "relayLegShort": "Leg {num}",
       "freeRelaySuffix": "Free Relay",
       "medleyRelaySuffix": "Medley Relay",
       "relayTimePlaceholder": "e.g. 1:52.10",
@@ -2612,7 +2613,8 @@
         "fetchFailed": "Failed to load practice records",
         "deleteConfirm": "Delete this practice record? This cannot be undone.",
         "deleteFailed": "Failed to delete practice record",
-        "addLog": "Add Log"
+        "addLog": "Add Log",
+        "recordBulkButton": "Enter Records"
       },
       "teamCompetitionList": {
         "title": "Team Competitions ({count})",
@@ -2623,7 +2625,9 @@
         "deleteFailed": "Failed to delete competition",
         "entryButton": "Entry",
         "recordButton": "Record",
-        "entryBulkButton": "Enter Entries"
+        "entryBulkButton": "Enter Entries",
+        "recordBulkButton": "Enter Records",
+        "entryStatusChangeAria": "Entry status: {status}. Tap to change"
       },
       "teamCompetitionEntryModal": {
         "title": "Entries for {title}",
@@ -2646,7 +2650,8 @@
         "unknownStyle": "Unknown event",
         "unknownUser": "Unknown user",
         "entryTimeLabel": "Entry time:",
-        "close": "Close"
+        "close": "Close",
+        "pastDateNotice": "Entry is automatically closed because the competition date has passed."
       },
       "announcementDeleteFailed": "Failed to delete announcement",
       "attendanceConfirmEditAfterDeadline": "You are editing after the deadline ({dates}). The edit timestamp will be automatically added to the note. Save anyway?",

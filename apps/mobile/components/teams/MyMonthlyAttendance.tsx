@@ -15,6 +15,7 @@ import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { getMonthDateRange, formatDate, toISODateString } from "@swim-hub/shared/utils/date";
+import { resolveAttendanceStatus } from "@swim-hub/shared/utils/attendanceStatus";
 import { startOfMonth, endOfMonth, addMonths, format, parseISO } from "date-fns";
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
 import { useTranslation } from "react-i18next";
@@ -449,7 +450,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       editState: AttendanceEditState,
       existingAttendance: TeamAttendanceWithDetails | undefined,
     ): Promise<{ status: AttendanceStatus | null; note: string } | null> => {
-      if (event.attendance_status === "closed") {
+      if (resolveAttendanceStatus(event.date, event.attendance_status) === "closed") {
         const date = parseISO(event.date);
         const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
         const confirmed = await new Promise<boolean>((resolve) => {
@@ -488,7 +489,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH)
         : null;
 
-      if (event.attendance_status === "closed") {
+      if (resolveAttendanceStatus(event.date, event.attendance_status) === "closed") {
         const editMark = `(${format(new Date(), "MM/dd HH:mm")}締切後編集)`;
         if (note) {
           const cleaned = note.replace(EDIT_MARK_REGEX, "").trim();
@@ -772,7 +773,8 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       }
 
       // 締切後の編集を含む場合は確認ダイアログを表示（web useAttendanceEdit:152-167 と同一挙動）。
-      // 保存対象 event のうち attendance_status === "closed" のものを抽出する。
+      // 保存対象 event のうち表示派生後のステータスが "closed" のものを抽出する
+      // (過去日イベントは DB 値に関わらず締切扱い = resolveAttendanceStatus)。
       const savedEventIds = new Set(
         events
           .filter((event) => {
@@ -792,7 +794,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
           .map((event) => event.id),
       );
       const closedEvents = events.filter(
-        (event) => savedEventIds.has(event.id) && event.attendance_status === "closed",
+        (event) => savedEventIds.has(event.id) && resolveAttendanceStatus(event.date, event.attendance_status) === "closed",
       );
       if (closedEvents.length > 0) {
         const dates = closedEvents
@@ -843,7 +845,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
 
           // 締切後の新規登録には締切後編集マークを付与（web useAttendanceEdit:191-208 と同一ロジック）。
           // update 経路は shared bulkUpdateMyAttendances→addEditMark が付与するため、ここでは insert のみ対象（二重付与防止）。
-          if (event.attendance_status === "closed") {
+          if (resolveAttendanceStatus(event.date, event.attendance_status) === "closed") {
             const editMark = `(${format(new Date(), "MM/dd HH:mm")}締切後編集)`;
             if (note) {
               const cleaned = note.replace(EDIT_MARK_REGEX, "").trim();
@@ -1075,7 +1077,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                         </Text>
                         {event.place && <Text style={styles.eventPlace}>@{event.place}</Text>}
                       </View>
-                      {getStatusBadge(event.attendance_status)}
+                      {getStatusBadge(resolveAttendanceStatus(event.date, event.attendance_status))}
                     </Pressable>
 
                     <View style={styles.attendanceButtons}>
@@ -1259,7 +1261,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
                               </Text>
                               {event.place && <Text style={styles.eventPlace}>@{event.place}</Text>}
                             </Pressable>
-                            {getStatusBadge(event.attendance_status)}
+                            {getStatusBadge(resolveAttendanceStatus(event.date, event.attendance_status))}
                           </View>
 
                           {/* 出欠選択 */}

@@ -31,6 +31,7 @@ import { useDayEntriesQuery } from "@/hooks/useDayEntriesQuery";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import type { PracticeWithLogs, PracticeTag } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 // 一覧の初期表示件数、および「もっと見る」(onEndReached)1回あたりの増分
 const PAGE_INCREMENT = 20;
@@ -145,8 +146,6 @@ export const PracticesScreen: React.FC = () => {
   }, [resetFilters]);
 
   // デフォルトの日付範囲（過去1年間）- 初期化時に一度だけ計算
-  const [isUserRefreshing, setIsUserRefreshing] = useState(false);
-
   const [defaultStartDate] = useState(() => {
     const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
     return date.toISOString().split("T")[0];
@@ -159,7 +158,10 @@ export const PracticesScreen: React.FC = () => {
   const practiceApi = useMemo(() => new PracticeAPI(supabase), [supabase]);
 
   // タグ一覧を取得
-  const { data: tags = [] } = useQuery({
+  const {
+    data: tags = [],
+    refetch: refetchTags,
+  } = useQuery({
     queryKey: ["practice-tags"],
     queryFn: async () => {
       return await practiceApi.getPracticeTags();
@@ -332,18 +334,16 @@ export const PracticesScreen: React.FC = () => {
     setShowDayDetail(true);
   }, []);
 
+  // この画面が依存する全クエリ(練習一覧 + タグ一覧 + 開いている日付詳細)を尽くす
+  const refreshAll = useCallback(async () => {
+    await Promise.allSettled([refetch(), refetchTags(), refetchDayEntries()]);
+  }, [refetch, refetchTags, refetchDayEntries]);
+
   // タブ遷移時にデータ再取得
-  useRefreshOnFocus(refetch);
+  useRefreshOnFocus(refreshAll);
 
   // プルリフレッシュ処理
-  const handleRefresh = useCallback(async () => {
-    setIsUserRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setIsUserRefreshing(false);
-    }
-  }, [refetch]);
+  const { refreshing: isUserRefreshing, handleRefresh } = usePullToRefresh(refreshAll);
 
   // 無限スクロール(displayCount を増やすのみ。ネットワーク再フェッチは行わない)。
   // 既に全件表示済みの場合は onEndReached の連続発火で無駄な再レンダーを起こさないよう
