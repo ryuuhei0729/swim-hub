@@ -1669,6 +1669,7 @@
         "relayFullTeam": "Please select all 4 members for relay events",
         "relayAllTimes": "Please enter times for all swimmers in relay events",
         "cumulativeTimeInverted": "Cumulative time is inverted. Leg {current} must be greater than Leg {prev}.",
+        "relaySplitBeforeLegStart": "The split time at {distance}m is invalid. Please enter a value greater than the cumulative time at the start of Leg {leg}.",
         "atLeastOneRecord": "Please enter at least one record"
       },
       "error": {
@@ -4087,7 +4088,10 @@
       "formError_noStyle": "Please select an event",
       "formError_noTime": "Please enter a time (format: min:sec.decimal or sec.decimal)",
       "addRecord": "Add Record",
-      "recordNumber": "Record {n}"
+      "recordNumber": "Record {n}",
+      "removeEventAria": "Remove event",
+      "formError_duplicateStyle": "The same event appears on multiple cards. Please resolve the duplicate.",
+      "formError_relaySplitNotSupported": "Split times for relay records cannot be saved. Please remove the splits before saving."
     },
     "tag": {
       "placeholder": "Select or create tags",

@@ -48,8 +48,11 @@ import {
   buildRelayEvents,
   RelayEventId,
   isRelayingForLeg,
+  calcCumulativeTimes,
   calcLegTimesFromCumulative,
   getRelayLegBoundaries,
+  getLegStartCumulative,
+  toLegRelativeSplitTime,
 } from "./teamRecordBulk/relayEvents";
 import {
   buildStyleEntriesFromExisting,
@@ -786,6 +789,12 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       for (const entry of styleEntries) {
         if (entry.styleId === "") continue;
 
+        // リレー種目の各 leg 開始通算タイム (record.time ベース)。D3 (split の事前バリデーション)
+        // と leg 相対 split 変換 (leg 分配) で共有する (Web RecordClient.handleSubmit と同ロジック)。
+        const legCumulativeTimes = entry.relayEventId
+          ? calcCumulativeTimes(entry.memberRecords.map((mr) => mr.time))
+          : [];
+
         if (entry.relayEventId) {
           const hasUnselectedMember = entry.memberRecords.some((mr) => !mr.memberUserId);
           if (hasUnselectedMember) {
@@ -815,6 +824,32 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
               }
             }
           }
+
+          // リレー split の事前バリデーション（書き込む前に弾く）:
+          // 各 split (通算値) が、その split が属する leg の開始通算タイム以下だと
+          // 物理的に成立しない (leg 開始前に split が発生することはない)。
+          // 浮動小数点誤差を吸収するため 0.005 秒の許容を入れる。
+          if (entry.relaySplitTimes && entry.relaySplitTimes.length > 0) {
+            const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
+            const INVERSION_TOLERANCE = 0.005;
+            for (const st of entry.relaySplitTimes) {
+              if (st.splitTime <= 0) continue;
+              const legIdx = legBoundaries.findIndex((boundary) => st.distance <= boundary);
+              if (legIdx === -1) continue;
+              const legStart = getLegStartCumulative(legCumulativeTimes, legIdx);
+              if (st.splitTime <= legStart + INVERSION_TOLERANCE) {
+                Alert.alert(
+                  t("common.error"),
+                  t("competition.records.validation.relaySplitBeforeLegStart", {
+                    distance: st.distance,
+                    leg: legIdx + 1,
+                  }),
+                );
+                setSaving(false);
+                return;
+              }
+            }
+          }
         }
 
         for (let legIdx = 0; legIdx < entry.memberRecords.length; legIdx++) {
@@ -828,17 +863,27 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             ? (mr.relayLegStyleId ?? (entry.styleId as number))
             : (entry.styleId as number);
 
+          // リレー種目: relaySplitTimes を各 leg に分配して leg 内距離・leg 相対タイムに変換
+          // (distance は従来どおり leg 内相対に変換、splitTime も同様に通算値から
+          // leg 開始通算タイムを引いた leg 相対値に変換する。records.time が既に
+          // 同じ変換を行っている既存パターンに追従する)
           let splitTimes = mr.splitTimes;
           if (entry.relayEventId && entry.relaySplitTimes) {
             const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
             const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
             const legHigh = legBoundaries[legIdx];
+            const legStart = getLegStartCumulative(legCumulativeTimes, legIdx);
             splitTimes = entry.relaySplitTimes
               .filter((st) => st.distance > legLow && st.distance <= legHigh)
-              .map((st) => ({
-                ...st,
-                distance: legIdx === 0 ? st.distance : st.distance - legLow,
-              }));
+              .map((st) => {
+                const legRelativeSplitTime = toLegRelativeSplitTime(st.splitTime, legStart);
+                return {
+                  ...st,
+                  distance: legIdx === 0 ? st.distance : st.distance - legLow,
+                  splitTime: legRelativeSplitTime,
+                  displayValue: formatTimeBest(legRelativeSplitTime),
+                };
+              });
           }
 
           validRecords.push({

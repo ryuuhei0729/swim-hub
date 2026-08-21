@@ -1672,6 +1672,7 @@
         "relayFullTeam": "계영 종목은 멤버 4명 전원을 선택해 주세요",
         "relayAllTimes": "계영 종목은 모든 영자의 기록을 입력해 주세요",
         "cumulativeTimeInverted": "누적 기록이 역전되어 있습니다. 제{current}영자의 누적 기록은 제{prev}영자보다 큰 값을 입력해 주세요.",
+        "relaySplitBeforeLegStart": "{distance}m 지점의 스플릿 기록이 올바르지 않습니다. 제{leg}영자 시작 시점의 누적 기록보다 큰 값을 입력해 주세요.",
         "atLeastOneRecord": "기록을 하나 이상 입력해 주세요"
       },
       "error": {
@@ -4090,7 +4091,10 @@
       "formError_noStyle": "종목을 선택해 주세요",
       "formError_noTime": "기록을 입력해 주세요 (형식: 분:초.소수 또는 초.소수)",
       "addRecord": "기록 추가",
-      "recordNumber": "기록 {n}"
+      "recordNumber": "기록 {n}",
+      "removeEventAria": "종목 삭제",
+      "formError_duplicateStyle": "동일한 종목의 카드가 여러 개 있습니다. 중복을 해결해 주세요.",
+      "formError_relaySplitNotSupported": "계영 기록의 스플릿(경과 시간)은 저장할 수 없습니다. 저장하기 전에 스플릿을 삭제해 주세요."
     },
     "tag": {
       "placeholder": "태그 선택 또는 생성",

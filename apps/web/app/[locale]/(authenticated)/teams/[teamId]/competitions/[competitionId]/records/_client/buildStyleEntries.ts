@@ -13,6 +13,8 @@ import {
   detectRelayEventId,
   getRelayLegDistance,
   getRelayLegBoundaries,
+  getLegStartCumulative,
+  toCumulativeSplitTime,
 } from "./relayEvents";
 import { userStylePairKey, type EntryAdditionPlan } from "@swim-hub/shared/utils/entryRecordMerge";
 
@@ -139,6 +141,39 @@ function restoreGoalSplit(
 }
 
 /**
+ * (R1-1) ある record の split_times が旧バグ由来の破損データ (D2 の leg 相対正規化より前に
+ * 保存された、split_time が通算値のままの状態) かどうかを判定する純粋関数。
+ *
+ * 掃除スクリプト (`scripts/cleanup-relay-split-time-cumulative-bug.sql`) と**同一の不変条件**
+ * を使う (二重管理を避けるため字面を一致させる): ある record の split_times に
+ * `split_time >= record.time` を満たす行が1件以上あれば、その record の split_times は
+ * 全件が旧形式 (通算値のまま) の破損データである。途中経過の split がゴールタイム
+ * (record.time) 以上になることは正常データでは起こり得ない。
+ * 許容誤差は入れない (`>=` をそのまま使い、掃除スクリプトの述語と字面を一致させる)。
+ *
+ * 呼び出し側は leg 内距離の途中経過 (distance < legDist、真に "leg 内" と呼べる範囲) として
+ * 保存された split_time のみを渡すこと。
+ * - distance === legDist (leg 自身のゴール地点) は、保存時フィルタ
+ *   (RecordClient の `!(raceDistance && st.distance === raceDistance)`) により本来
+ *   DB へ永続化されない値だが、テスト用の合成データ等では split_time が record.time と
+ *   厳密に一致し得る (leg 自身の finish = record.time なので当然の一致であり破損ではない)。
+ *   これを対象に含めると `>=` の等号側で誤検知するため、除外する。
+ * - distance > legDist の split (「新UI保存」の全体距離形式: distance も splitTime も
+ *   既に全体距離・通算値として保存された別形式のデータ。テスト名 `[V-05-new] 新UI保存データの
+ *   復元` が示すとおり、D2 とは独立した仕様であり「旧」ではない) はそもそも D2 の変換を
+ *   経由しない形式であり、この破損検知の対象外。
+ *
+ * @param recordTime - record.time (その leg のゴールタイム、秒)
+ * @param splitTimeValues - その record の leg 内距離側 split_times の split_time 値の配列
+ * @returns 破損している場合 true (呼び出し側はこの record の leg 内距離側 split を
+ *   逆変換せず丸ごと捨てる。境界 split は `restoreRelayBoundarySplits` が record.time から
+ *   再生成するためフォームは破綻しない)
+ */
+function isRecordSplitTimesCorrupted(recordTime: number, splitTimeValues: number[]): boolean {
+  return splitTimeValues.some((splitTime) => splitTime >= recordTime);
+}
+
+/**
  * 既存レコード配列から StyleEntry 配列を構築する純粋関数。
  *
  * 4 フェーズで処理する:
@@ -200,20 +235,43 @@ export function buildStyleEntriesFromExisting(
     const legDist = getRelayLegDistance(detectedRelayId);
     const legBoundaries = getRelayLegBoundaries(detectedRelayId);
 
-    // 各 leg の split_times を全体距離に変換して relaySplitTimes を構築
+    // 各 leg の split_times を全体距離・通算タイムに変換して relaySplitTimes を構築
     const relaySplitTimes: SplitTimeEntry[] = [];
     for (let legIdx = 0; legIdx < records.length; legIdx++) {
       const record = records[legIdx];
       const legOffset = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
-      for (let stIdx = 0; stIdx < (record.split_times || []).length; stIdx++) {
-        const st = record.split_times[stIdx];
-        // distance > legDist の場合は全体距離として解釈、それ以外は leg 内距離としてオフセット加算
-        const globalDistance = st.distance > legDist ? st.distance : legOffset + st.distance;
+      const legStart = getLegStartCumulative(cumulatives, legIdx);
+      const splitTimeRows = record.split_times || [];
+
+      // R1-1: leg 内距離の途中経過 (distance < legDist) として保存された split_time のみを
+      // 破損検知の対象にする (distance === legDist の leg 自身のゴールと、
+      // distance > legDist の別形式はいずれも対象外。理由は isRecordSplitTimesCorrupted の JSDoc 参照)。
+      const isCorrupted = isRecordSplitTimesCorrupted(
+        record.time,
+        splitTimeRows.filter((st) => st.distance < legDist).map((st) => st.split_time),
+      );
+
+      for (let stIdx = 0; stIdx < splitTimeRows.length; stIdx++) {
+        const st = splitTimeRows[stIdx];
+        // distance > legDist の場合は distance も splitTime も既に全体距離・通算値として
+        // 保存された全体距離形式 (新UI保存) と解釈し、変換しない (D2 の変換を経由しない別形式のため)。
+        // それ以外は leg 内距離・leg 相対タイムとして offset / legStart を加算する。
+        const isAlreadyGlobal = st.distance > legDist;
+
+        // R1-1: 旧バグ由来の破損レコードは leg 内距離側の split を丸ごと捨てる
+        // (逆変換すると legStart が二重に乗った第三の誤値になるため)。
+        if (!isAlreadyGlobal && isCorrupted) continue;
+
+        const globalDistance = isAlreadyGlobal ? st.distance : legOffset + st.distance;
+        // split_time は保存時に leg 相対値へ正規化されている (D2) ため、通算値に戻す (D4)
+        const cumulativeSplitTime = isAlreadyGlobal
+          ? st.split_time
+          : toCumulativeSplitTime(st.split_time, legStart);
         relaySplitTimes.push({
           id: st.id || `${legIdx}-${stIdx + 1}`,
           distance: globalDistance,
-          splitTime: st.split_time,
-          displayValue: formatTimeBest(st.split_time),
+          splitTime: cumulativeSplitTime,
+          displayValue: formatTimeBest(cumulativeSplitTime),
         });
       }
     }
@@ -310,18 +368,40 @@ export function buildStyleEntriesFromExisting(
     const legDist = getRelayLegDistance(detectedRelayId);
     const legBoundaries = getRelayLegBoundaries(detectedRelayId);
 
-    // 各 leg の splitTimes を全体距離に変換して relaySplitTimes を構築
+    // 各 leg の splitTimes を全体距離・通算タイムに変換して relaySplitTimes を構築
     const relaySplitTimes: SplitTimeEntry[] = [];
     for (let legIdx = 0; legIdx < entry.memberRecords.length; legIdx++) {
       const mr = entry.memberRecords[legIdx];
       const legOffset = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
+      const legStart = getLegStartCumulative(cumulatives, legIdx);
+
+      // R1-1: leg 内距離の途中経過 (distance < legDist) として保存された splitTime のみを
+      // 破損検知の対象にする (distance === legDist の leg 自身のゴールと、
+      // distance > legDist の別形式はいずれも対象外。理由は isRecordSplitTimesCorrupted の JSDoc 参照)。
+      const isCorrupted = isRecordSplitTimesCorrupted(
+        mr.time,
+        mr.splitTimes.filter((st) => st.distance < legDist).map((st) => st.splitTime),
+      );
+
       for (const st of mr.splitTimes) {
-        const globalDistance = st.distance > legDist ? st.distance : legOffset + st.distance;
+        // distance > legDist の場合は distance も splitTime も既に全体距離・通算値として
+        // 保存された全体距離形式 (新UI保存) と解釈し、変換しない (D2 の変換を経由しない別形式のため)。
+        // それ以外は leg 内距離・leg 相対タイムとして offset / legStart を加算する。
+        const isAlreadyGlobal = st.distance > legDist;
+
+        // R1-1: 旧バグ由来の破損レコードは leg 内距離側の split を丸ごと捨てる
+        // (逆変換すると legStart が二重に乗った第三の誤値になるため)。
+        if (!isAlreadyGlobal && isCorrupted) continue;
+
+        const globalDistance = isAlreadyGlobal ? st.distance : legOffset + st.distance;
+        const cumulativeSplitTime = isAlreadyGlobal
+          ? st.splitTime
+          : toCumulativeSplitTime(st.splitTime, legStart);
         relaySplitTimes.push({
           id: st.id,
           distance: globalDistance,
-          splitTime: st.splitTime,
-          displayValue: st.displayValue,
+          splitTime: cumulativeSplitTime,
+          displayValue: formatTimeBest(cumulativeSplitTime),
         });
       }
     }

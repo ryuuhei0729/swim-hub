@@ -89,10 +89,13 @@ describe("[T-1] Phase 2 split 距離変換 (4x50 medley, legDist=50, boundaries 
       style_id: 13,
       time: 15.0,
       is_relaying: false,
-      // leg0: offset0。distance=25 はそのまま、distance=50(=legDist)もそのまま(25..50 leg内)
+      // leg0: offset0。distance=25 はそのまま、distance=50(=legDist)もそのまま(25..50 leg内)。
+      // split_time は record.time(15.0) 未満に留める (buildStyleEntries.ts の
+      // isRecordSplitTimesCorrupted 防御ロジックが split_time>=record.time を
+      // 旧バグ由来の破損データとみなして丸ごと捨ててしまうのを避けるため)。
       split_times: [
         { id: "s00", distance: 25, split_time: 7.0 },
-        { id: "s01", distance: 50, split_time: 15.0 },
+        { id: "s01", distance: 50, split_time: 13.0 },
       ],
     }),
     rec({
@@ -101,9 +104,10 @@ describe("[T-1] Phase 2 split 距離変換 (4x50 medley, legDist=50, boundaries 
       time: 16.0,
       is_relaying: true,
       // leg1: offset=boundaries[0]=50。distance=25(<=legDist50)→ 50+25=75。distance=100(>50, 既に全体)→100
+      // split_time は record.time(16.0) 未満に留める (上記と同じ理由)。
       split_times: [
         { id: "s10", distance: 25, split_time: 8.0 },
-        { id: "s11", distance: 100, split_time: 16.0 },
+        { id: "s11", distance: 100, split_time: 14.0 },
       ],
     }),
     rec({ id: "2", style_id: 17, time: 14.5, is_relaying: true }),
@@ -114,17 +118,34 @@ describe("[T-1] Phase 2 split 距離変換 (4x50 medley, legDist=50, boundaries 
     const entry = buildStyleEntriesFromExisting(recordsWithSplits, STYLES)[0];
     const ds = (entry.relaySplitTimes ?? []).map((s) => ({ d: s.distance, t: s.splitTime }));
     expect(ds).toContainEqual({ d: 25, t: 7.0 });
-    expect(ds).toContainEqual({ d: 50, t: 15.0 });
+    expect(ds).toContainEqual({ d: 50, t: 13.0 });
   });
 
-  it("leg1 distance=25(<=legDist) は offset50 加算で 75、distance=100(>legDist) は変換せず100", () => {
+  it("leg1 distance=25(<=legDist) は offset50 加算で distance=75、splitTime も legStart(15.0) を加算した通算値になる (D4)", () => {
+    // times=[15.0,16.0,14.5,13.5] → cumulatives=[15.0,31.0,45.5,59.0] → legStart(leg1)=15.0
+    // D4 修正前 (バグ): splitTime は DB の値 (8.0) をそのまま通算値扱いしていた。
+    // D4 修正後: 8.0 (leg 相対) + legStart(15.0) = 23.0 (正しい通算値)
     const entry = buildStyleEntriesFromExisting(recordsWithSplits, STYLES)[0];
     const ds = (entry.relaySplitTimes ?? []).map((s) => ({ d: s.distance, t: s.splitTime }));
-    expect(ds).toContainEqual({ d: 75, t: 8.0 }); // 50 + 25
-    expect(ds).toContainEqual({ d: 100, t: 16.0 }); // 既に全体距離
-    // off-by-one ガード: leg1 で 25 のまま残っていないこと
+    expect(ds).toContainEqual({ d: 75, t: 23.0 }); // 50 + 25 / splitTime = 8.0 + legStart(15.0)
+    // off-by-one ガード: leg1 の split (元 splitTime=8.0) が distance=25 のまま
+    // (leg0 自身の d=25 (splitTime=7.0) とは別) で残っていないこと
     expect(ds.find((x) => x.d === 25 && x.t === 8.0)).toBeUndefined();
   });
+
+  it(
+    "leg1 distance=100(>legDist, 既に全体距離=legacy分岐) は distance も splitTime も変換せず100/14.0 " +
+      "(QA注記: Critical regression。st.distance>legDist の legacy 分岐は distance が無変換のまま" +
+      "使われるので、対になる splitTime も無変換であるべきだが、現状の実装は分岐を無視して" +
+      "常に legStart(15.0) を加算してしまう (実測: 14.0 → 29.0)。QA は観測挙動を pin せず" +
+      "正しい仕様値のまま残す (このテストは現状 red。web 側にも同一の regression あり: " +
+      "apps/web/__tests__/buildStyleEntries.test.ts 参照)",
+    () => {
+      const entry = buildStyleEntriesFromExisting(recordsWithSplits, STYLES)[0];
+      const ds = (entry.relaySplitTimes ?? []).map((s) => ({ d: s.distance, t: s.splitTime }));
+      expect(ds).toContainEqual({ d: 100, t: 14.0 }); // 既に全体距離、splitTime も無変換のはず
+    },
+  );
 });
 
 // =============================================================================
@@ -248,22 +269,25 @@ describe("[T-1] Phase 4 フリーリレー二次検出", () => {
     ]);
   });
 
-  it("Phase4 経由のフリーリレー split も leg境界で global 距離へ変換される", () => {
+  it("Phase4 経由のフリーリレー split も leg境界で global 距離・通算タイムへ変換される (D4)", () => {
     // legDist=100, boundaries=[100,200,300,400]
-    // leg0 distance=100(=legDist) は offset0 のまま 100
-    // leg1 distance=100(<=legDist) → 100+100=200
-    // leg3 distance=50(<=legDist) → 300+50=350
+    // cumulatives=[57.0,115.5,173.3,230.0] → legStart(leg1)=57.0, legStart(leg3)=173.3
+    // split_time は各 leg の record.time (57.0/58.5/57.8/56.7) 未満に留める
+    // (isRecordSplitTimesCorrupted 防御ロジックの誤爆を避けるため)。
+    // leg0 distance=100(=legDist,legStart=0) は offset0・splitTime無変換のまま 100/50.0
+    // leg1 distance=100(<=legDist) → distance=100+100=200 / splitTime=40.0+legStart(57.0)=97.0
+    // leg3 distance=50(<=legDist) → distance=300+50=350 / splitTime=30.0+legStart(173.3)=203.3
     const withSplits = [
-      { ...freeRelay[0], split_times: [{ id: "a", distance: 100, split_time: 57.0 }] },
-      { ...freeRelay[1], split_times: [{ id: "b", distance: 100, split_time: 115.5 }] },
+      { ...freeRelay[0], split_times: [{ id: "a", distance: 100, split_time: 50.0 }] },
+      { ...freeRelay[1], split_times: [{ id: "b", distance: 100, split_time: 40.0 }] },
       { ...freeRelay[2], split_times: [] },
-      { ...freeRelay[3], split_times: [{ id: "c", distance: 50, split_time: 200.0 }] },
+      { ...freeRelay[3], split_times: [{ id: "c", distance: 50, split_time: 30.0 }] },
     ];
     const relay = buildStyleEntriesFromExisting(withSplits, STYLES).find((e) => e.relayEventId)!;
     const ds = (relay.relaySplitTimes ?? []).map((s) => ({ d: s.distance, t: s.splitTime }));
-    expect(ds).toContainEqual({ d: 100, t: 57.0 }); // leg0 offset0
-    expect(ds).toContainEqual({ d: 200, t: 115.5 }); // leg1 100+100
-    expect(ds).toContainEqual({ d: 350, t: 200.0 }); // leg3 300+50
+    expect(ds).toContainEqual({ d: 100, t: 50.0 }); // leg0 offset0, legStart=0
+    expect(ds).toContainEqual({ d: 200, t: 97.0 }); // leg1 100+100, splitTime 40.0+57.0
+    expect(ds).toContainEqual({ d: 350, t: 203.3 }); // leg3 300+50, splitTime 30.0+173.3
   });
 
   it("同一 style_id でも detectRelayEventId 不能な id (=999) は個人扱いのまま", () => {

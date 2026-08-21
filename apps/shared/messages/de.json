@@ -1672,6 +1672,7 @@
         "relayFullTeam": "Bitte wählen Sie für Staffeldisziplinen alle 4 Mitglieder aus",
         "relayAllTimes": "Bitte geben Sie für Staffeldisziplinen die Zeiten aller Schwimmer ein",
         "cumulativeTimeInverted": "Die kumulierte Zeit ist invertiert. Die kumulierte Zeit des {current}. Schwimmers muss größer sein als die des {prev}. Schwimmers.",
+        "relaySplitBeforeLegStart": "Die Zwischenzeit bei {distance}m ist ungültig. Bitte geben Sie einen Wert größer als die kumulierte Zeit zu Beginn des {leg}. Schwimmers ein.",
         "atLeastOneRecord": "Bitte geben Sie mindestens ein Ergebnis ein"
       },
       "error": {
@@ -4090,7 +4091,10 @@
       "formError_noStyle": "Bitte wählen Sie eine Disziplin aus",
       "formError_noTime": "Bitte geben Sie eine Zeit ein (Format: Min:Sek.Dezimal oder Sek.Dezimal)",
       "addRecord": "Eintrag hinzufügen",
-      "recordNumber": "Eintrag {n}"
+      "recordNumber": "Eintrag {n}",
+      "removeEventAria": "Disziplin entfernen",
+      "formError_duplicateStyle": "Dieselbe Disziplin ist auf mehreren Karten vorhanden. Bitte beheben Sie die Duplizierung.",
+      "formError_relaySplitNotSupported": "Zwischenzeiten für Staffelergebnisse können nicht gespeichert werden. Bitte entfernen Sie die Zwischenzeiten vor dem Speichern."
     },
     "tag": {
       "placeholder": "Tags auswählen oder erstellen",

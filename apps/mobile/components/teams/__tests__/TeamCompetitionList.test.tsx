@@ -23,6 +23,30 @@
  *
  * 日付は `new Date()` からの相対 (subDays/addDays) で生成し、固定日付をハードコードしない
  * (テスト実行日に依存して壊れることを防ぐ)。
+ *
+ * ---------------------------------------------------------------------
+ * 【重要: 期待値の反転について】(ユーザー報告バグ修正スプリント, PM確定方針)
+ * 上記 [SC-5 配線確認] / [SC-9] は元々「過去日でもエントリーボタン/バッジが表示され
+ * クリック可能」ことを固定していた。しかし新しい Sprint Contract の方針は逆で、
+ * 「過去の大会 (昨日以前 = date < today、既存の純粋関数 isCompetitionDateInPast と
+ * 完全一致) では非adminの『エントリー』ボタンを非表示にし、adminの entry_status
+ * バッジは表示は残すがタップ不可 (Pressable→View に降格) にする」。
+ * 以下の2つの describe ブロックはこの反転後の期待値に合わせて全面的に書き換えている
+ * (ブロック名は元の [SC-5]/[SC-9] 番号を維持しつつ [REVISED] を付す)。
+ * 実装前の現時点ではこれらは RED になる想定。
+ *
+ * [V-11] 過去日 + 非admin: 「エントリー」ボタンは存在しない (押せないので自己エントリー
+ *        導線 handleSelfEntry も物理的に発火し得ない。モーダル自体が一度も開かれない)
+ * [V-12] 過去日 + admin: entry_status バッジはラベル表示は残るが role=button ではない
+ *        (タップしても受付状況モーダルは一度も開かれない)
+ * [V-13][境界値] 今日/未来日は従来通り表示・クリック可能 (今日は過去扱いしない)
+ *
+ * なお「past date + entryStatus='closed' を渡されたモーダルが自己エントリー導線を
+ * 出さない」という防御の二重化 (defense-in-depth) は、このコンポーネントではなく
+ * TeamCompetitionEntryModal.test.tsx 側で entryStatus prop 単体として検証済み
+ * (entry_status !== 'open' なら「種目をエントリー」導線が出ない)。本ファイルでは
+ * 「そもそも導線 (ボタン/タップ可能なバッジ) 自体が過去日には存在しない」という
+ * 一段目のガードのみを検証する (二重に同じ主張をしてトートロジー化するのを避ける)。
  */
 
 import React from "react";
@@ -686,8 +710,8 @@ describe("TeamCompetitionList", () => {
     });
   });
 
-  describe("[SC-5 配線確認] モーダルへの isPastDate prop 伝播", () => {
-    it("過去日の大会をタップすると isPastDate: true がモーダルへ渡る", () => {
+  describe("[SC-5 REVISED][V-11] 過去日 + 非admin: エントリーボタンが存在しない", () => {
+    it("[V-11] 過去日の大会では「エントリー」ボタンが表示されない (旧[SC-5]の逆: 押せないので isPastDate 配線先のモーダル自体が開かない)", () => {
       const comp = makeCompetition({
         id: "c-ispast-true",
         date: PAST_DATE,
@@ -703,14 +727,14 @@ describe("TeamCompetitionList", () => {
       });
 
       render(<TeamCompetitionList teamId="team-ip1" isAdmin={false} />);
-      fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
 
-      expect(mocks.entryModalSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ isPastDate: true }),
-      );
+      expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
+      // 記録ボタンはこのスプリントの対象外 (スコープ外への副作用がないことの回帰ガード)
+      expect(screen.getByRole("button", { name: "記録" })).toBeDefined();
+      expect(mocks.entryModalSpy).not.toHaveBeenCalled();
     });
 
-    it("未来日の大会をタップすると isPastDate が真ではない (false/undefined) 値でモーダルへ渡る", () => {
+    it("[境界値] 未来日の大会では「エントリー」ボタンが表示され、タップするとモーダルへ isPastDate が真ではない (false/undefined) 値で渡る (非退行)", () => {
       const comp = makeCompetition({
         id: "c-ispast-false",
         date: FUTURE_DATE,
@@ -732,14 +756,12 @@ describe("TeamCompetitionList", () => {
       const lastCall = calls[calls.length - 1][0] as Record<string, unknown>;
       expect(lastCall.isPastDate).toBeFalsy();
     });
-  });
 
-  describe("[SC-9] 過去日大会でセルフエントリー導線が発火しない", () => {
-    it("非 admin: 過去日 + DB=open でもモーダルの自己エントリー導線は EntryForm へ navigate しない", () => {
+    it("[境界値] 今日の大会では「エントリー」ボタンが表示される (今日は過去扱いしない)", () => {
       const comp = makeCompetition({
-        id: "c-past-self",
-        date: PAST_DATE,
-        title: "過去大会セルフ",
+        id: "c-ispast-today",
+        date: TODAY_DATE,
+        title: "本日大会isPastDate",
         entry_status: "open",
       });
       mocks.useTeamCompetitionsQuery.mockReturnValue({
@@ -750,19 +772,14 @@ describe("TeamCompetitionList", () => {
         refetch: vi.fn(),
       });
 
-      render(<TeamCompetitionList teamId="team-past-self" isAdmin={false} />);
+      render(<TeamCompetitionList teamId="team-ip3" isAdmin={false} />);
 
-      fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
-      // モーダルへは派生後の 'closed' が渡ること (DB の 'open' そのままではない)
-      expect(mocks.entryModalSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ entryStatus: "closed" }),
-      );
-      fireEvent.click(screen.getByText("ENTRY_MODAL_OPEN"));
-
-      expect(mocks.navigate).not.toHaveBeenCalledWith("EntryForm", expect.anything());
+      expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
     });
+  });
 
-    it("admin: 過去日 + DB=open でバッジタップ後もモーダルの自己エントリー導線は EntryForm へ navigate しない", () => {
+  describe("[SC-9 REVISED][V-12] 過去日 + admin: entry_status バッジがタップ不可 (View に降格)", () => {
+    it("[V-12] 過去日大会のバッジはラベル「受付終了」を表示するが role=button ではなく、タップしてもモーダルは一度も開かれない (旧[SC-9]の逆)", () => {
       const comp = makeCompetition({
         id: "c-past-self-admin",
         date: PAST_DATE,
@@ -779,14 +796,61 @@ describe("TeamCompetitionList", () => {
 
       render(<TeamCompetitionList teamId="team-past-self-admin" isAdmin={true} />);
 
-      // バッジは派生後の '受付終了' ラベルでタップ対象になる
-      fireEvent.click(screen.getByRole("button", { name: "受付終了" }));
-      expect(mocks.entryModalSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ entryStatus: "closed", isAdmin: true }),
-      );
-      fireEvent.click(screen.getByText("ENTRY_MODAL_OPEN"));
+      // ラベル自体 (派生後の '受付終了') は表示される (SC-4/SC-8 と非退行)
+      expect(screen.getByText("受付終了")).toBeDefined();
+      // だが button ロールとしては存在しない (SC-3 の非adminと同じ非インタラクティブ表示に揃う)
+      expect(screen.queryByRole("button", { name: "受付終了" })).toBeNull();
+      expect(mocks.entryModalSpy).not.toHaveBeenCalled();
+    });
 
-      expect(mocks.navigate).not.toHaveBeenCalledWith("EntryForm", expect.anything());
+    it("[境界値] 未来日大会の admin バッジは引き続きタップ可能で受付状況モーダルが開く (非退行、[SC-2]と同一観点の日付境界版)", () => {
+      const comp = makeCompetition({
+        id: "c-future-admin-badge",
+        date: FUTURE_DATE,
+        title: "未来大会管理者バッジ",
+        entry_status: "open",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-future-admin" isAdmin={true} />);
+
+      const badge = screen.getByRole("button", { name: "受付中" });
+      fireEvent.click(badge);
+
+      expect(mocks.entryModalSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ entryStatus: "open", isAdmin: true }),
+      );
+    });
+
+    it("[境界値] 今日の大会の admin バッジは引き続きタップ可能 (今日は過去扱いしない)", () => {
+      const comp = makeCompetition({
+        id: "c-today-admin-badge",
+        date: TODAY_DATE,
+        title: "本日大会管理者バッジ",
+        entry_status: "open",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-today-admin" isAdmin={true} />);
+
+      const badge = screen.getByRole("button", { name: "受付中" });
+      fireEvent.click(badge);
+
+      expect(mocks.entryModalSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ entryStatus: "open", isAdmin: true }),
+      );
     });
   });
 

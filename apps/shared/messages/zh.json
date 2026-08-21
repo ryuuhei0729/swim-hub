@@ -1672,6 +1672,7 @@
         "relayFullTeam": "接力项目请选择全部4名成员",
         "relayAllTimes": "接力项目请输入所有泳者的成绩",
         "cumulativeTimeInverted": "累计成绩出现倒挂。第{current}棒的累计成绩需大于第{prev}棒。",
+        "relaySplitBeforeLegStart": "{distance}m处的分段成绩不正确。请输入大于第{leg}棒起点累计成绩的数值。",
         "atLeastOneRecord": "请至少输入一条成绩"
       },
       "error": {
@@ -4090,7 +4091,10 @@
       "formError_noStyle": "请选择项目",
       "formError_noTime": "请输入成绩（格式：分:秒.小数 或 秒.小数）",
       "addRecord": "添加记录",
-      "recordNumber": "记录 {n}"
+      "recordNumber": "记录 {n}",
+      "removeEventAria": "删除项目",
+      "formError_duplicateStyle": "存在多张相同项目的卡片，请先解决重复问题。",
+      "formError_relaySplitNotSupported": "接力记录的分段成绩无法保存。请先删除分段成绩后再保存。"
     },
     "tag": {
       "placeholder": "选择或创建标签",

@@ -164,6 +164,49 @@ export function calcLegTimesFromCumulative(cumulativeTimes: number[]): number[] 
 }
 
 /**
+ * leg 開始時点の通算タイム (秒) を返す純粋関数。legIdx=0 は必ず 0 (オフセットなし)。
+ *
+ * @param cumulativeTimes - `calcCumulativeTimes` が返す累計タイム配列
+ * @param legIdx - leg インデックス (0-3)
+ * @returns leg 開始時点の通算タイム (秒)
+ */
+export function getLegStartCumulative(cumulativeTimes: number[], legIdx: number): number {
+  if (legIdx <= 0) return 0;
+  return cumulativeTimes[legIdx - 1] ?? 0;
+}
+
+/**
+ * 通算 split タイム (リレー開始からの通算値) を leg 相対の split タイムに変換する純粋関数。
+ * 浮動小数点誤差を避けるため必ず小数第2位で丸める。
+ *
+ * @param cumulativeSplitTime - 通算 split タイム (秒)
+ * @param legStartCumulative - `getLegStartCumulative` で得た leg 開始時点の通算タイム (秒)
+ * @returns leg 相対の split タイム (秒)
+ */
+export function toLegRelativeSplitTime(
+  cumulativeSplitTime: number,
+  legStartCumulative: number,
+): number {
+  return Math.round((cumulativeSplitTime - legStartCumulative) * 100) / 100;
+}
+
+/**
+ * leg 相対の split タイムを通算 split タイムに変換する純粋関数 (`toLegRelativeSplitTime` の逆変換)。
+ * 編集フォームの再読込時に DB の leg 相対値から通算値を復元するために使う。
+ * 浮動小数点誤差を避けるため必ず小数第2位で丸める。
+ *
+ * @param legRelativeSplitTime - leg 相対の split タイム (秒)
+ * @param legStartCumulative - `getLegStartCumulative` で得た leg 開始時点の通算タイム (秒)
+ * @returns 通算 split タイム (秒)
+ */
+export function toCumulativeSplitTime(
+  legRelativeSplitTime: number,
+  legStartCumulative: number,
+): number {
+  return Math.round((legRelativeSplitTime + legStartCumulative) * 100) / 100;
+}
+
+/**
  * リレー種目の 1 leg あたりの距離を返す純粋関数。
  *
  * @param relayEventId - リレー種目 ID

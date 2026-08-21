@@ -54,6 +54,10 @@ interface RecordLogEntryProps {
   showTitle?: boolean;
   /** 外枠カード(枠線・背景)を外し、フィールドを直接並べる。外側で枠を持つ場合に使用 */
   bare?: boolean;
+  /** 種目カード自体を削除できるか (カードが2件以上の場合のみ true にする想定) */
+  canRemove?: boolean;
+  /** 種目カード削除ボタンのハンドラ。canRemove が true の場合のみ表示に使用される */
+  onRemove?: () => void;
 }
 
 /**
@@ -87,6 +91,8 @@ export default function RecordLogEntry({
   onPendingFile,
   showTitle = true,
   bare = false,
+  canRemove = false,
+  onRemove,
 }: RecordLogEntryProps) {
   const t = useTranslations("forms.recordLog");
   const tPremium = useTranslations("forms.premium");
@@ -251,7 +257,20 @@ export default function RecordLogEntry({
         currentBestTime) && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         {showTitle && (
-          <h4 className="text-base font-semibold text-gray-900">{t("eventHeader", { n: sectionIndex })}</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="text-base font-semibold text-gray-900">{t("eventHeader", { n: sectionIndex })}</h4>
+            {canRemove && (
+              <button
+                type="button"
+                onClick={onRemove}
+                className="text-red-500 hover:text-red-700"
+                aria-label={t("removeEventAria")}
+                data-testid={`record-entry-remove-button-${sectionIndex}`}
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
           {entryMatchesCurrentStyle && entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0 && (

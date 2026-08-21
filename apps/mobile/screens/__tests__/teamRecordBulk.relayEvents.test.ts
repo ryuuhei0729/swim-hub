@@ -12,6 +12,9 @@ import {
   detectRelayEventId,
   getRelayLegDistance,
   getRelayLegBoundaries,
+  getLegStartCumulative,
+  toLegRelativeSplitTime,
+  toCumulativeSplitTime,
   RelayEventId,
 } from "../teamRecordBulk/relayEvents";
 
@@ -124,5 +127,49 @@ describe("[mobile] buildRelayEvents ラベル", () => {
     expect(m50.legs[0].legLabel).toContain("背泳ぎ");
     expect(m50.legs[3].legLabel).toContain("第4泳者");
     expect(m50.legs[3].legLabel).toContain("自由形");
+  });
+});
+
+// =============================================================================
+// D1: リレー split の通算値 ⇔ leg 相対値の変換 (Sprint Contract — split_times 混入バグ修正)
+// Web 正準 (apps/web/__tests__/relayEvents.test.ts) と同一の期待値で mobile 移植を検証する。
+// =============================================================================
+describe("[mobile] getLegStartCumulative", () => {
+  it("legIdx=0 は常に 0 を返す (先頭泳者はオフセット無し)", () => {
+    expect(getLegStartCumulative([57.0, 115.5, 173.3, 230.0], 0)).toBe(0);
+  });
+
+  it("legIdx=1..3 は cumulativeTimes[legIdx-1] を返す", () => {
+    const cumulatives = [57.0, 115.5, 173.3, 230.0];
+    expect(getLegStartCumulative(cumulatives, 1)).toBe(57.0);
+    expect(getLegStartCumulative(cumulatives, 2)).toBe(115.5);
+    expect(getLegStartCumulative(cumulatives, 3)).toBe(173.3);
+  });
+});
+
+describe("[mobile] toLegRelativeSplitTime / toCumulativeSplitTime (互いの逆変換)", () => {
+  it("legStart=0 のとき、通算値と leg相対値は等しい (第1泳者は無変換)", () => {
+    expect(toLegRelativeSplitTime(57.0, 0)).toBe(57.0);
+    expect(toCumulativeSplitTime(57.0, 0)).toBe(57.0);
+  });
+
+  it("通算値からleg開始タイムを引いた値がleg相対値になる (Sprint Contract 真因の修正対象)", () => {
+    // 4x200mフリーリレー第4泳者の実データ相当 (Success Criteria S1)
+    expect(toLegRelativeSplitTime(459.86, 399.86)).toBe(60.0);
+    expect(toLegRelativeSplitTime(493.98, 399.86)).toBe(94.12);
+    expect(toLegRelativeSplitTime(530.28, 399.86)).toBe(130.42);
+  });
+
+  it("toCumulativeSplitTime は toLegRelativeSplitTime の厳密な逆変換である", () => {
+    const legStart = 399.86;
+    for (const cumulative of [459.86, 493.98, 530.28, 536.4]) {
+      const legRelative = toLegRelativeSplitTime(cumulative, legStart);
+      expect(toCumulativeSplitTime(legRelative, legStart)).toBe(cumulative);
+    }
+  });
+
+  it("小数第2位で丸める (浮動小数点誤差を吸収する既存規約に揃える)", () => {
+    expect(toLegRelativeSplitTime(30.31, 10.11)).toBe(20.2);
+    expect(toCumulativeSplitTime(20.2, 10.11)).toBe(30.31);
   });
 });

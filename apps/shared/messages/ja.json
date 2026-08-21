@@ -1672,6 +1672,7 @@
         "relayFullTeam": "リレー種目はメンバー4名全員を選択してください",
         "relayAllTimes": "リレー種目はすべての泳者のタイムを入力してください",
         "cumulativeTimeInverted": "累計タイムが逆転しています。第{current}泳者の累計タイムは第{prev}泳者より大きい値を入力してください。",
+        "relaySplitBeforeLegStart": "{distance}m地点のスプリットタイムが不正です。第{leg}泳者の開始時点の累計タイムより大きい値を入力してください。",
         "atLeastOneRecord": "少なくとも1つの記録を入力してください"
       },
       "error": {
@@ -4090,7 +4091,10 @@
       "formError_noStyle": "種目を選択してください",
       "formError_noTime": "タイムを入力してください（形式: 分:秒.小数 または 秒.小数）",
       "addRecord": "記録を追加",
-      "recordNumber": "記録 {n}"
+      "recordNumber": "記録 {n}",
+      "removeEventAria": "種目を削除",
+      "formError_duplicateStyle": "同じ種目のカードが複数あります。重複を解消してください",
+      "formError_relaySplitNotSupported": "リレー記録のスプリット(経過タイム)は保存できません。スプリットを削除してから保存してください"
     },
     "tag": {
       "placeholder": "タグを選択または作成",

@@ -33,6 +33,7 @@ export default function RecordLogForm({
   competitionDate,
   poolType = 0,
   editData,
+  initialRecords,
   isLoading = false,
   styles = EMPTY_STYLES,
   entryDataList = EMPTY_ENTRY_DATA_LIST,
@@ -97,9 +98,11 @@ export default function RecordLogForm({
     handleSplitTimeChange,
     prepareSubmitData,
     isSplitTimeLimitReached,
+    removeFormData,
   } = useRecordLogForm({
     isOpen,
     editData,
+    initialRecords,
     entryDataList,
     styles,
     isPremium,
@@ -168,6 +171,42 @@ export default function RecordLogForm({
 
     if (submitList.length === 0) {
       setFormError(t("formError_noTime"));
+      setIsSubmitted(false);
+      return;
+    }
+
+    // 事前バリデーション: 同じ種目 (styleId) かつ同じリレー区分 (isRelaying) の
+    // カードが複数あると、既存記録の UPDATE と新規カードの CREATE が両方走り、
+    // 同じ種目・同じ区分に重複行が生成される (W2)。書き込む前に弾く。
+    // 順序制御や保存後の整合修正では対処しない。
+    // 注意: styleId 単独ではなく (styleId, isRelaying) の複合キーで判定する。
+    // 水泳競技では「個人種目の 100m Fr」と「リレーの1泳者として泳いだ 100m Fr」は
+    // 別レースであり、同じ大会・同じ種目で両方に記録が存在するのは正当なデータ
+    // (records/entries とも (user_id, competition_id, style_id) の UNIQUE 制約は無い)。
+    // styleId だけで判定すると、この正当な組み合わせを誤って重複と見なしてしまう。
+    const duplicateKeyOf = (item: { styleId: string; isRelaying: boolean }) =>
+      `${item.styleId}:${item.isRelaying}`;
+    const hasDuplicateStyle = submitList.some(
+      (item, index) =>
+        submitList.findIndex((other) => duplicateKeyOf(other) === duplicateKeyOf(item)) !==
+        index,
+    );
+    if (hasDuplicateStyle) {
+      setFormError(t("formError_duplicateStyle"));
+      setIsSubmitted(false);
+      return;
+    }
+
+    // 事前バリデーション (Reviewer指摘, Warning): 読み込み時点でリレーだった既存記録
+    // (existingRecordWasRelaying) はこの画面では split_times への書き込みを一切行わない
+    // (C1: リレーの split は読まないし書かないという安全策)。そのため、ユーザーが手動で
+    // スプリット行を追加してもエラー無く静かに保存されない ("保存したのに消えた" 体験)。
+    // DB は破壊されない安全側の失敗だが、無言のままにせず保存前に明示してブロックする。
+    const hasBlockedRelaySplitInput = submitList.some(
+      (item) => item.existingRecordWasRelaying && item.splitTimes.length > 0,
+    );
+    if (hasBlockedRelaySplitInput) {
+      setFormError(t("formError_relaySplitNotSupported"));
       setIsSubmitted(false);
       return;
     }
@@ -275,7 +314,18 @@ export default function RecordLogForm({
                 </div>
               )}
               {formDataList.map((formData, index) => {
-                const entryInfo = entryDataList[index];
+                // entryDataList は formDataList とは別の配列で、カード削除で formDataList
+                // の要素が詰まっても entryDataList はそのまま (index が対応しない)。
+                // styleId で紐付けることで、削除後も残ったカードが正しいエントリー情報を
+                // 参照できるようにする。
+                // 注記 (W1, QA実測): entries テーブルの style_id には DB 上の UNIQUE 制約は
+                // 存在しない (supabase/migrations/20251201014342_initial_schema.sql)。
+                // そのためユーザーが2枚のカードを同じ種目に変更した場合、両カードが同じ
+                // entryDataList 要素にマッチし、同じバッジが重複表示されうる
+                // (データ破損ではないが表示上の重複。W2 の保存時重複行防止バリデーションとは別問題)。
+                const entryInfo = entryDataList.find(
+                  (entry) => String(entry.styleId) === formData.styleId,
+                );
 
                 return (
                   <RecordLogEntry
@@ -311,6 +361,8 @@ export default function RecordLogForm({
                         ? (file, thumbnail) => handlePendingFileChange(index, file, thumbnail)
                         : undefined
                     }
+                    canRemove={formDataList.length > 1}
+                    onRemove={() => removeFormData(index)}
                   />
                 );
               })}

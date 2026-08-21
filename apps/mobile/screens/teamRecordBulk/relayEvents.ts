@@ -143,6 +143,37 @@ export function calcLegTimesFromCumulative(cumulativeTimes: number[]): number[] 
   });
 }
 
+/**
+ * leg 開始時点の通算タイム (秒) を返す純粋関数。legIdx=0 は 0。
+ * web 正準 `relayEvents.ts` の挙動を複製 (この 2 ファイルは shared 化されておらず複製運用)。
+ */
+export function getLegStartCumulative(cumulativeTimes: number[], legIdx: number): number {
+  if (legIdx <= 0) return 0;
+  return cumulativeTimes[legIdx - 1] ?? 0;
+}
+
+/**
+ * 通算 split 値 → leg 相対 split 値。
+ * web 正準 `relayEvents.ts` の挙動を複製。
+ */
+export function toLegRelativeSplitTime(
+  cumulativeSplitTime: number,
+  legStartCumulative: number,
+): number {
+  return Math.round((cumulativeSplitTime - legStartCumulative) * 100) / 100;
+}
+
+/**
+ * leg 相対 split 値 → 通算 split 値 (編集フォーム復元用の逆変換)。
+ * web 正準 `relayEvents.ts` の挙動を複製。
+ */
+export function toCumulativeSplitTime(
+  legRelativeSplitTime: number,
+  legStartCumulative: number,
+): number {
+  return Math.round((legRelativeSplitTime + legStartCumulative) * 100) / 100;
+}
+
 /** リレー種目の 1 leg あたりの距離を返す純粋関数。 */
 export function getRelayLegDistance(relayEventId: RelayEventId): number {
   const legDistMap: Record<RelayEventId, number> = {

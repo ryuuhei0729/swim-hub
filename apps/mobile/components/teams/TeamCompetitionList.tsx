@@ -66,6 +66,9 @@ const CompetitionItem = React.memo(function CompetitionItem({
   const entryStatus = resolveEntryStatus(competition.date, competition.entry_status);
   const badge = ENTRY_STATUS_BADGE[entryStatus];
   const entryStatusLabel = t(`teams.competitions.entryStatus.${entryStatus}`);
+  // 過去大会 (昨日以前) はエントリー導線を無効化する (web とのパリティ)。
+  // 今日・未来日は表示/タップ可能のまま維持する。
+  const isPastCompetition = isCompetitionDateInPast(competition.date);
 
   return (
     <View style={styles.item}>
@@ -125,7 +128,7 @@ const CompetitionItem = React.memo(function CompetitionItem({
         )}
       </Pressable>
       <View style={styles.statusRow}>
-        {isAdmin ? (
+        {isAdmin && !isPastCompetition ? (
           <Pressable
             style={[styles.entryStatusBadge, styles.entryStatusBadgeAdmin, badge.container]}
             onPress={() => onEntry(competition)}
@@ -147,15 +150,17 @@ const CompetitionItem = React.memo(function CompetitionItem({
       <View style={styles.entryRecordRow}>
         {!isAdmin && (
           <>
-            <Pressable
-              style={styles.entryButton}
-              onPress={() => onEntry(competition)}
-              accessibilityRole="button"
-              accessibilityLabel={t("teams.mobile.teamCompetitionList.entryButton")}
-            >
-              <Feather name="log-in" size={13} color="#2563EB" />
-              <Text style={styles.entryButtonText}>{t("teams.mobile.teamCompetitionList.entryButton")}</Text>
-            </Pressable>
+            {!isPastCompetition && (
+              <Pressable
+                style={styles.entryButton}
+                onPress={() => onEntry(competition)}
+                accessibilityRole="button"
+                accessibilityLabel={t("teams.mobile.teamCompetitionList.entryButton")}
+              >
+                <Feather name="log-in" size={13} color="#2563EB" />
+                <Text style={styles.entryButtonText}>{t("teams.mobile.teamCompetitionList.entryButton")}</Text>
+              </Pressable>
+            )}
             <Pressable
               style={styles.recordButton}
               onPress={() => onRecord(competition)}
@@ -389,6 +394,8 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
             entryModalCompetition.date,
             entryModalCompetition.entry_status,
           )}
+          // 現在の導線は過去日で isPastCompetition によりゲート済みのため true にはならないが、
+          // 直接呼び出し（テスト等）に対する保険として渡し続ける。
           isPastDate={isCompetitionDateInPast(entryModalCompetition.date)}
           isAdmin={isAdmin}
           onSelfEntry={(currentStatus) => handleSelfEntry(entryModalCompetition, currentStatus)}
