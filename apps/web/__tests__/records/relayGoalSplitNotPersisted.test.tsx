@@ -176,7 +176,11 @@ describe("RecordClient — distance===legDist(=raceDistance) の split は保存
       fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
       await waitFor(() => {
-        expect(mocks.push).toHaveBeenCalledWith("/teams/team-1?tab=competitions");
+        // 方式E (2026-08-25確定, Sprint Contract: recordSaveGuard.test.tsx と同様): RecordClient は
+        // teams-admin/ からしか到達できない admin 専用画面のため、保存成功後の遷移先は
+        // 無条件に /teams-admin/ に固定される。本テストの主眼は split_times payload の検証だが、
+        // 「保存が成功したこと」の確認として push 先も実測しているため、方式E に合わせて更新する。
+        expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
       });
 
       const splitTimeInserts = mocks.insertCalls.filter((c) => c.table === "split_times");

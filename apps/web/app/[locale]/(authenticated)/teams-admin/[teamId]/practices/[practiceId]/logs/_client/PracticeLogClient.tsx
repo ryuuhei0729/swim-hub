@@ -548,7 +548,7 @@ export default function PracticeLogClient({
       }
 
       // 成功時はリダイレクト
-      router.push(`/teams/${teamId}?tab=practices`);
+      router.push(`/teams-admin/${teamId}?tab=practices`);
     } catch (err) {
       console.error("チーム練習ログ作成エラー:", err);
       setSubmitError(t("practiceLog.errorSave"));
@@ -558,7 +558,7 @@ export default function PracticeLogClient({
   };
 
   const handleBack = () => {
-    router.push(`/teams/${teamId}?tab=practices`);
+    router.push(`/teams-admin/${teamId}?tab=practices`);
   };
 
   // OCR結果をフォームに反映

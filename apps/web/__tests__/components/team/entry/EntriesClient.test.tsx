@@ -198,6 +198,52 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
   );
 
   it(
+    "保存成功後は /teams-admin/team-1?tab=competitions へ遷移する（人間の意図: " +
+      "方式E [2026-08-25確定]。EntriesDataLoader は role !== 'admin' を server 側で" +
+      "redirect 済みのため、この画面に到達できるのは常に admin だけであり、" +
+      "戻り先は一般メンバー画面 [/teams/] ではなく管理者画面 [/teams-admin/] に固定してよい。" +
+      "完全一致で assert し、/teams/team-1?tab=competitions を受理してしまう緩い assert " +
+      "[toContain 等] を避ける)",
+    async () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+      renderEntriesClient(existingEntries);
+
+      const select = screen.getByRole("combobox");
+      fireEvent.change(select, { target: { value: "9" } });
+
+      fireEvent.click(screen.getByRole("button", { name: "saveButton" }));
+      fireEvent.click(await screen.findByRole("button", { name: "confirmButton" }));
+
+      await waitFor(() => {
+        expect(mocks.push).toHaveBeenCalledTimes(1);
+      });
+      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+    },
+  );
+
+  it(
+    "ヘッダーの戻るボタンを押すと /teams-admin/team-1?tab=competitions へ遷移する " +
+      "（人間の意図: 方式E [2026-08-25確定]。保存成功後と同じく戻り先は teams-admin に" +
+      "固定する。保存APIは一切呼ばれないこと [＝副作用なしのナビゲーションのみ] も併せて確認する)",
+    () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+      renderEntriesClient(existingEntries);
+
+      fireEvent.click(screen.getByRole("button", { name: "record.backButton" }));
+
+      expect(mocks.push).toHaveBeenCalledTimes(1);
+      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.updateEntry).not.toHaveBeenCalled();
+      expect(mocks.createBulkEntries).not.toHaveBeenCalled();
+      expect(mocks.deleteBulkEntries).not.toHaveBeenCalled();
+    },
+  );
+
+  it(
     "保存中に Postgres の UNIQUE制約違反 (code: 23505) が発生した場合、" +
       "saveFailedDuplicate の分岐メッセージが表示される（人間の意図: 事前バリデーションで" +
       "弾けなかった同時編集等のレースコンディションに対するフォールバック文言。" +
