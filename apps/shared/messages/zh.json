@@ -1025,6 +1025,8 @@
       "unknownStyle": "未知",
       "styleAlreadyEntered": "项目「{name}」已报名",
       "fetchCompetitionInfoFailed": "获取比赛信息失败",
+      "competitionSaveBlockedUnresolved": "无法确认比赛信息，已中止保存。请稍后重试。",
+      "competitionSaveBlockedDateInvalid": "无法确认日期的一致性，已中止保存。请检查开始日期和结束日期后重试。",
       "videoUploadPartialCompetition": "比赛和记录已创建，但视频上传失败。请从详情页面重新添加。",
       "statusBefore": "报名未开始",
       "statusClosed": "报名已截止",

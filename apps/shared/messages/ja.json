@@ -1025,6 +1025,8 @@
       "unknownStyle": "不明",
       "styleAlreadyEntered": "種目「{name}」は既にエントリー済みです",
       "fetchCompetitionInfoFailed": "大会情報の取得に失敗しました",
+      "competitionSaveBlockedUnresolved": "大会情報を確認できなかったため、保存を中止しました。時間をおいて再度お試しください。",
+      "competitionSaveBlockedDateInvalid": "終了日と開始日の整合性を確認できなかったため、保存を中止しました。開始日・終了日を確認して再度お試しください。",
       "videoUploadPartialCompetition": "大会と記録は作成されましたが、動画のアップロードに失敗しました。詳細画面から再度追加してください。",
       "statusBefore": "受付前",
       "statusClosed": "受付終了",

@@ -1025,6 +1025,8 @@
       "unknownStyle": "Unbekannt",
       "styleAlreadyEntered": "Für die Disziplin „{name}“ liegt bereits eine Meldung vor",
       "fetchCompetitionInfoFailed": "Wettkampfinformationen konnten nicht abgerufen werden",
+      "competitionSaveBlockedUnresolved": "Die Wettkampfinformationen konnten nicht bestätigt werden, daher wurde der Speichervorgang abgebrochen. Bitte versuchen Sie es später erneut.",
+      "competitionSaveBlockedDateInvalid": "Die Datumskonsistenz konnte nicht bestätigt werden, daher wurde der Speichervorgang abgebrochen. Bitte überprüfen Sie Start- und Enddatum und versuchen Sie es erneut.",
       "videoUploadPartialCompetition": "Wettkampf und Ergebnis wurden erstellt, aber der Video-Upload ist fehlgeschlagen. Bitte fügen Sie es über die Detailansicht erneut hinzu.",
       "statusBefore": "Noch nicht geöffnet",
       "statusClosed": "Geschlossen",

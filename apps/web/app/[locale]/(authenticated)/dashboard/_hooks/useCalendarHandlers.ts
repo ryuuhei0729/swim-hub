@@ -2,6 +2,8 @@
 // カレンダーイベントハンドラー用カスタムフック
 // =============================================================================
 
+"use client";
+
 import type { EditingData, EntryWithStyle } from "@/stores/types";
 import type {
   CalendarItemType,
@@ -266,11 +268,12 @@ export function useCalendarHandlers({
             let dateStr = competitionMeta?.date || item.date;
             let title = competitionMeta?.title || item.title || "";
             let place = competitionMeta?.place || "";
+            let poolType = competitionMeta?.pool_type;
 
             try {
               const { data: competitionData, error: competitionError } = await supabase
                 .from("competitions")
-                .select("entry_status, date, title, place")
+                .select("entry_status, date, title, place, pool_type")
                 .eq("id", competitionId)
                 .single();
 
@@ -280,12 +283,14 @@ export function useCalendarHandlers({
                   date?: string | null;
                   title?: string | null;
                   place?: string | null;
+                  pool_type?: number | null;
                 };
                 fetched = true;
                 status = cd.entry_status || "before";
                 dateStr = cd.date || dateStr;
                 title = cd.title || title;
                 place = cd.place || place;
+                poolType = cd.pool_type ?? poolType;
               }
             } catch (err: unknown) {
               console.error("エントリーステータスの取得エラー:", err);
@@ -298,6 +303,7 @@ export function useCalendarHandlers({
               date: dateStr,
               title,
               place,
+              pool_type: poolType,
             } as EditingData;
 
             // フェッチ失敗時は従来どおりエントリー編集を許可する
@@ -324,6 +330,7 @@ export function useCalendarHandlers({
               date: competitionMeta?.date || item.date,
               title: competitionMeta?.title || item.title || "",
               place: competitionMeta?.place || "",
+              pool_type: competitionMeta?.pool_type,
             } as EditingData;
 
             openCompetitionTabModal(entryDate, competitionEditingData, "entry");
@@ -590,6 +597,7 @@ export function useCalendarHandlers({
             date: cd.date || "",
             title: cd.title || "",
             place: cd.place || "",
+            pool_type: cd.pool_type,
           } as EditingData;
 
           const compDateObj = competitionDate ? parseDateString(competitionDate) : new Date();
@@ -645,7 +653,7 @@ export function useCalendarHandlers({
         try {
           const { data: competitionRow } = await supabase
             .from("competitions")
-            .select("id, date, title, place")
+            .select("id, date, title, place, pool_type")
             .eq("id", competitionId)
             .single();
 
@@ -655,6 +663,7 @@ export function useCalendarHandlers({
               date: string;
               title?: string | null;
               place?: string | null;
+              pool_type?: number | null;
             };
             const compDate = parseDateString(cr.date);
             const competitionEditingData: EditingData = {
@@ -663,6 +672,7 @@ export function useCalendarHandlers({
               date: cr.date,
               title: cr.title || "",
               place: cr.place || "",
+              pool_type: cr.pool_type,
             } as EditingData;
             openCompetitionTabModal(compDate, competitionEditingData, "record");
             return;

@@ -59,6 +59,10 @@ const baseParams = (overrides: Partial<CompetitionTabSaveParams> = {}): Competit
     editingCompetitionId: null,
     originalEntryIds: [],
     originalRecordIds: [],
+    // Sprint Contract D-3: CompetitionTabModal が実際に渡すフィールド。このファイルの既存テスト群は
+    // 「大会本体が正常に解決されている」通常フローを検証する契約なので true をデフォルトにする
+    // (D-3 ガード自体の contract テストは __tests__/hooks/useCompetitionTabSave.poolType.test.tsx)。
+    competitionRowResolved: true,
     ...overrides,
   }) as CompetitionTabSaveParams;
 

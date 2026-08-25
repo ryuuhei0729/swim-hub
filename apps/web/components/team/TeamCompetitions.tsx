@@ -42,7 +42,8 @@ import type {
   StyleOption,
 } from "@/components/forms/record-log/types";
 import type { EntryInfo } from "@apps/shared/types/ui";
-import type { RecordInsert, RecordUpdate } from "@apps/shared/types";
+import type { RecordInsert, RecordUpdate, PoolType } from "@apps/shared/types";
+import { isPoolType } from "@apps/shared/types";
 import type { EditingData } from "@/stores/types";
 
 const CompetitionBasicForm = dynamic(
@@ -58,8 +59,9 @@ export interface TeamCompetition {
   team_id: string;
   title: string;
   date: string;
+  end_date: string | null;
   place: string | null;
-  pool_type: number;
+  pool_type: PoolType;
   entry_status?: "before" | "open" | "closed";
   note: string | null;
   created_at: string;
@@ -114,6 +116,7 @@ interface RawCompetitionData {
   team_id: string;
   title: string;
   date: string;
+  end_date?: string | null;
   place: string | null;
   pool_type?: number | null;
   entry_status: string | null;
@@ -174,8 +177,10 @@ function mapToTeamCompetitions(
       team_id: item.team_id,
       title: item.title,
       date: item.date,
+      end_date: item.end_date ?? null,
       place: item.place,
-      pool_type: item.pool_type ?? 0,
+      // DB 由来の生の数値を PoolType (0 | 1) の値域に narrowing する。範囲外/NULL は 0 (短水路) にフォールバック
+      pool_type: isPoolType(item.pool_type) ? item.pool_type : 0,
       entry_status: isValidEntryStatus(item.entry_status)
         ? item.entry_status
         : undefined,
@@ -277,6 +282,7 @@ export default function TeamCompetitions({
             team_id,
             title,
             date,
+            end_date,
             place,
             pool_type,
             entry_status,
@@ -348,8 +354,10 @@ export default function TeamCompetitions({
       id: competition.id,
       type: "competition",
       date: competition.date,
+      end_date: competition.end_date || "",
       title: competition.title,
       place: competition.place || "",
+      pool_type: competition.pool_type,
       note: competition.note || "",
     } as EditingData);
   };
@@ -675,8 +683,8 @@ export default function TeamCompetitions({
           // C2: INSERT 用の完全指定オブジェクトを UPDATE に転用すると、フォームに
           // 現れないフィールド (video_thumbnail_path 等) を意図せず null で潰す。
           // RecordUpdate は Partial なので、この画面で変更しうるフィールドのみを
-          // 明示的に組み立てる (competition_id/team_id/pool_type はこの画面では
-          // 不変のため送らない)
+          // 明示的に組み立てる (competition_id/team_id はこの画面では不変のため送らない。
+          // pool_type は競技会側の破損データからの自己修復のため明示的に揃える。D-6)
           const updatePayload: RecordUpdate = {
             style_id: parseInt(formData.styleId, 10),
             time: formData.time,
@@ -684,6 +692,9 @@ export default function TeamCompetitions({
             video_thumbnail_path: formData.videoThumbnailPath || null,
             note: formData.note || null,
             is_relaying: formData.isRelaying || false,
+            // D-6: 保存対象の競技会の pool_type に揃える(自分の記録を保存する経路の中だけ)。
+            // 競技会本体が短水路(0)に破壊された後に長水路(1)へ修正したケースで、記録側も追随させる。
+            pool_type: selfRecordCompetition.pool_type,
             reaction_time: reactionTime,
           };
           const updatedRecord = await recordAPI.updateRecord(
@@ -719,7 +730,7 @@ export default function TeamCompetitions({
             note: formData.note || null,
             is_relaying: formData.isRelaying || false,
             reaction_time: reactionTime,
-            pool_type: selfRecordCompetition.pool_type === 1 ? 1 : 0,
+            pool_type: selfRecordCompetition.pool_type,
           };
           const newRecord = await recordAPI.createRecord(createPayload);
           if (formData.splitTimes.length > 0) {
@@ -1061,10 +1072,13 @@ export default function TeamCompetitions({
             editingData
               ? {
                   date: (editingData as { date?: string }).date,
+                  end_date:
+                    (editingData as { end_date?: string | null }).end_date,
                   title:
                     (editingData as { title?: string | null }).title ??
                     undefined,
                   place: (editingData as { place?: string }).place,
+                  pool_type: (editingData as { pool_type?: number }).pool_type,
                   note: (editingData as { note?: string }).note,
                 }
               : undefined
@@ -1119,7 +1133,7 @@ export default function TeamCompetitions({
             selfRecordCompetition.title || t("competitions.fallbackTitle")
           }
           competitionDate={selfRecordCompetition.date}
-          poolType={selfRecordCompetition.pool_type === 1 ? 1 : 0}
+          poolType={selfRecordCompetition.pool_type}
           isLoading={selfRecordLoading}
           styles={selfRecordStyles}
           entryDataList={selfRecordEntryDataList}

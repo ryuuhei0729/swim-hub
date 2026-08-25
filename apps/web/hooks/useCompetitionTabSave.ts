@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
 import { EntryAPI, CompetitionAPI } from "@apps/shared/api";
+import { isPoolType } from "@apps/shared/types";
 import type { Style } from "@apps/shared/types";
 import {
   computeEntryDiff,
@@ -85,7 +86,16 @@ export function useCompetitionTabSave({
     async (params: CompetitionTabSaveParams) => {
       if (!user?.id) throw new Error(t("authRequired"));
 
-      const { basicData, imageData, entries, records, editingCompetitionId: paramEditingId, originalEntryIds, originalRecordIds } = params;
+      const {
+        basicData,
+        imageData,
+        entries,
+        records,
+        editingCompetitionId: paramEditingId,
+        originalEntryIds,
+        originalRecordIds,
+        competitionRowResolved,
+      } = params;
 
       setCompetitionLoading(true);
       let competitionId: string | null = paramEditingId;
@@ -104,7 +114,7 @@ export function useCompetitionTabSave({
           });
           competitionId = created.id;
           setEditingCompetitionId(competitionId);
-        } else {
+        } else if (competitionRowResolved) {
           await updateCompetition(competitionId, {
             date: basicData.date,
             end_date: endDate,
@@ -114,6 +124,9 @@ export function useCompetitionTabSave({
             note: basicData.note || null,
           });
         }
+        // competitionRowResolved === false (D-3): 大会本体が DB から未解決のまま。
+        // basicData は暫定値の可能性があるため pool_type 等を推測で書き込まず、
+        // 競技会本体の UPDATE をスキップする。エントリー/記録の保存は続行する。
 
         // ── 2. 画像処理 ──
         if (competitionId && imageData) {
@@ -235,12 +248,15 @@ export function useCompetitionTabSave({
       }
 
       // ── 4. レコード (children) diff ADD / UPDATE / DELETE ──
-      const { data: competition } = await supabase
-        .from("competitions")
-        .select("pool_type")
-        .eq("id", competitionId!)
-        .single();
-      const poolType = (competition as { pool_type: 0 | 1 } | null)?.pool_type ?? 0;
+      // pool_type は params.basicData.poolType を直接使う (Warning, R2)。この値は呼び出し元
+      // (CompetitionTabModal) が新規作成時は init 時に強制 resolved、編集時は DB 再取得の成功
+      // (失敗時は throw して保存自体が行われない) によってのみ確定させているため、ここで
+      // competitions テーブルを再 SELECT するのは構造的に冗長。再 SELECT を消すことで、
+      // それが失敗した場合に ?? 0 で長水路の大会に短水路の記録を作ってしまう非対称も
+      // 構造的に無くなる (Critical 1 が塞いだ穴がここにも残らない)。
+      // basicData.poolType は number 型 (フォーム state) のため、DB 書き込み型 PoolType (0 | 1)
+      // への境界で narrowing する。範囲外の値は来ない前提だが、来た場合は 0 にフォールバックする。
+      const poolType = isPoolType(basicData.poolType) ? basicData.poolType : 0;
 
       const recordDiff = computeRecordDiff(records, originalRecordIds);
 
@@ -257,6 +273,8 @@ export function useCompetitionTabSave({
           video_path: formData.videoPath || null,
           note: formData.note || null,
           is_relaying: formData.isRelaying || false,
+          // D-6: 保存対象の競技会の pool_type に揃える (自分の記録を保存する経路の中だけ。RLS 下で自分の行のみ更新される)。
+          pool_type: poolType,
           reaction_time: formData.reactionTime?.trim() ? parseFloat(formData.reactionTime) : null,
         });
         if (formData.splitTimes?.length) {

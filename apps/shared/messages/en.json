@@ -1022,6 +1022,8 @@
       "unknownStyle": "Unknown",
       "styleAlreadyEntered": "Event \"{name}\" has already been entered",
       "fetchCompetitionInfoFailed": "Failed to fetch competition information",
+      "competitionSaveBlockedUnresolved": "Could not verify the competition information, so the save was stopped. Please try again after a moment.",
+      "competitionSaveBlockedDateInvalid": "Could not verify date consistency, so the save was stopped. Please check the start and end dates and try again.",
       "videoUploadPartialCompetition": "Competition and result were created, but video upload failed. Please try again from the details screen.",
       "statusBefore": "Not open yet",
       "statusClosed": "Closed",
