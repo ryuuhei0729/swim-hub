@@ -4,11 +4,12 @@ import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseISO, isValid } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
+import { recordKeys } from "@apps/shared/hooks/queries/keys";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { STYLE_CODE_TO_ABBREV } from "@apps/shared/utils/swimStyles";
@@ -36,6 +37,7 @@ import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import type { MainStackParamList } from "@/navigation/types";
 import type { RecordWithDetails } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 type RecordsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -52,7 +54,7 @@ export const RecordsScreen: React.FC = () => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
   const { supabase, user } = useAuth();
   const { t, i18n } = useTranslation();
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const [displayCount, setDisplayCount] = useState(PAGE_INCREMENT);
 
   // 並べ替え/絞り込みボトムシートの開閉状態(排他制御: 同時に開かない)
@@ -488,22 +490,32 @@ export const RecordsScreen: React.FC = () => {
     ],
   );
 
-  // タブ遷移時にデータ再取得(記録一覧 + エントリー済み(記録未登録)セクション)
-  const refetchAll = useCallback(() => {
-    refetch();
-    refetchEntryOnly();
-  }, [refetch, refetchEntryOnly]);
-  useRefreshOnFocus(refetchAll);
+  // 選択した日付のカレンダーエントリー（DayDetailModal表示用）
+  const {
+    data: dayEntries = [],
+    isLoading: isDayEntriesLoading,
+    isError: isDayEntriesError,
+    refetch: refetchDayEntries,
+  } = useDayEntriesQuery(supabase, modalDate);
+
+  // この画面と子孫(RecordItem配下のBestTimeBadgeが保持するuseListBestCandidatesQuery)が
+  // 依存する全クエリを尽くす。ベスト候補クエリは (userId, styleId, isRelaying, poolType) の
+  // 組み合わせごとに queryKey が分かれ画面側からは個々の filters を再現できないため、
+  // recordKeys.bestCandidates() の前方一致で invalidate する
+  const refreshAll = useCallback(async () => {
+    await Promise.allSettled([
+      refetch(),
+      refetchEntryOnly(),
+      refetchDayEntries(),
+      queryClient.invalidateQueries({ queryKey: recordKeys.bestCandidates() }),
+    ]);
+  }, [refetch, refetchEntryOnly, refetchDayEntries, queryClient]);
+
+  // タブ遷移時にデータ再取得
+  useRefreshOnFocus(refreshAll);
 
   // プルリフレッシュ処理
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([refetch(), refetchEntryOnly()]);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch, refetchEntryOnly]);
+  const { refreshing, handleRefresh } = usePullToRefresh(refreshAll);
 
   // 無限スクロール(displayCount を増やすのみ。ネットワーク再フェッチは行わない)。
   // 既に全件表示済みの場合は onEndReached の連続発火で無駄な再レンダーを起こさないよう
@@ -512,14 +524,6 @@ export const RecordsScreen: React.FC = () => {
     if (displayCount >= sortedRecords.length) return;
     setDisplayCount((count) => count + PAGE_INCREMENT);
   }, [displayCount, sortedRecords.length]);
-
-  // 選択した日付のカレンダーエントリー（DayDetailModal表示用）
-  const {
-    data: dayEntries = [],
-    isLoading: isDayEntriesLoading,
-    isError: isDayEntriesError,
-    refetch: refetchDayEntries,
-  } = useDayEntriesQuery(supabase, modalDate);
 
   // 削除/変更後は一覧とモーダルの両方を再取得する(エントリー済み(記録未登録)セクションも対象)
   const refetchAfterMutation = useCallback(() => {

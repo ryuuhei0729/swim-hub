@@ -176,6 +176,11 @@ export function useUnsubmittedEntriesQuery(
   return useQuery<UnsubmittedEntry[]>({
     queryKey: notificationKeys.unsubmitted(userId ?? "", teamIds),
     queryFn: async () => {
+      // 過去日の大会は resolveEntryStatus により表示上「受付終了」となり、セルフエントリー
+      // 導線も塞がれる。DB の entry_status="open" が残っていても催促しないよう、
+      // 大会日で今日以降 (今日は過去扱いしない = isCompetitionDateInPast と同じ境界) に絞る。
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+
       // 全チームを並列で処理
       const results = await Promise.all(
         teams.map(async (team): Promise<UnsubmittedEntry[]> => {
@@ -187,6 +192,7 @@ export function useUnsubmittedEntriesQuery(
             .select("id, title, date")
             .eq("team_id", teamId)
             .eq("entry_status", "open")
+            .gte("date", todayStr)
             .order("date", { ascending: true });
 
           if (competitionsError) {

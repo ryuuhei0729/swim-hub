@@ -233,9 +233,13 @@ describe("[新機能] StyleEntry.relaySplitTimes フィールドの復元", () =
 
     it(
       "4×100フリーリレー: leg1のスプリットが distance=100 (leg内距離) で保存されている場合、" +
-        "全体距離へ変換して distance=200 として relaySplitTimes に格納される",
+        "全体距離へ変換し、DB の leg 相対 split_time を leg 開始通算タイム分だけ通算値に戻して" +
+        "relaySplitTimes に格納される (D4)",
       () => {
         // leg1: distance=100 <= legDist=100 → leg内距離 → global = 100 (offset) + 100 = 200
+        // times=[57.0,58.5,57.8,56.7] → cumulatives=[57.0,115.5,173.3,230.0] → legStart(leg1)=57.0
+        // D4 修正前 (バグ): splitTime は DB の値 (58.5) をそのまま通算値扱いしていた。
+        // D4 修正後: 58.5 (leg 相対) + legStart(57.0) = 115.5 (正しい通算値)
         const records = makeRelayRecords4x100Free([
           [],
           [{ distance: 100, split_time: 58.5 }],
@@ -248,15 +252,18 @@ describe("[新機能] StyleEntry.relaySplitTimes フィールドの復元", () =
         const relaySplits = entry!.relaySplitTimes ?? [];
         const dist200 = relaySplits.find((st) => st.distance === 200);
         expect(dist200).toBeDefined();
-        expect(dist200!.splitTime).toBe(58.5);
+        expect(dist200!.splitTime).toBe(115.5);
       }
     );
 
     it(
       "4×200フリーリレー: leg2に distance=25 のスプリット (leg内距離) がある場合、" +
-        "全体距離 = 200*2 + 25 = 425 として relaySplitTimes に格納される",
+        "全体距離 = 200*2 + 25 = 425、通算タイムは leg2 開始通算タイム (231.5) を加算した値で" +
+        "relaySplitTimes に格納される (D4)",
       () => {
         // leg2: distance=25 <= legDist=200 → leg内距離 → global = 400 (offset) + 25 = 425
+        // times=[115.0,116.5,115.8,114.7] → cumulatives=[115.0,231.5,347.3,462.0] → legStart(leg2)=231.5
+        // 14.5 (leg 相対) + 231.5 (legStart) = 246.0 (正しい通算値)
         const records = makeRelayRecords4x200Free([
           [],
           [],
@@ -269,7 +276,7 @@ describe("[新機能] StyleEntry.relaySplitTimes フィールドの復元", () =
         const relaySplits = entry!.relaySplitTimes ?? [];
         const dist425 = relaySplits.find((st) => st.distance === 425);
         expect(dist425).toBeDefined();
-        expect(dist425!.splitTime).toBe(14.5);
+        expect(dist425!.splitTime).toBe(246.0);
       }
     );
 
@@ -338,10 +345,11 @@ describe("[新機能] StyleEntry.relaySplitTimes フィールドの復元", () =
         expect(entry).toBeDefined();
         // leg3 の cumulative は 112.1
         expect(entry!.memberRecords[3].cumulativeTimeSeconds).toBeCloseTo(112.1, 1);
-        // relaySplitTimes の distance=200 のスプリット (leg3 → offset150+50=200) の値は 27.6
+        // relaySplitTimes の distance=200 のスプリット (leg3 → offset150+50=200) は
+        // D4 修正により leg 相対値 (27.6) + legStart(84.5) = 112.1 (leg3 の全区間 = 累計と一致)
         const dist200 = (entry!.relaySplitTimes ?? []).find((st) => st.distance === 200);
         expect(dist200).toBeDefined();
-        expect(dist200!.splitTime).toBe(27.6);
+        expect(dist200!.splitTime).toBeCloseTo(112.1, 1);
       }
     );
 
@@ -377,8 +385,8 @@ describe("[Risk-1] 旧データ互換性: leg内距離 vs リレー全体距離�
         const entry = result.find((e) => e.relayEventId === "relay_4x100_free");
         const relaySplits = entry!.relaySplitTimes ?? [];
         // leg1 の 100m スプリットは leg 内距離と解釈され、全体距離 200 へ変換される。
-        // 保存済みの値が leg 境界の復元値より優先される (DB にある値を上書きしない)
-        expect(relaySplits.find((st) => st.distance === 200)?.splitTime).toBe(58.5);
+        // D4 修正により splitTime も leg 相対値として legStart(57.0) を加算した通算値になる。
+        expect(relaySplits.find((st) => st.distance === 200)?.splitTime).toBe(115.5);
         // 距離 100 に入るのは leg0 の累計タイム (57.0) であって、未変換の leg1 の値ではない
         expect(relaySplits.find((st) => st.distance === 100)?.splitTime).toBe(57.0);
       }
@@ -419,10 +427,22 @@ describe("[Risk-1] 旧データ互換性: leg内距離 vs リレー全体距離�
     );
   });
 
-  describe("全体距離として保存されたスプリットの復元", () => {
+  describe("全体距離として保存されたスプリットの復元 (distance > legDist の legacy 分岐)", () => {
+    // QA注記 (Critical・Developer報告事項):
+    // st.distance > legDist の分岐は「distance も splitTime も既に全体距離/通算値として
+    // 保存された旧世代データ」を想定した既存の互換ロジック (このスプリント以前から存在)。
+    // distance はこの分岐で無変換のまま使われる (`st.distance > legDist ? st.distance : ...`)
+    // ので、対になる splitTime も無変換であるべき — にもかかわらず D4 の実装
+    // (buildStyleEntries.ts / relayEvents.ts) は `toCumulativeSplitTime` を分岐に関わらず
+    // 常に適用しており、この legacy 分岐の splitTime まで legStart 分だけ二重にシフトしてしまう
+    // (実測: 115.5 → 172.5)。したがってこのテストは意図的に「修正前の正しい値」を pin し、
+    // 現状は red のままにしている (QA が観測挙動に合わせて期待値を書き換えると、この
+    // regression が仕様として固定されてしまうため)。Developer 側で
+    // `st.distance > legDist` の分岐では toCumulativeSplitTime を呼ばない (distance の
+    // 変換有無と splitTime の変換有無を対称にする) 対応が必要。
     it(
       "4×100フリーリレー: leg1に distance=200 (> legDist, = 全体距離) のスプリットがある場合 (新UI保存)、" +
-        "変換なしで distance=200 のまま relaySplitTimes に格納される",
+        "distance も splitTime も変換なしでそのまま relaySplitTimes に格納される",
       () => {
         const records = makeRelayRecords4x100Free([
           [],
@@ -441,7 +461,7 @@ describe("[Risk-1] 旧データ互換性: leg内距離 vs リレー全体距離�
 
     it(
       "4×200フリーリレー: leg2に distance=500 (> legDist=200) のスプリットがある場合 (新UI保存)、" +
-        "変換なしで distance=500 のまま relaySplitTimes に格納される",
+        "distance も splitTime も変換なしでそのまま relaySplitTimes に格納される",
       () => {
         const records = makeRelayRecords4x200Free([
           [],
@@ -452,7 +472,11 @@ describe("[Risk-1] 旧データ互換性: leg内距離 vs リレー全体距離�
         const result = buildStyleEntriesFromExisting(records, STYLES_WITH_200);
         const entry = result.find((e) => e.relayEventId === "relay_4x200_free");
         const relaySplits = entry!.relaySplitTimes ?? [];
-        expect(relaySplits.find((st) => st.distance === 500)).toBeDefined();
+        const dist500 = relaySplits.find((st) => st.distance === 500);
+        expect(dist500).toBeDefined();
+        // splitTime も無変換のはずだが、現状の実装は legStart(231.5) を加算してしまい
+        // 289.0 ではなく 520.5 を返す (Critical regression, 上記コメント参照)
+        expect(dist500!.splitTime).toBe(289.0);
       }
     );
   });
@@ -489,8 +513,8 @@ describe("[Risk-1] 旧データ互換性: leg内距離 vs リレー全体距離�
         const relaySplits = entry!.relaySplitTimes ?? [];
         // leg1 のオフセット = 100, distance=100 <= legDist=100 → global = 100 + 100 = 200
         // leg1 の 100m スプリットは leg 内距離と解釈され、全体距離 200 へ変換される。
-        // 保存済みの値が leg 境界の復元値より優先される (DB にある値を上書きしない)
-        expect(relaySplits.find((st) => st.distance === 200)?.splitTime).toBe(58.5);
+        // D4 修正により splitTime も leg 相対値として legStart(57.0) を加算した通算値になる。
+        expect(relaySplits.find((st) => st.distance === 200)?.splitTime).toBe(115.5);
         // 距離 100 に入るのは leg0 の累計タイム (57.0) であって、未変換の leg1 の値ではない
         expect(relaySplits.find((st) => st.distance === 100)?.splitTime).toBe(57.0);
       }
@@ -513,6 +537,14 @@ describe("[Risk-1] 旧データ互換性: leg内距離 vs リレー全体距離�
         const relaySplits = entry!.relaySplitTimes ?? [];
         expect(relaySplits.find((st) => st.distance === 100)).toBeDefined();
         expect(relaySplits.find((st) => st.distance === 200)).toBeDefined();
+        // leg0 (legStart=0): splitTime 変換なし
+        expect(relaySplits.find((st) => st.distance === 100)?.splitTime).toBe(57.0);
+        // leg1 (legStart=57.0, <=legDist分岐): splitTime は 58.5 + 57.0 = 115.5 に変換される
+        expect(relaySplits.find((st) => st.distance === 200)?.splitTime).toBe(115.5);
+        // leg2 (>legDist の legacy 分岐): splitTime は無変換のはず (172.8) だが、
+        // 上記の Critical regression により legStart(115.5) が加算され 288.3 になる。
+        // ここは QA が観測挙動を pin せず、正しい仕様値のまま残す (現状 red)。
+        expect(relaySplits.find((st) => st.distance === 300)?.splitTime).toBe(172.8);
         expect(relaySplits.find((st) => st.distance === 300)).toBeDefined();
       }
     );
@@ -551,14 +583,15 @@ describe("[C3] DB復元: 4×200フリーリレーの復元対称性", () => {
   ];
 
   it("全 leg 境界スプリット (200,400,600,800) が正しく復元される", () => {
-    // 期待される DB 保存状態をハードコード:
-    // 新UIで全体距離スプリット [200→115.0, 400→231.5, 600→347.3, 800→462.0] を入力
-    // 保存時に各 leg 内距離へ変換: leg0=200, leg1=200, leg2=200, leg3=200
+    // 期待される DB 保存状態をハードコード (D2 修正後: distance は leg 内距離、
+    // splitTime も leg 相対値。ここでは各 leg 自身の全区間タイムをそのまま入れているため
+    // legStart=0 の leg0 のみ無変換で、leg1〜3 は D4 で legStart が加算されて
+    // 全体距離スプリット [200→115.0, 400→231.5, 600→347.3, 800→462.0] に復元される
     const records = makeRelayRecords4x200Free([
-      [{ distance: 200, split_time: 115.0 }], // leg0: 全体200m → leg内200m
-      [{ distance: 200, split_time: 116.5 }], // leg1: 全体400m → 400-200=200
-      [{ distance: 200, split_time: 115.8 }], // leg2: 全体600m → 600-400=200
-      [{ distance: 200, split_time: 114.7 }], // leg3: 全体800m → 800-600=200
+      [{ distance: 200, split_time: 115.0 }], // leg0: 全体200m → leg内200m (legStart=0)
+      [{ distance: 200, split_time: 116.5 }], // leg1: leg 相対 116.5 + legStart(115.0) = 231.5
+      [{ distance: 200, split_time: 115.8 }], // leg2: leg 相対 115.8 + legStart(231.5) = 347.3
+      [{ distance: 200, split_time: 114.7 }], // leg3: leg 相対 114.7 + legStart(347.3) = 462.0
     ]);
     const result = buildStyleEntriesFromExisting(records, STYLES_WITH_200_EXTENDED);
     const entry = result.find((e) => e.relayEventId === "relay_4x200_free");
@@ -570,20 +603,24 @@ describe("[C3] DB復元: 4×200フリーリレーの復元対称性", () => {
     const distances = relaySplits.map((st) => st.distance).sort((a, b) => a - b);
     expect(distances).toEqual([200, 400, 600, 800]);
 
-    // タイムが正しく復元される
+    // タイムが正しく復元される (D4: leg 相対値 + legStart = 通算値)
     expect(relaySplits.find((st) => st.distance === 200 && Math.abs(st.splitTime - 115.0) < 0.01)).toBeDefined();
-    expect(relaySplits.find((st) => st.distance === 400 && Math.abs(st.splitTime - 116.5) < 0.01)).toBeDefined();
-    expect(relaySplits.find((st) => st.distance === 600 && Math.abs(st.splitTime - 115.8) < 0.01)).toBeDefined();
-    expect(relaySplits.find((st) => st.distance === 800 && Math.abs(st.splitTime - 114.7) < 0.01)).toBeDefined();
+    expect(relaySplits.find((st) => st.distance === 400 && Math.abs(st.splitTime - 231.5) < 0.01)).toBeDefined();
+    expect(relaySplits.find((st) => st.distance === 600 && Math.abs(st.splitTime - 347.3) < 0.01)).toBeDefined();
+    expect(relaySplits.find((st) => st.distance === 800 && Math.abs(st.splitTime - 462.0) < 0.01)).toBeDefined();
   });
 
   it("leg内中間スプリット (50m刻み) が正しく復元される", () => {
-    // 新UIで入力した全体距離スプリット:
+    // 新UIで入力した全体距離スプリット (管理者が entry.relaySplitTimes に入力した値):
     //   leg0: 50→28.0, 100→57.0, 150→86.0, 200→115.0
     //   leg1: 250→143.5, 300→172.0, 350→200.5, 400→231.5
-    // 保存時変換:
-    //   leg0: 50,100,150,200 → そのまま保存 (offset=0)
-    //   leg1: 250-200=50, 300-200=100, 350-200=150, 400-200=200
+    // D2 修正後の保存時変換 (distance は leg 内距離、splitTime も legStart(115.0) を
+    // 引いた leg 相対値):
+    //   leg0 (legStart=0): 50,100,150,200 → そのまま保存 (offset=0, splitTime無変換)
+    //   leg1 (legStart=115.0): distance = 250-200=50 / splitTime = 143.5-115.0=28.5
+    //                           distance = 300-200=100 / splitTime = 172.0-115.0=57.0
+    //                           distance = 350-200=150 / splitTime = 200.5-115.0=85.5
+    //                           distance = 400-200=200 / splitTime = 231.5-115.0=116.5
     const records = makeRelayRecords4x200Free([
       [
         { distance: 50, split_time: 28.0 },
@@ -592,10 +629,10 @@ describe("[C3] DB復元: 4×200フリーリレーの復元対称性", () => {
         { distance: 200, split_time: 115.0 },
       ],
       [
-        { distance: 50, split_time: 143.5 },   // 全体250m → leg内50m
-        { distance: 100, split_time: 172.0 },  // 全体300m → leg内100m
-        { distance: 150, split_time: 200.5 },  // 全体350m → leg内150m
-        { distance: 200, split_time: 231.5 },  // 全体400m → leg内200m
+        { distance: 50, split_time: 28.5 },   // 全体250m → leg内50m (leg相対値)
+        { distance: 100, split_time: 57.0 },  // 全体300m → leg内100m (leg相対値)
+        { distance: 150, split_time: 85.5 },  // 全体350m → leg内150m (leg相対値)
+        { distance: 200, split_time: 116.5 }, // 全体400m → leg内200m (leg相対値)
       ],
       [],
       [],
@@ -667,12 +704,18 @@ describe("[C3] DB復元: 4×100メドレーリレーの復元対称性", () => {
 
   it("全 leg 境界スプリット (100,200,300,400) が正しく復元される", () => {
     // 新UIで全体距離スプリット [100→62.0, 200→132.5, 300→197.3, 400→256.0] を入力
-    // 保存時変換: leg0=100, leg1=200-100=100, leg2=300-200=100, leg3=400-300=100
+    // (times=[62.0,70.5,64.8,58.7] → cumulatives=[62.0,132.5,197.3,256.0])
+    // D2 修正後の保存時変換: distance は leg 内距離 (offset差分)、splitTime は
+    // legStart を引いた leg 相対値 (= 各 leg 自身の time と一致する)
+    //   leg0 (legStart=0):    distance=100          / splitTime=62.0
+    //   leg1 (legStart=62.0): distance=200-100=100  / splitTime=132.5-62.0=70.5
+    //   leg2 (legStart=132.5):distance=300-200=100  / splitTime=197.3-132.5=64.8
+    //   leg3 (legStart=197.3):distance=400-300=100  / splitTime=256.0-197.3=58.7
     const records = makeRelayRecords4x100Medley([
-      [{ distance: 100, split_time: 62.0 }],   // leg0: 全体100m → leg内100m
-      [{ distance: 100, split_time: 132.5 }],  // leg1: 全体200m → 200-100=100
-      [{ distance: 100, split_time: 197.3 }],  // leg2: 全体300m → 300-200=100
-      [{ distance: 100, split_time: 256.0 }],  // leg3: 全体400m → 400-300=100
+      [{ distance: 100, split_time: 62.0 }],  // leg0: 全体100m → leg内100m (leg相対値)
+      [{ distance: 100, split_time: 70.5 }],  // leg1: 全体200m → leg内100m (leg相対値)
+      [{ distance: 100, split_time: 64.8 }],  // leg2: 全体300m → leg内100m (leg相対値)
+      [{ distance: 100, split_time: 58.7 }],  // leg3: 全体400m → leg内100m (leg相対値)
     ]);
     const result = buildStyleEntriesFromExisting(records, STYLES_WITH_MEDLEY);
     const entry = result.find((e) => e.relayEventId === "relay_4x100_medley");
@@ -683,7 +726,7 @@ describe("[C3] DB復元: 4×100メドレーリレーの復元対称性", () => {
     const distances = relaySplits.map((st) => st.distance).sort((a, b) => a - b);
     expect(distances).toEqual([100, 200, 300, 400]);
 
-    // タイムも正しく復元される (各 leg の leg内スプリットタイムそのまま)
+    // タイムが通算値 (D4: leg 相対値 + legStart) として正しく復元される
     const dist100 = relaySplits.find((st) => st.distance === 100);
     const dist200 = relaySplits.find((st) => st.distance === 200);
     expect(dist100?.splitTime).toBeCloseTo(62.0, 1);
@@ -692,17 +735,19 @@ describe("[C3] DB復元: 4×100メドレーリレーの復元対称性", () => {
 
   it("中間スプリット (50m刻み) が正しく復元される", () => {
     // 新UIで全体距離スプリット: 50→30.5, 100→62.0, 150→96.0, 200→132.5
-    // 保存時変換:
-    //   leg0: 50,100 → そのまま (offset=0)
-    //   leg1: 150-100=50, 200-100=100
+    // D2 修正後の保存時変換 (distance は offset差分、splitTime は legStart(62.0) を
+    // 引いた leg 相対値):
+    //   leg0 (legStart=0):    50,100 → そのまま (splitTime無変換)
+    //   leg1 (legStart=62.0): distance=150-100=50 / splitTime=96.0-62.0=34.0
+    //                          distance=200-100=100 / splitTime=132.5-62.0=70.5
     const records = makeRelayRecords4x100Medley([
       [
         { distance: 50, split_time: 30.5 },
         { distance: 100, split_time: 62.0 },
       ],
       [
-        { distance: 50, split_time: 96.0 },   // 全体150m → leg内50m
-        { distance: 100, split_time: 132.5 }, // 全体200m → leg内100m
+        { distance: 50, split_time: 34.0 },   // 全体150m → leg内50m (leg相対値)
+        { distance: 100, split_time: 70.5 },  // 全体200m → leg内100m (leg相対値)
       ],
       [],
       [],

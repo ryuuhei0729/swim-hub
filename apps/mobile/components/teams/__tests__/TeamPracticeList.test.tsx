@@ -291,4 +291,62 @@ describe("TeamPracticeList", () => {
       }),
     );
   });
+
+  // -----------------------------------------------------------------------
+  // Sprint Contract [SC-7]: admin 時ラベルを「記録代理入力」に分岐する (D-2)
+  // 遷移先 TeamPracticeLogBulkForm は不変 (既存動作は TeamBulkNavigation.test.tsx で検証済み)
+  // -----------------------------------------------------------------------
+
+  it("[SC-7] isAdmin=true のとき、ボタンラベルは「記録代理入力」であり旧ラベル「ログを記入」は表示されない", () => {
+    const practice = makePractice({ id: "p-admin-1", title: "管理者練習" });
+    mocks.useTeamPracticesQuery.mockReturnValue({
+      data: [practice],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamPracticeList teamId="team-1" isAdmin={true} />);
+
+    expect(screen.getByRole("button", { name: "記録代理入力" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "ログを記入" })).toBeNull();
+  });
+
+  it("[SC-7] isAdmin=false のとき、ボタンラベルは従来通り「ログを記入」のままである (新ラベルは出ない)", () => {
+    const practice = makePractice({ id: "p-nonadmin-1", title: "一般練習" });
+    mocks.useTeamPracticesQuery.mockReturnValue({
+      data: [practice],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamPracticeList teamId="team-1" isAdmin={false} />);
+
+    expect(screen.getByRole("button", { name: "ログを記入" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "記録代理入力" })).toBeNull();
+  });
+
+  it("[SC-7] isAdmin=true で「記録代理入力」を押すと TeamPracticeLogBulkForm へ { practiceId, teamId } で navigate される (遷移先不変)", () => {
+    const practice = makePractice({ id: "p-admin-nav", title: "管理者練習遷移" });
+    mocks.useTeamPracticesQuery.mockReturnValue({
+      data: [practice],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamPracticeList teamId="team-nav" isAdmin={true} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "記録代理入力" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith("TeamPracticeLogBulkForm", {
+      practiceId: "p-admin-nav",
+      teamId: "team-nav",
+    });
+    expect(mocks.navigate).not.toHaveBeenCalledWith("PracticeLogForm", expect.anything());
+  });
 });

@@ -1,0 +1,17 @@
+{
+  "extends": "../tools/typescript-config/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "paths": {
+      "@shared/racePace": ["../apps/shared/utils/racePace/index.ts"],
+      "@shared/racePace/*": ["../apps/shared/utils/racePace/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "__tests__/**/*.ts", "*.ts"],
+  "exclude": ["node_modules"]
+}

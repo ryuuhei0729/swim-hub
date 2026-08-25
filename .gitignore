@@ -164,3 +164,8 @@ scripts/register-users-with-records.sql
 
 # Mobile local react override (managed by postinstall script)
 apps/mobile/node_modules/
+
+# result-of-swimming: 収集した生データ・キャッシュ・生成物はコミットしない
+# (fixtures/ は PII 除去済みで意図的にコミットする)
+result-of-swimming/data/
+result-of-swimming/node_modules/

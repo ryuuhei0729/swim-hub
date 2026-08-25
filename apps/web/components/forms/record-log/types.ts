@@ -32,6 +32,14 @@ export interface RecordLogFormState {
   reactionTime: string;
   /** 新規作成時の保留動画データ（record UUID 確定後に親が直接アップロードする） */
   pendingVideo?: PendingVideoData;
+  /** 代理入力済み等、既存の records 行の ID (initialRecords 経由で復元)。
+   * 送信側はこれの有無で UPDATE (既存行) / INSERT (新規行) を分岐する */
+  existingRecordId?: string;
+  /** 読み込み時点 (initialRecords 構築時) の既存記録の is_relaying。
+   * ユーザーがフォーム上の isRelaying トグルを操作しても書き換わらない固定値。
+   * split_times の書き込み判定はこの値を使う (フォーム上の isRelaying で判定すると
+   * トグル操作でぶれる) */
+  existingRecordWasRelaying?: boolean;
 }
 
 // 送信用
@@ -47,6 +55,11 @@ export interface RecordLogFormData {
   reactionTime: string;
   /** 新規作成時の保留動画データ（record UUID 確定後に親が直接アップロードする） */
   pendingVideo?: PendingVideoData;
+  /** 既存の records 行の ID。存在する場合、呼び出し側は UPDATE すべき (INSERT による重複防止) */
+  existingRecordId?: string;
+  /** 読み込み時点の既存記録の is_relaying (現在のフォームの isRelaying トグルとは独立)。
+   * split_times の書き込み判定に使う */
+  existingRecordWasRelaying?: boolean;
 }
 
 export interface RecordLogEditData {
@@ -57,6 +70,7 @@ export interface RecordLogEditData {
   splitTimes?: SplitTimeRow[];
   note?: string;
   videoPath?: string | null;
+  videoThumbnailPath?: string | null;
   reactionTime?: number | null;
 }
 
@@ -76,6 +90,9 @@ export interface RecordLogFormProps {
   /** プールタイプ（0: 短水路, 1: 長水路） */
   poolType?: number;
   editData?: RecordLogEditData | null;
+  /** 複数レコードを一括初期化する場合に使用 (editData より優先される)。
+   * 代理入力済みの既存記録を復元する用途などで、entryDataList と同じ順序で渡す */
+  initialRecords?: RecordLogEditData[];
   isLoading?: boolean;
   styles?: StyleOption[];
   entryDataList?: EntryInfo[];

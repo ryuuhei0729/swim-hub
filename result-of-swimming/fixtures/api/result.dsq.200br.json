@@ -1,0 +1,94 @@
+{
+  "data": [
+    {
+      "result_id": 37448356,
+      "ranking": "失格",
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 1,
+      "lane": 2,
+      "result_time": "",
+      "result_date": "2026-08-02",
+      "gap_with_top": "",
+      "reaction_times": [
+        "-"
+      ],
+      "fina_point": "",
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "50m_record": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "50m_record": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "100m_record": {
+            "record": "0:00.00",
+            "ranking": "-",
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 150,
+          "passing_time": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "50m_record": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 200,
+          "passing_time": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "50m_record": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "100m_record": {
+            "record": "0:00.00",
+            "ranking": "-",
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "0:00.00",
+            "ranking": "-",
+            "rowspan": 4
+          }
+        }
+      ],
+      "reason_code": 2,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          2
+        ]
+      }
+    }
+  ]
+}

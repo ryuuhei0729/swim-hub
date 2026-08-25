@@ -14,6 +14,7 @@ import { ErrorView } from "@/components/layout/ErrorView";
 import type { MainStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 /**
  * マイページ画面
@@ -24,7 +25,6 @@ export const MyPageScreen: React.FC = () => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
 
   // プロフィールとチーム情報取得
   const {
@@ -55,23 +55,16 @@ export const MyPageScreen: React.FC = () => {
   const bestTimesErrorMessage =
     bestTimesErrorObj instanceof Error ? bestTimesErrorObj.message : undefined;
 
+  // この画面が依存する全クエリ(プロフィール + ベストタイム)を尽くす
+  const refreshAll = useCallback(async () => {
+    await Promise.allSettled([refetchProfile(), refetchBestTimes()]);
+  }, [refetchProfile, refetchBestTimes]);
+
   // タブ遷移時にデータ再取得
-  useRefreshOnFocus(
-    useCallback(() => {
-      refetchProfile();
-      refetchBestTimes();
-    }, [refetchProfile, refetchBestTimes]),
-  );
+  useRefreshOnFocus(refreshAll);
 
   // プルリフレッシュ処理
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([refetchProfile(), refetchBestTimes()]);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetchProfile, refetchBestTimes]);
+  const { refreshing, handleRefresh } = usePullToRefresh(refreshAll);
 
   // プロフィール更新処理
   const handleProfileUpdate = useCallback(

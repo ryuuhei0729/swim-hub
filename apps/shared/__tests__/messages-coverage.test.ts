@@ -364,6 +364,75 @@ describe("shared/messages global coverage", () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // Sprint Contract [SC-10]: 管理者代理入力 導線再編 (mobile) で追加した新規キー4件が
+  // 5言語すべてに存在すること。汎用の [V-01]/[V-01-ext] キー構造一致テストでも
+  // 欠落は検出されるが (ja にだけ追加され他言語に無い場合はそちらで既に fail する)、
+  // 「どのキーが」「どの言語で」欠けているかを名指しで特定できるよう専用テストを追加する
+  // (forms.timeInput.helpTitle/helpBody に対する [SC-01] と同じパターン)。
+  //
+  // Reviewer Test Review 指摘 (Phase 5b): 当初の「5言語で uniqueValues.size > 1」判定は
+  // 「1言語だけ ja のコピペで残りが翻訳されていれば size=4 で通ってしまい、
+  // “その1言語がコピペのまま” というリグレッションを検出できない」弱点があった。
+  // → 非 ja の4言語それぞれについて「ja の値と一致しないこと」を個別にアサートする形に強化する。
+  describe("teams.mobile 新規キー: recordBulkButton x2 + pastDateNotice + entryStatusChangeAria (SC-10)", () => {
+    const allMessages: Record<string, Record<string, unknown>> = {
+      ja: jaMessages as unknown as Record<string, unknown>,
+      en: enMessages as unknown as Record<string, unknown>,
+      zh: zhMessages as unknown as Record<string, unknown>,
+      ko: koMessages as unknown as Record<string, unknown>,
+      de: deMessages as unknown as Record<string, unknown>,
+    };
+
+    const NEW_KEYS = [
+      "teams.mobile.teamCompetitionList.recordBulkButton",
+      "teams.mobile.teamPracticeList.recordBulkButton",
+      "teams.mobile.teamCompetitionEntryModal.pastDateNotice",
+      "teams.mobile.teamCompetitionList.entryStatusChangeAria",
+    ] as const;
+
+    const NON_JA_LOCALES = ["en", "ko", "zh", "de"] as const;
+
+    it.each(NEW_KEYS.flatMap((key) => (["ja", "en", "ko", "zh", "de"] as const).map((locale) => [key, locale] as const)))(
+      "%s は %s.json に非空文字列で存在する",
+      (key, locale) => {
+        const val = getValue(allMessages[locale], key);
+        expect(val, `${locale}.json: ${key} is missing`).toBeDefined();
+        expect(typeof val, `${locale}.json: ${key} is not a string`).toBe("string");
+        expect(
+          (val as string).trim().length,
+          `${locale}.json: ${key} is an empty string`,
+        ).toBeGreaterThan(0);
+      },
+    );
+
+    // トートロジー防止 (強化版): 「5言語中どれか2つが違えば良い」ではなく、
+    // 非 ja の各言語 (en/ko/zh/de) を個別に ja と突き合わせ、1言語だけコピペで
+    // 残っていても確実にその言語単体で検出できるようにする。
+    it.each(NEW_KEYS.flatMap((key) => NON_JA_LOCALES.map((locale) => [key, locale] as const)))(
+      "%s: %s.json の値は ja.json の値のコピペのまま (未翻訳) になっていない",
+      (key, locale) => {
+        const jaVal = getValue(allMessages.ja, key) as string;
+        const localeVal = getValue(allMessages[locale], key) as string;
+        expect(
+          localeVal,
+          `${locale}.json の ${key} が ja.json の値のコピペのまま: "${jaVal}"`,
+        ).not.toBe(jaVal);
+      },
+    );
+
+    // teams.mobile.teamCompetitionList.recordBulkButton と
+    // teams.mobile.teamPracticeList.recordBulkButton は文言としては同じ「記録代理入力」だが
+    // 別コンポーネントの別キーである。片方だけ実装漏れするケースを検出するため個別に検証する
+    // (このテストは「ja.json の値が空でない」ことのみを見るため、上の非空検証と重複しない)。
+    it("teamCompetitionList と teamPracticeList の recordBulkButton は両方とも ja.json に定義されている (実装漏れ検出)", () => {
+      const a = getValue(jaMessages as unknown as Record<string, unknown>, NEW_KEYS[0]);
+      const b = getValue(jaMessages as unknown as Record<string, unknown>, NEW_KEYS[1]);
+      expect(a, "teamCompetitionList.recordBulkButton is missing in ja.json").toBeTruthy();
+      expect(b, "teamPracticeList.recordBulkButton is missing in ja.json").toBeTruthy();
+    });
+  });
+
   // Phase M3-M8 で導入した mobile-specific サブ namespace が存在することを確認
   it("mobile-specific sub-namespaces exist (regression guard for Phase M3-M8)", () => {
     const ja = jaMessages as unknown as Record<string, Record<string, unknown>>;

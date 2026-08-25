@@ -144,8 +144,9 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - api/* (Route Handlers; ロケールリダイレクトと Supabase 認証 chain を通さない)
+     * - guide/* (public/ 配下の静的な利用ガイド HTML; ロケールプレフィックスを付けない)
      * - 静的アセット (画像)
      */
-    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|guide|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

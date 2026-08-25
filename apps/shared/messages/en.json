@@ -1022,6 +1022,8 @@
       "unknownStyle": "Unknown",
       "styleAlreadyEntered": "Event \"{name}\" has already been entered",
       "fetchCompetitionInfoFailed": "Failed to fetch competition information",
+      "competitionSaveBlockedUnresolved": "Could not verify the competition information, so the save was stopped. Please try again after a moment.",
+      "competitionSaveBlockedDateInvalid": "Could not verify date consistency, so the save was stopped. Please check the start and end dates and try again.",
       "videoUploadPartialCompetition": "Competition and result were created, but video upload failed. Please try again from the details screen.",
       "statusBefore": "Not open yet",
       "statusClosed": "Closed",
@@ -1647,6 +1649,7 @@
       "fetchMembersFailed": "Failed to fetch team members",
       "teamFallback": "Team",
       "relayLegLabel": "Leg {num} ({style})",
+      "relayLegShort": "Leg {num}",
       "freeRelaySuffix": "Free Relay",
       "medleyRelaySuffix": "Medley Relay",
       "relayTimePlaceholder": "e.g. 1:52.10",
@@ -1668,6 +1671,7 @@
         "relayFullTeam": "Please select all 4 members for relay events",
         "relayAllTimes": "Please enter times for all swimmers in relay events",
         "cumulativeTimeInverted": "Cumulative time is inverted. Leg {current} must be greater than Leg {prev}.",
+        "relaySplitBeforeLegStart": "The split time at {distance}m is invalid. Please enter a value greater than the cumulative time at the start of Leg {leg}.",
         "atLeastOneRecord": "Please enter at least one record"
       },
       "error": {
@@ -2612,7 +2616,8 @@
         "fetchFailed": "Failed to load practice records",
         "deleteConfirm": "Delete this practice record? This cannot be undone.",
         "deleteFailed": "Failed to delete practice record",
-        "addLog": "Add Log"
+        "addLog": "Add Log",
+        "recordBulkButton": "Enter Records"
       },
       "teamCompetitionList": {
         "title": "Team Competitions ({count})",
@@ -2623,7 +2628,9 @@
         "deleteFailed": "Failed to delete competition",
         "entryButton": "Entry",
         "recordButton": "Record",
-        "entryBulkButton": "Enter Entries"
+        "entryBulkButton": "Enter Entries",
+        "recordBulkButton": "Enter Records",
+        "entryStatusChangeAria": "Entry status: {status}. Tap to change"
       },
       "teamCompetitionEntryModal": {
         "title": "Entries for {title}",
@@ -2646,7 +2653,8 @@
         "unknownStyle": "Unknown event",
         "unknownUser": "Unknown user",
         "entryTimeLabel": "Entry time:",
-        "close": "Close"
+        "close": "Close",
+        "pastDateNotice": "Entry is automatically closed because the competition date has passed."
       },
       "announcementDeleteFailed": "Failed to delete announcement",
       "attendanceConfirmEditAfterDeadline": "You are editing after the deadline ({dates}). The edit timestamp will be automatically added to the note. Save anyway?",
@@ -4082,7 +4090,10 @@
       "formError_noStyle": "Please select an event",
       "formError_noTime": "Please enter a time (format: min:sec.decimal or sec.decimal)",
       "addRecord": "Add Record",
-      "recordNumber": "Record {n}"
+      "recordNumber": "Record {n}",
+      "removeEventAria": "Remove event",
+      "formError_duplicateStyle": "The same event appears on multiple cards. Please resolve the duplicate.",
+      "formError_relaySplitNotSupported": "Split times for relay records cannot be saved. Please remove the splits before saving."
     },
     "tag": {
       "placeholder": "Select or create tags",

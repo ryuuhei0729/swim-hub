@@ -1,0 +1,1012 @@
+{
+  "data": [
+    {
+      "result_id": 37446406,
+      "ranking": 1,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 4,
+      "lane": 5,
+      "result_time": "15:27.00",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.00",
+      "reaction_times": [
+        "+0.67"
+      ],
+      "fina_point": 828,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:28.23",
+            "ranking": 7
+          },
+          "50m_record": {
+            "record": "0:28.23",
+            "ranking": 7
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:58.28",
+            "ranking": 5
+          },
+          "50m_record": {
+            "record": "0:30.05",
+            "ranking": 2
+          },
+          "100m_record": {
+            "record": "0:58.28",
+            "ranking": 5,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 150,
+          "passing_time": {
+            "record": "1:29.12",
+            "ranking": 4
+          },
+          "50m_record": {
+            "record": "0:30.84",
+            "ranking": 2
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 200,
+          "passing_time": {
+            "record": "1:59.79",
+            "ranking": 3
+          },
+          "50m_record": {
+            "record": "0:30.67",
+            "ranking": 2
+          },
+          "100m_record": {
+            "record": "1:01.51",
+            "ranking": 2,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "1:59.79",
+            "ranking": 3,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 250,
+          "passing_time": {
+            "record": "2:30.55",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:30.76",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 300,
+          "passing_time": {
+            "record": "3:01.50",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:30.95",
+            "ranking": 2
+          },
+          "100m_record": {
+            "record": "1:01.71",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 350,
+          "passing_time": {
+            "record": "3:32.52",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.02",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 400,
+          "passing_time": {
+            "record": "4:03.41",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:30.89",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:01.91",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:03.62",
+            "ranking": 1,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 450,
+          "passing_time": {
+            "record": "4:34.39",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:30.98",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 500,
+          "passing_time": {
+            "record": "5:05.40",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.01",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:01.99",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 550,
+          "passing_time": {
+            "record": "5:36.33",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:30.93",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 600,
+          "passing_time": {
+            "record": "6:07.28",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:30.95",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:01.88",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:03.87",
+            "ranking": 1,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 650,
+          "passing_time": {
+            "record": "6:38.25",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:30.97",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 700,
+          "passing_time": {
+            "record": "7:09.28",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.03",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:02.00",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 750,
+          "passing_time": {
+            "record": "7:40.51",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.23",
+            "ranking": 2
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 800,
+          "passing_time": {
+            "record": "8:11.52",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.01",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:02.24",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:04.24",
+            "ranking": 1,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 850,
+          "passing_time": {
+            "record": "8:42.83",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.31",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 900,
+          "passing_time": {
+            "record": "9:14.37",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.54",
+            "ranking": 3
+          },
+          "100m_record": {
+            "record": "1:02.85",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 950,
+          "passing_time": {
+            "record": "9:45.38",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.01",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1000,
+          "passing_time": {
+            "record": "10:16.93",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.55",
+            "ranking": 4
+          },
+          "100m_record": {
+            "record": "1:02.56",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:05.41",
+            "ranking": 1,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 1050,
+          "passing_time": {
+            "record": "10:48.01",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.08",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1100,
+          "passing_time": {
+            "record": "11:19.19",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.18",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:02.26",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1150,
+          "passing_time": {
+            "record": "11:50.78",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.59",
+            "ranking": 2
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1200,
+          "passing_time": {
+            "record": "12:22.38",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.60",
+            "ranking": 2
+          },
+          "100m_record": {
+            "record": "1:03.19",
+            "ranking": 2,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:05.45",
+            "ranking": 2,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 1250,
+          "passing_time": {
+            "record": "12:53.06",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:30.68",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1300,
+          "passing_time": {
+            "record": "13:24.18",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.12",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:01.80",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1350,
+          "passing_time": {
+            "record": "13:55.31",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.13",
+            "ranking": 2
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1400,
+          "passing_time": {
+            "record": "14:26.44",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.13",
+            "ranking": 2
+          },
+          "100m_record": {
+            "record": "1:02.26",
+            "ranking": 2,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:04.06",
+            "ranking": 1,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 1450,
+          "passing_time": {
+            "record": "14:56.84",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:30.40",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1500,
+          "passing_time": {
+            "record": "15:27.00",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:30.16",
+            "ranking": 6
+          },
+          "100m_record": {
+            "record": "1:00.56",
+            "ranking": 5,
+            "rowspan": 2
+          },
+          "200m_record": null
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          4
+        ]
+      }
+    },
+    {
+      "result_id": 37446410,
+      "ranking": 2,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 4,
+      "lane": 7,
+      "result_time": "15:30.50",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:03.50",
+      "reaction_times": [
+        "+0.58"
+      ],
+      "fina_point": 819,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:27.65",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:27.65",
+            "ranking": 2
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:57.23",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:29.58",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "0:57.23",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 150,
+          "passing_time": {
+            "record": "1:27.54",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:30.31",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 200,
+          "passing_time": {
+            "record": "1:57.71",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:30.17",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:00.48",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "1:57.71",
+            "ranking": 1,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 250,
+          "passing_time": {
+            "record": "2:28.88",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.17",
+            "ranking": 4
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 300,
+          "passing_time": {
+            "record": "2:59.76",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:30.88",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:02.05",
+            "ranking": 2,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 350,
+          "passing_time": {
+            "record": "3:30.90",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.14",
+            "ranking": 4
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 400,
+          "passing_time": {
+            "record": "4:01.91",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.01",
+            "ranking": 2
+          },
+          "100m_record": {
+            "record": "1:02.15",
+            "ranking": 3,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:04.20",
+            "ranking": 2,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 450,
+          "passing_time": {
+            "record": "4:33.18",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.27",
+            "ranking": 4
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 500,
+          "passing_time": {
+            "record": "5:04.55",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.37",
+            "ranking": 6
+          },
+          "100m_record": {
+            "record": "1:02.64",
+            "ranking": 4,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 550,
+          "passing_time": {
+            "record": "5:36.11",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:31.56",
+            "ranking": 6
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 600,
+          "passing_time": {
+            "record": "6:07.46",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.35",
+            "ranking": 5
+          },
+          "100m_record": {
+            "record": "1:02.91",
+            "ranking": 6,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:05.55",
+            "ranking": 6,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 650,
+          "passing_time": {
+            "record": "6:39.02",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.56",
+            "ranking": 6
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 700,
+          "passing_time": {
+            "record": "7:10.77",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.75",
+            "ranking": 8
+          },
+          "100m_record": {
+            "record": "1:03.31",
+            "ranking": 8,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 750,
+          "passing_time": {
+            "record": "7:42.62",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.85",
+            "ranking": 7
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 800,
+          "passing_time": {
+            "record": "8:14.51",
+            "ranking": 3
+          },
+          "50m_record": {
+            "record": "0:31.89",
+            "ranking": 6
+          },
+          "100m_record": {
+            "record": "1:03.74",
+            "ranking": 7,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:07.05",
+            "ranking": 8,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 850,
+          "passing_time": {
+            "record": "8:46.49",
+            "ranking": 4
+          },
+          "50m_record": {
+            "record": "0:31.98",
+            "ranking": 6
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 900,
+          "passing_time": {
+            "record": "9:18.06",
+            "ranking": 4
+          },
+          "50m_record": {
+            "record": "0:31.57",
+            "ranking": 5
+          },
+          "100m_record": {
+            "record": "1:03.55",
+            "ranking": 6,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 950,
+          "passing_time": {
+            "record": "9:49.81",
+            "ranking": 4
+          },
+          "50m_record": {
+            "record": "0:31.75",
+            "ranking": 6
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1000,
+          "passing_time": {
+            "record": "10:21.08",
+            "ranking": 3
+          },
+          "50m_record": {
+            "record": "0:31.27",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:03.02",
+            "ranking": 4,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:06.57",
+            "ranking": 5,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 1050,
+          "passing_time": {
+            "record": "10:52.71",
+            "ranking": 3
+          },
+          "50m_record": {
+            "record": "0:31.63",
+            "ranking": 3
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1100,
+          "passing_time": {
+            "record": "11:24.33",
+            "ranking": 3
+          },
+          "50m_record": {
+            "record": "0:31.62",
+            "ranking": 3
+          },
+          "100m_record": {
+            "record": "1:03.25",
+            "ranking": 3,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1150,
+          "passing_time": {
+            "record": "11:55.11",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:30.78",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1200,
+          "passing_time": {
+            "record": "12:26.15",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.04",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:01.82",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:05.07",
+            "ranking": 1,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 1250,
+          "passing_time": {
+            "record": "12:57.59",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.44",
+            "ranking": 2
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1300,
+          "passing_time": {
+            "record": "13:28.74",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.15",
+            "ranking": 2
+          },
+          "100m_record": {
+            "record": "1:02.59",
+            "ranking": 2,
+            "rowspan": 2
+          },
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1350,
+          "passing_time": {
+            "record": "13:59.78",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.04",
+            "ranking": 1
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1400,
+          "passing_time": {
+            "record": "14:30.47",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:30.69",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "1:01.73",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": {
+            "record": "2:04.32",
+            "ranking": 2,
+            "rowspan": 4
+          }
+        },
+        {
+          "lap_distance": 1450,
+          "passing_time": {
+            "record": "15:01.62",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:31.15",
+            "ranking": 6
+          },
+          "100m_record": null,
+          "200m_record": null
+        },
+        {
+          "lap_distance": 1500,
+          "passing_time": {
+            "record": "15:30.50",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:28.88",
+            "ranking": 2
+          },
+          "100m_record": {
+            "record": "1:00.03",
+            "ranking": 3,
+            "rowspan": 2
+          },
+          "200m_record": null
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          3
+        ]
+      }
+    }
+  ]
+}

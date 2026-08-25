@@ -810,7 +810,14 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
 
   const buildCompetitionEditingData = (
     competitionId: string,
-    competition: { date: string; title?: string | null; place?: string | null } | undefined,
+    competition:
+      | {
+          date: string;
+          title?: string | null;
+          place?: string | null;
+          pool_type?: number | null;
+        }
+      | undefined,
     images?: GalleryImage[],
   ): EditingData =>
     ({
@@ -819,6 +826,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
       date: competition?.date || "",
       title: competition?.title || "",
       place: competition?.place || "",
+      pool_type: competition?.pool_type ?? undefined,
       editData: images ? { images } : undefined,
     }) as EditingData;
 
@@ -839,7 +847,12 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
         competitionId,
         selection.mode === "record"
           ? competition
-          : { date: selection.item.date, title: selection.item.competitionName, place: selection.item.place },
+          : {
+              date: selection.item.date,
+              title: selection.item.competitionName,
+              place: selection.item.place,
+              pool_type: selection.item.poolType,
+            },
         images,
       ),
       "competition",
@@ -860,7 +873,12 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
         competitionId,
         selection.mode === "record"
           ? (selection.record.competition as Competition)
-          : { date: selection.item.date, title: selection.item.competitionName, place: selection.item.place },
+          : {
+              date: selection.item.date,
+              title: selection.item.competitionName,
+              place: selection.item.place,
+              pool_type: selection.item.poolType,
+            },
       ),
       "record",
     );
@@ -877,6 +895,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
         date: item.date,
         title: item.competitionName,
         place: item.place,
+        pool_type: item.poolType,
       }),
       "entry",
     );

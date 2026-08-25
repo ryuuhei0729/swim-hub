@@ -130,8 +130,12 @@ export const useRecordLogForm = ({
           splitTimes,
           note: rec.note || "",
           videoPath: rec.videoPath ?? null,
-          videoThumbnailPath: null,
+          videoThumbnailPath: rec.videoThumbnailPath ?? null,
           reactionTime: rec.reactionTime?.toString() || "",
+          existingRecordId: rec.id,
+          // 読み込み時点の is_relaying を固定値として保持する (フォーム上の isRelaying
+          // トグルとは独立)。split_times の書き込み判定は呼び出し側がこの値を使う
+          existingRecordWasRelaying: rec.isRelaying || false,
         };
       }),
     );
@@ -166,7 +170,7 @@ export const useRecordLogForm = ({
           splitTimes,
           note: editData.note || "",
           videoPath: editData.videoPath ?? null,
-          videoThumbnailPath: null,
+          videoThumbnailPath: editData.videoThumbnailPath ?? null,
           reactionTime: editData.reactionTime?.toString() || "",
         },
       ]);

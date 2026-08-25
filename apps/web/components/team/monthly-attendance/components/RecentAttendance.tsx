@@ -6,6 +6,7 @@ import { AttendanceEditState } from "../hooks/useAttendanceEdit";
 import { getStatusBadge } from "./StatusBadge";
 import { parseISO } from "date-fns";
 import { formatDate } from "@apps/shared/utils/date";
+import { resolveAttendanceStatus } from "@apps/shared/utils/attendanceStatus";
 import { useTranslations } from "next-intl";
 
 interface RecentAttendanceProps {
@@ -131,7 +132,7 @@ export const RecentAttendance = React.memo(
                     </div>
 
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <div>{getStatusBadge(event.attendance_status)}</div>
+                      <div>{getStatusBadge(resolveAttendanceStatus(event.date, event.attendance_status))}</div>
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => onStatusChange(event.id, "present")}

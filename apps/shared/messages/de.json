@@ -1025,6 +1025,8 @@
       "unknownStyle": "Unbekannt",
       "styleAlreadyEntered": "Für die Disziplin „{name}“ liegt bereits eine Meldung vor",
       "fetchCompetitionInfoFailed": "Wettkampfinformationen konnten nicht abgerufen werden",
+      "competitionSaveBlockedUnresolved": "Die Wettkampfinformationen konnten nicht bestätigt werden, daher wurde der Speichervorgang abgebrochen. Bitte versuchen Sie es später erneut.",
+      "competitionSaveBlockedDateInvalid": "Die Datumskonsistenz konnte nicht bestätigt werden, daher wurde der Speichervorgang abgebrochen. Bitte überprüfen Sie Start- und Enddatum und versuchen Sie es erneut.",
       "videoUploadPartialCompetition": "Wettkampf und Ergebnis wurden erstellt, aber der Video-Upload ist fehlgeschlagen. Bitte fügen Sie es über die Detailansicht erneut hinzu.",
       "statusBefore": "Noch nicht geöffnet",
       "statusClosed": "Geschlossen",
@@ -1650,6 +1652,7 @@
       "fetchMembersFailed": "Teammitglieder konnten nicht abgerufen werden",
       "teamFallback": "Team",
       "relayLegLabel": "{num}. Schwimmer ({style})",
+      "relayLegShort": "{num}. Schwimmer",
       "freeRelaySuffix": "Freistilstaffel",
       "medleyRelaySuffix": "Lagenstaffel",
       "relayTimePlaceholder": "z. B. 1:52.10",
@@ -1671,6 +1674,7 @@
         "relayFullTeam": "Bitte wählen Sie für Staffeldisziplinen alle 4 Mitglieder aus",
         "relayAllTimes": "Bitte geben Sie für Staffeldisziplinen die Zeiten aller Schwimmer ein",
         "cumulativeTimeInverted": "Die kumulierte Zeit ist invertiert. Die kumulierte Zeit des {current}. Schwimmers muss größer sein als die des {prev}. Schwimmers.",
+        "relaySplitBeforeLegStart": "Die Zwischenzeit bei {distance}m ist ungültig. Bitte geben Sie einen Wert größer als die kumulierte Zeit zu Beginn des {leg}. Schwimmers ein.",
         "atLeastOneRecord": "Bitte geben Sie mindestens ein Ergebnis ein"
       },
       "error": {
@@ -2615,7 +2619,8 @@
         "fetchFailed": "Trainingsaufzeichnungen konnten nicht geladen werden",
         "deleteConfirm": "Dieses Training löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
         "deleteFailed": "Training konnte nicht gelöscht werden",
-        "addLog": "Log eintragen"
+        "addLog": "Log eintragen",
+        "recordBulkButton": "Ergebnisse stellvertretend eingeben"
       },
       "teamCompetitionList": {
         "title": "Teamwettkämpfe ({count})",
@@ -2626,7 +2631,9 @@
         "deleteFailed": "Wettkampf konnte nicht gelöscht werden",
         "entryButton": "Anmelden",
         "recordButton": "Ergebnis",
-        "entryBulkButton": "Anmeldungen stellvertretend eingeben"
+        "entryBulkButton": "Anmeldungen stellvertretend eingeben",
+        "recordBulkButton": "Ergebnisse stellvertretend eingeben",
+        "entryStatusChangeAria": "Anmeldestatus: {status}. Zum Aendern tippen"
       },
       "teamCompetitionEntryModal": {
         "title": "Anmeldungen für {title}",
@@ -2649,7 +2656,8 @@
         "unknownStyle": "Unbekannte Disziplin",
         "unknownUser": "Unbekannter Benutzer",
         "entryTimeLabel": "Meldezeit:",
-        "close": "Schliessen"
+        "close": "Schliessen",
+        "pastDateNotice": "Die Anmeldung wurde automatisch geschlossen, da der Wettkampftermin bereits vergangen ist."
       },
       "announcementDeleteFailed": "Ankündigung konnte nicht gelöscht werden",
       "attendanceConfirmEditAfterDeadline": "Sie bearbeiten nach Ablauf der Frist ({dates}). Der Bearbeitungszeitpunkt wird automatisch der Anmerkung hinzugefügt. Trotzdem speichern?",
@@ -4085,7 +4093,10 @@
       "formError_noStyle": "Bitte wählen Sie eine Disziplin aus",
       "formError_noTime": "Bitte geben Sie eine Zeit ein (Format: Min:Sek.Dezimal oder Sek.Dezimal)",
       "addRecord": "Eintrag hinzufügen",
-      "recordNumber": "Eintrag {n}"
+      "recordNumber": "Eintrag {n}",
+      "removeEventAria": "Disziplin entfernen",
+      "formError_duplicateStyle": "Dieselbe Disziplin ist auf mehreren Karten vorhanden. Bitte beheben Sie die Duplizierung.",
+      "formError_relaySplitNotSupported": "Zwischenzeiten für Staffelergebnisse können nicht gespeichert werden. Bitte entfernen Sie die Zwischenzeiten vor dem Speichern."
     },
     "tag": {
       "placeholder": "Tags auswählen oder erstellen",

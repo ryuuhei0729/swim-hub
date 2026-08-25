@@ -1,0 +1,1995 @@
+{
+  "data": [
+    {
+      "race_date": "2026-08-02",
+      "race_genders": [
+        {
+          "gender": {
+            "code": 1,
+            "name": "男子"
+          },
+          "held_styles": [
+            {
+              "swimming_style": {
+                "code": 1,
+                "name": "自由形"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 2,
+                    "name": "50m",
+                    "name_for_relay": null
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 5,
+                            "name": "スイムオフ"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 3,
+                "name": "平泳ぎ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 4,
+                "name": "バタフライ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 3,
+                    "name": "100m",
+                    "name_for_relay": "4x25m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 5,
+                            "name": "スイムオフ"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 6,
+                "name": "フリーリレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "distance": {
+                    "code": 6,
+                    "name": "800m",
+                    "name_for_relay": "4x200m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "gender": {
+            "code": 2,
+            "name": "女子"
+          },
+          "held_styles": [
+            {
+              "swimming_style": {
+                "code": 1,
+                "name": "自由形"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 2,
+                    "name": "50m",
+                    "name_for_relay": null
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 3,
+                "name": "平泳ぎ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 4,
+                "name": "バタフライ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 3,
+                    "name": "100m",
+                    "name_for_relay": "4x25m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 6,
+                "name": "フリーリレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "distance": {
+                    "code": 6,
+                    "name": "800m",
+                    "name_for_relay": "4x200m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "race_date": "2026-07-30",
+      "race_genders": [
+        {
+          "gender": {
+            "code": 1,
+            "name": "男子"
+          },
+          "held_styles": [
+            {
+              "swimming_style": {
+                "code": 1,
+                "name": "自由形"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 3,
+                    "name": "100m",
+                    "name_for_relay": "4x25m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 5,
+                            "name": "スイムオフ"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "distance": {
+                    "code": 6,
+                    "name": "800m",
+                    "name_for_relay": "4x200m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "distance": {
+                    "code": 7,
+                    "name": "1500m",
+                    "name_for_relay": null
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 2,
+                "name": "背泳ぎ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 5,
+                "name": "個人メドレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "gender": {
+            "code": 2,
+            "name": "女子"
+          },
+          "held_styles": [
+            {
+              "swimming_style": {
+                "code": 1,
+                "name": "自由形"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 3,
+                    "name": "100m",
+                    "name_for_relay": "4x25m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "distance": {
+                    "code": 6,
+                    "name": "800m",
+                    "name_for_relay": "4x200m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 2,
+                "name": "背泳ぎ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 5,
+                "name": "個人メドレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "race_date": "2026-07-31",
+      "race_genders": [
+        {
+          "gender": {
+            "code": 1,
+            "name": "男子"
+          },
+          "held_styles": [
+            {
+              "swimming_style": {
+                "code": 1,
+                "name": "自由形"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 3,
+                "name": "平泳ぎ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 3,
+                    "name": "100m",
+                    "name_for_relay": "4x25m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 4,
+                "name": "バタフライ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 6,
+                "name": "フリーリレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "gender": {
+            "code": 2,
+            "name": "女子"
+          },
+          "held_styles": [
+            {
+              "swimming_style": {
+                "code": 1,
+                "name": "自由形"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 3,
+                "name": "平泳ぎ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 3,
+                    "name": "100m",
+                    "name_for_relay": "4x25m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 4,
+                "name": "バタフライ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 6,
+                "name": "フリーリレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "race_date": "2026-08-01",
+      "race_genders": [
+        {
+          "gender": {
+            "code": 1,
+            "name": "男子"
+          },
+          "held_styles": [
+            {
+              "swimming_style": {
+                "code": 1,
+                "name": "自由形"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 2,
+                "name": "背泳ぎ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 3,
+                    "name": "100m",
+                    "name_for_relay": "4x25m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 5,
+                "name": "個人メドレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 7,
+                "name": "メドレーリレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "gender": {
+            "code": 2,
+            "name": "女子"
+          },
+          "held_styles": [
+            {
+              "swimming_style": {
+                "code": 1,
+                "name": "自由形"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 2,
+                "name": "背泳ぎ"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 3,
+                    "name": "100m",
+                    "name_for_relay": "4x25m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 5,
+                "name": "個人メドレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 4,
+                    "name": "200m",
+                    "name_for_relay": "4x50m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 3,
+                            "name": "B-決勝"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 1,
+                            "name": "予選"
+                          }
+                        },
+                        {
+                          "division": {
+                            "code": 4,
+                            "name": "決勝(A-決勝)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "swimming_style": {
+                "code": 7,
+                "name": "メドレーリレー"
+              },
+              "held_distances": [
+                {
+                  "distance": {
+                    "code": 5,
+                    "name": "400m",
+                    "name_for_relay": "4x100m"
+                  },
+                  "classes": [
+                    {
+                      "class": {
+                        "code": 1,
+                        "name": "１部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "class": {
+                        "code": 2,
+                        "name": "２部"
+                      },
+                      "race_divisions": [
+                        {
+                          "division": {
+                            "code": 2,
+                            "name": "タイム決勝"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

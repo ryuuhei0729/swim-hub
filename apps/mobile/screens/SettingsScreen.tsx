@@ -4,9 +4,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
 import { restorePurchases } from "@/lib/revenucat";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
+import { calendarColorKeys, teamKeys } from "@apps/shared/hooks/queries/keys";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
@@ -19,6 +21,7 @@ import { AccountDeleteSettings } from "@/components/settings/AccountDeleteSettin
 import { PasswordChangeModal } from "@/components/profile";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import type { MainStackParamList } from "@/navigation/types";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 /**
  * 設定画面
@@ -30,7 +33,7 @@ export const SettingsScreen: React.FC = () => {
   const isPremium = checkIsPremium(subscription);
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -83,14 +86,19 @@ export const SettingsScreen: React.FC = () => {
     }
   }, [refreshSubscription, t]);
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refetchProfile();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetchProfile]);
+  // この画面と子孫(CalendarColorSettings が保持する useCalendarColorSettingsQuery /
+  // useTeamsQuery)が依存する全クエリを尽くす。子孫が queryKey を握っているため
+  // refetch を直接呼べず、Dashboard と同じく queryClient.invalidateQueries で狙う
+  const refreshAll = useCallback(async () => {
+    await Promise.allSettled([
+      refetchProfile(),
+      queryClient.invalidateQueries({ queryKey: calendarColorKeys.all }),
+      queryClient.invalidateQueries({ queryKey: teamKeys.lists() }),
+    ]);
+  }, [refetchProfile, queryClient]);
+
+  // プルリフレッシュ処理
+  const { refreshing, handleRefresh } = usePullToRefresh(refreshAll);
 
   if (isLoading && !profile) {
     return (

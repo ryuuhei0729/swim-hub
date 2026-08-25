@@ -23,8 +23,9 @@ import {
   EyeIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
+import { isCompetitionDateInPast } from "@apps/shared/utils/date";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
 import TeamCompetitionEntryModal from "./TeamCompetitionEntryModal";
@@ -36,10 +37,13 @@ import { StyleAPI } from "@apps/shared/api/styles";
 import { RecordAPI } from "@apps/shared/api/records";
 import RecordLogForm from "@/components/forms/record-log/RecordLogForm";
 import type {
+  RecordLogEditData,
   RecordLogFormData,
   StyleOption,
 } from "@/components/forms/record-log/types";
 import type { EntryInfo } from "@apps/shared/types/ui";
+import type { RecordInsert, RecordUpdate, PoolType } from "@apps/shared/types";
+import { isPoolType } from "@apps/shared/types";
 import type { EditingData } from "@/stores/types";
 
 const CompetitionBasicForm = dynamic(
@@ -55,8 +59,9 @@ export interface TeamCompetition {
   team_id: string;
   title: string;
   date: string;
+  end_date: string | null;
   place: string | null;
-  pool_type: number;
+  pool_type: PoolType;
   entry_status?: "before" | "open" | "closed";
   note: string | null;
   created_at: string;
@@ -111,6 +116,7 @@ interface RawCompetitionData {
   team_id: string;
   title: string;
   date: string;
+  end_date?: string | null;
   place: string | null;
   pool_type?: number | null;
   entry_status: string | null;
@@ -121,6 +127,26 @@ interface RawCompetitionData {
   created_by_user?: RawCompetitionUser | RawCompetitionUser[] | null;
   records?: RawCompetitionRecord[] | null;
   entries?: RawCompetitionEntry[] | null;
+}
+
+// 「自分の記録を追加」フォームの初期値復元専用: 一覧クエリの軽量な records とは別に、
+// 編集フォームに必要な全フィールドをオンデマンド取得するための型 (styles 取得と同じパターン)
+interface RawSelfRecordSplitTime {
+  distance: number;
+  split_time: number;
+}
+
+interface RawSelfRecordEntry {
+  id: string;
+  user_id: string;
+  style_id: number;
+  time: number;
+  is_relaying: boolean;
+  note: string | null;
+  reaction_time: number | null;
+  video_path: string | null;
+  video_thumbnail_path: string | null;
+  split_times?: RawSelfRecordSplitTime[] | null;
 }
 
 /**
@@ -151,8 +177,10 @@ function mapToTeamCompetitions(
       team_id: item.team_id,
       title: item.title,
       date: item.date,
+      end_date: item.end_date ?? null,
       place: item.place,
-      pool_type: item.pool_type ?? 0,
+      // DB 由来の生の数値を PoolType (0 | 1) の値域に narrowing する。範囲外/NULL は 0 (短水路) にフォールバック
+      pool_type: isPoolType(item.pool_type) ? item.pool_type : 0,
       entry_status: isValidEntryStatus(item.entry_status)
         ? item.entry_status
         : undefined,
@@ -213,6 +241,10 @@ export default function TeamCompetitions({
   const [showSelfRecordForm, setShowSelfRecordForm] = useState(false);
   const [selfRecordStyles, setSelfRecordStyles] = useState<StyleOption[]>([]);
   const [selfRecordLoading, setSelfRecordLoading] = useState(false);
+  // 代理入力済みの自分の既存記録（オンデマンド取得、styles 取得と同じ設計方針）
+  const [selfRecordExistingRecords, setSelfRecordExistingRecords] = useState<
+    RawSelfRecordEntry[]
+  >([]);
   const pageSize = 20;
 
   const {
@@ -250,6 +282,7 @@ export default function TeamCompetitions({
             team_id,
             title,
             date,
+            end_date,
             place,
             pool_type,
             entry_status,
@@ -321,8 +354,10 @@ export default function TeamCompetitions({
       id: competition.id,
       type: "competition",
       date: competition.date,
+      end_date: competition.end_date || "",
       title: competition.title,
       place: competition.place || "",
+      pool_type: competition.pool_type,
       note: competition.note || "",
     } as EditingData);
   };
@@ -459,6 +494,8 @@ export default function TeamCompetitions({
     e.stopPropagation();
     setSelfRecordCompetition(competition);
     setShowSelfRecordForm(true);
+    // 前回開いた大会の既存記録が一瞬表示されないよう、取得前にクリアする
+    setSelfRecordExistingRecords([]);
     // 種目一覧を非同期取得(モーダルは即座に開く。失敗しても致命的ではない)
     (async () => {
       try {
@@ -475,11 +512,57 @@ export default function TeamCompetitions({
         console.error("種目一覧の取得に失敗:", err);
       }
     })();
+    // 代理入力済みの自分の既存記録を非同期取得(モーダルは即座に開く。失敗しても致命的ではない=
+    // タイムが空欄のまま種目のみ復元される状態に degrade する。一覧クエリ (loadTeamCompetitions)
+    // の records select は widen しない方針のため、ここで別クエリとして取得する)。
+    //
+    // この導線は isAdmin ガードが無く一般メンバーも操作できるため、records テーブルを
+    // 直接クエリし、competition_id と user_id の2条件でサーバー側に絞り込みを要求する
+    // (C3, PM実測・PM裁定2)。これにより他メンバーの note/video_path/split_times 等の
+    // 私的データが一切ネットワークレスポンスに含まれない。
+    // competition_id で対象大会1件に絞るため、「自分の記録がある直近N件」のような
+    // order/range による件数上限は不要 (長期利用者が51件目以降の大会を開くと
+    // 事前入力が静かに失敗する既知バグの回避)。
+    if (!user) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("records")
+          .select(
+            `
+            id,
+            user_id,
+            style_id,
+            time,
+            is_relaying,
+            note,
+            reaction_time,
+            video_path,
+            video_thumbnail_path,
+            split_times ( distance, split_time )
+          `,
+          )
+          .eq("competition_id", competition.id)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+
+        // サーバー側で competition_id + user_id の2条件で既に絞り込まれているが、
+        // クライアント側でも念のため多重防御として自分の記録のみに絞る
+        const ownRecords = ((data as RawSelfRecordEntry[] | null) || []).filter(
+          (record) => record.user_id === user.id,
+        );
+        setSelfRecordExistingRecords(ownRecords);
+      } catch (err) {
+        console.error("代理入力済み記録の取得に失敗:", err);
+      }
+    })();
   };
 
   const handleCloseSelfRecordForm = () => {
     setShowSelfRecordForm(false);
     setSelfRecordCompetition(null);
+    setSelfRecordExistingRecords([]);
   };
 
   // 自分の記録が対象大会にエントリー済みの場合、エントリー内容をフォームの初期値として渡す
@@ -497,36 +580,168 @@ export default function TeamCompetitions({
       }));
   }, [selfRecordCompetition, selfRecordStyles, user]);
 
+  // dedupe/突合キー: 水泳競技では「個人種目の 100m Fr」と「リレーの1泳者として
+  // 泳いだ 100m Fr」は別レースであり、同じ大会・同じ種目で両方の記録が存在するのは
+  // 正当なデータ (records/entries とも (user_id, competition_id, style_id) の
+  // UNIQUE 制約は無い)。styleId 単独で dedupe すると片方が消えて入力漏れになるため、
+  // 必ず (style_id, is_relaying) の複合キーで扱う
+  const selfRecordDedupeKey = (styleId: number, isRelaying: boolean) =>
+    `${styleId}:${isRelaying}`;
+
+  const buildRecordLogEditData = (existing: RawSelfRecordEntry): RecordLogEditData => ({
+    id: existing.id,
+    styleId: existing.style_id,
+    time: existing.time,
+    isRelaying: existing.is_relaying,
+    // リレー記録の split(経過タイム) 復元は別セッション進行中の WIP と衝突するため
+    // 本スプリントのスコープ外とし、明示的に空にする (V-SR-02)
+    splitTimes: existing.is_relaying
+      ? []
+      : (existing.split_times || []).map((st) => ({
+          distance: st.distance,
+          splitTime: st.split_time,
+        })),
+    note: existing.note ?? undefined,
+    videoPath: existing.video_path ?? undefined,
+    // C2: UPDATE payload はこの値をそのまま使って再送するため、ここで既存値を
+    // 保持しておかないと動画本体は残るがサムネイルだけ null で消えてしまう
+    videoThumbnailPath: existing.video_thumbnail_path ?? undefined,
+    reactionTime: existing.reaction_time ?? undefined,
+  });
+
+  // 代理入力済みの既存記録をフォームの初期値として渡す (Issue1: タイム空欄バグの修正)。
+  // entryDataList と同じ順序で構築し、useRecordLogForm の initialRecords 経路
+  // (time 復元を含めて既に正しく動作する既存メカニズム) にそのまま渡せるようにする。
+  // 既存記録が1件も無い場合は undefined を返し、entryDataList ベースの従来の
+  // デフォルト初期化フロー (非回帰: V-SR-04) を維持する。
+  const selfRecordInitialRecords = useMemo<RecordLogEditData[] | undefined>(() => {
+    if (!selfRecordCompetition || !user) return undefined;
+    if (selfRecordExistingRecords.length === 0) return undefined;
+
+    const claimedKeys = new Set<string>();
+    const cards: RecordLogEditData[] = [];
+
+    // 1. entries (個人エントリー) の順序でカードを構築する。
+    // entries は isRelaying 相当の情報を持たないため、まず「非リレーの完全一致」を
+    // 優先して探し、無ければ「同じ種目で未使用の記録」(リレー含む) にフォールバックする。
+    // これにより、実際の代理入力がリレー記録としてのみ存在するケース (V-SR-02) でも、
+    // 1件しかない実データを正しく1枚のカードに復元できる。
+    selfRecordEntryDataList.forEach((entry) => {
+      let matched = selfRecordExistingRecords.find(
+        (record) =>
+          record.style_id === entry.styleId &&
+          !record.is_relaying &&
+          !claimedKeys.has(selfRecordDedupeKey(record.style_id, record.is_relaying)),
+      );
+      if (!matched) {
+        matched = selfRecordExistingRecords.find(
+          (record) =>
+            record.style_id === entry.styleId &&
+            !claimedKeys.has(selfRecordDedupeKey(record.style_id, record.is_relaying)),
+        );
+      }
+      if (matched) {
+        claimedKeys.add(selfRecordDedupeKey(matched.style_id, matched.is_relaying));
+        cards.push(buildRecordLogEditData(matched));
+      } else {
+        cards.push({ styleId: entry.styleId });
+      }
+    });
+
+    // 2. entries で拾われなかった残りの既存記録を、それぞれ独立したカードとして追加する。
+    // 個人種目とリレーの両方に記録がある場合、1で個人側が既にクレーム済みのため、
+    // ここでリレー側が別カードとして追加され、両方が保持される (入力漏れ防止)。
+    selfRecordExistingRecords.forEach((record) => {
+      const key = selfRecordDedupeKey(record.style_id, record.is_relaying);
+      if (claimedKeys.has(key)) return;
+      claimedKeys.add(key);
+      cards.push(buildRecordLogEditData(record));
+    });
+
+    return cards;
+  }, [
+    selfRecordCompetition,
+    user,
+    selfRecordEntryDataList,
+    selfRecordExistingRecords,
+  ]);
+
   const handleSelfRecordSubmit = async (formDataList: RecordLogFormData[]) => {
     if (!user || !selfRecordCompetition) return;
     setSelfRecordLoading(true);
     try {
       const recordAPI = new RecordAPI(supabase);
       for (const formData of formDataList) {
-        const newRecord = await recordAPI.createRecord({
-          competition_id: selfRecordCompetition.id,
-          team_id: teamId,
-          style_id: parseInt(formData.styleId, 10),
-          time: formData.time,
-          video_path: formData.videoPath || null,
-          video_thumbnail_path: null,
-          note: formData.note || null,
-          is_relaying: formData.isRelaying || false,
-          reaction_time:
-            formData.reactionTime && formData.reactionTime.trim() !== ""
-              ? parseFloat(formData.reactionTime)
-              : null,
-          pool_type: selfRecordCompetition.pool_type === 1 ? 1 : 0,
-        });
+        const reactionTime =
+          formData.reactionTime && formData.reactionTime.trim() !== ""
+            ? parseFloat(formData.reactionTime)
+            : null;
 
-        if (formData.splitTimes.length > 0) {
-          await recordAPI.createSplitTimes(
-            formData.splitTimes.map((splitTime) => ({
-              record_id: newRecord.id,
-              distance: splitTime.distance,
-              split_time: splitTime.splitTime,
-            })),
+        if (formData.existingRecordId) {
+          // 代理入力済みの既存 records 行を UPDATE する (重複INSERT防止)。
+          // 自然キーではなく id 指定で更新する (別行破壊の事故が過去にあるため)。
+          // C2: INSERT 用の完全指定オブジェクトを UPDATE に転用すると、フォームに
+          // 現れないフィールド (video_thumbnail_path 等) を意図せず null で潰す。
+          // RecordUpdate は Partial なので、この画面で変更しうるフィールドのみを
+          // 明示的に組み立てる (competition_id/team_id はこの画面では不変のため送らない。
+          // pool_type は競技会側の破損データからの自己修復のため明示的に揃える。D-6)
+          const updatePayload: RecordUpdate = {
+            style_id: parseInt(formData.styleId, 10),
+            time: formData.time,
+            video_path: formData.videoPath || null,
+            video_thumbnail_path: formData.videoThumbnailPath || null,
+            note: formData.note || null,
+            is_relaying: formData.isRelaying || false,
+            // D-6: 保存対象の競技会の pool_type に揃える(自分の記録を保存する経路の中だけ)。
+            // 競技会本体が短水路(0)に破壊された後に長水路(1)へ修正したケースで、記録側も追随させる。
+            pool_type: selfRecordCompetition.pool_type,
+            reaction_time: reactionTime,
+          };
+          const updatedRecord = await recordAPI.updateRecord(
+            formData.existingRecordId,
+            updatePayload,
           );
+
+          // split_times の書き込み判定は「ロード時点の既存記録が is_relaying だったか」
+          // (existingRecordWasRelaying) で行う。フォーム上の isRelaying トグルで判定すると
+          // ユーザーがトグルを操作した場合に判定がぶれる。
+          // リレー記録の split はこの画面では意図的に空のままロードしている (V-SR-02) ため、
+          // 書き込むとユーザーに見えていない実データ (別セッション進行中のリレー split WIP を
+          // 含む) を消してしまう (C1)。読まないし書かない、を一貫させる。
+          if (!formData.existingRecordWasRelaying) {
+            // 非リレー: 0件でも常に呼び、全件削除された場合も正しく永続化する
+            // (CompetitionClient.tsx の既存パターンと同じ「空配列でも常に呼ぶ」方式)
+            await recordAPI.replaceSplitTimes(
+              updatedRecord.id,
+              formData.splitTimes.map((splitTime) => ({
+                distance: splitTime.distance,
+                split_time: splitTime.splitTime,
+              })),
+            );
+          }
+        } else {
+          const createPayload: Omit<RecordInsert, "user_id"> = {
+            competition_id: selfRecordCompetition.id,
+            team_id: teamId,
+            style_id: parseInt(formData.styleId, 10),
+            time: formData.time,
+            video_path: formData.videoPath || null,
+            video_thumbnail_path: null,
+            note: formData.note || null,
+            is_relaying: formData.isRelaying || false,
+            reaction_time: reactionTime,
+            pool_type: selfRecordCompetition.pool_type,
+          };
+          const newRecord = await recordAPI.createRecord(createPayload);
+          if (formData.splitTimes.length > 0) {
+            await recordAPI.createSplitTimes(
+              formData.splitTimes.map((splitTime) => ({
+                record_id: newRecord.id,
+                distance: splitTime.distance,
+                split_time: splitTime.splitTime,
+              })),
+            );
+          }
         }
       }
 
@@ -648,13 +863,16 @@ export default function TeamCompetitions({
                       <div className="flex items-center space-x-2 mb-1">
                         <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
                         <span className="text-sm text-gray-600">
-                          {format(
-                            new Date(competition.date + "T00:00:00"),
-                            "yyyy年M月d日(EEE)",
-                            {
-                              locale: ja,
-                            },
-                          )}
+                          {(() => {
+                            const competitionDate = new Date(
+                              competition.date + "T00:00:00",
+                            );
+                            return isValid(competitionDate)
+                              ? format(competitionDate, "yyyy年M月d日(EEE)", {
+                                  locale: ja,
+                                })
+                              : "-";
+                          })()}
                         </span>
                       </div>
 
@@ -728,14 +946,16 @@ export default function TeamCompetitions({
 
                       {/* アクションボタン */}
                       <div className="flex gap-2 flex-wrap justify-end">
-                        {/* エントリー管理ボタン */}
-                        <button
-                          onClick={(e) => handleEntryClick(e, competition)}
-                          className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                        >
-                          <ClipboardDocumentListIcon className="h-4 w-4 mr-1" />
-                          {t("competitions.card.entryButton")}
-                        </button>
+                        {/* エントリー管理ボタン（過去日は非表示。今日・未来は表示） */}
+                        {!isCompetitionDateInPast(competition.date) && (
+                          <button
+                            onClick={(e) => handleEntryClick(e, competition)}
+                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                          >
+                            <ClipboardDocumentListIcon className="h-4 w-4 mr-1" />
+                            {t("competitions.card.entryButton")}
+                          </button>
+                        )}
 
                         {/* 一般メンバー含む全員向け: 自分の記録を追加 */}
                         <button
@@ -852,10 +1072,13 @@ export default function TeamCompetitions({
             editingData
               ? {
                   date: (editingData as { date?: string }).date,
+                  end_date:
+                    (editingData as { end_date?: string | null }).end_date,
                   title:
                     (editingData as { title?: string | null }).title ??
                     undefined,
                   place: (editingData as { place?: string }).place,
+                  pool_type: (editingData as { pool_type?: number }).pool_type,
                   note: (editingData as { note?: string }).note,
                 }
               : undefined
@@ -910,10 +1133,11 @@ export default function TeamCompetitions({
             selfRecordCompetition.title || t("competitions.fallbackTitle")
           }
           competitionDate={selfRecordCompetition.date}
-          poolType={selfRecordCompetition.pool_type === 1 ? 1 : 0}
+          poolType={selfRecordCompetition.pool_type}
           isLoading={selfRecordLoading}
           styles={selfRecordStyles}
           entryDataList={selfRecordEntryDataList}
+          initialRecords={selfRecordInitialRecords}
         />
       )}
 

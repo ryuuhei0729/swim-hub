@@ -68,7 +68,11 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
     <View style={styles.container}>
       {/* プロフィール画像と基本情報 */}
       <View style={styles.profileRow}>
-        <View style={styles.avatarContainer}>{renderAvatar()}</View>
+        <View
+          style={[styles.avatarContainer, !!resolvedAvatarUrl && styles.avatarContainerWithImage]}
+        >
+          {renderAvatar()}
+        </View>
         <View style={styles.infoContainer}>
           <Text style={styles.name}>{profile.name}</Text>
         </View>
@@ -139,6 +143,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563EB",
     justifyContent: "center",
     alignItems: "center",
+  },
+  // 画像がある場合は透過PNGの背景として薄いグレーを敷く（青が透けるのを防ぐ / web の bg-gray-100 と一致）
+  avatarContainerWithImage: {
+    backgroundColor: "#F3F4F6",
   },
   avatarImage: {
     width: "100%",

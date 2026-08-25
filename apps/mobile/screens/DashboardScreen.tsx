@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { addMonths, subMonths, format as formatDate } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCalendarQuery } from "@/hooks/useCalendarQuery";
 import { CalendarView } from "@/components/calendar";
@@ -11,10 +12,12 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calendarColors";
+import { announcementKeys, notificationKeys } from "@apps/shared/hooks/queries/keys";
 import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import { TeamAnnouncementsSection } from "@/components/dashboard/TeamAnnouncementsSection";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 // 未設定 (取得前・未カスタマイズ) の色設定。resolver がデフォルト色にフォールバックするための空値。
 const DEFAULT_CALENDAR_COLOR_SETTINGS: CalendarColorSettings = {
@@ -32,10 +35,10 @@ export const DashboardScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
 
   // チーム一覧取得（お知らせ表示用）
-  const { teams = [] } = useTeamsQuery(supabase, {
+  const { teams = [], refetch: refetchTeams } = useTeamsQuery(supabase, {
     enableRealtime: false,
   });
 
@@ -51,10 +54,10 @@ export const DashboardScreen: React.FC = () => {
   });
 
   // 記録色カスタマイズ設定 (未設定・取得前はデフォルト色を使うフォールバック値)
-  const { settings: colorSettings = DEFAULT_CALENDAR_COLOR_SETTINGS } = useCalendarColorSettingsQuery(
-    supabase,
-    user?.id,
-  );
+  const {
+    settings: colorSettings = DEFAULT_CALENDAR_COLOR_SETTINGS,
+    refetch: refetchColorSettings,
+  } = useCalendarColorSettingsQuery(supabase, user?.id);
 
   // 選択した日付のエントリーを取得
   const selectedDateEntries = useMemo(() => {
@@ -64,18 +67,25 @@ export const DashboardScreen: React.FC = () => {
     return entries.filter((item) => item.date === dateKey);
   }, [selectedDate, entries]);
 
+  // この画面と子孫(TeamAnnouncementsSection配下のTeamCard/useUnansweredAttendancesQuery等)が
+  // 依存する全クエリを尽くす。announcements/notifications は子孫が queryKey を握っているため
+  // refetch を直接呼べず、queryClient.invalidateQueries で狙う
+  // (子孫の query observer は announcements が0件でも active のまま維持されるため確実に再取得される)
+  const refreshAll = useCallback(async () => {
+    await Promise.allSettled([
+      refetch(),
+      refetchTeams(),
+      refetchColorSettings(),
+      queryClient.invalidateQueries({ queryKey: announcementKeys.lists() }),
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+    ]);
+  }, [refetch, refetchTeams, refetchColorSettings, queryClient]);
+
   // タブ遷移時にデータ再取得
-  useRefreshOnFocus(refetch);
+  useRefreshOnFocus(refreshAll);
 
   // プルリフレッシュ処理
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch]);
+  const { refreshing, handleRefresh } = usePullToRefresh(refreshAll);
 
   // 前月へ
   const handlePrevMonth = () => {

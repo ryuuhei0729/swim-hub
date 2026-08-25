@@ -107,6 +107,12 @@ export interface CompetitionTabSaveParams {
   originalEntryIds: string[];
   /** 編集前に DB に存在していたレコード ID 一覧 */
   originalRecordIds: string[];
+  /**
+   * 編集時、competitionId から大会本体を DB 再取得できたか (新規作成時は常に true)。
+   * false の場合、basicData は暫定値の可能性があるため、保存側は競技会本体の UPDATE を
+   * スキップしなければならない (D-3)。0 を推測で書き込まないためのガード。
+   */
+  competitionRowResolved: boolean;
 }
 
 export interface CompetitionTabModalProps {
@@ -161,6 +167,7 @@ export default function CompetitionTabModal({
   const tTabModal = useTranslations("forms.tabModal");
   const tPremium = useTranslations("forms.premium");
   const tTimeError = useTranslations("bulkBestTime.error");
+  const tHandlers = useTranslations("dashboard.handlers");
   const { subscription, user, supabase } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const { bestTimes, loadBestTimes } = useBestTimes(supabase);
@@ -304,6 +311,9 @@ export default function CompetitionTabModal({
   // Initialization
   // ---------------------------------------------------------------------------
   const [isInitialized, setIsInitialized] = useState(false);
+  // 編集時、competitionId から DB 再取得した大会本体で basicData を上書き済みかどうか (D-1/D-3)。
+  // editingData なし(新規作成)の場合は解決不要のため true。
+  const [competitionRowResolved, setCompetitionRowResolved] = useState(false);
   const initialDraftRef = useRef<string>("");
   const [tabErrors, setTabErrors] = useState<Record<CompetitionTabId, boolean>>({
     competition: false,
@@ -324,6 +334,7 @@ export default function CompetitionTabModal({
       setImageData({ newFiles: [], deletedIds: [] });
       setBasicValidationError(null);
       setEntryValidationError(null);
+      setCompetitionRowResolved(false);
       setTabErrors({ competition: false, entry: false, record: false });
       setIsSubmitted(false);
       setShowConfirmDialog(false);
@@ -351,55 +362,120 @@ export default function CompetitionTabModal({
 
     if (editingData && typeof editingData === "object") {
       const d = editingData as Record<string, unknown>;
-      if ("title" in d) {
-        initial = {
-          date: (d.date as string) || format(selectedDate, "yyyy-MM-dd"),
-          endDate: (d.end_date as string) || "",
-          title: (d.title as string) || "",
-          place: (d.place as string) || "",
-          poolType: (d.pool_type as number) ?? 0,
-          note: (d.note as string) || "",
-        };
-      } else if ("editData" in d && d.editData) {
-        const editPayload = d.editData as Record<string, unknown>;
-        const comp = editPayload.competition as Record<string, unknown> | undefined;
-        initial = {
-          date: (comp?.date as string) || (editPayload.date as string) || format(selectedDate, "yyyy-MM-dd"),
-          endDate: (comp?.end_date as string) || "",
-          title: (comp?.title as string) || "",
-          place: (comp?.place as string) || "",
-          poolType: (comp?.pool_type as number) ?? 0,
-          note: (comp?.note as string) || "",
-        };
-        const rawEntries = editPayload.entries as Array<Record<string, unknown>> | undefined;
-        if (rawEntries && rawEntries.length > 0) {
-          const drafts = rawEntries.map((entry, idx) => {
-            const rawTime = Number(entry.entryTime ?? entry.entry_time ?? 0);
-            return {
-              id: String(entry.id ?? `entry-${idx + 1}`),
-              styleId: String(entry.styleId ?? entry.style_id ?? ""),
-              entryTime: rawTime,
-              entryTimeDisplayValue: rawTime > 0 ? formatTimeBest(rawTime) : "",
-              note: String(entry.note ?? ""),
-              isRelaying: Boolean(entry.isRelaying ?? entry.is_relaying ?? false),
-            };
-          });
-          setEntries(drafts);
-          // DB UUID を持つエントリーの ID を originalEntryIds に保存
-          const dbIds = drafts
-            .map((d) => d.id)
-            .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
-          setOriginalEntryIds(dbIds);
-          initialEntriesSnapshotRef.current = JSON.stringify(drafts);
-        }
+      // 呼び出し元によって値の置き場所が異なる (top-level / editData.competition / metadata.competition)。
+      // 単一の if/else で先勝ちにすると、他の置き場所にしか値が無いケースを握り潰してしまう (D-2)。
+      // ここではあくまで DB 再取得(下の useEffect)が完了するまでの暫定値として、優先度をつけて合成する。
+      const editPayload =
+        "editData" in d && d.editData && typeof d.editData === "object"
+          ? (d.editData as Record<string, unknown>)
+          : undefined;
+      const payloadComp = editPayload?.competition as Record<string, unknown> | undefined;
+      const metaComp =
+        "metadata" in d && d.metadata && typeof d.metadata === "object"
+          ? ((d.metadata as Record<string, unknown>).competition as Record<string, unknown> | undefined)
+          : undefined;
+
+      // 優先度: top-level (呼び出し元が most-specific に詰めた値) > editData.competition
+      // (DayDetailModal のエントリー編集payload) > metadata.competition (カレンダーitem由来、最も古い可能性)。
+      // null/undefined のみスキップし、0 や "" (短水路 / 空文字の place など) は有効値として採用する。
+      const pick = <T,>(...values: Array<T | null | undefined>): T | undefined =>
+        values.find((v) => v !== null && v !== undefined);
+
+      initial = {
+        date:
+          pick<string>(
+            d.date as string,
+            payloadComp?.date as string,
+            editPayload?.date as string,
+            metaComp?.date as string,
+          ) || format(selectedDate, "yyyy-MM-dd"),
+        endDate:
+          pick<string>(d.end_date as string, payloadComp?.end_date as string, metaComp?.end_date as string) || "",
+        title: pick<string>(d.title as string, payloadComp?.title as string, metaComp?.title as string) || "",
+        place: pick<string>(d.place as string, payloadComp?.place as string, metaComp?.place as string) || "",
+        poolType:
+          pick<number>(d.pool_type as number, payloadComp?.pool_type as number, metaComp?.pool_type as number) ?? 0,
+        note: pick<string>(d.note as string, payloadComp?.note as string, metaComp?.note as string) || "",
+      };
+
+      const rawEntries = editPayload?.entries as Array<Record<string, unknown>> | undefined;
+      if (rawEntries && rawEntries.length > 0) {
+        const drafts = rawEntries.map((entry, idx) => {
+          const rawTime = Number(entry.entryTime ?? entry.entry_time ?? 0);
+          return {
+            id: String(entry.id ?? `entry-${idx + 1}`),
+            styleId: String(entry.styleId ?? entry.style_id ?? ""),
+            entryTime: rawTime,
+            entryTimeDisplayValue: rawTime > 0 ? formatTimeBest(rawTime) : "",
+            note: String(entry.note ?? ""),
+            isRelaying: Boolean(entry.isRelaying ?? entry.is_relaying ?? false),
+          };
+        });
+        setEntries(drafts);
+        // DB UUID を持つエントリーの ID を originalEntryIds に保存
+        const dbIds = drafts
+          .map((d) => d.id)
+          .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+        setOriginalEntryIds(dbIds);
+        initialEntriesSnapshotRef.current = JSON.stringify(drafts);
       }
     }
 
     setBasicData(initial);
     initialDraftRef.current = JSON.stringify(initial);
+    // 新規作成 (competitionId 無し) は解決すべき DB 行が無いので即座に resolved とする。
+    // 編集時は下の DB 再取得 useEffect が完了するまで false のまま (D-1/D-3)。
+    if (!editingCompetitionId) {
+      setCompetitionRowResolved(true);
+    }
     setIsInitialized(true);
     setActiveTab(initialTab);
-  }, [isOpen, isInitialized, editingData, selectedDate, initialTab]);
+  }, [isOpen, isInitialized, editingData, editingCompetitionId, selectedDate, initialTab]);
+
+  // 編集モード: competition_id から大会本体を DB から再取得し、basicData を DB の実値で上書きする (D-1)。
+  // 呼び出し元 (editingData) が渡す値は「初回描画用の暫定値」に過ぎない。mobile の
+  // CompetitionTabFormScreen.tsx が select("*") で一貫して行っている再取得と同型のパターン。
+  // 取得できるまでの間は競技会本体の UPDATE を発行させない (競技会 UPDATE 側のガードは D-3 / useCompetitionTabSave 側)。
+  useEffect(() => {
+    if (!isOpen || !isInitialized || !editingCompetitionId || competitionRowResolved) return;
+
+    let isCancelled = false;
+    const fetchCompetition = async () => {
+      const { data, error } = await supabase
+        .from("competitions")
+        .select("date, end_date, title, place, pool_type, note")
+        .eq("id", editingCompetitionId)
+        .single();
+
+      if (isCancelled) return;
+      if (error || !data) return; // 解決失敗: 暫定値のまま保持し、resolved は true にしない (D-3)
+
+      const row = data as {
+        date: string;
+        end_date: string | null;
+        title: string | null;
+        place: string | null;
+        pool_type: number | null;
+        note: string | null;
+      };
+      const resolved = {
+        date: row.date,
+        endDate: row.end_date || "",
+        title: row.title || "",
+        place: row.place || "",
+        poolType: row.pool_type ?? 0,
+        note: row.note || "",
+      };
+      setBasicData(resolved);
+      initialDraftRef.current = JSON.stringify(resolved);
+      setCompetitionRowResolved(true);
+    };
+
+    fetchCompetition().catch(() => {});
+    return () => {
+      isCancelled = true;
+    };
+  }, [isOpen, isInitialized, editingCompetitionId, competitionRowResolved, supabase]);
 
   // 編集モード: competition_id に紐づく全エントリーを DB から取得してフォームを初期化
   // rawEntries(editData.editData.entries)が既にある場合はスキップ(二重ロード防止)
@@ -641,6 +717,79 @@ export default function CompetitionTabModal({
     setIsSubmitted(true);
 
     try {
+      // Critical-2 (Reviewer): competitionRowResolved が false のまま保存を続行すると、
+      // 「保存成功」に見せかけて競技会本体の UPDATE を静かにスキップしてしまう。
+      // 保存直前に1回だけ再解決を試み、それでも読めない場合は何も書き込まずエラーで止める
+      // (「読めないなら書かない、そして黙るな」。部分保存してモーダルを閉じる案は採らない)。
+      let saveBasicData = basicData;
+      let saveCompetitionRowResolved = competitionRowResolved;
+      if (!saveCompetitionRowResolved && editingCompetitionId) {
+        const { data, error } = await supabase
+          .from("competitions")
+          .select("date, end_date, title, place, pool_type, note")
+          .eq("id", editingCompetitionId)
+          .single();
+
+        if (error || !data) {
+          throw new Error(tHandlers("competitionSaveBlockedUnresolved"));
+        }
+
+        const row = data as {
+          date: string;
+          end_date: string | null;
+          title: string | null;
+          place: string | null;
+          pool_type: number | null;
+          note: string | null;
+        };
+        const rowValues = {
+          date: row.date,
+          endDate: row.end_date || "",
+          title: row.title || "",
+          place: row.place || "",
+          poolType: row.pool_type ?? 0,
+          note: row.note || "",
+        };
+
+        // R3 (Reviewer): このブロックに到達するのは competitionRowResolved === false のときだけ。
+        // D-1 の mount 時再取得は「成功した場合のみ」 basicData / initialDraftRef.current を DB
+        // 実値で上書きし、同時に competitionRowResolved を true にする。つまり resolved === false
+        // のままここに来たということは、mount 時再取得は一度も initialDraftRef.current を書き換えて
+        // いない = initialDraftRef.current は今も「モーダルを開いた時点の暫定値」のままである。
+        // このブロック自身が末尾で initialDraftRef.current を書き換えるため、比較用のベースラインは
+        // 先にスナップショットしておく (別 ref を新設する必要はない: 上記の理由でこの時点の
+        // initialDraftRef.current は既に「開いた時点の暫定値」に固定されている)。
+        const provisionalJson = initialDraftRef.current;
+        const provisional = provisionalJson ? (JSON.parse(provisionalJson) as typeof basicData) : basicData;
+
+        // フィールド単位でマージする (Critical, R3)。「暫定値から変えていないフィールドだけ」
+        // DB 真値 (row) を採用し、変えたフィールドはユーザー入力 (basicData) を優先する。
+        // date と endDate は1つの単位として扱い、日付側だけ DB 値・終了日だけユーザー値のような
+        // ソース混在を構造的に作らない。
+        const dateGroupTouched = basicData.date !== provisional.date || basicData.endDate !== provisional.endDate;
+        const merged = {
+          date: dateGroupTouched ? basicData.date : rowValues.date,
+          endDate: dateGroupTouched ? basicData.endDate : rowValues.endDate,
+          title: basicData.title !== provisional.title ? basicData.title : rowValues.title,
+          place: basicData.place !== provisional.place ? basicData.place : rowValues.place,
+          poolType: basicData.poolType !== provisional.poolType ? basicData.poolType : rowValues.poolType,
+          note: basicData.note !== provisional.note ? basicData.note : rowValues.note,
+        };
+
+        // マージ後の日付整合性を再検証する。validateAll() は handleSave 冒頭でマージ前の
+        // basicData に対して1度しか走っていないため、マージ結果 (merged) は未検証のまま
+        // 保存され得る。validateAll の判定式 (:666) と同じ条件で再チェックする。
+        if (merged.endDate && merged.endDate < merged.date) {
+          throw new Error(tHandlers("competitionSaveBlockedDateInvalid"));
+        }
+
+        saveBasicData = merged;
+        saveCompetitionRowResolved = true;
+        setBasicData(saveBasicData);
+        initialDraftRef.current = JSON.stringify(saveBasicData);
+        setCompetitionRowResolved(true);
+      }
+
       const hasImageChanges = imageData.newFiles.length > 0 || imageData.deletedIds.length > 0;
 
       // 未編集のデフォルト行(種目・タイム・メモ・リレーいずれも初期値のまま)は
@@ -678,7 +827,7 @@ export default function CompetitionTabModal({
       }
 
       await onSave({
-        basicData,
+        basicData: saveBasicData,
         imageData: hasImageChanges ? imageData : undefined,
         // エントリータブ非表示時（今日・過去 / entryLocked）はエントリーを一切変更しない。
         // entries と originalEntryIds の両方を空にして diff を no-op にする（既存エントリーの誤削除防止）。
@@ -687,6 +836,7 @@ export default function CompetitionTabModal({
         editingCompetitionId,
         originalEntryIds: showEntryTab ? originalEntryIds : [],
         originalRecordIds: effectiveOriginalRecordIds,
+        competitionRowResolved: saveCompetitionRowResolved,
       });
     } catch (error) {
       console.error("大会一括保存に失敗しました:", error);
@@ -708,6 +858,9 @@ export default function CompetitionTabModal({
     editingCompetitionId,
     originalEntryIds,
     originalRecordIds,
+    competitionRowResolved,
+    supabase,
+    tHandlers,
     onSave,
   ]);
 

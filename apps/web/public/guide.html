@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>SwimHub のはじめかた — 小石川 水泳部</title>
+<style>
+  :root{
+    --ink:#0D1A29; --ink-2:#445A72; --ink-3:#6B819A;
+    --pool:#0B62D6; --pool-deep:#084AA3; --surf:#E9F2FC;
+    --lane:#CBD9E8; --hair:#DEE8F3;
+    --paper:#FBFCFE; --card:#FFFFFF;
+    --must:#A83A0C; --must-bg:#FDF0E9;
+    --ok:#0F6B44; --ok-bg:#E8F5EE;
+    --shadow:0 1px 2px rgba(13,26,41,.05), 0 8px 24px -12px rgba(13,26,41,.18);
+    --jp:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP","Segoe UI",sans-serif;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ink:#E6EDF6; --ink-2:#A2B5CA; --ink-3:#7E93AB;
+      --pool:#5EA5F7; --pool-deep:#8CC0FA; --surf:#132639;
+      --lane:#27394E; --hair:#1E2E40;
+      --paper:#09111B; --card:#101D2B;
+      --must:#F0916A; --must-bg:#2A1A12;
+      --ok:#54C08C; --ok-bg:#0F2A1E;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#E6EDF6; --ink-2:#A2B5CA; --ink-3:#7E93AB;
+    --pool:#5EA5F7; --pool-deep:#8CC0FA; --surf:#132639;
+    --lane:#27394E; --hair:#1E2E40;
+    --paper:#09111B; --card:#101D2B;
+    --must:#F0916A; --must-bg:#2A1A12;
+    --ok:#54C08C; --ok-bg:#0F2A1E;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"]{
+    --ink:#0D1A29; --ink-2:#445A72; --ink-3:#6B819A;
+    --pool:#0B62D6; --pool-deep:#084AA3; --surf:#E9F2FC;
+    --lane:#CBD9E8; --hair:#DEE8F3;
+    --paper:#FBFCFE; --card:#FFFFFF;
+    --must:#A83A0C; --must-bg:#FDF0E9;
+    --ok:#0F6B44; --ok-bg:#E8F5EE;
+    --shadow:0 1px 2px rgba(13,26,41,.05), 0 8px 24px -12px rgba(13,26,41,.18);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--jp); font-size:16px; line-height:1.8;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:900px; margin:0 auto; padding:0 20px 96px}
+
+  /* ---------- masthead ---------- */
+  .mast{padding:56px 0 36px; border-bottom:1px solid var(--hair)}
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--pool); margin:0 0 14px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::after{content:""; flex:1; height:1px; background:var(--hair)}
+  h1{
+    font-size:clamp(30px,5.4vw,44px); line-height:1.25; letter-spacing:-.02em;
+    font-weight:800; margin:0 0 16px; text-wrap:balance;
+  }
+  .lead{font-size:17px; color:var(--ink-2); margin:0; max-width:62ch}
+
+  /* ---------- cards ---------- */
+  .panel{
+    background:var(--card); border:1px solid var(--hair); border-radius:12px;
+    padding:22px 24px; box-shadow:var(--shadow);
+  }
+  .grid2{display:grid; gap:16px; margin:32px 0 8px; align-items:start}
+  @media (min-width:720px){ .grid2{grid-template-columns:1fr 1fr} }
+
+  .panel h3{
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-3); margin:0 0 12px; font-weight:600;
+  }
+  .creds{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px}
+  .creds li{display:flex; gap:12px; align-items:baseline; font-size:15px}
+  .creds .k{
+    font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--pool);
+    border:1px solid var(--lane); border-radius:4px; padding:2px 7px; white-space:nowrap;
+    background:var(--surf);
+  }
+  .creds code{font-family:var(--mono); font-size:13.5px; color:var(--ink)}
+
+  /* ---------- checklist ---------- */
+  ol.toc{list-style:none; counter-reset:t; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+  ol.toc li{counter-increment:t; display:flex; gap:12px; align-items:baseline; padding:5px 0}
+  ol.toc li::before{
+    content:counter(t); font-family:var(--mono); font-size:12px; font-weight:700;
+    color:var(--pool); min-width:1.4em;
+  }
+  ol.toc a{color:var(--ink); text-decoration:none; border-bottom:1px solid transparent; font-size:15px}
+  ol.toc a:hover{border-bottom-color:var(--pool); color:var(--pool)}
+  .flag{
+    font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    padding:2px 7px; border-radius:3px; font-weight:700; white-space:nowrap;
+  }
+  .flag.req{background:var(--must-bg); color:var(--must)}
+  .flag.opt{background:var(--surf); color:var(--ink-3)}
+
+  /* ---------- steps with lane-rope rail ---------- */
+  .step{padding:52px 0 8px; border-top:1px solid var(--hair)}
+  .step:first-of-type{border-top:none}
+  @media (min-width:820px){
+    .step{display:grid; grid-template-columns:76px 1fr; gap:0 28px}
+    .rail{position:relative}
+    /* lane divider: alternating segments, like a pool lane rope */
+    .rail::before{
+      content:""; position:absolute; left:26px; top:52px; bottom:-8px; width:6px; border-radius:3px;
+      background:repeating-linear-gradient(180deg,
+        var(--pool) 0 14px, var(--surf) 14px 28px);
+      opacity:.55;
+    }
+  }
+  .num{
+    font-family:var(--mono); font-weight:700; font-size:13px; letter-spacing:.06em;
+    color:#fff; background:var(--pool); width:38px; height:38px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .step-head{display:flex; align-items:center; gap:12px; margin-bottom:10px}
+  @media (min-width:820px){ .step-head{margin-left:0} .rail .num{margin-left:8px} }
+  h2{font-size:clamp(21px,3vw,26px); line-height:1.35; letter-spacing:-.01em; font-weight:800; margin:0; text-wrap:balance}
+  .step > .body > p{color:var(--ink-2); margin:0 0 20px; max-width:64ch}
+
+  /* mobile: number inline with heading */
+  .rail{display:flex; align-items:flex-start}
+  @media (max-width:819px){
+    .rail{margin-bottom:12px}
+  }
+
+  /* ---------- action list ---------- */
+  ol.do{list-style:none; counter-reset:d; margin:0 0 24px; padding:0}
+  ol.do > li{
+    counter-increment:d; position:relative; padding:0 0 14px 34px; font-size:15.5px;
+  }
+  ol.do > li::before{
+    content:counter(d); position:absolute; left:0; top:.15em;
+    font-family:var(--mono); font-size:11px; font-weight:700; color:var(--pool);
+    border:1px solid var(--lane); border-radius:50%;
+    width:21px; height:21px; display:flex; align-items:center; justify-content:center;
+    background:var(--card);
+  }
+  kbd{
+    font-family:var(--jp); font-size:13.5px; font-weight:700;
+    background:var(--surf); color:var(--pool-deep); border:1px solid var(--lane);
+    border-radius:5px; padding:2px 8px; white-space:nowrap;
+  }
+  code{font-family:var(--mono); font-size:14px; background:var(--surf); padding:1px 6px; border-radius:4px; font-variant-numeric:tabular-nums}
+
+  /* ---------- figures ---------- */
+  figure{margin:0 0 24px}
+  figure img{
+    display:block; width:100%; height:auto; border-radius:10px;
+    border:1px solid var(--lane); background:var(--card); box-shadow:var(--shadow);
+  }
+  figcaption{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.03em; color:var(--ink-3);
+    margin-top:9px; padding-left:2px; line-height:1.6;
+  }
+  .figs{display:flex; flex-direction:column; gap:0}
+  figure.narrow img{max-width:432px}
+  figure.narrow figcaption{max-width:432px}
+
+  /* ---------- callouts ---------- */
+  .note{
+    border-left:3px solid var(--pool); background:var(--surf);
+    padding:14px 18px; border-radius:0 8px 8px 0; margin:0 0 24px;
+    font-size:15px; color:var(--ink);
+  }
+  .note.warn{border-left-color:var(--must); background:var(--must-bg)}
+  .note.good{border-left-color:var(--ok); background:var(--ok-bg)}
+  .note strong{font-weight:800}
+  .note p{margin:0}
+  .note p + p{margin-top:8px}
+
+  /* ---------- faq ---------- */
+  .faq{margin-top:8px}
+  .faq dt{font-weight:700; font-size:15.5px; margin-top:20px}
+  .faq dd{margin:6px 0 0; color:var(--ink-2); font-size:15px}
+
+  footer{
+    margin-top:56px; padding-top:24px; border-top:1px solid var(--hair);
+    font-family:var(--mono); font-size:11.5px; color:var(--ink-3); line-height:1.9;
+  }
+
+  a{color:var(--pool)}
+  a:focus-visible, ol.toc a:focus-visible{outline:2px solid var(--pool); outline-offset:3px; border-radius:2px}
+
+  @media print{
+    body{background:#fff}
+    .step{break-inside:avoid}
+    figure{break-inside:avoid}
+    .panel{box-shadow:none}
+    figure img{box-shadow:none}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">小石川 水泳部</p>
+    <h1>SwimHub のはじめかた</h1>
+    <p class="lead">先生から配られたメールアドレスと仮パスワードで、最初にやることをまとめました。上から順に進めれば10分ほどで終わります。パソコンでもスマホでもできます。</p>
+  </header>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>配られるもの</h3>
+      <ul class="creds">
+        <li><span class="k">メール</span><code>koishikawa001@swimhub.jp</code></li>
+        <li><span class="k">仮パスワード</span><code>先生から個別に受け取ります</code></li>
+      </ul>
+      <p style="margin:14px 0 0; font-size:14px; color:var(--ink-2)">この2つは<strong>最初のログインだけ</strong>に使います。</p>
+    </div>
+    <div class="panel">
+      <h3>やることリスト</h3>
+      <ol class="toc">
+        <li><a href="#s1">初回ログイン</a></li>
+        <li><a href="#s2">パスワードを自分だけのものに変える</a> <span class="flag req">必須</span></li>
+        <li><a href="#s3">普段のメールアドレスに変える</a> <span class="flag opt">任意</span></li>
+        <li><a href="#s4">Google / Apple と連携する</a> <span class="flag opt">任意</span></li>
+        <li><a href="#s5">ベストタイムをまとめて入力する</a></li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ============ STEP 1 ============ -->
+  <section class="step" id="s1">
+    <div class="rail"><div class="num">01</div></div>
+    <div class="body">
+      <div class="step-head"><h2>初回ログイン</h2></div>
+      <p>ブラウザで <a href="https://swim-hub.app/ja/login">swim-hub.app</a> を開きます。</p>
+      <ol class="do">
+        <li><kbd>Emailでログイン</kbd> を押します。Google と Apple のボタンは、まだ使いません。</li>
+        <li>配られたメールアドレスと仮パスワードを入力して <kbd>ログイン</kbd> を押します。</li>
+      </ol>
+      <div class="figs">
+        <figure class="narrow">
+          <img src="/guide/img/01-login-choose.png" alt="SwimHub のログイン画面。Googleでログイン、Appleでログインのボタンの下に、Emailでログインのボタンがある。">
+          <figcaption>ログイン画面。いちばん下の「Emailでログイン」を押す。</figcaption>
+        </figure>
+        <figure class="narrow">
+          <img src="/guide/img/03-login-email-filled.png" alt="メールでログイン画面。メールアドレスとパスワードを入力した状態。">
+          <figcaption>配られたメールアドレスと仮パスワードを入力する。</figcaption>
+        </figure>
+      </div>
+      <div class="note">
+        <p>はじめてログインすると、名前や生年月日を登録する画面が出ることがあります。画面の案内どおりに進めてください。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 2 ============ -->
+  <section class="step" id="s2">
+    <div class="rail"><div class="num">02</div></div>
+    <div class="body">
+      <div class="step-head"><h2>パスワードを変える</h2><span class="flag req">必須</span></div>
+      <p>仮パスワードは受け取るまでに他の人の目に触れている可能性があります。ログインできたら、いちばん最初にここをやってください。</p>
+      <ol class="do">
+        <li>画面右上の<strong>自分の名前</strong>を押して、<kbd>設定</kbd> を選びます。</li>
+        <li>「パスワード」の <kbd>パスワードを変更</kbd> を押します。</li>
+        <li>新しいパスワードを<strong>2回</strong>入力して、<kbd>パスワードを更新</kbd> を押します。</li>
+      </ol>
+      <div class="figs">
+        <figure>
+          <img src="/guide/img/04-user-menu.png" alt="画面右上の名前を押して開いたメニュー。プロフィール、設定、ログアウトの項目がある。">
+          <figcaption>右上の名前 → 「設定」。</figcaption>
+        </figure>
+        <figure>
+          <img src="/guide/img/05-settings-password.png" alt="設定画面のパスワードセクション。右側にパスワードを変更ボタンがある。">
+          <figcaption>設定画面を下にスクロールすると「パスワード」がある。</figcaption>
+        </figure>
+        <figure>
+          <img src="/guide/img/07-password-modal-filled.png" alt="パスワード変更のダイアログ。新しいパスワードとパスワード確認の2つの入力欄に入力済み。">
+          <figcaption>同じパスワードを2回入力して「パスワードを更新」。</figcaption>
+        </figure>
+      </div>
+      <div class="note warn">
+        <p><strong>パスワードは6文字以上。</strong>今のパスワードを聞かれることはありません。自分だけがわかるものにして、他の人には教えないでください。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 3 ============ -->
+  <section class="step" id="s3">
+    <div class="rail"><div class="num">03</div></div>
+    <div class="body">
+      <div class="step-head"><h2>普段のメールアドレスに変える</h2><span class="flag opt">任意</span></div>
+      <p>いつも使っているメールアドレスでログインしたい人だけやってください。配られたアドレスのままでも問題ありません。</p>
+      <ol class="do">
+        <li>設定画面の「メールアドレス」で <kbd>変更する</kbd> を押します。</li>
+        <li>普段使っているメールアドレスを入力して <kbd>変更する</kbd> を押します。</li>
+        <li>そのアドレスに<strong>確認メール</strong>が届きます。メールの中のリンクを押します。</li>
+      </ol>
+      <div class="figs">
+        <figure>
+          <img src="/guide/img/08-settings-email.png" alt="設定画面のメールアドレスセクション。現在のメールアドレスと変更するボタン。">
+          <figcaption>今のメールアドレスが表示されている。</figcaption>
+        </figure>
+        <figure>
+          <img src="/guide/img/10-email-modal-filled.png" alt="メールアドレス変更のダイアログ。現在のアドレスの下に新しいメールアドレスを入力済み。">
+          <figcaption>新しいメールアドレスを入力する。</figcaption>
+        </figure>
+      </div>
+      <div class="note warn">
+        <p><strong>リンクを押すまで変更は完了しません。</strong>メールが見つからないときは、迷惑メールフォルダも確認してください。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 4 ============ -->
+  <section class="step" id="s4">
+    <div class="rail"><div class="num">04</div></div>
+    <div class="body">
+      <div class="step-head"><h2>Google / Apple でログインできるようにする</h2><span class="flag opt">任意</span></div>
+      <p>連携しておくと、毎回パスワードを打たなくてもログインできます。</p>
+      <ol class="do">
+        <li>設定画面の「ログイン連携」で、Google か Apple の <kbd>連携する</kbd> を押します。</li>
+        <li>いつものGoogle / Appleのログイン画面が出るので、そのまま進めます。</li>
+      </ol>
+      <figure>
+        <img src="/guide/img/11-settings-identity.png" alt="設定画面のログイン連携セクション。GoogleとAppleがそれぞれ未連携で、連携するボタンが並んでいる。">
+        <figcaption>Google と Apple、どちらか一方でも両方でもOK。</figcaption>
+      </figure>
+      <div class="note good">
+        <p>連携すると、<strong>メールアドレス・Google・Apple のどれからでも</strong>同じアカウントに入れるようになります。使いやすい方法でログインしてください。</p>
+        <p>ログイン方法は最低1つ残す必要があるので、すべての連携を解除することはできません。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 5 ============ -->
+  <section class="step" id="s5">
+    <div class="rail"><div class="num">05</div></div>
+    <div class="body">
+      <div class="step-head"><h2>ベストタイムをまとめて入力する</h2></div>
+      <p>わかっているベストタイムを入れておくと、これからの記録が自己ベストと比べられるようになります。<strong>わかるものだけでOK</strong>で、あとから追加もできます。</p>
+      <ol class="do">
+        <li>左のメニューから <kbd>マイページ</kbd> を開き、「Best Time」の <kbd>一括入力</kbd> を押します。</li>
+        <li>上の種目タブ（自由形・平泳ぎ・背泳ぎ・バタフライ・個人メドレー）を選びます。</li>
+        <li><strong>短水路</strong>か<strong>長水路</strong>の「タイム」の欄に、距離の行に合わせてタイムを入力します。</li>
+        <li>入れ終わったら <kbd>一括登録する</kbd> を押します。種目タブを切り替えて、まとめて登録できます。</li>
+      </ol>
+      <div class="figs">
+        <figure>
+          <img src="/guide/img/12-mypage-besttime-before.png" alt="マイページのBest Timeカード。まだ記録がなく、右上に一括入力ボタンがある。">
+          <figcaption>マイページの「Best Time」。右上の「一括入力」から。</figcaption>
+        </figure>
+        <figure>
+          <img src="/guide/img/13-bulk-empty.png" alt="ベストタイム一括入力画面。距離ごとの行と、短水路・長水路のタイム入力欄が並ぶ表。">
+          <figcaption>入力画面。行が距離、左半分が短水路、右半分が長水路。</figcaption>
+        </figure>
+        <figure>
+          <img src="/guide/img/14-bulk-filled.png" alt="一括入力画面に50m、100m、200mの短水路タイムを入力した状態。入力済み3件と表示されている。">
+          <figcaption>入力すると下の「入力済み」の数が増える。</figcaption>
+        </figure>
+        <figure>
+          <img src="/guide/img/15-bulk-success.png" alt="一括登録後の画面。3件の記録を登録しましたという緑色のメッセージが表示されている。">
+          <figcaption>登録できると緑のメッセージが出る。</figcaption>
+        </figure>
+        <figure>
+          <img src="/guide/img/16-mypage-besttime-after.png" alt="マイページのBest Time表。自由形の50m、100m、200mにタイムが入っている。">
+          <figcaption>マイページに戻ると、入力したタイムが並ぶ。</figcaption>
+        </figure>
+      </div>
+      <div class="note">
+        <p><strong>タイムの書き方。</strong>1分をこえるときは <code>1:01.42</code>、1分未満は <code>27.85</code> のように入力します。<code>1分01秒42</code> や <code>1.01.42</code> と打っても同じように登録されます。</p>
+        <p><strong>「引き継ぎ」の欄</strong>はリレーの引き継ぎタイム用です。ふつうの記録は左の「タイム」だけ入力すればOKです。</p>
+        <p>25mは短水路だけ、100m個人メドレーは長水路では入力できないので、その欄は「—」になっています。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="step" id="faq">
+    <div class="rail"><div class="num">?</div></div>
+    <div class="body">
+      <div class="step-head"><h2>困ったとき</h2></div>
+      <dl class="faq">
+        <dt>パスワードを忘れてログインできない</dt>
+        <dd>ログイン画面の「パスワードを忘れた方はこちら」から再設定できます。それでも入れないときは先生に相談してください。</dd>
+
+        <dt>確認メールが届かない</dt>
+        <dd>迷惑メールフォルダを確認してください。数分待っても届かない場合は、アドレスの打ち間違いがないかもう一度確認します。</dd>
+
+        <dt>タイムが登録できない</dt>
+        <dd>書き方が <code>1:23.45</code> の形になっているか確認してください。0やマイナスのタイムは登録できません。</dd>
+
+        <dt>スマホでもできる</dt>
+        <dd>同じURLをスマホのブラウザで開けば、同じことができます。やることの順番は同じですが、画面の並びは少し変わります。左のメニューは左上のボタンから開き、ベストタイムの入力は距離ごとのカード表示になります。</dd>
+      </dl>
+    </div>
+  </section>
+
+  <footer>
+    小石川 水泳部 / SwimHub 初回セットアップ手順<br>
+    画面の名前やタイムはサンプルです。実際の画面には自分の名前が表示されます。
+  </footer>
+
+</div>
+
+</body>
+</html>

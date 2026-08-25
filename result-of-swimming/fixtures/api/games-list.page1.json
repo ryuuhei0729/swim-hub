@@ -1,0 +1,129 @@
+{
+  "data": [
+    {
+      "game_code": "2826304",
+      "start_date": "2026-08-02",
+      "end_date": "2026-08-02",
+      "group": {
+        "code": 28,
+        "name": "兵庫"
+      },
+      "waterway": {
+        "code": 2,
+        "name": "短水路"
+      },
+      "game_name": "第77回西播高等学校選手権水泳競技大会",
+      "pool": "姫路市立総合スポーツ会館屋内プール",
+      "contestants": 132,
+      "game_status": {
+        "code": 5,
+        "name": "記録確定"
+      },
+      "is_official_games": true,
+      "delivery_status_code": 3
+    },
+    {
+      "game_code": "1526711",
+      "start_date": "2026-08-02",
+      "end_date": "2026-08-02",
+      "group": {
+        "code": 15,
+        "name": "山梨"
+      },
+      "waterway": {
+        "code": 1,
+        "name": "長水路"
+      },
+      "game_name": "山梨：第８１回２０２６年度山梨県選手権水泳競技大会　兼　第８１回国民スポーツ大会夏季大会水泳競技大会山梨県最終予選会",
+      "pool": "小瀬スポーツ公園水泳場",
+      "contestants": 219,
+      "game_status": {
+        "code": 5,
+        "name": "記録確定"
+      },
+      "is_official_games": true,
+      "delivery_status_code": 3
+    },
+    {
+      "game_code": "2826207",
+      "start_date": "2026-08-02",
+      "end_date": "2026-08-02",
+      "group": {
+        "code": 28,
+        "name": "兵庫"
+      },
+      "waterway": {
+        "code": 2,
+        "name": "短水路"
+      },
+      "game_name": "第58回姫路市中学校水泳競技大会",
+      "pool": "姫路市立総合スポーツ会館屋内プール",
+      "contestants": 145,
+      "game_status": {
+        "code": 5,
+        "name": "記録確定"
+      },
+      "is_official_games": true,
+      "delivery_status_code": 3
+    },
+    {
+      "game_code": "3926101",
+      "start_date": "2026-08-02",
+      "end_date": "2026-08-02",
+      "group": {
+        "code": 39,
+        "name": "高知"
+      },
+      "waterway": {
+        "code": 1,
+        "name": "長水路"
+      },
+      "game_name": "高知：第47回高知県学童水泳競技大会(2026/08/02)",
+      "pool": "くろしおアリーナ",
+      "contestants": 190,
+      "game_status": {
+        "code": 5,
+        "name": "記録確定"
+      },
+      "is_official_games": true,
+      "delivery_status_code": 3
+    },
+    {
+      "game_code": "4026662",
+      "start_date": "2026-08-02",
+      "end_date": "2026-08-02",
+      "group": {
+        "code": 40,
+        "name": "福岡"
+      },
+      "waterway": {
+        "code": 2,
+        "name": "短水路"
+      },
+      "game_name": "福岡アシスタンス・チャレンジ記録会　From Distance to Assistance～泳いで復興支援！～",
+      "pool": "総合西市民プール",
+      "contestants": 19,
+      "game_status": {
+        "code": 5,
+        "name": "記録確定"
+      },
+      "is_official_games": true,
+      "delivery_status_code": 3
+    }
+  ],
+  "links": {
+    "first": "http://result.swim.or.jp/api/v1/games?year=2026&page=1",
+    "last": "http://result.swim.or.jp/api/v1/games?year=2026&page=23",
+    "prev": "http://result.swim.or.jp/api/v1/games?year=2026&page=9",
+    "next": "http://result.swim.or.jp/api/v1/games?year=2026&page=11"
+  },
+  "meta": {
+    "current_page": 10,
+    "from": 451,
+    "last_page": 23,
+    "path": "http://result.swim.or.jp/api/v1/games",
+    "per_page": 50,
+    "to": 500,
+    "total": 1106
+  }
+}

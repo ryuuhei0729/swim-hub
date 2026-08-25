@@ -6,6 +6,7 @@ import { TeamEvent } from "@swim-hub/shared/types";
 import { AttendanceEditState } from "../hooks/useAttendanceEdit";
 import { getStatusBadge } from "./StatusBadge";
 import { formatDate } from "@apps/shared/utils/date";
+import { resolveAttendanceStatus } from "@apps/shared/utils/attendanceStatus";
 import { useTranslations } from "next-intl";
 
 interface MonthDetailModalProps {
@@ -90,7 +91,7 @@ export const MonthDetailModal = React.memo(
                             className="flex flex-col items-end gap-1.5 shrink-0"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div>{getStatusBadge(event.attendance_status)}</div>
+                            <div>{getStatusBadge(resolveAttendanceStatus(event.date, event.attendance_status))}</div>
                             <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => onStatusChange(event.id, "present")}

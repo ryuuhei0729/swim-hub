@@ -1,0 +1,620 @@
+{
+  "data": [
+    {
+      "result_id": 37446286,
+      "ranking": 1,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 5,
+      "lane": 4,
+      "result_time": "49.58",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.00",
+      "reaction_times": [
+        "+0.59"
+      ],
+      "fina_point": 819,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:23.68",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:23.68",
+            "ranking": 1
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:49.58",
+            "ranking": 1
+          },
+          "50m_record": {
+            "record": "0:25.90",
+            "ranking": 1
+          },
+          "100m_record": {
+            "record": "0:49.58",
+            "ranking": 1,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          3
+        ]
+      }
+    },
+    {
+      "result_id": 37446296,
+      "ranking": 2,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 6,
+      "lane": 4,
+      "result_time": "49.96",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.38",
+      "reaction_times": [
+        "+0.69"
+      ],
+      "fina_point": 801,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:23.72",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:23.72",
+            "ranking": 2
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:49.96",
+            "ranking": 2
+          },
+          "50m_record": {
+            "record": "0:26.24",
+            "ranking": 6
+          },
+          "100m_record": {
+            "record": "0:49.96",
+            "ranking": 2,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          4
+        ]
+      }
+    },
+    {
+      "result_id": 37446277,
+      "ranking": 3,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 4,
+      "lane": 5,
+      "result_time": "50.23",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.65",
+      "reaction_times": [
+        "+0.66"
+      ],
+      "fina_point": 788,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:23.95",
+            "ranking": 4
+          },
+          "50m_record": {
+            "record": "0:23.95",
+            "ranking": 4
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:50.23",
+            "ranking": 3
+          },
+          "50m_record": {
+            "record": "0:26.28",
+            "ranking": 7
+          },
+          "100m_record": {
+            "record": "0:50.23",
+            "ranking": 3,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          1
+        ]
+      }
+    },
+    {
+      "result_id": 37446275,
+      "ranking": 3,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 4,
+      "lane": 3,
+      "result_time": "50.23",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.65",
+      "reaction_times": [
+        "+0.59"
+      ],
+      "fina_point": 788,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:24.30",
+            "ranking": 16
+          },
+          "50m_record": {
+            "record": "0:24.30",
+            "ranking": 16
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:50.23",
+            "ranking": 3
+          },
+          "50m_record": {
+            "record": "0:25.93",
+            "ranking": 2
+          },
+          "100m_record": {
+            "record": "0:50.23",
+            "ranking": 3,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          2
+        ]
+      }
+    },
+    {
+      "result_id": 37446276,
+      "ranking": 5,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 4,
+      "lane": 4,
+      "result_time": "50.31",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.73",
+      "reaction_times": [
+        "+0.69"
+      ],
+      "fina_point": 784,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:23.73",
+            "ranking": 3
+          },
+          "50m_record": {
+            "record": "0:23.73",
+            "ranking": 3
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:50.31",
+            "ranking": 5
+          },
+          "50m_record": {
+            "record": "0:26.58",
+            "ranking": 15
+          },
+          "100m_record": {
+            "record": "0:50.31",
+            "ranking": 5,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          3
+        ]
+      }
+    },
+    {
+      "result_id": 37446297,
+      "ranking": 6,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 6,
+      "lane": 5,
+      "result_time": "50.43",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.85",
+      "reaction_times": [
+        "+0.65"
+      ],
+      "fina_point": 778,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:24.25",
+            "ranking": 13
+          },
+          "50m_record": {
+            "record": "0:24.25",
+            "ranking": 13
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:50.43",
+            "ranking": 6
+          },
+          "50m_record": {
+            "record": "0:26.18",
+            "ranking": 4
+          },
+          "100m_record": {
+            "record": "0:50.43",
+            "ranking": 6,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          4
+        ]
+      }
+    },
+    {
+      "result_id": 37446278,
+      "ranking": 7,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 4,
+      "lane": 6,
+      "result_time": "50.51",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.93",
+      "reaction_times": [
+        "+0.64"
+      ],
+      "fina_point": 775,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:24.22",
+            "ranking": 11
+          },
+          "50m_record": {
+            "record": "0:24.22",
+            "ranking": 11
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:50.51",
+            "ranking": 7
+          },
+          "50m_record": {
+            "record": "0:26.29",
+            "ranking": 8
+          },
+          "100m_record": {
+            "record": "0:50.51",
+            "ranking": 7,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          4
+        ]
+      }
+    },
+    {
+      "result_id": 37446295,
+      "ranking": 7,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 6,
+      "lane": 3,
+      "result_time": "50.51",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.93",
+      "reaction_times": [
+        "+0.63"
+      ],
+      "fina_point": 775,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:24.11",
+            "ranking": 6
+          },
+          "50m_record": {
+            "record": "0:24.11",
+            "ranking": 6
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:50.51",
+            "ranking": 7
+          },
+          "50m_record": {
+            "record": "0:26.40",
+            "ranking": 10
+          },
+          "100m_record": {
+            "record": "0:50.51",
+            "ranking": 7,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          3
+        ]
+      }
+    },
+    {
+      "result_id": 37446300,
+      "ranking": 7,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 6,
+      "lane": 8,
+      "result_time": "50.51",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:00.93",
+      "reaction_times": [
+        "+0.66"
+      ],
+      "fina_point": 775,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:24.11",
+            "ranking": 6
+          },
+          "50m_record": {
+            "record": "0:24.11",
+            "ranking": 6
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:50.51",
+            "ranking": 7
+          },
+          "50m_record": {
+            "record": "0:26.40",
+            "ranking": 10
+          },
+          "100m_record": {
+            "record": "0:50.51",
+            "ranking": 7,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          3
+        ]
+      }
+    },
+    {
+      "result_id": 37446288,
+      "ranking": 10,
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 5,
+      "lane": 6,
+      "result_time": "50.61",
+      "result_date": "2026-07-30",
+      "gap_with_top": "0:01.03",
+      "reaction_times": [
+        "+0.67"
+      ],
+      "fina_point": 770,
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:24.20",
+            "ranking": 9
+          },
+          "50m_record": {
+            "record": "0:24.20",
+            "ranking": 9
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:50.61",
+            "ranking": 10
+          },
+          "50m_record": {
+            "record": "0:26.41",
+            "ranking": 12
+          },
+          "100m_record": {
+            "record": "0:50.61",
+            "ranking": 10,
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 0,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          4
+        ]
+      }
+    },
+    {
+      "result_id": 37446284,
+      "ranking": "棄権",
+      "race_ranking": null,
+      "heat_ranking": null,
+      "heat": 5,
+      "lane": 2,
+      "result_time": "",
+      "result_date": "2026-07-30",
+      "gap_with_top": "",
+      "reaction_times": [
+        "-"
+      ],
+      "fina_point": "",
+      "record_info": "",
+      "lap_detail": [
+        {
+          "lap_distance": 50,
+          "passing_time": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "50m_record": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "100m_record": [],
+          "200m_record": []
+        },
+        {
+          "lap_distance": 100,
+          "passing_time": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "50m_record": {
+            "record": "0:00.00",
+            "ranking": "-"
+          },
+          "100m_record": {
+            "record": "0:00.00",
+            "ranking": "-",
+            "rowspan": 2
+          },
+          "200m_record": []
+        }
+      ],
+      "reason_code": 1,
+      "school_class": {
+        "code": 4,
+        "name": "大学",
+        "school_grade": [
+          3
+        ]
+      }
+    }
+  ]
+}

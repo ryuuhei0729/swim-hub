@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -18,12 +19,51 @@ interface TeamCompetitionEntryModalProps {
   teamId: string;
 }
 
+/** `competitions` テーブルから直接取得する、このモーダルが必要とする最小限のフィールド */
+interface TeamCompetitionRow {
+  team_id: string | null;
+  title: string | null;
+  date: string;
+  place: string | null;
+  entry_status: string | null;
+}
+
+/**
+ * 大会情報をチームスコープで直接取得する。
+ *
+ * 個人スコープの `recordApi.getCompetitions()` (`.or("user_id.eq.<自分>,user_id.is.null")`)
+ * だと自分以外の管理者が作成したチーム大会が取得できず「大会が見つかりません」に
+ * 誤って落ちるため、`competitions` テーブルを `id` + `team_id` で直接絞り込む
+ * (`entries/_server/EntriesDataLoader.tsx` と同型)。`team_id` も条件に含めることで
+ * 「別チームの大会 ID を渡された」ケースも同時に弾ける。
+ */
+async function fetchTeamCompetition(
+  supabase: SupabaseClient,
+  competitionId: string,
+  teamId: string,
+): Promise<TeamCompetitionRow | null> {
+  const { data, error } = await supabase
+    .from("competitions")
+    .select("team_id, title, date, place, entry_status")
+    .eq("id", competitionId)
+    .eq("team_id", teamId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as TeamCompetitionRow | null;
+}
+
+function isValidEntryStatus(
+  status: string | null,
+): status is "before" | "open" | "closed" {
+  return status === "before" || status === "open" || status === "closed";
+}
+
 export default function TeamCompetitionEntryModal({
   isOpen,
   onClose,
   competitionId,
   competitionTitle,
-  teamId: _teamId,
+  teamId,
 }: TeamCompetitionEntryModalProps) {
   const { supabase } = useAuth();
   const t = useTranslations("teams");
@@ -68,10 +108,11 @@ export default function TeamCompetitionEntryModal({
       setLoading(true);
       setError(null);
 
-      // 1) 競技会情報取得（team_id含む）
-      const competitions = await recordApi.getCompetitions();
-      const competition = competitions.find((c) => c.id === competitionId);
+      // 1) 競技会情報取得（team_id + id で直接絞り込み。個人スコープの getCompetitions() だと
+      // 自分以外の管理者が作成したチーム大会を取得できないため使わない）
+      const competition = await fetchTeamCompetition(supabase, competitionId, teamId);
       if (!competition) throw new Error(t("competitionEntryModal.competitionNotFound"));
+      // fetchTeamCompetition が team_id で絞るため現状は到達不能。型ナローイングと将来の絞り込み変更に備えた保険として残す。
       if (!competition.team_id) throw new Error(t("competitionEntryModal.notTeamCompetition"));
 
       // 2) 現在ユーザーのロール取得
@@ -130,7 +171,9 @@ export default function TeamCompetitionEntryModal({
           title: competition.title || competitionTitle,
           date: competition.date,
           place: competition.place,
-          entry_status: competition.entry_status || "before",
+          entry_status: isValidEntryStatus(competition.entry_status)
+            ? competition.entry_status
+            : "before",
         },
         isAdmin: membership?.role === "admin",
         entriesByStyle,
@@ -143,7 +186,7 @@ export default function TeamCompetitionEntryModal({
     } finally {
       setLoading(false);
     }
-  }, [competitionId, competitionTitle, entryApi, recordApi, supabase, t]);
+  }, [competitionId, competitionTitle, entryApi, supabase, t, teamId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -159,10 +202,10 @@ export default function TeamCompetitionEntryModal({
 
     try {
       setUpdatingStatus(true);
-      // 管理者チェックと更新（RecordAPIを使用）
-      const competitions = await recordApi.getCompetitions();
-      const competition = competitions.find((c) => c.id === competitionId);
+      // 管理者チェックと更新（team_id + id で直接絞り込み。理由は loadEntries と同じ）
+      const competition = await fetchTeamCompetition(supabase, competitionId, teamId);
       if (!competition) throw new Error(t("competitionEntryModal.competitionNotFound"));
+      // loadEntries と同じ理由で到達不能だが保険として残す
       if (!competition.team_id) throw new Error(t("competitionEntryModal.notTeamCompetition"));
 
       const {
@@ -297,13 +340,17 @@ export default function TeamCompetitionEntryModal({
                       )}
                     </div>
 
-                    <div className="ml-4">
-                      <span
-                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(data.competition.entry_status)}`}
-                      >
-                        {getStatusLabel(data.competition.entry_status)}
-                      </span>
-                    </div>
+                    {/* admin向けの現在値バッジ（select は選択肢一覧を表示するだけで色分けされないため併記する。
+                        非adminは左側の span で既にステータスを表示済みのため、ここでは出さない） */}
+                    {data.isAdmin && (
+                      <div className="ml-4">
+                        <span
+                          className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(data.competition.entry_status)}`}
+                        >
+                          {getStatusLabel(data.competition.entry_status)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

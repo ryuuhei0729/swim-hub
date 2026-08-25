@@ -34,7 +34,9 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ member, currentU
     <View style={styles.container}>
       <View style={styles.profileRow}>
         {/* アバター */}
-        <View style={styles.avatarContainer}>
+        <View
+          style={[styles.avatarContainer, !!resolvedAvatarUrl && styles.avatarContainerWithImage]}
+        >
           {resolvedAvatarUrl ? (
             <Image
               source={{ uri: resolvedAvatarUrl }}
@@ -119,6 +121,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563EB",
     justifyContent: "center",
     alignItems: "center",
+  },
+  // 画像がある場合は透過PNGの背景として薄いグレーを敷く（青が透けるのを防ぐ / web の bg-gray-100 と一致）
+  avatarContainerWithImage: {
+    backgroundColor: "#F3F4F6",
   },
   avatarImage: {
     width: "100%",

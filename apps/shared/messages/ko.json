@@ -1025,6 +1025,8 @@
       "unknownStyle": "알 수 없음",
       "styleAlreadyEntered": "종목 '{name}'은(는) 이미 엔트리되었습니다",
       "fetchCompetitionInfoFailed": "대회 정보를 불러오지 못했습니다",
+      "competitionSaveBlockedUnresolved": "대회 정보를 확인할 수 없어 저장을 중단했습니다. 잠시 후 다시 시도해 주세요.",
+      "competitionSaveBlockedDateInvalid": "날짜 정합성을 확인할 수 없어 저장을 중단했습니다. 시작일과 종료일을 확인한 후 다시 시도해 주세요.",
       "videoUploadPartialCompetition": "대회와 기록은 생성되었지만 동영상 업로드에 실패했습니다. 상세 화면에서 다시 추가해 주세요.",
       "statusBefore": "접수 전",
       "statusClosed": "접수 종료",
@@ -1650,6 +1652,7 @@
       "fetchMembersFailed": "팀 멤버를 불러오지 못했습니다",
       "teamFallback": "팀",
       "relayLegLabel": "제{num}영자 ({style})",
+      "relayLegShort": "제{num}영자",
       "freeRelaySuffix": "계영",
       "medleyRelaySuffix": "혼계영",
       "relayTimePlaceholder": "예: 1:52.10",
@@ -1671,6 +1674,7 @@
         "relayFullTeam": "계영 종목은 멤버 4명 전원을 선택해 주세요",
         "relayAllTimes": "계영 종목은 모든 영자의 기록을 입력해 주세요",
         "cumulativeTimeInverted": "누적 기록이 역전되어 있습니다. 제{current}영자의 누적 기록은 제{prev}영자보다 큰 값을 입력해 주세요.",
+        "relaySplitBeforeLegStart": "{distance}m 지점의 스플릿 기록이 올바르지 않습니다. 제{leg}영자 시작 시점의 누적 기록보다 큰 값을 입력해 주세요.",
         "atLeastOneRecord": "기록을 하나 이상 입력해 주세요"
       },
       "error": {
@@ -2615,7 +2619,8 @@
         "fetchFailed": "훈련 기록을 불러오지 못했습니다",
         "deleteConfirm": "이 훈련 기록을 삭제하시겠습니까? 되돌릴 수 없습니다.",
         "deleteFailed": "훈련 기록 삭제에 실패했습니다",
-        "addLog": "로그 작성"
+        "addLog": "로그 작성",
+        "recordBulkButton": "기록 대리 입력"
       },
       "teamCompetitionList": {
         "title": "팀 대회 ({count}건)",
@@ -2626,7 +2631,9 @@
         "deleteFailed": "대회 삭제에 실패했습니다",
         "entryButton": "엔트리",
         "recordButton": "기록",
-        "entryBulkButton": "엔트리 대리 입력"
+        "entryBulkButton": "엔트리 대리 입력",
+        "recordBulkButton": "기록 대리 입력",
+        "entryStatusChangeAria": "엔트리 접수 상태: {status}. 탭하여 변경"
       },
       "teamCompetitionEntryModal": {
         "title": "{title} 엔트리",
@@ -2649,7 +2656,8 @@
         "unknownStyle": "종목 불명",
         "unknownUser": "알 수 없는 사용자",
         "entryTimeLabel": "엔트리 기록:",
-        "close": "닫기"
+        "close": "닫기",
+        "pastDateNotice": "대회 날짜가 지나 자동으로 접수가 마감되었습니다."
       },
       "announcementDeleteFailed": "공지사항 삭제에 실패했습니다",
       "attendanceConfirmEditAfterDeadline": "제출 마감 후의 편집입니다 ({dates}). 비고에 편집 일시가 자동으로 추가됩니다. 저장하시겠습니까?",
@@ -4085,7 +4093,10 @@
       "formError_noStyle": "종목을 선택해 주세요",
       "formError_noTime": "기록을 입력해 주세요 (형식: 분:초.소수 또는 초.소수)",
       "addRecord": "기록 추가",
-      "recordNumber": "기록 {n}"
+      "recordNumber": "기록 {n}",
+      "removeEventAria": "종목 삭제",
+      "formError_duplicateStyle": "동일한 종목의 카드가 여러 개 있습니다. 중복을 해결해 주세요.",
+      "formError_relaySplitNotSupported": "계영 기록의 스플릿(경과 시간)은 저장할 수 없습니다. 저장하기 전에 스플릿을 삭제해 주세요."
     },
     "tag": {
       "placeholder": "태그 선택 또는 생성",

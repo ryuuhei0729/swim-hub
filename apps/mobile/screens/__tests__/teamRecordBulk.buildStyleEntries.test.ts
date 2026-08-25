@@ -82,24 +82,35 @@ describe("[mobile] メドレーリレー検出と累計", () => {
 });
 
 describe("[mobile] split の leg内距離⇄全体距離の自動判定 (Checklist #4)", () => {
-  it("leg1 distance=100 (= legDist) は全体距離 200 に変換される (旧UI互換)", () => {
+  it("leg1 distance=100 (= legDist) は全体距離 200 に変換され、splitTime も leg 開始通算タイム分だけ通算値に戻る (D4)", () => {
+    // times=[57.0,58.5,57.8,56.7] → cumulatives=[57.0,115.5,173.3,230.0] → legStart(leg1)=57.0
+    // D4 修正前 (バグ): splitTime は DB の値 (58.5) をそのまま通算値扱いしていた。
+    // D4 修正後: 58.5 (leg 相対) + legStart(57.0) = 115.5 (正しい通算値)
     const records = makeRelay4x100Free([[], [{ distance: 100, split_time: 58.5 }], [], []]);
     const entry = buildStyleEntriesFromExisting(records, STYLES).find((e) => e.relayEventId === "relay_4x100_free")!;
     const splits = entry.relaySplitTimes ?? [];
     expect(splits.find((s) => s.distance === 200)).toBeDefined();
-    // 保存済みの値が leg 境界の復元値より優先される (DB にある値を上書きしない)
-    expect(splits.find((s) => s.distance === 200)!.splitTime).toBe(58.5);
+    expect(splits.find((s) => s.distance === 200)!.splitTime).toBe(115.5);
     // 距離 100 に入るのは leg0 の累計タイム (57.0) であって、未変換の leg1 の値ではない
     expect(splits.find((s) => s.distance === 100)!.splitTime).toBe(57.0);
   });
 
-  it("leg1 distance=200 (> legDist, 全体距離) は変換なし", () => {
-    const records = makeRelay4x100Free([[], [{ distance: 200, split_time: 115.5 }], [], []]);
-    const entry = buildStyleEntriesFromExisting(records, STYLES).find((e) => e.relayEventId === "relay_4x100_free")!;
-    const s = (entry.relaySplitTimes ?? []).find((x) => x.distance === 200);
-    expect(s).toBeDefined();
-    expect(s!.splitTime).toBe(115.5);
-  });
+  it(
+    "leg1 distance=200 (> legDist, 全体距離=legacy分岐) は distance も splitTime も変換なし " +
+      "(QA注記: Critical regression。st.distance>legDist の分岐は distance が無変換のまま使われる " +
+      "legacy 互換ロジックであり、対になる splitTime も無変換であるべきだが、現状の実装" +
+      "(buildStyleEntries.ts の toCumulativeSplitTime 呼び出し) は分岐を無視して常に legStart を" +
+      "加算してしまう (実測: 115.5 → 172.5)。QA は観測挙動を pin せず正しい仕様値のまま残す " +
+      "(このテストは現状 red。Developer 側で distance>legDist 分岐では toCumulativeSplitTime を" +
+      "呼ばない対応が必要)",
+    () => {
+      const records = makeRelay4x100Free([[], [{ distance: 200, split_time: 115.5 }], [], []]);
+      const entry = buildStyleEntriesFromExisting(records, STYLES).find((e) => e.relayEventId === "relay_4x100_free")!;
+      const s = (entry.relaySplitTimes ?? []).find((x) => x.distance === 200);
+      expect(s).toBeDefined();
+      expect(s!.splitTime).toBe(115.5);
+    },
+  );
 
   it("leg0 distance=100 (= legDist, offset0) は全体距離 100 のまま", () => {
     const records = makeRelay4x100Free([[{ distance: 100, split_time: 57.0 }], [], [], []]);
