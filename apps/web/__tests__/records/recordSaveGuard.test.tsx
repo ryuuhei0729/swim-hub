@@ -184,7 +184,9 @@ describe("RecordClient — 空タイム行は保存されない (仕様#3の回�
       fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
       await waitFor(() => {
-        expect(mocks.push).toHaveBeenCalledWith("/teams/team-1?tab=competitions");
+        // 方式E (2026-08-25確定): RecordClient は teams-admin/ からしか到達できないため、
+        // 戻り先は無条件に /teams-admin/ に固定する (/teams/ の一般メンバー画面ではない)。
+        expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
       });
 
       const recordInserts = mocks.insertCalls.filter((c) => c.table === "records");
@@ -303,11 +305,33 @@ describe("RecordClient — リレー検出された StyleEntry の構造保持 (
       fireEvent.click(screen.getByRole("button", { name: "record.saveButton" }));
 
       await waitFor(() => {
-        expect(mocks.push).toHaveBeenCalledWith("/teams/team-1?tab=competitions");
+        expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
       });
 
       const recordInserts = mocks.insertCalls.filter((c) => c.table === "records");
       expect(recordInserts).toHaveLength(4);
+    },
+  );
+});
+
+describe("RecordClient — 戻るボタンの遷移先 (V-01 方式E: 2026-08-25確定)", () => {
+  beforeEach(() => {
+    mocks.insertCalls.length = 0;
+    mocks.push.mockClear();
+  });
+
+  it(
+    "ヘッダーの戻るボタンを押すと /teams-admin/team-1?tab=competitions へ遷移する " +
+      "（完全一致。/teams/team-1?tab=competitions ではないことを区別できる assert。" +
+      "RecordDataLoader は role !== 'admin' を server 側で redirect 済みのため、この画面に" +
+      "到達できるのは常に admin だけであり、戻り先は teams-admin に固定してよい）",
+    () => {
+      renderRecordClient([]);
+
+      fireEvent.click(screen.getByRole("button", { name: "record.backButton" }));
+
+      expect(mocks.push).toHaveBeenCalledTimes(1);
+      expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
     },
   );
 });

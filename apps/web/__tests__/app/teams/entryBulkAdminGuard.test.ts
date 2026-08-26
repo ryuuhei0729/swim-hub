@@ -156,8 +156,12 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
   });
 
   it(
-    "admin だが大会日が過去の場合は redirect される " +
-      "（人間の意図: 仕様#6『大会日が過去なら不可。今日は可』のserver側ガード）",
+    "admin だが大会日が過去の場合は /teams-admin/team-1?tab=competitions へ redirect される " +
+      "（人間の意図: 仕様#6『大会日が過去なら不可。今日は可』のserver側ガード。" +
+      "方式E [2026-08-25確定]: この過去日ガードは role !== 'admin' チェック [:148, 変更禁止] " +
+      "を通過した *admin 確定後* の弾き出しであり、role ガードとは異なり戻り先は " +
+      "/teams-admin/ に固定してよい。role ガード自体 [非admin用の /teams/] とこの過去日ガード " +
+      "[admin用の /teams-admin/] を同じ文字列と誤って混同していないかを区別するテスト)",
     async () => {
       const pastDate = "2000-01-01"; // 十分に過去の固定日付
       mockCreateAuthenticatedServerClient.mockResolvedValue(
@@ -190,7 +194,10 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
       await expect(
         EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1" }),
       ).rejects.toThrow(RedirectSignal);
-      expect(mockRedirect).toHaveBeenCalledWith("/teams/team-1?tab=competitions");
+      // 方式E: 過去日ガードは admin 確定後の弾き出しなので teams-admin/ に固定する
+      // (role !== "admin" ガード [:140 の別テスト] とは異なる文字列になることを明示的に区別する)
+      expect(mockRedirect).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mockRedirect).not.toHaveBeenCalledWith("/teams/team-1?tab=competitions");
     },
   );
 

@@ -1251,7 +1251,7 @@ export default function RecordClient({
         );
       }
 
-      router.push(`/teams/${teamId}?tab=competitions`);
+      router.push(`/teams-admin/${teamId}?tab=competitions`);
     } catch (err) {
       console.error("チーム大会記録作成エラー:", err);
       alert(tRecords("error.saveFailed"));
@@ -1261,7 +1261,7 @@ export default function RecordClient({
   };
 
   const handleBack = () => {
-    router.push(`/teams/${teamId}?tab=competitions`);
+    router.push(`/teams-admin/${teamId}?tab=competitions`);
   };
 
   return (

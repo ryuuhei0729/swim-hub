@@ -157,7 +157,7 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
 
   // 大会日が過去なら代理入力不可（仕様#10: server は redirect）
   if (isCompetitionDateInPast(competition.date)) {
-    return redirect(`/teams/${teamId}?tab=competitions`);
+    return redirect(`/teams-admin/${teamId}?tab=competitions`);
   }
 
   if (membersResult.error) {

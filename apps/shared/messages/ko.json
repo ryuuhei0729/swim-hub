@@ -1306,8 +1306,10 @@
       "distanceHeader": "거리",
       "legend": {
         "longCourse": "L: 장수로",
-        "relaying": "R: 이어받기 있음"
-      }
+        "relaying": "R: 이어받기 있음",
+        "relayingExcludedFromWaPoints": "이어받기 타임은 WA 포인트 산정에서 제외됩니다"
+      },
+      "waPointsToggle": "WA 포인트 표시"
     },
     "error": {
       "title": "오류가 발생했습니다",
@@ -2960,6 +2962,18 @@
     },
     "memberGroupSorter": {
       "label": "그룹 표시:"
+    },
+    "waPointsCompare": {
+      "buttonLabel": "WA 포인트로 비교",
+      "infoAriaLabel": "WA 포인트란?",
+      "infoTooltip": "WA 포인트는 World Aquatics(세계수영연맹)의 공식 포인트 제도입니다. 세계기록급 기준 시간을 1000점으로 설정하고 \"1000×(기준 시간÷기록)³\"로 산출합니다. 종목과 코스가 달라도 수영 실력을 비교할 수 있는 지표입니다.",
+      "modalTitle": "WA 포인트로 비교",
+      "rankLabel": "순위",
+      "pointsLabel": "WA 포인트",
+      "styleLabel": "종목",
+      "courseShort": "SC",
+      "courseLong": "LC",
+      "empty": "비교할 수 있는 기록이 없습니다"
     },
     "membershipActions": {
       "approveSuccess": "승인했습니다",

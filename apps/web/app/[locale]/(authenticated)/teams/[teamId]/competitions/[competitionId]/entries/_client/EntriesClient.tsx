@@ -457,7 +457,7 @@ export default function EntriesClient({
       }
 
       setShowConfirmModal(false);
-      router.push(`/teams/${teamId}?tab=competitions`);
+      router.push(`/teams-admin/${teamId}?tab=competitions`);
     } catch (err) {
       console.error("エントリー代理一括入力の保存に失敗:", err);
       // Postgres の UNIQUE 制約違反 (23505) は、事前バリデーションで弾けなかった
@@ -476,7 +476,7 @@ export default function EntriesClient({
   };
 
   const handleBack = () => {
-    router.push(`/teams/${teamId}?tab=competitions`);
+    router.push(`/teams-admin/${teamId}?tab=competitions`);
   };
 
   const saveDisabled = saving || isPastDate || duplicatePairs.size > 0;

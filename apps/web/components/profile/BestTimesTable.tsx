@@ -12,6 +12,11 @@ import {
   STYLE_KEY_MAP,
   isInvalidCombination,
 } from "@apps/shared/utils/swimStyles";
+import {
+  getBestWaPointsForCandidates,
+  type Gender,
+  type WaPointsCellCandidate,
+} from "@apps/shared/utils/waPoints";
 
 export interface BestTime {
   id: string;
@@ -45,14 +50,20 @@ type TabType = "all" | "short" | "long";
 
 interface BestTimesTableProps {
   bestTimes: BestTime[];
+  gender?: number; // 0: 男性, 1: 女性, undefined/その他: 不明 (WAポイントは常に「—」)
 }
 
-export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
+// セルの data-testid を組み立てる (例: 自由形100m -> "best-times-cell-Fr-100")
+const cellTestId = (style: string, distance: number) =>
+  `best-times-cell-${STYLE_KEY_MAP[style as keyof typeof STYLE_KEY_MAP]}-${distance}`;
+
+export default function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
   const t = useTranslations("mypage.bestTimesTable");
   const tStyles = useTranslations("practice.styles");
   const tStyleAbbrev = useTranslations("practice.styleAbbrev");
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false);
+  const [isWaPointsMode, setIsWaPointsMode] = useState<boolean>(false);
 
   const styleHeaderBgClass: Record<string, string> = {
     自由形: "bg-yellow-100",
@@ -188,6 +199,31 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
     }
   };
 
+  // WAポイント表示用のセル取得関数
+  // D1: 候補は「非リレー記録のみ」とし、includeRelaying の状態から完全に独立させる
+  //     (getBestTime とは意図的に別関数にし、既存のタイム表示アルゴリズムへの回帰を避ける)
+  // D2: ALLタブでは短水路/長水路を問わず「最高得点」の候補を選ぶ (最速タイムではない)
+  const getWaPointsCell = (
+    style: string,
+    distance: number,
+  ): { points: number; poolType: number } | null => {
+    // gender が男女いずれでもない (undefined 含む) 場合は常に「—」。例外は投げない
+    if (gender !== 0 && gender !== 1) return null;
+
+    const dbStyleName = `${distance}m${style}`;
+    // ALLタブは短水路/長水路の両方から候補を集める。短水路/長水路タブは既にpool_typeで絞られている
+    const source = activeTab === "all" ? bestTimes : filteredBestTimes;
+
+    const candidates: WaPointsCellCandidate[] = source
+      .filter((bt) => bt.style.name_jp === dbStyleName && !bt.is_relaying)
+      .map((bt) => ({ time: bt.time, poolType: bt.pool_type === 1 ? 1 : 0 }));
+
+    const styleKey = STYLE_KEY_MAP[style as keyof typeof STYLE_KEY_MAP];
+    const result = getBestWaPointsForCandidates(candidates, gender as Gender, styleKey, distance);
+    if (result === null) return null;
+    return { points: result.points, poolType: result.poolType };
+  };
+
   // タイム表示用のヘルパー関数
   const getTimeDisplay = (bestTime: BestTime) => {
     const timeStr = formatTimeBest(bestTime.time);
@@ -243,15 +279,30 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
           activeTabId={activeTab}
           onTabChange={(tabId) => setActiveTab(tabId as TabType)}
         />
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={includeRelaying}
-            onChange={(e) => setIncludeRelaying(e.target.checked)}
-            className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-          <span className="text-xs sm:text-sm text-gray-700">{t("includeRelay")}</span>
-        </label>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            data-testid="best-times-wa-points-toggle"
+            aria-pressed={isWaPointsMode}
+            onClick={() => setIsWaPointsMode((prev) => !prev)}
+            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border text-[10px] sm:text-sm font-medium transition-colors ${
+              isWaPointsMode
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            {t("waPointsToggle")}
+          </button>
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeRelaying}
+              onChange={(e) => setIncludeRelaying(e.target.checked)}
+              className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-xs sm:text-sm text-gray-700">{t("includeRelay")}</span>
+          </label>
+        </div>
       </div>
 
       <div className="bg-white rounded-none sm:rounded-xl shadow border-y sm:border border-gray-300 -mx-4 sm:mx-0">
@@ -281,13 +332,26 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
                   {distance}m
                 </td>
                 {STYLES.map((style) => {
-                  const bestTime = getBestTime(style, distance);
+                  const bestTime = !isWaPointsMode ? getBestTime(style, distance) : null;
+                  const waCell = isWaPointsMode ? getWaPointsCell(style, distance) : null;
                   return (
                     <td
                       key={style}
+                      data-testid={cellTestId(style, distance)}
                       className={`px-0.5 sm:px-3 py-1 sm:py-3 text-center text-[9px] sm:text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 h-[36px] sm:h-[64px] ${rowIdx > 0 ? "border-t border-gray-300" : ""} ${isInvalidCombination(style, distance) ? "bg-gray-200" : styleCellBgClass[style]}`}
                     >
-                      {bestTime ? (
+                      {isWaPointsMode ? (
+                        waCell ? (
+                          <span className="font-semibold text-xs sm:text-base md:text-lg text-gray-900">
+                            {waCell.points}
+                            {activeTab === "all" && waCell.poolType === 1 && (
+                              <span className="text-[8px] sm:text-xs ml-0.5 sm:ml-1">L</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="inline-block text-gray-300">—</span>
+                        )
+                      ) : bestTime ? (
                         <div
                           className={`group relative inline-block pt-1 sm:pt-2 ${(() => {
                             // 一括登録（competition なし）は New 表示対象外
@@ -368,8 +432,15 @@ export default function BestTimesTable({ bestTimes }: BestTimesTableProps) {
       </div>
 
       {/* 注釈 */}
-      <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-red-600 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-1 sm:gap-0 sm:space-x-4">
-        <span>{`※ ${t("legend.longCourse")}, ${t("legend.relaying")}`}</span>
+      <div
+        data-testid="best-times-legend"
+        className="mt-2 sm:mt-3 text-xs sm:text-sm text-red-600 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-1 sm:gap-0 sm:space-x-4"
+      >
+        <span>
+          {isWaPointsMode
+            ? `※ ${t("legend.longCourse")}, ${t("legend.relayingExcludedFromWaPoints")}`
+            : `※ ${t("legend.longCourse")}, ${t("legend.relaying")}`}
+        </span>
       </div>
     </div>
   );

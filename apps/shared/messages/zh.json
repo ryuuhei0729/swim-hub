@@ -1306,8 +1306,10 @@
       "distanceHeader": "距离",
       "legend": {
         "longCourse": "L：长池",
-        "relaying": "R：含接力交接"
-      }
+        "relaying": "R：含接力交接",
+        "relayingExcludedFromWaPoints": "接力交接成绩不计入WA积分"
+      },
+      "waPointsToggle": "显示WA积分"
     },
     "error": {
       "title": "发生错误",
@@ -2960,6 +2962,18 @@
     },
     "memberGroupSorter": {
       "label": "分组显示："
+    },
+    "waPointsCompare": {
+      "buttonLabel": "按WA积分比较",
+      "infoAriaLabel": "什么是WA积分？",
+      "infoTooltip": "WA积分是World Aquatics（世界游泳联合会）的官方积分制度。将世界纪录级别的基准时间设为1000分，按「1000×(基准时间÷成绩)³」计算。即使项目或泳池长度不同，也能比较游泳水平。",
+      "modalTitle": "按WA积分比较",
+      "rankLabel": "排名",
+      "pointsLabel": "WA积分",
+      "styleLabel": "项目",
+      "courseShort": "SC",
+      "courseLong": "LC",
+      "empty": "暂无可比较的成绩"
     },
     "membershipActions": {
       "approveSuccess": "已通过",

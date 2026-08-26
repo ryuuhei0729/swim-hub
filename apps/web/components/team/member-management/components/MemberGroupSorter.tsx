@@ -18,10 +18,14 @@ export const MemberGroupSorter: React.FC<MemberGroupSorterProps> = ({
 }) => {
   const t = useTranslations("teams");
 
+  // NOTE: このコンポーネントは categories.length === 0 のとき何も描画しない
+  // (グループ未設定チームでは「グループ表示:」自体が不要なため)。
+  // 呼び出し側 (TeamMemberManagement) はこの null 描画に依存する要素
+  // (「WAポイントで比較」ボタン等) をこのコンポーネントの外側に置くこと。
   if (categories.length === 0) return null;
 
   return (
-    <div className="mb-4 flex items-center gap-2 flex-wrap">
+    <>
       <span className="text-xs font-medium text-gray-500">{t("memberGroupSorter.label")}</span>
       {categories.map((category) => {
         const isActive = activeCategory === category;
@@ -41,6 +45,6 @@ export const MemberGroupSorter: React.FC<MemberGroupSorterProps> = ({
           </button>
         );
       })}
-    </div>
+    </>
   );
 };
