@@ -2920,8 +2920,10 @@
         "distanceHeader": "距离",
         "legend": {
           "longCourse": "L：长池",
-          "relaying": "R：含接力"
-        }
+          "relaying": "R：含接力",
+          "relayingExcludedFromWaPoints": "接力交接成绩不计入WA积分"
+        },
+        "waPointsToggle": "显示WA积分"
       }
     },
     "attendance": {

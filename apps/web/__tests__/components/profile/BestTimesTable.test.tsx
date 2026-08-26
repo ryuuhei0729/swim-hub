@@ -15,8 +15,25 @@
  *   [V-D5] タブ切替をしてもトグル状態(ON/OFF)は維持される
  *   [V-D4] 凡例文言がモードによって変わる (WAポイントモードでは「R: 引き継ぎあり」を出さない)
  *   [V-REG] 既存の時間表示・Newバッジ・ホバーツールチップ・チェックボックスの回帰確認
- *   [V-SCOPE] apps/web/components/member-detail/BestTimesTable.tsx
- *             (別コンポーネント、mypage版とは無関係) が本スプリントで変更されないこと
+ *
+ * ## [V-SCOPE] 削除の経緯 (2026-08-26 QA Phase A, 次スプリント)
+ * 前スプリントではこのファイルに、apps/web/components/member-detail/BestTimesTable.tsx
+ * (別コンポーネント) の sha256 ハッシュを pin する [V-SCOPE] ガードが存在した。
+ * 今回のスプリントは「member-detail 版にも同じWAポイント機能を実装する」ことが要件で
+ * あり、そのファイルを変更するのが正しい変更であるため、このガードは必然的に red になる。
+ * これは正しい失敗であり、実装を止める理由にはならない (PM 裁定により削除承認)。
+ *
+ * 単純に削除するだけでは「mypage版が今後も無変更である」保証を失うが、同じ hash-pin
+ * パターンで代替すると「1文字変えたら無条件に赤くなる」将来の足止めテストを再生産する
+ * だけなので採用しない。代わりに以下の behavioral な安全網で担保する:
+ *   - このファイル自体の [V-TOGGLE]/[V-D1]/[V-D2]/[V-D3]/[V-BASE]/[V-D5]/[V-D4]/[V-REG]
+ *     が今回のスプリント後も green のままであること (mypage版の実際の挙動を直接検証して
+ *     いるため、member-detail版の実装作業中に mypage版に誤って手を入れて壊した場合はここで
+ *     検出できる)
+ *   - member-detail 版自身の挙動は
+ *     apps/web/__tests__/components/member-detail/BestTimesTable.test.tsx が直接検証する
+ *     (ファイル内容の無変更を pin するのではなく、機能そのものが正しく動くことを検証する
+ *     「本来の検証」に格上げした)
  *
  * ## モック方針
  * - next-intl は手書き useTranslations モックを行わず、NextIntlClientProvider +
@@ -44,9 +61,6 @@
  *   全滅する。Developer 実装後に green になることを Sprint Contract の完了条件とする。
  */
 
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import React from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -359,26 +373,5 @@ describe("[V-REG] 既存機能の回帰確認 (本スプリントで変更され
     const bt = buildBestTime();
     renderWithLocale([bt]);
     expect(getCheckbox()).not.toBeChecked();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// [V-SCOPE] 別コンポーネント (member-detail/BestTimesTable.tsx) が変更されないこと
-// ---------------------------------------------------------------------------
-describe("[V-SCOPE] apps/web/components/member-detail/BestTimesTable.tsx は本スプリントの対象外", () => {
-  it("ファイル内容のsha256ハッシュが実装前に測定した値と一致する (無変更の証明)", () => {
-    const REPO_ROOT = path.resolve(__dirname, "../../../../..");
-    const targetPath = path.join(
-      REPO_ROOT,
-      "apps/web/components/member-detail/BestTimesTable.tsx",
-    );
-    const content = readFileSync(targetPath, "utf-8");
-    const hash = createHash("sha256").update(content).digest("hex");
-
-    // 2026-08-26 QA (Phase A) 実測ハッシュ。このスプリントで member-detail/BestTimesTable.tsx
-    // を編集した場合、このテストが red になる (プロフィール版と混同して波及させていないかの検出器)。
-    expect(hash).toBe(
-      "b5ed45c30eca66d1bac2fa750ad4e74f2675bf4660f1a7429d27206daef0c0b7",
-    );
   });
 });

@@ -10,6 +10,7 @@ export interface MemberDetail {
     birthday?: string;
     bio?: string;
     profile_image_path?: string | null;
+    gender?: number; // 0: 男性, 1: 女性, undefined: 不明 (WAポイントは常に「—」)
   };
 }
 

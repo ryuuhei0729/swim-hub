@@ -2920,8 +2920,10 @@
         "distanceHeader": "거리",
         "legend": {
           "longCourse": "L: 장수로",
-          "relaying": "R: 이어가기 있음"
-        }
+          "relaying": "R: 이어가기 있음",
+          "relayingExcludedFromWaPoints": "이어받기 타임은 WA 포인트 산정에서 제외됩니다"
+        },
+        "waPointsToggle": "WA 포인트 표시"
       }
     },
     "attendance": {

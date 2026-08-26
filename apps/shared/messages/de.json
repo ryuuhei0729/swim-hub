@@ -2920,8 +2920,10 @@
         "distanceHeader": "Distanz",
         "legend": {
           "longCourse": "L: Langbahn",
-          "relaying": "R: Staffel"
-        }
+          "relaying": "R: Staffel",
+          "relayingExcludedFromWaPoints": "Staffelwechselzeiten sind von den WA-Punkten ausgeschlossen"
+        },
+        "waPointsToggle": "WA-Punkte anzeigen"
       }
     },
     "attendance": {

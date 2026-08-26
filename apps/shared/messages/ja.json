@@ -2920,8 +2920,10 @@
         "distanceHeader": "距離",
         "legend": {
           "longCourse": "L: 長水路",
-          "relaying": "R: 引き継ぎあり"
-        }
+          "relaying": "R: 引き継ぎあり",
+          "relayingExcludedFromWaPoints": "引き継ぎタイムはWAポイント対象外です"
+        },
+        "waPointsToggle": "WAポイント表示"
       }
     },
     "attendance": {
