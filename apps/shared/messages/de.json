@@ -1306,8 +1306,10 @@
       "distanceHeader": "Distanz",
       "legend": {
         "longCourse": "L: Langbahn",
-        "relaying": "R: Staffelwechsel"
-      }
+        "relaying": "R: Staffelwechsel",
+        "relayingExcludedFromWaPoints": "Staffelwechselzeiten sind von den WA-Punkten ausgeschlossen"
+      },
+      "waPointsToggle": "WA-Punkte anzeigen"
     },
     "error": {
       "title": "Ein Fehler ist aufgetreten",
@@ -2960,6 +2962,18 @@
     },
     "memberGroupSorter": {
       "label": "Gruppieren nach:"
+    },
+    "waPointsCompare": {
+      "buttonLabel": "Nach WA-Punkten vergleichen",
+      "infoAriaLabel": "Was sind WA-Punkte?",
+      "infoTooltip": "WA-Punkte sind das offizielle Punktesystem von World Aquatics. Eine Basiszeit auf Weltrekordniveau entspricht 1000 Punkten und wird als „1000 x (Basiszeit / Zeit)^3“ berechnet. So lässt sich die Schwimmleistung über Disziplinen und Bahnlängen hinweg vergleichen.",
+      "modalTitle": "Nach WA-Punkten vergleichen",
+      "rankLabel": "Rang",
+      "pointsLabel": "WA-Punkte",
+      "styleLabel": "Disziplin",
+      "courseShort": "SC",
+      "courseLong": "LC",
+      "empty": "Keine Ergebnisse zum Vergleichen vorhanden"
     },
     "membershipActions": {
       "approveSuccess": "Genehmigt",

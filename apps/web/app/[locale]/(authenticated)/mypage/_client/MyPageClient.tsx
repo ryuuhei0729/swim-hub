@@ -234,7 +234,7 @@ export default function MyPageClient({ initialProfile, initialBestTimes }: MyPag
             </Link>
           </div>
 
-          <BestTimesTable bestTimes={bestTimes} />
+          <BestTimesTable bestTimes={bestTimes} gender={profile?.gender} />
         </div>
       </div>
 

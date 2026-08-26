@@ -1303,8 +1303,10 @@
       "distanceHeader": "Distance",
       "legend": {
         "longCourse": "L: Long Course",
-        "relaying": "R: Relay"
-      }
+        "relaying": "R: Relay",
+        "relayingExcludedFromWaPoints": "Relay times are excluded from WA Points"
+      },
+      "waPointsToggle": "Show WA Points"
     },
     "error": {
       "title": "An error occurred",
@@ -2954,6 +2956,18 @@
     },
     "memberGroupSorter": {
       "label": "Group by:"
+    },
+    "waPointsCompare": {
+      "buttonLabel": "Compare by WA Points",
+      "infoAriaLabel": "What are WA Points?",
+      "infoTooltip": "WA Points is World Aquatics' official points system. A world-record-level base time is set to 1000 points, calculated as \"1000 x (base time / your time)^3\", letting you compare swimming performance across events and courses.",
+      "modalTitle": "Compare by WA Points",
+      "rankLabel": "Rank",
+      "pointsLabel": "WA Points",
+      "styleLabel": "Event",
+      "courseShort": "SC",
+      "courseLong": "LC",
+      "empty": "No records available to compare"
     },
     "membershipActions": {
       "approveSuccess": "Approved",

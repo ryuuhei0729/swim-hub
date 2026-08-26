@@ -1306,8 +1306,10 @@
       "distanceHeader": "距離",
       "legend": {
         "longCourse": "L: 長水路",
-        "relaying": "R: 引き継ぎあり"
-      }
+        "relaying": "R: 引き継ぎあり",
+        "relayingExcludedFromWaPoints": "引き継ぎタイムはWAポイント対象外です"
+      },
+      "waPointsToggle": "WAポイント表示"
     },
     "error": {
       "title": "エラーが発生しました",
@@ -2960,6 +2962,18 @@
     },
     "memberGroupSorter": {
       "label": "グループ表示:"
+    },
+    "waPointsCompare": {
+      "buttonLabel": "WAポイントで比較",
+      "infoAriaLabel": "WAポイントとは",
+      "infoTooltip": "WAポイントは World Aquatics（世界水泳連盟）の公式ポイント制度です。世界記録級の基準タイムを1000点とし、「1000×(基準タイム÷記録)³」で算出します。種目やコースが異なっても泳力を比較できる指標です。",
+      "modalTitle": "WAポイントで比較",
+      "rankLabel": "順位",
+      "pointsLabel": "WAポイント",
+      "styleLabel": "種目",
+      "courseShort": "SC",
+      "courseLong": "LC",
+      "empty": "比較できる記録がありません"
     },
     "membershipActions": {
       "approveSuccess": "承認しました",
