@@ -284,22 +284,75 @@ describe("RecordAPI", () => {
     });
   });
 
-  describe("大会削除", () => {
-    it("大会を削除できる", async () => {
-      mockClient.from = vi.fn(() => ({
-        delete: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn().mockResolvedValue({
-              data: null,
-              error: null,
-            }),
-          })),
-        })),
-      })) as unknown as typeof mockClient.from;
+  // -----------------------------------------------------------------------
+  // 大会削除: delete_competition_with_records RPC 経由に変更されたことの検証
+  //
+  // 旧テストは `.from("competitions").delete().eq().eq()` という生クエリチェーンを
+  // モックしていたが、これは RPC 化により実装と一切対応しなくなった
+  // (deleteCompetition は現在 supabase.rpc(...) のみを呼び、.from("competitions") は
+  // 呼ばない)。旧テストのまま残すと「モックした関数が呼ばれないので何もテストしていない」
+  // 状態で green になるため、RPC 呼び出しを直接検証する形に置き換える。
+  //
+  // 「クエリ引数を捨てるモックはスコープを検証不能にする」の教訓に従い、
+  // rpc() に渡された関数名・引数オブジェクトを toHaveBeenCalledWith で厳密に assert する
+  // (呼ばれたことだけでなく、渡された competition_id が正しいことまで検証する)。
+  // -----------------------------------------------------------------------
+  describe("大会削除 (delete_competition_with_records RPC)", () => {
+    it("RPCが success:true を返したら resolve し、rpc に正しい関数名と引数を渡す", async () => {
+      mockClient.rpc = vi.fn().mockResolvedValue({
+        data: { success: true, deleted_record_count: 7 },
+        error: null,
+      }) as unknown as typeof mockClient.rpc;
 
       await expect(api.deleteCompetition("comp-1")).resolves.toBeUndefined();
 
-      expect(mockClient.from).toHaveBeenCalledWith("competitions");
+      expect(mockClient.rpc).toHaveBeenCalledTimes(1);
+      expect(mockClient.rpc).toHaveBeenCalledWith("delete_competition_with_records", {
+        p_competition_id: "comp-1",
+      });
+      // 生クエリ経由の削除ではないことの回帰防止 (RPC化前の実装が残っていないか)
+      expect(mockClient.from).not.toHaveBeenCalledWith("competitions");
+    });
+
+    it("RPC呼び出し自体がエラーを返したら、そのエラーをそのまま throw する", async () => {
+      const rpcError = new Error("network error");
+      mockClient.rpc = vi.fn().mockResolvedValue({
+        data: null,
+        error: rpcError,
+      }) as unknown as typeof mockClient.rpc;
+
+      await expect(api.deleteCompetition("comp-1")).rejects.toThrow("network error");
+    });
+
+    it("RPCがエラーは無いが success:false (未認可) を返したら、そのエラーメッセージで throw する", async () => {
+      mockClient.rpc = vi.fn().mockResolvedValue({
+        data: { success: false, error: "not authorized" },
+        error: null,
+      }) as unknown as typeof mockClient.rpc;
+
+      await expect(api.deleteCompetition("comp-1")).rejects.toThrow("not authorized");
+    });
+
+    it("RPCが success:false かつ error フィールドが無い場合は汎用フォールバック文言で throw する", async () => {
+      mockClient.rpc = vi.fn().mockResolvedValue({
+        data: { success: false },
+        error: null,
+      }) as unknown as typeof mockClient.rpc;
+
+      await expect(api.deleteCompetition("comp-1")).rejects.toThrow();
+    });
+
+    it("大会IDが異なれば、rpc に渡す p_competition_id もそれに応じて変わる (引数を固定値化していないことの確認)", async () => {
+      mockClient.rpc = vi.fn().mockResolvedValue({
+        data: { success: true, deleted_record_count: 0 },
+        error: null,
+      }) as unknown as typeof mockClient.rpc;
+
+      await api.deleteCompetition("comp-xyz-999");
+
+      expect(mockClient.rpc).toHaveBeenCalledWith("delete_competition_with_records", {
+        p_competition_id: "comp-xyz-999",
+      });
     });
   });
 
@@ -379,6 +432,84 @@ describe("RecordAPI", () => {
       const result = await api.countRecords();
 
       expect(result).toBe(0);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 大会別記録件数取得 (countRecordsByCompetition): D-2 新設メソッド。
+  // 削除確認モーダルの件数警告表示のために使われる。
+  //
+  // 「クエリ引数を捨てるモックはスコープを検証不能にする」の教訓に従い、
+  // .eq() に渡された実引数 (カラム名・値) を実際に記録して assert する
+  // (単に「呼ばれた」だけでは、絞り込み対象の competition_id が違っていても green になる)。
+  // -----------------------------------------------------------------------
+  describe("大会別記録件数取得 (countRecordsByCompetition)", () => {
+    function buildCountBuilder(count: number | null, error: unknown = null) {
+      const eqCalls: Array<[string, unknown]> = [];
+      const builder = {
+        select: vi.fn(),
+        eq: vi.fn((column: string, value: unknown) => {
+          eqCalls.push([column, value]);
+          return Promise.resolve({ count, error });
+        }),
+      };
+      builder.select.mockReturnValue(builder);
+      return { builder, eqCalls };
+    }
+
+    it("指定した大会IDの records 件数 (7件、判別可能な非自明値) を返す", async () => {
+      const { builder, eqCalls } = buildCountBuilder(7);
+      mockClient.from = vi.fn().mockReturnValue(builder) as unknown as typeof mockClient.from;
+
+      const result = await api.countRecordsByCompetition("comp-abc");
+
+      expect(mockClient.from).toHaveBeenCalledWith("records");
+      expect(result).toBe(7);
+      // 引数を捨てず、実際に competition_id=comp-abc で絞り込んだことを厳密に確認する
+      expect(eqCalls).toEqual([["competition_id", "comp-abc"]]);
+    });
+
+    it("select には count:exact, head:true が渡される (行本体を転送しない)", async () => {
+      const { builder } = buildCountBuilder(3);
+      mockClient.from = vi.fn().mockReturnValue(builder) as unknown as typeof mockClient.from;
+
+      await api.countRecordsByCompetition("comp-abc");
+
+      expect(builder.select).toHaveBeenCalledWith("*", { count: "exact", head: true });
+    });
+
+    it("countがnullの場合は0を返す", async () => {
+      const { builder } = buildCountBuilder(null);
+      mockClient.from = vi.fn().mockReturnValue(builder) as unknown as typeof mockClient.from;
+
+      const result = await api.countRecordsByCompetition("comp-empty");
+
+      expect(result).toBe(0);
+    });
+
+    it("countが0 (records自体が存在しない) の場合も厳密に0を返す (falsy値の取り違え防止)", async () => {
+      const { builder } = buildCountBuilder(0);
+      mockClient.from = vi.fn().mockReturnValue(builder) as unknown as typeof mockClient.from;
+
+      const result = await api.countRecordsByCompetition("comp-no-records");
+
+      expect(result).toBe(0);
+    });
+
+    it("エラーが返ったら throw する (呼び出し元が非致命フォールバックするかは呼び出し元の責務)", async () => {
+      const { builder } = buildCountBuilder(null, new Error("db error"));
+      mockClient.from = vi.fn().mockReturnValue(builder) as unknown as typeof mockClient.from;
+
+      await expect(api.countRecordsByCompetition("comp-abc")).rejects.toThrow("db error");
+    });
+
+    it("大会IDが異なれば絞り込み対象も追従する (固定値化していないことの確認)", async () => {
+      const { builder, eqCalls } = buildCountBuilder(2);
+      mockClient.from = vi.fn().mockReturnValue(builder) as unknown as typeof mockClient.from;
+
+      await api.countRecordsByCompetition("comp-another-999");
+
+      expect(eqCalls).toEqual([["competition_id", "comp-another-999"]]);
     });
   });
 

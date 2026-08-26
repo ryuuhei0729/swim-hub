@@ -694,7 +694,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     style={styles.actionButton}
                     onPress={(e) => {
                       e.stopPropagation();
-                      onDeleteCompetition(item.id);
+                      onDeleteCompetition(item.id, item.type === "team_competition");
                     }}
                   >
                     <Feather name="trash-2" size={20} color="#EF4444" />

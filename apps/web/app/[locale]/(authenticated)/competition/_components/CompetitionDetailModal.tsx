@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { format, parseISO, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
+import { useAuth } from "@/contexts";
 import {
   CompetitionDetails,
   CompetitionWithEntry,
@@ -13,6 +14,7 @@ import {
 import { DeleteConfirmModal } from "@/components/ui/DeleteConfirmModal";
 import type { GalleryImage } from "@/components/ui/ImageGallery";
 import type { Record as RecordType } from "@apps/shared/types";
+import { RecordAPI } from "@apps/shared/api/records";
 
 interface AttendanceModalState {
   eventId: string;
@@ -20,7 +22,9 @@ interface AttendanceModalState {
   teamId: string;
 }
 
-type DeleteTarget = { type: "competition" } | { type: "entry"; entryId: string };
+type DeleteTarget =
+  | { type: "competition"; recordCount?: number }
+  | { type: "entry"; entryId: string };
 
 export interface CompetitionDetailModalProps {
   isOpen: boolean;
@@ -85,13 +89,45 @@ export default function CompetitionDetailModal({
   onDeleteEntry,
 }: CompetitionDetailModalProps) {
   const t = useTranslations("dashboard");
+  const { supabase } = useAuth();
+  const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [isFetchingRecordCount, setIsFetchingRecordCount] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState<AttendanceModalState | null>(null);
+  // 件数取得リクエストのトークン。competitionId はこのモーダル内で不変のため、
+  // 「開く→キャンセル→再度開く」で発生する連続リクエストを区別できない。
+  // インクリメントするトークンで「このレスポンスが最新のリクエストのものか」を
+  // .then/.catch/.finally の全てで判定し、古いレスポンスは state を触らずに捨てる。
+  const recordCountRequestSeqRef = useRef(0);
 
   if (!isOpen) return null;
 
   const parsedDate = date ? parseISO(date) : null;
   const headerDate = parsedDate && isValid(parsedDate) ? format(parsedDate, "M月d日(E)", { locale: ja }) : "";
+
+  // 大会削除確認モーダルを開く。チーム大会は records を削除しないため件数取得を行わない。
+  // 件数取得の失敗は非致命: 削除自体はブロックせず、件数なしの汎用文言にフォールバックする。
+  const openCompetitionDeleteConfirm = () => {
+    setDeleteTarget({ type: "competition" });
+    if (isTeamCompetition) return;
+
+    const requestSeq = ++recordCountRequestSeqRef.current;
+    setIsFetchingRecordCount(true);
+    recordAPI
+      .countRecordsByCompetition(competitionId)
+      .then((count) => {
+        if (recordCountRequestSeqRef.current !== requestSeq) return;
+        setDeleteTarget((prev) => (prev && prev.type === "competition" ? { ...prev, recordCount: count } : prev));
+      })
+      .catch((error) => {
+        if (recordCountRequestSeqRef.current !== requestSeq) return;
+        console.error("大会記録件数の取得に失敗しました:", error);
+      })
+      .finally(() => {
+        if (recordCountRequestSeqRef.current !== requestSeq) return;
+        setIsFetchingRecordCount(false);
+      });
+  };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -101,7 +137,16 @@ export default function CompetitionDetailModal({
       await onDeleteEntry?.(deleteTarget.entryId);
     }
     setDeleteTarget(null);
+    setIsFetchingRecordCount(false);
+    recordCountRequestSeqRef.current++;
   };
+
+  const deleteConfirmExtraMessage =
+    deleteTarget?.type === "competition" &&
+    typeof deleteTarget.recordCount === "number" &&
+    deleteTarget.recordCount > 0
+      ? t("deleteConfirm.competitionRecordsWarning", { count: deleteTarget.recordCount })
+      : undefined;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" data-testid="record-detail-page-modal">
@@ -132,7 +177,7 @@ export default function CompetitionDetailModal({
                 teamId={teamId}
                 teamName={teamName}
                 onEdit={(images) => onEditCompetition(images)}
-                onDelete={() => setDeleteTarget({ type: "competition" })}
+                onDelete={() => openCompetitionDeleteConfirm()}
                 onAddRecord={() => onOpenRecordTab()}
                 onEditRecord={(record: RecordType) => {
                   void record;
@@ -159,7 +204,7 @@ export default function CompetitionDetailModal({
                 isTeamCompetition={isTeamCompetition}
                 onAddRecord={() => onOpenRecordTab()}
                 onEditCompetition={(images) => onEditCompetition(images)}
-                onDeleteCompetition={() => setDeleteTarget({ type: "competition" })}
+                onDeleteCompetition={() => openCompetitionDeleteConfirm()}
                 onEditEntry={() => onOpenEntryTab?.()}
                 onDeleteEntry={(id) => setDeleteTarget({ type: "entry", entryId: id })}
                 onClose={onClose}
@@ -182,7 +227,13 @@ export default function CompetitionDetailModal({
       <DeleteConfirmModal
         isOpen={!!deleteTarget}
         onConfirm={handleDeleteConfirm}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() => {
+          setDeleteTarget(null);
+          setIsFetchingRecordCount(false);
+          recordCountRequestSeqRef.current++;
+        }}
+        extraMessage={deleteConfirmExtraMessage}
+        isConfirmDisabled={isFetchingRecordCount}
       />
 
       {showAttendanceModal && (

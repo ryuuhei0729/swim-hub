@@ -931,7 +931,8 @@
       "title": "删除记录",
       "message": "确定要删除吗？",
       "confirm": "删除",
-      "cancel": "取消"
+      "cancel": "取消",
+      "competitionRecordsWarning": "该大会关联的 {count} 条记录也将被删除。"
     },
     "calendarView": {
       "title": "训练・记录日历",
@@ -2953,6 +2954,7 @@
         "name": "成员",
         "totalDistance": "总距离"
       },
+      "bulkEntryNote": "批量登记",
       "empty": "暂无成员",
       "sortAriaLabel": "按 {style} {distance}m 排序",
       "sortAscSuffix": "（升序）",

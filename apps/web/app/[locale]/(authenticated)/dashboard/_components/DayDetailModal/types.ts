@@ -13,6 +13,8 @@ export interface DeleteConfirmState {
   id: string;
   type: CalendarItemType;
   competitionId?: string;
+  /** 個人大会削除時に紐づく records の件数警告に使う。取得中/チーム大会/取得失敗時は undefined */
+  recordCount?: number;
 }
 
 // 出欠モーダルの状態型

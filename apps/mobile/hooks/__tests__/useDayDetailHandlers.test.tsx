@@ -13,8 +13,19 @@
 //   [V-M-P07 / V-M-C05] 削除/変更後に呼び出し元の refetch が呼ばれる
 //   [到達不能ルート] 旧 PracticeDetail/RecordDetail 画面へは一切 navigate しない
 //
+//   [V-M-C09] 大会削除確認 (handleDeleteCompetition) は必ず (competitionId, isTeamCompetition)
+//             の2引数を要求するシグネチャに変更されている (旧1引数呼び出しは型エラーになる)。
+//   [V-M-C10] 個人大会 (isTeamCompetition=false) 削除時は countRecordsByCompetition を呼び、
+//             件数>0なら確認メッセージに件数警告 (competitionRecordsWarning, {count}) が追記される。
+//   [V-M-C11] チーム大会 (isTeamCompetition=true) 削除時は countRecordsByCompetition を
+//             一切呼ばない (誤情報警告の防止・無駄なリクエスト防止)。
+//   [V-M-C12] 個人大会で件数=0のときは追加警告文を含めない (汎用文言のみ)。
+//   [V-M-C13] 件数取得が失敗しても削除自体はブロックされない (非致命・汎用文言にフォールバック)。
+//
 // トートロジー防止メモ: Alert.alert はスパイのみで実際のダイアログを描画しないため、
 // 「確認ボタン (destructive) の onPress を呼んだときの副作用」を検証する。
+// t のモックは params を無視せず `key:{"count":n}` 形式の文字列に展開することで、
+// 「キーが呼ばれたか」だけでなく「正しい件数が渡ったか」まで検証可能にする。
 
 import { Alert } from "react-native";
 import { act, renderHook } from "@testing-library/react";
@@ -26,6 +37,7 @@ const mocks = vi.hoisted(() => ({
   deleteRecordMutateAsync: vi.fn(),
   deleteCompetitionMutateAsync: vi.fn(),
   deletePracticeLog: vi.fn(),
+  countRecordsByCompetition: vi.fn(),
   syncPractice: vi.fn(),
   syncCompetition: vi.fn(),
 }));
@@ -35,7 +47,10 @@ vi.mock("@react-navigation/native", () => ({
 }));
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, params?: Record<string, unknown>) =>
+      params ? `${key}:${JSON.stringify(params)}` : key,
+  }),
 }));
 
 vi.mock("@apps/shared/hooks/queries/user", () => ({
@@ -62,6 +77,12 @@ vi.mock("@apps/shared/hooks/queries/records", () => ({
 vi.mock("@apps/shared/api/practices", () => ({
   PracticeAPI: class {
     deletePracticeLog = mocks.deletePracticeLog;
+  },
+}));
+
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    countRecordsByCompetition = mocks.countRecordsByCompetition;
   },
 }));
 
@@ -92,6 +113,7 @@ describe("useDayDetailHandlers", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.countRecordsByCompetition.mockResolvedValue(0);
   });
 
   it("[V-M-P02] 練習削除は Alert.alert で確認され、確認後に deleteMutation と refetch が呼ばれる", async () => {
@@ -145,11 +167,12 @@ describe("useDayDetailHandlers", () => {
     expect(mocks.deleteRecordMutateAsync).toHaveBeenCalledWith("record-1");
   });
 
-  it("[V-M-C03] 大会削除も Alert.alert で確認され、確認後に deleteCompetitionMutation が呼ばれる", async () => {
+  it("[V-M-C03/V-M-C09] 大会削除も Alert.alert で確認され、確認後に deleteCompetitionMutation が呼ばれる (2引数シグネチャ)", async () => {
+    mocks.countRecordsByCompetition.mockResolvedValue(0);
     const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
 
     await act(async () => {
-      await result.current.handleDeleteCompetition("comp-1");
+      await result.current.handleDeleteCompetition("comp-1", false);
     });
     const onConfirm = getConfirmOnPress(Alert.alert);
 
@@ -158,6 +181,70 @@ describe("useDayDetailHandlers", () => {
     });
 
     expect(mocks.deleteCompetitionMutateAsync).toHaveBeenCalledWith("comp-1");
+  });
+
+  it("[V-M-C10] 個人大会 (isTeamCompetition=false) の削除は countRecordsByCompetition を呼び、件数>0なら確認文言に件数警告が追記される", async () => {
+    mocks.countRecordsByCompetition.mockResolvedValue(7);
+    const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
+
+    await act(async () => {
+      await result.current.handleDeleteCompetition("comp-personal-1", false);
+    });
+
+    expect(mocks.countRecordsByCompetition).toHaveBeenCalledTimes(1);
+    expect(mocks.countRecordsByCompetition).toHaveBeenCalledWith("comp-personal-1");
+
+    const alertCall = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
+    const message = alertCall[1] as string;
+    // t() モックは params を握り潰さず `key:{"count":n}` に展開するため、
+    // 「キーが呼ばれた」だけでなく「7件という正しい値が渡った」ことまで検証できる。
+    expect(message).toContain('dashboard.deleteConfirm.competitionRecordsWarning:{"count":7}');
+  });
+
+  it("[V-M-C11] チーム大会 (isTeamCompetition=true) の削除は countRecordsByCompetition を一切呼ばない", async () => {
+    const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
+
+    await act(async () => {
+      await result.current.handleDeleteCompetition("comp-team-1", true);
+    });
+
+    expect(mocks.countRecordsByCompetition).not.toHaveBeenCalled();
+
+    const alertCall = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
+    const message = alertCall[1] as string;
+    expect(message).not.toContain("competitionRecordsWarning");
+  });
+
+  it("[V-M-C12] 個人大会で件数=0のときは追加警告文を含めない (汎用文言のみ)", async () => {
+    mocks.countRecordsByCompetition.mockResolvedValue(0);
+    const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
+
+    await act(async () => {
+      await result.current.handleDeleteCompetition("comp-personal-empty", false);
+    });
+
+    expect(mocks.countRecordsByCompetition).toHaveBeenCalledWith("comp-personal-empty");
+    const alertCall = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
+    const message = alertCall[1] as string;
+    expect(message).not.toContain("competitionRecordsWarning");
+  });
+
+  it("[V-M-C13] 件数取得が失敗しても削除確認自体はブロックされず、確認後に削除が実行される (非致命フォールバック)", async () => {
+    mocks.countRecordsByCompetition.mockRejectedValue(new Error("network error"));
+    const { result } = renderHook(() => useDayDetailHandlers(supabase, refetch));
+
+    await act(async () => {
+      await result.current.handleDeleteCompetition("comp-personal-err", false);
+    });
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    const onConfirm = getConfirmOnPress(Alert.alert);
+
+    await act(async () => {
+      await onConfirm();
+    });
+
+    expect(mocks.deleteCompetitionMutateAsync).toHaveBeenCalledWith("comp-personal-err");
   });
 
   it("[V-M-C02] 記録編集は team_id を含むメタデータでも含まないメタデータでも常に CompetitionTabForm(record) へ遷移する", () => {

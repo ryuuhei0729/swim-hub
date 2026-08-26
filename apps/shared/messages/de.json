@@ -931,7 +931,8 @@
       "title": "Eintrag löschen",
       "message": "Möchten Sie diesen Eintrag wirklich löschen?",
       "confirm": "Löschen",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "competitionRecordsWarning": "{count} mit diesem Wettkampf verknüpfte Ergebnis(se) werden ebenfalls gelöscht."
     },
     "calendarView": {
       "title": "Trainings- und Wettkampfkalender",
@@ -2953,6 +2954,7 @@
         "name": "Mitglied",
         "totalDistance": "Gesamtdistanz"
       },
+      "bulkEntryNote": "Sammeleintrag",
       "empty": "Keine Mitglieder",
       "sortAriaLabel": "Nach {style} {distance}m sortieren",
       "sortAscSuffix": " (aufsteigend)",

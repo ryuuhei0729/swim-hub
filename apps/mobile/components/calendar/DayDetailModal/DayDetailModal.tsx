@@ -393,6 +393,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           firstEntry.place || firstEntry.metadata?.competition?.place || "";
                         const poolType = firstEntry.metadata?.competition?.pool_type ?? 0;
                         const note = firstEntry.note || undefined;
+                        const isTeamCompetition = !!firstEntry.metadata?.competition?.team_id;
 
                         return (
                           <EntryDetail
@@ -412,7 +413,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             }}
                             onDeleteCompetition={() => {
                               if (onDeleteCompetition) {
-                                onDeleteCompetition(competitionId);
+                                onDeleteCompetition(competitionId, isTeamCompetition);
                               }
                             }}
                             onEditEntry={onEditEntry}
@@ -489,7 +490,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           }}
                           onDeleteCompetition={() => {
                             if (onDeleteCompetition) {
-                              onDeleteCompetition(competitionId);
+                              onDeleteCompetition(competitionId, isTeamCompetition);
                             }
                           }}
                           onAddRecord={() => {

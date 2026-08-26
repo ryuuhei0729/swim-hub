@@ -32,6 +32,12 @@ const practicesDeleteMock = vi.fn();
 const competitionsDeleteMock = vi.fn();
 const functionsInvokeMock = vi.fn();
 const deleteUserMock = vi.fn();
+// QA (Sprint Contract): 大会削除に records カスケードを追加した
+// delete_competition_with_records RPC が、退会フロー (このルート) からは
+// 一切呼ばれないことを検証するためのスパイ。退会時の個人大会削除は
+// 従来通り adminClient.from("competitions").delete() の直接削除で行われ、
+// records は (SET NULL のまま) カスケード削除の対象外であることを固定する。
+const rpcMock = vi.fn();
 
 vi.mock("@/lib/supabase-server", () => ({
   createAdminClient: vi.fn(() => ({
@@ -44,6 +50,7 @@ vi.mock("@/lib/supabase-server", () => ({
       }
       throw new Error(`unexpected table: ${table}`);
     },
+    rpc: (...args: unknown[]) => rpcMock(...args),
     functions: { invoke: (...args: unknown[]) => functionsInvokeMock(...args) },
     auth: { admin: { deleteUser: (...args: unknown[]) => deleteUserMock(...args) } },
   })),
@@ -68,6 +75,7 @@ describe("DELETE /api/account/delete - ストレージ削除失敗時のフェ�
     competitionsDeleteMock.mockReset().mockResolvedValue({ error: null });
     functionsInvokeMock.mockReset();
     deleteUserMock.mockReset().mockResolvedValue({ error: null });
+    rpcMock.mockReset();
     getUserMock.mockResolvedValue({ data: { user: VALID_USER }, error: null });
   });
 
@@ -155,6 +163,40 @@ describe("DELETE /api/account/delete - ストレージ削除失敗時のフェ�
     expect(deleteUserMock).toHaveBeenCalledTimes(1);
     expect(response.status).toBe(500);
   });
+
+  // QA (Sprint Contract: 大会削除 records カスケード追加スプリント):
+  // 退会フローは delete_competition_with_records RPC を経由しないことの固定。
+  // 個人大会の削除は adminClient.from("competitions").delete() の直接削除のままであり、
+  // records は SET NULL のまま残る (退会時の records 削除仕様変更はスコープ外)。
+  // このルートが将来 RPC 経由に「まとめられて」しまうと、退会時の records 削除挙動が
+  // 意図せず変わる (records 削除の権限チェックが auth.uid() 前提になり、
+  // adminClient=service_role の呼び出しパターンと噛み合わなくなる可能性がある) ため、
+  // 現状維持であることを明示的に固定する。
+  it("[V-RETIRE-01] 正常な退会フロー完了後も delete_competition_with_records RPC は一切呼ばれない", async () => {
+    functionsInvokeMock.mockResolvedValue({ data: { success: true }, error: null });
+
+    const promise = DELETE(makeAuthedRequest());
+    await vi.runAllTimersAsync();
+    const response = await promise;
+
+    expect(response.status).toBe(200);
+    expect(practicesDeleteMock).toHaveBeenCalledTimes(1);
+    expect(competitionsDeleteMock).toHaveBeenCalledTimes(1);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it("[V-RETIRE-01] ストレージ削除失敗でフェイルクローズするケースでも RPC は呼ばれない", async () => {
+    functionsInvokeMock.mockResolvedValue({
+      data: null,
+      error: { message: "edge function down" },
+    });
+
+    const promise = DELETE(makeAuthedRequest());
+    await vi.runAllTimersAsync();
+    await promise;
+
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
 });
 
 // QA追記 (PM依頼): isUserAlreadyDeletedError による deleteUser 冪等性の固定。
@@ -175,6 +217,7 @@ describe("DELETE /api/account/delete - deleteUser 冪等性 (already-deleted は
     competitionsDeleteMock.mockReset().mockResolvedValue({ error: null });
     functionsInvokeMock.mockReset().mockResolvedValue({ data: { success: true }, error: null });
     deleteUserMock.mockReset();
+    rpcMock.mockReset();
     getUserMock.mockResolvedValue({ data: { user: VALID_USER }, error: null });
   });
 
