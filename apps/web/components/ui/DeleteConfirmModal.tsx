@@ -7,6 +7,10 @@ export interface DeleteConfirmModalProps {
   isOpen: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  /** 通常の確認文言に追加で表示する警告文（例: 紐づく記録の件数警告）。未指定なら非表示 */
+  extraMessage?: string;
+  /** true の間、確認ボタンを無効化する（例: 件数取得中の二重押下防止） */
+  isConfirmDisabled?: boolean;
 }
 
 /**
@@ -15,7 +19,13 @@ export interface DeleteConfirmModalProps {
  * ダッシュボード (DayDetailModal) と練習/大会履歴タブ (PracticeDetailModal / CompetitionDetailModal)
  * から共通で利用される。挙動・見た目を完全に一致させるための共通コンポーネント。
  */
-export function DeleteConfirmModal({ isOpen, onConfirm, onCancel }: DeleteConfirmModalProps) {
+export function DeleteConfirmModal({
+  isOpen,
+  onConfirm,
+  onCancel,
+  extraMessage,
+  isConfirmDisabled = false,
+}: DeleteConfirmModalProps) {
   const t = useTranslations("dashboard");
 
   if (!isOpen) return null;
@@ -38,6 +48,11 @@ export function DeleteConfirmModal({ isOpen, onConfirm, onCancel }: DeleteConfir
                 <h3 className="text-lg leading-6 font-medium text-gray-900">{t("deleteConfirm.title")}</h3>
                 <div className="mt-2">
                   <p className="text-sm text-gray-500">{t("deleteConfirm.message")}</p>
+                  {extraMessage && (
+                    <p className="text-sm text-red-600 mt-1" data-testid="delete-confirm-extra-message">
+                      {extraMessage}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -45,8 +60,9 @@ export function DeleteConfirmModal({ isOpen, onConfirm, onCancel }: DeleteConfir
           <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={onConfirm}
+              disabled={isConfirmDisabled}
               data-testid="confirm-delete-button"
             >
               {t("deleteConfirm.confirm")}

@@ -800,21 +800,34 @@ export class RecordAPI {
   }
 
   /**
-   * 大会削除（個人大会のみ）
+   * 大会削除。個人大会 (team_id IS NULL) の場合は紐づく records も RPC 内で
+   * 削除される。チーム大会は records を削除せず大会のみ削除する。
+   * RPC 側で作成者本人 (auth.uid()) のみに削除を許可する。
    */
   async deleteCompetition(id: string): Promise<void> {
-    const {
-      data: { user },
-    } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
-
-    const { error } = await this.supabase
-      .from("competitions")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", user.id); // 個人大会のみ削除可能
+    const { data, error } = await this.supabase.rpc("delete_competition_with_records", {
+      p_competition_id: id,
+    });
 
     if (error) throw error;
+
+    const result = data as { success: boolean; error?: string } | null;
+    if (!result?.success) {
+      throw new Error(result?.error || "大会の削除に失敗しました");
+    }
+  }
+
+  /**
+   * 指定した大会に紐づく records の件数を取得する
+   */
+  async countRecordsByCompetition(competitionId: string): Promise<number> {
+    const { count, error } = await this.supabase
+      .from("records")
+      .select("*", { count: "exact", head: true })
+      .eq("competition_id", competitionId);
+
+    if (error) throw error;
+    return count || 0;
   }
 
   // =========================================================================

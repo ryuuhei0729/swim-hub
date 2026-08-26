@@ -136,7 +136,7 @@ export default function MemberDetailModal({
                 <div className="bg-gray-200 rounded-lg h-64"></div>
               </div>
             ) : bestTimes.length > 0 ? (
-              <BestTimesTable bestTimes={bestTimes} />
+              <BestTimesTable bestTimes={bestTimes} gender={member.users.gender} />
             ) : (
               <div className="text-center py-8">
                 <TrophyIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />

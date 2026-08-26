@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { TrophyIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/solid";
@@ -16,6 +16,7 @@ import {
   isTeamInfo,
 } from "@apps/shared/types/ui";
 import type { PracticeLog } from "@apps/shared/types";
+import { RecordAPI } from "@apps/shared/api/records";
 import { useCalendarColorSettingsQuery } from "@apps/shared/hooks";
 import { resolveCalendarItemColor, getDefaultColorForType } from "@apps/shared/utils/calendarColorResolver";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
@@ -52,9 +53,45 @@ export default function DayDetailModal({
 }: DayDetailModalProps) {
   const { supabase, user } = useAuth();
   const t = useTranslations("dashboard");
+  const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<DeleteConfirmState | null>(null);
+  const [isFetchingRecordCount, setIsFetchingRecordCount] = useState(false);
   const [deletedEntryIds, setDeletedEntryIds] = useState<string[]>([]);
   const [showAttendanceModal, setShowAttendanceModal] = useState<AttendanceModalState | null>(null);
+  // 件数取得中の competitionId。古いフェッチが後から解決したとき、現在開いている
+  // 確認対象と一致するかを .then/.catch/.finally の全てで判定するためのトークン。
+  // (state は非同期クロージャ内で stale になるため ref で保持する)
+  const pendingRecordCountRequestIdRef = useRef<string | null>(null);
+
+  // 大会削除確認モーダルを開く。チーム大会は records を削除しないため件数取得を行わない
+  // (誤情報の警告表示・無駄なリクエストを避ける)。件数取得の失敗は非致命: 削除自体は
+  // ブロックせず、件数なしの汎用文言にフォールバックする。
+  const openCompetitionDeleteConfirm = useCallback(
+    (competitionId: string, type: "competition" | "team_competition", isTeamCompetition: boolean) => {
+      setShowDeleteConfirm({ id: competitionId, type });
+      if (isTeamCompetition) return;
+
+      pendingRecordCountRequestIdRef.current = competitionId;
+      setIsFetchingRecordCount(true);
+      recordAPI
+        .countRecordsByCompetition(competitionId)
+        .then((count) => {
+          if (pendingRecordCountRequestIdRef.current !== competitionId) return;
+          setShowDeleteConfirm((prev) =>
+            prev && prev.id === competitionId ? { ...prev, recordCount: count } : prev,
+          );
+        })
+        .catch((error) => {
+          if (pendingRecordCountRequestIdRef.current !== competitionId) return;
+          console.error("大会記録件数の取得に失敗しました:", error);
+        })
+        .finally(() => {
+          if (pendingRecordCountRequestIdRef.current !== competitionId) return;
+          setIsFetchingRecordCount(false);
+        });
+    },
+    [recordAPI],
+  );
   const { settings: calendarColorSettings } = useCalendarColorSettingsQuery(supabase, user?.id);
   const getItemColor = (item: CalendarItem) =>
     resolveCalendarItemColor(item.type, item.metadata, calendarColorSettings);
@@ -162,12 +199,22 @@ export default function DayDetailModal({
         setDeletedEntryIds((prev) => [...prev, showDeleteConfirm.id]);
       }
       setShowDeleteConfirm(null);
+      setIsFetchingRecordCount(false);
+      pendingRecordCountRequestIdRef.current = null;
       const remainingEntries = entries.filter((e) => e.id !== showDeleteConfirm.id);
       if (remainingEntries.length === 0) {
         onClose();
       }
     }
   };
+
+  const deleteConfirmExtraMessage =
+    showDeleteConfirm &&
+    (showDeleteConfirm.type === "competition" || showDeleteConfirm.type === "team_competition") &&
+    typeof showDeleteConfirm.recordCount === "number" &&
+    showDeleteConfirm.recordCount > 0
+      ? t("deleteConfirm.competitionRecordsWarning", { count: showDeleteConfirm.recordCount })
+      : undefined;
 
   const handleShowAttendance = (
     eventId: string,
@@ -442,7 +489,13 @@ export default function DayDetailModal({
                         onEditItem?.(item);
                         onClose();
                       }}
-                      onDelete={() => setShowDeleteConfirm({ id: item.id, type: item.type })}
+                      onDelete={() =>
+                        openCompetitionDeleteConfirm(
+                          item.id,
+                          item.type as "competition" | "team_competition",
+                          item.type === "team_competition",
+                        )
+                      }
                       onAddRecord={onAddRecord}
                       onEditRecord={onEditRecord}
                       onDeleteRecord={onDeleteRecord}
@@ -500,7 +553,11 @@ export default function DayDetailModal({
                             onEditItem?.(competitionData);
                           }}
                           onDeleteCompetition={() =>
-                            setShowDeleteConfirm({ id: competitionId, type: "competition" })
+                            openCompetitionDeleteConfirm(
+                              competitionId,
+                              "competition",
+                              !!item.metadata?.team_id,
+                            )
                           }
                           onEditEntry={() => handleEditEntry(item, competitionId)}
                           onDeleteEntry={(entryId) => {
@@ -557,7 +614,13 @@ export default function DayDetailModal({
                           };
                           onEditItem?.(competitionData);
                         }}
-                        onDelete={() => setShowDeleteConfirm({ id: compId, type: "competition" })}
+                        onDelete={() =>
+                          openCompetitionDeleteConfirm(
+                            compId,
+                            "competition",
+                            record.metadata?.competition?.team_id != null,
+                          )
+                        }
                         onAddRecord={onAddRecord}
                         onEditRecord={onEditRecord}
                         onDeleteRecord={onDeleteRecord}
@@ -635,7 +698,13 @@ export default function DayDetailModal({
       <DeleteConfirmModal
         isOpen={!!showDeleteConfirm}
         onConfirm={handleDeleteConfirm}
-        onCancel={() => setShowDeleteConfirm(null)}
+        onCancel={() => {
+          setShowDeleteConfirm(null);
+          setIsFetchingRecordCount(false);
+          pendingRecordCountRequestIdRef.current = null;
+        }}
+        extraMessage={deleteConfirmExtraMessage}
+        isConfirmDisabled={isFetchingRecordCount}
       />
 
       {/* 出欠情報モーダル */}

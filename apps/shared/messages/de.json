@@ -931,7 +931,8 @@
       "title": "Eintrag löschen",
       "message": "Möchten Sie diesen Eintrag wirklich löschen?",
       "confirm": "Löschen",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "competitionRecordsWarning": "{count} mit diesem Wettkampf verknüpfte Ergebnis(se) werden ebenfalls gelöscht."
     },
     "calendarView": {
       "title": "Trainings- und Wettkampfkalender",
@@ -2920,8 +2921,10 @@
         "distanceHeader": "Distanz",
         "legend": {
           "longCourse": "L: Langbahn",
-          "relaying": "R: Staffel"
-        }
+          "relaying": "R: Staffel",
+          "relayingExcludedFromWaPoints": "Staffelwechselzeiten sind von den WA-Punkten ausgeschlossen"
+        },
+        "waPointsToggle": "WA-Punkte anzeigen"
       }
     },
     "attendance": {
@@ -2951,6 +2954,7 @@
         "name": "Mitglied",
         "totalDistance": "Gesamtdistanz"
       },
+      "bulkEntryNote": "Sammeleintrag",
       "empty": "Keine Mitglieder",
       "sortAriaLabel": "Nach {style} {distance}m sortieren",
       "sortAscSuffix": " (aufsteigend)",

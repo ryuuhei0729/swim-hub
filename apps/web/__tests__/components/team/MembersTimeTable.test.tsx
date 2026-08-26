@@ -11,6 +11,22 @@
  *   [V-06] ソートボタンの aria-label が言語混在なく自然に表示される
  *   [V-08] 境界値: 無効な種目×距離の組み合わせは列として存在しない / グループヘッダー行 / メンバー0人
  *
+ * ---------------------------------------------------------------------------
+ * 追加スプリント (一括登録ツールチップ) Sprint Contract 検証観点:
+ *   [V-BULK-01] competition が無く note がある記録は、ツールチップに note がそのまま表示され、
+ *               「一括登録」ラベル (t("membersTimeTable.bulkEntryNote")) は表示されない
+ *   [V-BULK-02] competition が無く note も無い記録は、ツールチップに「一括登録」ラベルが表示される
+ *   [V-BULK-03] competition がある記録は、note の有無に関わらず大会名が表示され、
+ *               note 文字列も「一括登録」ラベルも表示されない
+ *   [V-BULK-04] D-3: competition.date と created_at が異なる日付の場合、ツールチップの日付は
+ *               competition.date 側 (numeric フォーマット) が表示される。competition が無い場合は
+ *               created_at 側が表示される
+ *   [V-BULK-05] 引き継ぎ note 取り違え防止 (フック結合): includeRelaying=true で、引き継ぎなし記録の
+ *               note と引き継ぎ記録の note が異なる fixture を用い、表示される note が引き継ぎ側で
+ *               あることを assert する (短水路 pool_type=0 / 長水路 pool_type=1 の両分岐)
+ *   [V-BULK-06] 引き継ぎありのみ (bestTimesByStyleAndPool に該当なし) の経路でも、note が
+ *               そのまま (取り違えなく) ツールチップに載る (回帰防止)
+ *
  * ## 根本原因の再現方法（最重要）
  * MembersTimeTable の `STYLES` が英語内部キー ["Fr","Ba","Br","Fly","IM"] のままだと、
  * `getBestTimeForMember(memberId, style, distance)` 呼び出し時に `style` として "Fr" 等が渡り、
@@ -47,9 +63,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { MembersTimeTable } from "../../../components/team/member-management/components/MembersTimeTable";
 import { useMemberBestTimes } from "../../../components/team/shared/hooks/useMemberBestTimes";
+import type { BestTime } from "../../../components/team/shared/hooks/useMemberBestTimes";
 import { useMemberSort } from "../../../components/team/member-management/hooks/useMemberSort";
 import type { TeamMember } from "../../../components/team/member-management/hooks/useMembers";
 import { formatTimeBest } from "@apps/shared/utils/time";
+import { formatDate } from "@apps/shared/utils/date";
 // useMemberBestTimes 自体が useTranslations を呼ぶため、renderHook 単体使用時は
 // NextIntlClientProvider でラップする必要がある（実プロジェクトの既存規約に合わせ、
 // 手書きモックではなく renderHookWithI18n ヘルパーを利用する）。
@@ -854,6 +872,356 @@ describe("MembersTimeTable", () => {
       );
 
       expect(screen.queryByTestId(`team-member-row-${member.id}`)).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // [V-BULK-01] / [V-BULK-02] 一括登録（competition なし）ツールチップの note 表示
+  // ---------------------------------------------------------------------
+  describe("[V-BULK-01/02] 一括登録ツールチップの note / ラベル表示", () => {
+    // fixture の note は「一括登録」ラベル (bulkEntryNote) と共通部分文字列を持たない値にする
+    // (トートロジー回避: note に「一括登録」の部分文字列を含めない)
+    const BULK_NOTE = "手入力メモXYZ";
+
+    const buildBulkBestTime = (overrides: Partial<BestTime> = {}): BestTime => ({
+      id: "bt-bulk",
+      time: 27.3,
+      created_at: "2025-02-10T00:00:00Z",
+      pool_type: 0,
+      is_relaying: false,
+      style: { name_jp: "50m自由形", distance: 50 },
+      // competition は意図的に付けない（一括登録記録の再現）
+      ...overrides,
+    });
+
+    it("note がある一括登録記録は、ツールチップに note がそのまま表示され「一括登録」ラベルは出ない", () => {
+      const member = buildMember();
+      renderWithLocale(
+        <MembersTimeTable
+          members={[member]}
+          currentUserId="user-1"
+          includeRelaying={false}
+          sortStyle={null}
+          sortDistance={null}
+          sortOrder="asc"
+          isLoading={false}
+          onSort={vi.fn()}
+          onMemberClick={vi.fn()}
+          getBestTimeForMember={(_memberId, style, distance) =>
+            style === "自由形" && distance === 50
+              ? buildBulkBestTime({ note: BULK_NOTE })
+              : null
+          }
+        />,
+        "ja",
+      );
+
+      const row = screen.getByTestId(`team-member-row-${member.id}`);
+      expect(within(row).getByText(BULK_NOTE)).toBeInTheDocument();
+      expect(within(row).queryByText("一括登録")).not.toBeInTheDocument();
+    });
+
+    it("note が無い一括登録記録は、ツールチップに「一括登録」ラベル (ja) が表示される", () => {
+      const member = buildMember();
+      renderWithLocale(
+        <MembersTimeTable
+          members={[member]}
+          currentUserId="user-1"
+          includeRelaying={false}
+          sortStyle={null}
+          sortDistance={null}
+          sortOrder="asc"
+          isLoading={false}
+          onSort={vi.fn()}
+          onMemberClick={vi.fn()}
+          getBestTimeForMember={(_memberId, style, distance) =>
+            style === "自由形" && distance === 50 ? buildBulkBestTime() : null
+          }
+        />,
+        "ja",
+      );
+
+      const row = screen.getByTestId(`team-member-row-${member.id}`);
+      expect(within(row).getByText("一括登録")).toBeInTheDocument();
+    });
+
+    it("note が無い一括登録記録は、en ロケールでは「Bulk entry」ラベルが表示される（日本語混入なし）", () => {
+      const member = buildMember();
+      renderWithLocale(
+        <MembersTimeTable
+          members={[member]}
+          currentUserId="user-1"
+          includeRelaying={false}
+          sortStyle={null}
+          sortDistance={null}
+          sortOrder="asc"
+          isLoading={false}
+          onSort={vi.fn()}
+          onMemberClick={vi.fn()}
+          getBestTimeForMember={(_memberId, style, distance) =>
+            style === "自由形" && distance === 50 ? buildBulkBestTime() : null
+          }
+        />,
+        "en",
+      );
+
+      const row = screen.getByTestId(`team-member-row-${member.id}`);
+      expect(within(row).getByText("Bulk entry")).toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // [V-BULK-03] 大会記録では note / 一括登録ラベルどちらも表示されない
+  // ---------------------------------------------------------------------
+  describe("[V-BULK-03] 大会記録のツールチップは note・一括登録ラベルを表示しない", () => {
+    it("competition がある記録は、note が設定されていても note は表示されず大会名のみ表示される", () => {
+      const member = buildMember();
+      const NOTE_THAT_SHOULD_BE_HIDDEN = "非表示確認用メモQWERTY";
+      renderWithLocale(
+        <MembersTimeTable
+          members={[member]}
+          currentUserId="user-1"
+          includeRelaying={false}
+          sortStyle={null}
+          sortDistance={null}
+          sortOrder="asc"
+          isLoading={false}
+          onSort={vi.fn()}
+          onMemberClick={vi.fn()}
+          getBestTimeForMember={(_memberId, style, distance) =>
+            style === "自由形" && distance === 50
+              ? {
+                  id: "bt-comp",
+                  time: 27.3,
+                  created_at: "2025-01-05T00:00:00Z",
+                  pool_type: 0,
+                  is_relaying: false,
+                  note: NOTE_THAT_SHOULD_BE_HIDDEN,
+                  style: { name_jp: "50m自由形", distance: 50 },
+                  competition: { title: "第10回市民大会", date: "2025-06-20" },
+                }
+              : null
+          }
+        />,
+        "ja",
+      );
+
+      const row = screen.getByTestId(`team-member-row-${member.id}`);
+      expect(within(row).getByText("第10回市民大会")).toBeInTheDocument();
+      expect(within(row).queryByText(NOTE_THAT_SHOULD_BE_HIDDEN)).not.toBeInTheDocument();
+      expect(within(row).queryByText("一括登録")).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // [V-BULK-04] D-3: 日付表示は competition.date 優先、無い場合は created_at
+  // ---------------------------------------------------------------------
+  describe("[V-BULK-04] ツールチップの日付は competition.date 優先", () => {
+    it("competition.date と created_at が異なる日付の場合、表示される日付は competition.date 側", () => {
+      const member = buildMember();
+      const createdAt = "2025-01-05T00:00:00Z"; // created_at 側の日付
+      const competitionDate = "2025-06-20"; // competition.date 側の日付（異なる値）
+      renderWithLocale(
+        <MembersTimeTable
+          members={[member]}
+          currentUserId="user-1"
+          includeRelaying={false}
+          sortStyle={null}
+          sortDistance={null}
+          sortOrder="asc"
+          isLoading={false}
+          onSort={vi.fn()}
+          onMemberClick={vi.fn()}
+          getBestTimeForMember={(_memberId, style, distance) =>
+            style === "自由形" && distance === 50
+              ? {
+                  id: "bt-date",
+                  time: 27.3,
+                  created_at: createdAt,
+                  pool_type: 0,
+                  is_relaying: false,
+                  style: { name_jp: "50m自由形", distance: 50 },
+                  competition: { title: "日付検証大会", date: competitionDate },
+                }
+              : null
+          }
+        />,
+        "ja",
+      );
+
+      const row = screen.getByTestId(`team-member-row-${member.id}`);
+      expect(within(row).getByText(formatDate(competitionDate, "numeric"))).toBeInTheDocument();
+      expect(
+        within(row).queryByText(formatDate(createdAt, "numeric")),
+      ).not.toBeInTheDocument();
+    });
+
+    it("competition が無い場合、表示される日付は created_at 側", () => {
+      const member = buildMember();
+      const createdAt = "2025-02-10T00:00:00Z";
+      renderWithLocale(
+        <MembersTimeTable
+          members={[member]}
+          currentUserId="user-1"
+          includeRelaying={false}
+          sortStyle={null}
+          sortDistance={null}
+          sortOrder="asc"
+          isLoading={false}
+          onSort={vi.fn()}
+          onMemberClick={vi.fn()}
+          getBestTimeForMember={(_memberId, style, distance) =>
+            style === "自由形" && distance === 50
+              ? {
+                  id: "bt-date-bulk",
+                  time: 27.3,
+                  created_at: createdAt,
+                  pool_type: 0,
+                  is_relaying: false,
+                  style: { name_jp: "50m自由形", distance: 50 },
+                }
+              : null
+          }
+        />,
+        "ja",
+      );
+
+      const row = screen.getByTestId(`team-member-row-${member.id}`);
+      expect(within(row).getByText(formatDate(createdAt, "numeric"))).toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // [V-BULK-05] 引き継ぎ note 取り違え防止（実フック結合、トートロジー回避）
+  //   getBestTimeForMember(includeRelaying=true) が合成する「引き継ぎ候補」の note が、
+  //   引き継ぎなし記録の note を誤って引き継いでいないかを、実際に画面表示まで通して確認する。
+  //   note は「共通部分文字列を持たない」2つの異なる値を使う。
+  // ---------------------------------------------------------------------
+  describe("[V-BULK-05] 引き継ぎタイム候補の note 取り違え防止", () => {
+    const NON_RELAY_NOTE = "手入力メモXYZ";
+    const RELAY_NOTE = "遠征記録メモQRS";
+
+    it.each([
+      ["短水路 (pool_type=0)", 0],
+      ["長水路 (pool_type=1)", 1],
+    ])("%s: includeRelaying=true で表示される note は引き継ぎ側 (RELAY_NOTE) である", async (_label, poolType) => {
+      const member = buildMember();
+      const mockData = [
+        {
+          id: "non-relay-1",
+          time: 30.5,
+          created_at: "2025-01-15T00:00:00Z",
+          pool_type: poolType,
+          is_relaying: false,
+          note: NON_RELAY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+        {
+          id: "relay-1",
+          time: 29.0, // 引き継ぎありの方が速い
+          created_at: "2025-01-10T00:00:00Z",
+          pool_type: poolType,
+          is_relaying: true,
+          note: RELAY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+      ];
+      const mockSupabase = createMockSupabase(mockData, null);
+
+      const { result } = renderHookWithI18n(() => useMemberBestTimes(mockSupabase as never));
+      await act(async () => {
+        await result.current.loadAllBestTimes([{ id: member.id, user_id: member.user_id }]);
+      });
+
+      // フックの戻り値自体で note が取り違えられていないことを確認
+      const bestTimeWithRelaying = result.current.getBestTimeForMember(
+        member.id,
+        "自由形",
+        50,
+        true, // includeRelaying
+      );
+      expect(bestTimeWithRelaying?.is_relaying).toBe(true);
+      expect(bestTimeWithRelaying?.note).toBe(RELAY_NOTE);
+      expect(bestTimeWithRelaying?.note).not.toBe(NON_RELAY_NOTE);
+
+      // 画面表示でも引き継ぎ側の note が出て、引き継ぎなし側の note は出ないことを確認。
+      // MembersTimeTable 自身は getBestTimeForMember を (memberId, style, distance) の3引数で
+      // 呼ぶだけで includeRelaying は呼び出し元(TeamMemberManagement.tsx)がクロージャで
+      // バインドする設計のため、実結合と同じ形でラップする（そのままだと常に
+      // includeRelaying=false のデフォルト動作になり検証にならない）。
+      renderWithLocale(
+        <MembersTimeTable
+          members={[member]}
+          currentUserId="user-1"
+          includeRelaying={true}
+          sortStyle={null}
+          sortDistance={null}
+          sortOrder="asc"
+          isLoading={false}
+          onSort={vi.fn()}
+          onMemberClick={vi.fn()}
+          getBestTimeForMember={(memberId, style, distance) =>
+            result.current.getBestTimeForMember(memberId, style, distance, true)
+          }
+        />,
+        "ja",
+      );
+
+      const row = screen.getByTestId(`team-member-row-${member.id}`);
+      expect(within(row).getByText(RELAY_NOTE)).toBeInTheDocument();
+      expect(within(row).queryByText(NON_RELAY_NOTE)).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // [V-BULK-06] 引き継ぎありのみ経路（bestTimesByStyleAndPool に該当なし）の note 回帰防止
+  // ---------------------------------------------------------------------
+  describe("[V-BULK-06] 引き継ぎありのみ記録の note がそのまま表示される（回帰防止）", () => {
+    it("引き継ぎなし記録が存在しない種目でも、引き継ぎ記録自身の note がツールチップに表示される", async () => {
+      const member = buildMember();
+      const RELAY_ONLY_NOTE = "単独引き継ぎメモLMN";
+      const mockData = [
+        {
+          id: "relay-only-1",
+          time: 29.0,
+          created_at: "2025-01-10T00:00:00Z",
+          pool_type: 0,
+          is_relaying: true,
+          note: RELAY_ONLY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+      ];
+      const mockSupabase = createMockSupabase(mockData, null);
+
+      const { result } = renderHookWithI18n(() => useMemberBestTimes(mockSupabase as never));
+      await act(async () => {
+        await result.current.loadAllBestTimes([{ id: member.id, user_id: member.user_id }]);
+      });
+
+      renderWithLocale(
+        <MembersTimeTable
+          members={[member]}
+          currentUserId="user-1"
+          includeRelaying={true}
+          sortStyle={null}
+          sortDistance={null}
+          sortOrder="asc"
+          isLoading={false}
+          onSort={vi.fn()}
+          onMemberClick={vi.fn()}
+          getBestTimeForMember={(memberId, style, distance) =>
+            result.current.getBestTimeForMember(memberId, style, distance, true)
+          }
+        />,
+        "ja",
+      );
+
+      const row = screen.getByTestId(`team-member-row-${member.id}`);
+      expect(within(row).getByText(RELAY_ONLY_NOTE)).toBeInTheDocument();
+      expect(within(row).queryByText("一括登録")).not.toBeInTheDocument();
     });
   });
 });

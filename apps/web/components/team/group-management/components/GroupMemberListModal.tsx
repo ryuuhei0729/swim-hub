@@ -61,7 +61,8 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
             name,
             birthday,
             bio,
-            profile_image_path
+            profile_image_path,
+            gender
           )
         `,
         )

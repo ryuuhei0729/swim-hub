@@ -20,6 +20,7 @@ import {
   useDeleteCompetitionMutation,
 } from "@apps/shared/hooks/queries/records";
 import { PracticeAPI } from "@apps/shared/api/practices";
+import { RecordAPI } from "@apps/shared/api/records";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import type { MainStackParamList } from "@/navigation/types";
 import type { CalendarItem } from "@apps/shared/types/ui";
@@ -43,7 +44,7 @@ export interface UseDayDetailHandlersReturn {
   handleDeleteEntry: (entryId: string) => Promise<void>;
   handleAddEntry: (competitionId: string, date: string) => void;
   handleEditCompetition: (item: CalendarItem) => void;
-  handleDeleteCompetition: (competitionId: string) => Promise<void>;
+  handleDeleteCompetition: (competitionId: string, isTeamCompetition: boolean) => Promise<void>;
 }
 
 /**
@@ -304,10 +305,29 @@ export function useDayDetailHandlers(
 
   // 大会削除
   const deleteCompetitionMutation = useDeleteCompetitionMutation(supabase);
-  const handleDeleteCompetition = async (competitionId: string) => {
+  const handleDeleteCompetition = async (competitionId: string, isTeamCompetition: boolean) => {
+    let confirmMessage = t("dashboard.mobile.deleteCompetitionConfirmMessage");
+
+    // records が削除されるのは個人大会のみ（チーム大会は削除されない）。
+    // チーム大会では誤情報になるため件数フェッチ自体を行わない。
+    if (!isTeamCompetition) {
+      try {
+        const recordCount = await new RecordAPI(supabase).countRecordsByCompetition(competitionId);
+        if (recordCount > 0) {
+          confirmMessage = `${confirmMessage}\n${t(
+            "dashboard.deleteConfirm.competitionRecordsWarning",
+            { count: recordCount },
+          )}`;
+        }
+      } catch (error) {
+        console.warn("記録件数の取得エラー:", error);
+        // 件数取得の失敗は非致命。既存の汎用文言のみで削除確認を継続する。
+      }
+    }
+
     Alert.alert(
       t("dashboard.mobile.deletePracticeConfirmTitle"),
-      t("dashboard.mobile.deleteCompetitionConfirmMessage"),
+      confirmMessage,
       [
         {
           text: t("common.cancel"),

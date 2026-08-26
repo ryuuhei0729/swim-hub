@@ -928,7 +928,8 @@
       "title": "Delete Record",
       "message": "Are you sure you want to delete this?",
       "confirm": "Delete",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "competitionRecordsWarning": "{count} record(s) linked to this competition will also be deleted."
     },
     "calendarView": {
       "title": "Practice & Race Calendar",
@@ -2914,8 +2915,10 @@
         "distanceHeader": "Distance",
         "legend": {
           "longCourse": "L: Long Course",
-          "relaying": "R: Relay"
-        }
+          "relaying": "R: Relay",
+          "relayingExcludedFromWaPoints": "Relay times are excluded from WA Points"
+        },
+        "waPointsToggle": "Show WA Points"
       }
     },
     "attendance": {
@@ -2945,6 +2948,7 @@
         "name": "Member",
         "totalDistance": "Total Distance"
       },
+      "bulkEntryNote": "Bulk entry",
       "empty": "No members",
       "sortAriaLabel": "Sort by {style} {distance}m",
       "sortAscSuffix": " (ascending)",

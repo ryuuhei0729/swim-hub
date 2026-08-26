@@ -295,6 +295,7 @@ export const useMemberBestTimes = (supabase: SupabaseClient) => {
               time: bt.relayingTime.time,
               created_at: bt.relayingTime.created_at,
               is_relaying: true,
+              note: bt.relayingTime.note,
               competition: bt.relayingTime.competition,
             });
           }
@@ -320,6 +321,7 @@ export const useMemberBestTimes = (supabase: SupabaseClient) => {
               time: bt.relayingTime.time,
               created_at: bt.relayingTime.created_at,
               is_relaying: true,
+              note: bt.relayingTime.note,
               competition: bt.relayingTime.competition,
             });
           }

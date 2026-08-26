@@ -1350,6 +1350,10 @@ export type Database = {
       };
     };
     Functions: {
+      delete_competition_with_records: {
+        Args: { p_competition_id: string };
+        Returns: Json;
+      };
       find_team_by_invite_code: {
         Args: { p_invite_code: string };
         Returns: {

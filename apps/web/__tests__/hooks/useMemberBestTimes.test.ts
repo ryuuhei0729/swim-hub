@@ -640,6 +640,169 @@ describe("useMemberBestTimes", () => {
     });
   });
 
+  // -------------------------------------------------------------------
+  // [V-BULK-HOOK-01] D-4: getBestTimeForMember が合成する引き継ぎ候補の note 取り違え防止
+  //
+  // getBestTimeForMember は includeRelaying=true のとき、引き継ぎなし記録 (bt) の
+  // relayingTime を元に候補オブジェクトを `{ ...bt, id, time, created_at, is_relaying, competition }`
+  // で合成する（短水路分岐と長水路分岐の2箇所）。この合成が note を明示的に上書きしないと、
+  // 元の bt.note (引き継ぎなし記録の note) が残ったまま relayingTime.note に化けずに表示され、
+  // 一括登録の note 欄が誤った内容になる。
+  //
+  // fixture の2つの note は共通部分文字列を持たない値にする（トートロジー回避）。
+  // -------------------------------------------------------------------
+  describe("getBestTimeForMember - 引き継ぎ候補合成時の note 取り違え防止 (D-4)", () => {
+    const NON_RELAY_NOTE = "手入力メモXYZ";
+    const RELAY_NOTE = "遠征記録メモQRS";
+
+    it("短水路 (pool_type=0): includeRelaying=true で返る note は引き継ぎ側 (relayingTime.note)", async () => {
+      const mockData = [
+        {
+          id: "non-relay-1",
+          time: 30.5,
+          created_at: "2025-01-15T00:00:00Z",
+          pool_type: 0,
+          is_relaying: false,
+          note: NON_RELAY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+        {
+          id: "relay-1",
+          time: 29.0, // 引き継ぎありの方が速いので候補として選ばれる
+          created_at: "2025-01-10T00:00:00Z",
+          pool_type: 0,
+          is_relaying: true,
+          note: RELAY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+      ];
+      const mockSupabase = createMockSupabase(mockData, null);
+      const { result } = renderHook(() => useMemberBestTimes(mockSupabase as never));
+
+      await act(async () => {
+        await result.current.loadAllBestTimes([{ id: "member-1", user_id: "user-1" }]);
+      });
+
+      const bestTime = result.current.getBestTimeForMember("member-1", "自由形", 50, true);
+
+      expect(bestTime?.is_relaying).toBe(true);
+      expect(bestTime?.time).toBe(29.0);
+      expect(bestTime?.note).toBe(RELAY_NOTE);
+      expect(bestTime?.note).not.toBe(NON_RELAY_NOTE);
+    });
+
+    it("長水路 (pool_type=1): includeRelaying=true で返る note は引き継ぎ側 (relayingTime.note)", async () => {
+      const mockData = [
+        {
+          id: "non-relay-1",
+          time: 30.5,
+          created_at: "2025-01-15T00:00:00Z",
+          pool_type: 1,
+          is_relaying: false,
+          note: NON_RELAY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+        {
+          id: "relay-1",
+          time: 29.0,
+          created_at: "2025-01-10T00:00:00Z",
+          pool_type: 1,
+          is_relaying: true,
+          note: RELAY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+      ];
+      const mockSupabase = createMockSupabase(mockData, null);
+      const { result } = renderHook(() => useMemberBestTimes(mockSupabase as never));
+
+      await act(async () => {
+        await result.current.loadAllBestTimes([{ id: "member-1", user_id: "user-1" }]);
+      });
+
+      const bestTime = result.current.getBestTimeForMember("member-1", "自由形", 50, true);
+
+      expect(bestTime?.is_relaying).toBe(true);
+      expect(bestTime?.time).toBe(29.0);
+      expect(bestTime?.note).toBe(RELAY_NOTE);
+      expect(bestTime?.note).not.toBe(NON_RELAY_NOTE);
+    });
+
+    it("引き継ぎなし記録に note が無い場合でも、引き継ぎ候補の note は relayingTime.note になる", async () => {
+      const mockData = [
+        {
+          id: "non-relay-1",
+          time: 30.5,
+          created_at: "2025-01-15T00:00:00Z",
+          pool_type: 0,
+          is_relaying: false,
+          // note なし
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+        {
+          id: "relay-1",
+          time: 29.0,
+          created_at: "2025-01-10T00:00:00Z",
+          pool_type: 0,
+          is_relaying: true,
+          note: RELAY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+      ];
+      const mockSupabase = createMockSupabase(mockData, null);
+      const { result } = renderHook(() => useMemberBestTimes(mockSupabase as never));
+
+      await act(async () => {
+        await result.current.loadAllBestTimes([{ id: "member-1", user_id: "user-1" }]);
+      });
+
+      const bestTime = result.current.getBestTimeForMember("member-1", "自由形", 50, true);
+
+      expect(bestTime?.note).toBe(RELAY_NOTE);
+    });
+
+    it("includeRelaying=false のときは引き継ぎなし記録自身が返り、note も自身の note のまま", async () => {
+      const mockData = [
+        {
+          id: "non-relay-1",
+          time: 30.5,
+          created_at: "2025-01-15T00:00:00Z",
+          pool_type: 0,
+          is_relaying: false,
+          note: NON_RELAY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+        {
+          id: "relay-1",
+          time: 29.0,
+          created_at: "2025-01-10T00:00:00Z",
+          pool_type: 0,
+          is_relaying: true,
+          note: RELAY_NOTE,
+          styles: { name_jp: "50m自由形", distance: 50 },
+          competitions: null,
+        },
+      ];
+      const mockSupabase = createMockSupabase(mockData, null);
+      const { result } = renderHook(() => useMemberBestTimes(mockSupabase as never));
+
+      await act(async () => {
+        await result.current.loadAllBestTimes([{ id: "member-1", user_id: "user-1" }]);
+      });
+
+      const bestTime = result.current.getBestTimeForMember("member-1", "自由形", 50, false);
+
+      expect(bestTime?.is_relaying).toBe(false);
+      expect(bestTime?.note).toBe(NON_RELAY_NOTE);
+    });
+  });
+
   describe("コールバックの安定性", () => {
     it("loadBestTimesForMemberは再レンダリングしても同じ参照を保つ", () => {
       const mockSupabase = createMockSupabase([], null);
