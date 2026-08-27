@@ -213,7 +213,7 @@ export const MyPageScreen: React.FC = () => {
               </Text>
             </View>
           ) : (
-            <BestTimesTable bestTimes={bestTimes} />
+            <BestTimesTable bestTimes={bestTimes} gender={profile?.gender} />
           )}
         </View>
       </ScrollView>

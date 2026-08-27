@@ -208,7 +208,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
                 <Text style={styles.loadingText}>{t("teams.mobile.bestTimeLoading")}</Text>
               </View>
             ) : (
-              <BestTimesTable bestTimes={bestTimes} />
+              <BestTimesTable bestTimes={bestTimes} gender={member.users.gender} />
             )}
           </View>
 
