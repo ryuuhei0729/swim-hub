@@ -66,6 +66,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes, gende
               created_at: bt.relayingTime.created_at,
               is_relaying: true,
               competition: bt.relayingTime.competition,
+              note: bt.relayingTime.note,
             });
           }
         } else if (allowRelaying) {

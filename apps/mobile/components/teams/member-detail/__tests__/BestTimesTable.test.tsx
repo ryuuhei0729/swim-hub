@@ -16,8 +16,10 @@
 //   [V-POOL-01] pool_type=0→SCM / pool_type=1→LCM の向きが正しい
 //   [V-CELL-*] セル詳細シート: competition/note/フォールバックの3分岐、日付優先順位、
 //     空セルタップ無効、isWaPointsMode 中はタップ不可、同一/別セルタップ挙動
+//   [V-NOTE-RELAY] リレー引き継ぎ候補が採用されたとき、親記録の note ではなく
+//     引き継ぎ側 (relayingTime) の note が表示される (CodeRabbit 指摘の回帰テスト)
 //
-// トートロジー防止メモ: 542/763/1100/1000/902/985 は node -e で独立に計算した
+// トートロジー防止メモ: 542/763/1100/1000/902/985/291 は node -e で独立に計算した
 // ハードコード値であり、waPoints.ts や本コンポーネントの実装を呼び出していない。
 // =============================================================================
 
@@ -188,13 +190,20 @@ describe("BestTimesTable (member-detail) - セル詳細シート", () => {
     expect(screen.queryByText("一括登録")).toBeNull();
   });
 
-  it("[V-CELL-ISWAP] isWaPointsMode 中はセルをタップしても詳細シートが開かない", () => {
-    const bestTimes = [buildBestTime({ time: 34.0, style: FR50, note: "WAモード中のタップ検証" })];
+  it("[V-CELL-ISWAP] isWaPointsMode 中はWAポイントセルを実際にタップしても詳細シートが開かない", () => {
+    const bestTimes = [buildBestTime({ time: 30.0, style: FR50, note: "WAモード中のタップ検証" })];
     render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
 
     openWaPointsMode();
-    expect(screen.queryByText("34.00")).toBeNull();
+
+    // SCM 50m自由形 gender=0 (base=19.90) で t=30.00 → floor(1000*(19.90/30.00)^3)=291
+    // (node -e で独立計算。waPoints.ts の実装は呼んでいない)。
+    // このセルが実際に描画されていることを確認したうえで、そのセルを実際にタップする。
+    const waCell = screen.getByText("291");
+    fireEvent.click(waCell);
+
     expect(screen.queryByText("WAモード中のタップ検証")).toBeNull();
+    expect(screen.queryByText("一括登録")).toBeNull();
   });
 
   it("[V-CELL-06a] 別セルタップで内容が入れ替わる", () => {
@@ -228,5 +237,39 @@ describe("BestTimesTable (member-detail) - セル詳細シート", () => {
 
     fireEvent.click(cell);
     expect(screen.queryByText("セルA大会")).toBeNull();
+  });
+});
+
+describe("BestTimesTable (member-detail) - リレー引き継ぎ候補の note", () => {
+  it("[V-NOTE-RELAY] 引き継ぎ記録が採用されたセルは、親記録ではなく引き継ぎ側の note を表示する", () => {
+    const bestTimes = [
+      buildBestTime({
+        time: 40.0,
+        style: FR50,
+        note: "親記録のノート(表示されたら不合格)",
+        relayingTime: {
+          id: "relay-note-1",
+          time: 20.0,
+          created_at: "2024-06-01T00:00:00.000Z",
+          note: "引き継ぎ側のノート",
+        },
+      }),
+    ];
+    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+
+    // 「引き継ぎタイムを含む」をONにすると、引き継ぎ側 (20.00秒) の方が親 (40.00秒) より
+    // 速いため、このセルは引き継ぎ側の候補として描画される。
+    fireEvent.click(screen.getByText("引き継ぎタイム含"));
+
+    // タイム表示は "20.00" + 引き継ぎ接尾辞 "R" が別要素で入れ子になるため、
+    // getByText の完全一致では掴めない。button (Pressable) を実際にタップして検証する。
+    const timeCellButton = screen
+      .getAllByRole("button")
+      .find((el) => el.textContent?.startsWith("20.00"));
+    expect(timeCellButton).toBeTruthy();
+    fireEvent.click(timeCellButton as HTMLElement);
+
+    expect(screen.getByText("引き継ぎ側のノート")).toBeTruthy();
+    expect(screen.queryByText("親記録のノート(表示されたら不合格)")).toBeNull();
   });
 });

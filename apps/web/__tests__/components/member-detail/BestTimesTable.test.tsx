@@ -483,3 +483,124 @@ describe("[V-REG] 既存の時間表示・Newバッジ・ホバーツールチ�
     ).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// [V-NOTE-RELAY] リレー引き継ぎ候補が採用されたとき、親記録ではなく引き継ぎ側
+// (relayingTime) の note がホバーツールチップに表示される (CodeRabbit 指摘の回帰テスト)
+//
+// getBestTime には candidates.push({...bt, ...}) が3箇所ある (ALLタブの短水路分岐 /
+// ALLタブの長水路分岐 / 短水路・長水路単独タブの分岐、後者は「短水路タブ」「長水路タブ」
+// どちらを選んでも同じソース行を通る)。1箇所だけ直っていても他が直っていないケースを
+// 見逃さないよう、3つのタブ (短水路/長水路/ALL) それぞれを実際に経由する fixture で
+// 個別に検証する。親note・引き継ぎ側noteは意図的に異なる値にする (同じ値だと
+// トートロジーになる)。profile版と同型 (別コンポーネントなので独立に検証する)。
+// ---------------------------------------------------------------------------
+describe("[V-NOTE-RELAY] 引き継ぎ記録選択時は引き継ぎ側の note を表示する (親のnoteは漏れない、member-detail)", () => {
+  it("[短水路タブ] 短水路タブを選択しているとき、引き継ぎ側の note が表示され、親の note は表示されない", async () => {
+    const user = userEvent.setup();
+    const bt = buildBestTime({
+      id: "note-short-tab",
+      time: 40.0,
+      pool_type: 0,
+      is_relaying: false,
+      note: "親ノート(短水路タブ)",
+      competition: undefined,
+      relayingTime: {
+        id: "relay-short-tab",
+        time: 20.0,
+        created_at: "2020-01-01T00:00:00.000Z",
+        note: "引き継ぎノート(短水路タブ)",
+      },
+    });
+    renderWithLocale([bt], { gender: 0 });
+
+    await user.click(screen.getByRole("button", { name: "短水路" }));
+    await user.click(getCheckbox());
+
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
+
+    expect(screen.getByText("引き継ぎノート(短水路タブ)")).toBeInTheDocument();
+    expect(screen.queryByText("親ノート(短水路タブ)")).not.toBeInTheDocument();
+  });
+
+  it("[長水路タブ] 長水路タブを選択しているとき、引き継ぎ側の note が表示され、親の note は表示されない", async () => {
+    const user = userEvent.setup();
+    const bt = buildBestTime({
+      id: "note-long-tab",
+      time: 40.0,
+      pool_type: 1,
+      is_relaying: false,
+      note: "親ノート(長水路タブ)",
+      competition: undefined,
+      relayingTime: {
+        id: "relay-long-tab",
+        time: 20.0,
+        created_at: "2020-01-01T00:00:00.000Z",
+        note: "引き継ぎノート(長水路タブ)",
+      },
+    });
+    renderWithLocale([bt], { gender: 0 });
+
+    await user.click(screen.getByRole("button", { name: "長水路" }));
+    await user.click(getCheckbox());
+
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
+
+    expect(screen.getByText("引き継ぎノート(長水路タブ)")).toBeInTheDocument();
+    expect(screen.queryByText("親ノート(長水路タブ)")).not.toBeInTheDocument();
+  });
+
+  it("[ALLタブ-短水路分岐] pool_type=0の記録のみのとき、ALLタブで引き継ぎ側の note が表示され、親の note は表示されない", async () => {
+    const user = userEvent.setup();
+    const bt = buildBestTime({
+      id: "note-all-short",
+      time: 40.0,
+      pool_type: 0,
+      is_relaying: false,
+      note: "親ノート(ALL短水路分岐)",
+      competition: undefined,
+      relayingTime: {
+        id: "relay-all-short",
+        time: 20.0,
+        created_at: "2020-01-01T00:00:00.000Z",
+        note: "引き継ぎノート(ALL短水路分岐)",
+      },
+    });
+    renderWithLocale([bt], { gender: 0 }); // activeTab の初期値は "all"
+    await user.click(getCheckbox());
+
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
+
+    expect(screen.getByText("引き継ぎノート(ALL短水路分岐)")).toBeInTheDocument();
+    expect(screen.queryByText("親ノート(ALL短水路分岐)")).not.toBeInTheDocument();
+  });
+
+  it("[ALLタブ-長水路分岐] pool_type=1の記録のみのとき、ALLタブで引き継ぎ側の note が表示され、親の note は表示されない", async () => {
+    const user = userEvent.setup();
+    const bt = buildBestTime({
+      id: "note-all-long",
+      time: 40.0,
+      pool_type: 1,
+      is_relaying: false,
+      note: "親ノート(ALL長水路分岐)",
+      competition: undefined,
+      relayingTime: {
+        id: "relay-all-long",
+        time: 20.0,
+        created_at: "2020-01-01T00:00:00.000Z",
+        note: "引き継ぎノート(ALL長水路分岐)",
+      },
+    });
+    renderWithLocale([bt], { gender: 0 });
+    await user.click(getCheckbox());
+
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
+
+    expect(screen.getByText("引き継ぎノート(ALL長水路分岐)")).toBeInTheDocument();
+    expect(screen.queryByText("親ノート(ALL長水路分岐)")).not.toBeInTheDocument();
+  });
+});

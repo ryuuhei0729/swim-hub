@@ -82,6 +82,7 @@ export function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
               id: bt.relayingTime.id,
               time: bt.relayingTime.time,
               created_at: bt.relayingTime.created_at,
+              note: bt.relayingTime.note,
               is_relaying: true,
               competition: bt.relayingTime.competition,
             });
@@ -107,6 +108,7 @@ export function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
               id: bt.relayingTime.id,
               time: bt.relayingTime.time,
               created_at: bt.relayingTime.created_at,
+              note: bt.relayingTime.note,
               is_relaying: true,
               competition: bt.relayingTime.competition,
             });
@@ -133,6 +135,7 @@ export function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
               id: bt.relayingTime.id,
               time: bt.relayingTime.time,
               created_at: bt.relayingTime.created_at,
+              note: bt.relayingTime.note,
               is_relaying: true,
               competition: bt.relayingTime.competition,
             });

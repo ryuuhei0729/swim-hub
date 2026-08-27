@@ -17,7 +17,7 @@
 // member.users.gender と合成して組み立てる。このフックはその手前の
 // gender を含まない記録配列 (WaPointsSourceRecord[]) を user_id ごとに返す。
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -101,13 +101,27 @@ export function useMemberWaPointsRecords(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // WaPointsCompareModal は loadRecords を visible の変化と memberUserIds の変化の
+  // 2経路から呼び出す。モーダルの開閉やメンバー更新で古い呼び出しの Promise.all が
+  // 未解決のまま残ることがあり、それが後から解決すると新しい結果を上書きしてしまう。
+  // そのため呼び出しごとに連番を発行し、state 更新の直前に「自分が最新の呼び出しか」を
+  // 都度判定して古ければ何も更新せずに抜ける。
+  const requestIdRef = useRef(0);
+
   const loadRecords = useCallback(
     async (userIds: string[]) => {
+      const requestId = ++requestIdRef.current;
+      const isLatest = () => requestIdRef.current === requestId;
+
       if (userIds.length === 0) {
+        if (!isLatest()) return;
         setRecordsByUserId(new Map());
+        setError(null);
+        setLoading(false);
         return;
       }
 
+      if (!isLatest()) return;
       setLoading(true);
       setError(null);
       try {
@@ -167,13 +181,17 @@ export function useMemberWaPointsRecords(
           map.set(record.user_id, list);
         });
 
+        if (!isLatest()) return;
         setRecordsByUserId(map);
       } catch (err) {
         console.error("WAポイント比較用記録の取得エラー:", err);
+        if (!isLatest()) return;
         setError(t("teams.memberBestTimesHook.loadError"));
         setRecordsByUserId(new Map());
       } finally {
-        setLoading(false);
+        if (isLatest()) {
+          setLoading(false);
+        }
       }
     },
     [supabase, t],

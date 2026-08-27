@@ -12,6 +12,12 @@
 //     (想定外値は 0 にフォールバックする防御的処理も pin する)
 //   [V-HOOK-04] name_jp から解決できない種目 (STYLES に無い名称) の行はスキップされる
 //   [V-HOOK-05] userIds が空配列のときはクエリを発行せず、空の Map を返す
+//   [V-RACE-*] loadRecords を連続で呼び出したとき、先に発行した (古い) リクエストが
+//     後から発行した (新しい) リクエストより後に解決しても、新しいリクエストの
+//     結果/loading/error を上書きしない (CodeRabbit 指摘: useRef 連番ガードの回帰テスト)。
+//     `waitFor` で最終状態だけを見る書き方ではこの種の競合は原理的に再現しないため、
+//     deferred (resolve/reject を外部から明示的に制御できる Promise) で解決順序を
+//     意図的に「新→旧」に固定して検証する。
 //
 // トートロジー防止メモ: 期待する pool_type/styleKey/distance の組み合わせはテスト側の
 // fixture 定義そのものであり、useMemberWaPointsRecords.ts の実装をコピーしていない。
@@ -302,5 +308,200 @@ describe("useMemberWaPointsRecords - チャンク分割 (USER_ID_CHUNK_SIZE)", (
       expect(records).toHaveLength(1);
       expect(records![0].time).toBe(expectedRow.time);
     }
+  });
+});
+
+// =============================================================================
+// 競合するリクエストの解決順序 (V-RACE) — CodeRabbit 指摘の回帰テスト
+// =============================================================================
+// loadRecords は WaPointsCompareModal の visible / memberUserIds いずれの変化からも
+// 連続で呼ばれうる。古い呼び出しの Promise.all が未解決のまま残り、それが新しい
+// 呼び出しより後に解決すると新しい結果を上書きしてしまう回帰を防ぐ。
+// waitFor で最終状態だけを見る書き方ではこの競合は再現しないため、resolve/reject を
+// 外部から明示的に制御できる deferred で解決順序を「新→旧」に固定して検証する。
+describe("useMemberWaPointsRecords - 競合するリクエストの解決順序 (V-RACE)", () => {
+  interface DeferredCall {
+    userIds: string[];
+    resolve: (value: { data: unknown; error: unknown }) => void;
+    reject: (reason: unknown) => void;
+  }
+
+  function buildDeferredSupabaseMock() {
+    const calls: DeferredCall[] = [];
+
+    const from = vi.fn((_table: string) => ({
+      select: vi.fn(() => ({
+        in: vi.fn((_column: string, ids: string[]) => ({
+          eq: vi.fn(() => {
+            let resolve!: DeferredCall["resolve"];
+            let reject!: DeferredCall["reject"];
+            const promise = new Promise<{ data: unknown; error: unknown }>((res, rej) => {
+              resolve = res;
+              reject = rej;
+            });
+            calls.push({ userIds: ids, resolve, reject });
+            return promise;
+          }),
+        })),
+      })),
+    }));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = { from } as any;
+    return { supabase, calls };
+  }
+
+  const rowFor = (userId: string, time: number) => ({
+    user_id: userId,
+    time,
+    pool_type: 0,
+    is_relaying: false,
+    styles: { name_jp: "50m自由形", distance: 50 },
+  });
+
+  it("[V-RACE-01] 古いリクエストが新しいリクエストより後に解決しても、新しい結果を上書きしない", async () => {
+    const { supabase, calls } = buildDeferredSupabaseMock();
+    const { result } = renderHook(() => useMemberWaPointsRecords(supabase));
+
+    let oldPromise!: Promise<void>;
+    let newPromise!: Promise<void>;
+
+    act(() => {
+      oldPromise = result.current.loadRecords(["u-old"]);
+    });
+    act(() => {
+      newPromise = result.current.loadRecords(["u-new"]);
+    });
+
+    // 2回の loadRecords 呼び出しに対応する2件のクエリが (解決順序に関わらず) 発行されている
+    expect(calls).toHaveLength(2);
+
+    // 新しい (2番目の) リクエストを先に解決する
+    await act(async () => {
+      calls[1].resolve({ data: [rowFor("u-new", 30.0)], error: null });
+      await newPromise;
+    });
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.recordsByUserId.has("u-new")).toBe(true);
+    expect(result.current.recordsByUserId.has("u-old")).toBe(false);
+
+    // 古い (1番目の) リクエストを後から解決する。新しい結果を上書きしてはならない
+    await act(async () => {
+      calls[0].resolve({ data: [rowFor("u-old", 99.0)], error: null });
+      await oldPromise;
+    });
+
+    expect(result.current.recordsByUserId.size).toBe(1);
+    expect(result.current.recordsByUserId.has("u-new")).toBe(true);
+    expect(result.current.recordsByUserId.has("u-old")).toBe(false);
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("[V-RACE-02] 古いリクエストが後で reject しても、新しいリクエストの正常な結果と loading/error を上書きしない", async () => {
+    const { supabase, calls } = buildDeferredSupabaseMock();
+    const { result } = renderHook(() => useMemberWaPointsRecords(supabase));
+
+    let oldPromise!: Promise<void>;
+    let newPromise!: Promise<void>;
+
+    act(() => {
+      oldPromise = result.current.loadRecords(["u-old"]);
+    });
+    act(() => {
+      newPromise = result.current.loadRecords(["u-new"]);
+    });
+
+    expect(calls).toHaveLength(2);
+
+    await act(async () => {
+      calls[1].resolve({ data: [rowFor("u-new", 30.0)], error: null });
+      await newPromise;
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.recordsByUserId.has("u-new")).toBe(true);
+
+    // 古いリクエストが後からエラーで解決する。新しい正常な状態を破壊してはならない
+    await act(async () => {
+      calls[0].reject(new Error("stale request failed"));
+      await oldPromise;
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(false);
+    expect(result.current.recordsByUserId.has("u-new")).toBe(true);
+    expect(result.current.recordsByUserId.size).toBe(1);
+  });
+
+  it("[V-RACE-03] userIds.length===0 の早期return経路も、古いリクエストの遅延解決に上書きされない", async () => {
+    const { supabase, calls } = buildDeferredSupabaseMock();
+    const { result } = renderHook(() => useMemberWaPointsRecords(supabase));
+
+    let oldPromise!: Promise<void>;
+
+    // 1件目 (古い): 通常のクエリを発行する (まだ解決しない)
+    act(() => {
+      oldPromise = result.current.loadRecords(["u-old"]);
+    });
+    expect(calls).toHaveLength(1);
+
+    // 2件目 (新しい): userIds=[] の早期return経路。同期的に空Mapへ更新される
+    await act(async () => {
+      await result.current.loadRecords([]);
+    });
+
+    expect(result.current.recordsByUserId.size).toBe(0);
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
+
+    // 古いリクエストを後から解決する。空Mapの状態を上書きしてはならない
+    await act(async () => {
+      calls[0].resolve({ data: [rowFor("u-old", 30.0)], error: null });
+      await oldPromise;
+    });
+
+    expect(result.current.recordsByUserId.size).toBe(0);
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("[V-RACE-04] まだ解決していない新しいリクエストがある間は、古いリクエストの finally が loading を早期に false へ戻さない", async () => {
+    // 前例: web 側で `.finally()` だけガードを外した実装が Critical になったことがある
+    // (finally は catch/成功どちらの経路でも実行されるため、ここだけガード漏れがあると
+    // 他の分岐が正しくても loading の見た目だけ壊れる)。
+    const { supabase, calls } = buildDeferredSupabaseMock();
+    const { result } = renderHook(() => useMemberWaPointsRecords(supabase));
+
+    let oldPromise!: Promise<void>;
+    let newPromise!: Promise<void>;
+
+    act(() => {
+      oldPromise = result.current.loadRecords(["u-old"]);
+    });
+    act(() => {
+      newPromise = result.current.loadRecords(["u-new"]);
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(result.current.loading).toBe(true);
+
+    // 新しい (2番目の) リクエストがまだ未解決のうちに、古い (1番目の) リクエストだけを解決する
+    await act(async () => {
+      calls[0].resolve({ data: [rowFor("u-old", 99.0)], error: null });
+      await oldPromise;
+    });
+
+    // 新しいリクエストがまだ進行中なので、loading は true のままでなければならない
+    expect(result.current.loading).toBe(true);
+
+    // 新しいリクエストを解決すると、ここで初めて loading が false になる
+    await act(async () => {
+      calls[1].resolve({ data: [rowFor("u-new", 30.0)], error: null });
+      await newPromise;
+    });
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.recordsByUserId.has("u-new")).toBe(true);
+    expect(result.current.recordsByUserId.has("u-old")).toBe(false);
   });
 });

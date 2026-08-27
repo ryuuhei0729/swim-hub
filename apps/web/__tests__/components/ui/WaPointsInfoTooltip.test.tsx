@@ -13,6 +13,10 @@
  *               data-testid を持てる (同じコンポーネントを複数箇所で使っても衝突しない)
  *   [V-ICON-16] 新規 i18n キーを追加せず、既存 `teams.waPointsCompare` 名前空間の
  *               既存キー (10個) のみで完結する (回帰ガード)
+ *   [V-ICON-ARIA] info ボタンの aria-describedby が、実在するツールチップ要素の id を
+ *               指し、その要素が期待する説明文を含む (id 文字列の存在確認だけで終わらせず、
+ *               参照先の実体まで検証する)。同一ページに複数インスタンスがあっても
+ *               useId 由来の id が衝突しないことも検証する (CodeRabbit 指摘の回帰テスト)
  *
  * ## モック方針
  * next-intl は NextIntlClientProvider + 実メッセージ JSON を使う
@@ -174,5 +178,67 @@ describe("[V-ICON-15] WaPointsInfoTooltip: モバイルタップ開閉 + onBlur"
     // デスクトップ用ツールチップ要素自体は常時DOM上に存在し、正しい説明文を持つ
     // (表示/非表示自体は group-focus-within の CSS 制御であり、jsdom では検証できない)
     expect(screen.getByTestId("info-tooltip")).toHaveTextContent(EXPECTED_JA_TOOLTIP_TEXT);
+  });
+});
+
+describe("[V-ICON-ARIA] WaPointsInfoTooltip: aria-describedby の参照先実体", () => {
+  it("aria-describedby が指す id を持つ要素が実在し、期待する説明文を含む", () => {
+    renderWithLocale(
+      <WaPointsInfoTooltip buttonTestId="info-button" tooltipTestId="info-tooltip" />,
+    );
+
+    const infoButton = screen.getByTestId("info-button");
+    const describedById = infoButton.getAttribute("aria-describedby");
+
+    // id 文字列が存在するだけでなく、その id を持つ要素が実際に DOM 上にあることを確認する
+    expect(describedById).toBeTruthy();
+    const describedElement = document.getElementById(describedById as string);
+    expect(describedElement).not.toBeNull();
+    expect(describedElement).toHaveTextContent(EXPECTED_JA_TOOLTIP_TEXT);
+
+    // 参照先は role="tooltip" のデスクトップ用ツールチップ (data-testid で渡した要素) と同一である
+    expect(describedElement).toBe(screen.getByTestId("info-tooltip"));
+  });
+
+  it("同一ページに複数インスタンスをレンダリングしても、aria-describedby の参照先 id が衝突しない", () => {
+    renderWithLocale(
+      <div>
+        <WaPointsInfoTooltip buttonTestId="info-a" tooltipTestId="tooltip-a" />
+        <WaPointsInfoTooltip buttonTestId="info-b" tooltipTestId="tooltip-b" />
+      </div>,
+    );
+
+    const buttonA = screen.getByTestId("info-a");
+    const buttonB = screen.getByTestId("info-b");
+    const describedByA = buttonA.getAttribute("aria-describedby");
+    const describedByB = buttonB.getAttribute("aria-describedby");
+
+    expect(describedByA).toBeTruthy();
+    expect(describedByB).toBeTruthy();
+    // id が衝突すると同じ文字列になる。ここが壊れると参照先が別インスタンスになる
+    expect(describedByA).not.toBe(describedByB);
+
+    const elementA = document.getElementById(describedByA as string);
+    const elementB = document.getElementById(describedByB as string);
+
+    // それぞれの参照先が自分自身のツールチップであり、相手のツールチップではないこと
+    expect(elementA).toBe(screen.getByTestId("tooltip-a"));
+    expect(elementB).toBe(screen.getByTestId("tooltip-b"));
+    expect(elementA).not.toBe(elementB);
+  });
+
+  it("aria-describedby はデスクトップ用ツールチップ (常時マウント) を指し、モバイルタップ開閉の有無に関わらず参照が保たれる", async () => {
+    const user = userEvent.setup();
+    renderWithLocale(
+      <WaPointsInfoTooltip buttonTestId="info-button" tooltipTestId="info-tooltip" />,
+    );
+
+    const infoButton = screen.getByTestId("info-button");
+    const describedById = infoButton.getAttribute("aria-describedby");
+
+    await user.click(infoButton);
+    // モバイル用ツールチップが追加された後も、参照先の id 自体は変わらない
+    expect(infoButton.getAttribute("aria-describedby")).toBe(describedById);
+    expect(document.getElementById(describedById as string)).toBe(screen.getByTestId("info-tooltip"));
   });
 });
