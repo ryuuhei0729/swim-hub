@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  Modal,
   View,
   Text,
   ScrollView,
@@ -20,6 +19,10 @@ import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { useQueryClient } from "@tanstack/react-query";
 import type { EntryWithDetails } from "@swim-hub/shared/types";
 import { formatTimeBest } from "@apps/shared/utils/time";
+import { SlideUpModal } from "@/components/ui/SlideUpModal";
+
+/** 背面タップでは閉じない (元実装どおり、背面タップ用の Pressable が存在しない) */
+const NOOP_BACKDROP_PRESS = () => {};
 
 type EntryStatus = "before" | "open" | "closed";
 
@@ -48,13 +51,19 @@ interface EntryGroup {
 const STATUS_ORDER: EntryStatus[] = ["before", "open", "closed"];
 
 // 種目別にエントリーをグルーピング（Web の loadEntries 相当）
-function groupEntriesByStyle(entries: EntryWithDetails[]): Record<number, EntryGroup> {
+function groupEntriesByStyle(
+  entries: EntryWithDetails[],
+): Record<number, EntryGroup> {
   return entries.reduce<Record<number, EntryGroup>>((acc, entry) => {
     const styleId = entry.style_id;
     if (!acc[styleId]) {
       acc[styleId] = {
         style: entry.style
-          ? { id: entry.style.id, name_jp: entry.style.name_jp, distance: entry.style.distance }
+          ? {
+              id: entry.style.id,
+              name_jp: entry.style.name_jp,
+              distance: entry.style.distance,
+            }
           : null,
         entries: [],
       };
@@ -78,8 +87,13 @@ export function TeamCompetitionEntryModal({
   const { supabase } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const entryApi = useMemo(() => new EntryAPI(supabase as SupabaseClient), [supabase]);
-  const updateMutation = useUpdateCompetitionMutation(supabase as SupabaseClient);
+  const entryApi = useMemo(
+    () => new EntryAPI(supabase as SupabaseClient),
+    [supabase],
+  );
+  const updateMutation = useUpdateCompetitionMutation(
+    supabase as SupabaseClient,
+  );
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +123,8 @@ export function TeamCompetitionEntryModal({
   }, [visible, entryStatus, loadEntries]);
 
   const getStatusLabel = useCallback(
-    (s: EntryStatus) => t(`teams.mobile.teamCompetitionEntryModal.status${capitalize(s)}`),
+    (s: EntryStatus) =>
+      t(`teams.mobile.teamCompetitionEntryModal.status${capitalize(s)}`),
     [t],
   );
 
@@ -119,15 +134,23 @@ export function TeamCompetitionEntryModal({
       // 楽観的更新
       setStatus(next);
       try {
-        await updateMutation.mutateAsync({ id: competitionId, updates: { entry_status: next } });
+        await updateMutation.mutateAsync({
+          id: competitionId,
+          updates: { entry_status: next },
+        });
         // 既存 mutation の onSuccess は recordKeys のみ更新するため、
         // チーム大会一覧キーを明示的に無効化してバッジを再表示させる
-        queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
+        queryClient.invalidateQueries({
+          queryKey: teamKeys.competitions(teamId),
+        });
         await loadEntries();
       } catch (err) {
         // 失敗時はロールバック
         setStatus(previous);
-        console.error("TeamCompetitionEntryModal: failed to update status", err);
+        console.error(
+          "TeamCompetitionEntryModal: failed to update status",
+          err,
+        );
         const msg =
           err instanceof Error
             ? err.message
@@ -135,7 +158,15 @@ export function TeamCompetitionEntryModal({
         Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);
       }
     },
-    [status, updateMutation, competitionId, queryClient, teamId, loadEntries, t],
+    [
+      status,
+      updateMutation,
+      competitionId,
+      queryClient,
+      teamId,
+      loadEntries,
+      t,
+    ],
   );
 
   const handleStatusChange = useCallback(
@@ -161,180 +192,207 @@ export function TeamCompetitionEntryModal({
   const isSaving = updateMutation.isPending;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          {/* ヘッダー */}
-          <View style={styles.header}>
-            <View style={styles.headerTextWrap}>
-              <Text style={styles.headerTitle} numberOfLines={1}>
-                {t("teams.mobile.teamCompetitionEntryModal.title", { title: competitionTitle })}
-              </Text>
-              {!loading && !error && (
-                <Text style={styles.headerSubtitle}>
-                  {t("teams.mobile.teamCompetitionEntryModal.totalEntries", {
-                    count: entries.length,
-                  })}
+    <SlideUpModal
+      visible={visible}
+      onClose={onClose}
+      onBackdropPress={NOOP_BACKDROP_PRESS}
+      overlayColor="rgba(0,0,0,0.4)"
+      sheetStyle={styles.sheet}
+    >
+      {/* ヘッダー */}
+      <View style={styles.header}>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {t("teams.mobile.teamCompetitionEntryModal.title", {
+              title: competitionTitle,
+            })}
+          </Text>
+          {!loading && !error && (
+            <Text style={styles.headerSubtitle}>
+              {t("teams.mobile.teamCompetitionEntryModal.totalEntries", {
+                count: entries.length,
+              })}
+            </Text>
+          )}
+        </View>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t("teams.mobile.teamCompetitionEntryModal.close")}
+          style={styles.closeIcon}
+        >
+          <Feather name="x" size={22} color="#6B7280" />
+        </Pressable>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 受付状況管理 */}
+        <View style={styles.statusSection}>
+          <Text style={styles.sectionLabel}>
+            {t("teams.mobile.teamCompetitionEntryModal.entryStatusLabel")}
+          </Text>
+          {isAdmin ? (
+            <>
+              <View style={styles.segmentRow}>
+                {STATUS_ORDER.map((s) => {
+                  const active = s === status;
+                  const segmentDisabled = isSaving || isPastDate;
+                  return (
+                    <Pressable
+                      key={s}
+                      style={[
+                        styles.segment,
+                        active && segmentActiveStyle(s),
+                        segmentDisabled && styles.segmentDisabled,
+                      ]}
+                      onPress={() => handleStatusChange(s)}
+                      disabled={segmentDisabled}
+                      accessibilityRole="button"
+                      accessibilityState={{
+                        selected: active,
+                        disabled: segmentDisabled,
+                      }}
+                      accessibilityLabel={t(
+                        "teams.mobile.teamCompetitionEntryModal.changeStatusAria",
+                        { status: getStatusLabel(s) },
+                      )}
+                    >
+                      <Text
+                        style={[
+                          styles.segmentText,
+                          active && segmentActiveTextStyle(s),
+                        ]}
+                      >
+                        {getStatusLabel(s)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {isPastDate && (
+                <Text style={styles.pastDateNotice}>
+                  {t("teams.mobile.teamCompetitionEntryModal.pastDateNotice")}
                 </Text>
               )}
-            </View>
-            <Pressable
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel={t("teams.mobile.teamCompetitionEntryModal.close")}
-              style={styles.closeIcon}
-            >
-              <Feather name="x" size={22} color="#6B7280" />
-            </Pressable>
-          </View>
-
-          <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-            {/* 受付状況管理 */}
-            <View style={styles.statusSection}>
-              <Text style={styles.sectionLabel}>
-                {t("teams.mobile.teamCompetitionEntryModal.entryStatusLabel")}
+            </>
+          ) : (
+            <View style={[styles.readBadge, badgeStyle(status)]}>
+              <Text style={[styles.readBadgeText, badgeTextStyle(status)]}>
+                {getStatusLabel(status)}
               </Text>
-              {isAdmin ? (
-                <>
-                  <View style={styles.segmentRow}>
-                    {STATUS_ORDER.map((s) => {
-                      const active = s === status;
-                      const segmentDisabled = isSaving || isPastDate;
-                      return (
-                        <Pressable
-                          key={s}
-                          style={[
-                            styles.segment,
-                            active && segmentActiveStyle(s),
-                            segmentDisabled && styles.segmentDisabled,
-                          ]}
-                          onPress={() => handleStatusChange(s)}
-                          disabled={segmentDisabled}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: active, disabled: segmentDisabled }}
-                          accessibilityLabel={t(
-                            "teams.mobile.teamCompetitionEntryModal.changeStatusAria",
-                            { status: getStatusLabel(s) },
-                          )}
-                        >
-                          <Text style={[styles.segmentText, active && segmentActiveTextStyle(s)]}>
-                            {getStatusLabel(s)}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  {isPastDate && (
-                    <Text style={styles.pastDateNotice}>
-                      {t("teams.mobile.teamCompetitionEntryModal.pastDateNotice")}
-                    </Text>
-                  )}
-                </>
-              ) : (
-                <View style={[styles.readBadge, badgeStyle(status)]}>
-                  <Text style={[styles.readBadgeText, badgeTextStyle(status)]}>
-                    {getStatusLabel(status)}
-                  </Text>
-                </View>
-              )}
             </View>
+          )}
+        </View>
 
-            {/* 選手のセルフエントリー導線（種目入力）。
+        {/* 選手のセルフエントリー導線（種目入力）。
                 web は受付中(open)の大会のみセルフエントリー画面に到達するため(useTeamEntry.ts:59-64)、
                 受付中以外では導線を表示しない。 */}
+        {status === "open" && (
+          <Pressable
+            style={styles.selfEntryButton}
+            onPress={() => onSelfEntry(status)}
+            accessibilityRole="button"
+            accessibilityLabel={t(
+              "teams.mobile.teamCompetitionEntryModal.selfEntryButton",
+            )}
+          >
+            <Feather name="edit-3" size={15} color="#2563EB" />
+            <Text style={styles.selfEntryButtonText}>
+              {t("teams.mobile.teamCompetitionEntryModal.selfEntryButton")}
+            </Text>
+          </Pressable>
+        )}
+
+        {/* エントリー一覧 */}
+        {loading && (
+          <View style={styles.centerBlock}>
+            <ActivityIndicator size="large" color="#2563EB" />
+            <Text style={styles.infoText}>
+              {t("teams.mobile.teamCompetitionEntryModal.loading")}
+            </Text>
+          </View>
+        )}
+
+        {!loading && error && (
+          <View style={styles.errorBlock}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable style={styles.retryButton} onPress={loadEntries}>
+              <Feather name="refresh-cw" size={14} color="#FFFFFF" />
+              <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {!loading && !error && groupedEntries.length === 0 && (
+          <View style={styles.emptyBlock}>
+            <Text style={styles.infoText}>
+              {t("teams.mobile.teamCompetitionEntryModal.emptyNoEntry")}
+            </Text>
             {status === "open" && (
-              <Pressable
-                style={styles.selfEntryButton}
-                onPress={() => onSelfEntry(status)}
-                accessibilityRole="button"
-                accessibilityLabel={t("teams.mobile.teamCompetitionEntryModal.selfEntryButton")}
-              >
-                <Feather name="edit-3" size={15} color="#2563EB" />
-                <Text style={styles.selfEntryButtonText}>
-                  {t("teams.mobile.teamCompetitionEntryModal.selfEntryButton")}
-                </Text>
-              </Pressable>
+              <Text style={styles.emptyHint}>
+                {t("teams.mobile.teamCompetitionEntryModal.emptyOpenHint")}
+              </Text>
             )}
+          </View>
+        )}
 
-            {/* エントリー一覧 */}
-            {loading && (
-              <View style={styles.centerBlock}>
-                <ActivityIndicator size="large" color="#2563EB" />
-                <Text style={styles.infoText}>
-                  {t("teams.mobile.teamCompetitionEntryModal.loading")}
+        {!loading &&
+          !error &&
+          groupedEntries.map(([styleId, group]) => (
+            <View key={styleId} style={styles.styleGroup}>
+              <View style={styles.styleHeader}>
+                <Text style={styles.styleHeaderText}>
+                  {group.style?.name_jp ??
+                    t(
+                      "teams.mobile.teamCompetitionEntryModal.unknownStyle",
+                    )}{" "}
+                  ({group.entries.length})
                 </Text>
               </View>
-            )}
-
-            {!loading && error && (
-              <View style={styles.errorBlock}>
-                <Text style={styles.errorText}>{error}</Text>
-                <Pressable style={styles.retryButton} onPress={loadEntries}>
-                  <Feather name="refresh-cw" size={14} color="#FFFFFF" />
-                  <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
-                </Pressable>
-              </View>
-            )}
-
-            {!loading && !error && groupedEntries.length === 0 && (
-              <View style={styles.emptyBlock}>
-                <Text style={styles.infoText}>
-                  {t("teams.mobile.teamCompetitionEntryModal.emptyNoEntry")}
-                </Text>
-                {status === "open" && (
-                  <Text style={styles.emptyHint}>
-                    {t("teams.mobile.teamCompetitionEntryModal.emptyOpenHint")}
-                  </Text>
-                )}
-              </View>
-            )}
-
-            {!loading &&
-              !error &&
-              groupedEntries.map(([styleId, group]) => (
-                <View key={styleId} style={styles.styleGroup}>
-                  <View style={styles.styleHeader}>
-                    <Text style={styles.styleHeaderText}>
-                      {group.style?.name_jp ??
-                        t("teams.mobile.teamCompetitionEntryModal.unknownStyle")}{" "}
-                      ({group.entries.length})
+              {group.entries.map((entry, index) => (
+                <View key={entry.id} style={styles.entryRow}>
+                  <View style={styles.entryInfo}>
+                    <Text style={styles.entryName} numberOfLines={1}>
+                      {index + 1}.{" "}
+                      {entry.user?.name ??
+                        t("teams.mobile.teamCompetitionEntryModal.unknownUser")}
                     </Text>
-                  </View>
-                  {group.entries.map((entry, index) => (
-                    <View key={entry.id} style={styles.entryRow}>
-                      <View style={styles.entryInfo}>
-                        <Text style={styles.entryName} numberOfLines={1}>
-                          {index + 1}.{" "}
-                          {entry.user?.name ??
-                            t("teams.mobile.teamCompetitionEntryModal.unknownUser")}
+                    {entry.entry_time != null && (
+                      <Text style={styles.entryTime}>
+                        {t(
+                          "teams.mobile.teamCompetitionEntryModal.entryTimeLabel",
+                        )}{" "}
+                        <Text style={styles.entryTimeValue}>
+                          {formatTimeBest(entry.entry_time)}
                         </Text>
-                        {entry.entry_time != null && (
-                          <Text style={styles.entryTime}>
-                            {t("teams.mobile.teamCompetitionEntryModal.entryTimeLabel")}{" "}
-                            <Text style={styles.entryTimeValue}>
-                              {formatTimeBest(entry.entry_time)}
-                            </Text>
-                          </Text>
-                        )}
-                        {entry.note && <Text style={styles.entryNote}>{entry.note}</Text>}
-                      </View>
-                    </View>
-                  ))}
+                      </Text>
+                    )}
+                    {entry.note && (
+                      <Text style={styles.entryNote}>{entry.note}</Text>
+                    )}
+                  </View>
                 </View>
               ))}
-          </ScrollView>
+            </View>
+          ))}
+      </ScrollView>
 
-          {/* フッター */}
-          <SafeAreaView edges={["bottom"]} style={styles.footer}>
-            <Pressable style={styles.footerButton} onPress={onClose} accessibilityRole="button">
-              <Text style={styles.footerButtonText}>
-                {t("teams.mobile.teamCompetitionEntryModal.close")}
-              </Text>
-            </Pressable>
-          </SafeAreaView>
-        </View>
-      </View>
-    </Modal>
+      {/* フッター */}
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
+        <Pressable
+          style={styles.footerButton}
+          onPress={onClose}
+          accessibilityRole="button"
+        >
+          <Text style={styles.footerButtonText}>
+            {t("teams.mobile.teamCompetitionEntryModal.close")}
+          </Text>
+        </Pressable>
+      </SafeAreaView>
+    </SlideUpModal>
   );
 }
 
@@ -385,11 +443,6 @@ function segmentActiveTextStyle(s: EntryStatus) {
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 16,

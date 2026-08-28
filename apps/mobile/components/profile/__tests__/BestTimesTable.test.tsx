@@ -20,13 +20,47 @@
 // トートロジー防止メモ: 542/763/504/761/1100/1000/902/291 は node -e で
 // floor(1000*(B/T)^3) を独立に計算したハードコード値であり、waPoints.ts や
 // 本コンポーネントの実装を呼び出して生成していない。
+//
+// ## isWaPointsMode の state リフトアップについて (mobile UI フィードバック #5)
+// WAポイント表示トグルは呼び出し元 (MyPageScreen) に移設され、BestTimesTable は
+// `isWaPointsMode` を必須 props として受け取るだけの表示コンポーネントになった。
+// 本ファイルは BestTimesTable 単体の計算ロジック (floor/round・gender 0/1・
+// リレー除外・pool_type の向き) をユニットレベルで検証する目的のため、
+// 呼び出し元 (MyPageScreen) を模した最小限の `ControlledBestTimesTable` で
+// state を保持し、「トグルを押す→表示が切り替わる」という利用者観点の操作列は
+// そのまま維持する (呼び出し元配線そのものの回帰は
+// `screens/__tests__/MyPageScreen.waPointsGenderWiring.test.tsx` が別途担当)。
 // =============================================================================
 
-import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import React, { useState } from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import type { BestTime } from "@apps/shared/types/ui";
 import { BestTimesTable } from "../BestTimesTable";
+
+type ControlledProps = Omit<React.ComponentProps<typeof BestTimesTable>, "isWaPointsMode"> & {
+  initialWaPointsMode?: boolean;
+};
+
+/**
+ * MyPageScreen の state リフトアップ (isWaPointsMode を親が保持し props で渡す) を
+ * 模した最小限のテストハーネス。「WAポイント表示」ボタンは MyPageScreen 側の
+ * トグルボタンと同じラベルで、押すたびに isWaPointsMode を反転して BestTimesTable に渡す。
+ */
+const ControlledBestTimesTable: React.FC<ControlledProps> = ({
+  initialWaPointsMode = false,
+  ...rest
+}) => {
+  const [isWaPointsMode, setIsWaPointsMode] = useState(initialWaPointsMode);
+  return (
+    <>
+      <button type="button" onClick={() => setIsWaPointsMode((prev) => !prev)}>
+        WAポイント表示
+      </button>
+      <BestTimesTable {...rest} isWaPointsMode={isWaPointsMode} />
+    </>
+  );
+};
 
 let idCounter = 0;
 const buildBestTime = (overrides: Partial<BestTime> & { style: BestTime["style"] }): BestTime => {
@@ -48,7 +82,7 @@ const IM100 = { name_jp: "100m個人メドレー", distance: 100 };
 describe("BestTimesTable (profile) - WAポイント計算", () => {
   it("[V-GEN-01] gender が undefined のとき、WAポイントモードでも「—」のままで 542 は出ない", () => {
     const bestTimes = [buildBestTime({ time: 54.97, style: FR100 })];
-    render(<BestTimesTable bestTimes={bestTimes} gender={undefined} />);
+    render(<ControlledBestTimesTable bestTimes={bestTimes} gender={undefined} />);
 
     fireEvent.click(screen.getByText("ALL"));
     fireEvent.click(screen.getByText("WAポイント表示"));
@@ -60,20 +94,22 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
   it("[V-GEN-02] gender=0 と gender=1 で同じタイムでも異なる点数が表示される", () => {
     const bestTimes = [buildBestTime({ time: 54.97, style: FR100 })];
 
-    const { rerender } = render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    const { rerender } = render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
     fireEvent.click(screen.getByText("WAポイント表示"));
     expect(screen.getByText("542")).toBeTruthy();
     expect(screen.queryByText("763")).toBeNull();
 
-    // isWaPointsMode は前段の click で既に ON になっている (rerender で state は保持される)
-    rerender(<BestTimesTable bestTimes={bestTimes} gender={1} />);
+    // isWaPointsMode は前段の click で既に ON になっている (rerender で state は保持される。
+    // ControlledBestTimesTable は同一コンポーネント/同一位置で re-render されるため
+    // useState は React によって保持される)
+    rerender(<ControlledBestTimesTable bestTimes={bestTimes} gender={1} />);
     expect(screen.getByText("763")).toBeTruthy();
     expect(screen.queryByText("542")).toBeNull();
   });
 
   it("[V-FLOOR-01] floor であって round ではない (LCM 100m自由形, B=46.40, T=44.94 → 1100)", () => {
     const bestTimes = [buildBestTime({ time: 44.94, pool_type: 1, style: FR100 })];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
     fireEvent.click(screen.getByText("ALL"));
     fireEvent.click(screen.getByText("WAポイント表示"));
@@ -84,7 +120,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
 
   it("[V-LCM-IM100] 長水路の100m個人メドレーは base time が無いため「—」になる (0やNaNにならない)", () => {
     const bestTimes = [buildBestTime({ time: 130.0, pool_type: 1, style: IM100 })];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
     fireEvent.click(screen.getByText("WAポイント表示"));
 
@@ -95,7 +131,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
 
   it("[V-RELAY-01] includeRelaying トグル OFF でも、リレー記録のみのセルは WAポイントで「—」になる", () => {
     const bestTimes = [buildBestTime({ time: 20.0, style: FR50, is_relaying: true })];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
     fireEvent.click(screen.getByText("WAポイント表示"));
 
@@ -106,7 +142,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
 
   it("[V-RELAY-02] includeRelaying トグル ON でも、リレー記録は WAポイント計算から除外される (「引き継ぎ含む」チェックをONにしても点数は出ない)", () => {
     const bestTimes = [buildBestTime({ time: 20.0, style: FR50, is_relaying: true })];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
     // 「引き継ぎタイムを含む」チェックボックスをON
     fireEvent.click(screen.getByText("引き継ぎタイム含"));
@@ -122,7 +158,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
 
   it("[V-POOL-01] pool_type の向きが正しい (LCM 100m自由形 T=46.40 → 1000。SCM基準(902)ではない)", () => {
     const bestTimes = [buildBestTime({ time: 46.4, pool_type: 1, style: FR100 })];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
     fireEvent.click(screen.getByText("ALL"));
     fireEvent.click(screen.getByText("WAポイント表示"));
@@ -142,7 +178,7 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
         competition: { title: "第10回記録会", date: "2020-05-05" },
       }),
     ];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<BestTimesTable bestTimes={bestTimes} gender={0} isWaPointsMode={false} />);
 
     fireEvent.click(screen.getByText("30.11"));
     expect(screen.getByText("第10回記録会")).toBeTruthy();
@@ -153,7 +189,7 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
     const bestTimes = [
       buildBestTime({ time: 31.22, style: FR50, note: "自主練での計測" }),
     ];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<BestTimesTable bestTimes={bestTimes} gender={0} isWaPointsMode={false} />);
 
     fireEvent.click(screen.getByText("31.22"));
     expect(screen.getByText("自主練での計測")).toBeTruthy();
@@ -162,7 +198,7 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
 
   it("[V-CELL-03] competition なし + note なしのセルは「一括登録」にフォールバックする", () => {
     const bestTimes = [buildBestTime({ time: 32.33, style: FR50 })];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<BestTimesTable bestTimes={bestTimes} gender={0} isWaPointsMode={false} />);
 
     fireEvent.click(screen.getByText("32.33"));
     expect(screen.getByText("一括登録")).toBeTruthy();
@@ -177,7 +213,7 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
         competition: { title: "優先確認大会", date: "2023-12-25" },
       }),
     ];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<BestTimesTable bestTimes={bestTimes} gender={0} isWaPointsMode={false} />);
 
     fireEvent.click(screen.getByText("33.44"));
     // formatDate(date, "numeric", "ja") は "yyyy/MM/dd" 系。created_at(2019)ではなく
@@ -187,7 +223,13 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
   });
 
   it("[V-CELL-05] 空セル(記録なし)をタップしても詳細シートは開かない", () => {
-    render(<BestTimesTable bestTimes={[buildBestTime({ time: 30, style: FR50 })]} gender={0} />);
+    render(
+      <BestTimesTable
+        bestTimes={[buildBestTime({ time: 30, style: FR50 })]}
+        gender={0}
+        isWaPointsMode={false}
+      />,
+    );
 
     const emptyCells = screen.getAllByText("—");
     expect(emptyCells.length).toBeGreaterThan(0);
@@ -198,7 +240,7 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
 
   it("[V-CELL-ISWAP] isWaPointsMode 中はWAポイントセルを実際にタップしても詳細シートが開かない", () => {
     const bestTimes = [buildBestTime({ time: 30.0, style: FR50, note: "WAモード中のタップ検証" })];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
     fireEvent.click(screen.getByText("WAポイント表示"));
 
@@ -221,7 +263,7 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
         competition: { title: "セルB大会", date: "2023-02-10" },
       }),
     ];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<BestTimesTable bestTimes={bestTimes} gender={0} isWaPointsMode={false} />);
 
     fireEvent.click(screen.getByText("33.44"));
     expect(screen.getByText("セルA大会")).toBeTruthy();
@@ -231,19 +273,30 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
     expect(screen.queryByText("セルA大会")).toBeNull();
   });
 
-  it("[V-CELL-06b] 同一セル再タップで閉じる", () => {
-    const bestTimes = [
-      buildBestTime({ time: 33.44, style: FR50, competition: { title: "セルA大会", date: "2023-01-10" } }),
-    ];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+  it(
+    "[V-CELL-06b] 同一セル再タップで閉じる " +
+      "(PM裁定: CenterModal の閉じアニメーション分(160ms)の遅延を許容する。契約は" +
+      "「同一セル再タップで閉じる」であって「0msで中身が消える」ではないため、" +
+      "同期アサーションではなく waitFor で待つ。ただし『そもそも閉じない』退行は" +
+      "waitFor のタイムアウト(既定5000ms > 160ms)で確実に赤くなる)",
+    async () => {
+      const bestTimes = [
+        buildBestTime({ time: 33.44, style: FR50, competition: { title: "セルA大会", date: "2023-01-10" } }),
+      ];
+      render(<BestTimesTable bestTimes={bestTimes} gender={0} isWaPointsMode={false} />);
 
-    const cell = screen.getByText("33.44");
-    fireEvent.click(cell);
-    expect(screen.getByText("セルA大会")).toBeTruthy();
+      const cell = screen.getByText("33.44");
+      fireEvent.click(cell);
+      expect(screen.getByText("セルA大会")).toBeTruthy();
 
-    fireEvent.click(cell);
-    expect(screen.queryByText("セルA大会")).toBeNull();
-  });
+      fireEvent.click(cell);
+      // 閉じるアニメーション (CenterModal の ANIMATION_DURATION=160ms) の間は
+      // 直近の中身が残っていてもよい。アニメーション完了後に消えていることを確認する。
+      await waitFor(() => {
+        expect(screen.queryByText("セルA大会")).toBeNull();
+      });
+    },
+  );
 });
 
 describe("BestTimesTable (profile) - リレー引き継ぎ候補の note", () => {
@@ -261,7 +314,7 @@ describe("BestTimesTable (profile) - リレー引き継ぎ候補の note", () =>
         },
       }),
     ];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+    render(<BestTimesTable bestTimes={bestTimes} gender={0} isWaPointsMode={false} />);
 
     // 「引き継ぎタイムを含む」をONにすると、引き継ぎ側 (20.00秒) の方が親 (40.00秒) より
     // 速いため、このセルは引き継ぎ側の候補として描画される。

@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, Modal, Pressable, TextInput, FlatList, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  FlatList,
+  StyleSheet,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { CenterModal } from "@/components/ui/CenterModal";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface TeamMemberForSelection {
@@ -36,7 +44,9 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
   loading,
 }) => {
   const { t } = useTranslation();
-  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -83,122 +93,158 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
     onClose();
   };
 
-  if (!group) return null;
+  // 呼び出し元 (TeamGroupManagement.tsx) は group と visible を同一 state で同時に
+  // null/false にするため、生の group だけで中身を判定すると CenterModal の閉じ
+  // アニメーション(160msのフェード+スケールアウト)より先に中身が消えてしまう
+  // (空の白いカードが一瞬見える)。そこで直近の非 null な group をキャッシュし、
+  // レンダーにはこちら (displayGroup) を使う (レンダー中に ref.current を読むと
+  // react-hooks/refs に抵触するため useState + useEffect で同期する)。
+  // 「group を一度も受け取っていない (= 初回マウントから null のまま)」場合だけ、
+  // 既存テスト [V-B1-14] の契約 (group が null なら何もレンダーしない) を守るために
+  // early return する。一度でも非 null を受け取ったあとは、閉じる際もこのキャッシュを
+  // 使い続けるため、以後 group が null に戻っても early return されない。
+  const [displayGroup, setDisplayGroup] = useState<TeamGroupWithCount | null>(
+    group,
+  );
+  useEffect(() => {
+    if (group !== null) {
+      setDisplayGroup(group);
+    }
+  }, [group]);
+
+  if (!displayGroup) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title} numberOfLines={1}>
-              {t("teams.mobile.groupMembersTitle", { name: group.name })}
-            </Text>
-            <Pressable style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.body}>
-            {/* 検索 */}
-            <TextInput
-              style={styles.searchInput}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder={t("teams.mobile.memberSearchPlaceholder")}
-              placeholderTextColor="#9CA3AF"
-            />
-
-            {/* 選択状況 */}
-            <View style={styles.selectionBar}>
-              <Text style={styles.selectionCount}>
-                {t("teams.mobile.selectionCount", {
-                  selected: selectedUserIds.size,
-                  total: teamMembers.length,
-                })}
-              </Text>
-              <View style={styles.selectionActions}>
-                <Pressable onPress={handleSelectAll}>
-                  <Text style={styles.selectAllText}>{t("teams.mobile.selectAll")}</Text>
-                </Pressable>
-                <Pressable onPress={handleDeselectAll}>
-                  <Text style={styles.deselectAllText}>{t("teams.mobile.deselectAll")}</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            {/* メンバーリスト */}
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>{t("teams.mobile.loadingShort")}</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={filteredMembers}
-                keyExtractor={(item) => item.user_id}
-                style={styles.memberList}
-                keyboardShouldPersistTaps="handled"
-                ListEmptyComponent={
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>
-                      {searchQuery
-                        ? t("teams.mobile.noMatchingMembers")
-                        : t("teams.mobile.noMembers")}
-                    </Text>
-                  </View>
-                }
-                renderItem={({ item }) => {
-                  const isSelected = selectedUserIds.has(item.user_id);
-                  return (
-                    <Pressable
-                      style={[styles.memberRow, isSelected && styles.memberRowSelected]}
-                      onPress={() => handleToggle(item.user_id)}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: isSelected }}
-                      accessibilityLabel={item.users.name}
-                    >
-                      <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-                        {isSelected && <Feather name="check" size={14} color="#FFFFFF" />}
-                      </View>
-                      <Text style={styles.memberName}>{item.users.name}</Text>
-                    </Pressable>
-                  );
-                }}
-              />
-            )}
-          </View>
-
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={saving}
-            >
-              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.button, styles.submitButton, saving && styles.submitButtonDisabled]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              <Text style={styles.submitButtonText}>
-                {saving ? t("teams.mobile.saveLoading") : t("teams.mobile.saveButton")}
-              </Text>
-            </Pressable>
-          </View>
+    <CenterModal
+      visible={visible}
+      onClose={handleClose}
+      closeAccessibilityLabel={t("common.close")}
+      showCloseButton={false}
+      contentStyle={styles.modalContent}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title} numberOfLines={1}>
+          {t("teams.mobile.groupMembersTitle", { name: displayGroup.name })}
+        </Text>
+        <Pressable style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <View style={styles.body}>
+        {/* 検索 */}
+        <TextInput
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t("teams.mobile.memberSearchPlaceholder")}
+          placeholderTextColor="#9CA3AF"
+        />
+
+        {/* 選択状況 */}
+        <View style={styles.selectionBar}>
+          <Text style={styles.selectionCount}>
+            {t("teams.mobile.selectionCount", {
+              selected: selectedUserIds.size,
+              total: teamMembers.length,
+            })}
+          </Text>
+          <View style={styles.selectionActions}>
+            <Pressable onPress={handleSelectAll}>
+              <Text style={styles.selectAllText}>
+                {t("teams.mobile.selectAll")}
+              </Text>
+            </Pressable>
+            <Pressable onPress={handleDeselectAll}>
+              <Text style={styles.deselectAllText}>
+                {t("teams.mobile.deselectAll")}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* メンバーリスト */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>
+              {t("teams.mobile.loadingShort")}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredMembers}
+            keyExtractor={(item) => item.user_id}
+            style={styles.memberList}
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  {searchQuery
+                    ? t("teams.mobile.noMatchingMembers")
+                    : t("teams.mobile.noMembers")}
+                </Text>
+              </View>
+            }
+            renderItem={({ item }) => {
+              const isSelected = selectedUserIds.has(item.user_id);
+              return (
+                <Pressable
+                  style={[
+                    styles.memberRow,
+                    isSelected && styles.memberRowSelected,
+                  ]}
+                  onPress={() => handleToggle(item.user_id)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isSelected }}
+                  accessibilityLabel={item.users.name}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      isSelected && styles.checkboxChecked,
+                    ]}
+                  >
+                    {isSelected && (
+                      <Feather name="check" size={14} color="#FFFFFF" />
+                    )}
+                  </View>
+                  <Text style={styles.memberName}>{item.users.name}</Text>
+                </Pressable>
+              );
+            }}
+          />
+        )}
+      </View>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={[styles.button, styles.cancelButton]}
+          onPress={handleClose}
+          disabled={saving}
+        >
+          <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.button,
+            styles.submitButton,
+            saving && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          <Text style={styles.submitButtonText}>
+            {saving
+              ? t("teams.mobile.saveLoading")
+              : t("teams.mobile.saveButton")}
+          </Text>
+        </Pressable>
+      </View>
+    </CenterModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, Modal, Pressable, ScrollView, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -8,7 +8,14 @@ import { useAttendanceGrouping } from "@apps/shared/hooks/useAttendanceGrouping"
 import { fetchTeamMembers, type TeamMember } from "@apps/shared/utils/team";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
-import { AttendanceGroupSection, ATTENDANCE_GROUP_TITLE_COLORS } from "./AttendanceGroupSection";
+import {
+  AttendanceGroupSection,
+  ATTENDANCE_GROUP_TITLE_COLORS,
+} from "./AttendanceGroupSection";
+import { SlideUpModal } from "@/components/ui/SlideUpModal";
+
+/** 背面タップでは閉じない (元実装どおり、背面タップ用の Pressable が存在しない) */
+const NOOP_BACKDROP_PRESS = () => {};
 
 export interface AttendanceGroupModalProps {
   visible: boolean;
@@ -50,7 +57,9 @@ export const AttendanceGroupModal: React.FC<AttendanceGroupModalProps> = ({
   const { t } = useTranslation();
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
-  const [attendanceData, setAttendanceData] = useState<TeamAttendanceWithDetails[]>([]);
+  const [attendanceData, setAttendanceData] = useState<
+    TeamAttendanceWithDetails[]
+  >([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceError, setAttendanceError] = useState(false);
 
@@ -115,120 +124,132 @@ export const AttendanceGroupModal: React.FC<AttendanceGroupModalProps> = ({
     : t("teams.attendanceStatusModal.title");
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <Text style={styles.title} numberOfLines={1}>
-              {title}
+    <SlideUpModal
+      visible={visible}
+      onClose={onClose}
+      onBackdropPress={NOOP_BACKDROP_PRESS}
+      overlayColor="rgba(0,0,0,0.4)"
+      sheetStyle={styles.sheet}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
+        <Pressable
+          onPress={onClose}
+          style={styles.closeIcon}
+          accessibilityRole="button"
+        >
+          <Feather name="x" size={22} color="#6B7280" />
+        </Pressable>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+      >
+        {attendanceLoading ? (
+          <View style={styles.infoContainer}>
+            <Text style={styles.infoText}>{t("common.loading")}</Text>
+          </View>
+        ) : attendanceError ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>
+              {t("teams.attendanceStatusHook.loadError")}
             </Text>
-            <Pressable onPress={onClose} style={styles.closeIcon} accessibilityRole="button">
-              <Feather name="x" size={22} color="#6B7280" />
+            <Pressable
+              style={styles.retryButton}
+              onPress={loadAttendance}
+              accessibilityRole="button"
+            >
+              <Feather name="refresh-cw" size={14} color="#FFFFFF" />
+              <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
             </Pressable>
           </View>
+        ) : (
+          <View style={styles.memberGroups}>
+            <AttendanceGroupSection
+              title={t("teams.attendanceGrouping.present", {
+                count: grouping.presentMembers.length,
+              })}
+              titleStyle={ATTENDANCE_GROUP_TITLE_COLORS.present}
+              members={grouping.presentMembers}
+              emptyText={t("teams.attendanceGrouping.none")}
+            />
+            <AttendanceGroupSection
+              title={t("teams.attendanceGrouping.absent", {
+                count: grouping.absentMembers.length,
+              })}
+              titleStyle={ATTENDANCE_GROUP_TITLE_COLORS.absent}
+              members={grouping.absentMembers}
+              emptyText={t("teams.attendanceGrouping.none")}
+            />
+            <AttendanceGroupSection
+              title={t("teams.attendanceGrouping.other", {
+                count: grouping.otherMembers.length,
+              })}
+              titleStyle={ATTENDANCE_GROUP_TITLE_COLORS.other}
+              members={grouping.otherMembers}
+              emptyText={t("teams.attendanceGrouping.none")}
+            />
 
-          <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-            {attendanceLoading ? (
-              <View style={styles.infoContainer}>
-                <Text style={styles.infoText}>{t("common.loading")}</Text>
+            {/* 未回答: 名簿取得失敗時に0件表示にせず、エラー行+再試行を出す
+                （AdminMonthlyAttendance の既存パターンを踏襲） */}
+            {teamMembersLoading ? (
+              <View style={styles.memberGroupSection}>
+                <Text style={styles.infoText}>
+                  {t("teams.mobile.adminAttendance.memberAttendanceLoading")}
+                </Text>
               </View>
-            ) : attendanceError ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{t("teams.attendanceStatusHook.loadError")}</Text>
-                <Pressable style={styles.retryButton} onPress={loadAttendance} accessibilityRole="button">
+            ) : teamMembersError ? (
+              <View style={styles.memberGroupSection}>
+                <Text style={styles.errorTextInline}>
+                  {t("teams.mobile.adminAttendance.teamMembersFetchFailed")}
+                </Text>
+                <Pressable
+                  style={[styles.retryButton, styles.retryButtonInline]}
+                  onPress={loadTeamMembers}
+                  accessibilityRole="button"
+                >
                   <Feather name="refresh-cw" size={14} color="#FFFFFF" />
-                  <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
+                  <Text style={styles.retryButtonText}>
+                    {t("common.retry")}
+                  </Text>
                 </Pressable>
               </View>
             ) : (
-              <View style={styles.memberGroups}>
-                <AttendanceGroupSection
-                  title={t("teams.attendanceGrouping.present", {
-                    count: grouping.presentMembers.length,
-                  })}
-                  titleStyle={ATTENDANCE_GROUP_TITLE_COLORS.present}
-                  members={grouping.presentMembers}
-                  emptyText={t("teams.attendanceGrouping.none")}
-                />
-                <AttendanceGroupSection
-                  title={t("teams.attendanceGrouping.absent", {
-                    count: grouping.absentMembers.length,
-                  })}
-                  titleStyle={ATTENDANCE_GROUP_TITLE_COLORS.absent}
-                  members={grouping.absentMembers}
-                  emptyText={t("teams.attendanceGrouping.none")}
-                />
-                <AttendanceGroupSection
-                  title={t("teams.attendanceGrouping.other", {
-                    count: grouping.otherMembers.length,
-                  })}
-                  titleStyle={ATTENDANCE_GROUP_TITLE_COLORS.other}
-                  members={grouping.otherMembers}
-                  emptyText={t("teams.attendanceGrouping.none")}
-                />
-
-                {/* 未回答: 名簿取得失敗時に0件表示にせず、エラー行+再試行を出す
-                    （AdminMonthlyAttendance の既存パターンを踏襲） */}
-                {teamMembersLoading ? (
-                  <View style={styles.memberGroupSection}>
-                    <Text style={styles.infoText}>
-                      {t("teams.mobile.adminAttendance.memberAttendanceLoading")}
-                    </Text>
-                  </View>
-                ) : teamMembersError ? (
-                  <View style={styles.memberGroupSection}>
-                    <Text style={styles.errorTextInline}>
-                      {t("teams.mobile.adminAttendance.teamMembersFetchFailed")}
-                    </Text>
-                    <Pressable
-                      style={[styles.retryButton, styles.retryButtonInline]}
-                      onPress={loadTeamMembers}
-                      accessibilityRole="button"
-                    >
-                      <Feather name="refresh-cw" size={14} color="#FFFFFF" />
-                      <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <AttendanceGroupSection
-                    title={t("teams.attendanceGrouping.unanswered", {
-                      count: grouping.unansweredMembers.length,
-                    })}
-                    titleStyle={ATTENDANCE_GROUP_TITLE_COLORS.unanswered}
-                    members={grouping.unansweredMembers}
-                    emptyText={t("teams.attendanceGrouping.none")}
-                  />
-                )}
-              </View>
+              <AttendanceGroupSection
+                title={t("teams.attendanceGrouping.unanswered", {
+                  count: grouping.unansweredMembers.length,
+                })}
+                titleStyle={ATTENDANCE_GROUP_TITLE_COLORS.unanswered}
+                members={grouping.unansweredMembers}
+                emptyText={t("teams.attendanceGrouping.none")}
+              />
             )}
-          </ScrollView>
+          </View>
+        )}
+      </ScrollView>
 
-          {showChangeLink && onChangeLinkPress && (
-            <View style={styles.footer}>
-              <Pressable
-                style={styles.changeLinkButton}
-                onPress={onChangeLinkPress}
-                accessibilityRole="button"
-              >
-                <Feather name="edit-3" size={16} color="#FFFFFF" />
-                <Text style={styles.changeLinkButtonText}>
-                  {t("dashboard.attendance.changeButton")}
-                </Text>
-              </Pressable>
-            </View>
-          )}
+      {showChangeLink && onChangeLinkPress && (
+        <View style={styles.footer}>
+          <Pressable
+            style={styles.changeLinkButton}
+            onPress={onChangeLinkPress}
+            accessibilityRole="button"
+          >
+            <Feather name="edit-3" size={16} color="#FFFFFF" />
+            <Text style={styles.changeLinkButtonText}>
+              {t("dashboard.attendance.changeButton")}
+            </Text>
+          </Pressable>
         </View>
-      </View>
-    </Modal>
+      )}
+    </SlideUpModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 16,

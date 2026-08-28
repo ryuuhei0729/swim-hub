@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   Pressable,
-  Modal,
   ScrollView,
   StyleSheet,
   Alert,
@@ -15,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import type { PracticeTag } from "@apps/shared/types";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
+import { SlideUpModal } from "@/components/ui/SlideUpModal";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -45,7 +45,10 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const insets = useSafeInsets();
-  const selectedIds = useMemo(() => new Set(selectedTags.map((t) => t.id)), [selectedTags]);
+  const selectedIds = useMemo(
+    () => new Set(selectedTags.map((t) => t.id)),
+    [selectedTags],
+  );
   const [query, setQuery] = useState("");
 
   // モーダルを開き直すたびに検索語をリセット
@@ -99,139 +102,140 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        {/* 背景タップで閉じる */}
-        <Pressable style={styles.backdrop} onPress={onClose} />
-
-        {/* ボトムシート */}
-        <View style={[styles.sheet, { paddingBottom: getSafeFooterPadding(34, insets.bottom) }]}>
-          {/* ハンドル */}
-          <View style={styles.handleContainer}>
-            <View style={styles.handle} />
-          </View>
-
-          {/* ヘッダー */}
-          <View style={styles.header}>
-            <Text style={styles.title}>{t("forms.tag.selectModalTitle")}</Text>
-            <Pressable
-              style={styles.closeButton}
-              onPress={onClose}
-              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-            >
-              <Feather name="x" size={24} color="#374151" />
-            </Pressable>
-          </View>
-
-          {/* 検索フィールド (タグが存在する場合のみ) */}
-          {availableTags.length > 0 && (
-            <View style={styles.searchContainer}>
-              <Feather name="search" size={16} color="#9CA3AF" />
-              <TextInput
-                style={styles.searchInput}
-                value={query}
-                onChangeText={setQuery}
-                placeholder={t("forms.tag.selectSearchPlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                autoCorrect={false}
-                autoCapitalize="none"
-                returnKeyType="search"
-              />
-              {query.length > 0 && (
-                <Pressable
-                  onPress={() => setQuery("")}
-                  hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-                >
-                  <Feather name="x-circle" size={16} color="#9CA3AF" />
-                </Pressable>
-              )}
-            </View>
-          )}
-
-          {/* タグ一覧 */}
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.tagsContainer}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {availableTags.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>{t("forms.tag.emptyTitle")}</Text>
-                <Text style={styles.emptySubText}>{t("forms.tag.emptySubtext")}</Text>
-              </View>
-            ) : filteredTags.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>{t("forms.tag.noSearchResults")}</Text>
-              </View>
-            ) : (
-              <View style={styles.tagsGrid}>
-                {filteredTags.map((tag) => {
-                  const isSelected = selectedIds.has(tag.id);
-                  return (
-                    <View
-                      key={tag.id}
-                      style={[
-                        styles.tagItem,
-                        { backgroundColor: tag.color },
-                        isSelected && styles.tagItemSelected,
-                      ]}
-                    >
-                      {/* タグ選択部分 */}
-                      <Pressable style={styles.tagContent} onPress={() => handleTagToggle(tag)}>
-                        {isSelected && (
-                          <View style={styles.checkIcon}>
-                            <Feather name="check" size={12} color="#FFFFFF" />
-                          </View>
-                        )}
-                        <Text style={styles.tagText}>{tag.name}</Text>
-                      </Pressable>
-
-                      {/* 三点リーダー */}
-                      <Pressable
-                        style={styles.moreButton}
-                        onPress={() => handleMorePress(tag)}
-                        hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-                      >
-                        <Feather name="more-vertical" size={16} color="#374151" />
-                      </Pressable>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-
-            {/* 新規タグ作成ボタン */}
-            <Pressable style={styles.createButton} onPress={onCreateTag}>
-              <Feather name="plus" size={18} color="#2563EB" />
-              <Text style={styles.createButtonText}>{t("forms.tag.createNewButton")}</Text>
-            </Pressable>
-          </ScrollView>
-
-          {/* フッター */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              {t("forms.tag.selectedCount", { count: selectedTags.length })}
-            </Text>
-            <Pressable style={styles.doneButton} onPress={onClose}>
-              <Text style={styles.doneButtonText}>{t("forms.tag.doneButton")}</Text>
-            </Pressable>
-          </View>
-        </View>
+    <SlideUpModal
+      visible={visible}
+      onClose={onClose}
+      overlayColor="rgba(0, 0, 0, 0.4)"
+      sheetStyle={[
+        styles.sheet,
+        { paddingBottom: getSafeFooterPadding(34, insets.bottom) },
+      ]}
+    >
+      {/* ハンドル */}
+      <View style={styles.handleContainer}>
+        <View style={styles.handle} />
       </View>
-    </Modal>
+
+      {/* ヘッダー */}
+      <View style={styles.header}>
+        <Text style={styles.title}>{t("forms.tag.selectModalTitle")}</Text>
+        <Pressable
+          style={styles.closeButton}
+          onPress={onClose}
+          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+        >
+          <Feather name="x" size={24} color="#374151" />
+        </Pressable>
+      </View>
+
+      {/* 検索フィールド (タグが存在する場合のみ) */}
+      {availableTags.length > 0 && (
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={16} color="#9CA3AF" />
+          <TextInput
+            style={styles.searchInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t("forms.tag.selectSearchPlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+          {query.length > 0 && (
+            <Pressable
+              onPress={() => setQuery("")}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            >
+              <Feather name="x-circle" size={16} color="#9CA3AF" />
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {/* タグ一覧 */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.tagsContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {availableTags.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>{t("forms.tag.emptyTitle")}</Text>
+            <Text style={styles.emptySubText}>
+              {t("forms.tag.emptySubtext")}
+            </Text>
+          </View>
+        ) : filteredTags.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              {t("forms.tag.noSearchResults")}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.tagsGrid}>
+            {filteredTags.map((tag) => {
+              const isSelected = selectedIds.has(tag.id);
+              return (
+                <View
+                  key={tag.id}
+                  style={[
+                    styles.tagItem,
+                    { backgroundColor: tag.color },
+                    isSelected && styles.tagItemSelected,
+                  ]}
+                >
+                  {/* タグ選択部分 */}
+                  <Pressable
+                    style={styles.tagContent}
+                    onPress={() => handleTagToggle(tag)}
+                  >
+                    {isSelected && (
+                      <View style={styles.checkIcon}>
+                        <Feather name="check" size={12} color="#FFFFFF" />
+                      </View>
+                    )}
+                    <Text style={styles.tagText}>{tag.name}</Text>
+                  </Pressable>
+
+                  {/* 三点リーダー */}
+                  <Pressable
+                    style={styles.moreButton}
+                    onPress={() => handleMorePress(tag)}
+                    hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                  >
+                    <Feather name="more-vertical" size={16} color="#374151" />
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* 新規タグ作成ボタン */}
+        <Pressable style={styles.createButton} onPress={onCreateTag}>
+          <Feather name="plus" size={18} color="#2563EB" />
+          <Text style={styles.createButtonText}>
+            {t("forms.tag.createNewButton")}
+          </Text>
+        </Pressable>
+      </ScrollView>
+
+      {/* フッター */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          {t("forms.tag.selectedCount", { count: selectedTags.length })}
+        </Text>
+        <Pressable style={styles.doneButton} onPress={onClose}>
+          <Text style={styles.doneButtonText}>{t("forms.tag.doneButton")}</Text>
+        </Pressable>
+      </View>
+    </SlideUpModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-  },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 16,

@@ -1,10 +1,11 @@
 import React from "react";
-import { View, Text, Pressable, Modal, FlatList, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import type { TFunction } from "i18next";
 import { STYLES, formatStyleDisplay } from "./styleOptions";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
+import { SlideUpModal } from "@/components/ui/SlideUpModal";
 
 export interface StylePickerModalProps {
   visible: boolean;
@@ -25,45 +26,53 @@ export const StylePickerModal: React.FC<StylePickerModalProps> = ({
 }) => {
   const insets = useSafeInsets();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <View style={[styles.modalSheet, { paddingBottom: getSafeFooterPadding(32, insets.bottom) }]}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t("onboarding.step3.styleModalTitle")}</Text>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t("common.close")}>
-              <Feather name="x" size={20} color="#374151" />
+    <SlideUpModal
+      visible={visible}
+      onClose={onClose}
+      overlayColor="rgba(0, 0, 0, 0.4)"
+      sheetStyle={[
+        styles.modalSheet,
+        { paddingBottom: getSafeFooterPadding(32, insets.bottom) },
+      ]}
+    >
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>
+          {t("onboarding.step3.styleModalTitle")}
+        </Text>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t("common.close")}
+        >
+          <Feather name="x" size={20} color="#374151" />
+        </Pressable>
+      </View>
+      <FlatList
+        data={STYLES}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => {
+          const label = formatStyleDisplay(item, t);
+          return (
+            <Pressable
+              style={({ pressed }) => [
+                styles.modalItem,
+                pressed && styles.modalItemPressed,
+              ]}
+              onPress={() => onSelect(item.id)}
+              accessibilityRole="button"
+              accessibilityLabel={label}
+            >
+              <Text style={styles.modalItemText}>{label}</Text>
             </Pressable>
-          </View>
-          <FlatList
-            data={STYLES}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) => {
-              const label = formatStyleDisplay(item, t);
-              return (
-                <Pressable
-                  style={({ pressed }) => [styles.modalItem, pressed && styles.modalItemPressed]}
-                  onPress={() => onSelect(item.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={label}
-                >
-                  <Text style={styles.modalItemText}>{label}</Text>
-                </Pressable>
-              );
-            }}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-      </Pressable>
-    </Modal>
+          );
+        }}
+        showsVerticalScrollIndicator={false}
+      />
+    </SlideUpModal>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "flex-end",
-  },
   modalSheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,

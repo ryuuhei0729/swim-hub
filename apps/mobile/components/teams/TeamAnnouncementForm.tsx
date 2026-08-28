@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import { format, isValid } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -8,6 +15,7 @@ import {
   useUpdateAnnouncementMutation,
 } from "@apps/shared/hooks/queries/teams";
 import { DatePickerField } from "@/components/ui/DatePickerField";
+import { CenterModal } from "@/components/ui/CenterModal";
 import type { TeamAnnouncement } from "@swim-hub/shared/types";
 
 interface TeamAnnouncementFormProps {
@@ -132,7 +140,9 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
         newErrors.endAt = t("teamsAdmin.announcementForm.endAtPastError");
       }
       if (startAt && endAt && endAt < startAt) {
-        newErrors.endAt = t("teamsAdmin.announcementForm.endAtBeforeStartError");
+        newErrors.endAt = t(
+          "teamsAdmin.announcementForm.endAtBeforeStartError",
+        );
       }
     }
 
@@ -163,8 +173,10 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
     setError(null);
 
     try {
-      const startAtValue = buildLocalDateTime(startDate, startTime)?.toISOString() ?? null;
-      const endAtValue = buildLocalDateTime(endDate, endTime)?.toISOString() ?? null;
+      const startAtValue =
+        buildLocalDateTime(startDate, startTime)?.toISOString() ?? null;
+      const endAtValue =
+        buildLocalDateTime(endDate, endTime)?.toISOString() ?? null;
 
       if (editData) {
         // 更新
@@ -211,181 +223,205 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
   const submitDisabled = isLoading || !title.trim() || !content.trim();
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              {editData
-                ? t("teams.mobile.announcementEditTitle")
-                : t("teams.mobile.announcementCreateTitle")}
-            </Text>
-            <Pressable style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </Pressable>
-          </View>
-
-          <ScrollView style={styles.body}>
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("teams.mobile.announcementTitleLabel")}</Text>
-              <TextInput
-                style={styles.input}
-                value={title}
-                onChangeText={setTitle}
-                placeholder={t("teams.mobile.announcementTitlePlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                maxLength={TITLE_MAX_LENGTH}
-                editable={!isLoading}
-              />
-              <Text style={styles.counterText}>
-                {t("teams.mobile.charCounter", { current: title.length, max: TITLE_MAX_LENGTH })}
-              </Text>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("teams.mobile.announcementContentLabel")}</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={content}
-                onChangeText={setContent}
-                placeholder={t("teams.mobile.announcementContentPlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                multiline
-                numberOfLines={8}
-                textAlignVertical="top"
-                maxLength={CONTENT_MAX_LENGTH}
-                editable={!isLoading}
-              />
-              <Text style={styles.counterText}>
-                {t("teams.mobile.charCounter", {
-                  current: content.length,
-                  max: CONTENT_MAX_LENGTH,
-                })}
-              </Text>
-            </View>
-
-            {/* 表示期間設定（web AnnouncementForm.tsx:220-265 準拠） */}
-            <View style={styles.periodSection}>
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>{t("teamsAdmin.announcementForm.startAtLabel")}</Text>
-                <View style={styles.dateTimeRow}>
-                  <View style={styles.dateField}>
-                    <DatePickerField
-                      value={startDate}
-                      onChange={(date) => {
-                        setStartDate(date);
-                        setDateErrors((prev) => ({ ...prev, startAt: undefined }));
-                      }}
-                      disabled={isLoading}
-                      allowClear
-                    />
-                  </View>
-                  <TextInput
-                    style={[styles.input, styles.timeInput, dateErrors.startAt && styles.inputError]}
-                    value={startTime}
-                    onChangeText={(text) => {
-                      setStartTime(text);
-                      setDateErrors((prev) => ({ ...prev, startAt: undefined }));
-                    }}
-                    placeholder="HH:MM"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={5}
-                    editable={!isLoading}
-                  />
-                </View>
-                {dateErrors.startAt && (
-                  <Text style={styles.fieldErrorText}>{dateErrors.startAt}</Text>
-                )}
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>{t("teamsAdmin.announcementForm.endAtLabel")}</Text>
-                <View style={styles.dateTimeRow}>
-                  <View style={styles.dateField}>
-                    <DatePickerField
-                      value={endDate}
-                      onChange={(date) => {
-                        setEndDate(date);
-                        setDateErrors((prev) => ({ ...prev, endAt: undefined }));
-                      }}
-                      disabled={isLoading}
-                      allowClear
-                    />
-                  </View>
-                  <TextInput
-                    style={[styles.input, styles.timeInput, dateErrors.endAt && styles.inputError]}
-                    value={endTime}
-                    onChangeText={(text) => {
-                      setEndTime(text);
-                      setDateErrors((prev) => ({ ...prev, endAt: undefined }));
-                    }}
-                    placeholder="HH:MM"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={5}
-                    editable={!isLoading}
-                  />
-                </View>
-                {dateErrors.endAt && <Text style={styles.fieldErrorText}>{dateErrors.endAt}</Text>}
-              </View>
-            </View>
-          </ScrollView>
-
-          {/* フッター: 下書き保存 / キャンセル / 公開（web AnnouncementForm.tsx:270-298 準拠） */}
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.button, styles.draftButton, submitDisabled && styles.buttonDisabledOutline]}
-              onPress={() => handleSubmit(false)}
-              disabled={submitDisabled}
-            >
-              <Text style={styles.draftButtonText}>
-                {isLoading
-                  ? t("teamsAdmin.announcementForm.saving")
-                  : t("teamsAdmin.announcementForm.saveDraftButton")}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={isLoading}
-            >
-              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.button, styles.submitButton, submitDisabled && styles.submitButtonDisabled]}
-              onPress={() => handleSubmit(true)}
-              disabled={submitDisabled}
-            >
-              <Text style={styles.submitButtonText}>
-                {isLoading
-                  ? t("teamsAdmin.announcementForm.saving")
-                  : editData
-                    ? t("teamsAdmin.announcementForm.publishUpdateButton")
-                    : t("teamsAdmin.announcementForm.publishCreateButton")}
-              </Text>
-            </Pressable>
-          </View>
+    <CenterModal
+      visible={visible}
+      onClose={handleClose}
+      closeAccessibilityLabel={t("common.close")}
+      showCloseButton={false}
+      contentStyle={styles.modalContent}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          {editData
+            ? t("teams.mobile.announcementEditTitle")
+            : t("teams.mobile.announcementCreateTitle")}
+        </Text>
+        <Pressable style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <ScrollView style={styles.body}>
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            {t("teams.mobile.announcementTitleLabel")}
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={title}
+            onChangeText={setTitle}
+            placeholder={t("teams.mobile.announcementTitlePlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            maxLength={TITLE_MAX_LENGTH}
+            editable={!isLoading}
+          />
+          <Text style={styles.counterText}>
+            {t("teams.mobile.charCounter", {
+              current: title.length,
+              max: TITLE_MAX_LENGTH,
+            })}
+          </Text>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            {t("teams.mobile.announcementContentLabel")}
+          </Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={content}
+            onChangeText={setContent}
+            placeholder={t("teams.mobile.announcementContentPlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            multiline
+            numberOfLines={8}
+            textAlignVertical="top"
+            maxLength={CONTENT_MAX_LENGTH}
+            editable={!isLoading}
+          />
+          <Text style={styles.counterText}>
+            {t("teams.mobile.charCounter", {
+              current: content.length,
+              max: CONTENT_MAX_LENGTH,
+            })}
+          </Text>
+        </View>
+
+        {/* 表示期間設定（web AnnouncementForm.tsx:220-265 準拠） */}
+        <View style={styles.periodSection}>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              {t("teamsAdmin.announcementForm.startAtLabel")}
+            </Text>
+            <View style={styles.dateTimeRow}>
+              <View style={styles.dateField}>
+                <DatePickerField
+                  value={startDate}
+                  onChange={(date) => {
+                    setStartDate(date);
+                    setDateErrors((prev) => ({ ...prev, startAt: undefined }));
+                  }}
+                  disabled={isLoading}
+                  allowClear
+                />
+              </View>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.timeInput,
+                  dateErrors.startAt && styles.inputError,
+                ]}
+                value={startTime}
+                onChangeText={(text) => {
+                  setStartTime(text);
+                  setDateErrors((prev) => ({ ...prev, startAt: undefined }));
+                }}
+                placeholder="HH:MM"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+                editable={!isLoading}
+              />
+            </View>
+            {dateErrors.startAt && (
+              <Text style={styles.fieldErrorText}>{dateErrors.startAt}</Text>
+            )}
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>
+              {t("teamsAdmin.announcementForm.endAtLabel")}
+            </Text>
+            <View style={styles.dateTimeRow}>
+              <View style={styles.dateField}>
+                <DatePickerField
+                  value={endDate}
+                  onChange={(date) => {
+                    setEndDate(date);
+                    setDateErrors((prev) => ({ ...prev, endAt: undefined }));
+                  }}
+                  disabled={isLoading}
+                  allowClear
+                />
+              </View>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.timeInput,
+                  dateErrors.endAt && styles.inputError,
+                ]}
+                value={endTime}
+                onChangeText={(text) => {
+                  setEndTime(text);
+                  setDateErrors((prev) => ({ ...prev, endAt: undefined }));
+                }}
+                placeholder="HH:MM"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+                editable={!isLoading}
+              />
+            </View>
+            {dateErrors.endAt && (
+              <Text style={styles.fieldErrorText}>{dateErrors.endAt}</Text>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* フッター: 下書き保存 / キャンセル / 公開（web AnnouncementForm.tsx:270-298 準拠） */}
+      <View style={styles.footer}>
+        <Pressable
+          style={[
+            styles.button,
+            styles.draftButton,
+            submitDisabled && styles.buttonDisabledOutline,
+          ]}
+          onPress={() => handleSubmit(false)}
+          disabled={submitDisabled}
+        >
+          <Text style={styles.draftButtonText}>
+            {isLoading
+              ? t("teamsAdmin.announcementForm.saving")
+              : t("teamsAdmin.announcementForm.saveDraftButton")}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.button, styles.cancelButton]}
+          onPress={handleClose}
+          disabled={isLoading}
+        >
+          <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.button,
+            styles.submitButton,
+            submitDisabled && styles.submitButtonDisabled,
+          ]}
+          onPress={() => handleSubmit(true)}
+          disabled={submitDisabled}
+        >
+          <Text style={styles.submitButtonText}>
+            {isLoading
+              ? t("teamsAdmin.announcementForm.saving")
+              : editData
+                ? t("teamsAdmin.announcementForm.publishUpdateButton")
+                : t("teamsAdmin.announcementForm.publishCreateButton")}
+          </Text>
+        </Pressable>
+      </View>
+    </CenterModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,

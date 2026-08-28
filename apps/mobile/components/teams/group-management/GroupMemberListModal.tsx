@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
-  Modal,
   Pressable,
   FlatList,
   ActivityIndicator,
@@ -13,6 +12,7 @@ import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
+import { CenterModal } from "@/components/ui/CenterModal";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface MemberInfo {
@@ -36,7 +36,11 @@ interface GroupMemberRowProps {
  * グループメンバー1行分の表示
  * profile-images は private バケットのため、行単位で署名付きURLを解決する（Issue #36）
  */
-const GroupMemberRow: React.FC<GroupMemberRowProps> = ({ item, memberName, onPress }) => {
+const GroupMemberRow: React.FC<GroupMemberRowProps> = ({
+  item,
+  memberName,
+  onPress,
+}) => {
   const { t } = useTranslation();
   const { url: resolvedAvatarUrl } = useSignedImageUrl(
     "profile-images",
@@ -45,7 +49,10 @@ const GroupMemberRow: React.FC<GroupMemberRowProps> = ({ item, memberName, onPre
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.memberRow, pressed && styles.memberRowPressed]}
+      style={({ pressed }) => [
+        styles.memberRow,
+        pressed && styles.memberRowPressed,
+      ]}
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole="button"
@@ -54,10 +61,16 @@ const GroupMemberRow: React.FC<GroupMemberRowProps> = ({ item, memberName, onPre
       })}
     >
       {resolvedAvatarUrl ? (
-        <Image source={{ uri: resolvedAvatarUrl }} style={styles.avatarImage} contentFit="cover" />
+        <Image
+          source={{ uri: resolvedAvatarUrl }}
+          style={styles.avatarImage}
+          contentFit="cover"
+        />
       ) : (
         <View style={styles.avatarPlaceholder}>
-          <Text style={styles.avatarText}>{memberName.charAt(0).toUpperCase()}</Text>
+          <Text style={styles.avatarText}>
+            {memberName.charAt(0).toUpperCase()}
+          </Text>
         </View>
       )}
       <Text style={styles.memberName} numberOfLines={1}>
@@ -65,7 +78,9 @@ const GroupMemberRow: React.FC<GroupMemberRowProps> = ({ item, memberName, onPre
       </Text>
       {item.role === "admin" && (
         <View style={styles.adminBadge}>
-          <Text style={styles.adminBadgeText}>{t("teams.mobile.roleAdmin")}</Text>
+          <Text style={styles.adminBadgeText}>
+            {t("teams.mobile.roleAdmin")}
+          </Text>
         </View>
       )}
     </Pressable>
@@ -104,7 +119,9 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
         .eq("team_group_id", group.id);
       if (gmError) throw gmError;
 
-      const userIds = (groupMemberships ?? []).map((m: { user_id: string }) => m.user_id);
+      const userIds = (groupMemberships ?? []).map(
+        (m: { user_id: string }) => m.user_id,
+      );
       if (userIds.length === 0) {
         setMembers([]);
         return;
@@ -145,69 +162,95 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
     }
   }, [visible, group, loadMembers]);
 
-  if (!group) return null;
+  // 呼び出し元 (TeamGroupManagement.tsx) は group と visible を同一 state で同時に
+  // null/false にするため、生の group だけで中身を判定すると CenterModal の閉じ
+  // アニメーション(160msのフェード+スケールアウト)より先に中身が消えてしまう
+  // (空の白いカードが一瞬見える)。そこで直近の非 null な group をキャッシュし、
+  // レンダーにはこちら (displayGroup) を使う (GroupMemberModal.tsx と同じ方式。
+  // レンダー中に ref.current を読むと react-hooks/refs に抵触するため
+  // useState + useEffect で同期する)。
+  // データ取得 (loadMembers/useEffect) は生の group を使い続ける (キャッシュ値を使うと
+  // 別グループを開いたときに古いグループのメンバーを再取得してしまう)。
+  // 「group を一度も受け取っていない (= 初回マウントから null のまま)」場合だけ、
+  // 何もレンダーしない (GroupMemberModal.tsx の [V-B1-14] と同じ契約)。
+  const [displayGroup, setDisplayGroup] = useState<TeamGroupWithCount | null>(
+    group,
+  );
+  useEffect(() => {
+    if (group !== null) {
+      setDisplayGroup(group);
+    }
+  }, [group]);
+
+  if (!displayGroup) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title} numberOfLines={1}>
-              {group.name}
-            </Text>
-            <Pressable style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.body}>
-            {/* メンバー数 */}
-            <View style={styles.countRow}>
-              <Feather name="users" size={14} color="#6B7280" />
-              <Text style={styles.countText}>{t("teams.mobile.groupManagement.memberCount", { count: members.length })}</Text>
-            </View>
-
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#2563EB" />
-              </View>
-            ) : members.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Feather name="users" size={40} color="#D1D5DB" />
-                <Text style={styles.emptyText}>{t("teams.mobile.groupManagement.membersEmpty")}</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={members}
-                keyExtractor={(item) => item.id}
-                style={styles.memberList}
-                renderItem={({ item }) => {
-                  const memberName = item.users?.name || t("teams.mobile.unnamedMember");
-                  return (
-                    <GroupMemberRow
-                      item={item}
-                      memberName={memberName}
-                      onPress={onMemberClick ? () => onMemberClick(item.user_id) : undefined}
-                    />
-                  );
-                }}
-              />
-            )}
-          </View>
+    <CenterModal
+      visible={visible}
+      onClose={onClose}
+      closeAccessibilityLabel={t("common.close")}
+      showCloseButton={false}
+      contentStyle={styles.modalContent}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title} numberOfLines={1}>
+          {displayGroup.name}
+        </Text>
+        <Pressable style={styles.closeButton} onPress={onClose}>
+          <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <View style={styles.body}>
+        {/* メンバー数 */}
+        <View style={styles.countRow}>
+          <Feather name="users" size={14} color="#6B7280" />
+          <Text style={styles.countText}>
+            {t("teams.mobile.groupManagement.memberCount", {
+              count: members.length,
+            })}
+          </Text>
+        </View>
+
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#2563EB" />
+          </View>
+        ) : members.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Feather name="users" size={40} color="#D1D5DB" />
+            <Text style={styles.emptyText}>
+              {t("teams.mobile.groupManagement.membersEmpty")}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={members}
+            keyExtractor={(item) => item.id}
+            style={styles.memberList}
+            renderItem={({ item }) => {
+              const memberName =
+                item.users?.name || t("teams.mobile.unnamedMember");
+              return (
+                <GroupMemberRow
+                  item={item}
+                  memberName={memberName}
+                  onPress={
+                    onMemberClick
+                      ? () => onMemberClick(item.user_id)
+                      : undefined
+                  }
+                />
+              );
+            }}
+          />
+        )}
+      </View>
+    </CenterModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,

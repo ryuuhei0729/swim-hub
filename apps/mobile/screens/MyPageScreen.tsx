@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from "@/components/profile";
+import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import type { MainStackParamList } from "@/navigation/types";
@@ -25,6 +26,7 @@ export const MyPageScreen: React.FC = () => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isWaPointsMode, setIsWaPointsMode] = useState(false);
 
   // プロフィールとチーム情報取得
   const {
@@ -196,15 +198,31 @@ export const MyPageScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Best Time</Text>
-            <Pressable
-              style={styles.bulkInputButton}
-              onPress={() => navigation.navigate("BulkBestTime")}
-              accessibilityRole="button"
-              accessibilityLabel={t("mypage.mobile.bulkInputAria")}
-            >
-              <Feather name="upload" size={14} color="#374151" />
-              <Text style={styles.bulkInputButtonText}>{t("mypage.mobile.bulkInput")}</Text>
-            </Pressable>
+            <View style={styles.bestTimeHeaderActions}>
+              <Pressable
+                style={styles.bulkInputButton}
+                onPress={() => navigation.navigate("BulkBestTime")}
+                accessibilityRole="button"
+                accessibilityLabel={t("mypage.mobile.bulkInputAria")}
+              >
+                <Feather name="upload" size={14} color="#374151" />
+                <Text style={styles.bulkInputButtonText}>{t("mypage.mobile.bulkInput")}</Text>
+              </Pressable>
+              <View style={styles.waToggleWrapper}>
+                <Pressable
+                  testID="best-times-wa-points-toggle-mypage"
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isWaPointsMode }}
+                  style={[styles.waToggleButton, isWaPointsMode && styles.waToggleButtonActive]}
+                  onPress={() => setIsWaPointsMode((prev) => !prev)}
+                >
+                  <Text style={[styles.waToggleText, isWaPointsMode && styles.waToggleTextActive]}>
+                    {t("mypage.bestTimesTable.waPointsToggle")}
+                  </Text>
+                </Pressable>
+                <WaPointsInfoTooltip testID="best-times-wa-info-mypage" />
+              </View>
+            </View>
           </View>
           {bestTimesError ? (
             <View style={styles.errorContainer}>
@@ -213,7 +231,11 @@ export const MyPageScreen: React.FC = () => {
               </Text>
             </View>
           ) : (
-            <BestTimesTable bestTimes={bestTimes} gender={profile?.gender} />
+            <BestTimesTable
+              bestTimes={bestTimes}
+              gender={profile?.gender}
+              isWaPointsMode={isWaPointsMode}
+            />
           )}
         </View>
       </ScrollView>
@@ -258,6 +280,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    rowGap: 8,
     marginBottom: 16,
     paddingBottom: 12,
     paddingHorizontal: 16,
@@ -297,6 +321,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: "#374151",
+  },
+  bestTimeHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    flexShrink: 1,
+    gap: 8,
+  },
+  waToggleWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  waToggleButton: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+  },
+  waToggleButtonActive: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  waToggleText: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  waToggleTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   pageHeader: {
     flexDirection: "row",

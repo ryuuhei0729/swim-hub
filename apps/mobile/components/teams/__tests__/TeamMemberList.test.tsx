@@ -737,21 +737,32 @@ describe("TeamMemberList - D-1 クエリのフィールド網羅性 + セル詳�
   // Developer が `selectedCellKey` state + 同一トグル判定を追加し解消済み。
   // このテストは回帰防止のための検出器として引き続き残す (期待値は緩めていない)。
   // =============================================================================
-  it("[V-CELL-06b] 同一セル再タップで閉じる (回帰防止)", async () => {
-    const member = buildMember({ id: "m-1", user_id: "u-1", name: "再タップ五郎" });
-    buildCapturingRecordsMock(buildTwoCellFixture());
+  it(
+    "[V-CELL-06b] 同一セル再タップで閉じる (回帰防止) " +
+      "(PM裁定: CenterModal の閉じアニメーション分(160ms)の遅延を許容する。契約は" +
+      "「同一セル再タップで閉じる」であって「0msで中身が消える」ではないため、" +
+      "同期アサーションではなく waitFor で待つ。ただし『そもそも閉じない』退行は" +
+      "waitFor のタイムアウト(既定5000ms > 160ms)で確実に赤くなる)",
+    async () => {
+      const member = buildMember({ id: "m-1", user_id: "u-1", name: "再タップ五郎" });
+      buildCapturingRecordsMock(buildTwoCellFixture());
 
-    renderList([member]);
-    await screen.findByText("再タップ五郎");
+      renderList([member]);
+      await screen.findByText("再タップ五郎");
 
-    const cellA = screen.getByText("33.44");
-    fireEvent.click(cellA);
-    expect(await screen.findByText("セルA大会")).toBeTruthy();
+      const cellA = screen.getByText("33.44");
+      fireEvent.click(cellA);
+      expect(await screen.findByText("セルA大会")).toBeTruthy();
 
-    // 同一セル再タップで閉じるはず
-    fireEvent.click(cellA);
-    expect(screen.queryByText("セルA大会")).toBeNull();
-  });
+      // 同一セル再タップで閉じるはず。閉じるアニメーション (CenterModal の
+      // ANIMATION_DURATION=160ms) の間は直近の中身が残っていてもよいため、
+      // アニメーション完了後に消えていることを waitFor で確認する。
+      fireEvent.click(cellA);
+      await waitFor(() => {
+        expect(screen.queryByText("セルA大会")).toBeNull();
+      });
+    },
+  );
 });
 
 // =============================================================================

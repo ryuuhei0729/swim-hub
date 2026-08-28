@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Modal,
   ScrollView,
   Switch,
 } from "react-native";
@@ -12,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TeamMembershipWithUser } from "@apps/shared/types";
+import { SlideUpModal } from "@/components/ui/SlideUpModal";
 
 interface MemberSelectModalProps {
   visible: boolean;
@@ -52,7 +52,9 @@ export function MemberSelectModal({
 
   const toggle = (userId: string) => {
     setTempSelected((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId],
     );
   };
 
@@ -60,99 +62,99 @@ export function MemberSelectModal({
   const clearAll = () => setTempSelected([]);
 
   return (
-    <Modal
+    <SlideUpModal
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onCancel}
+      onClose={onCancel}
+      overlayColor="rgba(0,0,0,0.4)"
+      sheetStyle={styles.sheet}
     >
-      <View style={styles.overlay}>
-        <Pressable style={styles.backdrop} onPress={onCancel} />
-        <View style={styles.sheet}>
-          {/* ヘッダー */}
-          <View style={styles.header}>
-            <Text style={styles.title}>{title ?? t("teams.record.memberSelectTitle")}</Text>
-            <Pressable
-              onPress={onCancel}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t("common.cancel")}
-            >
-              <Feather name="x" size={22} color="#6B7280" />
-            </Pressable>
-          </View>
-
-          {/* 一括選択 */}
-          <View style={styles.bulkRow}>
-            <Pressable style={styles.bulkSelectButton} onPress={selectAll}>
-              <Text style={styles.bulkSelectText}>{t("teams.record.selectAll")}</Text>
-            </Pressable>
-            <Pressable style={styles.bulkClearButton} onPress={clearAll}>
-              <Text style={styles.bulkClearText}>{t("teams.record.clearSelection")}</Text>
-            </Pressable>
-          </View>
-
-          {/* メンバーリスト */}
-          <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-            {members.map((member) => {
-              const isSelected = tempSelected.includes(member.user_id);
-              return (
-                <Pressable
-                  key={member.id}
-                  style={[styles.memberRow, isSelected && styles.memberRowSelected]}
-                  onPress={() => toggle(member.user_id)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: isSelected }}
-                >
-                  <Switch
-                    value={isSelected}
-                    onValueChange={() => toggle(member.user_id)}
-                  />
-                  <Text style={styles.memberName} numberOfLines={1}>
-                    {member.users?.name || t("teams.mobile.unnamedMember")}
-                  </Text>
-                  {member.role === "admin" && (
-                    <View style={styles.adminBadge}>
-                      <Text style={styles.adminBadgeText}>{t("teams.record.adminBadge")}</Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* フッター */}
-          <SafeAreaView edges={["bottom"]} style={styles.footer}>
-            <Text style={styles.countText}>
-              {t("teams.record.selectedMemberCount", { n: tempSelected.length })}
-            </Text>
-            <View style={styles.footerButtons}>
-              <Pressable style={styles.cancelButton} onPress={onCancel}>
-                <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
-              </Pressable>
-              <Pressable
-                style={styles.confirmButton}
-                onPress={() => onConfirm(tempSelected)}
-              >
-                <Text style={styles.confirmButtonText}>{t("teams.record.confirmSelection")}</Text>
-              </Pressable>
-            </View>
-          </SafeAreaView>
-        </View>
+      {/* ヘッダー */}
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          {title ?? t("teams.record.memberSelectTitle")}
+        </Text>
+        <Pressable
+          onPress={onCancel}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t("common.cancel")}
+        >
+          <Feather name="x" size={22} color="#6B7280" />
+        </Pressable>
       </View>
-    </Modal>
+
+      {/* 一括選択 */}
+      <View style={styles.bulkRow}>
+        <Pressable style={styles.bulkSelectButton} onPress={selectAll}>
+          <Text style={styles.bulkSelectText}>
+            {t("teams.record.selectAll")}
+          </Text>
+        </Pressable>
+        <Pressable style={styles.bulkClearButton} onPress={clearAll}>
+          <Text style={styles.bulkClearText}>
+            {t("teams.record.clearSelection")}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* メンバーリスト */}
+      <ScrollView
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+      >
+        {members.map((member) => {
+          const isSelected = tempSelected.includes(member.user_id);
+          return (
+            <Pressable
+              key={member.id}
+              style={[styles.memberRow, isSelected && styles.memberRowSelected]}
+              onPress={() => toggle(member.user_id)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: isSelected }}
+            >
+              <Switch
+                value={isSelected}
+                onValueChange={() => toggle(member.user_id)}
+              />
+              <Text style={styles.memberName} numberOfLines={1}>
+                {member.users?.name || t("teams.mobile.unnamedMember")}
+              </Text>
+              {member.role === "admin" && (
+                <View style={styles.adminBadge}>
+                  <Text style={styles.adminBadgeText}>
+                    {t("teams.record.adminBadge")}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      {/* フッター */}
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
+        <Text style={styles.countText}>
+          {t("teams.record.selectedMemberCount", { n: tempSelected.length })}
+        </Text>
+        <View style={styles.footerButtons}>
+          <Pressable style={styles.cancelButton} onPress={onCancel}>
+            <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
+          </Pressable>
+          <Pressable
+            style={styles.confirmButton}
+            onPress={() => onConfirm(tempSelected)}
+          >
+            <Text style={styles.confirmButtonText}>
+              {t("teams.record.confirmSelection")}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </SlideUpModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 16,

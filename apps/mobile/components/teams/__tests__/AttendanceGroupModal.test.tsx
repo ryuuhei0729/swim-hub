@@ -163,6 +163,39 @@ describe("AttendanceGroupModal", () => {
     expect(onChangeLinkPress).toHaveBeenCalledTimes(1);
   });
 
+  it(
+    "[V-SLIDE-01] 背面タップで閉じない (SlideUpModal 移行後も NOOP_BACKDROP_PRESS のまま)",
+    async () => {
+      const onClose = vi.fn();
+      mocks.getAttendanceByPractice.mockResolvedValue([
+        makeAttendance("u1", "present", "田中"),
+      ]);
+      mocks.fetchTeamMembers.mockResolvedValue([{ id: "u1", name: "田中" }]);
+
+      const { container } = render(
+        <AttendanceGroupModal {...defaultProps} onClose={onClose} />,
+      );
+
+      await screen.findByText("出席 (1名)");
+
+      // SlideUpModal の背面タップ用 Pressable は絶対配置 (StyleSheet.absoluteFill) の
+      // button として一意に識別できる (この画面には他に absoluteFill を使う button が無い)。
+      const backdropCandidates = Array.from(container.querySelectorAll("button")).filter((el) =>
+        (el.getAttribute("style") ?? "").includes("position: absolute"),
+      );
+      expect(backdropCandidates.length).toBe(1);
+
+      fireEvent.click(backdropCandidates[0]);
+
+      // 閉じるアニメーション分の待機を挟んでも onClose が呼ばれないこと
+      // (SlideUpModal は閉じるとき即座に unmount せず setTimeout 後に unmount するため、
+      // タップ直後の DOM 残存だけでは「閉じない」ことの証明にならない。onClose 呼び出し
+      // 有無で直接判定する)
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(onClose).not.toHaveBeenCalled();
+    },
+  );
+
   it("[V-T6-03] 非表示インスタンスは名簿取得を遅延し、開いたインスタンスのみ1回だけ取得する(visibleガードの仕様固定)", async () => {
     // T-6 の本番形状: 同じ日に複数のチームイベントカードがあり、カードごとに
     // AttendanceGroupModal がマウントされる。ユーザーがまだどれもタップしていない間は

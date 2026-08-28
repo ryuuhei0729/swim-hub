@@ -12,13 +12,14 @@ import {
   type WaPointsCellCandidate,
 } from "@apps/shared/utils/waPoints";
 import type { BestTime } from "@apps/shared/types/ui";
-import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/BestTimeDetailSheet";
 
 interface BestTimesTableProps {
   bestTimes: BestTime[];
   /** 0: 男性, 1: 女性, undefined/その他: 不明 (WAポイントは常に「—」)。`?? 0` でフォールバックしないこと */
   gender?: number;
+  /** WAポイント表示モード。トグルボタンは呼び出し元 (MyPageScreen) に移設済み */
+  isWaPointsMode: boolean;
 }
 
 type TabType = "all" | "short" | "long";
@@ -35,11 +36,10 @@ const styleColors: Record<string, { bg: string; text: string }> = {
 /**
  * ベストタイム表コンポーネント
  */
-export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes, gender }) => {
+export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes, gender, isWaPointsMode }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false);
-  const [isWaPointsMode, setIsWaPointsMode] = useState<boolean>(false);
   const [selectedCellKey, setSelectedCellKey] = useState<string | null>(null);
   const [selectedDetail, setSelectedDetail] = useState<BestTimeDetail | null>(null);
 
@@ -204,22 +204,6 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes, gende
           ))}
         </View>
         <View style={styles.rightControls}>
-          <View style={styles.waToggleWrapper}>
-            <Pressable
-              testID="best-times-wa-points-toggle-mypage"
-              accessibilityRole="button"
-              accessibilityState={{ selected: isWaPointsMode }}
-              style={[styles.waToggleButton, isWaPointsMode && styles.waToggleButtonActive]}
-              onPress={() => setIsWaPointsMode((prev) => !prev)}
-            >
-              <Text
-                style={[styles.waToggleText, isWaPointsMode && styles.waToggleTextActive]}
-              >
-                {t("mypage.bestTimesTable.waPointsToggle")}
-              </Text>
-            </Pressable>
-            <WaPointsInfoTooltip testID="best-times-wa-info-mypage" />
-          </View>
           <Pressable
             style={styles.checkboxContainer}
             onPress={() => setIncludeRelaying(!includeRelaying)}
@@ -410,32 +394,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexWrap: "wrap",
     gap: 12,
-  },
-  waToggleWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  waToggleButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-  },
-  waToggleButtonActive: {
-    backgroundColor: "#2563EB",
-    borderColor: "#2563EB",
-  },
-  waToggleText: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  waToggleTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "600",
   },
   checkboxContainer: {
     flexDirection: "row",

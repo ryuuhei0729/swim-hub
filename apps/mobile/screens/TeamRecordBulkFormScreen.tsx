@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Alert,
   Switch,
-  Modal,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -30,7 +29,10 @@ import {
   buildEntryTimeReferenceLookup,
   type EntryRowForRecordMerge,
 } from "@apps/shared/utils/entryRecordMerge";
-import { normalizeReactionTime, toReactionTimeValue } from "@apps/shared/utils/reactionTime";
+import {
+  normalizeReactionTime,
+  toReactionTimeValue,
+} from "@apps/shared/utils/reactionTime";
 import { formatTimeBest } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
@@ -40,7 +42,11 @@ import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { MemberSelectModal } from "@/components/teams/MemberSelectModal";
-import { uploadVideoForTeamMember, MissingThumbnailError } from "@/utils/videoUpload";
+import { SlideUpModal } from "@/components/ui/SlideUpModal";
+import {
+  uploadVideoForTeamMember,
+  MissingThumbnailError,
+} from "@/utils/videoUpload";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
@@ -125,11 +131,18 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
   const [existingRecords, setExistingRecords] = useState<ExistingRecord[]>([]);
 
   // メンバー選択モーダル
-  const [memberModalEntryId, setMemberModalEntryId] = useState<string | null>(null);
+  const [memberModalEntryId, setMemberModalEntryId] = useState<string | null>(
+    null,
+  );
   // 種目選択モーダル
-  const [stylePickerEntryId, setStylePickerEntryId] = useState<string | null>(null);
+  const [stylePickerEntryId, setStylePickerEntryId] = useState<string | null>(
+    null,
+  );
   // リレー泳者選択モーダル（entryId + legIndex）
-  const [legPicker, setLegPicker] = useState<{ entryId: string; legIndex: number } | null>(null);
+  const [legPicker, setLegPicker] = useState<{
+    entryId: string;
+    legIndex: number;
+  } | null>(null);
 
   const relayEvents = useMemo(
     () =>
@@ -138,7 +151,8 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         br: t("practice.styles.Br"),
         fly: t("practice.styles.Fly"),
         fr: t("practice.styles.Fr"),
-        legLabel: (num, style) => t("competition.records.relayLegLabel", { num, style }),
+        legLabel: (num, style) =>
+          t("competition.records.relayLegLabel", { num, style }),
         freeRelaySuffix: t("competition.records.freeRelaySuffix"),
         medleyRelaySuffix: t("competition.records.medleyRelaySuffix"),
       }),
@@ -155,41 +169,45 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         setLoadError(null);
 
         const styleApi = new StyleAPI(supabase);
-        const [stylesData, competitionRes, recordsRes, entriesRes] = await Promise.all([
-          styleApi.getStyles(),
-          supabase
-            .from("competitions")
-            .select("id, title, pool_type")
-            .eq("id", competitionId)
-            .eq("team_id", teamId)
-            .single(),
-          supabase
-            .from("records")
-            .select(
-              `id, user_id, style_id, time, is_relaying, reaction_time, note,
+        const [stylesData, competitionRes, recordsRes, entriesRes] =
+          await Promise.all([
+            styleApi.getStyles(),
+            supabase
+              .from("competitions")
+              .select("id, title, pool_type")
+              .eq("id", competitionId)
+              .eq("team_id", teamId)
+              .single(),
+            supabase
+              .from("records")
+              .select(
+                `id, user_id, style_id, time, is_relaying, reaction_time, note,
                split_times ( id, distance, split_time ),
                users:users!records_user_id_fkey ( id, name )`,
-            )
-            .eq("competition_id", competitionId)
-            .eq("team_id", teamId)
-            .order("created_at", { ascending: true }),
-          // エントリー（申告タイム）。記録の初期行反映と参照ラベル表示に使う（entry_time は
-          // 入力欄には絶対に入れない。仕様#1）
-          supabase
-            .from("entries")
-            .select(
-              `id, user_id, style_id, entry_time, note,
+              )
+              .eq("competition_id", competitionId)
+              .eq("team_id", teamId)
+              .order("created_at", { ascending: true }),
+            // エントリー（申告タイム）。記録の初期行反映と参照ラベル表示に使う（entry_time は
+            // 入力欄には絶対に入れない。仕様#1）
+            supabase
+              .from("entries")
+              .select(
+                `id, user_id, style_id, entry_time, note,
                users:users!entries_user_id_fkey ( id, name )`,
-            )
-            .eq("competition_id", competitionId)
-            .eq("team_id", teamId)
-            .order("created_at", { ascending: true }),
-        ]);
+              )
+              .eq("competition_id", competitionId)
+              .eq("team_id", teamId)
+              .order("created_at", { ascending: true }),
+          ]);
 
         if (!isMounted) return;
 
         if (competitionRes.error || !competitionRes.data) {
-          throw competitionRes.error || new Error(t("recordMobile.competitionFetchFailed"));
+          throw (
+            competitionRes.error ||
+            new Error(t("recordMobile.competitionFetchFailed"))
+          );
         }
 
         const comp = competitionRes.data as unknown as {
@@ -202,9 +220,14 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         // recordsRes と同様に空配列へフォールバックする（web RecordDataLoader.tsx と同じ設計。
         // Reviewer 指摘: entries を fatal 扱いすると本機能追加前は無かった単一障害点が生まれる）。
         if (entriesRes.error) {
-          console.error("エントリー取得エラー（記録入力は続行）:", entriesRes.error);
+          console.error(
+            "エントリー取得エラー（記録入力は続行）:",
+            entriesRes.error,
+          );
         }
-        const rawEntries = (entriesRes.error ? [] : entriesRes.data || []) as unknown as Array<{
+        const rawEntries = (entriesRes.error
+          ? []
+          : entriesRes.data || []) as unknown as Array<{
           id: string;
           user_id: string;
           style_id: number;
@@ -214,33 +237,52 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         }>;
 
         setStyles(stylesData);
-        setCompetition({ id: comp.id, title: comp.title, pool_type: comp.pool_type });
+        setCompetition({
+          id: comp.id,
+          title: comp.title,
+          pool_type: comp.pool_type,
+        });
         setExistingRecords(records);
         setIsEditMode(records.length > 0);
 
         // 既存記録を優先し、不足分だけエントリーから初期行として追加する（仕様#2）。
         // (user_id, style_id) の重複排除とリレーグループ不可侵は shared の
         // planEntryAdditionsForRecords が保証する（mobile 側では再実装しない）。
-        const baseStyleEntries = buildStyleEntriesFromExisting(records, stylesData);
+        const baseStyleEntries = buildStyleEntriesFromExisting(
+          records,
+          stylesData,
+        );
         const entryRows: EntryRowForRecordMerge[] = rawEntries.map((e) => ({
           id: e.id,
           user_id: e.user_id,
           style_id: e.style_id,
           entry_time: e.entry_time,
           note: e.note,
-          userName: e.users?.name || t("teams.competitionRecordsModal.unknownUser"),
+          userName:
+            e.users?.name || t("teams.competitionRecordsModal.unknownUser"),
         }));
-        const plans = planEntryAdditionsForRecords(entryRows, baseStyleEntries, stylesData);
-        const merged = applyEntryAdditionsToStyleEntries(baseStyleEntries, plans);
+        const plans = planEntryAdditionsForRecords(
+          entryRows,
+          baseStyleEntries,
+          stylesData,
+        );
+        const merged = applyEntryAdditionsToStyleEntries(
+          baseStyleEntries,
+          plans,
+        );
 
         // 既存記録由来の行にも参考表示 (entryTimeReference) を後付けする（仕様#修正3:
         // 重複排除で追加されなかった行でも、申告タイムと結果タイムを見比べられるようにする）
         const entryTimeByUserStyle = buildEntryTimeReferenceLookup(entryRows);
-        setStyleEntries(stampExistingEntryTimeReferences(merged, entryTimeByUserStyle));
+        setStyleEntries(
+          stampExistingEntryTimeReferences(merged, entryTimeByUserStyle),
+        );
       } catch (err) {
         if (!isMounted) return;
         console.error("チーム記録ロードエラー:", err);
-        setLoadError(err instanceof Error ? err.message : t("recordMobile.saveFailed"));
+        setLoadError(
+          err instanceof Error ? err.message : t("recordMobile.saveFailed"),
+        );
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -272,7 +314,12 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
     setStyleEntries((prev) =>
       prev.map((entry) =>
         entry.id === entryId
-          ? { ...entry, styleId, styleName: style?.name_jp || "", relayEventId: null }
+          ? {
+              ...entry,
+              styleId,
+              styleName: style?.name_jp || "",
+              relayEventId: null,
+            }
           : entry,
       ),
     );
@@ -301,10 +348,18 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
     const defaultSplitDistances = legBoundaries.slice(0, 3);
     const allowedCount = isPremium
       ? defaultSplitDistances.length
-      : Math.max(0, Math.min(defaultSplitDistances.length, RELAY_FREE_PLAN_MAX_SPLITS));
+      : Math.max(
+          0,
+          Math.min(defaultSplitDistances.length, RELAY_FREE_PLAN_MAX_SPLITS),
+        );
     const defaultSplits: SplitTimeEntry[] = defaultSplitDistances
       .slice(0, allowedCount)
-      .map((distance) => ({ id: genId(), distance, splitTime: 0, displayValue: "" }));
+      .map((distance) => ({
+        id: genId(),
+        distance,
+        splitTime: 0,
+        displayValue: "",
+      }));
 
     setStyleEntries((prev) =>
       prev.map((entry) =>
@@ -322,13 +377,18 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
     );
   };
 
-  const confirmMemberSelection = (entryId: string, selectedUserIds: string[]) => {
+  const confirmMemberSelection = (
+    entryId: string,
+    selectedUserIds: string[],
+  ) => {
     setStyleEntries((prev) =>
       prev.map((entry) => {
         if (entry.id !== entryId) return entry;
         const newMemberRecords: MemberRecord[] = [];
         for (const userId of selectedUserIds) {
-          const existing = entry.memberRecords.find((mr) => mr.memberUserId === userId);
+          const existing = entry.memberRecords.find(
+            (mr) => mr.memberUserId === userId,
+          );
           if (existing) {
             newMemberRecords.push(existing);
           } else {
@@ -394,15 +454,31 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
 
   // 反応時間: 他の記録入力画面 (RecordLogFormScreen / CompetitionTabFormScreen) と同じく
   // blur 時に -1〜2 へクランプする
-  const handleReactionTimeBlurByIndex = (entryId: string, legIndex: number, value: string) => {
-    updateMemberRecordByIndex(entryId, legIndex, { reactionTime: normalizeReactionTime(value) });
+  const handleReactionTimeBlurByIndex = (
+    entryId: string,
+    legIndex: number,
+    value: string,
+  ) => {
+    updateMemberRecordByIndex(entryId, legIndex, {
+      reactionTime: normalizeReactionTime(value),
+    });
   };
 
-  const handleReactionTimeBlur = (entryId: string, memberUserId: string, value: string) => {
-    updateMemberRecord(entryId, memberUserId, { reactionTime: normalizeReactionTime(value) });
+  const handleReactionTimeBlur = (
+    entryId: string,
+    memberUserId: string,
+    value: string,
+  ) => {
+    updateMemberRecord(entryId, memberUserId, {
+      reactionTime: normalizeReactionTime(value),
+    });
   };
 
-  const handleTimeChange = (entryId: string, memberUserId: string, value: string) => {
+  const handleTimeChange = (
+    entryId: string,
+    memberUserId: string,
+    value: string,
+  ) => {
     const entry = styleEntries.find((e) => e.id === entryId);
     if (!entry) return;
     const style = styles_.find((s) => s.id === entry.styleId);
@@ -419,36 +495,56 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             let updatedSplitTimes = [...mr.splitTimes];
             if (raceDistance && newTime > 0) {
               const idx = updatedSplitTimes.findIndex(
-                (st) => typeof st.distance === "number" && st.distance === raceDistance,
+                (st) =>
+                  typeof st.distance === "number" &&
+                  st.distance === raceDistance,
               );
               if (idx >= 0) {
                 updatedSplitTimes = updatedSplitTimes.map((st, i) =>
                   i === idx
-                    ? { ...st, splitTime: newTime, displayValue: formatTimeBest(newTime) }
+                    ? {
+                        ...st,
+                        splitTime: newTime,
+                        displayValue: formatTimeBest(newTime),
+                      }
                     : st,
                 );
               } else {
                 updatedSplitTimes = [
                   ...updatedSplitTimes,
-                  { id: genId(), distance: raceDistance, splitTime: newTime, displayValue: formatTimeBest(newTime) },
+                  {
+                    id: genId(),
+                    distance: raceDistance,
+                    splitTime: newTime,
+                    displayValue: formatTimeBest(newTime),
+                  },
                 ];
               }
             }
-            return { ...mr, timeDisplayValue: value, time: newTime, splitTimes: updatedSplitTimes };
+            return {
+              ...mr,
+              timeDisplayValue: value,
+              time: newTime,
+              splitTimes: updatedSplitTimes,
+            };
           }),
         };
       }),
     );
   };
 
-  const countBillableSplitTimes = (entryId: string, splitTimes: SplitTimeEntry[]): number => {
+  const countBillableSplitTimes = (
+    entryId: string,
+    splitTimes: SplitTimeEntry[],
+  ): number => {
     const entry = styleEntries.find((e) => e.id === entryId);
     if (!entry) return splitTimes.length;
     const style = styles_.find((s) => s.id === entry.styleId);
     const raceDistance = style?.distance;
     if (!raceDistance) return splitTimes.length;
     return splitTimes.filter(
-      (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+      (st) =>
+        !(typeof st.distance === "number" && st.distance === raceDistance),
     ).length;
   };
 
@@ -461,7 +557,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         const totalDistance = legBoundaries[3];
 
         const currentSplits = entry.relaySplitTimes ?? [];
-        const existingIdx = currentSplits.findIndex((st) => st.distance === totalDistance);
+        const existingIdx = currentSplits.findIndex(
+          (st) => st.distance === totalDistance,
+        );
         let updatedSplits: SplitTimeEntry[];
         if (totalSeconds > 0) {
           const newSplit: SplitTimeEntry = {
@@ -472,11 +570,15 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           };
           updatedSplits =
             existingIdx >= 0
-              ? currentSplits.map((st, i) => (i === existingIdx ? newSplit : st))
+              ? currentSplits.map((st, i) =>
+                  i === existingIdx ? newSplit : st,
+                )
               : [...currentSplits, newSplit];
         } else {
           updatedSplits =
-            existingIdx >= 0 ? currentSplits.filter((_, i) => i !== existingIdx) : currentSplits;
+            existingIdx >= 0
+              ? currentSplits.filter((_, i) => i !== existingIdx)
+              : currentSplits;
         }
 
         const newCumulatives = legBoundaries.map((boundary) => {
@@ -484,7 +586,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           return found ? found.splitTime : 0;
         });
         const allBoundariesPresent = newCumulatives.every((c) => c > 0);
-        const legTimes = allBoundariesPresent ? calcLegTimesFromCumulative(newCumulatives) : null;
+        const legTimes = allBoundariesPresent
+          ? calcLegTimesFromCumulative(newCumulatives)
+          : null;
 
         const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
           const newCum = newCumulatives[idx];
@@ -503,7 +607,11 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           };
         });
 
-        return { ...entry, relaySplitTimes: updatedSplits, memberRecords: updatedMemberRecords };
+        return {
+          ...entry,
+          relaySplitTimes: updatedSplits,
+          memberRecords: updatedMemberRecords,
+        };
       }),
     );
   };
@@ -524,9 +632,16 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           if (st.id !== splitId) return st;
           if (field === "distance") {
             const parsed = parseFloat(value);
-            return { ...st, distance: value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed) };
+            return {
+              ...st,
+              distance: value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed),
+            };
           }
-          return { ...st, displayValue: value, splitTime: parseTimeToSeconds(value) };
+          return {
+            ...st,
+            displayValue: value,
+            splitTime: parseTimeToSeconds(value),
+          };
         });
 
         const newCumulatives = legBoundaries.map((boundary) => {
@@ -534,11 +649,15 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           return found ? found.splitTime : 0;
         });
         const allBoundariesPresent = newCumulatives.every((c) => c > 0);
-        const legTimes = allBoundariesPresent ? calcLegTimesFromCumulative(newCumulatives) : null;
+        const legTimes = allBoundariesPresent
+          ? calcLegTimesFromCumulative(newCumulatives)
+          : null;
 
         const changedSplit = updatedSplits.find((st) => st.id === splitId);
         const isTotalDistanceSplit =
-          field === "splitTime" && changedSplit && changedSplit.distance === totalDistance;
+          field === "splitTime" &&
+          changedSplit &&
+          changedSplit.distance === totalDistance;
 
         const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
           const newCum = allBoundariesPresent ? newCumulatives[idx] : 0;
@@ -554,7 +673,11 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           return { ...mr, ...updates };
         });
 
-        return { ...entry, relaySplitTimes: updatedSplits, memberRecords: updatedMemberRecords };
+        return {
+          ...entry,
+          relaySplitTimes: updatedSplits,
+          memberRecords: updatedMemberRecords,
+        };
       }),
     );
   };
@@ -570,9 +693,18 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           currentSplits.map((st) => st.distance).filter((d) => d > 0),
         );
         let newSplits: SplitTimeEntry[] = [];
-        for (let distance = interval; distance <= totalDistance; distance += interval) {
+        for (
+          let distance = interval;
+          distance <= totalDistance;
+          distance += interval
+        ) {
           if (!existingDistances.has(distance)) {
-            newSplits.push({ id: genId(), distance, splitTime: 0, displayValue: "" });
+            newSplits.push({
+              id: genId(),
+              distance,
+              splitTime: 0,
+              displayValue: "",
+            });
           }
         }
         if (newSplits.length === 0) return entry;
@@ -591,7 +723,8 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       prev.map((entry) => {
         if (entry.id !== entryId || !entry.relayEventId) return entry;
         const currentSplits = entry.relaySplitTimes ?? [];
-        if (!isPremium && currentSplits.length >= RELAY_FREE_PLAN_MAX_SPLITS) return entry;
+        if (!isPremium && currentSplits.length >= RELAY_FREE_PLAN_MAX_SPLITS)
+          return entry;
         return {
           ...entry,
           relaySplitTimes: [
@@ -610,7 +743,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           ? entry
           : {
               ...entry,
-              relaySplitTimes: (entry.relaySplitTimes ?? []).filter((st) => st.id !== splitId),
+              relaySplitTimes: (entry.relaySplitTimes ?? []).filter(
+                (st) => st.id !== splitId,
+              ),
             },
       ),
     );
@@ -626,7 +761,8 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             if (mr.memberUserId !== memberUserId) return mr;
             if (!isPremium) {
               const billable = countBillableSplitTimes(entryId, mr.splitTimes);
-              if (billable >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD) return mr;
+              if (billable >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD)
+                return mr;
             }
             return {
               ...mr,
@@ -641,7 +777,11 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
     );
   };
 
-  const addSplitTimesAtInterval = (entryId: string, memberUserId: string, interval: number) => {
+  const addSplitTimesAtInterval = (
+    entryId: string,
+    memberUserId: string,
+    interval: number,
+  ) => {
     if (!memberUserId) return;
     const entry = styleEntries.find((e) => e.id === entryId);
     if (!entry) return;
@@ -658,32 +798,51 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             if (mr.memberUserId !== memberUserId) return mr;
             const existingDistances = new Set(
               mr.splitTimes
-                .map((st) => (typeof st.distance === "number" ? st.distance : 0))
+                .map((st) =>
+                  typeof st.distance === "number" ? st.distance : 0,
+                )
                 .filter((d) => d > 0),
             );
             let newSplitTimes: SplitTimeEntry[] = [];
-            for (let distance = interval; distance <= raceDistance; distance += interval) {
+            for (
+              let distance = interval;
+              distance <= raceDistance;
+              distance += interval
+            ) {
               if (!existingDistances.has(distance)) {
-                newSplitTimes.push({ id: genId(), distance, splitTime: 0, displayValue: "" });
+                newSplitTimes.push({
+                  id: genId(),
+                  distance,
+                  splitTime: 0,
+                  displayValue: "",
+                });
               }
             }
             if (newSplitTimes.length === 0) return mr;
             if (!isPremium) {
               const billable = countBillableSplitTimes(entryId, mr.splitTimes);
               const newBillable = newSplitTimes.filter(
-                (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+                (st) =>
+                  !(
+                    typeof st.distance === "number" &&
+                    st.distance === raceDistance
+                  ),
               );
-              const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billable;
+              const maxNewBillable =
+                FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billable;
               if (maxNewBillable <= 0 && newBillable.length > 0) {
                 newSplitTimes = newSplitTimes.filter(
-                  (st) => typeof st.distance === "number" && st.distance === raceDistance,
+                  (st) =>
+                    typeof st.distance === "number" &&
+                    st.distance === raceDistance,
                 );
                 if (newSplitTimes.length === 0) return mr;
               } else if (newBillable.length > maxNewBillable) {
                 let added = 0;
                 newSplitTimes = newSplitTimes.filter((st) => {
                   const isRaceDist =
-                    typeof st.distance === "number" && st.distance === raceDistance;
+                    typeof st.distance === "number" &&
+                    st.distance === raceDistance;
                   if (isRaceDist) return true;
                   if (added < maxNewBillable) {
                     added++;
@@ -700,7 +859,11 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
     );
   };
 
-  const removeSplitTime = (entryId: string, memberUserId: string, splitId: string) => {
+  const removeSplitTime = (
+    entryId: string,
+    memberUserId: string,
+    splitId: string,
+  ) => {
     setStyleEntries((prev) =>
       prev.map((entry) =>
         entry.id !== entryId
@@ -710,7 +873,12 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
               memberRecords: entry.memberRecords.map((mr) =>
                 mr.memberUserId !== memberUserId
                   ? mr
-                  : { ...mr, splitTimes: mr.splitTimes.filter((st) => st.id !== splitId) },
+                  : {
+                      ...mr,
+                      splitTimes: mr.splitTimes.filter(
+                        (st) => st.id !== splitId,
+                      ),
+                    },
               ),
             },
       ),
@@ -740,11 +908,21 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
               if (st.id !== splitId) return st;
               if (field === "distance") {
                 const parsed = parseInt(value, 10);
-                return { ...st, distance: value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed) };
+                return {
+                  ...st,
+                  distance:
+                    value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed),
+                };
               }
-              return { ...st, displayValue: value, splitTime: parseTimeToSeconds(value) };
+              return {
+                ...st,
+                displayValue: value,
+                splitTime: parseTimeToSeconds(value),
+              };
             });
-            const updatedSplit = updatedSplitTimes.find((st) => st.id === splitId);
+            const updatedSplit = updatedSplitTimes.find(
+              (st) => st.id === splitId,
+            );
             if (
               field === "splitTime" &&
               raceDistance &&
@@ -756,7 +934,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                 ...mr,
                 splitTimes: updatedSplitTimes,
                 time: updatedSplit.splitTime,
-                timeDisplayValue: updatedSplit.displayValue || formatTimeBest(updatedSplit.splitTime),
+                timeDisplayValue:
+                  updatedSplit.displayValue ||
+                  formatTimeBest(updatedSplit.splitTime),
               };
             }
             return { ...mr, splitTimes: updatedSplitTimes };
@@ -796,16 +976,26 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           : [];
 
         if (entry.relayEventId) {
-          const hasUnselectedMember = entry.memberRecords.some((mr) => !mr.memberUserId);
+          const hasUnselectedMember = entry.memberRecords.some(
+            (mr) => !mr.memberUserId,
+          );
           if (hasUnselectedMember) {
-            Alert.alert(t("common.error"), t("competition.records.validation.relayFullTeam"));
+            Alert.alert(
+              t("common.error"),
+              t("competition.records.validation.relayFullTeam"),
+            );
             setSaving(false);
             return;
           }
-          const cumulatives = entry.memberRecords.map((mr) => mr.cumulativeTimeSeconds ?? 0);
+          const cumulatives = entry.memberRecords.map(
+            (mr) => mr.cumulativeTimeSeconds ?? 0,
+          );
           const inputtedLegs = cumulatives.filter((c) => c > 0);
           if (inputtedLegs.length > 0 && inputtedLegs.length < 4) {
-            Alert.alert(t("common.error"), t("competition.records.validation.relayAllTimes"));
+            Alert.alert(
+              t("common.error"),
+              t("competition.records.validation.relayAllTimes"),
+            );
             setSaving(false);
             return;
           }
@@ -834,9 +1024,14 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             const INVERSION_TOLERANCE = 0.005;
             for (const st of entry.relaySplitTimes) {
               if (st.splitTime <= 0) continue;
-              const legIdx = legBoundaries.findIndex((boundary) => st.distance <= boundary);
+              const legIdx = legBoundaries.findIndex(
+                (boundary) => st.distance <= boundary,
+              );
               if (legIdx === -1) continue;
-              const legStart = getLegStartCumulative(legCumulativeTimes, legIdx);
+              const legStart = getLegStartCumulative(
+                legCumulativeTimes,
+                legIdx,
+              );
               if (st.splitTime <= legStart + INVERSION_TOLERANCE) {
                 Alert.alert(
                   t("common.error"),
@@ -876,7 +1071,10 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             splitTimes = entry.relaySplitTimes
               .filter((st) => st.distance > legLow && st.distance <= legHigh)
               .map((st) => {
-                const legRelativeSplitTime = toLegRelativeSplitTime(st.splitTime, legStart);
+                const legRelativeSplitTime = toLegRelativeSplitTime(
+                  st.splitTime,
+                  legStart,
+                );
                 return {
                   ...st,
                   distance: legIdx === 0 ? st.distance : st.distance - legLow,
@@ -901,7 +1099,10 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       }
 
       if (validRecords.length === 0) {
-        Alert.alert(t("common.error"), t("competition.records.validation.atLeastOneRecord"));
+        Alert.alert(
+          t("common.error"),
+          t("competition.records.validation.atLeastOneRecord"),
+        );
         setSaving(false);
         return;
       }
@@ -930,13 +1131,18 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           .in("id", existingRecordIds);
         if (deleteError) {
           throw new Error(
-            t("competition.records.error.recordDeleteFailed", { detail: deleteError.message }),
+            t("competition.records.error.recordDeleteFailed", {
+              detail: deleteError.message,
+            }),
           );
         }
       }
 
       // 代理 insert（shared API を経由せず supabase.from を直叩き = Web 同方式）
-      const savedRecordIds: Array<{ recordId: string; record: (typeof validRecords)[number] }> = [];
+      const savedRecordIds: Array<{
+        recordId: string;
+        record: (typeof validRecords)[number];
+      }> = [];
       for (const record of validRecords) {
         const insertPayload: RecordInsert = {
           competition_id: competitionId,
@@ -956,7 +1162,10 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           .single();
 
         if (recordError || !newRecord) {
-          console.error(`Record作成エラー (${record.memberName}):`, recordError);
+          console.error(
+            `Record作成エラー (${record.memberName}):`,
+            recordError,
+          );
           hasError = true;
           continue;
         }
@@ -964,7 +1173,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         savedRecordIds.push({ recordId: newRecord.id, record });
 
         // 種目距離と同 distance の split は除外（ゴールタイム = split ではない）
-        const raceDistance = styles_.find((s) => s.id === record.styleId)?.distance;
+        const raceDistance = styles_.find(
+          (s) => s.id === record.styleId,
+        )?.distance;
         const validSplitTimes = record.splitTimes.filter(
           (st) =>
             st.distance > 0 &&
@@ -981,7 +1192,10 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             .from("split_times")
             .insert(splitTimesData);
           if (splitError) {
-            console.error(`SplitTime作成エラー (${record.memberName}):`, splitError);
+            console.error(
+              `SplitTime作成エラー (${record.memberName}):`,
+              splitError,
+            );
             hasError = true;
           }
         }
@@ -989,7 +1203,10 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
 
       // 部分失敗時はリダイレクトしない（Web 準拠）。集約表示。
       if (hasError) {
-        Alert.alert(t("common.error"), t("competition.records.error.saveFailed"));
+        Alert.alert(
+          t("common.error"),
+          t("competition.records.error.saveFailed"),
+        );
         setSaving(false);
         return;
       }
@@ -1030,7 +1247,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       }
 
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
-      queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
+      queryClient.invalidateQueries({
+        queryKey: teamKeys.competitions(teamId),
+      });
       // この操作を行った管理者自身のローカルキャッシュ上の記録一覧（大会タブ）を最新化する。
       // invalidateQueries はこの端末のキャッシュにしか作用せず、代理登録された各メンバー
       // 本人の端末には影響しない（別デバイスのキャッシュはクロスデバイスでは無効化できない）
@@ -1054,7 +1273,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       console.error("チーム大会記録作成エラー:", err);
       Alert.alert(
         t("common.error"),
-        err instanceof Error ? err.message : t("competition.records.error.saveFailed"),
+        err instanceof Error
+          ? err.message
+          : t("competition.records.error.saveFailed"),
       );
     } finally {
       setSaving(false);
@@ -1073,7 +1294,11 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
   if (loadError) {
     return (
       <View style={styles.container}>
-        <ErrorView message={loadError} fullScreen onRetry={() => navigation.goBack()} />
+        <ErrorView
+          message={loadError}
+          fullScreen
+          onRetry={() => navigation.goBack()}
+        />
       </View>
     );
   }
@@ -1084,16 +1309,24 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.permissionContainer}>
           <Feather name="lock" size={40} color="#DC2626" />
-          <Text style={styles.permissionText}>{t("teams.mobile.webGuide")}</Text>
-          <Pressable style={styles.permissionButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.permissionButtonText}>{t("teams.record.backButton")}</Text>
+          <Text style={styles.permissionText}>
+            {t("teams.mobile.webGuide")}
+          </Text>
+          <Pressable
+            style={styles.permissionButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.permissionButtonText}>
+              {t("teams.record.backButton")}
+            </Text>
           </Pressable>
         </View>
       </View>
     );
   }
 
-  const memberModalEntry = styleEntries.find((e) => e.id === memberModalEntryId) ?? null;
+  const memberModalEntry =
+    styleEntries.find((e) => e.id === memberModalEntryId) ?? null;
 
   return (
     <KeyboardAvoidingView
@@ -1110,7 +1343,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           <Text style={styles.compTitle}>
             {competition?.title || t("competition.records.competitionFallback")}
           </Text>
-          <Text style={styles.compSubtitle}>{t("teams.record.description")}</Text>
+          <Text style={styles.compSubtitle}>
+            {t("teams.record.description")}
+          </Text>
           <TimeInputHelp showCarryOver style={{ marginTop: 8 }} />
         </View>
 
@@ -1149,7 +1384,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                   <Text
                     style={[
                       styles.pickerButtonText,
-                      entry.styleId === "" && !entry.relayEventId && styles.placeholder,
+                      entry.styleId === "" &&
+                        !entry.relayEventId &&
+                        styles.placeholder,
                     ]}
                   >
                     {entry.relayEventId
@@ -1165,7 +1402,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
               {/* 個人種目: メンバー選択 */}
               {!entry.relayEventId && (
                 <View style={styles.field}>
-                  <Text style={styles.label}>{t("teams.record.participantsHeader")}</Text>
+                  <Text style={styles.label}>
+                    {t("teams.record.participantsHeader")}
+                  </Text>
                   <Pressable
                     style={styles.selectMemberButton}
                     onPress={() => setMemberModalEntryId(entry.id)}
@@ -1176,7 +1415,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                     </Text>
                   </Pressable>
                   <Text style={styles.countLabel}>
-                    {t("teams.record.selectedMemberCount", { n: entry.memberRecords.length })}
+                    {t("teams.record.selectedMemberCount", {
+                      n: entry.memberRecords.length,
+                    })}
                   </Text>
                 </View>
               )}
@@ -1184,7 +1425,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
               {/* リレー種目 */}
               {entry.relayEventId && (
                 <View style={styles.relaySection}>
-                  <Text style={styles.subHeader}>{t("teams.record.timesHeader")}</Text>
+                  <Text style={styles.subHeader}>
+                    {t("teams.record.timesHeader")}
+                  </Text>
 
                   {/* 泳者選択 + RT */}
                   {entry.memberRecords.map((mr, mrIndex) => (
@@ -1194,25 +1437,43 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                       </Text>
                       <Pressable
                         style={styles.pickerButton}
-                        onPress={() => setLegPicker({ entryId: entry.id, legIndex: mrIndex })}
+                        onPress={() =>
+                          setLegPicker({ entryId: entry.id, legIndex: mrIndex })
+                        }
                       >
                         <Text
-                          style={[styles.pickerButtonText, !mr.memberUserId && styles.placeholder]}
+                          style={[
+                            styles.pickerButtonText,
+                            !mr.memberUserId && styles.placeholder,
+                          ]}
                         >
-                          {mr.memberName || t("teams.record.relaySwimmerPlaceholder")}
+                          {mr.memberName ||
+                            t("teams.record.relaySwimmerPlaceholder")}
                         </Text>
-                        <Feather name="chevron-down" size={18} color="#6B7280" />
+                        <Feather
+                          name="chevron-down"
+                          size={18}
+                          color="#6B7280"
+                        />
                       </Pressable>
                       <View style={styles.rtField}>
-                        <Text style={styles.smallLabel}>{t("teams.record.reactionTime")}</Text>
+                        <Text style={styles.smallLabel}>
+                          {t("teams.record.reactionTime")}
+                        </Text>
                         <TextInput
                           style={styles.input}
                           value={mr.reactionTime || ""}
                           onChangeText={(text) =>
-                            updateMemberRecordByIndex(entry.id, mrIndex, { reactionTime: text })
+                            updateMemberRecordByIndex(entry.id, mrIndex, {
+                              reactionTime: text,
+                            })
                           }
                           onBlur={() =>
-                            handleReactionTimeBlurByIndex(entry.id, mrIndex, mr.reactionTime || "")
+                            handleReactionTimeBlurByIndex(
+                              entry.id,
+                              mrIndex,
+                              mr.reactionTime || "",
+                            )
                           }
                           placeholder="0.65"
                           keyboardType="decimal-pad"
@@ -1223,11 +1484,15 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
 
                   {/* 合計タイム */}
                   <View style={styles.field}>
-                    <Text style={styles.label}>{t("teams.record.totalTime")}</Text>
+                    <Text style={styles.label}>
+                      {t("teams.record.totalTime")}
+                    </Text>
                     <TextInput
                       style={styles.input}
                       value={entry.memberRecords[3]?.timeDisplayValue ?? ""}
-                      onChangeText={(text) => handleRelayTotalTimeChange(entry.id, text)}
+                      onChangeText={(text) =>
+                        handleRelayTotalTimeChange(entry.id, text)
+                      }
                       placeholder={t("teams.record.totalTimePlaceholder")}
                     />
                   </View>
@@ -1243,33 +1508,46 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                       <View style={styles.splitButtons}>
                         <Pressable
                           style={[styles.splitAddBtn, styles.splitAdd25]}
-                          onPress={() => addRelaySplitTimesAtInterval(entry.id, 25)}
+                          onPress={() =>
+                            addRelaySplitTimesAtInterval(entry.id, 25)
+                          }
                           disabled={
                             !isPremium &&
-                            (entry.relaySplitTimes ?? []).length >= RELAY_FREE_PLAN_MAX_SPLITS
+                            (entry.relaySplitTimes ?? []).length >=
+                              RELAY_FREE_PLAN_MAX_SPLITS
                           }
                         >
-                          <Text style={styles.splitAddText25}>{t("teams.record.addSplit25m")}</Text>
+                          <Text style={styles.splitAddText25}>
+                            {t("teams.record.addSplit25m")}
+                          </Text>
                         </Pressable>
                         <Pressable
                           style={[styles.splitAddBtn, styles.splitAdd50]}
-                          onPress={() => addRelaySplitTimesAtInterval(entry.id, 50)}
+                          onPress={() =>
+                            addRelaySplitTimesAtInterval(entry.id, 50)
+                          }
                           disabled={
                             !isPremium &&
-                            (entry.relaySplitTimes ?? []).length >= RELAY_FREE_PLAN_MAX_SPLITS
+                            (entry.relaySplitTimes ?? []).length >=
+                              RELAY_FREE_PLAN_MAX_SPLITS
                           }
                         >
-                          <Text style={styles.splitAddText50}>{t("teams.record.addSplit50m")}</Text>
+                          <Text style={styles.splitAddText50}>
+                            {t("teams.record.addSplit50m")}
+                          </Text>
                         </Pressable>
                         <Pressable
                           style={styles.splitAddBtn}
                           onPress={() => addRelaySplitTime(entry.id)}
                           disabled={
                             !isPremium &&
-                            (entry.relaySplitTimes ?? []).length >= RELAY_FREE_PLAN_MAX_SPLITS
+                            (entry.relaySplitTimes ?? []).length >=
+                              RELAY_FREE_PLAN_MAX_SPLITS
                           }
                         >
-                          <Text style={styles.splitAddText}>{t("teams.record.addSplitManual")}</Text>
+                          <Text style={styles.splitAddText}>
+                            {t("teams.record.addSplitManual")}
+                          </Text>
                         </Pressable>
                       </View>
                     </View>
@@ -1279,13 +1557,22 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                         <View key={split.id} style={styles.splitRow}>
                           <TextInput
                             style={[styles.input, styles.splitDistance]}
-                            value={split.distance > 0 ? String(split.distance) : ""}
+                            value={
+                              split.distance > 0 ? String(split.distance) : ""
+                            }
                             onChangeText={(text) => {
                               if (text === "" || /^\d+(\.\d*)?$/.test(text)) {
-                                handleRelaySplitTimeChange(entry.id, split.id, "distance", text);
+                                handleRelaySplitTimeChange(
+                                  entry.id,
+                                  split.id,
+                                  "distance",
+                                  text,
+                                );
                               }
                             }}
-                            placeholder={t("teams.record.splitDistancePlaceholder")}
+                            placeholder={t(
+                              "teams.record.splitDistancePlaceholder",
+                            )}
                             keyboardType="decimal-pad"
                           />
                           <Text style={styles.splitSeparator}>m:</Text>
@@ -1293,13 +1580,20 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                             style={[styles.input, styles.splitTime]}
                             value={split.displayValue}
                             onChangeText={(text) =>
-                              handleRelaySplitTimeChange(entry.id, split.id, "splitTime", text)
+                              handleRelaySplitTimeChange(
+                                entry.id,
+                                split.id,
+                                "splitTime",
+                                text,
+                              )
                             }
                             placeholder={t("teams.record.splitTimePlaceholder")}
                           />
                           <Pressable
                             style={styles.removeSplitBtn}
-                            onPress={() => removeRelaySplitTime(entry.id, split.id)}
+                            onPress={() =>
+                              removeRelaySplitTime(entry.id, split.id)
+                            }
                           >
                             <Feather name="trash-2" size={16} color="#EF4444" />
                           </Pressable>
@@ -1314,200 +1608,270 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                 entry.memberRecords.length > 0 &&
                 entry.memberRecords.map((mr) => {
                   return (
-                  <View key={mr.memberUserId} style={styles.memberCard}>
-                    <Text style={styles.memberName}>{mr.memberName}</Text>
+                    <View key={mr.memberUserId} style={styles.memberCard}>
+                      <Text style={styles.memberName}>{mr.memberName}</Text>
 
-                    {/* エントリータイム参照ラベル（読み取り専用。記録タイムの入力欄には反映しない。仕様#1） */}
-                    {mr.entryTimeReference != null && mr.entryTimeReference > 0 && (
-                      <View style={styles.entryTimeBadge}>
-                        <Text style={styles.entryTimeBadgeText}>
-                          {t("forms.recordLog.entryTimeLabel")}{" "}
-                          {formatTimeBest(mr.entryTimeReference)}
+                      {/* エントリータイム参照ラベル（読み取り専用。記録タイムの入力欄には反映しない。仕様#1） */}
+                      {mr.entryTimeReference != null &&
+                        mr.entryTimeReference > 0 && (
+                          <View style={styles.entryTimeBadge}>
+                            <Text style={styles.entryTimeBadgeText}>
+                              {t("forms.recordLog.entryTimeLabel")}{" "}
+                              {formatTimeBest(mr.entryTimeReference)}
+                            </Text>
+                          </View>
+                        )}
+
+                      {/* タイム */}
+                      <View style={styles.field}>
+                        <Text style={styles.smallLabel}>
+                          {t("teams.record.timeLabel")}
                         </Text>
-                      </View>
-                    )}
-
-                    {/* タイム */}
-                    <View style={styles.field}>
-                      <Text style={styles.smallLabel}>{t("teams.record.timeLabel")}</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={mr.timeDisplayValue}
-                        onChangeText={(text) => handleTimeChange(entry.id, mr.memberUserId, text)}
-                        placeholder={t("teams.record.timePlaceholder")}
-                      />
-                    </View>
-
-                    {/* リレー & RT */}
-                    <View style={styles.inlineRow}>
-                      <View style={styles.switchField}>
-                        <Text style={styles.smallLabel}>{t("teams.record.relay")}</Text>
-                        <Switch
-                          value={mr.isRelaying}
-                          onValueChange={(v) =>
-                            updateMemberRecord(entry.id, mr.memberUserId, { isRelaying: v })
+                        <TextInput
+                          style={styles.input}
+                          value={mr.timeDisplayValue}
+                          onChangeText={(text) =>
+                            handleTimeChange(entry.id, mr.memberUserId, text)
                           }
+                          placeholder={t("teams.record.timePlaceholder")}
                         />
                       </View>
-                      {!mr.isRelaying && (
-                        <View style={styles.rtFieldInline}>
-                          <Text style={styles.smallLabel}>{t("teams.record.reactionTime")}</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={mr.reactionTime || ""}
-                            onChangeText={(text) =>
-                              updateMemberRecord(entry.id, mr.memberUserId, { reactionTime: text })
+
+                      {/* リレー & RT */}
+                      <View style={styles.inlineRow}>
+                        <View style={styles.switchField}>
+                          <Text style={styles.smallLabel}>
+                            {t("teams.record.relay")}
+                          </Text>
+                          <Switch
+                            value={mr.isRelaying}
+                            onValueChange={(v) =>
+                              updateMemberRecord(entry.id, mr.memberUserId, {
+                                isRelaying: v,
+                              })
                             }
-                            onBlur={() =>
-                              handleReactionTimeBlur(
-                                entry.id,
-                                mr.memberUserId,
-                                mr.reactionTime || "",
-                              )
-                            }
-                            placeholder="0.65"
-                            keyboardType="decimal-pad"
                           />
                         </View>
-                      )}
-                    </View>
-
-                    {/* メモ */}
-                    <View style={styles.field}>
-                      <Text style={styles.smallLabel}>{t("teams.record.memoLabel")}</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={mr.note}
-                        onChangeText={(text) =>
-                          updateMemberRecord(entry.id, mr.memberUserId, { note: text })
-                        }
-                        placeholder={t("teams.record.memoPlaceholder")}
-                      />
-                    </View>
-
-                    {/* スプリット */}
-                    <View style={styles.field}>
-                      <View style={styles.splitHeader}>
-                        <Text style={styles.smallLabel}>{t("teams.record.splitTimeLabel")}</Text>
-                        <View style={styles.splitButtons}>
-                          <Pressable
-                            style={[
-                              styles.splitAddBtn,
-                              styles.splitAdd25,
-                              !hasDistance && styles.disabledBtn,
-                            ]}
-                            onPress={() => addSplitTimesAtInterval(entry.id, mr.memberUserId, 25)}
-                            disabled={!hasDistance}
-                          >
-                            <Text style={styles.splitAddText25}>{t("teams.record.addSplit25m")}</Text>
-                          </Pressable>
-                          <Pressable
-                            style={[
-                              styles.splitAddBtn,
-                              styles.splitAdd50,
-                              !hasDistance && styles.disabledBtn,
-                            ]}
-                            onPress={() => addSplitTimesAtInterval(entry.id, mr.memberUserId, 50)}
-                            disabled={!hasDistance}
-                          >
-                            <Text style={styles.splitAddText50}>{t("teams.record.addSplit50m")}</Text>
-                          </Pressable>
-                          <Pressable
-                            style={styles.splitAddBtn}
-                            onPress={() => addSplitTime(entry.id, mr.memberUserId)}
-                          >
-                            <Text style={styles.splitAddText}>{t("teams.record.addSplitManual")}</Text>
-                          </Pressable>
-                        </View>
-                      </View>
-                      {[...mr.splitTimes]
-                        .sort((a, b) => {
-                          const da = typeof a.distance === "number" ? a.distance : 0;
-                          const db = typeof b.distance === "number" ? b.distance : 0;
-                          return da - db;
-                        })
-                        .map((split) => (
-                          <View key={split.id} style={styles.splitRow}>
+                        {!mr.isRelaying && (
+                          <View style={styles.rtFieldInline}>
+                            <Text style={styles.smallLabel}>
+                              {t("teams.record.reactionTime")}
+                            </Text>
                             <TextInput
-                              style={[styles.input, styles.splitDistance]}
-                              value={split.distance > 0 ? String(split.distance) : ""}
-                              onChangeText={(text) => {
-                                if (text === "" || /^\d+(\.\d*)?$/.test(text)) {
+                              style={styles.input}
+                              value={mr.reactionTime || ""}
+                              onChangeText={(text) =>
+                                updateMemberRecord(entry.id, mr.memberUserId, {
+                                  reactionTime: text,
+                                })
+                              }
+                              onBlur={() =>
+                                handleReactionTimeBlur(
+                                  entry.id,
+                                  mr.memberUserId,
+                                  mr.reactionTime || "",
+                                )
+                              }
+                              placeholder="0.65"
+                              keyboardType="decimal-pad"
+                            />
+                          </View>
+                        )}
+                      </View>
+
+                      {/* メモ */}
+                      <View style={styles.field}>
+                        <Text style={styles.smallLabel}>
+                          {t("teams.record.memoLabel")}
+                        </Text>
+                        <TextInput
+                          style={styles.input}
+                          value={mr.note}
+                          onChangeText={(text) =>
+                            updateMemberRecord(entry.id, mr.memberUserId, {
+                              note: text,
+                            })
+                          }
+                          placeholder={t("teams.record.memoPlaceholder")}
+                        />
+                      </View>
+
+                      {/* スプリット */}
+                      <View style={styles.field}>
+                        <View style={styles.splitHeader}>
+                          <Text style={styles.smallLabel}>
+                            {t("teams.record.splitTimeLabel")}
+                          </Text>
+                          <View style={styles.splitButtons}>
+                            <Pressable
+                              style={[
+                                styles.splitAddBtn,
+                                styles.splitAdd25,
+                                !hasDistance && styles.disabledBtn,
+                              ]}
+                              onPress={() =>
+                                addSplitTimesAtInterval(
+                                  entry.id,
+                                  mr.memberUserId,
+                                  25,
+                                )
+                              }
+                              disabled={!hasDistance}
+                            >
+                              <Text style={styles.splitAddText25}>
+                                {t("teams.record.addSplit25m")}
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              style={[
+                                styles.splitAddBtn,
+                                styles.splitAdd50,
+                                !hasDistance && styles.disabledBtn,
+                              ]}
+                              onPress={() =>
+                                addSplitTimesAtInterval(
+                                  entry.id,
+                                  mr.memberUserId,
+                                  50,
+                                )
+                              }
+                              disabled={!hasDistance}
+                            >
+                              <Text style={styles.splitAddText50}>
+                                {t("teams.record.addSplit50m")}
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              style={styles.splitAddBtn}
+                              onPress={() =>
+                                addSplitTime(entry.id, mr.memberUserId)
+                              }
+                            >
+                              <Text style={styles.splitAddText}>
+                                {t("teams.record.addSplitManual")}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                        {[...mr.splitTimes]
+                          .sort((a, b) => {
+                            const da =
+                              typeof a.distance === "number" ? a.distance : 0;
+                            const db =
+                              typeof b.distance === "number" ? b.distance : 0;
+                            return da - db;
+                          })
+                          .map((split) => (
+                            <View key={split.id} style={styles.splitRow}>
+                              <TextInput
+                                style={[styles.input, styles.splitDistance]}
+                                value={
+                                  split.distance > 0
+                                    ? String(split.distance)
+                                    : ""
+                                }
+                                onChangeText={(text) => {
+                                  if (
+                                    text === "" ||
+                                    /^\d+(\.\d*)?$/.test(text)
+                                  ) {
+                                    updateSplitTime(
+                                      entry.id,
+                                      mr.memberUserId,
+                                      split.id,
+                                      "distance",
+                                      text,
+                                    );
+                                  }
+                                }}
+                                placeholder={t(
+                                  "teams.record.splitDistancePlaceholder",
+                                )}
+                                keyboardType="decimal-pad"
+                              />
+                              <Text style={styles.splitSeparator}>m:</Text>
+                              <TextInput
+                                style={[styles.input, styles.splitTime]}
+                                value={split.displayValue}
+                                onChangeText={(text) =>
                                   updateSplitTime(
                                     entry.id,
                                     mr.memberUserId,
                                     split.id,
-                                    "distance",
+                                    "splitTime",
                                     text,
-                                  );
+                                  )
                                 }
-                              }}
-                              placeholder={t("teams.record.splitDistancePlaceholder")}
-                              keyboardType="decimal-pad"
-                            />
-                            <Text style={styles.splitSeparator}>m:</Text>
-                            <TextInput
-                              style={[styles.input, styles.splitTime]}
-                              value={split.displayValue}
-                              onChangeText={(text) =>
-                                updateSplitTime(
-                                  entry.id,
-                                  mr.memberUserId,
-                                  split.id,
-                                  "splitTime",
-                                  text,
-                                )
-                              }
-                              placeholder={t("teams.record.splitTimePlaceholder")}
-                            />
-                            <Pressable
-                              style={styles.removeSplitBtn}
-                              onPress={() => removeSplitTime(entry.id, mr.memberUserId, split.id)}
-                            >
-                              <Feather name="trash-2" size={16} color="#EF4444" />
-                            </Pressable>
-                          </View>
-                        ))}
-                      {!isPremium &&
-                        countBillableSplitTimes(entry.id, mr.splitTimes) >=
-                          FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD && (
-                          <View style={styles.premiumBadgeWrap}>
-                            <PremiumBadge feature="split_time_limit" compact />
-                          </View>
-                        )}
+                                placeholder={t(
+                                  "teams.record.splitTimePlaceholder",
+                                )}
+                              />
+                              <Pressable
+                                style={styles.removeSplitBtn}
+                                onPress={() =>
+                                  removeSplitTime(
+                                    entry.id,
+                                    mr.memberUserId,
+                                    split.id,
+                                  )
+                                }
+                              >
+                                <Feather
+                                  name="trash-2"
+                                  size={16}
+                                  color="#EF4444"
+                                />
+                              </Pressable>
+                            </View>
+                          ))}
+                        {!isPremium &&
+                          countBillableSplitTimes(entry.id, mr.splitTimes) >=
+                            FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD && (
+                            <View style={styles.premiumBadgeWrap}>
+                              <PremiumBadge
+                                feature="split_time_limit"
+                                compact
+                              />
+                            </View>
+                          )}
 
-                      {/* ラップタイム表示（web LapTimeDisplay 相当）。
+                        {/* ラップタイム表示（web LapTimeDisplay 相当）。
                           種目の距離は選択中の style から算出して race タブの計算に使用する。 */}
-                      <LapTimeDisplay
-                        splitTimes={mr.splitTimes.map((st) => ({
-                          distance: typeof st.distance === "number" ? st.distance : "",
-                          splitTime: st.splitTime,
-                        }))}
-                        raceDistance={selectedStyle?.distance}
-                      />
-                    </View>
-
-                    {/* 代理動画（Premium ゲート）。VideoUploader は本人アップロードを行わず、
-                        選択された保留アセットを memberRecord に保持し、保存後 team-assign で送る。 */}
-                    <View style={styles.field}>
-                      <Text style={styles.smallLabel}>{t("teams.record.videoSelect")}</Text>
-                      {isPremium ? (
-                        <VideoUploader
-                          type="record"
-                          isPremium={isPremium}
-                          existingVideoPath={null}
-                          existingThumbnailPath={null}
-                          onPendingVideoAsset={(asset) =>
-                            updateMemberRecord(entry.id, mr.memberUserId, {
-                              videoAsset: asset,
-                            })
-                          }
+                        <LapTimeDisplay
+                          splitTimes={mr.splitTimes.map((st) => ({
+                            distance:
+                              typeof st.distance === "number"
+                                ? st.distance
+                                : "",
+                            splitTime: st.splitTime,
+                          }))}
+                          raceDistance={selectedStyle?.distance}
                         />
-                      ) : (
-                        <PremiumBadge feature="video_upload" compact />
-                      )}
+                      </View>
+
+                      {/* 代理動画（Premium ゲート）。VideoUploader は本人アップロードを行わず、
+                        選択された保留アセットを memberRecord に保持し、保存後 team-assign で送る。 */}
+                      <View style={styles.field}>
+                        <Text style={styles.smallLabel}>
+                          {t("teams.record.videoSelect")}
+                        </Text>
+                        {isPremium ? (
+                          <VideoUploader
+                            type="record"
+                            isPremium={isPremium}
+                            existingVideoPath={null}
+                            existingThumbnailPath={null}
+                            onPendingVideoAsset={(asset) =>
+                              updateMemberRecord(entry.id, mr.memberUserId, {
+                                videoAsset: asset,
+                              })
+                            }
+                          />
+                        ) : (
+                          <PremiumBadge feature="video_upload" compact />
+                        )}
+                      </View>
                     </View>
-                  </View>
                   );
                 })}
             </View>
@@ -1517,7 +1881,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         {/* 種目追加 */}
         <Pressable style={styles.addEventButton} onPress={addStyleEntry}>
           <Feather name="plus" size={16} color="#2563EB" />
-          <Text style={styles.addEventText}>{t("teams.record.addEventButton")}</Text>
+          <Text style={styles.addEventText}>
+            {t("teams.record.addEventButton")}
+          </Text>
         </Pressable>
       </ScrollView>
 
@@ -1528,7 +1894,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           onPress={() => navigation.goBack()}
           disabled={saving}
         >
-          <Text style={styles.cancelFooterText}>{t("teams.record.cancelButton")}</Text>
+          <Text style={styles.cancelFooterText}>
+            {t("teams.record.cancelButton")}
+          </Text>
         </Pressable>
         <Pressable
           style={[styles.saveButton, saving && styles.disabledBtn]}
@@ -1538,7 +1906,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           {saving ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.saveButtonText}>{t("teams.record.saveButton")}</Text>
+            <Text style={styles.saveButtonText}>
+              {t("teams.record.saveButton")}
+            </Text>
           )}
         </Pressable>
       </SafeAreaView>
@@ -1547,101 +1917,109 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       <MemberSelectModal
         visible={!!memberModalEntryId}
         members={members}
-        selectedUserIds={memberModalEntry?.memberRecords.map((mr) => mr.memberUserId) ?? []}
-        onConfirm={(ids) => memberModalEntryId && confirmMemberSelection(memberModalEntryId, ids)}
+        selectedUserIds={
+          memberModalEntry?.memberRecords.map((mr) => mr.memberUserId) ?? []
+        }
+        onConfirm={(ids) =>
+          memberModalEntryId && confirmMemberSelection(memberModalEntryId, ids)
+        }
         onCancel={() => setMemberModalEntryId(null)}
       />
 
       {/* 種目選択モーダル */}
-      <Modal
+      <SlideUpModal
         visible={!!stylePickerEntryId}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setStylePickerEntryId(null)}
+        onClose={() => setStylePickerEntryId(null)}
+        overlayColor="rgba(0,0,0,0.4)"
+        sheetStyle={styles.pickerSheet}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setStylePickerEntryId(null)} />
-          <View style={styles.pickerSheet}>
-            <View style={styles.pickerSheetHeader}>
-              <Text style={styles.pickerSheetTitle}>{t("teams.record.eventLabel")}</Text>
-              <Pressable onPress={() => setStylePickerEntryId(null)} hitSlop={8}>
-                <Feather name="x" size={22} color="#6B7280" />
-              </Pressable>
-            </View>
-            <ScrollView>
-              <Text style={styles.optgroupLabel}>{t("teams.record.individualEvents")}</Text>
-              {styles_.map((style) => (
-                <Pressable
-                  key={`s-${style.id}`}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    if (stylePickerEntryId) updateStyleEntry(stylePickerEntryId, style.id);
-                    setStylePickerEntryId(null);
-                  }}
-                >
-                  <Text style={styles.pickerOptionText}>{localizedStyleName(style, t)}</Text>
-                </Pressable>
-              ))}
-              <Text style={styles.optgroupLabel}>{t("teams.record.relayLabel")}</Text>
-              {relayEvents.map((relay) => (
-                <Pressable
-                  key={`r-${relay.id}`}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    if (stylePickerEntryId) updateRelayEntry(stylePickerEntryId, relay.id);
-                    setStylePickerEntryId(null);
-                  }}
-                >
-                  <Text style={styles.pickerOptionText}>{relay.label}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
+        <View style={styles.pickerSheetHeader}>
+          <Text style={styles.pickerSheetTitle}>
+            {t("teams.record.eventLabel")}
+          </Text>
+          <Pressable onPress={() => setStylePickerEntryId(null)} hitSlop={8}>
+            <Feather name="x" size={22} color="#6B7280" />
+          </Pressable>
         </View>
-      </Modal>
+        <ScrollView>
+          <Text style={styles.optgroupLabel}>
+            {t("teams.record.individualEvents")}
+          </Text>
+          {styles_.map((style) => (
+            <Pressable
+              key={`s-${style.id}`}
+              style={styles.pickerOption}
+              onPress={() => {
+                if (stylePickerEntryId)
+                  updateStyleEntry(stylePickerEntryId, style.id);
+                setStylePickerEntryId(null);
+              }}
+            >
+              <Text style={styles.pickerOptionText}>
+                {localizedStyleName(style, t)}
+              </Text>
+            </Pressable>
+          ))}
+          <Text style={styles.optgroupLabel}>
+            {t("teams.record.relayLabel")}
+          </Text>
+          {relayEvents.map((relay) => (
+            <Pressable
+              key={`r-${relay.id}`}
+              style={styles.pickerOption}
+              onPress={() => {
+                if (stylePickerEntryId)
+                  updateRelayEntry(stylePickerEntryId, relay.id);
+                setStylePickerEntryId(null);
+              }}
+            >
+              <Text style={styles.pickerOptionText}>{relay.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </SlideUpModal>
 
       {/* リレー泳者選択モーダル */}
-      <Modal
+      <SlideUpModal
         visible={!!legPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setLegPicker(null)}
+        onClose={() => setLegPicker(null)}
+        overlayColor="rgba(0,0,0,0.4)"
+        sheetStyle={styles.pickerSheet}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setLegPicker(null)} />
-          <View style={styles.pickerSheet}>
-            <View style={styles.pickerSheetHeader}>
-              <Text style={styles.pickerSheetTitle}>
-                {t("teams.record.relaySwimmerPlaceholder")}
-              </Text>
-              <Pressable onPress={() => setLegPicker(null)} hitSlop={8}>
-                <Feather name="x" size={22} color="#6B7280" />
-              </Pressable>
-            </View>
-            <ScrollView>
-              {members.map((m) => (
-                <Pressable
-                  key={`leg-opt-${m.user_id}`}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    if (legPicker) {
-                      updateMemberRecordByIndex(legPicker.entryId, legPicker.legIndex, {
-                        memberUserId: m.user_id,
-                        memberName: m.users?.name || "",
-                      });
-                    }
-                    setLegPicker(null);
-                  }}
-                >
-                  <Text style={styles.pickerOptionText}>
-                    {m.users?.name || t("teams.mobile.unnamedMember")}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
+        <View style={styles.pickerSheetHeader}>
+          <Text style={styles.pickerSheetTitle}>
+            {t("teams.record.relaySwimmerPlaceholder")}
+          </Text>
+          <Pressable onPress={() => setLegPicker(null)} hitSlop={8}>
+            <Feather name="x" size={22} color="#6B7280" />
+          </Pressable>
         </View>
-      </Modal>
+        <ScrollView>
+          {members.map((m) => (
+            <Pressable
+              key={`leg-opt-${m.user_id}`}
+              style={styles.pickerOption}
+              onPress={() => {
+                if (legPicker) {
+                  updateMemberRecordByIndex(
+                    legPicker.entryId,
+                    legPicker.legIndex,
+                    {
+                      memberUserId: m.user_id,
+                      memberName: m.users?.name || "",
+                    },
+                  );
+                }
+                setLegPicker(null);
+              }}
+            >
+              <Text style={styles.pickerOptionText}>
+                {m.users?.name || t("teams.mobile.unnamedMember")}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </SlideUpModal>
     </KeyboardAvoidingView>
   );
 };
@@ -1673,7 +2051,12 @@ const styles = StyleSheet.create({
   entryTitle: { fontSize: 16, fontWeight: "600", color: "#111827" },
   field: { marginBottom: 14 },
   label: { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 6 },
-  smallLabel: { fontSize: 12, fontWeight: "600", color: "#6B7280", marginBottom: 4 },
+  smallLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+    marginBottom: 4,
+  },
   pickerButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1700,15 +2083,29 @@ const styles = StyleSheet.create({
   },
   selectMemberText: { fontSize: 14, fontWeight: "600", color: "#2563EB" },
   countLabel: { fontSize: 13, color: "#6B7280", marginTop: 6 },
-  relaySection: { borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 12 },
-  subHeader: { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 10 },
+  relaySection: {
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    paddingTop: 12,
+  },
+  subHeader: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 10,
+  },
   legCard: {
     backgroundColor: "#F9FAFB",
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
   },
-  legLabel: { fontSize: 13, fontWeight: "600", color: "#1D4ED8", marginBottom: 6 },
+  legLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1D4ED8",
+    marginBottom: 6,
+  },
   rtField: { marginTop: 8 },
   rtFieldInline: { flex: 1 },
   input: {
@@ -1727,7 +2124,12 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 8,
   },
-  memberName: { fontSize: 15, fontWeight: "600", color: "#111827", marginBottom: 10 },
+  memberName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 10,
+  },
   entryTimeBadge: {
     backgroundColor: "#DBEAFE", // blue-100 (RecordLogFormScreen と同じ参照ラベル配色)
     borderRadius: 9999,
@@ -1740,7 +2142,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#1D4ED8", // blue-700
   },
-  inlineRow: { flexDirection: "row", gap: 12, marginBottom: 14, alignItems: "flex-end" },
+  inlineRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 14,
+    alignItems: "flex-end",
+  },
   switchField: { gap: 4 },
   splitHeader: {
     flexDirection: "row",
@@ -1764,7 +2171,12 @@ const styles = StyleSheet.create({
   splitAddText: { fontSize: 11, fontWeight: "600", color: "#2563EB" },
   splitAddText25: { fontSize: 11, fontWeight: "600", color: "#FFFFFF" },
   splitAddText50: { fontSize: 11, fontWeight: "600", color: "#FFFFFF" },
-  splitRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  splitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
   splitDistance: { width: 80 },
   splitSeparator: { fontSize: 14, color: "#6B7280" },
   splitTime: { flex: 1 },
@@ -1825,8 +2237,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   permissionButtonText: { fontSize: 14, fontWeight: "600", color: "#FFFFFF" },
-  modalOverlay: { flex: 1, justifyContent: "flex-end" },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
   pickerSheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 16,

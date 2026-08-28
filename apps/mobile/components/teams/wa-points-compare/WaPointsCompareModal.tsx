@@ -13,8 +13,14 @@
 //   2行目: 距離+種目 / コース(SC・LC) / タイム
 
 import React, { useCallback, useEffect, useMemo } from "react";
-import { Modal, View, Text, Pressable, StyleSheet } from "react-native";
-import { FlashList, type ListRenderItemInfo } from "@shopify/flash-list";
+import {
+  View,
+  Text,
+  Pressable,
+  FlatList,
+  StyleSheet,
+  type ListRenderItemInfo,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useTranslation } from "react-i18next";
@@ -33,6 +39,7 @@ import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { formatTimeBest } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { SlideUpModal } from "@/components/ui/SlideUpModal";
 import { useMemberWaPointsRecords } from "./useMemberWaPointsRecords";
 
 interface WaPointsCompareModalProps {
@@ -77,7 +84,10 @@ interface WaPointsRankingRowProps {
  */
 const WaPointsRankingRow: React.FC<WaPointsRankingRowProps> = React.memo(
   ({ item, pointsLabel, rankLabel }) => {
-    const { url: avatarUrl } = useSignedImageUrl("profile-images", item.avatarPath);
+    const { url: avatarUrl } = useSignedImageUrl(
+      "profile-images",
+      item.avatarPath,
+    );
     const badgeColor = getRankBadgeColor(item.rank);
 
     return (
@@ -88,10 +98,16 @@ const WaPointsRankingRow: React.FC<WaPointsRankingRowProps> = React.memo(
       >
         <View style={styles.rowTopLine}>
           <View style={[styles.rankBadge, { backgroundColor: badgeColor.bg }]}>
-            <Text style={[styles.rankBadgeText, { color: badgeColor.text }]}>{item.rank}</Text>
+            <Text style={[styles.rankBadgeText, { color: badgeColor.text }]}>
+              {item.rank}
+            </Text>
           </View>
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} contentFit="cover" />
+            <Image
+              source={{ uri: avatarUrl }}
+              style={styles.avatarImage}
+              contentFit="cover"
+            />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarPlaceholderText}>
@@ -125,10 +141,14 @@ export const WaPointsCompareModal: React.FC<WaPointsCompareModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const insets = useSafeInsets();
-  const { recordsByUserId, loading, error, loadRecords } = useMemberWaPointsRecords(supabase);
+  const { recordsByUserId, loading, error, loadRecords } =
+    useMemberWaPointsRecords(supabase);
 
   // members の配列参照が親の再レンダーごとに変わっても内容が同じなら再取得しない
-  const memberUserIds = useMemo(() => members.map((member) => member.user_id), [members]);
+  const memberUserIds = useMemo(
+    () => members.map((member) => member.user_id),
+    [members],
+  );
   const memberUserIdsKey = memberUserIds.join(",");
 
   useEffect(() => {
@@ -155,7 +175,8 @@ export const WaPointsCompareModal: React.FC<WaPointsCompareModalProps> = ({
       const genderRaw: unknown = member.users?.gender;
       // pool_type/gender は DB の生の値をそのまま渡す (0/1 の意味を再解釈しない)。
       // 0/1 以外 (未設定など) のメンバーは計算対象外にする。
-      const gender: Gender | null = genderRaw === 0 || genderRaw === 1 ? genderRaw : null;
+      const gender: Gender | null =
+        genderRaw === 0 || genderRaw === 1 ? genderRaw : null;
       const sourceRecords = recordsByUserId.get(member.user_id) ?? [];
 
       const records: WaPointRecordInput[] =
@@ -209,7 +230,11 @@ export const WaPointsCompareModal: React.FC<WaPointsCompareModalProps> = ({
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<RankingRowItem>) => (
-      <WaPointsRankingRow item={item} pointsLabel={pointsLabel} rankLabel={rankLabel} />
+      <WaPointsRankingRow
+        item={item}
+        pointsLabel={pointsLabel}
+        rankLabel={rankLabel}
+      />
     ),
     [pointsLabel, rankLabel],
   );
@@ -217,72 +242,73 @@ export const WaPointsCompareModal: React.FC<WaPointsCompareModalProps> = ({
   const keyExtractor = useCallback((item: RankingRowItem) => item.memberId, []);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        {/* 背面タップで閉じるための透明レイヤー。シート (modalContent) の「兄弟」として
-            絶対配置しており、シート本体のタップがここに届かない構造にしている
-            (apps/mobile/components/history/BottomSheet.tsx と同じ方式) */}
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-
-        {/*
-          modalContent (maxHeight:"90%") は flex:1 の overlay の直接の子にする。
-          間に SafeAreaView 等の高さ未確定なラッパーを挟むと、Yoga が % 高さを
-          解決できる確定した親高さを持てず maxHeight 制約が事実上無効化される
-          (このリポジトリで前科のある罠)。参照チェーンは
-          apps/mobile/components/history/BottomSheet.tsx:129-133 (overlay→sheet が直接の
-          親子) に合わせている。
-        */}
-        <View style={styles.modalContent}>
-          <View style={styles.header}>
-            <Text style={styles.title} numberOfLines={1}>
-              {t("teams.waPointsCompare.modalTitle")}
-            </Text>
-            <Pressable
-              style={styles.closeButton}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel={t("common.close")}
-            >
-              <Feather name="x" size={22} color="#6B7280" />
-            </Pressable>
-          </View>
-
-          <View style={styles.body}>
-            {loading ? (
-              <LoadingSpinner message={t("teams.mobile.bestTimeLoading")} />
-            ) : error ? (
-              <ErrorView message={error} onRetry={handleRetry} />
-            ) : rankingRows.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Feather name="award" size={40} color="#D1D5DB" />
-                <Text style={styles.emptyText}>{t("teams.waPointsCompare.empty")}</Text>
-              </View>
-            ) : (
-              <FlashList
-                data={rankingRows}
-                keyExtractor={keyExtractor}
-                renderItem={renderItem}
-                contentContainerStyle={styles.listContent}
-              />
-            )}
-          </View>
-
-          {/* Android edge-to-edge 対応: 中身のない SafeAreaView は padding を生成しない
-              (実機検証済みの既知の罠) ため、insets.bottom を明示的な高さの View として
-              確保する (BottomSheet.tsx の footer 不在時と同じ方式) */}
-          <View style={{ height: getSafeFooterPadding(0, insets.bottom) }} />
-        </View>
+    <SlideUpModal
+      visible={visible}
+      onClose={onClose}
+      backdropAccessibilityLabel={t("common.close")}
+      sheetStyle={styles.modalContent}
+    >
+      {/*
+        modalContent (maxHeight:"90%") は SlideUpModal 内部の flex:1 な overlay の
+        直接の子にする。間に SafeAreaView 等の高さ未確定なラッパーを挟むと、Yoga が
+        % 高さを解決できる確定した親高さを持てず maxHeight 制約が事実上無効化される
+        (このリポジトリで前科のある罠)。
+      */}
+      <View style={styles.header}>
+        <Text style={styles.title} numberOfLines={1}>
+          {t("teams.waPointsCompare.modalTitle")}
+        </Text>
+        <Pressable
+          style={styles.closeButton}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t("common.close")}
+        >
+          <Feather name="x" size={22} color="#6B7280" />
+        </Pressable>
       </View>
-    </Modal>
+
+      {/*
+        FlatList はシート (modalContent: maxHeight "90%") の直接の子にする。
+        中間に style 指定のない View を1枚挟むと、RN の flexShrink 既定値が 0 のため
+        その View がコンテンツサイズより縮まず、FlatList が maxHeight の制約を
+        受け取れずスクロールビューポートが成立しないまま溢れる恐れがある
+        (Reviewer 指摘: 20〜50人規模のチームで下位の順位に到達できない)。
+        StylePickerModal.tsx (FlatList がシート直下) / BottomSheet.tsx
+        (ScrollView flexGrow:0 がシート直下) と同じ「中間ラッパーを置かない」構造に揃える。
+        FlatList 自体は flexGrow:0 のままにし、高さ未確定の祖先に依存させず
+        modalContent の maxHeight で全体を頭打ちにする。
+      */}
+      {loading ? (
+        <LoadingSpinner message={t("teams.mobile.bestTimeLoading")} />
+      ) : error ? (
+        <ErrorView message={error} onRetry={handleRetry} />
+      ) : rankingRows.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Feather name="award" size={40} color="#D1D5DB" />
+          <Text style={styles.emptyText}>
+            {t("teams.waPointsCompare.empty")}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={rankingRows}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
+
+      {/* Android edge-to-edge 対応: 中身のない SafeAreaView は padding を生成しない
+          (実機検証済みの既知の罠) ため、insets.bottom を明示的な高さの View として
+          確保する (BottomSheet.tsx の footer 不在時と同じ方式) */}
+      <View style={{ height: getSafeFooterPadding(0, insets.bottom) }} />
+    </SlideUpModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
@@ -318,15 +344,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  body: {
-    flex: 1,
-    minHeight: 200,
+  list: {
+    // 高さ未確定の祖先 (modalContent) に対して flex で伸びようとすると高さ0に潰れるため、
+    // FlatList 自体はコンテンツサイズのまま (flexGrow:0) にする
+    flexGrow: 0,
   },
   listContent: {
     padding: 16,
   },
   emptyContainer: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 40,

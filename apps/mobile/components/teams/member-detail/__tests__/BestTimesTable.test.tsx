@@ -24,7 +24,7 @@
 // =============================================================================
 
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import type { BestTime } from "@apps/shared/types/ui";
 import { BestTimesTable } from "../BestTimesTable";
@@ -225,19 +225,30 @@ describe("BestTimesTable (member-detail) - セル詳細シート", () => {
     expect(screen.queryByText("セルA大会")).toBeNull();
   });
 
-  it("[V-CELL-06b] 同一セル再タップで閉じる", () => {
-    const bestTimes = [
-      buildBestTime({ time: 33.44, style: FR50, competition: { title: "セルA大会", date: "2023-01-10" } }),
-    ];
-    render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
+  it(
+    "[V-CELL-06b] 同一セル再タップで閉じる " +
+      "(PM裁定: CenterModal の閉じアニメーション分(160ms)の遅延を許容する。契約は" +
+      "「同一セル再タップで閉じる」であって「0msで中身が消える」ではないため、" +
+      "同期アサーションではなく waitFor で待つ。ただし『そもそも閉じない』退行は" +
+      "waitFor のタイムアウト(既定5000ms > 160ms)で確実に赤くなる)",
+    async () => {
+      const bestTimes = [
+        buildBestTime({ time: 33.44, style: FR50, competition: { title: "セルA大会", date: "2023-01-10" } }),
+      ];
+      render(<BestTimesTable bestTimes={bestTimes} gender={0} />);
 
-    const cell = screen.getByText("33.44");
-    fireEvent.click(cell);
-    expect(screen.getByText("セルA大会")).toBeTruthy();
+      const cell = screen.getByText("33.44");
+      fireEvent.click(cell);
+      expect(screen.getByText("セルA大会")).toBeTruthy();
 
-    fireEvent.click(cell);
-    expect(screen.queryByText("セルA大会")).toBeNull();
-  });
+      fireEvent.click(cell);
+      // 閉じるアニメーション (CenterModal の ANIMATION_DURATION=160ms) の間は
+      // 直近の中身が残っていてもよい。アニメーション完了後に消えていることを確認する。
+      await waitFor(() => {
+        expect(screen.queryByText("セルA大会")).toBeNull();
+      });
+    },
+  );
 });
 
 describe("BestTimesTable (member-detail) - リレー引き継ぎ候補の note", () => {

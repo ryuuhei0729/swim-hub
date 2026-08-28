@@ -25,37 +25,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
-// @shopify/flash-list はソースが素の .ts のまま配布されており、このリポジトリの
-// vitest 環境では変換に失敗する (`SyntaxError: Unexpected token 'typeof'`)。
-// `screens/__tests__/TeamsScreen.refreshDrift.test.tsx` と同じ方式でファイルローカルに
-// 最小スタブへ置き換える。
-vi.mock("@shopify/flash-list", () => ({
-  FlashList: ({
-    data,
-    renderItem,
-    keyExtractor,
-    ListEmptyComponent,
-    ...props
-  }: {
-    data?: unknown[];
-    renderItem?: (info: { item: unknown; index: number }) => React.ReactNode;
-    keyExtractor?: (item: unknown, index: number) => string | number;
-    ListEmptyComponent?: React.ReactNode;
-  } & Record<string, unknown>) =>
-    React.createElement(
-      "div",
-      props,
-      data && data.length > 0
-        ? data.map((item, index) =>
-            React.createElement(
-              "div",
-              { key: keyExtractor ? keyExtractor(item, index) : index },
-              renderItem ? renderItem({ item, index }) : null,
-            ),
-          )
-        : (ListEmptyComponent ?? null),
-    ),
-}));
+// mobile UI フィードバック #2 の実装で WaPointsCompareModal.tsx は `FlashList`
+// (`@shopify/flash-list`) から標準の `FlatList` (react-native) に置き換えられたため、
+// `@shopify/flash-list` の変換失敗を避けるためのファイルローカルスタブは不要になった。
+// (削除後も全テストが green のままであることを QA で確認済み)
 
 // useSignedImageUrl は内部で useAuth() を直接呼ぶ (supabase prop 経由ではない)。
 // アバター解決は本テストの関心事ではないため、session 無し (url は常に null) を返す。
@@ -242,6 +215,90 @@ describe("WaPointsCompareModal", () => {
     render(<WaPointsCompareModal visible={false} onClose={vi.fn()} members={[member]} supabase={supabase} />);
 
     expect(screen.queryByText("非表示太郎")).toBeNull();
+  });
+
+  // ---------------------------------------------------------------------
+  // ローディング/エラー/空状態の3分岐がそれぞれ実際に到達可能であることの検証
+  // (「到達不能な分岐をテストしていた」実例があるため、分岐名だけでなく実データで
+  // その分岐に到達させたうえで内容を確認する)
+  // ---------------------------------------------------------------------
+  it("[V-CMP-LOADING] データ取得中はローディング表示になる (ローディング分岐の到達確認)", () => {
+    const member = buildMember({ id: "m-1", user_id: "u-1", name: "読込中太郎", gender: 0 });
+    const fromSpy = vi.fn(() => ({
+      select: vi.fn(() => ({
+        in: vi.fn(() => ({
+          eq: vi.fn(() => new Promise(() => {})), // 永続 pending
+        })),
+      })),
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = { from: fromSpy } as any;
+
+    render(
+      <WaPointsCompareModal visible={true} onClose={vi.fn()} members={[member]} supabase={supabase} />,
+    );
+
+    expect(screen.getByText("ベストタイム読込中...")).toBeTruthy();
+    // ローディング中はランキング行も空状態メッセージも出ない
+    expect(screen.queryByText("読込中太郎")).toBeNull();
+    expect(screen.queryByText("比較できる記録がありません")).toBeNull();
+  });
+
+  it("[V-CMP-ERROR] データ取得に失敗するとエラーメッセージ+再試行ボタンが表示され、再試行で再取得される (エラー分岐の到達確認)", async () => {
+    const member = buildMember({ id: "m-1", user_id: "u-1", name: "失敗次郎", gender: 0 });
+    let callCount = 0;
+    const fromSpy = vi.fn(() => ({
+      select: vi.fn(() => ({
+        in: vi.fn(() => ({
+          eq: vi.fn(() => {
+            callCount += 1;
+            if (callCount === 1) {
+              return Promise.resolve({ data: null, error: { message: "network error" } });
+            }
+            return Promise.resolve({
+              data: [
+                {
+                  user_id: "u-1",
+                  time: 25.0,
+                  pool_type: 0,
+                  is_relaying: false,
+                  styles: { name_jp: "50m自由形", distance: 50 },
+                },
+              ],
+              error: null,
+            });
+          }),
+        })),
+      })),
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = { from: fromSpy } as any;
+
+    render(
+      <WaPointsCompareModal visible={true} onClose={vi.fn()} members={[member]} supabase={supabase} />,
+    );
+
+    await screen.findByText("ベストタイムの取得に失敗しました");
+    expect(screen.queryByText("失敗次郎")).toBeNull();
+
+    fireEvent.click(screen.getByText("再試行").closest("button")!);
+
+    await screen.findByText("失敗次郎");
+    expect(screen.getByText("504")).toBeTruthy();
+    expect(fromSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("[V-CMP-EMPTY] 比較できる記録が0件のとき空状態メッセージが表示される (空状態分岐の到達確認)", async () => {
+    // gender 不明のため計算対象外 = ランキング行が0件になる
+    const member = buildMember({ id: "m-1", user_id: "u-1", name: "空状態太郎" });
+    const { supabase } = buildSupabaseMock({ "u-1": [record("u-1", 25.0, 0, "50m自由形", 50)] });
+
+    render(
+      <WaPointsCompareModal visible={true} onClose={vi.fn()} members={[member]} supabase={supabase} />,
+    );
+
+    await screen.findByText("比較できる記録がありません");
+    expect(screen.queryByText("空状態太郎")).toBeNull();
   });
 
   it("閉じるボタンを押すと onClose が呼ばれる", async () => {

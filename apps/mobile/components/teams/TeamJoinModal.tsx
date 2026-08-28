@@ -1,6 +1,14 @@
 import React, { useState } from "react";
-import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import { useTranslation } from "react-i18next";
+import { CenterModal } from "@/components/ui/CenterModal";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useJoinTeamMutation } from "@apps/shared/hooks/queries/teams";
 
@@ -13,7 +21,11 @@ interface TeamJoinModalProps {
 /**
  * チーム参加モーダルコンポーネント
  */
-export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({ visible, onClose, onSuccess }) => {
+export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({
+  visible,
+  onClose,
+  onSuccess,
+}) => {
   const { supabase, user } = useAuth();
   const joinTeamMutation = useJoinTeamMutation(supabase);
   const { t } = useTranslation();
@@ -64,71 +76,72 @@ export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({ visible, onClose, 
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{t("teams.mobile.joinTitle")}</Text>
-            <Pressable style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </Pressable>
-          </View>
-
-          <ScrollView style={styles.body}>
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("teams.mobile.inviteCodeLabel")}</Text>
-              <TextInput
-                style={styles.input}
-                value={inviteCode}
-                onChangeText={setInviteCode}
-                placeholder={t("teams.mobile.inviteCodePlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
-              <Text style={styles.hint}>{t("teams.mobile.inviteCodeHint")}</Text>
-            </View>
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={isLoading}
-            >
-              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.button, styles.submitButton, isLoading && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={isLoading || !inviteCode.trim()}
-            >
-              <Text style={styles.submitButtonText}>
-                {isLoading ? t("teams.mobile.joining") : t("teams.mobile.joinButton")}
-              </Text>
-            </Pressable>
-          </View>
+    <CenterModal
+      visible={visible}
+      onClose={handleClose}
+      closeAccessibilityLabel={t("common.close")}
+      showCloseButton={false}
+      contentStyle={styles.modalContent}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>{t("teams.mobile.joinTitle")}</Text>
+        <Pressable style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <ScrollView style={styles.body}>
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>{t("teams.mobile.inviteCodeLabel")}</Text>
+          <TextInput
+            style={styles.input}
+            value={inviteCode}
+            onChangeText={setInviteCode}
+            placeholder={t("teams.mobile.inviteCodePlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isLoading}
+          />
+          <Text style={styles.hint}>{t("teams.mobile.inviteCodeHint")}</Text>
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={[styles.button, styles.cancelButton]}
+          onPress={handleClose}
+          disabled={isLoading}
+        >
+          <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.button,
+            styles.submitButton,
+            isLoading && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={isLoading || !inviteCode.trim()}
+        >
+          <Text style={styles.submitButtonText}>
+            {isLoading
+              ? t("teams.mobile.joining")
+              : t("teams.mobile.joinButton")}
+          </Text>
+        </Pressable>
+      </View>
+    </CenterModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,

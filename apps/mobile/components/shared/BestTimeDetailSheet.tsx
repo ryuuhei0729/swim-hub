@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
-import { BottomSheet } from "@/components/history/BottomSheet";
+import { CenterModal } from "@/components/ui/CenterModal";
 
 export interface BestTimeDetail {
   /** 大会日 (competition.date) または記録作成日 (created_at) の ISO 文字列。呼び出し元で優先順位を解決して渡すこと */
@@ -32,10 +33,11 @@ export interface BestTimeDetailSheetProps {
 
 /**
  * ベストタイムのセルをタップした際に「日付 + 大会名 (無ければ note、それも無ければ一括登録)」を
- * 表示する詳細シート。profile / member-detail / TeamMemberList の3表から共有される。
+ * 表示する詳細ポップアップ。profile / member-detail / TeamMemberList の3表から共有される。
  *
- * web 版はホバーツールチップ (絶対配置) だが、mobile はタップ操作のため既存の汎用オーバーレイ
- * 基盤である `BottomSheet` を再利用する (新しいポップオーバーは発明しない)。
+ * web 版はホバーツールチップ (絶対配置) だが、mobile はタップ操作のため中央配置のポップアップ
+ * モーダル (`CenterModal`) を使う。ユーザーから「ボトムシートではなくモーダル的なポップアップで
+ * 出てきてほしい」との要望があったため、既存の下端シート (`BottomSheet`) から変更している。
  */
 export const BestTimeDetailSheet: React.FC<BestTimeDetailSheetProps> = ({
   detail,
@@ -43,23 +45,51 @@ export const BestTimeDetailSheet: React.FC<BestTimeDetailSheetProps> = ({
   noteFallbackLabel,
 }) => {
   const locale = useDateLocale();
+  const { t } = useTranslation();
+
+  // CenterModal は閉じるときも160msのフェード+スケールアウトを再生する。呼び出し元は
+  // 「選択中セル」を detail の null/非null で表しているため、生の detail だけで中身を
+  // 判定すると、閉じ操作の瞬間に中身が消えてしまい、フェードアウト中に「空の白いカード」
+  // が見えてしまう。そこで直近の非 null な detail をキャッシュし、描画にはこちら
+  // (displayDetail) を使う。visible の判定 (CenterModal に渡す isOpen 相当) だけは
+  // 生の detail で行う (`GroupMemberModal.tsx`/`GroupMemberListModal.tsx` と同じ
+  // useState + useEffect 方式。useRef のレンダー中読み取りは react-hooks/refs に
+  // 抵触するため使わない)。
+  const [displayDetail, setDisplayDetail] = useState<BestTimeDetail | null>(
+    detail,
+  );
+  useEffect(() => {
+    if (detail !== null) {
+      setDisplayDetail(detail);
+    }
+  }, [detail]);
 
   return (
-    <BottomSheet isOpen={detail !== null} onClose={onClose}>
-      {detail && (
+    <CenterModal
+      visible={detail !== null}
+      onClose={onClose}
+      closeAccessibilityLabel={t("common.close")}
+    >
+      {displayDetail && (
         <View style={styles.container}>
           <View style={styles.dateRow}>
             <Feather name="calendar" size={14} color="#6B7280" />
-            <Text style={styles.dateText}>{formatDate(detail.date, "numeric", locale)}</Text>
+            <Text style={styles.dateText}>
+              {formatDate(displayDetail.date, "numeric", locale)}
+            </Text>
           </View>
-          {detail.competitionTitle ? (
-            <Text style={styles.titleText}>{detail.competitionTitle}</Text>
+          {displayDetail.competitionTitle ? (
+            <Text style={styles.titleText}>
+              {displayDetail.competitionTitle}
+            </Text>
           ) : (
-            <Text style={styles.noteText}>{detail.note || noteFallbackLabel}</Text>
+            <Text style={styles.noteText}>
+              {displayDetail.note || noteFallbackLabel}
+            </Text>
           )}
         </View>
       )}
-    </BottomSheet>
+    </CenterModal>
   );
 };
 

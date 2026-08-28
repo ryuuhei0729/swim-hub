@@ -162,7 +162,13 @@ const buildBestTime = (overrides: Partial<BestTime> = {}): BestTime => {
 
 describe("[V-I18N-NOTE] noteFallbackLabel のキー配線 (ドイツ語で名前空間ごとの取り違えを実証)", () => {
   it("[V-I18N-NOTE-01a] マイページ (profile/BestTimesTable) は Sammeleintrag を表示する (Sammeleingabe は出ない)", () => {
-    render(<ProfileBestTimesTable bestTimes={[buildBestTime({ time: 30.0 })]} gender={0} />);
+    render(
+      <ProfileBestTimesTable
+        bestTimes={[buildBestTime({ time: 30.0 })]}
+        gender={0}
+        isWaPointsMode={false}
+      />,
+    );
 
     fireEvent.click(screen.getByText("30.00"));
 

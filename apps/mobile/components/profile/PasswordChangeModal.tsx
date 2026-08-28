@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
-  Modal,
   Pressable,
   TextInput,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { CenterModal } from "@/components/ui/CenterModal";
 
 interface PasswordChangeModalProps {
   visible: boolean;
@@ -79,12 +79,17 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
         }, 2000);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : t("mypage.passwordChange.unexpectedError");
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : t("mypage.passwordChange.unexpectedError");
       setError(errorMessage);
       if (Platform.OS === "web") {
         window.alert(errorMessage);
       } else {
-        Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
+        Alert.alert(t("common.alertErrorTitle"), errorMessage, [
+          { text: "OK" },
+        ]);
       }
     } finally {
       setLoading(false);
@@ -100,100 +105,105 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
   }, []);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{t("mypage.passwordChange.title")}</Text>
-            <Pressable style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.body}
-            contentContainerStyle={styles.bodyContent}
-            testID="password-change-body-scroll"
-          >
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            {message && (
-              <View style={styles.messageContainer}>
-                <Text style={styles.messageText}>{message}</Text>
-              </View>
-            )}
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("mypage.passwordChange.newPasswordLabel")}</Text>
-              <TextInput
-                style={styles.input}
-                value={newPassword}
-                onChangeText={(text) => {
-                  setNewPassword(text);
-                  setError(null);
-                }}
-                placeholder={t("mypage.passwordChange.newPasswordPlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                secureTextEntry
-                editable={!loading}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("mypage.passwordChange.confirmPasswordLabel")}</Text>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={(text) => {
-                  setConfirmPassword(text);
-                  setError(null);
-                }}
-                placeholder={t("mypage.passwordChange.confirmPasswordPlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                secureTextEntry
-                editable={!loading}
-              />
-            </View>
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.button, styles.submitButton, loading && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={loading || newPassword.length < 6 || newPassword !== confirmPassword}
-            >
-              <Text style={styles.submitButtonText}>
-                {loading
-                  ? t("mypage.passwordChange.updating")
-                  : t("mypage.passwordChange.submitButton")}
-              </Text>
-            </Pressable>
-          </View>
+    <CenterModal
+      visible={visible}
+      onClose={handleClose}
+      closeAccessibilityLabel={t("common.close")}
+      showCloseButton={false}
+      contentStyle={styles.modalContent}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>{t("mypage.passwordChange.title")}</Text>
+        <Pressable style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        testID="password-change-body-scroll"
+      >
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {message && (
+          <View style={styles.messageContainer}>
+            <Text style={styles.messageText}>{message}</Text>
+          </View>
+        )}
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            {t("mypage.passwordChange.newPasswordLabel")}
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={newPassword}
+            onChangeText={(text) => {
+              setNewPassword(text);
+              setError(null);
+            }}
+            placeholder={t("mypage.passwordChange.newPasswordPlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            secureTextEntry
+            editable={!loading}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            {t("mypage.passwordChange.confirmPasswordLabel")}
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={confirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(text);
+              setError(null);
+            }}
+            placeholder={t("mypage.passwordChange.confirmPasswordPlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            secureTextEntry
+            editable={!loading}
+          />
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={[styles.button, styles.cancelButton]}
+          onPress={handleClose}
+          disabled={loading}
+        >
+          <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.button,
+            styles.submitButton,
+            loading && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={
+            loading || newPassword.length < 6 || newPassword !== confirmPassword
+          }
+        >
+          <Text style={styles.submitButtonText}>
+            {loading
+              ? t("mypage.passwordChange.updating")
+              : t("mypage.passwordChange.submitButton")}
+          </Text>
+        </Pressable>
+      </View>
+    </CenterModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
