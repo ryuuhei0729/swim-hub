@@ -27,6 +27,11 @@ interface TagSelectModalProps {
   onCreateTag: () => void;
   onEditTag: (tag: PracticeTag) => void;
   onDeleteTag: (tag: PracticeTag) => void;
+  /**
+   * このモーダルの実体 (SlideUpModal) が実際に閉じ終わったタイミングで呼ばれる。
+   * 呼び出し元が「このモーダルが完全に閉じてから次のモーダルを開く」制御に使う。
+   */
+  onClosed?: () => void;
 }
 
 /**
@@ -42,6 +47,7 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
   onCreateTag,
   onEditTag,
   onDeleteTag,
+  onClosed,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeInsets();
@@ -105,6 +111,7 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
     <SlideUpModal
       visible={visible}
       onClose={onClose}
+      onClosed={onClosed}
       overlayColor="rgba(0, 0, 0, 0.4)"
       sheetStyle={[
         styles.sheet,

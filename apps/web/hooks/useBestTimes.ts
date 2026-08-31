@@ -22,6 +22,7 @@ export function useBestTimes(supabase: SupabaseClient) {
           created_at,
           pool_type,
           is_relaying,
+          note,
           styles!records_style_id_fkey (
             name_jp,
             distance
@@ -50,6 +51,7 @@ export function useBestTimes(supabase: SupabaseClient) {
               created_at: string;
               pool_type: number;
               is_relaying: boolean;
+              note?: string | null;
               styles?:
                 | { name_jp: string; distance: number }
                 | null
@@ -77,6 +79,7 @@ export function useBestTimes(supabase: SupabaseClient) {
                     id: record.id,
                     time: record.time,
                     created_at: record.created_at,
+                    note: record.note || undefined,
                     competition: competition
                       ? {
                           title: competition.title,
@@ -97,6 +100,7 @@ export function useBestTimes(supabase: SupabaseClient) {
                     created_at: record.created_at,
                     pool_type: poolType,
                     is_relaying: false,
+                    note: record.note || undefined,
                     style: {
                       name_jp: style?.name_jp || "Unknown",
                       distance: style?.distance || 0,
@@ -158,6 +162,7 @@ export function useBestTimes(supabase: SupabaseClient) {
                 created_at: relayingTime.created_at,
                 pool_type: poolType,
                 is_relaying: true,
+                note: relayingTime.note,
                 style: {
                   name_jp: styleName,
                   distance: style?.distance || 0,

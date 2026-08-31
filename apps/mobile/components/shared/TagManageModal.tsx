@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -21,6 +22,12 @@ interface TagManageModalProps {
   tag: PracticeTag | null;
   onSave: (name: string, color: string) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
+  /**
+   * このモーダルが実際に閉じ終わったタイミングで呼ばれる (iOS は onDismiss、Android は
+   * visible=false を発火条件とし、実装内の分岐理由は本体コメントを参照。
+   * components/ui/SlideUpModal.tsx の onClosed と同じ意図)。初回マウント時は発火しない。
+   */
+  onClosed?: () => void;
 }
 
 /**
@@ -32,6 +39,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   tag,
   onSave,
   onDelete,
+  onClosed,
 }) => {
   const { t } = useTranslation();
   const [name, setName] = useState("");
@@ -42,6 +50,37 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isEditMode = tag !== null;
+
+  // onClosed の呼び出し元は毎レンダー新しい関数を渡すことがあるため、ref 経由で参照し
+  // 下の visible 監視 effect の依存配列には含めない (直前の visible の追跡だけで
+  // 発火判定したいため)。
+  const onClosedRef = useRef(onClosed);
+  useEffect(() => {
+    onClosedRef.current = onClosed;
+  }, [onClosed]);
+  const wasVisibleRef = useRef(visible);
+
+  useEffect(() => {
+    const wasVisible = wasVisibleRef.current;
+    wasVisibleRef.current = visible;
+
+    // Android/Web: RN <Modal> は visible=false で即座に中身を描画しなくなる (SlideUpModal と
+    // 異なり遅延アンマウントを持たない) ため、この時点を「閉じ終わった」とみなせる。
+    // iOS はここでは処理しない (下の onDismiss が信号を担う。visible=false の時点では
+    // ネイティブの閉じアニメーションがまだ再生中のため)。
+    if (Platform.OS === "ios") return;
+    if (!visible && wasVisible) {
+      onClosedRef.current?.();
+    }
+  }, [visible]);
+
+  const handleDismiss = () => {
+    // iOS 専用: ネイティブモーダルの提示アニメーションが完全に終わった (閉じ切った) 通知。
+    // Android では onDismiss 自体が発火しないため、Android の通知は上の useEffect が担う。
+    if (Platform.OS === "ios") {
+      onClosedRef.current?.();
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -131,6 +170,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onClose}
+      onDismiss={handleDismiss}
     >
       <SafeAreaView style={styles.container}>
         {/* ヘッダー */}

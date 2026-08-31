@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { approveMembership, rejectMembership } from "@/app/[locale]/(authenticated)/teams/_actions/actions";
 import { useTranslations } from "next-intl";
 

@@ -8,7 +8,7 @@ import { EmailSignInForm } from "@/components/auth";
 import { useAuth } from "@/contexts";
 import { useRouter } from "@/i18n/navigation";
 import { FullScreenLoading } from "@/components/ui/LoadingSpinner";
-import { getSafeRedirectUrl } from "@/utils/redirect";
+import { resolveSafeLocalRedirect } from "@/utils/localeRedirect";
 
 function EmailLoginFallback() {
   const tSignin = useTranslations("auth.signin");
@@ -34,7 +34,7 @@ function LoginEmailContent() {
   useEffect(() => {
     if (!loading && isAuthenticated && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
-      const redirectTo = getSafeRedirectUrl(searchParams.get("redirect_to"));
+      const redirectTo = resolveSafeLocalRedirect(searchParams.get("redirect_to"));
       router.push(redirectTo);
     }
   }, [isAuthenticated, loading, router, searchParams]);

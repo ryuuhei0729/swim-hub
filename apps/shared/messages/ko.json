@@ -1310,7 +1310,8 @@
         "relaying": "R: 이어받기 있음",
         "relayingExcludedFromWaPoints": "이어받기 타임은 WA 포인트 산정에서 제외됩니다"
       },
-      "waPointsToggle": "WA 포인트 표시"
+      "waPointsToggle": "WA 포인트 표시",
+      "waPointsToggleShort": "WA 포인트"
     },
     "error": {
       "title": "오류가 발생했습니다",
@@ -2499,9 +2500,7 @@
       "groupMemberAssignFailed": "멤버 배정에 실패했습니다",
       "memberListTitle": "멤버",
       "memberListEmpty": "멤버가 없습니다",
-      "memberListTotal": "합계: {count}명",
-      "memberListAdmin": "관리자: {count}명",
-      "memberListMember": "멤버: {count}명",
+      "memberListTotal": "인원: {count}명",
       "bestTimeLoading": "베스트 타임 불러오는 중...",
       "memberColLabel": "멤버",
       "youLabel": "나",
@@ -2551,7 +2550,8 @@
       "adminControlsTitle": "관리자 기능",
       "bestTimesEmpty": "기록이 없습니다",
       "bestTimesEmptySubText": "이 멤버는 아직 기록을 등록하지 않았습니다",
-      "bestTimesIncludeRelaying": "이어가기 타임 포함",
+      "bestTimesIncludeRelaying": "이어받기 포함",
+      "bestTimesWaPointsToggle": "WA 포인트",
       "bestTimesAnnotation": "※ L: 장수로, R: 이어가기 있음",
       "groupDisplayLabel": "그룹 표시:",
       "groupAddAria": "그룹 추가",
@@ -2975,8 +2975,8 @@
       "rankLabel": "순위",
       "pointsLabel": "WA 포인트",
       "styleLabel": "종목",
-      "courseShort": "SC",
-      "courseLong": "LC",
+      "courseShort": "단수로",
+      "courseLong": "장수로",
       "empty": "비교할 수 있는 기록이 없습니다"
     },
     "membershipActions": {

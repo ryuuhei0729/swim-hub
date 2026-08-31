@@ -36,6 +36,7 @@ import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { MemberSelectModal } from "@/components/teams/MemberSelectModal";
 import { uploadVideoForTeamMember, MissingThumbnailError } from "@/utils/videoUpload";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
+import { useTagModalTransition } from "@/hooks/useTagModalTransition";
 import type { MainStackParamList } from "@/navigation/types";
 import type { PracticeTag } from "@apps/shared/types";
 
@@ -167,9 +168,22 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
 
   // モーダル状態
   const [memberModalMenuId, setMemberModalMenuId] = useState<string | null>(null);
+  // タグ選択/作成/編集の対象メニューID。「モーダルの表示状態」とは別の state に分離している
+  // (以前は tagModalMenuId 自身が TagSelectModal の表示状態も兼ねていたため、
+  // openTagCreateModal が閉じるために null 化すると対象メニューの情報ごと失われ、
+  // 新規作成したタグがどのメニューにも反映されないバグの原因になっていた)。
   const [tagModalMenuId, setTagModalMenuId] = useState<string | null>(null);
-  const [showTagManageModal, setShowTagManageModal] = useState(false);
-  const [editingTag, setEditingTag] = useState<PracticeTag | null>(null);
+  const [showTagSelectModal, setShowTagSelectModal] = useState(false);
+  // TagSelectModal ⇄ TagManageModal の遷移 (二重マウント競合の修正) は共通フックに集約。
+  const {
+    showTagManageModal,
+    editingTag,
+    openTagCreateModal,
+    openTagEditModal,
+    handleTagSelectModalClosed,
+    handleTagManageModalClosed,
+    closeTagManageModal,
+  } = useTagModalTransition(setShowTagSelectModal);
 
   // タグミューテーション（単体フォーム PracticeLogFormScreen と同パターン）
   const createTagMutation = useCreatePracticeTagMutation(supabase);
@@ -414,23 +428,11 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
     return entry?.displayValue ?? "";
   };
 
-  // ---- タグ管理（PracticeLogFormScreen と同パターン）----
-  const openTagCreateModal = () => {
-    setTagModalMenuId(null);
-    setTimeout(() => {
-      setEditingTag(null);
-      setShowTagManageModal(true);
-    }, 100);
-  };
-
-  const openTagEditModal = (tag: PracticeTag) => {
-    setTagModalMenuId(null);
-    setTimeout(() => {
-      setEditingTag(tag);
-      setShowTagManageModal(true);
-    }, 100);
-  };
-
+  // ---- タグ管理（PracticeLogFormScreen と同パターン。TagSelectModal ⇄ TagManageModal の
+  // 遷移そのものは useTagModalTransition に集約済み。ここでは対象メニューID
+  // (tagModalMenuId) を openTagCreateModal/openTagEditModal 実行時点で変更しないことだけが
+  // このフックの外側の責務: handleSaveTag が「どのメニューに新規タグを付けるか」の判定にも
+  // 使うため、モーダルの開閉に連動してリセットしてはならない）----
   const handleSaveTag = async (name: string, color: string) => {
     try {
       if (editingTag) {
@@ -862,7 +864,10 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
                 <Text style={styles.label}>{t("teamsAdmin.practiceLog.tagLabel")}</Text>
                 <TagChips
                   tags={menu.tags}
-                  onPress={() => setTagModalMenuId(menu.id)}
+                  onPress={() => {
+                    setTagModalMenuId(menu.id);
+                    setShowTagSelectModal(true);
+                  }}
                   onRemove={(tagId) =>
                     updateMenu(
                       menu.id,
@@ -1038,8 +1043,9 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
 
       {/* タグ選択モーダル（共通基盤を再利用） */}
       <TagSelectModal
-        visible={!!tagModalMenuId}
-        onClose={() => setTagModalMenuId(null)}
+        visible={showTagSelectModal}
+        onClose={() => setShowTagSelectModal(false)}
+        onClosed={handleTagSelectModalClosed}
         selectedTags={tagModalMenu?.tags ?? []}
         availableTags={availableTags}
         onTagsChange={(tags) => tagModalMenuId && updateMenu(tagModalMenuId, "tags", tags)}
@@ -1051,7 +1057,8 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
       {/* タグ管理モーダル（作成・編集） */}
       <TagManageModal
         visible={showTagManageModal}
-        onClose={() => setShowTagManageModal(false)}
+        onClose={closeTagManageModal}
+        onClosed={handleTagManageModalClosed}
         tag={editingTag}
         onSave={handleSaveTag}
         onDelete={handleDeleteTag}

@@ -37,8 +37,14 @@ const render = (ui: ReactElement) =>
   );
 
 // Next.js Router をモック
+// 🔴 修正 (2026-08-30, PM 実測 by 全スイート実走): OnboardingWizard.tsx は項目4により
+// useRouter を "next/navigation" ではなく "@/i18n/navigation" から取るようになった。
+// "next/navigation" をモックしても intercept されず、実物の useRouter が
+// AppRouterContext 無しで呼ばれて `invariant expected app router to be mounted` で
+// クラッシュする (前スプリントで6ファイル分発生したのと同じパターン)。
+// 26ファイルで確立済みのパターンに合わせ "@/i18n/navigation" をモックする。
 const mockRouterPush = vi.fn();
-vi.mock("next/navigation", () => ({
+vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({
     push: mockRouterPush,
     replace: vi.fn(),
@@ -255,7 +261,51 @@ describe("OnboardingWizard", () => {
   describe("[V-06] 完了処理", () => {
     it.todo("「スキップして始める」で updateProfile({ onboarding_completed: true }) が呼ばれる");
 
-    it.todo("updateProfile 成功後に router.push('/dashboard') が呼ばれる");
+    it(
+      "updateProfile 成功後に router.push('/dashboard') が呼ばれる " +
+        "（人間の意図: push 先は locale なしの完全一致 '/dashboard' であること。" +
+        "@/i18n/navigation の router は locale を自動で付与するため、呼び出し側が" +
+        "locale を手動で埋め込むと二重 prefix になる。この非退行を固定する）",
+      async () => {
+        const user = userEvent.setup();
+        // name が email 形式でない (プリフィル済み) プロフィールを使い、
+        // Step2 のバリデーションに引っかからず「次へ」で Step 3 に進めるようにする
+        // (他の記録保持テストと同じパターン)。
+        render(
+          <OnboardingWizard
+            initialProfile={
+              {
+                id: "user-1",
+                name: "山田太郎",
+                gender: 0,
+                birthday: null,
+                bio: null,
+                profile_image_path: null,
+              } as UserProfile
+            }
+          />,
+        );
+
+        // Step 1 → Step 2 → Step 3
+        await user.click(screen.getByRole("button", { name: "始める" }));
+        await user.click(await screen.findByRole("button", { name: "次へ" }));
+
+        // Step 3: 「スキップして始める」で完了処理 (updateProfile → router.push)
+        const skipButton = await screen.findByRole("button", { name: /スキップして始める/ });
+        await user.click(skipButton);
+
+        await waitFor(() => {
+          expect(mockUpdateProfile).toHaveBeenCalledWith({ onboarding_completed: true });
+        });
+
+        await waitFor(() => {
+          expect(mockRouterPush).toHaveBeenCalledTimes(1);
+        });
+        expect(mockRouterPush).toHaveBeenCalledWith("/dashboard");
+        // locale が手動で埋め込まれていないこと (二重 prefix 退行の検出)
+        expect(mockRouterPush).not.toHaveBeenCalledWith("/ja/dashboard");
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------

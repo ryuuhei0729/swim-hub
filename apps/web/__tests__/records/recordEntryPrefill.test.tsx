@@ -23,7 +23,7 @@ import { formatTimeBest } from "@/utils/formatters";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";
 
 vi.mock("@/components/video/TeamVideoUploader", () => ({ default: () => null }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 vi.mock("next-intl", async (importOriginal) => {
   const original = await importOriginal<typeof import("next-intl")>();

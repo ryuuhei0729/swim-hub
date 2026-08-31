@@ -5,7 +5,7 @@
  *   [V-16] ボタンクリックでモーダルが開き、最高 WA ポイント種目がランキング表示される
  *          (絶対タイムが最速の記録ではなく、WA ポイントが最大の記録を採用することの
  *          コンポーネントレベルでの実証)
- *   [V-17] モーダルに SC/LC 表記が出る
+ *   [V-17] モーダルに 短水路/長水路 表記が出る
  *   [V-18] 記録0件で空状態が表示されクラッシュしない
  *
  * 本テストは WaPointsCompareModal を直接レンダリングし、
@@ -266,8 +266,8 @@ describe("WaPointsCompareModal", () => {
     });
   });
 
-  describe("[V-17] モーダルに SC/LC 表記が出る", () => {
-    it("採用記録が SCM (pool_type=0) のとき「SC」が表示される", () => {
+  describe("[V-17] モーダルに 短水路/長水路 表記が出る", () => {
+    it("採用記録が SCM (pool_type=0) のとき「短水路」が表示される", () => {
       const member = buildMember();
       renderWithLocale(
         <WaPointsCompareModal
@@ -282,11 +282,13 @@ describe("WaPointsCompareModal", () => {
         />,
       );
       const row = screen.getByTestId("team-wa-points-row-1");
-      expect(within(row).getByText("(SC)")).toBeInTheDocument();
-      expect(within(row).queryByText("(LC)")).not.toBeInTheDocument();
+      expect(within(row).getByText("(短水路)")).toBeInTheDocument();
+      expect(within(row).queryByText("(長水路)")).not.toBeInTheDocument();
+      // 略称 SC は廃止済み (回帰検出)
+      expect(within(row).queryByText("(SC)")).not.toBeInTheDocument();
     });
 
-    it("採用記録が LCM (pool_type=1) のとき「LC」が表示される", () => {
+    it("採用記録が LCM (pool_type=1) のとき「長水路」が表示される", () => {
       const member = buildMember();
       renderWithLocale(
         <WaPointsCompareModal
@@ -301,8 +303,10 @@ describe("WaPointsCompareModal", () => {
         />,
       );
       const row = screen.getByTestId("team-wa-points-row-1");
-      expect(within(row).getByText("(LC)")).toBeInTheDocument();
-      expect(within(row).queryByText("(SC)")).not.toBeInTheDocument();
+      expect(within(row).getByText("(長水路)")).toBeInTheDocument();
+      expect(within(row).queryByText("(短水路)")).not.toBeInTheDocument();
+      // 略称 LC は廃止済み (回帰検出)
+      expect(within(row).queryByText("(LC)")).not.toBeInTheDocument();
     });
   });
 

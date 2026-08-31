@@ -11,12 +11,13 @@
 
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 export const AuthUI: React.FC = () => {
   const tUi = useTranslations("auth.ui");
   const tErrors = useTranslations("auth.errors");
   const tAuth = useTranslations("auth");
+  const locale = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +41,7 @@ export const AuthUI: React.FC = () => {
         setLoading(false);
         return;
       }
-      const redirectTo = `${window.location.origin}/api/auth/callback?redirect_to=/dashboard`;
+      const redirectTo = `${window.location.origin}/api/auth/callback?redirect_to=/${locale}/dashboard`;
 
       const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: "google",

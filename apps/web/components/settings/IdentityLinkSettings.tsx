@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/contexts";
 import type { UserIdentity } from "@supabase/supabase-js";
 
@@ -45,6 +45,7 @@ const AppleIcon = () => (
 export default function IdentityLinkSettings() {
   const t = useTranslations("settings.identity");
   const tErrors = useTranslations("settings.identity.errors");
+  const locale = useLocale();
   const { supabase } = useAuth();
   const [identities, setIdentities] = useState<UserIdentity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +92,7 @@ export default function IdentityLinkSettings() {
       const { data, error: linkError } = await supabase.auth.linkIdentity({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/?redirect_to=/settings`,
+          redirectTo: `${window.location.origin}/?redirect_to=/${locale}/settings`,
         },
       });
       if (linkError) {

@@ -1,18 +1,19 @@
-import { redirect } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
+import { getLocale } from "next-intl/server";
 import { getServerUser, getServerUserProfile } from "@/lib/supabase-server-auth";
 import OnboardingWizard from "./_client/OnboardingWizard";
 
 export default async function OnboardingPage() {
-  const user = await getServerUser();
+  const [user, locale] = await Promise.all([getServerUser(), getLocale()]);
 
   if (!user) {
-    redirect("/login");
+    return redirect({ href: "/login", locale });
   }
 
   const profile = await getServerUserProfile(user.id);
 
   if (profile?.onboarding_completed) {
-    redirect("/dashboard");
+    return redirect({ href: "/dashboard", locale });
   }
 
   return (

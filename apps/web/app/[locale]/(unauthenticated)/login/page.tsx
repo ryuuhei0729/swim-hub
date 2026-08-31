@@ -8,7 +8,7 @@ import { OAuthButtons } from "@/components/auth";
 import { useAuth } from "@/contexts";
 import { useRouter, Link } from "@/i18n/navigation";
 import { FullScreenLoading } from "@/components/ui/LoadingSpinner";
-import { getSafeRedirectUrl } from "@/utils/redirect";
+import { resolveSafeLocalRedirect } from "@/utils/localeRedirect";
 
 // OAuth エラーコード → 翻訳キー (auth.errorMap.*) のマッピング。
 // 値文字列は messages/{locale}.json で管理する。
@@ -99,7 +99,7 @@ function LoginPageContent() {
   useEffect(() => {
     if (!loading && isAuthenticated && !hasRedirectedRef.current) {
       hasRedirectedRef.current = true;
-      const redirectTo = getSafeRedirectUrl(searchParams.get("redirect_to"));
+      const redirectTo = resolveSafeLocalRedirect(searchParams.get("redirect_to"));
       router.push(redirectTo);
     }
   }, [isAuthenticated, loading, router, searchParams]);

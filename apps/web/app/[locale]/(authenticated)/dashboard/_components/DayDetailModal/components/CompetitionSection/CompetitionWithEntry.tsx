@@ -11,7 +11,7 @@ import {
 import { formatTimeBest } from "@/utils/formatters";
 import { useAuth } from "@/contexts";
 import { EntryAPI } from "@swim-hub/shared/api/entries";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import ImageGallery, { GalleryImage } from "@/components/ui/ImageGallery";
 import { resolveGalleryImages } from "@/lib/image-url";
 import type { CompetitionWithEntryProps, CompetitionEntryDisplay } from "../../types";

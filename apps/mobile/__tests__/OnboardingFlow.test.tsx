@@ -214,7 +214,7 @@ describe("[V-IC] アイコン置換 — 絵文字/Unicode チェックマーク�
   it.todo("[V-IC05d] OnboardingGuide: マイページカードに Feather user アイコンが表示される (絵文字 👤 なし)");
 
   // BestTimesTable (整合性)
-  it.todo("[V-IC06] BestTimesTable: 「引き継ぎタイム含」チェックボックスのチェックマークが Feather check アイコンになる (\"✓\" Unicode なし)");
+  it.todo("[V-IC06] BestTimesTable: 「引き継ぎ含む」チェックボックスのチェックマークが Feather check アイコンになる (\"✓\" Unicode なし)");
 });
 
 // ---------------------------------------------------------------------------

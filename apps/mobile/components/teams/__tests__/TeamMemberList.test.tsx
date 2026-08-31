@@ -537,6 +537,9 @@ describe("TeamMemberList - 引き継ぎタイムを含むトグル (T-4)", () =>
 //   [V-CELL-04] 日付は competition?.date ?? created_at (両者が異なる fixture で検証)
 //   [V-CELL-05] 空セル(記録なし)をタップしても詳細シートは開かない
 //   [V-CELL-06] 同一セル再タップで閉じ、別セルタップで内容が入れ替わる
+//   [V-CELL-07] 象限A (competition あり・note あり): select() から BestTimeDetailSheet までの
+//     実データ経路を通しても大会名と備考の両方が表示される (note が select/伝播の途中で
+//     捨てられていないことを固定する)
 // トートロジー防止メモ: competitionTitle/note の期待文字列はテスト側の fixture 定義文字列
 // そのものであり、TeamMemberList.tsx の実装をコピーしていない。日付は意図的に
 // competition.date と created_at を別の値にして優先順位を判別可能にしている。
@@ -763,6 +766,31 @@ describe("TeamMemberList - D-1 クエリのフィールド網羅性 + セル詳�
       });
     },
   );
+
+  it("[V-CELL-07] 象限A: competition と note の両方があるセルは、大会名と備考の両方を表示する (select() の実データ経路)", async () => {
+    const member = buildMember({ id: "m-1", user_id: "u-1", name: "両方太郎" });
+    buildCapturingRecordsMock([
+      {
+        user_id: "u-1",
+        time: 35.66,
+        created_at: "2024-04-04T00:00:00.000Z",
+        note: "追い風参考",
+        pool_type: 0,
+        is_relaying: false,
+        styles: { name_jp: "50m自由形", distance: 50 },
+        competitions: { id: "c-1", title: "第10回記録会", date: "2024-04-05" },
+      },
+    ]);
+
+    renderList([member]);
+    await screen.findByText("両方太郎");
+
+    fireEvent.click(screen.getByText("35.66"));
+
+    expect(await screen.findByText("第10回記録会")).toBeTruthy();
+    expect(screen.getByText("追い風参考")).toBeTruthy();
+    expect(screen.queryByText("一括登録")).toBeNull();
+  });
 });
 
 // =============================================================================

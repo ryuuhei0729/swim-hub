@@ -100,7 +100,7 @@ describe("[V-GENDER-WIRING] MemberDetailModal は member.users.gender をその�
     );
 
     await screen.findByText("54.97");
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     await waitFor(() => {
       expect(screen.queryByText("542")).toBeNull();
@@ -120,7 +120,7 @@ describe("[V-GENDER-WIRING] MemberDetailModal は member.users.gender をその�
     );
 
     await screen.findByText("54.97");
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     await waitFor(() => {
       expect(screen.getByText("763")).toBeTruthy();
@@ -140,7 +140,7 @@ describe("[V-GENDER-WIRING] MemberDetailModal は member.users.gender をその�
     );
 
     await screen.findByText("54.97");
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     await waitFor(() => {
       expect(screen.getByText("542")).toBeTruthy();

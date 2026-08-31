@@ -129,14 +129,69 @@ export const Switch = ({
     onClick: () => onValueChange?.(!value),
   });
 
+// Modal 同時マウント検出レジストリ
+// ネイティブの <Modal> はそれぞれ独立したウィンドウ (iOS では UIViewController の
+// モーダル提示) を持つため、2つの <Modal> の「表示中」区間が重なると実機では
+// 提示が壊れる (例: SlideUpModal ベースの TagSelectModal がまだ閉じアニメーション中に
+// TagManageModal を提示しようとして失敗する不具合)。jsdom は複数ウィンドウの提示競合を
+// 再現できないため、代わりに「visible=true として実際に描画されている区間」を
+// mount/unmount イベントとして記録し、テスト側で区間の重なり・順序を検証できるようにする。
+// (このレジストリを参照しない既存テストの挙動には一切影響しない = 後方互換)
+export interface ModalMountEvent {
+  seq: number;
+  type: "mount" | "unmount";
+  id: string;
+  props: Record<string, unknown>;
+}
+
+let modalMountEventSeq = 0;
+
+export const __modalMountRegistry: {
+  mounted: Map<string, Record<string, unknown>>;
+  events: ModalMountEvent[];
+} = { mounted: new Map(), events: [] };
+
+/** テストの beforeEach 等で呼び出し、前のテストの記録を持ち越さないようにする。 */
+export function __resetModalMountRegistry(): void {
+  __modalMountRegistry.mounted.clear();
+  __modalMountRegistry.events = [];
+  modalMountEventSeq = 0;
+}
+
 // Modal API
 // React Native の <Modal visible> は visible=false のとき内容を描画しない。
 // テストではこの挙動を再現し、visible=true のときのみ children を描画する。
+// 加えて、visible=true になっている区間を __modalMountRegistry に記録する
+// (props は登録用の分類にのみ使う。DOM への反映は従来どおり素通し)。
 export const Modal = ({
   children,
   visible = true,
   ...props
 }: { children?: React.ReactNode; visible?: boolean } & Record<string, unknown>) => {
+  const id = React.useId();
+  const propsRef = React.useRef(props);
+  propsRef.current = props;
+
+  React.useEffect(() => {
+    if (!visible) return undefined;
+    __modalMountRegistry.mounted.set(id, propsRef.current);
+    __modalMountRegistry.events.push({
+      seq: ++modalMountEventSeq,
+      type: "mount",
+      id,
+      props: propsRef.current,
+    });
+    return () => {
+      __modalMountRegistry.mounted.delete(id);
+      __modalMountRegistry.events.push({
+        seq: ++modalMountEventSeq,
+        type: "unmount",
+        id,
+        props: propsRef.current,
+      });
+    };
+  }, [visible, id]);
+
   if (!visible) return null;
   return React.createElement("div", props, children);
 };

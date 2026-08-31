@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import { TeamMembersAPI } from "@apps/shared/api/teams/members";
 import { TeamMembershipWithUser } from "@apps/shared/types";

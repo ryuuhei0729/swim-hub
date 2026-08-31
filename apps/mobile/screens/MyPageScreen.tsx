@@ -217,7 +217,7 @@ export const MyPageScreen: React.FC = () => {
                   onPress={() => setIsWaPointsMode((prev) => !prev)}
                 >
                   <Text style={[styles.waToggleText, isWaPointsMode && styles.waToggleTextActive]}>
-                    {t("mypage.bestTimesTable.waPointsToggle")}
+                    {t("mypage.bestTimesTable.waPointsToggleShort")}
                   </Text>
                 </Pressable>
                 <WaPointsInfoTooltip testID="best-times-wa-info-mypage" />

@@ -234,6 +234,16 @@ export function TeamCompetitionEntryModal({
           <Text style={styles.sectionLabel}>
             {t("teams.mobile.teamCompetitionEntryModal.entryStatusLabel")}
           </Text>
+          {/*
+            Sprint Contract (mobile 管理者ビュー チーム大会タブ改修) により、この分岐
+            (isAdmin === true 側のセグメント UI) は現在到達不能なデッドコードになっている。
+            このモーダルを開く唯一の経路は TeamCompetitionList.tsx の非 admin 用「エントリー」
+            ボタン (isAdmin=false) のみになり、admin のステータス変更は同ファイルのカード上
+            プルダウン (statusDropdownWrapper/statusMenuPanel) に移行済み。performStatusChange
+            や確認ダイアログのロジックがコメント文言まで含めて2ファイルに重複しているが、
+            未解決項目がある中でのリファクタを避けるため今回は共通化しない
+            (次スプリントの課題とする)。
+          */}
           {isAdmin ? (
             <>
               <View style={styles.segmentRow}>

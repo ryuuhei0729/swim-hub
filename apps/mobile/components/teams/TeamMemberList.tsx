@@ -485,9 +485,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     );
   }
 
-  const adminCount = members.filter((m) => m.role === "admin").length;
-  const userCount = members.filter((m) => m.role === "user").length;
-
   return (
     <View style={styles.container}>
       {/* 上部固定エリア（統計 + グループフィルター） */}
@@ -496,6 +493,21 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
         <View style={styles.statsHeader}>
           <View style={styles.statsHeaderTop}>
             <Text style={styles.statsTitle}>{t("teams.mobile.memberListTitle")}</Text>
+            <Pressable
+              onPress={() => setIsWaPointsModalOpen(true)}
+              style={styles.waPointsButton}
+              accessibilityRole="button"
+            >
+              <Feather name="award" size={13} color="#2563EB" />
+              <Text style={styles.waPointsButtonText}>
+                {t("teams.waPointsCompare.buttonLabel")}
+              </Text>
+            </Pressable>
+          </View>
+          <View style={styles.statsRow}>
+            <Text style={styles.statsText}>
+              {t("teams.mobile.memberListTotal", { count: members.length })}
+            </Text>
             <View style={styles.includeRelayToggle}>
               <Text style={styles.includeRelayLabel} numberOfLines={1}>
                 {t("teams.memberStats.includeRelay")}
@@ -510,25 +522,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
               />
             </View>
           </View>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsText}>
-              {t("teams.mobile.memberListTotal", { count: members.length })}
-            </Text>
-            <Text style={[styles.statsText, styles.statsAdmin]}>
-              {t("teams.mobile.memberListAdmin", { count: adminCount })}
-            </Text>
-            <Text style={styles.statsText}>
-              {t("teams.mobile.memberListMember", { count: userCount })}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => setIsWaPointsModalOpen(true)}
-            style={styles.waPointsButton}
-            accessibilityRole="button"
-          >
-            <Feather name="award" size={13} color="#2563EB" />
-            <Text style={styles.waPointsButtonText}>{t("teams.waPointsCompare.buttonLabel")}</Text>
-          </Pressable>
         </View>
 
         {/* グループ表示 */}
@@ -841,7 +834,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 4,
   },
   includeRelayLabel: {
     fontSize: 11,
@@ -850,6 +842,8 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   statsText: {
@@ -860,15 +854,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-  statsAdmin: {
-    color: "#EAB308",
-  },
   waPointsButton: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
+    flexShrink: 1,
     gap: 5,
-    marginTop: 8,
+    marginBottom: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,

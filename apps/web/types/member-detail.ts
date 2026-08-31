@@ -46,6 +46,7 @@ export interface RelayingTimeRecord {
   id: string;
   time: number;
   created_at: string;
+  note?: string;
   competition?: {
     title: string;
     date: string;

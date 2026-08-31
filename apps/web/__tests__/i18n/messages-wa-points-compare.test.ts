@@ -50,8 +50,8 @@ const SPRINT_REQUIRED_KEYS = [
   "teams.waPointsCompare.rankLabel", // ランキング表の「順位」列見出し
   "teams.waPointsCompare.pointsLabel", // 「WAポイント」列見出し
   "teams.waPointsCompare.styleLabel", // 「種目」列見出し
-  "teams.waPointsCompare.courseShort", // SC (短水路) 表記
-  "teams.waPointsCompare.courseLong", // LC (長水路) 表記
+  "teams.waPointsCompare.courseShort", // 短水路 表記
+  "teams.waPointsCompare.courseLong", // 長水路 表記
   "teams.waPointsCompare.empty", // 対象記録が1件も無いチームの空状態
 ];
 

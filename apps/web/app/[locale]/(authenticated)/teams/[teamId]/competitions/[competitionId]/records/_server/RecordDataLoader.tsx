@@ -1,4 +1,5 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { getServerUser } from "@/lib/supabase-server";
@@ -75,7 +76,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
   const t = await getTranslations({ locale, namespace: "competition.records" });
 
   if (!user) {
-    redirect("/login");
+    return redirect({ href: "/login", locale });
   }
 
   // 並行でデータ取得
@@ -206,7 +207,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
 
   // admin権限チェック
   if (membershipData.role !== "admin") {
-    return redirect(`/teams/${teamId}?tab=competitions`);
+    return redirect({ href: `/teams/${teamId}?tab=competitions`, locale });
   }
 
   const competitionData = competitionResult.data;

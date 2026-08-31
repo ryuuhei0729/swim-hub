@@ -145,7 +145,7 @@ describe("[V-GENDER-WIRING] MyPageScreen は profile.gender をそのまま Best
     const timeCell = await screen.findByText("54.97");
     expect(timeCell).toBeTruthy();
 
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     await waitFor(() => {
       expect(screen.queryByText("542")).toBeNull();
@@ -157,7 +157,7 @@ describe("[V-GENDER-WIRING] MyPageScreen は profile.gender をそのまま Best
     setup({ gender: 1 });
 
     await screen.findByText("54.97");
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     await waitFor(() => {
       expect(screen.getByText("763")).toBeTruthy();
@@ -169,7 +169,7 @@ describe("[V-GENDER-WIRING] MyPageScreen は profile.gender をそのまま Best
     setup({ gender: 0 });
 
     await screen.findByText("54.97");
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     await waitFor(() => {
       expect(screen.getByText("542")).toBeTruthy();

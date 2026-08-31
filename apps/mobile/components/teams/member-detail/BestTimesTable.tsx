@@ -195,7 +195,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes, gende
               onPress={() => setIsWaPointsMode((prev) => !prev)}
             >
               <Text style={[styles.waToggleText, isWaPointsMode && styles.waToggleTextActive]}>
-                {t("teams.memberDetail.bestTimesTable.waPointsToggle")}
+                {t("teams.mobile.bestTimesWaPointsToggle")}
               </Text>
             </Pressable>
             <WaPointsInfoTooltip testID="member-detail-best-times-wa-info" />

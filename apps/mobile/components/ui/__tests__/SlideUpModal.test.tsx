@@ -29,6 +29,35 @@ import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 
+// Platform.OS を可変にする (V-10/V-11/V-12 で iOS 分岐を検証するため)。
+// vi.hoisted で作った可変オブジェクトを vi.mock ファクトリとテスト本体の両方から
+// 参照する (このリポジトリで既に確立されたパターン。screens/__tests__/*.tagModalRace.test.tsx
+// を参照)。既定値 "web" は共有モックの既定 Platform.OS と同じなので、Platform に触れない
+// 既存テスト (V-SLIDE-*, V-9*) の挙動には一切影響しない。
+const platformState = vi.hoisted(() => ({ OS: "web" as "web" | "ios" | "android" }));
+
+vi.mock("react-native", async (importOriginal) => {
+  const original = await importOriginal<typeof import("react-native")>();
+  return {
+    ...original,
+    Platform: {
+      get OS() {
+        return platformState.OS;
+      },
+      select: (obj: Record<string, unknown> & { web?: unknown; default?: unknown }) => {
+        if (platformState.OS === "ios") return (obj as Record<string, unknown>).ios ?? obj.default;
+        if (platformState.OS === "android")
+          return (obj as Record<string, unknown>).android ?? obj.default;
+        return obj.web ?? obj.default;
+      },
+    },
+  };
+});
+
+import {
+  __modalMountRegistry,
+  __resetModalMountRegistry,
+} from "../../../__mocks__/react-native";
 import { SlideUpModal } from "../SlideUpModal";
 
 /**
@@ -216,6 +245,337 @@ describe("SlideUpModal", () => {
 
       expect(container.textContent).toContain("rapid-toggle-marker");
       expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // [V-9] onClosed コールバック (二重マウント競合の修正で追加)
+  // TagSelectModal → TagManageModal の遷移で、呼び出し元が「このシートが完全に
+  // 閉じ終わってから次のモーダルを開く」制御に使う。誤って早すぎる/遅すぎる/
+  // 余分なタイミングで発火すると、呼び出し元側の状態遷移がずれるため、
+  // 発火有無そのものを直接検証する。
+  // ---------------------------------------------------------------------
+  describe("[V-9] onClosed コールバック", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("[V-9a] 初回マウント時 (visible が最初から false) には onClosed が発火しない", () => {
+      vi.useFakeTimers();
+      const onClosed = vi.fn();
+      render(
+        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+          <>never-opened-marker</>
+        </SlideUpModal>,
+      );
+
+      // 「一度も開いていない」状態であり、閉じるアニメーションも走らないため
+      // タイマーを進めても onClosed は呼ばれない。
+      act(() => {
+        vi.advanceTimersByTime(SLIDE_DURATION * 2);
+      });
+      expect(onClosed).not.toHaveBeenCalled();
+    });
+
+    it("[V-9a 補足] visible=true で初回マウントしただけ (まだ一度も閉じていない) では onClosed が発火しない", () => {
+      vi.useFakeTimers();
+      const onClosed = vi.fn();
+      render(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>still-open-marker</>
+        </SlideUpModal>,
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(SLIDE_DURATION * 2);
+      });
+      expect(onClosed).not.toHaveBeenCalled();
+    });
+
+    it("[V-9] visible: true→false でアニメーション時間が経過すると onClosed が1回だけ発火する", () => {
+      vi.useFakeTimers();
+      const onClosed = vi.fn();
+      const { rerender } = render(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>content</>
+        </SlideUpModal>,
+      );
+
+      rerender(
+        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+          <>content</>
+        </SlideUpModal>,
+      );
+
+      // アンマウント (unmount) されるより前は発火しない
+      act(() => {
+        vi.advanceTimersByTime(SLIDE_DURATION - 50);
+      });
+      expect(onClosed).not.toHaveBeenCalled();
+
+      // アンマウントと同時に1回だけ発火する
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      expect(onClosed).toHaveBeenCalledTimes(1);
+    });
+
+    it("[V-9b] 閉じアニメーション中に再オープンされた場合 (true→false→true) は onClosed が発火しない", () => {
+      vi.useFakeTimers();
+      const onClosed = vi.fn();
+      const { rerender } = render(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>rapid-toggle-marker</>
+        </SlideUpModal>,
+      );
+
+      rerender(
+        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+          <>rapid-toggle-marker</>
+        </SlideUpModal>,
+      );
+
+      // 閉じるアニメーションの途中 (完了前) で再度開く
+      act(() => {
+        vi.advanceTimersByTime(SLIDE_DURATION / 2);
+      });
+      rerender(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>rapid-toggle-marker</>
+        </SlideUpModal>,
+      );
+
+      // 元の (最初の) 閉じタイマーが仕込まれた時点から SLIDE_DURATION 以上経過させる。
+      // clearTimeout されていれば、ここで onClosed は誤発火しない。
+      act(() => {
+        vi.advanceTimersByTime(SLIDE_DURATION);
+      });
+
+      expect(onClosed).not.toHaveBeenCalled();
+    });
+
+    it("[V-9c] onClosed 未指定でもエラーにならない (省略可能なプロパティ)", () => {
+      vi.useFakeTimers();
+      const { rerender } = render(
+        <SlideUpModal visible onClose={vi.fn()}>
+          <>content</>
+        </SlideUpModal>,
+      );
+
+      rerender(
+        <SlideUpModal visible={false} onClose={vi.fn()}>
+          <>content</>
+        </SlideUpModal>,
+      );
+
+      expect(() => {
+        act(() => {
+          vi.advanceTimersByTime(SLIDE_DURATION);
+        });
+      }).not.toThrow();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // [V-10, V-11, V-12] iOS: ネイティブ onDismiss ベースの完了信号
+  // (Reviewer Critical 修正: `awaitingDismissRef`/`closeShouldNotifyRef` の検証)
+  //
+  // これまでのテスト (V-SLIDE-*, V-9*) は Platform.OS の既定値 "web" (= Android/Web と
+  // 同じ即時確定パス) でしか SlideUpModal を検証しておらず、iOS 専用パス
+  // (内部 <Modal> の onDismiss を実際に起点にする経路、`handleNativeDismiss`) は
+  // このリポジトリのどのテストからも一度も呼ばれていなかった (Reviewer 実測)。
+  // ここでは TagManageModal の V-8 と同じ手法 (__modalMountRegistry から onDismiss を
+  // capture して手動発火する) を、SlideUpModal 自身の内部 <Modal> (select 分類:
+  // `transparent === true` で判別可能) に適用する。
+  // ---------------------------------------------------------------------
+  describe("[V-10, V-11, V-12] iOS: onDismiss ベースの完了信号 (Reviewer Critical 修正の検証)", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+      platformState.OS = "web";
+    });
+
+    function advanceBy(ms: number) {
+      act(() => {
+        vi.advanceTimersByTime(ms);
+      });
+    }
+
+    /** 保留中の次のタイマーを1本だけ進める (フェイルセーフの正確な ms 値をテスト側で決め打ちしない)。 */
+    function fireNextTimer() {
+      act(() => {
+        vi.advanceTimersToNextTimer();
+      });
+    }
+
+    /**
+     * __modalMountRegistry に記録された「select 分類 (transparent === true)」の
+     * 直近のイベントから onDismiss を取り出す。SlideUpModal.test.tsx はこのファイル内で
+     * SlideUpModal 単体しかレンダーしないため、TagManageModal (manage 分類) との
+     * 混在を心配する必要はない。
+     */
+    function getLatestSelectOnDismiss(): () => void {
+      const events = __modalMountRegistry.events;
+      for (let i = events.length - 1; i >= 0; i--) {
+        const props = events[i].props;
+        if (props.transparent === true) {
+          const onDismiss = props.onDismiss;
+          if (typeof onDismiss === "function") return onDismiss as () => void;
+        }
+      }
+      throw new Error("[test setup] select 分類 (transparent===true) の onDismiss が記録されていない");
+    }
+
+    it("[V-10 最重要] スライドアウト完了後・onDismiss到達前に再オープンされた場合、stale な onDismiss が届いてもシートは消えず onClosed も発火しない", () => {
+      platformState.OS = "ios";
+      vi.useFakeTimers();
+      __resetModalMountRegistry();
+      const onClosed = vi.fn();
+      const { container, rerender } = render(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>reopen-race-marker</>
+        </SlideUpModal>,
+      );
+
+      // 閉じる
+      rerender(
+        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+          <>reopen-race-marker</>
+        </SlideUpModal>,
+      );
+
+      // スライドアウト完了 → 内部 <Modal> の visible が落ち、ネイティブ dismiss 開始相当。
+      // ここではまだ onDismiss (本物の完了信号) は届いていない。
+      advanceBy(SLIDE_DURATION);
+
+      const staleOnDismiss = getLatestSelectOnDismiss();
+
+      // onDismiss が届く前に再オープンする
+      rerender(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>reopen-race-marker</>
+        </SlideUpModal>,
+      );
+      expect(container.textContent).toContain("reopen-race-marker");
+
+      // reopen 前の (もう無効なはずの) クローズサイクルの onDismiss が遅れて届く
+      act(() => {
+        staleOnDismiss();
+      });
+
+      // シートは消えない (再オープンされたまま)
+      expect(container.textContent).toContain("reopen-race-marker");
+      // onClosed も誤発火しない
+      expect(onClosed).not.toHaveBeenCalled();
+    });
+
+    it("[V-11] フェイルセーフ発火後に本物の onDismiss が遅れて届いても、onClosed は高々1回しか発火しない", () => {
+      platformState.OS = "ios";
+      vi.useFakeTimers();
+      __resetModalMountRegistry();
+      const onClosed = vi.fn();
+      const { rerender } = render(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>failsafe-then-dismiss-marker</>
+        </SlideUpModal>,
+      );
+
+      rerender(
+        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+          <>failsafe-then-dismiss-marker</>
+        </SlideUpModal>,
+      );
+
+      advanceBy(SLIDE_DURATION);
+      const onDismiss = getLatestSelectOnDismiss();
+
+      // onDismiss がまだ来ないまま、フェイルセーフが先に発火する
+      fireNextTimer();
+      expect(onClosed).toHaveBeenCalledTimes(1);
+
+      // その後に本物の onDismiss が遅れて届く
+      act(() => {
+        onDismiss();
+      });
+
+      // 2回目は発火しない (高々1回)
+      expect(onClosed).toHaveBeenCalledTimes(1);
+    });
+
+    it("[V-12a 正常系] iOS: onDismiss が届くまで onClosed は発火せず、届いた時点で1回だけ発火する", () => {
+      platformState.OS = "ios";
+      vi.useFakeTimers();
+      __resetModalMountRegistry();
+      const onClosed = vi.fn();
+      const { rerender } = render(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>normal-ios-marker</>
+        </SlideUpModal>,
+      );
+
+      rerender(
+        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+          <>normal-ios-marker</>
+        </SlideUpModal>,
+      );
+
+      advanceBy(SLIDE_DURATION);
+      // まだ onDismiss が来ていない時点では発火しない
+      expect(onClosed).not.toHaveBeenCalled();
+
+      const onDismiss = getLatestSelectOnDismiss();
+      act(() => {
+        onDismiss();
+      });
+
+      expect(onClosed).toHaveBeenCalledTimes(1);
+    });
+
+    it("[V-12b 異常系] iOS: onDismiss が届かない場合でも、フェイルセーフにより最終的に1回だけ発火する", () => {
+      platformState.OS = "ios";
+      vi.useFakeTimers();
+      __resetModalMountRegistry();
+      const onClosed = vi.fn();
+      const { rerender } = render(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>failsafe-only-marker</>
+        </SlideUpModal>,
+      );
+
+      rerender(
+        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+          <>failsafe-only-marker</>
+        </SlideUpModal>,
+      );
+
+      advanceBy(SLIDE_DURATION);
+      expect(onClosed).not.toHaveBeenCalled();
+
+      // onDismiss を一切発火させないまま、フェイルセーフのタイマーだけを進める
+      fireNextTimer();
+
+      expect(onClosed).toHaveBeenCalledTimes(1);
+    });
+
+    it("[V-10 補足] Android では onDismiss を待たずに visible=false 直後で確定するため、この reopen 競合は起きない (対照確認)", () => {
+      platformState.OS = "android";
+      vi.useFakeTimers();
+      __resetModalMountRegistry();
+      const onClosed = vi.fn();
+      const { rerender } = render(
+        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+          <>android-marker</>
+        </SlideUpModal>,
+      );
+
+      rerender(
+        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+          <>android-marker</>
+        </SlideUpModal>,
+      );
+
+      // Android は SLIDE_DURATION 経過だけで確定する (onDismiss 不要)
+      advanceBy(SLIDE_DURATION);
+      expect(onClosed).toHaveBeenCalledTimes(1);
     });
   });
 });

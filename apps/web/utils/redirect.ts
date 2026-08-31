@@ -43,6 +43,19 @@ export function getSafeRedirectUrl(redirectTo: string | null): string {
     return defaultPath;
   }
 
+  // ".." トラバーサルを拒否 (パスセグメント単位で判定)
+  if (decoded.split(/[/\\]/).includes("..")) {
+    return defaultPath;
+  }
+
+  // 制御文字 (0x00-0x1F, 0x7F, 0x80-0x9F) を拒否
+  for (let i = 0; i < decoded.length; i++) {
+    const code = decoded.charCodeAt(i);
+    if (code <= 0x1f || code === 0x7f || (code >= 0x80 && code <= 0x9f)) {
+      return defaultPath;
+    }
+  }
+
   // 検証を通過したパスを返す
   return redirectTo;
 }

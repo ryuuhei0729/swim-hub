@@ -24,7 +24,7 @@ vi.mock("@/components/video/TeamVideoUploader", () => ({
   default: () => null,
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: mocks.push }),
 }));
 

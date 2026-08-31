@@ -419,9 +419,12 @@ export default function BestTimesTable({ bestTimes, gender }: BestTimesTableProp
                             </div>
                             {bestTime.competition ? (
                               <div className="text-blue-300">{bestTime.competition.title}</div>
-                            ) : (
-                              <div className="text-gray-400">{bestTime.note || t("bulkEntryNote")}</div>
-                            )}
+                            ) : null}
+                            {bestTime.note ? (
+                              <div className="text-gray-400">{bestTime.note}</div>
+                            ) : !bestTime.competition ? (
+                              <div className="text-gray-400">{t("bulkEntryNote")}</div>
+                            ) : null}
                             {/* 矢印 */}
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                           </div>

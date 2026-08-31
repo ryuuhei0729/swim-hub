@@ -11,7 +11,7 @@ export interface BestTimeDetail {
   date: string | null;
   /** 大会名 (competition.title)。大会に紐づかない記録は null */
   competitionTitle: string | null;
-  /** 備考 (note)。一括登録時のみ入る想定 */
+  /** 備考 (note)。一括登録時に加え、通常の大会記録入力画面の「メモ」欄からも入る */
   note: string | null;
 }
 
@@ -23,7 +23,7 @@ export interface BestTimeDetailSheetProps {
   detail: BestTimeDetail | null;
   onClose: () => void;
   /**
-   * 大会名も note も無い場合に表示するフォールバック文言 (「一括登録」相当)。
+   * フォールバック文言 (「一括登録」相当)。表示条件は本体 JSDoc の4象限表を参照。
    * `mypage.bestTimesTable.bulkEntryNote` / `teams.memberDetail.bestTimesTable.bulkEntryNote` /
    * `teams.membersTimeTable.bulkEntryNote` の3名前空間は言語によって微差があるため、
    * どのキーを使うかは呼び出し元が t() で解決してから渡すこと (このコンポーネントは i18n 名前空間を知らない)
@@ -32,8 +32,14 @@ export interface BestTimeDetailSheetProps {
 }
 
 /**
- * ベストタイムのセルをタップした際に「日付 + 大会名 (無ければ note、それも無ければ一括登録)」を
- * 表示する詳細ポップアップ。profile / member-detail / TeamMemberList の3表から共有される。
+ * ベストタイムのセルをタップした際に日付・大会名・備考を表示する詳細ポップアップ。
+ * profile / member-detail / TeamMemberList の3表から共有される。
+ *
+ * 表示ルール (日付は常に表示、大会名と備考はそれぞれ独立に判定する):
+ * - 大会名あり・備考あり: 日付 + 大会名 + 備考
+ * - 大会名あり・備考なし: 日付 + 大会名のみ (フォールバックは出さない)
+ * - 大会名なし・備考あり: 日付 + 備考
+ * - 大会名なし・備考なし: 日付 + noteFallbackLabel (「一括登録」相当)
  *
  * web 版はホバーツールチップ (絶対配置) だが、mobile はタップ操作のため中央配置のポップアップ
  * モーダル (`CenterModal`) を使う。ユーザーから「ボトムシートではなくモーダル的なポップアップで
@@ -64,6 +70,15 @@ export const BestTimeDetailSheet: React.FC<BestTimeDetailSheetProps> = ({
     }
   }, [detail]);
 
+  // 空文字 "" は「無し」扱い (従来の `note || fallback` と同じ falsy 判定)。
+  const hasCompetitionTitle = Boolean(displayDetail?.competitionTitle);
+  const hasNote = Boolean(displayDetail?.note);
+  const noteContent: string | null = hasNote
+    ? (displayDetail?.note ?? null)
+    : hasCompetitionTitle
+      ? null
+      : noteFallbackLabel;
+
   return (
     <CenterModal
       visible={detail !== null}
@@ -78,15 +93,14 @@ export const BestTimeDetailSheet: React.FC<BestTimeDetailSheetProps> = ({
               {formatDate(displayDetail.date, "numeric", locale)}
             </Text>
           </View>
-          {displayDetail.competitionTitle ? (
+          {hasCompetitionTitle ? (
             <Text style={styles.titleText}>
               {displayDetail.competitionTitle}
             </Text>
-          ) : (
-            <Text style={styles.noteText}>
-              {displayDetail.note || noteFallbackLabel}
-            </Text>
-          )}
+          ) : null}
+          {noteContent !== null ? (
+            <Text style={styles.noteText}>{noteContent}</Text>
+          ) : null}
         </View>
       )}
     </CenterModal>

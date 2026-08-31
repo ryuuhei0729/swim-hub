@@ -1307,7 +1307,8 @@
         "relaying": "R: Relay",
         "relayingExcludedFromWaPoints": "Relay times are excluded from WA Points"
       },
-      "waPointsToggle": "Show WA Points"
+      "waPointsToggle": "Show WA Points",
+      "waPointsToggleShort": "WA Points"
     },
     "error": {
       "title": "An error occurred",
@@ -2496,9 +2497,7 @@
       "groupMemberAssignFailed": "Failed to assign members",
       "memberListTitle": "Members",
       "memberListEmpty": "No members",
-      "memberListTotal": "Total: {count}",
-      "memberListAdmin": "Admins: {count}",
-      "memberListMember": "Members: {count}",
+      "memberListTotal": "Members: {count}",
       "bestTimeLoading": "Loading best times...",
       "memberColLabel": "Member",
       "youLabel": "You",
@@ -2548,7 +2547,8 @@
       "adminControlsTitle": "Admin controls",
       "bestTimesEmpty": "No records yet",
       "bestTimesEmptySubText": "This member hasn't registered any records",
-      "bestTimesIncludeRelaying": "Include relay times",
+      "bestTimesIncludeRelaying": "Incl. relay",
+      "bestTimesWaPointsToggle": "WA Points",
       "bestTimesAnnotation": "L: Long course, R: Relay takeover",
       "groupDisplayLabel": "Group by:",
       "groupAddAria": "Add group",
@@ -2969,8 +2969,8 @@
       "rankLabel": "Rank",
       "pointsLabel": "WA Points",
       "styleLabel": "Event",
-      "courseShort": "SC",
-      "courseLong": "LC",
+      "courseShort": "Short Course",
+      "courseLong": "Long Course",
       "empty": "No records available to compare"
     },
     "membershipActions": {

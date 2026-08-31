@@ -16,13 +16,19 @@
 //     別セルタップで内容が入れ替わる
 //   [V-NOTE-RELAY] リレー引き継ぎ候補が採用されたとき、親記録の note ではなく
 //     引き継ぎ側 (relayingTime) の note が表示される (CodeRabbit 指摘の回帰テスト)
+//   [V-CELL-07] 象限A (competition あり・note あり): 実データ経路 (bestTime→handleCellPress→
+//     BestTimeDetailSheet) を通しても大会名と備考の両方が表示される (note が select/伝播の
+//     途中で捨てられていないことを固定する)
+//   [V-NOTE-RELAY-02] 象限A のリレー版: 引き継ぎ候補 (relayingTime) が採用され、かつ
+//     relayingTime 自体に competition と note の両方があるとき、両方とも引き継ぎ側の値が
+//     表示される (親記録の competition/note は出ない)
 //
 // トートロジー防止メモ: 542/763/504/761/1100/1000/902/291 は node -e で
 // floor(1000*(B/T)^3) を独立に計算したハードコード値であり、waPoints.ts や
 // 本コンポーネントの実装を呼び出して生成していない。
 //
 // ## isWaPointsMode の state リフトアップについて (mobile UI フィードバック #5)
-// WAポイント表示トグルは呼び出し元 (MyPageScreen) に移設され、BestTimesTable は
+// WAポイントトグルは呼び出し元 (MyPageScreen) に移設され、BestTimesTable は
 // `isWaPointsMode` を必須 props として受け取るだけの表示コンポーネントになった。
 // 本ファイルは BestTimesTable 単体の計算ロジック (floor/round・gender 0/1・
 // リレー除外・pool_type の向き) をユニットレベルで検証する目的のため、
@@ -44,7 +50,7 @@ type ControlledProps = Omit<React.ComponentProps<typeof BestTimesTable>, "isWaPo
 
 /**
  * MyPageScreen の state リフトアップ (isWaPointsMode を親が保持し props で渡す) を
- * 模した最小限のテストハーネス。「WAポイント表示」ボタンは MyPageScreen 側の
+ * 模した最小限のテストハーネス。「WAポイント」ボタンは MyPageScreen 側の
  * トグルボタンと同じラベルで、押すたびに isWaPointsMode を反転して BestTimesTable に渡す。
  */
 const ControlledBestTimesTable: React.FC<ControlledProps> = ({
@@ -55,7 +61,7 @@ const ControlledBestTimesTable: React.FC<ControlledProps> = ({
   return (
     <>
       <button type="button" onClick={() => setIsWaPointsMode((prev) => !prev)}>
-        WAポイント表示
+        WAポイント
       </button>
       <BestTimesTable {...rest} isWaPointsMode={isWaPointsMode} />
     </>
@@ -85,7 +91,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
     render(<ControlledBestTimesTable bestTimes={bestTimes} gender={undefined} />);
 
     fireEvent.click(screen.getByText("ALL"));
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     expect(screen.queryByText("542")).toBeNull();
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
@@ -95,7 +101,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
     const bestTimes = [buildBestTime({ time: 54.97, style: FR100 })];
 
     const { rerender } = render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
     expect(screen.getByText("542")).toBeTruthy();
     expect(screen.queryByText("763")).toBeNull();
 
@@ -112,7 +118,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
     render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
     fireEvent.click(screen.getByText("ALL"));
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     expect(screen.getByText("1100")).toBeTruthy();
     expect(screen.queryByText("1101")).toBeNull();
@@ -122,7 +128,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
     const bestTimes = [buildBestTime({ time: 130.0, pool_type: 1, style: IM100 })];
     render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     expect(screen.queryByText("0")).toBeNull();
     expect(screen.queryByText("NaN")).toBeNull();
@@ -133,7 +139,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
     const bestTimes = [buildBestTime({ time: 20.0, style: FR50, is_relaying: true })];
     render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     // 通常モードでも同様に非表示 (リレーのみ = candidates 空)
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
@@ -145,9 +151,9 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
     render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
     // 「引き継ぎタイムを含む」チェックボックスをON
-    fireEvent.click(screen.getByText("引き継ぎタイム含"));
+    fireEvent.click(screen.getByText("引き継ぎ含む"));
     // WAポイントモードへ切り替え
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     // includeRelaying=true でも WA ポイント候補はリレーを除外するため、まだ「—」のはず
     // (20.00秒は SCM 50m自由形 gender0 で base=19.90 → floor(1000*(19.90/20.00)^3)=985 相当の
@@ -161,7 +167,7 @@ describe("BestTimesTable (profile) - WAポイント計算", () => {
     render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
     fireEvent.click(screen.getByText("ALL"));
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     expect(screen.getByText("1000")).toBeTruthy();
     expect(screen.queryByText("902")).toBeNull();
@@ -242,7 +248,7 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
     const bestTimes = [buildBestTime({ time: 30.0, style: FR50, note: "WAモード中のタップ検証" })];
     render(<ControlledBestTimesTable bestTimes={bestTimes} gender={0} />);
 
-    fireEvent.click(screen.getByText("WAポイント表示"));
+    fireEvent.click(screen.getByText("WAポイント"));
 
     // SCM 50m自由形 gender=0 (base=19.90) で t=30.00 → floor(1000*(19.90/30.00)^3)=291
     // (node -e で独立計算。waPoints.ts の実装は呼んでいない)。
@@ -297,6 +303,23 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
       });
     },
   );
+
+  it("[V-CELL-07] 象限A: competition と note の両方があるセルは、大会名と備考の両方を表示する (実データ経路)", () => {
+    const bestTimes = [
+      buildBestTime({
+        time: 35.66,
+        style: FR50,
+        note: "追い風参考",
+        competition: { title: "第10回記録会", date: "2024-04-04" },
+      }),
+    ];
+    render(<BestTimesTable bestTimes={bestTimes} gender={0} isWaPointsMode={false} />);
+
+    fireEvent.click(screen.getByText("35.66"));
+    expect(screen.getByText("第10回記録会")).toBeTruthy();
+    expect(screen.getByText("追い風参考")).toBeTruthy();
+    expect(screen.queryByText("一括登録")).toBeNull();
+  });
 });
 
 describe("BestTimesTable (profile) - リレー引き継ぎ候補の note", () => {
@@ -318,7 +341,7 @@ describe("BestTimesTable (profile) - リレー引き継ぎ候補の note", () =>
 
     // 「引き継ぎタイムを含む」をONにすると、引き継ぎ側 (20.00秒) の方が親 (40.00秒) より
     // 速いため、このセルは引き継ぎ側の候補として描画される。
-    fireEvent.click(screen.getByText("引き継ぎタイム含"));
+    fireEvent.click(screen.getByText("引き継ぎ含む"));
 
     // タイム表示は "20.00" + 引き継ぎ接尾辞 "R" が別要素で入れ子になるため、
     // getByText の完全一致では掴めない。button (Pressable) を実際にタップして検証する。
@@ -330,5 +353,37 @@ describe("BestTimesTable (profile) - リレー引き継ぎ候補の note", () =>
 
     expect(screen.getByText("引き継ぎ側のノート")).toBeTruthy();
     expect(screen.queryByText("親記録のノート(表示されたら不合格)")).toBeNull();
+  });
+
+  it("[V-NOTE-RELAY-02] 象限A: 引き継ぎ候補にcompetitionとnoteの両方があるとき、両方とも引き継ぎ側の値が表示される(親記録の値は出ない)", () => {
+    const bestTimes = [
+      buildBestTime({
+        time: 40.0,
+        style: FR50,
+        note: "親記録のノート(表示されたら不合格)",
+        competition: { title: "親大会(表示されたら不合格)", date: "2020-01-01" },
+        relayingTime: {
+          id: "relay-note-2",
+          time: 20.0,
+          created_at: "2024-06-01T00:00:00.000Z",
+          note: "追い風参考",
+          competition: { title: "第10回記録会", date: "2024-06-01" },
+        },
+      }),
+    ];
+    render(<BestTimesTable bestTimes={bestTimes} gender={0} isWaPointsMode={false} />);
+
+    fireEvent.click(screen.getByText("引き継ぎ含む"));
+
+    const timeCellButton = screen
+      .getAllByRole("button")
+      .find((el) => el.textContent?.startsWith("20.00"));
+    expect(timeCellButton).toBeTruthy();
+    fireEvent.click(timeCellButton as HTMLElement);
+
+    expect(screen.getByText("第10回記録会")).toBeTruthy();
+    expect(screen.getByText("追い風参考")).toBeTruthy();
+    expect(screen.queryByText("親記録のノート(表示されたら不合格)")).toBeNull();
+    expect(screen.queryByText("親大会(表示されたら不合格)")).toBeNull();
   });
 });
