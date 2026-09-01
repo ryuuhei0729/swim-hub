@@ -392,6 +392,9 @@ const BulkChangeSheet: React.FC<BulkChangeSheetProps> = ({
       visible={visible}
       onClose={handleClose}
       onBackdropPress={NOOP_BACKDROP_PRESS}
+      // このシートは背面タップで閉じない (NOOP) ため、"閉じる" ではなく
+      // 動作を約束しない中立的なラベルを読み上げさせる。
+      backdropAccessibilityLabel={t("common.aria.modalOverlay")}
       overlayColor="rgba(0,0,0,0.4)"
       sheetStyle={styles.bulkSheet}
     >

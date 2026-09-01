@@ -64,6 +64,7 @@ export function MemberSelectModal({
   return (
     <SlideUpModal
       visible={visible}
+      backdropAccessibilityLabel={t("common.close")}
       onClose={onCancel}
       overlayColor="rgba(0,0,0,0.4)"
       sheetStyle={styles.sheet}

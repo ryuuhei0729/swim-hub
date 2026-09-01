@@ -194,6 +194,9 @@ export function TeamCompetitionEntryModal({
   return (
     <SlideUpModal
       visible={visible}
+      // 背面タップで閉じない (NOOP) ため、"閉じる" ではなく動作を約束しない
+      // 中立的なラベルを読み上げさせる。
+      backdropAccessibilityLabel={t("common.aria.modalOverlay")}
       onClose={onClose}
       onBackdropPress={NOOP_BACKDROP_PRESS}
       overlayColor="rgba(0,0,0,0.4)"

@@ -70,7 +70,7 @@ const SLIDE_DURATION = 250;
 describe("SlideUpModal", () => {
   it("[V-SLIDE-01] Modal は animationType='none' で即時表示する (暗幕自体はネイティブアニメーションしない)", () => {
     const { container } = render(
-      <SlideUpModal visible onClose={vi.fn()}>
+      <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()}>
         <>content</>
       </SlideUpModal>,
     );
@@ -83,7 +83,7 @@ describe("SlideUpModal", () => {
 
   it("[V-SLIDE-02] 背面タップ用の Pressable は、シート (children を包む Animated.View) の外側の兄弟要素である", () => {
     render(
-      <SlideUpModal visible onClose={vi.fn()}>
+      <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()}>
         <>slide-up-modal-content-marker</>
       </SlideUpModal>,
     );
@@ -101,10 +101,25 @@ describe("SlideUpModal", () => {
     expect(backdrop.textContent).not.toContain("slide-up-modal-content-marker");
   });
 
+  it("[V-SLIDE-02b] 背面タップ用 Pressable は role=button と渡されたラベルの両方を持つ (名前の無いボタンにならない)", () => {
+    render(
+      <SlideUpModal backdropAccessibilityLabel="モーダルを閉じる" visible onClose={vi.fn()}>
+        <>content</>
+      </SlideUpModal>,
+    );
+
+    // __mocks__/react-native.ts の Pressable は props をそのまま <button> に渡すため、
+    // RN の accessibilityLabel/accessibilityRole は小文字の生属性として現れる
+    // (aria-label には変換されない)。ここではその生属性を直接検証する。
+    const backdrop = screen.getByRole("button");
+    expect(backdrop.getAttribute("accessibilitylabel")).toBe("モーダルを閉じる");
+    expect(backdrop.getAttribute("accessibilityrole")).toBe("button");
+  });
+
   it("[V-SLIDE-03] onBackdropPress を省略した場合、背面タップで onClose が呼ばれる", () => {
     const onClose = vi.fn();
     render(
-      <SlideUpModal visible onClose={onClose}>
+      <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={onClose}>
         <>content</>
       </SlideUpModal>,
     );
@@ -117,7 +132,7 @@ describe("SlideUpModal", () => {
     const onClose = vi.fn();
     const onBackdropPress = vi.fn();
     render(
-      <SlideUpModal visible onClose={onClose} onBackdropPress={onBackdropPress}>
+      <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={onClose} onBackdropPress={onBackdropPress}>
         <>content</>
       </SlideUpModal>,
     );
@@ -149,7 +164,7 @@ describe("SlideUpModal", () => {
     const onClose = vi.fn();
     const onBackdropPress = vi.fn();
     render(
-      <FreshSlideUpModal visible onClose={onClose} onBackdropPress={onBackdropPress}>
+      <FreshSlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={onClose} onBackdropPress={onBackdropPress}>
         <>content</>
       </FreshSlideUpModal>,
     );
@@ -161,7 +176,7 @@ describe("SlideUpModal", () => {
 
   it("[V-SLIDE-06] visible=false の間は何もレンダリングしない", () => {
     const { container } = render(
-      <SlideUpModal visible={false} onClose={vi.fn()}>
+      <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()}>
         <>hidden-content-marker</>
       </SlideUpModal>,
     );
@@ -182,14 +197,14 @@ describe("SlideUpModal", () => {
     it("[V-SLIDE-07] visible: true→false でも、アニメーション時間が経過するまでは中身がマウントされ続ける", () => {
       vi.useFakeTimers();
       const { container, rerender } = render(
-        <SlideUpModal visible onClose={vi.fn()}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()}>
           <>slide-transition-marker</>
         </SlideUpModal>,
       );
       expect(container.textContent).toContain("slide-transition-marker");
 
       rerender(
-        <SlideUpModal visible={false} onClose={vi.fn()}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()}>
           <>slide-transition-marker</>
         </SlideUpModal>,
       );
@@ -213,14 +228,14 @@ describe("SlideUpModal", () => {
       vi.useFakeTimers();
       const onClose = vi.fn();
       const { container, rerender } = render(
-        <SlideUpModal visible onClose={onClose}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={onClose}>
           <>rapid-toggle-marker</>
         </SlideUpModal>,
       );
 
       // 閉じる (このとき SLIDE_DURATION 後に unmount する setTimeout が仕込まれる)
       rerender(
-        <SlideUpModal visible={false} onClose={onClose}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={onClose}>
           <>rapid-toggle-marker</>
         </SlideUpModal>,
       );
@@ -232,7 +247,7 @@ describe("SlideUpModal", () => {
         vi.advanceTimersByTime(SLIDE_DURATION / 2);
       });
       rerender(
-        <SlideUpModal visible onClose={onClose}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={onClose}>
           <>rapid-toggle-marker</>
         </SlideUpModal>,
       );
@@ -264,7 +279,7 @@ describe("SlideUpModal", () => {
       vi.useFakeTimers();
       const onClosed = vi.fn();
       render(
-        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()} onClosed={onClosed}>
           <>never-opened-marker</>
         </SlideUpModal>,
       );
@@ -281,7 +296,7 @@ describe("SlideUpModal", () => {
       vi.useFakeTimers();
       const onClosed = vi.fn();
       render(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>still-open-marker</>
         </SlideUpModal>,
       );
@@ -296,13 +311,13 @@ describe("SlideUpModal", () => {
       vi.useFakeTimers();
       const onClosed = vi.fn();
       const { rerender } = render(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>content</>
         </SlideUpModal>,
       );
 
       rerender(
-        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()} onClosed={onClosed}>
           <>content</>
         </SlideUpModal>,
       );
@@ -324,13 +339,13 @@ describe("SlideUpModal", () => {
       vi.useFakeTimers();
       const onClosed = vi.fn();
       const { rerender } = render(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>rapid-toggle-marker</>
         </SlideUpModal>,
       );
 
       rerender(
-        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()} onClosed={onClosed}>
           <>rapid-toggle-marker</>
         </SlideUpModal>,
       );
@@ -340,7 +355,7 @@ describe("SlideUpModal", () => {
         vi.advanceTimersByTime(SLIDE_DURATION / 2);
       });
       rerender(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>rapid-toggle-marker</>
         </SlideUpModal>,
       );
@@ -357,13 +372,13 @@ describe("SlideUpModal", () => {
     it("[V-9c] onClosed 未指定でもエラーにならない (省略可能なプロパティ)", () => {
       vi.useFakeTimers();
       const { rerender } = render(
-        <SlideUpModal visible onClose={vi.fn()}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()}>
           <>content</>
         </SlideUpModal>,
       );
 
       rerender(
-        <SlideUpModal visible={false} onClose={vi.fn()}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()}>
           <>content</>
         </SlideUpModal>,
       );
@@ -431,14 +446,14 @@ describe("SlideUpModal", () => {
       __resetModalMountRegistry();
       const onClosed = vi.fn();
       const { container, rerender } = render(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>reopen-race-marker</>
         </SlideUpModal>,
       );
 
       // 閉じる
       rerender(
-        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()} onClosed={onClosed}>
           <>reopen-race-marker</>
         </SlideUpModal>,
       );
@@ -451,7 +466,7 @@ describe("SlideUpModal", () => {
 
       // onDismiss が届く前に再オープンする
       rerender(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>reopen-race-marker</>
         </SlideUpModal>,
       );
@@ -474,13 +489,13 @@ describe("SlideUpModal", () => {
       __resetModalMountRegistry();
       const onClosed = vi.fn();
       const { rerender } = render(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>failsafe-then-dismiss-marker</>
         </SlideUpModal>,
       );
 
       rerender(
-        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()} onClosed={onClosed}>
           <>failsafe-then-dismiss-marker</>
         </SlideUpModal>,
       );
@@ -507,13 +522,13 @@ describe("SlideUpModal", () => {
       __resetModalMountRegistry();
       const onClosed = vi.fn();
       const { rerender } = render(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>normal-ios-marker</>
         </SlideUpModal>,
       );
 
       rerender(
-        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()} onClosed={onClosed}>
           <>normal-ios-marker</>
         </SlideUpModal>,
       );
@@ -536,13 +551,13 @@ describe("SlideUpModal", () => {
       __resetModalMountRegistry();
       const onClosed = vi.fn();
       const { rerender } = render(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>failsafe-only-marker</>
         </SlideUpModal>,
       );
 
       rerender(
-        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()} onClosed={onClosed}>
           <>failsafe-only-marker</>
         </SlideUpModal>,
       );
@@ -562,13 +577,13 @@ describe("SlideUpModal", () => {
       __resetModalMountRegistry();
       const onClosed = vi.fn();
       const { rerender } = render(
-        <SlideUpModal visible onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()} onClosed={onClosed}>
           <>android-marker</>
         </SlideUpModal>,
       );
 
       rerender(
-        <SlideUpModal visible={false} onClose={vi.fn()} onClosed={onClosed}>
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible={false} onClose={vi.fn()} onClosed={onClosed}>
           <>android-marker</>
         </SlideUpModal>,
       );

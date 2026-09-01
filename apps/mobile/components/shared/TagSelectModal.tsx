@@ -110,6 +110,7 @@ export const TagSelectModal: React.FC<TagSelectModalProps> = ({
   return (
     <SlideUpModal
       visible={visible}
+      backdropAccessibilityLabel={t("common.close")}
       onClose={onClose}
       onClosed={onClosed}
       overlayColor="rgba(0, 0, 0, 0.4)"

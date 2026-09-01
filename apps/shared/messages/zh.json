@@ -120,7 +120,8 @@
       "previousPage": "上一页",
       "nextPage": "下一页",
       "pageN": "第 {page} 页",
-      "switchLanguage": "切换语言"
+      "switchLanguage": "切换语言",
+      "modalOverlay": "弹窗背景"
     },
     "pagination": {
       "prev": "上一页",

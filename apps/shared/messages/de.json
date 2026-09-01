@@ -120,7 +120,8 @@
       "previousPage": "Vorherige Seite",
       "nextPage": "Nächste Seite",
       "pageN": "Seite {page}",
-      "switchLanguage": "Sprache wechseln"
+      "switchLanguage": "Sprache wechseln",
+      "modalOverlay": "Modal-Hintergrund"
     },
     "pagination": {
       "prev": "Zurück",

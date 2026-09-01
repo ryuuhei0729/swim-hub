@@ -67,6 +67,56 @@ describe("resolveSafeLocalRedirect", () => {
   });
 
   // ----------------------------------------------------------------
+  // 🔴 クエリ/ハッシュ付き: locale セグメントに suffix が直付けされた入力
+  // (CodeRabbit 指摘)。stripLocale は pathname しか見ないため、切り離さずに
+  // 渡すと "/ja?tab=x" の locale が残り、next-intl が再度 prefix を足して
+  // /ja/ja?tab=x となる (= 修正対象だった404の再発)。
+  // ----------------------------------------------------------------
+  describe("🔴 クエリ/ハッシュ付きでも locale を剥がし切る", () => {
+    it("/ja?tab=x → /?tab=x (locale が残らない)", () => {
+      const result = resolveSafeLocalRedirect("/ja?tab=x");
+      expect(result).toBe("/?tab=x");
+      expect(result).not.toBe("/ja?tab=x");
+    });
+
+    it("/ja#top → /#top (locale が残らない)", () => {
+      const result = resolveSafeLocalRedirect("/ja#top");
+      expect(result).toBe("/#top");
+      expect(result).not.toBe("/ja#top");
+    });
+
+    it("/ja/dashboard?tab=x → /dashboard?tab=x (suffix は保持される)", () => {
+      expect(resolveSafeLocalRedirect("/ja/dashboard?tab=x")).toBe("/dashboard?tab=x");
+    });
+
+    it("/ja/ja/dashboard?a=1#b (二重 locale + query + hash) → /dashboard?a=1#b", () => {
+      expect(resolveSafeLocalRedirect("/ja/ja/dashboard?a=1#b")).toBe("/dashboard?a=1#b");
+    });
+
+    it("/en/mypage#section (他 locale + hash) → /mypage#section", () => {
+      expect(resolveSafeLocalRedirect("/en/mypage#section")).toBe("/mypage#section");
+    });
+
+    // suffix を切り出しても「剥がす → 検証」の順序は崩れておらず、結合後の
+    // 最終形に対して getSafeRedirectUrl が掛かることを確認する。
+    it("//evil.com?x (プロトコル相対 + query) → /dashboard (suffix 分離で素通りしない)", () => {
+      const result = resolveSafeLocalRedirect("//evil.com?x");
+      expect(result).toBe("/dashboard");
+      expect(result).not.toBe("//evil.com?x");
+    });
+
+    it("/ja//evil.com#x (locale 剥がし後にプロトコル相対が露出 + hash) → /dashboard", () => {
+      const result = resolveSafeLocalRedirect("/ja//evil.com#x");
+      expect(result).toBe("/dashboard");
+      expect(result).not.toBe("//evil.com#x");
+    });
+
+    it("?foo (先頭がスラッシュでない suffix のみ) → /dashboard", () => {
+      expect(resolveSafeLocalRedirect("?foo")).toBe("/dashboard");
+    });
+  });
+
+  // ----------------------------------------------------------------
   // locale と類似するが実際は locale ではないパスを誤って削らないこと
   // ----------------------------------------------------------------
   describe("locale 類似の非 locale パスは誤って削られない", () => {

@@ -197,7 +197,7 @@ export function TeamCompetitionRecordsModal({
       : t("teams.competitionRecordsModal.poolTypeShort");
 
   return (
-    <SlideUpModal visible={visible} onClose={onClose} overlayColor="rgba(0,0,0,0.4)" sheetStyle={styles.sheet}>
+    <SlideUpModal visible={visible} onClose={onClose} backdropAccessibilityLabel={t("common.close")} overlayColor="rgba(0,0,0,0.4)" sheetStyle={styles.sheet}>
       <View style={styles.header}>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {competitionTitle}

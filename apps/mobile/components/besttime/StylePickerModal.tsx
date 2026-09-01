@@ -28,6 +28,7 @@ export const StylePickerModal: React.FC<StylePickerModalProps> = ({
   return (
     <SlideUpModal
       visible={visible}
+      backdropAccessibilityLabel={t("common.close")}
       onClose={onClose}
       overlayColor="rgba(0, 0, 0, 0.4)"
       sheetStyle={[

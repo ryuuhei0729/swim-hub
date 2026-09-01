@@ -1929,6 +1929,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       {/* 種目選択モーダル */}
       <SlideUpModal
         visible={!!stylePickerEntryId}
+        backdropAccessibilityLabel={t("common.close")}
         onClose={() => setStylePickerEntryId(null)}
         overlayColor="rgba(0,0,0,0.4)"
         sheetStyle={styles.pickerSheet}
@@ -1982,6 +1983,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       {/* リレー泳者選択モーダル */}
       <SlideUpModal
         visible={!!legPicker}
+        backdropAccessibilityLabel={t("common.close")}
         onClose={() => setLegPicker(null)}
         overlayColor="rgba(0,0,0,0.4)"
         sheetStyle={styles.pickerSheet}

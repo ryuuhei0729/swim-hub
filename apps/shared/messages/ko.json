@@ -120,7 +120,8 @@
       "previousPage": "이전 페이지",
       "nextPage": "다음 페이지",
       "pageN": "{page} 페이지",
-      "switchLanguage": "언어 변경"
+      "switchLanguage": "언어 변경",
+      "modalOverlay": "모달 배경"
     },
     "pagination": {
       "prev": "이전",
@@ -2552,7 +2553,7 @@
       "bestTimesEmptySubText": "이 멤버는 아직 기록을 등록하지 않았습니다",
       "bestTimesIncludeRelaying": "이어받기 포함",
       "bestTimesWaPointsToggle": "WA 포인트",
-      "bestTimesAnnotation": "※ L: 장수로, R: 이어가기 있음",
+      "bestTimesAnnotation": "※ L: 장수로, R: 이어받기 있음",
       "groupDisplayLabel": "그룹 표시:",
       "groupAddAria": "그룹 추가",
       "groupConfirmTitle": "확인",
@@ -2916,12 +2917,12 @@
         "noRecordsDetail": "이 멤버는 아직 기록을 등록하지 않았습니다",
         "shortCourse": "단수로",
         "longCourse": "장수로",
-        "includeRelay": "이어가기 타임도 포함하여 표시",
+        "includeRelay": "이어받기 타임도 포함하여 표시",
         "bulkEntryNote": "일괄 등록",
         "distanceHeader": "거리",
         "legend": {
           "longCourse": "L: 장수로",
-          "relaying": "R: 이어가기 있음",
+          "relaying": "R: 이어받기 있음",
           "relayingExcludedFromWaPoints": "이어받기 타임은 WA 포인트 산정에서 제외됩니다"
         },
         "waPointsToggle": "WA 포인트 표시"
@@ -2944,7 +2945,7 @@
     },
     "memberStats": {
       "title": "멤버 관리 ({count}명)",
-      "includeRelay": "이어가기 포함",
+      "includeRelay": "이어받기 포함",
       "totalLabel": "전체 멤버: {count}명",
       "adminLabel": "관리자: {count}명",
       "userLabel": "사용자: {count}명"

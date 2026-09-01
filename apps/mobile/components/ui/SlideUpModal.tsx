@@ -69,7 +69,13 @@ export interface SlideUpModalProps {
    * ガード済みの関数 (例: `() => !saving && onClose()`) を渡すこと。
    */
   onBackdropPress?: () => void;
-  backdropAccessibilityLabel?: string;
+  /**
+   * 背面タップ用の透明レイヤーは `accessibilityRole="button"` を持つため、ラベルが無いと
+   * スクリーンリーダーに「名前のないボタン」として読み上げられてしまう。呼び出し側が
+   * 必ずローカライズ済みのラベル (多くの画面では `t("common.close")`) を渡すよう、
+   * 任意ではなく必須の prop にしている (付け忘れを tsc で検出させるため)。
+   */
+  backdropAccessibilityLabel: string;
   children: React.ReactNode;
   /** シート (Animated.View) に適用する追加スタイル。既存の modalContent/sheet 相当。 */
   sheetStyle?: StyleProp<ViewStyle>;

@@ -59,10 +59,15 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
     onClosedRef.current = onClosed;
   }, [onClosed]);
   const wasVisibleRef = useRef(visible);
+  // handleDismiss は「onDismiss が届いた時点の最新 visible」で判定する必要がある。
+  // ネイティブ側に渡ったハンドラが、閉じる直前 (visible=true) のレンダーで生成された
+  // クロージャのまま呼ばれる可能性があるため、prop を直接読まず ref 経由で見る。
+  const visibleRef = useRef(visible);
 
   useEffect(() => {
     const wasVisible = wasVisibleRef.current;
     wasVisibleRef.current = visible;
+    visibleRef.current = visible;
 
     // Android/Web: RN <Modal> は visible=false で即座に中身を描画しなくなる (SlideUpModal と
     // 異なり遅延アンマウントを持たない) ため、この時点を「閉じ終わった」とみなせる。
@@ -77,7 +82,20 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   const handleDismiss = () => {
     // iOS 専用: ネイティブモーダルの提示アニメーションが完全に終わった (閉じ切った) 通知。
     // Android では onDismiss 自体が発火しないため、Android の通知は上の useEffect が担う。
-    if (Platform.OS === "ios") {
+    //
+    // `visible` が既に true に戻っている場合は、閉じアニメーション中に再オープンされた
+    // ケースであり、ここへ届いた onDismiss は「reopen 前のクローズサイクル」の遅延信号。
+    // ネイティブの dismiss は JS から途中キャンセルできないため必ず遅れて届く。これを
+    // 無条件に通知すると、呼び出し元が「TagManageModal は閉じた」と誤認して
+    // TagSelectModal を開き直し、提示中の TagManageModal と二重マウントになる
+    // (SlideUpModal が awaitingDismissRef で防いでいるのと同じ競合)。TagManageModal は
+    // `visible` をネイティブ <Modal> にそのまま渡しているため、`!visibleRef.current` が
+    // 「クローズサイクルがまだ継続中か」の判定にそのまま使える。
+    //
+    // なお RN の onDismiss は発生源を識別する情報を持たない空のイベントのため、
+    // close→reopen→close のように3回以上連続で操作された場合までは保護できない
+    // (SlideUpModal の onClosed に記載した制約と同一)。
+    if (Platform.OS === "ios" && !visibleRef.current) {
       onClosedRef.current?.();
     }
   };

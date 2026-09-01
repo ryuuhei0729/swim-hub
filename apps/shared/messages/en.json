@@ -117,7 +117,8 @@
       "previousPage": "Previous page",
       "nextPage": "Next page",
       "pageN": "Page {page}",
-      "switchLanguage": "Switch language"
+      "switchLanguage": "Switch language",
+      "modalOverlay": "Modal overlay"
     },
     "pagination": {
       "prev": "Prev",

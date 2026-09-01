@@ -952,6 +952,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
       {/* 種目選択モーダル */}
       <SlideUpModal
         visible={!!stylePickerRowId}
+        backdropAccessibilityLabel={t("common.close")}
         onClose={() => setStylePickerRowId(null)}
         overlayColor="rgba(0,0,0,0.4)"
         sheetStyle={styles.pickerSheet}
@@ -998,7 +999,10 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
       {/* 確認モーダル: 新規/更新/削除/変更なしの4分類 */}
       <SlideUpModal
         visible={isConfirmModalOpen}
-        onClose={() => setIsConfirmModalOpen(false)}
+        backdropAccessibilityLabel={t("common.close")}
+        // Android の戻るボタン経由の閉じも、背面タップ/× と同様に保存中は無効にする
+        // (SlideUpModal は onRequestClose を onClose に直結させているため)。
+        onClose={() => !saving && setIsConfirmModalOpen(false)}
         onBackdropPress={() => !saving && setIsConfirmModalOpen(false)}
         overlayColor="rgba(0,0,0,0.4)"
         sheetStyle={styles.confirmSheet}

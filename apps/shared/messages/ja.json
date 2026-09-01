@@ -120,7 +120,8 @@
       "previousPage": "前のページ",
       "nextPage": "次のページ",
       "pageN": "ページ {page}",
-      "switchLanguage": "言語を切り替える"
+      "switchLanguage": "言語を切り替える",
+      "modalOverlay": "モーダルの背景"
     },
     "pagination": {
       "prev": "前へ",

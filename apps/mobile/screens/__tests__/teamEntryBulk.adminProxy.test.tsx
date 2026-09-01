@@ -22,16 +22,28 @@
 //   表示される可能性がある。
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Alert } from "react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-native", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("react-native");
+  // vi.mock ファクトリは巻き上げられるため、ファイル冒頭の import 済み React ではなく
+  // ここで実体を取り直す。
+  const ReactActual = await vi.importActual<typeof import("react")>("react");
+  const ActualModal = actual.Modal as React.ComponentType<Record<string, unknown>>;
   return {
     ...actual,
     KeyboardAvoidingView: actual.View,
+    // 共有モックの __modalMountRegistry は「マウント時点の props」しか保持しないため、
+    // onRequestClose がマウント時のクロージャ (saving=false) に固定されてしまう。
+    // 実機の RN では戻るボタンは常に「現在レンダーされている」ハンドラを呼ぶので、
+    // レンダーごとの最新 props を記録して、そちらを発火できるようにする。
+    Modal: (props: Record<string, unknown>) => {
+      mocks.modalRenders.push(props);
+      return ReactActual.createElement(ActualModal, props);
+    },
   };
 });
 
@@ -69,6 +81,7 @@ const mocks = vi.hoisted(() => {
   }
 
   return {
+    modalRenders: [] as Record<string, unknown>[],
     styleFree,
     styleBreast,
     responses,
@@ -146,6 +159,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.modalRenders.length = 0;
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
@@ -494,6 +508,78 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       for (const arg of allAlertArgs) {
         expect(String(arg)).not.toContain("foreign key constraint");
       }
+    },
+  );
+  // ------------------------------------------------------------------
+  // CodeRabbit 指摘 (PR #253): 確認モーダルは背面タップ (onBackdropPress) と
+  // ヘッダーの × (disabled) では保存中の閉じを既に塞いでいたが、
+  // SlideUpModal は Android の戻るボタン (Modal の onRequestClose) を onClose に
+  // 直結させているため、onClose 側だけ無防備だった。保存中に戻るボタンで
+  // 確認モーダルが閉じられると、進行中の書き込みの結果をユーザーが確認できない。
+  // ------------------------------------------------------------------
+  it(
+    "保存中は Android の戻るボタン (onRequestClose) で確認モーダルが閉じない" +
+      "（人間の意図: 背面タップ/× と同じ保護を戻るボタン経由にも掛ける。" +
+      "保存 API を未解決のまま保留して saving=true を維持し、その状態で" +
+      "実際に <Modal> へ渡された onRequestClose を発火させて検証する）",
+    async () => {
+      // deleteBulkEntries を保留させ、保存中 (saving=true) の状態を維持する
+      let resolveDelete: (() => void) | undefined;
+      mocks.deleteBulkEntries.mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveDelete = () => resolve();
+          }),
+      );
+
+      render(<TeamEntryBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+
+      await waitFor(() => {
+        expect(screen.getAllByText("選手A").length).toBeGreaterThan(0);
+      });
+
+      const deleteButtons = screen
+        .getAllByTestId("icon-trash-2")
+        .map((icon) => icon.closest("button") as HTMLElement);
+      fireEvent.click(deleteButtons[0]);
+
+      fireEvent.click(screen.getByText("まとめて登録"));
+      const confirmButton = await screen.findByText("確定");
+
+      fireEvent.click(confirmButton);
+      await waitFor(() => {
+        expect(mocks.deleteBulkEntries).toHaveBeenCalled();
+      });
+
+      // 保存が進行中 (deleteBulkEntries 未解決) の状態で、確認モーダルの <Modal> が
+      // 「今」受け取っている onRequestClose を取り出す。実機の Android 戻るボタンも
+      // 現在レンダーされているハンドラを呼ぶため、マウント時ではなく最新を使う。
+      const visibleModalProps = mocks.modalRenders.filter((p) => p.visible === true);
+      const confirmModalProps = visibleModalProps[visibleModalProps.length - 1];
+      if (!confirmModalProps) throw new Error("[test setup] 表示中の <Modal> が記録されていない");
+      const onRequestClose = confirmModalProps.onRequestClose as (() => void) | undefined;
+      if (typeof onRequestClose !== "function") {
+        throw new Error("[test setup] SlideUpModal の <Modal> に onRequestClose が渡されていない");
+      }
+
+      act(() => {
+        onRequestClose();
+      });
+
+      // SlideUpModal は閉じるとき SLIDE_DURATION(250ms) 後にネイティブ Modal の
+      // visible を落とす遅延アンマウントを持つため、発火直後に見るとガードの有無に
+      // かかわらず中身がまだ残っている。スライドアウトが終わり切る時間まで待ってから
+      // 「それでも開いたままである」ことを確認する。
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      // 確認モーダルは閉じていない。保存中は「確定」ラベルが ActivityIndicator に
+      // 差し替わるため、確定ボタンではなくモーダル見出しの有無で開閉を判定する。
+      expect(screen.queryByText("登録内容の確認")).not.toBeNull();
+
+      resolveDelete?.();
+      await waitFor(() => {
+        expect(mocks.goBack).toHaveBeenCalled();
+      });
     },
   );
 });
