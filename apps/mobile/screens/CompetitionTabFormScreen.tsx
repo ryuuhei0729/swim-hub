@@ -396,7 +396,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         setEndDate(competition.end_date || "");
         setTitle(competition.title || "");
         setPlace(competition.place || "");
-        setPoolType(competition.pool_type ?? 0);
+        setPoolType(competition.pool_type);
         setCompetitionNote(competition.note || "");
         // 編集権限判定 (competitions UPDATE RLS と同条件をクライアントでも反映する)
         setCompetitionOwnerId(competition.user_id);
@@ -476,7 +476,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           endDate: competition.end_date || "",
           title: competition.title || "",
           place: competition.place || "",
-          poolType: competition.pool_type ?? 0,
+          poolType: competition.pool_type,
           note: competition.note || "",
           entries: initialEntries,
           records: initialRecords,

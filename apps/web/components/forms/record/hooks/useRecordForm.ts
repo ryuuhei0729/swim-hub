@@ -125,6 +125,10 @@ export const useRecordForm = ({
           recordDate: editData.recordDate || defaultDate,
           place: editData.place || "",
           competitionName: editData.competitionName || "",
+          // PM報告(Warning2トリアージ): EditData.poolType は optional。この
+          // useRecordForm フック (components/forms/record/RecordForm.tsx) は grep で
+          // 追った限り production の呼び出し元が見つからず、自身の __tests__ からのみ
+          // 使われている。呼び出し元不在のため渡し忘れ経路の実証はできない。
           poolType: editData.poolType || 0,
           records: records,
           note: editData.note || "",
@@ -140,6 +144,7 @@ export const useRecordForm = ({
         recordDate: editData.recordDate || defaultDateSingle,
         place: editData.place || "",
         competitionName: editData.competitionName || "",
+        // 上の複数Record分岐と同じ理由 (呼び出し元不在、__tests__のみ使用) で残す。
         poolType: editData.poolType || 0,
         records: [
           {

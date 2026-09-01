@@ -32,6 +32,10 @@ function buildInitialStep2(initialProfile: UserProfile | null): Step2Snapshot {
   const rawName = initialProfile?.name ?? "";
   return {
     name: EMAIL_REGEX.test(rawName.trim()) ? "" : rawName,
+    // initialProfile が null なのは getServerUserProfile() が PGRST116 (行が存在しない) の
+    // ときだけ (他のDBエラーは throw される)。つまり null = users行がまだ無い新規ユーザーで、
+    // 上書きされる既存の実データは無い。0 は users.gender の DB デフォルトと同じ値なので
+    // フォーム初期選択として安全。
     gender: initialProfile?.gender ?? 0,
     birthday: initialProfile?.birthday ? initialProfile.birthday.split("T")[0]! : "", // split() は仕様上必ず non-empty array を返すため [0] は常に存在する
     bio: initialProfile?.bio ?? "",
@@ -106,6 +110,9 @@ export default function OnboardingWizard({ initialProfile }: OnboardingWizardPro
           : "";
       setStep2Saved({
         name: updates.name ?? "",
+        // handleProfileSave は Partial<UserProfile> を受け取る型だが、唯一の呼び出し元
+        // Step2Profile.tsx は常に gender: formData.gender (number) を含めて呼ぶため、
+        // 実際に undefined になる経路は無い。
         gender: updates.gender ?? 0,
         birthday: savedBirthday,
         bio: updates.bio ?? "",

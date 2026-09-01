@@ -282,6 +282,12 @@ export function CompetitionDetails({
               },
               competition: record.competition || undefined,
               style: record.style || undefined,
+              // PM報告(Warning2トリアージ): record.competition は RecordFromDB 上 optional。
+              // このクエリは .eq("competition_id", competitionId) で現在表示中の大会に紐づく
+              // record のみを取得するため通常は必ず join されるが、表示中に大会が削除される
+              // 競合（レース）では null になり得る。この値は line ~508 の onEditRecord 経路で
+              // editData.pool_type として記録編集フォームに渡り、そのまま保存され得るため
+              // 「0が業務的に正しいデフォルトか」を独断で決めず残す。
               pool_type: record.competition?.pool_type || 0,
             },
           }),
@@ -503,6 +509,12 @@ export function CompetitionDetails({
                     reaction_time: recordData.reaction_time ?? null,
                     created_at: "",
                     updated_at: "",
+                    // PM報告(Warning2トリアージ): record.metadata.pool_type は上の formattedRecords
+                    // 構築時に `record.competition?.pool_type || 0` から入るため通常は実値だが、
+                    // 大会が削除された競合時は undefined になり得る (同ファイル line ~285 参照)。
+                    // ここで 0 に潰した値は onEditRecord?.(editData) を通じて記録編集フォームの
+                    // 初期値になり、ユーザーが気付かず保存すると長水路の記録が短水路として
+                    // 保存され得る。挙動を変える判断はできないため残す。
                     pool_type: ((
                       record.metadata as { pool_type?: number } | undefined
                     )?.pool_type ?? 0) as PoolType,

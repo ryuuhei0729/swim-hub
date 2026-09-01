@@ -110,21 +110,12 @@ export function buildRelayEvents(labels: RelayLabels): LabelledRelayEventDef[] {
   const freeLabel = (dist: number) => `${dist}m×4 ${freeRelaySuffix}`;
   const medleyLabel = (dist: number) => `${dist}m×4 ${medleyRelaySuffix}`;
 
-  // 距離とフリー/メドレーの判定を id から導出し、RELAY_EVENTS を固定インデックスで
-  // 参照しない (定義順が変わっても対応が崩れないようにする)。
-  const distById: Record<RelayEventId, number> = {
-    relay_4x25_free: 25,
-    relay_4x50_free: 50,
-    relay_4x100_free: 100,
-    relay_4x200_free: 200,
-    relay_4x25_medley: 25,
-    relay_4x50_medley: 50,
-    relay_4x100_medley: 100,
-  };
+  // 距離は getRelayLegDistance を唯一の定義元とし、二重管理を避ける
+  // (RELAY_EVENTS を固定インデックスで参照しないので定義順が変わっても対応は崩れない)。
   const isMedley = (id: RelayEventId) => id.endsWith("_medley");
 
   return RELAY_EVENTS.map((event) => {
-    const dist = distById[event.id];
+    const dist = getRelayLegDistance(event.id);
     return {
       id: event.id,
       label: isMedley(event.id) ? medleyLabel(dist) : freeLabel(dist),

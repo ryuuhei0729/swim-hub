@@ -358,7 +358,7 @@ export class RecordAPI {
 
     records.forEach((record) => {
       const styleKey = record.styles?.name_jp || "Unknown";
-      const poolType = record.pool_type ?? 0;
+      const poolType = record.pool_type;
       const key = `${styleKey}_${poolType}`;
 
       if (record.is_relaying) {
@@ -439,7 +439,7 @@ export class RecordAPI {
 
         // 種目情報を取得（最初のレコードから）
         const record = records.find(
-          (r) => (r.styles?.name_jp || "Unknown") === styleName && (r.pool_type ?? 0) === poolType,
+          (r) => (r.styles?.name_jp || "Unknown") === styleName && r.pool_type === poolType,
         );
 
         if (record) {

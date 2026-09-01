@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { validatePracticeTimeLimit } from "@swim-hub/shared/utils/validators";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 
 import TimeInputModal from "../TimeInputModal";
@@ -53,6 +54,7 @@ export default function PracticeLogForm({
   const tPractice = useTranslations("forms.practice");
   const tUnsaved = useTranslations("forms.unsavedChanges");
   const tPremium = useTranslations("forms.premium");
+  const tCommon = useTranslations("common");
   const { subscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
 
@@ -114,6 +116,8 @@ export default function PracticeLogForm({
   const [templateName, setTemplateName] = useState("");
   // テンプレート保存中フラグ
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  // テンプレート保存エラー（本体フォームの formError とはドメインが異なるため分離）
+  const [templateSaveError, setTemplateSaveError] = useState<string | null>(null);
 
   // Supabaseクライアント
   const supabase = createBrowserClient(
@@ -153,6 +157,8 @@ export default function PracticeLogForm({
       window.removeEventListener("popstate", handlePopState);
     };
   }, [isOpen, hasUnsavedChanges, isSubmitted]);
+
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleClose = useCallback(() => {
     if (hasUnsavedChanges && !isSubmitted) {
@@ -203,6 +209,7 @@ export default function PracticeLogForm({
     }
 
     setIsSubmitted(true);
+    setFormError(null);
     try {
       // menus の id（一時ID）を tempMenuId として、pending video を pendingVideo としてマージ
       const submitData = prepareSubmitData().map((data, index) => {
@@ -220,6 +227,7 @@ export default function PracticeLogForm({
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error("フォーム送信エラー:", error);
+      setFormError(toUserFacingMessage(error, tCommon("error")));
     } finally {
       setIsSubmitted(false);
     }
@@ -229,6 +237,7 @@ export default function PracticeLogForm({
     if (!templateName.trim()) return;
 
     setIsSavingTemplate(true);
+    setTemplateSaveError(null);
     try {
       // 最初のメニューをテンプレートとして保存
       const firstMenu = menus[0];
@@ -260,9 +269,15 @@ export default function PracticeLogForm({
       await executeSubmit();
     } catch (error) {
       console.error("テンプレート保存エラー:", error);
+      setTemplateSaveError(toUserFacingMessage(error, tCommon("error")));
     } finally {
       setIsSavingTemplate(false);
     }
+  };
+
+  const handleCloseTemplateSaveModal = () => {
+    setShowTemplateSaveModal(false);
+    setTemplateSaveError(null);
   };
 
   const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -331,6 +346,16 @@ export default function PracticeLogForm({
 
           <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
             <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-6">
+              {formError && (
+                <div
+                  className="rounded-md bg-red-50 border border-red-200 p-4"
+                  role="alert"
+                  aria-live="polite"
+                  data-testid="practice-log-form-error"
+                >
+                  <p className="text-sm text-red-700">{formError}</p>
+                </div>
+              )}
               {/* メニューセクション */}
               <div className="space-y-2 sm:space-y-4">
                 <div className="flex items-center justify-end">
@@ -530,7 +555,7 @@ export default function PracticeLogForm({
             {/* オーバーレイ */}
             <div
               className="fixed inset-0 bg-black/40 transition-opacity"
-              onClick={() => setShowTemplateSaveModal(false)}
+              onClick={handleCloseTemplateSaveModal}
               aria-hidden="true"
             />
 
@@ -543,7 +568,7 @@ export default function PracticeLogForm({
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setShowTemplateSaveModal(false)}
+                  onClick={handleCloseTemplateSaveModal}
                   className="text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-md p-1"
                   aria-label={t("close_aria")}
                 >
@@ -553,6 +578,16 @@ export default function PracticeLogForm({
 
               {/* コンテンツ */}
               <div className="p-4">
+                {templateSaveError && (
+                  <div
+                    className="rounded-md bg-red-50 border border-red-200 p-4 mb-4"
+                    role="alert"
+                    aria-live="polite"
+                    data-testid="template-save-form-error"
+                  >
+                    <p className="text-sm text-red-700">{templateSaveError}</p>
+                  </div>
+                )}
                 <label
                   htmlFor="template-name"
                   className="block text-sm font-medium text-gray-700 mb-2"
@@ -575,7 +610,7 @@ export default function PracticeLogForm({
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setShowTemplateSaveModal(false)}
+                  onClick={handleCloseTemplateSaveModal}
                   disabled={isSavingTemplate}
                 >
                   {t("cancel")}

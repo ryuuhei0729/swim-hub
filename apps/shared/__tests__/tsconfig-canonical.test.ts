@@ -1,3 +1,12 @@
+/**
+ * [3リポ同期の不変条件]
+ * このファイルは以下の2ファイルと同じ canonical 値をリテラルで重複定義している。
+ * 3リポは独立した git リポジトリのため、単一の CI で跨リポの一致を検証することは
+ * 原理的に不可能。canonical 値を変更するときは、この3ファイルすべてを手動で更新すること。
+ *   - swimhub-scanner/apps/shared/__tests__/tsconfig-canonical.test.ts
+ *   - swimhub-timer/apps/shared/__tests__/tsconfig-canonical.test.ts
+ */
+
 import { describe, it, expect } from "vitest";
 import { execFileSync } from "node:child_process";
 import path from "node:path";

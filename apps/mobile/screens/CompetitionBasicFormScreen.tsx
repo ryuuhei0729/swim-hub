@@ -157,7 +157,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           setEndDate(competition.end_date || "");
           setTitle(competition.title || "");
           setPlace(competition.place || "");
-          setPoolType(competition.pool_type ?? 0);
+          setPoolType(competition.pool_type);
           setNote(competition.note || "");
           // 既存画像を読み込み（competition-images は private バケットのため署名付きURLを解決する。Issue #36）
           setSavedImagePaths(competition.image_paths ?? []);

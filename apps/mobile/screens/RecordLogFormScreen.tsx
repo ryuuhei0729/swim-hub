@@ -86,6 +86,10 @@ export const RecordLogFormScreen: React.FC = () => {
   const bestTimes = useMemo(() => bestTimesData ?? [], [bestTimesData]);
   // ベストタイムの水路判定用に大会のプール種別を取得
   const { data: competitionInfo } = useCompetitionInfoQuery(supabase, competitionId);
+  // competitionInfo は query 未解決中は undefined になり得るため genuinely nullable。
+  // ただし competitionPoolType は getBestTimeForEntry() のベストタイム参照バッジ表示にのみ
+  // 使う読み取り専用値で、DBへの書き込みには関与しない。同関数は同水路優先・異水路フォールバック
+  // の両方を持つため 0 default が誤っていてもバッジ表示のみへの影響に留まる。
   const competitionPoolType = competitionInfo?.poolType ?? 0;
 
   // 動画の状態管理
@@ -617,7 +621,7 @@ export const RecordLogFormScreen: React.FC = () => {
         throw competitionError || new Error(t("recordMobile.competitionFetchFailed"));
       }
 
-      const poolType: PoolType = (competition.pool_type ?? 0) as PoolType;
+      const poolType: PoolType = competition.pool_type as PoolType;
 
       // 編集モードの場合
       if (recordId && formDataList.length > 0) {

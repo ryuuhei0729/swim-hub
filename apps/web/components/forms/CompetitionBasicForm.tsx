@@ -226,6 +226,10 @@ export default function CompetitionBasicForm({
         endDate: editData.end_date || "",
         title: editData.title || editData.competition_name || "",
         place: editData.place || "",
+        // editData.pool_type は EditCompetitionBasicData 上 optional。この編集モードに
+        // editData を渡す唯一の呼び出し元 TeamCompetitions.tsx#handleEditCompetition は
+        // 常に pool_type: competition.pool_type (DB上NOT NULL) を渡すため、実際に
+        // undefined になる経路は無い。
         poolType: editData.pool_type ?? 0,
         note: editData.note || "",
       };

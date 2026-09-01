@@ -155,6 +155,31 @@ describe("[V-03] メドレーリレーの泳順と styleId マッピング (Ba�
   });
 });
 
+// =============================================================================
+// Reviewer Critical 4 回帰テスト: buildRelayEvents の distById (id→距離のハードコード
+// 対応表) は、1つ値を間違えるとその種目の event.label (トップレベルの種目名ラベル、
+// 例: "50m×4 フリーリレー") が静かに誤った距離で表示される。
+// 既存テストは legs[n].legLabel (第N泳者ラベル) のみを検証しており、event.label 自体は
+// medley/free 含めて一度も assert されていなかった (Reviewer実証: relay_4x50_free の
+// distById を 50→25 に書き換えても全テストが green のまま)。フリー4種目・メドレー3種目
+// 全てで event.label を検証し、この穴を塞ぐ。
+// =============================================================================
+describe("buildRelayEvents の event.label (種目トップレベルのラベル、Critical 4 回帰)", () => {
+  it.each([
+    ["relay_4x25_free", "25m×4 フリーリレー"],
+    ["relay_4x50_free", "50m×4 フリーリレー"],
+    ["relay_4x100_free", "100m×4 フリーリレー"],
+    ["relay_4x200_free", "200m×4 フリーリレー"],
+    ["relay_4x25_medley", "25m×4 メドレーリレー"],
+    ["relay_4x50_medley", "50m×4 メドレーリレー"],
+    ["relay_4x100_medley", "100m×4 メドレーリレー"],
+  ] satisfies Array<[RelayEventId, string]>)("%s の event.label は %s", (id, expectedLabel) => {
+    const labelled = buildRelayEvents(TEST_LABELS);
+    const event = labelled.find((e) => e.id === id)!;
+    expect(event.label).toBe(expectedLabel);
+  });
+});
+
 describe("[V-02] isRelayingForLeg 純粋関数", () => {
   it("legIndex=0 (第1泳者) は false を返す", () => {
     expect(isRelayingForLeg(0)).toBe(false);

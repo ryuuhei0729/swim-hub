@@ -749,7 +749,11 @@ export default function TeamCompetitions({
       await loadTeamCompetitions();
     } catch (err) {
       console.error("記録の登録に失敗:", err);
-      setError(t("competitions.selfRecordSaveFailed"));
+      // ここで setError しない (Reviewer/PM 実測: このモーダルは RecordLogForm の
+      // fixed inset-0 全画面オーバーレイの裏に隠れて表示先が見えず、かつ throw しないと
+      // resetUnsavedChanges() が保存失敗時にも実行されて未保存ガードが外れる)。
+      // rethrow して RecordLogForm 側の setFormError (モーダル内 role="alert") に委ねる。
+      throw err;
     } finally {
       setSelfRecordLoading(false);
     }

@@ -299,7 +299,7 @@ export const RecordFormScreen: React.FC = () => {
     if (fetchedRecord) {
       initialize(fetchedRecord);
       // 大会未紐付けレコードの場合、保存時に pool_type を維持できるよう保持しておく
-      setStandaloneOriginalPoolType((fetchedRecord.pool_type ?? 0) as PoolType);
+      setStandaloneOriginalPoolType(fetchedRecord.pool_type);
       // 動画パスを初期化
       setExistingVideoPath(fetchedRecord.video_path ?? null);
       setExistingThumbnailPath(fetchedRecord.video_thumbnail_path ?? null);
@@ -418,6 +418,13 @@ export const RecordFormScreen: React.FC = () => {
       const finalCompetitionId = isStandaloneRecord ? null : routeCompetitionId || storeCompetitionId;
       // 大会からプールタイプを取得。大会未紐付けレコードは大会が無いため、
       // 読み込み時点の記録自身の pool_type をそのまま維持する
+      // TODO(warning2) PM報告: competitions.find() は該当IDが `competitions` state に無い場合
+      // undefined を返す。`competitions` は useCompetitionsListQuery(supabase) を素通しした
+      // 状態で、finalCompetitionId が新規作成直後(キャッシュ未反映)やチーム大会
+      // (getCompetitions() のスコープに乗らない可能性)を指すと undefined になり得る。
+      // その場合 pool_type ?? 0 が recordData.pool_type としてそのまま作成/更新mutationに
+      // 送られ、長水路の大会でも短水路として記録が保存され得る。挙動を変える判断はできないため
+      // 現状維持で残す。
       const selectedCompetition = competitions.find((c) => c.id === finalCompetitionId);
       const poolType: PoolType = isStandaloneRecord
         ? standaloneOriginalPoolType

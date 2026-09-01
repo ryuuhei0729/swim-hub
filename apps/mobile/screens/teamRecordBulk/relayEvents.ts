@@ -75,19 +75,7 @@ function medleyLegsDef(baId: number, brId: number, flyId: number, frId: number):
 }
 
 /** ラベルなし静的定義 (styleId のみ) — detectRelayEventId 等で使用 */
-// フリーリレー4種目 + メドレーリレー3種目で要素数7が静的に確定しているため、
-// 固定長タプル型にして下記 buildRelayEvents 内の RELAY_EVENTS[N] 固定添字アクセスを安全にする (Doctrine 2.7)
-type RelayEventDefTuple = readonly [
-  RelayEventDef,
-  RelayEventDef,
-  RelayEventDef,
-  RelayEventDef,
-  RelayEventDef,
-  RelayEventDef,
-  RelayEventDef,
-];
-
-export const RELAY_EVENTS: RelayEventDefTuple = [
+export const RELAY_EVENTS: RelayEventDef[] = [
   { id: "relay_4x25_free", legs: freeLegsDef(1) },
   { id: "relay_4x50_free", legs: freeLegsDef(2) },
   { id: "relay_4x100_free", legs: freeLegsDef(3) },
@@ -116,15 +104,18 @@ export function buildRelayEvents(labels: RelayLabels): LabelledRelayEventDef[] {
   const freeLabel = (dist: number) => `${dist}m×4 ${freeRelaySuffix}`;
   const medleyLabel = (dist: number) => `${dist}m×4 ${medleyRelaySuffix}`;
 
-  return [
-    { id: "relay_4x25_free", label: freeLabel(25), legs: labelLegs(RELAY_EVENTS[0].legs) },
-    { id: "relay_4x50_free", label: freeLabel(50), legs: labelLegs(RELAY_EVENTS[1].legs) },
-    { id: "relay_4x100_free", label: freeLabel(100), legs: labelLegs(RELAY_EVENTS[2].legs) },
-    { id: "relay_4x200_free", label: freeLabel(200), legs: labelLegs(RELAY_EVENTS[3].legs) },
-    { id: "relay_4x25_medley", label: medleyLabel(25), legs: labelLegs(RELAY_EVENTS[4].legs) },
-    { id: "relay_4x50_medley", label: medleyLabel(50), legs: labelLegs(RELAY_EVENTS[5].legs) },
-    { id: "relay_4x100_medley", label: medleyLabel(100), legs: labelLegs(RELAY_EVENTS[6].legs) },
-  ];
+  // 距離は getRelayLegDistance を唯一の定義元とし、二重管理を避ける
+  // (RELAY_EVENTS を固定インデックスで参照しないので定義順が変わっても対応は崩れない)。
+  const isMedley = (id: RelayEventId) => id.endsWith("_medley");
+
+  return RELAY_EVENTS.map((event) => {
+    const dist = getRelayLegDistance(event.id);
+    return {
+      id: event.id,
+      label: isMedley(event.id) ? medleyLabel(dist) : freeLabel(dist),
+      legs: labelLegs(event.legs),
+    };
+  });
 }
 
 /**

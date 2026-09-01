@@ -756,6 +756,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
       await refetch();
     } catch (err) {
       console.error("大会記録の保存に失敗しました:", err);
+      throw err;
     }
   };
 

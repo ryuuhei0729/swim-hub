@@ -66,7 +66,7 @@ export function useBestTimes(supabase: SupabaseClient) {
                 ? record.competitions[0]
                 : record.competitions;
               const styleKey = style?.name_jp || "Unknown";
-              const poolType = record.pool_type ?? 0;
+              const poolType = record.pool_type;
               const key = `${styleKey}_${poolType}`;
 
               if (record.is_relaying) {
@@ -150,7 +150,7 @@ export function useBestTimes(supabase: SupabaseClient) {
                 const style = Array.isArray(r.styles) ? r.styles[0] : r.styles;
                 return (
                   (style?.name_jp || "Unknown") === styleName &&
-                  (r.pool_type ?? 0) === poolType &&
+                  r.pool_type === poolType &&
                   r.is_relaying &&
                   r.id === relayingTime.id
                 );

@@ -45,6 +45,10 @@ export default function RecordBestBadge({
       try {
         const prev = await new RecordAPI(supabase).getPreviousBestTime(
           styleId,
+          // poolType?: number | null は optional prop。両呼び出し元 (CompetitionDetails.tsx /
+          // RecordDetailModal.tsx) は常に値を渡すが、CompetitionDetails.tsx 側は
+          // record.metadata?.competition?.pool_type の連鎖(同ファイルで別途PM報告済み)を
+          // 経由するため、その稀な undefined ケースがここにも伝播しうる。
           poolType ?? 0,
           recordId,
           isRelaying ?? false,

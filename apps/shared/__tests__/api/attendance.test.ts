@@ -1,9 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createMockQueryBuilder,
-  createMockSupabaseClient,
-  type MockQueryBuilder,
-} from "../../__mocks__/supabase";
 import { AttendanceAPI } from "../../api/attendance";
 import {
   type AttendanceStatus,
@@ -11,56 +6,7 @@ import {
   type TeamAttendanceInsert,
   type TeamAttendanceUpdate,
 } from "../../types";
-
-type TableResponse = {
-  data: unknown;
-  error?: unknown;
-  configure?: (builder: MockQueryBuilder) => void;
-};
-
-const createSupabaseMock = (options: { userId?: string } = {}) => {
-  const { userId } = options;
-  const client = createMockSupabaseClient({ userId });
-  const tableQueues = new Map<string, TableResponse[]>();
-  const builderHistory = new Map<string, MockQueryBuilder[]>();
-
-  client.from = vi.fn((table: string) => {
-    const queue = tableQueues.get(table) ?? [];
-    const response =
-      queue.length > 0
-        ? queue.shift()!
-        : {
-            data: [],
-            error: null,
-          };
-
-    const builder = createMockQueryBuilder(response.data, response.error ?? null);
-    response.configure?.(builder);
-
-    const history = builderHistory.get(table) ?? [];
-    history.push(builder);
-    builderHistory.set(table, history);
-
-    return builder;
-  }) as unknown as typeof client.from;
-
-  return {
-    client,
-    queueTable: (table: string, responses: TableResponse[]) => {
-      tableQueues.set(table, [...responses]);
-    },
-    getBuilderHistory: (table: string) => builderHistory.get(table) ?? [],
-    // 呼び出し側は arrange/act で対象テーブルへの呼び出しが指定 index まで発生することを
-    // 保証した上で読む。存在しなければテストの前提が崩れているため早期に失敗させる
-    getBuilder: (table: string, index = 0): MockQueryBuilder => {
-      const builder = (builderHistory.get(table) ?? [])[index];
-      if (!builder) {
-        throw new Error(`No builder recorded for table "${table}" at index ${index}`);
-      }
-      return builder;
-    },
-  };
-};
+import { createSupabaseMock } from "../utils/supabase-mock";
 
 const createAttendanceRow = (
   overrides: Partial<TeamAttendance> & {

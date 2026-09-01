@@ -463,6 +463,9 @@ export default function CompetitionTabModal({
         endDate: row.end_date || "",
         title: row.title || "",
         place: row.place || "",
+        // row.pool_type はこの直上の手書き型で `number | null` にしているが、実際は
+        // competitions.pool_type = DB上 NOT NULL の直接 SELECT。防御的に nullable 型を
+        // 付けているだけで、実データで undefined/null になる経路は無い。
         poolType: row.pool_type ?? 0,
         note: row.note || "",
       };
@@ -747,6 +750,9 @@ export default function CompetitionTabModal({
           endDate: row.end_date || "",
           title: row.title || "",
           place: row.place || "",
+          // row.pool_type はこの直上の手書き型で `number | null` にしているが、実際は
+          // competitions.pool_type = DB上 NOT NULL の直接 SELECT。防御的に nullable 型を
+          // 付けているだけで、実データで undefined/null になる経路は無い。
           poolType: row.pool_type ?? 0,
           note: row.note || "",
         };

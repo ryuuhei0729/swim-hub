@@ -17,6 +17,7 @@ import { processCompetitionImage, processPracticeImage } from "@/utils/imageUtil
 import { uploadVideoClient } from "@/lib/video-upload-client";
 import { EntryAPI, PracticeAPI, CompetitionAPI } from "@apps/shared/api";
 import type { Style, PracticeLogTagInsert } from "@apps/shared/types";
+import { UserFacingError } from "@apps/shared/utils/userFacingError";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
 import { useCallback } from "react";
@@ -219,7 +220,7 @@ export function useDashboardHandlers({
               .single();
 
             if (selectError) {
-              throw new Error(t("fetchPracticeFailed", { detail: selectError.message }));
+              throw new UserFacingError(t("fetchPracticeFailed", { detail: selectError.message }));
             }
 
             const practiceData = currentPractice as { image_paths?: string[] | null } | null;
@@ -238,7 +239,7 @@ export function useDashboardHandlers({
               .eq("id", practiceId);
 
             if (updateError) {
-              throw new Error(t("updateImagePathFailed", { detail: updateError.message }));
+              throw new UserFacingError(t("updateImagePathFailed", { detail: updateError.message }));
             }
 
             // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
@@ -275,7 +276,7 @@ export function useDashboardHandlers({
               }
             }
 
-            throw new Error(t("practiceCreatedButImageFailed"));
+            throw new UserFacingError(t("practiceCreatedButImageFailed"));
           }
         }
 
@@ -314,7 +315,7 @@ export function useDashboardHandlers({
   const handlePracticeLogSubmit = useCallback(
     async (formDataArray: PracticeMenuFormData[]) => {
       if (!user || !user.id) {
-        throw new Error(t("authRequired"));
+        throw new UserFacingError(t("authRequired"));
       }
 
       setPracticeLoading(true);
@@ -369,7 +370,7 @@ export function useDashboardHandlers({
             for (const { error } of tagResults) {
               if (error) {
                 console.error("練習ログタグの挿入に失敗しました:", error);
-                throw new Error(t("insertPracticeTagFailed", { detail: error.message }));
+                throw new UserFacingError(t("insertPracticeTagFailed", { detail: error.message }));
               }
             }
           }
@@ -446,7 +447,7 @@ export function useDashboardHandlers({
               for (const { error } of tagResults) {
                 if (error) {
                   console.error("練習ログタグの挿入に失敗しました:", error);
-                  throw new Error(t("insertPracticeTagFailed", { detail: error.message }));
+                  throw new UserFacingError(t("insertPracticeTagFailed", { detail: error.message }));
                 }
               }
             }
@@ -489,6 +490,7 @@ export function useDashboardHandlers({
         refreshCalendar();
       } catch (error) {
         console.error("練習記録の処理に失敗しました:", error);
+        throw error;
       } finally {
         setPracticeLoading(false);
       }
@@ -634,7 +636,7 @@ export function useDashboardHandlers({
               .single();
 
             if (selectError) {
-              throw new Error(t("fetchCompetitionFailed", { detail: selectError.message }));
+              throw new UserFacingError(t("fetchCompetitionFailed", { detail: selectError.message }));
             }
 
             const competitionData = currentCompetition as { image_paths?: string[] | null } | null;
@@ -653,7 +655,7 @@ export function useDashboardHandlers({
               .eq("id", competitionId);
 
             if (updateError) {
-              throw new Error(t("updateImagePathFailed", { detail: updateError.message }));
+              throw new UserFacingError(t("updateImagePathFailed", { detail: updateError.message }));
             }
 
             // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
@@ -690,7 +692,7 @@ export function useDashboardHandlers({
               }
             }
 
-            throw new Error(t("competitionCreatedButImageFailed"));
+            throw new UserFacingError(t("competitionCreatedButImageFailed"));
           }
         }
 
@@ -740,7 +742,7 @@ export function useDashboardHandlers({
   const handleEntrySubmit = useCallback(
     async (entriesData: EntryFormData[]) => {
       if (!user || !user.id) {
-        throw new Error(t("authRequired"));
+        throw new UserFacingError(t("authRequired"));
       }
 
       setCompetitionLoading(true);
@@ -828,7 +830,7 @@ export function useDashboardHandlers({
               const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum));
               if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
                 const styleName = styles.find((s) => s.id === styleIdNum)?.name_jp || t("unknownStyle");
-                throw new Error(t("styleAlreadyEntered", { name: styleName }));
+                throw new UserFacingError(t("styleAlreadyEntered", { name: styleName }));
               }
             }
 
@@ -976,6 +978,7 @@ export function useDashboardHandlers({
             // setFormError + return で送信自体をブロックしているため現状は到達しないはずだが、
             // その保証は1ファイル離れた RecordLogForm.tsx にあり本関数からは見えない。
             // 早期 return で「無言で不正な更新が走る」より安全側に倒す。PM 裁定済み (裁定23): 早期 return を最終形とする。
+            closeRecordLogForm();
             return;
           }
           const updates: import("@swim-hub/shared/types").RecordUpdate = {
@@ -1074,11 +1077,12 @@ export function useDashboardHandlers({
         }
 
         refreshCalendar();
+        closeRecordLogForm();
       } catch (error) {
         console.error("記録の処理に失敗しました:", error);
+        throw error;
       } finally {
         setCompetitionLoading(false);
-        closeRecordLogForm();
       }
     },
     [

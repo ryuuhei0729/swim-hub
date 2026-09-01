@@ -192,6 +192,9 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                           date: firstEntry.date || "",
                           end_date: null,
                           place: place || null,
+                          // poolType は EntryDetailProps 上 optional。唯一の呼び出し元
+                          // DayDetailModal.tsx は firstEntry.metadata?.competition?.pool_type ?? 0
+                          // で既に解決済みの値を渡すため、実際に undefined になる経路は無い。
                           pool_type: poolType ?? 0,
                           team_id: firstEntry.metadata?.competition?.team_id || null,
                         },

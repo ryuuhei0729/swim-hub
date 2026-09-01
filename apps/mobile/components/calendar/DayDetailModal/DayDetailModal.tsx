@@ -394,6 +394,10 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           firstEntry.metadata?.competition?.title || firstEntry.title || fallbackCompetitionName;
                         const place =
                           firstEntry.place || firstEntry.metadata?.competition?.place || "";
+                        // metadata は calendar_view の JSONB 列で未型付けだが、'entry' 型行は
+                        // jsonb_build_object('competition', to_jsonb(c.*), ...) で competitions
+                        // 行全体をそのまま埋め込むため、実データには pool_type (DB上NOT NULL)
+                        // が必ず入っている。JSON型保証が無いための防御的フォールバック(web と同型)。
                         const poolType = firstEntry.metadata?.competition?.pool_type ?? 0;
                         const note = firstEntry.note || undefined;
                         const isTeamCompetition = !!firstEntry.metadata?.competition?.team_id;

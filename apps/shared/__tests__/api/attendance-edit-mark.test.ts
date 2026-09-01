@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createMockQueryBuilder,
-  createMockSupabaseClient,
-  type MockQueryBuilder,
-} from "../../__mocks__/supabase";
 import { AttendanceAPI } from "../../api/attendance";
 import type { AttendanceStatus, TeamAttendance } from "../../types";
+import { createSupabaseMock } from "../utils/supabase-mock";
 
 // =============================================================================
 // 改修1 検証: bulkUpdateMyAttendances 経由の「締切後編集」マーク付与/重複除去
@@ -14,50 +10,6 @@ import type { AttendanceStatus, TeamAttendance } from "../../types";
 // である bulkUpdateMyAttendances (closed イベント) を通してロジックを検証する。
 // これにより mobile の保存経路 (API 委譲) の実挙動をそのまま検証できる。
 // =============================================================================
-
-type TableResponse = {
-  data: unknown;
-  error?: unknown;
-  configure?: (builder: MockQueryBuilder) => void;
-};
-
-const createSupabaseMock = (options: { userId?: string } = {}) => {
-  const { userId } = options;
-  const client = createMockSupabaseClient({ userId });
-  const tableQueues = new Map<string, TableResponse[]>();
-  const builderHistory = new Map<string, MockQueryBuilder[]>();
-
-  client.from = vi.fn((table: string) => {
-    const queue = tableQueues.get(table) ?? [];
-    const response = queue.length > 0 ? queue.shift()! : { data: [], error: null };
-
-    const builder = createMockQueryBuilder(response.data, response.error ?? null);
-    response.configure?.(builder);
-
-    const history = builderHistory.get(table) ?? [];
-    history.push(builder);
-    builderHistory.set(table, history);
-
-    return builder;
-  }) as unknown as typeof client.from;
-
-  return {
-    client,
-    queueTable: (table: string, responses: TableResponse[]) => {
-      tableQueues.set(table, [...responses]);
-    },
-    getBuilderHistory: (table: string) => builderHistory.get(table) ?? [],
-    // 呼び出し側は arrange/act で対象テーブルへの呼び出しが指定 index まで発生することを
-    // 保証した上で読む。存在しなければテストの前提が崩れているため早期に失敗させる
-    getBuilder: (table: string, index = 0): MockQueryBuilder => {
-      const builder = (builderHistory.get(table) ?? [])[index];
-      if (!builder) {
-        throw new Error(`No builder recorded for table "${table}" at index ${index}`);
-      }
-      return builder;
-    },
-  };
-};
 
 /**
  * closed な練習 1 件に対して bulkUpdateMyAttendances を実行し、

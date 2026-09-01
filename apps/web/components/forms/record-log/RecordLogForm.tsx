@@ -15,6 +15,7 @@ import type { EntryInfo } from "@apps/shared/types/ui";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { useAuth } from "@/contexts";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 const EMPTY_STYLES: StyleOption[] = [];
 const EMPTY_ENTRY_DATA_LIST: EntryInfo[] = [];
@@ -42,6 +43,7 @@ export default function RecordLogForm({
   const tCompetition = useTranslations("forms.competition");
   const tUnsaved = useTranslations("forms.unsavedChanges");
   const tTimeError = useTranslations("bulkBestTime.error");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
   const dateFnsLocale = locale === "ja" ? ja : enUS;
 
@@ -216,6 +218,7 @@ export default function RecordLogForm({
       resetUnsavedChanges();
     } catch (error) {
       console.error("フォーム送信エラー:", error);
+      setFormError(toUserFacingMessage(error, tCommon("error")));
       setIsSubmitted(false);
     }
   };
