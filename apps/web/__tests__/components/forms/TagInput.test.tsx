@@ -219,7 +219,7 @@ describe("TagInput", () => {
     await user.click(deleteButton);
 
     const confirmButtons = await screen.findAllByRole("button", { name: "削除" });
-    await user.click(confirmButtons[1]);
+    await user.click(confirmButtons[1]!);
 
     await waitFor(() => {
       expect(supabase._mocks.deleteEqFirstMock).toHaveBeenCalledWith("id", "tag-2");

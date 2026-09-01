@@ -92,8 +92,12 @@ export default function TeamTimeInputModal({
       prev.map((entry) => {
         if (entry.memberId === memberId) {
           const newTimes = [...entry.times];
+          const existing = newTimes[timeIndex];
+          if (!existing) return entry; // timeIndex は呼び出し元 (対象セル) の index から
+            // 渡され、times は固定長で生成されるため通常常に存在するが、型上は
+            // 保証されないため防御的に更新をスキップする
           newTimes[timeIndex] = {
-            ...newTimes[timeIndex],
+            ...existing,
             displayValue: value,
           };
           return { ...entry, times: newTimes };
@@ -147,8 +151,12 @@ export default function TeamTimeInputModal({
         prev.map((entry) => {
           if (entry.memberId === memberId) {
             const newTimes = [...entry.times];
+            const existing = newTimes[timeIndex];
+            if (!existing) return entry; // timeIndex は呼び出し元 (対象セル) の index から
+              // 渡され、times は固定長で生成されるため通常常に存在するが、型上は
+              // 保証されないため防御的に更新をスキップする
             newTimes[timeIndex] = {
-              ...newTimes[timeIndex],
+              ...existing,
               displayValue: displayValue || value,
               time,
             };

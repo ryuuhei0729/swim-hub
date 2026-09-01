@@ -75,7 +75,19 @@ function medleyLegsDef(baId: number, brId: number, flyId: number, frId: number):
 }
 
 /** ラベルなし静的定義 (styleId のみ) — detectRelayEventId 等で使用 */
-export const RELAY_EVENTS: RelayEventDef[] = [
+// フリーリレー4種目 + メドレーリレー3種目で要素数7が静的に確定しているため、
+// 固定長タプル型にして下記 buildRelayEvents 内の RELAY_EVENTS[N] 固定添字アクセスを安全にする (Doctrine 2.7)
+type RelayEventDefTuple = readonly [
+  RelayEventDef,
+  RelayEventDef,
+  RelayEventDef,
+  RelayEventDef,
+  RelayEventDef,
+  RelayEventDef,
+  RelayEventDef,
+];
+
+export const RELAY_EVENTS: RelayEventDefTuple = [
   { id: "relay_4x25_free", legs: freeLegsDef(1) },
   { id: "relay_4x50_free", legs: freeLegsDef(2) },
   { id: "relay_4x100_free", legs: freeLegsDef(3) },
@@ -139,7 +151,8 @@ export function calcLegTimesFromCumulative(cumulativeTimes: number[]): number[] 
   if (cumulativeTimes.length === 0) return [];
   return cumulativeTimes.map((cum, i) => {
     if (i === 0) return cum;
-    return Math.round((cum - cumulativeTimes[i - 1]) * 100) / 100;
+    // i>=1 かつ Array.prototype.map の i は 0<=i<length を満たすため i-1 は必ず有効な添字
+    return Math.round((cum - cumulativeTimes[i - 1]!) * 100) / 100;
   });
 }
 

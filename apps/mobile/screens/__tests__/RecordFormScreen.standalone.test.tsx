@@ -287,7 +287,7 @@ describe("RecordFormScreen — 大会未紐付けレコード(一括入力)の�
       expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(1);
     });
 
-    const [{ id, updates }] = mocks.updateMutateAsync.mock.calls[0];
+    const [{ id, updates }] = mocks.updateMutateAsync.mock.calls[0]!; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
     expect(id).toBe("record-1");
     expect(updates.competition_id).toBeNull();
     expect(updates.pool_type).toBe(1); // レコード自身の pool_type (長水路) が保持される
@@ -342,7 +342,7 @@ describe("RecordFormScreen — 大会紐付けレコードの通常編集フロ�
       expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(1);
     });
 
-    const [{ id, updates }] = mocks.updateMutateAsync.mock.calls[0];
+    const [{ id, updates }] = mocks.updateMutateAsync.mock.calls[0]!; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
     expect(id).toBe("record-2");
     expect(updates.competition_id).toBe("comp-1");
     // linkedCompetition.pool_type=1 (長水路) が使われる。record.pool_type=0 (短水路) ではない

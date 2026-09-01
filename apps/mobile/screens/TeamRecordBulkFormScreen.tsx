@@ -328,6 +328,8 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
   const updateRelayEntry = (entryId: string, relayEventId: RelayEventId) => {
     const relayDef = relayEvents.find((r) => r.id === relayEventId);
     if (!relayDef) return;
+    const firstLeg = relayDef.legs[0];
+    if (!firstLeg) return; // relayDef は buildRelayEvents で必ず4 legs構築されるが防御的に扱う
 
     const legRecords: MemberRecord[] = relayDef.legs.map((leg) => ({
       id: genId(),
@@ -366,7 +368,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         entry.id === entryId
           ? {
               ...entry,
-              styleId: relayDef.legs[0].styleId,
+              styleId: firstLeg.styleId,
               styleName: relayDef.label,
               relayEventId,
               memberRecords: legRecords,
@@ -555,6 +557,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         const totalSeconds = parseTimeToSeconds(value);
         const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
         const totalDistance = legBoundaries[3];
+        if (totalDistance === undefined) return entry; // legBoundaries は常に4要素だが防御的に扱う
 
         const currentSplits = entry.relaySplitTimes ?? [];
         const existingIdx = currentSplits.findIndex(
@@ -563,7 +566,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         let updatedSplits: SplitTimeEntry[];
         if (totalSeconds > 0) {
           const newSplit: SplitTimeEntry = {
-            id: existingIdx >= 0 ? currentSplits[existingIdx].id : genId(),
+            id: existingIdx >= 0 ? (currentSplits[existingIdx]?.id ?? genId()) : genId(),
             distance: totalDistance,
             splitTime: totalSeconds,
             displayValue: value,
@@ -591,7 +594,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           : null;
 
         const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
-          const newCum = newCumulatives[idx];
+          // newCumulatives は legBoundaries.map の結果で既に「未検出は0」に正規化されているため、
+          // 0 はこの配列における既存の「未設定」センチネルと一致する (Doctrine 2.3)
+          const newCum = newCumulatives[idx] ?? 0;
           const isLastLeg = idx === 3;
           const cumTime = isLastLeg
             ? totalSeconds
@@ -660,7 +665,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           changedSplit.distance === totalDistance;
 
         const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
-          const newCum = allBoundariesPresent ? newCumulatives[idx] : 0;
+          // newCumulatives は legBoundaries.map の結果で既に「未検出は0」に正規化されているため、
+          // 0 はこの配列における既存の「未設定」センチネルと一致する (Doctrine 2.3)
+          const newCum = allBoundariesPresent ? newCumulatives[idx] ?? 0 : 0;
           const cumTime = newCum > 0 ? newCum : (mr.cumulativeTimeSeconds ?? 0);
           const legTime = legTimes ? (legTimes[idx] ?? mr.time) : mr.time;
           const updates: Partial<MemberRecord> = {
@@ -688,6 +695,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         if (entry.id !== entryId || !entry.relayEventId) return entry;
         const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
         const totalDistance = legBoundaries[3];
+        if (totalDistance === undefined) return entry; // legBoundaries は常に4要素だが防御的に扱う
         const currentSplits = entry.relaySplitTimes ?? [];
         const existingDistances = new Set(
           currentSplits.map((st) => st.distance).filter((d) => d > 0),
@@ -1001,7 +1009,10 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           }
           if (inputtedLegs.length === 4) {
             for (let i = 1; i < cumulatives.length; i++) {
-              if (cumulatives[i] <= cumulatives[i - 1]) {
+              const prev = cumulatives[i - 1];
+              const curr = cumulatives[i];
+              if (prev === undefined || curr === undefined) continue; // i>=1 かつ i<cumulatives.length なので理論上ここに来ないが防御的に扱う
+              if (curr <= prev) {
                 Alert.alert(
                   t("common.error"),
                   t("competition.records.validation.cumulativeTimeInverted", {
@@ -1049,6 +1060,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
 
         for (let legIdx = 0; legIdx < entry.memberRecords.length; legIdx++) {
           const mr = entry.memberRecords[legIdx];
+          if (!mr) continue; // legIdx < entry.memberRecords.length なので理論上ここに来ないが防御的に扱う
           const shouldSave = entry.relayEventId
             ? (mr.cumulativeTimeSeconds ?? 0) > 0
             : mr.time > 0;
@@ -1067,21 +1079,25 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
             const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
             const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
             const legHigh = legBoundaries[legIdx];
-            const legStart = getLegStartCumulative(legCumulativeTimes, legIdx);
-            splitTimes = entry.relaySplitTimes
-              .filter((st) => st.distance > legLow && st.distance <= legHigh)
-              .map((st) => {
-                const legRelativeSplitTime = toLegRelativeSplitTime(
-                  st.splitTime,
-                  legStart,
-                );
-                return {
-                  ...st,
-                  distance: legIdx === 0 ? st.distance : st.distance - legLow,
-                  splitTime: legRelativeSplitTime,
-                  displayValue: formatTimeBest(legRelativeSplitTime),
-                };
-              });
+            // legBoundaries は常に4要素で legIdx は範囲内のため理論上 undefined にはならないが、
+            // TS は配列長を追跡できないため防御的に扱う (undefined の場合は変換せず元の値を使う)
+            if (legLow !== undefined && legHigh !== undefined) {
+              const legStart = getLegStartCumulative(legCumulativeTimes, legIdx);
+              splitTimes = entry.relaySplitTimes
+                .filter((st) => st.distance > legLow && st.distance <= legHigh)
+                .map((st) => {
+                  const legRelativeSplitTime = toLegRelativeSplitTime(
+                    st.splitTime,
+                    legStart,
+                  );
+                  return {
+                    ...st,
+                    distance: legIdx === 0 ? st.distance : st.distance - legLow,
+                    splitTime: legRelativeSplitTime,
+                    displayValue: formatTimeBest(legRelativeSplitTime),
+                  };
+                });
+            }
           }
 
           validRecords.push({

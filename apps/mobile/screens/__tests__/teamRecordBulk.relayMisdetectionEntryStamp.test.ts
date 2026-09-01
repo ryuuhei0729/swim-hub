@@ -57,14 +57,14 @@ describe("[Reviewer回帰・修正はスコープ外・mobile] リレー誤検�
         { id: "r2", user_id: "user-c", style_id: 2, time: 28.3, is_relaying: true, reaction_time: null, note: null, split_times: [], users: { id: "user-c", name: "三郎" } },
       ];
       const baseStyleEntries = buildStyleEntriesFromExisting(records, STYLES);
-      expect(baseStyleEntries[0].relayEventId).toBeUndefined();
+      expect(baseStyleEntries[0]!.relayEventId).toBeUndefined(); // records は全件 style_id=2 なので必ず1グループに集約される
 
       const entries = [makeEntry({ user_id: "user-b", style_id: 2, entry_time: 99.99 })];
       const lookup = buildEntryTimeReferenceLookup(entries);
 
       const stamped = stampExistingEntryTimeReferences(baseStyleEntries, lookup);
 
-      const legRecordForUserB = stamped[0].memberRecords.find((mr) => mr.memberUserId === "user-b")!;
+      const legRecordForUserB = stamped[0]!.memberRecords.find((mr) => mr.memberUserId === "user-b")!; // 同上
       expect(legRecordForUserB.entryTimeReference).toBe(99.99);
       expect(legRecordForUserB.time).toBe(28.7);
 
@@ -74,10 +74,10 @@ describe("[Reviewer回帰・修正はスコープ外・mobile] リレー誤検�
         { id: "r3", user_id: "user-d", style_id: 2, time: 27.6, is_relaying: true, reaction_time: null, note: null, split_times: [], users: { id: "user-d", name: "四郎" } },
       ];
       const correctBase = buildStyleEntriesFromExisting(correctlyDetectedRecords, STYLES);
-      expect(correctBase[0].relayEventId).toBeDefined();
+      expect(correctBase[0]!.relayEventId).toBeDefined(); // correctlyDetectedRecords も全件 style_id=2 なので必ず1グループに集約される
 
       const correctStamped = stampExistingEntryTimeReferences(correctBase, lookup);
-      const correctLegForUserB = correctStamped[0].memberRecords.find(
+      const correctLegForUserB = correctStamped[0]!.memberRecords.find( // 同上
         (mr) => mr.memberUserId === "user-b",
       )!;
       expect(correctLegForUserB.entryTimeReference).toBeUndefined();

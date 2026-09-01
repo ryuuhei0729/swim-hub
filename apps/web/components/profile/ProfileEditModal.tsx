@@ -42,7 +42,8 @@ export default function ProfileEditModal({
     if (profile) {
       setFormData({
         name: profile.name || "",
-        birthday: profile.birthday ? profile.birthday.split("T")[0] : "", // YYYY-MM-DD形式
+        birthday: profile.birthday ? profile.birthday.split("T")[0]! : "", // YYYY-MM-DD形式
+          // split() は仕様上必ず non-empty array を返すため [0] は常に存在する
         gender: profile.gender !== undefined ? profile.gender : 0,
         bio: profile.bio || "",
       });

@@ -91,8 +91,8 @@ describe("getPracticeLogRowSortValue (V-WP-04/05/06: ソート値は date/place 
       const practice = makePractice({
         practice_logs: [makeLog({ id: "log-a" }), makeLog({ id: "log-b" })],
       });
-      const rowA: PracticeLogRow = { id: "log-a", practice, log: practice.practice_logs[0] };
-      const rowB: PracticeLogRow = { id: "log-b", practice, log: practice.practice_logs[1] };
+      const rowA: PracticeLogRow = { id: "log-a", practice, log: practice.practice_logs[0]! };
+      const rowB: PracticeLogRow = { id: "log-b", practice, log: practice.practice_logs[1]! };
 
       expect(getPracticeLogRowSortValue(rowA, "place")).toBe(
         getPracticeLogRowSortValue(rowB, "place"),

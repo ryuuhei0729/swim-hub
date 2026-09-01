@@ -186,7 +186,7 @@ describe("buildManualBulkRegisterInput (D6)", () => {
         competitionRow({ date: "2026-08-05", endDate: "" }),
       ],
     );
-    expect(input.competitions[0].end_date).toBe("2026-08-03");
-    expect(input.competitions[1].end_date).toBeNull();
+    expect(input.competitions[0]!.end_date).toBe("2026-08-03");
+    expect(input.competitions[1]!.end_date).toBeNull();
   });
 });

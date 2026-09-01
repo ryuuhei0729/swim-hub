@@ -203,6 +203,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
 
       for (const monthKey of sortedMonthKeys) {
         const [yearStr, monthStr] = monthKey.split("-");
+        if (!yearStr || !monthStr) continue; // monthKey は `${year}-${paddedMonth}` 形式で
+                                              // 自身が生成した文字列のため理論上ここに来ないが、
+                                              // split() の型を素直に守る
         const year = parseInt(yearStr);
         const month = parseInt(monthStr);
 
@@ -407,8 +410,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const handleStatusChange = (eventId: string, status: AttendanceStatus | null) => {
     setEditStates((prev) => ({
       ...prev,
+      // prev[eventId] が無い(まだ編集されていない)場合は「未回答」の既定状態から始める
       [eventId]: {
-        ...prev[eventId],
+        ...(prev[eventId] ?? { status: null, note: "" }),
         status,
       },
     }));
@@ -418,8 +422,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const handleNoteChange = (eventId: string, note: string) => {
     setEditStates((prev) => ({
       ...prev,
+      // prev[eventId] が無い(まだ編集されていない)場合は「未回答」の既定状態から始める
       [eventId]: {
-        ...prev[eventId],
+        ...(prev[eventId] ?? { status: null, note: "" }),
         note,
       },
     }));
@@ -651,14 +656,16 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const handleQuickStatusChange = (eventId: string, status: AttendanceStatus | null) => {
     setQuickEditStates((prev) => ({
       ...prev,
-      [eventId]: { ...prev[eventId], status },
+      // prev[eventId] が無い(まだ編集されていない)場合は「未回答」の既定状態から始める
+      [eventId]: { ...(prev[eventId] ?? { status: null, note: "" }), status },
     }));
   };
 
   const handleQuickNoteChange = (eventId: string, note: string) => {
     setQuickEditStates((prev) => ({
       ...prev,
-      [eventId]: { ...prev[eventId], note },
+      // prev[eventId] が無い(まだ編集されていない)場合は「未回答」の既定状態から始める
+      [eventId]: { ...(prev[eventId] ?? { status: null, note: "" }), note },
     }));
   };
 
@@ -837,6 +844,8 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         })
         .map((event) => {
           const editState = editStates[event.id];
+          if (!editState) return null; // 直前の .filter() で editState が存在する event のみに
+                                        // 絞っているが、TS はフィルタ結果を追跡できないため防御的に扱う
           // web useAttendanceEdit:191 / useRecentAttendance:199 と同順: 先にユーザー入力を sanitize し、
           // その後に締切後編集マーク（システム生成・サニタイズ不要）を付与する。
           let note: string | null = editState.note
@@ -863,7 +872,8 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
             status: editState.status,
             note,
           };
-        });
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
       // 新規作成と更新を実行
       // 新規作成

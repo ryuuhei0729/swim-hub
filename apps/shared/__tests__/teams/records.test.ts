@@ -20,7 +20,7 @@ describe("TeamRecordsAPI", () => {
       const result = await api.list("team-1");
 
       expect(result).toEqual(competitions);
-      const builder = supabaseMock.getBuilderHistory("competitions")[0];
+      const builder = supabaseMock.getBuilder("competitions");
       expect(builder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(builder.order).toHaveBeenCalledWith("date", { ascending: false });
     });
@@ -57,7 +57,7 @@ describe("TeamRecordsAPI", () => {
       const result = await api.create(input as unknown as Parameters<typeof api.create>[0]);
 
       expect(result).toEqual(created);
-      const builder = supabaseMock.getBuilderHistory("competitions")[0];
+      const builder = supabaseMock.getBuilder("competitions");
       expect(builder.insert).toHaveBeenCalledWith(input);
     });
 
@@ -94,7 +94,7 @@ describe("TeamRecordsAPI", () => {
       const result = await api.update("competition-1", { title: "更新後タイトル" });
 
       expect(result).toEqual(updated);
-      const builder = supabaseMock.getBuilderHistory("competitions")[0];
+      const builder = supabaseMock.getBuilder("competitions");
       expect(builder.update).toHaveBeenCalledWith({ title: "更新後タイトル" });
       expect(builder.eq).toHaveBeenCalledWith("id", "competition-1");
     });
@@ -120,7 +120,7 @@ describe("TeamRecordsAPI", () => {
 
       await api.remove("competition-1");
 
-      const builder = supabaseMock.getBuilderHistory("competitions")[0];
+      const builder = supabaseMock.getBuilder("competitions");
       expect(builder.delete).toHaveBeenCalled();
       expect(builder.eq).toHaveBeenCalledWith("id", "competition-1");
     });

@@ -16,6 +16,8 @@ const mockRevokeObjectURL = vi.fn();
 // crypto.randomUUID のモック
 const mockRandomUUID = vi.fn();
 
+// NOTE: `newFiles[0]!` / `mock.calls[...]!` を多用する。各テストは直前に `toHaveLength(...)`
+// で件数を確認済みで、その範囲内のインデックスのみアクセスしている。
 describe("useImageUpload", () => {
   let mockValidateFile: Mock<(file: File) => Promise<ImageValidationResult>>;
   let mockOnImagesChange: Mock<(files: ImageFile[], ids: string[]) => void>;
@@ -115,7 +117,7 @@ describe("useImageUpload", () => {
       });
 
       expect(result.current.newFiles).toHaveLength(1);
-      expect(result.current.newFiles[0].file).toBe(file);
+      expect(result.current.newFiles[0]!.file).toBe(file);
       expect(mockCreateObjectURL).toHaveBeenCalledWith(file);
       expect(mockOnImagesChange).toHaveBeenCalledWith(result.current.newFiles, []);
     });
@@ -387,7 +389,7 @@ describe("useImageUpload", () => {
         await result.current.handleFiles([createMockFile()]);
       });
 
-      const addedFileId = result.current.newFiles[0].id;
+      const addedFileId = result.current.newFiles[0]!.id;
       mockRevokeObjectURL.mockClear();
 
       // ファイルを削除
@@ -484,7 +486,7 @@ describe("useImageUpload", () => {
         await result.current.handleFiles([createMockFile()]);
       });
 
-      const fileId = result.current.newFiles[0].id;
+      const fileId = result.current.newFiles[0]!.id;
       mockOnImagesChange.mockClear();
 
       act(() => {
@@ -976,7 +978,7 @@ describe("useImageUpload", () => {
 
       // 最初のファイルを削除
       act(() => {
-        result.current.handleRemoveNewFile(firstBatchIds[0]);
+        result.current.handleRemoveNewFile(firstBatchIds[0]!);
       });
 
       expect(result.current.newFiles).toHaveLength(2);
@@ -989,7 +991,7 @@ describe("useImageUpload", () => {
       expect(result.current.deletedIds).toContain("existing-1");
 
       // 最終状態の確認
-      const lastCall = mockOnImagesChange.mock.calls[mockOnImagesChange.mock.calls.length - 1];
+      const lastCall = mockOnImagesChange.mock.calls[mockOnImagesChange.mock.calls.length - 1]!;
       expect(lastCall[0]).toHaveLength(2); // newFiles
       expect(lastCall[1]).toEqual(["existing-1"]); // deletedIds
     });

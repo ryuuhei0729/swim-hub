@@ -165,8 +165,8 @@ describe("TeamCompetitionRecordsModal", () => {
       );
 
       await waitFor(() => expect(compEqCalls.length).toBeGreaterThan(0));
-      expect(compEqCalls[0].value).toBe("comp-scope-2");
-      expect(recordsEqCalls[0].value).toBe("comp-scope-2");
+      expect(compEqCalls[0]!.value).toBe("comp-scope-2"); // 直前の toBeGreaterThan(0) で存在は保証済み
+      expect(recordsEqCalls[0]!.value).toBe("comp-scope-2"); // compEqCalls と同じクエリ発火タイミングで必ず存在
     });
   });
 

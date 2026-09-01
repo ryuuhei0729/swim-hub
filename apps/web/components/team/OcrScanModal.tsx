@@ -203,6 +203,10 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
           const result = reader.result as string;
           // data:image/...;base64, のプレフィックスを除去
           const base64Data = result.split(",")[1];
+          if (!base64Data) {
+            reject(new Error(t("ocr.errors.invalidFormat")));
+            return;
+          }
           resolve(base64Data);
         };
         reader.onerror = reject;
@@ -298,7 +302,13 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
   const getTimeValue = useCallback(
     (swimmerNo: number, timeIndex: number): number | null => {
       const key = `${swimmerNo}-${timeIndex}`;
-      if (key in editedTimes) return editedTimes[key];
+      if (key in editedTimes) {
+        const edited = editedTimes[key];
+        // `key in editedTimes` で存在確認済みだが、`in` は index signature を
+        // 絞り込まないため型上は undefined が残る。undefined ならスキャン結果側に
+        // フォールバックする (元の値を書き換えない安全側の挙動)
+        if (edited !== undefined) return edited;
+      }
       const swimmer = scanResult?.swimmers.find((s) => s.no === swimmerNo);
       return swimmer?.times[timeIndex] ?? null;
     },

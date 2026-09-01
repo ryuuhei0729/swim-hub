@@ -64,12 +64,14 @@ export function usePracticesQuery(
   const defaultStartDate = useMemo(() => {
     if (startDate) return startDate;
     const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    return date.toISOString().split("T")[0];
+    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
+    return date.toISOString().split("T")[0]!;
   }, [startDate]);
 
   const defaultEndDate = useMemo(() => {
     if (endDate) return endDate;
-    return new Date().toISOString().split("T")[0];
+    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
+    return new Date().toISOString().split("T")[0]!;
   }, [endDate]);
 
   // ページング計算
@@ -111,11 +113,14 @@ export function usePracticesQuery(
             if (index >= 0) {
               // 既存のものを更新
               const updated = [...old];
-              updated[index] = {
-                ...updated[index],
-                ...newPractice,
-                practice_logs: updated[index].practice_logs, // 既存のpractice_logsを保持
-              } as PracticeWithLogs;
+              const existing = updated[index];
+              if (existing) {
+                updated[index] = {
+                  ...existing,
+                  ...newPractice,
+                  practice_logs: existing.practice_logs, // 既存のpractice_logsを保持
+                } as PracticeWithLogs;
+              }
               return updated;
             }
 
@@ -156,12 +161,14 @@ export function usePracticesCountQuery(
   const defaultStartDate = useMemo(() => {
     if (startDate) return startDate;
     const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    return date.toISOString().split("T")[0];
+    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
+    return date.toISOString().split("T")[0]!;
   }, [startDate]);
 
   const defaultEndDate = useMemo(() => {
     if (endDate) return endDate;
-    return new Date().toISOString().split("T")[0];
+    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
+    return new Date().toISOString().split("T")[0]!;
   }, [endDate]);
 
   return useQuery({

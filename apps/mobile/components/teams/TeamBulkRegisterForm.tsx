@@ -78,7 +78,9 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
   const handlePracticeChange = (index: number, key: keyof PracticeRow, value: string) => {
     setPracticeRows((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [key]: value };
+      const current = next[index];
+      if (!current) return prev; // index が不正な場合は何も更新しない
+      next[index] = { ...current, [key]: value };
       return next;
     });
   };
@@ -101,7 +103,9 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
   ) => {
     setCompetitionRows((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [key]: value };
+      const current = next[index];
+      if (!current) return prev; // index が不正な場合は何も更新しない
+      next[index] = { ...current, [key]: value };
       return next;
     });
   };

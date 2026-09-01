@@ -37,6 +37,8 @@ vi.mock("@/utils/formatters", () => ({
   }),
 }));
 
+// NOTE: `screen.getAllBy...()[N]!` / `[...].length - 1]!` を多用する。各テストは直前に
+// 「種目を追加」等の操作を行った後に取得しており、対象要素が存在する前提で書かれている。
 describe("RecordForm", () => {
   const mockOnClose = vi.fn();
   const mockOnSubmit = vi.fn();
@@ -118,7 +120,7 @@ describe("RecordForm", () => {
 
       // 削除ボタンをクリック
       const removeButtons = screen.getAllByRole("button", { name: "種目を削除" });
-      await user.click(removeButtons[1]);
+      await user.click(removeButtons[1]!);
 
       expect(screen.queryByText("種目 2")).not.toBeInTheDocument();
     });
@@ -142,7 +144,7 @@ describe("RecordForm", () => {
       await user.click(addButton);
 
       const timeInputs = screen.getAllByLabelText("タイム");
-      const timeInput = timeInputs[timeInputs.length - 1];
+      const timeInput = timeInputs[timeInputs.length - 1]!;
       await user.type(timeInput, "1:30.50");
 
       expect(timeInput).toHaveValue("1:30.50");
@@ -165,7 +167,7 @@ describe("RecordForm", () => {
       await user.click(addButton);
 
       const styleSelects = screen.getAllByLabelText("種目");
-      const styleSelect = styleSelects[styleSelects.length - 1];
+      const styleSelect = styleSelects[styleSelects.length - 1]!;
       await user.selectOptions(styleSelect, "1");
 
       expect(styleSelect).toHaveValue("1");
@@ -188,7 +190,7 @@ describe("RecordForm", () => {
       await user.click(addButton);
 
       const relayCheckboxes = screen.getAllByLabelText("リレー");
-      const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1];
+      const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1]!;
       await user.click(relayCheckbox);
 
       expect(relayCheckbox).toBeChecked();
@@ -214,11 +216,11 @@ describe("RecordForm", () => {
 
       // リレーモードを有効化
       const relayCheckboxes = screen.getAllByLabelText("リレー");
-      const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1];
+      const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1]!;
       await user.click(relayCheckbox);
 
       const addSplitButtons = screen.getAllByTestId(/^record-split-add-button-\d+$/);
-      await user.click(addSplitButtons[addSplitButtons.length - 1]);
+      await user.click(addSplitButtons[addSplitButtons.length - 1]!);
 
       expect(screen.getAllByPlaceholderText("距離 (m)")).toHaveLength(1);
     });
@@ -241,15 +243,15 @@ describe("RecordForm", () => {
 
       // リレーモードを有効化
       const relayCheckboxes = screen.getAllByLabelText("リレー");
-      const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1];
+      const relayCheckbox = relayCheckboxes[relayCheckboxes.length - 1]!;
       await user.click(relayCheckbox);
 
       // スプリットを追加
       const addSplitButtons = screen.getAllByTestId(/^record-split-add-button-\d+$/);
-      await user.click(addSplitButtons[addSplitButtons.length - 1]);
+      await user.click(addSplitButtons[addSplitButtons.length - 1]!);
 
       // スプリット削除ボタンは data-testid="record-split-remove-button-*" で取得
-      const removeSplitButton = screen.getAllByTestId(/^record-split-remove-button-\d+-\d+$/)[0];
+      const removeSplitButton = screen.getAllByTestId(/^record-split-remove-button-\d+-\d+$/)[0]!;
       await user.click(removeSplitButton);
 
       await waitFor(() => {
@@ -281,11 +283,11 @@ describe("RecordForm", () => {
 
       // 記録を入力
       const timeInputs = screen.getAllByLabelText("タイム");
-      const timeInput = timeInputs[0];
+      const timeInput = timeInputs[0]!;
       await user.type(timeInput, "1:30.50");
 
       const styleSelects = screen.getAllByLabelText("種目");
-      const styleSelect = styleSelects[0];
+      const styleSelect = styleSelects[0]!;
       await user.selectOptions(styleSelect, "1");
 
       // 送信
@@ -297,7 +299,7 @@ describe("RecordForm", () => {
       });
 
       // 実際の呼び出し引数を確認（sanitizedDataが送られる）
-      const callArgs = mockOnSubmit.mock.calls[0][0];
+      const callArgs = mockOnSubmit.mock.calls[0]![0];
       expect(callArgs).toMatchObject({
         recordDate: expect.any(String),
         place: "テストプール",

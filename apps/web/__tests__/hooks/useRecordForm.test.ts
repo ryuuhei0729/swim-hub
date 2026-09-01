@@ -9,6 +9,10 @@ vi.mock("../../components/forms/record/utils/timeParser", () => ({
   generateUUID: vi.fn(() => `uuid-${Math.random().toString(36).substr(2, 9)}`),
 }));
 
+// NOTE: このファイル全体で `records[0]!` / `records[1]!` / `splitTimes[0]!` を多用する。
+// useRecordForm は removeRecord で最後の1件を削除できない設計のため records は常に1件以上を保持し、
+// addRecord() / addSplitTime() 呼び出し直後は該当インデックスの存在がテストの操作順序で保証される。
+// fixture(hook初期状態)がこの不変条件を保証しているため、non-null assertion で対応する。
 describe("useRecordForm", () => {
   const mockStyles: SwimStyle[] = [
     { id: "style-1", nameJp: "自由形100m", distance: 100 },
@@ -25,9 +29,9 @@ describe("useRecordForm", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: false, styles: mockStyles }));
 
       expect(result.current.formData.records).toHaveLength(1);
-      expect(result.current.formData.records[0].styleId).toBe("style-1");
-      expect(result.current.formData.records[0].time).toBe(0);
-      expect(result.current.formData.records[0].splitTimes).toEqual([]);
+      expect(result.current.formData.records[0]!.styleId).toBe("style-1");
+      expect(result.current.formData.records[0]!.time).toBe(0);
+      expect(result.current.formData.records[0]!.splitTimes).toEqual([]);
       expect(result.current.hasUnsavedChanges).toBe(false);
       expect(result.current.isSubmitted).toBe(false);
     });
@@ -44,7 +48,7 @@ describe("useRecordForm", () => {
     it("stylesが空の場合、styleIdは空文字になる", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: [] }));
 
-      expect(result.current.formData.records[0].styleId).toBe("");
+      expect(result.current.formData.records[0]!.styleId).toBe("");
     });
   });
 
@@ -59,9 +63,9 @@ describe("useRecordForm", () => {
       });
 
       expect(result.current.formData.records).toHaveLength(2);
-      expect(result.current.formData.records[1].styleId).toBe("style-1");
-      expect(result.current.formData.records[1].time).toBe(0);
-      expect(result.current.formData.records[1].isRelaying).toBe(false);
+      expect(result.current.formData.records[1]!.styleId).toBe("style-1");
+      expect(result.current.formData.records[1]!.time).toBe(0);
+      expect(result.current.formData.records[1]!.isRelaying).toBe(false);
     });
 
     it("複数のレコードを追加できる", () => {
@@ -85,7 +89,7 @@ describe("useRecordForm", () => {
         result.current.addRecord();
       });
 
-      const recordIdToRemove = result.current.formData.records[1].id;
+      const recordIdToRemove = result.current.formData.records[1]!.id;
 
       act(() => {
         result.current.removeRecord(recordIdToRemove);
@@ -100,7 +104,7 @@ describe("useRecordForm", () => {
     it("最後の1つのレコードは削除できない", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.removeRecord(recordId);
@@ -114,7 +118,7 @@ describe("useRecordForm", () => {
     it("レコードのプロパティを更新する", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.updateRecord(recordId, {
@@ -124,7 +128,7 @@ describe("useRecordForm", () => {
         });
       });
 
-      const updatedRecord = result.current.formData.records[0];
+      const updatedRecord = result.current.formData.records[0]!;
       expect(updatedRecord.time).toBe(55.42);
       expect(updatedRecord.note).toBe("テストメモ");
       expect(updatedRecord.isRelaying).toBe(true);
@@ -133,13 +137,13 @@ describe("useRecordForm", () => {
     it("タイムを更新すると、種目の距離と同じ距離のsplit-timeが自動追加される", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.updateRecord(recordId, { time: 55.42 });
       });
 
-      const updatedRecord = result.current.formData.records[0];
+      const updatedRecord = result.current.formData.records[0]!;
       // style-1 は 100m なので、100m のsplit-timeが追加される
       const splitTime100m = updatedRecord.splitTimes.find((st) => st.distance === 100);
       expect(splitTime100m).toBeDefined();
@@ -163,21 +167,21 @@ describe("useRecordForm", () => {
     it("空のsplit-timeを追加する", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.addSplitTime(recordId);
       });
 
-      expect(result.current.formData.records[0].splitTimes).toHaveLength(1);
-      expect(result.current.formData.records[0].splitTimes[0].distance).toBe("");
-      expect(result.current.formData.records[0].splitTimes[0].splitTime).toBe(0);
+      expect(result.current.formData.records[0]!.splitTimes).toHaveLength(1);
+      expect(result.current.formData.records[0]!.splitTimes[0]!.distance).toBe("");
+      expect(result.current.formData.records[0]!.splitTimes[0]!.splitTime).toBe(0);
     });
 
     it("複数のsplit-timeを追加できる", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.addSplitTime(recordId);
@@ -185,7 +189,7 @@ describe("useRecordForm", () => {
         result.current.addSplitTime(recordId);
       });
 
-      expect(result.current.formData.records[0].splitTimes).toHaveLength(3);
+      expect(result.current.formData.records[0]!.splitTimes).toHaveLength(3);
     });
   });
 
@@ -196,13 +200,13 @@ describe("useRecordForm", () => {
         useRecordForm({ isOpen: true, styles: mockStyles, isPremium: true }),
       );
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.addSplitTimesEvery25m(recordId);
       });
 
-      const splitTimes = result.current.formData.records[0].splitTimes;
+      const splitTimes = result.current.formData.records[0]!.splitTimes;
       // style-1 は 100m なので、25m, 50m, 75m, 100m の4つが追加される
       expect(splitTimes).toHaveLength(4);
       expect(splitTimes.map((st) => st.distance)).toEqual([25, 50, 75, 100]);
@@ -214,7 +218,7 @@ describe("useRecordForm", () => {
         useRecordForm({ isOpen: true, styles: mockStyles, isPremium: true }),
       );
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       // 50m のsplit-timeを先に追加
       act(() => {
@@ -228,7 +232,7 @@ describe("useRecordForm", () => {
         result.current.addSplitTimesEvery25m(recordId);
       });
 
-      const splitTimes = result.current.formData.records[0].splitTimes;
+      const splitTimes = result.current.formData.records[0]!.splitTimes;
       // 50m は既に存在するので、25m, 75m, 100m の3つだけ追加される
       expect(splitTimes).toHaveLength(4);
       // 50m のsplit-timeは最初に追加したもの（25.0秒）
@@ -241,7 +245,7 @@ describe("useRecordForm", () => {
     it("split-timeを更新する", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.addSplitTime(recordId);
@@ -251,7 +255,7 @@ describe("useRecordForm", () => {
         result.current.updateSplitTime(recordId, 0, { distance: 50, splitTime: 26.5 });
       });
 
-      const splitTime = result.current.formData.records[0].splitTimes[0];
+      const splitTime = result.current.formData.records[0]!.splitTimes[0]!;
       expect(splitTime.distance).toBe(50);
       expect(splitTime.splitTime).toBe(26.5);
     });
@@ -259,7 +263,7 @@ describe("useRecordForm", () => {
     it("種目の距離と同じ距離のsplit-timeを更新すると、タイムも同期される", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.addSplitTime(recordId);
@@ -271,7 +275,7 @@ describe("useRecordForm", () => {
       });
 
       // レコードのタイムも同期される
-      expect(result.current.formData.records[0].time).toBe(55.42);
+      expect(result.current.formData.records[0]!.time).toBe(55.42);
     });
   });
 
@@ -279,7 +283,7 @@ describe("useRecordForm", () => {
     it("指定したインデックスのsplit-timeを削除する", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.addSplitTime(recordId);
@@ -295,8 +299,8 @@ describe("useRecordForm", () => {
         result.current.removeSplitTime(recordId, 0);
       });
 
-      expect(result.current.formData.records[0].splitTimes).toHaveLength(1);
-      expect(result.current.formData.records[0].splitTimes[0].distance).toBe(50);
+      expect(result.current.formData.records[0]!.splitTimes).toHaveLength(1);
+      expect(result.current.formData.records[0]!.splitTimes[0]!.distance).toBe(50);
     });
   });
 
@@ -304,21 +308,21 @@ describe("useRecordForm", () => {
     it("uiKeyを除去したフォームデータを返す", () => {
       const { result } = renderHook(() => useRecordForm({ isOpen: true, styles: mockStyles }));
 
-      const recordId = result.current.formData.records[0].id;
+      const recordId = result.current.formData.records[0]!.id;
 
       act(() => {
         result.current.addSplitTime(recordId);
       });
 
       // uiKeyが存在することを確認
-      expect(result.current.formData.records[0].splitTimes[0].uiKey).toBeDefined();
+      expect(result.current.formData.records[0]!.splitTimes[0]!.uiKey).toBeDefined();
 
       const sanitized = result.current.sanitizeFormData();
 
       // sanitized後はuiKeyが含まれない
-      expect(sanitized.records[0].splitTimes[0]).not.toHaveProperty("uiKey");
-      expect(sanitized.records[0].splitTimes[0]).toHaveProperty("distance");
-      expect(sanitized.records[0].splitTimes[0]).toHaveProperty("splitTime");
+      expect(sanitized.records[0]!.splitTimes[0]!).not.toHaveProperty("uiKey");
+      expect(sanitized.records[0]!.splitTimes[0]!).toHaveProperty("distance");
+      expect(sanitized.records[0]!.splitTimes[0]!).toHaveProperty("splitTime");
     });
   });
 
@@ -398,9 +402,9 @@ describe("useRecordForm", () => {
       expect(result.current.formData.competitionName).toBe("日本選手権");
       expect(result.current.formData.poolType).toBe(1);
       expect(result.current.formData.records).toHaveLength(1);
-      expect(result.current.formData.records[0].styleId).toBe("style-2");
-      expect(result.current.formData.records[0].time).toBe(135.5);
-      expect(result.current.formData.records[0].splitTimes).toHaveLength(2);
+      expect(result.current.formData.records[0]!.styleId).toBe("style-2");
+      expect(result.current.formData.records[0]!.time).toBe(135.5);
+      expect(result.current.formData.records[0]!.splitTimes).toHaveLength(2);
     });
 
     it("複数レコードの編集データを正しく初期化する", () => {
@@ -435,10 +439,10 @@ describe("useRecordForm", () => {
       );
 
       expect(result.current.formData.records).toHaveLength(2);
-      expect(result.current.formData.records[0].id).toBe("record-1");
-      expect(result.current.formData.records[0].styleId).toBe("style-1");
-      expect(result.current.formData.records[1].id).toBe("record-2");
-      expect(result.current.formData.records[1].isRelaying).toBe(true);
+      expect(result.current.formData.records[0]!.id).toBe("record-1");
+      expect(result.current.formData.records[0]!.styleId).toBe("style-1");
+      expect(result.current.formData.records[1]!.id).toBe("record-2");
+      expect(result.current.formData.records[1]!.isRelaying).toBe(true);
     });
   });
 

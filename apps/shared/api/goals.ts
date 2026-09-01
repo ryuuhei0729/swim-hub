@@ -666,16 +666,18 @@ export class GoalAPI {
 
     if (!recordError && records && records.length > 0) {
       const record = records[0];
-      return {
-        achieved: true,
-        achievementData: {
-          recordId: record.id,
-          achievedValue: {
-            time: record.time,
-            target_time: params.target_time,
+      if (record) {
+        return {
+          achieved: true,
+          achievementData: {
+            recordId: record.id,
+            achievedValue: {
+              time: record.time,
+              target_time: params.target_time,
+            },
           },
-        },
-      };
+        };
+      }
     }
 
     return { achieved: false };
@@ -796,7 +798,8 @@ export class GoalAPI {
       .order("created_at", { ascending: false })
       .limit(1);
 
-    if (logError || !logs || logs.length === 0) {
+    const firstLog = logs?.[0];
+    if (logError || !logs || logs.length === 0 || !firstLog) {
       return { achieved: false };
     }
 
@@ -804,7 +807,7 @@ export class GoalAPI {
     return {
       achieved: true,
       achievementData: {
-        practiceLogId: logs[0].id,
+        practiceLogId: firstLog.id,
         achievedValue: {
           distance: params.distance,
           reps: params.reps,

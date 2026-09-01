@@ -431,10 +431,14 @@ export default function PracticeLogClient({
         const logIdMap = new Map<string, string>();
         let flatIdx = 0;
         for (let mi = 0; mi < menus.length; mi++) {
-          const targetMembers = members.filter((m) => menus[mi].targetUserIds.includes(m.user_id));
+          const menuAtIndex = menus[mi];
+          if (!menuAtIndex) continue; // menus は useState の PracticeMenu[] で穴は生じないが、
+            // for ループのインデックスは length チェックだけでは型上絞り込まれないため防御的に扱う
+          const targetMembers = members.filter((m) => menuAtIndex.targetUserIds.includes(m.user_id));
           for (const member of targetMembers) {
-            if (logIds[flatIdx]) {
-              logIdMap.set(`${mi}_${member.user_id}`, logIds[flatIdx]);
+            const logId = logIds[flatIdx];
+            if (logId) {
+              logIdMap.set(`${mi}_${member.user_id}`, logId);
             }
             flatIdx++;
           }
@@ -442,6 +446,7 @@ export default function PracticeLogClient({
         const videoUploadErrors: string[] = [];
         for (let i = 0; i < menus.length; i++) {
           const menu = menus[i];
+          if (!menu) continue; // 上記と同じ理由で防御的にスキップ
           if (!menu.videoFiles) continue;
           for (const [memberId, videoFile] of Object.entries(menu.videoFiles)) {
             if (!videoFile) continue;
@@ -566,7 +571,7 @@ export default function PracticeLogClient({
     // 既存メニューが1件でデフォルト値のままの場合は上書き
     let isDefault = false;
     if (menus.length === 1) {
-      const m = menus[0];
+      const m = menus[0]!; // menus.length === 1 を直上の if で確認済み
       isDefault =
         m.style === "Fr" &&
         m.swimCategory === "Swim" &&

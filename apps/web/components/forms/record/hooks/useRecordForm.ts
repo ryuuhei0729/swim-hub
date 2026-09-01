@@ -461,6 +461,9 @@ export const useRecordForm = ({
         );
 
         const updatedSplit = updatedSplitTimes[splitIndex];
+        if (!updatedSplit) return prev; // updatedSplitTimes は record.splitTimes と同じ長さで
+          // 生成され splitIndex は呼び出し元 (該当 split の index) から渡されるため通常常に
+          // 存在するが、型上は保証されないため防御的に更新をスキップする
         let updatedRecord = { ...record, splitTimes: updatedSplitTimes };
 
         // 種目の距離と同じ距離のsplit-timeが変更されたら、タイムも同期

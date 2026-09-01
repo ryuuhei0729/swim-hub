@@ -72,7 +72,9 @@ export function calculateLapTimes(
   const sorted = [...splitTimes].sort((a, b) => a.distance - b.distance);
 
   return sorted.map((split, index) => {
-    const previousSplit = index > 0 ? sorted[index - 1].split_time : 0;
+    // index > 0 のとき sorted[index - 1] は同一配列内の直前要素であり、
+    // map の index は常に sorted.length 未満のため必ず存在する
+    const previousSplit = index > 0 ? sorted[index - 1]!.split_time : 0;
     return {
       distance: split.distance,
       lapTime: split.split_time - previousSplit,

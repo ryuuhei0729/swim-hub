@@ -99,8 +99,12 @@ interface MemberTimeTableProps {
 
 function MemberTimeTable({ logs, labels }: MemberTimeTableProps) {
   const { repCount, setCount, members } = useMemo(() => {
-    const rep = logs[0].rep_count;
-    const set = logs[0].set_count;
+    const first = logs[0];
+    // logs が空の場合、rep/set は 0 になるが、その場合 members も空配列になり
+    // 直後の hasTimes チェックで「タイム未記録」表示に分岐するため repCount/setCount が
+    // 実際に画面表示で使われることはない (呼び出し元は常に非空の logs を渡す設計)
+    const rep = first ? first.rep_count : 0;
+    const set = first ? first.set_count : 0;
     const m: MemberInfo[] = logs.map((log) => ({
       userId: log.user_id,
       name: getUserName(log.users, labels.unknownUser),
@@ -197,7 +201,9 @@ function MemberTimeTable({ logs, labels }: MemberTimeTableProps) {
                         {labels.setRepLabel(repNumber)}
                       </td>
                       {members.map((member, mi) => {
-                        const time = rowTimes[mi];
+                        const time = rowTimes[mi] ?? 0; // rowTimes は members と同じ
+                          // index で生成されるため mi は常に範囲内だが型上は保証されない。
+                          // 0 は本関数内で「有効なタイムなし」を表す既存の sentinel (getTime 等)
                         const isFastest = time > 0 && time === rowFastest;
                         return (
                           <td key={member.userId} className="py-2 px-2 text-center">
@@ -222,7 +228,8 @@ function MemberTimeTable({ logs, labels }: MemberTimeTableProps) {
                     const avgs = members.map((m) => getSetAverage(m, setNumber));
                     const fastest = getRowFastest(avgs);
                     return members.map((member, mi) => {
-                      const avg = avgs[mi];
+                      const avg = avgs[mi] ?? 0; // avgs は members と同じ index で生成される
+                        // ため mi は常に範囲内だが型上は保証されない。0は「有効なタイムなし」の既存 sentinel
                       const isFastest = avg > 0 && avg === fastest;
                       return (
                         <td key={member.userId} className="py-2 px-2 text-center">
@@ -251,7 +258,8 @@ function MemberTimeTable({ logs, labels }: MemberTimeTableProps) {
               const fastests = members.map((m) => getOverallFastest(m));
               const rowFastest = getRowFastest(fastests);
               return members.map((member, mi) => {
-                const fastest = fastests[mi];
+                const fastest = fastests[mi] ?? 0; // fastests は members と同じ index で
+                  // 生成されるため mi は常に範囲内だが型上は保証されない。0は「有効なタイムなし」の既存 sentinel
                 const isBest = fastest > 0 && fastest === rowFastest;
                 return (
                   <td key={member.userId} className="py-2 px-2 text-center">
@@ -275,7 +283,8 @@ function MemberTimeTable({ logs, labels }: MemberTimeTableProps) {
               const avgs = members.map((m) => getOverallAverage(m));
               const rowFastest = getRowFastest(avgs);
               return members.map((member, mi) => {
-                const avg = avgs[mi];
+                const avg = avgs[mi] ?? 0; // avgs は members と同じ index で生成されるため
+                  // mi は常に範囲内だが型上は保証されない。0は「有効なタイムなし」の既存 sentinel
                 const isBest = avg > 0 && avg === rowFastest;
                 return (
                   <td key={member.userId} className="py-2 px-2 text-center">
@@ -479,6 +488,9 @@ export default function TeamPracticeDetailModal({
                 <div className="space-y-6">
                   {Object.entries(groupedLogs).map(([key, logs]) => {
                     const representativeLog = logs[0];
+                    if (!representativeLog) return null; // groupedLogs の各配列は
+                      // 生成時に必ず1件以上 push されるため実際には空にならないが、
+                      // 型上は保証されないため防御的にこのメニューグループの描画をスキップする
                     const tags =
                       representativeLog.practice_log_tags
                         ?.map((t) => t.practice_tags)

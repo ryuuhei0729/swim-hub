@@ -25,7 +25,9 @@ export interface ParsedPracticeData {
  */
 function getDayOfWeekName(date: Date): string {
   const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
-  return dayNames[getDay(date)];
+  // getDay() は 0〜6 を返すため dayNames の範囲内に必ず収まるが、
+  // 型上は保証されないため実際には到達しないフォールバックを安全側に用意する
+  return dayNames[getDay(date)] ?? "";
 }
 
 /**

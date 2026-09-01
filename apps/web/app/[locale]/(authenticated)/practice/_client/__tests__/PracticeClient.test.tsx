@@ -183,6 +183,9 @@ const renderClient = (practices: PracticeWithLogs[], tags: PracticeTag[] = []) =
 // ("練習詳細を表示(07/01 市民プール Fr)" のように個体情報付きの動的文言)を持つ
 const getCardRows = (): HTMLElement[] => screen.queryAllByRole("button", { name: /^練習詳細を表示\(/ });
 
+// NOTE: `getCardRows()[0]!` 等を多用する。各テストは renderClient() に1件以上の practice を渡した
+// 直後に呼んでおり、対応するカード行が描画されていることを前提にしている。
+
 // 絞り込みシートの「場所」グループには各場所と同じ文字列のチップが並ぶため、
 // シートが開いたまま(または閉じるアニメーション中)の状態で screen.getByText(place) を
 // 使うと二重ヒットする。カード行(role="button" + aria-label)側のみに絞って場所の
@@ -216,7 +219,7 @@ describe("PracticeClient", () => {
     const user = userEvent.setup();
     renderClient([makePractice()]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     expect(screen.getByTestId("practice-detail-modal-stub")).toBeInTheDocument();
 
     await user.click(screen.getByText("詳細を閉じる"));
@@ -229,7 +232,7 @@ describe("PracticeClient", () => {
 
     expect(screen.queryByTestId("practice-detail-modal-stub")).not.toBeInTheDocument();
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
 
     const modal = screen.getByTestId("practice-detail-modal-stub");
     expect(modal).toBeInTheDocument();
@@ -255,7 +258,7 @@ describe("PracticeClient", () => {
     mocks.deletePracticeLogMutateAsync.mockResolvedValue(undefined);
     renderClient([makePractice()]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     await user.click(screen.getByText("ログAを削除"));
 
     await waitFor(() => {
@@ -293,7 +296,7 @@ describe("PracticeClient", () => {
 
     renderClient([singleLogPractice]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     await user.click(screen.getByText("ログAを削除"));
 
     await waitFor(() => {
@@ -305,7 +308,7 @@ describe("PracticeClient", () => {
     const user = userEvent.setup();
     renderClient([makePractice()]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     await user.click(screen.getByText("詳細から編集"));
 
     const tabModal = screen.getByTestId("practice-tab-modal-stub");
@@ -318,7 +321,7 @@ describe("PracticeClient", () => {
     const user = userEvent.setup();
     renderClient([makePractice()]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     await user.click(screen.getByText("詳細からログ編集"));
 
     expect(screen.getByTestId("tab-initial-tab")).toHaveTextContent("practiceLog");
@@ -337,7 +340,7 @@ describe("PracticeClient", () => {
 
       expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
       const cards = getCardRows();
-      expect(cards[0].textContent).toContain("-");
+      expect(cards[0]!.textContent).toContain("-");
     });
   });
 
@@ -363,7 +366,7 @@ describe("PracticeClient", () => {
       const user = userEvent.setup();
       const { unmount } = renderClient([makePractice()]);
 
-      await user.click(getCardRows()[0]);
+      await user.click(getCardRows()[0]!);
       await user.click(screen.getByText("詳細から編集"));
       expect(screen.getByTestId("practice-tab-modal-stub")).toBeInTheDocument();
       expect(usePracticeStore.getState().isOpen).toBe(true);
@@ -435,14 +438,14 @@ describe("PracticeClient", () => {
 
       // 既定(日付新しい順)では2月のBプールが先
       let rows = getCardRows();
-      expect(rows[0].textContent).toContain("Bプール");
+      expect(rows[0]!.textContent).toContain("Bプール");
 
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
 
       rows = getCardRows();
-      expect(rows[0].textContent).toContain("Aプール");
-      expect(rows[1].textContent).toContain("Bプール");
+      expect(rows[0]!.textContent).toContain("Aプール");
+      expect(rows[1]!.textContent).toContain("Bプール");
     });
 
     it("[V-WP-06] place が未設定(null)の日は、場所ソートの昇順・降順いずれでも末尾固定される", async () => {
@@ -457,14 +460,14 @@ describe("PracticeClient", () => {
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
       let rows = getCardRows();
-      expect(rows[rows.length - 1].textContent).toContain("2026/01/02"); // place=null の日
-      expect(rows[0].textContent).toContain("2026/01/01");
+      expect(rows[rows.length - 1]!.textContent).toContain("2026/01/02"); // place=null の日
+      expect(rows[0]!.textContent).toContain("2026/01/01");
 
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       await user.click(screen.getByRole("button", { name: "場所(降順)" }));
       rows = getCardRows();
-      expect(rows[rows.length - 1].textContent).toContain("2026/01/02"); // desc でも末尾のまま
-      expect(rows[0].textContent).toContain("2026/01/01");
+      expect(rows[rows.length - 1]!.textContent).toContain("2026/01/02"); // desc でも末尾のまま
+      expect(rows[0]!.textContent).toContain("2026/01/01");
     });
 
     it("並べ替えプリセット選択で displayCount が20にリセットされ、もっと見るボタンが再度表示される", async () => {
@@ -514,8 +517,8 @@ describe("PracticeClient", () => {
       });
 
       let rows = getCardRows();
-      expect(rows[0].textContent).toContain("Bプール");
-      expect(rows[1].textContent).toContain("Aプール");
+      expect(rows[0]!.textContent).toContain("Bプール");
+      expect(rows[1]!.textContent).toContain("Aプール");
 
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       expect(screen.getByRole("button", { name: "場所(降順)" }).querySelector("svg")).toBeInTheDocument();
@@ -523,8 +526,8 @@ describe("PracticeClient", () => {
 
       await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
       rows = getCardRows();
-      expect(rows[0].textContent).toContain("Aプール");
-      expect(rows[1].textContent).toContain("Bプール");
+      expect(rows[0]!.textContent).toContain("Aプール");
+      expect(rows[1]!.textContent).toContain("Bプール");
     });
   });
 
@@ -752,7 +755,7 @@ describe("PracticeClient", () => {
     it("一覧セクションのラッパーが rounded-none sm:rounded-lg を持つ(スマホ幅で角丸を無くし全幅に見せる)", async () => {
       renderClient([makePractice()]);
 
-      const [card] = getCardRows();
+      const card = getCardRows()[0]!;
       const sectionWrapper = card.closest(".rounded-none");
       expect(sectionWrapper).not.toBeNull();
       expect(sectionWrapper?.className).toContain("rounded-none");
@@ -765,7 +768,7 @@ describe("PracticeClient", () => {
       () => {
         renderClient([makePractice()]);
 
-        const [card] = getCardRows();
+        const card = getCardRows()[0]!;
         const listWrapper = card.parentElement;
         expect(listWrapper?.className).toContain("px-0");
         expect(listWrapper?.className).toContain("sm:px-6");

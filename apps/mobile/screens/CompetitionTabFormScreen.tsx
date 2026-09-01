@@ -324,7 +324,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
         // 最初のエントリー行にデフォルト種目をセット
         if (stylesData.length > 0) {
-          const defaultStyleId = String(stylesData[0].id);
+          // 直前の length > 0 チェックにより、同一スコープ・同一配列の
+          // 先頭要素アクセスであることが保証される (Doctrine 2.6)
+          const defaultStyleId = String(stylesData[0]!.id);
           defaultEntryStyleIdRef.current = defaultStyleId;
           setEntries((prev) =>
             prev.map((e, i) => (i === 0 && !e.styleId ? { ...e, styleId: defaultStyleId } : e)),
@@ -943,6 +945,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         const createRecordSet = new Set(recordDiff.creates);
         for (let idx = 0; idx < validRecords.length; idx++) {
           const record = validRecords[idx];
+          if (!record) continue; // idx < validRecords.length なので理論上ここに来ないが防御的に扱う
           if (!createRecordSet.has(record.draftId)) continue;
           const recordData: Omit<RecordInsert, "user_id"> = {
             competition_id: savedCompetitionId,

@@ -366,7 +366,7 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
         "timePlaceholder",
       ) as HTMLInputElement[];
       expect(timeInputs).toHaveLength(1);
-      expect(timeInputs[0].value).toBe("");
+      expect(timeInputs[0]!.value).toBe("");
     },
   );
 

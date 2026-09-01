@@ -32,7 +32,11 @@ interface WaPointsCompareModalProps {
 function toStyleKey(nameJp: string) {
   const index = getStyleOrderIndex(nameJp);
   if (index === -1) return null;
-  return STYLE_KEY_MAP[STYLES[index]];
+  const styleName = STYLES[index];
+  if (!styleName) return null; // getStyleOrderIndex は STYLES 内の位置を返すため通常
+    // undefined にならないが、STYLES と STYLE_KEY_MAP は別データ構造であり
+    // 型上の保証はないため防御的に扱う (! による強制は使わない)
+  return STYLE_KEY_MAP[styleName];
 }
 
 /**

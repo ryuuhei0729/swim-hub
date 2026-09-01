@@ -104,7 +104,8 @@ describe("aggregate", () => {
     ];
     const models = aggregate(races, { minSampleCount: 1 });
     expect(models).toHaveLength(1);
-    expect(models[0].sampleCount).toBe(10);
+    // toHaveLength(1) で models が1件以上であることを検証済み
+    expect(models[0]!.sampleCount).toBe(10);
   });
 
   it("[V-A1] gender / pool / stroke / distance でグループが分かれる", () => {
@@ -138,26 +139,31 @@ describe("aggregate", () => {
         ],
       }),
     );
-    const [m] = aggregate(races, { minSampleCount: 1 });
+    // race() は必ず50/100の2 split を持つため、aggregate は1件・2 lap のモデルを返す
+    const m = aggregate(races, { minSampleCount: 1 })[0]!;
     expect(m.sampleCount).toBe(5);
-    expect(m.laps[0].ratioMedian).toBeCloseTo(0.48, 6);
-    expect(m.laps[0].ratioP25).toBeCloseTo(0.47, 6);
-    expect(m.laps[0].ratioP75).toBeCloseTo(0.49, 6);
+    const lap0 = m.laps[0]!;
+    const lap1 = m.laps[1]!;
+    expect(lap0.ratioMedian).toBeCloseTo(0.48, 6);
+    expect(lap0.ratioP25).toBeCloseTo(0.47, 6);
+    expect(lap0.ratioP75).toBeCloseTo(0.49, 6);
     // 第2LAP は残り。合計は1
-    expect(m.laps[0].ratioMedian + m.laps[1].ratioMedian).toBeCloseTo(1, 6);
+    expect(lap0.ratioMedian + lap1.ratioMedian).toBeCloseTo(1, 6);
   });
 
   it("[V-A2] LAP距離と本数が保たれる", () => {
-    const [m] = aggregate(sameBucket(30));
+    // sameBucket は30件の100m/50・100 split レースを返すため必ず1件のモデルになる
+    const m = aggregate(sameBucket(30))[0]!;
     expect(m.laps.map((l) => l.distance)).toEqual([50, 100]);
     expect(m.splitInterval).toBe(50);
   });
 
   it("[V-A2] 区間タイムの平均/中央値も出す", () => {
-    const [m] = aggregate(sameBucket(30));
-    expect(m.laps[0].lapTimeMeanMs).toBeGreaterThan(0);
-    expect(m.laps[0].lapTimeMedianMs).toBeGreaterThan(0);
-    expect(Number.isInteger(m.laps[0].lapTimeMeanMs)).toBe(true);
+    const m = aggregate(sameBucket(30))[0]!;
+    const lap0 = m.laps[0]!;
+    expect(lap0.lapTimeMeanMs).toBeGreaterThan(0);
+    expect(lap0.lapTimeMedianMs).toBeGreaterThan(0);
+    expect(Number.isInteger(lap0.lapTimeMeanMs)).toBe(true);
   });
 
   it("[V-A3] リレー/DSQ/欠損は混ざらない", () => {
@@ -169,7 +175,7 @@ describe("aggregate", () => {
     ];
     const models = aggregate(races);
     expect(models).toHaveLength(1);
-    expect(models[0].sampleCount).toBe(30);
+    expect(models[0]!.sampleCount).toBe(30);
   });
 
   it("[V-A5] pool_type が 0|1 で出る (25|50 は出さない)", () => {
@@ -186,8 +192,8 @@ describe("aggregate", () => {
     ];
     const models = aggregate(races, { minSampleCount: 30 });
     expect(models).toHaveLength(1);
-    expect(models[0].ageCategory).toBe("all");
-    expect(models[0].sampleCount).toBe(30);
+    expect(models[0]!.ageCategory).toBe("all");
+    expect(models[0]!.sampleCount).toBe(30);
   });
 
   it("[V-A6] school_class モードでは学種ごとに分かれる", () => {
@@ -209,7 +215,7 @@ describe("aggregate", () => {
     const a = aggregate(races, { minSampleCount: 1 });
     const b = aggregate([...races].reverse(), { minSampleCount: 1 });
     expect(a.map((m) => [m.gender, m.minTimeMs])).toEqual(b.map((m) => [m.gender, m.minTimeMs]));
-    expect(a[0].gender).toBe("female");
+    expect(a[0]!.gender).toBe("female");
   });
 
   it("[V-A1] bucket 幅の設定を差し替えられる", () => {

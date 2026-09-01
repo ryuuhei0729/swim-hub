@@ -136,6 +136,7 @@ function restoreRelayBoundarySplits(
 
   for (let idx = 0; idx < legBoundaries.length; idx++) {
     const distance = legBoundaries[idx];
+    if (distance === undefined) continue; // idx < legBoundaries.length なので理論上ここに来ないが防御的に扱う
     const cumulative = cumulatives[idx] ?? 0;
     if (cumulative <= 0 || existingDistances.has(distance)) continue;
     restored.push({
@@ -205,11 +206,11 @@ export function buildStyleEntriesFromExisting(
     if (usedIndices.has(i)) continue;
 
     const candidate = existingRecords.slice(i, i + 4);
-    const isRelayPattern =
-      !candidate[0].is_relaying &&
-      candidate[1].is_relaying &&
-      candidate[2].is_relaying &&
-      candidate[3].is_relaying;
+    const [c0, c1, c2, c3] = candidate;
+    // i <= existingRecords.length - 4 の保証より candidate は常に4件揃うが、
+    // TS はスライスの長さを追跡できないため防御的に扱う
+    if (!c0 || !c1 || !c2 || !c3) continue;
+    const isRelayPattern = !c0.is_relaying && c1.is_relaying && c2.is_relaying && c3.is_relaying;
 
     if (!isRelayPattern) continue;
 
@@ -239,7 +240,9 @@ export function buildStyleEntriesFromExisting(
     const relaySplitTimes: SplitTimeEntry[] = [];
     for (let legIdx = 0; legIdx < records.length; legIdx++) {
       const record = records[legIdx];
+      if (!record) continue; // legIdx < records.length なので理論上ここに来ないが防御的に扱う
       const legOffset = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
+      if (legOffset === undefined) continue; // legBoundaries は常に4要素で legIdx-1 は範囲内だが防御的に扱う
       const legStart = getLegStartCumulative(cumulatives, legIdx);
       const splitTimeRows = record.split_times || [];
 
@@ -253,6 +256,7 @@ export function buildStyleEntriesFromExisting(
 
       for (let stIdx = 0; stIdx < splitTimeRows.length; stIdx++) {
         const st = splitTimeRows[stIdx];
+        if (!st) continue; // stIdx < splitTimeRows.length なので理論上ここに来ないが防御的に扱う
         // distance > legDist の場合は distance も splitTime も既に全体距離・通算値として
         // 保存された全体距離形式 (新UI保存) と解釈し、変換しない (D2 の変換を経由しない別形式のため)。
         // それ以外は leg 内距離・leg 相対タイムとして offset / legStart を加算する。
@@ -278,12 +282,13 @@ export function buildStyleEntriesFromExisting(
 
     const memberRecords: MemberRecord[] = records.map((record, idx) => {
       const leg = relayDef.legs[idx];
+      const cumulativeAtIdx = cumulatives[idx] ?? 0;
       return {
         id: record.id,
         memberUserId: record.user_id,
         memberName: record.users?.name || "Unknown",
         time: record.time,
-        timeDisplayValue: (cumulatives[idx] ?? 0) > 0 ? formatTimeBest(cumulatives[idx]) : "",
+        timeDisplayValue: cumulativeAtIdx > 0 ? formatTimeBest(cumulativeAtIdx) : "",
         reactionTime: record.reaction_time?.toString() || "",
         isRelaying: record.is_relaying,
         note: record.note || "",
@@ -293,15 +298,23 @@ export function buildStyleEntriesFromExisting(
           splitTime: st.split_time,
           displayValue: formatTimeBest(st.split_time),
         })),
-        relayLegStyleId: leg.styleId,
+        // relayDef.legs は records と同じ4件で構築されているが、idx による突合は
+        // 2つの独立した配列を跨ぐため、TS が undefined を検知した際は
+        // オプショナルチェイニングで安全側 (フィールド未設定) に倒す
+        relayLegStyleId: leg?.styleId,
         relayLegLabel: undefined,
-        cumulativeTimeSeconds: cumulatives[idx] ?? 0,
+        cumulativeTimeSeconds: cumulativeAtIdx,
       };
     });
 
+    const firstRecord = records[0];
+    if (!firstRecord) continue; // relayGroups の records は Phase 1 で必ず4件構成されるが防御的に扱う
+    const firstLeg = relayDef.legs[0];
+    if (!firstLeg) continue; // relayDef は RELAY_EVENTS の全エントリと同様に必ず4 legs構築されるが防御的に扱う
+
     resultEntries.push({
-      id: `relay-${records[0].id}`,
-      styleId: relayDef.legs[0].styleId,
+      id: `relay-${firstRecord.id}`,
+      styleId: firstLeg.styleId,
       styleName: "",
       memberRecords,
       relayEventId: detectedRelayId,
@@ -316,6 +329,7 @@ export function buildStyleEntriesFromExisting(
     if (usedIndices.has(i)) continue;
 
     const record = existingRecords[i];
+    if (!record) continue; // i < existingRecords.length なので理論上ここに来ないが防御的に扱う
     const styleId = record.style_id;
     const style = styles.find((s) => s.id === styleId);
 
@@ -349,12 +363,14 @@ export function buildStyleEntriesFromExisting(
 
   // Phase 4: フリーリレーの復元
   for (const entry of styleMap.values()) {
+    // 直前の `entry.memberRecords.length === 4` により、続く [0]〜[3] は
+    // 同一スコープ・同一配列の長さチェック直後のアクセスであることが保証される (Doctrine 2.6)
     const isRelayPattern =
       entry.memberRecords.length === 4 &&
-      !entry.memberRecords[0].isRelaying &&
-      entry.memberRecords[1].isRelaying &&
-      entry.memberRecords[2].isRelaying &&
-      entry.memberRecords[3].isRelaying;
+      !entry.memberRecords[0]!.isRelaying &&
+      entry.memberRecords[1]!.isRelaying &&
+      entry.memberRecords[2]!.isRelaying &&
+      entry.memberRecords[3]!.isRelaying;
 
     if (!isRelayPattern) continue;
 
@@ -372,7 +388,9 @@ export function buildStyleEntriesFromExisting(
     const relaySplitTimes: SplitTimeEntry[] = [];
     for (let legIdx = 0; legIdx < entry.memberRecords.length; legIdx++) {
       const mr = entry.memberRecords[legIdx];
+      if (!mr) continue; // legIdx < entry.memberRecords.length なので理論上ここに来ないが防御的に扱う
       const legOffset = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
+      if (legOffset === undefined) continue; // legBoundaries は常に4要素で legIdx-1 は範囲内だが防御的に扱う
       const legStart = getLegStartCumulative(cumulatives, legIdx);
 
       // R1-1: leg 内距離の途中経過 (distance < legDist) として保存された splitTime のみを
@@ -415,12 +433,16 @@ export function buildStyleEntriesFromExisting(
     );
     entry.memberRecords = entry.memberRecords.map((mr, idx) => {
       const leg = relayDef.legs[idx];
+      const cumulativeAtIdx = cumulatives[idx] ?? 0;
       return {
         ...mr,
-        relayLegStyleId: leg.styleId,
+        // relayDef.legs は entry.memberRecords と同じ4件で構築されているが、idx による突合は
+        // 2つの独立した配列を跨ぐため、TS が undefined を検知した際は
+        // オプショナルチェイニングで安全側 (フィールド未設定) に倒す
+        relayLegStyleId: leg?.styleId,
         relayLegLabel: undefined,
-        cumulativeTimeSeconds: cumulatives[idx] ?? 0,
-        timeDisplayValue: (cumulatives[idx] ?? 0) > 0 ? formatTimeBest(cumulatives[idx]) : "",
+        cumulativeTimeSeconds: cumulativeAtIdx,
+        timeDisplayValue: cumulativeAtIdx > 0 ? formatTimeBest(cumulativeAtIdx) : "",
       };
     });
   }

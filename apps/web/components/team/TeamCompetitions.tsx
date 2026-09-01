@@ -157,7 +157,7 @@ function normalizeUser(
 ): { name: string } | undefined {
   if (!user) return undefined;
   if (Array.isArray(user)) {
-    return user.length > 0 ? { name: user[0].name } : undefined;
+    return user.length > 0 ? { name: user[0]!.name } : undefined; // user.length > 0 を三項演算子内で確認済み
   }
   return { name: user.name };
 }

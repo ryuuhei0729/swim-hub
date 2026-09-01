@@ -456,7 +456,7 @@ describe("[AP-08] updateOnboardingCompleted — user null", () => {
 
     await waitFor(() => {
       expect(onResult).toHaveBeenCalled();
-      const result = onResult.mock.calls[0][0] as { error: Error | null };
+      const result = onResult.mock.calls[0]![0] as { error: Error | null }; // 直前の toHaveBeenCalled で存在は保証済み
       expect(result.error).toBeInstanceOf(Error);
       expect(result.error?.message).toContain("User not authenticated");
     });
@@ -487,7 +487,7 @@ describe("[AP-09] updateOnboardingCompleted — DB 更新失敗", () => {
 
     await waitFor(() => {
       expect(onResult).toHaveBeenCalled();
-      const result = onResult.mock.calls[0][0] as { error: Error | null };
+      const result = onResult.mock.calls[0]![0] as { error: Error | null }; // 直前の toHaveBeenCalled で存在は保証済み
       expect(result.error).toBeInstanceOf(Error);
       expect(result.error?.message).toContain("DB connection failed");
     });

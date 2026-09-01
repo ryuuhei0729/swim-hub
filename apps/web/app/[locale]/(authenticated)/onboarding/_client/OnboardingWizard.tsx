@@ -33,7 +33,7 @@ function buildInitialStep2(initialProfile: UserProfile | null): Step2Snapshot {
   return {
     name: EMAIL_REGEX.test(rawName.trim()) ? "" : rawName,
     gender: initialProfile?.gender ?? 0,
-    birthday: initialProfile?.birthday ? initialProfile.birthday.split("T")[0] : "",
+    birthday: initialProfile?.birthday ? initialProfile.birthday.split("T")[0]! : "", // split() は仕様上必ず non-empty array を返すため [0] は常に存在する
     bio: initialProfile?.bio ?? "",
     avatarUrl: initialProfile?.profile_image_path ?? null,
   };
@@ -102,7 +102,7 @@ export default function OnboardingWizard({ initialProfile }: OnboardingWizardPro
       }
       const savedBirthday =
         typeof updates.birthday === "string"
-          ? updates.birthday.split("T")[0]
+          ? updates.birthday.split("T")[0]! // split() は仕様上必ず non-empty array を返すため [0] は常に存在する
           : "";
       setStep2Saved({
         name: updates.name ?? "",

@@ -112,12 +112,15 @@ describe("PoC 通し", () => {
     expect(out.laps.at(-1)!.cumulativeTimeMs).toBe(50000);
     expect(out.sampleCount).toBe(model!.sampleCount);
 
+    // 直前の toEqual([50, 100]) で out.laps が2要素であることを検証済み
+    const [lap0, lap1] = [out.laps[0]!, out.laps[1]!];
+
     // 実データ由来なので前半が後半より速い (自由形の一般的なペース配分)
-    expect(out.laps[0].lapTimeMs).toBeLessThan(out.laps[1].lapTimeMs);
+    expect(lap0.lapTimeMs).toBeLessThan(lap1.lapTimeMs);
 
     // 表示可能な形になっている
-    expect(formatMsToTime(out.laps[0].cumulativeTimeMs)).toMatch(/^\d+\.\d{2}$/);
-    expect(formatMsToTime(out.laps[1].cumulativeTimeMs)).toBe("50.00");
+    expect(formatMsToTime(lap0.cumulativeTimeMs)).toMatch(/^\d+\.\d{2}$/);
+    expect(formatMsToTime(lap1.cumulativeTimeMs)).toBe("50.00");
   });
 
   it("★ 400m / 1500m でも合計保証が成立する", () => {
@@ -130,7 +133,13 @@ describe("PoC 通し", () => {
       expect(out.laps).toHaveLength(distance / 50);
       expect(out.laps.reduce((a, l) => a + l.lapTimeMs, 0), `${distance}m`).toBe(target);
       const cums = out.laps.map((l) => l.cumulativeTimeMs);
-      for (let i = 1; i < cums.length; i++) expect(cums[i]).toBeGreaterThan(cums[i - 1]);
+      for (let i = 1; i < cums.length; i++) {
+        const prev = cums[i - 1];
+        const curr = cums[i];
+        // i>=1 かつ i<cums.length なので理論上 undefined にならないが、防御的に扱う
+        if (prev === undefined || curr === undefined) continue;
+        expect(curr).toBeGreaterThan(prev);
+      }
     }
   });
 

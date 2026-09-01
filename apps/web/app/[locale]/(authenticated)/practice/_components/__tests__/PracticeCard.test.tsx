@@ -97,11 +97,14 @@ const PARITY_FIXTURE_LOGS: PracticeLogWithTags[] = [
   }),
 ];
 
+// NOTE: `PARITY_FIXTURE_LOGS[N]!` / `practice.practice_logs[0]!` を多用する。
+// PARITY_FIXTURE_LOGS は上で2件固定定義しており、practice.practice_logs も
+// makePractice() の既定 fixture が1件以上のログを持つ設計になっている。
 describe("PracticeCard", () => {
   it("渡されたログの距離×本数×セット・サークル・種目が ' / ' 区切りで表示される", () => {
     const practice = makePractice({ practice_logs: PARITY_FIXTURE_LOGS });
     renderWithIntl(
-      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]} onClick={vi.fn()} />,
+      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]!} onClick={vi.fn()} />,
     );
 
     expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
@@ -115,7 +118,7 @@ describe("PracticeCard", () => {
     () => {
       const practice = makePractice({ practice_logs: PARITY_FIXTURE_LOGS });
       renderWithIntl(
-        <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]} onClick={vi.fn()} />,
+        <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]!} onClick={vi.fn()} />,
       );
 
       expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
@@ -127,7 +130,7 @@ describe("PracticeCard", () => {
   it("タグは渡されたログ自身のものだけが表示される(兄弟ログのタグは混入しない)", () => {
     const practice = makePractice({ practice_logs: PARITY_FIXTURE_LOGS });
     renderWithIntl(
-      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[1]} onClick={vi.fn()} />,
+      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[1]!} onClick={vi.fn()} />,
     );
 
     expect(screen.getByText("タグB")).toBeInTheDocument();
@@ -138,13 +141,13 @@ describe("PracticeCard", () => {
     const practice = makePractice({ title: "IM練習", place: "市民プール", practice_logs: PARITY_FIXTURE_LOGS });
 
     const { unmount } = renderWithIntl(
-      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]} onClick={vi.fn()} />,
+      <PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[0]!} onClick={vi.fn()} />,
     );
     expect(screen.getByText("IM練習")).toBeInTheDocument();
     expect(screen.getByText("市民プール")).toBeInTheDocument();
     unmount();
 
-    renderWithIntl(<PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[1]} onClick={vi.fn()} />);
+    renderWithIntl(<PracticeCard practice={practice} log={PARITY_FIXTURE_LOGS[1]!} onClick={vi.fn()} />);
     expect(screen.getByText("IM練習")).toBeInTheDocument();
     expect(screen.getByText("市民プール")).toBeInTheDocument();
   });
@@ -172,7 +175,7 @@ describe("PracticeCard", () => {
     const onClick = vi.fn();
     const practice = makePractice({ id: "practice-xyz" });
     renderWithIntl(
-      <PracticeCard practice={practice} log={practice.practice_logs[0]} onClick={onClick} />,
+      <PracticeCard practice={practice} log={practice.practice_logs[0]!} onClick={onClick} />,
     );
 
     screen.getByRole("button", { name: /^練習詳細を表示\(/ }).click();
@@ -185,7 +188,7 @@ describe("PracticeCard", () => {
     const onClick = vi.fn();
     const practice = makePractice();
     renderWithIntl(
-      <PracticeCard practice={practice} log={practice.practice_logs[0]} onClick={onClick} />,
+      <PracticeCard practice={practice} log={practice.practice_logs[0]!} onClick={onClick} />,
     );
 
     const card = screen.getByRole("button", { name: /^練習詳細を表示\(/ });
@@ -198,7 +201,7 @@ describe("PracticeCard", () => {
     const practice = makePractice({ date: "invalid-date-string" });
     expect(() =>
       renderWithIntl(
-        <PracticeCard practice={practice} log={practice.practice_logs[0]} onClick={vi.fn()} />,
+        <PracticeCard practice={practice} log={practice.practice_logs[0]!} onClick={vi.fn()} />,
       ),
     ).not.toThrow();
     const card = screen.getByRole("button", { name: /^練習詳細を表示\(/ });

@@ -136,7 +136,8 @@ export const useRecentAttendance = (
     setEditStates((prev) => ({
       ...prev,
       [eventId]: {
-        ...prev[eventId],
+        // prev[eventId] が未初期化のときは初期表示時の既定値と同じ形にする
+        ...(prev[eventId] ?? { status: null, note: "" }),
         status,
       },
     }));
@@ -148,7 +149,8 @@ export const useRecentAttendance = (
     setEditStates((prev) => ({
       ...prev,
       [eventId]: {
-        ...prev[eventId],
+        // prev[eventId] が未初期化のときは初期表示時の既定値と同じ形にする
+        ...(prev[eventId] ?? { status: null, note: "" }),
         note: trimmedNote,
       },
     }));

@@ -110,15 +110,27 @@ export function buildRelayEvents(labels: RelayLabels): LabelledRelayEventDef[] {
   const freeLabel = (dist: number) => `${dist}m×4 ${freeRelaySuffix}`;
   const medleyLabel = (dist: number) => `${dist}m×4 ${medleyRelaySuffix}`;
 
-  return [
-    { id: "relay_4x25_free", label: freeLabel(25), legs: labelLegs(RELAY_EVENTS[0].legs) },
-    { id: "relay_4x50_free", label: freeLabel(50), legs: labelLegs(RELAY_EVENTS[1].legs) },
-    { id: "relay_4x100_free", label: freeLabel(100), legs: labelLegs(RELAY_EVENTS[2].legs) },
-    { id: "relay_4x200_free", label: freeLabel(200), legs: labelLegs(RELAY_EVENTS[3].legs) },
-    { id: "relay_4x25_medley", label: medleyLabel(25), legs: labelLegs(RELAY_EVENTS[4].legs) },
-    { id: "relay_4x50_medley", label: medleyLabel(50), legs: labelLegs(RELAY_EVENTS[5].legs) },
-    { id: "relay_4x100_medley", label: medleyLabel(100), legs: labelLegs(RELAY_EVENTS[6].legs) },
-  ];
+  // 距離とフリー/メドレーの判定を id から導出し、RELAY_EVENTS を固定インデックスで
+  // 参照しない (定義順が変わっても対応が崩れないようにする)。
+  const distById: Record<RelayEventId, number> = {
+    relay_4x25_free: 25,
+    relay_4x50_free: 50,
+    relay_4x100_free: 100,
+    relay_4x200_free: 200,
+    relay_4x25_medley: 25,
+    relay_4x50_medley: 50,
+    relay_4x100_medley: 100,
+  };
+  const isMedley = (id: RelayEventId) => id.endsWith("_medley");
+
+  return RELAY_EVENTS.map((event) => {
+    const dist = distById[event.id];
+    return {
+      id: event.id,
+      label: isMedley(event.id) ? medleyLabel(dist) : freeLabel(dist),
+      legs: labelLegs(event.legs),
+    };
+  });
 }
 
 /**
@@ -159,7 +171,8 @@ export function calcLegTimesFromCumulative(cumulativeTimes: number[]): number[] 
   if (cumulativeTimes.length === 0) return [];
   return cumulativeTimes.map((cum, i) => {
     if (i === 0) return cum;
-    return Math.round((cum - cumulativeTimes[i - 1]) * 100) / 100;
+    return Math.round((cum - cumulativeTimes[i - 1]!) * 100) / 100; // i===0 を直上で
+      // return済みなので i>=1、かつ map の i は常に配列長未満のため i-1 は必ず範囲内
   });
 }
 

@@ -25,6 +25,7 @@ import {
   STYLE_KEY_MAP,
   isInvalidCombination,
   getDistancesForStyle,
+  type SwimStyleName,
 } from "@apps/shared/utils/swimStyles";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -51,7 +52,9 @@ interface MemberBestTime {
 }
 
 // 種目の色定義（プラットフォーム固有のためこのファイルに残す）
-const STYLE_COLORS: Record<string, { bg: string; header: string; text: string }> = {
+// STYLES の閉じたユニオンでキーを持つため、styleColumns 内の STYLE_COLORS[style] アクセスは
+// 常に安全 (Doctrine 2.7)
+const STYLE_COLORS: Record<SwimStyleName, { bg: string; header: string; text: string }> = {
   自由形: { bg: "#FEFCE8", header: "#FEF9C3", text: "#854D0E" },
   平泳ぎ: { bg: "#F0FDF4", header: "#DCFCE7", text: "#166534" },
   背泳ぎ: { bg: "#FEF2F2", header: "#FEE2E2", text: "#991B1B" },

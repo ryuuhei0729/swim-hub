@@ -84,6 +84,8 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// NOTE: `mock.invocationCallOrder[0]!` / `mock.calls[0]![0]` を多用する。各テストは直前に
+// `await POST(...)` を実行しモックが実際に呼ばれたことを前提にしている。
 describe("POST /api/storage/profile — R2分岐", () => {
   beforeEach(() => {
     isR2Enabled.mockReturnValue(true);
@@ -157,14 +159,14 @@ describe("POST /api/storage/profile — R2分岐", () => {
 
     await POST(makeRequest());
 
-    const listOrder = listR2Objects.mock.invocationCallOrder[0];
-    const uploadOrder = uploadToR2.mock.invocationCallOrder[0];
-    const deleteOrder = deleteMultipleFromR2.mock.invocationCallOrder[0];
+    const listOrder = listR2Objects.mock.invocationCallOrder[0]!;
+    const uploadOrder = uploadToR2.mock.invocationCallOrder[0]!;
+    const deleteOrder = deleteMultipleFromR2.mock.invocationCallOrder[0]!;
     expect(listOrder).toBeLessThan(uploadOrder);
     expect(uploadOrder).toBeLessThan(deleteOrder);
 
     // 削除対象は list() の戻り値そのまま。新規アップロードしたファイルのキー(UUID)が紛れ込んでいない
-    const deletedKeys = deleteMultipleFromR2.mock.calls[0][0] as string[];
+    const deletedKeys = deleteMultipleFromR2.mock.calls[0]![0] as string[];
     expect(deletedKeys).toEqual([`profile-images/${USER_ID}/old.jpg`]);
   });
 });
@@ -210,13 +212,13 @@ describe("POST /api/storage/profile — Supabase フォールバック分岐", (
 
     await POST(makeRequest());
 
-    const listOrder = spies.list.mock.invocationCallOrder[0];
-    const uploadOrder = spies.upload.mock.invocationCallOrder[0];
-    const removeOrder = spies.remove.mock.invocationCallOrder[0];
+    const listOrder = spies.list.mock.invocationCallOrder[0]!;
+    const uploadOrder = spies.upload.mock.invocationCallOrder[0]!;
+    const removeOrder = spies.remove.mock.invocationCallOrder[0]!;
     expect(listOrder).toBeLessThan(uploadOrder);
     expect(uploadOrder).toBeLessThan(removeOrder);
 
-    const removedPaths = spies.remove.mock.calls[0][0] as string[];
+    const removedPaths = spies.remove.mock.calls[0]![0] as string[];
     expect(removedPaths).toEqual([`${USER_ID}/old.jpg`]);
   });
 });

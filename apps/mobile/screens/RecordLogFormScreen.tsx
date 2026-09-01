@@ -272,6 +272,7 @@ export const RecordLogFormScreen: React.FC = () => {
   const handleTimeChange = (index: number, value: string) => {
     const newTime = parseTimeToSeconds(value);
     const formData = formDataList[index];
+    if (!formData) return;
     const style = swimStyles.find((s) => s.id.toString() === formData.styleId);
     const raceDistance = style?.distance;
 
@@ -376,6 +377,7 @@ export const RecordLogFormScreen: React.FC = () => {
   const handleAddSplitTime = (index: number) => {
     if (isSplitTimeLimitReached(index)) return;
     const formData = formDataList[index];
+    if (!formData) return;
     updateFormData(index, {
       splitTimes: [
         ...formData.splitTimes,
@@ -391,6 +393,7 @@ export const RecordLogFormScreen: React.FC = () => {
   // スプリットタイムを25mごとに追加
   const handleAddSplitTimesEvery25m = (index: number) => {
     const formData = formDataList[index];
+    if (!formData) return;
     const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
     if (!selectedStyle?.distance) return;
 
@@ -436,6 +439,7 @@ export const RecordLogFormScreen: React.FC = () => {
   // スプリットタイムを50mごとに追加
   const handleAddSplitTimesEvery50m = (index: number) => {
     const formData = formDataList[index];
+    if (!formData) return;
     const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
     if (!selectedStyle?.distance) return;
 
@@ -501,6 +505,7 @@ export const RecordLogFormScreen: React.FC = () => {
   // スプリットタイム削除
   const handleRemoveSplitTime = (index: number, splitIndex: number) => {
     const formData = formDataList[index];
+    if (!formData) return;
     updateFormData(index, {
       splitTimes: formData.splitTimes.filter((_, i) => i !== splitIndex),
     });
@@ -514,6 +519,7 @@ export const RecordLogFormScreen: React.FC = () => {
     value: string,
   ) => {
     const formData = formDataList[index];
+    if (!formData) return;
     const updatedSplitTimes = formData.splitTimes.map((st, i) => {
       if (i !== splitIndex) return st;
       if (field === "distance") {
@@ -616,6 +622,10 @@ export const RecordLogFormScreen: React.FC = () => {
       // 編集モードの場合
       if (recordId && formDataList.length > 0) {
         const formData = formDataList[0];
+        if (!formData) {
+          setLoading(false);
+          return;
+        }
         if (formData.time <= 0) {
           Alert.alert(t("common.error"), t("recordMobile.form.timeRequired"));
           setLoading(false);
@@ -669,6 +679,7 @@ export const RecordLogFormScreen: React.FC = () => {
         // 新規作成モードの場合
         for (let index = 0; index < formDataList.length; index++) {
           const formData = formDataList[index];
+          if (!formData) continue; // index < formDataList.length なので理論上ここに来ないが防御的に扱う
           if (formData.time <= 0) {
             // タイム未入力のフォームはスキップ。保留動画も破棄する
             pendingVideoAssetRef.current.delete(index);

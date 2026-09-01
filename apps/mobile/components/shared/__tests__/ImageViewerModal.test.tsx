@@ -185,7 +185,7 @@ describe("ImageViewerModal", () => {
       const images = screen.getAllByRole("img");
       // FlatList のレンダリングから少なくとも 1 枚以上存在すること
       expect(images.length).toBeGreaterThanOrEqual(1);
-      const firstSrc = images[0].getAttribute("src");
+      const firstSrc = images[0]!.getAttribute("src"); // 直前の toBeGreaterThanOrEqual(1) で存在は保証済み
       expect(firstSrc).toContain("https://example.com/");
     });
   });

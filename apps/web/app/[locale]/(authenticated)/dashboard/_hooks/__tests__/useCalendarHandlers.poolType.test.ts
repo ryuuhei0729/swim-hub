@@ -77,6 +77,8 @@ const baseEntryItem = (overrides: Partial<CalendarItem> = {}): CalendarItem =>
     ...overrides,
   }) as CalendarItem;
 
+// NOTE: `mock.calls[0]!` を多用する。各テストは直前に `toHaveBeenCalledTimes(1)` で
+// 呼び出し回数を確認済み。
 describe("useCalendarHandlers — pool_type 伝搬 (D-5 #2〜#5)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -102,7 +104,7 @@ describe("useCalendarHandlers — pool_type 伝搬 (D-5 #2〜#5)", () => {
     await result.current.onEditItem(item);
 
     expect(openCompetitionTabModal).toHaveBeenCalledTimes(1);
-    const editingData = openCompetitionTabModal.mock.calls[0][1] as EditingData;
+    const editingData = openCompetitionTabModal.mock.calls[0]![1] as EditingData;
     expect((editingData as Record<string, unknown>).pool_type).toBe(1);
 
     // SELECT が pool_type を落としていないことも直接検証する (V-8 と同種のクエリ形状検証)
@@ -129,7 +131,7 @@ describe("useCalendarHandlers — pool_type 伝搬 (D-5 #2〜#5)", () => {
     await result.current.onEditItem(item);
 
     expect(openCompetitionTabModal).toHaveBeenCalledTimes(1);
-    const editingData = openCompetitionTabModal.mock.calls[0][1] as EditingData;
+    const editingData = openCompetitionTabModal.mock.calls[0]![1] as EditingData;
     expect((editingData as Record<string, unknown>).pool_type).toBe(1);
   });
 
@@ -147,7 +149,7 @@ describe("useCalendarHandlers — pool_type 伝搬 (D-5 #2〜#5)", () => {
     await result.current.onAddRecord({ competitionId: "comp-1" });
 
     expect(openCompetitionTabModal).toHaveBeenCalledTimes(1);
-    const editingData = openCompetitionTabModal.mock.calls[0][1] as EditingData;
+    const editingData = openCompetitionTabModal.mock.calls[0]![1] as EditingData;
     expect((editingData as Record<string, unknown>).pool_type).toBe(1);
   });
 
@@ -170,7 +172,7 @@ describe("useCalendarHandlers — pool_type 伝搬 (D-5 #2〜#5)", () => {
     await result.current.onEditRecord(record);
 
     expect(openCompetitionTabModal).toHaveBeenCalledTimes(1);
-    const editingData = openCompetitionTabModal.mock.calls[0][1] as EditingData;
+    const editingData = openCompetitionTabModal.mock.calls[0]![1] as EditingData;
     expect((editingData as Record<string, unknown>).pool_type).toBe(1);
     expect(supabase.selectCalls.some((c) => c.includes("pool_type"))).toBe(true);
   });

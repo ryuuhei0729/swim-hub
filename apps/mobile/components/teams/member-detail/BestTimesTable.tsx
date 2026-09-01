@@ -4,7 +4,13 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { differenceInDays, parseISO } from "date-fns";
 import { formatTime } from "@/utils/formatters";
-import { STYLES, DISTANCES, isInvalidCombination, STYLE_KEY_MAP } from "@apps/shared/utils/swimStyles";
+import {
+  STYLES,
+  DISTANCES,
+  isInvalidCombination,
+  STYLE_KEY_MAP,
+  type SwimStyleName,
+} from "@apps/shared/utils/swimStyles";
 import {
   getBestWaPointsForCandidates,
   type Gender,
@@ -17,7 +23,9 @@ import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/Be
 
 type TabType = "all" | "short" | "long";
 
-const styleColors: Record<string, { bg: string; text: string }> = {
+// STYLES (自由形/平泳ぎ/背泳ぎ/バタフライ/個人メドレー) の閉じたユニオンでキーを持つため、
+// STYLES.map((style) => ...) 内での styleColors[style] アクセスは常に安全 (Doctrine 2.7)
+const styleColors: Record<SwimStyleName, { bg: string; text: string }> = {
   自由形: { bg: "#FEF3C7", text: "#92400E" },
   平泳ぎ: { bg: "#D1FAE5", text: "#065F46" },
   背泳ぎ: { bg: "#FEE2E2", text: "#991B1B" },

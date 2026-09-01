@@ -28,11 +28,12 @@ export function calculateAllLapTimes(splitTimes: SplitTime[]): LapTime[] {
   const lapTimes: LapTime[] = [];
 
   // 最初のsplit-timeは0mからのlap-time
-  if (sorted.length > 0 && sorted[0].distance > 0) {
+  const firstSplit = sorted[0];
+  if (firstSplit && firstSplit.distance > 0) {
     lapTimes.push({
       fromDistance: 0,
-      toDistance: sorted[0].distance,
-      lapTime: sorted[0].splitTime,
+      toDistance: firstSplit.distance,
+      lapTime: firstSplit.splitTime,
     });
   }
 
@@ -40,6 +41,8 @@ export function calculateAllLapTimes(splitTimes: SplitTime[]): LapTime[] {
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1];
     const curr = sorted[i];
+    if (!prev || !curr) continue; // i>=1 かつ i<sorted.length なので理論上 undefined にならないが、
+                                   // sorted は呼び出し元由来の可変長配列のため防御的に扱う
 
     if (prev.distance < curr.distance && prev.splitTime > 0 && curr.splitTime > 0) {
       lapTimes.push({

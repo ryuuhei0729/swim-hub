@@ -126,6 +126,9 @@ export const useMonthList = (
 
       for (const monthKey of sortedMonthKeys) {
         const [yearStr, monthStr] = monthKey.split("-");
+        if (!yearStr || !monthStr) continue; // monthKey は同ファイル内で
+          // format(date, "yyyy-MM") により生成されるため常に2要素に分割されるが、
+          // split() の型上は保証されないため防御的にスキップする
         const year = parseInt(yearStr);
         const month = parseInt(monthStr);
 

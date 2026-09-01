@@ -47,6 +47,15 @@ const createSupabaseMock = (options: { userId?: string } = {}) => {
       tableQueues.set(table, [...responses]);
     },
     getBuilderHistory: (table: string) => builderHistory.get(table) ?? [],
+    // 呼び出し側は arrange/act で対象テーブルへの呼び出しが指定 index まで発生することを
+    // 保証した上で読む。存在しなければテストの前提が崩れているため早期に失敗させる
+    getBuilder: (table: string, index = 0): MockQueryBuilder => {
+      const builder = (builderHistory.get(table) ?? [])[index];
+      if (!builder) {
+        throw new Error(`No builder recorded for table "${table}" at index ${index}`);
+      }
+      return builder;
+    },
   };
 };
 
@@ -100,9 +109,8 @@ const runClosedBulkUpdate = async (
     { attendanceId: "attendance-1", status, note: inputNote },
   ]);
 
-  const history = supabaseMock.getBuilderHistory("team_attendance");
-  // history[1] が update().select().single() の builder
-  const updateBuilder = history[1];
+  // index 1 が update().select().single() の builder
+  const updateBuilder = supabaseMock.getBuilder("team_attendance", 1);
   const updateArg = updateBuilder.update.mock.calls[0]?.[0] as
     | { status: AttendanceStatus | null; note: string | null }
     | undefined;
@@ -214,8 +222,9 @@ describe("改修1: bulkUpdateMyAttendances の締切後編集マーク", () => {
         { attendanceId: "attendance-1", status: "present", note: "そのまま" },
       ]);
 
-      const history = supabaseMock.getBuilderHistory("team_attendance");
-      const updateArg = history[1].update.mock.calls[0]?.[0] as { note: string | null };
+      const updateArg = supabaseMock.getBuilder("team_attendance", 1).update.mock.calls[0]?.[0] as {
+        note: string | null;
+      };
       expect(updateArg.note).toBe("そのまま");
       expect(updateArg.note).not.toContain("締切後編集");
     });

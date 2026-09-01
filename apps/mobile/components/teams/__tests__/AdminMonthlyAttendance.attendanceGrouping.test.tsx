@@ -159,7 +159,7 @@ async function expandFirstEventCard() {
   await waitFor(() => {
     expect(screen.getAllByTestId("icon-chevron-down").length).toBeGreaterThan(0);
   });
-  fireEvent.click(screen.getAllByTestId("icon-chevron-down")[0].closest("button")!);
+  fireEvent.click(screen.getAllByTestId("icon-chevron-down")[0]!.closest("button")!); // 直前の toBeGreaterThan(0) で存在は保証済み
 }
 
 describe("AdminMonthlyAttendance attendance grouping", () => {
@@ -370,8 +370,8 @@ describe("AdminMonthlyAttendance attendance grouping", () => {
       expect(screen.getAllByTestId("icon-chevron-down").length).toBe(2);
     });
     const chevrons = screen.getAllByTestId("icon-chevron-down");
-    fireEvent.click(chevrons[0].closest("button")!);
-    fireEvent.click(chevrons[1].closest("button")!);
+    fireEvent.click(chevrons[0]!.closest("button")!); // 直前の toBe(2) で存在は保証済み
+    fireEvent.click(chevrons[1]!.closest("button")!);
 
     await waitFor(() => {
       expect(screen.getAllByText("出席 (0名)").length).toBe(2);

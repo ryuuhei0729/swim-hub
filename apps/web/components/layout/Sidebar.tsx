@@ -85,7 +85,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         // チームが1つだけの場合はIDを保存
         if (data && data.length === 1) {
-          setSingleTeamId(data[0].team_id);
+          setSingleTeamId(data[0]!.team_id); // data.length === 1 を直上の if で確認済み
         } else {
           setSingleTeamId(null);
         }

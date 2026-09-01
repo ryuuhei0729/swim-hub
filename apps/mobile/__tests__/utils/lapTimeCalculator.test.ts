@@ -156,12 +156,12 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
       ];
       const result = calculateRaceLapTimesTable(splitTimes, 100);
       expect(result).toHaveLength(4);
-      expect(result[0].lapTimes[25]).toBe(12.5);
-      expect(result[0].lapTimes[50]).toBeNull();
-      expect(result[1].lapTimes[25]).toBe(13.5);
-      expect(result[1].lapTimes[50]).toBe(26.0);
-      expect(result[3].lapTimes[25]).toBe(15.0);
-      expect(result[3].lapTimes[50]).toBe(29.0);
+      expect(result[0]!.lapTimes[25]).toBe(12.5); // 直前の toHaveLength(4) で存在は保証済み
+      expect(result[0]!.lapTimes[50]).toBeNull();
+      expect(result[1]!.lapTimes[25]).toBe(13.5);
+      expect(result[1]!.lapTimes[50]).toBe(26.0);
+      expect(result[3]!.lapTimes[25]).toBe(15.0);
+      expect(result[3]!.lapTimes[50]).toBe(29.0);
     });
 
     it("200m種目のテーブルを生成する", () => {
@@ -173,10 +173,10 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
       ];
       const result = calculateRaceLapTimesTable(splitTimes, 200);
       expect(result).toHaveLength(4);
-      expect(result[1].lapTimes[50]).toBe(32.0);
-      expect(result[1].lapTimes[100]).toBe(60.0);
-      expect(result[3].lapTimes[50]).toBe(35.0);
-      expect(result[3].lapTimes[100]).toBe(70.0);
+      expect(result[1]!.lapTimes[50]).toBe(32.0); // 直前の toHaveLength(4) で存在は保証済み
+      expect(result[1]!.lapTimes[100]).toBe(60.0);
+      expect(result[3]!.lapTimes[50]).toBe(35.0);
+      expect(result[3]!.lapTimes[100]).toBe(70.0);
     });
 
     it("25mの倍数でない距離はフィルタリングされる", () => {
@@ -187,8 +187,8 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
       ];
       const result = calculateRaceLapTimesTable(splitTimes, 100);
       expect(result).toHaveLength(2);
-      expect(result[0].distance).toBe(25);
-      expect(result[1].distance).toBe(50);
+      expect(result[0]!.distance).toBe(25); // 直前の toHaveLength(2) で存在は保証済み
+      expect(result[1]!.distance).toBe(50);
     });
 
     it("split-timeが0の距離はフィルタリングされる", () => {
@@ -199,8 +199,8 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
       ];
       const result = calculateRaceLapTimesTable(splitTimes, 100);
       expect(result).toHaveLength(2);
-      expect(result[0].distance).toBe(25);
-      expect(result[1].distance).toBe(75);
+      expect(result[0]!.distance).toBe(25); // 直前の toHaveLength(2) で存在は保証済み
+      expect(result[1]!.distance).toBe(75);
     });
   });
 

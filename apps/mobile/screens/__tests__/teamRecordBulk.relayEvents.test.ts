@@ -123,10 +123,10 @@ describe("[mobile] buildRelayEvents ラベル", () => {
   it("メドレーラベルが正しい泳順で生成される", () => {
     const m50 = buildRelayEvents(TEST_LABELS).find((e) => e.id === "relay_4x50_medley")!;
     expect(m50.label).toBe("50m×4 メドレーリレー");
-    expect(m50.legs[0].legLabel).toContain("第1泳者");
-    expect(m50.legs[0].legLabel).toContain("背泳ぎ");
-    expect(m50.legs[3].legLabel).toContain("第4泳者");
-    expect(m50.legs[3].legLabel).toContain("自由形");
+    expect(m50.legs[0]!.legLabel).toContain("第1泳者"); // リレーは常に4legなので必ず存在
+    expect(m50.legs[0]!.legLabel).toContain("背泳ぎ");
+    expect(m50.legs[3]!.legLabel).toContain("第4泳者");
+    expect(m50.legs[3]!.legLabel).toContain("自由形");
   });
 });
 

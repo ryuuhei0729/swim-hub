@@ -249,7 +249,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                 if (actualEntries.length > 0 && !loading) {
                   const firstActualEntry = actualEntries[0];
                   const firstCalendarEntry = entries[0];
-                  if (firstCalendarEntry && onEditEntry) {
+                  if (firstActualEntry && firstCalendarEntry && onEditEntry) {
                     // 実際のエントリーIDを使用してCalendarItemを構築
                     const entryItem: CalendarItem = {
                       ...firstCalendarEntry,
@@ -260,8 +260,11 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                   }
                 } else if (entries.length > 0 && onEditEntry) {
                   // actualEntriesがまだ読み込まれていない場合は、CalendarItemをそのまま使用
-                  onEditEntry(entries[0]);
-                  onClose?.();
+                  const firstEntry = entries[0];
+                  if (firstEntry) {
+                    onEditEntry(firstEntry);
+                    onClose?.();
+                  }
                 }
               }}
             >

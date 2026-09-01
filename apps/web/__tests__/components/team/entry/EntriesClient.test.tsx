@@ -144,13 +144,13 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
 
       const selects = screen.getAllByRole("combobox");
       // 1行目 (entry-X, 自由形) の種目を平泳ぎ(id=9)に付け替える
-      fireEvent.change(selects[0], { target: { value: "9" } });
+      fireEvent.change(selects[0]!, { target: { value: "9" } });
       // 2行目 (entry-Y, 元から平泳ぎ) をフォームから削除する。
       // これをしないと user-1:9 が2行に重複するため、正しく「重複エラーで
       // 保存disabled」になる (それ自体は仕様#7の正しい動作)。ここで検証したいのは
       // 「Yの行を消してXをYの種目に付け替える」という実際の管理者操作なので、
       // 削除ボタンで明示的にYの行を取り除く
-      fireEvent.click(screen.getAllByRole("button", { name: "delete" })[1]);
+      fireEvent.click(screen.getAllByRole("button", { name: "delete" })[1]!);
 
       fireEvent.click(screen.getByRole("button", { name: "saveButton" }));
 
@@ -445,8 +445,8 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
       fireEvent.click(screen.getByRole("button", { name: "record.addEventButton" }));
 
       const selects = screen.getAllByRole("combobox");
-      fireEvent.change(selects[0], { target: { value: "3" } });
-      fireEvent.change(selects[1], { target: { value: "3" } });
+      fireEvent.change(selects[0]!, { target: { value: "3" } });
+      fireEvent.change(selects[1]!, { target: { value: "3" } });
 
       expect(screen.getAllByText("duplicateMemberStyle").length).toBeGreaterThan(0);
       expect(screen.getByRole("button", { name: "saveButton" })).toBeDisabled();

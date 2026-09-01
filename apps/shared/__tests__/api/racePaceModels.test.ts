@@ -95,13 +95,15 @@ describe("RacePaceModelAPI.getModels", () => {
     });
     const { supabase } = mockSupabase([reversed]);
     const [m] = await new RacePaceModelAPI(supabase).getModels(query);
-    expect(m.laps.map((l) => l.distance)).toEqual([50, 100]);
+    // mockSupabase([reversed]) は1行のみ返すため、getModels は必ず1件のモデルを返す
+    expect(m!.laps.map((l) => l.distance)).toEqual([50, 100]);
   });
 
   it("[V-M3] laps が null でも落ちない", async () => {
     const { supabase } = mockSupabase([row({ laps: null })]);
     const [m] = await new RacePaceModelAPI(supabase).getModels(query);
-    expect(m.laps).toEqual([]);
+    // mockSupabase は1行のみ返すため、getModels は必ず1件のモデルを返す
+    expect(m!.laps).toEqual([]);
   });
 
   it("[V-M5] エラーは throw する", async () => {

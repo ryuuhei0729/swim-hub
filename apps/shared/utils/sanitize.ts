@@ -14,7 +14,9 @@ export function escapeHtml(text: string): string {
     '"': "&quot;",
     "'": "&#039;",
   };
-  return text.replace(/[&<>"']/g, (m) => map[m]);
+  // 正規表現の文字クラス [&<>"'] は map のキー集合と完全に一致しているため、
+  // マッチした m は必ず map に存在する
+  return text.replace(/[&<>"']/g, (m) => map[m]!);
 }
 
 /**

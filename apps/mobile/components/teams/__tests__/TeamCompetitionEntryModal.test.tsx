@@ -154,7 +154,7 @@ describe("TeamCompetitionEntryModal", () => {
     );
     expect(backdropCandidates.length).toBe(1);
 
-    fireEvent.click(backdropCandidates[0]);
+    fireEvent.click(backdropCandidates[0]!); // 直前の toBe(1) で存在は保証済み
 
     // SlideUpModal は閉じるとき即座に unmount せず setTimeout 後に unmount するため、
     // タップ直後の DOM 残存だけでは「閉じない」ことの証明にならない。onClose 呼び出し
@@ -183,7 +183,7 @@ describe("TeamCompetitionEntryModal", () => {
     // 確認 Alert が呼ばれる
     expect(Alert.alert).toHaveBeenCalledTimes(1);
     const alertArgs = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
-    const buttons = alertArgs[2] as Array<{ text: string; onPress?: () => void }>;
+    const buttons = alertArgs![2] as Array<{ text: string; onPress?: () => void }>; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
     // OK ボタンの onPress を発火
     const okButton = buttons.find((b) => b.onPress);
     expect(okButton).toBeDefined();
@@ -208,7 +208,7 @@ describe("TeamCompetitionEntryModal", () => {
 
     fireEvent.click(screen.getByText("受付終了")); // before -> closed
     const confirmCall = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
-    const buttons = confirmCall[2] as Array<{ text: string; onPress?: () => void }>;
+    const buttons = confirmCall![2] as Array<{ text: string; onPress?: () => void }>; // 直前の click で Alert.alert が呼ばれる設計のため必ず存在
     buttons.find((b) => b.onPress)?.onPress?.();
 
     // 失敗後にエラー Alert (2 回目) が出る
@@ -416,7 +416,7 @@ describe("TeamCompetitionEntryModal", () => {
       fireEvent.click(screen.getByText("受付中")); // before -> open
       expect(Alert.alert).toHaveBeenCalledTimes(1);
       const alertArgs = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
-      const buttons = alertArgs[2] as Array<{ text: string; onPress?: () => void }>;
+      const buttons = alertArgs![2] as Array<{ text: string; onPress?: () => void }>; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
       buttons.find((b) => b.onPress)?.onPress?.();
 
       await waitFor(() =>

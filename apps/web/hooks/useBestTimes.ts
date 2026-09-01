@@ -132,6 +132,9 @@ export function useBestTimes(supabase: SupabaseClient) {
         relayingBestTimesByStyleAndPool.forEach((relayingTime, key) => {
           if (!bestTimesByStyleAndPool.has(key)) {
             const [styleName, poolTypeStr] = key.split("_");
+            if (styleName === undefined || poolTypeStr === undefined) return; // key は
+              // `${styleKey}_${poolType}` 形式で生成されるため通常2要素に分割されるが、
+              // split() の型上は undefined を許すため防御的にスキップする
             const poolType = parseInt(poolTypeStr, 10);
 
             const record = data?.find(

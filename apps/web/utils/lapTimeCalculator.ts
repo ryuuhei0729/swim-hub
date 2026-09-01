@@ -28,11 +28,12 @@ export function calculateAllLapTimes(splitTimes: SplitTime[]): LapTime[] {
   const lapTimes: LapTime[] = [];
 
   // 最初のsplit-timeは0mからのlap-time
-  if (sorted.length > 0 && sorted[0].distance > 0) {
+  if (sorted.length > 0 && sorted[0]!.distance > 0) {
+    // sorted.length > 0 を直上の if で確認済み
     lapTimes.push({
       fromDistance: 0,
-      toDistance: sorted[0].distance,
-      lapTime: sorted[0].splitTime,
+      toDistance: sorted[0]!.distance,
+      lapTime: sorted[0]!.splitTime,
     });
   }
 
@@ -40,6 +41,8 @@ export function calculateAllLapTimes(splitTimes: SplitTime[]): LapTime[] {
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1];
     const curr = sorted[i];
+    if (!prev || !curr) continue; // i>=1 かつ i<sorted.length のため理論上
+      // undefined にならないが、型上は保証されないため防御的に扱う
 
     if (prev.distance < curr.distance && prev.splitTime > 0 && curr.splitTime > 0) {
       lapTimes.push({
@@ -92,10 +95,13 @@ export function calculateLapTimesForInterval(
 
   const results: Array<{ distance: number; lapTime: number | null }> = [];
 
+  // splitTimes.length === 0 を関数先頭で return 済みのため sorted は常に1件以上
+  const lastDistance = sorted[sorted.length - 1]!.distance;
+
   // 間隔の倍数の距離でのlap-timeを計算
   for (
     let distance = interval;
-    distance <= sorted[sorted.length - 1].distance;
+    distance <= lastDistance;
     distance += interval
   ) {
     // 該当する距離のsplit-timeを探す

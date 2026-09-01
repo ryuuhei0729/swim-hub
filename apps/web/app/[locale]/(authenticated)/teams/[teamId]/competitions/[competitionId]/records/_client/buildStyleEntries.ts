@@ -94,6 +94,8 @@ function restoreRelayBoundarySplits(
 
   for (let idx = 0; idx < legBoundaries.length; idx++) {
     const distance = legBoundaries[idx];
+    if (distance === undefined) continue; // legBoundaries は呼び出し元 getRelayLegBoundaries が
+      // 返す固定4要素配列で idx < legBoundaries.length の範囲では常に定義されるが防御的に扱う
     const cumulative = cumulatives[idx] ?? 0;
     if (cumulative <= 0 || existingDistances.has(distance)) continue;
     restored.push({
@@ -205,11 +207,10 @@ export function buildStyleEntriesFromExisting(
     if (usedIndices.has(i)) continue;
 
     const candidate = existingRecords.slice(i, i + 4);
-    const isRelayPattern =
-      !candidate[0].is_relaying &&
-      candidate[1].is_relaying &&
-      candidate[2].is_relaying &&
-      candidate[3].is_relaying;
+    const [c0, c1, c2, c3] = candidate;
+    if (!c0 || !c1 || !c2 || !c3) continue; // i <= length-4 の for ループ条件から
+      // slice(i, i+4) は常に4件を返すが、型上は保証されないため防御的にスキップ
+    const isRelayPattern = !c0.is_relaying && c1.is_relaying && c2.is_relaying && c3.is_relaying;
 
     if (!isRelayPattern) continue;
 
@@ -239,7 +240,11 @@ export function buildStyleEntriesFromExisting(
     const relaySplitTimes: SplitTimeEntry[] = [];
     for (let legIdx = 0; legIdx < records.length; legIdx++) {
       const record = records[legIdx];
+      if (!record) continue; // records は relayGroups 生成時に必ず4件保証されるが、
+        // 型上は保証されないため防御的にスキップする
       const legOffset = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
+      if (legOffset === undefined) continue; // legBoundaries は固定4要素配列で legIdx-1 は
+        // 常に範囲内のはずだが、legOffset=0 (leg0 の意味) と取り違えないよう ?? は使わない
       const legStart = getLegStartCumulative(cumulatives, legIdx);
       const splitTimeRows = record.split_times || [];
 
@@ -253,6 +258,7 @@ export function buildStyleEntriesFromExisting(
 
       for (let stIdx = 0; stIdx < splitTimeRows.length; stIdx++) {
         const st = splitTimeRows[stIdx];
+        if (!st) continue; // splitTimeRows.length に基づく for ループのため型上のみの防御
         // distance > legDist の場合は distance も splitTime も既に全体距離・通算値として
         // 保存された全体距離形式 (新UI保存) と解釈し、変換しない (D2 の変換を経由しない別形式のため)。
         // それ以外は leg 内距離・leg 相対タイムとして offset / legStart を加算する。
@@ -278,12 +284,15 @@ export function buildStyleEntriesFromExisting(
 
     const memberRecords: MemberRecord[] = records.map((record, idx) => {
       const leg = relayDef.legs[idx];
+      const cumAtIdx = cumulatives[idx] ?? 0; // cumulatives は records と同じ長さで
+        // 1:1生成される (calcCumulativeTimes) ため idx は常に範囲内だが型上は保証されない。
+        // 0 は「未計算/該当なし」の sentinel で、直後の `> 0` 判定が明示的に扱っている。
       return {
         id: record.id,
         memberUserId: record.user_id,
         memberName: record.users?.name || "Unknown",
         time: record.time,
-        timeDisplayValue: (cumulatives[idx] ?? 0) > 0 ? formatTimeBest(cumulatives[idx]) : "",
+        timeDisplayValue: cumAtIdx > 0 ? formatTimeBest(cumAtIdx) : "",
         reactionTime: record.reaction_time?.toString() || "",
         isRelaying: record.is_relaying,
         note: record.note || "",
@@ -293,15 +302,24 @@ export function buildStyleEntriesFromExisting(
           splitTime: st.split_time,
           displayValue: formatTimeBest(st.split_time),
         })),
-        relayLegStyleId: leg.styleId,
+        // relayDef.legs (静的定義) と records (実データ) は別データ構造の位置対応であり、
+        // 対応が崩れた場合でも無言で誤った styleId を埋め込まないよう optional chaining で
+        // 欠落を許容する (relayLegStyleId は元々 optional。消費側 RecordClient.tsx の
+        // `mr.relayLegStyleId ?? entry.styleId` が既にフォールバックを持つ)
+        relayLegStyleId: leg?.styleId,
         relayLegLabel: undefined,
-        cumulativeTimeSeconds: cumulatives[idx] ?? 0,
+        cumulativeTimeSeconds: cumAtIdx,
       };
     });
 
+    const firstRecord = records[0];
+    const firstLeg = relayDef.legs[0];
+    if (!firstRecord || !firstLeg) continue; // records/relayDef.legs は共に4件保証されるが
+      // 型上は保証されないため、この relayGroup 全体をスキップする防御的分岐
+
     resultEntries.push({
-      id: `relay-${records[0].id}`,
-      styleId: relayDef.legs[0].styleId,
+      id: `relay-${firstRecord.id}`,
+      styleId: firstLeg.styleId,
       styleName: "",
       memberRecords,
       relayEventId: detectedRelayId,
@@ -316,6 +334,7 @@ export function buildStyleEntriesFromExisting(
     if (usedIndices.has(i)) continue;
 
     const record = existingRecords[i];
+    if (!record) continue; // existingRecords.length に基づく for ループのため型上のみの防御
     const styleId = record.style_id;
     const style = styles.find((s) => s.id === styleId);
 
@@ -351,10 +370,11 @@ export function buildStyleEntriesFromExisting(
   for (const entry of styleMap.values()) {
     const isRelayPattern =
       entry.memberRecords.length === 4 &&
-      !entry.memberRecords[0].isRelaying &&
-      entry.memberRecords[1].isRelaying &&
-      entry.memberRecords[2].isRelaying &&
-      entry.memberRecords[3].isRelaying;
+      // entry.memberRecords.length === 4 を直前の && で確認済み (同一配列への添字アクセス)
+      !entry.memberRecords[0]!.isRelaying &&
+      entry.memberRecords[1]!.isRelaying &&
+      entry.memberRecords[2]!.isRelaying &&
+      entry.memberRecords[3]!.isRelaying;
 
     if (!isRelayPattern) continue;
 
@@ -372,7 +392,10 @@ export function buildStyleEntriesFromExisting(
     const relaySplitTimes: SplitTimeEntry[] = [];
     for (let legIdx = 0; legIdx < entry.memberRecords.length; legIdx++) {
       const mr = entry.memberRecords[legIdx];
+      if (!mr) continue; // entry.memberRecords.length に基づく for ループのため型上のみの防御
       const legOffset = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
+      if (legOffset === undefined) continue; // legBoundaries は固定4要素配列で legIdx-1 は
+        // 常に範囲内のはずだが、legOffset=0 (leg0 の意味) と取り違えないよう ?? は使わない
       const legStart = getLegStartCumulative(cumulatives, legIdx);
 
       // R1-1: leg 内距離の途中経過 (distance < legDist) として保存された splitTime のみを
@@ -415,12 +438,18 @@ export function buildStyleEntriesFromExisting(
     );
     entry.memberRecords = entry.memberRecords.map((mr, idx) => {
       const leg = relayDef.legs[idx];
+      const cumAtIdx = cumulatives[idx] ?? 0; // cumulatives は entry.memberRecords と同じ長さで
+        // 1:1生成される (calcCumulativeTimes) ため idx は常に範囲内。0 は「未計算/該当なし」の
+        // sentinel で、直後の `> 0` 判定が明示的に扱っている。
       return {
         ...mr,
-        relayLegStyleId: leg.styleId,
+        // relayDef.legs (静的定義) と entry.memberRecords (実データ) は別データ構造の
+        // 位置対応であり、崩れても無言で誤った styleId を埋め込まないよう optional chaining
+        // で欠落を許容する (relayLegStyleId は元々 optional)
+        relayLegStyleId: leg?.styleId,
         relayLegLabel: undefined,
-        cumulativeTimeSeconds: cumulatives[idx] ?? 0,
-        timeDisplayValue: (cumulatives[idx] ?? 0) > 0 ? formatTimeBest(cumulatives[idx]) : "",
+        cumulativeTimeSeconds: cumAtIdx,
+        timeDisplayValue: cumAtIdx > 0 ? formatTimeBest(cumAtIdx) : "",
       };
     });
   }

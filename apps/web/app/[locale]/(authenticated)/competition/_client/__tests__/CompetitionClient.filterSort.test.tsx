@@ -184,6 +184,9 @@ const getCardRows = (): HTMLElement[] => screen.queryAllByRole("button", { name:
 const cardHasTitle = (title: string): boolean =>
   getCardRows().some((row) => row.textContent?.includes(title));
 
+// NOTE: `rows[N]!` を多用する。各テストは renderClient() に描画した件数分のカード行が
+// 揃っている前提で書かれている。
+
 describe("CompetitionClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -201,9 +204,9 @@ describe("CompetitionClient", () => {
       ]);
 
       const rows = getCardRows();
-      expect(rows[0].textContent).toContain("3月大会");
-      expect(rows[1].textContent).toContain("2月大会");
-      expect(rows[2].textContent).toContain("1月大会");
+      expect(rows[0]!.textContent).toContain("3月大会");
+      expect(rows[1]!.textContent).toContain("2月大会");
+      expect(rows[2]!.textContent).toContain("1月大会");
 
       // エントリー済み(記録未登録)取得の非同期 effect が act() 外で解決しないよう待つ
       await waitFor(() => {
@@ -244,8 +247,8 @@ describe("CompetitionClient", () => {
       await user.click(screen.getByRole("button", { name: "日付(古い順)" }));
 
       const rows = getCardRows();
-      expect(rows[0].textContent).toContain("1月大会");
-      expect(rows[1].textContent).toContain("3月大会");
+      expect(rows[0]!.textContent).toContain("1月大会");
+      expect(rows[1]!.textContent).toContain("3月大会");
     });
 
     it("[V-CF-03b] 「記録が速い順」「記録が遅い順」を選択すると time 昇順/降順で再描画される", async () => {
@@ -258,14 +261,14 @@ describe("CompetitionClient", () => {
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       await user.click(screen.getByRole("button", { name: "記録が速い順" }));
       let rows = getCardRows();
-      expect(rows[0].textContent).toContain("速い記録大会");
-      expect(rows[1].textContent).toContain("遅い記録大会");
+      expect(rows[0]!.textContent).toContain("速い記録大会");
+      expect(rows[1]!.textContent).toContain("遅い記録大会");
 
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       await user.click(screen.getByRole("button", { name: "記録が遅い順" }));
       rows = getCardRows();
-      expect(rows[0].textContent).toContain("遅い記録大会");
-      expect(rows[1].textContent).toContain("速い記録大会");
+      expect(rows[0]!.textContent).toContain("遅い記録大会");
+      expect(rows[1]!.textContent).toContain("速い記録大会");
     });
 
     it(

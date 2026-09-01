@@ -127,7 +127,7 @@ describe("TeamAttendancesAPI", () => {
       const result = await api.upsert(input);
 
       expect(result).toEqual(upserted);
-      const builder = supabaseMock.getBuilderHistory("team_attendance")[0];
+      const builder = supabaseMock.getBuilder("team_attendance");
       expect(builder.upsert).toHaveBeenCalledWith(input);
     });
 
@@ -202,7 +202,7 @@ describe("TeamAttendancesAPI", () => {
       const result = await api.update("attendance-1", updates);
 
       expect(result).toEqual(updated);
-      const builder = supabaseMock.getBuilderHistory("team_attendance")[1];
+      const builder = supabaseMock.getBuilder("team_attendance", 1);
       expect(builder.update).toHaveBeenCalledWith(updates);
       expect(builder.eq).toHaveBeenCalledWith("id", "attendance-1");
     });
@@ -262,7 +262,7 @@ describe("TeamAttendancesAPI", () => {
 
       await expect(api.updatePracticeAttendanceStatus(practiceId, status)).resolves.toBeUndefined();
 
-      const builder = supabaseMock.getBuilderHistory("practices")[1];
+      const builder = supabaseMock.getBuilder("practices", 1);
       expect(builder.update).toHaveBeenCalledWith({ attendance_status: status });
       expect(builder.eq).toHaveBeenCalledWith("id", practiceId);
     });
@@ -283,7 +283,7 @@ describe("TeamAttendancesAPI", () => {
 
       await expect(api.updatePracticeAttendanceStatus(practiceId, null)).resolves.toBeUndefined();
 
-      const builder = supabaseMock.getBuilderHistory("practices")[1];
+      const builder = supabaseMock.getBuilder("practices", 1);
       expect(builder.update).toHaveBeenCalledWith({ attendance_status: null });
     });
 
@@ -340,7 +340,7 @@ describe("TeamAttendancesAPI", () => {
         api.updateCompetitionAttendanceStatus(competitionId, status),
       ).resolves.toBeUndefined();
 
-      const builder = supabaseMock.getBuilderHistory("competitions")[1];
+      const builder = supabaseMock.getBuilder("competitions", 1);
       expect(builder.update).toHaveBeenCalledWith({ attendance_status: status });
       expect(builder.eq).toHaveBeenCalledWith("id", competitionId);
     });
@@ -363,7 +363,7 @@ describe("TeamAttendancesAPI", () => {
         api.updateCompetitionAttendanceStatus(competitionId, null),
       ).resolves.toBeUndefined();
 
-      const builder = supabaseMock.getBuilderHistory("competitions")[1];
+      const builder = supabaseMock.getBuilder("competitions", 1);
       expect(builder.update).toHaveBeenCalledWith({ attendance_status: null });
     });
 

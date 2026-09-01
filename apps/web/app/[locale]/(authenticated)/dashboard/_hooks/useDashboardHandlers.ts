@@ -323,6 +323,17 @@ export function useDashboardHandlers({
 
         if (editingData) {
           const menu = menus[0];
+          if (!menu) {
+            // TODO(#14-B real-bug candidate): formDataArray が空配列だと menu が undefined になり
+            // 以前は menu.style で実行時例外が発生していた（catch で握り潰され console.error のみ、
+            // ユーザーには何も表示されない無言失敗）。呼び出し元
+            // (PracticeLogForm.executeSubmit -> usePracticeLogForm.prepareSubmitData) は
+            // menus の長さを常に1以上に保つ設計（removeMenu が1件以下への削除を拒否する）だが、
+            // その保証はここから3ファイル離れており本関数のスコープからは見えない。
+            // 早期 return で「無言でデフォルト値の練習メニューが保存される」より安全側に倒す。
+            // PM 裁定済み (裁定23): 早期 return を最終形とする。?? {} で握り潰すと無言でデフォルト値が保存されるため。
+            return;
+          }
           const logInput = {
             style: menu.style || "fr",
             swim_category: menu.swimCategory || "Swim",
@@ -958,6 +969,15 @@ export function useDashboardHandlers({
 
         if (effectiveEditingData && effectiveEditingData.id) {
           const formData = dataArray[0];
+          if (!formData) {
+            // TODO(#14-B real-bug candidate): dataArray が空だと formData が undefined になり
+            // formData.styleId で実行時例外(catch で握り潰され console.error のみ)。呼び出し元
+            // (RecordLogForm.handleSubmit) は submitList.length === 0 を検出したら
+            // setFormError + return で送信自体をブロックしているため現状は到達しないはずだが、
+            // その保証は1ファイル離れた RecordLogForm.tsx にあり本関数からは見えない。
+            // 早期 return で「無言で不正な更新が走る」より安全側に倒す。PM 裁定済み (裁定23): 早期 return を最終形とする。
+            return;
+          }
           const updates: import("@swim-hub/shared/types").RecordUpdate = {
             style_id: parseInt(formData.styleId),
             time: formData.time,

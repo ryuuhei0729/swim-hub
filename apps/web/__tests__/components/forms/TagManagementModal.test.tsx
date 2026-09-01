@@ -68,7 +68,7 @@ describe("TagManagementModal", () => {
 
     // 確認モーダルの削除ボタンを押下
     const deleteButtons = await screen.findAllByRole("button", { name: "削除" });
-    await user.click(deleteButtons[1]);
+    await user.click(deleteButtons[1]!);
 
     await waitFor(() => {
       expect(props.onDeleteTag).toHaveBeenCalledWith("tag-1");

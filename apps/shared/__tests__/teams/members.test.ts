@@ -27,7 +27,7 @@ describe("TeamMembersAPI", () => {
       const result = await api.list("team-1");
 
       expect(result).toEqual(members);
-      const builder = supabaseMock.getBuilderHistory("team_memberships")[0];
+      const builder = supabaseMock.getBuilder("team_memberships");
       expect(builder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(builder.eq).toHaveBeenCalledWith("status", "approved");
       expect(builder.eq).toHaveBeenCalledWith("is_active", true);
@@ -114,9 +114,9 @@ describe("TeamMembersAPI", () => {
 
       await api.leave("team-1");
 
-      const builder = supabaseMock.getBuilderHistory("team_memberships")[0];
+      const builder = supabaseMock.getBuilder("team_memberships");
       expect(builder.update).toHaveBeenCalled();
-      const updateArg = builder.update.mock.calls[0][0];
+      const updateArg = builder.update.mock.calls[0]![0]; // toHaveBeenCalled() を直前で確認済み
       expect(updateArg.is_active).toBe(false);
       expect(updateArg.left_at).toEqual(new Date("2025-01-01T00:00:00Z").toISOString());
       expect(builder.eq).toHaveBeenCalledWith("team_id", "team-1");
@@ -161,11 +161,11 @@ describe("TeamMembersAPI", () => {
       const result = await api.updateRole("team-1", "member-1", "admin");
 
       expect(result).toEqual(updated);
-      const adminBuilder = supabaseMock.getBuilderHistory("team_memberships")[0];
+      const adminBuilder = supabaseMock.getBuilder("team_memberships");
       expect(adminBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(adminBuilder.eq).toHaveBeenCalledWith("user_id", "test-user-id");
       expect(adminBuilder.eq).toHaveBeenCalledWith("is_active", true);
-      const updateBuilder = supabaseMock.getBuilderHistory("team_memberships")[1];
+      const updateBuilder = supabaseMock.getBuilder("team_memberships", 1);
       expect(updateBuilder.update).toHaveBeenCalledWith({ role: "admin" });
       expect(updateBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(updateBuilder.eq).toHaveBeenCalledWith("user_id", "member-1");
@@ -225,13 +225,13 @@ describe("TeamMembersAPI", () => {
 
       await api.remove("team-1", "member-1");
 
-      const adminBuilder = supabaseMock.getBuilderHistory("team_memberships")[0];
+      const adminBuilder = supabaseMock.getBuilder("team_memberships");
       expect(adminBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(adminBuilder.eq).toHaveBeenCalledWith("user_id", "test-user-id");
       expect(adminBuilder.eq).toHaveBeenCalledWith("role", "admin");
-      const updateBuilder = supabaseMock.getBuilderHistory("team_memberships")[1];
+      const updateBuilder = supabaseMock.getBuilder("team_memberships", 1);
       expect(updateBuilder.update).toHaveBeenCalled();
-      const updateArg = updateBuilder.update.mock.calls[0][0];
+      const updateArg = updateBuilder.update.mock.calls[0]![0]; // toHaveBeenCalled() を直前で確認済み
       expect(updateArg.is_active).toBe(false);
       expect(updateArg.left_at).toEqual(new Date("2025-01-01T00:00:00Z").toISOString());
       expect(updateBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
@@ -334,11 +334,11 @@ describe("TeamMembersAPI", () => {
       const result = await api.listPending("team-1");
 
       expect(result).toEqual(pendingMembers);
-      const adminBuilder = supabaseMock.getBuilderHistory("team_memberships")[0];
+      const adminBuilder = supabaseMock.getBuilder("team_memberships");
       expect(adminBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(adminBuilder.eq).toHaveBeenCalledWith("user_id", "test-user-id");
       expect(adminBuilder.eq).toHaveBeenCalledWith("is_active", true);
-      const listBuilder = supabaseMock.getBuilderHistory("team_memberships")[1];
+      const listBuilder = supabaseMock.getBuilder("team_memberships", 1);
       expect(listBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(listBuilder.eq).toHaveBeenCalledWith("status", "pending");
     });
@@ -391,11 +391,11 @@ describe("TeamMembersAPI", () => {
       const result = await api.countPending("team-1");
 
       expect(result).toBe(3);
-      const adminBuilder = supabaseMock.getBuilderHistory("team_memberships")[0];
+      const adminBuilder = supabaseMock.getBuilder("team_memberships");
       expect(adminBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(adminBuilder.eq).toHaveBeenCalledWith("user_id", "test-user-id");
       expect(adminBuilder.eq).toHaveBeenCalledWith("is_active", true);
-      const countBuilder = supabaseMock.getBuilderHistory("team_memberships")[1];
+      const countBuilder = supabaseMock.getBuilder("team_memberships", 1);
       expect(countBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(countBuilder.eq).toHaveBeenCalledWith("status", "pending");
     });
@@ -449,7 +449,7 @@ describe("TeamMembersAPI", () => {
       const result = await api.approve("membership-1");
 
       expect(result).toEqual(approvedMembership);
-      const updateBuilder = supabaseMock.getBuilderHistory("team_memberships")[2];
+      const updateBuilder = supabaseMock.getBuilder("team_memberships", 2);
       expect(updateBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           status: "approved",
@@ -529,7 +529,7 @@ describe("TeamMembersAPI", () => {
       const result = await api.reject("membership-1");
 
       expect(result).toEqual(rejectedMembership);
-      const updateBuilder = supabaseMock.getBuilderHistory("team_memberships")[2];
+      const updateBuilder = supabaseMock.getBuilder("team_memberships", 2);
       expect(updateBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           status: "rejected",

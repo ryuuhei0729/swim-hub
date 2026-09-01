@@ -129,7 +129,9 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
           .filter((n) => n.length > 0);
         if (names.length === 0) return false;
         if (names.length === 1) {
-          const result = await createGroup(category, names[0]);
+          // names.length === 1 は同一 if 内で確認済み。names は同一関数スコープの
+          // ローカル配列でドリフトの余地がない。
+          const result = await createGroup(category, names[0]!);
           return result !== null;
         }
         return await createGroups(category, names);

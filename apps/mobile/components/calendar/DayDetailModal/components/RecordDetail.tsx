@@ -200,16 +200,19 @@ export const RecordCard: React.FC<{
   const allLapTimes = useMemo(() => {
     if (displaySplitTimes.length === 0) return [];
     const laps: { fromDistance: number; toDistance: number; lapTime: number }[] = [];
-    if (displaySplitTimes[0].distance > 0) {
+    const firstSplit = displaySplitTimes[0];
+    if (firstSplit && firstSplit.distance > 0) {
       laps.push({
         fromDistance: 0,
-        toDistance: displaySplitTimes[0].distance,
-        lapTime: displaySplitTimes[0].split_time,
+        toDistance: firstSplit.distance,
+        lapTime: firstSplit.split_time,
       });
     }
     for (let i = 1; i < displaySplitTimes.length; i++) {
       const prev = displaySplitTimes[i - 1];
       const curr = displaySplitTimes[i];
+      if (!prev || !curr) continue; // i>=1 かつ i<length なので理論上 undefined にならないが、
+                                     // 配列が外部から渡される可変長データのため防御的に扱う
       if (prev.split_time > 0 && curr.split_time > 0) {
         laps.push({
           fromDistance: prev.distance,

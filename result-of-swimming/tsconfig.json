@@ -6,6 +6,9 @@
     "lib": ["ES2022"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "types": ["node"],
     "paths": {
       "@shared/racePace": ["../apps/shared/utils/racePace/index.ts"],

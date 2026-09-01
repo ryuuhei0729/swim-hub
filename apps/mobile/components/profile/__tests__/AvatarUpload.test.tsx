@@ -151,7 +151,7 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
       await act(async () => {
         fireEvent.click(screen.getByTestId("icon-camera"));
       });
-      const options = mocks.launchImageLibraryAsync.mock.calls[0][0];
+      const options = mocks.launchImageLibraryAsync.mock.calls[0]![0]; // fireEvent.click で必ず1回呼ばれる設計のため必ず存在
       expect(options.mediaTypes).toEqual(["images"]);
       expect(options.legacy).toBeUndefined();
       expect(options.allowsEditing).toBeUndefined();
@@ -421,7 +421,7 @@ describe("AvatarUpload — iOS legacy Picker (回帰: クロップ・権限フ�
       await act(async () => {
         fireEvent.click(screen.getByTestId("icon-camera"));
       });
-      const options = mocks.launchImageLibraryAsync.mock.calls[0][0];
+      const options = mocks.launchImageLibraryAsync.mock.calls[0]![0]; // fireEvent.click で必ず1回呼ばれる設計のため必ず存在
       expect(options.mediaTypes).toEqual(["images"]);
       expect(options.legacy).toBe(true);
       expect(options.allowsEditing).toBe(true);

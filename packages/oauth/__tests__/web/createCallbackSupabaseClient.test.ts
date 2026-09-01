@@ -49,7 +49,9 @@ function makeRequestWithCookies(cookieHeader: string): NextRequest {
 
 function lastConfig(): CookiesConfig {
   const calls = createServerClientMock.mock.calls;
-  return calls[calls.length - 1][2] as CookiesConfig;
+  const lastCall = calls[calls.length - 1];
+  if (!lastCall) throw new Error("createServerClient was not called"); // テストの前提が崩れているため早期に失敗させる
+  return lastCall[2] as CookiesConfig;
 }
 
 const ORIGINAL_ENV = {

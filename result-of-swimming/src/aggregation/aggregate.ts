@@ -139,8 +139,16 @@ export function aggregate(
     if (entry.lapDistances.length !== laps.length) continue;
 
     for (let i = 0; i < laps.length; i++) {
-      entry.ratiosByLap[i].push(ratios[i]);
-      entry.timesByLap[i].push(lapTimes[i]);
+      const ratioSamples = entry.ratiosByLap[i];
+      const timeSamples = entry.timesByLap[i];
+      const ratio = ratios[i];
+      const lapTime = lapTimes[i];
+      // ratiosByLap/timesByLap は entry 生成時に laps と同じ長さで初期化され(121-134行目)、
+      // ratios/lapTimes も同じ laps から導出される(101-103行目)ため理論上ここに来ないが、
+      // 4つの独立した配列を添字で対応付けているため防御的にガードする
+      if (!ratioSamples || !timeSamples || ratio === undefined || lapTime === undefined) continue;
+      ratioSamples.push(ratio);
+      timeSamples.push(lapTime);
     }
     entry.sampleCount += 1;
   }
@@ -151,15 +159,25 @@ export function aggregate(
     if (b.sampleCount < minSampleCount) continue;
     if (b.lapDistances.length < MIN_LAP_COUNT) continue;
 
-    const laps: RacePaceModelLap[] = b.lapDistances.map((distance, i) => ({
-      distance,
-      ratioMedian: median(b.ratiosByLap[i]) as number,
-      ratioP25: percentile(b.ratiosByLap[i], 0.25) as number,
-      ratioP75: percentile(b.ratiosByLap[i], 0.75) as number,
-      ratioMean: mean(b.ratiosByLap[i]) as number,
-      lapTimeMeanMs: Math.round(mean(b.timesByLap[i]) as number),
-      lapTimeMedianMs: Math.round(median(b.timesByLap[i]) as number),
-    }));
+    const laps: RacePaceModelLap[] = b.lapDistances.map((distance, i) => {
+      const ratioSamples = b.ratiosByLap[i];
+      const timeSamples = b.timesByLap[i];
+      if (!ratioSamples || !timeSamples) {
+        // ratiosByLap/timesByLap は Bucket 生成時に lapDistances と同じ長さで初期化され、
+        // 以後 push でしか変更されない(139行目のガードで長さ不一致は既に continue 済み)ため
+        // 理論上ここに来ないが、3つの独立した配列を添字で対応付けているため異常として検知する
+        throw new Error(`aggregate: lap sample arrays missing at index ${i}`);
+      }
+      return {
+        distance,
+        ratioMedian: median(ratioSamples) as number,
+        ratioP25: percentile(ratioSamples, 0.25) as number,
+        ratioP75: percentile(ratioSamples, 0.75) as number,
+        ratioMean: mean(ratioSamples) as number,
+        lapTimeMeanMs: Math.round(mean(timeSamples) as number),
+        lapTimeMedianMs: Math.round(median(timeSamples) as number),
+      };
+    });
 
     models.push({
       gender: b.gender,

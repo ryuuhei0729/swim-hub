@@ -307,7 +307,8 @@ describe("MembersTimeTable", () => {
         locale,
       );
 
-      const headerRow = container.querySelectorAll("thead tr")[0];
+      // MembersTimeTable は必ず thead に1行以上のヘッダー行を描画する
+      const headerRow = container.querySelectorAll("thead tr")[0]!;
       // 先頭の th はメンバー名列 (rowSpan=2) なので除外
       const styleHeaders = Array.from(headerRow.querySelectorAll("th")).slice(1);
       const texts = styleHeaders.map((th) => th.textContent?.trim());

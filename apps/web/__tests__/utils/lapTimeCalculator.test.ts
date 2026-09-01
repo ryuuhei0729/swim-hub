@@ -8,6 +8,9 @@ import {
   type SplitTime,
 } from "../../utils/lapTimeCalculator";
 
+// NOTE: `result[N]!` / `lapTimes[N]!` を多用する。各テストは直前に `toHaveLength(...)` で
+// 配列長を確認済みで、その長さの範囲内のインデックスのみアクセスしている。
+
 describe("lapTimeCalculator", () => {
   describe("calculateAllLapTimes", () => {
     describe("正常系", () => {
@@ -267,28 +270,28 @@ describe("lapTimeCalculator", () => {
         expect(result).toHaveLength(4);
 
         // 25m
-        expect(result[0].distance).toBe(25);
-        expect(result[0].splitTime).toBe(12.5);
-        expect(result[0].lapTimes[25]).toBe(12.5);
-        expect(result[0].lapTimes[50]).toBeNull(); // 25mは50mの倍数ではない
+        expect(result[0]!.distance).toBe(25);
+        expect(result[0]!.splitTime).toBe(12.5);
+        expect(result[0]!.lapTimes[25]).toBe(12.5);
+        expect(result[0]!.lapTimes[50]).toBeNull(); // 25mは50mの倍数ではない
 
         // 50m
-        expect(result[1].distance).toBe(50);
-        expect(result[1].splitTime).toBe(26.0);
-        expect(result[1].lapTimes[25]).toBe(13.5);
-        expect(result[1].lapTimes[50]).toBe(26.0);
+        expect(result[1]!.distance).toBe(50);
+        expect(result[1]!.splitTime).toBe(26.0);
+        expect(result[1]!.lapTimes[25]).toBe(13.5);
+        expect(result[1]!.lapTimes[50]).toBe(26.0);
 
         // 75m
-        expect(result[2].distance).toBe(75);
-        expect(result[2].splitTime).toBe(40.0);
-        expect(result[2].lapTimes[25]).toBe(14.0);
-        expect(result[2].lapTimes[50]).toBeNull();
+        expect(result[2]!.distance).toBe(75);
+        expect(result[2]!.splitTime).toBe(40.0);
+        expect(result[2]!.lapTimes[25]).toBe(14.0);
+        expect(result[2]!.lapTimes[50]).toBeNull();
 
         // 100m
-        expect(result[3].distance).toBe(100);
-        expect(result[3].splitTime).toBe(55.0);
-        expect(result[3].lapTimes[25]).toBe(15.0);
-        expect(result[3].lapTimes[50]).toBe(29.0);
+        expect(result[3]!.distance).toBe(100);
+        expect(result[3]!.splitTime).toBe(55.0);
+        expect(result[3]!.lapTimes[25]).toBe(15.0);
+        expect(result[3]!.lapTimes[50]).toBe(29.0);
       });
 
       it("200m種目のテーブルを生成する", () => {
@@ -303,12 +306,12 @@ describe("lapTimeCalculator", () => {
         expect(result).toHaveLength(4);
 
         // 100m
-        expect(result[1].lapTimes[50]).toBe(32.0);
-        expect(result[1].lapTimes[100]).toBe(60.0);
+        expect(result[1]!.lapTimes[50]).toBe(32.0);
+        expect(result[1]!.lapTimes[100]).toBe(60.0);
 
         // 200m
-        expect(result[3].lapTimes[50]).toBe(35.0);
-        expect(result[3].lapTimes[100]).toBe(70.0);
+        expect(result[3]!.lapTimes[50]).toBe(35.0);
+        expect(result[3]!.lapTimes[100]).toBe(70.0);
       });
     });
 
@@ -322,8 +325,8 @@ describe("lapTimeCalculator", () => {
         const result = calculateRaceLapTimesTable(splitTimes, 100);
 
         expect(result).toHaveLength(2);
-        expect(result[0].distance).toBe(25);
-        expect(result[1].distance).toBe(50);
+        expect(result[0]!.distance).toBe(25);
+        expect(result[1]!.distance).toBe(50);
       });
     });
 
@@ -337,8 +340,8 @@ describe("lapTimeCalculator", () => {
         const result = calculateRaceLapTimesTable(splitTimes, 100);
 
         expect(result).toHaveLength(2);
-        expect(result[0].distance).toBe(25);
-        expect(result[1].distance).toBe(75);
+        expect(result[0]!.distance).toBe(25);
+        expect(result[1]!.distance).toBe(75);
       });
     });
   });
@@ -357,8 +360,8 @@ describe("lapTimeCalculator", () => {
       expect(lapTimes).toHaveLength(4);
 
       // 前半50mと後半50mの比較
-      const first50 = lapTimes[0].lapTime + lapTimes[1].lapTime;
-      const second50 = lapTimes[2].lapTime + lapTimes[3].lapTime;
+      const first50 = lapTimes[0]!.lapTime + lapTimes[1]!.lapTime;
+      const second50 = lapTimes[2]!.lapTime + lapTimes[3]!.lapTime;
       expect(first50).toBeCloseTo(22.0);
       expect(second50).toBeCloseTo(25.0);
     });

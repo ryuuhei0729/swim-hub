@@ -29,7 +29,13 @@ describe("time bucket", () => {
     // 距離が伸びるほど幅も広い (単調)
     const ds = Object.keys(TIME_BUCKET_CONFIG).map(Number).sort((a, b) => a - b);
     for (let i = 1; i < ds.length; i++) {
-      expect(TIME_BUCKET_CONFIG[ds[i]]).toBeGreaterThanOrEqual(TIME_BUCKET_CONFIG[ds[i - 1]]);
+      const prev = ds[i - 1];
+      const curr = ds[i];
+      // i>=1 かつ i<ds.length なので理論上 undefined にならないが、防御的に扱う
+      if (prev === undefined || curr === undefined) continue;
+      // prev/curr は Object.keys(TIME_BUCKET_CONFIG) 由来のキーなので、
+      // TIME_BUCKET_CONFIG に必ず値が存在する
+      expect(TIME_BUCKET_CONFIG[curr]!).toBeGreaterThanOrEqual(TIME_BUCKET_CONFIG[prev]!);
     }
   });
 

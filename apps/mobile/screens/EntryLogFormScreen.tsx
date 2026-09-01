@@ -190,10 +190,12 @@ export const EntryLogFormScreen: React.FC = () => {
   // 新規作成モードの場合、最初のエントリーにデフォルトの種目を設定
   useEffect(() => {
     if (entryId || loadingStyles || swimStyles.length === 0) return;
-    if (entries.length > 0 && !entries[0].styleId && swimStyles.length > 0) {
+    const firstEntry = entries[0];
+    const firstStyle = swimStyles[0];
+    if (firstEntry && !firstEntry.styleId && firstStyle) {
       setEntries((prev) =>
         prev.map((entry, index) =>
-          index === 0 ? { ...entry, styleId: String(swimStyles[0].id) } : entry,
+          index === 0 ? { ...entry, styleId: String(firstStyle.id) } : entry,
         ),
       );
     }
@@ -715,9 +717,12 @@ export const EntryLogFormScreen: React.FC = () => {
                     style={[styles.dropdownOption, isSelected && styles.dropdownOptionSelected]}
                     onPress={() => {
                       if (pickingEntryIndex !== null) {
-                        updateEntry(entries[pickingEntryIndex].id, {
-                          styleId: String(style.id),
-                        });
+                        const targetEntry = entries[pickingEntryIndex];
+                        if (targetEntry) {
+                          updateEntry(targetEntry.id, {
+                            styleId: String(style.id),
+                          });
+                        }
                       }
                       setShowStylePicker(false);
                       setPickingEntryIndex(null);

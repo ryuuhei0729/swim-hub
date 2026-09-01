@@ -77,7 +77,7 @@ describe("WaPointsInfoTooltip", () => {
 
     // button の並び: [0]=info アイコン自身, [1]=CenterModal の背面タップ用 Pressable,
     // [2]=CenterModal 内蔵の閉じるボタン (×)。
-    const backdrop = screen.getAllByRole("button")[1];
+    const backdrop = screen.getAllByRole("button")[1]!; // アイコン+背面タップ+閉じるボタンの3つが常に描画される設計
     fireEvent.click(backdrop);
     await waitFor(() => {
       expect(screen.queryByText("WAポイントの説明文")).toBeNull();

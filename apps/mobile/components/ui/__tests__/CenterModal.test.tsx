@@ -56,7 +56,7 @@ describe("CenterModal", () => {
     );
 
     // 背面タップ用 Pressable は StyleSheet.absoluteFill が付与された最初の button。
-    const backdrop = screen.getAllByRole("button")[0];
+    const backdrop = screen.getAllByRole("button")[0]!; // getAllByRole は1件以上見つからなければ throw するため必ず存在
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalledTimes(1);
   });

@@ -45,7 +45,8 @@ describe("parseResults - 長水路 100m自由形 決勝", () => {
 
   it("[V-P1] 8名分を返し、累積と区間の両方が取れている", () => {
     expect(races).toHaveLength(8);
-    const top = races[0];
+    // toHaveLength(8) で races[0] の存在を検証済み
+    const top = races[0]!;
     expect(top.finalTimeMs).toBe(49520);
     expect(top.splits).toEqual([
       { distance: 50, cumulativeTimeMs: 23740, lapTimeMs: 23740 },
@@ -68,8 +69,9 @@ describe("parseResults - 長水路 100m自由形 決勝", () => {
   });
 
   it("[V-P2] 学種のみカテゴリとして残る", () => {
-    expect(races[0].ageCategory).toBe("大学");
-    expect(races[0].schoolGrade).toEqual([3]);
+    // 同 describe 内の [V-P1] テストで races.length===8 を確認済み (fixture 由来で不変)
+    expect(races[0]!.ageCategory).toBe("大学");
+    expect(races[0]!.schoolGrade).toEqual([3]);
   });
 
   it("[V-P3] 全員 valid", () => {
@@ -77,19 +79,21 @@ describe("parseResults - 長水路 100m自由形 決勝", () => {
   });
 
   it("[V-P4] 種目属性が文脈から埋まる", () => {
-    expect(races[0].distance).toBe(100);
-    expect(races[0].poolLength).toBe(50);
-    expect(races[0].stroke).toBe("fr");
-    expect(races[0].gender).toBe("male");
-    expect(races[0].round).toBe("決勝(A-決勝)");
-    expect(races[0].isRelay).toBe(false);
+    const r = races[0]!;
+    expect(r.distance).toBe(100);
+    expect(r.poolLength).toBe(50);
+    expect(r.stroke).toBe("fr");
+    expect(r.gender).toBe("male");
+    expect(r.round).toBe("決勝(A-決勝)");
+    expect(r.isRelay).toBe(false);
   });
 
   it("[V-P7] sourceRaceId と sourceUrl が再現可能", () => {
-    expect(races[0].sourceRaceId).toBe("37446552");
-    expect(races[0].sourceUrl).toBe(buildResultsUrl(ctx()));
-    expect(races[0].sourceUrl).toContain("/games/4826412/results/genders/1");
-    expect(races[0].sourceUrl).toContain("/race_divisions/4/heats/1");
+    const r = races[0]!;
+    expect(r.sourceRaceId).toBe("37446552");
+    expect(r.sourceUrl).toBe(buildResultsUrl(ctx()));
+    expect(r.sourceUrl).toContain("/games/4826412/results/genders/1");
+    expect(r.sourceUrl).toContain("/race_divisions/4/heats/1");
   });
 });
 
@@ -102,20 +106,22 @@ describe("parseResults - LAP粒度は距離と整合する (長水路)", () => {
 
   it.each(cases)("[V-P4] %s は %d m で LAP %d 本", (file, distance, laps, over) => {
     const races = parseResults(fixture(file), ctx(over));
-    expect(races[0].distance).toBe(distance);
-    expect(races[0].splits).toHaveLength(laps);
-    expect(races[0].splits.at(-1)?.distance).toBe(distance);
-    expect(races[0].validationStatus).toBe("valid");
+    // fixture は各距離とも1レース分 (複数名) の結果を含む設計のため races[0] は必ず存在する
+    const r = races[0]!;
+    expect(r.distance).toBe(distance);
+    expect(r.splits).toHaveLength(laps);
+    expect(r.splits.at(-1)?.distance).toBe(distance);
+    expect(r.validationStatus).toBe("valid");
   });
 
   it("[V-P4] 200IM は stroke=im になる", () => {
     const races = parseResults(fixture("result.lc.200im.final.json"), ctx({ swimmingStyleCode: 5, distance: 200 }));
-    expect(races[0].stroke).toBe("im");
+    expect(races[0]!.stroke).toBe("im");
   });
 
   it("[V-P4] 1500m の区間合計が最終タイムに一致する", () => {
     const races = parseResults(fixture("result.lc.1500fr.timed.json"), ctx({ distance: 1500, distanceCode: 7 }));
-    const r = races[0];
+    const r = races[0]!;
     expect(r.splits.reduce((a, s) => a + (s.lapTimeMs ?? 0), 0)).toBe(r.finalTimeMs);
     expect(r.finalTimeMs).toBe(927000);
   });
@@ -127,9 +133,10 @@ describe("parseResults - 短水路", () => {
       fixture("result.sc.100fr.timed.json"),
       ctx({ poolLength: 25, gameCode: "2826304", classCode: 6, raceDivisionCode: 2, heat: 4 }),
     );
-    expect(races[0].poolLength).toBe(25);
-    expect(races[0].splits.map((s) => s.distance)).toEqual([50, 100]);
-    expect(races.every((r) => r.splits.every((s) => s.distance % 50 === 0))).toBe(true);
+    const r = races[0]!; // fixture は1レース分の結果を含む設計
+    expect(r.poolLength).toBe(25);
+    expect(r.splits.map((s) => s.distance)).toEqual([50, 100]);
+    expect(races.every((r2) => r2.splits.every((s) => s.distance % 50 === 0))).toBe(true);
   });
 });
 
@@ -140,17 +147,21 @@ describe("parseResults - クレンジング", () => {
       ctx({ swimmingStyleCode: 3, distanceCode: 4, distance: 200, raceDivisionCode: 1 }),
     );
     expect(races).toHaveLength(1);
-    expect(races[0].reasonCode).toBe(2);
-    expect(races[0].finalTimeMs).toBeNull();
-    expect(races[0].splits.length).toBeGreaterThan(0);
-    expect(races[0].validationStatus).toBe("disqualified");
-    expect(races[0].validationReason).toContain("2");
+    // toHaveLength(1) で races[0] の存在を検証済み
+    const r = races[0]!;
+    expect(r.reasonCode).toBe(2);
+    expect(r.finalTimeMs).toBeNull();
+    expect(r.splits.length).toBeGreaterThan(0);
+    expect(r.validationStatus).toBe("disqualified");
+    expect(r.validationReason).toContain("2");
   });
 
   it("[V-P3] 棄権 (reason_code=1) も disqualified", () => {
     const races = parseResults(fixture("result.dns.100fr.json"), ctx({ raceDivisionCode: 1, heat: 100 }));
-    expect(races[0].reasonCode).toBe(1);
-    expect(races[0].validationStatus).toBe("disqualified");
+    expect(races).toHaveLength(1);
+    const r = races[0]!;
+    expect(r.reasonCode).toBe(1);
+    expect(r.validationStatus).toBe("disqualified");
   });
 });
 

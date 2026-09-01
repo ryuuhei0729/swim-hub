@@ -84,7 +84,7 @@ describe("BestTimeDetailSheet", () => {
     );
 
     // 背面タップ用 Pressable は最初の button (CenterModal の構造上、閉じるボタンより先に描画される)
-    fireEvent.click(screen.getAllByRole("button")[0]);
+    fireEvent.click(screen.getAllByRole("button")[0]!); // getAllByRole は1件以上見つからなければ throw するため必ず存在
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

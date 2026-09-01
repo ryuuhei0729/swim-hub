@@ -38,6 +38,21 @@ function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
   return keys;
 }
 
+/**
+ * ロケール名 -> メッセージオブジェクトのテーブルから該当ロケールを取り出す。
+ * it.each の配列は locale を固定リテラルで並べているため未知のロケールが渡ることは
+ * 無いはずだが、テーブル自体は Record<string, ...> なので TS 上は undefined が
+ * あり得る。存在しなければテストの前提が崩れているため早期に失敗させる
+ */
+function messagesFor(
+  table: Record<string, Record<string, unknown>>,
+  locale: string,
+): Record<string, unknown> {
+  const messages = table[locale];
+  if (!messages) throw new Error(`Unknown locale in test table: ${locale}`);
+  return messages;
+}
+
 function getValue(obj: Record<string, unknown>, dottedKey: string): unknown {
   const parts = dottedKey.split(".");
   let cur: unknown = obj;
@@ -90,7 +105,7 @@ describe("shared/messages global coverage", () => {
     "[V-01-ext] %s.json has identical key structure to ja.json",
     (locale) => {
       const jaKeys = flattenKeys(jaMessages as unknown as Record<string, unknown>).sort();
-      const localeKeys = flattenKeys(localeMessages[locale]).sort();
+      const localeKeys = flattenKeys(messagesFor(localeMessages, locale)).sort();
 
       const missingInLocale = jaKeys.filter((k) => !localeKeys.includes(k));
       const extraInLocale = localeKeys.filter((k) => !jaKeys.includes(k));
@@ -299,7 +314,7 @@ describe("shared/messages global coverage", () => {
     it.each(["ja", "en", "ko", "zh", "de"])(
       "[SC-01] %s.json has non-empty forms.timeInput.helpTitle",
       (locale) => {
-        const val = getValue(allMessages[locale], "forms.timeInput.helpTitle");
+        const val = getValue(messagesFor(allMessages, locale), "forms.timeInput.helpTitle");
         expect(val, `${locale}: forms.timeInput.helpTitle is missing`).toBeDefined();
         expect(typeof val, `${locale}: forms.timeInput.helpTitle is not a string`).toBe("string");
         expect((val as string).trim().length, `${locale}: forms.timeInput.helpTitle is empty`).toBeGreaterThan(0);
@@ -309,7 +324,7 @@ describe("shared/messages global coverage", () => {
     it.each(["ja", "en", "ko", "zh", "de"])(
       "[SC-01] %s.json has non-empty forms.timeInput.helpBody",
       (locale) => {
-        const val = getValue(allMessages[locale], "forms.timeInput.helpBody");
+        const val = getValue(messagesFor(allMessages, locale), "forms.timeInput.helpBody");
         expect(val, `${locale}: forms.timeInput.helpBody is missing`).toBeDefined();
         expect(typeof val, `${locale}: forms.timeInput.helpBody is not a string`).toBe("string");
         expect((val as string).trim().length, `${locale}: forms.timeInput.helpBody is empty`).toBeGreaterThan(0);
@@ -319,7 +334,7 @@ describe("shared/messages global coverage", () => {
     it.each(["ja", "en", "ko", "zh", "de"])(
       "[SC-02] %s.json forms.timeInput.helpTitle has no {placeholder} variables",
       (locale) => {
-        const val = getValue(allMessages[locale], "forms.timeInput.helpTitle") as string;
+        const val = getValue(messagesFor(allMessages, locale), "forms.timeInput.helpTitle") as string;
         const placeholders = [...(val ?? "").matchAll(/\{(\w+)\}/g)].map((m) => m[0]);
         expect(
           placeholders,
@@ -331,7 +346,7 @@ describe("shared/messages global coverage", () => {
     it.each(["ja", "en", "ko", "zh", "de"])(
       "[SC-02] %s.json forms.timeInput.helpBody has no {placeholder} variables",
       (locale) => {
-        const val = getValue(allMessages[locale], "forms.timeInput.helpBody") as string;
+        const val = getValue(messagesFor(allMessages, locale), "forms.timeInput.helpBody") as string;
         const placeholders = [...(val ?? "").matchAll(/\{(\w+)\}/g)].map((m) => m[0]);
         expect(
           placeholders,
@@ -343,7 +358,7 @@ describe("shared/messages global coverage", () => {
     // helpTitle は全言語で内容が異なること（翻訳されていること）= 全て同じ文字列ではない
     it("[SC-01] helpTitle is translated (not identical across all 5 locales)", () => {
       const values = ["ja", "en", "ko", "zh", "de"].map(
-        (loc) => getValue(allMessages[loc], "forms.timeInput.helpTitle") as string,
+        (loc) => getValue(messagesFor(allMessages, loc), "forms.timeInput.helpTitle") as string,
       );
       const uniqueValues = new Set(values);
       expect(
@@ -354,7 +369,7 @@ describe("shared/messages global coverage", () => {
 
     it("[SC-01] helpBody is translated (not identical across all 5 locales)", () => {
       const values = ["ja", "en", "ko", "zh", "de"].map(
-        (loc) => getValue(allMessages[loc], "forms.timeInput.helpBody") as string,
+        (loc) => getValue(messagesFor(allMessages, loc), "forms.timeInput.helpBody") as string,
       );
       const uniqueValues = new Set(values);
       expect(
@@ -396,7 +411,7 @@ describe("shared/messages global coverage", () => {
     it.each(NEW_KEYS.flatMap((key) => (["ja", "en", "ko", "zh", "de"] as const).map((locale) => [key, locale] as const)))(
       "%s は %s.json に非空文字列で存在する",
       (key, locale) => {
-        const val = getValue(allMessages[locale], key);
+        const val = getValue(messagesFor(allMessages, locale), key);
         expect(val, `${locale}.json: ${key} is missing`).toBeDefined();
         expect(typeof val, `${locale}.json: ${key} is not a string`).toBe("string");
         expect(
@@ -412,8 +427,8 @@ describe("shared/messages global coverage", () => {
     it.each(NEW_KEYS.flatMap((key) => NON_JA_LOCALES.map((locale) => [key, locale] as const)))(
       "%s: %s.json の値は ja.json の値のコピペのまま (未翻訳) になっていない",
       (key, locale) => {
-        const jaVal = getValue(allMessages.ja, key) as string;
-        const localeVal = getValue(allMessages[locale], key) as string;
+        const jaVal = getValue(messagesFor(allMessages, "ja"), key) as string;
+        const localeVal = getValue(messagesFor(allMessages, locale), key) as string;
         expect(
           localeVal,
           `${locale}.json の ${key} が ja.json の値のコピペのまま: "${jaVal}"`,

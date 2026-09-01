@@ -139,14 +139,14 @@ export default function DashboardClient({
         // まず期限切れ目標をチェック（優先）
         const expiredGoals = await goalAPI.getExpiredGoals();
         if (expiredGoals && expiredGoals.length > 0) {
-          setExpiredGoal(expiredGoals[0]);
+          setExpiredGoal(expiredGoals[0]!); // expiredGoals.length > 0 を直上の if で確認済み
           return;
         }
 
         // 期限切れ目標がなければマイルストーンをチェック
         const expiredMilestones = await goalAPI.getExpiredMilestones();
         if (expiredMilestones && expiredMilestones.length > 0) {
-          setExpiredMilestone(expiredMilestones[0]);
+          setExpiredMilestone(expiredMilestones[0]!); // expiredMilestones.length > 0 を直上の if で確認済み
         }
       } catch (error) {
         console.error("期限切れチェックエラー:", error);
@@ -408,13 +408,13 @@ export default function DashboardClient({
               const goalAPI = new GoalAPI(supabase);
               const expiredGoals = await goalAPI.getExpiredGoals();
               if (expiredGoals && expiredGoals.length > 0) {
-                setExpiredGoal(expiredGoals[0]);
+                setExpiredGoal(expiredGoals[0]!); // expiredGoals.length > 0 を直上の if で確認済み
               } else {
                 setExpiredGoal(null);
                 // 目標がなくなったらマイルストーンをチェック
                 const expiredMilestones = await goalAPI.getExpiredMilestones();
                 if (expiredMilestones && expiredMilestones.length > 0) {
-                  setExpiredMilestone(expiredMilestones[0]);
+                  setExpiredMilestone(expiredMilestones[0]!); // expiredMilestones.length > 0 を直上の if で確認済み
                 }
               }
             }}
@@ -432,7 +432,7 @@ export default function DashboardClient({
               const goalAPI = new GoalAPI(supabase);
               const expired = await goalAPI.getExpiredMilestones();
               if (expired && expired.length > 0) {
-                setExpiredMilestone(expired[0]);
+                setExpiredMilestone(expired[0]!); // expired.length > 0 を直上の if で確認済み
               } else {
                 setExpiredMilestone(null);
               }

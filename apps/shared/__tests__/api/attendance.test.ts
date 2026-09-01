@@ -50,6 +50,15 @@ const createSupabaseMock = (options: { userId?: string } = {}) => {
       tableQueues.set(table, [...responses]);
     },
     getBuilderHistory: (table: string) => builderHistory.get(table) ?? [],
+    // 呼び出し側は arrange/act で対象テーブルへの呼び出しが指定 index まで発生することを
+    // 保証した上で読む。存在しなければテストの前提が崩れているため早期に失敗させる
+    getBuilder: (table: string, index = 0): MockQueryBuilder => {
+      const builder = (builderHistory.get(table) ?? [])[index];
+      if (!builder) {
+        throw new Error(`No builder recorded for table "${table}" at index ${index}`);
+      }
+      return builder;
+    },
   };
 };
 
@@ -202,9 +211,9 @@ describe("AttendanceAPI", () => {
 
       expect(result).toEqual(updatedAttendance);
 
-      const builderHistory = supabaseMock.getBuilderHistory("team_attendance");
-      expect(builderHistory[1].update).toHaveBeenCalledWith(updates);
-      expect(builderHistory[1].eq).toHaveBeenCalledWith("id", "attendance-1");
+      const updateBuilder = supabaseMock.getBuilder("team_attendance", 1);
+      expect(updateBuilder.update).toHaveBeenCalledWith(updates);
+      expect(updateBuilder.eq).toHaveBeenCalledWith("id", "attendance-1");
     });
 
     it("自分以外の出欠情報は更新できない", async () => {
@@ -264,7 +273,7 @@ describe("AttendanceAPI", () => {
       const result = await api.createAttendance(baseInsert);
 
       expect(result).toEqual(createdAttendance);
-      const builder = supabaseMock.getBuilderHistory("team_attendance")[0];
+      const builder = supabaseMock.getBuilder("team_attendance");
       expect(builder.insert).toHaveBeenCalledWith(baseInsert);
     });
 
@@ -315,9 +324,9 @@ describe("AttendanceAPI", () => {
       const result = await api.updateAttendance("attendance-1", updates);
 
       expect(result).toEqual(updatedAttendance);
-      const builderHistory = supabaseMock.getBuilderHistory("team_attendance");
-      expect(builderHistory[1].update).toHaveBeenCalledWith(updates);
-      expect(builderHistory[1].eq).toHaveBeenCalledWith("id", "attendance-1");
+      const updateBuilder = supabaseMock.getBuilder("team_attendance", 1);
+      expect(updateBuilder.update).toHaveBeenCalledWith(updates);
+      expect(updateBuilder.eq).toHaveBeenCalledWith("id", "attendance-1");
     });
 
     it("出欠情報が存在しない場合はエラーとなる", async () => {

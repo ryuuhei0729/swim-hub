@@ -72,7 +72,7 @@ describe("TeamMembersAPI.updateRole - requireTeamAdmin ガード", () => {
     const history = supabaseMock.getBuilderHistory("team_memberships");
     expect(history).toHaveLength(1);
     // UPDATE は呼ばれていないはず
-    expect(history[0].update).not.toHaveBeenCalled();
+    expect(supabaseMock.getBuilder("team_memberships", 0).update).not.toHaveBeenCalled();
   });
 
   it("admin 権限がある場合は updateRole が成功し、UPDATE が実行される", async () => {
@@ -110,9 +110,10 @@ describe("TeamMembersAPI.updateRole - requireTeamAdmin ガード", () => {
     // 2 回の team_memberships アクセス（admin チェック + UPDATE）
     expect(history).toHaveLength(2);
     // 2回目が UPDATE であること
-    expect(history[1].update).toHaveBeenCalledWith({ role: "user" });
-    expect(history[1].eq).toHaveBeenCalledWith("team_id", "team-1");
-    expect(history[1].eq).toHaveBeenCalledWith("user_id", "member-1");
+    const updateBuilder = supabaseMock.getBuilder("team_memberships", 1);
+    expect(updateBuilder.update).toHaveBeenCalledWith({ role: "user" });
+    expect(updateBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+    expect(updateBuilder.eq).toHaveBeenCalledWith("user_id", "member-1");
   });
 
   it("admin チェック中に DB エラーが発生した場合は DB エラーが伝播する", async () => {
@@ -148,10 +149,10 @@ describe("TeamMembersAPI.updateRole - requireTeamAdmin ガード", () => {
     );
 
     // requireTeamAdmin が team_id と user_id と is_active と role で eq を呼ぶこと
-    const history = supabaseMock.getBuilderHistory("team_memberships");
-    expect(history[0].eq).toHaveBeenCalledWith("team_id", "team-99");
-    expect(history[0].eq).toHaveBeenCalledWith("user_id", "test-user-id"); // auth.getUser() のユーザー
-    expect(history[0].eq).toHaveBeenCalledWith("is_active", true);
-    expect(history[0].eq).toHaveBeenCalledWith("role", "admin");
+    const adminCheckBuilder = supabaseMock.getBuilder("team_memberships", 0);
+    expect(adminCheckBuilder.eq).toHaveBeenCalledWith("team_id", "team-99");
+    expect(adminCheckBuilder.eq).toHaveBeenCalledWith("user_id", "test-user-id"); // auth.getUser() のユーザー
+    expect(adminCheckBuilder.eq).toHaveBeenCalledWith("is_active", true);
+    expect(adminCheckBuilder.eq).toHaveBeenCalledWith("role", "admin");
   });
 });

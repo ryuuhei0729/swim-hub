@@ -42,10 +42,11 @@ describe("planEntryAdditionsForRecords", () => {
     const plans = planEntryAdditionsForRecords(entries, [], STYLES);
 
     expect(plans).toHaveLength(1);
-    expect(plans[0].targetStyleEntryId).toBeNull();
-    expect(plans[0].styleId).toBe(2);
-    expect(plans[0].styleName).toBe("自由形50m");
-    expect(plans[0].entry.userName).toBe("太郎");
+    // toHaveLength(1) を直前で確認済み
+    expect(plans[0]!.targetStyleEntryId).toBeNull();
+    expect(plans[0]!.styleId).toBe(2);
+    expect(plans[0]!.styleName).toBe("自由形50m");
+    expect(plans[0]!.entry.userName).toBe("太郎");
   });
 
   it(
@@ -60,7 +61,7 @@ describe("planEntryAdditionsForRecords", () => {
       const plans = planEntryAdditionsForRecords(entries, existing, STYLES);
 
       expect(plans).toHaveLength(1);
-      expect(plans[0].targetStyleEntryId).toBe("style-2");
+      expect(plans[0]!.targetStyleEntryId).toBe("style-2"); // toHaveLength(1) を直前で確認済み
     },
   );
 
@@ -79,7 +80,7 @@ describe("planEntryAdditionsForRecords", () => {
       const plans = planEntryAdditionsForRecords(entries, existing, STYLES);
 
       expect(plans).toHaveLength(1);
-      expect(plans[0].entry.user_id).toBe("user-2");
+      expect(plans[0]!.entry.user_id).toBe("user-2"); // toHaveLength(1) を直前で確認済み
     },
   );
 
@@ -95,7 +96,7 @@ describe("planEntryAdditionsForRecords", () => {
       const plans = planEntryAdditionsForRecords(entries, [], STYLES);
 
       expect(plans).toHaveLength(1);
-      expect(plans[0].entry.id).toBe("e1");
+      expect(plans[0]!.entry.id).toBe("e1"); // toHaveLength(1) を直前で確認済み
     },
   );
 
@@ -122,7 +123,7 @@ describe("planEntryAdditionsForRecords", () => {
       const plans = planEntryAdditionsForRecords(entries, existing, STYLES);
 
       expect(plans).toHaveLength(1);
-      expect(plans[0].targetStyleEntryId).toBeNull(); // relay-1 には絶対に紐付かない
+      expect(plans[0]!.targetStyleEntryId).toBeNull(); // toHaveLength(1) を直前で確認済み。relay-1 には絶対に紐付かない
     },
   );
 
@@ -151,8 +152,9 @@ describe("planEntryAdditionsForRecords", () => {
       const plans = planEntryAdditionsForRecords(entries, existing, STYLES);
 
       expect(plans).toHaveLength(1);
-      expect(plans[0].entry.user_id).toBe("user-a");
-      expect(plans[0].targetStyleEntryId).toBeNull();
+      // toHaveLength(1) を直前で確認済み
+      expect(plans[0]!.entry.user_id).toBe("user-a");
+      expect(plans[0]!.targetStyleEntryId).toBeNull();
     },
   );
 
@@ -167,7 +169,7 @@ describe("planEntryAdditionsForRecords", () => {
       const plans = planEntryAdditionsForRecords(entries, existing, STYLES);
 
       expect(plans).toHaveLength(1);
-      expect(plans[0].targetStyleEntryId).toBeNull();
+      expect(plans[0]!.targetStyleEntryId).toBeNull(); // toHaveLength(1) を直前で確認済み
     },
   );
 
@@ -196,10 +198,11 @@ describe("planEntryAdditionsForRecords", () => {
       const entries = [makeEntry({ user_id: "user-1", style_id: 2, entry_time: 83.45 })];
       const plans = planEntryAdditionsForRecords(entries, [], STYLES);
 
-      expect(plans[0].entry.entry_time).toBe(83.45);
+      expect(plans).toHaveLength(1);
+      expect(plans[0]!.entry.entry_time).toBe(83.45); // toHaveLength(1) を直前で確認済み
       // EntryAdditionPlan には entry_time を time として解釈するフィールドが存在しない
       // (plan オブジェクトのキーが targetStyleEntryId/styleId/styleName/entry のみ)
-      expect(Object.keys(plans[0]).sort()).toEqual(
+      expect(Object.keys(plans[0]!).sort()).toEqual(
         ["entry", "styleId", "styleName", "targetStyleEntryId"].sort(),
       );
     },
@@ -209,7 +212,8 @@ describe("planEntryAdditionsForRecords", () => {
     const entries = [makeEntry({ user_id: "user-1", style_id: 999 })];
     const plans = planEntryAdditionsForRecords(entries, [], STYLES);
 
-    expect(plans[0].styleName).toBe("");
+    expect(plans).toHaveLength(1);
+    expect(plans[0]!.styleName).toBe(""); // toHaveLength(1) を直前で確認済み
   });
 
   it("entries が空配列なら追加計画も空配列になる (エントリー0件の大会)", () => {

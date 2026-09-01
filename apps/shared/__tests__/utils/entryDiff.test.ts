@@ -137,8 +137,8 @@ describe("diffEntryRows", () => {
       const diff = diffEntryRows([existing], [row], "comp-1", "team-1");
 
       expect(diff.toUpdate).toHaveLength(1);
-      expect(diff.toUpdate[0].id).toBe("e-1");
-      expect(diff.toUpdate[0].patch.entry_time).toBeCloseTo(70.0, 5);
+      expect(diff.toUpdate[0]!.id).toBe("e-1"); // toHaveLength(1) を直前で確認済み
+      expect(diff.toUpdate[0]!.patch.entry_time).toBeCloseTo(70.0, 5);
       expect(diff.toCreate).toHaveLength(0);
       expect(diff.toDelete).toHaveLength(0);
     },
@@ -221,7 +221,8 @@ describe("diffEntryRows", () => {
     () => {
       const row = makeDraft({ existingEntryId: null, entryTimeInput: "" });
       const diff = diffEntryRows([], [row], "comp-1", "team-1");
-      expect(diff.toCreate[0].entry_time).toBeNull();
+      expect(diff.toCreate).toHaveLength(1);
+      expect(diff.toCreate[0]!.entry_time).toBeNull(); // toHaveLength(1) を直前で確認済み
     },
   );
 

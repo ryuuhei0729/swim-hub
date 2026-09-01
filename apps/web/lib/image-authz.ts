@@ -81,7 +81,8 @@ async function authorizeResourceImage(
   if (segments.length < 3) {
     return { ok: false, status: 400, error: "不正なパスです" };
   }
-  const [ownerId, resourceId] = segments;
+  const ownerId = segments[0]!; // segments.length >= 3 を直上の if で確認済み
+  const resourceId = segments[1]!; // 同上
 
   if (ownerId === callerId) {
     return { ok: true };
@@ -114,7 +115,7 @@ async function authorizeProfileImage(
   if (segments.length < 2) {
     return { ok: false, status: 400, error: "不正なパスです" };
   }
-  const [ownerId] = segments;
+  const ownerId = segments[0]!; // segments.length >= 2 を直上の if で確認済み
 
   if (ownerId === callerId) {
     return { ok: true };

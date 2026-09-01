@@ -186,6 +186,8 @@ const PROVISIONAL_EDITING_DATA_VARIANTS: Array<[string, EditingData]> = [
   ["editingData なし (competitionId のみで開く経路)", null],
 ];
 
+// NOTE: `onSave.mock.calls[0]!` を多用する。各テストは直前に `toHaveBeenCalledTimes(1)` で
+// 呼び出し回数を確認済み。
 describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -249,7 +251,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
         });
 
         await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-        const params = onSave.mock.calls[0][0];
+        const params = onSave.mock.calls[0]![0];
         expect(params.basicData.poolType).toBe(1);
       });
     },
@@ -279,7 +281,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
     });
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][0].basicData.endDate).toBe("2099-01-03");
+    expect(onSave.mock.calls[0]![0].basicData.endDate).toBe("2099-01-03");
   });
 
   it("[V-6] note を設定した競技会でエントリーのみ保存しても note が消えない", async () => {
@@ -306,7 +308,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
     });
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][0].basicData.note).toBe("更衣室は東側です");
+    expect(onSave.mock.calls[0]![0].basicData.note).toBe("更衣室は東側です");
   });
 
   it("[V-4] 長水路に修正・保存した後、同じ競技会を再度開いても長水路のまま (症状B-2の再発防止)", async () => {
@@ -430,7 +432,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
     });
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][0].basicData.poolType).toBe(1);
+    expect(onSave.mock.calls[0]![0].basicData.poolType).toBe(1);
   });
 
   it("[V-14] 新規作成 (competitionId 無し) では competitions テーブルへの再取得を行わず、デフォルト値(0)で開く", async () => {
@@ -646,7 +648,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       });
 
       await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-      const savedBasicData = onSave.mock.calls[0][0].basicData;
+      const savedBasicData = onSave.mock.calls[0]![0].basicData;
 
       // 編集したフィールド (title) はユーザー値
       expect(savedBasicData.title).toBe("ユーザー編集タイトル");
@@ -701,7 +703,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       });
 
       await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-      const savedBasicData = onSave.mock.calls[0][0].basicData;
+      const savedBasicData = onSave.mock.calls[0]![0].basicData;
 
       // ユーザーが編集した pool_type はユーザー値 (1) が優先され、DB の 0 で上書きされない
       expect(savedBasicData.poolType).toBe(1);
@@ -761,7 +763,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       });
 
       await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-      const savedBasicData = onSave.mock.calls[0][0].basicData;
+      const savedBasicData = onSave.mock.calls[0]![0].basicData;
 
       // endDate はユーザーの編集値
       expect(savedBasicData.endDate).toBe("2026-08-10");
@@ -871,7 +873,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       });
 
       await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-      const savedBasicData = onSave.mock.calls[0][0].basicData;
+      const savedBasicData = onSave.mock.calls[0]![0].basicData;
 
       // 編集なし → リトライで得た DB 実値が全フィールドで採用される (自己修復)
       expect(savedBasicData.poolType).toBe(1);

@@ -37,6 +37,8 @@ import {
 
 const STYLES_200 = [{ id: 4, name_jp: "200m 自由形", distance: 200 }];
 
+// NOTE: `memberRecords[1]!` / `legBoundaries[legIdx±1]!` を多用する。4×200リレー固定のテストで
+// 4件の memberRecords / legBoundaries を前提にしている。
 describe("[S10] 旧形式破損データ (split_time が通算値のまま) の読み取りガード", () => {
   it(
     "PM 提示の具体例 (DB split_time=493.98, legStart=137.00) で、legStart を加算した" +
@@ -123,8 +125,8 @@ describe("[S10] 旧形式破損データ (split_time が通算値のまま) の�
     const entry = buildStyleEntriesFromExisting(records, STYLES_200).find((e) => e.relayEventId)!;
     // 破損ガードは relaySplitTimes のみに作用し、memberRecords[1].cumulativeTimeSeconds
     // (record.time ベースの累計) は変わらない
-    expect(entry.memberRecords[1].cumulativeTimeSeconds).toBe(cumulatives[1]);
-    expect(entry.memberRecords[1].time).toBe(134.0);
+    expect(entry.memberRecords[1]!.cumulativeTimeSeconds).toBe(cumulatives[1]);
+    expect(entry.memberRecords[1]!.time).toBe(134.0);
   });
 });
 
@@ -163,8 +165,8 @@ describe("[S11] 破損レコードは保存経路を通すと自己修復し、�
       const legBoundaries = getRelayLegBoundaries("relay_4x200_free");
       const RACE_DISTANCE = 200; // leg1 の種目 (200m 自由形) の距離
       const legIdx = 1;
-      const legLow = legBoundaries[legIdx - 1]; // 200
-      const legHigh = legBoundaries[legIdx]; // 400
+      const legLow = legBoundaries[legIdx - 1]!; // 200
+      const legHigh = legBoundaries[legIdx]!; // 400
       const legStart = getLegStartCumulative(cumulatives, legIdx);
       const savedForLeg1 = relaySplitTimes
         .filter((st) => st.distance > legLow && st.distance <= legHigh)

@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Stripe の顧客情報が見つかりません" }, { status: 404 });
       }
 
-      customerId = existingCustomers.data[0].id;
+      customerId = existingCustomers.data[0]!.id; // data.length === 0 の分岐を直上で return 済み
 
       // DB に Customer ID をキャッシュ（service_role で RLS をバイパス）
       const adminClient = createAdminClient();

@@ -244,6 +244,9 @@ export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps
     inputs.forEach((input, key) => {
       if (input.time && !input.error && input.timeInSeconds !== undefined) {
         const [styleIdStr, poolTypeStr, isRelayingStr] = key.split("_");
+        if (!styleIdStr || !poolTypeStr || !isRelayingStr) return; // key は getInputKey() が
+          // "${styleId}_${poolType}_{0|1}" 形式で生成した文字列のみが Map に入る想定だが、
+          // split() の型上は各要素が undefined になり得るため防御的にスキップする
         records.push({
           style_id: parseInt(styleIdStr, 10),
           time: input.timeInSeconds,

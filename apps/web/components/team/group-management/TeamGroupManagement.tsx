@@ -117,7 +117,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
           .filter((n) => n.length > 0);
         if (names.length === 0) return false;
         if (names.length === 1) {
-          const result = await createGroup(category, names[0]);
+          const result = await createGroup(category, names[0]!); // names.length === 1 を直上の if で確認済み
           return result !== null;
         }
         return await createGroups(category, names);

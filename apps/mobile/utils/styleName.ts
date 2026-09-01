@@ -41,9 +41,13 @@ interface ParsedStyleString {
 function parseStyleString(s: string): ParsedStyleString | null {
   const match = s.match(/^(\d+)m(\s*)(.+)$/);
   if (!match) return null;
-  const distance = Number(match[1]);
-  const separator = match[2];
-  const jpPart = match[3].trim();
+  // 正規表現の3つの capture group はいずれもオプショナル (`?`) ではないため
+  // match が成立した時点で全て文字列として存在するが、TS の RegExpMatchArray は
+  // それを追跡できないため防御的にガードする。
+  const [, distanceStr, separator, jpPartRaw] = match;
+  if (distanceStr === undefined || separator === undefined || jpPartRaw === undefined) return null;
+  const distance = Number(distanceStr);
+  const jpPart = jpPartRaw.trim();
   const abbrev = JP_PART_TO_ABBREV[jpPart];
   return abbrev ? { distance, abbrev, separator } : null;
 }

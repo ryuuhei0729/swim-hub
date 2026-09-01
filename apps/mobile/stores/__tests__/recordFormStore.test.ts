@@ -112,8 +112,8 @@ describe("recordFormStore", () => {
 
     const state = useRecordStore.getState();
     expect(state.splitTimes).toHaveLength(2);
-    expect(state.splitTimes[0].distance).toBe(50);
-    expect(state.splitTimes[1].distance).toBe(150);
+    expect(state.splitTimes[0]!.distance).toBe(50); // 直前の toHaveLength(2) で存在は保証済み
+    expect(state.splitTimes[1]!.distance).toBe(150);
   });
 
   it("updateSplitTimeでスプリットタイムを更新できる", () => {
@@ -127,8 +127,8 @@ describe("recordFormStore", () => {
     updateSplitTime(0, { splitTime: 26.0 });
 
     const state = useRecordStore.getState();
-    expect(state.splitTimes[0].splitTime).toBe(26.0);
-    expect(state.splitTimes[0].distance).toBe(50); // 他のプロパティは保持
+    expect(state.splitTimes[0]!.splitTime).toBe(26.0); // splitTimes は直前に2要素で setSplitTimes 済みのため必ず存在
+    expect(state.splitTimes[0]!.distance).toBe(50); // 他のプロパティは保持
     expect(state.splitTimes[1]).toEqual(splitTimes[1]); // 他のアイテムは変更されない
   });
 
