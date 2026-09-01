@@ -59,7 +59,7 @@ vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({ user: { id: "admin-1" }, supabase: {} }),
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: mocks.push }),
 }));
 

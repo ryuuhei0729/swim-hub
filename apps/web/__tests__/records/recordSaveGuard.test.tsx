@@ -15,7 +15,7 @@
  * entries マージ自体の検証は、新規 shared 純粋関数が着地してから別途追加する。
  *
  * 実装方針は `EntriesClient.test.tsx` (前スプリント) を踏襲: 巨大な client component を
- * 丸ごとレンダリングし、next-intl / next/navigation / AuthProvider をモックした上で
+ * 丸ごとレンダリングし、next-intl / @/i18n/navigation / AuthProvider をモックした上で
  * 実際の DOM 操作 (保存ボタン押下) を通して検証する。RecordClient は supabase.from() を
  * 直叩きする方式 (API クラス経由ではない) のため、テーブルごとに呼び出しを記録する
  * 最小限の supabase フェイクをこのファイル内に用意する。
@@ -31,7 +31,7 @@ vi.mock("@/components/video/TeamVideoUploader", () => ({
   default: () => null,
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: mocks.push }),
 }));
 

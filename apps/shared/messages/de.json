@@ -120,7 +120,8 @@
       "previousPage": "Vorherige Seite",
       "nextPage": "Nächste Seite",
       "pageN": "Seite {page}",
-      "switchLanguage": "Sprache wechseln"
+      "switchLanguage": "Sprache wechseln",
+      "modalOverlay": "Modal-Hintergrund"
     },
     "pagination": {
       "prev": "Zurück",
@@ -1310,7 +1311,8 @@
         "relaying": "R: Staffelwechsel",
         "relayingExcludedFromWaPoints": "Staffelwechselzeiten sind von den WA-Punkten ausgeschlossen"
       },
-      "waPointsToggle": "WA-Punkte anzeigen"
+      "waPointsToggle": "WA-Punkte anzeigen",
+      "waPointsToggleShort": "WA-Punkte"
     },
     "error": {
       "title": "Ein Fehler ist aufgetreten",
@@ -2499,9 +2501,7 @@
       "groupMemberAssignFailed": "Mitglieder konnten nicht zugewiesen werden",
       "memberListTitle": "Mitglieder",
       "memberListEmpty": "Keine Mitglieder",
-      "memberListTotal": "Gesamt: {count}",
-      "memberListAdmin": "Administratoren: {count}",
-      "memberListMember": "Mitglieder: {count}",
+      "memberListTotal": "Mitglieder: {count}",
       "bestTimeLoading": "Bestzeiten werden geladen...",
       "memberColLabel": "Mitglied",
       "youLabel": "Sie",
@@ -2551,7 +2551,8 @@
       "adminControlsTitle": "Administratorfunktionen",
       "bestTimesEmpty": "Noch keine Einträge",
       "bestTimesEmptySubText": "Dieses Mitglied hat noch keine Einträge registriert",
-      "bestTimesIncludeRelaying": "Staffelzeiten einbeziehen",
+      "bestTimesIncludeRelaying": "Inkl. Wechsel",
+      "bestTimesWaPointsToggle": "WA-Punkte",
       "bestTimesAnnotation": "L: Langbahn, R: Staffelübernahme",
       "groupDisplayLabel": "Gruppieren nach:",
       "groupAddAria": "Gruppe hinzufügen",
@@ -2975,8 +2976,8 @@
       "rankLabel": "Rang",
       "pointsLabel": "WA-Punkte",
       "styleLabel": "Disziplin",
-      "courseShort": "SC",
-      "courseLong": "LC",
+      "courseShort": "Kurzbahn",
+      "courseLong": "Langbahn",
       "empty": "Keine Ergebnisse zum Vergleichen vorhanden"
     },
     "membershipActions": {

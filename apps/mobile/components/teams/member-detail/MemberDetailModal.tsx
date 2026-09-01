@@ -177,7 +177,9 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
           )}
 
           {/* プロフィール */}
-          <ProfileSection member={member} currentUserId={currentUserId} />
+          <View style={styles.horizontalPadding}>
+            <ProfileSection member={member} currentUserId={currentUserId} />
+          </View>
 
           {/* 区切り線 */}
           <View style={styles.divider} />
@@ -185,17 +187,19 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
           {/* 管理者機能 */}
           {canManage && (
             <>
-              <AdminControls
-                member={member}
-                isRemoving={isRemoving}
-                onRoleChangeClick={handleRoleChangeClick}
-                onRemoveMember={handleRemoveMember}
-              />
+              <View style={styles.horizontalPadding}>
+                <AdminControls
+                  member={member}
+                  isRemoving={isRemoving}
+                  onRoleChangeClick={handleRoleChangeClick}
+                  onRemoveMember={handleRemoveMember}
+                />
+              </View>
               <View style={styles.divider} />
             </>
           )}
 
-          {/* ベストタイム */}
+          {/* ベストタイム (見出しは padding を保持、表は左右いっぱいに表示) */}
           <View style={styles.bestTimesSection}>
             <View style={styles.bestTimesHeader}>
               <Feather name="award" size={18} color="#EAB308" />
@@ -208,14 +212,16 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
                 <Text style={styles.loadingText}>{t("teams.mobile.bestTimeLoading")}</Text>
               </View>
             ) : (
-              <BestTimesTable bestTimes={bestTimes} />
+              <BestTimesTable bestTimes={bestTimes} gender={member.users.gender} />
             )}
           </View>
 
           {/* 閉じるボタン */}
-          <Pressable style={styles.closeFooterButton} onPress={onClose}>
-            <Text style={styles.closeFooterButtonText}>{t("common.close")}</Text>
-          </Pressable>
+          <View style={styles.horizontalPadding}>
+            <Pressable style={styles.closeFooterButton} onPress={onClose}>
+              <Text style={styles.closeFooterButtonText}>{t("common.close")}</Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </Modal>
@@ -248,13 +254,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingTop: 20,
     paddingBottom: 40,
+  },
+  horizontalPadding: {
+    paddingHorizontal: 20,
   },
   errorContainer: {
     backgroundColor: "#FEF2F2",
     padding: 12,
     borderRadius: 8,
+    marginHorizontal: 20,
     marginBottom: 16,
   },
   errorText: {
@@ -273,6 +283,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    paddingHorizontal: 20,
   },
   bestTimesTitle: {
     fontSize: 16,

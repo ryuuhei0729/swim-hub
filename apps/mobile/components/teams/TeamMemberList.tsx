@@ -33,6 +33,8 @@ import { formatTime } from "@/utils/formatters";
 import { selectBestTime, formatBestTimeSuffix } from "@/utils/bestTimeSelection";
 import { TeamMemberGroupFilter } from "./TeamMemberGroupFilter";
 import { MemberDetailModal } from "./member-detail";
+import { WaPointsCompareModal } from "@/components/teams/wa-points-compare";
+import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/BestTimeDetailSheet";
 
 // ベストタイム型定義
 interface MemberBestTime {
@@ -42,6 +44,10 @@ interface MemberBestTime {
   isRelaying: boolean;
   createdAt: string;
   hasCompetition: boolean;
+  distance: number;
+  note?: string;
+  competitionTitle?: string;
+  competitionDate?: string;
 }
 
 // 種目の色定義（プラットフォーム固有のためこのファイルに残す）
@@ -106,6 +112,36 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     setSelectedMember(null);
   }, []);
 
+  // WAポイント比較モーダル
+  const [isWaPointsModalOpen, setIsWaPointsModalOpen] = useState(false);
+
+  // ベストタイムセルの詳細シート（日付・大会名・備考）
+  // profile/BestTimesTable.tsx・teams/member-detail/BestTimesTable.tsx と同じ構造:
+  // selectedCellKey を持ち、同一セル再タップでは閉じる（トグル）。
+  const [selectedCellKey, setSelectedCellKey] = useState<string | null>(null);
+  const [selectedCellDetail, setSelectedCellDetail] = useState<BestTimeDetail | null>(null);
+
+  const closeCellDetail = useCallback(() => {
+    setSelectedCellKey(null);
+    setSelectedCellDetail(null);
+  }, []);
+
+  const handleCellPress = useCallback(
+    (cellKey: string, bestTime: MemberBestTime) => {
+      if (selectedCellKey === cellKey) {
+        closeCellDetail();
+        return;
+      }
+      setSelectedCellKey(cellKey);
+      setSelectedCellDetail({
+        date: bestTime.competitionDate ?? bestTime.createdAt,
+        competitionTitle: bestTime.competitionTitle ?? null,
+        note: bestTime.note ?? null,
+      });
+    },
+    [selectedCellKey, closeCellDetail],
+  );
+
   // グループ表示（グルーピング + ヘッダー）
   const [groupedMembers, setGroupedMembers] = useState<TeamMembershipWithUser[]>(members);
   const [groupHeaders, setGroupHeaders] = useState<Map<number, string>>(new Map());
@@ -164,6 +200,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
           user_id,
           time,
           created_at,
+          note,
           pool_type,
           is_relaying,
           styles!records_style_id_fkey (
@@ -171,7 +208,9 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
             distance
           ),
           competitions!records_competition_id_fkey (
-            id
+            id,
+            title,
+            date
           )
         `,
         )
@@ -200,13 +239,17 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
               user_id: string;
               time: number;
               created_at: string;
+              note: string | null;
               pool_type: number;
               is_relaying: boolean;
               styles?:
                 | { name_jp: string; distance: number }
                 | null
                 | { name_jp: string; distance: number }[];
-              competitions?: { id: string } | null | { id: string }[];
+              competitions?:
+                | { id: string; title: string; date: string }
+                | null
+                | { id: string; title: string; date: string }[];
             }) => {
               const style = Array.isArray(record.styles) ? record.styles[0] : record.styles;
               if (!style) return;
@@ -223,6 +266,10 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                 isRelaying: record.is_relaying,
                 createdAt: record.created_at,
                 hasCompetition: !!competition,
+                distance: style.distance,
+                note: record.note ?? undefined,
+                competitionTitle: competition?.title ?? undefined,
+                competitionDate: competition?.date ?? undefined,
               });
             },
           );
@@ -438,9 +485,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     );
   }
 
-  const adminCount = members.filter((m) => m.role === "admin").length;
-  const userCount = members.filter((m) => m.role === "user").length;
-
   return (
     <View style={styles.container}>
       {/* 上部固定エリア（統計 + グループフィルター） */}
@@ -449,6 +493,21 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
         <View style={styles.statsHeader}>
           <View style={styles.statsHeaderTop}>
             <Text style={styles.statsTitle}>{t("teams.mobile.memberListTitle")}</Text>
+            <Pressable
+              onPress={() => setIsWaPointsModalOpen(true)}
+              style={styles.waPointsButton}
+              accessibilityRole="button"
+            >
+              <Feather name="award" size={13} color="#2563EB" />
+              <Text style={styles.waPointsButtonText}>
+                {t("teams.waPointsCompare.buttonLabel")}
+              </Text>
+            </Pressable>
+          </View>
+          <View style={styles.statsRow}>
+            <Text style={styles.statsText}>
+              {t("teams.mobile.memberListTotal", { count: members.length })}
+            </Text>
             <View style={styles.includeRelayToggle}>
               <Text style={styles.includeRelayLabel} numberOfLines={1}>
                 {t("teams.memberStats.includeRelay")}
@@ -462,17 +521,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                 accessibilityLabel={t("teams.memberStats.includeRelay")}
               />
             </View>
-          </View>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsText}>
-              {t("teams.mobile.memberListTotal", { count: members.length })}
-            </Text>
-            <Text style={[styles.statsText, styles.statsAdmin]}>
-              {t("teams.mobile.memberListAdmin", { count: adminCount })}
-            </Text>
-            <Text style={styles.statsText}>
-              {t("teams.mobile.memberListMember", { count: userCount })}
-            </Text>
           </View>
         </View>
 
@@ -669,35 +717,46 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                                     isRelaying: bestTime.isRelaying,
                                   })
                                 : "";
-                              return (
-                                <View
-                                  key={`${item.id}-${style}-${distance}`}
-                                  style={[
-                                    styles.timeCell,
-                                    {
-                                      backgroundColor: isInvalidCombination(style, distance)
-                                        ? "#E5E7EB"
-                                        : colors.bg,
-                                    },
-                                    styles.cellBorderRight,
-                                  ]}
-                                >
-                                  {bestTime ? (
-                                    <Text
-                                      style={[
-                                        styles.timeCellValue,
-                                        isNew && styles.timeCellValueNew,
-                                      ]}
-                                    >
-                                      {formatTime(bestTime.time)}
-                                      {suffix !== "" && (
-                                        <Text style={styles.timeCellSuffix}> {suffix}</Text>
-                                      )}
-                                    </Text>
-                                  ) : (
+                              const cellStyle = [
+                                styles.timeCell,
+                                {
+                                  backgroundColor: isInvalidCombination(style, distance)
+                                    ? "#E5E7EB"
+                                    : colors.bg,
+                                },
+                                styles.cellBorderRight,
+                              ];
+
+                              // メンバーの識別子も含める（同じ種目・距離でも別メンバーの行は別セルとして扱う）
+                              const cellKey = `${item.id}-${style}-${distance}`;
+
+                              // 空セル（記録なし）はタップ対象にしない
+                              if (!bestTime) {
+                                return (
+                                  <View key={cellKey} style={cellStyle}>
                                     <Text style={styles.timeCellEmpty}>—</Text>
-                                  )}
-                                </View>
+                                  </View>
+                                );
+                              }
+
+                              return (
+                                <Pressable
+                                  key={cellKey}
+                                  onPress={() => handleCellPress(cellKey, bestTime)}
+                                  style={cellStyle}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.timeCellValue,
+                                      isNew && styles.timeCellValueNew,
+                                    ]}
+                                  >
+                                    {formatTime(bestTime.time)}
+                                    {suffix !== "" && (
+                                      <Text style={styles.timeCellSuffix}> {suffix}</Text>
+                                    )}
+                                  </Text>
+                                </Pressable>
                               );
                             }),
                           )}
@@ -720,6 +779,21 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
         currentUserId={currentUserId}
         isCurrentUserAdmin={isCurrentUserAdmin}
         onMembershipChange={onMemberChange}
+      />
+
+      {/* WAポイント比較モーダル */}
+      <WaPointsCompareModal
+        visible={isWaPointsModalOpen}
+        onClose={() => setIsWaPointsModalOpen(false)}
+        members={members}
+        supabase={supabase}
+      />
+
+      {/* ベストタイムセルの詳細シート */}
+      <BestTimeDetailSheet
+        detail={selectedCellDetail}
+        onClose={closeCellDetail}
+        noteFallbackLabel={t("teams.membersTimeTable.bulkEntryNote")}
       />
     </View>
   );
@@ -760,7 +834,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 4,
   },
   includeRelayLabel: {
     fontSize: 11,
@@ -769,6 +842,8 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
   },
   statsText: {
@@ -779,8 +854,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-  statsAdmin: {
-    color: "#EAB308",
+  waPointsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+    gap: 5,
+    marginBottom: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    backgroundColor: "#EFF6FF",
+  },
+  waPointsButtonText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#2563EB",
   },
 
   /* テーブルローディング */

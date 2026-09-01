@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
-import { getSafeRedirectUrl } from "@/utils/redirect";
+import { resolveSafeLocalRedirect } from "@/utils/localeRedirect";
 import { useSearchParams } from "next/navigation";
 
 type AuthError = {
@@ -71,7 +71,7 @@ export const EmailSignInForm: React.FC = () => {
       if (signInError) {
         setError(formatSignInError(signInError, tErrors));
       } else {
-        const redirectTo = getSafeRedirectUrl(searchParams.get("redirect_to"));
+        const redirectTo = resolveSafeLocalRedirect(searchParams.get("redirect_to"));
         router.push(redirectTo);
       }
     } catch {

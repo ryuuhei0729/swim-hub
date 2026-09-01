@@ -132,13 +132,27 @@ test.describe("[V-06] メールボタンクリックでメール専用ログイ�
     test.skip(true, "Phase B: 実装後に有効化する");
   });
 
-  test("TC-LR-003: ?redirect_to= が /login/email URL に引き継がれる", async ({ page }) => {
-    // TODO:
-    // await page.goto(`${URLS.LOGIN}?redirect_to=/ja/dashboard`);
-    // await page.getByTestId("email-signin-button").click();
-    // await page.waitForURL("**/login/email**");
-    // expect(page.url()).toContain("redirect_to");
-    test.skip(true, "Phase B: 実装後に有効化する");
+  test("TC-LR-003: ?redirect_to= が /login/email URL に引き継がれ、二重 locale プレフィックスにならない", async ({
+    page,
+  }) => {
+    // バグ1回帰確認 (二重 locale プレフィックス 404): /login の emailHref
+    // (login/page.tsx) は `@/i18n/navigation` の Link で組み立てられる。
+    // redirect_to が locale 付き (/ja/dashboard) のまま query string に埋め込まれても、
+    // Link 自体の href ("/login/email?redirect_to=...") には locale が含まれないため
+    // ここでの遷移では二重 prefix は起きない想定だが、実機で /ja/ja/... に
+    // ならないことを直接確認する。
+    await page.goto(`${URLS.LOGIN}?redirect_to=${encodeURIComponent("/ja/dashboard")}`);
+    await page.waitForLoadState("networkidle");
+    await page.getByTestId("email-signin-button").click();
+    await page.waitForURL("**/login/email**");
+
+    const url = new URL(page.url());
+    // redirect_to パラメータが引き継がれていること (デコードして完全一致で確認する。
+    // toContain は "redirect_to" という文字列の有無しか見ないため使わない)
+    expect(url.searchParams.get("redirect_to")).toBe("/ja/dashboard");
+    // 二重 locale プレフィックス (/ja/ja/...) になっていないこと
+    expect(url.pathname).not.toMatch(/\/ja\/ja\//);
+    expect(url.pathname).toBe("/ja/login/email");
   });
 });
 
@@ -316,16 +330,62 @@ test.describe("[V-17] メールログイン成功フロー", () => {
     test.skip(true, "Phase B: 実装後に有効化する");
   });
 
-  test("TC-LR-015: [V-17b] ?redirect_to= 付きでログイン成功 → 指定 URL に遷移する", async ({
+  test("TC-LR-015: [V-17b] ?redirect_to= 付きでログイン成功 → 指定 URL に遷移する (二重 locale プレフィックス404の回帰確認)", async ({
     page,
   }) => {
     test.skip(!hasRequiredEnvVars, "E2E_EMAIL, E2E_PASSWORD が未設定");
-    // TODO:
-    // await page.goto(`${LOGIN_EMAIL_URL}?redirect_to=/ja/mypage`);
-    // ... ログイン操作 ...
-    // await page.waitForURL("**/mypage**");
-    // expect(page.url()).toContain("/mypage");
-    test.skip(true, "Phase B: 実装後に有効化する");
+    // バグ1本体の回帰確認: middleware が redirect_to=/ja/mypage (locale付き) で
+    // /ja/login にリダイレクトした場合と同じ状況を、/login/email に
+    // ?redirect_to=/ja/mypage (locale付き) を直接付与して再現する。
+    // 修正前は EmailSignInForm が getSafeRedirectUrl の戻り値をそのまま
+    // @/i18n/navigation の router.push に渡すため、next-intl の localizeHref が
+    // 既に locale 付きの "/ja/mypage" にもう一段 prefix を足し "/ja/ja/mypage" になり
+    // 404 (app/[locale]/ja/mypage は存在しない) になる。
+    await page.goto(`${LOGIN_EMAIL_URL}?redirect_to=${encodeURIComponent("/ja/mypage")}`);
+    await page.waitForLoadState("networkidle");
+    await page.getByTestId("email-input").fill(testEnv!.credentials.email);
+    await page.getByTestId("password-input").fill(testEnv!.credentials.password);
+    await page.getByTestId("login-button").click();
+
+    // 404 に落ちず、意図した /ja/mypage に到達すること。
+    // waitForURL は "/ja/ja/mypage" でも "**/mypage**" にマッチしてしまい
+    // 誤検出になるため、pathname の完全一致で待つ。
+    // 項目5 (Sprint Contract, Phase A): playwright.config.ts:132 の
+    // navigationTimeout グローバル既定が 15000 のため、この明示指定 (15000) は
+    // 実質 no-op で、ローカル実行時の flaky の原因になっていた。25000 に
+    // 引き上げて初めて意味を持つ (CI は本番ビルドのため原理的に再現しない)。
+    await page.waitForURL((url) => url.pathname === "/ja/mypage", { timeout: 25000 });
+
+    const finalUrl = new URL(page.url());
+    expect(finalUrl.pathname).not.toMatch(/\/ja\/ja\//);
+    expect(finalUrl.pathname).toBe("/ja/mypage");
+  });
+
+  test("TC-LR-015b: [Reviewer Critical再検証] redirect_to 自体が二重 locale (/ja/ja/mypage) でもログイン成功後に /ja/mypage に到達する (404が再発しない)", async ({
+    page,
+  }) => {
+    test.skip(!hasRequiredEnvVars, "E2E_EMAIL, E2E_PASSWORD が未設定");
+    // Reviewer Critical指摘の再現: stripLocale は1レイヤーしか剥がさないため、
+    // redirect_to 自体が既に二重 locale (/ja/ja/mypage) だった場合、
+    // 1回だけ適用する実装だと /ja/mypage まで剥がれず /ja/dashboard 相当の
+    // 剥がし残しが残り、push 後に next-intl がもう一段 prefix を足して
+    // 再び /ja/ja/mypage に戻り 404 になる (resolveSafeLocalRedirect 導入前の穴)。
+    // resolveSafeLocalRedirect は剥がし切るまでループするため、
+    // 最終的に /ja/mypage (1層) に到達するはず。
+    await page.goto(`${LOGIN_EMAIL_URL}?redirect_to=${encodeURIComponent("/ja/ja/mypage")}`);
+    await page.waitForLoadState("networkidle");
+    await page.getByTestId("email-input").fill(testEnv!.credentials.email);
+    await page.getByTestId("password-input").fill(testEnv!.credentials.password);
+    await page.getByTestId("login-button").click();
+
+    // "**/mypage**" だと /ja/ja/mypage にもマッチしてしまうため、pathname の
+    // 完全一致で待つ (剥がし残しの検出漏れを防ぐ)。
+    // 項目5 (Sprint Contract, Phase A): 上の TC-LR-015 と同じ理由で 25000 に引き上げる。
+    await page.waitForURL((url) => url.pathname === "/ja/mypage", { timeout: 25000 });
+
+    const finalUrl = new URL(page.url());
+    expect(finalUrl.pathname).not.toMatch(/\/ja\/ja\//);
+    expect(finalUrl.pathname).toBe("/ja/mypage");
   });
 });
 

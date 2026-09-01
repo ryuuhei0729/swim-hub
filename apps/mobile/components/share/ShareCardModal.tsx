@@ -2,7 +2,6 @@ import React, { useRef, useState } from "react";
 import {
   View,
   Text,
-  Modal,
   Pressable,
   StyleSheet,
   ScrollView,
@@ -18,6 +17,7 @@ import { PracticeShareCard } from "./PracticeShareCard";
 import type { CompetitionShareData, PracticeShareData } from "./types";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
+import { SlideUpModal } from "@/components/ui/SlideUpModal";
 
 type ShareCardType = "competition" | "practice";
 
@@ -54,7 +54,10 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
     try {
       const available = await Sharing.isAvailableAsync();
       if (!available) {
-        Alert.alert(t("common.error"), t("common.shareCardModal.shareUnavailable"));
+        Alert.alert(
+          t("common.error"),
+          t("common.shareCardModal.shareUnavailable"),
+        );
         return;
       }
       const uri = await captureRef(cardRef, {
@@ -78,68 +81,70 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
   if (!data) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+    <SlideUpModal
+      visible={visible}
+      onClose={onClose}
+      overlayColor="rgba(0, 0, 0, 0.6)"
+      backdropAccessibilityLabel={t("common.shareCardModal.closeOverlay")}
+      sheetStyle={[
+        styles.sheet,
+        { paddingBottom: getSafeFooterPadding(34, insets.bottom) },
+      ]}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>{t(titleKey)}</Text>
         <Pressable
-          style={StyleSheet.absoluteFill}
           onPress={onClose}
+          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
           accessibilityRole="button"
-          accessibilityLabel={t("common.shareCardModal.closeOverlay")}
-        />
-        <View style={[styles.sheet, { paddingBottom: getSafeFooterPadding(34, insets.bottom) }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{t(titleKey)}</Text>
-            <Pressable
-              onPress={onClose}
-              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel={t("common.shareCardModal.close")}
-            >
-              <Feather name="x" size={24} color="#9CA3AF" />
-            </Pressable>
-          </View>
-
-          <ScrollView contentContainerStyle={styles.preview} showsVerticalScrollIndicator={false}>
-            {/* collapsable={false}: Android で captureRef の対象ビューを確実に保持する */}
-            <View ref={cardRef} collapsable={false} style={styles.captureWrap}>
-              {type === "competition" ? (
-                <CompetitionShareCard data={data as CompetitionShareData} t={t} />
-              ) : (
-                <PracticeShareCard data={data as PracticeShareData} t={t} />
-              )}
-            </View>
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.shareButton, isGenerating && styles.shareButtonDisabled]}
-              onPress={handleShare}
-              disabled={isGenerating}
-              accessibilityRole="button"
-              accessibilityLabel={t("common.shareCardModal.share")}
-            >
-              {isGenerating ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <>
-                  <Feather name="share-2" size={18} color="#FFFFFF" />
-                  <Text style={styles.shareButtonText}>{t("common.shareCardModal.share")}</Text>
-                </>
-              )}
-            </Pressable>
-          </View>
-        </View>
+          accessibilityLabel={t("common.shareCardModal.close")}
+        >
+          <Feather name="x" size={24} color="#9CA3AF" />
+        </Pressable>
       </View>
-    </Modal>
+
+      <ScrollView
+        contentContainerStyle={styles.preview}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* collapsable={false}: Android で captureRef の対象ビューを確実に保持する */}
+        <View ref={cardRef} collapsable={false} style={styles.captureWrap}>
+          {type === "competition" ? (
+            <CompetitionShareCard data={data as CompetitionShareData} t={t} />
+          ) : (
+            <PracticeShareCard data={data as PracticeShareData} t={t} />
+          )}
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={[
+            styles.shareButton,
+            isGenerating && styles.shareButtonDisabled,
+          ]}
+          onPress={handleShare}
+          disabled={isGenerating}
+          accessibilityRole="button"
+          accessibilityLabel={t("common.shareCardModal.share")}
+        >
+          {isGenerating ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <>
+              <Feather name="share-2" size={18} color="#FFFFFF" />
+              <Text style={styles.shareButtonText}>
+                {t("common.shareCardModal.share")}
+              </Text>
+            </>
+          )}
+        </Pressable>
+      </View>
+    </SlideUpModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-  },
   sheet: {
     backgroundColor: "#111827",
     borderTopLeftRadius: 20,

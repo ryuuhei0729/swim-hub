@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Pressable,
   Alert,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -28,6 +27,10 @@ import type { SupportedLocale } from "@apps/shared/utils/date";
 import { formatDate } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { AttendanceGroupSection } from "./AttendanceGroupSection";
+import { SlideUpModal } from "@/components/ui/SlideUpModal";
+
+/** 背面タップでは閉じない (元実装どおり、背面タップ用の Pressable が存在しない) */
+const NOOP_BACKDROP_PRESS = () => {};
 
 export interface AdminMonthlyAttendanceProps {
   teamId: string;
@@ -85,12 +88,19 @@ const EventCard: React.FC<EventCardProps> = ({
   );
 
   const attendanceQuery =
-    event.type === "practice" ? practiceAttendanceQuery : competitionAttendanceQuery;
+    event.type === "practice"
+      ? practiceAttendanceQuery
+      : competitionAttendanceQuery;
 
   // 出席/欠席/その他/未回答の4グループに分類（web AttendanceGroupingDisplay と同一の共有フック）
-  const grouping = useAttendanceGrouping(attendanceQuery.data ?? [], teamMembers);
+  const grouping = useAttendanceGrouping(
+    attendanceQuery.data ?? [],
+    teamMembers,
+  );
 
-  const renderReceiptStatusBadge = (status: AttendanceStatusType | null | undefined) => {
+  const renderReceiptStatusBadge = (
+    status: AttendanceStatusType | null | undefined,
+  ) => {
     switch (status) {
       case "open":
         return (
@@ -146,9 +156,12 @@ const EventCard: React.FC<EventCardProps> = ({
           style={[styles.toggleButton, isSaving && styles.toggleButtonDisabled]}
           onPress={() => onToggleStatus(event)}
           disabled={isSaving}
-          accessibilityLabel={t("teams.mobile.adminAttendance.toggleStatusAria", {
-            title: eventTitle,
-          })}
+          accessibilityLabel={t(
+            "teams.mobile.adminAttendance.toggleStatusAria",
+            {
+              title: eventTitle,
+            },
+          )}
         >
           <Feather
             name={event.attendance_status === "open" ? "lock" : "unlock"}
@@ -167,7 +180,9 @@ const EventCard: React.FC<EventCardProps> = ({
         <Pressable
           style={styles.expandButton}
           onPress={() => setExpanded((prev) => !prev)}
-          accessibilityLabel={t("teams.mobile.adminAttendance.memberAttendanceTitle")}
+          accessibilityLabel={t(
+            "teams.mobile.adminAttendance.memberAttendanceTitle",
+          )}
         >
           <Feather
             name={expanded ? "chevron-up" : "chevron-down"}
@@ -238,7 +253,9 @@ const EventCard: React.FC<EventCardProps> = ({
                     accessibilityRole="button"
                   >
                     <Feather name="refresh-cw" size={14} color="#FFFFFF" />
-                    <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
+                    <Text style={styles.retryButtonText}>
+                      {t("common.retry")}
+                    </Text>
                   </Pressable>
                 </View>
               ) : (
@@ -289,7 +306,10 @@ interface BulkChangeSheetProps {
   events: TeamEvent[];
   isSaving: boolean;
   onClose: () => void;
-  onBulkUpdate: (selectedEventIds: Set<string>, status: "open" | "closed") => Promise<void>;
+  onBulkUpdate: (
+    selectedEventIds: Set<string>,
+    status: "open" | "closed",
+  ) => Promise<void>;
   t: TFunction;
   locale: SupportedLocale;
 }
@@ -305,7 +325,9 @@ const BulkChangeSheet: React.FC<BulkChangeSheetProps> = ({
   t,
   locale,
 }) => {
-  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const groupedEvents = useMemo(() => groupEventsByMonth(events), [events]);
 
@@ -336,11 +358,14 @@ const BulkChangeSheet: React.FC<BulkChangeSheetProps> = ({
   };
 
   const isMonthAllSelected = (monthEvents: TeamEvent[]) =>
-    monthEvents.length > 0 && monthEvents.every((e) => selectedEventIds.has(e.id));
+    monthEvents.length > 0 &&
+    monthEvents.every((e) => selectedEventIds.has(e.id));
 
   const getStatusLabel = (status: "open" | "closed" | null | undefined) => {
-    if (status === "open") return t("teams.mobile.adminAttendance.bulkChange.statusOpen");
-    if (status === "closed") return t("teams.mobile.adminAttendance.bulkChange.statusClosed");
+    if (status === "open")
+      return t("teams.mobile.adminAttendance.bulkChange.statusOpen");
+    if (status === "closed")
+      return t("teams.mobile.adminAttendance.bulkChange.statusClosed");
     return t("teams.mobile.adminAttendance.bulkChange.statusUnset");
   };
 
@@ -363,125 +388,160 @@ const BulkChangeSheet: React.FC<BulkChangeSheetProps> = ({
   const hasSelection = selectedEventIds.size > 0;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={styles.bulkOverlay}>
-        <View style={styles.bulkSheet}>
-          <View style={styles.bulkHeader}>
-            <Text style={styles.bulkTitle} numberOfLines={1}>
-              {t("teams.mobile.adminAttendance.bulkChange.title")}
-            </Text>
-            <Pressable onPress={handleClose} style={styles.bulkCloseIcon} accessibilityRole="button">
-              <Feather name="x" size={22} color="#6B7280" />
-            </Pressable>
-          </View>
+    <SlideUpModal
+      visible={visible}
+      onClose={handleClose}
+      onBackdropPress={NOOP_BACKDROP_PRESS}
+      // このシートは背面タップで閉じない (NOOP) ため、"閉じる" ではなく
+      // 動作を約束しない中立的なラベルを読み上げさせる。
+      backdropAccessibilityLabel={t("common.aria.modalOverlay")}
+      overlayColor="rgba(0,0,0,0.4)"
+      sheetStyle={styles.bulkSheet}
+    >
+      <View style={styles.bulkHeader}>
+        <Text style={styles.bulkTitle} numberOfLines={1}>
+          {t("teams.mobile.adminAttendance.bulkChange.title")}
+        </Text>
+        <Pressable
+          onPress={handleClose}
+          style={styles.bulkCloseIcon}
+          accessibilityRole="button"
+        >
+          <Feather name="x" size={22} color="#6B7280" />
+        </Pressable>
+      </View>
 
-          {groupedEvents.length === 0 ? (
-            <View style={styles.bulkEmptyBlock}>
-              <Text style={styles.bulkEmptyText}>
-                {t("teams.mobile.adminAttendance.bulkChange.empty")}
-              </Text>
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={styles.bulkBody} showsVerticalScrollIndicator={false}>
-              {groupedEvents.map((group) => {
-                const allSelected = isMonthAllSelected(group.events);
-                return (
-                  <View key={`${group.year}-${group.month}`} style={styles.bulkMonthGroup}>
+      {groupedEvents.length === 0 ? (
+        <View style={styles.bulkEmptyBlock}>
+          <Text style={styles.bulkEmptyText}>
+            {t("teams.mobile.adminAttendance.bulkChange.empty")}
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.bulkBody}
+          showsVerticalScrollIndicator={false}
+        >
+          {groupedEvents.map((group) => {
+            const allSelected = isMonthAllSelected(group.events);
+            return (
+              <View
+                key={`${group.year}-${group.month}`}
+                style={styles.bulkMonthGroup}
+              >
+                <Pressable
+                  style={styles.bulkMonthHeader}
+                  onPress={() => handleToggleMonth(group.events)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: allSelected }}
+                >
+                  <Feather
+                    name={allSelected ? "check-square" : "square"}
+                    size={18}
+                    color={allSelected ? "#2563EB" : "#9CA3AF"}
+                  />
+                  <Text style={styles.bulkMonthLabel}>
+                    {t("common.yearMonth", {
+                      year: group.year,
+                      month: group.month,
+                    })}
+                  </Text>
+                  <Text style={styles.bulkSelectAllHint}>
+                    {t("teams.mobile.adminAttendance.bulkChange.selectAll")}
+                  </Text>
+                </Pressable>
+
+                {group.events.map((event) => {
+                  const isSelected = selectedEventIds.has(event.id);
+                  const title =
+                    event.type === "competition"
+                      ? (event.title ??
+                        t("teams.mobile.adminAttendance.defaultCompetition"))
+                      : t("teams.mobile.adminAttendance.defaultPractice");
+                  return (
                     <Pressable
-                      style={styles.bulkMonthHeader}
-                      onPress={() => handleToggleMonth(group.events)}
+                      key={event.id}
+                      style={styles.bulkEventRow}
+                      onPress={() => handleToggleEvent(event.id)}
                       accessibilityRole="checkbox"
-                      accessibilityState={{ checked: allSelected }}
+                      accessibilityState={{ checked: isSelected }}
                     >
                       <Feather
-                        name={allSelected ? "check-square" : "square"}
-                        size={18}
-                        color={allSelected ? "#2563EB" : "#9CA3AF"}
+                        name={isSelected ? "check-square" : "square"}
+                        size={16}
+                        color={isSelected ? "#2563EB" : "#9CA3AF"}
                       />
-                      <Text style={styles.bulkMonthLabel}>
-                        {t("common.yearMonth", { year: group.year, month: group.month })}
-                      </Text>
-                      <Text style={styles.bulkSelectAllHint}>
-                        {t("teams.mobile.adminAttendance.bulkChange.selectAll")}
-                      </Text>
-                    </Pressable>
-
-                    {group.events.map((event) => {
-                      const isSelected = selectedEventIds.has(event.id);
-                      const title =
-                        event.type === "competition"
-                          ? (event.title ??
-                            t("teams.mobile.adminAttendance.defaultCompetition"))
-                          : t("teams.mobile.adminAttendance.defaultPractice");
-                      return (
-                        <Pressable
-                          key={event.id}
-                          style={styles.bulkEventRow}
-                          onPress={() => handleToggleEvent(event.id)}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: isSelected }}
-                        >
-                          <Feather
-                            name={isSelected ? "check-square" : "square"}
-                            size={16}
-                            color={isSelected ? "#2563EB" : "#9CA3AF"}
-                          />
-                          <View style={styles.bulkEventInfo}>
-                            <Text style={styles.bulkEventDate}>
-                              {formatDate(event.date, "shortWithWeekday", locale)}
-                            </Text>
-                            {event.type === "competition" && (
-                              <Text style={styles.bulkCompetitionLabel}>
-                                {t("teams.mobile.adminAttendance.bulkChange.competitionLabel")}
-                              </Text>
+                      <View style={styles.bulkEventInfo}>
+                        <Text style={styles.bulkEventDate}>
+                          {formatDate(event.date, "shortWithWeekday", locale)}
+                        </Text>
+                        {event.type === "competition" && (
+                          <Text style={styles.bulkCompetitionLabel}>
+                            {t(
+                              "teams.mobile.adminAttendance.bulkChange.competitionLabel",
                             )}
-                            <Text style={styles.bulkEventTitle} numberOfLines={1}>
-                              {title}
-                            </Text>
-                            <Text style={[styles.bulkEventStatus, getStatusTextStyle(event.attendance_status)]}>
-                              [{getStatusLabel(event.attendance_status)}]
-                            </Text>
-                          </View>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                );
-              })}
-            </ScrollView>
-          )}
+                          </Text>
+                        )}
+                        <Text style={styles.bulkEventTitle} numberOfLines={1}>
+                          {title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.bulkEventStatus,
+                            getStatusTextStyle(event.attendance_status),
+                          ]}
+                        >
+                          [{getStatusLabel(event.attendance_status)}]
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
 
-          {groupedEvents.length > 0 && (
-            <SafeAreaView edges={["bottom"]} style={styles.bulkFooter}>
-              <Pressable
-                style={[styles.bulkActionButton, styles.bulkOpenButton, (!hasSelection || isSaving) && styles.bulkActionDisabled]}
-                onPress={() => handleUpdate("open")}
-                disabled={!hasSelection || isSaving}
-                accessibilityRole="button"
-              >
-                <Text style={styles.bulkActionText}>
-                  {t("teams.mobile.adminAttendance.bulkChange.openButton")}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.bulkActionButton, styles.bulkClosedButton, (!hasSelection || isSaving) && styles.bulkActionDisabled]}
-                onPress={() => handleUpdate("closed")}
-                disabled={!hasSelection || isSaving}
-                accessibilityRole="button"
-              >
-                <Text style={styles.bulkActionText}>
-                  {t("teams.mobile.adminAttendance.bulkChange.closedButton")}
-                </Text>
-              </Pressable>
-            </SafeAreaView>
-          )}
-        </View>
-      </View>
-    </Modal>
+      {groupedEvents.length > 0 && (
+        <SafeAreaView edges={["bottom"]} style={styles.bulkFooter}>
+          <Pressable
+            style={[
+              styles.bulkActionButton,
+              styles.bulkOpenButton,
+              (!hasSelection || isSaving) && styles.bulkActionDisabled,
+            ]}
+            onPress={() => handleUpdate("open")}
+            disabled={!hasSelection || isSaving}
+            accessibilityRole="button"
+          >
+            <Text style={styles.bulkActionText}>
+              {t("teams.mobile.adminAttendance.bulkChange.openButton")}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.bulkActionButton,
+              styles.bulkClosedButton,
+              (!hasSelection || isSaving) && styles.bulkActionDisabled,
+            ]}
+            onPress={() => handleUpdate("closed")}
+            disabled={!hasSelection || isSaving}
+            accessibilityRole="button"
+          >
+            <Text style={styles.bulkActionText}>
+              {t("teams.mobile.adminAttendance.bulkChange.closedButton")}
+            </Text>
+          </Pressable>
+        </SafeAreaView>
+      )}
+    </SlideUpModal>
   );
 };
 
-export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ teamId }) => {
+export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({
+  teamId,
+}) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
   const locale = useDateLocale();
@@ -509,7 +569,10 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
       const members = await fetchTeamMembers(supabase, teamId);
       setTeamMembers(members);
     } catch (err) {
-      console.error("AdminMonthlyAttendance: failed to fetch team members", err);
+      console.error(
+        "AdminMonthlyAttendance: failed to fetch team members",
+        err,
+      );
       setTeamMembersError(true);
     } finally {
       setTeamMembersLoading(false);
@@ -575,7 +638,8 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
   const handleToggleStatus = useCallback(
     (event: TeamEvent) => {
       const current = event.attendance_status ?? null;
-      const next: AttendanceStatusType | null = current === "open" ? "closed" : "open";
+      const next: AttendanceStatusType | null =
+        current === "open" ? "closed" : "open";
 
       const confirmKey =
         next === "open"
@@ -606,7 +670,10 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
               } catch (err) {
                 // 失敗時は変更前 state に復元してサーバ状態と同期
                 setEvents(previousEvents);
-                console.error("AdminMonthlyAttendance: failed to update status", err);
+                console.error(
+                  "AdminMonthlyAttendance: failed to update status",
+                  err,
+                );
                 const msg =
                   err instanceof Error
                     ? err.message
@@ -639,12 +706,17 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
         await loadFutureEvents();
         setBulkSheetVisible(false);
       } catch (err) {
-        console.error("AdminMonthlyAttendance: failed to bulk update status", err);
+        console.error(
+          "AdminMonthlyAttendance: failed to bulk update status",
+          err,
+        );
         // 逐次 mutateAsync が途中で失敗した場合、確定済みの変更が UI と乖離する。
         // 再読込してサーバー状態に同期する（確定分を正しく反映）。
         await loadFutureEvents();
         const msg =
-          err instanceof Error ? err.message : t("teams.mobile.adminAttendance.saveFailed");
+          err instanceof Error
+            ? err.message
+            : t("teams.mobile.adminAttendance.saveFailed");
         Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);
       } finally {
         setBulkSaving(false);
@@ -678,7 +750,10 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+    >
       {error && (
         <View style={styles.inlineErrorContainer}>
           <Text style={styles.errorText}>{error}</Text>
@@ -688,7 +763,9 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
       {events.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Feather name="calendar" size={40} color="#D1D5DB" />
-          <Text style={styles.emptyText}>{t("teams.mobile.adminAttendance.empty")}</Text>
+          <Text style={styles.emptyText}>
+            {t("teams.mobile.adminAttendance.empty")}
+          </Text>
         </View>
       ) : (
         <>
@@ -696,7 +773,9 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({ 
             style={styles.bulkChangeButton}
             onPress={() => setBulkSheetVisible(true)}
             accessibilityRole="button"
-            accessibilityLabel={t("teams.mobile.adminAttendance.bulkChange.title")}
+            accessibilityLabel={t(
+              "teams.mobile.adminAttendance.bulkChange.title",
+            )}
           >
             <Feather name="check-square" size={15} color="#2563EB" />
             <Text style={styles.bulkChangeButtonText}>
@@ -992,11 +1071,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#2563EB",
-  },
-  bulkOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
   },
   bulkSheet: {
     backgroundColor: "#FFFFFF",

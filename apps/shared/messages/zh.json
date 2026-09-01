@@ -120,7 +120,8 @@
       "previousPage": "上一页",
       "nextPage": "下一页",
       "pageN": "第 {page} 页",
-      "switchLanguage": "切换语言"
+      "switchLanguage": "切换语言",
+      "modalOverlay": "弹窗背景"
     },
     "pagination": {
       "prev": "上一页",
@@ -1310,7 +1311,8 @@
         "relaying": "R：含接力交接",
         "relayingExcludedFromWaPoints": "接力交接成绩不计入WA积分"
       },
-      "waPointsToggle": "显示WA积分"
+      "waPointsToggle": "显示WA积分",
+      "waPointsToggleShort": "WA积分"
     },
     "error": {
       "title": "发生错误",
@@ -2499,9 +2501,7 @@
       "groupMemberAssignFailed": "分配成员失败",
       "memberListTitle": "成员",
       "memberListEmpty": "暂无成员",
-      "memberListTotal": "合计：{count}人",
-      "memberListAdmin": "管理员：{count}人",
-      "memberListMember": "成员：{count}人",
+      "memberListTotal": "人数：{count}人",
       "bestTimeLoading": "正在加载最佳成绩...",
       "memberColLabel": "成员",
       "youLabel": "你",
@@ -2551,7 +2551,8 @@
       "adminControlsTitle": "管理员功能",
       "bestTimesEmpty": "暂无记录",
       "bestTimesEmptySubText": "该成员尚未登记任何记录",
-      "bestTimesIncludeRelaying": "含接力成绩",
+      "bestTimesIncludeRelaying": "含接力交接",
+      "bestTimesWaPointsToggle": "WA积分",
       "bestTimesAnnotation": "※ L：长池，R：含接力交接",
       "groupDisplayLabel": "分组显示：",
       "groupAddAria": "添加分组",
@@ -2975,8 +2976,8 @@
       "rankLabel": "排名",
       "pointsLabel": "WA积分",
       "styleLabel": "项目",
-      "courseShort": "SC",
-      "courseLong": "LC",
+      "courseShort": "短池",
+      "courseLong": "长池",
       "empty": "暂无可比较的成绩"
     },
     "membershipActions": {

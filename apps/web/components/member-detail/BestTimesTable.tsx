@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Tabs } from "@/components/ui/Tabs";
+import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { TrophyIcon, CalendarIcon } from "@heroicons/react/24/outline";
 import { differenceInDays, parseISO } from "date-fns";
 import { formatTimeBest, formatDate } from "@/utils/formatters";
@@ -81,6 +82,7 @@ export function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
               id: bt.relayingTime.id,
               time: bt.relayingTime.time,
               created_at: bt.relayingTime.created_at,
+              note: bt.relayingTime.note,
               is_relaying: true,
               competition: bt.relayingTime.competition,
             });
@@ -106,6 +108,7 @@ export function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
               id: bt.relayingTime.id,
               time: bt.relayingTime.time,
               created_at: bt.relayingTime.created_at,
+              note: bt.relayingTime.note,
               is_relaying: true,
               competition: bt.relayingTime.competition,
             });
@@ -132,6 +135,7 @@ export function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
               id: bt.relayingTime.id,
               time: bt.relayingTime.time,
               created_at: bt.relayingTime.created_at,
+              note: bt.relayingTime.note,
               is_relaying: true,
               competition: bt.relayingTime.competition,
             });
@@ -217,19 +221,22 @@ export function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
           onTabChange={(tabId) => setActiveTab(tabId as TabType)}
         />
         <div className="flex items-center space-x-3">
-          <button
-            type="button"
-            data-testid="member-detail-best-times-wa-points-toggle"
-            aria-pressed={isWaPointsMode}
-            onClick={() => setIsWaPointsMode((prev) => !prev)}
-            className={`px-3 py-1.5 rounded-md border text-xs sm:text-sm font-medium transition-colors ${
-              isWaPointsMode
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-            }`}
-          >
-            {t("waPointsToggle")}
-          </button>
+          <div className="relative inline-block shrink-0">
+            <button
+              type="button"
+              data-testid="member-detail-best-times-wa-points-toggle"
+              aria-pressed={isWaPointsMode}
+              onClick={() => setIsWaPointsMode((prev) => !prev)}
+              className={`px-3 py-1.5 rounded-md border text-xs sm:text-sm font-medium transition-colors ${
+                isWaPointsMode
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {t("waPointsToggle")}
+            </button>
+            <WaPointsInfoTooltip buttonTestId="member-detail-best-times-wa-points-info-button" />
+          </div>
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
               type="checkbox"
@@ -324,9 +331,12 @@ export function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
                             </div>
                             {bestTime.competition ? (
                               <div className="text-blue-300">{bestTime.competition.title}</div>
-                            ) : (
-                              <div className="text-gray-400">{bestTime.note || t("bulkEntryNote")}</div>
-                            )}
+                            ) : null}
+                            {bestTime.note ? (
+                              <div className="text-gray-400">{bestTime.note}</div>
+                            ) : !bestTime.competition ? (
+                              <div className="text-gray-400">{t("bulkEntryNote")}</div>
+                            ) : null}
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                           </div>
                         </div>

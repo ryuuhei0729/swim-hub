@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Modal, Pressable, TextInput, ScrollView, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 import { useTranslation } from "react-i18next";
+import { CenterModal } from "@/components/ui/CenterModal";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface GroupFormModalProps {
@@ -23,7 +31,9 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
   error,
 }) => {
   const { t } = useTranslation();
-  const [categoryMode, setCategoryMode] = useState<"existing" | "new">("existing");
+  const [categoryMode, setCategoryMode] = useState<"existing" | "new">(
+    "existing",
+  );
   const [selectedCategory, setSelectedCategory] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [name, setName] = useState("");
@@ -31,7 +41,10 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
   useEffect(() => {
     if (editingGroup) {
       setName(editingGroup.name);
-      if (editingGroup.category && existingCategories.includes(editingGroup.category)) {
+      if (
+        editingGroup.category &&
+        existingCategories.includes(editingGroup.category)
+      ) {
         setCategoryMode("existing");
         setSelectedCategory(editingGroup.category);
       } else if (editingGroup.category) {
@@ -55,7 +68,10 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
   };
 
   const handleSubmit = async () => {
-    const category = categoryMode === "new" ? newCategory.trim() || null : selectedCategory || null;
+    const category =
+      categoryMode === "new"
+        ? newCategory.trim() || null
+        : selectedCategory || null;
     const success = await onSubmit(category, name.trim());
     if (success) {
       onClose();
@@ -65,177 +81,183 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
   const isValid = name.trim().length > 0;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              {editingGroup ? t("teams.mobile.groupEditTitle") : t("teams.mobile.groupAddTitle")}
-            </Text>
-            <Pressable style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </Pressable>
-          </View>
-
-          <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
-            {/* カテゴリ */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("teams.mobile.groupCategoryLabel")}</Text>
-              {existingCategories.length > 0 && (
-                <View style={styles.modeToggle}>
-                  <Pressable
-                    style={[
-                      styles.modeButton,
-                      categoryMode === "existing" && styles.modeButtonActive,
-                    ]}
-                    onPress={() => setCategoryMode("existing")}
-                  >
-                    <Text
-                      style={[
-                        styles.modeButtonText,
-                        categoryMode === "existing" && styles.modeButtonTextActive,
-                      ]}
-                    >
-                      {t("teams.mobile.groupCategoryExisting")}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.modeButton, categoryMode === "new" && styles.modeButtonActive]}
-                    onPress={() => setCategoryMode("new")}
-                  >
-                    <Text
-                      style={[
-                        styles.modeButtonText,
-                        categoryMode === "new" && styles.modeButtonTextActive,
-                      ]}
-                    >
-                      {t("teams.mobile.groupCategoryNew")}
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-
-              {categoryMode === "existing" && existingCategories.length > 0 ? (
-                <View style={styles.categoryPills}>
-                  <Pressable
-                    style={[
-                      styles.categoryPill,
-                      selectedCategory === "" && styles.categoryPillSelected,
-                    ]}
-                    onPress={() => setSelectedCategory("")}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryPillText,
-                        selectedCategory === "" && styles.categoryPillTextSelected,
-                      ]}
-                    >
-                      {t("teams.mobile.groupCategoryNone")}
-                    </Text>
-                  </Pressable>
-                  {existingCategories.map((cat) => (
-                    <Pressable
-                      key={cat}
-                      style={[
-                        styles.categoryPill,
-                        selectedCategory === cat && styles.categoryPillSelected,
-                      ]}
-                      onPress={() => setSelectedCategory(cat)}
-                    >
-                      <Text
-                        style={[
-                          styles.categoryPillText,
-                          selectedCategory === cat && styles.categoryPillTextSelected,
-                        ]}
-                      >
-                        {cat}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  value={newCategory}
-                  onChangeText={setNewCategory}
-                  placeholder={t("teams.mobile.groupCategoryPlaceholder")}
-                  placeholderTextColor="#9CA3AF"
-                  editable={!saving}
-                />
-              )}
-              <Text style={styles.hint}>{t("teams.mobile.groupCategoryHint")}</Text>
-            </View>
-
-            {/* グループ名 */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                {t("teams.mobile.groupNameLabel")} <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder={
-                  editingGroup
-                    ? t("teams.mobile.groupNamesPlaceholderEdit")
-                    : t("teams.mobile.groupNamesPlaceholderNew")
-                }
-                placeholderTextColor="#9CA3AF"
-                editable={!saving}
-              />
-              {!editingGroup && (
-                <Text style={styles.hint}>{t("teams.mobile.groupNameMultiHint")}</Text>
-              )}
-            </View>
-
-            {/* エラー */}
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={saving}
-            >
-              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.button,
-                styles.submitButton,
-                (!isValid || saving) && styles.submitButtonDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={!isValid || saving}
-            >
-              <Text style={styles.submitButtonText}>
-                {saving
-                  ? t("teams.mobile.saveLoading")
-                  : editingGroup
-                    ? t("teams.mobile.groupSaveButtonUpdate")
-                    : t("teams.mobile.groupSaveButtonCreate")}
-              </Text>
-            </Pressable>
-          </View>
+    <CenterModal
+      visible={visible}
+      onClose={handleClose}
+      closeAccessibilityLabel={t("common.close")}
+      showCloseButton={false}
+      contentStyle={styles.modalContent}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          {editingGroup
+            ? t("teams.mobile.groupEditTitle")
+            : t("teams.mobile.groupAddTitle")}
+        </Text>
+        <Pressable style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
+        {/* カテゴリ */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            {t("teams.mobile.groupCategoryLabel")}
+          </Text>
+          {existingCategories.length > 0 && (
+            <View style={styles.modeToggle}>
+              <Pressable
+                style={[
+                  styles.modeButton,
+                  categoryMode === "existing" && styles.modeButtonActive,
+                ]}
+                onPress={() => setCategoryMode("existing")}
+              >
+                <Text
+                  style={[
+                    styles.modeButtonText,
+                    categoryMode === "existing" && styles.modeButtonTextActive,
+                  ]}
+                >
+                  {t("teams.mobile.groupCategoryExisting")}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.modeButton,
+                  categoryMode === "new" && styles.modeButtonActive,
+                ]}
+                onPress={() => setCategoryMode("new")}
+              >
+                <Text
+                  style={[
+                    styles.modeButtonText,
+                    categoryMode === "new" && styles.modeButtonTextActive,
+                  ]}
+                >
+                  {t("teams.mobile.groupCategoryNew")}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {categoryMode === "existing" && existingCategories.length > 0 ? (
+            <View style={styles.categoryPills}>
+              <Pressable
+                style={[
+                  styles.categoryPill,
+                  selectedCategory === "" && styles.categoryPillSelected,
+                ]}
+                onPress={() => setSelectedCategory("")}
+              >
+                <Text
+                  style={[
+                    styles.categoryPillText,
+                    selectedCategory === "" && styles.categoryPillTextSelected,
+                  ]}
+                >
+                  {t("teams.mobile.groupCategoryNone")}
+                </Text>
+              </Pressable>
+              {existingCategories.map((cat) => (
+                <Pressable
+                  key={cat}
+                  style={[
+                    styles.categoryPill,
+                    selectedCategory === cat && styles.categoryPillSelected,
+                  ]}
+                  onPress={() => setSelectedCategory(cat)}
+                >
+                  <Text
+                    style={[
+                      styles.categoryPillText,
+                      selectedCategory === cat &&
+                        styles.categoryPillTextSelected,
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <TextInput
+              style={styles.input}
+              value={newCategory}
+              onChangeText={setNewCategory}
+              placeholder={t("teams.mobile.groupCategoryPlaceholder")}
+              placeholderTextColor="#9CA3AF"
+              editable={!saving}
+            />
+          )}
+          <Text style={styles.hint}>{t("teams.mobile.groupCategoryHint")}</Text>
+        </View>
+
+        {/* グループ名 */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            {t("teams.mobile.groupNameLabel")}{" "}
+            <Text style={styles.required}>*</Text>
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder={
+              editingGroup
+                ? t("teams.mobile.groupNamesPlaceholderEdit")
+                : t("teams.mobile.groupNamesPlaceholderNew")
+            }
+            placeholderTextColor="#9CA3AF"
+            editable={!saving}
+          />
+          {!editingGroup && (
+            <Text style={styles.hint}>
+              {t("teams.mobile.groupNameMultiHint")}
+            </Text>
+          )}
+        </View>
+
+        {/* エラー */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={[styles.button, styles.cancelButton]}
+          onPress={handleClose}
+          disabled={saving}
+        >
+          <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.button,
+            styles.submitButton,
+            (!isValid || saving) && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={!isValid || saving}
+        >
+          <Text style={styles.submitButtonText}>
+            {saving
+              ? t("teams.mobile.saveLoading")
+              : editingGroup
+                ? t("teams.mobile.groupSaveButtonUpdate")
+                : t("teams.mobile.groupSaveButtonCreate")}
+          </Text>
+        </Pressable>
+      </View>
+    </CenterModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,

@@ -177,6 +177,24 @@
   }
   .note.warn{border-left-color:var(--must); background:var(--must-bg)}
   .note.good{border-left-color:var(--ok); background:var(--ok-bg)}
+
+  /* 例外ケースの呼びかけ: 手順に入る前に止まってほしい人向け */
+  .heads-up{
+    margin:24px 0 8px; padding:20px 22px;
+    background:var(--must-bg); border:1px solid var(--must);
+    border-radius:12px; font-size:15px; line-height:1.85;
+  }
+  .heads-up .hu-title{
+    margin:0 0 8px; font-weight:800; font-size:16px; color:var(--must);
+    display:flex; align-items:baseline; gap:9px;
+  }
+  .heads-up .hu-title::before{
+    content:"CHECK"; font-family:var(--mono); font-size:10px; letter-spacing:.12em;
+    border:1px solid var(--must); border-radius:3px; padding:2px 6px; flex:none;
+  }
+  .heads-up p{margin:0}
+  .heads-up p + p{margin-top:10px}
+  .heads-up strong{font-weight:800}
   .note strong{font-weight:800}
   .note p{margin:0}
   .note p + p{margin-top:8px}
@@ -211,15 +229,15 @@
   <header class="mast">
     <p class="eyebrow">小石川 水泳部</p>
     <h1>SwimHub のはじめかた</h1>
-    <p class="lead">先生から配られたメールアドレスと仮パスワードで、最初にやることをまとめました。上から順に進めれば10分ほどで終わります。パソコンでもスマホでもできます。</p>
+    <p class="lead">細井から配られたメールアドレスと仮パスワードで、最初にやることをまとめました。上から順に進めれば10分ほどで終わります。パソコンでもスマホでもできます。</p>
   </header>
 
   <div class="grid2">
     <div class="panel">
       <h3>配られるもの</h3>
       <ul class="creds">
-        <li><span class="k">メール</span><code>koishikawa001@swimhub.jp</code></li>
-        <li><span class="k">仮パスワード</span><code>先生から個別に受け取ります</code></li>
+        <li><span class="k">メール</span><code>細井から配られます</code></li>
+        <li><span class="k">仮パスワード</span><code>細井から配られます</code></li>
       </ul>
       <p style="margin:14px 0 0; font-size:14px; color:var(--ink-2)">この2つは<strong>最初のログインだけ</strong>に使います。</p>
     </div>
@@ -233,6 +251,12 @@
         <li><a href="#s5">ベストタイムをまとめて入力する</a></li>
       </ol>
     </div>
+  </div>
+
+  <div class="heads-up">
+    <p class="hu-title">すでに SwimHub を使っている人へ</p>
+    <p>自分でアカウントを作って、すでに記録を入力したことがある人は、<strong>この手順を始める前に細井に一報ください。</strong>今まで入力した記録は、細井の方で新しいアカウントに移し替えます。</p>
+    <p>先に新しいアカウントで入力を始めてしまうと、記録が2つのアカウントに分かれてしまいます。</p>
   </div>
 
   <!-- ============ STEP 1 ============ -->
@@ -389,7 +413,7 @@
       <div class="step-head"><h2>困ったとき</h2></div>
       <dl class="faq">
         <dt>パスワードを忘れてログインできない</dt>
-        <dd>ログイン画面の「パスワードを忘れた方はこちら」から再設定できます。それでも入れないときは先生に相談してください。</dd>
+        <dd>ログイン画面の「パスワードを忘れた方はこちら」から再設定できます。それでも入れないときは細井に相談してください。</dd>
 
         <dt>確認メールが届かない</dt>
         <dd>迷惑メールフォルダを確認してください。数分待っても届かない場合は、アドレスの打ち間違いがないかもう一度確認します。</dd>

@@ -1,71 +1,77 @@
 /**
  * TeamCompetitionList コンポーネント テスト
  *
- * Sprint 2 Phase B QA 検証
- *
- * 検証観点:
- * [S2-V-05] isLoading 時にローディング表示が出る
- * [S2-V-06] isError 時にエラー表示が出る
- * [S2-V-07] 大会が 0 件のとき空状態表示
- * [S2-V-08] 大会リストが表示される (タイトル / 場所)
- * [S2-V-09] isAdmin=true のとき追加ボタン・navigate が呼ばれる
- * [S2-V-10] isAdmin=false のとき追加ボタンが表示されない
+ * ---------------------------------------------------------------------
+ * Sprint Contract (mobile 管理者ビュー チーム大会タブ改修) 検証観点マッピング
+ * ---------------------------------------------------------------------
+ * [V-1]  place ありのカードで「{place} (25m)/(50m)」が1行に出て、独立した水路行が無い (D-1)
+ * [V-2]  place なしのカードで「短水路 (25m)/長水路 (50m)」が droplet 行として残る (D-1)
+ * [V-3]  pool_type=0→(25m) / pool_type=1→(50m) の向きが逆転していない (D-1)
+ * [V-4]  過去大会は admin/非admin 問わず statusRow が丸ごと非表示になる (D-2)
+ * [V-5]  今日・未来日は受付ステータスが表示される (境界値, D-2)
+ * [V-6]  admin バッジタップで3択がカード上に展開する。RN Modal を新規ネストしない (D-3)
+ * [V-7]  別ステータス選択で mutation が正しい値で呼ばれる。同一値選択は no-op (D-3)
+ * [V-8]  保存中 (isPending) は選択操作をしても mutation が呼ばれない (二重送信防止, D-3)
+ * [V-9]  編集/削除/記録代理入力/エントリー代理入力/ステータスプルダウンのタップでは
+ *        記録一覧モーダルが開かない (5要素を個別に検証, D-4)
+ * [V-10] admin がカード本体をタップすると記録一覧モーダルが開く (D-4)
+ * [V-11] 非admin はカード本体タップで記録一覧モーダルが開かない (D-4)
+ * [V-16] TeamPracticeList は本ファイルの対象外 (別ファイルで回帰確認、変更なしのはず)
+ * [V-17] i18n 5言語パリティは `apps/shared/__tests__/messages-coverage.test.ts` の
+ *        汎用キー構造一致テスト (V-01/V-01-ext) が担保する。今回のスプリントは既存キー
+ *        (`teams.competitions.entryStatus.*` 等) の再利用のみで新規キーを増やさない前提。
+ * [V-12]〜[V-15] は新規コンポーネント `TeamCompetitionRecordsModal.test.tsx` 側で検証する
+ *        (このファイルでは「開く/開かない」の配線のみを検証し、モーダル内部は検証しない)。
  *
  * ---------------------------------------------------------------------
- * Sprint Contract 追加検証観点 (管理者代理入力 導線再編 + entry_status 表示派生):
- * [SC-1] admin 時、ボタン行は「記録代理入力」「エントリー代理入力」の2個のみ。「エントリー」ボタンは無い
- * [SC-2] admin 時、entry_status バッジをタップすると受付状況モーダルが開く
- * [SC-3] 非 admin 時のボタン構成/ラベル/遷移先は変更前と完全一致 (entryButton 経由でモーダルを開く)
- * [SC-4] 過去日なら DB 値(before/open)によらずバッジは「受付終了」
- * [SC-6] 今日は過去扱いしない (DB 値のまま)
- * [SC-8] 上記の日付派生は admin/非 admin 共通
- * [SC-9] 過去日大会でセルフエントリー導線 (handleSelfEntry) が発火しない
+ * 【重要: 既存テストの矛盾と書き換えについて】(QA Phase A 棚卸し)
+ * 旧 Sprint Contract (管理者代理入力 導線再編) 時点で書かれた以下のブロックは、
+ * 今回の Sprint Contract (D-2/D-3) と正面から矛盾するため書き換えた:
  *
- * 日付は `new Date()` からの相対 (subDays/addDays) で生成し、固定日付をハードコードしない
- * (テスト実行日に依存して壊れることを防ぐ)。
+ * 1. 旧 [SC-4][SC-6][SC-8] のうち「過去日なら受付終了と *表示される*」を pin していた
+ *    3ケース (旧 L649-668, L781-804 相当) → 新仕様は「過去日は statusRow を丸ごと
+ *    描画しない」なので、「受付終了というテキスト自体が一切現れない」に反転した
+ *    ([V-4] として書き換え)。旧仕様は「過去日でも DB 値を『受付終了』に強制表示する」
+ *    だったが、新仕様は「そもそも表示しない」。今日/未来日の挙動 (表示される) は
+ *    従来と変わらないためそのまま維持する ([V-5])。
+ * 2. 旧 [SC-2] (admin バッジタップで TeamCompetitionEntryModal が開く, 旧 L528-596) と
+ *    旧 [SC-9 REVISED] のうち未来日/今日で admin バッジタップ→モーダルが開くことを
+ *    pin していた2ケース (旧 L806-829, L831-854) → 新仕様はバッジタップで
+ *    「カード上の3択プルダウン」が展開し、TeamCompetitionEntryModal は一切開かない
+ *    (D-3: 既存モーダルは非adminの「エントリー」ボタン経由の導線としてのみ残る)。
+ *    [V-6]/[V-7]/[V-8] として全面的に書き換えた。
  *
- * ---------------------------------------------------------------------
- * 【重要: 期待値の反転について】(ユーザー報告バグ修正スプリント, PM確定方針)
- * 上記 [SC-5 配線確認] / [SC-9] は元々「過去日でもエントリーボタン/バッジが表示され
- * クリック可能」ことを固定していた。しかし新しい Sprint Contract の方針は逆で、
- * 「過去の大会 (昨日以前 = date < today、既存の純粋関数 isCompetitionDateInPast と
- * 完全一致) では非adminの『エントリー』ボタンを非表示にし、adminの entry_status
- * バッジは表示は残すがタップ不可 (Pressable→View に降格) にする」。
- * 以下の2つの describe ブロックはこの反転後の期待値に合わせて全面的に書き換えている
- * (ブロック名は元の [SC-5]/[SC-9] 番号を維持しつつ [REVISED] を付す)。
- * 実装前の現時点ではこれらは RED になる想定。
+ * 【変更していないもの】
+ * - 非 admin の「エントリー」ボタン経由で TeamCompetitionEntryModal が開く一連のテスト
+ *   (SC-3 本体、onSelfEntry 系) は D-3 で「非adminの導線として残す」と明記されているため
+ *   無変更。
+ * - [SC-5 REVISED][V-11](旧番号。今回の Sprint Contract の V-11 とは無関係な別番号なので
+ *   混同注意) の非admin エントリーボタンの過去日非表示は、D-2 の対象 (statusRow) とは
+ *   別の行 (entryRecordRow) であり、今回のスコープ外のため無変更。
+ * - [C-2 再評価] の aria/chevron-down/hitSlop の構造検証は、バッジの見た目構造自体は
+ *   D-3 で変わらない (タップ後の遷移先だけが変わる) ため無変更。
+ * - [SC-1] admin ボタン構成 (記録代理入力/エントリー代理入力の2つのみ) も無変更。
  *
- * [V-11] 過去日 + 非admin: 「エントリー」ボタンは存在しない (押せないので自己エントリー
- *        導線 handleSelfEntry も物理的に発火し得ない。モーダル自体が一度も開かれない)
- * [V-12] 過去日 + admin: entry_status バッジはラベル表示は残るが role=button ではない
- *        (タップしても受付状況モーダルは一度も開かれない)
- * [V-13][境界値] 今日/未来日は従来通り表示・クリック可能 (今日は過去扱いしない)
- *
- * なお「past date + entryStatus='closed' を渡されたモーダルが自己エントリー導線を
- * 出さない」という防御の二重化 (defense-in-depth) は、このコンポーネントではなく
- * TeamCompetitionEntryModal.test.tsx 側で entryStatus prop 単体として検証済み
- * (entry_status !== 'open' なら「種目をエントリー」導線が出ない)。本ファイルでは
- * 「そもそも導線 (ボタン/タップ可能なバッジ) 自体が過去日には存在しない」という
- * 一段目のガードのみを検証する (二重に同じ主張をしてトートロジー化するのを避ける)。
+ * トートロジー防止: DOM に表示される文字列・要素の有無、外部 mock の呼び出し引数のみ
+ * 検証する。日付は `new Date()` からの相対 (subDays/addDays) で生成し、固定日付を
+ * ハードコードしない (テスト実行日に依存して壊れることを防ぐ)。
  */
 
 import React from "react";
-import { Text, Pressable } from "react-native";
+import { Text, Pressable, Alert } from "react-native";
+import { __modalMountRegistry, __resetModalMountRegistry } from "../../../__mocks__/react-native";
 import { describe, it, vi, beforeEach, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { addDays, format, subDays } from "date-fns";
 import jaMessages from "@apps/shared/messages/ja.json";
 
-// 固定日付ハードコード禁止 (SC-4/SC-6): 実行時の「今日」からの相対で past/today/future を導出する
+// 固定日付ハードコード禁止: 実行時の「今日」からの相対で past/today/future を導出する
 const NOW = new Date();
 const PAST_DATE = format(subDays(NOW, 5), "yyyy-MM-dd");
 const TODAY_DATE = format(NOW, "yyyy-MM-dd");
 const FUTURE_DATE = format(addDays(NOW, 5), "yyyy-MM-dd");
 
 // ja.json の実データを直接テンプレート解決する (vitest.setup.ts の tMock と同じ方式)。
-// 期待文字列を丸ごとハードコードせず、キーが指すテンプレートに実値を当てはめて算出することで
-// 「翻訳内容が変わっても追随するが、キー自体が消えたら resolveJaKey が undefined を投げて
-// テストが落ちる」形にする。
 function resolveJaKey(key: string): string {
   const parts = key.split(".");
   let cur: unknown = jaMessages;
@@ -88,17 +94,34 @@ function interpolateJa(key: string, values: Record<string, string>): string {
 const mocks = vi.hoisted(() => ({
   useTeamCompetitionsQuery: vi.fn(),
   useDeleteTeamCompetitionMutation: vi.fn(),
+  useUpdateCompetitionMutation: vi.fn(),
+  mutateAsync: vi.fn(),
+  invalidateQueries: vi.fn(),
   navigate: vi.fn(),
   supabase: {},
   // モーダルが描画する子コンポーネントを差し替えて、TeamCompetitionList 単体の
-  // 「エントリーボタン押下でモーダルが開く」挙動だけを検証する。
-  // (モーダル本体の検証は TeamCompetitionEntryModal.test.tsx)
+  // 「タップでモーダルが開く」配線だけを検証する (モーダル本体は各専用テストで検証)。
   entryModalSpy: vi.fn(),
+  recordsModalSpy: vi.fn(),
 }));
 
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useTeamCompetitionsQuery: mocks.useTeamCompetitionsQuery,
   useDeleteTeamCompetitionMutation: mocks.useDeleteTeamCompetitionMutation,
+}));
+
+vi.mock("@apps/shared/hooks/queries/records", () => ({
+  useUpdateCompetitionMutation: mocks.useUpdateCompetitionMutation,
+}));
+
+vi.mock("@apps/shared/hooks/queries/keys", () => ({
+  teamKeys: {
+    competitions: (teamId: string) => ["teams", "detail", teamId, "competitions"],
+  },
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: vi.fn(() => ({ invalidateQueries: mocks.invalidateQueries })),
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -130,15 +153,21 @@ vi.mock("../TeamCompetitionEntryModal", () => ({
   },
 }));
 
+// D-4: 新規「記録一覧」モーダル。プロパティ名は Sprint Contract の記述 (competitionId,
+// competitionTitle) と既存 TeamCompetitionEntryModal の命名慣習 (visible/onClose) から
+// QA が仮定したもの。実装が異なる場合は Phase B で要修正 (この仮定自体もレビュー対象)。
+vi.mock("../TeamCompetitionRecordsModal", () => ({
+  TeamCompetitionRecordsModal: (props: Record<string, unknown>) => {
+    mocks.recordsModalSpy(props);
+    if (!props.visible) return null;
+    return React.createElement(Text, null, "RECORDS_MODAL_OPEN");
+  },
+}));
+
 import { TeamCompetitionList } from "../TeamCompetitionList";
 
-// Reviewer Test Review 指摘 (Phase 5b): デフォルト日付が "2026-06-15" のハードコードだと
-// 実行日 (本セッション起動時点で既に 2026-08-19) より過去になっており、entry_status 系の
-// 新規テストが date を省略して書かれると resolveEntryStatus の過去日判定に巻き込まれて
-// 実行日依存で壊れる地雷になる。デフォルトを相対未来日 (FUTURE_DATE) に変更する。
-// 影響確認: 本ファイル内で `date` を明示指定していない makeCompetition() 呼び出しは
-// タイトル文字列表示 / entryButton・recordButton 表示のみを検証しており、entry_status
-// 由来の表示 (バッジ文言等) には一切依存していないため非退行 (実測: 全 138 -> 147 テスト green)。
+// Reviewer Test Review 指摘 (Phase 5b): デフォルト日付が固定ハードコードだと実行日依存で
+// 壊れる地雷になるため、デフォルトを相対未来日 (FUTURE_DATE) にしている。
 const makeCompetition = (overrides: Record<string, unknown> = {}) => ({
   id: "c-1",
   user_id: "user-1",
@@ -160,10 +189,22 @@ const makeMutationMock = () => ({
   isPending: false,
 });
 
+// テキストが複数の子要素 (Text) に分割されて描画されていても、行コンテナの
+// textContent が完全一致すれば拾えるようにするヘルパー (既存の
+// TeamMemberList.test.tsx と同じ `textContent ===` 完全一致パターン)。
+function queryRowsWithExactText(text: string): HTMLElement[] {
+  return screen.queryAllByText((_content, element) => element?.textContent === text) as HTMLElement[];
+}
+
 describe("TeamCompetitionList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.useDeleteTeamCompetitionMutation.mockReturnValue(makeMutationMock());
+    mocks.useUpdateCompetitionMutation.mockReturnValue({
+      mutateAsync: mocks.mutateAsync,
+      isPending: false,
+    });
+    mocks.mutateAsync.mockResolvedValue(undefined);
   });
 
   // [S2-V-05] ローディング
@@ -265,6 +306,7 @@ describe("TeamCompetitionList", () => {
   });
 
   // isAdmin=true で編集ボタンを押すと { competitionId, date, teamId } で navigate される
+  // (D-4: 編集は編集アイコンに一本化されるが、アイコン自体の挙動は無変更)
   it("isAdmin=true で編集ボタンを押すと CompetitionForm + { competitionId, date, teamId } で navigate される", () => {
     const comp = makeCompetition({ id: "c-edit", title: "編集対象大会", date: "2026-08-10" });
     mocks.useTeamCompetitionsQuery.mockReturnValue({
@@ -277,9 +319,10 @@ describe("TeamCompetitionList", () => {
 
     render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
 
-    const buttons = screen.getAllByRole("button");
-    // buttons[0] = ヘッダー追加, buttons[1] = 編集, buttons[2] = 削除
-    fireEvent.click(buttons[1]);
+    const editIcon = screen.getByTestId("icon-edit-2");
+    const editButton = editIcon.closest("button");
+    expect(editButton, "編集アイコンの button が見つからない").not.toBeNull();
+    fireEvent.click(editButton as HTMLButtonElement);
 
     expect(mocks.navigate).toHaveBeenCalledWith(
       "CompetitionForm",
@@ -329,12 +372,8 @@ describe("TeamCompetitionList", () => {
     expect(screen.getByText("記録")).toBeDefined();
   });
 
-  // 仕様変更 (Web パリティ + Sprint Contract SC-3): 非 admin はエントリーボタンが従来通り
-  // 直接 EntryForm へ遷移せず、受付状況管理モーダルを開く (この挙動は今回のスプリントでも不変)。
-  // 【注意】admin 時はこのボタン自体が廃止され entry_status バッジのタップに置き換わる ([SC-1]/[SC-2] で別途検証)。
-  // このテストは元々 isAdmin={true} で書かれていたが、新仕様では admin に「エントリー」ボタンは
-  // 存在しないため必ず破壊される。QA が Sprint Contract のリスク欄に基づき isAdmin={false} (非 admin
-  // フロー) に書き換えた。
+  // 仕様変更 (Web パリティ): 非 admin はエントリーボタンを押すと受付状況管理モーダルが開く
+  // (D-3 でもこの非 admin 導線は不変。admin のバッジ経由の導線のみ廃止される)。
   it("[SC-3] 非 admin: エントリーボタンを押すと受付状況モーダルが開き、対象大会の props が渡る", () => {
     const comp = makeCompetition({
       id: "c-ent",
@@ -379,8 +418,6 @@ describe("TeamCompetitionList", () => {
 
   // [V-06 / Sprint Contract] モーダル内「種目をエントリー」(onSelfEntry) で EntryForm へ遷移する (セルフエントリー機能維持)
   it("モーダルの onSelfEntry で EntryForm に { competitionId, date, teamId } で navigate される", () => {
-    // #7: セルフエントリー導線は entry_status === "open" のときのみ有効。
-    // 受付中の大会でのみ EntryForm へ遷移できることを検証する。
     const comp = makeCompetition({
       id: "c-self",
       date: FUTURE_DATE,
@@ -398,7 +435,6 @@ describe("TeamCompetitionList", () => {
     render(<TeamCompetitionList teamId="team-self" isAdmin={false} />);
 
     fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
-    // モーダル内のセルフエントリー導線を押下 (スタブの onSelfEntry を発火)
     fireEvent.click(screen.getByText("ENTRY_MODAL_OPEN"));
 
     expect(mocks.navigate).toHaveBeenCalledWith(
@@ -432,13 +468,10 @@ describe("TeamCompetitionList", () => {
     fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
     fireEvent.click(screen.getByText("ENTRY_MODAL_OPEN"));
 
-    // 現在 status (closed) でガードされ、navigate は呼ばれない
     expect(mocks.navigate).not.toHaveBeenCalledWith("EntryForm", expect.anything());
   });
 
   // entry_status が null/未定義でもモーダルへ "before" 相当で渡る (安全表示)
-  // 日付は明示的に未来日を指定する (デフォルト fixture 日付は過去になり得るため、
-  // resolveEntryStatus の過去日派生と混同しないよう SC-8 の「デフォルト値」側面のみを検証する)
   it("entry_status が未指定のときモーダルへ entryStatus='before' が渡る", () => {
     const comp = makeCompetition({
       id: "c-null",
@@ -463,10 +496,6 @@ describe("TeamCompetitionList", () => {
   });
 
   // [S3-V-B1 / W-01] 記録ボタン押下で CompetitionTabForm(initialTab:"record") + { competitionId, date, teamId } で navigate される。
-  // バグ修正 (2026-08-01): RecordLogForm は recordId 未指定だと既存レコードを検索せず
-  // 重複作成を招くため、useDayDetailHandlers.handleEditRecord と同じ CompetitionTabForm
-  // (competitionId 指定で既存レコードを読み込み編集対象にする) に統一された。
-  // 旧挙動 (RecordLogForm 直遷移) への回帰防止のため、RecordLogForm が呼ばれないことも検証する。
   it("[S3-V-B1 / W-01] 記録ボタンを押すと CompetitionTabForm に { competitionId, date, teamId, initialTab: 'record' } で navigate される (重複レコード作成バグの回帰防止)", () => {
     const comp = makeCompetition({ id: "c-rec", date: "2026-10-15", title: "選手権大会" });
     mocks.useTeamCompetitionsQuery.mockReturnValue({
@@ -492,13 +521,11 @@ describe("TeamCompetitionList", () => {
       }),
     );
 
-    // 回帰防止: recordId 未指定のブランクフォーム (RecordLogForm) には遷移しないこと
-    // (既存レコードを無視した重複作成バグの再発防止)
     expect(mocks.navigate).not.toHaveBeenCalledWith("RecordLogForm", expect.anything());
   });
 
   // -----------------------------------------------------------------------
-  // Sprint Contract: 管理者代理入力 導線再編 + entry_status 表示派生
+  // [SC-1] admin ボタン構成 (無変更)
   // -----------------------------------------------------------------------
 
   describe("[SC-1] admin 時のボタン構成", () => {
@@ -514,24 +541,26 @@ describe("TeamCompetitionList", () => {
 
       render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
 
-      // 旧「エントリー」ボタンは admin では廃止される (queryBy で非存在を確認)
       expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
-      // 旧「記録」ボタンも admin では「記録代理入力」に置き換わる
       expect(screen.queryByRole("button", { name: "記録" })).toBeNull();
 
-      // 新設の2ボタンが厳密一致で存在する
       expect(screen.getByRole("button", { name: "記録代理入力" })).toBeDefined();
       expect(screen.getByRole("button", { name: "エントリー代理入力" })).toBeDefined();
     });
   });
 
-  describe("[SC-2] admin 時、entry_status バッジのタップでモーダルが開く", () => {
-    it("バッジ (受付中) をタップすると受付状況モーダルが開き、admin として props が渡る", () => {
+  // -----------------------------------------------------------------------
+  // D-1 [V-1][V-2][V-3]: 大会カードの2行レイアウト (水路表示)
+  // -----------------------------------------------------------------------
+
+  describe("[Sprint Contract D-1][V-1][V-2][V-3] 大会カードの水路表示 (2行レイアウト)", () => {
+    it("[V-1] place あり + pool_type=0(短水路) は「{place} (25m)」が1行に出て、独立した水路行(droplet)が存在しない", () => {
       const comp = makeCompetition({
-        id: "c-badge-open",
+        id: "c-layout-1",
         date: FUTURE_DATE,
-        title: "バッジ大会",
-        entry_status: "open",
+        title: "レイアウト大会1",
+        place: "○○プール",
+        pool_type: 0,
       });
       mocks.useTeamCompetitionsQuery.mockReturnValue({
         data: [comp],
@@ -541,39 +570,22 @@ describe("TeamCompetitionList", () => {
         refetch: vi.fn(),
       });
 
-      render(<TeamCompetitionList teamId="team-badge" isAdmin={true} />);
+      render(<TeamCompetitionList teamId="team-layout1" isAdmin={false} />);
 
-      expect(screen.queryByText("ENTRY_MODAL_OPEN")).toBeNull();
-
-      // ja.json: teams.competitions.entryStatus.open = '受付中' — バッジのラベルそのものがタップ対象
-      const badge = screen.getByRole("button", { name: "受付中" });
-      fireEvent.click(badge);
-
-      expect(screen.getByText("ENTRY_MODAL_OPEN")).toBeDefined();
-      expect(mocks.entryModalSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          visible: true,
-          competitionId: "c-badge-open",
-          teamId: "team-badge",
-          entryStatus: "open",
-          isAdmin: true,
-        }),
-      );
-
-      // 回帰ガード: バッジは編集用の外側 Pressable (onEdit) の子要素にネストしてはならない。
-      // ネストすると (テストハーネスの Pressable→<button> 変換により) クリックイベントが
-      // 外側の onPress にもバブリングし、意図せず CompetitionForm への編集画面遷移が発火する。
-      expect(mocks.navigate).not.toHaveBeenCalledWith("CompetitionForm", expect.anything());
+      expect(queryRowsWithExactText("○○プール (25m)").length).toBeGreaterThan(0);
+      // 独立した droplet 行 (水路単独表示) は place ありのとき描画されない
+      expect(screen.queryAllByTestId("icon-droplet")).toHaveLength(0);
+      // map-pin は場所行として1つだけ
+      expect(screen.queryAllByTestId("icon-map-pin")).toHaveLength(1);
     });
 
-    it("entry_status が未指定 (falsy) でも admin は必ずタップ可能なバッジ導線を持つ (防御的要件)", () => {
-      // Boundary Cases: 「entry_status が falsy な fixture でバッジ非描画のとき、
-      // admin のモーダル導線が消える → 要対処」への回帰防止。
+    it("[V-3] place あり + pool_type=1(長水路) は「{place} (50m)」になり、(25m) は出ない (逆転していないこと)", () => {
       const comp = makeCompetition({
-        id: "c-badge-null",
+        id: "c-layout-2",
         date: FUTURE_DATE,
-        title: "状態なし大会",
-        entry_status: undefined,
+        title: "レイアウト大会2",
+        place: "△△プール",
+        pool_type: 1,
       });
       mocks.useTeamCompetitionsQuery.mockReturnValue({
         data: [comp],
@@ -583,52 +595,79 @@ describe("TeamCompetitionList", () => {
         refetch: vi.fn(),
       });
 
-      render(<TeamCompetitionList teamId="team-badge-null" isAdmin={true} />);
+      render(<TeamCompetitionList teamId="team-layout2" isAdmin={false} />);
 
-      // resolveEntryStatus の既定値 'before' → ja.json: '受付前'
-      const badge = screen.getByRole("button", { name: "受付前" });
-      fireEvent.click(badge);
+      expect(queryRowsWithExactText("△△プール (50m)").length).toBeGreaterThan(0);
+      expect(queryRowsWithExactText("△△プール (25m)")).toHaveLength(0);
+    });
 
-      expect(mocks.entryModalSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ visible: true, entryStatus: "before", isAdmin: true }),
-      );
+    it("[V-2] place なし + pool_type=0(短水路) は「短水路 (25m)」が droplet 行として残る (情報が消えない)", () => {
+      const comp = makeCompetition({
+        id: "c-layout-3",
+        date: FUTURE_DATE,
+        title: "レイアウト大会3",
+        place: null,
+        pool_type: 0,
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-layout3" isAdmin={false} />);
+
+      expect(queryRowsWithExactText("短水路 (25m)").length).toBeGreaterThan(0);
+      expect(screen.queryAllByTestId("icon-droplet")).toHaveLength(1);
+      expect(screen.queryAllByTestId("icon-map-pin")).toHaveLength(0);
+    });
+
+    it("[V-2][V-3] place なし + pool_type=1(長水路) は「長水路 (50m)」になる (逆転していないこと)", () => {
+      const comp = makeCompetition({
+        id: "c-layout-4",
+        date: FUTURE_DATE,
+        title: "レイアウト大会4",
+        place: null,
+        pool_type: 1,
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-layout4" isAdmin={false} />);
+
+      expect(queryRowsWithExactText("長水路 (50m)").length).toBeGreaterThan(0);
+      expect(queryRowsWithExactText("短水路 (50m)")).toHaveLength(0);
+      expect(queryRowsWithExactText("長水路 (25m)")).toHaveLength(0);
     });
   });
 
-  describe("[SC-3] 非 admin 時のバッジは非 Pressable (タップしても何も起きない)", () => {
-    it("バッジがラベルとして表示されるが role=button ではない", () => {
-      const comp = makeCompetition({
-        id: "c-badge-nonadmin",
-        date: FUTURE_DATE,
-        title: "非管理者大会",
-        entry_status: "open",
-      });
-      mocks.useTeamCompetitionsQuery.mockReturnValue({
-        data: [comp],
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      });
+  // -----------------------------------------------------------------------
+  // D-2 [V-4][V-5]: 過去大会の受付ステータス完全非表示 + 今日/未来日の境界
+  // -----------------------------------------------------------------------
 
-      render(<TeamCompetitionList teamId="team-1" isAdmin={false} />);
-
-      // ラベル自体は表示される (表示は admin/非 admin 共通 = SC-8)
-      expect(screen.getByText("受付中")).toBeDefined();
-      // だが button ロールとしては存在しない (タップ導線ではない)
-      expect(screen.queryByRole("button", { name: "受付中" })).toBeNull();
-    });
-  });
-
-  describe("[SC-4][SC-6][SC-8] entry_status バッジの日付派生 (admin/非 admin 共通)", () => {
-    it.each([true, false])(
-      "過去日なら DB=open でもバッジは「受付終了」と表示される (isAdmin=%s)",
-      (isAdmin) => {
+  describe("[Sprint Contract D-2][V-4] 過去大会は受付ステータス行が完全に非表示 (admin/非 admin 共通)", () => {
+    it.each([
+      ["open", true],
+      ["open", false],
+      ["before", true],
+      ["before", false],
+      ["closed", true],
+      ["closed", false],
+    ] as const)(
+      "DB entry_status=%s / isAdmin=%s でも過去日ならバッジ/ラベルが一切描画されない (旧仕様は「受付終了」表示を強制していたが、新仕様は行自体を描画しない)",
+      (dbStatus, isAdmin) => {
         const comp = makeCompetition({
-          id: "c-past-open",
+          id: `c-past-hide-${dbStatus}-${isAdmin}`,
           date: PAST_DATE,
-          title: "過去大会オープン",
-          entry_status: "open",
+          title: "過去大会非表示検証",
+          entry_status: dbStatus,
         });
         mocks.useTeamCompetitionsQuery.mockReturnValue({
           data: [comp],
@@ -638,36 +677,20 @@ describe("TeamCompetitionList", () => {
           refetch: vi.fn(),
         });
 
-        render(<TeamCompetitionList teamId="team-past" isAdmin={isAdmin} />);
+        render(<TeamCompetitionList teamId="team-past-hide" isAdmin={isAdmin} />);
 
-        expect(screen.getByText("受付終了")).toBeDefined();
-        // DB 値そのままの表示 (受付中) は出ないこと
+        // 3ラベルいずれも一切表示されない (DB値に関わらず。表示自体が無い)
+        expect(screen.queryByText("受付前")).toBeNull();
         expect(screen.queryByText("受付中")).toBeNull();
+        expect(screen.queryByText("受付終了")).toBeNull();
+        // タップ可能なプルダウン(chevron-down)も存在しない
+        expect(screen.queryAllByTestId("icon-chevron-down")).toHaveLength(0);
       },
     );
+  });
 
-    it("過去日なら DB=before でもバッジは「受付終了」と表示される", () => {
-      const comp = makeCompetition({
-        id: "c-past-before",
-        date: PAST_DATE,
-        title: "過去大会未受付",
-        entry_status: "before",
-      });
-      mocks.useTeamCompetitionsQuery.mockReturnValue({
-        data: [comp],
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      });
-
-      render(<TeamCompetitionList teamId="team-past2" isAdmin={false} />);
-
-      expect(screen.getByText("受付終了")).toBeDefined();
-      expect(screen.queryByText("受付前")).toBeNull();
-    });
-
-    it("今日は過去扱いしない: DB=open のままバッジは「受付中」と表示される", () => {
+  describe("[Sprint Contract D-2][V-5][境界値] 今日・未来日は受付ステータスが表示される (今日は過去扱いしない)", () => {
+    it("今日は過去扱いしない: DB=open のままバッジは「受付中」と表示される (非admin)", () => {
       const comp = makeCompetition({
         id: "c-today-open",
         date: TODAY_DATE,
@@ -688,7 +711,7 @@ describe("TeamCompetitionList", () => {
       expect(screen.queryByText("受付終了")).toBeNull();
     });
 
-    it("今日は過去扱いしない: DB=before のままバッジは「受付前」と表示される", () => {
+    it("今日は過去扱いしない: DB=before のままバッジは「受付前」と表示される (非admin)", () => {
       const comp = makeCompetition({
         id: "c-today-before",
         date: TODAY_DATE,
@@ -708,10 +731,355 @@ describe("TeamCompetitionList", () => {
       expect(screen.getByText("受付前")).toBeDefined();
       expect(screen.queryByText("受付終了")).toBeNull();
     });
+
+    it("今日: admin バッジも表示され、タップでプルダウンが展開できる (D-3 とのクロスチェック)", () => {
+      const comp = makeCompetition({
+        id: "c-today-admin-visible",
+        date: TODAY_DATE,
+        title: "本日大会admin",
+        entry_status: "open",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-today-admin2" isAdmin={true} />);
+
+      expect(screen.getByText("受付中")).toBeDefined();
+      fireEvent.click(screen.getByRole("button", { name: "受付中" }));
+      expect(screen.getAllByText("受付終了").length).toBeGreaterThan(0);
+    });
+
+    it("未来日: admin バッジも表示される", () => {
+      const comp = makeCompetition({
+        id: "c-future-admin-visible",
+        date: FUTURE_DATE,
+        title: "未来大会admin",
+        entry_status: "before",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-future-admin2" isAdmin={true} />);
+
+      expect(screen.getByText("受付前")).toBeDefined();
+      expect(screen.queryAllByTestId("icon-chevron-down").length).toBeGreaterThan(0);
+    });
   });
 
-  describe("[SC-5 REVISED][V-11] 過去日 + 非admin: エントリーボタンが存在しない", () => {
-    it("[V-11] 過去日の大会では「エントリー」ボタンが表示されない (旧[SC-5]の逆: 押せないので isPastDate 配線先のモーダル自体が開かない)", () => {
+  // -----------------------------------------------------------------------
+  // 非 admin バッジの非インタラクティブ性 (無変更。future/today のみ該当。past は D-2 で行ごと消える)
+  // -----------------------------------------------------------------------
+
+  describe("[SC-3] 非 admin 時のバッジは非 Pressable (タップしても何も起きない)", () => {
+    it("バッジがラベルとして表示されるが role=button ではない", () => {
+      const comp = makeCompetition({
+        id: "c-badge-nonadmin",
+        date: FUTURE_DATE,
+        title: "非管理者大会",
+        entry_status: "open",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-1" isAdmin={false} />);
+
+      expect(screen.getByText("受付中")).toBeDefined();
+      expect(screen.queryByRole("button", { name: "受付中" })).toBeNull();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // D-3 [V-6][V-7][V-8]: 受付ステータスをカード上のプルダウンに
+  // -----------------------------------------------------------------------
+
+  describe("[Sprint Contract D-3][V-6] admin バッジタップでカード上に3択プルダウンが展開する", () => {
+    it("バッジ(受付中)をタップすると受付前/受付中/受付終了の3択が現れ、受付状況モーダル(TeamCompetitionEntryModal)は一度も開かない", () => {
+      const comp = makeCompetition({
+        id: "c-dropdown-1",
+        date: FUTURE_DATE,
+        title: "プルダウン大会",
+        entry_status: "open",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-dropdown" isAdmin={true} />);
+
+      // 展開前: 現在値以外の2ラベルは存在しない
+      expect(screen.queryByText("受付前")).toBeNull();
+      expect(screen.queryByText("受付終了")).toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: "受付中" }));
+
+      // 展開後: 3択すべてが表示される
+      expect(screen.getAllByText("受付前").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("受付中").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("受付終了").length).toBeGreaterThan(0);
+
+      // 受付状況モーダル (TeamCompetitionEntryModal) は admin 経由では廃止され、一度も開かない
+      expect(screen.queryByText("ENTRY_MODAL_OPEN")).toBeNull();
+      expect(mocks.entryModalSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({ visible: true }),
+      );
+      // 回帰ガード: 誤ってバブリングして編集画面へ遷移していないこと
+      expect(mocks.navigate).not.toHaveBeenCalledWith("CompetitionForm", expect.anything());
+    });
+
+    it("[技術要件] 3択プルダウンは新たな RN <Modal> をネストしない (__modalMountRegistry に新規 mount が記録されない)", () => {
+      __resetModalMountRegistry();
+
+      const comp = makeCompetition({
+        id: "c-dropdown-modal-check",
+        date: FUTURE_DATE,
+        title: "モーダル検査大会",
+        entry_status: "before",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-modal-check" isAdmin={true} />);
+      fireEvent.click(screen.getByRole("button", { name: "受付前" }));
+
+      expect(__modalMountRegistry.events).toHaveLength(0);
+    });
+  });
+
+  describe("[Sprint Contract D-3][V-7] 別ステータス選択で mutation が正しい値で呼ばれる。同一値の選択は no-op", () => {
+    it("受付前→受付中を選ぶと確認 Alert が出て、OK 押下で mutation が { id, updates: { entry_status: 'open' } } で呼ばれる", () => {
+      const comp = makeCompetition({
+        id: "c-mut-1",
+        date: FUTURE_DATE,
+        title: "変更大会1",
+        entry_status: "before",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-mut1" isAdmin={true} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "受付前" })); // 展開 (トリガー、この時点で一意)
+      fireEvent.click(screen.getByRole("button", { name: "受付中" })); // 選択 (現在値と異なるため展開後も一意)
+
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      const buttons = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0][2] as Array<{
+        text: string;
+        onPress?: () => void;
+      }>;
+      const okButton = buttons.find((b) => b.onPress);
+      expect(okButton, "確認ダイアログの OK 相当ボタンが見つからない").toBeDefined();
+      okButton?.onPress?.();
+
+      expect(mocks.mutateAsync).toHaveBeenCalledWith({
+        id: "c-mut-1",
+        updates: { entry_status: "open" },
+      });
+    });
+
+    it("同一値 (受付中→受付中) を選択しても確認 Alert も mutation も呼ばれない", () => {
+      const comp = makeCompetition({
+        id: "c-mut-noop",
+        date: FUTURE_DATE,
+        title: "noop大会",
+        entry_status: "open",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-noop" isAdmin={true} />);
+
+      // 展開前は唯一の一致 (トリガー自身) のはず。参照を保持しておき、
+      // 展開後に「トリガー自身を誤って再クリックしてメニューを閉じてしまう」ことを避ける
+      // (トリガーは再クリックでトグルして閉じるため、それを含めて全部クリックすると
+      // 後続のクリックが無意味になり、no-op 崩れを検出できなくなる)。
+      const trigger = screen.getByRole("button", { name: "受付中" });
+      fireEvent.click(trigger); // 展開
+
+      // 展開後に新たに現れた「受付中」要素 (トリガーとは別の DOM ノード = 選択肢自体) だけを
+      // クリック対象にする。実装がトリガーを残す/隠すいずれの場合でも、新規要素があれば拾える。
+      const afterExpand = screen.getAllByRole("button", { name: "受付中" });
+      const optionCandidates = afterExpand.filter((el) => el !== trigger);
+      expect(optionCandidates.length, "展開後に選択肢としての「受付中」要素が見つからない").toBeGreaterThan(0);
+      optionCandidates.forEach((btn) => fireEvent.click(btn));
+
+      expect(Alert.alert).not.toHaveBeenCalled();
+      expect(mocks.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("確認ダイアログでキャンセルすると mutation は呼ばれない", () => {
+      const comp = makeCompetition({
+        id: "c-mut-cancel",
+        date: FUTURE_DATE,
+        title: "キャンセル大会",
+        entry_status: "before",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-cancel" isAdmin={true} />);
+      fireEvent.click(screen.getByRole("button", { name: "受付前" }));
+      fireEvent.click(screen.getByRole("button", { name: "受付終了" }));
+
+      const buttons = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0][2] as Array<{
+        text: string;
+        style?: string;
+        onPress?: () => void;
+      }>;
+      const cancelButton = buttons.find((b) => b.style === "cancel" || !b.onPress);
+      expect(cancelButton).toBeDefined();
+      cancelButton?.onPress?.();
+
+      expect(mocks.mutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("[Sprint Contract D-3][V-8] 保存中(isPending)は選択操作をしても mutation が呼ばれない (二重送信防止・再入経路)", () => {
+    // ---------------------------------------------------------------------
+    // 【書き直しの経緯】(Reviewer 指摘への QA 対応)
+    // 旧テストは isPending=true を「最初から固定」したモックで検証しており、
+    // 「保存開始後は展開済みメニュー項目の disabled が効く」ことしか証明できなかった。
+    // これは「保存中にバッジ本体を再タップしてメニューを開き直し、別ステータスを
+    // 選び直す」再入経路 (バッジ本体の disabled ガード :257) を一度も突いていない。
+    // ここでは isPending を固定値ではなく、deferred promise + 実 React state で
+    // mutation の進行に応じて実際に変化させ、「保存開始 → 再タップ」という時系列を
+    // 再現したうえで、2件目の mutation が発火しないことを検証する。
+    // ---------------------------------------------------------------------
+
+    // 実際の react-query の isPending 挙動 (mutateAsync 呼び出しで true になり、
+    // resolve/reject で false に戻る) を模した、実 useState ベースの mutation モック。
+    // 固定値ではなく本物の再レンダーを発生させる点が旧テストとの最大の違い。
+    function useControllableMutation(spy: (args: unknown) => Promise<unknown>) {
+      const [isPending, setIsPending] = React.useState(false);
+      const mutateAsync = React.useCallback(
+        (args: unknown) => {
+          setIsPending(true);
+          return spy(args).finally(() => setIsPending(false));
+        },
+        [spy],
+      );
+      return { mutateAsync, isPending };
+    }
+
+    function createDeferred<T = void>() {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    }
+
+    it("mutation 進行中 (isPending=true) にバッジを再タップしても、プルダウンは再展開せず2件目の mutation は発火しない", async () => {
+      const deferred = createDeferred<void>();
+      const mutateAsyncSpy = vi.fn(() => deferred.promise);
+      mocks.useUpdateCompetitionMutation.mockImplementation(() =>
+        useControllableMutation(mutateAsyncSpy),
+      );
+
+      const comp = makeCompetition({
+        id: "c-reentry",
+        date: FUTURE_DATE,
+        title: "再入検証大会",
+        entry_status: "before",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-reentry" isAdmin={true} />);
+
+      // 1件目: 受付前→受付中を選択し、確認ダイアログでOKを押して mutation を開始する
+      // (deferred が未 resolve のため、この mutation は「進行中」のまま保持される)。
+      fireEvent.click(screen.getByRole("button", { name: "受付前" })); // 展開 (この時点で一意)
+      fireEvent.click(screen.getByRole("button", { name: "受付中" })); // 選択 (展開後も一意)
+      const firstButtons = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0][2] as Array<{
+        text: string;
+        onPress?: () => void;
+      }>;
+      const firstOk = firstButtons.find((b) => b.onPress);
+      expect(firstOk, "1件目の確認ダイアログの OK 相当ボタンが見つからない").toBeDefined();
+
+      await act(async () => {
+        firstOk?.onPress?.();
+        // performStatusChange 内の setState (statusOverride/isStatusMenuOpen/isPending) と
+        // mutateAsync 呼び出しによる isPending=true への再レンダーを反映させる。
+        await Promise.resolve();
+      });
+
+      // mutation が実際に進行中になっている (isPending=true が再レンダーに反映済み)
+      expect(mutateAsyncSpy).toHaveBeenCalledTimes(1);
+      // 楽観的表示は「受付中」に切り替わり、メニューは閉じている
+      expect(screen.queryByText("受付前")).toBeNull();
+      expect(screen.queryByText("受付終了")).toBeNull();
+
+      // 再入試行: 保存中にバッジ (現在値ラベル「受付中」) を再タップし、
+      // プルダウンを開き直して別ステータスを選ぼうとする。
+      screen.getAllByRole("button", { name: "受付中" }).forEach((btn) => fireEvent.click(btn));
+
+      // プルダウンが再展開されていないこと (バッジの disabled ガードが外れていれば
+      // 「受付前」「受付終了」が選択肢として再び現れてしまう)
+      expect(screen.queryByText("受付前")).toBeNull();
+      expect(screen.queryByText("受付終了")).toBeNull();
+      // 確認ダイアログも mutation も2件目は一切発火しない
+      expect(Alert.alert).toHaveBeenCalledTimes(1);
+      expect(mutateAsyncSpy).toHaveBeenCalledTimes(1);
+
+      // 後片付け: pending を解消してテストを終える (unhandled rejection 防止)
+      await act(async () => {
+        deferred.resolve();
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // [SC-5 REVISED] (旧番号。今回 Sprint Contract の V-11 とは別物なので注意)
+  // 過去日 + 非admin: 「エントリー」ボタン (entryRecordRow, D-2/D-3 の対象外) は無変更
+  // -----------------------------------------------------------------------
+
+  describe("[SC-5 REVISED] 過去日 + 非admin: エントリーボタンが存在しない (statusRow とは別行, スコープ外で無変更)", () => {
+    it("過去日の大会では「エントリー」ボタンが表示されない (押せないので isPastDate 配線先のモーダル自体が開かない)", () => {
       const comp = makeCompetition({
         id: "c-ispast-true",
         date: PAST_DATE,
@@ -729,7 +1097,6 @@ describe("TeamCompetitionList", () => {
       render(<TeamCompetitionList teamId="team-ip1" isAdmin={false} />);
 
       expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
-      // 記録ボタンはこのスプリントの対象外 (スコープ外への副作用がないことの回帰ガード)
       expect(screen.getByRole("button", { name: "記録" })).toBeDefined();
       expect(mocks.entryModalSpy).not.toHaveBeenCalled();
     });
@@ -778,14 +1145,13 @@ describe("TeamCompetitionList", () => {
     });
   });
 
-  describe("[SC-9 REVISED][V-12] 過去日 + admin: entry_status バッジがタップ不可 (View に降格)", () => {
-    it("[V-12] 過去日大会のバッジはラベル「受付終了」を表示するが role=button ではなく、タップしてもモーダルは一度も開かれない (旧[SC-9]の逆)", () => {
-      const comp = makeCompetition({
-        id: "c-past-self-admin",
-        date: PAST_DATE,
-        title: "過去大会セルフ管理者",
-        entry_status: "open",
-      });
+  // -----------------------------------------------------------------------
+  // D-4 [V-9][V-10][V-11]: カード本体タップで記録一覧モーダル (admin のみ)
+  // -----------------------------------------------------------------------
+
+  describe("[Sprint Contract D-4][V-10][V-11] カード本体タップで記録一覧モーダル (admin のみ)", () => {
+    it("[V-10] admin がカード本体 (タイトル) をタップすると記録一覧モーダルが開き、対象大会の props が渡る", () => {
+      const comp = makeCompetition({ id: "c-records-1", date: FUTURE_DATE, title: "記録一覧対象大会" });
       mocks.useTeamCompetitionsQuery.mockReturnValue({
         data: [comp],
         isLoading: false,
@@ -794,45 +1160,97 @@ describe("TeamCompetitionList", () => {
         refetch: vi.fn(),
       });
 
-      render(<TeamCompetitionList teamId="team-past-self-admin" isAdmin={true} />);
+      render(<TeamCompetitionList teamId="team-records" isAdmin={true} />);
 
-      // ラベル自体 (派生後の '受付終了') は表示される (SC-4/SC-8 と非退行)
-      expect(screen.getByText("受付終了")).toBeDefined();
-      // だが button ロールとしては存在しない (SC-3 の非adminと同じ非インタラクティブ表示に揃う)
-      expect(screen.queryByRole("button", { name: "受付終了" })).toBeNull();
-      expect(mocks.entryModalSpy).not.toHaveBeenCalled();
-    });
+      expect(screen.queryByText("RECORDS_MODAL_OPEN")).toBeNull();
 
-    it("[境界値] 未来日大会の admin バッジは引き続きタップ可能で受付状況モーダルが開く (非退行、[SC-2]と同一観点の日付境界版)", () => {
-      const comp = makeCompetition({
-        id: "c-future-admin-badge",
-        date: FUTURE_DATE,
-        title: "未来大会管理者バッジ",
-        entry_status: "open",
-      });
-      mocks.useTeamCompetitionsQuery.mockReturnValue({
-        data: [comp],
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: vi.fn(),
-      });
+      const titleEl = screen.getByText("記録一覧対象大会");
+      const cardButton = titleEl.closest("button");
+      expect(cardButton, "カード本体の Pressable が button として見つからない").not.toBeNull();
+      fireEvent.click(cardButton as HTMLButtonElement);
 
-      render(<TeamCompetitionList teamId="team-future-admin" isAdmin={true} />);
+      expect(screen.getByText("RECORDS_MODAL_OPEN")).toBeDefined();
+      expect(mocks.recordsModalSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          visible: true,
+          competitionId: "c-records-1",
+          competitionTitle: "記録一覧対象大会",
+        }),
+      );
 
-      const badge = screen.getByRole("button", { name: "受付中" });
-      fireEvent.click(badge);
-
-      expect(mocks.entryModalSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ entryStatus: "open", isAdmin: true }),
+      // 回帰ガード: 旧仕様の「カード本体タップ=編集画面遷移」はもう起きない
+      expect(mocks.navigate).not.toHaveBeenCalledWith(
+        "CompetitionForm",
+        expect.objectContaining({ competitionId: "c-records-1" }),
       );
     });
 
-    it("[境界値] 今日の大会の admin バッジは引き続きタップ可能 (今日は過去扱いしない)", () => {
+    it("[V-11] 一般ビュー (isAdmin=false) ではカード本体をタップしても記録一覧モーダルが開かない", () => {
       const comp = makeCompetition({
-        id: "c-today-admin-badge",
-        date: TODAY_DATE,
-        title: "本日大会管理者バッジ",
+        id: "c-records-nonadmin",
+        date: FUTURE_DATE,
+        title: "非管理者記録対象大会",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-records-na" isAdmin={false} />);
+
+      const titleEl = screen.getByText("非管理者記録対象大会");
+      const cardButton = titleEl.closest("button");
+      expect(cardButton).not.toBeNull();
+      fireEvent.click(cardButton as HTMLButtonElement);
+
+      expect(screen.queryByText("RECORDS_MODAL_OPEN")).toBeNull();
+      expect(mocks.recordsModalSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({ visible: true }),
+      );
+    });
+
+    it("記録0件でもカード本体はタップ可能 (一覧クエリは変更しない。カード自体のタップ可否のみ確認)", () => {
+      const comp = makeCompetition({
+        id: "c-records-alwaystap",
+        date: FUTURE_DATE,
+        title: "常時タップ大会",
+        entry_status: "closed",
+      });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-alwaystap" isAdmin={true} />);
+      const cardButton = screen.getByText("常時タップ大会").closest("button");
+      fireEvent.click(cardButton as HTMLButtonElement);
+
+      expect(mocks.recordsModalSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ visible: true, competitionId: "c-records-alwaystap" }),
+      );
+    });
+  });
+
+  describe("[Sprint Contract D-4][V-9] 編集/削除/記録代理入力/エントリー代理入力/ステータスプルダウンのタップでは記録一覧モーダルが開かない (5要素を個別に検証)", () => {
+    const cases: Array<[string, () => HTMLElement | null]> = [
+      ["編集アイコン", () => screen.getByTestId("icon-edit-2").closest("button")],
+      ["削除アイコン", () => screen.getByTestId("icon-trash-2").closest("button")],
+      ["記録代理入力ボタン", () => screen.getByRole("button", { name: "記録代理入力" })],
+      ["エントリー代理入力ボタン", () => screen.getByRole("button", { name: "エントリー代理入力" })],
+      ["ステータスプルダウン(バッジ)", () => screen.getByTestId("icon-chevron-down").closest("button")],
+    ];
+
+    it.each(cases)("%s をタップしても記録一覧モーダルは開かない", (_label, getTarget) => {
+      const comp = makeCompetition({
+        id: "c-v9",
+        date: FUTURE_DATE,
+        title: "V9検証大会",
         entry_status: "open",
       });
       mocks.useTeamCompetitionsQuery.mockReturnValue({
@@ -843,34 +1261,21 @@ describe("TeamCompetitionList", () => {
         refetch: vi.fn(),
       });
 
-      render(<TeamCompetitionList teamId="team-today-admin" isAdmin={true} />);
+      render(<TeamCompetitionList teamId="team-v9" isAdmin={true} />);
 
-      const badge = screen.getByRole("button", { name: "受付中" });
-      fireEvent.click(badge);
+      const target = getTarget();
+      expect(target, "対象要素が見つからない").not.toBeNull();
+      fireEvent.click(target as HTMLButtonElement);
 
-      expect(mocks.entryModalSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ entryStatus: "open", isAdmin: true }),
+      expect(screen.queryByText("RECORDS_MODAL_OPEN")).toBeNull();
+      expect(mocks.recordsModalSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({ visible: true }),
       );
     });
   });
 
   // -----------------------------------------------------------------------
-  // Reviewer Critical C-2 再評価 (Phase 5b): admin バッジの chevron-down / hitSlop / aria
-  //
-  // 【重要な前提】このテストハーネス (__mocks__/react-native.ts の Pressable) は
-  // accessibilityLabel を aria-label に変換せず、React の非標準 DOM 属性として
-  // 素通しする (小文字化されて `accessibilitylabel="..."` になる)。そのため
-  // testing-library の getByRole(..., {name}) はこの属性を一切見ない
-  // (accessible name は可視テキストの内容から計算される)。Developer の
-  // 「テストハーネスの Pressable モックは accessibilityLabel を aria-label に変換
-  // しないので既存テストは無影響」という報告は実測で真である
-  // (apps/mobile/components/teams/__tests__/__probe4.test.tsx 相当で確認済み、
-  // 検証用ファイルのため削除済み)。
-  //
-  // つまり既存の name ベースのテストは accessibilityLabel の値を一切ピン止めしていない
-  // (badge の accessible name は Text の可視テキスト "受付中" 等のみで決まる)。
-  // これでは C-2 の aria キー配線に回帰があっても検出できないため、生 DOM 属性
-  // (`accessibilitylabel`) を直接読む形で新たにピン止めする。
+  // Reviewer Critical C-2 再評価: admin バッジの chevron-down / hitSlop / aria (構造自体は D-3 で無変更)
   // -----------------------------------------------------------------------
   describe("[C-2 再評価] admin entry_status バッジの chevron-down / hitSlop / aria", () => {
     it("admin バッジの accessibilitylabel 属性が entryStatusChangeAria テンプレートに実ステータスを当てはめた文字列になる", () => {
@@ -938,10 +1343,6 @@ describe("TeamCompetitionList", () => {
       render(<TeamCompetitionList teamId="team-hitslop" isAdmin={true} />);
 
       const badge = screen.getByText("受付前").closest("button");
-      // React はオブジェクト prop を DOM 属性化するとき String(value) するため
-      // 常に "[object Object]" になる。値の中身 (top/bottom/left/right) はこの経路では
-      // 検証できないが、「hitSlop prop 自体が渡っているか (undefined でないか)」は
-      // 属性の有無で判別できる (mutation テストで確認済み: 除去すると属性ごと消える)。
       expect(badge?.getAttribute("hitslop")).not.toBeNull();
     });
 
@@ -962,14 +1363,8 @@ describe("TeamCompetitionList", () => {
 
       render(<TeamCompetitionList teamId="team-nonadmin-badge" isAdmin={false} />);
 
-      // button ロールとしては存在しない (SC-3 で既に検証済みだが C-2 追加要素も含め再確認)
       expect(screen.queryByRole("button", { name: "受付中" })).toBeNull();
 
-      // ラベルテキストの直近コンテナ (バッジの View 自体) を見ても button ではなく、
-      // chevron-down も無く、accessibilitylabel 属性も持たない。
-      // 【注意】非 admin の entryButton/recordButton 自体は元々 accessibilityLabel を
-      // 持つため (旧仕様から不変)、document 全体に対して属性の非存在を assert すると
-      // 無関係な既存ボタンまで拾って誤検知する。バッジのコンテナ要素だけをスコープにする。
       const labelEl = screen.getByText("受付中");
       const badgeContainer = labelEl.parentElement;
       expect(badgeContainer?.tagName.toLowerCase()).not.toBe("button");

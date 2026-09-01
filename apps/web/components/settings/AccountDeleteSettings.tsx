@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";

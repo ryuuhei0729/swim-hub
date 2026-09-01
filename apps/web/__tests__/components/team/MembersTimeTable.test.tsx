@@ -16,8 +16,11 @@
  *   [V-BULK-01] competition が無く note がある記録は、ツールチップに note がそのまま表示され、
  *               「一括登録」ラベル (t("membersTimeTable.bulkEntryNote")) は表示されない
  *   [V-BULK-02] competition が無く note も無い記録は、ツールチップに「一括登録」ラベルが表示される
- *   [V-BULK-03] competition がある記録は、note の有無に関わらず大会名が表示され、
- *               note 文字列も「一括登録」ラベルも表示されない
+ *   [V-BULK-03] 象限A (2026-08-30 改訂): competition と note が両方ある記録は、
+ *               大会名と note の両方が表示され「一括登録」ラベルは表示されない。
+ *               (旧仕様は「note の有無に関わらず大会名のみ」という排他表示だったが、
+ *               ユーザー要求「大会名がある場合：日付、大会名、備考全て表示」により反転した。
+ *               旧テストはこのバグを仕様として pin していたため PM 判断で書き換えた)
  *   [V-BULK-04] D-3: competition.date と created_at が異なる日付の場合、ツールチップの日付は
  *               competition.date 側 (numeric フォーマット) が表示される。competition が無い場合は
  *               created_at 側が表示される
@@ -26,6 +29,11 @@
  *               あることを assert する (短水路 pool_type=0 / 長水路 pool_type=1 の両分岐)
  *   [V-BULK-06] 引き継ぎありのみ (bestTimesByStyleAndPool に該当なし) の経路でも、note が
  *               そのまま (取り違えなく) ツールチップに載る (回帰防止)
+ *   [V-BULK-07] 象限B (新設): competition があり note が無い記録は、大会名のみ表示され
+ *               「一括登録」ラベルは表示されない
+ *   [V-BULK-08] 境界値 (新設): note="" は note=undefined と同一の「無し」扱いになる。
+ *               可視テキストは変わらないため getByText/queryByText では検出できず、
+ *               container innerHTML の DOM 構造完全一致で検証する
  *
  * ## 根本原因の再現方法（最重要）
  * MembersTimeTable の `STYLES` が英語内部キー ["Fr","Ba","Br","Fly","IM"] のままだと、
@@ -971,12 +979,15 @@ describe("MembersTimeTable", () => {
   });
 
   // ---------------------------------------------------------------------
-  // [V-BULK-03] 大会記録では note / 一括登録ラベルどちらも表示されない
+  // [V-BULK-03] 象限A: competition と note が両方ある記録は、大会名と note の
+  // 両方が表示される (2026-08-30 PM 判断により書き換え。旧テストは「note が
+  // 設定されていても note は表示されず大会名のみ表示される」という排他挙動を
+  // pin していたが、これはバグを仕様に昇格させたものだったため反転した)
   // ---------------------------------------------------------------------
-  describe("[V-BULK-03] 大会記録のツールチップは note・一括登録ラベルを表示しない", () => {
-    it("competition がある記録は、note が設定されていても note は表示されず大会名のみ表示される", () => {
+  describe("[V-BULK-03] 象限A: 大会記録に note があるときは大会名と note の両方が表示される", () => {
+    it("competition と note が両方ある記録は、大会名と note の両方が表示され、一括登録ラベルは出ない", () => {
       const member = buildMember();
-      const NOTE_THAT_SHOULD_BE_HIDDEN = "非表示確認用メモQWERTY";
+      const NOTE_ALONGSIDE_COMPETITION = "併記確認用メモQWERTY";
       renderWithLocale(
         <MembersTimeTable
           members={[member]}
@@ -996,7 +1007,7 @@ describe("MembersTimeTable", () => {
                   created_at: "2025-01-05T00:00:00Z",
                   pool_type: 0,
                   is_relaying: false,
-                  note: NOTE_THAT_SHOULD_BE_HIDDEN,
+                  note: NOTE_ALONGSIDE_COMPETITION,
                   style: { name_jp: "50m自由形", distance: 50 },
                   competition: { title: "第10回市民大会", date: "2025-06-20" },
                 }
@@ -1008,8 +1019,99 @@ describe("MembersTimeTable", () => {
 
       const row = screen.getByTestId(`team-member-row-${member.id}`);
       expect(within(row).getByText("第10回市民大会")).toBeInTheDocument();
-      expect(within(row).queryByText(NOTE_THAT_SHOULD_BE_HIDDEN)).not.toBeInTheDocument();
+      expect(within(row).getByText(NOTE_ALONGSIDE_COMPETITION)).toBeInTheDocument();
       expect(within(row).queryByText("一括登録")).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // [V-BULK-07] 象限B: competition があり note が無い記録は、大会名のみ表示され
+  // note 欄・「一括登録」ラベルのどちらも表示されない
+  // ---------------------------------------------------------------------
+  describe("[V-BULK-07] 象限B: 大会記録に note が無いときは大会名のみで一括登録ラベルは出ない", () => {
+    it("competition があり note が無い記録は、大会名のみ表示され一括登録ラベルは表示されない", () => {
+      const member = buildMember();
+      renderWithLocale(
+        <MembersTimeTable
+          members={[member]}
+          currentUserId="user-1"
+          includeRelaying={false}
+          sortStyle={null}
+          sortDistance={null}
+          sortOrder="asc"
+          isLoading={false}
+          onSort={vi.fn()}
+          onMemberClick={vi.fn()}
+          getBestTimeForMember={(_memberId, style, distance) =>
+            style === "自由形" && distance === 50
+              ? {
+                  id: "bt-comp-nonote",
+                  time: 27.3,
+                  created_at: "2025-01-05T00:00:00Z",
+                  pool_type: 0,
+                  is_relaying: false,
+                  style: { name_jp: "50m自由形", distance: 50 },
+                  competition: { title: "備考なし記録大会", date: "2025-06-20" },
+                }
+              : null
+          }
+        />,
+        "ja",
+      );
+
+      const row = screen.getByTestId(`team-member-row-${member.id}`);
+      expect(within(row).getByText("備考なし記録大会")).toBeInTheDocument();
+      expect(within(row).queryByText("一括登録")).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // [V-BULK-08] 境界値: note="" は note=undefined と同じ「無し」扱いになる (象限Bの境界)。
+  // 可視テキストは変わらないため getByText/queryByText では検出できない
+  // (誤実装は不可視の空要素を1つ追加描画するだけ) ため、
+  // container innerHTML のDOM構造完全一致で検証する。
+  // ---------------------------------------------------------------------
+  describe("[V-BULK-08] 境界値: note='' は note=undefined と同一のDOM構造になる (象限Bの境界)", () => {
+    it("competitionがある記録で、note='' と note=undefined のツールチップDOMが完全一致する", () => {
+      const member = buildMember();
+      const buildBoundaryTime = (note?: string) => ({
+        id: "bt-boundary",
+        time: 27.3,
+        created_at: "2025-01-05T00:00:00Z",
+        pool_type: 0,
+        is_relaying: false,
+        note,
+        style: { name_jp: "50m自由形", distance: 50 },
+        competition: { title: "境界確認大会", date: "2025-06-20" },
+      });
+
+      const renderRowHtml = (note?: string) => {
+        const { unmount } = renderWithLocale(
+          <MembersTimeTable
+            members={[member]}
+            currentUserId="user-1"
+            includeRelaying={false}
+            sortStyle={null}
+            sortDistance={null}
+            sortOrder="asc"
+            isLoading={false}
+            onSort={vi.fn()}
+            onMemberClick={vi.fn()}
+            getBestTimeForMember={(_memberId, style, distance) =>
+              style === "自由形" && distance === 50 ? buildBoundaryTime(note) : null
+            }
+          />,
+          "ja",
+        );
+        const html = screen.getByTestId(`team-member-row-${member.id}`).innerHTML;
+        unmount();
+        return html;
+      };
+
+      const htmlWithUndefined = renderRowHtml(undefined);
+      const htmlWithEmptyString = renderRowHtml("");
+
+      expect(htmlWithEmptyString).toBe(htmlWithUndefined);
     });
   });
 

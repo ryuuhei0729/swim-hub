@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/contexts";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import type { UserProfile } from "@apps/shared/types";
@@ -17,6 +17,7 @@ export default function GoogleCalendarSyncSettings({
 }: GoogleCalendarSyncSettingsProps) {
   const t = useTranslations("settings.googleCalendar");
   const tErrors = useTranslations("settings.googleCalendar.errors");
+  const locale = useLocale();
   const { signInWithOAuth, supabase, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -41,7 +42,7 @@ export default function GoogleCalendarSyncSettings({
       typeof window !== "undefined"
         ? window.location.origin
         : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const callbackUrl = `${appUrl}/api/auth/callback?calendar_connect=true&redirect_to=/settings`;
+    const callbackUrl = `${appUrl}/api/auth/callback?calendar_connect=true&redirect_to=/${locale}/settings`;
 
     const { error } = await signInWithOAuth("google", {
       redirectTo: callbackUrl,

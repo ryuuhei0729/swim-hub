@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Modal,
   Pressable,
   TextInput,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { CenterModal } from "@/components/ui/CenterModal";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCreateTeamMutation } from "@apps/shared/hooks/queries/teams";
 import type { TeamInsert } from "@swim-hub/shared/types";
@@ -42,7 +42,8 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const isLoading = createTeamMutation.isPending;
-  const hasUnsavedChanges = name.trim().length > 0 || description.trim().length > 0;
+  const hasUnsavedChanges =
+    name.trim().length > 0 || description.trim().length > 0;
 
   const cleanupAndClose = () => {
     setName("");
@@ -61,14 +62,18 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
           cleanupAndClose();
         }
       } else {
-        Alert.alert(t("forms.unsavedChanges.title"), t("forms.unsavedChanges.messageClose"), [
-          { text: t("forms.unsavedChanges.cancel"), style: "cancel" },
-          {
-            text: t("forms.unsavedChanges.confirmClose"),
-            style: "destructive",
-            onPress: cleanupAndClose,
-          },
-        ]);
+        Alert.alert(
+          t("forms.unsavedChanges.title"),
+          t("forms.unsavedChanges.messageClose"),
+          [
+            { text: t("forms.unsavedChanges.cancel"), style: "cancel" },
+            {
+              text: t("forms.unsavedChanges.confirmClose"),
+              style: "destructive",
+              onPress: cleanupAndClose,
+            },
+          ],
+        );
       }
       return;
     }
@@ -125,91 +130,92 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{t("teams.mobile.createTitle")}</Text>
-            <Pressable style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </Pressable>
-          </View>
-
-          <ScrollView style={styles.body}>
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("teams.mobile.nameLabel")}</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder={t("teams.mobile.namePlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                maxLength={NAME_MAX_LENGTH}
-                editable={!isLoading}
-              />
-              <Text style={styles.counterText}>
-                {t("forms.teamCreate.nameCounter", { current: name.length })}
-              </Text>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("teams.mobile.descriptionLabel")}</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder={t("teams.mobile.descriptionPlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                maxLength={DESCRIPTION_MAX_LENGTH}
-                editable={!isLoading}
-              />
-              <Text style={styles.counterText}>
-                {t("forms.teamCreate.descCounter", { current: description.length })}
-              </Text>
-            </View>
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={isLoading}
-            >
-              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.button, styles.submitButton, isLoading && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={isLoading || !name.trim()}
-            >
-              <Text style={styles.submitButtonText}>
-                {isLoading ? t("teams.mobile.creating") : t("teams.mobile.createButton")}
-              </Text>
-            </Pressable>
-          </View>
+    <CenterModal
+      visible={visible}
+      onClose={handleClose}
+      closeAccessibilityLabel={t("common.close")}
+      showCloseButton={false}
+      contentStyle={styles.modalContent}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>{t("teams.mobile.createTitle")}</Text>
+        <Pressable style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <ScrollView style={styles.body}>
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>{t("teams.mobile.nameLabel")}</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder={t("teams.mobile.namePlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            maxLength={NAME_MAX_LENGTH}
+            editable={!isLoading}
+          />
+          <Text style={styles.counterText}>
+            {t("forms.teamCreate.nameCounter", { current: name.length })}
+          </Text>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>{t("teams.mobile.descriptionLabel")}</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder={t("teams.mobile.descriptionPlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            maxLength={DESCRIPTION_MAX_LENGTH}
+            editable={!isLoading}
+          />
+          <Text style={styles.counterText}>
+            {t("forms.teamCreate.descCounter", { current: description.length })}
+          </Text>
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={[styles.button, styles.cancelButton]}
+          onPress={handleClose}
+          disabled={isLoading}
+        >
+          <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.button,
+            styles.submitButton,
+            isLoading && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={isLoading || !name.trim()}
+        >
+          <Text style={styles.submitButtonText}>
+            {isLoading
+              ? t("teams.mobile.creating")
+              : t("teams.mobile.createButton")}
+          </Text>
+        </Pressable>
+      </View>
+    </CenterModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,

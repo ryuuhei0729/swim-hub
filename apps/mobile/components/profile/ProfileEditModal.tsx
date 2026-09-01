@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Modal, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 import { AvatarUpload } from "./AvatarUpload";
 import { BirthdayInput } from "@/components/ui/BirthdayInput";
 import { GenderToggle } from "@/components/ui/GenderToggle";
+import { CenterModal } from "@/components/ui/CenterModal";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { uploadProfileImageViaApi } from "@/utils/imageUpload";
@@ -45,7 +53,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   useEffect(() => {
     if (profile) {
       const birthdayStr =
-        profile.birthday && profile.birthday.length >= 10 ? profile.birthday.substring(0, 10) : "";
+        profile.birthday && profile.birthday.length >= 10
+          ? profile.birthday.substring(0, 10)
+          : "";
       setFormData({
         name: profile.name || "",
         birthday: birthdayStr,
@@ -94,7 +104,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         } catch (err) {
           console.error("画像アップロードエラー:", err);
           const errorMessage =
-            err instanceof Error ? err.message : t("mypage.profileEdit.imageUploadFailed");
+            err instanceof Error
+              ? err.message
+              : t("mypage.profileEdit.imageUploadFailed");
           throw new Error(errorMessage);
         }
       }
@@ -121,143 +133,138 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{t("mypage.profileEdit.title")}</Text>
-            <Pressable style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.body}
-            contentContainerStyle={styles.bodyContent}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}
-          >
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            {/* アバター */}
-            <View style={styles.avatarSection}>
-              <AvatarUpload
-                currentAvatarUrl={profile.profile_image_path ?? null}
-                userName={formData.name || profile.name || ""}
-                onAvatarChange={onAvatarChange}
-                onImageSelected={(imageUri, base64Data, fileExtension) => {
-                  setSelectedImageData({ base64: base64Data, fileExtension });
-                }}
-                disabled={isUpdating}
-              />
-            </View>
-
-            {/* 名前 */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>
-                {t("mypage.profileEdit.nameLabel")}{" "}
-                <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={formData.name}
-                onChangeText={(text) => {
-                  setFormData((prev) => ({ ...prev, name: text }));
-                  setError(null);
-                }}
-                placeholder={t("mypage.profileEdit.namePlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                editable={!isUpdating}
-              />
-            </View>
-
-            {/* 性別 */}
-            <GenderToggle
-              value={formData.gender}
-              onChange={(gender) => {
-                setFormData((prev) => ({ ...prev, gender }));
-                setError(null);
-              }}
-              disabled={isUpdating}
-            />
-
-            {/* 生年月日 */}
-            <BirthdayInput
-              label={t("mypage.profileEdit.birthdayLabel")}
-              value={formData.birthday}
-              onChange={(date) => {
-                setFormData((prev) => ({ ...prev, birthday: date }));
-                setError(null);
-              }}
-              disabled={isUpdating}
-            />
-
-            {/* 自己紹介 */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>{t("mypage.profileEdit.bioLabel")}</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.bio}
-                onChangeText={(text) => {
-                  setFormData((prev) => ({ ...prev, bio: text }));
-                  setError(null);
-                }}
-                placeholder={t("mypage.profileEdit.bioPlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                multiline
-                numberOfLines={5}
-                maxLength={500}
-                textAlignVertical="top"
-                editable={!isUpdating}
-              />
-              <Text style={styles.charCount}>
-                {t("mypage.profileEdit.bioCount", { count: formData.bio.length })}
-              </Text>
-            </View>
-          </ScrollView>
-
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={isUpdating}
-            >
-              <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.button,
-                styles.submitButton,
-                isUpdating && styles.submitButtonDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={isUpdating || !formData.name.trim()}
-            >
-              <Text style={styles.submitButtonText}>
-                {isUpdating
-                  ? t("mypage.profileEdit.submitUpdating")
-                  : t("mypage.profileEdit.submit")}
-              </Text>
-            </Pressable>
-          </View>
+    <CenterModal
+      visible={visible}
+      onClose={handleClose}
+      closeAccessibilityLabel={t("common.close")}
+      showCloseButton={false}
+      contentStyle={styles.modalContent}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>{t("mypage.profileEdit.title")}</Text>
+        <Pressable style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </View>
+
+      <ScrollView
+        style={styles.body}
+        contentContainerStyle={styles.bodyContent}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
+      >
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* アバター */}
+        <View style={styles.avatarSection}>
+          <AvatarUpload
+            currentAvatarUrl={profile.profile_image_path ?? null}
+            userName={formData.name || profile.name || ""}
+            onAvatarChange={onAvatarChange}
+            onImageSelected={(imageUri, base64Data, fileExtension) => {
+              setSelectedImageData({ base64: base64Data, fileExtension });
+            }}
+            disabled={isUpdating}
+          />
+        </View>
+
+        {/* 名前 */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>
+            {t("mypage.profileEdit.nameLabel")}{" "}
+            <Text style={styles.required}>*</Text>
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={formData.name}
+            onChangeText={(text) => {
+              setFormData((prev) => ({ ...prev, name: text }));
+              setError(null);
+            }}
+            placeholder={t("mypage.profileEdit.namePlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            editable={!isUpdating}
+          />
+        </View>
+
+        {/* 性別 */}
+        <GenderToggle
+          value={formData.gender}
+          onChange={(gender) => {
+            setFormData((prev) => ({ ...prev, gender }));
+            setError(null);
+          }}
+          disabled={isUpdating}
+        />
+
+        {/* 生年月日 */}
+        <BirthdayInput
+          label={t("mypage.profileEdit.birthdayLabel")}
+          value={formData.birthday}
+          onChange={(date) => {
+            setFormData((prev) => ({ ...prev, birthday: date }));
+            setError(null);
+          }}
+          disabled={isUpdating}
+        />
+
+        {/* 自己紹介 */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>{t("mypage.profileEdit.bioLabel")}</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.bio}
+            onChangeText={(text) => {
+              setFormData((prev) => ({ ...prev, bio: text }));
+              setError(null);
+            }}
+            placeholder={t("mypage.profileEdit.bioPlaceholder")}
+            placeholderTextColor="#9CA3AF"
+            multiline
+            numberOfLines={5}
+            maxLength={500}
+            textAlignVertical="top"
+            editable={!isUpdating}
+          />
+          <Text style={styles.charCount}>
+            {t("mypage.profileEdit.bioCount", { count: formData.bio.length })}
+          </Text>
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Pressable
+          style={[styles.button, styles.cancelButton]}
+          onPress={handleClose}
+          disabled={isUpdating}
+        >
+          <Text style={styles.cancelButtonText}>{t("common.cancel")}</Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.button,
+            styles.submitButton,
+            isUpdating && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={isUpdating || !formData.name.trim()}
+        >
+          <Text style={styles.submitButtonText}>
+            {isUpdating
+              ? t("mypage.profileEdit.submitUpdating")
+              : t("mypage.profileEdit.submit")}
+          </Text>
+        </Pressable>
+      </View>
+    </CenterModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,

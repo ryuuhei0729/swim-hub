@@ -16,6 +16,16 @@
  *   [V-D4] 凡例文言がモードによって変わる (WAポイントモードでは「R: 引き継ぎあり」を出さない)
  *   [V-REG] 既存の時間表示・Newバッジ・ホバーツールチップ・チェックボックスの回帰確認
  *
+ * ## [V-QUAD] 追加スプリント (2026-08-30, 一括登録 note 併記) Sprint Contract 検証観点
+ * competition と note の4象限 (A: 両方あり / B: competitionのみ / C: noteのみ / D: どちらも無し)
+ * のうち、A・B は本ファイルに一度もテストが存在しなかった (C・D は [V-NOTE-RELAY] 等で
+ * 間接的にカバー済み)。以下を新設する:
+ *   [V-QUAD-A] 象限A: competition と note が両方ある記録は、大会名と note の両方が表示される
+ *   [V-QUAD-B] 象限B: competition があり note が無い記録は、大会名のみで一括登録ラベルは出ない
+ *   [V-QUAD-BOUNDARY] 境界値: note="" は note=undefined と同一のDOM構造になる (象限Bの境界)。
+ *               可視テキストは変わらないため getByText/queryByText では検出できないので
+ *               container innerHTML のDOM構造完全一致で検証する
+ *
  * ## [V-SCOPE] 削除の経緯 (2026-08-26 QA Phase A, 次スプリント)
  * 前スプリントではこのファイルに、apps/web/components/member-detail/BestTimesTable.tsx
  * (別コンポーネント) の sha256 ハッシュを pin する [V-SCOPE] ガードが存在した。
@@ -373,5 +383,198 @@ describe("[V-REG] 既存機能の回帰確認 (本スプリントで変更され
     const bt = buildBestTime();
     renderWithLocale([bt]);
     expect(getCheckbox()).not.toBeChecked();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [V-NOTE-RELAY] リレー引き継ぎ候補が採用されたとき、親記録ではなく引き継ぎ側
+// (relayingTime) の note がホバーツールチップに表示される (CodeRabbit 指摘の回帰テスト)
+//
+// getBestTime には candidates.push({...bt, ...}) が3箇所ある (ALLタブの短水路分岐 /
+// ALLタブの長水路分岐 / 短水路・長水路単独タブの分岐、後者は「短水路タブ」「長水路タブ」
+// どちらを選んでも同じソース行を通る)。1箇所だけ直っていても他が直っていないケースを
+// 見逃さないよう、3つのタブ (短水路/長水路/ALL) それぞれを実際に経由する fixture で
+// 個別に検証する。親note・引き継ぎ側noteは意図的に異なる値にする (同じ値だと
+// トートロジーになる)。
+// ---------------------------------------------------------------------------
+describe("[V-NOTE-RELAY] 引き継ぎ記録選択時は引き継ぎ側の note を表示する (親のnoteは漏れない)", () => {
+  it("[短水路タブ] 短水路タブを選択しているとき、引き継ぎ側の note が表示され、親の note は表示されない", async () => {
+    const user = userEvent.setup();
+    const bt = buildBestTime({
+      id: "note-short-tab",
+      time: 40.0,
+      pool_type: 0,
+      is_relaying: false,
+      note: "親ノート(短水路タブ)",
+      competition: undefined,
+      relayingTime: {
+        id: "relay-short-tab",
+        time: 20.0,
+        created_at: "2020-01-01T00:00:00.000Z",
+        note: "引き継ぎノート(短水路タブ)",
+      },
+    });
+    renderWithLocale([bt], { gender: 0 });
+
+    await user.click(screen.getByRole("button", { name: "短水路" }));
+    await user.click(getCheckbox()); // 引き継ぎタイムを含める
+
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    // 引き継ぎ側 (20.00秒) が親 (40.00秒) より速いため、こちらが採用されていることを確認する
+    expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
+
+    expect(screen.getByText("引き継ぎノート(短水路タブ)")).toBeInTheDocument();
+    expect(screen.queryByText("親ノート(短水路タブ)")).not.toBeInTheDocument();
+  });
+
+  it("[長水路タブ] 長水路タブを選択しているとき、引き継ぎ側の note が表示され、親の note は表示されない", async () => {
+    const user = userEvent.setup();
+    const bt = buildBestTime({
+      id: "note-long-tab",
+      time: 40.0,
+      pool_type: 1,
+      is_relaying: false,
+      note: "親ノート(長水路タブ)",
+      competition: undefined,
+      relayingTime: {
+        id: "relay-long-tab",
+        time: 20.0,
+        created_at: "2020-01-01T00:00:00.000Z",
+        note: "引き継ぎノート(長水路タブ)",
+      },
+    });
+    renderWithLocale([bt], { gender: 0 });
+
+    await user.click(screen.getByRole("button", { name: "長水路" }));
+    await user.click(getCheckbox());
+
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
+
+    expect(screen.getByText("引き継ぎノート(長水路タブ)")).toBeInTheDocument();
+    expect(screen.queryByText("親ノート(長水路タブ)")).not.toBeInTheDocument();
+  });
+
+  it("[ALLタブ-短水路分岐] pool_type=0の記録のみのとき、ALLタブで引き継ぎ側の note が表示され、親の note は表示されない", async () => {
+    const user = userEvent.setup();
+    const bt = buildBestTime({
+      id: "note-all-short",
+      time: 40.0,
+      pool_type: 0,
+      is_relaying: false,
+      note: "親ノート(ALL短水路分岐)",
+      competition: undefined,
+      relayingTime: {
+        id: "relay-all-short",
+        time: 20.0,
+        created_at: "2020-01-01T00:00:00.000Z",
+        note: "引き継ぎノート(ALL短水路分岐)",
+      },
+    });
+    renderWithLocale([bt], { gender: 0 }); // activeTab の初期値は "all"
+    await user.click(getCheckbox());
+
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
+
+    expect(screen.getByText("引き継ぎノート(ALL短水路分岐)")).toBeInTheDocument();
+    expect(screen.queryByText("親ノート(ALL短水路分岐)")).not.toBeInTheDocument();
+  });
+
+  it("[ALLタブ-長水路分岐] pool_type=1の記録のみのとき、ALLタブで引き継ぎ側の note が表示され、親の note は表示されない", async () => {
+    const user = userEvent.setup();
+    const bt = buildBestTime({
+      id: "note-all-long",
+      time: 40.0,
+      pool_type: 1,
+      is_relaying: false,
+      note: "親ノート(ALL長水路分岐)",
+      competition: undefined,
+      relayingTime: {
+        id: "relay-all-long",
+        time: 20.0,
+        created_at: "2020-01-01T00:00:00.000Z",
+        note: "引き継ぎノート(ALL長水路分岐)",
+      },
+    });
+    renderWithLocale([bt], { gender: 0 });
+    await user.click(getCheckbox());
+
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    expect(within(cell).getByText(formatTimeBest(20.0))).toBeInTheDocument();
+
+    expect(screen.getByText("引き継ぎノート(ALL長水路分岐)")).toBeInTheDocument();
+    expect(screen.queryByText("親ノート(ALL長水路分岐)")).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [V-QUAD-A] 象限A: competition と note が両方ある記録は、大会名と note の両方が表示される
+// ---------------------------------------------------------------------------
+describe("[V-QUAD-A] 象限A: 大会記録に note があるときは大会名と note の両方が表示される", () => {
+  it("competition と note が両方ある記録は、ホバー詳細に大会名と note の両方が表示され、一括登録ラベルは出ない", () => {
+    const bt = buildBestTime({
+      time: 54.97,
+      pool_type: 0,
+      note: "併記確認用メモABC123",
+      competition: { title: "併記確認用大会XYZ789", date: "2020-01-01" },
+    });
+    renderWithLocale([bt]);
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+
+    expect(within(cell).getByText("併記確認用大会XYZ789")).toBeInTheDocument();
+    expect(within(cell).getByText("併記確認用メモABC123")).toBeInTheDocument();
+    expect(
+      within(cell).queryByText(jaMessages.mypage.bestTimesTable.bulkEntryNote),
+    ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [V-QUAD-B] 象限B: competition があり note が無い記録は、大会名のみで一括登録ラベルは出ない
+// ---------------------------------------------------------------------------
+describe("[V-QUAD-B] 象限B: 大会記録に note が無いときは大会名のみで一括登録ラベルは出ない", () => {
+  it("competition があり note が無い記録は、大会名のみ表示され一括登録ラベルは表示されない", () => {
+    const bt = buildBestTime({
+      time: 54.97,
+      pool_type: 0,
+      competition: { title: "備考なし確認大会DEF456", date: "2020-01-01" },
+    });
+    renderWithLocale([bt]);
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+
+    expect(within(cell).getByText("備考なし確認大会DEF456")).toBeInTheDocument();
+    expect(
+      within(cell).queryByText(jaMessages.mypage.bestTimesTable.bulkEntryNote),
+    ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// [V-QUAD-BOUNDARY] 境界値: note="" は note=undefined と同一のDOM構造になる (象限Bの境界)。
+// 可視テキストは変わらないため getByText/queryByText では検出できず、
+// container innerHTML のDOM構造完全一致で検証する
+// ---------------------------------------------------------------------------
+describe("[V-QUAD-BOUNDARY] 境界値: note='' は note=undefined と同一のDOM構造になる", () => {
+  it("competitionがある記録で、note='' と note=undefined のホバー詳細DOMが完全一致する", () => {
+    const buildBoundary = (note?: string) =>
+      buildBestTime({
+        time: 54.97,
+        pool_type: 0,
+        note,
+        competition: { title: "境界確認大会GHI000", date: "2020-01-01" },
+      });
+
+    const renderCellHtml = (note?: string) => {
+      const { unmount } = renderWithLocale([buildBoundary(note)]);
+      const html = screen.getByTestId(cellTestId("自由形", 100)).innerHTML;
+      unmount();
+      return html;
+    };
+
+    const htmlUndefined = renderCellHtml(undefined);
+    const htmlEmptyString = renderCellHtml("");
+
+    expect(htmlEmptyString).toBe(htmlUndefined);
   });
 });

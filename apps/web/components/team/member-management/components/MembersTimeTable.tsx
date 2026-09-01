@@ -268,9 +268,12 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                                 </div>
                                 {bestTime.competition ? (
                                   <div className="text-blue-300">{bestTime.competition.title}</div>
-                                ) : (
-                                  <div className="text-gray-400">{bestTime.note || t("membersTimeTable.bulkEntryNote")}</div>
-                                )}
+                                ) : null}
+                                {bestTime.note ? (
+                                  <div className="text-gray-400">{bestTime.note}</div>
+                                ) : !bestTime.competition ? (
+                                  <div className="text-gray-400">{t("membersTimeTable.bulkEntryNote")}</div>
+                                ) : null}
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                               </div>
                             </div>

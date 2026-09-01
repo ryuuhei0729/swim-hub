@@ -5,7 +5,15 @@ import { Feather } from "@expo/vector-icons";
 import { differenceInDays, parseISO } from "date-fns";
 import { formatTime } from "@/utils/formatters";
 import { STYLES, DISTANCES, isInvalidCombination, STYLE_KEY_MAP } from "@apps/shared/utils/swimStyles";
+import {
+  getBestWaPointsForCandidates,
+  type Gender,
+  type PoolType,
+  type WaPointsCellCandidate,
+} from "@apps/shared/utils/waPoints";
 import type { BestTime } from "@apps/shared/types/ui";
+import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
+import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/BestTimeDetailSheet";
 
 type TabType = "all" | "short" | "long";
 
@@ -21,12 +29,17 @@ const BORDER_COLOR = "#D1D5DB";
 
 interface BestTimesTableProps {
   bestTimes: BestTime[];
+  /** 0: 男性, 1: 女性, undefined/その他: 不明 (WAポイントは常に「—」)。`?? 0` でフォールバックしないこと */
+  gender?: number;
 }
 
-export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => {
+export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes, gender }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [includeRelaying, setIncludeRelaying] = useState(false);
+  const [isWaPointsMode, setIsWaPointsMode] = useState(false);
+  const [selectedCellKey, setSelectedCellKey] = useState<string | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<BestTimeDetail | null>(null);
 
   const filteredBestTimes = useMemo(() => {
     if (activeTab === "short") {
@@ -53,6 +66,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
               created_at: bt.relayingTime.created_at,
               is_relaying: true,
               competition: bt.relayingTime.competition,
+              note: bt.relayingTime.note,
             });
           }
         } else if (allowRelaying) {
@@ -86,6 +100,28 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
     }
   };
 
+  // WAポイント表示用のセル取得関数
+  // 候補は「非リレー記録のみ」とし、includeRelaying の状態から完全に独立させる
+  // (getBestTime とは意図的に別関数にし、既存のタイム表示アルゴリズムへの回帰を避ける)
+  const getWaPointsCell = (
+    style: string,
+    distance: number,
+  ): { points: number; poolType: PoolType } | null => {
+    // gender が男女いずれでもない (undefined 含む) 場合は常に「—」。0 にフォールバックしない
+    if (gender !== 0 && gender !== 1) return null;
+
+    const dbStyleName = `${distance}m${style}`;
+    // ALLタブは短水路/長水路の両方から候補を集める。短水路/長水路タブは既にpool_typeで絞られている
+    const source = activeTab === "all" ? bestTimes : filteredBestTimes;
+
+    const candidates: WaPointsCellCandidate[] = source
+      .filter((bt) => bt.style.name_jp === dbStyleName && !bt.is_relaying)
+      .map((bt) => ({ time: bt.time, poolType: bt.pool_type === 1 ? 1 : 0 }));
+
+    const styleKey = STYLE_KEY_MAP[style as keyof typeof STYLE_KEY_MAP];
+    return getBestWaPointsForCandidates(candidates, gender as Gender, styleKey, distance);
+  };
+
   const getTimeDisplay = (bestTime: BestTime): { main: string; suffix: string } => {
     const timeStr = formatTime(bestTime.time);
     const suffixes: string[] = [];
@@ -98,6 +134,24 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
     }
 
     return { main: timeStr, suffix: suffixes.join("") };
+  };
+
+  const closeDetail = () => {
+    setSelectedCellKey(null);
+    setSelectedDetail(null);
+  };
+
+  const handleCellPress = (cellKey: string, bestTime: BestTime) => {
+    if (selectedCellKey === cellKey) {
+      closeDetail();
+      return;
+    }
+    setSelectedCellKey(cellKey);
+    setSelectedDetail({
+      date: bestTime.competition?.date ?? bestTime.created_at,
+      competitionTitle: bestTime.competition?.title ?? null,
+      note: bestTime.note ?? null,
+    });
   };
 
   if (bestTimes.length === 0) {
@@ -131,15 +185,31 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
             </Pressable>
           ))}
         </View>
-        <Pressable
-          style={styles.checkboxContainer}
-          onPress={() => setIncludeRelaying(!includeRelaying)}
-        >
-          <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
-            {includeRelaying && <Feather name="check" size={10} color="#FFFFFF" />}
+        <View style={styles.rightControls}>
+          <View style={styles.waToggleWrapper}>
+            <Pressable
+              testID="member-detail-best-times-wa-points-toggle"
+              accessibilityRole="button"
+              accessibilityState={{ selected: isWaPointsMode }}
+              style={[styles.waToggleButton, isWaPointsMode && styles.waToggleButtonActive]}
+              onPress={() => setIsWaPointsMode((prev) => !prev)}
+            >
+              <Text style={[styles.waToggleText, isWaPointsMode && styles.waToggleTextActive]}>
+                {t("teams.mobile.bestTimesWaPointsToggle")}
+              </Text>
+            </Pressable>
+            <WaPointsInfoTooltip testID="member-detail-best-times-wa-info" />
           </View>
-          <Text style={styles.checkboxLabel}>{t("teams.mobile.bestTimesIncludeRelaying")}</Text>
-        </Pressable>
+          <Pressable
+            style={styles.checkboxContainer}
+            onPress={() => setIncludeRelaying(!includeRelaying)}
+          >
+            <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
+              {includeRelaying && <Feather name="check" size={10} color="#FFFFFF" />}
+            </View>
+            <Text style={styles.checkboxLabel}>{t("teams.mobile.bestTimesIncludeRelaying")}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* テーブル */}
@@ -173,9 +243,36 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                 <Text style={styles.distanceText}>{distance}m</Text>
               </View>
               {STYLES.map((style) => {
-                const bestTime = getBestTime(style, distance);
                 const isInvalid = isInvalidCombination(style, distance);
                 const color = styleColors[style];
+                const cellKey = `${style}_${distance}`;
+
+                if (isWaPointsMode) {
+                  const waCell = getWaPointsCell(style, distance);
+                  return (
+                    <View
+                      key={style}
+                      style={[
+                        styles.cell,
+                        styles.styleCell,
+                        { backgroundColor: isInvalid ? "#E5E7EB" : color.bg },
+                      ]}
+                    >
+                      {waCell ? (
+                        <Text style={[styles.waPointsText, { color: color.text }]}>
+                          {waCell.points}
+                          {activeTab === "all" && waCell.poolType === 1 && (
+                            <Text style={styles.timeSuffix}>L</Text>
+                          )}
+                        </Text>
+                      ) : (
+                        <Text style={styles.emptyCellText}>—</Text>
+                      )}
+                    </View>
+                  );
+                }
+
+                const bestTime = getBestTime(style, distance);
 
                 return (
                   <View
@@ -187,7 +284,10 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                     ]}
                   >
                     {bestTime ? (
-                      <View style={styles.timeContainer}>
+                      <Pressable
+                        onPress={() => handleCellPress(cellKey, bestTime)}
+                        style={styles.timeContainer}
+                      >
                         {(() => {
                           const createdAt = parseISO(bestTime.created_at);
                           const isNew = bestTime.competition
@@ -217,7 +317,7 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
                             </>
                           );
                         })()}
-                      </View>
+                      </Pressable>
                     ) : (
                       <Text style={styles.emptyCellText}>—</Text>
                     )}
@@ -231,8 +331,20 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes }) => 
 
       {/* 注釈 */}
       <View style={styles.annotation}>
-        <Text style={styles.annotationText}>{t("teams.mobile.bestTimesAnnotation")}</Text>
+        <Text style={styles.annotationText}>
+          {isWaPointsMode
+            ? `※ ${t("teams.memberDetail.bestTimesTable.legend.longCourse")}, ${t(
+                "teams.memberDetail.bestTimesTable.legend.relayingExcludedFromWaPoints",
+              )}`
+            : t("teams.mobile.bestTimesAnnotation")}
+        </Text>
       </View>
+
+      <BestTimeDetailSheet
+        detail={selectedDetail}
+        onClose={closeDetail}
+        noteFallbackLabel={t("teams.memberDetail.bestTimesTable.bulkEntryNote")}
+      />
     </View>
   );
 };
@@ -269,6 +381,38 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
   tabTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  rightControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  waToggleWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  waToggleButton: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+  },
+  waToggleButtonActive: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  waToggleText: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  waToggleTextActive: {
     color: "#FFFFFF",
     fontWeight: "600",
   },
@@ -376,6 +520,10 @@ const styles = StyleSheet.create({
   timeSuffix: {
     fontSize: 8,
     marginLeft: 1,
+  },
+  waPointsText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   emptyCellText: {
     fontSize: 11,

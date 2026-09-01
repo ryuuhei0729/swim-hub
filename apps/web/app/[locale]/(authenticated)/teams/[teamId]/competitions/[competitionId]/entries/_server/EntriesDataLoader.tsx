@@ -1,4 +1,5 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { getServerUser } from "@/lib/supabase-server";
@@ -54,7 +55,7 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
   const t = await getTranslations({ locale, namespace: "competition.entries" });
 
   if (!user) {
-    redirect("/login");
+    return redirect({ href: "/login", locale });
   }
 
   // 並行でデータ取得
@@ -145,7 +146,7 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
 
   // admin権限チェック（仕様#2: role !== "admin" は redirect）
   if (membershipData.role !== "admin") {
-    return redirect(`/teams/${teamId}?tab=competitions`);
+    return redirect({ href: `/teams/${teamId}?tab=competitions`, locale });
   }
 
   const competitionData = competitionResult.data;
@@ -157,7 +158,7 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
 
   // 大会日が過去なら代理入力不可（仕様#10: server は redirect）
   if (isCompetitionDateInPast(competition.date)) {
-    return redirect(`/teams-admin/${teamId}?tab=competitions`);
+    return redirect({ href: `/teams-admin/${teamId}?tab=competitions`, locale });
   }
 
   if (membersResult.error) {

@@ -10,6 +10,11 @@ const mocks = vi.hoisted(() => ({
   useDeleteTeamCompetitionMutation: vi.fn(),
   useTeamPracticesQuery: vi.fn(),
   useDeleteTeamPracticeMutation: vi.fn(),
+  // Sprint Contract (D-3) で TeamCompetitionList のカード上プルダウンが
+  // useUpdateCompetitionMutation / useQueryClient / teamKeys に依存するようになった。
+  // このファイルはその挙動自体を検証しないが、レンダーが通るための配線として必要。
+  useUpdateCompetitionMutation: vi.fn(),
+  invalidateQueries: vi.fn(),
   navigate: vi.fn(),
   supabase: {},
 }));
@@ -19,6 +24,20 @@ vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useDeleteTeamCompetitionMutation: mocks.useDeleteTeamCompetitionMutation,
   useTeamPracticesQuery: mocks.useTeamPracticesQuery,
   useDeleteTeamPracticeMutation: mocks.useDeleteTeamPracticeMutation,
+}));
+
+vi.mock("@apps/shared/hooks/queries/records", () => ({
+  useUpdateCompetitionMutation: mocks.useUpdateCompetitionMutation,
+}));
+
+vi.mock("@apps/shared/hooks/queries/keys", () => ({
+  teamKeys: {
+    competitions: (teamId: string) => ["teams", "detail", teamId, "competitions"],
+  },
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: vi.fn(() => ({ invalidateQueries: mocks.invalidateQueries })),
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -66,6 +85,7 @@ describe("[Gate] TeamCompetitionList 記録ボタンの admin 分岐", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.useDeleteTeamCompetitionMutation.mockReturnValue(makeMutationMock());
+    mocks.useUpdateCompetitionMutation.mockReturnValue(makeMutationMock());
     mocks.useTeamCompetitionsQuery.mockReturnValue({
       data: [competition],
       isLoading: false,

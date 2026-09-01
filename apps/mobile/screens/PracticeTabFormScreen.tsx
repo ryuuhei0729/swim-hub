@@ -35,6 +35,7 @@ import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { practiceKeys, teamKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
+import { useTagModalTransition } from "@/hooks/useTagModalTransition";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -180,9 +181,17 @@ export const PracticeTabFormScreen: React.FC = () => {
   // ---- 練習ログタブ state ----
   const [menus, setMenus] = useState<PracticeMenu[]>([createDefaultMenu()]);
   const [showTagSelectModal, setShowTagSelectModal] = useState(false);
-  const [showTagManageModal, setShowTagManageModal] = useState(false);
-  const [editingTag, setEditingTag] = useState<PracticeTag | null>(null);
   const [activeMenuIndex, setActiveMenuIndex] = useState(0);
+  // TagSelectModal ⇄ TagManageModal の遷移 (二重マウント競合の修正) は共通フックに集約。
+  const {
+    showTagManageModal,
+    editingTag,
+    openTagCreateModal,
+    openTagEditModal,
+    handleTagSelectModalClosed,
+    handleTagManageModalClosed,
+    closeTagManageModal,
+  } = useTagModalTransition(setShowTagSelectModal);
 
   // ---- ローディング state ----
   const [loadingExisting, setLoadingExisting] = useState(isEditMode);
@@ -890,22 +899,6 @@ export const PracticeTabFormScreen: React.FC = () => {
     setShowTagSelectModal(true);
   }, []);
 
-  const openTagCreateModal = useCallback(() => {
-    setShowTagSelectModal(false);
-    setTimeout(() => {
-      setEditingTag(null);
-      setShowTagManageModal(true);
-    }, 100);
-  }, []);
-
-  const openTagEditModal = useCallback((tag: PracticeTag) => {
-    setShowTagSelectModal(false);
-    setTimeout(() => {
-      setEditingTag(tag);
-      setShowTagManageModal(true);
-    }, 100);
-  }, []);
-
   const handleTagsChange = useCallback(
     (tags: PracticeTag[]) => {
       const menu = menus[activeMenuIndex];
@@ -1510,6 +1503,7 @@ export const PracticeTabFormScreen: React.FC = () => {
             <TagSelectModal
               visible={showTagSelectModal}
               onClose={() => setShowTagSelectModal(false)}
+              onClosed={handleTagSelectModalClosed}
               selectedTags={menus[activeMenuIndex]?.tags || []}
               availableTags={availableTags}
               onTagsChange={handleTagsChange}
@@ -1521,10 +1515,8 @@ export const PracticeTabFormScreen: React.FC = () => {
             {/* タグ管理モーダル */}
             <TagManageModal
               visible={showTagManageModal}
-              onClose={() => {
-                setShowTagManageModal(false);
-                setTimeout(() => setShowTagSelectModal(true), 100);
-              }}
+              onClose={closeTagManageModal}
+              onClosed={handleTagManageModalClosed}
               tag={editingTag}
               onSave={handleSaveTag}
               onDelete={handleDeleteTag}

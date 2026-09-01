@@ -6,6 +6,7 @@ import type { Database } from "@swim-hub/shared/types";
 import type { Session } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import { getQueryClient } from "@/providers/QueryProvider";
 import { AuthContextType } from "@swim-hub/shared/types/auth";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -21,6 +22,7 @@ type CoreAuthState = {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
+  const locale = useLocale();
   // supabase.tsから統一されたBrowser Clientを使用
   // これにより、PKCE code verifierが確実にCookieに保存・読み取りされる
   const supabaseClient = useMemo((): SupabaseClient<Database> | null => {
@@ -151,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 重要: redirectToはルートパス(/)に設定し、Middlewareで/api/auth/callbackにリダイレクトさせる
         // これにより、PKCE code verifier Cookieが確実に転送される
         const redirectTo =
-          options?.redirectTo || `${window.location.origin}/?redirect_to=/onboarding`;
+          options?.redirectTo || `${window.location.origin}/?redirect_to=/${locale}/onboarding`;
 
         const { data, error } = await supabaseClient.auth.signInWithOAuth({
           provider,
@@ -181,7 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: error as import("@supabase/supabase-js").AuthError };
       }
     },
-    [supabaseClient],
+    [supabaseClient, locale],
   );
 
   // クライアント側の全キャッシュ・ストアをクリア（冪等）

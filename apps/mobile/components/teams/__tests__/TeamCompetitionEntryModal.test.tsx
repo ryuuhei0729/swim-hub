@@ -139,6 +139,30 @@ describe("TeamCompetitionEntryModal", () => {
     expect(screen.queryByText("受付終了")).toBeNull();
   });
 
+  // mobile UI フィードバック #3: SlideUpModal 移行後も背面タップで閉じないこと (元実装どおり)
+  it("[V-SLIDE-01] 背面タップで閉じない (SlideUpModal 移行後も NOOP_BACKDROP_PRESS のまま)", async () => {
+    const onClose = vi.fn();
+    const { container } = render(
+      <TeamCompetitionEntryModal {...baseProps} onClose={onClose} isAdmin={true} />,
+    );
+    await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalledWith("c-1"));
+
+    // SlideUpModal の背面タップ用 Pressable は絶対配置 (StyleSheet.absoluteFill) の button
+    // として一意に識別できる (この画面には他に absoluteFill を使う button が無い)。
+    const backdropCandidates = Array.from(container.querySelectorAll("button")).filter((el) =>
+      (el.getAttribute("style") ?? "").includes("position: absolute"),
+    );
+    expect(backdropCandidates.length).toBe(1);
+
+    fireEvent.click(backdropCandidates[0]);
+
+    // SlideUpModal は閉じるとき即座に unmount せず setTimeout 後に unmount するため、
+    // タップ直後の DOM 残存だけでは「閉じない」ことの証明にならない。onClose 呼び出し
+    // 有無を直接判定する (アニメーション時間の待機を挟んでも呼ばれないこと)。
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   // [V-03] 現在値と同値選択は no-op (Alert 確認も mutation も呼ばれない)
   it("現在値と同じステータスを押しても mutation も確認 Alert も呼ばれない", async () => {
     render(<TeamCompetitionEntryModal {...baseProps} isAdmin={true} entryStatus="before" />);

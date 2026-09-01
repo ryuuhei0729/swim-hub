@@ -1,4 +1,6 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
+import { getLocale } from "next-intl/server";
 import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { getServerUser } from "@/lib/supabase-server";
 import PracticeLogClient from "../_client/PracticeLogClient";
@@ -58,10 +60,14 @@ export default async function PracticeLogDataLoader({
   teamId,
   practiceId,
 }: PracticeLogDataLoaderProps) {
-  const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
+  const [user, supabase, locale] = await Promise.all([
+    getServerUser(),
+    createAuthenticatedServerClient(),
+    getLocale(),
+  ]);
 
   if (!user) {
-    redirect("/login");
+    return redirect({ href: "/login", locale });
   }
 
   // 並行でデータ取得
@@ -171,7 +177,7 @@ export default async function PracticeLogDataLoader({
 
   // admin権限チェック
   if (membershipData.role !== "admin") {
-    return redirect(`/teams/${teamId}?tab=practices`);
+    return redirect({ href: `/teams/${teamId}?tab=practices`, locale });
   }
 
   const practiceData = practiceResult.data;

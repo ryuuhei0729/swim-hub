@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/utils/cn";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import { RecordAPI } from "@apps/shared/api/records";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";

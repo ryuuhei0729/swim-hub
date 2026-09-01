@@ -24,7 +24,7 @@
 
 import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 // -----------------------------------------------------------------------
 // vi.hoisted — モジュール巻き上げ対策
@@ -320,4 +320,44 @@ describe("AdminMonthlyAttendance", () => {
     // Alert のモック連携は環境依存のため、mutation 呼び出しの確認に留める
     // (実機検証は Playwright で行うため省略)
   });
+
+  // -----------------------------------------------------------------------
+  // mobile UI フィードバック #3: SlideUpModal 移行後も「一括変更」シートは
+  // 背面タップで閉じない (元実装どおり NOOP_BACKDROP_PRESS)。
+  // -----------------------------------------------------------------------
+  it(
+    "[V-SLIDE-BULK-01] 「まとめて出欠状態を変更」シートは背面タップで閉じない " +
+      "(SlideUpModal 移行後も NOOP_BACKDROP_PRESS のまま)",
+    async () => {
+      setupMockSupabase([makePracticeEvent({ id: "p-1", attendance_status: null })], []);
+
+      const { container } = render(<AdminMonthlyAttendance teamId="team-1" />);
+
+      const openButton = await screen.findByRole("button", {
+        name: "まとめて出欠状態を変更",
+      });
+      fireEvent.click(openButton);
+
+      // シートが開いたことの確認 (シート内固有の「全選択」ボタン)
+      await screen.findByText("全選択");
+
+      // SlideUpModal の背面タップ用 Pressable は絶対配置 (StyleSheet.absoluteFill) の
+      // button として一意に識別できる (`components/ui/SlideUpModal.test.tsx` の構造検証と
+      // 同じ selector。この画面には他に absoluteFill を使う button が無い)。
+      const backdropCandidates = Array.from(container.querySelectorAll("button")).filter((el) =>
+        (el.getAttribute("style") ?? "").includes("position: absolute"),
+      );
+      expect(backdropCandidates.length).toBe(1);
+      const backdrop = backdropCandidates[0];
+
+      fireEvent.click(backdrop);
+
+      // SlideUpModal は閉じるとき即座に unmount せず、閉じアニメーション分(250ms)の
+      // setTimeout を待ってから unmount する。「タップ直後にまだ表示されている」だけでは
+      // 「正しく閉じない」ことの証明にならない(閉じる場合でもアニメーション中は残る)ため、
+      // アニメーション時間を確実に超えるまで待ってから判定する。
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(screen.getByText("全選択")).toBeTruthy();
+    },
+  );
 });

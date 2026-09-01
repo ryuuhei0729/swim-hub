@@ -120,7 +120,8 @@
       "previousPage": "前のページ",
       "nextPage": "次のページ",
       "pageN": "ページ {page}",
-      "switchLanguage": "言語を切り替える"
+      "switchLanguage": "言語を切り替える",
+      "modalOverlay": "モーダルの背景"
     },
     "pagination": {
       "prev": "前へ",
@@ -1302,7 +1303,7 @@
       "shortCourse": "短水路",
       "longCourse": "長水路",
       "includeRelay": "引き継ぎタイムも含めて表示",
-      "includeRelayShort": "引き継ぎタイム含",
+      "includeRelayShort": "引き継ぎ含む",
       "bulkEntryNote": "一括登録",
       "distanceHeader": "距離",
       "legend": {
@@ -1310,7 +1311,8 @@
         "relaying": "R: 引き継ぎあり",
         "relayingExcludedFromWaPoints": "引き継ぎタイムはWAポイント対象外です"
       },
-      "waPointsToggle": "WAポイント表示"
+      "waPointsToggle": "WAポイント表示",
+      "waPointsToggleShort": "WAポイント"
     },
     "error": {
       "title": "エラーが発生しました",
@@ -2499,9 +2501,7 @@
       "groupMemberAssignFailed": "メンバーの割り当てに失敗しました",
       "memberListTitle": "メンバー",
       "memberListEmpty": "メンバーがいません",
-      "memberListTotal": "合計: {count}人",
-      "memberListAdmin": "管理者: {count}人",
-      "memberListMember": "メンバー: {count}人",
+      "memberListTotal": "人数: {count}人",
       "bestTimeLoading": "ベストタイム読込中...",
       "memberColLabel": "メンバー",
       "youLabel": "あなた",
@@ -2551,7 +2551,8 @@
       "adminControlsTitle": "管理者機能",
       "bestTimesEmpty": "記録がありません",
       "bestTimesEmptySubText": "このメンバーはまだ記録を登録していません",
-      "bestTimesIncludeRelaying": "引き継ぎタイム含",
+      "bestTimesIncludeRelaying": "引き継ぎ含む",
+      "bestTimesWaPointsToggle": "WAポイント",
       "bestTimesAnnotation": "※ L: 長水路, R: 引き継ぎあり",
       "groupDisplayLabel": "グループ表示:",
       "groupAddAria": "グループを追加",
@@ -2975,8 +2976,8 @@
       "rankLabel": "順位",
       "pointsLabel": "WAポイント",
       "styleLabel": "種目",
-      "courseShort": "SC",
-      "courseLong": "LC",
+      "courseShort": "短水路",
+      "courseLong": "長水路",
       "empty": "比較できる記録がありません"
     },
     "membershipActions": {
@@ -2998,7 +2999,7 @@
     },
     "recentAttendance": {
       "title": "直近の出欠",
-      "empty": "のイベントがありません",
+      "empty": "イベントがありません",
       "saveButton": "保存",
       "thisMonth": "今月",
       "nextMonth": "来月",

@@ -7,7 +7,7 @@
  *        DB に split (負値・0 含む) が 1 件も書き込まれない (records.insert も発生しない)。
  *
  * 実装方針は recordSaveGuard.test.tsx を踏襲: RecordClient を丸ごとレンダリングし、
- * next-intl / next/navigation / AuthProvider をモックした上で実際の保存ボタン押下を
+ * next-intl / @/i18n/navigation / AuthProvider をモックした上で実際の保存ボタン押下を
  * 通して検証する。既存記録 (existingRecords) の split_times に「leg 相対値として
  * 負値」を直接仕込むことで、再読込直後の entry.relaySplitTimes に不正な通算値
  * (leg 開始通算タイム以下) を再現する。これは「新規に不正な値を入力するケース」だけでなく
@@ -25,7 +25,7 @@ vi.mock("@/components/video/TeamVideoUploader", () => ({
   default: () => null,
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: mocks.push }),
 }));
 

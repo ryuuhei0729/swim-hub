@@ -35,6 +35,7 @@ import type { PracticeTag, PracticeTime } from "@apps/shared/types";
 import type { TimeEntry } from "@apps/shared/types/ui";
 import { formatTime, SWIM_STYLES } from "@/utils/formatters";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
+import { useTagModalTransition } from "@/hooks/useTagModalTransition";
 
 type PracticeLogFormScreenRouteProp = RouteProp<MainStackParamList, "PracticeLogForm">;
 type PracticeLogFormScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
@@ -99,9 +100,17 @@ export const PracticeLogFormScreen: React.FC = () => {
 
   // タグ関連の状態
   const [showTagSelectModal, setShowTagSelectModal] = useState(false);
-  const [showTagManageModal, setShowTagManageModal] = useState(false);
-  const [editingTag, setEditingTag] = useState<PracticeTag | null>(null);
   const [activeMenuIndex, setActiveMenuIndex] = useState(0);
+  // TagSelectModal ⇄ TagManageModal の遷移 (二重マウント競合の修正) は共通フックに集約。
+  const {
+    showTagManageModal,
+    editingTag,
+    openTagCreateModal,
+    openTagEditModal,
+    handleTagSelectModalClosed,
+    handleTagManageModalClosed,
+    closeTagManageModal,
+  } = useTagModalTransition(setShowTagSelectModal);
 
   // タグ取得（React Query）
   const { data: availableTags = [] } = usePracticeTagsQuery(supabase);
@@ -263,24 +272,6 @@ export const PracticeLogFormScreen: React.FC = () => {
   const openTagSelectModal = useCallback((menuIndex: number) => {
     setActiveMenuIndex(menuIndex);
     setShowTagSelectModal(true);
-  }, []);
-
-  // タグ管理モーダルを開く（新規作成）
-  const openTagCreateModal = useCallback(() => {
-    setShowTagSelectModal(false); // まずTagSelectModalを閉じる
-    setTimeout(() => {
-      setEditingTag(null);
-      setShowTagManageModal(true);
-    }, 100);
-  }, []);
-
-  // タグ管理モーダルを開く（編集）
-  const openTagEditModal = useCallback((tag: PracticeTag) => {
-    setShowTagSelectModal(false); // まずTagSelectModalを閉じる
-    setTimeout(() => {
-      setEditingTag(tag);
-      setShowTagManageModal(true);
-    }, 100);
   }, []);
 
   // タグ選択変更
@@ -874,6 +865,7 @@ export const PracticeLogFormScreen: React.FC = () => {
       <TagSelectModal
         visible={showTagSelectModal}
         onClose={() => setShowTagSelectModal(false)}
+        onClosed={handleTagSelectModalClosed}
         selectedTags={menus[activeMenuIndex]?.tags || []}
         availableTags={availableTags}
         onTagsChange={handleTagsChange}
@@ -885,11 +877,8 @@ export const PracticeLogFormScreen: React.FC = () => {
       {/* タグ管理モーダル */}
       <TagManageModal
         visible={showTagManageModal}
-        onClose={() => {
-          setShowTagManageModal(false);
-          // タグ管理モーダルを閉じた後、タグ選択モーダルを再度開く
-          setTimeout(() => setShowTagSelectModal(true), 100);
-        }}
+        onClose={closeTagManageModal}
+        onClosed={handleTagManageModalClosed}
         tag={editingTag}
         onSave={handleSaveTag}
         onDelete={handleDeleteTag}

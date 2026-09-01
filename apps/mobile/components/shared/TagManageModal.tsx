@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -21,6 +22,12 @@ interface TagManageModalProps {
   tag: PracticeTag | null;
   onSave: (name: string, color: string) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
+  /**
+   * このモーダルが実際に閉じ終わったタイミングで呼ばれる (iOS は onDismiss、Android は
+   * visible=false を発火条件とし、実装内の分岐理由は本体コメントを参照。
+   * components/ui/SlideUpModal.tsx の onClosed と同じ意図)。初回マウント時は発火しない。
+   */
+  onClosed?: () => void;
 }
 
 /**
@@ -32,6 +39,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   tag,
   onSave,
   onDelete,
+  onClosed,
 }) => {
   const { t } = useTranslation();
   const [name, setName] = useState("");
@@ -42,6 +50,55 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isEditMode = tag !== null;
+
+  // onClosed の呼び出し元は毎レンダー新しい関数を渡すことがあるため、ref 経由で参照し
+  // 下の visible 監視 effect の依存配列には含めない (直前の visible の追跡だけで
+  // 発火判定したいため)。
+  const onClosedRef = useRef(onClosed);
+  useEffect(() => {
+    onClosedRef.current = onClosed;
+  }, [onClosed]);
+  const wasVisibleRef = useRef(visible);
+  // handleDismiss は「onDismiss が届いた時点の最新 visible」で判定する必要がある。
+  // ネイティブ側に渡ったハンドラが、閉じる直前 (visible=true) のレンダーで生成された
+  // クロージャのまま呼ばれる可能性があるため、prop を直接読まず ref 経由で見る。
+  const visibleRef = useRef(visible);
+
+  useEffect(() => {
+    const wasVisible = wasVisibleRef.current;
+    wasVisibleRef.current = visible;
+    visibleRef.current = visible;
+
+    // Android/Web: RN <Modal> は visible=false で即座に中身を描画しなくなる (SlideUpModal と
+    // 異なり遅延アンマウントを持たない) ため、この時点を「閉じ終わった」とみなせる。
+    // iOS はここでは処理しない (下の onDismiss が信号を担う。visible=false の時点では
+    // ネイティブの閉じアニメーションがまだ再生中のため)。
+    if (Platform.OS === "ios") return;
+    if (!visible && wasVisible) {
+      onClosedRef.current?.();
+    }
+  }, [visible]);
+
+  const handleDismiss = () => {
+    // iOS 専用: ネイティブモーダルの提示アニメーションが完全に終わった (閉じ切った) 通知。
+    // Android では onDismiss 自体が発火しないため、Android の通知は上の useEffect が担う。
+    //
+    // `visible` が既に true に戻っている場合は、閉じアニメーション中に再オープンされた
+    // ケースであり、ここへ届いた onDismiss は「reopen 前のクローズサイクル」の遅延信号。
+    // ネイティブの dismiss は JS から途中キャンセルできないため必ず遅れて届く。これを
+    // 無条件に通知すると、呼び出し元が「TagManageModal は閉じた」と誤認して
+    // TagSelectModal を開き直し、提示中の TagManageModal と二重マウントになる
+    // (SlideUpModal が awaitingDismissRef で防いでいるのと同じ競合)。TagManageModal は
+    // `visible` をネイティブ <Modal> にそのまま渡しているため、`!visibleRef.current` が
+    // 「クローズサイクルがまだ継続中か」の判定にそのまま使える。
+    //
+    // なお RN の onDismiss は発生源を識別する情報を持たない空のイベントのため、
+    // close→reopen→close のように3回以上連続で操作された場合までは保護できない
+    // (SlideUpModal の onClosed に記載した制約と同一)。
+    if (Platform.OS === "ios" && !visibleRef.current) {
+      onClosedRef.current?.();
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -131,6 +188,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onClose}
+      onDismiss={handleDismiss}
     >
       <SafeAreaView style={styles.container}>
         {/* ヘッダー */}
