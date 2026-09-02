@@ -13,9 +13,6 @@ export type PoolType = 0 | 1; // 0: 短水路, 1: 長水路
 // 性別
 export type Gender = 0 | 1; // 0: 男性, 1: 女性
 
-// 泳法
-export type SwimStyle = "fr" | "br" | "ba" | "fly" | "im";
-
 // 出欠ステータス
 export type AttendanceStatus = "present" | "absent" | "other";
 export type AttendanceStatusType = "open" | "closed";
@@ -50,7 +47,14 @@ export const GENDERS = {
   FEMALE: 1 as const,
 } as const;
 
-export const SWIM_STYLES = ["Fr", "Ba", "Br", "Fly", "IM"] as const;
+// 泳法。styles.style の CHECK 制約 (styles_style_check) の値集合と DB シード順
+// (supabase/migrations/20251201014342_initial_schema.sql) に一致させる、唯一の定義元。
+// 型 (SwimStyle) は定数から導出するため、定数と型が構造的に一致し二重管理が発生しない。
+// 表示順は既存の STYLE_ORDER 系配列 (web: CompetitionClient.tsx, mobile:
+// practiceLogFilter.ts / recordFilter.ts) と揃えてあり、この配列の並びを変えると
+// それらの表示順も連動して変わる。
+export const SWIM_STYLES = ["Fr", "Br", "Ba", "Fly", "IM"] as const;
+export type SwimStyle = (typeof SWIM_STYLES)[number];
 
 // カレンダーアイテムタイプの定数（Single Source of Truth）
 export const CALENDAR_ITEM_TYPES = [
@@ -76,7 +80,7 @@ export const isGender = (value: unknown): value is Gender => {
 };
 
 export const isSwimStyle = (value: unknown): value is SwimStyle => {
-  return typeof value === "string" && ["fr", "br", "ba", "fly", "im"].includes(value);
+  return typeof value === "string" && (SWIM_STYLES as readonly string[]).includes(value);
 };
 
 export const isCalendarItemType = (value: unknown): value is CalendarItemType => {

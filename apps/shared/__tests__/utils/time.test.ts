@@ -124,46 +124,54 @@ describe("time utilities", () => {
   // =============================================================================
   // フォーマット関数
   // =============================================================================
+  // NOTE (Sprint: Issue #13 Stage2, PM裁定 2026-09-01):
+  //   このブロックはかつて formatTime の小数第1位までの挙動を pin していたが、
+  //   DB (numeric(10,2)) / 入力UI (useTimeInput, 2桁) / mobile formatTime (2桁) /
+  //   CLAUDE.md のタイム表示規約 (分:秒.コンマ秒) といずれも矛盾する「誤ってピン留め
+  //   された挙動」であるとPMが判定したため、期待値を小数第2位に更新した。
+  //   1桁と2桁で丸め結果の境界(分の繰り上がりが起きる入力値)が変わるケースは、
+  //   桁数だけを機械的に置換せず、2桁精度で実際に境界を跨ぐ入力値に差し替えている
+  //   (59.99→59.995、3599.99→3599.995)。
   describe("formatTime", () => {
     describe("正常系", () => {
-      it('0秒は"0.0"を返す', () => {
-        expect(formatTime(0)).toBe("0.0");
+      it('0秒は"0.00"を返す', () => {
+        expect(formatTime(0)).toBe("0.00");
       });
 
-      it("1分未満の秒数はSS.m形式を返す", () => {
-        expect(formatTime(30.5)).toBe("30.5");
-        expect(formatTime(59.94)).toBe("59.9");
+      it("1分未満の秒数はSS.mm形式を返す", () => {
+        expect(formatTime(30.5)).toBe("30.50");
+        expect(formatTime(59.94)).toBe("59.94");
       });
 
-      it("59.99秒は60.0秒に丸まるため1:00.0形式を返す", () => {
-        expect(formatTime(59.99)).toBe("1:00.0");
+      it("59.995秒は60.00秒に丸まるため1:00.00形式を返す", () => {
+        expect(formatTime(59.995)).toBe("1:00.00");
       });
 
-      it("1分以上の秒数はM:SS.m形式を返す", () => {
-        expect(formatTime(60)).toBe("1:00.0");
-        expect(formatTime(65.42)).toBe("1:05.4");
-        expect(formatTime(125.5)).toBe("2:05.5");
+      it("1分以上の秒数はM:SS.mm形式を返す", () => {
+        expect(formatTime(60)).toBe("1:00.00");
+        expect(formatTime(65.42)).toBe("1:05.42");
+        expect(formatTime(125.5)).toBe("2:05.50");
       });
 
       it("10分以上の秒数も正しくフォーマットする", () => {
-        expect(formatTime(600)).toBe("10:00.0");
-        expect(formatTime(3599.99)).toBe("60:00.0");
+        expect(formatTime(600)).toBe("10:00.00");
+        expect(formatTime(3599.995)).toBe("60:00.00");
       });
     });
 
     describe("異常系", () => {
-      it('負の秒数は"0.0"を返す', () => {
-        expect(formatTime(-1)).toBe("0.0");
-        expect(formatTime(-100)).toBe("0.0");
+      it('負の秒数は"0.00"を返す', () => {
+        expect(formatTime(-1)).toBe("0.00");
+        expect(formatTime(-100)).toBe("0.00");
       });
 
-      it('Infinityは"0.0"を返す', () => {
-        expect(formatTime(Infinity)).toBe("0.0");
-        expect(formatTime(-Infinity)).toBe("0.0");
+      it('Infinityは"0.00"を返す', () => {
+        expect(formatTime(Infinity)).toBe("0.00");
+        expect(formatTime(-Infinity)).toBe("0.00");
       });
 
-      it('NaNは"0.0"を返す', () => {
-        expect(formatTime(NaN)).toBe("0.0");
+      it('NaNは"0.00"を返す', () => {
+        expect(formatTime(NaN)).toBe("0.00");
       });
     });
   });
@@ -540,21 +548,21 @@ describe("time utilities", () => {
       const timeStr = "55.42";
       const seconds = parseTime(timeStr);
       expect(seconds).toBe(55.42);
-      expect(formatTime(seconds)).toBe("55.4");
+      expect(formatTime(seconds)).toBe("55.42");
     });
 
     it("200m個人メドレーのタイムを処理する", () => {
       const timeStr = "2:15.30";
       const seconds = parseTime(timeStr);
       expect(seconds).toBe(135.3);
-      expect(formatTime(seconds)).toBe("2:15.3");
+      expect(formatTime(seconds)).toBe("2:15.30");
     });
 
     it("1500m自由形のタイムを処理する", () => {
       const timeStr = "16:30.00";
       const seconds = parseTime(timeStr);
       expect(seconds).toBe(990);
-      expect(formatTime(seconds)).toBe("16:30.0");
+      expect(formatTime(seconds)).toBe("16:30.00");
     });
 
     it("複数のタイムから最速と平均を計算する", () => {

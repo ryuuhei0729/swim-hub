@@ -20,15 +20,14 @@ import { describe, expect, it } from "vitest";
 import {
   DISTANCES,
   STYLES,
-  STYLE_CODE_TO_ABBREV,
   STYLE_KEY_MAP,
   formatStyleAbbrev,
   getDistancesForStyle,
   getStyleOrderIndex,
   isInvalidCombination,
+  toStyleCode,
   type StyleTranslationKey,
 } from "../../utils/swimStyles";
-import type { SwimStyle } from "../../types";
 
 describe("STYLES / DISTANCES 定数", () => {
   it("[V-S1] STYLES は Option A の並び順", () => {
@@ -208,42 +207,95 @@ describe("getStyleOrderIndex", () => {
 });
 
 // ---------------------------------------------------------------------------
-// STYLE_CODE_TO_ABBREV / formatStyleAbbrev - 2026-07-22 Sprint 新規
-// 種目名のスマホ幅略称化(web CompetitionRecordCard の sm 未満表示 / mobile RecordItem の
-// 常時表示)が共用する、ロケール非依存の距離+略称フォーマッタ。
+// toStyleCode - 種目コード正規化の唯一の定義元
+//
+// PM 裁定 (2026-09-02, Issue #13 High対応): Reviewer が「toStyleCode() の大小無視
+// マッチが "FR"(フリーリレー略称) を "Fr"(自由形) に潰す。呼び出し元7箇所が
+// 無防備」という High を出した。個別呼び出し元にガードを複製するのではなく、
+// 定義元であるこの関数自体を2段構造に絞り込んだ:
+//   ① canonical との完全一致 (大小区別あり) を最優先
+//   ② legacy バグ (.toLowerCase() 正規化コード) が書き込んだ「厳密な全小文字」のみ救済
+//   ③ それ以外 (全大文字・混在ケーシング) は null
+// 実際に legacy バグが書き込んだのは .toLowerCase() の結果である厳密な全小文字のみで
+// あり、全大文字・混在ケーシングの実データは存在しないため、対応範囲を広げる理由もない。
+// このテストが「新契約」を固定する唯一のテストであり、各消費側 (goalSetCalculator /
+// practiceLogFilter / styleName / racePaceModels 等) はここでの契約を前提にしてよい。
 // ---------------------------------------------------------------------------
 
-describe("STYLE_CODE_TO_ABBREV", () => {
-  it.each([
-    ["fr", "Fr"],
-    ["br", "Br"],
-    ["ba", "Ba"],
-    ["fly", "Fly"],
-    ["im", "IM"],
-  ] as const)("%s は公式略称 %s にマップされる", (code, abbrev) => {
-    expect(STYLE_CODE_TO_ABBREV[code]).toBe(abbrev);
+describe("toStyleCode", () => {
+  describe("canonical との完全一致(大小区別あり)は常に通る", () => {
+    it.each(["Fr", "Br", "Ba", "Fly", "IM"] as const)("%s はそのまま返る", (code) => {
+      expect(toStyleCode(code)).toBe(code);
+    });
+
+    it('"IM" は canonical 自体が全大文字だが、完全一致で確定するため弾かれない(最重要回帰ガード)', () => {
+      expect(toStyleCode("IM")).toBe("IM");
+    });
   });
 
-  it("5泳法すべてを網羅する(SwimStyle の全パターンにキーが存在する)", () => {
-    const allCodes: SwimStyle[] = ["fr", "br", "ba", "fly", "im"];
-    expect(Object.keys(STYLE_CODE_TO_ABBREV).sort()).toEqual([...allCodes].sort());
+  describe("legacy な「厳密な全小文字」は救済される(移行窓の防御)", () => {
+    it.each([
+      ["fr", "Fr"],
+      ["br", "Br"],
+      ["ba", "Ba"],
+      ["fly", "Fly"],
+      ["im", "IM"],
+    ] as const)("%s は %s に正規化される", (input, expected) => {
+      expect(toStyleCode(input)).toBe(expected);
+    });
+  });
+
+  describe("[新契約] 全大文字・混在ケーシングは null (リレー略称等との衝突を避けるため非対応)", () => {
+    it.each(["FR", "BR", "BA", "FLY", "fR", "Im", "bR"])("%s は null を返す", (input) => {
+      expect(toStyleCode(input)).toBeNull();
+    });
+
+    it('"FR"(フリーリレー略称)・"MR"(メドレーリレー略称)は自由形に化けず null になる', () => {
+      expect(toStyleCode("FR")).toBeNull();
+      expect(toStyleCode("MR")).toBeNull();
+    });
+  });
+
+  describe("null安全性", () => {
+    it("null/undefined/空文字は null を返す", () => {
+      expect(toStyleCode(null)).toBeNull();
+      expect(toStyleCode(undefined)).toBeNull();
+      expect(toStyleCode("")).toBeNull();
+    });
+
+    it("未知の値(butterfly等の英単語)は null を返す", () => {
+      expect(toStyleCode("butterfly")).toBeNull();
+      expect(toStyleCode("backstroke")).toBeNull();
+    });
   });
 });
+
+// ---------------------------------------------------------------------------
+// formatStyleAbbrev - 2026-07-22 Sprint 新規
+// 種目名のスマホ幅略称化(web CompetitionRecordCard の sm 未満表示 / mobile RecordItem の
+// 常時表示)が共用する、ロケール非依存の距離+略称フォーマッタ。
+//
+// 2026-09 (Issue #13 Reviewer 裁定): SwimStyle 自体が公式英略称と同じ値集合
+// (Fr/Br/Ba/Fly/IM) になったため、コード→略称の変換テーブル (STYLE_CODE_TO_ABBREV)
+// は恒等写像となり削除された (production 側も削除済み)。formatStyleAbbrev は
+// `${distance}m${style.style}` を素通しで組み立てるだけなので、以下のフィクスチャは
+// SwimStyle の実際の値集合であるタイトルケースを使う (小文字は型として無効な入力)。
+// ---------------------------------------------------------------------------
 
 describe("formatStyleAbbrev", () => {
   describe("style(コード)+distance が揃っている場合(通常経路)", () => {
     it.each([
-      ["fr", 50, "50mFr"],
-      ["br", 100, "100mBr"],
-      ["ba", 200, "200mBa"],
-      ["fly", 100, "100mFly"],
-      ["im", 200, "200mIM"],
+      ["Fr", 50, "50mFr"],
+      ["Br", 100, "100mBr"],
+      ["Ba", 200, "200mBa"],
+      ["Fly", 100, "100mFly"],
+      ["IM", 200, "200mIM"],
     ] as const)("style=%s, distance=%i → %s", (style, distance, expected) => {
       expect(formatStyleAbbrev({ style, distance })).toBe(expected);
     });
 
     it("distance=0 でも数値として扱われる(!= null のガードのため欠落しない)", () => {
-      expect(formatStyleAbbrev({ style: "fr", distance: 0 })).toBe("0mFr");
+      expect(formatStyleAbbrev({ style: "Fr", distance: 0 })).toBe("0mFr");
     });
   });
 
@@ -261,7 +313,7 @@ describe("formatStyleAbbrev", () => {
     });
 
     it("style(コード)はあるが distance が無い(null)場合も name フォールバックが使われる", () => {
-      expect(formatStyleAbbrev({ style: "im", distance: null, name: "200IM" })).toBe("200mIM");
+      expect(formatStyleAbbrev({ style: "IM", distance: null, name: "200IM" })).toBe("200mIM");
     });
   });
 
@@ -285,13 +337,13 @@ describe("formatStyleAbbrev", () => {
     });
 
     it("style コードのみあり distance が無く、name/name_jp も無い場合は「-」を返す", () => {
-      expect(formatStyleAbbrev({ style: "fr" })).toBe("-");
+      expect(formatStyleAbbrev({ style: "Fr" })).toBe("-");
     });
   });
 
   describe("優先順位(style+distance > name > name_jp > '-')の確認", () => {
     it("style+distance と name が両方ある場合、style+distance が優先される", () => {
-      expect(formatStyleAbbrev({ style: "fr", distance: 50, name: "999XX" })).toBe("50mFr");
+      expect(formatStyleAbbrev({ style: "Fr", distance: 50, name: "999XX" })).toBe("50mFr");
     });
 
     it("name と name_jp が両方ある場合、name が優先される", () => {

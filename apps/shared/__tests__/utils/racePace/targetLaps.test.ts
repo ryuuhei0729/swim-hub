@@ -22,7 +22,7 @@ import type { RacePaceModel } from "../../../utils/racePace/types";
 const model100fr: RacePaceModel = {
   gender: "male",
   poolType: 1,
-  stroke: "fr",
+  stroke: "Fr",
   distance: 100,
   splitInterval: 50,
   ageCategory: "all",

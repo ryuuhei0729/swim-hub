@@ -62,7 +62,7 @@ for (const m of models.slice(0, 10)) {
 }
 
 // 代表的なモデルで理想LAPを1本出して、通ることを目で確認できるようにする
-const demo = models.find((m) => m.distance === 100 && m.stroke === "fr") ?? models[0];
+const demo = models.find((m) => m.distance === 100 && m.stroke === "Fr") ?? models[0];
 if (!demo) {
   // 48行目で models.length === 0 の場合は既に process.exit(0) 済みのため
   // ここに来る場合 models[0] は必ず存在するが、防御的にガードする

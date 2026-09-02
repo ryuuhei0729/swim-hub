@@ -4,7 +4,11 @@
  * web apps/web/utils/lapTimeCalculator.ts の挙動を mobile に複製したもの（shared 統合はしない）。
  */
 
-export interface SplitTime {
+// 注意: apps/shared/types/record.ts の DB レコード型 `SplitTime`
+// ({id, record_id, distance, split_time, created_at}) とは別物 (UI 計算用の中間値)。
+// 同一リポ内で名前が衝突していたため `LapSplitPoint` にリネームした
+// (apps/web/utils/lapTimeCalculator.ts の対応する型と名称を揃えている)。
+export interface LapSplitPoint {
   distance: number;
   splitTime: number;
 }
@@ -20,7 +24,7 @@ export interface LapTime {
  * @param splitTimes 距離とタイムのペア配列
  * @returns lap-timeの配列
  */
-export function calculateAllLapTimes(splitTimes: SplitTime[]): LapTime[] {
+export function calculateAllLapTimes(splitTimes: LapSplitPoint[]): LapTime[] {
   if (splitTimes.length === 0) return [];
 
   const sorted = [...splitTimes].sort((a, b) => a.distance - b.distance);
@@ -85,7 +89,7 @@ export function getLapIntervalsForRace(raceDistance: number): number[] {
  * @returns 表形式のデータ（各行は距離、Split Time、各間隔のLap Time）
  */
 export function calculateRaceLapTimesTable(
-  splitTimes: SplitTime[],
+  splitTimes: LapSplitPoint[],
   raceDistance: number,
 ): Array<{
   distance: number;

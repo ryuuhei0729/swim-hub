@@ -5,7 +5,7 @@ import {
   calculateAllLapTimes,
   calculateRaceLapTimesTable,
   getLapIntervalsForRace,
-  type SplitTime,
+  type LapSplitPoint,
 } from "@/utils/lapTimeCalculator";
 import { formatTimeBest } from "@/utils/formatters";
 
@@ -23,7 +23,7 @@ export const LapTimeDisplay: React.FC<LapTimeDisplayProps> = ({ splitTimes, race
   const [activeTab, setActiveTab] = useState<"all" | "race">("race");
 
   // split-timeを有効なものだけフィルタリングしてSplitTime型に変換
-  const validSplitTimes: SplitTime[] = useMemo(() => {
+  const validSplitTimes: LapSplitPoint[] = useMemo(() => {
     return splitTimes
       .filter((st) => typeof st.distance === "number" && st.distance > 0 && st.splitTime > 0)
       .map((st) => ({

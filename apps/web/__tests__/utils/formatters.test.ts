@@ -8,30 +8,41 @@ import {
   formatTime,
 } from "../../utils/formatters";
 
+// NOTE (Sprint: Issue #13 Stage2, PM裁定 2026-09-01):
+//   この describe はかつて formatTime の小数第1位までの挙動を pin していたが、
+//   DB (numeric(10,2)) / 入力UI (2桁) / mobile formatTime (2桁) / CLAUDE.md の
+//   タイム表示規約といずれも矛盾する「誤ってピン留めされた挙動」であるとPMが
+//   判定したため、期待値を小数第2位に更新した。5.12 は1桁精度では "5.1" に丸まって
+//   いたが2桁精度では丸めが発生しないため "5.12" のまま、0.01 は1桁精度では "0.0" に
+//   丸まっていたが2桁精度では "0.01" のまま — という2件は桁数追加ではなく実際に
+//   返り値が変わる (旧テストが誤りだったことの直接証拠)。
 describe("formatTime", () => {
-  it("60秒以上のときMM:SS.s形式でフォーマットされる", () => {
-    expect(formatTime(125.5)).toBe("2:05.5");
-    expect(formatTime(60.0)).toBe("1:00.0");
-    expect(formatTime(186.0)).toBe("3:06.0");
+  it("60秒以上のときMM:SS.ss形式でフォーマットされる", () => {
+    expect(formatTime(125.5)).toBe("2:05.50");
+    expect(formatTime(60.0)).toBe("1:00.00");
+    expect(formatTime(186.0)).toBe("3:06.00");
   });
 
   it("60秒未満のとき分なしでフォーマットされる", () => {
-    expect(formatTime(60.0)).toBe("1:00.0");
-    expect(formatTime(30.5)).toBe("30.5");
-    expect(formatTime(5.12)).toBe("5.1");
+    expect(formatTime(60.0)).toBe("1:00.00");
+    expect(formatTime(30.5)).toBe("30.50");
+    expect(formatTime(5.12)).toBe("5.12");
   });
 
   it("エッジケースを処理できる", () => {
-    expect(formatTime(0)).toBe("0.0");
-    expect(formatTime(0.01)).toBe("0.0");
+    expect(formatTime(0)).toBe("0.00");
+    // 0.01 は小数第2位精度では丸めで消えない実際の値 (1桁精度時代の "0.0" は誤り)
+    expect(formatTime(0.01)).toBe("0.01");
+    // 小数第2位未満の端数のみ0に丸まる
+    expect(formatTime(0.001)).toBe("0.00");
   });
 
-  it("無効な入力に対して0.0を返す", () => {
-    expect(formatTime(-1)).toBe("0.0");
-    expect(formatTime(-100.5)).toBe("0.0");
-    expect(formatTime(NaN)).toBe("0.0");
-    expect(formatTime(Infinity)).toBe("0.0");
-    expect(formatTime(-Infinity)).toBe("0.0");
+  it("無効な入力に対して0.00を返す", () => {
+    expect(formatTime(-1)).toBe("0.00");
+    expect(formatTime(-100.5)).toBe("0.00");
+    expect(formatTime(NaN)).toBe("0.00");
+    expect(formatTime(Infinity)).toBe("0.00");
+    expect(formatTime(-Infinity)).toBe("0.00");
   });
 });
 

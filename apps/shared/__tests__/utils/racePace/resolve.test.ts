@@ -18,7 +18,7 @@ import type { RacePaceModel } from "../../../utils/racePace/types";
 const model = (minTimeMs: number, maxTimeMs: number, firstRatio: number, sampleCount = 40): RacePaceModel => ({
   gender: "male",
   poolType: 1,
-  stroke: "fr",
+  stroke: "Fr",
   distance: 100,
   splitInterval: 50,
   ageCategory: "all",

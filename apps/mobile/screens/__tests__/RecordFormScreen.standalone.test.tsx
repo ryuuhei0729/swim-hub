@@ -98,7 +98,25 @@ const mocks = vi.hoisted(() => {
   const recordsFixture = [standaloneRecord, linkedRecord];
   const stylesFixture = [style];
   const competitionsFixture: unknown[] = [linkedCompetition];
-  const supabaseFixture = {};
+  // #47 修正 (App Developer): 保存時の pool_type 取得が competitions.find() から
+  // supabase.from("competitions").select("pool_type").eq("id", ...).single() の
+  // 直接取得に変わったため、linkedRecord (competition_id="comp-1") の保存経路が
+  // このスタブを経由する。standaloneRecord の保存は isStandaloneRecord=true のため
+  // このスタブを呼ばずに済む (standaloneOriginalPoolType を直接使う)。
+  const supabaseFixture = {
+    from: (table: string) => ({
+      select: (_columns: string) => ({
+        eq: (_column: string, id: string) => ({
+          single: () =>
+            Promise.resolve(
+              table === "competitions" && id === linkedCompetition.id
+                ? { data: { pool_type: linkedCompetition.pool_type }, error: null }
+                : { data: null, error: new Error(`no mock response for ${table}:${id}`) },
+            ),
+        }),
+      }),
+    }),
+  };
   // useRoute のモックが参照する可変な route params (テストごとに recordId を切り替える)
   const routeParams: { recordId?: string } = { recordId: "record-1" };
 

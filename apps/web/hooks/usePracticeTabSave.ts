@@ -153,7 +153,7 @@ export function usePracticeTabSave({
       for (const menu of diff.toAdd) {
         const logInput = {
           practice_id: practiceId!,
-          style: menu.style || "fr",
+          style: menu.style || "Fr",
           swim_category: menu.swimCategory || "Swim",
           rep_count: Number(menu.reps) || 1,
           set_count: Number(menu.sets) || 1,
@@ -196,7 +196,7 @@ export function usePracticeTabSave({
       // UPDATE
       for (const { id, data: menu } of diff.toUpdate) {
         await updatePracticeLog(id, {
-          style: menu.style || "fr",
+          style: menu.style || "Fr",
           swim_category: menu.swimCategory || "Swim",
           rep_count: Number(menu.reps) || 1,
           set_count: Number(menu.sets) || 1,

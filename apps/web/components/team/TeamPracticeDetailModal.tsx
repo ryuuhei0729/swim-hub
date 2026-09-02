@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import type { PracticeTag } from "@apps/shared/types";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { useTranslations } from "next-intl";
 
 const getTextColor = (backgroundColor: string) => {
@@ -73,8 +74,12 @@ function getUserName(
 }
 
 // ログをメニュー（style+distance+circle等）でグルーピングするキー
+// log.style は practice_logs.style (CHECK 制約の無い自由記述列) で legacy な小文字行が
+// 混在し得る。正規化せずキーに使うと、同じメニューの他メンバー分のログが "Fr"/"fr" で
+// 別グループに分裂し、メンバー横断の比較表が壊れる。toStyleCode() で正規化してから使う。
 function getMenuKey(log: PracticeLogEntry): string {
-  return `${log.style}_${log.distance}_${log.rep_count}_${log.set_count}_${log.circle}_${log.swim_category}`;
+  const styleCode = toStyleCode(log.style) ?? log.style;
+  return `${styleCode}_${log.distance}_${log.rep_count}_${log.set_count}_${log.circle}_${log.swim_category}`;
 }
 
 interface MemberInfo {
@@ -326,8 +331,12 @@ export default function TeamPracticeDetailModal({
     [t],
   );
 
+  // practice_logs.style は CHECK 制約の無い自由記述列で legacy な小文字行が混在し得るため、
+  // toStyleCode() で正規化してから Record を引く(生の "fr" のまま引くとキーが無く
+  // 翻訳されない生文字列がそのまま表示される)。
   const getStyleLabel = (styleValue: string): string => {
-    return (swimStyles as Record<string, string>)[styleValue] || styleValue;
+    const code = toStyleCode(styleValue);
+    return (code && (swimStyles as Record<string, string>)[code]) || styleValue;
   };
 
   useEffect(() => {

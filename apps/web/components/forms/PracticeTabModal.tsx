@@ -29,6 +29,7 @@ import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { validatePracticeTimeLimit } from "@swim-hub/shared/utils/validators";
 import { useCreatePracticeLogTemplateMutation } from "@swim-hub/shared/hooks";
 import { PracticeAPI } from "@apps/shared/api";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { isDbUuid } from "@/utils/isDbUuid";
 import { getTabNavAdjacency } from "@/utils/tabModalUtils";
 import type { PracticeImageFile, ExistingImage } from "@/components/forms/PracticeImageUploader";
@@ -317,7 +318,14 @@ export default function PracticeTabModal({
           const tags = availableTags.filter((tag) => tagIds.includes(tag.id));
           return {
             id: row.id as string,
-            style: (row.style as string) || "Fr",
+            // practice_logs.style は CHECK 制約の無い自由記述列で legacy な小文字行が
+            // 混在し得るため toStyleCode() で正規化する(このパスは usePracticeLogForm の
+            // 内部正規化を経由せず setMenus() で直接 state を上書きするため、ここで
+            // 正規化しないと <select>/SelectChips が既存の種目を選択済み表示できない)。
+            // 正規化できない場合は "Fr" に潰さず元の値を保持する(編集フォームの初期値を
+            // "Fr" に潰すと、種目欄を触らず保存しただけで元の値が自由形として静かに
+            // 上書きされる)。
+            style: toStyleCode(row.style as string) ?? (row.style as string),
             swimCategory: ((row.swim_category as string) || "Swim") as "Swim" | "Pull" | "Kick",
             distance: (row.distance as number) || 100,
             reps: (row.rep_count as number) || 1,
@@ -348,9 +356,14 @@ export default function PracticeTabModal({
           const circleTime = (d.circle as number) || 0;
           const tagIds = (d.tag_ids as string[] | undefined) ?? [];
           const templateTags = availableTags.filter((tag) => tagIds.includes(tag.id));
+          // isTemplateAppendMode は typeof d.style === "string" を前提条件として
+          // 判定済みだが、d は Record<string, unknown> 経由のため型上は保証されない。
+          // 正規化できない場合は "Fr" に潰さず元の値を保持する(既存ログ相当のデータを
+          // 追記するモードのため、"Fr" に潰すと想定外の種目が自由形にすり替わる)。
+          const dStyle = typeof d.style === "string" ? d.style : "Fr";
           const templateMenu: PracticeMenu = {
             id: String(Date.now()),
-            style: String(d.style || "Fr"),
+            style: toStyleCode(dStyle) ?? dStyle,
             swimCategory: ((d.swim_category as string) || "Swim") as "Swim" | "Pull" | "Kick",
             distance: (d.distance as number) || 100,
             reps: (d.rep_count as number) || 1,

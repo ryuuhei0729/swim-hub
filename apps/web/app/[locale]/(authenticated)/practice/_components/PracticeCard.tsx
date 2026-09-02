@@ -5,11 +5,8 @@ import { useTranslations } from "next-intl";
 import { format, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 import type { PracticeLogWithTags, PracticeWithLogs } from "@apps/shared/types";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { buildPracticeLogLine } from "../_utils/practiceLogGrouping";
-
-// 種目コードの一覧（ラベルは翻訳キー経由で取得。PracticeDetails.tsx と同じ方式）
-const SWIM_STYLE_VALUES = ["Fr", "Ba", "Br", "Fly", "IM"] as const;
-type SwimStyleValue = (typeof SWIM_STYLE_VALUES)[number];
 
 export interface PracticeCardProps {
   practice: PracticeWithLogs;
@@ -34,10 +31,15 @@ export interface PracticeCardProps {
 export default function PracticeCard({ practice, log, onClick }: PracticeCardProps) {
   const t = useTranslations("practice");
 
-  // 種目コードをローカライズラベルに変換(PracticeDetails.tsx の getStyleLabel と同方式)
+  // 種目コードをローカライズラベルに変換(PracticeDetails.tsx の getStyleLabel と同方式)。
+  // practice_logs.style は CHECK 制約の無い自由記述列で legacy な小文字行が混在し得るため、
+  // toStyleCode() で正規化してから翻訳キーを引く(生の "fr" のまま t() に渡すと
+  // 該当キーが無く壊れたラベルになる)。正規化できない値はそのまま返す
+  // (DB の name_jp 由来など、canonical な種目コードでない値の既存フォールバック)。
   const getStyleLabel = (styleValue: string): string => {
-    if (SWIM_STYLE_VALUES.includes(styleValue as SwimStyleValue)) {
-      return t(`styles.${styleValue as SwimStyleValue}`);
+    const code = toStyleCode(styleValue);
+    if (code) {
+      return t(`styles.${code}`);
     }
     return styleValue;
   };

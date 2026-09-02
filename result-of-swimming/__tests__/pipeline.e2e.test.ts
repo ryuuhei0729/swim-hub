@@ -78,7 +78,7 @@ describe("PoC 通し", () => {
     expect(models.length).toBeGreaterThan(0);
     // 長水路100m自由形のモデルが存在する
     const m = models.find(
-      (x) => x.stroke === "fr" && x.distance === 100 && x.poolType === 1,
+      (x) => x.stroke === "Fr" && x.distance === 100 && x.poolType === 1,
     );
     expect(m).toBeDefined();
     expect(m!.laps.map((l) => l.distance)).toEqual([50, 100]);
@@ -87,7 +87,7 @@ describe("PoC 通し", () => {
 
   it("短水路と長水路が別モデルになる", () => {
     const models = aggregate(races, { minSampleCount: 1 });
-    const fr100 = models.filter((x) => x.stroke === "fr" && x.distance === 100);
+    const fr100 = models.filter((x) => x.stroke === "Fr" && x.distance === 100);
     expect(new Set(fr100.map((x) => x.poolType)).size).toBe(2);
   });
 
@@ -101,7 +101,7 @@ describe("PoC 通し", () => {
   it("★ 目標タイムから理想LAPが出て、合計が厳密に一致する", () => {
     const models = aggregate(races, { minSampleCount: 1 });
     const model = models.find(
-      (x) => x.stroke === "fr" && x.distance === 100 && x.poolType === 1 && x.minTimeMs <= 49520 && 49520 <= x.maxTimeMs,
+      (x) => x.stroke === "Fr" && x.distance === 100 && x.poolType === 1 && x.minTimeMs <= 49520 && 49520 <= x.maxTimeMs,
     );
     expect(model, "49.52 を含む bucket のモデル").toBeDefined();
 
@@ -145,7 +145,7 @@ describe("PoC 通し", () => {
 
   it("生成結果を人が読める形で確認できる (回帰時の目視用)", () => {
     const models = aggregate(races, { minSampleCount: 1 });
-    const model = models.find((x) => x.stroke === "fr" && x.distance === 100 && x.poolType === 1)!;
+    const model = models.find((x) => x.stroke === "Fr" && x.distance === 100 && x.poolType === 1)!;
     const out = generateTargetLaps({ targetTimeMs: 50000, model });
     const rendered = out.laps.map((l) => `${l.distance}m ${formatMsToTime(l.cumulativeTimeMs)}`);
     expect(rendered).toHaveLength(2);

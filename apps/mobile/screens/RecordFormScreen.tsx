@@ -155,9 +155,17 @@ export const RecordFormScreen: React.FC = () => {
   const [newImageFiles, setNewImageFiles] = useState<ImageFile[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
-  // 保存用の生パス一覧（表示専用の resolveGalleryImages 結果は署名URL取得に失敗した
-  // パスを除外するため、保存に使う image_paths はこちらを source of truth とする）
-  const [existingImagePaths, setExistingImagePaths] = useState<string[]>([]);
+  // 大会名の表示専用キャッシュ（dropdown 一覧のスコープ外の大会は ID 直指定で解決する。
+  // Issue #48）。undefined = 未解決（大会未選択・直指定取得が未完了または失敗、その場合は
+  // dropdown 一覧からの解決にフォールバックする）、null = 直指定取得は成功したが title が
+  // DB 上 NULL、string = 取得した大会名。
+  // ※ 保存に使う image_paths はこの画面ではどこにも state として保持しない。
+  // 「表示時に読み込んだ値」を保存の source of truth にすると、表示がスコープ外の大会で
+  // 欠落したり、表示から保存までの間に他ユーザーが画像を編集した場合に取りこぼす
+  // （Issue #48 の直接原因）。保存直前に handleSave 内で毎回 ID 直指定の再取得を行う。
+  const [selectedCompetitionTitle, setSelectedCompetitionTitle] = useState<
+    string | null | undefined
+  >(undefined);
 
   // 動画の状態管理
   const [existingVideoPath, setExistingVideoPath] = useState<string | null>(null);
@@ -229,45 +237,53 @@ export const RecordFormScreen: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeCompetitionId, isEditMode]);
 
-  // 大会が選択されたら既存画像を読み込み
+  // 大会が選択されたら既存画像・大会名を ID 直指定で読み込む（Issue #48）。
+  // dropdown 一覧 (useCompetitionsListQuery = RecordAPI.getCompetitions() の
+  // `.or("user_id.eq.<self>,user_id.is.null")` 個人スコープ) に対する `.find()` に
+  // 依存すると、他管理者が作成したチーム大会等ではスコープ漏れして見つからず、画像が
+  // 読み込めないだけでなく保存時に image_paths が全置換される（旧実装のバグ）。
+  // ここでの取得結果は表示専用（保存の source of truth ではない）。保存直前には
+  // handleSave 内で別途 ID 直指定の再取得を行う。
   const currentCompetitionId = routeCompetitionId || storeCompetitionId;
   useEffect(() => {
-    if (!currentCompetitionId || competitions.length === 0) {
+    if (!currentCompetitionId) {
       setExistingImages([]);
-      setExistingImagePaths([]);
+      setSelectedCompetitionTitle(undefined);
       return;
     }
 
-    const selectedCompetition = competitions.find((c) => c.id === currentCompetitionId);
-    if (!selectedCompetition) {
-      setExistingImages([]);
-      setExistingImagePaths([]);
-      return;
-    }
-
-    // 保存用の生パスは表示用の解決結果と独立して常に保持する
-    setExistingImagePaths(selectedCompetition.image_paths ?? []);
-
-    // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
     let isMounted = true;
-    getAccessToken().then((accessToken) => {
-      if (!isMounted) return;
-      if (!accessToken) {
-        setExistingImages([]);
-        return;
-      }
-      resolveGalleryImages(
-        "competition-images",
-        selectedCompetition.image_paths,
-        accessToken,
-      ).then((images) => {
+    supabase
+      .from("competitions")
+      .select("image_paths, title")
+      .eq("id", currentCompetitionId)
+      .single()
+      .then(async ({ data, error }) => {
+        if (!isMounted) return;
+        if (error || !data) {
+          setExistingImages([]);
+          setSelectedCompetitionTitle(undefined);
+          return;
+        }
+
+        const row = data as { image_paths: string[] | null; title: string | null };
+        setSelectedCompetitionTitle(row.title ?? null);
+
+        // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
+        const accessToken = await getAccessToken();
+        if (!isMounted) return;
+        if (!accessToken) {
+          setExistingImages([]);
+          return;
+        }
+        const images = await resolveGalleryImages("competition-images", row.image_paths, accessToken);
         if (isMounted) setExistingImages(images);
       });
-    });
+
     return () => {
       isMounted = false;
     };
-  }, [currentCompetitionId, competitions, getAccessToken]);
+  }, [currentCompetitionId, supabase, getAccessToken]);
 
   const hasInitializedForEdit = useRef(false);
 
@@ -418,17 +434,22 @@ export const RecordFormScreen: React.FC = () => {
       const finalCompetitionId = isStandaloneRecord ? null : routeCompetitionId || storeCompetitionId;
       // 大会からプールタイプを取得。大会未紐付けレコードは大会が無いため、
       // 読み込み時点の記録自身の pool_type をそのまま維持する
-      // TODO(warning2) PM報告: competitions.find() は該当IDが `competitions` state に無い場合
-      // undefined を返す。`competitions` は useCompetitionsListQuery(supabase) を素通しした
-      // 状態で、finalCompetitionId が新規作成直後(キャッシュ未反映)やチーム大会
-      // (getCompetitions() のスコープに乗らない可能性)を指すと undefined になり得る。
-      // その場合 pool_type ?? 0 が recordData.pool_type としてそのまま作成/更新mutationに
-      // 送られ、長水路の大会でも短水路として記録が保存され得る。挙動を変える判断はできないため
-      // 現状維持で残す。
-      const selectedCompetition = competitions.find((c) => c.id === finalCompetitionId);
-      const poolType: PoolType = isStandaloneRecord
-        ? standaloneOriginalPoolType
-        : ((selectedCompetition?.pool_type ?? 0) as PoolType); // デフォルトは短水路
+      let poolType: PoolType;
+      if (isStandaloneRecord) {
+        poolType = standaloneOriginalPoolType;
+      } else {
+        const { data: competition, error: competitionError } = await supabase
+          .from("competitions")
+          .select("pool_type")
+          .eq("id", finalCompetitionId!)
+          .single();
+
+        if (competitionError || !competition) {
+          throw competitionError || new Error(t("recordMobile.competitionFetchFailed"));
+        }
+
+        poolType = competition.pool_type as PoolType;
+      }
 
       const recordData = {
         competition_id: finalCompetitionId,
@@ -528,9 +549,29 @@ export const RecordFormScreen: React.FC = () => {
             uploadedImagePaths = uploadResults.map((r) => r.path);
           }
 
-          // 生パス (source of truth) から削除分を除外し新規分を追加（mergeImagePaths 参照）
+          // 保存直前に権威ある image_paths を ID 直指定で再取得する（Issue #48）。
+          // 画面表示時に読み込んだ値は (a) dropdown 一覧のスコープ外だと欠落し得る、
+          // (b) 表示から保存までの間に他ユーザーが画像を編集している可能性がある、の
+          // 2点で信頼できないため、保存の source of truth には使わない。
+          // 取得に失敗した場合は「不明」を [] とみなして全置換してはならないため、
+          // ここで throw して image_paths を含む update を送らずに中断する
+          // （catch ブロックでアップロード済み画像のロールバックとエラー表示を行う）。
+          const { data: currentCompetition, error: imagePathsError } = await supabase
+            .from("competitions")
+            .select("image_paths")
+            .eq("id", finalCompetitionId)
+            .single();
+
+          if (imagePathsError || !currentCompetition) {
+            throw imagePathsError || new Error(t("recordMobile.competitionFetchFailed"));
+          }
+
+          const authoritativeImagePaths =
+            (currentCompetition as { image_paths: string[] | null }).image_paths ?? [];
+
+          // 権威ある生パスから削除分を除外し新規分を追加（mergeImagePaths 参照）
           const updatedImagePaths = mergeImagePaths(
-            existingImagePaths,
+            authoritativeImagePaths,
             deletedImageIds,
             uploadedImagePaths,
           );
@@ -798,13 +839,16 @@ export const RecordFormScreen: React.FC = () => {
     setReactionTime(parseReactionTimeInput(text));
   };
 
-  // 大会選択の表示名を取得
+  // 大会選択の表示名を取得（dropdown 一覧のスコープ外の大会は ID 直指定で解決した
+  // selectedCompetitionTitle を優先する。Issue #48。ID 直指定取得が未解決・失敗・
+  // title が空/NULL の場合は、従来どおり dropdown 一覧からの解決にフォールバックする）
   const selectedCompetitionName = useMemo(() => {
     const id = routeCompetitionId || storeCompetitionId;
     if (!id) return null;
+    if (selectedCompetitionTitle) return selectedCompetitionTitle;
     const comp = competitions.find((c) => c.id === id);
     return comp ? comp.title || comp.id : null;
-  }, [routeCompetitionId, storeCompetitionId, competitions]);
+  }, [routeCompetitionId, storeCompetitionId, competitions, selectedCompetitionTitle]);
 
   // 種目選択の表示名を取得
   const selectedStyleName = useMemo(() => {

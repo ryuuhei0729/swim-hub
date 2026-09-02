@@ -7,7 +7,7 @@ import { BestBadge } from "./BestBadge";
 import {
   calculateRaceLapTimesTable,
   getLapIntervalsForRace,
-  type SplitTime,
+  type LapSplitPoint,
 } from "@/utils/lapTimeCalculator";
 
 interface CompetitionShareCardProps {
@@ -21,8 +21,8 @@ interface CompetitionShareCardProps {
  */
 export const CompetitionShareCard = forwardRef<HTMLDivElement, CompetitionShareCardProps>(
   function CompetitionShareCard({ data, className = "" }, ref) {
-    // split-timeを有効なものだけフィルタリング（@/types のSplitTimeはsplit_timeを使用）
-    const validSplitTimes: SplitTime[] = useMemo(() => {
+    // split-timeを有効なものだけフィルタリング
+    const validSplitTimes: LapSplitPoint[] = useMemo(() => {
       if (!data.splitTimes) return [];
       return data.splitTimes
         .filter((st) => st.distance > 0 && st.split_time > 0)

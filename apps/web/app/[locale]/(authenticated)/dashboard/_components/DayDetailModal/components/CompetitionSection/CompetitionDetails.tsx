@@ -27,12 +27,7 @@ const VideoPlayer = dynamic(() => import("@/components/video/VideoPlayer"), {
 });
 import type { CompetitionShareData } from "@/components/share";
 import { formatTimeBest } from "@/utils/formatters";
-import {
-  styleIdToCodeKey,
-  nameJpToCodeKey,
-  buildSwimStyleLabel,
-  type StyleCodeKey,
-} from "@/utils/swimStyle";
+import { styleIdToCodeKey, nameJpToCodeKey, buildSwimStyleLabel } from "@/utils/swimStyle";
 import { useLocale } from "next-intl";
 import { useAuth } from "@/contexts";
 import RecordBestBadge from "@/components/ui/RecordBestBadge";
@@ -43,7 +38,6 @@ import type {
   Record as RecordType,
   SplitTime,
   PoolType,
-  SwimStyle,
 } from "@apps/shared/types";
 import { AttendanceButton } from "../AttendanceSection";
 import { RecordSplitTimes } from "./RecordSplitTimes";
@@ -52,17 +46,6 @@ import { RecordAPI } from "@apps/shared/api/records";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
 import { DEFAULT_COMPETITION_COLOR } from "@apps/shared/utils/calendarColorResolver";
 import { formatStyleAbbrev } from "@apps/shared/utils/swimStyles";
-
-// StyleCodeKey ("Fr"/"Ba"/"Br"/"Fly"/"IM") → shared formatStyleAbbrev が要求する
-// SwimStyle コード ("fr"/"ba"/"br"/"fly"/"im")。カード(CompetitionRecordCard)と
-// 略称の組み立てロジックを一本化するための橋渡し。
-const CODE_KEY_TO_SWIM_STYLE: Record<StyleCodeKey, SwimStyle> = {
-  Fr: "fr",
-  Ba: "ba",
-  Br: "br",
-  Fly: "fly",
-  IM: "im",
-};
 
 // 色の明度に基づいてテキスト色を決定する関数(PracticeDetails.tsx と同一アルゴリズム)
 const getTextColor = (backgroundColor: string) => {
@@ -148,7 +131,7 @@ export function CompetitionDetails({
           ? nameJpToCodeKey(nameJp)
           : null;
     return formatStyleAbbrev({
-      style: codeKey ? CODE_KEY_TO_SWIM_STYLE[codeKey] : undefined,
+      style: codeKey ?? undefined,
       distance,
       name_jp: nameJp ?? fallback,
     });

@@ -82,7 +82,7 @@ describe("parseResults - 長水路 100m自由形 決勝", () => {
     const r = races[0]!;
     expect(r.distance).toBe(100);
     expect(r.poolLength).toBe(50);
-    expect(r.stroke).toBe("fr");
+    expect(r.stroke).toBe("Fr");
     expect(r.gender).toBe("male");
     expect(r.round).toBe("決勝(A-決勝)");
     expect(r.isRelay).toBe(false);
@@ -116,7 +116,7 @@ describe("parseResults - LAP粒度は距離と整合する (長水路)", () => {
 
   it("[V-P4] 200IM は stroke=im になる", () => {
     const races = parseResults(fixture("result.lc.200im.final.json"), ctx({ swimmingStyleCode: 5, distance: 200 }));
-    expect(races[0]!.stroke).toBe("im");
+    expect(races[0]!.stroke).toBe("IM");
   });
 
   it("[V-P4] 1500m の区間合計が最終タイムに一致する", () => {

@@ -68,8 +68,15 @@ interface Bucket {
   sampleCount: number;
 }
 
-/** 集計に使えるレースか (ここが唯一の入口フィルタ) */
-export function isAggregatable(race: RawRace): boolean {
+/**
+ * 集計に使えるレースか (ここが唯一の入口フィルタ)。
+ * 型述語にして gender/stroke/finalTimeMs の絞り込みを呼び出し元に伝播させる
+ * (isAggregatable が検査しているのはこの3フィールドのみ。他は真偽値の確認だけ)。
+ * これにより呼び出し側で as Stroke 等の unchecked cast が不要になる。
+ */
+export function isAggregatable(
+  race: RawRace,
+): race is RawRace & { gender: "male" | "female"; stroke: Stroke; finalTimeMs: number } {
   return (
     race.validationStatus === "valid" &&
     !race.isRelay &&
@@ -92,7 +99,7 @@ export function aggregate(
   for (const race of races) {
     if (!isAggregatable(race)) continue;
 
-    const finalTimeMs = race.finalTimeMs as number;
+    const finalTimeMs = race.finalTimeMs;
     const laps = splitsToLaps(
       race.splits.map((s) => ({ distance: s.distance, cumulativeTimeMs: s.cumulativeTimeMs })),
     );
@@ -119,9 +126,9 @@ export function aggregate(
     let entry = buckets.get(key);
     if (!entry) {
       entry = {
-        gender: race.gender as "male" | "female",
+        gender: race.gender,
         poolType,
-        stroke: race.stroke as Stroke,
+        stroke: race.stroke,
         distance: race.distance,
         ageCategory,
         minTimeMs: bucket.minTimeMs,

@@ -3,6 +3,15 @@
  *
  * 対象: `utils/recordFilter.ts` (RecordsScreen の純フィルタ/ソートロジック)
  *
+ * NOTE (Sprint: GitHub Issue #13 種目略称ケーシング統一, PM裁定 2026-09-01):
+ *   `record.style.style` (DB `styles.style`) がタイトルケースに移行されたのに合わせ、
+ *   本ファイルの style フィクスチャ値・フィルタ値を旧小文字 canonical から
+ *   新タイトルケース canonical に更新した (`RECORD_STYLE_ORDER` もタイトルケースに
+ *   移行済み)。recordFilter.ts の `getParticipatedStyleCodes` は practiceLogFilter.ts の
+ *   `normalizeStyleCode` のような大文字小文字正規化を行わず DB 値をそのまま
+ *   `RECORD_STYLE_ORDER` と突き合わせるため、フィクスチャは実際の DB canonical と
+ *   一致していなければならない。
+ *
  * Sprint Contract 検証観点:
  *   [V-MC-01] 年度フィルタ(filterFiscalYear)に関するロジックが一切存在しない
  *   [V-MC-03/04] distance/style が独立2軸(グループ内OR・グループ間AND)
@@ -55,7 +64,7 @@ function makeRecord(overrides: Partial<RecordWithDetails> & { id: string }): Rec
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
     },
-    style: { id: 1, name_jp: "50m自由形", name: "50 Free", style: "fr", distance: 50 },
+    style: { id: 1, name_jp: "50m自由形", name: "50 Free", style: "Fr", distance: 50 },
     split_times: [],
     ...overrides,
   } as unknown as RecordWithDetails;
@@ -82,9 +91,9 @@ describe("filterRecords", () => {
   });
 
   describe("[V-MC-03/04] distance/style 独立2軸(グループ内OR・グループ間AND)", () => {
-    const r50fr = makeRecord({ id: "r-50fr", style: { id: 1, name_jp: "50m自由形", name: "50 Free", style: "fr", distance: 50 } });
-    const r100fr = makeRecord({ id: "r-100fr", style: { id: 2, name_jp: "100m自由形", name: "100 Free", style: "fr", distance: 100 } });
-    const r50br = makeRecord({ id: "r-50br", style: { id: 3, name_jp: "50m平泳ぎ", name: "50 Breast", style: "br", distance: 50 } });
+    const r50fr = makeRecord({ id: "r-50fr", style: { id: 1, name_jp: "50m自由形", name: "50 Free", style: "Fr", distance: 50 } });
+    const r100fr = makeRecord({ id: "r-100fr", style: { id: 2, name_jp: "100m自由形", name: "100 Free", style: "Fr", distance: 100 } });
+    const r50br = makeRecord({ id: "r-50br", style: { id: 3, name_jp: "50m平泳ぎ", name: "50 Breast", style: "Br", distance: 50 } });
 
     it("distance=[50] のみ指定すると、距離が一致する記録のみ返る(種目は問わない)", () => {
       const result = filterRecords([r50fr, r100fr, r50br], { ...noFilters, filterDistances: ["50"] });
@@ -92,7 +101,7 @@ describe("filterRecords", () => {
     });
 
     it("style=[fr] のみ指定すると、種目が一致する記録のみ返る(距離は問わない)", () => {
-      const result = filterRecords([r50fr, r100fr, r50br], { ...noFilters, filterStyles: ["fr"] });
+      const result = filterRecords([r50fr, r100fr, r50br], { ...noFilters, filterStyles: ["Fr"] });
       expect(result.map((r) => r.id).sort()).toEqual(["r-100fr", "r-50fr"]);
     });
 
@@ -100,7 +109,7 @@ describe("filterRecords", () => {
       const result = filterRecords([r50fr, r100fr, r50br], {
         ...noFilters,
         filterDistances: ["50"],
-        filterStyles: ["fr"],
+        filterStyles: ["Fr"],
       });
       expect(result.map((r) => r.id)).toEqual(["r-50fr"]);
     });
@@ -278,7 +287,7 @@ describe("countActiveRecordFilters", () => {
 
   it("distance/style/competitionName/place のいずれか1件でも選択されていればグループごとに1カウントする", () => {
     expect(
-      countActiveRecordFilters({ ...noFilters, filterDistances: ["50"], filterStyles: ["fr"] }),
+      countActiveRecordFilters({ ...noFilters, filterDistances: ["50"], filterStyles: ["Fr"] }),
     ).toBe(2);
   });
 
@@ -289,16 +298,16 @@ describe("countActiveRecordFilters", () => {
 
 describe("選択肢生成関数(distinct)", () => {
   it("getParticipatedDistances は distinct・昇順で返し、style が無い記録はスキップする", () => {
-    const r1 = makeRecord({ id: "r1", style: { id: 1, name_jp: "100m自由形", name: "100 Free", style: "fr", distance: 100 } });
-    const r2 = makeRecord({ id: "r2", style: { id: 2, name_jp: "50m自由形", name: "50 Free", style: "fr", distance: 50 } });
+    const r1 = makeRecord({ id: "r1", style: { id: 1, name_jp: "100m自由形", name: "100 Free", style: "Fr", distance: 100 } });
+    const r2 = makeRecord({ id: "r2", style: { id: 2, name_jp: "50m自由形", name: "50 Free", style: "Fr", distance: 50 } });
     const r3 = makeRecord({ id: "r3", style: null as unknown as RecordWithDetails["style"] });
     expect(getParticipatedDistances([r1, r2, r3])).toEqual([50, 100]);
   });
 
   it("getParticipatedStyleCodes は STYLES 定義順(自由形→平泳ぎ→...)で distinct を返す", () => {
-    const rBr = makeRecord({ id: "r-br", style: { id: 1, name_jp: "100m平泳ぎ", name: "100 Breast", style: "br", distance: 100 } });
-    const rFr = makeRecord({ id: "r-fr", style: { id: 2, name_jp: "50m自由形", name: "50 Free", style: "fr", distance: 50 } });
-    expect(getParticipatedStyleCodes([rBr, rFr])).toEqual(["fr", "br"]);
+    const rBr = makeRecord({ id: "r-br", style: { id: 1, name_jp: "100m平泳ぎ", name: "100 Breast", style: "Br", distance: 100 } });
+    const rFr = makeRecord({ id: "r-fr", style: { id: 2, name_jp: "50m自由形", name: "50 Free", style: "Fr", distance: 50 } });
+    expect(getParticipatedStyleCodes([rBr, rFr])).toEqual(["Fr", "Br"]);
   });
 
   it("getParticipatedCompetitionNames は distinct・ロケール順で返す", () => {

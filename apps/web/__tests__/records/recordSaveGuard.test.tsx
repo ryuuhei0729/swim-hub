@@ -95,7 +95,7 @@ const STYLE_FREE_50: Style = {
   id: 2,
   name_jp: "自由形50m",
   name: "Freestyle",
-  style: "fr",
+  style: "Fr",
   distance: 50,
 };
 
@@ -245,7 +245,7 @@ describe("RecordClient — リレー検出された StyleEntry の構造保持 (
   });
 
   const STYLES_FOR_RELAY: Style[] = [
-    { id: 2, name_jp: "自由形50m", name: "Freestyle", style: "fr", distance: 50 },
+    { id: 2, name_jp: "自由形50m", name: "Freestyle", style: "Fr", distance: 50 },
   ];
 
   function renderWithRelay() {

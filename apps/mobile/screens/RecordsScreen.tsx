@@ -12,7 +12,6 @@ import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/que
 import { recordKeys } from "@apps/shared/hooks/queries/keys";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
-import { STYLE_CODE_TO_ABBREV } from "@apps/shared/utils/swimStyles";
 import { RecordItem, StandaloneRecordDetailModal, EntryOnlySection } from "@/components/records";
 import { ListToolbar, SortBottomSheet, FilterBottomSheet } from "@/components/history";
 import type { SortPreset, FilterGroup } from "@/components/history";
@@ -454,7 +453,7 @@ export const RecordsScreen: React.FC = () => {
         mode: "multi",
         options: participatedStyleCodes.map((code) => ({
           value: code,
-          label: t(`practice.styleAbbrev.${STYLE_CODE_TO_ABBREV[code]}`),
+          label: t(`practice.styleAbbrev.${code}`),
         })),
         selectedValues: filterDraft.filterStyles,
         onChange: handleDraftStylesChange,

@@ -7,6 +7,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import { RecordAPI } from "@apps/shared/api/records";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -40,30 +41,32 @@ interface BestTimeInput {
 // 定数定義
 // =============================================================================
 
-// 種目マスターデータ（stylesテーブルと同期）
+// 種目マスターデータ（stylesテーブルと同期。style は styles.style の CHECK 制約と同じ
+// タイトルケース値 (Issue #13) で保持する。この定数自体の style_id ⇔ 距離対応表としての
+// 二重管理は既知の負債(集約は別スプリント)だが、casing だけは canonical に合わせる）
 const STYLES: StyleDefinition[] = [
-  { id: 1, nameJp: "25m自由形", style: "fr", distance: 25 },
-  { id: 2, nameJp: "50m自由形", style: "fr", distance: 50 },
-  { id: 3, nameJp: "100m自由形", style: "fr", distance: 100 },
-  { id: 4, nameJp: "200m自由形", style: "fr", distance: 200 },
-  { id: 5, nameJp: "400m自由形", style: "fr", distance: 400 },
-  { id: 6, nameJp: "800m自由形", style: "fr", distance: 800 },
-  { id: 7, nameJp: "1500m自由形", style: "fr", distance: 1500 },
-  { id: 8, nameJp: "25m平泳ぎ", style: "br", distance: 25 },
-  { id: 9, nameJp: "50m平泳ぎ", style: "br", distance: 50 },
-  { id: 10, nameJp: "100m平泳ぎ", style: "br", distance: 100 },
-  { id: 11, nameJp: "200m平泳ぎ", style: "br", distance: 200 },
-  { id: 12, nameJp: "25m背泳ぎ", style: "ba", distance: 25 },
-  { id: 13, nameJp: "50m背泳ぎ", style: "ba", distance: 50 },
-  { id: 14, nameJp: "100m背泳ぎ", style: "ba", distance: 100 },
-  { id: 15, nameJp: "200m背泳ぎ", style: "ba", distance: 200 },
-  { id: 16, nameJp: "25mバタフライ", style: "fly", distance: 25 },
-  { id: 17, nameJp: "50mバタフライ", style: "fly", distance: 50 },
-  { id: 18, nameJp: "100mバタフライ", style: "fly", distance: 100 },
-  { id: 19, nameJp: "200mバタフライ", style: "fly", distance: 200 },
-  { id: 20, nameJp: "100m個人メドレー", style: "im", distance: 100 },
-  { id: 21, nameJp: "200m個人メドレー", style: "im", distance: 200 },
-  { id: 22, nameJp: "400m個人メドレー", style: "im", distance: 400 },
+  { id: 1, nameJp: "25m自由形", style: "Fr", distance: 25 },
+  { id: 2, nameJp: "50m自由形", style: "Fr", distance: 50 },
+  { id: 3, nameJp: "100m自由形", style: "Fr", distance: 100 },
+  { id: 4, nameJp: "200m自由形", style: "Fr", distance: 200 },
+  { id: 5, nameJp: "400m自由形", style: "Fr", distance: 400 },
+  { id: 6, nameJp: "800m自由形", style: "Fr", distance: 800 },
+  { id: 7, nameJp: "1500m自由形", style: "Fr", distance: 1500 },
+  { id: 8, nameJp: "25m平泳ぎ", style: "Br", distance: 25 },
+  { id: 9, nameJp: "50m平泳ぎ", style: "Br", distance: 50 },
+  { id: 10, nameJp: "100m平泳ぎ", style: "Br", distance: 100 },
+  { id: 11, nameJp: "200m平泳ぎ", style: "Br", distance: 200 },
+  { id: 12, nameJp: "25m背泳ぎ", style: "Ba", distance: 25 },
+  { id: 13, nameJp: "50m背泳ぎ", style: "Ba", distance: 50 },
+  { id: 14, nameJp: "100m背泳ぎ", style: "Ba", distance: 100 },
+  { id: 15, nameJp: "200m背泳ぎ", style: "Ba", distance: 200 },
+  { id: 16, nameJp: "25mバタフライ", style: "Fly", distance: 25 },
+  { id: 17, nameJp: "50mバタフライ", style: "Fly", distance: 50 },
+  { id: 18, nameJp: "100mバタフライ", style: "Fly", distance: 100 },
+  { id: 19, nameJp: "200mバタフライ", style: "Fly", distance: 200 },
+  { id: 20, nameJp: "100m個人メドレー", style: "IM", distance: 100 },
+  { id: 21, nameJp: "200m個人メドレー", style: "IM", distance: 200 },
+  { id: 22, nameJp: "400m個人メドレー", style: "IM", distance: 400 },
 ];
 
 // 種目タブID定義（nameは翻訳で取得）
@@ -96,9 +99,12 @@ const POOL_TYPES = [
 
 /**
  * style_idを取得
+ * styleCode は StyleTab (タブ/翻訳キーの都合で小文字を保持) から渡ってくるため、
+ * canonical なタイトルケースで保持する STYLES.style と比較する前に toStyleCode() で揃える。
  */
 function getStyleId(styleCode: string, distance: number): number | null {
-  const style = STYLES.find((s) => s.style === styleCode && s.distance === distance);
+  const normalized = toStyleCode(styleCode);
+  const style = STYLES.find((s) => s.style === normalized && s.distance === distance);
   return style ? style.id : null;
 }
 

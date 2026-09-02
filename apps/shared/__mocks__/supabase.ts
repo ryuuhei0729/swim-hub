@@ -239,11 +239,13 @@ export const createMockCompetition = (overrides = {}) => ({
   ...overrides,
 });
 
+// NOTE (Sprint: GitHub Issue #13, PM実測 2026-09-01): style は styles.style の DB canonical
+// (タイトルケース移行済み) に合わせて "Fr" にした。旧 "fr" は SwimStyle 型に非適合になる。
 export const createMockStyle = (overrides = {}) => ({
   id: 1,
   name_jp: "自由形",
   name: "freestyle",
-  style: "fr" as const,
+  style: "Fr" as const,
   distance: 100,
   ...overrides,
 });

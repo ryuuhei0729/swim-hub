@@ -15,6 +15,17 @@
  *
  * トートロジー防止メモ: 実装の分岐をなぞらず、「絞り込み後に一覧へ何枚のカードが
  * 残るか」という観察可能な結果から逆算して書く。
+ *
+ * NOTE (Sprint: GitHub Issue #13 種目略称ケーシング統一, PM裁定 2026-09-01):
+ *   種目マスタードメイン (`SwimStyle`) がタイトルケース ("Fr"/"Br"/"Ba"/"Fly"/"IM") に
+ *   統一されるのに合わせ、本ファイルの style 関連の期待値を旧小文字 canonical から
+ *   新タイトルケース canonical に更新した。practice_logs.style は元々タイトルケースで
+ *   永続化されており(このマイグレーション以前から)、fr/br 等の小文字リテラルで書いていた
+ *   旧テストの方が実データと乖離した誤ったフィクスチャだった。
+ *   「大文字小文字表記ゆれ正規化」のテストケースだけは、正規化元(表記ゆれのある入力)を
+ *   小文字/全大文字のバリアントのまま残し、正規化先(canonical/フィルタ値)だけを
+ *   タイトルケースに更新している(normalizeStyleCode が表記ゆれを吸収する既存の
+ *   意図そのものは変わらないため)。
  */
 
 import { describe, expect, it } from "vitest";
@@ -39,7 +50,7 @@ function makeLog(
     id,
     user_id: "user-1",
     practice_id: "practice-1",
-    style: overrides.style ?? "fr",
+    style: overrides.style ?? "Fr",
     swim_category: "Swim" as const,
     rep_count: 4,
     set_count: 1,
@@ -102,20 +113,30 @@ describe("logMatchesStyle ([V-MP-04] single, そのログ自身の種目)", () =
   });
 
   it("そのログの種目が一致すれば true", () => {
-    expect(logMatchesStyle(makeLog("log-1", { style: "br" }), "br")).toBe(true);
+    expect(logMatchesStyle(makeLog("log-1", { style: "Br" }), "Br")).toBe(true);
   });
 
   it("一致しなければ false", () => {
-    expect(logMatchesStyle(makeLog("log-1", { style: "fr" }), "br")).toBe(false);
+    expect(logMatchesStyle(makeLog("log-1", { style: "Fr" }), "Br")).toBe(false);
   });
 
-  it("style の大文字小文字表記ゆれ(Fr/FR等)を正規化して一致させる", () => {
-    expect(logMatchesStyle(makeLog("log-1", { style: "Fr" }), "fr")).toBe(true);
-    expect(logMatchesStyle(makeLog("log-2", { style: "FR" }), "fr")).toBe(true);
+  it("style が legacy な全小文字(fr)の場合は正規化してcanonical値(Fr)に一致させる(移行窓の防御)", () => {
+    expect(logMatchesStyle(makeLog("log-1", { style: "fr" }), "Fr")).toBe(true);
+  });
+
+  // PM 裁定 (2026-09-02, Issue #13 High対応): toStyleCode() は canonical との完全一致と
+  // legacy な「厳密な全小文字」のみを正規化対象とし、全大文字・混在ケーシングは
+  // "FR"(フリーリレー略称)との衝突を避けるため非対応(null)になった。
+  // 以前はここで logMatchesStyle(..., "FR" ..., "Fr") が true になることを期待していたが、
+  // 実際に legacy バグが書き込んだのは .toLowerCase() の結果である厳密な全小文字のみで
+  // 全大文字の実データは存在しない。"FR" を自由形に正規化してしまう方が、
+  // フリーリレー種目との衝突というバグを生むため、この新契約を固定する。
+  it("[新契約] 全大文字(FR)はフリーリレー略称との衝突を避けるため正規化されず一致しない", () => {
+    expect(logMatchesStyle(makeLog("log-2", { style: "FR" }), "Fr")).toBe(false);
   });
 
   it("ログ未登録(null)の行は種目を持たないため false", () => {
-    expect(logMatchesStyle(null, "fr")).toBe(false);
+    expect(logMatchesStyle(null, "Fr")).toBe(false);
   });
 });
 
@@ -124,22 +145,22 @@ describe("filterPracticeLogRows ([V-MP-05] グループ間AND / log 単位の絞
     const matching = makePractice({
       id: "p-match",
       place: "プールA",
-      practice_logs: [makeLog("log-match", { style: "fr", tagIds: ["tag-a"] })],
+      practice_logs: [makeLog("log-match", { style: "Fr", tagIds: ["tag-a"] })],
     });
     const wrongPlace = makePractice({
       id: "p-wrong-place",
       place: "プールB",
-      practice_logs: [makeLog("log-wrong-place", { style: "fr", tagIds: ["tag-a"] })],
+      practice_logs: [makeLog("log-wrong-place", { style: "Fr", tagIds: ["tag-a"] })],
     });
     const wrongStyle = makePractice({
       id: "p-wrong-style",
       place: "プールA",
-      practice_logs: [makeLog("log-wrong-style", { style: "br", tagIds: ["tag-a"] })],
+      practice_logs: [makeLog("log-wrong-style", { style: "Br", tagIds: ["tag-a"] })],
     });
 
     const filters: PracticeFilterValues = {
       filterPlaces: ["プールA"],
-      filterStyle: "fr",
+      filterStyle: "Fr",
       selectedTagIds: ["tag-a"],
     };
     const result = filterPracticeLogRows(
@@ -157,14 +178,14 @@ describe("filterPracticeLogRows ([V-MP-05] グループ間AND / log 単位の絞
       const practice = makePractice({
         id: "p-mixed",
         practice_logs: [
-          makeLog("log-fr", { style: "fr" }),
-          makeLog("log-br", { style: "br" }),
+          makeLog("log-fr", { style: "Fr" }),
+          makeLog("log-br", { style: "Br" }),
         ],
       });
 
       const result = filterPracticeLogRows(buildPracticeLogRows([practice]), {
         filterPlaces: [],
-        filterStyle: "br",
+        filterStyle: "Br",
         selectedTagIds: [],
       });
 
@@ -208,7 +229,7 @@ describe("countActivePracticeFilters", () => {
 
   it("place/style/tags いずれか1件以上あればグループごとに1カウント", () => {
     expect(
-      countActivePracticeFilters({ filterPlaces: ["プールA"], filterStyle: "fr", selectedTagIds: ["tag-a"] }),
+      countActivePracticeFilters({ filterPlaces: ["プールA"], filterStyle: "Fr", selectedTagIds: ["tag-a"] }),
     ).toBe(3);
   });
 });
@@ -225,10 +246,10 @@ describe("選択肢生成関数", () => {
 
   it("getParticipatedPracticeStyleCodes は STYLES 定義順で distinct を返す", () => {
     const practices = [
-      makePractice({ id: "p1", practice_logs: [makeLog("l1", { style: "br" })] }),
-      makePractice({ id: "p2", practice_logs: [makeLog("l2", { style: "fr" })] }),
+      makePractice({ id: "p1", practice_logs: [makeLog("l1", { style: "Br" })] }),
+      makePractice({ id: "p2", practice_logs: [makeLog("l2", { style: "Fr" })] }),
     ];
-    expect(getParticipatedPracticeStyleCodes(practices)).toEqual(["fr", "br"]);
+    expect(getParticipatedPracticeStyleCodes(practices)).toEqual(["Fr", "Br"]);
   });
 });
 

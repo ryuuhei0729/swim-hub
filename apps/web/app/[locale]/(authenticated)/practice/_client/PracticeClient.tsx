@@ -24,7 +24,7 @@ import {
   useDeletePracticeTimeMutation,
 } from "@apps/shared/hooks/queries/practices";
 import type { PracticeTag, PracticeWithLogs, Style } from "@apps/shared/types";
-import { getStyleOrderIndex } from "@apps/shared/utils/swimStyles";
+import { getStyleOrderIndex, toStyleCode } from "@apps/shared/utils/swimStyles";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type { PracticeSortColumn } from "@/stores/practice/practiceStore";
 import type { EditingData } from "@/stores/types";
@@ -281,10 +281,17 @@ export default function PracticeClient({
   }, [pastOrTodayRows, locale]);
 
   // 種目フィルタの選択肢（distinct, STYLES定義順。log 単位のフィールド）
+  // practice_logs.style は CHECK 制約の無い自由記述列で、legacy な小文字行("fr" 等)が
+  // 混在し得る(backfill migration は別途進行中だが、本修正はそれに依存しない防御)。
+  // toStyleCode() で canonical に正規化してから distinct 化することで、"Fr" と "fr" が
+  // 別々のフィルタ選択肢に分裂するのを防ぐ。正規化できない値(canonical 外)は選択肢として
+  // 提示しない(その行自体は絞り込み無しの一覧には表示され続ける。壊れたラベルの
+  // 選択肢を出すより安全)。
   const participatedStyleKeys = useMemo(() => {
     const keys = new Set<string>();
     pastOrTodayRows.forEach((row) => {
-      if (row.log?.style) keys.add(row.log.style);
+      const code = toStyleCode(row.log?.style);
+      if (code) keys.add(code);
     });
     return Array.from(keys).sort((a, b) => getStyleOrderIndex(a) - getStyleOrderIndex(b));
   }, [pastOrTodayRows]);
@@ -319,8 +326,11 @@ export default function PracticeClient({
         }
 
         // 種目フィルタリング（単一select。そのログの種目が一致する場合のみ表示）
+        // filterStyle は participatedStyleKeys(正規化済み)から選ばれるため常に canonical。
+        // log.style 側も toStyleCode() で正規化してから比較し、legacy な小文字行を
+        // 取りこぼさない(例: filterStyle="Fr" のとき log.style="fr" の行も一致させる)。
         if (filterStyle) {
-          if (log?.style !== filterStyle) {
+          if (toStyleCode(log?.style) !== filterStyle) {
             return false;
           }
         }

@@ -166,34 +166,41 @@ describe("calculateAge", () => {
 });
 
 describe("getStyleCoefficient", () => {
+  // PM 裁定 (2026-09-02, Issue #13 High対応): toStyleCode() は canonical との完全一致
+  // (大小区別あり) と、legacy バグが書き込んだ「厳密な全小文字」のみを受理し、
+  // 全大文字・混在ケーシング ("FR"/"FLY"/"BA"/"BR" 等) は "FR"(フリーリレー)との
+  // 衝突を避けるため非対応 (null) になった。
+  //
+  // このテストは以前「大文字小文字を問わず正規化される」ことを示すつもりで
+  // 各styleの全大文字版もアサートしていたが、Fr/Fly/IM は toStyleCode の結果が
+  // 何であれ(正しく認識されても、非対応でnullになりswitchのdefaultに落ちても)
+  // 係数0を返す設計のため、全大文字ケースのアサーションは「常に通るが何も検証していない」
+  // トートロジーだった。削除する (Ba/Br側の同型アサーションは非ゼロ係数のため実際に
+  // red化しており、別途削除する)。"FR"/"FLY" 等が toStyleCode() で正しく null になる
+  // ことの検証は swimStyles.test.ts の toStyleCode 専用テストで行う。
   it("自由形（fr）の係数が0を返す", () => {
     expect(getStyleCoefficient("fr")).toBe(0);
     expect(getStyleCoefficient("Fr")).toBe(0);
-    expect(getStyleCoefficient("FR")).toBe(0);
   });
 
   it("バタフライ（fly）の係数が0を返す", () => {
     expect(getStyleCoefficient("fly")).toBe(0);
     expect(getStyleCoefficient("Fly")).toBe(0);
-    expect(getStyleCoefficient("FLY")).toBe(0);
   });
 
   it("背泳ぎ（ba）の係数が1.53を返す", () => {
     expect(getStyleCoefficient("ba")).toBe(1.53);
     expect(getStyleCoefficient("Ba")).toBe(1.53);
-    expect(getStyleCoefficient("BA")).toBe(1.53);
   });
 
   it("平泳ぎ（br）の係数が2.34を返す", () => {
     expect(getStyleCoefficient("br")).toBe(2.34);
     expect(getStyleCoefficient("Br")).toBe(2.34);
-    expect(getStyleCoefficient("BR")).toBe(2.34);
   });
 
   it("個人メドレー（im）の係数が0を返す（自由形として扱う）", () => {
     expect(getStyleCoefficient("im")).toBe(0);
     expect(getStyleCoefficient("Im")).toBe(0);
-    expect(getStyleCoefficient("IM")).toBe(0);
   });
 
   it("不明な種目の場合、デフォルトで0を返す", () => {

@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { PracticeLogTemplateAPI } from "@swim-hub/shared/api";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { useTranslations } from "next-intl";
 import type {
   GoalWithMilestones,
@@ -86,14 +87,12 @@ export default function MilestoneCreateModal({
 
     // タイムトライアルテンプレートが選択された場合、goalから値を取得
     if (templateId === "time_trial") {
-      const styleMap: Record<string, string> = {
-        fr: "Fr",
-        br: "Br",
-        ba: "Ba",
-        fly: "Fly",
-        im: "Im",
-      };
-      const styleValue = styleMap[goal.style.style] || "Fr";
+      // goal.style.style は canonical な SwimStyle ("Fr"/"Br"/"Ba"/"Fly"/"IM") であり、
+      // StyleSelector (constants.ts の SWIM_STYLES) が要求する値と同じ形式なのでそのまま使える。
+      // styles.style は DB CHECK 制約により5値以外を取り得ないため toStyleCode() は理論上
+      // 必ず非 null を返すが、フォールバックは「自由形」ではなく元の値を使う
+      // (practice_logs.style の教訓: 想定外時に別種目へ静かに化けるのを避ける)。
+      const styleValue = toStyleCode(goal.style.style) ?? goal.style.style;
 
       const timeTrialParams: MilestoneTimeParams = {
         distance: goal.style.distance,
@@ -117,16 +116,12 @@ export default function MilestoneCreateModal({
 
   // ゴールセット計算結果を適用
   const handleGoalSetConfirm = (targetAverageTime: number, practicePoolType: number) => {
-    // style.styleは'fr' | 'br' | 'ba' | 'fly' | 'im'の形式
-    // MilestoneGoalSetParamsのstyleは'Fr' | 'Br' | 'Ba' | 'Fly' | 'Im'の形式（先頭大文字）
-    const styleMap: Record<string, string> = {
-      fr: "Fr",
-      br: "Br",
-      ba: "Ba",
-      fly: "Fly",
-      im: "Im",
-    };
-    const styleValue = styleMap[goal.style.style] || "Fr";
+    // goal.style.style は canonical な SwimStyle ("Fr"/"Br"/"Ba"/"Fly"/"IM") であり、
+    // StyleSelector (constants.ts の SWIM_STYLES) が要求する値と同じ形式なのでそのまま使える。
+    // styles.style は DB CHECK 制約により5値以外を取り得ないため toStyleCode() は理論上
+    // 必ず非 null を返すが、フォールバックは「自由形」ではなく元の値を使う
+    // (practice_logs.style の教訓: 想定外時に別種目へ静かに化けるのを避ける)。
+    const styleValue = toStyleCode(goal.style.style) ?? goal.style.style;
 
     const goalSetParams: MilestoneGoalSetParams = {
       distance: 50,

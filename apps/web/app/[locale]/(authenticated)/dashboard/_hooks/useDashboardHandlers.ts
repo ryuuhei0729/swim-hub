@@ -336,7 +336,7 @@ export function useDashboardHandlers({
             return;
           }
           const logInput = {
-            style: menu.style || "fr",
+            style: menu.style || "Fr",
             swim_category: menu.swimCategory || "Swim",
             rep_count: Number(menu.reps) || 1,
             set_count: Number(menu.sets) || 1,
@@ -417,7 +417,7 @@ export function useDashboardHandlers({
           for (const menu of menus) {
             const logInput = {
               practice_id: practiceId,
-              style: menu.style || "fr",
+              style: menu.style || "Fr",
               swim_category: menu.swimCategory || "Swim",
               rep_count: Number(menu.reps) || 1,
               set_count: Number(menu.sets) || 1,

@@ -7,7 +7,6 @@ import { parseISO, isValid } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
 import { practiceKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
-import { STYLE_CODE_TO_ABBREV } from "@apps/shared/utils/swimStyles";
 import { PracticeItem } from "@/components/practices";
 import { ListToolbar, SortBottomSheet, FilterBottomSheet } from "@/components/history";
 import type { SortPreset, FilterGroup } from "@/components/history";
@@ -266,7 +265,7 @@ export const PracticesScreen: React.FC = () => {
         mode: "single",
         options: participatedStyleCodes.map((code) => ({
           value: code,
-          label: t(`practice.styleAbbrev.${STYLE_CODE_TO_ABBREV[code]}`),
+          label: t(`practice.styleAbbrev.${code}`),
         })),
         selectedValues: filterDraft.filterStyle ? [filterDraft.filterStyle] : [],
         onChange: (values: string[]) => handleDraftStyleChange(values[0] ?? ""),

@@ -5,16 +5,14 @@
 // ja では「50m 自由形」を、en では「50m Fr」(公式略称) を返す。
 
 import type { TFunction } from "i18next";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
 type StyleAbbrev = "Fr" | "Ba" | "Br" | "Fly" | "IM";
 
-const CODE_TO_ABBREV: Record<string, StyleAbbrev> = {
-  fr: "Fr",
-  ba: "Ba",
-  br: "Br",
-  fly: "Fly",
-  im: "IM",
-};
+// 種目コード ("Fr"/"fr"/"FR" 等、任意ケーシング) → 公式略称の正規化は
+// canonical 定義元の toStyleCode() (apps/shared/utils/swimStyles.ts) に委譲する。
+// styles.style の CHECK 制約がタイトルケースに統一された (Issue #13) ことで
+// SwimStyle の値集合 = StyleAbbrev の値集合となったため、ローカルの変換表は不要。
 
 const JP_PART_TO_ABBREV: Record<string, StyleAbbrev> = {
   自由形: "Fr",
@@ -54,7 +52,7 @@ function parseStyleString(s: string): ParsedStyleString | null {
 
 function styleAbbrevOf(input: StyleLike): StyleAbbrev | undefined {
   if (input.style) {
-    const a = CODE_TO_ABBREV[input.style.toLowerCase()];
+    const a = toStyleCode(input.style);
     if (a) return a;
   }
   if (input.name_jp) {
@@ -82,7 +80,7 @@ export function localizedStyleName(
     if (parsed) {
       return `${parsed.distance}m${parsed.separator}${t(`practice.styleAbbrev.${parsed.abbrev}`)}`;
     }
-    const direct = JP_PART_TO_ABBREV[input] ?? CODE_TO_ABBREV[input.toLowerCase()];
+    const direct = JP_PART_TO_ABBREV[input] ?? toStyleCode(input);
     return direct ? t(`practice.styleAbbrev.${direct}`) : input;
   }
 

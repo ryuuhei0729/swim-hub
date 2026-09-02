@@ -3,7 +3,10 @@
  * split-timeからlap-timeを計算する関数群
  */
 
-export interface SplitTime {
+// UI 計算用の距離+スプリットタイムの組。@apps/shared/types の DB レコード型 SplitTime
+// ({id, record_id, distance, split_time, created_at}) と同名衝突していたため改名した
+// (Issue 要件③)。挙動は変更しない。
+export interface LapSplitPoint {
   distance: number;
   splitTime: number;
 }
@@ -19,7 +22,7 @@ export interface LapTime {
  * @param splitTimes 距離とタイムのペア配列（距離順にソート済み）
  * @returns lap-timeの配列
  */
-export function calculateAllLapTimes(splitTimes: SplitTime[]): LapTime[] {
+export function calculateAllLapTimes(splitTimes: LapSplitPoint[]): LapTime[] {
   if (splitTimes.length === 0) return [];
 
   // 距離でソート
@@ -85,7 +88,7 @@ export function getLapIntervalsForRace(raceDistance: number): number[] {
  * @returns 各間隔でのlap-timeの配列
  */
 export function calculateLapTimesForInterval(
-  splitTimes: SplitTime[],
+  splitTimes: LapSplitPoint[],
   interval: number,
 ): Array<{ distance: number; lapTime: number | null }> {
   if (splitTimes.length === 0) return [];
@@ -149,7 +152,7 @@ export function calculateLapTimesForInterval(
  * @returns 表形式のデータ（各行は距離、Split Time、各間隔のLap Time）
  */
 export function calculateRaceLapTimesTable(
-  splitTimes: SplitTime[],
+  splitTimes: LapSplitPoint[],
   raceDistance: number,
 ): Array<{
   distance: number;

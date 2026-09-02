@@ -26,6 +26,7 @@ import TeamTimeInputModal from "@/components/team/TeamTimeInputModal";
 import type { TeamTimeEntry } from "@/components/team/TeamTimeInputModal";
 import OcrScanModal from "@/components/team/OcrScanModal";
 import { PracticeTag, Practice } from "@apps/shared/types";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
 // TeamVideoUploaderを動的インポート（重いコンポーネント）
 const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
@@ -200,7 +201,11 @@ export default function PracticeLogClient({
     >();
 
     for (const log of existingLogs) {
-      const key = `${log.style}-${log.swim_category || "Swim"}-${log.distance}-${log.rep_count}-${log.set_count}`;
+      // log.style は practice_logs.style (CHECK 制約の無い自由記述列) で legacy な
+      // 小文字行が混在し得る。正規化せずグルーピングキーに使うと、本来同一メニューの
+      // ログが "Fr"/"fr" で別グループに分裂し、対象メンバーが正しく1つにまとまらない。
+      const normalizedStyle = toStyleCode(log.style) ?? log.style;
+      const key = `${normalizedStyle}-${log.swim_category || "Swim"}-${log.distance}-${log.rep_count}-${log.set_count}`;
 
       if (!menuGroups.has(key)) {
         const tags =
@@ -209,7 +214,7 @@ export default function PracticeLogClient({
             .filter((tag): tag is PracticeTag => tag != null) || [];
 
         menuGroups.set(key, {
-          style: log.style,
+          style: normalizedStyle,
           swim_category: log.swim_category || "Swim",
           distance: log.distance,
           rep_count: log.rep_count,

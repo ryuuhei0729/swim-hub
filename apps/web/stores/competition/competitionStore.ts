@@ -45,7 +45,7 @@ export type RelayFilterMode = "all" | "excludeRelay" | "onlyRelay";
 interface CompetitionFilterState {
   /** 距離フィルタ(複数select, 文字列化した距離。例: ["50","100"]。グループ内OR) */
   filterDistances: string[];
-  /** 種目(泳法)フィルタ(複数select, SwimStyle コード。例: ["fr","br"]。グループ内OR) */
+  /** 種目(泳法)フィルタ(複数select, SwimStyle コード。例: ["Fr","Br"]。グループ内OR) */
   filterStyles: string[];
   filterPoolType: string;
   filterRelayMode: RelayFilterMode;

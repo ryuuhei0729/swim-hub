@@ -47,14 +47,14 @@ const STYLE_FREE_50: Style = {
   id: 2,
   name_jp: "自由形50m",
   name: "Freestyle",
-  style: "fr",
+  style: "Fr",
   distance: 50,
 };
 const STYLE_BREAST_50: Style = {
   id: 9,
   name_jp: "平泳ぎ50m",
   name: "Breaststroke",
-  style: "br",
+  style: "Br",
   distance: 50,
 };
 

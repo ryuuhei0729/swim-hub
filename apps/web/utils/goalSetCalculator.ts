@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { differenceInYears, parseISO, isValid } from "date-fns";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
 /**
  * 予測式の係数
@@ -67,21 +68,21 @@ export function calculateAge(birthday: string | null): number | null {
 /**
  * 種目から種目係数（X7）を取得
  * 外部サイトの実装に合わせて、種目を1つの変数で表現
- * @param style - 種目のstyle値（'ba' | 'br' | 'fr' | 'fly' | 'im'）
+ * @param style - 種目のstyle値。任意のケーシング (toStyleCode で正規化) を受け付ける
  * @returns 種目係数（自由形,バタフライ=0, 背泳ぎ=1.53, 平泳ぎ=2.34）
  */
 export function getStyleCoefficient(style: string): number {
-  const styleLower = style.toLowerCase();
+  const styleCode = toStyleCode(style);
 
-  switch (styleLower) {
-    case "ba": // 背泳ぎ
+  switch (styleCode) {
+    case "Ba": // 背泳ぎ
       return 1.53;
-    case "br": // 平泳ぎ
+    case "Br": // 平泳ぎ
       return 2.34;
-    case "fly": // バタフライ
+    case "Fly": // バタフライ
       return 0;
-    case "fr": // 自由形
-    case "im": // 個人メドレー（自由形として扱う）
+    case "Fr": // 自由形
+    case "IM": // 個人メドレー（自由形として扱う）
     default:
       return 0;
   }

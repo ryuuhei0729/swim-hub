@@ -16,6 +16,7 @@ import {
   type ResolveResult,
   type Stroke,
 } from "../utils/racePace";
+import { toStyleCode } from "../utils/swimStyles";
 
 /** 理想LAPを引くための条件 */
 export interface RacePaceQuery {
@@ -41,11 +42,27 @@ interface RacePaceModelRow {
   laps: RacePaceModelLap[];
 }
 
-function toModel(row: RacePaceModelRow): RacePaceModel {
+/**
+ * DB行 → RacePaceModel。stroke は toStyleCode で canonical 化を検証してから使う
+ * (race_pace_models.stroke の CHECK 制約は Fr/Br/Ba/Fly/IM のみを許可しているため
+ * 通常は必ず正規化できるはずだが、`as Stroke` の unchecked cast のまま信頼すると
+ * CHECK 制約を経由しない値 (手動 UPDATE・将来の投入経路の考慮漏れ等) が
+ * 静かに間違った Stroke として下流に流れてしまう)。canonical化できない行は
+ * 理想LAP計算から除外し、原因追跡のため console.error で記録する。
+ * null を返す行は呼び出し元 (getModels) で除外する。
+ */
+function toModel(row: RacePaceModelRow): RacePaceModel | null {
+  const stroke = toStyleCode(row.stroke);
+  if (!stroke) {
+    console.error(
+      `race_pace_models.stroke が canonical な種目コードに正規化できません (行を除外します): "${row.stroke}"`,
+    );
+    return null;
+  }
   return {
     gender: row.gender as Gender,
     poolType: row.pool_type as PoolType,
-    stroke: row.stroke as Stroke,
+    stroke,
     distance: row.distance,
     splitInterval: row.split_interval,
     ageCategory: row.age_category,
@@ -75,13 +92,27 @@ export class RacePaceModelAPI {
       )
       .eq("gender", query.gender)
       .eq("pool_type", query.poolType)
-      .eq("stroke", query.stroke)
+      // stroke の照合はケース非依存にする (移行期の暫定措置。恒久固定ではない)。
+      // race_pace_models.stroke は 20260901000001 でタイトルケースへ移行したが、
+      // このテーブルへの書き込みは result-of-swimming の service_role バッチが
+      // アプリコードとは別デプロイで行う。ilike が救えるのは「アプリコード
+      // (この ilike 版) が先に出て、投入バッチがまだ旧ケーシングで書き込んで
+      // いる」方向のみ。逆に「投入バッチが先にタイトルケースへ移行し、
+      // 旧アプリコード (.eq 版) がまだ稼働している」場合は救えず、旧コードは
+      // 0件・エラーなしで静かに壊れる。正しい手順は「アプリコードを100%
+      // ロールアウトしてから投入バッチ/migration側を切り替える」こと。
+      // styles.style (apps/shared/api/goals.ts, apps/shared/api/styles.ts) と
+      // 同じ理由で ilike にする。result-of-swimming 側の投入コードが完全に
+      // タイトルケースへ追従したことを確認できたら .eq に戻す選択肢がある。
+      .ilike("stroke", query.stroke)
       .eq("distance", query.distance)
       .eq("age_category", query.ageCategory ?? "all")
       .order("min_time_ms", { ascending: true });
 
     if (error) throw error;
-    return (data as unknown as RacePaceModelRow[]).map(toModel);
+    return (data as unknown as RacePaceModelRow[])
+      .map(toModel)
+      .filter((model): model is RacePaceModel => model !== null);
   }
 
   /**

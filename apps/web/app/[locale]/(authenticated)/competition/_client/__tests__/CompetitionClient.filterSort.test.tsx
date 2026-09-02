@@ -103,10 +103,10 @@ import CompetitionClient from "../CompetitionClient";
 
 // 種目マスター(距離接頭辞除去後のラベル確認用に name_jp を "50m自由形" 形式にしておく)
 const STYLES_MASTER: Style[] = [
-  { id: 1, name: "fr50", name_jp: "50m自由形", style: "fr", distance: 50 },
-  { id: 2, name: "fr100", name_jp: "100m自由形", style: "fr", distance: 100 },
-  { id: 3, name: "br100", name_jp: "100m平泳ぎ", style: "br", distance: 100 },
-  { id: 4, name: "ba50", name_jp: "50m背泳ぎ", style: "ba", distance: 50 },
+  { id: 1, name: "fr50", name_jp: "50m自由形", style: "Fr", distance: 50 },
+  { id: 2, name: "fr100", name_jp: "100m自由形", style: "Fr", distance: 100 },
+  { id: 3, name: "br100", name_jp: "100m平泳ぎ", style: "Br", distance: 100 },
+  { id: 4, name: "ba50", name_jp: "50m背泳ぎ", style: "Ba", distance: 50 },
 ];
 
 interface MakeRecordOptions {
@@ -114,7 +114,7 @@ interface MakeRecordOptions {
   competitionId: string;
   title: string;
   date: string;
-  styleCode?: "fr" | "br" | "ba" | "fly" | "im" | null;
+  styleCode?: "Fr" | "Br" | "Ba" | "Fly" | "IM" | null;
   distance?: number | null;
   time?: number;
   isRelaying?: boolean;
@@ -156,7 +156,7 @@ const makeRecord = (opts: MakeRecordOptions): RecordType =>
             id: 1,
             name_jp: opts.styleNameJp ?? `${opts.distance ?? 50}m自由形`,
             distance: opts.distance ?? 50,
-            style: opts.styleCode ?? "fr",
+            style: opts.styleCode ?? "Fr",
           } as unknown as RecordType["style"]),
   }) as RecordType;
 
@@ -311,7 +311,7 @@ describe("CompetitionClient", () => {
           competitionId: "c1",
           title: "自由形大会",
           date: "2026-01-01",
-          styleCode: "fr",
+          styleCode: "Fr",
           distance: 50,
         }),
       ]);
@@ -333,7 +333,7 @@ describe("CompetitionClient", () => {
           competitionId: "c1",
           title: "50m大会",
           date: "2026-01-01",
-          styleCode: "fr",
+          styleCode: "Fr",
           distance: 50,
         }),
         makeRecord({
@@ -341,7 +341,7 @@ describe("CompetitionClient", () => {
           competitionId: "c2",
           title: "100m大会",
           date: "2026-01-02",
-          styleCode: "fr",
+          styleCode: "Fr",
           distance: 100,
         }),
       ]);
@@ -365,7 +365,7 @@ describe("CompetitionClient", () => {
           competitionId: "c1",
           title: "自由形大会",
           date: "2026-01-01",
-          styleCode: "fr",
+          styleCode: "Fr",
           distance: 50,
         }),
         makeRecord({
@@ -373,7 +373,7 @@ describe("CompetitionClient", () => {
           competitionId: "c2",
           title: "平泳ぎ大会",
           date: "2026-01-02",
-          styleCode: "br",
+          styleCode: "Br",
           distance: 100,
         }),
       ]);
@@ -397,7 +397,7 @@ describe("CompetitionClient", () => {
         competitionId: "c-50fr",
         title: "50Fr大会",
         date: "2026-01-01",
-        styleCode: "fr",
+        styleCode: "Fr",
         distance: 50,
       }),
       makeRecord({
@@ -405,7 +405,7 @@ describe("CompetitionClient", () => {
         competitionId: "c-100fr",
         title: "100Fr大会",
         date: "2026-01-02",
-        styleCode: "fr",
+        styleCode: "Fr",
         distance: 100,
       }),
       makeRecord({
@@ -413,7 +413,7 @@ describe("CompetitionClient", () => {
         competitionId: "c-50br",
         title: "50Br大会",
         date: "2026-01-03",
-        styleCode: "br",
+        styleCode: "Br",
         distance: 50,
       }),
       makeRecord({
@@ -421,7 +421,7 @@ describe("CompetitionClient", () => {
         competitionId: "c-200br",
         title: "200Br大会",
         date: "2026-01-04",
-        styleCode: "br",
+        styleCode: "Br",
         distance: 200,
       }),
     ];
@@ -430,7 +430,7 @@ describe("CompetitionClient", () => {
       const user = userEvent.setup();
       renderClient(buildMixedRecords(), [
         ...STYLES_MASTER,
-        { id: 5, name: "br200", name_jp: "200m平泳ぎ", style: "br", distance: 200 },
+        { id: 5, name: "br200", name_jp: "200m平泳ぎ", style: "Br", distance: 200 },
       ]);
 
       await user.click(screen.getByRole("button", { name: "絞り込み" }));
@@ -486,7 +486,7 @@ describe("CompetitionClient", () => {
         competitionId: "c-50",
         title: "50m大会",
         date: "2026-01-01",
-        styleCode: "fr",
+        styleCode: "Fr",
         distance: 50,
       }),
       makeRecord({
@@ -494,7 +494,7 @@ describe("CompetitionClient", () => {
         competitionId: "c-100",
         title: "100m大会",
         date: "2026-01-02",
-        styleCode: "fr",
+        styleCode: "Fr",
         distance: 100,
       }),
     ];
@@ -676,7 +676,7 @@ describe("CompetitionClient", () => {
             competitionId: "c-50fr",
             title: "50Fr大会",
             date: "2026-01-01",
-            styleCode: "fr",
+            styleCode: "Fr",
             distance: 50,
           }),
           makeRecord({
@@ -684,7 +684,7 @@ describe("CompetitionClient", () => {
             competitionId: "c-50br",
             title: "50Br大会",
             date: "2026-01-02",
-            styleCode: "br",
+            styleCode: "Br",
             distance: 50,
           }),
           makeRecord({
@@ -692,7 +692,7 @@ describe("CompetitionClient", () => {
             competitionId: "c-100fr",
             title: "100Fr大会",
             date: "2026-01-03",
-            styleCode: "fr",
+            styleCode: "Fr",
             distance: 100,
           }),
         ]);
@@ -715,7 +715,7 @@ describe("CompetitionClient", () => {
           competitionId: "c-50fr",
           title: "50Fr大会",
           date: "2026-01-01",
-          styleCode: "fr",
+          styleCode: "Fr",
           distance: 50,
         }),
         makeRecord({
@@ -723,7 +723,7 @@ describe("CompetitionClient", () => {
           competitionId: "c-100fr",
           title: "100Fr大会",
           date: "2026-01-02",
-          styleCode: "fr",
+          styleCode: "Fr",
           distance: 100,
         }),
         makeRecord({
@@ -731,7 +731,7 @@ describe("CompetitionClient", () => {
           competitionId: "c-50br",
           title: "50Br大会",
           date: "2026-01-03",
-          styleCode: "br",
+          styleCode: "Br",
           distance: 50,
         }),
       ]);
@@ -756,7 +756,7 @@ describe("CompetitionClient", () => {
             competitionId: "c-50fr",
             title: "50Fr大会",
             date: "2026-01-01",
-            styleCode: "fr",
+            styleCode: "Fr",
             distance: 50,
           }),
           makeRecord({
@@ -764,7 +764,7 @@ describe("CompetitionClient", () => {
             competitionId: "c-100br",
             title: "100Br大会",
             date: "2026-01-02",
-            styleCode: "br",
+            styleCode: "Br",
             distance: 100,
           }),
         ]);
@@ -856,7 +856,7 @@ describe("CompetitionClient", () => {
           competitionId: "c-50fr",
           title: "50Fr大会",
           date: "2026-01-01",
-          styleCode: "fr",
+          styleCode: "Fr",
           distance: 50,
         }),
         makeRecord({
@@ -887,7 +887,7 @@ describe("CompetitionClient", () => {
             competitionId: "c-999",
             title: "特殊距離大会",
             date: "2026-01-01",
-            styleCode: "fr",
+            styleCode: "Fr",
             distance: 999,
           }),
         ],

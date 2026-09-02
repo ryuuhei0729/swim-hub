@@ -81,11 +81,11 @@ describe("flattenRaceTree", () => {
   });
 
   it("[V-C3] 個人種目の stroke へ写せる", () => {
-    expect(new Set(targets.map((t) => t.stroke))).toEqual(new Set(["fr", "ba", "br", "fly", "im"]));
+    expect(new Set(targets.map((t) => t.stroke))).toEqual(new Set(["Fr", "Ba", "Br", "Fly", "IM"]));
   });
 
   it("[V-C3] 距離と種目の組が実在するものだけになる", () => {
-    const im50 = targets.find((t) => t.stroke === "im" && t.distance === 50);
+    const im50 = targets.find((t) => t.stroke === "IM" && t.distance === 50);
     expect(im50).toBeUndefined();
   });
 

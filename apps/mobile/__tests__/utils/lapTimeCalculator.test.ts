@@ -24,7 +24,7 @@ import {
   calculateAllLapTimes,
   calculateRaceLapTimesTable,
   getLapIntervalsForRace,
-  type SplitTime,
+  type LapSplitPoint,
 } from "@/utils/lapTimeCalculator";
 
 describe("lapTimeCalculator (mobile, web 同値)", () => {
@@ -34,14 +34,14 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("1つのsplit-timeは0mからのlap-timeを返す", () => {
-      const splitTimes: SplitTime[] = [{ distance: 50, splitTime: 30.5 }];
+      const splitTimes: LapSplitPoint[] = [{ distance: 50, splitTime: 30.5 }];
       expect(calculateAllLapTimes(splitTimes)).toEqual([
         { fromDistance: 0, toDistance: 50, lapTime: 30.5 },
       ]);
     });
 
     it("複数のsplit-timeから連続するlap-timeを計算する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 50, splitTime: 30.0 },
         { distance: 100, splitTime: 62.0 },
       ];
@@ -52,7 +52,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("100m自由形の典型的なsplit-timeを計算する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 25, splitTime: 12.5 },
         { distance: 50, splitTime: 26.0 },
         { distance: 75, splitTime: 40.0 },
@@ -67,7 +67,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("ソートされていないsplit-timeも正しく処理する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 100, splitTime: 62.0 },
         { distance: 50, splitTime: 30.0 },
       ];
@@ -78,7 +78,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("200m個人メドレーの全ラップを計算する (リレー/IM)", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 50, splitTime: 28.0 },
         { distance: 100, splitTime: 62.0 },
         { distance: 150, splitTime: 100.0 },
@@ -93,7 +93,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
 
   describe("[LAP-02] calculateAllLapTimes 異常系", () => {
     it("split-timeが0の場合はそのlap-timeを計算しない", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 50, splitTime: 30.0 },
         { distance: 100, splitTime: 0 },
         { distance: 150, splitTime: 95.0 },
@@ -104,7 +104,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("0mから始まるsplit-timeがある場合は最初のlapを生成しない", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 0, splitTime: 0 },
         { distance: 50, splitTime: 30.0 },
       ];
@@ -148,7 +148,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("100m自由形のテーブルを生成する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 25, splitTime: 12.5 },
         { distance: 50, splitTime: 26.0 },
         { distance: 75, splitTime: 40.0 },
@@ -165,7 +165,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("200m種目のテーブルを生成する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 50, splitTime: 28.0 },
         { distance: 100, splitTime: 60.0 },
         { distance: 150, splitTime: 95.0 },
@@ -180,7 +180,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("25mの倍数でない距離はフィルタリングされる", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 25, splitTime: 12.5 },
         { distance: 30, splitTime: 15.0 },
         { distance: 50, splitTime: 26.0 },
@@ -192,7 +192,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("split-timeが0の距離はフィルタリングされる", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 25, splitTime: 12.5 },
         { distance: 50, splitTime: 0 },
         { distance: 75, splitTime: 40.0 },

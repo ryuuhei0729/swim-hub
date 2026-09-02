@@ -51,7 +51,13 @@ export interface Record extends RecordBase {
 export type RecordInsert = Omit<RecordBase, "id" | "created_at" | "updated_at">;
 export type RecordUpdate = Partial<Omit<RecordInsert, "user_id">>;
 
-// スプリットタイム
+// スプリットタイム (DB の split_times テーブル1行に対応する永続化レコード型)。
+// 注意: 別リポの swimhub-timer にも同名の `SplitTime` 型が存在するが、構造が異なる
+// (timer 側はローカルタイマーの UI 用中間値で DB レコードではない)。3リポは
+// 独立リポで跨リポ CI が無いため、この名前の衝突はコードレベルでは検出できない。
+// リネームはしない (SplitTimeInsert/SplitTimeUpdate 派生型・広範な参照があるため)。
+// swim-hub 内の apps/web/utils/lapTimeCalculator.ts / apps/mobile/utils/lapTimeCalculator.ts
+// にある UI 計算用の `SplitTime` (この型とは別物) は別スプリントでリネーム予定。
 export interface SplitTime {
   id: string;
   record_id: string;

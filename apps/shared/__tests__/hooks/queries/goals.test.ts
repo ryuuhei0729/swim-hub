@@ -52,7 +52,7 @@ const createMockGoalWithMilestones = (
       goal_id: "goal-1",
       title: "50m 30秒切り",
       type: "time",
-      params: { distance: 50, target_time: 30, style: "fr", swim_category: "Swim" },
+      params: { distance: 50, target_time: 30, style: "Fr", swim_category: "Swim" },
       deadline: "2025-06-01",
       status: "in_progress",
       achieved_at: null,
