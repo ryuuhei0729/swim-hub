@@ -79,7 +79,7 @@ describe("[IM-01] uploadImageViaApi — 正常系", () => {
 
     await uploadImageViaApi(MOCK_FILE, "practice-1", PRACTICE_BUCKET, MOCK_ACCESS_TOKEN);
 
-    const fetchOptions = mockFetch.mock.calls[0][1] as RequestInit;
+    const fetchOptions = mockFetch.mock.calls[0]![1] as RequestInit; // uploadImageViaApi は1回だけ fetch する設計なので calls[0] は必ず存在
     const headers = fetchOptions.headers as Record<string, string>;
     expect(headers["Authorization"]).toBe(`Bearer ${MOCK_ACCESS_TOKEN}`);
   });
@@ -177,7 +177,7 @@ describe("[IM-04] uploadImagesViaApi — ロールバック", () => {
     );
     expect(deleteCalls).toHaveLength(1);
     // 1枚目の path がロールバック対象であること（URL エンコードを考慮して decodeURIComponent でチェック）
-    const deleteUrl = decodeURIComponent(deleteCalls[0][0] as string);
+    const deleteUrl = decodeURIComponent(deleteCalls[0]![0] as string); // 直前の toHaveLength(1) で存在は保証済み
     expect(deleteUrl).toContain("path/img1.jpg");
   });
 
@@ -217,7 +217,7 @@ describe("[IM-05] uploadImageViaApi — access_token の境界値", () => {
       uploadImageViaApi(MOCK_FILE, "practice-1", PRACTICE_BUCKET, ""),
     ).rejects.toThrow();
 
-    const fetchOptions = mockFetch.mock.calls[0][1] as RequestInit;
+    const fetchOptions = mockFetch.mock.calls[0]![1] as RequestInit; // uploadImageViaApi は1回だけ fetch する設計なので calls[0] は必ず存在
     const headers = fetchOptions.headers as Record<string, string>;
     // 空 token でも "Bearer " プレフィックスは付与される（バリデーションなし）
     expect(headers["Authorization"]).toBe("Bearer ");
@@ -297,7 +297,7 @@ describe("[IM-08] uploadImagesViaApi — 401 レスポンス時の動作 (既存
     ).rejects.toThrow();
 
     // Authorization ヘッダが正しく設定されていること
-    const fetchOptions = mockFetch.mock.calls[0][1] as RequestInit;
+    const fetchOptions = mockFetch.mock.calls[0]![1] as RequestInit; // uploadImagesViaApi は1回目の fetch で必ず呼ばれる
     const headers = fetchOptions.headers as Record<string, string>;
     expect(headers["Authorization"]).toBe(`Bearer ${MOCK_ACCESS_TOKEN}`);
   });

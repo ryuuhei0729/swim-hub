@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { TeamBulkRegisterAPI, type BulkRegisterInput } from "@apps/shared/api/teams/bulkRegister";
 import { useAuth } from "@/contexts/AuthProvider";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface PracticeRow {
   date: string;
@@ -78,7 +79,9 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
   const handlePracticeChange = (index: number, key: keyof PracticeRow, value: string) => {
     setPracticeRows((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [key]: value };
+      const current = next[index];
+      if (!current) return prev; // index が不正な場合は何も更新しない
+      next[index] = { ...current, [key]: value };
       return next;
     });
   };
@@ -101,7 +104,9 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
   ) => {
     setCompetitionRows((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [key]: value };
+      const current = next[index];
+      if (!current) return prev; // index が不正な場合は何も更新しない
+      next[index] = { ...current, [key]: value };
       return next;
     });
   };
@@ -199,7 +204,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
         ]);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("teams.mobile.bulkRegisterFailed");
+      const message = toUserFacingMessage(err, t("teams.mobile.bulkRegisterFailed"));
       setError(message);
       if (Platform.OS === "web") {
         window.alert(message);

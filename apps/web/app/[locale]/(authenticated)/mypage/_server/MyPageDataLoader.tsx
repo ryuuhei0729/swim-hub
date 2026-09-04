@@ -166,7 +166,7 @@ async function getBestTimes(
     const records = data as RecordWithRelations[];
     records.forEach((record) => {
       const styleKey = record.styles?.name_jp || "Unknown";
-      const poolType = record.pool_type ?? 0;
+      const poolType = record.pool_type;
       const key = `${styleKey}_${poolType}`;
 
       if (record.is_relaying) {
@@ -232,12 +232,15 @@ async function getBestTimes(
     if (!bestTimesByStyleAndPool.has(key)) {
       // キーから種目名とプール種別を取得
       const [styleName, poolTypeStr] = key.split("_");
+      if (styleName === undefined || poolTypeStr === undefined) return; // key は
+        // `${styleKey}_${poolType}` 形式で生成されるため通常2要素に分割されるが、
+        // split() の型上は undefined を許すため防御的にスキップする
       const poolType = parseInt(poolTypeStr, 10);
 
       // 種目情報を取得（最初のレコードから）
       const record = data?.find(
         (r: RecordWithRelations) =>
-          (r.styles?.name_jp || "Unknown") === styleName && (r.pool_type ?? 0) === poolType,
+          (r.styles?.name_jp || "Unknown") === styleName && r.pool_type === poolType,
       ) as RecordWithRelations | undefined;
 
       if (record) {

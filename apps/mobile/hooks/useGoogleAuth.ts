@@ -315,10 +315,16 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
       } catch (err) {
         // 例外時もガードが残らないよう解除する
         oauthSessionGuard.active = false;
+        // rawMessage は localizeSupabaseAuthError の既知パターン照合専用の入力であり、
+        // 同関数が本番ビルドでは未知のメッセージを汎用文言にフォールバックするため、
+        // ここでの instanceof Error は情報露出には当たらない (utils/authErrorLocalizer.ts 参照)。
         const rawMessage = err instanceof Error ? err.message : t("auth.mobile.unknownError");
         const localizedMessage = localizeSupabaseAuthError({ message: rawMessage });
         setError(localizedMessage);
-        return { success: false, error: err instanceof Error ? err : new Error(rawMessage) };
+        // 呼び出し元 (GoogleCalendarSyncSettings 等) が result.error.message をそのまま表示するため、
+        // 生の err をここで返すと localizeSupabaseAuthError を経由しない生メッセージが露出する。
+        // 常に上で算出済みの安全な localizedMessage を積んだ Error を返す
+        return { success: false, error: new Error(localizedMessage) };
       } finally {
         setLoading(false);
         // warm path（このプロセス内で openAuthSessionAsync が resolve/例外まで完了した）

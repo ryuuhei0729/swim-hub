@@ -66,8 +66,8 @@ describe("resolveEntryMutations — C-1 種目変更によるデータ損失防�
     expect(result.deletes).not.toContain("uuidB");
 
     // B の旧値で上書きされていないことの確認 (entryTime が A の編集値であること)
-    expect(result.updates[0].entryTime).toBe(70.0);
-    expect(result.updates[0].note).toBe("Aの編集");
+    expect(result.updates[0]!.entryTime).toBe(70.0); // 冒頭の toHaveLength(1) で存在は保証済み
+    expect(result.updates[0]!.note).toBe("Aの編集");
   });
 
   it("[C-1 swap] A(Fr)↔B(Br) のスワップ → 重複・損失なし、各 DB id は一度ずつ update、delete なし", () => {

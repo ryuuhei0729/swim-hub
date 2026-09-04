@@ -10,9 +10,9 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useRecordsQuery, useDeleteRecordMutation } from "@apps/shared/hooks/queries/records";
 import { recordKeys } from "@apps/shared/hooks/queries/keys";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
-import { STYLE_CODE_TO_ABBREV } from "@apps/shared/utils/swimStyles";
 import { RecordItem, StandaloneRecordDetailModal, EntryOnlySection } from "@/components/records";
 import { ListToolbar, SortBottomSheet, FilterBottomSheet } from "@/components/history";
 import type { SortPreset, FilterGroup } from "@/components/history";
@@ -454,7 +454,7 @@ export const RecordsScreen: React.FC = () => {
         mode: "multi",
         options: participatedStyleCodes.map((code) => ({
           value: code,
-          label: t(`practice.styleAbbrev.${STYLE_CODE_TO_ABBREV[code]}`),
+          label: t(`practice.styleAbbrev.${code}`),
         })),
         selectedValues: filterDraft.filterStyles,
         onChange: handleDraftStylesChange,
@@ -592,7 +592,7 @@ export const RecordsScreen: React.FC = () => {
                 console.error("削除エラー:", error);
                 Alert.alert(
                   t("common.error"),
-                  error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"),
+                  toUserFacingMessage(error, t("dashboard.mobile.deleteFailed")),
                   [{ text: "OK" }],
                 );
               } finally {

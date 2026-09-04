@@ -483,6 +483,8 @@ describe("generatePracticeExcelTemplate", () => {
   });
 });
 
+// NOTE: `practices[N]!` / `errors[N]!` を多用する。各テストは直前に `.length` を確認済みで、
+// その範囲内のインデックスのみアクセスしている。
 describe("parsePracticeExcelFile", () => {
   let parsePracticeExcelFile: (file: File) => Promise<{
     practices: Array<{
@@ -545,8 +547,8 @@ describe("parsePracticeExcelFile", () => {
 
     const result = await parsePracticeExcelFile(file);
 
-    expect(result.practices[0].date).toBe("2025-01-01");
-    expect(result.practices[1].date).toBe("2025-12-31");
+    expect(result.practices[0]!.date).toBe("2025-01-01");
+    expect(result.practices[1]!.date).toBe("2025-12-31");
   });
 
   it("空のセルが正しく処理される", async () => {
@@ -572,8 +574,8 @@ describe("parsePracticeExcelFile", () => {
     // タイトルが入力されているので登録対象になる
     expect(result.practices.length).toBe(1);
     // 場所と備考が空の場合はnullになる
-    expect(result.practices[0].place).toBeNull();
-    expect(result.practices[0].note).toBeNull();
+    expect(result.practices[0]!.place).toBeNull();
+    expect(result.practices[0]!.note).toBeNull();
   });
 
   it("サンプルシートがスキップされる", async () => {
@@ -667,8 +669,8 @@ describe("parsePracticeExcelFile", () => {
 
     expect(result.practices.length).toBe(1);
     expect(result.errors.length).toBe(2);
-    expect(result.errors[0].row).toBe(2);
-    expect(result.errors[1].row).toBe(4);
+    expect(result.errors[0]!.row).toBe(2);
+    expect(result.errors[1]!.row).toBe(4);
   });
 
   it("ISO形式の日付文字列が正しくパースされる", async () => {
@@ -688,7 +690,7 @@ describe("parsePracticeExcelFile", () => {
     const result = await parse(file);
 
     expect(result.practices.length).toBe(1);
-    expect(result.practices[0].date).toBe("2025-01-20");
+    expect(result.practices[0]!.date).toBe("2025-01-20");
   });
 
   it("日本語形式の日付文字列が正しくパースされる", async () => {
@@ -709,7 +711,7 @@ describe("parsePracticeExcelFile", () => {
 
     expect(result.practices.length).toBe(1);
     // 年は現在年または近い年で推測される
-    expect(result.practices[0].date).toMatch(/^\d{4}-01-20$/);
+    expect(result.practices[0]!.date).toMatch(/^\d{4}-01-20$/);
   });
 
   it("Excelシリアル日付形式が正しくパースされる", async () => {
@@ -730,7 +732,7 @@ describe("parsePracticeExcelFile", () => {
     const result = await parse(file);
 
     expect(result.practices.length).toBe(1);
-    expect(result.practices[0].date).toBe("2025-01-15"); // シリアル日付の計算結果
+    expect(result.practices[0]!.date).toBe("2025-01-15"); // シリアル日付の計算結果
   });
 
   it("複数シートのデータが統合される", async () => {

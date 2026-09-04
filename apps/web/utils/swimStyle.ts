@@ -3,8 +3,14 @@
  * style_id (DB の styles.id) と next-intl の泳法コードキー (Fr/Ba/Br/Fly/IM) を橋渡しする。
  */
 
-/** next-intl practice.styles.* / practice.styleAbbrev.* のキー */
-export type StyleCodeKey = "Fr" | "Ba" | "Br" | "Fly" | "IM";
+import type { SwimStyle } from "@apps/shared/types";
+
+/**
+ * next-intl practice.styles.* / practice.styleAbbrev.* のキー。
+ * 値集合が shared の SwimStyle ("Fr"/"Br"/"Ba"/"Fly"/"IM") と完全に一致するため、
+ * 独立した型として持たず SwimStyle から導出する (二重管理の禁止)。
+ */
+export type StyleCodeKey = SwimStyle;
 
 /**
  * DB の styles.id を泳法コードキーに変換する。

@@ -29,7 +29,7 @@ export default function GoalsClient({
   const t = useTranslations("goals");
   const { supabase } = useAuth();
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(
-    initialGoals.length > 0 ? initialGoals[0].id : null,
+    initialGoals.length > 0 ? initialGoals[0]!.id : null, // initialGoals.length > 0 を三項演算子内で確認済み
   );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

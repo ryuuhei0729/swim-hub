@@ -248,7 +248,7 @@ describe("validators", () => {
     });
 
     it("今日の日付で成功する", () => {
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toISOString().split("T")[0]!; // split() は必ず1要素以上の配列を返す
       const result = validatePastDate(today);
       expect(result.valid).toBe(true);
     });
@@ -256,7 +256,7 @@ describe("validators", () => {
     it("未来の日付で失敗する", () => {
       const futureDate = new Date();
       futureDate.setFullYear(futureDate.getFullYear() + 1);
-      const result = validatePastDate(futureDate.toISOString().split("T")[0]);
+      const result = validatePastDate(futureDate.toISOString().split("T")[0]!); // split() は必ず1要素以上
       expect(result.valid).toBe(false);
       expect(result.error).toBe("未来の日付は指定できません");
     });
@@ -281,7 +281,7 @@ describe("validators", () => {
     it("未来の日付で成功する", () => {
       const futureDate = new Date();
       futureDate.setFullYear(futureDate.getFullYear() + 1);
-      const result = validateFutureDate(futureDate.toISOString().split("T")[0]);
+      const result = validateFutureDate(futureDate.toISOString().split("T")[0]!); // split() は必ず1要素以上
       expect(result.valid).toBe(true);
       expect(result.error).toBeUndefined();
     });

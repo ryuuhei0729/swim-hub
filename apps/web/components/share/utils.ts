@@ -3,6 +3,8 @@
 // タイムフォーマット、画像生成等のヘルパー関数
 // =============================================================================
 
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
+
 /**
  * 秒数をMM:SS.ss形式にフォーマット
  */
@@ -72,7 +74,9 @@ export function calculateLapTimes(
   const sorted = [...splitTimes].sort((a, b) => a.distance - b.distance);
 
   return sorted.map((split, index) => {
-    const previousSplit = index > 0 ? sorted[index - 1].split_time : 0;
+    // index > 0 のとき sorted[index - 1] は同一配列内の直前要素であり、
+    // map の index は常に sorted.length 未満のため必ず存在する
+    const previousSplit = index > 0 ? sorted[index - 1]!.split_time : 0;
     return {
       distance: split.distance,
       lapTime: split.split_time - previousSplit,
@@ -184,7 +188,14 @@ export function getStyleNameJp(shortName: string): string {
     MR: "メドレーリレー",
     FR: "フリーリレー",
   };
-  return styleMap[shortName] || shortName;
+  // styleMap は "MR"(メドレーリレー)/"FR"(フリーリレー) という SwimStyle とは別語彙を含む。
+  // toStyleCode() は canonical 5値しか返さないため、この完全一致分岐がリレー略称を
+  // リレー名に解決する唯一の経路。外すと "FR" が生文字列のまま表示される。消さないこと。
+  // 後段の toStyleCode() は practice_logs.style (CHECK 制約の無い自由記述列) 由来の
+  // legacy な全小文字行 ("fr" 等) を救済するためのフォールバック。
+  if (styleMap[shortName]) return styleMap[shortName];
+  const normalized = toStyleCode(shortName);
+  return (normalized && styleMap[normalized]) || shortName;
 }
 
 /**

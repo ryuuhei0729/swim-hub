@@ -41,8 +41,9 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
-import type { PracticeWithLogs, PracticeTag, Style } from "@apps/shared/types";
+import type { PracticeWithLogs, PracticeTag, Style, PracticeLogWithTags } from "@apps/shared/types";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
+import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 // -----------------------------------------------------------------------
 // vi.hoisted — モック関数の巻き上げ対策
@@ -99,6 +100,7 @@ vi.mock("@/app/[locale]/(authenticated)/practice/_components/PracticeDetailModal
     onEditPractice: () => void;
     onOpenPracticeLogTab: () => void;
     onDeletePracticeLog: (logId: string) => void;
+    onDeletePractice: () => void;
     onClose: () => void;
   }) =>
     props.isOpen ? (
@@ -109,6 +111,7 @@ vi.mock("@/app/[locale]/(authenticated)/practice/_components/PracticeDetailModal
         <button onClick={() => props.onOpenPracticeLogTab()}>詳細からログ編集</button>
         <button onClick={() => props.onDeletePracticeLog("log-a")}>ログAを削除</button>
         <button onClick={() => props.onDeletePracticeLog("log-b")}>ログBを削除</button>
+        <button onClick={() => props.onDeletePractice()}>練習全体を削除</button>
         <button onClick={() => props.onClose()}>詳細を閉じる</button>
       </div>
     ) : null,
@@ -183,6 +186,9 @@ const renderClient = (practices: PracticeWithLogs[], tags: PracticeTag[] = []) =
 // ("練習詳細を表示(07/01 市民プール Fr)" のように個体情報付きの動的文言)を持つ
 const getCardRows = (): HTMLElement[] => screen.queryAllByRole("button", { name: /^練習詳細を表示\(/ });
 
+// NOTE: `getCardRows()[0]!` 等を多用する。各テストは renderClient() に1件以上の practice を渡した
+// 直後に呼んでおり、対応するカード行が描画されていることを前提にしている。
+
 // 絞り込みシートの「場所」グループには各場所と同じ文字列のチップが並ぶため、
 // シートが開いたまま(または閉じるアニメーション中)の状態で screen.getByText(place) を
 // 使うと二重ヒットする。カード行(role="button" + aria-label)側のみに絞って場所の
@@ -216,7 +222,7 @@ describe("PracticeClient", () => {
     const user = userEvent.setup();
     renderClient([makePractice()]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     expect(screen.getByTestId("practice-detail-modal-stub")).toBeInTheDocument();
 
     await user.click(screen.getByText("詳細を閉じる"));
@@ -229,7 +235,7 @@ describe("PracticeClient", () => {
 
     expect(screen.queryByTestId("practice-detail-modal-stub")).not.toBeInTheDocument();
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
 
     const modal = screen.getByTestId("practice-detail-modal-stub");
     expect(modal).toBeInTheDocument();
@@ -255,7 +261,7 @@ describe("PracticeClient", () => {
     mocks.deletePracticeLogMutateAsync.mockResolvedValue(undefined);
     renderClient([makePractice()]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     await user.click(screen.getByText("ログAを削除"));
 
     await waitFor(() => {
@@ -293,7 +299,7 @@ describe("PracticeClient", () => {
 
     renderClient([singleLogPractice]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     await user.click(screen.getByText("ログAを削除"));
 
     await waitFor(() => {
@@ -305,7 +311,7 @@ describe("PracticeClient", () => {
     const user = userEvent.setup();
     renderClient([makePractice()]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     await user.click(screen.getByText("詳細から編集"));
 
     const tabModal = screen.getByTestId("practice-tab-modal-stub");
@@ -318,7 +324,7 @@ describe("PracticeClient", () => {
     const user = userEvent.setup();
     renderClient([makePractice()]);
 
-    await user.click(getCardRows()[0]);
+    await user.click(getCardRows()[0]!);
     await user.click(screen.getByText("詳細からログ編集"));
 
     expect(screen.getByTestId("tab-initial-tab")).toHaveTextContent("practiceLog");
@@ -337,7 +343,7 @@ describe("PracticeClient", () => {
 
       expect(screen.getByText(/100m × 4本 × 1セット/)).toBeInTheDocument();
       const cards = getCardRows();
-      expect(cards[0].textContent).toContain("-");
+      expect(cards[0]!.textContent).toContain("-");
     });
   });
 
@@ -363,7 +369,7 @@ describe("PracticeClient", () => {
       const user = userEvent.setup();
       const { unmount } = renderClient([makePractice()]);
 
-      await user.click(getCardRows()[0]);
+      await user.click(getCardRows()[0]!);
       await user.click(screen.getByText("詳細から編集"));
       expect(screen.getByTestId("practice-tab-modal-stub")).toBeInTheDocument();
       expect(usePracticeStore.getState().isOpen).toBe(true);
@@ -435,14 +441,14 @@ describe("PracticeClient", () => {
 
       // 既定(日付新しい順)では2月のBプールが先
       let rows = getCardRows();
-      expect(rows[0].textContent).toContain("Bプール");
+      expect(rows[0]!.textContent).toContain("Bプール");
 
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
 
       rows = getCardRows();
-      expect(rows[0].textContent).toContain("Aプール");
-      expect(rows[1].textContent).toContain("Bプール");
+      expect(rows[0]!.textContent).toContain("Aプール");
+      expect(rows[1]!.textContent).toContain("Bプール");
     });
 
     it("[V-WP-06] place が未設定(null)の日は、場所ソートの昇順・降順いずれでも末尾固定される", async () => {
@@ -457,14 +463,14 @@ describe("PracticeClient", () => {
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
       let rows = getCardRows();
-      expect(rows[rows.length - 1].textContent).toContain("2026/01/02"); // place=null の日
-      expect(rows[0].textContent).toContain("2026/01/01");
+      expect(rows[rows.length - 1]!.textContent).toContain("2026/01/02"); // place=null の日
+      expect(rows[0]!.textContent).toContain("2026/01/01");
 
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       await user.click(screen.getByRole("button", { name: "場所(降順)" }));
       rows = getCardRows();
-      expect(rows[rows.length - 1].textContent).toContain("2026/01/02"); // desc でも末尾のまま
-      expect(rows[0].textContent).toContain("2026/01/01");
+      expect(rows[rows.length - 1]!.textContent).toContain("2026/01/02"); // desc でも末尾のまま
+      expect(rows[0]!.textContent).toContain("2026/01/01");
     });
 
     it("並べ替えプリセット選択で displayCount が20にリセットされ、もっと見るボタンが再度表示される", async () => {
@@ -514,8 +520,8 @@ describe("PracticeClient", () => {
       });
 
       let rows = getCardRows();
-      expect(rows[0].textContent).toContain("Bプール");
-      expect(rows[1].textContent).toContain("Aプール");
+      expect(rows[0]!.textContent).toContain("Bプール");
+      expect(rows[1]!.textContent).toContain("Aプール");
 
       await user.click(screen.getByRole("button", { name: "並べ替え" }));
       expect(screen.getByRole("button", { name: "場所(降順)" }).querySelector("svg")).toBeInTheDocument();
@@ -523,8 +529,8 @@ describe("PracticeClient", () => {
 
       await user.click(screen.getByRole("button", { name: "場所(昇順)" }));
       rows = getCardRows();
-      expect(rows[0].textContent).toContain("Aプール");
-      expect(rows[1].textContent).toContain("Bプール");
+      expect(rows[0]!.textContent).toContain("Aプール");
+      expect(rows[1]!.textContent).toContain("Bプール");
     });
   });
 
@@ -748,11 +754,149 @@ describe("PracticeClient", () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // カスケード削除ガード回帰 (Sprint Contract [V-W-P07]〜[V-W-P10])
+  //
+  // displayPractices (usePracticesQuery({ startDate, endDate, pageSize: 1000 }) の戻り値、
+  // 日付範囲でスコープされた個人一覧) に selectedPractice が含まれない状態
+  // (= handleDeletePracticeLog 内の `.find()` が外れる条件) を再現する。
+  //
+  // 実装 (PracticeClient.tsx) を読んだ根拠:
+  //   - selectedPractice はカード行クリック時に setSelectedPractice(row.practice) で
+  //     ローカル state にセットされる (handleRowClick)。displayPractices が後から
+  //     変化しても、この state は自動的にクリアされない。
+  //   - よって「①行クリックで selectedPractice をセット → ②裏で displayPractices から
+  //     その practice が消える → ③ログ削除ボタンを押す」という手順を踏めば、
+  //     `currentPractice === undefined` を再現できる。
+  //     ②は usePracticesQuery のモック戻り値を差し替えた上で rerender() することで作る
+  //     (selectedPractice はコンポーネントインスタンスが保持したまま維持される)。
+  //     実運用では「他デバイスでの同時削除」や「日付範囲外への変化」に相当する状態。
+  //
+  // NOTE: 既存の [V-W-P07](シェアボタン非表示) [V-W-P08](詳細モーダルclose) [V-W-P09]
+  //   (旧来のインライン編集/削除ボタン非表示) は、このファイルの旧 Sprint Contract で
+  //   既に同じ ID を使用済みだったため、ID 衝突を避けてこの回帰群には [V-W-P11]〜[V-W-P13]
+  //   を採番した(QA Report 参照)。対照ケース([V-W-P10] 相当: `.find()` が当たり残り
+  //   ログ0件で従来どおりカスケード削除される)は既存の [V-W-P05] が新しい分岐構造
+  //   (`currentPractice !== undefined` 経由)を通った上で既にこの観点を検証済みのため、
+  //   重複テストは追加しない。
+  // ---------------------------------------------------------------------------
+  describe("[displayPractices から selectedPractice が消える] カスケード削除ガード回帰", () => {
+    const buildSingleLog = (): PracticeLogWithTags => ({
+      id: "log-a",
+      user_id: "user-1",
+      practice_id: "practice-1",
+      style: "Fr",
+      swim_category: "Swim",
+      rep_count: 4,
+      set_count: 1,
+      distance: 100,
+      circle: 90,
+      note: null,
+      created_at: "2026-07-01T00:00:00Z",
+      updated_at: "2026-07-01T00:00:00Z",
+      practice_times: [],
+      practice_log_tags: [],
+    });
+
+    const renderPracticeClient = () =>
+      render(
+        <NextIntlClientProvider locale="ja" messages={messages as unknown as AbstractIntlMessages}>
+          <PracticeClient styles={[] as Style[]} tags={[]} />
+        </NextIntlClientProvider>,
+      );
+
+    // 「①行クリックで selectedPractice をセット → ②displayPractices から対象 practice が
+    // 消えた状態に rerender → ③ログ削除ボタンをクリック」までを行う共通セットアップ。
+    // 削除後の非同期処理 (mutateAsync/refetch) の完了待ちは各 it 側の waitFor に委ねる。
+    const setupMissingPracticeAndDeleteLog = async (user: ReturnType<typeof userEvent.setup>) => {
+      const mockRefetch = vi.fn();
+      const singleLogPractice = makePractice({ practice_logs: [buildSingleLog()] });
+
+      mocks.usePracticesQuery.mockReturnValue({
+        data: [singleLogPractice],
+        isLoading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+      const { rerender } = renderPracticeClient();
+
+      await user.click(getCardRows()[0]!);
+      expect(screen.getByTestId("practice-detail-modal-stub")).toBeInTheDocument();
+
+      // displayPractices から practice-1 を消す(selectedPractice はローカル state のため
+      // 保持されたまま = 「.find() が外れる」条件を再現する)
+      mocks.usePracticesQuery.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+      rerender(
+        <NextIntlClientProvider locale="ja" messages={messages as unknown as AbstractIntlMessages}>
+          <PracticeClient styles={[] as Style[]} tags={[]} />
+        </NextIntlClientProvider>,
+      );
+
+      await user.click(screen.getByText("ログAを削除"));
+
+      return { mockRefetch };
+    };
+
+    it(
+      "[V-W-P11] displayPractices に対象 practice が含まれない状態でログを削除すると、" +
+        "deletePracticeMutation は一切呼ばれない。かつ deletePracticeLogMutation は呼ばれている" +
+        "(ログ削除自体は成功している=「何も起きない」との区別)",
+      async () => {
+        const user = userEvent.setup();
+        mocks.deletePracticeLogMutateAsync.mockResolvedValue(undefined);
+        mocks.deletePracticeMutateAsync.mockResolvedValue(undefined);
+
+        await setupMissingPracticeAndDeleteLog(user);
+
+        await waitFor(() => {
+          expect(mocks.deletePracticeLogMutateAsync).toHaveBeenCalledWith("log-a");
+        });
+        expect(mocks.deletePracticeMutateAsync).not.toHaveBeenCalled();
+      },
+    );
+
+    it(
+      "[V-W-P12] 同ケースでは setSelectedPractice(null) 相当の挙動が起きない" +
+        "(=詳細モーダルが閉じない)ことを描画結果で確認する",
+      async () => {
+        const user = userEvent.setup();
+        mocks.deletePracticeLogMutateAsync.mockResolvedValue(undefined);
+        mocks.deletePracticeMutateAsync.mockResolvedValue(undefined);
+
+        await setupMissingPracticeAndDeleteLog(user);
+
+        await waitFor(() => {
+          expect(mocks.deletePracticeLogMutateAsync).toHaveBeenCalledWith("log-a");
+        });
+        // 描画結果(スタブモーダルの有無)で判定する。実装の内部 state を直接見ない。
+        expect(screen.getByTestId("practice-detail-modal-stub")).toBeInTheDocument();
+      },
+    );
+
+    it("[V-W-P13] 同ケースでも一覧の再取得(refetch)は行われる", async () => {
+      const user = userEvent.setup();
+      mocks.deletePracticeLogMutateAsync.mockResolvedValue(undefined);
+      mocks.deletePracticeMutateAsync.mockResolvedValue(undefined);
+
+      const { mockRefetch } = await setupMissingPracticeAndDeleteLog(user);
+
+      await waitFor(() => {
+        expect(mockRefetch).toHaveBeenCalled();
+      });
+    });
+  });
+
   describe("スマホ幅調整: 一覧セクションの全幅化(rounded-none)+左右paddingゼロ+カード間隔縮小(大会タブとのパリティ)", () => {
     it("一覧セクションのラッパーが rounded-none sm:rounded-lg を持つ(スマホ幅で角丸を無くし全幅に見せる)", async () => {
       renderClient([makePractice()]);
 
-      const [card] = getCardRows();
+      const card = getCardRows()[0]!;
       const sectionWrapper = card.closest(".rounded-none");
       expect(sectionWrapper).not.toBeNull();
       expect(sectionWrapper?.className).toContain("rounded-none");
@@ -765,12 +909,65 @@ describe("PracticeClient", () => {
       () => {
         renderClient([makePractice()]);
 
-        const [card] = getCardRows();
+        const card = getCardRows()[0]!;
         const listWrapper = card.parentElement;
         expect(listWrapper?.className).toContain("px-0");
         expect(listWrapper?.className).toContain("sm:px-6");
         expect(listWrapper?.className).toContain("space-y-2");
         expect(listWrapper?.className).toContain("sm:space-y-3");
+      },
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // 情報露出防止の対テスト (QA追加): PracticeClient.tsx の削除系ハンドラ
+  // (handleDeletePractice / handleDeletePracticeLog) は
+  // `alert(t("client.saveError", { message: toUserFacingMessage(error, t("client.deleteFailed")) }))`
+  // で失敗を通知する。これまで文言(生エラーが露出しないこと)は未検証だったため追加する。
+  // alert() はブラウザネイティブダイアログのため window.alert をスパイして検証する。
+  // ---------------------------------------------------------------------------
+  describe("[QA追加] 削除失敗時のエラー表示 — 情報露出防止の対テスト", () => {
+    it(
+      "[V-ERR-01] 練習全体の削除が生の Error (RLSポリシー詳細等) で失敗した場合、" +
+        "alert には汎用フォールバック文言が使われ、生のエラー文字列は含まれない",
+      async () => {
+        const user = userEvent.setup();
+        const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+        mocks.deletePracticeMutateAsync.mockRejectedValueOnce(
+          new Error('relation "practices" violates row-level security policy'),
+        );
+        renderClient([makePractice()]);
+
+        await user.click(getCardRows()[0]!);
+        await user.click(screen.getByText("練習全体を削除"));
+
+        await waitFor(() => {
+          expect(alertSpy).toHaveBeenCalledTimes(1);
+        });
+        const message = alertSpy.mock.calls[0]![0] as string;
+        expect(message).toBe("エラー: 削除に失敗しました");
+        expect(message).not.toContain("row-level security policy");
+      },
+    );
+
+    it(
+      "[V-ERR-02] 練習全体の削除が UserFacingError (i18n 済みメッセージ) で失敗した場合、" +
+        "alert にはそのメッセージがそのまま使われる (対照実験)",
+      async () => {
+        const user = userEvent.setup();
+        const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+        mocks.deletePracticeMutateAsync.mockRejectedValueOnce(
+          new UserFacingError("テスト用の翻訳済みメッセージ"),
+        );
+        renderClient([makePractice()]);
+
+        await user.click(getCardRows()[0]!);
+        await user.click(screen.getByText("練習全体を削除"));
+
+        await waitFor(() => {
+          expect(alertSpy).toHaveBeenCalledTimes(1);
+        });
+        expect(alertSpy.mock.calls[0]![0]).toBe("エラー: テスト用の翻訳済みメッセージ");
       },
     );
   });

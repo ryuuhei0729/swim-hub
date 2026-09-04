@@ -44,6 +44,8 @@ const STYLES = [
   { id: 4, name_jp: "200m 自由形", distance: 200 },
 ];
 
+// NOTE: このファイル全体で `!` を多用する。saved[N]!/result[0]! 系は、この関数の戻り配列が
+// legCount(常に4)と一致する長さで返る設計であることに基づく (呼び出し元は全て legCount=4)。
 const STYLE_ID_FOR_RELAY: Record<string, number> = {
   relay_4x100_free: 3,
   relay_4x200_free: 4,
@@ -61,8 +63,10 @@ function saveSplitsPerLeg(
   const cumulatives = calcCumulativeTimes(legTimes);
   const out: Array<{ distance: number; split_time: number }[]> = [];
   for (let legIdx = 0; legIdx < legCount; legIdx++) {
-    const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
-    const legHigh = legBoundaries[legIdx];
+    // legCount は呼び出し元で常に getRelayLegBoundaries(relayEventId).length と一致する値を渡す
+    // (このファイル内の全呼び出しで legCount=4 かつ4×リレーを使用)
+    const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1]!;
+    const legHigh = legBoundaries[legIdx]!;
     const legStart = getLegStartCumulative(cumulatives, legIdx);
     out.push(
       relaySplits
@@ -81,12 +85,16 @@ function reloadGlobalDistances(
   savedPerLeg: Array<{ distance: number; split_time: number }[]>,
   legTimes: number[],
 ): { distance: number; splitTime: number }[] {
-  const styleId = STYLE_ID_FOR_RELAY[relayEventId];
+  // STYLE_ID_FOR_RELAY はこのファイルで実際に使う relay_4x100_free / relay_4x200_free のみを
+  // カバーする (RelayEventId 全種を網羅する必要は無い、テスト専用の最小マップ)
+  const styleId = STYLE_ID_FOR_RELAY[relayEventId]!;
   const records: ExistingRecord[] = savedPerLeg.map((legSplits, idx) => ({
     id: `r-${idx}`,
     user_id: `u-${idx}`,
     style_id: styleId,
-    time: legTimes[idx],
+    // legTimes は呼び出し元で savedPerLeg と同じ leg 数の配列を渡す設計 (このファイル内の
+    // 全呼び出しで saveSplitsPerLeg に渡した同じ配列を再利用している)
+    time: legTimes[idx]!,
     is_relaying: idx !== 0,
     reaction_time: null,
     note: null,
@@ -173,7 +181,7 @@ describe("[S1] 4x200mフリーリレー第4泳者の実データ回帰 (Success 
       { distance: 100, split_time: 94.12 }, // 493.98 - 399.86
       { distance: 150, split_time: 130.42 }, // 530.28 - 399.86
     ]);
-    for (const st of saved[3]) {
+    for (const st of saved[3]!) {
       expect(st.split_time).toBeLessThan(140);
     }
   });
@@ -186,7 +194,7 @@ describe("[S1] 4x200mフリーリレー第4泳者の実データ回帰 (Success 
       "補完する挙動を再現)",
     () => {
       const saved = saveSplitsPerLeg("relay_4x200_free", 4, originalCumulativeSplits, LEG_TIMES_S1);
-      const leg3Splits = saved[3].map((s) => ({ distance: s.distance, splitTime: s.split_time }));
+      const leg3Splits = saved[3]!.map((s) => ({ distance: s.distance, splitTime: s.split_time }));
 
       // RecordSplitTimes.tsx 相当: DB の leg 相対値 + raceDistance(200) のゴール補完 (record.time)
       const displaySplits = [...leg3Splits, { distance: 200, splitTime: RECORD_TIME_LEG3 }];
@@ -261,8 +269,8 @@ describe("[S4] 個人種目 (非リレー) の split_times / lap 表示は現状
       },
     ];
     const result = buildStyleEntriesFromExisting(records, STYLES);
-    expect(result[0].relayEventId).toBeUndefined();
-    const splitTimes = result[0].memberRecords[0].splitTimes;
+    expect(result[0]!.relayEventId).toBeUndefined();
+    const splitTimes = result[0]!.memberRecords[0]!.splitTimes;
     // distance も splitTime も DB の値のまま (leg 相対変換は適用されない)。
     // 200m (= 種目距離) は Phase5 の既存機能でゴール split として record.time (125.0) が
     // 復元される (今回の修正の対象外・不変)
@@ -307,8 +315,8 @@ describe("[S4] 個人種目 (非リレー) の split_times / lap 表示は現状
         },
       ];
       const result = buildStyleEntriesFromExisting(records, [{ id: 2, name_jp: "50m 自由形" }]);
-      expect(result[0].relayEventId).toBeUndefined();
-      expect(result[0].memberRecords[0].splitTimes).toEqual([{ id: "s1", distance: 25, splitTime: 13.0, displayValue: "13.00" }]);
+      expect(result[0]!.relayEventId).toBeUndefined();
+      expect(result[0]!.memberRecords[0]!.splitTimes).toEqual([{ id: "s1", distance: 25, splitTime: 13.0, displayValue: "13.00" }]);
     },
   );
 });

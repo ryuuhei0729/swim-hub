@@ -27,12 +27,7 @@ const VideoPlayer = dynamic(() => import("@/components/video/VideoPlayer"), {
 });
 import type { CompetitionShareData } from "@/components/share";
 import { formatTimeBest } from "@/utils/formatters";
-import {
-  styleIdToCodeKey,
-  nameJpToCodeKey,
-  buildSwimStyleLabel,
-  type StyleCodeKey,
-} from "@/utils/swimStyle";
+import { styleIdToCodeKey, nameJpToCodeKey, buildSwimStyleLabel } from "@/utils/swimStyle";
 import { useLocale } from "next-intl";
 import { useAuth } from "@/contexts";
 import RecordBestBadge from "@/components/ui/RecordBestBadge";
@@ -43,7 +38,6 @@ import type {
   Record as RecordType,
   SplitTime,
   PoolType,
-  SwimStyle,
 } from "@apps/shared/types";
 import { AttendanceButton } from "../AttendanceSection";
 import { RecordSplitTimes } from "./RecordSplitTimes";
@@ -52,17 +46,6 @@ import { RecordAPI } from "@apps/shared/api/records";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
 import { DEFAULT_COMPETITION_COLOR } from "@apps/shared/utils/calendarColorResolver";
 import { formatStyleAbbrev } from "@apps/shared/utils/swimStyles";
-
-// StyleCodeKey ("Fr"/"Ba"/"Br"/"Fly"/"IM") → shared formatStyleAbbrev が要求する
-// SwimStyle コード ("fr"/"ba"/"br"/"fly"/"im")。カード(CompetitionRecordCard)と
-// 略称の組み立てロジックを一本化するための橋渡し。
-const CODE_KEY_TO_SWIM_STYLE: Record<StyleCodeKey, SwimStyle> = {
-  Fr: "fr",
-  Ba: "ba",
-  Br: "br",
-  Fly: "fly",
-  IM: "im",
-};
 
 // 色の明度に基づいてテキスト色を決定する関数(PracticeDetails.tsx と同一アルゴリズム)
 const getTextColor = (backgroundColor: string) => {
@@ -148,7 +131,7 @@ export function CompetitionDetails({
           ? nameJpToCodeKey(nameJp)
           : null;
     return formatStyleAbbrev({
-      style: codeKey ? CODE_KEY_TO_SWIM_STYLE[codeKey] : undefined,
+      style: codeKey ?? undefined,
       distance,
       name_jp: nameJp ?? fallback,
     });
@@ -282,6 +265,12 @@ export function CompetitionDetails({
               },
               competition: record.competition || undefined,
               style: record.style || undefined,
+              // PM報告(Warning2トリアージ): record.competition は RecordFromDB 上 optional。
+              // このクエリは .eq("competition_id", competitionId) で現在表示中の大会に紐づく
+              // record のみを取得するため通常は必ず join されるが、表示中に大会が削除される
+              // 競合（レース）では null になり得る。この値は line ~508 の onEditRecord 経路で
+              // editData.pool_type として記録編集フォームに渡り、そのまま保存され得るため
+              // 「0が業務的に正しいデフォルトか」を独断で決めず残す。
               pool_type: record.competition?.pool_type || 0,
             },
           }),
@@ -503,6 +492,12 @@ export function CompetitionDetails({
                     reaction_time: recordData.reaction_time ?? null,
                     created_at: "",
                     updated_at: "",
+                    // PM報告(Warning2トリアージ): record.metadata.pool_type は上の formattedRecords
+                    // 構築時に `record.competition?.pool_type || 0` から入るため通常は実値だが、
+                    // 大会が削除された競合時は undefined になり得る (同ファイル line ~285 参照)。
+                    // ここで 0 に潰した値は onEditRecord?.(editData) を通じて記録編集フォームの
+                    // 初期値になり、ユーザーが気付かず保存すると長水路の記録が短水路として
+                    // 保存され得る。挙動を変える判断はできないため残す。
                     pool_type: ((
                       record.metadata as { pool_type?: number } | undefined
                     )?.pool_type ?? 0) as PoolType,

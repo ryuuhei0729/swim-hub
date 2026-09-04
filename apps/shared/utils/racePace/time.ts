@@ -38,7 +38,9 @@ export function parseTimeToMs(raw: string | null | undefined): number | null {
   if (minutes >= 60 && hours > 0) return null;
 
   // 小数部を ms へ桁合わせ: "5"->500, "52"->520, "523"->523
-  const fracMs = Number(fracStr.padEnd(3, "0"));
+  // fracStr は TIME_PATTERN の必須キャプチャグループ (g1/g2 のような ?: の外) なので、
+  // m がマッチしていれば常に文字列が入る
+  const fracMs = Number(fracStr!.padEnd(3, "0"));
 
   return ((hours * 60 + minutes) * 60 + seconds) * 1000 + fracMs;
 }

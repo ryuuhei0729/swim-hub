@@ -290,7 +290,7 @@ const VALID_RECORD: RecordWithDetails = {
     id: 1,
     name_jp: "100m自由形",
     name: "100Fr",
-    style: "fr",
+    style: "Fr",
     distance: 100,
   },
   split_times: [],

@@ -27,7 +27,9 @@ export type TagColor = (typeof TAG_COLORS)[number];
  * ランダムなタグカラーを取得
  */
 export function getRandomTagColor(): TagColor {
-  return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
+  // Math.floor(Math.random() * length) は常に [0, length-1] の整数になるため、
+  // TAG_COLORS（固定長10の配列）の範囲外になることはない
+  return TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)]!;
 }
 
 /**
@@ -40,5 +42,7 @@ export function getColorForName(name: string): TagColor {
   for (let i = 0; i < name.length; i++) {
     hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   }
-  return TAG_COLORS[hash % TAG_COLORS.length];
+  // hash は >>> 0 で非負整数に固定されているため、% length の結果は常に [0, length-1] になり
+  // TAG_COLORS（固定長10の配列）の範囲外になることはない
+  return TAG_COLORS[hash % TAG_COLORS.length]!;
 }

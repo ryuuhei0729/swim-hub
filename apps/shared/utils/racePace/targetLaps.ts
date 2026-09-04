@@ -39,13 +39,13 @@ export function generateTargetLaps({
   let allocated = 0;
 
   // 最終LAP以外を granularity 単位で配分
-  for (let i = 0; i < model.laps.length - 1; i++) {
-    const normalized = model.laps[i].ratioMedian / ratioSum;
+  for (const lap of model.laps.slice(0, -1)) {
+    const normalized = lap.ratioMedian / ratioSum;
     const raw = normalized * targetTimeMs;
     const lapTimeMs = Math.max(g, Math.round(raw / g) * g);
     allocated += lapTimeMs;
     laps.push({
-      distance: model.laps[i].distance,
+      distance: lap.distance,
       lapTimeMs,
       cumulativeTimeMs: allocated,
     });
@@ -53,6 +53,7 @@ export function generateTargetLaps({
 
   // 最終LAP が残余を吸収する => 合計は必ず targetTimeMs
   const last = model.laps[model.laps.length - 1];
+  if (!last) return base; // model.laps.length === 0 は上で return 済みだが、防御的に扱う
   laps.push({
     distance: last.distance,
     lapTimeMs: targetTimeMs - allocated,

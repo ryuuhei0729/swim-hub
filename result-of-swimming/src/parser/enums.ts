@@ -3,6 +3,14 @@
 // =============================================================================
 // Phase 0 実測値。API は {code, name} を返すため、可能なら name を優先して
 // 判定する (code の意味が既存 scraping/types.ts のコメントと食い違っていた前例あり)。
+//
+// RawStroke (../types.ts) は @shared/racePace の Stroke (= apps/shared の
+// SwimStyle 型エイリアス) から導出している。つまりこのファイルは
+// result-of-swimming 独自の閉じた語彙ではなく swim-hub 全体の canonical に
+// 直結しており、STROKE_BY_CODE は「外部 API のコード (1-5) -> canonical」の
+// 境界変換層そのもの。SwimStyle (apps/shared/types/common.ts) の値集合が
+// 変わったときはこのファイルも追従が必要 (このパッケージは他スプリントの
+// 変更範囲から漏れやすいので明記する)。
 // =============================================================================
 import type { PoolLength, RawGender, RawStroke } from "../types";
 
@@ -11,13 +19,18 @@ export const GENDER_BY_CODE: Record<number, RawGender> = {
   2: "female",
 };
 
-/** swimming_style.code -> styles.style。6/7 はリレーなので個人種目の語彙を持たない */
+/**
+ * swimming_style.code -> styles.style。6/7 はリレーなので個人種目の語彙を持たない。
+ * 数値コードと種目の対応 (1=自由形, 2=背泳ぎ, 3=平泳ぎ, 4=バタフライ, 5=個人メドレー) は
+ * canonical 配列の並び順 (Fr, Br, Ba, Fly, IM) とは順序が異なる。ケーシングを
+ * 変える際も対応関係 (特に 2=Ba, 3=Br) を機械的な並べ替えで崩さないこと。
+ */
 export const STROKE_BY_CODE: Record<number, RawStroke> = {
-  1: "fr",
-  2: "ba",
-  3: "br",
-  4: "fly",
-  5: "im",
+  1: "Fr",
+  2: "Ba",
+  3: "Br",
+  4: "Fly",
+  5: "IM",
 };
 
 /** リレー種目の swimming_style.code */

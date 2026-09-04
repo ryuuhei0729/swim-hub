@@ -22,7 +22,7 @@ import type { RacePaceModel } from "../../../utils/racePace/types";
 const model100fr: RacePaceModel = {
   gender: "male",
   poolType: 1,
-  stroke: "fr",
+  stroke: "Fr",
   distance: 100,
   splitInterval: 50,
   ageCategory: "all",
@@ -40,8 +40,9 @@ describe("generateTargetLaps", () => {
   it("[V-G1][V-G4] median ratio から LAP と累積を生成する", () => {
     const out = generateTargetLaps({ targetTimeMs: 50000, model: model100fr });
     expect(out.laps.map((l) => l.distance)).toEqual([50, 100]);
-    expect(out.laps[0].lapTimeMs).toBe(24000);
-    expect(out.laps[1].lapTimeMs).toBe(26000);
+    // model100fr.laps は2件固定なので out.laps も必ず2件になる
+    expect(out.laps[0]!.lapTimeMs).toBe(24000);
+    expect(out.laps[1]!.lapTimeMs).toBe(26000);
     expect(out.laps.map((l) => l.cumulativeTimeMs)).toEqual([24000, 50000]);
     expect(out.targetTimeMs).toBe(50000);
   });
@@ -55,7 +56,8 @@ describe("generateTargetLaps", () => {
       const out = generateTargetLaps({ targetTimeMs: target, model: model100fr });
       const sum = out.laps.reduce((a, l) => a + l.lapTimeMs, 0);
       expect(sum, `target=${target}`).toBe(target);
-      expect(out.laps[out.laps.length - 1].cumulativeTimeMs, `target=${target}`).toBe(target);
+      // model100fr.laps.length > 0 のため out.laps は常に1件以上
+      expect(out.laps[out.laps.length - 1]!.cumulativeTimeMs, `target=${target}`).toBe(target);
     }
   });
 
@@ -63,16 +65,23 @@ describe("generateTargetLaps", () => {
     const model = {
       ...model100fr,
       distance: 400,
+      // ratioMedian の配列は distance 配列と同じ8要素なので、同じ i で必ず対応する値がある
       laps: [50, 100, 150, 200, 250, 300, 350, 400].map((distance, i) => ({
         distance,
-        ratioMedian: [0.114, 0.126, 0.128, 0.129, 0.128, 0.127, 0.126, 0.122][i],
+        ratioMedian: [0.114, 0.126, 0.128, 0.129, 0.128, 0.127, 0.126, 0.122][i]!,
         ratioP25: 0,
         ratioP75: 0,
       })),
     };
     const out = generateTargetLaps({ targetTimeMs: 229310, model });
     const cums = out.laps.map((l) => l.cumulativeTimeMs);
-    for (let i = 1; i < cums.length; i++) expect(cums[i]).toBeGreaterThan(cums[i - 1]);
+    for (let i = 1; i < cums.length; i++) {
+      const prev = cums[i - 1];
+      const curr = cums[i];
+      // i>=1 かつ i<cums.length なので理論上 undefined にならないが、防御的に扱う
+      if (prev === undefined || curr === undefined) continue;
+      expect(curr).toBeGreaterThan(prev);
+    }
     expect(cums[cums.length - 1]).toBe(229310);
     expect(out.laps.reduce((a, l) => a + l.lapTimeMs, 0)).toBe(229310);
   });
@@ -100,8 +109,8 @@ describe("generateTargetLaps", () => {
     };
     const out = generateTargetLaps({ targetTimeMs: 50000, model: skewed });
     expect(out.laps.reduce((a, l) => a + l.lapTimeMs, 0)).toBe(50000);
-    // 正規化されるので前半が極端に短くならない
-    expect(out.laps[0].lapTimeMs).toBeGreaterThan(20000);
+    // 正規化されるので前半が極端に短くならない (skewed.laps は2件固定)
+    expect(out.laps[0]!.lapTimeMs).toBeGreaterThan(20000);
   });
 
   it("LAP が無いモデルは空の laps を返す (throw しない)", () => {
@@ -134,18 +143,19 @@ describe("interpolateLapRatios", () => {
 
   it("[V-G6] 2モデルの中間で線形補間する", () => {
     const mid = interpolateLapRatios(low, high, 50000);
-    expect(mid[0].ratioMedian).toBeCloseTo(0.48, 10);
-    expect(mid[1].ratioMedian).toBeCloseTo(0.52, 10);
+    // interpolateLapRatios の戻り値の長さは low.laps (2件固定) と同じ
+    expect(mid[0]!.ratioMedian).toBeCloseTo(0.48, 10);
+    expect(mid[1]!.ratioMedian).toBeCloseTo(0.52, 10);
   });
 
   it("[V-G6] center と一致する目標では該当モデルの値になる", () => {
-    expect(interpolateLapRatios(low, high, 49750)[0].ratioMedian).toBeCloseTo(0.47, 10);
-    expect(interpolateLapRatios(low, high, 50250)[0].ratioMedian).toBeCloseTo(0.49, 10);
+    expect(interpolateLapRatios(low, high, 49750)[0]!.ratioMedian).toBeCloseTo(0.47, 10);
+    expect(interpolateLapRatios(low, high, 50250)[0]!.ratioMedian).toBeCloseTo(0.49, 10);
   });
 
   it("[V-G6] 範囲外は端のモデルにクランプする (外挿しない)", () => {
-    expect(interpolateLapRatios(low, high, 40000)[0].ratioMedian).toBeCloseTo(0.47, 10);
-    expect(interpolateLapRatios(low, high, 90000)[0].ratioMedian).toBeCloseTo(0.49, 10);
+    expect(interpolateLapRatios(low, high, 40000)[0]!.ratioMedian).toBeCloseTo(0.47, 10);
+    expect(interpolateLapRatios(low, high, 90000)[0]!.ratioMedian).toBeCloseTo(0.49, 10);
   });
 
   it("[V-G6] 補間した比率で生成しても合計保証が保たれる", () => {

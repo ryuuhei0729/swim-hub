@@ -303,8 +303,9 @@ describe("BestTimeBadge (web 一覧用・3状態常時表示)", () => {
       // 確認する(実際のキャッシュ共有は react-query 側の責務であり、shared側の
       // useListBestCandidatesQuery のテストで検証済み。ここでは呼び出し引数の一致を確認する)
       expect(mocks.useListBestCandidatesQuery).toHaveBeenCalledTimes(2);
-      const [, firstCallOptions] = mocks.useListBestCandidatesQuery.mock.calls[0];
-      const [, secondCallOptions] = mocks.useListBestCandidatesQuery.mock.calls[1];
+      // 直前の toHaveBeenCalledTimes(2) で calls[0]/calls[1] の存在を確認済み
+      const [, firstCallOptions] = mocks.useListBestCandidatesQuery.mock.calls[0]!;
+      const [, secondCallOptions] = mocks.useListBestCandidatesQuery.mock.calls[1]!;
       expect(firstCallOptions).toMatchObject({
         userId: "user-1",
         styleId: 1,

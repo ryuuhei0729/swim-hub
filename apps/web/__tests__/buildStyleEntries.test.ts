@@ -4,6 +4,12 @@ import {
   ExistingRecord,
 } from "../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/buildStyleEntries";
 
+// NOTE: このファイル全体で配列インデックスアクセスに non-null assertion (`!`) を多用する。
+// - `result[0]!` 系: 直前の `toHaveLength(1)` 等で長さを確認済み
+// - `legSplits[idx]!` 系: このファイルの各 make*Records ヘルパーは呼び出し元が必ず4要素の配列を
+//   渡す設計(4レグ固定のリレー)であり、ファイル内の全呼び出し箇所で実際に4要素を渡している
+// - `entry.memberRecords[N]!` 系: 4レグリレーの復元結果は必ず4件の memberRecords を持つ
+
 function makeRecord(
   overrides: Partial<ExistingRecord> & { style_id: number; time: number },
 ): ExistingRecord {
@@ -32,17 +38,17 @@ describe("buildStyleEntriesFromExisting", () => {
   it("空配列の場合、空の StyleEntry を 1 つ返す", () => {
     const result = buildStyleEntriesFromExisting([], STYLES);
     expect(result).toHaveLength(1);
-    expect(result[0].styleId).toBe("");
-    expect(result[0].memberRecords).toHaveLength(0);
+    expect(result[0]!.styleId).toBe("");
+    expect(result[0]!.memberRecords).toHaveLength(0);
   });
 
   it("個人種目 1 件のみ: 区間タイムがそのまま表示される", () => {
     const records = [makeRecord({ style_id: 2, time: 27.5 })];
     const result = buildStyleEntriesFromExisting(records, STYLES);
     expect(result).toHaveLength(1);
-    expect(result[0].styleId).toBe(2);
-    expect(result[0].relayEventId).toBeUndefined();
-    expect(result[0].memberRecords[0].time).toBe(27.5);
+    expect(result[0]!.styleId).toBe(2);
+    expect(result[0]!.relayEventId).toBeUndefined();
+    expect(result[0]!.memberRecords[0]!.time).toBe(27.5);
   });
 
   describe("Phase 1+2: メドレーリレー検出", () => {
@@ -55,8 +61,8 @@ describe("buildStyleEntriesFromExisting", () => {
       ];
       const result = buildStyleEntriesFromExisting(records, STYLES);
       expect(result).toHaveLength(1);
-      expect(result[0].relayEventId).toBe("relay_4x50_medley");
-      expect(result[0].memberRecords).toHaveLength(4);
+      expect(result[0]!.relayEventId).toBe("relay_4x50_medley");
+      expect(result[0]!.memberRecords).toHaveLength(4);
     });
 
     it("累計タイムが正しく算出される", () => {
@@ -67,11 +73,11 @@ describe("buildStyleEntriesFromExisting", () => {
         makeRecord({ style_id: 2, time: 13.5, is_relaying: true }),
       ];
       const result = buildStyleEntriesFromExisting(records, STYLES);
-      const mrs = result[0].memberRecords;
-      expect(mrs[0].cumulativeTimeSeconds).toBe(15.0);
-      expect(mrs[1].cumulativeTimeSeconds).toBe(31.0);
-      expect(mrs[2].cumulativeTimeSeconds).toBe(45.5);
-      expect(mrs[3].cumulativeTimeSeconds).toBe(59.0);
+      const mrs = result[0]!.memberRecords;
+      expect(mrs[0]!.cumulativeTimeSeconds).toBe(15.0);
+      expect(mrs[1]!.cumulativeTimeSeconds).toBe(31.0);
+      expect(mrs[2]!.cumulativeTimeSeconds).toBe(45.5);
+      expect(mrs[3]!.cumulativeTimeSeconds).toBe(59.0);
     });
   });
 
@@ -85,8 +91,8 @@ describe("buildStyleEntriesFromExisting", () => {
       ];
       const result = buildStyleEntriesFromExisting(records, STYLES);
       expect(result).toHaveLength(1);
-      expect(result[0].relayEventId).toBe("relay_4x50_free");
-      expect(result[0].memberRecords).toHaveLength(4);
+      expect(result[0]!.relayEventId).toBe("relay_4x50_free");
+      expect(result[0]!.memberRecords).toHaveLength(4);
     });
   });
 
@@ -107,7 +113,7 @@ describe("buildStyleEntriesFromExisting", () => {
       expect(relayEntry).toBeDefined();
       expect(relayEntry!.relayEventId).toBe("relay_4x50_medley");
       expect(individualEntry).toBeDefined();
-      expect(individualEntry!.memberRecords[0].time).toBe(30.0);
+      expect(individualEntry!.memberRecords[0]!.time).toBe(30.0);
     });
   });
 
@@ -137,16 +143,15 @@ function makeRelayRecords4x100Free(
   legSplits: Array<{ distance: number; split_time: number }[]>,
 ): ExistingRecord[] {
   const times = [57.0, 58.5, 57.8, 56.7];
-  const isRelayingFlags = [false, true, true, true];
   return times.map((time, idx) => ({
     id: crypto.randomUUID(),
     user_id: `user-${idx}`,
     style_id: 3, // 100m 自由形
     time,
-    is_relaying: isRelayingFlags[idx],
+    is_relaying: idx !== 0, // times配列と同じ長さの固定パターン(先頭のみfalse)
     reaction_time: null,
     note: null,
-    split_times: legSplits[idx].map((st, stIdx) => ({
+    split_times: legSplits[idx]!.map((st, stIdx) => ({
       id: `st-${idx}-${stIdx}`,
       distance: st.distance,
       split_time: st.split_time,
@@ -160,16 +165,15 @@ function makeRelayRecords4x50Free(
   legSplits: Array<{ distance: number; split_time: number }[]>,
 ): ExistingRecord[] {
   const times = [27.5, 28.7, 28.3, 27.6];
-  const isRelayingFlags = [false, true, true, true];
   return times.map((time, idx) => ({
     id: crypto.randomUUID(),
     user_id: `user-${idx}`,
     style_id: 2, // 50m 自由形
     time,
-    is_relaying: isRelayingFlags[idx],
+    is_relaying: idx !== 0, // times配列と同じ長さの固定パターン(先頭のみfalse)
     reaction_time: null,
     note: null,
-    split_times: legSplits[idx].map((st, stIdx) => ({
+    split_times: legSplits[idx]!.map((st, stIdx) => ({
       id: `st-${idx}-${stIdx}`,
       distance: st.distance,
       split_time: st.split_time,
@@ -183,16 +187,15 @@ function makeRelayRecords4x200Free(
   legSplits: Array<{ distance: number; split_time: number }[]>,
 ): ExistingRecord[] {
   const times = [115.0, 116.5, 115.8, 114.7];
-  const isRelayingFlags = [false, true, true, true];
   return times.map((time, idx) => ({
     id: crypto.randomUUID(),
     user_id: `user-${idx}`,
     style_id: 4, // 200m 自由形
     time,
-    is_relaying: isRelayingFlags[idx],
+    is_relaying: idx !== 0, // times配列と同じ長さの固定パターン(先頭のみfalse)
     reaction_time: null,
     note: null,
-    split_times: legSplits[idx].map((st, stIdx) => ({
+    split_times: legSplits[idx]!.map((st, stIdx) => ({
       id: `st-${idx}-${stIdx}`,
       distance: st.distance,
       split_time: st.split_time,
@@ -344,7 +347,7 @@ describe("[新機能] StyleEntry.relaySplitTimes フィールドの復元", () =
         const entry = result.find((e) => e.relayEventId === "relay_4x50_free");
         expect(entry).toBeDefined();
         // leg3 の cumulative は 112.1
-        expect(entry!.memberRecords[3].cumulativeTimeSeconds).toBeCloseTo(112.1, 1);
+        expect(entry!.memberRecords[3]!.cumulativeTimeSeconds).toBeCloseTo(112.1, 1);
         // relaySplitTimes の distance=200 のスプリット (leg3 → offset150+50=200) は
         // D4 修正により leg 相対値 (27.6) + legStart(84.5) = 112.1 (leg3 の全区間 = 累計と一致)
         const dist200 = (entry!.relaySplitTimes ?? []).find((st) => st.distance === 200);
@@ -364,7 +367,7 @@ describe("[新機能] StyleEntry.relaySplitTimes フィールドの復元", () =
       // style_id=3×4 → relay_4x100_free として復元されるはず
       const entry = result.find((e) => e.relayEventId === "relay_4x100_free");
       expect(entry).toBeDefined();
-      expect(entry!.memberRecords[3].cumulativeTimeSeconds).toBe(0);
+      expect(entry!.memberRecords[3]!.cumulativeTimeSeconds).toBe(0);
     });
   });
 });
@@ -682,18 +685,17 @@ describe("[C3] DB復元: 4×100メドレーリレーの復元対称性", () => {
     legSplits: Array<{ distance: number; split_time: number }[]>,
   ): ExistingRecord[] {
     const times = [62.0, 70.5, 64.8, 58.7];
-    const isRelayingFlags = [false, true, true, true];
     // ba=14, br=10, fly=18, fr=3 (relay_4x100_medley)
     const styleIds = [14, 10, 18, 3];
     return times.map((time, idx) => ({
       id: crypto.randomUUID(),
       user_id: `user-${idx}`,
-      style_id: styleIds[idx],
+      style_id: styleIds[idx]!, // styleIds は times と同じ固定長4の配列でこの関数内でのみ対応付けられる
       time,
-      is_relaying: isRelayingFlags[idx],
+      is_relaying: idx !== 0, // times配列と同じ長さの固定パターン(先頭のみfalse)
       reaction_time: null,
       note: null,
-      split_times: legSplits[idx].map((st, stIdx) => ({
+      split_times: legSplits[idx]!.map((st, stIdx) => ({
         id: `st-${idx}-${stIdx}`,
         distance: st.distance,
         split_time: st.split_time,
@@ -769,10 +771,10 @@ describe("[C3] DB復元: 4×100メドレーリレーの復元対称性", () => {
 // =============================================================================
 // [Warning-1] handleRelayTotalTimeChange の ?? → > 0 修正の単体検証
 //
-// 修正前: newCumulatives[idx] ?? mr.cumulativeTimeSeconds ?? 0
-//   → newCumulatives[idx] === 0 のとき 0 ?? ... が 0 を返す (既存値を上書き)
+// 修正前: newCumulatives[idx]! ?? mr.cumulativeTimeSeconds ?? 0
+//   → newCumulatives[idx]! === 0 のとき 0 ?? ... が 0 を返す (既存値を上書き)
 // 修正後: newCum > 0 ? newCum : (mr.cumulativeTimeSeconds ?? 0)
-//   → newCumulatives[idx] === 0 のとき既存の cumulativeTimeSeconds を保持する
+//   → newCumulatives[idx]! === 0 のとき既存の cumulativeTimeSeconds を保持する
 //
 // RecordClient.tsx 内の React ステート更新ロジックを直接テストできないため、
 // 修正した条件式と同等のピュア関数として抽出して検証する。
@@ -784,34 +786,34 @@ describe("[C3] DB復元: 4×100メドレーリレーの復元対称性", () => {
 // =============================================================================
 
 describe("[V-GUARD-01] buildStyleEntriesFromExisting: styleName フィールドが name_jp 生値を保持する", () => {
-  it("style_id=2 (50m 自由形) の record → result[0].styleName === '50m 自由形'", () => {
+  it("style_id=2 (50m 自由形) の record → result[0]!.styleName === '50m 自由形'", () => {
     const records = [makeRecord({ style_id: 2, time: 27.5 })];
     const result = buildStyleEntriesFromExisting(records, STYLES);
-    expect(result[0].styleName).toBe("50m 自由形");
+    expect(result[0]!.styleName).toBe("50m 自由形");
   });
 
-  it("style_id=13 (50m 背泳ぎ) の record → result[0].styleName === '50m 背泳ぎ'", () => {
+  it("style_id=13 (50m 背泳ぎ) の record → result[0]!.styleName === '50m 背泳ぎ'", () => {
     const records = [makeRecord({ style_id: 13, time: 32.1 })];
     const result = buildStyleEntriesFromExisting(records, STYLES);
-    expect(result[0].styleName).toBe("50m 背泳ぎ");
+    expect(result[0]!.styleName).toBe("50m 背泳ぎ");
   });
 
-  it("styles に存在しない style_id=99 → result[0].styleName === ''", () => {
+  it("styles に存在しない style_id=99 → result[0]!.styleName === ''", () => {
     const records = [makeRecord({ style_id: 99, time: 30.0 })];
     const result = buildStyleEntriesFromExisting(records, STYLES);
-    expect(result[0].styleName).toBe("");
+    expect(result[0]!.styleName).toBe("");
   });
 
-  it("空配列 → result[0].styleName === '' (空エントリーのフォールバック)", () => {
+  it("空配列 → result[0]!.styleName === '' (空エントリーのフォールバック)", () => {
     const result = buildStyleEntriesFromExisting([], STYLES);
-    expect(result[0].styleName).toBe("");
+    expect(result[0]!.styleName).toBe("");
   });
 
   it("styleName が翻訳後フィールドでないことを確認: '50m 自由形' に 'Freestyle' が含まれない", () => {
     const records = [makeRecord({ style_id: 2, time: 27.5 })];
     const result = buildStyleEntriesFromExisting(records, STYLES);
-    expect(result[0].styleName).not.toContain("Freestyle");
-    expect(result[0].styleName).not.toContain("Free");
+    expect(result[0]!.styleName).not.toContain("Freestyle");
+    expect(result[0]!.styleName).not.toContain("Free");
   });
 });
 
@@ -848,7 +850,7 @@ describe("[Warning-1] cumTime の ?? フォールバック修正の検証", () =
     const newCumulatives = [0, 0, 0, 230.0];
 
     const result = existingCumulatives.map((existing, idx) =>
-      resolveCumTime(newCumulatives[idx], existing)
+      resolveCumTime(newCumulatives[idx]!, existing)
     );
 
     // leg0-2 の既存累計タイムが保持される
@@ -900,7 +902,7 @@ describe("保存→再オープンのラップタイム復元", () => {
       // 境界スプリットは各 leg の累計タイムそのもの。ズレると合計タイム欄と矛盾する
       boundaries.forEach((distance, idx) => {
         expect(entry.relaySplitTimes!.find((st) => st.distance === distance)!.splitTime).toBe(
-          entry.memberRecords[idx].cumulativeTimeSeconds,
+          entry.memberRecords[idx]!.cumulativeTimeSeconds,
         );
       });
     });
@@ -917,7 +919,7 @@ describe("保存→再オープンのラップタイム復元", () => {
           split_times: [{ id: "st-1", distance: 50, split_time: 26.0 }],
         }),
       ];
-      const splitTimes = buildStyleEntriesFromExisting(records, STYLES)[0].memberRecords[0]
+      const splitTimes = buildStyleEntriesFromExisting(records, STYLES)[0]!.memberRecords[0]!
         .splitTimes;
 
       expect(splitTimes.map((st) => st.distance)).toEqual([50, 100]);
@@ -927,7 +929,7 @@ describe("保存→再オープンのラップタイム復元", () => {
     it("ラップタイムを 1 件も持たない記録には、ゴール地点スプリットを追加しない", () => {
       // ラップ未入力の行に空でない入力欄を勝手に生やさないため
       const records = [makeRecord({ style_id: 3, time: 54.0, split_times: [] })];
-      const splitTimes = buildStyleEntriesFromExisting(records, STYLES)[0].memberRecords[0]
+      const splitTimes = buildStyleEntriesFromExisting(records, STYLES)[0]!.memberRecords[0]!
         .splitTimes;
 
       expect(splitTimes).toHaveLength(0);
@@ -944,7 +946,7 @@ describe("保存→再オープンのラップタイム復元", () => {
           ],
         }),
       ];
-      const splitTimes = buildStyleEntriesFromExisting(records, STYLES)[0].memberRecords[0]
+      const splitTimes = buildStyleEntriesFromExisting(records, STYLES)[0]!.memberRecords[0]!
         .splitTimes;
 
       expect(splitTimes.filter((st) => st.distance === 100)).toHaveLength(1);
@@ -964,7 +966,7 @@ describe("保存→再オープンのラップタイム復元", () => {
       )!;
 
       // leg0 の splitTimes は保存済みの 50m のみ (100m = leg タイム 57.0 が足されていない)
-      expect(entry.memberRecords[0].splitTimes.map((st) => st.distance)).toEqual([50]);
+      expect(entry.memberRecords[0]!.splitTimes.map((st) => st.distance)).toEqual([50]);
     });
   });
 });

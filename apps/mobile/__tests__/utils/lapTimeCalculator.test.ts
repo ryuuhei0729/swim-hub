@@ -24,7 +24,7 @@ import {
   calculateAllLapTimes,
   calculateRaceLapTimesTable,
   getLapIntervalsForRace,
-  type SplitTime,
+  type LapSplitPoint,
 } from "@/utils/lapTimeCalculator";
 
 describe("lapTimeCalculator (mobile, web 同値)", () => {
@@ -34,14 +34,14 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("1つのsplit-timeは0mからのlap-timeを返す", () => {
-      const splitTimes: SplitTime[] = [{ distance: 50, splitTime: 30.5 }];
+      const splitTimes: LapSplitPoint[] = [{ distance: 50, splitTime: 30.5 }];
       expect(calculateAllLapTimes(splitTimes)).toEqual([
         { fromDistance: 0, toDistance: 50, lapTime: 30.5 },
       ]);
     });
 
     it("複数のsplit-timeから連続するlap-timeを計算する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 50, splitTime: 30.0 },
         { distance: 100, splitTime: 62.0 },
       ];
@@ -52,7 +52,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("100m自由形の典型的なsplit-timeを計算する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 25, splitTime: 12.5 },
         { distance: 50, splitTime: 26.0 },
         { distance: 75, splitTime: 40.0 },
@@ -67,7 +67,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("ソートされていないsplit-timeも正しく処理する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 100, splitTime: 62.0 },
         { distance: 50, splitTime: 30.0 },
       ];
@@ -78,7 +78,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("200m個人メドレーの全ラップを計算する (リレー/IM)", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 50, splitTime: 28.0 },
         { distance: 100, splitTime: 62.0 },
         { distance: 150, splitTime: 100.0 },
@@ -93,7 +93,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
 
   describe("[LAP-02] calculateAllLapTimes 異常系", () => {
     it("split-timeが0の場合はそのlap-timeを計算しない", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 50, splitTime: 30.0 },
         { distance: 100, splitTime: 0 },
         { distance: 150, splitTime: 95.0 },
@@ -104,7 +104,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("0mから始まるsplit-timeがある場合は最初のlapを生成しない", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 0, splitTime: 0 },
         { distance: 50, splitTime: 30.0 },
       ];
@@ -148,7 +148,7 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
     });
 
     it("100m自由形のテーブルを生成する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 25, splitTime: 12.5 },
         { distance: 50, splitTime: 26.0 },
         { distance: 75, splitTime: 40.0 },
@@ -156,16 +156,16 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
       ];
       const result = calculateRaceLapTimesTable(splitTimes, 100);
       expect(result).toHaveLength(4);
-      expect(result[0].lapTimes[25]).toBe(12.5);
-      expect(result[0].lapTimes[50]).toBeNull();
-      expect(result[1].lapTimes[25]).toBe(13.5);
-      expect(result[1].lapTimes[50]).toBe(26.0);
-      expect(result[3].lapTimes[25]).toBe(15.0);
-      expect(result[3].lapTimes[50]).toBe(29.0);
+      expect(result[0]!.lapTimes[25]).toBe(12.5); // 直前の toHaveLength(4) で存在は保証済み
+      expect(result[0]!.lapTimes[50]).toBeNull();
+      expect(result[1]!.lapTimes[25]).toBe(13.5);
+      expect(result[1]!.lapTimes[50]).toBe(26.0);
+      expect(result[3]!.lapTimes[25]).toBe(15.0);
+      expect(result[3]!.lapTimes[50]).toBe(29.0);
     });
 
     it("200m種目のテーブルを生成する", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 50, splitTime: 28.0 },
         { distance: 100, splitTime: 60.0 },
         { distance: 150, splitTime: 95.0 },
@@ -173,34 +173,34 @@ describe("lapTimeCalculator (mobile, web 同値)", () => {
       ];
       const result = calculateRaceLapTimesTable(splitTimes, 200);
       expect(result).toHaveLength(4);
-      expect(result[1].lapTimes[50]).toBe(32.0);
-      expect(result[1].lapTimes[100]).toBe(60.0);
-      expect(result[3].lapTimes[50]).toBe(35.0);
-      expect(result[3].lapTimes[100]).toBe(70.0);
+      expect(result[1]!.lapTimes[50]).toBe(32.0); // 直前の toHaveLength(4) で存在は保証済み
+      expect(result[1]!.lapTimes[100]).toBe(60.0);
+      expect(result[3]!.lapTimes[50]).toBe(35.0);
+      expect(result[3]!.lapTimes[100]).toBe(70.0);
     });
 
     it("25mの倍数でない距離はフィルタリングされる", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 25, splitTime: 12.5 },
         { distance: 30, splitTime: 15.0 },
         { distance: 50, splitTime: 26.0 },
       ];
       const result = calculateRaceLapTimesTable(splitTimes, 100);
       expect(result).toHaveLength(2);
-      expect(result[0].distance).toBe(25);
-      expect(result[1].distance).toBe(50);
+      expect(result[0]!.distance).toBe(25); // 直前の toHaveLength(2) で存在は保証済み
+      expect(result[1]!.distance).toBe(50);
     });
 
     it("split-timeが0の距離はフィルタリングされる", () => {
-      const splitTimes: SplitTime[] = [
+      const splitTimes: LapSplitPoint[] = [
         { distance: 25, splitTime: 12.5 },
         { distance: 50, splitTime: 0 },
         { distance: 75, splitTime: 40.0 },
       ];
       const result = calculateRaceLapTimesTable(splitTimes, 100);
       expect(result).toHaveLength(2);
-      expect(result[0].distance).toBe(25);
-      expect(result[1].distance).toBe(75);
+      expect(result[0]!.distance).toBe(25); // 直前の toHaveLength(2) で存在は保証済み
+      expect(result[1]!.distance).toBe(75);
     });
   });
 

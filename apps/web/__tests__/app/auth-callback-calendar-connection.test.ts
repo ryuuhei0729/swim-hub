@@ -139,6 +139,8 @@ afterEach(() => {
   consoleErrorSpy.mockRestore();
 });
 
+// NOTE: `mock.calls[0]!` を多用する。各テストは直前に `toHaveBeenCalledTimes(1)` で
+// 呼び出し回数を確認済み。
 describe("GET /api/auth/callback — calendar_connect=true: provider_refresh_token の暗号化 (セキュリティ修正検証)", () => {
   it("V-ENC-01: 平文の provider_refresh_token が暗号化されて RPC に渡り、平文のまま渡らないこと", async () => {
     exchangeCodeForSession.mockResolvedValue({
@@ -149,7 +151,7 @@ describe("GET /api/auth/callback — calendar_connect=true: provider_refresh_tok
     const res = await GET(makeCalendarConnectRequest());
 
     expect(rpc).toHaveBeenCalledTimes(1);
-    const rpcArgs = rpc.mock.calls[0][1] as { p_user_id: string; p_token: string };
+    const rpcArgs = rpc.mock.calls[0]![1] as { p_user_id: string; p_token: string };
 
     // 修正の核心: RPC に渡る p_token は平文そのものではない
     expect(rpcArgs.p_token).not.toBe(PLAINTEXT_REFRESH_TOKEN);
@@ -181,7 +183,7 @@ describe("GET /api/auth/callback — calendar_connect=true: provider_refresh_tok
     // 二重暗号化されていれば IV が変わり別の文字列になるはずだが、そうならないこと
     expect(encryptSpy).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledTimes(1);
-    const rpcArgs = rpc.mock.calls[0][1] as { p_token: string };
+    const rpcArgs = rpc.mock.calls[0]![1] as { p_token: string };
     expect(rpcArgs.p_token).toBe(alreadyEncrypted);
     expect(realDecrypt(rpcArgs.p_token)).toBe(PLAINTEXT_REFRESH_TOKEN);
     expect(location(res)).toBe(`${ORIGIN}/dashboard?calendar_connected=true`);
@@ -315,7 +317,7 @@ describe("mobile 経路 (google-calendar/connect/route.ts) との対称性", () 
     const mobileRes = await POST(mobileRequest);
     expect(mobileRes.status).toBe(200);
     expect(rpcMobile).toHaveBeenCalledTimes(1);
-    const mobileTokenArg = rpcMobile.mock.calls[0][1] as { p_token: string };
+    const mobileTokenArg = rpcMobile.mock.calls[0]![1] as { p_token: string };
 
     // web 経路: GET /api/auth/callback?calendar_connect=true
     exchangeCodeForSession.mockResolvedValue({
@@ -323,7 +325,7 @@ describe("mobile 経路 (google-calendar/connect/route.ts) との対称性", () 
       error: null,
     });
     await GET(makeCalendarConnectRequest());
-    const webTokenArg = rpc.mock.calls[0][1] as { p_token: string };
+    const webTokenArg = rpc.mock.calls[0]![1] as { p_token: string };
 
     // どちらも enc:v1: プレフィックスを持ち、同じ decrypt() で元の平文に戻る
     // (IV がランダムなためバイト列自体は一致しないが、"読み出し側が同じ decrypt() で

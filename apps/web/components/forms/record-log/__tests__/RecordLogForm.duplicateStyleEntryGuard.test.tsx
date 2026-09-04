@@ -156,7 +156,7 @@ describe("RecordLogForm — entryDataList 経由の同一styleId自動生成カ�
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
     expect(screen.queryByTestId("record-form-error")).not.toBeInTheDocument();
-    expect(onSubmit.mock.calls[0][0]).toHaveLength(2);
+    expect(onSubmit.mock.calls[0]![0]).toHaveLength(2);
   });
 
   // 将来課題 (次スプリント, PM記録用): entries.is_relaying をフォームの初期カード

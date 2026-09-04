@@ -13,8 +13,8 @@ function convertRelaySplitsForLeg(
   relaySplits: { distance: number; splitTime: number }[],
 ): { distance: number; splitTime: number }[] {
   const legBoundaries = getRelayLegBoundaries(relayEventId);
-  const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
-  const legHigh = legBoundaries[legIdx];
+  const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1]!; // legBoundaries は呼び出し元で常に legIdx と対応する長さを持つ設計
+  const legHigh = legBoundaries[legIdx]!; // 同上
   return relaySplits
     .filter((st) => st.distance > legLow && st.distance <= legHigh)
     .map((st) => ({ ...st, distance: legIdx === 0 ? st.distance : st.distance - legLow }));

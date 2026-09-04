@@ -282,7 +282,7 @@ describe("TeamCompetitionList", () => {
 
     const buttons = screen.getAllByRole("button");
     expect(buttons.length).toBeGreaterThan(0);
-    fireEvent.click(buttons[0]);
+    fireEvent.click(buttons[0]!); // 直前の toBeGreaterThan(0) で存在は保証済み
 
     expect(mocks.navigate).toHaveBeenCalledWith(
       "CompetitionForm",
@@ -891,7 +891,7 @@ describe("TeamCompetitionList", () => {
       fireEvent.click(screen.getByRole("button", { name: "受付中" })); // 選択 (現在値と異なるため展開後も一意)
 
       expect(Alert.alert).toHaveBeenCalledTimes(1);
-      const buttons = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0][2] as Array<{
+      const buttons = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0]![2] as Array<{ // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
         text: string;
         onPress?: () => void;
       }>;
@@ -959,7 +959,7 @@ describe("TeamCompetitionList", () => {
       fireEvent.click(screen.getByRole("button", { name: "受付前" }));
       fireEvent.click(screen.getByRole("button", { name: "受付終了" }));
 
-      const buttons = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0][2] as Array<{
+      const buttons = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0]![2] as Array<{ // 直前の click で Alert.alert が呼ばれる設計のため必ず存在
         text: string;
         style?: string;
         onPress?: () => void;
@@ -1034,7 +1034,7 @@ describe("TeamCompetitionList", () => {
       // (deferred が未 resolve のため、この mutation は「進行中」のまま保持される)。
       fireEvent.click(screen.getByRole("button", { name: "受付前" })); // 展開 (この時点で一意)
       fireEvent.click(screen.getByRole("button", { name: "受付中" })); // 選択 (展開後も一意)
-      const firstButtons = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0][2] as Array<{
+      const firstButtons = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0]![2] as Array<{ // 直前の click で Alert.alert が呼ばれる設計のため必ず存在
         text: string;
         onPress?: () => void;
       }>;
@@ -1120,7 +1120,7 @@ describe("TeamCompetitionList", () => {
       fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
 
       const calls = mocks.entryModalSpy.mock.calls;
-      const lastCall = calls[calls.length - 1][0] as Record<string, unknown>;
+      const lastCall = calls[calls.length - 1]![0] as Record<string, unknown>; // 直前の click でモーダルが開かれる設計のため必ず存在
       expect(lastCall.isPastDate).toBeFalsy();
     });
 

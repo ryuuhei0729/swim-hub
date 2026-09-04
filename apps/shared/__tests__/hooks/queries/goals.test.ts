@@ -52,7 +52,7 @@ const createMockGoalWithMilestones = (
       goal_id: "goal-1",
       title: "50m 30秒切り",
       type: "time",
-      params: { distance: 50, target_time: 30, style: "fr", swim_category: "Swim" },
+      params: { distance: 50, target_time: 30, style: "Fr", swim_category: "Swim" },
       deadline: "2025-06-01",
       status: "in_progress",
       achieved_at: null,
@@ -139,8 +139,9 @@ describe("Goal Query Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data![0].competition).toBeUndefined();
-      expect(result.current.data![0].style).toBeUndefined();
+      // mockGoals は1件のみ返すため、data[0] は必ず存在する
+      expect(result.current.data![0]!.competition).toBeUndefined();
+      expect(result.current.data![0]!.style).toBeUndefined();
     });
 
     it("invalidate()がgoalKeys.allでinvalidateQueriesを呼び出す", async () => {

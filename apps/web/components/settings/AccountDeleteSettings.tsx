@@ -6,6 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export default function AccountDeleteSettings() {
   const t = useTranslations("settings.accountDelete");
@@ -39,7 +40,7 @@ export default function AccountDeleteSettings() {
       // ログイン画面にリダイレクト
       router.push("/login");
     } catch (err) {
-      setError(err instanceof Error ? err.message : tErrors("genericFailed"));
+      setError(toUserFacingMessage(err, tErrors("genericFailed")));
       setIsDeleting(false);
     }
   }, [session, signOut, router, tErrors]);

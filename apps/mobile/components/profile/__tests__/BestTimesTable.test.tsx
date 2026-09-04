@@ -239,7 +239,7 @@ describe("BestTimesTable (profile) - セル詳細シート", () => {
 
     const emptyCells = screen.getAllByText("—");
     expect(emptyCells.length).toBeGreaterThan(0);
-    fireEvent.click(emptyCells[0]);
+    fireEvent.click(emptyCells[0]!); // 直前の toBeGreaterThan(0) で存在は保証済み
 
     expect(screen.queryByText("一括登録")).toBeNull();
   });

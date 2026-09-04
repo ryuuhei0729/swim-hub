@@ -66,12 +66,20 @@ export function parseQuickTime(
 
   // 2パーツ: SS-ms 形式（60秒未満）または引き継ぎあり
   if (parts.length === 2) {
-    return parseTwoPartFormat(parts[0], parts[1], ctx);
+    const [secondsPart, msPart] = parts;
+    // parts.length === 2 は直前で確認済みだが、関数境界を超えた保証は信用しない
+    if (secondsPart === undefined || msPart === undefined) return null;
+    return parseTwoPartFormat(secondsPart, msPart, ctx);
   }
 
   // 3パーツ: M-SS-ms 形式（60秒以上）
   if (parts.length === 3) {
-    return parseThreePartFormat(parts[0], parts[1], parts[2]);
+    const [minutesPart, secondsPart, msPart] = parts;
+    // parts.length === 3 は直前で確認済みだが、関数境界を超えた保証は信用しない
+    if (minutesPart === undefined || secondsPart === undefined || msPart === undefined) {
+      return null;
+    }
+    return parseThreePartFormat(minutesPart, secondsPart, msPart);
   }
 
   return null;

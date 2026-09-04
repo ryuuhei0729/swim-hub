@@ -43,8 +43,9 @@ describe("parseGamesList", () => {
   });
 
   it("大会名と日付を持つ", () => {
-    expect(parsed.games[0].gameCode).toBeTruthy();
-    expect(parsed.games[0].startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // games-list.page1.json は実データの1ページ分を含むフィクスチャで必ず1件以上ある
+    expect(parsed.games[0]!.gameCode).toBeTruthy();
+    expect(parsed.games[0]!.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("[V-C1] 記録確定のみを対象にする", () => {
@@ -63,7 +64,8 @@ describe("flattenRaceTree", () => {
 
   it("[V-C3] (gender, style, distance, class, division) へ平坦化する", () => {
     expect(targets.length).toBeGreaterThan(50);
-    const t = targets[0];
+    // toBeGreaterThan(50) で targets が1件以上であることを検証済み
+    const t = targets[0]!;
     expect(t.gameCode).toBe("4826412");
     for (const key of ["genderCode", "swimmingStyleCode", "distanceCode", "classCode", "raceDivisionCode"]) {
       expect(typeof (t as never as Record<string, unknown>)[key]).toBe("number");
@@ -79,17 +81,18 @@ describe("flattenRaceTree", () => {
   });
 
   it("[V-C3] 個人種目の stroke へ写せる", () => {
-    expect(new Set(targets.map((t) => t.stroke))).toEqual(new Set(["fr", "ba", "br", "fly", "im"]));
+    expect(new Set(targets.map((t) => t.stroke))).toEqual(new Set(["Fr", "Ba", "Br", "Fly", "IM"]));
   });
 
   it("[V-C3] 距離と種目の組が実在するものだけになる", () => {
-    const im50 = targets.find((t) => t.stroke === "im" && t.distance === 50);
+    const im50 = targets.find((t) => t.stroke === "IM" && t.distance === 50);
     expect(im50).toBeUndefined();
   });
 
   it("round 名と日付を引き継ぐ", () => {
-    expect(targets[0].roundName).toBeTruthy();
-    expect(targets[0].raceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // 同 describe 内の [V-C3] テストで targets.length > 50 を確認済み (fixture 由来で不変)
+    expect(targets[0]!.roundName).toBeTruthy();
+    expect(targets[0]!.raceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
 
@@ -97,9 +100,10 @@ describe("selectHeats", () => {
   it("[V-C5] heats に 100 があれば 100 のみ", () => {
     const divisions = selectHeats(fixture("heats-list.1500fr.json"));
     expect(divisions).toHaveLength(1);
-    expect(divisions[0].raceDivisionCode).toBe(2);
-    expect(divisions[0].heats).toEqual([100]);
-    expect(divisions[0].usedAggregate).toBe(true);
+    // toHaveLength(1) で divisions[0] の存在を検証済み
+    expect(divisions[0]!.raceDivisionCode).toBe(2);
+    expect(divisions[0]!.heats).toEqual([100]);
+    expect(divisions[0]!.usedAggregate).toBe(true);
   });
 
   it("[V-C5][V-C6] division ごとに判定する", () => {
@@ -127,8 +131,9 @@ describe("selectHeats", () => {
     // heats に 100 以上の実在組が並ぶケース。100 を集約扱いすると99組を取り落とす
     const many = { data: [{ division: { code: 1, name: "予選" }, heats: [1, 50, 100, 101] }] };
     const divisions = selectHeats(many);
-    expect(divisions[0].usedAggregate).toBe(false);
-    expect(divisions[0].heats).toEqual([1, 50, 100, 101]);
+    // many.data は1件のみのため divisions も1件になる
+    expect(divisions[0]!.usedAggregate).toBe(false);
+    expect(divisions[0]!.heats).toEqual([1, 50, 100, 101]);
   });
 
   it("空入力で落ちない", () => {

@@ -172,31 +172,73 @@ describe("RecordAPI", () => {
   });
 
   describe("記録削除", () => {
+    // deleteRecord は delete().eq("id", id).select("id") というチェインで呼ばれる
+    // (RLSがDELETEを拒否した場合もerrorを返さず0行削除で正常終了する問題への対策として
+    // .select() で結果行を見る。practices.ts の deletePractice と同型)。
+    // eq / select に渡された引数は戻り値経由でテストごとに検証できるようにし、
+    // クエリの絞り込み対象・返却カラムを捨てない。
+    const mockDeleteRecordChain = (response: { data: unknown; error: unknown }) => {
+      const selectMock = vi.fn().mockResolvedValue(response);
+      const eqMock = vi.fn().mockReturnThis();
+      const deleteMock = vi.fn().mockReturnThis();
+      const builder = { delete: deleteMock, eq: eqMock, select: selectMock };
+      mockClient.from = vi.fn(() => builder) as unknown as typeof mockClient.from;
+      return { deleteMock, eqMock, selectMock };
+    };
+
     it("記録を削除できる", async () => {
-      mockClient.from = vi.fn(() => ({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      })) as unknown as typeof mockClient.from;
+      const { deleteMock, eqMock, selectMock } = mockDeleteRecordChain({
+        data: [{ id: "record-1" }],
+        error: null,
+      });
 
       await expect(api.deleteRecord("record-1")).resolves.toBeUndefined();
 
       expect(mockClient.from).toHaveBeenCalledWith("records");
+      expect(deleteMock).toHaveBeenCalled();
+      expect(eqMock).toHaveBeenCalledWith("id", "record-1");
+      expect(selectMock).toHaveBeenCalledWith("id");
     });
 
     it("削除が失敗したときエラーが発生する", async () => {
       const error = new Error("Delete failed");
-      mockClient.from = vi.fn(() => ({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
-          data: null,
-          error,
-        }),
-      })) as unknown as typeof mockClient.from;
+      mockDeleteRecordChain({ data: null, error });
 
       await expect(api.deleteRecord("record-1")).rejects.toThrow("Delete failed");
+    });
+
+    describe("0行ガード (課題B展開・回帰)", () => {
+      it("[D-1] DELETEが0行を返した場合はエラーをthrowする", async () => {
+        const { eqMock, selectMock } = mockDeleteRecordChain({ data: [], error: null });
+
+        await expect(api.deleteRecord("record-1")).rejects.toThrow("記録の削除に失敗しました");
+        expect(eqMock).toHaveBeenCalledWith("id", "record-1");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-2] dataがnullの場合もエラーをthrowする", async () => {
+        mockDeleteRecordChain({ data: null, error: null });
+
+        await expect(api.deleteRecord("record-1")).rejects.toThrow("記録の削除に失敗しました");
+      });
+
+      it("[D-3] 1行返った場合は正常終了する(非退行)", async () => {
+        const { eqMock, selectMock } = mockDeleteRecordChain({
+          data: [{ id: "record-99" }],
+          error: null,
+        });
+
+        await expect(api.deleteRecord("record-99")).resolves.toBeUndefined();
+        expect(eqMock).toHaveBeenCalledWith("id", "record-99");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-4] errorが返った場合は元のerrorをthrowする(汎用メッセージで上書きしない)", async () => {
+        const error = new Error("permission denied for table records");
+        mockDeleteRecordChain({ data: null, error });
+
+        await expect(api.deleteRecord("record-1")).rejects.toThrow(error);
+      });
     });
   });
 
@@ -664,6 +706,52 @@ describe("RecordAPI", () => {
 
       expect(deleteBuilder.delete).toHaveBeenCalled();
       expect(result).toEqual([]);
+    });
+
+    describe("record_id単位の削除は0行許容 (回帰・意図的に0行ガードを付けない)", () => {
+      it("[D-5] 既存スプリットが0件(削除0行)でもthrowせず正常に完了する(0行ガードを追加していないことの担保)", async () => {
+        const newSplitTimes = [{ distance: 50, split_time: 25.0 }];
+        const createdSplitTimes = newSplitTimes.map((st, i) => ({
+          id: `split-new-${i}`,
+          record_id: "record-1",
+          ...st,
+        }));
+
+        // record_id単位の削除で0行(スプリット未入力の記録)を模擬
+        const deleteBuilder = {
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+        };
+        const insertBuilder = {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue({ data: createdSplitTimes, error: null }),
+        };
+
+        let callCount = 0;
+        mockClient.from = vi.fn(() => {
+          callCount++;
+          return callCount === 1 ? deleteBuilder : insertBuilder;
+        }) as unknown as typeof mockClient.from;
+
+        await expect(api.replaceSplitTimes("record-1", newSplitTimes)).resolves.toEqual(
+          createdSplitTimes,
+        );
+        expect(deleteBuilder.eq).toHaveBeenCalledWith("record_id", "record-1");
+      });
+
+      it("[D-6] 削除でerrorが返った場合はthrowする(errorチェック追加の担保)", async () => {
+        const error = new Error("permission denied for table split_times");
+        const deleteBuilder = {
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: null, error }),
+        };
+        mockClient.from = vi.fn(() => deleteBuilder) as unknown as typeof mockClient.from;
+
+        await expect(
+          api.replaceSplitTimes("record-1", [{ distance: 50, split_time: 25.0 }]),
+        ).rejects.toThrow(error);
+        expect(deleteBuilder.eq).toHaveBeenCalledWith("record_id", "record-1");
+      });
     });
   });
 

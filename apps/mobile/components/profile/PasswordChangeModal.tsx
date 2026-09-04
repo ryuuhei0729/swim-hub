@@ -12,6 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { CenterModal } from "@/components/ui/CenterModal";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface PasswordChangeModalProps {
   visible: boolean;
@@ -79,10 +80,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
         }, 2000);
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : t("mypage.passwordChange.unexpectedError");
+      const errorMessage = toUserFacingMessage(err, t("mypage.passwordChange.unexpectedError"));
       setError(errorMessage);
       if (Platform.OS === "web") {
         window.alert(errorMessage);

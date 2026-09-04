@@ -3,7 +3,7 @@
 // Web/Mobile のベストタイム表・練習ログ等が共用する種目・距離の定数と純粋関数
 // =============================================================================
 
-import type { SwimStyle } from "../types";
+import { SWIM_STYLES, type SwimStyle } from "../types";
 
 // DB 照合用の日本語キー (バックエンドの style.name_jp と一致させるため翻訳しない)
 export const STYLES = ["自由形", "平泳ぎ", "背泳ぎ", "バタフライ", "個人メドレー"] as const;
@@ -65,14 +65,47 @@ export function getStyleOrderIndex(styleNameOrKey: string): number {
   return STYLES.findIndex((style) => STYLE_KEY_MAP[style] === styleNameOrKey);
 }
 
-// SwimStyle ("fr"/"br"/"ba"/"fly"/"im") → ロケール非依存の公式英略称
-export const STYLE_CODE_TO_ABBREV: Record<SwimStyle, string> = {
-  fr: "Fr",
-  br: "Br",
-  ba: "Ba",
-  fly: "Fly",
-  im: "IM",
-};
+// legacy バグ (STYLE_CODE_TO_JAPANESE[styleCode.toLowerCase()] や
+// .eq("styles.style", params.style.toLowerCase()) 等、Issue #13 移行前の
+// .toLowerCase() 正規化コード) が書き込んだ「厳密な全小文字」形からの救済専用マップ。
+// SWIM_STYLES から機械的に導出するため、値の定義元は SWIM_STYLES の1箇所のみ
+// (CLAUDE.md: 同一のドメイン対応表を2箇所にハードコードするな)。
+const LEGACY_LOWERCASE_TO_CANONICAL: ReadonlyMap<string, SwimStyle> = new Map(
+  SWIM_STYLES.map((code) => [code.toLowerCase(), code] as const),
+);
+
+/**
+ * 種目コード文字列を canonical な SwimStyle ("Fr"/"Br"/"Ba"/"Fly"/"IM") に正規化する。
+ * styles.style の CHECK 制約がタイトルケースに統一された (Issue #13) ことに伴い、
+ * DB 由来の値・旧コード ("fr" 等) のいずれが来ても同じ結果に落とすための唯一の
+ * 正規化関数。
+ *
+ * 受理するのは (1) canonical との完全一致 (大文字小文字区別あり)、
+ * (2) legacy バグが書き込んだ「厳密な全小文字」形 ("fr"/"br"/"ba"/"fly"/"im") のみ。
+ * それ以外の大文字小文字混在・全大文字は非対応。特に "FR"/"MR" はリレー種目の
+ * 略称 (SwimStyle とは別語彙。apps/web/components/share/utils.ts の
+ * getStyleNameJp が扱う「フリーリレー」「メドレーリレー」) と衝突するため、
+ * ここで正規化してしまうと "FR" が「自由形」に化ける。実際に legacy バグが
+ * 書き込んだのは `.toLowerCase()` の結果である厳密な全小文字のみであり、
+ * 全大文字や混在ケーシングの実データは存在しないため、対応範囲を広げる理由もない。
+ * canonical ("IM" 等、canonical 自体が全大文字のものを含む) は先に完全一致で
+ * 確定させるため、legacy 小文字救済ロジックに巻き込まれて誤って弾かれることはない。
+ *
+ * @example toStyleCode("fr") => "Fr" (legacy 全小文字を救済)
+ * @example toStyleCode("Fr") => "Fr" (canonical と完全一致)
+ * @example toStyleCode("IM") => "IM" (canonical 自体が全大文字。完全一致で確定するため弾かれない)
+ * @example toStyleCode("FR") => null (リレー略称 "フリーリレー" と衝突するため非対応。呼び出し元で別途扱うこと)
+ * @example toStyleCode("butterfly") => null (未知の値)
+ * @example toStyleCode(null) => null
+ */
+export function toStyleCode(input: string | null | undefined): SwimStyle | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if ((SWIM_STYLES as readonly string[]).includes(trimmed)) {
+    return trimmed as SwimStyle;
+  }
+  return LEGACY_LOWERCASE_TO_CANONICAL.get(trimmed) ?? null;
+}
 
 // DB name (例: "200IM") の先頭数字直後に "m" を挿入するための正規表現
 const LEADING_DIGITS_PATTERN = /^(\d+)/;
@@ -80,7 +113,8 @@ const LEADING_DIGITS_PATTERN = /^(\d+)/;
 /**
  * 種目の距離+略称表示 (例: "200mIM") を組み立てる純粋関数。
  * スマホ幅でフル名 ("200m個人メドレー") の代わりに表示するコンパクトな略称。
- * - style.style / style.distance が揃っていれば `${distance}m${STYLE_CODE_TO_ABBREV[style]}` を組み立てる
+ * - style.style / style.distance が揃っていれば `${distance}m${style}` を組み立てる
+ *   (SwimStyle 自体が公式英略称と同じ値集合 (Fr/Br/Ba/Fly/IM) なので変換不要)
  * - 揃わない場合は DB name (例: "200IM") があれば先頭数字直後に "m" を挿入 ("200mIM") して代用
  * - それも無ければ name_jp、最後は "-"
  */
@@ -92,7 +126,7 @@ export function formatStyleAbbrev(
 ): string {
   if (!style) return "-";
   if (style.style && style.distance != null) {
-    return `${style.distance}m${STYLE_CODE_TO_ABBREV[style.style]}`;
+    return `${style.distance}m${style.style}`;
   }
   if (style.name) {
     return style.name.replace(LEADING_DIGITS_PATTERN, "$&m");

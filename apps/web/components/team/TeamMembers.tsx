@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import { TeamMembersAPI } from "@apps/shared/api/teams/members";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { TeamMembershipWithUser } from "@apps/shared/types";
 import Avatar from "@/components/ui/Avatar";
 import { UserPlusIcon, UserMinusIcon, StarIcon } from "@heroicons/react/24/outline";
@@ -80,7 +81,7 @@ export default function TeamMembers({ teamId, isAdmin = false }: TeamMembersProp
         setMembers(membersData);
       } catch (err) {
         console.error("メンバー情報の取得に失敗:", err);
-        setError(t("members.error"));
+        setError(toUserFacingMessage(err, t("members.error")));
       } finally {
         setLoading(false);
       }

@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { BirthdayInput } from "@/components/ui/BirthdayInput";
 import { GenderToggle } from "@/components/ui/GenderToggle";
 import type { UserProfile } from "@swim-hub/shared/types";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface OnboardingProfileProps {
   initialProfile: Partial<UserProfile> | null;
@@ -84,7 +85,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
         gender: formData.gender,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("onboarding.step2.saveError"));
+      setError(toUserFacingMessage(err, t("onboarding.step2.saveError")));
     } finally {
       setIsSaving(false);
     }
@@ -98,7 +99,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
       // スキップ時は更新なしで次のステップへ
       await onNext({});
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("onboarding.step2.skipFailed"));
+      setError(toUserFacingMessage(err, t("onboarding.step2.skipFailed")));
     } finally {
       setIsSaving(false);
     }

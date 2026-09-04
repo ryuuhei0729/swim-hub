@@ -43,5 +43,15 @@ export const createSupabaseMock = (options: { userId?: string } = {}) => {
       tableQueues.set(table, [...responses]);
     },
     getBuilderHistory: (table: string) => builderHistory.get(table) ?? [],
+    // 呼び出し側は「このテストは対象テーブルへの呼び出しがN件目まで発生する」ことを
+    // arrange/act で保証した上で読む。存在しなければテストの前提自体が崩れているため、
+    // undefined を黙って返さずここで失敗させる
+    getBuilder: (table: string, index = 0): MockQueryBuilder => {
+      const builder = (builderHistory.get(table) ?? [])[index];
+      if (!builder) {
+        throw new Error(`No builder recorded for table "${table}" at index ${index}`);
+      }
+      return builder;
+    },
   };
 };

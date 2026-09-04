@@ -155,7 +155,7 @@ render(<MyMonthlyAttendance teamId="team-1" />);
     // 月モーダルを開くと、モーダル側にも同月の B が同じテキストで表示されるため、
     // DOM 出現順で先頭(=即回答セクション側。モーダルは JSX 上で後段に配置される)を取る。
     const bCardQuick = () =>
-      screen.getAllByText("@Bプール")[0].closest("button")!.parentElement!;
+      screen.getAllByText("@Bプール")[0]!.closest("button")!.parentElement!; // getAllByText は1件以上見つからなければ throw するため必ず存在
     fireEvent.click(within(bCardQuick()).getByText("欠席"));
     fireEvent.change(within(bCardQuick()).getByPlaceholderText("備考を入力（任意）"), {
       target: { value: "B用未保存メモ" },
@@ -183,7 +183,7 @@ render(<MyMonthlyAttendance teamId="team-1" />);
     //  即回答セクション側より1階層多く遡って eventCard まで戻る)
     const aCardsInModal = screen.getAllByText("@Aプール");
     const aCardModal =
-      aCardsInModal[aCardsInModal.length - 1].closest("button")!.parentElement!.parentElement!;
+      aCardsInModal[aCardsInModal.length - 1]!.closest("button")!.parentElement!.parentElement!; // getAllByText は1件以上見つからなければ throw するため必ず存在
     fireEvent.click(within(aCardModal).getByText("出席"));
     fireEvent.click(within(aCardModal).getByText("保存").closest("button")!);
 

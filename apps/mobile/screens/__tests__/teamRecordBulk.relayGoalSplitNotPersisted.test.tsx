@@ -164,7 +164,7 @@ function makeRelayRecords() {
     is_relaying: isRelaying[idx],
     reaction_time: null,
     note: null,
-    split_times: legSplits[idx].map((s, j) => ({
+    split_times: legSplits[idx]!.map((s, j) => ({ // legSplits は times と同じ4要素固定配列なので idx は必ず対応する要素を持つ
       id: `st-${idx}-${j}`,
       distance: s.distance,
       split_time: s.split_time,

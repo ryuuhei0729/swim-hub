@@ -17,6 +17,7 @@ import { processCompetitionImage, processPracticeImage } from "@/utils/imageUtil
 import { uploadVideoClient } from "@/lib/video-upload-client";
 import { EntryAPI, PracticeAPI, CompetitionAPI } from "@apps/shared/api";
 import type { Style, PracticeLogTagInsert } from "@apps/shared/types";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
 import { useCallback } from "react";
@@ -155,6 +156,10 @@ export function useDashboardHandlers({
   setEditingCompetitionId,
 }: UseDashboardHandlersProps) {
   const t = useTranslations("dashboard.handlers");
+  // handleDeleteItem のエラー通知専用。dashboard.dayDetail.entryDeleteFailed の兄弟キー
+  // (dashboard.dayDetail.deleteFailed) を使うため、"dashboard.handlers" スコープの t とは
+  // 別に "dashboard.dayDetail" スコープの翻訳関数を用意する。
+  const tDayDetail = useTranslations("dashboard.dayDetail");
   // 練習予定作成・更新
   const handlePracticeBasicSubmit = useCallback(
     async (
@@ -219,7 +224,9 @@ export function useDashboardHandlers({
               .single();
 
             if (selectError) {
-              throw new Error(t("fetchPracticeFailed", { detail: selectError.message }));
+              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+              console.error("練習データの取得エラー:", selectError);
+              throw new UserFacingError(t("fetchPracticeFailed"));
             }
 
             const practiceData = currentPractice as { image_paths?: string[] | null } | null;
@@ -238,7 +245,9 @@ export function useDashboardHandlers({
               .eq("id", practiceId);
 
             if (updateError) {
-              throw new Error(t("updateImagePathFailed", { detail: updateError.message }));
+              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+              console.error("練習の画像パス更新エラー:", updateError);
+              throw new UserFacingError(t("updateImagePathFailed"));
             }
 
             // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
@@ -275,7 +284,7 @@ export function useDashboardHandlers({
               }
             }
 
-            throw new Error(t("practiceCreatedButImageFailed"));
+            throw new UserFacingError(t("practiceCreatedButImageFailed"));
           }
         }
 
@@ -314,7 +323,7 @@ export function useDashboardHandlers({
   const handlePracticeLogSubmit = useCallback(
     async (formDataArray: PracticeMenuFormData[]) => {
       if (!user || !user.id) {
-        throw new Error(t("authRequired"));
+        throw new UserFacingError(t("authRequired"));
       }
 
       setPracticeLoading(true);
@@ -323,8 +332,19 @@ export function useDashboardHandlers({
 
         if (editingData) {
           const menu = menus[0];
+          if (!menu) {
+            // TODO(#14-B real-bug candidate): formDataArray が空配列だと menu が undefined になり
+            // 以前は menu.style で実行時例外が発生していた（catch で握り潰され console.error のみ、
+            // ユーザーには何も表示されない無言失敗）。呼び出し元
+            // (PracticeLogForm.executeSubmit -> usePracticeLogForm.prepareSubmitData) は
+            // menus の長さを常に1以上に保つ設計（removeMenu が1件以下への削除を拒否する）だが、
+            // その保証はここから3ファイル離れており本関数のスコープからは見えない。
+            // 早期 return で「無言でデフォルト値の練習メニューが保存される」より安全側に倒す。
+            // PM 裁定済み (裁定23): 早期 return を最終形とする。?? {} で握り潰すと無言でデフォルト値が保存されるため。
+            return;
+          }
           const logInput = {
-            style: menu.style || "fr",
+            style: menu.style || "Fr",
             swim_category: menu.swimCategory || "Swim",
             rep_count: Number(menu.reps) || 1,
             set_count: Number(menu.sets) || 1,
@@ -358,7 +378,8 @@ export function useDashboardHandlers({
             for (const { error } of tagResults) {
               if (error) {
                 console.error("練習ログタグの挿入に失敗しました:", error);
-                throw new Error(t("insertPracticeTagFailed", { detail: error.message }));
+                // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+                throw new UserFacingError(t("insertPracticeTagFailed"));
               }
             }
           }
@@ -405,7 +426,7 @@ export function useDashboardHandlers({
           for (const menu of menus) {
             const logInput = {
               practice_id: practiceId,
-              style: menu.style || "fr",
+              style: menu.style || "Fr",
               swim_category: menu.swimCategory || "Swim",
               rep_count: Number(menu.reps) || 1,
               set_count: Number(menu.sets) || 1,
@@ -435,7 +456,8 @@ export function useDashboardHandlers({
               for (const { error } of tagResults) {
                 if (error) {
                   console.error("練習ログタグの挿入に失敗しました:", error);
-                  throw new Error(t("insertPracticeTagFailed", { detail: error.message }));
+                  // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+                throw new UserFacingError(t("insertPracticeTagFailed"));
                 }
               }
             }
@@ -478,6 +500,7 @@ export function useDashboardHandlers({
         refreshCalendar();
       } catch (error) {
         console.error("練習記録の処理に失敗しました:", error);
+        throw error;
       } finally {
         setPracticeLoading(false);
       }
@@ -521,14 +544,18 @@ export function useDashboardHandlers({
           // Google Calendar同期を含むミューテーションを使用
           await deletePractice(itemId);
         } else if (itemType === "practice_log") {
-          const { error } = await supabase.from("practice_logs").delete().eq("id", itemId);
-          if (error) throw error;
+          // 共有API (apps/shared/api/practices.ts の deletePracticeLog) 経由に統一。
+          // PostgREST は RLS が DELETE を拒否しても error を返さず0行削除で正常終了するため、
+          // 共有API側で .select("id") + 0行 throw のガードが入っている。インラインで
+          // supabase.from("practice_logs").delete() を再実装すると同じテーブルの削除ロジックが
+          // 二重管理になり、ガードだけ抜け落ちる (usePracticeTabSave と同じ受け取り方に揃える)。
+          if (deletePracticeLog) {
+            await deletePracticeLog(itemId);
+          }
         } else if (itemType === "entry") {
-          const { error } = await supabase.from("entries").delete().eq("id", itemId);
-          if (error) throw error;
+          await deleteEntry(itemId);
         } else if (itemType === "record") {
-          const { error } = await supabase.from("records").delete().eq("id", itemId);
-          if (error) throw error;
+          await deleteRecord(itemId);
         } else if (itemType === "competition" || itemType === "team_competition") {
           // Google Calendar同期を含むミューテーションを使用
           await deleteCompetition(itemId);
@@ -537,9 +564,25 @@ export function useDashboardHandlers({
         refreshCalendar();
       } catch (error) {
         console.error("記録の削除に失敗しました:", error);
+        // deletePractice/deletePracticeLog等が投げるエラーはここまで握りつぶされ、
+        // 呼び出し元 (DashboardClient.tsx) にはエラー表示手段が無いため、ここで
+        // ユーザーに見える形にする。API 層 (apps/shared/api/practices.ts 等) が
+        // 投げるのは i18n されていない生の Error/PostgrestError であり、そのまま
+        // メッセージを表示すると多言語ユーザーへの誤表示や情報露出になるため、
+        // UserFacingError 由来のメッセージのみを通し、それ以外は i18n 済みの
+        // 汎用メッセージ (fallback) にフォールバックする。
+        alert(toUserFacingMessage(error, tDayDetail("deleteFailed")));
       }
     },
-    [supabase, refreshCalendar, deletePractice, deleteCompetition],
+    [
+      refreshCalendar,
+      deletePractice,
+      deletePracticeLog,
+      deleteEntry,
+      deleteRecord,
+      deleteCompetition,
+      tDayDetail,
+    ],
   );
 
   // 大会情報作成・更新
@@ -623,7 +666,9 @@ export function useDashboardHandlers({
               .single();
 
             if (selectError) {
-              throw new Error(t("fetchCompetitionFailed", { detail: selectError.message }));
+              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+              console.error("大会データの取得エラー:", selectError);
+              throw new UserFacingError(t("fetchCompetitionFailed"));
             }
 
             const competitionData = currentCompetition as { image_paths?: string[] | null } | null;
@@ -642,7 +687,9 @@ export function useDashboardHandlers({
               .eq("id", competitionId);
 
             if (updateError) {
-              throw new Error(t("updateImagePathFailed", { detail: updateError.message }));
+              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+              console.error("大会の画像パス更新エラー:", updateError);
+              throw new UserFacingError(t("updateImagePathFailed"));
             }
 
             // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
@@ -679,7 +726,7 @@ export function useDashboardHandlers({
               }
             }
 
-            throw new Error(t("competitionCreatedButImageFailed"));
+            throw new UserFacingError(t("competitionCreatedButImageFailed"));
           }
         }
 
@@ -729,7 +776,7 @@ export function useDashboardHandlers({
   const handleEntrySubmit = useCallback(
     async (entriesData: EntryFormData[]) => {
       if (!user || !user.id) {
-        throw new Error(t("authRequired"));
+        throw new UserFacingError(t("authRequired"));
       }
 
       setCompetitionLoading(true);
@@ -817,7 +864,7 @@ export function useDashboardHandlers({
               const existingEntryWithSameStyle = existingEntriesMap.get(String(styleIdNum));
               if (existingEntryWithSameStyle && existingEntryWithSameStyle.id !== entryData.id) {
                 const styleName = styles.find((s) => s.id === styleIdNum)?.name_jp || t("unknownStyle");
-                throw new Error(t("styleAlreadyEntered", { name: styleName }));
+                throw new UserFacingError(t("styleAlreadyEntered", { name: styleName }));
               }
             }
 
@@ -905,6 +952,11 @@ export function useDashboardHandlers({
         }
       } catch (error) {
         console.error("エントリーの登録に失敗しました:", error);
+        // 呼び出し元 (DashboardClient.tsx) は try/catch を持たないため、ここで出さないと
+        // エントリー登録の失敗が完全に無音になる。同ファイルの handleDeleteItem と同型に、
+        // UserFacingError 由来のメッセージのみを通し、それ以外 (生の Error/PostgrestError)
+        // は i18n 済みの汎用メッセージに倒す (情報露出と多言語ユーザーへの誤表示を防ぐ)。
+        alert(toUserFacingMessage(error, t("entrySubmitFailed")));
       } finally {
         setCompetitionLoading(false);
       }
@@ -958,6 +1010,16 @@ export function useDashboardHandlers({
 
         if (effectiveEditingData && effectiveEditingData.id) {
           const formData = dataArray[0];
+          if (!formData) {
+            // TODO(#14-B real-bug candidate): dataArray が空だと formData が undefined になり
+            // formData.styleId で実行時例外(catch で握り潰され console.error のみ)。呼び出し元
+            // (RecordLogForm.handleSubmit) は submitList.length === 0 を検出したら
+            // setFormError + return で送信自体をブロックしているため現状は到達しないはずだが、
+            // その保証は1ファイル離れた RecordLogForm.tsx にあり本関数からは見えない。
+            // 早期 return で「無言で不正な更新が走る」より安全側に倒す。PM 裁定済み (裁定23): 早期 return を最終形とする。
+            closeRecordLogForm();
+            return;
+          }
           const updates: import("@swim-hub/shared/types").RecordUpdate = {
             style_id: parseInt(formData.styleId),
             time: formData.time,
@@ -1054,11 +1116,12 @@ export function useDashboardHandlers({
         }
 
         refreshCalendar();
+        closeRecordLogForm();
       } catch (error) {
         console.error("記録の処理に失敗しました:", error);
+        throw error;
       } finally {
         setCompetitionLoading(false);
-        closeRecordLogForm();
       }
     },
     [

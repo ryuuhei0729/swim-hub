@@ -88,7 +88,7 @@ const STYLE_FREE_50: Style = {
   id: 2,
   name_jp: "自由形50m",
   name: "Freestyle",
-  style: "fr",
+  style: "Fr",
   distance: 50,
 };
 
@@ -135,7 +135,6 @@ function makeRelayRecords(
   legSplits: Array<{ distance: number; split_time: number }[]>,
 ) {
   const times = [27.5, 28.7, 28.3, 27.6];
-  const isRelaying = [false, true, true, true];
   return times.map((time, idx) => ({
     id: `relay-record-${idx}`,
     user_id: `user-${idx}`,
@@ -143,11 +142,12 @@ function makeRelayRecords(
     time,
     video_path: null,
     note: null,
-    is_relaying: isRelaying[idx],
+    is_relaying: idx !== 0, // times配列と同じ長さの固定パターン(先頭のみfalse)
     reaction_time: null,
     pool_type: null,
     team_id: "team-1",
-    split_times: legSplits[idx].map((s, j) => ({
+    // legSplits は呼び出し元 (このファイル内) で常に times と同じ4要素の配列を渡す設計
+    split_times: legSplits[idx]!.map((s, j) => ({
       id: `st-${idx}-${j}`,
       distance: s.distance,
       split_time: s.split_time,

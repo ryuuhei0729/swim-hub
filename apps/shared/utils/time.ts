@@ -39,23 +39,27 @@ export function calcSum(times: TimeEntryLike[]): number {
 // =============================================================================
 
 /**
- * 秒数を "M:SS.m" 形式にフォーマット（小数第1位まで）
+ * 秒数を "M:SS.ms" 形式にフォーマット（小数第2位まで）
+ *
+ * DB のタイム列 (records.time / split_times.split_time / practice_times.time)
+ * は numeric(10,2) で 1/100 秒精度のため、表示側もそれに合わせる
+ * (formatTimeAverage/formatTimeBest と数値的に同じ丸め方に統一)。
  *
  * @param seconds - 秒数（小数点以下はミリ秒）
  * @returns フォーマットされた時間文字列
- * @example formatTime(65.42) => "1:05.4"
- * @example formatTime(0) => "0.0"
- * @example formatTime(-1) => "0.0"
+ * @example formatTime(65.42) => "1:05.42"
+ * @example formatTime(0) => "0.00"
+ * @example formatTime(-1) => "0.00"
  */
 export function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) {
-    return "0.0";
+    return "0.00";
   }
-  // 小数第1位で丸めてから分と秒を計算（59.99 → 60.0 → 1:00.0 のケースを正しく処理）
-  const rounded = Math.round(seconds * 10) / 10;
+  // 小数第2位で丸めてから分と秒を計算（59.995 → 60.00 → 1:00.00 のケースを正しく処理）
+  const rounded = Math.round(seconds * 100) / 100;
   const minutes = Math.floor(rounded / 60);
-  const remainingSeconds = (rounded % 60).toFixed(1);
-  return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(4, "0")}` : remainingSeconds;
+  const remainingSeconds = (rounded % 60).toFixed(2);
+  return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(5, "0")}` : remainingSeconds;
 }
 
 /**
@@ -105,6 +109,11 @@ export function formatTimeFull(seconds: number): string {
 /**
  * 秒数を "M:SS.ms" 形式にフォーマット（平均値用、小数第2位まで）
  *
+ * formatTime の2桁化 (Issue #13) により実装が完全に一致したため、formatTime に
+ * 委譲するエイリアスにしてある (CLAUDE.md 「同一のドメイン対応表を2箇所に
+ * ハードコードするな」と同じ理由で、丸め方の実体を複数箇所に持たない)。
+ * 呼び出し名の意味 (平均値表示であること) を保つために別名として残す。
+ *
  * @param seconds - 秒数
  * @returns フォーマットされた時間文字列
  * @example formatTimeAverage(65.42) => "1:05.42"
@@ -112,18 +121,15 @@ export function formatTimeFull(seconds: number): string {
  * @example formatTimeAverage(0) => "0.00"
  */
 export function formatTimeAverage(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) {
-    return "0.00";
-  }
-  // 小数第2位で丸めてから分と秒を計算（59.995 → 60.00 → 1:00.00 のケースを正しく処理）
-  const rounded = Math.round(seconds * 100) / 100;
-  const minutes = Math.floor(rounded / 60);
-  const remainingSeconds = (rounded % 60).toFixed(2);
-  return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(5, "0")}` : remainingSeconds;
+  return formatTime(seconds);
 }
 
 /**
  * 秒数を "M:SS.ms" 形式にフォーマット（ベストタイム/大会記録用、小数第2位まで）
+ *
+ * formatTime の2桁化 (Issue #13) により実装が完全に一致したため、formatTime に
+ * 委譲するエイリアスにしてある (理由は formatTimeAverage のコメント参照)。
+ * 呼び出し名の意味 (ベストタイム/大会記録表示であること) を保つために別名として残す。
  *
  * @param seconds - 秒数
  * @returns フォーマットされた時間文字列
@@ -133,14 +139,7 @@ export function formatTimeAverage(seconds: number): string {
  * @example formatTimeBest(-1) => "0.00"
  */
 export function formatTimeBest(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) {
-    return "0.00";
-  }
-  // 小数第2位で丸めてから分と秒を計算（59.995 → 60.00 → 1:00.00 のケースを正しく処理）
-  const rounded = Math.round(seconds * 100) / 100;
-  const minutes = Math.floor(rounded / 60);
-  const remainingSeconds = (rounded % 60).toFixed(2);
-  return minutes > 0 ? `${minutes}:${remainingSeconds.padStart(5, "0")}` : remainingSeconds;
+  return formatTime(seconds);
 }
 
 /**
@@ -207,9 +206,11 @@ function parseTraditionalFormat(cleaned: string): number {
   if (cleaned.includes(":")) {
     const parts = cleaned.split(":");
     if (parts.length !== 2) return 0;
+    const [minutesPart, secondsPart] = parts;
+    if (minutesPart === undefined || secondsPart === undefined) return 0; // parts.length === 2 を直前で確認済み
 
-    const minutes = parseInt(parts[0], 10);
-    const seconds = parseFloat(parts[1]);
+    const minutes = parseInt(minutesPart, 10);
+    const seconds = parseFloat(secondsPart);
 
     if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) return 0;
     if (minutes < 0 || seconds < 0) return 0;
@@ -232,16 +233,20 @@ function parseQuickFormat(cleaned: string): number {
 
   // 1パーツ: 秒のみ (例: "30")
   if (parts.length === 1) {
-    const seconds = parseFloat(parts[0]);
+    const [secondsPart] = parts;
+    if (secondsPart === undefined) return 0; // parts.length === 1 を直前で確認済み
+    const seconds = parseFloat(secondsPart);
     return Number.isFinite(seconds) && seconds >= 0 ? seconds : 0;
   }
 
   // 2パーツ: SS-ms (例: "31-2" → 31.20秒)
   if (parts.length === 2) {
-    const seconds = parseInt(parts[0], 10);
-    const msValue = parseInt(parts[1], 10);
+    const [secondsPart, msPart] = parts;
+    if (secondsPart === undefined || msPart === undefined) return 0; // parts.length === 2 を直前で確認済み
+    const seconds = parseInt(secondsPart, 10);
+    const msValue = parseInt(msPart, 10);
     // 小数部を正規化（1桁なら×10、2桁以上ならそのまま）
-    const ms = parts[1].length === 1 ? msValue * 10 : msValue;
+    const ms = msPart.length === 1 ? msValue * 10 : msValue;
     if (!Number.isFinite(seconds) || !Number.isFinite(ms)) return 0;
     if (seconds < 0 || ms < 0) return 0;
     return seconds + ms / 100;
@@ -249,10 +254,13 @@ function parseQuickFormat(cleaned: string): number {
 
   // 3パーツ: M-SS-ms (例: "1-05-3" → 65.30秒)
   if (parts.length === 3) {
-    const minutes = parseInt(parts[0], 10);
-    const seconds = parseInt(parts[1], 10);
-    const msValue = parseInt(parts[2], 10);
-    const ms = parts[2].length === 1 ? msValue * 10 : msValue;
+    const [minutesPart, secondsPart, msPart] = parts;
+    // parts.length === 3 を直前で確認済み
+    if (minutesPart === undefined || secondsPart === undefined || msPart === undefined) return 0;
+    const minutes = parseInt(minutesPart, 10);
+    const seconds = parseInt(secondsPart, 10);
+    const msValue = parseInt(msPart, 10);
+    const ms = msPart.length === 1 ? msValue * 10 : msValue;
     if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || !Number.isFinite(ms)) return 0;
     if (minutes < 0 || seconds < 0 || ms < 0) return 0;
     return minutes * 60 + seconds + ms / 100;

@@ -239,7 +239,7 @@ function openTagSelectModalViaChips() {
  */
 function clickTagManageModalCancelButton() {
   const cancelButtons = screen.getAllByText("キャンセル");
-  fireEvent.click(cancelButtons[cancelButtons.length - 1]);
+  fireEvent.click(cancelButtons[cancelButtons.length - 1]!); // getAllByText は1件以上見つからなければ throw するため末尾要素は必ず存在する
 }
 
 function clickCreateNewTagButton() {

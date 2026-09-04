@@ -19,6 +19,7 @@ const styles: StyleOption[] = [
   { id: 21, nameJp: "200m個人メドレー", distance: 200 },
 ];
 
+// NOTE: `formDataList[N]!` を多用する。各テストは直前に `toHaveLength(...)` で件数を確認済み。
 describe("useRecordLogForm — entryDataList からの初期化", () => {
   it("[自動生成フロー] entryDataList が複数件あるとき、formDataList[i].styleId は entryDataList[i].styleId と一致する", () => {
     const entryDataList: EntryInfo[] = [
@@ -31,8 +32,8 @@ describe("useRecordLogForm — entryDataList からの初期化", () => {
     );
 
     expect(result.current.formDataList).toHaveLength(2);
-    expect(result.current.formDataList[0].styleId).toBe("2");
-    expect(result.current.formDataList[1].styleId).toBe("21");
+    expect(result.current.formDataList[0]!.styleId).toBe("2");
+    expect(result.current.formDataList[1]!.styleId).toBe("21");
   });
 
   it("entryDataList が空の場合はデフォルト種目 (50m自由形) 1件で初期化される", () => {
@@ -41,7 +42,7 @@ describe("useRecordLogForm — entryDataList からの初期化", () => {
     );
 
     expect(result.current.formDataList).toHaveLength(1);
-    expect(result.current.formDataList[0].styleId).toBe("2");
+    expect(result.current.formDataList[0]!.styleId).toBe("2");
   });
 
   it("editData が指定されている場合は entryDataList より editData の styleId が優先される", () => {
@@ -57,6 +58,6 @@ describe("useRecordLogForm — entryDataList からの初期化", () => {
     );
 
     expect(result.current.formDataList).toHaveLength(1);
-    expect(result.current.formDataList[0].styleId).toBe("2");
+    expect(result.current.formDataList[0]!.styleId).toBe("2");
   });
 });

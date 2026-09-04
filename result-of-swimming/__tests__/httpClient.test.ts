@@ -41,6 +41,7 @@ function fakeFetch(responses: Array<{ status: number; body?: string; headers?: R
   const impl = (async (url: string | URL | Request, init?: RequestInit) => {
     calls.push({ url: String(url), init });
     const r = responses[Math.min(i, responses.length - 1)];
+    if (!r) throw new Error("fakeFetch: responses must not be empty");
     i++;
     return new Response(r.body ?? "{}", { status: r.status, headers: r.headers });
   }) as unknown as typeof fetch;
@@ -256,7 +257,8 @@ describe("PoliteHttpClient", () => {
       nowImpl: clock.nowImpl,
     }).get("https://x.test/a");
 
-    const headers = (calls[0].init?.headers ?? {}) as Record<string, string>;
+    expect(calls.length).toBeGreaterThan(0);
+    const headers = (calls[0]!.init?.headers ?? {}) as Record<string, string>;
     const keys = Object.keys(headers).map((k) => k.toLowerCase());
     expect(keys).not.toContain("user-agent");
     expect(JSON.stringify(headers).toLowerCase()).not.toContain("mozilla");

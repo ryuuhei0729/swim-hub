@@ -14,15 +14,16 @@ const UNKNOWN = "不明";
 function detectOs(ua: string): { name: string; version: string } | null {
   // iOS (iPhone / iPad / iPod)
   const ios = ua.match(/(?:iPhone|iPad|iPod).*?OS (\d+(?:_\d+)*)/);
-  if (ios) return { name: "iOS", version: ios[1].replace(/_/g, ".") };
+  if (ios) return { name: "iOS", version: ios[1]!.replace(/_/g, ".") }; // 正規表現の
+    // 捕捉グループはオプショナルでないため、ios が truthy (マッチ成功) なら [1] は必ず存在する
 
   const android = ua.match(/Android (\d+(?:\.\d+)*)/);
-  if (android) return { name: "Android", version: android[1] };
+  if (android) return { name: "Android", version: android[1]! }; // 同上
 
   if (/Windows NT/.test(ua)) return { name: "Windows", version: "" };
 
   const mac = ua.match(/Mac OS X (\d+(?:[._]\d+)*)/);
-  if (mac) return { name: "macOS", version: mac[1].replace(/_/g, ".") };
+  if (mac) return { name: "macOS", version: mac[1]!.replace(/_/g, ".") }; // 同上
 
   if (/CrOS/.test(ua)) return { name: "ChromeOS", version: "" };
   if (/Linux/.test(ua)) return { name: "Linux", version: "" };
@@ -36,7 +37,8 @@ function detectDeviceModel(ua: string): string | null {
   // Android の端末モデル: "Android 14; Pixel 8 Build/..." の "Pixel 8" を抽出
   const android = ua.match(/Android [\d.]+;\s?([^;)]+?)(?:\s+Build|;|\))/);
   if (android) {
-    const model = android[1].trim();
+    const model = android[1]!.trim(); // 正規表現の捕捉グループはオプショナルでないため、
+      // android が truthy (マッチ成功) なら [1] は必ず存在する
     // Chrome の UA 削減で "K" 等の無意味値になる場合は除外
     if (model && model !== "K" && !/^wv$/i.test(model)) return model;
     return "Android端末";
@@ -47,19 +49,20 @@ function detectDeviceModel(ua: string): string | null {
 function detectBrowser(ua: string): { name: string; version: string } | null {
   // 順序が重要（Edge/Chrome/Firefox を Safari より先に判定）
   const edge = ua.match(/Edg(?:iOS|A)?\/(\d+)/);
-  if (edge) return { name: "Edge", version: edge[1] };
+  if (edge) return { name: "Edge", version: edge[1]! }; // 正規表現の捕捉グループは
+    // オプショナルでないため、マッチ成功時は [1] は必ず存在する
 
   const firefox = ua.match(/(?:Firefox|FxiOS)\/(\d+)/);
-  if (firefox) return { name: "Firefox", version: firefox[1] };
+  if (firefox) return { name: "Firefox", version: firefox[1]! }; // 同上
 
   const chrome = ua.match(/(?:Chrome|CriOS)\/(\d+)/);
-  if (chrome && !/OPR|Edg/.test(ua)) return { name: "Chrome", version: chrome[1] };
+  if (chrome && !/OPR|Edg/.test(ua)) return { name: "Chrome", version: chrome[1]! }; // 同上
 
   const opera = ua.match(/OPR\/(\d+)/);
-  if (opera) return { name: "Opera", version: opera[1] };
+  if (opera) return { name: "Opera", version: opera[1]! }; // 同上
 
   const safari = ua.match(/Version\/(\d+(?:\.\d+)?).*Safari/);
-  if (safari) return { name: "Safari", version: safari[1] };
+  if (safari) return { name: "Safari", version: safari[1]! }; // 同上
 
   if (/Safari/.test(ua)) return { name: "Safari", version: "" };
   return null;

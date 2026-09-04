@@ -9,6 +9,7 @@ import {
   useUpdateTeamAnnouncementMutation,
 } from "@apps/shared/hooks/queries/announcements";
 import type { TeamAnnouncement } from "@apps/shared/types/team";
+import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface AnnouncementFormProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
   editData,
 }) => {
   const t = useTranslations("teamsAdmin");
+  const tCommon = useTranslations("common");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [startAt, setStartAt] = useState<string>("");
@@ -124,7 +126,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error(t("announcementForm.authRequired"));
+        if (!user) throw new UserFacingError(t("announcementForm.authRequired"));
 
         await createAnnouncementMutation.mutateAsync({
           team_id: teamId,
@@ -141,9 +143,7 @@ export const AnnouncementForm: React.FC<AnnouncementFormProps> = ({
     } catch (error) {
       console.error("保存エラー:", error);
       // API側のバリデーションエラーを表示
-      if (error instanceof Error) {
-        setErrors({ endAt: error.message });
-      }
+      setErrors({ endAt: toUserFacingMessage(error, tCommon("error")) });
     }
   };
 

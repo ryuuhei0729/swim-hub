@@ -71,14 +71,25 @@ describe("deleteImage", () => {
     expect(removeMock).toHaveBeenCalledWith(["user1/record1/image.jpg"]);
   });
 
-  it("削除エラー時に例外をスローする", async () => {
+  // 情報露出の是正 (根拠: apps/shared/utils/userFacingError.ts のクラスコメント):
+  // Supabase Storage の生エラー (バケット名等を含みうる) をそのままユーザーに表示すると
+  // 情報露出になるため、imageUpload.ts は common.upload.imageDeleteFailedDetail
+  // (生 error.message を {detail} に埋め込む) から imageDeleteFailedSimple
+  // (詳細なし) に変更された。以前このテストは「生エラーメッセージがそのまま
+  // 例外に含まれること」を pin していたが、これは情報露出を仕様として固定して
+  // しまっていたため、新仕様 (詳細を含まない) に期待値を更新する。
+  // 検証観点自体 (削除エラー時に例外が伝播すること) は維持する。
+  it("削除エラー時に例外をスローする（情報露出対策のため生エラーメッセージは含まれない）", async () => {
     const mockSupabase = createMockSupabaseClient({
       removeError: { message: "Delete failed" } as Error,
     });
 
     await expect(
       deleteImage(mockSupabase, "user1/record1/image.jpg", "practice-images"),
-    ).rejects.toThrow("画像の削除に失敗しました: Delete failed");
+    ).rejects.toThrow("画像の削除に失敗しました");
+    await expect(
+      deleteImage(mockSupabase, "user1/record1/image.jpg", "practice-images"),
+    ).rejects.not.toThrow("Delete failed");
   });
 });
 
@@ -119,14 +130,20 @@ describe("deleteImages", () => {
     expect(removeMock).not.toHaveBeenCalled();
   });
 
-  it("削除エラー時に例外をスローする", async () => {
+  // 情報露出の是正 (deleteImage と同型。根拠は同ファイル内の deleteImage 側コメント参照):
+  // 生エラーメッセージ ("Batch delete failed") が例外メッセージに含まれないことを
+  // 新仕様として期待値を更新する。検証観点自体 (削除エラー時に例外が伝播すること) は維持する。
+  it("削除エラー時に例外をスローする（情報露出対策のため生エラーメッセージは含まれない）", async () => {
     const mockSupabase = createMockSupabaseClient({
       removeError: { message: "Batch delete failed" } as Error,
     });
 
     await expect(
       deleteImages(mockSupabase, ["path1.jpg", "path2.jpg"], "practice-images"),
-    ).rejects.toThrow("画像の削除に失敗しました: Batch delete failed");
+    ).rejects.toThrow("画像の削除に失敗しました");
+    await expect(
+      deleteImages(mockSupabase, ["path1.jpg", "path2.jpg"], "practice-images"),
+    ).rejects.not.toThrow("Batch delete failed");
   });
 });
 

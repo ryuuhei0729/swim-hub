@@ -6,7 +6,8 @@ export interface ItemTabsProps {
   count: number;
   activeIndex: number;
   onSelect: (i: number) => void;
-  onAdd: () => void;
+  /** タブ末尾の + で項目を追加。未指定の場合は + を表示しない */
+  onAdd?: () => void;
   /** タブ内の × で項目を削除。未指定の場合は × を表示しない */
   onRemove?: (i: number) => void;
   label: (i: number) => string;
@@ -43,6 +44,7 @@ export function ItemTabs({
   const accentColor = accent === "green" ? ACCENT_GREEN : ACCENT_BLUE;
   const accentBg = accent === "green" ? ACCENT_GREEN_BG : ACCENT_BLUE_BG;
   const showRemove = typeof onRemove === "function" && count > 1;
+  const showAdd = typeof onAdd === "function";
 
   return (
     <View style={styles.container} testID={testID}>
@@ -97,16 +99,18 @@ export function ItemTabs({
             </View>
           );
         })}
-        <Pressable
-          style={styles.addButton}
-          onPress={onAdd}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel="add item"
-          testID="item-tab-add"
-        >
-          <Feather name="plus" size={18} color={accentColor} />
-        </Pressable>
+        {showAdd && (
+          <Pressable
+            style={styles.addButton}
+            onPress={onAdd}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel="add item"
+            testID="item-tab-add"
+          >
+            <Feather name="plus" size={18} color={accentColor} />
+          </Pressable>
+        )}
       </ScrollView>
 
       {/* コンテンツパネル: アクティブタブと一体化(上辺枠でタブと接合) */}

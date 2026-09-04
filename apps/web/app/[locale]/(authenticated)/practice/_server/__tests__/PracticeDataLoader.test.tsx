@@ -121,11 +121,12 @@ describe("PracticeDataLoader - prefetch エラーハンドリング", () => {
 
     const dehydratedState = element.props.state;
     expect(dehydratedState.queries).toHaveLength(1);
-    expect(dehydratedState.queries[0].queryKey).toEqual(
+    // 直前の toHaveLength(1) で1件以上の存在を確認済み
+    expect(dehydratedState.queries[0]!.queryKey).toEqual(
       practiceKeys.list({ startDate, endDate, page: 1, pageSize: 1000 }),
     );
-    expect(dehydratedState.queries[0].state.status).toBe("success");
-    expect(dehydratedState.queries[0].state.data).toEqual(practices);
+    expect(dehydratedState.queries[0]!.state.status).toBe("success");
+    expect(dehydratedState.queries[0]!.state.data).toEqual(practices);
 
     consoleErrorSpy.mockRestore();
   });

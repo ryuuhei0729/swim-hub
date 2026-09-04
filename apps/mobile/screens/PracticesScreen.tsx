@@ -7,7 +7,6 @@ import { parseISO, isValid } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
 import { practiceKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
-import { STYLE_CODE_TO_ABBREV } from "@apps/shared/utils/swimStyles";
 import { PracticeItem } from "@/components/practices";
 import { ListToolbar, SortBottomSheet, FilterBottomSheet } from "@/components/history";
 import type { SortPreset, FilterGroup } from "@/components/history";
@@ -148,11 +147,13 @@ export const PracticesScreen: React.FC = () => {
   // デフォルトの日付範囲（過去1年間）- 初期化時に一度だけ計算
   const [defaultStartDate] = useState(() => {
     const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    return date.toISOString().split("T")[0];
+    // toISOString() は仕様上必ず "YYYY-MM-DDTHH:mm:ss.sssZ" 形式を返すため
+    // split("T") は必ず2要素以上の配列になり [0] は常に存在する
+    return date.toISOString().split("T")[0]!;
   });
 
   const [defaultEndDate] = useState(() => {
-    return new Date().toISOString().split("T")[0];
+    return new Date().toISOString().split("T")[0]!;
   });
 
   const practiceApi = useMemo(() => new PracticeAPI(supabase), [supabase]);
@@ -264,7 +265,7 @@ export const PracticesScreen: React.FC = () => {
         mode: "single",
         options: participatedStyleCodes.map((code) => ({
           value: code,
-          label: t(`practice.styleAbbrev.${STYLE_CODE_TO_ABBREV[code]}`),
+          label: t(`practice.styleAbbrev.${code}`),
         })),
         selectedValues: filterDraft.filterStyle ? [filterDraft.filterStyle] : [],
         onChange: (values: string[]) => handleDraftStyleChange(values[0] ?? ""),

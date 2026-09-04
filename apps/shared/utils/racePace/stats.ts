@@ -17,14 +17,18 @@ export function mean(xs: number[]): number | null {
  */
 export function percentile(xs: number[], p: number): number | null {
   if (xs.length === 0) return null;
-  if (xs.length === 1) return xs[0];
+  if (xs.length === 1) return xs[0]!; // xs.length === 1 を直前で確認済み
 
   const sorted = [...xs].sort((a, b) => a - b);
   const pos = Math.min(Math.max(p, 0), 1) * (sorted.length - 1);
   const lower = Math.floor(pos);
   const upper = Math.ceil(pos);
-  if (lower === upper) return sorted[lower];
-  return sorted[lower] + (pos - lower) * (sorted[upper] - sorted[lower]);
+  // pos は Math.min/Math.max で [0, sorted.length-1] にクランプ済みのため、
+  // floor/ceil した lower/upper も常に有効な配列インデックスになる
+  const lowerValue = sorted[lower]!;
+  const upperValue = sorted[upper]!;
+  if (lower === upper) return lowerValue;
+  return lowerValue + (pos - lower) * (upperValue - lowerValue);
 }
 
 export function median(xs: number[]): number | null {

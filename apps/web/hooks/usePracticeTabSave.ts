@@ -113,12 +113,19 @@ export function usePracticeTabSave({
                 uploadedPaths.push(await practiceAPI.uploadPracticeImage(practiceId!, file));
               }
             }
-            const { data: cur } = await supabase
+            // 保存直前に権威ある image_paths を再取得する。取得に失敗した場合 (ネットワークエラー等) に
+            // 「不明」を [] とみなして全置換してしまうと、他メンバーがアップロード済みの画像が
+            // 参照から外れて消失する (Issue #48)。取得失敗時は throw して image_paths を含む
+            // update を送らずに中断する (外側の catch でアップロード済み画像のロールバックを行う)。
+            const { data: cur, error: imagePathsError } = await supabase
               .from("practices")
               .select("image_paths")
               .eq("id", practiceId)
               .single();
-            const existing: string[] = (cur as { image_paths?: string[] | null } | null)?.image_paths ?? [];
+            if (imagePathsError || !cur) {
+              throw imagePathsError ?? new Error("Failed to fetch practice image_paths");
+            }
+            const existing: string[] = (cur as { image_paths: string[] | null }).image_paths ?? [];
             await supabase
               .from("practices")
               .update({ image_paths: [...existing.filter((p) => !imageData.deletedIds.includes(p)), ...uploadedPaths] })
@@ -153,7 +160,7 @@ export function usePracticeTabSave({
       for (const menu of diff.toAdd) {
         const logInput = {
           practice_id: practiceId!,
-          style: menu.style || "fr",
+          style: menu.style || "Fr",
           swim_category: menu.swimCategory || "Swim",
           rep_count: Number(menu.reps) || 1,
           set_count: Number(menu.sets) || 1,
@@ -168,7 +175,8 @@ export function usePracticeTabSave({
           };
           for (const tag of menu.tags) {
             const { error } = await qb.insert({ practice_log_id: createdLog.id, practice_tag_id: tag.id });
-            if (error) throw new Error(t("insertPracticeTagFailed", { detail: error.message }));
+            // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+            if (error) throw new Error(t("insertPracticeTagFailed"));
           }
         }
         if (menu.times?.length && createdLog) {
@@ -196,7 +204,7 @@ export function usePracticeTabSave({
       // UPDATE
       for (const { id, data: menu } of diff.toUpdate) {
         await updatePracticeLog(id, {
-          style: menu.style || "fr",
+          style: menu.style || "Fr",
           swim_category: menu.swimCategory || "Swim",
           rep_count: Number(menu.reps) || 1,
           set_count: Number(menu.sets) || 1,
@@ -212,7 +220,8 @@ export function usePracticeTabSave({
           };
           for (const tag of menu.tags) {
             const { error } = await qb.insert({ practice_log_id: id, practice_tag_id: tag.id });
-            if (error) throw new Error(t("insertPracticeTagFailed", { detail: error.message }));
+            // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+            if (error) throw new Error(t("insertPracticeTagFailed"));
           }
         }
         // 時間再同期

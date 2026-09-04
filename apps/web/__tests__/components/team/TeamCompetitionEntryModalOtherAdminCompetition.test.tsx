@@ -259,4 +259,68 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
     expect(screen.getByTestId("team-competition-entry-error")).toBeInTheDocument();
     expect(screen.queryByText("受付中")).not.toBeInTheDocument();
   });
+
+  // ---------------------------------------------------------------------------
+  // 情報露出防止の対テスト (QA追加): TeamCompetitionEntryModal.tsx:185 の
+  // `setError(toUserFacingMessage(err, t("competitionEntryModal.fetchFailed")))` は
+  // これまで UserFacingError 側 (競技会が見つからない場合の competitionNotFound、上記
+  // V-14 で間接的に検証済み) しか確認されていなかった。防御側 (生の Error → 汎用
+  // フォールバックに潰され、生のメッセージが画面に出ない) を対で追加する。
+  // ---------------------------------------------------------------------------
+  describe("[QA追加] エントリー情報取得失敗時のエラー表示 — 情報露出防止の対テスト", () => {
+    it(
+      "[V-ERR-01] competitions テーブルの取得が生の Error (RLSポリシー詳細等) で失敗した場合、" +
+        "汎用フォールバック文言 (fetchFailed) が表示され、生のエラー文字列は表示されない",
+      async () => {
+        currentAuthMock = {
+          supabase: buildSupabaseMock({
+            competitions: {
+              data: null,
+              error: new Error('relation "competitions" violates row-level security policy'),
+            },
+          }),
+        };
+
+        render(
+          <TeamCompetitionEntryModal
+            isOpen={true}
+            onClose={vi.fn()}
+            competitionId="comp-1"
+            competitionTitle="県大会"
+            teamId="team-1"
+          />,
+        );
+
+        const errorEl = await screen.findByTestId("team-competition-entry-error");
+        expect(errorEl).toHaveTextContent("エントリー情報の取得に失敗しました");
+        expect(errorEl).not.toHaveTextContent("row-level security policy");
+        expect(screen.queryByText(/row-level security policy/)).not.toBeInTheDocument();
+      },
+    );
+
+    it(
+      "[V-ERR-02] competitions テーブルの取得が UserFacingError (i18n 済みメッセージ) で" +
+        "失敗した場合、そのメッセージがそのまま表示される (対照実験: competitionNotFound)",
+      async () => {
+        currentAuthMock = {
+          supabase: buildSupabaseMock({
+            competitions: { data: null, error: null },
+          }),
+        };
+
+        render(
+          <TeamCompetitionEntryModal
+            isOpen={true}
+            onClose={vi.fn()}
+            competitionId="comp-1"
+            competitionTitle="県大会"
+            teamId="team-1"
+          />,
+        );
+
+        const errorEl = await screen.findByTestId("team-competition-entry-error");
+        expect(errorEl).toHaveTextContent("大会が見つかりません");
+      },
+    );
+  });
 });

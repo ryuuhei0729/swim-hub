@@ -113,7 +113,7 @@ describe("PracticeLog 重複排除ロジック", () => {
       const result = deduplicatePracticeLogItems(items);
 
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe("log-item-1"); // 最初の出現が代表
+      expect(result[0]!.id).toBe("log-item-1"); // 最初の出現が代表
     });
 
     it("practice.id（ネスト）ベースで2件 → 1件に絞り込まれる", () => {
@@ -125,7 +125,7 @@ describe("PracticeLog 重複排除ロジック", () => {
       const result = deduplicatePracticeLogItems(items);
 
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe("log-item-1");
+      expect(result[0]!.id).toBe("log-item-1");
     });
   });
 
@@ -151,7 +151,7 @@ describe("PracticeLog 重複排除ロジック", () => {
 
       const result = deduplicatePracticeLogItems(items);
 
-      expect(result[0].id).toBe("first-log");
+      expect(result[0]!.id).toBe("first-log");
     });
   });
 

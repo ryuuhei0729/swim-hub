@@ -14,6 +14,9 @@ import {
   RelayEventId,
 } from "../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/relayEvents";
 
+// NOTE: `event.legs[0]!`〜`[3]!` を多用する。RELAY_EVENTS の各リレー種目は4泳者固定の設計であり、
+// legs 配列は常に4件を持つ(ドメイン制約)。
+
 const TEST_LABELS = {
   ba: "背泳ぎ",
   br: "平泳ぎ",
@@ -104,51 +107,76 @@ describe("フリーリレーの styleId マッピング", () => {
 describe("[V-03] メドレーリレーの泳順と styleId マッピング (Ba→Br→Fly→Fr)", () => {
   it("25m×4メドレーリレー: ba=12, br=8, fly=16, fr=1", () => {
     const event = RELAY_EVENTS.find((e) => e.id === "relay_4x25_medley")!;
-    expect(event.legs[0].styleKey).toBe("ba");
-    expect(event.legs[0].styleId).toBe(12);
-    expect(event.legs[1].styleKey).toBe("br");
-    expect(event.legs[1].styleId).toBe(8);
-    expect(event.legs[2].styleKey).toBe("fly");
-    expect(event.legs[2].styleId).toBe(16);
-    expect(event.legs[3].styleKey).toBe("fr");
-    expect(event.legs[3].styleId).toBe(1);
+    expect(event.legs[0]!.styleKey).toBe("ba");
+    expect(event.legs[0]!.styleId).toBe(12);
+    expect(event.legs[1]!.styleKey).toBe("br");
+    expect(event.legs[1]!.styleId).toBe(8);
+    expect(event.legs[2]!.styleKey).toBe("fly");
+    expect(event.legs[2]!.styleId).toBe(16);
+    expect(event.legs[3]!.styleKey).toBe("fr");
+    expect(event.legs[3]!.styleId).toBe(1);
   });
 
   it("50m×4メドレーリレー: ba=13, br=9, fly=17, fr=2", () => {
     const event = RELAY_EVENTS.find((e) => e.id === "relay_4x50_medley")!;
-    expect(event.legs[0].styleKey).toBe("ba");
-    expect(event.legs[0].styleId).toBe(13);
-    expect(event.legs[1].styleKey).toBe("br");
-    expect(event.legs[1].styleId).toBe(9);
-    expect(event.legs[2].styleKey).toBe("fly");
-    expect(event.legs[2].styleId).toBe(17);
-    expect(event.legs[3].styleKey).toBe("fr");
-    expect(event.legs[3].styleId).toBe(2);
+    expect(event.legs[0]!.styleKey).toBe("ba");
+    expect(event.legs[0]!.styleId).toBe(13);
+    expect(event.legs[1]!.styleKey).toBe("br");
+    expect(event.legs[1]!.styleId).toBe(9);
+    expect(event.legs[2]!.styleKey).toBe("fly");
+    expect(event.legs[2]!.styleId).toBe(17);
+    expect(event.legs[3]!.styleKey).toBe("fr");
+    expect(event.legs[3]!.styleId).toBe(2);
   });
 
   it("100m×4メドレーリレー: ba=14, br=10, fly=18, fr=3", () => {
     const event = RELAY_EVENTS.find((e) => e.id === "relay_4x100_medley")!;
-    expect(event.legs[0].styleKey).toBe("ba");
-    expect(event.legs[0].styleId).toBe(14);
-    expect(event.legs[1].styleKey).toBe("br");
-    expect(event.legs[1].styleId).toBe(10);
-    expect(event.legs[2].styleKey).toBe("fly");
-    expect(event.legs[2].styleId).toBe(18);
-    expect(event.legs[3].styleKey).toBe("fr");
-    expect(event.legs[3].styleId).toBe(3);
+    expect(event.legs[0]!.styleKey).toBe("ba");
+    expect(event.legs[0]!.styleId).toBe(14);
+    expect(event.legs[1]!.styleKey).toBe("br");
+    expect(event.legs[1]!.styleId).toBe(10);
+    expect(event.legs[2]!.styleKey).toBe("fly");
+    expect(event.legs[2]!.styleId).toBe(18);
+    expect(event.legs[3]!.styleKey).toBe("fr");
+    expect(event.legs[3]!.styleId).toBe(3);
   });
 
   it("メドレーリレーの泳者ラベルが正しい順序で表示される", () => {
     const labelled = buildRelayEvents(TEST_LABELS);
     const event = labelled.find((e) => e.id === "relay_4x50_medley")!;
-    expect(event.legs[0].legLabel).toContain("第1泳者");
-    expect(event.legs[0].legLabel).toContain("背泳ぎ");
-    expect(event.legs[1].legLabel).toContain("第2泳者");
-    expect(event.legs[1].legLabel).toContain("平泳ぎ");
-    expect(event.legs[2].legLabel).toContain("第3泳者");
-    expect(event.legs[2].legLabel).toContain("バタフライ");
-    expect(event.legs[3].legLabel).toContain("第4泳者");
-    expect(event.legs[3].legLabel).toContain("自由形");
+    expect(event.legs[0]!.legLabel).toContain("第1泳者");
+    expect(event.legs[0]!.legLabel).toContain("背泳ぎ");
+    expect(event.legs[1]!.legLabel).toContain("第2泳者");
+    expect(event.legs[1]!.legLabel).toContain("平泳ぎ");
+    expect(event.legs[2]!.legLabel).toContain("第3泳者");
+    expect(event.legs[2]!.legLabel).toContain("バタフライ");
+    expect(event.legs[3]!.legLabel).toContain("第4泳者");
+    expect(event.legs[3]!.legLabel).toContain("自由形");
+  });
+});
+
+// =============================================================================
+// Reviewer Critical 4 回帰テスト: buildRelayEvents の distById (id→距離のハードコード
+// 対応表) は、1つ値を間違えるとその種目の event.label (トップレベルの種目名ラベル、
+// 例: "50m×4 フリーリレー") が静かに誤った距離で表示される。
+// 既存テストは legs[n].legLabel (第N泳者ラベル) のみを検証しており、event.label 自体は
+// medley/free 含めて一度も assert されていなかった (Reviewer実証: relay_4x50_free の
+// distById を 50→25 に書き換えても全テストが green のまま)。フリー4種目・メドレー3種目
+// 全てで event.label を検証し、この穴を塞ぐ。
+// =============================================================================
+describe("buildRelayEvents の event.label (種目トップレベルのラベル、Critical 4 回帰)", () => {
+  it.each([
+    ["relay_4x25_free", "25m×4 フリーリレー"],
+    ["relay_4x50_free", "50m×4 フリーリレー"],
+    ["relay_4x100_free", "100m×4 フリーリレー"],
+    ["relay_4x200_free", "200m×4 フリーリレー"],
+    ["relay_4x25_medley", "25m×4 メドレーリレー"],
+    ["relay_4x50_medley", "50m×4 メドレーリレー"],
+    ["relay_4x100_medley", "100m×4 メドレーリレー"],
+  ] satisfies Array<[RelayEventId, string]>)("%s の event.label は %s", (id, expectedLabel) => {
+    const labelled = buildRelayEvents(TEST_LABELS);
+    const event = labelled.find((e) => e.id === id)!;
+    expect(event.label).toBe(expectedLabel);
   });
 });
 
@@ -348,7 +376,8 @@ describe("[V-07] getRelayLegBoundaries - leg境界距離配列の取得", () => 
     for (const event of RELAY_EVENTS) {
       const boundaries = getRelayLegBoundaries(event.id);
       for (let i = 1; i < boundaries.length; i++) {
-        expect(boundaries[i]).toBeGreaterThan(boundaries[i - 1]);
+        // ループ条件 (1 <= i < boundaries.length) により boundaries[i] と boundaries[i - 1] は常に範囲内
+        expect(boundaries[i]!).toBeGreaterThan(boundaries[i - 1]!);
       }
     }
   });

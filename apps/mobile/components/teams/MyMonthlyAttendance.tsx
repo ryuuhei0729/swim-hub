@@ -18,6 +18,7 @@ import { getMonthDateRange, formatDate, toISODateString } from "@swim-hub/shared
 import { resolveAttendanceStatus } from "@swim-hub/shared/utils/attendanceStatus";
 import { startOfMonth, endOfMonth, addMonths, format, parseISO } from "date-fns";
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useTranslation } from "react-i18next";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { AttendanceGroupModal } from "./AttendanceGroupModal";
@@ -203,6 +204,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
 
       for (const monthKey of sortedMonthKeys) {
         const [yearStr, monthStr] = monthKey.split("-");
+        if (!yearStr || !monthStr) continue; // monthKey は `${year}-${paddedMonth}` 形式で
+                                              // 自身が生成した文字列のため理論上ここに来ないが、
+                                              // split() の型を素直に守る
         const year = parseInt(yearStr);
         const month = parseInt(monthStr);
 
@@ -407,8 +411,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const handleStatusChange = (eventId: string, status: AttendanceStatus | null) => {
     setEditStates((prev) => ({
       ...prev,
+      // prev[eventId] が無い(まだ編集されていない)場合は「未回答」の既定状態から始める
       [eventId]: {
-        ...prev[eventId],
+        ...(prev[eventId] ?? { status: null, note: "" }),
         status,
       },
     }));
@@ -418,8 +423,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const handleNoteChange = (eventId: string, note: string) => {
     setEditStates((prev) => ({
       ...prev,
+      // prev[eventId] が無い(まだ編集されていない)場合は「未回答」の既定状態から始める
       [eventId]: {
-        ...prev[eventId],
+        ...(prev[eventId] ?? { status: null, note: "" }),
         note,
       },
     }));
@@ -483,7 +489,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+      if (!user) throw new UserFacingError(t("auth.errorMap.sessionNotFound"));
 
       let note: string | null = editState.note
         ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH)
@@ -613,8 +619,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       await syncQuickStateAfterSave(eventId, event, saved);
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : t("teams.mobile.attendanceSaveFailed");
+      const errorMessage = toUserFacingMessage(err, t("teams.mobile.attendanceSaveFailed"));
       // NOTE: setError はコンポーネント全体をエラー表示に切り替えてモーダルが消えるため、
       // イベント単位保存では Alert のみで通知し、編集状態を保持する
       Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
@@ -651,14 +656,16 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const handleQuickStatusChange = (eventId: string, status: AttendanceStatus | null) => {
     setQuickEditStates((prev) => ({
       ...prev,
-      [eventId]: { ...prev[eventId], status },
+      // prev[eventId] が無い(まだ編集されていない)場合は「未回答」の既定状態から始める
+      [eventId]: { ...(prev[eventId] ?? { status: null, note: "" }), status },
     }));
   };
 
   const handleQuickNoteChange = (eventId: string, note: string) => {
     setQuickEditStates((prev) => ({
       ...prev,
-      [eventId]: { ...prev[eventId], note },
+      // prev[eventId] が無い(まだ編集されていない)場合は「未回答」の既定状態から始める
+      [eventId]: { ...(prev[eventId] ?? { status: null, note: "" }), note },
     }));
   };
 
@@ -701,8 +708,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       await loadMonthList();
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : t("teams.recentAttendanceHook.saveError");
+      const errorMessage = toUserFacingMessage(err, t("teams.recentAttendanceHook.saveError"));
       Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
     } finally {
       setQuickSavingEventIds((prev) => {
@@ -824,7 +830,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+      if (!user) throw new UserFacingError(t("auth.errorMap.sessionNotFound"));
 
       const newAttendances = events
         .filter((event) => {
@@ -837,6 +843,8 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
         })
         .map((event) => {
           const editState = editStates[event.id];
+          if (!editState) return null; // 直前の .filter() で editState が存在する event のみに
+                                        // 絞っているが、TS はフィルタ結果を追跡できないため防御的に扱う
           // web useAttendanceEdit:191 / useRecentAttendance:199 と同順: 先にユーザー入力を sanitize し、
           // その後に締切後編集マーク（システム生成・サニタイズ不要）を付与する。
           let note: string | null = editState.note
@@ -863,7 +871,8 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
             status: editState.status,
             note,
           };
-        });
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
       // 新規作成と更新を実行
       // 新規作成
@@ -895,8 +904,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       );
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : t("teams.mobile.attendanceSaveFailed");
+      const errorMessage = toUserFacingMessage(err, t("teams.mobile.attendanceSaveFailed"));
       setError(errorMessage);
       Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
     } finally {

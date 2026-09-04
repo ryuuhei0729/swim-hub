@@ -50,12 +50,12 @@ describe("[T-1] Phase 1/2 メドレーリレー (4x50)", () => {
   it("1 entry にまとまり relayEventId が relay_4x50_medley", () => {
     const result = buildStyleEntriesFromExisting(records, STYLES);
     expect(result).toHaveLength(1);
-    expect(result[0].relayEventId).toBe("relay_4x50_medley");
-    expect(result[0].id).toBe("relay-0");
+    expect(result[0]!.relayEventId).toBe("relay_4x50_medley"); // 直前の toHaveLength(1) で result[0] の存在は保証済み
+    expect(result[0]!.id).toBe("relay-0");
   });
 
   it("累計タイム (cumulativeTimeSeconds) が手計算値と一致", () => {
-    const mrs = buildStyleEntriesFromExisting(records, STYLES)[0].memberRecords;
+    const mrs = buildStyleEntriesFromExisting(records, STYLES)[0]!.memberRecords; // records は4連続のメドレーリレー検出パターンで必ず1entryにまとまる設計
     expect(mrs.map((m) => m.cumulativeTimeSeconds)).toEqual([15.2, 31.5, 46.0, 59.1]);
   });
 
@@ -67,16 +67,16 @@ describe("[T-1] Phase 1/2 メドレーリレー (4x50)", () => {
       rec({ id: "2", style_id: 17, time: 0, is_relaying: true }),
       rec({ id: "3", style_id: 2, time: 0, is_relaying: true }),
     ];
-    const mrs = buildStyleEntriesFromExisting(slow, STYLES)[0].memberRecords;
+    const mrs = buildStyleEntriesFromExisting(slow, STYLES)[0]!.memberRecords; // slow も同じ4連続パターンで必ず1entryにまとまる設計
     // 累計: 30.00 / 65.00(=1:05.00) / 65.00 / 65.00
-    expect(mrs[0].timeDisplayValue).toBe("30.00");
-    expect(mrs[1].timeDisplayValue).toBe("1:05.00");
+    expect(mrs[0]!.timeDisplayValue).toBe("30.00"); // slow は4件固定の入力なので mrs は必ず4要素
+    expect(mrs[1]!.timeDisplayValue).toBe("1:05.00");
     // cumulative > 0 なので leg3 も累計を表示 (65.00)
-    expect(mrs[3].timeDisplayValue).toBe("1:05.00");
+    expect(mrs[3]!.timeDisplayValue).toBe("1:05.00");
   });
 
   it("relayLegStyleId が relay 定義の leg 順 (ba=13,br=9,fly=17,fr=2) に一致", () => {
-    const mrs = buildStyleEntriesFromExisting(records, STYLES)[0].memberRecords;
+    const mrs = buildStyleEntriesFromExisting(records, STYLES)[0]!.memberRecords; // records は4連続のメドレーリレー検出パターンで必ず1entryにまとまる設計
     expect(mrs.map((m) => m.relayLegStyleId)).toEqual([13, 9, 17, 2]);
   });
 });
@@ -115,7 +115,7 @@ describe("[T-1] Phase 2 split 距離変換 (4x50 medley, legDist=50, boundaries 
   ];
 
   it("leg0 の split は offset0 のまま (25, 50)", () => {
-    const entry = buildStyleEntriesFromExisting(recordsWithSplits, STYLES)[0];
+    const entry = buildStyleEntriesFromExisting(recordsWithSplits, STYLES)[0]!; // recordsWithSplits も4連続のメドレーリレー検出パターンで必ず1entryにまとまる設計
     const ds = (entry.relaySplitTimes ?? []).map((s) => ({ d: s.distance, t: s.splitTime }));
     expect(ds).toContainEqual({ d: 25, t: 7.0 });
     expect(ds).toContainEqual({ d: 50, t: 13.0 });
@@ -125,7 +125,7 @@ describe("[T-1] Phase 2 split 距離変換 (4x50 medley, legDist=50, boundaries 
     // times=[15.0,16.0,14.5,13.5] → cumulatives=[15.0,31.0,45.5,59.0] → legStart(leg1)=15.0
     // D4 修正前 (バグ): splitTime は DB の値 (8.0) をそのまま通算値扱いしていた。
     // D4 修正後: 8.0 (leg 相対) + legStart(15.0) = 23.0 (正しい通算値)
-    const entry = buildStyleEntriesFromExisting(recordsWithSplits, STYLES)[0];
+    const entry = buildStyleEntriesFromExisting(recordsWithSplits, STYLES)[0]!; // 同上
     const ds = (entry.relaySplitTimes ?? []).map((s) => ({ d: s.distance, t: s.splitTime }));
     expect(ds).toContainEqual({ d: 75, t: 23.0 }); // 50 + 25 / splitTime = 8.0 + legStart(15.0)
     // off-by-one ガード: leg1 の split (元 splitTime=8.0) が distance=25 のまま
@@ -141,7 +141,7 @@ describe("[T-1] Phase 2 split 距離変換 (4x50 medley, legDist=50, boundaries 
       "正しい仕様値のまま残す (このテストは現状 red。web 側にも同一の regression あり: " +
       "apps/web/__tests__/buildStyleEntries.test.ts 参照)",
     () => {
-      const entry = buildStyleEntriesFromExisting(recordsWithSplits, STYLES)[0];
+      const entry = buildStyleEntriesFromExisting(recordsWithSplits, STYLES)[0]!; // 同上
       const ds = (entry.relaySplitTimes ?? []).map((s) => ({ d: s.distance, t: s.splitTime }));
       expect(ds).toContainEqual({ d: 100, t: 14.0 }); // 既に全体距離、splitTime も無変換のはず
     },
@@ -162,8 +162,8 @@ describe("[T-1] Phase 1 複数リレーグループ", () => {
     const result = buildStyleEntriesFromExisting([...grp("a"), ...grp("b")], STYLES);
     const relayEntries = result.filter((e) => e.relayEventId);
     expect(relayEntries).toHaveLength(2);
-    expect(relayEntries[0].id).toBe("relay-a0");
-    expect(relayEntries[1].id).toBe("relay-b0");
+    expect(relayEntries[0]!.id).toBe("relay-a0"); // 直前の toHaveLength(2) で2件の存在は保証済み
+    expect(relayEntries[1]!.id).toBe("relay-b0");
   });
 
   it("is_relaying パターン一致でも style 順が逆だと検出されない (取り違え防止)", () => {
@@ -200,10 +200,10 @@ describe("[T-1] Phase 3 個人種目グループ化", () => {
     ];
     const result = buildStyleEntriesFromExisting(records, STYLES);
     expect(result).toHaveLength(1);
-    expect(result[0].styleId).toBe(2);
-    expect(result[0].styleName).toBe("50m 自由形");
-    expect(result[0].memberRecords).toHaveLength(2);
-    expect(result[0].memberRecords.map((m) => m.time)).toEqual([27.5, 28.1]);
+    expect(result[0]!.styleId).toBe(2); // 直前の toHaveLength(1) で result[0] の存在は保証済み
+    expect(result[0]!.styleName).toBe("50m 自由形");
+    expect(result[0]!.memberRecords).toHaveLength(2);
+    expect(result[0]!.memberRecords.map((m) => m.time)).toEqual([27.5, 28.1]);
   });
 
   it("異なる style_id は別 entry (3件: 50Fr, 100Fr, 200Fr)", () => {
@@ -218,7 +218,7 @@ describe("[T-1] Phase 3 個人種目グループ化", () => {
 
   it("styles に存在しない style_id は styleName 空文字", () => {
     const result = buildStyleEntriesFromExisting([rec({ id: "0", style_id: 999, time: 10 })], STYLES);
-    expect(result[0].styleName).toBe("");
+    expect(result[0]!.styleName).toBe(""); // records は要素1件の配列なので必ず1entryが返る
   });
 
   it("個人種目 split は変換されず distance そのまま (Phase2 変換は適用外)", () => {
@@ -233,7 +233,7 @@ describe("[T-1] Phase 3 個人種目グループ化", () => {
         ],
       }),
     ];
-    const sts = buildStyleEntriesFromExisting(records, STYLES)[0].memberRecords[0].splitTimes;
+    const sts = buildStyleEntriesFromExisting(records, STYLES)[0]!.memberRecords[0]!.splitTimes; // records は要素1件の配列で memberRecords も必ず1件
     expect(sts.map((s) => s.distance)).toEqual([50, 100]);
   });
 });
@@ -278,10 +278,10 @@ describe("[T-1] Phase 4 フリーリレー二次検出", () => {
     // leg1 distance=100(<=legDist) → distance=100+100=200 / splitTime=40.0+legStart(57.0)=97.0
     // leg3 distance=50(<=legDist) → distance=300+50=350 / splitTime=30.0+legStart(173.3)=203.3
     const withSplits = [
-      { ...freeRelay[0], split_times: [{ id: "a", distance: 100, split_time: 50.0 }] },
-      { ...freeRelay[1], split_times: [{ id: "b", distance: 100, split_time: 40.0 }] },
-      { ...freeRelay[2], split_times: [] },
-      { ...freeRelay[3], split_times: [{ id: "c", distance: 50, split_time: 30.0 }] },
+      { ...freeRelay[0]!, split_times: [{ id: "a", distance: 100, split_time: 50.0 }] }, // freeRelay は要素4件固定の配列
+      { ...freeRelay[1]!, split_times: [{ id: "b", distance: 100, split_time: 40.0 }] },
+      { ...freeRelay[2]!, split_times: [] },
+      { ...freeRelay[3]!, split_times: [{ id: "c", distance: 50, split_time: 30.0 }] },
     ];
     const relay = buildStyleEntriesFromExisting(withSplits, STYLES).find((e) => e.relayEventId)!;
     const ds = (relay.relaySplitTimes ?? []).map((s) => ({ d: s.distance, t: s.splitTime }));
@@ -299,6 +299,6 @@ describe("[T-1] Phase 4 フリーリレー二次検出", () => {
     ];
     const result = buildStyleEntriesFromExisting(notRelay, STYLES);
     expect(result.find((e) => e.relayEventId)).toBeUndefined();
-    expect(result[0].memberRecords).toHaveLength(4);
+    expect(result[0]!.memberRecords).toHaveLength(4); // notRelay は要素4件で同一style_idのため必ず1entryにまとまる設計
   });
 });

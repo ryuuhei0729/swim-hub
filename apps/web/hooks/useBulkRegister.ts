@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { TeamBulkRegisterAPI, BulkRegisterInput } from "@apps/shared/api/teams/bulkRegister";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { parsePracticeExcelFile } from "@/utils/practiceExcel";
 import { parseCompetitionExcelFile } from "@/utils/competitionExcel";
 import type { ParsedData, RegisterResult } from "@/types/bulk-register";
@@ -150,7 +151,7 @@ export function useBulkRegister(supabase: SupabaseClient | null, teamId: string)
         setError(`一部の登録に失敗しました: ${result.errors.join(", ")}`);
       }
     } catch (err) {
-      setError("一括登録に失敗しました");
+      setError(toUserFacingMessage(err, "一括登録に失敗しました"));
       console.error("一括登録エラー:", err);
     } finally {
       setLoading(false);

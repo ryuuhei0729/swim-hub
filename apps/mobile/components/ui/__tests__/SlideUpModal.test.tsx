@@ -94,7 +94,7 @@ describe("SlideUpModal", () => {
     // シートは背面タップ用 button の中には無い (兄弟構造)。
     expect(overlay.children.length).toBe(2);
     expect(overlay.children[0]).toBe(backdrop);
-    const sheet = overlay.children[1];
+    const sheet = overlay.children[1]!; // 直前の toBe(2) で存在は保証済み
     expect(sheet.tagName).not.toBe("BUTTON");
     expect(sheet.textContent).toContain("slide-up-modal-content-marker");
     // 背面タップ用 button 自身はシートの内容を含まない (兄弟であり親子ではないことの補強)
@@ -431,7 +431,7 @@ describe("SlideUpModal", () => {
     function getLatestSelectOnDismiss(): () => void {
       const events = __modalMountRegistry.events;
       for (let i = events.length - 1; i >= 0; i--) {
-        const props = events[i].props;
+        const props = events[i]!.props; // ループ条件 0<=i<events.length により同一配列内で必ず存在
         if (props.transparent === true) {
           const onDismiss = props.onDismiss;
           if (typeof onDismiss === "function") return onDismiss as () => void;

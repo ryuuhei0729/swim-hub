@@ -4,6 +4,7 @@ import { TeamAttendancesAPI } from "@apps/shared/api/teams/attendances";
 import { AttendanceStatusType, TeamEvent } from "@swim-hub/shared/types";
 import { format } from "date-fns";
 import type { EventStatusEditState } from "@/types/admin-attendance";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
   const attendancesAPI = useMemo(() => new TeamAttendancesAPI(supabase), [supabase]);
@@ -61,7 +62,7 @@ export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
       setEditStates(initialEditStates);
     } catch (err) {
       console.error("イベント情報の取得に失敗:", err);
-      setError("イベント情報の取得に失敗しました");
+      setError(toUserFacingMessage(err, "イベント情報の取得に失敗しました"));
     } finally {
       setLoading(false);
     }
@@ -116,7 +117,7 @@ export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
         }));
       } catch (err) {
         console.error("出欠ステータスの保存に失敗:", err);
-        setError("出欠ステータスの保存に失敗しました");
+        setError(toUserFacingMessage(err, "出欠ステータスの保存に失敗しました"));
       } finally {
         setSavingEventIds((prev) => {
           const next = new Set(prev);
@@ -172,7 +173,7 @@ export function useAdminAttendance(supabase: SupabaseClient, teamId: string) {
         await loadFutureEvents();
       } catch (err) {
         console.error("一括更新に失敗:", err);
-        setError("一括更新に失敗しました");
+        setError(toUserFacingMessage(err, "一括更新に失敗しました"));
       }
     },
     [events, attendancesAPI, loadFutureEvents],

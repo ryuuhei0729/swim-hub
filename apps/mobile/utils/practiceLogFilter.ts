@@ -9,23 +9,14 @@
 import { parseISO, isValid } from "date-fns";
 import type { PracticeWithLogs, PracticeLogWithTags, SwimStyle } from "@swim-hub/shared/types";
 import { logMatchesAllTags, type PracticeLogRow } from "@apps/shared/utils/practiceLogRows";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { compareWithNullsLast } from "./sortCompare";
 
 export type PracticeSortColumn = "date" | "place" | null;
 export type PracticeSortOrder = "asc" | "desc";
 
 /** 種目(泳法)コードの表示順(自由形→平泳ぎ→背泳ぎ→バタフライ→個人メドレー) */
-const STYLE_ORDER: SwimStyle[] = ["fr", "br", "ba", "fly", "im"];
-
-/**
- * PracticeLog.style ("Fr"/"fr"/"FR" 等、大文字小文字表記ゆれあり) を
- * 正規化した SwimStyle コードに変換する。一致しない場合は null。
- */
-function normalizeStyleCode(style: string | null | undefined): SwimStyle | null {
-  if (!style) return null;
-  const lower = style.toLowerCase();
-  return (STYLE_ORDER as readonly string[]).includes(lower) ? (lower as SwimStyle) : null;
-}
+const STYLE_ORDER: SwimStyle[] = ["Fr", "Br", "Ba", "Fly", "IM"];
 
 /** 場所フィルタ(複数選択, OR。practice.place との直接比較)。選択0件は常に一致 */
 export function practiceMatchesPlaces(practice: PracticeWithLogs, selectedPlaces: string[]): boolean {
@@ -41,7 +32,7 @@ export function practiceMatchesPlaces(practice: PracticeWithLogs, selectedPlaces
 export function logMatchesStyle(log: PracticeLogWithTags | null, selectedStyle: string): boolean {
   if (!selectedStyle) return true;
   if (!log) return false;
-  return normalizeStyleCode(log.style) === selectedStyle;
+  return toStyleCode(log.style) === selectedStyle;
 }
 
 export interface PracticeFilterValues {
@@ -93,7 +84,7 @@ export function getParticipatedPracticeStyleCodes(practices: PracticeWithLogs[])
   const codes = new Set<SwimStyle>();
   practices.forEach((practice) => {
     (practice.practice_logs ?? []).forEach((log) => {
-      const code = normalizeStyleCode(log.style);
+      const code = toStyleCode(log.style);
       if (code) codes.add(code);
     });
   });

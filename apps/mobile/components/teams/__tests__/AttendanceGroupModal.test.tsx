@@ -185,7 +185,7 @@ describe("AttendanceGroupModal", () => {
       );
       expect(backdropCandidates.length).toBe(1);
 
-      fireEvent.click(backdropCandidates[0]);
+      fireEvent.click(backdropCandidates[0]!); // 直前の toBe(1) で存在は保証済み
 
       // 閉じるアニメーション分の待機を挟んでも onClose が呼ばれないこと
       // (SlideUpModal は閉じるとき即座に unmount せず setTimeout 後に unmount するため、

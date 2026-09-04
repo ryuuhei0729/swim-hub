@@ -49,7 +49,7 @@ const SPRINT_REQUIRED_KEYS = [
   "teams.memberDetail.bestTimesTable.legend.relayingExcludedFromWaPoints", // WAモード時の凡例文言
 ] as const;
 
-const ALL_MESSAGES: Record<string, Record<string, unknown>> = {
+const ALL_MESSAGES: Record<"ja" | "en" | "de" | "ko" | "zh", Record<string, unknown>> = {
   ja: jaMessages as unknown as Record<string, unknown>,
   en: enMessages as unknown as Record<string, unknown>,
   de: deMessages as unknown as Record<string, unknown>,

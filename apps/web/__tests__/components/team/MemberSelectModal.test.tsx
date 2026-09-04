@@ -70,7 +70,7 @@ describe("MemberSelectModal (web)", () => {
       );
 
       expect(screen.getByText("record.selectedMemberCount")).toBeInTheDocument();
-      fireEvent.click(screen.getAllByRole("checkbox")[0]);
+      fireEvent.click(screen.getAllByRole("checkbox")[0]!);
       // カウント表示のテキスト自体はi18n補間 (mock passthroughのため {n} は展開されない) だが、
       // チェック状態の変化を checkbox の checked 属性で直接確認する
       expect(screen.getAllByRole("checkbox")[0]).toBeChecked();
@@ -112,7 +112,7 @@ describe("MemberSelectModal (web)", () => {
 
       // user-2 (選手A) を追加で選択する
       const checkboxes = screen.getAllByRole("checkbox");
-      fireEvent.click(checkboxes[1]);
+      fireEvent.click(checkboxes[1]!);
       fireEvent.click(screen.getByRole("button", { name: "record.confirmSelection" }));
 
       expect(onConfirm).toHaveBeenCalledWith(expect.arrayContaining(["user-1", "user-2"]));
@@ -136,7 +136,7 @@ describe("MemberSelectModal (web)", () => {
         />,
       );
 
-      fireEvent.click(screen.getAllByRole("checkbox")[0]);
+      fireEvent.click(screen.getAllByRole("checkbox")[0]!);
       fireEvent.click(screen.getByRole("button", { name: "record.cancelButton" }));
 
       expect(onConfirm).not.toHaveBeenCalled();

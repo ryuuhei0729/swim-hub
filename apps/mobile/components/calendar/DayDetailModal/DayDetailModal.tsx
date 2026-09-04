@@ -387,10 +387,17 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                         if (recordsByCompetition.has(competitionId)) return null;
 
                         const firstEntry = entryList[0];
+                        if (!firstEntry) return null; // entriesByCompetition は Map.entries() 由来で
+                                                       // 各グループは構造的に空にならないが、TS は
+                                                       // それを知らないため防御的に扱う
                         const competitionName =
                           firstEntry.metadata?.competition?.title || firstEntry.title || fallbackCompetitionName;
                         const place =
                           firstEntry.place || firstEntry.metadata?.competition?.place || "";
+                        // metadata は calendar_view の JSONB 列で未型付けだが、'entry' 型行は
+                        // jsonb_build_object('competition', to_jsonb(c.*), ...) で competitions
+                        // 行全体をそのまま埋め込むため、実データには pool_type (DB上NOT NULL)
+                        // が必ず入っている。JSON型保証が無いための防御的フォールバック(web と同型)。
                         const poolType = firstEntry.metadata?.competition?.pool_type ?? 0;
                         const note = firstEntry.note || undefined;
                         const isTeamCompetition = !!firstEntry.metadata?.competition?.team_id;
@@ -434,6 +441,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                     {/* 記録を大会ごとに表示 */}
                     {Array.from(recordsByCompetition.entries()).map(([competitionId, records]) => {
                       const firstRecord = records[0];
+                      if (!firstRecord) return null; // recordsByCompetition は Map.entries() 由来で
+                                                       // 各グループは構造的に空にならないが、TS は
+                                                       // それを知らないため防御的に扱う
                       const competitionName =
                         firstRecord.metadata?.competition?.title || firstRecord.title || fallbackCompetitionName;
                       const place =

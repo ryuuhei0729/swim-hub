@@ -122,6 +122,8 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 // AuthUI.tsx (デッドコード。実消費者ゼロだがバレル export のため直す対象)
 // ---------------------------------------------------------------------------
+// NOTE: `mock.calls[0]!` を多用する。各テストは直前に `toHaveBeenCalledTimes(1)` 相当の
+// 呼び出しを確認済み。
 describe("AuthUI.tsx — Google認証ボタンの redirectTo に現在の locale が埋め込まれる", () => {
   async function renderAndClick() {
     const { AuthUI } = await import("@/components/auth/AuthUI");
@@ -204,7 +206,7 @@ describe("AuthProvider.tsx — signInWithOAuth のデフォルト redirectTo に
     await waitFor(() => {
       expect(mocks.supabaseSignInWithOAuth).toHaveBeenCalledTimes(1);
     });
-    const call = mocks.supabaseSignInWithOAuth.mock.calls[0][0];
+    const call = mocks.supabaseSignInWithOAuth.mock.calls[0]![0];
     expect(call.provider).toBe("google");
     expect(call.options.redirectTo).toBe("http://localhost:3000/?redirect_to=/ja/onboarding");
   });
@@ -216,7 +218,7 @@ describe("AuthProvider.tsx — signInWithOAuth のデフォルト redirectTo に
     await waitFor(() => {
       expect(mocks.supabaseSignInWithOAuth).toHaveBeenCalledTimes(1);
     });
-    const call = mocks.supabaseSignInWithOAuth.mock.calls[0][0];
+    const call = mocks.supabaseSignInWithOAuth.mock.calls[0]![0];
     expect(call.options.redirectTo).toBe("http://localhost:3000/?redirect_to=/de/onboarding");
     expect(call.options.redirectTo).not.toContain("/de/de/");
   });
@@ -236,7 +238,7 @@ describe("IdentityLinkSettings.tsx — アカウント連携の redirectTo に�
     });
     const linkButtons = await screen.findAllByText("linkButton");
     const index = provider === "Google" ? 0 : 1;
-    fireEvent.click(linkButtons[index]);
+    fireEvent.click(linkButtons[index]!);
   }
 
   it("[V-B4-05] locale='ja' の場合、Google連携の redirectTo は http://localhost:3000/?redirect_to=/ja/settings", async () => {
@@ -288,7 +290,7 @@ describe("GoogleCalendarSyncSettings.tsx — カレンダー連携の redirectTo
     await waitFor(() => {
       expect(mocks.contextSignInWithOAuth).toHaveBeenCalledTimes(1);
     });
-    const [, options] = mocks.contextSignInWithOAuth.mock.calls[0];
+    const [, options] = mocks.contextSignInWithOAuth.mock.calls[0]!;
     expect(options.redirectTo).toBe(
       "http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=/ja/settings",
     );
@@ -301,7 +303,7 @@ describe("GoogleCalendarSyncSettings.tsx — カレンダー連携の redirectTo
     await waitFor(() => {
       expect(mocks.contextSignInWithOAuth).toHaveBeenCalledTimes(1);
     });
-    const [, options] = mocks.contextSignInWithOAuth.mock.calls[0];
+    const [, options] = mocks.contextSignInWithOAuth.mock.calls[0]!;
     expect(options.redirectTo).toBe(
       "http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=/ko/settings",
     );

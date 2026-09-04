@@ -66,8 +66,9 @@ describe("crawl - 取得失敗の記録", () => {
 
     const skips = journal.events.filter((e) => e.type === "skip") as Array<{ reason: string }>;
     expect(skips.length).toBeGreaterThan(0);
-    expect(skips[0].reason).toContain("403");
-    expect(skips[0].reason).not.toContain("個人種目なし");
+    // toBeGreaterThan(0) で skips が1件以上であることを検証済み
+    expect(skips[0]!.reason).toContain("403");
+    expect(skips[0]!.reason).not.toContain("個人種目なし");
     expect(summary.fetchFailures).toBeGreaterThan(0);
     expect(summary.gamesCrawled).toBe(0);
   });
@@ -110,7 +111,8 @@ describe("crawl - 取得失敗の記録", () => {
     await crawl({ client, journal, year: 2026, gameLimit: 1 });
 
     const skips = journal.events.filter((e) => e.type === "skip") as Array<{ reason: string }>;
-    expect(skips[0].reason).toBe("個人種目なし");
+    expect(skips.length).toBeGreaterThan(0);
+    expect(skips[0]!.reason).toBe("個人種目なし");
   });
 });
 

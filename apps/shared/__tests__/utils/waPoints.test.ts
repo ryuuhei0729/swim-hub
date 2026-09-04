@@ -306,7 +306,8 @@ describe("[V-09] rankMembersByWaPoints: 降順ソート + 同点でも連番rank
       member({ memberId: "b", records: [tiedRecord] }),
     ];
     const ranking = rankMembersByWaPoints(members);
-    expect(ranking[0].points).toBe(ranking[1].points);
+    expect(ranking).toHaveLength(2);
+    expect(ranking[0]!.points).toBe(ranking[1]!.points); // toHaveLength(2) を直前で確認済み
     expect(ranking.map((r) => r.rank)).toEqual([1, 2]);
   });
 });

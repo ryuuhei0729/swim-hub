@@ -31,6 +31,7 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -86,6 +87,10 @@ export const RecordLogFormScreen: React.FC = () => {
   const bestTimes = useMemo(() => bestTimesData ?? [], [bestTimesData]);
   // ベストタイムの水路判定用に大会のプール種別を取得
   const { data: competitionInfo } = useCompetitionInfoQuery(supabase, competitionId);
+  // competitionInfo は query 未解決中は undefined になり得るため genuinely nullable。
+  // ただし competitionPoolType は getBestTimeForEntry() のベストタイム参照バッジ表示にのみ
+  // 使う読み取り専用値で、DBへの書き込みには関与しない。同関数は同水路優先・異水路フォールバック
+  // の両方を持つため 0 default が誤っていてもバッジ表示のみへの影響に留まる。
   const competitionPoolType = competitionInfo?.poolType ?? 0;
 
   // 動画の状態管理
@@ -272,6 +277,7 @@ export const RecordLogFormScreen: React.FC = () => {
   const handleTimeChange = (index: number, value: string) => {
     const newTime = parseTimeToSeconds(value);
     const formData = formDataList[index];
+    if (!formData) return;
     const style = swimStyles.find((s) => s.id.toString() === formData.styleId);
     const raceDistance = style?.distance;
 
@@ -376,6 +382,7 @@ export const RecordLogFormScreen: React.FC = () => {
   const handleAddSplitTime = (index: number) => {
     if (isSplitTimeLimitReached(index)) return;
     const formData = formDataList[index];
+    if (!formData) return;
     updateFormData(index, {
       splitTimes: [
         ...formData.splitTimes,
@@ -391,6 +398,7 @@ export const RecordLogFormScreen: React.FC = () => {
   // スプリットタイムを25mごとに追加
   const handleAddSplitTimesEvery25m = (index: number) => {
     const formData = formDataList[index];
+    if (!formData) return;
     const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
     if (!selectedStyle?.distance) return;
 
@@ -436,6 +444,7 @@ export const RecordLogFormScreen: React.FC = () => {
   // スプリットタイムを50mごとに追加
   const handleAddSplitTimesEvery50m = (index: number) => {
     const formData = formDataList[index];
+    if (!formData) return;
     const selectedStyle = swimStyles.find((s) => String(s.id) === formData.styleId);
     if (!selectedStyle?.distance) return;
 
@@ -501,6 +510,7 @@ export const RecordLogFormScreen: React.FC = () => {
   // スプリットタイム削除
   const handleRemoveSplitTime = (index: number, splitIndex: number) => {
     const formData = formDataList[index];
+    if (!formData) return;
     updateFormData(index, {
       splitTimes: formData.splitTimes.filter((_, i) => i !== splitIndex),
     });
@@ -514,6 +524,7 @@ export const RecordLogFormScreen: React.FC = () => {
     value: string,
   ) => {
     const formData = formDataList[index];
+    if (!formData) return;
     const updatedSplitTimes = formData.splitTimes.map((st, i) => {
       if (i !== splitIndex) return st;
       if (field === "distance") {
@@ -611,11 +622,15 @@ export const RecordLogFormScreen: React.FC = () => {
         throw competitionError || new Error(t("recordMobile.competitionFetchFailed"));
       }
 
-      const poolType: PoolType = (competition.pool_type ?? 0) as PoolType;
+      const poolType: PoolType = competition.pool_type as PoolType;
 
       // 編集モードの場合
       if (recordId && formDataList.length > 0) {
         const formData = formDataList[0];
+        if (!formData) {
+          setLoading(false);
+          return;
+        }
         if (formData.time <= 0) {
           Alert.alert(t("common.error"), t("recordMobile.form.timeRequired"));
           setLoading(false);
@@ -669,6 +684,7 @@ export const RecordLogFormScreen: React.FC = () => {
         // 新規作成モードの場合
         for (let index = 0; index < formDataList.length; index++) {
           const formData = formDataList[index];
+          if (!formData) continue; // index < formDataList.length なので理論上ここに来ないが防御的に扱う
           if (formData.time <= 0) {
             // タイム未入力のフォームはスキップ。保留動画も破棄する
             pendingVideoAssetRef.current.delete(index);
@@ -744,7 +760,7 @@ export const RecordLogFormScreen: React.FC = () => {
                 });
               } catch (err) {
                 console.error("動画アップロードエラー:", err);
-                const errorDetail = err instanceof Error ? err.message : t("common.error");
+                const errorDetail = toUserFacingMessage(err, t("common.error"));
                 Alert.alert(
                   t("recordMobile.videoUploadFailedTitle"),
                   `${t("recordMobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
@@ -769,7 +785,7 @@ export const RecordLogFormScreen: React.FC = () => {
       console.error("保存エラー:", error);
       Alert.alert(
         t("common.error"),
-        error instanceof Error ? error.message : t("recordMobile.saveFailed"),
+        toUserFacingMessage(error, t("recordMobile.saveFailed")),
         [{ text: "OK" }],
       );
     } finally {

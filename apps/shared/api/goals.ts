@@ -7,6 +7,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { format, parseISO, isValid, startOfDay } from "date-fns";
 import { CompetitionInsert } from "../types";
 import { normalizeRelation, normalizeRelationArray } from "../utils/supabase-helpers";
+import { toStyleCode } from "../utils/swimStyles";
 import {
   CreateGoalInput,
   CreateMilestoneInput,
@@ -24,7 +25,7 @@ import {
   UpdateGoalInput,
   UpdateMilestoneInput,
 } from "../types/goals";
-import type { Competition, Style } from "../types";
+import type { Competition, Style, SwimStyle } from "../types";
 
 // Supabaseクエリ結果の型（配列/単一オブジェクトの不整合に対応）
 interface GoalQueryResult extends Goal {
@@ -34,20 +35,23 @@ interface GoalQueryResult extends Goal {
 }
 
 // スタイルコード→日本語名のマッピング（practice_logsは日本語名で格納されている）
-const STYLE_CODE_TO_JAPANESE: Record<string, string> = {
-  fr: "自由形",
-  ba: "背泳ぎ",
-  br: "平泳ぎ",
-  fly: "バタフライ",
-  im: "個人メドレー",
+const STYLE_CODE_TO_JAPANESE: Record<SwimStyle, string> = {
+  Fr: "自由形",
+  Ba: "背泳ぎ",
+  Br: "平泳ぎ",
+  Fly: "バタフライ",
+  IM: "個人メドレー",
 };
 
 /**
  * スタイルコードを日本語名に変換
- * practice_logsのstyleカラムは日本語名で格納されているため、クエリ時に変換が必要
+ * practice_logsのstyleカラムは日本語名で格納されているため、クエリ時に変換が必要。
+ * 入力ケーシングに依存させないため toStyleCode で canonical 化してから引く
+ * (旧コード "fr" 等・DB 由来のタイトルケース値のどちらが来ても同じ結果になる)。
  */
 function getStyleJapanese(styleCode: string): string {
-  return STYLE_CODE_TO_JAPANESE[styleCode.toLowerCase()] || styleCode;
+  const canonical = toStyleCode(styleCode);
+  return canonical ? STYLE_CODE_TO_JAPANESE[canonical] : styleCode;
 }
 
 export class GoalAPI {
@@ -237,9 +241,18 @@ export class GoalAPI {
    * 大会目標削除
    */
   async deleteGoal(goalId: string): Promise<void> {
-    const { error } = await this.supabase.from("goals").delete().eq("id", goalId);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（practices.ts の deletePractice と同型）。
+    const { data, error } = await this.supabase
+      .from("goals")
+      .delete()
+      .eq("id", goalId)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("大会目標の削除に失敗しました");
+    }
   }
 
   /**
@@ -414,9 +427,18 @@ export class GoalAPI {
    * マイルストーン削除
    */
   async deleteMilestone(milestoneId: string): Promise<void> {
-    const { error } = await this.supabase.from("milestones").delete().eq("id", milestoneId);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（practices.ts の deletePractice と同型）。
+    const { data, error } = await this.supabase
+      .from("milestones")
+      .delete()
+      .eq("id", milestoneId)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("マイルストーンの削除に失敗しました");
+    }
   }
 
   /**
@@ -646,7 +668,16 @@ export class GoalAPI {
       }
     }
 
-    // 大会記録から検索
+    // 大会記録から検索。milestones.params は JSONB でサーバー側の enum
+    // バリデーションが無く、認証済みユーザーが自分の milestone に任意の
+    // params.style ("%" 等) を書き込める。ilike に渡す前に canonical 化して
+    // ワイルドカードを含む値を弾く (canonical 外なら styles マスターに
+    // 一致する行は存在しえないので、クエリを送らず未達成として扱う)。
+    const styleCode = toStyleCode(params.style);
+    if (!styleCode) {
+      return { achieved: false };
+    }
+
     const { data: records, error: recordError } = await this.supabase
       .from("records")
       .select(
@@ -659,23 +690,39 @@ export class GoalAPI {
       )
       .eq("user_id", userId)
       .eq("styles.distance", params.distance)
-      .eq("styles.style", params.style.toLowerCase())
+      // styles.style の照合はケース非依存にする (移行期の暫定措置。恒久固定ではない)。
+      // コードと migration (styles.style をタイトルケースへ移行, Issue #13) を
+      // 別々にデプロイする場合は「コードを100%ロールアウトしてから migration を
+      // 適用する」順序を守ること。ilike が救えるのは「コード先行」方向のみ
+      // (新コードの ilike が旧DBの小文字行にもマッチする) で、逆の
+      // 「migration 先行」方向は救えない: DB が先にタイトルケースへ移行された状態で
+      // 旧コード (このコミット以前の .eq(..., toLowerCase())) がまだ稼働していると、
+      // 旧コードは小文字で問い合わせるため新データ (タイトルケース) と一致せず
+      // 0件・エラーなしで静かに壊れる。ilike はワイルドカードを含まない値に対しては
+      // 大文字小文字を無視した完全一致として働く (embedded resource
+      // styles!inner(...) に対しても動作することを local Supabase で実証済み)。
+      // 旧コード (この .toLowerCase() を使わない版) が本番から完全に消えたことを
+      // 確認できたら、.eq に戻してインデックス効率を回復する選択肢がある。
+      // styleCode は toStyleCode で検証済みの canonical 値のみ (ワイルドカード不可)。
+      .ilike("styles.style", styleCode)
       .lte("time", params.target_time)
       .order("created_at", { ascending: false })
       .limit(1);
 
     if (!recordError && records && records.length > 0) {
       const record = records[0];
-      return {
-        achieved: true,
-        achievementData: {
-          recordId: record.id,
-          achievedValue: {
-            time: record.time,
-            target_time: params.target_time,
+      if (record) {
+        return {
+          achieved: true,
+          achievementData: {
+            recordId: record.id,
+            achievedValue: {
+              time: record.time,
+              target_time: params.target_time,
+            },
           },
-        },
-      };
+        };
+      }
     }
 
     return { achieved: false };
@@ -796,7 +843,8 @@ export class GoalAPI {
       .order("created_at", { ascending: false })
       .limit(1);
 
-    if (logError || !logs || logs.length === 0) {
+    const firstLog = logs?.[0];
+    if (logError || !logs || logs.length === 0 || !firstLog) {
       return { achieved: false };
     }
 
@@ -804,7 +852,7 @@ export class GoalAPI {
     return {
       achieved: true,
       achievementData: {
-        practiceLogId: logs[0].id,
+        practiceLogId: firstLog.id,
         achievedValue: {
           distance: params.distance,
           reps: params.reps,
@@ -870,7 +918,14 @@ export class GoalAPI {
       }
     }
 
-    // 大会記録を確認
+    // 大会記録を確認。ilike に渡す前に canonical 化する理由は checkTimeAchievement
+    // 内の同型クエリのコメント参照 (ワイルドカード注入対策。canonical 外なら
+    // styles マスターに一致する行は存在しえないのでクエリを送らず false とする)。
+    const styleCode = toStyleCode(params.style);
+    if (!styleCode) {
+      return false;
+    }
+
     const { data: records, error: recordError } = await this.supabase
       .from("records")
       .select(
@@ -881,7 +936,9 @@ export class GoalAPI {
       )
       .eq("user_id", userId)
       .eq("styles.distance", params.distance)
-      .eq("styles.style", params.style.toLowerCase())
+      // ケース非依存にする理由・デプロイ順序の注意点は checkTimeAchievement 内の
+      // 同型クエリのコメント参照 (移行期の暫定措置。恒久固定ではない)。
+      .ilike("styles.style", styleCode)
       .limit(1);
 
     if (!recordError && records && records.length > 0) {

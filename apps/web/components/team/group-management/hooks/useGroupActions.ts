@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useTranslations } from "next-intl";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type { TeamGroup, TeamGroupMembership } from "@swim-hub/shared/types";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 /**
  * グループCRUD操作ラッパー
@@ -34,15 +35,16 @@ export const useGroupActions = (
         onSuccess?.();
         return result;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("createFailed");
+        // 重複制約違反 (23505) の判定にのみ生メッセージを使い、画面には出さない
+        const rawMessage = err instanceof Error ? err.message : "";
         if (
-          message.includes("23505") ||
-          message.includes("duplicate") ||
-          message.includes("unique")
+          rawMessage.includes("23505") ||
+          rawMessage.includes("duplicate") ||
+          rawMessage.includes("unique")
         ) {
           setError(t("duplicateName"));
         } else {
-          setError(message);
+          setError(toUserFacingMessage(err, t("createFailed")));
         }
         return null;
       } finally {
@@ -68,15 +70,16 @@ export const useGroupActions = (
               created_by: null,
             });
           } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : t("createFailedGeneric");
+            // 重複制約違反 (23505) の判定にのみ生メッセージを使い、画面には出さない
+            const rawMessage = err instanceof Error ? err.message : "";
             if (
-              message.includes("23505") ||
-              message.includes("duplicate") ||
-              message.includes("unique")
+              rawMessage.includes("23505") ||
+              rawMessage.includes("duplicate") ||
+              rawMessage.includes("unique")
             ) {
               errors.push(t("duplicateNameSpecific", { name }));
             } else {
-              errors.push(`「${name}」: ${message}`);
+              errors.push(`「${name}」: ${toUserFacingMessage(err, t("createFailedGeneric"))}`);
             }
           }
         }
@@ -102,15 +105,16 @@ export const useGroupActions = (
         onSuccess?.();
         return result;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("updateFailed");
+        // 重複制約違反 (23505) の判定にのみ生メッセージを使い、画面には出さない
+        const rawMessage = err instanceof Error ? err.message : "";
         if (
-          message.includes("23505") ||
-          message.includes("duplicate") ||
-          message.includes("unique")
+          rawMessage.includes("23505") ||
+          rawMessage.includes("duplicate") ||
+          rawMessage.includes("unique")
         ) {
           setError(t("duplicateName"));
         } else {
-          setError(message);
+          setError(toUserFacingMessage(err, t("updateFailed")));
         }
         return null;
       } finally {
@@ -129,8 +133,7 @@ export const useGroupActions = (
         onSuccess?.();
         return true;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("deleteFailed");
-        setError(message);
+        setError(toUserFacingMessage(err, t("deleteFailed")));
         return false;
       } finally {
         setSaving(false);
@@ -151,8 +154,7 @@ export const useGroupActions = (
         setError(null);
         return await api.listGroupMembers(groupId);
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("fetchMembersFailed");
-        setError(message);
+        setError(toUserFacingMessage(err, t("fetchMembersFailed")));
         return [];
       }
     },
@@ -168,8 +170,7 @@ export const useGroupActions = (
         onSuccess?.();
         return true;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("assignFailed");
-        setError(message);
+        setError(toUserFacingMessage(err, t("assignFailed")));
         return false;
       } finally {
         setSaving(false);

@@ -157,7 +157,8 @@ describe("TeamCompetitions — UPDATE 時の video_thumbnail_path 保持 (R4修�
         expect(mocks.updateRecord).toHaveBeenCalled();
       });
 
-      const [, payload] = mocks.updateRecord.mock.calls[0];
+      // 直前の toHaveBeenCalled() で呼び出し済みを確認済み
+      const [, payload] = mocks.updateRecord.mock.calls[0]!;
       expect(payload.video_path).toBe("videos/record-existing-1.mp4");
       // 修正確認: サムネイルパスは実際の既存値のまま送信され、null で潰されない。
       expect(payload.video_thumbnail_path).toBe("thumbnails/record-existing-1.jpg");

@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 import { deleteProfileImageViaApi } from "@/utils/imageUpload";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface AvatarUploadProps {
   /** プロフィール画像のバケット内相対パス（"{userId}/{fileName}"）。旧データはフルURLの場合もある */
@@ -238,7 +239,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         }
       } catch (err) {
         console.error("画像選択エラー:", err);
-        const errorMessage = err instanceof Error ? err.message : t("common.upload.imageSelectFailed");
+        const errorMessage = toUserFacingMessage(err, t("common.upload.imageSelectFailed"));
         setError(errorMessage);
         Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
       }
@@ -304,7 +305,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         }
       } catch (err) {
         console.error("画像選択エラー:", err);
-        const errorMessage = err instanceof Error ? err.message : t("common.upload.imageSelectFailed");
+        const errorMessage = toUserFacingMessage(err, t("common.upload.imageSelectFailed"));
         setError(errorMessage);
         Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
       }
@@ -329,7 +330,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
     try {
       const accessToken = await getAccessToken();
       if (!accessToken) {
-        throw new Error(t("common.upload.sessionInvalid"));
+        throw new UserFacingError(t("common.upload.sessionInvalid"));
       }
 
       await deleteProfileImageViaApi(accessToken);
@@ -337,7 +338,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       onAvatarChange(null);
     } catch (err) {
       console.error("画像削除エラー:", err);
-      const errorMessage = err instanceof Error ? err.message : t("common.upload.imageDeleteFailed");
+      const errorMessage = toUserFacingMessage(err, t("common.upload.imageDeleteFailed"));
       setError(errorMessage);
       if (Platform.OS === "web") {
         window.alert(errorMessage);

@@ -115,6 +115,11 @@ export const useMemberBestTimes = (supabase: SupabaseClient) => {
                 ? record.competitions[0]
                 : record.competitions;
               const styleKey = style?.name_jp || "Unknown";
+              // PM報告(Warning2トリアージ): record.pool_type はこのinline型では number (非optional)
+              // で、DBの records.pool_type も NOT NULL のため通常は発火しない。ただし
+              // __tests__/hooks/useMemberBestTimes.test.ts の「pool_typeがundefinedの場合は
+              // 0として扱う」テストが pool_type: undefined を注入する契約を明示しているため、
+              // テストを書き換えずに残す (テストは意図の表現)。
               const poolType = record.pool_type ?? 0;
               const key = `${styleKey}_${poolType}`;
 
@@ -181,6 +186,9 @@ export const useMemberBestTimes = (supabase: SupabaseClient) => {
         relayingBestTimesByStyleAndPool.forEach((relayingTime, key) => {
           if (!bestTimesByStyleAndPool.has(key)) {
             const [styleName, poolTypeStr] = key.split("_");
+            if (styleName === undefined || poolTypeStr === undefined) return; // key は
+              // `${styleKey}_${poolType}` 形式で生成されるため通常2要素に分割されるが、
+              // split() の型上は undefined を許すため防御的にスキップする
             const poolType = parseInt(poolTypeStr, 10);
 
             const record = data?.find(
@@ -196,7 +204,7 @@ export const useMemberBestTimes = (supabase: SupabaseClient) => {
                 const style = Array.isArray(r.styles) ? r.styles[0] : r.styles;
                 return (
                   (style?.name_jp || "Unknown") === styleName &&
-                  (r.pool_type ?? 0) === poolType &&
+                  r.pool_type === poolType &&
                   r.is_relaying &&
                   r.id === relayingTime.id
                 );

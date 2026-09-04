@@ -24,6 +24,7 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useCompetitionFormStore } from "@/stores/competitionFormStore";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -157,7 +158,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           setEndDate(competition.end_date || "");
           setTitle(competition.title || "");
           setPlace(competition.place || "");
-          setPoolType(competition.pool_type ?? 0);
+          setPoolType(competition.pool_type);
           setNote(competition.note || "");
           // 既存画像を読み込み（competition-images は private バケットのため署名付きURLを解決する。Issue #36）
           setSavedImagePaths(competition.image_paths ?? []);
@@ -244,7 +245,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     // stale な user state より先に呼び、リフレッシュのチャンスを与える
     const accessToken = await getAccessToken();
     if (!accessToken) {
-      throw new Error(t("practice.mobile.sessionInvalid"));
+      throw new UserFacingError(t("practice.mobile.sessionInvalid"));
     }
 
     if (competitionId) {
@@ -391,7 +392,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       navigation.popToTop();
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("competition.mobile.saveFailed"), [
+      Alert.alert(t("common.error"), toUserFacingMessage(error, t("competition.mobile.saveFailed")), [
         { text: "OK" },
       ]);
     } finally {
@@ -436,7 +437,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("competition.mobile.saveFailed"), [
+      Alert.alert(t("common.error"), toUserFacingMessage(error, t("competition.mobile.saveFailed")), [
         { text: "OK" },
       ]);
     } finally {
@@ -482,7 +483,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       }
     } catch (error) {
       console.error("保存エラー:", error);
-      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("competition.mobile.saveFailed"), [
+      Alert.alert(t("common.error"), toUserFacingMessage(error, t("competition.mobile.saveFailed")), [
         { text: "OK" },
       ]);
     } finally {

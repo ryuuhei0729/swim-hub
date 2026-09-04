@@ -6,6 +6,7 @@ import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import { useTranslations } from "next-intl";
 import { getMonthDateRange } from "@swim-hub/shared/utils/date";
 import { format, startOfMonth, endOfMonth, addMonths, parseISO } from "date-fns";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export interface MonthItem {
   year: number;
@@ -126,6 +127,9 @@ export const useMonthList = (
 
       for (const monthKey of sortedMonthKeys) {
         const [yearStr, monthStr] = monthKey.split("-");
+        if (!yearStr || !monthStr) continue; // monthKey は同ファイル内で
+          // format(date, "yyyy-MM") により生成されるため常に2要素に分割されるが、
+          // split() の型上は保証されないため防御的にスキップする
         const year = parseInt(yearStr);
         const month = parseInt(monthStr);
 
@@ -140,7 +144,7 @@ export const useMonthList = (
       setMonthList(monthList);
     } catch (err) {
       console.error("月リストの取得に失敗:", err);
-      setError(t("monthListHook.loadError"));
+      setError(toUserFacingMessage(err, t("monthListHook.loadError")));
     } finally {
       setLoading(false);
     }

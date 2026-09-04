@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type { TeamGroup, TeamGroupMembership } from "@swim-hub/shared/types";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 /**
  * グループCRUD操作ラッパー
@@ -32,15 +33,18 @@ export const useGroupActions = (
         onSuccess?.();
         return result;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("teams.mobile.groupCreateFailed");
+        // 重複判定はエラーの生メッセージ（Postgres unique_violation の内容）を内部的に
+        // 検査するだけで、ユーザーには表示しない。表示する場合は toUserFacingMessage で
+        // サニタイズする。
+        const rawMessage = err instanceof Error ? err.message : "";
         if (
-          message.includes("23505") ||
-          message.includes("duplicate") ||
-          message.includes("unique")
+          rawMessage.includes("23505") ||
+          rawMessage.includes("duplicate") ||
+          rawMessage.includes("unique")
         ) {
           setError(t("teams.mobile.groupDuplicateError"));
         } else {
-          setError(message);
+          setError(toUserFacingMessage(err, t("teams.mobile.groupCreateFailed")));
         }
         return null;
       } finally {
@@ -66,15 +70,20 @@ export const useGroupActions = (
               created_by: null,
             });
           } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : t("teams.mobile.groupCreateFailedSimple");
+            const rawMessage = err instanceof Error ? err.message : "";
             if (
-              message.includes("23505") ||
-              message.includes("duplicate") ||
-              message.includes("unique")
+              rawMessage.includes("23505") ||
+              rawMessage.includes("duplicate") ||
+              rawMessage.includes("unique")
             ) {
               errors.push(t("teams.mobile.groupAlreadyExists", { name }));
             } else {
-              errors.push(t("teams.mobile.groupCreateError", { name, message }));
+              errors.push(
+                t("teams.mobile.groupCreateError", {
+                  name,
+                  message: toUserFacingMessage(err, t("teams.mobile.groupCreateFailedSimple")),
+                }),
+              );
             }
           }
         }
@@ -100,15 +109,15 @@ export const useGroupActions = (
         onSuccess?.();
         return result;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("teams.mobile.groupUpdateFailed");
+        const rawMessage = err instanceof Error ? err.message : "";
         if (
-          message.includes("23505") ||
-          message.includes("duplicate") ||
-          message.includes("unique")
+          rawMessage.includes("23505") ||
+          rawMessage.includes("duplicate") ||
+          rawMessage.includes("unique")
         ) {
           setError(t("teams.mobile.groupDuplicateError"));
         } else {
-          setError(message);
+          setError(toUserFacingMessage(err, t("teams.mobile.groupUpdateFailed")));
         }
         return null;
       } finally {
@@ -127,8 +136,7 @@ export const useGroupActions = (
         onSuccess?.();
         return true;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("teams.mobile.groupDeleteFailed");
-        setError(message);
+        setError(toUserFacingMessage(err, t("teams.mobile.groupDeleteFailed")));
         return false;
       } finally {
         setSaving(false);
@@ -149,8 +157,7 @@ export const useGroupActions = (
         setError(null);
         return await api.listGroupMembers(groupId);
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("teams.mobile.groupMemberFetchFailed");
-        setError(message);
+        setError(toUserFacingMessage(err, t("teams.mobile.groupMemberFetchFailed")));
         return [];
       }
     },
@@ -166,8 +173,7 @@ export const useGroupActions = (
         onSuccess?.();
         return true;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : t("teams.mobile.groupMemberAssignFailed");
-        setError(message);
+        setError(toUserFacingMessage(err, t("teams.mobile.groupMemberAssignFailed")));
         return false;
       } finally {
         setSaving(false);

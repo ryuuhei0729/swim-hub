@@ -205,7 +205,7 @@ describe("GroupMemberModal - 保存/クローズ", () => {
     await Promise.resolve();
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    const [calledGroupId, calledUserIds] = onSave.mock.calls[0];
+    const [calledGroupId, calledUserIds] = onSave.mock.calls[0]!; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
     expect(calledGroupId).toBe("g1");
     expect(new Set(calledUserIds)).toEqual(new Set(["u1", "u3"]));
     expect(onClose).toHaveBeenCalledTimes(1);

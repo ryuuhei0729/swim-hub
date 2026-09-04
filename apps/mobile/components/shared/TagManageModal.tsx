@@ -15,6 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { PracticeTag } from "@apps/shared/types";
 import { PRESET_TAG_COLORS, getColorForName } from "@/constants/tagColors";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface TagManageModalProps {
   visible: boolean;
@@ -43,7 +44,10 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [name, setName] = useState("");
-  const [color, setColor] = useState(PRESET_TAG_COLORS[0]);
+  // PRESET_TAG_COLORS[0] は固定の定数配列の先頭要素で構造的に必ず存在するが、
+  // 型上は string | undefined になるため、既存の「未選択時のデフォルト」と同じ
+  // getColorForName("") にフォールバックする (line 111 の reset 処理と同じ考え方)
+  const [color, setColor] = useState(PRESET_TAG_COLORS[0] ?? getColorForName(""));
   // 新規作成時、ユーザーが手動で色を選ぶまでは名前から色を自動導出する (Web と同一の決定的割当)
   const [colorManuallySet, setColorManuallySet] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -142,7 +146,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
       console.error("タグ保存エラー:", error);
       Alert.alert(
         t("common.alertErrorTitle"),
-        error instanceof Error ? error.message : t("forms.tag.errorSaveFailed"),
+        toUserFacingMessage(error, t("forms.tag.errorSaveFailed")),
       );
     } finally {
       setIsSaving(false);
@@ -169,7 +173,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
               console.error("タグ削除エラー:", error);
               Alert.alert(
                 t("common.alertErrorTitle"),
-                error instanceof Error ? error.message : t("forms.tag.errorDeleteFailed"),
+                toUserFacingMessage(error, t("forms.tag.errorDeleteFailed")),
               );
             } finally {
               setIsDeleting(false);

@@ -72,8 +72,8 @@ function saveSplitsPerLeg(
   const cumulatives = calcCumulativeTimes(legTimes);
   const out: Array<{ distance: number; split_time: number }[]> = [];
   for (let legIdx = 0; legIdx < legCount; legIdx++) {
-    const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
-    const legHigh = legBoundaries[legIdx];
+    const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1]!; // legBoundaries は呼び出し元で legCount と同じ長さを渡す設計
+    const legHigh = legBoundaries[legIdx]!; // 同上
     const legStart = getLegStartCumulative(cumulatives, legIdx);
     out.push(
       relaySplits
@@ -94,12 +94,12 @@ function reloadGlobalDistances(
   savedPerLeg: Array<{ distance: number; split_time: number }[]>,
   legTimes: number[] = LEG_TIMES,
 ): { distance: number; splitTime: number }[] {
-  const styleId = STYLE_ID_FOR_RELAY[relayEventId];
+  const styleId = STYLE_ID_FOR_RELAY[relayEventId]!; // このファイルで使う2種 (relay_4x100_free/relay_4x200_free) のみ定義されており必ず存在
   const records: ExistingRecord[] = savedPerLeg.map((legSplits, idx) => ({
     id: `r-${idx}`,
     user_id: `u-${idx}`,
     style_id: styleId,
-    time: legTimes[idx],
+    time: legTimes[idx]!, // legTimes は savedPerLeg と同じ leg 数以上の長さを持つ設計
     is_relaying: idx !== 0,
     reaction_time: null,
     note: null,
@@ -295,11 +295,11 @@ describe("[Round-trip invariant] 通算値 → leg相対値 (保存) → 通算�
       // 各 leg の「開始から50m地点」の通算タイムを、leg 自身のタイムから机上計算で作る
       // (leg の平均ペースの 1/4 を 50m 地点の目安タイムとする簡易フィクスチャ)
       const original: SplitTimeEntry[] = legTimes.map((t, idx) => {
-        const legStart = idx === 0 ? 0 : cumulatives[idx - 1];
+        const legStart = idx === 0 ? 0 : cumulatives[idx - 1]!; // cumulatives は legTimes と同じ長さなので idx>=1 の範囲では必ず存在
         const cumulativeAt50m = Math.round((legStart + t / 4) * 100) / 100;
         return {
           id: `leg${idx}-50m`,
-          distance: (idx === 0 ? 0 : legBoundaries[idx - 1]) + 50,
+          distance: (idx === 0 ? 0 : legBoundaries[idx - 1]!) + 50, // legBoundaries は legCount(4)分の境界を持つ設計なので同上
           splitTime: cumulativeAt50m,
           displayValue: "",
         };
@@ -310,13 +310,13 @@ describe("[Round-trip invariant] 通算値 → leg相対値 (保存) → 通算�
       // 中間値 (DB 相当) が「通算値のまま」漏れていないことを明示的に確認する。
       // 旧バグでは splitTime が無変換だったため、leg1〜3 の DB 値は元の通算値と一致していた。
       for (let legIdx = 1; legIdx < 4; legIdx++) {
-        const legStart = cumulatives[legIdx - 1];
-        const dbEntry = saved[legIdx][0];
+        const legStart = cumulatives[legIdx - 1]!; // cumulatives/original は共に legTimes(4要素) と同じ長さなので legIdx 1..3 の範囲は必ず存在
+        const dbEntry = saved[legIdx]![0]; // saved は legCount(4)分の要素を持つ設計なので外側の添字は必ず存在。内側[0]の存在は直後の toBeDefined で検証
         expect(dbEntry).toBeDefined();
         // DB に書かれる値は leg 相対値 (通算値 - legStart) であり、通算値そのものとは異なる
-        expect(dbEntry.split_time).toBeCloseTo(original[legIdx].splitTime - legStart, 2);
+        expect(dbEntry!.split_time).toBeCloseTo(original[legIdx]!.splitTime - legStart, 2);
         if (legStart > 0.01) {
-          expect(dbEntry.split_time).not.toBeCloseTo(original[legIdx].splitTime, 2);
+          expect(dbEntry!.split_time).not.toBeCloseTo(original[legIdx]!.splitTime, 2);
         }
       }
 
@@ -369,7 +369,7 @@ describe("[S1] 4x200mフリーリレー第4泳者の実データ回帰 (Success 
       { distance: 150, split_time: 130.42 }, // 530.28 - 399.86
     ]);
     // 通算値 (459.86等) がそのまま DB に漏れていないことを明示的に確認する
-    for (const st of saved[3]) {
+    for (const st of saved[3]!) {  // saved は legCount(4)要素の配列なので index3 は必ず存在
       expect(st.split_time).toBeLessThan(140);
     }
   });
@@ -380,7 +380,7 @@ describe("[S1] 4x200mフリーリレー第4泳者の実データ回帰 (Success 
     "mobile 側に同名ユーティリティが無いため、DB 復元後の値を使った素朴な差分計算で再現する)",
     () => {
       const saved = saveSplitsPerLeg("relay_4x200_free", 4, originalCumulativeSplits, LEG_TIMES_S1);
-      const leg3Splits = saved[3]; // [{50,60.0},{100,94.12},{150,130.42}]
+      const leg3Splits = saved[3]!; // saved は legCount(4)要素の配列なので index3 は必ず存在
 
       // 表示側 (RecordSplitTimes.tsx 相当) は raceDistance(200) のゴール split を
       // record.time で補完する。DB の leg 相対値 + ゴール補完値でラップ表を作る。
@@ -388,10 +388,11 @@ describe("[S1] 4x200mフリーリレー第4泳者の実データ回帰 (Success 
         (a, b) => a.distance - b.distance,
       );
 
-      const lap50 = displaySplits[0].split_time; // 0→50m
-      const lap100 = displaySplits[1].split_time - displaySplits[0].split_time; // 50→100m
-      const lap150 = displaySplits[2].split_time - displaySplits[1].split_time; // 100→150m
-      const lap200 = displaySplits[3].split_time - displaySplits[2].split_time; // 150→200m
+      // leg3Splits(3件) + ゴール補完1件 = 常に4件の配列なので添字0-3は必ず存在
+      const lap50 = displaySplits[0]!.split_time; // 0→50m
+      const lap100 = displaySplits[1]!.split_time - displaySplits[0]!.split_time; // 50→100m
+      const lap150 = displaySplits[2]!.split_time - displaySplits[1]!.split_time; // 100→150m
+      const lap200 = displaySplits[3]!.split_time - displaySplits[2]!.split_time; // 150→200m
 
       // 先頭ラップは通算値 459.86 ではない (旧バグはここが 459.86 になっていた)
       expect(lap50).not.toBeCloseTo(459.86, 1);

@@ -18,7 +18,7 @@ import type { RacePaceModel } from "../../../utils/racePace/types";
 const model = (minTimeMs: number, maxTimeMs: number, firstRatio: number, sampleCount = 40): RacePaceModel => ({
   gender: "male",
   poolType: 1,
-  stroke: "fr",
+  stroke: "Fr",
   distance: 100,
   splitInterval: 50,
   ageCategory: "all",
@@ -44,7 +44,8 @@ describe("resolveTargetLaps", () => {
     const r = resolveTargetLaps({ models, targetTimeMs: 52500 });
     expect(r).not.toBeNull();
     expect(r!.source).toBe("exact");
-    expect(r!.laps[0].lapTimeMs).toBe(Math.round(52500 * 0.48 / 10) * 10);
+    // resolveTargetLaps は model.laps.length > 0 のときだけ build() を呼ぶため常に1件以上返す
+    expect(r!.laps[0]!.lapTimeMs).toBe(Math.round(52500 * 0.48 / 10) * 10);
     expect(r!.sampleCount).toBe(40);
   });
 
@@ -52,7 +53,7 @@ describe("resolveTargetLaps", () => {
     const r = resolveTargetLaps({ models, targetTimeMs: 53500 });
     expect(r!.source).toBe("interpolated");
     // 52.5 の 0.48 と 54.5 の 0.49 の中間 = 0.485 付近
-    const ratio = r!.laps[0].lapTimeMs / 53500;
+    const ratio = r!.laps[0]!.lapTimeMs / 53500; // laps は常に1件以上
     expect(ratio).toBeGreaterThan(0.48);
     expect(ratio).toBeLessThan(0.49);
     // 両隣のサンプルを合算して報告する
@@ -62,13 +63,13 @@ describe("resolveTargetLaps", () => {
   it("[V-R3] 範囲より速い目標は最速 bucket にクランプする (外挿しない)", () => {
     const r = resolveTargetLaps({ models, targetTimeMs: 45000 });
     expect(r!.source).toBe("nearest");
-    expect(r!.laps[0].lapTimeMs / 45000).toBeCloseTo(0.475, 3);
+    expect(r!.laps[0]!.lapTimeMs / 45000).toBeCloseTo(0.475, 3); // laps は常に1件以上
   });
 
   it("[V-R3] 範囲より遅い目標は最遅 bucket にクランプする", () => {
     const r = resolveTargetLaps({ models, targetTimeMs: 70000 });
     expect(r!.source).toBe("nearest");
-    expect(r!.laps[0].lapTimeMs / 70000).toBeCloseTo(0.49, 3);
+    expect(r!.laps[0]!.lapTimeMs / 70000).toBeCloseTo(0.49, 3); // laps は常に1件以上
   });
 
   it("[V-R4] モデルが無ければ null", () => {
@@ -90,7 +91,8 @@ describe("resolveTargetLaps", () => {
     for (const target of [45000, 51500, 52500, 53500, 54500, 70000, 52501]) {
       const r = resolveTargetLaps({ models, targetTimeMs: target });
       expect(r!.laps.reduce((a, l) => a + l.lapTimeMs, 0), `target=${target}`).toBe(target);
-      expect(r!.laps[r!.laps.length - 1].cumulativeTimeMs, `target=${target}`).toBe(target);
+      // laps は常に1件以上
+      expect(r!.laps[r!.laps.length - 1]!.cumulativeTimeMs, `target=${target}`).toBe(target);
     }
   });
 
@@ -112,9 +114,10 @@ describe("resolveTargetLaps", () => {
   });
 
   it("LAP本数が違うモデルが混ざっていても壊れない", () => {
+    // models は固定3要素のモジュールスコープ定数のため常に存在する
     const mixed = [
-      models[0],
-      { ...models[1], laps: [{ distance: 100, ratioMedian: 1, ratioP25: 0, ratioP75: 0 }] },
+      models[0]!,
+      { ...models[1]!, laps: [{ distance: 100, ratioMedian: 1, ratioP25: 0, ratioP75: 0 }] },
     ];
     const r = resolveTargetLaps({ models: mixed, targetTimeMs: 51500 });
     expect(r!.laps).toHaveLength(2);

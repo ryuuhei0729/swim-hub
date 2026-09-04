@@ -177,7 +177,7 @@ describe("TeamAnnouncementsAPI", () => {
       const result = await api.create(input);
 
       expect(result).toEqual(created);
-      const builder = supabaseMock.getBuilderHistory("announcements")[0];
+      const builder = supabaseMock.getBuilder("announcements");
       expect(builder.insert).toHaveBeenCalledWith({
         ...input,
         created_by: "test-user-id",
@@ -288,7 +288,7 @@ describe("TeamAnnouncementsAPI", () => {
       });
 
       expect(result).toEqual(updated);
-      const builder = supabaseMock.getBuilderHistory("announcements")[1];
+      const builder = supabaseMock.getBuilder("announcements", 1);
       expect(builder.update).toHaveBeenCalledWith({
         title: "更新後タイトル",
         content: "更新後コンテンツ",
@@ -367,7 +367,7 @@ describe("TeamAnnouncementsAPI", () => {
 
       await api.remove("announcement-1");
 
-      const builder = supabaseMock.getBuilderHistory("announcements")[1];
+      const builder = supabaseMock.getBuilder("announcements", 1);
       expect(builder.delete).toHaveBeenCalled();
       expect(builder.eq).toHaveBeenCalledWith("id", "announcement-1");
     });

@@ -26,6 +26,7 @@ import {
   useDeletePracticeTagMutation,
 } from "@apps/shared/hooks/queries/practices";
 import { teamKeys, practiceKeys } from "@apps/shared/hooks/queries/keys";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { formatTime, SWIM_STYLES } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -299,7 +300,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
         if (!isMounted) return;
 
         if (practiceRes.error || !practiceRes.data) {
-          throw practiceRes.error || new Error(t("practice.mobile.fetchLogFailed"));
+          throw practiceRes.error || new UserFacingError(t("practice.mobile.fetchLogFailed"));
         }
 
         const practiceData = practiceRes.data as unknown as PracticeInfo;
@@ -317,7 +318,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
       } catch (err) {
         if (!isMounted) return;
         console.error("チーム練習ログロードエラー:", err);
-        setLoadError(err instanceof Error ? err.message : t("practice.mobile.fetchLogFailed"));
+        setLoadError(toUserFacingMessage(err, t("practice.mobile.fetchLogFailed")));
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -525,13 +526,10 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
       if (result && typeof result === "object") {
         const r = result as { success?: boolean; error?: string; log_ids?: unknown };
         if ("success" in r && !r.success) {
+          // r.error は RPC (replace_practice_logs) の戻り値で、想定外の例外時は
+          // SQLERRM (生の Postgres エラー) がそのまま入りうるためユーザーには表示しない（情報露出対策）
           console.error("練習ログ保存エラー:", r.error);
-          Alert.alert(
-            t("common.error"),
-            r.error
-              ? t("teamsAdmin.practiceLog.errorSaveWithMessage", { message: r.error })
-              : t("teamsAdmin.practiceLog.errorSave"),
-          );
+          Alert.alert(t("common.error"), t("teamsAdmin.practiceLog.errorSave"));
           setSaving(false);
           return;
         }
@@ -625,7 +623,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
       console.error("チーム練習ログ作成エラー:", err);
       Alert.alert(
         t("common.error"),
-        err instanceof Error ? err.message : t("teamsAdmin.practiceLog.errorSave"),
+        toUserFacingMessage(err, t("teamsAdmin.practiceLog.errorSave")),
       );
     } finally {
       setSaving(false);

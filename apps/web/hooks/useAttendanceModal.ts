@@ -3,6 +3,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { TeamAttendancesAPI } from "@apps/shared/api/teams/attendances";
 import { TeamAttendanceWithDetails, TeamEvent } from "@swim-hub/shared/types";
 import { fetchTeamMembers, TeamMember } from "@swim-hub/shared/utils/team";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 export function useAttendanceModal(supabase: SupabaseClient, teamId: string) {
   const attendancesAPI = useMemo(() => new TeamAttendancesAPI(supabase), [supabase]);
@@ -30,7 +31,7 @@ export function useAttendanceModal(supabase: SupabaseClient, teamId: string) {
         setTeamMembers(members);
       } catch (err) {
         console.error("出欠情報の取得に失敗:", err);
-        setError("出欠情報の取得に失敗しました");
+        setError(toUserFacingMessage(err, "出欠情報の取得に失敗しました"));
       } finally {
         setLoading(false);
       }

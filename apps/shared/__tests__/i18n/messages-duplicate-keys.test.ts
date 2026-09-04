@@ -140,7 +140,7 @@ describe("shared/messages duplicate key detection", () => {
       }`;
       const result = findDuplicateKeys(fixture);
       expect(result).toHaveLength(1);
-      expect(result[0].path).toBe("forms.tag.searchPlaceholder");
+      expect(result[0]!.path).toBe("forms.tag.searchPlaceholder"); // toHaveLength(1) を直前で確認済み
     });
 
     it("異なるオブジェクトスコープの同名キーは重複としない", () => {

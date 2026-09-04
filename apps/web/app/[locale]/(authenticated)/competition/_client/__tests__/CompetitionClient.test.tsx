@@ -646,6 +646,8 @@ describe("CompetitionClient", () => {
     // (括弧なし)のままのため、"(" を含む前方一致にして誤ってヒットしないようにする。
     const getCardRows = (): HTMLElement[] =>
       screen.getAllByRole("button", { name: /^大会記録詳細を表示\(/ });
+    // NOTE: `rows[0]!` / `rows[1]!` は renderClient() に渡した2件の記録がカード行として
+    // 描画されている前提。
     const makeCompetitionRecord = (
       overrides: Partial<RecordType> & {
         competitionOverrides?: Partial<RecordType["competition"]>;
@@ -700,18 +702,18 @@ describe("CompetitionClient", () => {
 
         // 前提条件: 既定順(日付降順)では平泳ぎ大会(2月)が先
         let rows = getCardRows();
-        expect(rows[0].textContent).toContain("平泳ぎ大会");
-        expect(rows[1].textContent).toContain("自由形大会");
+        expect(rows[0]!.textContent).toContain("平泳ぎ大会");
+        expect(rows[1]!.textContent).toContain("自由形大会");
 
         // SortBottomSheet を開き「記録が速い順」プリセットを選択する(旧「種目(昇順)」は廃止済み)
         await user.click(screen.getByRole("button", { name: "並べ替え" }));
         await user.click(screen.getByRole("button", { name: "記録が速い順" }));
 
         rows = getCardRows();
-        expect(rows[0].textContent, "タイムが速い自由形大会がタイムが遅い平泳ぎ大会より先に来ていない").toContain(
+        expect(rows[0]!.textContent, "タイムが速い自由形大会がタイムが遅い平泳ぎ大会より先に来ていない").toContain(
           "自由形大会",
         );
-        expect(rows[1].textContent).toContain("平泳ぎ大会");
+        expect(rows[1]!.textContent).toContain("平泳ぎ大会");
       },
     );
 

@@ -47,14 +47,14 @@ const STYLE_FREE_50: Style = {
   id: 2,
   name_jp: "自由形50m",
   name: "Freestyle",
-  style: "fr",
+  style: "Fr",
   distance: 50,
 };
 const STYLE_BREAST_50: Style = {
   id: 9,
   name_jp: "平泳ぎ50m",
   name: "Breaststroke",
-  style: "br",
+  style: "Br",
   distance: 50,
 };
 
@@ -366,7 +366,7 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
         "timePlaceholder",
       ) as HTMLInputElement[];
       expect(timeInputs).toHaveLength(1);
-      expect(timeInputs[0].value).toBe("");
+      expect(timeInputs[0]!.value).toBe("");
     },
   );
 

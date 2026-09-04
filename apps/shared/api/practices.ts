@@ -19,6 +19,25 @@ import {
 // Supabaseリアルタイム購読の設定型
 type RealtimeSubscriptionConfig = RealtimePostgresChangesFilter<"*">;
 
+// 練習（ログ・タイム・タグ込み）取得時の select 定義元。
+// getPracticeById / getTeamScopedPracticeById の両方がここから参照する
+// (同一のネストした select を2箇所にハードコードしない)。
+const PRACTICE_WITH_LOGS_SELECT = `
+  *,
+  practice_logs (
+    *,
+    practice_times (*),
+    practice_log_tags (
+      practice_tag_id,
+      practice_tags (
+        id,
+        name,
+        color
+      )
+    )
+  )
+`;
+
 export class PracticeAPI {
   constructor(private supabase: SupabaseClient) {}
 
@@ -149,29 +168,39 @@ export class PracticeAPI {
 
     const { data, error } = await this.supabase
       .from("practices")
-      .select(
-        `
-        *,
-        practice_logs (
-          *,
-          practice_times (*),
-          practice_log_tags (
-            practice_tag_id,
-            practice_tags (
-              id,
-              name,
-              color
-            )
-          )
-        )
-      `,
-      )
+      .select(PRACTICE_WITH_LOGS_SELECT)
       .eq("user_id", user.id)
       .eq("id", id)
       .single();
 
     if (error) {
       // レコードが見つからない場合は null を返す
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+    return data as PracticeWithLogs;
+  }
+
+  /**
+   * IDで練習記録を取得（チームスコープ込み）
+   * user_id での絞り込みを行わず、practices の SELECT RLS
+   * ((user_id = auth.uid()) OR is_team_member(team_id, auth.uid())) を
+   * そのままスコープとして使う。所有者本人に加え、同じチームのメンバーであれば取得できる
+   * (チーム管理者が他メンバーの練習を代理編集する際の初期化取得に使用)。
+   * 既存の getPracticeById (user_id スコープ) はこのメソッドとは独立して維持する。
+   * @param id 練習記録ID
+   */
+  async getTeamScopedPracticeById(id: string): Promise<PracticeWithLogs | null> {
+    const { data, error } = await this.supabase
+      .from("practices")
+      .select(PRACTICE_WITH_LOGS_SELECT)
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      // レコードが見つからない、または RLS で見えない場合は null を返す
       if (error.code === "PGRST116") {
         return null;
       }
@@ -218,9 +247,20 @@ export class PracticeAPI {
    * 練習記録削除
    */
   async deletePractice(id: string): Promise<void> {
-    const { error } = await this.supabase.from("practices").delete().eq("id", id);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する。
+    // 「対象が存在しない」と「RLSで拒否された」はクライアントから区別できないため、
+    // どちらも同じ扱いとしてthrowする（無言の成功扱いを防ぐ）。
+    const { data, error } = await this.supabase
+      .from("practices")
+      .delete()
+      .eq("id", id)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("練習記録の削除に失敗しました");
+    }
   }
 
   // =========================================================================
@@ -229,8 +269,16 @@ export class PracticeAPI {
 
   /**
    * 練習ログ作成
+   * @param log user_id を明示的に指定すると、チーム管理者が対象メンバーに代理して
+   *   メニューを追加する際にそのメンバーを所有者にできる (replace_practice_logs RPC の
+   *   p_logs_data 各要素が持つ user_id と同型)。省略時は呼び出し元本人が所有者になる
+   *   (個人フローの既存挙動を維持)。実際の代理入力の可否は RLS
+   *   (practice_logs INSERT ポリシー: 本人 OR 当該 team の active admin かつ
+   *   対象 user_id が active member) が判定する。
    */
-  async createPracticeLog(log: Omit<PracticeLogInsert, "user_id">): Promise<PracticeLog> {
+  async createPracticeLog(
+    log: Omit<PracticeLogInsert, "user_id"> & { user_id?: string },
+  ): Promise<PracticeLog> {
     const {
       data: { user },
     } = await this.supabase.auth.getUser();
@@ -238,7 +286,7 @@ export class PracticeAPI {
 
     const { data, error } = await this.supabase
       .from("practice_logs")
-      .insert({ ...log, user_id: user.id })
+      .insert({ ...log, user_id: log.user_id ?? user.id })
       .select()
       .single();
 
@@ -248,14 +296,17 @@ export class PracticeAPI {
 
   /**
    * 複数の練習ログを一括作成
+   * user_id の扱いは createPracticeLog と同型 (各要素で個別に指定可能。省略時は呼び出し元)。
    */
-  async createPracticeLogs(logs: Omit<PracticeLogInsert, "user_id">[]): Promise<PracticeLog[]> {
+  async createPracticeLogs(
+    logs: (Omit<PracticeLogInsert, "user_id"> & { user_id?: string })[],
+  ): Promise<PracticeLog[]> {
     const {
       data: { user },
     } = await this.supabase.auth.getUser();
     if (!user) throw new Error("認証が必要です");
 
-    const logsWithUserId = logs.map((log) => ({ ...log, user_id: user.id }));
+    const logsWithUserId = logs.map((log) => ({ ...log, user_id: log.user_id ?? user.id }));
     const { data, error } = await this.supabase
       .from("practice_logs")
       .insert(logsWithUserId)
@@ -284,9 +335,18 @@ export class PracticeAPI {
    * 練習ログ削除
    */
   async deletePracticeLog(id: string): Promise<void> {
-    const { error } = await this.supabase.from("practice_logs").delete().eq("id", id);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（deletePracticeと同型）。
+    const { data, error } = await this.supabase
+      .from("practice_logs")
+      .delete()
+      .eq("id", id)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("練習ログの削除に失敗しました");
+    }
   }
 
   // =========================================================================
@@ -295,6 +355,10 @@ export class PracticeAPI {
 
   /**
    * 練習タイム作成
+   * @param time PracticeTimeInsert は user_id を必須で持つ。
+   *   呼び出し元が上書きせず渡された user_id をそのまま使う (代理入力ではログ所有者の
+   *   user_id が渡される想定。以前は呼び出し元自身の id で強制上書きしており、
+   *   渡された値が黙って破棄されていた)。認可は RLS が担う。
    */
   async createPracticeTime(time: PracticeTimeInsert): Promise<PracticeTime> {
     const {
@@ -304,10 +368,7 @@ export class PracticeAPI {
 
     const { data, error } = await this.supabase
       .from("practice_times")
-      .insert({
-        ...time,
-        user_id: user.id,
-      })
+      .insert(time)
       .select()
       .single();
 
@@ -317,6 +378,7 @@ export class PracticeAPI {
 
   /**
    * 複数の練習タイムを一括作成
+   * user_id の扱いは createPracticeTime と同型 (渡された値をそのまま使う)。
    */
   async createPracticeTimes(times: PracticeTimeInsert[]): Promise<PracticeTime[]> {
     const {
@@ -324,15 +386,7 @@ export class PracticeAPI {
     } = await this.supabase.auth.getUser();
     if (!user) throw new Error("認証が必要です");
 
-    const { data, error } = await this.supabase
-      .from("practice_times")
-      .insert(
-        times.map((time) => ({
-          ...time,
-          user_id: user.id,
-        })),
-      )
-      .select();
+    const { data, error } = await this.supabase.from("practice_times").insert(times).select();
 
     if (error) throw error;
     return data;
@@ -340,10 +394,17 @@ export class PracticeAPI {
 
   /**
    * 練習ログのタイムを全て削除して再作成
+   * @param userId タイムの所有者。省略時は呼び出し元本人 (個人フローの既存挙動)。
+   *   チーム管理者が対象メンバーのログを代理編集する場合は、そのメンバーの user_id を
+   *   渡す (practice_times.user_id は紐づく practice_log の所有者と一致させる。
+   *   20260903000000 の practice_times INSERT ポリシーは対象行の所有者を
+   *   pl.user_id (= 紐づく practice_log の所有者) で判定するため、practice_times.user_id
+   *   自体はこのポリシーの認可対象ではないが、データの整合性のため一致させる)。
    */
   async replacePracticeTimes(
     practiceLogId: string,
     times: Omit<PracticeTimeInsert, "practice_log_id" | "user_id">[],
+    userId?: string,
   ): Promise<PracticeTime[]> {
     const {
       data: { user },
@@ -351,18 +412,26 @@ export class PracticeAPI {
     if (!user) throw new Error("認証が必要です");
 
     // 既存のタイムを削除
-    await this.supabase.from("practice_times").delete().eq("practice_log_id", practiceLogId);
+    // practice_log_id単位の削除のため、既存タイムが0件のログでは0行が正当な結果となる
+    // (deletePracticeTimeのようなid指定削除とは異なり0行ガードは付けない)。
+    // ただし従来はerrorを一切チェックしていなかったため、その穴のみ塞ぐ。
+    const { error: deleteTimesError } = await this.supabase
+      .from("practice_times")
+      .delete()
+      .eq("practice_log_id", practiceLogId);
+    if (deleteTimesError) throw deleteTimesError;
 
     // 新しいタイムを作成
     if (times.length === 0) return [];
 
+    const targetUserId = userId ?? user.id;
     const { data, error } = await this.supabase
       .from("practice_times")
       .insert(
         times.map((t) => ({
           ...t,
           practice_log_id: practiceLogId,
-          user_id: user.id,
+          user_id: targetUserId,
         })),
       )
       .select();
@@ -375,9 +444,18 @@ export class PracticeAPI {
    * 練習タイム削除
    */
   async deletePracticeTime(id: string): Promise<void> {
-    const { error } = await this.supabase.from("practice_times").delete().eq("id", id);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（deletePracticeと同型）。
+    const { data, error } = await this.supabase
+      .from("practice_times")
+      .delete()
+      .eq("id", id)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("練習タイムの削除に失敗しました");
+    }
   }
 
   // =========================================================================
@@ -519,13 +597,19 @@ export class PracticeAPI {
     } = await this.supabase.auth.getUser();
     if (!user) throw new Error("認証が必要です");
 
-    const { error } = await this.supabase
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（deletePracticeと同型）。
+    const { data, error } = await this.supabase
       .from("practice_tags")
       .delete()
       .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("練習タグの削除に失敗しました");
+    }
   }
 
   // =========================================================================

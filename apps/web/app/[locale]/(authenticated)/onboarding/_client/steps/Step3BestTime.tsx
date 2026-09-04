@@ -97,7 +97,9 @@ export default function Step3BestTime({
     if (codeKey) {
       // nameJp は "100m 自由形" のようにスペースあり → distance を抽出
       const distMatch = style.nameJp.match(/^(\d+)/);
-      const distance = distMatch ? parseInt(distMatch[1], 10) : 0;
+      const distance = distMatch ? parseInt(distMatch[1]!, 10) : 0; // 正規表現の捕捉グループ (\d+) は
+        // オプショナルでないため、distMatch が truthy (マッチ成功) なら [1] は必ず存在する
+      if (distance) return buildSwimStyleLabel(distance, tStyles(codeKey), locale);
       if (distance) return buildSwimStyleLabel(distance, tStyles(codeKey), locale);
     }
     return style.nameJp;

@@ -44,6 +44,8 @@ function makeEntry(overrides: Partial<EntryRowForRecordMerge> & { user_id: strin
   };
 }
 
+// NOTE: `result[0]!` 系を多用する。各テストの records は必ず結果1件・memberRecords1件以上に
+// 収束する固定シナリオであることを前提にしている。
 describe("[Reviewer回帰・修正はスコープ外] リレー誤検出と entryTimeReference スタンプの相互作用", () => {
   it(
     "is_relaying=[false,true,true] (3件、4件連続パターンに満たない) の場合、" +
@@ -60,8 +62,8 @@ describe("[Reviewer回帰・修正はスコープ外] リレー誤検出と entr
       const result = buildStyleEntriesFromExisting(records, STYLES);
 
       expect(result).toHaveLength(1);
-      expect(result[0].relayEventId).toBeUndefined();
-      expect(result[0].memberRecords).toHaveLength(3);
+      expect(result[0]!.relayEventId).toBeUndefined();
+      expect(result[0]!.memberRecords).toHaveLength(3);
     },
   );
 
@@ -82,7 +84,7 @@ describe("[Reviewer回帰・修正はスコープ外] リレー誤検出と entr
       ];
       const baseStyleEntries = buildStyleEntriesFromExisting(records, STYLES);
       // 前提: 誤検出により relayEventId が付いていない
-      expect(baseStyleEntries[0].relayEventId).toBeUndefined();
+      expect(baseStyleEntries[0]!.relayEventId).toBeUndefined();
 
       // user-b の (user_id, style_id) に一致する「無関係な個人エントリー」が存在する
       // (本来は user-b が単独でエントリーした別の申告タイムのつもりだが、
@@ -92,7 +94,7 @@ describe("[Reviewer回帰・修正はスコープ外] リレー誤検出と entr
 
       const stamped = stampExistingEntryTimeReferences(baseStyleEntries, lookup);
 
-      const legRecordForUserB = stamped[0].memberRecords.find((mr) => mr.memberUserId === "user-b")!;
+      const legRecordForUserB = stamped[0]!.memberRecords.find((mr) => mr.memberUserId === "user-b")!;
       // 【現状の挙動】無関係な個人エントリーの申告タイム (99.99) がレグ記録に紛れ込む
       expect(legRecordForUserB.entryTimeReference).toBe(99.99);
       // レグの結果タイム (28.7) 自体は上書きされていない (表示上の誤帰属に留まる)
@@ -105,10 +107,10 @@ describe("[Reviewer回帰・修正はスコープ外] リレー誤検出と entr
         { id: "r3", user_id: "user-d", style_id: 2, time: 27.6, is_relaying: true, reaction_time: null, note: null, split_times: [], users: { id: "user-d", name: "四郎" } },
       ];
       const correctBase = buildStyleEntriesFromExisting(correctlyDetectedRecords, STYLES);
-      expect(correctBase[0].relayEventId).toBeDefined(); // 4件連続で正しく検出される
+      expect(correctBase[0]!.relayEventId).toBeDefined(); // 4件連続で正しく検出される
 
       const correctStamped = stampExistingEntryTimeReferences(correctBase, lookup);
-      const correctLegForUserB = correctStamped[0].memberRecords.find(
+      const correctLegForUserB = correctStamped[0]!.memberRecords.find(
         (mr) => mr.memberUserId === "user-b",
       )!;
       expect(correctLegForUserB.entryTimeReference).toBeUndefined();

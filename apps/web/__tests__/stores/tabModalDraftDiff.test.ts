@@ -66,6 +66,9 @@ function makeRecord(overrides: Partial<RecordFormDataInput & { id?: string }> = 
   };
 }
 
+// NOTE: `toUpdate[0]!` / `toAdd[0]!` を多用する。各テストは直前に `toHaveLength(1)` で
+// 件数を確認済みで、その範囲内のインデックスのみアクセスしている。
+
 // ============================================================
 // [V-05-P1] 練習ログ差分計算
 // ============================================================
@@ -101,7 +104,7 @@ describe("[V-05-P1] computePracticeLogDiff: 練習ログ差分計算", () => {
     const result = computePracticeLogDiff([editedLog], [UUID_1]);
     expect(result.toAdd).toHaveLength(0);
     expect(result.toUpdate).toHaveLength(1);
-    expect(result.toUpdate[0].id).toBe(UUID_1);
+    expect(result.toUpdate[0]!.id).toBe(UUID_1);
     expect(result.toDelete).toHaveLength(0);
   });
 
@@ -126,7 +129,7 @@ describe("[V-05-P1] computePracticeLogDiff: 練習ログ差分計算", () => {
     const result = computePracticeLogDiff(draftLogs, [UUID_1, UUID_2]);
     expect(result.toAdd).toHaveLength(1);
     expect(result.toUpdate).toHaveLength(1);
-    expect(result.toUpdate[0].id).toBe(UUID_1);
+    expect(result.toUpdate[0]!.id).toBe(UUID_1);
     expect(result.toDelete).toEqual([UUID_2]);
   });
 
@@ -135,7 +138,7 @@ describe("[V-05-P1] computePracticeLogDiff: 練習ログ差分計算", () => {
     const log = makePracticeLog({ tempMenuId: UUID_1 });
     const result = computePracticeLogDiff([log], [UUID_1]);
     expect(result.toUpdate).toHaveLength(1);
-    expect(result.toUpdate[0].id).toBe(UUID_1);
+    expect(result.toUpdate[0]!.id).toBe(UUID_1);
   });
 });
 
@@ -156,14 +159,14 @@ describe("[V-05-C1] computeEntryDiff: 大会エントリー差分計算", () => 
     const newEntry = makeEntry({ id: "entry-local-1" });
     const result = computeEntryDiff([newEntry], []);
     expect(result.toAdd).toHaveLength(1);
-    expect(result.toAdd[0].styleId).toBe("1");
+    expect(result.toAdd[0]!.styleId).toBe("1");
   });
 
   it("id が DB UUID で originalIds に存在するエントリーは toUpdate に含まれる", () => {
     const editedEntry = makeEntry({ id: UUID_1, styleId: "5" });
     const result = computeEntryDiff([editedEntry], [UUID_1]);
     expect(result.toUpdate).toHaveLength(1);
-    expect(result.toUpdate[0].id).toBe(UUID_1);
+    expect(result.toUpdate[0]!.id).toBe(UUID_1);
     expect(result.toDelete).toHaveLength(0);
   });
 
@@ -224,8 +227,8 @@ describe("[V-05-C2] computeRecordDiff: 大会レコード差分計算", () => {
     const editedRecord = makeRecord({ id: UUID_1, time: 9999 });
     const result = computeRecordDiff([editedRecord], [UUID_1]);
     expect(result.toUpdate).toHaveLength(1);
-    expect(result.toUpdate[0].id).toBe(UUID_1);
-    expect(result.toUpdate[0].data.time).toBe(9999);
+    expect(result.toUpdate[0]!.id).toBe(UUID_1);
+    expect(result.toUpdate[0]!.data.time).toBe(9999);
   });
 
   it("originalIds にあるがドラフトにないレコードは toDelete に含まれる", () => {
@@ -303,7 +306,7 @@ describe("[V-05-CW-record / C-R2-1/C-R2-2] RecordLogFormState 型での computeR
     const record = makeFormStateRecord({ id: UUID_1 });
     const result = computeRecordDiff([record], [UUID_1]);
     expect(result.toUpdate).toHaveLength(1);
-    expect(result.toUpdate[0].id).toBe(UUID_1);
+    expect(result.toUpdate[0]!.id).toBe(UUID_1);
     expect(result.toAdd).toHaveLength(0);
     expect(result.toDelete).toHaveLength(0);
   });
@@ -587,7 +590,7 @@ describe("isDefaultUntouchedEntry → computeEntryDiff 連結 (web)", () => {
 
     expect(result.toAdd).toEqual([]);
     expect(result.toUpdate).toHaveLength(1);
-    expect(result.toUpdate[0].id).toBe(UUID_1);
+    expect(result.toUpdate[0]!.id).toBe(UUID_1);
     expect(result.toDelete).toEqual([UUID_2]);
   });
 });

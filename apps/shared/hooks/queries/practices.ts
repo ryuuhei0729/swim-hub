@@ -64,12 +64,14 @@ export function usePracticesQuery(
   const defaultStartDate = useMemo(() => {
     if (startDate) return startDate;
     const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    return date.toISOString().split("T")[0];
+    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
+    return date.toISOString().split("T")[0]!;
   }, [startDate]);
 
   const defaultEndDate = useMemo(() => {
     if (endDate) return endDate;
-    return new Date().toISOString().split("T")[0];
+    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
+    return new Date().toISOString().split("T")[0]!;
   }, [endDate]);
 
   // ページング計算
@@ -111,11 +113,14 @@ export function usePracticesQuery(
             if (index >= 0) {
               // 既存のものを更新
               const updated = [...old];
-              updated[index] = {
-                ...updated[index],
-                ...newPractice,
-                practice_logs: updated[index].practice_logs, // 既存のpractice_logsを保持
-              } as PracticeWithLogs;
+              const existing = updated[index];
+              if (existing) {
+                updated[index] = {
+                  ...existing,
+                  ...newPractice,
+                  practice_logs: existing.practice_logs, // 既存のpractice_logsを保持
+                } as PracticeWithLogs;
+              }
               return updated;
             }
 
@@ -156,12 +161,14 @@ export function usePracticesCountQuery(
   const defaultStartDate = useMemo(() => {
     if (startDate) return startDate;
     const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    return date.toISOString().split("T")[0];
+    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
+    return date.toISOString().split("T")[0]!;
   }, [startDate]);
 
   const defaultEndDate = useMemo(() => {
     if (endDate) return endDate;
-    return new Date().toISOString().split("T")[0];
+    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
+    return new Date().toISOString().split("T")[0]!;
   }, [endDate]);
 
   return useQuery({
@@ -462,7 +469,18 @@ export function useDeletePracticeMutation(
           const {
             data: { user },
           } = await supabase.auth.getUser();
-          if (user) {
+
+          // 同期は「自分が所有する練習を削除した場合」のみ実行する。
+          // google_event_id は所有者本人のGoogle Calendarの予定を指すため、
+          // 他人の練習（チーム管理者による代理削除など）を削除した場合、
+          // 削除者のトークンではその予定を操作できない/すべきでない。
+          // practiceData.user_id は getPracticeById が .eq("user_id", user.id) で
+          // 絞り込んだ結果なので通常は一致するはずだが、それに暗黙で依存せず
+          // ここで明示的に比較する。=== は null/undefined を他の値と一致させない
+          // ため、practiceData.user_id が欠けていても「自分のもの」に誤判定しない。
+          const isOwnPractice = !!user && practiceData.user_id === user.id;
+
+          if (isOwnPractice && user) {
             const { data: profile } = await supabase
               .from("users")
               .select("google_calendar_enabled, google_calendar_sync_practices")
@@ -503,16 +521,19 @@ export function useDeletePracticeMutation(
 
 /**
  * 練習ログ作成ミューテーション
+ * @param log user_id を明示的に指定すると、チーム管理者が対象メンバーに代理してメニューを
+ *   追加する際にそのメンバーを所有者にできる (PracticeAPI.createPracticeLog と同型)。
+ *   省略時は呼び出し元本人が所有者になる (個人フローの既存挙動を維持)。
  */
 export function useCreatePracticeLogMutation(
   supabase: SupabaseClient,
   api?: PracticeAPI,
-): UseMutationResult<PracticeLog, Error, Omit<PracticeLogInsert, "user_id">> {
+): UseMutationResult<PracticeLog, Error, Omit<PracticeLogInsert, "user_id"> & { user_id?: string }> {
   const queryClient = useQueryClient();
   const practiceApi = useMemo(() => api ?? new PracticeAPI(supabase), [supabase, api]);
 
   return useMutation({
-    mutationFn: async (log: Omit<PracticeLogInsert, "user_id">) => {
+    mutationFn: async (log: Omit<PracticeLogInsert, "user_id"> & { user_id?: string }) => {
       return await practiceApi.createPracticeLog(log);
     },
     onSuccess: async () => {
@@ -596,17 +617,22 @@ export function useDeletePracticeLogMutation(
 
 /**
  * 練習タイム一括作成ミューテーション
+ * PracticeAPI.createPracticeTimes は渡された user_id をそのまま使う (呼び出し元での
+ * 強制上書きをしない)。そのため各要素は user_id を必須で持つ必要がある。
+ * 以前はこの型が誤って user_id を Omit した上で `as PracticeTimeInsert[]` により
+ * 未検証のままキャストしており、user_id を持たないオブジェクトを渡しても型エラーに
+ * ならず、実行時に practice_times.user_id の NOT NULL 制約違反になり得た。
  */
 export function useCreatePracticeTimesMutation(
   supabase: SupabaseClient,
   api?: PracticeAPI,
-): UseMutationResult<PracticeTime[], Error, Omit<PracticeTimeInsert, "user_id">[]> {
+): UseMutationResult<PracticeTime[], Error, PracticeTimeInsert[]> {
   const queryClient = useQueryClient();
   const practiceApi = useMemo(() => api ?? new PracticeAPI(supabase), [supabase, api]);
 
   return useMutation({
-    mutationFn: async (times: Omit<PracticeTimeInsert, "user_id">[]) => {
-      return await practiceApi.createPracticeTimes(times as PracticeTimeInsert[]);
+    mutationFn: async (times: PracticeTimeInsert[]) => {
+      return await practiceApi.createPracticeTimes(times);
     },
     onSuccess: async () => {
       // 関連するクエリを無効化して再取得
@@ -632,6 +658,8 @@ export function useCreatePracticeTimesMutation(
 
 /**
  * 練習タイム置き換えミューテーション
+ * @param userId タイムの所有者。省略時は呼び出し元本人 (PracticeAPI.replacePracticeTimes と同型。
+ *   チーム管理者が対象メンバーのログを代理編集する場合はそのメンバーの user_id を渡す)。
  */
 export function useReplacePracticeTimesMutation(
   supabase: SupabaseClient,
@@ -639,7 +667,11 @@ export function useReplacePracticeTimesMutation(
 ): UseMutationResult<
   PracticeTime[],
   Error,
-  { practiceLogId: string; times: Omit<PracticeTimeInsert, "practice_log_id" | "user_id">[] }
+  {
+    practiceLogId: string;
+    times: Omit<PracticeTimeInsert, "practice_log_id" | "user_id">[];
+    userId?: string;
+  }
 > {
   const queryClient = useQueryClient();
   const practiceApi = useMemo(() => api ?? new PracticeAPI(supabase), [supabase, api]);
@@ -648,11 +680,13 @@ export function useReplacePracticeTimesMutation(
     mutationFn: async ({
       practiceLogId,
       times,
+      userId,
     }: {
       practiceLogId: string;
       times: Omit<PracticeTimeInsert, "practice_log_id" | "user_id">[];
+      userId?: string;
     }) => {
-      return await practiceApi.replacePracticeTimes(practiceLogId, times);
+      return await practiceApi.replacePracticeTimes(practiceLogId, times, userId);
     },
     onSuccess: async () => {
       // 関連するクエリを無効化して再取得

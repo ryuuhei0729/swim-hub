@@ -53,7 +53,7 @@ describe("groupRecordsByStyle", () => {
 
     const groups = groupRecordsByStyle(records);
     expect(groups).toHaveLength(1);
-    const [group] = groups;
+    const group = groups[0]!; // 直前の toHaveLength(1) で存在は保証済み
 
     expect(group.individual.map((r) => r.id)).toEqual(["ind-fast", "ind-slow"]);
     expect(group.individual.map((r) => r.rank)).toEqual([1, 2]);
@@ -65,9 +65,9 @@ describe("groupRecordsByStyle", () => {
 
   it("[V-13] time が同じでも individual/relay 双方で rank は 1 始まりの連番になる (0件・1件の境界含む)", () => {
     const records: RecordEntry[] = [makeRecord({ id: "solo", time: 25, is_relaying: false })];
-    const [group] = groupRecordsByStyle(records);
+    const group = groupRecordsByStyle(records)[0]!; // records は要素1件なので必ず1グループが返る設計
     expect(group.individual).toHaveLength(1);
-    expect(group.individual[0].rank).toBe(1);
+    expect(group.individual[0]!.rank).toBe(1); // 直前の toHaveLength(1) で存在は保証済み
     expect(group.relay).toHaveLength(0);
   });
 
@@ -96,13 +96,13 @@ describe("groupRecordsByStyle", () => {
 
     const groups = groupRecordsByStyle(records);
     expect(groups).toHaveLength(1);
-    expect(groups[0].individual.map((r) => r.id)).toEqual(["r-ok"]);
+    expect(groups[0]!.individual.map((r) => r.id)).toEqual(["r-ok"]); // 直前の toHaveLength(1) で存在は保証済み
   });
 
   it("styles が配列で返ってきても (Supabase JOIN の配列形) 先頭要素を種目として扱う", () => {
     const records: RecordEntry[] = [makeRecord({ id: "r-array-style", styles: [STYLE_BACK] })];
     const groups = groupRecordsByStyle(records);
-    expect(groups[0].style.id).toBe(STYLE_BACK.id);
+    expect(groups[0]!.style.id).toBe(STYLE_BACK.id); // records は要素1件なので必ず1グループが返る設計
   });
 });
 

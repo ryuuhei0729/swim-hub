@@ -12,15 +12,39 @@
  *   [V-D4C-02] ボタン押下で RecordLogForm が開き、対象の competitionId が渡される
  *   [V-D4C-03] admin でも「自分の記録を追加」ボタンが表示される (既存の管理者向け
  *              「記録入力」ボタンとは別に共存する)
- *   [V-D4C-04] RecordAPI.createRecord が reject した場合、エラーメッセージが表示される
  *
- * 【V-D4C-04 のエラー表示契約】(Reviewer Critical #1 の是正: 見せかけのエラーハンドリング)
- * TeamCompetitions.tsx の handleSelfRecordSubmit は現状 catch 内で console.error のみで
- * setError を呼ばないため、失敗してもユーザーに一切通知されない。手本は
- * TeamPractices.tsx / TeamCompetitionsAdminActions.test.tsx の V-D3C-07〜09 と同じ設計
- * (一覧側の既存 error state を再利用し `<p className="text-red-600 ...">{error}</p>` で
- * 描画)。翻訳キーは新規に `teams.competitions.selfRecordSaveFailed` の追加を実装要件として
- * 提案する(ja: "自分の記録の保存に失敗しました"。他ロケールも同様の対応が必要)。
+ * 【[V-D4C-04] は本ファイルから移動した (PM裁定, 2026-09-01)】
+ * 旧 [V-D4C-04] (「RecordAPI.createRecord が reject した場合、エラーメッセージが
+ * 表示される」) は、過去スプリントの Reviewer Critical #1 (見せかけのエラー
+ * ハンドリング = catch 内で console.error のみでユーザーに通知されない) を是正する
+ * ために書かれ、その是正策として「一覧側の既存 error state を再利用し
+ * `<p className="text-red-600 ...">{error}</p>` で表示する」設計が選ばれた
+ * (翻訳キー `teams.competitions.selfRecordSaveFailed` も当時この目的で追加提案された)。
+ *
+ * しかしこのテストは本ファイル冒頭で `RecordLogForm` を丸ごとスタブ化しており
+ * (旧: 下記 vi.mock)、スタブの送信ボタンは await/try-catch を持たない
+ * `onClick={() => props.onSubmit(...)}` だった。実際には本番の RecordLogForm は
+ * `fixed inset-0 z-70` の全画面モーダルとして開いたままであり、一覧側の setError は
+ * そのモーダルの裏に隠れて常に見えない (Reviewer 実測)。さらに旧
+ * `handleSelfRecordSubmit` が throw しないことで、RecordLogForm.tsx の
+ * `resetUnsavedChanges()` が保存失敗時にも実行され、未保存ガードが外れてユーザーが
+ * 入力を黙って失うデータロスがあった。「スタブがモーダルの存在を消したことで、
+ * まさにその欠陥が見えなくなっていた」— モックが本番より緩いパターン。
+ *
+ * PM 裁定: このテストの「意図」(保存失敗はユーザーに通知される) は正しいが、
+ * 検証する経路が誤っていた。実装は `throw err` に修正され (Web Developer)、
+ * RecordLogForm 側の formError (モーダル内 role="alert",
+ * data-testid="record-form-error") に表示を委ねる設計に変わった。この意図は
+ * `RecordLogForm` をスタブ化せず実コンポーネントを通す
+ * `TeamCompetitionsSelfRecordSubmitErrorInModal.test.tsx` (`[V-CRIT-01]`〜
+ * `[V-CRIT-03]`) に、より忠実な経路として引き継がれている。次に誰かが
+ * 「一覧領域への setError」方式に戻そうとした場合、そのファイルが red になり
+ * 検知する。
+ *
+ * 翻訳キー `teams.competitions.selfRecordSaveFailed` は上記の経緯により
+ * production コードから既に参照されなくなっている (throw への変更時点で唯一の
+ * 呼び出し箇所が削除された)。未使用キーが JSON に残る影響は無害と判断し、
+ * 5言語パリティのリスクを負ってまで削除はしない (i18n JSON は編集しない)。
  *
  * 【useAuth モックの安定性についての注記】(Reviewer Critical #2 の根本原因の是正)
  * 旧実装は `vi.mock("@/contexts/AuthProvider", () => ({ useAuth: () => ({ ..., supabase:
@@ -31,7 +55,7 @@
  */
 
 import React from "react";
-import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
+import { renderWithI18n as render, screen } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -193,25 +217,7 @@ describe("TeamCompetitions — 自己記録導線 (D4)", () => {
     expect(screen.getByText("記録入力")).toBeInTheDocument();
   });
 
-  it(
-    "[V-D4C-04] RecordAPI.createRecord が reject した場合、" +
-      "翻訳済みエラーメッセージ(teams.competitions.selfRecordSaveFailed)が表示される",
-    async () => {
-      mocks.createRecord.mockRejectedValueOnce(new Error("network down"));
-      const user = userEvent.setup();
-      render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
-      await screen.findByText("県大会");
-
-      await user.click(screen.getByRole("button", { name: /自分の記録を追加|自己記録を追加/ }));
-      await screen.findByTestId("record-log-form-stub");
-      await user.click(screen.getByTestId("record-log-form-submit"));
-
-      await waitFor(() => {
-        expect(mocks.createRecord).toHaveBeenCalled();
-      });
-      expect(
-        await screen.findByText("自分の記録の保存に失敗しました"),
-      ).toBeInTheDocument();
-    },
-  );
+  // [V-D4C-04] はこのファイルから移動した。ファイル冒頭のコメント (PM裁定,
+  // 2026-09-01) を参照。移動先: TeamCompetitionsSelfRecordSubmitErrorInModal.test.tsx
+  // ([V-CRIT-01]〜[V-CRIT-03], 実 RecordLogForm を通す経路で検証)。
 });

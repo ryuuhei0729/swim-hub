@@ -103,6 +103,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           options: {
             data: {
               name: name || "",
+              // gender は signUp() の optional param (number | undefined)。
+              // 唯一の呼び出し元 AuthForm.tsx は useState(0) 初期値の number を必ず渡すため
+              // 実際に undefined が来る経路は無いが、型上は省略可能なので明示的にデフォルトする。
               gender: gender ?? 0,
               birthday: birthday || null,
             },

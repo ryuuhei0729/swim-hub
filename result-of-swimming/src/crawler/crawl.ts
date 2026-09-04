@@ -165,6 +165,9 @@ export async function crawl(options: CrawlOptions): Promise<CrawlSummary> {
     for (const [, group] of groupTargets(targets)) {
       if (summary.resultRequests >= resultLimit) break;
       const sample = group[0];
+      if (!sample) continue; // groupTargets (59-68行目) は各キーに必ず1件以上 push してから
+                              // Map に格納するため理論上ここに来ないが、Map の値配列を
+                              // 添字で取り出しているため防御的にガードする
 
       const heatsUrl =
         `${API_BASE}/games/${game.gameCode}` +

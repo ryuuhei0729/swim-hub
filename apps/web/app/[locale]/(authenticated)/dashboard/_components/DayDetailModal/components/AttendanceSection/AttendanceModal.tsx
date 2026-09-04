@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { XMarkIcon, ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 import Link from "next/link";
 import type { TeamAttendanceWithDetails } from "@apps/shared/types";
 import type { AttendanceModalProps } from "../../types";
@@ -34,7 +35,7 @@ export function AttendanceModal({
       setAttendances(data);
     } catch (err) {
       console.error("出欠情報の取得に失敗:", err);
-      setError(t("attendance.fetchFailed"));
+      setError(toUserFacingMessage(err, t("attendance.fetchFailed")));
     } finally {
       setLoading(false);
     }

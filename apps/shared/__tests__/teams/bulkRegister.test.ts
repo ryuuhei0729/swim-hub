@@ -53,7 +53,7 @@ describe("TeamBulkRegisterAPI", () => {
       expect(result.competitionsCreated).toBe(0);
       expect(result.errors).toHaveLength(0);
 
-      const builder = supabaseMock.getBuilderHistory("practices")[0];
+      const builder = supabaseMock.getBuilder("practices");
       expect(builder.insert).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
@@ -109,7 +109,7 @@ describe("TeamBulkRegisterAPI", () => {
       expect(result.competitionsCreated).toBe(1);
       expect(result.errors).toHaveLength(0);
 
-      const builder = supabaseMock.getBuilderHistory("competitions")[0];
+      const builder = supabaseMock.getBuilder("competitions");
       expect(builder.insert).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
@@ -317,7 +317,7 @@ describe("TeamBulkRegisterAPI", () => {
         competitions: [],
       });
 
-      const builder = supabaseMock.getBuilderHistory("practices")[0];
+      const builder = supabaseMock.getBuilder("practices");
       expect(builder.insert).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({

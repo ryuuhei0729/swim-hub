@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowDownTrayIcon, ArrowsPointingOutIcon } from "@heroicons/react/24/outline";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface VideoPlayerProps {
   videoPath: string;
@@ -50,7 +51,7 @@ export default function VideoPlayer({
       setExpiresAt(new Date(data.expiresAt));
     } catch (err) {
       console.error("署名付きURL取得エラー:", err);
-      setError(err instanceof Error ? err.message : t("loadFailed"));
+      setError(toUserFacingMessage(err, t("loadFailed")));
     } finally {
       setIsLoading(false);
     }

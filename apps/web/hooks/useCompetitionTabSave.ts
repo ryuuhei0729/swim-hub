@@ -142,12 +142,19 @@ export function useCompetitionTabSave({
                 uploadedPaths.push(await competitionAPI.uploadCompetitionImage(competitionId!, file));
               }
             }
-            const { data: cur } = await supabase
+            // 保存直前に権威ある image_paths を再取得する。取得に失敗した場合 (ネットワークエラー等) に
+            // 「不明」を [] とみなして全置換してしまうと、他メンバーがアップロード済みの画像が
+            // 参照から外れて消失する (Issue #48)。取得失敗時は throw して image_paths を含む
+            // update を送らずに中断する (外側の catch でアップロード済み画像のロールバックを行う)。
+            const { data: cur, error: imagePathsError } = await supabase
               .from("competitions")
               .select("image_paths")
               .eq("id", competitionId)
               .single();
-            const existing: string[] = (cur as { image_paths?: string[] | null } | null)?.image_paths ?? [];
+            if (imagePathsError || !cur) {
+              throw imagePathsError ?? new Error("Failed to fetch competition image_paths");
+            }
+            const existing: string[] = (cur as { image_paths: string[] | null }).image_paths ?? [];
             await supabase
               .from("competitions")
               .update({ image_paths: [...existing.filter((p) => !imageData.deletedIds.includes(p)), ...uploadedPaths] })

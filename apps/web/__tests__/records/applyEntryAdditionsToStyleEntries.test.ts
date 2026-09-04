@@ -30,6 +30,9 @@ function makePlan(overrides: Partial<EntryAdditionPlan> & { entry: EntryAddition
   };
 }
 
+// NOTE: `result[0]!` / `memberRecords[N]!` を多用する。各テストは直前に `toHaveLength(...)`
+// で配列長を確認済みで、その範囲内のインデックスのみアクセスしている。
+
 describe("applyEntryAdditionsToStyleEntries", () => {
   it("plans が空なら styleEntries をそのまま返す (参照も変えない)", () => {
     const base: StyleEntry[] = [{ id: "1", styleId: "", styleName: "", memberRecords: [] }];
@@ -50,7 +53,7 @@ describe("applyEntryAdditionsToStyleEntries", () => {
       const result = applyEntryAdditionsToStyleEntries(base, plans);
 
       expect(result).toHaveLength(1);
-      const mr = result[0].memberRecords[0];
+      const mr = result[0]!.memberRecords[0]!;
       expect(mr.memberUserId).toBe("user-1");
       expect(mr.memberName).toBe("太郎");
       expect(mr.entryTimeReference).toBe(27.5);
@@ -111,12 +114,12 @@ describe("applyEntryAdditionsToStyleEntries", () => {
       const result = applyEntryAdditionsToStyleEntries(base, plans);
 
       expect(result).toHaveLength(1);
-      expect(result[0].memberRecords).toHaveLength(2);
-      expect(result[0].memberRecords[0].memberUserId).toBe("user-existing");
-      expect(result[0].memberRecords[0].time).toBe(30.0); // 既存行は変更されない
-      expect(result[0].memberRecords[1].memberUserId).toBe("user-new");
-      expect(result[0].memberRecords[1].time).toBe(0);
-      expect(result[0].memberRecords[1].entryTimeReference).toBe(31.2);
+      expect(result[0]!.memberRecords).toHaveLength(2);
+      expect(result[0]!.memberRecords[0]!.memberUserId).toBe("user-existing");
+      expect(result[0]!.memberRecords[0]!.time).toBe(30.0); // 既存行は変更されない
+      expect(result[0]!.memberRecords[1]!.memberUserId).toBe("user-new");
+      expect(result[0]!.memberRecords[1]!.time).toBe(0);
+      expect(result[0]!.memberRecords[1]!.entryTimeReference).toBe(31.2);
     },
   );
 

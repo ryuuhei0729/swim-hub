@@ -26,7 +26,7 @@ export interface RecordFilterValues {
 export const UNSET_PLACE_VALUE = "";
 
 /** 種目(泳法)コードの表示順(自由形→平泳ぎ→背泳ぎ→バタフライ→個人メドレー) */
-export const RECORD_STYLE_ORDER: SwimStyle[] = ["fr", "br", "ba", "fly", "im"];
+export const RECORD_STYLE_ORDER: SwimStyle[] = ["Fr", "Br", "Ba", "Fly", "IM"];
 
 function getRecordSortDate(record: RecordWithDetails): Date | null {
   const dateStr = record.competition?.date || record.created_at;

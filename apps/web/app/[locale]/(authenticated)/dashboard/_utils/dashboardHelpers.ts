@@ -235,10 +235,11 @@ export function getEntryDataForRecord(
   }
 
   if (createdEntries.length > 0) {
+    // createdEntries.length > 0 を直上の if で確認済み
     return {
-      styleId: createdEntries[0].styleId,
-      styleName: String(createdEntries[0].styleName || ""),
-      entryTime: createdEntries[0].entryTime,
+      styleId: createdEntries[0]!.styleId,
+      styleName: String(createdEntries[0]!.styleName || ""),
+      entryTime: createdEntries[0]!.entryTime,
     };
   }
 

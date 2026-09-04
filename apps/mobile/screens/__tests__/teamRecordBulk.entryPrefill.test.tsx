@@ -307,7 +307,7 @@ describe("TeamRecordBulkFormScreen — エントリー行の初期反映 (仕様
         "例: 1:30.50",
       ) as HTMLInputElement[];
       expect(timeInputs).toHaveLength(1);
-      expect(timeInputs[0].value).toBe("");
+      expect(timeInputs[0]!.value).toBe(""); // 直前の toHaveLength(1) で存在は保証済み
     },
   );
 });

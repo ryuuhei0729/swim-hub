@@ -74,6 +74,7 @@ function extractReferencedKeys(filePath: string, bindings: Record<string, string
     let match: RegExpExecArray | null;
     while ((match = pattern.exec(source)) !== null) {
       const key = match[1];
+      if (!key) continue; // 正規表現の捕捉グループ ([\w.]+) は一致すれば必ず非空文字列
       keys.add(namespace ? `${namespace}.${key}` : key);
     }
   }

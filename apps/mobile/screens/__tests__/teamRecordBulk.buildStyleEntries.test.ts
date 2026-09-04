@@ -41,10 +41,10 @@ function makeRelay4x100Free(
     user_id: `user-${idx}`,
     style_id: 3,
     time,
-    is_relaying: flags[idx],
+    is_relaying: flags[idx]!, // times/flags は同じ4要素固定配列なので idx は必ず対応する要素を持つ
     reaction_time: null,
     note: null,
-    split_times: legSplits[idx].map((st, j) => ({ id: `st-${idx}-${j}`, distance: st.distance, split_time: st.split_time })),
+    split_times: legSplits[idx]!.map((st, j) => ({ id: `st-${idx}-${j}`, distance: st.distance, split_time: st.split_time })), // legSplits は呼び出し元で常に4要素 (leg数) の配列として渡される設計
     users: { id: `user-${idx}`, name: `Swimmer ${idx + 1}` },
   }));
 }
@@ -53,15 +53,15 @@ describe("[mobile] buildStyleEntriesFromExisting 基本", () => {
   it("空配列は空 StyleEntry を1つ返す", () => {
     const result = buildStyleEntriesFromExisting([], STYLES);
     expect(result).toHaveLength(1);
-    expect(result[0].styleId).toBe("");
-    expect(result[0].memberRecords).toHaveLength(0);
+    expect(result[0]!.styleId).toBe(""); // 直前の toHaveLength(1) で存在は保証済み
+    expect(result[0]!.memberRecords).toHaveLength(0);
   });
 
   it("個人種目1件はそのまま", () => {
     const result = buildStyleEntriesFromExisting([makeRecord({ style_id: 2, time: 27.5 })], STYLES);
-    expect(result[0].styleId).toBe(2);
-    expect(result[0].relayEventId).toBeUndefined();
-    expect(result[0].memberRecords[0].time).toBe(27.5);
+    expect(result[0]!.styleId).toBe(2); // records は要素1件の配列なので必ず1entryが返る設計
+    expect(result[0]!.relayEventId).toBeUndefined();
+    expect(result[0]!.memberRecords[0]!.time).toBe(27.5); // entryのmemberRecordsも要素1件
   });
 });
 
@@ -75,8 +75,8 @@ describe("[mobile] メドレーリレー検出と累計", () => {
     ];
     const result = buildStyleEntriesFromExisting(records, STYLES);
     expect(result).toHaveLength(1);
-    expect(result[0].relayEventId).toBe("relay_4x50_medley");
-    const mrs = result[0].memberRecords;
+    expect(result[0]!.relayEventId).toBe("relay_4x50_medley"); // 直前の toHaveLength(1) で存在は保証済み
+    const mrs = result[0]!.memberRecords;
     expect(mrs.map((m) => m.cumulativeTimeSeconds)).toEqual([15.0, 31.0, 45.5, 59.0]);
   });
 });
@@ -159,8 +159,8 @@ describe("[mobile] 個人種目のゴール地点スプリット復元", () => {
 
   it("ラップタイムを持つ記録には、ゴール地点スプリット (100m = 記録タイム) が復元される", () => {
     const records = [makeIndividual(54.0, [{ distance: 50, split_time: 26.0 }])];
-    const splits = buildStyleEntriesFromExisting(records, STYLES_WITH_DISTANCE)[0]
-      .memberRecords[0].splitTimes;
+    const splits = buildStyleEntriesFromExisting(records, STYLES_WITH_DISTANCE)[0]! // records は要素1件の配列であり必ず1entry・1memberRecordを返す設計
+      .memberRecords[0]!.splitTimes;
 
     expect(splits.map((s) => s.distance)).toEqual([50, 100]);
     expect(splits.find((s) => s.distance === 100)!.splitTime).toBe(54.0);
@@ -168,8 +168,8 @@ describe("[mobile] 個人種目のゴール地点スプリット復元", () => {
 
   it("ラップタイムを 1 件も持たない記録には、ゴール地点スプリットを追加しない", () => {
     const records = [makeIndividual(54.0, [])];
-    const splits = buildStyleEntriesFromExisting(records, STYLES_WITH_DISTANCE)[0]
-      .memberRecords[0].splitTimes;
+    const splits = buildStyleEntriesFromExisting(records, STYLES_WITH_DISTANCE)[0]! // 同上
+      .memberRecords[0]!.splitTimes;
 
     expect(splits).toHaveLength(0);
   });
@@ -181,8 +181,8 @@ describe("[mobile] 個人種目のゴール地点スプリット復元", () => {
         { distance: 100, split_time: 54.0 },
       ]),
     ];
-    const splits = buildStyleEntriesFromExisting(records, STYLES_WITH_DISTANCE)[0]
-      .memberRecords[0].splitTimes;
+    const splits = buildStyleEntriesFromExisting(records, STYLES_WITH_DISTANCE)[0]! // 同上
+      .memberRecords[0]!.splitTimes;
 
     expect(splits.filter((s) => s.distance === 100)).toHaveLength(1);
   });

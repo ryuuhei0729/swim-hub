@@ -11,6 +11,7 @@ import { autoAssignMembers } from "@/utils/memberMatch";
 import { transformScanResultToMenus, type GeminiScanResult } from "@/utils/ocrTransform";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { CameraIcon, ArrowPathIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface TeamMember {
   id: string;
@@ -203,6 +204,10 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
           const result = reader.result as string;
           // data:image/...;base64, のプレフィックスを除去
           const base64Data = result.split(",")[1];
+          if (!base64Data) {
+            reject(new UserFacingError(t("ocr.errors.invalidFormat")));
+            return;
+          }
           resolve(base64Data);
         };
         reader.onerror = reject;
@@ -231,7 +236,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
 
       if (!isGeminiScanResult(data)) {
         console.error("Invalid scan response shape:", data);
-        throw new Error(t("ocr.errors.invalidFormat"));
+        throw new UserFacingError(t("ocr.errors.invalidFormat"));
       }
 
       setScanResult(data);
@@ -243,7 +248,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
       setStep("results");
     } catch (err) {
       if (cancelledRef.current) return;
-      setError(err instanceof Error ? err.message : t("ocr.errors.analyzeError"));
+      setError(toUserFacingMessage(err, t("ocr.errors.analyzeError")));
       setStep("upload");
     }
   }, [imageFile, supabase, members, t]);
@@ -298,7 +303,13 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
   const getTimeValue = useCallback(
     (swimmerNo: number, timeIndex: number): number | null => {
       const key = `${swimmerNo}-${timeIndex}`;
-      if (key in editedTimes) return editedTimes[key];
+      if (key in editedTimes) {
+        const edited = editedTimes[key];
+        // `key in editedTimes` で存在確認済みだが、`in` は index signature を
+        // 絞り込まないため型上は undefined が残る。undefined ならスキャン結果側に
+        // フォールバックする (元の値を書き換えない安全側の挙動)
+        if (edited !== undefined) return edited;
+      }
       const swimmer = scanResult?.swimmers.find((s) => s.no === swimmerNo);
       return swimmer?.times[timeIndex] ?? null;
     },

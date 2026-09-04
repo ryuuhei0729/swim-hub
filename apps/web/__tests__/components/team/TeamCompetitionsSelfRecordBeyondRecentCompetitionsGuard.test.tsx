@@ -103,7 +103,7 @@ const openSelfRecordForm = async (user: ReturnType<typeof userEvent.setup>) => {
 
   // 一覧は日付降順で描画されるため、最も古い対象大会 (rank51) は常に配列の最後に来る。
   const buttons = screen.getAllByRole("button", { name: /自分の記録を追加|自己記録を追加/ });
-  await user.click(buttons[buttons.length - 1]);
+  await user.click(buttons[buttons.length - 1]!);
   await screen.findByTestId("record-form-modal");
 };
 

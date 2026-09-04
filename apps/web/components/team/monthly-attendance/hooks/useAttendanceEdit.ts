@@ -9,6 +9,7 @@ import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
 import { resolveAttendanceStatus } from "@swim-hub/shared/utils/attendanceStatus";
 import { format, parseISO } from "date-fns";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export interface AttendanceEditState {
   status: AttendanceStatus | null;
@@ -31,7 +32,8 @@ export const useAttendanceEdit = (
     setEditStates((prev) => ({
       ...prev,
       [eventId]: {
-        ...prev[eventId],
+        // prev[eventId] が未初期化のときは initializeEditStates と同じデフォルト値を使う
+        ...(prev[eventId] ?? { status: null, note: "" }),
         status,
       },
     }));
@@ -43,7 +45,8 @@ export const useAttendanceEdit = (
     setEditStates((prev) => ({
       ...prev,
       [eventId]: {
-        ...prev[eventId],
+        // prev[eventId] が未初期化のときは initializeEditStates と同じデフォルト値を使う
+        ...(prev[eventId] ?? { status: null, note: "" }),
         note: trimmedNote,
       },
     }));
@@ -189,6 +192,9 @@ export const useAttendanceEdit = (
           })
           .map((event) => {
             const editState = editStates[event.id];
+            if (!editState) return null; // 直前の filter で editStates[event.id] が
+              // 存在することを確認済みだが、filter と map は別クロージャで型情報が
+              // 引き継がれないため防御的に扱う
             let note = editState.note ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH) : null;
 
             if (resolveAttendanceStatus(event.date, event.attendance_status) === "closed") {
@@ -215,7 +221,8 @@ export const useAttendanceEdit = (
               status: editState.status,
               note,
             };
-          });
+          })
+          .filter((a): a is NonNullable<typeof a> => a !== null);
 
         if (newAttendances.length > 0) {
           const { error: insertError } = await supabase
@@ -233,7 +240,7 @@ export const useAttendanceEdit = (
         onSuccess?.();
       } catch (err) {
         console.error("出欠情報の保存に失敗:", err);
-        setError(t("attendanceEditHook.saveError"));
+        setError(toUserFacingMessage(err, t("attendanceEditHook.saveError")));
       } finally {
         setSaving(false);
       }

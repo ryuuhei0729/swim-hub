@@ -1,6 +1,7 @@
 {
   "extends": "../../tools/typescript-config/library.json",
   "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx"
   },
   "include": ["**/*.ts", "**/*.tsx"],

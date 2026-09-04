@@ -57,7 +57,10 @@ interface RawRecordRow {
 function toStyleKey(nameJp: string): StyleTranslationKey | null {
   const index = getStyleOrderIndex(nameJp);
   if (index === -1) return null;
-  return STYLE_KEY_MAP[STYLES[index]];
+  const styleName = STYLES[index];
+  if (!styleName) return null; // 理論上ここには来ないが、STYLES と STYLE_KEY_MAP の
+                                // 対応が将来ズレた場合に silent undefined を防ぐ
+  return STYLE_KEY_MAP[styleName];
 }
 
 /**

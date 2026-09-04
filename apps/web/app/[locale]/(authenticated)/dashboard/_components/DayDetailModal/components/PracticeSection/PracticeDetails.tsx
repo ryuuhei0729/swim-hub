@@ -36,10 +36,7 @@ import type {
 } from "@apps/shared/types";
 import { AttendanceButton } from "../AttendanceSection";
 import type { PracticeDetailsProps, FormattedPracticeLog } from "../../types";
-
-// 種目コードの一覧（ラベルは翻訳キー経由で取得）
-const SWIM_STYLE_VALUES = ["Fr", "Ba", "Br", "Fly", "IM"] as const;
-type SwimStyleValue = (typeof SWIM_STYLE_VALUES)[number];
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
 // 色の明度に基づいてテキスト色を決定する関数
 const getTextColor = (backgroundColor: string) => {
@@ -79,10 +76,13 @@ export function PracticeDetails({
   const tDash = useTranslations("dashboard");
   const userId = user?.id;
 
-  // 種目コードをローカライズラベルに変換
+  // 種目コードをローカライズラベルに変換。practice_logs.style は CHECK 制約の無い
+  // 自由記述列で legacy な小文字行が混在し得るため、toStyleCode() で正規化してから
+  // 翻訳キーを引く(生の "fr" のまま t() に渡すと該当キーが無く壊れたラベルになる)。
   const getStyleLabel = (styleValue: string): string => {
-    if (SWIM_STYLE_VALUES.includes(styleValue as SwimStyleValue)) {
-      return t(`styles.${styleValue as SwimStyleValue}`);
+    const code = toStyleCode(styleValue);
+    if (code) {
+      return t(`styles.${code}`);
     }
     // DB の name_jp 値（ベストタイム由来）がそのまま来た場合はそのまま返す
     return styleValue;
@@ -433,11 +433,13 @@ export function PracticeDetails({
                     </button>
                     <button
                       onClick={() => {
-                        const styleValue = formattedLog.style;
-                        const styleCode =
-                          (SWIM_STYLE_VALUES.includes(styleValue as SwimStyleValue) ? styleValue : undefined) ||
-                          styleValue ||
-                          "Fr";
+                        // legacy な小文字行 ("fr" 等) を編集フォームの StyleChipSelector に
+                        // そのまま渡すと選択中チップが表示されない(canonical なタイトルケース
+                        // 値としか一致しない)ため、toStyleCode() で正規化する。フォールバックは
+                        // "Fr" ではなく元の値: 正規化できない値を "Fr" に潰すと、種目欄を
+                        // 触らず保存しただけで元の値が自由形として静かに上書きされてしまう
+                        // (pool_type ?? 0 と同型の実障害パターン)。
+                        const styleCode = toStyleCode(formattedLog.style) ?? formattedLog.style;
 
                         const formData: PracticeLogWithTimes & {
                           tags?: PracticeTag[];

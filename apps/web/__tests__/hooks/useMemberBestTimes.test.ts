@@ -18,6 +18,7 @@ const createMockSupabase = (mockData: unknown[] | null = [], mockError: Error | 
   };
 };
 
+// NOTE: `bestTimes[0]!` を多用する。各テストは直前に `toHaveLength(1)` で件数を確認済み。
 describe("useMemberBestTimes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -199,8 +200,8 @@ describe("useMemberBestTimes", () => {
 
       // 最速の30.5秒のみが返される
       expect(bestTimes).toHaveLength(1);
-      expect(bestTimes[0].time).toBe(30.5);
-      expect(bestTimes[0].id).toBe("1");
+      expect(bestTimes[0]!.time).toBe(30.5);
+      expect(bestTimes[0]!.id).toBe("1");
     });
 
     it("異なる種目は個別に返す", async () => {
@@ -305,9 +306,9 @@ describe("useMemberBestTimes", () => {
       });
 
       expect(bestTimes).toHaveLength(1);
-      expect(bestTimes[0].is_relaying).toBe(false);
-      expect(bestTimes[0].relayingTime).toBeDefined();
-      expect(bestTimes[0].relayingTime?.time).toBe(29.8);
+      expect(bestTimes[0]!.is_relaying).toBe(false);
+      expect(bestTimes[0]!.relayingTime).toBeDefined();
+      expect(bestTimes[0]!.relayingTime?.time).toBe(29.8);
     });
 
     it("引き継ぎありのみのタイムも返す", async () => {
@@ -334,7 +335,7 @@ describe("useMemberBestTimes", () => {
 
       // 引き継ぎなしがない場合、引き継ぎありを単独で追加
       expect(bestTimes).toHaveLength(1);
-      expect(bestTimes[0].is_relaying).toBe(true);
+      expect(bestTimes[0]!.is_relaying).toBe(true);
     });
 
     it("スタイルがnullの場合はUnknownとして処理", async () => {
@@ -360,8 +361,8 @@ describe("useMemberBestTimes", () => {
       });
 
       expect(bestTimes).toHaveLength(1);
-      expect(bestTimes[0].style.name_jp).toBe("Unknown");
-      expect(bestTimes[0].style.distance).toBe(0);
+      expect(bestTimes[0]!.style.name_jp).toBe("Unknown");
+      expect(bestTimes[0]!.style.distance).toBe(0);
     });
 
     it("スタイルが配列の場合は最初の要素を使用", async () => {
@@ -390,7 +391,7 @@ describe("useMemberBestTimes", () => {
       });
 
       expect(bestTimes).toHaveLength(1);
-      expect(bestTimes[0].style.name_jp).toBe("50m自由形");
+      expect(bestTimes[0]!.style.name_jp).toBe("50m自由形");
     });
 
     it("pool_typeがundefinedの場合は0として扱う", async () => {
@@ -416,7 +417,7 @@ describe("useMemberBestTimes", () => {
       });
 
       expect(bestTimes).toHaveLength(1);
-      expect(bestTimes[0].pool_type).toBe(0);
+      expect(bestTimes[0]!.pool_type).toBe(0);
     });
   });
 

@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useTranslations } from "next-intl";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { TeamGroup } from "@swim-hub/shared/types";
 
 export type TeamGroupWithCount = TeamGroup & { member_count: number };
@@ -26,7 +27,7 @@ export const useTeamGroups = (teamId: string, supabase: SupabaseClient) => {
       setGroups(data);
     } catch (err) {
       console.error("Failed to fetch group information:", err);
-      setError(t("fetchFailed"));
+      setError(toUserFacingMessage(err, t("fetchFailed")));
     } finally {
       setLoading(false);
     }

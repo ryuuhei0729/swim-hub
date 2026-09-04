@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useTranslations } from "next-intl";
 import { TeamMembersAPI } from "@apps/shared/api/teams/members";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { MemberDetail } from "@/types/member-detail";
 
 export function useMemberDetail(
@@ -31,7 +32,7 @@ export function useMemberDetail(
         onMembershipChange?.();
       } catch (err) {
         console.error("権限変更エラー:", err);
-        setError(t("roleChangeFailed"));
+        setError(toUserFacingMessage(err, t("roleChangeFailed")));
         throw err;
       }
     },
@@ -62,7 +63,7 @@ export function useMemberDetail(
         return true;
       } catch (err) {
         console.error("メンバー削除エラー:", err);
-        setError(t("removeFailed"));
+        setError(toUserFacingMessage(err, t("removeFailed")));
         return false;
       } finally {
         setIsRemoving(false);

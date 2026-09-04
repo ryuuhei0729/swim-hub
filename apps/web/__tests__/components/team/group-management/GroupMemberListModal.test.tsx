@@ -145,7 +145,7 @@ describe("[V-GROUPMODAL-02] メンバークリックで gender を含む MemberD
     await user.click(memberButton);
 
     expect(onMemberClick).toHaveBeenCalledTimes(1);
-    const passedMember = onMemberClick.mock.calls[0][0];
+    const passedMember = onMemberClick.mock.calls[0]![0];
     expect(passedMember.users.gender).toBe(1);
   });
 });

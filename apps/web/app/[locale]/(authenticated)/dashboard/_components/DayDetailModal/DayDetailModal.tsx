@@ -545,6 +545,10 @@ export default function DayDetailModal({
                                   date: item.metadata?.competition?.date || item.date,
                                   end_date: item.metadata?.competition?.end_date || null,
                                   place: item.place || "",
+                                  // metadata は calendar_view の JSONB 列で未型付けだが、'entry' 型行は
+                                  // jsonb_build_object('competition', to_jsonb(c.*), ...) で competitions
+                                  // 行全体をそのまま埋め込むため、実データには pool_type (DB上NOT NULL)
+                                  // が必ず入っている。JSON型保証が無いための防御的フォールバック。
                                   pool_type: item.metadata?.competition?.pool_type || 0,
                                 },
                               },
@@ -572,6 +576,10 @@ export default function DayDetailModal({
 
                   {recordItems.map((record) => {
                     const compId = record.metadata?.competition?.id || record.id;
+                    // metadata は calendar_view の JSONB 列で未型付けだが、'record' 型行は
+                    // SELECT ... jsonb_build_object(..., 'pool_type', c.pool_type, ...) FROM competitions c
+                    // WHERE EXISTS (records...) で c が必須の FROM 元になるため、実データには
+                    // pool_type (DB上NOT NULL) が必ず入っている。JSON型保証が無いための防御的フォールバック。
                     const poolType = record.metadata?.pool_type || 0;
 
                     return (

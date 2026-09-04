@@ -98,8 +98,8 @@ describe("[mobile][S10] 旧形式破損データ (split_time が通算値のま�
       users: { id: `u-${idx}`, name: `S${idx}` },
     }));
     const entry = buildStyleEntriesFromExisting(records, STYLES_200).find((e) => e.relayEventId)!;
-    expect(entry.memberRecords[1].cumulativeTimeSeconds).toBe(cumulatives[1]);
-    expect(entry.memberRecords[1].time).toBe(134.0);
+    expect(entry.memberRecords[1]!.cumulativeTimeSeconds).toBe(cumulatives[1]); // legTimes(4要素)と対応するため必ず存在
+    expect(entry.memberRecords[1]!.time).toBe(134.0);
   });
 });
 
@@ -136,8 +136,8 @@ describe("[mobile][S11] 破損レコードは保存経路を通すと自己修�
       const legBoundaries = getRelayLegBoundaries("relay_4x200_free");
       const RACE_DISTANCE = 200; // leg1 の種目 (200m 自由形) の距離
       const legIdx = 1;
-      const legLow = legBoundaries[legIdx - 1]; // 200
-      const legHigh = legBoundaries[legIdx]; // 400
+      const legLow = legBoundaries[legIdx - 1]!; // 200 (4x200リレーのlegBoundariesは4要素なので必ず存在)
+      const legHigh = legBoundaries[legIdx]!; // 400
       const legStart = getLegStartCumulative(cumulatives, legIdx);
       const savedForLeg1 = relaySplitTimes
         .filter((st) => st.distance > legLow && st.distance <= legHigh)
