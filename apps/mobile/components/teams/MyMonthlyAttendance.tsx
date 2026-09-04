@@ -18,6 +18,7 @@ import { getMonthDateRange, formatDate, toISODateString } from "@swim-hub/shared
 import { resolveAttendanceStatus } from "@swim-hub/shared/utils/attendanceStatus";
 import { startOfMonth, endOfMonth, addMonths, format, parseISO } from "date-fns";
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useTranslation } from "react-i18next";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { AttendanceGroupModal } from "./AttendanceGroupModal";
@@ -488,7 +489,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+      if (!user) throw new UserFacingError(t("auth.errorMap.sessionNotFound"));
 
       let note: string | null = editState.note
         ? sanitizeTextInput(editState.note, NOTE_MAX_LENGTH)
@@ -618,8 +619,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       await syncQuickStateAfterSave(eventId, event, saved);
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : t("teams.mobile.attendanceSaveFailed");
+      const errorMessage = toUserFacingMessage(err, t("teams.mobile.attendanceSaveFailed"));
       // NOTE: setError はコンポーネント全体をエラー表示に切り替えてモーダルが消えるため、
       // イベント単位保存では Alert のみで通知し、編集状態を保持する
       Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
@@ -708,8 +708,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       await loadMonthList();
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : t("teams.recentAttendanceHook.saveError");
+      const errorMessage = toUserFacingMessage(err, t("teams.recentAttendanceHook.saveError"));
       Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
     } finally {
       setQuickSavingEventIds((prev) => {
@@ -831,7 +830,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+      if (!user) throw new UserFacingError(t("auth.errorMap.sessionNotFound"));
 
       const newAttendances = events
         .filter((event) => {
@@ -905,8 +904,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       );
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : t("teams.mobile.attendanceSaveFailed");
+      const errorMessage = toUserFacingMessage(err, t("teams.mobile.attendanceSaveFailed"));
       setError(errorMessage);
       Alert.alert(t("common.error"), errorMessage, [{ text: "OK" }]);
     } finally {

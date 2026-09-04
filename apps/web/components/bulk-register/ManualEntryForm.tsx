@@ -15,6 +15,7 @@ import {
   type ManualMode,
   type ManualErrorTranslator,
 } from "@/utils/teamBulkRegisterManual";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface ManualEntryFormProps {
   teamId: string;
@@ -45,6 +46,7 @@ const emptyCompetitionRow = (date: string): CompetitionRow => ({
  */
 export default function ManualEntryForm({ teamId, onSuccess }: ManualEntryFormProps) {
   const t = useTranslations("teamsAdmin.bulkRegister");
+  const tCommon = useTranslations("common");
   const { supabase } = useAuth();
   const api = useMemo(() => new TeamBulkRegisterAPI(supabase), [supabase]);
   const today = format(new Date(), "yyyy-MM-dd");
@@ -125,7 +127,7 @@ export default function ManualEntryForm({ teamId, onSuccess }: ManualEntryFormPr
         onSuccess?.();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(toUserFacingMessage(err, tCommon("error")));
     } finally {
       setLoading(false);
     }

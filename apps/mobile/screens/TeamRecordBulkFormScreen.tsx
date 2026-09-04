@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys, recordKeys } from "@apps/shared/hooks/queries/keys";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
@@ -206,7 +207,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         if (competitionRes.error || !competitionRes.data) {
           throw (
             competitionRes.error ||
-            new Error(t("recordMobile.competitionFetchFailed"))
+            new UserFacingError(t("recordMobile.competitionFetchFailed"))
           );
         }
 
@@ -281,7 +282,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
         if (!isMounted) return;
         console.error("チーム記録ロードエラー:", err);
         setLoadError(
-          err instanceof Error ? err.message : t("recordMobile.saveFailed"),
+          toUserFacingMessage(err, t("recordMobile.saveFailed")),
         );
       } finally {
         if (isMounted) setLoading(false);
@@ -1132,11 +1133,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
               .delete()
               .eq("record_id", record.id);
             if (splitDeleteError) {
-              throw new Error(
-                t("competition.records.error.splitDeleteFailed", {
-                  detail: splitDeleteError.message,
-                }),
-              );
+              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+              console.error("スプリットタイム削除エラー:", splitDeleteError);
+              throw new Error(t("competition.records.error.splitDeleteFailed"));
             }
           }
         }
@@ -1146,11 +1145,9 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           .delete()
           .in("id", existingRecordIds);
         if (deleteError) {
-          throw new Error(
-            t("competition.records.error.recordDeleteFailed", {
-              detail: deleteError.message,
-            }),
-          );
+          // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+          console.error("既存レコード削除エラー:", deleteError);
+          throw new Error(t("competition.records.error.recordDeleteFailed"));
         }
       }
 
@@ -1289,9 +1286,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       console.error("チーム大会記録作成エラー:", err);
       Alert.alert(
         t("common.error"),
-        err instanceof Error
-          ? err.message
-          : t("competition.records.error.saveFailed"),
+        toUserFacingMessage(err, t("competition.records.error.saveFailed")),
       );
     } finally {
       setSaving(false);

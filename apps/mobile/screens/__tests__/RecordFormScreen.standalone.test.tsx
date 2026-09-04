@@ -9,7 +9,7 @@
 //     読み込んだレコードの competition_id が null の場合、大会選択UIが disabled の
 //     「(一括入力)」表示に切り替わり、画像アップロードUIも非表示になる
 //   [pool_type 保持] 保存時、大会が無いため選択中の大会からは pool_type を導出できない。
-//     読み込み時点のレコード自身の pool_type (standaloneOriginalPoolType) がそのまま
+//     読み込み時点のレコード自身の pool_type (loadedRecordPoolType) がそのまま
 //     保存に使われ、失われない
 //   [competition_id null 維持] 保存時に competition_id が null のまま維持される
 //     (大会に誤って紐付けられない)
@@ -77,6 +77,7 @@ const mocks = vi.hoisted(() => {
     title: "テスト大会",
     date: "2026-07-01",
     pool_type: 1, // 大会側は長水路 (record.pool_type=0 とはあえて変えて「大会から導出される」ことを確認)
+    image_paths: [] as string[],
   };
   const linkedRecord = {
     id: "record-2",
@@ -102,21 +103,63 @@ const mocks = vi.hoisted(() => {
   // supabase.from("competitions").select("pool_type").eq("id", ...).single() の
   // 直接取得に変わったため、linkedRecord (competition_id="comp-1") の保存経路が
   // このスタブを経由する。standaloneRecord の保存は isStandaloneRecord=true のため
-  // このスタブを呼ばずに済む (standaloneOriginalPoolType を直接使う)。
-  const supabaseFixture = {
-    from: (table: string) => ({
-      select: (_columns: string) => ({
-        eq: (_column: string, id: string) => ({
-          single: () =>
-            Promise.resolve(
-              table === "competitions" && id === linkedCompetition.id
-                ? { data: { pool_type: linkedCompetition.pool_type }, error: null }
-                : { data: null, error: new Error(`no mock response for ${table}:${id}`) },
-            ),
+  // このスタブを呼ばずに済む (loadedRecordPoolType を直接使う)。
+  //
+  // クエリ引数を捨てない: この画面は同じ id に対して `.select("pool_type")` (保存直前)
+  // と `.select("image_paths, title")` (表示用、linkedRecord のように大会紐付けの場合に
+  // マウント時に飛ぶ) の複数種類の ID 直指定クエリを投げる。以前は select() の columns と
+  // eq() の column 名を無視して常に { pool_type } だけを返しており、これが原因で
+  // 「大会名を ID 直指定の title で表示する」実装追加時に非退行テストが誤って red 化した
+  // (今スプリント Critical の再発防止)。手本:
+  // RecordFormScreen.competitionScopeImagePaths.test.tsx の normalizeColumns。列名は
+  // 「カンマ区切り→trim→ソート→再結合」で正規化し、id と組み合わせてキーにすることで
+  // クエリ種別ごとに別々の応答を返す。
+  const competitionByIdResponses: Record<
+    string,
+    { data: Record<string, unknown> | null; error: unknown }
+  > = {
+    [`pool_type:${linkedCompetition.id}`]: {
+      data: { pool_type: linkedCompetition.pool_type },
+      error: null,
+    },
+    [`image_paths,title:${linkedCompetition.id}`]: {
+      data: { image_paths: linkedCompetition.image_paths, title: linkedCompetition.title },
+      error: null,
+    },
+  };
+  const competitionFetchCalls: Array<{ table: string; columns: string; id: string }> = [];
+
+  function normalizeColumns(columns: string): string {
+    return columns
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .sort()
+      .join(",");
+  }
+
+  function makeSupabase() {
+    return {
+      from: (table: string) => ({
+        select: (columns: string) => ({
+          eq: (_column: string, id: string) => {
+            competitionFetchCalls.push({ table, columns, id });
+            const responseKey = `${normalizeColumns(columns)}:${id}`;
+            return {
+              single: () =>
+                Promise.resolve(
+                  competitionByIdResponses[responseKey] ?? {
+                    data: null,
+                    error: new Error(`no mock response for ${table}.${responseKey}`),
+                  },
+                ),
+            };
+          },
         }),
       }),
-    }),
-  };
+    };
+  }
+  const supabaseFixture = makeSupabase();
   // useRoute のモックが参照する可変な route params (テストごとに recordId を切り替える)
   const routeParams: { recordId?: string } = { recordId: "record-1" };
 
@@ -128,6 +171,8 @@ const mocks = vi.hoisted(() => {
     recordsFixture,
     stylesFixture,
     competitionsFixture,
+    competitionByIdResponses,
+    competitionFetchCalls,
     supabaseFixture,
     routeParams,
     navigate: vi.fn(),
@@ -270,6 +315,7 @@ describe("RecordFormScreen — 大会未紐付けレコード(一括入力)の�
   beforeEach(() => {
     vi.clearAllMocks();
     useRecordStore.getState().reset();
+    mocks.competitionFetchCalls.length = 0;
     mocks.routeParams.recordId = "record-1";
     mocks.recordByIdError = false;
     mocks.recordByIdLoading = false;
@@ -325,6 +371,7 @@ describe("RecordFormScreen — 大会紐付けレコードの通常編集フロ�
   beforeEach(() => {
     vi.clearAllMocks();
     useRecordStore.getState().reset();
+    mocks.competitionFetchCalls.length = 0;
     mocks.routeParams.recordId = "record-2"; // linkedRecord (competition_id="comp-1")
     mocks.recordByIdError = false;
     mocks.recordByIdLoading = false;
@@ -381,6 +428,7 @@ describe("RecordFormScreen — 編集対象レコード解決の3状態 (V-04)",
   beforeEach(() => {
     vi.clearAllMocks();
     useRecordStore.getState().reset();
+    mocks.competitionFetchCalls.length = 0;
     mocks.routeParams.recordId = "record-1";
     mocks.recordByIdError = false;
     mocks.recordByIdLoading = false;

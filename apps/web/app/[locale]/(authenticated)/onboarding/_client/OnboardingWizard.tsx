@@ -13,6 +13,7 @@ import type { UserProfile } from "@apps/shared/types";
 import Step1Welcome from "./steps/Step1Welcome";
 import Step2Profile, { EMAIL_REGEX, type Step2FormData } from "./steps/Step2Profile";
 import Step3BestTime, { type BestTimeEntry } from "./steps/Step3BestTime";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface OnboardingWizardProps {
   initialProfile: UserProfile | null;
@@ -138,13 +139,12 @@ export default function OnboardingWizard({ initialProfile }: OnboardingWizardPro
     } catch (err) {
       // 失敗時は離脱警告を再度有効化
       setIsSubmitted(false);
-      const message = err instanceof Error ? err.message : "完了処理に失敗しました";
-      setCompleteError(message);
+      setCompleteError(toUserFacingMessage(err, t("completionFailed")));
       setCompleting(false);
     }
     // 成功時は router.push で unmount されるため setCompleting(false) は不要。
     // 遷移中に「準備中...」表示が残る方が自然。
-  }, [updateProfile, router]);
+  }, [updateProfile, router, t]);
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 space-y-5 sm:space-y-8">

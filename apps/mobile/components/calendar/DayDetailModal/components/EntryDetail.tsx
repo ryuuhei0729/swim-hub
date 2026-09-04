@@ -8,6 +8,7 @@ import { localizedStyleName } from "@/utils/styleName";
 import { EntryAPI } from "@apps/shared/api/entries";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { darkenHex } from "@/utils/colorTone";
 import { styles } from "../styles";
 import type { EntryDetailProps, EntryData } from "../types";
@@ -341,9 +342,10 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                                   console.error("削除エラー:", error);
                                   Alert.alert(
                                     t("common.alertErrorTitle"),
-                                    error instanceof Error
-                                      ? error.message
-                                      : t("dashboard.dayDetail.entryDeleteFailed"),
+                                    toUserFacingMessage(
+                                      error,
+                                      t("dashboard.dayDetail.entryDeleteFailed"),
+                                    ),
                                     [{ text: "OK" }],
                                   );
                                 } finally {

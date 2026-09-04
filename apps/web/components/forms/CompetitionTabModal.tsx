@@ -37,6 +37,7 @@ import type { RecordLogFormData } from "@/components/forms/record-log/types";
 import type { StyleOption } from "@/components/forms/record-log/types";
 import type { EntryInfo } from "@apps/shared/types/ui";
 import type { EditingData, CompetitionTabId, EntryFormData } from "@/stores/types";
+import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 const POOL_TYPES = [{ value: 0 }, { value: 1 }];
 
@@ -168,6 +169,7 @@ export default function CompetitionTabModal({
   const tPremium = useTranslations("forms.premium");
   const tTimeError = useTranslations("bulkBestTime.error");
   const tHandlers = useTranslations("dashboard.handlers");
+  const tCommon = useTranslations("common");
   const { subscription, user, supabase } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const { bestTimes, loadBestTimes } = useBestTimes(supabase);
@@ -734,7 +736,7 @@ export default function CompetitionTabModal({
           .single();
 
         if (error || !data) {
-          throw new Error(tHandlers("competitionSaveBlockedUnresolved"));
+          throw new UserFacingError(tHandlers("competitionSaveBlockedUnresolved"));
         }
 
         const row = data as {
@@ -786,7 +788,7 @@ export default function CompetitionTabModal({
         // basicData に対して1度しか走っていないため、マージ結果 (merged) は未検証のまま
         // 保存され得る。validateAll の判定式 (:666) と同じ条件で再チェックする。
         if (merged.endDate && merged.endDate < merged.date) {
-          throw new Error(tHandlers("competitionSaveBlockedDateInvalid"));
+          throw new UserFacingError(tHandlers("competitionSaveBlockedDateInvalid"));
         }
 
         saveBasicData = merged;
@@ -848,10 +850,8 @@ export default function CompetitionTabModal({
       console.error("大会一括保存に失敗しました:", error);
       isSubmittingRef.current = false;
       setIsSubmitted(false);
-      if (error instanceof Error && error.message) {
-        setBasicValidationError(error.message);
-        setActiveTab("competition");
-      }
+      setBasicValidationError(toUserFacingMessage(error, tCommon("error")));
+      setActiveTab("competition");
     }
   }, [
     validateAll,
@@ -867,6 +867,7 @@ export default function CompetitionTabModal({
     competitionRowResolved,
     supabase,
     tHandlers,
+    tCommon,
     onSave,
   ]);
 

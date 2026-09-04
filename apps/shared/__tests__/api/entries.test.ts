@@ -1074,31 +1074,57 @@ describe("EntryAPI", () => {
   });
 
   describe("エントリー削除", () => {
+    // deleteEntry は「所有者/チーム管理者を確認する select().eq().single()」の後に
+    // delete().eq("id", id).select("id") というチェインで呼ばれる
+    // (RLSがDELETEを拒否した場合もerrorを返さず0行削除で正常終了する問題への対策として
+    // .select() で結果行を見る。practices.ts の deletePractice と同型)。
+    // "entries" テーブルへの1回目の from() 呼び出しは既存エントリー取得用、
+    // 2回目は削除確認用のため、callCount で呼び出しごとに異なるビルダーを返す。
+    // eq / select に渡された引数は戻り値経由でテストごとに検証できるようにし、
+    // クエリの絞り込み対象・返却カラムを捨てない。
+    const mockDeleteEntryChain = (
+      existingEntry: { user_id: string; team_id: string | null },
+      deleteResponse: { data: unknown; error: unknown },
+    ) => {
+      const fetchBuilder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: existingEntry, error: null }),
+      };
+      const deleteMock = vi.fn().mockReturnThis();
+      const deleteEqMock = vi.fn().mockReturnThis();
+      const selectMock = vi.fn().mockResolvedValue(deleteResponse);
+      const deleteBuilder = { delete: deleteMock, eq: deleteEqMock, select: selectMock };
+
+      let entriesCallCount = 0;
+      mockClient.from = vi.fn((table: string) => {
+        if (table === "entries") {
+          entriesCallCount++;
+          return entriesCallCount === 1 ? fetchBuilder : deleteBuilder;
+        }
+        return createMockQueryBuilder();
+      }) as unknown as typeof mockClient.from;
+
+      return { fetchBuilder, deleteMock, deleteEqMock, selectMock };
+    };
+
     it("ユーザーが所有者のときエントリーを削除できる", async () => {
       const existingEntry = {
         user_id: "test-user-id",
         team_id: null,
       };
-
-      mockClient.from = vi.fn((table: string) => {
-        if (table === "entries") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            single: vi
-              .fn()
-              .mockResolvedValueOnce({ data: existingEntry, error: null }) // 初回取得
-              .mockResolvedValueOnce({ data: null, error: null }), // 削除後
-            delete: vi.fn().mockReturnThis(),
-          };
-        }
-        return createMockQueryBuilder();
-      }) as unknown as typeof mockClient.from;
+      const { deleteMock, deleteEqMock, selectMock } = mockDeleteEntryChain(existingEntry, {
+        data: [{ id: "entry-1" }],
+        error: null,
+      });
 
       await api.deleteEntry("entry-1");
 
       // 削除が実行されたことを確認
       expect(mockClient.from).toHaveBeenCalledWith("entries");
+      expect(deleteMock).toHaveBeenCalled();
+      expect(deleteEqMock).toHaveBeenCalledWith("id", "entry-1");
+      expect(selectMock).toHaveBeenCalledWith("id");
     });
 
     it("ユーザーがチーム管理者のときエントリーを削除できる", async () => {
@@ -1111,17 +1137,23 @@ describe("EntryAPI", () => {
         role: "admin",
       };
 
+      const deleteMock = vi.fn().mockReturnThis();
+      const deleteEqMock = vi.fn().mockReturnThis();
+      const selectMock = vi.fn().mockResolvedValue({ data: [{ id: "entry-1" }], error: null });
+      const deleteBuilder = { delete: deleteMock, eq: deleteEqMock, select: selectMock };
+
+      let entriesCallCount = 0;
       mockClient.from = vi.fn((table: string) => {
         if (table === "entries") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            single: vi
-              .fn()
-              .mockResolvedValueOnce({ data: existingEntry, error: null }) // 初回取得
-              .mockResolvedValueOnce({ data: null, error: null }), // 削除後
-            delete: vi.fn().mockReturnThis(),
-          };
+          entriesCallCount++;
+          if (entriesCallCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({ data: existingEntry, error: null }),
+            };
+          }
+          return deleteBuilder;
         } else if (table === "team_memberships") {
           return {
             select: vi.fn().mockReturnThis(),
@@ -1139,6 +1171,9 @@ describe("EntryAPI", () => {
 
       // 削除が実行されたことを確認
       expect(mockClient.from).toHaveBeenCalledWith("entries");
+      expect(deleteMock).toHaveBeenCalled();
+      expect(deleteEqMock).toHaveBeenCalledWith("id", "entry-1");
+      expect(selectMock).toHaveBeenCalledWith("id");
     });
 
     it("ユーザーが所有者でもチーム管理者でもないときエラーになる", async () => {
@@ -1261,29 +1296,55 @@ describe("EntryAPI", () => {
       };
 
       const deleteError = new Error("Delete operation failed");
-
-      mockClient.from = vi.fn((table: string) => {
-        if (table === "entries") {
-          const mockBuilder = {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: existingEntry,
-              error: null,
-            }),
-            delete: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({
-                data: null,
-                error: deleteError,
-              }),
-            }),
-          };
-          return mockBuilder;
-        }
-        return createMockQueryBuilder();
-      }) as unknown as typeof mockClient.from;
+      const { deleteEqMock, selectMock } = mockDeleteEntryChain(existingEntry, {
+        data: null,
+        error: deleteError,
+      });
 
       await expect(api.deleteEntry("entry-1")).rejects.toThrow(deleteError);
+      expect(deleteEqMock).toHaveBeenCalledWith("id", "entry-1");
+      expect(selectMock).toHaveBeenCalledWith("id");
+    });
+
+    describe("0行ガード (課題B展開・回帰)", () => {
+      it("[D-1] DELETEが0行を返した場合はエラーをthrowする", async () => {
+        const existingEntry = { user_id: "test-user-id", team_id: null };
+        const { deleteEqMock, selectMock } = mockDeleteEntryChain(existingEntry, {
+          data: [],
+          error: null,
+        });
+
+        await expect(api.deleteEntry("entry-1")).rejects.toThrow("エントリーの削除に失敗しました");
+        expect(deleteEqMock).toHaveBeenCalledWith("id", "entry-1");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-2] dataがnullの場合もエラーをthrowする", async () => {
+        const existingEntry = { user_id: "test-user-id", team_id: null };
+        mockDeleteEntryChain(existingEntry, { data: null, error: null });
+
+        await expect(api.deleteEntry("entry-1")).rejects.toThrow("エントリーの削除に失敗しました");
+      });
+
+      it("[D-3] 1行返った場合は正常終了する(非退行)", async () => {
+        const existingEntry = { user_id: "test-user-id", team_id: null };
+        const { deleteEqMock, selectMock } = mockDeleteEntryChain(existingEntry, {
+          data: [{ id: "entry-99" }],
+          error: null,
+        });
+
+        await expect(api.deleteEntry("entry-99")).resolves.toBeUndefined();
+        expect(deleteEqMock).toHaveBeenCalledWith("id", "entry-99");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-4] errorが返った場合は元のerrorをthrowする(汎用メッセージで上書きしない)", async () => {
+        const existingEntry = { user_id: "test-user-id", team_id: null };
+        const error = new Error("permission denied for table entries");
+        mockDeleteEntryChain(existingEntry, { data: null, error });
+
+        await expect(api.deleteEntry("entry-1")).rejects.toThrow(error);
+      });
     });
   });
 
@@ -1516,6 +1577,44 @@ describe("EntryAPI", () => {
       }) as unknown as typeof mockClient.from;
 
       await expect(api.deleteEntriesByCompetition("comp-1")).rejects.toThrow(deleteError);
+    });
+
+    describe("competition_id単位の削除は0行許容 (回帰・意図的に0行ガードを付けない)", () => {
+      it(
+        "[D-5] エントリーが0件(削除0行)でもthrowせず正常に完了する" +
+          "(0行ガードを追加していないことの担保。deleteEntryのようなid指定削除とは異なり、" +
+          "エントリーが1件も無い大会の削除は正当な結果のため)",
+        async () => {
+          const mockCompetition = { team_id: "team-1" };
+          const mockMembership = { role: "admin" };
+          const entriesEqMock = vi.fn().mockResolvedValue({ data: [], error: null });
+
+          mockClient.from = vi.fn((table: string) => {
+            if (table === "competitions") {
+              return {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                single: vi.fn().mockResolvedValue({ data: mockCompetition, error: null }),
+              };
+            } else if (table === "team_memberships") {
+              return {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                single: vi.fn().mockResolvedValue({ data: mockMembership, error: null }),
+              };
+            } else if (table === "entries") {
+              return {
+                delete: vi.fn().mockReturnThis(),
+                eq: entriesEqMock,
+              };
+            }
+            return createMockQueryBuilder();
+          }) as unknown as typeof mockClient.from;
+
+          await expect(api.deleteEntriesByCompetition("comp-1")).resolves.toBeUndefined();
+          expect(entriesEqMock).toHaveBeenCalledWith("competition_id", "comp-1");
+        },
+      );
     });
   });
 
@@ -1826,7 +1925,8 @@ describe("EntryAPI", () => {
         "という契約をコードレベルで保証する多層防御。実際のクロスチームDB検証は" +
         "RLSレベルの統合テストに委ねる、とこのテストのコメントで明示する）",
       async () => {
-        const entriesBuilder = createMockQueryBuilder(null, null);
+        // .select("id") で削除結果行数を判定するため(0行ガード)、1行を返して非退行を保つ。
+        const entriesBuilder = createMockQueryBuilder([{ id: "entry-1" }], null);
         mockClient.from = vi.fn((table: string) => {
           if (table === "team_memberships") {
             const builder = createMockQueryBuilder([{ user_id: "user-1" }], null);
@@ -1837,11 +1937,14 @@ describe("EntryAPI", () => {
           return createMockQueryBuilder();
         }) as unknown as typeof mockClient.from;
 
-        await api.deleteBulkEntries("team-1", ["entry-1", "entry-2"]);
+        await expect(
+          api.deleteBulkEntries("team-1", ["entry-1", "entry-2"]),
+        ).resolves.toBeUndefined();
 
         expect(entriesBuilder.delete).toHaveBeenCalled();
         expect(entriesBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
         expect(entriesBuilder.in).toHaveBeenCalledWith("id", ["entry-1", "entry-2"]);
+        expect(entriesBuilder.select).toHaveBeenCalledWith("id");
       },
     );
 
@@ -1858,6 +1961,63 @@ describe("EntryAPI", () => {
       await expect(api.deleteBulkEntries("team-1", ["entry-1"])).rejects.toThrow(
         "管理者権限が必要です",
       );
+    });
+
+    describe("0行ガード (課題B展開・回帰)", () => {
+      const mockAdminAndEntries = (entriesResponse: { data: unknown; error: unknown }) => {
+        const entriesBuilder = createMockQueryBuilder(
+          entriesResponse.data,
+          entriesResponse.error,
+        );
+        mockClient.from = vi.fn((table: string) => {
+          if (table === "team_memberships") {
+            const builder = createMockQueryBuilder([{ user_id: "user-1" }], null);
+            builder.single.mockResolvedValue({ data: { role: "admin" }, error: null });
+            return builder;
+          }
+          if (table === "entries") return entriesBuilder;
+          return createMockQueryBuilder();
+        }) as unknown as typeof mockClient.from;
+        return entriesBuilder;
+      };
+
+      it("[D-6] DELETEが0行を返した場合はエラーをthrowする", async () => {
+        const entriesBuilder = mockAdminAndEntries({ data: [], error: null });
+
+        await expect(api.deleteBulkEntries("team-1", ["entry-1"])).rejects.toThrow(
+          "エントリーの一括削除に失敗しました",
+        );
+        expect(entriesBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+        expect(entriesBuilder.in).toHaveBeenCalledWith("id", ["entry-1"]);
+        expect(entriesBuilder.select).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-7] dataがnullの場合もエラーをthrowする", async () => {
+        mockAdminAndEntries({ data: null, error: null });
+
+        await expect(api.deleteBulkEntries("team-1", ["entry-1"])).rejects.toThrow(
+          "エントリーの一括削除に失敗しました",
+        );
+      });
+
+      it("[D-8] 1行以上返った場合は正常終了する(非退行)", async () => {
+        const entriesBuilder = mockAdminAndEntries({
+          data: [{ id: "entry-1" }, { id: "entry-2" }],
+          error: null,
+        });
+
+        await expect(
+          api.deleteBulkEntries("team-1", ["entry-1", "entry-2"]),
+        ).resolves.toBeUndefined();
+        expect(entriesBuilder.select).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-9] errorが返った場合は元のerrorをthrowする(汎用メッセージで上書きしない)", async () => {
+        const error = new Error("permission denied for table entries");
+        mockAdminAndEntries({ data: null, error });
+
+        await expect(api.deleteBulkEntries("team-1", ["entry-1"])).rejects.toThrow(error);
+      });
     });
   });
 });

@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import DatePicker from "@/components/ui/DatePicker";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
+import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface TeamPracticeFormProps {
   isOpen: boolean;
@@ -117,7 +118,7 @@ export default function TeamPracticeForm({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error(t("authRequired"));
+      if (!user) throw new UserFacingError(t("authRequired"));
 
       const practicesAPI = new TeamPracticesAPI(supabase);
       const practiceInput: import("@swim-hub/shared/types").PracticeInsert = {
@@ -142,7 +143,7 @@ export default function TeamPracticeForm({
       });
     } catch (err) {
       console.error("チーム練習記録作成エラー:", err);
-      setError(err instanceof Error ? err.message : t("createFailed"));
+      setError(toUserFacingMessage(err, t("createFailed")));
     } finally {
       setLoading(false);
     }

@@ -6,6 +6,7 @@ import {
   createMockPractice,
 } from "../../../__mocks__/supabase";
 import { PracticeAPI } from "../../../api/practices";
+import { syncPracticeToGoogleCalendar } from "../../../api/google-calendar";
 import {
   usePracticesQuery,
   usePracticesCountQuery,
@@ -36,6 +37,11 @@ vi.mock("../../../api/goals", () => ({
   GoalAPI: vi.fn().mockImplementation(() => ({
     updateAllMilestoneStatuses: vi.fn(),
   })),
+}));
+
+// Google Calendar同期API（削除時に動的importされる）をモック化
+vi.mock("../../../api/google-calendar", () => ({
+  syncPracticeToGoogleCalendar: vi.fn(),
 }));
 
 interface MockPracticeAPI {
@@ -311,6 +317,101 @@ describe("Practice Query Hooks", () => {
       });
 
       expect(mockApi.deletePractice).toHaveBeenCalledWith("practice-1");
+    });
+
+    describe("Google Calendar同期の所有者ガード (課題A回帰)", () => {
+      // google_event_id と同期設定を常に「同期条件を満たす」状態にしておくことで、
+      // 各テストの green/red が isOwnPractice の判定結果だけに左右されるようにする。
+      // (同期前提を弱いままにすると、ガードを迂回しても呼ばれない状態のままredにならない
+      //  空振りが起きうる)
+      const mockSyncPreconditions = () => {
+        mockSupabase.from = vi.fn((table: string) => {
+          if (table === "practices") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: { google_event_id: "event-1" },
+                error: null,
+              }),
+            };
+          }
+          if (table === "users") {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              single: vi.fn().mockResolvedValue({
+                data: {
+                  google_calendar_enabled: true,
+                  google_calendar_sync_practices: true,
+                },
+                error: null,
+              }),
+            };
+          }
+          throw new Error(`Unexpected table in test mock: ${table}`);
+        }) as unknown as typeof mockSupabase.from;
+      };
+
+      it("[D-5] 自分の練習を削除した場合はGoogle Calendar同期が実行される", async () => {
+        mockSyncPreconditions();
+        mockApi.deletePractice.mockResolvedValue(undefined);
+        mockApi.getPracticeById.mockResolvedValue(
+          createMockPractice({ id: "practice-1", user_id: "test-user-id" }),
+        );
+
+        const { result } = renderQueryHook(() =>
+          useDeletePracticeMutation(mockSupabase, mockApi as unknown as PracticeAPI),
+        );
+
+        await act(async () => {
+          await result.current.mutateAsync("practice-1");
+        });
+
+        expect(syncPracticeToGoogleCalendar).toHaveBeenCalledTimes(1);
+      });
+
+      it("[D-6] 他人の練習を削除した場合はGoogle Calendar同期が実行されない", async () => {
+        mockSyncPreconditions();
+        mockApi.deletePractice.mockResolvedValue(undefined);
+        mockApi.getPracticeById.mockResolvedValue(
+          createMockPractice({ id: "practice-1", user_id: "other-user-id" }),
+        );
+
+        const { result } = renderQueryHook(() =>
+          useDeletePracticeMutation(mockSupabase, mockApi as unknown as PracticeAPI),
+        );
+
+        await act(async () => {
+          await result.current.mutateAsync("practice-1");
+        });
+
+        expect(syncPracticeToGoogleCalendar).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ["null", null],
+        ["undefined", undefined],
+      ])(
+        "[D-7] practiceData.user_idが%sのとき「自分のもの」と誤判定せず同期しない (fail openの防止)",
+        async (_label, userId) => {
+          mockSyncPreconditions();
+          mockApi.deletePractice.mockResolvedValue(undefined);
+          mockApi.getPracticeById.mockResolvedValue(
+            createMockPractice({ id: "practice-1", user_id: userId }),
+          );
+
+          const { result } = renderQueryHook(() =>
+            useDeletePracticeMutation(mockSupabase, mockApi as unknown as PracticeAPI),
+          );
+
+          await act(async () => {
+            await result.current.mutateAsync("practice-1");
+          });
+
+          expect(syncPracticeToGoogleCalendar).not.toHaveBeenCalled();
+        },
+      );
     });
   });
 

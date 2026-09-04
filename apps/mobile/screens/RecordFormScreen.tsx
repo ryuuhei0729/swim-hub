@@ -32,6 +32,7 @@ import {
 import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
@@ -136,9 +137,13 @@ export const RecordFormScreen: React.FC = () => {
   // (大会に紐づけない = CompetitionTabForm を使わず、この画面をそのまま再利用する)
   const isStandaloneRecord =
     isEditMode && !routeCompetitionId && !loadingRecord && storeCompetitionId === null;
-  // 大会未紐付けレコードは選択中の大会から pool_type を導出できないため、
-  // 読み込み時点の記録自身の pool_type を保持しておき、保存時にそのまま使う
-  const [standaloneOriginalPoolType, setStandaloneOriginalPoolType] = useState<PoolType>(0);
+  // 編集対象レコードが読み込み時点で持っていた pool_type。大会未紐付けレコードは
+  // 選択中の大会から pool_type を導出できないため保存時にそのまま使う。加えて、
+  // 大会に紐付いてはいるが RLS 等で大会情報が取得できない編集時（退会済みチームの
+  // 大会など）にも、記録自身の pool_type を維持するためのフォールバックとして使う。
+  // 初期値の 0（=短水路）は「未読込」と区別が付かないため、fetchedRecord が読み込まれる
+  // までは参照しないこと（handleSave 側で isEditMode && fetchedRecord をガードにする）
+  const [loadedRecordPoolType, setLoadedRecordPoolType] = useState<PoolType>(0);
 
   // ドロップダウンピッカーの状態
   const [showStylePicker, setShowStylePicker] = useState(false);
@@ -314,8 +319,8 @@ export const RecordFormScreen: React.FC = () => {
 
     if (fetchedRecord) {
       initialize(fetchedRecord);
-      // 大会未紐付けレコードの場合、保存時に pool_type を維持できるよう保持しておく
-      setStandaloneOriginalPoolType(fetchedRecord.pool_type);
+      // 保存時に pool_type を維持できるよう、読み込んだ記録自身の pool_type を保持しておく
+      setLoadedRecordPoolType(fetchedRecord.pool_type);
       // 動画パスを初期化
       setExistingVideoPath(fetchedRecord.video_path ?? null);
       setExistingThumbnailPath(fetchedRecord.video_thumbnail_path ?? null);
@@ -436,7 +441,7 @@ export const RecordFormScreen: React.FC = () => {
       // 読み込み時点の記録自身の pool_type をそのまま維持する
       let poolType: PoolType;
       if (isStandaloneRecord) {
-        poolType = standaloneOriginalPoolType;
+        poolType = loadedRecordPoolType;
       } else {
         const { data: competition, error: competitionError } = await supabase
           .from("competitions")
@@ -445,10 +450,18 @@ export const RecordFormScreen: React.FC = () => {
           .single();
 
         if (competitionError || !competition) {
-          throw competitionError || new Error(t("recordMobile.competitionFetchFailed"));
+          // 大会情報が取得できない場合（退会済みチームの大会など、RLS で
+          // competitions だけが参照できないケース）、編集モードで記録自身の
+          // pool_type が既知なら、その値を維持して保存を継続する。新規作成時は
+          // 維持すべき値が存在しないため従来どおり throw する
+          if (isEditMode && fetchedRecord) {
+            poolType = loadedRecordPoolType;
+          } else {
+            throw competitionError || new UserFacingError(t("recordMobile.competitionFetchFailed"));
+          }
+        } else {
+          poolType = competition.pool_type as PoolType;
         }
-
-        poolType = competition.pool_type as PoolType;
       }
 
       const recordData = {
@@ -494,7 +507,7 @@ export const RecordFormScreen: React.FC = () => {
               });
             } catch (err) {
               console.error("動画アップロードエラー:", err);
-              const errorDetail = err instanceof Error ? err.message : t("common.error");
+              const errorDetail = toUserFacingMessage(err, t("common.error"));
               Alert.alert(
                 t("recordMobile.videoUploadFailedTitle"),
                 `${t("recordMobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
@@ -621,7 +634,7 @@ export const RecordFormScreen: React.FC = () => {
           console.error("画像ロールバックエラー:", rollbackError);
         }
       }
-      Alert.alert(t("common.error"), error instanceof Error ? error.message : t("recordMobile.saveFailed"), [
+      Alert.alert(t("common.error"), toUserFacingMessage(error, t("recordMobile.saveFailed")), [
         { text: "OK" },
       ]);
     } finally {
@@ -847,8 +860,13 @@ export const RecordFormScreen: React.FC = () => {
     if (!id) return null;
     if (selectedCompetitionTitle) return selectedCompetitionTitle;
     const comp = competitions.find((c) => c.id === id);
-    return comp ? comp.title || comp.id : null;
-  }, [routeCompetitionId, storeCompetitionId, competitions, selectedCompetitionTitle]);
+    if (comp) return comp.title || comp.id;
+    // ID 直指定では解決できたが title が未設定 (DB は NULL を許容し、カラムコメントも
+    // 「NULL の場合は『大会』と表示」と規定) かつ dropdown 一覧のスコープ外。
+    // ここで null を返すと「未選択」プレースホルダーが出て、選択済みなのに
+    // 未選択に見える (ボタンは disabled) ため、汎用の大会名フォールバックを出す。
+    return selectedCompetitionTitle === null ? t("recordMobile.fallbackTitle") : null;
+  }, [routeCompetitionId, storeCompetitionId, competitions, selectedCompetitionTitle, t]);
 
   // 種目選択の表示名を取得
   const selectedStyleName = useMemo(() => {

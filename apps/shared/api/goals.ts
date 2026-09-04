@@ -241,9 +241,18 @@ export class GoalAPI {
    * 大会目標削除
    */
   async deleteGoal(goalId: string): Promise<void> {
-    const { error } = await this.supabase.from("goals").delete().eq("id", goalId);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（practices.ts の deletePractice と同型）。
+    const { data, error } = await this.supabase
+      .from("goals")
+      .delete()
+      .eq("id", goalId)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("大会目標の削除に失敗しました");
+    }
   }
 
   /**
@@ -418,9 +427,18 @@ export class GoalAPI {
    * マイルストーン削除
    */
   async deleteMilestone(milestoneId: string): Promise<void> {
-    const { error } = await this.supabase.from("milestones").delete().eq("id", milestoneId);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（practices.ts の deletePractice と同型）。
+    const { data, error } = await this.supabase
+      .from("milestones")
+      .delete()
+      .eq("id", milestoneId)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("マイルストーンの削除に失敗しました");
+    }
   }
 
   /**

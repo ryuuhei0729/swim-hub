@@ -23,6 +23,7 @@ import {
   useDeletePracticeLogTemplateMutation,
   useTogglePracticeLogTemplateFavoriteMutation,
 } from "@apps/shared/hooks/queries/practiceLogTemplates";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { NumberStepper } from "@/components/ui/NumberStepper";
 import { DistanceChips } from "@/components/practices/DistanceChips";
@@ -144,7 +145,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
       console.error("テンプレート保存エラー:", err);
       Alert.alert(
         t("common.error"),
-        err instanceof Error ? err.message : t("practice.mobile.saveFailed"),
+        toUserFacingMessage(err, t("practice.mobile.saveFailed")),
       );
     } finally {
       setIsSubmitting(false);

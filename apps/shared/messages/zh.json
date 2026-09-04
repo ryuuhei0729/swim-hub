@@ -161,7 +161,7 @@
       "videoUploadUrlFailed": "获取上传 URL 失败",
       "videoReadFailed": "视频文件读取失败：{uri}",
       "videoReadHttpFailed": "视频文件读取失败：HTTP {status}（{uri}）",
-      "videoUploadHttpFailed": "视频上传失败：HTTP {status}{detail}",
+      "videoUploadHttpFailed": "视频上传失败：HTTP {status}",
       "thumbnailUploadHttpFailed": "缩略图上传失败：HTTP {status}",
       "videoDbUpdateFailed": "数据库更新失败",
       "videoSignedUrlFailed": "获取签名 URL 失败",
@@ -917,6 +917,7 @@
       "entryDeleteConfirmTitle": "确认删除",
       "entryDeleteConfirmMessage": "确定删除该报名吗？\n此操作无法撤销。",
       "entryDeleteFailed": "删除失败",
+      "deleteFailed": "删除失败",
       "fieldStyle": "项目:",
       "fieldEntryTime": "报名成绩:",
       "fieldMemo": "备注:",
@@ -1016,13 +1017,14 @@
       "unknown": "未知错误"
     },
     "handlers": {
-      "fetchPracticeFailed": "获取训练数据失败: {detail}",
-      "updateImagePathFailed": "更新图片路径失败: {detail}",
+      "fetchPracticeFailed": "获取训练数据失败",
+      "updateImagePathFailed": "更新图片路径失败",
       "practiceCreatedButImageFailed": "训练已创建，但图片上传失败",
       "authRequired": "需要已认证的用户",
-      "insertPracticeTagFailed": "插入训练日志标签失败: {detail}",
+      "insertPracticeTagFailed": "插入训练日志标签失败",
       "videoUploadPartialPractice": "训练记录已保存，但视频上传失败。请从详情页面重新添加。",
-      "fetchCompetitionFailed": "获取比赛数据失败: {detail}",
+      "fetchCompetitionFailed": "获取比赛数据失败",
+      "entrySubmitFailed": "报名提交失败",
       "competitionCreatedButImageFailed": "比赛已创建，但图片上传失败",
       "unknownStyle": "未知",
       "styleAlreadyEntered": "项目「{name}」已报名",
@@ -1683,8 +1685,8 @@
         "atLeastOneRecord": "请至少输入一条成绩"
       },
       "error": {
-        "splitDeleteFailed": "删除分段成绩失败：{detail}",
-        "recordDeleteFailed": "删除现有成绩失败：{detail}",
+        "splitDeleteFailed": "删除分段成绩失败",
+        "recordDeleteFailed": "删除现有成绩失败",
         "saveFailed": "保存时发生错误。请重试。"
       },
       "errorVideoUploadUrlFailed": "{name}：获取上传 URL 失败（{status}）",
@@ -4227,7 +4229,8 @@
         "cancel": "继续编辑"
       },
       "recordFutureGuard": "未来日期无法录入比赛记录。",
-      "competitionEditRestricted": "此比赛信息仅团队管理员可编辑。"
+      "competitionEditRestricted": "此比赛信息仅团队管理员可编辑。",
+      "practiceEditRestricted": "此训练信息仅团队管理员可编辑。"
     },
     "premium": {
       "upgradeText": "升级到 Premium",

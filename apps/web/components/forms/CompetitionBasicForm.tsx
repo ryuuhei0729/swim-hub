@@ -19,6 +19,7 @@ import CompetitionImageUploader, {
 import { useAuth } from "@/contexts";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import PremiumBadge from "@/components/ui/PremiumBadge";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface CompetitionBasicFormData {
   date: string;
@@ -78,6 +79,7 @@ export default function CompetitionBasicForm({
   const t = useTranslations("forms.competition");
   const tUnsaved = useTranslations("forms.unsavedChanges");
   const tPremium = useTranslations("forms.premium");
+  const tCommon = useTranslations("common");
 
   const COMPETITION_STEPS = useMemo(
     () => [
@@ -331,9 +333,7 @@ export default function CompetitionBasicForm({
       console.error("フォーム送信エラー:", error);
       isSubmittingRef.current = false;
       setIsSubmitted(false);
-      if (error instanceof Error && error.message) {
-        setValidationError(error.message);
-      }
+      setValidationError(toUserFacingMessage(error, tCommon("error")));
     }
   };
 

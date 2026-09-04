@@ -32,6 +32,7 @@ import { PracticeAPI } from "@apps/shared/api";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { isDbUuid } from "@/utils/isDbUuid";
 import { getTabNavAdjacency } from "@/utils/tabModalUtils";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 import type { PracticeImageFile, ExistingImage } from "@/components/forms/PracticeImageUploader";
 import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
 import type { PracticeLogEditData, PracticeLogSubmitData, PracticeMenu } from "@/components/forms/practice-log/types";
@@ -132,6 +133,7 @@ export default function PracticeTabModal({
   const tTabModal = useTranslations("forms.tabModal");
   const tPracticeLog = useTranslations("forms.practiceLog");
   const tPremium = useTranslations("forms.premium");
+  const tCommon = useTranslations("common");
   const { subscription, supabase } = useAuth();
   const isPremium = checkIsPremium(subscription);
 
@@ -524,16 +526,13 @@ export default function PracticeTabModal({
       // 親保存済み(editingPracticeId セット済み)の場合は beforeunload を抑止するため isSubmitted を true のまま保持
       const parentAlreadySaved = !!editingPracticeId;
       if (!parentAlreadySaved) setIsSubmitted(false);
-      const msg =
-        parentAlreadySaved
-          ? tTabModal("partialSaveError")
-          : error instanceof Error
-            ? error.message
-            : String(error);
+      const msg = parentAlreadySaved
+        ? tTabModal("partialSaveError")
+        : toUserFacingMessage(error, tCommon("error"));
       setBasicValidationError(msg);
       setActiveTab("practice");
     }
-  }, [validateAll, saveAsTemplate, executeSave, editingPracticeId, tTabModal]);
+  }, [validateAll, saveAsTemplate, executeSave, editingPracticeId, tTabModal, tCommon]);
 
   const handleTemplateSave = useCallback(async () => {
     if (!templateName.trim()) return;

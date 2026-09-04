@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from "@/components/profile";
 import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -54,8 +55,9 @@ export const MyPageScreen: React.FC = () => {
   const isLoading = profileLoading || bestTimesLoading;
   const isError = profileError;
   const error = profileErrorObj;
-  const bestTimesErrorMessage =
-    bestTimesErrorObj instanceof Error ? bestTimesErrorObj.message : undefined;
+  const bestTimesErrorMessage = bestTimesErrorObj
+    ? toUserFacingMessage(bestTimesErrorObj, t("mypage.mobile.bestTimesFetchFailed"))
+    : undefined;
 
   // この画面が依存する全クエリ(プロフィール + ベストタイム)を尽くす
   const refreshAll = useCallback(async () => {

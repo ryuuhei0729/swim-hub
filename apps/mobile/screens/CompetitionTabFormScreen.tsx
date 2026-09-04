@@ -34,6 +34,7 @@ import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { StyleAPI } from "@apps/shared/api/styles";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
@@ -828,7 +829,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+        if (!user) throw new UserFacingError(t("auth.errorMap.sessionNotFound"));
 
         // 既存エントリー取得 (衝突解決用)
         const allExistingEntries = await entryApi.getEntriesByCompetition(savedCompetitionId);
@@ -985,7 +986,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                 });
               } catch (err) {
                 console.error("動画アップロードエラー:", err);
-                const errorDetail = err instanceof Error ? err.message : t("common.error");
+                const errorDetail = toUserFacingMessage(err, t("common.error"));
                 Alert.alert(
                   t("recordMobile.videoUploadFailedTitle"),
                   `${t("recordMobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
@@ -1009,7 +1010,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
       setIsSaved(true);
     } catch (error) {
       console.error("保存エラー:", error);
-      const msg = error instanceof Error ? error.message : t("competition.mobile.saveFailed");
+      const msg = toUserFacingMessage(error, t("competition.mobile.saveFailed"));
       setSaveError(msg);
       Alert.alert(t("common.error"), msg, [{ text: "OK" }]);
     } finally {

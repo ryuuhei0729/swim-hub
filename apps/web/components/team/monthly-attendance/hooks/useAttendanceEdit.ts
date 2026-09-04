@@ -9,6 +9,7 @@ import { AttendanceStatus, TeamEvent } from "@swim-hub/shared/types";
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
 import { resolveAttendanceStatus } from "@swim-hub/shared/utils/attendanceStatus";
 import { format, parseISO } from "date-fns";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export interface AttendanceEditState {
   status: AttendanceStatus | null;
@@ -239,7 +240,7 @@ export const useAttendanceEdit = (
         onSuccess?.();
       } catch (err) {
         console.error("出欠情報の保存に失敗:", err);
-        setError(t("attendanceEditHook.saveError"));
+        setError(toUserFacingMessage(err, t("attendanceEditHook.saveError")));
       } finally {
         setSaving(false);
       }

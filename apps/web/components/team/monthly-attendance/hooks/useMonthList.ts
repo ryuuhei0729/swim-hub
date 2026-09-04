@@ -6,6 +6,7 @@ import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import { useTranslations } from "next-intl";
 import { getMonthDateRange } from "@swim-hub/shared/utils/date";
 import { format, startOfMonth, endOfMonth, addMonths, parseISO } from "date-fns";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export interface MonthItem {
   year: number;
@@ -143,7 +144,7 @@ export const useMonthList = (
       setMonthList(monthList);
     } catch (err) {
       console.error("月リストの取得に失敗:", err);
-      setError(t("monthListHook.loadError"));
+      setError(toUserFacingMessage(err, t("monthListHook.loadError")));
     } finally {
       setLoading(false);
     }

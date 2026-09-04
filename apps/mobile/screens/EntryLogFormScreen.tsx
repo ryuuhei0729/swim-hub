@@ -27,6 +27,7 @@ import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
 import { localizedStyleName } from "@/utils/styleName";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { resolveEntryMutations } from "@/utils/entryMutations";
@@ -379,7 +380,7 @@ export const EntryLogFormScreen: React.FC = () => {
     const {
       data: { user },
     } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+    if (!user) throw new UserFacingError(t("auth.errorMap.sessionNotFound"));
 
     // この大会・このユーザーの既存エントリーを取得（編集/新規どちらも、style 衝突解決のため取得）。
     // 新規作成モードでも、同一 style の既存エントリーがあれば update する必要がある
@@ -496,7 +497,7 @@ export const EntryLogFormScreen: React.FC = () => {
       console.error("エントリー登録エラー:", error);
       Alert.alert(
         t("common.error"),
-        error instanceof Error ? error.message : t("competition.entry.registrationFailed"),
+        toUserFacingMessage(error, t("competition.entry.registrationFailed")),
         [{ text: "OK" }],
       );
     } finally {
@@ -540,7 +541,7 @@ export const EntryLogFormScreen: React.FC = () => {
       console.error("エントリー登録エラー:", error);
       Alert.alert(
         t("common.error"),
-        error instanceof Error ? error.message : t("competition.entry.registrationFailed"),
+        toUserFacingMessage(error, t("competition.entry.registrationFailed")),
         [{ text: "OK" }],
       );
     } finally {

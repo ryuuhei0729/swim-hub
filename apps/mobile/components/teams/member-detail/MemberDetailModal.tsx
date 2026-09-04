@@ -20,6 +20,7 @@ import {
 } from "@apps/shared/hooks/queries/teams";
 import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { ProfileSection } from "./ProfileSection";
 import { AdminControls } from "./AdminControls";
 import { BestTimesTable } from "./BestTimesTable";
@@ -83,7 +84,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
           onMembershipChange?.();
         } catch (err) {
           console.error("権限変更エラー:", err);
-          const errorMsg = err instanceof Error ? err.message : t("teams.mobile.roleChangeFailed");
+          const errorMsg = toUserFacingMessage(err, t("teams.mobile.roleChangeFailed"));
           setError(errorMsg);
         }
       };
@@ -121,7 +122,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
         onClose();
       } catch (err) {
         console.error("メンバー削除エラー:", err);
-        const errorMsg = err instanceof Error ? err.message : t("teams.mobile.memberDeleteFailed");
+        const errorMsg = toUserFacingMessage(err, t("teams.mobile.memberDeleteFailed"));
         setError(errorMsg);
       } finally {
         setIsRemoving(false);

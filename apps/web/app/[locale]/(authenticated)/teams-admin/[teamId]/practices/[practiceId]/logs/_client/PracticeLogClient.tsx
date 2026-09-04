@@ -415,9 +415,10 @@ export default function PracticeLogClient({
       // RPC関数の戻り値を確認
       if (result && typeof result === "object" && "success" in result) {
         if (!result.success) {
-          const errorMessage = result.error || t("practiceLog.errorSave");
-          console.error("練習ログ保存エラー:", errorMessage);
-          setSubmitError(t("practiceLog.errorSaveWithMessage", { message: errorMessage }));
+          // result.error は RPC (replace_practice_logs) の戻り値で、想定外の例外時は
+          // SQLERRM (生の Postgres エラー) がそのまま入りうるためユーザーには表示しない（情報露出対策）
+          console.error("練習ログ保存エラー:", result.error);
+          setSubmitError(t("practiceLog.errorSave"));
           setSaving(false);
           return;
         }

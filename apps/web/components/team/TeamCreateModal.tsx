@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts";
 import { useCreateTeamMutation } from "@apps/shared/hooks/queries/teams";
 import TeamCreateForm, { TeamCreateFormData } from "@/components/forms/TeamCreateForm";
 import { useTranslations } from "next-intl";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export interface TeamCreateModalProps {
   isOpen: boolean;
@@ -50,15 +51,7 @@ export default function TeamCreateModal({ isOpen, onClose, onSuccess }: TeamCrea
         fullError: err,
       });
 
-      // より詳細なエラーメッセージを設定
-      let errorMessage = t("createModal.createFailed");
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err && typeof err === "object" && "message" in err) {
-        errorMessage = String(err.message);
-      }
-
-      setError(errorMessage);
+      setError(toUserFacingMessage(err, t("createModal.createFailed")));
     } finally {
       setIsLoading(false);
     }

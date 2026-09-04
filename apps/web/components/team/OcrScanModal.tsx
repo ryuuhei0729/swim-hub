@@ -11,6 +11,7 @@ import { autoAssignMembers } from "@/utils/memberMatch";
 import { transformScanResultToMenus, type GeminiScanResult } from "@/utils/ocrTransform";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { CameraIcon, ArrowPathIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface TeamMember {
   id: string;
@@ -204,7 +205,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
           // data:image/...;base64, のプレフィックスを除去
           const base64Data = result.split(",")[1];
           if (!base64Data) {
-            reject(new Error(t("ocr.errors.invalidFormat")));
+            reject(new UserFacingError(t("ocr.errors.invalidFormat")));
             return;
           }
           resolve(base64Data);
@@ -235,7 +236,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
 
       if (!isGeminiScanResult(data)) {
         console.error("Invalid scan response shape:", data);
-        throw new Error(t("ocr.errors.invalidFormat"));
+        throw new UserFacingError(t("ocr.errors.invalidFormat"));
       }
 
       setScanResult(data);
@@ -247,7 +248,7 @@ export default function OcrScanModal({ isOpen, onClose, onApply, members }: OcrS
       setStep("results");
     } catch (err) {
       if (cancelledRef.current) return;
-      setError(err instanceof Error ? err.message : t("ocr.errors.analyzeError"));
+      setError(toUserFacingMessage(err, t("ocr.errors.analyzeError")));
       setStep("upload");
     }
   }, [imageFile, supabase, members, t]);

@@ -25,6 +25,7 @@ import type { TeamEvent } from "@swim-hub/shared/types";
 import type { AttendanceStatusType } from "@swim-hub/shared/types";
 import type { SupportedLocale } from "@apps/shared/utils/date";
 import { formatDate } from "@apps/shared/utils/date";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { AttendanceGroupSection } from "./AttendanceGroupSection";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
@@ -674,10 +675,7 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({
                   "AdminMonthlyAttendance: failed to update status",
                   err,
                 );
-                const msg =
-                  err instanceof Error
-                    ? err.message
-                    : t("teams.mobile.adminAttendance.saveFailed");
+                const msg = toUserFacingMessage(err, t("teams.mobile.adminAttendance.saveFailed"));
                 Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);
               }
             },
@@ -713,10 +711,7 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({
         // 逐次 mutateAsync が途中で失敗した場合、確定済みの変更が UI と乖離する。
         // 再読込してサーバー状態に同期する（確定分を正しく反映）。
         await loadFutureEvents();
-        const msg =
-          err instanceof Error
-            ? err.message
-            : t("teams.mobile.adminAttendance.saveFailed");
+        const msg = toUserFacingMessage(err, t("teams.mobile.adminAttendance.saveFailed"));
         Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);
       } finally {
         setBulkSaving(false);

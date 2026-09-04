@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useAuth } from "@/contexts";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import type { UserProfile } from "@apps/shared/types";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface GoogleCalendarSyncSettingsProps {
   profile: UserProfile | null;
@@ -180,7 +181,7 @@ export default function GoogleCalendarSyncSettings({
       onUpdate(); // プロフィールを再取得
     } catch (err) {
       console.error("一括同期エラー:", err);
-      setError(err instanceof Error ? err.message : tErrors("bulkSyncFailed"));
+      setError(toUserFacingMessage(err, tErrors("bulkSyncFailed")));
     } finally {
       setBulkSyncing(false);
     }

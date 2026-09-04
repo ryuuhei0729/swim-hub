@@ -16,6 +16,7 @@ import Animated, {
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import type { TeamGroupWithCount } from "./hooks";
 
@@ -340,9 +341,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
       // エラーはユーザーに通知し、モーダルは開いたまま再試行可能にする
       // （再保存は全グループを set し直すため、途中失敗の部分保存も再試行で収束する）
       console.error("保存に失敗:", err);
-      const detail = err instanceof Error ? err.message : null;
-      const base = t("teams.mobile.bulkAssignSaveFailed");
-      setSaveError(detail ? `${base}: ${detail}` : base);
+      setSaveError(toUserFacingMessage(err, t("teams.mobile.bulkAssignSaveFailed")));
     } finally {
       setSaving(false);
     }

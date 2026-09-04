@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
 import { AttendanceStatus } from "@swim-hub/shared/types";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export interface TeamAttendanceListProps {
   practiceId?: string;
@@ -55,7 +56,7 @@ export default function TeamAttendanceList({
       }
     } catch (err) {
       console.error("出欠情報の取得に失敗:", err);
-      setError(t("loadFailed"));
+      setError(toUserFacingMessage(err, t("loadFailed")));
     } finally {
       setLoading(false);
     }

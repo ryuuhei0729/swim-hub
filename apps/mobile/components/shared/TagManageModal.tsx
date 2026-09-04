@@ -15,6 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { PracticeTag } from "@apps/shared/types";
 import { PRESET_TAG_COLORS, getColorForName } from "@/constants/tagColors";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface TagManageModalProps {
   visible: boolean;
@@ -145,7 +146,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
       console.error("タグ保存エラー:", error);
       Alert.alert(
         t("common.alertErrorTitle"),
-        error instanceof Error ? error.message : t("forms.tag.errorSaveFailed"),
+        toUserFacingMessage(error, t("forms.tag.errorSaveFailed")),
       );
     } finally {
       setIsSaving(false);
@@ -172,7 +173,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
               console.error("タグ削除エラー:", error);
               Alert.alert(
                 t("common.alertErrorTitle"),
-                error instanceof Error ? error.message : t("forms.tag.errorDeleteFailed"),
+                toUserFacingMessage(error, t("forms.tag.errorDeleteFailed")),
               );
             } finally {
               setIsDeleting(false);

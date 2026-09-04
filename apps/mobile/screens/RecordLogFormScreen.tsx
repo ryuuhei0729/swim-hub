@@ -31,6 +31,7 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -759,7 +760,7 @@ export const RecordLogFormScreen: React.FC = () => {
                 });
               } catch (err) {
                 console.error("動画アップロードエラー:", err);
-                const errorDetail = err instanceof Error ? err.message : t("common.error");
+                const errorDetail = toUserFacingMessage(err, t("common.error"));
                 Alert.alert(
                   t("recordMobile.videoUploadFailedTitle"),
                   `${t("recordMobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
@@ -784,7 +785,7 @@ export const RecordLogFormScreen: React.FC = () => {
       console.error("保存エラー:", error);
       Alert.alert(
         t("common.error"),
-        error instanceof Error ? error.message : t("recordMobile.saveFailed"),
+        toUserFacingMessage(error, t("recordMobile.saveFailed")),
         [{ text: "OK" }],
       );
     } finally {

@@ -14,6 +14,7 @@ import { CenterModal } from "@/components/ui/CenterModal";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCreateTeamMutation } from "@apps/shared/hooks/queries/teams";
 import type { TeamInsert } from "@swim-hub/shared/types";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface TeamCreateModalProps {
   visible: boolean;
@@ -119,13 +120,7 @@ export const TeamCreateModal: React.FC<TeamCreateModalProps> = ({
       cleanupAndClose();
     } catch (err) {
       console.error("チーム作成エラー:", err);
-      let errorMessage = t("teams.mobile.createFailed");
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err && typeof err === "object" && "message" in err) {
-        errorMessage = String(err.message);
-      }
-      setError(errorMessage);
+      setError(toUserFacingMessage(err, t("teams.mobile.createFailed")));
     }
   };
 

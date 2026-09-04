@@ -17,6 +17,7 @@ import PracticeImageUploader, { PracticeImageFile, ExistingImage } from "./Pract
 import { useAuth } from "@/contexts";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import PremiumBadge from "@/components/ui/PremiumBadge";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export interface PracticeBasicData {
   date: string;
@@ -64,6 +65,7 @@ export default function PracticeBasicForm({
   const t = useTranslations("forms.practice");
   const tUnsaved = useTranslations("forms.unsavedChanges");
   const tPremium = useTranslations("forms.premium");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
   const dateFnsLocale = locale === "ja" ? ja : enUS;
 
@@ -295,9 +297,7 @@ export default function PracticeBasicForm({
       console.error("練習記録の保存に失敗しました:", error);
       isSubmittingRef.current = false;
       setIsSubmitted(false);
-      if (error instanceof Error && error.message) {
-        setValidationError(error.message);
-      }
+      setValidationError(toUserFacingMessage(error, tCommon("error")));
     }
   };
 

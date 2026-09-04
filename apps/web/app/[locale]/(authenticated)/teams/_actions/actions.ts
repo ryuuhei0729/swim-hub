@@ -2,6 +2,7 @@
 
 import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { TeamMembersAPI } from "@apps/shared/api/teams/members";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -40,7 +41,7 @@ export async function joinTeam(inviteCode: string) {
     return { success: true, membership };
   } catch (error) {
     const t = await getActionsT();
-    const message = error instanceof Error ? error.message : t("joinFailed");
+    const message = toUserFacingMessage(error, t("joinFailed"));
     return { success: false, error: message };
   }
 }
@@ -63,7 +64,7 @@ export async function approveMembership(membershipId: string, teamId: string) {
     return { success: true, membership };
   } catch (error) {
     const t = await getActionsT();
-    const message = error instanceof Error ? error.message : t("approveFailed");
+    const message = toUserFacingMessage(error, t("approveFailed"));
     return { success: false, error: message };
   }
 }
@@ -86,7 +87,7 @@ export async function rejectMembership(membershipId: string, teamId: string) {
     return { success: true, membership };
   } catch (error) {
     const t = await getActionsT();
-    const message = error instanceof Error ? error.message : t("rejectFailed");
+    const message = toUserFacingMessage(error, t("rejectFailed"));
     return { success: false, error: message };
   }
 }

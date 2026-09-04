@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthProvider";
 import { TeamCoreAPI } from "@apps/shared/api/teams/core";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { ExclamationTriangleIcon, PencilIcon } from "@heroicons/react/24/outline";
 
 export interface TeamSettingsProps {
@@ -52,7 +53,7 @@ export default function TeamSettings({
       setIsEditing(false);
     } catch (err) {
       console.error("チーム更新エラー:", err);
-      setError(t("settings.updateFailed"));
+      setError(toUserFacingMessage(err, t("settings.updateFailed")));
     } finally {
       setLoading(false);
     }

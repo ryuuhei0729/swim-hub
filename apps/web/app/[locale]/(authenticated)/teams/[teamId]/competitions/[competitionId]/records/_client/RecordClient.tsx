@@ -1089,9 +1089,10 @@ export default function RecordClient({
               .eq("record_id", record.id);
 
             if (splitDeleteError) {
+              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
               console.error("スプリットタイム削除エラー:", splitDeleteError);
               // 致命的な削除エラーなのでthrowして外側のcatchブロックで処理
-              throw new Error(tRecords("error.splitDeleteFailed", { detail: splitDeleteError.message }));
+              throw new Error(tRecords("error.splitDeleteFailed"));
             }
           }
         }
@@ -1103,9 +1104,10 @@ export default function RecordClient({
           .in("id", existingRecordIds);
 
         if (deleteError) {
+          // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
           console.error("既存のレコード削除エラー:", deleteError);
           // 致命的な削除エラーなのでthrowして外側のcatchブロックで処理
-          throw new Error(tRecords("error.recordDeleteFailed", { detail: deleteError.message }));
+          throw new Error(tRecords("error.recordDeleteFailed"));
         }
       }
 

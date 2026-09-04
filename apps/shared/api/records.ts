@@ -165,9 +165,18 @@ export class RecordAPI {
    * 記録削除
    */
   async deleteRecord(id: string): Promise<void> {
-    const { error } = await this.supabase.from("records").delete().eq("id", id);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（practices.ts の deletePractice と同型）。
+    const { data, error } = await this.supabase
+      .from("records")
+      .delete()
+      .eq("id", id)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("記録の削除に失敗しました");
+    }
   }
 
   /**
@@ -868,7 +877,14 @@ export class RecordAPI {
     splitTimes: Omit<SplitTimeInsert, "record_id">[],
   ): Promise<SplitTime[]> {
     // 既存のスプリットタイムを削除
-    await this.supabase.from("split_times").delete().eq("record_id", recordId);
+    // record_id単位の削除のため、既存スプリットが0件の記録では0行が正当な結果となる
+    // (deleteRecordのようなid指定削除とは異なり0行ガードは付けない)。
+    // ただし従来はerrorを一切チェックしていなかったため、その穴のみ塞ぐ。
+    const { error: deleteSplitTimesError } = await this.supabase
+      .from("split_times")
+      .delete()
+      .eq("record_id", recordId);
+    if (deleteSplitTimesError) throw deleteSplitTimesError;
 
     // 新しいスプリットタイムを作成
     if (splitTimes.length === 0) return [];

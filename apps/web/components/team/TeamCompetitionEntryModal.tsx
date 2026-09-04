@@ -10,6 +10,7 @@ import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTranslations } from "next-intl";
+import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface TeamCompetitionEntryModalProps {
   isOpen: boolean;
@@ -111,15 +112,15 @@ export default function TeamCompetitionEntryModal({
       // 1) 競技会情報取得（team_id + id で直接絞り込み。個人スコープの getCompetitions() だと
       // 自分以外の管理者が作成したチーム大会を取得できないため使わない）
       const competition = await fetchTeamCompetition(supabase, competitionId, teamId);
-      if (!competition) throw new Error(t("competitionEntryModal.competitionNotFound"));
+      if (!competition) throw new UserFacingError(t("competitionEntryModal.competitionNotFound"));
       // fetchTeamCompetition が team_id で絞るため現状は到達不能。型ナローイングと将来の絞り込み変更に備えた保険として残す。
-      if (!competition.team_id) throw new Error(t("competitionEntryModal.notTeamCompetition"));
+      if (!competition.team_id) throw new UserFacingError(t("competitionEntryModal.notTeamCompetition"));
 
       // 2) 現在ユーザーのロール取得
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error(t("competitionEntryModal.authRequired"));
+      if (!user) throw new UserFacingError(t("competitionEntryModal.authRequired"));
       const { data: membership, error: membershipError } = await supabase
         .from("team_memberships")
         .select("role")
@@ -180,9 +181,8 @@ export default function TeamCompetitionEntryModal({
         totalEntries: entries.length,
       });
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
       console.error("エントリー情報の取得に失敗:", err);
-      setError(error.message || t("competitionEntryModal.fetchFailed"));
+      setError(toUserFacingMessage(err, t("competitionEntryModal.fetchFailed")));
     } finally {
       setLoading(false);
     }
@@ -204,14 +204,14 @@ export default function TeamCompetitionEntryModal({
       setUpdatingStatus(true);
       // 管理者チェックと更新（team_id + id で直接絞り込み。理由は loadEntries と同じ）
       const competition = await fetchTeamCompetition(supabase, competitionId, teamId);
-      if (!competition) throw new Error(t("competitionEntryModal.competitionNotFound"));
+      if (!competition) throw new UserFacingError(t("competitionEntryModal.competitionNotFound"));
       // loadEntries と同じ理由で到達不能だが保険として残す
-      if (!competition.team_id) throw new Error(t("competitionEntryModal.notTeamCompetition"));
+      if (!competition.team_id) throw new UserFacingError(t("competitionEntryModal.notTeamCompetition"));
 
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error(t("competitionEntryModal.authRequired"));
+      if (!user) throw new UserFacingError(t("competitionEntryModal.authRequired"));
       const { data: membership, error: membershipError } = await supabase
         .from("team_memberships")
         .select("role")
@@ -220,14 +220,13 @@ export default function TeamCompetitionEntryModal({
         .eq("is_active", true)
         .single();
       if (membershipError) throw membershipError;
-      if (membership?.role !== "admin") throw new Error(t("competitionEntryModal.adminRequired"));
+      if (membership?.role !== "admin") throw new UserFacingError(t("competitionEntryModal.adminRequired"));
 
       await recordApi.updateCompetition(competitionId, { entry_status: newStatus });
       await loadEntries(); // 再読み込み
     } catch (err) {
       console.error("ステータス変更に失敗:", err);
-      const error = err instanceof Error ? err : new Error(String(err));
-      setError(error.message || t("competitionEntryModal.statusChangeFailed"));
+      setError(toUserFacingMessage(err, t("competitionEntryModal.statusChangeFailed")));
     } finally {
       setUpdatingStatus(false);
     }

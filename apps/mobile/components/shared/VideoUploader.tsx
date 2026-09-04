@@ -5,6 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { uploadVideo, deleteVideo, type VideoType } from "@/utils/videoUpload";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { PremiumBadge } from "./PremiumBadge";
 import { VideoPlayer } from "./VideoPlayer";
 
@@ -15,6 +16,7 @@ interface VideoUploaderProps {
   existingVideoPath?: string | null;
   existingThumbnailPath?: string | null;
   isPremium: boolean;
+  disabled?: boolean;
   onUploadComplete?: (videoPath: string, thumbnailPath: string) => void;
   onDelete?: () => void;
   /** 新規作成フロー（id なし）で動画が選択/取り消された際に呼ばれる（URI + mimeType） */
@@ -38,6 +40,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   existingVideoPath,
   existingThumbnailPath,
   isPremium,
+  disabled = false,
   onUploadComplete,
   onDelete,
   onPendingVideoAsset,
@@ -92,7 +95,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         } catch (err) {
           if (!isMounted) return;
           console.error("動画アップロードエラー:", err);
-          setError(err instanceof Error ? err.message : t("common.upload.uploadFailed"));
+          setError(toUserFacingMessage(err, t("common.upload.uploadFailed")));
           setUploadState("error");
         }
       };
@@ -185,7 +188,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
         }
       } catch (err) {
         console.error("動画選択/アップロードエラー:", err);
-        setError(err instanceof Error ? err.message : t("common.upload.uploadFailed"));
+        setError(toUserFacingMessage(err, t("common.upload.uploadFailed")));
         setUploadState("error");
       }
     },
@@ -193,14 +196,17 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   );
 
   const handleSelectSource = useCallback(() => {
+    if (disabled) return;
     Alert.alert(t("common.upload.videoAddTitle"), t("common.upload.videoSourceSelectMessage"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.upload.cameraOption"), onPress: () => pickVideo("camera") },
       { text: t("common.upload.libraryOption"), onPress: () => pickVideo("library") },
     ]);
-  }, [pickVideo, t]);
+  }, [disabled, pickVideo, t]);
 
   const handleDelete = useCallback(async () => {
+    if (disabled) return;
+
     // 保留中の動画を削除
     if (pendingVideoUri) {
       setPendingVideoUri(null);
@@ -231,12 +237,12 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
             setShowPlayer(false);
             onDelete?.();
           } catch (err) {
-            Alert.alert(t("common.alertErrorTitle"), err instanceof Error ? err.message : t("common.upload.deleteFailed"));
+            Alert.alert(t("common.alertErrorTitle"), toUserFacingMessage(err, t("common.upload.deleteFailed")));
           }
         },
       },
     ]);
-  }, [getAccessToken, type, id, onDelete, onPendingVideoAsset, onPendingVideoUri, pendingVideoUri, t]);
+  }, [disabled, getAccessToken, type, id, onDelete, onPendingVideoAsset, onPendingVideoUri, pendingVideoUri, t]);
 
   // Premium 制限
   // idle に加え error 状態でも非 Premium にはバッジを表示し、追加ボタンの再表示を防ぐ（Web と一致）
@@ -252,10 +258,12 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
           <Feather name="check-circle" size={16} color="#059669" />
           <Text style={styles.selectedText}>{t("common.upload.videoSelected")}</Text>
         </View>
-        <Pressable style={styles.removeButton} onPress={handleDelete}>
-          <Feather name="x" size={14} color="#DC2626" />
-          <Text style={styles.removeText}>{t("common.upload.videoSelectedRemove")}</Text>
-        </Pressable>
+        {!disabled && (
+          <Pressable style={styles.removeButton} onPress={handleDelete}>
+            <Feather name="x" size={14} color="#DC2626" />
+            <Text style={styles.removeText}>{t("common.upload.videoSelectedRemove")}</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -284,10 +292,12 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
               <Feather name="x" size={16} color="#6B7280" />
               <Text style={styles.closeText}>{t("common.upload.videoClosePlayer")}</Text>
             </Pressable>
-            <Pressable style={styles.deleteButton} onPress={handleDelete}>
-              <Feather name="trash-2" size={16} color="#DC2626" />
-              <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
-            </Pressable>
+            {!disabled && (
+              <Pressable style={styles.deleteButton} onPress={handleDelete}>
+                <Feather name="trash-2" size={16} color="#DC2626" />
+                <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       );
@@ -301,16 +311,18 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
             <Text style={styles.thumbnailText}>{t("common.upload.videoTapToPlay")}</Text>
           </View>
         </Pressable>
-        <View style={styles.actionRow}>
-          <Pressable style={styles.replaceButton} onPress={handleSelectSource}>
-            <Feather name="refresh-cw" size={14} color="#6366F1" />
-            <Text style={styles.replaceText}>{t("common.upload.videoReplace")}</Text>
-          </Pressable>
-          <Pressable style={styles.deleteButton} onPress={handleDelete}>
-            <Feather name="trash-2" size={14} color="#DC2626" />
-            <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
-          </Pressable>
-        </View>
+        {!disabled && (
+          <View style={styles.actionRow}>
+            <Pressable style={styles.replaceButton} onPress={handleSelectSource}>
+              <Feather name="refresh-cw" size={14} color="#6366F1" />
+              <Text style={styles.replaceText}>{t("common.upload.videoReplace")}</Text>
+            </Pressable>
+            <Pressable style={styles.deleteButton} onPress={handleDelete}>
+              <Feather name="trash-2" size={14} color="#DC2626" />
+              <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     );
   }
@@ -319,10 +331,12 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
   return (
     <View>
       {error && <Text style={styles.errorText}>{error}</Text>}
-      <Pressable style={styles.addButton} onPress={handleSelectSource}>
-        <Feather name="video" size={20} color="#6B7280" />
-        <Text style={styles.addButtonText}>{t("common.upload.videoAddTitle")}</Text>
-      </Pressable>
+      {!disabled && (
+        <Pressable style={styles.addButton} onPress={handleSelectSource}>
+          <Feather name="video" size={20} color="#6B7280" />
+          <Text style={styles.addButtonText}>{t("common.upload.videoAddTitle")}</Text>
+        </Pressable>
+      )}
     </View>
   );
 };

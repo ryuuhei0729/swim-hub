@@ -36,6 +36,7 @@ import { TeamMemberGroupFilter } from "./TeamMemberGroupFilter";
 import { MemberDetailModal } from "./member-detail";
 import { WaPointsCompareModal } from "@/components/teams/wa-points-compare";
 import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/BestTimeDetailSheet";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 // ベストタイム型定義
 interface MemberBestTime {
@@ -386,7 +387,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       if (onMemberChange) onMemberChange();
     } catch (err) {
       console.error("ロール変更エラー:", err);
-      const errorMessage = err instanceof Error ? err.message : t("teams.mobile.roleChangeFailed");
+      const errorMessage = toUserFacingMessage(err, t("teams.mobile.roleChangeFailed"));
       if (Platform.OS === "web") {
         window.alert(errorMessage);
       } else {
@@ -428,8 +429,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       if (onMemberChange) onMemberChange();
     } catch (err) {
       console.error("メンバー削除エラー:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : t("teams.mobile.memberDeleteFailed");
+      const errorMessage = toUserFacingMessage(err, t("teams.mobile.memberDeleteFailed"));
       if (Platform.OS === "web") {
         window.alert(errorMessage);
       } else {

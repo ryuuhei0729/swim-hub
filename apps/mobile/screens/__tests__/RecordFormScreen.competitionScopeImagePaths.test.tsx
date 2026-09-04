@@ -28,10 +28,19 @@
 //   [V-48-5] 自分が作成した大会 (dropdown 一覧のスコープ内) での画像追加は非退行。
 //     (このテストは現状の実装でも green になるはずの対照ケース。もし red になったら
 //      テストハーネス自体の設計ミスを疑うこと)
+//   [V-48-6] PM 裁定 (#47 との設計衝突の解消): 退会済みチームの大会 (RLS で
+//     competitions が SELECT できない) に紐づく過去記録でも、レコード自体の保存は
+//     成功する。pool_type は記録自身の値を維持し (0 に潰されていないこと)、大会取得
+//     失敗を理由に保存全体を throw で中止してはならない (根拠: 一律 throw すると、
+//     退会済みチームの記録を持つユーザーは note の修正すら一切できなくなる。
+//     RecordFormScreen.competitionScopePoolType.test.tsx の V-47-3 と同一の分岐
+//     [isEditMode && fetchedRecord] を通る)。
 //   [V-48-11] dropdown 一覧のスコープ外の大会で、ID 直指定取得した title が画面に
 //     表示される (実装4: selectedCompetitionName の title 解決)。
-//   [V-48-12] ID 直指定取得は成功したが title が DB 上 NULL の場合、現状の実装では
-//     プレースホルダーが表示される (現状挙動の記録。仕様として合意されたものではない)。
+//   [V-48-12] ID 直指定取得は成功したが title が DB 上 NULL の場合、汎用フォールバック
+//     文言 (t("recordMobile.fallbackTitle")) が表示され、未選択プレースホルダーは
+//     表示されない (PM 判断で確定した仕様。根拠: initial_schema.sql:684 の
+//     competitions.title カラムコメント「大会名（NULLの場合は「大会」と表示）」)。
 //   [V-48-13] ID 直指定取得自体が失敗した場合、selectedCompetitionTitle は undefined の
 //     ままとなり、従来どおり dropdown 一覧からの解決にフォールバックする (非退行)。
 //
@@ -143,7 +152,11 @@ const mocks = vi.hoisted(() => {
   };
 
   // 退会済みチームの大会に紐づく過去記録。competition_id は非nullのまま残るが、
-  // RLS で SELECT/UPDATE とも拒否される想定 (V-48-6)
+  // RLS で SELECT/UPDATE とも拒否される想定 (V-48-6)。
+  // pool_type=1 (長水路): PM 裁定により「大会取得に失敗しても記録自身の pool_type を
+  // 維持して保存を継続する」仕様になったため、fixture を #47/#48 の旧バグが書き込んで
+  // いた値である 0 のままにすると、維持しても 0 が書かれる旧バグと区別が付かず
+  // トートロジーになる。意図的に非0にして「0 に潰されていないこと」を検証可能にする。
   const withdrawnTeamRecord = {
     id: "record-6",
     user_id: "user-1",
@@ -153,7 +166,7 @@ const mocks = vi.hoisted(() => {
     note: null,
     is_relaying: false,
     reaction_time: null,
-    pool_type: 0,
+    pool_type: 1,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     competition: null, // RLS で join が落ちている
@@ -591,12 +604,14 @@ describe("RecordFormScreen — issue #48: dropdown一覧のスコープ外の大
   );
 
   it(
-    "[V-48-12] ID 直指定取得は成功したが title が DB 上 NULL の場合、現状の実装では" +
-      "プレースホルダーが表示される。" +
-      "これは現状挙動の記録であり、望ましい仕様として合意されたものではない " +
-      "(competitions.title は NOT NULL 制約が無く、カラムコメントには " +
-      "「NULLの場合は「大会」と表示」と明記されているが、現状の RecordFormScreen は " +
-      "その仕様を実装していない)。",
+    "[V-48-12] ID 直指定取得は成功したが title が DB 上 NULL の場合、汎用フォールバック" +
+      "文言 (t(\"recordMobile.fallbackTitle\")) が表示され、未選択プレースホルダーは" +
+      "表示されない " +
+      "(PM 判断で確定した仕様。根拠: competitions.title のカラムコメントに " +
+      "「大会名（NULLの場合は「大会」と表示）」と明記されている " +
+      "[initial_schema.sql:684]。selectedCompetitionTitle が null [= 取得成功・title 未設定] と " +
+      "undefined [= 取得失敗、V-48-13 で別途検証] を区別し、null の場合のみこのフォールバックに" +
+      "落ちる)。",
     async () => {
       mocks.competitionByIdResponses["image_paths,title:comp-1"] = {
         data: {
@@ -612,13 +627,19 @@ describe("RecordFormScreen — issue #48: dropdown一覧のスコープ外の大
         expect(screen.getByText("保存")).toBeDefined();
       });
 
-      // 現状の実装は selectedCompetitionTitle が falsy (null) だと dropdown 一覧の
-      // フォールバックに落ちる。comp-1 は dropdown 一覧のスコープ外なので .find() も
-      // 外れ、結局プレースホルダーが表示される (「大会」というカラムコメント上の
-      // 意図した表示にはなっていない)。
+      // 仕様: ID 直指定取得が成功し title が DB 上 NULL のときは、カラムコメントが
+      // 規定する汎用の大会名フォールバック (「大会」) が表示される。dropdown 一覧の
+      // スコープ外 (comp-1) でも、選択済みなのに未選択プレースホルダーに落ちてはならない。
+      // 大会選択ボタン自身を role="button" でスコープする (フィールドラベルの
+      // "大会" テキストと fallbackTitle の "大会" テキストが同じ文字列のため、
+      // screen.getByText("大会") は複数要素にヒットしてしまう。Pressable は
+      // react-native-web 上で <button> に描画されるため、アクセシブルネームで
+      // 一意に絞り込める)。
       await waitFor(() => {
-        expect(screen.getByText("大会を選択")).toBeDefined();
+        expect(screen.getByRole("button", { name: "大会" })).toBeDefined();
       });
+
+      expect(screen.queryByText("大会を選択")).toBeNull();
     },
   );
 
@@ -650,7 +671,7 @@ describe("RecordFormScreen — issue #48: dropdown一覧のスコープ外の大
   );
 });
 
-describe("RecordFormScreen — issue #48: 退会済みチームの大会に紐づく過去記録の編集 (V-48-6, 現状動作の実測)", () => {
+describe("RecordFormScreen — issue #48: 退会済みチームの大会に紐づく過去記録の編集 (V-48-6, PM 裁定で確定した仕様)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useRecordStore.getState().reset();
@@ -667,7 +688,6 @@ describe("RecordFormScreen — issue #48: 退会済みチームの大会に紐�
     mocks.deleteImagesViaApi.mockResolvedValue(undefined);
 
     // 退会済みチームの大会 (comp-9) は RLS で SELECT が拒否される
-    // (#47 WIP の pool_type ID 直指定取得がここでエラーを受け取る)
     mocks.competitionByIdResponses["pool_type:comp-9"] = {
       data: null,
       error: new Error("RLS denied: not a team member"),
@@ -675,9 +695,12 @@ describe("RecordFormScreen — issue #48: 退会済みチームの大会に紐�
   });
 
   it(
-    "[V-48-6] storeCompetitionId が非null (competition_id が残存) なため isStandaloneRecord が" +
-      "false と誤判定され、pool_type 取得の RLS 拒否によりレコード自体の保存も中断する" +
-      "(現状の実装をそのまま実測して記録する。修正の要否は PM 判断)",
+    "[V-48-6] storeCompetitionId が非null (competition_id が残存) のため isStandaloneRecord は" +
+      "false だが、pool_type 取得が RLS で拒否されてもレコード自体の保存は成功し、pool_type は" +
+      "記録自身の値 (長水路=1。0 に潰されていないこと) が維持される " +
+      "(PM 裁定: 一律 throw すると退会済みチームの記録を持つユーザーが note の修正すら" +
+      "一切できなくなるため、大会取得失敗時は記録自身の値を維持して保存を継続する。" +
+      "V-47-3 と同一の分岐 [isEditMode && fetchedRecord] を通る)",
     async () => {
       render(<RecordFormScreen />, { wrapper: createWrapper() });
 
@@ -686,17 +709,32 @@ describe("RecordFormScreen — issue #48: 退会済みチームの大会に紐�
       });
 
       // 「(一括入力)」表示にはならない = isStandaloneRecord が false と判定されていることの確認
+      // (competition_id が残っているため大会紐付けレコードとして扱われる)
       expect(screen.queryByText(/一括入力/)).toBeNull();
 
       fireEvent.click(screen.getByText("保存"));
 
       await waitFor(() => {
-        expect(vi.mocked(Alert.alert).mock.calls.length).toBeGreaterThan(0);
+        expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(1);
       });
 
-      // レコード自体の更新 (note/time 等、pool_type と無関係なフィールドを含む) も
-      // 実行されない = ユーザーは自分の過去記録を一切保存できずエラーダイアログで詰む
-      expect(mocks.updateMutateAsync).not.toHaveBeenCalled();
+      const [{ id, updates }] = mocks.updateMutateAsync.mock.calls[0]!; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
+      expect(id).toBe("record-6");
+      expect(updates.competition_id).toBe("comp-9");
+      // 本体assert: 記録自身の pool_type (長水路=1) が維持される。0 に潰されてはならない
+      expect(updates.pool_type).toBe(1);
+      expect(updates.pool_type).not.toBe(0);
+
+      // pool_type 取得は実際に試みて RLS 拒否を受け取ったことも確認する
+      // (取得を試みずに常に維持側へフォールバックしているのではないことの担保)
+      expect(mocks.competitionFetchCalls).toContainEqual({
+        table: "competitions",
+        columns: "pool_type",
+        id: "comp-9",
+      });
+
+      // 保存は中止されていない (エラーダイアログは出ない)
+      expect(Alert.alert).not.toHaveBeenCalled();
     },
   );
 });

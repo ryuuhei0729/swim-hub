@@ -101,6 +101,7 @@
       "fast-xml-parser": ">=5.5.7",
       "fast-xml-builder": ">=1.1.7",
       "uuid": ">=14.0.0",
+      "exceljs>uuid": "^10.0.0",
       "minimatch": "^10.2.3",
       "@supabase/supabase-js": "^2.97.0",
       "undici": ">=7.29.0 <8",

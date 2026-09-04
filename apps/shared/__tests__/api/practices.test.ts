@@ -158,31 +158,76 @@ describe("PracticeAPI", () => {
   });
 
   describe("練習記録削除", () => {
+    // deletePractice は delete().eq("id", id).select("id") というチェインで呼ばれる
+    // (RLS拒否時に0行でも正常終了扱いになる問題への対策として .select() で結果行を見る)。
+    // eq / select に渡された引数は戻り値経由でテストごとに検証できるようにし、
+    // クエリの絞り込み対象・返却カラムを捨てない。
+    const mockDeleteChain = (response: { data: unknown; error: unknown }) => {
+      const selectMock = vi.fn().mockResolvedValue(response);
+      const eqMock = vi.fn().mockReturnThis();
+      const deleteMock = vi.fn().mockReturnThis();
+      const builder = { delete: deleteMock, eq: eqMock, select: selectMock };
+      mockClient.from = vi.fn(() => builder) as unknown as typeof mockClient.from;
+      return { deleteMock, eqMock, selectMock };
+    };
+
     it("練習記録を削除できる", async () => {
-      mockClient.from = vi.fn(() => ({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      })) as unknown as typeof mockClient.from;
+      const { deleteMock, eqMock, selectMock } = mockDeleteChain({
+        data: [{ id: "practice-1" }],
+        error: null,
+      });
 
       await expect(api.deletePractice("practice-1")).resolves.toBeUndefined();
 
       expect(mockClient.from).toHaveBeenCalledWith("practices");
+      expect(deleteMock).toHaveBeenCalled();
+      expect(eqMock).toHaveBeenCalledWith("id", "practice-1");
+      expect(selectMock).toHaveBeenCalledWith("id");
     });
 
     it("削除が失敗したときエラーが発生する", async () => {
       const error = new Error("Delete failed");
-      mockClient.from = vi.fn(() => ({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
-          data: null,
-          error,
-        }),
-      })) as unknown as typeof mockClient.from;
+      mockDeleteChain({ data: null, error });
 
       await expect(api.deletePractice("practice-1")).rejects.toThrow("Delete failed");
+    });
+
+    describe("RLS拒否時の無言失敗防止 (課題B回帰)", () => {
+      it("[D-1] DELETEが0行を返した場合はエラーをthrowする", async () => {
+        const { eqMock, selectMock } = mockDeleteChain({ data: [], error: null });
+
+        await expect(api.deletePractice("practice-1")).rejects.toThrow(
+          "練習記録の削除に失敗しました",
+        );
+        expect(eqMock).toHaveBeenCalledWith("id", "practice-1");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-2] dataがnullの場合もエラーをthrowする", async () => {
+        mockDeleteChain({ data: null, error: null });
+
+        await expect(api.deletePractice("practice-1")).rejects.toThrow(
+          "練習記録の削除に失敗しました",
+        );
+      });
+
+      it("[D-3] 1行返った場合は正常終了する(管理者による代理削除などの非退行)", async () => {
+        const { eqMock, selectMock } = mockDeleteChain({
+          data: [{ id: "practice-99" }],
+          error: null,
+        });
+
+        await expect(api.deletePractice("practice-99")).resolves.toBeUndefined();
+        expect(eqMock).toHaveBeenCalledWith("id", "practice-99");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-4] errorが返った場合は元のerrorをthrowする(汎用メッセージで上書きしない)", async () => {
+        const error = new Error("permission denied for table practices");
+        mockDeleteChain({ data: null, error });
+
+        await expect(api.deletePractice("practice-1")).rejects.toThrow(error);
+      });
     });
   });
 
@@ -284,18 +329,69 @@ describe("PracticeAPI", () => {
   });
 
   describe("練習ログ削除", () => {
+    // deletePracticeLog は delete().eq("id", id).select("id") というチェインで呼ばれる
+    // (deletePractice と同型: RLS拒否時0行を検出するため .select() で結果行を見る)。
+    // eq / select に渡された引数は戻り値経由でテストごとに検証できるようにし、
+    // クエリの絞り込み対象・返却カラムを捨てない。
+    const mockDeleteLogChain = (response: { data: unknown; error: unknown }) => {
+      const selectMock = vi.fn().mockResolvedValue(response);
+      const eqMock = vi.fn().mockReturnThis();
+      const deleteMock = vi.fn().mockReturnThis();
+      const builder = { delete: deleteMock, eq: eqMock, select: selectMock };
+      mockClient.from = vi.fn(() => builder) as unknown as typeof mockClient.from;
+      return { deleteMock, eqMock, selectMock };
+    };
+
     it("練習ログを削除できる", async () => {
-      mockClient.from = vi.fn(() => ({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      })) as unknown as typeof mockClient.from;
+      const { deleteMock, eqMock, selectMock } = mockDeleteLogChain({
+        data: [{ id: "log-1" }],
+        error: null,
+      });
 
       await expect(api.deletePracticeLog("log-1")).resolves.toBeUndefined();
 
       expect(mockClient.from).toHaveBeenCalledWith("practice_logs");
+      expect(deleteMock).toHaveBeenCalled();
+      expect(eqMock).toHaveBeenCalledWith("id", "log-1");
+      expect(selectMock).toHaveBeenCalledWith("id");
+    });
+
+    describe("0行ガード (課題B展開・回帰)", () => {
+      it("[D-8] DELETEが0行を返した場合はエラーをthrowする", async () => {
+        const { eqMock, selectMock } = mockDeleteLogChain({ data: [], error: null });
+
+        await expect(api.deletePracticeLog("log-1")).rejects.toThrow(
+          "練習ログの削除に失敗しました",
+        );
+        expect(eqMock).toHaveBeenCalledWith("id", "log-1");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-9] dataがnullの場合もエラーをthrowする", async () => {
+        mockDeleteLogChain({ data: null, error: null });
+
+        await expect(api.deletePracticeLog("log-1")).rejects.toThrow(
+          "練習ログの削除に失敗しました",
+        );
+      });
+
+      it("[D-10] 1行返った場合は正常終了する(非退行)", async () => {
+        const { eqMock, selectMock } = mockDeleteLogChain({
+          data: [{ id: "log-99" }],
+          error: null,
+        });
+
+        await expect(api.deletePracticeLog("log-99")).resolves.toBeUndefined();
+        expect(eqMock).toHaveBeenCalledWith("id", "log-99");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-11] errorが返った場合は元のerrorをthrowする(汎用メッセージで上書きしない)", async () => {
+        const error = new Error("permission denied for table practice_logs");
+        mockDeleteLogChain({ data: null, error });
+
+        await expect(api.deletePracticeLog("log-1")).rejects.toThrow(error);
+      });
     });
   });
 
@@ -566,18 +662,138 @@ describe("PracticeAPI", () => {
       expect(result).toEqual([]);
     });
 
+    // deletePracticeTime は delete().eq("id", id).select("id") というチェインで呼ばれる
+    // (deletePractice と同型)。eq / select の引数を捨てずに記録する。
+    const mockDeleteTimeChain = (response: { data: unknown; error: unknown }) => {
+      const selectMock = vi.fn().mockResolvedValue(response);
+      const eqMock = vi.fn().mockReturnThis();
+      const deleteMock = vi.fn().mockReturnThis();
+      const builder = { delete: deleteMock, eq: eqMock, select: selectMock };
+      mockClient.from = vi.fn(() => builder) as unknown as typeof mockClient.from;
+      return { deleteMock, eqMock, selectMock };
+    };
+
     it("練習タイムを削除できる", async () => {
-      mockClient.from = vi.fn(() => ({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-      })) as unknown as typeof mockClient.from;
+      const { deleteMock, eqMock, selectMock } = mockDeleteTimeChain({
+        data: [{ id: "time-1" }],
+        error: null,
+      });
 
       await expect(api.deletePracticeTime("time-1")).resolves.toBeUndefined();
 
       expect(mockClient.from).toHaveBeenCalledWith("practice_times");
+      expect(deleteMock).toHaveBeenCalled();
+      expect(eqMock).toHaveBeenCalledWith("id", "time-1");
+      expect(selectMock).toHaveBeenCalledWith("id");
+    });
+
+    describe("0行ガード (課題B展開・回帰)", () => {
+      it("[D-12] DELETEが0行を返した場合はエラーをthrowする", async () => {
+        const { eqMock, selectMock } = mockDeleteTimeChain({ data: [], error: null });
+
+        await expect(api.deletePracticeTime("time-1")).rejects.toThrow(
+          "練習タイムの削除に失敗しました",
+        );
+        expect(eqMock).toHaveBeenCalledWith("id", "time-1");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-13] dataがnullの場合もエラーをthrowする", async () => {
+        mockDeleteTimeChain({ data: null, error: null });
+
+        await expect(api.deletePracticeTime("time-1")).rejects.toThrow(
+          "練習タイムの削除に失敗しました",
+        );
+      });
+
+      it("[D-14] 1行返った場合は正常終了する(非退行)", async () => {
+        const { eqMock, selectMock } = mockDeleteTimeChain({
+          data: [{ id: "time-99" }],
+          error: null,
+        });
+
+        await expect(api.deletePracticeTime("time-99")).resolves.toBeUndefined();
+        expect(eqMock).toHaveBeenCalledWith("id", "time-99");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-15] errorが返った場合は元のerrorをthrowする(汎用メッセージで上書きしない)", async () => {
+        const error = new Error("permission denied for table practice_times");
+        mockDeleteTimeChain({ data: null, error });
+
+        await expect(api.deletePracticeTime("time-1")).rejects.toThrow(error);
+      });
+    });
+
+    describe("練習タイム置き換えの0行許容とerror伝播 (回帰)", () => {
+      it("[D-20] 既存タイムが0件(削除0行)でもthrowせず正常に完了する(0行ガードを追加していないことの担保)", async () => {
+        const newTimes = [{ set_number: 1, rep_number: 1, time: 20.0 }];
+        const createdTimes = newTimes.map((t, i) => ({
+          id: `time-${i}`,
+          practice_log_id: "log-1",
+          ...t,
+        }));
+
+        // practice_log_id単位の削除で0行(タイム未入力のログ)を模擬
+        const deleteBuilder = {
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+        };
+        const insertBuilder = {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue({ data: createdTimes, error: null }),
+        };
+
+        let callCount = 0;
+        mockClient.from = vi.fn(() => {
+          callCount++;
+          return callCount === 1 ? deleteBuilder : insertBuilder;
+        }) as unknown as typeof mockClient.from;
+
+        await expect(api.replacePracticeTimes("log-1", newTimes)).resolves.toEqual(createdTimes);
+        expect(deleteBuilder.eq).toHaveBeenCalledWith("practice_log_id", "log-1");
+      });
+
+      it("[D-21] 削除でerrorが返った場合はthrowする(errorチェック追加の担保)", async () => {
+        const error = new Error("permission denied for table practice_times");
+        const deleteBuilder = {
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: null, error }),
+        };
+        mockClient.from = vi.fn(() => deleteBuilder) as unknown as typeof mockClient.from;
+
+        await expect(
+          api.replacePracticeTimes("log-1", [{ set_number: 1, rep_number: 1, time: 20.0 }]),
+        ).rejects.toThrow(error);
+        expect(deleteBuilder.eq).toHaveBeenCalledWith("practice_log_id", "log-1");
+      });
+
+      it("[D-22] 削除成功後に新しいタイムが挿入される(非退行)", async () => {
+        const newTimes = [{ set_number: 1, rep_number: 1, time: 21.0 }];
+        const createdTimes = newTimes.map((t, i) => ({
+          id: `time-${i}`,
+          practice_log_id: "log-1",
+          ...t,
+        }));
+
+        const deleteBuilder = {
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: [{ id: "old-time-1" }], error: null }),
+        };
+        const insertBuilder = {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue({ data: createdTimes, error: null }),
+        };
+
+        let callCount = 0;
+        mockClient.from = vi.fn(() => {
+          callCount++;
+          return callCount === 1 ? deleteBuilder : insertBuilder;
+        }) as unknown as typeof mockClient.from;
+
+        await expect(api.replacePracticeTimes("log-1", newTimes)).resolves.toEqual(createdTimes);
+        expect(insertBuilder.select).toHaveBeenCalled();
+      });
     });
   });
 
@@ -654,21 +870,72 @@ describe("PracticeAPI", () => {
       expect(result).toEqual(updatedTag);
     });
 
+    // deletePracticeTag は delete().eq("id", id).eq("user_id", user.id).select("id") という
+    // 2段 eq チェインで呼ばれる。同一の eqMock が2回呼ばれるので
+    // toHaveBeenNthCalledWith で id/user_id 両方の絞り込み引数を検証する
+    // (user_id 絞り込みが消えると他人のタグを削除できてしまうため)。
+    const mockDeleteTagChain = (response: { data: unknown; error: unknown }) => {
+      const selectMock = vi.fn().mockResolvedValue(response);
+      const eqMock = vi.fn().mockReturnThis();
+      const deleteMock = vi.fn().mockReturnThis();
+      const builder = { delete: deleteMock, eq: eqMock, select: selectMock };
+      mockClient.from = vi.fn(() => builder) as unknown as typeof mockClient.from;
+      return { deleteMock, eqMock, selectMock };
+    };
+
     it("練習タグを削除できる", async () => {
-      mockClient.from = vi.fn(() => ({
-        delete: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn().mockResolvedValue({
-              data: null,
-              error: null,
-            }),
-          })),
-        })),
-      })) as unknown as typeof mockClient.from;
+      const { deleteMock, eqMock, selectMock } = mockDeleteTagChain({
+        data: [{ id: "tag-1" }],
+        error: null,
+      });
 
       await expect(api.deletePracticeTag("tag-1")).resolves.toBeUndefined();
 
       expect(mockClient.from).toHaveBeenCalledWith("practice_tags");
+      expect(deleteMock).toHaveBeenCalled();
+      expect(eqMock).toHaveBeenNthCalledWith(1, "id", "tag-1");
+      expect(eqMock).toHaveBeenNthCalledWith(2, "user_id", "test-user-id");
+      expect(selectMock).toHaveBeenCalledWith("id");
+    });
+
+    describe("0行ガードとuser_idスコープ (課題B展開・回帰)", () => {
+      it("[D-16] DELETEが0行を返した場合はエラーをthrowする", async () => {
+        const { eqMock, selectMock } = mockDeleteTagChain({ data: [], error: null });
+
+        await expect(api.deletePracticeTag("tag-1")).rejects.toThrow(
+          "練習タグの削除に失敗しました",
+        );
+        expect(eqMock).toHaveBeenNthCalledWith(1, "id", "tag-1");
+        expect(eqMock).toHaveBeenNthCalledWith(2, "user_id", "test-user-id");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-17] dataがnullの場合もエラーをthrowする", async () => {
+        mockDeleteTagChain({ data: null, error: null });
+
+        await expect(api.deletePracticeTag("tag-1")).rejects.toThrow(
+          "練習タグの削除に失敗しました",
+        );
+      });
+
+      it("[D-18] 1行返った場合は正常終了し、id/user_idの両方で絞り込まれる(他人のタグを削除できないことの担保・非退行)", async () => {
+        const { eqMock, selectMock } = mockDeleteTagChain({
+          data: [{ id: "tag-1" }],
+          error: null,
+        });
+
+        await expect(api.deletePracticeTag("tag-1")).resolves.toBeUndefined();
+        expect(eqMock).toHaveBeenNthCalledWith(1, "id", "tag-1");
+        expect(eqMock).toHaveBeenNthCalledWith(2, "user_id", "test-user-id");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-19] errorが返った場合は元のerrorをthrowする(汎用メッセージで上書きしない)", async () => {
+        const error = new Error("permission denied for table practice_tags");
+        mockDeleteTagChain({ data: null, error });
+
+        await expect(api.deletePracticeTag("tag-1")).rejects.toThrow(error);
+      });
     });
   });
 

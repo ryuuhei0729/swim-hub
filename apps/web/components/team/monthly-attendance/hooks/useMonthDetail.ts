@@ -8,6 +8,7 @@ import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendanc
 import { TeamEvent } from "@swim-hub/shared/types";
 import { getMonthDateRange } from "@swim-hub/shared/utils/date";
 import { parseISO } from "date-fns";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export const useMonthDetail = (
   teamId: string,
@@ -67,7 +68,7 @@ export const useMonthDetail = (
         return { events: allEvents, attendances: attendanceData };
       } catch (err) {
         console.error("出欠情報の取得に失敗:", err);
-        setError(t("monthDetailHook.loadError"));
+        setError(toUserFacingMessage(err, t("monthDetailHook.loadError")));
         return null;
       } finally {
         setLoading(false);

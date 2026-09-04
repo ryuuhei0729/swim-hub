@@ -15,6 +15,18 @@
  * [V-P-19〜23] iOS (回帰): legacy:true 維持・権限リクエスト・allowsEditing/aspect維持
  * [V-P-21〜24b] アバター削除 (Web API 経由) — Photo Picker 移行と無関係な既存動作の回帰確認
  *
+ * 情報露出防止メモ (PM 裁定による Phase B 再修正):
+ *   - [V-P-14d] / [V-P-26] は元々「生の Error メッセージがそのまま Alert に表示される」ことを
+ *     正解として `toBe("getSize failed")` / `toBe("削除に失敗しました")` のように固定していたが、
+ *     これは情報露出 (テーブル名・RLS ポリシー詳細等の生エラーをユーザーに見せてしまう) を
+ *     仕様として肯定する記述だった。AvatarUpload.tsx は `toUserFacingMessage(err, fallback)`
+ *     (apps/shared/utils/userFacingError.ts) を使い、`UserFacingError` インスタンス以外は
+ *     詳細を出さず i18n 済みの汎用フォールバックに置き換える設計に是正済みのため、期待値を
+ *     フォールバック文言 (common.upload.imageSelectFailed / imageDeleteFailed) に更新した。
+ *   - [V-P-14d-2] / [V-P-26b] は対照実験として `UserFacingError` を注入し、そのメッセージが
+ *     素通しされる (フォールバックに潰されない) ことを検証する。この対を成すことで
+ *     「実装が全部を汎用文言に潰しているだけ」ではないことを証明する。
+ *
  * トートロジー防止メモ:
  *   - 期待するクロップ座標 (originX/originY/width/height) は「短辺を一致させ、はみ出す長辺を
  *     中央基準で切り落とす」という Sprint Contract の仕様から QA が独立に算出したものであり、
@@ -86,6 +98,7 @@ vi.mock("react-native", async (importOriginal) => {
 
 import { AvatarUpload } from "../AvatarUpload";
 import { SaveFormat } from "expo-image-manipulator";
+import { UserFacingError } from "@apps/shared/utils/userFacingError";
 
 /** Alert.alert のボタン群から text 一致するものを自動押下するヘルパー */
 function mockAlertPressButton(buttonText: string) {
@@ -235,7 +248,9 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
 
   it(
     "[V-P-14d] RNImage.getSize が失敗 (reject) した場合、未処理 Promise 例外にならず" +
-      "外側 try/catch の汎用エラー Alert に伝播する",
+      "外側 try/catch で汎用エラー (imageSelectFailed フォールバック) の Alert に置き換わる" +
+      " (情報露出防止: toUserFacingMessage は UserFacingError 以外を fallback に潰す。" +
+      " userFacingError.ts の docstring 参照)",
     async () => {
       mocks.getSize.mockImplementation(
         (_uri: string, _success: (w: number, h: number) => void, failure: (err: Error) => void) =>
@@ -254,9 +269,41 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
       });
       expect(mocks.crop).not.toHaveBeenCalled();
       expect(onImageSelected).not.toHaveBeenCalled();
+      // 生の Error メッセージ ("getSize failed") はそのまま出さず、common.upload.imageSelectFailed の
+      // 汎用フォールバック文言に置き換わる (AvatarUpload.tsx: toUserFacingMessage(err, t("common.upload.imageSelectFailed")))
       expect(mocks.alertFn).toHaveBeenCalledWith(
         expect.anything(),
-        "getSize failed",
+        "画像の選択に失敗しました",
+        expect.anything(),
+      );
+    },
+  );
+
+  it(
+    "[V-P-14d-2] RNImage.getSize が UserFacingError で失敗した場合はそのメッセージがそのまま" +
+      " Alert に表示される ([V-P-14d] との対照実験: toUserFacingMessage が UserFacingError を" +
+      " 素通しすることの証明)",
+    async () => {
+      mocks.getSize.mockImplementation(
+        (_uri: string, _success: (w: number, h: number) => void, failure: (err: Error) => void) =>
+          failure(new UserFacingError("ストレージの空き容量が不足しています")),
+      );
+      mocks.launchImageLibraryAsync.mockResolvedValueOnce({
+        canceled: false,
+        assets: [{ uri: "file:///nodim.jpg", width: 0, height: 0, type: "image/jpeg" }],
+      });
+      const onImageSelected = vi.fn();
+      render(
+        <AvatarUpload {...BASE_PROPS} currentAvatarUrl={null} onImageSelected={onImageSelected} />,
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("icon-camera"));
+      });
+      expect(mocks.crop).not.toHaveBeenCalled();
+      expect(onImageSelected).not.toHaveBeenCalled();
+      expect(mocks.alertFn).toHaveBeenCalledWith(
+        expect.anything(),
+        "ストレージの空き容量が不足しています",
         expect.anything(),
       );
     },
@@ -525,23 +572,60 @@ describe("AvatarUpload — アバター削除 (Photo Picker 移行と無関係�
     expect(onAvatarChange).toHaveBeenCalledWith(null);
   });
 
-  it("[V-P-26] 削除失敗時にエラーメッセージが表示される (回帰)", async () => {
-    mocks.deleteProfileImageViaApi.mockRejectedValueOnce(new Error("削除に失敗しました"));
-    const onAvatarChange = vi.fn();
-    render(
-      <AvatarUpload {...BASE_PROPS} currentAvatarUrl="user-1/avatar.jpg" onAvatarChange={onAvatarChange} />,
-    );
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("icon-x"));
-    });
-    expect(onAvatarChange).not.toHaveBeenCalled();
-    // Android (Alert.alert) 経由でエラー表示される (回帰)
-    expect(mocks.alertFn).toHaveBeenCalledWith(
-      expect.anything(),
-      "削除に失敗しました",
-      expect.anything(),
-    );
-  });
+  it(
+    "[V-P-26] 削除失敗 (生の Error) 時は汎用エラーメッセージ (imageDeleteFailed フォールバック)" +
+      " が表示される (情報露出防止: 生の RLS/Postgres エラー詳細をそのまま出さない。" +
+      " AvatarUpload.tsx: toUserFacingMessage(err, t(\"common.upload.imageDeleteFailed\")))",
+    async () => {
+      // 生の Error はテーブル名等の内部詳細を含みうる例として想定 (UserFacingError ではない)
+      mocks.deleteProfileImageViaApi.mockRejectedValueOnce(
+        new Error('relation "profile_images" violates row-level security policy'),
+      );
+      const onAvatarChange = vi.fn();
+      render(
+        <AvatarUpload {...BASE_PROPS} currentAvatarUrl="user-1/avatar.jpg" onAvatarChange={onAvatarChange} />,
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("icon-x"));
+      });
+      expect(onAvatarChange).not.toHaveBeenCalled();
+      // Android (Alert.alert) 経由で汎用フォールバック文言が表示される
+      expect(mocks.alertFn).toHaveBeenCalledWith(
+        expect.anything(),
+        "画像の削除に失敗しました",
+        expect.anything(),
+      );
+      // 生のエラー詳細はどこにも露出しない
+      expect(mocks.alertFn).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining("row-level security"),
+        expect.anything(),
+      );
+    },
+  );
+
+  it(
+    "[V-P-26b] 削除失敗が UserFacingError の場合はそのメッセージがそのまま表示される" +
+      " ([V-P-26] との対照実験: toUserFacingMessage が UserFacingError を素通しすることの証明)",
+    async () => {
+      mocks.deleteProfileImageViaApi.mockRejectedValueOnce(
+        new UserFacingError("画像を削除できませんでした。時間をおいて再度お試しください"),
+      );
+      const onAvatarChange = vi.fn();
+      render(
+        <AvatarUpload {...BASE_PROPS} currentAvatarUrl="user-1/avatar.jpg" onAvatarChange={onAvatarChange} />,
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("icon-x"));
+      });
+      expect(onAvatarChange).not.toHaveBeenCalled();
+      expect(mocks.alertFn).toHaveBeenCalledWith(
+        expect.anything(),
+        "画像を削除できませんでした。時間をおいて再度お試しください",
+        expect.anything(),
+      );
+    },
+  );
 
   it(
     "[V-P-27] accessToken が取得できない場合、deleteProfileImageViaApi を呼ばずエラー表示になる " +

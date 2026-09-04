@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { CenterModal } from "@/components/ui/CenterModal";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useJoinTeamMutation } from "@apps/shared/hooks/queries/teams";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface TeamJoinModalProps {
   visible: boolean;
@@ -61,17 +62,11 @@ export const TeamJoinModal: React.FC<TeamJoinModalProps> = ({
         onSuccess(membership.team_id);
         handleClose();
       } else {
-        throw new Error(t("teams.mobile.teamIdFetchFailed"));
+        throw new UserFacingError(t("teams.mobile.teamIdFetchFailed"));
       }
     } catch (err) {
       console.error("チーム参加エラー:", err);
-      let errorMessage = t("teams.mobile.joinFailed");
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err && typeof err === "object" && "message" in err) {
-        errorMessage = String(err.message);
-      }
-      setError(errorMessage);
+      setError(toUserFacingMessage(err, t("teams.mobile.joinFailed")));
     }
   };
 

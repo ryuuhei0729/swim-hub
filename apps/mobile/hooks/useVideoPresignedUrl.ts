@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { getPresignedUrl } from "@/utils/videoUpload";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface UseVideoPresignedUrlResult {
   videoUrl: string | null;
@@ -40,7 +41,7 @@ export function useVideoPresignedUrl(
       setVideoUrl(result.url);
       setThumbnailUrl(result.thumbnailUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("common.video.urlFetchFailed"));
+      setError(toUserFacingMessage(err, t("common.video.urlFetchFailed")));
     } finally {
       setIsLoading(false);
     }

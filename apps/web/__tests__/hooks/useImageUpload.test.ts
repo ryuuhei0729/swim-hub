@@ -1,6 +1,7 @@
 import { act } from "@testing-library/react";
 import { renderHookWithI18n as renderHook } from "../utils/render";
 import { afterEach, beforeEach, describe, expect, it, vi, Mock } from "vitest";
+import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 import {
   ImageFile,
@@ -229,7 +230,15 @@ describe("useImageUpload", () => {
   });
 
   describe("validateFile - 例外発生", () => {
-    it("バリデーション関数が例外を投げた場合、エラーが設定される", async () => {
+    // NOTE (情報露出防止): `validateFile` が投げた値は `toUserFacingMessage` を経由して
+    // エラーに設定される (`apps/shared/utils/userFacingError.ts` docstring 参照)。
+    // `PostgrestError` 等の生 `Error` は「テーブル名・カラム名・RLS ポリシー詳細を含む」
+    // 可能性があるため、メッセージをそのまま表示せず `forms.imageUploader.invalidFile`
+    // (ja: "無効なファイルです") の汎用フォールバックに置き換える。
+    // 一方 `UserFacingError` は「ユーザーに見せてよい」と明示された例外なので、
+    // そのメッセージがそのまま使われる。この2つを対で検証し、実装が
+    // 「何を投げても一律フォールバックに潰しているだけ」ではないことを保証する。
+    it("生の Error が投げられた場合、詳細を表示せず汎用フォールバックメッセージに置き換えられる (情報露出防止)", async () => {
       const mockThrowingValidate = vi.fn().mockRejectedValue(new Error("ネットワークエラー"));
 
       const { result } = renderHook(() =>
@@ -244,7 +253,33 @@ describe("useImageUpload", () => {
         await result.current.handleFiles([createMockFile()]);
       });
 
-      expect(result.current.error).toBe("ネットワークエラー");
+      // 生エラーのメッセージ("ネットワークエラー")がそのまま表示されないこと、
+      // かつ forms.imageUploader.invalidFile の汎用フォールバックに置き換わること
+      expect(result.current.error).toBe("無効なファイルです");
+      expect(result.current.error).not.toBe("ネットワークエラー");
+      expect(result.current.newFiles).toHaveLength(0);
+    });
+
+    it("UserFacingError が投げられた場合、そのメッセージがそのままエラーに設定される", async () => {
+      const mockThrowingValidate = vi
+        .fn()
+        .mockRejectedValue(new UserFacingError("この画像形式には対応していません"));
+
+      const { result } = renderHook(() =>
+        useImageUpload({
+          ...defaultOptions,
+          validateFile: mockThrowingValidate,
+          onImagesChange: mockOnImagesChange,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleFiles([createMockFile()]);
+      });
+
+      // UserFacingError は「ユーザー提示前提」と明示されたメッセージなので、
+      // 汎用フォールバックに潰されずそのまま表示される
+      expect(result.current.error).toBe("この画像形式には対応していません");
       expect(result.current.newFiles).toHaveLength(0);
     });
 

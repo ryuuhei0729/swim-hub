@@ -324,23 +324,73 @@ describe("GoalAPI", () => {
   });
 
   describe("deleteGoal", () => {
+    // deleteGoal は delete().eq("id", id).select("id") というチェインで呼ばれる
+    // (RLSがDELETEを拒否した場合もerrorを返さず0行削除で正常終了する問題への対策として
+    // .select() で結果行を見る。practices.ts の deletePractice と同型)。
+    // eq / select に渡された引数は戻り値経由でテストごとに検証できるようにし、
+    // クエリの絞り込み対象・返却カラムを捨てない。
+    const mockDeleteGoalChain = (response: { data: unknown; error: unknown }) => {
+      const selectMock = vi.fn().mockResolvedValue(response);
+      const eqMock = vi.fn().mockReturnThis();
+      const deleteMock = vi.fn().mockReturnThis();
+      const builder = { delete: deleteMock, eq: eqMock, select: selectMock };
+      mockClient.from = vi.fn(() => builder) as unknown as typeof mockClient.from;
+      return { deleteMock, eqMock, selectMock };
+    };
+
     it("目標を削除できる", async () => {
-      mockClient.from = vi.fn().mockReturnValue({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      }) as unknown as typeof mockClient.from;
+      const { deleteMock, eqMock, selectMock } = mockDeleteGoalChain({
+        data: [{ id: "goal-1" }],
+        error: null,
+      });
 
       await expect(api.deleteGoal("goal-1")).resolves.not.toThrow();
+
+      expect(mockClient.from).toHaveBeenCalledWith("goals");
+      expect(deleteMock).toHaveBeenCalled();
+      expect(eqMock).toHaveBeenCalledWith("id", "goal-1");
+      expect(selectMock).toHaveBeenCalledWith("id");
     });
 
     it("削除エラーの場合は例外を投げる", async () => {
       const error = new Error("削除失敗");
-      mockClient.from = vi.fn().mockReturnValue({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error }),
-      }) as unknown as typeof mockClient.from;
+      mockDeleteGoalChain({ data: null, error });
 
       await expect(api.deleteGoal("goal-1")).rejects.toThrow(error);
+    });
+
+    describe("0行ガード (課題B展開・回帰)", () => {
+      it("[D-1] DELETEが0行を返した場合はエラーをthrowする", async () => {
+        const { eqMock, selectMock } = mockDeleteGoalChain({ data: [], error: null });
+
+        await expect(api.deleteGoal("goal-1")).rejects.toThrow("大会目標の削除に失敗しました");
+        expect(eqMock).toHaveBeenCalledWith("id", "goal-1");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-2] dataがnullの場合もエラーをthrowする", async () => {
+        mockDeleteGoalChain({ data: null, error: null });
+
+        await expect(api.deleteGoal("goal-1")).rejects.toThrow("大会目標の削除に失敗しました");
+      });
+
+      it("[D-3] 1行返った場合は正常終了する(非退行)", async () => {
+        const { eqMock, selectMock } = mockDeleteGoalChain({
+          data: [{ id: "goal-99" }],
+          error: null,
+        });
+
+        await expect(api.deleteGoal("goal-99")).resolves.toBeUndefined();
+        expect(eqMock).toHaveBeenCalledWith("id", "goal-99");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-4] errorが返った場合は元のerrorをthrowする(汎用メッセージで上書きしない)", async () => {
+        const error = new Error("permission denied for table goals");
+        mockDeleteGoalChain({ data: null, error });
+
+        await expect(api.deleteGoal("goal-1")).rejects.toThrow(error);
+      });
     });
   });
 
@@ -538,13 +588,69 @@ describe("GoalAPI", () => {
   });
 
   describe("deleteMilestone", () => {
+    // deleteMilestone は delete().eq("id", id).select("id") というチェインで呼ばれる
+    // (deleteGoal と同型: RLS拒否時0行を検出するため .select() で結果行を見る)。
+    // eq / select に渡された引数は戻り値経由でテストごとに検証できるようにし、
+    // クエリの絞り込み対象・返却カラムを捨てない。
+    const mockDeleteMilestoneChain = (response: { data: unknown; error: unknown }) => {
+      const selectMock = vi.fn().mockResolvedValue(response);
+      const eqMock = vi.fn().mockReturnThis();
+      const deleteMock = vi.fn().mockReturnThis();
+      const builder = { delete: deleteMock, eq: eqMock, select: selectMock };
+      mockClient.from = vi.fn(() => builder) as unknown as typeof mockClient.from;
+      return { deleteMock, eqMock, selectMock };
+    };
+
     it("マイルストーンを削除できる", async () => {
-      mockClient.from = vi.fn().mockReturnValue({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      }) as unknown as typeof mockClient.from;
+      const { deleteMock, eqMock, selectMock } = mockDeleteMilestoneChain({
+        data: [{ id: "milestone-1" }],
+        error: null,
+      });
 
       await expect(api.deleteMilestone("milestone-1")).resolves.not.toThrow();
+
+      expect(mockClient.from).toHaveBeenCalledWith("milestones");
+      expect(deleteMock).toHaveBeenCalled();
+      expect(eqMock).toHaveBeenCalledWith("id", "milestone-1");
+      expect(selectMock).toHaveBeenCalledWith("id");
+    });
+
+    describe("0行ガード (課題B展開・回帰)", () => {
+      it("[D-5] DELETEが0行を返した場合はエラーをthrowする", async () => {
+        const { eqMock, selectMock } = mockDeleteMilestoneChain({ data: [], error: null });
+
+        await expect(api.deleteMilestone("milestone-1")).rejects.toThrow(
+          "マイルストーンの削除に失敗しました",
+        );
+        expect(eqMock).toHaveBeenCalledWith("id", "milestone-1");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-6] dataがnullの場合もエラーをthrowする", async () => {
+        mockDeleteMilestoneChain({ data: null, error: null });
+
+        await expect(api.deleteMilestone("milestone-1")).rejects.toThrow(
+          "マイルストーンの削除に失敗しました",
+        );
+      });
+
+      it("[D-7] 1行返った場合は正常終了する(非退行)", async () => {
+        const { eqMock, selectMock } = mockDeleteMilestoneChain({
+          data: [{ id: "milestone-99" }],
+          error: null,
+        });
+
+        await expect(api.deleteMilestone("milestone-99")).resolves.toBeUndefined();
+        expect(eqMock).toHaveBeenCalledWith("id", "milestone-99");
+        expect(selectMock).toHaveBeenCalledWith("id");
+      });
+
+      it("[D-8] errorが返った場合は元のerrorをthrowする(汎用メッセージで上書きしない)", async () => {
+        const error = new Error("permission denied for table milestones");
+        mockDeleteMilestoneChain({ data: null, error });
+
+        await expect(api.deleteMilestone("milestone-1")).rejects.toThrow(error);
+      });
     });
   });
 
