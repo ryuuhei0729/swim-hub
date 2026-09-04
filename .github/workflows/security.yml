@@ -78,6 +78,8 @@ jobs:
           # severity: 'CRITICAL,HIGH' が SARIF にだけ効かず、MEDIUM/LOW と
           # secret 検出が GitHub Security に上がり、下の table 出力 (4件) と食い違う。
           limit-severities-for-sarif: true
+          # 上流に修正版が無く対処不能なものだけを期限付きで抑制する (中身のコメント参照)
+          trivyignores: '.trivyignore.yaml'
           exit-code: '0'
 
       - name: Check if SARIF file exists
@@ -104,4 +106,5 @@ jobs:
           scan-ref: '.'
           format: 'table'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore.yaml'
           exit-code: '0'

@@ -1,0 +1,30 @@
+# Trivy の抑制設定。安易に追加しないこと。
+#
+# 追加してよいのは「上流に修正版が存在せず、こちらで取れる対処が無い」ものだけ。
+# バージョンを上げれば直るものは overrides (package.json の pnpm.overrides) で直す。
+#
+# expired_at を必ず入れる。期限を過ぎると検出が復活するので、
+# 修正版が出たかどうかを定期的に見直す強制力が働く。
+vulnerabilities:
+  # image-size (metro@0.83.7 の直接依存。React Native のバンドラが
+  # ローカルの画像アセットの寸法を読むためにビルド時のみ使う)。
+  #
+  # GitHub Advisory DB で実測 (2026-09-04):
+  #   CVE-2025-71329 = GHSA-5p2g-fcmc-qvqq / CVE-2025-71330 = GHSA-w3rx-r6r6-pgpr
+  #   いずれも vulnerable_version_range が "<= 2.0.2"、first_patched_version は null。
+  #   npm の最新も 2.0.2 なので、公開済みの全バージョンが該当し上げ先が存在しない。
+  #   (Trivy の出力でも Fixed Version が空、status: affected)
+  #
+  # 影響範囲: 配布物の実行時コードではなくビルド時ツールチェーンで、
+  # 入力はリポジトリ内の自前アセットのみ。攻撃者が細工した画像を渡す経路が無い。
+  # なお metro を image-size 2.x へ寄せる回避も不可 (2.x は API 破壊変更、かつ同様に脆弱)。
+  - id: CVE-2025-71329
+    statement: >-
+      metro のビルド時依存。全公開バージョンが該当し修正版が存在しないため対処不能。
+      修正版が出たら overrides で上げてこのエントリを削除する。
+    expired_at: 2026-12-04
+  - id: CVE-2025-71330
+    statement: >-
+      metro のビルド時依存。全公開バージョンが該当し修正版が存在しないため対処不能。
+      修正版が出たら overrides で上げてこのエントリを削除する。
+    expired_at: 2026-12-04
