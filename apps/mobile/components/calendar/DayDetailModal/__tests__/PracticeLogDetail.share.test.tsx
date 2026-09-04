@@ -163,14 +163,14 @@ describe("PracticeLogDetail practice share (isPractice block)", () => {
 
     // 1件目(log-a)の共有ボタンを押す
     const shareButtons = screen.getAllByTestId("icon-share-2");
-    fireEvent.click(shareButtons[0].closest("button")!);
+    fireEvent.click(shareButtons[0]!.closest("button")!); // getAllByTestId で取得済みのボタンなので必ず存在
 
     await waitFor(() => {
       expect(mockShareCardModal).toHaveBeenCalledWith(
         expect.objectContaining({ visible: true, type: "practice" }),
       );
     });
-    const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1][0] as {
+    const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1]![0] as { // 直前の toHaveBeenCalledWith/waitFor で呼び出し済みであることを確認済み
       data: { menuItems: Array<{ distance: number; style: string }> };
     };
     expect(lastCall.data.menuItems).toHaveLength(2);
@@ -189,10 +189,10 @@ describe("PracticeLogDetail practice share (isPractice block)", () => {
       expect(screen.getAllByTestId("icon-share-2").length).toBe(2);
     });
     const shareButtons = screen.getAllByTestId("icon-share-2");
-    fireEvent.click(shareButtons[1].closest("button")!);
+    fireEvent.click(shareButtons[1]!.closest("button")!); // getAllByTestId で取得済みのボタンなので必ず存在
 
     await waitFor(() => {
-      const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1][0] as {
+      const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1]![0] as { // 直前の toHaveBeenCalledWith/waitFor で呼び出し済みであることを確認済み
         data: { menuItems: Array<{ distance: number }> };
       };
       expect(lastCall.data.menuItems).toHaveLength(2);
@@ -209,7 +209,7 @@ describe("PracticeLogDetail practice share (isPractice block)", () => {
     fireEvent.click(screen.getByTestId("icon-share-2").closest("button")!);
 
     await waitFor(() => {
-      const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1][0] as {
+      const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1]![0] as { // 直前の toHaveBeenCalledWith/waitFor で呼び出し済みであることを確認済み
         data: { menuItems: unknown[] };
       };
       expect(lastCall.data.menuItems).toHaveLength(1);
@@ -226,10 +226,10 @@ describe("PracticeLogDetail practice share (isPractice block)", () => {
     await waitFor(() => {
       expect(screen.getAllByTestId("icon-share-2").length).toBe(2);
     });
-    fireEvent.click(screen.getAllByTestId("icon-share-2")[0].closest("button")!);
+    fireEvent.click(screen.getAllByTestId("icon-share-2")[0]!.closest("button")!); // getAllByTestId は1件以上見つからなければ throw するため必ず存在
 
     await waitFor(() => {
-      const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1][0] as {
+      const lastCall = mockShareCardModal.mock.calls[mockShareCardModal.mock.calls.length - 1]![0] as { // 直前の toHaveBeenCalledWith/waitFor で呼び出し済みであることを確認済み
         data: { totalDistance: number; totalSets: number };
       };
       expect(lastCall.data.totalDistance).toBe(800 + 400);

@@ -124,9 +124,9 @@ describe("CompetitionDataLoader - prefetch エラーハンドリング", () => {
 
     const dehydratedState = element.props.state;
     expect(dehydratedState.queries).toHaveLength(1);
-    expect(dehydratedState.queries[0].queryKey).toEqual(RECORDS_QUERY_KEY);
-    expect(dehydratedState.queries[0].state.status).toBe("success");
-    expect(dehydratedState.queries[0].state.data).toEqual(records);
+    expect(dehydratedState.queries[0]!.queryKey).toEqual(RECORDS_QUERY_KEY);
+    expect(dehydratedState.queries[0]!.state.status).toBe("success");
+    expect(dehydratedState.queries[0]!.state.data).toEqual(records);
 
     consoleErrorSpy.mockRestore();
   });

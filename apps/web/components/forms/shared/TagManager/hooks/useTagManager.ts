@@ -25,7 +25,10 @@ export const PRESET_COLORS = [
  * ランダムなプリセットカラーを取得
  */
 export const getRandomColor = (): string => {
-  return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
+  const index = Math.floor(Math.random() * PRESET_COLORS.length);
+  return PRESET_COLORS[index] ?? "#D1D5DB"; // index は 0〜PRESET_COLORS.length-1 の範囲に
+    // 必ず収まるため実際には到達しないフォールバックだが、型上は保証されないため
+    // normalizeColor の無効値時と同じデフォルト色を安全側に返す
 };
 
 /**

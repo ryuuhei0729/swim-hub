@@ -86,21 +86,62 @@ describe("[mobile] 累計⇄区間タイム変換", () => {
   });
 });
 
-describe("[mobile] getRelayLegBoundaries / getRelayLegDistance", () => {
-  it("各種目の leg 境界配列", () => {
-    expect(getRelayLegBoundaries("relay_4x25_free")).toEqual([25, 50, 75, 100]);
-    expect(getRelayLegBoundaries("relay_4x50_free")).toEqual([50, 100, 150, 200]);
-    expect(getRelayLegBoundaries("relay_4x100_medley")).toEqual([100, 200, 300, 400]);
-    expect(getRelayLegBoundaries("relay_4x200_free")).toEqual([200, 400, 600, 800]);
+// ---------------------------------------------------------------------------
+// Reviewer Warning 回帰テスト: getRelayLegDistance 内の legDistMap (id→距離の
+// ハードコード対応表) は distById (buildRelayEvents, 上記 Critical 4 回帰) と
+// 同型の別の二重管理。既存テストは relay_4x200_free / relay_4x50_medley の2件
+// しか直接 assert しておらず、relay_4x100_free と relay_4x25_medley は
+// どこからも検証されていなかった (Reviewer実証: legDistMap の relay_4x100_free
+// を 100→999 に書き換えても既存37テストが全 green)。
+// Web 正準 (apps/web/__tests__/relayEvents.test.ts の [V-07] ブロック) と同水準
+// になるよう、getRelayLegDistance / getRelayLegBoundaries の双方で全7ケースを
+// 個別に assert する。
+// ---------------------------------------------------------------------------
+describe("[mobile] getRelayLegDistance - leg距離の取得 (Web [V-07] と同水準の全7ケース)", () => {
+  it.each([
+    ["relay_4x25_free", 25],
+    ["relay_4x50_free", 50],
+    ["relay_4x100_free", 100],
+    ["relay_4x200_free", 200],
+    ["relay_4x25_medley", 25],
+    ["relay_4x50_medley", 50],
+    ["relay_4x100_medley", 100],
+  ] satisfies Array<[RelayEventId, number]>)("%s → legDist = %i", (id, expectedDist) => {
+    expect(getRelayLegDistance(id)).toBe(expectedDist);
   });
 
-  it("legDist の取得", () => {
-    expect(getRelayLegDistance("relay_4x200_free")).toBe(200);
-    expect(getRelayLegDistance("relay_4x50_medley")).toBe(50);
-  });
-
-  it("不正 ID は例外", () => {
+  it("不正な relayEventId を渡したとき例外を投げる", () => {
     expect(() => getRelayLegDistance("relay_unknown" as RelayEventId)).toThrow();
+  });
+});
+
+describe("[mobile] getRelayLegBoundaries - leg境界距離配列の取得 (Web [V-07] と同水準の全7ケース)", () => {
+  it.each([
+    ["relay_4x25_free", [25, 50, 75, 100]],
+    ["relay_4x50_free", [50, 100, 150, 200]],
+    ["relay_4x100_free", [100, 200, 300, 400]],
+    ["relay_4x200_free", [200, 400, 600, 800]],
+    ["relay_4x25_medley", [25, 50, 75, 100]],
+    ["relay_4x50_medley", [50, 100, 150, 200]],
+    ["relay_4x100_medley", [100, 200, 300, 400]],
+  ] satisfies Array<[RelayEventId, number[]]>)("%s → %j", (id, expectedBoundaries) => {
+    expect(getRelayLegBoundaries(id)).toEqual(expectedBoundaries);
+  });
+
+  it("全種目: 境界距離配列の長さは常に4である", () => {
+    for (const event of RELAY_EVENTS) {
+      expect(getRelayLegBoundaries(event.id)).toHaveLength(4);
+    }
+  });
+
+  it("全種目: 境界距離配列は昇順に並んでいる", () => {
+    for (const event of RELAY_EVENTS) {
+      const boundaries = getRelayLegBoundaries(event.id);
+      for (let i = 1; i < boundaries.length; i++) {
+        // ループ条件 (1 <= i < boundaries.length) により boundaries[i] と boundaries[i - 1] は常に範囲内
+        expect(boundaries[i]!).toBeGreaterThan(boundaries[i - 1]!);
+      }
+    }
   });
 });
 
@@ -123,10 +164,33 @@ describe("[mobile] buildRelayEvents ラベル", () => {
   it("メドレーラベルが正しい泳順で生成される", () => {
     const m50 = buildRelayEvents(TEST_LABELS).find((e) => e.id === "relay_4x50_medley")!;
     expect(m50.label).toBe("50m×4 メドレーリレー");
-    expect(m50.legs[0].legLabel).toContain("第1泳者");
-    expect(m50.legs[0].legLabel).toContain("背泳ぎ");
-    expect(m50.legs[3].legLabel).toContain("第4泳者");
-    expect(m50.legs[3].legLabel).toContain("自由形");
+    expect(m50.legs[0]!.legLabel).toContain("第1泳者"); // リレーは常に4legなので必ず存在
+    expect(m50.legs[0]!.legLabel).toContain("背泳ぎ");
+    expect(m50.legs[3]!.legLabel).toContain("第4泳者");
+    expect(m50.legs[3]!.legLabel).toContain("自由形");
+  });
+
+  // ---------------------------------------------------------------------------
+  // Reviewer Critical 4 回帰テスト: buildRelayEvents の distById (id→距離のハードコード
+  // 対応表) は、1つ値を間違えるとその種目の event.label (トップレベルの種目名ラベル、
+  // 例: "50m×4 フリーリレー") が静かに誤った距離で表示される。
+  // 既存テストは relay_4x50_medley の event.label のみを検証しており、フリー種目
+  // (25/50/100/200) の event.label は一度も assert されていなかった
+  // (Reviewer実証: relay_4x50_free の distById を 50→25 に書き換えても全テストが
+  // green のまま)。medley の残り2種目 (25/100) も未検証だったため合わせて塞ぐ。
+  // ---------------------------------------------------------------------------
+  it.each([
+    ["relay_4x25_free", "25m×4 フリーリレー"],
+    ["relay_4x50_free", "50m×4 フリーリレー"],
+    ["relay_4x100_free", "100m×4 フリーリレー"],
+    ["relay_4x200_free", "200m×4 フリーリレー"],
+    ["relay_4x25_medley", "25m×4 メドレーリレー"],
+    ["relay_4x50_medley", "50m×4 メドレーリレー"],
+    ["relay_4x100_medley", "100m×4 メドレーリレー"],
+  ] satisfies Array<[RelayEventId, string]>)("%s の event.label は %s", (id, expectedLabel) => {
+    const labelled = buildRelayEvents(TEST_LABELS);
+    const event = labelled.find((e) => e.id === id)!;
+    expect(event.label).toBe(expectedLabel);
   });
 });
 

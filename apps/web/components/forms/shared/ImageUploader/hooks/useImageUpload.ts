@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export interface ImageFile {
   id: string;
@@ -170,7 +171,7 @@ export const useImageUpload = ({
           if (previewUrl) {
             URL.revokeObjectURL(previewUrl);
           }
-          setError(err instanceof Error ? err.message : t("invalidFile"));
+          setError(toUserFacingMessage(err, t("invalidFile")));
           return;
         }
       }

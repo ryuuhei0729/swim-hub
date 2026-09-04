@@ -77,7 +77,7 @@ describe("useCalendarQuery", () => {
 
     // getCalendarEntriesが呼ばれたことを確認
     expect(mockApi.getCalendarEntries).toHaveBeenCalled();
-    const callArgs = vi.mocked(mockApi.getCalendarEntries).mock.calls[0];
+    const callArgs = vi.mocked(mockApi.getCalendarEntries).mock.calls[0]!; // 直前の toHaveBeenCalled で呼び出しの存在は保証済み
     expect(callArgs).toHaveLength(2);
     // 開始日と終了日が文字列形式であることを確認
     expect(typeof callArgs[0]).toBe("string");
@@ -133,7 +133,7 @@ describe("useCalendarQuery", () => {
 
     // 2月のクエリが実行されたことを確認
     expect(mockApi.getCalendarEntries).toHaveBeenCalled();
-    const callArgs = vi.mocked(mockApi.getCalendarEntries).mock.calls[0];
+    const callArgs = vi.mocked(mockApi.getCalendarEntries).mock.calls[0]!; // 直前の toHaveBeenCalled で呼び出しの存在は保証済み
     // 2月の日付が含まれることを確認（タイムゾーンの影響を考慮）
     const dateString = callArgs[0] + callArgs[1];
     expect(dateString).toMatch(/2025-02/);
@@ -182,8 +182,8 @@ describe("useCalendarQuery", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toHaveLength(1);
-    expect(result.current.data?.[0].type).toBe("team_practice");
-    expect(result.current.data?.[0].id).toBe("tp-1");
+    expect(result.current.data?.[0]!.type).toBe("team_practice"); // 直前の toHaveLength(1) で存在は保証済み
+    expect(result.current.data?.[0]!.id).toBe("tp-1");
   });
 
   it("team_competition アイテムがフィルタアウトされずに返される", async () => {
@@ -209,8 +209,8 @@ describe("useCalendarQuery", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toHaveLength(1);
-    expect(result.current.data?.[0].type).toBe("team_competition");
-    expect(result.current.data?.[0].id).toBe("tc-1");
+    expect(result.current.data?.[0]!.type).toBe("team_competition"); // 直前の toHaveLength(1) で存在は保証済み
+    expect(result.current.data?.[0]!.id).toBe("tc-1");
   });
 
   it("複数の team_id を持つ team_practice が混在しても全て返される", async () => {

@@ -72,7 +72,7 @@ describe("TeamMembersAPI.updateRole - requireTeamAdmin ガード", () => {
     const history = supabaseMock.getBuilderHistory("team_memberships");
     expect(history).toHaveLength(1);
     // UPDATE は呼ばれていないはず
-    expect(history[0].update).not.toHaveBeenCalled();
+    expect(supabaseMock.getBuilder("team_memberships", 0).update).not.toHaveBeenCalled();
   });
 
   it("admin 権限がある場合は updateRole が成功し、UPDATE が実行される", async () => {
@@ -110,12 +110,22 @@ describe("TeamMembersAPI.updateRole - requireTeamAdmin ガード", () => {
     // 2 回の team_memberships アクセス（admin チェック + UPDATE）
     expect(history).toHaveLength(2);
     // 2回目が UPDATE であること
-    expect(history[1].update).toHaveBeenCalledWith({ role: "user" });
-    expect(history[1].eq).toHaveBeenCalledWith("team_id", "team-1");
-    expect(history[1].eq).toHaveBeenCalledWith("user_id", "member-1");
+    const updateBuilder = supabaseMock.getBuilder("team_memberships", 1);
+    expect(updateBuilder.update).toHaveBeenCalledWith({ role: "user" });
+    expect(updateBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
+    expect(updateBuilder.eq).toHaveBeenCalledWith("user_id", "member-1");
   });
 
-  it("admin チェック中に DB エラーが発生した場合は DB エラーが伝播する", async () => {
+  // 情報露出の是正 (根拠: apps/shared/utils/userFacingError.ts のクラスコメント):
+  // PostgrestError はテーブル名・カラム名・RLS ポリシー詳細を含みうる生のエラーであり、
+  // `エラーが発生しました: ${error.message}` のように独自メッセージへ埋め込んで
+  // フォームへそのまま表示すると情報露出になる。そのため requireTeamAdmin は
+  // 生の PostgrestError をメッセージに埋め込まず `throw error` でそのまま
+  // 再送出するように変更された (呼び出し元が UserFacingError で判定し、
+  // ユーザー提示用メッセージが無ければ汎用メッセージにフォールバックする設計)。
+  // このテストは「DB エラー時に例外が伝播すること」自体は維持しつつ、
+  // 期待値を新仕様 (生エラーがそのまま伝播する) に更新する。
+  it("admin チェック中に DB エラーが発生した場合は元の DB エラーがそのまま伝播する（メッセージに埋め込まれない）", async () => {
     const dbError = new Error("connection error");
 
     supabaseMock.queueTable("team_memberships", [
@@ -127,9 +137,7 @@ describe("TeamMembersAPI.updateRole - requireTeamAdmin ガード", () => {
       },
     ]);
 
-    await expect(api.updateRole("team-1", "member-1", "admin")).rejects.toThrow(
-      "管理者権限の確認中にエラーが発生しました",
-    );
+    await expect(api.updateRole("team-1", "member-1", "admin")).rejects.toThrow(dbError);
   });
 
   it("updateRole は teamId を admin チェックに使用する（user_id と team_id の組み合わせで確認）", async () => {
@@ -148,10 +156,10 @@ describe("TeamMembersAPI.updateRole - requireTeamAdmin ガード", () => {
     );
 
     // requireTeamAdmin が team_id と user_id と is_active と role で eq を呼ぶこと
-    const history = supabaseMock.getBuilderHistory("team_memberships");
-    expect(history[0].eq).toHaveBeenCalledWith("team_id", "team-99");
-    expect(history[0].eq).toHaveBeenCalledWith("user_id", "test-user-id"); // auth.getUser() のユーザー
-    expect(history[0].eq).toHaveBeenCalledWith("is_active", true);
-    expect(history[0].eq).toHaveBeenCalledWith("role", "admin");
+    const adminCheckBuilder = supabaseMock.getBuilder("team_memberships", 0);
+    expect(adminCheckBuilder.eq).toHaveBeenCalledWith("team_id", "team-99");
+    expect(adminCheckBuilder.eq).toHaveBeenCalledWith("user_id", "test-user-id"); // auth.getUser() のユーザー
+    expect(adminCheckBuilder.eq).toHaveBeenCalledWith("is_active", true);
+    expect(adminCheckBuilder.eq).toHaveBeenCalledWith("role", "admin");
   });
 });

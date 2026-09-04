@@ -30,6 +30,8 @@ beforeEach(() => {
   singleMock.mockResolvedValue({ data: { allowed: true, remaining: 9 }, error: null });
 });
 
+// NOTE: `rpcMock.mock.calls[0]!` を多用する。各テストは直前に `await reserveContactSubmission(...)`
+// を実行し RPC が呼ばれたことを前提にしている。
 describe("reserveContactSubmission — M-2 (V8)", () => {
   it("V8: RPC 呼び出しの引数に生IPがそのまま含まれていない", async () => {
     await reserveContactSubmission(RAW_IP);
@@ -44,11 +46,11 @@ describe("reserveContactSubmission — M-2 (V8)", () => {
 
   it("V8: p_ip_hash は SHA-256 ハッシュ (64桁hex) であり、同じIPからは決定的に同じ値になる", async () => {
     await reserveContactSubmission(RAW_IP);
-    const firstHash = (rpcMock.mock.calls[0][1] as { p_ip_hash: string }).p_ip_hash;
+    const firstHash = (rpcMock.mock.calls[0]![1] as { p_ip_hash: string }).p_ip_hash;
 
     rpcMock.mockClear();
     await reserveContactSubmission(RAW_IP);
-    const secondHash = (rpcMock.mock.calls[0][1] as { p_ip_hash: string }).p_ip_hash;
+    const secondHash = (rpcMock.mock.calls[0]![1] as { p_ip_hash: string }).p_ip_hash;
 
     expect(firstHash).toMatch(/^[0-9a-f]{64}$/);
     expect(firstHash).toBe(secondHash);
@@ -57,11 +59,11 @@ describe("reserveContactSubmission — M-2 (V8)", () => {
 
   it("V8: 異なるIPは異なるハッシュになる (バケット分離の前提)", async () => {
     await reserveContactSubmission("203.0.113.55");
-    const hashA = (rpcMock.mock.calls[0][1] as { p_ip_hash: string }).p_ip_hash;
+    const hashA = (rpcMock.mock.calls[0]![1] as { p_ip_hash: string }).p_ip_hash;
 
     rpcMock.mockClear();
     await reserveContactSubmission("198.51.100.10");
-    const hashB = (rpcMock.mock.calls[0][1] as { p_ip_hash: string }).p_ip_hash;
+    const hashB = (rpcMock.mock.calls[0]![1] as { p_ip_hash: string }).p_ip_hash;
 
     expect(hashA).not.toBe(hashB);
   });

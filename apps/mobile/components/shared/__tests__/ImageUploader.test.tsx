@@ -103,7 +103,7 @@ describe("ImageUploader — Android Photo Picker (権限撤去・JPEG再エン�
       await act(async () => {
         fireEvent.click(screen.getByText("追加"));
       });
-      const options = mocks.launchImageLibraryAsync.mock.calls[0][0];
+      const options = mocks.launchImageLibraryAsync.mock.calls[0]![0]; // fireEvent.click で必ず1回呼ばれる設計のため必ず存在
       expect(options.mediaTypes).toEqual(["images"]);
       expect(options.allowsEditing).toBe(false);
       expect(options.legacy).toBeUndefined();
@@ -149,7 +149,8 @@ describe("ImageUploader — Android Photo Picker (権限撤去・JPEG再エン�
       await act(async () => {
         fireEvent.click(screen.getByText("追加"));
       });
-      const [[newFiles]] = onImagesChange.mock.calls;
+      // onImagesChange は直前の fireEvent.click で必ず1回呼ばれる設計のため calls[0]/[0] は必ず存在
+      const newFiles = onImagesChange.mock.calls[0]![0];
       expect(newFiles[0].fileExtension).toBe("jpg");
       expect(newFiles[0].base64).toBe("JPEGBASE64"); // saveAsync (JPEG化後) の出力を使っている
     },
@@ -280,7 +281,7 @@ describe("ImageUploader — iOS legacy Picker (回帰: getFileExtensionFromAsset
     await act(async () => {
       fireEvent.click(screen.getByText("追加"));
     });
-    const options = mocks.launchImageLibraryAsync.mock.calls[0][0];
+    const options = mocks.launchImageLibraryAsync.mock.calls[0]![0]; // fireEvent.click で必ず1回呼ばれる設計のため必ず存在
     expect(options.legacy).toBe(true);
     expect(options.allowsEditing).toBe(false);
     expect(mocks.manipulate).not.toHaveBeenCalled();

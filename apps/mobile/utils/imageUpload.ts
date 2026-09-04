@@ -64,8 +64,9 @@ export async function deleteImage(
   const { error } = await supabase.storage.from(bucket).remove([path]);
 
   if (error) {
+    // Supabase Storage の生エラー (バケット名等を含みうる) はユーザーに表示しない（情報露出対策）
     console.error("画像削除エラー:", error);
-    throw new Error(i18n.t("common.upload.imageDeleteFailedDetail", { detail: error.message }));
+    throw new Error(i18n.t("common.upload.imageDeleteFailedSimple"));
   }
 }
 
@@ -82,8 +83,9 @@ export async function deleteImages(
   const { error } = await supabase.storage.from(bucket).remove(paths);
 
   if (error) {
+    // Supabase Storage の生エラー (バケット名等を含みうる) はユーザーに表示しない（情報露出対策）
     console.error("画像削除エラー:", error);
-    throw new Error(i18n.t("common.upload.imageDeleteFailedDetail", { detail: error.message }));
+    throw new Error(i18n.t("common.upload.imageDeleteFailedSimple"));
   }
 }
 

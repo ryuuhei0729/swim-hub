@@ -264,7 +264,7 @@ export const StyleSheet = {
     // スタイルオブジェクトをそのまま返す（DOM要素でも動作するように）
     const result: Record<string, Record<string, unknown>> = {};
     Object.keys(styles).forEach((key) => {
-      const style = styles[key];
+      const style = styles[key]!; // key は Object.keys(styles) から得た既存キーなので必ず存在
       if (typeof style === "object" && style !== null) {
         // ネストされたスタイルオブジェクトをフラット化
         result[key] = { ...style };

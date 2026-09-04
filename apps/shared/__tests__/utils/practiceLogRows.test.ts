@@ -97,8 +97,9 @@ describe("buildPracticeLogRows", () => {
     const rows = buildPracticeLogRows([makePractice("p-empty", [])]);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].log).toBeNull();
-    expect(rows[0].id).toBe("p-empty");
+    // toHaveLength(1) を直前で確認済み
+    expect(rows[0]!.log).toBeNull();
+    expect(rows[0]!.id).toBe("p-empty");
   });
 
   it("practice_logs が undefined でもクラッシュせず1行を返す", () => {

@@ -16,6 +16,7 @@ import {
   competitionToIOSEvent,
 } from "@/services/iosCalendarSync";
 import type { Practice, Competition } from "@swim-hub/shared/types";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 export interface UseIOSCalendarSyncReturn {
   /** iOS カレンダー連携が利用可能か */
@@ -106,20 +107,20 @@ export const useIOSCalendarSync = (): UseIOSCalendarSyncReturn => {
         }
       }
 
-      // DB更新
+      // DB更新（更新エラーは disableSync と同様に throw し、下の catch で生の詳細を
+      // 埋め込まずに処理する。生の PostgrestError.message をそのまま表示すると情報露出になる）
       const { error: updateError } = await supabase
         .from("users")
         .update({ ios_calendar_enabled: true })
         .eq("id", user.id);
 
-      if (updateError) {
-        setError(t("settings.iosCalendar.errors.dbUpdateError", { message: updateError.message }));
-        return false;
-      }
+      if (updateError) throw updateError;
 
       return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
+      // 生の例外メッセージ (RLS/ネイティブ API の詳細) をそのまま埋め込むと情報露出になるため、
+      // UserFacingError 由来のメッセージのみを通し、それ以外は i18n 済みの汎用文言にフォールバックする
+      const errorMessage = toUserFacingMessage(err, t("common.error"));
       setError(t("settings.iosCalendar.errors.enableSyncFailed", { message: errorMessage }));
       return false;
     } finally {

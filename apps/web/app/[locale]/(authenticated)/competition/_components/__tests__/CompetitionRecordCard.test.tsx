@@ -87,7 +87,11 @@ const makeRecord = (overrides: Partial<RecordType> = {}): RecordType =>
       id: 2,
       name_jp: "50m自由形",
       name: "50Fr",
-      style: "fr",
+      // styles.style は Issue #13 でタイトルケースに統一された DB canonical 値
+      // ("Fr"/"Br"/"Ba"/"Fly"/"IM")。formatStyleAbbrev は変換をかけず素通しするため、
+      // 小文字のままだと略称表示 (sm:hidden 側の span) が "50mfr" になり非表示テキストと
+      // 不一致になる。
+      style: "Fr",
       distance: 50,
     } as unknown as RecordType["style"],
     ...overrides,

@@ -71,10 +71,15 @@ export function resolveTargetLaps({
   // 範囲外 -> 端にクランプ (外挿しない)
   if (!below) {
     const first = sorted[0];
+    // sorted は usable (length > 0 を確認済み) のコピーで空になり得ないが、
+    // 関数境界を超えた保証は信用しない方針に従う
+    if (!first) return null;
     return build(first, "nearest", first.sampleCount, [bucketOf(first)]);
   }
   if (!above) {
     const last = sorted[sorted.length - 1];
+    // 同上: sorted は空になり得ないが防御的に扱う
+    if (!last) return null;
     return build(last, "nearest", last.sampleCount, [bucketOf(last)]);
   }
 

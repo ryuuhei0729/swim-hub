@@ -27,6 +27,7 @@ import {
 } from "@apps/shared/hooks/queries/practices";
 import { practiceKeys, teamKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { TagChips, TagSelectModal, TagManageModal, VideoUploader } from "@/components/shared";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
@@ -208,7 +209,7 @@ export const PracticeLogFormScreen: React.FC = () => {
           console.error("練習ログ取得エラー:", error);
           Alert.alert(
             t("common.error"),
-            error instanceof Error ? error.message : t("practice.mobile.fetchLogFailed"),
+            toUserFacingMessage(error, t("practice.mobile.fetchLogFailed")),
             [{ text: "OK", onPress: () => navigation.goBack() }],
           );
           setLoadingPracticeLog(false);
@@ -501,7 +502,7 @@ export const PracticeLogFormScreen: React.FC = () => {
                 });
               } catch (err) {
                 console.error("動画アップロードエラー:", err);
-                const errorDetail = err instanceof Error ? err.message : t("common.error");
+                const errorDetail = toUserFacingMessage(err, t("common.error"));
                 Alert.alert(
                   t("practice.mobile.videoUploadFailedTitle"),
                   `${t("practice.mobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
@@ -531,7 +532,7 @@ export const PracticeLogFormScreen: React.FC = () => {
       console.error("保存エラー:", error);
       Alert.alert(
         t("common.error"),
-        error instanceof Error ? error.message : t("practice.mobile.saveFailed"),
+        toUserFacingMessage(error, t("practice.mobile.saveFailed")),
         [{ text: "OK" }],
       );
     } finally {

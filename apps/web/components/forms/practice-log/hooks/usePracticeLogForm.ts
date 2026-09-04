@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { PracticeMenu, Tag, PracticeLogEditData, PracticeLogSubmitData } from "../types";
 import type { TimeEntry } from "@apps/shared/types/ui";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
 interface UsePracticeLogFormOptions {
   isOpen: boolean;
@@ -105,7 +106,13 @@ export const usePracticeLogForm = ({
       initialData = [
         {
           id: editData.id || "1",
-          style: editData.style || "Fr",
+          // practice_logs.style は CHECK 制約の無い自由記述列で legacy な小文字行が
+          // 混在し得るため、toStyleCode() で正規化する(そのまま渡すと StyleChipSelector
+          // で選択中チップが表示されない)。正規化できない場合は "Fr" に潰さず元の値を保持する
+          // (編集フォームの初期値なので、"Fr" に潰すと種目欄を触らず保存しただけで元の値が
+          // 自由形として静かに上書きされる)。editData.style は optional 型 (PracticeLogEditData)
+          // なので、値そのものが無い(=新規相当)場合のみ最終フォールバックとして "Fr" を使う。
+          style: toStyleCode(editData.style) ?? editData.style ?? "Fr",
           swimCategory: swimCategory as "Swim" | "Pull" | "Kick",
           distance: editData.distance || 100,
           reps: editData.rep_count || 4,

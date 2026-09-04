@@ -15,6 +15,7 @@ import { CenterModal } from "@/components/ui/CenterModal";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { uploadProfileImageViaApi } from "@/utils/imageUpload";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface ProfileEditModalProps {
   visible: boolean;
@@ -87,7 +88,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         try {
           const accessToken = await getAccessToken();
           if (!accessToken) {
-            throw new Error(t("common.upload.sessionInvalid"));
+            throw new UserFacingError(t("common.upload.sessionInvalid"));
           }
 
           const { path } = await uploadProfileImageViaApi(
@@ -103,11 +104,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
           await onAvatarChange(path);
         } catch (err) {
           console.error("画像アップロードエラー:", err);
-          const errorMessage =
-            err instanceof Error
-              ? err.message
-              : t("mypage.profileEdit.imageUploadFailed");
-          throw new Error(errorMessage);
+          throw new UserFacingError(
+            toUserFacingMessage(err, t("mypage.profileEdit.imageUploadFailed")),
+          );
         }
       }
 

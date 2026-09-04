@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import DatePicker from "@/components/ui/DatePicker";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
+import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface TeamCompetitionFormProps {
   isOpen: boolean;
@@ -60,7 +61,7 @@ export default function TeamCompetitionForm({
         error: authError,
       } = await supabase.auth.getUser();
       if (authError) throw authError;
-      if (!user) throw new Error(t("authRequired"));
+      if (!user) throw new UserFacingError(t("authRequired"));
 
       const competitionInput: import("@swim-hub/shared/types").CompetitionInsert = {
         user_id: user.id,
@@ -88,7 +89,7 @@ export default function TeamCompetitionForm({
       });
     } catch (err) {
       console.error("チーム大会作成エラー:", err);
-      setError(err instanceof Error ? err.message : t("createFailed"));
+      setError(toUserFacingMessage(err, t("createFailed")));
     } finally {
       setLoading(false);
     }

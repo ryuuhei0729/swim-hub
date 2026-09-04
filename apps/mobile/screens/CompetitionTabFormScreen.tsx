@@ -34,6 +34,7 @@ import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { StyleAPI } from "@apps/shared/api/styles";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
@@ -324,7 +325,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
         // 最初のエントリー行にデフォルト種目をセット
         if (stylesData.length > 0) {
-          const defaultStyleId = String(stylesData[0].id);
+          // 直前の length > 0 チェックにより、同一スコープ・同一配列の
+          // 先頭要素アクセスであることが保証される (Doctrine 2.6)
+          const defaultStyleId = String(stylesData[0]!.id);
           defaultEntryStyleIdRef.current = defaultStyleId;
           setEntries((prev) =>
             prev.map((e, i) => (i === 0 && !e.styleId ? { ...e, styleId: defaultStyleId } : e)),
@@ -394,7 +397,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         setEndDate(competition.end_date || "");
         setTitle(competition.title || "");
         setPlace(competition.place || "");
-        setPoolType(competition.pool_type ?? 0);
+        setPoolType(competition.pool_type);
         setCompetitionNote(competition.note || "");
         // 編集権限判定 (competitions UPDATE RLS と同条件をクライアントでも反映する)
         setCompetitionOwnerId(competition.user_id);
@@ -474,7 +477,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           endDate: competition.end_date || "",
           title: competition.title || "",
           place: competition.place || "",
-          poolType: competition.pool_type ?? 0,
+          poolType: competition.pool_type,
           note: competition.note || "",
           entries: initialEntries,
           records: initialRecords,
@@ -826,7 +829,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+        if (!user) throw new UserFacingError(t("auth.errorMap.sessionNotFound"));
 
         // 既存エントリー取得 (衝突解決用)
         const allExistingEntries = await entryApi.getEntriesByCompetition(savedCompetitionId);
@@ -943,6 +946,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         const createRecordSet = new Set(recordDiff.creates);
         for (let idx = 0; idx < validRecords.length; idx++) {
           const record = validRecords[idx];
+          if (!record) continue; // idx < validRecords.length なので理論上ここに来ないが防御的に扱う
           if (!createRecordSet.has(record.draftId)) continue;
           const recordData: Omit<RecordInsert, "user_id"> = {
             competition_id: savedCompetitionId,
@@ -982,7 +986,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                 });
               } catch (err) {
                 console.error("動画アップロードエラー:", err);
-                const errorDetail = err instanceof Error ? err.message : t("common.error");
+                const errorDetail = toUserFacingMessage(err, t("common.error"));
                 Alert.alert(
                   t("recordMobile.videoUploadFailedTitle"),
                   `${t("recordMobile.videoUploadFailedSaved")}\n\n${errorDetail}`,
@@ -1006,7 +1010,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
       setIsSaved(true);
     } catch (error) {
       console.error("保存エラー:", error);
-      const msg = error instanceof Error ? error.message : t("competition.mobile.saveFailed");
+      const msg = toUserFacingMessage(error, t("competition.mobile.saveFailed"));
       setSaveError(msg);
       Alert.alert(t("common.error"), msg, [{ text: "OK" }]);
     } finally {

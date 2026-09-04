@@ -76,7 +76,7 @@ describe("TagInput ドロップダウンのリアルタイム更新 (practiceSto
     await user.click(within(formRow).getByTestId("manage-tag-button-tag-1"));
     await user.click(screen.getByRole("button", { name: /削除/ }));
     const confirmButtons = await screen.findAllByRole("button", { name: "削除" });
-    await user.click(confirmButtons[confirmButtons.length - 1]);
+    await user.click(confirmButtons[confirmButtons.length - 1]!);
 
     // 削除後、ストアは更新される
     await waitFor(() => {

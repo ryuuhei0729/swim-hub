@@ -8,6 +8,7 @@ import { localizedStyleName } from "@/utils/styleName";
 import { EntryAPI } from "@apps/shared/api/entries";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { darkenHex } from "@/utils/colorTone";
 import { styles } from "../styles";
 import type { EntryDetailProps, EntryData } from "../types";
@@ -192,6 +193,9 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                           date: firstEntry.date || "",
                           end_date: null,
                           place: place || null,
+                          // poolType は EntryDetailProps 上 optional。唯一の呼び出し元
+                          // DayDetailModal.tsx は firstEntry.metadata?.competition?.pool_type ?? 0
+                          // で既に解決済みの値を渡すため、実際に undefined になる経路は無い。
                           pool_type: poolType ?? 0,
                           team_id: firstEntry.metadata?.competition?.team_id || null,
                         },
@@ -249,7 +253,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                 if (actualEntries.length > 0 && !loading) {
                   const firstActualEntry = actualEntries[0];
                   const firstCalendarEntry = entries[0];
-                  if (firstCalendarEntry && onEditEntry) {
+                  if (firstActualEntry && firstCalendarEntry && onEditEntry) {
                     // 実際のエントリーIDを使用してCalendarItemを構築
                     const entryItem: CalendarItem = {
                       ...firstCalendarEntry,
@@ -260,8 +264,11 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                   }
                 } else if (entries.length > 0 && onEditEntry) {
                   // actualEntriesがまだ読み込まれていない場合は、CalendarItemをそのまま使用
-                  onEditEntry(entries[0]);
-                  onClose?.();
+                  const firstEntry = entries[0];
+                  if (firstEntry) {
+                    onEditEntry(firstEntry);
+                    onClose?.();
+                  }
                 }
               }}
             >
@@ -335,9 +342,10 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                                   console.error("削除エラー:", error);
                                   Alert.alert(
                                     t("common.alertErrorTitle"),
-                                    error instanceof Error
-                                      ? error.message
-                                      : t("dashboard.dayDetail.entryDeleteFailed"),
+                                    toUserFacingMessage(
+                                      error,
+                                      t("dashboard.dayDetail.entryDeleteFailed"),
+                                    ),
                                     [{ text: "OK" }],
                                   );
                                 } finally {

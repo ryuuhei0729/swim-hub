@@ -19,6 +19,7 @@ import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { useQueryClient } from "@tanstack/react-query";
 import type { EntryWithDetails } from "@swim-hub/shared/types";
 import { formatTimeBest } from "@apps/shared/utils/time";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
 
 /** 背面タップでは閉じない (元実装どおり、背面タップ用の Pressable が存在しない) */
@@ -151,10 +152,7 @@ export function TeamCompetitionEntryModal({
           "TeamCompetitionEntryModal: failed to update status",
           err,
         );
-        const msg =
-          err instanceof Error
-            ? err.message
-            : t("teams.mobile.teamCompetitionEntryModal.saveFailed");
+        const msg = toUserFacingMessage(err, t("teams.mobile.teamCompetitionEntryModal.saveFailed"));
         Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);
       }
     },

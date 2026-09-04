@@ -27,7 +27,7 @@ const capturePanConfig = () => {
   const spy = vi.spyOn(PanResponder, "create");
   return () => {
     expect(spy).toHaveBeenCalledTimes(1);
-    return spy.mock.results[0].value.__config;
+    return spy.mock.results[0]!.value.__config; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
   };
 };
 

@@ -1,9 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createMockQueryBuilder,
-  createMockSupabaseClient,
-  type MockQueryBuilder,
-} from "../../__mocks__/supabase";
 import { AttendanceAPI } from "../../api/attendance";
 import {
   type AttendanceStatus,
@@ -11,47 +6,7 @@ import {
   type TeamAttendanceInsert,
   type TeamAttendanceUpdate,
 } from "../../types";
-
-type TableResponse = {
-  data: unknown;
-  error?: unknown;
-  configure?: (builder: MockQueryBuilder) => void;
-};
-
-const createSupabaseMock = (options: { userId?: string } = {}) => {
-  const { userId } = options;
-  const client = createMockSupabaseClient({ userId });
-  const tableQueues = new Map<string, TableResponse[]>();
-  const builderHistory = new Map<string, MockQueryBuilder[]>();
-
-  client.from = vi.fn((table: string) => {
-    const queue = tableQueues.get(table) ?? [];
-    const response =
-      queue.length > 0
-        ? queue.shift()!
-        : {
-            data: [],
-            error: null,
-          };
-
-    const builder = createMockQueryBuilder(response.data, response.error ?? null);
-    response.configure?.(builder);
-
-    const history = builderHistory.get(table) ?? [];
-    history.push(builder);
-    builderHistory.set(table, history);
-
-    return builder;
-  }) as unknown as typeof client.from;
-
-  return {
-    client,
-    queueTable: (table: string, responses: TableResponse[]) => {
-      tableQueues.set(table, [...responses]);
-    },
-    getBuilderHistory: (table: string) => builderHistory.get(table) ?? [],
-  };
-};
+import { createSupabaseMock } from "../utils/supabase-mock";
 
 const createAttendanceRow = (
   overrides: Partial<TeamAttendance> & {
@@ -202,9 +157,9 @@ describe("AttendanceAPI", () => {
 
       expect(result).toEqual(updatedAttendance);
 
-      const builderHistory = supabaseMock.getBuilderHistory("team_attendance");
-      expect(builderHistory[1].update).toHaveBeenCalledWith(updates);
-      expect(builderHistory[1].eq).toHaveBeenCalledWith("id", "attendance-1");
+      const updateBuilder = supabaseMock.getBuilder("team_attendance", 1);
+      expect(updateBuilder.update).toHaveBeenCalledWith(updates);
+      expect(updateBuilder.eq).toHaveBeenCalledWith("id", "attendance-1");
     });
 
     it("自分以外の出欠情報は更新できない", async () => {
@@ -264,7 +219,7 @@ describe("AttendanceAPI", () => {
       const result = await api.createAttendance(baseInsert);
 
       expect(result).toEqual(createdAttendance);
-      const builder = supabaseMock.getBuilderHistory("team_attendance")[0];
+      const builder = supabaseMock.getBuilder("team_attendance");
       expect(builder.insert).toHaveBeenCalledWith(baseInsert);
     });
 
@@ -315,9 +270,9 @@ describe("AttendanceAPI", () => {
       const result = await api.updateAttendance("attendance-1", updates);
 
       expect(result).toEqual(updatedAttendance);
-      const builderHistory = supabaseMock.getBuilderHistory("team_attendance");
-      expect(builderHistory[1].update).toHaveBeenCalledWith(updates);
-      expect(builderHistory[1].eq).toHaveBeenCalledWith("id", "attendance-1");
+      const updateBuilder = supabaseMock.getBuilder("team_attendance", 1);
+      expect(updateBuilder.update).toHaveBeenCalledWith(updates);
+      expect(updateBuilder.eq).toHaveBeenCalledWith("id", "attendance-1");
     });
 
     it("出欠情報が存在しない場合はエラーとなる", async () => {

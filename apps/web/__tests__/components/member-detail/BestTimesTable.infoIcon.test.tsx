@@ -98,7 +98,8 @@ describe("[V-ICON-10] メンバー詳細: info ツールチップの文言が実
 
   it("トグルボタン自身の文言とは異なる、説明文特有の内容 (算出式) を含む (トートロジー回避の確認)", () => {
     renderWithLocale([buildBestTime()], { gender: 0 });
-    const tooltip = screen.getAllByRole("tooltip")[0];
+    // role="tooltip" は前のテストと同様に1件のみ存在する前提
+    const tooltip = screen.getAllByRole("tooltip")[0]!;
     expect(tooltip.textContent).toContain("1000×(基準タイム÷記録)³");
     expect(getToggle().textContent).not.toContain("1000×(基準タイム÷記録)³");
   });

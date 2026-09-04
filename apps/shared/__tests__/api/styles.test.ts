@@ -78,9 +78,14 @@ describe("StyleAPI", () => {
         createMockStyle({ name_en: "freestyle", distance: 100 }),
       ];
 
+      // NOTE (Sprint: GitHub Issue #13): getStylesByStroke は移行安全性のため
+      // .eq ではなく .ilike で照合するよう変更された (apps/shared/api/styles.ts 参照)。
+      // ケーシングの絞り込み値そのものの検証は
+      // apps/shared/__tests__/api/styleCasingMigrationSafety.test.ts [V-MIG-03] で行う。
+      // このテストは既存の「結果が返る」観点のみ維持するため、モックに ilike を追加した。
       mockClient.from = vi.fn(() => ({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
+        ilike: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({
           data: mockStyles,
           error: null,

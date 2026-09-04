@@ -348,7 +348,7 @@ describe("AdminMonthlyAttendance", () => {
         (el.getAttribute("style") ?? "").includes("position: absolute"),
       );
       expect(backdropCandidates.length).toBe(1);
-      const backdrop = backdropCandidates[0];
+      const backdrop = backdropCandidates[0]!; // 直前の toBe(1) で存在は保証済み
 
       fireEvent.click(backdrop);
 

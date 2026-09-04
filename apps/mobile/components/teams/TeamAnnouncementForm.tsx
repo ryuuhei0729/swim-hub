@@ -17,6 +17,7 @@ import {
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { CenterModal } from "@/components/ui/CenterModal";
 import type { TeamAnnouncement } from "@swim-hub/shared/types";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 interface TeamAnnouncementFormProps {
   visible: boolean;
@@ -210,13 +211,7 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
       handleClose();
     } catch (err) {
       console.error("お知らせ保存エラー:", err);
-      let errorMessage = t("teams.mobile.announcementSaveFailed");
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err && typeof err === "object" && "message" in err) {
-        errorMessage = String(err.message);
-      }
-      setError(errorMessage);
+      setError(toUserFacingMessage(err, t("teams.mobile.announcementSaveFailed")));
     }
   };
 

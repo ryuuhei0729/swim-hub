@@ -73,6 +73,12 @@ export const RecordCard: React.FC<{
   // share-record-button ハンドラと同一方針。取得失敗時は catch し、バッジ非表示のまま進める）
   const handleShare = async () => {
     const competitionDateRaw = records[0]?.date;
+    // TODO(warning2) PM報告: poolType は RecordCard の optional prop。呼び出し元のうち
+    // components/records/StandaloneRecordDetailModal.tsx は poolType を一切渡していない
+    // (record.pool_type が実在するのに未配線)。大会未紐付けレコード(一括入力)を
+    // このモーダルで共有すると、常に pool_type=0(短水路)として前回ベストタイムを検索する。
+    // シェアバッジ表示のみで書き込みには関与しないため実害は表示の誤りに限られるが、
+    // 挙動を変える判断はできないため現状維持で残す。
     const poolTypeNum = poolType ?? 0;
     let previousBest: number | undefined;
     let isFirstRecord = false;
@@ -200,16 +206,19 @@ export const RecordCard: React.FC<{
   const allLapTimes = useMemo(() => {
     if (displaySplitTimes.length === 0) return [];
     const laps: { fromDistance: number; toDistance: number; lapTime: number }[] = [];
-    if (displaySplitTimes[0].distance > 0) {
+    const firstSplit = displaySplitTimes[0];
+    if (firstSplit && firstSplit.distance > 0) {
       laps.push({
         fromDistance: 0,
-        toDistance: displaySplitTimes[0].distance,
-        lapTime: displaySplitTimes[0].split_time,
+        toDistance: firstSplit.distance,
+        lapTime: firstSplit.split_time,
       });
     }
     for (let i = 1; i < displaySplitTimes.length; i++) {
       const prev = displaySplitTimes[i - 1];
       const curr = displaySplitTimes[i];
+      if (!prev || !curr) continue; // i>=1 かつ i<length なので理論上 undefined にならないが、
+                                     // 配列が外部から渡される可変長データのため防御的に扱う
       if (prev.split_time > 0 && curr.split_time > 0) {
         laps.push({
           fromDistance: prev.distance,
@@ -270,6 +279,12 @@ export const RecordCard: React.FC<{
                         name_jp: record.styleName,
                         distance: record.styleDistance,
                       },
+                      // PM報告(Warning2トリアージ): poolType は上の handleShare 同様
+                      // StandaloneRecordDetailModal.tsx 経由では undefined になり得る。ただし
+                      // その唯一の呼び出し元は onEditRecord={() => onEdit(record)} と自前の
+                      // record をそのまま使い、この calendarItem 引数を読まずに捨てているため
+                      // 現状は未消費(死んでいる)。onEditRecord の配線が将来変わると発火しうる
+                      // ため、挙動を変える判断はできず現状維持で残す。
                       pool_type: poolType ?? 0,
                     },
                   };

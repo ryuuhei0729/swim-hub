@@ -301,7 +301,11 @@ describe("validInputCount - 入力済みカウント", () => {
 // =============================================================================
 
 describe("長水路フィルタ境界値", () => {
-  const DISTANCES_BY_STYLE: Record<string, number[]> = {
+  // プロダクション本体 (BulkBestTimeClient.tsx) の StyleTab / DISTANCES_BY_STYLE は
+  // export されていないため import できない (PM 裁定#6: プロダクションへの export
+  // 追加はスコープ外)。テスト側で同じ閉じたリテラルユニオンとして再定義することで
+  // `!` を撒かずにインデックスアクセスを安全にする (Doctrine 2.7)。
+  const DISTANCES_BY_STYLE: Record<"fr" | "br" | "ba" | "fly" | "im", number[]> = {
     fr: [25, 50, 100, 200, 400, 800, 1500],
     br: [25, 50, 100, 200],
     ba: [25, 50, 100, 200],

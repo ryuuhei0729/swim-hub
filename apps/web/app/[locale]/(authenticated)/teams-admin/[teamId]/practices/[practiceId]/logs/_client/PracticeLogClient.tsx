@@ -26,6 +26,7 @@ import TeamTimeInputModal from "@/components/team/TeamTimeInputModal";
 import type { TeamTimeEntry } from "@/components/team/TeamTimeInputModal";
 import OcrScanModal from "@/components/team/OcrScanModal";
 import { PracticeTag, Practice } from "@apps/shared/types";
+import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
 // TeamVideoUploaderを動的インポート（重いコンポーネント）
 const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
@@ -200,7 +201,11 @@ export default function PracticeLogClient({
     >();
 
     for (const log of existingLogs) {
-      const key = `${log.style}-${log.swim_category || "Swim"}-${log.distance}-${log.rep_count}-${log.set_count}`;
+      // log.style は practice_logs.style (CHECK 制約の無い自由記述列) で legacy な
+      // 小文字行が混在し得る。正規化せずグルーピングキーに使うと、本来同一メニューの
+      // ログが "Fr"/"fr" で別グループに分裂し、対象メンバーが正しく1つにまとまらない。
+      const normalizedStyle = toStyleCode(log.style) ?? log.style;
+      const key = `${normalizedStyle}-${log.swim_category || "Swim"}-${log.distance}-${log.rep_count}-${log.set_count}`;
 
       if (!menuGroups.has(key)) {
         const tags =
@@ -209,7 +214,7 @@ export default function PracticeLogClient({
             .filter((tag): tag is PracticeTag => tag != null) || [];
 
         menuGroups.set(key, {
-          style: log.style,
+          style: normalizedStyle,
           swim_category: log.swim_category || "Swim",
           distance: log.distance,
           rep_count: log.rep_count,
@@ -410,9 +415,10 @@ export default function PracticeLogClient({
       // RPC関数の戻り値を確認
       if (result && typeof result === "object" && "success" in result) {
         if (!result.success) {
-          const errorMessage = result.error || t("practiceLog.errorSave");
-          console.error("練習ログ保存エラー:", errorMessage);
-          setSubmitError(t("practiceLog.errorSaveWithMessage", { message: errorMessage }));
+          // result.error は RPC (replace_practice_logs) の戻り値で、想定外の例外時は
+          // SQLERRM (生の Postgres エラー) がそのまま入りうるためユーザーには表示しない（情報露出対策）
+          console.error("練習ログ保存エラー:", result.error);
+          setSubmitError(t("practiceLog.errorSave"));
           setSaving(false);
           return;
         }
@@ -431,10 +437,14 @@ export default function PracticeLogClient({
         const logIdMap = new Map<string, string>();
         let flatIdx = 0;
         for (let mi = 0; mi < menus.length; mi++) {
-          const targetMembers = members.filter((m) => menus[mi].targetUserIds.includes(m.user_id));
+          const menuAtIndex = menus[mi];
+          if (!menuAtIndex) continue; // menus は useState の PracticeMenu[] で穴は生じないが、
+            // for ループのインデックスは length チェックだけでは型上絞り込まれないため防御的に扱う
+          const targetMembers = members.filter((m) => menuAtIndex.targetUserIds.includes(m.user_id));
           for (const member of targetMembers) {
-            if (logIds[flatIdx]) {
-              logIdMap.set(`${mi}_${member.user_id}`, logIds[flatIdx]);
+            const logId = logIds[flatIdx];
+            if (logId) {
+              logIdMap.set(`${mi}_${member.user_id}`, logId);
             }
             flatIdx++;
           }
@@ -442,6 +452,7 @@ export default function PracticeLogClient({
         const videoUploadErrors: string[] = [];
         for (let i = 0; i < menus.length; i++) {
           const menu = menus[i];
+          if (!menu) continue; // 上記と同じ理由で防御的にスキップ
           if (!menu.videoFiles) continue;
           for (const [memberId, videoFile] of Object.entries(menu.videoFiles)) {
             if (!videoFile) continue;
@@ -566,7 +577,7 @@ export default function PracticeLogClient({
     // 既存メニューが1件でデフォルト値のままの場合は上書き
     let isDefault = false;
     if (menus.length === 1) {
-      const m = menus[0];
+      const m = menus[0]!; // menus.length === 1 を直上の if で確認済み
       isDefault =
         m.style === "Fr" &&
         m.swimCategory === "Swim" &&

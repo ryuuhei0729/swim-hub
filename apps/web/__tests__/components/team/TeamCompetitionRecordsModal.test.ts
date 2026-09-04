@@ -8,6 +8,8 @@ interface SplitTimeEntry {
   split_time: number;
 }
 
+// NOTE: `result[N]!` を使用する。このテストの入力 (3件の split + ゴール1件) から
+// buildDisplaySplits が返す配列は常に4件になる (静的な入力に基づく決定的な結果)。
 describe("buildDisplaySplits", () => {
   // ---- 正常系 ----
 
@@ -48,10 +50,10 @@ describe("buildDisplaySplits", () => {
       ];
       const result = buildDisplaySplits(splits, 200, 120.0);
 
-      expect(result[0].distance).toBe(50);
-      expect(result[1].distance).toBe(100);
-      expect(result[2].distance).toBe(150);
-      expect(result[3].distance).toBe(200); // ゴール
+      expect(result[0]!.distance).toBe(50);
+      expect(result[1]!.distance).toBe(100);
+      expect(result[2]!.distance).toBe(150);
+      expect(result[3]!.distance).toBe(200); // ゴール
     });
   });
 

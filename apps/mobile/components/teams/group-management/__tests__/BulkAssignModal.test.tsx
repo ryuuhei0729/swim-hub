@@ -278,6 +278,19 @@ function getZoneCountText(label: string): string | null | undefined {
   return screen.getByText(label).nextElementSibling?.textContent;
 }
 
+/**
+ * capturedPanGestures[0] は各 it() で render()+flush() の直後に取得する。
+ * TEAM_MEMBERS は常に1件以上あり、render 時に対象チップの Gesture.Pan() が
+ * 必ず1回呼ばれるため、この時点で配列は必ず1件以上を含む設計である。
+ * 要素が無い場合はテストのセットアップ自体が壊れているため早期に例外で失敗させる
+ * (fixture 側の保証をここに集約し、呼び出し側ごとに ! を撒かない)。
+ */
+function firstGesture(): PanHandlers {
+  const gesture = capturedPanGestures[0];
+  if (!gesture) throw new Error("capturedPanGestures[0] was not captured");
+  return gesture;
+}
+
 describe("BulkAssignModal - ドラッグ中のコンポーネント参照安定性 [Bug3]", () => {
   it("[V-B3-01] ドラッグ開始 (draggedUserId の変化) をまたいでも、チップの DOM ノードは再生成されない", async () => {
     render(
@@ -295,16 +308,16 @@ describe("BulkAssignModal - ドラッグ中のコンポーネント参照安定�
     await flush();
 
     // 未割り当てゾーン側のチップ (ドラッグオーバーレイにも同名テキストが出るため index 0 を使う)
-    const chipNodeBefore = screen.getAllByText("Taro")[0].parentElement;
+    const chipNodeBefore = screen.getAllByText("Taro")[0]!.parentElement; // getAllByText は1件以上見つからなければ throw するため [0] は必ず存在する
 
     expect(capturedPanGestures.length).toBeGreaterThan(0);
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
 
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
     });
 
-    const chipNodeAfter = screen.getAllByText("Taro")[0].parentElement;
+    const chipNodeAfter = screen.getAllByText("Taro")[0]!.parentElement; // 同上
 
     expect(chipNodeAfter).toBe(chipNodeBefore);
   });
@@ -324,16 +337,16 @@ describe("BulkAssignModal - ドラッグ中のコンポーネント参照安定�
     );
     await flush();
 
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
     });
-    const chipNodeAfterStart = screen.getAllByText("Taro")[0].parentElement;
+    const chipNodeAfterStart = screen.getAllByText("Taro")[0]!.parentElement; // 同上
 
     act(() => {
       gesture.onUpdate?.({ absoluteX: 50, absoluteY: 50 });
     });
-    const chipNodeAfterUpdate = screen.getAllByText("Taro")[0].parentElement;
+    const chipNodeAfterUpdate = screen.getAllByText("Taro")[0]!.parentElement; // 同上
 
     expect(chipNodeAfterUpdate).toBe(chipNodeAfterStart);
   });
@@ -387,7 +400,7 @@ describe("BulkAssignModal - ドラッグ中のコンポーネント参照安定�
     await flush();
 
     const baseline = capturedPanGestures.length;
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
 
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
@@ -430,7 +443,7 @@ describe("BulkAssignModal - ドラッグ中のコンポーネント参照安定�
     // ドロップ前: 未割り当てゾーンに Taro が1人、Group1 は0人
     expect(getZoneCountText("Group1")).toBe("0");
 
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
     // 現在有効な登録バッチにおける Group1 の位置 (0=未割り当て, 1=Group1) から
     // ドロップ先座標を動的に算出する (ハードコードした y はモック側の再登録
     // タイミングに対して壊れやすいため使わない — 詳細は zoneY のコメント参照)。
@@ -492,7 +505,7 @@ describe("BulkAssignModal - draggedUserId のリセット経路 [scrollEnabled �
   it("[V-B3-05] onStart でドラッグが始まると scrollEnabled が false になる", async () => {
     renderModal();
     await flush();
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
 
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
@@ -504,7 +517,7 @@ describe("BulkAssignModal - draggedUserId のリセット経路 [scrollEnabled �
   it("[V-B3-06] 正常ドロップ (ゾーン上で onEnd → onFinalize) の後、scrollEnabled は true に戻る", async () => {
     renderModal();
     await flush();
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
 
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
@@ -527,7 +540,7 @@ describe("BulkAssignModal - draggedUserId のリセット経路 [scrollEnabled �
   it("[V-B3-07] ゾーン外ドロップ (どのゾーンにもヒットしない座標での onEnd → onFinalize) の後も scrollEnabled は true に戻る", async () => {
     renderModal();
     await flush();
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
 
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
@@ -554,7 +567,7 @@ describe("BulkAssignModal - draggedUserId のリセット経路 [scrollEnabled �
   it("[V-B3-08] onEnd を経ずに onFinalize だけが呼ばれる (ジェスチャーキャンセル) 場合も scrollEnabled は true に戻る", async () => {
     renderModal();
     await flush();
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
 
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
@@ -583,7 +596,7 @@ describe("BulkAssignModal - draggedUserId のリセット経路 [scrollEnabled �
 
     renderModal();
     await flush();
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
 
     // 先にドラッグ&ドロップを正常完了させ、draggedUserId を null に戻しておく
     act(() => {
@@ -619,7 +632,7 @@ describe("BulkAssignModal - draggedUserId のリセット経路 [scrollEnabled �
     // 再オープンは常に新しいコンポーネントインスタンス = 初期状態から始まる。
     const first = renderModal();
     await flush();
-    const gestureBeforeUnmount = capturedPanGestures[0];
+    const gestureBeforeUnmount = firstGesture();
 
     act(() => {
       // finalize を呼ばずにドラッグ中のまま放置する (壊れたケースを想定)
@@ -708,7 +721,7 @@ describe("BulkAssignModal - ゾーン参照の再アタッチ/削除 [null ク�
     expect(screen.queryByText("Group2")).toBeNull();
 
     // 削除前に Group2 が実際に登録されていた座標にドロップを試みる
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
     });
@@ -758,7 +771,7 @@ describe("BulkAssignModal - ゾーン参照の再アタッチ/削除 [null ク�
     // Group2 削除後、生き残った Group1 は現在有効な登録バッチの position1 にいる
     // (0=未割り当て, 1=Group1 の2ゾーン構成)。
     const group1Y = zoneY(1, 2);
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
     });
@@ -821,7 +834,7 @@ describe("BulkAssignModal - ゾーン参照の再アタッチ/削除 [null ク�
 
     // Group3 は現在有効な登録バッチの position2 にいる (0=未割り当て, 1=Group1, 2=Group3)。
     const group3Y = zoneY(2, 3);
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
     });
@@ -873,7 +886,7 @@ describe("BulkAssignModal - ゾーン参照の再アタッチ/削除 [null ク�
 
     // 並び替え後の登録順は 0=未割り当て, 1=Group2, 2=Group1
     const group1Y = zoneY(2, 3);
-    const gesture = capturedPanGestures[0];
+    const gesture = firstGesture();
     act(() => {
       gesture.onStart?.({ absoluteX: 10, absoluteY: 10 });
     });

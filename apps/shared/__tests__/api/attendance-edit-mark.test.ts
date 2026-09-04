@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createMockQueryBuilder,
-  createMockSupabaseClient,
-  type MockQueryBuilder,
-} from "../../__mocks__/supabase";
 import { AttendanceAPI } from "../../api/attendance";
 import type { AttendanceStatus, TeamAttendance } from "../../types";
+import { createSupabaseMock } from "../utils/supabase-mock";
 
 // =============================================================================
 // 改修1 検証: bulkUpdateMyAttendances 経由の「締切後編集」マーク付与/重複除去
@@ -14,41 +10,6 @@ import type { AttendanceStatus, TeamAttendance } from "../../types";
 // である bulkUpdateMyAttendances (closed イベント) を通してロジックを検証する。
 // これにより mobile の保存経路 (API 委譲) の実挙動をそのまま検証できる。
 // =============================================================================
-
-type TableResponse = {
-  data: unknown;
-  error?: unknown;
-  configure?: (builder: MockQueryBuilder) => void;
-};
-
-const createSupabaseMock = (options: { userId?: string } = {}) => {
-  const { userId } = options;
-  const client = createMockSupabaseClient({ userId });
-  const tableQueues = new Map<string, TableResponse[]>();
-  const builderHistory = new Map<string, MockQueryBuilder[]>();
-
-  client.from = vi.fn((table: string) => {
-    const queue = tableQueues.get(table) ?? [];
-    const response = queue.length > 0 ? queue.shift()! : { data: [], error: null };
-
-    const builder = createMockQueryBuilder(response.data, response.error ?? null);
-    response.configure?.(builder);
-
-    const history = builderHistory.get(table) ?? [];
-    history.push(builder);
-    builderHistory.set(table, history);
-
-    return builder;
-  }) as unknown as typeof client.from;
-
-  return {
-    client,
-    queueTable: (table: string, responses: TableResponse[]) => {
-      tableQueues.set(table, [...responses]);
-    },
-    getBuilderHistory: (table: string) => builderHistory.get(table) ?? [],
-  };
-};
 
 /**
  * closed な練習 1 件に対して bulkUpdateMyAttendances を実行し、
@@ -100,9 +61,8 @@ const runClosedBulkUpdate = async (
     { attendanceId: "attendance-1", status, note: inputNote },
   ]);
 
-  const history = supabaseMock.getBuilderHistory("team_attendance");
-  // history[1] が update().select().single() の builder
-  const updateBuilder = history[1];
+  // index 1 が update().select().single() の builder
+  const updateBuilder = supabaseMock.getBuilder("team_attendance", 1);
   const updateArg = updateBuilder.update.mock.calls[0]?.[0] as
     | { status: AttendanceStatus | null; note: string | null }
     | undefined;
@@ -214,8 +174,9 @@ describe("改修1: bulkUpdateMyAttendances の締切後編集マーク", () => {
         { attendanceId: "attendance-1", status: "present", note: "そのまま" },
       ]);
 
-      const history = supabaseMock.getBuilderHistory("team_attendance");
-      const updateArg = history[1].update.mock.calls[0]?.[0] as { note: string | null };
+      const updateArg = supabaseMock.getBuilder("team_attendance", 1).update.mock.calls[0]?.[0] as {
+        note: string | null;
+      };
       expect(updateArg.note).toBe("そのまま");
       expect(updateArg.note).not.toContain("締切後編集");
     });

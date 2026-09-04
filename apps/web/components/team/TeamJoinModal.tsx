@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts";
 import TeamJoinForm from "@/components/forms/TeamJoinForm";
 import { joinTeam } from "@/app/[locale]/(authenticated)/teams/_actions/actions";
 import { useTranslations } from "next-intl";
+import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 export interface TeamJoinModalProps {
   isOpen: boolean;
@@ -42,20 +43,11 @@ export default function TeamJoinModal({ isOpen, onClose, onSuccess }: TeamJoinMo
         onSuccess(teamId);
         onClose();
       } else {
-        throw new Error(t("joinModal.teamIdFailed"));
+        throw new UserFacingError(t("joinModal.teamIdFailed"));
       }
     } catch (err) {
       console.error("チーム参加エラー:", err);
-
-      // より詳細なエラーメッセージを設定
-      let errorMessage = t("joinModal.joinFailed");
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (err && typeof err === "object" && "message" in err) {
-        errorMessage = String(err.message);
-      }
-
-      setError(errorMessage);
+      setError(toUserFacingMessage(err, t("joinModal.joinFailed")));
     } finally {
       setIsLoading(false);
     }

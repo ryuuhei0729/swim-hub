@@ -5,6 +5,11 @@ import { usePracticeLogForm } from "../../components/forms/practice-log/hooks/us
 import type { PracticeLogEditData, Tag } from "../../components/forms/practice-log/types";
 import type { TimeEntry } from "@apps/shared/types/ui";
 
+// NOTE: このファイル全体で `menus[0]!` / `menus[1]!` / `submitData[N]!` を多用する。
+// usePracticeLogForm は removeMenu で最後の1件を削除できない設計のため menus は常に1件以上を保持し、
+// addMenu() 呼び出し後は該当インデックスの存在が保証される。prepareSubmitData() は menus と1:1で
+// 変換するため submitData の長さも menus と一致する。fixture(hook初期状態)がこの不変条件を
+// 保証しているため、noUncheckedIndexedAccess の non-null assertion で対応する。
 describe("usePracticeLogForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -20,56 +25,56 @@ describe("usePracticeLogForm", () => {
     it("デフォルトメニューのstyleはFrである", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      expect(result.current.menus[0].style).toBe("Fr");
+      expect(result.current.menus[0]!.style).toBe("Fr");
     });
 
     it("デフォルトメニューのswimCategoryはSwimである", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      expect(result.current.menus[0].swimCategory).toBe("Swim");
+      expect(result.current.menus[0]!.swimCategory).toBe("Swim");
     });
 
     it("デフォルトメニューのdistanceは100である", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      expect(result.current.menus[0].distance).toBe(100);
+      expect(result.current.menus[0]!.distance).toBe(100);
     });
 
     it("デフォルトメニューのrepsは4である", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      expect(result.current.menus[0].reps).toBe(4);
+      expect(result.current.menus[0]!.reps).toBe(4);
     });
 
     it("デフォルトメニューのsetsは1である", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      expect(result.current.menus[0].sets).toBe(1);
+      expect(result.current.menus[0]!.sets).toBe(1);
     });
 
     it("デフォルトメニューのcircleMinは1、circleSecは30である", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      expect(result.current.menus[0].circleMin).toBe(1);
-      expect(result.current.menus[0].circleSec).toBe(30);
+      expect(result.current.menus[0]!.circleMin).toBe(1);
+      expect(result.current.menus[0]!.circleSec).toBe(30);
     });
 
     it("デフォルトメニューのnoteは空文字である", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      expect(result.current.menus[0].note).toBe("");
+      expect(result.current.menus[0]!.note).toBe("");
     });
 
     it("デフォルトメニューのtagsは空配列である", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      expect(result.current.menus[0].tags).toEqual([]);
+      expect(result.current.menus[0]!.tags).toEqual([]);
     });
 
     it("デフォルトメニューのtimesは空配列である", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      expect(result.current.menus[0].times).toEqual([]);
+      expect(result.current.menus[0]!.times).toEqual([]);
     });
 
     it("showTimeModalの初期値はfalseである", () => {
@@ -103,7 +108,8 @@ describe("usePracticeLogForm", () => {
         result.current.addMenu();
       });
 
-      const newMenu = result.current.menus[1];
+      // addMenu() 呼び出し直後で menus.length === 2 が保証されているため [1] は必ず存在する
+      const newMenu = result.current.menus[1]!;
       expect(newMenu.style).toBe("Fr");
       expect(newMenu.swimCategory).toBe("Swim");
       expect(newMenu.distance).toBe(100);
@@ -150,7 +156,7 @@ describe("usePracticeLogForm", () => {
     it("指定したIDのメニューを削除できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuIdToRemove = result.current.menus[0].id;
+      const menuIdToRemove = result.current.menus[0]!.id;
 
       act(() => {
         result.current.addMenu();
@@ -169,7 +175,7 @@ describe("usePracticeLogForm", () => {
     it("メニューが1つしかない場合は削除されない", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.removeMenu(menuId);
@@ -199,111 +205,111 @@ describe("usePracticeLogForm", () => {
     it("styleを更新できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "style", "Ba");
       });
 
-      expect(result.current.menus[0].style).toBe("Ba");
+      expect(result.current.menus[0]!.style).toBe("Ba");
     });
 
     it("swimCategoryを更新できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "swimCategory", "Kick");
       });
 
-      expect(result.current.menus[0].swimCategory).toBe("Kick");
+      expect(result.current.menus[0]!.swimCategory).toBe("Kick");
     });
 
     it("distanceを更新できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "distance", 200);
       });
 
-      expect(result.current.menus[0].distance).toBe(200);
+      expect(result.current.menus[0]!.distance).toBe(200);
     });
 
     it("repsを更新できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "reps", 8);
       });
 
-      expect(result.current.menus[0].reps).toBe(8);
+      expect(result.current.menus[0]!.reps).toBe(8);
     });
 
     it("setsを更新できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "sets", 3);
       });
 
-      expect(result.current.menus[0].sets).toBe(3);
+      expect(result.current.menus[0]!.sets).toBe(3);
     });
 
     it("circleMinとcircleSecを更新できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "circleMin", 2);
         result.current.updateMenu(menuId, "circleSec", 0);
       });
 
-      expect(result.current.menus[0].circleMin).toBe(2);
-      expect(result.current.menus[0].circleSec).toBe(0);
+      expect(result.current.menus[0]!.circleMin).toBe(2);
+      expect(result.current.menus[0]!.circleSec).toBe(0);
     });
 
     it("noteを更新できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "note", "テストメモ");
       });
 
-      expect(result.current.menus[0].note).toBe("テストメモ");
+      expect(result.current.menus[0]!.note).toBe("テストメモ");
     });
 
     it("存在しないIDを指定しても何も起きない", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const originalStyle = result.current.menus[0].style;
+      const originalStyle = result.current.menus[0]!.style;
 
       act(() => {
         result.current.updateMenu("non-existent-id", "style", "Ba");
       });
 
-      expect(result.current.menus[0].style).toBe(originalStyle);
+      expect(result.current.menus[0]!.style).toBe(originalStyle);
     });
 
     it("空文字を設定できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "distance", "");
       });
 
-      expect(result.current.menus[0].distance).toBe("");
+      expect(result.current.menus[0]!.distance).toBe("");
     });
   });
 
@@ -311,7 +317,7 @@ describe("usePracticeLogForm", () => {
     it("タグを更新できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
       const newTags: Tag[] = [
         {
           id: "1",
@@ -335,13 +341,13 @@ describe("usePracticeLogForm", () => {
         result.current.handleTagsChange(menuId, newTags);
       });
 
-      expect(result.current.menus[0].tags).toEqual(newTags);
+      expect(result.current.menus[0]!.tags).toEqual(newTags);
     });
 
     it("タグを空配列に更新できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
       const initialTags: Tag[] = [
         {
           id: "1",
@@ -361,7 +367,7 @@ describe("usePracticeLogForm", () => {
         result.current.handleTagsChange(menuId, []);
       });
 
-      expect(result.current.menus[0].tags).toEqual([]);
+      expect(result.current.menus[0]!.tags).toEqual([]);
     });
   });
 
@@ -369,7 +375,7 @@ describe("usePracticeLogForm", () => {
     it("openTimeModalでモーダルを開ける", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.openTimeModal(menuId);
@@ -382,7 +388,7 @@ describe("usePracticeLogForm", () => {
     it("handleTimeSaveでタイムを保存しモーダルを閉じる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
       const times: TimeEntry[] = [
         { setNumber: 1, repNumber: 1, time: 65.5 },
         { setNumber: 1, repNumber: 2, time: 66.0 },
@@ -396,7 +402,7 @@ describe("usePracticeLogForm", () => {
         result.current.handleTimeSave(times);
       });
 
-      expect(result.current.menus[0].times).toEqual(times);
+      expect(result.current.menus[0]!.times).toEqual(times);
       expect(result.current.showTimeModal).toBe(false);
       expect(result.current.currentMenuId).toBeNull();
     });
@@ -404,19 +410,19 @@ describe("usePracticeLogForm", () => {
     it("currentMenuIdがnullのときhandleTimeSaveは何もしない", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const originalTimes = result.current.menus[0].times;
+      const originalTimes = result.current.menus[0]!.times;
 
       act(() => {
         result.current.handleTimeSave([{ setNumber: 1, repNumber: 1, time: 65.5 }]);
       });
 
-      expect(result.current.menus[0].times).toEqual(originalTimes);
+      expect(result.current.menus[0]!.times).toEqual(originalTimes);
     });
 
     it("getCurrentMenuで現在のメニューを取得できる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.openTimeModal(menuId);
@@ -457,7 +463,7 @@ describe("usePracticeLogForm", () => {
     it("circleTimeが0の場合はnullになる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "circleMin", 0);
@@ -465,7 +471,7 @@ describe("usePracticeLogForm", () => {
       });
 
       const submitData = result.current.prepareSubmitData();
-      expect(submitData[0].circleTime).toBeNull();
+      expect(submitData[0]!.circleTime).toBeNull();
     });
 
     it("複数メニューを正しく変換できる", () => {
@@ -475,8 +481,8 @@ describe("usePracticeLogForm", () => {
         result.current.addMenu();
       });
 
-      const menuId1 = result.current.menus[0].id;
-      const menuId2 = result.current.menus[1].id;
+      const menuId1 = result.current.menus[0]!.id;
+      const menuId2 = result.current.menus[1]!.id;
 
       act(() => {
         result.current.updateMenu(menuId1, "style", "Ba");
@@ -488,16 +494,16 @@ describe("usePracticeLogForm", () => {
       const submitData = result.current.prepareSubmitData();
 
       expect(submitData).toHaveLength(2);
-      expect(submitData[0].style).toBe("Ba");
-      expect(submitData[0].distance).toBe(50);
-      expect(submitData[1].style).toBe("Br");
-      expect(submitData[1].distance).toBe(200);
+      expect(submitData[0]!.style).toBe("Ba");
+      expect(submitData[0]!.distance).toBe(50);
+      expect(submitData[1]!.style).toBe("Br");
+      expect(submitData[1]!.distance).toBe(200);
     });
 
     it("空文字のフィールドはデフォルト値に変換される", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "distance", "");
@@ -507,15 +513,15 @@ describe("usePracticeLogForm", () => {
 
       const submitData = result.current.prepareSubmitData();
 
-      expect(submitData[0].distance).toBe(100); // Number('') || 100 = 100
-      expect(submitData[0].reps).toBe(1); // Number('') || 1 = 1
-      expect(submitData[0].sets).toBe(1); // Number('') || 1 = 1
+      expect(submitData[0]!.distance).toBe(100); // Number('') || 100 = 100
+      expect(submitData[0]!.reps).toBe(1); // Number('') || 1 = 1
+      expect(submitData[0]!.sets).toBe(1); // Number('') || 1 = 1
     });
 
     it("タグとタイムが正しく含まれる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
       const tags: Tag[] = [
         {
           id: "1",
@@ -539,8 +545,8 @@ describe("usePracticeLogForm", () => {
 
       const submitData = result.current.prepareSubmitData();
 
-      expect(submitData[0].tags).toEqual(tags);
-      expect(submitData[0].times).toEqual(times);
+      expect(submitData[0]!.tags).toEqual(tags);
+      expect(submitData[0]!.times).toEqual(times);
     });
   });
 
@@ -576,17 +582,17 @@ describe("usePracticeLogForm", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
 
       expect(result.current.menus).toHaveLength(1);
-      expect(result.current.menus[0].id).toBe("edit-1");
-      expect(result.current.menus[0].style).toBe("Ba");
-      expect(result.current.menus[0].swimCategory).toBe("Kick");
-      expect(result.current.menus[0].distance).toBe(50);
-      expect(result.current.menus[0].reps).toBe(8);
-      expect(result.current.menus[0].sets).toBe(2);
-      expect(result.current.menus[0].circleMin).toBe(2);
-      expect(result.current.menus[0].circleSec).toBe(0);
-      expect(result.current.menus[0].note).toBe("テストノート");
-      expect(result.current.menus[0].tags).toEqual(editData.tags);
-      expect(result.current.menus[0].times).toEqual([{ setNumber: 1, repNumber: 1, time: 30.5 }]);
+      expect(result.current.menus[0]!.id).toBe("edit-1");
+      expect(result.current.menus[0]!.style).toBe("Ba");
+      expect(result.current.menus[0]!.swimCategory).toBe("Kick");
+      expect(result.current.menus[0]!.distance).toBe(50);
+      expect(result.current.menus[0]!.reps).toBe(8);
+      expect(result.current.menus[0]!.sets).toBe(2);
+      expect(result.current.menus[0]!.circleMin).toBe(2);
+      expect(result.current.menus[0]!.circleSec).toBe(0);
+      expect(result.current.menus[0]!.note).toBe("テストノート");
+      expect(result.current.menus[0]!.tags).toEqual(editData.tags);
+      expect(result.current.menus[0]!.times).toEqual([{ setNumber: 1, repNumber: 1, time: 30.5 }]);
     });
 
     it("editDataの一部フィールドが欠けていてもデフォルト値が使われる", () => {
@@ -597,15 +603,15 @@ describe("usePracticeLogForm", () => {
 
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
 
-      expect(result.current.menus[0].swimCategory).toBe("Swim");
-      expect(result.current.menus[0].distance).toBe(100);
-      expect(result.current.menus[0].reps).toBe(4);
-      expect(result.current.menus[0].sets).toBe(1);
-      expect(result.current.menus[0].circleMin).toBe(0);
-      expect(result.current.menus[0].circleSec).toBe(0);
-      expect(result.current.menus[0].note).toBe("");
-      expect(result.current.menus[0].tags).toEqual([]);
-      expect(result.current.menus[0].times).toEqual([]);
+      expect(result.current.menus[0]!.swimCategory).toBe("Swim");
+      expect(result.current.menus[0]!.distance).toBe(100);
+      expect(result.current.menus[0]!.reps).toBe(4);
+      expect(result.current.menus[0]!.sets).toBe(1);
+      expect(result.current.menus[0]!.circleMin).toBe(0);
+      expect(result.current.menus[0]!.circleSec).toBe(0);
+      expect(result.current.menus[0]!.note).toBe("");
+      expect(result.current.menus[0]!.tags).toEqual([]);
+      expect(result.current.menus[0]!.times).toEqual([]);
     });
 
     it("circleが秒数から分と秒に正しく分解される", () => {
@@ -616,8 +622,8 @@ describe("usePracticeLogForm", () => {
 
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
 
-      expect(result.current.menus[0].circleMin).toBe(1);
-      expect(result.current.menus[0].circleSec).toBe(35);
+      expect(result.current.menus[0]!.circleMin).toBe(1);
+      expect(result.current.menus[0]!.circleSec).toBe(35);
     });
 
     it("circleがnullの場合は0になる", () => {
@@ -628,8 +634,8 @@ describe("usePracticeLogForm", () => {
 
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
 
-      expect(result.current.menus[0].circleMin).toBe(0);
-      expect(result.current.menus[0].circleSec).toBe(0);
+      expect(result.current.menus[0]!.circleMin).toBe(0);
+      expect(result.current.menus[0]!.circleSec).toBe(0);
     });
   });
 
@@ -645,7 +651,7 @@ describe("usePracticeLogForm", () => {
       rerender({ isOpen: true, editData: null });
 
       expect(result.current.menus).toHaveLength(1);
-      expect(result.current.menus[0].style).toBe("Fr");
+      expect(result.current.menus[0]!.style).toBe("Fr");
     });
 
     it("isOpenがfalseになると初期化フラグがリセットされる", () => {
@@ -659,7 +665,7 @@ describe("usePracticeLogForm", () => {
         { initialProps: { isOpen: true, editData } },
       );
 
-      expect(result.current.menus[0].style).toBe("Ba");
+      expect(result.current.menus[0]!.style).toBe("Ba");
 
       // モーダルを閉じる
       rerender({ isOpen: false, editData });
@@ -672,7 +678,7 @@ describe("usePracticeLogForm", () => {
 
       rerender({ isOpen: true, editData: newEditData });
 
-      expect(result.current.menus[0].style).toBe("Br");
+      expect(result.current.menus[0]!.style).toBe("Br");
     });
 
     it("同じeditDataで再度開いても再初期化されない", () => {
@@ -688,16 +694,16 @@ describe("usePracticeLogForm", () => {
 
       // スタイルを変更
       act(() => {
-        result.current.updateMenu(result.current.menus[0].id, "style", "Fly");
+        result.current.updateMenu(result.current.menus[0]!.id, "style", "Fly");
       });
 
-      expect(result.current.menus[0].style).toBe("Fly");
+      expect(result.current.menus[0]!.style).toBe("Fly");
 
       // 同じpropsで再レンダリング
       rerender({ isOpen: true, editData });
 
       // 変更が保持されている（再初期化されていない）
-      expect(result.current.menus[0].style).toBe("Fly");
+      expect(result.current.menus[0]!.style).toBe("Fly");
     });
   });
 
@@ -858,7 +864,7 @@ describe("usePracticeLogForm", () => {
 
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
 
-      expect(result.current.menus[0].times).toEqual([]);
+      expect(result.current.menus[0]!.times).toEqual([]);
     });
 
     it("timesがundefinedのeditDataでも正しく初期化される", () => {
@@ -869,7 +875,7 @@ describe("usePracticeLogForm", () => {
 
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
 
-      expect(result.current.menus[0].times).toEqual([]);
+      expect(result.current.menus[0]!.times).toEqual([]);
     });
 
     it("複数メンバーのtimesが正しくフラット化される", () => {
@@ -892,8 +898,8 @@ describe("usePracticeLogForm", () => {
 
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
 
-      expect(result.current.menus[0].times).toHaveLength(3);
-      expect(result.current.menus[0].times).toEqual([
+      expect(result.current.menus[0]!.times).toHaveLength(3);
+      expect(result.current.menus[0]!.times).toEqual([
         { setNumber: 1, repNumber: 1, time: 30.5 },
         { setNumber: 1, repNumber: 2, time: 31.0 },
         { setNumber: 1, repNumber: 1, time: 32.5 },
@@ -908,8 +914,8 @@ describe("usePracticeLogForm", () => {
 
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
 
-      expect(result.current.menus[0].circleMin).toBe(59);
-      expect(result.current.menus[0].circleSec).toBe(59);
+      expect(result.current.menus[0]!.circleMin).toBe(59);
+      expect(result.current.menus[0]!.circleSec).toBe(59);
     });
   });
 
@@ -923,7 +929,7 @@ describe("usePracticeLogForm", () => {
     it("updateMenuで値を変更するとtrueになる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "style", "Ba");
@@ -935,7 +941,7 @@ describe("usePracticeLogForm", () => {
     it("handleTimeSaveでタイムを入力するとtrueになる", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
       const times: TimeEntry[] = [{ setNumber: 1, repNumber: 1, time: 65.5 }];
 
       act(() => {
@@ -965,7 +971,7 @@ describe("usePracticeLogForm", () => {
         { initialProps: { isOpen: true } },
       );
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       act(() => {
         result.current.updateMenu(menuId, "style", "Ba");
@@ -990,7 +996,7 @@ describe("usePracticeLogForm", () => {
 
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData }));
 
-      const menuId = result.current.menus[0].id;
+      const menuId = result.current.menus[0]!.id;
 
       // 値を変更する
       act(() => {

@@ -29,6 +29,7 @@ import { StyleAPI } from "@apps/shared/api/styles";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import {
   diffEntryRows,
   findDuplicateMemberStylePairs,
@@ -192,7 +193,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
         if (competitionRes.error || !competitionRes.data) {
           throw (
             competitionRes.error ||
-            new Error(t("recordMobile.competitionFetchFailed"))
+            new UserFacingError(t("recordMobile.competitionFetchFailed"))
           );
         }
         if (entriesRes.error) {
@@ -251,7 +252,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
         if (!isMounted) return;
         console.error("チームエントリーロードエラー:", err);
         setLoadError(
-          err instanceof Error ? err.message : t("recordMobile.saveFailed"),
+          toUserFacingMessage(err, t("recordMobile.saveFailed")),
         );
       } finally {
         if (isMounted) setLoading(false);

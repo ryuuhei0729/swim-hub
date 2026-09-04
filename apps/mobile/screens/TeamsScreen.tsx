@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { TeamItem, TeamCreateModal, TeamJoinModal } from "@/components/teams";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
@@ -102,7 +103,7 @@ export const TeamsScreen: React.FC = () => {
 
   // エラー状態
   if (isError && error) {
-    const errorMessage = error instanceof Error ? error.message : t("teams.mobile.fetchListFailed");
+    const errorMessage = toUserFacingMessage(error, t("teams.mobile.fetchListFailed"));
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <ErrorView message={errorMessage} onRetry={() => refetch()} fullScreen />

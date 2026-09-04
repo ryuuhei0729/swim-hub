@@ -195,7 +195,7 @@ describe("useDayDetailHandlers", () => {
     expect(mocks.countRecordsByCompetition).toHaveBeenCalledWith("comp-personal-1");
 
     const alertCall = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
-    const message = alertCall[1] as string;
+    const message = alertCall![1] as string; // handleDeleteCompetition が必ず Alert.alert を呼ぶ設計のため必ず存在
     // t() モックは params を握り潰さず `key:{"count":n}` に展開するため、
     // 「キーが呼ばれた」だけでなく「7件という正しい値が渡った」ことまで検証できる。
     expect(message).toContain('dashboard.deleteConfirm.competitionRecordsWarning:{"count":7}');
@@ -211,7 +211,7 @@ describe("useDayDetailHandlers", () => {
     expect(mocks.countRecordsByCompetition).not.toHaveBeenCalled();
 
     const alertCall = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
-    const message = alertCall[1] as string;
+    const message = alertCall![1] as string; // handleDeleteCompetition が必ず Alert.alert を呼ぶ設計のため必ず存在
     expect(message).not.toContain("competitionRecordsWarning");
   });
 
@@ -225,7 +225,7 @@ describe("useDayDetailHandlers", () => {
 
     expect(mocks.countRecordsByCompetition).toHaveBeenCalledWith("comp-personal-empty");
     const alertCall = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
-    const message = alertCall[1] as string;
+    const message = alertCall![1] as string; // handleDeleteCompetition が必ず Alert.alert を呼ぶ設計のため必ず存在
     expect(message).not.toContain("competitionRecordsWarning");
   });
 

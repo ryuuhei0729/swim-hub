@@ -141,7 +141,9 @@ const PracticeMenuCard: React.FC<PracticeMenuCardProps> = ({ item, t }) => {
               </View>
               {Array.from({ length: item.setCount }, (_, setIndex) => {
                 const setNumber = setIndex + 1;
-                const average = setAverages[setNumber];
+                // 0 は「まだ記録が無い」という意味の sentinel で、直後の `average > 0` が
+                // 既にそれを判定している。?? 0 は既存ロジックの意図をそのまま型で表現するだけ。
+                const average = setAverages[setNumber] ?? 0;
                 return (
                   <View key={setNumber} style={[styles.tableDataCell, styles.setAverageCell]}>
                     <Text style={styles.setAverageText}>

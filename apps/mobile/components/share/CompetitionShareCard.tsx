@@ -6,7 +6,7 @@ import { getBadgeState } from "@/components/records/BestTimeBadge";
 import {
   calculateRaceLapTimesTable,
   getLapIntervalsForRace,
-  type SplitTime,
+  type LapSplitPoint,
 } from "@/utils/lapTimeCalculator";
 import type { CompetitionShareData } from "./types";
 
@@ -49,7 +49,7 @@ interface CompetitionShareCardProps {
  * web apps/web/components/share/CompetitionShareCard.tsx のレイアウトを RN に移植。
  */
 export const CompetitionShareCard: React.FC<CompetitionShareCardProps> = ({ data, t }) => {
-  const validSplitTimes: SplitTime[] = useMemo(() => {
+  const validSplitTimes: LapSplitPoint[] = useMemo(() => {
     if (!data.splitTimes) return [];
     return data.splitTimes
       .filter((st) => st.distance > 0 && st.split_time > 0)

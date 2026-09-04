@@ -506,6 +506,9 @@ export const useRecordLogForm = ({
         });
 
         const updatedSplit = updatedSplitTimes[splitIndex];
+        if (!updatedSplit) return prev; // updatedSplitTimes は prev.splitTimes と同じ長さで
+          // 生成され splitIndex は呼び出し元 (該当 split の index) から渡されるため通常常に
+          // 存在するが、型上は保証されないため防御的に更新をスキップする
         if (
           field === "splitTime" &&
           raceDistance &&

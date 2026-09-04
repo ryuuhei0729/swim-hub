@@ -38,11 +38,12 @@ const isEmailOtpLinkType = (value: string | null): value is EmailOtpLinkType =>
  */
 export const isEmailAuthCallback = (url: string): boolean => {
   // フラグメント・クエリを除いたベース URL を抽出し完全一致チェック
-  const base = url.split("#")[0].split("?")[0];
+  // split() は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
+  const base = url.split("#")[0]!.split("?")[0];
   if (base !== EMAIL_CALLBACK_BASE) return false;
 
   // 新形式: クエリの token_hash + type (Supabase メールテンプレート更新後)
-  const query = url.split("#")[0].split("?")[1] ?? "";
+  const query = url.split("#")[0]!.split("?")[1] ?? "";
   const queryParams = new URLSearchParams(query);
   if (queryParams.has("token_hash")) {
     // recovery (パスワードリセット) リンクは対象外 — recovery の深リンク対応は別スプリント

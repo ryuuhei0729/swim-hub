@@ -139,8 +139,8 @@ describe("[V-03] Phase 1-A からの必須キー維持確認", () => {
   }
 
   it('common.appName の値が両ロケールで "SwimHub" であること (固有名詞は翻訳しない)', () => {
-    const ja = jaMessages as unknown as Record<string, Record<string, string>>;
-    const en = enMessages as unknown as Record<string, Record<string, string>>;
+    const ja = jaMessages as unknown as { common: { appName: string } };
+    const en = enMessages as unknown as { common: { appName: string } };
     expect(ja.common.appName).toBe("SwimHub");
     expect(en.common.appName).toBe("SwimHub");
   });

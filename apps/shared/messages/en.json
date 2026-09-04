@@ -158,7 +158,7 @@
       "videoUploadUrlFailed": "Failed to fetch upload URL",
       "videoReadFailed": "Failed to read video file: {uri}",
       "videoReadHttpFailed": "Failed to read video file: HTTP {status} ({uri})",
-      "videoUploadHttpFailed": "Video upload failed: HTTP {status}{detail}",
+      "videoUploadHttpFailed": "Video upload failed: HTTP {status}",
       "thumbnailUploadHttpFailed": "Thumbnail upload failed: HTTP {status}",
       "videoDbUpdateFailed": "Failed to update database",
       "videoSignedUrlFailed": "Failed to fetch signed URL",
@@ -914,6 +914,7 @@
       "entryDeleteConfirmTitle": "Confirm deletion",
       "entryDeleteConfirmMessage": "Delete this entry?\nThis action cannot be undone.",
       "entryDeleteFailed": "Deletion failed",
+      "deleteFailed": "Failed to delete",
       "fieldStyle": "Style:",
       "fieldEntryTime": "Entry time:",
       "fieldMemo": "Note:",
@@ -1013,13 +1014,14 @@
       "unknown": "Unknown error"
     },
     "handlers": {
-      "fetchPracticeFailed": "Failed to fetch practice data: {detail}",
-      "updateImagePathFailed": "Failed to update image path: {detail}",
+      "fetchPracticeFailed": "Failed to fetch practice data",
+      "updateImagePathFailed": "Failed to update image path",
       "practiceCreatedButImageFailed": "Practice was created, but image upload failed",
       "authRequired": "An authenticated user is required",
-      "insertPracticeTagFailed": "Failed to insert practice log tag: {detail}",
+      "insertPracticeTagFailed": "Failed to insert practice log tag",
       "videoUploadPartialPractice": "Practice record was saved, but video upload failed. Please try again from the details screen.",
-      "fetchCompetitionFailed": "Failed to fetch competition data: {detail}",
+      "fetchCompetitionFailed": "Failed to fetch competition data",
+      "entrySubmitFailed": "Failed to submit entry",
       "competitionCreatedButImageFailed": "Competition was created, but image upload failed",
       "unknownStyle": "Unknown",
       "styleAlreadyEntered": "Event \"{name}\" has already been entered",
@@ -1680,8 +1682,8 @@
         "atLeastOneRecord": "Please enter at least one record"
       },
       "error": {
-        "splitDeleteFailed": "Failed to delete split times: {detail}",
-        "recordDeleteFailed": "Failed to delete existing records: {detail}",
+        "splitDeleteFailed": "Failed to delete split times",
+        "recordDeleteFailed": "Failed to delete existing records",
         "saveFailed": "An error occurred while saving. Please try again."
       },
       "errorVideoUploadUrlFailed": "{name}: Failed to get upload URL ({status})",
@@ -4224,7 +4226,8 @@
         "cancel": "Continue editing"
       },
       "recordFutureGuard": "Race records cannot be registered for future dates.",
-      "competitionEditRestricted": "Only team admins can edit this competition's details."
+      "competitionEditRestricted": "Only team admins can edit this competition's details.",
+      "practiceEditRestricted": "Only team admins can edit this practice's details."
     },
     "premium": {
       "upgradeText": "Upgrade to Premium",

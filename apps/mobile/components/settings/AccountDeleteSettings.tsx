@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from "rea
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { env } from "@/lib/env";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 const WEB_API_URL = env.webApiUrl;
 
@@ -42,7 +43,7 @@ export const AccountDeleteSettings: React.FC = () => {
       setIsDeleting(false);
       Alert.alert(
         t("common.error"),
-        err instanceof Error ? err.message : t("settings.accountDelete.errors.deleteFailed"),
+        toUserFacingMessage(err, t("settings.accountDelete.errors.deleteFailed")),
       );
     }
   }, [session, signOut, t]);

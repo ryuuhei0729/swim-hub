@@ -24,6 +24,7 @@ import {
 } from "@apps/shared/utils/entryDiff";
 import { isCompetitionDateInPast, formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { formatTimeBest } from "@apps/shared/utils/time";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { styleIdToCodeKey, buildSwimStyleLabel } from "@/utils/swimStyle";
 import MemberSelectModal, { type MemberSelectOption } from "@/components/team/MemberSelectModal";
 import EntryBulkConfirmModal, {
@@ -468,7 +469,11 @@ export default function EntriesClient({
         err !== null &&
         "code" in err &&
         (err as { code?: unknown }).code === "23505";
-      window.alert(isUniqueViolation ? tEntries("saveFailedDuplicate") : t("record.saveFailed"));
+      window.alert(
+        isUniqueViolation
+          ? tEntries("saveFailedDuplicate")
+          : toUserFacingMessage(err, t("record.saveFailed")),
+      );
       // フォーム状態は破棄しない。画面遷移もしない（再度保存ボタンを押せる状態を保つ）
     } finally {
       setSaving(false);

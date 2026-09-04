@@ -21,6 +21,7 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import { PracticeAPI } from "@apps/shared/api/practices";
 import { RecordAPI } from "@apps/shared/api/records";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import type { MainStackParamList } from "@/navigation/types";
 import type { CalendarItem } from "@apps/shared/types/ui";
@@ -151,7 +152,7 @@ export function useDayDetailHandlers(
               console.error("削除エラー:", error);
               Alert.alert(
                 t("common.error"),
-                error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"),
+                toUserFacingMessage(error, t("dashboard.mobile.deleteFailed")),
                 [{ text: "OK" }],
               );
             } finally {
@@ -199,7 +200,7 @@ export function useDayDetailHandlers(
               console.error("削除エラー:", error);
               Alert.alert(
                 t("common.error"),
-                error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"),
+                toUserFacingMessage(error, t("dashboard.mobile.deleteFailed")),
                 [{ text: "OK" }],
               );
             } finally {
@@ -251,7 +252,7 @@ export function useDayDetailHandlers(
               console.error("削除エラー:", error);
               Alert.alert(
                 t("common.error"),
-                error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"),
+                toUserFacingMessage(error, t("dashboard.mobile.deleteFailed")),
                 [{ text: "OK" }],
               );
             } finally {
@@ -368,7 +369,7 @@ export function useDayDetailHandlers(
               console.error("削除エラー:", error);
               Alert.alert(
                 t("common.error"),
-                error instanceof Error ? error.message : t("dashboard.mobile.deleteFailed"),
+                toUserFacingMessage(error, t("dashboard.mobile.deleteFailed")),
                 [{ text: "OK" }],
               );
             } finally {

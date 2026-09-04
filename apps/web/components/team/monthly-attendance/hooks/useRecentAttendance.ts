@@ -10,6 +10,7 @@ import { getMonthDateRange } from "@swim-hub/shared/utils/date";
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
 import { resolveAttendanceStatus } from "@swim-hub/shared/utils/attendanceStatus";
 import { format, parseISO } from "date-fns";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface AttendanceEditState {
   status: AttendanceStatus | null;
@@ -122,7 +123,7 @@ export const useRecentAttendance = (
         if (signal?.aborted) return;
 
         console.error("直近の出欠情報の取得に失敗:", err);
-        setError(t("recentAttendanceHook.loadError"));
+        setError(toUserFacingMessage(err, t("recentAttendanceHook.loadError")));
       } finally {
         if (!signal?.aborted) {
           setLoading(false);
@@ -136,7 +137,8 @@ export const useRecentAttendance = (
     setEditStates((prev) => ({
       ...prev,
       [eventId]: {
-        ...prev[eventId],
+        // prev[eventId] が未初期化のときは初期表示時の既定値と同じ形にする
+        ...(prev[eventId] ?? { status: null, note: "" }),
         status,
       },
     }));
@@ -148,7 +150,8 @@ export const useRecentAttendance = (
     setEditStates((prev) => ({
       ...prev,
       [eventId]: {
-        ...prev[eventId],
+        // prev[eventId] が未初期化のときは初期表示時の既定値と同じ形にする
+        ...(prev[eventId] ?? { status: null, note: "" }),
         note: trimmedNote,
       },
     }));

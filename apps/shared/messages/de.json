@@ -161,7 +161,7 @@
       "videoUploadUrlFailed": "Upload-URL konnte nicht abgerufen werden",
       "videoReadFailed": "Videodatei konnte nicht gelesen werden: {uri}",
       "videoReadHttpFailed": "Videodatei konnte nicht gelesen werden: HTTP {status} ({uri})",
-      "videoUploadHttpFailed": "Video-Upload fehlgeschlagen: HTTP {status}{detail}",
+      "videoUploadHttpFailed": "Video-Upload fehlgeschlagen: HTTP {status}",
       "thumbnailUploadHttpFailed": "Thumbnail-Upload fehlgeschlagen: HTTP {status}",
       "videoDbUpdateFailed": "Datenbank konnte nicht aktualisiert werden",
       "videoSignedUrlFailed": "Signierte URL konnte nicht abgerufen werden",
@@ -917,6 +917,7 @@
       "entryDeleteConfirmTitle": "Löschen bestätigen",
       "entryDeleteConfirmMessage": "Möchten Sie diese Meldung löschen?\nDieser Vorgang kann nicht rückgängig gemacht werden.",
       "entryDeleteFailed": "Löschen fehlgeschlagen",
+      "deleteFailed": "Löschen fehlgeschlagen",
       "fieldStyle": "Disziplin:",
       "fieldEntryTime": "Meldezeit:",
       "fieldMemo": "Notiz:",
@@ -1016,13 +1017,14 @@
       "unknown": "Unbekannter Fehler"
     },
     "handlers": {
-      "fetchPracticeFailed": "Trainingsdaten konnten nicht abgerufen werden: {detail}",
-      "updateImagePathFailed": "Bildpfad konnte nicht aktualisiert werden: {detail}",
+      "fetchPracticeFailed": "Trainingsdaten konnten nicht abgerufen werden",
+      "updateImagePathFailed": "Bildpfad konnte nicht aktualisiert werden",
       "practiceCreatedButImageFailed": "Das Training wurde erstellt, aber der Bild-Upload ist fehlgeschlagen",
       "authRequired": "Ein authentifizierter Benutzer ist erforderlich",
-      "insertPracticeTagFailed": "Trainingsprotokoll-Tag konnte nicht eingefügt werden: {detail}",
+      "insertPracticeTagFailed": "Trainingsprotokoll-Tag konnte nicht eingefügt werden",
       "videoUploadPartialPractice": "Der Trainingseintrag wurde gespeichert, aber der Video-Upload ist fehlgeschlagen. Bitte fügen Sie es über die Detailansicht erneut hinzu.",
-      "fetchCompetitionFailed": "Wettkampfdaten konnten nicht abgerufen werden: {detail}",
+      "fetchCompetitionFailed": "Wettkampfdaten konnten nicht abgerufen werden",
+      "entrySubmitFailed": "Meldung konnte nicht gespeichert werden",
       "competitionCreatedButImageFailed": "Der Wettkampf wurde erstellt, aber der Bild-Upload ist fehlgeschlagen",
       "unknownStyle": "Unbekannt",
       "styleAlreadyEntered": "Für die Disziplin „{name}“ liegt bereits eine Meldung vor",
@@ -1683,8 +1685,8 @@
         "atLeastOneRecord": "Bitte geben Sie mindestens ein Ergebnis ein"
       },
       "error": {
-        "splitDeleteFailed": "Zwischenzeiten konnten nicht gelöscht werden: {detail}",
-        "recordDeleteFailed": "Vorhandene Datensätze konnten nicht gelöscht werden: {detail}",
+        "splitDeleteFailed": "Zwischenzeiten konnten nicht gelöscht werden",
+        "recordDeleteFailed": "Vorhandene Datensätze konnten nicht gelöscht werden",
         "saveFailed": "Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
       },
       "errorVideoUploadUrlFailed": "{name}: Abrufen der Upload-URL fehlgeschlagen ({status})",
@@ -4227,7 +4229,8 @@
         "cancel": "Weiter bearbeiten"
       },
       "recordFutureGuard": "Für zukünftige Daten können keine Rennergebnisse eingetragen werden.",
-      "competitionEditRestricted": "Nur Team-Admins können die Angaben zu diesem Wettkampf bearbeiten."
+      "competitionEditRestricted": "Nur Team-Admins können die Angaben zu diesem Wettkampf bearbeiten.",
+      "practiceEditRestricted": "Nur Team-Admins können die Angaben zu diesem Training bearbeiten."
     },
     "premium": {
       "upgradeText": "Auf Premium upgraden",

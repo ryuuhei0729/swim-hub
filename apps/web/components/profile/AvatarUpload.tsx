@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { validateImageFile } from "@/utils/imageUtils";
 import { getSignedImageUrl } from "@/lib/image-url";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 // react-easy-cropを含むImageCropModalを動的インポート（バンドルサイズ削減）
 const ImageCropModal = dynamic(() => import("./ImageCropModal"), { ssr: false });
@@ -108,7 +109,7 @@ export default function AvatarUpload({
       onAvatarChange(null);
     } catch (err) {
       console.error("画像削除エラー:", err);
-      setError(err instanceof Error ? err.message : t("deleteImageFailed"));
+      setError(toUserFacingMessage(err, t("deleteImageFailed")));
     } finally {
       setIsUploading(false);
     }
@@ -140,7 +141,7 @@ export default function AvatarUpload({
       onAvatarChange(path);
     } catch (err) {
       console.error("アップロードエラー:", err);
-      setError(err instanceof Error ? err.message : t("uploadImageFailed"));
+      setError(toUserFacingMessage(err, t("uploadImageFailed")));
     } finally {
       // メモリリークを防ぐため、生成したオブジェクトURLを解放
       try {

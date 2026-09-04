@@ -79,10 +79,10 @@ vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({ supabase: { from: () => ({ select: () => ({ eq: () => ({}) }) }) }, subscription: null }),
 }));
 
-const STYLE_FR_50: Style = { id: 2, name_jp: "自由形50m", name: "Freestyle", style: "fr", distance: 50 };
-const STYLE_BR_50: Style = { id: 9, name_jp: "平泳ぎ50m", name: "Breaststroke", style: "br", distance: 50 };
-const STYLE_BA_50: Style = { id: 13, name_jp: "背泳ぎ50m", name: "Backstroke", style: "ba", distance: 50 };
-const STYLE_FLY_50: Style = { id: 17, name_jp: "バタフライ50m", name: "Butterfly", style: "fly", distance: 50 };
+const STYLE_FR_50: Style = { id: 2, name_jp: "自由形50m", name: "Freestyle", style: "Fr", distance: 50 };
+const STYLE_BR_50: Style = { id: 9, name_jp: "平泳ぎ50m", name: "Breaststroke", style: "Br", distance: 50 };
+const STYLE_BA_50: Style = { id: 13, name_jp: "背泳ぎ50m", name: "Backstroke", style: "Ba", distance: 50 };
+const STYLE_FLY_50: Style = { id: 17, name_jp: "バタフライ50m", name: "Butterfly", style: "Fly", distance: 50 };
 const STYLES = [STYLE_FR_50, STYLE_BR_50, STYLE_BA_50, STYLE_FLY_50];
 
 const baseCompetition = {

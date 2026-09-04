@@ -99,7 +99,8 @@ describe("[V-ICON-04] マイページ: info ツールチップの文言が実際
 
   it("トグルボタン自身の文言 ('WAポイント表示') とは異なる、説明文特有の内容を含む (短い部分文字列によるトートロジー回避の確認)", () => {
     renderWithLocale([buildBestTime()]);
-    const tooltip = screen.getAllByRole("tooltip")[0];
+    // role="tooltip" は前のテストと同様に1件のみ存在する前提
+    const tooltip = screen.getAllByRole("tooltip")[0]!;
     // トグルのラベルには絶対に出てこない、算出式パート
     expect(tooltip.textContent).toContain("1000×(基準タイム÷記録)³");
     expect(getToggle().textContent).not.toContain("1000×(基準タイム÷記録)³");

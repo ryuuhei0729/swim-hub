@@ -238,6 +238,8 @@ export default function RecordClient({
   const updateRelayEntry = (entryId: string, relayEventId: RelayEventId) => {
     const relayDef = relayEvents.find((r) => r.id === relayEventId);
     if (!relayDef) return;
+    const firstLeg = relayDef.legs[0];
+    if (!firstLeg) return; // relayDef.legs は常に4件保証されるが型上は保証されないため防御的に扱う
 
     // リレー種目ではすべての leg を空の MemberRecord として初期化
     const legRecords: MemberRecord[] = relayDef.legs.map((leg) => ({
@@ -275,7 +277,7 @@ export default function RecordClient({
         entry.id === entryId
           ? {
               ...entry,
-              styleId: relayDef.legs[0].styleId, // 代表 styleId (第1泳者の種目)
+              styleId: firstLeg.styleId, // 代表 styleId (第1泳者の種目)
               styleName: relayDef.label,
               relayEventId,
               memberRecords: legRecords,
@@ -455,6 +457,8 @@ export default function RecordClient({
         const totalSeconds = parseTimeToSeconds(value);
         const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
         const totalDistance = legBoundaries[3];
+        if (totalDistance === undefined) return entry; // legBoundaries は固定4要素配列で
+          // 本来常に定義されるが型上は保証されないため防御的に扱う
 
         // relaySplitTimes の全体距離スプリット（= totalDistance）を同期更新
         const currentSplits = entry.relaySplitTimes ?? [];
@@ -462,7 +466,7 @@ export default function RecordClient({
         let updatedSplits: SplitTimeEntry[];
         if (totalSeconds > 0) {
           const newSplit: SplitTimeEntry = {
-            id: existingIdx >= 0 ? currentSplits[existingIdx].id : crypto.randomUUID(),
+            id: existingIdx >= 0 ? currentSplits[existingIdx]!.id : crypto.randomUUID(), // existingIdx >= 0 を直前の三項演算子の条件で確認済み
             distance: totalDistance,
             splitTime: totalSeconds,
             displayValue: value,
@@ -487,7 +491,8 @@ export default function RecordClient({
         const legTimes = allBoundariesPresent ? calcLegTimesFromCumulative(newCumulatives) : null;
 
         const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
-          const newCum = newCumulatives[idx];
+          const newCum = newCumulatives[idx] ?? 0; // newCumulatives は legBoundaries と同じ
+            // 長さで1:1生成される。0は「境界未確定」の sentinel で直後の `> 0` 判定が扱う
           const isLastLeg = idx === 3;
           // 最終leg（合計タイム）は入力値に常に追従させ、クリア操作も反映する
           const cumTime = isLastLeg
@@ -530,6 +535,8 @@ export default function RecordClient({
 
         const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
         const totalDistance = legBoundaries[3];
+        if (totalDistance === undefined) return entry; // legBoundaries は固定4要素配列で
+          // 本来常に定義されるが型上は保証されないため防御的に扱う
 
         const updatedSplits = (entry.relaySplitTimes ?? []).map((st) => {
           if (st.id !== splitId) return st;
@@ -558,7 +565,8 @@ export default function RecordClient({
           field === "splitTime" && changedSplit && changedSplit.distance === totalDistance;
 
         const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
-          const newCum = allBoundariesPresent ? newCumulatives[idx] : 0;
+          const newCum = (allBoundariesPresent ? newCumulatives[idx] : 0) ?? 0; // newCumulatives は
+            // legBoundaries と同じ長さで1:1生成される。0は「境界未確定」の sentinel
           const cumTime = newCum > 0 ? newCum : (mr.cumulativeTimeSeconds ?? 0);
           const legTime = legTimes ? (legTimes[idx] ?? mr.time) : mr.time;
           const updates: Partial<MemberRecord> = {
@@ -605,6 +613,8 @@ export default function RecordClient({
         if (entry.id !== entryId || !entry.relayEventId) return entry;
         const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
         const totalDistance = legBoundaries[3];
+        if (totalDistance === undefined) return entry; // legBoundaries は固定4要素配列で
+          // 本来常に定義されるが型上は保証されないため防御的に扱う
         const currentSplits = entry.relaySplitTimes ?? [];
         const existingDistances = new Set(
           currentSplits.map((st) => st.distance).filter((d) => d > 0),
@@ -966,7 +976,11 @@ export default function RecordClient({
           // 累計タイム逆転バリデーション (全 leg 入力済みの場合のみ実行)
           if (inputtedLegs.length === 4) {
             for (let i = 1; i < cumulatives.length; i++) {
-              if (cumulatives[i] <= cumulatives[i - 1]) {
+              const prevCum = cumulatives[i - 1];
+              const currCum = cumulatives[i];
+              if (prevCum === undefined || currCum === undefined) continue; // i>=1 かつ
+                // i<cumulatives.length のため理論上 undefined にならないが防御的に扱う
+              if (currCum <= prevCum) {
                 alert(
                   tRecords("validation.cumulativeTimeInverted", { current: i + 1, prev: i }),
                 );
@@ -1004,6 +1018,7 @@ export default function RecordClient({
 
         for (let legIdx = 0; legIdx < entry.memberRecords.length; legIdx++) {
           const mr = entry.memberRecords[legIdx];
+          if (!mr) continue; // entry.memberRecords.length に基づく for ループのため型上のみの防御
           // リレー種目: 累計タイムが > 0 なら保存対象（区間タイムは累計から逆算されるため0になりえない）
           // 個人種目: 区間タイムが > 0 なら保存対象
           const shouldSave = entry.relayEventId
@@ -1023,7 +1038,11 @@ export default function RecordClient({
             if (entry.relayEventId && entry.relaySplitTimes) {
               const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
               const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
+              if (legLow === undefined) continue; // legBoundaries は固定4要素配列で
+                // 本来常に定義されるが、legLow=0 (leg0 の意味) と取り違えないよう ?? は使わない
               const legHigh = legBoundaries[legIdx];
+              if (legHigh === undefined) continue; // legBoundaries は固定4要素配列で
+                // 本来常に定義されるが型上は保証されないため防御的に扱う
               const legStart = getLegStartCumulative(legCumulativeTimes, legIdx);
               splitTimes = entry.relaySplitTimes
                 .filter(
@@ -1070,9 +1089,10 @@ export default function RecordClient({
               .eq("record_id", record.id);
 
             if (splitDeleteError) {
+              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
               console.error("スプリットタイム削除エラー:", splitDeleteError);
               // 致命的な削除エラーなのでthrowして外側のcatchブロックで処理
-              throw new Error(tRecords("error.splitDeleteFailed", { detail: splitDeleteError.message }));
+              throw new Error(tRecords("error.splitDeleteFailed"));
             }
           }
         }
@@ -1084,9 +1104,10 @@ export default function RecordClient({
           .in("id", existingRecordIds);
 
         if (deleteError) {
+          // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
           console.error("既存のレコード削除エラー:", deleteError);
           // 致命的な削除エラーなのでthrowして外側のcatchブロックで処理
-          throw new Error(tRecords("error.recordDeleteFailed", { detail: deleteError.message }));
+          throw new Error(tRecords("error.recordDeleteFailed"));
         }
       }
 
@@ -1572,6 +1593,8 @@ export default function RecordClient({
                             distance: st.distance,
                             splitTime: st.splitTime,
                           }));
+                          if (totalDistance === undefined) return baseSplits; // legBoundaries は
+                            // 固定4要素配列で本来常に定義されるが型上は保証されないため防御的に扱う
                           const totalTime = entry.memberRecords[3]?.cumulativeTimeSeconds ?? 0;
                           if (totalTime > 0 && !baseSplits.some((st) => st.distance === totalDistance)) {
                             return [...baseSplits, { distance: totalDistance, splitTime: totalTime }];

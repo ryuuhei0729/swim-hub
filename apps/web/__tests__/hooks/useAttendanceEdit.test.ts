@@ -74,6 +74,10 @@ const makeExistingAttendance = (
 
 const EDIT_MARK_RE = /\(\d{2}\/\d{2}\s\d{2}:\d{2}締切後編集\)/;
 
+// NOTE: `mock.calls[0]!` / `payload[0]!` / `inserted[0]!` を多用する。各テストは直前に
+// toHaveBeenCalledTimes(1) 相当の呼び出しを1回だけ行っており、mock 呼び出し配列と
+// そこから取り出す payload/inserted 配列は共に1件以上を持つ設計になっている。
+
 describe("useAttendanceEdit (修正3-A)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -103,18 +107,18 @@ describe("useAttendanceEdit (修正3-A)", () => {
       });
 
       expect(bulkUpdateMyAttendances).toHaveBeenCalledTimes(1);
-      const payload = bulkUpdateMyAttendances.mock.calls[0][0] as Array<{
+      const payload = bulkUpdateMyAttendances.mock.calls[0]![0] as Array<{
         attendanceId: string;
         status: string | null;
         note: string | null;
       }>;
       expect(payload).toHaveLength(1);
-      expect(payload[0].attendanceId).toBe("att-ev-1");
-      expect(payload[0].status).toBe("absent");
+      expect(payload[0]!.attendanceId).toBe("att-ev-1");
+      expect(payload[0]!.status).toBe("absent");
       // クライアントは締切後編集マークを一切付与しない (API の addEditMark に委譲)
-      expect(payload[0].note).toBe("体調不良で欠席");
-      expect(payload[0].note).not.toContain("締切後編集");
-      expect(payload[0].note).not.toMatch(EDIT_MARK_RE);
+      expect(payload[0]!.note).toBe("体調不良で欠席");
+      expect(payload[0]!.note).not.toContain("締切後編集");
+      expect(payload[0]!.note).not.toMatch(EDIT_MARK_RE);
     });
 
     it("closed の既存出欠を本文なし (空) で更新 → API には null を渡す (マーク生成しない)", async () => {
@@ -133,9 +137,9 @@ describe("useAttendanceEdit (修正3-A)", () => {
         await result.current.saveAll(events, attendances);
       });
 
-      const payload = bulkUpdateMyAttendances.mock.calls[0][0] as Array<{ note: string | null }>;
+      const payload = bulkUpdateMyAttendances.mock.calls[0]![0] as Array<{ note: string | null }>;
       // 空文字は null として渡し、マーク文字列は生成しない (API が getEditMark を付与する)
-      expect(payload[0].note).toBeNull();
+      expect(payload[0]!.note).toBeNull();
     });
 
     it("旧マーク付き note を再編集 → クライアントはマークを除去/再付与せず raw のまま渡す", async () => {
@@ -155,9 +159,9 @@ describe("useAttendanceEdit (修正3-A)", () => {
         await result.current.saveAll(events, attendances);
       });
 
-      const payload = bulkUpdateMyAttendances.mock.calls[0][0] as Array<{ note: string | null }>;
+      const payload = bulkUpdateMyAttendances.mock.calls[0]![0] as Array<{ note: string | null }>;
       // クライアントは加工しない: 入力された raw note がそのまま渡る
-      expect(payload[0].note).toBe("メモ (06/17 20:23締切後編集)");
+      expect(payload[0]!.note).toBe("メモ (06/17 20:23締切後編集)");
     });
   });
 
@@ -177,9 +181,9 @@ describe("useAttendanceEdit (修正3-A)", () => {
         await result.current.saveAll(events, attendances);
       });
 
-      const payload = bulkUpdateMyAttendances.mock.calls[0][0] as Array<{ note: string | null }>;
-      expect(payload[0].note).toBe("出席します");
-      expect(payload[0].note).not.toContain("締切後編集");
+      const payload = bulkUpdateMyAttendances.mock.calls[0]![0] as Array<{ note: string | null }>;
+      expect(payload[0]!.note).toBe("出席します");
+      expect(payload[0]!.note).not.toContain("締切後編集");
     });
   });
 
@@ -204,18 +208,18 @@ describe("useAttendanceEdit (修正3-A)", () => {
       expect(insertMock).toHaveBeenCalledTimes(1);
       expect(bulkUpdateMyAttendances).not.toHaveBeenCalled();
 
-      const inserted = insertMock.mock.calls[0][0] as Array<{
+      const inserted = insertMock.mock.calls[0]![0] as Array<{
         user_id: string;
         practice_id: string | null;
         status: string | null;
         note: string | null;
       }>;
       expect(inserted).toHaveLength(1);
-      expect(inserted[0].practice_id).toBe("ev-new");
-      expect(inserted[0].status).toBe("present");
+      expect(inserted[0]!.practice_id).toBe("ev-new");
+      expect(inserted[0]!.status).toBe("present");
       // insert 経路は据え置き: クライアント側でマークが付与される
-      expect(inserted[0].note).toContain("遅れて参加");
-      expect(inserted[0].note).toMatch(EDIT_MARK_RE);
+      expect(inserted[0]!.note).toContain("遅れて参加");
+      expect(inserted[0]!.note).toMatch(EDIT_MARK_RE);
     });
 
     it("open の新規出欠は insert 時にマークを付与しない", async () => {
@@ -234,9 +238,9 @@ describe("useAttendanceEdit (修正3-A)", () => {
         await result.current.saveAll(events, attendances);
       });
 
-      const inserted = insertMock.mock.calls[0][0] as Array<{ note: string | null }>;
-      expect(inserted[0].note).toBe("参加します");
-      expect(inserted[0].note).not.toContain("締切後編集");
+      const inserted = insertMock.mock.calls[0]![0] as Array<{ note: string | null }>;
+      expect(inserted[0]!.note).toBe("参加します");
+      expect(inserted[0]!.note).not.toContain("締切後編集");
     });
   });
 

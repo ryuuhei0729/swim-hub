@@ -5,6 +5,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { TeamMembership, TeamMembershipWithUser } from "../../types";
 import { requireAuth, requireTeamAdmin } from "../auth-utils";
+import { UserFacingError } from "../../utils/userFacingError";
 
 export class TeamMembersAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -40,7 +41,9 @@ export class TeamMembersAPI {
     };
 
     if (!result.success) {
-      throw new Error(result.error || "参加申請に失敗しました");
+      // result.error はRPC内の業務ロジックが返すユーザー提示前提のメッセージ
+      // (招待コード無効など)。生のPostgrestErrorではないためUserFacingErrorとして扱う。
+      throw new UserFacingError(result.error || "参加申請に失敗しました");
     }
 
     return result.membership as TeamMembership;
@@ -148,7 +151,9 @@ export class TeamMembersAPI {
     };
 
     if (!result.success) {
-      throw new Error(result.error || "再アクティブ化に失敗しました");
+      // result.error はRPC内の業務ロジックが返すユーザー提示前提のメッセージ。
+      // 生のPostgrestErrorではないためUserFacingErrorとして扱う。
+      throw new UserFacingError(result.error || "再アクティブ化に失敗しました");
     }
 
     return result.membership as TeamMembership;
@@ -199,9 +204,9 @@ export class TeamMembersAPI {
       .single();
 
     if (fetchError) throw fetchError;
-    if (!membership) throw new Error("メンバーシップが見つかりません");
+    if (!membership) throw new UserFacingError("メンバーシップが見つかりません");
     if (membership.status !== "pending") {
-      throw new Error("承認待ちのメンバーシップのみ承認できます");
+      throw new UserFacingError("承認待ちのメンバーシップのみ承認できます");
     }
 
     // 管理者権限チェック
@@ -236,9 +241,9 @@ export class TeamMembersAPI {
       .single();
 
     if (fetchError) throw fetchError;
-    if (!membership) throw new Error("メンバーシップが見つかりません");
+    if (!membership) throw new UserFacingError("メンバーシップが見つかりません");
     if (membership.status !== "pending") {
-      throw new Error("承認待ちのメンバーシップのみ拒否できます");
+      throw new UserFacingError("承認待ちのメンバーシップのみ拒否できます");
     }
 
     // 管理者権限チェック

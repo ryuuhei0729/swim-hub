@@ -27,6 +27,7 @@ import { StyleAPI } from "@apps/shared/api/styles";
 import { useCompetitionFormStore, type EntryInfo } from "@/stores/competitionFormStore";
 import { localizedStyleName } from "@/utils/styleName";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
+import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { resolveEntryMutations } from "@/utils/entryMutations";
@@ -190,10 +191,12 @@ export const EntryLogFormScreen: React.FC = () => {
   // 新規作成モードの場合、最初のエントリーにデフォルトの種目を設定
   useEffect(() => {
     if (entryId || loadingStyles || swimStyles.length === 0) return;
-    if (entries.length > 0 && !entries[0].styleId && swimStyles.length > 0) {
+    const firstEntry = entries[0];
+    const firstStyle = swimStyles[0];
+    if (firstEntry && !firstEntry.styleId && firstStyle) {
       setEntries((prev) =>
         prev.map((entry, index) =>
-          index === 0 ? { ...entry, styleId: String(swimStyles[0].id) } : entry,
+          index === 0 ? { ...entry, styleId: String(firstStyle.id) } : entry,
         ),
       );
     }
@@ -377,7 +380,7 @@ export const EntryLogFormScreen: React.FC = () => {
     const {
       data: { user },
     } = await supabaseClient.auth.getUser();
-    if (!user) throw new Error(t("auth.errorMap.sessionNotFound"));
+    if (!user) throw new UserFacingError(t("auth.errorMap.sessionNotFound"));
 
     // この大会・このユーザーの既存エントリーを取得（編集/新規どちらも、style 衝突解決のため取得）。
     // 新規作成モードでも、同一 style の既存エントリーがあれば update する必要がある
@@ -494,7 +497,7 @@ export const EntryLogFormScreen: React.FC = () => {
       console.error("エントリー登録エラー:", error);
       Alert.alert(
         t("common.error"),
-        error instanceof Error ? error.message : t("competition.entry.registrationFailed"),
+        toUserFacingMessage(error, t("competition.entry.registrationFailed")),
         [{ text: "OK" }],
       );
     } finally {
@@ -538,7 +541,7 @@ export const EntryLogFormScreen: React.FC = () => {
       console.error("エントリー登録エラー:", error);
       Alert.alert(
         t("common.error"),
-        error instanceof Error ? error.message : t("competition.entry.registrationFailed"),
+        toUserFacingMessage(error, t("competition.entry.registrationFailed")),
         [{ text: "OK" }],
       );
     } finally {
@@ -715,9 +718,12 @@ export const EntryLogFormScreen: React.FC = () => {
                     style={[styles.dropdownOption, isSelected && styles.dropdownOptionSelected]}
                     onPress={() => {
                       if (pickingEntryIndex !== null) {
-                        updateEntry(entries[pickingEntryIndex].id, {
-                          styleId: String(style.id),
-                        });
+                        const targetEntry = entries[pickingEntryIndex];
+                        if (targetEntry) {
+                          updateEntry(targetEntry.id, {
+                            styleId: String(style.id),
+                          });
+                        }
                       }
                       setShowStylePicker(false);
                       setPickingEntryIndex(null);

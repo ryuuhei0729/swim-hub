@@ -144,6 +144,9 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
       try {
         const prev = await new RecordAPI(supabase).getPreviousBestTime(
           styleId,
+          // poolType?: number | null は optional prop。唯一の呼び出し元 RecordItem.tsx は
+          // record.pool_type (RecordWithDetails 上 NOT NULL) を常に渡すため、実際に
+          // undefined になる経路は無い。
           poolType ?? 0,
           recordId,
           isRelaying ?? false,

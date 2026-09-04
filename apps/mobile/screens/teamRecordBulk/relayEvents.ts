@@ -104,15 +104,18 @@ export function buildRelayEvents(labels: RelayLabels): LabelledRelayEventDef[] {
   const freeLabel = (dist: number) => `${dist}m×4 ${freeRelaySuffix}`;
   const medleyLabel = (dist: number) => `${dist}m×4 ${medleyRelaySuffix}`;
 
-  return [
-    { id: "relay_4x25_free", label: freeLabel(25), legs: labelLegs(RELAY_EVENTS[0].legs) },
-    { id: "relay_4x50_free", label: freeLabel(50), legs: labelLegs(RELAY_EVENTS[1].legs) },
-    { id: "relay_4x100_free", label: freeLabel(100), legs: labelLegs(RELAY_EVENTS[2].legs) },
-    { id: "relay_4x200_free", label: freeLabel(200), legs: labelLegs(RELAY_EVENTS[3].legs) },
-    { id: "relay_4x25_medley", label: medleyLabel(25), legs: labelLegs(RELAY_EVENTS[4].legs) },
-    { id: "relay_4x50_medley", label: medleyLabel(50), legs: labelLegs(RELAY_EVENTS[5].legs) },
-    { id: "relay_4x100_medley", label: medleyLabel(100), legs: labelLegs(RELAY_EVENTS[6].legs) },
-  ];
+  // 距離は getRelayLegDistance を唯一の定義元とし、二重管理を避ける
+  // (RELAY_EVENTS を固定インデックスで参照しないので定義順が変わっても対応は崩れない)。
+  const isMedley = (id: RelayEventId) => id.endsWith("_medley");
+
+  return RELAY_EVENTS.map((event) => {
+    const dist = getRelayLegDistance(event.id);
+    return {
+      id: event.id,
+      label: isMedley(event.id) ? medleyLabel(dist) : freeLabel(dist),
+      legs: labelLegs(event.legs),
+    };
+  });
 }
 
 /**
@@ -139,7 +142,8 @@ export function calcLegTimesFromCumulative(cumulativeTimes: number[]): number[] 
   if (cumulativeTimes.length === 0) return [];
   return cumulativeTimes.map((cum, i) => {
     if (i === 0) return cum;
-    return Math.round((cum - cumulativeTimes[i - 1]) * 100) / 100;
+    // i>=1 かつ Array.prototype.map の i は 0<=i<length を満たすため i-1 は必ず有効な添字
+    return Math.round((cum - cumulativeTimes[i - 1]!) * 100) / 100;
   });
 }
 

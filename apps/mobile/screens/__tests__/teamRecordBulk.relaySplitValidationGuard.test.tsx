@@ -158,7 +158,7 @@ function makeRelayRecords(legSplits: Array<{ distance: number; split_time: numbe
     is_relaying: isRelaying[idx],
     reaction_time: null,
     note: null,
-    split_times: legSplits[idx].map((s, j) => ({
+    split_times: legSplits[idx]!.map((s, j) => ({ // legSplits は呼び出し元で常に times と同じ4要素を渡す設計
       id: `st-${idx}-${j}`,
       distance: s.distance,
       split_time: s.split_time,

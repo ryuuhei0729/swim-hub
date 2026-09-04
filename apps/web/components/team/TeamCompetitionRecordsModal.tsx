@@ -212,10 +212,12 @@ export default function TeamCompetitionRecordsModal({
       const styleInfo = getStyle(record.styles);
       if (!styleInfo) continue;
 
-      if (!grouped[record.style_id]) {
-        grouped[record.style_id] = { style: styleInfo, records: [] };
+      let entry = grouped[record.style_id];
+      if (!entry) {
+        entry = { style: styleInfo, records: [] };
+        grouped[record.style_id] = entry;
       }
-      grouped[record.style_id].records.push(record);
+      entry.records.push(record);
     }
 
     // 種目名でソート

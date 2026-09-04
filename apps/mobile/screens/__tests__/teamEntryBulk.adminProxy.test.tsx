@@ -211,7 +211,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
 
       // entry-X (1行目) を削除ボタンで取り除く
       const deleteButtons = screen.getAllByTestId("icon-trash-2").map((icon) => icon.closest("button") as HTMLElement);
-      fireEvent.click(deleteButtons[0]);
+      fireEvent.click(deleteButtons[0]!); // icon-trash-2 は entry-X/entry-Y の2行分描画されるため必ず存在
 
       fireEvent.click(screen.getByText("まとめて登録"));
       fireEvent.click(await screen.findByText("確定"));
@@ -239,8 +239,8 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
 
       const deleteButtons = screen.getAllByTestId("icon-trash-2").map((icon) => icon.closest("button") as HTMLElement);
       expect(deleteButtons).toHaveLength(2);
-      fireEvent.click(deleteButtons[1]);
-      fireEvent.click((screen.getAllByTestId("icon-trash-2")[0]).closest("button") as HTMLElement);
+      fireEvent.click(deleteButtons[1]!); // 直前の toHaveLength(2) で2件の存在は保証済み
+      fireEvent.click((screen.getAllByTestId("icon-trash-2")[0]!).closest("button") as HTMLElement); // 1行削除後、残りの1行分のみ描画されるため必ず存在
 
       fireEvent.click(screen.getByText("まとめて登録"));
       // 全削除保存が可能であること (アラートでブロックされず確認モーダルが開く)
@@ -260,12 +260,12 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
     const pickerButtons = screen
       .getAllByRole("button")
       .filter((btn) => /自由形|平泳ぎ|種目を選択/.test(btn.textContent ?? ""));
-    fireEvent.click(pickerButtons[0]);
+    fireEvent.click(pickerButtons[0]!); // entry-X/entry-Y は共に種目ピッカーボタンを持つため必ず1件以上存在
 
     // 種目ピッカーの選択肢一覧は「行の現在値表示」より後にDOM上へ追加されるため、
     // 複数マッチのうち最後の要素がピッカー内の選択肢である
     const breastOptions = await screen.findAllByText(/平泳ぎ/, { selector: "span" });
-    const breastOption = breastOptions[breastOptions.length - 1];
+    const breastOption = breastOptions[breastOptions.length - 1]!; // findAllByText は1件以上見つからなければ throw するため末尾要素は必ず存在する
     fireEvent.click(breastOption.closest("button") ?? breastOption);
   }
 
@@ -287,7 +287,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       const deleteButtons = screen
         .getAllByTestId("icon-trash-2")
         .map((icon) => icon.closest("button") as HTMLElement);
-      fireEvent.click(deleteButtons[1]);
+      fireEvent.click(deleteButtons[1]!); // entry-X/entry-Y の2行が描画されているため必ず存在
 
       fireEvent.click(screen.getByText("まとめて登録"));
 
@@ -324,7 +324,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       const deleteButtons = screen
         .getAllByTestId("icon-trash-2")
         .map((icon) => icon.closest("button") as HTMLElement);
-      fireEvent.click(deleteButtons[1]);
+      fireEvent.click(deleteButtons[1]!); // entry-X/entry-Y の2行が描画されているため必ず存在
       fireEvent.click(screen.getByText("まとめて登録"));
 
       // ja.json の実データ: conflictingDeleteTitle = "削除待ちの種目と重複しています"
@@ -336,7 +336,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
 
       // 生のi18nキー文字列がそのまま渡っていないこと（キー欠落の再発防止）
       const [, messageArg] = (Alert.alert as unknown as { mock: { calls: unknown[][] } }).mock
-        .calls[0];
+        .calls[0]!; // 直前の toHaveBeenCalledWith で Alert.alert 呼び出しの存在は保証済み
       expect(messageArg).not.toContain("teams.mobile.entryBulk.conflictingDelete");
     },
   );
@@ -355,7 +355,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       const pickerButtons = screen
         .getAllByRole("button")
         .filter((btn) => /自由形|平泳ぎ|種目を選択/.test(btn.textContent ?? ""));
-      fireEvent.click(pickerButtons[0]);
+      fireEvent.click(pickerButtons[0]!); // entry-X/entry-Y は共に種目ピッカーボタンを持つため必ず1件以上存在
 
       const clearOption = await screen.findByText("選択解除");
       fireEvent.click(clearOption.closest("button") ?? clearOption);
@@ -386,14 +386,14 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       const deleteButtons = screen
         .getAllByTestId("icon-trash-2")
         .map((icon) => icon.closest("button") as HTMLElement);
-      fireEvent.click(deleteButtons[0]);
+      fireEvent.click(deleteButtons[0]!); // entry-X/entry-Y の2行が描画されているため必ず存在
 
       fireEvent.click(screen.getByText("まとめて登録"));
       await screen.findByText("確定");
       // フッターの「キャンセル」(画面全体) と確認モーダル内の「キャンセル」が両方存在するため、
       // DOM上で後に追加される (モーダル内の) ものを選ぶ
       const cancelTexts = screen.getAllByText("キャンセル");
-      fireEvent.click(cancelTexts[cancelTexts.length - 1]);
+      fireEvent.click(cancelTexts[cancelTexts.length - 1]!); // getAllByText は1件以上見つからなければ throw するため末尾要素は必ず存在する
 
       await waitFor(() => {
         expect(screen.queryByText("確定")).toBeNull();
@@ -436,10 +436,10 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       // 開かずアラートを出すだけになり、後続の `findByText("確定")` がタイムアウトする)
       const prefillButtons = await screen.findAllByText("ベストタイムを流用");
       await waitFor(() => {
-        const btn = prefillButtons[0].closest("button") as HTMLButtonElement | null;
+        const btn = prefillButtons[0]!.closest("button") as HTMLButtonElement | null; // findAllByText は1件以上見つからなければ throw するため [0] は必ず存在する
         expect(btn?.disabled).toBe(false);
       });
-      fireEvent.click(prefillButtons[0].closest("button") ?? prefillButtons[0]);
+      fireEvent.click(prefillButtons[0]!.closest("button") ?? prefillButtons[0]!); // 同上
 
       // プリフィルが実際に入力欄へ反映されたこと (state更新の反映) を確認してから
       // 保存に進む。フォーマット済みの "1:05.00" (65.0秒) が表示されるまで待つ
@@ -452,7 +452,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
         expect(Alert.alert).toHaveBeenCalled();
       });
       const [, messageArg] = (Alert.alert as unknown as { mock: { calls: unknown[][] } }).mock
-        .calls[0];
+        .calls[0]!; // 直前の toHaveBeenCalled で Alert.alert 呼び出しの存在は保証済み
       // 現状の参照先 (competition.entries.saveFailedDuplicate) のいずれかの翻訳文言。
       // 生のキー文字列や "duplicate key" ではないことを確認する
       expect(messageArg).not.toBe("duplicate key");
@@ -486,10 +486,10 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       // 開かずアラートを出すだけになり、後続の `findByText("確定")` がタイムアウトする)
       const prefillButtons = await screen.findAllByText("ベストタイムを流用");
       await waitFor(() => {
-        const btn = prefillButtons[0].closest("button") as HTMLButtonElement | null;
+        const btn = prefillButtons[0]!.closest("button") as HTMLButtonElement | null; // findAllByText は1件以上見つからなければ throw するため [0] は必ず存在する
         expect(btn?.disabled).toBe(false);
       });
-      fireEvent.click(prefillButtons[0].closest("button") ?? prefillButtons[0]);
+      fireEvent.click(prefillButtons[0]!.closest("button") ?? prefillButtons[0]!); // 同上
 
       // プリフィルが実際に入力欄へ反映されたこと (state更新の反映) を確認してから
       // 保存に進む。フォーマット済みの "1:05.00" (65.0秒) が表示されるまで待つ
@@ -541,7 +541,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       const deleteButtons = screen
         .getAllByTestId("icon-trash-2")
         .map((icon) => icon.closest("button") as HTMLElement);
-      fireEvent.click(deleteButtons[0]);
+      fireEvent.click(deleteButtons[0]!); // entry-X/entry-Y の2行が描画されているため必ず存在
 
       fireEvent.click(screen.getByText("まとめて登録"));
       const confirmButton = await screen.findByText("確定");

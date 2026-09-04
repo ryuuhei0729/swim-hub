@@ -66,7 +66,7 @@ describe("useDayEntriesQuery", () => {
 
     expect(result.current.data).toEqual(items);
     expect(spy).toHaveBeenCalledTimes(1);
-    const [startDate, endDate] = spy.mock.calls[0];
+    const [startDate, endDate] = spy.mock.calls[0]!; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
     // 月全体ではなく、タップした日1日分のみをリクエストしていること
     expect(startDate).toBe(endDate);
     expect(startDate).toMatch(/2026-07-10/);
@@ -86,7 +86,7 @@ describe("useDayEntriesQuery", () => {
     rerender({ date: new Date("2026-07-11T00:00:00") });
     await waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
 
-    const secondCallArgs = spy.mock.calls[1];
+    const secondCallArgs = spy.mock.calls[1]!; // 直前の toHaveBeenCalledTimes(2) で存在は保証済み
     expect(secondCallArgs[0]).toMatch(/2026-07-11/);
   });
 

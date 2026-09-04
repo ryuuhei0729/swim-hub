@@ -139,7 +139,10 @@ export default function LpMarquee({ items, light = false }: LpMarqueeProps) {
 
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
+        const entry = entries[0];
+        if (!entry) return; // observe() は1要素のみを対象とするため通常常に
+          // 存在するが、型上は保証されないため防御的に扱う
+        if (entry.isIntersecting) {
           startLoop();
         } else {
           stopLoop();

@@ -172,11 +172,17 @@ export class PracticeLogTemplateAPI {
    * テンプレートを削除
    */
   async deleteTemplate(templateId: string): Promise<void> {
-    const { error } = await this.supabase
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（practices.ts の deletePractice と同型）。
+    const { data, error } = await this.supabase
       .from("practice_log_templates")
       .delete()
-      .eq("id", templateId);
+      .eq("id", templateId)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("テンプレートの削除に失敗しました");
+    }
   }
 }

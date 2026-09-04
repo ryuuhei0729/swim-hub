@@ -228,7 +228,7 @@ describe("TeamMemberList - ソート3状態サイクル", () => {
     // 初期状態（未ソート）: 入力順そのまま
     expect(getRowOrder()).toEqual(["中太郎", "遅い次郎", "速い三郎", "未登録四郎"]);
 
-    const sortButton = () => screen.getAllByText("50m")[0].closest("button")!;
+    const sortButton = () => screen.getAllByText("50m")[0]!.closest("button")!; // getAllByText は1件以上見つからなければ throw するため [0] は必ず存在する
 
     // 1回目タップ: 昇順（速い順）。未登録メンバーは末尾のまま。
     fireEvent.click(sortButton());
@@ -253,8 +253,8 @@ describe("TeamMemberList - ソート3状態サイクル", () => {
     renderList(members);
     await screen.findByText("中太郎");
 
-    const button50 = () => screen.getAllByText("50m")[0].closest("button")!;
-    const button100 = () => screen.getAllByText("100m")[0].closest("button")!;
+    const button50 = () => screen.getAllByText("50m")[0]!.closest("button")!; // 同上
+    const button100 = () => screen.getAllByText("100m")[0]!.closest("button")!; // 同上
 
     fireEvent.click(button50());
     expect(within(button50()).getByText("↑")).toBeTruthy();
@@ -274,8 +274,8 @@ describe("TeamMemberList - ソート3状態サイクル", () => {
     renderList(members);
     await screen.findByText("中太郎");
 
-    const button50 = () => screen.getAllByText("50m")[0].closest("button")!;
-    const button100 = () => screen.getAllByText("100m")[0].closest("button")!;
+    const button50 = () => screen.getAllByText("50m")[0]!.closest("button")!; // 同上
+    const button100 = () => screen.getAllByText("100m")[0]!.closest("button")!; // 同上
 
     // 50m を昇順→降順まで進める
     fireEvent.click(button50());
@@ -310,7 +310,7 @@ describe("TeamMemberList - ソート3状態サイクル", () => {
     );
     await screen.findByText("無記録A");
 
-    const sortButton = () => screen.getAllByText("50m")[0].closest("button")!;
+    const sortButton = () => screen.getAllByText("50m")[0]!.closest("button")!; // 同上
     expect(() => {
       fireEvent.click(sortButton()); // asc
       fireEvent.click(sortButton()); // desc
@@ -334,7 +334,7 @@ describe("TeamMemberList - ソート3状態サイクル", () => {
     expect(screen.getByText("グループA")).toBeTruthy();
     expect(screen.getByText("グループB")).toBeTruthy();
 
-    const sortButton = () => screen.getAllByText("50m")[0].closest("button")!;
+    const sortButton = () => screen.getAllByText("50m")[0]!.closest("button")!; // 同上
     fireEvent.click(sortButton()); // asc
     fireEvent.click(sortButton()); // desc
 
@@ -472,7 +472,7 @@ describe("TeamMemberList - 引き継ぎタイムを含むトグル (T-4)", () =>
     );
     await screen.findByText("選手アルファ");
 
-    const sortButton = () => screen.getAllByText("50m")[0].closest("button")!;
+    const sortButton = () => screen.getAllByText("50m")[0]!.closest("button")!; // 同上
 
     // トグルOFFのまま昇順ソート: ベータ(25.00) が先、アルファ(35.00)が後
     fireEvent.click(sortButton());
@@ -587,7 +587,7 @@ describe("TeamMemberList - D-1 クエリのフィールド網羅性 + セル詳�
     await screen.findByText("選手クエリ子");
 
     expect(selectCalls.length).toBeGreaterThan(0);
-    const sel = selectCalls[0];
+    const sel = selectCalls[0]!; // 直前の toBeGreaterThan(0) で存在は保証済み
     // note 列 (単純な部分文字列一致は "annotation" 等に誤爆しないよう、単語境界で確認)
     expect(/\bnote\b/.test(sel)).toBe(true);
     // competitions の JOIN ブロックが id/title/date を伴って存在すること
@@ -681,7 +681,7 @@ describe("TeamMemberList - D-1 クエリのフィールド網羅性 + セル詳�
     // 50m自由形セルは記録なし = "—" 表示 (Pressable ではない plain View)
     const emptyCells = screen.getAllByText("—");
     expect(emptyCells.length).toBeGreaterThan(0);
-    fireEvent.click(emptyCells[0]);
+    fireEvent.click(emptyCells[0]!); // 直前の toBeGreaterThan(0) で存在は保証済み
 
     // 詳細シートの内容(大会名/一括登録フォールバック)は一切表示されない
     expect(screen.queryByText("一括登録")).toBeNull();

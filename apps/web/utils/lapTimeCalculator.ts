@@ -3,7 +3,10 @@
  * split-timeからlap-timeを計算する関数群
  */
 
-export interface SplitTime {
+// UI 計算用の距離+スプリットタイムの組。@apps/shared/types の DB レコード型 SplitTime
+// ({id, record_id, distance, split_time, created_at}) と同名衝突していたため改名した
+// (Issue 要件③)。挙動は変更しない。
+export interface LapSplitPoint {
   distance: number;
   splitTime: number;
 }
@@ -19,7 +22,7 @@ export interface LapTime {
  * @param splitTimes 距離とタイムのペア配列（距離順にソート済み）
  * @returns lap-timeの配列
  */
-export function calculateAllLapTimes(splitTimes: SplitTime[]): LapTime[] {
+export function calculateAllLapTimes(splitTimes: LapSplitPoint[]): LapTime[] {
   if (splitTimes.length === 0) return [];
 
   // 距離でソート
@@ -28,11 +31,12 @@ export function calculateAllLapTimes(splitTimes: SplitTime[]): LapTime[] {
   const lapTimes: LapTime[] = [];
 
   // 最初のsplit-timeは0mからのlap-time
-  if (sorted.length > 0 && sorted[0].distance > 0) {
+  if (sorted.length > 0 && sorted[0]!.distance > 0) {
+    // sorted.length > 0 を直上の if で確認済み
     lapTimes.push({
       fromDistance: 0,
-      toDistance: sorted[0].distance,
-      lapTime: sorted[0].splitTime,
+      toDistance: sorted[0]!.distance,
+      lapTime: sorted[0]!.splitTime,
     });
   }
 
@@ -40,6 +44,8 @@ export function calculateAllLapTimes(splitTimes: SplitTime[]): LapTime[] {
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1];
     const curr = sorted[i];
+    if (!prev || !curr) continue; // i>=1 かつ i<sorted.length のため理論上
+      // undefined にならないが、型上は保証されないため防御的に扱う
 
     if (prev.distance < curr.distance && prev.splitTime > 0 && curr.splitTime > 0) {
       lapTimes.push({
@@ -82,7 +88,7 @@ export function getLapIntervalsForRace(raceDistance: number): number[] {
  * @returns 各間隔でのlap-timeの配列
  */
 export function calculateLapTimesForInterval(
-  splitTimes: SplitTime[],
+  splitTimes: LapSplitPoint[],
   interval: number,
 ): Array<{ distance: number; lapTime: number | null }> {
   if (splitTimes.length === 0) return [];
@@ -92,10 +98,13 @@ export function calculateLapTimesForInterval(
 
   const results: Array<{ distance: number; lapTime: number | null }> = [];
 
+  // splitTimes.length === 0 を関数先頭で return 済みのため sorted は常に1件以上
+  const lastDistance = sorted[sorted.length - 1]!.distance;
+
   // 間隔の倍数の距離でのlap-timeを計算
   for (
     let distance = interval;
-    distance <= sorted[sorted.length - 1].distance;
+    distance <= lastDistance;
     distance += interval
   ) {
     // 該当する距離のsplit-timeを探す
@@ -143,7 +152,7 @@ export function calculateLapTimesForInterval(
  * @returns 表形式のデータ（各行は距離、Split Time、各間隔のLap Time）
  */
 export function calculateRaceLapTimesTable(
-  splitTimes: SplitTime[],
+  splitTimes: LapSplitPoint[],
   raceDistance: number,
 ): Array<{
   distance: number;

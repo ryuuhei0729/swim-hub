@@ -313,13 +313,19 @@ export class EntryAPI {
 
     await requireTeamAdmin(this.supabase, teamId);
 
-    const { error } = await this.supabase
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（practices.ts の deletePractice と同型）。
+    const { data, error } = await this.supabase
       .from("entries")
       .delete()
       .eq("team_id", teamId)
-      .in("id", entryIds);
+      .in("id", entryIds)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("エントリーの一括削除に失敗しました");
+    }
   }
 
   // =========================================================================
@@ -437,9 +443,18 @@ export class EntryAPI {
     }
 
     // 3. データベース削除
-    const { error } = await this.supabase.from("entries").delete().eq("id", entryId);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（practices.ts の deletePractice と同型）。
+    const { data, error } = await this.supabase
+      .from("entries")
+      .delete()
+      .eq("id", entryId)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("エントリーの削除に失敗しました");
+    }
   }
 
   /**
@@ -463,6 +478,8 @@ export class EntryAPI {
     await requireTeamAdmin(this.supabase, comp.team_id);
 
     // 3. エントリー削除実行
+    // competition_id単位の削除のため、エントリーが0件の大会では0行が正当な結果となる
+    // (deleteEntryのようなid指定削除とは異なり0行ガードは付けない)。
     const { error } = await this.supabase
       .from("entries")
       .delete()

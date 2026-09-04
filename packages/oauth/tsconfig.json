@@ -1,5 +1,8 @@
 {
   "extends": "../../tools/typescript-config/library.json",
+  "compilerOptions": {
+    "sourceMap": true
+  },
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

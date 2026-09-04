@@ -2,13 +2,27 @@
 // racePace/types.ts - 目標タイムから理想LAPを算出するための型
 // =============================================================================
 // 語彙は既存DBに合わせている (新しい語彙を発明しない):
-//   stroke   : styles.style の CHECK 制約 ('fr'|'br'|'ba'|'fly'|'im') と同一
+//   stroke   : styles.style の CHECK 制約 ('Fr'|'Br'|'Ba'|'Fly'|'IM') と同一
+//              (Issue #13 でタイトルケースに統一。common.ts の SwimStyle が
+//              唯一の定義元で、Stroke はそこから導出する型エイリアス)
 //   poolType : records.pool_type と同一 (0=短水路25m, 1=長水路50m)
 // タイムは全て milliseconds の整数。float 秒は使わない。
+//
+// 注意: race_pace_models.stroke の CHECK 制約 (race_pace_models_stroke_check) も
+// supabase/migrations/20260901000001_titlecase_race_pace_models_stroke_column.sql
+// でタイトルケースへ移行済み (PM 裁定: styles と乖離させたままにしない)。
+// 20260819000000_add_race_pace_models.sql:26,108 のコメントは適用済み migration
+// のため書き換えていないが、その記述 ('fr'|'br'|'ba'|'fly'|'im') は古い。
+// apps/shared/api/racePaceModels.ts の toModel は toStyleCode で DB 値を検証してから
+// Stroke に変換する (unchecked cast はしない)。result-of-swimming (別 Developer 担当)
+// 側の投入コードがタイトルケースに追従していない間は、race_pace_models への INSERT が
+// CHECK 制約違反で失敗しうる (静かに古いケーシングが紛れ込むより安全)。
 // =============================================================================
 
-/** styles.style と同一の種目コード */
-export type Stroke = "fr" | "br" | "ba" | "fly" | "im";
+import type { SwimStyle } from "../../types/common";
+
+/** styles.style と同一の種目コード。SwimStyle の型エイリアス (独立した3つ目のリテラルにしない) */
+export type Stroke = SwimStyle;
 
 /** records.pool_type と同一。0=短水路(25m), 1=長水路(50m) */
 export type PoolType = 0 | 1;

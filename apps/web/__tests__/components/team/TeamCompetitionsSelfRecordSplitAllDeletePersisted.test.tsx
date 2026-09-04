@@ -261,7 +261,8 @@ describe("TeamCompetitions — 既存スプリット全削除の永続化 (PM裁
       // isRelaying トグルは false で送信されるが (payload 上は反映される)、
       // split 書き込み判定はロード時点の existingRecordWasRelaying=true を使うため
       // 依然として split_times への書き込みは発生しない。
-      const [, updatePayload] = mocks.updateRecord.mock.calls[0];
+      // 直前の toHaveBeenCalled() で呼び出し済みを確認済み
+      const [, updatePayload] = mocks.updateRecord.mock.calls[0]!;
       expect(updatePayload.is_relaying).toBe(false);
       expect(mocks.replaceSplitTimes).not.toHaveBeenCalled();
       expect(mocks.createSplitTimes).not.toHaveBeenCalled();

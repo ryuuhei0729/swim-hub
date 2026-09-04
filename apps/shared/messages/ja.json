@@ -161,7 +161,7 @@
       "videoUploadUrlFailed": "アップロードURLの取得に失敗しました",
       "videoReadFailed": "動画ファイル読み込み失敗: {uri}",
       "videoReadHttpFailed": "動画ファイル読み込み失敗: HTTP {status} ({uri})",
-      "videoUploadHttpFailed": "動画アップロード失敗: HTTP {status}{detail}",
+      "videoUploadHttpFailed": "動画アップロード失敗: HTTP {status}",
       "thumbnailUploadHttpFailed": "サムネイルアップロード失敗: HTTP {status}",
       "videoDbUpdateFailed": "DB更新に失敗しました",
       "videoSignedUrlFailed": "署名付きURLの取得に失敗しました",
@@ -917,6 +917,7 @@
       "entryDeleteConfirmTitle": "削除確認",
       "entryDeleteConfirmMessage": "このエントリーを削除しますか？\nこの操作は取り消せません。",
       "entryDeleteFailed": "削除に失敗しました",
+      "deleteFailed": "削除に失敗しました",
       "fieldStyle": "種目:",
       "fieldEntryTime": "エントリータイム:",
       "fieldMemo": "メモ:",
@@ -1016,13 +1017,14 @@
       "unknown": "不明なエラー"
     },
     "handlers": {
-      "fetchPracticeFailed": "練習データの取得に失敗しました: {detail}",
-      "updateImagePathFailed": "画像パスの更新に失敗しました: {detail}",
+      "fetchPracticeFailed": "練習データの取得に失敗しました",
+      "updateImagePathFailed": "画像パスの更新に失敗しました",
       "practiceCreatedButImageFailed": "練習は作成されましたが、画像のアップロードに失敗しました",
       "authRequired": "認証されたユーザーが必要です",
-      "insertPracticeTagFailed": "練習ログタグの挿入に失敗しました: {detail}",
+      "insertPracticeTagFailed": "練習ログタグの挿入に失敗しました",
       "videoUploadPartialPractice": "練習記録は保存されましたが、動画のアップロードに失敗しました。詳細画面から再度追加してください。",
-      "fetchCompetitionFailed": "大会データの取得に失敗しました: {detail}",
+      "fetchCompetitionFailed": "大会データの取得に失敗しました",
+      "entrySubmitFailed": "エントリーの登録に失敗しました",
       "competitionCreatedButImageFailed": "大会は作成されましたが、画像のアップロードに失敗しました",
       "unknownStyle": "不明",
       "styleAlreadyEntered": "種目「{name}」は既にエントリー済みです",
@@ -1683,8 +1685,8 @@
         "atLeastOneRecord": "少なくとも1つの記録を入力してください"
       },
       "error": {
-        "splitDeleteFailed": "スプリットタイムの削除に失敗しました: {detail}",
-        "recordDeleteFailed": "既存レコードの削除に失敗しました: {detail}",
+        "splitDeleteFailed": "スプリットタイムの削除に失敗しました",
+        "recordDeleteFailed": "既存レコードの削除に失敗しました",
         "saveFailed": "保存中にエラーが発生しました。もう一度お試しください。"
       },
       "errorVideoUploadUrlFailed": "{name}: アップロードURL取得に失敗しました ({status})",
@@ -4227,7 +4229,8 @@
         "cancel": "編集を続ける"
       },
       "recordFutureGuard": "未来の日付でレースレコードを登録することはできません",
-      "competitionEditRestricted": "この大会の情報はチーム管理者のみ編集できます"
+      "competitionEditRestricted": "この大会の情報はチーム管理者のみ編集できます",
+      "practiceEditRestricted": "この練習の情報はチーム管理者のみ編集できます"
     },
     "premium": {
       "upgradeText": "Premium にアップグレード",

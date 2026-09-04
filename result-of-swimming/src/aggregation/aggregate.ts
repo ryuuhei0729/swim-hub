@@ -68,8 +68,15 @@ interface Bucket {
   sampleCount: number;
 }
 
-/** 集計に使えるレースか (ここが唯一の入口フィルタ) */
-export function isAggregatable(race: RawRace): boolean {
+/**
+ * 集計に使えるレースか (ここが唯一の入口フィルタ)。
+ * 型述語にして gender/stroke/finalTimeMs の絞り込みを呼び出し元に伝播させる
+ * (isAggregatable が検査しているのはこの3フィールドのみ。他は真偽値の確認だけ)。
+ * これにより呼び出し側で as Stroke 等の unchecked cast が不要になる。
+ */
+export function isAggregatable(
+  race: RawRace,
+): race is RawRace & { gender: "male" | "female"; stroke: Stroke; finalTimeMs: number } {
   return (
     race.validationStatus === "valid" &&
     !race.isRelay &&
@@ -92,7 +99,7 @@ export function aggregate(
   for (const race of races) {
     if (!isAggregatable(race)) continue;
 
-    const finalTimeMs = race.finalTimeMs as number;
+    const finalTimeMs = race.finalTimeMs;
     const laps = splitsToLaps(
       race.splits.map((s) => ({ distance: s.distance, cumulativeTimeMs: s.cumulativeTimeMs })),
     );
@@ -119,9 +126,9 @@ export function aggregate(
     let entry = buckets.get(key);
     if (!entry) {
       entry = {
-        gender: race.gender as "male" | "female",
+        gender: race.gender,
         poolType,
-        stroke: race.stroke as Stroke,
+        stroke: race.stroke,
         distance: race.distance,
         ageCategory,
         minTimeMs: bucket.minTimeMs,
@@ -139,8 +146,16 @@ export function aggregate(
     if (entry.lapDistances.length !== laps.length) continue;
 
     for (let i = 0; i < laps.length; i++) {
-      entry.ratiosByLap[i].push(ratios[i]);
-      entry.timesByLap[i].push(lapTimes[i]);
+      const ratioSamples = entry.ratiosByLap[i];
+      const timeSamples = entry.timesByLap[i];
+      const ratio = ratios[i];
+      const lapTime = lapTimes[i];
+      // ratiosByLap/timesByLap は entry 生成時に laps と同じ長さで初期化され(121-134行目)、
+      // ratios/lapTimes も同じ laps から導出される(101-103行目)ため理論上ここに来ないが、
+      // 4つの独立した配列を添字で対応付けているため防御的にガードする
+      if (!ratioSamples || !timeSamples || ratio === undefined || lapTime === undefined) continue;
+      ratioSamples.push(ratio);
+      timeSamples.push(lapTime);
     }
     entry.sampleCount += 1;
   }
@@ -151,15 +166,25 @@ export function aggregate(
     if (b.sampleCount < minSampleCount) continue;
     if (b.lapDistances.length < MIN_LAP_COUNT) continue;
 
-    const laps: RacePaceModelLap[] = b.lapDistances.map((distance, i) => ({
-      distance,
-      ratioMedian: median(b.ratiosByLap[i]) as number,
-      ratioP25: percentile(b.ratiosByLap[i], 0.25) as number,
-      ratioP75: percentile(b.ratiosByLap[i], 0.75) as number,
-      ratioMean: mean(b.ratiosByLap[i]) as number,
-      lapTimeMeanMs: Math.round(mean(b.timesByLap[i]) as number),
-      lapTimeMedianMs: Math.round(median(b.timesByLap[i]) as number),
-    }));
+    const laps: RacePaceModelLap[] = b.lapDistances.map((distance, i) => {
+      const ratioSamples = b.ratiosByLap[i];
+      const timeSamples = b.timesByLap[i];
+      if (!ratioSamples || !timeSamples) {
+        // ratiosByLap/timesByLap は Bucket 生成時に lapDistances と同じ長さで初期化され、
+        // 以後 push でしか変更されない(139行目のガードで長さ不一致は既に continue 済み)ため
+        // 理論上ここに来ないが、3つの独立した配列を添字で対応付けているため異常として検知する
+        throw new Error(`aggregate: lap sample arrays missing at index ${i}`);
+      }
+      return {
+        distance,
+        ratioMedian: median(ratioSamples) as number,
+        ratioP25: percentile(ratioSamples, 0.25) as number,
+        ratioP75: percentile(ratioSamples, 0.75) as number,
+        ratioMean: mean(ratioSamples) as number,
+        lapTimeMeanMs: Math.round(mean(timeSamples) as number),
+        lapTimeMedianMs: Math.round(median(timeSamples) as number),
+      };
+    });
 
     models.push({
       gender: b.gender,

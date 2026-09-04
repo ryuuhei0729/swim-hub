@@ -26,6 +26,7 @@ import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { formatDate, isCompetitionDateInPast } from "@apps/shared/utils/date";
 import { resolveEntryStatus } from "@apps/shared/utils/entryStatus";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { TeamCompetitionEntryModal } from "./TeamCompetitionEntryModal";
 import { TeamCompetitionRecordsModal } from "./TeamCompetitionRecordsModal";
 
@@ -128,10 +129,7 @@ const CompetitionItem = React.memo(function CompetitionItem({
         // 失敗時はロールバック
         setStatusOverride(previous);
         console.error("TeamCompetitionList: failed to update entry_status", err);
-        const msg =
-          err instanceof Error
-            ? err.message
-            : t("teams.mobile.teamCompetitionEntryModal.saveFailed");
+        const msg = toUserFacingMessage(err, t("teams.mobile.teamCompetitionEntryModal.saveFailed"));
         Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);
       }
     },

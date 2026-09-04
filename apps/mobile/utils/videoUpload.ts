@@ -110,9 +110,11 @@ export async function uploadVideoToR2(
   });
 
   if (!res.ok) {
+    // レスポンスボディ (R2/S3 互換ストレージの生エラー詳細) はユーザーに表示しない。
+    // console.error でのみ残し、開発者が調査できるようにする（情報露出対策）。
     const errorBody = await (typeof res.text === "function" ? res.text().catch(() => "") : Promise.resolve(""));
-    const detail = (errorBody as string).slice(0, 200);
-    throw new Error(i18n.t("common.upload.videoUploadHttpFailed", { status: res.status, detail: detail ? ` ${detail}` : "" }));
+    console.error("動画アップロードHTTPエラー:", res.status, (errorBody as string).slice(0, 200));
+    throw new Error(i18n.t("common.upload.videoUploadHttpFailed", { status: res.status }));
   }
 
   onProgress?.(90);

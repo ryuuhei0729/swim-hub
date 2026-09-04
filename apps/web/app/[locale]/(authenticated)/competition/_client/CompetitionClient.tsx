@@ -76,7 +76,7 @@ interface FilterDraft {
 const PAGE_INCREMENT = 20;
 
 // 絞り込みシート「種目(泳法)」グループの表示順(STYLES 定義順: 自由形→平泳ぎ→背泳ぎ→バタフライ→個人メドレー)
-const STYLE_ORDER: SwimStyle[] = ["fr", "br", "ba", "fly", "im"];
+const STYLE_ORDER: SwimStyle[] = ["Fr", "Br", "Ba", "Fly", "IM"];
 
 // style.name_jp (例: "50m自由形") から距離接頭辞を除いた裸の泳法名 (例: "自由形") を取り出すための正規表現
 const DISTANCE_PREFIX_PATTERN = /^\d+m/;
@@ -756,6 +756,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
       await refetch();
     } catch (err) {
       console.error("大会記録の保存に失敗しました:", err);
+      throw err;
     }
   };
 

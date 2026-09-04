@@ -165,9 +165,18 @@ export class RecordAPI {
    * 記録削除
    */
   async deleteRecord(id: string): Promise<void> {
-    const { error } = await this.supabase.from("records").delete().eq("id", id);
+    // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
+    // .select() で削除された行を返させ、件数で成否を判定する（practices.ts の deletePractice と同型）。
+    const { data, error } = await this.supabase
+      .from("records")
+      .delete()
+      .eq("id", id)
+      .select("id");
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("記録の削除に失敗しました");
+    }
   }
 
   /**
@@ -358,7 +367,7 @@ export class RecordAPI {
 
     records.forEach((record) => {
       const styleKey = record.styles?.name_jp || "Unknown";
-      const poolType = record.pool_type ?? 0;
+      const poolType = record.pool_type;
       const key = `${styleKey}_${poolType}`;
 
       if (record.is_relaying) {
@@ -439,7 +448,7 @@ export class RecordAPI {
 
         // 種目情報を取得（最初のレコードから）
         const record = records.find(
-          (r) => (r.styles?.name_jp || "Unknown") === styleName && (r.pool_type ?? 0) === poolType,
+          (r) => (r.styles?.name_jp || "Unknown") === styleName && r.pool_type === poolType,
         );
 
         if (record) {
@@ -868,7 +877,14 @@ export class RecordAPI {
     splitTimes: Omit<SplitTimeInsert, "record_id">[],
   ): Promise<SplitTime[]> {
     // 既存のスプリットタイムを削除
-    await this.supabase.from("split_times").delete().eq("record_id", recordId);
+    // record_id単位の削除のため、既存スプリットが0件の記録では0行が正当な結果となる
+    // (deleteRecordのようなid指定削除とは異なり0行ガードは付けない)。
+    // ただし従来はerrorを一切チェックしていなかったため、その穴のみ塞ぐ。
+    const { error: deleteSplitTimesError } = await this.supabase
+      .from("split_times")
+      .delete()
+      .eq("record_id", recordId);
+    if (deleteSplitTimesError) throw deleteSplitTimesError;
 
     // 新しいスプリットタイムを作成
     if (splitTimes.length === 0) return [];

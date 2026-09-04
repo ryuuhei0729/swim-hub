@@ -24,6 +24,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { StyleOption } from "@/components/forms/record-log/types";
 import type { EditingData } from "@/stores/types";
+import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 // ---------------------------------------------------------------------------
 // 汎用クエリチェーンレコーダー
@@ -186,6 +187,8 @@ const PROVISIONAL_EDITING_DATA_VARIANTS: Array<[string, EditingData]> = [
   ["editingData なし (competitionId のみで開く経路)", null],
 ];
 
+// NOTE: `onSave.mock.calls[0]!` を多用する。各テストは直前に `toHaveBeenCalledTimes(1)` で
+// 呼び出し回数を確認済み。
 describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -249,7 +252,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
         });
 
         await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-        const params = onSave.mock.calls[0][0];
+        const params = onSave.mock.calls[0]![0];
         expect(params.basicData.poolType).toBe(1);
       });
     },
@@ -279,7 +282,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
     });
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][0].basicData.endDate).toBe("2099-01-03");
+    expect(onSave.mock.calls[0]![0].basicData.endDate).toBe("2099-01-03");
   });
 
   it("[V-6] note を設定した競技会でエントリーのみ保存しても note が消えない", async () => {
@@ -306,7 +309,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
     });
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][0].basicData.note).toBe("更衣室は東側です");
+    expect(onSave.mock.calls[0]![0].basicData.note).toBe("更衣室は東側です");
   });
 
   it("[V-4] 長水路に修正・保存した後、同じ競技会を再度開いても長水路のまま (症状B-2の再発防止)", async () => {
@@ -430,7 +433,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
     });
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][0].basicData.poolType).toBe(1);
+    expect(onSave.mock.calls[0]![0].basicData.poolType).toBe(1);
   });
 
   it("[V-14] 新規作成 (competitionId 無し) では competitions テーブルへの再取得を行わず、デフォルト値(0)で開く", async () => {
@@ -646,7 +649,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       });
 
       await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-      const savedBasicData = onSave.mock.calls[0][0].basicData;
+      const savedBasicData = onSave.mock.calls[0]![0].basicData;
 
       // 編集したフィールド (title) はユーザー値
       expect(savedBasicData.title).toBe("ユーザー編集タイトル");
@@ -701,7 +704,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       });
 
       await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-      const savedBasicData = onSave.mock.calls[0][0].basicData;
+      const savedBasicData = onSave.mock.calls[0]![0].basicData;
 
       // ユーザーが編集した pool_type はユーザー値 (1) が優先され、DB の 0 で上書きされない
       expect(savedBasicData.poolType).toBe(1);
@@ -761,7 +764,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       });
 
       await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-      const savedBasicData = onSave.mock.calls[0][0].basicData;
+      const savedBasicData = onSave.mock.calls[0]![0].basicData;
 
       // endDate はユーザーの編集値
       expect(savedBasicData.endDate).toBe("2026-08-10");
@@ -871,7 +874,7 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       });
 
       await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-      const savedBasicData = onSave.mock.calls[0][0].basicData;
+      const savedBasicData = onSave.mock.calls[0]![0].basicData;
 
       // 編集なし → リトライで得た DB 実値が全フィールドで採用される (自己修復)
       expect(savedBasicData.poolType).toBe(1);
@@ -882,4 +885,73 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       expect(savedBasicData.endDate).toBe("");
     },
   );
+
+  // ---------------------------------------------------------------------------
+  // 情報露出防止の対テスト (QA追加): CompetitionTabModal.tsx:853 の
+  // `setBasicValidationError(toUserFacingMessage(error, tCommon("error")))` は
+  // これまで UserFacingError 側 (competitionSaveBlockedUnresolved /
+  // competitionSaveBlockedDateInvalid, 上記の Critical-2 / R3 テストで検証済み) しか
+  // 検証されていなかった。防御側 (生の Error → 汎用フォールバックに潰され、生の
+  // メッセージが画面に出ない) が未検証だったため追加する。
+  // onSave (プロパティとして直接注入可能) を reject させることで、D-1 の DB 再取得
+  // リトライ経路を経由せずに handleSave の catch ブロックだけを単独で検証する
+  // (editingCompetitionId を null にして再取得自体を起こさせない)。
+  // ---------------------------------------------------------------------------
+  describe("[QA追加] 保存失敗時のエラー表示 — 情報露出防止の対テスト", () => {
+    it(
+      "[V-ERR-01] onSave が生の Error (RLSポリシー詳細等) で失敗した場合、" +
+        "汎用フォールバック文言 (common.error) が表示され、生のエラー文字列は表示されない",
+      async () => {
+        const onSave = vi.fn().mockRejectedValue(
+          new Error('relation "competitions" violates row-level security policy'),
+        );
+        renderModal({
+          editingData: { id: "comp-1", type: "competition", date: FUTURE_DATE, title: "県大会", place: "" } as EditingData,
+          editingCompetitionId: null,
+          onSave,
+        });
+
+        await waitFor(() => {
+          expect(screen.getByTestId("competition-tab-modal")).toBeInTheDocument();
+        });
+
+        await act(async () => {
+          screen.getByTestId("competition-tab-modal-save").click();
+        });
+
+        const errorAlert = await screen.findByRole("alert");
+        expect(errorAlert).toHaveTextContent("エラーが発生しました");
+
+        // 最重要: 生の DB/RLS エラー文字列が画面に一切出ていないこと (情報露出防止)
+        expect(errorAlert).not.toHaveTextContent("row-level security policy");
+        expect(screen.queryByText(/row-level security policy/)).not.toBeInTheDocument();
+      },
+    );
+
+    it(
+      "[V-ERR-02] onSave が UserFacingError (i18n 済みメッセージ) で失敗した場合、" +
+        "そのメッセージがそのまま表示される (対照実験)",
+      async () => {
+        const onSave = vi.fn().mockRejectedValue(
+          new UserFacingError("テスト用の翻訳済みメッセージ"),
+        );
+        renderModal({
+          editingData: { id: "comp-1", type: "competition", date: FUTURE_DATE, title: "県大会", place: "" } as EditingData,
+          editingCompetitionId: null,
+          onSave,
+        });
+
+        await waitFor(() => {
+          expect(screen.getByTestId("competition-tab-modal")).toBeInTheDocument();
+        });
+
+        await act(async () => {
+          screen.getByTestId("competition-tab-modal-save").click();
+        });
+
+        const errorAlert = await screen.findByRole("alert");
+        expect(errorAlert).toHaveTextContent("テスト用の翻訳済みメッセージ");
+      },
+    );
+  });
 });

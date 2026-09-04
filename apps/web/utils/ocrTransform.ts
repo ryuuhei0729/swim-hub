@@ -64,7 +64,13 @@ export function transformScanResultToMenus(
   const resolvedSwimmers = scanResult.swimmers.map((swimmer) => {
     const times = swimmer.times.map((time, index) => {
       const key = `${swimmer.no}-${index}`;
-      return key in editedTimes ? editedTimes[key] : time;
+      if (key in editedTimes) {
+        const edited = editedTimes[key];
+        // `key in editedTimes` で存在確認済みだが、`in` は index signature を
+        // 絞り込まないため型上は undefined が残る。undefined なら元の time にフォールバックする
+        if (edited !== undefined) return edited;
+      }
+      return time;
     });
     return { ...swimmer, times };
   });

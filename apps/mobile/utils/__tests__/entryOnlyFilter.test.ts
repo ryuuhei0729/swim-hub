@@ -174,7 +174,7 @@ describe("buildEntryOnlyItems", () => {
     const result = buildEntryOnlyItems(rows, new Set(), today, FALLBACK_NAME);
 
     expect(result).toHaveLength(1);
-    expect(result[0].competitionId).toBe("comp-today");
+    expect(result[0]!.competitionId).toBe("comp-today"); // 直前の toHaveLength(1) で存在は保証済み
   });
 
   it("[V-05] competition が null の行は除外され、例外も投げない", () => {
@@ -201,7 +201,7 @@ describe("buildEntryOnlyItems", () => {
 
     const result = buildEntryOnlyItems(rows, new Set(), today, FALLBACK_NAME);
 
-    expect(result[0].competitionName).toBe(FALLBACK_NAME);
+    expect(result[0]!.competitionName).toBe(FALLBACK_NAME); // rows は要素1件なので必ず1件のresultが返る設計
   });
 
   it("[V-06b] 大会名が空文字のとき fallbackCompetitionName で補完される", () => {
@@ -221,7 +221,7 @@ describe("buildEntryOnlyItems", () => {
 
     const result = buildEntryOnlyItems(rows, new Set(), today, FALLBACK_NAME);
 
-    expect(result[0].competitionName).toBe(FALLBACK_NAME);
+    expect(result[0]!.competitionName).toBe(FALLBACK_NAME); // rows は要素1件なので必ず1件のresultが返る設計
   });
 
   it("[V-07] entryRows が空配列なら空配列を返す", () => {

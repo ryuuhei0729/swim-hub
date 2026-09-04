@@ -168,7 +168,7 @@ describe("[VU-04] requestUploadUrl — 正常系", () => {
 
     await requestUploadUrl("record", "rec-1", "video/mp4", "test-token");
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string) as { type: string };
+    const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string) as { type: string }; // requestUploadUrl は1回だけ呼ぶ設計なので calls[0] は必ず存在
     expect(body.type).toBe("record");
   });
 });
@@ -186,7 +186,7 @@ describe("[VU-05] requestUploadUrl — contentType 伝達", () => {
 
     await requestUploadUrl("record", "rec-1", "video/quicktime", "test-token");
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string) as {
+    const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string) as { // requestUploadUrl は1回だけ呼ぶ設計なので calls[0] は必ず存在
       contentType: string;
     };
     expect(body.contentType).toBe("video/quicktime");
@@ -200,7 +200,7 @@ describe("[VU-05] requestUploadUrl — contentType 伝達", () => {
 
     await requestUploadUrl("record", "rec-1", "video/mp4", "test-token");
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string) as {
+    const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string) as { // 同上
       contentType: string;
     };
     expect(body.contentType).toBe("video/mp4");
@@ -343,7 +343,7 @@ describe("[VU-09] uploadVideo — 全フロー正常系", () => {
     expect(progressValues).toContain(100);
     // 単調増加
     for (let i = 1; i < progressValues.length; i++) {
-      expect(progressValues[i]).toBeGreaterThanOrEqual(progressValues[i - 1]);
+      expect(progressValues[i]).toBeGreaterThanOrEqual(progressValues[i - 1]!); // ループ条件 i>=1 && i<length により同一配列内で必ず存在
     }
   });
 });
@@ -408,7 +408,7 @@ describe("[VU-11] uploadVideo — contentType を mimeType から決定", () => 
         opts?.method === "POST",
     );
     expect(postCalls).toHaveLength(1);
-    const body = JSON.parse(postCalls[0][1]?.body as string) as { contentType: string };
+    const body = JSON.parse(postCalls[0]![1]?.body as string) as { contentType: string }; // 直前の toHaveLength(1) で存在は保証済み
     expect(body.contentType).toBe("video/quicktime");
   });
 
@@ -429,7 +429,7 @@ describe("[VU-11] uploadVideo — contentType を mimeType から決定", () => 
         url.includes("upload-url") &&
         opts?.method === "POST",
     );
-    const body = JSON.parse(postCalls[0][1]?.body as string) as { contentType: string };
+    const body = JSON.parse(postCalls[0]![1]?.body as string) as { contentType: string }; // uploadVideo は1回だけ requestUploadUrl を呼ぶ設計なので必ず1件フィルタされる
     expect(body.contentType).toBe("video/mp4");
   });
 
@@ -450,7 +450,7 @@ describe("[VU-11] uploadVideo — contentType を mimeType から決定", () => 
         url.includes("upload-url") &&
         opts?.method === "POST",
     );
-    const body = JSON.parse(postCalls[0][1]?.body as string) as { contentType: string };
+    const body = JSON.parse(postCalls[0]![1]?.body as string) as { contentType: string }; // 同上
     expect(body.contentType).toBe("video/mp4");
   });
 });

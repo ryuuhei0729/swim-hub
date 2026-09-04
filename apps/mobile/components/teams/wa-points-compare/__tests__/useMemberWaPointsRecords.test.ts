@@ -104,7 +104,7 @@ describe("useMemberWaPointsRecords", () => {
     // クライアント側フィルタにより is_relaying=true の行 (time=20.0) は結果に含まれない
     const records = result.current.recordsByUserId.get("u-1") ?? [];
     expect(records).toHaveLength(1);
-    expect(records[0].time).toBe(30.0);
+    expect(records[0]!.time).toBe(30.0); // 直前の toHaveLength(1) で存在は保証済み
   });
 
   it("[V-HOOK-03] pool_type=1 は LCM(1) に、pool_type=0 は SCM(0) に変換される", async () => {
@@ -138,7 +138,7 @@ describe("useMemberWaPointsRecords", () => {
     });
 
     const records = result.current.recordsByUserId.get("u-1") ?? [];
-    expect(records[0].poolType).toBe(0);
+    expect(records[0]!.poolType).toBe(0); // rows は u-1 に対して1件のみ渡しているため必ず存在
   });
 
   it("[V-HOOK-04] STYLES に解決できない種目名の行はスキップされる", async () => {
@@ -155,7 +155,7 @@ describe("useMemberWaPointsRecords", () => {
 
     const records = result.current.recordsByUserId.get("u-1") ?? [];
     expect(records).toHaveLength(1);
-    expect(records[0].time).toBe(30.0);
+    expect(records[0]!.time).toBe(30.0); // 直前の toHaveLength(1) で存在は保証済み
   });
 
   it("[V-HOOK-05] userIds が空配列のときはクエリを発行せず、空の Map になる", async () => {
@@ -306,7 +306,7 @@ describe("useMemberWaPointsRecords - チャンク分割 (USER_ID_CHUNK_SIZE)", (
       const records = result.current.recordsByUserId.get(id);
       expect(records).toBeDefined();
       expect(records).toHaveLength(1);
-      expect(records![0].time).toBe(expectedRow.time);
+      expect(records![0]!.time).toBe(expectedRow.time); // 直前の toHaveLength(1) で存在は保証済み
     }
   });
 });
@@ -378,7 +378,7 @@ describe("useMemberWaPointsRecords - 競合するリクエストの解決順序 
 
     // 新しい (2番目の) リクエストを先に解決する
     await act(async () => {
-      calls[1].resolve({ data: [rowFor("u-new", 30.0)], error: null });
+      calls[1]!.resolve({ data: [rowFor("u-new", 30.0)], error: null }); // 直前の toHaveLength(2) で存在は保証済み
       await newPromise;
     });
 
@@ -388,7 +388,7 @@ describe("useMemberWaPointsRecords - 競合するリクエストの解決順序 
 
     // 古い (1番目の) リクエストを後から解決する。新しい結果を上書きしてはならない
     await act(async () => {
-      calls[0].resolve({ data: [rowFor("u-old", 99.0)], error: null });
+      calls[0]!.resolve({ data: [rowFor("u-old", 99.0)], error: null });
       await oldPromise;
     });
 
@@ -415,7 +415,7 @@ describe("useMemberWaPointsRecords - 競合するリクエストの解決順序 
     expect(calls).toHaveLength(2);
 
     await act(async () => {
-      calls[1].resolve({ data: [rowFor("u-new", 30.0)], error: null });
+      calls[1]!.resolve({ data: [rowFor("u-new", 30.0)], error: null }); // 直前の toHaveLength(2) で存在は保証済み
       await newPromise;
     });
 
@@ -424,7 +424,7 @@ describe("useMemberWaPointsRecords - 競合するリクエストの解決順序 
 
     // 古いリクエストが後からエラーで解決する。新しい正常な状態を破壊してはならない
     await act(async () => {
-      calls[0].reject(new Error("stale request failed"));
+      calls[0]!.reject(new Error("stale request failed"));
       await oldPromise;
     });
 
@@ -457,7 +457,7 @@ describe("useMemberWaPointsRecords - 競合するリクエストの解決順序 
 
     // 古いリクエストを後から解決する。空Mapの状態を上書きしてはならない
     await act(async () => {
-      calls[0].resolve({ data: [rowFor("u-old", 30.0)], error: null });
+      calls[0]!.resolve({ data: [rowFor("u-old", 30.0)], error: null }); // 直前の toHaveLength(1) で存在は保証済み
       await oldPromise;
     });
 
@@ -487,7 +487,7 @@ describe("useMemberWaPointsRecords - 競合するリクエストの解決順序 
 
     // 新しい (2番目の) リクエストがまだ未解決のうちに、古い (1番目の) リクエストだけを解決する
     await act(async () => {
-      calls[0].resolve({ data: [rowFor("u-old", 99.0)], error: null });
+      calls[0]!.resolve({ data: [rowFor("u-old", 99.0)], error: null }); // 直前の toHaveLength(2) で存在は保証済み
       await oldPromise;
     });
 
@@ -496,7 +496,7 @@ describe("useMemberWaPointsRecords - 競合するリクエストの解決順序 
 
     // 新しいリクエストを解決すると、ここで初めて loading が false になる
     await act(async () => {
-      calls[1].resolve({ data: [rowFor("u-new", 30.0)], error: null });
+      calls[1]!.resolve({ data: [rowFor("u-new", 30.0)], error: null });
       await newPromise;
     });
 

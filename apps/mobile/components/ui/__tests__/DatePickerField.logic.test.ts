@@ -71,8 +71,8 @@ describe("buildMonthGrid - 月グリッド生成", () => {
     expect(leading).toBe(1);
     const realDays = grid.filter((d): d is Date => d !== null);
     expect(realDays).toHaveLength(30);
-    expect(format(realDays[0], "yyyy-MM-dd")).toBe("2026-06-01");
-    expect(format(realDays[realDays.length - 1], "yyyy-MM-dd")).toBe("2026-06-30");
+    expect(format(realDays[0]!, "yyyy-MM-dd")).toBe("2026-06-01"); // 直前の toHaveLength(30) で存在は保証済み
+    expect(format(realDays[realDays.length - 1]!, "yyyy-MM-dd")).toBe("2026-06-30");
   });
 
   it("月初が日曜の月は先頭 null が0個 (2026-02-01=日曜)", () => {

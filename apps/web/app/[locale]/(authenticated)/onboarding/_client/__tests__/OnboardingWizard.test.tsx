@@ -24,6 +24,7 @@ import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { ReactElement } from "react";
 import type { UserProfile } from "@apps/shared/types";
 import messages from "@apps/shared/messages/ja.json";
+import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 // OnboardingWizard 及び子コンポーネントは useTranslations を呼ぶため NextIntlClientProvider が必要
 const render = (ui: ReactElement) =>
@@ -312,11 +313,89 @@ describe("OnboardingWizard", () => {
   // エラー系
   // ---------------------------------------------------------------------------
   describe("[V-08] DB 更新失敗時のエラーハンドリング", () => {
-    it.todo("updateProfile が error を返した場合、エラーメッセージが表示される");
+    // Step 1 → Step 2 → Step 3 (スキップボタンが表示されるところ) まで進める共通ヘルパー
+    const advanceToStep3 = async (user: ReturnType<typeof userEvent.setup>) => {
+      render(
+        <OnboardingWizard
+          initialProfile={
+            {
+              id: "user-1",
+              name: "山田太郎",
+              gender: 0,
+              birthday: null,
+              bio: null,
+              profile_image_path: null,
+            } as UserProfile
+          }
+        />,
+      );
+      await user.click(screen.getByRole("button", { name: "始める" }));
+      await user.click(await screen.findByRole("button", { name: "次へ" }));
+      return screen.findByRole("button", { name: /スキップして始める/ });
+    };
 
-    it.todo("エラー時は /dashboard への遷移が発生しない");
+    // 情報露出防止の対テスト (QA追加): OnboardingWizard.tsx の handleComplete は
+    // `setCompleteError(toUserFacingMessage(err, t("completionFailed")))` で失敗を通知する。
+    // updateProfile が返す/投げるエラーが生の Error か UserFacingError かで表示が
+    // 変わることを対で検証する (実装が一律汎用文言に潰しているだけでないことの証明)。
+    it(
+      "updateProfile が生の Error (RLSポリシー詳細等) で失敗した場合、" +
+        "汎用フォールバック文言 (completionFailed) が表示され、生のエラー文字列は表示されない",
+      async () => {
+        const user = userEvent.setup();
+        const skipButton = await advanceToStep3(user);
+        // Step2 の保存 (handleProfileSave) は成功させ、Step3 のスキップ (handleComplete)
+        // だけを失敗させる (mockUpdateProfile は Step2/Step3 の両方から呼ばれるため)。
+        mockUpdateProfile.mockRejectedValueOnce(
+          new Error('relation "users" violates row-level security policy'),
+        );
 
-    it.todo("エラー時に isSubmitted が false に戻り、再試行で警告抑止が働き直す");
+        await user.click(skipButton);
+
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("完了処理に失敗しました");
+        expect(alert).not.toHaveTextContent("row-level security policy");
+        expect(screen.queryByText(/row-level security policy/)).not.toBeInTheDocument();
+
+        // エラー時は /dashboard への遷移が発生しない
+        expect(mockRouterPush).not.toHaveBeenCalled();
+      },
+    );
+
+    it(
+      "updateProfile が UserFacingError (i18n 済みメッセージ) で失敗した場合、" +
+        "そのメッセージがそのまま表示される (対照実験)",
+      async () => {
+        const user = userEvent.setup();
+        const skipButton = await advanceToStep3(user);
+        mockUpdateProfile.mockRejectedValueOnce(
+          new UserFacingError("テスト用の翻訳済みメッセージ"),
+        );
+
+        await user.click(skipButton);
+
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("テスト用の翻訳済みメッセージ");
+        expect(mockRouterPush).not.toHaveBeenCalled();
+      },
+    );
+
+    it("エラー時に isSubmitted が false に戻り、再試行するとエラーが解消し /dashboard に遷移する", async () => {
+      const user = userEvent.setup();
+      const skipButton = await advanceToStep3(user);
+      mockUpdateProfile.mockRejectedValueOnce(new Error("network down"));
+
+      await user.click(skipButton);
+      await screen.findByRole("alert");
+
+      // 再試行: 2回目は成功させる
+      mockUpdateProfile.mockResolvedValueOnce({ error: null });
+      await user.click(screen.getByRole("button", { name: /スキップして始める/ }));
+
+      await waitFor(() => {
+        expect(mockRouterPush).toHaveBeenCalledWith("/dashboard");
+      });
+    });
   });
 
   // ---------------------------------------------------------------------------

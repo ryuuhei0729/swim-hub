@@ -112,7 +112,7 @@ describe("[TM-01] サムネ生成成功 → team-assign 完了", () => {
     );
     expect(teamAssignCalls).toHaveLength(1);
     // team-assign body に sourceId(=id) / targetUserId / tempThumbnailPath が渡る
-    const body = JSON.parse(teamAssignCalls[0][1]?.body as string) as {
+    const body = JSON.parse(teamAssignCalls[0]![1]?.body as string) as { // 直前の toHaveLength(1) で存在は保証済み
       sourceId: string;
       targetUserId: string;
       tempThumbnailPath: string;

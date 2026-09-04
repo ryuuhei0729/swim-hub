@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { VideoCameraIcon, TrashIcon, CheckCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import VideoPlayer from "./VideoPlayer";
 import PremiumBadge from "@/components/ui/PremiumBadge";
+import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 const VideoEditor = dynamic(() => import("./VideoEditor"), { ssr: false });
 
@@ -101,9 +102,9 @@ export default function VideoUploader({
         };
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(t("videoUploadFailed", { status: xhr.status })));
+          else reject(new UserFacingError(t("videoUploadFailed", { status: xhr.status })));
         };
-        xhr.onerror = () => reject(new Error(t("videoNetworkError")));
+        xhr.onerror = () => reject(new UserFacingError(t("videoNetworkError")));
         xhr.send(editedFile);
       });
 
@@ -115,7 +116,7 @@ export default function VideoUploader({
         body: thumbnail,
       });
       if (!thumbnailPutRes.ok) {
-        throw new Error(t("thumbnailUploadFailed", { status: thumbnailPutRes.status }));
+        throw new UserFacingError(t("thumbnailUploadFailed", { status: thumbnailPutRes.status }));
       }
 
       setUploadProgress(95);
@@ -146,7 +147,7 @@ export default function VideoUploader({
       onUploadComplete?.(vPath, tPath);
     } catch (err) {
       console.error("動画アップロードエラー:", err);
-      setError(err instanceof Error ? err.message : t("uploadFailed"));
+      setError(toUserFacingMessage(err, t("uploadFailed")));
       setUploadState("error");
     }
   }, [type, onUploadComplete, t]);
@@ -206,7 +207,7 @@ export default function VideoUploader({
       onDelete?.();
     } catch (err) {
       console.error("動画削除エラー:", err);
-      alert(err instanceof Error ? err.message : t("deleteFailed"));
+      alert(toUserFacingMessage(err, t("deleteFailed")));
     }
   };
 

@@ -178,7 +178,7 @@ describe("TeamPracticeList", () => {
 
     // 空状態の追加ボタンをクリック
     const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]);
+    fireEvent.click(buttons[0]!); // 空状態でも追加ボタンは常に表示される設計のため必ず存在
 
     expect(mocks.navigate).toHaveBeenCalledWith(
       "PracticeForm",
@@ -237,7 +237,7 @@ describe("TeamPracticeList", () => {
     // アクセシビリティラベル "teams.mobile.tabPractices" を持つ編集ボタン
     const buttons = screen.getAllByRole("button");
     // buttons[0] = ヘッダー追加, buttons[1] = 編集, buttons[2] = 削除
-    fireEvent.click(buttons[1]);
+    fireEvent.click(buttons[1]!); // isAdmin=true+練習1件は常に追加+編集+削除の3ボタンを表示する設計
 
     expect(mocks.navigate).toHaveBeenCalledWith(
       "PracticeForm",

@@ -70,7 +70,9 @@ function TrimBar({ duration, startTime, endTime, onChange, onSeek, onRelease, tr
     const onMouseMove = (ev: MouseEvent) => move(ev.clientX);
     const onTouchMove = (ev: TouchEvent) => {
       ev.preventDefault();
-      move(ev.touches[0].clientX);
+      const touch = ev.touches[0];
+      if (!touch) return; // タッチ終了時などで touches が空になる可能性があるため無視する
+      move(touch.clientX);
     };
     const onUp = () => {
       onRelease();
@@ -451,10 +453,12 @@ export default function VideoEditor({ file, onComplete, onCancel }: VideoEditorP
               onMouseUp={(e) => handleCropPointerUp(e.clientX, e.clientY)}
               onTouchStart={(e) => {
                 const t = e.touches[0];
+                if (!t) return; // タッチが存在しない場合は無視する
                 handleCropPointerDown(t.clientX, t.clientY);
               }}
               onTouchEnd={(e) => {
                 const t = e.changedTouches[0];
+                if (!t) return; // タッチが存在しない場合は無視する
                 handleCropPointerUp(t.clientX, t.clientY);
               }}
             >

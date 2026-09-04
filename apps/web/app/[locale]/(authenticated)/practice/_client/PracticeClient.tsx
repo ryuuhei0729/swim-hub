@@ -24,7 +24,7 @@ import {
   useDeletePracticeTimeMutation,
 } from "@apps/shared/hooks/queries/practices";
 import type { PracticeTag, PracticeWithLogs, Style } from "@apps/shared/types";
-import { getStyleOrderIndex } from "@apps/shared/utils/swimStyles";
+import { getStyleOrderIndex, toStyleCode } from "@apps/shared/utils/swimStyles";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type { PracticeSortColumn } from "@/stores/practice/practiceStore";
 import type { EditingData } from "@/stores/types";
@@ -37,6 +37,7 @@ import {
   type PracticeLogRow,
 } from "@apps/shared/utils/practiceLogRows";
 import { getPracticeLogRowSortValue } from "../_utils/practiceLogGrouping";
+import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
 interface PracticeClientProps {
   styles: Style[];
@@ -281,10 +282,17 @@ export default function PracticeClient({
   }, [pastOrTodayRows, locale]);
 
   // 種目フィルタの選択肢（distinct, STYLES定義順。log 単位のフィールド）
+  // practice_logs.style は CHECK 制約の無い自由記述列で、legacy な小文字行("fr" 等)が
+  // 混在し得る(backfill migration は別途進行中だが、本修正はそれに依存しない防御)。
+  // toStyleCode() で canonical に正規化してから distinct 化することで、"Fr" と "fr" が
+  // 別々のフィルタ選択肢に分裂するのを防ぐ。正規化できない値(canonical 外)は選択肢として
+  // 提示しない(その行自体は絞り込み無しの一覧には表示され続ける。壊れたラベルの
+  // 選択肢を出すより安全)。
   const participatedStyleKeys = useMemo(() => {
     const keys = new Set<string>();
     pastOrTodayRows.forEach((row) => {
-      if (row.log?.style) keys.add(row.log.style);
+      const code = toStyleCode(row.log?.style);
+      if (code) keys.add(code);
     });
     return Array.from(keys).sort((a, b) => getStyleOrderIndex(a) - getStyleOrderIndex(b));
   }, [pastOrTodayRows]);
@@ -319,8 +327,11 @@ export default function PracticeClient({
         }
 
         // 種目フィルタリング（単一select。そのログの種目が一致する場合のみ表示）
+        // filterStyle は participatedStyleKeys(正規化済み)から選ばれるため常に canonical。
+        // log.style 側も toStyleCode() で正規化してから比較し、legacy な小文字行を
+        // 取りこぼさない(例: filterStyle="Fr" のとき log.style="fr" の行も一致させる)。
         if (filterStyle) {
-          if (log?.style !== filterStyle) {
+          if (toStyleCode(log?.style) !== filterStyle) {
             return false;
           }
         }
@@ -503,7 +514,7 @@ export default function PracticeClient({
       await refetch();
     } catch (error) {
       console.error("練習記録の削除に失敗しました:", error);
-      const errorMessage = error instanceof Error ? error.message : t("client.deleteFailed");
+      const errorMessage = toUserFacingMessage(error, t("client.deleteFailed"));
       alert(t("client.saveError", { message: errorMessage }));
     }
   };
@@ -517,32 +528,43 @@ export default function PracticeClient({
       await deletePracticeLogMutation.mutateAsync(logId);
 
       // 直近(削除前)の displayPractices から、削除対象の practiceId に紐づく現在の
-      // practice_logs を引き、削除したログを除いた残りログ数でカスケード判定する
+      // practice_logs を引き、削除したログを除いた残りログ数でカスケード判定する。
+      // displayPractices は startDate/endDate でスコープされた個人一覧のため、
+      // 対象の practice がここに含まれない(＝「不明」)ケースが起こりうる。
+      // その場合は「残りログ0件」と区別し、カスケード削除を発火させない
+      // (「不明」を「0件」として扱うと、他にログが残っていても親 practice ごと
+      // 削除してしまう破壊的なバグになる)。
       const currentPractice = displayPractices.find((practice) => practice.id === practiceId);
-      const remainingLogs = (currentPractice?.practice_logs || []).filter(
-        (log) => log.id !== logId,
-      );
 
-      if (remainingLogs.length === 0) {
-        try {
-          await deletePracticeMutation.mutateAsync(practiceId);
-          setSelectedPractice(null);
-        } catch (practiceDeleteError) {
-          console.error("Practiceの削除に失敗しました:", practiceDeleteError);
-          const errorMessage =
-            practiceDeleteError instanceof Error
-              ? practiceDeleteError.message
-              : t("client.deleteFailed");
-          alert(t("client.saveError", { message: errorMessage }));
-        }
-      } else {
+      if (currentPractice === undefined) {
+        console.warn(
+          "handleDeletePracticeLog: displayPractices から practiceId に一致する practice が" +
+            "見つからなかったため、カスケード削除の要否を判定できませんでした。ログ削除自体は" +
+            "成功しているため、親 practice は削除せずモーダルの表示のみ更新します。",
+          { practiceId, logId },
+        );
         setModalNonce((n) => n + 1);
+      } else {
+        const remainingLogs = currentPractice.practice_logs.filter((log) => log.id !== logId);
+
+        if (remainingLogs.length === 0) {
+          try {
+            await deletePracticeMutation.mutateAsync(practiceId);
+            setSelectedPractice(null);
+          } catch (practiceDeleteError) {
+            console.error("Practiceの削除に失敗しました:", practiceDeleteError);
+            const errorMessage = toUserFacingMessage(practiceDeleteError, t("client.deleteFailed"));
+            alert(t("client.saveError", { message: errorMessage }));
+          }
+        } else {
+          setModalNonce((n) => n + 1);
+        }
       }
 
       await refetch();
     } catch (error) {
       console.error("削除エラー:", error);
-      const errorMessage = error instanceof Error ? error.message : t("client.deleteFailed");
+      const errorMessage = toUserFacingMessage(error, t("client.deleteFailed"));
       alert(t("client.saveError", { message: errorMessage }));
     }
   };

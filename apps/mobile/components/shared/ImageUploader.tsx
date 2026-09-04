@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 export interface ExistingImage {
   id: string;
@@ -216,7 +217,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         });
       } catch (err) {
         console.error("画像選択エラー:", err);
-        const errorMessage = err instanceof Error ? err.message : t("common.upload.imageSelectFailed");
+        const errorMessage = toUserFacingMessage(err, t("common.upload.imageSelectFailed"));
         setError(errorMessage);
         Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
       }
@@ -271,7 +272,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         });
       } catch (err) {
         console.error("画像選択エラー:", err);
-        const errorMessage = err instanceof Error ? err.message : t("common.upload.imageSelectFailed");
+        const errorMessage = toUserFacingMessage(err, t("common.upload.imageSelectFailed"));
         setError(errorMessage);
         Alert.alert(t("common.alertErrorTitle"), errorMessage, [{ text: "OK" }]);
       }

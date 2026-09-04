@@ -21,12 +21,20 @@
  * トートロジー防止:
  * - DOM に表示される文字列・要素の有無、外部 mock の呼び出し引数のみ検証する
  * - 実装の内部 state をそのままアサートしない。Sprint Contract の仕様に基づく
+ *
+ * 情報露出防止 (PM 裁定による Phase B 再修正):
+ * - [V-04] の失敗系テストは元々「生の Error メッセージがそのまま Alert に表示される」ことを
+ *   正解として固定していたが、これは情報露出を仕様として肯定する記述だった。
+ *   toUserFacingMessage (apps/shared/utils/userFacingError.ts) により UserFacingError 以外は
+ *   汎用フォールバック (saveFailed) に置き換わる設計へ是正済みのため、期待値を更新し、
+ *   UserFacingError が素通しされることを検証する対照テストを追加した。
  */
 
 import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Alert } from "react-native";
+import { UserFacingError } from "@apps/shared/utils/userFacingError";
 
 const mocks = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
@@ -154,7 +162,7 @@ describe("TeamCompetitionEntryModal", () => {
     );
     expect(backdropCandidates.length).toBe(1);
 
-    fireEvent.click(backdropCandidates[0]);
+    fireEvent.click(backdropCandidates[0]!); // 直前の toBe(1) で存在は保証済み
 
     // SlideUpModal は閉じるとき即座に unmount せず setTimeout 後に unmount するため、
     // タップ直後の DOM 残存だけでは「閉じない」ことの証明にならない。onClose 呼び出し
@@ -183,7 +191,7 @@ describe("TeamCompetitionEntryModal", () => {
     // 確認 Alert が呼ばれる
     expect(Alert.alert).toHaveBeenCalledTimes(1);
     const alertArgs = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
-    const buttons = alertArgs[2] as Array<{ text: string; onPress?: () => void }>;
+    const buttons = alertArgs![2] as Array<{ text: string; onPress?: () => void }>; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
     // OK ボタンの onPress を発火
     const okButton = buttons.find((b) => b.onPress);
     expect(okButton).toBeDefined();
@@ -200,21 +208,58 @@ describe("TeamCompetitionEntryModal", () => {
     });
   });
 
-  // [V-04] mutation 失敗時はエラー Alert が表示される (ロールバック導線)
-  it("mutation が失敗するとエラー Alert が表示される", async () => {
-    mocks.mutateAsync.mockRejectedValueOnce(new Error("ネットワークエラー"));
+  // [V-04] mutation 失敗時 (生の Error) は汎用エラー Alert が表示される (ロールバック導線)
+  //
+  // 情報露出防止メモ (PM 裁定による Phase B 再修正): 元々は
+  // `c[1].includes("ネットワークエラー")` のように生のエラーメッセージがそのまま Alert に
+  // 表示されることを正解として固定していたが、これは情報露出 (テーブル名・RLS ポリシー詳細を
+  // 含む生の Postgres/RLS エラーをユーザーに見せてしまう) を仕様として肯定する記述だった。
+  // TeamCompetitionEntryModal.tsx は `toUserFacingMessage(err, t("teams.mobile.
+  // teamCompetitionEntryModal.saveFailed"))` (apps/shared/utils/userFacingError.ts) を使い、
+  // `UserFacingError` インスタンス以外は詳細を出さず i18n 済みの汎用フォールバックに
+  // 置き換える設計に是正済みのため、期待値をフォールバック文言に更新した。
+  it("mutation が失敗すると汎用エラー Alert (saveFailed フォールバック) が表示される (情報露出防止)", async () => {
+    // 生の Error はテーブル名等の内部詳細を含みうる例として想定 (UserFacingError ではない)
+    mocks.mutateAsync.mockRejectedValueOnce(
+      new Error('relation "competitions" violates row-level security policy'),
+    );
     render(<TeamCompetitionEntryModal {...baseProps} isAdmin={true} entryStatus="before" />);
     await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
 
     fireEvent.click(screen.getByText("受付終了")); // before -> closed
     const confirmCall = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
-    const buttons = confirmCall[2] as Array<{ text: string; onPress?: () => void }>;
+    const buttons = confirmCall![2] as Array<{ text: string; onPress?: () => void }>; // 直前の click で Alert.alert が呼ばれる設計のため必ず存在
     buttons.find((b) => b.onPress)?.onPress?.();
 
-    // 失敗後にエラー Alert (2 回目) が出る
+    // 失敗後に汎用フォールバック文言のエラー Alert (2 回目) が出る
+    // (ja.json: teams.mobile.teamCompetitionEntryModal.saveFailed)
     await waitFor(() => {
       const calls = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls;
-      const errorCall = calls.find((c) => String(c[1]).includes("ネットワークエラー"));
+      const errorCall = calls.find((c) => c[1] === "受付状況の変更に失敗しました");
+      expect(errorCall).toBeDefined();
+    });
+    // 生のエラー詳細はどこにも露出しない
+    const calls = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls.some((c) => String(c[1]).includes("row-level security"))).toBe(false);
+  });
+
+  // [V-04-2] UserFacingError の場合はそのメッセージがそのまま表示される
+  // (上記テストとの対照実験: toUserFacingMessage が UserFacingError を素通しすることの証明)
+  it("mutation が UserFacingError で失敗した場合はそのメッセージがそのまま Alert に表示される (情報露出防止の対照実験)", async () => {
+    mocks.mutateAsync.mockRejectedValueOnce(
+      new UserFacingError("この大会の受付状況を変更する権限がありません"),
+    );
+    render(<TeamCompetitionEntryModal {...baseProps} isAdmin={true} entryStatus="before" />);
+    await waitFor(() => expect(mocks.getEntriesByCompetition).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText("受付終了")); // before -> closed
+    const confirmCall = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
+    const buttons = confirmCall![2] as Array<{ text: string; onPress?: () => void }>; // 直前の click で Alert.alert が呼ばれる設計のため必ず存在
+    buttons.find((b) => b.onPress)?.onPress?.();
+
+    await waitFor(() => {
+      const calls = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls;
+      const errorCall = calls.find((c) => c[1] === "この大会の受付状況を変更する権限がありません");
       expect(errorCall).toBeDefined();
     });
   });
@@ -416,7 +461,7 @@ describe("TeamCompetitionEntryModal", () => {
       fireEvent.click(screen.getByText("受付中")); // before -> open
       expect(Alert.alert).toHaveBeenCalledTimes(1);
       const alertArgs = (Alert.alert as ReturnType<typeof vi.fn>).mock.calls[0];
-      const buttons = alertArgs[2] as Array<{ text: string; onPress?: () => void }>;
+      const buttons = alertArgs![2] as Array<{ text: string; onPress?: () => void }>; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
       buttons.find((b) => b.onPress)?.onPress?.();
 
       await waitFor(() =>

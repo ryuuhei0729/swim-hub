@@ -42,9 +42,10 @@ vi.mock("@react-navigation/native", () => ({
 import { PremiumBadge } from "../PremiumBadge";
 
 // ja.json から期待値を直接取得
-const ja = jaMessages as unknown as Record<string, Record<string, Record<string, string>>>;
-const PREMIUM_MESSAGES = ja.forms.premium;
-const UPGRADE_LABEL = ja.common.premiumBadge.upgradeAction;
+// (resolveJsonModule によりリテラル型で推論されるため、Record<string, ...> への
+// 型消去キャストは不要かつ noUncheckedIndexedAccess 下で undefined を持ち込むだけなので行わない)
+const PREMIUM_MESSAGES = jaMessages.forms.premium;
+const UPGRADE_LABEL = jaMessages.common.premiumBadge.upgradeAction;
 
 describe("PremiumBadge — feature prop 別の翻訳済み文言レンダリング", () => {
   beforeEach(() => {

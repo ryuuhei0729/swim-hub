@@ -39,6 +39,8 @@ const createMockSupabase = (mockData: unknown[] | null = [], mockError: Error | 
   };
 };
 
+// NOTE: `bestTimes[0]!` / `mock.calls[0]!` を多用する。各テストは直前に `toHaveLength(1)` /
+// `toHaveBeenCalledTimes(1)` で件数を確認済みで、その範囲内のインデックスのみアクセスしている。
 describe("useBestTimes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,7 +59,7 @@ describe("useBestTimes", () => {
       });
 
       expect(mocks.mockSelect).toHaveBeenCalledTimes(1);
-      const queryArg = mocks.mockSelect.mock.calls[0][0] as string;
+      const queryArg = mocks.mockSelect.mock.calls[0]![0] as string;
       expect(queryArg).toMatch(/\bnote\b/);
       // スコープ確認: user_id での絞り込みも同時に行われていること
       expect(mocks.mockEq).toHaveBeenCalledWith("user_id", "user-1");
@@ -91,7 +93,7 @@ describe("useBestTimes", () => {
       });
 
       expect(result.current.bestTimes).toHaveLength(1);
-      expect(result.current.bestTimes[0].note).toBe("非リレー備考ABC123");
+      expect(result.current.bestTimes[0]!.note).toBe("非リレー備考ABC123");
     });
 
     it("境界値: note='' は note=undefined 扱いになる (空文字はフォールバックで捨てられる)", async () => {
@@ -117,7 +119,7 @@ describe("useBestTimes", () => {
       });
 
       expect(result.current.bestTimes).toHaveLength(1);
-      expect(result.current.bestTimes[0].note).toBeUndefined();
+      expect(result.current.bestTimes[0]!.note).toBeUndefined();
     });
   });
 
@@ -159,7 +161,7 @@ describe("useBestTimes", () => {
       });
 
       expect(result.current.bestTimes).toHaveLength(1);
-      const bestTime = result.current.bestTimes[0];
+      const bestTime = result.current.bestTimes[0]!;
       expect(bestTime.note).toBe("親ノートDEF456");
       expect(bestTime.relayingTime?.note).toBe("引き継ぎノートGHI789");
       expect(bestTime.relayingTime?.note).not.toBe(bestTime.note);
@@ -198,7 +200,7 @@ describe("useBestTimes", () => {
       });
 
       expect(result.current.bestTimes).toHaveLength(1);
-      const bestTime = result.current.bestTimes[0];
+      const bestTime = result.current.bestTimes[0]!;
       expect(bestTime.note).toBe("親ノートLCM-MNO345");
       expect(bestTime.relayingTime?.note).toBe("引き継ぎノートLCM-PQR678");
       expect(bestTime.relayingTime?.note).not.toBe(bestTime.note);
@@ -232,8 +234,8 @@ describe("useBestTimes", () => {
       });
 
       expect(result.current.bestTimes).toHaveLength(1);
-      expect(result.current.bestTimes[0].is_relaying).toBe(true);
-      expect(result.current.bestTimes[0].note).toBe("単独引き継ぎノートJKL012");
+      expect(result.current.bestTimes[0]!.is_relaying).toBe(true);
+      expect(result.current.bestTimes[0]!.note).toBe("単独引き継ぎノートJKL012");
     });
   });
 });
