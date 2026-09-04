@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 
 /**
@@ -27,14 +28,20 @@ import path from "node:path";
  *   (0エラーであれば緩い設定でも通る)。一方 `unit-tests` ジョブは
  *   `pnpm --filter @swim-hub/shared test` を明示的に呼ぶため、このファイルは確実に CI で実行される。
  *   apps/shared は web/mobile 双方から参照される中心的パッケージであり、
- *   result-of-swimming / scraping は pnpm workspace 外だが同じ git リポジトリ内なので、
+ *   result-of-swimming は pnpm workspace 外だが同じ git リポジトリ内なので、
  *   相対パスで `tsc --showConfig` を直接叩けば「型チェックは CI 未カバーでも設定ドリフトだけは検知できる」。
+ *   scraping だけは事情が違う (下記「検証できないこと」を参照)。
  *
  * 検証できないこと (既知の限界。QA report 参照):
  *   - 3リポジトリ (swim-hub / swimhub-scanner / swimhub-timer) 間の cross-repo 一致そのもの。
  *     CI は自リポジトリしか checkout しないため、3つの canonical-test ファイルがそれぞれ
  *     同じリテラル値 (target: "es2022" 等) を hardcode することで初めて実質的に統一される。
  *     3ファイルのリテラルが将来ズレても、このテスト単体では検知できない。
+ *   - CI 上での scraping/tsconfig.json。`/scraping/` は .gitignore で丸ごと除外されており
+ *     (ローカル開発機にのみ存在する運用スクリプト群)、CI の checkout には存在しない。
+ *     tsconfig.json 単体を追跡対象に戻しても `include: ["**\/*.ts"]` に一致する入力が 0 件になり
+ *     `tsc --showConfig` が TS18003 で失敗するため、追跡による CI 検証は成立しない。
+ *     よって scraping のケースはファイルが存在する環境 (= ローカル) でのみ実行する。
  *   - `lib` が未指定のときに TypeScript が暗黙に補う DOM 等のデフォルト。
  *     `tsc --showConfig` は明示的に設定された値だけを返すため、暗黙のデフォルトには頼らない
  *     (swim-hub/apps/shared に DOM を明示させるのはまさにこの暗黙依存を無くすための修正)。
@@ -124,23 +131,32 @@ describe("Sprint #14 tsconfig canonical values (swim-hub)", () => {
     expect(co.sourceMap).toBe(true);
   });
 
-  it("scraping: target は ES2022 化するが module/moduleResolution は Node CJS スクリプトとして維持される", () => {
-    const co = showConfig("../../scraping/tsconfig.json");
-    // PM_RULINGS.md 第3部「維持する per-project 逸脱」:
-    // 「swim-hub/scraping: module: commonjs, moduleResolution: node10
-    //  (Node CJS スクリプト。target のみ ES2022 化、実測0エラー)」
-    expect(co.target).toBe("es2022");
-    expect(co.module).toBe("commonjs");
-    expect(co.moduleResolution).toBe("node10");
-    expect(co.strict).toBe(true);
-    expect(co.noUncheckedIndexedAccess).toBe(true);
-    expect(co.esModuleInterop).toBe(true);
-    expect(co.skipLibCheck).toBe(true);
-    expect(co.forceConsistentCasingInFileNames).toBe(true);
-    expect(co.resolveJsonModule).toBe(true);
-    expect(co.isolatedModules).toBe(true);
-    // NOTE(QA): scraping の最終的な lib の値 (ES2022+DOM に揃えるか ES2020+DOM のままか) は
-    // PM_RULINGS.md に明記が無いため、意図的に assert しない。Developer の実装後、
-    // 実際の値を PM/QA で確認してからこのテストに追記すること (Sprint Contract V-08 参照)。
-  });
+  // `/scraping/` は .gitignore で除外されており CI の checkout には存在しない (上記「検証できないこと」参照)。
+  // ローカル開発機では実在するので、そこでは通常どおり設定ドリフトを検知する。
+  const scrapingTsconfigExists = existsSync(
+    path.resolve(process.cwd(), "../../scraping/tsconfig.json"),
+  );
+
+  it.skipIf(!scrapingTsconfigExists)(
+    "scraping: target は ES2022 化するが module/moduleResolution は Node CJS スクリプトとして維持される",
+    () => {
+      const co = showConfig("../../scraping/tsconfig.json");
+      // PM_RULINGS.md 第3部「維持する per-project 逸脱」:
+      // 「swim-hub/scraping: module: commonjs, moduleResolution: node10
+      //  (Node CJS スクリプト。target のみ ES2022 化、実測0エラー)」
+      expect(co.target).toBe("es2022");
+      expect(co.module).toBe("commonjs");
+      expect(co.moduleResolution).toBe("node10");
+      expect(co.strict).toBe(true);
+      expect(co.noUncheckedIndexedAccess).toBe(true);
+      expect(co.esModuleInterop).toBe(true);
+      expect(co.skipLibCheck).toBe(true);
+      expect(co.forceConsistentCasingInFileNames).toBe(true);
+      expect(co.resolveJsonModule).toBe(true);
+      expect(co.isolatedModules).toBe(true);
+      // NOTE(QA): scraping の最終的な lib の値 (ES2022+DOM に揃えるか ES2020+DOM のままか) は
+      // PM_RULINGS.md に明記が無いため、意図的に assert しない。Developer の実装後、
+      // 実際の値を PM/QA で確認してからこのテストに追記すること (Sprint Contract V-08 参照)。
+    },
+  );
 });
