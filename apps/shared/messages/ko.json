@@ -4239,5 +4239,38 @@
       "splitTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로",
       "practiceTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로"
     }
+  },
+  "timeLevel": {
+    "metaTitle": "타임 레벨 측정 | SwimHub",
+    "metaDesc": "성별・수영장 종류・종목・거리・기록을 입력하면 WA 포인트・도추 포인트・도고 포인트 3가지 지표로 자신의 수영 실력을 확인할 수 있습니다.",
+    "title": "타임 레벨 측정",
+    "description": "성별・수영장 종류・종목・거리・기록을 입력하면 WA 포인트・도추 포인트・도고 포인트 3가지 지표로 레벨을 확인할 수 있습니다.",
+    "genderLabel": "성별",
+    "genderMale": "남성",
+    "genderFemale": "여성",
+    "poolTypeLabel": "수영장 종류",
+    "styleLabel": "종목",
+    "distanceLabel": "거리",
+    "timeLabel": "기록",
+    "timePlaceholder": "1:23.45",
+    "invalidTimeFormat": "기록 형식이 올바르지 않습니다 (예: 1:23.45 또는 83.45)",
+    "emptyEnterTime": "기록을 입력해주세요",
+    "noStandardTime": "이 종목・거리의 기준 기록이 없습니다",
+    "lcmOnly": "장코스(LCM)에만 대응합니다",
+    "pointsUnit": "점",
+    "baseTimeLabel": "기준 기록",
+    "cleared": "돌파",
+    "notCleared": "미돌파",
+    "wa": {
+      "title": "WA 포인트"
+    },
+    "tochu": {
+      "title": "도추 포인트",
+      "note": "'도추 포인트'는 도쿄도 중학교 체육연맹의 공식 점수 제도가 아닙니다. 도 선수권대회 참가 기준 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
+    },
+    "toko": {
+      "title": "도고 포인트",
+      "note": "'도고 포인트'는 도쿄도 고등학교 체육연맹의 공식 점수 제도가 아닙니다. 도 고교대회 출전 제한 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
+    }
   }
 }

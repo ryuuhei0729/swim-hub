@@ -143,7 +143,22 @@ export function formatTimeBest(seconds: number): string {
 }
 
 /**
- * 時間の差分をフォーマット
+ * 符号付き秒数 (すでに計算済みの差分) を "+1.42" / "-1.42" 形式にフォーマットする。
+ * 符号付け・桁数 (小数第2位) のロジックの唯一の定義元。`formatTimeDiff` はこの関数に
+ * 委譲する (2箇所で同じフォーマットロジックを持たない)。
+ *
+ * @example formatSignedSeconds(1.42) => "+1.42"
+ * @example formatSignedSeconds(-1.42) => "-1.42"
+ * @example formatSignedSeconds(0) => "+0.00"
+ */
+export function formatSignedSeconds(diffSeconds: number): string {
+  const sign = diffSeconds >= 0 ? "+" : "";
+  return `${sign}${diffSeconds.toFixed(2)}`;
+}
+
+/**
+ * 時間の差分をフォーマット (2つの絶対タイムを受け取り、内部で減算してから
+ * formatSignedSeconds に委譲する)
  *
  * @param time1 - 基準タイム（秒）
  * @param time2 - 比較タイム（秒）
@@ -151,9 +166,7 @@ export function formatTimeBest(seconds: number): string {
  * @example formatTimeDiff(65.42, 64.00) => "+1.42"
  */
 export function formatTimeDiff(time1: number, time2: number): string {
-  const diff = time1 - time2;
-  const sign = diff >= 0 ? "+" : "";
-  return `${sign}${diff.toFixed(2)}`;
+  return formatSignedSeconds(time1 - time2);
 }
 
 // =============================================================================

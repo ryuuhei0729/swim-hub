@@ -10,9 +10,11 @@ import { describe, expect, it } from "vitest";
 import type { ListBestCandidates } from "../../api/records";
 import {
   BEST_EPSILON,
+  NEW_RECORD_DAYS,
   computeListPreviousBest,
   formatBestDelta,
   getBestBadgeState,
+  isNewRecord,
   normalizeRecordDateForBulkComparison,
 } from "../../utils/bestTimeBadge";
 
@@ -165,5 +167,44 @@ describe("getBestBadgeState", () => {
     expect(getBestBadgeState(62.5, 60.0, false)).toEqual({ kind: "slower", label: "Best+2.50" });
     // 境界: epsilon をわずかに超える悪化は slower
     expect(getBestBadgeState(60.01, 60.0, false)).toEqual({ kind: "slower", label: "Best+0.01" });
+  });
+});
+
+// =============================================================================
+// isNewRecord — New バッジ / 赤文字の判定軸は「大会実施日」であること
+// =============================================================================
+describe("isNewRecord", () => {
+  // 判定を実時刻から切り離すため now を明示注入する
+  const now = new Date("2026-09-05T09:00:00+09:00");
+
+  it("大会実施日が当日なら New", () => {
+    expect(isNewRecord("2026-09-05", now)).toBe(true);
+  });
+
+  it("大会実施日から NEW_RECORD_DAYS(30日) 経過した日は New (境界の内側)", () => {
+    expect(NEW_RECORD_DAYS).toBe(30);
+    expect(isNewRecord("2026-08-06", now)).toBe(true);
+  });
+
+  it("大会実施日から31日経過した記録は New ではない (境界の外側)", () => {
+    expect(isNewRecord("2026-08-05", now)).toBe(false);
+  });
+
+  it("何年も前の大会の記録は New ではない", () => {
+    expect(isNewRecord("2020-01-01", now)).toBe(false);
+  });
+
+  it("一括登録 (competition なし = null/undefined) は常に New ではない", () => {
+    expect(isNewRecord(null, now)).toBe(false);
+    expect(isNewRecord(undefined, now)).toBe(false);
+    expect(isNewRecord("", now)).toBe(false);
+  });
+
+  it("パースできない日付文字列は New ではない (isValid ガード)", () => {
+    expect(isNewRecord("not-a-date", now)).toBe(false);
+  });
+
+  it("未来日の大会は「大会日からまだ30日経っていない」ため New", () => {
+    expect(isNewRecord("2026-10-01", now)).toBe(true);
   });
 });

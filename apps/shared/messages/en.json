@@ -4236,5 +4236,38 @@
       "splitTimeLimit": "Free plan allows up to {limit} entries. Upgrade to Premium for unlimited",
       "practiceTimeLimit": "Free plan allows up to {limit} entries. Upgrade to Premium for unlimited"
     }
+  },
+  "timeLevel": {
+    "metaTitle": "Time Level Checker | SwimHub",
+    "metaDesc": "Enter your gender, pool type, event, distance, and time to see your swimming level across three indicators: WA Points, Tochu Points, and Toko Points.",
+    "title": "Time Level Checker",
+    "description": "Enter your gender, pool type, event, distance, and time to check your level across three indicators: WA Points, Tochu Points, and Toko Points.",
+    "genderLabel": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "poolTypeLabel": "Pool Type",
+    "styleLabel": "Event",
+    "distanceLabel": "Distance",
+    "timeLabel": "Time",
+    "timePlaceholder": "1:23.45",
+    "invalidTimeFormat": "Invalid time format (e.g. 1:23.45 or 83.45)",
+    "emptyEnterTime": "Please enter a time",
+    "noStandardTime": "No standard time is available for this event/distance",
+    "lcmOnly": "Only available for long course (LCM)",
+    "pointsUnit": "pts",
+    "baseTimeLabel": "Standard time",
+    "cleared": "Cleared",
+    "notCleared": "Not cleared",
+    "wa": {
+      "title": "WA Points"
+    },
+    "tochu": {
+      "title": "Tochu Points",
+      "note": "“Tochu Points” is not an official scoring system of the Tokyo Junior High School Athletic Federation. It is SwimHub's own conversion that treats the qualifying standard time for the Tokyo Championship as 1000 points."
+    },
+    "toko": {
+      "title": "Toko Points",
+      "note": "“Toko Points” is not an official scoring system of the Tokyo Senior High School Athletic Federation. It is SwimHub's own conversion that treats the entry-restriction time for the Tokyo High School Championship as 1000 points."
+    }
   }
 }

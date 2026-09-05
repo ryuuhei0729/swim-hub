@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { Tabs } from "@/components/ui/Tabs";
 import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { TrophyIcon, CalendarIcon } from "@heroicons/react/24/outline";
-import { differenceInDays, parseISO } from "date-fns";
 import { formatTimeBest, formatDate } from "@/utils/formatters";
 import type { BestTime, TabType } from "@/types/member-detail";
 import {
@@ -19,6 +18,7 @@ import {
   type Gender,
   type WaPointsCellCandidate,
 } from "@apps/shared/utils/waPoints";
+import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
 
 const styleHeaderBgClass: Record<string, string> = {
   自由形: "bg-yellow-100",
@@ -277,12 +277,8 @@ export function BestTimesTable({ bestTimes, gender }: BestTimesTableProps) {
                 {STYLES.map((style) => {
                   const bestTime = !isWaPointsMode ? getBestTime(style, distance) : null;
                   const waCell = isWaPointsMode ? getWaPointsCell(style, distance) : null;
-                  const createdAt = bestTime ? parseISO(bestTime.created_at) : null;
-                  // 一括登録（competition なし）は New 表示対象外
-                  const isNew =
-                    !isWaPointsMode && bestTime?.competition && createdAt
-                      ? differenceInDays(new Date(), createdAt) <= 30
-                      : false;
+                  // New 判定は大会実施日が基準。一括登録 (competition なし) は対象外
+                  const isNew = isNewRecord(bestTime?.competition?.date);
                   return (
                     <td
                       key={style}

@@ -4239,5 +4239,38 @@
       "splitTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte Einträge",
       "practiceTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte Einträge"
     }
+  },
+  "timeLevel": {
+    "metaTitle": "Zeitniveau-Rechner | SwimHub",
+    "metaDesc": "Gib Geschlecht, Beckenart, Schwimmart, Distanz und Zeit ein, um dein Niveau anhand von drei Kennzahlen zu sehen: WA-Punkte, Tochu-Punkte und Toko-Punkte.",
+    "title": "Zeitniveau-Rechner",
+    "description": "Gib Geschlecht, Beckenart, Schwimmart, Distanz und Zeit ein, um dein Niveau anhand von drei Kennzahlen zu prüfen: WA-Punkte, Tochu-Punkte und Toko-Punkte.",
+    "genderLabel": "Geschlecht",
+    "genderMale": "Männlich",
+    "genderFemale": "Weiblich",
+    "poolTypeLabel": "Beckenart",
+    "styleLabel": "Schwimmart",
+    "distanceLabel": "Distanz",
+    "timeLabel": "Zeit",
+    "timePlaceholder": "1:23.45",
+    "invalidTimeFormat": "Ungültiges Zeitformat (z. B. 1:23.45 oder 83.45)",
+    "emptyEnterTime": "Bitte eine Zeit eingeben",
+    "noStandardTime": "Für diese Schwimmart/Distanz ist keine Standardzeit verfügbar",
+    "lcmOnly": "Nur für Langbahn (LCM) verfügbar",
+    "pointsUnit": "Pkt.",
+    "baseTimeLabel": "Standardzeit",
+    "cleared": "Erreicht",
+    "notCleared": "Nicht erreicht",
+    "wa": {
+      "title": "WA-Punkte"
+    },
+    "tochu": {
+      "title": "Tochu-Punkte",
+      "note": "„Tochu-Punkte“ ist kein offizielles Punktesystem des Tokioter Junior-High-School-Sportverbands, sondern eine eigene Umrechnung von SwimHub, bei der die Qualifikationszeit für die Tokyo Championship als 1000 Punkte gilt."
+    },
+    "toko": {
+      "title": "Toko-Punkte",
+      "note": "„Toko-Punkte“ ist kein offizielles Punktesystem des Tokioter High-School-Sportverbands, sondern eine eigene Umrechnung von SwimHub, bei der die Teilnahmezeitgrenze für die Tokyo High School Championship als 1000 Punkte gilt."
+    }
   }
 }

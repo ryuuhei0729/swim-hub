@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
-import { differenceInDays, parseISO } from "date-fns";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { formatTime } from "@/utils/formatters";
@@ -12,6 +11,7 @@ import {
   type WaPointsCellCandidate,
 } from "@apps/shared/utils/waPoints";
 import type { BestTime } from "@apps/shared/types/ui";
+import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
 import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/BestTimeDetailSheet";
 
 interface BestTimesTableProps {
@@ -281,11 +281,8 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({ bestTimes, gende
                         style={styles.timeContainer}
                       >
                         {(() => {
-                          const createdAt = parseISO(bestTime.created_at);
-                          // 一括登録（competition なし）は New 表示対象外
-                          const isNew = bestTime.competition
-                            ? differenceInDays(new Date(), createdAt) <= 30
-                            : false;
+                          // New 判定は大会実施日が基準。一括登録 (competition なし) は対象外
+                          const isNew = isNewRecord(bestTime.competition?.date);
                           const display = getTimeDisplay(bestTime);
 
                           return (

@@ -12,7 +12,6 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { parseISO, differenceInDays } from "date-fns";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -37,6 +36,7 @@ import { MemberDetailModal } from "./member-detail";
 import { WaPointsCompareModal } from "@/components/teams/wa-points-compare";
 import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/BestTimeDetailSheet";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
 
 // ベストタイム型定義
 interface MemberBestTime {
@@ -45,7 +45,6 @@ interface MemberBestTime {
   poolType: number; // 0: 短水路, 1: 長水路
   isRelaying: boolean;
   createdAt: string;
-  hasCompetition: boolean;
   distance: number;
   note?: string;
   competitionTitle?: string;
@@ -269,7 +268,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                 poolType: record.pool_type,
                 isRelaying: record.is_relaying,
                 createdAt: record.created_at,
-                hasCompetition: !!competition,
                 distance: style.distance,
                 note: record.note ?? undefined,
                 competitionTitle: competition?.title ?? undefined,
@@ -711,9 +709,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                                 distance,
                                 includeRelaying,
                               );
-                              const isNew = bestTime?.hasCompetition
-                                ? differenceInDays(new Date(), parseISO(bestTime.createdAt)) <= 30
-                                : false;
+                              // New 判定は大会実施日が基準。一括登録 (competition なし) は対象外
+                              const isNew = isNewRecord(bestTime?.competitionDate);
                               const suffix = bestTime
                                 ? formatBestTimeSuffix({
                                     poolType: bestTime.poolType as 0 | 1,

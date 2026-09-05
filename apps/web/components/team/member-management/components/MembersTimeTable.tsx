@@ -4,7 +4,6 @@ import React from "react";
 import Avatar from "@/components/ui/Avatar";
 import { StarIcon, CalendarIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest, formatDate } from "@/utils/formatters";
-import { differenceInDays, parseISO } from "date-fns";
 import type { BestTime } from "../../shared/hooks/useMemberBestTimes";
 import type { TeamMember } from "../hooks/useMembers";
 import { useTranslations } from "next-intl";
@@ -14,6 +13,7 @@ import {
   isInvalidCombination,
   getDistancesForStyle,
 } from "@apps/shared/utils/swimStyles";
+import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
 
 interface MembersTimeTableProps {
   members: TeamMember[];
@@ -231,12 +231,8 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
                     const distances = getDistancesForStyle(style);
                     return distances.map((distance) => {
                       const bestTime = getBestTimeForMember(member.id, style, distance);
-                      const createdAt = bestTime ? parseISO(bestTime.created_at) : null;
-                      // 一括登録（competition なし）は New 表示対象外
-                      const isNew =
-                        bestTime?.competition && createdAt
-                          ? differenceInDays(new Date(), createdAt) <= 30
-                          : false;
+                      // New 判定は大会実施日が基準。一括登録 (competition なし) は対象外
+                      const isNew = isNewRecord(bestTime?.competition?.date);
                       return (
                         <td
                           key={`${member.id}-${style}-${distance}`}

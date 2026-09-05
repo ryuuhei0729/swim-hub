@@ -1,7 +1,9 @@
 // =============================================================================
-// 一覧ベストバッジ判定ユーティリティ - Swim Hub共通パッケージ
-// Web/Mobile の一覧 BestTimeBadge が共用する純粋関数
+// ベストタイムのバッジ判定ユーティリティ - Swim Hub共通パッケージ
+// Web/Mobile が共用する純粋関数 (一覧の BestTimeBadge / ベストタイム表の New バッジ)
 // =============================================================================
+
+import { differenceInDays, isValid, parseISO } from "date-fns";
 
 import type { ListBestCandidates } from "../api/records";
 import { formatTimeBest } from "./time";
@@ -83,4 +85,29 @@ export function computeListPreviousBest(
     if (best === null || row.time < best) best = row.time;
   }
   return best;
+}
+
+// -----------------------------------------------------------------------------
+// New バッジ (直近の記録を赤文字 + New バッジで強調) 判定
+// -----------------------------------------------------------------------------
+
+/** New バッジ / 赤文字の対象期間（日）。大会実施日からの経過日数で判定する */
+export const NEW_RECORD_DAYS = 30;
+
+/**
+ * ベストタイムを「New」（New バッジ + 赤文字）として強調表示するかを判定する。
+ *
+ * 判定軸は **大会実施日 (competitions.date)**。記録行の作成日時 (created_at) ではないため、
+ * 過去の大会の記録を今日入力しても New にはならない。
+ * 一括登録は competition が無く引数が null/undefined になるため常に false（判定対象外）。
+ * 未来日の大会は「大会日からまだ 30 日経っていない」状態なので New として扱う。
+ */
+export function isNewRecord(
+  competitionDate: string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!competitionDate) return false;
+  const date = parseISO(competitionDate);
+  if (!isValid(date)) return false;
+  return differenceInDays(now, date) <= NEW_RECORD_DAYS;
 }

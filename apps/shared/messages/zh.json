@@ -4239,5 +4239,38 @@
       "splitTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记",
       "practiceTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记"
     }
+  },
+  "timeLevel": {
+    "metaTitle": "游泳成绩等级测定 | SwimHub",
+    "metaDesc": "输入性别、泳道类型、项目、距离和成绩，即可通过WA积分、都中积分、都高积分三项指标查看你的游泳水平。",
+    "title": "游泳成绩等级测定",
+    "description": "输入性别、泳道类型、项目、距离和成绩，即可通过WA积分、都中积分、都高积分三项指标确认你的水平。",
+    "genderLabel": "性别",
+    "genderMale": "男性",
+    "genderFemale": "女性",
+    "poolTypeLabel": "泳道类型",
+    "styleLabel": "项目",
+    "distanceLabel": "距离",
+    "timeLabel": "成绩",
+    "timePlaceholder": "1:23.45",
+    "invalidTimeFormat": "成绩格式不正确（例如：1:23.45 或 83.45）",
+    "emptyEnterTime": "请输入成绩",
+    "noStandardTime": "该项目・距离没有基准成绩",
+    "lcmOnly": "仅支持长池（LCM）",
+    "pointsUnit": "分",
+    "baseTimeLabel": "基准成绩",
+    "cleared": "达标",
+    "notCleared": "未达标",
+    "wa": {
+      "title": "WA积分"
+    },
+    "tochu": {
+      "title": "都中积分",
+      "note": "「都中积分」并非东京都中学校体育联盟的官方评分制度，而是SwimHub将都选拔赛的参赛标准成绩视为1000分独自换算的指标。"
+    },
+    "toko": {
+      "title": "都高积分",
+      "note": "「都高积分」并非东京都高中体育联盟的官方评分制度，而是SwimHub将都高中大赛的出场限制成绩视为1000分独自换算的指标。"
+    }
   }
 }

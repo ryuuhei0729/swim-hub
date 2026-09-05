@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { differenceInDays, parseISO } from "date-fns";
 import { CalendarIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { formatTimeBest, formatDate } from "../../utils/formatters";
@@ -18,6 +17,7 @@ import {
   type Gender,
   type WaPointsCellCandidate,
 } from "@apps/shared/utils/waPoints";
+import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
 
 export interface BestTime {
   id: string;
@@ -341,6 +341,8 @@ export default function BestTimesTable({ bestTimes, gender }: BestTimesTableProp
                 {STYLES.map((style) => {
                   const bestTime = !isWaPointsMode ? getBestTime(style, distance) : null;
                   const waCell = isWaPointsMode ? getWaPointsCell(style, distance) : null;
+                  // New 判定は大会実施日が基準。一括登録 (competition なし) は対象外
+                  const isNew = isNewRecord(bestTime?.competition?.date);
                   return (
                     <td
                       key={style}
@@ -360,41 +362,16 @@ export default function BestTimesTable({ bestTimes, gender }: BestTimesTableProp
                         )
                       ) : bestTime ? (
                         <div
-                          className={`group relative inline-block pt-1 sm:pt-2 ${(() => {
-                            // 一括登録（competition なし）は New 表示対象外
-                            if (!bestTime.competition) return "";
-                            const createdAt = bestTime.created_at
-                              ? parseISO(bestTime.created_at)
-                              : new Date(0);
-                            const isNew = differenceInDays(new Date(), createdAt) <= 30;
-                            return isNew ? "pr-4 sm:pr-6" : "";
-                          })()}`}
+                          className={`group relative inline-block pt-1 sm:pt-2 ${isNew ? "pr-4 sm:pr-6" : ""}`}
                         >
-                          {(() => {
-                            // 一括登録（competition なし）は New 表示対象外
-                            if (!bestTime.competition) return null;
-                            const createdAt = bestTime.created_at
-                              ? parseISO(bestTime.created_at)
-                              : new Date(0);
-                            const isNew = differenceInDays(new Date(), createdAt) <= 30;
-                            return isNew ? (
-                              <span className="absolute -top-0.5 sm:-top-1 -right-2 sm:-right-3 text-[8px] sm:text-[10px] md:text-xs bg-red-500 text-white px-1 sm:px-1.5 py-0.5 rounded-full shadow">
-                                New
-                              </span>
-                            ) : null;
-                          })()}
+                          {isNew && (
+                            <span className="absolute -top-0.5 sm:-top-1 -right-2 sm:-right-3 text-[8px] sm:text-[10px] md:text-xs bg-red-500 text-white px-1 sm:px-1.5 py-0.5 rounded-full shadow">
+                              New
+                            </span>
+                          )}
                           {/* 通常表示：ベストタイム */}
                           <span
-                            className={`font-semibold text-xs sm:text-base md:text-lg ${(() => {
-                              // 一括登録（competition なし）は New 表示対象外
-                              if (!bestTime.competition) return "text-gray-900";
-                              const createdAt = bestTime.created_at
-                                ? parseISO(bestTime.created_at)
-                                : new Date(0);
-                              return differenceInDays(new Date(), createdAt) <= 30
-                                ? "text-red-600"
-                                : "text-gray-900";
-                            })()}`}
+                            className={`font-semibold text-xs sm:text-base md:text-lg ${isNew ? "text-red-600" : "text-gray-900"}`}
                           >
                             {(() => {
                               const display = getTimeDisplay(bestTime);

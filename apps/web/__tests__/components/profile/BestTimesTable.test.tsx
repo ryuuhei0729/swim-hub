@@ -76,6 +76,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, expect, it } from "vitest";
+import { format, subDays } from "date-fns";
 
 import BestTimesTable, { type BestTime } from "../../../components/profile/BestTimesTable";
 import { STYLE_KEY_MAP } from "@apps/shared/utils/swimStyles";
@@ -114,6 +115,9 @@ function buildBestTime(overrides: Partial<BestTime> = {}): BestTime {
     ...overrides,
   };
 }
+
+/** New 判定 (大会実施日基準) を実時刻に依存させないための相対日付ヘルパー */
+const daysAgo = (n: number) => format(subDays(new Date(), n), "yyyy-MM-dd");
 
 const cellTestId = (style: keyof typeof STYLE_KEY_MAP, distance: number) =>
   `best-times-cell-${STYLE_KEY_MAP[style]}-${distance}`;
@@ -356,19 +360,29 @@ describe("[V-D4] 凡例文言がモードで変わる (WAポイントモード�
 // [V-REG] 既存の時間表示・Newバッジ・ホバーツールチップ・チェックボックスの回帰確認
 // ---------------------------------------------------------------------------
 describe("[V-REG] 既存機能の回帰確認 (本スプリントで変更されないこと)", () => {
-  it("30日以内の記録には New バッジが表示される", () => {
+  it("大会実施日が30日以内なら New バッジが表示される (記録の作成日が何年も前でも)", () => {
     const recent = buildBestTime({
-      created_at: new Date().toISOString(),
-      competition: { title: "直近大会", date: "2026-08-01" },
+      created_at: "2000-01-01T00:00:00.000Z",
+      competition: { title: "直近大会", date: daysAgo(5) },
     });
     renderWithLocale([recent]);
     const cell = screen.getByTestId(cellTestId("自由形", 100));
     expect(within(cell).getByText("New")).toBeInTheDocument();
   });
 
-  it("30日より前の記録には New バッジが表示されない", () => {
-    const old = buildBestTime({ created_at: "2000-01-01T00:00:00.000Z" });
+  it("大会実施日が30日より前なら New バッジは表示されない (今日作成した記録でも)", () => {
+    const old = buildBestTime({
+      created_at: new Date().toISOString(),
+      competition: { title: "過去大会", date: daysAgo(31) },
+    });
     renderWithLocale([old]);
+    const cell = screen.getByTestId(cellTestId("自由形", 100));
+    expect(within(cell).queryByText("New")).not.toBeInTheDocument();
+  });
+
+  it("一括登録 (competition なし) は大会日が無いため New バッジを出さない", () => {
+    const bulk = buildBestTime({ created_at: new Date().toISOString(), competition: undefined });
+    renderWithLocale([bulk]);
     const cell = screen.getByTestId(cellTestId("自由形", 100));
     expect(within(cell).queryByText("New")).not.toBeInTheDocument();
   });

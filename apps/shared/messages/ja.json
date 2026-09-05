@@ -4239,5 +4239,38 @@
       "splitTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に",
       "practiceTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に"
     }
+  },
+  "timeLevel": {
+    "metaTitle": "タイムレベル判定 | SwimHub",
+    "metaDesc": "性別・水路・種目・距離・タイムを入力するだけで、WAポイント・都中ポイント・都高ポイントの3つの指標で自分の泳力レベルを確認できます。",
+    "title": "タイムレベル判定",
+    "description": "性別・水路・種目・距離・タイムを入力すると、WAポイント・都中ポイント・都高ポイントの3つの指標でレベルを確認できます。",
+    "genderLabel": "性別",
+    "genderMale": "男性",
+    "genderFemale": "女性",
+    "poolTypeLabel": "水路",
+    "styleLabel": "種目",
+    "distanceLabel": "距離",
+    "timeLabel": "タイム",
+    "timePlaceholder": "1:23.45",
+    "invalidTimeFormat": "タイムの形式が正しくありません（例: 1:23.45 または 83.45）",
+    "emptyEnterTime": "タイムを入力してください",
+    "noStandardTime": "この種目・距離の基準タイムはありません",
+    "lcmOnly": "長水路のみ対応しています",
+    "pointsUnit": "点",
+    "baseTimeLabel": "基準タイム",
+    "cleared": "突破",
+    "notCleared": "未突破",
+    "wa": {
+      "title": "WAポイント"
+    },
+    "tochu": {
+      "title": "都中ポイント",
+      "note": "「都中ポイント」は東京都中学校体育連盟の公式得点制度ではありません。都選手権大会の参加標準記録を1000点とみなしてSwimHubが独自に換算した指標です。"
+    },
+    "toko": {
+      "title": "都高ポイント",
+      "note": "「都高ポイント」は東京都高等学校体育連盟の公式得点制度ではありません。都高校大会の出場制限タイムを1000点とみなしてSwimHubが独自に換算した指標です。"
+    }
   }
 }
