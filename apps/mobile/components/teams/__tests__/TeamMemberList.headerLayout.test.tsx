@@ -9,6 +9,9 @@
 // 検証観点:
 //   [V-HDR-01] 「WAポイントで比較」ボタンとタイトルが同一の直近コンテナ (タイトル行) にあり、
 //              ボタンがタイトルより後ろ (= 右端) に置かれている
+//              ※ ボタンは info アイコンと横並びにするための行ラッパー (waPointsButtonWrapper)
+//                で包まれているため、「タイトル行の直下の子」はボタン自身ではなくラッパー。
+//                ラッパーの中身 (info アイコン) は TeamMemberList.waPointsInfoIcon.test.tsx が担当
 //   [V-HDR-02] 「引き継ぎを含む」スイッチと人数テキストが同一の直近コンテナ (人数行) にあり、
 //              スイッチが人数テキストより後ろ (= 右端) に置かれている
 //   [V-HDR-03] 交差ガード: ボタンはタイトル行に「だけ」、スイッチは人数行に「だけ」存在する
@@ -154,12 +157,16 @@ describe("[V-HDR] TeamMemberList 統計ヘッダーの配置", () => {
     const title = getTitle();
     const waButton = getWaButton();
 
-    // タイトル(span)の親 = タイトル行(statsHeaderTop)。ボタンはその直下の兄弟であること。
-    expect(waButton.parentElement).toBe(title.parentElement);
+    // タイトル(span)の親 = タイトル行(statsHeaderTop)。
+    // ボタンは info アイコンとの行ラッパー (waPointsButtonWrapper) に包まれているので、
+    // 「ボタンの親 (=ラッパー)」がタイトル行の直下の兄弟であること。
+    const buttonWrapper = waButton.parentElement!;
+    expect(buttonWrapper).not.toBe(title.parentElement);
+    expect(buttonWrapper.parentElement).toBe(title.parentElement);
 
-    // 行内の並び順: タイトル → ボタン (右端)
+    // 行内の並び順: タイトル → ボタン(ラッパー) (右端)
     const rowChildren = Array.from(title.parentElement!.children);
-    expect(rowChildren.indexOf(waButton)).toBeGreaterThan(rowChildren.indexOf(title));
+    expect(rowChildren.indexOf(buttonWrapper)).toBeGreaterThan(rowChildren.indexOf(title));
   });
 
   it("[V-HDR-02] 「引き継ぎを含む」スイッチは人数テキストと同じ行にあり、人数より後ろに置かれる", () => {

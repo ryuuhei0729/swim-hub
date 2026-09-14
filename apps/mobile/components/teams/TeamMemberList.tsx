@@ -34,6 +34,7 @@ import { selectBestTime, formatBestTimeSuffix } from "@/utils/bestTimeSelection"
 import { TeamMemberGroupFilter } from "./TeamMemberGroupFilter";
 import { MemberDetailModal } from "./member-detail";
 import { WaPointsCompareModal } from "@/components/teams/wa-points-compare";
+import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/BestTimeDetailSheet";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
@@ -494,16 +495,24 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
         <View style={styles.statsHeader}>
           <View style={styles.statsHeaderTop}>
             <Text style={styles.statsTitle}>{t("teams.mobile.memberListTitle")}</Text>
-            <Pressable
-              onPress={() => setIsWaPointsModalOpen(true)}
-              style={styles.waPointsButton}
-              accessibilityRole="button"
-            >
-              <Feather name="award" size={13} color="#2563EB" />
-              <Text style={styles.waPointsButtonText}>
-                {t("teams.waPointsCompare.buttonLabel")}
-              </Text>
-            </Pressable>
+            {/* 「WAポイントで比較」ボタン + 右隣の info アイコン。
+                web 版 (WaPointsCompareButton) はアイコンをボタン右上に absolute 配置するが、
+                mobile ではマイページの WA トグル (MyPageScreen の waToggleWrapper) と同じ
+                「行ラッパーで横並び」にする。info はデフォルト文言
+                (teams.waPointsCompare.infoAriaLabel / infoTooltip) をそのまま使う */}
+            <View style={styles.waPointsButtonWrapper}>
+              <Pressable
+                onPress={() => setIsWaPointsModalOpen(true)}
+                style={styles.waPointsButton}
+                accessibilityRole="button"
+              >
+                <Feather name="award" size={13} color="#2563EB" />
+                <Text style={styles.waPointsButtonText}>
+                  {t("teams.waPointsCompare.buttonLabel")}
+                </Text>
+              </Pressable>
+              <WaPointsInfoTooltip testID="team-member-list-wa-info" />
+            </View>
           </View>
           <View style={styles.statsRow}>
             <Text style={styles.statsText}>
@@ -854,12 +863,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
+  waPointsButtonWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+    gap: 4,
+    // statsTitle の marginBottom:4 と揃える。ボタン側に付けると info アイコンとの
+    // 縦中央が 2px ずれるためラッパーに持たせる
+    marginBottom: 4,
+  },
   waPointsButton: {
     flexDirection: "row",
     alignItems: "center",
     flexShrink: 1,
     gap: 5,
-    marginBottom: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
