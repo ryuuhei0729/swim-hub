@@ -9,7 +9,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  KeyboardAvoidingView,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
@@ -19,6 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import {
   useCreateCompetitionMutation,
   useUpdateCompetitionMutation,
@@ -40,11 +41,12 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
+import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { VideoUploader } from "@/components/shared/VideoUploader";
-import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
 import { ItemTabs } from "@/components/forms/ItemTabs";
 import { StyleChipSelector } from "@/components/forms/StyleChipSelector";
+import { getStyleOption, canRelay } from "@/components/besttime/styleOptions";
 import { LapTimeDisplay, getBestTimeForEntry } from "@/components/records";
 import {
   uploadImagesViaApi,
@@ -56,7 +58,11 @@ import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
-import { normalizeReactionTime, toReactionTimeValue } from "@apps/shared/utils/reactionTime";
+import {
+  parseReactionTimeInput,
+  isReactionTimeInRange,
+  toReactionTimeValue,
+} from "@apps/shared/utils/reactionTime";
 import {
   hasUnsavedChanges,
   isEntryTabVisible,
@@ -222,6 +228,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // ---- レースレコードタブ state ----
   const [records, setRecords] = useState<RecordDraftRow[]>(initialRecordsRef.current);
   const [activeRecordIndex, setActiveRecordIndex] = useState(0);
+  // スプリットタイムの距離欄を編集中は表示順を固定する (編集完了 = blur 後に距離昇順へ再整列)。
+  // 編集中に生の distance 値で毎キー入力ごと再ソートすると、入力中の行が別の位置へ
+  // ジャンプしてキーボードの外へ出てしまう不具合を防ぐ。
+  const [frozenSplitOrder, setFrozenSplitOrder] = useState<number[] | null>(null);
   const [recordErrors, setRecordErrors] = useState<Record<string, string>>({});
   // 動画保留 (record.draftId → asset)
   // 配列 index キーだとレコード削除で index がずれ、動画の消失/誤添付が起きるため
@@ -657,6 +667,15 @@ export const CompetitionTabFormScreen: React.FC = () => {
       const rawTime = record.timeDisplayValue.trim();
       if (rawTime !== "" && parseTimeFlexible(rawTime) === null) {
         newErrors[`time-${index}`] = t("recordMobile.form.timeFormatInvalid");
+      }
+      const rawReactionTime = record.reactionTime.trim();
+      if (rawReactionTime !== "") {
+        const parsedReactionTime = parseReactionTimeInput(rawReactionTime);
+        if (parsedReactionTime === null) {
+          newErrors[`reactionTime-${index}`] = t("recordMobile.form.reactionTimeFormatInvalid");
+        } else if (!isReactionTimeInRange(parsedReactionTime)) {
+          newErrors[`reactionTime-${index}`] = t("recordMobile.form.reactionTimeRange");
+        }
       }
     });
     setRecordErrors(newErrors);
@@ -1350,14 +1369,48 @@ export const CompetitionTabFormScreen: React.FC = () => {
     [t],
   );
 
-  // ---- 反応時間: blur 時に shared/utils/reactionTime の範囲へクランプ ----
-  const handleReactionTimeBlur = useCallback((draftId: string) => {
-    setRecords((prev) =>
-      prev.map((r) =>
-        r.draftId === draftId ? { ...r, reactionTime: normalizeReactionTime(r.reactionTime) } : r,
-      ),
-    );
-  }, []);
+  // ---- 反応時間: blur 時に parseReactionTimeInput で構造ガードし、
+  // 解釈不能な入力・範囲外の入力は確定せずエラー表示する (タイム入力と同一方式) ----
+  const handleReactionTimeBlur = useCallback(
+    (draftId: string) => {
+      setRecords((prev) =>
+        prev.map((r, index) => {
+          if (r.draftId !== draftId) return r;
+          const raw = r.reactionTime.trim();
+          if (raw === "") {
+            setRecordErrors((prevErrors) => {
+              const next = { ...prevErrors };
+              delete next[`reactionTime-${index}`];
+              return next;
+            });
+            return { ...r, reactionTime: "" };
+          }
+          const parsed = parseReactionTimeInput(raw);
+          if (parsed === null) {
+            setRecordErrors((prevErrors) => ({
+              ...prevErrors,
+              [`reactionTime-${index}`]: t("recordMobile.form.reactionTimeFormatInvalid"),
+            }));
+            return r;
+          }
+          if (!isReactionTimeInRange(parsed)) {
+            setRecordErrors((prevErrors) => ({
+              ...prevErrors,
+              [`reactionTime-${index}`]: t("recordMobile.form.reactionTimeRange"),
+            }));
+            return r;
+          }
+          setRecordErrors((prevErrors) => {
+            const next = { ...prevErrors };
+            delete next[`reactionTime-${index}`];
+            return next;
+          });
+          return { ...r, reactionTime: String(Math.round(parsed * 100) / 100) };
+        }),
+      );
+    },
+    [t],
+  );
 
   // ---- スプリットタイム操作 ----
   // Free プランの課金対象カウントはゴール地点スプリット (distance === raceDistance) を除外する
@@ -1468,6 +1521,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
       setRecords((prev) =>
         prev.map((r) => {
           if (r.draftId !== draftId) return r;
+          const style = swimStyles.find((s) => s.id.toString() === r.styleId);
+          const raceDistance = style?.distance;
+          // ゴール地点スプリット (distance === raceDistance) のタイムを編集した場合は
+          // 逆方向にも同期する (タイム → スプリットは handleRecordTimeChange 側で対応済み)
+          let syncedTime: number | undefined;
+          let syncedTimeDisplayValue: string | undefined;
           const updatedSplitTimes = r.splitTimes.map((st, i) => {
             if (i !== splitIndex) return st;
             if (field === "distance") {
@@ -1477,17 +1536,31 @@ export const CompetitionTabFormScreen: React.FC = () => {
             }
             // blur / 保存時の確定値と同じ parseTimeFlexible 解釈。入力中は生文字列を保持する
             const parsedTime = value.trim() === "" ? 0 : (parseTimeFlexible(value) ?? 0);
+            if (
+              raceDistance != null &&
+              typeof st.distance === "number" &&
+              st.distance === raceDistance
+            ) {
+              syncedTime = parsedTime;
+              syncedTimeDisplayValue = value;
+            }
             return {
               ...st,
               splitTimeDisplayValue: value,
               splitTime: parsedTime,
             };
           });
-          return { ...r, splitTimes: updatedSplitTimes };
+          return {
+            ...r,
+            splitTimes: updatedSplitTimes,
+            ...(syncedTimeDisplayValue !== undefined
+              ? { time: syncedTime, timeDisplayValue: syncedTimeDisplayValue }
+              : {}),
+          };
         }),
       );
     },
-    [],
+    [swimStyles],
   );
 
   const handleRemoveSplitTime = useCallback((draftId: string, splitIndex: number) => {
@@ -1499,27 +1572,46 @@ export const CompetitionTabFormScreen: React.FC = () => {
     );
   }, []);
 
-  // スプリットタイムの blur 時に確定値へ再フォーマット (タイム欄と同じ UX)
+  // スプリットタイムの blur 時に確定値へ再フォーマット (タイム欄と同じ UX)。
+  // ゴール地点スプリットの場合はタイムへも同期する (逆方向の同期)
   const handleSplitTimeBlur = useCallback(
     (draftId: string, splitIndex: number) => {
       setRecords((prev) =>
         prev.map((r) => {
           if (r.draftId !== draftId) return r;
+          const style = swimStyles.find((s) => s.id.toString() === r.styleId);
+          const raceDistance = style?.distance;
+          let syncedTime: number | undefined;
+          let syncedTimeDisplayValue: string | undefined;
           const updatedSplitTimes = r.splitTimes.map((st, i) => {
             if (i !== splitIndex) return st;
             const parsed = parseTimeFlexible(st.splitTimeDisplayValue);
             if (parsed === null) return st;
+            if (
+              raceDistance != null &&
+              typeof st.distance === "number" &&
+              st.distance === raceDistance
+            ) {
+              syncedTime = parsed;
+              syncedTimeDisplayValue = formatTimeBest(parsed);
+            }
             return {
               ...st,
               splitTimeDisplayValue: formatTimeBest(parsed),
               splitTime: parsed,
             };
           });
-          return { ...r, splitTimes: updatedSplitTimes };
+          return {
+            ...r,
+            splitTimes: updatedSplitTimes,
+            ...(syncedTimeDisplayValue !== undefined
+              ? { time: syncedTime, timeDisplayValue: syncedTimeDisplayValue }
+              : {}),
+          };
         }),
       );
     },
-    [],
+    [swimStyles],
   );
 
   // スプリットタイムを距離昇順でソートして元インデックスを保持 (web RecordLogEntry :190-209)
@@ -1540,6 +1632,18 @@ export const CompetitionTabFormScreen: React.FC = () => {
         if (distB === 0) return -1;
         return distA - distB;
       });
+  }, []);
+
+  // 距離欄フォーカス時に現在の並び順を固定し、blur で解除して再整列させる
+  const handleSplitDistanceFocus = useCallback(
+    (splitTimes: SplitTimeData[]) => {
+      setFrozenSplitOrder(getSortedSplitIndices(splitTimes).map(({ idx }) => idx));
+    },
+    [getSortedSplitIndices],
+  );
+
+  const handleSplitDistanceBlur = useCallback(() => {
+    setFrozenSplitOrder(null);
   }, []);
 
   // ---- タブ定義 ----
@@ -1587,10 +1691,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={styles.container}>
       {/* タブバー */}
       <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="competition" />
 
@@ -1609,7 +1710,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
       >
         {/* ---- 大会タブ ---- */}
         {activeTab === "competition" && (
-          <View style={styles.form}>
+          <View style={[styles.form, styles.formCompact]}>
             {/* 編集権限なし (チーム大会の非管理者かつ非オーナー) の場合は読み取り専用にする */}
             {!canEditCompetitionDetails && (
               <View style={styles.guardMessage}>
@@ -1620,10 +1721,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
             )}
 
             {/* 日付 */}
-            <View style={styles.section}>
+            <View style={[styles.section, styles.sectionCompact]}>
               <View style={styles.dateRow}>
                 <View style={styles.dateColumn}>
-                  <Text style={styles.label}>
+                  <Text style={[styles.label, styles.labelCompact]}>
                     {t("competition.form.startDateLabel")}{" "}
                     <Text style={styles.required}>*</Text>
                   </Text>
@@ -1633,10 +1734,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     required
                     disabled={isSaving || !canEditCompetitionDetails}
                     error={competitionErrors.date}
+                    compact
                   />
                 </View>
                 <View style={styles.dateColumn}>
-                  <Text style={styles.label}>
+                  <Text style={[styles.label, styles.labelCompact]}>
                     {t("competition.form.endDateLabel")}{" "}
                     <Text style={styles.optional}>{t("competition.form.multiDayHint")}</Text>
                   </Text>
@@ -1647,16 +1749,24 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     disabled={isSaving || !canEditCompetitionDetails}
                     error={competitionErrors.endDate}
                     minDate={isValid(parseISO(date)) ? parseISO(date) : undefined}
+                    compact
                   />
                 </View>
               </View>
             </View>
 
             {/* 大会名 */}
-            <View style={styles.section}>
-              <Text style={styles.label}>{t("competition.form.nameLabel")}</Text>
+            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
+              <Text style={[styles.label, styles.horizontalLabel]}>
+                {t("competition.form.nameLabel")}
+              </Text>
               <TextInput
-                style={[styles.input, !canEditCompetitionDetails && styles.inputDisabled]}
+                style={[
+                  styles.input,
+                  styles.inputCompact,
+                  styles.horizontalInput,
+                  !canEditCompetitionDetails && styles.inputDisabled,
+                ]}
                 value={title}
                 onChangeText={setTitle}
                 placeholder={t("competition.form.namePlaceholder")}
@@ -1665,10 +1775,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
             </View>
 
             {/* 場所 */}
-            <View style={styles.section}>
-              <Text style={styles.label}>{t("competition.form.placeLabel")}</Text>
+            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
+              <Text style={[styles.label, styles.horizontalLabel]}>
+                {t("competition.form.placeLabel")}
+              </Text>
               <TextInput
-                style={[styles.input, !canEditCompetitionDetails && styles.inputDisabled]}
+                style={[
+                  styles.input,
+                  styles.inputCompact,
+                  styles.horizontalInput,
+                  !canEditCompetitionDetails && styles.inputDisabled,
+                ]}
                 value={place}
                 onChangeText={setPlace}
                 placeholder={t("competition.form.placePlaceholder")}
@@ -1677,17 +1794,18 @@ export const CompetitionTabFormScreen: React.FC = () => {
             </View>
 
             {/* プール種別 */}
-            <View style={styles.section}>
-              <Text style={styles.label}>
+            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
+              <Text style={[styles.label, styles.horizontalLabel]}>
                 {t("competition.form.poolTypeLabel")}{" "}
                 <Text style={styles.required}>*</Text>
               </Text>
-              <View style={styles.pickerContainer}>
+              <View style={[styles.pickerContainer, styles.horizontalInput]}>
                 {POOL_TYPES.map((type) => (
                   <Pressable
                     key={type.value}
                     style={[
                       styles.pickerOption,
+                      styles.pickerOptionCompact,
                       poolType === type.value && styles.pickerOptionSelected,
                       !canEditCompetitionDetails && styles.pickerOptionDisabled,
                     ]}
@@ -1708,12 +1826,16 @@ export const CompetitionTabFormScreen: React.FC = () => {
             </View>
 
             {/* メモ */}
-            <View style={styles.section}>
-              <Text style={styles.label}>{t("competition.form.memoLabel")}</Text>
+            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
+              <Text style={[styles.label, styles.horizontalLabel]}>
+                {t("competition.form.memoLabel")}
+              </Text>
               <TextInput
                 style={[
                   styles.input,
+                  styles.inputCompact,
                   styles.textArea,
+                  styles.horizontalInput,
                   !canEditCompetitionDetails && styles.inputDisabled,
                 ]}
                 value={competitionNote}
@@ -1726,7 +1848,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
             </View>
 
             {/* 画像 */}
-            <View style={styles.section}>
+            <View style={[styles.section, styles.sectionCompact]}>
               {canUploadImage(isPremium) ? (
                 <ImageUploader
                   existingImages={existingImages}
@@ -1749,8 +1871,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
               <Text style={styles.sectionTitle}>{t("competition.entry.title")}</Text>
             </View>
 
-            <TimeInputHelp style={{ marginBottom: 12 }} />
-
             {/* 種目重複エラーバナー (web CompetitionTabModal entryValidationError と同一) */}
             {entryErrors.duplicate && (
               <View style={styles.errorBanner}>
@@ -1764,6 +1884,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
               const entryStyle = entry
                 ? swimStyles.find((s) => s.id.toString() === entry.styleId)
                 : undefined;
+              // リレー可否 (StyleChipSelector 内部の canRelay 判定と同一)
+              const entryStyleOption = entryStyle ? getStyleOption(entryStyle.id) : undefined;
+              const canRelayCurrentEntryStyle =
+                entryStyleOption != null && canRelay(entryStyleOption);
               const entryBestTime = entry
                 ? getBestTimeForEntry(
                     entryStyle?.name_jp ?? "",
@@ -1800,7 +1924,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     </View>
                   )}
 
-                  {/* 種目選択 (距離チップ × 泳法チップ + リレートグル) */}
+                  {/* 種目選択 (距離チップ × 泳法チップ)。リレートグルはエントリータイム行にまとめて表示 */}
                   <View style={styles.section}>
                     <Text style={styles.label}>
                       {t("competition.entry.styleLabel")}{" "}
@@ -1813,11 +1937,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
                         handleEntryStyleChange(entry.draftId, index, styleId)
                       }
                       disabled={isSaving}
-                      isRelaying={entry.isRelaying}
-                      onToggleRelaying={(next) =>
-                        handleEntryToggleRelaying(entry.draftId, index, next)
-                      }
-                      relayLabel={t("forms.entry.relayLabel")}
                       testID={`entry-style-${index + 1}`}
                     />
                     {entryErrors[`style-${index}`] && (
@@ -1825,34 +1944,66 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     )}
                   </View>
 
-                  {/* エントリータイム */}
-                  <View style={styles.section}>
-                    <Text style={styles.label}>{t("competition.entry.entryTimeLabel")}</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        entryErrors[`entryTime-${index}`] && styles.inputError,
-                      ]}
-                      value={entry.entryTimeDisplayValue}
-                      onChangeText={(text) =>
-                        updateEntry(entry.draftId, { entryTimeDisplayValue: text })
-                      }
-                      onBlur={() => handleEntryTimeBlur(entry.draftId)}
-                      placeholder={t("competition.entry.entryTimePlaceholder")}
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="decimal-pad"
-                      editable={!isSaving}
-                    />
-                    {entryErrors[`entryTime-${index}`] && (
-                      <Text style={styles.errorText}>{entryErrors[`entryTime-${index}`]}</Text>
-                    )}
-                    {entry.entryTime > 0 && !entryErrors[`entryTime-${index}`] && (
-                      <Text style={styles.timeHint}>
-                        {t("competition.entry.inputValueHint", {
-                          time: formatTimeBest(entry.entryTime),
-                        })}
-                      </Text>
-                    )}
+                  {/* エントリータイム + リレー */}
+                  <View style={styles.timeReactionRow}>
+                    <View style={styles.timeField}>
+                      <View style={styles.labelRow}>
+                        <Text style={[styles.label, styles.labelRowText]}>
+                          {t("competition.entry.entryTimeLabel")}
+                        </Text>
+                        <WaPointsInfoTooltip
+                          testID="entry-time-help-icon"
+                          ariaLabel={t("forms.timeInput.helpTitle")}
+                          tooltipText={t("forms.timeInput.helpBodyBasic")}
+                        />
+                      </View>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          entryErrors[`entryTime-${index}`] && styles.inputError,
+                        ]}
+                        value={entry.entryTimeDisplayValue}
+                        onChangeText={(text) =>
+                          updateEntry(entry.draftId, { entryTimeDisplayValue: text })
+                        }
+                        onBlur={() => handleEntryTimeBlur(entry.draftId)}
+                        placeholder={t("competition.entry.entryTimePlaceholder")}
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="decimal-pad"
+                        editable={!isSaving}
+                      />
+                      {entryErrors[`entryTime-${index}`] && (
+                        <Text style={styles.errorText}>{entryErrors[`entryTime-${index}`]}</Text>
+                      )}
+                      {entry.entryTime > 0 && !entryErrors[`entryTime-${index}`] && (
+                        <Text style={styles.timeHint}>
+                          {t("competition.entry.inputValueHint", {
+                            time: formatTimeBest(entry.entryTime),
+                          })}
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* リレー (種目がリレー対応の場合のみラベル・トグルとも表示。非表示時も横幅は詰めない) */}
+                    <View style={styles.relayField}>
+                      {canRelayCurrentEntryStyle ? (
+                        <>
+                          <Text style={styles.label}>{t("forms.entry.relayLabel")}</Text>
+                          <View style={styles.relaySwitchRow}>
+                            <Switch
+                              value={entry.isRelaying}
+                              onValueChange={(next) =>
+                                handleEntryToggleRelaying(entry.draftId, index, next)
+                              }
+                              disabled={isSaving}
+                              testID={`entry-style-${index + 1}-relay`}
+                            />
+                          </View>
+                        </>
+                      ) : (
+                        <View style={styles.relaySwitchSpacer} />
+                      )}
+                    </View>
                   </View>
 
                   {/* メモ */}
@@ -1880,12 +2031,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
         {/* ---- レースレコードタブ ---- */}
         {activeTab === "record" && (
           <View style={styles.form}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t("recordMobile.form.sectionTitle")}</Text>
-            </View>
-
-            {showRecordTab && <TimeInputHelp style={{ marginBottom: 12 }} />}
-
             {!showRecordTab && (
               <View style={styles.guardMessage}>
                 <Text style={styles.guardMessageText}>
@@ -1901,6 +2046,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
                 ? swimStyles.find((s) => s.id.toString() === record.styleId)
                 : undefined;
               const raceDistance = recordStyle?.distance;
+              // リレー可否 (StyleChipSelector 内部の canRelay 判定と同一)
+              const recordStyleOption = recordStyle ? getStyleOption(recordStyle.id) : undefined;
+              const canRelayCurrentStyle =
+                recordStyleOption != null && canRelay(recordStyleOption);
               // 同インデックスのエントリータイム (web RecordLogEntry entryInfo バッジ相当)
               const linkedEntryTime =
                 record && entries[index] && entries[index].entryTime > 0
@@ -1931,6 +2080,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       return null;
                     })
                     .filter((st): st is { distance: number; splitTime: number } => st !== null)
+                : [];
+              // 距離欄編集中 (frozenSplitOrder あり) は並び順を固定し、それ以外は距離昇順
+              const sortedSplitEntries = record
+                ? frozenSplitOrder
+                  ? frozenSplitOrder
+                      .map((idx) => ({ st: record.splitTimes[idx], idx }))
+                      .filter(
+                        (entry): entry is { st: SplitTimeData; idx: number } =>
+                          entry.st !== undefined,
+                      )
+                  : getSortedSplitIndices(record.splitTimes)
                 : [];
               return (
                 <ItemTabs
@@ -1969,7 +2129,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     </View>
                   )}
 
-                  {/* 種目選択 (距離チップ × 泳法チップ + リレートグル) */}
+                  {/* 種目選択 (距離チップ × 泳法チップ)。リレートグルはタイム行にまとめて表示 */}
                   <View style={styles.field}>
                     <Text style={styles.label}>
                       {t("recordMobile.form.styleLabel")}{" "}
@@ -1982,11 +2142,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
                         handleRecordStyleChange(record.draftId, index, styleId)
                       }
                       disabled={isSaving}
-                      isRelaying={record.isRelaying}
-                      onToggleRelaying={(next) =>
-                        handleRecordToggleRelaying(record.draftId, index, next)
-                      }
-                      relayLabel={t("forms.recordLog.relayLabel")}
                       testID={`record-style-${index + 1}`}
                     />
                     {recordErrors[`style-${index}`] && (
@@ -1994,85 +2149,78 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     )}
                   </View>
 
-                  {/* タイム */}
-                  <View style={styles.field}>
-                    <Text style={styles.label}>
-                      {t("recordMobile.form.timeLabel")}{" "}
-                      <Text style={styles.required}>*</Text>
-                    </Text>
-                    <TextInput
-                      style={[styles.input, recordErrors[`time-${index}`] && styles.inputError]}
-                      value={record.timeDisplayValue}
-                      onChangeText={(text) => handleRecordTimeChange(record.draftId, text)}
-                      onBlur={() => handleRecordTimeBlur(record.draftId)}
-                      placeholder={t("recordMobile.form.timePlaceholder2")}
-                      keyboardType="decimal-pad"
-                      editable={!isSaving}
-                    />
-                    {recordErrors[`time-${index}`] && (
-                      <Text style={styles.errorText}>{recordErrors[`time-${index}`]}</Text>
-                    )}
-                  </View>
+                  {/* タイム + 反応時間 */}
+                  <View style={styles.timeReactionRow}>
+                    <View style={styles.timeField}>
+                      <View style={styles.labelRow}>
+                        <Text style={[styles.label, styles.labelRowText]}>
+                          {t("recordMobile.form.timeLabel")}{" "}
+                          <Text style={styles.required}>*</Text>
+                        </Text>
+                        <WaPointsInfoTooltip
+                          testID="record-time-help-icon"
+                          ariaLabel={t("forms.timeInput.helpTitle")}
+                          tooltipText={t("forms.timeInput.helpBodyBasic")}
+                        />
+                      </View>
+                      <TextInput
+                        style={[styles.input, recordErrors[`time-${index}`] && styles.inputError]}
+                        value={record.timeDisplayValue}
+                        onChangeText={(text) => handleRecordTimeChange(record.draftId, text)}
+                        onBlur={() => handleRecordTimeBlur(record.draftId)}
+                        placeholder={t("recordMobile.form.timePlaceholder2")}
+                        keyboardType="decimal-pad"
+                        editable={!isSaving}
+                      />
+                      {recordErrors[`time-${index}`] && (
+                        <Text style={styles.errorText}>{recordErrors[`time-${index}`]}</Text>
+                      )}
+                    </View>
 
-                  {/* 反応時間 (web: step=0.01 / min=-1 / max=2) */}
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t("recordMobile.form.reactionTimeLabel")}</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={record.reactionTime}
-                      onChangeText={(text) => updateRecord(record.draftId, { reactionTime: text })}
-                      onBlur={() => handleReactionTimeBlur(record.draftId)}
-                      placeholder={t("recordMobile.form.reactionTimePlaceholder")}
-                      keyboardType="numbers-and-punctuation"
-                      editable={!isSaving}
-                    />
-                  </View>
-
-                  {/* メモ */}
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t("recordMobile.form.memoLabel")}</Text>
-                    <TextInput
-                      style={[styles.input, styles.textAreaSmall]}
-                      value={record.note}
-                      onChangeText={(text) => updateRecord(record.draftId, { note: text })}
-                      placeholder={t("recordMobile.form.memoPlaceholder")}
-                      multiline
-                      numberOfLines={3}
-                      editable={!isSaving}
-                    />
-                  </View>
-
-                  {/* 動画 (編集時は既存動画を表示し、削除・差し替え可能。web :1195-1197) */}
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t("recordMobile.form.videoLabel")}</Text>
-                    <VideoUploader
-                      key={record.draftId}
-                      type="record"
-                      id={record.existingRecordId}
-                      existingVideoPath={record.videoPath}
-                      existingThumbnailPath={record.videoThumbnailPath}
-                      isPremium={isPremium}
-                      onUploadComplete={(vPath, tPath) =>
-                        updateRecord(record.draftId, {
-                          videoPath: vPath,
-                          videoThumbnailPath: tPath,
-                        })
-                      }
-                      onDelete={() =>
-                        updateRecord(record.draftId, {
-                          videoPath: null,
-                          videoThumbnailPath: null,
-                        })
-                      }
-                      onPendingVideoAsset={(asset) => {
-                        if (asset) {
-                          pendingVideoAssetRef.current.set(record.draftId, asset);
-                        } else {
-                          pendingVideoAssetRef.current.delete(record.draftId);
+                    {/* 反応時間 (web: step=0.01 / min=-1 / max=2) */}
+                    <View style={styles.reactionTimeField}>
+                      <Text style={styles.label}>{t("recordMobile.form.reactionTimeLabel")}</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          recordErrors[`reactionTime-${index}`] && styles.inputError,
+                        ]}
+                        value={record.reactionTime}
+                        onChangeText={(text) =>
+                          updateRecord(record.draftId, { reactionTime: text })
                         }
-                        syncPendingVideoCount();
-                      }}
-                    />
+                        onBlur={() => handleReactionTimeBlur(record.draftId)}
+                        placeholder={t("recordMobile.form.reactionTimePlaceholder")}
+                        keyboardType="numbers-and-punctuation"
+                        editable={!isSaving}
+                      />
+                      {recordErrors[`reactionTime-${index}`] && (
+                        <Text style={styles.errorText}>
+                          {recordErrors[`reactionTime-${index}`]}
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* リレー (種目がリレー対応の場合のみラベル・トグルとも表示。非表示時も横幅は詰めない) */}
+                    <View style={styles.relayField}>
+                      {canRelayCurrentStyle ? (
+                        <>
+                          <Text style={styles.label}>{t("forms.recordLog.relayLabel")}</Text>
+                          <View style={styles.relaySwitchRow}>
+                            <Switch
+                              value={record.isRelaying}
+                              onValueChange={(next) =>
+                                handleRecordToggleRelaying(record.draftId, index, next)
+                              }
+                              disabled={isSaving}
+                              testID={`record-style-${index + 1}-relay`}
+                            />
+                          </View>
+                        </>
+                      ) : (
+                        <View style={styles.relaySwitchSpacer} />
+                      )}
+                    </View>
                   </View>
 
                   {/* スプリットタイム */}
@@ -2124,56 +2272,74 @@ export const CompetitionTabFormScreen: React.FC = () => {
                         </Pressable>
                       </View>
                     </View>
-                    {getSortedSplitIndices(record.splitTimes).map(
-                      ({ st: splitTime, idx: splitIndex }) => (
-                      <View key={splitIndex} style={styles.splitTimeRow}>
-                        <TextInput
-                          style={[styles.input, styles.splitTimeDistance]}
-                          value={
-                            typeof splitTime.distance === "number" && splitTime.distance > 0
-                              ? String(splitTime.distance)
-                              : typeof splitTime.distance === "string"
-                                ? splitTime.distance
-                                : ""
-                          }
-                          onChangeText={(text) => {
-                            if (text === "" || /^\d+(\.\d*)?$/.test(text)) {
-                              handleSplitTimeChange(record.draftId, splitIndex, "distance", text);
-                            }
-                          }}
-                          placeholder={t("recordMobile.form.distancePlaceholder")}
-                          keyboardType="decimal-pad"
-                          editable={!isSaving}
-                        />
-                        <Text style={styles.splitTimeSeparator}>m:</Text>
-                        <TextInput
-                          style={[styles.input, styles.splitTimeTime]}
-                          value={splitTime.splitTimeDisplayValue}
-                          onChangeText={(text) =>
-                            handleSplitTimeChange(record.draftId, splitIndex, "splitTime", text)
-                          }
-                          onBlur={() => handleSplitTimeBlur(record.draftId, splitIndex)}
-                          placeholder={t("recordMobile.form.splitPlaceholder")}
-                          keyboardType="decimal-pad"
-                          editable={!isSaving}
-                        />
-                        {/* ゴール地点スプリット (distance === raceDistance) は削除不可 (web :449-461) */}
-                        {!(
-                          typeof splitTime.distance === "number" &&
-                          splitTime.distance === raceDistance
-                        ) ? (
-                          <Pressable
-                            style={styles.removeButton}
-                            onPress={() => handleRemoveSplitTime(record.draftId, splitIndex)}
-                            disabled={isSaving}
+                    {sortedSplitEntries.length > 0 && (
+                      <View style={styles.splitTimeTable}>
+                        {sortedSplitEntries.map(
+                          ({ st: splitTime, idx: splitIndex }, rowIndex, rows) => (
+                          <View
+                            key={splitIndex}
+                            style={[
+                              styles.splitTimeRow,
+                              rowIndex === rows.length - 1 && styles.splitTimeRowLast,
+                            ]}
                           >
-                            <Feather name="trash-2" size={16} color="#EF4444" />
-                          </Pressable>
-                        ) : (
-                          <View style={styles.removeButtonSpacer} />
+                            <View style={styles.splitTimeDistance}>
+                              <TextInput
+                                style={[styles.input, styles.splitTimeDistanceValue]}
+                                value={
+                                  typeof splitTime.distance === "number" && splitTime.distance > 0
+                                    ? String(splitTime.distance)
+                                    : typeof splitTime.distance === "string"
+                                      ? splitTime.distance
+                                      : ""
+                                }
+                                onChangeText={(text) => {
+                                  if (text === "" || /^\d+(\.\d*)?$/.test(text)) {
+                                    handleSplitTimeChange(
+                                      record.draftId,
+                                      splitIndex,
+                                      "distance",
+                                      text,
+                                    );
+                                  }
+                                }}
+                                onFocus={() => handleSplitDistanceFocus(record.splitTimes)}
+                                onBlur={handleSplitDistanceBlur}
+                                keyboardType="decimal-pad"
+                                editable={!isSaving}
+                              />
+                              <Text style={styles.splitTimeUnitText}>m</Text>
+                            </View>
+                            <TextInput
+                              style={[styles.input, styles.splitTimeTime]}
+                              value={splitTime.splitTimeDisplayValue}
+                              onChangeText={(text) =>
+                                handleSplitTimeChange(record.draftId, splitIndex, "splitTime", text)
+                              }
+                              onBlur={() => handleSplitTimeBlur(record.draftId, splitIndex)}
+                              placeholder={t("recordMobile.form.splitPlaceholder")}
+                              keyboardType="decimal-pad"
+                              editable={!isSaving}
+                            />
+                            {/* ゴール地点スプリット (distance === raceDistance) は削除不可 (web :449-461) */}
+                            {!(
+                              typeof splitTime.distance === "number" &&
+                              splitTime.distance === raceDistance
+                            ) ? (
+                              <Pressable
+                                style={styles.removeButton}
+                                onPress={() => handleRemoveSplitTime(record.draftId, splitIndex)}
+                                disabled={isSaving}
+                              >
+                                <Feather name="trash-2" size={16} color="#EF4444" />
+                              </Pressable>
+                            ) : (
+                              <View style={styles.removeButtonSpacer} />
+                            )}
+                          </View>
+                          ),
                         )}
                       </View>
-                      ),
                     )}
 
                     {/* ラップタイムプレビュー (web RecordLogEntry :468) */}
@@ -2189,6 +2355,53 @@ export const CompetitionTabFormScreen: React.FC = () => {
                         <PremiumBadge feature="split_time_limit" compact />
                       </View>
                     )}
+                  </View>
+
+                  {/* メモ */}
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t("recordMobile.form.memoLabel")}</Text>
+                    <TextInput
+                      style={[styles.input, styles.textAreaSmall]}
+                      value={record.note}
+                      onChangeText={(text) => updateRecord(record.draftId, { note: text })}
+                      placeholder={t("recordMobile.form.memoPlaceholder")}
+                      multiline
+                      numberOfLines={3}
+                      editable={!isSaving}
+                    />
+                  </View>
+
+                  {/* 動画 (編集時は既存動画を表示し、削除・差し替え可能。web :1195-1197) */}
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t("recordMobile.form.videoLabel")}</Text>
+                    <VideoUploader
+                      key={record.draftId}
+                      type="record"
+                      id={record.existingRecordId}
+                      existingVideoPath={record.videoPath}
+                      existingThumbnailPath={record.videoThumbnailPath}
+                      isPremium={isPremium}
+                      onUploadComplete={(vPath, tPath) =>
+                        updateRecord(record.draftId, {
+                          videoPath: vPath,
+                          videoThumbnailPath: tPath,
+                        })
+                      }
+                      onDelete={() =>
+                        updateRecord(record.draftId, {
+                          videoPath: null,
+                          videoThumbnailPath: null,
+                        })
+                      }
+                      onPendingVideoAsset={(asset) => {
+                        if (asset) {
+                          pendingVideoAssetRef.current.set(record.draftId, asset);
+                        } else {
+                          pendingVideoAssetRef.current.delete(record.draftId);
+                        }
+                        syncPendingVideoCount();
+                      }}
+                    />
                   </View>
                     </View>
                   )}
@@ -2260,7 +2473,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           )}
         </View>
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 
@@ -2405,12 +2618,63 @@ const styles = StyleSheet.create({
   pickerOptionDisabled: {
     opacity: 0.5,
   },
-  entryCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+  formCompact: {
+    gap: 14,
+  },
+  sectionCompact: {
+    marginBottom: 0,
+  },
+  labelCompact: {
+    marginBottom: 4,
+  },
+  inputCompact: {
+    paddingVertical: 8,
+  },
+  pickerOptionCompact: {
+    paddingVertical: 8,
+  },
+  horizontalField: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  horizontalLabel: {
+    width: 56,
+    marginBottom: 0,
+  },
+  horizontalInput: {
+    flex: 1,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 8,
+  },
+  labelRowText: {
+    marginBottom: 0,
+  },
+  timeReactionRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  timeField: {
+    flex: 1,
+  },
+  reactionTimeField: {
+    flex: 1,
+    maxWidth: "25%",
+  },
+  relayField: {
+    alignItems: "flex-start",
+  },
+  relaySwitchRow: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  relaySwitchSpacer: {
+    width: 51,
   },
   entryItemHeader: {
     flexDirection: "row",
@@ -2422,13 +2686,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#374151",
-  },
-  recordCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   recordItemHeader: {
     flexDirection: "row",
@@ -2473,7 +2730,7 @@ const styles = StyleSheet.create({
   splitTimeHeader: {
     flexDirection: "column",
     alignItems: "stretch",
-    gap: 8,
+    gap: 4,
     marginBottom: 8,
   },
   splitTimeButtons: {
@@ -2530,21 +2787,49 @@ const styles = StyleSheet.create({
   addButtonDisabled: {
     opacity: 0.4,
   },
+  splitTimeTable: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+  },
   splitTimeRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
+    alignItems: "stretch",
+    borderBottomWidth: 1,
+    borderBottomColor: "#D1D5DB",
+  },
+  splitTimeRowLast: {
+    borderBottomWidth: 0,
   },
   splitTimeDistance: {
-    width: 80,
+    flexDirection: "row",
+    alignItems: "center",
+    width: 88,
+    borderRightWidth: 1,
+    borderRightColor: "#D1D5DB",
+    paddingLeft: 12,
   },
-  splitTimeSeparator: {
+  splitTimeDistanceValue: {
+    flex: 1,
+    paddingHorizontal: 0,
+    paddingVertical: 6,
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: "transparent",
+  },
+  splitTimeUnitText: {
     fontSize: 14,
     color: "#6B7280",
+    paddingRight: 8,
   },
   splitTimeTime: {
     flex: 1,
+    paddingVertical: 6,
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: "transparent",
   },
   errorBanner: {
     backgroundColor: "#FEE2E2",

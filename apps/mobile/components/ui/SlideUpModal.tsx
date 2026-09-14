@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
-  View,
   Pressable,
   Animated,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 
 /** シートの開閉アニメーションにかける時間(ms)。 */
 const SLIDE_DURATION = 250;
@@ -322,7 +322,10 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
       onDismiss={handleNativeDismiss}
       statusBarTranslucent
     >
-      <View style={[styles.overlay, { backgroundColor: overlayColor }]}>
+      <FormKeyboardAvoidingView
+        style={[styles.overlay, { backgroundColor: overlayColor }]}
+        hasNativeHeader={false}
+      >
         {/* 背面タップで閉じるための透明レイヤー。シート (Animated.View) の「兄弟」として
             絶対配置しており、シート本体のタップがここに届かない構造にしている
             (components/history/BottomSheet.tsx と同じ方式)。 */}
@@ -337,7 +340,7 @@ export const SlideUpModal: React.FC<SlideUpModalProps> = ({
         >
           {children}
         </Animated.View>
-      </View>
+      </FormKeyboardAvoidingView>
     </Modal>
   );
 };

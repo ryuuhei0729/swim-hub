@@ -12,8 +12,6 @@ import {
   ActivityIndicator,
   Keyboard,
   Dimensions,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
@@ -22,6 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreateRecordMutation,
@@ -814,10 +813,7 @@ export const RecordLogFormScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -1189,7 +1185,7 @@ export const RecordLogFormScreen: React.FC = () => {
           )}
         </Pressable>
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 

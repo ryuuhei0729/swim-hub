@@ -8,8 +8,6 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
@@ -18,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import {
   usePracticeTagsQuery,
@@ -666,10 +665,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
   const tagModalMenu = menus.find((m) => m.id === tagModalMenuId) ?? null;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -1062,7 +1058,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
         onSave={handleSaveTag}
         onDelete={handleDeleteTag}
       />
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 

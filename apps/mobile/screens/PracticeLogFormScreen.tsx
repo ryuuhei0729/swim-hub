@@ -7,8 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { useAuth } from "@/contexts/AuthProvider";
 import { uploadVideo } from "@/utils/videoUpload";
@@ -563,10 +562,7 @@ export const PracticeLogFormScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={{ flex: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={[
           styles.content,
           { paddingBottom: getSafeFooterPadding(16, insets.bottom) },
@@ -896,7 +892,7 @@ export const PracticeLogFormScreen: React.FC = () => {
         onDelete={handleDeleteTag}
       />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 

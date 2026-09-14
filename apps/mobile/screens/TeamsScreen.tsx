@@ -15,6 +15,8 @@ import type { MainStackParamList } from "@/navigation/types";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { groupTeamMemberships } from "@/utils/teamMembershipGroups";
+import { Feather } from "@expo/vector-icons";
 
 type TeamsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -41,23 +43,7 @@ export const TeamsScreen: React.FC = () => {
   });
 
   // 承認済みチームと承認待ちチームを分ける
-  const { approvedTeams, pendingTeams } = useMemo(() => {
-    const approved: TeamMembershipWithUser[] = [];
-    const pending: TeamMembershipWithUser[] = [];
-
-    teams.forEach((membership) => {
-      if (membership.status === "approved" && membership.is_active) {
-        approved.push(membership);
-      } else if (membership.status === "pending") {
-        pending.push(membership);
-      }
-    });
-
-    return {
-      approvedTeams: approved,
-      pendingTeams: pending,
-    };
-  }, [teams]);
+  const { approvedTeams, pendingTeams } = useMemo(() => groupTeamMemberships(teams), [teams]);
 
   // タブ遷移時にデータ再取得(子孫なし。チーム一覧のみが対象)
   useRefreshOnFocus(refetch);
@@ -125,21 +111,25 @@ export const TeamsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* アクションボタン */}
-      <View style={styles.actionBar}>
-        <Pressable
-          style={[styles.actionButton, styles.createButton]}
-          onPress={() => setIsCreateModalOpen(true)}
-        >
-          <Text style={styles.createButtonText}>{t("teams.mobile.createTeamAction")}</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.actionButton, styles.joinButton]}
-          onPress={() => setIsJoinModalOpen(true)}
-        >
-          <Text style={styles.joinButtonText}>{t("teams.mobile.joinByInviteCodeAction")}</Text>
-        </Pressable>
-      </View>
+      {/* アクションボタン(所属チームがある場合のみ。0チーム時は中央CTAと重複するため非表示) */}
+      {displayTeams.length > 0 && (
+        <View style={styles.actionBar}>
+          <Pressable
+            style={[styles.actionButton, styles.createButton]}
+            onPress={() => setIsCreateModalOpen(true)}
+            testID="teams-action-create"
+          >
+            <Text style={styles.createButtonText}>{t("teams.mobile.createTeamAction")}</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.actionButton, styles.joinButton]}
+            onPress={() => setIsJoinModalOpen(true)}
+            testID="teams-action-join"
+          >
+            <Text style={styles.joinButtonText}>{t("teams.mobile.joinByInviteCodeAction")}</Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* チーム一覧 */}
       {displayTeams.length > 0 ? (
@@ -164,8 +154,31 @@ export const TeamsScreen: React.FC = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>{t("teams.mobile.noTeams")}</Text>
+          <Feather name="users" size={56} color="#93C5FD" />
+          <Text style={[styles.emptyText, styles.emptyTextLarge]}>
+            {t("teams.mobile.noTeams")}
+          </Text>
           <Text style={styles.emptySubtext}>{t("teams.mobile.noTeamsSubtext")}</Text>
+          <View style={styles.emptyActions}>
+            <Pressable
+              style={[styles.actionButton, styles.createButton, styles.emptyActionButton]}
+              onPress={() => setIsCreateModalOpen(true)}
+              testID="teams-empty-cta-create"
+            >
+              <Text style={[styles.createButtonText, styles.emptyActionButtonText]}>
+                {t("teams.mobile.createTeamAction")}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.actionButton, styles.joinButton, styles.emptyActionButton]}
+              onPress={() => setIsJoinModalOpen(true)}
+              testID="teams-empty-cta-join"
+            >
+              <Text style={[styles.joinButtonText, styles.emptyActionButtonText]}>
+                {t("teams.mobile.joinByInviteCodeAction")}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -237,9 +250,30 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: 8,
   },
+  emptyTextLarge: {
+    fontSize: 22,
+    marginTop: 16,
+  },
   emptySubtext: {
     fontSize: 14,
     color: "#9CA3AF",
     textAlign: "center",
+  },
+  emptyActions: {
+    width: "100%",
+    maxWidth: 360,
+    gap: 12,
+    marginTop: 24,
+  },
+  emptyActionButton: {
+    // flexBasis:0 (flex:1由来) を打ち消し、ラベル折り返し時に高さを伸ばせるようにする
+    flex: 0,
+    minHeight: 52,
+    borderRadius: 12,
+    justifyContent: "center",
+  },
+  emptyActionButtonText: {
+    fontSize: 17,
+    fontWeight: "600",
   },
 });

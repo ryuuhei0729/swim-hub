@@ -61,6 +61,34 @@ export const ScrollView = ({
 }: { children?: React.ReactNode } & Record<string, unknown>) =>
   React.createElement("div", { ...props, style: { overflow: "auto" } }, children);
 
+// KeyboardAvoidingView API
+// behavior/keyboardVerticalOffset は DOM に反映しても意味を持たないため、
+// Switch の data-value と同じ流儀で data 属性として素通しし、テストから検証できるようにする。
+export const KeyboardAvoidingView = ({
+  children,
+  style,
+  behavior,
+  keyboardVerticalOffset,
+  ...props
+}: {
+  children?: React.ReactNode;
+  style?: unknown;
+  behavior?: string;
+  keyboardVerticalOffset?: number;
+} & Record<string, unknown>) => {
+  const processedStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
+  return React.createElement(
+    "div",
+    {
+      ...props,
+      style: processedStyle,
+      "data-behavior": behavior,
+      "data-keyboard-vertical-offset": keyboardVerticalOffset,
+    },
+    children,
+  );
+};
+
 export const FlatList = ({
   data,
   renderItem,
@@ -317,6 +345,11 @@ export const Platform = {
   select: <T>(obj: { web?: T; default?: T }): T | undefined => obj.web ?? obj.default,
 };
 
+// PixelRatio API (useKeyboardAvoidingBehavior の Dynamic Island 補正計算が参照する)
+export const PixelRatio = {
+  get: () => 3,
+};
+
 // Alert API
 export const Alert = {
   alert: vi.fn(),
@@ -337,6 +370,7 @@ const ReactNative = {
   Pressable,
   ScrollView,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
   ActivityIndicator,
   RefreshControl,
@@ -345,6 +379,7 @@ const ReactNative = {
   Switch,
   StyleSheet,
   Platform,
+  PixelRatio,
   Alert,
   AppState,
   Animated,

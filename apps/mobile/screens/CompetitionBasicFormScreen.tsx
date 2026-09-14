@@ -9,7 +9,6 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
@@ -18,6 +17,7 @@ import { format, parseISO, isValid, isBefore } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import {
   useCreateCompetitionMutation,
   useUpdateCompetitionMutation,
@@ -517,10 +517,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* 日付（開始日・終了日） */}
         <View style={styles.section}>
@@ -688,7 +685,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
           </Pressable>
         )}
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 

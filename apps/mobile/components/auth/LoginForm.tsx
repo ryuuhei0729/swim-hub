@@ -6,14 +6,13 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import type { AuthStackParamList } from "@/navigation/types";
 
 type AuthError = {
@@ -139,10 +138,7 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={{ flex: 1 }} hasNativeHeader={false}>
       <View style={styles.container}>
       <View style={styles.formContainer}>
         <View style={styles.header}>
@@ -219,7 +215,7 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
         </View>
       </View>
       </View>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 

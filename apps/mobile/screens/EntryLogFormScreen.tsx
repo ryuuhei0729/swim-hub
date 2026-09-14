@@ -11,8 +11,6 @@ import {
   ActivityIndicator,
   Keyboard,
   Dimensions,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
@@ -21,6 +19,7 @@ import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { useAuth } from "@/contexts/AuthProvider";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
@@ -582,10 +581,7 @@ export const EntryLogFormScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* エントリー種目セクション */}
         <View style={styles.section}>
@@ -790,7 +786,7 @@ export const EntryLogFormScreen: React.FC = () => {
           )}
         </Pressable>
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 

@@ -43,6 +43,8 @@ interface DatePickerFieldProps {
   maxDate?: Date;
   /** クリアボタンを表示するか */
   allowClear?: boolean;
+  /** 入力欄の上下 padding / 最小高さを詰めたコンパクト表示にするか */
+  compact?: boolean;
 }
 
 /** 日付グリッド生成: 月初の曜日分の先頭空白 + 当月の各日 */
@@ -66,6 +68,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   minDate,
   maxDate,
   allowClear,
+  compact,
 }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
@@ -138,12 +141,13 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         accessibilityLabel={label ?? t("common.datePicker.calendarAriaLabel")}
         style={[
           styles.trigger,
+          compact ? styles.triggerCompact : null,
           error ? styles.triggerError : null,
           disabled ? styles.triggerDisabled : null,
         ]}
       >
         <View style={styles.triggerContent}>
-          <Feather name="calendar" size={18} color="#9CA3AF" />
+          <Feather name="calendar" size={compact ? 16 : 18} color="#9CA3AF" />
           <Text
             style={[styles.triggerText, !hasValidSelection && styles.placeholderText]}
             numberOfLines={1}
@@ -331,6 +335,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: "#FFFFFF",
     minHeight: 48,
+  },
+  triggerCompact: {
+    paddingVertical: 8,
+    minHeight: 0,
   },
   triggerError: {
     borderColor: "#DC2626",

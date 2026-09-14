@@ -1,15 +1,20 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import type { TabParamList } from "./types";
+import type { TabParamList, MainStackParamList } from "./types";
 import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PracticesScreen } from "@/screens/PracticesScreen";
 import { CompetitionsScreen } from "@/screens/CompetitionsScreen";
 import { TeamsScreen } from "@/screens/TeamsScreen";
 import { MyPageScreen } from "@/screens/MyPageScreen";
+import { useAuth } from "@/contexts/AuthProvider";
+import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
+import { getSoleApprovedTeamId } from "@/utils/teamMembershipGroups";
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
@@ -20,6 +25,14 @@ const Tab = createBottomTabNavigator<TabParamList>();
  */
 export const TabNavigator: React.FC = () => {
   const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { supabase } = useAuth();
+
+  // DashboardScreen も同じ queryKey (teamKeys.list()) を購読済みのため dedupe され追加フェッチは発生しない
+  const { teams } = useTeamsQuery(supabase, {
+    enableRealtime: false,
+  });
+  const soleTeamId = useMemo(() => getSoleApprovedTeamId(teams), [teams]);
 
   // Android のシステムナビゲーションバー(3ボタン)ぶんの下部インセットは、
   // JS の useSafeAreaInsets フックが一部端末で 0 を返す既知不具合
@@ -88,6 +101,15 @@ export const TabNavigator: React.FC = () => {
           tabBarLabel: t("navigation.mobile.tabs.teams"),
           tabBarButtonTestID: "tab-teams",
           tabBarIcon: ({ color }) => <Feather name="users" size={20} color={color} />,
+        }}
+        listeners={{
+          tabPress: () => {
+            // preventDefault は呼ばない。タブ切替は通常どおり通し、戻るボタンの
+            // 着地点にチーム一覧を残したまま、所属チームが1件のみの場合だけ詳細へ直行させる。
+            if (soleTeamId !== null) {
+              navigation.navigate("TeamDetail", { teamId: soleTeamId });
+            }
+          },
         }}
       />
       <Tab.Screen

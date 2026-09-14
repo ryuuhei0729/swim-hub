@@ -9,10 +9,10 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  KeyboardAvoidingView,
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
@@ -45,6 +45,7 @@ import { NumberStepper } from "@/components/ui/NumberStepper";
 import { TagChips, TagSelectModal, TagManageModal, VideoUploader } from "@/components/shared";
 import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
 import { ItemTabs } from "@/components/forms/ItemTabs";
+import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 import { DistanceChips } from "@/components/practices/DistanceChips";
 import { PracticeLogTemplateSelectModal } from "@/components/practices/PracticeLogTemplateSelectModal";
 import { useCreatePracticeLogTemplateMutation } from "@apps/shared/hooks/queries/practiceLogTemplates";
@@ -1144,10 +1145,7 @@ export const PracticeTabFormScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={styles.container}>
       {/* タブバー */}
       <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="practice" />
 
@@ -1165,7 +1163,7 @@ export const PracticeTabFormScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
       >
         {activeTab === "practice" && (
-          <View style={styles.form}>
+          <View style={[styles.form, styles.formCompact]}>
             {/* 編集権限なし (チーム練習の非管理者かつ非作成者) の場合は読み取り専用にする */}
             {!canEditPracticeDetails && (
               <View style={styles.guardMessage}>
@@ -1176,51 +1174,72 @@ export const PracticeTabFormScreen: React.FC = () => {
             )}
 
             {/* 日付 */}
-            <View style={styles.field}>
-              <Text style={styles.label}>
-                {t("practice.form.dateLabel")} <Text style={styles.required}>*</Text>
-              </Text>
-              <DatePickerField
-                value={practiceTab.date}
-                onChange={(next) => {
-                  setPracticeTab((prev) => ({ ...prev, date: next }));
-                  if (practiceErrors.date) {
-                    setPracticeErrors((prev) => ({ ...prev, date: undefined }));
-                  }
-                }}
-                required
-                disabled={isSaving || !canEditPracticeDetails}
-                error={practiceErrors.date}
-                placeholder={t("practice.form.datePlaceholder")}
-              />
+            <View style={[styles.field, styles.fieldCompact]}>
+              <View style={styles.horizontalField}>
+                <Text style={[styles.label, styles.horizontalLabel]}>
+                  {t("practice.form.dateLabel")} <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.horizontalInput}>
+                  <DatePickerField
+                    value={practiceTab.date}
+                    onChange={(next) => {
+                      setPracticeTab((prev) => ({ ...prev, date: next }));
+                      if (practiceErrors.date) {
+                        setPracticeErrors((prev) => ({ ...prev, date: undefined }));
+                      }
+                    }}
+                    required
+                    disabled={isSaving || !canEditPracticeDetails}
+                    error={practiceErrors.date}
+                    placeholder={t("practice.form.datePlaceholder")}
+                    compact
+                  />
+                </View>
+              </View>
             </View>
 
             {/* タイトル */}
-            <View style={styles.field}>
-              <Text style={styles.label}>{t("practice.form.titleLabel")}</Text>
-              <TextInput
-                style={[styles.input, !canEditPracticeDetails && styles.inputDisabled]}
-                value={practiceTab.title}
-                onChangeText={(v) => setPracticeTab((prev) => ({ ...prev, title: v }))}
-                placeholder={t("practice.form.titlePlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                editable={!isSaving && canEditPracticeDetails}
-              />
+            <View style={[styles.field, styles.fieldCompact]}>
+              <View style={styles.horizontalField}>
+                <Text style={[styles.label, styles.horizontalLabel]} numberOfLines={1}>
+                  {t("practice.form.titleLabel")}
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.inputCompact,
+                    styles.horizontalInput,
+                    !canEditPracticeDetails && styles.inputDisabled,
+                  ]}
+                  value={practiceTab.title}
+                  onChangeText={(v) => setPracticeTab((prev) => ({ ...prev, title: v }))}
+                  placeholder={t("practice.form.titlePlaceholder")}
+                  editable={!isSaving && canEditPracticeDetails}
+                />
+              </View>
             </View>
 
             {/* 場所 */}
-            <View style={styles.field}>
-              <Text style={styles.label}>{t("practice.form.placeLabel")}</Text>
-              <TextInput
-                style={[styles.input, !canEditPracticeDetails && styles.inputDisabled]}
-                value={practiceTab.place}
-                onChangeText={(v) => setPracticeTab((prev) => ({ ...prev, place: v }))}
-                onFocus={() => setPlaceFocused(true)}
-                onBlur={() => setPlaceFocused(false)}
-                placeholder={t("practice.form.placePlaceholder")}
-                placeholderTextColor="#9CA3AF"
-                editable={!isSaving && canEditPracticeDetails}
-              />
+            <View style={[styles.field, styles.fieldCompact]}>
+              <View style={styles.horizontalField}>
+                <Text style={[styles.label, styles.horizontalLabel]}>
+                  {t("practice.form.placeLabel")}
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.inputCompact,
+                    styles.horizontalInput,
+                    !canEditPracticeDetails && styles.inputDisabled,
+                  ]}
+                  value={practiceTab.place}
+                  onChangeText={(v) => setPracticeTab((prev) => ({ ...prev, place: v }))}
+                  onFocus={() => setPlaceFocused(true)}
+                  onBlur={() => setPlaceFocused(false)}
+                  placeholder={t("practice.form.placePlaceholder")}
+                  editable={!isSaving && canEditPracticeDetails}
+                />
+              </View>
               {/* 過去に使った場所のサジェスト (web PlaceCombobox 相当) */}
               {placeFocused &&
                 (() => {
@@ -1258,27 +1277,31 @@ export const PracticeTabFormScreen: React.FC = () => {
             </View>
 
             {/* メモ */}
-            <View style={styles.field}>
-              <Text style={styles.label}>{t("practice.modal.memo")}</Text>
+            <View style={[styles.field, styles.fieldCompact, styles.horizontalField]}>
+              <Text style={[styles.label, styles.horizontalLabel]}>
+                {t("practice.modal.memo")}
+              </Text>
               <TextInput
                 style={[
                   styles.input,
+                  styles.inputCompact,
                   styles.textArea,
+                  styles.basicMemoTextArea,
+                  styles.horizontalInput,
                   !canEditPracticeDetails && styles.inputDisabled,
                 ]}
                 value={practiceTab.note}
                 onChangeText={(v) => setPracticeTab((prev) => ({ ...prev, note: v }))}
                 placeholder={t("practice.form.memoPlaceholder")}
-                placeholderTextColor="#9CA3AF"
                 multiline
-                numberOfLines={4}
+                numberOfLines={3}
                 textAlignVertical="top"
                 editable={!isSaving && canEditPracticeDetails}
               />
             </View>
 
             {/* 画像 */}
-            <View style={styles.field}>
+            <View style={[styles.field, styles.fieldCompact]}>
               {canUploadImage(isPremium) ? (
                 <ImageUploader
                   existingImages={existingImages}
@@ -1309,10 +1332,6 @@ export const PracticeTabFormScreen: React.FC = () => {
 
             {/* メニューセクション */}
             <View style={styles.menuSection}>
-              <View style={styles.menuHeader}>
-                <Text style={styles.sectionTitle}>{t("practice.form.menuSection")}</Text>
-              </View>
-
               {(() => {
                 const menu = menus[activeMenuIndex];
                 const index = activeMenuIndex;
@@ -1363,12 +1382,12 @@ export const PracticeTabFormScreen: React.FC = () => {
                     />
                   </View>
 
-                  {/* 種目 */}
+                  {/* 種目 (泳法チップ + カテゴリチップを1ラベルの下に連続表示。レースレコードタブと同じUI) */}
                   <View style={styles.menuField}>
                     <Text style={styles.label}>
                       {t("practice.form.styleLabel")} <Text style={styles.required}>*</Text>
                     </Text>
-                    <View style={styles.pickerContainer}>
+                    <ChipScrollRow>
                       {SWIM_STYLES.map((style) => (
                         <Pressable
                           key={style.value}
@@ -1389,15 +1408,8 @@ export const PracticeTabFormScreen: React.FC = () => {
                           </Text>
                         </Pressable>
                       ))}
-                    </View>
-                  </View>
-
-                  {/* 泳法カテゴリ */}
-                  <View style={styles.menuField}>
-                    <Text style={styles.label}>
-                      {t("practice.form.categoryLabel")} <Text style={styles.required}>*</Text>
-                    </Text>
-                    <View style={styles.pickerContainer}>
+                    </ChipScrollRow>
+                    <ChipScrollRow>
                       {SWIM_CATEGORIES.map((category) => (
                         <Pressable
                           key={category.value}
@@ -1421,7 +1433,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                           </Text>
                         </Pressable>
                       ))}
-                    </View>
+                    </ChipScrollRow>
                   </View>
 
                   {/* 距離 (プリセットチップ + その他で直接入力) */}
@@ -1861,14 +1873,14 @@ export const PracticeTabFormScreen: React.FC = () => {
           )}
         </View>
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
@@ -1880,8 +1892,25 @@ const styles = StyleSheet.create({
   form: {
     gap: 20,
   },
+  formCompact: {
+    gap: 14,
+  },
   field: {
     gap: 8,
+  },
+  fieldCompact: {
+    gap: 4,
+  },
+  horizontalField: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  horizontalLabel: {
+    width: 56,
+  },
+  horizontalInput: {
+    flex: 1,
   },
   menuField: {
     gap: 8,
@@ -1893,7 +1922,7 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   required: {
-    color: "#DC2626",
+    color: "#EF4444",
   },
   input: {
     backgroundColor: "#FFFFFF",
@@ -1901,13 +1930,19 @@ const styles = StyleSheet.create({
     borderColor: "#D1D5DB",
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 10,
     fontSize: 16,
     color: "#111827",
+  },
+  inputCompact: {
+    paddingVertical: 8,
   },
   textArea: {
     minHeight: 100,
     paddingTop: 12,
+  },
+  basicMemoTextArea: {
+    minHeight: 80,
   },
   inputDisabled: {
     backgroundColor: "#F3F4F6",
@@ -1943,16 +1978,6 @@ const styles = StyleSheet.create({
   menuSection: {
     gap: 16,
   },
-  menuHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-  },
   addButton: {
     backgroundColor: "#2563EB",
     paddingHorizontal: 12,
@@ -1966,13 +1991,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600",
-  },
-  menuContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   menuItemHeader: {
     flexDirection: "row",
@@ -1994,8 +2012,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pickerOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#D1D5DB",
@@ -2006,7 +2024,8 @@ const styles = StyleSheet.create({
     borderColor: "#2563EB",
   },
   pickerOptionText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "500",
     color: "#374151",
   },
   pickerOptionTextSelected: {

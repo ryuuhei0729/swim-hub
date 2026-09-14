@@ -9,12 +9,11 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
@@ -340,10 +339,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
+        <FormKeyboardAvoidingView style={styles.modalOverlay} hasNativeHeader={false}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setModalVisible(false)} />
           <View style={styles.modal}>
             <View style={styles.modalHeader}>
@@ -568,7 +564,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
               </Pressable>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </FormKeyboardAvoidingView>
       </Modal>
     </View>
   );

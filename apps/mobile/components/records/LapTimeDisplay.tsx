@@ -112,7 +112,7 @@ export const LapTimeDisplay: React.FC<LapTimeDisplayProps> = ({ splitTimes, race
               <View style={styles.table}>
                 {/* ヘッダー行 */}
                 <View style={[styles.tableRow, styles.tableHeaderRow]}>
-                  <Text style={[styles.cell, styles.headerCell]}>
+                  <Text style={[styles.cell, styles.headerCell, styles.distanceCell]}>
                     {t("recordMobile.lapTime.distanceHeader")}
                   </Text>
                   <Text style={[styles.cell, styles.headerCell]}>
@@ -249,6 +249,7 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   distanceCell: {
+    minWidth: 60,
     fontWeight: "600",
   },
 });

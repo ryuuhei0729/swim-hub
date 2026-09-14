@@ -6,6 +6,7 @@ import {
   canRelay,
   type StyleKey,
 } from "@/components/besttime/styleOptions";
+import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 import type { Style } from "@apps/shared/types";
 
 interface StyleChipSelectorProps {
@@ -90,7 +91,7 @@ export const StyleChipSelector: React.FC<StyleChipSelectorProps> = ({
   return (
     <View style={sheet.container} testID={testID}>
       {/* 距離 */}
-      <View style={sheet.chipRow}>
+      <ChipScrollRow>
         {distanceOptions.map((d) => {
           const isActive = raceDistance === d;
           return (
@@ -122,9 +123,9 @@ export const StyleChipSelector: React.FC<StyleChipSelectorProps> = ({
             </Pressable>
           );
         })}
-      </View>
+      </ChipScrollRow>
       {/* 泳法 — ラベルは practice.styles 翻訳 */}
-      <View style={sheet.chipRow}>
+      <ChipScrollRow>
         {codeKeysToShow.map((ck) => {
           const isActive = currentCodeKey === ck;
           return (
@@ -154,7 +155,7 @@ export const StyleChipSelector: React.FC<StyleChipSelectorProps> = ({
             </Pressable>
           );
         })}
-      </View>
+      </ChipScrollRow>
       {/* リレー (オンオフトグル) */}
       {showRelayToggle && (
         <View style={sheet.relayRow}>
@@ -173,11 +174,6 @@ export const StyleChipSelector: React.FC<StyleChipSelectorProps> = ({
 
 const sheet = StyleSheet.create({
   container: {
-    gap: 6,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: 6,
   },
   chip: {

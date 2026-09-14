@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 16,
     color: "#111827",
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 4,
   },
 });
