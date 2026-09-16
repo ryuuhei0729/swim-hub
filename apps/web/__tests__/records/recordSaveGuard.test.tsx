@@ -114,6 +114,7 @@ function renderRecordClient(existingRecords: Parameters<typeof RecordClient>[0][
       existingRecords={existingRecords}
       styles={[STYLE_FREE_50]}
       entries={[]}
+      bestTimesByUser={{}}
     />,
   );
 }
@@ -265,6 +266,7 @@ describe("RecordClient — リレー検出された StyleEntry の構造保持 (
         existingRecords={relayRecords}
         styles={STYLES_FOR_RELAY}
         entries={[]}
+        bestTimesByUser={{}}
       />,
     );
   }

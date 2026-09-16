@@ -89,6 +89,9 @@ export default function EntriesClient({
   const tCommon = useTranslations("common");
   const tEntries = useTranslations("competition.entries");
   const tStyles = useTranslations("practice.styles");
+  // 参考バッジ「ベストタイム:」は個人の大会入力画面と同じ forms.recordLog.bestTimeLabel を
+  // 再利用する (同義キーを増やさない)
+  const tRecordLog = useTranslations("forms.recordLog");
   const { supabase } = useAuth();
 
   const [rows, setRows] = useState<EntryDraftRow[]>(() => buildInitialRows(existingEntries));
@@ -667,6 +670,14 @@ export default function EntriesClient({
                                   {tEntries("bestTimePrefillButton")}
                                 </button>
                               </div>
+                              {bestTime && (
+                                <p
+                                  data-testid={`entry-best-time-badge-${row.localId}`}
+                                  className="mt-1 text-xs text-green-800 bg-green-100 px-2 py-1 rounded-full inline-flex items-center"
+                                >
+                                  {tRecordLog("bestTimeLabel")}: {formatTimeBest(bestTime.time)}
+                                </p>
+                              )}
                               {untouchedPrefill && (
                                 <p className="mt-1 text-xs text-yellow-700">
                                   {tEntries("bestTimePrefillBadge")}

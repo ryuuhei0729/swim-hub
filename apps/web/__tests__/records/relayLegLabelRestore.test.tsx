@@ -171,6 +171,7 @@ function renderRecordClient(existingRecords: ExistingRecordFixture[]) {
       existingRecords={existingRecords}
       styles={STYLES}
       entries={[]}
+      bestTimesByUser={{}}
     />,
   );
 }

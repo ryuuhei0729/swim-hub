@@ -108,6 +108,7 @@ function renderRecordClient(existingRecords: Parameters<typeof RecordClient>[0][
       existingRecords={existingRecords}
       styles={[STYLE_FREE_50]}
       entries={[]}
+      bestTimesByUser={{}}
     />,
   );
 }

@@ -22,6 +22,7 @@ import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys, recordKeys, invalidateTeamRankings } from "@apps/shared/hooks/queries/keys";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { StyleAPI } from "@apps/shared/api/styles";
+import { RecordAPI } from "@apps/shared/api/records";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import {
@@ -36,6 +37,7 @@ import {
 import { formatTimeBest } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
+import { getBestTimeForEntry } from "@/components/records/bestTimeForEntry";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -50,6 +52,7 @@ import {
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
+import type { BestTime } from "@apps/shared/types/ui";
 import {
   buildRelayEvents,
   RelayEventId,
@@ -165,6 +168,14 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [existingRecords, setExistingRecords] = useState<ExistingRecord[]>([]);
+  /**
+   * user_id → その選手のベストタイム一覧（両水路・引き継ぎ込み）。
+   * 参考バッジの表示にのみ使う。**入力値のプリフィルには使わない**
+   * (ここは結果タイムを入力する画面なので、ベストが初期値に入ると実測値と区別できなくなる)。
+   */
+  const [bestTimesByUserId, setBestTimesByUserId] = useState<
+    Map<string, BestTime[]>
+  >(new Map());
 
   // メンバー選択モーダル
   const [memberModalEntryId, setMemberModalEntryId] = useState<string | null>(
@@ -329,6 +340,55 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       isMounted = false;
     };
   }, [supabase, competitionId, teamId, t]);
+
+  // ベストタイム参照バッジ用に、メンバー全員分を1回だけ取得する（N+1回避）。
+  // 取得失敗時はバッジを諦めて画面は続行する — 記録入力そのものはブロックしない。
+  useEffect(() => {
+    if (members.length === 0) return;
+    let isMounted = true;
+
+    const loadBestTimes = async () => {
+      try {
+        const map = await new RecordAPI(supabase).getBestTimesDetailedForUsers(
+          members.map((m) => m.user_id),
+        );
+        if (isMounted) setBestTimesByUserId(map);
+      } catch (err) {
+        console.error("ベストタイム参照の取得に失敗しました:", err);
+      }
+    };
+
+    loadBestTimes();
+    return () => {
+      isMounted = false;
+    };
+  }, [supabase, members]);
+
+  /**
+   * 参考バッジ用のベストタイム。`styleId` を DB 識別子 `styles.name_jp` に解決してから
+   * 共通の優先順位表 (`@apps/shared/utils/bestTimeForEntry`) に渡す。
+   * 大会の水路を基準に、無ければ他水路へ落ちる。
+   *
+   * リレー種目では leg ごとの種目 (`relayLegStyleId`) と引き継ぎフラグ
+   * (第1泳者のみ false) を渡すので、第2〜4泳者には引き継ぎベストが出る。
+   */
+  const bestTimeBadgeFor = (
+    memberUserId: string,
+    styleId: number | "" | undefined,
+    isRelaying: boolean,
+  ): { time: number; label: string } | null => {
+    if (!memberUserId || styleId === "" || styleId === undefined) return null;
+    if (!competition) return null;
+    const styleName = styles_.find((st) => st.id === styleId)?.name_jp;
+    if (!styleName) return null;
+    const result = getBestTimeForEntry(
+      styleName,
+      competition.pool_type,
+      isRelaying,
+      bestTimesByUserId.get(memberUserId) ?? [],
+    );
+    return result ? { time: result.time, label: t(result.labelKey) } : null;
+  };
 
   // ---- StyleEntry 操作（Web RecordClient と同ロジック）----
 
@@ -1640,6 +1700,24 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                           color="#6B7280"
                         />
                       </Pressable>
+                      {(() => {
+                        const best = bestTimeBadgeFor(
+                          mr.memberUserId,
+                          mr.relayLegStyleId,
+                          mr.isRelaying,
+                        );
+                        if (!best) return null;
+                        return (
+                          <View
+                            testID={`relay-leg-best-time-badge-${mrIndex}`}
+                            style={styles.bestTimeBadge}
+                          >
+                            <Text style={styles.bestTimeBadgeText}>
+                              {best.label}: {formatTimeBest(best.time)}
+                            </Text>
+                          </View>
+                        );
+                      })()}
                       <View style={styles.rtField}>
                         <Text style={styles.smallLabel}>
                           {t("teams.record.reactionTime")}
@@ -1807,6 +1885,25 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
                             </Text>
                           </View>
                         )}
+
+                      {(() => {
+                        const best = bestTimeBadgeFor(
+                          mr.memberUserId,
+                          entry.styleId,
+                          mr.isRelaying,
+                        );
+                        if (!best) return null;
+                        return (
+                          <View
+                            testID={`record-best-time-badge-${mr.memberUserId}`}
+                            style={styles.bestTimeBadge}
+                          >
+                            <Text style={styles.bestTimeBadgeText}>
+                              {best.label}: {formatTimeBest(best.time)}
+                            </Text>
+                          </View>
+                        );
+                      })()}
 
                       {/* タイム */}
                       <View style={styles.field}>
@@ -2332,6 +2429,19 @@ const styles = StyleSheet.create({
   entryTimeBadgeText: {
     fontSize: 12,
     color: "#1D4ED8", // blue-700
+  },
+  // 参考バッジ (web RecordClient の green-100/green-700 と同色)
+  bestTimeBadge: {
+    backgroundColor: "#DCFCE7", // green-100
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+    marginBottom: 10,
+  },
+  bestTimeBadgeText: {
+    fontSize: 12,
+    color: "#15803D", // green-700
   },
   inlineRow: {
     flexDirection: "row",

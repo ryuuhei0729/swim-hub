@@ -222,6 +222,7 @@ function renderRecordClient(
       existingRecords={existingRecords}
       styles={[STYLE_FREE_50]}
       entries={[]}
+      bestTimesByUser={{}}
     />,
   );
 }

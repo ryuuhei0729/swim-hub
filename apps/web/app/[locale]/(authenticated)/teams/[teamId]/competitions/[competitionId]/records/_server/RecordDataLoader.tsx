@@ -5,6 +5,8 @@ import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { getServerUser } from "@/lib/supabase-server";
 import RecordClient from "../_client/RecordClient";
 import { Competition, Style } from "@apps/shared/types";
+import { RecordAPI } from "@apps/shared/api/records";
+import type { BestTime } from "@apps/shared/types/ui";
 
 interface RecordDataLoaderProps {
   teamId: string;
@@ -233,6 +235,21 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
   // 初期反映を諦めて空配列にフォールバックし、記録入力自体はブロックしない）
   const entries = (entriesResult.data || []) as unknown as EntryWithUser[];
 
+  // ベストタイム参照バッジ用に、メンバー全員分を1クエリで取得する
+  // (メンバーごとに getBestTimes を呼ぶと N+1 になる)。
+  // 取得失敗時はバッジを諦めて空で続行する — 記録入力そのものをブロックしない。
+  const memberUserIds = members.map((m) => m.user_id);
+  let bestTimesByUser: Record<string, BestTime[]> = {};
+  if (memberUserIds.length > 0) {
+    try {
+      bestTimesByUser = Object.fromEntries(
+        await new RecordAPI(supabase).getBestTimesDetailedForUsers(memberUserIds),
+      );
+    } catch (error) {
+      console.error("ベストタイム参照の取得に失敗しました:", error);
+    }
+  }
+
   return (
     <RecordClient
       teamId={teamId}
@@ -243,6 +260,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
       existingRecords={records}
       styles={styles}
       entries={entries}
+      bestTimesByUser={bestTimesByUser}
     />
   );
 }

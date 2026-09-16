@@ -53,6 +53,8 @@ import {
   buildEntryTimeReferenceLookup,
   type EntryRowForRecordMerge,
 } from "@swim-hub/shared/utils/entryRecordMerge";
+import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
+import type { BestTime } from "@apps/shared/types/ui";
 
 // TeamVideoUploaderを動的インポート
 const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
@@ -140,6 +142,13 @@ interface RecordClientProps {
   styles: Style[];
   /** 大会エントリー（記録入力の初期反映用） */
   entries: EntryWithUser[];
+  /**
+   * user_id → その選手のベストタイム一覧（両水路・引き継ぎ込み）。
+   * 参考バッジの表示にのみ使う。入力値のプリフィルには**絶対に使わない**
+   * (エントリー画面と違い、ここは結果タイムを入力する画面なので
+   *  ベストタイムが初期値として入ると実測値と区別できなくなる)。
+   */
+  bestTimesByUser: Record<string, BestTime[]>;
 }
 
 export default function RecordClient({
@@ -151,6 +160,7 @@ export default function RecordClient({
   existingRecords,
   styles,
   entries,
+  bestTimesByUser,
 }: RecordClientProps) {
   const router = useRouter();
   const t = useTranslations("teams");
@@ -263,6 +273,31 @@ export default function RecordClient({
           : entry,
       ),
     );
+  };
+
+  /**
+   * 参考バッジ用のベストタイム。`styleId` を DB 識別子 `styles.name_jp` に解決してから
+   * 共通の優先順位表 (`@apps/shared/utils/bestTimeForEntry`) に渡す。
+   * 大会の水路 (`competitions.pool_type` は DB NOT NULL) を基準に、無ければ他水路へ落ちる。
+   *
+   * リレー種目では leg ごとの種目 (`relayLegStyleId`) と引き継ぎフラグ
+   * (第1泳者のみ false) を渡すので、第2〜4泳者には引き継ぎベストが出る。
+   */
+  const bestTimeBadgeFor = (
+    memberUserId: string,
+    styleId: number | "" | undefined,
+    isRelaying: boolean,
+  ): { time: number; label: string } | null => {
+    if (!memberUserId || styleId === "" || styleId === undefined) return null;
+    const styleName = styles.find((st) => st.id === styleId)?.name_jp;
+    if (!styleName) return null;
+    const result = getBestTimeForEntry(
+      styleName,
+      competition.pool_type,
+      isRelaying,
+      bestTimesByUser[memberUserId] ?? [],
+    );
+    return result ? { time: result.time, label: tRecordLog(result.labelKey) } : null;
   };
 
   /** リレーのレグラベルを relayEventId から導出する。復元経路では state の relayLegLabel が undefined のため */
@@ -1590,6 +1625,22 @@ export default function RecordClient({
                             </option>
                           ))}
                         </select>
+                        {(() => {
+                          const best = bestTimeBadgeFor(
+                            mr.memberUserId,
+                            mr.relayLegStyleId,
+                            mr.isRelaying,
+                          );
+                          if (!best) return null;
+                          return (
+                            <p
+                              data-testid={`relay-leg-best-time-badge-${mrIndex}`}
+                              className="mt-1 text-xs text-green-800 bg-green-100 px-2 py-1 rounded-full inline-flex items-center"
+                            >
+                              {best.label}: {formatTimeBest(best.time)}
+                            </p>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -1760,13 +1811,25 @@ export default function RecordClient({
                   <h3 className="text-sm font-medium text-gray-700">{t("record.timesHeader")}</h3>
                   {entry.memberRecords.map((mr) => (
                     <div key={mr.memberUserId} className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-medium text-gray-900">{mr.memberName}</span>
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span className="font-medium text-gray-900 mr-auto">{mr.memberName}</span>
                         {mr.entryTimeReference != null && mr.entryTimeReference > 0 && (
                           <span className="text-sm text-gray-500">
                             {tRecordLog("entryTimeLabel")} {formatTimeBest(mr.entryTimeReference)}
                           </span>
                         )}
+                        {(() => {
+                          const best = bestTimeBadgeFor(mr.memberUserId, entry.styleId, mr.isRelaying);
+                          if (!best) return null;
+                          return (
+                            <span
+                              data-testid={`record-best-time-badge-${mr.memberUserId}`}
+                              className="text-xs text-green-800 bg-green-100 px-3 py-1 rounded-full inline-flex items-center"
+                            >
+                              {best.label}: {formatTimeBest(best.time)}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-3">

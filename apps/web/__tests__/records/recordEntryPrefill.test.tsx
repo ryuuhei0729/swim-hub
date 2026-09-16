@@ -95,6 +95,7 @@ function renderRecordClient(
       existingRecords={[]}
       styles={[STYLE_FREE_50, STYLE_BREAST_50]}
       entries={[]}
+      bestTimesByUser={{}}
       {...overrides}
     />,
   );

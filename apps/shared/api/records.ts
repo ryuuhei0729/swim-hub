@@ -33,6 +33,153 @@ export interface ListBestCandidates {
   bulkRows: Array<{ id: string; time: number; created_at: string }>;
 }
 
+/** `aggregateBestTimes` の入力1行。Supabase の配列/単一オブジェクト差は呼び出し側で吸収済み */
+export interface BestTimeSourceRecord {
+  id: string;
+  time: number;
+  created_at: string;
+  pool_type: number;
+  is_relaying: boolean;
+  note?: string | null;
+  style_id: number;
+  styles?: { name_jp: string; distance: number } | null;
+  competitions?: { title: string; date: string } | null;
+}
+
+/**
+ * ベストタイム集計の唯一の定義元。
+ *
+ * 1ユーザー分の records 行から、種目 (`styles.name_jp`) × 水路ごとの最速タイムを
+ * 1件ずつ取り出し、引き継ぎあり (`is_relaying`) のベストを `relayingTime` に紐付ける。
+ * `getBestTimes` (1人分) と `getBestTimesDetailedForUsers` (複数人分) の両方がこれを使う。
+ * 集計表を2箇所に持つと片方だけ更新されて静かに壊れるため関数を共有すること。
+ */
+export function aggregateBestTimes(records: BestTimeSourceRecord[]): BestTime[] {
+  // 引き継ぎなしのベストタイム（種目、プール種別ごと）
+  const bestTimesByStyleAndPool = new Map<string, BestTime>();
+  // 引き継ぎありのベストタイム（種目、プール種別ごと）
+  const relayingBestTimesByStyleAndPool = new Map<
+    string,
+    {
+      id: string;
+      time: number;
+      created_at: string;
+      note?: string;
+      competition?: {
+        title: string;
+        date: string;
+      };
+    }
+  >();
+
+  records.forEach((record) => {
+    const styleKey = record.styles?.name_jp || "Unknown";
+    const poolType = record.pool_type;
+    const key = `${styleKey}_${poolType}`;
+
+    if (record.is_relaying) {
+      // 引き継ぎありのタイム
+      if (
+        !relayingBestTimesByStyleAndPool.has(key) ||
+        record.time < relayingBestTimesByStyleAndPool.get(key)!.time
+      ) {
+        relayingBestTimesByStyleAndPool.set(key, {
+          id: record.id,
+          time: record.time,
+          created_at: record.created_at,
+          note: record.note || undefined,
+          competition: record.competitions
+            ? {
+                title: record.competitions.title,
+                date: record.competitions.date,
+              }
+            : undefined,
+        });
+      }
+    } else {
+      // 引き継ぎなしのタイム
+      if (
+        !bestTimesByStyleAndPool.has(key) ||
+        record.time < bestTimesByStyleAndPool.get(key)!.time
+      ) {
+        bestTimesByStyleAndPool.set(key, {
+          id: record.id,
+          time: record.time,
+          created_at: record.created_at,
+          pool_type: poolType,
+          is_relaying: false,
+          note: record.note || undefined,
+          style_id: record.style_id,
+          style: {
+            name_jp: record.styles?.name_jp || "Unknown",
+            distance: record.styles?.distance || 0,
+          },
+          competition: record.competitions
+            ? {
+                title: record.competitions.title,
+                date: record.competitions.date,
+              }
+            : undefined,
+        });
+      }
+    }
+  });
+
+  // 引き継ぎなしのタイムに、引き継ぎありのタイムを紐付ける
+  const result: BestTime[] = [];
+  bestTimesByStyleAndPool.forEach((bestTime, key) => {
+    const relayingTime = relayingBestTimesByStyleAndPool.get(key);
+    result.push({
+      ...bestTime,
+      relayingTime: relayingTime,
+    });
+  });
+
+  // 引き継ぎなしがなく、引き継ぎありのみの場合も追加
+  relayingBestTimesByStyleAndPool.forEach((relayingTime, key) => {
+    if (!bestTimesByStyleAndPool.has(key)) {
+      // キーから種目名とプール種別を取得
+      const lastUnderscoreIndex = key.lastIndexOf("_");
+      if (lastUnderscoreIndex === -1) {
+        return;
+      }
+
+      const styleName = key.slice(0, lastUnderscoreIndex);
+      const poolTypeStr = key.slice(lastUnderscoreIndex + 1);
+      const poolType = Number.isInteger(parseInt(poolTypeStr, 10))
+        ? parseInt(poolTypeStr, 10)
+        : NaN;
+      if (Number.isNaN(poolType)) {
+        return;
+      }
+
+      // 種目情報を取得（最初のレコードから）
+      const record = records.find(
+        (r) => (r.styles?.name_jp || "Unknown") === styleName && r.pool_type === poolType,
+      );
+
+      if (record) {
+        result.push({
+          id: relayingTime.id,
+          time: relayingTime.time,
+          created_at: relayingTime.created_at,
+          pool_type: poolType,
+          is_relaying: true,
+          note: relayingTime.note,
+          style_id: record.style_id,
+          style: {
+            name_jp: record.styles?.name_jp || "Unknown",
+            distance: record.styles?.distance || 0,
+          },
+          competition: relayingTime.competition,
+        });
+      }
+    }
+  });
+
+  return result;
+}
+
 export class RecordAPI {
   constructor(private supabase: SupabaseClient) {}
 
@@ -348,129 +495,7 @@ export class RecordAPI {
       };
     });
 
-    // 引き継ぎなしのベストタイム（種目、プール種別ごと）
-    const bestTimesByStyleAndPool = new Map<string, BestTime>();
-    // 引き継ぎありのベストタイム（種目、プール種別ごと）
-    const relayingBestTimesByStyleAndPool = new Map<
-      string,
-      {
-        id: string;
-        time: number;
-        created_at: string;
-        note?: string;
-        competition?: {
-          title: string;
-          date: string;
-        };
-      }
-    >();
-
-    records.forEach((record) => {
-      const styleKey = record.styles?.name_jp || "Unknown";
-      const poolType = record.pool_type;
-      const key = `${styleKey}_${poolType}`;
-
-      if (record.is_relaying) {
-        // 引き継ぎありのタイム
-        if (
-          !relayingBestTimesByStyleAndPool.has(key) ||
-          record.time < relayingBestTimesByStyleAndPool.get(key)!.time
-        ) {
-          relayingBestTimesByStyleAndPool.set(key, {
-            id: record.id,
-            time: record.time,
-            created_at: record.created_at,
-            note: record.note || undefined,
-            competition: record.competitions
-              ? {
-                  title: record.competitions.title,
-                  date: record.competitions.date,
-                }
-              : undefined,
-          });
-        }
-      } else {
-        // 引き継ぎなしのタイム
-        if (
-          !bestTimesByStyleAndPool.has(key) ||
-          record.time < bestTimesByStyleAndPool.get(key)!.time
-        ) {
-          bestTimesByStyleAndPool.set(key, {
-            id: record.id,
-            time: record.time,
-            created_at: record.created_at,
-            pool_type: poolType,
-            is_relaying: false,
-            note: record.note || undefined,
-            style_id: record.style_id,
-            style: {
-              name_jp: record.styles?.name_jp || "Unknown",
-              distance: record.styles?.distance || 0,
-            },
-            competition: record.competitions
-              ? {
-                  title: record.competitions.title,
-                  date: record.competitions.date,
-                }
-              : undefined,
-          });
-        }
-      }
-    });
-
-    // 引き継ぎなしのタイムに、引き継ぎありのタイムを紐付ける
-    const result: BestTime[] = [];
-    bestTimesByStyleAndPool.forEach((bestTime, key) => {
-      const relayingTime = relayingBestTimesByStyleAndPool.get(key);
-      result.push({
-        ...bestTime,
-        relayingTime: relayingTime,
-      });
-    });
-
-    // 引き継ぎなしがなく、引き継ぎありのみの場合も追加
-    relayingBestTimesByStyleAndPool.forEach((relayingTime, key) => {
-      if (!bestTimesByStyleAndPool.has(key)) {
-        // キーから種目名とプール種別を取得
-        const lastUnderscoreIndex = key.lastIndexOf("_");
-        if (lastUnderscoreIndex === -1) {
-          return;
-        }
-
-        const styleName = key.slice(0, lastUnderscoreIndex);
-        const poolTypeStr = key.slice(lastUnderscoreIndex + 1);
-        const poolType = Number.isInteger(parseInt(poolTypeStr, 10))
-          ? parseInt(poolTypeStr, 10)
-          : NaN;
-        if (Number.isNaN(poolType)) {
-          return;
-        }
-
-        // 種目情報を取得（最初のレコードから）
-        const record = records.find(
-          (r) => (r.styles?.name_jp || "Unknown") === styleName && r.pool_type === poolType,
-        );
-
-        if (record) {
-          result.push({
-            id: relayingTime.id,
-            time: relayingTime.time,
-            created_at: relayingTime.created_at,
-            pool_type: poolType,
-            is_relaying: true,
-            note: relayingTime.note,
-            style_id: record.style_id,
-            style: {
-              name_jp: record.styles?.name_jp || "Unknown",
-              distance: record.styles?.distance || 0,
-            },
-            competition: relayingTime.competition,
-          });
-        }
-      }
-    });
-
-    return result;
+    return aggregateBestTimes(records);
   }
 
   /**
@@ -602,6 +627,102 @@ export class RecordAPI {
     }
     return result;
   }
+
+  /**
+   * 複数ユーザーのベストタイムを1クエリで取得する (両水路・引き継ぎあり込み)。
+   *
+   * `getBestTimesForUsers` との違いは意図的:
+   *   - あちらは**エントリー代理入力のプリフィル用**。同一水路・非リレーの1件だけを返す
+   *     (プリフィルに他水路や引き継ぎタイムを混ぜると申告タイムが静かに壊れるため)。
+   *   - こちらは**参照バッジ表示用**。`getBestTimeForEntry` のフォールバック階層
+   *     (同水路→他水路、非リレー↔引き継ぎ) を成立させるために両水路・両フラグを返す。
+   * 返す形は `getBestTimes(userId)` と同一なので、バッジ側は個人画面と同じ関数を使える。
+   *
+   * チームメンバー全員分をループで `getBestTimes` する N+1 を避けるため、画面を開いた
+   * 時点で対象になり得る全 userId をまとめて1回だけ呼ぶこと。
+   *
+   * @param userIds 対象ユーザーIDの配列
+   * @returns userId → ベストタイム配列 の Map (記録が無いユーザーはキー自体が存在しない)
+   */
+  async getBestTimesDetailedForUsers(userIds: string[]): Promise<Map<string, BestTime[]>> {
+    if (userIds.length === 0) return new Map();
+
+    // クラス内の他メソッド (getBestTimes 等) と同じ明示的な認証チェック規約に揃える
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
+    if (!user) throw new Error("認証が必要です");
+
+    const { data, error } = await this.supabase
+      .from("records")
+      .select(
+        `
+        id,
+        user_id,
+        time,
+        created_at,
+        pool_type,
+        is_relaying,
+        note,
+        style_id,
+        styles!records_style_id_fkey (
+          name_jp,
+          distance
+        ),
+        competitions!records_competition_id_fkey (
+          title,
+          date
+        )
+      `,
+      )
+      .in("user_id", userIds)
+      .order("time", { ascending: true });
+
+    if (error) {
+      console.error("複数ユーザーのベストタイム取得エラー:", error);
+      throw error;
+    }
+
+    if (!data || !Array.isArray(data)) return new Map();
+
+    type Row = Omit<BestTimeSourceRecord, "styles" | "competitions"> & {
+      user_id: string;
+      styles?: BestTimeSourceRecord["styles"] | BestTimeSourceRecord["styles"][];
+      competitions?: BestTimeSourceRecord["competitions"] | BestTimeSourceRecord["competitions"][];
+    };
+
+    // ユーザーごとに行を束ねてから、1人分の集計を共通関数へ委譲する
+    const rowsByUser = new Map<string, BestTimeSourceRecord[]>();
+    for (const raw of data as Row[]) {
+      const styleData = Array.isArray(raw.styles) ? raw.styles[0] : raw.styles;
+      const competitionData = Array.isArray(raw.competitions)
+        ? raw.competitions[0]
+        : raw.competitions;
+
+      const rows = rowsByUser.get(raw.user_id) ?? [];
+      rows.push({
+        id: raw.id,
+        time: raw.time,
+        created_at: raw.created_at,
+        pool_type: raw.pool_type,
+        is_relaying: raw.is_relaying,
+        note: raw.note,
+        style_id: raw.style_id,
+        styles: styleData ? { name_jp: styleData.name_jp, distance: styleData.distance } : null,
+        competitions: competitionData
+          ? { title: competitionData.title, date: competitionData.date }
+          : null,
+      });
+      rowsByUser.set(raw.user_id, rows);
+    }
+
+    const result = new Map<string, BestTime[]>();
+    for (const [userId, rows] of rowsByUser) {
+      result.set(userId, aggregateBestTimes(rows));
+    }
+    return result;
+  }
+
 
   /**
    * 指定記録を除外した、その種目・水路のユーザー自己ベスト(秒)。無ければ null。

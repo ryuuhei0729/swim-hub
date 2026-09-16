@@ -862,6 +862,91 @@ describe("RecordAPI", () => {
     });
   });
 
+  describe("複数ユーザーのベストタイム取得 (getBestTimesDetailedForUsers)", () => {
+    /** in()/order() まで chain して await できる thenable ビルダーを作る */
+    function createBuilder(data: unknown[], error: unknown = null) {
+      const builder = {
+        select: vi.fn(),
+        in: vi.fn(),
+        order: vi.fn(),
+        then: vi.fn(),
+      };
+      builder.select.mockReturnValue(builder);
+      builder.in.mockReturnValue(builder);
+      builder.order.mockReturnValue(builder);
+      builder.then.mockImplementation((onFulfilled: (value: unknown) => unknown) =>
+        Promise.resolve({ data, error }).then(onFulfilled),
+      );
+      return builder;
+    }
+
+    const row = (over: Record<string, unknown>) => ({
+      id: "r",
+      user_id: "user-a",
+      time: 55.0,
+      created_at: "2025-01-15T00:00:00Z",
+      pool_type: 0,
+      is_relaying: false,
+      note: null,
+      style_id: 1,
+      styles: { name_jp: "自由形100m", distance: 100 },
+      competitions: null,
+      ...over,
+    });
+
+    it("ユーザーをまたいで最速タイムが混ざらない (他人のベストが自分のバッジに出ない)", async () => {
+      // 同じ種目・同じ水路で、user-b の方が速い。user_id ごとに集計されていないと
+      // user-a のバッジに user-b のタイムが出る
+      const builder = createBuilder([
+        row({ id: "r-b", user_id: "user-b", time: 52.0 }),
+        row({ id: "r-a", user_id: "user-a", time: 55.0 }),
+      ]);
+      mockClient.from = vi.fn().mockReturnValue(builder) as unknown as typeof mockClient.from;
+
+      const result = await api.getBestTimesDetailedForUsers(["user-a", "user-b"]);
+
+      expect(builder.in).toHaveBeenCalledWith("user_id", ["user-a", "user-b"]);
+      expect(result.get("user-a")?.map((b) => b.time)).toEqual([55.0]);
+      expect(result.get("user-b")?.map((b) => b.time)).toEqual([52.0]);
+    });
+
+    it("同一ユーザーの両水路・引き継ぎありを落とさずに返す (フォールバック階層の材料になる)", async () => {
+      // getBestTimesForUsers (プリフィル用) は同一水路・非リレーしか返さないが、
+      // こちらは参照バッジ用なので両方が必要
+      const builder = createBuilder([
+        row({ id: "r-sc", time: 55.0, pool_type: 0 }),
+        row({ id: "r-sc-relay", time: 54.2, pool_type: 0, is_relaying: true }),
+        row({ id: "r-lc", time: 57.0, pool_type: 1 }),
+      ]);
+      mockClient.from = vi.fn().mockReturnValue(builder) as unknown as typeof mockClient.from;
+
+      const result = await api.getBestTimesDetailedForUsers(["user-a"]);
+
+      const bests = result.get("user-a") ?? [];
+      const shortCourse = bests.find((b) => b.pool_type === 0);
+      const longCourse = bests.find((b) => b.pool_type === 1);
+      expect(shortCourse?.time).toBe(55.0);
+      expect(shortCourse?.relayingTime?.time).toBe(54.2);
+      expect(longCourse?.time).toBe(57.0);
+    });
+
+    it("userIds が空なら空 Map を返し、クエリを投げない", async () => {
+      mockClient.from = vi.fn() as unknown as typeof mockClient.from;
+
+      const result = await api.getBestTimesDetailedForUsers([]);
+
+      expect(result.size).toBe(0);
+      expect(mockClient.from).not.toHaveBeenCalled();
+    });
+
+    it("認証されていないときエラーになる", async () => {
+      mockClient = createMockSupabaseClient({ userId: "" });
+      api = new RecordAPI(mockClient);
+
+      await expect(api.getBestTimesDetailedForUsers(["user-a"])).rejects.toThrow("認証が必要です");
+    });
+  });
+
   describe("一覧ベスト候補取得 (getListBestCandidates)", () => {
     /** order().limit() まで chain して await できる thenable ビルダーを作る */
     function createCandidateBuilder(data: unknown[], error: unknown = null) {
