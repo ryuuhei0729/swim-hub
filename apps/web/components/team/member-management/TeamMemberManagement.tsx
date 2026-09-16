@@ -16,8 +16,6 @@ import {
   MemberStatsHeader,
   MembersTimeTable,
   MemberGroupSorter,
-  WaPointsCompareButton,
-  WaPointsCompareModal,
 } from "./components";
 import type { TeamMember } from "./hooks/useMembers";
 
@@ -66,16 +64,13 @@ export default function TeamMemberManagement({
 
   // ベストタイム管理
   const {
-    memberBestTimes,
     loading: loadingBestTimes,
-    error: bestTimesError,
     loadAllBestTimes,
     getBestTimeForMember: getBestTimeBase,
   } = useMemberBestTimes(supabase);
 
   // UI状態
   const [includeRelaying, setIncludeRelaying] = useState<boolean>(false);
-  const [isWaPointsModalOpen, setIsWaPointsModalOpen] = useState<boolean>(false);
 
   // ソート機能
   const getBestTimeForMemberWithRelaying = useCallback(
@@ -166,13 +161,13 @@ export default function TeamMemberManagement({
       />
 
       {/*
-        グループ別表示 + 「WAポイントで比較」ボタン。
-        MemberGroupSorter は categories.length === 0 のとき null を返すため、
-        行のレイアウト自体をこの親コンポーネント側で構成し、ボタンを
-        MemberGroupSorter の描画有無に依存しない位置 (常時表示) に置く。
+        グループ別表示。MemberGroupSorter は categories.length === 0 のとき null を
+        返すので、この行は空になりうる。余白だけが残らないよう categories が
+        空のときは行自体を描画しない。
+        (「WAポイントで比較」はランキングタブの WaPointsCompareLauncher へ移設した)
       */}
-      <div className="mb-4 flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
+      {categories.length > 0 && (
+        <div className="mb-4 flex items-center gap-2 flex-wrap">
           <MemberGroupSorter
             categories={categories}
             activeCategory={activeCategory}
@@ -180,8 +175,7 @@ export default function TeamMemberManagement({
             getCategoryLabel={getCategoryLabel}
           />
         </div>
-        <WaPointsCompareButton onClick={() => setIsWaPointsModalOpen(true)} />
-      </div>
+      )}
 
       {/* 承認待ちセクション（管理者のみ） */}
       {isCurrentUserAdmin && (
@@ -229,16 +223,6 @@ export default function TeamMemberManagement({
         onSort={handleSort}
         onMemberClick={onMemberClick}
         getBestTimeForMember={getBestTimeForMemberWithRelaying}
-      />
-
-      {/* WAポイント比較モーダル */}
-      <WaPointsCompareModal
-        isOpen={isWaPointsModalOpen}
-        onClose={() => setIsWaPointsModalOpen(false)}
-        members={members}
-        memberBestTimes={memberBestTimes}
-        isLoading={loadingBestTimes}
-        error={bestTimesError}
       />
     </div>
   );

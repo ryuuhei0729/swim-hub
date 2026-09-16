@@ -1991,7 +1991,7 @@
     },
     "calendarColors": {
       "title": "Calendar Colors",
-      "description": "Customize the display colors for practice and competition records on the dashboard. You can also set different colors per team.",
+      "description": "Customize the display colors for practice and competition records on the dashboard. Per-team colors can be changed in each team's settings tab.",
       "personalSectionTitle": "Personal Colors",
       "teamSectionTitle": "Team Colors",
       "practiceLabel": "Practice",
@@ -2627,8 +2627,8 @@
       "tabAnnouncements": "Announcements",
       "adminToggle": {
         "label": "View",
-        "admin": "Admin View",
-        "user": "User View"
+        "admin": "Admin",
+        "user": "Member"
       },
       "pendingApproveConfirmTitle": "Confirm Approval",
       "pendingApproveConfirmMessage": "Approve {name}?",
@@ -2722,7 +2722,8 @@
         "conflictingDeleteTitle": "Conflicts with an event pending deletion",
         "conflictingDeleteMessage": "Please save the deletion first, then save the event change.\n{list}",
         "saveFailedDuplicate": "Failed to save. This may be caused by a duplicate event. Please try again."
-      }
+      },
+      "tabSettings": "Settings"
     },
     "page": {
       "title": "My Teams",
@@ -2767,7 +2768,8 @@
       "members": "Members",
       "practices": "Practices",
       "competitions": "Competitions",
-      "rankings": "Rankings"
+      "rankings": "Rankings",
+      "settings": "Settings"
     },
     "createModal": {
       "errorTitle": "An error occurred",
@@ -3446,6 +3448,40 @@
       "reactivateFailed": "Failed to reactivate membership",
       "approveFailed": "Failed to approve membership",
       "rejectFailed": "Failed to reject membership"
+    },
+    "settingsTab": {
+      "teamInfoTitle": "Team info",
+      "editTeamInfo": "Edit team info",
+      "inviteCodeTitle": "Invite code",
+      "inviteCodeDescription": "Share this code to let others join the team.",
+      "copyInviteCode": "Copy invite code",
+      "copied": "Copied",
+      "calendarColorTitle": "Colors for this team",
+      "calendarColorDescription": "Choose the colors used for this team's practices and competitions on the dashboard calendar.",
+      "teamActionsTitle": "Team actions",
+      "createTeam": "Create team",
+      "joinTeam": "Join with invite code",
+      "dangerZoneTitle": "Danger zone",
+      "leaveTeam": "Leave team",
+      "leaveConfirmTitle": "Leave this team?",
+      "leaveConfirmMessage": "You will leave “{name}”. Its practices, competitions and attendance will no longer appear.",
+      "leaveFailed": "Failed to leave the team",
+      "leaving": "Leaving...",
+      "lastAdminCannotLeave": "You are the last admin, so you cannot leave. Make another member an admin first.",
+      "deleteTeam": "Delete team",
+      "deleteConfirmTitle": "Delete this team?",
+      "deleteConfirmMessage": "“{name}” will be deleted. Its competitions, entries, announcements and member list cannot be restored. Practice and race records are kept as personal records, but the competition name will no longer be shown.",
+      "deleteFailed": "Failed to delete the team",
+      "deleting": "Deleting...",
+      "deleteErrors": {
+        "notAuthorized": "Only team admins can delete the team.",
+        "teamNotFound": "Team not found. It may have already been deleted.",
+        "authRequired": "Your session has expired. Please sign in again."
+      },
+      "leaveDescription": "After leaving, this team's practices, competitions and attendance will no longer appear. You will need an invite code to rejoin. Your own practice and race records are kept.",
+      "leaveButton": "Leave this team",
+      "deleteDescription": "Deleting the team permanently removes its competitions, entries, announcements and member list. This cannot be undone. Members' practice and race records are kept as personal records.",
+      "deleteButton": "Delete this team"
     }
   },
   "teamsAdmin": {

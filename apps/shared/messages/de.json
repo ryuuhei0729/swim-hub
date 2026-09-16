@@ -1994,7 +1994,7 @@
     },
     "calendarColors": {
       "title": "Kalenderfarben",
-      "description": "Passe die Anzeigefarben für Trainings- und Wettkampfeinträge im Dashboard an. Du kannst auch pro Team unterschiedliche Farben festlegen.",
+      "description": "Passe die Anzeigefarben für Trainings- und Wettkampfeinträge im Dashboard an. Teamspezifische Farben änderst du im Einstellungs-Tab des jeweiligen Teams.",
       "personalSectionTitle": "Persönliche Farben",
       "teamSectionTitle": "Teamfarben",
       "practiceLabel": "Training",
@@ -2630,8 +2630,8 @@
       "tabAnnouncements": "Ankündigungen",
       "adminToggle": {
         "label": "Ansicht",
-        "admin": "Admin-Ansicht",
-        "user": "Nutzeransicht"
+        "admin": "Administrator",
+        "user": "Mitglied"
       },
       "pendingApproveConfirmTitle": "Genehmigung bestätigen",
       "pendingApproveConfirmMessage": "{name} genehmigen?",
@@ -2725,7 +2725,8 @@
         "conflictingDeleteTitle": "Konflikt mit einer zur Löschung vorgesehenen Disziplin",
         "conflictingDeleteMessage": "Speichern Sie zuerst nur die Löschung und anschließend die Disziplinänderung.\n{list}",
         "saveFailedDuplicate": "Speichern fehlgeschlagen. Dies könnte an einer doppelten Disziplin liegen. Bitte versuchen Sie es erneut."
-      }
+      },
+      "tabSettings": "Einstellungen"
     },
     "page": {
       "title": "Meine Teams",
@@ -2770,7 +2771,8 @@
       "members": "Mitglieder",
       "practices": "Trainings",
       "competitions": "Wettkämpfe",
-      "rankings": "Ranglisten"
+      "rankings": "Ranglisten",
+      "settings": "Einstellungen"
     },
     "createModal": {
       "errorTitle": "Ein Fehler ist aufgetreten",
@@ -3449,6 +3451,40 @@
       "reactivateFailed": "Mitgliedschaft konnte nicht reaktiviert werden",
       "approveFailed": "Mitgliedschaft konnte nicht genehmigt werden",
       "rejectFailed": "Mitgliedschaft konnte nicht abgelehnt werden"
+    },
+    "settingsTab": {
+      "teamInfoTitle": "Teaminfo",
+      "editTeamInfo": "Teaminfo bearbeiten",
+      "inviteCodeTitle": "Einladungscode",
+      "inviteCodeDescription": "Teile diesen Code, damit andere dem Team beitreten können.",
+      "copyInviteCode": "Einladungscode kopieren",
+      "copied": "Kopiert",
+      "calendarColorTitle": "Farben für dieses Team",
+      "calendarColorDescription": "Lege die Farben fest, mit denen Trainings und Wettkämpfe dieses Teams im Kalender angezeigt werden.",
+      "teamActionsTitle": "Teamaktionen",
+      "createTeam": "Team erstellen",
+      "joinTeam": "Mit Einladungscode beitreten",
+      "dangerZoneTitle": "Gefahrenzone",
+      "leaveTeam": "Team verlassen",
+      "leaveConfirmTitle": "Dieses Team verlassen?",
+      "leaveConfirmMessage": "Du verlässt „{name}“. Trainings, Wettkämpfe und Anwesenheiten werden nicht mehr angezeigt.",
+      "leaveFailed": "Das Team konnte nicht verlassen werden",
+      "leaving": "Wird verlassen ...",
+      "lastAdminCannotLeave": "Du bist der letzte Administrator und kannst das Team nicht verlassen. Mache zuerst ein anderes Mitglied zum Administrator.",
+      "deleteTeam": "Team löschen",
+      "deleteConfirmTitle": "Dieses Team löschen?",
+      "deleteConfirmMessage": "„{name}“ wird gelöscht. Wettkämpfe, Meldungen, Ankündigungen und die Mitgliederliste lassen sich nicht wiederherstellen. Trainings- und Wettkampfergebnisse bleiben als persönliche Einträge erhalten, der Wettkampfname wird jedoch nicht mehr angezeigt.",
+      "deleteFailed": "Das Team konnte nicht gelöscht werden",
+      "deleting": "Wird gelöscht ...",
+      "deleteErrors": {
+        "notAuthorized": "Nur Team-Administratoren können das Team löschen.",
+        "teamNotFound": "Team nicht gefunden. Möglicherweise wurde es bereits gelöscht.",
+        "authRequired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
+      },
+      "leaveDescription": "Nach dem Verlassen werden Trainings, Wettkämpfe und Anwesenheiten dieses Teams nicht mehr angezeigt. Für einen erneuten Beitritt brauchst du einen Einladungscode. Deine eigenen Trainings- und Wettkampfergebnisse bleiben erhalten.",
+      "leaveButton": "Team verlassen",
+      "deleteDescription": "Beim Löschen werden Wettkämpfe, Meldungen, Ankündigungen und die Mitgliederliste des Teams endgültig entfernt. Das lässt sich nicht rückgängig machen. Die Trainings- und Wettkampfergebnisse der Mitglieder bleiben als persönliche Einträge erhalten.",
+      "deleteButton": "Team löschen"
     }
   },
   "teamsAdmin": {

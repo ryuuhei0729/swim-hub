@@ -28,6 +28,7 @@
     "type-check": "tsc --noEmit",
     "clean": "pnpm exec expo clean",
     "test": "vitest run",
+    "test:nav": "vitest run --config vitest.nav.config.ts",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
     "submit:ios": "set -a && source .env && set +a && export APPLE_ID APPLE_APP_SPECIFIC_PASSWORD && eas submit --platform ios --latest",

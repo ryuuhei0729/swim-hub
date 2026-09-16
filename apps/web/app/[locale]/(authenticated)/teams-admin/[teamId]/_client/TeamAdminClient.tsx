@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
@@ -9,20 +9,49 @@ import { useAuth } from "@/contexts";
 import TeamAdminTabs from "@/components/team/TeamAdminTabs";
 import { isTeamAdminTabType } from "@/components/team/TeamAdminTabs";
 import MemberDetailModal from "@/components/team/MemberDetailModal";
+import TabLoadingSkeleton from "@/components/team/TabLoadingSkeleton";
 
-// タブコンテンツは一度に1つしか表示されないため遅延読み込み
-const TeamAnnouncements = dynamic(() =>
-  import("@/components/team/TeamAnnouncements").then((m) => ({ default: m.TeamAnnouncements })),
+// タブコンテンツは一度に1つしか表示されないため遅延読み込み。
+//
+// 🚨 **`loading` は必須。** 一般ページ (teams/[teamId]/_client/TeamDetailClient.tsx) と
+// 同じ構造上の穴がここにもある: `next/dynamic` はオプション無しだと Suspense 境界を
+// 作らないため、初回クリックのサスペンドが `page.tsx` の `<Suspense>` まで伝播し、
+// 隠されたツリーの effect が破棄される。
+//
+// 管理ページで「初回クリックが飲まれる」症状が出ていないのは、**この画面には
+// ストアを書き換える cleanup が無い**から (TeamAdminClient は unmount 時の
+// `reset()` を持たない)。effect の破棄自体は同様に起きており、
+// 将来この画面に cleanup を足した瞬間に同じバグが再発する。
+// またスケルトンが無いとチャンク取得中に本文が空になり「押しても無反応」に見える。
+// 詳細は TabLoadingSkeleton.tsx の docstring を参照。**外さないこと。**
+const TeamAnnouncements = dynamic(
+  () => import("@/components/team/TeamAnnouncements").then((m) => ({ default: m.TeamAnnouncements })),
+  { loading: TabLoadingSkeleton },
 );
-const TeamMemberManagement = dynamic(() => import("@/components/team/TeamMemberManagement"));
-const TeamPractices = dynamic(() => import("@/components/team/TeamPractices"));
-const TeamCompetitions = dynamic(() => import("@/components/team/TeamCompetitions"));
-const TeamRankings = dynamic(() => import("@/components/team/rankings/TeamRankings"));
-const TeamSettings = dynamic(() => import("@/components/team/TeamSettings"));
-const TeamBulkRegister = dynamic(() => import("@/components/team/TeamBulkRegister"));
-const AdminMonthlyAttendance = dynamic(() => import("@/components/team/AdminMonthlyAttendance"));
+const TeamMemberManagement = dynamic(() => import("@/components/team/TeamMemberManagement"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamPractices = dynamic(() => import("@/components/team/TeamPractices"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamCompetitions = dynamic(() => import("@/components/team/TeamCompetitions"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamRankings = dynamic(() => import("@/components/team/rankings/TeamRankings"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamSettings = dynamic(() => import("@/components/team/TeamSettings"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamBulkRegister = dynamic(() => import("@/components/team/TeamBulkRegister"), {
+  loading: TabLoadingSkeleton,
+});
+const AdminMonthlyAttendance = dynamic(() => import("@/components/team/AdminMonthlyAttendance"), {
+  loading: TabLoadingSkeleton,
+});
 const TeamGroupManagement = dynamic(
   () => import("@/components/team/group-management/TeamGroupManagement"),
+  { loading: TabLoadingSkeleton },
 );
 import type { MemberDetail } from "@/components/team/MemberDetailModal";
 import { TeamMembership, TeamWithMembers } from "@swim-hub/shared/types";
@@ -66,6 +95,8 @@ export default function TeamAdminClient({
     setActiveTab,
     openMemberModal,
     closeMemberModal,
+    appliedTabParam,
+    setAppliedTabParam,
   } = useTeamAdminStore();
 
   // サーバー側から取得したデータをストアに設定
@@ -87,7 +118,14 @@ export default function TeamAdminClient({
   // ⚠️ 観測した値は **空 (クエリなし) も含めて必ず記録する**。空を記録せず早期 return すると
   // 「?tab=V → クエリなしのリンク → 戻るで ?tab=V」の3手目で ref がまだ "V" のままになり、
   // URL は V を指しているのに画面が別タブのままになる (同一ルートのクエリ変化では
-  // アンマウントしないため ref も初期化されない)。
+  // アンマウントしない)。
+  //
+  // 🚨 **記録は useRef ではなくストア (appliedTabParam) に持ち、購読した値を deps に含める。**
+  // ストアは AuthProvider.clearAllClientState() からも reset() される。記録を ref に
+  // 置くと activeTab だけが初期化されて記録が生き残り、URL のタブが二度と反映されない。
+  // `useTeamAdminStore.getState().appliedTabParam` で読むのも不可 — reset しても
+  // deps が変化せず effect が再実行されないため、同じバグが静かに残る。
+  // (一般ページの TeamDetailClient と同じ構造。片方だけ直さないこと)
   //
   // 許可判定は TeamAdminTabs.tsx の定義配列から導出した isTeamAdminTabType が
   // 唯一の定義元。
@@ -95,15 +133,14 @@ export default function TeamAdminClient({
   // ⚠️ 残債務「タブクリックで URL を更新する」を実装する場合は必ず `router.replace(?tab=X)`
   // を使うこと。`history.pushState` は Next の canonicalUrl を更新しないため
   // `useSearchParams()` がその変化を一切見ず、URL と表示タブが乖離する。
-  const appliedTabParamRef = useRef<string | null>(null);
   useEffect(() => {
     const tabParam = searchParams.get("tab") || initialTab || null;
-    if (appliedTabParamRef.current === tabParam) return;
-    appliedTabParamRef.current = tabParam;
+    if (appliedTabParam === tabParam) return;
+    setAppliedTabParam(tabParam);
     if (tabParam && isTeamAdminTabType(tabParam)) {
       setActiveTab(tabParam);
     }
-  }, [searchParams, initialTab, setActiveTab]);
+  }, [searchParams, initialTab, appliedTabParam, setAppliedTabParam, setActiveTab]);
 
   // 承認待ち数を取得
   useEffect(() => {

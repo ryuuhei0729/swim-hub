@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
@@ -8,18 +8,43 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import TeamTabs from "@/components/team/TeamTabs";
 import MemberDetailModal from "@/components/team/MemberDetailModal";
+import TabLoadingSkeleton from "@/components/team/TabLoadingSkeleton";
 
-// タブコンテンツは一度に1つしか表示されないため遅延読み込み
-const TeamMemberManagement = dynamic(() => import("@/components/team/TeamMemberManagement"));
-const TeamPractices = dynamic(() => import("@/components/team/TeamPractices"));
-const TeamCompetitions = dynamic(() => import("@/components/team/TeamCompetitions"));
-const TeamRankings = dynamic(() => import("@/components/team/rankings/TeamRankings"));
-const MyMonthlyAttendance = dynamic(() => import("@/components/team/MyMonthlyAttendance"));
+// タブコンテンツは一度に1つしか表示されないため遅延読み込み。
+//
+// 🚨 **`loading` は必須。省略するとタブの初回クリックが飲まれる。**
+// `next/dynamic` はオプション無しだと Suspense 境界を作らず (loadable.js の
+// `hasSuspenseBoundary = !opts.ssr || !!opts.loading` が false → Wrap が Fragment)、
+// 初回クリックのチャンク取得によるサスペンドが `page.tsx` の `<Suspense>`
+// (このコンポーネントより上) まで伝播する。React は隠したツリーの effect を破棄するため
+// 下の `useEffect(..., [reset])` の cleanup が走ってストアが初期化され、
+// 押したタブが既定値 (出欠) へ戻ってしまう。2回目はチャンクがキャッシュ済みで
+// サスペンドしないため効く ＝「初回だけ効かない」症状になる。
+// `loading` を渡すと境界がここにローカル化され、この伝播が起きなくなる。
+// 詳細は TabLoadingSkeleton.tsx の docstring を参照。**外さないこと。**
+const TeamMemberManagement = dynamic(() => import("@/components/team/TeamMemberManagement"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamPractices = dynamic(() => import("@/components/team/TeamPractices"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamCompetitions = dynamic(() => import("@/components/team/TeamCompetitions"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamRankings = dynamic(() => import("@/components/team/rankings/TeamRankings"), {
+  loading: TabLoadingSkeleton,
+});
+const MyMonthlyAttendance = dynamic(() => import("@/components/team/MyMonthlyAttendance"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamSettingsTab = dynamic(() => import("@/components/team/settings/TeamSettingsTab"), {
+  loading: TabLoadingSkeleton,
+});
 import type { MemberDetail } from "@/components/team/MemberDetailModal";
 import { isTeamTabType } from "@/components/team/TeamTabs";
-import { TeamMembership, TeamWithMembers } from "@swim-hub/shared/types";
+import { TeamMembership, TeamWithMembers } from "@apps/shared/types";
+import type { LeaveGuardMember } from "@apps/shared/utils/teamLeaveGuard";
 import { useTeamDetailStore } from "@/stores/form/teamDetailStore";
-import { ClipboardDocumentIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 interface TeamDetailClientProps {
   teamId: string;
@@ -40,9 +65,7 @@ export default function TeamDetailClient({
   const searchParams = useSearchParams();
   const router = useRouter();
   const t = useTranslations("teams");
-  const tCommon = useTranslations("common");
   const { user } = useAuth();
-  const [isCopied, setIsCopied] = useState(false);
 
   const {
     team,
@@ -56,6 +79,9 @@ export default function TeamDetailClient({
     setActiveTab,
     openMemberModal,
     closeMemberModal,
+    appliedTabParam,
+    setAppliedTabParam,
+    reset,
   } = useTeamDetailStore();
 
   // サーバー側から取得したデータをストアに設定
@@ -67,28 +93,48 @@ export default function TeamDetailClient({
 
   // URLパラメータからタブを取得。
   //
-  // ref の目的は「同じ URL 値を再適用しないこと」。ユーザーがタブをクリックした後に
+  // 記録の目的は「同じ URL 値を再適用しないこと」。ユーザーがタブをクリックした後に
   // 同じ値の effect が再実行されると、選んだタブが URL の値へ引き戻されてしまう。
   //
   // ⚠️ 観測した値は **空 (クエリなし) も含めて必ず記録する**。空を記録せず早期 return すると
-  // 「?tab=V → クエリなしのリンク → 戻るで ?tab=V」の3手目で ref がまだ "V" のままになり、
+  // 「?tab=V → クエリなしのリンク → 戻るで ?tab=V」の3手目で記録がまだ "V" のままになり、
   // URL は V を指しているのに画面が別タブのままになる (同一ルートのクエリ変化では
-  // アンマウントしないため ref も初期化されない)。
+  // アンマウントしない)。
+  //
+  // 🚨 **記録は useRef ではなくストア (appliedTabParam) に持ち、購読した値を deps に含める。**
+  // ストアは AuthProvider.clearAllClientState() からも reset() されるが、
+  // 記録を ref に置くと activeTab だけが初期化されて記録が生き残り、URL のタブが
+  // 二度と反映されなくなる。さらに `useStore.getState().appliedTabParam` で読むと
+  // (lint も通る自然な書き方に見えるが) reset しても deps が変化せず effect が
+  // 再実行されないため、同じバグが**レビューでもテストでも正しく見える形**で残る。
   //
   // 許可判定は TeamTabs.tsx の定義配列から導出した isTeamTabType が唯一の定義元。
   //
   // ⚠️ 残債務「タブクリックで URL を更新する」を実装する場合は必ず `router.replace(?tab=X)`
   // を使うこと。`history.pushState` は Next の canonicalUrl を更新しないため
   // `useSearchParams()` がその変化を一切見ず、URL と表示タブが乖離する。
-  const appliedTabParamRef = useRef<string | null>(null);
   useEffect(() => {
     const tabParam = searchParams.get("tab") || initialTab || null;
-    if (appliedTabParamRef.current === tabParam) return;
-    appliedTabParamRef.current = tabParam;
+    if (appliedTabParam === tabParam) return;
+    setAppliedTabParam(tabParam);
     if (tabParam && isTeamTabType(tabParam)) {
       setActiveTab(tabParam);
     }
-  }, [searchParams, initialTab, setActiveTab]);
+  }, [searchParams, initialTab, appliedTabParam, setAppliedTabParam, setActiveTab]);
+
+  // useTeamDetailStore はモジュールシングルトン。アンマウントで初期化しないと
+  // 直前に見ていたチームの team / activeTab が次のチームの初回レンダーに乗る
+  // (setTeam は上の effect = ペイント後に走るため 1 フレーム遅れる)。
+  // 以前は teamId prop しか使わないタブばかりで実害が無かったが、設定タブは
+  // チーム名と招待コードを表示し削除まで行うので、混線すると実害が出る。
+  //
+  // appliedTabParam もストアに入っているので、この reset だけで
+  // 「activeTab と 適用済みの ?tab=」が同時に初期化される (対で消える)。
+  useEffect(() => {
+    return () => {
+      reset();
+    };
+  }, [reset]);
 
   // 表示用のデータ（ストアから取得、なければ初期データを使用）
   const displayTeam = team || initialTeam;
@@ -149,6 +195,39 @@ export default function TeamDetailClient({
         return <TeamRankings teamId={teamId} />;
       case "attendance":
         return <MyMonthlyAttendance teamId={teamId} />;
+      case "settings":
+        // 🚨 **ストア (displayTeam) ではなく props の initialTeam だけを読む。**
+        // ストアはモジュールシングルトンなので、チーム A → B の遷移直後の 1 フレームは
+        // A の値を返しうる。設定タブは招待コードを表示し「<名前> を削除しますか？」と
+        // 確認して teamId prop のチームを消すため、混線すると
+        // 「A のコードが見える」「A と表示して B を消す」になる。
+        // initialTeam はこのページのレンダーごとに Server Component から渡る値で、
+        // teamId prop と必ず同じチームを指す。
+        if (!initialTeam) return null;
+        return (
+          <TeamSettingsTab
+            teamId={teamId}
+            teamName={initialTeam.name}
+            teamDescription={initialTeam.description}
+            inviteCode={initialTeam.invite_code}
+            isAdmin={initialMembership?.role === "admin"}
+            // getTeam() は承認待ち・退会済みを含む全メンバーシップを返す。脱退ガードは
+            // 「他に管理者が残るか」を数えるので、ここで在籍中のメンバーだけに絞る。
+            // 絞らないと退会済みの管理者を現役と数えて最後の管理者が抜けられてしまう。
+            //
+            // shared の TeamMembership.role は string 型なので、ガードが要求する
+            // "admin" | "user" に明示的に絞る (admin 以外は一般メンバー扱い)。
+            // `as` で迂回すると role が増えたときに型エラーで気付けない。
+            members={initialTeam.team_memberships
+              .filter(
+                (membership) => membership.status === "approved" && membership.is_active === true,
+              )
+              .map<LeaveGuardMember>((membership) => ({
+                user_id: membership.user_id,
+                role: membership.role === "admin" ? "admin" : "user",
+              }))}
+          />
+        );
       default:
         return null;
     }
@@ -156,53 +235,10 @@ export default function TeamDetailClient({
 
   return (
     <div>
-      {/* チームヘッダー */}
-      <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 wrap-break-word">
-              {displayTeam.name}
-            </h1>
-            {displayTeam.description && (
-              <p className="text-xs sm:text-sm text-gray-600 wrap-break-word">
-                {displayTeam.description}
-              </p>
-            )}
-          </div>
-          {displayTeam.invite_code && (
-            <div className="w-full md:w-auto md:shrink-0">
-              <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 w-full md:w-auto">
-                <div className="flex flex-row items-center gap-2">
-                  <label className="block text-xs font-medium text-gray-700 whitespace-nowrap">
-                    {t("detail.inviteCodeLabel")}
-                  </label>
-                  <input
-                    type="text"
-                    value={displayTeam.invite_code}
-                    readOnly
-                    className="flex-1 px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm text-xs font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(displayTeam.invite_code || "");
-                      setIsCopied(true);
-                      setTimeout(() => setIsCopied(false), 2000);
-                    }}
-                    className="inline-flex items-center justify-center px-2 py-1 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                    title={tCommon("copy")}
-                  >
-                    {isCopied ? (
-                      <CheckIcon className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <ClipboardDocumentIcon className="h-3 w-3" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* チーム名・招待コードのヘッダーカードは廃止した (2026-09-16)。
+          タブの上に常時2行占有していたのをやめ、招待コードは設定タブの
+          「チーム情報」カード内へ移設 (components/team/settings/TeamSettingsTab.tsx)。
+          チーム名は <title> (page.tsx の generateMetadata) に出る。 */}
 
       {/* タブナビゲーション */}
       <div className="mt-4">

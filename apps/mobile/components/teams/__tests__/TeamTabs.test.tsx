@@ -10,6 +10,9 @@
 //     タブが増えても減っても緑のまま通る状態だった。
 //     ここではタブ数を `getAllByRole("button")` の件数で**厳密一致**させ、
 //     さらにラベルの並びまで固定する (増減・並べ替えの両方を検出する)。
+//   設定タブ追加 … 全メンバー向けの `settings` タブが末尾に増え、5→6 / 7→8 になった。
+//     **実装が正で期待値が古い赤**だったため期待値側を更新した (Contract 上、
+//     設定タブは adminOnly ではないので非管理者側にも1つ増える)。
 // =============================================================================
 
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -41,11 +44,11 @@ describe("TeamTabs", () => {
   });
 
   // S1-V-04 / #1: 非管理者には管理者専用タブ (groups / announcements) 以外が表示される
-  it("非管理者にはちょうど 5 タブが表示される（members/practices/competitions/attendance/rankings）", () => {
+  it("非管理者にはちょうど 6 タブが表示される（members/practices/competitions/attendance/rankings/settings）", () => {
     render(<TeamTabs {...makeProps({ isAdmin: false })} />);
 
     // 件数の厳密一致。タブが増えても減っても落ちる
-    expect(screen.getAllByRole("button")).toHaveLength(5);
+    expect(screen.getAllByRole("button")).toHaveLength(6);
     // 並び順まで固定する (ラベルは shared/messages の ja.json 由来)
     expect(screen.getAllByRole("button").map((tab) => tab.textContent)).toEqual([
       "メンバー",
@@ -53,12 +56,14 @@ describe("TeamTabs", () => {
       "大会",
       "出欠",
       "ランキング",
+      "設定",
     ]);
     expect(screen.getByTestId("icon-users")).toBeTruthy();      // members
     expect(screen.getByTestId("icon-clock")).toBeTruthy();      // practices
     expect(screen.getByTestId("icon-award")).toBeTruthy();      // competitions
     expect(screen.getByTestId("icon-clipboard")).toBeTruthy();  // attendance
     expect(screen.getByTestId("icon-bar-chart-2")).toBeTruthy(); // rankings
+    expect(screen.getByTestId("icon-settings")).toBeTruthy();   // settings (全メンバー向け)
     expect(screen.queryByTestId("icon-layers")).toBeNull();     // groups (adminOnly: 非表示)
     expect(screen.queryByTestId("icon-bell")).toBeNull();       // announcements (adminOnly: 非表示)
   });
@@ -81,10 +86,10 @@ describe("TeamTabs", () => {
   });
 
   // S1-V-05: 管理者にはちょうど 7 タブすべてが表示される
-  it("管理者にはちょうど 7 タブすべてが表示される", () => {
+  it("管理者にはちょうど 8 タブすべてが表示される", () => {
     render(<TeamTabs {...makeProps({ isAdmin: true })} />);
 
-    expect(screen.getAllByRole("button")).toHaveLength(7);
+    expect(screen.getAllByRole("button")).toHaveLength(8);
     expect(screen.getAllByRole("button").map((tab) => tab.textContent)).toEqual([
       "メンバー",
       "グループ",
@@ -93,6 +98,7 @@ describe("TeamTabs", () => {
       "出欠",
       "ランキング",
       "お知らせ",
+      "設定",
     ]);
     expect(screen.getByTestId("icon-users")).toBeTruthy();
     expect(screen.getByTestId("icon-layers")).toBeTruthy();
@@ -101,6 +107,7 @@ describe("TeamTabs", () => {
     expect(screen.getByTestId("icon-clipboard")).toBeTruthy();
     expect(screen.getByTestId("icon-bar-chart-2")).toBeTruthy();
     expect(screen.getByTestId("icon-bell")).toBeTruthy();
+    expect(screen.getByTestId("icon-settings")).toBeTruthy();
   });
 
   // タブクリックで onTabChange が呼ばれる

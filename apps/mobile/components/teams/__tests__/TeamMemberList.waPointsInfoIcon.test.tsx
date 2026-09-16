@@ -23,7 +23,7 @@
 
 import React, { useEffect } from "react";
 import { Pressable, Text } from "react-native";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import jaMessages from "@apps/shared/messages/ja.json";
@@ -144,19 +144,9 @@ const EXPECTED_BODY = jaMessages.teams.waPointsCompare.infoTooltip;
 const MYPAGE_BODY = jaMessages.mypage.bestTimesTable.pointsInfo;
 const MEMBER_DETAIL_BODY = jaMessages.teams.memberDetail.bestTimesTable.pointsInfo;
 
-/** 「WAポイントで比較」Pressable (モックにより button として描画される) */
-const getWaButton = () => screen.getByText(BUTTON_LABEL).closest("button") as HTMLElement;
 /** 統計ヘッダーのタイトル Text (span) */
 const getTitle = () => screen.getByText(jaMessages.teams.mobile.memberListTitle);
 
-// `testID` は RN のプロップ名で、このリポジトリの DOM モックでは Pressable に渡すと生の
-// `testid` 属性として転記される (`data-testid` ではない) ため属性セレクタで取る
-// (components/ui/__tests__/WaPointsInfoTooltip.test.tsx と同じ理由)。
-function getInfoIcon(container: HTMLElement): HTMLElement {
-  const el = container.querySelector(`[testid="${INFO_TEST_ID}"]`);
-  if (!el) throw new Error(`testid="${INFO_TEST_ID}" の要素が見つかりません`);
-  return el as HTMLElement;
-}
 
 // CenterModal の `<Modal animationType="none">` は DOM モックで `animationtype="none"`
 // 属性としてそのまま転記される。比較モーダル (SlideUpModal) は別の animationType なので、
@@ -165,78 +155,59 @@ function getInfoIcon(container: HTMLElement): HTMLElement {
 function getInfoModals(container: HTMLElement): Element[] {
   return Array.from(container.querySelectorAll('[animationtype="none"]'));
 }
-function getTitleAndBodySpans(modal: Element): { titleEl?: Element; bodyEl?: Element } {
-  const contentSpans = Array.from(modal.querySelectorAll("span")).filter(
-    (el) => !el.hasAttribute("data-testid"),
-  );
-  return { titleEl: contentSpans[0], bodyEl: contentSpans[1] };
-}
 
-describe("[V-WAI] TeamMemberList 「WAポイントで比較」ボタン右隣の info アイコン", () => {
+describe("[V-WAI 反転] TeamMemberList から WAポイント比較ボタン + info アイコンが撤去されている", () => {
+  // ---------------------------------------------------------------------------
+  // 本スプリントで「WAポイントで比較」ボタンと右隣の info アイコンは
+  // **セットでランキングタブへ移設**された (PM 裁定)。
+  //
+  // 「メンバータブにある」を pin していた [V-WAI-01/02/03] を**削除せず反転**する。
+  // 削除すると「ボタンがどこにも無い」状態でも全 green になり、移設の失敗
+  // (= 機能の消失) を誰も検出できなくなる。
+  //
+  // 移設先の検証 (配置・ポップアップ本文・比較モーダルを開かないこと) は
+  //   components/teams/rankings/__tests__/TeamRankings.waPointsCompare.test.tsx
+  // の [V-B36]〜[V-B38] が引き継いでいる。
+  // ---------------------------------------------------------------------------
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("[V-WAI-01] info アイコンはボタンと同じ行ラッパー内でボタンの後ろ (右隣) にあり、ラッパーはタイトル行の直下", () => {
+  it("[V-WAI-01 反転] メンバータブに「WAポイントで比較」ボタンと info アイコンが存在しない", () => {
     const { container } = renderList();
 
-    const waButton = getWaButton();
-    const infoIcon = getInfoIcon(container);
-    const wrapper = waButton.parentElement!;
+    // --- 正のコントロール ---
+    // 描画自体が失敗して「何も見つからない」状態を「撤去成功」と誤読しないため、
+    // 統計ヘッダーが生きていることを先に固定する。
+    // (メンバー行そのものはベストタイム取得の解決待ちで初期コミットに出ないため、
+    //  同期的に必ず存在するヘッダー要素を対照に使う)
+    expect(getTitle()).toBeTruthy();
+    expect(screen.getByRole("switch", { name: "引き継ぎを含む" })).toBeTruthy();
 
-    // 同じラッパーに属する (WaPointsInfoTooltip 自身の View で1段包まれるため contains で見る)
-    expect(wrapper.contains(infoIcon)).toBe(true);
-
-    // ラッパー内の並び順: ボタン → info アイコン (右隣)
-    const wrapperChildren = Array.from(wrapper.children);
-    const infoHolderIndex = wrapperChildren.findIndex((el) => el.contains(infoIcon));
-    expect(infoHolderIndex).toBeGreaterThan(wrapperChildren.indexOf(waButton));
-
-    // ラッパーはタイトル行 (statsHeaderTop) の直下 = 「メンバー」タイトルと同じ行
-    expect(wrapper.parentElement).toBe(getTitle().parentElement);
-
-    // 画面全体で info アイコンは1個だけ (複製されていない)
-    expect(container.querySelectorAll(`[testid="${INFO_TEST_ID}"]`)).toHaveLength(1);
+    // --- 本体 ---
+    expect(screen.queryByText(BUTTON_LABEL)).toBeNull();
+    expect(container.querySelectorAll(`[testid="${INFO_TEST_ID}"]`)).toHaveLength(0);
   });
 
-  it("[V-WAI-02] info アイコンをタップするとポップアップが開き、タイトル/本文が teams.waPointsCompare.infoAriaLabel/infoTooltip と一致する", () => {
+  it("[V-WAI-02 反転] WA の説明ポップアップはメンバータブのどこにも無い (本文ごと消えている)", () => {
     const { container } = renderList();
 
-    // タップ前: ポップアップは未マウント
+    expect(getTitle()).toBeTruthy(); // 正のコントロール
+
+    // ポップアップ本体 (CenterModal = animationtype="none") が1つも無い
     expect(getInfoModals(container)).toHaveLength(0);
+    // 説明本文も画面上に存在しない
+    expect(screen.queryByText(EXPECTED_TITLE)).toBeNull();
     expect(screen.queryByText(EXPECTED_BODY)).toBeNull();
-
-    fireEvent.click(getInfoIcon(container));
-
-    const modals = getInfoModals(container);
-    expect(modals).toHaveLength(1);
-    const { titleEl, bodyEl } = getTitleAndBodySpans(modals[0]!);
-    expect(titleEl).toBeTruthy();
-    expect(bodyEl).toBeTruthy();
-
-    expect(titleEl!.textContent).toBe(EXPECTED_TITLE);
-    expect(bodyEl!.textContent).toBe(EXPECTED_BODY);
-
-    // このボタンは WA ポイント専用なので WA の説明であること (「World Aquatics」を含む)。
-    // マイページ/メンバー詳細用の「点数化の一般説明」に取り違えていないこと。
-    expect(bodyEl!.textContent).toContain("World Aquatics");
-    expect(bodyEl!.textContent).not.toBe(MYPAGE_BODY);
-    expect(bodyEl!.textContent).not.toBe(MEMBER_DETAIL_BODY);
   });
 
-  it("[V-WAI-03] info アイコンのタップで比較モーダル (WaPointsCompareModal) は開かない", () => {
-    const { container } = renderList();
+  it("[V-WAI-03 反転] 取り違え対照: マイページ/メンバー詳細の説明文もここには現れない", () => {
+    renderList();
 
-    // 比較モーダルのタイトル (modalTitle) はボタンラベルと同じ文字列なので、
-    // 開くと画面上の「WAポイントで比較」が 2 個になる。タップ前は 1 個 (ボタンのみ)。
-    expect(jaMessages.teams.waPointsCompare.modalTitle).toBe(BUTTON_LABEL);
-    expect(screen.getAllByText(BUTTON_LABEL)).toHaveLength(1);
+    expect(getTitle()).toBeTruthy(); // 正のコントロール
 
-    fireEvent.click(getInfoIcon(container));
-
-    // info ポップアップは開くが、比較モーダルは開かない
-    expect(getInfoModals(container)).toHaveLength(1);
-    expect(screen.getAllByText(BUTTON_LABEL)).toHaveLength(1);
-    expect(screen.queryByText(jaMessages.teams.waPointsCompare.empty)).toBeNull();
+    // WA 用を消したつもりで別名前空間の説明文を残す、という取り違えが起きていないこと
+    expect(screen.queryByText(MYPAGE_BODY)).toBeNull();
+    expect(screen.queryByText(MEMBER_DETAIL_BODY)).toBeNull();
   });
 });

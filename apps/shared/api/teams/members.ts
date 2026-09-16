@@ -71,13 +71,22 @@ export class TeamMembersAPI {
     }
   }
 
+  /**
+   * 自分でチームを脱退する。
+   *
+   * `.select("*").single()` は remove()（管理者による除名）と同じ意図で必須。
+   * これが無いと RLS 拒否やメンバーシップ不在による 0 行更新が「エラー無し」で
+   * 返り、脱退できていないのに画面だけ脱退済みになる。
+   */
   async leave(teamId: string): Promise<void> {
     const userId = await requireAuth(this.supabase);
     const { error } = await this.supabase
       .from("team_memberships")
       .update({ is_active: false, left_at: new Date().toISOString() })
       .eq("team_id", teamId)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select("*")
+      .single();
     if (error) throw error;
 
     // 脱退したチームのカレンダー記録色カスタマイズ設定を削除する(自分の行のみ、RLSで安全)。

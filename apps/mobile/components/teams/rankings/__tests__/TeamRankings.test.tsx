@@ -199,7 +199,7 @@ function renderRankings() {
   });
   const result = render(
     <QueryClientProvider client={queryClient}>
-      <TeamRankings teamId={TEAM_ID} />
+      <TeamRankings teamId={TEAM_ID} members={[]} />
     </QueryClientProvider>,
   );
   // `queryClient` を返すのは「セッション中に styles マスターが変わった」状態を
@@ -839,7 +839,7 @@ describe("TeamRankings (mobile)", () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { container } = render(
       <QueryClientProvider client={queryClient}>
-        <TeamRankings teamId={TEAM_ID} />
+        <TeamRankings teamId={TEAM_ID} members={[]} />
       </QueryClientProvider>,
     );
 

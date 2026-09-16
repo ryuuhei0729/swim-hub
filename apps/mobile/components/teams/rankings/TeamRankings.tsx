@@ -35,8 +35,11 @@ import { TEAM_RANKING_FETCH_LIMIT } from "@apps/shared/api/teams/rankings";
 import { assignCompetitionRanks } from "@apps/shared/utils/ranking";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { TeamRankingFilters, TeamRankingRow } from "@apps/shared/types";
+import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { useAuth } from "@/contexts/AuthProvider";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { WaPointsCompareModal } from "@/components/teams/wa-points-compare";
+import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { RankingErrorView } from "./RankingErrorView";
 import { RankingFilterSheet } from "./RankingFilterSheet";
 import { RankingList } from "./RankingList";
@@ -161,6 +164,12 @@ const RankingsContent: React.FC<RankingsContentProps> = ({ teamId, supabase, fil
 };
 export interface TeamRankingsProps {
   teamId: string;
+  /**
+   * 「WAポイントで比較」に渡すチームメンバー。
+   * **親 (TeamDetailScreen) が持っている配列をそのまま渡す。** 中間で詰め替えると
+   * `users.gender` が落ちて全員男性換算になる既知障害があるため、加工・フィルタ禁止。
+   */
+  members: TeamMembershipWithUser[];
 }
 
 /**
@@ -191,10 +200,11 @@ type IndividualUnavailability = "fetchFailed" | "empty";
  * この状態でリレーへ倒したり通知を出したりしてはいけない
  * (根拠は `buildDefaultRankingFilterState` の docstring)。
  */
-export const TeamRankings: React.FC<TeamRankingsProps> = ({ teamId }) => {
+export const TeamRankings: React.FC<TeamRankingsProps> = ({ teamId, members }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+  const [waPointsModalVisible, setWaPointsModalVisible] = useState(false);
 
   // styles は固定マスタ (アプリの稼働中に増減しない) なので長めにキャッシュする
   const stylesQuery = useQuery({
@@ -319,162 +329,193 @@ export const TeamRankings: React.FC<TeamRankingsProps> = ({ teamId }) => {
     ].join(" / ");
   };
 
-  // 1. isPending を最初に見るので「取得中」がエラーやリレーへの縮退に落ちる経路が
-  //    生まれない (偽エラー1フレームの Critical は構造的に再発しない)。
-  //    ⚠️ この段より後ろで styleGroups の空を判定すること。取得中も空なので、
-  //    順序を入れ替えると「読み込み中に個人種目が使えないと通知する」ことになる
-  if (stylesQuery.isPending) {
-    return (
-      <View style={styles.container}>
-        <LoadingSpinner message={t("teams.ranking.loading")} />
-      </View>
-    );
-  }
+  // 本体 (絞り込みツールバー〜一覧) は styles マスターの取得状況で分岐する。
+  // **「WAポイントで比較」はこの分岐の外側**に置く — WA ポイントは styles マスターを
+  // 引かないので、読み込み中もエラー時も使えなければならない (早期 return の後ろに
+  // 置くとその2状態でボタンが消える)
+  const renderContent = () => {
+    // 1. isPending を最初に見るので「取得中」がエラーやリレーへの縮退に落ちる経路が
+    //    生まれない (偽エラー1フレームの Critical は構造的に再発しない)。
+    //    ⚠️ この段より後ろで styleGroups の空を判定すること。取得中も空なので、
+    //    順序を入れ替えると「読み込み中に個人種目が使えないと通知する」ことになる
+    if (stylesQuery.isPending) {
+      return <LoadingSpinner message={t("teams.ranking.loading")} />;
+    }
 
-  // 2. 個人種目が出せるか。取得失敗と空を分ける (再試行ボタンの有無が変わる)
-  const individualUnavailability: IndividualUnavailability | null = stylesQuery.isError
-    ? "fetchFailed"
-    : styleGroups.length === 0
-      ? "empty"
-      : null;
+    // 2. 個人種目が出せるか。取得失敗と空を分ける (再試行ボタンの有無が変わる)
+    const individualUnavailability: IndividualUnavailability | null = stylesQuery.isError
+      ? "fetchFailed"
+      : styleGroups.length === 0
+        ? "empty"
+        : null;
 
-  // 3. どちらのモードでも条件が組めない = 個人種目もリレーも軸が無い。
-  //    リレーの軸は静的定義から決まるので実際には到達しないが、
-  //    `toRankingQueryTarget` の null を非null断定で潰さないためのガード。
-  //    ローディング扱いにすると stylesQuery は settled + staleTime 24時間 +
-  //    再取得トリガー無しで **永久スピナー**になるため、エラー + 再試行に寄せる
-  if (active === null) {
-    return (
-      <View style={styles.container}>
-        {/* 生のエラー詳細は出さず汎用文言にフォールバックする */}
+    // 3. どちらのモードでも条件が組めない = 個人種目もリレーも軸が無い。
+    //    リレーの軸は静的定義から決まるので実際には到達しないが、
+    //    `toRankingQueryTarget` の null を非null断定で潰さないためのガード。
+    //    ローディング扱いにすると stylesQuery は settled + staleTime 24時間 +
+    //    再取得トリガー無しで **永久スピナー**になるため、エラー + 再試行に寄せる
+    if (active === null) {
+      // 生のエラー詳細は出さず汎用文言にフォールバックする
+      return (
         <RankingErrorView
           message={toUserFacingMessage(stylesQuery.error, t("teams.ranking.error"))}
           onRetry={handleStylesRetry}
         />
-      </View>
-    );
-  }
+      );
+    }
 
-  const activeFilterCount = countActiveRankingFilterState(active.state, defaultState);
-  // 対象大会スコープは個人種目にしか無い軸なので、リレー表示中は注意書きも出さない
-  // (state には残っているが、その条件では問い合わせていない)
-  const showScopeNote =
-    active.target.mode === "individual" && active.state.scope === "allCompetitions";
-  // 年度指定時に competition_id が NULL の記録 (一括登録) が母集団から落ちることの
-  // 説明。**出し分けの規則は shared の `shouldShowFiscalYearNote` が唯一の定義元**
-  // (4状態の真理値表・teamCompetitions とリレーで出さない根拠・将来復活させる
-  // 条件はすべてあちらの docstring にある。web も同じ関数を通る)。
-  // 絞り込みシート側の note も同じ関数を通すので、シートを開いたときと閉じた
-  // ときで言うことが変わらない。ここは**適用済み state**、シート側は draft を渡す
-  const showFiscalYearNote = shouldShowFiscalYearNote(active.state);
+    const activeFilterCount = countActiveRankingFilterState(active.state, defaultState);
+    // 対象大会スコープは個人種目にしか無い軸なので、リレー表示中は注意書きも出さない
+    // (state には残っているが、その条件では問い合わせていない)
+    const showScopeNote =
+      active.target.mode === "individual" && active.state.scope === "allCompetitions";
+    // 年度指定時に competition_id が NULL の記録 (一括登録) が母集団から落ちることの
+    // 説明。**出し分けの規則は shared の `shouldShowFiscalYearNote` が唯一の定義元**
+    // (4状態の真理値表・teamCompetitions とリレーで出さない根拠・将来復活させる
+    // 条件はすべてあちらの docstring にある。web も同じ関数を通る)。
+    // 絞り込みシート側の note も同じ関数を通すので、シートを開いたときと閉じた
+    // ときで言うことが変わらない。ここは**適用済み state**、シート側は draft を渡す
+    const showFiscalYearNote = shouldShowFiscalYearNote(active.state);
+
+    return (
+      <>
+        {/* 個人種目が使えないことの通知。**見出し直下・全幅**で、リレーに切り替えても
+            出したままにする (今この画面で何が使えないかの説明であって、
+            リレーの表示結果についての説明ではない。web の amber バナーと同じ位置)。
+            配色と構造は既存の唯一の通知バナー `components/layout/OfflineBanner.tsx`
+            (amber-100 / amber-300 / amber-800 + Feather アイコン) に合わせ、
+            新しい通知表現を発明しない。文言は `accessibilityRole="alert"` を持つ
+            Text に置く (`BestTimeEntryRow` / `BulkBestTimeScreen` と同じ形。
+            RN に web の role="status" 相当は無い) */}
+        {individualUnavailability !== null && (
+          <View style={styles.notice}>
+            <Feather name="alert-triangle" size={14} color="#92400E" />
+            <View style={styles.noticeBody}>
+              <Text style={styles.noticeText} accessibilityRole="alert">
+                {t(`teams.ranking.individualUnavailable.${individualUnavailability}`)}
+              </Text>
+              {/* 再試行は取得失敗のときだけ。マスターが空の側に出すと
+                  「押しても直らないボタン」になる */}
+              {individualUnavailability === "fetchFailed" && (
+                <Pressable
+                  style={styles.noticeRetry}
+                  onPress={handleStylesRetry}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("teams.ranking.retry")}
+                >
+                  <Text style={styles.noticeRetryText}>{t("teams.ranking.retry")}</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
+
+        <View style={styles.toolbar}>
+          {/* 画面上はタブ名 (ランキング) と重複するため見出しを別行に置かず、
+              スクリーンリーダー向けのラベルとしてセクション名を付ける */}
+          {/* 第2弾で期間が、追加要望で (allRaces のときだけ) 集計が加わり最大5項目に
+              なった。1行だと 360dp では末尾が必ず省略されて読めない。
+              **上限を3行にしてある**根拠 (幅 360dp / 要約に使える幅 218dp を
+              5ロケールで実測):
+                ja/ko/zh は最悪ケースでも 370〜400dp = 2行に収まる
+                en/de は「2023年度以前 + 全レース」で 500dp / 539dp となり
+                2行 (=436dp) では**末尾の集計が切れる** — QA が「気付けない」と
+                指摘した情報がまさに落ちる
+              `numberOfLines` は上限なので、収まるケースの高さは2行のままで
+              変わらない (通常ケースは 232〜423dp = 2行) */}
+          <Text
+            style={styles.summary}
+            numberOfLines={3}
+            accessibilityLabel={`${t("teams.ranking.title")}: ${buildSummary(active.state)}`}
+          >
+            {buildSummary(active.state)}
+          </Text>
+          <Pressable
+            style={styles.filterButton}
+            onPress={() => setFilterSheetVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("common.listToolbar.filterButton")}
+          >
+            <Feather name="filter" size={14} color="#374151" />
+            <Text style={styles.filterButtonText}>{t("common.listToolbar.filterButton")}</Text>
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
+
+        {/* 「今どういう条件で問い合わせているか」の説明。**state だけで決まる**ので
+            本体 (取得結果に依存する件数・切り詰め注記) とは別にここへ置く。
+            年度は両モードに出る軸なので、本体側に置くと個人種目とリレーの2箇所に
+            同じ JSX を複製することになる (第3弾でツールバーと要約を親へ寄せたのと
+            同じ理屈)。
+            読み込み中でもエラー中でも出す — 「該当なし」のような事実を語らないため
+            抑止する理由が無い (第1弾で scope 注意書きについて確定した規則)。
+            ⚠️ 色は既存の scope 注意書きと同じ **素の amber テキスト**。
+            `individualUnavailable` の琥珀バナー (背景色付き) は異常の通知専用で、
+            こちらは正常な仕様の説明なので同じ見た目にしない */}
+        {(showScopeNote || showFiscalYearNote) && (
+          <View style={styles.metaRow}>
+            {showScopeNote && (
+              <Text style={styles.metaNote}>{t("teams.ranking.scope.allCompetitionsNote")}</Text>
+            )}
+            {showFiscalYearNote && (
+              <Text style={styles.metaNote}>{t("teams.ranking.period.fiscalYearNote")}</Text>
+            )}
+          </View>
+        )}
+
+        {/* 本体は残りの高さを埋める。ここに flex:1 を置かないと中の FlatList の
+            高さが 0 になり、行が描画されているのに何も見えない状態になる */}
+        <View style={styles.viewBody}>
+          {active.target.mode === "relay" ? (
+            <TeamRelayRankings teamId={teamId} filters={active.target.filters} />
+          ) : (
+            <RankingsContent teamId={teamId} supabase={supabase} filters={active.target.filters} />
+          )}
+        </View>
+
+        <RankingFilterSheet
+          visible={filterSheetVisible}
+          onClose={() => setFilterSheetVisible(false)}
+          filterState={active.state}
+          styleGroups={styleGroups}
+          periodChoices={periodChoices}
+          onApply={handleApply}
+        />
+      </>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      {/* 個人種目が使えないことの通知。**見出し直下・全幅**で、リレーに切り替えても
-          出したままにする (今この画面で何が使えないかの説明であって、
-          リレーの表示結果についての説明ではない。web の amber バナーと同じ位置)。
-          配色と構造は既存の唯一の通知バナー `components/layout/OfflineBanner.tsx`
-          (amber-100 / amber-300 / amber-800 + Feather アイコン) に合わせ、
-          新しい通知表現を発明しない。文言は `accessibilityRole="alert"` を持つ
-          Text に置く (`BestTimeEntryRow` / `BulkBestTimeScreen` と同じ形。
-          RN に web の role="status" 相当は無い) */}
-      {individualUnavailability !== null && (
-        <View style={styles.notice}>
-          <Feather name="alert-triangle" size={14} color="#92400E" />
-          <View style={styles.noticeBody}>
-            <Text style={styles.noticeText} accessibilityRole="alert">
-              {t(`teams.ranking.individualUnavailable.${individualUnavailability}`)}
-            </Text>
-            {/* 再試行は取得失敗のときだけ。マスターが空の側に出すと
-                「押しても直らないボタン」になる */}
-            {individualUnavailability === "fetchFailed" && (
-              <Pressable
-                style={styles.noticeRetry}
-                onPress={handleStylesRetry}
-                accessibilityRole="button"
-                accessibilityLabel={t("teams.ranking.retry")}
-              >
-                <Text style={styles.noticeRetryText}>{t("teams.ranking.retry")}</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-      )}
-
-      <View style={styles.toolbar}>
-        {/* 画面上はタブ名 (ランキング) と重複するため見出しを別行に置かず、
-            スクリーンリーダー向けのラベルとしてセクション名を付ける */}
-        {/* 第2弾で期間が、追加要望で (allRaces のときだけ) 集計が加わり最大5項目に
-            なった。1行だと 360dp では末尾が必ず省略されて読めない。
-            **上限を3行にしてある**根拠 (幅 360dp / 要約に使える幅 218dp を
-            5ロケールで実測):
-              ja/ko/zh は最悪ケースでも 370〜400dp = 2行に収まる
-              en/de は「2023年度以前 + 全レース」で 500dp / 539dp となり
-              2行 (=436dp) では**末尾の集計が切れる** — QA が「気付けない」と
-              指摘した情報がまさに落ちる
-            `numberOfLines` は上限なので、収まるケースの高さは2行のままで
-            変わらない (通常ケースは 232〜423dp = 2行) */}
-        <Text
-          style={styles.summary}
-          numberOfLines={3}
-          accessibilityLabel={`${t("teams.ranking.title")}: ${buildSummary(active.state)}`}
-        >
-          {buildSummary(active.state)}
-        </Text>
+      {/* メンバータブから移設。個人種目/リレーのどちらを表示していても常に見える
+          よう本体の外・最上段に置く (ランキングにサブタブは作らない)。
+          ツールバー行には入れない — あの行は「絞り込み」だけを持つ */}
+      <View style={styles.waPointsRow}>
         <Pressable
-          style={styles.filterButton}
-          onPress={() => setFilterSheetVisible(true)}
+          style={styles.waPointsButton}
+          onPress={() => setWaPointsModalVisible(true)}
           accessibilityRole="button"
-          accessibilityLabel={t("common.listToolbar.filterButton")}
         >
-          <Feather name="filter" size={14} color="#374151" />
-          <Text style={styles.filterButtonText}>{t("common.listToolbar.filterButton")}</Text>
-          {activeFilterCount > 0 && (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-            </View>
-          )}
+          <Feather name="award" size={13} color="#2563EB" />
+          <Text style={styles.waPointsButtonText}>
+            {t("teams.waPointsCompare.buttonLabel")}
+          </Text>
         </Pressable>
+        <WaPointsInfoTooltip testID="team-rankings-wa-info" />
       </View>
 
-      {/* 「今どういう条件で問い合わせているか」の説明。**state だけで決まる**ので
-          本体 (取得結果に依存する件数・切り詰め注記) とは別にここへ置く。
-          年度は両モードに出る軸なので、本体側に置くと個人種目とリレーの2箇所に
-          同じ JSX を複製することになる (第3弾でツールバーと要約を親へ寄せたのと
-          同じ理屈)。
-          読み込み中でもエラー中でも出す — 「該当なし」のような事実を語らないため
-          抑止する理由が無い (第1弾で scope 注意書きについて確定した規則)。
-          ⚠️ 色は既存の scope 注意書きと同じ **素の amber テキスト**。
-          `individualUnavailable` の琥珀バナー (背景色付き) は異常の通知専用で、
-          こちらは正常な仕様の説明なので同じ見た目にしない */}
-      {(showScopeNote || showFiscalYearNote) && (
-        <View style={styles.metaRow}>
-          {showScopeNote && (
-            <Text style={styles.metaNote}>{t("teams.ranking.scope.allCompetitionsNote")}</Text>
-          )}
-          {showFiscalYearNote && (
-            <Text style={styles.metaNote}>{t("teams.ranking.period.fiscalYearNote")}</Text>
-          )}
-        </View>
-      )}
+      {renderContent()}
 
-      {/* 本体は残りの高さを埋める。ここに flex:1 を置かないと中の FlatList の
-          高さが 0 になり、行が描画されているのに何も見えない状態になる */}
-      <View style={styles.viewBody}>
-        {active.target.mode === "relay" ? (
-          <TeamRelayRankings teamId={teamId} filters={active.target.filters} />
-        ) : (
-          <RankingsContent teamId={teamId} supabase={supabase} filters={active.target.filters} />
-        )}
-      </View>
-
-      <RankingFilterSheet
-        visible={filterSheetVisible}
-        onClose={() => setFilterSheetVisible(false)}
-        filterState={active.state}
-        styleGroups={styleGroups}
-        periodChoices={periodChoices}
-        onApply={handleApply}
+      {/* members は親の配列をそのまま渡す (詰め替え禁止。props の docstring 参照) */}
+      <WaPointsCompareModal
+        visible={waPointsModalVisible}
+        onClose={() => setWaPointsModalVisible(false)}
+        members={members}
+        supabase={supabase}
       />
     </View>
   );
@@ -487,6 +528,33 @@ const styles = StyleSheet.create({
   },
   viewBody: {
     flex: 1,
+  },
+  // メンバータブ (TeamMemberList の waPointsButtonWrapper) と同じ「行ラッパーで横並び」。
+  // 見た目を移設前から変えない
+  waPointsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  waPointsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    backgroundColor: "#EFF6FF",
+  },
+  waPointsButtonText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   bodyContainer: {
     flex: 1,

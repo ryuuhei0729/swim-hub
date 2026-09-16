@@ -27,6 +27,7 @@ import RankingFilters from "./RankingFilters";
 import RankingSplitLayout from "./RankingSplitLayout";
 import RankingTable from "./RankingTable";
 import TeamRelayRankings from "./TeamRelayRankings";
+import WaPointsCompareLauncher from "./WaPointsCompareLauncher";
 
 interface TeamRankingsProps {
   teamId: string;
@@ -392,7 +393,12 @@ export default function TeamRankings({ teamId }: TeamRankingsProps) {
 
   return (
     <div className="bg-white rounded-lg shadow p-4 sm:p-6" data-testid="team-rankings">
-      <h2 className="mb-4 text-lg sm:text-xl font-semibold text-gray-900">{t("title")}</h2>
+      {/* 見出し行。「WAポイントで比較」はランキングの読み込み状態に関係なく
+          常に同じ位置に出す (読み込み中に導線が消えないようにするため)。 */}
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{t("title")}</h2>
+        <WaPointsCompareLauncher teamId={teamId} />
+      </div>
 
       {/* 個人種目が使えないことの通知。**リレーは使えることを文言で伝える**
           (`individualUnavailable.*` の訳文に含めてある)。カード全体に効く事実なので

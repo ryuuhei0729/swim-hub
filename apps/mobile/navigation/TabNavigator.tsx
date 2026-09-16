@@ -103,12 +103,32 @@ export const TabNavigator: React.FC = () => {
           tabBarIcon: ({ color }) => <Feather name="users" size={20} color={color} />,
         }}
         listeners={{
-          tabPress: () => {
-            // preventDefault は呼ばない。タブ切替は通常どおり通し、戻るボタンの
-            // 着地点にチーム一覧を残したまま、所属チームが1件のみの場合だけ詳細へ直行させる。
-            if (soleTeamId !== null) {
-              navigation.navigate("TeamDetail", { teamId: soleTeamId });
-            }
+          tabPress: (e) => {
+            // 所属チームが1件のみのときだけ、チーム一覧を飛ばして詳細へ直行させる。
+            // それ以外は何もせず通常のタブ切替に任せる (preventDefault もしない)
+            if (soleTeamId === null) return;
+
+            // 押した時点の値で確定させる。以降の2つの dispatch は同一 tick で走るので
+            // 実行時の再評価はしない
+            const targetTeamId = soleTeamId;
+
+            // タブ切替を「ライブラリに任せず自分で行う」ことが要点。
+            // BottomTabBar.onPress は tabPress を emit した直後、!focused のときだけ
+            // dispatch(CommonActions.navigate(route)) を実行するが、その新 state は
+            // emit 前のスナップショットから組み立てられるため、リスナー内で積んだ
+            // TeamDetail が上書きで捨てられる (POP ではないので beforeRemove も出ない)。
+            // ＝ホーム等の別タブから押したときだけ遷移が消える、という不具合になる。
+            //
+            // そこで preventDefault でライブラリ側の dispatch を止め、タブ切替と push の
+            // 両方を我々の navigation から同一 tick で連続 dispatch する。こちらは毎回
+            // 最新 state を読むため打ち消しが起きず、2つが同じコミットに畳まれるので
+            // 「チーム一覧が1フレームだけ見える」中間描画も発生しない。
+            //
+            // ⚠️ タブ切替(1行目)を省くと、タブバーのハイライトがホームのまま残り、
+            // 戻るボタンでもチーム一覧ではなくホームに着地してしまう。2行はセット。
+            e.preventDefault();
+            navigation.navigate("MainTabs", { screen: "Teams" });
+            navigation.navigate("TeamDetail", { teamId: targetTeamId, instant: true });
           },
         }}
       />

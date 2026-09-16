@@ -7,6 +7,7 @@ import {
   TrophyIcon,
   ChartBarIcon,
   ClipboardDocumentCheckIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 
@@ -26,6 +27,8 @@ const TEAM_TAB_DEFS = [
   { id: "practices", labelKey: "tabs.practices", icon: ClockIcon },
   { id: "competitions", labelKey: "tabs.competitions", icon: TrophyIcon },
   { id: "rankings", labelKey: "tabs.rankings", icon: ChartBarIcon },
+  // 設定は管理者限定ではない。招待コード・カレンダー記録色・脱退は全メンバーの操作
+  { id: "settings", labelKey: "tabs.settings", icon: Cog6ToothIcon },
 ] as const;
 
 export type TeamTabType = (typeof TEAM_TAB_DEFS)[number]["id"];

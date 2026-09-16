@@ -794,50 +794,48 @@ describe("TeamMemberList - D-1 クエリのフィールド網羅性 + セル詳�
 });
 
 // =============================================================================
-// WAポイント比較モーダルの起動とデータ取得 (N+1 検証, Phase B 本実装検証)
+// WAポイント比較ボタンのランキングタブ移設 (対テスト)
 // =============================================================================
-// Sprint Contract 検証観点:
-//   [V-N1-01] 「WAポイントで比較」ボタンを押してモーダルを開いたとき、比較用データ取得が
-//     メンバーごとの個別クエリ(N+1)ではなく `.in("user_id", [...])` の単一バッチクエリで
-//     行われる (呼び出し回数そのものを assert する)
+// 本スプリントで「WAポイントで比較」はメンバータブからランキングタブへ移設された。
+//
+// 元の [V-N1-01] は「メンバータブのボタンから開くとバッチ取得になる」を検証していたが、
+// 入口が無くなったため**同じ形では成立しない**。ただし削除はしない:
+//   - 「メンバータブに無い」= 本ケース (下) が担保
+//   - 「ランキングタブにある」= components/teams/rankings/__tests__/
+//     TeamRankings.waPointsCompare.test.tsx が担保
+//   - 「取得が .in("user_id",[全員]) + .eq("is_relaying",false) の1回」=
+//     wa-points-compare/__tests__/WaPointsCompareModal.test.tsx の
+//     [V-N1-01 移設] が引き取り済み (入口に依存しない層へ移した)
+// この3点が揃って初めて「移設できている」と言える。1つでも欠けると
+// 「どこにも無い」状態が全 green で通る。
 // =============================================================================
-describe("TeamMemberList - WAポイント比較モーダル起動とN+1検証", () => {
+describe("[V-N1-01 反転] メンバータブから WAポイント比較の導線が撤去されている", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("[V-N1-01] 比較ボタン押下でモーダルを開くと、比較用記録取得は .in() 単一呼び出しで全メンバー分をまとめて取得する", async () => {
+  it("[V-N1-01 反転] メンバータブに比較ボタンが無く、比較用クエリ (eq(is_relaying,false)) も発行されない", async () => {
     const m1 = buildMember({ id: "m-1", user_id: "u-1", name: "比較アルファ" });
     const m2 = buildMember({ id: "m-2", user_id: "u-2", name: "比較ベータ" });
-    const m3 = buildMember({ id: "m-3", user_id: "u-3", name: "比較ガンマ" });
-    const members = [m1, m2, m3];
 
-    const selectCalls: string[] = [];
-    const inCalls: unknown[][] = [];
     const eqCalls: { column: string; value: unknown }[] = [];
     mocks.supabaseFrom.mockImplementation((_table: string) => ({
-      select: vi.fn((sel: string) => {
-        selectCalls.push(sel);
-        return {
-          in: vi.fn((_col: string, ids: string[]) => {
-            inCalls.push(ids);
-            return {
-              // loadBestTimes (テーブル一覧) 用
-              order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-              // useMemberWaPointsRecords (比較モーダル) 用
-              eq: vi.fn((col: string, val: unknown) => {
-                eqCalls.push({ column: col, value: val });
-                return Promise.resolve({ data: [], error: null });
-              }),
-            };
+      select: vi.fn(() => ({
+        in: vi.fn(() => ({
+          // loadBestTimes (テーブル一覧) 用
+          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          // useMemberWaPointsRecords (比較モーダル) 用。撤去後は呼ばれないはず
+          eq: vi.fn((col: string, val: unknown) => {
+            eqCalls.push({ column: col, value: val });
+            return Promise.resolve({ data: [], error: null });
           }),
-        };
-      }),
+        })),
+      })),
     }));
 
     render(
       <TeamMemberList
-        members={members}
+        members={[m1, m2]}
         teamId="team-1"
         isLoading={false}
         isError={false}
@@ -846,24 +844,14 @@ describe("TeamMemberList - WAポイント比較モーダル起動とN+1検証", 
         isCurrentUserAdmin={false}
       />,
     );
+
+    // --- 正のコントロール ---
+    // メンバータブ自体は生きている (描画失敗を「撤去成功」と誤読しないため)
     await screen.findByText("比較アルファ");
 
-    // マウント時の loadBestTimes 呼び出し分 (1回目の .in())
-    const inCallsBeforeOpen = inCalls.length;
-
-    fireEvent.click(screen.getByText("WAポイントで比較"));
-
-    // 比較モーダルの記録取得 (eq("is_relaying", false)) が呼ばれるまで待つ
-    await waitFor(() => {
-      expect(eqCalls.length).toBeGreaterThan(0);
-    });
-
-    // 比較モーダル用の .in() 呼び出しは1回だけ増えている (メンバー3人分を1回でまとめて取得)
-    expect(inCalls.length).toBe(inCallsBeforeOpen + 1);
-    const compareInCall = inCalls[inCalls.length - 1];
-    expect(compareInCall).toEqual(["u-1", "u-2", "u-3"]);
-
-    // is_relaying=false のクエリ側フィルタも実際に発火している
-    expect(eqCalls).toEqual([{ column: "is_relaying", value: false }]);
+    // --- 本体 ---
+    expect(screen.queryByText("WAポイントで比較")).toBeNull();
+    // ボタンが無いので比較用の取得も走らない
+    expect(eqCalls).toEqual([]);
   });
 });

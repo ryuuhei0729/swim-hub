@@ -12,6 +12,20 @@ export interface TeamSettingsProps {
   teamName: string;
   teamDescription?: string;
   isAdmin?: boolean;
+  /**
+   * 他のカードの中に埋め込むモード。見出し「チーム設定」と外側のカード装飾
+   * (白背景・影・余白) を描画しない。チーム詳細の設定タブが「チーム情報」
+   * セクションの中身としてこのコンポーネントを再利用するために使う。
+   * 既定 false = 管理者ページ (teams-admin) の単独カード表示。
+   */
+  embedded?: boolean;
+  /** 最初から編集フォームを開く。既定 false = 表示モードで開き「編集」で切り替える */
+  initialEditing?: boolean;
+  /**
+   * 編集が終わった (保存成功 / キャンセル) ときに呼ぶ。
+   * 未指定なら内部の表示モードへ戻るだけ (管理者ページの現行挙動)。
+   */
+  onEditingEnd?: () => void;
 }
 
 export default function TeamSettings({
@@ -19,9 +33,12 @@ export default function TeamSettings({
   teamName,
   teamDescription,
   isAdmin = false,
+  embedded = false,
+  initialEditing = false,
+  onEditingEnd,
 }: TeamSettingsProps) {
   const t = useTranslations("teamsAdmin");
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(initialEditing);
   const [name, setName] = useState(teamName);
   const [description, setDescription] = useState(teamDescription || "");
   const [loading, setLoading] = useState(false);
@@ -51,6 +68,7 @@ export default function TeamSettings({
       });
 
       setIsEditing(false);
+      onEditingEnd?.();
     } catch (err) {
       console.error("チーム更新エラー:", err);
       setError(toUserFacingMessage(err, t("settings.updateFailed")));
@@ -64,14 +82,19 @@ export default function TeamSettings({
     setDescription(teamDescription || "");
     setError(null);
     setIsEditing(false);
+    onEditingEnd?.();
   };
+
+  const containerClassName = embedded ? "" : "bg-white rounded-lg shadow p-6";
 
   // メンバー向けの表示（チーム名・説明の編集以外）
   if (!isAdmin) {
     return (
       <>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("settings.title")}</h2>
+        <div className={containerClassName}>
+          {!embedded && (
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("settings.title")}</h2>
+          )}
 
           {/* エラー表示 */}
           {error && (
@@ -104,8 +127,10 @@ export default function TeamSettings({
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("settings.title")}</h2>
+      <div className={containerClassName}>
+        {!embedded && (
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">{t("settings.title")}</h2>
+        )}
 
         {/* エラー表示 */}
         {error && (

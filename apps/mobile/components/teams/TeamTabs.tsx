@@ -2,15 +2,12 @@ import React from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { TEAM_TAB_DEFS, type TeamTabType } from "./teamTabDefs";
 
-export type TeamTabType =
-  | "members"
-  | "groups"
-  | "practices"
-  | "competitions"
-  | "attendance"
-  | "rankings"
-  | "announcements";
+// タブの定義元は ./teamTabDefs.ts の 1 本。ここは描画だけを担う。
+// 既存の import 経路 (navigation/types.ts・TeamDetailScreen.tsx・
+// components/teams/index.ts) を維持するため型は再 export する
+export type { TeamTabType };
 
 export interface TeamTabsProps {
   activeTab: TeamTabType;
@@ -20,23 +17,12 @@ export interface TeamTabsProps {
   pendingCount?: number;
 }
 
-const BASE_TABS: { id: TeamTabType; nameKey: string; icon: keyof typeof Feather.glyphMap; adminOnly?: boolean }[] = [
-  { id: "members", nameKey: "teams.mobile.tabMembers", icon: "users" },
-  { id: "groups", nameKey: "teams.mobile.tabGroups", icon: "layers", adminOnly: true },
-  { id: "practices", nameKey: "teams.mobile.tabPractices", icon: "clock" },
-  { id: "competitions", nameKey: "teams.mobile.tabCompetitions", icon: "award" },
-  { id: "attendance", nameKey: "teams.mobile.tabAttendance", icon: "clipboard" },
-  // ランキングは一般メンバーも閲覧するため adminOnly を付けない
-  { id: "rankings", nameKey: "teams.mobile.tabRankings", icon: "bar-chart-2" },
-  { id: "announcements", nameKey: "teams.mobile.tabAnnouncements", icon: "bell", adminOnly: true },
-];
-
 /**
  * チームタブコンポーネント
- * メンバー、練習、大会、出欠、ランキング、お知らせのタブ切り替え
+ * メンバー、練習、大会、出欠、ランキング、お知らせ、設定のタブ切り替え
  * お知らせ・グループタブは管理者ビュー時のみ表示
  *
- * タブは横スクロールさせる。非管理者5タブ/管理者7タブを幅 360dp の端末に
+ * タブは横スクロールさせる。非管理者6タブ/管理者8タブを幅 360dp の端末に
  * 均等割り (flex:1) で詰め込むと1タブ約51dp になりラベルが読めなくなるため、
  * 各タブは内容に応じた幅にして溢れた分は横スクロールで見せる
  * (web の components/team/TeamTabs.tsx が `overflow-x-auto` + `whitespace-nowrap`
@@ -49,7 +35,7 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
   pendingCount = 0,
 }) => {
   const { t } = useTranslation();
-  const visibleTabs = BASE_TABS.filter((tab) => !tab.adminOnly || isAdmin);
+  const visibleTabs = TEAM_TAB_DEFS.filter((tab) => !tab.adminOnly || isAdmin);
 
   return (
     <View style={styles.container}>

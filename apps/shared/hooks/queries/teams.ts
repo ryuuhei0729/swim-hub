@@ -262,8 +262,15 @@ export function useDeleteTeamMutation(
     mutationFn: async (id: string) => {
       await coreApi.deleteTeam(id);
     },
-    onSuccess: () => {
+    onSuccess: (_: void, id: string) => {
       queryClient.invalidateQueries({ queryKey: teamKeys.lists() });
+      // 削除したチームの詳細・メンバー・お知らせ・ランキング等は staleTime 5分の間
+      // キャッシュに残る。invalidate ではなく **remove** する: 再フェッチしても
+      // 存在しない行を引くだけで、その間は消えたはずのチームが画面に出てしまう。
+      // teamKeys の team スコープはすべて teamKeys.detail(id) を前置詞に持つので
+      // (keys.ts の members/announcements/practices/competitions/rankings)、
+      // これ 1 本で配下がまとめて落ちる。
+      queryClient.removeQueries({ queryKey: teamKeys.detail(id) });
     },
   });
 }

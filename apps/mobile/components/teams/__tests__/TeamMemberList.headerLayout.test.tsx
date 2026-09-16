@@ -137,8 +137,6 @@ const renderList = () => {
   );
 };
 
-/** 「WAポイントで比較」Pressable (モックにより button として描画される) */
-const getWaButton = () => screen.getByText("WAポイントで比較").closest("button") as HTMLElement;
 /** 「引き継ぎを含む」Switch (モックにより role="switch" の button として描画される) */
 const getRelaySwitch = () => screen.getByRole("switch", { name: "引き継ぎを含む" });
 /** 統計ヘッダーのタイトル Text (span) */
@@ -151,22 +149,23 @@ describe("[V-HDR] TeamMemberList 統計ヘッダーの配置", () => {
     vi.clearAllMocks();
   });
 
-  it("[V-HDR-01] 「WAポイントで比較」ボタンはタイトルと同じ行にあり、タイトルより後ろに置かれる", () => {
+  // [V-HDR-01 反転] 本スプリントで「WAポイントで比較」はランキングタブへ移設された。
+  // **「ある」を pin していたテストを消さずに「無い」へ反転する。**
+  // 消してしまうと「どこにも無い」状態でも全 green になり、移設の失敗を検出できない。
+  // 「ランキングタブにある」側は
+  // components/teams/rankings/__tests__/TeamRankings.waPointsCompare.test.tsx が担保する。
+  it("[V-HDR-01 反転] 「WAポイントで比較」ボタンはメンバータブに存在しない (ランキングタブへ移設)", () => {
     renderList();
 
-    const title = getTitle();
-    const waButton = getWaButton();
+    // --- 正のコントロール (先に置く) ---
+    // 「描画そのものが失敗したので見つからない」を「撤去できている」と誤読しないため、
+    // 統計ヘッダーが生きていることを先に確認する。これが無いと否定形は無意味になる
+    expect(getTitle()).toBeTruthy();
+    expect(getCountText()).toBeTruthy();
+    expect(getRelaySwitch()).toBeTruthy();
 
-    // タイトル(span)の親 = タイトル行(statsHeaderTop)。
-    // ボタンは info アイコンとの行ラッパー (waPointsButtonWrapper) に包まれているので、
-    // 「ボタンの親 (=ラッパー)」がタイトル行の直下の兄弟であること。
-    const buttonWrapper = waButton.parentElement!;
-    expect(buttonWrapper).not.toBe(title.parentElement);
-    expect(buttonWrapper.parentElement).toBe(title.parentElement);
-
-    // 行内の並び順: タイトル → ボタン(ラッパー) (右端)
-    const rowChildren = Array.from(title.parentElement!.children);
-    expect(rowChildren.indexOf(buttonWrapper)).toBeGreaterThan(rowChildren.indexOf(title));
+    // --- 本体: ボタンが1つも無い ---
+    expect(screen.queryByText("WAポイントで比較")).toBeNull();
   });
 
   it("[V-HDR-02] 「引き継ぎを含む」スイッチは人数テキストと同じ行にあり、人数より後ろに置かれる", () => {
@@ -186,22 +185,24 @@ describe("[V-HDR] TeamMemberList 統計ヘッダーの配置", () => {
     expect(toggleWrapperIndex).toBeGreaterThan(rowChildren.indexOf(countText));
   });
 
-  it("[V-HDR-03] 交差ガード: ボタンは人数行に、スイッチはタイトル行に存在しない", () => {
+  it("[V-HDR-03 反転] 交差ガード: WA ボタンはどちらの行にも無く、スイッチは人数行に残っている", () => {
     renderList();
 
     const titleRow = getTitle().parentElement!;
     const countRow = getCountText().parentElement!;
-    const waButton = getWaButton();
     const relaySwitch = getRelaySwitch();
 
     // 2行が別コンテナであること (前提が崩れると以下の否定形が無意味になる)
     expect(titleRow).not.toBe(countRow);
 
-    expect(countRow.contains(waButton)).toBe(false);
-    expect(titleRow.contains(relaySwitch)).toBe(false);
+    // WA ボタンはタイトル行にも人数行にも無い
+    expect(titleRow.textContent).not.toContain("WAポイントで比較");
+    expect(countRow.textContent).not.toContain("WAポイントで比較");
 
-    // 画面全体でも各1個だけ (移動ではなく複製されていないことの確認)
-    expect(screen.getAllByText("WAポイントで比較")).toHaveLength(1);
+    // --- 対照: 撤去したのは WA ボタンだけで、引き継ぎスイッチは人数行のまま ---
+    // (「ヘッダーごと消えた」のを「ボタンだけ消えた」と誤読しないため)
+    expect(countRow.contains(relaySwitch)).toBe(true);
+    expect(titleRow.contains(relaySwitch)).toBe(false);
     expect(screen.getAllByRole("switch", { name: "引き継ぎを含む" })).toHaveLength(1);
   });
 });

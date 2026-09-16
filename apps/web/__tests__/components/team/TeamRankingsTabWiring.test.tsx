@@ -142,7 +142,9 @@ describe("[V-30a] web 一般タブ (TeamTabs)", () => {
     vi.clearAllMocks();
   });
 
-  it("タブがちょうど 5 つで、順序は 出欠 / メンバー / 練習 / 大会 / ランキング", () => {
+  // 本スプリントで全メンバー向けの「設定」タブが末尾に追加された (5→6)。
+  // **実装が正で期待値が古い赤**だったため期待値側を更新している。
+  it("タブがちょうど 6 つで、順序は 出欠 / メンバー / 練習 / 大会 / ランキング / 設定", () => {
     wrap(<TeamTabs activeTab="members" onTabChange={vi.fn()} />);
 
     const labels = screen.getAllByRole("button").map((button) => button.textContent?.trim());
@@ -152,6 +154,7 @@ describe("[V-30a] web 一般タブ (TeamTabs)", () => {
       messages.teams.tabs.practices,
       messages.teams.tabs.competitions,
       messages.teams.tabs.rankings,
+      messages.teams.tabs.settings,
     ]);
   });
 
@@ -378,16 +381,26 @@ describe("[V-33] タブ定義の単一定義元", () => {
     vi.clearAllMocks();
   });
 
-  it("一般タブ: 描画される5タブがすべて isTeamTabType を通り、rankings も含まれる", async () => {
+  it("一般タブ: 描画される6タブがすべて isTeamTabType を通り、rankings / settings も含まれる", async () => {
     const { isTeamTabType } = await import("@/components/team/TeamTabs");
 
     // 描画されるラベル → id の対応はテスト側に手書きする (実装から導出しない)
-    const expectedIds = ["attendance", "members", "practices", "competitions", "rankings"];
+    const expectedIds = [
+      "attendance",
+      "members",
+      "practices",
+      "competitions",
+      "rankings",
+      // 本スプリントで追加。以前はここが「通ってはいけない」側に入っていたが、
+      // 設定タブは全メンバー向けの正式なタブになったため有効側へ移した
+      // (`?tab=settings` での直接着地を許可する)
+      "settings",
+    ];
     for (const id of expectedIds) {
       expect(isTeamTabType(id), `${id} がホワイトリストに無い`).toBe(true);
     }
     // 管理者専用タブ・未知の値は通らない
-    for (const id of ["announcements", "groups", "bulk-register", "settings", "ranking", ""]) {
+    for (const id of ["announcements", "groups", "bulk-register", "setting", "ranking", ""]) {
       expect(isTeamTabType(id), `${id} がホワイトリストを通ってしまう`).toBe(false);
     }
 

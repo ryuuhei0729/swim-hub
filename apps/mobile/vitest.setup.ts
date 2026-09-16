@@ -107,6 +107,17 @@ vi.mock("expo-image", () => ({
   },
 }));
 
+// expo-clipboard のモック
+// build/ClipboardPasteButton.js が JSX を変換せずに配布されており、vite (rollup) の
+// SSR transform が `Parse failure: Expression expected` で落ちる
+// (expo-linear-gradient と同型の問題)。クリップボードへの書き込みは jsdom では
+// 検証できないので、成功する no-op に差し替える
+// (個別に検証したいテストはファイル内の vi.mock で上書きする)。
+vi.mock("expo-clipboard", () => ({
+  setStringAsync: vi.fn(async () => true),
+  getStringAsync: vi.fn(async () => ""),
+}));
+
 // expo-linear-gradient のモック
 // build/LinearGradient.js が JSX を変換せずに配布されており、vite (rollup) の SSR transform が
 // `Parse failure: Expression expected` で落ちる (react-native-purchases の Flow 構文と同型の問題)。

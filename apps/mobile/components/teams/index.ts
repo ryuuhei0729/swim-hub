@@ -5,6 +5,8 @@ export { PendingMembersSection } from "./PendingMembersSection";
 export { TeamBulkRegisterForm } from "./TeamBulkRegisterForm";
 export { TeamCreateModal } from "./TeamCreateModal";
 export { TeamSettingsModal } from "./TeamSettingsModal";
+export { TeamSettingsTab } from "./TeamSettingsTab";
+export type { TeamSettingsTabProps } from "./TeamSettingsTab";
 export { TeamGroupManagement } from "./group-management";
 export { TeamItem } from "./TeamItem";
 export { TeamJoinModal } from "./TeamJoinModal";

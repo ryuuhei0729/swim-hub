@@ -110,19 +110,35 @@ describe("TeamMemberManagement", () => {
     });
   });
 
-  describe("[V-14] グループ0件のチームでもボタンが表示される", () => {
-    it("categories=[] のとき「グループ表示:」ラベルは出ないが「WAポイントで比較」ボタンは表示される", () => {
+  // ---------------------------------------------------------------------------
+  // [V-14 / V-16 反転] 「WAポイントで比較」はランキングタブへ移設された
+  //
+  // 元は「メンバータブにボタンがある」を pin していた。**削除せず反転する** —
+  // 削除すると「ボタンがどこにも無い」状態でも全 green になり、移設の失敗を
+  // 検出できなくなる。
+  //   - 「ランキングタブにある」= __tests__/components/team/rankings/
+  //     WaPointsCompareLauncher.test.tsx が担保 (遅延ロード・members 同一参照・
+  //     gender undefined の保全まで含む)
+  //   - info アイコンもボタンと一緒に移設済み (PM 裁定)
+  // ---------------------------------------------------------------------------
+  describe("[V-14 反転] メンバータブから WAポイント比較の導線が撤去されている", () => {
+    const renderMemberTab = (categories: string[]) => {
       const member = buildMember();
-      useMembersMock.mockReturnValue({ members: [member], loading: false, error: null, loadMembers: vi.fn() });
+      useMembersMock.mockReturnValue({
+        members: [member],
+        loading: false,
+        error: null,
+        loadMembers: vi.fn(),
+      });
       useMemberGroupSortMock.mockReturnValue({
-        categories: [],
+        categories,
         activeCategory: null,
         toggleCategory: vi.fn(),
         groupMembers: vi.fn(() => null),
         getCategoryLabel: vi.fn((c: string) => c),
       });
 
-      renderWithLocale(
+      return renderWithLocale(
         <TeamMemberManagement
           teamId="team-1"
           currentUserId="user-1"
@@ -130,73 +146,48 @@ describe("TeamMemberManagement", () => {
           onMemberClick={vi.fn()}
         />,
       );
+    };
 
-      // MemberGroupSorter は categories=[] のとき何も描画しない実コードパスであることの確認
+    it("グループ0件でも「WAポイントで比較」ボタン・モーダルは存在しない", () => {
+      renderMemberTab([]);
+
+      // --- 正のコントロール ---
+      // 「描画が失敗して何も無い」を「撤去できている」と誤読しないため、
+      // メンバータブ自体が生きている (メンバー名が出ている) ことを先に固定する
+      expect(screen.getByText("テスト太郎")).toBeInTheDocument();
+      // MemberGroupSorter は categories=[] のとき何も描画しない実コードパス
       expect(screen.queryByText("グループ表示:")).not.toBeInTheDocument();
-      // それでも「WAポイントで比較」ボタンはちょうど1つ表示される
-      expect(screen.getByTestId("team-wa-points-button")).toBeInTheDocument();
-      expect(screen.getAllByRole("button", { name: "WAポイントで比較" })).toHaveLength(1);
+
+      // --- 本体 ---
+      expect(screen.queryByTestId("team-wa-points-button")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "WAポイントで比較" })).not.toBeInTheDocument();
+      expect(screen.queryByTestId("team-wa-points-modal")).not.toBeInTheDocument();
     });
 
-    it("categories が2件以上のときも「WAポイントで比較」ボタンは表示される (グループ表示ラベルと併存)", () => {
-      const member = buildMember();
-      useMembersMock.mockReturnValue({ members: [member], loading: false, error: null, loadMembers: vi.fn() });
-      useMemberGroupSortMock.mockReturnValue({
-        categories: ["__gender__", "custom-group"],
-        activeCategory: null,
-        toggleCategory: vi.fn(),
-        getCategoryLabel: vi.fn((c: string) => c),
-        groupMembers: vi.fn(() => null),
-      });
+    it("グループが2件以上あってもボタンは復活しない (グループ表示ラベルだけが出る)", () => {
+      renderMemberTab(["__gender__", "custom-group"]);
 
-      renderWithLocale(
-        <TeamMemberManagement
-          teamId="team-1"
-          currentUserId="user-1"
-          isCurrentUserAdmin={false}
-          onMemberClick={vi.fn()}
-        />,
-      );
-
+      // --- 正のコントロール: グループ表示まわりは従来どおり動く ---
       expect(screen.getByText("グループ表示:")).toBeInTheDocument();
-      // カテゴリボタンが厳密に2件表示される
       expect(screen.getByText("__gender__")).toBeInTheDocument();
       expect(screen.getByText("custom-group")).toBeInTheDocument();
-      // 「WAポイントで比較」ボタンも表示される
-      expect(screen.getByTestId("team-wa-points-button")).toBeInTheDocument();
-      expect(screen.getAllByRole("button", { name: "WAポイントで比較" })).toHaveLength(1);
+
+      // --- 本体 ---
+      expect(screen.queryByTestId("team-wa-points-button")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "WAポイントで比較" })).not.toBeInTheDocument();
     });
-  });
 
-  describe("[V-16 補助] ボタンクリックでモーダルが開く配線", () => {
-    it("初期状態ではモーダルは閉じており、ボタンをクリックすると開く", async () => {
-      const member = buildMember();
-      useMembersMock.mockReturnValue({ members: [member], loading: false, error: null, loadMembers: vi.fn() });
-      useMemberGroupSortMock.mockReturnValue({
-        categories: [],
-        activeCategory: null,
-        toggleCategory: vi.fn(),
-        getCategoryLabel: vi.fn((c: string) => c),
-        groupMembers: vi.fn(() => null),
-      });
+    it("[V-16 反転] メンバータブには比較モーダルを開く導線が一切ない", () => {
+      renderMemberTab([]);
 
-      const { default: userEvent } = await import("@testing-library/user-event");
-      const user = userEvent.setup();
+      expect(screen.getByText("テスト太郎")).toBeInTheDocument(); // 正のコントロール
 
-      renderWithLocale(
-        <TeamMemberManagement
-          teamId="team-1"
-          currentUserId="user-1"
-          isCurrentUserAdmin={false}
-          onMemberClick={vi.fn()}
-        />,
-      );
-
+      // 開く前・開いた後という状態遷移そのものが存在しない
       expect(screen.queryByTestId("team-wa-points-modal")).not.toBeInTheDocument();
-
-      await user.click(screen.getByTestId("team-wa-points-button"));
-
-      expect(screen.getByTestId("team-wa-points-modal")).toBeInTheDocument();
+      expect(screen.queryByTestId("team-wa-points-button")).not.toBeInTheDocument();
+      // info アイコンもボタンと一緒に移設済み
+      expect(screen.queryByTestId("team-wa-points-info")).not.toBeInTheDocument();
     });
   });
+
 });

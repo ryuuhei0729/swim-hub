@@ -1994,7 +1994,7 @@
     },
     "calendarColors": {
       "title": "カレンダー記録色",
-      "description": "ダッシュボードの練習・大会記録の表示色をカスタマイズします。チーム別に色を分けることもできます。",
+      "description": "ダッシュボードの練習・大会記録の表示色をカスタマイズします。チーム別の色は、各チームの設定タブで変更できます。",
       "personalSectionTitle": "個人の記録色",
       "teamSectionTitle": "チーム別の記録色",
       "practiceLabel": "練習",
@@ -2630,8 +2630,8 @@
       "tabAnnouncements": "お知らせ",
       "adminToggle": {
         "label": "表示切替",
-        "admin": "管理者ビュー",
-        "user": "利用者ビュー"
+        "admin": "管理者",
+        "user": "利用者"
       },
       "pendingApproveConfirmTitle": "承認確認",
       "pendingApproveConfirmMessage": "{name}を承認しますか？",
@@ -2725,7 +2725,8 @@
         "conflictingDeleteTitle": "削除待ちの種目と重複しています",
         "conflictingDeleteMessage": "先に削除だけを保存してから、種目の変更を保存してください。\n{list}",
         "saveFailedDuplicate": "保存に失敗しました。種目の重複が原因の可能性があります。もう一度お試しください。"
-      }
+      },
+      "tabSettings": "設定"
     },
     "page": {
       "title": "マイチーム",
@@ -2770,7 +2771,8 @@
       "members": "メンバー",
       "practices": "練習",
       "competitions": "大会",
-      "rankings": "ランキング"
+      "rankings": "ランキング",
+      "settings": "設定"
     },
     "createModal": {
       "errorTitle": "エラーが発生しました",
@@ -3449,6 +3451,40 @@
       "reactivateFailed": "メンバーシップの再アクティブ化に失敗しました",
       "approveFailed": "メンバーシップの承認に失敗しました",
       "rejectFailed": "メンバーシップの拒否に失敗しました"
+    },
+    "settingsTab": {
+      "teamInfoTitle": "チーム情報",
+      "editTeamInfo": "チーム情報を編集",
+      "inviteCodeTitle": "招待コード",
+      "inviteCodeDescription": "このコードを共有すると、チームに参加してもらえます。",
+      "copyInviteCode": "招待コードをコピー",
+      "copied": "コピーしました",
+      "calendarColorTitle": "このチームの記録色",
+      "calendarColorDescription": "ダッシュボードのカレンダーで、このチームの練習・大会を表示する色を設定します。",
+      "teamActionsTitle": "チーム操作",
+      "createTeam": "チームを作成",
+      "joinTeam": "招待コードで参加",
+      "dangerZoneTitle": "危険な操作",
+      "leaveTeam": "チームを脱退",
+      "leaveConfirmTitle": "チームを脱退しますか？",
+      "leaveConfirmMessage": "「{name}」を脱退します。チームの練習・大会・出欠は表示されなくなります。",
+      "leaveFailed": "チームの脱退に失敗しました",
+      "leaving": "脱退中...",
+      "lastAdminCannotLeave": "あなたが最後の管理者のため脱退できません。先に他のメンバーを管理者に変更してください。",
+      "deleteTeam": "チームを削除",
+      "deleteConfirmTitle": "チームを削除しますか？",
+      "deleteConfirmMessage": "「{name}」を削除します。大会・エントリー・お知らせ・メンバー情報は元に戻せません。練習記録とレース記録は個人の記録として残りますが、大会名は表示されなくなります。",
+      "deleteFailed": "チームの削除に失敗しました",
+      "deleting": "削除中...",
+      "deleteErrors": {
+        "notAuthorized": "チームの管理者のみ削除できます。",
+        "teamNotFound": "チームが見つかりませんでした。すでに削除された可能性があります。",
+        "authRequired": "ログインの有効期限が切れました。再度ログインしてください。"
+      },
+      "leaveDescription": "チームを脱退すると、このチームの練習・大会・出欠が表示されなくなります。再び参加するには招待コードが必要です。あなたの練習記録とレース記録は残ります。",
+      "leaveButton": "チームを脱退する",
+      "deleteDescription": "チームを削除すると、大会・エントリー・お知らせ・メンバー情報が完全に削除され、復元できません。メンバーの練習記録とレース記録は個人の記録として残ります。",
+      "deleteButton": "チームを削除する"
     }
   },
   "teamsAdmin": {

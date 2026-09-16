@@ -115,6 +115,12 @@ export type MainStackParamList = {
     teamId: string;
     /** 起動時に開くタブ（未指定時は "members"）。DayDetailModal の出欠確認からの遷移で使用 */
     initialTab?: TeamTabType;
+    /**
+     * 画面遷移アニメーションを切るか（未指定時は通常のスライド）。
+     * チームタブの tabPress のように「タブ切替で前面に出たチーム一覧の上を
+     * 詳細がスライドで覆う」見え方になる経路でのみ true を渡す。
+     */
+    instant?: boolean;
   };
   /** チーム練習・大会一括登録（管理者専用） */
   TeamBulkRegister: {

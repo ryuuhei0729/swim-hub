@@ -33,8 +33,6 @@ import { formatTime } from "@/utils/formatters";
 import { selectBestTime, formatBestTimeSuffix } from "@/utils/bestTimeSelection";
 import { TeamMemberGroupFilter } from "./TeamMemberGroupFilter";
 import { MemberDetailModal } from "./member-detail";
-import { WaPointsCompareModal } from "@/components/teams/wa-points-compare";
-import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/BestTimeDetailSheet";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
@@ -115,9 +113,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     setIsMemberDetailOpen(false);
     setSelectedMember(null);
   }, []);
-
-  // WAポイント比較モーダル
-  const [isWaPointsModalOpen, setIsWaPointsModalOpen] = useState(false);
 
   // ベストタイムセルの詳細シート（日付・大会名・備考）
   // profile/BestTimesTable.tsx・teams/member-detail/BestTimesTable.tsx と同じ構造:
@@ -493,26 +488,10 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       <View style={styles.fixedTop}>
         {/* メンバー統計ヘッダー */}
         <View style={styles.statsHeader}>
+          {/* 「WAポイントで比較」ボタンと info アイコンはランキングタブ
+              (components/teams/rankings/TeamRankings.tsx) へ移設済み */}
           <View style={styles.statsHeaderTop}>
             <Text style={styles.statsTitle}>{t("teams.mobile.memberListTitle")}</Text>
-            {/* 「WAポイントで比較」ボタン + 右隣の info アイコン。
-                web 版 (WaPointsCompareButton) はアイコンをボタン右上に absolute 配置するが、
-                mobile ではマイページの WA トグル (MyPageScreen の waToggleWrapper) と同じ
-                「行ラッパーで横並び」にする。info はデフォルト文言
-                (teams.waPointsCompare.infoAriaLabel / infoTooltip) をそのまま使う */}
-            <View style={styles.waPointsButtonWrapper}>
-              <Pressable
-                onPress={() => setIsWaPointsModalOpen(true)}
-                style={styles.waPointsButton}
-                accessibilityRole="button"
-              >
-                <Feather name="award" size={13} color="#2563EB" />
-                <Text style={styles.waPointsButtonText}>
-                  {t("teams.waPointsCompare.buttonLabel")}
-                </Text>
-              </Pressable>
-              <WaPointsInfoTooltip testID="team-member-list-wa-info" />
-            </View>
           </View>
           <View style={styles.statsRow}>
             <Text style={styles.statsText}>
@@ -790,14 +769,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
         onMembershipChange={onMemberChange}
       />
 
-      {/* WAポイント比較モーダル */}
-      <WaPointsCompareModal
-        visible={isWaPointsModalOpen}
-        onClose={() => setIsWaPointsModalOpen(false)}
-        members={members}
-        supabase={supabase}
-      />
-
       {/* ベストタイムセルの詳細シート */}
       <BestTimeDetailSheet
         detail={selectedCellDetail}
@@ -863,33 +834,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-  waPointsButtonWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-    gap: 4,
-    // statsTitle の marginBottom:4 と揃える。ボタン側に付けると info アイコンとの
-    // 縦中央が 2px ずれるためラッパーに持たせる
-    marginBottom: 4,
-  },
-  waPointsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-    backgroundColor: "#EFF6FF",
-  },
-  waPointsButtonText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#2563EB",
-  },
-
   /* テーブルローディング */
   tableLoading: {
     backgroundColor: "#FFFFFF",

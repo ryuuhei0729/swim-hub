@@ -159,10 +159,14 @@ export const MainStack: React.FC = () => {
       <Stack.Screen
         name="TeamDetail"
         component={TeamDetailScreen}
-        options={{
+        options={({ route }) => ({
           ...baseHeaderOptions,
+          // 既定タイトル。実際のチーム名は TeamDetailScreen の setOptions が上書きする
           title: t("navigation.mobile.titles.teamDetail"),
-        }}
+          // タブ経由 (instant) のときだけスライドを切る。既にチーム一覧が前面に
+          // 出ている上を詳細が覆うため、アニメーションがあると遷移していないように見える
+          animation: route.params?.instant ? "none" : "default",
+        })}
       />
       <Stack.Screen
         name="TeamBulkRegister"

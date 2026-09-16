@@ -1994,7 +1994,7 @@
     },
     "calendarColors": {
       "title": "日历记录颜色",
-      "description": "自定义仪表盘中训练和比赛记录的显示颜色，也可以按团队分别设置颜色。",
+      "description": "自定义仪表盘中训练和比赛记录的显示颜色。团队颜色可在各团队的设置标签页中更改。",
       "personalSectionTitle": "个人颜色",
       "teamSectionTitle": "团队颜色",
       "practiceLabel": "训练",
@@ -2630,8 +2630,8 @@
       "tabAnnouncements": "公告",
       "adminToggle": {
         "label": "切换视图",
-        "admin": "管理员视图",
-        "user": "用户视图"
+        "admin": "管理员",
+        "user": "成员"
       },
       "pendingApproveConfirmTitle": "确认审批",
       "pendingApproveConfirmMessage": "是否审批通过 {name}？",
@@ -2725,7 +2725,8 @@
         "conflictingDeleteTitle": "与待删除的项目重复",
         "conflictingDeleteMessage": "请先单独保存删除操作，然后再保存项目变更。\n{list}",
         "saveFailedDuplicate": "保存失败。可能是由于项目重复导致的。请重试。"
-      }
+      },
+      "tabSettings": "设置"
     },
     "page": {
       "title": "我的团队",
@@ -2770,7 +2771,8 @@
       "members": "成员",
       "practices": "训练",
       "competitions": "比赛",
-      "rankings": "排行榜"
+      "rankings": "排行榜",
+      "settings": "设置"
     },
     "createModal": {
       "errorTitle": "发生错误",
@@ -3449,6 +3451,40 @@
       "reactivateFailed": "重新激活成员资格失败",
       "approveFailed": "审核成员资格失败",
       "rejectFailed": "拒绝成员资格失败"
+    },
+    "settingsTab": {
+      "teamInfoTitle": "团队信息",
+      "editTeamInfo": "编辑团队信息",
+      "inviteCodeTitle": "邀请码",
+      "inviteCodeDescription": "分享此邀请码，其他人即可加入团队。",
+      "copyInviteCode": "复制邀请码",
+      "copied": "已复制",
+      "calendarColorTitle": "该团队的记录颜色",
+      "calendarColorDescription": "设置该团队的训练和比赛在仪表板日历中显示的颜色。",
+      "teamActionsTitle": "团队操作",
+      "createTeam": "创建团队",
+      "joinTeam": "使用邀请码加入",
+      "dangerZoneTitle": "危险操作",
+      "leaveTeam": "退出团队",
+      "leaveConfirmTitle": "要退出该团队吗？",
+      "leaveConfirmMessage": "你将退出“{name}”。该团队的训练、比赛和考勤将不再显示。",
+      "leaveFailed": "退出团队失败",
+      "leaving": "正在退出...",
+      "lastAdminCannotLeave": "你是最后一位管理员，无法退出。请先将其他成员设为管理员。",
+      "deleteTeam": "删除团队",
+      "deleteConfirmTitle": "要删除该团队吗？",
+      "deleteConfirmMessage": "将删除“{name}”。比赛、报名、公告和成员信息无法恢复。训练记录和比赛记录会作为个人记录保留，但不再显示比赛名称。",
+      "deleteFailed": "删除团队失败",
+      "deleting": "正在删除...",
+      "deleteErrors": {
+        "notAuthorized": "只有团队管理员才能删除团队。",
+        "teamNotFound": "未找到团队，可能已被删除。",
+        "authRequired": "登录已过期，请重新登录。"
+      },
+      "leaveDescription": "退出后，该团队的训练、比赛和考勤将不再显示。若要重新加入，需要邀请码。你本人的训练记录和比赛记录会保留。",
+      "leaveButton": "退出该团队",
+      "deleteDescription": "删除团队将永久移除比赛、报名、公告和成员信息，且无法恢复。成员的训练记录和比赛记录会作为个人记录保留。",
+      "deleteButton": "删除该团队"
     }
   },
   "teamsAdmin": {
