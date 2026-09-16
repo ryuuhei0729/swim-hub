@@ -18,6 +18,7 @@ import {
   VideoCameraIcon,
 } from "@heroicons/react/24/outline";
 import { Competition, Style } from "@apps/shared/types";
+import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { FREE_PLAN_LIMITS } from "@apps/shared/constants/premium";
 import { useInvalidateTeamRankings } from "@apps/shared/hooks/queries/useInvalidateTeamRankings";
 import { format } from "date-fns";
@@ -67,6 +68,9 @@ interface TeamMember {
   id: string;
   user_id: string;
   role: string;
+  // optional: 呼び出し元の select 漏れ・古いキャッシュでは無い場合がある。
+  // undefined は「泳者」として扱う (apps/shared/utils/swimmerFilter.ts と同じ判定)。
+  is_swimmer?: boolean;
   users: {
     id: string;
     name: string;
@@ -190,6 +194,25 @@ export default function RecordClient({
     () => new Map(members.map((member) => [member.user_id, member.users.gender])),
     [members],
   );
+
+  // 候補提示 (メンバー選択欄・リレー泳者選択) の直前だけをフィルタする。members 自体は
+  // memberGenderByUserId (性別区分 prefill) と confirmMemberSelection 内の名前解決にも
+  // 共用されているため、フィルタ済みの生配列に置き換えてはならない (PM裁定 R4)。
+  const swimmerCandidates = useMemo(() => excludeNonSwimmers(members), [members]);
+
+  /**
+   * ネイティブ `<select>` は `value` がどの `<option>` とも一致しないと、
+   * ブラウザが暗黙に先頭 (空プレースホルダー) を選択してしまう。
+   * 既に非泳者が割り当て済みのリレーレグでは `currentUserId` が
+   * `swimmerCandidates` から漏れているため、そのままだと表示が壊れる
+   * (Critical: 受け入れ基準「非泳者に変更しても既存の記録は消えない」への違反)。
+   * 「候補を絞った配列」と「既存の選択値」を union してから options に渡すこと。
+   */
+  const withCurrentSelection = (candidates: TeamMember[], currentUserId: string): TeamMember[] => {
+    if (!currentUserId || candidates.some((m) => m.user_id === currentUserId)) return candidates;
+    const current = members.find((m) => m.user_id === currentUserId);
+    return current ? [...candidates, current] : candidates;
+  };
 
   /** style_id から翻訳済み種目ラベルを組み立てる。未知種目は name_jp をそのまま返す */
   const styleOptionLabel = (style: Style): string => {
@@ -1601,7 +1624,12 @@ export default function RecordClient({
 
                   {/* 上段: 泳者4列グリッド */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {entry.memberRecords.map((mr, mrIndex) => (
+                    {entry.memberRecords.map((mr, mrIndex) => {
+                      const legMemberOptions = withCurrentSelection(
+                        swimmerCandidates,
+                        mr.memberUserId,
+                      );
+                      return (
                       <div key={`relay-leg-${mrIndex}`}>
                         <p className="text-xs font-medium text-blue-700 mb-1">
                           {relayLegLabelOf(entry, mrIndex)}
@@ -1619,7 +1647,7 @@ export default function RecordClient({
                           className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">{tRecords("selectSwimmer")}</option>
-                          {members.map((m) => (
+                          {legMemberOptions.map((m) => (
                             <option key={m.user_id} value={m.user_id}>
                               {m.users.name}
                             </option>
@@ -1642,7 +1670,8 @@ export default function RecordClient({
                           );
                         })()}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* 中段: 合計タイム + リアクションタイム4列 */}
@@ -2107,7 +2136,7 @@ export default function RecordClient({
               <div className="flex gap-2 p-4 border-b bg-gray-50">
                 <button
                   type="button"
-                  onClick={() => setTempSelectedUserIds(members.map((m) => m.user_id))}
+                  onClick={() => setTempSelectedUserIds(swimmerCandidates.map((m) => m.user_id))}
                   className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
                 >
                   全員選択
@@ -2124,7 +2153,7 @@ export default function RecordClient({
               {/* メンバーリスト */}
               <div className="flex-1 overflow-y-auto p-4">
                 <div className="space-y-2">
-                  {members.map((member) => {
+                  {swimmerCandidates.map((member) => {
                     const isSelected = tempSelectedUserIds.includes(member.user_id);
 
                     return (

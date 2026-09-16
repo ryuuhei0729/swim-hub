@@ -14,6 +14,7 @@ export function useMemberDetail(
   onMembershipChange?: () => void,
 ) {
   const t = useTranslations("teams.memberDetail.hook");
+  const tNonSwimmer = useTranslations("teams.nonSwimmer");
   const [error, setError] = useState<string | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
   const membersApi = useMemo(() => new TeamMembersAPI(supabase), [supabase]);
@@ -37,6 +38,23 @@ export function useMemberDetail(
       }
     },
     [membersApi, teamId, onMembershipChange, t],
+  );
+
+  const handleSwimmerStatusChange = useCallback(
+    async (member: MemberDetail, isSwimmer: boolean) => {
+      try {
+        setError(null);
+
+        await membersApi.updateSwimmerStatus(teamId, member.user_id, isSwimmer);
+
+        onMembershipChange?.();
+      } catch (err) {
+        console.error("非泳者設定エラー:", err);
+        setError(toUserFacingMessage(err, tNonSwimmer("updateFailed")));
+        throw err;
+      }
+    },
+    [membersApi, teamId, onMembershipChange, tNonSwimmer],
   );
 
   const handleRemoveMember = useCallback(
@@ -76,6 +94,7 @@ export function useMemberDetail(
     error,
     isRemoving,
     handleRoleChange,
+    handleSwimmerStatusChange,
     handleRemoveMember,
     setError,
   };

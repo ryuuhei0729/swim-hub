@@ -2573,7 +2573,7 @@
       "bestTimeSection": "Best Time",
       "youBadge": "あなた",
       "birthdayLabel": "生年月日: {date}",
-      "adminControlsTitle": "管理者機能",
+      "adminControlsTitle": "メンバー設定",
       "bestTimesEmpty": "記録がありません",
       "bestTimesEmptySubText": "このメンバーはまだ記録を登録していません",
       "bestTimesIncludeRelaying": "引き継ぎ含む",
@@ -2801,6 +2801,18 @@
         "closeButton": "閉じる"
       }
     },
+    "nonSwimmer": {
+      "checkboxLabel": "泳者として登録しない",
+      "segmentSwimmer": "泳者",
+      "segmentNonSwimmer": "非泳者",
+      "infoAriaLabel": "非泳者設定について",
+      "infoText": "「非泳者」に設定すると、メンバータブのベストタイム一覧では最下部の「非泳者」に折りたたまれ、大会エントリー・練習の記録入力の対象者に表示されなくなります。出欠確認には引き続き表示されます。",
+      "sectionToggle": "非泳者 ({count})",
+      "updateFailed": "非泳者設定の更新に失敗しました",
+      "confirmTitle": "泳者設定の変更",
+      "confirmMessageToNonSwimmer": "{name}さんを非泳者にしますか？",
+      "confirmMessageToSwimmer": "{name}さんを泳者にしますか？"
+    },
     "practices": {
       "title": "チーム練習記録 ({count}件)",
       "addButton": "練習記録追加",
@@ -3012,11 +3024,13 @@
       "leaveButton": "脱退する",
       "removeButton": "除名する",
       "adminControls": {
-        "sectionTitle": "管理者機能",
+        "sectionTitle": "メンバー設定",
         "roleUser": "ユーザー",
         "roleAdmin": "管理者",
         "removing": "削除中...",
-        "removeFromTeam": "チームから削除"
+        "removeFromTeam": "チームから削除",
+        "roleInfoAriaLabel": "管理者権限について",
+        "roleInfoText": "管理者は、参加申請の承認、メンバーの権限・泳者区分の変更や削除、グループやお知らせの管理、練習・大会の予定作成や一括登録、他メンバーの出欠登録・出欠受付の締切設定、エントリーの一括登録、チーム設定の変更・削除など、チーム運営に関わる操作を行えます。"
       },
       "roleChange": {
         "title": "権限変更の確認",

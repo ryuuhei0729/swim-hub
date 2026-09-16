@@ -112,6 +112,29 @@ export class TeamMembersAPI {
   }
 
   /**
+   * 非泳者フラグを更新する（管理者のみ）
+   *
+   * updateRole() と同一パターン: requireTeamAdmin 先行 → update().eq().eq().select().single()。
+   */
+  async updateSwimmerStatus(
+    teamId: string,
+    userId: string,
+    isSwimmer: boolean,
+  ): Promise<TeamMembership> {
+    await requireTeamAdmin(this.supabase, teamId);
+
+    const { data, error } = await this.supabase
+      .from("team_memberships")
+      .update({ is_swimmer: isSwimmer })
+      .eq("team_id", teamId)
+      .eq("user_id", userId)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return data as TeamMembership;
+  }
+
+  /**
    * メンバーを退会させる（管理者による除名）
    *
    * 自己退会は leave() が別経路で担うため、remove() は管理者権限を要求する。

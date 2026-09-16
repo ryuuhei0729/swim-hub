@@ -17,6 +17,7 @@ interface TeamMember {
   id: string;
   user_id: string;
   role: string;
+  is_swimmer: boolean;
   users: {
     id: string;
     name: string;
@@ -137,6 +138,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
         id,
         user_id,
         role,
+        is_swimmer,
         users!team_memberships_user_id_fkey (
           id,
           name,

@@ -21,6 +21,7 @@ import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidin
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys, recordKeys, invalidateTeamRankings } from "@apps/shared/hooks/queries/keys";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { RecordAPI } from "@apps/shared/api/records";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
@@ -128,6 +129,10 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
     if (!user || !members) return false;
     return members.some((m) => m.user_id === user.id && m.role === "admin");
   }, [user, members]);
+
+  // メンバー選択候補（非泳者を除外）。isCurrentUserAdmin 判定・氏名解決には
+  // 生の members を使い続け、候補提示の直前だけこの配列を使う (PM 裁定 R4)。
+  const memberSelectCandidates = useMemo(() => excludeNonSwimmers(members), [members]);
 
   /**
    * `user_id` → `users.gender`。リレーのチーム記録 (`relay_records.gender_category`) の
@@ -2202,7 +2207,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
       {/* メンバー選択モーダル（個人種目） */}
       <MemberSelectModal
         visible={!!memberModalEntryId}
-        members={members}
+        members={memberSelectCandidates}
         selectedUserIds={
           memberModalEntry?.memberRecords.map((mr) => mr.memberUserId) ?? []
         }
@@ -2283,7 +2288,7 @@ export const TeamRecordBulkFormScreen: React.FC = () => {
           </Pressable>
         </View>
         <ScrollView>
-          {members.map((m) => (
+          {memberSelectCandidates.map((m) => (
             <Pressable
               key={`leg-opt-${m.user_id}`}
               style={styles.pickerOption}

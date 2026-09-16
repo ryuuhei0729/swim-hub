@@ -2573,7 +2573,7 @@
       "bestTimeSection": "Best Time",
       "youBadge": "나",
       "birthdayLabel": "생년월일: {date}",
-      "adminControlsTitle": "관리자 기능",
+      "adminControlsTitle": "멤버 설정",
       "bestTimesEmpty": "기록이 없습니다",
       "bestTimesEmptySubText": "이 멤버는 아직 기록을 등록하지 않았습니다",
       "bestTimesIncludeRelaying": "이어받기 포함",
@@ -2801,6 +2801,18 @@
         "closeButton": "닫기"
       }
     },
+    "nonSwimmer": {
+      "checkboxLabel": "선수로 등록하지 않음",
+      "segmentSwimmer": "선수",
+      "segmentNonSwimmer": "비선수",
+      "infoAriaLabel": "비선수 설정 안내",
+      "infoText": "'비선수'로 설정하면 멤버 탭의 베스트 기록 목록에서 하단의 '비선수'로 접히고, 대회 출전 및 연습 기록 입력 대상자에 표시되지 않습니다. 출결 확인에는 계속 표시됩니다.",
+      "sectionToggle": "비선수 ({count})",
+      "updateFailed": "비선수 설정 업데이트에 실패했습니다",
+      "confirmTitle": "선수 설정 변경 확인",
+      "confirmMessageToNonSwimmer": "{name}님을 비선수로 설정하시겠습니까?",
+      "confirmMessageToSwimmer": "{name}님을 선수로 설정하시겠습니까?"
+    },
     "practices": {
       "title": "팀 연습 기록 ({count}건)",
       "addButton": "연습 기록 추가",
@@ -3012,11 +3024,13 @@
       "leaveButton": "탈퇴",
       "removeButton": "제명",
       "adminControls": {
-        "sectionTitle": "관리자 기능",
+        "sectionTitle": "멤버 설정",
         "roleUser": "사용자",
         "roleAdmin": "관리자",
         "removing": "삭제 중...",
-        "removeFromTeam": "팀에서 삭제"
+        "removeFromTeam": "팀에서 삭제",
+        "roleInfoAriaLabel": "관리자 권한 안내",
+        "roleInfoText": "관리자는 가입 신청 승인, 멤버의 권한·선수 구분 변경 및 삭제, 그룹·공지사항 관리, 연습·대회 일정 생성 및 일괄 등록, 다른 멤버의 출결 등록 및 출결 접수 마감 설정, 엔트리 일괄 등록, 팀 설정 변경·삭제 등 팀 운영과 관련된 작업을 할 수 있습니다."
       },
       "roleChange": {
         "title": "권한 변경 확인",

@@ -9,6 +9,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
   type UseMutationResult,
 } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -316,6 +317,43 @@ export function useLeaveTeamMutation(
 }
 
 /**
+ * メンバー一覧キャッシュの1行だけを差し替える楽観的更新。
+ *
+ * mobile のチーム詳細メンバータブは members クエリの結果をそのまま描画しているため、
+ * これが無いと「UPDATE の往復 → invalidate → メンバー全件の再取得」が終わるまで
+ * 画面が変わらない (実機で数秒かかるという報告あり)。書き換えは呼び出し側の
+ * onError で必ず元に戻すこと。
+ */
+type MembersCacheSnapshot = { previous: TeamMembershipWithUser[] | undefined };
+
+function patchMemberInCache(
+  queryClient: QueryClient,
+  teamId: string,
+  userId: string,
+  patch: Partial<Pick<TeamMembershipWithUser, "role" | "is_swimmer">>,
+): MembersCacheSnapshot {
+  const queryKey = teamKeys.members(teamId);
+  const previous = queryClient.getQueryData<TeamMembershipWithUser[]>(queryKey);
+  if (previous) {
+    queryClient.setQueryData<TeamMembershipWithUser[]>(
+      queryKey,
+      previous.map((m) => (m.user_id === userId ? { ...m, ...patch } : m)),
+    );
+  }
+  return { previous };
+}
+
+function rollbackMembersCache(
+  queryClient: QueryClient,
+  teamId: string,
+  context: MembersCacheSnapshot | undefined,
+): void {
+  if (context?.previous) {
+    queryClient.setQueryData(teamKeys.members(teamId), context.previous);
+  }
+}
+
+/**
  * メンバーロール更新ミューテーション
  */
 export function useUpdateMemberRoleMutation(
@@ -324,7 +362,8 @@ export function useUpdateMemberRoleMutation(
 ): UseMutationResult<
   TeamMembership,
   Error,
-  { teamId: string; userId: string; role: "admin" | "user" }
+  { teamId: string; userId: string; role: "admin" | "user" },
+  MembersCacheSnapshot
 > {
   const queryClient = useQueryClient();
   const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
@@ -341,9 +380,94 @@ export function useUpdateMemberRoleMutation(
     }) => {
       return await membersApi.updateRole(teamId, userId, role);
     },
+    // 画面はサーバー往復を待たずに新しいロールで描画する。
+    // 進行中の members 再取得があると、古いレスポンスが後からキャッシュを
+    // 上書きして一瞬元のロールに戻るため先にキャンセルする
+    onMutate: async ({
+      teamId,
+      userId,
+      role,
+    }: {
+      teamId: string;
+      userId: string;
+      role: "admin" | "user";
+    }) => {
+      await queryClient.cancelQueries({ queryKey: teamKeys.members(teamId) });
+      return patchMemberInCache(queryClient, teamId, userId, { role });
+    },
+    onError: (
+      _error: Error,
+      variables: { teamId: string; userId: string; role: "admin" | "user" },
+      context: MembersCacheSnapshot | undefined,
+    ) => {
+      rollbackMembersCache(queryClient, variables.teamId, context);
+    },
     onSuccess: (_, variables: { teamId: string; userId: string; role: "admin" | "user" }) => {
       queryClient.invalidateQueries({ queryKey: teamKeys.members(variables.teamId) });
-      queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
+      // exact: true が必須。teamKeys.members / announcements / practices / competitions /
+      // rankings はすべて teamKeys.detail(teamId) を前置詞に持つ (keys.ts) ため、
+      // exact 無しだとロール変更のたびにチーム配下の全クエリを再取得してしまう
+      queryClient.invalidateQueries({
+        queryKey: teamKeys.detail(variables.teamId),
+        exact: true,
+      });
+    },
+  });
+}
+
+/**
+ * メンバー非泳者フラグ更新ミューテーション
+ */
+export function useUpdateSwimmerStatusMutation(
+  supabase: SupabaseClient,
+  api?: TeamMembersAPI,
+): UseMutationResult<
+  TeamMembership,
+  Error,
+  { teamId: string; userId: string; isSwimmer: boolean },
+  MembersCacheSnapshot
+> {
+  const queryClient = useQueryClient();
+  const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
+
+  return useMutation({
+    mutationFn: async ({
+      teamId,
+      userId,
+      isSwimmer,
+    }: {
+      teamId: string;
+      userId: string;
+      isSwimmer: boolean;
+    }) => {
+      return await membersApi.updateSwimmerStatus(teamId, userId, isSwimmer);
+    },
+    // ロール変更と同じ楽観的更新 (useUpdateMemberRoleMutation のコメント参照)
+    onMutate: async ({
+      teamId,
+      userId,
+      isSwimmer,
+    }: {
+      teamId: string;
+      userId: string;
+      isSwimmer: boolean;
+    }) => {
+      await queryClient.cancelQueries({ queryKey: teamKeys.members(teamId) });
+      return patchMemberInCache(queryClient, teamId, userId, { is_swimmer: isSwimmer });
+    },
+    onError: (
+      _error: Error,
+      variables: { teamId: string; userId: string; isSwimmer: boolean },
+      context: MembersCacheSnapshot | undefined,
+    ) => {
+      rollbackMembersCache(queryClient, variables.teamId, context);
+    },
+    onSuccess: (_, variables: { teamId: string; userId: string; isSwimmer: boolean }) => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.members(variables.teamId) });
+      queryClient.invalidateQueries({
+        queryKey: teamKeys.detail(variables.teamId),
+        exact: true,
+      });
     },
   });
 }

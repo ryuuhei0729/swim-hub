@@ -81,6 +81,10 @@ export default function TeamAdminClient({
   const { user, supabase } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
+  // メンバー詳細モーダルでの権限・泳者区分の変更を、開いたまま裏側の一覧
+  // (TeamMemberManagement) にもバックグラウンドで反映するためのシグナル。
+  // undefined のままなら一覧側は再取得しない
+  const [membersRefreshSignal, setMembersRefreshSignal] = useState<number | undefined>(undefined);
 
   const {
     team,
@@ -223,6 +227,7 @@ export default function TeamAdminClient({
               router.refresh();
             }}
             onMemberClick={handleMemberClick}
+            membersRefreshSignal={membersRefreshSignal}
           />
         );
       case "groups":
@@ -322,8 +327,12 @@ export default function TeamAdminClient({
         currentUserId={user?.id || ""}
         isCurrentUserAdmin={true}
         onMembershipChange={() => {
-          // メンバー情報を再読み込み
+          // team / pendingCount 等サーバー由来のデータを更新
           router.refresh();
+          // メンバー一覧 (TeamMemberManagement) をバックグラウンドで最新化する。
+          // モーダル自体の表示は displayMember (MemberDetailModal 内) が
+          // 即時反映するので、この再取得の完了を待つ必要はない
+          setMembersRefreshSignal((prev) => (prev ?? 0) + 1);
         }}
       />
     </div>

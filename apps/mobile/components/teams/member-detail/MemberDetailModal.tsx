@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import {
   useUpdateMemberRoleMutation,
   useRemoveMemberMutation,
+  useUpdateSwimmerStatusMutation,
 } from "@apps/shared/hooks/queries/teams";
 import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 import { resolveAgeCategory } from "@apps/shared/utils/domesticRecords";
@@ -58,6 +59,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
   const insets = useSafeInsets();
   const updateRoleMutation = useUpdateMemberRoleMutation(supabase);
   const removeMemberMutation = useRemoveMemberMutation(supabase);
+  const updateSwimmerStatusMutation = useUpdateSwimmerStatusMutation(supabase);
   const [isRemoving, setIsRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -162,6 +164,55 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
     }
   }, [member, removeMemberMutation, onMembershipChange, onClose, t]);
 
+  // 非泳者フラグ変更
+  // handleRoleChangeClick と同じ扱い: Platform.OS==="web" は window.confirm、
+  // それ以外は Alert.alert で確認してから実行する (ユーザー要望: 誤タップでの
+  // 即時更新を防ぐ)。キャンセル時は何もしない — セグメント (泳者/非泳者) の表示値は
+  // member.is_swimmer から直接導出しているため (AdminControls.tsx)、見た目だけが
+  // 変わったまま実値と食い違う状態は起こらない。
+  //
+  // メッセージには対象メンバー名を補間する (handleRoleChangeClick の memberName と同じ
+  // 組み立て方)。補間値を渡し忘れると shared messages 側の "{name}さんを..." がそのまま
+  // 画面に出る (past incident: Issue #49 フォローアップで発覚し修正済み)。
+  const handleSwimmerStatusChange = useCallback(
+    (isSwimmer: boolean) => {
+      if (!member || member.is_swimmer === isSwimmer) return;
+
+      const memberName = member.users?.name || t("teams.mobile.fallbackMemberName");
+      const message = isSwimmer
+        ? t("teams.nonSwimmer.confirmMessageToSwimmer", { name: memberName })
+        : t("teams.nonSwimmer.confirmMessageToNonSwimmer", { name: memberName });
+
+      const execute = async () => {
+        try {
+          setError(null);
+          await updateSwimmerStatusMutation.mutateAsync({
+            teamId: member.team_id,
+            userId: member.user_id,
+            isSwimmer,
+          });
+          onMembershipChange?.();
+        } catch (err) {
+          console.error("非泳者設定変更エラー:", err);
+          const errorMsg = toUserFacingMessage(err, t("teams.nonSwimmer.updateFailed"));
+          setError(errorMsg);
+        }
+      };
+
+      if (Platform.OS === "web") {
+        if (window.confirm(message)) {
+          execute();
+        }
+      } else {
+        Alert.alert(t("teams.nonSwimmer.confirmTitle"), message, [
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("teams.mobile.roleChangeButton"), onPress: execute },
+        ]);
+      }
+    },
+    [member, updateSwimmerStatusMutation, onMembershipChange, t],
+  );
+
   if (!member) return null;
 
   const displayError = error || (bestTimesError ? bestTimesError.message : null);
@@ -214,6 +265,7 @@ export const MemberDetailModal: React.FC<MemberDetailModalProps> = ({
                   isRemoving={isRemoving}
                   onRoleChangeClick={handleRoleChangeClick}
                   onRemoveMember={handleRemoveMember}
+                  onSwimmerStatusChange={handleSwimmerStatusChange}
                 />
               </View>
               <View style={styles.divider} />

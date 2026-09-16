@@ -144,8 +144,13 @@ const EXPECTED_BODY = jaMessages.teams.waPointsCompare.infoTooltip;
 const MYPAGE_BODY = jaMessages.mypage.bestTimesTable.pointsInfo;
 const MEMBER_DETAIL_BODY = jaMessages.teams.memberDetail.bestTimesTable.pointsInfo;
 
-/** 統計ヘッダーのタイトル Text (span) */
-const getTitle = () => screen.getByText(jaMessages.teams.mobile.memberListTitle);
+/**
+ * 正のコントロール用の「確実に描画されている要素」。
+ * 統計ヘッダーカード (タイトル「メンバー」+ 人数行) は撤去され、人数はテーブル左上セルへ
+ * 移った。テーブルはベストタイム取得の解決待ちで初期コミットに出ないため、
+ * 同期的に必ず存在する「引き継ぎを含む」スイッチを対照に使う。
+ */
+const getTitle = () => screen.getByRole("switch", { name: jaMessages.teams.memberStats.includeRelay });
 
 
 // CenterModal の `<Modal animationType="none">` は DOM モックで `animationtype="none"`

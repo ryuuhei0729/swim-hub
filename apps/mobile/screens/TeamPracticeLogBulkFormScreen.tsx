@@ -26,6 +26,7 @@ import {
 } from "@apps/shared/hooks/queries/practices";
 import { teamKeys, practiceKeys } from "@apps/shared/hooks/queries/keys";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { formatTime, SWIM_STYLES } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -158,6 +159,10 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
     return members.some((m) => m.user_id === user.id && m.role === "admin");
   }, [user, members]);
 
+  // メンバー選択候補（非泳者を除外）。isCurrentUserAdmin 判定・氏名解決には
+  // 生の members を使い続け、候補提示・デフォルト全選択の直前だけこの配列を使う (PM 裁定 R4)。
+  const memberSelectCandidates = useMemo(() => excludeNonSwimmers(members), [members]);
+
   const [practice, setPractice] = useState<PracticeInfo | null>(null);
   const [menus, setMenus] = useState<PracticeMenu[]>([]);
   const [presentUserIds, setPresentUserIds] = useState<string[]>([]);
@@ -215,7 +220,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
           circleSec: 30,
           note: "",
           tags: [],
-          targetUserIds: present.length > 0 ? present : members.map((m) => m.user_id),
+          targetUserIds: present.length > 0 ? present : memberSelectCandidates.map((m) => m.user_id),
           times: {},
           videoAssets: {},
         },
@@ -348,7 +353,9 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
         note: "",
         tags: [],
         targetUserIds:
-          presentUserIds.length > 0 ? presentUserIds : members.map((m) => m.user_id),
+          presentUserIds.length > 0
+            ? presentUserIds
+            : memberSelectCandidates.map((m) => m.user_id),
         times: {},
         videoAssets: {},
       },
@@ -1029,7 +1036,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
       {/* メンバー選択モーダル（共通基盤を再利用） */}
       <MemberSelectModal
         visible={!!memberModalMenuId}
-        members={members}
+        members={memberSelectCandidates}
         selectedUserIds={memberModalMenu?.targetUserIds ?? []}
         onConfirm={(ids) => memberModalMenuId && confirmMemberSelection(memberModalMenuId, ids)}
         onCancel={() => setMemberModalMenuId(null)}

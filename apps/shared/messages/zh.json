@@ -2573,7 +2573,7 @@
       "bestTimeSection": "Best Time",
       "youBadge": "你",
       "birthdayLabel": "出生日期：{date}",
-      "adminControlsTitle": "管理员功能",
+      "adminControlsTitle": "成员设置",
       "bestTimesEmpty": "暂无记录",
       "bestTimesEmptySubText": "该成员尚未登记任何记录",
       "bestTimesIncludeRelaying": "含接力交接",
@@ -2801,6 +2801,18 @@
         "closeButton": "关闭"
       }
     },
+    "nonSwimmer": {
+      "checkboxLabel": "不作为选手登记",
+      "segmentSwimmer": "选手",
+      "segmentNonSwimmer": "非选手",
+      "infoAriaLabel": "关于非选手设置",
+      "infoText": "设为“非选手”后，该成员将在成员标签页的最佳成绩列表中折叠到底部的“非选手”分组，且不会出现在比赛报名和练习记录输入的候选名单中。出勤确认中仍会显示。",
+      "sectionToggle": "非选手（{count}）",
+      "updateFailed": "非选手设置更新失败",
+      "confirmTitle": "选手设置变更确认",
+      "confirmMessageToNonSwimmer": "确定将{name}设为非选手吗？",
+      "confirmMessageToSwimmer": "确定将{name}设为选手吗？"
+    },
     "practices": {
       "title": "团队训练记录（{count}项）",
       "addButton": "添加训练记录",
@@ -3012,11 +3024,13 @@
       "leaveButton": "退出",
       "removeButton": "移除",
       "adminControls": {
-        "sectionTitle": "管理员功能",
+        "sectionTitle": "成员设置",
         "roleUser": "用户",
         "roleAdmin": "管理员",
         "removing": "正在删除...",
-        "removeFromTeam": "从团队中移除"
+        "removeFromTeam": "从团队中移除",
+        "roleInfoAriaLabel": "关于管理员权限",
+        "roleInfoText": "管理员可以批准加入申请、变更成员的权限或选手身份并移除成员、管理分组和公告、创建并批量登记训练/比赛安排、代为登记其他成员的出勤并设置出勤接收的开放/截止、批量登记报名，以及变更或删除团队设置等与团队运营相关的操作。"
       },
       "roleChange": {
         "title": "权限变更确认",

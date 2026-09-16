@@ -17,6 +17,7 @@ interface ActiveTeamMember {
   id: string;
   user_id: string;
   role: string;
+  is_swimmer: boolean;
   users: {
     id: string;
     name: string;
@@ -104,6 +105,7 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
         id,
         user_id,
         role,
+        is_swimmer,
         users!team_memberships_user_id_fkey (
           id,
           name
@@ -206,7 +208,12 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
         entry_status: competition.entry_status,
         teamName: competition.team?.name || t("pageTitle"),
       }}
-      activeMembers={members.map((m) => ({ user_id: m.user_id, role: m.role, name: m.users.name }))}
+      activeMembers={members.map((m) => ({
+        user_id: m.user_id,
+        role: m.role,
+        name: m.users.name,
+        is_swimmer: m.is_swimmer,
+      }))}
       existingEntries={existingEntries}
       styles={styles}
       bestTimesByUser={bestTimesByUser}

@@ -2573,7 +2573,7 @@
       "bestTimeSection": "Best Time",
       "youBadge": "Sie",
       "birthdayLabel": "Geburtsdatum: {date}",
-      "adminControlsTitle": "Administratorfunktionen",
+      "adminControlsTitle": "Mitgliedereinstellungen",
       "bestTimesEmpty": "Noch keine Einträge",
       "bestTimesEmptySubText": "Dieses Mitglied hat noch keine Einträge registriert",
       "bestTimesIncludeRelaying": "Inkl. Wechsel",
@@ -2801,6 +2801,18 @@
         "closeButton": "Schließen"
       }
     },
+    "nonSwimmer": {
+      "checkboxLabel": "Nicht als Schwimmer registrieren",
+      "segmentSwimmer": "Schwimmer",
+      "segmentNonSwimmer": "Nicht-Schwimmer",
+      "infoAriaLabel": "Über die Nicht-Schwimmer-Einstellung",
+      "infoText": "Wenn auf \"Nicht-Schwimmer\" gesetzt, wird dieses Mitglied in der Bestzeitenliste im Mitglieder-Tab unten unter \"Nicht-Schwimmer\" eingeklappt und erscheint nicht mehr als Kandidat für Wettkampfmeldungen oder die Trainingsprotokoll-Eingabe. Bei der Anwesenheitserfassung wird es weiterhin angezeigt.",
+      "sectionToggle": "Nicht-Schwimmer ({count})",
+      "updateFailed": "Aktualisierung der Nicht-Schwimmer-Einstellung fehlgeschlagen",
+      "confirmTitle": "Schwimmer-Einstellung ändern",
+      "confirmMessageToNonSwimmer": "{name} als Nicht-Schwimmer markieren?",
+      "confirmMessageToSwimmer": "{name} als Schwimmer markieren?"
+    },
     "practices": {
       "title": "Teamtrainings ({count})",
       "addButton": "Training hinzufügen",
@@ -3012,11 +3024,13 @@
       "leaveButton": "Team verlassen",
       "removeButton": "Mitglied entfernen",
       "adminControls": {
-        "sectionTitle": "Administratorfunktionen",
+        "sectionTitle": "Mitgliedereinstellungen",
         "roleUser": "Benutzer",
         "roleAdmin": "Administrator",
         "removing": "Wird entfernt...",
-        "removeFromTeam": "Aus Team entfernen"
+        "removeFromTeam": "Aus Team entfernen",
+        "roleInfoAriaLabel": "Über Administratorrechte",
+        "roleInfoText": "Administratoren können Beitrittsanfragen genehmigen, die Rolle oder den Schwimmerstatus von Mitgliedern ändern oder Mitglieder entfernen, Gruppen und Ankündigungen verwalten, Trainings-/Wettkampftermine erstellen und in großer Zahl registrieren, die Anwesenheit anderer Mitglieder eintragen und die Anwesenheitserfassung öffnen/schließen, Meldungen in großer Zahl registrieren sowie Team-Einstellungen ändern oder das Team löschen."
       },
       "roleChange": {
         "title": "Rollenänderung bestätigen",

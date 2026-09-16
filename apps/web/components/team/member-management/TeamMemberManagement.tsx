@@ -25,6 +25,13 @@ export interface TeamMemberManagementProps {
   isCurrentUserAdmin: boolean;
   onMembershipChange?: () => void;
   onMemberClick: (member: TeamMember) => void;
+  /**
+   * メンバー詳細モーダル (このコンポーネントの外、ページ側で開く) での権限・泳者区分の
+   * 変更をこの一覧にも反映するためのトリガー。値が変わるたびに一覧を
+   * バックグラウンドで再取得する (silent: ローディングスケルトンは出さない)。
+   * 初期値の `undefined` では再取得しない (マウント時の二重取得を避ける)。
+   */
+  membersRefreshSignal?: number;
 }
 
 /**
@@ -39,6 +46,7 @@ export default function TeamMemberManagement({
   isCurrentUserAdmin,
   onMembershipChange,
   onMemberClick,
+  membersRefreshSignal,
 }: TeamMemberManagementProps) {
   const { supabase } = useAuth();
   const t = useTranslations("teams");
@@ -90,6 +98,13 @@ export default function TeamMemberManagement({
       loadPendingMembers();
     }
   }, [teamId, isCurrentUserAdmin, loadMembers, loadPendingMembers]);
+
+  // メンバー詳細モーダル (ページ側) での変更をバックグラウンドで反映する。
+  // undefined のままなら (シグナルが一度も来ていない) 何もしない
+  useEffect(() => {
+    if (membersRefreshSignal === undefined) return;
+    loadMembers({ silent: true });
+  }, [membersRefreshSignal, loadMembers]);
 
   // メンバーが読み込まれたらベストタイムを取得
   useEffect(() => {

@@ -28,6 +28,7 @@ import { StyleAPI } from "@apps/shared/api/styles";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import {
   diffEntryRows,
@@ -108,6 +109,10 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
     if (!user || !members) return false;
     return members.some((m) => m.user_id === user.id && m.role === "admin");
   }, [user, members]);
+
+  // メンバー選択候補（非泳者を除外）。isCurrentUserAdmin 判定・既存行の名前解決には
+  // 生の members を使い続け、候補提示の直前だけこの配列を使う (PM 裁定 R4)。
+  const memberSelectCandidates = useMemo(() => excludeNonSwimmers(members), [members]);
 
   const [swimStyles, setSwimStyles] = useState<Style[]>([]);
   const [competition, setCompetition] = useState<CompetitionInfo | null>(null);
@@ -950,7 +955,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
       {/* メンバー選択モーダル */}
       <MemberSelectModal
         visible={isMemberModalOpen}
-        members={members}
+        members={memberSelectCandidates}
         selectedUserIds={memberOrder}
         title={t("teams.mobile.entryBulk.memberSelectTitle")}
         onConfirm={confirmMemberSelection}
