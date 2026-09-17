@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Avatar from "@/components/ui/Avatar";
-import { StarIcon, CalendarIcon, ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import { StarIcon, CalendarIcon, ChevronRightIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest, formatDate } from "@/utils/formatters";
 import type { BestTime } from "../../shared/hooks/useMemberBestTimes";
 import type { TeamMember } from "../hooks/useMembers";
@@ -98,9 +98,10 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
   const t = useTranslations("teams");
   const tPractice = useTranslations("practice");
   const tNonSwimmer = useTranslations("teams.nonSwimmer");
-  const [isNonSwimmerOpen, setIsNonSwimmerOpen] = useState(false);
+  const [isNonSwimmerExpanded, setIsNonSwimmerExpanded] = useState(false);
 
-  // 非泳者は本体テーブルから除外し、下部の折りたたみセクションにのみ表示する
+  // 非泳者は表の本体行には出さず、最下行の「非泳者 (N)」トグル行をクリックすると
+  // 同じ tbody 内でその場に展開するアコーディオンとして表示する (下部に別テーブルは出さない)。
   // (単一定義元 apps/shared/utils/swimmerFilter.ts を使う。生の members 配列そのものは
   // ここでは書き換えない)。
   const swimmerMembers = useMemo(() => excludeNonSwimmers(members), [members]);
@@ -293,9 +294,45 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
     </React.Fragment>
   );
 
+  // 「非泳者 (N)」行。メンバー行ではないため renderMemberRow / swimmerGroupHeaders の
+  // インデックス計算には一切関与させない (別関数として完全に分離する)。
+  // 非泳者が0人のときは呼び出し側で描画しない。
+  // クリックでその場開閉するトグル (アコーディオン)。ポップアップは持たない。
+  const renderNonSwimmerToggleRow = () => (
+    <tr
+      onClick={() => setIsNonSwimmerExpanded((prev) => !prev)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setIsNonSwimmerExpanded((prev) => !prev);
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-expanded={isNonSwimmerExpanded}
+      aria-label={tNonSwimmer("sectionToggle", { count: nonSwimmerMembers.length })}
+      data-testid="team-member-nonswimmer-row"
+      className="cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors border-t border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+    >
+      <td colSpan={TOTAL_COLUMNS} className="px-3 py-2 text-xs font-medium text-gray-600">
+        <span className="inline-flex items-center gap-1">
+          {tNonSwimmer("sectionToggle", { count: nonSwimmerMembers.length })}
+          {isNonSwimmerExpanded ? (
+            <ChevronDownIcon className="h-3 w-3" />
+          ) : (
+            <ChevronRightIcon className="h-3 w-3" />
+          )}
+        </span>
+      </td>
+    </tr>
+  );
+
+  const hasSwimmers = swimmerMembers.length > 0;
+  const hasNonSwimmers = nonSwimmerMembers.length > 0;
+
   return (
     <div>
-      {swimmerMembers.length === 0 ? (
+      {!hasSwimmers && !hasNonSwimmers ? (
         <div className="text-center py-8" data-testid="team-member-empty-state">
           <Avatar avatarUrl={null} userName="?" size="lg" className="mx-auto mb-4 opacity-50" />
           <p className="text-gray-600">{t("membersTimeTable.empty")}</p>
@@ -308,43 +345,17 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
               {swimmerMembers.map((member, memberIdx) =>
                 renderMemberRow(member, memberIdx, swimmerGroupHeaders.get(memberIdx)),
               )}
+              {hasNonSwimmers && renderNonSwimmerToggleRow()}
+              {/* 展開中の非泳者行。groupHeaders のインデックス計算 (swimmerGroupHeaders /
+                  remapGroupHeadersForSwimmers) には一切関与させないため、泳者の行配列
+                  (swimmerMembers.map) の外・末尾に別枠で追加する。 */}
+              {hasNonSwimmers &&
+                isNonSwimmerExpanded &&
+                nonSwimmerMembers.map((member, memberIdx) =>
+                  renderMemberRow(member, memberIdx, undefined),
+                )}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* 非泳者トグル。既定は閉。非泳者が0人なら描画しない */}
-      {nonSwimmerMembers.length > 0 && (
-        <div className="mt-3">
-          <button
-            type="button"
-            data-testid="team-member-nonswimmer-toggle"
-            onClick={() => setIsNonSwimmerOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
-          >
-            {isNonSwimmerOpen ? (
-              <ChevronUpIcon className="h-4 w-4" />
-            ) : (
-              <ChevronDownIcon className="h-4 w-4" />
-            )}
-            {tNonSwimmer("sectionToggle", { count: nonSwimmerMembers.length })}
-          </button>
-
-          {isNonSwimmerOpen && (
-            <div
-              data-testid="team-member-nonswimmer-section"
-              className="mt-2 overflow-x-auto bg-white rounded-lg shadow border border-gray-300 opacity-75"
-            >
-              <table className="min-w-full table-fixed border-separate border-spacing-0">
-                {renderTableHead()}
-                <tbody className="bg-white">
-                  {nonSwimmerMembers.map((member, memberIdx) =>
-                    renderMemberRow(member, memberIdx, undefined),
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       )}
     </div>

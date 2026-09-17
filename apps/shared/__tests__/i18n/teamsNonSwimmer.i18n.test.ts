@@ -37,8 +37,9 @@ const LOCALE_MESSAGES: Record<Locale, unknown> = {
 };
 
 // R5 で PM が明記した最低限のキー
+// "checkboxLabel" は UI がチェックボックス→セグメントコントロールへ移行し
+// プロダクションコードからの参照がゼロになったため除外 (Reviewer 指摘, 2026-09-17)
 const REQUIRED_KEYS = [
-  "checkboxLabel",
   "infoAriaLabel",
   "infoText",
   "sectionToggle",

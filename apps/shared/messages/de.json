@@ -2802,7 +2802,6 @@
       }
     },
     "nonSwimmer": {
-      "checkboxLabel": "Nicht als Schwimmer registrieren",
       "segmentSwimmer": "Schwimmer",
       "segmentNonSwimmer": "Nicht-Schwimmer",
       "infoAriaLabel": "Über die Nicht-Schwimmer-Einstellung",
@@ -3030,7 +3029,7 @@
         "removing": "Wird entfernt...",
         "removeFromTeam": "Aus Team entfernen",
         "roleInfoAriaLabel": "Über Administratorrechte",
-        "roleInfoText": "Administratoren können Beitrittsanfragen genehmigen, die Rolle oder den Schwimmerstatus von Mitgliedern ändern oder Mitglieder entfernen, Gruppen und Ankündigungen verwalten, Trainings-/Wettkampftermine erstellen und in großer Zahl registrieren, die Anwesenheit anderer Mitglieder eintragen und die Anwesenheitserfassung öffnen/schließen, Meldungen in großer Zahl registrieren sowie Team-Einstellungen ändern oder das Team löschen."
+        "roleInfoText": "Administratoren können:\n- Beitrittsanfragen genehmigen\n- Die Rolle von Mitgliedern ändern, den Schwimmerstatus ändern oder Mitglieder entfernen\n- Gruppen und Ankündigungen verwalten\n- Trainings-/Wettkampftermine erstellen und in großer Zahl registrieren\n- Die Anwesenheit anderer Mitglieder eintragen und die Anwesenheitserfassung öffnen/schließen\n- Meldungen in großer Zahl registrieren\n- Team-Einstellungen ändern und das Team löschen"
       },
       "roleChange": {
         "title": "Rollenänderung bestätigen",

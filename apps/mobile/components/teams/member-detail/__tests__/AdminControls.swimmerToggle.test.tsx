@@ -1,36 +1,39 @@
 /**
- * Issue #49 QA テスト (Phase A スケルトン): mobile AdminControls の非泳者トグル
+ * mobile AdminControls の「泳者 / 非泳者」セグメントコントロール
  *
  * 対象: apps/mobile/components/teams/member-detail/AdminControls.tsx
- *   (Phase A 時点では未実装)
  *
- * Sprint Contract 検証観点 (web AdminControlsSwimmerCheckbox.test.tsx と同一仕様のパリティ):
- *   [V-12-01] member.is_swimmer !== false のとき、トグルは OFF
- *   [V-12-02] member.is_swimmer === false のとき、トグルは ON
- *   [V-12-03] トグル操作で onSwimmerStatusChange が反転後の値で呼ばれる
+ * ## 仕様変更の経緯
+ * Phase A 時点では `<Switch>` (accessibilityRole="switch") を想定していたが、
+ * ユーザー指示により web と同じ「泳者 / 非泳者」の2ボタンセグメントコントロールに
+ * 変更された (既存の「ユーザー / 管理者」権限セグメントと同一の実装パターン)。
+ * このファイルは `<Switch>` 前提の旧テスト (V-12-*) をセグメント仕様に更新したもの。
+ *
+ * ## data-testid / testID の実測結果
+ * `AdminControls.tsx` は権限セグメント・泳者セグメントのいずれの `<Pressable>` にも
+ * `testID` を付与していない (`WaPointsInfoTooltip` の呼び出しにも testID を渡していない)。
+ * 判別できる手がかりはボタン内の `<Text>` の文言のみのため、本テストは
+ * `screen.getByText(...)` でラベル文言から `<button>` (Pressable の DOM モック) を
+ * 辿って取得する。info アイコンは `accessibilityLabel` が DOM モック上
+ * `accessibilitylabel` 属性としてそのまま転記されるため、それで取得する
+ * (`__mocks__/react-native.ts` の testID→data-testid 変換は TextInput 限定で、
+ * Pressable/View/Text には広げてはいけない制約があるため)。
+ *
+ * ## 確認ダイアログについて
+ * このコンポーネント自体は確認ダイアログを持たない (web の AdminControls.tsx と同型:
+ * ボタン押下で即座に onSwimmerStatusChange を呼ぶだけ)。確認ダイアログの gating は
+ * 呼び出し元の `MemberDetailModal.tsx` (`handleSwimmerStatusChange`) が担うため、
+ * その検証は同ディレクトリの `MemberDetailModal.swimmerStatusConfirm.test.tsx` に置く。
+ *
+ * Sprint Contract 検証観点:
+ *   [V-12-01] is_swimmer=true のとき「泳者」がアクティブ表示、「非泳者」は非アクティブ
+ *   [V-12-02] is_swimmer=false のとき「非泳者」がアクティブ表示、「泳者」は非アクティブ
+ *   [V-12-03] 「非泳者」を押すと onSwimmerStatusChange(false) が呼ばれる (泳者→非泳者)
+ *   [V-12-03] 「泳者」を押すと onSwimmerStatusChange(true) が呼ばれる (非泳者→泳者)
  *   [V-12-04] info アイコンをタップすると teams.nonSwimmer.infoText の説明が表示される
- *             (web はホバー、app はタップ。CenterModal 系のダイアログを想定)
- *
- * 契約 (Developer 実装対象、Phase A で QA が確定させたインターフェース):
- *   interface AdminControlsProps {
- *     member: TeamMembershipWithUser; // is_swimmer: boolean を持つ (shared TeamMembership 拡張)
- *     isRemoving: boolean;
- *     onRoleChangeClick: (newRole: "admin" | "user") => void;
- *     onRemoveMember: () => void;
- *     onSwimmerStatusChange: (isSwimmer: boolean) => void; // 新規
- *   }
- *   非泳者トグルは既存の includeRelaying (TeamMemberList.tsx) と同じ RN <Switch> パターンで実装する
- *   (accessibilityRole="switch", accessibilityLabel = t("teams.nonSwimmer.checkboxLabel"))。
- *   `apps/mobile/__mocks__/react-native.ts` の Switch モックは testID を data-testid に
- *   変換しないため、本テストは screen.getByRole("switch", { name: ... }) で取得する
- *   (View/Pressable/Text の testID 変換は既存の "変換を広げてはいけない" 制約に従う)。
- *
- * i18n: apps/mobile/vitest.setup.ts のグローバル react-i18next モックが実際の ja.json を
- * 解決するため、next-intl のような手書きモックは不要 (テスト対象キー: teams.nonSwimmer.*)。
  */
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import ja from "@apps/shared/messages/ja.json";
@@ -56,84 +59,73 @@ const buildMember = (overrides: Partial<MemberWithSwimmer> = {}): MemberWithSwim
     ...overrides,
   }) as unknown as MemberWithSwimmer;
 
-const checkboxLabel = (ja as { teams: { nonSwimmer: { checkboxLabel: string } } }).teams.nonSwimmer
-  .checkboxLabel;
+const NON_SWIMMER = ja as {
+  teams: { nonSwimmer: { segmentSwimmer: string; segmentNonSwimmer: string; infoAriaLabel: string; infoText: string } };
+};
+const segmentSwimmerLabel = NON_SWIMMER.teams.nonSwimmer.segmentSwimmer;
+const segmentNonSwimmerLabel = NON_SWIMMER.teams.nonSwimmer.segmentNonSwimmer;
 
-describe("mobile AdminControls - 非泳者トグル", () => {
-  it("[V-12-01] is_swimmer=true のときトグルは OFF", () => {
-    render(
-      <AdminControls
-        member={buildMember({ is_swimmer: true }) as unknown as TeamMembershipWithUser}
-        isRemoving={false}
-        onRoleChangeClick={vi.fn()}
-        onRemoveMember={vi.fn()}
-        onSwimmerStatusChange={vi.fn()}
-      />,
-    );
+function renderControls(overrides: Partial<MemberWithSwimmer>, onSwimmerStatusChange = vi.fn()) {
+  render(
+    <AdminControls
+      member={buildMember(overrides) as unknown as TeamMembershipWithUser}
+      isRemoving={false}
+      onRoleChangeClick={vi.fn()}
+      onRemoveMember={vi.fn()}
+      onSwimmerStatusChange={onSwimmerStatusChange}
+    />,
+  );
+  return { onSwimmerStatusChange };
+}
 
-    const toggle = screen.getByRole("switch", { name: checkboxLabel });
-    expect(toggle.getAttribute("data-value")).toBe("false");
+function getSegmentButtons() {
+  const swimmerButton = screen.getByText(segmentSwimmerLabel).closest("button") as HTMLButtonElement;
+  const nonSwimmerButton = screen
+    .getByText(segmentNonSwimmerLabel)
+    .closest("button") as HTMLButtonElement;
+  return { swimmerButton, nonSwimmerButton };
+}
+
+describe("mobile AdminControls - 泳者/非泳者セグメント", () => {
+  it("[V-12-01] is_swimmer=true のとき「泳者」がアクティブ(白背景)、「非泳者」は非アクティブ", () => {
+    renderControls({ is_swimmer: true });
+
+    const { swimmerButton, nonSwimmerButton } = getSegmentButtons();
+    expect(swimmerButton.style.backgroundColor).toBe("rgb(255, 255, 255)");
+    expect(nonSwimmerButton.style.backgroundColor).toBe("");
   });
 
-  it("[V-12-02] is_swimmer=false のときトグルは ON", () => {
-    render(
-      <AdminControls
-        member={buildMember({ is_swimmer: false }) as unknown as TeamMembershipWithUser}
-        isRemoving={false}
-        onRoleChangeClick={vi.fn()}
-        onRemoveMember={vi.fn()}
-        onSwimmerStatusChange={vi.fn()}
-      />,
-    );
+  it("[V-12-02] is_swimmer=false のとき「非泳者」がアクティブ(黄背景)、「泳者」は非アクティブ", () => {
+    renderControls({ is_swimmer: false });
 
-    const toggle = screen.getByRole("switch", { name: checkboxLabel });
-    expect(toggle.getAttribute("data-value")).toBe("true");
+    const { swimmerButton, nonSwimmerButton } = getSegmentButtons();
+    expect(nonSwimmerButton.style.backgroundColor).toBe("rgb(254, 249, 195)");
+    expect(swimmerButton.style.backgroundColor).toBe("");
   });
 
-  it("[V-12-03] OFF から操作すると onSwimmerStatusChange(false) が呼ばれる (泳者→非泳者)", async () => {
-    const user = userEvent.setup();
-    const onSwimmerStatusChange = vi.fn();
+  it("[V-12-03] 「非泳者」を押すと onSwimmerStatusChange(false) が呼ばれる (泳者→非泳者)", () => {
+    const { onSwimmerStatusChange } = renderControls({ is_swimmer: true });
 
-    render(
-      <AdminControls
-        member={buildMember({ is_swimmer: true }) as unknown as TeamMembershipWithUser}
-        isRemoving={false}
-        onRoleChangeClick={vi.fn()}
-        onRemoveMember={vi.fn()}
-        onSwimmerStatusChange={onSwimmerStatusChange}
-      />,
-    );
-
-    await user.click(screen.getByRole("switch", { name: checkboxLabel }));
+    const { nonSwimmerButton } = getSegmentButtons();
+    fireEvent.click(nonSwimmerButton);
 
     expect(onSwimmerStatusChange).toHaveBeenCalledTimes(1);
     expect(onSwimmerStatusChange).toHaveBeenCalledWith(false);
   });
 
-  it("[V-12-03] ON から操作すると onSwimmerStatusChange(true) が呼ばれる (非泳者→泳者)", async () => {
-    const user = userEvent.setup();
-    const onSwimmerStatusChange = vi.fn();
+  it("[V-12-03] 「泳者」を押すと onSwimmerStatusChange(true) が呼ばれる (非泳者→泳者)", () => {
+    const { onSwimmerStatusChange } = renderControls({ is_swimmer: false });
 
-    render(
-      <AdminControls
-        member={buildMember({ is_swimmer: false }) as unknown as TeamMembershipWithUser}
-        isRemoving={false}
-        onRoleChangeClick={vi.fn()}
-        onRemoveMember={vi.fn()}
-        onSwimmerStatusChange={onSwimmerStatusChange}
-      />,
-    );
-
-    await user.click(screen.getByRole("switch", { name: checkboxLabel }));
+    const { swimmerButton } = getSegmentButtons();
+    fireEvent.click(swimmerButton);
 
     expect(onSwimmerStatusChange).toHaveBeenCalledTimes(1);
     expect(onSwimmerStatusChange).toHaveBeenCalledWith(true);
   });
 
-  it("[V-12-04] info アイコンをタップすると teams.nonSwimmer.infoText の説明が表示される (Phase B 追加)", () => {
-    const infoAriaLabel = (ja as { teams: { nonSwimmer: { infoAriaLabel: string } } }).teams.nonSwimmer
-      .infoAriaLabel;
-    const infoText = (ja as { teams: { nonSwimmer: { infoText: string } } }).teams.nonSwimmer.infoText;
+  it("[V-12-04] info アイコンをタップすると teams.nonSwimmer.infoText の説明が表示される", () => {
+    const infoAriaLabel = NON_SWIMMER.teams.nonSwimmer.infoAriaLabel;
+    const infoText = NON_SWIMMER.teams.nonSwimmer.infoText;
 
     const { container } = render(
       <AdminControls
@@ -148,11 +140,9 @@ describe("mobile AdminControls - 非泳者トグル", () => {
     // タップ前は説明文が (CenterModal 非表示のため) 存在しない
     expect(screen.queryByText(infoText)).toBeNull();
 
-    // Pressable の testID 変換はこのリポジトリの react-native モックでは行われない
-    // (TextInput 限定) ため、accessibilityLabel が素通しされた DOM 属性
-    // (小文字化される: accessibilitylabel) で対象を絞り込む
-    // (MyPageScreen.waPointsInfoIcon.test.tsx と同じ手法)。
-    const infoButton = container.querySelector(`[accessibilitylabel="${infoAriaLabel}"]`) as HTMLElement;
+    const infoButton = container.querySelector(
+      `[accessibilitylabel="${infoAriaLabel}"]`,
+    ) as HTMLElement;
     expect(infoButton).toBeTruthy();
     fireEvent.click(infoButton);
 

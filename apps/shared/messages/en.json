@@ -2799,7 +2799,6 @@
       }
     },
     "nonSwimmer": {
-      "checkboxLabel": "Do not register as a swimmer",
       "segmentSwimmer": "Swimmer",
       "segmentNonSwimmer": "Non-swimmer",
       "infoAriaLabel": "About non-swimmer setting",
@@ -3024,7 +3023,7 @@
         "removing": "Removing...",
         "removeFromTeam": "Remove from team",
         "roleInfoAriaLabel": "About admin permissions",
-        "roleInfoText": "Admins can approve join requests, change members' roles or swimmer status, remove members, manage groups and announcements, schedule practices/competitions and bulk-register them, register attendance for other members and open/close attendance collection, bulk-register entries, and change or delete team settings."
+        "roleInfoText": "Admins can:\n- Approve join requests\n- Change members' roles, change swimmer status, or remove members\n- Manage groups and announcements\n- Schedule practices/competitions and bulk-register them\n- Register attendance for other members and open/close attendance collection\n- Bulk-register competition entries\n- Change team settings and delete the team"
       },
       "roleChange": {
         "title": "Confirm Role Change",
