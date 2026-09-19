@@ -7,7 +7,7 @@ import Input from "@/components/ui/Input";
 import { useTranslations } from "next-intl";
 
 import { PracticeTag } from "@apps/shared/types";
-import { TAG_COLORS } from "@apps/shared/constants/tagColors";
+import { DEFAULT_TAG_COLOR, TAG_COLORS } from "@apps/shared/constants/tagColors";
 
 type Tag = PracticeTag;
 
@@ -24,7 +24,7 @@ const PRESET_COLORS: readonly string[] = TAG_COLORS;
 
 // カラー正規化関数
 const normalizeColor = (color: string): string => {
-  if (!color) return "#D1D5DB"; // デフォルト色
+  if (!color) return DEFAULT_TAG_COLOR; // デフォルト色
 
   // 先頭の#を追加（ない場合）
   let normalized = color.startsWith("#") ? color : `#${color}`;
@@ -40,7 +40,7 @@ const normalizeColor = (color: string): string => {
   // 有効なHEXカラーかチェック
   const hexPattern = /^#[0-9a-f]{6}$/;
   if (!hexPattern.test(normalized)) {
-    return "#D1D5DB"; // 無効な場合はデフォルト色
+    return DEFAULT_TAG_COLOR; // 無効な場合はデフォルト色
   }
 
   return normalized;
@@ -49,7 +49,7 @@ const normalizeColor = (color: string): string => {
 // カラー検証関数
 const isValidColor = (color: string): boolean => {
   const normalized = normalizeColor(color);
-  return normalized !== "#D1D5DB" || color === "#D1D5DB";
+  return normalized !== DEFAULT_TAG_COLOR || color === DEFAULT_TAG_COLOR;
 };
 
 export default function TagManagementModal({
@@ -156,7 +156,12 @@ export default function TagManagementModal({
             {/* 色選択 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">{t("colorLabel")}</label>
-              <div className="grid grid-cols-5 gap-2">
+              {/* 8色を1行に収める (以前は 10色 × grid-cols-5 で2行になっていた)。
+                  列数はカレンダー色の ColorSwatchRow (components/settings/CalendarColorSettings.tsx)
+                  と同一にする。同じパレットを出す UI が2系統で別のレスポンシブ挙動になるのを避ける。
+                  8列は 8×32px + 7×8px = 312px 必要で、375px 端末のモーダル内側幅では
+                  はみ出しうる (スウォッチは w-8 固定なのでセルが縮んでもボタンは縮まない)。 */}
+              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
                 {colorOptions.map((color) => {
                   const normalizedColor = normalizeColor(color);
                   const isSelected = normalizeColor(selectedColor) === normalizedColor;

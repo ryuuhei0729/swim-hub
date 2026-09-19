@@ -5,11 +5,38 @@ import {
   UsersIcon,
   ClockIcon,
   TrophyIcon,
+  ChartBarIcon,
   ClipboardDocumentCheckIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 
-export type TeamTabType = "members" | "practices" | "competitions" | "attendance";
+/**
+ * タブの定義。**タブを増やすときはここだけを直す。**
+ *
+ * 以前は「union 型」「表示用の配列」「URL クエリのホワイトリスト
+ * (`_client/TeamDetailClient.tsx`)」の3箇所に同じ ID 列があり、ホワイトリストの
+ * 更新を忘れると `?tab=xxx` が型エラーも lint エラーも出さずに黙って無視される
+ * 罠になっていた。型・表示順・ホワイトリスト判定をすべてこの配列から導出する。
+ *
+ * 配列の順序が画面上のタブの並び順になる。
+ */
+const TEAM_TAB_DEFS = [
+  { id: "attendance", labelKey: "tabs.attendance", icon: ClipboardDocumentCheckIcon },
+  { id: "members", labelKey: "tabs.members", icon: UsersIcon },
+  { id: "practices", labelKey: "tabs.practices", icon: ClockIcon },
+  { id: "competitions", labelKey: "tabs.competitions", icon: TrophyIcon },
+  { id: "rankings", labelKey: "tabs.rankings", icon: ChartBarIcon },
+  // 設定は管理者限定ではない。招待コード・カレンダー記録色・脱退は全メンバーの操作
+  { id: "settings", labelKey: "tabs.settings", icon: Cog6ToothIcon },
+] as const;
+
+export type TeamTabType = (typeof TEAM_TAB_DEFS)[number]["id"];
+
+/** URL の `?tab=` を `TeamTabType` に絞り込む。定義元は `TEAM_TAB_DEFS` の1箇所のみ。 */
+export function isTeamTabType(value: string): value is TeamTabType {
+  return TEAM_TAB_DEFS.some((tab) => tab.id === value);
+}
 
 export interface TeamTab {
   id: TeamTabType;
@@ -26,28 +53,11 @@ export interface TeamTabsProps {
 export default function TeamTabs({ activeTab, onTabChange }: TeamTabsProps) {
   const t = useTranslations("teams");
 
-  const tabs: TeamTab[] = [
-    {
-      id: "attendance",
-      name: t("tabs.attendance"),
-      icon: ClipboardDocumentCheckIcon,
-    },
-    {
-      id: "members",
-      name: t("tabs.members"),
-      icon: UsersIcon,
-    },
-    {
-      id: "practices",
-      name: t("tabs.practices"),
-      icon: ClockIcon,
-    },
-    {
-      id: "competitions",
-      name: t("tabs.competitions"),
-      icon: TrophyIcon,
-    },
-  ];
+  const tabs: TeamTab[] = TEAM_TAB_DEFS.map((tab) => ({
+    id: tab.id,
+    name: t(tab.labelKey),
+    icon: tab.icon,
+  }));
 
   // 一般ページは閲覧専用のため、全てのタブを表示（isAdminは使用しない）
   const visibleTabs = tabs;

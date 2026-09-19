@@ -80,7 +80,9 @@ function parseHexColor(hex: string): { r: number; g: number; b: number } | null 
 export function hexToRgba(hex: string, alpha: number): string {
   const rgb = parseHexColor(hex);
   if (!rgb) {
-    return `rgba(209, 213, 219, ${alpha})`; // #D1D5DB (グレー) フォールバック
+    // DEFAULT_TAG_COLOR (#D1D5DB グレー) を rgba に展開したもの。
+    // constants/tagColors.ts の DEFAULT_TAG_COLOR と対応する (選択肢ではないフォールバック色)。
+    return `rgba(209, 213, 219, ${alpha})`;
   }
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }

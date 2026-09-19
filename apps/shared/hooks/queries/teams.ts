@@ -9,14 +9,23 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
   type UseMutationResult,
 } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { TeamAnnouncementsAPI, TeamCoreAPI, TeamMembersAPI } from "../../api/teams";
 import { TeamPracticesAPI } from "../../api/teams/practices";
 import { TeamRecordsAPI } from "../../api/teams/records";
+import { TeamRankingsAPI } from "../../api/teams/rankings";
+import { TeamRelayRankingsAPI } from "../../api/teams/relayRankings";
 import { TeamAttendancesAPI } from "../../api/teams/attendances";
-import type { AttendanceStatusType } from "../../types";
+import type {
+  AttendanceStatusType,
+  TeamRankingFilters,
+  TeamRankingRecord,
+  TeamRelayRankingFilters,
+  TeamRelayRankingRecord,
+} from "../../types";
 import type {
   Team,
   TeamAnnouncement,
@@ -28,7 +37,7 @@ import type {
   TeamUpdate,
   TeamWithMembers,
 } from "../../types";
-import { teamKeys } from "./keys";
+import { invalidateTeamRankings, teamKeys } from "./keys";
 
 export interface UseTeamsQueryOptions {
   teamId?: string;
@@ -254,8 +263,15 @@ export function useDeleteTeamMutation(
     mutationFn: async (id: string) => {
       await coreApi.deleteTeam(id);
     },
-    onSuccess: () => {
+    onSuccess: (_: void, id: string) => {
       queryClient.invalidateQueries({ queryKey: teamKeys.lists() });
+      // 削除したチームの詳細・メンバー・お知らせ・ランキング等は staleTime 5分の間
+      // キャッシュに残る。invalidate ではなく **remove** する: 再フェッチしても
+      // 存在しない行を引くだけで、その間は消えたはずのチームが画面に出てしまう。
+      // teamKeys の team スコープはすべて teamKeys.detail(id) を前置詞に持つので
+      // (keys.ts の members/announcements/practices/competitions/rankings)、
+      // これ 1 本で配下がまとめて落ちる。
+      queryClient.removeQueries({ queryKey: teamKeys.detail(id) });
     },
   });
 }
@@ -301,6 +317,43 @@ export function useLeaveTeamMutation(
 }
 
 /**
+ * メンバー一覧キャッシュの1行だけを差し替える楽観的更新。
+ *
+ * mobile のチーム詳細メンバータブは members クエリの結果をそのまま描画しているため、
+ * これが無いと「UPDATE の往復 → invalidate → メンバー全件の再取得」が終わるまで
+ * 画面が変わらない (実機で数秒かかるという報告あり)。書き換えは呼び出し側の
+ * onError で必ず元に戻すこと。
+ */
+type MembersCacheSnapshot = { previous: TeamMembershipWithUser[] | undefined };
+
+function patchMemberInCache(
+  queryClient: QueryClient,
+  teamId: string,
+  userId: string,
+  patch: Partial<Pick<TeamMembershipWithUser, "role" | "is_swimmer">>,
+): MembersCacheSnapshot {
+  const queryKey = teamKeys.members(teamId);
+  const previous = queryClient.getQueryData<TeamMembershipWithUser[]>(queryKey);
+  if (previous) {
+    queryClient.setQueryData<TeamMembershipWithUser[]>(
+      queryKey,
+      previous.map((m) => (m.user_id === userId ? { ...m, ...patch } : m)),
+    );
+  }
+  return { previous };
+}
+
+function rollbackMembersCache(
+  queryClient: QueryClient,
+  teamId: string,
+  context: MembersCacheSnapshot | undefined,
+): void {
+  if (context?.previous) {
+    queryClient.setQueryData(teamKeys.members(teamId), context.previous);
+  }
+}
+
+/**
  * メンバーロール更新ミューテーション
  */
 export function useUpdateMemberRoleMutation(
@@ -309,7 +362,8 @@ export function useUpdateMemberRoleMutation(
 ): UseMutationResult<
   TeamMembership,
   Error,
-  { teamId: string; userId: string; role: "admin" | "user" }
+  { teamId: string; userId: string; role: "admin" | "user" },
+  MembersCacheSnapshot
 > {
   const queryClient = useQueryClient();
   const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
@@ -326,9 +380,94 @@ export function useUpdateMemberRoleMutation(
     }) => {
       return await membersApi.updateRole(teamId, userId, role);
     },
+    // 画面はサーバー往復を待たずに新しいロールで描画する。
+    // 進行中の members 再取得があると、古いレスポンスが後からキャッシュを
+    // 上書きして一瞬元のロールに戻るため先にキャンセルする
+    onMutate: async ({
+      teamId,
+      userId,
+      role,
+    }: {
+      teamId: string;
+      userId: string;
+      role: "admin" | "user";
+    }) => {
+      await queryClient.cancelQueries({ queryKey: teamKeys.members(teamId) });
+      return patchMemberInCache(queryClient, teamId, userId, { role });
+    },
+    onError: (
+      _error: Error,
+      variables: { teamId: string; userId: string; role: "admin" | "user" },
+      context: MembersCacheSnapshot | undefined,
+    ) => {
+      rollbackMembersCache(queryClient, variables.teamId, context);
+    },
     onSuccess: (_, variables: { teamId: string; userId: string; role: "admin" | "user" }) => {
       queryClient.invalidateQueries({ queryKey: teamKeys.members(variables.teamId) });
-      queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
+      // exact: true が必須。teamKeys.members / announcements / practices / competitions /
+      // rankings はすべて teamKeys.detail(teamId) を前置詞に持つ (keys.ts) ため、
+      // exact 無しだとロール変更のたびにチーム配下の全クエリを再取得してしまう
+      queryClient.invalidateQueries({
+        queryKey: teamKeys.detail(variables.teamId),
+        exact: true,
+      });
+    },
+  });
+}
+
+/**
+ * メンバー非泳者フラグ更新ミューテーション
+ */
+export function useUpdateSwimmerStatusMutation(
+  supabase: SupabaseClient,
+  api?: TeamMembersAPI,
+): UseMutationResult<
+  TeamMembership,
+  Error,
+  { teamId: string; userId: string; isSwimmer: boolean },
+  MembersCacheSnapshot
+> {
+  const queryClient = useQueryClient();
+  const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
+
+  return useMutation({
+    mutationFn: async ({
+      teamId,
+      userId,
+      isSwimmer,
+    }: {
+      teamId: string;
+      userId: string;
+      isSwimmer: boolean;
+    }) => {
+      return await membersApi.updateSwimmerStatus(teamId, userId, isSwimmer);
+    },
+    // ロール変更と同じ楽観的更新 (useUpdateMemberRoleMutation のコメント参照)
+    onMutate: async ({
+      teamId,
+      userId,
+      isSwimmer,
+    }: {
+      teamId: string;
+      userId: string;
+      isSwimmer: boolean;
+    }) => {
+      await queryClient.cancelQueries({ queryKey: teamKeys.members(teamId) });
+      return patchMemberInCache(queryClient, teamId, userId, { is_swimmer: isSwimmer });
+    },
+    onError: (
+      _error: Error,
+      variables: { teamId: string; userId: string; isSwimmer: boolean },
+      context: MembersCacheSnapshot | undefined,
+    ) => {
+      rollbackMembersCache(queryClient, variables.teamId, context);
+    },
+    onSuccess: (_, variables: { teamId: string; userId: string; isSwimmer: boolean }) => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.members(variables.teamId) });
+      queryClient.invalidateQueries({
+        queryKey: teamKeys.detail(variables.teamId),
+        exact: true,
+      });
     },
   });
 }
@@ -568,7 +707,139 @@ export function useDeleteTeamCompetitionMutation(
     },
     onSuccess: (_: void, variables: { id: string; teamId: string }) => {
       queryClient.invalidateQueries({ queryKey: teamKeys.competitions(variables.teamId) });
+      // 大会を消すと records_competition_id_fkey (ON DELETE SET NULL) で
+      // records.competition_id が NULL 化される。teamCompetitions スコープからは
+      // その大会の全行が消え、allCompetitions では大会名が「なし」に変わるため
+      // ランキングの内容が変わる。
+      // teamKeys.competitions(teamId) = ["teams","detail",id,"competitions"] は
+      // ["teams","detail",id,"rankings",filters] に前方一致しないので個別に落とす。
+      invalidateTeamRankings(queryClient);
     },
+  });
+}
+
+export interface UseTeamRankingsQueryOptions {
+  /** false の間はフェッチしない (タブが非表示のとき等)。既定は true */
+  enabled?: boolean;
+  /** テスト・DI 用。省略時は supabase から生成する */
+  api?: TeamRankingsAPI;
+}
+
+/**
+ * チーム記録ランキング取得クエリ。
+ *
+ * SECURITY DEFINER RPC を叩くので、認可 (承認済みかつアクティブなメンバーか) は
+ * サーバー側で判定される。絞り込み条件ごとに別のサーバー結果になるため、
+ * queryKey には filters をそのまま含める (クライアント側での再絞り込みはしない)。
+ */
+export function useTeamRankingsQuery(
+  supabase: SupabaseClient,
+  teamId: string,
+  filters: TeamRankingFilters | undefined,
+  options: UseTeamRankingsQueryOptions = {},
+) {
+  const { enabled = true, api } = options;
+  const rankingsApi = useMemo(() => api ?? new TeamRankingsAPI(supabase), [supabase, api]);
+
+  return useQuery<TeamRankingRecord[]>({
+    queryKey: teamKeys.rankings(teamId, filters),
+    queryFn: async () => {
+      // enabled で弾いているので通常到達しない。到達したら握り潰さず落とす
+      if (!filters) throw new Error("filters is required");
+      return await rankingsApi.getRankings(teamId, filters);
+    },
+    enabled: !!filters && enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * チームに大会記録が1件でも存在するかの判定クエリ。
+ *
+ * 空状態の文言を「絞り込み条件に一致する記録が0件」と「チームに大会記録が1件もない」に
+ * 分けるためだけに使う。ランキングが0件だったときにのみ enabled を立てること。
+ */
+export function useTeamHasAnyRecordQuery(
+  supabase: SupabaseClient,
+  teamId: string,
+  options: UseTeamRankingsQueryOptions = {},
+) {
+  const { enabled = true, api } = options;
+  const rankingsApi = useMemo(() => api ?? new TeamRankingsAPI(supabase), [supabase, api]);
+
+  return useQuery<boolean>({
+    queryKey: teamKeys.hasAnyRecord(teamId),
+    queryFn: async () => {
+      return await rankingsApi.hasAnyRecord(teamId);
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export interface UseTeamRelayRankingsQueryOptions {
+  /** false の間はフェッチしない (リレーのサブビューが非表示のとき等)。既定は true */
+  enabled?: boolean;
+  /** テスト・DI 用。省略時は supabase から生成する */
+  api?: TeamRelayRankingsAPI;
+}
+
+/**
+ * チームのリレー記録ランキング取得クエリ。
+ *
+ * SECURITY DEFINER RPC `get_team_relay_rankings` を叩くので、認可 (承認済みかつ
+ * アクティブなメンバーか) はサーバー側で判定される。絞り込み条件ごとに別の
+ * サーバー結果になるため queryKey には filters をそのまま含める
+ * (クライアント側での再絞り込みはしない)。第1弾の `useTeamRankingsQuery` と同型。
+ */
+export function useTeamRelayRankingsQuery(
+  supabase: SupabaseClient,
+  teamId: string,
+  filters: TeamRelayRankingFilters | undefined,
+  options: UseTeamRelayRankingsQueryOptions = {},
+) {
+  const { enabled = true, api } = options;
+  const relayRankingsApi = useMemo(
+    () => api ?? new TeamRelayRankingsAPI(supabase),
+    [supabase, api],
+  );
+
+  return useQuery<TeamRelayRankingRecord[]>({
+    queryKey: teamKeys.relayRankings(teamId, filters),
+    queryFn: async () => {
+      // enabled で弾いているので通常到達しない。到達したら握り潰さず落とす
+      if (!filters) throw new Error("filters is required");
+      return await relayRankingsApi.getRelayRankings(teamId, filters);
+    },
+    enabled: !!filters && enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * チームにリレー記録が1件でも存在するかの判定クエリ。
+ *
+ * 空状態の文言を「絞り込み条件に一致するリレー記録が0件」と「チームにリレー記録が
+ * 1件もない」に分けるためだけに使う。ランキングが0件だったときにのみ enabled を立てること。
+ */
+export function useTeamHasAnyRelayRecordQuery(
+  supabase: SupabaseClient,
+  teamId: string,
+  options: UseTeamRelayRankingsQueryOptions = {},
+) {
+  const { enabled = true, api } = options;
+  const relayRankingsApi = useMemo(
+    () => api ?? new TeamRelayRankingsAPI(supabase),
+    [supabase, api],
+  );
+
+  return useQuery<boolean>({
+    queryKey: teamKeys.hasAnyRelayRecord(teamId),
+    queryFn: async () => {
+      return await relayRankingsApi.hasAnyRelayRecord(teamId);
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

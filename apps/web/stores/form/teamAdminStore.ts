@@ -15,6 +15,16 @@ interface TeamAdminState {
 
   // タブ
   activeTab: TeamAdminTabType;
+  /**
+   * 既に適用済みの `?tab=` の値 (クエリなしは null)。
+   *
+   * 🚨 **ref ではなくストアに置く。** これは activeTab と対になった状態で、
+   * 「この URL 値はもう反映した」という記録。コンポーネント側の useRef に置くと
+   * `reset()` で activeTab だけが初期化されて記録が生き残り、
+   * 「activeTab は attendance なのに ?tab=settings は適用済み」という不整合になって
+   * URL のタブが二度と反映されない。ここに置けば reset() が両方を同時に消す。
+   */
+  appliedTabParam: string | null;
 
   // モーダル
   selectedMember: MemberDetail | null;
@@ -29,6 +39,7 @@ interface TeamAdminActions {
 
   // タブ操作
   setActiveTab: (tab: TeamAdminTabType) => void;
+  setAppliedTabParam: (tabParam: string | null) => void;
 
   // モーダル操作
   setSelectedMember: (member: MemberDetail | null) => void;
@@ -44,6 +55,7 @@ const initialState: TeamAdminState = {
   membership: null,
   loading: true,
   activeTab: "attendance",
+  appliedTabParam: null,
   selectedMember: null,
   isMemberModalOpen: false,
 };
@@ -58,6 +70,7 @@ export const useTeamAdminStore = create<TeamAdminState & TeamAdminActions>()((se
 
   // タブ操作
   setActiveTab: (tab: TeamAdminTabType) => set({ activeTab: tab }),
+  setAppliedTabParam: (tabParam) => set({ appliedTabParam: tabParam }),
 
   // モーダル操作
   setSelectedMember: (member) => set({ selectedMember: member }),

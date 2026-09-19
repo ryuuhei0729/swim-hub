@@ -150,28 +150,70 @@ describe("TeamCoreAPI", () => {
   });
 
   describe("deleteTeam", () => {
-    it("チームを削除できる", async () => {
-      supabaseMock.queueTable("teams", [
-        {
-          data: null,
-          configure: (builder) => {
-            builder.delete.mockReturnValue(builder);
-          },
+    // -------------------------------------------------------------------------
+    // 本スプリントで deleteTeam は **teams への直接 DELETE から RPC 経由へ変更**された。
+    //
+    // 理由: records_team_id_fkey は ON DELETE CASCADE なので、teams を素朴に消すと
+    // **他メンバーのレース記録が物理削除される**。RPC delete_team_preserving_records が
+    // records.team_id を NULL 化してから teams を消す (migration 20260910000001)。
+    //
+    // 旧テストは「builder.delete が呼ばれること」= まさに消してはいけない経路を
+    // 正解として pin していた。**実装が正で期待値が古い**ため期待値側を更新する。
+    // 直接 DELETE を発行しないことの明示的なガードは
+    // __tests__/teams/core.teamSettings.test.ts の [V-A22] が持つ。
+    // -------------------------------------------------------------------------
+    const mockRpc = (value: { data: unknown; error?: unknown }) => {
+      (supabaseMock.client.rpc as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: value.data,
+        error: value.error ?? null,
+      });
+    };
+
+    it("チームを削除できる (RPC delete_team_preserving_records 経由)", async () => {
+      mockRpc({
+        data: {
+          success: true,
+          deleted_team_count: 1,
+          cleared_record_count: 2,
+          cleared_practice_count: 1,
         },
-      ]);
+      });
 
       await api.deleteTeam("team-1");
 
-      const builder = supabaseMock.getBuilder("teams");
-      expect(builder.delete).toHaveBeenCalled();
-      expect(builder.eq).toHaveBeenCalledWith("id", "team-1");
+      expect(supabaseMock.client.rpc).toHaveBeenCalledWith("delete_team_preserving_records", {
+        p_team_id: "team-1",
+      });
+      // teams テーブルには一切触れない (CASCADE で他人の記録を消さないことの担保)
+      expect(supabaseMock.getBuilderHistory("teams")).toHaveLength(0);
     });
 
     it("削除時にエラーが発生した場合は例外を投げる", async () => {
       const error = new Error("delete failed");
-      supabaseMock.queueTable("teams", [{ data: null, error }]);
+      mockRpc({ data: null, error });
 
       await expect(api.deleteTeam("team-1")).rejects.toThrow(error);
+    });
+
+    // ⚠️ フィクスチャは実 migration (20260910000001) の戻り値に合わせること。
+    // RPC が返すのは日本語の文言ではなく snake_case の機械可読コード。
+    it("RPC が success:false を返した場合はそのコードを載せて例外を投げる", async () => {
+      mockRpc({ data: { success: false, error: "not_authorized" } });
+
+      await expect(api.deleteTeam("team-1")).rejects.toThrow("not_authorized");
+    });
+
+    it("success:true でも削除件数が 1 でなければ例外を投げる (0行サイレント成功の封じ込め)", async () => {
+      mockRpc({
+        data: {
+          success: true,
+          deleted_team_count: 0,
+          cleared_record_count: 0,
+          cleared_practice_count: 0,
+        },
+      });
+
+      await expect(api.deleteTeam("team-1")).rejects.toThrow();
     });
   });
 });

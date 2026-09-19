@@ -381,9 +381,10 @@ function EntryRow({ entry, styleName, onUpdate, onRemove, disabled, isDuplicate 
           <div className="relative">
             <input
               type="text"
+              inputMode="decimal"
               value={entry.time}
               onChange={(e) => onUpdate(entry.key, { time: e.target.value })}
-              placeholder="1:23.45"
+              placeholder="2.00.00"
               disabled={disabled}
               className="w-full px-1.5 py-1 pr-6 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
             />

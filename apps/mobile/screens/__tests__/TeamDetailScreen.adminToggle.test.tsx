@@ -123,11 +123,54 @@ vi.mock("@/components/teams/TeamCompetitionList", () => ({
 import { TeamDetailScreen } from "../TeamDetailScreen";
 import { useTeamAdminViewStore } from "@/stores/teamAdminViewStore";
 
-/** navigation.setOptions への直近の呼び出しから headerRight ファクトリを取り出す */
-function getLatestHeaderRight(): () => React.ReactElement {
+/**
+ * navigation.setOptions に渡された **headerRight を含む最新の呼び出し**から
+ * ファクトリを取り出す。
+ *
+ * ⚠️ 「最後の呼び出し」を見てはいけない。TeamDetailScreen は
+ *   - headerRight 注入 (isCurrentUserAdmin 依存)
+ *   - タイトル注入 (currentTeam?.name 依存)
+ * を **意図的に別々の useLayoutEffect に分けている** (同じ effect にまとめると
+ * チーム名の取得時に headerRight が作り直されて再マウントし、スイッチが1回目の
+ * タップに反応しなくなる「タップ2回問題」が再発する。TeamDetailScreen L115-117 の
+ * コメント参照)。その結果、最後の呼び出しは `{ title }` だけになる。
+ *
+ * react-navigation の setOptions は **マージ**なので、本番では後から title だけを
+ * 渡しても headerRight は保持される。つまり実装が正しく、「最後の呼び出しだけを
+ * 見る」というこのヘルパーの前提が誤りだった。
+ *
+ * `headerRight` が **キーとして存在するか** (`in`) で探す。値の真偽では探さない —
+ * 非管理者のとき実装は `headerRight: undefined` を明示的に渡しており、
+ * 「トグルを出さない」ことの検証 (下の `typeof !== "function"`) を成立させるには
+ * その呼び出しを見つけたうえで undefined を返す必要がある。
+ */
+function getLatestHeaderRight(): (() => React.ReactElement) | undefined {
   const calls = mocks.setOptions.mock.calls;
-  const lastCall = calls[calls.length - 1];
-  return lastCall?.[0]?.headerRight;
+  for (let i = calls.length - 1; i >= 0; i--) {
+    const options = calls[i]?.[0];
+    if (options && typeof options === "object" && "headerRight" in options) {
+      return options.headerRight;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * 管理者ケース用。headerRight が関数であることを前提にして取り出す。
+ *
+ * 非管理者では実装が `headerRight: undefined` を渡すため戻り値は
+ * `(() => ReactElement) | undefined` になる。呼び出し側で毎回 `!` を書くと
+ * 「本当は undefined だった」ときの失敗メッセージが
+ * `headerRight is not a function` という読めない形になるので、
+ * ここで前提を明示して落とす。
+ */
+function requireHeaderRight(): () => React.ReactElement {
+  const headerRight = getLatestHeaderRight();
+  expect(
+    typeof headerRight,
+    "管理者なのに headerRight が setOptions に渡されていない",
+  ).toBe("function");
+  return headerRight as () => React.ReactElement;
 }
 
 describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タップ同時反映 (B-3, V-04)", () => {
@@ -161,12 +204,11 @@ describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タッ�
 
       // navigation.setOptions 経由で登録された headerRight ファクトリを取得し、
       // 画面本体と並べて描画する (native-stack のヘッダーポータル相当)
-      const headerRight = getLatestHeaderRight();
-      expect(typeof headerRight).toBe("function");
+      const headerRight = requireHeaderRight();
       render(<>{headerRight()}</>);
 
       // 初期状態: 利用者ビュー
-      expect(screen.getByText("利用者ビュー")).toBeDefined();
+      expect(screen.getByText("利用者")).toBeDefined();
       expect(screen.queryByText("グループ")).toBeNull();
       expect(screen.queryByText("PENDING_MEMBERS_MARKER")).toBeNull();
 
@@ -175,8 +217,8 @@ describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タッ�
       fireEvent.click(toggleSwitch);
 
       // (a) スイッチ値 (b) ラベル (c) タブ内容の管理者要素が同時に (1タップで) 切り替わる
-      expect(screen.getByText("管理者ビュー")).toBeDefined();
-      expect(screen.queryByText("利用者ビュー")).toBeNull();
+      expect(screen.getByText("管理者")).toBeDefined();
+      expect(screen.queryByText("利用者")).toBeNull();
       expect(screen.getByText("グループ")).toBeDefined();
       expect(screen.getByText("お知らせ")).toBeDefined();
       expect(screen.getByText("PENDING_MEMBERS_MARKER")).toBeDefined();
@@ -187,15 +229,15 @@ describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タッ�
     "[V-04] 連続タップ (ON→OFF) でも状態がずれない (2タップ目で確実に元に戻る)",
     () => {
       render(<TeamDetailScreen />);
-      const headerRight = getLatestHeaderRight();
+      const headerRight = requireHeaderRight();
       render(<>{headerRight()}</>);
 
       const toggleSwitch = screen.getByRole("switch");
       fireEvent.click(toggleSwitch); // OFF -> ON
-      expect(screen.getByText("管理者ビュー")).toBeDefined();
+      expect(screen.getByText("管理者")).toBeDefined();
 
       fireEvent.click(screen.getByRole("switch")); // ON -> OFF
-      expect(screen.getByText("利用者ビュー")).toBeDefined();
+      expect(screen.getByText("利用者")).toBeDefined();
       expect(screen.queryByText("グループ")).toBeNull();
       expect(screen.queryByText("PENDING_MEMBERS_MARKER")).toBeNull();
     },
@@ -218,10 +260,10 @@ describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タッ�
     () => {
       // チームA (team-1, 管理者) を開き、管理者ビューをONにする
       const { unmount: unmountTeamA } = render(<TeamDetailScreen />);
-      const headerRightA = getLatestHeaderRight();
+      const headerRightA = requireHeaderRight();
       const { unmount: unmountHeaderA } = render(<>{headerRightA()}</>);
       fireEvent.click(screen.getByRole("switch"));
-      expect(screen.getByText("管理者ビュー")).toBeDefined();
+      expect(screen.getByText("管理者")).toBeDefined();
 
       // チームAの画面は (実際のnative-stackでは) unmountされず裏に残ることもあるが、
       // ここでは新しい画面インスタンス (チームB) への遷移を再現するため、
@@ -242,7 +284,7 @@ describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タッ�
         render(<>{headerRightB()}</>);
       }
       expect(screen.queryByRole("switch")).toBeNull();
-      expect(screen.queryByText("管理者ビュー")).toBeNull();
+      expect(screen.queryByText("管理者")).toBeNull();
       expect(screen.queryByText("グループ")).toBeNull();
       expect(screen.queryByText("お知らせ")).toBeNull();
       expect(screen.queryByText("PENDING_MEMBERS_MARKER")).toBeNull();
@@ -255,10 +297,10 @@ describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タッ�
     () => {
       // チームA (team-1, 管理者) を開き、管理者ビューをONにする
       const { unmount: unmountTeamA } = render(<TeamDetailScreen />);
-      const headerRightA = getLatestHeaderRight();
+      const headerRightA = requireHeaderRight();
       const { unmount: unmountHeaderA } = render(<>{headerRightA()}</>);
       fireEvent.click(screen.getByRole("switch"));
-      expect(screen.getByText("管理者ビュー")).toBeDefined();
+      expect(screen.getByText("管理者")).toBeDefined();
 
       unmountHeaderA();
       unmountTeamA();
@@ -267,12 +309,14 @@ describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タッ�
       mocks.routeParams.teamId = "team-2";
 
       render(<TeamDetailScreen />);
-      const headerRightB = getLatestHeaderRight();
+      // team-2 も自分が管理者のチーム (nonAdminTeamIds に入れていない) なので
+      // headerRight は必ず関数で返る
+      const headerRightB = requireHeaderRight();
       render(<>{headerRightB()}</>);
 
       // 新しい画面 (チームB, 自分も管理者) でも初期状態は利用者ビュー
-      expect(screen.getByText("利用者ビュー")).toBeDefined();
-      expect(screen.queryByText("管理者ビュー")).toBeNull();
+      expect(screen.getByText("利用者")).toBeDefined();
+      expect(screen.queryByText("管理者")).toBeNull();
       expect(screen.queryByText("グループ")).toBeNull();
       expect(screen.queryByText("PENDING_MEMBERS_MARKER")).toBeNull();
     },
@@ -326,10 +370,10 @@ describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タッ�
     () => {
       // チームA (team-1, 管理者) を開き、管理者ビューをONにする
       const { unmount: unmountTeamA } = render(<TeamDetailScreen />);
-      const headerRightA = getLatestHeaderRight();
+      const headerRightA = requireHeaderRight();
       const { unmount: unmountHeaderA } = render(<>{headerRightA()}</>);
       fireEvent.click(screen.getByRole("switch"));
-      expect(screen.getByText("管理者ビュー")).toBeDefined();
+      expect(screen.getByText("管理者")).toBeDefined();
 
       unmountHeaderA();
       unmountTeamA();

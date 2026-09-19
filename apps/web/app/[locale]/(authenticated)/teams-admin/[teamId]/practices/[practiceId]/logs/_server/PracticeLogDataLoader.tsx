@@ -5,6 +5,7 @@ import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { getServerUser } from "@/lib/supabase-server";
 import PracticeLogClient from "../_client/PracticeLogClient";
 import { PracticeTag, Practice } from "@apps/shared/types";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 
 interface PracticeLogDataLoaderProps {
   teamId: string;
@@ -18,6 +19,7 @@ interface TeamMember {
   users: {
     id: string;
     name: string;
+    birthday?: string | null;
   };
 }
 
@@ -120,13 +122,13 @@ export default async function PracticeLogDataLoader({
         role,
         users!team_memberships_user_id_fkey (
           id,
-          name
+          name,
+          birthday
         )
       `,
       )
       .eq("team_id", teamId)
-      .eq("is_active", true)
-      .order("role", { ascending: false }),
+      .eq("is_active", true),
 
     // 既存のPractice_Logを取得
     supabase
@@ -190,7 +192,10 @@ export default async function PracticeLogDataLoader({
   }
 
   const practice = practiceData as unknown as PracticeWithDetails;
-  const members = (membersResult.data || []) as unknown as TeamMember[];
+  // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+  const members = ((membersResult.data || []) as unknown as TeamMember[]).sort(
+    compareMembersByBirthday,
+  );
   const practiceLogs = (practiceLogsResult.data || []) as unknown as PracticeLogWithDetails[];
   const tags = (tagsResult.data || []) as PracticeTag[];
   const attendance = (attendanceResult.data || []) as AttendanceRecord[];

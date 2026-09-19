@@ -8,6 +8,9 @@ export interface MemberSelectOption {
   user_id: string;
   role: string;
   name: string;
+  // optional: 呼び出し元によっては is_swimmer を select していない場合がある。
+  // undefined は「泳者」として扱う (apps/shared/utils/swimmerFilter.ts と同じ判定)。
+  is_swimmer?: boolean;
 }
 
 interface MemberSelectModalProps {

@@ -1,12 +1,15 @@
-import type { BestTime } from "@apps/shared/types/ui";
+import {
+  BEST_TIME_LABEL_NAMESPACE,
+  getBestTimeForEntry as getBestTimeForEntryShared,
+  type BestTimeCandidate,
+} from "@apps/shared/utils/bestTimeForEntry";
 
 /**
- * 純粋関数: 種目・水路・リレーフラグを元にベストタイムを返す (mobile 版)。
- * web apps/web/utils/bestTimeForEntry.ts と同一のフォールバック階層を再現。
- * - リレーOFF: 同じ水路・非リレー → 同じ水路・リレー → 異なる水路・非リレー → 異なる水路・リレー
- * - リレーON:  同じ水路・リレー → 同じ水路・非リレー → 異なる水路・リレー → 異なる水路・非リレー
+ * ベストタイム参照バッジ (mobile 版ラッパー)。
  *
- * labelKey は "forms.recordLog" 名前空間のフルキーを返す。呼び出し側で t(labelKey) すること。
+ * 優先順位表そのものは `@apps/shared/utils/bestTimeForEntry` が唯一の定義元。
+ * ここは mobile の i18n が名前空間付きフルキーで引く (`t("forms.recordLog.xxx")`)
+ * ため、shared が返す素のキーに接頭辞を付けるだけの層。
  */
 
 export type BestTimeLabelKey =
@@ -26,60 +29,12 @@ export function getBestTimeForEntry(
   styleName: string,
   poolType: number,
   isRelaying: boolean,
-  bestTimes: BestTime[],
+  bestTimes: readonly BestTimeCandidate[],
 ): BestTimeResult | null {
-  if (!styleName || !bestTimes.length) return null;
-
-  const otherPoolType = poolType === 0 ? 1 : 0;
-  const otherPoolLabelKey: BestTimeLabelKey =
-    poolType === 0 ? "forms.recordLog.bestTimeLong" : "forms.recordLog.bestTimeShort";
-  const otherPoolRelayLabelKey: BestTimeLabelKey =
-    poolType === 0
-      ? "forms.recordLog.bestTimeLongRelay"
-      : "forms.recordLog.bestTimeShortRelay";
-
-  const samePool = bestTimes.find(
-    (bt) => bt.style.name_jp === styleName && bt.pool_type === poolType,
-  );
-  const otherPool = bestTimes.find(
-    (bt) => bt.style.name_jp === styleName && bt.pool_type === otherPoolType,
-  );
-
-  if (isRelaying) {
-    // 1. 同じ水路・リレー
-    if (samePool?.relayingTime) {
-      return { time: samePool.relayingTime.time, labelKey: "forms.recordLog.bestTimeRelay" };
-    }
-    // 2. 同じ水路・非リレー
-    if (samePool && !samePool.is_relaying) {
-      return { time: samePool.time, labelKey: "forms.recordLog.bestTimeLabel" };
-    }
-    // 3. 異なる水路・リレー
-    if (otherPool?.relayingTime) {
-      return { time: otherPool.relayingTime.time, labelKey: otherPoolRelayLabelKey };
-    }
-    // 4. 異なる水路・非リレー
-    if (otherPool && !otherPool.is_relaying) {
-      return { time: otherPool.time, labelKey: otherPoolLabelKey };
-    }
-  } else {
-    // 1. 同じ水路・非リレー
-    if (samePool && !samePool.is_relaying) {
-      return { time: samePool.time, labelKey: "forms.recordLog.bestTimeLabel" };
-    }
-    // 2. 同じ水路・リレー
-    if (samePool?.relayingTime) {
-      return { time: samePool.relayingTime.time, labelKey: "forms.recordLog.bestTimeRelay" };
-    }
-    // 3. 異なる水路・非リレー
-    if (otherPool && !otherPool.is_relaying) {
-      return { time: otherPool.time, labelKey: otherPoolLabelKey };
-    }
-    // 4. 異なる水路・リレー
-    if (otherPool?.relayingTime) {
-      return { time: otherPool.relayingTime.time, labelKey: otherPoolRelayLabelKey };
-    }
-  }
-
-  return null;
+  const result = getBestTimeForEntryShared(styleName, poolType, isRelaying, bestTimes);
+  if (!result) return null;
+  return {
+    time: result.time,
+    labelKey: `${BEST_TIME_LABEL_NAMESPACE}.${result.labelKey}` as BestTimeLabelKey,
+  };
 }

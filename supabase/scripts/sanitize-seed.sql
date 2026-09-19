@@ -2,6 +2,10 @@
 -- PIIマスク処理（seedデータのサニタイズ）
 -- 本番データの個人情報をダミーデータに置換する
 -- =============================================================================
+-- 実行後のログイン情報:
+--   全ユーザー      user_<連番>@example.com / Pass1234
+--   テストユーザー  test@test.test         / Pass1234
+-- =============================================================================
 
 -- トリガー無効化
 SET session_replication_role = 'replica';
@@ -11,7 +15,11 @@ SET session_replication_role = 'replica';
 -- -----------------------------------------------------------------------------
 UPDATE auth.users u SET
   email = 'user_' || n.rn || '@example.com',
-  encrypted_password = '$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345',
+  -- 全ユーザーを Pass1234 でログイン可能にする。ローカル限定かつ
+  -- ここまでで氏名・メール・誕生日はマスク済みなので実害はない。
+  -- 相関のないスカラサブクエリなので gen_salt は 1 回だけ評価される
+  -- (直接書くと行数ぶん bcrypt が走る)。
+  encrypted_password = (SELECT crypt('Pass1234', gen_salt('bf'))),
   phone = NULL,
   raw_user_meta_data = jsonb_build_object(
     'full_name', 'テストユーザー' || n.rn,
@@ -47,6 +55,30 @@ FROM (
   FROM public.users
 ) n
 WHERE u.id = n.id;
+
+-- -----------------------------------------------------------------------------
+-- auth.identities: identity_data に残る本番のメール・氏名・アバターをマスク
+-- -----------------------------------------------------------------------------
+-- auth.users.email をマスクしても、OAuth プロバイダから来た identity_data に
+-- 同じ情報 (email / full_name / name / avatar_url / picture / birthday / gender)
+-- がそのまま残る。
+--
+-- メールは rn を採番し直さず、上でマスク済みの auth.users.email をそのまま参照する。
+-- 採番し直すと created_at が同値のユーザーで順序が揺れて users と identities が
+-- 食い違ううえ、再実行するたびにテストユーザーまで巻き込んで番号がずれる。
+UPDATE auth.identities i SET
+  identity_data = jsonb_build_object(
+    'sub', CASE WHEN i.provider = 'email' THEN i.user_id::text ELSE i.provider_id END,
+    'email', u.email,
+    'email_verified', true,
+    'phone_verified', false
+  ),
+  provider_id = CASE
+    WHEN i.provider = 'email' THEN u.email
+    ELSE i.provider_id
+  END
+FROM auth.users u
+WHERE i.user_id = u.id;
 
 -- -----------------------------------------------------------------------------
 -- テストユーザー追加（test@test.test / Pass1234）

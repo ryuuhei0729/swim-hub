@@ -368,6 +368,53 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
   );
 
   it(
+    "既存行にベストタイムがあると、その値が参考バッジとして画面に表示される（人間の意図: " +
+      "従来は『流用』ボタンが押せるかどうかでしか自己ベストの有無が分からず、値そのものは " +
+      "画面に出ていなかった。代理入力するコーチが桁違いの申告タイムに気付けるよう、" +
+      "記録の代理入力画面と同じ緑バッジで値を見せる。バッジは表示のみで入力欄には入らない）",
+    () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+      const bestTimesByUser: Record<string, BestTime[]> = {
+        "user-1": [
+          {
+            id: "best-1",
+            time: 58.0,
+            created_at: "2025-01-01T00:00:00Z",
+            pool_type: 0,
+            is_relaying: false,
+            style_id: 3,
+            style: { name_jp: "自由形100m", distance: 100 },
+          },
+        ],
+      };
+
+      renderEntriesClient(existingEntries, bestTimesByUser);
+
+      const badge = screen.getByTestId(/^entry-best-time-badge-/);
+      expect(badge.textContent?.replace(/\s+/g, " ").trim()).toBe("bestTimeLabel: 58.00");
+      // 入力欄は既存エントリーの申告タイムのまま (バッジは表示専用)
+      const timeInput = screen.getByPlaceholderText("record.timePlaceholder") as HTMLInputElement;
+      expect(timeInput.value).toBe("1:00.50");
+    },
+  );
+
+  it(
+    "ベストタイムを持たない選手・種目の行には参考バッジが出ない（人間の意図: " +
+      "ベストが無いときに 0.00 のような意味のない値を出さないこと）",
+    () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+
+      renderEntriesClient(existingEntries, {});
+
+      expect(screen.queryByTestId(/^entry-best-time-badge-/)).toBeNull();
+    },
+  );
+
+  it(
     "既存行 (更新対象) に対して『流用』ボタンでベストタイムを再適用すると、確認モーダルの" +
       "『更新』セクションに ⚠️ (未編集プリフィル警告) が表示される（人間の意図: " +
       "Reviewer Critical#5の再発防止。⚠️警告は新規作成行だけでなく既存行の更新にも" +

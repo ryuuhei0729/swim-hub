@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTimeBest } from "@/utils/formatters";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
 import {
   groupRecordsByStyle,
@@ -121,6 +123,10 @@ export function TeamCompetitionRecordsModal({
 }: TeamCompetitionRecordsModalProps) {
   const { supabase } = useAuth();
   const { t } = useTranslation();
+  // Android edge-to-edge: このシートはフッターを持たないため、ScrollView の
+  // 最下段 (最後の記録行) がシステムナビゲーションバーに埋没する。
+  // スクロール余白に下部インセットを加算する (パターンB)。
+  const insets = useSafeInsets();
 
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [records, setRecords] = useState<RecordEntry[]>([]);
@@ -215,7 +221,10 @@ export function TeamCompetitionRecordsModal({
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[
+          styles.body,
+          { paddingBottom: getSafeFooterPadding(16, insets.bottom) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {loading && (

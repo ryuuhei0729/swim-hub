@@ -247,6 +247,7 @@ export default function TimeLevelClient() {
             id="time-level-time"
             label={t("timeLabel")}
             type="text"
+            inputMode="decimal"
             value={timeInput}
             onChange={(e) => setTimeInput(e.target.value)}
             onBlur={(e) => {

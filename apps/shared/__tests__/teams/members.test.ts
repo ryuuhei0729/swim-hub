@@ -39,6 +39,61 @@ describe("TeamMembersAPI", () => {
 
       await expect(api.list("team-1")).rejects.toThrow("認証が必要です");
     });
+
+    // [並び順スプリント] select() に渡された文字列を実測する。
+    // クエリ引数を捨てるモックはスコープを検証不能にする過去事例があるため、
+    // モックが握り潰さず実際の select() 呼び出し引数を検証する。
+    //
+    // 注記(実測): このメソッドは `users:users(*)` という users テーブル全カラムの
+    // ワイルドカード select を使っており、"birthday" という個別カラム名は
+    // 文字列として現れない。これは個別カラム列挙より安全な形 (カラムを個別指定する
+    // 実装に変わった場合、birthday の指定漏れが将来ここで再発しうる: その回帰を
+    // 検出するため、少なくとも users 側が個別カラム列挙ではなくワイルドカードの
+    // ままであることをここで固定する)。
+    it("select() が users:users(*) のワイルドカードで birthday を含め全カラム取得する", async () => {
+      supabaseMock.queueTable("team_memberships", [{ data: [] }]);
+
+      await api.list("team-1");
+
+      const builder = supabaseMock.getBuilder("team_memberships");
+      expect(builder.select).toHaveBeenCalledTimes(1);
+      const selectArg = builder.select.mock.calls[0]![0] as string; // toHaveBeenCalledTimes(1) で存在確認済み
+      expect(selectArg).toContain("users:users(*)");
+    });
+
+    // [並び順スプリント] list() が年上順（生年月日昇順）で返すことを実測する。
+    // compareMembersByBirthday の実物を list() 経由で通す (テスト内で並べ替えを
+    // 再実装しない)。
+    it("年上順（生年月日昇順）でメンバーが返る。管理者でも先頭固定にはならない", async () => {
+      const younger = {
+        id: "membership-younger",
+        team_id: "team-1",
+        user_id: "u-younger",
+        role: "admin", // 旧仕様(管理者を先頭に)が復活していないことも同時に確認する
+        users: { name: "ジロウ", birthday: "2012-04-01" },
+      };
+      const older = {
+        id: "membership-older",
+        team_id: "team-1",
+        user_id: "u-older",
+        role: "user",
+        users: { name: "タロウ", birthday: "2008-04-01" },
+      };
+      const noBirthday = {
+        id: "membership-none",
+        team_id: "team-1",
+        user_id: "u-none",
+        role: "user",
+        users: { name: "サブロウ", birthday: null },
+      };
+
+      // 意図的に「年下→年上→未設定」という、望ましい並びとは異なる順で DB から返す
+      supabaseMock.queueTable("team_memberships", [{ data: [younger, older, noBirthday] }]);
+
+      const result = await api.list("team-1");
+
+      expect(result.map((m) => m.user_id)).toEqual(["u-older", "u-younger", "u-none"]);
+    });
   });
 
   describe("join", () => {

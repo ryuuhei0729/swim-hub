@@ -543,6 +543,7 @@ export default function EntryLogForm({
                         <div className="flex-1 min-w-0">
                           <Input
                             type="text"
+                            inputMode="decimal"
                             value={
                               entry.entryTimeDisplayValue !== undefined
                                 ? entry.entryTimeDisplayValue
@@ -575,7 +576,7 @@ export default function EntryLogForm({
                                 });
                               }
                             }}
-                            placeholder="1:30.50"
+                            placeholder="2.00.00"
                             disabled={isLoading}
                             data-testid={`entry-time-${index + 1}`}
                             className="w-full"

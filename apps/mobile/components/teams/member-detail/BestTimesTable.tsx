@@ -467,6 +467,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexWrap: "wrap",
     gap: 12,
+    // ALL/短水路/長水路タブと「引き継ぎ含む」チェックボックスにだけ左右の余白を持たせる。
+    // table (tableContainer) はこの View の外側の兄弟なので影響を受けず、既存どおり
+    // 左右いっぱいのまま (ユーザー要望: 表自体は edge-to-edge を維持)。
+    paddingHorizontal: 12,
   },
   compareMetricRow: {
     flexDirection: "row",
@@ -666,6 +670,9 @@ const styles = StyleSheet.create({
   },
   annotation: {
     alignItems: "flex-end",
+    // controls (ALL/短水路/長水路・引き継ぎ含む) と同じ余白量に揃える。
+    // 表 (tableContainer) はこの View の外側の兄弟なので影響を受けない。
+    paddingHorizontal: 12,
   },
   annotationText: {
     fontSize: 12,

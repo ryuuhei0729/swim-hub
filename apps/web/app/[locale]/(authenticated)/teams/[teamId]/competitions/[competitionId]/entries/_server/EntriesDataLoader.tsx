@@ -6,6 +6,7 @@ import { getServerUser } from "@/lib/supabase-server";
 import { RecordAPI } from "@apps/shared/api/records";
 import { isCompetitionDateInPast } from "@apps/shared/utils/date";
 import { isPoolType, type Competition, type Style } from "@apps/shared/types";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 import EntriesClient, { type ExistingEntryDisplay } from "../_client/EntriesClient";
 
 interface EntriesDataLoaderProps {
@@ -17,9 +18,11 @@ interface ActiveTeamMember {
   id: string;
   user_id: string;
   role: string;
+  is_swimmer: boolean;
   users: {
     id: string;
     name: string;
+    birthday?: string | null;
   };
 }
 
@@ -104,15 +107,16 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
         id,
         user_id,
         role,
+        is_swimmer,
         users!team_memberships_user_id_fkey (
           id,
-          name
+          name,
+          birthday
         )
       `,
         )
         .eq("team_id", teamId)
-        .eq("is_active", true)
-        .order("role", { ascending: false }),
+        .eq("is_active", true),
 
       // 既存のエントリーを取得（退会済みメンバーの表示名フォールバック用に users を join）
       supabase
@@ -168,7 +172,10 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
     throw entriesResult.error;
   }
 
-  const members = (membersResult.data || []) as unknown as ActiveTeamMember[];
+  // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+  const members = ((membersResult.data || []) as unknown as ActiveTeamMember[]).sort(
+    compareMembersByBirthday,
+  );
   const entriesData = (entriesResult.data || []) as unknown as EntryWithUser[];
   const styles = (stylesResult.data || []) as Style[];
 
@@ -206,7 +213,12 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
         entry_status: competition.entry_status,
         teamName: competition.team?.name || t("pageTitle"),
       }}
-      activeMembers={members.map((m) => ({ user_id: m.user_id, role: m.role, name: m.users.name }))}
+      activeMembers={members.map((m) => ({
+        user_id: m.user_id,
+        role: m.role,
+        name: m.users.name,
+        is_swimmer: m.is_swimmer,
+      }))}
       existingEntries={existingEntries}
       styles={styles}
       bestTimesByUser={bestTimesByUser}

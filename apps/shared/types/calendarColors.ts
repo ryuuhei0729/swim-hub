@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { z } from "zod";
-import { TAG_COLORS } from "../constants/tagColors";
+import { STORABLE_TAG_COLORS, TAG_COLORS } from "../constants/tagColors";
 
 /** カレンダー記録色として選択可能な色（タグと同一パレット） */
 export const PRESET_CALENDAR_COLORS = TAG_COLORS;
@@ -45,8 +45,13 @@ export interface CalendarColorSettings {
  * パレット外の値 (自由入力の hex 等) を拒否する。null は「デフォルトに戻す」を表す。
  */
 export const CalendarColorInputSchema = z.object({
-  practice_color: z.enum(TAG_COLORS).nullable(),
-  competition_color: z.enum(TAG_COLORS).nullable(),
+  // 🚨 検証対象は **STORABLE_TAG_COLORS (選択肢8色 + 旧色)**。TAG_COLORS ではない。
+  // 「変更しない側の色を既存値のまま再送する」保存実装のため、8色に絞ると
+  // 旧色を保存済みのユーザーがもう片方の色を変更できなくなる (回復不能)。
+  // 根拠の詳細は constants/tagColors.ts の STORABLE_TAG_COLORS を参照。
+  // ピッカーが提示するのは引き続き TAG_COLORS の8色だけ。
+  practice_color: z.enum(STORABLE_TAG_COLORS).nullable(),
+  competition_color: z.enum(STORABLE_TAG_COLORS).nullable(),
 });
 
 export type CalendarColorInput = z.infer<typeof CalendarColorInputSchema>;

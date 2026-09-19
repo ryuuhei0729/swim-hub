@@ -29,6 +29,8 @@ import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { AttendanceGroupSection } from "./AttendanceGroupSection";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 
 /** 背面タップでは閉じない (元実装どおり、背面タップ用の Pressable が存在しない) */
 const NOOP_BACKDROP_PRESS = () => {};
@@ -326,6 +328,7 @@ const BulkChangeSheet: React.FC<BulkChangeSheetProps> = ({
   t,
   locale,
 }) => {
+  const insets = useSafeInsets();
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(
     new Set(),
   );
@@ -413,7 +416,15 @@ const BulkChangeSheet: React.FC<BulkChangeSheetProps> = ({
       </View>
 
       {groupedEvents.length === 0 ? (
-        <View style={styles.bulkEmptyBlock}>
+        // Android edge-to-edge: 空状態はフッター (bulkFooter) が描画されないため、
+        // padding:32 だけではシステムナビゲーションバーに文字が重なる。
+        // 下部インセットを加算する。
+        <View
+          style={[
+            styles.bulkEmptyBlock,
+            { paddingBottom: getSafeFooterPadding(32, insets.bottom) },
+          ]}
+        >
           <Text style={styles.bulkEmptyText}>
             {t("teams.mobile.adminAttendance.bulkChange.empty")}
           </Text>

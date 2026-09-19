@@ -27,7 +27,7 @@ import type {
   SplitTimeInsert,
 } from "../../types";
 import type { BestTime } from "../../types/ui";
-import { recordKeys } from "./keys";
+import { invalidateTeamRankings, recordKeys } from "./keys";
 
 export interface UseRecordsQueryOptions {
   startDate?: string;
@@ -102,6 +102,7 @@ export function useRecordsQuery(supabase: SupabaseClient, options: UseRecordsQue
         recordsChannel = api.subscribeToRecords(() => {
           // 関連するクエリを無効化して再取得（リレーションデータも含める）
           queryClient.invalidateQueries({ queryKey: recordKeys.lists() });
+          invalidateTeamRankings(queryClient);
         }, user.id); // user_idフィルタを追加
       } catch (error) {
         console.error("Failed to setup records subscription:", error);
@@ -220,6 +221,7 @@ export function useCreateRecordMutation(
     },
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: recordKeys.lists() });
+      invalidateTeamRankings(queryClient);
 
       // マイルストーンのステータスを自動更新
       try {
@@ -257,6 +259,7 @@ export function useUpdateRecordMutation(
       // 個別に invalidate しないと useRecordByIdQuery の staleTime 内は更新前の値が
       // 残り続ける（編集画面を保存直後にもう一度開くと古い値が出る）
       queryClient.invalidateQueries({ queryKey: recordKeys.detail(id) });
+      invalidateTeamRankings(queryClient);
 
       // マイルストーンのステータスを自動更新
       try {
@@ -290,6 +293,7 @@ export function useDeleteRecordMutation(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: recordKeys.all });
+      invalidateTeamRankings(queryClient);
     },
   });
 }
@@ -436,6 +440,14 @@ export function useUpdateCompetitionMutation(
           return old.map((c: Competition) => (c.id === variables.id ? updated : c));
         },
       );
+      // 🚨 ランキングの年度絞り込みは `competitions.date` を見るので、**大会日を
+      // 年度をまたいで編集すると紐づく記録が別年度のランキングへ移動する**。
+      // 第2弾で年度を選べるようにしたため無効化が必要になった (第1弾は通算固定で
+      // 大会の編集がランキングの中身を変えなかった)。
+      //
+      // ⚠️ `useCreateCompetitionMutation` には**足さない**。作成直後の大会には
+      // 記録が1件も紐づいていないので、どの年度のランキングも変わらない。
+      invalidateTeamRankings(queryClient);
     },
   });
 }
@@ -503,6 +515,10 @@ export function useDeleteCompetitionMutation(
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: recordKeys.competitions() });
+      // delete_competition_with_records RPC は個人大会 (team_id IS NULL) に紐づく
+      // records も削除するため、ランキングも落とす。落とさないと最大5分間
+      // 「存在しない記録」が順位表に残る。
+      invalidateTeamRankings(queryClient);
     },
   });
 }

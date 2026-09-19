@@ -176,9 +176,13 @@ describe("TeamPracticeList", () => {
 
     render(<TeamPracticeList teamId="team-1" isAdmin={true} />);
 
-    // 空状態の追加ボタンをクリック
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]!); // 空状態でも追加ボタンは常に表示される設計のため必ず存在
+    // [脆さ修正] 空状態では「練習を追加」ラベルのボタンがヘッダー用・空状態用の
+    // 2つ存在する (どちらも同じ handleAdd を呼ぶため機能的には等価)。
+    // インデックスではなく、ヘッダー側 (+ アイコン付き) を icon-plus の有無で識別する。
+    const addButtons = screen.getAllByRole("button", { name: "練習を追加" });
+    const headerAddButton = addButtons.find((el) => el.querySelector('[data-testid="icon-plus"]'));
+    expect(headerAddButton, "ヘッダーの追加ボタン(+アイコン付き)が見つからない").toBeDefined();
+    fireEvent.click(headerAddButton!);
 
     expect(mocks.navigate).toHaveBeenCalledWith(
       "PracticeForm",
@@ -234,10 +238,16 @@ describe("TeamPracticeList", () => {
 
     render(<TeamPracticeList teamId="team-1" isAdmin={true} />);
 
-    // アクセシビリティラベル "teams.mobile.tabPractices" を持つ編集ボタン
-    const buttons = screen.getAllByRole("button");
-    // buttons[0] = ヘッダー追加, buttons[1] = 編集, buttons[2] = 削除
-    fireEvent.click(buttons[1]!); // isAdmin=true+練習1件は常に追加+編集+削除の3ボタンを表示する設計
+    // [脆さ修正] 一括登録ボタンがヘッダーに増えて buttons[1] が編集ボタンでは
+    // なくなった。編集ボタンはアイコンのみで可視テキストが無く
+    // accessibilityLabel は DOM の aria-label にマップされない (このモックの
+    // Pressable は accessibilityLabel を素通りの独自属性として出力するのみ) ため
+    // getByRole の name には拾えない。TeamCompetitionList.test.tsx と同じ
+    // icon-edit-2 の testID から button を辿る方式に揃える。
+    const editIcon = screen.getByTestId("icon-edit-2");
+    const editButton = editIcon.closest("button");
+    expect(editButton, "編集アイコンの button が見つからない").not.toBeNull();
+    fireEvent.click(editButton as HTMLButtonElement);
 
     expect(mocks.navigate).toHaveBeenCalledWith(
       "PracticeForm",
@@ -348,5 +358,80 @@ describe("TeamPracticeList", () => {
       teamId: "team-nav",
     });
     expect(mocks.navigate).not.toHaveBeenCalledWith("PracticeLogForm", expect.anything());
+  });
+
+  // -----------------------------------------------------------------------
+  // [変更C] 一括登録ボタンの移設 (TeamDetailScreen の独立行 → ヘッダー行内)
+  // -----------------------------------------------------------------------
+
+  describe("[変更C] 一括登録ボタンがヘッダー行内に「追加」の左として配置される", () => {
+    it("isAdmin=true のとき、一括登録ボタンが DOM 上で追加ボタンより先に現れる", () => {
+      mocks.useTeamPracticesQuery.mockReturnValue({
+        data: [],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamPracticeList teamId="team-1" isAdmin={true} />);
+
+      const bulkRegisterButton = screen.getByRole("button", { name: "一括登録" });
+      const addButtons = screen.getAllByRole("button", { name: "練習を追加" });
+      const headerAddButton = addButtons.find((el) => el.querySelector('[data-testid="icon-plus"]'));
+      expect(headerAddButton, "ヘッダーの追加ボタンが見つからない").toBeDefined();
+
+      // Node.compareDocumentPosition: 前者が後者より前にあれば PRECEDING ビットが立たない
+      // (後者から見て前者が「先行 (preceding)」)
+      // eslint 上の理由で bitwise を直接比較する代わりに位置関係を明示的に確認する。
+      const position = bulkRegisterButton.compareDocumentPosition(headerAddButton!);
+      expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("練習が0件 (空状態) でも一括登録ボタンと追加ボタンはヘッダーに表示される (items.length===0 分岐の外側)", () => {
+      mocks.useTeamPracticesQuery.mockReturnValue({
+        data: [],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamPracticeList teamId="team-1" isAdmin={true} />);
+
+      expect(screen.getByRole("button", { name: "一括登録" })).toBeDefined();
+      const addButtons = screen.getAllByRole("button", { name: "練習を追加" });
+      expect(addButtons.length).toBeGreaterThan(0);
+    });
+
+    it("isAdmin=false のときは一括登録ボタンが表示されない (表示条件は addButton と同一)", () => {
+      mocks.useTeamPracticesQuery.mockReturnValue({
+        data: [makePractice()],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamPracticeList teamId="team-1" isAdmin={false} />);
+
+      expect(screen.queryByRole("button", { name: "一括登録" })).toBeNull();
+    });
+
+    it("一括登録ボタンを押すと TeamBulkRegister へ { teamId } で navigate される", () => {
+      mocks.useTeamPracticesQuery.mockReturnValue({
+        data: [],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamPracticeList teamId="team-bulk" isAdmin={true} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "一括登録" }));
+
+      expect(mocks.navigate).toHaveBeenCalledWith("TeamBulkRegister", { teamId: "team-bulk" });
+    });
   });
 });

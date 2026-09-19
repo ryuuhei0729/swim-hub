@@ -14,6 +14,15 @@
 //     無ければランキングから除外されることを確認する = 常時除外の構造的実証)
 //   [V-CMP-05] データ取得は「WAポイントで比較」オープン時に1回だけ (メンバーごとの
 //     個別クエリではない、N+1 でないこと)
+//   [V-N1-01 移設] 比較用記録の取得クエリが `.in("user_id", [全メンバーのid])` +
+//     `.eq("is_relaying", false)` という**実引数**で発行される。
+//     元は components/teams/__tests__/TeamMemberList.test.tsx にあったが、
+//     起動ボタンがランキングタブへ移設され、メンバータブからは開けなくなったため、
+//     入口に依存しないモーダル自身のテストとしてここへ引き取った。
+//     ⚠️ [V-CMP-05] は `fromSpy` の**呼び出し回数**しか見ておらず、
+//     `buildSupabaseMock` の `in` は列名 `_col` を捨てて常に user_id で絞るため、
+//     `.in("id", ...)` のような列取り違えを検出できない。本ケースが実引数を assert する
+//     唯一の場所になる (「クエリ引数を捨てるモックを書くな」の原則)。
 //
 // トートロジー防止メモ: 542/763/504/761/1100 は node -e で floor(1000*(B/T)^3) を
 // 独立に計算したハードコード値であり、waPoints.ts や本コンポーネントの実装を
@@ -314,5 +323,49 @@ describe("WaPointsCompareModal", () => {
     // 閉じるボタン内の Feather "x" アイコン (data-testid="icon-x") の親ボタンをクリックする。
     fireEvent.click(screen.getByTestId("icon-x").closest("button")!);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("[V-N1-01 移設] 比較用記録は .in(\"user_id\", [全員]) + .eq(\"is_relaying\", false) の実引数で1回だけ取得される", async () => {
+    const m1 = buildMember({ id: "m-1", user_id: "u-1", name: "比較アルファ", gender: 0 });
+    const m2 = buildMember({ id: "m-2", user_id: "u-2", name: "比較ベータ", gender: 0 });
+    const m3 = buildMember({ id: "m-3", user_id: "u-3", name: "比較ガンマ", gender: 0 });
+
+    // 引数を捨てないスパイ。列名と値の両方を記録して完全一致で検証する
+    const inCalls: { column: string; ids: string[] }[] = [];
+    const eqCalls: { column: string; value: unknown }[] = [];
+    const fromSpy = vi.fn((_table: string) => ({
+      select: vi.fn(() => ({
+        in: vi.fn((column: string, ids: string[]) => {
+          inCalls.push({ column, ids });
+          return {
+            eq: vi.fn((col: string, value: unknown) => {
+              eqCalls.push({ column: col, value });
+              return Promise.resolve({
+                data: [record("u-1", 25.0, 0, "50m自由形", 50)],
+                error: null,
+              });
+            }),
+          };
+        }),
+      })),
+    }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = { from: fromSpy } as any;
+
+    render(
+      <WaPointsCompareModal
+        visible={true}
+        onClose={vi.fn()}
+        members={[m1, m2, m3]}
+        supabase={supabase}
+      />,
+    );
+
+    await waitFor(() => expect(eqCalls.length).toBeGreaterThan(0));
+
+    // メンバー3人分を **1回の .in()** でまとめて取得している (N+1 でない)
+    expect(inCalls).toEqual([{ column: "user_id", ids: ["u-1", "u-2", "u-3"] }]);
+    // リレー除外は**サーバー側フィルタ**で効いている (クライアント filter との混同防止)
+    expect(eqCalls).toEqual([{ column: "is_relaying", value: false }]);
   });
 });

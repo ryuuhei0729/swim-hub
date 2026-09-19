@@ -27,13 +27,17 @@ import {
   type SwimStyleName,
 } from "@apps/shared/utils/swimStyles";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
+import {
+  excludeNonSwimmers,
+  selectNonSwimmers,
+  remapGroupHeadersForSwimmers,
+} from "@apps/shared/utils/swimmerFilter";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { formatTime } from "@/utils/formatters";
 import { selectBestTime, formatBestTimeSuffix } from "@/utils/bestTimeSelection";
 import { TeamMemberGroupFilter } from "./TeamMemberGroupFilter";
 import { MemberDetailModal } from "./member-detail";
-import { WaPointsCompareModal } from "@/components/teams/wa-points-compare";
 import { BestTimeDetailSheet, type BestTimeDetail } from "@/components/shared/BestTimeDetailSheet";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
@@ -102,21 +106,35 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   const [_processingMemberId, setProcessingMemberId] = useState<string | null>(null);
 
   // メンバー詳細モーダル
-  const [selectedMember, setSelectedMember] = useState<TeamMembershipWithUser | null>(null);
+  // id だけを保持し、表示対象は毎レンダー members から導出する。member オブジェクトの
+  // スナップショットを state に持つと、モーダルを開いたまま非泳者設定・権限を変更しても
+  // members が再取得されて更新された後もモーダル側は古い値のまま表示され続ける
+  // (web の Zustand スナップショットと同型のバグ。Issue #49 フォローアップで発覚)。
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [isMemberDetailOpen, setIsMemberDetailOpen] = useState(false);
+  const selectedMember = useMemo(
+    () => members.find((m) => m.id === selectedMemberId) ?? null,
+    [members, selectedMemberId],
+  );
 
   const handleMemberPress = useCallback((member: TeamMembershipWithUser) => {
-    setSelectedMember(member);
+    setSelectedMemberId(member.id);
     setIsMemberDetailOpen(true);
   }, []);
 
   const handleMemberDetailClose = useCallback(() => {
     setIsMemberDetailOpen(false);
-    setSelectedMember(null);
+    setSelectedMemberId(null);
   }, []);
 
-  // WAポイント比較モーダル
-  const [isWaPointsModalOpen, setIsWaPointsModalOpen] = useState(false);
+  // 非泳者セクションの開閉（表の行として展開するアコーディオン）。
+  // ボトムシートは廃止し、他のメンバー行と同じ 2 列構造 (固定名前列 + 横スクロール
+  // タイム列) の行として最後のメンバー行の直下に描画する。既定は閉じた状態。
+  const [isNonSwimmerExpanded, setIsNonSwimmerExpanded] = useState(false);
+
+  const handleToggleNonSwimmerExpanded = useCallback(() => {
+    setIsNonSwimmerExpanded((prev) => !prev);
+  }, []);
 
   // ベストタイムセルの詳細シート（日付・大会名・備考）
   // profile/BestTimesTable.tsx・teams/member-detail/BestTimesTable.tsx と同じ構造:
@@ -187,9 +205,26 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
   // ベストタイムデータ
   const [bestTimesMap, setBestTimesMap] = useState<Map<string, MemberBestTime[]>>(new Map());
   const [loadingBestTimes, setLoadingBestTimes] = useState(false);
+  const [hasLoadedBestTimes, setHasLoadedBestTimes] = useState(false);
+
+  // ベストタイムの取得対象は「メンバーの顔ぶれ」だけで決まる。members 配列そのものを
+  // 依存に置くと、権限変更・泳者区分変更で1行書き換わっただけでもチーム全員分の
+  // records を引き直し、その間テーブルがスピナーに戻る (体感で数秒固まる)。
+  // 顔ぶれを表すキーだけを依存にし、members 自体は ref 経由で最新を読む。
+  const membersRef = useRef(members);
+  membersRef.current = members;
+  const memberUserIdsKey = useMemo(
+    () =>
+      members
+        .map((m) => m.user_id)
+        .sort()
+        .join(","),
+    [members],
+  );
 
   // メンバーのベストタイムを一括取得
   const loadBestTimes = useCallback(async () => {
+    const members = membersRef.current;
     if (members.length === 0) return;
 
     setLoadingBestTimes(true);
@@ -288,14 +323,15 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       console.error("ベストタイム取得エラー:", err);
     } finally {
       setLoadingBestTimes(false);
+      setHasLoadedBestTimes(true);
     }
-  }, [members, supabase]);
+  }, [supabase]);
 
   useEffect(() => {
-    if (members.length > 0) {
+    if (memberUserIdsKey.length > 0) {
       loadBestTimes();
     }
-  }, [members, loadBestTimes]);
+  }, [memberUserIdsKey, loadBestTimes]);
 
   // 引き継ぎタイムを含めて表示するか（WEB版 useMemberBestTimes 準拠、初期値false）
   const [includeRelaying, setIncludeRelaying] = useState(false);
@@ -370,6 +406,18 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
       sortedGroupHeaders: groupHeaders,
     };
   }, [groupedMembers, groupHeaders, sortStyle, sortDistance, sortOrder, getBestTime, includeRelaying]);
+
+  // 非泳者は表の本体行には出さず、最下行の「非泳者 (N)」1行に集約する。
+  // 件数・一覧はどちらも共有の唯一の定義元 (selectNonSwimmers) から導出する。
+  const nonSwimmerMembers = useMemo(() => selectNonSwimmers(members), [members]);
+
+  // 本体グリッド用の表示メンバー（泳者のみ）。groupHeaders の付け替えは
+  // web と共通の単一定義元 (remapGroupHeadersForSwimmers) を使う。
+  const displayedMembers = useMemo(() => excludeNonSwimmers(sortedMembers), [sortedMembers]);
+  const displayedGroupHeaders = useMemo(
+    () => remapGroupHeadersForSwimmers(sortedMembers, sortedGroupHeaders),
+    [sortedMembers, sortedGroupHeaders],
+  );
 
   // ロール変更処理
   const _handleRoleChange = async (member: TeamMembershipWithUser, newRole: "admin" | "user") => {
@@ -455,6 +503,88 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     headerScrollRef.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false });
   }, []);
 
+  // 泳者の行と非泳者の展開行はどちらもベストタイム付きの通常の行として同じ見た目で
+  // 描画する（要件3）。groupHeaders の付け替えとは無関係に呼び出せるよう、
+  // 単なる関数として切り出す（JSX タグとしては使わずレンダー内で直接呼ぶ）。
+  const renderMemberNameCell = (item: TeamMembershipWithUser) => {
+    const isCurrentUser = item.user_id === currentUserId;
+    return (
+      <Pressable
+        key={item.id}
+        onPress={() => handleMemberPress(item)}
+        style={[
+          styles.nameCell,
+          styles.cellBorderRight,
+          styles.memberRowBorderTop,
+          isCurrentUser && styles.nameCellCurrent,
+        ]}
+      >
+        <View style={styles.nameCellContent}>
+          <View style={styles.nameCellNameRow}>
+            <Text style={styles.nameCellText} numberOfLines={1}>
+              {item.users.name || t("teams.mobile.unnamedMember")}
+            </Text>
+            {item.role === "admin" && <Feather name="star" size={9} color="#EAB308" />}
+          </View>
+          {isCurrentUser && <Text style={styles.nameCellYou}>{t("teams.mobile.youLabel")}</Text>}
+        </View>
+      </Pressable>
+    );
+  };
+
+  const renderMemberTimeRow = (item: TeamMembershipWithUser) => {
+    const isCurrentUser = item.user_id === currentUserId;
+    return (
+      <Pressable
+        key={item.id}
+        onPress={() => handleMemberPress(item)}
+        style={[styles.memberRow, styles.memberRowBorderTop, isCurrentUser && styles.memberRowCurrent]}
+      >
+        {styleColumns.map(({ style, distances, colors }) =>
+          distances.map((distance) => {
+            const bestTime = getBestTime(item.id, style, distance, includeRelaying);
+            // New 判定は大会実施日が基準。一括登録 (competition なし) は対象外
+            const isNew = isNewRecord(bestTime?.competitionDate);
+            const suffix = bestTime
+              ? formatBestTimeSuffix({
+                  poolType: bestTime.poolType as 0 | 1,
+                  isRelaying: bestTime.isRelaying,
+                })
+              : "";
+            const cellStyle = [
+              styles.timeCell,
+              {
+                backgroundColor: isInvalidCombination(style, distance) ? "#E5E7EB" : colors.bg,
+              },
+              styles.cellBorderRight,
+            ];
+
+            // メンバーの識別子も含める（同じ種目・距離でも別メンバーの行は別セルとして扱う）
+            const cellKey = `${item.id}-${style}-${distance}`;
+
+            // 空セル（記録なし）はタップ対象にしない
+            if (!bestTime) {
+              return (
+                <View key={cellKey} style={cellStyle}>
+                  <Text style={styles.timeCellEmpty}>—</Text>
+                </View>
+              );
+            }
+
+            return (
+              <Pressable key={cellKey} onPress={() => handleCellPress(cellKey, bestTime)} style={cellStyle}>
+                <Text style={[styles.timeCellValue, isNew && styles.timeCellValueNew]}>
+                  {formatTime(bestTime.time)}
+                  {suffix !== "" && <Text style={styles.timeCellSuffix}> {suffix}</Text>}
+                </Text>
+              </Pressable>
+            );
+          }),
+        )}
+      </Pressable>
+    );
+  };
+
   // ローディング状態
   if (isLoading && members.length === 0) {
     return (
@@ -488,54 +618,39 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* 上部固定エリア（統計 + グループフィルター） */}
+      {/* 上部固定エリア（グループフィルター + 引き継ぎトグル） */}
       <View style={styles.fixedTop}>
-        {/* メンバー統計ヘッダー */}
-        <View style={styles.statsHeader}>
-          <View style={styles.statsHeaderTop}>
-            <Text style={styles.statsTitle}>{t("teams.mobile.memberListTitle")}</Text>
-            <Pressable
-              onPress={() => setIsWaPointsModalOpen(true)}
-              style={styles.waPointsButton}
-              accessibilityRole="button"
-            >
-              <Feather name="award" size={13} color="#2563EB" />
-              <Text style={styles.waPointsButtonText}>
-                {t("teams.waPointsCompare.buttonLabel")}
-              </Text>
-            </Pressable>
+        {/* 「WAポイントで比較」ボタンと info アイコンはランキングタブ
+            (components/teams/rankings/TeamRankings.tsx) へ移設済み。
+            タイトルと人数はカードごと撤去し、人数はテーブル左上セルへ移した */}
+        <View style={styles.groupFilterRow}>
+          {/* グループ表示（カテゴリピル） */}
+          <View style={styles.groupFilterFill}>
+            <TeamMemberGroupFilter
+              teamId={teamId}
+              supabase={supabase}
+              members={members}
+              onGroupedMembersChange={handleGroupedMembersChange}
+            />
           </View>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsText}>
-              {t("teams.mobile.memberListTotal", { count: members.length })}
+          <View style={styles.includeRelayToggle}>
+            <Text style={styles.includeRelayLabel} numberOfLines={1}>
+              {t("teams.memberStats.includeRelay")}
             </Text>
-            <View style={styles.includeRelayToggle}>
-              <Text style={styles.includeRelayLabel} numberOfLines={1}>
-                {t("teams.memberStats.includeRelay")}
-              </Text>
-              <Switch
-                value={includeRelaying}
-                onValueChange={setIncludeRelaying}
-                trackColor={{ false: "#D1D5DB", true: "#93C5FD" }}
-                thumbColor={includeRelaying ? "#2563EB" : "#F3F4F6"}
-                accessibilityRole="switch"
-                accessibilityLabel={t("teams.memberStats.includeRelay")}
-              />
-            </View>
+            <Switch
+              value={includeRelaying}
+              onValueChange={setIncludeRelaying}
+              trackColor={{ false: "#D1D5DB", true: "#93C5FD" }}
+              thumbColor={includeRelaying ? "#2563EB" : "#F3F4F6"}
+              accessibilityRole="switch"
+              accessibilityLabel={t("teams.memberStats.includeRelay")}
+            />
           </View>
         </View>
-
-        {/* グループ表示 */}
-        <TeamMemberGroupFilter
-          teamId={teamId}
-          supabase={supabase}
-          members={members}
-          onGroupedMembersChange={handleGroupedMembersChange}
-        />
       </View>
 
       {/* ベストタイムテーブル */}
-      {loadingBestTimes ? (
+      {loadingBestTimes && !hasLoadedBestTimes ? (
         <View style={styles.tableLoading}>
           <ActivityIndicator size="large" color="#2563EB" />
           <Text style={styles.tableLoadingText}>{t("teams.mobile.bestTimeLoading")}</Text>
@@ -544,9 +659,16 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
         <View style={styles.tableWrapper}>
           {/* === 固定ヘッダー行（種目名 + 距離） === */}
           <View style={styles.tableHeaderFixed}>
-            {/* 左上: メンバーラベル */}
+            {/* 左上: 人数 (旧「メンバー」ラベルの位置) */}
             <View style={[styles.nameHeaderCellFrozen, styles.cellBorderRight]}>
-              <Text style={styles.nameHeaderText}>{t("teams.mobile.memberColLabel")}</Text>
+              <Text
+                style={styles.nameHeaderText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
+                {t("teams.mobile.memberListTotal", { count: members.length })}
+              </Text>
             </View>
             {/* 右上: 種目ヘッダー（横スクロール同期） */}
             <ScrollView
@@ -624,10 +746,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
             <View style={styles.tableBody}>
               {/* 固定メンバー名列 */}
               <View style={styles.frozenColumn}>
-                {sortedMembers.map((item, idx) => {
-                  const user = item.users;
-                  const isCurrentUser = item.user_id === currentUserId;
-                  const groupName = sortedGroupHeaders.get(idx);
+                {displayedMembers.map((item, idx) => {
+                  const groupName = displayedGroupHeaders.get(idx);
 
                   return (
                     <React.Fragment key={item.id}>
@@ -641,32 +761,47 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                           <Text style={styles.groupHeaderText}>{groupName}</Text>
                         </View>
                       )}
-                      <Pressable
-                        onPress={() => handleMemberPress(item)}
-                        style={[
-                          styles.nameCell,
-                          styles.cellBorderRight,
-                          styles.memberRowBorderTop,
-                          isCurrentUser && styles.nameCellCurrent,
-                        ]}
-                      >
-                        <View style={styles.nameCellContent}>
-                          <View style={styles.nameCellNameRow}>
-                            <Text style={styles.nameCellText} numberOfLines={1}>
-                              {user.name || t("teams.mobile.unnamedMember")}
-                            </Text>
-                            {item.role === "admin" && (
-                              <Feather name="star" size={9} color="#EAB308" />
-                            )}
-                          </View>
-                          {isCurrentUser && (
-                            <Text style={styles.nameCellYou}>{t("teams.mobile.youLabel")}</Text>
-                          )}
-                        </View>
-                      </Pressable>
+                      {renderMemberNameCell(item)}
                     </React.Fragment>
                   );
                 })}
+                {/* 非泳者行（表の流れの中、最後のメンバー行の直下）。groupHeaders の
+                    インデックス計算 (displayedMembers 基準) には一切関与させず、
+                    描画の最後に独立して追加する。0人のときは行自体を出さない。 */}
+                {nonSwimmerMembers.length > 0 && (
+                  <>
+                    <Pressable
+                      onPress={handleToggleNonSwimmerExpanded}
+                      style={[
+                        styles.groupHeaderRowFrozen,
+                        styles.memberRowBorderTop,
+                        styles.nonSwimmerToggleRow,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: isNonSwimmerExpanded }}
+                      accessibilityLabel={t("teams.nonSwimmer.sectionToggle", {
+                        count: nonSwimmerMembers.length,
+                      })}
+                    >
+                      <View style={styles.nameCellContent}>
+                        <View style={styles.nameCellNameRow}>
+                          <Text style={styles.nameCellText} numberOfLines={1}>
+                            {t("teams.nonSwimmer.sectionToggle", {
+                              count: nonSwimmerMembers.length,
+                            })}
+                          </Text>
+                          <Feather
+                            name={isNonSwimmerExpanded ? "chevron-down" : "chevron-right"}
+                            size={12}
+                            color="#6B7280"
+                          />
+                        </View>
+                      </View>
+                    </Pressable>
+                    {isNonSwimmerExpanded &&
+                      nonSwimmerMembers.map((item) => renderMemberNameCell(item))}
+                  </>
+                )}
               </View>
 
               {/* スクロール可能なタイム列（横スクロール同期） */}
@@ -679,9 +814,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                 style={styles.scrollableColumns}
               >
                 <View>
-                  {sortedMembers.map((item, idx) => {
-                    const isCurrentUser = item.user_id === currentUserId;
-                    const groupName = sortedGroupHeaders.get(idx);
+                  {displayedMembers.map((item, idx) => {
+                    const groupName = displayedGroupHeaders.get(idx);
 
                     return (
                       <React.Fragment key={item.id}>
@@ -693,77 +827,20 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                             ]}
                           />
                         )}
-                        <Pressable
-                          onPress={() => handleMemberPress(item)}
-                          style={[
-                            styles.memberRow,
-                            styles.memberRowBorderTop,
-                            isCurrentUser && styles.memberRowCurrent,
-                          ]}
-                        >
-                          {styleColumns.map(({ style, distances, colors }) =>
-                            distances.map((distance) => {
-                              const bestTime = getBestTime(
-                                item.id,
-                                style,
-                                distance,
-                                includeRelaying,
-                              );
-                              // New 判定は大会実施日が基準。一括登録 (competition なし) は対象外
-                              const isNew = isNewRecord(bestTime?.competitionDate);
-                              const suffix = bestTime
-                                ? formatBestTimeSuffix({
-                                    poolType: bestTime.poolType as 0 | 1,
-                                    isRelaying: bestTime.isRelaying,
-                                  })
-                                : "";
-                              const cellStyle = [
-                                styles.timeCell,
-                                {
-                                  backgroundColor: isInvalidCombination(style, distance)
-                                    ? "#E5E7EB"
-                                    : colors.bg,
-                                },
-                                styles.cellBorderRight,
-                              ];
-
-                              // メンバーの識別子も含める（同じ種目・距離でも別メンバーの行は別セルとして扱う）
-                              const cellKey = `${item.id}-${style}-${distance}`;
-
-                              // 空セル（記録なし）はタップ対象にしない
-                              if (!bestTime) {
-                                return (
-                                  <View key={cellKey} style={cellStyle}>
-                                    <Text style={styles.timeCellEmpty}>—</Text>
-                                  </View>
-                                );
-                              }
-
-                              return (
-                                <Pressable
-                                  key={cellKey}
-                                  onPress={() => handleCellPress(cellKey, bestTime)}
-                                  style={cellStyle}
-                                >
-                                  <Text
-                                    style={[
-                                      styles.timeCellValue,
-                                      isNew && styles.timeCellValueNew,
-                                    ]}
-                                  >
-                                    {formatTime(bestTime.time)}
-                                    {suffix !== "" && (
-                                      <Text style={styles.timeCellSuffix}> {suffix}</Text>
-                                    )}
-                                  </Text>
-                                </Pressable>
-                              );
-                            }),
-                          )}
-                        </Pressable>
+                        {renderMemberTimeRow(item)}
                       </React.Fragment>
                     );
                   })}
+                  {/* 非泳者行（名前列側と対になる、横スクロールするタイム列側）。
+                      トグル行自体はタイム値を持たないため空セルとして高さだけ揃える。
+                      展開時はベストタイム付きの通常の行 (renderMemberTimeRow) を追加する。 */}
+                  {nonSwimmerMembers.length > 0 && (
+                    <>
+                      <View style={[styles.groupHeaderRowScrollable, styles.memberRowBorderTop]} />
+                      {isNonSwimmerExpanded &&
+                        nonSwimmerMembers.map((item) => renderMemberTimeRow(item))}
+                    </>
+                  )}
                 </View>
               </ScrollView>
             </View>
@@ -779,14 +856,6 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
         currentUserId={currentUserId}
         isCurrentUserAdmin={isCurrentUserAdmin}
         onMembershipChange={onMemberChange}
-      />
-
-      {/* WAポイント比較モーダル */}
-      <WaPointsCompareModal
-        visible={isWaPointsModalOpen}
-        onClose={() => setIsWaPointsModalOpen(false)}
-        members={members}
-        supabase={supabase}
       />
 
       {/* ベストタイムセルの詳細シート */}
@@ -809,26 +878,17 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
 
-  /* 統計ヘッダー */
-  statsHeader: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  statsHeaderTop: {
+  /* グループ表示行（左: カテゴリピル / 右端: 引き継ぎトグル） */
+  groupFilterRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 8,
   },
-  statsTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 4,
+  // RN の flexShrink 既定は 0 なので、ピルの横スクロール領域には明示的に flex を与える。
+  // これが無いとピルがトグルを画面外へ押し出す
+  groupFilterFill: {
+    flex: 1,
   },
   includeRelayToggle: {
     flexDirection: "row",
@@ -840,39 +900,6 @@ const styles = StyleSheet.create({
     color: "#374151",
     flexShrink: 1,
   },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  statsText: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  statsValue: {
-    fontWeight: "600",
-    color: "#111827",
-  },
-  waPointsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-    gap: 5,
-    marginBottom: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-    backgroundColor: "#EFF6FF",
-  },
-  waPointsButtonText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#2563EB",
-  },
-
   /* テーブルローディング */
   tableLoading: {
     backgroundColor: "#FFFFFF",
@@ -1000,6 +1027,18 @@ const styles = StyleSheet.create({
   groupHeaderRowScrollable: {
     backgroundColor: "#F3F4F6",
     height: 28,
+  },
+  // groupHeaderRowFrozen 単体 (default flexDirection: "column") では、直下の
+  // nameCellContent が flex: 1 で主軸 (縦方向) いっぱいに伸びてしまい、
+  // justifyContent: "center" が分配できる余白が残らない。結果として内部の
+  // nameCellNameRow は column の既定値 flex-start = 上端に留まる。
+  // nameCell (メンバー行) は同じ nameCellContent を使うが flexDirection: "row" +
+  // alignItems: "center" を持つため、flex: 1 は横方向 (主軸) に効いて幅を埋め、
+  // 縦方向 (交差軸) は alignItems: "center" が stretch を上書きしてコンテンツの
+  // 高さぶんだけ確保した上で中央寄せする。非泳者トグル行だけ同じ構造を追加する。
+  nonSwimmerToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   groupHeaderText: {
     fontSize: 11,

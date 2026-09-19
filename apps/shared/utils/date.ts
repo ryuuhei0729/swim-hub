@@ -177,6 +177,28 @@ export function isCompetitionDateInPast(date: string | null | undefined): boolea
 }
 
 /**
+ * 日本の年度 (4/1 〜 翌3/31) を返す。1〜3月は前年の年度に属する。
+ *
+ * 4月以降ならその年、1〜3月なら前年。**単純に `getFullYear()` を使うと年度末の
+ * 3ヶ月間だけ1年ズレる。**
+ *
+ * ⚠️ **この判定を各所で書き直さないこと。** 同じ 4/1 基準を
+ * `./domesticRecords.ts` の `resolveAgeCategory` (年齢別記録の基準日) と
+ * `./rankingEventAxis.ts` の年度選択肢が読んでおり、片方だけズラすと
+ * 「ランキングの今年度」と「年齢区分の基準年度」が静かに食い違う。
+ *
+ * `getMonth()` はローカルタイムゾーンで解釈される。この関数は「ユーザーにとっての
+ * 今が何年度か」を返すものなので、ローカル解釈が正しい (UTC で判定すると
+ * JST の 4/1 09:00 未満が前年度になる)。
+ *
+ * @param today 基準となる「現在時刻」。省略時は `new Date()` (テスト容易化のため注入可能)
+ */
+export function resolveFiscalYear(today: Date = new Date()): number {
+  // getMonth() は 0-indexed (3 = 4月)
+  return today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+}
+
+/**
  * 指定された年月の開始日と終了日を'yyyy-MM-dd'形式の文字列で返す
  * @param year 年
  * @param month 月（1-12）

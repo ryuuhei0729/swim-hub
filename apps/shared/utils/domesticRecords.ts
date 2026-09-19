@@ -25,6 +25,7 @@
 // =============================================================================
 
 import { differenceInYears, isAfter, isValid, parseISO } from "date-fns";
+import { resolveFiscalYear } from "./date";
 import type { StyleTranslationKey } from "./swimStyles";
 import { type Gender, type PoolType, type WaPointsCellCandidate, type WaPointsCellResult, getBestPointsForCandidates } from "./waPoints";
 
@@ -494,10 +495,10 @@ export function resolveAgeCategory(
   // 「today ちょうどに生まれた」場合は弾かれない。
   if (isAfter(birthDate, today)) return null;
 
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth(); // 0-indexed (0 = 1月, 3 = 4月)
-  const fiscalYear = currentMonth >= 3 ? currentYear : currentYear - 1;
-  const referenceDate = parseISO(`${fiscalYear}-04-01`);
+  // 4/1 基準の年度判定は `./date.ts` の `resolveFiscalYear` が唯一の定義元。
+  // ランキングの年度選択肢も同じ関数を読む (両者がズレると「今年度」の意味が
+  // 画面間で食い違う)。
+  const referenceDate = parseISO(`${resolveFiscalYear(today)}-04-01`);
 
   const age = differenceInYears(referenceDate, birthDate);
   if (age <= 11) return "elementary";

@@ -61,6 +61,34 @@ export const ScrollView = ({
 }: { children?: React.ReactNode } & Record<string, unknown>) =>
   React.createElement("div", { ...props, style: { overflow: "auto" } }, children);
 
+// KeyboardAvoidingView API
+// behavior/keyboardVerticalOffset は DOM に反映しても意味を持たないため、
+// Switch の data-value と同じ流儀で data 属性として素通しし、テストから検証できるようにする。
+export const KeyboardAvoidingView = ({
+  children,
+  style,
+  behavior,
+  keyboardVerticalOffset,
+  ...props
+}: {
+  children?: React.ReactNode;
+  style?: unknown;
+  behavior?: string;
+  keyboardVerticalOffset?: number;
+} & Record<string, unknown>) => {
+  const processedStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
+  return React.createElement(
+    "div",
+    {
+      ...props,
+      style: processedStyle,
+      "data-behavior": behavior,
+      "data-keyboard-vertical-offset": keyboardVerticalOffset,
+    },
+    children,
+  );
+};
+
 export const FlatList = ({
   data,
   renderItem,
@@ -93,8 +121,21 @@ export const Image = ({
   return React.createElement("img", { ...props, src });
 };
 
-export const TextInput = ({ ...props }: Record<string, unknown>) =>
-  React.createElement("input", { type: "text", ...props });
+// testID は RN 側のプロップ名なので、そのまま spread すると DOM 属性 `testid` になり
+// testing-library の getByTestId (既定で data-testid を見る) から引けない。
+// TextInput だけ data-testid に変換する。
+//
+// 【重要】この変換を View / Pressable / Text にも広げてはいけない。
+// それらには testID 付きの本番要素が既に多数あり、`queryByTestId(...).toBeNull()` を
+// 期待する既存テスト (PracticeTabFormScreen.practiceScopeRowWipe / CompetitionTabFormScreen 等)
+// が「見つからないから null」で通っている。変換を広げると要素が見つかるようになり、
+// それらが一斉に赤くなる (= 現状それらのアサーションは空振りしている、という別課題)。
+export const TextInput = ({ testID, ...props }: Record<string, unknown>) =>
+  React.createElement("input", {
+    type: "text",
+    ...props,
+    ...(typeof testID === "string" ? { "data-testid": testID } : {}),
+  });
 
 // Switch API
 // value/onValueChange のみを DOM の button + data 属性で観察可能にする。
@@ -304,6 +345,11 @@ export const Platform = {
   select: <T>(obj: { web?: T; default?: T }): T | undefined => obj.web ?? obj.default,
 };
 
+// PixelRatio API (useKeyboardAvoidingBehavior の Dynamic Island 補正計算が参照する)
+export const PixelRatio = {
+  get: () => 3,
+};
+
 // Alert API
 export const Alert = {
   alert: vi.fn(),
@@ -324,6 +370,7 @@ const ReactNative = {
   Pressable,
   ScrollView,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
   ActivityIndicator,
   RefreshControl,
@@ -332,6 +379,7 @@ const ReactNative = {
   Switch,
   StyleSheet,
   Platform,
+  PixelRatio,
   Alert,
   AppState,
   Animated,

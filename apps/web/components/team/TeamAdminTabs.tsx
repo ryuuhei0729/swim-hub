@@ -7,21 +7,44 @@ import {
   UsersIcon,
   ClockIcon,
   TrophyIcon,
+  ChartBarIcon,
   CogIcon,
   ClipboardDocumentCheckIcon,
   DocumentArrowUpIcon,
   TagIcon,
 } from "@heroicons/react/24/outline";
 
-export type TeamAdminTabType =
-  | "announcements"
-  | "members"
-  | "groups"
-  | "practices"
-  | "competitions"
-  | "attendance"
-  | "bulk-register"
-  | "settings";
+/**
+ * 管理者タブの定義。**タブを増やすときはここだけを直す。**
+ *
+ * 以前は「union 型」「表示用の配列」「URL クエリのホワイトリスト
+ * (`_client/TeamAdminClient.tsx`)」の3箇所に同じ ID 列があり、ホワイトリストの
+ * 更新を忘れると `?tab=xxx` が型エラーも lint エラーも出さずに黙って無視される
+ * 罠になっていた。型・表示順・ホワイトリスト判定をすべてこの配列から導出する。
+ *
+ * ⚠️ `id` と i18n キーは一致しない (`bulk-register` → `tabs.bulkRegister`) ため
+ * `labelKey` を明示的に持つ。
+ *
+ * 配列の順序が画面上のタブの並び順になる。
+ */
+const TEAM_ADMIN_TAB_DEFS = [
+  { id: "attendance", labelKey: "tabs.attendance", icon: ClipboardDocumentCheckIcon },
+  { id: "announcements", labelKey: "tabs.announcements", icon: MegaphoneIcon },
+  { id: "members", labelKey: "tabs.members", icon: UsersIcon },
+  { id: "groups", labelKey: "tabs.groups", icon: TagIcon },
+  { id: "practices", labelKey: "tabs.practices", icon: ClockIcon },
+  { id: "competitions", labelKey: "tabs.competitions", icon: TrophyIcon },
+  { id: "rankings", labelKey: "tabs.rankings", icon: ChartBarIcon },
+  { id: "bulk-register", labelKey: "tabs.bulkRegister", icon: DocumentArrowUpIcon },
+  { id: "settings", labelKey: "tabs.settings", icon: CogIcon },
+] as const;
+
+export type TeamAdminTabType = (typeof TEAM_ADMIN_TAB_DEFS)[number]["id"];
+
+/** URL の `?tab=` を `TeamAdminTabType` に絞り込む。定義元は `TEAM_ADMIN_TAB_DEFS` の1箇所のみ。 */
+export function isTeamAdminTabType(value: string): value is TeamAdminTabType {
+  return TEAM_ADMIN_TAB_DEFS.some((tab) => tab.id === value);
+}
 
 export interface TeamAdminTab {
   id: TeamAdminTabType;
@@ -42,48 +65,11 @@ export default function TeamAdminTabs({
 }: TeamAdminTabsProps) {
   const t = useTranslations("teamsAdmin");
 
-  const adminTabs: TeamAdminTab[] = [
-    {
-      id: "attendance",
-      name: t("tabs.attendance"),
-      icon: ClipboardDocumentCheckIcon,
-    },
-    {
-      id: "announcements",
-      name: t("tabs.announcements"),
-      icon: MegaphoneIcon,
-    },
-    {
-      id: "members",
-      name: t("tabs.members"),
-      icon: UsersIcon,
-    },
-    {
-      id: "groups",
-      name: t("tabs.groups"),
-      icon: TagIcon,
-    },
-    {
-      id: "practices",
-      name: t("tabs.practices"),
-      icon: ClockIcon,
-    },
-    {
-      id: "competitions",
-      name: t("tabs.competitions"),
-      icon: TrophyIcon,
-    },
-    {
-      id: "bulk-register",
-      name: t("tabs.bulkRegister"),
-      icon: DocumentArrowUpIcon,
-    },
-    {
-      id: "settings",
-      name: t("tabs.settings"),
-      icon: CogIcon,
-    },
-  ];
+  const adminTabs: TeamAdminTab[] = TEAM_ADMIN_TAB_DEFS.map((tab) => ({
+    id: tab.id,
+    name: t(tab.labelKey),
+    icon: tab.icon,
+  }));
 
   return (
     <div className="bg-white rounded-lg shadow">

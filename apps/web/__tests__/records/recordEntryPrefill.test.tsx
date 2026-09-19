@@ -74,8 +74,8 @@ const baseCompetition = {
 };
 
 const activeMembers = [
-  { id: "user-1", user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } },
-  { id: "user-2", user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎" } },
+  { id: "user-1", user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎", gender: 0 } },
+  { id: "user-2", user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎", gender: 0 } },
 ];
 
 type RecordClientPropsFull = Parameters<typeof RecordClient>[0];
@@ -95,6 +95,7 @@ function renderRecordClient(
       existingRecords={[]}
       styles={[STYLE_FREE_50, STYLE_BREAST_50]}
       entries={[]}
+      bestTimesByUser={{}}
       {...overrides}
     />,
   );
@@ -320,7 +321,7 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
         pool_type: null,
         team_id: "team-1",
         split_times: [],
-        users: { id: r.user_id, name: `選手${idx}` },
+        users: { id: r.user_id, name: `選手${idx}`, gender: 0 },
         styles: { id: 2, name_jp: "自由形50m", distance: 50 },
       }));
 
@@ -331,10 +332,10 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
         // するため、リレーメンバーを members にも含めておく必要がある)
         members: [
           ...activeMembers,
-          { id: "user-a", user_id: "user-a", role: "user", users: { id: "user-a", name: "選手0" } },
-          { id: "user-b", user_id: "user-b", role: "user", users: { id: "user-b", name: "選手1" } },
-          { id: "user-c", user_id: "user-c", role: "user", users: { id: "user-c", name: "選手2" } },
-          { id: "user-d", user_id: "user-d", role: "user", users: { id: "user-d", name: "選手3" } },
+          { id: "user-a", user_id: "user-a", role: "user", users: { id: "user-a", name: "選手0", gender: 0 } },
+          { id: "user-b", user_id: "user-b", role: "user", users: { id: "user-b", name: "選手1", gender: 0 } },
+          { id: "user-c", user_id: "user-c", role: "user", users: { id: "user-c", name: "選手2", gender: 0 } },
+          { id: "user-d", user_id: "user-d", role: "user", users: { id: "user-d", name: "選手3", gender: 0 } },
         ],
         entries: [
           // リレーとは別の種目 (平泳ぎ50m) への、リレーに参加していない選手のエントリー
@@ -401,7 +402,7 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
         pool_type: null,
         team_id: "team-1",
         split_times: [],
-        users: { id: r.user_id, name: `選手${idx}` },
+        users: { id: r.user_id, name: `選手${idx}`, gender: 0 },
         styles: { id: 2, name_jp: "自由形50m", distance: 50 },
       }));
 
@@ -409,10 +410,10 @@ describe("RecordClient — エントリー行の初期反映 (仕様#1: 参考�
         existingRecords: relayRecords,
         members: [
           ...activeMembers,
-          { id: "user-a", user_id: "user-a", role: "user", users: { id: "user-a", name: "選手0" } },
-          { id: "user-b", user_id: "user-b", role: "user", users: { id: "user-b", name: "選手1" } },
-          { id: "user-c", user_id: "user-c", role: "user", users: { id: "user-c", name: "選手2" } },
-          { id: "user-d", user_id: "user-d", role: "user", users: { id: "user-d", name: "選手3" } },
+          { id: "user-a", user_id: "user-a", role: "user", users: { id: "user-a", name: "選手0", gender: 0 } },
+          { id: "user-b", user_id: "user-b", role: "user", users: { id: "user-b", name: "選手1", gender: 0 } },
+          { id: "user-c", user_id: "user-c", role: "user", users: { id: "user-c", name: "選手2", gender: 0 } },
+          { id: "user-d", user_id: "user-d", role: "user", users: { id: "user-d", name: "選手3", gender: 0 } },
         ],
         // リレーの一員 user-a の (user_id=user-a, style_id=2) に完全一致するエントリーを用意する
         entries: [

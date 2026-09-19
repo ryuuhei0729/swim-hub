@@ -18,7 +18,12 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    exclude: ["node_modules", "dist", ".expo", "web-build"],
+    // `__tests__/navigation-integration/` は **別プロジェクト** (vitest.nav.config.ts) で動かす。
+    // あちらは react-navigation を実物で、`react-native` を `react-native-web` で解決して
+    // BottomTabBar の実 onPress まで走らせるため、この設定 (RN 静的モック +
+    // react-navigation スタブ) とは両立しない。
+    //   実行: pnpm --filter @swim-hub/mobile test:nav
+    exclude: ["node_modules", "dist", ".expo", "web-build", "**/__tests__/navigation-integration/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

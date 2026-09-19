@@ -27,3 +27,12 @@ export * from "./practiceLogTemplate";
 
 // チーム大会エントリー代理一括入力型
 export * from "./team-entry";
+
+// チームランキング型
+export * from "./teamRanking";
+
+// リレーのチーム記録型
+export * from "./relayRecord";
+
+// チームリレーランキング型
+export * from "./teamRelayRanking";

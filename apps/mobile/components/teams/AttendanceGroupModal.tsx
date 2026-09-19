@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -13,6 +14,8 @@ import {
   ATTENDANCE_GROUP_TITLE_COLORS,
 } from "./AttendanceGroupSection";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 
 /** 背面タップでは閉じない (元実装どおり、背面タップ用の Pressable が存在しない) */
 const NOOP_BACKDROP_PRESS = () => {};
@@ -55,6 +58,7 @@ export const AttendanceGroupModal: React.FC<AttendanceGroupModalProps> = ({
   onChangeLinkPress,
 }) => {
   const { t } = useTranslation();
+  const insets = useSafeInsets();
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
   const [attendanceData, setAttendanceData] = useState<
@@ -234,8 +238,13 @@ export const AttendanceGroupModal: React.FC<AttendanceGroupModalProps> = ({
         )}
       </ScrollView>
 
-      {showChangeLink && onChangeLinkPress && (
-        <View style={styles.footer}>
+      {/* Android edge-to-edge: フッターはネイティブ経路の SafeAreaView で下部インセットを
+          消費する (パターンA)。フッター不在時は ScrollView の最下段がシステム
+          ナビゲーションバーに埋没するため、代わりに inset ぶんのスペーサーを置く
+          (children/style を持たない空の SafeAreaView は Fabric で padding を生成しないため、
+           明示的な高さを持つ View を使う。BottomSheet.tsx と同じ方式)。 */}
+      {showChangeLink && onChangeLinkPress ? (
+        <SafeAreaView edges={["bottom"]} style={styles.footer}>
           <Pressable
             style={styles.changeLinkButton}
             onPress={onChangeLinkPress}
@@ -246,7 +255,9 @@ export const AttendanceGroupModal: React.FC<AttendanceGroupModalProps> = ({
               {t("dashboard.attendance.changeButton")}
             </Text>
           </Pressable>
-        </View>
+        </SafeAreaView>
+      ) : (
+        <View style={{ height: getSafeFooterPadding(0, insets.bottom) }} />
       )}
     </SlideUpModal>
   );

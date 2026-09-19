@@ -183,7 +183,14 @@ describe("validatePracticeImageFile", () => {
   describe("異常系", () => {
     it("10MB超のファイルを拒否する", async () => {
       // 11MBのファイル
-      const content = new Array(11 * 1024 * 1024).fill("a").join("");
+      // ⚠️ `new Array(11 * 1024 * 1024).fill("a").join("")` にしないこと。
+      //    1100万要素の配列生成 + join で**単体でも 5000ms 上限のほぼ全部**を
+      //    使い、負荷が乗ると必ずタイムアウトする潜在的フレーキーになる
+      //    (実測: このテストだけで tests 1.1〜1.4s、ファイル全体で 4.6〜4.8s)。
+      //    `validatePracticeImageFile` は `file.size` / `file.name` / `file.type`
+      //    しか読まず**中身を一度も読まない** (`utils/imageUtils.ts:210-247`) ので、
+      //    文字列の作り方を変えても検証内容は等価。
+      const content = "a".repeat(11 * 1024 * 1024);
       const file = new File([content], "test.jpg", { type: "image/jpeg" });
       const result = await validatePracticeImageFile(file);
 

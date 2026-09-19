@@ -64,7 +64,7 @@ const mocks = vi.hoisted(() => {
     style,
     responses,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -78,6 +78,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -99,12 +100,18 @@ vi.mock("@apps/shared/api/styles", () => ({
   },
 }));
 
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
+  },
+}));
+
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
 vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -118,7 +125,7 @@ function makeQueryClient() {
   });
 }
 
-describe("TeamRecordBulkFormScreen — entries 取得失敗の回帰 (Critical, 2026-08-12着地確認)", () => {
+describe("TeamRecordStyleDetailScreen — entries 取得失敗の回帰 (Critical, 2026-08-12着地確認)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getStyles.mockResolvedValue([mocks.style]);
@@ -157,7 +164,7 @@ describe("TeamRecordBulkFormScreen — entries 取得失敗の回帰 (Critical, 
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       // ErrorView (再試行ボタン) には遷移しない。記録入力フォームの保存ボタンが表示される
       await waitFor(() => {
@@ -166,13 +173,13 @@ describe("TeamRecordBulkFormScreen — entries 取得失敗の回帰 (Critical, 
       expect(screen.queryByText("再試行")).toBeNull();
 
       // 既存記録 (太郎, 30.00秒) の入力・編集は続行できる (entries 失敗の影響を受けない)
-      const timeInput = screen.getByPlaceholderText("例: 1:30.50") as HTMLInputElement;
+      const timeInput = screen.getByTestId("record-bulk-member-time") as HTMLInputElement;
       expect(timeInput.value).toBe("30.00");
     },
   );
 });
 
-describe("TeamRecordBulkFormScreen — userName フォールバックの i18n 化 (Warning 1, 2026-08-12着地確認)", () => {
+describe("TeamRecordStyleDetailScreen — userName フォールバックの i18n 化 (Warning 1, 2026-08-12着地確認)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getStyles.mockResolvedValue([mocks.style]);
@@ -197,7 +204,7 @@ describe("TeamRecordBulkFormScreen — userName フォールバックの i18n �
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();
@@ -210,7 +217,7 @@ describe("TeamRecordBulkFormScreen — userName フォールバックの i18n �
   );
 });
 
-describe("TeamRecordBulkFormScreen — entry_time=0 のバッジ非表示 (Warning 2, 2026-08-12着地確認)", () => {
+describe("TeamRecordStyleDetailScreen — entry_time=0 のバッジ非表示 (Warning 2, 2026-08-12着地確認)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getStyles.mockResolvedValue([mocks.style]);
@@ -251,7 +258,7 @@ describe("TeamRecordBulkFormScreen — entry_time=0 のバッジ非表示 (Warni
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();

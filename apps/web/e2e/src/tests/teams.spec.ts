@@ -15,6 +15,41 @@ import { supabaseLogin } from "../utils/supabase-login";
  * - TC-TEAMS-006: チーム一覧表示
  */
 
+/**
+ * チーム詳細ページで招待コードを読む。
+ *
+ * ⚠️ ヘッダーにあったチーム名・招待コードのカードは廃止され、招待コードは
+ * **設定タブの「チーム情報」カード内**へ統合された。したがってチーム詳細を
+ * 開いただけでは `input[readonly]` は存在しない。`?tab=settings` へ遷移してから読む。
+ *
+ * 取得はページ全体の `input[readonly]` ではなく **設定タブのコンテナ配下**に
+ * スコープする。ページ直下の最初の readonly 入力を拾う書き方だと、将来別の
+ * readonly 入力が増えたときに黙って別の値を読みはじめる。
+ */
+async function readInviteCodeFromSettingsTab(page: Page): Promise<string> {
+  const url = new URL(page.url());
+  if (url.searchParams.get("tab") !== "settings") {
+    url.searchParams.set("tab", "settings");
+    await page.goto(url.toString());
+    await page.waitForLoadState("networkidle");
+  }
+
+  const settingsTab = page.locator('[data-testid="team-settings-tab"]');
+  await settingsTab.waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
+
+  // コピーボタンの存在＝招待コード欄が描画されている、の目印
+  await page
+    .locator('[data-testid="team-settings-copy-invite-code"]')
+    .waitFor({ state: "visible", timeout: 15000 })
+    .catch(() => {});
+
+  return await settingsTab
+    .locator("input[readonly]")
+    .first()
+    .inputValue()
+    .catch(() => "");
+}
+
 // テスト開始前に環境変数を検証
 let hasRequiredEnvVars = false;
 try {
@@ -177,9 +212,8 @@ test.describe("チーム機能のテスト", () => {
       await page.waitForLoadState("networkidle");
     }
 
-    // ステップ2: 招待コードを取得
-    const inviteCodeInput = page.locator("input[readonly]").first();
-    inviteCode = await inviteCodeInput.inputValue();
+    // ステップ2: 招待コードを取得 (設定タブへ遷移してから読む)
+    inviteCode = await readInviteCodeFromSettingsTab(page);
 
     if (!inviteCode) {
       console.log("招待コードが取得できないため、テストをスキップします");
@@ -242,12 +276,8 @@ test.describe("チーム機能のテスト", () => {
       await page.waitForLoadState("networkidle");
       await page.waitForTimeout(1000);
 
-      // 招待コードを確認
-      const currentInviteCode = await page
-        .locator("input[readonly]")
-        .first()
-        .inputValue()
-        .catch(() => "");
+      // 招待コードを確認 (設定タブへ遷移してから読む)
+      const currentInviteCode = await readInviteCodeFromSettingsTab(page);
       if (currentInviteCode === inviteCode) {
         // アカウントBは既にこのチームのメンバー
         alreadyMember = true;
@@ -343,16 +373,14 @@ test.describe("チーム機能のテスト", () => {
         await card.click();
         await page.waitForLoadState("networkidle");
 
-        // 招待コードを確認
-        const teamInviteCode = await page
-          .locator("input[readonly]")
-          .first()
-          .inputValue()
-          .catch(() => "");
+        // 招待コードを確認 (設定タブへ遷移してから読む)
+        const teamInviteCode = await readInviteCodeFromSettingsTab(page);
         if (teamInviteCode === inviteCode) {
           foundTeam = true;
           // URLからチームIDを取得
-          const urlMatch = page.url().match(/\/teams\/([a-zA-Z0-9-]+)$/);
+          // ⚠️ 招待コード確認のために `?tab=settings` を付けて遷移しているため、
+          // 末尾一致 (`$`) では team id を取り出せない。クエリの手前までを取る
+          const urlMatch = page.url().match(/\/teams\/([a-zA-Z0-9-]+)(?:[?#]|$)/);
           if (urlMatch) {
             teamId = urlMatch[1];
           }

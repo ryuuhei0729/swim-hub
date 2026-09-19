@@ -25,6 +25,7 @@ import {
   type CompareMetric,
 } from "@apps/shared/utils/domesticRecords";
 import { isNewRecord } from "@apps/shared/utils/bestTimeBadge";
+import { COMPACT_SELECT_CLASS } from "@/components/ui/selectStyles";
 
 const styleHeaderBgClass: Record<string, string> = {
   自由形: "bg-yellow-100",
@@ -309,19 +310,10 @@ export function BestTimesTable({ bestTimes, gender, ageCategory }: BestTimesTabl
 
       {/* 比較指標プルダウン (ONのときだけ表示。初期選択は常にWA / jaロケール限定) */}
       {/*
-        高さ・padding の根拠 (globals.css の `@media (max-width:768px){input,select,textarea{font-size:16px!important}}`
-        との衝突対策。この !important は残す前提でボックス側を合わせる):
-        Tailwind v4 の text-xs/text-sm は line-height をユニットレスの比率で定義する
-        (--text-xs--line-height: calc(1/0.75)=1.333, --text-sm--line-height: calc(1.25/0.875)=1.4286)。
-        比率なので 16px 強制時は font-size と一緒にスケールし、想定より大きい line-height になる。
-        - 〜639px (text-xs, 16px 強制): line-height = 16 * 1.333 ≈ 21.33px
-        - 640〜767px (sm: が効くが 16px 強制はまだ効く text-sm): line-height = 16 * 1.4286 ≈ 22.86px (最大ケース)
-        - 768px〜 (実際の text-sm, 14px): line-height = 14 * 1.4286 = 20px
-        border-box なので box 内の中身が入る余地 = height - border(2px) - padding。
-        py-1 (padding 4px×2=8px) にすると必要高さは最大でも 22.86+8+2=32.86px。
-        h-9 (36px) はどの帯域でも上回る (余裕 3px 以上)。デスクトップは高さ 36px のまま変更なし
-        (padding だけ 8px→4px に縮小。従来は 20+16(旧padding)+2=38px 必要で 36px に対し僅かに超過していた)。
-        (profile/BestTimesTable.tsx と同一指定。片方だけ直すと将来食い違うため必ず両方同時に変更すること)
+        select のボックス指定 (h-9 / py-1 / pl-2 sm:pl-3 / pr-7) は
+        `components/ui/selectStyles.ts` の COMPACT_SELECT_CLASS が唯一の定義元。
+        ▼ の重なりと 640〜767px の高さ不足の根拠コメントはそこにある。
+        🚨 ここにクラス文字列を書き戻さないこと (片方だけ直されて再発する)。
       */}
       {isWaPointsMode && showCompareMetricPicker && (
         <div className="mb-3 flex flex-wrap items-center gap-2 sm:gap-3">
@@ -331,7 +323,7 @@ export function BestTimesTable({ bestTimes, gender, ageCategory }: BestTimesTabl
               aria-label={t("compareMetricLabel")}
               value={compareMetric}
               onChange={(e) => setCompareMetric(e.target.value as CompareMetric)}
-              className="pr-6 h-9 py-1 px-2 sm:px-3 border border-gray-300 rounded-md text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={COMPACT_SELECT_CLASS}
             >
               <option value="wa">{t("compareMetric.wa")}</option>
               <option value="nr">{t("compareMetric.nr")}</option>
@@ -354,7 +346,7 @@ export function BestTimesTable({ bestTimes, gender, ageCategory }: BestTimesTabl
                   e.target.value === "unset" ? null : (e.target.value as AgeCategory),
                 )
               }
-              className="h-9 py-1 px-2 sm:px-3 border border-gray-300 rounded-md text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={COMPACT_SELECT_CLASS}
             >
               <option value="unset">{t("ageCategoryUnset")}</option>
               {AGE_CATEGORY_ORDER.map((category) => (

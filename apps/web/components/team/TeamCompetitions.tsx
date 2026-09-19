@@ -33,6 +33,7 @@ import TeamCompetitionRecordsModal from "./TeamCompetitionRecordsModal";
 import Pagination from "@/components/ui/Pagination";
 import DeleteConfirmModal from "@/components/ui/DeleteConfirmModal";
 import { TeamRecordsAPI } from "@apps/shared/api/teams/records";
+import { useInvalidateTeamRankings } from "@apps/shared/hooks/queries/useInvalidateTeamRankings";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { RecordAPI } from "@apps/shared/api/records";
 import RecordLogForm from "@/components/forms/record-log/RecordLogForm";
@@ -221,6 +222,7 @@ export default function TeamCompetitions({
   isAdmin = false,
 }: TeamCompetitionsProps) {
   const { supabase, user } = useAuth();
+  const invalidateRankings = useInvalidateTeamRankings();
   const router = useRouter();
   const t = useTranslations("teams");
   const [competitions, setCompetitions] = useState<TeamCompetition[]>([]);
@@ -443,6 +445,12 @@ export default function TeamCompetitions({
     try {
       const api = new TeamRecordsAPI(supabase);
       await api.remove(pendingDeleteId);
+      // 大会を消すと records_competition_id_fkey (ON DELETE SET NULL) で
+      // records.competition_id が NULL 化され、ランキングの内容が変わる
+      // (teamCompetitions からはその大会の全行が消える)。この画面は React Query を
+      // 使わず自前で再読み込みするため、ランキング側は明示的に落とす。
+      // (Provider が無い環境では no-op。理由は useInvalidateTeamRankings の docstring)
+      invalidateRankings();
       setPendingDeleteId(null);
       await loadTeamCompetitions();
     } catch (err) {

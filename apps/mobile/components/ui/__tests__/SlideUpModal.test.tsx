@@ -35,6 +35,9 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 // を参照)。既定値 "web" は共有モックの既定 Platform.OS と同じなので、Platform に触れない
 // 既存テスト (V-SLIDE-*, V-9*) の挙動には一切影響しない。
 const platformState = vi.hoisted(() => ({ OS: "web" as "web" | "ios" | "android" }));
+// safe area insets を可変にする (KAV 統合検証 [V-KAV-07] 用)。既定 top:0 は
+// vitest.setup.ts のグローバルモックと同じ値なので、既存テストの挙動には影響しない。
+const insetsState = vi.hoisted(() => ({ top: 0, bottom: 0, left: 0, right: 0 }));
 
 vi.mock("react-native", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-native")>();
@@ -44,6 +47,7 @@ vi.mock("react-native", async (importOriginal) => {
       get OS() {
         return platformState.OS;
       },
+      isPad: false,
       select: (obj: Record<string, unknown> & { web?: unknown; default?: unknown }) => {
         if (platformState.OS === "ios") return (obj as Record<string, unknown>).ios ?? obj.default;
         if (platformState.OS === "android")
@@ -53,6 +57,11 @@ vi.mock("react-native", async (importOriginal) => {
     },
   };
 });
+
+vi.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => insetsState,
+  initialWindowMetrics: null,
+}));
 
 import {
   __modalMountRegistry,
@@ -591,6 +600,63 @@ describe("SlideUpModal", () => {
       // Android は SLIDE_DURATION 経過だけで確定する (onDismiss 不要)
       advanceBy(SLIDE_DURATION);
       expect(onClosed).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // KAV 統合 (Sprint Contract V-KAV-07): SlideUpModal は独立したネイティブ Modal の
+  // 直下にあり react-navigation のヘッダーを持たないため、内部の
+  // FormKeyboardAvoidingView には hasNativeHeader=false が渡る前提。
+  // ---------------------------------------------------------------------
+  describe("KeyboardAvoidingView 統合", () => {
+    afterEach(() => {
+      platformState.OS = "web";
+      insetsState.top = 0;
+    });
+
+    it("[V-KAV-07] iOS: Modal 直下が KeyboardAvoidingView (behavior='padding') でラップされている", () => {
+      platformState.OS = "ios";
+      insetsState.top = 47;
+
+      const { container } = render(
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()}>
+          <>content</>
+        </SlideUpModal>,
+      );
+
+      const modalRoot = container.firstElementChild as HTMLElement;
+      const kav = modalRoot.firstElementChild as HTMLElement;
+      expect(kav.getAttribute("data-behavior")).toBe("padding");
+    });
+
+    it("[V-KAV-07] iOS: ネイティブヘッダーを持たない (Modal 配下) ため offset は insets.top を足さず0のまま", () => {
+      platformState.OS = "ios";
+      insetsState.top = 47;
+
+      const { container } = render(
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()}>
+          <>content</>
+        </SlideUpModal>,
+      );
+
+      const modalRoot = container.firstElementChild as HTMLElement;
+      const kav = modalRoot.firstElementChild as HTMLElement;
+      expect(kav.getAttribute("data-keyboard-vertical-offset")).toBe("0");
+    });
+
+    it("[V-KAV-09] Android: behavior=undefined のまま (data-behavior 属性が付かない)", () => {
+      platformState.OS = "android";
+      insetsState.top = 47;
+
+      const { container } = render(
+        <SlideUpModal backdropAccessibilityLabel="閉じる" visible onClose={vi.fn()}>
+          <>content</>
+        </SlideUpModal>,
+      );
+
+      const modalRoot = container.firstElementChild as HTMLElement;
+      const kav = modalRoot.firstElementChild as HTMLElement;
+      expect(kav.getAttribute("data-behavior")).toBeNull();
     });
   });
 });

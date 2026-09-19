@@ -1,5 +1,6 @@
 import type { NavigatorScreenParams } from "@react-navigation/native";
 import type { TeamTabType } from "@/components/teams/TeamTabs";
+import type { RelayEventId } from "@apps/shared/utils/relayEvents";
 
 /**
  * ナビゲーションの型定義
@@ -98,9 +99,17 @@ export type MainStackParamList = {
     date: string;
     teamId?: string;
   };
+  /** チーム大会記録一覧（種目カードグリッド。管理者専用） */
   TeamRecordBulkForm: {
     competitionId: string;
     teamId: string;
+  };
+  /** チーム大会記録の種目詳細（代理入力。管理者専用）。styleId / relayEventId は排他 */
+  TeamRecordBulkFormDetail: {
+    competitionId: string;
+    teamId: string;
+    styleId?: number;
+    relayEventId?: RelayEventId;
   };
   TeamPracticeLogBulkForm: {
     practiceId: string;
@@ -115,6 +124,12 @@ export type MainStackParamList = {
     teamId: string;
     /** 起動時に開くタブ（未指定時は "members"）。DayDetailModal の出欠確認からの遷移で使用 */
     initialTab?: TeamTabType;
+    /**
+     * 画面遷移アニメーションを切るか（未指定時は通常のスライド）。
+     * チームタブの tabPress のように「タブ切替で前面に出たチーム一覧の上を
+     * 詳細がスライドで覆う」見え方になる経路でのみ true を渡す。
+     */
+    instant?: boolean;
   };
   /** チーム練習・大会一括登録（管理者専用） */
   TeamBulkRegister: {

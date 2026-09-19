@@ -5,6 +5,9 @@ import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { getServerUser } from "@/lib/supabase-server";
 import RecordClient from "../_client/RecordClient";
 import { Competition, Style } from "@apps/shared/types";
+import { RecordAPI } from "@apps/shared/api/records";
+import type { BestTime } from "@apps/shared/types/ui";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 
 interface RecordDataLoaderProps {
   teamId: string;
@@ -15,9 +18,16 @@ interface TeamMember {
   id: string;
   user_id: string;
   role: string;
+  is_swimmer: boolean;
   users: {
     id: string;
     name: string;
+    /**
+     * `users.gender` (0=男性 / 1=女性)。DB は integer NOT NULL DEFAULT 0 + CHECK(0,1)。
+     * リレーのチーム記録 (`relay_records.gender_category`) の prefill にのみ使う。
+     */
+    gender: number;
+    birthday?: string | null;
   };
 }
 
@@ -130,15 +140,17 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
         id,
         user_id,
         role,
+        is_swimmer,
         users!team_memberships_user_id_fkey (
           id,
-          name
+          name,
+          gender,
+          birthday
         )
       `,
         )
         .eq("team_id", teamId)
-        .eq("is_active", true)
-        .order("role", { ascending: false }),
+        .eq("is_active", true),
 
       // 既存のRecordを取得
       supabase
@@ -220,12 +232,30 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
   }
 
   const competition = competitionData as unknown as CompetitionWithDetails;
-  const members = (membersResult.data || []) as unknown as TeamMember[];
+  // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+  const members = ((membersResult.data || []) as unknown as TeamMember[]).sort(
+    compareMembersByBirthday,
+  );
   const records = (recordsResult.data || []) as unknown as RecordWithDetails[];
   const styles = (stylesResult.data || []) as Style[];
   // entries は admin に全メンバー分の閲覧が RLS で許可済み（取得失敗時は
   // 初期反映を諦めて空配列にフォールバックし、記録入力自体はブロックしない）
   const entries = (entriesResult.data || []) as unknown as EntryWithUser[];
+
+  // ベストタイム参照バッジ用に、メンバー全員分を1クエリで取得する
+  // (メンバーごとに getBestTimes を呼ぶと N+1 になる)。
+  // 取得失敗時はバッジを諦めて空で続行する — 記録入力そのものをブロックしない。
+  const memberUserIds = members.map((m) => m.user_id);
+  let bestTimesByUser: Record<string, BestTime[]> = {};
+  if (memberUserIds.length > 0) {
+    try {
+      bestTimesByUser = Object.fromEntries(
+        await new RecordAPI(supabase).getBestTimesDetailedForUsers(memberUserIds),
+      );
+    } catch (error) {
+      console.error("ベストタイム参照の取得に失敗しました:", error);
+    }
+  }
 
   return (
     <RecordClient
@@ -237,6 +267,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
       existingRecords={records}
       styles={styles}
       entries={entries}
+      bestTimesByUser={bestTimesByUser}
     />
   );
 }

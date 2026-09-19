@@ -7,14 +7,13 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { BirthdayInput } from "@/components/ui/BirthdayInput";
 import { GenderToggle } from "@/components/ui/GenderToggle";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 
 interface OnboardingProfileProps {
   initialProfile: Partial<UserProfile> | null;
@@ -106,10 +105,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={{ flex: 1 }} hasNativeHeader={false}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
@@ -227,7 +223,7 @@ export const OnboardingProfile: React.FC<OnboardingProfileProps> = ({
         </View>
       </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 

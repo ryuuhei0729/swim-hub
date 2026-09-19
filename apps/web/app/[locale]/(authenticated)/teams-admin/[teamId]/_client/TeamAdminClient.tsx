@@ -7,21 +7,51 @@ import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import TeamAdminTabs from "@/components/team/TeamAdminTabs";
-import type { TeamAdminTabType } from "@/components/team/TeamAdminTabs";
+import { isTeamAdminTabType } from "@/components/team/TeamAdminTabs";
 import MemberDetailModal from "@/components/team/MemberDetailModal";
+import TabLoadingSkeleton from "@/components/team/TabLoadingSkeleton";
 
-// タブコンテンツは一度に1つしか表示されないため遅延読み込み
-const TeamAnnouncements = dynamic(() =>
-  import("@/components/team/TeamAnnouncements").then((m) => ({ default: m.TeamAnnouncements })),
+// タブコンテンツは一度に1つしか表示されないため遅延読み込み。
+//
+// 🚨 **`loading` は必須。** 一般ページ (teams/[teamId]/_client/TeamDetailClient.tsx) と
+// 同じ構造上の穴がここにもある: `next/dynamic` はオプション無しだと Suspense 境界を
+// 作らないため、初回クリックのサスペンドが `page.tsx` の `<Suspense>` まで伝播し、
+// 隠されたツリーの effect が破棄される。
+//
+// 管理ページで「初回クリックが飲まれる」症状が出ていないのは、**この画面には
+// ストアを書き換える cleanup が無い**から (TeamAdminClient は unmount 時の
+// `reset()` を持たない)。effect の破棄自体は同様に起きており、
+// 将来この画面に cleanup を足した瞬間に同じバグが再発する。
+// またスケルトンが無いとチャンク取得中に本文が空になり「押しても無反応」に見える。
+// 詳細は TabLoadingSkeleton.tsx の docstring を参照。**外さないこと。**
+const TeamAnnouncements = dynamic(
+  () => import("@/components/team/TeamAnnouncements").then((m) => ({ default: m.TeamAnnouncements })),
+  { loading: TabLoadingSkeleton },
 );
-const TeamMemberManagement = dynamic(() => import("@/components/team/TeamMemberManagement"));
-const TeamPractices = dynamic(() => import("@/components/team/TeamPractices"));
-const TeamCompetitions = dynamic(() => import("@/components/team/TeamCompetitions"));
-const TeamSettings = dynamic(() => import("@/components/team/TeamSettings"));
-const TeamBulkRegister = dynamic(() => import("@/components/team/TeamBulkRegister"));
-const AdminMonthlyAttendance = dynamic(() => import("@/components/team/AdminMonthlyAttendance"));
+const TeamMemberManagement = dynamic(() => import("@/components/team/TeamMemberManagement"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamPractices = dynamic(() => import("@/components/team/TeamPractices"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamCompetitions = dynamic(() => import("@/components/team/TeamCompetitions"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamRankings = dynamic(() => import("@/components/team/rankings/TeamRankings"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamSettings = dynamic(() => import("@/components/team/TeamSettings"), {
+  loading: TabLoadingSkeleton,
+});
+const TeamBulkRegister = dynamic(() => import("@/components/team/TeamBulkRegister"), {
+  loading: TabLoadingSkeleton,
+});
+const AdminMonthlyAttendance = dynamic(() => import("@/components/team/AdminMonthlyAttendance"), {
+  loading: TabLoadingSkeleton,
+});
 const TeamGroupManagement = dynamic(
   () => import("@/components/team/group-management/TeamGroupManagement"),
+  { loading: TabLoadingSkeleton },
 );
 import type { MemberDetail } from "@/components/team/MemberDetailModal";
 import { TeamMembership, TeamWithMembers } from "@swim-hub/shared/types";
@@ -51,6 +81,10 @@ export default function TeamAdminClient({
   const { user, supabase } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
+  // メンバー詳細モーダルでの権限・泳者区分の変更を、開いたまま裏側の一覧
+  // (TeamMemberManagement) にもバックグラウンドで反映するためのシグナル。
+  // undefined のままなら一覧側は再取得しない
+  const [membersRefreshSignal, setMembersRefreshSignal] = useState<number | undefined>(undefined);
 
   const {
     team,
@@ -65,6 +99,8 @@ export default function TeamAdminClient({
     setActiveTab,
     openMemberModal,
     closeMemberModal,
+    appliedTabParam,
+    setAppliedTabParam,
   } = useTeamAdminStore();
 
   // サーバー側から取得したデータをストアに設定
@@ -78,25 +114,37 @@ export default function TeamAdminClient({
   const displayTeam = team || initialTeam;
   const displayMembership = membership || initialMembership;
 
-  // URLパラメータからタブを取得
+  // URLパラメータからタブを取得。
+  //
+  // ref の目的は「同じ URL 値を再適用しないこと」。ユーザーがタブをクリックした後に
+  // 同じ値の effect が再実行されると、選んだタブが URL の値へ引き戻されてしまう。
+  //
+  // ⚠️ 観測した値は **空 (クエリなし) も含めて必ず記録する**。空を記録せず早期 return すると
+  // 「?tab=V → クエリなしのリンク → 戻るで ?tab=V」の3手目で ref がまだ "V" のままになり、
+  // URL は V を指しているのに画面が別タブのままになる (同一ルートのクエリ変化では
+  // アンマウントしない)。
+  //
+  // 🚨 **記録は useRef ではなくストア (appliedTabParam) に持ち、購読した値を deps に含める。**
+  // ストアは AuthProvider.clearAllClientState() からも reset() される。記録を ref に
+  // 置くと activeTab だけが初期化されて記録が生き残り、URL のタブが二度と反映されない。
+  // `useTeamAdminStore.getState().appliedTabParam` で読むのも不可 — reset しても
+  // deps が変化せず effect が再実行されないため、同じバグが静かに残る。
+  // (一般ページの TeamDetailClient と同じ構造。片方だけ直さないこと)
+  //
+  // 許可判定は TeamAdminTabs.tsx の定義配列から導出した isTeamAdminTabType が
+  // 唯一の定義元。
+  //
+  // ⚠️ 残債務「タブクリックで URL を更新する」を実装する場合は必ず `router.replace(?tab=X)`
+  // を使うこと。`history.pushState` は Next の canonicalUrl を更新しないため
+  // `useSearchParams()` がその変化を一切見ず、URL と表示タブが乖離する。
   useEffect(() => {
-    const tabParam = searchParams.get("tab") || initialTab;
-    if (
-      tabParam &&
-      [
-        "announcements",
-        "members",
-        "groups",
-        "practices",
-        "competitions",
-        "attendance",
-        "bulk-register",
-        "settings",
-      ].includes(tabParam)
-    ) {
-      setActiveTab(tabParam as TeamAdminTabType);
+    const tabParam = searchParams.get("tab") || initialTab || null;
+    if (appliedTabParam === tabParam) return;
+    setAppliedTabParam(tabParam);
+    if (tabParam && isTeamAdminTabType(tabParam)) {
+      setActiveTab(tabParam);
     }
-  }, [searchParams, initialTab, setActiveTab]);
+  }, [searchParams, initialTab, appliedTabParam, setAppliedTabParam, setActiveTab]);
 
   // 承認待ち数を取得
   useEffect(() => {
@@ -179,6 +227,7 @@ export default function TeamAdminClient({
               router.refresh();
             }}
             onMemberClick={handleMemberClick}
+            membersRefreshSignal={membersRefreshSignal}
           />
         );
       case "groups":
@@ -187,6 +236,8 @@ export default function TeamAdminClient({
         return <TeamPractices teamId={teamId} isAdmin={true} />;
       case "competitions":
         return <TeamCompetitions teamId={teamId} isAdmin={true} />;
+      case "rankings":
+        return <TeamRankings teamId={teamId} />;
       case "attendance":
         return <AdminMonthlyAttendance teamId={teamId} />;
       case "bulk-register":
@@ -276,8 +327,12 @@ export default function TeamAdminClient({
         currentUserId={user?.id || ""}
         isCurrentUserAdmin={true}
         onMembershipChange={() => {
-          // メンバー情報を再読み込み
+          // team / pendingCount 等サーバー由来のデータを更新
           router.refresh();
+          // メンバー一覧 (TeamMemberManagement) をバックグラウンドで最新化する。
+          // モーダル自体の表示は displayMember (MemberDetailModal 内) が
+          // 即時反映するので、この再取得の完了を待つ必要はない
+          setMembersRefreshSignal((prev) => (prev ?? 0) + 1);
         }}
       />
     </div>

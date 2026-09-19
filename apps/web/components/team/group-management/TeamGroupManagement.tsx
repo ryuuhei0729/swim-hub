@@ -7,6 +7,7 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useTeamGroups, type TeamGroupWithCount } from "./hooks/useTeamGroups";
 import { useGroupActions } from "./hooks/useGroupActions";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 import {
   BulkAssignModal,
   CategorySection,
@@ -27,6 +28,7 @@ interface TeamMemberForSelection {
   users: {
     id: string;
     name: string;
+    birthday?: string | null;
     profile_image_path?: string | null;
   };
 }
@@ -69,6 +71,11 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
   const [viewMembersGroup, setViewMembersGroup] = useState<TeamGroupWithCount | null>(null);
   // メンバー詳細モーダル
   const [selectedMember, setSelectedMember] = useState<MemberDetail | null>(null);
+  // メンバー詳細モーダルでの権限・泳者区分の変更を、GroupMemberListModal の一覧にも
+  // バックグラウンドで反映するためのシグナル。undefined のままなら再取得しない
+  const [groupMembersRefreshSignal, setGroupMembersRefreshSignal] = useState<number | undefined>(
+    undefined,
+  );
   // 一括振り分けモーダル
   const [bulkAssignCategory, setBulkAssignCategory] = useState<string | null>(null);
 
@@ -89,6 +96,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
           users!team_memberships_user_id_fkey (
             id,
             name,
+            birthday,
             profile_image_path
           )
         `,
@@ -97,7 +105,10 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         .eq("status", "approved")
         .eq("is_active", true);
       if (!fetchError && data) {
-        setTeamMembers(data as unknown as TeamMemberForSelection[]);
+        // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+        setTeamMembers(
+          (data as unknown as TeamMemberForSelection[]).sort(compareMembersByBirthday),
+        );
       }
     };
     loadTeamMembers();
@@ -304,6 +315,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         group={viewMembersGroup}
         teamId={teamId}
         onMemberClick={handleMemberClick}
+        membersRefreshSignal={groupMembersRefreshSignal}
       />
 
       {/* メンバー詳細モーダル */}
@@ -314,7 +326,14 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         teamId={teamId}
         currentUserId={user?.id || ""}
         isCurrentUserAdmin={true}
-        onMembershipChange={loadGroups}
+        onMembershipChange={() => {
+          // グループ一覧 (人数カウント等) を更新
+          loadGroups();
+          // GroupMemberListModal の一覧をバックグラウンドで最新化する。
+          // モーダル自体の表示は displayMember (MemberDetailModal 内) が
+          // 即時反映するので、この再取得の完了を待つ必要はない
+          setGroupMembersRefreshSignal((prev) => (prev ?? 0) + 1);
+        }}
       />
 
       {/* 一括振り分けモーダル */}

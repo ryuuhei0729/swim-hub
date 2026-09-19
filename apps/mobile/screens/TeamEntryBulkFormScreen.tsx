@@ -8,8 +8,6 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -23,12 +21,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import {
   diffEntryRows,
@@ -109,6 +109,10 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
     if (!user || !members) return false;
     return members.some((m) => m.user_id === user.id && m.role === "admin");
   }, [user, members]);
+
+  // メンバー選択候補（非泳者を除外）。isCurrentUserAdmin 判定・既存行の名前解決には
+  // 生の members を使い続け、候補提示の直前だけこの配列を使う (PM 裁定 R4)。
+  const memberSelectCandidates = useMemo(() => excludeNonSwimmers(members), [members]);
 
   const [swimStyles, setSwimStyles] = useState<Style[]>([]);
   const [competition, setCompetition] = useState<CompetitionInfo | null>(null);
@@ -709,10 +713,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
   const canSave = !saving && duplicatePairs.size === 0;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -872,6 +873,17 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                       {rowError && (
                         <Text style={styles.errorText}>{rowError}</Text>
                       )}
+                      {bestTime && (
+                        <View
+                          testID={`entry-best-time-badge-${row.localId}`}
+                          style={styles.bestTimeBadge}
+                        >
+                          <Text style={styles.bestTimeBadgeText}>
+                            {t("forms.recordLog.bestTimeLabel")}:{" "}
+                            {formatTimeBest(bestTime.time)}
+                          </Text>
+                        </View>
+                      )}
                       {isPrefilledUntouched && !rowError && (
                         <Text style={styles.prefillWarningText}>
                           {t("teams.mobile.entryBulk.prefillUntouchedWarning")}
@@ -943,7 +955,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
       {/* メンバー選択モーダル */}
       <MemberSelectModal
         visible={isMemberModalOpen}
-        members={members}
+        members={memberSelectCandidates}
         selectedUserIds={memberOrder}
         title={t("teams.mobile.entryBulk.memberSelectTitle")}
         onConfirm={confirmMemberSelection}
@@ -1205,7 +1217,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
           </Pressable>
         </SafeAreaView>
       </SlideUpModal>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 
@@ -1332,6 +1344,19 @@ const styles = StyleSheet.create({
     color: "#B45309",
     marginTop: 4,
     fontWeight: "600",
+  },
+  // 参考バッジ (web の green-100/green-700 と同色。CompetitionTabFormScreen と共通の見た目)
+  bestTimeBadge: {
+    backgroundColor: "#DCFCE7", // green-100
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginTop: 4,
+    alignSelf: "flex-start",
+  },
+  bestTimeBadgeText: {
+    fontSize: 12,
+    color: "#15803D", // green-700
   },
   addEventButton: {
     flexDirection: "row",

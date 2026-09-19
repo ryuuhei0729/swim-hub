@@ -31,24 +31,21 @@ import {
   DEFAULT_PRACTICE_COLOR,
   DEFAULT_COMPETITION_COLOR,
 } from "../../utils/calendarColorResolver";
+import { STORABLE_TAG_COLORS, TAG_COLORS } from "../../constants/tagColors";
 
 // -----------------------------------------------------------------------------
 // テストデータヘルパー
 // -----------------------------------------------------------------------------
 
-// タグ機能と同一の10色パレット (apps/shared/constants/tagColors.ts に集約済み)
-const PALETTE = [
-  "#93C5FD", // 青
-  "#7DD3FC", // 水色
-  "#86EFAC", // 緑
-  "#A3E635", // 黄緑
-  "#FCA5A5", // 赤
-  "#F9A8D4", // ピンク
-  "#FDBA74", // オレンジ
-  "#FDE047", // 黄色
-  "#C4B5FD", // 紫
-  "#D1D5DB", // グレー
-] as const;
+// 🚨 **色を書き写さないこと。** ここは以前パレットを literal でコピーしており、
+// 2026-09-16 の 10色→8色 削減 (`#7DD3FC` / `#D1D5DB` を除外) を**何も検出しなかった**。
+// パレットの3つ目のコピーになっていた。定義元は
+// apps/shared/constants/tagColors.ts の1箇所だけ。
+//
+// 導出元に `STORABLE_TAG_COLORS` (選択肢8色 + 旧色2色) を使うのは、このテストが
+// 「**保存済み設定に入りうる値**」をリゾルバへ与えるものだから。旧色が残った
+// データも解決対象なので、選択肢の8色より広い集合が正しい。
+const PALETTE = STORABLE_TAG_COLORS;
 
 interface BuildSettingsOverrides {
   personalPracticeColor?: string | null;
@@ -79,9 +76,12 @@ function buildMetadata(
 // =============================================================================
 
 describe("デフォルト色定数", () => {
-  it("デフォルト練習色・デフォルト大会色はいずれもパレット内の値である", () => {
-    expect(PALETTE).toContain(DEFAULT_PRACTICE_COLOR);
-    expect(PALETTE).toContain(DEFAULT_COMPETITION_COLOR);
+  // 既定色は「保存できる」だけでなく **ピッカーで選べる色**であるべき。
+  // STORABLE (旧色を含む広い集合) ではなく TAG_COLORS で検証する
+  // — 既定色が旧色になってしまうと、ユーザーは既定へ戻す操作ができない
+  it("デフォルト練習色・デフォルト大会色はいずれも選択可能な8色に含まれる", () => {
+    expect(TAG_COLORS).toContain(DEFAULT_PRACTICE_COLOR);
+    expect(TAG_COLORS).toContain(DEFAULT_COMPETITION_COLOR);
   });
 
   it("デフォルト練習色とデフォルト大会色は異なる値である", () => {

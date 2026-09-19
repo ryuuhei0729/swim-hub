@@ -7,13 +7,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { validatePassword, type PasswordChecks } from "@/utils/validatePassword";
 
 interface SignupFormProps {
@@ -190,10 +189,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <FormKeyboardAvoidingView style={{ flex: 1 }} hasNativeHeader={false}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
@@ -276,7 +272,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSuccess, onBackToLogin
         </View>
       </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 

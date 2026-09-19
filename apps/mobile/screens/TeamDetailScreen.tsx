@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useLayoutEffect, useRef } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Platform } from "react-native";
-import * as Clipboard from "expo-clipboard";
+import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -21,11 +21,12 @@ import {
 } from "@/components/teams";
 import { AdminMonthlyAttendance } from "@/components/teams/AdminMonthlyAttendance";
 import { TeamDetailHeaderAdminToggle } from "@/components/teams/TeamDetailHeaderAdminToggle";
-import { TeamSettingsModal } from "@/components/teams/TeamSettingsModal";
+import { TeamSettingsTab } from "@/components/teams/TeamSettingsTab";
 import { TeamAnnouncementList } from "@/components/teams/TeamAnnouncementList";
 import { TeamAnnouncementForm } from "@/components/teams/TeamAnnouncementForm";
 import { TeamPracticeList } from "@/components/teams/TeamPracticeList";
 import { TeamCompetitionList } from "@/components/teams/TeamCompetitionList";
+import { TeamRankings } from "@/components/teams/rankings";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
@@ -47,14 +48,12 @@ export const TeamDetailScreen: React.FC = () => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TeamTabType>(initialTab ?? "members");
-  const [isCopied, setIsCopied] = useState(false);
   // 管理者ビュー/利用者ビューの状態は、ヘッダー右側の TeamDetailHeaderAdminToggle と
   // 共有購読するためストアで管理する（詳細は teamAdminViewStore.ts のコメント参照）
   const isAdminView = useTeamAdminViewStore((state) => state.isAdminView);
   const resetAdminView = useTeamAdminViewStore((state) => state.reset);
   const [announcementFormVisible, setAnnouncementFormVisible] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<TeamAnnouncement | undefined>(undefined);
-  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
   // チームデータ取得
   const { currentTeam, members, announcements, isLoading, isError, error, refetch } = useTeamsQuery(supabase, {
@@ -110,56 +109,26 @@ export const TeamDetailScreen: React.FC = () => {
   // ヘッダー右側に管理者ビュー切替スイッチを配置（管理者のみ）。
   // スイッチの値自体は TeamDetailHeaderAdminToggle がストアを直接購読するため、
   // ここでは isCurrentUserAdmin が変わったときのみ setOptions を呼べば良い
-  // （詳細は teamAdminViewStore.ts のコメント参照）
+  // （詳細は teamAdminViewStore.ts のコメント参照）。
+  // ⚠️ タイトル注入とは **effect を分ける**。同じ effect にまとめるとチーム名の
+  // 取得時に headerRight が作り直されて再マウントし、スイッチが1回目のタップに
+  // 反応しなくなる（TeamDetailHeaderAdminToggle の docstring にある「タップ2回問題」）
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: isCurrentUserAdmin ? () => <TeamDetailHeaderAdminToggle /> : undefined,
     });
   }, [navigation, isCurrentUserAdmin]);
 
-  // 招待コードをコピー
-  const handleCopyInviteCode = async () => {
-    if (!currentTeam || !currentTeam.invite_code) return;
-
-    if (Platform.OS === "web") {
-      // Web版ではClipboard APIを使用
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(currentTeam.invite_code).then(
-          () => {
-            setIsCopied(true);
-            setTimeout(() => setIsCopied(false), 2000);
-          },
-          () => {
-            window.alert(t("teams.mobile.copyFailed"));
-          },
-        );
-      } else {
-        // フォールバック: テキストエリアを使用
-        const textArea = document.createElement("textarea");
-        textArea.value = currentTeam.invite_code;
-        textArea.style.position = "fixed";
-        textArea.style.opacity = "0";
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-          document.execCommand("copy");
-          setIsCopied(true);
-          setTimeout(() => setIsCopied(false), 2000);
-        } catch {
-          window.alert(t("teams.mobile.copyFailed"));
-        }
-        document.body.removeChild(textArea);
-      }
-    } else {
-      try {
-        await Clipboard.setStringAsync(currentTeam.invite_code);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-      } catch {
-        Alert.alert(t("common.error"), t("teams.mobile.copyFailed"), [{ text: "OK" }]);
-      }
-    }
-  };
+  // ヘッダータイトルにチーム名を出す。未取得・エラー・承認待ちのときは既定の画面名に倒す
+  // （name は NOT NULL だが空文字だと無題のヘッダーになるため `||` で弾く）。
+  // ⚠️ headerTitle にコンポーネントを渡さないこと。Android で
+  // backButtonInCustomView 経路に切り替わり戻るボタンの描画が回帰する。
+  // 長いチーム名の省略記号はネイティブヘッダーが既定で描く
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: currentTeam?.name || t("navigation.mobile.titles.teamDetail"),
+    });
+  }, [navigation, currentTeam?.name, t]);
 
   // 承認待ち状態
   if (isError && error?.message === "PENDING_APPROVAL") {
@@ -234,21 +203,6 @@ export const TeamDetailScreen: React.FC = () => {
     );
   };
 
-  // 一括登録画面への導線（管理者ビューの練習/大会タブ。web admin タブの bulk-register 相当）
-  const renderBulkRegisterButton = () => (
-    <View style={styles.bulkRegisterRow}>
-      <Pressable
-        style={styles.bulkRegisterButton}
-        onPress={() => navigation.navigate("TeamBulkRegister", { teamId })}
-        accessibilityRole="button"
-        accessibilityLabel={t("teamsAdmin.tabs.bulkRegister")}
-      >
-        <Feather name="upload" size={14} color="#2563EB" />
-        <Text style={styles.bulkRegisterButtonText}>{t("teamsAdmin.tabs.bulkRegister")}</Text>
-      </Pressable>
-    </View>
-  );
-
   // タブコンテンツのレンダリング
   const renderTabContent = () => {
     switch (activeTab) {
@@ -280,17 +234,19 @@ export const TeamDetailScreen: React.FC = () => {
       case "practices":
         return (
           <View style={styles.eventTabContent}>
-            {effectiveIsAdminView && renderBulkRegisterButton()}
             <TeamPracticeList teamId={teamId} isAdmin={effectiveIsAdminView} />
           </View>
         );
       case "competitions":
         return (
           <View style={styles.eventTabContent}>
-            {effectiveIsAdminView && renderBulkRegisterButton()}
             <TeamCompetitionList teamId={teamId} isAdmin={effectiveIsAdminView} />
           </View>
         );
+      case "rankings":
+        // 管理者専用ではない (一般メンバーも閲覧する)。
+        // members は「WAポイントで比較」用。ここで詰め替えないこと
+        return <TeamRankings teamId={teamId} members={members || []} />;
       case "attendance":
         return effectiveIsAdminView ? (
           <AdminMonthlyAttendance teamId={teamId} />
@@ -329,49 +285,32 @@ export const TeamDetailScreen: React.FC = () => {
             />
           </View>
         );
+      case "settings":
+        // 設定は全メンバー向けタブ。中身の出し分けは「管理者ビュー/利用者ビュー」トグルに
+        // 連動させる (ユーザー指示。以前は永続的な権限 isCurrentUserAdmin 基準だった)
+        return (
+          <TeamSettingsTab
+            teamId={teamId}
+            teamName={currentTeam.name}
+            teamDescription={currentTeam.description}
+            inviteCode={currentTeam.invite_code}
+            isAdminView={effectiveIsAdminView}
+            members={members || []}
+            onLeftTeam={() => navigation.navigate("MainTabs", { screen: "Teams" })}
+            onTeamUpdated={() => refetch()}
+          />
+        );
       default:
         return null;
     }
   };
 
+  // Android の Edge-to-Edge 強制下ではシステムナビゲーションバー(3ボタン)の領域まで
+  // 描画される。この画面はタブごとに別コンポーネントが独自のスクロールビューを持つため、
+  // 個々のスクロール余白ではなく画面ルートで下部インセットを消費する
+  // (ネイティブ経路の SafeAreaView。タブが増えても自動的に保護されるようにするため)。
   return (
-    <View style={styles.container}>
-      {/* チーム情報（固定） */}
-      <View style={styles.teamInfo}>
-        <View style={styles.teamInfoRow}>
-          <Text style={styles.teamName} numberOfLines={1}>
-            {currentTeam.name}
-          </Text>
-          <View style={styles.teamInfoRight}>
-            {currentTeam.invite_code && (
-              <View style={styles.inviteCodeContent}>
-                <Text style={styles.inviteCode}>{currentTeam.invite_code}</Text>
-                <Pressable style={styles.copyButton} onPress={handleCopyInviteCode}>
-                  <Feather
-                    name={isCopied ? "check" : "clipboard"}
-                    size={14}
-                    color={isCopied ? "#10B981" : "#9CA3AF"}
-                  />
-                </Pressable>
-              </View>
-            )}
-            {effectiveIsAdminView && (
-              <Pressable
-                style={styles.settingsButton}
-                onPress={() => setSettingsModalVisible(true)}
-                accessibilityRole="button"
-                accessibilityLabel={t("teamsAdmin.settings.title")}
-              >
-                <Feather name="edit-2" size={13} color="#6B7280" />
-              </Pressable>
-            )}
-          </View>
-        </View>
-        {currentTeam.description && (
-          <Text style={styles.teamDescription}>{currentTeam.description}</Text>
-        )}
-      </View>
-
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
       {/* タブ（固定） */}
       <TeamTabs
         activeTab={activeTab}
@@ -382,17 +321,7 @@ export const TeamDetailScreen: React.FC = () => {
 
       {/* タブコンテンツ（スクロール可能） */}
       <View style={styles.tabContent}>{renderTabContent()}</View>
-
-      {/* チーム設定モーダル（管理者専用） */}
-      <TeamSettingsModal
-        visible={settingsModalVisible}
-        onClose={() => setSettingsModalVisible(false)}
-        teamId={teamId}
-        teamName={currentTeam.name}
-        teamDescription={currentTeam.description}
-        onSuccess={() => refetch()}
-      />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -401,96 +330,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#EFF6FF",
   },
-  teamInfo: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 12,
-    marginTop: 8,
-    marginBottom: 4,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  teamInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  teamInfoRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexShrink: 0,
-  },
-  teamName: {
-    fontSize: 17,
-    fontWeight: "bold",
-    color: "#111827",
-    flexShrink: 1,
-  },
-  teamDescription: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
-    lineHeight: 16,
-  },
-  inviteCodeContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  inviteCode: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6B7280",
-    fontFamily: "monospace",
-  },
-  copyButton: {
-    padding: 2,
-  },
   tabContent: {
     flex: 1,
     minHeight: 400,
   },
   eventTabContent: {
     flex: 1,
-  },
-  bulkRegisterRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: 12,
-    paddingTop: 8,
-  },
-  bulkRegisterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#2563EB",
-    borderRadius: 8,
-    backgroundColor: "#FFFFFF",
-  },
-  bulkRegisterButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#2563EB",
-  },
-  settingsButton: {
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 6,
   },
   membersTabContent: {
     flex: 1,

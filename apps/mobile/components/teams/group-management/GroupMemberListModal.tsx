@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useSignedImageUrl } from "@/hooks/useSignedImageUrl";
 import { CenterModal } from "@/components/ui/CenterModal";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 import type { TeamGroupWithCount } from "./hooks";
 
 interface MemberInfo {
@@ -23,6 +24,7 @@ interface MemberInfo {
     id: string;
     name: string;
     profile_image_path: string | null;
+    birthday: string | null;
   };
 }
 
@@ -137,18 +139,19 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
           users!team_memberships_user_id_fkey (
             id,
             name,
-            profile_image_path
+            profile_image_path,
+            birthday
           )
         `,
         )
         .eq("team_id", teamId)
         .eq("status", "approved")
         .eq("is_active", true)
-        .in("user_id", userIds)
-        .order("role", { ascending: true });
+        .in("user_id", userIds);
 
       if (tmError) throw tmError;
-      setMembers((data ?? []) as unknown as MemberInfo[]);
+      // メンバータブと同じ年上順で並べる (唯一の定義元は memberSort.ts)
+      setMembers(((data ?? []) as unknown as MemberInfo[]).sort(compareMembersByBirthday));
     } catch (err) {
       console.error("グループメンバー取得エラー:", err);
     } finally {
