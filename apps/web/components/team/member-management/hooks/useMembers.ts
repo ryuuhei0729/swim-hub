@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useTranslations } from "next-intl";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 
 export interface TeamMember {
   id: string;
@@ -65,11 +66,11 @@ export const useMembers = (teamId: string, supabase: SupabaseClient) => {
           )
           .eq("team_id", teamId)
           .eq("status", "approved")
-          .eq("is_active", true)
-          .order("role", { ascending: false }); // adminを先に表示
+          .eq("is_active", true);
 
         if (fetchError) throw fetchError;
-        setMembers((data ?? []) as unknown as TeamMember[]);
+        // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+        setMembers(((data ?? []) as unknown as TeamMember[]).sort(compareMembersByBirthday));
       } catch (err) {
         console.error("メンバー情報の取得に失敗:", err);
         setError(t("membersHook.loadError"));

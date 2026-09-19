@@ -196,14 +196,21 @@ function individualOnlyRecords() {
 }
 
 /**
- * 差し替え前に存在する古い `relay_records` 行。
+ * 差し替え前に存在する古い `relay_records.id` を解決するための `relay_record_legs`
+ * フェイク行。
  *
- * `TeamRelayRecordsAPI.replace()` は `select("id")` しか読まない
- * (note 列の廃止で自然キー照合が不要になったため)。id 以外を持たせても
- * 使われないので、フェイクの戻り行も id だけにする。
+ * 【修正ラウンド 2026-09-17 (Critical #1)】以前は `replace()` 自身が
+ * `relay_records.select("id").eq("team_id", ...).eq("competition_id", ...)` で
+ * 古い行を取得していたが、これは同じ種目に複数チーム/組がある場合に他チームの
+ * 行を巻き込んで削除してしまう Critical だった。新設計では `replace()` は内部で
+ * 一切 select しない。呼び出し元 (RecordClient.tsx) が保存開始時点で
+ * `TeamRelayRecordsAPI.resolveRelayRecordIdsForRecords()` を呼び、
+ * `relay_record_legs.select("relay_record_id").in("record_id", recordIds)` の
+ * 結果から `relay_records.id` を逆引きして `replace()` に渡す。
+ * このフェイクはその `relay_record_legs` の行を模擬する。
  */
-function existingRelayRows(ids: readonly string[] = ["stale-relay-row"]) {
-  return ids.map((id) => ({ id }));
+function staleRelayLegRows(relayRecordIds: readonly string[] = ["stale-relay-row"]) {
+  return relayRecordIds.map((id) => ({ relay_record_id: id }));
 }
 
 type ExistingRecords = Parameters<typeof RecordClient>[0]["existingRecords"];
@@ -253,11 +260,13 @@ beforeEach(() => {
 //   → このブロックの 3 テストが赤になるはず。
 // ---------------------------------------------------------------------------
 describe("[V-SG-01] records が1件でも失敗したら relay 側を1行も書かない", () => {
-  it("4 レグのうち 3 本目の records insert が失敗すると relay_records に insert しない", async () => {
+  it("4 レグのうち 3 本目の records update が失敗すると relay_records に insert しない", async () => {
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => undefined);
+    // fixture (relayExistingRecords) は保存前から存在する4行なので、upsert化後は
+    // INSERT ではなく UPDATE として書かれる。よって失敗させるのも updateError 側。
     fake = buildRecordSaveSupabaseMock({
-      insertError: (table, _payload, nth) =>
-        table === "records" && nth === 3 ? { message: "insert denied", code: "23505" } : null,
+      updateError: (table, _payload, nth) =>
+        table === "records" && nth === 3 ? { message: "update denied", code: "23505" } : null,
     });
 
     renderRecordClient(relayExistingRecords());
@@ -276,8 +285,8 @@ describe("[V-SG-01] records が1件でも失敗したら relay 側を1行も書�
   it("失敗時は relay_records を select すらしない (差し替えを開始していない)", async () => {
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => undefined);
     fake = buildRecordSaveSupabaseMock({
-      insertError: (table, _payload, nth) =>
-        table === "records" && nth === 1 ? { message: "insert denied", code: "23505" } : null,
+      updateError: (table, _payload, nth) =>
+        table === "records" && nth === 1 ? { message: "update denied", code: "23505" } : null,
     });
 
     renderRecordClient(relayExistingRecords());
@@ -319,7 +328,7 @@ describe("[V-SG-02] 古い行の delete は全計画が成功したときだけ"
   it("relay_records の insert が失敗したら古い行を delete しない (記録を完全に失わない)", async () => {
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => undefined);
     fake = buildRecordSaveSupabaseMock({
-      selectRows: { relay_records: existingRelayRows() },
+      selectRows: { relay_record_legs: staleRelayLegRows() },
       insertError: (table) =>
         table === "relay_records" ? { message: "insert denied", code: "42501" } : null,
     });
@@ -338,7 +347,7 @@ describe("[V-SG-02] 古い行の delete は全計画が成功したときだけ"
 
   it("すべて成功したら古い行を delete する (対照。古い行が残り続けない)", async () => {
     fake = buildRecordSaveSupabaseMock({
-      selectRows: { relay_records: existingRelayRows() },
+      selectRows: { relay_record_legs: staleRelayLegRows() },
     });
 
     renderRecordClient(relayExistingRecords());
@@ -382,7 +391,7 @@ describe("[V-SG-02] 古い行の delete は全計画が成功したときだけ"
 describe("[V-SG-03] 差し替え順序と delete の条件", () => {
   it("delete は明示の id リストで行う (team_id / competition_id の条件 delete にしない)", async () => {
     fake = buildRecordSaveSupabaseMock({
-      selectRows: { relay_records: existingRelayRows() },
+      selectRows: { relay_record_legs: staleRelayLegRows() },
     });
 
     renderRecordClient(relayExistingRecords());
@@ -407,7 +416,7 @@ describe("[V-SG-03] 差し替え順序と delete の条件", () => {
 
   it("insert が delete より先に発行される (逆順にすると insert 失敗で記録が消える)", async () => {
     fake = buildRecordSaveSupabaseMock({
-      selectRows: { relay_records: existingRelayRows() },
+      selectRows: { relay_record_legs: staleRelayLegRows() },
     });
 
     renderRecordClient(relayExistingRecords());
@@ -424,10 +433,10 @@ describe("[V-SG-03] 差し替え順序と delete の条件", () => {
       .map((op) => `${op.op}:${op.table}`);
 
     expect(relayOps).toEqual([
-      "select:relay_records", // 差し替え前の取得 (古い行の id と note)
+      "select:relay_record_legs", // 差し替え前の取得 (画面が読み込んだ records.id から relay_records.id を逆引き)
       "insert:relay_records", // 新しい親
       "insert:relay_record_legs", // 新しいレグ
-      "delete:relay_records", // 事前取得した古い行だけを明示 id で削除
+      "delete:relay_records", // 事前に解決した古い行だけを明示 id で削除
     ]);
 
     const newRelayIds = fake.insertedIds.relay_records ?? [];
@@ -440,26 +449,43 @@ describe("[V-SG-03] 差し替え順序と delete の条件", () => {
     }
   });
 
-  it("差し替え前の取得は team_id と competition_id の両方でサーバー絞り込みする", async () => {
+  // 【修正ラウンド 2026-09-17 (Critical #1)】以前は「差し替え前の取得が
+  // relay_records を team_id / competition_id でサーバー絞り込みしていること」を
+  // 検証していた。これは旧 replace() の内部 SELECT を前提にしたアサーションで、
+  // 新設計では replace() は内部 SELECT を一切行わない。
+  // 「サーバー側で絞り込んでいること」を検証する意図そのものは維持し、検証対象を
+  // 「relay_records への .eq(team_id/competition_id)」から
+  // 「relay_record_legs への .in(record_id, 画面が読み込んだ records.id)」へ移す。
+  // これが緩んで record_id 条件を外すと、大会・チームを跨いだ relay_record_legs
+  // 全行が読めてしまい (クライアント filter との区別が付かなくなる)、
+  // それを経由して他チームの relay_records.id が削除対象に混入しうる。
+  it("差し替え前の取得は relay_record_legs を record_id (画面が読み込んだ records.id 集合) でサーバー絞り込みする", async () => {
     fake = buildRecordSaveSupabaseMock({
-      selectRows: { relay_records: existingRelayRows() },
+      selectRows: { relay_record_legs: staleRelayLegRows() },
     });
 
-    renderRecordClient(relayExistingRecords());
+    const existingRecords = relayExistingRecords();
+    renderRecordClient(existingRecords);
     clickSave();
 
     await waitFor(() =>
       expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
     );
 
-    expect(
-      fake.eqCalls
-        .filter((call) => call.table === "relay_records" && call.op === "select")
-        .map((call) => [call.column, call.value]),
-    ).toEqual([
-      ["team_id", "team-thrush"],
-      ["competition_id", "comp-thrush"],
+    const legScopeSelect = fake.inCalls.filter(
+      (call) => call.table === "relay_record_legs" && call.op === "select",
+    );
+    expect(legScopeSelect).toEqual([
+      {
+        table: "relay_record_legs",
+        op: "select",
+        column: "record_id",
+        values: existingRecords.map((r) => r.id),
+      },
     ]);
+
+    // relay_records 自体への条件 select (旧内部 SELECT) はもう発生しない
+    expect(fake.selectCalls.filter((call) => call.table === "relay_records")).toHaveLength(0);
   });
 });
 
@@ -501,7 +527,7 @@ describe("[V-SG-04] レグ insert 失敗で親を巻き戻す", () => {
   it("レグ失敗時も古い行は残す (巻き戻しと古い行の削除を混同しない)", async () => {
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => undefined);
     fake = buildRecordSaveSupabaseMock({
-      selectRows: { relay_records: existingRelayRows() },
+      selectRows: { relay_record_legs: staleRelayLegRows() },
       insertError: (table) =>
         table === "relay_record_legs" ? { message: "legs denied", code: "23503" } : null,
     });
@@ -594,8 +620,14 @@ describe("[V-SG-06] 個人種目だけの保存は relay_records に一切触れ
       expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
     );
 
-    expect(fake.insertCalls.filter((call) => call.table === "records")).toHaveLength(1);
+    // individualOnlyRecords() は保存前から存在する1行なので UPDATE になる (INSERT ではない)
+    expect(fake.insertCalls.filter((call) => call.table === "records")).toHaveLength(0);
+    expect(fake.updateCalls.filter((call) => call.table === "records")).toHaveLength(1);
     expect(fake.selectCalls.filter((call) => call.table === "relay_records")).toHaveLength(0);
+    // 差し替え前の逆引き (relay_record_legs) すら発行しない
+    // (needsRelayWork が false なので resolveRelayRecordIdsForRecords 自体を呼ばない)
+    expect(fake.selectCalls.filter((call) => call.table === "relay_record_legs")).toHaveLength(0);
+    expect(fake.inCalls.filter((call) => call.table === "relay_record_legs")).toHaveLength(0);
     expect(relayInsertsOf(fake)).toHaveLength(0);
     expect(legInsertsOf(fake)).toHaveLength(0);
     expect(fake.deleteCalls.filter((call) => call.table === "relay_records")).toHaveLength(0);
@@ -620,7 +652,7 @@ describe("[V-SG-07] レグの payload", () => {
     expect(legRows.map((row) => row.leg_time)).not.toEqual([27.5, 56.2, 84.5, 112.1]);
   });
 
-  it("record_id が今 insert した records の id を指す (レグと個人記録が繋がっている)", async () => {
+  it("record_id が保存された records の id を指す (レグと個人記録が繋がっている)", async () => {
     renderRecordClient(relayExistingRecords());
     clickSave();
 
@@ -628,11 +660,21 @@ describe("[V-SG-07] レグの payload", () => {
       expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
     );
 
-    const insertedRecordIds = fake.insertedIds.records ?? [];
-    expect(insertedRecordIds).toHaveLength(4);
+    // relayExistingRecords() は保存前から存在する4行なので UPDATE で書かれ、
+    // id は新規採番されず既存の records.id (fake.insertedIds.records ではなく
+    // updateCalls の eq 条件) のまま保持される。
+    const recordUpdates = fake.updateCalls.filter((call) => call.table === "records");
+    expect(recordUpdates).toHaveLength(4);
+    const updatedRecordIds = recordUpdates.map((call) => call.eq[0]?.value);
 
     const legRows = legInsertsOf(fake)[0]?.payload as Array<Record<string, unknown>>;
-    expect(legRows.map((row) => row.record_id)).toEqual(insertedRecordIds);
+    expect(legRows.map((row) => row.record_id)).toEqual(updatedRecordIds);
+    expect(updatedRecordIds).toEqual([
+      "existing-record-0",
+      "existing-record-1",
+      "existing-record-2",
+      "existing-record-3",
+    ]);
   });
 
   it("relay_record_id が今 insert した親の id を指す", async () => {
@@ -691,14 +733,18 @@ describe("[V-SG-08] 性別区分の prefill", () => {
 });
 
 describe("[V-SG-09] 古い行は自然キーに関係なくすべて削除対象になる", () => {
-  // note 列の廃止で自然キー照合は不要になった。差し替えのスコープは
-  // (team_id, competition_id) の**全行**であり、種類・距離・泳者が違っても
-  // 消す。狭めるとフォームから削除したリレーが孤児として残り、`records` が
-  // 消えた後もランキングに出続ける。
+  // note 列の廃止で自然キー照合は不要になった。
+  // 【修正ラウンド 2026-09-17】差し替えのスコープは (team_id, competition_id) の
+  // 全行ではなく、「画面が読み込んだ records.id から relay_record_legs 経由で
+  // 逆引きした relay_records.id」になった (Critical #1 対応)。この単一大会の
+  // シナリオでは resolveRelayRecordIdsForRecords が返す relay_records.id は
+  // 種類・距離・泳者に関わらず削除対象に含まれる — 狭めるとフォームから削除した
+  // リレーが孤児として残り、`records` が消えた後もランキングに出続ける、という
+  // 意図は id ベースの新設計でも同じ。
   it("種類・距離・泳者が違う古い行も削除対象に含まれる (孤児を残さない)", async () => {
     fake = buildRecordSaveSupabaseMock({
       selectRows: {
-        relay_records: existingRelayRows([
+        relay_record_legs: staleRelayLegRows([
           "stale-medley-row",
           "stale-other-distance-row",
           "stale-other-squad-row",
@@ -723,9 +769,15 @@ describe("[V-SG-09] 古い行は自然キーに関係なくすべて削除対象
     ]);
   });
 
-  it("差し替え前の取得は id しか読まない (廃止した note 列を読み戻していない)", async () => {
+  // 【修正ラウンド 2026-09-17】以前は「relay_records を select("id") しか読まない
+  // (note 列を読み戻していない)」ことを検証していた。新設計では relay_records 自体は
+  // 一切 select されず、代わりに relay_record_legs を "relay_record_id" 列だけ読む。
+  // 「廃止した note 列を読み戻していないこと」という意図は、対象テーブルが変わっても
+  // 同じ形で維持できる (relay_record_legs にはそもそも note 列が無いが、余計な列を
+  // 読んでいないことの回帰防止として残す)。
+  it("差し替え前の取得は relay_record_legs の relay_record_id しか読まない (relay_records 自体は select しない)", async () => {
     fake = buildRecordSaveSupabaseMock({
-      selectRows: { relay_records: existingRelayRows() },
+      selectRows: { relay_record_legs: staleRelayLegRows() },
     });
 
     renderRecordClient(relayExistingRecords());
@@ -735,10 +787,11 @@ describe("[V-SG-09] 古い行は自然キーに関係なくすべて削除対象
       expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-thrush?tab=competitions"),
     );
 
-    const selectCall = fake.selectCalls.find((call) => call.table === "relay_records");
-    expect(selectCall?.columns).toBe("id");
+    expect(fake.selectCalls.filter((call) => call.table === "relay_records")).toHaveLength(0);
+
+    const selectCall = fake.selectCalls.find((call) => call.table === "relay_record_legs");
+    expect(selectCall?.columns).toBe("relay_record_id");
     expect(selectCall?.columns).not.toContain("note");
-    expect(selectCall?.columns).not.toContain("relay_record_legs");
   });
 
   it("insert payload に note を送らない (DB に列が無いので送ると insert が落ちる)", async () => {

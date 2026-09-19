@@ -1,12 +1,18 @@
-// TeamRecordBulkFormScreen — 非泳者管理者アクセス規制回帰テスト (Issue #49 QA Phase B 追加)
+// TeamRecordStyleListScreen / TeamRecordStyleDetailScreen — 非泳者管理者アクセス規制回帰テスト
+// (Issue #49 QA Phase B 追加。2階層化に伴い移植: 旧 TeamRecordBulkFormScreen.test.tsx)
 //
-// teamEntryBulk.nonSwimmerAdminGuard.test.tsx と同型。PM裁定 R4 が名指しした
-// isCurrentUserAdmin 判定 (TeamRecordBulkFormScreen.tsx:128-131) が生の members を
-// 読み続けていること、および memberSelectCandidates (:134) が候補提示の直前だけに
-// 適用されていることを検証する。
+// PM裁定 R4 が名指しした isCurrentUserAdmin 判定 (旧 TeamRecordBulkFormScreen.tsx:128-131、
+// 新画面でも同形) が生の members を読み続けていること、および
+// memberSelectCandidates (詳細画面) が候補提示の直前だけに適用されていることを検証する。
 //
-//   [V-15-01] 非泳者かつ管理者のログインユーザーは権限ゲートに阻まれず画面にアクセスできる
-//   [V-15-02] MemberSelectModal に渡る候補一覧には非泳者が含まれない
+//   [V-15-01] 非泳者かつ管理者のログインユーザーは一覧画面の権限ゲートに阻まれず
+//             アクセスできる
+//   [V-15-02] 詳細画面の MemberSelectModal に渡る候補一覧には非泳者が含まれない
+//
+// 移植方針: 2階層化により関心事が一覧画面 (admin ゲート) と詳細画面 (候補フィルタ) に
+// 分かれた。V-15-02 は teamRecordBulk.nonSwimmerHandoffDetail.test.tsx (Sprint Contract
+// V-09) と観点が重複するが、こちらは「旧テストの移植」という別の出自として残す
+// (回帰検知の網を二重化する意図。削除しない)。
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -47,7 +53,7 @@ const mocks = vi.hoisted(() => {
   return {
     responses,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1" } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -56,9 +62,25 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+// useFocusEffect はマウント時に1回だけ callback を実行する実装で上書きする
+// (RecordsScreen.refreshDrift.test.tsx 等と同一パターン)。空の vi.fn() にはしない
+// (フォーカス時再取得が一切実行されなくなり回帰検知能力を失う) が、グローバルモック
+// (vitest.setup.ts の `vi.fn((callback) => callback())`) をそのまま持ち込むと、
+// このファイルの callback は `load` (setState を伴う実 fetch) であるため、
+// 「レンダーのたびに再実行される」globalモックの挙動と組み合わさり
+// setState → 再レンダー → callback 再実行 → setState → ... の無限ループになる
+// (実測済み: "Too many re-renders" で検証)。このファイルの関心事はフォーカス時
+// 再取得の再現ではなく通常表示なので、マウント1回だけ発火させれば十分。
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
+  useFocusEffect: (callback: () => void) => {
+    React.useEffect(() => {
+      callback();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+  },
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -80,6 +102,12 @@ vi.mock("@apps/shared/api/styles", () => ({
   },
 }));
 
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
+  },
+}));
+
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
@@ -92,7 +120,8 @@ vi.mock("@/components/teams/MemberSelectModal", () => ({
   },
 }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleListScreen } from "../TeamRecordStyleListScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -100,7 +129,7 @@ const createWrapper = (queryClient: QueryClient) => {
   );
 };
 
-describe("TeamRecordBulkFormScreen - 非泳者管理者の締め出し回帰 (R4)", () => {
+describe("TeamRecordStyleListScreen/Detail - 非泳者管理者の締め出し回帰 (R4)", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -110,6 +139,7 @@ describe("TeamRecordBulkFormScreen - 非泳者管理者の締め出し回帰 (R4
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
 
+    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1" };
     mocks.getStyles.mockResolvedValue([
       { id: 2, name_jp: "自由形50m", name: "Freestyle", style: "Fr", distance: 50 },
     ]);
@@ -118,6 +148,7 @@ describe("TeamRecordBulkFormScreen - 非泳者管理者の締め出し回帰 (R4
       error: null,
     };
     mocks.responses["select:records"] = { data: [], error: null };
+    mocks.responses["select:entries"] = { data: [], error: null };
 
     mocks.membersBox.current = [
       {
@@ -135,8 +166,8 @@ describe("TeamRecordBulkFormScreen - 非泳者管理者の締め出し回帰 (R4
     ];
   });
 
-  it("[V-15-01] 非泳者かつ管理者のログインユーザーは権限ゲートに阻まれず画面にアクセスできる", async () => {
-    render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+  it("[V-15-01] 非泳者かつ管理者のログインユーザーは一覧画面の権限ゲートに阻まれずアクセスできる", async () => {
+    render(<TeamRecordStyleListScreen />, { wrapper: createWrapper(queryClient) });
 
     await waitFor(() => {
       expect(mocks.getStyles).toHaveBeenCalled();
@@ -145,8 +176,10 @@ describe("TeamRecordBulkFormScreen - 非泳者管理者の締め出し回帰 (R4
     expect(screen.queryByText(ja.teams.mobile.webGuide)).toBeNull();
   });
 
-  it("[V-15-02] MemberSelectModal に渡る候補一覧には非泳者が含まれない", async () => {
-    render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+  it("[V-15-02] 詳細画面の MemberSelectModal に渡る候補一覧には非泳者が含まれない", async () => {
+    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+
+    render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
     await waitFor(() => {
       expect(capturedMemberSelectProps.length).toBeGreaterThan(0);

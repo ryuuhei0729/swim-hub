@@ -62,6 +62,10 @@ const SCOPE: RelayRecordReplaceScope = {
   teamId: "team-kingfisher",
   competitionId: "comp-kingfisher-spring",
   poolType: 1,
+  // 【修正ラウンド 2026-09-17】旧 `relayEventId?` を廃止し、画面が読み込んだ
+  // `relay_records.id` の明示集合に置換 (Critical #1)。DB 列条件による絞り込みは
+  // 一切行わない設計なので、この pin テストも id ベースの scope で組み立てる。
+  relayRecordIds: ["rr-existing-1", "rr-existing-2"],
 };
 
 // 型注釈が付いた実体から取り出す。
@@ -136,6 +140,7 @@ interface InsertCall {
 function makeSupabase() {
   const insertCalls: InsertCall[] = [];
   const eqCalls: Array<{ table: string; column: string; value: unknown }> = [];
+  const inCalls: Array<{ table: string; column: string; values: unknown[] }> = [];
 
   const client = {
     from: vi.fn((table: string) => {
@@ -145,7 +150,10 @@ function makeSupabase() {
         eqCalls.push({ table, column, value });
         return builder;
       });
-      builder.in = vi.fn(() => builder);
+      builder.in = vi.fn((column: string, values: unknown[]) => {
+        inCalls.push({ table, column, values: [...values] });
+        return builder;
+      });
       builder.delete = vi.fn(() => builder);
       builder.insert = vi.fn((row: Record<string, unknown> | Record<string, unknown>[]) => {
         for (const one of Array.isArray(row) ? row : [row]) {
@@ -162,7 +170,7 @@ function makeSupabase() {
     }),
   };
 
-  return { insertCalls, eqCalls, client: client as unknown as SupabaseClient };
+  return { insertCalls, eqCalls, inCalls, client: client as unknown as SupabaseClient };
 }
 
 describe("[V-P2-70] リレー記録の書き込みは competition_id を必須にする", () => {
@@ -199,18 +207,31 @@ describe("[V-P2-70] リレー記録の書き込みは competition_id を必須�
     expect(row.team_id).toBe("team-kingfisher");
   });
 
-  it("既存行の削除も scope の competition_id で絞る (他の大会のリレーを消さない)", async () => {
+  // 【修正ラウンド 2026-09-17】以前は「差し替え前の取得を team_id/competition_id で
+  // 絞り込んでいること」を検証していたが、これは旧 replace() の内部 SELECT を前提に
+  // したアサーションであり、新設計では replace() は内部 SELECT を行わない
+  // (呼び出し元が読み込んだ relayRecordIds をそのまま staleIds として使うだけ)。
+  // 「サーバー側で絞り込んでいること」を検証する意図そのものは維持し、検証対象を
+  // 「DB 列条件による絞り込み」から「呼び出し元が渡した明示的な id 集合による絞り込み」
+  // へ移す (他の大会・他チームのリレーを巻き込まない、という意図は同じ)。
+  it("既存行の削除は scope.relayRecordIds に渡された id だけを対象にする (DB 列条件で絞り込み直さない)", async () => {
     const fake = makeSupabase();
     const api = new TeamRelayRecordsAPI(fake.client);
 
     await api.replace(SCOPE, [PLAN], [null, null, null, null]);
 
-    const scopedEq = fake.eqCalls.filter((call) => call.table === "relay_records");
-    expect(scopedEq).toEqual(
-      expect.arrayContaining([
-        { table: "relay_records", column: "team_id", value: "team-kingfisher" },
-        { table: "relay_records", column: "competition_id", value: "comp-kingfisher-spring" },
-      ]),
+    // team_id / competition_id による絞り込み delete は発生しない (列条件に逆戻りしていない)
+    const eqScopedDelete = fake.eqCalls.filter(
+      (call) => call.table === "relay_records" && (call.column === "team_id" || call.column === "competition_id"),
     );
+    expect(eqScopedDelete).toHaveLength(0);
+
+    // 代わりに scope.relayRecordIds そのものが .in("id", ...) の対象になる
+    const idScopedDelete = fake.inCalls.filter(
+      (call) => call.table === "relay_records" && call.column === "id",
+    );
+    expect(idScopedDelete).toEqual([
+      { table: "relay_records", column: "id", values: ["rr-existing-1", "rr-existing-2"] },
+    ]);
   });
 });

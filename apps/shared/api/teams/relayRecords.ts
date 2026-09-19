@@ -3,7 +3,8 @@
 // =============================================================================
 // `relay_records` / `relay_record_legs` を差し替える**唯一の実装元**。
 // web (`.../records/_client/RecordClient.tsx`) と
-// mobile (`apps/mobile/screens/TeamRecordBulkFormScreen.tsx`) の両方が呼ぶ。
+// mobile (`apps/mobile/screens/teamRecordBulk/saveStyleRecords.ts`、
+// `TeamRecordStyleDetailScreen.tsx` から呼ばれる) の両方が呼ぶ。
 //
 // なぜ shared に集約するのか:
 //   当初は web / mobile がそれぞれ `replaceRelayRecords` を持っており、
@@ -24,12 +25,18 @@ import type { RelaySavePlan } from "../../utils/relayRecordSave";
 /**
  * 差し替えの対象範囲。
  *
- * この API は **(team_id, competition_id) スコープの行を丸ごと置き換える**。
- * 呼び出し元の記録入力画面が同じスコープの `records` を delete + insert で
- * 置き換えるため、リレー側も同じ操作の一部として同じスコープを持つ。
- * 自然キー (種類 + 距離 + 泳者集合) まで狭めると、フォームからリレー種目を
- * 削除したときに古い `relay_records` 行が孤児として残り、`records` が消えた後も
- * ランキングに出続ける。
+ * 【修正ラウンド 2026-09-17 (Critical #1)】以前はここに `relayEventId?` を持たせ、
+ * 指定時は既存行の取得を `relay_kind` + `leg_distance` でも絞り込んでいた。
+ * これは**同じ種目に登録された別チーム/別組の行を区別できない**。例えば
+ * 400m フリーリレーに2チーム登録されている場合、`(team_id, competition_id,
+ * relay_kind, leg_distance)` は両チームの行にヒットするため、片方のチームを
+ * 保存すると `staleIds` にもう片方のチームの行が含まれてしまい、保存する
+ * `plans` にはそのチームの分が無いため、**相手チームの `relay_records` 行が
+ * 削除されて復活しない** (チームランキングの集計元なので、ランキングから
+ * 静かに消える)。
+ *
+ * そこで `records` 側 (`computeRecordSaveDiff`) と同じ「画面が読み込んだ id
+ * だけを消す」原則に揃える。DB 列条件による絞り込みは一切行わない。
  */
 export interface RelayRecordReplaceScope {
   teamId: string;
@@ -62,6 +69,18 @@ export interface RelayRecordReplaceScope {
    * (静かに片方の水路へ寄せない)。
    */
   poolType: number;
+  /**
+   * この保存で「古い行」として扱う対象の `relay_records.id` の集合。
+   *
+   * 呼び出し元 (画面のデータ取得層) が、今回のセッションで実際に読み込んだ
+   * `relay_records.id` だけを渡すこと。ここに含まれる id だけが delete 候補になり、
+   * それ以外 (同じ `relay_kind` + `leg_distance` を持つ別チーム/別組の行など、
+   * この画面が読み込んでいない行) には一切触れない。
+   *
+   * 空配列なら「置き換え対象の既存行は無い」= 新規保存のみを意味する
+   * (新規大会・新規種目でこのリレーが初めて保存される場合など)。
+   */
+  relayRecordIds: readonly string[];
 }
 
 export interface RelayRecordReplaceResult {
@@ -143,7 +162,63 @@ export class TeamRelayRecordsAPI {
   constructor(private supabase: SupabaseClient) {}
 
   /**
-   * (team_id, competition_id) スコープのリレー記録を差し替える。
+   * `records.id` 集合から、それらが属する `relay_records.id` を解決する。
+   * `replace()` に渡す `RelayRecordReplaceScope.relayRecordIds` を組み立てる
+   * ための補助メソッド。
+   *
+   * 【元は mobile 画面層にあった】 web/mobile がそれぞれ「画面が読み込んだ
+   * records.id から relay_records.id を逆引きする」ロジックを持つと、片方だけ
+   * 更新されて静かに壊れる (このモジュール冒頭の docstring と同じ理由)。元は
+   * mobile の `screens/teamRecordBulk/saveStyleRecords.ts` の
+   * `scopeRelayRecordIdsForLegRecords` にあった実装をここへ移し、mobile 側は
+   * このメソッドへの薄い委譲に置き換えてある。
+   *
+   * 【なぜ `relay_record_legs.record_id` 経由か】`relay_records` 自体には「組」を
+   * 識別する列が無い。同一チーム・同一大会・同一 relay_kind/leg_distance の行は
+   * 複数組にまたがって同じ値になりうるため、DB 列条件だけでは「この画面が読み込んだ
+   * 行」を一意に特定できない。`relay_record_legs.record_id` は `records.id` への FK
+   * であり、その records.id 自体が既に (呼び出し元が読み込んだ) 組へ一意に紐づいて
+   * いるため、これを経由すれば列条件を使わずに正確な relay_records.id 集合を得られる。
+   *
+   * 【呼び出し順序に関する注意】`relay_record_legs.record_id` は
+   * `ON DELETE SET NULL` (元になった records 行を消してもリレー記録は残すため)。
+   * 呼び出し元が対象の records 行を先に DELETE してからこのメソッドを呼ぶと、
+   * 該当行の record_id は既に NULL 化されており解決できない。**records の DELETE
+   * より前に呼ぶこと。**
+   *
+   * @param recordIds 呼び出し元が実際に読み込んだ `records.id` の集合
+   *   (leg 0 は `is_relaying=false` でも対象になるため、`is_relaying` で
+   *   事前に絞り込まないこと)
+   * @returns 解決できた `relay_records.id` の集合。空配列を渡した場合は
+   *   問い合わせずに空集合を返す
+   */
+  async resolveRelayRecordIdsForRecords(recordIds: readonly string[]): Promise<Set<string>> {
+    if (recordIds.length === 0) return new Set();
+
+    const { data, error } = await this.supabase
+      .from("relay_record_legs")
+      .select("relay_record_id")
+      .in("record_id", recordIds);
+
+    if (error) {
+      // 生の PostgrestError.message はテーブル名等を含みうるため文字列に埋め込まない。
+      // 失敗時は空集合を返す (置き換え対象が無い = 既存の relay_records は消さない側に
+      // 倒す。データを消し損なうより、まれに重複行が残る方を選ぶ既存方針
+      // (`replace()` の docstring 「データが消えるより重複が残る方を選ぶ」) と一致させる)。
+      console.error("relay_record_legs 取得エラー:", error);
+      return new Set();
+    }
+
+    return new Set(
+      ((data ?? []) as Array<{ relay_record_id: string | null }>)
+        .map((row) => row.relay_record_id)
+        .filter((id): id is string => id != null),
+    );
+  }
+
+  /**
+   * リレー記録を差し替える。古い行の対象は `scope.relayRecordIds` に**渡された
+   * id だけ** (DB 列条件による絞り込みは行わない。事実1)。
    *
    * 【なぜ upsert ではないか】
    * `id` を含まない upsert は自然キー側の一意制約に依存して別行を壊した前科が
@@ -173,22 +248,9 @@ export class TeamRelayRecordsAPI {
     plans: readonly RelaySavePlan[],
     insertedRecordIds: ReadonlyArray<string | null>,
   ): Promise<RelayRecordReplaceResult> {
-    // 差し替え前の行の id を取得する。今 insert する行を巻き込まずに
-    // 古い行だけを消すために必要 (`.eq("team_id", ...)` のような条件 delete に
-    // すると、この呼び出しで書いた行も消える)。
-    const { data: existingRows, error: fetchError } = await this.supabase
-      .from("relay_records")
-      .select("id")
-      .eq("team_id", scope.teamId)
-      .eq("competition_id", scope.competitionId);
-
-    if (fetchError) {
-      // 生の PostgrestError.message はテーブル名等を含みうるため文字列に埋め込まない
-      console.error("既存のリレー記録取得エラー:", fetchError);
-      return { failed: true };
-    }
-
-    const staleIds = ((existingRows ?? []) as Array<{ id: string }>).map((row) => row.id);
+    // 古い行として消す候補は呼び出し元が渡した id 集合そのもの。DB へ問い合わせて
+    // 対象を探し直すことはしない (探し直すと列条件での絞り込みに逆戻りしてしまう)。
+    const staleIds = [...scope.relayRecordIds];
 
     let failed = false;
 

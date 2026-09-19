@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => {
 
   const responses: Record<string, { data: unknown; error: unknown }> = {};
   const insertCalls: Array<{ table: string; payload: unknown }> = [];
+  const updateCalls: Array<{ table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> }> = [];
   const deleteCalls: Array<{ table: string }> = [];
   /**
    * `.eq()` の列名・値を発生順に記録する。
@@ -82,12 +83,14 @@ const mocks = vi.hoisted(() => {
     return {
       from: (table: string) => {
         let op: string | null = null;
+        let pendingUpdate: { table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> } | null = null;
         const builder: {
           select: (..._a: unknown[]) => typeof builder;
           eq: (column: string, value: unknown) => typeof builder;
           order: (..._a: unknown[]) => typeof builder;
           in: (column: string, values: unknown[]) => typeof builder;
           insert: (payload: unknown) => typeof builder;
+          update: (payload: unknown) => typeof builder;
           delete: (..._a: unknown[]) => typeof builder;
           single: () => Promise<{ data: unknown; error: unknown }>;
           then: (resolve: (v: { data: unknown; error: unknown }) => void) => void;
@@ -98,6 +101,7 @@ const mocks = vi.hoisted(() => {
           },
           eq: (column: string, value: unknown) => {
             eqCalls.push({ table, op, column, value });
+            if (op === "update" && pendingUpdate) pendingUpdate.eq.push({ column, value });
             return builder;
           },
           order: () => builder,
@@ -108,6 +112,12 @@ const mocks = vi.hoisted(() => {
           insert: (payload: unknown) => {
             if (!op) op = "insert";
             insertCalls.push({ table, payload });
+            return builder;
+          },
+          update: (payload: unknown) => {
+            op = "update";
+            pendingUpdate = { table, payload, eq: [] };
+            updateCalls.push(pendingUpdate);
             return builder;
           },
           delete: (..._a) => {
@@ -124,7 +134,18 @@ const mocks = vi.hoisted(() => {
             }
             return Promise.resolve({ data: null, error: null });
           },
-          then: (resolve) => resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
+          then: (resolve) => {
+            const override = responses[`${op}:${table}`];
+            if (override) return resolve(override);
+            if (op === "update") {
+              // 【修正ラウンド 2026-09-17】production が `.update().eq("id", id).select("id")`
+              // で 0 行 UPDATE を検知して INSERT にフォールバックするようになった (High #2)。
+              // テストが明示的に上書きしない限り「1行ヒット (成功)」をデフォルトにする。
+              const idEq = pendingUpdate?.eq.find((e) => e.column === "id");
+              return resolve({ data: idEq ? [{ id: idEq.value }] : [{}], error: null });
+            }
+            return resolve({ data: null, error: null });
+          },
         };
         return builder;
       },
@@ -138,13 +159,14 @@ const mocks = vi.hoisted(() => {
     style,
     responses,
     insertCalls,
+    updateCalls,
     deleteCalls,
     eqCalls,
     inCalls,
     insertedIds,
     teamMembers,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -155,6 +177,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -179,12 +202,18 @@ vi.mock("@apps/shared/api/styles", () => ({
   },
 }));
 
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
+  },
+}));
+
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
 vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -198,10 +227,11 @@ function makeQueryClient() {
   });
 }
 
-describe("TeamRecordBulkFormScreen — 空タイム行は保存されない (仕様#3の回帰確認)", () => {
+describe("TeamRecordStyleDetailScreen — 空タイム行は保存されない (仕様#3の回帰確認)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.insertCalls.length = 0;
+    mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;
     mocks.eqCalls.length = 0;
     mocks.inCalls.length = 0;
@@ -213,6 +243,7 @@ describe("TeamRecordBulkFormScreen — 空タイム行は保存されない (仕
       error: null,
     };
     mocks.responses["delete:records"] = { data: null, error: null };
+    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
   });
 
   it(
@@ -250,7 +281,7 @@ describe("TeamRecordBulkFormScreen — 空タイム行は保存されない (仕
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();
@@ -261,19 +292,30 @@ describe("TeamRecordBulkFormScreen — 空タイム行は保存されない (仕
         expect(mocks.goBack).toHaveBeenCalled();
       });
 
+      // record-1/record-2 は保存前から存在する既存行なので INSERT ではなく
+      // UPDATE/DELETE に振り分けられる (upsert 化後の正しい帰結)
       const recordInserts = mocks.insertCalls.filter((c) => c.table === "records");
-      expect(recordInserts).toHaveLength(1);
-      const insertedUserIds = recordInserts.map((c) => (c.payload as { user_id: string }).user_id);
-      expect(insertedUserIds).toEqual(["user-1"]);
-      expect(insertedUserIds).not.toContain("user-2");
+      expect(recordInserts).toHaveLength(0);
+      const recordUpdates = mocks.updateCalls.filter((c) => c.table === "records");
+      expect(recordUpdates).toHaveLength(1);
+      const updatedUserIds = recordUpdates.map((c) => (c.payload as { user_id: string }).user_id);
+      expect(updatedUserIds).toEqual(["user-1"]);
+      expect(updatedUserIds).not.toContain("user-2");
+      // 未入力に戻された次郎の既存行 (record-2) は削除される
+      const recordDeletes = mocks.inCalls.filter(
+        (c) => c.table === "records" && c.op === "delete",
+      );
+      expect(recordDeletes).toHaveLength(1);
+      expect(recordDeletes[0]?.values).toEqual(["record-2"]);
     },
   );
 });
 
-describe("TeamRecordBulkFormScreen — リレー検出された StyleEntry の構造保持 (仕様#2 前提の回帰確認)", () => {
+describe("TeamRecordStyleDetailScreen — リレー検出された StyleEntry の構造保持 (仕様#2 前提の回帰確認)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.insertCalls.length = 0;
+    mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;
     mocks.eqCalls.length = 0;
     mocks.inCalls.length = 0;
@@ -285,6 +327,11 @@ describe("TeamRecordBulkFormScreen — リレー検出された StyleEntry の�
       error: null,
     };
     mocks.responses["delete:records"] = { data: null, error: null };
+    mocks.routeParams = {
+      competitionId: "comp-1",
+      teamId: "team-1",
+      relayEventId: "relay_4x50_free",
+    };
   });
 
   it(
@@ -314,7 +361,7 @@ describe("TeamRecordBulkFormScreen — リレー検出された StyleEntry の�
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();
@@ -325,18 +372,29 @@ describe("TeamRecordBulkFormScreen — リレー検出された StyleEntry の�
         expect(mocks.goBack).toHaveBeenCalled();
       });
 
+      // relay-record-0〜3 は保存前から存在する既存行なので UPDATE される (INSERT ではない)
       const recordInserts = mocks.insertCalls.filter((c) => c.table === "records");
-      expect(recordInserts).toHaveLength(4);
+      expect(recordInserts).toHaveLength(0);
+      const recordUpdates = mocks.updateCalls.filter((c) => c.table === "records");
+      expect(recordUpdates).toHaveLength(4);
     },
   );
 
+  // 【修正ラウンド 2026-09-17 (Critical #1)】以前は「差し替え前の取得が relay_records を
+  // team_id/competition_id/relay_kind/leg_distance でサーバー絞り込みしていること」を
+  // 検証していた。これは DB 列条件による絞り込みを前提にしたアサーションであり、
+  // 新設計ではこの絞り込み自体が Critical の原因だった (同一種目の別チーム/別組の行を
+  // 区別できない)。「サーバー側で絞り込んでいること」を検証する意図は維持し、
+  // 検証対象を「relay_records への列条件 .eq()」から「relay_record_legs への
+  // .in(record_id, この種目詳細画面が読み込んだ records.id 集合)」へ移す。
   it(
-    "リレーの差し替え前に行う relay_records の取得は team_id と competition_id の" +
-      "**両方をサーバー側の絞り込み条件として渡している** " +
-      "(片方だけにしてクライアント側で filter する形になっていないこと。" +
-      "サーバー絞り込みを緩めると他チーム・他大会のリレー記録が一旦クライアントに" +
-      "届いてしまい、テストからは区別できないまま情報露出が通り抜ける)",
+    "リレーの差し替え前に行う relay_record_legs の取得は record_id を" +
+      "**この種目詳細画面が読み込んだ records.id 集合でサーバー側の絞り込み条件として" +
+      "渡している** (DB 列条件で絞り込み直す形になっていないこと。緩めると他チーム・" +
+      "他大会の relay_record_legs が一旦クライアントに届いてしまい、テストからは" +
+      "区別できないまま情報露出が通り抜ける)",
     async () => {
+      const relayRecordIds = ["relay-record-0", "relay-record-1", "relay-record-2", "relay-record-3"];
       mocks.responses["select:records"] = {
         data: [
           { time: 27.5, is_relaying: false, user_id: "user-0" },
@@ -344,7 +402,7 @@ describe("TeamRecordBulkFormScreen — リレー検出された StyleEntry の�
           { time: 28.3, is_relaying: true, user_id: "user-2" },
           { time: 27.6, is_relaying: true, user_id: "user-3" },
         ].map((r, idx) => ({
-          id: `relay-record-${idx}`,
+          id: relayRecordIds[idx],
           user_id: r.user_id,
           style_id: 2,
           time: r.time,
@@ -358,7 +416,7 @@ describe("TeamRecordBulkFormScreen — リレー検出された StyleEntry の�
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();
@@ -369,23 +427,26 @@ describe("TeamRecordBulkFormScreen — リレー検出された StyleEntry の�
         expect(mocks.goBack).toHaveBeenCalled();
       });
 
-      const relaySelectEqs = mocks.eqCalls.filter(
-        (c) => c.table === "relay_records" && c.op === "select",
+      const legScopeIn = mocks.inCalls.filter(
+        (c) => c.table === "relay_record_legs" && c.op === "select",
       );
-
-      // 列名と値の対応まで見る (列名だけの検査だと値がテンプレート化していても通る)
-      expect(relaySelectEqs.map((c) => [c.column, c.value])).toEqual([
-        ["team_id", "team-1"],
-        ["competition_id", "comp-1"],
+      expect(legScopeIn).toEqual([
+        { table: "relay_record_legs", op: "select", column: "record_id", values: relayRecordIds },
       ]);
+
+      // relay_records 自体への条件 select (旧内部 SELECT) はもう発生しない
+      expect(
+        mocks.eqCalls.filter((c) => c.table === "relay_records" && c.op === "select"),
+      ).toHaveLength(0);
     },
   );
 });
 
-describe("TeamRecordBulkFormScreen — 非 admin の権限ガード (既存挙動の回帰確認)", () => {
+describe("TeamRecordStyleDetailScreen — 非 admin の権限ガード (既存挙動の回帰確認)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.insertCalls.length = 0;
+    mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;
     mocks.eqCalls.length = 0;
     mocks.inCalls.length = 0;
@@ -398,6 +459,7 @@ describe("TeamRecordBulkFormScreen — 非 admin の権限ガード (既存挙�
     };
     mocks.responses["select:records"] = { data: [], error: null };
     mocks.responses["delete:records"] = { data: null, error: null };
+    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
   });
 
   it(
@@ -409,7 +471,7 @@ describe("TeamRecordBulkFormScreen — 非 admin の権限ガード (既存挙�
       mocks.teamMembers.push({ user_id: "user-1", role: "user", users: { id: "user-1", name: "太郎" } });
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("大会一覧に戻る")).toBeDefined();

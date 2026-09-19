@@ -3270,12 +3270,12 @@
       "eventNumber": "Disziplin {n}",
       "selectMemberButton": "Mitglieder auswählen",
       "selectedMemberCount": "{n} ausgewählt",
+      "groupNumber": "{n}. Lauf",
       "relaySwimmerPlaceholder": "Schwimmer auswählen",
       "totalTime": "Gesamtzeit",
       "totalTimePlaceholder": "2.00.00",
       "timeLabel": "Zeit",
       "timePlaceholder": "2.00.00",
-      "reactionTime": "Reaktionszeit",
       "relay": "Staffel",
       "memoLabel": "Anmerkung",
       "memoPlaceholder": "Anmerkung",
@@ -3286,9 +3286,6 @@
       "videoSelect": "Video auswählen",
       "addEventButton": "Disziplin hinzufügen",
       "cancelButton": "Abbrechen",
-      "addSplit25m": "Hinzufügen (alle 25m)",
-      "addSplit50m": "Hinzufügen (alle 50m)",
-      "addSplitManual": "Hinzufügen",
       "memberSelectTitle": "Mitglieder auswählen",
       "selectAll": "Alle auswählen",
       "clearSelection": "Auswahl aufheben",
@@ -3299,6 +3296,13 @@
       "noRecordsError": "Bitte geben Sie mindestens einen Eintrag ein",
       "saveFailed": "Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
       "adminBadge": "Administrator"
+    },
+    "recordList": {
+      "pageTitle": "Wettkampfart auswählen",
+      "filledCountIndividual": "{n} Schwimmer",
+      "filledCountRelay": "{n} Teams",
+      "emptyLabel": "Nicht eingegeben",
+      "entryCountLabel": "({n} Anmeldungen)"
     },
     "practiceForm": {
       "title": "Training hinzufügen",

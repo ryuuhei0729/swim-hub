@@ -7,6 +7,7 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useTeamGroups, type TeamGroupWithCount } from "./hooks/useTeamGroups";
 import { useGroupActions } from "./hooks/useGroupActions";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 import {
   BulkAssignModal,
   CategorySection,
@@ -27,6 +28,7 @@ interface TeamMemberForSelection {
   users: {
     id: string;
     name: string;
+    birthday?: string | null;
     profile_image_path?: string | null;
   };
 }
@@ -94,6 +96,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
           users!team_memberships_user_id_fkey (
             id,
             name,
+            birthday,
             profile_image_path
           )
         `,
@@ -102,7 +105,10 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         .eq("status", "approved")
         .eq("is_active", true);
       if (!fetchError && data) {
-        setTeamMembers(data as unknown as TeamMemberForSelection[]);
+        // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+        setTeamMembers(
+          (data as unknown as TeamMemberForSelection[]).sort(compareMembersByBirthday),
+        );
       }
     };
     loadTeamMembers();

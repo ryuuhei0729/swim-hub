@@ -3264,12 +3264,12 @@
       "eventNumber": "Event {n}",
       "selectMemberButton": "Select Members",
       "selectedMemberCount": "{n} selected",
+      "groupNumber": "Entry {n}",
       "relaySwimmerPlaceholder": "Select swimmer",
       "totalTime": "Total Time",
       "totalTimePlaceholder": "2.00.00",
       "timeLabel": "Time",
       "timePlaceholder": "2.00.00",
-      "reactionTime": "Reaction Time",
       "relay": "Relay",
       "memoLabel": "Note",
       "memoPlaceholder": "Note",
@@ -3280,9 +3280,6 @@
       "videoSelect": "Select video",
       "addEventButton": "Add event",
       "cancelButton": "Cancel",
-      "addSplit25m": "Add (every 25m)",
-      "addSplit50m": "Add (every 50m)",
-      "addSplitManual": "Add",
       "memberSelectTitle": "Select members",
       "selectAll": "Select all",
       "clearSelection": "Clear selection",
@@ -3293,6 +3290,13 @@
       "noRecordsError": "Please enter at least one record",
       "saveFailed": "An error occurred while saving. Please try again.",
       "adminBadge": "Admin"
+    },
+    "recordList": {
+      "pageTitle": "Select Event",
+      "filledCountIndividual": "{n} swimmers",
+      "filledCountRelay": "{n} teams",
+      "emptyLabel": "Not entered",
+      "entryCountLabel": "({n} entries)"
     },
     "entrySection": {
       "title": "Open for Entry"

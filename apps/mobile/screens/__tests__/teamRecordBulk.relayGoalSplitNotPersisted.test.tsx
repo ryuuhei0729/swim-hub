@@ -36,6 +36,7 @@ const mocks = vi.hoisted(() => {
 
   const responses: Record<string, { data: unknown; error: unknown }> = {};
   const insertCalls: Array<{ table: string; payload: unknown }> = [];
+  const updateCalls: Array<{ table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> }> = [];
   const deleteCalls: Array<{ table: string }> = [];
   /**
    * `.eq()` の列名・値を発生順に記録する。
@@ -78,12 +79,14 @@ const mocks = vi.hoisted(() => {
     return {
       from: (table: string) => {
         let op: string | null = null;
+        let pendingUpdate: { table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> } | null = null;
         const builder: {
           select: (..._a: unknown[]) => typeof builder;
           eq: (column: string, value: unknown) => typeof builder;
           order: (..._a: unknown[]) => typeof builder;
           in: (column: string, values: unknown[]) => typeof builder;
           insert: (payload: unknown) => typeof builder;
+          update: (payload: unknown) => typeof builder;
           delete: (..._a: unknown[]) => typeof builder;
           single: () => Promise<{ data: unknown; error: unknown }>;
           then: (resolve: (v: { data: unknown; error: unknown }) => void) => void;
@@ -94,6 +97,7 @@ const mocks = vi.hoisted(() => {
           },
           eq: (column: string, value: unknown) => {
             eqCalls.push({ table, op, column, value });
+            if (op === "update" && pendingUpdate) pendingUpdate.eq.push({ column, value });
             return builder;
           },
           order: () => builder,
@@ -104,6 +108,12 @@ const mocks = vi.hoisted(() => {
           insert: (payload: unknown) => {
             if (!op) op = "insert";
             insertCalls.push({ table, payload });
+            return builder;
+          },
+          update: (payload: unknown) => {
+            op = "update";
+            pendingUpdate = { table, payload, eq: [] };
+            updateCalls.push(pendingUpdate);
             return builder;
           },
           delete: (..._a) => {
@@ -134,13 +144,14 @@ const mocks = vi.hoisted(() => {
     style,
     responses,
     insertCalls,
+    updateCalls,
     deleteCalls,
     eqCalls,
     inCalls,
     insertedIds,
     teamMembers,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -151,6 +162,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -175,12 +187,18 @@ vi.mock("@apps/shared/api/styles", () => ({
   },
 }));
 
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
+  },
+}));
+
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
 vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -224,10 +242,11 @@ function makeRelayRecords() {
   }));
 }
 
-describe("TeamRecordBulkFormScreen — distance===legDist(=raceDistance) の split は保存経路で永続化されない (S15)", () => {
+describe("TeamRecordStyleDetailScreen — distance===legDist(=raceDistance) の split は保存経路で永続化されない (S15)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.insertCalls.length = 0;
+    mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;
     mocks.eqCalls.length = 0;
     mocks.inCalls.length = 0;
@@ -249,7 +268,7 @@ describe("TeamRecordBulkFormScreen — distance===legDist(=raceDistance) の spl
       mocks.responses["select:records"] = { data: makeRelayRecords(), error: null };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();

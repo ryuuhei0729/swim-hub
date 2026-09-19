@@ -1,5 +1,6 @@
 import type { NavigatorScreenParams } from "@react-navigation/native";
 import type { TeamTabType } from "@/components/teams/TeamTabs";
+import type { RelayEventId } from "@apps/shared/utils/relayEvents";
 
 /**
  * ナビゲーションの型定義
@@ -98,9 +99,17 @@ export type MainStackParamList = {
     date: string;
     teamId?: string;
   };
+  /** チーム大会記録一覧（種目カードグリッド。管理者専用） */
   TeamRecordBulkForm: {
     competitionId: string;
     teamId: string;
+  };
+  /** チーム大会記録の種目詳細（代理入力。管理者専用）。styleId / relayEventId は排他 */
+  TeamRecordBulkFormDetail: {
+    competitionId: string;
+    teamId: string;
+    styleId?: number;
+    relayEventId?: RelayEventId;
   };
   TeamPracticeLogBulkForm: {
     practiceId: string;

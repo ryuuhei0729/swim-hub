@@ -280,9 +280,14 @@ describe("TeamCompetitionList", () => {
 
     render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
 
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBeGreaterThan(0);
-    fireEvent.click(buttons[0]!); // 直前の toBeGreaterThan(0) で存在は保証済み
+    // [脆さ修正] ヘッダーに一括登録ボタンが追加され buttons[0] が「大会を追加」では
+    // なくなった。加えて競合大会が0件のため「大会を追加」ラベルのボタンはヘッダー用・
+    // 空状態用の2つ存在する (どちらも同じ handleAdd を呼ぶため機能的には等価)。
+    // インデックスではなく、ヘッダー側 (+ アイコン付き) を icon-plus の有無で識別する。
+    const addButtons = screen.getAllByRole("button", { name: "大会を追加" });
+    const headerAddButton = addButtons.find((el) => el.querySelector('[data-testid="icon-plus"]'));
+    expect(headerAddButton, "ヘッダーの追加ボタン(+アイコン付き)が見つからない").toBeDefined();
+    fireEvent.click(headerAddButton!);
 
     expect(mocks.navigate).toHaveBeenCalledWith(
       "CompetitionForm",
@@ -1370,6 +1375,79 @@ describe("TeamCompetitionList", () => {
       expect(badgeContainer?.tagName.toLowerCase()).not.toBe("button");
       expect(badgeContainer?.getAttribute("accessibilitylabel")).toBeNull();
       expect(badgeContainer?.querySelector('[data-testid="icon-chevron-down"]')).toBeNull();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // [変更C] 一括登録ボタンの移設 (TeamDetailScreen の独立行 → ヘッダー行内)
+  // -----------------------------------------------------------------------
+
+  describe("[変更C] 一括登録ボタンがヘッダー行内に「追加」の左として配置される", () => {
+    it("isAdmin=true のとき、一括登録ボタンが DOM 上で追加ボタンより先に現れる", () => {
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
+
+      const bulkRegisterButton = screen.getByRole("button", { name: "一括登録" });
+      const addButtons = screen.getAllByRole("button", { name: "大会を追加" });
+      const headerAddButton = addButtons.find((el) => el.querySelector('[data-testid="icon-plus"]'));
+      expect(headerAddButton, "ヘッダーの追加ボタンが見つからない").toBeDefined();
+
+      const position = bulkRegisterButton.compareDocumentPosition(headerAddButton!);
+      expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("大会が0件 (空状態) でも一括登録ボタンと追加ボタンはヘッダーに表示される (items.length===0 分岐の外側)", () => {
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
+
+      expect(screen.getByRole("button", { name: "一括登録" })).toBeDefined();
+      const addButtons = screen.getAllByRole("button", { name: "大会を追加" });
+      expect(addButtons.length).toBeGreaterThan(0);
+    });
+
+    it("isAdmin=false のときは一括登録ボタンが表示されない (表示条件は addButton と同一)", () => {
+      const comp = makeCompetition({ title: "一括登録非表示検証" });
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [comp],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-1" isAdmin={false} />);
+
+      expect(screen.queryByRole("button", { name: "一括登録" })).toBeNull();
+    });
+
+    it("一括登録ボタンを押すと TeamBulkRegister へ { teamId } で navigate される", () => {
+      mocks.useTeamCompetitionsQuery.mockReturnValue({
+        data: [],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamCompetitionList teamId="team-bulk" isAdmin={true} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "一括登録" }));
+
+      expect(mocks.navigate).toHaveBeenCalledWith("TeamBulkRegister", { teamId: "team-bulk" });
     });
   });
 });

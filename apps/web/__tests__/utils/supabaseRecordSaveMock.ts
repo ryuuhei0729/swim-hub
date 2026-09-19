@@ -23,11 +23,29 @@
  *   - `from(t).select(cols).eq(c, v).eq(c, v)`            → await で `{ data, error }`
  *   - `from(t).insert(payload).select("id").single()`     → `{ data: { id }, error }`
  *   - `from(t).insert(rows)`                              → await で `{ data: null, error }`
+ *   - `from(t).update(payload).eq(c, v)`                  → await で `{ data: null, error }`
  *   - `from(t).delete().eq(c, v)` / `.delete().in(c, vs)` → await で `{ data: null, error }`
  *
- * 意図的に対応していないもの: `order` / `range` / `update` / `upsert` / rpc。
- * RecordClient がそれらを使い始めたらこのモックは `TypeError` で落ちる。
- * 「静かに undefined を返して緑のまま通る」よりそちらが望ましい。
+ * `update` は upsert 化 (Sprint #records-upsert) で QA (Phase B) が追加した。追加時も
+ * 「クエリ引数を捨てない」原則を維持する: `.update()` に渡された payload そのものと、
+ * 続く `.eq()` の列名・値の両方を `updateCalls` に記録するので、テストは
+ * 「どのテーブルに・どの payload で・どの `.eq()` 条件で」UPDATE したかを直接 assert できる
+ * (`eqCalls` にも `op: "update"` として同時に記録されるので、単に列名だけを見たい場合は
+ * そちらでも良い)。
+ *
+ * 【修正ラウンド 2026-09-17】production (`RecordClient.tsx`) が
+ *   `.update(payload).eq("id", id).select("id")`
+ * で 0 行 UPDATE を検知して INSERT にフォールバックするようになった (High #2)。
+ * 以前のこのモックは `.update()` チェーンを常に `{ data: null, error }` で解決して
+ * いたため、`.select()` を挟んでも「0 行 UPDATE」と区別できず、**正常系のテストでも
+ * 常にフォールバックが発火してしまっていた** (production 側は正しいのに、モックの
+ * 表現力不足でテストが割れる状態)。
+ *
+ * `.select()` を伴わない `.update()` は素の supabase-js と同じく `data: null` を返す
+ * (挙動を変えない)。`.select()` が伴った場合のみ、`updateMatchedRows` でマッチ行数を
+ * 制御できる。未指定時のデフォルトは「`.eq("id", v)` があれば `[{ id: v }]` (1行ヒット)」
+ * — production の呼び出し形は必ず `.eq("id", ...)` を伴うため、明示的に 0 行を作りたい
+ * テストだけが `updateMatchedRows` でオプトインすればよい。
  */
 
 export type FakeError = { message: string; code?: string };
@@ -36,14 +54,14 @@ export interface RecordSaveEqCall {
   /** `from()` に渡されたテーブル名 */
   table: string;
   /** その `.eq()` がどの操作の絞り込みだったか */
-  op: "select" | "delete" | "unknown";
+  op: "select" | "update" | "delete" | "unknown";
   column: string;
   value: unknown;
 }
 
 export interface RecordSaveInCall {
   table: string;
-  op: "select" | "delete" | "unknown";
+  op: "select" | "update" | "delete" | "unknown";
   column: string;
   values: unknown[];
 }
@@ -51,6 +69,16 @@ export interface RecordSaveInCall {
 export interface RecordSaveInsertCall {
   table: string;
   payload: unknown;
+}
+
+/**
+ * `.update(payload).eq(c, v)...` の1呼び出し分。`eq` はこの update チェーンに続いた
+ * `.eq()` だけを発生順に集める (他のチェーンの `.eq()` は混ざらない)。
+ */
+export interface RecordSaveUpdateCall {
+  table: string;
+  payload: unknown;
+  eq: Array<{ column: string; value: unknown }>;
 }
 
 export interface RecordSaveDeleteCall {
@@ -71,7 +99,7 @@ export interface RecordSaveSelectCall {
  */
 export interface RecordSaveOperation {
   table: string;
-  op: "select" | "insert" | "delete";
+  op: "select" | "insert" | "update" | "delete";
 }
 
 export interface RecordSaveSupabaseMockOptions {
@@ -85,6 +113,26 @@ export interface RecordSaveSupabaseMockOptions {
    * @param nthForTable そのテーブルへの insert が何回目か (1 始まり)
    */
   insertError?: (table: string, payload: unknown, nthForTable: number) => FakeError | null;
+  /** update を失敗させる。`null` を返せば成功
+   * @param nthForTable そのテーブルへの update が何回目か (1 始まり)
+   */
+  updateError?: (table: string, payload: unknown, nthForTable: number) => FakeError | null;
+  /**
+   * `.update(payload).eq(...).select(...)` の形で呼ばれたときにマッチした行を制御する。
+   * `undefined` を返す (またはオプション自体を渡さない) とデフォルト挙動
+   * (`.eq("id", v)` があれば `[{ id: v }]` = 1行ヒット、無ければ `[{}]`) になる。
+   * **空配列を返すと「0行UPDATE」を模擬でき、production の INSERT フォールバックを
+   * 意図的に起動させられる。**
+   * `.select()` を伴わない `.update()` はこのオプションを経由せず常に `data: null`
+   * (素の supabase-js の挙動と同じ)。
+   * @param eq その update チェーンに続いた `.eq()` を発生順に並べたもの
+   * @param nthForTable そのテーブルへの update が何回目か (1 始まり)
+   */
+  updateMatchedRows?: (
+    table: string,
+    eq: ReadonlyArray<{ column: string; value: unknown }>,
+    nthForTable: number,
+  ) => Array<Record<string, unknown>> | undefined;
   /** delete を失敗させる。`null` を返せば成功 */
   deleteError?: (table: string, nthForTable: number) => FakeError | null;
   /** select を失敗させる。`null` を返せば成功 */
@@ -97,6 +145,8 @@ export interface RecordSaveSupabaseMock {
   /** 全操作の発生順 (順序の検証に使う) */
   operations: RecordSaveOperation[];
   insertCalls: RecordSaveInsertCall[];
+  /** `.update(payload).eq()...` を発生順に記録する (payload と eq 条件を捨てない) */
+  updateCalls: RecordSaveUpdateCall[];
   deleteCalls: RecordSaveDeleteCall[];
   selectCalls: RecordSaveSelectCall[];
   /** `.eq()` の列名・値を発生順に記録する (引数を捨てない) */
@@ -107,10 +157,11 @@ export interface RecordSaveSupabaseMock {
   insertedIds: Record<string, string[]>;
 }
 
-type Op = "select" | "insert" | "delete" | "unknown";
+type Op = "select" | "insert" | "update" | "delete" | "unknown";
 
 interface Counters {
   insert: Record<string, number>;
+  update: Record<string, number>;
   select: Record<string, number>;
   delete: Record<string, number>;
   idSeq: Record<string, number>;
@@ -137,20 +188,25 @@ export function buildRecordSaveSupabaseMock(
 ): RecordSaveSupabaseMock {
   const operations: RecordSaveOperation[] = [];
   const insertCalls: RecordSaveInsertCall[] = [];
+  const updateCalls: RecordSaveUpdateCall[] = [];
   const deleteCalls: RecordSaveDeleteCall[] = [];
   const selectCalls: RecordSaveSelectCall[] = [];
   const eqCalls: RecordSaveEqCall[] = [];
   const inCalls: RecordSaveInCall[] = [];
   const insertedIds: Record<string, string[]> = {};
 
-  const counters: Counters = { insert: {}, select: {}, delete: {}, idSeq: {} };
+  const counters: Counters = { insert: {}, update: {}, select: {}, delete: {}, idSeq: {} };
 
   const from = (table: string) => {
     // 1 つの `from()` で始まるチェーンの状態。`op` は最初に呼ばれた
-    // insert / select / delete で確定する。
+    // insert / update / select / delete で確定する。
     let op: Op = "unknown";
     let insertNth = 0;
     let insertPayload: unknown = undefined;
+    let updateNth = 0;
+    let updatePayload: unknown = undefined;
+    let updateCallRef: RecordSaveUpdateCall | null = null;
+    let updateSelectRequested = false;
     let selectNth = 0;
     let deleteNth = 0;
 
@@ -159,6 +215,18 @@ export function buildRecordSaveSupabaseMock(
       if (op === "insert") {
         const error = options.insertError?.(table, insertPayload, insertNth) ?? null;
         return { data: null, error };
+      }
+      if (op === "update") {
+        const error = options.updateError?.(table, updatePayload, updateNth) ?? null;
+        if (error) return { data: null, error };
+        // `.select()` を伴わない `.update()` は素の supabase-js と同じく data: null
+        // (この分岐が既存の「常に null」挙動を保つ)。
+        if (!updateSelectRequested) return { data: null, error: null };
+        const eq = updateCallRef?.eq ?? [];
+        const override = options.updateMatchedRows?.(table, eq, updateNth);
+        if (override !== undefined) return { data: override, error: null };
+        const idEq = eq.find((e) => e.column === "id");
+        return { data: idEq ? [{ id: idEq.value }] : [{}], error: null };
       }
       if (op === "delete") {
         const error = options.deleteError?.(table, deleteNth) ?? null;
@@ -186,8 +254,8 @@ export function buildRecordSaveSupabaseMock(
     };
 
     /** `.eq()` / `.in()` の記録に使う操作種別 (insert には絞り込みが来ない) */
-    const filterOp = (): "select" | "delete" | "unknown" =>
-      op === "select" || op === "delete" ? op : "unknown";
+    const filterOp = (): "select" | "update" | "delete" | "unknown" =>
+      op === "select" || op === "update" || op === "delete" ? op : "unknown";
 
     const builder = {
       insert(payload: unknown) {
@@ -198,6 +266,15 @@ export function buildRecordSaveSupabaseMock(
         operations.push({ table, op: "insert" });
         return builder;
       },
+      update(payload: unknown) {
+        op = "update";
+        updatePayload = payload;
+        updateNth = bump(counters.update, table);
+        updateCallRef = { table, payload, eq: [] };
+        updateCalls.push(updateCallRef);
+        operations.push({ table, op: "update" });
+        return builder;
+      },
       select(columns?: string) {
         // insert().select("id") は「insert の戻り列指定」なので op を上書きしない
         if (op === "unknown") {
@@ -205,6 +282,10 @@ export function buildRecordSaveSupabaseMock(
           selectNth = bump(counters.select, table);
           selectCalls.push({ table, columns: columns ?? "" });
           operations.push({ table, op: "select" });
+        } else if (op === "update") {
+          // update().eq(...).select(...) — 0行UPDATE検知用の select。
+          // op は上書きしない (update のまま)。マッチ行の制御は updateMatchedRows へ。
+          updateSelectRequested = true;
         }
         return builder;
       },
@@ -217,6 +298,9 @@ export function buildRecordSaveSupabaseMock(
       },
       eq(column: string, value: unknown) {
         eqCalls.push({ table, op: filterOp(), column, value });
+        if (op === "update" && updateCallRef) {
+          updateCallRef.eq.push({ column, value });
+        }
         return builder;
       },
       in(column: string, values: unknown[]) {
@@ -241,6 +325,7 @@ export function buildRecordSaveSupabaseMock(
     supabase: { from },
     operations,
     insertCalls,
+    updateCalls,
     deleteCalls,
     selectCalls,
     eqCalls,

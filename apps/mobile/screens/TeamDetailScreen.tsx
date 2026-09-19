@@ -203,21 +203,6 @@ export const TeamDetailScreen: React.FC = () => {
     );
   };
 
-  // 一括登録画面への導線（管理者ビューの練習/大会タブ。web admin タブの bulk-register 相当）
-  const renderBulkRegisterButton = () => (
-    <View style={styles.bulkRegisterRow}>
-      <Pressable
-        style={styles.bulkRegisterButton}
-        onPress={() => navigation.navigate("TeamBulkRegister", { teamId })}
-        accessibilityRole="button"
-        accessibilityLabel={t("teamsAdmin.tabs.bulkRegister")}
-      >
-        <Feather name="upload" size={14} color="#2563EB" />
-        <Text style={styles.bulkRegisterButtonText}>{t("teamsAdmin.tabs.bulkRegister")}</Text>
-      </Pressable>
-    </View>
-  );
-
   // タブコンテンツのレンダリング
   const renderTabContent = () => {
     switch (activeTab) {
@@ -249,14 +234,12 @@ export const TeamDetailScreen: React.FC = () => {
       case "practices":
         return (
           <View style={styles.eventTabContent}>
-            {effectiveIsAdminView && renderBulkRegisterButton()}
             <TeamPracticeList teamId={teamId} isAdmin={effectiveIsAdminView} />
           </View>
         );
       case "competitions":
         return (
           <View style={styles.eventTabContent}>
-            {effectiveIsAdminView && renderBulkRegisterButton()}
             <TeamCompetitionList teamId={teamId} isAdmin={effectiveIsAdminView} />
           </View>
         );
@@ -353,28 +336,6 @@ const styles = StyleSheet.create({
   },
   eventTabContent: {
     flex: 1,
-  },
-  bulkRegisterRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: 12,
-    paddingTop: 8,
-  },
-  bulkRegisterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#2563EB",
-    borderRadius: 8,
-    backgroundColor: "#FFFFFF",
-  },
-  bulkRegisterButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#2563EB",
   },
   membersTabContent: {
     flex: 1,

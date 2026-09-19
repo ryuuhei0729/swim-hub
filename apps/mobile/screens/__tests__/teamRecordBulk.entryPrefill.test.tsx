@@ -8,10 +8,10 @@
 //   [仕様#2] 既存記録を優先し、不足分だけエントリーから追加する。(user_id, style_id) の
 //     組で重複排除する。リレー検出済みの StyleEntry には一切触れない。
 //
-// web 側の recordEntryPrefill.test.tsx (apps/web/__tests__/records/) と対になる
-// mobile 版。実装は TeamRecordBulkFormScreen.tsx が
-// `planEntryAdditionsForRecords` (shared) + `applyEntryAdditionsToStyleEntries`
-// (mobile ローカル、web からの移植) を経由する。
+// 移植 (2階層化): 旧 TeamRecordBulkFormScreen は大会全体を1フォームで表示していたが、
+// 新画面は一覧 (種目カード) + 詳細 (1種目/1リレー種目) に分かれた。各テストは
+// 対象種目の詳細画面を直接開くことで元の観点をそのまま検証できる。「別カードとして
+// 追加される」観点 (旧テスト4本目) だけは一覧画面のカード件数表示に観点が移る。
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -55,6 +55,7 @@ const mocks = vi.hoisted(() => {
           },
           eq: () => builder,
           order: () => builder,
+          in: () => builder,
           single: () => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
           then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
             resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
@@ -69,7 +70,7 @@ const mocks = vi.hoisted(() => {
     styleBreast,
     responses,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -81,9 +82,25 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+// useFocusEffect はマウント時に1回だけ callback を実行する実装で上書きする
+// (RecordsScreen.refreshDrift.test.tsx 等と同一パターン)。空の vi.fn() にはしない
+// (フォーカス時再取得が一切実行されなくなり回帰検知能力を失う) が、グローバルモック
+// (vitest.setup.ts の `vi.fn((callback) => callback())`) をそのまま持ち込むと、
+// このファイルの callback は `load` (setState を伴う実 fetch) であるため、
+// 「レンダーのたびに再実行される」globalモックの挙動と組み合わさり
+// setState → 再レンダー → callback 再実行 → setState → ... の無限ループになる
+// (実測済み: "Too many re-renders" で検証)。このファイルの関心事はフォーカス時
+// 再取得の再現ではなく通常表示なので、マウント1回だけ発火させれば十分。
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
+  useFocusEffect: (callback: () => void) => {
+    React.useEffect(() => {
+      callback();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+  },
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -105,12 +122,19 @@ vi.mock("@apps/shared/api/styles", () => ({
   },
 }));
 
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
+  },
+}));
+
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
 vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
+import { TeamRecordStyleListScreen } from "../TeamRecordStyleListScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -124,10 +148,11 @@ function makeQueryClient() {
   });
 }
 
-describe("TeamRecordBulkFormScreen — エントリー行の初期反映 (仕様#1・仕様#2)", () => {
+describe("TeamRecordStyleDetailScreen — エントリー行の初期反映 (仕様#1・仕様#2)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getStyles.mockResolvedValue([mocks.style, mocks.styleBreast]);
+    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
@@ -154,7 +179,7 @@ describe("TeamRecordBulkFormScreen — エントリー行の初期反映 (仕様
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       // 参考ラベルが表示される (実際の i18n 文言 + フォーマット済みタイム)。
       // ラベルと値は別々の Text ノードとして描画されるため body 全体のテキストで照合する
@@ -201,7 +226,7 @@ describe("TeamRecordBulkFormScreen — エントリー行の初期反映 (仕様
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       const timeInputs = (await screen.findAllByTestId("record-bulk-member-time")) as HTMLInputElement[];
       // 太郎(既存, タイム保持) + 次郎(エントリー由来, 未入力) の2件
@@ -244,7 +269,7 @@ describe("TeamRecordBulkFormScreen — エントリー行の初期反映 (仕様
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       // 既存記録の行 (太郎, time=27.5) にもエントリーの参考ラベルが付く
       await waitFor(() => {
@@ -260,9 +285,9 @@ describe("TeamRecordBulkFormScreen — エントリー行の初期反映 (仕様
 
   it(
     "リレー検出済みの StyleEntry と別種目のエントリーが同時にあっても、リレーカードの" +
-      "泳者選択 (4名) は変化せず、エントリー由来行は別カードとして追加される" +
-      "(仕様#2 リレー不可侵)",
+      "泳者選択 (4名) は変化しない (仕様#2 リレー不可侵。詳細画面をリレー種目で開く)",
     async () => {
+      mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
       mocks.responses["select:records"] = {
         data: [
           { time: 27.5, is_relaying: false, user_id: "user-a" },
@@ -289,7 +314,7 @@ describe("TeamRecordBulkFormScreen — エントリー行の初期反映 (仕様
         error: null,
       };
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       // リレーカードの4名の泳者選択 (mobile はネイティブ select ではなく Pressable +
       // モーダルのピッカーボタンに選択中の氏名を表示する) がそのまま残っている
@@ -300,10 +325,50 @@ describe("TeamRecordBulkFormScreen — エントリー行の初期反映 (仕様
         expect(screen.getByText("選手3")).toBeDefined();
       });
 
-      // 平泳ぎのエントリー由来行が別カードとして追加され、未入力のまま
-      const timeInputs = screen.getAllByTestId("record-bulk-member-time") as HTMLInputElement[];
-      expect(timeInputs).toHaveLength(1);
-      expect(timeInputs[0]!.value).toBe(""); // 直前の toHaveLength(1) で存在は保証済み
+      // このリレー詳細画面には平泳ぎのエントリー由来行は現れない
+      // (2階層化により別種目は別カード/別画面。「別カードとして追加される」ことの
+      //  確認は下の一覧画面テストで行う)
+      expect(screen.queryAllByTestId("record-bulk-member-time")).toHaveLength(0);
+    },
+  );
+
+  it(
+    "リレー検出済みの StyleEntry と別種目のエントリーが同時にあっても、エントリー由来行は" +
+      "一覧画面で別カードとして反映される (仕様#2 リレー不可侵。一覧画面側の観点)",
+    async () => {
+      mocks.routeParams = { competitionId: "comp-1", teamId: "team-1" };
+      mocks.responses["select:records"] = {
+        data: [
+          { time: 27.5, is_relaying: false, user_id: "user-a" },
+          { time: 28.7, is_relaying: true, user_id: "user-b" },
+          { time: 28.3, is_relaying: true, user_id: "user-c" },
+          { time: 27.6, is_relaying: true, user_id: "user-d" },
+        ].map((r, idx) => ({
+          id: `relay-record-${idx}`,
+          user_id: r.user_id,
+          style_id: 2,
+          time: r.time,
+          is_relaying: r.is_relaying,
+          reaction_time: null,
+          note: null,
+          split_times: [],
+          users: { id: r.user_id, name: `選手${idx}` },
+        })),
+        error: null,
+      };
+      mocks.responses["select:entries"] = {
+        data: [
+          { id: "entry-1", user_id: "user-2", style_id: 9, entry_time: 45.0, note: null, users: { id: "user-2", name: "次郎" } },
+        ],
+        error: null,
+      };
+      const queryClient = makeQueryClient();
+      render(<TeamRecordStyleListScreen />, { wrapper: createWrapper(queryClient) });
+
+      // 平泳ぎ (id 9) カードは entries 由来の1件を持つ「未入力」カードとして表示される
+      await waitFor(() => {
+        expect(screen.getByText("50m平泳ぎ")).toBeDefined();
+      });
     },
   );
 });

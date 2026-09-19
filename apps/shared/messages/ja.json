@@ -3270,12 +3270,12 @@
       "eventNumber": "種目 {n}",
       "selectMemberButton": "メンバーを選択",
       "selectedMemberCount": "{n}名選択中",
+      "groupNumber": "{n}本目",
       "relaySwimmerPlaceholder": "泳者を選択",
       "totalTime": "合計タイム",
       "totalTimePlaceholder": "2.00.00",
       "timeLabel": "タイム",
       "timePlaceholder": "2.00.00",
-      "reactionTime": "リアクションタイム",
       "relay": "リレー",
       "memoLabel": "メモ",
       "memoPlaceholder": "メモ",
@@ -3286,9 +3286,6 @@
       "videoSelect": "動画を選択",
       "addEventButton": "種目を追加",
       "cancelButton": "キャンセル",
-      "addSplit25m": "追加(25mごと)",
-      "addSplit50m": "追加(50mごと)",
-      "addSplitManual": "追加",
       "memberSelectTitle": "対象メンバーを選択",
       "selectAll": "全員選択",
       "clearSelection": "選択解除",
@@ -3299,6 +3296,13 @@
       "noRecordsError": "少なくとも1つの記録を入力してください",
       "saveFailed": "保存中にエラーが発生しました。もう一度お試しください。",
       "adminBadge": "管理者"
+    },
+    "recordList": {
+      "pageTitle": "種目を選択",
+      "filledCountIndividual": "{n}人",
+      "filledCountRelay": "{n}チーム",
+      "emptyLabel": "未入力",
+      "entryCountLabel": "({n}人エントリー)"
     },
     "practiceForm": {
       "title": "練習記録を追加",

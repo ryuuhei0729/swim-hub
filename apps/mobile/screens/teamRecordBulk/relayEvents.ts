@@ -10,7 +10,7 @@
 //  `getRelayKind()` に置き換えても評価結果は同一だった)
 //
 // このファイルを削除せず re-export として残す理由:
-//   このパスは `./buildStyleEntries.ts` / `../TeamRecordBulkFormScreen.tsx` と
+//   このパスは `./buildStyleEntries.ts` / `../TeamRecordStyleDetailScreen.tsx` と
 //   既存テスト5本 (`../__tests__/teamRecordBulk.*`, `../__tests__/teamBulk.saveLogic.test.ts`)
 //   からの相対 import 経路であり、記録入力画面の内部モジュール境界として
 //   既に定着している。実装が1箇所になった以上、パスの数は二重管理ではない。

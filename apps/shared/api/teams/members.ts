@@ -6,10 +6,17 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { TeamMembership, TeamMembershipWithUser } from "../../types";
 import { requireAuth, requireTeamAdmin } from "../auth-utils";
 import { UserFacingError } from "../../utils/userFacingError";
+import { compareMembersByBirthday } from "../../utils/memberSort";
 
 export class TeamMembersAPI {
   constructor(private supabase: SupabaseClient) {}
 
+  /**
+   * 承認済みメンバー一覧を年上順（生年月日昇順、未設定は末尾）で取得する。
+   * このメソッドを起点に useTeamsQuery / useTeamMembersQuery が全画面（メンバータブ・
+   * グループ分け・大会/練習の代理入力候補等）へ配信するため、比較関数は
+   * memberSort.ts の唯一の定義元を使う（画面側で個別に並べ替えない）。
+   */
   async list(teamId: string): Promise<TeamMembershipWithUser[]> {
     await requireAuth(this.supabase);
     const { data, error } = await this.supabase
@@ -19,7 +26,7 @@ export class TeamMembersAPI {
       .eq("status", "approved")
       .eq("is_active", true);
     if (error) throw error;
-    return data as unknown as TeamMembershipWithUser[];
+    return (data as unknown as TeamMembershipWithUser[]).sort(compareMembersByBirthday);
   }
 
   async join(inviteCode: string): Promise<TeamMembership> {

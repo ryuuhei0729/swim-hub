@@ -127,6 +127,13 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
     });
   }, [navigation, teamId]);
 
+  // 一括登録画面への導線（管理者ビュー専用。web admin タブの bulk-register 相当）。
+  // 以前は TeamDetailScreen 側で「追加」ボタンと別行に描画していたが、実機フィードバックを
+  // 受けてヘッダー行内で「追加」の左に並べる (isAdmin の表示条件は addButton と同一)
+  const handleBulkRegister = useCallback(() => {
+    navigation.navigate("TeamBulkRegister", { teamId });
+  }, [navigation, teamId]);
+
   const handleEdit = useCallback((practice: Practice) => {
     navigation.navigate("PracticeForm", {
       practiceId: practice.id,
@@ -212,16 +219,29 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>
+        <Text style={styles.title} numberOfLines={1}>
           {t("teams.mobile.teamPracticeList.title", { count: items.length })}
         </Text>
         {isAdmin && (
-          <Pressable style={styles.addButton} onPress={handleAdd} accessibilityRole="button">
-            <Feather name="plus" size={16} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>
-              {t("teams.mobile.teamPracticeList.addButton")}
-            </Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.bulkRegisterButton}
+              onPress={handleBulkRegister}
+              accessibilityRole="button"
+              accessibilityLabel={t("teamsAdmin.tabs.bulkRegister")}
+            >
+              <Feather name="upload" size={14} color="#2563EB" />
+              <Text style={styles.bulkRegisterButtonText}>
+                {t("teamsAdmin.tabs.bulkRegister")}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.addButton} onPress={handleAdd} accessibilityRole="button">
+              <Feather name="plus" size={16} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>
+                {t("teams.mobile.teamPracticeList.addButton")}
+              </Text>
+            </Pressable>
+          </View>
         )}
       </View>
 
@@ -269,6 +289,32 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#111827",
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  bulkRegisterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    borderRadius: 6,
+    backgroundColor: "#FFFFFF",
+  },
+  bulkRegisterButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   addButton: {
     flexDirection: "row",

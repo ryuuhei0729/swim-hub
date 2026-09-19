@@ -7,6 +7,7 @@ import RecordClient from "../_client/RecordClient";
 import { Competition, Style } from "@apps/shared/types";
 import { RecordAPI } from "@apps/shared/api/records";
 import type { BestTime } from "@apps/shared/types/ui";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 
 interface RecordDataLoaderProps {
   teamId: string;
@@ -26,6 +27,7 @@ interface TeamMember {
      * リレーのチーム記録 (`relay_records.gender_category`) の prefill にのみ使う。
      */
     gender: number;
+    birthday?: string | null;
   };
 }
 
@@ -142,13 +144,13 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
         users!team_memberships_user_id_fkey (
           id,
           name,
-          gender
+          gender,
+          birthday
         )
       `,
         )
         .eq("team_id", teamId)
-        .eq("is_active", true)
-        .order("role", { ascending: false }),
+        .eq("is_active", true),
 
       // 既存のRecordを取得
       supabase
@@ -230,7 +232,10 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
   }
 
   const competition = competitionData as unknown as CompetitionWithDetails;
-  const members = (membersResult.data || []) as unknown as TeamMember[];
+  // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+  const members = ((membersResult.data || []) as unknown as TeamMember[]).sort(
+    compareMembersByBirthday,
+  );
   const records = (recordsResult.data || []) as unknown as RecordWithDetails[];
   const styles = (stylesResult.data || []) as Style[];
   // entries は admin に全メンバー分の閲覧が RLS で許可済み（取得失敗時は

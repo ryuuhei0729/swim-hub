@@ -1,9 +1,17 @@
 // =============================================================================
-// TeamRecordBulkFormScreen.invalidate.test.tsx
+// teamRecordBulk.detailScreenInvalidate.test.tsx
 // =============================================================================
 //
+// 【命名の経緯】このファイルは元々 `TeamRecordBulkFormScreen.invalidate.test.tsx`
+// という名前だったが、対象画面 `TeamRecordBulkFormScreen.tsx` は
+// 修正ラウンド 2026-09-17 (「組」入力の2階層化復旧) で削除され、
+// `TeamRecordStyleDetailScreen.tsx` に置き換わった。中身は既にこの新画面の
+// テストになっていたが、ファイル名だけ削除済みの旧画面名のまま残っていたため
+// (Reviewer 指摘)、既存の命名規則 `teamRecordBulk.<関心事>.test.tsx` に合わせて
+// リネームした。観点そのもの (保存後のキャッシュ invalidate) は変わっていない。
+//
 // Sprint Contract 検証観点 (B-2 の姉妹バグ):
-//   チーム一括登録 (TeamRecordBulkFormScreen) の保存後 invalidate は
+//   チーム記録の種目詳細画面 (TeamRecordStyleDetailScreen) の保存後 invalidate は
 //   ["calendar"] と teamKeys.competitions(teamId) のみで、recordKeys.lists() が
 //   欠落している。姉妹画面 TeamPracticeLogBulkFormScreen.tsx は practiceKeys.lists() を
 //   正しく invalidate しており、これは非対称バグ (同一クラスの欠陥)。
@@ -21,11 +29,16 @@
 // (この画面のフルインタラクションE2Eは実機/Playwright 側で別途行う)。
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, configure } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { recordKeys, teamKeys } from "@apps/shared/hooks/queries/keys";
 import { Alert } from "react-native";
+
+// このファイル限定で TextInput を onChange 結線済みに差し替えるため (下記 vi.mock)、
+// RN の `testID` prop がそのまま DOM の `testid` 属性になる (`data-testid` にならない)。
+// RTL のクエリ対象属性を合わせて切り替える (CompetitionTabFormScreen.test.tsx と同じ対処)。
+configure({ testIdAttribute: "testID" });
 
 // react-native の静的モックには KeyboardAvoidingView が含まれないため、
 // この画面専用に補完する (RecordFormScreen.standalone.test.tsx と同じ方針。
@@ -35,6 +48,21 @@ vi.mock("react-native", async () => {
   return {
     ...actual,
     KeyboardAvoidingView: actual.View,
+    // __mocks__/react-native.ts の TextInput は onChangeText を DOM の onChange に
+    // 結線しないため fireEvent.change でテキスト入力を再現できない。V-M32 の
+    // delete 経路 (既存行のタイムを0クリアして削除対象にする) を再現するために
+    // このファイル限定で結線する。
+    TextInput: ({
+      onChangeText,
+      value,
+      ...props
+    }: { onChangeText?: (text: string) => void; value?: string } & Record<string, unknown>) =>
+      React.createElement("input", {
+        type: "text",
+        ...props,
+        value,
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChangeText?.(e.target.value),
+      }),
   };
 });
 
@@ -59,6 +87,19 @@ const mocks = vi.hoisted(() => {
     users: { id: "user-1", name: "太郎" },
   };
 
+  /** V-M32 の部分失敗シナリオ用: 太郎とは別の既存記録 (次郎) */
+  const existingRecord2 = {
+    id: "record-2",
+    user_id: "user-2",
+    style_id: 2,
+    time: 28.0,
+    is_relaying: false,
+    reaction_time: null,
+    note: null,
+    split_times: [] as { id: string; distance: number; split_time: number }[],
+    users: { id: "user-2", name: "次郎" },
+  };
+
   // supabase.from(table)...の呼び出しシーケンス (select/insert/delete) ごとにレスポンスを
   // 切り替えられる最小のチェーン可能 + thenable フェイク。
   const responses: Record<string, { data: unknown; error: unknown }> = {};
@@ -73,6 +114,7 @@ const mocks = vi.hoisted(() => {
           order: (..._a: unknown[]) => typeof builder;
           in: (..._a: unknown[]) => typeof builder;
           insert: (..._a: unknown[]) => typeof builder;
+          update: (..._a: unknown[]) => typeof builder;
           delete: (..._a: unknown[]) => typeof builder;
           single: () => Promise<{ data: unknown; error: unknown }>;
           then: (
@@ -88,6 +130,10 @@ const mocks = vi.hoisted(() => {
           in: () => builder,
           insert: (..._a) => {
             if (!op) op = "insert";
+            return builder;
+          },
+          update: (..._a) => {
+            if (!op) op = "update";
             return builder;
           },
           delete: (..._a) => {
@@ -106,9 +152,10 @@ const mocks = vi.hoisted(() => {
   return {
     style,
     existingRecord,
+    existingRecord2,
     responses,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -119,6 +166,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -132,7 +180,10 @@ vi.mock("@/contexts/AuthProvider", () => ({
 
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useTeamsQuery: () => ({
-    members: [{ user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } }],
+    members: [
+      { user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } },
+      { user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎" } },
+    ],
     isLoading: false,
   }),
 }));
@@ -140,6 +191,12 @@ vi.mock("@apps/shared/hooks/queries/teams", () => ({
 vi.mock("@apps/shared/api/styles", () => ({
   StyleAPI: class {
     getStyles = mocks.getStyles;
+  },
+}));
+
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
   },
 }));
 
@@ -158,7 +215,7 @@ vi.mock("@/components/teams/MemberSelectModal", () => ({
   MemberSelectModal: () => null,
 }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -166,7 +223,7 @@ const createWrapper = (queryClient: QueryClient) => {
   );
 };
 
-describe("TeamRecordBulkFormScreen — 保存成功後のキャッシュ無効化 (V-03)", () => {
+describe("TeamRecordStyleDetailScreen — 保存成功後のキャッシュ無効化 (V-03)", () => {
   let queryClient: QueryClient;
   let invalidateSpy: MockInstance<QueryClient["invalidateQueries"]>;
 
@@ -191,7 +248,7 @@ describe("TeamRecordBulkFormScreen — 保存成功後のキャッシュ無効�
     "[V-03] 既存メンバー記録の再保存後、大会タブが購読する recordKeys.lists() 配下が " +
       "invalidate される (従来は calendar / teamKeys.competitions のみ)",
     async () => {
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       // 既存の1件 (time=30.5, split_times無し) が buildStyleEntriesFromExisting で
       // 再構築され、UI 操作なしで保存可能な状態になっている
@@ -212,7 +269,7 @@ describe("TeamRecordBulkFormScreen — 保存成功後のキャッシュ無効�
   );
 
   it("[非退行] calendar キャッシュも引き続き無効化される", async () => {
-    render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+    render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
     await waitFor(() => {
       expect(screen.getByText("記録を保存")).toBeDefined();
     });
@@ -228,7 +285,7 @@ describe("TeamRecordBulkFormScreen — 保存成功後のキャッシュ無効�
   });
 
   it("[非退行] teamKeys.competitions(teamId) も引き続き無効化される", async () => {
-    render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+    render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
     await waitFor(() => {
       expect(screen.getByText("記録を保存")).toBeDefined();
     });
@@ -297,17 +354,37 @@ describe("[V-M32] 部分失敗時のランキングキャッシュ無効化 (M-1
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
     };
-    mocks.responses["select:records"] = { data: [mocks.existingRecord], error: null };
+    // 太郎(record-1)・次郎(record-2) の既存2行。upsert 化後は両方とも UPDATE される。
+    mocks.responses["select:records"] = {
+      data: [mocks.existingRecord, mocks.existingRecord2],
+      error: null,
+    };
     mocks.responses["delete:records"] = { data: null, error: null };
-    mocks.responses["insert:records"] = { data: { id: "new-record-1" }, error: null };
   });
 
   const save = async () => {
-    render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+    render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
     await waitFor(() => {
       expect(screen.getByText("記録を保存")).toBeDefined();
     });
     fireEvent.click(screen.getByText("記録を保存"));
+  };
+
+  /**
+   * 次郎 (2件目) のタイム入力を空にする = shouldSave=false でフォームから
+   * 消える = 既存 record-2 は削除対象になる (太郎の record-1 は UPDATE のまま)。
+   * upsert 化後の「部分失敗」の再現には、旧アーキテクチャの
+   * delete-all→insert-all と違い、UPDATE (太郎) と DELETE (次郎) が
+   * 同時に走る状況を作る必要がある。
+   */
+  const clearJiroTime = async () => {
+    const timeInputs = (await screen.findAllByTestId(
+      "record-bulk-member-time",
+    )) as HTMLInputElement[];
+    expect(timeInputs).toHaveLength(2);
+    const jiroInput = timeInputs.find((input) => input.value === "28.00");
+    expect(jiroInput).toBeDefined();
+    fireEvent.change(jiroInput as HTMLInputElement, { target: { value: "" } });
   };
 
   it("[V-M32] 保存成功時にランキングのキャッシュが落ちる (前提の確認)", async () => {
@@ -316,31 +393,44 @@ describe("[V-M32] 部分失敗時のランキングキャッシュ無効化 (M-1
     await waitFor(() => expect(rankingInvalidateCount()).toBeGreaterThanOrEqual(1));
   });
 
-  it("[V-M32] delete 成功 + insert 失敗 (部分失敗) でもランキングのキャッシュが落ちる", async () => {
-    // delete は成功、insert が失敗 → hasError = true → Alert → 早期 return の経路
-    mocks.responses["insert:records"] = {
+  it("[V-M32] UPDATE 成功 (太郎) + DELETE 失敗 (次郎) の部分失敗でもランキングのキャッシュが落ちる", async () => {
+    render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
+    await waitFor(() => {
+      expect(screen.getByText("記録を保存")).toBeDefined();
+    });
+    await clearJiroTime();
+
+    // 次郎の削除 (record-2) だけ失敗させる。太郎の UPDATE は成功するので
+    // 「一部は既に DB に反映済み」という部分失敗状態になる。
+    mocks.responses["delete:records"] = {
       data: null,
-      error: { code: "23503", message: "insert failed" },
+      error: { code: "42501", message: "delete failed" },
     };
 
-    await save();
+    fireEvent.click(screen.getByText("記録を保存"));
 
     // まず「部分失敗の経路を実際に通った」ことを Alert で確認する。
     // これを確認しないと、成功経路を測って緑になっているのと区別できない
     await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
-    // その上で、無効化が飛ばされていないこと
+    // その上で、無効化が飛ばされていないこと (太郎の UPDATE は既に確定しているため)
     expect(rankingInvalidateCount()).toBeGreaterThanOrEqual(1);
     // 画面に留まる (リダイレクトしない) のも Web 準拠の既存挙動
     expect(mocks.goBack).not.toHaveBeenCalled();
   });
 
   it("[V-M32] 部分失敗時は記録一覧・大会・カレンダーのキャッシュも一緒に落ちる", async () => {
-    mocks.responses["insert:records"] = {
+    render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
+    await waitFor(() => {
+      expect(screen.getByText("記録を保存")).toBeDefined();
+    });
+    await clearJiroTime();
+
+    mocks.responses["delete:records"] = {
       data: null,
-      error: { code: "23503", message: "insert failed" },
+      error: { code: "42501", message: "delete failed" },
     };
 
-    await save();
+    fireEvent.click(screen.getByText("記録を保存"));
     await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
 
     const invalidatedKeys = invalidateSpy.mock.calls
@@ -352,23 +442,35 @@ describe("[V-M32] 部分失敗時のランキングキャッシュ無効化 (M-1
     expect(invalidatedKeys).toContain(JSON.stringify(recordKeys.lists()));
   });
 
-  it("[V-M32] 対: delete 自体が失敗して throw する経路ではランキングを落とさない", async () => {
-    // records を1行も変更していないので、キャッシュを落とす必要が無い
-    mocks.responses["delete:records"] = {
-      data: null,
-      error: { code: "42501", message: "delete failed" },
-    };
+  it(
+    "[V-M32] 対: バリデーションで保存が DB 書き込み前に中断された場合はランキングを落とさない " +
+      "(upsert 化で『delete 自体が失敗して throw する経路』は無くなったが、" +
+      "『1件も書き込み対象が無く保存関数が例外を投げる経路』(atLeastOneRecord) が" +
+      "同じ役割 = 書き込みゼロなら無効化もゼロ、を引き継ぐ)",
+    async () => {
+      // 太郎・次郎の両方のタイムを空にする → 保存対象が1件も無く
+      // saveStyleRecords が SaveStyleRecordsValidationError を投げる →
+      // invalidateQueries に一切到達しない
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
+      await waitFor(() => {
+        expect(screen.getByText("記録を保存")).toBeDefined();
+      });
+      const timeInputs = (await screen.findAllByTestId(
+        "record-bulk-member-time",
+      )) as HTMLInputElement[];
+      for (const input of timeInputs) {
+        fireEvent.change(input, { target: { value: "" } });
+      }
 
-    await save();
+      fireEvent.click(screen.getByText("記録を保存"));
 
-    // エラー経路を通ったことを確認 (通っていなければこのテストは無意味)
-    await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
-    expect(rankingInvalidateCount()).toBe(0);
-    // insert 前に抜けるので他のキャッシュも落ちない
-    const invalidatedKeys = invalidateSpy.mock.calls
-      .map(([arg]) => (arg as { queryKey?: unknown[] } | undefined)?.queryKey)
-      .filter(Array.isArray)
-      .map((key) => JSON.stringify(key));
+      // エラー経路を通ったことを確認 (通っていなければこのテストは無意味)
+      await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+      expect(rankingInvalidateCount()).toBe(0);
+      const invalidatedKeys = invalidateSpy.mock.calls
+        .map(([arg]) => (arg as { queryKey?: unknown[] } | undefined)?.queryKey)
+        .filter(Array.isArray)
+        .map((key) => JSON.stringify(key));
     expect(invalidatedKeys).not.toContain(JSON.stringify(["calendar"]));
   });
 });

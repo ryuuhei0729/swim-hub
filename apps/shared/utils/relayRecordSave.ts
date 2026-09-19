@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // web (`apps/web/app/.../records/_client/RecordClient.tsx`) と
-// mobile (`apps/mobile/screens/TeamRecordBulkFormScreen.tsx`) の
+// mobile (`apps/mobile/screens/TeamRecordStyleDetailScreen.tsx`) の
 // **どちらも同じリレー入力 UI を持ち、同じ relay_records を書く**。
 // 保存する値の組み立て (計画の型) と性別区分の prefill をここに集約する。
 // Supabase クライアントには触らない — 実際の書き込み (insert → 古い行の delete、

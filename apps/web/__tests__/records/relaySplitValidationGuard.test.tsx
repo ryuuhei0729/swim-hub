@@ -211,8 +211,12 @@ describe("RecordClient — リレー split の事前バリデーション (D3・
         expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
       });
 
+      // fixture (existingRecords) は保存前から存在する4行なので upsert 化後は
+      // INSERT ではなく UPDATE で書かれる。
       const recordInserts = fake.insertCalls.filter((c) => c.table === "records");
-      expect(recordInserts).toHaveLength(4);
+      expect(recordInserts).toHaveLength(0);
+      const recordUpdates = fake.updateCalls.filter((c) => c.table === "records");
+      expect(recordUpdates).toHaveLength(4);
     },
   );
 });

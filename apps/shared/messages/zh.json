@@ -3270,12 +3270,12 @@
       "eventNumber": "项目 {n}",
       "selectMemberButton": "选择成员",
       "selectedMemberCount": "已选择{n}名",
+      "groupNumber": "第{n}组",
       "relaySwimmerPlaceholder": "选择泳手",
       "totalTime": "总成绩",
       "totalTimePlaceholder": "2.00.00",
       "timeLabel": "成绩",
       "timePlaceholder": "2.00.00",
-      "reactionTime": "出发反应时间",
       "relay": "接力",
       "memoLabel": "备注",
       "memoPlaceholder": "备注",
@@ -3286,9 +3286,6 @@
       "videoSelect": "选择视频",
       "addEventButton": "添加项目",
       "cancelButton": "取消",
-      "addSplit25m": "添加（每25m）",
-      "addSplit50m": "添加（每50m）",
-      "addSplitManual": "添加",
       "memberSelectTitle": "选择目标成员",
       "selectAll": "全选",
       "clearSelection": "取消选择",
@@ -3299,6 +3296,13 @@
       "noRecordsError": "请至少输入一条记录",
       "saveFailed": "保存时发生错误。请重试。",
       "adminBadge": "管理员"
+    },
+    "recordList": {
+      "pageTitle": "选择项目",
+      "filledCountIndividual": "{n}人",
+      "filledCountRelay": "{n}队",
+      "emptyLabel": "未输入",
+      "entryCountLabel": "({n}人报名)"
     },
     "practiceForm": {
       "title": "添加训练记录",

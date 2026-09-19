@@ -142,7 +142,7 @@ vi.mock("@apps/shared/api/records", () => ({
 }));
 
 // このテストの検証対象外の重量コンポーネントを薄いスタブに差し替える
-// (TeamRecordBulkFormScreen.invalidate.test.tsx と同じ方針)
+// (teamRecordBulk.detailScreenInvalidate.test.tsx と同じ方針)
 vi.mock("@/components/teams/MemberSelectModal", () => ({
   MemberSelectModal: () => null,
 }));

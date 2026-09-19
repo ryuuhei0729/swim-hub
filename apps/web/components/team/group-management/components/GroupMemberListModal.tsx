@@ -8,6 +8,7 @@ import Avatar from "@/components/ui/Avatar";
 import { UsersIcon } from "@heroicons/react/24/outline";
 import type { TeamGroupWithCount } from "../hooks/useTeamGroups";
 import type { MemberDetail } from "@/types/member-detail";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 
 interface GroupMemberListModalProps {
   isOpen: boolean;
@@ -78,11 +79,11 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
           .eq("team_id", teamId)
           .eq("status", "approved")
           .eq("is_active", true)
-          .in("user_id", userIds)
-          .order("role", { ascending: true });
+          .in("user_id", userIds);
 
         if (tmError) throw tmError;
-        setMembers((data ?? []) as unknown as MemberDetail[]);
+        // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+        setMembers(((data ?? []) as unknown as MemberDetail[]).sort(compareMembersByBirthday));
       } catch (err) {
         console.error("グループメンバー取得エラー:", err);
       } finally {

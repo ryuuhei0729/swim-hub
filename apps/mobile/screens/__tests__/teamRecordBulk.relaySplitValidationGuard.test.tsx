@@ -38,6 +38,7 @@ const mocks = vi.hoisted(() => {
 
   const responses: Record<string, { data: unknown; error: unknown }> = {};
   const insertCalls: Array<{ table: string; payload: unknown }> = [];
+  const updateCalls: Array<{ table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> }> = [];
   const deleteCalls: Array<{ table: string }> = [];
   /**
    * `.eq()` の列名・値を発生順に記録する。
@@ -80,12 +81,14 @@ const mocks = vi.hoisted(() => {
     return {
       from: (table: string) => {
         let op: string | null = null;
+        let pendingUpdate: { table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> } | null = null;
         const builder: {
           select: (..._a: unknown[]) => typeof builder;
           eq: (column: string, value: unknown) => typeof builder;
           order: (..._a: unknown[]) => typeof builder;
           in: (column: string, values: unknown[]) => typeof builder;
           insert: (payload: unknown) => typeof builder;
+          update: (payload: unknown) => typeof builder;
           delete: (..._a: unknown[]) => typeof builder;
           single: () => Promise<{ data: unknown; error: unknown }>;
           then: (resolve: (v: { data: unknown; error: unknown }) => void) => void;
@@ -96,6 +99,7 @@ const mocks = vi.hoisted(() => {
           },
           eq: (column: string, value: unknown) => {
             eqCalls.push({ table, op, column, value });
+            if (op === "update" && pendingUpdate) pendingUpdate.eq.push({ column, value });
             return builder;
           },
           order: () => builder,
@@ -106,6 +110,12 @@ const mocks = vi.hoisted(() => {
           insert: (payload: unknown) => {
             if (!op) op = "insert";
             insertCalls.push({ table, payload });
+            return builder;
+          },
+          update: (payload: unknown) => {
+            op = "update";
+            pendingUpdate = { table, payload, eq: [] };
+            updateCalls.push(pendingUpdate);
             return builder;
           },
           delete: (..._a) => {
@@ -122,7 +132,18 @@ const mocks = vi.hoisted(() => {
             }
             return Promise.resolve({ data: null, error: null });
           },
-          then: (resolve) => resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
+          then: (resolve) => {
+            const override = responses[`${op}:${table}`];
+            if (override) return resolve(override);
+            if (op === "update") {
+              // 【修正ラウンド 2026-09-17】production が `.update().eq("id", id).select("id")`
+              // で 0 行 UPDATE を検知して INSERT にフォールバックするようになった (High #2)。
+              // テストが明示的に上書きしない限り「1行ヒット (成功)」をデフォルトにする。
+              const idEq = pendingUpdate?.eq.find((e) => e.column === "id");
+              return resolve({ data: idEq ? [{ id: idEq.value }] : [{}], error: null });
+            }
+            return resolve({ data: null, error: null });
+          },
         };
         return builder;
       },
@@ -136,13 +157,14 @@ const mocks = vi.hoisted(() => {
     style,
     responses,
     insertCalls,
+    updateCalls,
     deleteCalls,
     eqCalls,
     inCalls,
     insertedIds,
     teamMembers,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -153,6 +175,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -177,12 +200,18 @@ vi.mock("@apps/shared/api/styles", () => ({
   },
 }));
 
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
+  },
+}));
+
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
 vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -218,10 +247,11 @@ function makeRelayRecords(legSplits: Array<{ distance: number; split_time: numbe
   }));
 }
 
-describe("TeamRecordBulkFormScreen — リレー split の事前バリデーション (D3・Success Criteria S6)", () => {
+describe("TeamRecordStyleDetailScreen — リレー split の事前バリデーション (D3・Success Criteria S6)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.insertCalls.length = 0;
+    mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;
     mocks.eqCalls.length = 0;
     mocks.inCalls.length = 0;
@@ -251,7 +281,7 @@ describe("TeamRecordBulkFormScreen — リレー split の事前バリデーシ�
 
       const alertSpy = vi.spyOn(Alert, "alert");
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();
@@ -289,7 +319,7 @@ describe("TeamRecordBulkFormScreen — リレー split の事前バリデーシ�
       };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();
@@ -300,8 +330,11 @@ describe("TeamRecordBulkFormScreen — リレー split の事前バリデーシ�
         expect(mocks.goBack).toHaveBeenCalled();
       });
 
+      // relay-record-0〜3 は保存前から存在する既存行なので UPDATE される (INSERT ではない)
       const recordInserts = mocks.insertCalls.filter((c) => c.table === "records");
-      expect(recordInserts).toHaveLength(4);
+      expect(recordInserts).toHaveLength(0);
+      const recordUpdates = mocks.updateCalls.filter((c) => c.table === "records");
+      expect(recordUpdates).toHaveLength(4);
     },
   );
 });

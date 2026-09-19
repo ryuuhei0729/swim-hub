@@ -12,7 +12,8 @@ import { CompetitionBasicFormScreen } from "@/screens/CompetitionBasicFormScreen
 import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
 import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
 import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
-import { TeamRecordBulkFormScreen } from "@/screens/TeamRecordBulkFormScreen";
+import { TeamRecordStyleListScreen } from "@/screens/TeamRecordStyleListScreen";
+import { TeamRecordStyleDetailScreen } from "@/screens/TeamRecordStyleDetailScreen";
 import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
 import { TeamEntryBulkFormScreen } from "@/screens/TeamEntryBulkFormScreen";
 import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
@@ -134,7 +135,15 @@ export const MainStack: React.FC = () => {
       />
       <Stack.Screen
         name="TeamRecordBulkForm"
-        component={TeamRecordBulkFormScreen}
+        component={TeamRecordStyleListScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("teams.recordList.pageTitle"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamRecordBulkFormDetail"
+        component={TeamRecordStyleDetailScreen}
         options={{
           ...baseHeaderOptions,
           title: t("teams.record.pageTitle"),

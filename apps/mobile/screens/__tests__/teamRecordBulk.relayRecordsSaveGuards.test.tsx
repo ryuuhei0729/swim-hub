@@ -56,6 +56,7 @@ const mocks = vi.hoisted(() => {
 
   const responses: Record<string, { data: unknown; error: unknown }> = {};
   const insertCalls: Array<{ table: string; payload: unknown }> = [];
+  const updateCalls: Array<{ table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> }> = [];
   const deleteCalls: Array<{ table: string }> = [];
   /** 全操作の発生順 (insert → delete の順序を証明するのに使う) */
   const operations: Array<{ table: string; op: string }> = [];
@@ -84,12 +85,14 @@ const mocks = vi.hoisted(() => {
     return {
       from: (table: string) => {
         let op: string | null = null;
+        let pendingUpdate: { table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> } | null = null;
         const builder: {
           select: (..._a: unknown[]) => typeof builder;
           eq: (column: string, value: unknown) => typeof builder;
           order: (..._a: unknown[]) => typeof builder;
           in: (column: string, values: unknown[]) => typeof builder;
           insert: (payload: unknown) => typeof builder;
+          update: (payload: unknown) => typeof builder;
           delete: (..._a: unknown[]) => typeof builder;
           single: () => Promise<{ data: unknown; error: unknown }>;
           then: (resolve: (v: { data: unknown; error: unknown }) => void) => void;
@@ -103,6 +106,7 @@ const mocks = vi.hoisted(() => {
           },
           eq: (column: string, value: unknown) => {
             eqCalls.push({ table, op, column, value });
+            if (op === "update" && pendingUpdate) pendingUpdate.eq.push({ column, value });
             return builder;
           },
           order: () => builder,
@@ -116,6 +120,15 @@ const mocks = vi.hoisted(() => {
               operations.push({ table, op });
             }
             insertCalls.push({ table, payload });
+            return builder;
+          },
+          update: (payload: unknown) => {
+            if (!op) {
+              op = "update";
+              operations.push({ table, op });
+            }
+            pendingUpdate = { table, payload, eq: [] };
+            updateCalls.push(pendingUpdate);
             return builder;
           },
           delete: (..._a) => {
@@ -135,7 +148,21 @@ const mocks = vi.hoisted(() => {
             }
             return Promise.resolve({ data: null, error: null });
           },
-          then: (resolve) => resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
+          then: (resolve) => {
+            const override = responses[`${op}:${table}`];
+            if (override) return resolve(override);
+            if (op === "update") {
+              // 【修正ラウンド 2026-09-17】production (`saveStyleRecords.ts`) が
+              // `.update(payload).eq("id", id).select("id")` で 0 行 UPDATE を
+              // 検知して INSERT にフォールバックするようになった (High #2)。
+              // テストが明示的に上書きしない限り「1行ヒット (成功)」をデフォルトに
+              // する (production の呼び出し形は必ず `.eq("id", ...)` を伴うため)。
+              // 空配列を明示的に `responses` へ設定したテストだけが 0 行を再現できる。
+              const idEq = pendingUpdate?.eq.find((e) => e.column === "id");
+              return resolve({ data: idEq ? [{ id: idEq.value }] : [{}], error: null });
+            }
+            return resolve({ data: null, error: null });
+          },
         };
         return builder;
       },
@@ -173,6 +200,7 @@ const mocks = vi.hoisted(() => {
     style,
     responses,
     insertCalls,
+    updateCalls,
     deleteCalls,
     operations,
     eqCalls,
@@ -180,7 +208,11 @@ const mocks = vi.hoisted(() => {
     insertedIds,
     teamMembers,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-thrush", teamId: "team-thrush" },
+    routeParams: {
+      competitionId: "comp-thrush",
+      teamId: "team-thrush",
+      relayEventId: "relay_4x50_free",
+    } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -191,6 +223,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -215,13 +248,19 @@ vi.mock("@apps/shared/api/styles", () => ({
   },
 }));
 
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
+  },
+}));
+
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
 vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
 
 import { Alert } from "react-native";
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -258,17 +297,27 @@ function relayRecordRows() {
 }
 
 /**
- * 差し替え前に存在する古い `relay_records` 行。
- * `TeamRelayRecordsAPI.replace()` は `select("id")` しか読まない
- * (note 列の廃止で自然キー照合が不要になった)。
+ * 差し替え前に存在する古い `relay_records.id` を解決するための `relay_record_legs`
+ * フェイク行。
+ *
+ * 【修正ラウンド 2026-09-17 (Critical #1)】以前は `replace()` 自身が
+ * `relay_records.select("id").eq("team_id", ...).eq("competition_id", ...)
+ * .eq("relay_kind", ...).eq("leg_distance", ...)` で古い行を取得していたが、
+ * これは同じ種目に複数チーム/組がある場合に他チームの行を巻き込んで削除して
+ * しまう Critical だった。新設計では `replace()` は内部で一切 select しない。
+ * 画面が読み込み時点 (`TeamRecordStyleDetailScreen.load()`) で
+ * `scopeRelayRecordIdsForLegRecords` (= `TeamRelayRecordsAPI.resolveRelayRecordIdsForRecords`)
+ * を呼び、`relay_record_legs.select("relay_record_id").in("record_id", recordIds)`
+ * の結果から `relay_records.id` を逆引きする。このフェイクはその行を模擬する。
  */
-function existingRelayRows(ids: readonly string[] = ["stale-relay-row"]) {
-  return ids.map((id) => ({ id }));
+function staleRelayLegRows(relayRecordIds: readonly string[] = ["stale-relay-row"]) {
+  return relayRecordIds.map((id) => ({ relay_record_id: id }));
 }
 
 function resetMocks() {
   vi.clearAllMocks();
   mocks.insertCalls.length = 0;
+  mocks.updateCalls.length = 0;
   mocks.deleteCalls.length = 0;
   mocks.operations.length = 0;
   mocks.eqCalls.length = 0;
@@ -282,11 +331,20 @@ function resetMocks() {
     error: null,
   };
   mocks.responses["delete:records"] = { data: null, error: null };
+  // routeParams はテストをまたいで書き換わる可変オブジェクトなので、
+  // describe ブロックが独自に上書きしない限りリレー種目詳細画面が既定になるよう
+  // 毎回リセットする (V-MG-06 が個人種目用に上書きした状態が後続 describe に
+  // 漏れ残ると、テスト順序に依存する偽の green/red を生む)。
+  mocks.routeParams = {
+    competitionId: "comp-thrush",
+    teamId: "team-thrush",
+    relayEventId: "relay_4x50_free",
+  };
 }
 
 async function renderAndSave() {
   const queryClient = makeQueryClient();
-  render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+  render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
   await waitFor(() => {
     expect(screen.getByText("記録を保存")).toBeDefined();
@@ -311,10 +369,12 @@ describe("[V-MG-01] records が1件でも失敗したら relay 側を1行も書�
     mocks.responses["select:records"] = { data: relayRecordRows(), error: null };
   });
 
-  it("records の insert が失敗すると relay_records に insert も select もしない", async () => {
-    mocks.responses["insert:records"] = {
+  it("records の update が失敗すると relay_records に insert も select もしない", async () => {
+    // relayRecordRows() は保存前から存在する4行なので upsert 化後は UPDATE で書かれる
+    // (INSERT ではない)。よって失敗させるのも update 側。
+    mocks.responses["update:records"] = {
       data: null,
-      error: { message: "insert denied", code: "23505" },
+      error: { message: "update denied", code: "23505" },
     };
 
     await renderAndSave();
@@ -324,7 +384,8 @@ describe("[V-MG-01] records が1件でも失敗したら relay 側を1行も書�
     //    終わり切ったこと (= Alert が出たこと) を先に待つ。
     await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
 
-    expect(mocks.insertCalls.filter((call) => call.table === "records")).toHaveLength(4);
+    expect(mocks.updateCalls.filter((call) => call.table === "records")).toHaveLength(4);
+    expect(mocks.insertCalls.filter((call) => call.table === "records")).toHaveLength(0);
     // 保存に失敗したので画面も戻らない
     expect(mocks.goBack).not.toHaveBeenCalled();
 
@@ -355,7 +416,7 @@ describe("[V-MG-02] 古い行の delete は全計画が成功したときだけ 
   beforeEach(() => {
     resetMocks();
     mocks.responses["select:records"] = { data: relayRecordRows(), error: null };
-    mocks.responses["select:relay_records"] = { data: existingRelayRows(), error: null };
+    mocks.responses["select:relay_record_legs"] = { data: staleRelayLegRows(), error: null };
   });
 
   it("relay_records の insert が失敗したら古い行を delete しない", async () => {
@@ -397,10 +458,10 @@ describe("[V-MG-03] 差し替え順序と delete の条件 (mobile)", () => {
   beforeEach(() => {
     resetMocks();
     mocks.responses["select:records"] = { data: relayRecordRows(), error: null };
-    mocks.responses["select:relay_records"] = { data: existingRelayRows(), error: null };
+    mocks.responses["select:relay_record_legs"] = { data: staleRelayLegRows(), error: null };
   });
 
-  it("relay_records の操作順は select → insert → (レグ insert) → delete である", async () => {
+  it("relay_records の操作順は (画面ロード時の relay_record_legs select) → insert → (レグ insert) → delete である", async () => {
     await renderAndSave();
     await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
 
@@ -408,8 +469,12 @@ describe("[V-MG-03] 差し替え順序と delete の条件 (mobile)", () => {
       .filter((op) => op.table === "relay_records" || op.table === "relay_record_legs")
       .map((op) => `${op.op}:${op.table}`);
 
+    // 画面ロード時点 (TeamRecordStyleDetailScreen.load()) で
+    // relay_record_legs から relay_records.id を逆引きしておき (select)、
+    // 保存時は insert → insert(legs) → delete の順に書く。
+    // relay_records 自体への事前 select はもう発生しない。
     expect(relayOps).toEqual([
-      "select:relay_records",
+      "select:relay_record_legs",
       "insert:relay_records",
       "insert:relay_record_legs",
       "delete:relay_records",
@@ -437,18 +502,32 @@ describe("[V-MG-03] 差し替え順序と delete の条件 (mobile)", () => {
     }
   });
 
-  it("差し替え前の取得は team_id と competition_id の両方でサーバー絞り込みする", async () => {
+  // 【修正ラウンド 2026-09-17 (Critical #1)】以前は「差し替え前の取得が
+  // relay_records を team_id/competition_id/relay_kind/leg_distance でサーバー
+  // 絞り込みしていること」を検証していた。これは DB 列条件による絞り込みを前提に
+  // したアサーションであり、新設計ではこの絞り込み自体が Critical の原因だった
+  // (同一種目の別チーム/別組の行を区別できない)。
+  // 「サーバー側で絞り込んでいること」を検証する意図は維持し、検証対象を
+  // 「relay_records への列条件 .eq()」から「relay_record_legs への
+  // .in(record_id, この種目詳細画面が読み込んだ records.id 集合)」へ移す。
+  it("差し替え前の取得は relay_record_legs を record_id (この種目詳細画面が読み込んだ records.id 集合) でサーバー絞り込みする", async () => {
     await renderAndSave();
     await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
 
-    expect(
-      mocks.eqCalls
-        .filter((call) => call.table === "relay_records" && call.op === "select")
-        .map((call) => [call.column, call.value]),
-    ).toEqual([
-      ["team_id", "team-thrush"],
-      ["competition_id", "comp-thrush"],
+    const legScopeIn = mocks.inCalls.filter(
+      (call) => call.table === "relay_record_legs" && call.op === "select",
+    );
+    expect(legScopeIn).toEqual([
+      {
+        table: "relay_record_legs",
+        op: "select",
+        column: "record_id",
+        values: relayRecordRows().map((r) => r.id),
+      },
     ]);
+
+    // relay_records 自体への条件 select (旧内部 SELECT) はもう発生しない
+    expect(mocks.eqCalls.filter((call) => call.table === "relay_records" && call.op === "select")).toHaveLength(0);
   });
 });
 
@@ -541,6 +620,8 @@ describe("[V-MG-05] created_by をクライアントから送らない (mobile)"
 describe("[V-MG-06] 個人種目だけの保存は relay_records に一切触れない (mobile)", () => {
   beforeEach(() => {
     resetMocks();
+    // 個人種目詳細画面として開く (relayEventId ではなく styleId スコープ)
+    mocks.routeParams = { competitionId: "comp-thrush", teamId: "team-thrush", styleId: 2 };
     mocks.responses["select:records"] = {
       data: [
         {
@@ -563,7 +644,9 @@ describe("[V-MG-06] 個人種目だけの保存は relay_records に一切触れ
     await renderAndSave();
     await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
 
-    expect(mocks.insertCalls.filter((call) => call.table === "records")).toHaveLength(1);
+    // existing-record-solo は保存前から存在する既存行なので UPDATE される
+    expect(mocks.insertCalls.filter((call) => call.table === "records")).toHaveLength(0);
+    expect(mocks.updateCalls.filter((call) => call.table === "records")).toHaveLength(1);
     expect(mocks.operations.filter((op) => op.table === "relay_records")).toHaveLength(0);
     expect(mocks.operations.filter((op) => op.table === "relay_record_legs")).toHaveLength(0);
   });
@@ -588,15 +671,24 @@ describe("[V-MG-07] レグの payload (mobile)", () => {
     expect(legRows.map((row) => row.leg_time)).not.toEqual([27.5, 56.2, 84.5, 112.1]);
   });
 
-  it("record_id が今 insert した records の id を指す", async () => {
+  it("record_id が保存された records の id を指す (relayRecordRows は既存行なので UPDATE で id 保持)", async () => {
     await renderAndSave();
     await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
 
-    const insertedRecordIds = mocks.insertedIds.records ?? [];
-    expect(insertedRecordIds).toHaveLength(4);
+    // relayRecordRows() の4行は保存前から存在するので UPDATE され、id は新規採番されず
+    // 既存の records.id (updateCalls の eq 条件) のまま保持される。
+    const recordUpdates = mocks.updateCalls.filter((call) => call.table === "records");
+    expect(recordUpdates).toHaveLength(4);
+    const updatedRecordIds = recordUpdates.map((call) => call.eq[0]?.value);
+    expect(updatedRecordIds).toEqual([
+      "existing-record-0",
+      "existing-record-1",
+      "existing-record-2",
+      "existing-record-3",
+    ]);
 
     const legRows = legInserts()[0]?.payload as Array<Record<string, unknown>>;
-    expect(legRows.map((row) => row.record_id)).toEqual(insertedRecordIds);
+    expect(legRows.map((row) => row.record_id)).toEqual(updatedRecordIds);
   });
 
   it("user_id は 4 レグそれぞれの泳者になる (第1泳者に潰れない)", async () => {
@@ -644,7 +736,7 @@ describe("[V-MG-09] web とのパリティ (mobile)", () => {
   beforeEach(() => {
     resetMocks();
     mocks.responses["select:records"] = { data: relayRecordRows(), error: null };
-    mocks.responses["select:relay_records"] = { data: existingRelayRows(), error: null };
+    mocks.responses["select:relay_record_legs"] = { data: staleRelayLegRows(), error: null };
   });
 
   it("relay_kind / leg_distance / leg_count / total_time / pool_type が web と同じ値になる", async () => {
@@ -663,8 +755,8 @@ describe("[V-MG-09] web とのパリティ (mobile)", () => {
   });
 
   it("種類・距離・泳者が違う古い行も削除対象に含まれる (孤児を残さない)", async () => {
-    mocks.responses["select:relay_records"] = {
-      data: existingRelayRows([
+    mocks.responses["select:relay_record_legs"] = {
+      data: staleRelayLegRows([
         "stale-medley-row",
         "stale-other-distance-row",
         "stale-other-squad-row",

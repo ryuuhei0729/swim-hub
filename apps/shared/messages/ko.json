@@ -3270,12 +3270,12 @@
       "eventNumber": "종목 {n}",
       "selectMemberButton": "멤버 선택",
       "selectedMemberCount": "{n}명 선택 중",
+      "groupNumber": "{n}번째",
       "relaySwimmerPlaceholder": "선수 선택",
       "totalTime": "합계 타임",
       "totalTimePlaceholder": "2.00.00",
       "timeLabel": "타임",
       "timePlaceholder": "2.00.00",
-      "reactionTime": "반응 시간",
       "relay": "계영",
       "memoLabel": "메모",
       "memoPlaceholder": "메모",
@@ -3286,9 +3286,6 @@
       "videoSelect": "동영상 선택",
       "addEventButton": "종목 추가",
       "cancelButton": "취소",
-      "addSplit25m": "추가(25m마다)",
-      "addSplit50m": "추가(50m마다)",
-      "addSplitManual": "추가",
       "memberSelectTitle": "대상 멤버 선택",
       "selectAll": "전원 선택",
       "clearSelection": "선택 해제",
@@ -3299,6 +3296,13 @@
       "noRecordsError": "최소 1개의 기록을 입력하세요",
       "saveFailed": "저장 중 오류가 발생했습니다. 다시 시도해 주세요.",
       "adminBadge": "관리자"
+    },
+    "recordList": {
+      "pageTitle": "종목 선택",
+      "filledCountIndividual": "{n}명",
+      "filledCountRelay": "{n}팀",
+      "emptyLabel": "미입력",
+      "entryCountLabel": "({n}명 엔트리)"
     },
     "practiceForm": {
       "title": "연습 기록 추가",

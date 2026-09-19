@@ -41,6 +41,7 @@ import {
   type RelaySavePlan,
 } from "@apps/shared/utils/relayRecordSave";
 import { TeamRelayRecordsAPI } from "@apps/shared/api/teams/relayRecords";
+import { computeRecordSaveDiff } from "@apps/shared/utils/recordSaveDiff";
 import {
   buildStyleEntriesFromExisting,
   applyEntryAdditionsToStyleEntries,
@@ -269,7 +270,6 @@ export default function RecordClient({
     const entryTimeByUserStyle = buildEntryTimeReferenceLookup(entryRows);
     return stampExistingEntryTimeReferences(merged, entryTimeByUserStyle);
   });
-  const isEditMode = existingRecords.length > 0;
 
   const addStyleEntry = () => {
     const newEntry: StyleEntry = {
@@ -1029,7 +1029,14 @@ export default function RecordClient({
 
     try {
       // 有効なレコードを収集
+      // id: フォーム行の id (MemberRecord.id)。既存記録由来なら records.id、エントリー由来
+      // なら entries.id、新規追加行なら生成値 — 文字列は区別できないので、この後の
+      // upsert 振り分けは id の membership のみで行う (computeRecordSaveDiff)。
+      // index: この配列内での位置。relay_record_legs.record_id を写すための
+      // insertedRecordIds と同じ添字を使うために保持する。
       const validRecords: Array<{
+        index: number;
+        id: string;
         styleId: number;
         memberUserId: string;
         memberName: string;
@@ -1183,6 +1190,8 @@ export default function RecordClient({
             }
 
             validRecords.push({
+              index: validRecords.length,
+              id: mr.id,
               styleId,
               memberUserId: mr.memberUserId,
               memberName: mr.memberName,
@@ -1223,29 +1232,77 @@ export default function RecordClient({
         return;
       }
 
-      // 編集モードの場合は既存データを削除
-      if (isEditMode) {
-        for (const record of existingRecords) {
-          if (record.split_times && record.split_times.length > 0) {
-            const { error: splitDeleteError } = await supabase
-              .from("split_times")
-              .delete()
-              .eq("record_id", record.id);
+      // upsert 化: 既存 records.id 集合と現在のフォーム行 (validRecords) の差分を取り、
+      // INSERT / UPDATE / DELETE に振り分ける。判定原理は mobile と同一で、web は
+      // スコープが大会全体のまま (mobile のみ種目スコープ) という違いだけ。
+      // 片方だけ更新されて静かに壊れないよう、判定ロジック自体は shared 側 1箇所で持つ。
+      const existingRecordIds = new Set(existingRecords.map((r) => r.id));
 
-            if (splitDeleteError) {
-              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
-              console.error("スプリットタイム削除エラー:", splitDeleteError);
-              // 致命的な削除エラーなのでthrowして外側のcatchブロックで処理
-              throw new Error(tRecords("error.splitDeleteFailed"));
-            }
-          }
+      // `savableRelayPlans` / `needsRelayWork` / `relayRecordIds` (置き換え対象の
+      // relay_records.id) は、下の DELETE (toDeleteIds) より**前に**確定させる。
+      // `relay_record_legs.record_id` は「元になった records 行を消してもリレー記録は
+      // 残す」ため ON DELETE SET NULL
+      // (`supabase/migrations/20260908000000_add_relay_records.sql`)。先に DELETE を
+      // 実行すると対象行の record_id が NULL 化され、以後はその id から
+      // relay_records.id を辿れなくなる (置き換えるべき古い行を見失う)。
+      //
+      // web は大会全体スコープで保存するため (mobile は種目スコープ)、渡す集合も
+      // 「大会全体で今回読み込んだ records.id」= `existingRecordIds` そのもの。
+      //
+      // is_relaying でフィルタしない。`resolveRelayRecordIdsForRecords` は
+      // `record_id IN (...)` の該当行が1件でもあれば relay_records.id を解決できる
+      // ため、4レグ中のどれか (is_relaying=true の第2〜4泳者だけでも) が含まれていれば
+      // 通常は is_relaying=false の第1泳者を除外しても解決自体は成立する。
+      // それでも絞らないのは、絞ることで得るものが無い一方、失う場合がありうるため:
+      // `relay_record_legs.record_id` は `ON DELETE SET NULL`
+      // (`supabase/migrations/20260908000000_add_relay_records.sql:176`、コメントに
+      // 「元になった records 行を消してもリレー記録は残す」とある通り、records 単体の
+      // 削除はこの画面のリレー保存フローの外側でも起こりうる前提で設計されている)。
+      // 個別の `records` 行は `apps/shared/api/records.ts` の `RecordAPI.deleteRecord`
+      // 経由でも消せ、これは relay_records/relay_record_legs を一切関知しない。
+      // これにより「is_relaying=true の脚 (第2〜4泳者) だけが既に他経路で削除されて
+      // record_id が NULL 化され、is_relaying=false の第1泳者だけが解決の手がかりとして
+      // 残っている」状態が (レアケースとして) 起こりうる。is_relaying=true だけに絞ると、
+      // この唯一残った手がかりをクエリ対象から外してしまい、そのグループの
+      // relay_records.id を解決できなくなる (置き換えられず孤児として残る)。
+      // 絞らなければこのリスクは無く、代わりに払うコストは `.in()` に渡す id 数が
+      // 増えるだけ (個人種目の record_id は relay_record_legs に存在しないので
+      // マッチせず、誤って別のグループを拾うこともない)。
+      const savableRelayPlans = relayPlans.filter((plan) => plan.legs.length > 0);
+      // リレーに関係しない保存では relay_records に**一切触れない**。
+      // 「消すべき古い行が存在しうる」のは、この (competition_id, team_id) に
+      // is_relaying の records があった場合だけ (relay_records はこの画面の保存か
+      // is_relaying records からのバックフィルでしか作られない)。
+      const needsRelayWork =
+        savableRelayPlans.length > 0 || existingRecords.some((record) => record.is_relaying);
+      const relayRecordIds = needsRelayWork
+        ? await relayRecordsApi.resolveRelayRecordIdsForRecords(Array.from(existingRecordIds))
+        : new Set<string>();
+
+      const { toInsert, toUpdate, toDeleteIds } = computeRecordSaveDiff(
+        existingRecordIds,
+        validRecords,
+        (record) => record.id,
+      );
+
+      // フォームから削除された既存行を削除する (split_times を先に消してから records を消す)
+      if (toDeleteIds.length > 0) {
+        const { error: splitDeleteError } = await supabase
+          .from("split_times")
+          .delete()
+          .in("record_id", toDeleteIds);
+
+        if (splitDeleteError) {
+          // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
+          console.error("スプリットタイム削除エラー:", splitDeleteError);
+          // 致命的な削除エラーなのでthrowして外側のcatchブロックで処理
+          throw new Error(tRecords("error.splitDeleteFailed"));
         }
 
-        const existingRecordIds = existingRecords.map((r) => r.id);
         const { error: deleteError } = await supabase
           .from("records")
           .delete()
-          .in("id", existingRecordIds);
+          .in("id", toDeleteIds);
 
         if (deleteError) {
           // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
@@ -1255,30 +1312,140 @@ export default function RecordClient({
         }
       }
 
-      // 新規レコードを作成
-      // insert した records.id を validRecords の添字と同じ位置に記録する
-      // (relay_record_legs.record_id へ写すため)。insert が失敗した位置は null。
+      // 保存後の records.id を validRecords と同じ添字で並べる (relay_record_legs.record_id
+      // へ写すため)。UPDATE 行は既存 id のまま、INSERT 行は新規採番された id。
+      // 失敗した位置は null のまま残す。
       const insertedRecordIds: Array<string | null> = validRecords.map(() => null);
+      // フォーム行 id (mr.id) → 保存後の実 records.id。動画アップロードの対象解決に使う
+      // (mr.id は既存記録由来の行では records.id と一致するが、エントリー由来・新規行では
+      // 一致しないため、そのまま動画アップロードの id に使うと 404 になる)。
+      const savedRecordIdByRowId = new Map<string, string>();
 
-      for (let recordIdx = 0; recordIdx < validRecords.length; recordIdx++) {
-        const record = validRecords[recordIdx];
-        if (!record) continue; // validRecords.length に基づく for ループのため型上のみの防御
+      // UPDATE の SET句は**旧 insert payload と同一の列集合**にする。列を個別に列挙して
+      // 覚えるのではなく、insert/update で同じペイロード構築関数を使うことで
+      // 「旧 delete-all 方式と列単位で等価」であることをコード上で自明にする。
+      // style_id / user_id / pool_type を SET句から漏らすと、既存行の種目変更・
+      // リレー泳者の差し替え (leg の <select> は mr.id を据え置いたまま memberUserId
+      // だけ更新する。updateRelayEntry によるレグ id の再生成が起きるのは relayEventId
+      // 自体を変更したときだけで、同一リレー内で1レグの泳者だけ差し替える経路は
+      // mr.id を保持するため該当する)・大会水路の事後修正が無言で反映されなくなる
+      // (PM訂正 2026-09-17)。video_path / video_thumbnail_path はもともと insert
+      // payload に含まれていないため、この構成で自動的に対象外になる。
+      // competition_id / team_id はスコープ不変で実質 no-op だが、等価性を自明にする
+      // ため除外しない。
+      const buildRecordPayload = (record: (typeof validRecords)[number]) => ({
+        competition_id: competitionId,
+        user_id: record.memberUserId,
+        team_id: teamId,
+        style_id: record.styleId,
+        time: record.time,
+        note: record.note || null,
+        is_relaying: record.isRelaying,
+        pool_type: competition.pool_type,
+        reaction_time:
+          record.reactionTime && record.reactionTime.trim() !== ""
+            ? parseFloat(record.reactionTime)
+            : null,
+      });
+
+      // 既存行の更新
+      for (const record of toUpdate) {
+        const { data: updatedRows, error: updateError } = await supabase
+          .from("records")
+          .update(buildRecordPayload(record))
+          .eq("id", record.id)
+          .select("id");
+
+        if (updateError) {
+          console.error(`Record更新エラー (${record.memberName}):`, updateError);
+          hasError = true;
+          continue;
+        }
+
+        // PostgREST は UPDATE の対象行が0件でもエラーを返さない (DELETE で実証済みの
+        // 既知挙動と同じ)。この行は `existingRecords` スナップショットには残っているが、
+        // 別セッション (別管理者、または別タブの自分自身) が保存の直前に同じ行を
+        // 削除した場合、対象0件のまま「成功」扱いになり、この入力が無言で消える。
+        // 旧 delete-all → insert-all 方式では insert 側で必ず生き残っていたので、
+        // upsert 化で新たに生じた退行として INSERT にフォールバックし、
+        // 入力を失わないことを優先する (PM 修正ラウンド指示)。
+        let recordId = record.id;
+        if (updatedRows === null) {
+          // `error` が無いのに `data` が `null` になるのは PostgREST の通常挙動
+          // (0行 UPDATE は `[]` を返す) から外れた異常系。下の INSERT フォールバック
+          // 自体は実行するが (理由は次のコメント)、この経路だけは誰にも見えないと
+          // 異常に気付けないため console.error で観測可能にしておく。
+          console.error(
+            `Record更新: updatedRows が null (0行なら本来 [] のはず, 異常系) (${record.memberName})`,
+          );
+        }
+        if (!updatedRows || updatedRows.length === 0) {
+          // INSERT へのフォールバックは「データが消えるより重複が残る方を選ぶ」という
+          // 既存方針 (`apps/shared/api/teams/relayRecords.ts` の `replace()` docstring
+          // 参照) と同じ判断。対象行が他セッションで削除済み (空配列) でも、上の
+          // 異常系 (null) でも、ここで INSERT を諦めるとユーザーの入力がそのまま
+          // 消える。稀に重複行が残る方を、入力を握りつぶすより優先する。
+          const { data: recreated, error: recreateError } = await supabase
+            .from("records")
+            .insert(buildRecordPayload(record))
+            .select("id")
+            .single();
+
+          if (recreateError || !recreated) {
+            console.error(`Record再作成エラー (${record.memberName}):`, recreateError);
+            hasError = true;
+            continue;
+          }
+          recordId = recreated.id;
+        }
+
+        insertedRecordIds[record.index] = recordId;
+        savedRecordIdByRowId.set(record.id, recordId);
+
+        // split_timesは行単位で入れ替える（既存を削除してから新しいものを挿入）。
+        // フォールバックで新規作成した行には元々 split_times が無いため、この
+        // delete は 0 件ヒットの no-op になるだけで安全。
+        const { error: splitDeleteError } = await supabase
+          .from("split_times")
+          .delete()
+          .eq("record_id", recordId);
+
+        if (splitDeleteError) {
+          console.error(`SplitTime削除エラー (${record.memberName}):`, splitDeleteError);
+          hasError = true;
+          continue;
+        }
+
+        // 種目の距離と同じ距離のsplit_timeは保存しない
+        // （ゴールタイム=split_timeなので途中経過ではない）
+        const raceDistance = styles.find((s) => s.id === record.styleId)?.distance;
+        const validSplitTimes = record.splitTimes.filter(
+          (st) =>
+            st.distance > 0 &&
+            st.splitTime > 0 &&
+            !(raceDistance && st.distance === raceDistance),
+        );
+        if (validSplitTimes.length > 0) {
+          const splitTimesData = validSplitTimes.map((st) => ({
+            record_id: recordId,
+            distance: st.distance as number,
+            split_time: st.splitTime,
+          }));
+
+          const { error: splitError } = await supabase.from("split_times").insert(splitTimesData);
+
+          if (splitError) {
+            console.error(`SplitTime作成エラー (${record.memberName}):`, splitError);
+            hasError = true;
+          }
+        }
+      }
+
+      // 新規行の作成
+      for (const record of toInsert) {
         const { data: newRecord, error: recordError } = await supabase
           .from("records")
-          .insert({
-            competition_id: competitionId,
-            user_id: record.memberUserId,
-            team_id: teamId,
-            style_id: record.styleId,
-            time: record.time,
-            note: record.note || null,
-            is_relaying: record.isRelaying,
-            pool_type: competition.pool_type,
-            reaction_time:
-              record.reactionTime && record.reactionTime.trim() !== ""
-                ? parseFloat(record.reactionTime)
-                : null,
-          })
+          .insert(buildRecordPayload(record))
           .select("id")
           .single();
 
@@ -1289,7 +1456,8 @@ export default function RecordClient({
         }
 
         if (newRecord) {
-          insertedRecordIds[recordIdx] = newRecord.id;
+          insertedRecordIds[record.index] = newRecord.id;
+          savedRecordIdByRowId.set(record.id, newRecord.id);
         }
 
         // 種目の距離と同じ距離のsplit_timeは保存しない
@@ -1335,18 +1503,20 @@ export default function RecordClient({
       // その行のタイムは過去に実際に泳がれた値なので嘘ではない。
       // ユーザーには既存の `error.saveFailed` が出るので再試行できる。
       // ---------------------------------------------------------------------
-      const savableRelayPlans = relayPlans.filter((plan) => plan.legs.length > 0);
-
-      // リレーに関係しない保存では relay_records に**一切触れない**。
-      // 「消すべき古い行が存在しうる」のは、この (competition_id, team_id) に
-      // is_relaying の records があった場合だけ (relay_records はこの画面の保存か
-      // is_relaying records からのバックフィルでしか作られない)。
-      const needsRelayWork =
-        savableRelayPlans.length > 0 || existingRecords.some((record) => record.is_relaying);
+      // `savableRelayPlans` / `needsRelayWork` / `relayRecordIds` は DELETE より
+      // 前に確定済み (上記コメント参照)。
 
       if (needsRelayWork && !hasError) {
         const { failed: relayWriteFailed } = await relayRecordsApi.replace(
-          { teamId, competitionId, poolType: competition.pool_type },
+          {
+            teamId,
+            competitionId,
+            poolType: competition.pool_type,
+            // DB 列条件 (relay_kind + leg_distance) ではなく、大会全体で読み込んだ
+            // records.id から解決した relay_records.id だけを渡す
+            // (`apps/shared/api/teams/relayRecords.ts` の事実1)。
+            relayRecordIds: Array.from(relayRecordIds),
+          },
           savableRelayPlans,
           insertedRecordIds,
         );
@@ -1355,7 +1525,7 @@ export default function RecordClient({
         console.error("records の書き込みに失敗したため relay_records の差し替えを中止しました");
       }
 
-      // 代理入力はチームメンバー全員の records を delete + insert で置き換えるため、
+      // 代理入力はチームメンバー全員の records を書き換えるため、
       // チーム記録ランキングのキャッシュ (staleTime 5分) を落とす。
       // この画面は React Query を経由しない生の from("records") 書き込みで、
       // useRecordsQuery の realtime も subscribeToRecords(cb, 自分の user_id) の
@@ -1374,15 +1544,25 @@ export default function RecordClient({
       // 動画アップロード（保存されたrecordの各メンバーへ）
       // PracticeLogClient と同様に、partial-failure を集約してユーザーに通知する。
       // 各ステップの戻り値を確認し、無音破棄 (continue / catch console.error) を排する。
+      //
+      // 対象は「保存が成功した全 record (insert + update)」— upsert 化前は
+      // 毎回delete+insertだったため実質insert行だけが対象だったが、UPDATE 経路の
+      // 既存行にも新しい動画を添付できる必要がある。
       const videoUploadErrors: string[] = [];
       for (const entry of styleEntries) {
         for (const mr of entry.memberRecords) {
           if (!mr.videoFile || !mr.id) continue;
+          // mr.id (フォーム行 id) を records.id にそのまま使わない — 既存記録由来の
+          // 行では一致するが、エントリー由来・新規行では一致しないため。保存後の
+          // 実 id に解決する。見つからない場合 (時間未入力等でそもそも保存対象に
+          // ならなかった行) は mr.id のまま試み、既存の挙動 (404 →
+          // errorVideoUploadUrlFailed) を変えない。
+          const recordId = savedRecordIdByRowId.get(mr.id) ?? mr.id;
           try {
             const uploadUrlRes = await fetch("/api/storage/videos/upload-url", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ type: "record", id: mr.id, contentType: "video/mp4" }),
+              body: JSON.stringify({ type: "record", id: recordId, contentType: "video/mp4" }),
             });
             if (!uploadUrlRes.ok) {
               videoUploadErrors.push(
@@ -1415,7 +1595,7 @@ export default function RecordClient({
             }
             const confirmFormData = new FormData();
             confirmFormData.append("type", "record");
-            confirmFormData.append("id", mr.id);
+            confirmFormData.append("id", recordId);
             confirmFormData.append("videoPath", vPath);
             confirmFormData.append("thumbnailPath", tPath);
             if (mr.videoThumbnailBlob) {
@@ -1446,7 +1626,7 @@ export default function RecordClient({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 type: "record",
-                sourceId: mr.id,
+                sourceId: recordId,
                 targetUserId: mr.memberUserId,
                 teamId,
                 tempVideoPath: vPath,
@@ -1878,27 +2058,32 @@ export default function RecordClient({
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             </div>
-                            {!mr.isRelaying && (
-                              <div className="w-36">
-                                <label className="block text-xs font-medium text-gray-600 mb-1">
-                                  リアクションタイム
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="-1"
-                                  max="2"
-                                  value={mr.reactionTime || ""}
-                                  onChange={(e) =>
-                                    updateMemberRecord(entry.id, mr.memberUserId, {
-                                      reactionTime: e.target.value,
-                                    })
-                                  }
-                                  placeholder="0.65"
-                                  className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                              </div>
-                            )}
+                            {/* リレー中も RT 欄は表示する。保存側 (buildRecordPayload) は
+                                is_relaying に関わらず reaction_time を常に書き込んでおり、
+                                「リレー中は RT を無視する」というルールは存在しない。
+                                REACTION_TIME_MIN (apps/shared/utils/reactionTime.ts) が
+                                「リレー引き継ぎのマイナス反応を許容する」ために -1 に
+                                設定されているのは、リレーでの入力を前提としている証拠。
+                                以前の非表示は歴史的な不整合であり、意図的な仕様ではない。 */}
+                            <div className="w-36">
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                リアクションタイム
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="-1"
+                                max="2"
+                                value={mr.reactionTime || ""}
+                                onChange={(e) =>
+                                  updateMemberRecord(entry.id, mr.memberUserId, {
+                                    reactionTime: e.target.value,
+                                  })
+                                }
+                                placeholder="0.65"
+                                className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
                           </div>
                         </div>
 

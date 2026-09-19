@@ -12,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 import { useTeamGroups, useGroupActions, type TeamGroupWithCount } from "./hooks";
 import { CategorySection } from "./CategorySection";
 import { GroupFormModal } from "./GroupFormModal";
@@ -33,6 +34,7 @@ interface TeamMemberForSelection {
     id: string;
     name: string;
     profile_image_path?: string | null;
+    birthday?: string | null;
   };
 }
 
@@ -95,7 +97,8 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
           users!team_memberships_user_id_fkey (
             id,
             name,
-            profile_image_path
+            profile_image_path,
+            birthday
           )
         `,
         )
@@ -109,7 +112,10 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
       }
       if (data) {
         setMemberError(null);
-        setTeamMembers(data as unknown as TeamMemberForSelection[]);
+        // グループへのメンバー割り当てもメンバータブと同じ年上順で並べる (唯一の定義元は memberSort.ts)
+        setTeamMembers(
+          (data as unknown as TeamMemberForSelection[]).sort(compareMembersByBirthday),
+        );
       }
     };
     loadTeamMembers();

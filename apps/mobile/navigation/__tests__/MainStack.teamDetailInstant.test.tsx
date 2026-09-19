@@ -51,7 +51,19 @@ vi.mock("@/screens/CompetitionBasicFormScreen", () => ({ CompetitionBasicFormScr
 vi.mock("@/screens/CompetitionTabFormScreen", () => ({ CompetitionTabFormScreen: () => null }));
 vi.mock("@/screens/EntryLogFormScreen", () => ({ EntryLogFormScreen: () => null }));
 vi.mock("@/screens/RecordLogFormScreen", () => ({ RecordLogFormScreen: () => null }));
-vi.mock("@/screens/TeamRecordBulkFormScreen", () => ({ TeamRecordBulkFormScreen: () => null }));
+// TeamRecordBulkFormScreen (旧・チーム大会記録の代理入力画面) は2階層化に伴い
+// TeamRecordStyleListScreen (一覧) / TeamRecordStyleDetailScreen (詳細) の
+// 2画面に置き換わった (MainStack.tsx の TeamRecordBulkForm /
+// TeamRecordBulkFormDetail ルート定義を参照)。旧画面へのモックのままだと
+// MainStack が実際に import する新2画面が未モック化のまま実モジュールとして
+// 読み込まれ、依存チェーン経由で expo-auth-session (expo-modules-core の
+// CodedError 未モック) に到達して落ちる (QA Sprint Contract Phase B で修正)。
+vi.mock("@/screens/TeamRecordStyleListScreen", () => ({
+  TeamRecordStyleListScreen: () => null,
+}));
+vi.mock("@/screens/TeamRecordStyleDetailScreen", () => ({
+  TeamRecordStyleDetailScreen: () => null,
+}));
 vi.mock("@/screens/TeamPracticeLogBulkFormScreen", () => ({
   TeamPracticeLogBulkFormScreen: () => null,
 }));

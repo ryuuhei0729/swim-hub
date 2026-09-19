@@ -58,6 +58,7 @@ const mocks = vi.hoisted(() => {
           },
           eq: () => builder,
           order: () => builder,
+          in: () => builder,
           single: () => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
           then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
             resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
@@ -71,7 +72,7 @@ const mocks = vi.hoisted(() => {
     styles,
     responses,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1" } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -86,6 +87,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -118,7 +120,7 @@ vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null })
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
 vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const LABEL = ja.forms.recordLog;
 
@@ -230,9 +232,10 @@ const waitForBadges = async (expectedCount: number): Promise<string[]> => {
   return badgeTexts();
 };
 
-describe("TeamRecordBulkFormScreen — ベストタイム参照バッジ", () => {
+describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     mocks.getStyles.mockResolvedValue(mocks.styles);
     mocks.getBestTimesDetailedForUsers.mockResolvedValue(new Map());
     mocks.responses["select:competitions"] = {
@@ -257,7 +260,7 @@ describe("TeamRecordBulkFormScreen — ベストタイム参照バッジ", () =>
       );
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       expect(await waitForBadges(1)).toEqual([`${LABEL.bestTimeLabel}: 26.50`]);
       // 入力欄は既存記録の値のまま (ベストが初期値に化けない)
@@ -277,7 +280,7 @@ describe("TeamRecordBulkFormScreen — ベストタイム参照バッジ", () =>
       );
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       expect(await waitForBadges(1)).toEqual([`${LABEL.bestTimeLong}: 28.40`]);
     });
@@ -294,7 +297,7 @@ describe("TeamRecordBulkFormScreen — ベストタイム参照バッジ", () =>
       );
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByDisplayValue("27.00")).toBeDefined();
@@ -308,6 +311,7 @@ describe("TeamRecordBulkFormScreen — ベストタイム参照バッジ", () =>
 
   describe("リレー4レグ", () => {
     beforeEach(() => {
+      mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_medley" };
       mocks.responses["select:records"] = { data: medleyRelayRecords(), error: null };
       mocks.getBestTimesDetailedForUsers.mockResolvedValue(
         new Map([
@@ -325,7 +329,7 @@ describe("TeamRecordBulkFormScreen — ベストタイム参照バッジ", () =>
 
     it("第1泳者は通常ベスト、第2泳者は引き継ぎベストを表示する", async () => {
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       const badges = await waitForBadges(4);
       expect(badges[0]).toBe(`${LABEL.bestTimeLabel}: 30.20`);
@@ -334,7 +338,7 @@ describe("TeamRecordBulkFormScreen — ベストタイム参照バッジ", () =>
 
     it("引き継ぎベストが無い泳者は同一水路の通常ベストへ、同一水路が無い泳者は他水路の引き継ぎベストへ落ちる", async () => {
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       const badges = await waitForBadges(4);
       expect(badges[2]).toBe(`${LABEL.bestTimeLabel}: 29.00`);
@@ -350,7 +354,7 @@ describe("TeamRecordBulkFormScreen — ベストタイム参照バッジ", () =>
       );
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(mocks.getBestTimesDetailedForUsers).toHaveBeenCalled();
