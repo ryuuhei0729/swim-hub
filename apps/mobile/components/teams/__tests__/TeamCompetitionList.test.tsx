@@ -2569,31 +2569,35 @@ describe("TeamCompetitionList", () => {
       });
     });
 
-    describe("[SC-6c] admin の「エントリー代理入力」は isEntryTabVisible 境界 (未来のみ) で表示/非表示になる", () => {
-      it("未来 (明日) は「エントリー代理入力」が表示される", () => {
+    // 【QA Phase B 書き換え (R3)】admin の未来日ボタンは「エントリー代理入力」から
+    // 「エントリー」(モーダルを開く、非admin と同じ導線) に置換された。isEntryTabVisible
+    // 境界の判定ロジック自体は変わっていないため、ボタン名のみ更新する。
+    describe("[SC-6c] admin の「エントリー」は isEntryTabVisible 境界 (未来のみ) で表示/非表示になる", () => {
+      it("未来 (明日) は「エントリー」が表示される", () => {
         helper([makeCompetition({ id: "c-sc6c-future", date: TOMORROW_DATE, title: "SC-6c検証大会" })]);
         render(<TeamCompetitionList teamId="team-sc6c-future" isAdmin={true} />);
 
-        expect(screen.getByRole("button", { name: "エントリー代理入力" })).toBeDefined();
+        expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
+        expect(screen.queryByRole("button", { name: "エントリー代理入力" })).toBeNull();
       });
 
       // 【最重要境界: PM 指摘】isEntryTabVisible と isCompetitionDateInPast の
       // 唯一の違いが「今日」の扱い (前者は今日を未来扱いしない=false、後者も
-      // 今日を過去扱いしない=false だが「エントリー代理入力を消す」条件としては
+      // 今日を過去扱いしない=false だが「エントリーを消す」条件としては
       // 逆になる)。ここで admin 側の実装がどちらの判定関数を使っているかが
       // 露呈する。
-      it("[最重要境界] 今日は「エントリー代理入力」が表示されない", () => {
+      it("[最重要境界] 今日は「エントリー」が表示されない", () => {
         helper([makeCompetition({ id: "c-sc6c-today", date: TODAY_DATE, title: "SC-6c検証大会" })]);
         render(<TeamCompetitionList teamId="team-sc6c-today" isAdmin={true} />);
 
-        expect(screen.queryByRole("button", { name: "エントリー代理入力" })).toBeNull();
+        expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
       });
 
-      it("過去 (昨日) は「エントリー代理入力」が表示されない", () => {
+      it("過去 (昨日) は「エントリー」が表示されない", () => {
         helper([makeCompetition({ id: "c-sc6c-past", date: YESTERDAY_DATE, title: "SC-6c検証大会" })]);
         render(<TeamCompetitionList teamId="team-sc6c-past" isAdmin={true} />);
 
-        expect(screen.queryByRole("button", { name: "エントリー代理入力" })).toBeNull();
+        expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
       });
 
       const sc6cFallbackCases: Array<[string, string | null]> = [
@@ -2602,37 +2606,37 @@ describe("TeamCompetitionList", () => {
         ["不正な日付文字列", "not-a-date"],
       ];
 
-      it.each(sc6cFallbackCases)("date=%s は「エントリー代理入力」が表示されない (フォールバック)", (_label, date) => {
+      it.each(sc6cFallbackCases)("date=%s は「エントリー」が表示されない (フォールバック)", (_label, date) => {
         helper([makeCompetition({ id: "c-sc6c-fallback", date, title: "SC-6c検証大会" })]);
         render(<TeamCompetitionList teamId="team-sc6c-fallback" isAdmin={true} />);
 
-        expect(screen.queryByRole("button", { name: "エントリー代理入力" })).toBeNull();
+        expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
       });
     });
 
     describe("[SC-9] admin も非admin と同じく排他になった: 両方向を明示的に assert する (片方だけだと排他化していなくても緑になるため)", () => {
-      it("未来 (明日) は「エントリー代理入力」のみが表示され、「記録代理入力」は表示されない", () => {
+      it("未来 (明日) は「エントリー」のみが表示され、「記録代理入力」は表示されない", () => {
         helper([makeCompetition({ id: "c-sc9-future", date: TOMORROW_DATE, title: "SC-9検証大会" })]);
         render(<TeamCompetitionList teamId="team-sc9-future" isAdmin={true} />);
 
-        expect(screen.getByRole("button", { name: "エントリー代理入力" }), "エントリー代理入力が出ていない").toBeDefined();
+        expect(screen.getByRole("button", { name: "エントリー" }), "エントリーが出ていない").toBeDefined();
         expect(screen.queryByRole("button", { name: "記録代理入力" }), "未来日なのに記録代理入力が出ている (排他化されていない疑い)").toBeNull();
       });
 
-      it("今日は「記録代理入力」のみが表示され、「エントリー代理入力」は表示されない", () => {
+      it("今日は「記録代理入力」のみが表示され、「エントリー」は表示されない", () => {
         helper([makeCompetition({ id: "c-sc9-today", date: TODAY_DATE, title: "SC-9検証大会" })]);
         render(<TeamCompetitionList teamId="team-sc9-today" isAdmin={true} />);
 
         expect(screen.getByRole("button", { name: "記録代理入力" }), "記録代理入力が出ていない").toBeDefined();
-        expect(screen.queryByRole("button", { name: "エントリー代理入力" }), "今日なのにエントリー代理入力が出ている (排他化されていない疑い)").toBeNull();
+        expect(screen.queryByRole("button", { name: "エントリー" }), "今日なのにエントリーが出ている (排他化されていない疑い)").toBeNull();
       });
 
-      it("過去 (昨日) は「記録代理入力」のみが表示され、「エントリー代理入力」は表示されない", () => {
+      it("過去 (昨日) は「記録代理入力」のみが表示され、「エントリー」は表示されない", () => {
         helper([makeCompetition({ id: "c-sc9-past", date: YESTERDAY_DATE, title: "SC-9検証大会" })]);
         render(<TeamCompetitionList teamId="team-sc9-past" isAdmin={true} />);
 
         expect(screen.getByRole("button", { name: "記録代理入力" }), "記録代理入力が出ていない").toBeDefined();
-        expect(screen.queryByRole("button", { name: "エントリー代理入力" }), "過去日なのにエントリー代理入力が出ている (排他化されていない疑い)").toBeNull();
+        expect(screen.queryByRole("button", { name: "エントリー" }), "過去日なのにエントリーが出ている (排他化されていない疑い)").toBeNull();
       });
     });
 
