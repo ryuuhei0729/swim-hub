@@ -33,7 +33,6 @@ import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFac
 import {
   diffEntryRows,
   findDuplicateMemberStylePairs,
-  isPrefillUntouched,
   partitionConflictingDeletes,
 } from "@apps/shared/utils/entryDiff";
 import type { ExistingEntryRow } from "@apps/shared/utils/entryDiff";
@@ -787,16 +786,60 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                 const isDuplicate =
                   row.styleId !== "" &&
                   duplicatePairs.has(`${row.targetUserId}:${row.styleId}`);
-                const isPrefilledUntouched = isPrefillUntouched(row);
                 const rowError = errors[row.localId];
 
                 return (
                   <View key={row.localId} style={styles.rowCard}>
-                    <View style={styles.rowHeader}>
-                      <Text style={styles.rowIndexLabel}>
-                        {t("teams.record.eventNumber", { n: rowIndex + 1 })}
-                      </Text>
+                    <View style={styles.topRow}>
+                      {/* 種目選択 */}
+                      <View style={styles.topRowColumn}>
+                        <Text style={styles.label}>
+                          {t("teams.record.eventNumber", { n: rowIndex + 1 })}
+                        </Text>
+                        <Pressable
+                          style={styles.pickerButton}
+                          onPress={() => setStylePickerRowId(row.localId)}
+                        >
+                          <Text
+                            style={[
+                              styles.pickerButtonText,
+                              row.styleId === "" && styles.placeholder,
+                            ]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {selectedStyle
+                              ? localizedStyleName(selectedStyle, t)
+                              : t("teams.mobile.entryBulk.eventPlaceholder")}
+                          </Text>
+                          <Feather
+                            name="chevron-down"
+                            size={18}
+                            color="#6B7280"
+                          />
+                        </Pressable>
+                      </View>
+
+                      {/* メモ */}
+                      <View style={styles.topRowColumn}>
+                        <Text style={styles.label}>
+                          {t("teams.mobile.entryBulk.memoLabel")}
+                        </Text>
+                        <TextInput
+                          style={styles.input}
+                          value={row.note}
+                          onChangeText={(text) =>
+                            updateRowNote(row.localId, text)
+                          }
+                          placeholder={t(
+                            "teams.mobile.entryBulk.memoPlaceholder",
+                          )}
+                          placeholderTextColor="#9CA3AF"
+                        />
+                      </View>
+
                       <Pressable
+                        style={styles.rowDeleteButton}
                         onPress={() => removeRow(row.localId)}
                         hitSlop={8}
                         accessibilityRole="button"
@@ -806,40 +849,14 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                       </Pressable>
                     </View>
 
-                    {/* 種目選択 */}
-                    <View style={styles.field}>
-                      <Text style={styles.label}>
-                        {t("teams.mobile.entryBulk.eventLabel")}
+                    {isDuplicate && (
+                      <Text style={styles.errorText}>
+                        {t("teams.mobile.entryBulk.duplicateError")}
                       </Text>
-                      <Pressable
-                        style={styles.pickerButton}
-                        onPress={() => setStylePickerRowId(row.localId)}
-                      >
-                        <Text
-                          style={[
-                            styles.pickerButtonText,
-                            row.styleId === "" && styles.placeholder,
-                          ]}
-                        >
-                          {selectedStyle
-                            ? localizedStyleName(selectedStyle, t)
-                            : t("teams.mobile.entryBulk.eventPlaceholder")}
-                        </Text>
-                        <Feather
-                          name="chevron-down"
-                          size={18}
-                          color="#6B7280"
-                        />
-                      </Pressable>
-                      {isDuplicate && (
-                        <Text style={styles.errorText}>
-                          {t("teams.mobile.entryBulk.duplicateError")}
-                        </Text>
-                      )}
-                    </View>
+                    )}
 
                     {/* エントリータイム */}
-                    <View style={styles.field}>
+                    <View style={styles.timeField}>
                       <View style={styles.timeLabelRow}>
                         <Text style={styles.label}>
                           {t("teams.mobile.entryBulk.timeLabel")}
@@ -884,29 +901,6 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                           </Text>
                         </View>
                       )}
-                      {isPrefilledUntouched && !rowError && (
-                        <Text style={styles.prefillWarningText}>
-                          {t("teams.mobile.entryBulk.prefillUntouchedWarning")}
-                        </Text>
-                      )}
-                    </View>
-
-                    {/* メモ */}
-                    <View style={styles.field}>
-                      <Text style={styles.label}>
-                        {t("teams.mobile.entryBulk.memoLabel")}
-                      </Text>
-                      <TextInput
-                        style={styles.input}
-                        value={row.note}
-                        onChangeText={(text) =>
-                          updateRowNote(row.localId, text)
-                        }
-                        placeholder={t(
-                          "teams.mobile.entryBulk.memoPlaceholder",
-                        )}
-                        placeholderTextColor="#9CA3AF"
-                      />
                     </View>
                   </View>
                 );
@@ -1049,14 +1043,6 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                 {diffResult.toCreate.length})
               </Text>
               {diffResult.toCreate.map((item, idx) => {
-                const sourceRow = validDraftRows.find(
-                  (r) =>
-                    !r.existingEntryId &&
-                    r.targetUserId === item.user_id &&
-                    r.styleId === item.style_id,
-                );
-                const isUntouchedPrefill =
-                  !!sourceRow && isPrefillUntouched(sourceRow);
                 return (
                   <View key={`create-${idx}`} style={styles.confirmRow}>
                     <Text style={styles.confirmRowText}>
@@ -1066,7 +1052,6 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                       {item.entry_time != null
                         ? formatTimeBest(item.entry_time)
                         : "-"}
-                      {isUntouchedPrefill ? " ⚠️" : ""}
                     </Text>
                   </View>
                 );
@@ -1088,11 +1073,6 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
               {diffResult.toUpdate.map(({ id, patch }) => {
                 const existing = existingEntryRows.find((e) => e.id === id);
                 if (!existing) return null;
-                const sourceRow = validDraftRows.find(
-                  (r) => r.existingEntryId === id,
-                );
-                const isUntouchedPrefill =
-                  !!sourceRow && isPrefillUntouched(sourceRow);
                 const beforeTime =
                   existing.entry_time != null
                     ? formatTimeBest(existing.entry_time)
@@ -1110,7 +1090,6 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                       {styleNameById(existing.style_id)}
                       {" : "}
                       {beforeTime} {"→"} {afterTime}
-                      {isUntouchedPrefill ? " ⚠️" : ""}
                     </Text>
                   </View>
                 );
@@ -1162,11 +1141,6 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
               {diffResult.unchanged.map((id) => {
                 const existing = existingEntryRows.find((e) => e.id === id);
                 if (!existing) return null;
-                const sourceRow = validDraftRows.find(
-                  (r) => r.existingEntryId === id,
-                );
-                const isUntouchedPrefill =
-                  !!sourceRow && isPrefillUntouched(sourceRow);
                 return (
                   <View key={`unchanged-${id}`} style={styles.confirmRow}>
                     <Text style={styles.confirmRowTextMuted}>
@@ -1176,7 +1150,6 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                       {existing.entry_time != null
                         ? formatTimeBest(existing.entry_time)
                         : "-"}
-                      {isUntouchedPrefill ? " ⚠️" : ""}
                     </Text>
                   </View>
                 );
@@ -1224,11 +1197,12 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9FAFB" },
   scrollView: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 32 },
+  scrollContent: { paddingHorizontal: 10, paddingTop: 16, paddingBottom: 32 },
   compHeader: {
     backgroundColor: "#FFFFFF",
     borderRadius: 8,
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
     marginBottom: 12,
   },
   compTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
@@ -1267,7 +1241,8 @@ const styles = StyleSheet.create({
   memberCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 8,
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
     marginBottom: 16,
   },
   memberCardHeader: {
@@ -1287,17 +1262,25 @@ const styles = StyleSheet.create({
   rowCard: {
     backgroundColor: "#F9FAFB",
     borderRadius: 8,
-    padding: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     marginBottom: 10,
   },
-  rowHeader: {
+  topRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
+    alignItems: "flex-end",
+    gap: 8,
   },
-  rowIndexLabel: { fontSize: 13, fontWeight: "600", color: "#374151" },
-  field: { marginBottom: 12 },
+  topRowColumn: { flex: 1 },
+  // alignItems:"flex-end" により入力枠(pickerButton/input)の下端に揃える。
+  // paddingVertical を input と同値にしているため、単一行かつ標準フォントスケールでは
+  // アイコンが入力枠の縦帯に収まる。OS のフォント拡大時は入力枠側だけ伸びるため
+  // 完全な中心一致は保証しない
+  rowDeleteButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+  },
+  timeField: { marginTop: 12 },
   label: { fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 6 },
   timeLabelRow: {
     flexDirection: "row",
@@ -1321,17 +1304,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#D1D5DB",
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     backgroundColor: "#FFFFFF",
   },
-  pickerButtonText: { fontSize: 15, color: "#111827" },
+  pickerButtonText: { flex: 1, fontSize: 15, color: "#111827" },
   placeholder: { color: "#9CA3AF" },
   input: {
     borderWidth: 1,
     borderColor: "#D1D5DB",
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingVertical: 10,
     fontSize: 15,
     color: "#111827",
@@ -1339,12 +1322,6 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: "#DC2626" },
   errorText: { fontSize: 12, color: "#DC2626", marginTop: 4 },
-  prefillWarningText: {
-    fontSize: 12,
-    color: "#B45309",
-    marginTop: 4,
-    fontWeight: "600",
-  },
   // 参考バッジ (web の green-100/green-700 と同色。CompetitionTabFormScreen と共通の見た目)
   bestTimeBadge: {
     backgroundColor: "#DCFCE7", // green-100
@@ -1374,7 +1351,8 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     gap: 12,
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
     backgroundColor: "#FFFFFF",
@@ -1443,7 +1421,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     maxHeight: "85%",
   },
-  confirmScrollContent: { padding: 16 },
+  confirmScrollContent: { paddingHorizontal: 12, paddingVertical: 16 },
   confirmDescription: { fontSize: 13, color: "#6B7280", marginBottom: 12 },
   confirmSection: { marginBottom: 16 },
   confirmSectionTitle: {
@@ -1469,7 +1447,8 @@ const styles = StyleSheet.create({
   confirmFooter: {
     flexDirection: "row",
     gap: 12,
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
   },

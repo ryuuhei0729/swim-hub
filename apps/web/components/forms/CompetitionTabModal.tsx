@@ -368,6 +368,11 @@ export default function CompetitionTabModal({
       initialRecordsSnapshotRef.current = "";
       return;
     }
+    // D9 保護: この one-shot ガードが無いと isOpen 中の再レンダーで毎回この effect が
+    // 走り、下の setActiveEntryIndex(resolveEntryTabIndex(...)) (:440) が initialEntryId
+    // ベースで毎回再計算され、ユーザーが手動で切り替えた後のタブ選択を勝手に戻してしまう。
+    // 「冗長な早期 return」に見えても削除しないこと (Reviewer 実測: この行があるため
+    // 現状は再現手順が無いと確認済み)。
     if (isInitialized) return;
 
     let initial = {
@@ -504,6 +509,10 @@ export default function CompetitionTabModal({
   // rawEntries(editData.editData.entries)が既にある場合はスキップ(二重ロード防止)
   useEffect(() => {
     if (!isOpen || !isInitialized || !editingCompetitionId || !user?.id) return;
+    // D9 保護: 上の isInitialized ガードと同じ理由。フェッチ済み後にこの effect が
+    // 再実行されると、下の setActiveEntryIndex(resolveEntryTabIndex(...)) (:545) が
+    // initialEntryId で再度上書きし、ユーザーが手動で切り替えたタブ選択を戻してしまう。
+    // 削除しないこと (Reviewer 実測: この行があるため現状は再現手順が無いと確認済み)。
     if (originalEntryIds.length > 0) return; // 既にフェッチ済み(rawEntriesまたは前回のfetch)
 
     const fetchEntries = async () => {

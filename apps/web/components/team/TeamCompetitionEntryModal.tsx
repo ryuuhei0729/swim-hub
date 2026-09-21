@@ -29,11 +29,11 @@ interface TeamCompetitionEntryModalProps {
   teamId: string;
   /**
    * 自分のエントリーを追加/編集する画面 (CompetitionTabModal のエントリータブ) を開く。
-   * 行の編集アイコンと「種目をエントリー」ボタンの両方から呼ばれる (R6)。
+   * 行の編集アイコンと「エントリーを追加」ボタン (D10改訂) の両方から呼ばれる (R6)。
    * CompetitionTabModal 側が competitionId + 自分の user_id で対象大会の自分の
    * 全エントリーを再取得するため、対象の絞り込みは不要だが、
    * 編集アイコンから呼ぶ場合は `entryId` (D9) を渡すことで、その entry.id に対応する
-   * 項目タブがアクティブな状態で開く。「種目をエントリー」ボタンから呼ぶ場合は
+   * 項目タブがアクティブな状態で開く。「エントリーを追加」ボタンから呼ぶ場合は
    * `entryId` を渡さず、先頭タブを開く (従来どおり)。
    */
   onOpenSelfEntry: (entryId?: string) => void;
@@ -119,6 +119,7 @@ export default function TeamCompetitionEntryModal({
   const { supabase, user } = useAuth();
   const router = useRouter();
   const t = useTranslations("teams");
+  const tCommon = useTranslations("common");
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
   const recordApi = useMemo(() => new RecordAPI(supabase), [supabase]);
   const [loading, setLoading] = useState(true);
@@ -439,7 +440,7 @@ export default function TeamCompetitionEntryModal({
                   </div>
                 </div>
 
-                {/* セルフエントリー導線 (要件B後半 / D6): 非admin「種目をエントリー」/
+                {/* セルフエントリー導線 (要件B後半 / D6): 非admin「エントリーを追加」(D10改訂) /
                     admin「エントリーを代理入力」。admin 判定はこのモーダルが実測する
                     data.isAdmin (実際のロール) を使う。TeamCompetitions.tsx の isAdmin prop は
                     ルート (/teams vs /teams-admin) 固定値のため、実ロールと食い違う場合がある
@@ -595,6 +596,7 @@ export default function TeamCompetitionEntryModal({
         onCancel={handleCancelDeleteEntry}
         title={t("competitionEntryModal.deleteConfirmTitle")}
         message={t("competitionEntryModal.deleteConfirmMessage")}
+        confirmLabel={tCommon("delete")}
         variant="danger"
       />
     </div>

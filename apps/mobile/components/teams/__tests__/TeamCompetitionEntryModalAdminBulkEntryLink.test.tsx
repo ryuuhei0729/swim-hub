@@ -147,6 +147,30 @@ describe("TeamCompetitionEntryModal — モーダル内導線の admin 分岐 (m
       fireEvent.click(badge);
 
       expect(mocks.mutateAsync).not.toHaveBeenCalled();
+      // PM 指摘 (穴の指摘): mutateAsync 未呼び出しだけでは「UI を出さずに
+      // useUpdateCompetitionMutation の呼び出しだけを書き戻す」部分的再導入を検出できない
+      // (`feedback_swimhub_delete_ui_removal_needs_hook_spy` の failure mode)。
+      // フック自体が一度も呼ばれていないことを直接検証する。
+      expect(mocks.useUpdateCompetitionMutation).not.toHaveBeenCalled();
+    });
+
+    // [ミューテーション実証] 上記アサーションが実際に「休眠した書き込み経路の再導入」を
+    // 検出できることを、プロダクションコードを書き換えずに実証する。このモーダルの
+    // レンダーツリーとは無関係に、テスト内だけに存在するダミーコンポーネントで
+    // useUpdateCompetitionMutation を呼び出し、同じ assertion が赤くなることを確認する。
+    it("[ミューテーション実証] フックを呼ぶダミーコンポーネントに対しては同じ assertion が赤くなる (再導入検出の実証)", () => {
+      function DummyReintroducedStatusSegment() {
+        // R5 で削除されたステータス変更セグメントが、mutation 呼び出しだけ静かに
+        // 書き戻された状況を模す (このコンポーネントはテストローカルであり、
+        // TeamCompetitionEntryModal のレンダーツリーには含まれない)。
+        mocks.useUpdateCompetitionMutation(mocks.supabase);
+        return null;
+      }
+      render(<DummyReintroducedStatusSegment />);
+
+      expect(() =>
+        expect(mocks.useUpdateCompetitionMutation).not.toHaveBeenCalled(),
+      ).toThrow();
     });
   });
 });

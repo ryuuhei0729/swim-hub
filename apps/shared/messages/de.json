@@ -2715,7 +2715,6 @@
         "memoLabel": "Notiz",
         "memoPlaceholder": "Notiz (optional)",
         "prefillButton": "Bestzeit übernehmen",
-        "prefillUntouchedWarning": "⚠️ Bestzeit unverändert übernommen",
         "duplicateError": "Die gleiche Schwimmer-/Disziplin-Zeile ist doppelt vorhanden",
         "closedStatusWarning": "Die Anmeldung ist geschlossen, Administratoren können jedoch weiterhin stellvertretend Anmeldungen eingeben.",
         "pastDateWarning": "Dieser Wettkampf liegt bereits in der Vergangenheit, daher können keine Anmeldungen mehr stellvertretend eingegeben werden.",

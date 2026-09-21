@@ -44,7 +44,11 @@ export interface UseCompetitionTabSaveProps {
   deleteEntry: (id: string) => Promise<void>;
   createSplitTimes: (params: {
     recordId: string;
-    splitTimes: Array<{ distance: number; split_time?: number; splitTime?: number }>;
+    // 唯一の呼び出し元 (下記 handleCompetitionTabSave 内の ADD new records 節) は常に
+    // formData.splitTimes[].splitTime (RecordFormDataInput で必須の number) を split_time に
+    // 詰めて渡すため undefined は来ない。split_time?/splitTime? の緩い型が実装側の
+    // `?? 0` フォールバックを誘発していたため、実態に合わせて締める (CLAUDE.md `??` 規約)。
+    splitTimes: Array<{ distance: number; split_time: number }>;
   }) => Promise<import("@swim-hub/shared/types").SplitTime[]>;
   replaceSplitTimes: (params: {
     recordId: string;
@@ -327,7 +331,7 @@ export function useCompetitionTabSave({
         if (formData.splitTimes?.length) {
           await createSplitTimes({
             recordId: newRecord.id,
-            splitTimes: formData.splitTimes.map((st) => ({ distance: st.distance, split_time: st.splitTime })) as Array<{ distance: number; split_time?: number; splitTime?: number }>,
+            splitTimes: formData.splitTimes.map((st) => ({ distance: st.distance, split_time: st.splitTime })) as Array<{ distance: number; split_time: number }>,
           });
         }
         if (formData.pendingVideo) {

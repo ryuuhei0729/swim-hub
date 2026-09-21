@@ -594,12 +594,12 @@ export default function TeamCompetitions({
 
   // 自分のエントリーを追加/編集する画面 (CompetitionTabModal のエントリータブ) を開く
   // (要件A/B後半 / D2・D6, R6)。TeamCompetitionEntryModal の編集アイコン・
-  // 「種目をエントリー」ボタンの両方から呼ばれる。TeamCompetitionEntryModal は開いたまま
+  // 「エントリーを追加」ボタン (D10改訂) の両方から呼ばれる。TeamCompetitionEntryModal は開いたまま
   // 残し、CompetitionTabModal をその上に重ねて表示する
   // (CompetitionClient.tsx の CompetitionDetailModal + CompetitionTabModal と同じ既存パターン)。
   // targetEntryId (D9): 編集アイコンから呼ばれた場合はその entry.id を渡し、
   // CompetitionTabModal のエントリー項目タブをその entry.id に対応するタブでアクティブにする。
-  // 「種目をエントリー」ボタンからは引数なしで呼ばれ、先頭タブにフォールバックする。
+  // 「エントリーを追加」ボタンからは引数なしで呼ばれ、先頭タブにフォールバックする。
   const handleOpenEntryEditor = useCallback((targetEntryId?: string) => {
     if (!selectedCompetition) return;
     setEntryEditorTargetEntryId(targetEntryId);
@@ -666,11 +666,15 @@ export default function TeamCompetitions({
     },
     createSplitTimes: async ({ recordId, splitTimes }) => {
       const recordAPI = new RecordAPI(supabase);
+      // split_time は useCompetitionTabSave.ts 側で number 必須に締めてあり、
+      // ここに undefined が来ることは無い (実測: 唯一の呼び出し元が
+      // formData.splitTimes[].splitTime を常に設定する)。0 秒スプリットとして
+      // 静かに書き込む `?? 0` フォールバックは業務的意味と衝突するため使わない
       return recordAPI.createSplitTimes(
         splitTimes.map((st) => ({
           record_id: recordId,
           distance: st.distance,
-          split_time: st.split_time ?? st.splitTime ?? 0,
+          split_time: st.split_time,
         })),
       );
     },
@@ -1083,8 +1087,13 @@ export default function TeamCompetitions({
 
                       {/* アクションボタン */}
                       <div className="flex gap-2 flex-wrap justify-end">
-                        {/* エントリー管理ボタン（過去日は非表示。今日・未来は表示） */}
-                        {!isCompetitionDateInPast(competition.date) && (
+                        {/* エントリー管理ボタン（非adminは過去日を非表示。今日・未来は表示、従来どおり）。
+                            admin は過去日でも表示する (R9) — 撤去前のカード上「エントリー代理一括入力」
+                            ボタンは isAdmin のみでガードされ日付制限が無かった (実測: efcf7c37^)。
+                            そのボタンをこのカードの「エントリー」ボタン一本に統合した (R4) ため、
+                            admin の代理一括入力への到達能力 (日付を問わない) をここで維持しないと
+                            過去大会に対して代理入力ページへ到達できなくなる退行が生じる */}
+                        {(isAdmin || !isCompetitionDateInPast(competition.date)) && (
                           <button
                             onClick={(e) => handleEntryClick(e, competition)}
                             className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"

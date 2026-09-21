@@ -29,7 +29,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { getTabNavAdjacency } from "../../utils/tabModalUtils";
+import { getTabNavAdjacency, resolveEntryTabIndex } from "../../utils/tabModalUtils";
 
 type PracticeTab = "practice" | "practiceLog";
 type CompetitionTab = "competition" | "entry" | "record";
@@ -178,5 +178,72 @@ describe("[V-NAV-05] getTabNavAdjacency: 境界値・異常系", () => {
       isGuarded: false,
     });
     expect(result.nextTab).toBe("b");
+  });
+});
+
+// ============================================================
+// resolveEntryTabIndex 単体テスト (web, Sprint Contract D9 / SC11〜SC14)
+// ============================================================
+//
+// エントリー編集入力画面 (CompetitionTabModal のエントリータブ) の項目サブタブを、
+// 押した行の entry.id に対応するインデックスへ解決する純粋関数。
+// mobile 版 `resolveInitialEntryTabIndex` と同じ契約 (entry.id で解決、style_id は使わない)。
+
+describe("resolveEntryTabIndex", () => {
+  describe("[SC11] 種目ごとに対応するタブが開く", () => {
+    it("種目1(先頭)の entry.id を渡すと index 0 が返る", () => {
+      const entries = [{ id: "entry-1" }, { id: "entry-2" }];
+      expect(resolveEntryTabIndex(entries, "entry-1")).toBe(0);
+    });
+
+    it("種目2(2番目)の entry.id を渡すと index 1 が返る", () => {
+      const entries = [{ id: "entry-1" }, { id: "entry-2" }];
+      expect(resolveEntryTabIndex(entries, "entry-2")).toBe(1);
+    });
+  });
+
+  describe("[SC12] リレー: 同一 style の行が複数あっても entry.id で一意に引ける", () => {
+    // この関数のシグネチャ自体が `{ id: string }` のみを受け取り、style_id を
+    // 一切参照しない (関数の型がリレーのレグ複数行を区別できることを保証する)。
+    it("同一 style_id 相当の行が複数あっても、押した行の entry.id に対応するタブが開く", () => {
+      const entries = [{ id: "relay-leg-1" }, { id: "relay-leg-2" }, { id: "relay-leg-3" }];
+      expect(resolveEntryTabIndex(entries, "relay-leg-2")).toBe(1);
+      expect(resolveEntryTabIndex(entries, "relay-leg-3")).toBe(2);
+    });
+  });
+
+  describe("[SC13] フォールバック: 存在しない entry / 未指定は先頭タブ", () => {
+    it("存在しない entry.id を渡すと先頭タブ (index 0) が返る (他端末で削除された等)", () => {
+      const entries = [{ id: "entry-1" }, { id: "entry-2" }];
+      expect(resolveEntryTabIndex(entries, "entry-does-not-exist")).toBe(0);
+    });
+
+    it("entries が空配列でも例外を投げず index 0 を返す", () => {
+      expect(resolveEntryTabIndex([], "entry-1")).toBe(0);
+    });
+  });
+
+  describe("[SC14] 非退行: targetEntryId を渡さない既存の遷移は先頭タブのまま", () => {
+    it("targetEntryId が undefined のとき index 0 が返る", () => {
+      const entries = [{ id: "entry-1" }, { id: "entry-2" }];
+      expect(resolveEntryTabIndex(entries, undefined)).toBe(0);
+    });
+
+    it("targetEntryId が null のとき index 0 が返る", () => {
+      const entries = [{ id: "entry-1" }, { id: "entry-2" }];
+      expect(resolveEntryTabIndex(entries, null)).toBe(0);
+    });
+
+    it("targetEntryId が空文字のとき index 0 が返る (falsy 扱い)", () => {
+      expect(resolveEntryTabIndex([{ id: "entry-1" }], "")).toBe(0);
+    });
+  });
+
+  describe("[ミューテーション実証] 入力を変えるだけで結果が反転すること", () => {
+    it("存在する id を存在しない id に差し替えると結果が変わる (非0 → 0)", () => {
+      const entries = [{ id: "entry-1" }, { id: "entry-2" }];
+      expect(resolveEntryTabIndex(entries, "entry-2")).toBe(1);
+      expect(resolveEntryTabIndex(entries, "entry-not-exist")).toBe(0);
+    });
   });
 });

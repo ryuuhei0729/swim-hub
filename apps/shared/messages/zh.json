@@ -2715,7 +2715,6 @@
         "memoLabel": "备注",
         "memoPlaceholder": "备注（可选）",
         "prefillButton": "使用最佳成绩",
-        "prefillUntouchedWarning": "⚠️ 仍为最佳成绩，未修改",
         "duplicateError": "同一选手・项目的行重复",
         "closedStatusWarning": "报名已截止，但管理员仍可代为录入。",
         "pastDateWarning": "由于已超过比赛日期，无法代为录入。",

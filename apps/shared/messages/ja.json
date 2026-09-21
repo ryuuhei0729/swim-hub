@@ -2715,7 +2715,6 @@
         "memoLabel": "メモ",
         "memoPlaceholder": "メモ（任意）",
         "prefillButton": "ベストタイムを流用",
-        "prefillUntouchedWarning": "⚠️ ベストタイムのまま未編集です",
         "duplicateError": "同じ選手・種目の行が重複しています",
         "closedStatusWarning": "エントリー受付は終了していますが、管理者は代理入力できます。",
         "pastDateWarning": "大会日を過ぎているため、代理入力はできません。",

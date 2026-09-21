@@ -2712,7 +2712,6 @@
         "memoLabel": "Memo",
         "memoPlaceholder": "Memo (optional)",
         "prefillButton": "Use Best Time",
-        "prefillUntouchedWarning": "⚠️ Best time left unedited",
         "duplicateError": "The same swimmer/event combination is duplicated",
         "closedStatusWarning": "Entry registration is closed, but admins can still enter entries on behalf of members.",
         "pastDateWarning": "This competition's date has already passed, so entries can no longer be entered on behalf of members.",

@@ -165,7 +165,18 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
     expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
   });
 
-  it("[V-06] admin でも過去日ならエントリーボタンは表示されない (isAdmin に関わらずガードが効く)", async () => {
+  // 【QA Phase B 書き換え (PM 裁定 R9, Reviewer Critical 対応)】
+  // D4 で web カードから admin 専用「エントリー代理一括入力」ボタンを撤去した結果、
+  // admin が過去大会の代理一括入力ページへ到達できなくなる退行が生じていた
+  // (撤去前のボタンは isAdmin のみのガードで日付制限が無かったことを PM が実測確認)。
+  // Web Developer が `(isAdmin || !isCompetitionDateInPast(competition.date))`
+  // (`TeamCompetitions.tsx:1096`) に修正し、admin は過去日でも統合後の「エントリー」
+  // ボタン (→モーダル内「エントリーを代理入力」) から到達できるようにした。
+  // 旧テストは「admin でも過去日なら非表示」を pin していたが、これは新仕様
+  // (SC19: admin は表示 / SC20: 非admin は非表示) と正面から矛盾するため反転した。
+  // 「エントリー入力」ボタン (entryBulkInputButton) はカードから撤去済みで、その代替が
+  // この統合済み「エントリー」ボタンであるため、旧ボタン名でのアサーションは削除する。
+  it("[SC19] admin: 過去日でも「エントリー」ボタンが表示される (代理入力への到達能力を維持)", async () => {
     currentAuthMock = {
       user: { id: "admin-1" },
       supabase: buildSupabaseMock([
@@ -175,11 +186,23 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
     render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
     await screen.findByText("過去大会admin");
-    expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
+    expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
 
     // 非退行: スコープ外の admin 専用ボタンは過去日でも消えない
     expect(screen.getByRole("button", { name: "記録入力" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "エントリー入力" })).toBeDefined();
+  });
+
+  it("[SC20] 非admin: 過去日では「エントリー」ボタンが表示されない (従来どおり)", async () => {
+    currentAuthMock = {
+      user: { id: "member-1" },
+      supabase: buildSupabaseMock([
+        buildCompetitionRow({ date: PAST_DATE, title: "過去大会非admin" }),
+      ]),
+    };
+    render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
+
+    await screen.findByText("過去大会非admin");
+    expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
   });
 
   it("[V-07] 過去日で「自分の記録を追加」ボタンは引き続き表示される (エントリーボタンのみが対象)", async () => {
