@@ -102,6 +102,16 @@ interface EntryDraftRow {
   note: string;
   /** リレー区分 (web EntryDraft.isRelaying と同一) */
   isRelaying: boolean;
+  /**
+   * この行のタイムがベストタイム流用ボタンで入れられたままか (ラッチ)。
+   * shared `EntryDraftRow` (apps/shared/types/team-entry.ts) の同名フィールドとは別物
+   * (あちらは代理入力用で数値 styleId + prefilledInput(string) を持つ)。混同しないこと。
+   *
+   * Sprint Contract v2 裁定2: 値の比較はしない。タイム欄の onChangeText が一度でも
+   * 発火したら (プリフィルと同じ文字列でも) 無条件で null に落とし、以後 "bestTime" に
+   * 戻す経路を持たない (EntriesClient.tsx の参照実装と同じラッチ方式)。
+   */
+  prefillSource: "bestTime" | null;
 }
 
 // ---- スプリットタイム ----
@@ -137,6 +147,7 @@ function createEmptyEntry(): EntryDraftRow {
     entryTimeDisplayValue: "",
     note: "",
     isRelaying: false,
+    prefillSource: null,
   };
 }
 
@@ -437,6 +448,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
                 entryTimeDisplayValue: e.entry_time ? formatTimeBest(e.entry_time) : "",
                 note: e.note || "",
                 isRelaying: e.is_relaying ?? false,
+                // 既存 DB エントリーの復元行は流用ボタンを押していないので未流用扱い
+                prefillSource: null,
               }))
             : [createEmptyEntry()];
         setEntries(initialEntries);
@@ -1170,6 +1183,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           entryTimeDisplayValue: "",
           note: "",
           isRelaying: false,
+          prefillSource: null,
         },
       ];
       setActiveEntryIndex(next.length - 1);
@@ -1200,7 +1214,14 @@ export const CompetitionTabFormScreen: React.FC = () => {
         if ("entryTimeDisplayValue" in updates) {
           const tv = updates.entryTimeDisplayValue || "";
           const parsed = tv.trim() !== "" ? (parseTimeFlexible(tv) ?? 0) : 0;
-          updated.entryTime = parsed;
+          // 呼び出し元が entryTime を明示的に渡した場合はそちらを権威とする
+          // (例: applyEntryBestTimePrefill はバッジと同じ生値を渡す。formatTimeBest ⇄
+          // parseTimeFlexible の往復は 1 ULP 非可逆なため、ここで再パース結果に
+          // 上書きすると保存値がバッジの値からずれる)。エラー表示の判定・更新は
+          // 手入力時と同じくこの再パース結果を使い続ける (ガードするのは代入のみ)。
+          if (!("entryTime" in updates)) {
+            updated.entryTime = parsed;
+          }
           if (tv.trim() !== "" && parsed <= 0) {
             setEntryErrors((prev) => ({
               ...prev,
@@ -1336,13 +1357,43 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const handleEntryStyleChange = useCallback(
     (draftId: string, styleId: string) => {
       const linkedRecordDraftId = findLinkedRowDraftId(entries, draftId, records);
-      updateEntry(draftId, { styleId });
+      // 種目を変えたら流用状態をリセットする (別種目のベストタイムが
+      // 未編集扱いのまま残ると誤ったバッジが出るため。Sprint Contract v2 裁定2)
+      updateEntry(draftId, { styleId, prefillSource: null });
       if (linkedRecordDraftId) {
         updateRecord(linkedRecordDraftId, { styleId });
       }
     },
     [updateEntry, updateRecord, entries, records],
   );
+
+  // ---- ベストタイム流用 (Sprint Contract 裁定1: バッジに表示されている値と常に同一) ----
+  // 呼び出し元は entryBestTime.time (バッジ算出と同じ getBestTimeForEntry の戻り値) を渡すこと。
+  // ここで別の取得経路を新設しない。
+  // entryTime は bestTimeValue をそのまま渡す (updateEntry 側で entryTime in updates を
+  // ガードにして再パース上書きを止めているため、保存値がバッジの生値と一致する。
+  // formatTimeBest ⇄ parseTimeFlexible の往復は 1 ULP 非可逆で、表示専用の
+  // entryTimeDisplayValue に頼ると保存値が劣化する)。
+  const applyEntryBestTimePrefill = useCallback(
+    (draftId: string, bestTimeValue: number) => {
+      updateEntry(draftId, {
+        entryTime: bestTimeValue,
+        entryTimeDisplayValue: formatTimeBest(bestTimeValue),
+        prefillSource: "bestTime",
+      });
+    },
+    [updateEntry],
+  );
+
+  // ---- 水路 (pool_type) 変更 ----
+  // poolType は大会1件に対して1値 (全エントリー行が共有) なので、水路を切り替えると
+  // getBestTimeForEntry の同水路/他水路フォールバックが行ごとに変わりうる。プリフィル済みの
+  // 値が表示中のベストタイムと対応しなくなるため、全エントリー行のラッチを落とす
+  // (1行だけではなく全行。Sprint Contract v2 裁定2)。
+  const handlePoolTypeChange = useCallback((value: number) => {
+    setPoolType(value);
+    setEntries((prev) => prev.map((e) => (e.prefillSource ? { ...e, prefillSource: null } : e)));
+  }, []);
 
   const handleEntryToggleRelaying = useCallback(
     (draftId: string, next: boolean) => {
@@ -1903,7 +1954,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       poolType === type.value && styles.pickerOptionSelected,
                       !canEditCompetitionDetails && styles.pickerOptionDisabled,
                     ]}
-                    onPress={() => setPoolType(type.value)}
+                    onPress={() => handlePoolTypeChange(type.value)}
                     disabled={isSaving || !canEditCompetitionDetails}
                   >
                     <Text
@@ -1990,6 +2041,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     bestTimes,
                   )
                 : null;
+              // 未編集警告: ラッチのみで判定し、値の比較はしない (Sprint Contract v2 裁定2)。
+              // タイム欄への手入力が一度でも発火すると prefillSource は無条件で null に
+              // 落ち (プリフィルと同じ文字列を打ち直しても)、以後 "bestTime" に戻る経路が
+              // 無い (EntriesClient.tsx の参照実装と同じラッチ方式)。
+              const isEntryPrefillUntouched = entry?.prefillSource === "bestTime";
               return (
                 <ItemTabs
                   count={entries.length}
@@ -2041,15 +2097,40 @@ export const CompetitionTabFormScreen: React.FC = () => {
                   {/* エントリータイム + リレー */}
                   <View style={styles.timeReactionRow}>
                     <View style={styles.timeField}>
-                      <View style={styles.labelRow}>
-                        <Text style={[styles.label, styles.labelRowText]}>
-                          {t("competition.entry.entryTimeLabel")}
-                        </Text>
-                        <WaPointsInfoTooltip
-                          testID="entry-time-help-icon"
-                          ariaLabel={t("forms.timeInput.helpTitle")}
-                          tooltipText={t("forms.timeInput.helpBodyBasic")}
-                        />
+                      <View style={styles.entryTimeHeaderRow}>
+                        <View style={styles.labelRow}>
+                          <Text style={[styles.label, styles.labelRowText]}>
+                            {t("competition.entry.entryTimeLabel")}
+                          </Text>
+                          <WaPointsInfoTooltip
+                            testID="entry-time-help-icon"
+                            ariaLabel={t("forms.timeInput.helpTitle")}
+                            tooltipText={t("forms.timeInput.helpBodyBasic")}
+                          />
+                        </View>
+                        <Pressable
+                          style={[
+                            styles.prefillButton,
+                            // records.time は numeric(10,2) NOT NULL だが CHECK(time > 0) が無い
+                            // (relay_records.total_time と異なり 0 を DB 制約で排除していない。
+                            // supabase/migrations/20251201014342_initial_schema.sql:764)。
+                            // entryBestTime.time === 0 を弾かずに流用すると formatTimeBest(0) →
+                            // parseTimeFlexible → 0 となり、updateEntry の parsed <= 0 分岐で
+                            // timeFormatInvalid エラーが出てしまう (裁定8)。
+                            (!entryBestTime || entryBestTime.time <= 0) &&
+                              styles.prefillButtonDisabled,
+                          ]}
+                          onPress={() =>
+                            entryBestTime &&
+                            entryBestTime.time > 0 &&
+                            applyEntryBestTimePrefill(entry.draftId, entryBestTime.time)
+                          }
+                          disabled={!entryBestTime || entryBestTime.time <= 0 || isSaving}
+                        >
+                          <Text style={styles.prefillButtonText}>
+                            {t("competition.entries.bestTimePrefillButton")}
+                          </Text>
+                        </Pressable>
                       </View>
                       <TextInput
                         style={[
@@ -2058,7 +2139,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
                         ]}
                         value={entry.entryTimeDisplayValue}
                         onChangeText={(text) =>
-                          updateEntry(entry.draftId, { entryTimeDisplayValue: text })
+                          // 手入力が一度でも発火したら無条件でラッチを落とす
+                          // (プリフィルと同じ文字列を打ち直しても "bestTime" には戻らない。Sprint Contract v2 裁定2)
+                          updateEntry(entry.draftId, {
+                            entryTimeDisplayValue: text,
+                            prefillSource: null,
+                          })
                         }
                         onBlur={() => handleEntryTimeBlur(entry.draftId)}
                         placeholder={t("competition.entry.entryTimePlaceholder")}
@@ -2074,6 +2160,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
                           {t("competition.entry.inputValueHint", {
                             time: formatTimeBest(entry.entryTime),
                           })}
+                        </Text>
+                      )}
+                      {isEntryPrefillUntouched && (
+                        <Text style={styles.prefillWarningText}>
+                          {t("competition.entries.bestTimePrefillBadge")}
                         </Text>
                       )}
                     </View>
@@ -2749,6 +2840,36 @@ const styles = StyleSheet.create({
   },
   labelRowText: {
     marginBottom: 0,
+  },
+  // エントリータイムのラベル行 (ラベル+ヘルプアイコン) と流用ボタンを両端揃えにする行。
+  // labelRow 自体はレコードタブの同等箇所とも共有しているため、ここでは触らず外側に足す。
+  entryTimeHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  // TeamEntryBulkFormScreen.tsx の prefillButton/prefillButtonText (L1291-1299) を踏襲
+  prefillButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    backgroundColor: "#FFFFFF",
+  },
+  prefillButtonDisabled: {
+    opacity: 0.5,
+  },
+  prefillButtonText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+  prefillWarningText: {
+    fontSize: 12,
+    color: "#B45309", // amber-700 (web EntriesClient.tsx の text-yellow-700 相当)
+    marginTop: 4,
   },
   timeReactionRow: {
     flexDirection: "row",

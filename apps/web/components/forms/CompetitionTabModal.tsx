@@ -158,6 +158,14 @@ interface EntryDraft {
   entryTimeDisplayValue: string;
   note: string;
   isRelaying: boolean;
+  /**
+   * 「ベストタイムを流用」ボタンで入れた値が未編集のまま残っているかどうかのラッチ (裁定2 v2)。
+   * タイム欄の onChange・種目変更・水路変更のいずれかが起きたら無条件に null に落とす。
+   * 値の比較はしない (formatTimeBest⇄parseTimeFlexible の往復が1ULP非可逆なため、
+   * 値比較方式だと「押した直後なのに警告が出ない」穴を構造的に抱える。参照実装
+   * (EntriesClient.tsx handleTimeInputChange) も同じラッチ方式)。
+   */
+  prefillSource: "bestTime" | null;
 }
 
 // =============================================================================
@@ -181,6 +189,7 @@ export default function CompetitionTabModal({
 }: CompetitionTabModalProps) {
   const t = useTranslations("forms.competition");
   const tEntry = useTranslations("forms.entry");
+  const tEntries = useTranslations("competition.entries");
   const tRecord = useTranslations("forms.recordLog");
   const tTabModal = useTranslations("forms.tabModal");
   const tPremium = useTranslations("forms.premium");
@@ -244,6 +253,7 @@ export default function CompetitionTabModal({
       entryTimeDisplayValue: "",
       note: "",
       isRelaying: false,
+      prefillSource: null,
     },
   ]);
   // 1行目のエントリーに自動セットされたデフォルト種目ID (未編集判定用)。
@@ -433,6 +443,8 @@ export default function CompetitionTabModal({
             entryTimeDisplayValue: rawTime > 0 ? formatTimeBest(rawTime) : "",
             note: String(entry.note ?? ""),
             isRelaying: Boolean(entry.isRelaying ?? entry.is_relaying ?? false),
+            // 呼び出し元から渡された編集用ペイロードは流用元の情報を持たないため未編集扱いにしない
+            prefillSource: null,
           };
         });
         setEntries(drafts);
@@ -542,6 +554,8 @@ export default function CompetitionTabModal({
           entryTimeDisplayValue: rawTime > 0 ? formatTimeBest(rawTime) : "",
           note: r.note ?? "",
           isRelaying: r.is_relaying ?? false,
+          // DB から復元した既存エントリーは流用元の情報を持たないため未編集扱いにしない
+          prefillSource: null,
         };
       });
 
@@ -945,6 +959,7 @@ export default function CompetitionTabModal({
         entryTimeDisplayValue: "",
         note: "",
         isRelaying: false,
+        prefillSource: null,
       },
     ]);
   }, []);
@@ -968,7 +983,8 @@ export default function CompetitionTabModal({
   // Entry style changed → also update record[index] if it exists
   const handleEntryStyleChange = useCallback(
     (entryId: string, entryIndex: number, styleId: string) => {
-      updateEntry(entryId, { styleId });
+      // 種目を変えたら別種目のベストタイムが未編集扱いで残らないようリセットする (裁定2 v2)
+      updateEntry(entryId, { styleId, prefillSource: null });
       if (showEntryTab && recordFormDataList[entryIndex] !== undefined) {
         handleRecordStyleChange(entryIndex, styleId);
       }
@@ -1008,6 +1024,29 @@ export default function CompetitionTabModal({
     },
     [handleRecordToggleRelaying, showEntryTab, entries, updateEntry],
   );
+
+  // 「ベストタイムを流用」ボタン: バッジに表示している値 (entryBestTime.time) をそのまま
+  // タイム欄へ入れる (裁定1)。別経路でベストタイムを取得し直さない。
+  // prefillSource は値を比較しないラッチ (裁定2 v2)。タイム欄の onChange / 種目変更 /
+  // 水路変更のいずれかが起きたら null に落とす。
+  const handleApplyBestTime = useCallback(
+    (entryId: string, time: number) => {
+      updateEntry(entryId, {
+        entryTime: time,
+        entryTimeDisplayValue: formatTimeBest(time),
+        prefillSource: "bestTime",
+      });
+    },
+    [updateEntry],
+  );
+
+  // 水路 (poolType) を変えると全行のベストタイムバッジが入れ替わり、プリフィル済みの値が
+  // 表示中のベストタイムと対応しなくなるため、1行だけでなく全エントリー行のラッチを外す
+  // (裁定2 v2)。
+  const handlePoolTypeChange = useCallback((poolType: number) => {
+    setBasicData((prev) => ({ ...prev, poolType }));
+    setEntries((prev) => prev.map((e) => (e.prefillSource ? { ...e, prefillSource: null } : e)));
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Existing images for image uploader
@@ -1183,9 +1222,7 @@ export default function CompetitionTabModal({
                         <button
                           key={type.value}
                           type="button"
-                          onClick={() =>
-                            setBasicData((prev) => ({ ...prev, poolType: type.value }))
-                          }
+                          onClick={() => handlePoolTypeChange(type.value)}
                           disabled={!allowParentUpdate}
                           aria-pressed={isActive}
                           className={`h-8 sm:h-10 px-3 border text-sm font-medium whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -1277,6 +1314,10 @@ export default function CompetitionTabModal({
                         bestTimes,
                       )
                     : null;
+                  // 未編集判定は prefillSource のラッチのみで行う (裁定2 v2)。値の比較はしない
+                  // (formatTimeBest⇄parseTimeFlexible の往復が1ULP非可逆なため、値比較方式だと
+                  // 「押した直後なのに警告が出ない」穴を構造的に抱える)。
+                  const isEntryPrefillUntouched = entry?.prefillSource === "bestTime";
                   return (
                     <ItemTabs
                       count={entries.length}
@@ -1341,32 +1382,52 @@ export default function CompetitionTabModal({
                                 <span className="hidden sm:inline">{tEntry("timeLabel")}</span>
                               </label>
                               <div className="flex-1 min-w-0">
-                                <Input
-                                  type="text"
-                                  inputMode="decimal"
-                                  value={entry.entryTimeDisplayValue}
-                                  onChange={(e) => {
-                                    // 構造ガード: "1.23.45" 等はクイック解釈で受理。解釈不能なら 0 のまま
-                                    const parsed = parseTimeFlexible(e.target.value);
-                                    updateEntry(entry.id, {
-                                      entryTimeDisplayValue: e.target.value,
-                                      entryTime: parsed ?? 0,
-                                    });
-                                  }}
-                                  onBlur={(e) => {
-                                    const parsed = parseTimeFlexible(e.target.value);
-                                    updateEntry(entry.id, {
-                                      // 不正形式は入力値を残してエラー表示する（誤値で整形しない）
-                                      entryTimeDisplayValue:
-                                        parsed !== null ? formatTimeBest(parsed) : e.target.value,
-                                      entryTime: parsed ?? 0,
-                                    });
-                                  }}
-                                  placeholder="2.00.00"
-                                  className="w-full h-8 sm:h-10"
-                                  disabled={isLoading}
-                                  data-testid={`entry-time-${clampedIndex + 1}`}
-                                />
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={entry.entryTimeDisplayValue}
+                                    onChange={(e) => {
+                                      // 構造ガード: "1.23.45" 等はクイック解釈で受理。解釈不能なら 0 のまま
+                                      const parsed = parseTimeFlexible(e.target.value);
+                                      updateEntry(entry.id, {
+                                        entryTimeDisplayValue: e.target.value,
+                                        entryTime: parsed ?? 0,
+                                        // 値が何であれ無条件にラッチを外す (裁定2 v2)
+                                        prefillSource: null,
+                                      });
+                                    }}
+                                    onBlur={(e) => {
+                                      const parsed = parseTimeFlexible(e.target.value);
+                                      updateEntry(entry.id, {
+                                        // 不正形式は入力値を残してエラー表示する（誤値で整形しない）
+                                        entryTimeDisplayValue:
+                                          parsed !== null ? formatTimeBest(parsed) : e.target.value,
+                                        entryTime: parsed ?? 0,
+                                      });
+                                    }}
+                                    placeholder="2.00.00"
+                                    className="flex-1 min-w-0 h-8 sm:h-10"
+                                    disabled={isLoading}
+                                    data-testid={`entry-time-${clampedIndex + 1}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      entryBestTime && handleApplyBestTime(entry.id, entryBestTime.time)
+                                    }
+                                    // records.time は numeric(10,2) NOT NULL だが CHECK (time > 0)
+                                    // が無い (relay_records.total_time と違い下限制約が無い)。
+                                    // time <= 0 の記録が DB に入り得るため、その値をそのまま流用
+                                    // すると "0.00" が入ってしまう。オブジェクトの truthiness だけ
+                                    // でなく time > 0 も見る。
+                                    disabled={isLoading || !entryBestTime || entryBestTime.time <= 0}
+                                    className="shrink-0 h-8 sm:h-10 px-3 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    data-testid={`entry-best-time-prefill-${clampedIndex + 1}`}
+                                  >
+                                    {tEntries("bestTimePrefillButton")}
+                                  </button>
+                                </div>
                                 {entry.entryTimeDisplayValue.trim() !== "" &&
                                   parseTimeFlexible(entry.entryTimeDisplayValue) === null && (
                                     <p
@@ -1376,6 +1437,14 @@ export default function CompetitionTabModal({
                                       {tTimeError("invalidTimeFormat")}
                                     </p>
                                   )}
+                                {isEntryPrefillUntouched && (
+                                  <p
+                                    className="mt-1 text-xs text-yellow-700"
+                                    data-testid={`entry-prefill-warning-${clampedIndex + 1}`}
+                                  >
+                                    {tEntries("bestTimePrefillBadge")}
+                                  </p>
+                                )}
                               </div>
                             </div>
 

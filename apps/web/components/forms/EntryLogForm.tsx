@@ -7,15 +7,11 @@ import Input from "@/components/ui/Input";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon, PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
-import {
-  formatTimeBest,
-  formatTimeShort,
-  isInvalidTimeInput,
-  parseTimeFlexible,
-} from "@apps/shared/utils/time";
+import { formatTimeBest, isInvalidTimeInput, parseTimeFlexible } from "@apps/shared/utils/time";
 import { format } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
 import { useBestTimes } from "@/hooks/useBestTimes";
+import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
 import type { EntryFormData } from "@/stores/types";
 import { useAuth } from "@/contexts";
 
@@ -25,6 +21,11 @@ interface EntryData {
   entryTime: number; // 秒単位
   entryTimeDisplayValue?: string; // 入力中の表示用
   note: string;
+  /**
+   * 「ベストタイムを流用」ボタンで入れた値が未編集のまま残っているかどうかのラッチ (裁定2 v2)。
+   * タイム欄の onChange・種目変更のいずれかが起きたら無条件に null に落とす。値の比較はしない。
+   */
+  prefillSource: "bestTime" | null;
 }
 
 // 編集データの型定義
@@ -81,6 +82,7 @@ export default function EntryLogForm({
 }: EntryLogFormProps) {
   const t = useTranslations("forms.entry");
   const tCompetition = useTranslations("forms.competition");
+  const tEntries = useTranslations("competition.entries");
   const tRecordLog = useTranslations("forms.recordLog");
   const tUnsaved = useTranslations("forms.unsavedChanges");
   const tTimeError = useTranslations("bulkBestTime.error");
@@ -118,61 +120,16 @@ export default function EntryLogForm({
     }
   }, [isOpen, user?.id, loadBestTimes]);
 
-  // styleIdからベストタイムを取得するヘルパー関数（優先順位付き）
-  // 1. 同じ水路・非リレー
-  // 2. 同じ水路・リレー（引き継ぎあり）
-  // 3. 異なる水路・非リレー
-  // 4. 異なる水路・リレー（引き継ぎあり）
-  const getBestTimeForStyle = useMemo(() => {
-    return (styleId: string): { time: number; label: string } | null => {
-      if (!bestTimes.length || !styleId) return null;
-
-      const style = styles.find((s) => s.id === styleId);
-      if (!style) return null;
-
-      const styleName = style.nameJp;
-      const otherPoolType = poolType === 0 ? 1 : 0;
-      const otherPoolLabelKey = poolType === 0 ? "bestTimeLong" : "bestTimeShort";
-      const otherPoolRelayLabelKey = poolType === 0 ? "bestTimeLongRelay" : "bestTimeShortRelay";
-
-      // 1. 同じ水路・非リレー
-      const samePoolNonRelay = bestTimes.find(
-        (bt) => bt.style.name_jp === styleName && bt.pool_type === poolType && !bt.is_relaying,
-      );
-      if (samePoolNonRelay) {
-        return { time: samePoolNonRelay.time, label: tRecordLog("bestTimeLabel") };
-      }
-
-      // 2. 同じ水路・リレー（relayingTimeを探す）
-      const samePoolRelay = bestTimes.find(
-        (bt) => bt.style.name_jp === styleName && bt.pool_type === poolType && bt.relayingTime,
-      );
-      if (samePoolRelay?.relayingTime) {
-        return { time: samePoolRelay.relayingTime.time, label: tRecordLog("bestTimeRelay") };
-      }
-
-      // 3. 異なる水路・非リレー
-      const otherPoolNonRelay = bestTimes.find(
-        (bt) => bt.style.name_jp === styleName && bt.pool_type === otherPoolType && !bt.is_relaying,
-      );
-      if (otherPoolNonRelay) {
-        return { time: otherPoolNonRelay.time, label: tRecordLog(otherPoolLabelKey) };
-      }
-
-      // 4. 異なる水路・リレー
-      const otherPoolRelay = bestTimes.find(
-        (bt) => bt.style.name_jp === styleName && bt.pool_type === otherPoolType && bt.relayingTime,
-      );
-      if (otherPoolRelay?.relayingTime) {
-        return {
-          time: otherPoolRelay.relayingTime.time,
-          label: tRecordLog(otherPoolRelayLabelKey),
-        };
-      }
-
-      return null;
-    };
-  }, [bestTimes, styles, poolType, tRecordLog]);
+  // styleId からベストタイムを取得するヘルパー。フォールバック優先順位の実装は
+  // shared の getBestTimeForEntry (唯一の定義元) に委譲する (裁定4)。
+  // 以前はここに同じ4段階フォールバック表がファイルローカルで再実装されていた。
+  // この画面の行型 (EntryData) はリレー区分を持たないため、isRelaying は常に
+  // false 固定で渡す (この画面自体にリレーエントリー入力の導線が無い)。
+  const getEntryBestTime = (styleId: string) => {
+    const styleName = styles.find((s) => s.id === styleId)?.nameJp;
+    if (!styleName) return null;
+    return getBestTimeForEntry(styleName, poolType, false, bestTimes);
+  };
 
   const [entries, setEntries] = useState<EntryData[]>([
     {
@@ -180,6 +137,7 @@ export default function EntryLogForm({
       styleId: styles[0]?.id || "",
       entryTime: 0,
       note: "",
+      prefillSource: null,
     },
   ]);
 
@@ -258,6 +216,8 @@ export default function EntryLogForm({
           entry.entryTimeDisplayValue ??
           (entry.entryTime && entry.entryTime > 0 ? formatTimeBest(entry.entryTime) : ""),
         note: entry.note || "",
+        // 呼び出し元から渡された初期エントリーは流用元の情報を持たないため未編集扱いにしない
+        prefillSource: null,
       }));
     } else if (editData) {
       // 編集モード: 既存の値をセット
@@ -286,6 +246,8 @@ export default function EntryLogForm({
                   ? formatTimeBest(Number(entry.entryTime ?? entry.entry_time))
                   : "",
               note: entry.note || "",
+              // 編集データ由来の既存エントリーは流用元の情報を持たないため未編集扱いにしない
+              prefillSource: null,
             }));
           }
         }
@@ -297,6 +259,7 @@ export default function EntryLogForm({
             entryTime: editData.entry_time || 0,
             entryTimeDisplayValue: editData.entry_time ? formatTimeBest(editData.entry_time) : "",
             note: editData.note || "",
+            prefillSource: null,
           },
         ];
       })();
@@ -308,6 +271,7 @@ export default function EntryLogForm({
           styleId: styles[0]?.id || "",
           entryTime: 0,
           note: "",
+          prefillSource: null,
         },
       ];
     }
@@ -390,6 +354,7 @@ export default function EntryLogForm({
       styleId: styles[0]?.id || "",
       entryTime: 0,
       note: "",
+      prefillSource: null,
     };
 
     setEntries((prev) => [...prev, newEntry]);
@@ -407,8 +372,16 @@ export default function EntryLogForm({
     );
   };
 
-  const formatTimeDisplay = (seconds: number): string => {
-    return formatTimeShort(seconds);
+  // 「ベストタイムを流用」ボタン: バッジに表示している値 (getEntryBestTime の time) を
+  // そのままタイム欄へ入れる (裁定1)。別経路でベストタイムを取得し直さない。
+  // prefillSource は値を比較しないラッチ (裁定2 v2)。タイム欄の onChange / 種目変更のいずれかが
+  // 起きたら null に落とす。
+  const handleApplyBestTime = (entryId: string, time: number) => {
+    updateEntry(entryId, {
+      entryTime: time,
+      entryTimeDisplayValue: formatTimeBest(time),
+      prefillSource: "bestTime",
+    });
   };
 
   return (
@@ -480,7 +453,11 @@ export default function EntryLogForm({
                   </Button>
                 </div>
 
-                {entries.map((entry, index) => (
+                {entries.map((entry, index) => {
+                  const entryBestTime = getEntryBestTime(entry.styleId);
+                  // 未編集判定は prefillSource のラッチのみで行う (裁定2 v2)。値の比較はしない。
+                  const isPrefillUntouched = entry.prefillSource === "bestTime";
+                  return (
                   <div
                     key={entry.id}
                     className="border border-gray-200 rounded-lg p-4 space-y-3 bg-blue-50"
@@ -519,7 +496,13 @@ export default function EntryLogForm({
                         */}
                         <select
                           value={entry.styleId}
-                          onChange={(e) => updateEntry(entry.id, { styleId: e.target.value })}
+                          onChange={(e) =>
+                            // 種目を変えたら別種目のベストタイムが未編集扱いで残らないようリセットする (裁定2 v2)
+                            updateEntry(entry.id, {
+                              styleId: e.target.value,
+                              prefillSource: null,
+                            })
+                          }
                           className="flex-1 min-w-0 h-8 sm:h-10 px-2 sm:px-3 py-0.5 sm:py-1.5 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                           disabled={isLoading}
@@ -541,46 +524,67 @@ export default function EntryLogForm({
                           <span className="hidden sm:inline">{t("timeLabel")}</span>
                         </label>
                         <div className="flex-1 min-w-0">
-                          <Input
-                            type="text"
-                            inputMode="decimal"
-                            value={
-                              entry.entryTimeDisplayValue !== undefined
-                                ? entry.entryTimeDisplayValue
-                                : entry.entryTime > 0
-                                  ? formatTimeDisplay(entry.entryTime)
-                                  : ""
-                            }
-                            onChange={(e) => {
-                              const timeStr = e.target.value;
-                              updateEntry(entry.id, { entryTimeDisplayValue: timeStr });
-                            }}
-                            onBlur={(e) => {
-                              const timeStr = e.target.value;
-                              if (timeStr === "") {
-                                updateEntry(entry.id, {
-                                  entryTime: 0,
-                                  entryTimeDisplayValue: undefined,
-                                });
-                                return;
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              value={
+                                entry.entryTimeDisplayValue !== undefined
+                                  ? entry.entryTimeDisplayValue
+                                  : entry.entryTime > 0
+                                    ? formatTimeBest(entry.entryTime)
+                                    : ""
                               }
-                              // 構造ガード: "1.23.45" 等はクイック解釈 (1:23.45) で確定。
-                              // 解釈不能な入力のみ値を残してエラー表示する
-                              const time = parseTimeFlexible(timeStr);
-                              if (time === null) {
-                                updateEntry(entry.id, { entryTime: 0 });
-                              } else {
+                              onChange={(e) => {
+                                const timeStr = e.target.value;
+                                // 値が何であれ無条件にラッチを外す (裁定2 v2)
                                 updateEntry(entry.id, {
-                                  entryTime: time,
-                                  entryTimeDisplayValue: undefined,
+                                  entryTimeDisplayValue: timeStr,
+                                  prefillSource: null,
                                 });
+                              }}
+                              onBlur={(e) => {
+                                const timeStr = e.target.value;
+                                if (timeStr === "") {
+                                  updateEntry(entry.id, {
+                                    entryTime: 0,
+                                    entryTimeDisplayValue: undefined,
+                                  });
+                                  return;
+                                }
+                                // 構造ガード: "1.23.45" 等はクイック解釈 (1:23.45) で確定。
+                                // 解釈不能な入力のみ値を残してエラー表示する
+                                const time = parseTimeFlexible(timeStr);
+                                if (time === null) {
+                                  updateEntry(entry.id, { entryTime: 0 });
+                                } else {
+                                  updateEntry(entry.id, {
+                                    entryTime: time,
+                                    entryTimeDisplayValue: undefined,
+                                  });
+                                }
+                              }}
+                              placeholder="2.00.00"
+                              disabled={isLoading}
+                              data-testid={`entry-time-${index + 1}`}
+                              className="flex-1 min-w-0"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                entryBestTime && handleApplyBestTime(entry.id, entryBestTime.time)
                               }
-                            }}
-                            placeholder="2.00.00"
-                            disabled={isLoading}
-                            data-testid={`entry-time-${index + 1}`}
-                            className="w-full"
-                          />
+                              // records.time は numeric(10,2) NOT NULL だが CHECK (time > 0) が
+                              // 無い (relay_records.total_time と違い下限制約が無い)。time <= 0 の
+                              // 記録が DB に入り得るため、その値をそのまま流用すると "0.00" が
+                              // 入ってしまう。オブジェクトの truthiness だけでなく time > 0 も見る。
+                              disabled={isLoading || !entryBestTime || entryBestTime.time <= 0}
+                              className="shrink-0 h-8 sm:h-10 px-3 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                              data-testid={`entry-best-time-prefill-${index + 1}`}
+                            >
+                              {tEntries("bestTimePrefillButton")}
+                            </button>
+                          </div>
                           {isInvalidTimeInput(entry.entryTimeDisplayValue) && (
                             <p
                               className="mt-1 text-xs text-red-600"
@@ -589,10 +593,17 @@ export default function EntryLogForm({
                               {tTimeError("invalidTimeFormat")}
                             </p>
                           )}
-                          {getBestTimeForStyle(entry.styleId) && (
+                          {entryBestTime && (
                             <p className="text-xs text-gray-500 mt-1">
-                              {getBestTimeForStyle(entry.styleId)!.label}:{" "}
-                              {formatTimeBest(getBestTimeForStyle(entry.styleId)!.time)}
+                              {tRecordLog(entryBestTime.labelKey)}: {formatTimeBest(entryBestTime.time)}
+                            </p>
+                          )}
+                          {isPrefillUntouched && (
+                            <p
+                              className="mt-1 text-xs text-yellow-700"
+                              data-testid={`entry-prefill-warning-${index + 1}`}
+                            >
+                              {tEntries("bestTimePrefillBadge")}
                             </p>
                           )}
                         </div>
@@ -616,7 +627,8 @@ export default function EntryLogForm({
                       />
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

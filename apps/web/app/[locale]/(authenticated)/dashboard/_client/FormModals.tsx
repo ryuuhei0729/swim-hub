@@ -185,6 +185,7 @@ export function FormModals({
     styleId: string;
     entryTime: number;
     note: string;
+    prefillSource: "bestTime" | null;
   }> => {
     if (!editingData || typeof editingData !== "object") {
       return [];
@@ -208,6 +209,8 @@ export function FormModals({
                 ? entry.entry_time
                 : 0,
           note: String(entry.note ?? ""),
+          // 編集データ由来の既存エントリーは流用元の情報を持たないため未編集扱いにしない
+          prefillSource: null,
         }));
       }
     }
@@ -228,6 +231,8 @@ export function FormModals({
               ? entry.entry_time
               : 0,
         note: String(entry.note ?? ""),
+        // 編集データ由来の既存エントリーは流用元の情報を持たないため未編集扱いにしない
+        prefillSource: null,
       }));
     }
 
@@ -248,6 +253,8 @@ export function FormModals({
           styleId: String(legacy.styleId ?? legacy.style_id ?? ""),
           entryTime: legacy.entryTime ?? legacy.entry_time ?? 0,
           note: legacy.note ?? "",
+          // 編集データ由来の既存エントリーは流用元の情報を持たないため未編集扱いにしない
+          prefillSource: null,
         },
       ];
     }
