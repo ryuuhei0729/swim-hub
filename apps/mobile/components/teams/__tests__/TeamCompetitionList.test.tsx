@@ -569,12 +569,16 @@ describe("TeamCompetitionList", () => {
     expect(mocks.navigate).not.toHaveBeenCalledWith("EntryForm", expect.anything());
 
     // 正しい props がモーダルへ渡されること (非 admin なので isAdmin: false)
+    // 【QA Phase B 書き換え】旧アサーションは `teamId` prop を期待していたが、現行の
+    // TeamCompetitionEntryModal は teamId を受け取らない (TeamCompetitionList.tsx の
+    // 呼び出しに teamId は渡されていない、実測済み)。渡されなくなった prop を
+    // 期待し続けていただけで、モーダルは isAdmin:false / entryStatus:"open" で
+    // 正しく開いている (退行ではない)。
     expect(mocks.entryModalSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         visible: true,
         competitionId: "c-ent",
         competitionTitle: "秋季大会",
-        teamId: "team-ent",
         entryStatus: "open",
         isAdmin: false,
       }),
@@ -711,9 +715,11 @@ describe("TeamCompetitionList", () => {
   // -----------------------------------------------------------------------
 
   describe("[旧SC-1] admin 時のボタン構成", () => {
-    // 日付は FUTURE_DATE (未来) なので、今回のスプリントで admin も排他化された結果、
-    // 「エントリー代理入力」のみが表示される側になった (「記録代理入力」は表示されない)。
-    it("「エントリー」「記録」ボタンは存在せず、未来日は「エントリー代理入力」のみ存在する", () => {
+    // 【QA Phase B 書き換え (R3)】日付は FUTURE_DATE (未来) のまま。今回のスプリントで
+    // admin の未来日ボタンは「エントリー代理入力」から「エントリー」(モーダルを開く、
+    // 非admin と同じ導線) に置換された。カード上に代理入力ボタンは残らない
+    // (代理入力への導線はモーダル内に移動した。実装のバグではなく仕様変更)。
+    it("「記録」ボタンは存在せず、未来日は「エントリー」のみ存在する (代理入力ボタンはカードに残らない)", () => {
       const comp = makeCompetition({ id: "c-admin-btns", date: FUTURE_DATE, title: "管理者大会" });
       mocks.useTeamCompetitionsQuery.mockReturnValue({
         data: [comp],
@@ -725,10 +731,10 @@ describe("TeamCompetitionList", () => {
 
       render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
 
-      expect(screen.queryByRole("button", { name: "エントリー" })).toBeNull();
       expect(screen.queryByRole("button", { name: "記録" })).toBeNull();
 
-      expect(screen.getByRole("button", { name: "エントリー代理入力" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
+      expect(screen.queryByRole("button", { name: "エントリー代理入力" })).toBeNull();
       expect(screen.queryByRole("button", { name: "記録代理入力" })).toBeNull();
     });
   });
@@ -1535,7 +1541,10 @@ describe("TeamCompetitionList", () => {
       ["編集アイコン", FUTURE_DATE, () => screen.getByTestId("icon-edit-2").closest("button")],
       ["削除アイコン", FUTURE_DATE, () => screen.getByTestId("icon-trash-2").closest("button")],
       ["記録代理入力ボタン", PAST_DATE, () => screen.getByRole("button", { name: "記録代理入力" })],
-      ["エントリー代理入力ボタン", FUTURE_DATE, () => screen.getByRole("button", { name: "エントリー代理入力" })],
+      // 【QA Phase B 書き換え (R3)】admin の未来日ボタンは「エントリー代理入力」から
+      // 「エントリー」(モーダルを開くだけ) に置換された。カード上のこのボタンをタップ
+      // しても記録一覧モーダルは開かない、という検証観点自体は変わらない。
+      ["エントリーボタン", FUTURE_DATE, () => screen.getByRole("button", { name: "エントリー" })],
       ["ステータスプルダウン(バッジ)", FUTURE_DATE, () => screen.getByTestId("icon-chevron-down").closest("button")],
     ];
 
@@ -1737,7 +1746,8 @@ describe("TeamCompetitionList", () => {
       ["削除アイコン", FUTURE_DATE, () => screen.getByTestId("icon-trash-2").closest("button")],
       ["受付ステータスプルダウン(バッジ)", FUTURE_DATE, () => screen.getByTestId("icon-chevron-down").closest("button")],
       ["記録代理入力ボタン", PAST_DATE, () => screen.getByRole("button", { name: "記録代理入力" })],
-      ["エントリー代理入力ボタン", FUTURE_DATE, () => screen.getByRole("button", { name: "エントリー代理入力" })],
+      // 【QA Phase B 書き換え (R3)】admin の未来日ボタンは「エントリー」に置換された。
+      ["エントリーボタン", FUTURE_DATE, () => screen.getByRole("button", { name: "エントリー" })],
     ];
 
     it.each(adminCases)("%s をタップしても記録一覧モーダルは開かない (admin)", (_label, date, getTarget) => {
@@ -2035,20 +2045,23 @@ describe("TeamCompetitionList", () => {
   // -----------------------------------------------------------------------
 
   describe("[Sprint Contract Phase E][V-24] admin ビューのボタン配置 (利用者ビューに揃える)", () => {
-    // 【QA Phase A 書き換え】旧 [V-24a] は「記録代理入力ボタンがエントリー代理入力
+    // 【QA Phase A/B 書き換え】旧 [V-24a] は「記録代理入力ボタンがエントリー代理入力
     // ボタンより DOM 順で先に現れる」を FUTURE_DATE 1ケースで pin していたが、今回の
     // スプリントで admin のボタンが排他表示になったため、同一日付で両ボタンを同時に
     // 描画できなくなった (前提が崩れた)。代わりに「排他化後も itemButtonColumn には
     // 常に1つのボタンだけが存在する (利用者ビューと同じ単一ボタンレイアウト)」を
     // 未来日/過去日の両方で確認する。
+    // 【QA Phase B 追記 (R3)】未来日側のボタンは「エントリー代理入力」から「エントリー」
+    // (モーダルを開く) に置換された。
     it("[V-24a 改訂] admin: 排他表示化後もボタン列には常に1つのボタンだけが存在する (利用者ビューと同じ単一ボタンレイアウト)", () => {
       const future = makeCompetition({ id: "c-v24-order-future", date: FUTURE_DATE, title: "V24順序検証大会(未来)" });
       mocks.useTeamCompetitionsQuery.mockReturnValue({
         data: [future], isLoading: false, isError: false, error: null, refetch: vi.fn(),
       });
       const { unmount } = render(<TeamCompetitionList teamId="team-v24-order-future" isAdmin={true} />);
-      expect(screen.getByRole("button", { name: "エントリー代理入力" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "エントリー" })).toBeDefined();
       expect(screen.queryByRole("button", { name: "記録代理入力" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "エントリー代理入力" })).toBeNull();
       unmount();
 
       const past = makeCompetition({ id: "c-v24-order-past", date: PAST_DATE, title: "V24順序検証大会(過去)" });
@@ -2077,11 +2090,12 @@ describe("TeamCompetitionList", () => {
       );
     });
 
-    it("[V-24c 非退行] admin: レイアウト変更後も記録代理入力/エントリー代理入力ボタンをタップして記録一覧モーダルが誤って開かない ([V-21] 再確認)", () => {
+    it("[V-24c 非退行] admin: レイアウト変更後も記録代理入力/エントリーボタンをタップして記録一覧モーダルが誤って開かない ([V-21] 再確認)", () => {
       // 排他化により、それぞれのボタンが描画される日付を個別に指定する。
+      // 【QA Phase B 書き換え (R3)】未来日側は「エントリー代理入力」から「エントリー」に置換された。
       const namesWithDate: Array<[string, string]> = [
         ["記録代理入力", PAST_DATE],
-        ["エントリー代理入力", FUTURE_DATE],
+        ["エントリー", FUTURE_DATE],
       ];
 
       for (const [name, date] of namesWithDate) {
@@ -2107,9 +2121,12 @@ describe("TeamCompetitionList", () => {
       }
     });
 
-    it("[V-24d 最重要] プルダウン展開中は代理入力ボタン (記録代理入力/エントリー代理入力) をタップしても遷移しない (statusMenuPanel との重なり対策)", () => {
-      // 排他化により両ボタンを同時に描画できないため、未来日 (エントリー代理入力) と
+    it("[V-24d 最重要] プルダウン展開中は代理入力/エントリーボタン (記録代理入力/エントリー) をタップしても遷移しない (statusMenuPanel との重なり対策)", () => {
+      // 排他化により両ボタンを同時に描画できないため、未来日 (エントリー) と
       // 過去日 (記録代理入力) の2ケースに分けて検証する。
+      // 【QA Phase B 書き換え (R3)】未来日側のボタンは「エントリー代理入力」から
+      // 「エントリー」(モーダルを開く) に置換された。プルダウン展開中はタップ自体が
+      // 無効化される (pointerEvents="none") ため、モーダルも開かないはず。
       const future = makeCompetition({
         id: "c-v24-overlap-future",
         date: FUTURE_DATE,
@@ -2122,8 +2139,10 @@ describe("TeamCompetitionList", () => {
       const { unmount } = render(<TeamCompetitionList teamId="team-v24-overlap-future" isAdmin={true} />);
       fireEvent.click(screen.getByRole("button", { name: "受付前" }));
       expect(screen.getByText("受付中"), "展開後の選択肢が見つからない (前提条件)").toBeDefined();
-      fireEvent.click(screen.getByRole("button", { name: "エントリー代理入力" }));
-      expect(mocks.navigate).not.toHaveBeenCalledWith("TeamEntryBulkForm", expect.anything());
+      fireEvent.click(screen.getByRole("button", { name: "エントリー" }));
+      expect(mocks.entryModalSpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({ visible: true }),
+      );
       expect(mocks.recordsModalSpy).not.toHaveBeenCalledWith(
         expect.objectContaining({ visible: true }),
       );

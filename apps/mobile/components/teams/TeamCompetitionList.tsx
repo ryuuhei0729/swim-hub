@@ -493,7 +493,8 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
   }, []);
 
   // モーダル内の「種目をエントリー」(非admin): 既存の選手セルフエントリー画面へ遷移（機能維持）。
-  // web は受付中(open)の大会のみセルフエントリーに到達するため(useTeamEntry.ts:59-64)、
+  // web (apps/web/components/team/TeamCompetitionEntryModal.tsx の canEditOrDeleteEntry) も
+  // 受付中(open)の大会でのみ自分のエントリー導線を表示する方針であり、これに揃えて
   // 受付中以外では導線を出さない（モーダル側で非表示だが二重ガード）。
   const handleSelfEntry = useCallback((competition: Competition, currentStatus: EntryStatus) => {
     // モーダルが表示している status（resolveEntryStatus の結果をそのまま保持した値。R5 で
