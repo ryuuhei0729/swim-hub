@@ -1,46 +1,63 @@
 // =============================================================================
-// TeamSettingsTab.test.tsx — QA Sprint Contract Phase A スケルトン (mobile)
+// TeamSettingsTab.test.tsx — QA Sprint Contract (mobile)
 // =============================================================================
 //
-// 対象: apps/mobile/components/teams/TeamSettingsTab.tsx (未実装・Phase B で新規作成)
+// 対象: apps/mobile/components/teams/TeamSettingsTab.tsx
 //
-// ■ QA が Phase A で確定させる実装要件 (Contract 補強 / PM 経由で Developer へ)
-//     export interface TeamSettingsTabProps {
-//       teamId: string;
-//       teamName: string;
-//       teamDescription?: string | null;
-//       inviteCode?: string | null;
-//       isAdminView: boolean;
-//       /** TeamDetailScreen が既に持っている members をそのまま渡す。詰め替え禁止 */
-//       members: TeamMembershipWithUser[];
-//     }
-//     export const TeamSettingsTab: React.FC<TeamSettingsTabProps>;
+// ■ 2026-09-21 追補: チーム削除機能はユーザー指示により web・mobile 双方の
+//   UI から撤去した。管理者ビューでも「チームを削除」見出し・説明・ボタンを
+//   一切描画しない。
+//   `deleteTeam` API / `useDeleteTeamMutation` / `getDeleteTeamErrorMessageKey` /
+//   `TeamOperationError` / i18n の `teams.settingsTab.delete*` キー /
+//   RPC `delete_team_preserving_records` は PM 裁定で shared 側に意図的に
+//   残置する (migration 巻き戻しと shared テストの改変を避けるため)。
+//   このテストが撤去してはいけない。旧 [V-A54] (管理者に削除が出る) は本追補で
+//   反転し、旧 [V-A58]/[V-A59] (削除失敗時のエラーコード変換 / 成功時コールバック)
+//   は削除ボタンが存在しなくなったため成立せず撤去した。変換ロジック自体の
+//   検証は apps/shared/__tests__/teams/deleteTeamErrorMessageKey.test.ts が
+//   継続して担当する。
 //
-//   TeamDetailScreen は activeTab === "settings" のときこれを描画する。
-//   `members` は加工せずそのまま渡すこと (users.gender が optional なので
-//   中間で型を作り直すと落ちる — WA ポイントで実障害の前科がある)。
-//
-// ■ Sprint Contract 検証観点 (縦積み5セクション)
+// ■ Sprint Contract 検証観点 (縦積みセクション)
 //   [V-A50] 一般メンバー: チーム情報 / 招待コード / カレンダー記録色 /
-//           チーム操作 / 危険な操作 の5セクションがすべて表示される
+//           脱退カード が表示される
 //   [V-A51] 一般メンバー: 「編集」ボタンは表示されない (管理者のみ)
-//   [V-A52] 一般メンバー: 「チームを削除」は表示されない (管理者のみ)
 //   [V-A53] 一般メンバー: 「脱退する」は表示される
-//   [V-A54] 管理者: 「編集」「チームを削除」がどちらも表示される
 //   [V-A55] 招待コードは全メンバーに値が表示され、コピーボタンがある
 //   [V-A56] PM 裁定 C — 自分が最後の管理者かつ他メンバーが残るとき、
 //           「脱退する」を押すと **leave API を呼ばずに** エラー文言が出る
 //   [V-A57] 対照 — 管理者がもう一人居れば同じ操作で leave API が呼ばれる
+//   [V-D1] 管理者ビュー (isAdminView=true) で「チームを削除」見出し・
+//          deleteDescription・deleteButton のいずれも描画されない (旧 V-A54 の反転)
+//   [V-D2] 利用者ビュー (isAdminView=false) でも同様に描画されない
+//   [V-D3] 対照 (退行検知): 管理者ビューで「チーム情報を編集」は従来どおり
+//          描画される — 「削除だけ消えた」ことを示す (isAdminView 分岐ごと
+//          壊した場合はここが赤くなる)
+//   [V-D4] 対照 (退行検知): 脱退カードは管理者・一般メンバー双方で描画され、
+//          押すと確認 Alert → leaveTeamMutation.mutateAsync が呼ばれる
+//          (最後の管理者ガードは V-A56/A57 として維持)
+//   [V-D5] useDeleteTeamMutation の mutateAsync が一度も呼ばれないこと
+//          (脱退フローが誤って削除フックを呼ばないことを確認する。削除 UI
+//          非描画の主たる担保は V-D1/V-D2 側)
+//   [V-D6] 管理者ビューでレンダーしただけで useDeleteTeamMutation フック自体が
+//          一度も呼ばれないこと (ボタンは配線しない半端な再導入を render 時点で
+//          検出する。V-D5 とは検出対象が異なるので両方維持する)
+//
+//   構成: [V-D5]/[V-D6] は「最後の管理者の脱退ガード」describe とは意味的に
+//   無関係なため、専用の describe("[V-D5/V-D6] チーム削除フックが配線されて
+//   いないこと") に切り出している (Reviewer 指摘)
 //
 // ■ jsdom で検証できないことの明示
 //   - セクションの縦積み順序が「見た目で上から下」であること (Flexbox 非解決)。
 //     DOM 上の前後関係までは見るが、実際の並びは実機/エミュレータ目視で確認する
-//   - スクロールで下端の「危険な操作」に到達できること (高さ計算がされない)
+//   - スクロールで下端のカードに到達できること (高さ計算がされない)
 //   - スウォッチのタップ判定 (ヒットテスト)
 //
 // ■ トートロジー回避
 //   ラベルは shared/messages の ja.json から **キー経由**で引く (訳文は固定しない)。
 //   キーが存在しなければ明示的に落とす (getByText(undefined) の不可解な失敗を避ける)。
+//   「出ない」だけの assert は i18n キーの綴りミスでも緑になるので、対照
+//   (同じ label() ヘルパーで取得した文字列が実在キーとして getByText で通る) を
+//   必ずセットで置く (V-D3/V-D4 が担う)。
 // =============================================================================
 
 import React from "react";
@@ -49,7 +66,6 @@ import { render, screen, fireEvent, act, cleanup } from "@testing-library/react"
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import jaMessages from "@apps/shared/messages/ja.json";
-import { TeamOperationError } from "@apps/shared/api/teams/core";
 
 // -----------------------------------------------------------------------------
 // モックは **実モジュールの export と戻り値の形**に一致させること。
@@ -84,7 +100,20 @@ const mocks = vi.hoisted(() => {
     /** 既定は成功。失敗経路のテストだけ mockResolvedValueOnce(false) で上書きする */
     copyTextToClipboard: vi.fn(async (_text: string) => true),
     leaveMutateAsync: vi.fn(),
+    /**
+     * mobile から削除機能は撤去されたので本体はこれを呼ばない。
+     * それでも `useDeleteTeamMutation` 自体のモックは残す — 消してしまうと
+     * 「呼ばれない」を [V-D5]/[V-D6] で**証明**できなくなる (呼ばれないモックは
+     * 呼ばれても検知できないのと違い、呼び出し回数を検証可能にするために存在する)。
+     */
     deleteMutateAsync: vi.fn(),
+    /**
+     * [V-D6] 用。`useDeleteTeamMutation` フック**自体**が呼ばれたかを記録する。
+     * `deleteMutateAsync` (mutateAsync の呼び出し) とは別物 — フックだけを
+     * 関数本体の先頭に書き戻す半端な再導入 (ボタンは配線しない) をすると、
+     * render 時点でこちらだけが呼ばれる
+     */
+    useDeleteTeamMutationSpy: vi.fn(),
     updateMutateAsync: vi.fn(),
     createMutateAsync: vi.fn(),
     joinMutateAsync: vi.fn(),
@@ -108,7 +137,14 @@ vi.mock("@/utils/copyToClipboard", () => ({
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useTeamsQuery: () => ({ teams: [], isLoading: false, isError: false, refetch: vi.fn() }),
   useLeaveTeamMutation: () => ({ mutateAsync: mocks.leaveMutateAsync, isPending: false }),
-  useDeleteTeamMutation: () => ({ mutateAsync: mocks.deleteMutateAsync, isPending: false }),
+  // 本体は mobile では import しなくなる想定。それでもモック自体は残し、
+  // [V-D5] で mutateAsync の呼び出し回数が 0 であることを検証する。
+  // フック呼び出し自体は useDeleteTeamMutationSpy に記録する ([V-D6])。
+  // 素のアロー関数のままでは「フックが呼ばれたこと自体」は記録されない
+  useDeleteTeamMutation: (...args: unknown[]) => {
+    mocks.useDeleteTeamMutationSpy(...args);
+    return { mutateAsync: mocks.deleteMutateAsync, isPending: false };
+  },
   useUpdateTeamMutation: () => ({ mutateAsync: mocks.updateMutateAsync, isPending: false }),
   // TeamSettingsTab は「チーム操作」セクションで TeamCreateModal / TeamJoinModal を
   // 常時マウントする。これらが使う mutation もモックしないとフック取得で落ちる
@@ -237,8 +273,12 @@ describe("[V-A50〜A55] TeamSettingsTab セクションの出し分け", () => {
     expect(screen.getByText(label("teams.settingsTab.leaveButton"))).toBeTruthy();
   });
 
-  it("[V-A50] 削除カードは管理者ビューでのみ**丸ごと**出る (説明文だけ残る実装を検出)", () => {
-    // 利用者ビュー: 見出し・説明・ボタンのいずれも出ない
+  // [V-D1/V-D2] mobile から削除機能は撤去された。旧仕様は「管理者ビューでのみ
+  // 丸ごと出る」だったが、**ビューに関わらず一切出ない**へ反転した。
+  // 管理者・利用者の両方を同一テストで見ることで、「isAdminView=true のときだけ
+  // 復活する」退行 (旧実装への巻き戻し) を検出できる。
+  it("[V-D1/V-D2] 削除カード (見出し・説明・ボタン) は管理者ビューでも利用者ビューでも出ない", () => {
+    // [V-D2] 利用者ビュー
     renderTab({ isAdminView: false });
     expect(screen.queryByText(label("teams.settingsTab.deleteTeam"))).toBeNull();
     expect(screen.queryByText(label("teams.settingsTab.deleteDescription"))).toBeNull();
@@ -246,11 +286,11 @@ describe("[V-A50〜A55] TeamSettingsTab セクションの出し分け", () => {
 
     cleanup();
 
-    // 管理者ビュー: 3要素すべて出る
+    // [V-D1] 管理者ビュー (旧 V-A54 の反転。ここが本スプリントの中核)
     renderTab({ isAdminView: true });
-    expect(screen.getByText(label("teams.settingsTab.deleteTeam"))).toBeTruthy();
-    expect(screen.getByText(label("teams.settingsTab.deleteDescription"))).toBeTruthy();
-    expect(screen.getByText(label("teams.settingsTab.deleteButton"))).toBeTruthy();
+    expect(screen.queryByText(label("teams.settingsTab.deleteTeam"))).toBeNull();
+    expect(screen.queryByText(label("teams.settingsTab.deleteDescription"))).toBeNull();
+    expect(screen.queryByText(label("teams.settingsTab.deleteButton"))).toBeNull();
   });
 
   it("[V-A50] 招待コードはチーム情報カード内に値とコピーボタンが出る", () => {
@@ -266,29 +306,35 @@ describe("[V-A50〜A55] TeamSettingsTab セクションの出し分け", () => {
   });
 
   // ===========================================================================
-  // [V-A51/A52/A54] 出し分けは **管理者ビュートグル連動** (ユーザー指示で変更)
+  // [V-A51] 「編集」の出し分けは **管理者ビュートグル連動** (ユーザー指示で変更)。
+  // 削除は撤去されたのでビューに関わらず常に出ない ([V-D1/V-D2] で担保済み)。
   //
   // 🚨 **必ず ON/OFF の対で書くこと。** 「利用者ビューで出ない」だけを書くと、
-  // 常時非表示の実装 (= 管理者でも永久に編集・削除できない) でも緑になる。
+  // 常時非表示の実装 (= 管理者でも永久に編集できない) でも緑になる。
   // 逆に「管理者ビューで出る」だけでは、権限基準へ戻す退行を検出できない。
   // ===========================================================================
-  it("[V-A51/A52] 利用者ビュー (isAdminView=false) では「編集」「チームを削除」が出ない", () => {
+  it("[V-A51] 利用者ビュー (isAdminView=false) では「編集」が出ない", () => {
     renderTab({ isAdminView: false, members: [makeMember("me", "admin"), makeMember("u1", "user")] });
 
     expect(screen.queryByText(label("teams.settingsTab.editTeamInfo"))).toBeNull();
-    expect(screen.queryByText(label("teams.settingsTab.deleteTeam"))).toBeNull();
   });
 
-  it("[V-A54] 対照: 管理者ビュー (isAdminView=true) では「編集」「チームを削除」が出る", () => {
-    // ⚠️ members は上のケースと**同一**。差分は isAdminView だけ。
-    // これにより「ビューに連動している」ことが確定する (権限や人数の副作用ではない)
+  // [V-D3] 対照 (退行検知): 「削除だけ消えた」ことを示す。
+  // members は上のケースと**同一**、差分は isAdminView だけ。編集は従来どおり
+  // 出るのに削除は出ない、という非対称を固定することで、
+  // 「isAdminView 分岐そのものを丸ごと壊した (編集まで消えた)」場合と
+  // 「削除だけを狙って撤去せず isAdminView 判定を書き換えて全部残した」場合の
+  // どちらも検出できる。
+  it("[V-D3] 対照: 管理者ビュー (isAdminView=true) では「編集」は出るが「チームを削除」は出ない", () => {
     renderTab({ isAdminView: true, members: [makeMember("me", "admin"), makeMember("u1", "user")] });
 
     expect(screen.getByText(label("teams.settingsTab.editTeamInfo"))).toBeTruthy();
-    expect(screen.getByText(label("teams.settingsTab.deleteTeam"))).toBeTruthy();
+    expect(screen.queryByText(label("teams.settingsTab.deleteTeam"))).toBeNull();
+    expect(screen.queryByText(label("teams.settingsTab.deleteDescription"))).toBeNull();
+    expect(screen.queryByText(label("teams.settingsTab.deleteButton"))).toBeNull();
   });
 
-  it("[V-A53] 「チームを脱退」はビューに関わらず常に出る (全メンバーの操作)", () => {
+  it("[V-A53/V-D4] 「チームを脱退」はビューに関わらず常に出る (全メンバーの操作)", () => {
     renderTab({ isAdminView: false });
     expect(screen.getByText(label("teams.settingsTab.leaveTeam"))).toBeTruthy();
 
@@ -456,81 +502,28 @@ describe("[V-A56/A57] 最後の管理者の脱退ブロック (PM 裁定 C)", ()
   });
 
   /**
-   * [V-A58] 削除失敗時、RPC の**機械可読コード**がそのまま画面に出ず、
-   * 翻訳済みの文言に変換されること。
-   *
-   * deleteTeam は UserFacingError の message に `not_authorized` 等のコードを載せて
-   * throw する (UserFacingError 本来の「そのまま表示してよい文言」とは異なる運用)。
-   * UI が `toUserFacingMessage()` のような素通し表示をすると、ユーザーには
-   * `not_authorized` という英小文字のコードが見える。
-   * 変換は `getDeleteTeamErrorMessageKey()` が唯一の定義元
-   * (対応表そのものの検証は shared の deleteTeamErrorMessageKey.test.ts が担当)。
+   * [V-D4] 脱退カードが実際に配線されていること (退行検知)。
+   * 「見出し/説明/ボタンが出る」だけでは、ボタンが押しても何も起きない
+   * 未配線の実装でも緑になる。確認 Alert → destructive ボタンの onPress を
+   * 実プロダクションコード経由で発火させ、leaveTeamMutation.mutateAsync が
+   * 実際に呼ばれるところまで見る。
    */
-  it.each([
-    ["not_authorized", "teams.settingsTab.deleteErrors.notAuthorized"],
-    ["team_not_found", "teams.settingsTab.deleteErrors.teamNotFound"],
-    ["auth_required", "teams.settingsTab.deleteErrors.authRequired"],
-  ])(
-    "[V-A58] 削除が %s で失敗したとき、コードではなく翻訳済み文言が表示される",
-    async (code, expectedKey) => {
-      mocks.deleteMutateAsync.mockRejectedValueOnce(new TeamOperationError(code));
-      renderTab({ isAdminView: true, members: [makeMember("me", "admin")] });
-
-      fireEvent.click(screen.getByText(label("teams.settingsTab.deleteButton")));
-
-      // 確認ダイアログの destructive ボタンを実プロダクションコード経由で発火させる
-      const alertCall = (Alert.alert as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
-      const buttons = alertCall[2] as { text: string; onPress?: () => void }[];
-      const confirmButton = buttons.find((b) => b.onPress);
-      expect(confirmButton, "確認ダイアログに実行ボタンが無い").toBeDefined();
-      await act(async () => {
-        confirmButton!.onPress!();
-      });
-
-      expect(await screen.findByText(label(expectedKey))).toBeTruthy();
-      // 生のコードが画面に出ていないこと
-      expect(screen.queryByText(code)).toBeNull();
-    },
-  );
-
-  it("[V-A58] 未知のコードで失敗したときは汎用文言に落ちる", async () => {
-    mocks.deleteMutateAsync.mockRejectedValueOnce(new TeamOperationError("some_new_code"));
-    renderTab({ isAdminView: true, members: [makeMember("me", "admin")] });
-
-    fireEvent.click(screen.getByText(label("teams.settingsTab.deleteButton")));
-    const alertCall = (Alert.alert as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
-    const buttons = alertCall[2] as { text: string; onPress?: () => void }[];
-    await act(async () => {
-      buttons.find((b) => b.onPress)!.onPress!();
-    });
-
-    expect(await screen.findByText(label("teams.settingsTab.deleteFailed"))).toBeTruthy();
-    expect(screen.queryByText("some_new_code")).toBeNull();
-  });
-
-  /**
-   * [V-A59] 成功時の戻り値に `cleared_practice_count` (今回 RPC に増えたフィールド) が
-   * 含まれていても経路が壊れないこと。
-   * ⚠️ `deleteTeam` の戻り値は `void` なので、この件数は **UI には出ない**
-   * (RPC は計算して返しているが消費者が居ない)。ここで固定するのは
-   * 「フィールドが増えても削除完了の導線が通る」ことまで。
-   */
-  it("[V-A59] 削除成功時 (cleared_practice_count を含む戻り値) に onLeftTeam が呼ばれる", async () => {
-    mocks.deleteMutateAsync.mockResolvedValueOnce(undefined);
+  it("[V-D4] 脱退ボタンを押すと確認 Alert 経由で leaveTeamMutation.mutateAsync が呼ばれる", async () => {
+    mocks.leaveMutateAsync.mockResolvedValueOnce(undefined);
     const onLeftTeam = vi.fn();
-    renderTab({ isAdminView: true, members: [makeMember("me", "admin")], onLeftTeam });
+    renderTab({ isAdminView: true, members: [makeMember("me", "admin"), makeMember("a2", "admin")], onLeftTeam });
 
-    fireEvent.click(screen.getByText(label("teams.settingsTab.deleteButton")));
+    fireEvent.click(screen.getByText(label("teams.settingsTab.leaveButton")));
     const alertCall = (Alert.alert as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
     const buttons = alertCall[2] as { text: string; onPress?: () => void }[];
+    const confirmButton = buttons.find((b) => b.onPress);
+    expect(confirmButton, "確認ダイアログに実行ボタンが無い").toBeDefined();
     await act(async () => {
-      buttons.find((b) => b.onPress)!.onPress!();
+      confirmButton!.onPress!();
     });
 
-    expect(mocks.deleteMutateAsync).toHaveBeenCalledWith("team-1");
+    expect(mocks.leaveMutateAsync).toHaveBeenCalledWith("team-1");
     expect(onLeftTeam).toHaveBeenCalledTimes(1);
-    // 失敗文言は出ない
-    expect(screen.queryByText(label("teams.settingsTab.deleteFailed"))).toBeNull();
   });
 
   it("[V-A56 境界] 自分が唯一のメンバー (管理者) なら脱退できる", () => {
@@ -540,5 +533,53 @@ describe("[V-A56/A57] 最後の管理者の脱退ブロック (PM 裁定 C)", ()
 
     expect(screen.queryByText(label("teams.settingsTab.lastAdminCannotLeave"))).toBeNull();
     expect(didProceedToLeave()).toBe(true);
+  });
+});
+
+// =============================================================================
+// [V-D5]/[V-D6] は「最後の管理者の脱退ガード」とは意味的に無関係 (Reviewer 指摘)
+// なので専用の describe に切り出す。役割分担: [V-D6] はフックだけを関数本体の
+// 先頭に書き戻す半端な再導入を render 時点で検出し、[V-D5] は脱退フローが
+// 誤って削除フックの mutateAsync を呼ばないことを見る。削除 UI が非描画で
+// あることの主たる担保は [V-D1]/[V-D2] 側にある。
+// =============================================================================
+describe("[V-D5/V-D6] チーム削除フックが配線されていないこと", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Alert.alert = vi.fn(); // [V-D5] が確認ダイアログ経由の脱退フローで使う
+  });
+
+  /**
+   * [V-D5] `useDeleteTeamMutation` の mutateAsync が一度も呼ばれないこと。
+   * production から `useDeleteTeamMutation` の import 自体が消えているため、
+   * このモックはどんな操作をしても呼ばれ得ない。ここで実際に検出できるのは
+   * 「脱退フローが誤って削除フックを呼ばないこと」という狭い退行のみ。
+   * それでもモック自体は残す (import が将来復活した場合の保険になる)。
+   */
+  it("[V-D5] useDeleteTeamMutation.mutateAsync は一度も呼ばれない", async () => {
+    renderTab({ isAdminView: true, members: [makeMember("me", "admin"), makeMember("a2", "admin")] });
+
+    fireEvent.click(screen.getByText(label("teams.settingsTab.leaveButton")));
+    const alertCall = (Alert.alert as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    const buttons = alertCall[2] as { text: string; onPress?: () => void }[];
+    await act(async () => {
+      buttons.find((b) => b.onPress)!.onPress!();
+    });
+
+    expect(mocks.deleteMutateAsync).not.toHaveBeenCalled();
+  });
+
+  /**
+   * [V-D6] 管理者ビューでレンダーしただけで `useDeleteTeamMutation` フック自体が
+   * 一度も呼ばれないこと。
+   * [V-D5] は「脱退フローが誤って削除フックを呼ばないこと」を見るのに対し、
+   * [V-D6] は「削除ボタンは配線しないが `useDeleteTeamMutation` フック呼び出し
+   * だけを関数本体の先頭に書き戻す」半端な再導入を render 時点で検出する
+   * (ボタンを押さない限り検出できない [V-D5] の弱点を補う)。
+   */
+  it("[V-D6] 管理者ビューでレンダーしただけで useDeleteTeamMutation は一度も呼ばれない", () => {
+    renderTab({ isAdminView: true, members: [makeMember("me", "admin"), makeMember("a2", "admin")] });
+
+    expect(mocks.useDeleteTeamMutationSpy).not.toHaveBeenCalled();
   });
 });

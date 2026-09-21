@@ -18,7 +18,13 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
-import type { RelayRecord, RelayRecordLeg } from "../../types";
+import type {
+  RelayGenderCategory,
+  RelayKind,
+  RelayRecord,
+  RelayRecordLeg,
+  RelayRecordWithLegs,
+} from "../../types";
 import { fromRelayEventId } from "../../utils/relayEvents";
 import type { RelaySavePlan } from "../../utils/relayRecordSave";
 
@@ -155,6 +161,101 @@ function toRelayRecordLegRow(relayRecordId: string, fields: RelayRecordLegInsert
     leg_time: fields.legTime,
     reaction_time: fields.reactionTime,
     record_id: fields.recordId,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// getByCompetition (読み取り) の境界型
+// -----------------------------------------------------------------------------
+
+/** `users` の埋め込み選択列 (leg の泳者表示用)。 */
+interface RelayLegUserRow {
+  name: string | null;
+  profile_image_path: string | null;
+}
+
+/** `styles` の埋め込み選択列 (leg の種目表示用)。 */
+interface RelayLegStyleRow {
+  name_jp: string | null;
+  distance: number | null;
+}
+
+/** `relay_record_legs` + 埋め込みの1行 (snake_case)。 */
+interface RelayRecordLegQueryRow {
+  id: string;
+  leg_index: number;
+  user_id: string | null;
+  style_id: number;
+  leg_time: number;
+  reaction_time: number | null;
+  record_id: string | null;
+  // 埋め込みリレーションは型付きクライアントでは配列に推論されるため両形状を吸収する
+  // (RecordAPI.getListBestCandidates の competition 埋め込みと同じ理由)。
+  users: RelayLegUserRow | RelayLegUserRow[] | null;
+  styles: RelayLegStyleRow | RelayLegStyleRow[] | null;
+}
+
+/** `relay_records` + `relay_record_legs` 埋め込みの1行 (snake_case)。 */
+interface RelayRecordQueryRow {
+  id: string;
+  team_id: string;
+  competition_id: string | null;
+  relay_kind: RelayKind;
+  leg_distance: number;
+  leg_count: number;
+  pool_type: number;
+  gender_category: RelayGenderCategory;
+  total_time: number;
+  created_at: string | null;
+  relay_record_legs: RelayRecordLegQueryRow[];
+}
+
+/** 単一 / 配列どちらの形状で返っても最初の要素 (無ければ null) に正規化する。 */
+function unwrapEmbed<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+/**
+ * `getByCompetition` の行 → `RelayRecordWithLegs`。
+ *
+ * **legs は legIndex 昇順に整える。** 通算タイムの導出 (`calcCumulativeTimes`) は
+ * 表示側で配列順に完全に依存するため、境界を越える時点で昇順を確定させる
+ * (`relayRankings.ts` の `toRankingLegs` と同じ理由)。
+ */
+function toRelayRecordWithLegs(row: RelayRecordQueryRow): RelayRecordWithLegs {
+  const legs = [...row.relay_record_legs]
+    .sort((a, b) => a.leg_index - b.leg_index)
+    .map((leg) => {
+      const user = unwrapEmbed(leg.users);
+      const style = unwrapEmbed(leg.styles);
+      return {
+        id: leg.id,
+        legIndex: leg.leg_index,
+        userId: leg.user_id,
+        styleId: leg.style_id,
+        legTime: leg.leg_time,
+        reactionTime: leg.reaction_time,
+        recordId: leg.record_id,
+        userName: user?.name ?? null,
+        profileImagePath: user?.profile_image_path ?? null,
+        styleNameJp: style?.name_jp ?? null,
+        styleDistance: style?.distance ?? null,
+      };
+    });
+
+  return {
+    id: row.id,
+    teamId: row.team_id,
+    competitionId: row.competition_id,
+    relayKind: row.relay_kind,
+    legDistance: row.leg_distance,
+    legCount: row.leg_count,
+    poolType: row.pool_type,
+    genderCategory: row.gender_category,
+    totalTime: row.total_time,
+    createdAt: row.created_at,
+    legs,
   };
 }
 
@@ -331,5 +432,65 @@ export class TeamRelayRecordsAPI {
     }
 
     return { failed };
+  }
+
+  /**
+   * 1大会分のリレーのチーム記録を、レグ・泳者・種目込みで取得する。
+   *
+   * Sprint Contract「チーム大会タブ 記録一覧モーダル改修」の D3 境界契約 (PM 確定)。
+   * web (`TeamCompetitionRecordsModal.tsx`) / mobile の両方がこれを呼ぶ**唯一の
+   * 実装**。2箇所に別実装を書かないこと (このファイル冒頭の docstring と同じ理由)。
+   *
+   * `competitionId` だけで絞り込み、`teamId` は引数に取らない。`relay_records` /
+   * `relay_record_legs` の SELECT RLS は「承認済みかつアクティブなチームメンバー」
+   * 一本 (`team_id` 経由) なので、他チームの行は DB 側で自然に除外される。
+   *
+   * @throws 生の `PostgrestError` をそのまま re-throw する。呼び出し元
+   *   (`replace()` と同じ方針) はテーブル名等を含みうる生メッセージをユーザーに
+   *   出さず、`toUserFacingMessage(error, fallback)` 等でフォールバックすること。
+   */
+  static async getByCompetition(
+    supabase: SupabaseClient,
+    competitionId: string,
+  ): Promise<RelayRecordWithLegs[]> {
+    const { data, error } = await supabase
+      .from("relay_records")
+      .select(
+        `
+        id,
+        team_id,
+        competition_id,
+        relay_kind,
+        leg_distance,
+        leg_count,
+        pool_type,
+        gender_category,
+        total_time,
+        created_at,
+        relay_record_legs (
+          id,
+          leg_index,
+          user_id,
+          style_id,
+          leg_time,
+          reaction_time,
+          record_id,
+          users!relay_record_legs_user_id_fkey (
+            name,
+            profile_image_path
+          ),
+          styles!relay_record_legs_style_id_fkey (
+            name_jp,
+            distance
+          )
+        )
+      `,
+      )
+      .eq("competition_id", competitionId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    return ((data ?? []) as unknown as RelayRecordQueryRow[]).map(toRelayRecordWithLegs);
   }
 }

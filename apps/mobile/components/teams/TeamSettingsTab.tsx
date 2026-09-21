@@ -2,14 +2,18 @@
  * チーム詳細「設定」タブ。
  *
  * セクション構成:
- *   チーム情報 (招待コードを内包) / このチームの記録色 /
- *   チーム操作 (見出しなしの2ボタン) / 脱退・削除 (見出しなしの2ボタン)
+ *   チーム情報 (招待コードを内包) / このチームの記録色 / 脱退 (見出しなしの1ボタン)
  *
  * 出し分けは `isAdminView` (= ヘッダーの「管理者ビュー/利用者ビュー」トグルの状態) で行う。
  * 以前は永続的な権限 `isAdmin` を基準にし「effectiveIsAdminView では切り替えないこと」と
  * していたが、**ユーザー指示によりビュー連動に変更した** — 管理者でも利用者ビューの間は
- * 「チーム情報を編集」「チームを削除」を出さない、という見え方を優先する。
- * 権限基準に戻さないこと。
+ * 「チーム情報を編集」を出さない、という見え方を優先する。権限基準に戻さないこと。
+ *
+ * チーム削除機能はユーザー指示により web・mobile 双方の UI から撤去した。
+ * `deleteTeam` API / `useDeleteTeamMutation` / `getDeleteTeamErrorMessageKey` /
+ * i18n の `teams.settingsTab.delete*` キー / RPC `delete_team_preserving_records` は
+ * PM 裁定で shared 側に意図的に残置されている (migration 巻き戻しと shared テストの
+ * 改変を避けるため) が、どちらのアプリからも呼び出す形で復活させないこと。
  *
  * 画面遷移はこのコンポーネントでは行わず、親 (TeamDetailScreen) のコールバックに
  * 委ねる。ナビゲーションの起点を親に集約しておくと、タブ側は描画と API 呼び出しだけを
@@ -20,11 +24,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Alert, ActivityIndicator
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
-import {
-  useDeleteTeamMutation,
-  useLeaveTeamMutation,
-} from "@apps/shared/hooks/queries/teams";
-import { getDeleteTeamErrorMessageKey } from "@apps/shared/api/teams/core";
+import { useLeaveTeamMutation } from "@apps/shared/hooks/queries/teams";
 import { getLeaveBlockReason, type LeaveGuardMember } from "@apps/shared/utils/teamLeaveGuard";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
@@ -50,7 +50,7 @@ export interface TeamSettingsTabProps {
    * (詰め替えると user_id / role が落ちてガードが素通りする)
    */
   members: TeamMembershipWithUser[];
-  /** 脱退・削除に成功してこのチームを離れたとき */
+  /** 脱退に成功してこのチームを離れたとき */
   onLeftTeam?: () => void;
   /** チーム情報を更新したとき */
   onTeamUpdated?: () => void;
@@ -69,7 +69,6 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
   const { t } = useTranslation();
   const { supabase, user } = useAuth();
   const leaveTeamMutation = useLeaveTeamMutation(supabase);
-  const deleteTeamMutation = useDeleteTeamMutation(supabase);
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -85,7 +84,7 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
     [],
   );
 
-  const isBusy = leaveTeamMutation.isPending || deleteTeamMutation.isPending;
+  const isBusy = leaveTeamMutation.isPending;
 
   const handleCopyInviteCode = async () => {
     if (!inviteCode) return;
@@ -131,32 +130,6 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
               onLeftTeam?.();
             } catch (error) {
               setActionError(toUserFacingMessage(error, t("teams.settingsTab.leaveFailed")));
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const handleDeletePress = () => {
-    setActionError(null);
-    Alert.alert(
-      t("teams.settingsTab.deleteConfirmTitle"),
-      t("teams.settingsTab.deleteConfirmMessage", { name: teamName }),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteTeamMutation.mutateAsync(teamId);
-              onLeftTeam?.();
-            } catch (error) {
-              // RPC は機械可読なコードを返すので、i18n キーへの変換は shared の
-              // getDeleteTeamErrorMessageKey が唯一の定義元 (対応表をここに写さない)。
-              // 未知のコードは同関数が deleteFailed へフォールバックさせる
-              setActionError(t(getDeleteTeamErrorMessageKey(error)));
             }
           },
         },
@@ -232,12 +205,13 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
         <TeamCalendarColorSection teamId={teamId} />
       </View>
 
-      {/* 脱退 / 削除（各1枚の説明付きカードを縦積み）。
+      {/* 脱退（説明付きカード1枚）。
           ⚠️ 直前の版は「左右に2ボタン」だったが、ユーザー指示で
           settings/AccountDeleteSettings.tsx と同じカード UI に変更した。
           見た目・余白・ボタン配色はあちらに合わせること（独自スタイルを作らない）。
           「チームを作成 / 招待コードで参加」もユーザー指示で設定タブから撤去済み
-          （チーム一覧画面には引き続きあるので機能は失われない）。 */}
+          （チーム一覧画面には引き続きあるので機能は失われない）。
+          チーム削除はユーザー指示により mobile では提供しない (docstring 参照)。 */}
       <View style={styles.dangerCardBox}>
         <Text style={styles.dangerCardTitle}>{t("teams.settingsTab.leaveTeam")}</Text>
         <Text style={styles.dangerCardDescription}>
@@ -258,29 +232,6 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
           )}
         </Pressable>
       </View>
-
-      {isAdminView && (
-        <View style={styles.dangerCardBox}>
-          <Text style={styles.dangerCardTitle}>{t("teams.settingsTab.deleteTeam")}</Text>
-          <Text style={styles.dangerCardDescription}>
-            {t("teams.settingsTab.deleteDescription")}
-          </Text>
-          <Pressable
-            style={[styles.dangerActionButton, isBusy && styles.dangerActionButtonDisabled]}
-            onPress={handleDeletePress}
-            disabled={isBusy}
-            accessibilityRole="button"
-          >
-            {deleteTeamMutation.isPending ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.dangerActionButtonText}>
-                {t("teams.settingsTab.deleteButton")}
-              </Text>
-            )}
-          </Pressable>
-        </View>
-      )}
 
       {actionError !== null && <Text style={styles.actionErrorText}>{actionError}</Text>}
 
@@ -390,7 +341,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#2563EB",
   },
-  // チーム操作 / 脱退・削除の横並び行。TeamsScreen のアクションバーと同じ見た目に揃える
   // settings/AccountDeleteSettings.tsx と同じカード構成（余白・角丸・配色を揃える）
   dangerCardBox: {
     backgroundColor: "#FFFFFF",
@@ -414,13 +364,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 20,
   },
-  dangerActionButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: "#DC2626",
-    alignItems: "center",
-  },
   // 脱退は「招待コードで復帰できる」ため、復元不能な削除より一段弱い見た目にする。
   // web (TeamSettingsTab) の 脱退=枠線 / 削除=塗り の差をそのまま踏襲する
   // (border-red-300 = #FCA5A5 / text-red-600 = #DC2626)。
@@ -438,19 +381,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#DC2626",
   },
-  // 枠線ボタンなので、塗り用の dangerActionButtonDisabled (背景を #F87171 にする) は使えない。
-  // 背景を塗りつぶさず透過だけ落とす
+  // 枠線ボタンなので、背景を塗りつぶさず透過だけ落とす
   leaveActionButtonDisabled: {
     opacity: 0.6,
-  },
-  dangerActionButtonDisabled: {
-    backgroundColor: "#F87171",
-    opacity: 0.6,
-  },
-  dangerActionButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
   },
   actionErrorText: {
     fontSize: 12,

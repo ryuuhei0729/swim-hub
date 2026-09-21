@@ -25,7 +25,7 @@ import StyleChipSelector from "@/components/forms/StyleChipSelector";
 import { useAuth } from "@/contexts";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { CompetitionAPI } from "@apps/shared/api";
-import { isEntryTabVisible, getTabNavAdjacency } from "@/utils/tabModalUtils";
+import { isEntryTabVisible, getTabNavAdjacency, resolveEntryTabIndex } from "@/utils/tabModalUtils";
 import { isDefaultUntouchedEntry } from "@/utils/tabModalDiff";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { formatTimeBest } from "@/utils/formatters";
@@ -128,6 +128,14 @@ export interface CompetitionTabModalProps {
   existingEntries?: EntryInfo[];
   isLoading: boolean;
   initialTab?: CompetitionTabId;
+  /**
+   * エントリータブの項目サブタブ (「項目1 / 項目2 / +」) を、この entry.id を持つ項目が
+   * アクティブな状態で開く (D9)。未指定、または一致するエントリーが無い場合は先頭タブ
+   * (index 0) にフォールバックする。対応付けは entry.id で行う (style_id ではない。
+   * リレーはレグ別行で同一 style が複数行に現れるため)。このパラメータを渡さない
+   * 既存の呼び出し元は従来どおり先頭タブで開く。
+   */
+  initialEntryId?: string;
   /** エントリー編集をロックする（チーム大会で entry_status が open でない場合など）。true のとき記録入力のみ許可 */
   entryLocked?: boolean;
   /**
@@ -167,6 +175,7 @@ export default function CompetitionTabModal({
   existingEntries = [],
   isLoading,
   initialTab = "competition",
+  initialEntryId,
   entryLocked = false,
   allowParentUpdate = true,
 }: CompetitionTabModalProps) {
@@ -428,6 +437,7 @@ export default function CompetitionTabModal({
           .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
         setOriginalEntryIds(dbIds);
         initialEntriesSnapshotRef.current = JSON.stringify(drafts);
+        setActiveEntryIndex(resolveEntryTabIndex(drafts, initialEntryId));
       }
     }
 
@@ -440,7 +450,7 @@ export default function CompetitionTabModal({
     }
     setIsInitialized(true);
     setActiveTab(initialTab);
-  }, [isOpen, isInitialized, editingData, editingCompetitionId, selectedDate, initialTab]);
+  }, [isOpen, isInitialized, editingData, editingCompetitionId, selectedDate, initialTab, initialEntryId]);
 
   // 編集モード: competition_id から大会本体を DB から再取得し、basicData を DB の実値で上書きする (D-1)。
   // 呼び出し元 (editingData) が渡す値は「初回描画用の暫定値」に過ぎない。mobile の
@@ -531,10 +541,12 @@ export default function CompetitionTabModal({
       setOriginalEntryIds(ids);
       // snapshot は EntryDraft[] で取る(hasUnsavedChangesと型を揃える)
       initialEntriesSnapshotRef.current = JSON.stringify(drafts);
+      // D9: 押した行の entry.id に対応する項目タブをアクティブにする (未指定/該当なしは先頭タブ)
+      setActiveEntryIndex(resolveEntryTabIndex(drafts, initialEntryId));
     };
 
     fetchEntries().catch(() => {});
-  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalEntryIds.length, supabase]);
+  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalEntryIds.length, supabase, initialEntryId]);
 
   // 編集モード: competition_id に紐づく全レコードを DB から取得してフォームを初期化
   useEffect(() => {

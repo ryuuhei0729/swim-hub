@@ -10,8 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
 import { useRouter } from "@/i18n/navigation";
-import { useDeleteTeamMutation, useLeaveTeamMutation } from "@apps/shared/hooks/queries/teams";
-import { getDeleteTeamErrorMessageKey } from "@apps/shared/api/teams/core";
+import { useLeaveTeamMutation } from "@apps/shared/hooks/queries/teams";
 import { getLeaveBlockReason, type LeaveGuardMember } from "@apps/shared/utils/teamLeaveGuard";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -35,9 +34,12 @@ export interface TeamSettingsTabProps {
 /**
  * チーム詳細の「設定」タブ (全メンバー向け)。
  *
- * 縦積み5セクション: チーム情報 / 招待コード / このチームの記録色 /
- * チーム操作 / 危険な操作。管理者だけに出すのは「チーム情報を編集」と
- * 「チームを削除」の2つだけで、残りは全メンバーが使う。
+ * 縦積み3セクション: チーム情報 (招待コード含む) / このチームの記録色 / 脱退。
+ * 管理者だけに出すのは「チーム情報を編集」だけで、残りは全メンバーが使う。
+ *
+ * チーム削除機能は UI から撤去した (ユーザー指示)。`deleteTeam` API /
+ * `useDeleteTeamMutation` / `getDeleteTeamErrorMessageKey` は shared 側に
+ * 意図的に残置されているが、このタブから再び呼び出す形で復活させないこと。
  *
  * チーム名・説明の編集 UI は既存の `TeamSettings` をそのまま使う (再実装しない)。
  */
@@ -53,22 +55,16 @@ export default function TeamSettingsTab({
   // チーム名/説明のラベルは既存 TeamSettings と同じキーを使う (表記を2系統に分けない)
   const tTeamFields = useTranslations("teamsAdmin.settings");
   const tCommon = useTranslations("common");
-  // 名前空間なし = ドット区切りのフルパスで引ける。削除エラーのキーは shared の
-  // getDeleteTeamErrorMessageKey がフルパスで返すのでこちらで受ける
-  const tRoot = useTranslations();
   const router = useRouter();
   const { supabase, user } = useAuth();
 
   const leaveTeamMutation = useLeaveTeamMutation(supabase);
-  const deleteTeamMutation = useDeleteTeamMutation(supabase);
 
   const inviteCodeRef = useRef<HTMLInputElement>(null);
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleCopyInviteCode = async () => {
     if (!inviteCode) return;
@@ -118,21 +114,6 @@ export default function TeamSettingsTab({
     } catch (err) {
       console.error("チーム脱退エラー:", err);
       setLeaveError(toUserFacingMessage(err, t("leaveFailed")));
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    setIsDeleteConfirmOpen(false);
-    setDeleteError(null);
-    try {
-      await deleteTeamMutation.mutateAsync(teamId);
-      router.push("/teams");
-    } catch (err) {
-      console.error("チーム削除エラー:", err);
-      // deleteTeam は **TeamOperationError** (message は表示文言ではなくコード) を投げる。
-      // そのまま表示すると ja/de/ko/zh のユーザーに英語の識別子が出るので、必ず
-      // 共有の対応表でキーへ変換してから t() に通す。
-      setDeleteError(tRoot(getDeleteTeamErrorMessageKey(err)));
     }
   };
 
@@ -237,7 +218,7 @@ export default function TeamSettingsTab({
         <TeamCalendarColorSection teamId={teamId} />
       </section>
 
-      {/* ------------------------------------------------ 破壊的操作
+      {/* ------------------------------------------------ 脱退
           2026-09-16: **前回の「左右2ボタン」構成を撤回**し、1機能 = 1カードの縦積みに変更。
           手本は components/settings/AccountDeleteSettings.tsx (アカウント削除カード)。
           見出し + 説明 + ボタンを揃え、独自のスタイルを作らない。
@@ -246,10 +227,8 @@ export default function TeamSettingsTab({
           中にあり、そのまま写すと影が二重になるため。内側 (アイコン+見出し行 / 説明 /
           エラー / ボタン) は手本と同一。
 
-          「チームを削除」カードは管理者のみ。脱退は全メンバーに出す。
+          チーム削除カードは UI から撤去した (ユーザー指示)。脱退のみ全メンバーに出す。
           見出し (teams.settingsTab.dangerZoneTitle) は引き続き表示しない (キーは残置)。 */}
-
-      {/* 脱退 */}
       <section className="border border-gray-200 rounded-lg p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-2">
           <ExclamationTriangleIcon className="h-5 w-5 text-red-600" aria-hidden="true" />
@@ -275,40 +254,6 @@ export default function TeamSettingsTab({
         </button>
       </section>
 
-      {/* 削除 (管理者のみ) */}
-      {isAdmin && (
-        <section className="border border-gray-200 rounded-lg p-4 sm:p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <ExclamationTriangleIcon className="h-5 w-5 text-red-600" aria-hidden="true" />
-            <h3 className="text-lg font-semibold text-gray-900">{t("deleteTeam")}</h3>
-          </div>
-          <p className="text-sm text-gray-600 mb-4">{t("deleteDescription")}</p>
-          {deleteError && (
-            <div
-              role="alert"
-              className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700"
-            >
-              {deleteError}
-            </div>
-          )}
-          {/* 脱退は枠線ボタン (手本と同一) だが、削除だけは塗りにする。
-              脱退は招待コードで復帰できるのに対し、削除は復元不能で破壊力が一段違うため。
-              塗りの赤は ConfirmDialog の danger ボタンと同じ bg-red-600/hover:bg-red-700。 */}
-          <button
-            type="button"
-            onClick={() => {
-              setDeleteError(null);
-              setIsDeleteConfirmOpen(true);
-            }}
-            disabled={deleteTeamMutation.isPending}
-            data-testid="team-settings-delete"
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-          >
-            {deleteTeamMutation.isPending ? t("deleting") : t("deleteButton")}
-          </button>
-        </section>
-      )}
-
       <ConfirmDialog
         isOpen={isLeaveConfirmOpen}
         variant="danger"
@@ -317,15 +262,6 @@ export default function TeamSettingsTab({
         confirmLabel={t("leaveTeam")}
         onConfirm={() => void handleLeaveConfirm()}
         onCancel={() => setIsLeaveConfirmOpen(false)}
-      />
-      <ConfirmDialog
-        isOpen={isDeleteConfirmOpen}
-        variant="danger"
-        title={t("deleteConfirmTitle")}
-        message={t("deleteConfirmMessage", { name: teamName })}
-        confirmLabel={t("deleteTeam")}
-        onConfirm={() => void handleDeleteConfirm()}
-        onCancel={() => setIsDeleteConfirmOpen(false)}
       />
     </div>
   );

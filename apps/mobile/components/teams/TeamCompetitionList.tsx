@@ -21,7 +21,7 @@ import {
 } from "@apps/shared/hooks/queries/teams";
 import { useUpdateCompetitionMutation } from "@apps/shared/hooks/queries/records";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
-import type { Competition } from "@swim-hub/shared/types";
+import type { Competition, EntryWithDetails } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { formatDate, isCompetitionDateInPast } from "@apps/shared/utils/date";
@@ -65,7 +65,6 @@ const CompetitionItem = React.memo(function CompetitionItem({
   onDelete,
   onEntry,
   onRecord,
-  onEntryBulk,
   onOpenRecords,
 }: {
   competition: Competition;
@@ -75,7 +74,6 @@ const CompetitionItem = React.memo(function CompetitionItem({
   onDelete: (competition: Competition) => void;
   onEntry: (competition: Competition) => void;
   onRecord: (competition: Competition) => void;
-  onEntryBulk: (competition: Competition) => void;
   onOpenRecords: (competition: Competition) => void;
 }) {
   const { t } = useTranslation();
@@ -330,20 +328,22 @@ const CompetitionItem = React.memo(function CompetitionItem({
             style={styles.itemButtonColumn}
             pointerEvents={isStatusMenuOpen ? "none" : "auto"}
           >
-            {/* 未来日 (isEntryTabVisible=true) はエントリー代理入力ボタンのみ、
+            {/* PM 裁定 R3: admin の未来日ボタンは非admin と同じ「エントリー」(このモーダルを
+                開く) に統一する。代理入力への導線はモーダル内の「エントリーを代理入力」
+                ボタンに移動した (カード上に代理入力ボタンは残さない)。
                 それ以外(今日・過去・null・空文字・不正日付)は記録代理入力ボタンのみを排他表示する。
                 isEntryTabVisible は「未来のみ true」を保証するため、フォールバック側
                 (記録代理入力ボタン)に今日・過去・不正値がすべて自然に落ちる。 */}
             {isEntryTabVisible(competition.date) ? (
               <Pressable
-                style={styles.entryBulkButton}
-                onPress={() => onEntryBulk(competition)}
+                style={styles.entryButton}
+                onPress={() => onEntry(competition)}
                 accessibilityRole="button"
-                accessibilityLabel={t("teams.mobile.teamCompetitionList.entryBulkButton")}
+                accessibilityLabel={t("teams.mobile.teamCompetitionList.entryButton")}
               >
-                <Feather name="users" size={13} color="#7C3AED" />
-                <Text style={styles.entryBulkButtonText}>
-                  {t("teams.mobile.teamCompetitionList.entryBulkButton")}
+                <Feather name="log-in" size={13} color="#2563EB" />
+                <Text style={styles.entryButtonText}>
+                  {t("teams.mobile.teamCompetitionList.entryButton")}
                 </Text>
               </Pressable>
             ) : (
@@ -486,17 +486,21 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     });
   }, [navigation, teamId]);
 
-  // 「エントリー」ボタン: Web パリティで受付状況管理モーダルを開く
+  // 「エントリー」ボタン: PM 裁定 R3 により admin/非admin 共通でエントリー一覧モーダルを開く
+  // (admin も最初に見るのは代理入力ボタンではなく、このモーダル)。
   const handleEntry = useCallback((competition: Competition) => {
     setEntryModalCompetition(competition);
   }, []);
 
-  // モーダル内の「種目をエントリー」: 既存の選手セルフエントリー画面へ遷移（機能維持）。
+  // モーダル内の「種目をエントリー」(非admin): 既存の選手セルフエントリー画面へ遷移（機能維持）。
   // web は受付中(open)の大会のみセルフエントリーに到達するため(useTeamEntry.ts:59-64)、
   // 受付中以外では導線を出さない（モーダル側で非表示だが二重ガード）。
   const handleSelfEntry = useCallback((competition: Competition, currentStatus: EntryStatus) => {
-    // モーダル内の現在 status（楽観的更新後の値）でガードする。
-    // prop の competition.entry_status は再フェッチ前は stale なため使わない（dead-click 防止）。
+    // モーダルが表示している status（resolveEntryStatus の結果をそのまま保持した値。R5 で
+    // モーダル内の楽観的更新自体は削除済み）でガードする。
+    // この関数の引数 competition はモーダルを開いた時点でクローズオーバーした値であり、
+    // モーダルが開いている間に受付状況が変わった場合 competition.entry_status は
+    // 再フェッチ前の stale な値になりうるため使わない（dead-click 防止）。
     if (currentStatus !== "open") return;
     setEntryModalCompetition(null);
     navigation.navigate("CompetitionTabForm", {
@@ -507,17 +511,36 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     });
   }, [navigation, teamId]);
 
-  // 「エントリー代理入力」ボタン: admin 専用。管理者代理一括入力画面へ遷移する。
-  // handleEntry（受付状況管理モーダル）/ handleSelfEntry（本人用エントリー導線）とは
-  // 独立した新規ボタンであり、それらの既存動作には影響しない。
+  // モーダル内の「エントリーを代理入力」(admin 専用、要件B後半): 管理者代理一括入力画面へ遷移する。
+  // PM 裁定 R3 によりカード上の代理入力ボタンは撤去され、この導線はモーダル内に一本化された。
   const handleEntryBulk = useCallback((competition: Competition) => {
     if (isAdmin) {
+      setEntryModalCompetition(null);
       navigation.navigate("TeamEntryBulkForm", {
         competitionId: competition.id,
         teamId,
       });
     }
   }, [navigation, teamId, isAdmin]);
+
+  // モーダル内、自分のエントリー行の編集アイコン (要件A / R6・D9): 既存の CompetitionTabFormScreen
+  // (entry タブ) へ遷移する。同画面はログイン中ユーザーの既存エントリーを user_id で
+  // プリフィルする実装を既に持つため、行ごとの entryId 自体は渡さないが、D9 により
+  // 「どの項目タブを開くか」の解決に entry.id (targetEntryId) を渡す。style_id では引かない
+  // (リレーのレグ別行は同一 style が複数行に現れうるため)。
+  const handleEditEntry = useCallback(
+    (competition: Competition, entry: EntryWithDetails) => {
+      setEntryModalCompetition(null);
+      navigation.navigate("CompetitionTabForm", {
+        competitionId: competition.id,
+        date: competition.date,
+        teamId,
+        initialTab: "entry",
+        targetEntryId: entry.id,
+      });
+    },
+    [navigation, teamId],
+  );
 
   const handleRecord = useCallback((competition: Competition) => {
     // admin は一括代理入力画面へ、非 admin は個人フロー(CompetitionTabForm)へ分岐。
@@ -579,7 +602,6 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
       onDelete={handleDelete}
       onEntry={handleEntry}
       onRecord={handleRecord}
-      onEntryBulk={handleEntryBulk}
       onOpenRecords={handleOpenRecords}
     />
   ), [
@@ -589,7 +611,6 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     handleDelete,
     handleEntry,
     handleRecord,
-    handleEntryBulk,
     handleOpenRecords,
   ]);
 
@@ -679,21 +700,17 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
           competitionTitle={
             entryModalCompetition.title || t("teams.mobile.fallbackCompetitionTitle")
           }
-          teamId={teamId}
+          // PM 裁定 R1: 生の entry_status ではなく、大会日が過去かどうかを織り込んだ
+          // 実効ステータス (resolveEntryStatus の戻り値) を渡す。モーダル内の行単位の
+          // 編集/削除アイコン表示判定・セルフエントリー導線もこの値を基準にする。
           entryStatus={resolveEntryStatus(
             entryModalCompetition.date,
             entryModalCompetition.entry_status,
           )}
-          // このモーダルを開く唯一の導線は非admin の entryButton (L408:
-          // `isEntryTabVisible(competition.date) ? ... : ...` の true 側) であり、
-          // isEntryTabVisible は date が厳密未来 (date > today) のときだけ true を返す。
-          // 一方 isCompetitionDateInPast は date が昨日以前 (date < today) のときだけ true を
-          // 返すため、両者が同時に true になる区間は存在しない (date > today と date < today
-          // は排他)。よってこの呼び出しで isPastDate が true になることは無いが、
-          // 直接呼び出し（テスト等）に対する保険として渡し続ける。
-          isPastDate={isCompetitionDateInPast(entryModalCompetition.date)}
           isAdmin={isAdmin}
           onSelfEntry={(currentStatus) => handleSelfEntry(entryModalCompetition, currentStatus)}
+          onEditEntry={(entry) => handleEditEntry(entryModalCompetition, entry)}
+          onAdminBulkEntry={() => handleEntryBulk(entryModalCompetition)}
         />
       )}
 
@@ -967,21 +984,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#059669",
-  },
-  entryBulkButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#7C3AED",
-  },
-  entryBulkButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#7C3AED",
   },
   centerContainer: {
     flex: 1,

@@ -19,7 +19,6 @@ import {
   TrophyIcon,
   PencilSquareIcon,
   ClipboardDocumentListIcon,
-  ClipboardDocumentCheckIcon,
   EyeIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
@@ -36,14 +35,17 @@ import { TeamRecordsAPI } from "@apps/shared/api/teams/records";
 import { useInvalidateTeamRankings } from "@apps/shared/hooks/queries/useInvalidateTeamRankings";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { RecordAPI } from "@apps/shared/api/records";
+import { EntryAPI } from "@apps/shared/api/entries";
 import RecordLogForm from "@/components/forms/record-log/RecordLogForm";
+import CompetitionTabModal from "@/components/forms/CompetitionTabModal";
+import { useCompetitionTabSave } from "@/hooks/useCompetitionTabSave";
 import type {
   RecordLogEditData,
   RecordLogFormData,
   StyleOption,
 } from "@/components/forms/record-log/types";
 import type { EntryInfo } from "@apps/shared/types/ui";
-import type { RecordInsert, RecordUpdate, PoolType } from "@apps/shared/types";
+import type { RecordInsert, RecordUpdate, PoolType, Style } from "@apps/shared/types";
 import { isPoolType } from "@apps/shared/types";
 import type { EditingData } from "@/stores/types";
 
@@ -247,6 +249,20 @@ export default function TeamCompetitions({
   const [selfRecordExistingRecords, setSelfRecordExistingRecords] = useState<
     RawSelfRecordEntry[]
   >([]);
+  // エントリー編集/追加 (D2/D6, R6) 用の種目一覧。selfRecordStyles と同じ設計方針
+  // (モーダルを開くタイミングで遅延取得。TeamCompetitionEntryModal を開くたびではなく
+  // CompetitionTabModal を開く直前にのみ取得する)
+  const [entryEditorStyles, setEntryEditorStyles] = useState<Style[]>([]);
+  // TeamCompetitionEntryModal 強制再マウント用 (CompetitionTabModal.tsx の modalNonce と同型)。
+  // CompetitionTabModal はエントリー編集完了後に自身を閉じるだけで、下に残った
+  // TeamCompetitionEntryModal の一覧は自動更新されない (isOpen は変わらないため isOpen effect が
+  // 再発火しない)。key を変えて強制的に再マウントし、保存直後に最新のエントリー一覧を再取得させる。
+  const [entryModalNonce, setEntryModalNonce] = useState(0);
+  // 編集アイコンから開いたときに項目タブをアクティブにする対象 entry.id (D9)。
+  // 「エントリーを追加」ボタンから開く場合は undefined のまま (先頭タブにフォールバック)。
+  const [entryEditorTargetEntryId, setEntryEditorTargetEntryId] = useState<string | undefined>(
+    undefined,
+  );
   const pageSize = 20;
 
   const {
@@ -257,6 +273,15 @@ export default function TeamCompetitions({
     openBasicForm,
     closeBasicForm,
     setLoading: setFormLoading,
+    // タブモーダル (エントリー編集/追加。D2/D6, R6): CompetitionBasicForm と
+    // isOpen/isBasicFormOpen が排他制御されることを除き selectedDate/editingData/isLoading の
+    // 状態スロットは共有する (store 自身の設計。openTabModal が isBasicFormOpen を false にする)
+    isOpen: isEntryTabModalOpen,
+    editingCompetitionId: entryTabEditingCompetitionId,
+    openTabModal,
+    closeTabModal,
+    setEditingCompetitionId: setEntryTabEditingCompetitionId,
+    setCreatedEntries: setEntryTabCreatedEntries,
   } = useCompetitionStore();
 
   // チームの大会一覧を取得（関数として抽出）
@@ -472,12 +497,6 @@ export default function TeamCompetitions({
     router.push(`/teams/${teamId}/competitions/${competitionId}/records`);
   };
 
-  // エントリー代理一括入力ページへ遷移
-  const handleEntryBulkInputClick = (e: React.MouseEvent, competitionId: string) => {
-    e.stopPropagation(); // 親要素のクリックイベントを停止
-    router.push(`/teams/${teamId}/competitions/${competitionId}/entries`);
-  };
-
   // エントリー管理モーダルを開く
   const handleEntryClick = (
     e: React.MouseEvent,
@@ -572,6 +591,107 @@ export default function TeamCompetitions({
     setSelfRecordCompetition(null);
     setSelfRecordExistingRecords([]);
   };
+
+  // 自分のエントリーを追加/編集する画面 (CompetitionTabModal のエントリータブ) を開く
+  // (要件A/B後半 / D2・D6, R6)。TeamCompetitionEntryModal の編集アイコン・
+  // 「種目をエントリー」ボタンの両方から呼ばれる。TeamCompetitionEntryModal は開いたまま
+  // 残し、CompetitionTabModal をその上に重ねて表示する
+  // (CompetitionClient.tsx の CompetitionDetailModal + CompetitionTabModal と同じ既存パターン)。
+  // targetEntryId (D9): 編集アイコンから呼ばれた場合はその entry.id を渡し、
+  // CompetitionTabModal のエントリー項目タブをその entry.id に対応するタブでアクティブにする。
+  // 「種目をエントリー」ボタンからは引数なしで呼ばれ、先頭タブにフォールバックする。
+  const handleOpenEntryEditor = useCallback((targetEntryId?: string) => {
+    if (!selectedCompetition) return;
+    setEntryEditorTargetEntryId(targetEntryId);
+    const parsedDate = new Date(`${selectedCompetition.date}T00:00:00`);
+    openTabModal(
+      isValid(parsedDate) ? parsedDate : new Date(),
+      {
+        id: selectedCompetition.id,
+        type: "competition",
+        date: selectedCompetition.date,
+        title: selectedCompetition.title,
+        place: selectedCompetition.place || "",
+        pool_type: selectedCompetition.pool_type,
+      } as EditingData,
+      "entry",
+    );
+    // 種目一覧を非同期取得(モーダルは即座に開く。selfRecordStyles と同じ degrade 方針)
+    (async () => {
+      try {
+        const styleAPI = new StyleAPI(supabase);
+        setEntryEditorStyles(await styleAPI.getStyles());
+      } catch (err) {
+        console.error("種目一覧の取得に失敗:", err);
+      }
+    })();
+  }, [selectedCompetition, openTabModal, supabase]);
+
+  // エントリータブ保存 (CompetitionTabModal 共通フック)。
+  // allowParentUpdate: false — この画面から開くのは常に「自分のエントリーの追加/編集」のみで、
+  // 大会本体 (basicData) の編集は行わせない (大会本体の編集は既存の handleEditCompetition /
+  // CompetitionBasicForm 経路が別に存在する)。editingCompetitionId は常に既存のチーム大会の ID が
+  // 入っているため、createCompetition / updateCompetition は実際には呼ばれない
+  // (createCompetition は !competitionId の新規作成時のみ、updateCompetition は
+  // allowParentUpdate === true のときのみ呼ばれる)。呼ばれない前提でも型を満たす必要があるため、
+  // 他の画面 (handleCompetitionBasicSubmit / handleSelfRecordSubmit) と同じ API クラスで実装する。
+  const handleEntryTabSave = useCompetitionTabSave({
+    supabase,
+    user,
+    styles: entryEditorStyles,
+    createCompetition: async (competition) => {
+      if (!user) throw new Error(t("competitionForm.authRequired"));
+      const api = new TeamRecordsAPI(supabase);
+      return api.create({ ...competition, user_id: user.id, team_id: teamId });
+    },
+    updateCompetition: async (id, updates) => {
+      const api = new TeamRecordsAPI(supabase);
+      return api.update(id, updates);
+    },
+    createRecord: async (record) => {
+      const recordAPI = new RecordAPI(supabase);
+      return recordAPI.createRecord(record);
+    },
+    updateRecord: async (id, updates) => {
+      const recordAPI = new RecordAPI(supabase);
+      return recordAPI.updateRecord(id, updates);
+    },
+    deleteRecord: async (id) => {
+      const recordAPI = new RecordAPI(supabase);
+      await recordAPI.deleteRecord(id);
+    },
+    deleteEntry: async (id) => {
+      const entryAPI = new EntryAPI(supabase);
+      await entryAPI.deleteEntry(id);
+    },
+    createSplitTimes: async ({ recordId, splitTimes }) => {
+      const recordAPI = new RecordAPI(supabase);
+      return recordAPI.createSplitTimes(
+        splitTimes.map((st) => ({
+          record_id: recordId,
+          distance: st.distance,
+          split_time: st.split_time ?? st.splitTime ?? 0,
+        })),
+      );
+    },
+    replaceSplitTimes: async ({ recordId, splitTimes }) => {
+      const recordAPI = new RecordAPI(supabase);
+      return recordAPI.replaceSplitTimes(recordId, splitTimes);
+    },
+    setCompetitionLoading: setFormLoading,
+    setEditingCompetitionId: setEntryTabEditingCompetitionId,
+    setCreatedEntries: setEntryTabCreatedEntries,
+    closeCompetitionTabModal: closeTabModal,
+    onSaved: () => {
+      // CompetitionTabModal は保存成功時に自身を閉じるだけで、下に残っている
+      // TeamCompetitionEntryModal の一覧・カード一覧は自動更新されない。
+      // entryModalNonce を bump して TeamCompetitionEntryModal を強制再マウントし、
+      // カード一覧も合わせて再読み込みする (SC1)。
+      setEntryModalNonce((n) => n + 1);
+      loadTeamCompetitions();
+    },
+    allowParentUpdate: false,
+  });
 
   // 自分の記録が対象大会にエントリー済みの場合、エントリー内容をフォームの初期値として渡す
   const selfRecordEntryDataList = useMemo<EntryInfo[]>(() => {
@@ -984,19 +1104,10 @@ export default function TeamCompetitions({
                           {t("competitions.selfRecordButton")}
                         </button>
 
-                        {/* エントリー代理一括入力ボタン（adminのみ。記録入力ボタンと構造的に対等な
-                            admin専用ページへの導線のため、同じプライマリ配色に揃える） */}
-                        {isAdmin && (
-                          <button
-                            onClick={(e) =>
-                              handleEntryBulkInputClick(e, competition.id)
-                            }
-                            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                          >
-                            <ClipboardDocumentCheckIcon className="h-4 w-4 mr-1" />
-                            {t("competitions.card.entryBulkInputButton")}
-                          </button>
-                        )}
+                        {/* エントリー代理一括入力ボタンはカードから撤去し、エントリー管理モーダル内へ
+                            移設した (R4)。admin はカードの「エントリー」ボタン (上) からモーダルを開き、
+                            モーダル内の「エントリーを代理入力」ボタンからこのページへ遷移する
+                            (TeamCompetitionEntryModal.tsx の handleAdminBulkEntryClick)。 */}
 
                         {/* 記録入力ボタン（adminのみ） */}
                         {isAdmin && (
@@ -1108,6 +1219,7 @@ export default function TeamCompetitions({
       {/* エントリー管理モーダル */}
       {showEntryModal && selectedCompetition && (
         <TeamCompetitionEntryModal
+          key={`${selectedCompetition.id}-${entryModalNonce}`}
           isOpen={showEntryModal}
           onClose={() => {
             setShowEntryModal(false);
@@ -1120,8 +1232,29 @@ export default function TeamCompetitions({
             selectedCompetition.title || t("competitions.fallbackTitle")
           }
           teamId={teamId}
+          onOpenSelfEntry={handleOpenEntryEditor}
         />
       )}
+
+      {/* エントリー編集/追加タブモーダル (要件A/B後半 / D2・D6, R6)。
+          TeamCompetitionEntryModal の上に重ねて開く (CompetitionClient.tsx と同じ既存パターン) */}
+      <CompetitionTabModal
+        isOpen={isEntryTabModalOpen}
+        onClose={closeTabModal}
+        onSave={handleEntryTabSave}
+        selectedDate={selectedDate || new Date()}
+        editingData={editingData}
+        editingCompetitionId={entryTabEditingCompetitionId}
+        styles={entryEditorStyles.map((s) => ({
+          id: s.id.toString(),
+          nameJp: s.name_jp,
+          distance: s.distance,
+        }))}
+        isLoading={formLoading}
+        initialTab="entry"
+        initialEntryId={entryEditorTargetEntryId}
+        allowParentUpdate={false}
+      />
 
       {/* 記録一覧モーダル */}
       {showRecordsModal && selectedCompetitionForRecords && (

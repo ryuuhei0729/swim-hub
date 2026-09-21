@@ -13,6 +13,20 @@ interface BestTimeBadgeProps {
   recordDate?: string | null;
   poolType?: number | null;
   isRelaying?: boolean;
+  /**
+   * 判定対象のユーザー id。未指定時はログインユーザー (`user?.id`) にフォールバックする
+   * (後方互換)。チーム記録一覧のようにログインユーザー以外の記録を判定する画面は
+   * 明示的に渡すこと (根拠は Success Criteria「他メンバーの記録でも、その人の userId
+   * で判定される」)。
+   */
+  userId?: string;
+  /**
+   * true の場合、フォントサイズ/パディングを一段小さくして表示する
+   * (`transform: scale()` は使わない。チーム大会記録一覧のような密なリスト行向け)。
+   * mobile `components/records/BestTimeBadge.tsx` の同名 prop とパリティを揃える。
+   * 未指定時は既存の見た目のまま (後方互換)。
+   */
+  compact?: boolean;
 }
 
 /**
@@ -35,10 +49,13 @@ export default function BestTimeBadge({
   recordDate,
   poolType,
   isRelaying,
+  userId: userIdProp,
+  compact,
 }: BestTimeBadgeProps) {
   const { supabase, user } = useAuth();
   const t = useTranslations("common");
-  const userId = user?.id;
+  const userId = userIdProp ?? user?.id;
+  const sizeClasses = compact ? "px-1 py-0.5 text-[10px]" : "px-1.5 py-0.5 text-xs";
 
   // ガード条件: 未認証、または styleId / recordDate が falsy な場合はフェッチせず非表示
   const canJudge = !!userId && !!styleId && !!recordDate;
@@ -68,7 +85,9 @@ export default function BestTimeBadge({
 
   if (badgeState.kind === "first") {
     return (
-      <span className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-600 whitespace-nowrap">
+      <span
+        className={`inline-flex items-center rounded font-medium bg-amber-50 text-amber-600 whitespace-nowrap ${sizeClasses}`}
+      >
         {t("bestBadge.first")}
       </span>
     );
@@ -77,7 +96,7 @@ export default function BestTimeBadge({
   const isBest = badgeState.kind === "best";
   return (
     <span
-      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium whitespace-nowrap ${
+      className={`inline-flex items-center rounded font-medium whitespace-nowrap ${sizeClasses} ${
         isBest ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
       }`}
     >

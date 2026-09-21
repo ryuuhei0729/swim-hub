@@ -74,6 +74,7 @@ import {
 } from "@/utils/tabFormUtils";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
+import { resolveInitialEntryTabIndex } from "@/utils/entryTabIndex";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
 
@@ -172,6 +173,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     date: initialDateParam,
     teamId,
     initialTab,
+    targetEntryId,
   } = route.params;
   const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
@@ -438,6 +440,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
               }))
             : [createEmptyEntry()];
         setEntries(initialEntries);
+        // Sprint Contract D9: targetEntryId (entries.id) に対応する行の項目タブを開く。
+        // 未指定・該当行なしのときは resolveInitialEntryTabIndex が先頭 (0) を返す
+        // (既存呼び出し元の非退行、および他端末での直前削除等のフォールバック)。
+        setActiveEntryIndex(
+          resolveInitialEntryTabIndex(initialEntries, targetEntryId),
+        );
 
         // レースレコードデータ取得 (C-5: 編集モードで既存レコードを初期化)
         // RecordAPI に competition_id フィルタ付きメソッドが無いため getRecords() で全件取得後

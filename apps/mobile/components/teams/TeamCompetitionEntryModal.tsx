@@ -14,12 +14,10 @@ import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthProvider";
 import { EntryAPI } from "@apps/shared/api/entries";
-import { useUpdateCompetitionMutation } from "@apps/shared/hooks/queries/records";
-import { teamKeys } from "@apps/shared/hooks/queries/keys";
-import { useQueryClient } from "@tanstack/react-query";
 import type { EntryWithDetails } from "@swim-hub/shared/types";
 import { formatTimeBest } from "@apps/shared/utils/time";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { canEditOrDeleteEntryRow } from "@/utils/entryRowPermissions";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
 
 /** 背面タップでは閉じない (元実装どおり、背面タップ用の Pressable が存在しない) */
@@ -32,24 +30,27 @@ interface TeamCompetitionEntryModalProps {
   onClose: () => void;
   competitionId: string;
   competitionTitle: string;
-  teamId: string;
   entryStatus: EntryStatus;
-  // 大会日が過去かどうか。true のときはステータス変更セグメントを disabled にし、
-  // 「大会日を過ぎたため自動的に受付終了」の説明を表示する (DB 値は書き換えない)。
-  // 既存呼び出し元との後方互換のため optional・デフォルト false。
-  isPastDate?: boolean;
   isAdmin: boolean;
-  // 現在のモーダル内 status（楽観的更新後の値）を渡し、呼び出し側ガードが
-  // prop の stale な entry_status ではなく同一ソースで判定できるようにする（dead-click 防止）。
+  // R5 でステータス変更 (楽観的更新) はこのモーダルから削除済みで、status はもう書き換わらない
+  // (親から渡された entryStatus をそのまま保持するだけの値)。それでも呼び出し側 (親コンポーネント)
+  // が持つ prop の competition.entry_status は再フェッチ前は stale な場合があるため、
+  // 同一ソース (このモーダルが表示している値) で判定させる目的で引数として渡す（dead-click 防止）。
   onSelfEntry: (currentStatus: EntryStatus) => void;
+  // Sprint Contract R6/D9: 編集はモーダル内にインラインフォームを作らず、既存の
+  // CompetitionTabFormScreen (entry タブ) へ遷移する。D9 により、押した行の entry.id を
+  // CompetitionTabForm の targetEntryId route param に渡し、対応する項目タブを開いた状態で
+  // 表示する必要があるため、対象の行 (EntryWithDetails) を丸ごと渡す。
+  onEditEntry: (entry: EntryWithDetails) => void;
+  // Sprint Contract R3: admin のカードボタンは「エントリー」(このモーダルを開く) に統一され、
+  // 代理入力への導線はこのモーダル内のボタンに移動した。
+  onAdminBulkEntry: () => void;
 }
 
 interface EntryGroup {
   style: { id: number; name_jp: string; distance: number } | null;
   entries: EntryWithDetails[];
 }
-
-const STATUS_ORDER: EntryStatus[] = ["before", "open", "closed"];
 
 // 種目別にエントリーをグルーピング（Web の loadEntries 相当）
 function groupEntriesByStyle(
@@ -79,28 +80,28 @@ export function TeamCompetitionEntryModal({
   onClose,
   competitionId,
   competitionTitle,
-  teamId,
   entryStatus,
-  isPastDate = false,
   isAdmin,
   onSelfEntry,
+  onEditEntry,
+  onAdminBulkEntry,
 }: TeamCompetitionEntryModalProps) {
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const entryApi = useMemo(
     () => new EntryAPI(supabase as SupabaseClient),
     [supabase],
-  );
-  const updateMutation = useUpdateCompetitionMutation(
-    supabase as SupabaseClient,
   );
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<EntryWithDetails[]>([]);
-  // 受付状況は楽観的更新のためローカル state で保持（初期値は親から）
+  // 受付状況は resolveEntryStatus (isPastDate 込みの実効ステータス) を親から受け取った
+  // 値をそのまま保持する。ステータス変更はカード上プルダウンに一本化済み(R5)のため、
+  // このモーダル内で楽観的に書き換えることはない。
   const [status, setStatus] = useState<EntryStatus>(entryStatus);
+  // 削除処理中のエントリー行 (二重タップ防止)
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   const loadEntries = useCallback(async () => {
     try {
@@ -129,65 +130,47 @@ export function TeamCompetitionEntryModal({
     [t],
   );
 
-  const performStatusChange = useCallback(
-    async (next: EntryStatus) => {
-      const previous = status;
-      // 楽観的更新
-      setStatus(next);
-      try {
-        await updateMutation.mutateAsync({
-          id: competitionId,
-          updates: { entry_status: next },
-        });
-        // 既存 mutation の onSuccess は recordKeys のみ更新するため、
-        // チーム大会一覧キーを明示的に無効化してバッジを再表示させる
-        queryClient.invalidateQueries({
-          queryKey: teamKeys.competitions(teamId),
-        });
-        await loadEntries();
-      } catch (err) {
-        // 失敗時はロールバック
-        setStatus(previous);
-        console.error(
-          "TeamCompetitionEntryModal: failed to update status",
-          err,
-        );
-        const msg = toUserFacingMessage(err, t("teams.mobile.teamCompetitionEntryModal.saveFailed"));
-        Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);
-      }
-    },
-    [
-      status,
-      updateMutation,
-      competitionId,
-      queryClient,
-      teamId,
-      loadEntries,
-      t,
-    ],
-  );
-
-  const handleStatusChange = useCallback(
-    (next: EntryStatus) => {
-      // 現在値と同値は no-op（Web パリティ）
-      if (next === status) return;
-
-      const confirmKey = `teams.mobile.teamCompetitionEntryModal.confirm${capitalize(next)}`;
+  // Sprint Contract D1: 確認 Alert → EntryAPI.deleteEntry(entry.id) → loadEntries() 再取得。
+  // R2: 行単位のみの削除であり、他選手のレグ行には触れない。確認文言は種目非依存の
+  // 汎用文言 (deleteConfirmMessage) を使い、追加の警告文言は出さない。
+  const handleDeleteEntry = useCallback(
+    (entry: EntryWithDetails) => {
       Alert.alert(
-        t("teams.mobile.teamCompetitionEntryModal.confirmTitle"),
-        t(confirmKey),
+        t("teams.mobile.teamCompetitionEntryModal.deleteConfirmTitle"),
+        t("teams.mobile.teamCompetitionEntryModal.deleteConfirmMessage"),
         [
           { text: t("common.cancel"), style: "cancel" },
-          { text: t("common.ok"), onPress: () => performStatusChange(next) },
+          {
+            text: t("common.delete"),
+            style: "destructive",
+            onPress: async () => {
+              setDeletingEntryId(entry.id);
+              try {
+                await entryApi.deleteEntry(entry.id);
+                await loadEntries();
+              } catch (err) {
+                console.error(
+                  "TeamCompetitionEntryModal: failed to delete entry",
+                  err,
+                );
+                const msg = toUserFacingMessage(
+                  err,
+                  t("teams.mobile.teamCompetitionEntryModal.deleteFailed"),
+                );
+                Alert.alert(t("common.error"), msg, [{ text: t("common.ok") }]);
+              } finally {
+                setDeletingEntryId(null);
+              }
+            },
+          },
         ],
       );
     },
-    [status, performStatusChange, t],
+    [entryApi, loadEntries, t],
   );
 
   const grouped = useMemo(() => groupEntriesByStyle(entries), [entries]);
   const groupedEntries = useMemo(() => Object.entries(grouped), [grouped]);
-  const isSaving = updateMutation.isPending;
 
   return (
     <SlideUpModal
@@ -230,92 +213,58 @@ export function TeamCompetitionEntryModal({
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
       >
-        {/* 受付状況管理 */}
+        {/* 受付状況表示。PM 裁定 R5: ステータス変更セグメントは削除し、
+            TeamCompetitionList.tsx のカード上プルダウンに一本化する。admin も
+            このモーダル内では read-only バッジのみを見る (両者で分岐しない)。 */}
         <View style={styles.statusSection}>
           <Text style={styles.sectionLabel}>
             {t("teams.mobile.teamCompetitionEntryModal.entryStatusLabel")}
           </Text>
-          {/*
-            Sprint Contract (mobile 管理者ビュー チーム大会タブ改修) により、この分岐
-            (isAdmin === true 側のセグメント UI) は現在到達不能なデッドコードになっている。
-            このモーダルを開く唯一の経路は TeamCompetitionList.tsx の非 admin 用「エントリー」
-            ボタン (isAdmin=false) のみになり、admin のステータス変更は同ファイルのカード上
-            プルダウン (statusDropdownWrapper/statusMenuPanel) に移行済み。performStatusChange
-            や確認ダイアログのロジックがコメント文言まで含めて2ファイルに重複しているが、
-            未解決項目がある中でのリファクタを避けるため今回は共通化しない
-            (次スプリントの課題とする)。
-          */}
-          {isAdmin ? (
-            <>
-              <View style={styles.segmentRow}>
-                {STATUS_ORDER.map((s) => {
-                  const active = s === status;
-                  const segmentDisabled = isSaving || isPastDate;
-                  return (
-                    <Pressable
-                      key={s}
-                      style={[
-                        styles.segment,
-                        active && segmentActiveStyle(s),
-                        segmentDisabled && styles.segmentDisabled,
-                      ]}
-                      onPress={() => handleStatusChange(s)}
-                      disabled={segmentDisabled}
-                      accessibilityRole="button"
-                      accessibilityState={{
-                        selected: active,
-                        disabled: segmentDisabled,
-                      }}
-                      accessibilityLabel={t(
-                        "teams.mobile.teamCompetitionEntryModal.changeStatusAria",
-                        { status: getStatusLabel(s) },
-                      )}
-                    >
-                      <Text
-                        style={[
-                          styles.segmentText,
-                          active && segmentActiveTextStyle(s),
-                        ]}
-                      >
-                        {getStatusLabel(s)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              {isPastDate && (
-                <Text style={styles.pastDateNotice}>
-                  {t("teams.mobile.teamCompetitionEntryModal.pastDateNotice")}
-                </Text>
-              )}
-            </>
-          ) : (
-            <View style={[styles.readBadge, badgeStyle(status)]}>
-              <Text style={[styles.readBadgeText, badgeTextStyle(status)]}>
-                {getStatusLabel(status)}
-              </Text>
-            </View>
-          )}
+          <View style={[styles.readBadge, badgeStyle(status)]}>
+            <Text style={[styles.readBadgeText, badgeTextStyle(status)]}>
+              {getStatusLabel(status)}
+            </Text>
+          </View>
         </View>
 
-        {/* 選手のセルフエントリー導線（種目入力）。
-                web は受付中(open)の大会のみセルフエントリー画面に到達するため(useTeamEntry.ts:59-64)、
-                受付中以外では導線を表示しない。 */}
-        {status === "open" && (
-          <Pressable
-            style={styles.selfEntryButton}
-            onPress={() => onSelfEntry(status)}
-            accessibilityRole="button"
-            accessibilityLabel={t(
-              "teams.mobile.teamCompetitionEntryModal.selfEntryButton",
-            )}
-          >
-            <Feather name="edit-3" size={15} color="#2563EB" />
-            <Text style={styles.selfEntryButtonText}>
-              {t("teams.mobile.teamCompetitionEntryModal.selfEntryButton")}
-            </Text>
-          </Pressable>
-        )}
+        {/* 種目エントリー導線。非admin は自分のエントリー入力へ、admin は代理入力へ (要件B後半)。
+            web は受付中(open)の大会のみセルフエントリー画面に到達するため(useTeamEntry.ts:59-64)、
+            受付中以外では導線を表示しない (admin の代理入力ボタンも同じ条件に揃える)。
+            D10 改訂: 「自分のエントリー0件で非表示」ルールはユーザーが撤回したため、
+            自分のエントリー件数に関係なく status === "open" のみで表示する
+            (admin/非admin ともに、この条件だけで分岐しない)。 */}
+        {status === "open" &&
+          (isAdmin ? (
+            <Pressable
+              style={styles.selfEntryButton}
+              onPress={onAdminBulkEntry}
+              accessibilityRole="button"
+              accessibilityLabel={t(
+                "teams.mobile.teamCompetitionEntryModal.adminBulkEntryButton",
+              )}
+            >
+              <Feather name="users" size={15} color="#2563EB" />
+              <Text style={styles.selfEntryButtonText}>
+                {t(
+                  "teams.mobile.teamCompetitionEntryModal.adminBulkEntryButton",
+                )}
+              </Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={styles.selfEntryButton}
+              onPress={() => onSelfEntry(status)}
+              accessibilityRole="button"
+              accessibilityLabel={t(
+                "teams.mobile.teamCompetitionEntryModal.selfEntryButton",
+              )}
+            >
+              <Feather name="edit-3" size={15} color="#2563EB" />
+              <Text style={styles.selfEntryButtonText}>
+                {t("teams.mobile.teamCompetitionEntryModal.selfEntryButton")}
+              </Text>
+            </Pressable>
+          ))}
 
         {/* エントリー一覧 */}
         {loading && (
@@ -352,43 +301,96 @@ export function TeamCompetitionEntryModal({
 
         {!loading &&
           !error &&
-          groupedEntries.map(([styleId, group]) => (
-            <View key={styleId} style={styles.styleGroup}>
-              <View style={styles.styleHeader}>
-                <Text style={styles.styleHeaderText}>
-                  {group.style?.name_jp ??
-                    t(
-                      "teams.mobile.teamCompetitionEntryModal.unknownStyle",
-                    )}{" "}
-                  ({group.entries.length})
-                </Text>
-              </View>
-              {group.entries.map((entry, index) => (
-                <View key={entry.id} style={styles.entryRow}>
-                  <View style={styles.entryInfo}>
-                    <Text style={styles.entryName} numberOfLines={1}>
-                      {index + 1}.{" "}
-                      {entry.user?.name ??
-                        t("teams.mobile.teamCompetitionEntryModal.unknownUser")}
-                    </Text>
-                    {entry.entry_time != null && (
-                      <Text style={styles.entryTime}>
-                        {t(
-                          "teams.mobile.teamCompetitionEntryModal.entryTimeLabel",
-                        )}{" "}
-                        <Text style={styles.entryTimeValue}>
-                          {formatTimeBest(entry.entry_time)}
-                        </Text>
-                      </Text>
-                    )}
-                    {entry.note && (
-                      <Text style={styles.entryNote}>{entry.note}</Text>
-                    )}
-                  </View>
+          groupedEntries.map(([styleId, group]) => {
+            const styleLabel =
+              group.style?.name_jp ??
+              t("teams.mobile.teamCompetitionEntryModal.unknownStyle");
+            return (
+              <View key={styleId} style={styles.styleGroup}>
+                <View style={styles.styleHeader}>
+                  <Text style={styles.styleHeaderText}>
+                    {t("teams.mobile.teamCompetitionEntryModal.styleGroupHeader", {
+                      style: styleLabel,
+                      count: group.entries.length,
+                    })}
+                  </Text>
                 </View>
-              ))}
-            </View>
-          ))}
+                {group.entries.map((entry, index) => {
+                  // Sprint Contract R1: 生の entry_status ではなく、大会日が過去かを
+                  // 織り込んだ実効ステータス (このモーダルの status state) で判定する。
+                  // SC3/SC8: 他ユーザーの行には出さず、admin 自身の行には出す
+                  // (isAdmin では分岐しない)。
+                  const canManage = canEditOrDeleteEntryRow(
+                    entry.user_id,
+                    user?.id,
+                    status,
+                  );
+                  return (
+                    <View key={entry.id} style={styles.entryRow}>
+                      <View style={styles.entryRowContent}>
+                        <View style={styles.entryInfo}>
+                          <Text style={styles.entryName} numberOfLines={1}>
+                            {index + 1}.{" "}
+                            {entry.user?.name ??
+                              t(
+                                "teams.mobile.teamCompetitionEntryModal.unknownUser",
+                              )}
+                          </Text>
+                          {entry.entry_time != null && (
+                            <Text style={styles.entryTime}>
+                              {t(
+                                "teams.mobile.teamCompetitionEntryModal.entryTimeLabel",
+                              )}{" "}
+                              <Text style={styles.entryTimeValue}>
+                                {formatTimeBest(entry.entry_time)}
+                              </Text>
+                            </Text>
+                          )}
+                          {entry.note && (
+                            <Text style={styles.entryNote}>{entry.note}</Text>
+                          )}
+                        </View>
+                        {canManage && (
+                          <View style={styles.entryRowActions}>
+                            <Pressable
+                              style={styles.entryActionButton}
+                              onPress={() => onEditEntry(entry)}
+                              accessibilityRole="button"
+                              accessibilityLabel={t(
+                                "teams.mobile.teamCompetitionEntryModal.editEntryAria",
+                                { style: styleLabel },
+                              )}
+                            >
+                              <Feather name="edit" size={16} color="#2563EB" />
+                            </Pressable>
+                            <Pressable
+                              style={[
+                                styles.entryActionButton,
+                                deletingEntryId === entry.id &&
+                                  styles.entryActionButtonDisabled,
+                              ]}
+                              onPress={() => handleDeleteEntry(entry)}
+                              disabled={deletingEntryId === entry.id}
+                              accessibilityRole="button"
+                              accessibilityState={{
+                                disabled: deletingEntryId === entry.id,
+                              }}
+                              accessibilityLabel={t(
+                                "teams.mobile.teamCompetitionEntryModal.deleteEntryAria",
+                                { style: styleLabel },
+                              )}
+                            >
+                              <Feather name="trash-2" size={16} color="#DC2626" />
+                            </Pressable>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })}
       </ScrollView>
 
       {/* フッター */}
@@ -432,27 +434,6 @@ function badgeTextStyle(s: EntryStatus) {
       return styles.badgeTextBefore;
   }
 }
-function segmentActiveStyle(s: EntryStatus) {
-  switch (s) {
-    case "open":
-      return styles.segmentActiveOpen;
-    case "closed":
-      return styles.segmentActiveClosed;
-    default:
-      return styles.segmentActiveBefore;
-  }
-}
-function segmentActiveTextStyle(s: EntryStatus) {
-  switch (s) {
-    case "open":
-      return styles.segmentActiveTextOpen;
-    case "closed":
-      return styles.segmentActiveTextClosed;
-    default:
-      return styles.segmentActiveTextBefore;
-  }
-}
-
 const styles = StyleSheet.create({
   sheet: {
     backgroundColor: "#FFFFFF",
@@ -502,55 +483,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#374151",
-  },
-  segmentRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-  },
-  segmentDisabled: {
-    opacity: 0.5,
-  },
-  pastDateNotice: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  segmentText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#6B7280",
-  },
-  segmentActiveBefore: {
-    backgroundColor: "#F3F4F6",
-    borderColor: "#9CA3AF",
-  },
-  segmentActiveTextBefore: {
-    color: "#374151",
-    fontWeight: "700",
-  },
-  segmentActiveOpen: {
-    backgroundColor: "#DCFCE7",
-    borderColor: "#16A34A",
-  },
-  segmentActiveTextOpen: {
-    color: "#166534",
-    fontWeight: "700",
-  },
-  segmentActiveClosed: {
-    backgroundColor: "#FEE2E2",
-    borderColor: "#DC2626",
-  },
-  segmentActiveTextClosed: {
-    color: "#991B1B",
-    fontWeight: "700",
   },
   readBadge: {
     alignSelf: "flex-start",
@@ -667,7 +599,14 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#F3F4F6",
   },
+  entryRowContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+  },
   entryInfo: {
+    flex: 1,
     gap: 2,
   },
   entryName: {
@@ -686,6 +625,18 @@ const styles = StyleSheet.create({
   entryNote: {
     fontSize: 12,
     color: "#9CA3AF",
+  },
+  // D1: 自分のエントリー行の編集/削除アイコン列
+  entryRowActions: {
+    flexDirection: "row",
+    gap: 4,
+    flexShrink: 0,
+  },
+  entryActionButton: {
+    padding: 4,
+  },
+  entryActionButtonDisabled: {
+    opacity: 0.5,
   },
   footer: {
     borderTopWidth: 1,

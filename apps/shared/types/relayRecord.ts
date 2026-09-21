@@ -94,6 +94,30 @@ export interface RelayRecord {
   legs: RelayRecordLeg[];
 }
 
+// =============================================================================
+// 表示用の型 (読み取り境界)
+//
+// Sprint Contract「チーム大会タブ 記録一覧モーダル改修」の D3 境界契約 (PM 確定)。
+// `apps/shared/api/teams/relayRecords.ts` の `getByCompetition()` が返す型で、
+// web/mobile のモーダル UI はこの形にだけ依存する。
+// =============================================================================
+
+/** 表示用: リレー1本 + そのレグ (泳者・種目を解決済み)。 */
+export interface RelayRecordWithLegs extends RelayRecord {
+  legs: Array<
+    RelayRecordLeg & {
+      /** `users.name`。退会 (user_id が SET NULL) の場合は null。 */
+      userName: string | null;
+      /** `users.profile_image_path`。退会、または未設定の場合は null。 */
+      profileImagePath: string | null;
+      /** `styles.name_jp`。参照先が万一欠けている場合に備え null を許容する。 */
+      styleNameJp: string | null;
+      /** `styles.distance`。参照先が万一欠けている場合に備え null を許容する。 */
+      styleDistance: number | null;
+    }
+  >;
+}
+
 // note フィールドは意図的に持たない。
 // 当初は個人記録 (`records.note`) に倣って `relay_records.note` を置いたが、
 // 非 NULL を書き込む経路が UI・API・バックフィルのどこにも存在せず、

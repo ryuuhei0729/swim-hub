@@ -18,23 +18,44 @@
  *
  *   既存の `apps/web/components/team/TeamSettings.tsx` (管理者ページの設定タブ) とは
  *   別ファイルにする。あちらは teamsAdmin 名前空間・チーム名/説明の編集のみで、
- *   本スプリントの5セクション構成とは別物。
- *   ⚠️ **Contract の抜け**: 管理者ページ (teams-admin) の既存「設定」タブを
- *      この新コンポーネントへ寄せるかどうかが Contract に書かれていない。
- *      PM の裁定が必要 (最終報告で指摘済み)。本ファイルは一般ページ側のみ検証する。
+ *   本スプリントの3セクション構成 (チーム情報 (招待コード内包) / このチームの記録色 / 脱退)
+ *   とは別物。
+ *   ⚠️ **Contract の抜け (過去スプリントからの持ち越し。本スプリントでは扱わない)**:
+ *      管理者ページ (teams-admin) の既存「設定」タブをこの新コンポーネントへ寄せるかどうかが
+ *      Contract に書かれていない。PM の裁定が必要 (最終報告で指摘済み)。
+ *      本ファイルは一般ページ側のみ検証する。
  *
- * ■ Sprint Contract 検証観点 (縦積み5セクション / mobile と同じ [V-A50]〜[V-A57])
+ * ■ Sprint Contract 検証観点 (縦積み3セクション: チーム情報 (招待コード内包) /
+ *   このチームの記録色 / 脱退。mobile は今スプリントで [V-D1]〜[V-D6] に個別展開済み
+ *   (ID は1対1対応しない。web も mobile の [V-D6] (フック呼び出し) / [V-D5]
+ *   (mutateAsync) と粒度を揃え、[V-W6a]/[V-W6b] の2件に分けている))
  *   [V-A70] セクション構成 (見出しは2つだけ。廃止した見出しが復活していないこと、
  *           および見出しを持たないセクションが**中のコントロール**で生きていること)
  *   [V-A71] 一般メンバー: 「編集」ボタンが表示されない
- *   [V-A72] 一般メンバー: 「チームを削除」が表示されない
  *   [V-A73] 一般メンバー: 「脱退する」は表示される
- *   [V-A74] 管理者: 「編集」「チームを削除」が両方表示される
  *   [V-A75] 招待コードは readOnly の入力欄で値が見え、コピーボタンがある
  *   [V-A76] PM 裁定 C — 最後の管理者は脱退できない (leave API を呼ばない)
  *   [V-A77] 対照 — 管理者が2人なら脱退処理に進む
  *   [V-A78] カレンダー記録色セクションは ColorSwatchRow を再利用する
  *           (ロジックを再実装しない。export されていることを直接確認する)
+ *
+ * ■ 2026-09-21 追加スプリント: 「チームを削除する」動線の撤去 (ユーザー指示)
+ *   PM 裁定: shared の deleteTeam API / useDeleteTeamMutation /
+ *   getDeleteTeamErrorMessageKey / i18n の `teams.settingsTab.delete*`
+ *   キーは意図的に残置する。撤去対象は web のこのコンポーネントの配線のみ。
+ *   [V-W1] 管理者でも deleteTeam 見出し/deleteDescription/deleteButton/
+ *          data-testid="team-settings-delete" のいずれも DOM に無い (旧 [V-A72]/[V-A74] の反転)
+ *   [V-W2] 非管理者でも同様に無い (旧 [V-A72] の期待値を維持)
+ *   [V-W3] 削除確認ダイアログを開く経路が無い。ConfirmDialog が2つから1つに減った
+ *   [V-W4] 対照 (退行検知): 管理者の「編集」は従来どおり出る (削除だけが消えたことの証跡)
+ *   [V-W5] 対照 (退行検知): 脱退は管理者・非管理者双方に出て、確定すると
+ *          leaveTeamMutation が呼ばれ /teams へ遷移する ([V-A76]/[V-A77] のガードは維持)
+ *   [V-W6a] useDeleteTeamMutation フック自体が一度も呼ばれない
+ *   [V-W6b] mutateAsync が一度も呼ばれない (削除フックへの配線が
+ *          外れていることの証跡。2件に分割し、どちらの退行かを区別できるようにした)
+ *   旧 [V-A58]/[V-A59] (削除失敗時の文言変換・成功時の遷移) はクリック導線が
+ *   無くなったため撤去。deleteTeam / getDeleteTeamErrorMessageKey 自体の検証は
+ *   apps/shared/__tests__/deleteTeamErrorMessageKey.test.ts が引き続き担う。
  *
  * ■ jsdom で検証できないことの明示
  *   - Tailwind のクラスは jsdom では解決されないため、セクションの縦積み・余白・
@@ -50,7 +71,6 @@ import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import messages from "@apps/shared/messages/ja.json";
-import { TeamOperationError } from "@apps/shared/api/teams/core";
 
 // -----------------------------------------------------------------------------
 // モックは **実モジュールの import パスと戻り値の形**に一致させること。
@@ -89,6 +109,8 @@ const mocks = vi.hoisted(() => {
   return {
     leaveTeam: vi.fn(),
     deleteTeam: vi.fn(),
+    /** useDeleteTeamMutation フックそのものが呼ばれたかを検出する ([V-W6a]) */
+    useDeleteTeamMutationSpy: vi.fn(),
     routerPush: vi.fn(),
     routerRefresh: vi.fn(),
     updatePersonalColors: mutationStub(),
@@ -116,7 +138,13 @@ vi.mock("@/contexts", () => ({
 
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useLeaveTeamMutation: () => ({ mutateAsync: mocks.leaveTeam, isPending: false }),
-  useDeleteTeamMutation: () => ({ mutateAsync: mocks.deleteTeam, isPending: false }),
+  // [V-W6a] フック自体がコンポーネントから呼ばれていないことを検出するためのスパイ。
+  // (mutateAsync の非呼び出しは mocks.deleteTeam を見る [V-W6b] が担当)
+  // shared 側のフックは PM 裁定により残置されているのでモック自体は消さない。
+  useDeleteTeamMutation: (...args: unknown[]) => {
+    mocks.useDeleteTeamMutationSpy(...args);
+    return { mutateAsync: mocks.deleteTeam, isPending: false };
+  },
 }));
 
 vi.mock("@apps/shared/hooks", async () => {
@@ -286,28 +314,41 @@ describe("[V-A70〜A75] web 設定タブのセクション出し分け", () => {
     expect(button.textContent?.trim()).not.toBe(label("teams.settingsTab.leaveTeam"));
   });
 
-  it("[V-A70] 削除カード: 管理者には見出し・説明・動詞形ボタンが揃っている", () => {
-    renderTab({
-      isAdmin: true,
-      members: [{ user_id: "me", role: "admin" }, { user_id: "u1", role: "user" }],
-    });
+  // ===========================================================================
+  // [V-W1/V-W2] チーム削除 UI 撤去 (2026-09-21 ユーザー指示)
+  //
+  // 旧仕様 (管理者には deleteTeam 見出し/deleteDescription/deleteButton/
+  // data-testid="team-settings-delete" が出る) を反転する。shared の
+  // deleteTeam API / useDeleteTeamMutation / getDeleteTeamErrorMessageKey /
+  // i18n の `teams.settingsTab.delete*` キー自体は PM 裁定により意図的に残置
+  // されている (apps/shared/__tests__/ 配下は変更禁止)。ここで見るのは
+  // **web のこのコンポーネントから配線が外れたこと** のみ。
+  // ===========================================================================
+  it.each([
+    [
+      "管理者 (isAdmin=true)",
+      true,
+      [
+        { user_id: "me", role: "admin" as const },
+        { user_id: "u1", role: "user" as const },
+      ],
+    ],
+    [
+      "非管理者 (isAdmin=false)",
+      false,
+      [
+        { user_id: "admin-1", role: "admin" as const },
+        { user_id: "me", role: "user" as const },
+      ],
+    ],
+  ])("[V-W1/V-W2] %s でも削除見出し・説明・ボタン・testid が一切出ない", (_case, isAdmin, members) => {
+    renderTab({ isAdmin, members });
 
-    expect(screen.getByText(label("teams.settingsTab.deleteTeam"))).toBeInTheDocument();
-    expect(screen.getByText(label("teams.settingsTab.deleteDescription"))).toBeInTheDocument();
-
-    const button = screen.getByTestId("team-settings-delete");
-    expect(button.textContent?.trim()).toBe(label("teams.settingsTab.deleteButton"));
-    expect(button.textContent?.trim()).not.toBe(label("teams.settingsTab.deleteTeam"));
-  });
-
-  it("[V-A70] 非管理者には削除カードが**丸ごと**出ない (説明文だけ残る実装を検出)", () => {
-    renderTab({ isAdmin: false });
-
-    // 正のコントロール: 脱退カードは出ている = 破壊的操作セクション自体は生きている
+    // 正のコントロール: 描画自体が失敗していない/破壊的操作セクション自体は生きている
+    expect(screen.getByTestId("team-settings-tab")).toBeInTheDocument();
     expect(screen.getByTestId("team-settings-leave")).toBeInTheDocument();
-    expect(screen.getByText(label("teams.settingsTab.leaveDescription"))).toBeInTheDocument();
 
-    // 🚨 ボタンだけ消して見出し・説明が残る実装を検出するため、3要素すべてを見る
+    // 🚨 ボタンだけ消して見出し・説明が残る実装を検出するため、4要素すべてを見る
     expect(screen.queryByTestId("team-settings-delete")).not.toBeInTheDocument();
     expect(screen.queryByText(label("teams.settingsTab.deleteTeam"))).not.toBeInTheDocument();
     expect(
@@ -321,20 +362,105 @@ describe("[V-A70〜A75] web 設定タブのセクション出し分け", () => {
     expect(screen.queryByTestId("team-settings-edit-info")).toBeNull();
   });
 
-  it("[V-A72] 一般メンバーには「チームを削除」が表示されない", () => {
-    renderTab({ isAdmin: false });
-    expect(screen.queryByTestId("team-settings-delete")).toBeNull();
-  });
-
   it("[V-A73] 一般メンバーにも「脱退する」は表示される", () => {
     renderTab({ isAdmin: false });
     expect(screen.getByTestId("team-settings-leave")).toBeInTheDocument();
   });
 
-  it("[V-A74] 管理者には「編集」と「チームを削除」が両方表示される", () => {
-    renderTab({ isAdmin: true, members: [{ user_id: "me", role: "admin" }, { user_id: "u1", role: "user" }] });
+  // -----------------------------------------------------------------------
+  // [V-W4] 対照 (退行検知): 「編集」は削除撤去の影響を受けず従来どおり出る。
+  // 削除だけが消えたことを示す。isAdmin 分岐ごと壊すと真っ先にここが赤くなる。
+  // -----------------------------------------------------------------------
+  it("[V-W4] 対照: 管理者には「編集」は従来どおり表示され、「チームを削除」は表示されない", () => {
+    renderTab({
+      isAdmin: true,
+      members: [{ user_id: "me", role: "admin" }, { user_id: "u1", role: "user" }],
+    });
     expect(screen.getByTestId("team-settings-edit-info")).toBeInTheDocument();
-    expect(screen.getByTestId("team-settings-delete")).toBeInTheDocument();
+    expect(screen.queryByTestId("team-settings-delete")).not.toBeInTheDocument();
+  });
+
+  // -----------------------------------------------------------------------
+  // [V-W3] 削除確認ダイアログを開く経路が存在しない。ConfirmDialog が
+  // 2つ (脱退用/削除用) から1つ (脱退用のみ) に減ったことを示す。
+  // トリガーとなるボタン自体が無いので、脱退操作を経由しても
+  // deleteConfirmTitle は絶対に出てこないことを対照として置く。
+  // -----------------------------------------------------------------------
+  it("[V-W3] 脱退ボタンを押すと開くのはleaveConfirmTitleのみ。deleteConfirmTitleは出ない", async () => {
+    renderTab({
+      isAdmin: true,
+      members: [
+        { user_id: "me", role: "admin" },
+        { user_id: "a2", role: "admin" },
+      ],
+    });
+
+    // 削除確認ダイアログを開くトリガー自体が無い
+    expect(screen.queryByTestId("team-settings-delete")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("team-settings-leave"));
+
+    expect(
+      await screen.findByText(label("teams.settingsTab.leaveConfirmTitle")),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(label("teams.settingsTab.deleteConfirmTitle")),
+    ).not.toBeInTheDocument();
+  });
+
+  // -----------------------------------------------------------------------
+  // [V-W6a/V-W6b] useDeleteTeamMutation がこのコンポーネントから一度も呼ばれない。
+  // 「ボタンが無い」だけでなく「削除フックへの配線が外れている」ことを示す。
+  // mobile の [V-D6] (フック呼び出し) / [V-D5] (mutateAsync) と粒度を揃え、
+  // 検出対象の異なる2軸 (レンダー時のフック呼び出し / クリック起因の
+  // mutateAsync 呼び出し) を別 it に分ける。落ちたときにどちらの退行かを
+  // 一目で区別できるようにするため。削除 UI 自体が描画されないことの
+  // 主たる担保は [V-W1]/[V-W2] が持つ。ここはその上で「配線」まで外れて
+  // いることの証跡。
+  // -----------------------------------------------------------------------
+  it("[V-W6a] useDeleteTeamMutation フック自体が呼ばれない", () => {
+    // 削除ボタンは配線しないが `useDeleteTeamMutation(supabase)` だけを
+    // 関数本体に書き戻す半端な再導入を render 時点で検出する。
+    renderTab({
+      isAdmin: true,
+      members: [{ user_id: "me", role: "admin" }, { user_id: "u1", role: "user" }],
+    });
+
+    expect(mocks.useDeleteTeamMutationSpy).not.toHaveBeenCalled();
+  });
+
+  it("[V-W6b] mutateAsync が呼ばれない", () => {
+    // クリック起因の呼び出しが無いこと。トリガーとなるボタン自体が無い
+    // ([V-W1]/[V-W2]) ので、レンダーのみでも mutateAsync は発火しない。
+    renderTab({
+      isAdmin: true,
+      members: [{ user_id: "me", role: "admin" }, { user_id: "u1", role: "user" }],
+    });
+
+    expect(mocks.deleteTeam).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // [V-W5] 脱退は管理者・非管理者双方に出る。確定するとmutateAsyncが呼ばれ
+  // 一覧へ遷移する。削除撤去の影響を受けていないことの対照。
+  // -----------------------------------------------------------------------
+  it.each([
+    ["管理者 (isAdmin=true)", true],
+    ["非管理者 (isAdmin=false)", false],
+  ])("[V-W5] %s: 脱退を確定するとleaveTeamMutationが呼ばれ一覧へ遷移する", async (_case, isAdmin) => {
+    renderTab({
+      isAdmin,
+      members: [
+        { user_id: "admin-1", role: "admin" },
+        { user_id: "me", role: isAdmin ? "admin" : "user" },
+      ],
+    });
+
+    await userEvent.click(screen.getByTestId("team-settings-leave"));
+    await userEvent.click(screen.getByTestId("confirm-dialog-confirm-button"));
+
+    expect(mocks.leaveTeam).toHaveBeenCalledWith("team-1");
+    expect(mocks.routerPush).toHaveBeenCalledWith("/teams");
   });
 
   it("[V-A75] 招待コードは readOnly の入力欄に表示され、コピーボタンがある", () => {
@@ -406,82 +532,11 @@ describe("[V-A76/A77] web 最後の管理者の脱退ブロック", () => {
   });
 });
 
-describe("[V-A58/A59] 削除失敗コードの文言変換と成功経路", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  /** 削除ボタン → 確認ダイアログの実行ボタン、まで実プロダクションコード経由で進める */
-  const clickDeleteAndConfirm = async () => {
-    await userEvent.click(screen.getByTestId("team-settings-delete"));
-    // 確認ダイアログの実行ボタンはトリガーと同じ文言 (「チームを削除」) を持つため、
-    // 文言ではなく ConfirmDialog 固有の testid で特定する
-    await userEvent.click(screen.getByTestId("confirm-dialog-confirm-button"));
-  };
-
-  /**
-   * [V-A58] RPC の**機械可読コード**がそのまま画面に出ず、翻訳済み文言に変換されること。
-   * deleteTeam は UserFacingError の message にコードを載せて throw するので、
-   * 素通し表示にすると `not_authorized` という英小文字が画面に出る。
-   * 変換の定義元は `getDeleteTeamErrorMessageKey()` 1箇所
-   * (対応表自体の検証は shared の deleteTeamErrorMessageKey.test.ts が担当)。
-   */
-  it.each([
-    ["not_authorized", "teams.settingsTab.deleteErrors.notAuthorized"],
-    ["team_not_found", "teams.settingsTab.deleteErrors.teamNotFound"],
-    ["auth_required", "teams.settingsTab.deleteErrors.authRequired"],
-  ])(
-    "[V-A58] 削除が %s で失敗したとき、コードではなく翻訳済み文言が表示される",
-    async (code, expectedKey) => {
-      mocks.deleteTeam.mockRejectedValueOnce(new TeamOperationError(code));
-      renderTab({ isAdmin: true, members: [{ user_id: "me", role: "admin" }] });
-
-      await clickDeleteAndConfirm();
-
-      expect(await screen.findByText(label(expectedKey))).toBeInTheDocument();
-      expect(screen.queryByText(code)).not.toBeInTheDocument();
-      // 失敗したのでチーム一覧へ遷移しない
-      expect(mocks.routerPush).not.toHaveBeenCalled();
-    },
-  );
-
-  it("[V-A58] 未知のコードで失敗したときは汎用文言に落ちる", async () => {
-    mocks.deleteTeam.mockRejectedValueOnce(new TeamOperationError("some_new_code"));
-    renderTab({ isAdmin: true, members: [{ user_id: "me", role: "admin" }] });
-
-    await clickDeleteAndConfirm();
-
-    expect(await screen.findByText(label("teams.settingsTab.deleteFailed"))).toBeInTheDocument();
-    expect(screen.queryByText("some_new_code")).not.toBeInTheDocument();
-  });
-
-  it("[V-A58] 生の PostgrestError でも RLS 詳細が画面に出ず汎用文言になる", async () => {
-    const raw = new Error('relation "teams" violates row-level security policy');
-    mocks.deleteTeam.mockRejectedValueOnce(raw);
-    renderTab({ isAdmin: true, members: [{ user_id: "me", role: "admin" }] });
-
-    await clickDeleteAndConfirm();
-
-    expect(await screen.findByText(label("teams.settingsTab.deleteFailed"))).toBeInTheDocument();
-    expect(screen.queryByText(/row-level security/)).not.toBeInTheDocument();
-  });
-
-  /**
-   * [V-A59] 成功時。RPC 戻り値に `cleared_practice_count` が増えたが
-   * `deleteTeam` の戻り値は `void` なので **UI には出ない**。
-   * ここで固定するのは「フィールドが増えても削除完了の導線 (一覧への遷移) が通る」ことまで。
-   */
-  it("[V-A59] 削除成功時はエラーを出さずチーム一覧へ遷移する", async () => {
-    mocks.deleteTeam.mockResolvedValueOnce(undefined);
-    renderTab({ isAdmin: true, members: [{ user_id: "me", role: "admin" }] });
-
-    await clickDeleteAndConfirm();
-
-    expect(mocks.deleteTeam).toHaveBeenCalledWith("team-1");
-    expect(mocks.routerPush).toHaveBeenCalledWith("/teams");
-    expect(screen.queryByText(label("teams.settingsTab.deleteFailed"))).not.toBeInTheDocument();
-  });
-});
+// [V-A58/A59] 削除失敗コードの文言変換と成功経路のテストは削除 UI 撤去 (2026-09-21)
+// に伴い撤去した。deleteTeam / getDeleteTeamErrorMessageKey 自体の検証は
+// apps/shared/__tests__/deleteTeamErrorMessageKey.test.ts が引き続き担う
+// (PM 裁定により変更禁止)。web 側のクリック導線が無くなったため
+// clickDeleteAndConfirm 経由のテストは成立しない ([V-W1]〜[V-W3] が代替)。
 
 describe("[V-A78] カレンダー記録色は既存実装を再利用する", () => {
   it("[V-A78] ColorSwatchRow が CalendarColorSettings から export されている", async () => {

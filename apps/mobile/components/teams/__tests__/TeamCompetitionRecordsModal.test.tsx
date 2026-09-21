@@ -17,11 +17,18 @@
  * トートロジー防止: モックの制約をプロダクションのクエリ形状 (select→eq→order /
  * select→eq→single という実際の Supabase チェーン順序) に合わせているだけであり、
  * テスト側で任意に発明した順序ではない。
+ *
+ * Sprint Contract「チーム大会タブ 記録一覧モーダル改修」により、本コンポーネントは
+ * competitions/records に加えて `TeamRelayRecordsAPI.getByCompetition` も並列に呼ぶ
+ * ようになった。このファイルはリレーグルーピング自体を検証対象にしないため (それは
+ * TeamCompetitionRecordsModal.relaySprint.test.tsx の責務)、既定で空配列を返す
+ * スタブに固定し、旧来の competitions/records のみのシナリオを壊さないようにする。
  */
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { createQueryWrapper } from "@/__tests__/helpers/testUtils";
 
 interface QueryResponse<T> {
   data: T;
@@ -103,6 +110,13 @@ vi.mock("@/components/records/LapTimeDisplay", () => ({
   },
 }));
 
+// relay_records 系のグルーピングはこのファイルの対象外 (relaySprint.test.tsx が担う)。
+// 既定で空配列を返すことで、競技 records のみを見る旧来シナリオの結果に影響させない。
+const mockGetByCompetition = vi.hoisted(() => vi.fn(() => Promise.resolve([])));
+vi.mock("@apps/shared/api/teams/relayRecords", () => ({
+  TeamRelayRecordsAPI: { getByCompetition: mockGetByCompetition },
+}));
+
 import { TeamCompetitionRecordsModal } from "../TeamCompetitionRecordsModal";
 
 function baseCompetitionRow(overrides: Record<string, unknown> = {}) {
@@ -138,6 +152,7 @@ describe("TeamCompetitionRecordsModal", () => {
           competitionId="comp-scope-1"
           competitionTitle="スコープ大会"
         />,
+        { wrapper: createQueryWrapper() },
       );
 
       await waitFor(() => expect(fromCalls).toContain("records"));
@@ -162,6 +177,7 @@ describe("TeamCompetitionRecordsModal", () => {
           competitionId="comp-scope-2"
           competitionTitle="スコープ大会2"
         />,
+        { wrapper: createQueryWrapper() },
       );
 
       await waitFor(() => expect(compEqCalls.length).toBeGreaterThan(0));
@@ -182,6 +198,7 @@ describe("TeamCompetitionRecordsModal", () => {
           competitionId="comp-loading"
           competitionTitle="ローディング大会"
         />,
+        { wrapper: createQueryWrapper() },
       );
 
       // ja.json: teams.competitionRecordsModal.loading = "読み込み中..."
@@ -201,6 +218,7 @@ describe("TeamCompetitionRecordsModal", () => {
           competitionId="comp-empty"
           competitionTitle="空大会"
         />,
+        { wrapper: createQueryWrapper() },
       );
 
       // ja.json: teams.competitionRecordsModal.empty = "記録がまだ登録されていません"
@@ -224,6 +242,7 @@ describe("TeamCompetitionRecordsModal", () => {
           competitionId="comp-err"
           competitionTitle="エラー大会"
         />,
+        { wrapper: createQueryWrapper() },
       );
 
       // ja.json: teams.competitionRecordsModal.loadError = "大会記録の取得に失敗しました"
@@ -247,6 +266,7 @@ describe("TeamCompetitionRecordsModal", () => {
           competitionId="comp-err2"
           competitionTitle="エラー大会2"
         />,
+        { wrapper: createQueryWrapper() },
       );
 
       await screen.findByText("大会記録の取得に失敗しました");
@@ -295,6 +315,7 @@ describe("TeamCompetitionRecordsModal", () => {
           competitionId="comp-wire"
           competitionTitle="配線確認大会"
         />,
+        { wrapper: createQueryWrapper() },
       );
 
       await screen.findByText("田中一郎");
@@ -334,6 +355,7 @@ describe("TeamCompetitionRecordsModal", () => {
           competitionId="comp-split"
           competitionTitle="スプリット確認大会"
         />,
+        { wrapper: createQueryWrapper() },
       );
 
       await screen.findByText("山田次郎");

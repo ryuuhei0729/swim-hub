@@ -81,6 +81,12 @@ export type MainStackParamList = {
     teamId?: string;
     /** 初期タブ。省略時は "competition" */
     initialTab?: "competition" | "entry" | "record";
+    /**
+     * Sprint Contract D9: エントリータブの「項目」サブタブを、この entries.id を
+     * 持つ行がアクティブな状態で開く。省略時・該当行が見つからない場合は先頭タブ
+     * (index 0) を開く (既存呼び出し元の非退行のため optional)。
+     */
+    targetEntryId?: string;
   };
   EntryForm: {
     competitionId: string;

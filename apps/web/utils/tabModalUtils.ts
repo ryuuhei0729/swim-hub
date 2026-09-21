@@ -82,3 +82,29 @@ export function getTabNavAdjacency<T extends string>(
   }
   return { prevTab, nextTab };
 }
+
+// =============================================================================
+// resolveEntryTabIndex — entry.id から項目タブ(ItemTabs)の初期インデックスを解決
+// =============================================================================
+
+/**
+ * エントリー編集入力画面 (CompetitionTabModal のエントリータブ) の項目サブタブ
+ * (「項目1 / 項目2 / +」) を、指定した `entry.id` を持つ項目のインデックスに解決する純粋関数。
+ *
+ * - `targetEntryId` が指定され、`entries` 内に一致する `id` があればそのインデックスを返す
+ * - `targetEntryId` が未指定、または一致する行が見つからない場合は 0 (先頭タブ) を返す
+ *   (直前に他端末で削除された等の場合でも、例外・空画面にせずフォールバックする)
+ * - 対応付けは `entry.id` で行う。`style_id` はリレーのレグ別行で同一 style が複数行に
+ *   現れるため対応付けキーとして使えない (mobile 版 `resolveInitialEntryTabIndex` と同じ制約)
+ *
+ * @param entries - 項目タブに表示されているエントリー一覧 (id のみ参照)
+ * @param targetEntryId - アクティブにしたいエントリーの id
+ */
+export function resolveEntryTabIndex(
+  entries: Array<{ id: string }>,
+  targetEntryId: string | null | undefined,
+): number {
+  if (!targetEntryId) return 0;
+  const idx = entries.findIndex((entry) => entry.id === targetEntryId);
+  return idx >= 0 ? idx : 0;
+}

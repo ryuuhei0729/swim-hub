@@ -63,6 +63,25 @@ interface BestTimeBadgeProps {
    * true / 未指定の場合は詳細画面・シェアカード向けの3状態表示（ラベル+値の2要素）。
    */
   showDiff?: boolean;
+  /**
+   * 判定対象のユーザー id。未指定時は現在ログイン中のユーザー (`user?.id`) に
+   * フォールバックする（後方互換）。チーム大会記録一覧のように他メンバーの記録を
+   * 一覧表示する場合、この prop でその記録の `user_id` を渡す
+   * (ログインユーザーの記録で判定してしまわないため)。
+   *
+   * 一覧表示 (`showDiff === false`) にのみ効く。3状態表示 (`showDiff !== false`、
+   * 詳細画面・シェアカード用) は `RecordAPI.getPreviousBestTime` が内部で
+   * `supabase.auth.getUser()` を使い常にログインユーザーで判定するため、この prop は
+   * 効果を持たない（両画面とも常に「自分の記録」を表示する用途であり、他ユーザー指定の
+   * 需要が無い）。
+   */
+  userId?: string;
+  /**
+   * true の場合、フォントサイズ/パディングを一段小さくして表示する
+   * (`transform: scale()` は使わない。チーム大会記録一覧のような密なリスト行向け)。
+   * 一覧表示 (`showDiff === false`) 用のオプション。未指定時は既存の見た目のまま。
+   */
+  compact?: boolean;
 }
 
 /**
@@ -91,13 +110,16 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
   poolType,
   isRelaying,
   showDiff,
+  userId: userIdProp,
+  compact,
 }) => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const [state, setState] = useState<ShareBadgeState>({ kind: "none" });
   const isListVariant = showDiff === false;
-  // user オブジェクトはトークン更新等で参照が変わり得るため id だけを依存に使う
-  const userId = user?.id;
+  // user オブジェクトはトークン更新等で参照が変わり得るため id だけを依存に使う。
+  // userIdProp が指定されていればそれを優先する (他メンバーの記録の判定用)。
+  const userId = userIdProp ?? user?.id;
 
   // 一覧パス: web components/ui/BestTimeBadge.tsx checkBestTime と同一アルゴリズム。
   // 候補は (userId, styleId, isRelaying, poolType) グループ単位の共有キャッシュクエリで
@@ -180,12 +202,12 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
   if (badgeState.kind === "first") {
     return (
       <View
-        style={[styles.badge, styles.badgeFirst]}
+        style={[styles.badge, styles.badgeFirst, compact && styles.badgeCompact]}
         accessible={true}
         accessibilityRole="text"
         accessibilityLabel={t("recordMobile.bestBadge.first")}
       >
-        <Text style={[styles.badgeText, styles.badgeTextFirst]}>
+        <Text style={[styles.badgeText, styles.badgeTextFirst, compact && styles.badgeTextCompact]}>
           {t("recordMobile.bestBadge.first")}
         </Text>
       </View>
@@ -201,12 +223,14 @@ const BestTimeBadge: React.FC<BestTimeBadgeProps> = ({
     const listTextToneStyle = isBest ? styles.badgeTextFirst : styles.badgeTextSlower;
     return (
       <View
-        style={[styles.badge, listToneStyle]}
+        style={[styles.badge, listToneStyle, compact && styles.badgeCompact]}
         accessible={true}
         accessibilityRole="text"
         accessibilityLabel={badgeState.label}
       >
-        <Text style={[styles.badgeText, listTextToneStyle]}>{badgeState.label}</Text>
+        <Text style={[styles.badgeText, listTextToneStyle, compact && styles.badgeTextCompact]}>
+          {badgeState.label}
+        </Text>
       </View>
     );
   }
@@ -243,6 +267,15 @@ const styles = StyleSheet.create({
   },
   badgeSlower: {
     backgroundColor: "#FEF2F2", // red-50
+  },
+  // compact: フォントサイズ/パディングを一段小さくする (transform: scale() は使わない)
+  badgeCompact: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    gap: 2,
+  },
+  badgeTextCompact: {
+    fontSize: 10,
   },
   badgeLabel: {
     fontSize: 10,
