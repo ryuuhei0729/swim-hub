@@ -10,11 +10,17 @@
  * - 非admin: `selfEntryButton` = 「エントリーを追加」(D10改訂で web/mobile 共通の文言に更新済み)
  * - admin: `adminBulkEntryButton` = 「エントリーを代理入力」
  * - admin が押すと `/teams/{teamId}/competitions/{competitionId}/entries` へ遷移する
- *   (`TeamCompetitionEntryModal.tsx:317-319` の `handleAdminBulkEntryClick`、実測で
- *   常に `/teams/...` 固定であることを確認済み。呼び出し元ルートを判別する仕組みは無い)。
+ *   (`TeamCompetitionEntryModal.tsx` の `handleAdminBulkEntryClick`)。
  * - R5 (web): カードにプルダウンが無く、モーダル内 `<select>` (status 変更) が唯一の変更手段
  *   なので現状維持。本ファイルはその `<select>` には触れない
  *   (既存 TeamCompetitionEntryModalOtherAdminCompetition.test.tsx が担保)。
+ *
+ * 🔴 追記 (追加スプリント: 代理入力の戻り先が起点と食い違う): 上記コメントが「常に /teams/...
+ * 固定で呼び出し元ルートを判別する仕組みは無い」としていた前提はこのスプリントで解消された。
+ * `routeIsAdmin` prop (TeamCompetitions.tsx 自身のルート固定 isAdmin) を新設し、
+ * `handleAdminBulkEntryClick` が遷移先に `?origin=member|admin` を付与するようになった
+ * (D12)。既知債務 `project_swimhub_admin_return_path_teams_admin` は解消済みなので
+ * it.todo だった検証を実テストに置き換える。
  */
 
 import React from "react";
@@ -82,7 +88,13 @@ const makeCompetitionRow = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-function renderModal(role: "admin" | "user", entryStatus: "before" | "open" | "closed" = "open") {
+function renderModal(
+  role: "admin" | "user",
+  entryStatus: "before" | "open" | "closed" = "open",
+  // ルート固定の isAdmin (往路が /teams/ か /teams-admin/ か)。本ファイルの大半のテストは
+  // 往路を検証対象にしていないため、既定値は false (= /teams/ 起点) に固定する。
+  routeIsAdmin = false,
+) {
   currentAuthMock = {
     supabase: buildSupabaseMock({
       competitions: { data: makeCompetitionRow({ entry_status: entryStatus }), error: null },
@@ -96,6 +108,7 @@ function renderModal(role: "admin" | "user", entryStatus: "before" | "open" | "c
       competitionId="c-1"
       competitionTitle="春季大会"
       teamId="team-1"
+      routeIsAdmin={routeIsAdmin}
       onOpenSelfEntry={vi.fn()}
     />,
   );
@@ -124,28 +137,30 @@ describe("TeamCompetitionEntryModal — モーダル内導線の admin/非admin 
       expect(screen.queryByTestId("team-competition-entry-self-button")).not.toBeInTheDocument();
     });
 
-    it("admin が bulk-button を押すと /teams/{teamId}/competitions/{competitionId}/entries へ遷移する", async () => {
+    it("admin が /teams/ 起点 (routeIsAdmin=false) で bulk-button を押すと ?origin=member を付与して遷移する", async () => {
       const user = userEvent.setup();
-      renderModal("admin", "open");
+      renderModal("admin", "open", false);
 
       const bulkButton = await screen.findByTestId("team-competition-entry-bulk-button");
       await user.click(bulkButton);
 
-      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/c-1/entries");
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/c-1/entries?origin=member");
     });
 
-    // [D6注意/既知債務] handleAdminBulkEntryClick は呼び出し元 (`/teams/` vs `/teams-admin/`)
-    // を判別する手段を持たず、常に `/teams/{teamId}/...` へ push する (実測済み、上記テストで
-    // 検証済み)。「teams-admin 起点なら teams-admin に戻る」という戻り先の理想動作は
-    // `project_swimhub_admin_return_path_teams_admin` の既知債務として未解決のままで、
-    // Sprint Contract 自身が「既知の債務あり」と明記し Out of Scope
-    // (代理一括入力ページ自体の UI 変更) の外側にある。モーダルには起点を区別する prop も
-    // 状態も存在しないため、この観点だけを単体で検証する意味のあるテストを構成できない。
-    // バグを仕様として固定するリスクを避けるため、実装可能になるまで todo に留める。
-    it.todo(
-      "[D6注意/既知債務] teams-admin 起点で開いた場合に teams-admin へ戻る導線があるべきだが、" +
-        "モーダルは起点を判別する手段を持たず未解決 (project_swimhub_admin_return_path_teams_admin)",
-    );
+    // [D6注意・解消済み] 旧コメントは「handleAdminBulkEntryClick は呼び出し元
+    // (`/teams/` vs `/teams-admin/`) を判別する手段を持たず、常に `/teams/{teamId}/...` へ
+    // push する」としていたが、追加スプリント (代理入力の戻り先が起点と食い違う) で
+    // `routeIsAdmin` prop 経由の origin クエリ付与により解消された
+    // (`project_swimhub_admin_return_path_teams_admin` の債務を解消)。
+    it("admin が /teams-admin/ 起点 (routeIsAdmin=true) で bulk-button を押すと ?origin=admin を付与して遷移する", async () => {
+      const user = userEvent.setup();
+      renderModal("admin", "open", true);
+
+      const bulkButton = await screen.findByTestId("team-competition-entry-bulk-button");
+      await user.click(bulkButton);
+
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1/competitions/c-1/entries?origin=admin");
+    });
 
     // 実装実測 (TeamCompetitionEntryModal.tsx:443-451, コメント明記):
     // 非admin の self-button は canEditOrDeleteEntry (entry_status==="open" かつ未来日) で

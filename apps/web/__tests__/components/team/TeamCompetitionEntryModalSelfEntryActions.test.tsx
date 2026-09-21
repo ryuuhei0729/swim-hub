@@ -115,6 +115,7 @@ function renderModal(
       competitionId="c-1"
       competitionTitle="春季大会"
       teamId="team-1"
+      routeIsAdmin={false}
       onOpenSelfEntry={vi.fn()}
       {...props}
     />,

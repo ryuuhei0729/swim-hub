@@ -34,7 +34,6 @@
 import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { Alert } from "react-native";
 
 const mocks = vi.hoisted(() => ({
   getEntriesByCompetition: vi.fn(),

@@ -133,7 +133,7 @@ describe("EntriesDataLoader — メンバー一覧の年上順ソート [並び�
     mockCreateAuthenticatedServerClient.mockResolvedValue({ from });
 
     const EntriesDataLoader = await loadEntriesDataLoader();
-    await EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1" });
+    await EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1", returnOrigin: "admin" });
 
     const memberSelects = selectCallsByTable.team_memberships ?? [];
     expect(memberSelects.length).toBeGreaterThanOrEqual(2);
@@ -158,7 +158,11 @@ describe("EntriesDataLoader — メンバー一覧の年上順ソート [並び�
     mockCreateAuthenticatedServerClient.mockResolvedValue({ from });
 
     const EntriesDataLoader = await loadEntriesDataLoader();
-    const result = (await EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1" })) as {
+    const result = (await EntriesDataLoader({
+      teamId: "team-1",
+      competitionId: "comp-1",
+      returnOrigin: "admin",
+    })) as {
       props: { activeMembers: Array<{ user_id: string }> };
     };
 

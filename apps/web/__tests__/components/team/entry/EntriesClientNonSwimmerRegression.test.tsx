@@ -101,6 +101,7 @@ function renderEntriesClient(existingEntries: ExistingEntryDisplay[]) {
       existingEntries={existingEntries}
       styles={[STYLE_FREE_100]}
       bestTimesByUser={{} as Record<string, BestTime[]>}
+      returnOrigin="admin"
     />,
   );
 }

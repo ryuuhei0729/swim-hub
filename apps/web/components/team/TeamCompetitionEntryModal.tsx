@@ -19,6 +19,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 import { isEntryTabVisible } from "@/utils/tabModalUtils";
+import type { EntryReturnOrigin } from "@/utils/entryReturnOrigin";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 interface TeamCompetitionEntryModalProps {
@@ -27,6 +28,16 @@ interface TeamCompetitionEntryModalProps {
   competitionId: string;
   competitionTitle: string;
   teamId: string;
+  /**
+   * このモーダルを開いた往路のルート ("/teams/[teamId]" なら false、
+   * "/teams-admin/[teamId]" なら true)。`TeamCompetitions.tsx` 自身のルート固定 `isAdmin` prop
+   * をそのまま渡してもらう。**下の `data.isAdmin` (実ロール) とは別物** —
+   * 実ロール admin が利用者ビュー `/teams/[teamId]` を開いている場合、
+   * `routeIsAdmin` は false でも `data.isAdmin` は true になる。
+   * `handleAdminBulkEntryClick` の遷移先 origin クエリ (追加スプリント D12) の
+   * 決定にのみ使う。
+   */
+  routeIsAdmin: boolean;
   /**
    * 自分のエントリーを追加/編集する画面 (CompetitionTabModal のエントリータブ) を開く。
    * 行の編集アイコンと「エントリーを追加」ボタン (D10改訂) の両方から呼ばれる (R6)。
@@ -114,6 +125,7 @@ export default function TeamCompetitionEntryModal({
   competitionId,
   competitionTitle,
   teamId,
+  routeIsAdmin,
   onOpenSelfEntry,
 }: TeamCompetitionEntryModalProps) {
   const { supabase, user } = useAuth();
@@ -314,9 +326,14 @@ export default function TeamCompetitionEntryModal({
     }
   };
 
-  // admin: エントリー代理一括入力ページへ遷移 (要件B後半 / D4 でカードから移設)
+  // admin: エントリー代理一括入力ページへ遷移 (要件B後半 / D4 でカードから移設)。
+  // 追加スプリント D12: 往路 (routeIsAdmin) を enum の origin クエリで運ぶ。
+  // クエリの値をパス文字列に直接埋め込まない (R11) — ここで埋め込むのは
+  // "member" | "admin" の2値のみに絞られた EntryReturnOrigin 型の値であり、
+  // 遷移先の entries/page.tsx がこれを再度 enum に正規化してから使う。
   const handleAdminBulkEntryClick = () => {
-    router.push(`/teams/${teamId}/competitions/${competitionId}/entries`);
+    const origin: EntryReturnOrigin = routeIsAdmin ? "admin" : "member";
+    router.push(`/teams/${teamId}/competitions/${competitionId}/entries?origin=${origin}`);
   };
 
   const getStatusLabel = (status: "before" | "open" | "closed") => {

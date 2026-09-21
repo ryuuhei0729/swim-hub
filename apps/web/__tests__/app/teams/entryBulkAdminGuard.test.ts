@@ -165,10 +165,34 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
       const EntriesDataLoader = await loadEntriesDataLoader();
 
       const url = await captureRedirectUrl(() =>
-        EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1" }),
+        EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1", returnOrigin: "admin" }),
       );
       expect(url).toBe("/ja/teams/team-1?tab=competitions");
       expect(url).not.toBe("/teams/team-1?tab=competitions");
+      expect(url).not.toBe("/ja/teams-admin/team-1?tab=competitions");
+    },
+  );
+
+  it(
+    "[SC24] 非 admin が returnOrigin: \"member\" (クライアントが ?origin=member を付けた直URL) で" +
+      "アクセスしても、redirect 先は returnOrigin の値に関わらず /ja/teams/team-1?tab=competitions " +
+      "のまま変わらない（人間の意図: サーバー側の role !== \"admin\" ガードは returnOrigin を一切" +
+      "参照しない [EntriesDataLoader.tsx は returnOrigin を EntriesClient にそのまま渡すだけ] " +
+      "ことを、role ガードが先に発火する経路そのもので実証する。origin の値をどう変えても " +
+      "/teams-admin/ や任意のパスへ迂回できないことの決定的な証拠）",
+    async () => {
+      mockCreateAuthenticatedServerClient.mockResolvedValue(
+        buildSupabaseMock({
+          team_memberships: { single: { data: { id: "m-1", role: "user" }, error: null } },
+        }),
+      );
+
+      const EntriesDataLoader = await loadEntriesDataLoader();
+
+      const url = await captureRedirectUrl(() =>
+        EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1", returnOrigin: "member" }),
+      );
+      expect(url).toBe("/ja/teams/team-1?tab=competitions");
       expect(url).not.toBe("/ja/teams-admin/team-1?tab=competitions");
     },
   );
@@ -187,7 +211,7 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
       const EntriesDataLoader = await loadEntriesDataLoader();
 
       const url = await captureRedirectUrl(() =>
-        EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1" }),
+        EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1", returnOrigin: "admin" }),
       );
       expect(url).toBe("/en/teams/team-1?tab=competitions");
       expect(url).not.toBe("/ja/teams/team-1?tab=competitions");
@@ -203,7 +227,7 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
 
     const EntriesDataLoader = await loadEntriesDataLoader();
 
-    await expect(EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1" })).rejects.toThrow(
+    await expect(EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1", returnOrigin: "admin" })).rejects.toThrow(
       NotFoundSignal,
     );
   });
@@ -215,7 +239,12 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
       "を通過した *admin 確定後* の弾き出しであり、role ガードとは異なり戻り先は " +
       "/teams-admin/ に固定してよい。role ガード自体 [非admin用の /teams/] とこの過去日ガード " +
       "[admin用の /teams-admin/] を同じ文字列と誤って混同していないかを区別するテスト。" +
-      "項目3で locale prefix が付いても /teams-admin/ と /teams/ の判別を維持する)",
+      "項目3で locale prefix が付いても /teams-admin/ と /teams/ の判別を維持する)。" +
+      "🔴 追記 (追加スプリント: 代理入力の戻り先が起点と食い違う): 過去日ガードは " +
+      "returnOrigin に従って戻り先を分岐するようになった (getEntryReturnPath 経由)。" +
+      "本テストは returnOrigin: \"admin\" 固定 (origin 未指定時の既定値と同じ) で" +
+      "従来どおり teams-admin/ に戻ることを固定する非退行テスト。returnOrigin: \"member\" の" +
+      "場合の分岐は直後の新規テストで検証する",
     async () => {
       const pastDate = "2000-01-01"; // 十分に過去の固定日付
       mockCreateAuthenticatedServerClient.mockResolvedValue(
@@ -246,13 +275,59 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
       const EntriesDataLoader = await loadEntriesDataLoader();
 
       const url = await captureRedirectUrl(() =>
-        EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1" }),
+        EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1", returnOrigin: "admin" }),
       );
       // 方式E: 過去日ガードは admin 確定後の弾き出しなので teams-admin/ に固定する
       // (role !== "admin" ガード [:140 の別テスト] とは異なる文字列になることを明示的に区別する)
       expect(url).toBe("/ja/teams-admin/team-1?tab=competitions");
       expect(url).not.toBe("/teams-admin/team-1?tab=competitions");
       expect(url).not.toBe("/ja/teams/team-1?tab=competitions");
+      expect(url).not.toBe("/teams/team-1?tab=competitions");
+    },
+  );
+
+  it(
+    "admin だが大会日が過去の場合、returnOrigin: \"member\" なら /ja/teams/team-1?tab=competitions " +
+      "へ redirect される（人間の意図: 追加スプリント。Web Developer は過去日ガードを " +
+      "`getEntryReturnPath(returnOrigin, teamId)` 経由に修正済みで、returnOrigin が " +
+      "\"admin\" 固定だった旧実装との非対称 [Reviewer指摘] を解消した。直前のテスト " +
+      "[returnOrigin: \"admin\" → teams-admin/] と対にして、returnOrigin の値が実際に" +
+      "反映されることを確認する。role !== \"admin\" 認可ガード [上部の別テスト、完全一致 " +
+      "assert] とは異なる分岐であり、このテストはそちらの assert を一切変更しない)",
+    async () => {
+      const pastDate = "2000-01-01"; // 十分に過去の固定日付
+      mockCreateAuthenticatedServerClient.mockResolvedValue(
+        buildSupabaseMock({
+          team_memberships: { single: { data: { id: "m-1", role: "admin" }, error: null } },
+          competitions: {
+            single: {
+              data: {
+                id: "comp-1",
+                user_id: "user-1",
+                team_id: "team-1",
+                title: "大会",
+                date: pastDate,
+                end_date: null,
+                place: null,
+                pool_type: 0,
+                entry_status: "open",
+                note: null,
+                created_at: "2020-01-01T00:00:00Z",
+                team: { id: "team-1", name: "チーム" },
+              },
+              error: null,
+            },
+          },
+        }),
+      );
+
+      const EntriesDataLoader = await loadEntriesDataLoader();
+
+      const url = await captureRedirectUrl(() =>
+        EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1", returnOrigin: "member" }),
+      );
+      expect(url).toBe("/ja/teams/team-1?tab=competitions");
+      expect(url).not.toBe("/ja/teams-admin/team-1?tab=competitions");
       expect(url).not.toBe("/teams/team-1?tab=competitions");
     },
   );
@@ -300,7 +375,7 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
       const EntriesDataLoader = await loadEntriesDataLoader();
       // redirect() が呼ばれていれば NEXT_REDIRECT で await が reject するため、
       // 正常に result を受け取れたこと自体が redirect されなかった証明になる。
-      const result = await EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1" });
+      const result = await EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1", returnOrigin: "admin" });
 
       expect(mockNotFound).not.toHaveBeenCalled();
       expect(result).toBeTruthy();

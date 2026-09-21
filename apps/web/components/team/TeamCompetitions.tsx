@@ -1241,6 +1241,9 @@ export default function TeamCompetitions({
             selectedCompetition.title || t("competitions.fallbackTitle")
           }
           teamId={teamId}
+          // 追加スプリント D11: 自身のルート固定 isAdmin prop をそのまま渡す。
+          // モーダル内部の data.isAdmin (実ロール) とは別物 (往路の判定用)
+          routeIsAdmin={isAdmin}
           onOpenSelfEntry={handleOpenEntryEditor}
         />
       )}

@@ -187,6 +187,7 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
         competitionId="comp-other-admin"
         competitionTitle="他管理者大会"
         teamId="team-1"
+        routeIsAdmin={false}
         onOpenSelfEntry={vi.fn()}
       />,
     );
@@ -217,6 +218,7 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
         competitionId="comp-other-admin"
         competitionTitle="他管理者大会"
         teamId="team-1"
+        routeIsAdmin={false}
         onOpenSelfEntry={vi.fn()}
       />,
     );
@@ -258,6 +260,7 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
         competitionId="comp-belongs-to-team-2"
         competitionTitle="他チーム限定大会"
         teamId="team-1"
+        routeIsAdmin={false}
         onOpenSelfEntry={vi.fn()}
       />,
     );
@@ -300,6 +303,7 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
             competitionId="comp-1"
             competitionTitle="県大会"
             teamId="team-1"
+            routeIsAdmin={false}
             onOpenSelfEntry={vi.fn()}
           />,
         );
@@ -328,6 +332,7 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
             competitionId="comp-1"
             competitionTitle="県大会"
             teamId="team-1"
+            routeIsAdmin={false}
             onOpenSelfEntry={vi.fn()}
           />,
         );

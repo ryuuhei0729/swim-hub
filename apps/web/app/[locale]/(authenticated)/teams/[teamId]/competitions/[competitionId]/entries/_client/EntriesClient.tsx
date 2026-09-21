@@ -27,6 +27,7 @@ import { formatTimeBest } from "@apps/shared/utils/time";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { styleIdToCodeKey, buildSwimStyleLabel } from "@/utils/swimStyle";
+import { getEntryReturnPath, type EntryReturnOrigin } from "@/utils/entryReturnOrigin";
 import MemberSelectModal, { type MemberSelectOption } from "@/components/team/MemberSelectModal";
 import EntryBulkConfirmModal, {
   type EntryBulkConfirmRow,
@@ -59,6 +60,8 @@ interface EntriesClientProps {
   existingEntries: ExistingEntryDisplay[];
   styles: Style[];
   bestTimesByUser: Record<string, BestTime[]>;
+  /** page.tsx (Server Component) が enum に正規化した戻り先 (R12)。DataLoader 経由で prop として渡ってくる */
+  returnOrigin: EntryReturnOrigin;
 }
 
 function buildInitialRows(existingEntries: ExistingEntryDisplay[]): EntryDraftRow[] {
@@ -83,6 +86,7 @@ export default function EntriesClient({
   existingEntries,
   styles,
   bestTimesByUser,
+  returnOrigin,
 }: EntriesClientProps) {
   const router = useRouter();
   const locale = useLocale();
@@ -467,7 +471,9 @@ export default function EntriesClient({
       }
 
       setShowConfirmModal(false);
-      router.push(`/teams-admin/${teamId}?tab=competitions`);
+      // 戻り先は往路 (returnOrigin) に従う。enum → ハードコードパス定数のマップ経由で
+      // 解決するため、クエリの値そのものがパス文字列に埋め込まれることはない (R11)
+      router.push(getEntryReturnPath(returnOrigin, teamId));
     } catch (err) {
       console.error("エントリー代理一括入力の保存に失敗:", err);
       // Postgres の UNIQUE 制約違反 (23505) は、事前バリデーションで弾けなかった
@@ -490,7 +496,8 @@ export default function EntriesClient({
   };
 
   const handleBack = () => {
-    router.push(`/teams-admin/${teamId}?tab=competitions`);
+    // キャンセル後も保存後と同じ戻り先ルールに従う (R11/SC22)
+    router.push(getEntryReturnPath(returnOrigin, teamId));
   };
 
   const saveDisabled = saving || isPastDate || duplicatePairs.size > 0;

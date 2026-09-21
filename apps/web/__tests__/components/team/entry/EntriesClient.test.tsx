@@ -104,6 +104,9 @@ const activeMembers = [{ user_id: "user-1", role: "user", name: "選手A" }];
 function renderEntriesClient(
   existingEntries: ExistingEntryDisplay[],
   bestTimesByUser: Record<string, BestTime[]> = {},
+  // 追加スプリント (代理入力の戻り先) 前は戻り先が /teams-admin/ に固定だったため、
+  // 既定値は "admin" にして既存の assert (下記) を無改修で通す。
+  returnOrigin: "member" | "admin" = "admin",
 ) {
   return render(
     <EntriesClient
@@ -114,6 +117,7 @@ function renderEntriesClient(
       existingEntries={existingEntries}
       styles={[STYLE_FREE_100, STYLE_BREAST_50]}
       bestTimesByUser={bestTimesByUser}
+      returnOrigin={returnOrigin}
     />,
   );
 }
@@ -237,6 +241,51 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
 
       expect(mocks.push).toHaveBeenCalledTimes(1);
       expect(mocks.push).toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.updateEntry).not.toHaveBeenCalled();
+      expect(mocks.createBulkEntries).not.toHaveBeenCalled();
+      expect(mocks.deleteBulkEntries).not.toHaveBeenCalled();
+    },
+  );
+
+  it(
+    "returnOrigin=\"member\" で保存成功後は /teams/team-1?tab=competitions へ遷移する " +
+      "[SC21] (人間の意図: 追加スプリント。実ロール admin が利用者ビュー /teams/{teamId} 起点で" +
+      "代理入力した場合は、保存後に管理者ビューへ強制移動させず利用者ビューに戻す。" +
+      "/teams-admin/ へ遷移してしまう退行を検出する)",
+    async () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+      renderEntriesClient(existingEntries, {}, "member");
+
+      const select = screen.getByRole("combobox");
+      fireEvent.change(select, { target: { value: "9" } });
+
+      fireEvent.click(screen.getByRole("button", { name: "saveButton" }));
+      fireEvent.click(await screen.findByRole("button", { name: "confirmButton" }));
+
+      await waitFor(() => {
+        expect(mocks.push).toHaveBeenCalledTimes(1);
+      });
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1?tab=competitions");
+      expect(mocks.push).not.toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+    },
+  );
+
+  it(
+    "returnOrigin=\"member\" でヘッダーの戻るボタンを押すと /teams/team-1?tab=competitions へ" +
+      "遷移する [SC22] (保存成功後と同じ戻り先ルールがキャンセル経路にも適用されることの確認)",
+    () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+      renderEntriesClient(existingEntries, {}, "member");
+
+      fireEvent.click(screen.getByRole("button", { name: "record.backButton" }));
+
+      expect(mocks.push).toHaveBeenCalledTimes(1);
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1?tab=competitions");
+      expect(mocks.push).not.toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
       expect(mocks.updateEntry).not.toHaveBeenCalled();
       expect(mocks.createBulkEntries).not.toHaveBeenCalled();
       expect(mocks.deleteBulkEntries).not.toHaveBeenCalled();
