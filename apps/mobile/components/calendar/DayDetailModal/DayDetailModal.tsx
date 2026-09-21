@@ -411,6 +411,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             poolType={poolType}
                             note={note}
                             entries={entryList}
+                            isTeamCompetition={isTeamCompetition}
                             color={getEntryDisplayColor(firstEntry, colorSettings)}
                             onEditCompetition={(item) => {
                               if (onEditCompetition) {

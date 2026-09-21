@@ -247,22 +247,40 @@ export const PracticeTabFormScreen: React.FC = () => {
   const updateLogMutation = useUpdatePracticeLogMutation(supabase);
 
   // ---- 練習の編集権限判定 ----
-  // practices UPDATE RLS (user_id = auth.uid() OR is_team_admin(team_id, auth.uid())) と
-  // 同じ条件をクライアント側でも判定する。チーム練習でない場合は自分の練習なので常に true。
+  // 練習タブ (basicData: 名称/日付/場所/メモ/画像) と log タブ (practice_logs) で
+  // 守るべき対象が異なるため、判定変数を明確に分離する (PM裁定・修正ラウンド2)。
+  //
+  // canEditPracticeDetails: 練習タブ (basicData) 用。今スプリントの新仕様。
+  // 個人画面 (dashboard/練習タブ) では、チーム練習の basicData は admin であっても
+  // 編集不可 (Sprint Contract 2)。team_id の有無のみで判定し、admin 判定は使わない。
   // CompetitionTabFormScreen の canEditCompetitionDetails と同型。
+  const canEditPracticeDetails = useMemo(() => {
+    if (!isEditMode) return true; // 新規作成は常に自分の練習
+    return !practiceTeamId; // チーム練習は個人画面から編集不可
+  }, [isEditMode, practiceTeamId]);
+
+  // canEditPracticeLogs: log タブ (practice_logs の追加・編集・「+」ボタン・Save ボタン) 用。
+  // こちらは今スプリント以前の旧ロジックをそのまま維持する (practices ではなく
+  // practice_logs の INSERT/UPDATE RLS (user_id = auth.uid() OR is_team_admin(team_id,
+  // auth.uid())) と同じ条件。practice_logs 側は今スプリントで変更していない)。
+  // 一般メンバーが他人のチーム練習に自分のログを追加する経路は RLS が最終防衛線として
+  // 弾くため実害は無いが (Sprint Contract 2 修正ラウンド2で実測済み)、UI 側で
+  // 「編集不可と分かる」旧体験 (「+」非表示・フィールド disabled・バナー表示) を
+  // 変更前と同一に保つために admin/owner 判定を維持する。
   const { data: practiceTeamMembers, isLoading: isPracticeTeamMembersLoading } =
     useTeamMembersQuery(supabase, practiceTeamId ?? undefined);
   const isCurrentUserPracticeTeamAdmin = useMemo(() => {
     if (!user || !practiceTeamId || !practiceTeamMembers) return false;
     return practiceTeamMembers.some((m) => m.user_id === user.id && m.role === "admin");
   }, [user, practiceTeamId, practiceTeamMembers]);
-  const canEditPracticeDetails = useMemo(() => {
+  const canEditPracticeLogs = useMemo(() => {
     if (!isEditMode) return true; // 新規作成は常に自分の練習
     if (!practiceTeamId) return true; // 個人の練習は常に自分のもの
     if (user && practiceOwnerId === user.id) return true;
     return isCurrentUserPracticeTeamAdmin;
   }, [isEditMode, practiceTeamId, practiceOwnerId, user, isCurrentUserPracticeTeamAdmin]);
-  // チーム練習の編集権限確定待ち (未確定のまま編集可能 UI を出さないためのローディングガード)
+  // チーム練習の log タブ編集権限確定待ち (未確定のまま編集可能 UI を出さないための
+  // ローディングガード。旧実装と同型)
   const isResolvingPracticePermission =
     isEditMode && !!practiceTeamId && isPracticeTeamMembersLoading;
 
@@ -555,13 +573,6 @@ export const PracticeTabFormScreen: React.FC = () => {
   // ---- 保存ハンドラ ----
   const executeSave = useCallback(async () => {
     if (isSubmittingRef.current) return;
-    if (isEditMode && !canEditPracticeDetails) {
-      // 一般メンバーは他メンバーの練習を保存できない (practices UPDATE RLS と同条件)。
-      // 保存ボタンの disabled に加えてここでも保存を構造的に実行できないようにする
-      // (CompetitionTabFormScreen の canEditCompetitionDetails と同型のガード)。
-      Alert.alert(t("common.error"), t("forms.tabModal.practiceEditRestricted"), [{ text: "OK" }]);
-      return;
-    }
 
     isSubmittingRef.current = true;
     setIsSaving(true);
@@ -584,89 +595,96 @@ export const PracticeTabFormScreen: React.FC = () => {
 
       // --- 練習 INSERT or UPDATE ---
       if (isEditMode && savedPracticeId) {
-        // 更新: 画像処理を含む
-        // 画像を一切変更していない (追加も削除もない) 場合は、この後の再取得と
-        // updates.image_paths への設定自体をスキップする。無条件に再取得すると、
-        // 画像と無関係な title/place/note/date のみの編集までこの余分な
-        // ラウンドトリップに巻き込まれ、失敗すると保存全体が中止されてしまう
-        // (RecordFormScreen.tsx:533 の deletedImageIds/newImageFiles ゲート、
-        // web PracticeTabModal.tsx:486-489 の hasImageChanges と同型)。
-        const hasImageChanges = newImageFiles.length > 0 || deletedImageIds.length > 0;
+        // 更新: チーム練習かつ個人画面からの編集は canEditPracticeDetails が false になり
+        // practices UPDATE RLS (team_id IS NULL AND user_id=auth.uid()) OR
+        // (team_id IS NOT NULL AND is_team_admin) を満たさない。その場合は練習本体の更新
+        // (画像アップロードを含む) を丸ごとスキップし、練習ログの保存へ進む
+        // (CompetitionTabFormScreen の canEditCompetitionDetails と同型のガード。
+        // スキップ判定はストレージへのアップロードより前に行う)。
+        if (canEditPracticeDetails) {
+          // 画像を一切変更していない (追加も削除もない) 場合は、この後の再取得と
+          // updates.image_paths への設定自体をスキップする。無条件に再取得すると、
+          // 画像と無関係な title/place/note/date のみの編集までこの余分な
+          // ラウンドトリップに巻き込まれ、失敗すると保存全体が中止されてしまう
+          // (RecordFormScreen.tsx:533 の deletedImageIds/newImageFiles ゲート、
+          // web PracticeTabModal.tsx:486-489 の hasImageChanges と同型)。
+          const hasImageChanges = newImageFiles.length > 0 || deletedImageIds.length > 0;
 
-        let newImagePaths: string[] = [];
-        if (newImageFiles.length > 0) {
-          const uploadResults = await uploadImagesViaApi(
-            newImageFiles.map((f) => ({ base64: f.base64, fileExtension: f.fileExtension })),
-            savedPracticeId,
-            "practice-images",
-            accessToken,
-          );
-          newImagePaths = uploadResults.map((r) => r.path);
-          // アップロード直後にロールバック対象として記録する。この後の再取得や
-          // update が失敗しても、ここまでにアップロード済みの画像は catch で削除する
-          uploadedImagePaths = newImagePaths;
-        }
-
-        let updatedImagePaths: string[] = [];
-        if (hasImageChanges) {
-          // 保存直前に権威ある image_paths を ID 直指定で再取得する
-          // (RecordFormScreen.tsx の #48 修正と同型)。画面表示時に読み込んだ値は
-          // 表示から保存までの間に他の経路で画像が変わっている可能性があるため、
-          // 保存の source of truth には使わない。取得に失敗した場合は「不明」を [] と
-          // みなして全置換してはならないため、ここで throw して image_paths を含む
-          // update を送らずに中断する。
-          const { data: currentPractice, error: imagePathsError } = await supabase
-            .from("practices")
-            .select("image_paths")
-            .eq("id", savedPracticeId)
-            .single();
-
-          if (imagePathsError || !currentPractice) {
-            throw imagePathsError || new Error(t("practice.mobile.notFound"));
+          let newImagePaths: string[] = [];
+          if (newImageFiles.length > 0) {
+            const uploadResults = await uploadImagesViaApi(
+              newImageFiles.map((f) => ({ base64: f.base64, fileExtension: f.fileExtension })),
+              savedPracticeId,
+              "practice-images",
+              accessToken,
+            );
+            newImagePaths = uploadResults.map((r) => r.path);
+            // アップロード直後にロールバック対象として記録する。この後の再取得や
+            // update が失敗しても、ここまでにアップロード済みの画像は catch で削除する
+            uploadedImagePaths = newImagePaths;
           }
 
-          const authoritativeImagePaths =
-            (currentPractice as { image_paths: string[] | null }).image_paths ?? [];
+          let updatedImagePaths: string[] = [];
+          if (hasImageChanges) {
+            // 保存直前に権威ある image_paths を ID 直指定で再取得する
+            // (RecordFormScreen.tsx の #48 修正と同型)。画面表示時に読み込んだ値は
+            // 表示から保存までの間に他の経路で画像が変わっている可能性があるため、
+            // 保存の source of truth には使わない。取得に失敗した場合は「不明」を [] と
+            // みなして全置換してはならないため、ここで throw して image_paths を含む
+            // update を送らずに中断する。
+            const { data: currentPractice, error: imagePathsError } = await supabase
+              .from("practices")
+              .select("image_paths")
+              .eq("id", savedPracticeId)
+              .single();
 
-          // 権威ある生パスから削除分を除外し新規分を追加（mergeImagePaths 参照）
-          updatedImagePaths = mergeImagePaths(
-            authoritativeImagePaths,
-            deletedImageIds,
-            newImagePaths,
-          );
-        }
+            if (imagePathsError || !currentPractice) {
+              throw imagePathsError || new Error(t("practice.mobile.notFound"));
+            }
 
-        const formData = {
-          date: practiceTab.date,
-          title: practiceTab.title.trim() || null,
-          place: practiceTab.place.trim() || null,
-          note: practiceTab.note.trim() || null,
-          // 画像未変更時はキー自体を作らない (部分更新なので既存値がそのまま残る)。
-          ...(hasImageChanges ? { image_paths: updatedImagePaths } : {}),
-        };
-        await updatePracticeMutation.mutateAsync({ id: savedPracticeId, updates: formData });
+            const authoritativeImagePaths =
+              (currentPractice as { image_paths: string[] | null }).image_paths ?? [];
 
-        if (deletedImageIds.length > 0) {
-          await deleteImagesViaApi(deletedImageIds, "practice-images", accessToken);
-        }
+            // 権威ある生パスから削除分を除外し新規分を追加（mergeImagePaths 参照）
+            updatedImagePaths = mergeImagePaths(
+              authoritativeImagePaths,
+              deletedImageIds,
+              newImagePaths,
+            );
+          }
 
-        // iOSカレンダー同期
-        if (
-          Platform.OS === "ios" &&
-          profile?.ios_calendar_enabled &&
-          profile?.ios_calendar_sync_practices
-        ) {
-          const practiceForSync = loadedPracticeForSyncRef.current;
-          if (practiceForSync) {
-            try {
-              await syncPractice({ ...practiceForSync, ...formData }, "update");
-            } catch (syncError) {
-              console.warn("カレンダー同期エラー:", syncError);
-              Alert.alert(
-                t("practice.mobile.calendarSyncFailedTitle"),
-                t("practice.mobile.calendarSyncFailedMessage"),
-                [{ text: "OK" }],
-              );
+          const formData = {
+            date: practiceTab.date,
+            title: practiceTab.title.trim() || null,
+            place: practiceTab.place.trim() || null,
+            note: practiceTab.note.trim() || null,
+            // 画像未変更時はキー自体を作らない (部分更新なので既存値がそのまま残る)。
+            ...(hasImageChanges ? { image_paths: updatedImagePaths } : {}),
+          };
+          await updatePracticeMutation.mutateAsync({ id: savedPracticeId, updates: formData });
+
+          if (deletedImageIds.length > 0) {
+            await deleteImagesViaApi(deletedImageIds, "practice-images", accessToken);
+          }
+
+          // iOSカレンダー同期
+          if (
+            Platform.OS === "ios" &&
+            profile?.ios_calendar_enabled &&
+            profile?.ios_calendar_sync_practices
+          ) {
+            const practiceForSync = loadedPracticeForSyncRef.current;
+            if (practiceForSync) {
+              try {
+                await syncPractice({ ...practiceForSync, ...formData }, "update");
+              } catch (syncError) {
+                console.warn("カレンダー同期エラー:", syncError);
+                Alert.alert(
+                  t("practice.mobile.calendarSyncFailedTitle"),
+                  t("practice.mobile.calendarSyncFailedMessage"),
+                  [{ text: "OK" }],
+                );
+              }
             }
           }
         }
@@ -1321,8 +1339,10 @@ export const PracticeTabFormScreen: React.FC = () => {
           <View style={styles.form}>
             {/* 編集権限なし (チーム練習の非管理者かつ非作成者) の場合は読み取り専用にする。
                 練習タブと同じバナーをタブ切替後も表示し続ける (タブ切替でメッセージが
-                消えると、なぜ入力できないか分からなくなるため)。 */}
-            {!canEditPracticeDetails && (
+                消えると、なぜ入力できないか分からなくなるため)。
+                canEditPracticeLogs は旧ロジック (admin/owner 判定) を維持しており、
+                この画面固有の閲覧専用バナー表示条件は Sprint Contract 2 以前と同一。 */}
+            {!canEditPracticeLogs && (
               <View style={styles.guardMessage}>
                 <Text style={styles.guardMessageText}>
                   {t("forms.tabModal.practiceEditRestricted")}
@@ -1340,9 +1360,9 @@ export const PracticeTabFormScreen: React.FC = () => {
                     count={menus.length}
                     activeIndex={activeMenuIndex}
                     onSelect={setActiveMenuIndex}
-                    onAdd={canEditPracticeDetails ? addMenu : undefined}
+                    onAdd={canEditPracticeLogs ? addMenu : undefined}
                     onRemove={
-                      canEditPracticeDetails
+                      canEditPracticeLogs
                         ? (i) => {
                             const target = menus[i];
                             if (target) removeMenu(target.id);
@@ -1363,7 +1383,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                       <Pressable
                         style={styles.templateButton}
                         onPress={() => setShowTemplateSelectModal(true)}
-                        disabled={isSaving || !canEditPracticeDetails}
+                        disabled={isSaving || !canEditPracticeLogs}
                         accessibilityRole="button"
                       >
                         <Feather name="clipboard" size={14} color="#374151" />
@@ -1378,7 +1398,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                       onRemove={(tagId) =>
                         updateMenu(menu.id, "tags", menu.tags.filter((tg) => tg.id !== tagId))
                       }
-                      disabled={isSaving || !canEditPracticeDetails}
+                      disabled={isSaving || !canEditPracticeLogs}
                     />
                   </View>
 
@@ -1396,7 +1416,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                             menu.style === style.value && styles.pickerOptionSelected,
                           ]}
                           onPress={() => updateMenu(menu.id, "style", style.value)}
-                          disabled={isSaving || !canEditPracticeDetails}
+                          disabled={isSaving || !canEditPracticeLogs}
                         >
                           <Text
                             style={[
@@ -1420,7 +1440,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                           onPress={() =>
                             updateMenu(menu.id, "swimCategory", category.value)
                           }
-                          disabled={isSaving || !canEditPracticeDetails}
+                          disabled={isSaving || !canEditPracticeLogs}
                         >
                           <Text
                             style={[
@@ -1444,7 +1464,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                     <DistanceChips
                       value={menu.distance}
                       onChange={(v) => updateMenu(menu.id, "distance", v)}
-                      disabled={isSaving || !canEditPracticeDetails}
+                      disabled={isSaving || !canEditPracticeLogs}
                       testID="practice-distance"
                     />
                   </View>
@@ -1461,7 +1481,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                         min={1}
                         step={1}
                         placeholder="4"
-                        disabled={isSaving || !canEditPracticeDetails}
+                        disabled={isSaving || !canEditPracticeLogs}
                         accessibilityLabel={t("practice.form.repsLabel")}
                         testID="practice-rep-count"
                       />
@@ -1476,7 +1496,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                         min={1}
                         step={1}
                         placeholder="1"
-                        disabled={isSaving || !canEditPracticeDetails}
+                        disabled={isSaving || !canEditPracticeLogs}
                         accessibilityLabel={t("practice.form.setsLabel")}
                         testID="practice-set-count"
                       />
@@ -1493,7 +1513,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                         min={0}
                         step={1}
                         placeholder="1"
-                        disabled={isSaving || !canEditPracticeDetails}
+                        disabled={isSaving || !canEditPracticeLogs}
                         accessibilityLabel={t("practice.form.circleMinLabel")}
                         testID="practice-circle-min"
                       />
@@ -1507,7 +1527,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                         max={59}
                         step={10}
                         placeholder="30"
-                        disabled={isSaving || !canEditPracticeDetails}
+                        disabled={isSaving || !canEditPracticeLogs}
                         accessibilityLabel={t("practice.form.circleSecLabel")}
                         testID="practice-circle-sec"
                       />
@@ -1520,7 +1540,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                     <Pressable
                       style={styles.timeButton}
                       onPress={() => handleTimeInput(menu.id)}
-                      disabled={isSaving || !canEditPracticeDetails}
+                      disabled={isSaving || !canEditPracticeLogs}
                     >
                       <Feather name="clock" size={16} color="#374151" />
                       <Text style={styles.timeButtonText}>
@@ -1637,7 +1657,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                       style={[
                         styles.input,
                         styles.textArea,
-                        !canEditPracticeDetails && styles.inputDisabled,
+                        !canEditPracticeLogs && styles.inputDisabled,
                       ]}
                       value={menu.note}
                       onChangeText={(text) => updateMenu(menu.id, "note", text)}
@@ -1646,7 +1666,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                       multiline
                       numberOfLines={4}
                       textAlignVertical="top"
-                      editable={!isSaving && canEditPracticeDetails}
+                      editable={!isSaving && canEditPracticeLogs}
                     />
                   </View>
 
@@ -1659,12 +1679,12 @@ export const PracticeTabFormScreen: React.FC = () => {
                       existingVideoPath={menu.videoPath ?? null}
                       existingThumbnailPath={menu.videoThumbnailPath ?? null}
                       isPremium={isPremium}
-                      disabled={isSaving || !canEditPracticeDetails}
+                      disabled={isSaving || !canEditPracticeLogs}
                       onUploadComplete={(vPath, tPath) => {
                         // VideoUploader 側の disabled でボタン自体は非表示だが、id 付与後の
                         // 保留動画自動アップロード effect は disabled を見ないため、
                         // 二重防御として menus state への反映もここで止める。
-                        if (!canEditPracticeDetails) return;
+                        if (!canEditPracticeLogs) return;
                         setMenus((prev) =>
                           prev.map((m) =>
                             m.id === menu.id
@@ -1674,7 +1694,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                         );
                       }}
                       onDelete={() => {
-                        if (!canEditPracticeDetails) return;
+                        if (!canEditPracticeLogs) return;
                         setMenus((prev) =>
                           prev.map((m) =>
                             m.id === menu.id
@@ -1684,7 +1704,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                         );
                       }}
                       onPendingVideoAsset={(asset) => {
-                        if (!canEditPracticeDetails) return;
+                        if (!canEditPracticeLogs) return;
                         if (asset) {
                           pendingVideoAssetRef.current.set(menu.id, asset);
                         } else {
@@ -1835,10 +1855,10 @@ export const PracticeTabFormScreen: React.FC = () => {
           <Pressable
             style={[
               nextTab ? styles.outlineButton : styles.saveButton,
-              (isSaving || !canEditPracticeDetails) && styles.buttonDisabled,
+              (isSaving || !canEditPracticeLogs) && styles.buttonDisabled,
             ]}
             onPress={handleSave}
-            disabled={isSaving || !canEditPracticeDetails}
+            disabled={isSaving || !canEditPracticeLogs}
             testID="practice-tab-form-save"
           >
             {isSaving ? (

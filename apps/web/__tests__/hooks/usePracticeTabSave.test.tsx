@@ -89,7 +89,10 @@ describe("usePracticeTabSave", () => {
   let closePracticeTabModal: ReturnType<typeof vi.fn>;
   let onSaved: ReturnType<typeof vi.fn>;
 
-  const setup = (user: { id: string } | null = { id: "user-1" }) => {
+  const setup = (
+    user: { id: string } | null = { id: "user-1" },
+    options: { allowParentUpdate?: boolean } = {},
+  ) => {
     supabase = createFakeSupabase();
     createPractice = vi.fn().mockResolvedValue({ id: "new-practice-id" });
     updatePractice = vi.fn().mockResolvedValue({ id: "practice-1" });
@@ -120,6 +123,7 @@ describe("usePracticeTabSave", () => {
           setEditingPracticeId,
           closePracticeTabModal,
           onSaved,
+          ...options,
         }),
       { wrapper },
     );
@@ -274,5 +278,170 @@ describe("usePracticeTabSave", () => {
     expect(closePracticeTabModal).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
     expect(setPracticeLoading).toHaveBeenCalledWith(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // Sprint Contract 2 (編集禁止) D2: 親子分離。allowParentUpdate=false のとき、
+  // 親 (practices) の UPDATE と image_paths 書き込みをスキップし、子 (practice_logs)
+  // の保存は継続する。SC2 (既存のチーム練習に自分のログを追加できる) の核心。
+  // -------------------------------------------------------------------------
+  describe("allowParentUpdate (Sprint Contract 2 D2: 親子分離)", () => {
+    it("[SC2-web-1] allowParentUpdate=false のとき、updatePractice は呼ばれないが練習ログの保存は継続する", async () => {
+      const result = setup({ id: "user-1" }, { allowParentUpdate: false });
+
+      await act(async () => {
+        await result.current(
+          baseParams({
+            editingPracticeId: "practice-1",
+            basicData: { date: "2026-07-10", title: "他人のチーム練習", place: "", note: "" },
+            logs: [
+              {
+                style: "Fr",
+                swimCategory: "Swim",
+                distance: 100,
+                reps: 4,
+                sets: 1,
+                circleTime: 90,
+                note: "",
+                tags: [],
+                times: [],
+                // tempMenuId なし = 新規追加 (自分のログ)
+              },
+            ],
+          }),
+        );
+      });
+
+      expect(updatePractice).not.toHaveBeenCalled();
+      expect(createPracticeLog).toHaveBeenCalledTimes(1);
+      expect(createPracticeLog).toHaveBeenCalledWith(
+        expect.objectContaining({ practice_id: "practice-1", style: "Fr", distance: 100 }),
+      );
+      await waitFor(() => {
+        expect(closePracticeTabModal).toHaveBeenCalledTimes(1);
+      });
+      expect(onSaved).toHaveBeenCalledTimes(1);
+    });
+
+    it("[SC2-web-2] allowParentUpdate を省略した場合は従来どおり updatePractice が呼ばれる (デフォルト true・チームタブ向け非退行)", async () => {
+      const result = setup(); // options 省略
+
+      await act(async () => {
+        await result.current(baseParams({ editingPracticeId: "practice-1" }));
+      });
+
+      expect(updatePractice).toHaveBeenCalledWith(
+        "practice-1",
+        expect.objectContaining({ date: "2026-07-10" }),
+      );
+    });
+
+    it("[SC6-web] allowParentUpdate=false のとき、画像を変更していても uploadPracticeImage 自体が呼ばれない " +
+      "(アップロード後にスキップすると孤児ファイルが残るため、アップロード前にスキップしなければならない)", async () => {
+      const result = setup({ id: "user-1" }, { allowParentUpdate: false });
+      const file = new File(["dummy"], "photo.png", { type: "image/png" });
+
+      await act(async () => {
+        await result.current(
+          baseParams({
+            editingPracticeId: "practice-1",
+            imageData: {
+              newFiles: [{ file, previewUrl: "blob://x" }],
+              deletedIds: [],
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any,
+          }),
+        );
+      });
+
+      // アップロード自体が発生していないことを確認する (アップロード後にDB更新だけ
+      // スキップする実装だと、ここが呼ばれてしまい孤児ファイルが Storage に残る)。
+      expect(mocks.uploadPracticeImage).not.toHaveBeenCalled();
+      expect(updatePractice).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(closePracticeTabModal).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Reviewer 指摘 (F3): TeamPractices.tsx の自己ログ追加 (非 admin) で子 (practice_logs)
+  // 保存が失敗し editingPracticeId が保持されたまま再送信された場合、basicData が
+  // 直前に自分が適用した値と無変更なら updatePractice を呼ばない (RLS 拒否の再発生を防ぐ)。
+  // -------------------------------------------------------------------------
+  describe("lastAppliedParentDataRef ダーティチェック (Reviewer F3)", () => {
+    it(
+      "[F3-web-1] 新規作成 (createPractice) 直後、同一の basicData で再送信すると" +
+        " updatePractice は呼ばれない (直前に自分が適用した内容と無変更のため)",
+      async () => {
+        const result = setup({ id: "user-1" }, { allowParentUpdate: true });
+        const basicData = { date: "2026-07-10", title: "朝練", place: "市民プール", note: "" };
+
+        // 1回目: 新規作成 (createPractice が呼ばれ、practiceId が確定する)
+        await act(async () => {
+          await result.current(baseParams({ basicData, editingPracticeId: null }));
+        });
+        expect(createPractice).toHaveBeenCalledTimes(1);
+        expect(updatePractice).not.toHaveBeenCalled();
+
+        // 2回目: 子 (practice_logs) の再送信を模して、同一 practiceId・同一 basicData で
+        // 送信する (子失敗後の再試行シナリオ)。
+        await act(async () => {
+          await result.current(
+            baseParams({ basicData, editingPracticeId: "new-practice-id" }),
+          );
+        });
+
+        expect(updatePractice).not.toHaveBeenCalled();
+      },
+    );
+
+    it(
+      "[F3-web-2 / 非退行] basicData が直前の適用内容と異なる場合は、" +
+        " 同一 practiceId への再送信でも updatePractice が呼ばれる",
+      async () => {
+        const result = setup({ id: "user-1" }, { allowParentUpdate: true });
+        const firstBasicData = { date: "2026-07-10", title: "朝練", place: "市民プール", note: "" };
+
+        await act(async () => {
+          await result.current(baseParams({ basicData: firstBasicData, editingPracticeId: null }));
+        });
+        expect(createPractice).toHaveBeenCalledTimes(1);
+
+        const changedBasicData = { ...firstBasicData, title: "夜練" };
+        await act(async () => {
+          await result.current(
+            baseParams({ basicData: changedBasicData, editingPracticeId: "new-practice-id" }),
+          );
+        });
+
+        expect(updatePractice).toHaveBeenCalledTimes(1);
+        expect(updatePractice).toHaveBeenCalledWith(
+          "new-practice-id",
+          expect.objectContaining({ title: "夜練" }),
+        );
+      },
+    );
+
+    it(
+      "[F3-web-3 / 非退行] 既存の練習を編集 (editingPracticeId 指定で開始) した場合、" +
+        " 初回の保存では basicData が無変更でも updatePractice が呼ばれる" +
+        " (lastAppliedParentDataRef は自分がこのフックで適用した履歴のみを追跡し、" +
+        " モーダルを開いた時点の初期値とは比較しないため)",
+      async () => {
+        const result = setup({ id: "user-1" }, { allowParentUpdate: true });
+
+        await act(async () => {
+          await result.current(
+            baseParams({
+              basicData: { date: "2026-07-10", title: "既存タイトル", place: "", note: "" },
+              editingPracticeId: "practice-1",
+            }),
+          );
+        });
+
+        expect(updatePractice).toHaveBeenCalledTimes(1);
+      },
+    );
   });
 });

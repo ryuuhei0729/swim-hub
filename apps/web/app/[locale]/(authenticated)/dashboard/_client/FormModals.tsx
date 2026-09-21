@@ -11,7 +11,7 @@ import type {
   RecordFormDataInternal,
 } from "@/stores/types";
 import { convertRecordFormData } from "@/stores/types";
-import { getCompetitionId } from "../_utils/dashboardHelpers";
+import { getCompetitionId, getEditingDataTeamId } from "../_utils/dashboardHelpers";
 import { getEntryDataListForRecord } from "@/utils/getEntryDataListForRecord";
 import { useAuth } from "@/contexts";
 import { useCompetitionInfoQuery } from "@apps/shared/hooks/queries/records";
@@ -260,6 +260,13 @@ export function FormModals({
     [competitionEditingData],
   );
 
+  // 個人画面 (dashboard) は team_id の有無から明示的に導出する (Sprint Contract 2)。
+  // usePracticeTabSave/useCompetitionTabSave (useDashboardHandlers.ts) が親 basicData
+  // UPDATE のスキップに使う判定と同じ関数 (getEditingDataTeamId) を使い、
+  // PracticeTabModal/CompetitionTabModal のフィールド disable に反映する (Reviewer 指摘 F1-3)。
+  const allowPracticeParentUpdate = getEditingDataTeamId(editingData) == null;
+  const allowCompetitionParentUpdate = getEditingDataTeamId(competitionEditingData) == null;
+
   return (
     <>
       {/* 練習メニューフォーム (個別ログ追加・編集) */}
@@ -442,6 +449,7 @@ export function FormModals({
         availableTags={availableTags}
         setAvailableTags={setAvailableTags}
         initialTab={practiceActiveTab}
+        allowParentUpdate={allowPracticeParentUpdate}
       />
 
       {/* タブモーダル: 大会 (3タブ統合) */}
@@ -461,6 +469,7 @@ export function FormModals({
         isLoading={competitionIsLoading}
         initialTab={competitionActiveTab}
         entryLocked={competitionEntryLocked}
+        allowParentUpdate={allowCompetitionParentUpdate}
       />
     </>
   );

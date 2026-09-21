@@ -29,6 +29,7 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import type { Record, Competition, Style, SwimStyle } from "@apps/shared/types";
 import { EntryAPI } from "@apps/shared/api/entries";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import type { CompetitionSortColumn, RelayFilterMode } from "@/stores/competition/competitionStore";
 import type { EditingData } from "@/stores/types";
@@ -782,6 +783,16 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
     createSplitTimesMutation.isPending ||
     replaceSplitTimesMutation.isPending;
 
+  // 個人画面 (/competition) は team_id の有無から明示的に導出する (Sprint Contract 2)。
+  // selection は現在編集/記録追加対象の大会 (新規作成時は未選択 = 個人扱いで true)。
+  // 保存フック (親 basicData UPDATE のスキップ) と CompetitionTabModal (フィールド disable)
+  // の両方に同じ値を渡し、判定基準を一本化する (Reviewer 指摘 F1-3)。
+  const allowParentUpdate = !selection
+    ? true
+    : selection.mode === "record"
+      ? (selection.record.competition as Competition)?.team_id == null
+      : !selection.item.isTeamCompetition;
+
   // 大会タブモーダル一括保存（ダッシュボードと共通ロジック）
   const handleCompetitionTabSave = useCompetitionTabSave({
     supabase,
@@ -807,6 +818,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
       setEntryOnlyRefreshKey((n) => n + 1);
       refetch();
     },
+    allowParentUpdate,
   });
 
   const buildCompetitionEditingData = (
@@ -966,14 +978,20 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
     );
   }
 
-  const errorMessage =
-    error?.message ||
-    createRecordMutation.error?.message ||
-    updateRecordMutation.error?.message ||
-    deleteRecordMutation.error?.message ||
-    createCompetitionMutation.error?.message ||
-    deleteCompetitionMutation.error?.message ||
-    replaceSplitTimesMutation.error?.message;
+  // 生の Error (RPC の内部識別子文字列等) をそのまま表示すると情報露出になるため、
+  // PracticeClient.tsx の delete ハンドラと同じ toUserFacingMessage() パターンに揃える。
+  // UserFacingError でない限り fallback (汎用文言) に畳まれる。
+  const rawError =
+    error ||
+    createRecordMutation.error ||
+    updateRecordMutation.error ||
+    deleteRecordMutation.error ||
+    createCompetitionMutation.error ||
+    deleteCompetitionMutation.error ||
+    replaceSplitTimesMutation.error;
+  const errorMessage = rawError
+    ? toUserFacingMessage(rawError, t("errorPage.unknownError"))
+    : null;
 
   if (errorMessage && !loading) {
     return (
@@ -1191,6 +1209,7 @@ export default function CompetitionClient({ styles }: CompetitionClientProps) {
         isLoading={isTabLoading}
         initialTab={competitionActiveTab}
         entryLocked={entryLocked}
+        allowParentUpdate={allowParentUpdate}
       />
 
       {/* 大会未紐付けレコード(一括ベストタイム入力等)の単体詳細モーダル */}

@@ -855,9 +855,15 @@ describe("PracticeTabFormScreen — 練習一覧スコープ外の練習を編�
   );
 
   it(
-    "[P-11] チーム練習・他メンバーが作成者・自分がチーム管理者の場合、フォームが実データで" +
-      "初期化され、保存が成功する (updatePracticeMutation に実 title/place/note が渡る)",
+    "[P-11 / Sprint Contract 2 で仕様変更] チーム練習・他メンバーが作成者・自分がチーム管理者でも、" +
+      "個人画面 (このタブ統合画面) からは basicData を編集できない (admin 判定は使わない)",
     async () => {
+      // Sprint Contract 2 (編集禁止) 以前は「チーム管理者は個人画面からでも他メンバーの
+      // チーム練習を編集できる」が仕様だったが、Contract 2 が「team_id 付き練習は
+      // admin であっても個人画面 (dashboard/練習タブ) からは編集不可」に上書きした
+      // (チームタブ /teams-admin/[teamId] からのみ編集可能)。
+      // useTeamMembersQuery 自体が canEditPracticeDetails の判定から外れたため、
+      // このモック設定 (admin ロール付与) はもはや判定に影響しない。
       mocks.currentUserId = TEAM_ADMIN_VIEWER_ID;
       mocks.routeParams.practiceId = TEAM_OWNED_PRACTICE_ID;
       mocks.useTeamMembersQuery.mockReturnValue({
@@ -879,24 +885,14 @@ describe("PracticeTabFormScreen — 練習一覧スコープ外の練習を編�
       );
       expect(screen.getByDisplayValue(teamOwnedByOtherFixture.place as string)).toBeTruthy();
       expect(screen.getByDisplayValue(teamOwnedByOtherFixture.note as string)).toBeTruthy();
-      expect(screen.queryByText(EDIT_RESTRICTED_MESSAGE)).toBeNull();
+      // Contract 2: admin であっても個人画面からは編集不可を示す制限メッセージが出る
+      expect(screen.getByText(EDIT_RESTRICTED_MESSAGE)).toBeTruthy();
 
-      fireEvent.click(screen.getByTestId("practice-tab-form-save"));
+      const saveButton = screen.getByTestId("practice-tab-form-save");
+      fireEvent.click(saveButton);
+      await flushAsync();
 
-      await waitFor(
-        () => {
-          expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(1);
-        },
-        { timeout: 15000 },
-      );
-
-      const [{ id, updates }] = mocks.updateMutateAsync.mock.calls[0] as [
-        { id: string; updates: Record<string, unknown> },
-      ];
-      expect(id).toBe(TEAM_OWNED_PRACTICE_ID);
-      expect(updates.title).toBe(teamOwnedByOtherFixture.title);
-      expect(updates.place).toBe(teamOwnedByOtherFixture.place);
-      expect(updates.note).toBe(teamOwnedByOtherFixture.note);
+      expect(mocks.updateMutateAsync).not.toHaveBeenCalled();
     },
     15000,
   );
@@ -946,8 +942,12 @@ describe("PracticeTabFormScreen — 練習一覧スコープ外の練習を編�
   );
 
   it(
-    "[P-13] チーム練習・他メンバーが作成者・権限判定が未確定 (useTeamMembersQuery が" +
-      "isLoading) の場合、編集可能 UI を出さず保存も実行されない",
+    "[P-13 / 修正ラウンド2で再確定] チームメンバー取得中 (log タブの owner/admin 判定が" +
+      "未確定) は basicData も含め画面全体がローディング表示のままになる" +
+      "(canEditPracticeDetails 自体は team_id の有無のみの同期的な値だが、" +
+      "canEditPracticeLogs は useTeamMembersQuery に依存するため、isResolvingPracticePermission" +
+      "が画面全体のローディングゲートとして復活している。編集不可 UI を早出ししないための" +
+      "ガードであり、退行ではない)",
     async () => {
       mocks.currentUserId = TEAM_ADMIN_VIEWER_ID;
       mocks.routeParams.practiceId = TEAM_OWNED_PRACTICE_ID;
@@ -956,20 +956,17 @@ describe("PracticeTabFormScreen — 練習一覧スコープ外の練習を編�
 
       renderScreen();
 
-      // 練習データ自体の取得は完了しているが、権限確定待ちのためフォームは出さない。
+      // 練習データ自体の取得は完了しているが、log タブの権限確定待ちのためフォームは出さない。
       await waitFor(
         () => {
           expect(mocks.getTeamScopedPracticeById).toHaveBeenCalledWith(TEAM_OWNED_PRACTICE_ID);
         },
         { timeout: 15000 },
       );
-      // 取得完了後の state 更新 (practiceOwnerId/practiceTeamId/loadingExisting) が
-      // コミットされる猶予を与える。
       await flushAsync();
 
       expect(screen.queryByDisplayValue(teamOwnedByOtherFixture.title as string)).toBeNull();
       expect(screen.queryByTestId("practice-tab-form-save")).toBeNull();
-      expect(screen.queryByText(EDIT_RESTRICTED_MESSAGE)).toBeNull();
       expect(mocks.updateMutateAsync).not.toHaveBeenCalled();
     },
     15000,
@@ -1014,8 +1011,12 @@ describe("PracticeTabFormScreen — 練習一覧スコープ外の練習を編�
   );
 
   it(
-    "[P-15] チーム練習・自分が作成者の場合、管理者でなくても編集・保存できる",
+    "[P-15 / Sprint Contract 2 で仕様変更] チーム練習・自分が作成者であっても、" +
+      "個人画面からは basicData を編集できない (作成者判定も使わない。team_id の有無のみ)",
     async () => {
+      // Sprint Contract 2 以前は「作成者本人なら管理者でなくても編集できる」が仕様だったが、
+      // Contract 2 は「team_id が付いた行は個人画面から一律編集不可」に上書きした。
+      // 作成者本人であることは canEditPracticeDetails の判定にもう関与しない。
       mocks.currentUserId = SELF_CREATOR_ID;
       mocks.routeParams.practiceId = TEAM_SELF_PRACTICE_ID;
       mocks.useTeamMembersQuery.mockReturnValue({
@@ -1035,24 +1036,177 @@ describe("PracticeTabFormScreen — 練習一覧スコープ外の練習を編�
         },
         { timeout: 15000 },
       );
-      expect(screen.queryByText(EDIT_RESTRICTED_MESSAGE)).toBeNull();
+      expect(screen.getByText(EDIT_RESTRICTED_MESSAGE)).toBeTruthy();
 
-      fireEvent.click(screen.getByTestId("practice-tab-form-save"));
+      const saveButton = screen.getByTestId("practice-tab-form-save");
+      fireEvent.click(saveButton);
+      await flushAsync();
+
+      expect(mocks.updateMutateAsync).not.toHaveBeenCalled();
+    },
+    15000,
+  );
+});
+
+// -----------------------------------------------------------------------
+// Sprint Contract 2 (編集禁止) SC2 の回帰テスト【確定仕様 — PM裁定 2026-09-19 最終】
+//
+// 判定変数が2系統に分離された (PM裁定・修正ラウンド2):
+//   canEditPracticeDetails: basicData タブ用。新仕様 (= !practiceTeamId のみ、
+//     admin/owner 判定なし)。P-11/P-12/P-13/P-15 が担当。
+//   canEditPracticeLogs: log タブ用。Contract 2 以前の旧ロジックをそのまま維持
+//     (owner 本人 OR team admin)。一般メンバーは不可 — これは仕様であり、
+//     RLS 実測 (practice_logs INSERT WITH CHECK は p.user_id=auth.uid() の
+//     「本人」枝が practice_logs.user_id の値を一切見ないため、一般メンバーが
+//     他人のチーム練習にログを追加しようとしても両枝とも不成立で必ず拒否される)
+//     により「一般メンバーに解禁しても実害は無い」ことは確認済みだが、
+//     UX 上の「編集不可であることが明確に伝わる」旧体験を優先し admin/owner 判定を残す。
+//
+// 「ボタンが無いこと」の assert は偽陽性になりやすいため、同じセレクタで
+// 「出るべきケース」(owner/admin) を対に置く。加えて、2つの判定変数の取り違えを
+// 検出できるよう、basicData 用の値を差し替えても log タブの結果が変わらないことを
+// 明示的に確認する (SC2-4)。
+// -----------------------------------------------------------------------
+describe("PracticeTabFormScreen — SC2: チーム練習の log タブは Contract 2 以前と同じ人が同じことをできる", () => {
+  it(
+    "[SC2-1] チーム練習の作成者本人 (owner, 非admin) は log タブで「メニュー追加」ボタンが出る" +
+      "(セレクタの健全性確認・非退行)",
+    async () => {
+      mocks.currentUserId = SELF_CREATOR_ID;
+      mocks.routeParams.practiceId = TEAM_SELF_PRACTICE_ID;
+      mocks.routeParams.initialTab = "log";
+      mocks.useTeamMembersQuery.mockReturnValue({
+        data: [
+          { user_id: SELF_CREATOR_ID, role: "user" },
+          { user_id: OTHER_MEMBER_OWNER_ID, role: "admin" },
+        ],
+        isLoading: false,
+      });
+      mocks.getTeamScopedPracticeById.mockResolvedValue(structuredClone(teamOwnedBySelfFixture));
+
+      renderScreen();
 
       await waitFor(
         () => {
-          expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(1);
+          expect(screen.getByTestId("practicelog-item-tabs")).toBeTruthy();
         },
         { timeout: 15000 },
       );
 
-      const [{ id, updates }] = mocks.updateMutateAsync.mock.calls[0] as [
-        { id: string; updates: Record<string, unknown> },
-      ];
-      expect(id).toBe(TEAM_SELF_PRACTICE_ID);
-      expect(updates.title).toBe(teamOwnedBySelfFixture.title);
-      expect(updates.place).toBe(teamOwnedBySelfFixture.place);
-      expect(updates.note).toBe(teamOwnedBySelfFixture.note);
+      expect(screen.queryByTestId("item-tab-add")).not.toBeNull();
+      expect(screen.queryByText(EDIT_RESTRICTED_MESSAGE)).toBeNull();
+    },
+    15000,
+  );
+
+  it(
+    "[SC2-2] チーム管理者 (オーナーではない) は log タブで「メニュー追加」ボタンが出る (非退行)",
+    async () => {
+      mocks.currentUserId = TEAM_ADMIN_VIEWER_ID;
+      mocks.routeParams.practiceId = TEAM_OWNED_PRACTICE_ID;
+      mocks.routeParams.initialTab = "log";
+      mocks.useTeamMembersQuery.mockReturnValue({
+        data: [
+          { user_id: TEAM_ADMIN_VIEWER_ID, role: "admin" },
+          { user_id: OTHER_MEMBER_OWNER_ID, role: "user" },
+        ],
+        isLoading: false,
+      });
+      mocks.getTeamScopedPracticeById.mockResolvedValue(structuredClone(teamOwnedByOtherFixture));
+
+      renderScreen();
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("practicelog-item-tabs")).toBeTruthy();
+        },
+        { timeout: 15000 },
+      );
+
+      expect(screen.queryByTestId("item-tab-add")).not.toBeNull();
+      expect(screen.queryByText(EDIT_RESTRICTED_MESSAGE)).toBeNull();
+    },
+    15000,
+  );
+
+  it(
+    "[SC2-3] 一般メンバー (作成者でも admin でもない) は log タブで「メニュー追加」ボタンが出ず、" +
+      "制限バナーが表示される (Contract 2 以前と同じ挙動。SC2-1/SC2-2 でセレクタが機能する" +
+      "ことを確認済みのため、ここで見つからないのは偽陽性ではない)",
+    async () => {
+      mocks.currentUserId = TEAM_GENERAL_VIEWER_ID;
+      mocks.routeParams.practiceId = TEAM_OWNED_PRACTICE_ID;
+      mocks.routeParams.initialTab = "log";
+      mocks.useTeamMembersQuery.mockReturnValue({
+        data: [
+          { user_id: TEAM_GENERAL_VIEWER_ID, role: "user" },
+          { user_id: OTHER_MEMBER_OWNER_ID, role: "user" },
+        ],
+        isLoading: false,
+      });
+      mocks.getTeamScopedPracticeById.mockResolvedValue(structuredClone(teamOwnedByOtherFixture));
+
+      renderScreen();
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("practicelog-item-tabs")).toBeTruthy();
+        },
+        { timeout: 15000 },
+      );
+
+      expect(screen.queryByTestId("item-tab-add")).toBeNull();
+      expect(screen.getByText(EDIT_RESTRICTED_MESSAGE)).toBeTruthy();
+    },
+    15000,
+  );
+
+  it(
+    "[SC2-4 / 変数分離の確認] basicData タブでは制限バナーが出る一般メンバーでも、" +
+      "log タブの制限有無は canEditPracticeLogs (owner/admin 判定) 側で独立に決まる" +
+      "(2つの判定変数が取り違えられていないことの確認: 同一ユーザー・同一練習で" +
+      "practice タブと log タブの結果を両方確認する)",
+    async () => {
+      // teamOwnedBySelfFixture: 閲覧者自身が作成者 (owner) で admin ではない。
+      // basicData タブは Contract 2 新仕様で「team_id が付いていれば一律不可」なので
+      // owner でも制限バナーが出るが、log タブは旧ロジックにより owner なら許可される。
+      // もし2つの判定変数が誤って同じ実装に統合されていたら、ここで log タブも
+      // 制限されてしまい SC2-1 と矛盾する結果になる。
+      mocks.currentUserId = SELF_CREATOR_ID;
+      mocks.routeParams.practiceId = TEAM_SELF_PRACTICE_ID;
+      mocks.routeParams.initialTab = "practice";
+      mocks.useTeamMembersQuery.mockReturnValue({
+        data: [
+          { user_id: SELF_CREATOR_ID, role: "user" },
+          { user_id: OTHER_MEMBER_OWNER_ID, role: "admin" },
+        ],
+        isLoading: false,
+      });
+      mocks.getTeamScopedPracticeById.mockResolvedValue(structuredClone(teamOwnedBySelfFixture));
+
+      renderScreen();
+
+      // basicData タブ: Contract 2 新仕様により owner でも制限される
+      await waitFor(
+        () => {
+          expect(screen.getByText(EDIT_RESTRICTED_MESSAGE)).toBeTruthy();
+        },
+        { timeout: 15000 },
+      );
+
+      // log タブに切り替える (同一画面・同一ユーザー・同一練習)。
+      // FormTabBar に testID は無いため、タブラベルのテキスト ("練習ログ") で切り替える。
+      fireEvent.click(screen.getByText("練習ログ"));
+
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("practicelog-item-tabs")).toBeTruthy();
+        },
+        { timeout: 15000 },
+      );
+
+      // log タブでは旧ロジック (owner 判定) により制限されないはず
+      expect(screen.queryByTestId("item-tab-add")).not.toBeNull();
     },
     15000,
   );

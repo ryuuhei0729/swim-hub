@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
@@ -44,6 +44,13 @@ export interface UsePracticeTabSaveProps {
   closePracticeTabModal: () => void;
   /** 保存成功時に呼び出すコールバック（ダッシュボードでは refreshCalendar、履歴タブでは refetch 等） */
   onSaved: () => void;
+  /**
+   * 親 (practices) 行の basicData / image_paths UPDATE を許可するか。
+   * 省略時は true (従来動作。チームタブ (TeamPractices.tsx) は認可を RLS に委譲するため省略してよい)。
+   * **個人画面 (PracticeClient.tsx / dashboard) は team_id の有無から導出し、必ず明示的に渡すこと。**
+   * 省略すると「個人画面から team_id 付き練習の basicData を編集できてしまう」フェイルオープンになる。
+   */
+  allowParentUpdate?: boolean;
 }
 
 /**
@@ -65,8 +72,26 @@ export function usePracticeTabSave({
   setEditingPracticeId,
   closePracticeTabModal,
   onSaved,
+  allowParentUpdate,
 }: UsePracticeTabSaveProps) {
   const t = useTranslations("dashboard.handlers");
+  // 省略時は従来動作 (更新する)。チームタブ (TeamPractices.tsx) は明示的に渡さず
+  // この既定値に委ね、認可は RLS (is_team_admin) に任せる。
+  const canUpdateParent = allowParentUpdate ?? true;
+
+  // Reviewer 指摘 (F3): TeamPractices.tsx の自己ログ追加 (非 admin) は
+  // 子 (practice_logs) 保存失敗時、親 practices の作成は成功済みのまま
+  // editingPracticeId が保持されモーダルが開いたまま残る (子 INSERT 失敗時の
+  // 再送信を可能にするための既存設計)。ユーザーが再送信すると basicData が
+  // 無変更でも UPDATE 分岐に入り、非 admin には新 RLS が働いて親 UPDATE 自体が
+  // 拒否され、再送信 (本来は子だけのはずの再試行) ごと失敗する。
+  // TeamPractices.tsx は編集不可のため、フック側で「直前に自分が適用した
+  // basicData と一致するなら UPDATE を発行しない」ダーティチェックを行い、
+  // 不要な UPDATE (と、それに伴う RLS 拒否) 自体を発生させない。
+  const lastAppliedParentDataRef = useRef<{
+    practiceId: string;
+    basicData: { date: string; title: string | null; place: string | null; note: string | null };
+  } | null>(null);
 
   const handlePracticeTabSave = useCallback(
     async (params: PracticeTabSaveParams) => {
@@ -88,19 +113,34 @@ export function usePracticeTabSave({
           };
           const created = await createPractice(payload);
           practiceId = created.id;
+          lastAppliedParentDataRef.current = { practiceId, basicData: payload };
           // 子 INSERT 失敗時に再送信できるよう ID を保持
           setEditingPracticeId(practiceId);
-        } else {
-          await updatePractice(practiceId, {
+        } else if (canUpdateParent) {
+          const payload = {
             date: basicData.date,
             title: basicData.title || null,
             place: basicData.place || null,
             note: basicData.note || null,
-          });
+          };
+          const isUnchangedFromLastApply =
+            lastAppliedParentDataRef.current?.practiceId === practiceId &&
+            JSON.stringify(lastAppliedParentDataRef.current.basicData) === JSON.stringify(payload);
+
+          if (!isUnchangedFromLastApply) {
+            await updatePractice(practiceId, payload);
+            lastAppliedParentDataRef.current = { practiceId, basicData: payload };
+          }
         }
+        // canUpdateParent === false: 親 UPDATE をスキップする (Sprint Contract 2)。
+        // 個人画面から team_id 付き練習の basicData を書き換えさせないための第二防御
+        // (第一防御は D3 の編集ボタン非表示、第三防御は RLS)。子 (practice_logs) の
+        // 保存はこの下で必ず継続する。
 
         // ── 2. 画像処理 ──
-        if (practiceId && imageData) {
+        // image_paths も親行の列のためスキップ対象。アップロードより前に判定する
+        // (アップロード後にスキップすると孤児ファイルが Storage に残るため)。
+        if (practiceId && imageData && canUpdateParent) {
           const practiceAPI = new PracticeAPI(supabase);
           const uploadedPaths: string[] = [];
           try {
@@ -271,6 +311,7 @@ export function usePracticeTabSave({
       setEditingPracticeId,
       closePracticeTabModal,
       onSaved,
+      canUpdateParent,
       t,
     ],
   );

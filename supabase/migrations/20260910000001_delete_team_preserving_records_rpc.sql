@@ -111,6 +111,15 @@ BEGIN
 
   -- チーム練習を個人練習に戻す。ぶら下がる practice_logs / practice_times /
   -- practice_log_tags は親が残ることで丸ごと保持される
+  --
+  -- 順序依存 (20260919000000 で追加された prevent_unauthorized_team_id_change
+  -- トリガとの関係): このトリガは team_id を書き換える UPDATE の権限判定に
+  -- is_team_admin(OLD.team_id, auth.uid()) を使う。is_team_admin は
+  -- team_memberships を参照するため、この UPDATE は team_memberships が
+  -- ON DELETE CASCADE で消える下の `DELETE FROM public.teams` より必ず先に
+  -- 実行しなければならない。順序を入れ替えると team_memberships が既に
+  -- 無い状態で is_team_admin が false を返し、この正当な UPDATE 自体が
+  -- トリガに拒否される (チーム削除機能が壊れる)。
   UPDATE public.practices SET team_id = NULL WHERE team_id = p_team_id;
   GET DIAGNOSTICS v_cleared_practice_count = ROW_COUNT;
 

@@ -196,6 +196,66 @@ export function getRecordCompetitionId(
 }
 
 /**
+ * getEditingDataTeamId の戻り値。
+ * `null` = 個人 (team_id が実際に NULL であることを確認済み)。
+ * `"unknown"` = DB から取得できていない、または team_id を含まない構築経路
+ * (フェッチ失敗時のフォールバック等)。呼び出し側は "unknown" を「個人」と
+ * 同一視してはならない (Reviewer 指摘 F1: 未確認を個人扱いにすると
+ * admin がチーム項目の basicData を個人画面から書き換えられてしまう)。
+ */
+export type EditingDataTeamId = string | null | "unknown";
+
+/**
+ * editingData から team_id を取得するヘルパー関数。
+ * 親 (practices/competitions) 行の basicData UPDATE を許可してよいかの判定に使う
+ * (Sprint Contract 2: team_id が無ければ個人の行として編集可、あれば admin 限定)。
+ */
+export function getEditingDataTeamId(editingData: unknown): EditingDataTeamId {
+  if (!editingData) return null; // editingData 自体が無い = 新規作成 (個人)
+
+  // 直接team_idをチェック (dashboardHandlers内で組み立てるEditingDataの第2バリアント)
+  if (isObject(editingData) && "team_id" in editingData) {
+    const teamId = editingData.team_id;
+    if (teamId === "unknown") return "unknown";
+    if (typeof teamId === "string") return teamId;
+    if (teamId === null) return null;
+    // team_id キーはあるが上記のいずれでもない (undefined 等) → 未確認扱い
+    return "unknown";
+  }
+
+  // CalendarItemの場合: metadata.team_id / metadata.competition.team_id / metadata.entry.team_id をチェック
+  if (hasMetadata(editingData)) {
+    const metadata = editingData.metadata;
+
+    if ("team_id" in metadata) {
+      const teamId = metadata.team_id;
+      if (typeof teamId === "string") return teamId;
+      if (teamId === null) return null;
+    }
+
+    if ("competition" in metadata && isObject(metadata.competition) && "team_id" in metadata.competition) {
+      const teamId = metadata.competition.team_id;
+      if (typeof teamId === "string") return teamId;
+      if (teamId === null) return null;
+    }
+
+    if ("entry" in metadata && isObject(metadata.entry) && "team_id" in metadata.entry) {
+      const teamId = metadata.entry.team_id;
+      if (typeof teamId === "string") return teamId;
+      if (teamId === null) return null;
+    }
+
+    // CalendarItem は calendar 取得パイプラインが該当時に必ず team_id を含めるため、
+    // どの経路にも一致しなければ「そもそもチームに紐づかない項目」= 個人とみなす。
+    return null;
+  }
+
+  // team_id キー自体を持たないオブジェクト (取得失敗時のフォールバック等) → 未確認。
+  // 「個人」と混同せず安全側 (unknown) に倒す。
+  return "unknown";
+}
+
+/**
  * 記録フォーム用のEntryInfoを取得するヘルパー関数
  */
 export function getEntryDataForRecord(

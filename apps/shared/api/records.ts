@@ -931,7 +931,8 @@ export class RecordAPI {
 
   /**
    * 大会削除。個人大会 (team_id IS NULL) の場合は紐づく records も RPC 内で
-   * 削除される。チーム大会は records を削除せず大会のみ削除する。
+   * 削除される。チーム大会 (team_id IS NOT NULL) は RPC 側で `success: false` を
+   * 返し拒否される (作成者・管理者に関わらず、本 RPC 経由での削除は個人大会専用)。
    * RPC 側で作成者本人 (auth.uid()) のみに削除を許可する。
    */
   async deleteCompetition(id: string): Promise<void> {

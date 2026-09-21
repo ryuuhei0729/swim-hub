@@ -15,6 +15,7 @@ import type { RecordLogFormState, StyleOption } from "../types";
 import type { BestTime } from "@/types/member-detail";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
 import PremiumBadge from "@/components/ui/PremiumBadge";
+import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
 const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
@@ -250,7 +251,13 @@ export default function RecordLogEntry({
         </label>
         <div className="space-y-1.5" data-testid={`record-style-${sectionIndex}`}>
           {/* 距離 */}
-          <div className="flex flex-wrap gap-1">
+          <ChipScrollRow
+            className="gap-1"
+            // 容器の testid は chiprow- 接頭辞の別名前空間。チップ側 testid
+            // (record-style-distance-{idx}-{d}) と先頭が異なるので、後から
+            // [data-testid^="record-style-distance-1-"] を書かれても衝突しない
+            data-testid={`chiprow-record-style-distance-${sectionIndex}`}
+          >
             {distanceOptions.map((d) => {
               const isActive = raceDistance === d;
               return (
@@ -275,9 +282,12 @@ export default function RecordLogEntry({
                 </button>
               );
             })}
-          </div>
+          </ChipScrollRow>
           {/* 泳法 — ラベルは practice.styles 翻訳 */}
-          <div className="flex flex-wrap gap-1">
+          <ChipScrollRow
+            className="gap-1"
+            data-testid={`chiprow-record-style-stroke-${sectionIndex}`}
+          >
             {codeKeysForCurrentDistance.map((ck) => {
               const isActive = currentCodeKey === ck;
               return (
@@ -300,7 +310,7 @@ export default function RecordLogEntry({
                 </button>
               );
             })}
-          </div>
+          </ChipScrollRow>
           {/* リレー (3行目: オンオフトグル) */}
           {canRelay && (
             <button
@@ -419,20 +429,24 @@ export default function RecordLogEntry({
                 key={st.uiKey || `${index}-${originalIndex}`}
                 className="flex items-center space-x-2"
               >
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={st.distance === 0 || st.distance === "" ? "" : String(st.distance)}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "" || /^\d+(\.\d*)?$/.test(value)) {
-                      onSplitTimeChange(originalIndex, "distance", value);
-                    }
-                  }}
-                  placeholder={t("distance_placeholder")}
-                  className="w-24"
-                  data-testid={`record-split-distance-${sectionIndex}-${originalIndex + 1}`}
-                />
+                {/* 幅はラッパー側で持つ。Input に w-* を渡しても内部 base の w-full と
+                    同時に出力され、CSS 出力順で w-full が後勝ちして効かない */}
+                <div className="w-16 sm:w-24 shrink-0">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={st.distance === 0 || st.distance === "" ? "" : String(st.distance)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "" || /^\d+(\.\d*)?$/.test(value)) {
+                        onSplitTimeChange(originalIndex, "distance", value);
+                      }
+                    }}
+                    placeholder={t("distance_placeholder")}
+                    className="w-full"
+                    data-testid={`record-split-distance-${sectionIndex}-${originalIndex + 1}`}
+                  />
+                </div>
                 <div className="flex-1">
                   <Input
                     type="text"

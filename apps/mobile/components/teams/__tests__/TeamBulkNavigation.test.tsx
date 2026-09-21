@@ -1,6 +1,20 @@
 // QA Phase B: チーム代理入力導線の権限ゲート検証 (Contract Checklist #3)。
 // isAdmin により記録/ログボタンが TeamRecordBulkForm / TeamPracticeLogBulkForm へ分岐し、
-// 非 admin では従来の本人入力フロー (RecordLogForm / PracticeLogForm) に向かうことを確認する。
+// 非 admin では本人入力フロー CompetitionTabForm(initialTab:"record") /
+// PracticeTabForm(initialTab:"log") に向かうことを確認する (下記 it("isAdmin=false: ...")
+// 2件の toHaveBeenCalledWith が根拠。旧 RecordLogForm はルート自体を削除済み、
+// PracticeLogForm はリダイレクトシムとして現存するが、このファイルの非admin テストの
+// 遷移先ではない)。
+//
+// 【"RecordLogForm" への negative assert を置き換えた経緯 — 定義はここ1箇所】
+// 旧 RecordLogForm ルートは RecordLogFormScreen ごと削除され、navigation/types.ts の
+// MainStackParamList からも消えた。そのため
+// `expect(navigate).not.toHaveBeenCalledWith("RecordLogForm", ...)` のような文字列
+// リテラル比較の negative assert は、ルート消滅後は何が壊れても永久に真であり検出力が
+// ゼロになる。よってこのファイルおよび TeamCompetitionList.test.tsx では、これらを
+// 「`toHaveBeenCalledWith(<期待ルート>)` + `toHaveBeenCalledTimes(1)`」の組
+// (= クリック1回につき期待したルートへ1回だけ遷移した、を肯定形で担保する) に
+// 置き換えている。各 assert 直上の1行コメントはこの方針への参照である。
 import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -105,25 +119,31 @@ describe("[Gate] TeamCompetitionList 記録ボタンの admin 分岐", () => {
       competitionId: "c-1",
       teamId: "team-1",
     });
-    expect(mocks.navigate).not.toHaveBeenCalledWith("RecordLogForm", expect.anything());
+    // 期待ルート以外へは飛ばない (上の toHaveBeenCalledWith との組で担保)
+    expect(mocks.navigate).toHaveBeenCalledTimes(1);
   });
 
   // バグ修正 (2026-08-01): 非 admin の本人フローは RecordLogForm (recordId 未指定の
   // ブランクフォーム。既存レコードを検索しないため重複作成を招く) から、
   // useDayDetailHandlers.handleEditRecord と同じ CompetitionTabForm(initialTab:"record")
   // (competitionId 指定で既存レコードを読み込み編集対象にする) へ統一された。
-  it("isAdmin=false: 記録ボタンで本人フロー CompetitionTabForm(initialTab:'record') へ遷移 (代理導線なし・重複レコード作成バグの回帰防止)", () => {
+  //
+  // 【QA Phase A 書き換えメモ (今回の Sprint Contract SC-2)】competition.date は
+  // "2026-07-01" 固定 (このファイルのモジュールスコープで定義済み、変更範囲外)。
+  // 実測時点 (2026-09-21) で既に過去日のため、[SC-3][SC-4] の排他仕様上も
+  // 記録追加ボタンが表示される側であり非退行。ラベルのみ SC-2 の新文言
+  // 「記録追加」(旧「記録」) に書き換えた。
+  it("isAdmin=false: 記録追加ボタンで本人フロー CompetitionTabForm(initialTab:'record') へ遷移 (代理導線なし・重複レコード作成バグの回帰防止)", () => {
     render(<TeamCompetitionList teamId="team-1" isAdmin={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "記録" }));
+    fireEvent.click(screen.getByRole("button", { name: "記録追加" }));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "CompetitionTabForm",
       expect.objectContaining({ competitionId: "c-1", teamId: "team-1", initialTab: "record" }),
     );
     // 非 admin では代理入力画面 (TeamRecordBulkForm) へは遷移しない (非退行)
     expect(mocks.navigate).not.toHaveBeenCalledWith("TeamRecordBulkForm", expect.anything());
-    // 回帰防止: recordId 未指定のブランクフォーム (RecordLogForm) には遷移しないこと
-    // (既存レコードを無視した重複作成バグの再発防止)
-    expect(mocks.navigate).not.toHaveBeenCalledWith("RecordLogForm", expect.anything());
+    // 期待ルート以外へは飛ばない (上の toHaveBeenCalledWith との組で担保)
+    expect(mocks.navigate).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -154,13 +174,19 @@ describe("[Gate] TeamPracticeList ログボタンの admin 分岐", () => {
     expect(mocks.navigate).not.toHaveBeenCalledWith("PracticeLogForm", expect.anything());
   });
 
-  it("isAdmin=false: ログボタンで本人フロー PracticeLogForm へ遷移 (代理導線なし)", () => {
+  // 【QA Phase A 書き換えメモ (今回の Sprint Contract SC-1)】ラベルは
+  // 「ログを記入」→「記録追加」に変わった (apps/shared/messages/ja.json 実測で確認済み)。
+  // 【QA Phase A 再書き換え (今回のスプリント: 旧画面の統合タブ画面への一本化)】
+  // 遷移先が PracticeLogForm から PracticeTabForm(initialTab:"log") に変わった
+  // (旧画面 PracticeLogFormScreen はリダイレクトシム化された)。
+  it("isAdmin=false: 記録追加ボタンで本人フロー PracticeTabForm(initialTab:'log') へ遷移 (代理導線なし)", () => {
     render(<TeamPracticeList teamId="team-1" isAdmin={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "ログを記入" }));
+    fireEvent.click(screen.getByRole("button", { name: "記録追加" }));
     expect(mocks.navigate).toHaveBeenCalledWith(
-      "PracticeLogForm",
-      expect.objectContaining({ practiceId: "p-1", teamId: "team-1" }),
+      "PracticeTabForm",
+      expect.objectContaining({ practiceId: "p-1", teamId: "team-1", initialTab: "log" }),
     );
     expect(mocks.navigate).not.toHaveBeenCalledWith("TeamPracticeLogBulkForm", expect.anything());
+    expect(mocks.navigate).not.toHaveBeenCalledWith("PracticeLogForm", expect.anything());
   });
 });

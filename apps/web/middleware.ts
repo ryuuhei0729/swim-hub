@@ -38,13 +38,19 @@ function generateNonce(): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
+// React の dev ビルドは RSC のコールスタック復元に eval() を使う。CSP に 'unsafe-eval'
+// が無いと WebKit で TypeError となり、続けて flight ストリームが errored 状態になって
+// "stream is closing or closed" 等が連鎖する (iPhone Safari 実機で観測)。
+// 本番ビルドでは React が eval() を使わないため、dev のみ許可する。
+const DEV_SCRIPT_SRC = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
+
 function buildCsp(nonce: string): string {
   return [
     "default-src 'self'",
     // ffmpeg.wasm は unpkg から取得した core.js/core.wasm を blob: URL 経由で実行するため
     // script-src に blob: と 'wasm-unsafe-eval' が必要
     // JSON-LD の inline <script> はリクエストごとの nonce で許可する ('unsafe-inline' は使わない)
-    `script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval' blob:`,
+    `script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval' blob:${DEV_SCRIPT_SRC}`,
     "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline'",
     [
@@ -145,8 +151,10 @@ export const config = {
      * - favicon.ico (favicon file)
      * - api/* (Route Handlers; ロケールリダイレクトと Supabase 認証 chain を通さない)
      * - guide/* (public/ 配下の静的な利用ガイド HTML; ロケールプレフィックスを付けない)
-     * - 静的アセット (画像)
+     * - 静的アセット (画像・フォント・json)
+     *   除外し忘れると next-intl がロケールを付けてリダイレクトし 404 になる
+     *   (public/manifest.json と public/fonts/dseg/*.woff2 が実際に 404 していた)
      */
-    "/((?!_next/static|_next/image|favicon.ico|api|guide|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|guide|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|woff|woff2)$).*)",
   ],
 };

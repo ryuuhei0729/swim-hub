@@ -90,6 +90,9 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   const teamId = item.metadata?.team_id ?? null;
   const isTeamEvent =
     (item.type === "team_practice" || item.type === "team_competition") && !!teamId;
+  // チーム大会/チーム練習は個人画面(ダッシュボード/大会タブ/練習タブ)から削除不可
+  // (PM裁定: 管理者判定は使わず type のみで判定。チームタブからの削除は別経路で維持)
+  const isTeamItem = item.type === "team_practice" || item.type === "team_competition";
   const [attendanceModalVisible, setAttendanceModalVisible] = useState(false);
   const [recordDetail, setRecordDetail] = useState<{
     time: number;
@@ -606,7 +609,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
               <Text style={[styles.entryTypeText, { color: badgeTextColor }]}>{typeLabel}</Text>
             </View>
             <View style={styles.actionButtons}>
-              {isPractice && onEditPractice && (
+              {isPractice && !isTeamItem && onEditPractice && (
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
@@ -618,7 +621,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                   <Feather name="edit" size={18} color="#2563EB" />
                 </Pressable>
               )}
-              {isPractice && onDeletePractice && (
+              {isPractice && !isTeamItem && onDeletePractice && (
                 <Pressable
                   style={styles.actionButton}
                   onPress={(e) => {
@@ -676,6 +679,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                 </Pressable>
               )}
               {(item.type === "competition" || item.type === "team_competition") &&
+                !isTeamItem &&
                 onEditCompetition && (
                   <Pressable
                     style={styles.actionButton}
@@ -689,6 +693,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                   </Pressable>
                 )}
               {(item.type === "competition" || item.type === "team_competition") &&
+                !isTeamItem &&
                 onDeleteCompetition && (
                   <Pressable
                     style={styles.actionButton}

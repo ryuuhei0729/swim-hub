@@ -101,7 +101,9 @@ const PracticeItem = React.memo(function PracticeItem({
             : t("teams.mobile.teamPracticeList.addLog")
         }
       >
-        <Feather name="edit-3" size={13} color="#2563EB" />
+        {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-3 を維持する。
+            非admin は「記録追加」という追加操作に変わったため plus に切り替える。 */}
+        <Feather name={isAdmin ? "edit-3" : "plus"} size={13} color="#2563EB" />
         <Text style={styles.logButtonText}>
           {isAdmin
             ? t("teams.mobile.teamPracticeList.recordBulkButton")
@@ -150,9 +152,10 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
       });
       return;
     }
-    navigation.navigate("PracticeLogForm", {
+    navigation.navigate("PracticeTabForm", {
       practiceId: practice.id,
       teamId,
+      initialTab: "log",
     });
   }, [navigation, teamId, isAdmin]);
 

@@ -14,6 +14,7 @@ import type { PracticeTag } from "@swim-hub/shared/types";
 import TagInput from "@/components/forms/TagInput";
 import Button from "@/components/ui/Button";
 import NumberStepper from "@/components/ui/NumberStepper";
+import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 import { SelectChips, chipClass } from "@/components/forms/practice-log/components/SelectChips";
 import { SWIM_STYLES, SWIM_CATEGORIES, DISTANCE_PRESETS } from "@/components/forms/practice-log/types";
 import { cn } from "@/utils/cn";
@@ -296,7 +297,10 @@ export function PracticeLogTemplateCreateModal({
               <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
                 {t("distanceLabel")} <span className="text-red-500">*</span>
               </label>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              <ChipScrollRow
+                className="gap-1.5 sm:gap-2"
+                data-testid="chiprow-template-distance-preset"
+              >
                 {DISTANCE_PRESETS.map((preset) => {
                   const selected = !showCustomDistance && Number(distance) === preset;
                   return (
@@ -319,7 +323,7 @@ export function PracticeLogTemplateCreateModal({
                   // Critical 1: distance state に直接反映。空のまま送信 → required が確実に効く
                   //
                   // 高さ・padding の根拠: components/ui/Input.tsx の「16px ズーム防止 box サイズ根拠」参照。
-                  // 同じ flex-wrap 行に並ぶ SelectChips (chipClass, h-8 sm:h-10) と高さを揃える必要が
+                  // 同じチップ行に並ぶ SelectChips (chipClass, h-8 sm:h-10) と高さを揃える必要が
                   // あるため、箱の高さは変えず padding のみ py-0.5 sm:py-1.5 に縮小する
                   // (h-9 等の非レスポンシブ高さにするとプリセットチップと数px ずれる)。
                   <input
@@ -348,7 +352,7 @@ export function PracticeLogTemplateCreateModal({
                     {tPM("distanceOther")}
                   </button>
                 )}
-              </div>
+              </ChipScrollRow>
             </div>
 
             {/* 本数 × セット数 — Critical 2: number | "" で保持 */}

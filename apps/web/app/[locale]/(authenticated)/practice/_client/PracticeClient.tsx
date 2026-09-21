@@ -448,6 +448,12 @@ export default function PracticeClient({
     setSelectedPractice(null);
   };
 
+  // 個人画面 (/practice) は team_id の有無から明示的に導出する (Sprint Contract 2)。
+  // selectedPractice は現在編集/ログ追加対象の練習 (新規作成時は未選択 = 個人扱いで true)。
+  // 保存フック (親 basicData UPDATE のスキップ) と PracticeTabModal (フィールド disable)
+  // の両方に同じ値を渡し、判定基準を一本化する (Reviewer 指摘 F1-3)。
+  const allowParentUpdate = selectedPractice ? selectedPractice.team_id == null : true;
+
   // 練習タブモーダル一括保存（ダッシュボードと共通ロジック）
   const handlePracticeTabSave = usePracticeTabSave({
     supabase,
@@ -462,6 +468,7 @@ export default function PracticeClient({
     setPracticeLoading: setTabLoading,
     setEditingPracticeId,
     closePracticeTabModal,
+    allowParentUpdate,
     onSaved: () => {
       setModalNonce((n) => n + 1);
       refetch();
@@ -733,6 +740,7 @@ export default function PracticeClient({
         isLoading={isTabLoading}
         availableTags={availableTags}
         setAvailableTags={setAvailableTags}
+        allowParentUpdate={allowParentUpdate}
         initialTab={practiceActiveTab}
       />
     </div>

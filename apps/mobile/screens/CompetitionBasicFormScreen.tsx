@@ -38,6 +38,7 @@ import {
   mergeImagePaths,
 } from "@/utils/imageUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
+import { resolveSaveReturnTarget } from "@/utils/tabFormUtils";
 import type { MainStackParamList } from "@/navigation/types";
 
 type CompetitionFormScreenRouteProp = RouteProp<MainStackParamList, "CompetitionForm">;
@@ -373,7 +374,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     }
   };
 
-  // 保存処理（保存してダッシュボードに戻る）
+  // 保存処理（チーム大会は直前にいた TeamDetail の大会タブへ、個人大会はダッシュボードに戻る）
   const handleSave = async () => {
     if (isSubmittingRef.current) return;
     if (!validate()) return;
@@ -389,7 +390,18 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       if (teamId) {
         queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
       }
-      navigation.popToTop();
+      const target = resolveSaveReturnTarget(teamId);
+      if (target.kind === "team") {
+        // popTo は既存の TeamDetail インスタンスが見つかればそこまで pop するだけで
+        // unmount/remount は起きない。その通常経路では TeamDetail の activeTab state は
+        // 保持されたまま (大会タブ) なので initialTab は実質無視される。initialTab を
+        // 渡しているのは、popTo が一致するルートを見つけられず新規 push にフォールバック
+        // した場合の保険 (TeamDetailScreen L50 の useState 初期値は初回マウント時にしか
+        // 読まれないという実装上の事実に基づく)。
+        navigation.popTo("TeamDetail", { teamId: target.teamId, initialTab: "competitions" });
+      } else {
+        navigation.popToTop();
+      }
     } catch (error) {
       console.error("保存エラー:", error);
       Alert.alert(t("common.error"), toUserFacingMessage(error, t("competition.mobile.saveFailed")), [
@@ -402,7 +414,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     }
   };
 
-  // 続けてエントリーを作成（EntryFormへ遷移）
+  // 続けてエントリーを作成（CompetitionTabForm のエントリータブへ遷移）
   const handleContinueToEntry = async () => {
     if (isSubmittingRef.current) return;
     if (!validate()) return;
@@ -421,20 +433,12 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       if (teamId) {
         queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
       }
-      if (teamId) {
-        // チームフロー: 旧画面へ
-        navigation.navigate("EntryForm", {
-          competitionId: resultId,
-          date,
-        });
-      } else {
-        // 個人フロー: 新タブ画面(エントリータブ)へ
-        navigation.navigate("CompetitionTabForm", {
-          competitionId: resultId,
-          date,
-          initialTab: "entry",
-        });
-      }
+      navigation.navigate("CompetitionTabForm", {
+        competitionId: resultId,
+        date,
+        teamId,
+        initialTab: "entry",
+      });
     } catch (error) {
       console.error("保存エラー:", error);
       Alert.alert(t("common.error"), toUserFacingMessage(error, t("competition.mobile.saveFailed")), [
@@ -447,7 +451,7 @@ export const CompetitionBasicFormScreen: React.FC = () => {
     }
   };
 
-  // 続けて記録を入力（過去の大会：EntryFormをスキップしてRecordLogFormへ遷移）
+  // 続けて記録を入力（過去の大会：CompetitionTabForm のレコードタブへ遷移）
   const handleContinueToRecord = async () => {
     if (isSubmittingRef.current) return;
     if (!validate()) return;
@@ -466,21 +470,12 @@ export const CompetitionBasicFormScreen: React.FC = () => {
       if (teamId) {
         queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
       }
-      if (teamId) {
-        // チームフロー: 旧画面へ
-        navigation.navigate("RecordLogForm", {
-          competitionId: resultId,
-          entryDataList: [],
-          date,
-        });
-      } else {
-        // 個人フロー: 新タブ画面(レースレコードタブ)へ
-        navigation.navigate("CompetitionTabForm", {
-          competitionId: resultId,
-          date,
-          initialTab: "record",
-        });
-      }
+      navigation.navigate("CompetitionTabForm", {
+        competitionId: resultId,
+        date,
+        teamId,
+        initialTab: "record",
+      });
     } catch (error) {
       console.error("保存エラー:", error);
       Alert.alert(t("common.error"), toUserFacingMessage(error, t("competition.mobile.saveFailed")), [

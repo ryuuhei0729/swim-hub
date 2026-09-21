@@ -57,7 +57,7 @@ export default function ItemTabs({
       <div
         role="tablist"
         aria-label="item tabs"
-        className="flex items-end gap-1 overflow-x-auto px-1 scrollbar-none"
+        className="flex items-end gap-1 overflow-x-auto px-1 scrollbar-hide"
       >
         {Array.from({ length: count }, (_, i) => {
           const isActive = activeIndex === i;

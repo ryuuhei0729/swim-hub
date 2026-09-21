@@ -20,7 +20,6 @@
         "recordCreate": "创建比赛记录",
         "competitionInfo": "比赛信息",
         "entryRegister": "报名登记",
-        "recordInput": "成绩录入",
         "teamDetail": "团队详情",
         "settings": "设置",
         "bulkBestTime": "批量录入最好成绩"
@@ -2648,7 +2647,7 @@
         "fetchFailed": "训练记录加载失败",
         "deleteConfirm": "确定删除此训练记录？此操作无法撤销。",
         "deleteFailed": "训练记录删除失败",
-        "addLog": "填写日志",
+        "addLog": "添加成绩",
         "recordBulkButton": "代为录入成绩"
       },
       "teamCompetitionList": {
@@ -2659,10 +2658,11 @@
         "deleteConfirm": "确定删除此比赛？此操作无法撤销。",
         "deleteFailed": "比赛删除失败",
         "entryButton": "报名",
-        "recordButton": "成绩",
+        "recordButton": "添加成绩",
         "entryBulkButton": "代为录入报名",
         "recordBulkButton": "代为录入成绩",
-        "entryStatusChangeAria": "报名状态：{status}。点击更改"
+        "entryStatusChangeAria": "报名状态：{status}。点击更改",
+        "viewRecordsAria": "查看 {title} 的成绩列表"
       },
       "teamCompetitionEntryModal": {
         "title": "{title} 的报名",
@@ -2857,7 +2857,12 @@
         "manageButton": "管理",
         "editButton": "编辑",
         "deleteButton": "删除",
-        "entryBulkInputButton": "录入报名"
+        "entryBulkInputButton": "录入报名",
+        "recordCount": "已登记记录：{count}项",
+        "tapForDetails": "点击查看详情",
+        "noRecords": "暂无登记记录",
+        "addable": "可添加",
+        "viewRecordsAriaLabel": "查看{title}的记录"
       },
       "entryStatus": {
         "before": "报名前",
@@ -4142,6 +4147,8 @@
       "pool_type_label": "泳道",
       "pool_short": "短池 (25m)",
       "pool_long": "长池 (50m)",
+      "pool_short_abbrev": "短池",
+      "pool_long_abbrev": "长池",
       "note_label": "备注",
       "note_placeholder": "比赛相关备注（可选）",
       "save": "保存",

@@ -10,6 +10,7 @@
     "start:local": "pnpm exec dotenvx run -f .env.local -- expo start",
     "start:dev": "pnpm exec dotenvx run -f .env.development -- expo start",
     "start:prod": "pnpm exec dotenvx run -f .env.production -- expo start",
+    "start:tailnet": "bash scripts/start-tailnet.sh",
     "android": "pnpm exec dotenvx run -f .env.local -- expo start --android",
     "android:clear": "pnpm exec dotenvx run -f .env.local -- expo start --android --clear",
     "android:local": "pnpm exec dotenvx run -f .env.local -- expo start --android",

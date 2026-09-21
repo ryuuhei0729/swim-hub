@@ -56,6 +56,13 @@ export interface UseCompetitionTabSaveProps {
   closeCompetitionTabModal: () => void;
   /** 保存成功時に呼び出すコールバック（ダッシュボードでは refreshCalendar、履歴タブでは refetch 等） */
   onSaved: () => void;
+  /**
+   * 親 (competitions) 行の basicData / image_paths UPDATE を許可するか。
+   * 省略時は true (従来動作。チームタブ (TeamCompetitions.tsx) は認可を RLS に委譲するため省略してよい)。
+   * **個人画面 (CompetitionClient.tsx / dashboard) は team_id の有無から導出し、必ず明示的に渡すこと。**
+   * 省略すると「個人画面から team_id 付き大会の basicData を編集できてしまう」フェイルオープンになる。
+   */
+  allowParentUpdate?: boolean;
 }
 
 /**
@@ -79,8 +86,12 @@ export function useCompetitionTabSave({
   setCreatedEntries,
   closeCompetitionTabModal,
   onSaved,
+  allowParentUpdate,
 }: UseCompetitionTabSaveProps) {
   const t = useTranslations("dashboard.handlers");
+  // 省略時は従来動作 (更新する)。チームタブ (TeamCompetitions.tsx) は明示的に渡さず
+  // この既定値に委ね、認可は RLS (is_team_admin) に任せる。
+  const canUpdateParent = allowParentUpdate ?? true;
 
   const handleCompetitionTabSave = useCallback(
     async (params: CompetitionTabSaveParams) => {
@@ -114,7 +125,7 @@ export function useCompetitionTabSave({
           });
           competitionId = created.id;
           setEditingCompetitionId(competitionId);
-        } else if (competitionRowResolved) {
+        } else if (competitionRowResolved && canUpdateParent) {
           await updateCompetition(competitionId, {
             date: basicData.date,
             end_date: endDate,
@@ -127,9 +138,15 @@ export function useCompetitionTabSave({
         // competitionRowResolved === false (D-3): 大会本体が DB から未解決のまま。
         // basicData は暫定値の可能性があるため pool_type 等を推測で書き込まず、
         // 競技会本体の UPDATE をスキップする。エントリー/記録の保存は続行する。
+        // canUpdateParent === false: 親 UPDATE をスキップする (Sprint Contract 2)。
+        // 個人画面から team_id 付き大会の basicData を書き換えさせないための第二防御
+        // (第一防御は D3 の編集ボタン非表示、第三防御は RLS)。エントリー/記録の
+        // 保存はこの下で必ず継続する。
 
         // ── 2. 画像処理 ──
-        if (competitionId && imageData) {
+        // image_paths も親行の列のためスキップ対象。アップロードより前に判定する
+        // (アップロード後にスキップすると孤児ファイルが Storage に残るため)。
+        if (competitionId && imageData && canUpdateParent) {
           const competitionAPI = new CompetitionAPI(supabase);
           const uploadedPaths: string[] = [];
           try {
@@ -343,6 +360,7 @@ export function useCompetitionTabSave({
       setCreatedEntries,
       closeCompetitionTabModal,
       onSaved,
+      canUpdateParent,
       t,
     ],
   );

@@ -30,7 +30,6 @@ import {
   useBestTimesQuery,
 } from "@apps/shared/hooks/queries/records";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
-import { useTeamMembersQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
@@ -69,6 +68,9 @@ import {
   diffRecordDraft,
   isDefaultUntouchedEntry,
   getTabNavAdjacency,
+  mergeEntriesIntoRecords,
+  resolveSaveReturnTarget,
+  findLinkedRowDraftId,
 } from "@/utils/tabFormUtils";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
@@ -171,7 +173,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     teamId,
     initialTab,
   } = route.params;
-  const { supabase, user, subscription, getAccessToken } = useAuth();
+  const { supabase, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -188,7 +190,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // 既存データ取得時に competitions.team_id (source of truth) で上書きする。
   // handleSave 以降はこの competitionTeamId を唯一の参照先とし、route.params.teamId を
   // 直接参照しない (新規作成モードでは競技データ未取得のためこの初期値がそのまま使われる)。
-  const [competitionOwnerId, setCompetitionOwnerId] = useState<string | null>(null);
   const [competitionTeamId, setCompetitionTeamId] = useState<string | null>(teamId ?? null);
 
   // ---- 大会タブ state ----
@@ -273,6 +274,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // ---- エントリー1行目に自動セットされたデフォルト種目ID (未編集判定用) ----
   const defaultEntryStyleIdRef = useRef("");
 
+  // ---- エントリー→記録の自動引き継ぎ済み styleId (画面マウント中のみ保持) ----
+  // 一度自動生成した styleId をここに記録し、ユーザーが手動削除した後にタブを
+  // 再度開いても復活させない (mergeEntriesIntoRecords 参照)。state化して再レンダーを
+  // 起こす必要はないので ref で保持する。
+  const mergedEntryStyleIdsRef = useRef<Set<string>>(new Set());
+
   // ---- 保存完了フラグ (usePreventRemove 制御) ----
   // usePreventRemove(preventRemove, ...) の preventRemove は render のたびに評価される
   // ただの boolean のため、ref (isSavedRef.current 等) で持つと値を変えても再レンダーが
@@ -298,25 +305,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase);
 
   // ---- 大会の編集権限判定 ----
-  // competitions UPDATE RLS (user_id = auth.uid() OR is_team_admin(team_id, auth.uid())) と
-  // 同じ条件をクライアント側でも判定する。チーム大会でない場合は自分の大会なので常に true。
-  // メンバー一覧の取得・管理者判定は TeamDetailScreen (members.some(m => m.user_id === user.id
-  // && m.role === "admin")) と同じパターンを踏襲する。
-  const { data: competitionTeamMembers, isLoading: isCompetitionTeamMembersLoading } =
-    useTeamMembersQuery(supabase, competitionTeamId ?? undefined);
-  const isCurrentUserCompetitionTeamAdmin = useMemo(() => {
-    if (!user || !competitionTeamId || !competitionTeamMembers) return false;
-    return competitionTeamMembers.some((m) => m.user_id === user.id && m.role === "admin");
-  }, [user, competitionTeamId, competitionTeamMembers]);
+  // 個人画面 (dashboard/大会タブ) では、チーム大会の basicData は admin であっても
+  // 編集不可 (Sprint Contract 2)。team_id の有無のみで判定し、admin 判定は使わない。
   const canEditCompetitionDetails = useMemo(() => {
     if (!isEditMode) return true; // 新規作成は常に自分の大会
-    if (!competitionTeamId) return true; // 個人の大会は常に自分のもの
-    if (user && competitionOwnerId === user.id) return true;
-    return isCurrentUserCompetitionTeamAdmin;
-  }, [isEditMode, competitionTeamId, competitionOwnerId, user, isCurrentUserCompetitionTeamAdmin]);
-  // チーム大会の編集権限確定待ち (未確定のまま編集可能 UI を出さないためのローディングガード)
-  const isResolvingCompetitionPermission =
-    isEditMode && !!competitionTeamId && isCompetitionTeamMembersLoading;
+    return !competitionTeamId; // チーム大会は個人画面から編集不可
+  }, [isEditMode, competitionTeamId]);
 
   // ---- EntryAPI ----
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
@@ -409,8 +403,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
         setPlace(competition.place || "");
         setPoolType(competition.pool_type);
         setCompetitionNote(competition.note || "");
-        // 編集権限判定 (competitions UPDATE RLS と同条件をクライアントでも反映する)
-        setCompetitionOwnerId(competition.user_id);
         setCompetitionTeamId(competition.team_id ?? null);
         // 保存用の生パスは表示用の解決結果と独立して常に保持する
         setSavedImagePaths(competition.image_paths ?? []);
@@ -535,6 +527,51 @@ export const CompetitionTabFormScreen: React.FC = () => {
     }
   }, [date, activeTab]);
 
+  // ---- 記録タブオープン時: エントリー入力を記録行へ引き継ぐ ----
+  // 旧 EntryLogFormScreen の「続けて大会記録を作成」相当。DB 復元エントリー
+  // (initialTab: "record" で直接開かれ、非同期取得が effect 実行後に完了するケース)
+  // からも引き継ぐ必要があるため、依存に entries を含める。records は含めない
+  // (records を依存に入れて setRecords すると自己再発火し無限ループになるため)。
+  //
+  // entries を依存に含めると、双方向リンク (handleRecordStyleChange 内の updateEntry
+  // 呼び出し。本ファイル内 handleRecordStyleChange 参照) により「record タブ内で
+  // 無関係な行の種目を変更しただけ」でも entries が変化しこの effect が再発火するが、
+  // 収束は以下の理由で保証される:
+  // 1. mergeEntriesIntoRecords は「追加すべき styleId が無ければ addedStyleIds: []」を
+  //    返す。呼び出し側は addedStyleIds が空なら setRecords 自体を呼ばない (下記)ため、
+  //    この場合は render も再実行されず、この effect も再発火しない。
+  // 2. handleRecordStyleChange は findLinkedRowDraftId (styleId 突き合わせ) で
+  //    見つかった対応エントリー行だけを新しい styleId に書き換える。その styleId は
+  //    同じ操作で records 側 (updateRecord 呼び出し先の同一行) にも既に反映済みで
+  //    あり、次に mergeEntriesIntoRecords が見る records の existingStyleIds に
+  //    含まれるため missingStyleIds に入らない (= addedStyleIds は空になる。
+  //    上記1に帰着)。対応するエントリー行が見つからない場合は updateEntry 自体が
+  //    呼ばれず entries は変化しないため、この effect も再発火しない。
+  // 3. mergedEntryStyleIdsRef による恒久ガードにより、仮に一度 addedStyleIds に
+  //    載った styleId があっても、その styleId は以後二度と addedStyleIds に
+  //    入らない (ユーザーが行を手動削除して entries だけが再度変化しても復活しない)。
+  //    styleId の集合は有限 (swimStyles の件数が上限) なので、この effect が
+  //    「setRecords を呼ぶ」回数は種目数を超えて増え続けることがなく、
+  //    有限回で「addedStyleIds が常に空」の状態に落ち着く。
+  useEffect(() => {
+    if (activeTab !== "record") return;
+    const result = mergeEntriesIntoRecords(
+      records,
+      entries,
+      defaultEntryStyleIdRef.current,
+      (styleId) => ({ ...createEmptyRecord(), styleId }),
+      mergedEntryStyleIdsRef.current,
+    );
+    // addedStyleIds が空 = records と同一参照。setRecords 自体を呼ばないことで
+    // 無駄な再レンダー (延いてはこの effect の再発火の起点) を作らない。
+    if (result.addedStyleIds.length === 0) return;
+    for (const styleId of result.addedStyleIds) {
+      mergedEntryStyleIdsRef.current.add(styleId);
+    }
+    setRecords(result.records);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, entries]);
+
   // ---- 開始日変更ハンドラ ----
   const handleStartDateChange = useCallback(
     (newDate: string) => {
@@ -554,15 +591,37 @@ export const CompetitionTabFormScreen: React.FC = () => {
   );
 
   // ---- 保存完了 → 前画面へ戻る ----
-  // setIsSaved(true) の直後に navigation.goBack() を同期で呼ぶと、preventRemove=false を
-  // 反映したレンダーが commit される前に REMOVE アクションが発行されてしまう。isSaved の
-  // 変化で再レンダーが commit されるのを待ってからこの effect 経由で goBack() することで、
-  // preventRemove=false が確定した状態で REMOVE を発行する。
+  // setIsSaved(true) の直後に navigation.goBack()/popTo() を同期で呼ぶと、
+  // preventRemove=false を反映したレンダーが commit される前に REMOVE アクションが
+  // 発行されてしまう。isSaved の変化で再レンダーが commit されるのを待ってからこの
+  // effect 経由で呼ぶことで、preventRemove=false が確定した状態で REMOVE を発行する
+  // (popTo も REMOVE 系アクションのため同じ制約を受ける)。
+  //
+  // チーム大会フロー (CompetitionBasicFormScreen の「続けてエントリー/記録を作成」
+  // 経由で push される) は goBack() だけだと中間に挟まった CompetitionBasicFormScreen
+  // (保存済みの基本情報フォーム) に戻ってしまう。route.params.teamId (state 化した
+  // competitionTeamId ではなく生の route パラメータ) があれば popTo("TeamDetail") で
+  // 一気に戻す。competitionTeamId は既存データ取得後に competitions.team_id で
+  // 上書きされるため (competitionTeamId の初期化コメント参照)、ダッシュボード発の個人フローで
+  // 「たまたまチームの大会を編集した」場合にも非 null になりうる。その場合に
+  // popTo してしまうと来歴に無い TeamDetail へ誤って飛ばす。route.params.teamId は
+  // TeamCompetitionList / CompetitionBasicFormScreen の「続けて〜」経路でのみ渡され
+  // (useDayDetailHandlers 経由の個人フローでは渡らない)、スタック上に TeamDetail が
+  // 実在することの唯一の信頼できる手がかりのためこちらを使う。
+  // 個人フロー (中間画面を挟まない) は従来通り goBack() のままとする
+  // (resolveSaveReturnTarget の fallback: "goBack" で明示指定。省略時の popToTop は
+  // 他画面 (CompetitionBasicFormScreen 等) 向けの既定値のため)。
   useEffect(() => {
-    if (isSaved) {
+    if (!isSaved) return;
+    const target = resolveSaveReturnTarget(teamId, { fallback: "goBack" });
+    if (target.kind === "team") {
+      navigation.popTo("TeamDetail", { teamId: target.teamId, initialTab: "competitions" });
+    } else if (target.kind === "goBack") {
       navigation.goBack();
+    } else {
+      navigation.popToTop();
     }
-  }, [isSaved, navigation]);
+  }, [isSaved, navigation, teamId]);
 
   // ---- 破棄確認 ----
   // snapshotRef の更新は必ず対応する state 変更を伴わせること (伴わないと memo が再計算されず stale になる)
@@ -631,10 +690,23 @@ export const CompetitionTabFormScreen: React.FC = () => {
   }, [date, endDate, t]);
 
   // ---- エントリータブ バリデーション (空→valid) ----
+  // 未編集のデフォルト行は検証対象から外す (validateRecordTab の「全フィールド空なら
+  // スキップ」と同じ形)。判定は handleSave の effectiveEntries フィルタ
+  // と同一の述語 isDefaultUntouchedEntry・同一の引数 defaultEntryStyleIdRef.current を
+  // 使う。validate 側と save 側が別の述語で「未編集」を判定すると、一方は通すのに
+  // 他方は捨てる (またはその逆) という不整合が起きるため、判定基準を1箇所に揃える。
+  // これが無いと、ユーザーが一切触っていない行のために「種目を選択してください」で
+  // save 全体がブロックされ、「デフォルト行に触らなければ登録しない」という
+  // isDefaultUntouchedEntry 本来の意図 (過去のエントリー誤登録バグの修正) が
+  // 検証の手前で無効化されてしまう。
+  // isDefaultUntouchedEntry は全フィールドが未入力のときだけ true を返すため、
+  // 種目だけ選んだ・タイムだけ入れた等「部分的に触られた行」はここでは false になり
+  // 従来通り下のチェック対象になる (スキップされるのは完全な未編集行のみ)。
   const validateEntryTab = useCallback((): boolean => {
     if (!showEntryTab) return true;
     const newErrors: Record<string, string> = {};
     entries.forEach((entry, index) => {
+      if (isDefaultUntouchedEntry(entry, defaultEntryStyleIdRef.current)) return;
       if (!entry.styleId) {
         newErrors[`style-${index}`] = t("competition.entry.selectStyleRequired");
       }
@@ -644,8 +716,13 @@ export const CompetitionTabFormScreen: React.FC = () => {
         newErrors[`entryTime-${index}`] = t("competition.entry.timeFormatInvalid");
       }
     });
-    // 種目重複チェック (web CompetitionTabModal validateAll と同一)
-    const styleIds = entries.filter((e) => e.styleId).map((e) => e.styleId);
+    // 種目重複チェック (web CompetitionTabModal validateAll と同一)。
+    // 未編集行は effectiveEntries でも保存対象から外れる (= 重複の実害が無い) ため、
+    // ここでも同じ述語で除外し、未編集行同士 (または未編集行と実際の入力行) の
+    // styleId 一致を「重複」として誤検知しないようにする。
+    const styleIds = entries
+      .filter((e) => e.styleId && !isDefaultUntouchedEntry(e, defaultEntryStyleIdRef.current))
+      .map((e) => e.styleId);
     if (styleIds.length !== new Set(styleIds).size) {
       newErrors.duplicate = t("forms.tabModal.duplicateEntryStyle");
     }
@@ -1238,49 +1315,58 @@ export const CompetitionTabFormScreen: React.FC = () => {
     [],
   );
 
-  // ---- 双方向リンク: entry[i] <-> record[i] (web CompetitionTabModal :733-774 と同一) ----
+  // ---- 双方向リンク: entry ⇔ record (styleId 突き合わせ。web CompetitionTabModal の
+  // handleEntryStyleChange / handleLinkedRecordStyleChange 等の元実装は index 突き合わせ
+  // だったが、entries/records の行数・並び順が一致しなくなりうる理由は
+  // mergeEntriesIntoRecords の JSDoc を参照。mobile はここで styleId 突き合わせに変更した
+  // (linkedEntryTime のバッジ表示を styleId 突き合わせにしたのと同じ理由)。----
+  //
+  // findLinkedRowDraftId には必ず変更前の entries/records をそのまま渡すこと。
+  // updateEntry/updateRecord で state を更新する前に (＝この関数呼び出しの時点で
+  // まだ styleId が書き換わっていない entries/records を使って) 相手の draftId を
+  // 計算してから、その後で更新系の呼び出しを行う。
   const handleEntryStyleChange = useCallback(
-    (draftId: string, index: number, styleId: string) => {
+    (draftId: string, styleId: string) => {
+      const linkedRecordDraftId = findLinkedRowDraftId(entries, draftId, records);
       updateEntry(draftId, { styleId });
-      const linkedRecord = records[index];
-      if (linkedRecord) {
-        updateRecord(linkedRecord.draftId, { styleId });
+      if (linkedRecordDraftId) {
+        updateRecord(linkedRecordDraftId, { styleId });
       }
     },
-    [updateEntry, updateRecord, records],
+    [updateEntry, updateRecord, entries, records],
   );
 
   const handleEntryToggleRelaying = useCallback(
-    (draftId: string, index: number, next: boolean) => {
+    (draftId: string, next: boolean) => {
+      const linkedRecordDraftId = findLinkedRowDraftId(entries, draftId, records);
       updateEntry(draftId, { isRelaying: next });
-      const linkedRecord = records[index];
-      if (linkedRecord) {
-        updateRecord(linkedRecord.draftId, { isRelaying: next });
+      if (linkedRecordDraftId) {
+        updateRecord(linkedRecordDraftId, { isRelaying: next });
       }
     },
-    [updateEntry, updateRecord, records],
+    [updateEntry, updateRecord, entries, records],
   );
 
   const handleRecordStyleChange = useCallback(
-    (draftId: string, index: number, styleId: string) => {
+    (draftId: string, styleId: string) => {
+      const linkedEntryDraftId = findLinkedRowDraftId(records, draftId, entries);
       updateRecord(draftId, { styleId });
-      const linkedEntry = entries[index];
-      if (linkedEntry) {
-        updateEntry(linkedEntry.draftId, { styleId });
+      if (linkedEntryDraftId) {
+        updateEntry(linkedEntryDraftId, { styleId });
       }
     },
-    [updateRecord, updateEntry, entries],
+    [updateRecord, updateEntry, records, entries],
   );
 
   const handleRecordToggleRelaying = useCallback(
-    (draftId: string, index: number, next: boolean) => {
+    (draftId: string, next: boolean) => {
+      const linkedEntryDraftId = findLinkedRowDraftId(records, draftId, entries);
       updateRecord(draftId, { isRelaying: next });
-      const linkedEntry = entries[index];
-      if (linkedEntry) {
-        updateEntry(linkedEntry.draftId, { isRelaying: next });
+      if (linkedEntryDraftId) {
+        updateEntry(linkedEntryDraftId, { isRelaying: next });
       }
     },
-    [updateRecord, updateEntry, entries],
+    [updateRecord, updateEntry, records, entries],
   );
 
   // ---- タイム入力 ----
@@ -1682,7 +1768,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
   );
 
   // ---- ローディング ----
-  if (loadingExisting || loadingStyles || isResolvingCompetitionPermission) {
+  if (loadingExisting || loadingStyles) {
     return (
       <View style={styles.container}>
         <LoadingSpinner fullScreen message={t("competition.mobile.loadingInfo")} />
@@ -1934,7 +2020,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       styles={swimStyles}
                       value={entry.styleId}
                       onChange={(styleId) =>
-                        handleEntryStyleChange(entry.draftId, index, styleId)
+                        handleEntryStyleChange(entry.draftId, styleId)
                       }
                       disabled={isSaving}
                       testID={`entry-style-${index + 1}`}
@@ -1993,7 +2079,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                             <Switch
                               value={entry.isRelaying}
                               onValueChange={(next) =>
-                                handleEntryToggleRelaying(entry.draftId, index, next)
+                                handleEntryToggleRelaying(entry.draftId, next)
                               }
                               disabled={isSaving}
                               testID={`entry-style-${index + 1}-relay`}
@@ -2050,11 +2136,13 @@ export const CompetitionTabFormScreen: React.FC = () => {
               const recordStyleOption = recordStyle ? getStyleOption(recordStyle.id) : undefined;
               const canRelayCurrentStyle =
                 recordStyleOption != null && canRelay(recordStyleOption);
-              // 同インデックスのエントリータイム (web RecordLogEntry entryInfo バッジ相当)
-              const linkedEntryTime =
-                record && entries[index] && entries[index].entryTime > 0
-                  ? entries[index].entryTime
-                  : null;
+              // 同一種目のエントリータイム (web RecordLogEntry entryInfo バッジ相当)。
+              // records と entries の行数が一致しなくなりうる理由は mergeEntriesIntoRecords
+              // の JSDoc を参照。配列インデックスではなく styleId で突き合わせる。
+              const linkedEntry = record
+                ? entries.find((e) => e.styleId === record.styleId && e.entryTime > 0)
+                : undefined;
+              const linkedEntryTime = linkedEntry ? linkedEntry.entryTime : null;
               // ベストタイム (水路フォールバック付き。web RecordLogEntry currentBestTime 相当)
               const recordBestTime = record
                 ? getBestTimeForEntry(
@@ -2139,7 +2227,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       styles={swimStyles}
                       value={record.styleId}
                       onChange={(styleId) =>
-                        handleRecordStyleChange(record.draftId, index, styleId)
+                        handleRecordStyleChange(record.draftId, styleId)
                       }
                       disabled={isSaving}
                       testID={`record-style-${index + 1}`}
@@ -2210,7 +2298,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                             <Switch
                               value={record.isRelaying}
                               onValueChange={(next) =>
-                                handleRecordToggleRelaying(record.draftId, index, next)
+                                handleRecordToggleRelaying(record.draftId, next)
                               }
                               disabled={isSaving}
                               testID={`record-style-${index + 1}-relay`}

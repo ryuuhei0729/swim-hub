@@ -16,6 +16,16 @@ export type EditingData =
       type?: string;
       competitionId?: string | null;
       practiceId?: string;
+      /**
+       * 親 (practices/competitions) 行の team_id。basicData 編集可否の判定に使う
+       * (Sprint Contract 2)。`null` = 個人 (team_id が実際に NULL であることを確認済み)。
+       * `"unknown"` = DB から取得できていない (エラー等)。省略時も `getEditingDataTeamId`
+       * (dashboardHelpers.ts) が "unknown" 扱いにする — 「個人」と「未確認」を混同して
+       * 未確認を個人扱いにしてしまう事故を防ぐため、省略 = 安全側 (unknown) に倒す。
+       * `EditingData` は他画面 (TeamCompetitions.tsx 等) とも共有される型のため、
+       * ここでは optional のままにし、個々の構築箇所には強制しない。
+       */
+      team_id?: string | null | "unknown";
       entryData?: EntryInfo;
       entryDataList?: EntryInfo[];
       metadata?: {

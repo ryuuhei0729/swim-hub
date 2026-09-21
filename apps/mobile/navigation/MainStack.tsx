@@ -11,7 +11,6 @@ import { RecordFormScreen } from "@/screens/RecordFormScreen";
 import { CompetitionBasicFormScreen } from "@/screens/CompetitionBasicFormScreen";
 import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
 import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
-import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
 import { TeamRecordStyleListScreen } from "@/screens/TeamRecordStyleListScreen";
 import { TeamRecordStyleDetailScreen } from "@/screens/TeamRecordStyleDetailScreen";
 import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
@@ -123,14 +122,6 @@ export const MainStack: React.FC = () => {
         options={{
           ...baseHeaderOptions,
           title: t("navigation.mobile.titles.entryRegister"),
-        }}
-      />
-      <Stack.Screen
-        name="RecordLogForm"
-        component={RecordLogFormScreen}
-        options={{
-          ...baseHeaderOptions,
-          title: t("navigation.mobile.titles.recordInput"),
         }}
       />
       <Stack.Screen

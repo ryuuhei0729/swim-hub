@@ -26,6 +26,7 @@ import {
   getCompetitionId,
   getPracticeId,
   getRecordCompetitionId,
+  getEditingDataTeamId,
 } from "../_utils/dashboardHelpers";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
 import { useCompetitionTabSave } from "@/hooks/useCompetitionTabSave";
@@ -180,9 +181,15 @@ export function useDashboardHandlers({
         let practiceId: string | undefined;
         let isNewPractice = false;
         let createdPracticeRef: { id: string } | undefined;
+        // Reviewer 指摘 (F2): この関数は現状 UI から到達不能 (DashboardClient.tsx が
+        // 呼び出し配線を持たない) だが、削除ではなくガードで安全側に倒す。再配線されても
+        // 個人画面から team_id 付き練習の basicData/image_paths を書き換えられないようにする。
+        const canUpdateParent = getEditingDataTeamId(editingData) == null;
 
         if (editingData && editingData.id) {
-          await updatePractice(editingData.id, payload);
+          if (canUpdateParent) {
+            await updatePractice(editingData.id, payload);
+          }
           practiceId = editingData.id;
         } else {
           const createdPractice = await createPractice(payload);
@@ -194,7 +201,7 @@ export function useDashboardHandlers({
         // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
         // NOTE: 画像アップロードを画面遷移より先に実行する（新規時にアンマウントされると fetch が abort される問題の回避）
         // NOTE: 画像パスはpractices.image_pathsで管理（practice_imagesテーブルは廃止）
-        if (practiceId && imageData) {
+        if (practiceId && imageData && canUpdateParent) {
           const practiceAPI = new PracticeAPI(supabase);
           const uploadedPaths: string[] = [];
 
@@ -609,16 +616,22 @@ export function useDashboardHandlers({
         let competitionId: string | undefined;
         let isNewCompetition = false;
         let newCompetitionRef: { id: string } | undefined;
+        // Reviewer 指摘 (F2): この関数は現状 UI から到達不能 (DashboardClient.tsx が
+        // 呼び出し配線を持たない) だが、削除ではなくガードで安全側に倒す。再配線されても
+        // 個人画面から team_id 付き大会の basicData/image_paths を書き換えられないようにする。
+        const canUpdateParent = getEditingDataTeamId(competitionEditingData) == null;
 
         if (competitionEditingData && competitionEditingData.id) {
-          await updateCompetition(competitionEditingData.id, {
-            date: basicData.date,
-            end_date: endDate,
-            title: basicData.title || null,
-            place: basicData.place || null,
-            pool_type: basicData.poolType,
-            note: basicData.note || null,
-          });
+          if (canUpdateParent) {
+            await updateCompetition(competitionEditingData.id, {
+              date: basicData.date,
+              end_date: endDate,
+              title: basicData.title || null,
+              place: basicData.place || null,
+              pool_type: basicData.poolType,
+              note: basicData.note || null,
+            });
+          }
           competitionId = competitionEditingData.id;
         } else {
           const newCompetition = await createCompetition({
@@ -637,7 +650,7 @@ export function useDashboardHandlers({
         // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
         // NOTE: 画像アップロードを画面遷移より先に実行する（新規時にアンマウントされると fetch が abort される問題の回避）
         // NOTE: 画像パスはcompetitions.image_pathsで管理（competition_imagesテーブルは廃止）
-        if (competitionId && imageData) {
+        if (competitionId && imageData && canUpdateParent) {
           const competitionAPI = new CompetitionAPI(supabase);
           const uploadedPaths: string[] = [];
 
@@ -1139,6 +1152,14 @@ export function useDashboardHandlers({
     ],
   );
 
+  // 個人画面 (dashboard) は team_id の有無から明示的に導出する (Sprint Contract 2)。
+  // editingData/competitionEditingData は現在タブモーダルで編集/追加対象になっている
+  // 練習・大会を指す。保存フック (親 basicData UPDATE のスキップ) と
+  // PracticeTabModal/CompetitionTabModal (フィールド disable, DashboardClient.tsx 側で使用)
+  // の両方に同じ値を渡し、判定基準を一本化する (Reviewer 指摘 F1-3)。
+  const allowPracticeParentUpdate = getEditingDataTeamId(editingData) == null;
+  const allowCompetitionParentUpdate = getEditingDataTeamId(competitionEditingData) == null;
+
   // ===========================================================================
   // タブモーダル: 練習一括保存 (ロジックは usePracticeTabSave に切り出し、dashboard/practice 両方から再利用)
   // ===========================================================================
@@ -1156,6 +1177,7 @@ export function useDashboardHandlers({
     setEditingPracticeId,
     closePracticeTabModal,
     onSaved: refreshCalendar,
+    allowParentUpdate: allowPracticeParentUpdate,
   });
 
   // ===========================================================================
@@ -1178,6 +1200,7 @@ export function useDashboardHandlers({
     setCreatedEntries,
     closeCompetitionTabModal,
     onSaved: refreshCalendar,
+    allowParentUpdate: allowCompetitionParentUpdate,
   });
 
   return {

@@ -9,11 +9,30 @@ import { vi } from "vitest";
 export const View = ({
   children,
   style,
+  pointerEvents,
   ...props
-}: { children?: React.ReactNode; style?: unknown } & Record<string, unknown>) => {
+}: { children?: React.ReactNode; style?: unknown; pointerEvents?: string } & Record<
+  string,
+  unknown
+>) => {
   // styleプロップを処理（配列の場合はマージ）
   const processedStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
-  return React.createElement("div", { ...props, style: processedStyle }, children);
+  // 実機 RN の pointerEvents="none" は、この View 自身と配下をタッチ判定から除外する
+  // (タッチはこの要素の背後にあるものへ素通りする)。jsdom の DOM には「タッチ判定」の
+  // 概念自体が無く、pointerEvents を素通しの DOM 属性として描画するだけでは
+  // fireEvent.click が素通りせず子要素のハンドラをそのまま発火させてしまう
+  // (実機と異なる=モックの嘘)。capture フェーズで stopPropagation することで、
+  // このサブツリー配下のクリックハンドラにイベントが到達しないようにし、実機の
+  // 「タップが素通りする」挙動を模す ("box-none"/"box-only" は対象外。RN の意味論上
+  // 対象コンポーネント自身のみ/子要素のみをタッチ対象から除外する複合的な挙動であり、
+  // 本モックでは単純な最頻出ケース "none" のみを扱う)。
+  const pointerEventsCaptureProps =
+    pointerEvents === "none" ? { onClickCapture: (e: { stopPropagation?: () => void }) => e.stopPropagation?.() } : {};
+  return React.createElement(
+    "div",
+    { ...props, style: processedStyle, pointerEvents, ...pointerEventsCaptureProps },
+    children,
+  );
 };
 
 export const Text = ({
@@ -37,7 +56,7 @@ export const Pressable = ({
   onPress,
   style,
   ...props
-}: { children?: React.ReactNode; onPress?: () => void; style?: unknown } & Record<
+}: { children?: React.ReactNode; onPress?: (event?: unknown) => void; style?: unknown } & Record<
   string,
   unknown
 >) => {
@@ -50,7 +69,22 @@ export const Pressable = ({
   }
   return React.createElement(
     "button",
-    { ...props, style: processedStyle, onClick: onPress },
+    {
+      ...props,
+      style: processedStyle,
+      // 実機 RN のレスポンダシステムは「最も深いタッチ対象」がタッチを専有し、
+      // 親の Pressable へバブリングしない (jsdom の DOM click イベントは既定でバブリングする
+      // ため、これまでは Pressable のネストが実機と異なる挙動を示していた=モックの嘘)。
+      // ここで stopPropagation() してから onPress へイベントを転送することで、
+      // 実機同様「最も内側の Pressable だけが反応する」挙動を再現する。
+      // 転送を忘れるとイベント引数に依存するプロダクションコード
+      // (例: PracticeLogDetail.tsx の `onPress={(e) => { e.stopPropagation(); ... }}`)
+      // が `e` を受け取れず壊れるため、必ず `onPress(e)` の形で転送すること。
+      onClick: (event: unknown) => {
+        (event as { stopPropagation?: () => void })?.stopPropagation?.();
+        onPress?.(event);
+      },
+    },
     children,
   );
 };

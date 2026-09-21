@@ -12,6 +12,12 @@ const analyzer = withBundleAnalyzer({
 const nextConfig = {
   // セキュリティヘッダーは middleware.ts で設定（OpenNext の routingHandler との互換性のため）
 
+  // 実機スマホから dev サーバーを開くための許可オリジン（dev 専用・本番ビルドには影響しない）
+  // - 192.168.0.13:   同一 Wi-Fi 時の LAN IP（`pnpm dev:lan`）
+  // - 100.67.68.119:  この Mac の tailnet IP（別回線から http で直接叩く場合）
+  // - *.ts.net:       Tailscale の MagicDNS 名（`tailscale serve` 経由の https）
+  allowedDevOrigins: ["192.168.0.13", "100.67.68.119", "*.ts.net"],
+
   // TypeScript設定
   typescript: {
     ignoreBuildErrors: false,
@@ -28,6 +34,12 @@ const nextConfig = {
   // バンドル最適化: barrel importを自動的に直接importに変換
   // Next.js 16 では experimental 内に配置
   experimental: {
+    // Next 16 の dev DevTools 用デバッグチャネル (既定 true)。
+    // next/dist/client/dev/debug-channel.js が TransformStream の writer を
+    // IndexedDB 復元経路で二重に close/write するため、iOS Safari 実機で
+    // "stream is closing or closed" / "Cannot close a writable stream..." が出る。
+    // アプリ側は stream API を一切使っておらず、dev 専用機能なので無効化する。
+    reactDebugChannel: false,
     optimizePackageImports: [
       "@heroicons/react/24/outline",
       "@heroicons/react/24/solid",

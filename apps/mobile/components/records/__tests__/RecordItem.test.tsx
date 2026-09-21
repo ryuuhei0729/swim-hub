@@ -36,7 +36,9 @@ describe("RecordItem", () => {
 
   // NOTE: 大会に紐づく記録は保存時に record.pool_type が必ず competition.pool_type と
   // 同値でコピーされる (web useCompetitionTabSave.ts / mobile RecordFormScreen.tsx・
-  // RecordLogFormScreen.tsx いずれの保存パスも競技会の pool_type をそのまま記録へコピーする)。
+  // CompetitionTabFormScreen.tsx いずれの保存パスも競技会の pool_type をそのまま記録へ
+  // コピーする。旧 RecordLogFormScreen.tsx は削除済みで、この保存パスは
+  // CompetitionTabFormScreen.tsx に統合された)。
   // フィクスチャでこの不変条件を崩す (top-level pool_type と competition.pool_type が
   // 食い違う) と、実データでは起こり得ない状態になり、表示ロジックの参照フィールドを
   // 切り替えるリファクタで見かけ上のリグレッションを誤検知する。

@@ -130,6 +130,13 @@ export interface CompetitionTabModalProps {
   initialTab?: CompetitionTabId;
   /** エントリー編集をロックする（チーム大会で entry_status が open でない場合など）。true のとき記録入力のみ許可 */
   entryLocked?: boolean;
+  /**
+   * 親 (competitions) 行の basicData 編集を許可するか。省略時は true (従来動作)。
+   * false のとき、大会タブ (basicData) のフィールドを disabled にする
+   * (タブ自体は非表示にしない。閲覧は可能)。呼び出し元は useCompetitionTabSave に
+   * 渡す allowParentUpdate と同じ値を渡すこと (Sprint Contract 2, Reviewer 指摘 F1-3)。
+   */
+  allowParentUpdate?: boolean;
 }
 
 // =============================================================================
@@ -161,6 +168,7 @@ export default function CompetitionTabModal({
   isLoading,
   initialTab = "competition",
   entryLocked = false,
+  allowParentUpdate = true,
 }: CompetitionTabModalProps) {
   const t = useTranslations("forms.competition");
   const tEntry = useTranslations("forms.entry");
@@ -1071,6 +1079,18 @@ export default function CompetitionTabModal({
                 </div>
               )}
 
+              {/* 親 (competitions) 行の basicData を編集できない場合の案内。
+                  タブ自体は非表示にせず、閲覧はできる (フィールドのみ disabled)。 */}
+              {!allowParentUpdate && (
+                <div
+                  role="alert"
+                  className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-3"
+                  data-testid="competition-tab-edit-restricted-notice"
+                >
+                  {tTabModal("competitionEditRestricted")}
+                </div>
+              )}
+
               {/* Dates */}
               <div className="grid grid-cols-2 gap-4">
                 <DatePicker
@@ -1081,6 +1101,7 @@ export default function CompetitionTabModal({
                     setBasicValidationError(null);
                   }}
                   required
+                  disabled={!allowParentUpdate}
                   placeholder={t("start_date_label")}
                   data-testid="competition-tab-date"
                 />
@@ -1094,6 +1115,7 @@ export default function CompetitionTabModal({
                   minDate={basicData.date ? new Date(basicData.date) : undefined}
                   placeholder=""
                   popupAlign="right"
+                  disabled={!allowParentUpdate}
                   data-testid="competition-tab-end-date"
                 />
               </div>
@@ -1108,6 +1130,7 @@ export default function CompetitionTabModal({
                   value={basicData.title}
                   onChange={(e) => setBasicData((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder={t("name_placeholder")}
+                  disabled={!allowParentUpdate}
                   data-testid="competition-tab-title"
                 />
 
@@ -1121,6 +1144,7 @@ export default function CompetitionTabModal({
                       onChange={(value) => setBasicData((prev) => ({ ...prev, place: value }))}
                       suggestions={placeSuggestions}
                       placeholder="TAC"
+                      disabled={!allowParentUpdate}
                       data-testid="competition-tab-place"
                     />
                   </div>
@@ -1141,8 +1165,9 @@ export default function CompetitionTabModal({
                           onClick={() =>
                             setBasicData((prev) => ({ ...prev, poolType: type.value }))
                           }
+                          disabled={!allowParentUpdate}
                           aria-pressed={isActive}
-                          className={`h-8 sm:h-10 px-3 border text-sm font-medium whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          className={`h-8 sm:h-10 px-3 border text-sm font-medium whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
                             isFirst ? "rounded-l-md" : ""
                           } ${isLast ? "rounded-r-md" : ""} ${!isFirst ? "-ml-px" : ""} ${
                             isActive
@@ -1151,7 +1176,13 @@ export default function CompetitionTabModal({
                           }`}
                           data-testid={`competition-tab-pool-type-${type.value}`}
                         >
-                          {type.value === 0 ? t("pool_short") : t("pool_long")}
+                          {/* 狭幅では略称、sm 以上は従来のフル表記 */}
+                          <span className="sm:hidden">
+                            {type.value === 0 ? t("pool_short_abbrev") : t("pool_long_abbrev")}
+                          </span>
+                          <span className="hidden sm:inline">
+                            {type.value === 0 ? t("pool_short") : t("pool_long")}
+                          </span>
                         </button>
                       );
                     })}
@@ -1169,7 +1200,8 @@ export default function CompetitionTabModal({
                   onChange={(e) => setBasicData((prev) => ({ ...prev, note: e.target.value }))}
                   placeholder={t("note_placeholder")}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!allowParentUpdate}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50"
                   data-testid="competition-tab-note"
                 />
               </div>
@@ -1182,7 +1214,7 @@ export default function CompetitionTabModal({
                     onImagesChange={(newFiles: CompetitionImageFile[], deletedIds: string[]) =>
                       setImageData({ newFiles, deletedIds })
                     }
-                    disabled={isLoading}
+                    disabled={isLoading || !allowParentUpdate}
                   />
                 ) : (
                   <PremiumBadge message={tPremium("imageUpload")} />

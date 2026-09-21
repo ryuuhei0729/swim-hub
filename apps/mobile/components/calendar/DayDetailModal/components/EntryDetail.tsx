@@ -33,6 +33,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   poolType,
   note,
   entries,
+  isTeamCompetition,
   color = LEGACY_COMPETITION_ACCENT,
   onEditCompetition,
   onDeleteCompetition,
@@ -170,7 +171,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
             <Text style={styles.competitionHeaderTitle}>{competitionName}</Text>
           </View>
           <View style={styles.competitionHeaderActions}>
-            {onEditCompetition && (
+            {onEditCompetition && !isTeamCompetition && (
               <Pressable
                 style={styles.competitionHeaderActionButton}
                 onPress={() => {
@@ -209,7 +210,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                 <Feather name="edit" size={18} color="#2563EB" />
               </Pressable>
             )}
-            {onDeleteCompetition && (
+            {onDeleteCompetition && !isTeamCompetition && (
               <Pressable style={styles.competitionHeaderActionButton} onPress={onDeleteCompetition}>
                 <Feather name="trash-2" size={18} color="#EF4444" />
               </Pressable>

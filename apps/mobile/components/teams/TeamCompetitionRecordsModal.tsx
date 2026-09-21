@@ -111,7 +111,7 @@ function RecordRow({
 }
 
 /**
- * チーム大会の記録一覧モーダル (admin 専用)。
+ * チーム大会の記録一覧モーダル (チームメンバーであれば admin/非admin 問わず閲覧可能)。
  * web `apps/web/components/team/TeamCompetitionRecordsModal.tsx` を仕様の正として移植。
  * competitions/records を2クエリ並列取得し、種目別グルーピング + 個人/リレー独立採番で表示する。
  */

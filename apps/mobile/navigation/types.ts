@@ -88,17 +88,6 @@ export type MainStackParamList = {
     date: string;
     teamId?: string;
   };
-  RecordLogForm: {
-    competitionId: string;
-    recordId?: string;
-    entryDataList?: Array<{
-      styleId: number;
-      styleName: string;
-      entryTime?: number;
-    }>;
-    date: string;
-    teamId?: string;
-  };
   /** チーム大会記録一覧（種目カードグリッド。管理者専用） */
   TeamRecordBulkForm: {
     competitionId: string;

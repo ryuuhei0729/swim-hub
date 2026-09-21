@@ -20,6 +20,11 @@
       "persistent": true,
       "cache": false
     },
+    "dev:lan": {
+      "dependsOn": ["^build"],
+      "persistent": true,
+      "cache": false
+    },
     "lint": {
       "dependsOn": ["^build"]
     },

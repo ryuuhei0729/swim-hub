@@ -816,7 +816,7 @@ export default function TeamCompetitions({
             {competitions.map((competition) => {
               const hasRecords =
                 competition.records && competition.records.length > 0;
-              const canViewRecords = isAdmin && hasRecords;
+              const canViewRecords = hasRecords;
               return (
                 <div
                   key={competition.id}
@@ -834,7 +834,11 @@ export default function TeamCompetitions({
                   }}
                   aria-label={
                     canViewRecords
-                      ? `${competition.title || t("competitions.fallbackTitle")}の記録を閲覧`
+                      ? t("competitions.card.viewRecordsAriaLabel", {
+                          title:
+                            competition.title ||
+                            t("competitions.fallbackTitle"),
+                        })
                       : undefined
                   }
                   tabIndex={canViewRecords ? 0 : undefined}
@@ -903,32 +907,33 @@ export default function TeamCompetitions({
                         </p>
                       )}
 
-                      {/* 記録情報（管理者のみ表示） */}
-                      {isAdmin &&
-                        (competition.records &&
-                        competition.records.length > 0 ? (
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="text-sm text-green-600 font-medium flex items-center gap-1">
-                              <ChartBarIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              登録記録: {competition.records.length}件
-                            </span>
-                            <span className="text-xs text-gray-500 flex items-center">
-                              <EyeIcon className="h-3 w-3 mr-1" />
-                              タップで詳細
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="text-sm text-gray-500 flex items-center gap-1">
-                              <ChartBarIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                              登録記録なし
-                            </span>
-                            <span className="text-xs text-blue-600 flex items-center">
-                              <PlusIcon className="h-3 w-3 mr-1" />
-                              追加可能
-                            </span>
-                          </div>
-                        ))}
+                      {/* 記録情報 */}
+                      {competition.records &&
+                      competition.records.length > 0 ? (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-sm text-green-600 font-medium flex items-center gap-1">
+                            <ChartBarIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                            {t("competitions.card.recordCount", {
+                              count: competition.records.length,
+                            })}
+                          </span>
+                          <span className="text-xs text-gray-500 flex items-center">
+                            <EyeIcon className="h-3 w-3 mr-1" />
+                            {t("competitions.card.tapForDetails")}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-sm text-gray-500 flex items-center gap-1">
+                            <ChartBarIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                            {t("competitions.card.noRecords")}
+                          </span>
+                          <span className="text-xs text-blue-600 flex items-center">
+                            <PlusIcon className="h-3 w-3 mr-1" />
+                            {t("competitions.card.addable")}
+                          </span>
+                        </div>
+                      )}
 
                       {/* エントリー情報 */}
                       {competition.entries &&
@@ -1118,8 +1123,8 @@ export default function TeamCompetitions({
         />
       )}
 
-      {/* 記録一覧モーダル（管理者のみ） */}
-      {isAdmin && showRecordsModal && selectedCompetitionForRecords && (
+      {/* 記録一覧モーダル */}
+      {showRecordsModal && selectedCompetitionForRecords && (
         <TeamCompetitionRecordsModal
           isOpen={showRecordsModal}
           onClose={() => {

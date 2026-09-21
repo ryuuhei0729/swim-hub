@@ -2,14 +2,47 @@
 // splitTimesEvery50m.logic.test.ts
 // Task #20: handleAddSplitTimesEvery50m のコアロジック検証
 // Sprint Contract V-01〜V-06 対応
+// ※ 検証対象は production ではなくローカル複製。下の警告ブロックを必ず読むこと。
 // =============================================================================
 
 import { describe, it, expect } from "vitest";
 import { FREE_PLAN_LIMITS } from "@apps/shared/constants/premium";
 
 // ============================================================
-// ピュア関数として抽出したコアロジック
-// RecordFormScreen.tsx 行 518-552 / RecordLogFormScreen.tsx 行 354-388 と等価
+// 【警告: このファイルは production を import していない — ローカル複製を検証している】
+//
+// 下の computeAddSplitTimesEvery50m() は production コードではなく、このファイル内に
+// 手で書かれた複製である。そして現在の screens/RecordFormScreen.tsx の
+// handleAddSplitTimesEvery50m と **等価ではない**。
+// (以前このコメントには「等価」と書かれていたが、両実装を同一入力で突き合わせた結果
+//  偽であることが判明したため撤回した。)
+//
+// 差異: Free プランの切り詰め規則。
+//   - production: handleAddSplitTimesEvery50m は絞り込みを sliceByFreeLimit に委ねる。
+//     sliceByFreeLimit は「ゴール地点 (distance === raceDistance) は上限に関わらず常に
+//     許可」し、上限判定には billableSplitCount (= splitTimes のうち
+//     distance === selectedStyleDistance の行を除外した件数) を使う。
+//   - この複製: ゴール地点の免除規則を持たず、上限判定に splitTimes.length を素で使う
+//     (remaining = FREE_SPLIT_LIMIT - splitTimes.length)。
+//
+// 実測した差分 (FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD = 3、両実装を同一入力で実行):
+//   入力: 100m 種目 / 既存 [25,50,75] / free
+//     この複製 = null (追加なし) / production = [25,50,75,100] (ゴール 100m が追加される)
+//   入力: 100m 種目 / 既存 [25,75] / free
+//     この複製 = [25,75,50] (len=3)  / production = [25,75,50,100] (len=4)
+//
+// したがって下の describe("V-06: Free プラン上限到達時は追加されない") 配下の
+// Free プラン系 assertion は **production の実挙動を反映していない**。
+// この複製の挙動を仕様として書いたものであり、production の仕様ではない。
+// 【次の保守者へ】このテストを根拠に production を「直す」な。そうすると free ユーザーが
+// ゴール地点スプリットを入力できなくなる退行を招く。production 側の仕様を確認したい場合は
+// 必ず RecordFormScreen.tsx の sliceByFreeLimit / billableSplitCount を直接読むこと。
+// (複製の解消 = production からのロジック抽出は今回のスプリント以前から存在する別債務で、
+//  対応方針は PM 経由でユーザー判断待ち。このファイル単独で期待値を書き換えないこと。)
+//
+// なお 25m/50m 共通化された CompetitionTabFormScreen.tsx の addSplitTimesEvery は
+// また別の実装であり、このファイルは同様にそれも検証していない
+// (旧 RecordLogFormScreen.tsx の削除に伴う統合先)。
 // ============================================================
 
 const FREE_SPLIT_LIMIT = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
@@ -17,7 +50,9 @@ const FREE_SPLIT_LIMIT = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD;
 type SplitTime = { distance: number; splitTime: number };
 
 /**
- * handleAddSplitTimesEvery50m のコアロジックをピュア関数化
+ * handleAddSplitTimesEvery50m を模したローカル複製 (production からの import ではない)。
+ * Free プランの切り詰めは production の sliceByFreeLimit と挙動が異なる。
+ * 詳細と実測した差分は上の警告ブロックを参照。
  * @param raceDistance  種目の距離 (null = 未選択)
  * @param splitTimes    現在のスプリットタイム一覧
  * @param isPremium     プレミアムユーザーか
@@ -123,6 +158,12 @@ describe("handleAddSplitTimesEvery50m コアロジック", () => {
   });
 
   // --- V-06: Free プラン上限 (splitTimes.length >= 3) 時は追加されない ---
+  // 【警告】この describe 配下の期待値は上のローカル複製の挙動であり、production
+  // (RecordFormScreen.tsx の handleAddSplitTimesEvery50m + sliceByFreeLimit) の
+  // 実挙動ではない。production はゴール地点 (distance === raceDistance) を上限から
+  // 免除するため、下の「null を返す」「len=3 に収まる」はいずれも production では成立
+  // しない (実測値はファイル冒頭の警告ブロックの表を参照)。期待値をこのまま production
+  // の仕様と読むな。
   describe("V-06: Free プラン上限到達時は追加されない", () => {
     it("splitTimes.length === 3 (上限到達) → null を返す", () => {
       const existing: SplitTime[] = [

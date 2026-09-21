@@ -481,7 +481,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   poolType,
   note,
   records,
-  isTeamCompetition = false,
+  isTeamCompetition,
   teamId = null,
   color = LEGACY_COMPETITION_ACCENT,
   onEditCompetition,
@@ -740,12 +740,12 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             </View>
           </View>
           <View style={styles.competitionHeaderActions}>
-            {onEditCompetition && (
+            {onEditCompetition && !isTeamCompetition && (
               <Pressable style={styles.competitionHeaderButton} onPress={onEditCompetition}>
                 <Feather name="edit" size={18} color="#2563EB" />
               </Pressable>
             )}
-            {onDeleteCompetition && (
+            {onDeleteCompetition && !isTeamCompetition && (
               <Pressable style={styles.competitionHeaderButton} onPress={onDeleteCompetition}>
                 <Feather name="trash-2" size={20} color="#EF4444" />
               </Pressable>

@@ -20,7 +20,6 @@
         "recordCreate": "大会記録作成",
         "competitionInfo": "大会情報",
         "entryRegister": "エントリー登録",
-        "recordInput": "記録入力",
         "teamDetail": "チーム詳細",
         "settings": "設定",
         "bulkBestTime": "ベストタイム一括入力"
@@ -2648,7 +2647,7 @@
         "fetchFailed": "練習記録の取得に失敗しました",
         "deleteConfirm": "この練習記録を削除しますか？この操作は取り消せません。",
         "deleteFailed": "練習記録の削除に失敗しました",
-        "addLog": "ログを記入",
+        "addLog": "記録追加",
         "recordBulkButton": "記録代理入力"
       },
       "teamCompetitionList": {
@@ -2659,10 +2658,11 @@
         "deleteConfirm": "この大会を削除しますか？この操作は取り消せません。",
         "deleteFailed": "大会の削除に失敗しました",
         "entryButton": "エントリー",
-        "recordButton": "記録",
+        "recordButton": "記録追加",
         "entryBulkButton": "エントリー代理入力",
         "recordBulkButton": "記録代理入力",
-        "entryStatusChangeAria": "エントリー受付状況: {status}。タップして変更"
+        "entryStatusChangeAria": "エントリー受付状況: {status}。タップして変更",
+        "viewRecordsAria": "{title} の記録一覧を表示"
       },
       "teamCompetitionEntryModal": {
         "title": "{title} のエントリー",
@@ -2857,7 +2857,12 @@
         "manageButton": "管理",
         "editButton": "編集",
         "deleteButton": "削除",
-        "entryBulkInputButton": "エントリー入力"
+        "entryBulkInputButton": "エントリー入力",
+        "recordCount": "登録記録: {count}件",
+        "tapForDetails": "タップで詳細",
+        "noRecords": "登録記録なし",
+        "addable": "追加可能",
+        "viewRecordsAriaLabel": "{title}の記録を閲覧"
       },
       "entryStatus": {
         "before": "受付前",
@@ -4142,6 +4147,8 @@
       "pool_type_label": "水路",
       "pool_short": "短水路 (25m)",
       "pool_long": "長水路 (50m)",
+      "pool_short_abbrev": "短水",
+      "pool_long_abbrev": "長水",
       "note_label": "メモ",
       "note_placeholder": "大会に関するメモ（任意）",
       "save": "保存",

@@ -84,7 +84,7 @@ export interface RecordDetailProps {
   poolType?: number;
   note?: string;
   records: CalendarItem[];
-  isTeamCompetition?: boolean;
+  isTeamCompetition: boolean;
   /** チームID（isTeamCompetition時のみ）。出欠確認ボタンの表示・データ取得に使用 */
   teamId?: string | null;
   /** 識別色(記録色カスタマイズ)。未指定時は旧来のデフォルト青(#2563EB)を使う */
@@ -106,6 +106,7 @@ export interface EntryDetailProps {
   poolType?: number;
   note?: string;
   entries: CalendarItem[];
+  isTeamCompetition: boolean;
   /** 識別色(記録色カスタマイズ)。未指定時は旧来のデフォルト青(#2563EB)を使う */
   color?: string;
   onEditCompetition?: (item: CalendarItem) => void;

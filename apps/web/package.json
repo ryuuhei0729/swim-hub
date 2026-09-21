@@ -5,6 +5,7 @@
   "description": "水泳選手マネジメントシステム - Webアプリケーション",
   "scripts": {
     "dev": "dotenvx run -f .env.local -- next dev",
+    "dev:lan": "bash scripts/start-lan.sh",
     "dev:https": "dotenvx run -f .env.local -- node server.js",
     "build": "next build",
     "build:local": "dotenvx run -f .env.local -- next build",
@@ -22,6 +23,7 @@
     "test:ui": "dotenvx run -f .env.local -- vitest --ui",
     "test:coverage": "dotenvx run -f .env.local -- vitest run --coverage",
     "test:e2e": "dotenvx run -f .env.local -- playwright test --config e2e/src/config/playwright.config.ts",
+    "test:e2e:headless": "dotenvx run -f .env.local -- playwright test --config e2e/src/config/playwright.headless.config.ts",
     "test:e2e:ui": "dotenvx run -f .env.local -- playwright test --config e2e/src/config/playwright.config.ts --ui",
     "test:e2e:headed": "dotenvx run -f .env.local -- playwright test --config e2e/src/config/playwright.config.ts --headed",
     "test:e2e:debug": "dotenvx run -f .env.local -- playwright test --config e2e/src/config/playwright.config.ts --debug",

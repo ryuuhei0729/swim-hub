@@ -255,6 +255,7 @@ export class PracticeAPI {
       .from("practices")
       .delete()
       .eq("id", id)
+      .is("team_id", null)
       .select("id");
 
     if (error) throw error;

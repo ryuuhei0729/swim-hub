@@ -20,7 +20,6 @@
         "recordCreate": "New race",
         "competitionInfo": "Meet info",
         "entryRegister": "Register entry",
-        "recordInput": "Enter results",
         "teamDetail": "Team details",
         "settings": "Settings",
         "bulkBestTime": "Bulk best time entry"
@@ -2645,7 +2644,7 @@
         "fetchFailed": "Failed to load practice records",
         "deleteConfirm": "Delete this practice record? This cannot be undone.",
         "deleteFailed": "Failed to delete practice record",
-        "addLog": "Add Log",
+        "addLog": "Add Record",
         "recordBulkButton": "Enter Records"
       },
       "teamCompetitionList": {
@@ -2656,10 +2655,11 @@
         "deleteConfirm": "Delete this competition? This cannot be undone.",
         "deleteFailed": "Failed to delete competition",
         "entryButton": "Entry",
-        "recordButton": "Record",
+        "recordButton": "Add Record",
         "entryBulkButton": "Enter Entries",
         "recordBulkButton": "Enter Records",
-        "entryStatusChangeAria": "Entry status: {status}. Tap to change"
+        "entryStatusChangeAria": "Entry status: {status}. Tap to change",
+        "viewRecordsAria": "View records for {title}"
       },
       "teamCompetitionEntryModal": {
         "title": "Entries for {title}",
@@ -2854,7 +2854,12 @@
         "manageButton": "Manage",
         "editButton": "Edit",
         "deleteButton": "Delete",
-        "entryBulkInputButton": "Enter Entries"
+        "entryBulkInputButton": "Enter Entries",
+        "recordCount": "{count, plural, one {{count} record} other {{count} records}}",
+        "tapForDetails": "Tap for details",
+        "noRecords": "No records yet",
+        "addable": "Add a record",
+        "viewRecordsAriaLabel": "View records for {title}"
       },
       "entryStatus": {
         "before": "Not Open",
@@ -4139,6 +4144,8 @@
       "pool_type_label": "Pool Type",
       "pool_short": "Short Course (25m)",
       "pool_long": "Long Course (50m)",
+      "pool_short_abbrev": "Short",
+      "pool_long_abbrev": "Long",
       "note_label": "Notes",
       "note_placeholder": "Notes about the competition (optional)",
       "save": "Save",

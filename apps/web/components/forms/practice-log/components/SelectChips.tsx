@@ -2,6 +2,7 @@
 
 import React from "react";
 import { cn } from "@/utils/cn";
+import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 
 /** 選択式チップボタンの共通クラス */
 export function chipClass(selected: boolean) {
@@ -23,7 +24,11 @@ interface SelectChipsProps {
 /** 単一選択のチップボタン群(種目・カテゴリ用) */
 export function SelectChips({ options, value, onChange, testIdPrefix }: SelectChipsProps) {
   return (
-    <div className="flex flex-wrap gap-1.5 sm:gap-2" role="group">
+    <ChipScrollRow
+      className="gap-1.5 sm:gap-2"
+      role="group"
+      data-testid={`chiprow-${testIdPrefix}`}
+    >
       {options.map((opt) => {
         const selected = opt.value === value;
         return (
@@ -39,6 +44,6 @@ export function SelectChips({ options, value, onChange, testIdPrefix }: SelectCh
           </button>
         );
       })}
-    </div>
+    </ChipScrollRow>
   );
 }

@@ -50,7 +50,6 @@ vi.mock("@/screens/RecordFormScreen", () => ({ RecordFormScreen: () => null }));
 vi.mock("@/screens/CompetitionBasicFormScreen", () => ({ CompetitionBasicFormScreen: () => null }));
 vi.mock("@/screens/CompetitionTabFormScreen", () => ({ CompetitionTabFormScreen: () => null }));
 vi.mock("@/screens/EntryLogFormScreen", () => ({ EntryLogFormScreen: () => null }));
-vi.mock("@/screens/RecordLogFormScreen", () => ({ RecordLogFormScreen: () => null }));
 // TeamRecordBulkFormScreen (旧・チーム大会記録の代理入力画面) は2階層化に伴い
 // TeamRecordStyleListScreen (一覧) / TeamRecordStyleDetailScreen (詳細) の
 // 2画面に置き換わった (MainStack.tsx の TeamRecordBulkForm /
