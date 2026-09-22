@@ -376,14 +376,20 @@ describe("[V-M32] 部分失敗時のランキングキャッシュ無効化 (M-1
    * upsert 化後の「部分失敗」の再現には、旧アーキテクチャの
    * delete-all→insert-all と違い、UPDATE (太郎) と DELETE (次郎) が
    * 同時に走る状況を作る必要がある。
+   *
+   * 【仕様変更 (種目詳細画面の選手タブ化) に伴う修正】ItemTabs が「組」から
+   * 「選手」単位になり、record-bulk-member-time は常にアクティブな選手1名分
+   * しか描画されない (findAllByTestId が2件返る前提は崩れた)。次郎のタブ
+   * (item-tab-2、選手の登場順=太郎→次郎) に切り替えてから該当欄を空にする。
    */
   const clearJiroTime = async () => {
+    fireEvent.click(screen.getByTestId("item-tab-2"));
     const timeInputs = (await screen.findAllByTestId(
       "record-bulk-member-time",
     )) as HTMLInputElement[];
-    expect(timeInputs).toHaveLength(2);
-    const jiroInput = timeInputs.find((input) => input.value === "28.00");
-    expect(jiroInput).toBeDefined();
+    expect(timeInputs).toHaveLength(1);
+    const jiroInput = timeInputs[0];
+    expect(jiroInput?.value).toBe("28.00");
     fireEvent.change(jiroInput as HTMLInputElement, { target: { value: "" } });
   };
 
@@ -451,16 +457,24 @@ describe("[V-M32] 部分失敗時のランキングキャッシュ無効化 (M-1
       // 太郎・次郎の両方のタイムを空にする → 保存対象が1件も無く
       // saveStyleRecords が SaveStyleRecordsValidationError を投げる →
       // invalidateQueries に一切到達しない
+      //
+      // 【仕様変更】選手タブ化により record-bulk-member-time は常にアクティブな
+      // 選手1名分しか描画されない。太郎(item-tab-1)を空にしてから次郎(item-tab-2)
+      // に切り替えて同様に空にする (findAllByTestId が2件返る前提は崩れた)。
       render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();
       });
-      const timeInputs = (await screen.findAllByTestId(
+      const taroInput = (await screen.findByTestId(
         "record-bulk-member-time",
-      )) as HTMLInputElement[];
-      for (const input of timeInputs) {
-        fireEvent.change(input, { target: { value: "" } });
-      }
+      )) as HTMLInputElement;
+      fireEvent.change(taroInput, { target: { value: "" } });
+
+      fireEvent.click(screen.getByTestId("item-tab-2"));
+      const jiroInput = (await screen.findByTestId(
+        "record-bulk-member-time",
+      )) as HTMLInputElement;
+      fireEvent.change(jiroInput, { target: { value: "" } });
 
       fireEvent.click(screen.getByText("記録を保存"));
 

@@ -14,7 +14,7 @@
 // 追加される」観点 (旧テスト4本目) だけは一覧画面のカード件数表示に観点が移る。
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -228,12 +228,24 @@ describe("TeamRecordStyleDetailScreen — エントリー行の初期反映 (仕
       const queryClient = makeQueryClient();
       render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
-      const timeInputs = (await screen.findAllByTestId("record-bulk-member-time")) as HTMLInputElement[];
-      // 太郎(既存, タイム保持) + 次郎(エントリー由来, 未入力) の2件
-      expect(timeInputs).toHaveLength(2);
-      const values = timeInputs.map((el) => el.value);
-      expect(values).toContain("27.50");
-      expect(values).toContain("");
+      // 【仕様変更 (種目詳細画面の選手タブ化) に伴う修正】ItemTabs が「組」から
+      // 「選手」単位になり、record-bulk-member-time は常にアクティブな選手1名分
+      // しか描画されない。太郎(item-tab-1, 既存)・次郎(item-tab-2, エントリー由来)
+      // の両タブを切り替えてそれぞれの入力欄の値を確認する。
+      const taroInput = (await screen.findByTestId(
+        "record-bulk-member-time",
+      )) as HTMLInputElement;
+      expect(taroInput.value).toBe("27.50");
+
+      // このファイルは configure({ testIdAttribute: "testID" }) を呼んでいないため
+      // (既定の data-testid 前提)、testID をそのまま DOM 属性化する Pressable (ItemTabs
+      // のタブ本体) は getByTestId で引けない (TextInput だけが data-testid に変換
+      // される __mocks__/react-native.ts の既定挙動)。タブラベルのテキストで代用する。
+      fireEvent.click(screen.getByText("次郎"));
+      const jiroInput = (await screen.findByTestId(
+        "record-bulk-member-time",
+      )) as HTMLInputElement;
+      expect(jiroInput.value).toBe("");
     },
   );
 

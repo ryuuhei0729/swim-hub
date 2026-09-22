@@ -244,6 +244,13 @@ describe("TeamRecordStyleDetailScreen — 空タイム行は保存されない (
     };
     mocks.responses["delete:records"] = { data: null, error: null };
     mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+    // 【テスト分離バグの修正】末尾の「非 admin の権限ガード」describe が
+    // mocks.teamMembers (vi.hoisted の共有配列) を非 admin 1名だけに書き換えたまま
+    // 復元していない。--sequence.shuffle でその describe が先に走ると、この
+    // describe のテストが権限ゲートに阻まれて全滅する (実測済み: 通常順序では
+    // 隠れるが shuffle で毎回再現する)。各 describe で admin 状態に明示的に戻す。
+    mocks.teamMembers.length = 0;
+    mocks.teamMembers.push({ user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } });
   });
 
   it(
@@ -332,6 +339,9 @@ describe("TeamRecordStyleDetailScreen — リレー検出された StyleEntry �
       teamId: "team-1",
       relayEventId: "relay_4x50_free",
     };
+    // 【テスト分離バグの修正】上記コメント参照 (末尾 describe の非 admin 書き換えの復元)。
+    mocks.teamMembers.length = 0;
+    mocks.teamMembers.push({ user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } });
   });
 
   it(

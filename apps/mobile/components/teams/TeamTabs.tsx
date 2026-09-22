@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 import { TEAM_TAB_DEFS, type TeamTabType } from "./teamTabDefs";
 
 // タブの定義元は ./teamTabDefs.ts の 1 本。ここは描画だけを担う。
@@ -27,6 +28,10 @@ export interface TeamTabsProps {
  * 各タブは内容に応じた幅にして溢れた分は横スクロールで見せる
  * (web の components/team/TeamTabs.tsx が `overflow-x-auto` + `whitespace-nowrap`
  * で解決しているのと同じ方針)。
+ *
+ * 横スクロールできること自体が気づかれにくいため、記録入力の種目チップ
+ * (components/forms/StyleChipSelector.tsx) と同じ ChipScrollRow に載せ、
+ * 右端に隠れたタブがある間だけ右端フェードを重ねる。
  */
 export const TeamTabs: React.FC<TeamTabsProps> = ({
   activeTab,
@@ -39,15 +44,11 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* 下線 (borderBottom) はスクロールする中身ではなく ScrollView 自体に付ける。
-          こうするとスクロール位置に関わらず可視領域の全幅に線が引かれる
-          (web が `overflow-x-auto` の親 div 側に `border-b` を置いているのと同じ) */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabList}
-        contentContainerStyle={styles.tabListContent}
-      >
+      {/* 下線 (borderBottom) はスクロールする中身ではなく container 側に付ける。
+          こうするとスクロール位置に関わらず可視領域の全幅に線が引かれ
+          (web が `overflow-x-auto` の親 div 側に `border-b` を置いているのと同じ)、
+          かつ右端フェードは線の上ではなく内側に重なるので線が途切れない */}
+      <ChipScrollRow contentContainerStyle={styles.tabListContent}>
         {visibleTabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const showBadge = tab.id === "members" && pendingCount > 0;
@@ -69,7 +70,7 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
             </Pressable>
           );
         })}
-      </ScrollView>
+      </ChipScrollRow>
     </View>
   );
 };
@@ -86,8 +87,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 1,
     elevation: 1,
-  },
-  tabList: {
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
   },
@@ -97,6 +96,9 @@ const styles = StyleSheet.create({
     // 大きくなるため justifyContent は効かず、各タブは自然幅のまま横スクロールになる
     flexGrow: 1,
     justifyContent: "space-between",
+    // ChipScrollRow 既定の gap 6 を打ち消す。タブは paddingHorizontal 12 で
+    // 間隔を持っており、gap を足すとタブ数の多い管理者ビューで更に溢れる
+    gap: 0,
   },
   tab: {
     // flex:1 の均等割りは廃止。タブ数が増えるとラベルが潰れるため、

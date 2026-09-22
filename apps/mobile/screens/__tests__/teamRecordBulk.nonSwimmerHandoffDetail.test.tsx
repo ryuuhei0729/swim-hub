@@ -216,8 +216,13 @@ describe("[V-09] 詳細画面での非泳者フィルタ引き継ぎ", () => {
 
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
+    // 【仕様変更 (種目詳細画面の選手タブ化) に伴う修正】個人種目では選手氏名が
+    // タブラベル (item-tab-1) とアクティブなメンバーカード (memberName) の
+    // 両方に描画されるようになった。getByText は複数マッチで例外になるため
+    // getAllByText で「氏名が解決され、どこかに表示されている」ことだけを見る
+    // (0件=氏名解決の失敗と区別できれば良く、出現箇所数はこの観点の対象外)。
     await waitFor(() => {
-      expect(screen.getByText("非泳者管理者")).toBeTruthy();
+      expect(screen.getAllByText("非泳者管理者").length).toBeGreaterThan(0);
     });
   });
 });
