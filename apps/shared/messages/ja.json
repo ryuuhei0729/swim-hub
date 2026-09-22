@@ -3299,6 +3299,8 @@
       "cancelButton": "キャンセル",
       "memberSelectTitle": "対象メンバーを選択",
       "selectAll": "全員選択",
+      "selectAllToggle": "全選択",
+      "selectAllToggleGroup": "{group}を全選択",
       "clearSelection": "選択解除",
       "confirmSelection": "決定",
       "relayAllMembersRequired": "リレー種目はメンバー4名全員を選択してください",

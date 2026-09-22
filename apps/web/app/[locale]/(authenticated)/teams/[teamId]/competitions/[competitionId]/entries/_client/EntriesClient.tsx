@@ -749,6 +749,8 @@ export default function EntriesClient({
 
       <MemberSelectModal
         isOpen={showMemberSelectModal}
+        teamId={teamId}
+        supabase={supabase}
         members={swimmerCandidates}
         selectedUserIds={memberOrder}
         onConfirm={confirmMemberSelection}

@@ -403,8 +403,11 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
       renderEntriesClient([], bestTimesByUser);
 
       // 選手を選択して空行を1つ追加する
+      // [チップ化スプリント] MemberSelectModal は checkbox ではなく
+      // 選択チップ (button, aria-pressed) を使う。activeMembers は「選手A」1名のみ
+      // (admin バッジも無い) なので accessible name の完全一致で特定できる
       fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
-      fireEvent.click(await screen.findByRole("checkbox"));
+      fireEvent.click(await screen.findByRole("button", { name: "選手A" }));
       fireEvent.click(screen.getByRole("button", { name: "record.confirmSelection" }));
 
       const select = screen.getByRole("combobox") as unknown as HTMLSelectElement;
@@ -532,9 +535,9 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
       renderEntriesClient([]);
 
       fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
-      // MemberSelectModal で選手Aを選択して確定する
-      const checkbox = await screen.findByRole("checkbox");
-      fireEvent.click(checkbox);
+      // MemberSelectModal で選手Aを選択して確定する (チップ化スプリント: checkbox → chip button)
+      const chip = await screen.findByRole("button", { name: "選手A" });
+      fireEvent.click(chip);
       fireEvent.click(screen.getByRole("button", { name: "record.confirmSelection" }));
 
       // 選手カードに種目行を1つ追加し、既定行と合わせて2行を同じ種目にする

@@ -14,7 +14,6 @@ import {
   CalendarDaysIcon,
   MapPinIcon,
   UserGroupIcon,
-  XMarkIcon,
   VideoCameraIcon,
 } from "@heroicons/react/24/outline";
 import { Competition, Style } from "@apps/shared/types";
@@ -57,11 +56,17 @@ import {
 } from "@swim-hub/shared/utils/entryRecordMerge";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
 import type { BestTime } from "@apps/shared/types/ui";
+import MemberSelectModal, {
+  type MemberSelectOption,
+} from "@/components/team/MemberSelectModal";
 
 // TeamVideoUploaderを動的インポート
-const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
-  ssr: false,
-});
+const TeamVideoUploader = dynamic(
+  () => import("@/components/video/TeamVideoUploader"),
+  {
+    ssr: false,
+  },
+);
 
 const RELAY_FREE_PLAN_MAX_SPLITS = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD * 4;
 
@@ -124,7 +129,6 @@ interface RecordWithDetails {
   } | null;
 }
 
-
 interface EntryWithUser {
   id: string;
   user_id: string;
@@ -183,7 +187,10 @@ export default function RecordClient({
    * リレーのチーム記録の書き込み API。差し替えの手順は shared 側が持つ
    * (web/mobile で同じ実装を複製しないため)。
    */
-  const relayRecordsApi = useMemo(() => new TeamRelayRecordsAPI(supabase), [supabase]);
+  const relayRecordsApi = useMemo(
+    () => new TeamRelayRecordsAPI(supabase),
+    [supabase],
+  );
 
   /**
    * `user_id` → `users.gender`。リレーのチーム記録の性別区分 prefill にのみ使う。
@@ -192,14 +199,32 @@ export default function RecordClient({
    *  「不明」として `mixed` に寄せる。0 で埋めない)
    */
   const memberGenderByUserId = useMemo(
-    () => new Map(members.map((member) => [member.user_id, member.users.gender])),
+    () =>
+      new Map(members.map((member) => [member.user_id, member.users.gender])),
     [members],
   );
 
   // 候補提示 (メンバー選択欄・リレー泳者選択) の直前だけをフィルタする。members 自体は
   // memberGenderByUserId (性別区分 prefill) と confirmMemberSelection 内の名前解決にも
   // 共用されているため、フィルタ済みの生配列に置き換えてはならない (PM裁定 R4)。
-  const swimmerCandidates = useMemo(() => excludeNonSwimmers(members), [members]);
+  const swimmerCandidates = useMemo(
+    () => excludeNonSwimmers(members),
+    [members],
+  );
+
+  // 共有 MemberSelectModal (MemberSelectOption[]) 向けの変換。gender は
+  // users.gender (必須) をそのまま渡す (グルーピング用)
+  const memberSelectCandidates: MemberSelectOption[] = useMemo(
+    () =>
+      swimmerCandidates.map((m) => ({
+        user_id: m.user_id,
+        role: m.role,
+        name: m.users.name,
+        is_swimmer: m.is_swimmer,
+        gender: m.users.gender,
+      })),
+    [swimmerCandidates],
+  );
 
   /**
    * ネイティブ `<select>` は `value` がどの `<option>` とも一致しないと、
@@ -209,8 +234,12 @@ export default function RecordClient({
    * (Critical: 受け入れ基準「非泳者に変更しても既存の記録は消えない」への違反)。
    * 「候補を絞った配列」と「既存の選択値」を union してから options に渡すこと。
    */
-  const withCurrentSelection = (candidates: TeamMember[], currentUserId: string): TeamMember[] => {
-    if (!currentUserId || candidates.some((m) => m.user_id === currentUserId)) return candidates;
+  const withCurrentSelection = (
+    candidates: TeamMember[],
+    currentUserId: string,
+  ): TeamMember[] => {
+    if (!currentUserId || candidates.some((m) => m.user_id === currentUserId))
+      return candidates;
     const current = members.find((m) => m.user_id === currentUserId);
     return current ? [...candidates, current] : candidates;
   };
@@ -241,8 +270,9 @@ export default function RecordClient({
 
   const [saving, setSaving] = useState(false);
   const [showMemberSelectModal, setShowMemberSelectModal] = useState(false);
-  const [currentStyleEntryId, setCurrentStyleEntryId] = useState<string | null>(null);
-  const [tempSelectedUserIds, setTempSelectedUserIds] = useState<string[]>([]);
+  const [currentStyleEntryId, setCurrentStyleEntryId] = useState<string | null>(
+    null,
+  );
   const [videoUploadModal, setVideoUploadModal] = useState<{
     entryId: string;
     memberUserId: string;
@@ -292,7 +322,12 @@ export default function RecordClient({
     setStyleEntries((prev) =>
       prev.map((entry) =>
         entry.id === entryId
-          ? { ...entry, styleId, styleName: style?.name_jp || "", relayEventId: null }
+          ? {
+              ...entry,
+              styleId,
+              styleName: style?.name_jp || "",
+              relayEventId: null,
+            }
           : entry,
       ),
     );
@@ -320,13 +355,19 @@ export default function RecordClient({
       isRelaying,
       bestTimesByUser[memberUserId] ?? [],
     );
-    return result ? { time: result.time, label: tRecordLog(result.labelKey) } : null;
+    return result
+      ? { time: result.time, label: tRecordLog(result.labelKey) }
+      : null;
   };
 
   /** リレーのレグラベルを relayEventId から導出する。復元経路では state の relayLegLabel が undefined のため */
-  const relayLegLabelOf = (entry: StyleEntry, legIndex: number): string | undefined =>
+  const relayLegLabelOf = (
+    entry: StyleEntry,
+    legIndex: number,
+  ): string | undefined =>
     (entry.relayEventId
-      ? relayEvents.find((r) => r.id === entry.relayEventId)?.legs[legIndex]?.legLabel
+      ? relayEvents.find((r) => r.id === entry.relayEventId)?.legs[legIndex]
+          ?.legLabel
       : undefined) ?? entry.memberRecords[legIndex]?.relayLegLabel;
 
   const updateRelayEntry = (entryId: string, relayEventId: RelayEventId) => {
@@ -356,7 +397,10 @@ export default function RecordClient({
     const defaultSplitDistances = legBoundaries.slice(0, 3);
     const allowedCount = isPremium
       ? defaultSplitDistances.length
-      : Math.max(0, Math.min(defaultSplitDistances.length, RELAY_FREE_PLAN_MAX_SPLITS));
+      : Math.max(
+          0,
+          Math.min(defaultSplitDistances.length, RELAY_FREE_PLAN_MAX_SPLITS),
+        );
     const defaultSplits: SplitTimeEntry[] = defaultSplitDistances
       .slice(0, allowedCount)
       .map((distance) => ({
@@ -386,12 +430,43 @@ export default function RecordClient({
     const entry = styleEntries.find((e) => e.id === entryId);
     if (entry) {
       setCurrentStyleEntryId(entryId);
-      setTempSelectedUserIds(entry.memberRecords.map((mr) => mr.memberUserId));
       setShowMemberSelectModal(true);
     }
   };
 
-  const confirmMemberSelection = () => {
+  // MemberSelectModal に渡す selectedUserIds (修正C→修正F: レンダーのたびに新しい
+  // 配列インスタンスを作ると、共有モーダル側の useEffect([isOpen, selectedUserIds])
+  // が参照同一性で再発火し、モーダルを開いたまま無関係な state 更新 (動画アップロード
+  // 進捗等) が起きただけで選択が開いた瞬間の値に巻き戻る。
+  //
+  // 修正C は依存を [styleEntries, currentStyleEntryId] にしたが、styleEntries は
+  // setStyleEntries(prev => prev.map(...)) のたびに (編集対象が別の種目エントリーで
+  // あっても) 新しい配列参照になる。.find().memberRecords.map() は styleEntries の
+  // 参照が変わるたびに再計算されるため、対象エントリーの中身が同じでも新しい配列に
+  // なってしまう残存経路があった (Reviewer指摘)。
+  //
+  // 二段構成にする: まず対象エントリーの memberUserId を決定的な順序で連結した
+  // 文字列キーを useMemo する。文字列はプリミティブ値なので内容が同じなら
+  // (styleEntries の参照が変わっていても) React の依存比較で「変化なし」と
+  // 判定され、後段の配列 useMemo は再計算されない (＝同じ配列参照を返し続ける)
+  const currentStyleEntryMemberUserIdsKey = useMemo(() => {
+    const entry = styleEntries.find((e) => e.id === currentStyleEntryId);
+    return entry
+      ? entry.memberRecords.map((mr) => mr.memberUserId).join(",")
+      : "";
+  }, [styleEntries, currentStyleEntryId]);
+
+  const currentStyleEntrySelectedUserIds = useMemo(
+    () =>
+      currentStyleEntryMemberUserIdsKey === ""
+        ? []
+        : currentStyleEntryMemberUserIdsKey.split(","),
+    [currentStyleEntryMemberUserIdsKey],
+  );
+
+  // W8: 呼び出し元はこのコンポーネント自身のみのため、MemberSelectModal の
+  // onConfirm(selectedUserIds) をそのまま受け取る形に変更してよい (PM裁定)
+  const confirmMemberSelection = (selectedUserIds: string[]) => {
     if (!currentStyleEntryId) return;
 
     setStyleEntries((prev) =>
@@ -401,8 +476,10 @@ export default function RecordClient({
         // 新しく選択されたメンバーを追加、削除されたメンバーを除去
         const newMemberRecords: MemberRecord[] = [];
 
-        for (const userId of tempSelectedUserIds) {
-          const existing = entry.memberRecords.find((mr) => mr.memberUserId === userId);
+        for (const userId of selectedUserIds) {
+          const existing = entry.memberRecords.find(
+            (mr) => mr.memberUserId === userId,
+          );
           if (existing) {
             newMemberRecords.push(existing);
           } else {
@@ -467,7 +544,11 @@ export default function RecordClient({
     );
   };
 
-  const handleTimeChange = (entryId: string, memberUserId: string, value: string) => {
+  const handleTimeChange = (
+    entryId: string,
+    memberUserId: string,
+    value: string,
+  ) => {
     const entry = styleEntries.find((e) => e.id === entryId);
     if (!entry) return;
 
@@ -488,14 +569,20 @@ export default function RecordClient({
             // タイムが変更された場合、種目の距離と同じ距離のsplit-timeを自動追加/更新
             if (raceDistance && newTime > 0) {
               const existingSplitIndex = updatedSplitTimes.findIndex(
-                (st) => typeof st.distance === "number" && st.distance === raceDistance,
+                (st) =>
+                  typeof st.distance === "number" &&
+                  st.distance === raceDistance,
               );
 
               if (existingSplitIndex >= 0) {
                 // 既存のsplit-timeを更新
                 updatedSplitTimes = updatedSplitTimes.map((st, idx) =>
                   idx === existingSplitIndex
-                    ? { ...st, splitTime: newTime, displayValue: formatTimeBest(newTime) }
+                    ? {
+                        ...st,
+                        splitTime: newTime,
+                        displayValue: formatTimeBest(newTime),
+                      }
                     : st,
                 );
               } else {
@@ -535,7 +622,8 @@ export default function RecordClient({
     const raceDistance = style?.distance;
     if (!raceDistance) return splitTimes.length;
     return splitTimes.filter(
-      (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+      (st) =>
+        !(typeof st.distance === "number" && st.distance === raceDistance),
     ).length;
   };
 
@@ -552,28 +640,36 @@ export default function RecordClient({
         const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
         const totalDistance = legBoundaries[3];
         if (totalDistance === undefined) return entry; // legBoundaries は固定4要素配列で
-          // 本来常に定義されるが型上は保証されないため防御的に扱う
+        // 本来常に定義されるが型上は保証されないため防御的に扱う
 
         // relaySplitTimes の全体距離スプリット（= totalDistance）を同期更新
         const currentSplits = entry.relaySplitTimes ?? [];
-        const existingIdx = currentSplits.findIndex((st) => st.distance === totalDistance);
+        const existingIdx = currentSplits.findIndex(
+          (st) => st.distance === totalDistance,
+        );
         let updatedSplits: SplitTimeEntry[];
         if (totalSeconds > 0) {
           const newSplit: SplitTimeEntry = {
-            id: existingIdx >= 0 ? currentSplits[existingIdx]!.id : crypto.randomUUID(), // existingIdx >= 0 を直前の三項演算子の条件で確認済み
+            id:
+              existingIdx >= 0
+                ? currentSplits[existingIdx]!.id
+                : crypto.randomUUID(), // existingIdx >= 0 を直前の三項演算子の条件で確認済み
             distance: totalDistance,
             splitTime: totalSeconds,
             displayValue: value,
           };
           if (existingIdx >= 0) {
-            updatedSplits = currentSplits.map((st, i) => (i === existingIdx ? newSplit : st));
+            updatedSplits = currentSplits.map((st, i) =>
+              i === existingIdx ? newSplit : st,
+            );
           } else {
             updatedSplits = [...currentSplits, newSplit];
           }
         } else {
-          updatedSplits = existingIdx >= 0
-            ? currentSplits.filter((_, i) => i !== existingIdx)
-            : currentSplits;
+          updatedSplits =
+            existingIdx >= 0
+              ? currentSplits.filter((_, i) => i !== existingIdx)
+              : currentSplits;
         }
 
         // leg 境界スプリットが揃っている場合に各 leg の time を再計算
@@ -582,11 +678,13 @@ export default function RecordClient({
           return found ? found.splitTime : 0;
         });
         const allBoundariesPresent = newCumulatives.every((c) => c > 0);
-        const legTimes = allBoundariesPresent ? calcLegTimesFromCumulative(newCumulatives) : null;
+        const legTimes = allBoundariesPresent
+          ? calcLegTimesFromCumulative(newCumulatives)
+          : null;
 
         const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
           const newCum = newCumulatives[idx] ?? 0; // newCumulatives は legBoundaries と同じ
-            // 長さで1:1生成される。0は「境界未確定」の sentinel で直後の `> 0` 判定が扱う
+          // 長さで1:1生成される。0は「境界未確定」の sentinel で直後の `> 0` 判定が扱う
           const isLastLeg = idx === 3;
           // 最終leg（合計タイム）は入力値に常に追従させ、クリア操作も反映する
           const cumTime = isLastLeg
@@ -630,13 +728,16 @@ export default function RecordClient({
         const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
         const totalDistance = legBoundaries[3];
         if (totalDistance === undefined) return entry; // legBoundaries は固定4要素配列で
-          // 本来常に定義されるが型上は保証されないため防御的に扱う
+        // 本来常に定義されるが型上は保証されないため防御的に扱う
 
         const updatedSplits = (entry.relaySplitTimes ?? []).map((st) => {
           if (st.id !== splitId) return st;
           if (field === "distance") {
             const parsed = parseFloat(value);
-            return { ...st, distance: value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed) };
+            return {
+              ...st,
+              distance: value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed),
+            };
           }
           return {
             ...st,
@@ -651,16 +752,20 @@ export default function RecordClient({
           return found ? found.splitTime : 0;
         });
         const allBoundariesPresent = newCumulatives.every((c) => c > 0);
-        const legTimes = allBoundariesPresent ? calcLegTimesFromCumulative(newCumulatives) : null;
+        const legTimes = allBoundariesPresent
+          ? calcLegTimesFromCumulative(newCumulatives)
+          : null;
 
         // 変更されたスプリットが全体距離の場合、合計タイム欄（leg3）を同期
         const changedSplit = updatedSplits.find((st) => st.id === splitId);
         const isTotalDistanceSplit =
-          field === "splitTime" && changedSplit && changedSplit.distance === totalDistance;
+          field === "splitTime" &&
+          changedSplit &&
+          changedSplit.distance === totalDistance;
 
         const updatedMemberRecords = entry.memberRecords.map((mr, idx) => {
           const newCum = (allBoundariesPresent ? newCumulatives[idx] : 0) ?? 0; // newCumulatives は
-            // legBoundaries と同じ長さで1:1生成される。0は「境界未確定」の sentinel
+          // legBoundaries と同じ長さで1:1生成される。0は「境界未確定」の sentinel
           const cumTime = newCum > 0 ? newCum : (mr.cumulativeTimeSeconds ?? 0);
           const legTime = legTimes ? (legTimes[idx] ?? mr.time) : mr.time;
           const updates: Partial<MemberRecord> = {
@@ -694,7 +799,12 @@ export default function RecordClient({
           ...entry,
           relaySplitTimes: [
             ...currentSplits,
-            { id: crypto.randomUUID(), distance: 0, splitTime: 0, displayValue: "" },
+            {
+              id: crypto.randomUUID(),
+              distance: 0,
+              splitTime: 0,
+              displayValue: "",
+            },
           ],
         };
       }),
@@ -708,16 +818,25 @@ export default function RecordClient({
         const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
         const totalDistance = legBoundaries[3];
         if (totalDistance === undefined) return entry; // legBoundaries は固定4要素配列で
-          // 本来常に定義されるが型上は保証されないため防御的に扱う
+        // 本来常に定義されるが型上は保証されないため防御的に扱う
         const currentSplits = entry.relaySplitTimes ?? [];
         const existingDistances = new Set(
           currentSplits.map((st) => st.distance).filter((d) => d > 0),
         );
 
         let newSplits: SplitTimeEntry[] = [];
-        for (let distance = interval; distance <= totalDistance; distance += interval) {
+        for (
+          let distance = interval;
+          distance <= totalDistance;
+          distance += interval
+        ) {
           if (!existingDistances.has(distance)) {
-            newSplits.push({ id: crypto.randomUUID(), distance, splitTime: 0, displayValue: "" });
+            newSplits.push({
+              id: crypto.randomUUID(),
+              distance,
+              splitTime: 0,
+              displayValue: "",
+            });
           }
         }
         if (newSplits.length === 0) return entry;
@@ -734,8 +853,10 @@ export default function RecordClient({
     );
   };
 
-  const addRelaySplitTimesEvery25m = (entryId: string) => addRelaySplitTimesAtInterval(entryId, 25);
-  const addRelaySplitTimesEvery50m = (entryId: string) => addRelaySplitTimesAtInterval(entryId, 50);
+  const addRelaySplitTimesEvery25m = (entryId: string) =>
+    addRelaySplitTimesAtInterval(entryId, 25);
+  const addRelaySplitTimesEvery50m = (entryId: string) =>
+    addRelaySplitTimesAtInterval(entryId, 50);
 
   const removeRelaySplitTime = (entryId: string, splitId: string) => {
     setStyleEntries((prev) =>
@@ -743,7 +864,9 @@ export default function RecordClient({
         if (entry.id !== entryId || !entry.relayEventId) return entry;
         return {
           ...entry,
-          relaySplitTimes: (entry.relaySplitTimes ?? []).filter((st) => st.id !== splitId),
+          relaySplitTimes: (entry.relaySplitTimes ?? []).filter(
+            (st) => st.id !== splitId,
+          ),
         };
       }),
     );
@@ -759,7 +882,10 @@ export default function RecordClient({
             if (mr.memberUserId !== memberUserId) return mr;
 
             if (!isPremium) {
-              const billableCount = countBillableSplitTimes(entryId, mr.splitTimes);
+              const billableCount = countBillableSplitTimes(
+                entryId,
+                mr.splitTimes,
+              );
               if (billableCount >= FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD) {
                 return mr;
               }
@@ -803,7 +929,9 @@ export default function RecordClient({
 
             const existingDistances = new Set(
               mr.splitTimes
-                .map((st) => (typeof st.distance === "number" ? st.distance : 0))
+                .map((st) =>
+                  typeof st.distance === "number" ? st.distance : 0,
+                )
                 .filter((d) => d > 0),
             );
 
@@ -825,21 +953,33 @@ export default function RecordClient({
 
             // Free ユーザーの場合、制限内に収まるよう切り詰める（最終タイムは除外してカウント）
             if (!isPremium) {
-              const billableCount = countBillableSplitTimes(entryId, mr.splitTimes);
-              const newBillable = newSplitTimes.filter(
-                (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+              const billableCount = countBillableSplitTimes(
+                entryId,
+                mr.splitTimes,
               );
-              const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
+              const newBillable = newSplitTimes.filter(
+                (st) =>
+                  !(
+                    typeof st.distance === "number" &&
+                    st.distance === raceDistance
+                  ),
+              );
+              const maxNewBillable =
+                FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
               if (maxNewBillable <= 0 && newBillable.length > 0) {
                 // 最終タイムだけなら追加OK
                 newSplitTimes = newSplitTimes.filter(
-                  (st) => typeof st.distance === "number" && st.distance === raceDistance,
+                  (st) =>
+                    typeof st.distance === "number" &&
+                    st.distance === raceDistance,
                 );
                 if (newSplitTimes.length === 0) return mr;
               } else if (newBillable.length > maxNewBillable) {
                 let billableAdded = 0;
                 newSplitTimes = newSplitTimes.filter((st) => {
-                  const isRaceDist = typeof st.distance === "number" && st.distance === raceDistance;
+                  const isRaceDist =
+                    typeof st.distance === "number" &&
+                    st.distance === raceDistance;
                   if (isRaceDist) return true;
                   if (billableAdded < maxNewBillable) {
                     billableAdded++;
@@ -880,7 +1020,9 @@ export default function RecordClient({
 
             const existingDistances = new Set(
               mr.splitTimes
-                .map((st) => (typeof st.distance === "number" ? st.distance : 0))
+                .map((st) =>
+                  typeof st.distance === "number" ? st.distance : 0,
+                )
                 .filter((d) => d > 0),
             );
 
@@ -901,20 +1043,32 @@ export default function RecordClient({
 
             // Free ユーザーの場合、制限内に収まるよう切り詰める（最終タイムは除外してカウント）
             if (!isPremium) {
-              const billableCount = countBillableSplitTimes(entryId, mr.splitTimes);
-              const newBillable = newSplitTimes.filter(
-                (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+              const billableCount = countBillableSplitTimes(
+                entryId,
+                mr.splitTimes,
               );
-              const maxNewBillable = FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
+              const newBillable = newSplitTimes.filter(
+                (st) =>
+                  !(
+                    typeof st.distance === "number" &&
+                    st.distance === raceDistance
+                  ),
+              );
+              const maxNewBillable =
+                FREE_PLAN_LIMITS.SPLIT_TIMES_PER_RECORD - billableCount;
               if (maxNewBillable <= 0 && newBillable.length > 0) {
                 newSplitTimes = newSplitTimes.filter(
-                  (st) => typeof st.distance === "number" && st.distance === raceDistance,
+                  (st) =>
+                    typeof st.distance === "number" &&
+                    st.distance === raceDistance,
                 );
                 if (newSplitTimes.length === 0) return mr;
               } else if (newBillable.length > maxNewBillable) {
                 let billableAdded = 0;
                 newSplitTimes = newSplitTimes.filter((st) => {
-                  const isRaceDist = typeof st.distance === "number" && st.distance === raceDistance;
+                  const isRaceDist =
+                    typeof st.distance === "number" &&
+                    st.distance === raceDistance;
                   if (isRaceDist) return true;
                   if (billableAdded < maxNewBillable) {
                     billableAdded++;
@@ -935,7 +1089,11 @@ export default function RecordClient({
     );
   };
 
-  const removeSplitTime = (entryId: string, memberUserId: string, splitId: string) => {
+  const removeSplitTime = (
+    entryId: string,
+    memberUserId: string,
+    splitId: string,
+  ) => {
     setStyleEntries((prev) =>
       prev.map((entry) => {
         if (entry.id !== entryId) return entry;
@@ -978,7 +1136,11 @@ export default function RecordClient({
               if (st.id !== splitId) return st;
               if (field === "distance") {
                 const parsed = parseInt(value, 10);
-                return { ...st, distance: value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed) };
+                return {
+                  ...st,
+                  distance:
+                    value === "" || isNaN(parsed) ? 0 : Math.max(0, parsed),
+                };
               }
               return {
                 ...st,
@@ -988,7 +1150,9 @@ export default function RecordClient({
             });
 
             // split-timeが変更された場合、種目の距離と同じ距離のsplit-timeならタイムも更新
-            const updatedSplit = updatedSplitTimes.find((st) => st.id === splitId);
+            const updatedSplit = updatedSplitTimes.find(
+              (st) => st.id === splitId,
+            );
             if (
               field === "splitTime" &&
               raceDistance &&
@@ -1002,7 +1166,8 @@ export default function RecordClient({
                 splitTimes: updatedSplitTimes,
                 time: updatedSplit.splitTime,
                 timeDisplayValue:
-                  updatedSplit.displayValue || formatTimeBest(updatedSplit.splitTime),
+                  updatedSplit.displayValue ||
+                  formatTimeBest(updatedSplit.splitTime),
               };
             }
 
@@ -1016,8 +1181,16 @@ export default function RecordClient({
     );
   };
 
-  const handleVideoReady = (entryId: string, memberUserId: string, file: File, thumbnail: Blob) => {
-    updateMemberRecord(entryId, memberUserId, { videoFile: file, videoThumbnailBlob: thumbnail });
+  const handleVideoReady = (
+    entryId: string,
+    memberUserId: string,
+    file: File,
+    thumbnail: Blob,
+  ) => {
+    updateMemberRecord(entryId, memberUserId, {
+      videoFile: file,
+      videoThumbnailBlob: thumbnail,
+    });
     setVideoUploadModal(null);
   };
 
@@ -1063,7 +1236,9 @@ export default function RecordClient({
 
         // リレー種目のバリデーション
         if (entry.relayEventId) {
-          const hasUnselectedMember = entry.memberRecords.some((mr) => !mr.memberUserId);
+          const hasUnselectedMember = entry.memberRecords.some(
+            (mr) => !mr.memberUserId,
+          );
           if (hasUnselectedMember) {
             alert(tRecords("validation.relayFullTeam"));
             setSaving(false);
@@ -1071,7 +1246,9 @@ export default function RecordClient({
           }
 
           // 部分入力バリデーション: 全 leg 入力または全 leg 未入力のみ許容
-          const cumulatives = entry.memberRecords.map((mr) => mr.cumulativeTimeSeconds ?? 0);
+          const cumulatives = entry.memberRecords.map(
+            (mr) => mr.cumulativeTimeSeconds ?? 0,
+          );
           const inputtedLegs = cumulatives.filter((c) => c > 0);
           if (inputtedLegs.length > 0 && inputtedLegs.length < 4) {
             alert(tRecords("validation.relayAllTimes"));
@@ -1085,10 +1262,13 @@ export default function RecordClient({
               const prevCum = cumulatives[i - 1];
               const currCum = cumulatives[i];
               if (prevCum === undefined || currCum === undefined) continue; // i>=1 かつ
-                // i<cumulatives.length のため理論上 undefined にならないが防御的に扱う
+              // i<cumulatives.length のため理論上 undefined にならないが防御的に扱う
               if (currCum <= prevCum) {
                 alert(
-                  tRecords("validation.cumulativeTimeInverted", { current: i + 1, prev: i }),
+                  tRecords("validation.cumulativeTimeInverted", {
+                    current: i + 1,
+                    prev: i,
+                  }),
                 );
                 setSaving(false);
                 return;
@@ -1105,9 +1285,14 @@ export default function RecordClient({
             const INVERSION_TOLERANCE = 0.005;
             for (const st of entry.relaySplitTimes) {
               if (st.splitTime <= 0) continue;
-              const legIdx = legBoundaries.findIndex((boundary) => st.distance <= boundary);
+              const legIdx = legBoundaries.findIndex(
+                (boundary) => st.distance <= boundary,
+              );
               if (legIdx === -1) continue;
-              const legStart = getLegStartCumulative(legCumulativeTimes, legIdx);
+              const legStart = getLegStartCumulative(
+                legCumulativeTimes,
+                legIdx,
+              );
               if (st.splitTime <= legStart + INVERSION_TOLERANCE) {
                 alert(
                   tRecords("validation.relaySplitBeforeLegStart", {
@@ -1169,17 +1354,21 @@ export default function RecordClient({
               const legBoundaries = getRelayLegBoundaries(entry.relayEventId);
               const legLow = legIdx === 0 ? 0 : legBoundaries[legIdx - 1];
               if (legLow === undefined) continue; // legBoundaries は固定4要素配列で
-                // 本来常に定義されるが、legLow=0 (leg0 の意味) と取り違えないよう ?? は使わない
+              // 本来常に定義されるが、legLow=0 (leg0 の意味) と取り違えないよう ?? は使わない
               const legHigh = legBoundaries[legIdx];
               if (legHigh === undefined) continue; // legBoundaries は固定4要素配列で
-                // 本来常に定義されるが型上は保証されないため防御的に扱う
-              const legStart = getLegStartCumulative(legCumulativeTimes, legIdx);
+              // 本来常に定義されるが型上は保証されないため防御的に扱う
+              const legStart = getLegStartCumulative(
+                legCumulativeTimes,
+                legIdx,
+              );
               splitTimes = entry.relaySplitTimes
-                .filter(
-                  (st) => st.distance > legLow && st.distance <= legHigh,
-                )
+                .filter((st) => st.distance > legLow && st.distance <= legHigh)
                 .map((st) => {
-                  const legRelativeSplitTime = toLegRelativeSplitTime(st.splitTime, legStart);
+                  const legRelativeSplitTime = toLegRelativeSplitTime(
+                    st.splitTime,
+                    legStart,
+                  );
                   return {
                     ...st,
                     distance: legIdx === 0 ? st.distance : st.distance - legLow,
@@ -1268,15 +1457,20 @@ export default function RecordClient({
       // 絞らなければこのリスクは無く、代わりに払うコストは `.in()` に渡す id 数が
       // 増えるだけ (個人種目の record_id は relay_record_legs に存在しないので
       // マッチせず、誤って別のグループを拾うこともない)。
-      const savableRelayPlans = relayPlans.filter((plan) => plan.legs.length > 0);
+      const savableRelayPlans = relayPlans.filter(
+        (plan) => plan.legs.length > 0,
+      );
       // リレーに関係しない保存では relay_records に**一切触れない**。
       // 「消すべき古い行が存在しうる」のは、この (competition_id, team_id) に
       // is_relaying の records があった場合だけ (relay_records はこの画面の保存か
       // is_relaying records からのバックフィルでしか作られない)。
       const needsRelayWork =
-        savableRelayPlans.length > 0 || existingRecords.some((record) => record.is_relaying);
+        savableRelayPlans.length > 0 ||
+        existingRecords.some((record) => record.is_relaying);
       const relayRecordIds = needsRelayWork
-        ? await relayRecordsApi.resolveRelayRecordIdsForRecords(Array.from(existingRecordIds))
+        ? await relayRecordsApi.resolveRelayRecordIdsForRecords(
+            Array.from(existingRecordIds),
+          )
         : new Set<string>();
 
       const { toInsert, toUpdate, toDeleteIds } = computeRecordSaveDiff(
@@ -1315,7 +1509,9 @@ export default function RecordClient({
       // 保存後の records.id を validRecords と同じ添字で並べる (relay_record_legs.record_id
       // へ写すため)。UPDATE 行は既存 id のまま、INSERT 行は新規採番された id。
       // 失敗した位置は null のまま残す。
-      const insertedRecordIds: Array<string | null> = validRecords.map(() => null);
+      const insertedRecordIds: Array<string | null> = validRecords.map(
+        () => null,
+      );
       // フォーム行 id (mr.id) → 保存後の実 records.id。動画アップロードの対象解決に使う
       // (mr.id は既存記録由来の行では records.id と一致するが、エントリー由来・新規行では
       // 一致しないため、そのまま動画アップロードの id に使うと 404 になる)。
@@ -1357,7 +1553,10 @@ export default function RecordClient({
           .select("id");
 
         if (updateError) {
-          console.error(`Record更新エラー (${record.memberName}):`, updateError);
+          console.error(
+            `Record更新エラー (${record.memberName}):`,
+            updateError,
+          );
           hasError = true;
           continue;
         }
@@ -1392,7 +1591,10 @@ export default function RecordClient({
             .single();
 
           if (recreateError || !recreated) {
-            console.error(`Record再作成エラー (${record.memberName}):`, recreateError);
+            console.error(
+              `Record再作成エラー (${record.memberName}):`,
+              recreateError,
+            );
             hasError = true;
             continue;
           }
@@ -1411,14 +1613,19 @@ export default function RecordClient({
           .eq("record_id", recordId);
 
         if (splitDeleteError) {
-          console.error(`SplitTime削除エラー (${record.memberName}):`, splitDeleteError);
+          console.error(
+            `SplitTime削除エラー (${record.memberName}):`,
+            splitDeleteError,
+          );
           hasError = true;
           continue;
         }
 
         // 種目の距離と同じ距離のsplit_timeは保存しない
         // （ゴールタイム=split_timeなので途中経過ではない）
-        const raceDistance = styles.find((s) => s.id === record.styleId)?.distance;
+        const raceDistance = styles.find(
+          (s) => s.id === record.styleId,
+        )?.distance;
         const validSplitTimes = record.splitTimes.filter(
           (st) =>
             st.distance > 0 &&
@@ -1432,10 +1639,15 @@ export default function RecordClient({
             split_time: st.splitTime,
           }));
 
-          const { error: splitError } = await supabase.from("split_times").insert(splitTimesData);
+          const { error: splitError } = await supabase
+            .from("split_times")
+            .insert(splitTimesData);
 
           if (splitError) {
-            console.error(`SplitTime作成エラー (${record.memberName}):`, splitError);
+            console.error(
+              `SplitTime作成エラー (${record.memberName}):`,
+              splitError,
+            );
             hasError = true;
           }
         }
@@ -1450,7 +1662,10 @@ export default function RecordClient({
           .single();
 
         if (recordError) {
-          console.error(`Record作成エラー (${record.memberName}):`, recordError);
+          console.error(
+            `Record作成エラー (${record.memberName}):`,
+            recordError,
+          );
           hasError = true;
           continue;
         }
@@ -1462,7 +1677,9 @@ export default function RecordClient({
 
         // 種目の距離と同じ距離のsplit_timeは保存しない
         // （ゴールタイム=split_timeなので途中経過ではない）
-        const raceDistance = styles.find((s) => s.id === record.styleId)?.distance;
+        const raceDistance = styles.find(
+          (s) => s.id === record.styleId,
+        )?.distance;
         const validSplitTimes = record.splitTimes.filter(
           (st) =>
             st.distance > 0 &&
@@ -1476,10 +1693,15 @@ export default function RecordClient({
             split_time: st.splitTime,
           }));
 
-          const { error: splitError } = await supabase.from("split_times").insert(splitTimesData);
+          const { error: splitError } = await supabase
+            .from("split_times")
+            .insert(splitTimesData);
 
           if (splitError) {
-            console.error(`SplitTime作成エラー (${record.memberName}):`, splitError);
+            console.error(
+              `SplitTime作成エラー (${record.memberName}):`,
+              splitError,
+            );
             hasError = true;
           }
         }
@@ -1522,7 +1744,9 @@ export default function RecordClient({
         );
         if (relayWriteFailed) hasError = true;
       } else if (needsRelayWork && hasError) {
-        console.error("records の書き込みに失敗したため relay_records の差し替えを中止しました");
+        console.error(
+          "records の書き込みに失敗したため relay_records の差し替えを中止しました",
+        );
       }
 
       // 代理入力はチームメンバー全員の records を書き換えるため、
@@ -1562,33 +1786,56 @@ export default function RecordClient({
             const uploadUrlRes = await fetch("/api/storage/videos/upload-url", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ type: "record", id: recordId, contentType: "video/mp4" }),
+              body: JSON.stringify({
+                type: "record",
+                id: recordId,
+                contentType: "video/mp4",
+              }),
             });
             if (!uploadUrlRes.ok) {
               videoUploadErrors.push(
-                tRecords("errorVideoUploadUrlFailed", { name: mr.memberName, status: uploadUrlRes.status }),
+                tRecords("errorVideoUploadUrlFailed", {
+                  name: mr.memberName,
+                  status: uploadUrlRes.status,
+                }),
               );
               continue;
             }
-            const { videoUploadUrl, thumbnailUploadUrl, videoPath: vPath, thumbnailPath: tPath } =
-              await uploadUrlRes.json() as {
-                videoUploadUrl: string;
-                thumbnailUploadUrl: string;
-                videoPath: string;
-                thumbnailPath: string;
-              };
-            const putRes = await fetch(videoUploadUrl, { method: "PUT", body: mr.videoFile });
+            const {
+              videoUploadUrl,
+              thumbnailUploadUrl,
+              videoPath: vPath,
+              thumbnailPath: tPath,
+            } = (await uploadUrlRes.json()) as {
+              videoUploadUrl: string;
+              thumbnailUploadUrl: string;
+              videoPath: string;
+              thumbnailPath: string;
+            };
+            const putRes = await fetch(videoUploadUrl, {
+              method: "PUT",
+              body: mr.videoFile,
+            });
             if (!putRes.ok) {
               videoUploadErrors.push(
-                tRecords("errorVideoUploadFailed", { name: mr.memberName, status: putRes.status }),
+                tRecords("errorVideoUploadFailed", {
+                  name: mr.memberName,
+                  status: putRes.status,
+                }),
               );
               continue;
             }
             if (mr.videoThumbnailBlob) {
-              const thumbRes = await fetch(thumbnailUploadUrl, { method: "PUT", body: mr.videoThumbnailBlob });
+              const thumbRes = await fetch(thumbnailUploadUrl, {
+                method: "PUT",
+                body: mr.videoThumbnailBlob,
+              });
               if (!thumbRes.ok) {
                 videoUploadErrors.push(
-                  tRecords("errorVideoThumbnailFailed", { name: mr.memberName, status: thumbRes.status }),
+                  tRecords("errorVideoThumbnailFailed", {
+                    name: mr.memberName,
+                    status: thumbRes.status,
+                  }),
                 );
                 continue;
               }
@@ -1601,7 +1848,9 @@ export default function RecordClient({
             if (mr.videoThumbnailBlob) {
               confirmFormData.append(
                 "thumbnailBlob",
-                new File([mr.videoThumbnailBlob], "thumbnail.jpg", { type: "image/jpeg" }),
+                new File([mr.videoThumbnailBlob], "thumbnail.jpg", {
+                  type: "image/jpeg",
+                }),
               );
             }
             const confirmRes = await fetch("/api/storage/videos/confirm", {
@@ -1610,7 +1859,10 @@ export default function RecordClient({
             });
             if (!confirmRes.ok) {
               videoUploadErrors.push(
-                tRecords("errorVideoConfirmFailed", { name: mr.memberName, status: confirmRes.status }),
+                tRecords("errorVideoConfirmFailed", {
+                  name: mr.memberName,
+                  status: confirmRes.status,
+                }),
               );
               continue;
             }
@@ -1618,7 +1870,9 @@ export default function RecordClient({
             // コピーする)。サムネイル未生成の場合に team-assign を呼ぶと R2 に存在しない
             // オブジェクトをコピーしようとして失敗するため、呼ばず通知する。
             if (!mr.videoThumbnailBlob) {
-              videoUploadErrors.push(tRecords("errorVideoNoThumbnail", { name: mr.memberName }));
+              videoUploadErrors.push(
+                tRecords("errorVideoNoThumbnail", { name: mr.memberName }),
+              );
               continue;
             }
             const assignRes = await fetch("/api/storage/videos/team-assign", {
@@ -1635,12 +1889,17 @@ export default function RecordClient({
             });
             if (!assignRes.ok) {
               videoUploadErrors.push(
-                tRecords("errorVideoAssignFailed", { name: mr.memberName, status: assignRes.status }),
+                tRecords("errorVideoAssignFailed", {
+                  name: mr.memberName,
+                  status: assignRes.status,
+                }),
               );
             }
           } catch (videoErr) {
             console.error("動画アップロードエラー:", videoErr);
-            videoUploadErrors.push(tRecords("errorVideoGenericFailed", { name: mr.memberName }));
+            videoUploadErrors.push(
+              tRecords("errorVideoGenericFailed", { name: mr.memberName }),
+            );
           }
         }
       }
@@ -1650,7 +1909,9 @@ export default function RecordClient({
         // この直後に router.push で遷移するため、ブロッキングな通知 (alert) で
         // 「保存成功 + 一部動画失敗」を必ず伝えてから遷移する (PracticeLogClient と同じ扱い)。
         window.alert(
-          tRecords("videoPartialFailureSaved", { errors: videoUploadErrors.join("\n") }),
+          tRecords("videoPartialFailureSaved", {
+            errors: videoUploadErrors.join("\n"),
+          }),
         );
       }
 
@@ -1689,14 +1950,20 @@ export default function RecordClient({
             {/* 大会情報 */}
             <div className="flex flex-wrap gap-4 text-sm text-gray-600 border-t pt-4">
               <div className="flex items-center gap-1">
-                <span className="font-medium">{competition.title || tRecords("competitionFallback")}</span>
+                <span className="font-medium">
+                  {competition.title || tRecords("competitionFallback")}
+                </span>
               </div>
               <div className="flex items-center gap-1">
                 <CalendarDaysIcon className="h-4 w-4" />
                 <span>
-                  {format(new Date(competition.date + "T00:00:00"), "yyyy年M月d日(EEE)", {
-                    locale: ja,
-                  })}
+                  {format(
+                    new Date(competition.date + "T00:00:00"),
+                    "yyyy年M月d日(EEE)",
+                    {
+                      locale: ja,
+                    },
+                  )}
                 </span>
               </div>
               {competition.place && (
@@ -1707,7 +1974,9 @@ export default function RecordClient({
               )}
               <div className="flex items-center gap-1">
                 <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
-                  {competition.pool_type === 1 ? tCommon("poolTypeLong") : tCommon("poolTypeShort")}
+                  {competition.pool_type === 1
+                    ? tCommon("poolTypeLong")
+                    : tCommon("poolTypeShort")}
                 </span>
               </div>
             </div>
@@ -1720,7 +1989,9 @@ export default function RecordClient({
             <div key={entry.id} className="bg-white rounded-lg shadow p-6">
               {/* 種目ヘッダー */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">{tRecords("entryHeader", { num: entryIndex + 1 })}</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {tRecords("entryHeader", { num: entryIndex + 1 })}
+                </h2>
                 {styleEntries.length > 1 && (
                   <button
                     type="button"
@@ -1734,9 +2005,15 @@ export default function RecordClient({
 
               {/* 種目選択 */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">{tRecords("eventLabel")}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {tRecords("eventLabel")}
+                </label>
                 <select
-                  value={entry.relayEventId ? `relay:${entry.relayEventId}` : entry.styleId}
+                  value={
+                    entry.relayEventId
+                      ? `relay:${entry.relayEventId}`
+                      : entry.styleId
+                  }
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val.startsWith("relay:")) {
@@ -1768,7 +2045,9 @@ export default function RecordClient({
               {/* 対象メンバー選択 (個人種目) */}
               {!entry.relayEventId && (
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t("record.participantsHeader")}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t("record.participantsHeader")}
+                  </label>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1800,7 +2079,9 @@ export default function RecordClient({
               {/* リレー種目: 3段構造 */}
               {entry.relayEventId && (
                 <div className="space-y-4 border-t pt-4">
-                  <h3 className="text-sm font-medium text-gray-700">{t("record.timesHeader")}</h3>
+                  <h3 className="text-sm font-medium text-gray-700">
+                    {t("record.timesHeader")}
+                  </h3>
 
                   {/* 上段: 泳者4列グリッド */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1810,46 +2091,50 @@ export default function RecordClient({
                         mr.memberUserId,
                       );
                       return (
-                      <div key={`relay-leg-${mrIndex}`}>
-                        <p className="text-xs font-medium text-blue-700 mb-1">
-                          {relayLegLabelOf(entry, mrIndex)}
-                        </p>
-                        <select
-                          value={mr.memberUserId}
-                          onChange={(e) => {
-                            const selectedUserId = e.target.value;
-                            const selectedMember = members.find((m) => m.user_id === selectedUserId);
-                            updateMemberRecordByIndex(entry.id, mrIndex, {
-                              memberUserId: selectedUserId,
-                              memberName: selectedMember?.users.name || "",
-                            });
-                          }}
-                          className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">{tRecords("selectSwimmer")}</option>
-                          {legMemberOptions.map((m) => (
-                            <option key={m.user_id} value={m.user_id}>
-                              {m.users.name}
+                        <div key={`relay-leg-${mrIndex}`}>
+                          <p className="text-xs font-medium text-blue-700 mb-1">
+                            {relayLegLabelOf(entry, mrIndex)}
+                          </p>
+                          <select
+                            value={mr.memberUserId}
+                            onChange={(e) => {
+                              const selectedUserId = e.target.value;
+                              const selectedMember = members.find(
+                                (m) => m.user_id === selectedUserId,
+                              );
+                              updateMemberRecordByIndex(entry.id, mrIndex, {
+                                memberUserId: selectedUserId,
+                                memberName: selectedMember?.users.name || "",
+                              });
+                            }}
+                            className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">
+                              {tRecords("selectSwimmer")}
                             </option>
-                          ))}
-                        </select>
-                        {(() => {
-                          const best = bestTimeBadgeFor(
-                            mr.memberUserId,
-                            mr.relayLegStyleId,
-                            mr.isRelaying,
-                          );
-                          if (!best) return null;
-                          return (
-                            <p
-                              data-testid={`relay-leg-best-time-badge-${mrIndex}`}
-                              className="mt-1 text-xs text-green-800 bg-green-100 px-2 py-1 rounded-full inline-flex items-center"
-                            >
-                              {best.label}: {formatTimeBest(best.time)}
-                            </p>
-                          );
-                        })()}
-                      </div>
+                            {legMemberOptions.map((m) => (
+                              <option key={m.user_id} value={m.user_id}>
+                                {m.users.name}
+                              </option>
+                            ))}
+                          </select>
+                          {(() => {
+                            const best = bestTimeBadgeFor(
+                              mr.memberUserId,
+                              mr.relayLegStyleId,
+                              mr.isRelaying,
+                            );
+                            if (!best) return null;
+                            return (
+                              <p
+                                data-testid={`relay-leg-best-time-badge-${mrIndex}`}
+                                className="mt-1 text-xs text-green-800 bg-green-100 px-2 py-1 rounded-full inline-flex items-center"
+                              >
+                                {best.label}: {formatTimeBest(best.time)}
+                              </p>
+                            );
+                          })()}
+                        </div>
                       );
                     })}
                   </div>
@@ -1865,7 +2150,9 @@ export default function RecordClient({
                           type="text"
                           inputMode="decimal"
                           value={entry.memberRecords[3]?.timeDisplayValue ?? ""}
-                          onChange={(e) => handleRelayTotalTimeChange(entry.id, e.target.value)}
+                          onChange={(e) =>
+                            handleRelayTotalTimeChange(entry.id, e.target.value)
+                          }
                           placeholder={tRecords("relayTimePlaceholder")}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
@@ -1877,7 +2164,8 @@ export default function RecordClient({
                       {entry.memberRecords.map((mr, mrIndex) => (
                         <div key={`relay-reaction-${mrIndex}`}>
                           <label className="block text-xs font-medium text-gray-600 mb-1">
-                            {tRecords("relayLegShort", { num: mrIndex + 1 })} {tRecordLog("reactionTimeLabelShort")}
+                            {tRecords("relayLegShort", { num: mrIndex + 1 })}{" "}
+                            {tRecordLog("reactionTimeLabelShort")}
                           </label>
                           <input
                             type="number"
@@ -1905,7 +2193,8 @@ export default function RecordClient({
                         {t("record.zoneLabel")}
                         {!isPremium && (
                           <span className="ml-2 text-gray-400">
-                            {(entry.relaySplitTimes ?? []).length}/{RELAY_FREE_PLAN_MAX_SPLITS}
+                            {(entry.relaySplitTimes ?? []).length}/
+                            {RELAY_FREE_PLAN_MAX_SPLITS}
                           </span>
                         )}
                       </label>
@@ -1917,7 +2206,8 @@ export default function RecordClient({
                           className="text-xs py-1 px-2"
                           disabled={
                             !isPremium &&
-                            (entry.relaySplitTimes ?? []).length >= RELAY_FREE_PLAN_MAX_SPLITS
+                            (entry.relaySplitTimes ?? []).length >=
+                              RELAY_FREE_PLAN_MAX_SPLITS
                           }
                         >
                           <PlusIcon className="h-3 w-3 mr-1" />
@@ -1930,7 +2220,8 @@ export default function RecordClient({
                           className="text-xs py-1 px-2"
                           disabled={
                             !isPremium &&
-                            (entry.relaySplitTimes ?? []).length >= RELAY_FREE_PLAN_MAX_SPLITS
+                            (entry.relaySplitTimes ?? []).length >=
+                              RELAY_FREE_PLAN_MAX_SPLITS
                           }
                         >
                           <PlusIcon className="h-3 w-3 mr-1" />
@@ -1943,7 +2234,8 @@ export default function RecordClient({
                           className="text-xs py-1 px-2"
                           disabled={
                             !isPremium &&
-                            (entry.relaySplitTimes ?? []).length >= RELAY_FREE_PLAN_MAX_SPLITS
+                            (entry.relaySplitTimes ?? []).length >=
+                              RELAY_FREE_PLAN_MAX_SPLITS
                           }
                         >
                           <PlusIcon className="h-3 w-3 mr-1" />
@@ -1956,12 +2248,20 @@ export default function RecordClient({
                         {[...(entry.relaySplitTimes ?? [])]
                           .sort((a, b) => a.distance - b.distance)
                           .map((split) => (
-                            <div key={split.id} className="flex items-center gap-2">
+                            <div
+                              key={split.id}
+                              className="flex items-center gap-2"
+                            >
                               <input
                                 type="number"
                                 value={split.distance}
                                 onChange={(e) =>
-                                  handleRelaySplitTimeChange(entry.id, split.id, "distance", e.target.value)
+                                  handleRelaySplitTimeChange(
+                                    entry.id,
+                                    split.id,
+                                    "distance",
+                                    e.target.value,
+                                  )
                                 }
                                 placeholder={tRecords("distancePlaceholder")}
                                 className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
@@ -1972,14 +2272,21 @@ export default function RecordClient({
                                 inputMode="decimal"
                                 value={split.displayValue}
                                 onChange={(e) =>
-                                  handleRelaySplitTimeChange(entry.id, split.id, "splitTime", e.target.value)
+                                  handleRelaySplitTimeChange(
+                                    entry.id,
+                                    split.id,
+                                    "splitTime",
+                                    e.target.value,
+                                  )
                                 }
                                 placeholder={tRecords("splitTimePlaceholder")}
                                 className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                               />
                               <button
                                 type="button"
-                                onClick={() => removeRelaySplitTime(entry.id, split.id)}
+                                onClick={() =>
+                                  removeRelaySplitTime(entry.id, split.id)
+                                }
                                 className="text-red-500 hover:text-red-700"
                               >
                                 <TrashIcon className="h-4 w-4" />
@@ -1990,26 +2297,48 @@ export default function RecordClient({
                     )}
 
                     {/* リレー全体の LapTimeDisplay */}
-                    {(entry.relaySplitTimes ?? []).length > 0 && entry.relayEventId && (
-                      <LapTimeDisplay
-                        splitTimes={(() => {
-                          const legBoundaries = getRelayLegBoundaries(entry.relayEventId!);
-                          const totalDistance = legBoundaries[3];
-                          const baseSplits = (entry.relaySplitTimes ?? []).map((st) => ({
-                            distance: st.distance,
-                            splitTime: st.splitTime,
-                          }));
-                          if (totalDistance === undefined) return baseSplits; // legBoundaries は
+                    {(entry.relaySplitTimes ?? []).length > 0 &&
+                      entry.relayEventId && (
+                        <LapTimeDisplay
+                          splitTimes={(() => {
+                            const legBoundaries = getRelayLegBoundaries(
+                              entry.relayEventId!,
+                            );
+                            const totalDistance = legBoundaries[3];
+                            const baseSplits = (
+                              entry.relaySplitTimes ?? []
+                            ).map((st) => ({
+                              distance: st.distance,
+                              splitTime: st.splitTime,
+                            }));
+                            if (totalDistance === undefined) return baseSplits; // legBoundaries は
                             // 固定4要素配列で本来常に定義されるが型上は保証されないため防御的に扱う
-                          const totalTime = entry.memberRecords[3]?.cumulativeTimeSeconds ?? 0;
-                          if (totalTime > 0 && !baseSplits.some((st) => st.distance === totalDistance)) {
-                            return [...baseSplits, { distance: totalDistance, splitTime: totalTime }];
+                            const totalTime =
+                              entry.memberRecords[3]?.cumulativeTimeSeconds ??
+                              0;
+                            if (
+                              totalTime > 0 &&
+                              !baseSplits.some(
+                                (st) => st.distance === totalDistance,
+                              )
+                            ) {
+                              return [
+                                ...baseSplits,
+                                {
+                                  distance: totalDistance,
+                                  splitTime: totalTime,
+                                },
+                              ];
+                            }
+                            return baseSplits;
+                          })()}
+                          raceDistance={
+                            entry.relayEventId
+                              ? getRelayLegBoundaries(entry.relayEventId)[3]
+                              : undefined
                           }
-                          return baseSplits;
-                        })()}
-                        raceDistance={entry.relayEventId ? getRelayLegBoundaries(entry.relayEventId)[3] : undefined}
-                      />
-                    )}
+                        />
+                      )}
                   </div>
                 </div>
               )}
@@ -2017,18 +2346,31 @@ export default function RecordClient({
               {/* 個人種目: メンバーごとの記録入力 */}
               {!entry.relayEventId && entry.memberRecords.length > 0 && (
                 <div className="space-y-4 border-t pt-4">
-                  <h3 className="text-sm font-medium text-gray-700">{t("record.timesHeader")}</h3>
+                  <h3 className="text-sm font-medium text-gray-700">
+                    {t("record.timesHeader")}
+                  </h3>
                   {entry.memberRecords.map((mr) => (
-                    <div key={mr.memberUserId} className="bg-gray-50 rounded-lg p-4">
+                    <div
+                      key={mr.memberUserId}
+                      className="bg-gray-50 rounded-lg p-4"
+                    >
                       <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <span className="font-medium text-gray-900 mr-auto">{mr.memberName}</span>
-                        {mr.entryTimeReference != null && mr.entryTimeReference > 0 && (
-                          <span className="text-sm text-gray-500">
-                            {tRecordLog("entryTimeLabel")} {formatTimeBest(mr.entryTimeReference)}
-                          </span>
-                        )}
+                        <span className="font-medium text-gray-900 mr-auto">
+                          {mr.memberName}
+                        </span>
+                        {mr.entryTimeReference != null &&
+                          mr.entryTimeReference > 0 && (
+                            <span className="text-sm text-gray-500">
+                              {tRecordLog("entryTimeLabel")}{" "}
+                              {formatTimeBest(mr.entryTimeReference)}
+                            </span>
+                          )}
                         {(() => {
-                          const best = bestTimeBadgeFor(mr.memberUserId, entry.styleId, mr.isRelaying);
+                          const best = bestTimeBadgeFor(
+                            mr.memberUserId,
+                            entry.styleId,
+                            mr.isRelaying,
+                          );
                           if (!best) return null;
                           return (
                             <span
@@ -2053,7 +2395,13 @@ export default function RecordClient({
                                 type="text"
                                 inputMode="decimal"
                                 value={mr.timeDisplayValue}
-                                onChange={(e) => handleTimeChange(entry.id, mr.memberUserId, e.target.value)}
+                                onChange={(e) =>
+                                  handleTimeChange(
+                                    entry.id,
+                                    mr.memberUserId,
+                                    e.target.value,
+                                  )
+                                }
                                 placeholder={tRecords("timePlaceholder")}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
@@ -2076,9 +2424,13 @@ export default function RecordClient({
                                 max="2"
                                 value={mr.reactionTime || ""}
                                 onChange={(e) =>
-                                  updateMemberRecord(entry.id, mr.memberUserId, {
-                                    reactionTime: e.target.value,
-                                  })
+                                  updateMemberRecord(
+                                    entry.id,
+                                    mr.memberUserId,
+                                    {
+                                      reactionTime: e.target.value,
+                                    },
+                                  )
                                 }
                                 placeholder="0.65"
                                 className="w-full px-2 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -2137,27 +2489,39 @@ export default function RecordClient({
                           <div className="flex gap-1">
                             <Button
                               type="button"
-                              onClick={() => addSplitTimesEvery25m(entry.id, mr.memberUserId)}
+                              onClick={() =>
+                                addSplitTimesEvery25m(entry.id, mr.memberUserId)
+                              }
                               variant="outline"
                               className="text-xs py-1 px-2"
-                              disabled={!styles.find((s) => s.id === entry.styleId)?.distance}
+                              disabled={
+                                !styles.find((s) => s.id === entry.styleId)
+                                  ?.distance
+                              }
                             >
                               <PlusIcon className="h-3 w-3 mr-1" />
                               追加(25mごと)
                             </Button>
                             <Button
                               type="button"
-                              onClick={() => addSplitTimesEvery50m(entry.id, mr.memberUserId)}
+                              onClick={() =>
+                                addSplitTimesEvery50m(entry.id, mr.memberUserId)
+                              }
                               variant="outline"
                               className="text-xs py-1 px-2"
-                              disabled={!styles.find((s) => s.id === entry.styleId)?.distance}
+                              disabled={
+                                !styles.find((s) => s.id === entry.styleId)
+                                  ?.distance
+                              }
                             >
                               <PlusIcon className="h-3 w-3 mr-1" />
                               追加(50mごと)
                             </Button>
                             <Button
                               type="button"
-                              onClick={() => addSplitTime(entry.id, mr.memberUserId)}
+                              onClick={() =>
+                                addSplitTime(entry.id, mr.memberUserId)
+                              }
                               variant="outline"
                               className="text-xs py-1 px-2"
                             >
@@ -2170,12 +2534,21 @@ export default function RecordClient({
                           <div className="space-y-2">
                             {[...mr.splitTimes]
                               .sort((a, b) => {
-                                const distA = typeof a.distance === "number" ? a.distance : 0;
-                                const distB = typeof b.distance === "number" ? b.distance : 0;
+                                const distA =
+                                  typeof a.distance === "number"
+                                    ? a.distance
+                                    : 0;
+                                const distB =
+                                  typeof b.distance === "number"
+                                    ? b.distance
+                                    : 0;
                                 return distA - distB;
                               })
                               .map((split) => (
-                                <div key={split.id} className="flex items-center gap-2">
+                                <div
+                                  key={split.id}
+                                  className="flex items-center gap-2"
+                                >
                                   <input
                                     type="number"
                                     value={split.distance}
@@ -2188,10 +2561,14 @@ export default function RecordClient({
                                         e.target.value,
                                       )
                                     }
-                                    placeholder={tRecords("distancePlaceholder")}
+                                    placeholder={tRecords(
+                                      "distancePlaceholder",
+                                    )}
                                     className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
                                   />
-                                  <span className="text-gray-500 text-sm">m:</span>
+                                  <span className="text-gray-500 text-sm">
+                                    m:
+                                  </span>
                                   <input
                                     type="text"
                                     inputMode="decimal"
@@ -2205,13 +2582,19 @@ export default function RecordClient({
                                         e.target.value,
                                       )
                                     }
-                                    placeholder={tRecords("splitTimePlaceholder")}
+                                    placeholder={tRecords(
+                                      "splitTimePlaceholder",
+                                    )}
                                     className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                                   />
                                   <button
                                     type="button"
                                     onClick={() =>
-                                      removeSplitTime(entry.id, mr.memberUserId, split.id)
+                                      removeSplitTime(
+                                        entry.id,
+                                        mr.memberUserId,
+                                        split.id,
+                                      )
                                     }
                                     className="text-red-500 hover:text-red-700"
                                   >
@@ -2240,7 +2623,9 @@ export default function RecordClient({
                             }`}
                           >
                             <VideoCameraIcon className="h-3.5 w-3.5" />
-                            {mr.videoFile ? tRecords("videoHas") : tRecords("videoSelect")}
+                            {mr.videoFile
+                              ? tRecords("videoHas")
+                              : tRecords("videoSelect")}
                           </button>
                         </div>
 
@@ -2252,22 +2637,34 @@ export default function RecordClient({
                                 distance: st.distance,
                                 splitTime: st.splitTime,
                               }));
-                              const raceDistance = styles.find((s) => s.id === entry.styleId)?.distance;
+                              const raceDistance = styles.find(
+                                (s) => s.id === entry.styleId,
+                              )?.distance;
                               const recordTime = mr.time;
-                              if (raceDistance && recordTime && recordTime > 0) {
+                              if (
+                                raceDistance &&
+                                recordTime &&
+                                recordTime > 0
+                              ) {
                                 const hasGoalSplit = baseSplits.some(
                                   (st) => st.distance === raceDistance,
                                 );
                                 if (!hasGoalSplit) {
                                   return [
                                     ...baseSplits,
-                                    { distance: raceDistance, splitTime: recordTime },
+                                    {
+                                      distance: raceDistance,
+                                      splitTime: recordTime,
+                                    },
                                   ];
                                 }
                               }
                               return baseSplits;
                             })()}
-                            raceDistance={styles.find((s) => s.id === entry.styleId)?.distance}
+                            raceDistance={
+                              styles.find((s) => s.id === entry.styleId)
+                                ?.distance
+                            }
                           />
                         )}
                       </div>
@@ -2279,7 +2676,12 @@ export default function RecordClient({
           ))}
 
           {/* 種目追加ボタン */}
-          <Button type="button" onClick={addStyleEntry} variant="outline" className="w-full">
+          <Button
+            type="button"
+            onClick={addStyleEntry}
+            variant="outline"
+            className="w-full"
+          >
             <PlusIcon className="h-4 w-4 mr-2" />
             種目を追加
           </Button>
@@ -2289,7 +2691,11 @@ export default function RecordClient({
             <Button type="button" onClick={handleBack} variant="secondary">
               キャンセル
             </Button>
-            <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               {saving ? t("record.saving") : t("record.saveButton")}
             </Button>
           </div>
@@ -2297,111 +2703,19 @@ export default function RecordClient({
       </div>
 
       {/* メンバー選択モーダル */}
-      {showMemberSelectModal && currentStyleEntryId && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black/40 transition-opacity"
-              onClick={() => setShowMemberSelectModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 max-w-lg w-full max-h-[80vh] flex flex-col">
-              {/* モーダルヘッダー */}
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-900">{tRecords("selectMembersTitle")}</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowMemberSelectModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* 一括選択ボタン */}
-              <div className="flex gap-2 p-4 border-b bg-gray-50">
-                <button
-                  type="button"
-                  onClick={() => setTempSelectedUserIds(swimmerCandidates.map((m) => m.user_id))}
-                  className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
-                >
-                  全員選択
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTempSelectedUserIds([])}
-                  className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                >
-                  選択解除
-                </button>
-              </div>
-
-              {/* メンバーリスト */}
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-2">
-                  {swimmerCandidates.map((member) => {
-                    const isSelected = tempSelectedUserIds.includes(member.user_id);
-
-                    return (
-                      <label
-                        key={member.id}
-                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                          isSelected
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setTempSelectedUserIds((prev) => [...prev, member.user_id]);
-                            } else {
-                              setTempSelectedUserIds((prev) =>
-                                prev.filter((id) => id !== member.user_id),
-                              );
-                            }
-                          }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <span className="ml-3 flex-1 text-sm font-medium text-gray-900">
-                          {member.users.name}
-                        </span>
-                        {member.role === "admin" && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                            管理者
-                          </span>
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* モーダルフッター */}
-              <div className="flex items-center justify-between p-4 border-t bg-gray-50">
-                <span className="text-sm text-gray-600">{tempSelectedUserIds.length}名選択中</span>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowMemberSelectModal(false)}
-                  >
-                    キャンセル
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={confirmMemberSelection}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    決定
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <MemberSelectModal
+        isOpen={showMemberSelectModal}
+        teamId={teamId}
+        supabase={supabase}
+        title={tRecords("selectMembersTitle")}
+        members={memberSelectCandidates}
+        selectedUserIds={currentStyleEntrySelectedUserIds}
+        onConfirm={confirmMemberSelection}
+        onCancel={() => {
+          setShowMemberSelectModal(false);
+          setCurrentStyleEntryId(null);
+        }}
+      />
 
       {/* 動画アップロードモーダル */}
       {videoUploadModal && (

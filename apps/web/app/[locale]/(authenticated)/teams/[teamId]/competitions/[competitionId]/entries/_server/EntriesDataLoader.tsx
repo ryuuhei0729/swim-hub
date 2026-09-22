@@ -26,6 +26,9 @@ interface ActiveTeamMember {
     id: string;
     name: string;
     birthday?: string | null;
+    // optional: 共有 MemberSelectModal (useMemberGroupSort の性別グルーピング) が
+    // 参照する。欠損時はモーダル側がフラット表示にフォールバックする (PM裁定 W10)
+    gender?: number;
   };
 }
 
@@ -118,7 +121,8 @@ export default async function EntriesDataLoader({
         users!team_memberships_user_id_fkey (
           id,
           name,
-          birthday
+          birthday,
+          gender
         )
       `,
         )
@@ -228,6 +232,7 @@ export default async function EntriesDataLoader({
         role: m.role,
         name: m.users.name,
         is_swimmer: m.is_swimmer,
+        gender: m.users.gender,
       }))}
       existingEntries={existingEntries}
       styles={styles}

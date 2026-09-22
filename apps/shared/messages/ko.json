@@ -3299,6 +3299,8 @@
       "cancelButton": "취소",
       "memberSelectTitle": "대상 멤버 선택",
       "selectAll": "전원 선택",
+      "selectAllToggle": "전체 선택",
+      "selectAllToggleGroup": "{group} 전체 선택",
       "clearSelection": "선택 해제",
       "confirmSelection": "확정",
       "relayAllMembersRequired": "계영 종목은 멤버 4명 전원을 선택하세요",

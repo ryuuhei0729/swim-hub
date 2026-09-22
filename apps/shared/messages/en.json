@@ -3293,6 +3293,8 @@
       "cancelButton": "Cancel",
       "memberSelectTitle": "Select members",
       "selectAll": "Select all",
+      "selectAllToggle": "Select all",
+      "selectAllToggleGroup": "Select all in {group}",
       "clearSelection": "Clear selection",
       "confirmSelection": "Confirm",
       "relayAllMembersRequired": "All 4 members must be selected for relay events",

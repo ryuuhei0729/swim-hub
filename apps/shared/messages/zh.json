@@ -3299,6 +3299,8 @@
       "cancelButton": "取消",
       "memberSelectTitle": "选择目标成员",
       "selectAll": "全选",
+      "selectAllToggle": "全选",
+      "selectAllToggleGroup": "全选{group}",
       "clearSelection": "取消选择",
       "confirmSelection": "确定",
       "relayAllMembersRequired": "接力项目请选择全部4名成员",

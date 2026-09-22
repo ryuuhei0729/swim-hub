@@ -1036,6 +1036,8 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
       {/* メンバー選択モーダル（共通基盤を再利用） */}
       <MemberSelectModal
         visible={!!memberModalMenuId}
+        teamId={teamId}
+        supabase={supabase}
         members={memberSelectCandidates}
         selectedUserIds={memberModalMenu?.targetUserIds ?? []}
         onConfirm={(ids) => memberModalMenuId && confirmMemberSelection(memberModalMenuId, ids)}

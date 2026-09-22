@@ -1310,6 +1310,8 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
 
       <MemberSelectModal
         visible={memberModalOpen}
+        teamId={teamId}
+        supabase={supabase}
         members={memberSelectCandidates}
         selectedUserIds={entry.memberRecords.map((mr) => mr.memberUserId)}
         onConfirm={confirmMemberSelection}

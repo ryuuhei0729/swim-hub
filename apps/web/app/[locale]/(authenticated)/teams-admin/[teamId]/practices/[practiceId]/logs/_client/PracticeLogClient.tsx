@@ -15,7 +15,6 @@ import {
   CalendarDaysIcon,
   MapPinIcon,
   UserGroupIcon,
-  XMarkIcon,
   CheckIcon,
   ChevronDownIcon,
   SparklesIcon,
@@ -27,11 +26,18 @@ import type { TeamTimeEntry } from "@/components/team/TeamTimeInputModal";
 import OcrScanModal from "@/components/team/OcrScanModal";
 import { PracticeTag, Practice } from "@apps/shared/types";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
+import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
+import MemberSelectModal, {
+  type MemberSelectOption,
+} from "@/components/team/MemberSelectModal";
 
 // TeamVideoUploaderを動的インポート（重いコンポーネント）
-const TeamVideoUploader = dynamic(() => import("@/components/video/TeamVideoUploader"), {
-  ssr: false,
-});
+const TeamVideoUploader = dynamic(
+  () => import("@/components/video/TeamVideoUploader"),
+  {
+    ssr: false,
+  },
+);
 
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { openTimesheetPrintWindow } from "@/utils/generateTimesheetHtml";
@@ -44,9 +50,16 @@ interface TeamMember {
   id: string;
   user_id: string;
   role: string;
+  // optional: 呼び出し元の select 漏れ・古いキャッシュでは無い場合がある。
+  // undefined は「泳者」として扱う (apps/shared/utils/swimmerFilter.ts と同じ判定)。
+  // PracticeLogDataLoader.tsx は select 済み (修正A)
+  is_swimmer?: boolean;
   users: {
     id: string;
     name: string;
+    // optional: 共有 MemberSelectModal (useMemberGroupSort の性別グルーピング) が
+    // 参照する。undefined のときはモーダル側がフラット表示にフォールバックする
+    gender?: number;
   };
 }
 
@@ -129,23 +142,61 @@ export default function PracticeLogClient({
   const { supabase, subscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
 
-  const SWIM_STYLES = useMemo(() => [
-    { value: "Fr", label: tPractice("styles.Fr") },
-    { value: "Ba", label: tPractice("styles.Ba") },
-    { value: "Br", label: tPractice("styles.Br") },
-    { value: "Fly", label: tPractice("styles.Fly") },
-    { value: "IM", label: tPractice("styles.IM") },
-  ], [tPractice]);
+  const SWIM_STYLES = useMemo(
+    () => [
+      { value: "Fr", label: tPractice("styles.Fr") },
+      { value: "Ba", label: tPractice("styles.Ba") },
+      { value: "Br", label: tPractice("styles.Br") },
+      { value: "Fly", label: tPractice("styles.Fly") },
+      { value: "IM", label: tPractice("styles.IM") },
+    ],
+    [tPractice],
+  );
 
   const [availableTags, setAvailableTags] = useState<Tag[]>(initialTags);
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showOcrModal, setShowOcrModal] = useState(false);
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
-  const [pendingOcrMenus, setPendingOcrMenus] = useState<PracticeMenu[] | null>(null);
+  const [pendingOcrMenus, setPendingOcrMenus] = useState<PracticeMenu[] | null>(
+    null,
+  );
   const [showUserSelectModal, setShowUserSelectModal] = useState(false);
-  const [currentMenuIdForUserSelect, setCurrentMenuIdForUserSelect] = useState<string | null>(null);
+  const [currentMenuIdForUserSelect, setCurrentMenuIdForUserSelect] = useState<
+    string | null
+  >(null);
   const [tempSelectedUserIds, setTempSelectedUserIds] = useState<string[]>([]);
+
+  // 候補提示 (対象ユーザー選択モーダル) の直前だけをフィルタする。members 自体は
+  // 他の名前解決 (targetUserIds → member.users.name) にも共用されているため、
+  // フィルタ済みの生配列に置き換えてはならない (Issue #49 適用漏れ修正・PM裁定 W7)
+  const swimmerCandidates = useMemo(
+    () => excludeNonSwimmers(members),
+    [members],
+  );
+
+  const memberSelectCandidates: MemberSelectOption[] = useMemo(
+    () =>
+      swimmerCandidates.map((m) => ({
+        user_id: m.user_id,
+        role: m.role,
+        name: m.users.name,
+        is_swimmer: m.is_swimmer,
+        gender: m.users.gender,
+      })),
+    [swimmerCandidates],
+  );
+
+  // 「出席者のみ」ボタンの対象。非泳者は候補自体に出ないため、出席していても
+  // 非泳者は選択されえない (PM裁定 W6/W7)
+  const presentCandidateIds = useMemo(
+    () =>
+      presentUserIds.filter((id) =>
+        swimmerCandidates.some((m) => m.user_id === id),
+      ),
+    [presentUserIds, swimmerCandidates],
+  );
+
   const [videoUploadModal, setVideoUploadModal] = useState<{
     menuId: string;
     memberId: string;
@@ -178,7 +229,10 @@ export default function PracticeLogClient({
           note: "",
           tags: [],
           times: [],
-          targetUserIds: presentUserIds.length > 0 ? presentUserIds : members.map((m) => m.user_id),
+          targetUserIds:
+            presentUserIds.length > 0
+              ? presentUserIds
+              : members.map((m) => m.user_id),
         },
       ];
     }
@@ -236,7 +290,9 @@ export default function PracticeLogClient({
       // メンバーのタイムを追加
       const member = members.find((m) => m.user_id === log.user_id);
       if (member && log.practice_times && log.practice_times.length > 0) {
-        const existingMemberTime = group.times.find((t) => t.memberId === member.id);
+        const existingMemberTime = group.times.find(
+          (t) => t.memberId === member.id,
+        );
 
         const memberTimes = log.practice_times.map((pt) => ({
           setNumber: pt.set_number,
@@ -291,7 +347,10 @@ export default function PracticeLogClient({
       note: "",
       tags: [],
       times: [],
-      targetUserIds: presentUserIds.length > 0 ? presentUserIds : members.map((m) => m.user_id),
+      targetUserIds:
+        presentUserIds.length > 0
+          ? presentUserIds
+          : members.map((m) => m.user_id),
     };
     setMenus((prev) => [...prev, newMenu]);
   };
@@ -308,7 +367,9 @@ export default function PracticeLogClient({
     value: PracticeMenu[K],
   ) => {
     setMenus((prev) =>
-      prev.map((menu) => (menu.id === menuId ? { ...menu, [field]: value } : menu)),
+      prev.map((menu) =>
+        menu.id === menuId ? { ...menu, [field]: value } : menu,
+      ),
     );
   };
 
@@ -316,14 +377,22 @@ export default function PracticeLogClient({
     updateMenu(menuId, "times", times);
   };
 
-  const handleVideoReady = (menuId: string, memberId: string, file: File, thumbnail: Blob) => {
+  const handleVideoReady = (
+    menuId: string,
+    memberId: string,
+    file: File,
+    thumbnail: Blob,
+  ) => {
     setMenus((prev) =>
       prev.map((menu) => {
         if (menu.id !== menuId) return menu;
         return {
           ...menu,
           videoFiles: { ...(menu.videoFiles ?? {}), [memberId]: file },
-          videoThumbnails: { ...(menu.videoThumbnails ?? {}), [memberId]: thumbnail },
+          videoThumbnails: {
+            ...(menu.videoThumbnails ?? {}),
+            [memberId]: thumbnail,
+          },
         };
       }),
     );
@@ -366,12 +435,16 @@ export default function PracticeLogClient({
 
       for (const menu of menus) {
         // 対象ユーザーのみにログを作成
-        const targetMembers = members.filter((m) => menu.targetUserIds.includes(m.user_id));
+        const targetMembers = members.filter((m) =>
+          menu.targetUserIds.includes(m.user_id),
+        );
 
         for (const member of targetMembers) {
-          const memberTimes = menu.times.find((t) => t.memberId === member.id)?.times || [];
+          const memberTimes =
+            menu.times.find((t) => t.memberId === member.id)?.times || [];
 
-          const circleSeconds = (Number(menu.circleMin) || 0) * 60 + (Number(menu.circleSec) || 0);
+          const circleSeconds =
+            (Number(menu.circleMin) || 0) * 60 + (Number(menu.circleSec) || 0);
 
           logsData.push({
             user_id: member.user_id,
@@ -400,10 +473,13 @@ export default function PracticeLogClient({
 
       // RPC関数を呼び出して原子性のある操作を実行
       // replace_practice_logsは、practice_idに紐づくすべてのログを削除してから新しいログを挿入する
-      const { data: result, error: rpcError } = await supabase.rpc("replace_practice_logs", {
-        p_practice_id: practiceId,
-        p_logs_data: logsData,
-      });
+      const { data: result, error: rpcError } = await supabase.rpc(
+        "replace_practice_logs",
+        {
+          p_practice_id: practiceId,
+          p_logs_data: logsData,
+        },
+      );
 
       if (rpcError) {
         console.error("練習ログ保存エラー:", rpcError);
@@ -439,8 +515,10 @@ export default function PracticeLogClient({
         for (let mi = 0; mi < menus.length; mi++) {
           const menuAtIndex = menus[mi];
           if (!menuAtIndex) continue; // menus は useState の PracticeMenu[] で穴は生じないが、
-            // for ループのインデックスは length チェックだけでは型上絞り込まれないため防御的に扱う
-          const targetMembers = members.filter((m) => menuAtIndex.targetUserIds.includes(m.user_id));
+          // for ループのインデックスは length チェックだけでは型上絞り込まれないため防御的に扱う
+          const targetMembers = members.filter((m) =>
+            menuAtIndex.targetUserIds.includes(m.user_id),
+          );
           for (const member of targetMembers) {
             const logId = logIds[flatIdx];
             if (logId) {
@@ -461,39 +539,83 @@ export default function PracticeLogClient({
             if (!logId) {
               // 動画は添付されているが保存済みログと突き合わせできなかった
               // (RPC の log_ids 不足や順序不整合)。無音破棄せず通知する。
-              const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
-              videoUploadErrors.push(t("practiceLog.errorVideoLogResolveFailed", { name: memberName }));
+              const memberName =
+                members.find((m) => m.user_id === memberId)?.users?.name ??
+                memberId;
+              videoUploadErrors.push(
+                t("practiceLog.errorVideoLogResolveFailed", {
+                  name: memberName,
+                }),
+              );
               continue;
             }
             try {
-              const uploadUrlRes = await fetch("/api/storage/videos/upload-url", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ type: "practice-log", id: logId, contentType: "video/mp4" }),
-              });
+              const uploadUrlRes = await fetch(
+                "/api/storage/videos/upload-url",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    type: "practice-log",
+                    id: logId,
+                    contentType: "video/mp4",
+                  }),
+                },
+              );
               if (!uploadUrlRes.ok) {
-                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
-                videoUploadErrors.push(t("practiceLog.errorVideoUploadUrlFailed", { name: memberName, status: uploadUrlRes.status }));
+                const memberName =
+                  members.find((m) => m.user_id === memberId)?.users?.name ??
+                  memberId;
+                videoUploadErrors.push(
+                  t("practiceLog.errorVideoUploadUrlFailed", {
+                    name: memberName,
+                    status: uploadUrlRes.status,
+                  }),
+                );
                 continue;
               }
-              const { videoUploadUrl, thumbnailUploadUrl, videoPath: vPath, thumbnailPath: tPath } =
-                await uploadUrlRes.json() as {
-                  videoUploadUrl: string;
-                  thumbnailUploadUrl: string;
-                  videoPath: string;
-                  thumbnailPath: string;
-                };
-              const putRes = await fetch(videoUploadUrl, { method: "PUT", body: videoFile });
+              const {
+                videoUploadUrl,
+                thumbnailUploadUrl,
+                videoPath: vPath,
+                thumbnailPath: tPath,
+              } = (await uploadUrlRes.json()) as {
+                videoUploadUrl: string;
+                thumbnailUploadUrl: string;
+                videoPath: string;
+                thumbnailPath: string;
+              };
+              const putRes = await fetch(videoUploadUrl, {
+                method: "PUT",
+                body: videoFile,
+              });
               if (!putRes.ok) {
-                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
-                videoUploadErrors.push(t("practiceLog.errorVideoUploadFailed", { name: memberName, status: putRes.status }));
+                const memberName =
+                  members.find((m) => m.user_id === memberId)?.users?.name ??
+                  memberId;
+                videoUploadErrors.push(
+                  t("practiceLog.errorVideoUploadFailed", {
+                    name: memberName,
+                    status: putRes.status,
+                  }),
+                );
                 continue;
               }
               if (thumbnail) {
-                const thumbRes = await fetch(thumbnailUploadUrl, { method: "PUT", body: thumbnail });
+                const thumbRes = await fetch(thumbnailUploadUrl, {
+                  method: "PUT",
+                  body: thumbnail,
+                });
                 if (!thumbRes.ok) {
-                  const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
-                  videoUploadErrors.push(t("practiceLog.errorVideoThumbnailFailed", { name: memberName, status: thumbRes.status }));
+                  const memberName =
+                    members.find((m) => m.user_id === memberId)?.users?.name ??
+                    memberId;
+                  videoUploadErrors.push(
+                    t("practiceLog.errorVideoThumbnailFailed", {
+                      name: memberName,
+                      status: thumbRes.status,
+                    }),
+                  );
                   continue;
                 }
               }
@@ -505,13 +627,25 @@ export default function PracticeLogClient({
               if (thumbnail) {
                 confirmFormData.append(
                   "thumbnailBlob",
-                  new File([thumbnail], "thumbnail.jpg", { type: "image/jpeg" }),
+                  new File([thumbnail], "thumbnail.jpg", {
+                    type: "image/jpeg",
+                  }),
                 );
               }
-              const confirmRes = await fetch("/api/storage/videos/confirm", { method: "POST", body: confirmFormData });
+              const confirmRes = await fetch("/api/storage/videos/confirm", {
+                method: "POST",
+                body: confirmFormData,
+              });
               if (!confirmRes.ok) {
-                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
-                videoUploadErrors.push(t("practiceLog.errorVideoConfirmFailed", { name: memberName, status: confirmRes.status }));
+                const memberName =
+                  members.find((m) => m.user_id === memberId)?.users?.name ??
+                  memberId;
+                videoUploadErrors.push(
+                  t("practiceLog.errorVideoConfirmFailed", {
+                    name: memberName,
+                    status: confirmRes.status,
+                  }),
+                );
                 continue;
               }
               // team-assign はサムネイル必須 (サーバー側で thumbnails/.../{sourceId}.jpg を
@@ -519,8 +653,12 @@ export default function PracticeLogClient({
               // オブジェクトをコピーしようとして失敗するため、team-assign を呼ばず通知する
               // (mobile の MissingThumbnailError と同じ扱い)。
               if (!thumbnail) {
-                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
-                videoUploadErrors.push(t("practiceLog.errorVideoNoThumbnail", { name: memberName }));
+                const memberName =
+                  members.find((m) => m.user_id === memberId)?.users?.name ??
+                  memberId;
+                videoUploadErrors.push(
+                  t("practiceLog.errorVideoNoThumbnail", { name: memberName }),
+                );
                 continue;
               }
               // team-assign APIでターゲットユーザーに移動
@@ -537,13 +675,24 @@ export default function PracticeLogClient({
                 }),
               });
               if (!assignRes.ok) {
-                const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
-                videoUploadErrors.push(t("practiceLog.errorVideoAssignFailed", { name: memberName, status: assignRes.status }));
+                const memberName =
+                  members.find((m) => m.user_id === memberId)?.users?.name ??
+                  memberId;
+                videoUploadErrors.push(
+                  t("practiceLog.errorVideoAssignFailed", {
+                    name: memberName,
+                    status: assignRes.status,
+                  }),
+                );
               }
             } catch (videoErr) {
               console.error("動画アップロードエラー:", videoErr);
-              const memberName = members.find((m) => m.user_id === memberId)?.users?.name ?? memberId;
-              videoUploadErrors.push(t("practiceLog.errorVideoGenericFailed", { name: memberName }));
+              const memberName =
+                members.find((m) => m.user_id === memberId)?.users?.name ??
+                memberId;
+              videoUploadErrors.push(
+                t("practiceLog.errorVideoGenericFailed", { name: memberName }),
+              );
             }
           }
         }
@@ -553,7 +702,9 @@ export default function PracticeLogClient({
           // ブロッキングな通知 (alert) で「保存成功 + 一部動画失敗」を必ず伝えてから遷移する
           // (mobile の partial-failure 通知と同じ扱い)。
           window.alert(
-            t("practiceLog.videoPartialFailureSaved", { errors: videoUploadErrors.join("\n") }),
+            t("practiceLog.videoPartialFailureSaved", {
+              errors: videoUploadErrors.join("\n"),
+            }),
           );
         }
       }
@@ -617,10 +768,16 @@ export default function PracticeLogClient({
     [menus, currentMenuId],
   );
   const modalTeamMembers = useMemo(
-    () => teamMembersForModal.filter((m) => currentMenu?.targetUserIds.includes(m.user_id)),
+    () =>
+      teamMembersForModal.filter((m) =>
+        currentMenu?.targetUserIds.includes(m.user_id),
+      ),
     [teamMembersForModal, currentMenu?.targetUserIds],
   );
-  const modalInitialTimes = useMemo(() => currentMenu?.times || [], [currentMenu?.times]);
+  const modalInitialTimes = useMemo(
+    () => currentMenu?.times || [],
+    [currentMenu?.times],
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -637,7 +794,9 @@ export default function PracticeLogClient({
 
           <div className="bg-white rounded-lg shadow p-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {isEditMode ? t("practiceLog.titleEdit") : t("practiceLog.titleAdd")}
+              {isEditMode
+                ? t("practiceLog.titleEdit")
+                : t("practiceLog.titleAdd")}
             </h1>
             <p className="text-gray-600 mb-4">{t("practiceLog.subtitle")}</p>
 
@@ -648,9 +807,14 @@ export default function PracticeLogClient({
                 <span>
                   {(() => {
                     const dateLocale = locale === "ja" ? ja : enUS;
-                    const datePattern = locale === "ja" ? "yyyy年M月d日(EEE)" : "MMM d, yyyy (EEE)";
+                    const datePattern =
+                      locale === "ja"
+                        ? "yyyy年M月d日(EEE)"
+                        : "MMM d, yyyy (EEE)";
                     const parsedDate = parseISO(practice.date + "T00:00:00");
-                    return isValid(parsedDate) ? format(parsedDate, datePattern, { locale: dateLocale }) : "-";
+                    return isValid(parsedDate)
+                      ? format(parsedDate, datePattern, { locale: dateLocale })
+                      : "-";
                   })()}
                 </span>
               </div>
@@ -666,7 +830,11 @@ export default function PracticeLogClient({
 
         {/* 記録表印刷 & 画像スキャンボタン */}
         <div className="flex justify-end gap-2 -mt-2 mb-4">
-          <Button type="button" variant="outline" onClick={() => openTimesheetPrintWindow()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => openTimesheetPrintWindow()}
+          >
             <PrinterIcon className="h-4 w-4 mr-2" />
             {t("practiceLog.printButton")}
           </Button>
@@ -684,7 +852,9 @@ export default function PracticeLogClient({
         {/* エラー表示 */}
         {submitError && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800 whitespace-pre-line">{submitError}</p>
+            <p className="text-sm text-red-800 whitespace-pre-line">
+              {submitError}
+            </p>
             <button
               type="button"
               onClick={() => setSubmitError(null)}
@@ -705,7 +875,9 @@ export default function PracticeLogClient({
             >
               {/* メニューヘッダー */}
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">{t("practiceLog.menuTitle", { index: index + 1 })}</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t("practiceLog.menuTitle", { index: index + 1 })}
+                </h2>
                 {menus.length > 1 && (
                   <button
                     type="button"
@@ -723,11 +895,15 @@ export default function PracticeLogClient({
               <div className="grid grid-cols-2 gap-4 mb-4">
                 {/* 種目① */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("practiceLog.style1Label")}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("practiceLog.style1Label")}
+                  </label>
                   <div className="relative">
                     <select
                       value={menu.style}
-                      onChange={(e) => updateMenu(menu.id, "style", e.target.value)}
+                      onChange={(e) =>
+                        updateMenu(menu.id, "style", e.target.value)
+                      }
                       className="w-full pl-3 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                       data-testid={`team-practice-log-style-${index + 1}`}
                     >
@@ -743,7 +919,9 @@ export default function PracticeLogClient({
 
                 {/* 種目② */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("practiceLog.style2Label")}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("practiceLog.style2Label")}
+                  </label>
                   <div className="relative">
                     <select
                       value={menu.swimCategory}
@@ -772,7 +950,9 @@ export default function PracticeLogClient({
               <div className="grid grid-cols-5 gap-4 mb-4">
                 {/* 距離 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("practiceLog.distanceLabel")}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("practiceLog.distanceLabel")}
+                  </label>
                   <input
                     type="number"
                     value={menu.distance}
@@ -792,7 +972,9 @@ export default function PracticeLogClient({
 
                 {/* 本数 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("practiceLog.repsLabel")}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("practiceLog.repsLabel")}
+                  </label>
                   <input
                     type="number"
                     value={menu.reps}
@@ -811,7 +993,9 @@ export default function PracticeLogClient({
 
                 {/* セット数 */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t("practiceLog.setsLabel")}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("practiceLog.setsLabel")}
+                  </label>
                   <input
                     type="number"
                     value={menu.sets}
@@ -874,7 +1058,9 @@ export default function PracticeLogClient({
 
               {/* 対象ユーザー */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">{t("practiceLog.participantsSection")}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("practiceLog.participantsSection")}
+                </label>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -889,7 +1075,11 @@ export default function PracticeLogClient({
                     <UserGroupIcon className="h-4 w-4 mr-2" />
                     {t("practiceLog.selectUsersButton")}
                   </button>
-                  <span className="text-sm text-gray-600">{t("practiceLog.selectedCount", { count: menu.targetUserIds.length })}</span>
+                  <span className="text-sm text-gray-600">
+                    {t("practiceLog.selectedCount", {
+                      count: menu.targetUserIds.length,
+                    })}
+                  </span>
                 </div>
                 {/* 選択されたユーザーの表示 */}
                 {menu.targetUserIds.length > 0 && (
@@ -907,7 +1097,9 @@ export default function PracticeLogClient({
                     })}
                     {menu.targetUserIds.length > 5 && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                        {t("practiceLog.morePeopleCount", { count: menu.targetUserIds.length - 5 })}
+                        {t("practiceLog.morePeopleCount", {
+                          count: menu.targetUserIds.length - 5,
+                        })}
                       </span>
                     )}
                   </div>
@@ -917,22 +1109,32 @@ export default function PracticeLogClient({
               {/* 動画アップロード（対象ユーザーごと） */}
               {menu.targetUserIds.length > 0 && (
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t("practiceLog.videoLabel")}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t("practiceLog.videoLabel")}
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {menu.targetUserIds.map((userId) => {
-                      const hasVideo = !!(menu.videoFiles?.[userId]);
+                      const hasVideo = !!menu.videoFiles?.[userId];
                       return (
                         <button
                           key={userId}
                           type="button"
-                          onClick={() => setVideoUploadModal({ menuId: menu.id, memberId: userId })}
+                          onClick={() =>
+                            setVideoUploadModal({
+                              menuId: menu.id,
+                              memberId: userId,
+                            })
+                          }
                           className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
                             hasVideo
                               ? "border-green-500 bg-green-50 text-green-700"
                               : "border-gray-300 bg-white text-gray-600 hover:border-blue-400"
                           }`}
                         >
-                          {getMemberName(userId)}: {hasVideo ? t("practiceLog.videoHas") : t("practiceLog.videoSelect")}
+                          {getMemberName(userId)}:{" "}
+                          {hasVideo
+                            ? t("practiceLog.videoHas")
+                            : t("practiceLog.videoSelect")}
                         </button>
                       );
                     })}
@@ -942,7 +1144,9 @@ export default function PracticeLogClient({
 
               {/* タグ */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">{t("practiceLog.tagLabel")}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t("practiceLog.tagLabel")}
+                </label>
                 <TagInput
                   selectedTags={menu.tags}
                   availableTags={availableTags}
@@ -953,7 +1157,9 @@ export default function PracticeLogClient({
 
               {/* メモ */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t("practiceLog.memoLabel")}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t("practiceLog.memoLabel")}
+                </label>
                 <textarea
                   value={menu.note}
                   onChange={(e) => updateMenu(menu.id, "note", e.target.value)}
@@ -973,7 +1179,9 @@ export default function PracticeLogClient({
                     total: (Number(menu.sets) || 0) * (Number(menu.reps) || 0),
                   })}
                   <br />
-                  <span className="text-xs text-gray-500">{t("practiceLog.timeInputOptional")}</span>
+                  <span className="text-xs text-gray-500">
+                    {t("practiceLog.timeInputOptional")}
+                  </span>
                 </div>
                 <Button
                   type="button"
@@ -992,34 +1200,56 @@ export default function PracticeLogClient({
               {/* 各人のタイム表示 */}
               {menu.times && menu.times.length > 0 && (
                 <div className="mt-4 border-t pt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">{t("practiceLog.recordedTimesTitle")}</h3>
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">
+                    {t("practiceLog.recordedTimesTitle")}
+                  </h3>
                   <div className="space-y-3">
                     {menu.times.map((memberTime: TeamTimeEntry) => {
-                      const member = members.find((m) => m.id === memberTime.memberId);
-                      if (!member || !memberTime.times || memberTime.times.length === 0)
+                      const member = members.find(
+                        (m) => m.id === memberTime.memberId,
+                      );
+                      if (
+                        !member ||
+                        !memberTime.times ||
+                        memberTime.times.length === 0
+                      )
                         return null;
 
-                      const validTimes = memberTime.times.filter((t) => t.time > 0);
+                      const validTimes = memberTime.times.filter(
+                        (t) => t.time > 0,
+                      );
                       if (validTimes.length === 0) return null;
 
                       return (
-                        <div key={memberTime.memberId} className="bg-gray-50 p-3 rounded-lg">
+                        <div
+                          key={memberTime.memberId}
+                          className="bg-gray-50 p-3 rounded-lg"
+                        >
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-700">
                               {member.users?.name || "Unknown User"}
                             </span>
                             <span className="text-xs text-gray-500">
-                              {t("practiceLog.recordedCount", { count: validTimes.length })}
+                              {t("practiceLog.recordedCount", {
+                                count: validTimes.length,
+                              })}
                             </span>
                           </div>
                           <div className="grid grid-cols-4 gap-2 text-xs">
                             {validTimes.map((timeEntry, idx: number) => (
-                              <div key={idx} className="bg-white p-2 rounded border text-center">
+                              <div
+                                key={idx}
+                                className="bg-white p-2 rounded border text-center"
+                              >
                                 <div className="text-gray-500">
-                                  {t("practiceLog.setRepLabel", { set: timeEntry.setNumber, rep: timeEntry.repNumber })}
+                                  {t("practiceLog.setRepLabel", {
+                                    set: timeEntry.setNumber,
+                                    rep: timeEntry.repNumber,
+                                  })}
                                 </div>
                                 <div className="font-mono text-gray-800">
-                                  {timeEntry.displayValue || formatTime(timeEntry.time)}
+                                  {timeEntry.displayValue ||
+                                    formatTime(timeEntry.time)}
                                 </div>
                               </div>
                             ))}
@@ -1075,7 +1305,9 @@ export default function PracticeLogClient({
             setShowTimeModal(false);
             setCurrentMenuId(null);
           }}
-          onSubmit={(times: TeamTimeEntry[]) => handleTimeSave(currentMenuId, times)}
+          onSubmit={(times: TeamTimeEntry[]) =>
+            handleTimeSave(currentMenuId, times)
+          }
           setCount={currentMenu?.sets || 1}
           repCount={currentMenu?.reps || 1}
           teamMembers={modalTeamMembers}
@@ -1085,130 +1317,41 @@ export default function PracticeLogClient({
       )}
 
       {/* ユーザー選択モーダル */}
-      {showUserSelectModal && currentMenuIdForUserSelect && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <div
-              className="fixed inset-0 bg-black/40 transition-opacity"
-              onClick={() => setShowUserSelectModal(false)}
-            />
-            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-300 max-w-lg w-full max-h-[80vh] flex flex-col">
-              {/* モーダルヘッダー */}
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-900">{t("practiceLog.userSelectModalTitle")}</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowUserSelectModal(false)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* 一括選択ボタン */}
-              <div className="flex gap-2 p-4 border-b bg-gray-50">
-                <button
-                  type="button"
-                  onClick={() => setTempSelectedUserIds(members.map((m) => m.user_id))}
-                  className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
-                >
-                  {t("practiceLog.selectAllButton")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTempSelectedUserIds(presentUserIds)}
-                  className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 hover:bg-green-200 rounded transition-colors"
-                  disabled={presentUserIds.length === 0}
-                >
-                  {t("practiceLog.selectPresentButton", { count: presentUserIds.length })}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTempSelectedUserIds([])}
-                  className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                >
-                  {t("practiceLog.deselectButton")}
-                </button>
-              </div>
-
-              {/* メンバーリスト */}
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-2">
-                  {members.map((member) => {
-                    const isSelected = tempSelectedUserIds.includes(member.user_id);
-                    const isPresent = presentUserIds.includes(member.user_id);
-
-                    return (
-                      <label
-                        key={member.id}
-                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                          isSelected
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setTempSelectedUserIds((prev) => [...prev, member.user_id]);
-                            } else {
-                              setTempSelectedUserIds((prev) =>
-                                prev.filter((id) => id !== member.user_id),
-                              );
-                            }
-                          }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <span className="ml-3 flex-1 text-sm font-medium text-gray-900">
-                          {member.users.name}
-                        </span>
-                        {isPresent && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                            <CheckIcon className="h-3 w-3 mr-1" />
-                            {t("practiceLog.attendingBadge")}
-                          </span>
-                        )}
-                        {member.role === "admin" && (
-                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                            {t("practiceLog.adminBadge")}
-                          </span>
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* モーダルフッター */}
-              <div className="flex items-center justify-between p-4 border-t bg-gray-50">
-                <span className="text-sm text-gray-600">{t("practiceLog.selectedCount", { count: tempSelectedUserIds.length })}</span>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowUserSelectModal(false)}
-                  >
-                    {t("practiceLog.cancelButton")}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      updateMenu(currentMenuIdForUserSelect, "targetUserIds", tempSelectedUserIds);
-                      setShowUserSelectModal(false);
-                      setCurrentMenuIdForUserSelect(null);
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    {t("practiceLog.confirmButton")}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <MemberSelectModal
+        isOpen={showUserSelectModal}
+        teamId={teamId}
+        supabase={supabase}
+        title={t("practiceLog.userSelectModalTitle")}
+        members={memberSelectCandidates}
+        selectedUserIds={tempSelectedUserIds}
+        onConfirm={(selectedUserIds) => {
+          if (currentMenuIdForUserSelect) {
+            updateMenu(
+              currentMenuIdForUserSelect,
+              "targetUserIds",
+              selectedUserIds,
+            );
+          }
+          setShowUserSelectModal(false);
+          setCurrentMenuIdForUserSelect(null);
+        }}
+        onCancel={() => setShowUserSelectModal(false)}
+        extraAction={{
+          label: t("practiceLog.selectPresentButton", {
+            count: presentCandidateIds.length,
+          }),
+          onClick: () => setTempSelectedUserIds(presentCandidateIds),
+          disabled: presentCandidateIds.length === 0,
+        }}
+        renderMemberBadge={(member) =>
+          presentUserIds.includes(member.user_id) ? (
+            <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
+              <CheckIcon className="h-3 w-3" />
+              {t("practiceLog.attendingBadge")}
+            </span>
+          ) : null
+        }
+      />
 
       {/* OCRスキャンモーダル */}
       {showOcrModal && (
@@ -1228,7 +1371,12 @@ export default function PracticeLogClient({
           targetUserName={getMemberName(videoUploadModal.memberId)}
           isPremium={isPremium}
           onVideoReady={(file, thumbnail) =>
-            handleVideoReady(videoUploadModal.menuId, videoUploadModal.memberId, file, thumbnail)
+            handleVideoReady(
+              videoUploadModal.menuId,
+              videoUploadModal.memberId,
+              file,
+              thumbnail,
+            )
           }
           onCancel={() => setVideoUploadModal(null)}
         />
@@ -1247,7 +1395,8 @@ export default function PracticeLogClient({
           setPendingOcrMenus(null);
         }}
         onTertiary={() => {
-          if (pendingOcrMenus) setMenus((prev) => [...prev, ...pendingOcrMenus]);
+          if (pendingOcrMenus)
+            setMenus((prev) => [...prev, ...pendingOcrMenus]);
           setShowOverwriteConfirm(false);
           setPendingOcrMenus(null);
         }}

@@ -20,6 +20,11 @@
  * buildRecordSaveSupabaseMock ヘルパーと fixture 構造を踏襲する。
  * 契約: RecordClient の TeamMember (ローカル interface) は `is_swimmer: boolean` を持つ
  * (Phase A 時点では型に無いため fixture は `as unknown as` でキャストする)。
+ *
+ * [チップ化スプリント 追記] インラインの選手選択モーダルは共有 MemberSelectModal
+ * (checkbox → 選択チップ `<button aria-pressed>`) に統合される (PM裁定W1)。
+ * [V-11-01] の検証意図「非泳者が候補一覧に出ない」は変えず、チップ (button) 依存の
+ * クエリに書き直す。
  */
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -113,11 +118,11 @@ describe("RecordClient — 非泳者回帰テスト (R4)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "メンバーを選択" }));
 
-    const checkboxes = screen.getAllByRole("checkbox");
-    const labelTexts = checkboxes.map((cb) => cb.closest("label")?.textContent ?? "");
-
-    expect(labelTexts.some((text) => text.includes("選手A"))).toBe(true);
-    expect(labelTexts.some((text) => text.includes("非泳者B"))).toBe(false);
+    // [チップ化スプリント] 候補一覧は選択チップ (button, aria-pressed) として描画される。
+    // 「非泳者B」がチップとして存在しないことを直接確認する (Issue #49 の回帰防止そのもの)
+    const swimmerChip = screen.getByRole("button", { name: "選手A" });
+    expect(swimmerChip).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("button", { name: "非泳者B" })).not.toBeInTheDocument();
   });
 
   it("[V-11-02] 既存記録を持つ非泳者メンバーの参加者バッジが正しい名前で表示される (members に依存しない経路の回帰防止)", () => {

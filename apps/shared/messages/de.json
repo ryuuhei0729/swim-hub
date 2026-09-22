@@ -3299,6 +3299,8 @@
       "cancelButton": "Abbrechen",
       "memberSelectTitle": "Mitglieder auswählen",
       "selectAll": "Alle auswählen",
+      "selectAllToggle": "Alle auswählen",
+      "selectAllToggleGroup": "Alle in {group} auswählen",
       "clearSelection": "Auswahl aufheben",
       "confirmSelection": "Bestätigen",
       "relayAllMembersRequired": "Für Staffeldisziplinen müssen alle 4 Mitglieder ausgewählt werden",

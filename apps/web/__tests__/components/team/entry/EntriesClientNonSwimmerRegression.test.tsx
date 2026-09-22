@@ -24,6 +24,12 @@
  * 契約: activeMembers の要素 (MemberSelectOption) は `is_swimmer: boolean` を持つ
  * (Phase A 時点では型に無いため、テストの fixture は `as unknown as MemberSelectOption`
  * でキャストする)。
+ *
+ * [チップ化スプリント 追記] MemberSelectModal は checkbox ではなく選択チップ
+ * (`<button aria-pressed>`) になる (apps/web/__tests__/components/team/MemberSelectModal.test.tsx
+ * の契約を参照)。本ファイルの [V-10-02] 系は checkbox 依存のクエリをチップ (button) 依存に
+ * 書き直す。「非泳者が候補に出ない」という検証意図そのものは変えない
+ * (Issue #49 の回帰防止であることに変わりはない)。
  */
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -136,14 +142,12 @@ describe("EntriesClient — 非泳者回帰テスト (R4)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
 
-    // BaseModal はダイアログとしてレンダリングされる想定。候補一覧のチェックボックス群から
-    // 名前を探す (モーダル内テキストとして厳密に確認する)。
-    const checkboxes = screen.getAllByRole("checkbox");
+    // 候補一覧は選択チップ (button, aria-pressed) として描画される。
     // 少なくとも1件は表示されている (正のコントロール)
-    expect(checkboxes.length).toBeGreaterThan(0);
+    const candidateChip = screen.getByRole("button", { name: "選手A" });
+    expect(candidateChip).toHaveAttribute("aria-pressed", "false");
 
-    expect(screen.getByText("選手A")).toBeInTheDocument();
-    expect(screen.queryByText("非泳者B")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "非泳者B" })).not.toBeInTheDocument();
   });
 
   it("[V-10-02 補助] 非泳者が既にエントリー済みの場合でも、候補一覧 (追加用) には出ない", () => {
@@ -165,11 +169,10 @@ describe("EntriesClient — 非泳者回帰テスト (R4)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
 
-    // モーダル内のチェックボックス候補として「選手A」は出るが「非泳者B」は出ない。
-    // 既存カードの見出し (非泳者B) と混同しないよう、チェックボックス付きラベル要素に限定する。
-    const checkboxes = screen.getAllByRole("checkbox");
-    const labelTexts = checkboxes.map((cb) => cb.closest("label")?.textContent ?? "");
-    expect(labelTexts.some((text) => text.includes("選手A"))).toBe(true);
-    expect(labelTexts.some((text) => text.includes("非泳者B"))).toBe(false);
+    // モーダル内の候補チップとして「選手A」は出るが「非泳者B」は出ない。
+    // 既存カードの見出し (非泳者B) は <span> でボタンではないため、
+    // button ロールでの検索なら候補チップとだけ衝突しない。
+    expect(screen.getByRole("button", { name: "選手A" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "非泳者B" })).not.toBeInTheDocument();
   });
 });

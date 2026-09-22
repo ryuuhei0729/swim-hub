@@ -949,6 +949,8 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
       {/* メンバー選択モーダル */}
       <MemberSelectModal
         visible={isMemberModalOpen}
+        teamId={teamId}
+        supabase={supabase}
         members={memberSelectCandidates}
         selectedUserIds={memberOrder}
         title={t("teams.mobile.entryBulk.memberSelectTitle")}
