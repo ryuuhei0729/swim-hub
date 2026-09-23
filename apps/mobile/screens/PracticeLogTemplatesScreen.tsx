@@ -28,6 +28,7 @@ import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { NumberStepper } from "@/components/ui/NumberStepper";
 import { DistanceChips } from "@/components/practices/DistanceChips";
+import { SWIM_CATEGORIES } from "@/components/practices/StyleCategoryChips";
 import { formatTemplateCircle } from "@/components/practices/PracticeLogTemplateSelectModal";
 import { SWIM_STYLES } from "@/utils/formatters";
 import type {
@@ -37,12 +38,6 @@ import type {
 
 /** 無料ユーザーのテンプレート上限 (web PracticeLogTemplateList.MAX_TEMPLATES と同一) */
 const MAX_TEMPLATES = 10;
-
-const SWIM_CATEGORIES = [
-  { value: "Swim", label: "Swim" },
-  { value: "Pull", label: "Pull" },
-  { value: "Kick", label: "Kick" },
-] as const;
 
 // ---- テンプレート編集フォーム state 型 ----
 interface TemplateFormState {

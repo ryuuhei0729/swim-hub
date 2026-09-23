@@ -45,8 +45,8 @@ import { NumberStepper } from "@/components/ui/NumberStepper";
 import { TagChips, TagSelectModal, TagManageModal, VideoUploader } from "@/components/shared";
 import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
 import { ItemTabs } from "@/components/forms/ItemTabs";
-import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 import { DistanceChips } from "@/components/practices/DistanceChips";
+import { StyleCategoryChips } from "@/components/practices/StyleCategoryChips";
 import { PracticeLogTemplateSelectModal } from "@/components/practices/PracticeLogTemplateSelectModal";
 import { useCreatePracticeLogTemplateMutation } from "@apps/shared/hooks/queries/practiceLogTemplates";
 import {
@@ -57,7 +57,7 @@ import {
 } from "@/utils/imageUpload";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
-import { formatTime, formatTimeAverage, SWIM_STYLES } from "@/utils/formatters";
+import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import { hasUnsavedChanges, diffPracticeLogDraft, getTabNavAdjacency } from "@/utils/tabFormUtils";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
 import type { MainStackParamList } from "@/navigation/types";
@@ -74,12 +74,6 @@ type PracticeTab = "practice" | "log";
 const PRACTICE_VISIBLE_TABS: PracticeTab[] = ["practice", "log"];
 
 // ---- 練習ログメニュー型 ----
-const SWIM_CATEGORIES = [
-  { value: "Swim", label: "Swim" },
-  { value: "Pull", label: "Pull" },
-  { value: "Kick", label: "Kick" },
-] as const;
-
 interface PracticeMenu {
   id: string;
   style: string;
@@ -1404,56 +1398,13 @@ export const PracticeTabFormScreen: React.FC = () => {
 
                   {/* 種目 (泳法チップ + カテゴリチップを1ラベルの下に連続表示。レースレコードタブと同じUI) */}
                   <View style={styles.menuField}>
-                    <Text style={styles.label}>
-                      {t("practice.form.styleLabel")} <Text style={styles.required}>*</Text>
-                    </Text>
-                    <ChipScrollRow>
-                      {SWIM_STYLES.map((style) => (
-                        <Pressable
-                          key={style.value}
-                          style={[
-                            styles.pickerOption,
-                            menu.style === style.value && styles.pickerOptionSelected,
-                          ]}
-                          onPress={() => updateMenu(menu.id, "style", style.value)}
-                          disabled={isSaving || !canEditPracticeLogs}
-                        >
-                          <Text
-                            style={[
-                              styles.pickerOptionText,
-                              menu.style === style.value && styles.pickerOptionTextSelected,
-                            ]}
-                          >
-                            {t(`practice.styleAbbrev.${style.value}`)}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ChipScrollRow>
-                    <ChipScrollRow>
-                      {SWIM_CATEGORIES.map((category) => (
-                        <Pressable
-                          key={category.value}
-                          style={[
-                            styles.pickerOption,
-                            menu.swimCategory === category.value && styles.pickerOptionSelected,
-                          ]}
-                          onPress={() =>
-                            updateMenu(menu.id, "swimCategory", category.value)
-                          }
-                          disabled={isSaving || !canEditPracticeLogs}
-                        >
-                          <Text
-                            style={[
-                              styles.pickerOptionText,
-                              menu.swimCategory === category.value &&
-                                styles.pickerOptionTextSelected,
-                            ]}
-                          >
-                            {category.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </ChipScrollRow>
+                    <StyleCategoryChips
+                      style={menu.style}
+                      swimCategory={menu.swimCategory}
+                      onChangeStyle={(v) => updateMenu(menu.id, "style", v)}
+                      onChangeCategory={(v) => updateMenu(menu.id, "swimCategory", v)}
+                      disabled={isSaving || !canEditPracticeLogs}
+                    />
                   </View>
 
                   {/* 距離 (プリセットチップ + その他で直接入力) */}
@@ -2025,32 +1976,6 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 4,
-  },
-  pickerContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  pickerOption: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-  },
-  pickerOptionSelected: {
-    backgroundColor: "#2563EB",
-    borderColor: "#2563EB",
-  },
-  pickerOptionText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  pickerOptionTextSelected: {
-    color: "#FFFFFF",
-    fontWeight: "600",
   },
   timeButton: {
     backgroundColor: "#F3F4F6",

@@ -28,29 +28,27 @@ import { teamKeys, practiceKeys } from "@apps/shared/hooks/queries/keys";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
-import { formatTime, SWIM_STYLES } from "@/utils/formatters";
+import { formatTime } from "@/utils/formatters";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { VideoUploader, TagChips, TagSelectModal, TagManageModal } from "@/components/shared";
 import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { MemberSelectModal } from "@/components/teams/MemberSelectModal";
+import { StyleCategoryChips, type SwimCategory } from "@/components/practices/StyleCategoryChips";
+import { DistanceChips } from "@/components/practices/DistanceChips";
+import { NumberStepper } from "@/components/ui/NumberStepper";
+import { ItemTabs } from "@/components/forms/ItemTabs";
+import { PracticeLogTemplateSelectModal } from "@/components/practices/PracticeLogTemplateSelectModal";
 import { uploadVideoForTeamMember, MissingThumbnailError } from "@/utils/videoUpload";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
 import { useTagModalTransition } from "@/hooks/useTagModalTransition";
 import type { MainStackParamList } from "@/navigation/types";
 import type { PracticeTag } from "@apps/shared/types";
+import type { PracticeLogTemplate } from "@apps/shared/types/practiceLogTemplate";
 
 type RouteProps = RouteProp<MainStackParamList, "TeamPracticeLogBulkForm">;
 type NavProps = NativeStackNavigationProp<MainStackParamList>;
-
-const SWIM_CATEGORIES = [
-  { value: "Swim", label: "Swim" },
-  { value: "Pull", label: "Pull" },
-  { value: "Kick", label: "Kick" },
-] as const;
-
-type SwimCategory = "Swim" | "Pull" | "Kick";
 
 /** RN には crypto.randomUUID がないため簡易 ID 生成（クライアント内のみで使用） */
 let idCounter = 0;
@@ -171,6 +169,10 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // ItemTabs サブタブ化 (個人側 PracticeTabFormScreen と同型)。表示中のメニュー1件のみを
+  // レンダリングする。
+  const [activeMenuIndex, setActiveMenuIndex] = useState(0);
+
   // モーダル状態
   const [memberModalMenuId, setMemberModalMenuId] = useState<string | null>(null);
   // タグ選択/作成/編集の対象メニューID。「モーダルの表示状態」とは別の state に分離している
@@ -179,6 +181,11 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
   // 新規作成したタグがどのメニューにも反映されないバグの原因になっていた)。
   const [tagModalMenuId, setTagModalMenuId] = useState<string | null>(null);
   const [showTagSelectModal, setShowTagSelectModal] = useState(false);
+  // テンプレート選択の対象メニューID。タグと同じ理由で「モーダルの表示状態」とは別に持つ
+  // (テンプレートは対象メニュー1件のみへ非破壊マージする。他メニューの
+  // targetUserIds/times/videoAssets は一切変更しない)。
+  const [templateModalMenuId, setTemplateModalMenuId] = useState<string | null>(null);
+  const [showTemplateSelectModal, setShowTemplateSelectModal] = useState(false);
   // TagSelectModal ⇄ TagManageModal の遷移 (二重マウント競合の修正) は共通フックに集約。
   const {
     showTagManageModal,
@@ -339,31 +346,49 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
   // ---- メニュー操作（Web PracticeLogClient と同ロジック）----
 
   const addMenu = () => {
-    setMenus((prev) => [
-      ...prev,
-      {
-        id: genId(),
-        style: "Fr",
-        swimCategory: "Swim",
-        distance: 100,
-        reps: 4,
-        sets: 1,
-        circleMin: 1,
-        circleSec: 30,
-        note: "",
-        tags: [],
-        targetUserIds:
-          presentUserIds.length > 0
-            ? presentUserIds
-            : memberSelectCandidates.map((m) => m.user_id),
-        times: {},
-        videoAssets: {},
-      },
-    ]);
+    setMenus((prev) => {
+      const next: PracticeMenu[] = [
+        ...prev,
+        {
+          id: genId(),
+          style: "Fr",
+          swimCategory: "Swim",
+          distance: 100,
+          reps: 4,
+          sets: 1,
+          circleMin: 1,
+          circleSec: 30,
+          note: "",
+          tags: [],
+          targetUserIds:
+            presentUserIds.length > 0
+              ? presentUserIds
+              : memberSelectCandidates.map((m) => m.user_id),
+          times: {},
+          videoAssets: {},
+        },
+      ];
+      setActiveMenuIndex(next.length - 1);
+      return next;
+    });
   };
 
+  // removedIndex は削除対象メニューの表示上のインデックス (ItemTabs のタブ位置) を指し、
+  // activeMenuIndex を「削除された位置より後ろなら1つ前へ詰める」ために使う
+  // (個人側 PracticeTabFormScreen.removeMenu と同型のクランプロジック)。
   const removeMenu = (menuId: string) => {
-    setMenus((prev) => (prev.length > 1 ? prev.filter((m) => m.id !== menuId) : prev));
+    setMenus((prev) => {
+      if (prev.length <= 1) return prev;
+      const removedIndex = prev.findIndex((m) => m.id === menuId);
+      const next = prev.filter((m) => m.id !== menuId);
+      setActiveMenuIndex((cur) => {
+        const newLen = next.length;
+        if (cur >= newLen) return newLen - 1;
+        if (cur > removedIndex) return cur - 1;
+        return cur;
+      });
+      return next;
+    });
   };
 
   const updateMenu = <K extends keyof PracticeMenu>(
@@ -389,6 +414,37 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
       }),
     );
     setMemberModalMenuId(null);
+  };
+
+  // ---- テンプレートから作成 ----
+  // 個人側 handleTemplateSelect (setMenus([templateMenu]) で丸ごと置換) とは異なり、
+  // bulk 画面は各メニューが targetUserIds/times/videoAssets を持つため、
+  // 対象メニュー (templateModalMenuId) 1件のフィールドのみを上書きし、
+  // targetUserIds/times/videoAssets (対象メニュー自身を含む) と他メニューは一切変更しない。
+  const handleTemplateSelect = (template: PracticeLogTemplate) => {
+    if (!templateModalMenuId) return;
+    const circleTime = template.circle || 0;
+    const templateTags = template.tag_ids
+      ? availableTags.filter((tag) => template.tag_ids.includes(tag.id))
+      : [];
+    setMenus((prev) =>
+      prev.map((menu) =>
+        menu.id === templateModalMenuId
+          ? {
+              ...menu,
+              style: template.style,
+              swimCategory: template.swim_category,
+              distance: template.distance,
+              reps: template.rep_count,
+              sets: template.set_count,
+              circleMin: Math.floor(circleTime / 60),
+              circleSec: circleTime % 60,
+              note: template.note || "",
+              tags: templateTags,
+            }
+          : menu,
+      ),
+    );
   };
 
   const setMemberTimeCell = (
@@ -695,318 +751,297 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
           <TimeInputHelp showCarryOver style={{ marginTop: 8 }} />
         </View>
 
-        {menus.map((menu, index) => {
+        {(() => {
+          const menu = menus[activeMenuIndex];
+          if (!menu) return null;
           const setCount = Number(menu.sets) || 0;
           const repCount = Number(menu.reps) || 0;
           return (
-            <View key={menu.id} style={styles.menuCard}>
-              {/* メニューヘッダー */}
-              <View style={styles.menuHeader}>
-                <Text style={styles.menuTitle}>
-                  {t("teamsAdmin.practiceLog.menuTitle", { index: index + 1 })}
-                </Text>
-                {menus.length > 1 && (
+            <ItemTabs
+              count={menus.length}
+              activeIndex={activeMenuIndex}
+              onSelect={setActiveMenuIndex}
+              onAdd={addMenu}
+              onRemove={(i) => {
+                const target = menus[i];
+                if (target) removeMenu(target.id);
+              }}
+              label={(i) => t("practice.details.menuNumber", { n: i + 1 })}
+              accent="green"
+              disabled={saving}
+              testID="practicelog-item-tabs"
+            >
+              <View key={menu.id}>
+                {/* タグ + テンプレートから作成 (個人側 PracticeTabFormScreen と同じ配置) */}
+                <View style={styles.field}>
+                  <View style={styles.tagRowHeader}>
+                    <Text style={styles.label}>{t("teamsAdmin.practiceLog.tagLabel")}</Text>
+                    <Pressable
+                      style={styles.templateButton}
+                      onPress={() => {
+                        setTemplateModalMenuId(menu.id);
+                        setShowTemplateSelectModal(true);
+                      }}
+                      disabled={saving}
+                      accessibilityRole="button"
+                    >
+                      <Feather name="clipboard" size={14} color="#374151" />
+                      <Text style={styles.templateButtonText}>
+                        {t("forms.practiceLog.templateFromLong")}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <TagChips
+                    tags={menu.tags}
+                    onPress={() => {
+                      setTagModalMenuId(menu.id);
+                      setShowTagSelectModal(true);
+                    }}
+                    onRemove={(tagId) =>
+                      updateMenu(
+                        menu.id,
+                        "tags",
+                        menu.tags.filter((tg) => tg.id !== tagId),
+                      )
+                    }
+                    disabled={saving}
+                  />
+                </View>
+
+                {/* 種目 (泳法チップ + カテゴリチップ。個人側と共通の StyleCategoryChips) */}
+                <View style={styles.field}>
+                  <StyleCategoryChips
+                    style={menu.style}
+                    swimCategory={menu.swimCategory}
+                    onChangeStyle={(v) => updateMenu(menu.id, "style", v)}
+                    onChangeCategory={(v) => updateMenu(menu.id, "swimCategory", v)}
+                    disabled={saving}
+                  />
+                </View>
+
+                {/* 距離 (プリセットチップ + その他で直接入力。個人側と同一部品) */}
+                <View style={styles.field}>
+                  <Text style={styles.label}>
+                    {t("practice.form.distanceLabel")} <Text style={styles.required}>*</Text>
+                  </Text>
+                  <DistanceChips
+                    value={menu.distance}
+                    onChange={(v) => updateMenu(menu.id, "distance", v)}
+                    disabled={saving}
+                    testID="practice-distance"
+                  />
+                </View>
+
+                {/* 本数・セット数 (ステッパー。個人側と同一 min/step/placeholder) */}
+                <View style={styles.row}>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>
+                      {t("practice.form.repsLabel")} <Text style={styles.required}>*</Text>
+                    </Text>
+                    <NumberStepper
+                      value={menu.reps}
+                      onChange={(v) => updateMenu(menu.id, "reps", v)}
+                      min={1}
+                      step={1}
+                      placeholder="4"
+                      disabled={saving}
+                      accessibilityLabel={t("practice.form.repsLabel")}
+                      testID="practice-rep-count"
+                    />
+                  </View>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>
+                      {t("practice.form.setsLabel")} <Text style={styles.required}>*</Text>
+                    </Text>
+                    <NumberStepper
+                      value={menu.sets}
+                      onChange={(v) => updateMenu(menu.id, "sets", v)}
+                      min={1}
+                      step={1}
+                      placeholder="1"
+                      disabled={saving}
+                      accessibilityLabel={t("practice.form.setsLabel")}
+                      testID="practice-set-count"
+                    />
+                  </View>
+                </View>
+
+                {/* サークル (分: step1 / 秒: step10, max59。個人側と同一) */}
+                <View style={styles.row}>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>{t("practice.form.circleMinLabel")}</Text>
+                    <NumberStepper
+                      value={menu.circleMin}
+                      onChange={(v) => updateMenu(menu.id, "circleMin", v)}
+                      min={0}
+                      step={1}
+                      placeholder="1"
+                      disabled={saving}
+                      accessibilityLabel={t("practice.form.circleMinLabel")}
+                      testID="practice-circle-min"
+                    />
+                  </View>
+                  <View style={styles.fieldHalf}>
+                    <Text style={styles.label}>{t("practice.form.circleSecLabel")}</Text>
+                    <NumberStepper
+                      value={menu.circleSec}
+                      onChange={(v) => updateMenu(menu.id, "circleSec", v)}
+                      min={0}
+                      max={59}
+                      step={10}
+                      placeholder="30"
+                      disabled={saving}
+                      accessibilityLabel={t("practice.form.circleSecLabel")}
+                      testID="practice-circle-sec"
+                    />
+                  </View>
+                </View>
+
+                {/* 対象メンバー (現状維持: タイム入力・対象ユーザー選択UIは Out of Scope) */}
+                <View style={styles.field}>
+                  <Text style={styles.label}>
+                    {t("teamsAdmin.practiceLog.participantsSection")}
+                  </Text>
                   <Pressable
-                    onPress={() => removeMenu(menu.id)}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("common.delete")}
+                    style={styles.selectMemberButton}
+                    onPress={() => setMemberModalMenuId(menu.id)}
                   >
-                    <Feather name="trash-2" size={18} color="#DC2626" />
+                    <Feather name="users" size={16} color="#2563EB" />
+                    <Text style={styles.selectMemberText}>
+                      {t("teamsAdmin.practiceLog.selectUsersButton")}
+                    </Text>
                   </Pressable>
+                  <Text style={styles.countLabel}>
+                    {t("teamsAdmin.practiceLog.selectedCount", {
+                      count: menu.targetUserIds.length,
+                    })}
+                  </Text>
+                </View>
+
+                {/* メモ */}
+                <View style={styles.field}>
+                  <Text style={styles.label}>{t("teamsAdmin.practiceLog.memoLabel")}</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={menu.note}
+                    onChangeText={(text) => updateMenu(menu.id, "note", text)}
+                    placeholder={t("teamsAdmin.practiceLog.memoPlaceholder")}
+                    placeholderTextColor="#9CA3AF"
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                    editable={!saving}
+                  />
+                </View>
+
+                {/* メンバー × タイム入力 (Out of Scope: グリッド自体は無改修) */}
+                {menu.targetUserIds.length === 0 ? (
+                  <View style={styles.emptyMembersBox}>
+                    <Text style={styles.emptyMembersText}>
+                      {t("teams.mobile.bulkPracticeEmpty", {
+                        defaultValue: t("teamsAdmin.practiceLog.selectUsersButton"),
+                      })}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.membersSection}>
+                    <Text style={styles.subHeader}>
+                      {t("teamsAdmin.practiceLog.timeInputSummary", {
+                        sets: setCount,
+                        reps: repCount,
+                        total: setCount * repCount,
+                      })}
+                    </Text>
+                    {menu.targetUserIds.map((userId) => (
+                      <View key={userId} style={styles.memberCard}>
+                        <Text style={styles.memberName}>{getMemberName(userId)}</Text>
+
+                        {/* タイムグリッド（セット×本数）。1:23.45 形式 */}
+                        {setCount > 0 && repCount > 0 ? (
+                          <View style={styles.timeGrid}>
+                            {Array.from({ length: setCount }, (_, si) => {
+                              const setNumber = si + 1;
+                              return (
+                                <View key={setNumber} style={styles.setBlock}>
+                                  <Text style={styles.setLabel}>
+                                    {t("practice.modal.setLabel", { n: setNumber })}
+                                  </Text>
+                                  <View style={styles.repRow}>
+                                    {Array.from({ length: repCount }, (_, ri) => {
+                                      const repNumber = ri + 1;
+                                      return (
+                                        <View key={repNumber} style={styles.repCell}>
+                                          <Text style={styles.repCellLabel}>
+                                            {t("practice.modal.repLabel", { n: repNumber })}
+                                          </Text>
+                                          <TextInput
+                                            style={styles.repInput}
+                                            value={getCellValue(menu, userId, setNumber, repNumber)}
+                                            onChangeText={(text) =>
+                                              setMemberTimeCell(
+                                                menu.id,
+                                                userId,
+                                                setNumber,
+                                                repNumber,
+                                                text,
+                                              )
+                                            }
+                                            placeholder={t(
+                                              "teams.record.timePlaceholder",
+                                            )}
+                                            placeholderTextColor="#9CA3AF"
+                                            keyboardType="decimal-pad"
+                                          />
+                                        </View>
+                                      );
+                                    })}
+                                  </View>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        ) : (
+                          <Text style={styles.hintText}>
+                            {t("teamsAdmin.practiceLog.timeInputOptional")}
+                          </Text>
+                        )}
+
+                        {/* 代理動画（Premium ゲート） */}
+                        <View style={styles.videoField}>
+                          <Text style={styles.smallLabel}>
+                            {t("teamsAdmin.practiceLog.videoLabel")}
+                          </Text>
+                          {isPremium ? (
+                            <VideoUploader
+                              type="practice-log"
+                              isPremium={isPremium}
+                              existingVideoPath={null}
+                              existingThumbnailPath={null}
+                              onPendingVideoAsset={(asset) =>
+                                setMenus((prev) =>
+                                  prev.map((mm) =>
+                                    mm.id === menu.id
+                                      ? {
+                                          ...mm,
+                                          videoAssets: { ...mm.videoAssets, [userId]: asset },
+                                        }
+                                      : mm,
+                                  ),
+                                )
+                              }
+                            />
+                          ) : (
+                            <PremiumBadge feature="video_upload" compact />
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
                 )}
               </View>
-
-              {/* 種目 */}
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("teamsAdmin.practiceLog.style1Label")}</Text>
-                <View style={styles.pickerContainer}>
-                  {SWIM_STYLES.map((style) => (
-                    <Pressable
-                      key={style.value}
-                      style={[
-                        styles.pickerOption,
-                        menu.style === style.value && styles.pickerOptionSelected,
-                      ]}
-                      onPress={() => updateMenu(menu.id, "style", style.value)}
-                    >
-                      <Text
-                        style={[
-                          styles.pickerOptionText,
-                          menu.style === style.value && styles.pickerOptionTextSelected,
-                        ]}
-                      >
-                        {t(`practice.styleAbbrev.${style.value}`)}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              {/* 泳法カテゴリ */}
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("teamsAdmin.practiceLog.style2Label")}</Text>
-                <View style={styles.pickerContainer}>
-                  {SWIM_CATEGORIES.map((category) => (
-                    <Pressable
-                      key={category.value}
-                      style={[
-                        styles.pickerOption,
-                        menu.swimCategory === category.value && styles.pickerOptionSelected,
-                      ]}
-                      onPress={() =>
-                        updateMenu(menu.id, "swimCategory", category.value as SwimCategory)
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.pickerOptionText,
-                          menu.swimCategory === category.value && styles.pickerOptionTextSelected,
-                        ]}
-                      >
-                        {category.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              {/* 距離・本数・セット数 */}
-              <View style={styles.row}>
-                <View style={styles.fieldThird}>
-                  <Text style={styles.label}>{t("teamsAdmin.practiceLog.distanceLabel")}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={menu.distance === "" ? "" : String(menu.distance)}
-                    onChangeText={(text) =>
-                      updateMenu(menu.id, "distance", text === "" ? "" : Number(text))
-                    }
-                    placeholder="100"
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={styles.fieldThird}>
-                  <Text style={styles.label}>{t("teamsAdmin.practiceLog.repsLabel")}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={menu.reps === "" ? "" : String(menu.reps)}
-                    onChangeText={(text) =>
-                      updateMenu(menu.id, "reps", text === "" ? "" : Number(text))
-                    }
-                    placeholder="4"
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={styles.fieldThird}>
-                  <Text style={styles.label}>{t("teamsAdmin.practiceLog.setsLabel")}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={menu.sets === "" ? "" : String(menu.sets)}
-                    onChangeText={(text) =>
-                      updateMenu(menu.id, "sets", text === "" ? "" : Number(text))
-                    }
-                    placeholder="1"
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              {/* サークル */}
-              <View style={styles.row}>
-                <View style={styles.fieldHalf}>
-                  <Text style={styles.label}>{t("teamsAdmin.practiceLog.circleMinLabel")}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={menu.circleMin === "" ? "" : String(menu.circleMin)}
-                    onChangeText={(text) =>
-                      updateMenu(menu.id, "circleMin", text === "" ? "" : Number(text))
-                    }
-                    placeholder="1"
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={styles.fieldHalf}>
-                  <Text style={styles.label}>{t("teamsAdmin.practiceLog.circleSecLabel")}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={menu.circleSec === "" ? "" : String(menu.circleSec)}
-                    onChangeText={(text) =>
-                      updateMenu(menu.id, "circleSec", text === "" ? "" : Number(text))
-                    }
-                    placeholder="30"
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              {/* 対象メンバー */}
-              <View style={styles.field}>
-                <Text style={styles.label}>
-                  {t("teamsAdmin.practiceLog.participantsSection")}
-                </Text>
-                <Pressable
-                  style={styles.selectMemberButton}
-                  onPress={() => setMemberModalMenuId(menu.id)}
-                >
-                  <Feather name="users" size={16} color="#2563EB" />
-                  <Text style={styles.selectMemberText}>
-                    {t("teamsAdmin.practiceLog.selectUsersButton")}
-                  </Text>
-                </Pressable>
-                <Text style={styles.countLabel}>
-                  {t("teamsAdmin.practiceLog.selectedCount", {
-                    count: menu.targetUserIds.length,
-                  })}
-                </Text>
-              </View>
-
-              {/* タグ */}
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("teamsAdmin.practiceLog.tagLabel")}</Text>
-                <TagChips
-                  tags={menu.tags}
-                  onPress={() => {
-                    setTagModalMenuId(menu.id);
-                    setShowTagSelectModal(true);
-                  }}
-                  onRemove={(tagId) =>
-                    updateMenu(
-                      menu.id,
-                      "tags",
-                      menu.tags.filter((tg) => tg.id !== tagId),
-                    )
-                  }
-                />
-              </View>
-
-              {/* メモ */}
-              <View style={styles.field}>
-                <Text style={styles.label}>{t("teamsAdmin.practiceLog.memoLabel")}</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={menu.note}
-                  onChangeText={(text) => updateMenu(menu.id, "note", text)}
-                  placeholder={t("teamsAdmin.practiceLog.memoPlaceholder")}
-                  placeholderTextColor="#9CA3AF"
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
-
-              {/* メンバー × タイム入力 */}
-              {menu.targetUserIds.length === 0 ? (
-                <View style={styles.emptyMembersBox}>
-                  <Text style={styles.emptyMembersText}>
-                    {t("teams.mobile.bulkPracticeEmpty", {
-                      defaultValue: t("teamsAdmin.practiceLog.selectUsersButton"),
-                    })}
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.membersSection}>
-                  <Text style={styles.subHeader}>
-                    {t("teamsAdmin.practiceLog.timeInputSummary", {
-                      sets: setCount,
-                      reps: repCount,
-                      total: setCount * repCount,
-                    })}
-                  </Text>
-                  {menu.targetUserIds.map((userId) => (
-                    <View key={userId} style={styles.memberCard}>
-                      <Text style={styles.memberName}>{getMemberName(userId)}</Text>
-
-                      {/* タイムグリッド（セット×本数）。1:23.45 形式 */}
-                      {setCount > 0 && repCount > 0 ? (
-                        <View style={styles.timeGrid}>
-                          {Array.from({ length: setCount }, (_, si) => {
-                            const setNumber = si + 1;
-                            return (
-                              <View key={setNumber} style={styles.setBlock}>
-                                <Text style={styles.setLabel}>
-                                  {t("practice.modal.setLabel", { n: setNumber })}
-                                </Text>
-                                <View style={styles.repRow}>
-                                  {Array.from({ length: repCount }, (_, ri) => {
-                                    const repNumber = ri + 1;
-                                    return (
-                                      <View key={repNumber} style={styles.repCell}>
-                                        <Text style={styles.repCellLabel}>
-                                          {t("practice.modal.repLabel", { n: repNumber })}
-                                        </Text>
-                                        <TextInput
-                                          style={styles.repInput}
-                                          value={getCellValue(menu, userId, setNumber, repNumber)}
-                                          onChangeText={(text) =>
-                                            setMemberTimeCell(
-                                              menu.id,
-                                              userId,
-                                              setNumber,
-                                              repNumber,
-                                              text,
-                                            )
-                                          }
-                                          placeholder={t(
-                                            "teams.record.timePlaceholder",
-                                          )}
-                                          placeholderTextColor="#9CA3AF"
-                                          keyboardType="decimal-pad"
-                                        />
-                                      </View>
-                                    );
-                                  })}
-                                </View>
-                              </View>
-                            );
-                          })}
-                        </View>
-                      ) : (
-                        <Text style={styles.hintText}>
-                          {t("teamsAdmin.practiceLog.timeInputOptional")}
-                        </Text>
-                      )}
-
-                      {/* 代理動画（Premium ゲート） */}
-                      <View style={styles.videoField}>
-                        <Text style={styles.smallLabel}>
-                          {t("teamsAdmin.practiceLog.videoLabel")}
-                        </Text>
-                        {isPremium ? (
-                          <VideoUploader
-                            type="practice-log"
-                            isPremium={isPremium}
-                            existingVideoPath={null}
-                            existingThumbnailPath={null}
-                            onPendingVideoAsset={(asset) =>
-                              setMenus((prev) =>
-                                prev.map((mm) =>
-                                  mm.id === menu.id
-                                    ? {
-                                        ...mm,
-                                        videoAssets: { ...mm.videoAssets, [userId]: asset },
-                                      }
-                                    : mm,
-                                ),
-                              )
-                            }
-                          />
-                        ) : (
-                          <PremiumBadge feature="video_upload" compact />
-                        )}
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
+            </ItemTabs>
           );
-        })}
-
-        {/* メニュー追加 */}
-        <Pressable style={styles.addMenuButton} onPress={addMenu}>
-          <Feather name="plus" size={16} color="#2563EB" />
-          <Text style={styles.addMenuText}>{t("teamsAdmin.practiceLog.addMenuButton")}</Text>
-        </Pressable>
+        })()}
       </ScrollView>
 
       {/* フッター */}
@@ -1067,6 +1102,17 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
         onSave={handleSaveTag}
         onDelete={handleDeleteTag}
       />
+
+      {/* テンプレート選択モーダル (個人側 PracticeTabFormScreen と共通コンポーネント) */}
+      <PracticeLogTemplateSelectModal
+        visible={showTemplateSelectModal}
+        onClose={() => setShowTemplateSelectModal(false)}
+        onSelect={handleTemplateSelect}
+        onManage={() => {
+          setShowTemplateSelectModal(false);
+          navigation.navigate("PracticeLogTemplates");
+        }}
+      />
     </FormKeyboardAvoidingView>
   );
 };
@@ -1085,24 +1131,11 @@ const styles = StyleSheet.create({
   practiceSubtitle: { fontSize: 13, color: "#6B7280", marginTop: 4 },
   placeRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
   placeText: { fontSize: 13, color: "#6B7280" },
-  menuCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  menuHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  menuTitle: { fontSize: 16, fontWeight: "600", color: "#111827" },
   field: { marginBottom: 14 },
   fieldHalf: { flex: 1 },
-  fieldThird: { flex: 1 },
   row: { flexDirection: "row", gap: 12, marginBottom: 14 },
   label: { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 6 },
+  required: { color: "#EF4444" },
   smallLabel: { fontSize: 12, fontWeight: "600", color: "#6B7280", marginBottom: 4 },
   hintText: { fontSize: 13, color: "#9CA3AF" },
   input: {
@@ -1116,18 +1149,28 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   textArea: { minHeight: 80, paddingTop: 10 },
-  pickerContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  pickerOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  // タグ行 (テンプレートボタン付き。個人側 PracticeTabFormScreen と同一デザイン)
+  tagRowHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  templateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#D1D5DB",
     backgroundColor: "#FFFFFF",
   },
-  pickerOptionSelected: { backgroundColor: "#2563EB", borderColor: "#2563EB" },
-  pickerOptionText: { fontSize: 14, color: "#374151" },
-  pickerOptionTextSelected: { color: "#FFFFFF", fontWeight: "600" },
+  templateButtonText: {
+    fontSize: 12,
+    color: "#374151",
+    fontWeight: "500",
+  },
   selectMemberButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1177,19 +1220,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   videoField: { marginTop: 12 },
-  addMenuButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: "#2563EB",
-    borderRadius: 8,
-    borderStyle: "dashed",
-    backgroundColor: "#FFFFFF",
-  },
-  addMenuText: { fontSize: 14, fontWeight: "600", color: "#2563EB" },
   footer: {
     flexDirection: "row",
     gap: 12,
