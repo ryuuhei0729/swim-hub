@@ -135,7 +135,7 @@ interface PracticeTabState {
 export const PracticeTabFormScreen: React.FC = () => {
   const route = useRoute<PracticeTabFormRouteProp>();
   const navigation = useNavigation<PracticeTabFormNavigationProp>();
-  const { practiceId: initialPracticeId, date: initialDateParam, teamId, initialTab } =
+  const { practiceId: initialPracticeId, date: initialDateParam, teamId, initialTab, origin } =
     route.params || {};
   const { supabase, user, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
@@ -244,14 +244,30 @@ export const PracticeTabFormScreen: React.FC = () => {
   // 練習タブ (basicData: 名称/日付/場所/メモ/画像) と log タブ (practice_logs) で
   // 守るべき対象が異なるため、判定変数を明確に分離する (PM裁定・修正ラウンド2)。
   //
-  // canEditPracticeDetails: 練習タブ (basicData) 用。今スプリントの新仕様。
+  // isCurrentUserPracticeTeamAdmin は canEditPracticeDetails / canEditPracticeLogs の
+  // 両方から参照するため、両方より前に定義する (Sprint Contract #PM-1: 定義順の入れ替え。
+  // ロジック自体は変更しない)。
+  const { data: practiceTeamMembers, isLoading: isPracticeTeamMembersLoading } =
+    useTeamMembersQuery(supabase, practiceTeamId ?? undefined);
+  const isCurrentUserPracticeTeamAdmin = useMemo(() => {
+    if (!user || !practiceTeamId || !practiceTeamMembers) return false;
+    return practiceTeamMembers.some((m) => m.user_id === user.id && m.role === "admin");
+  }, [user, practiceTeamId, practiceTeamMembers]);
+
+  // canEditPracticeDetails: 練習タブ (basicData) 用。
   // 個人画面 (dashboard/練習タブ) では、チーム練習の basicData は admin であっても
-  // 編集不可 (Sprint Contract 2)。team_id の有無のみで判定し、admin 判定は使わない。
-  // CompetitionTabFormScreen の canEditCompetitionDetails と同型。
+  // 編集不可 (Sprint Contract 2)。ただし「チーム管理者ビュー (管理者の鉛筆ボタン)」経由の
+  // 編集は route params の origin==="teamAdmin" で明示され、かつ実際に当該チームの
+  // admin である場合のみ許可する (Sprint Contract #PM-1)。origin だけで許可すると
+  // UI が RLS より広くなり、非admin が保存ボタンを押した際に RLS 拒否の UPDATE が
+  // 0行成功で無言破棄される (Sprint Contract 2 で実際に発生した failure mode)。
+  // CompetitionTabFormScreen の canEditCompetitionDetails とは、チーム管理者ビュー分岐が
+  // ある点で異なる (大会側は Out of Scope のため無変更)。
   const canEditPracticeDetails = useMemo(() => {
     if (!isEditMode) return true; // 新規作成は常に自分の練習
-    return !practiceTeamId; // チーム練習は個人画面から編集不可
-  }, [isEditMode, practiceTeamId]);
+    if (!practiceTeamId) return true; // 個人の練習は常に自分のもの
+    return origin === "teamAdmin" && isCurrentUserPracticeTeamAdmin;
+  }, [isEditMode, practiceTeamId, origin, isCurrentUserPracticeTeamAdmin]);
 
   // canEditPracticeLogs: log タブ (practice_logs の追加・編集・「+」ボタン・Save ボタン) 用。
   // こちらは今スプリント以前の旧ロジックをそのまま維持する (practices ではなく
@@ -261,12 +277,6 @@ export const PracticeTabFormScreen: React.FC = () => {
   // 弾くため実害は無いが (Sprint Contract 2 修正ラウンド2で実測済み)、UI 側で
   // 「編集不可と分かる」旧体験 (「+」非表示・フィールド disabled・バナー表示) を
   // 変更前と同一に保つために admin/owner 判定を維持する。
-  const { data: practiceTeamMembers, isLoading: isPracticeTeamMembersLoading } =
-    useTeamMembersQuery(supabase, practiceTeamId ?? undefined);
-  const isCurrentUserPracticeTeamAdmin = useMemo(() => {
-    if (!user || !practiceTeamId || !practiceTeamMembers) return false;
-    return practiceTeamMembers.some((m) => m.user_id === user.id && m.role === "admin");
-  }, [user, practiceTeamId, practiceTeamMembers]);
   const canEditPracticeLogs = useMemo(() => {
     if (!isEditMode) return true; // 新規作成は常に自分の練習
     if (!practiceTeamId) return true; // 個人の練習は常に自分のもの
@@ -595,7 +605,24 @@ export const PracticeTabFormScreen: React.FC = () => {
         // (画像アップロードを含む) を丸ごとスキップし、練習ログの保存へ進む
         // (CompetitionTabFormScreen の canEditCompetitionDetails と同型のガード。
         // スキップ判定はストレージへのアップロードより前に行う)。
-        if (canEditPracticeDetails) {
+        // isResolvingPracticePermission は「isPending (このチームの members を一度も
+        // 取得していない)」の間だけ true になる防御であり、画面全体のローディング表示
+        // (line ~1161) が Save ボタンの描画自体をブロックする経路を、保存ハンドラ側でも
+        // 二重に塞ぐためのもの (Sprint Contract #PM-1)。
+        // 【カバーしない経路】useTeamMembersQuery は staleTime: 5分 (apps/shared/hooks/
+        // queries/teams.ts) を持つため、直近5分以内に同じチームの members を取得済みだと
+        // queryKey 切替の瞬間から isLoading=false・stale なキャッシュ値(例: 剥奪前の
+        // admin=true) が返る。この経路では isResolvingPracticePermission は false のまま
+        // なのでこのガードは効かない (PM 実測・Reviewer 指摘、修正ラウンド2)。
+        // 【この穴が実害にならない理由】上記の stale 経路をすり抜けて canEditPracticeDetails
+        // が誤って true になっても、practices UPDATE は実際の RLS (is_team_admin) で
+        // 評価されるため権限昇格やデータ損失には至らない。PracticeAPI.updatePractice
+        // (apps/shared/api/practices.ts) は .select().single() を使っており、RLS 拒否で
+        // 0行 UPDATE になった場合は PGRST116 として throw される (無言破棄にはならず、
+        // ユーザーにはエラーアラートが出る)。稀な経路 (5分以内に admin 剥奪 かつ管理者
+        // ビューに残存) のために staleTime 短縮や isFetching ベースへの変更は今スプリント
+        // では見送り、残存リスクとして受容する (PM 裁定)。
+        if (canEditPracticeDetails && !isResolvingPracticePermission) {
           // 画像を一切変更していない (追加も削除もない) 場合は、この後の再取得と
           // updates.image_paths への設定自体をスキップする。無条件に再取得すると、
           // 画像と無関係な title/place/note/date のみの編集までこの余分な
@@ -906,6 +933,7 @@ export const PracticeTabFormScreen: React.FC = () => {
     resolvedPracticeId,
     isEditMode,
     canEditPracticeDetails,
+    isResolvingPracticePermission,
     practiceOwnerId,
     user,
     practiceTab,

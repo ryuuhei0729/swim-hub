@@ -38,6 +38,11 @@ export type MainStackParamList = {
     practiceId?: string;
     date?: string;
     teamId?: string;
+    /**
+     * チーム管理者ビューの編集導線から来たことを示す。個人画面からは決して渡さない。
+     * `teamId` の有無を代わりのシグナルに使ってはならない (Sprint Contract #PM-1)。
+     */
+    origin?: "teamAdmin";
   };
   /** 練習タブ統合フォーム(個人フロー) */
   PracticeTabForm: {
@@ -46,6 +51,11 @@ export type MainStackParamList = {
     teamId?: string;
     /** 初期タブ。省略時は "practice" */
     initialTab?: "practice" | "log";
+    /**
+     * チーム管理者ビューの編集導線から来たことを示す。個人画面からは決して渡さない。
+     * `teamId` の有無を代わりのシグナルに使ってはならない (Sprint Contract #PM-1)。
+     */
+    origin?: "teamAdmin";
   };
   PracticeLogForm: {
     practiceId: string;

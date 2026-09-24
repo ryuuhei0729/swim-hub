@@ -261,6 +261,101 @@ describe("TeamPracticeList", () => {
   });
 
   // -----------------------------------------------------------------------
+  // [Sprint Contract #PM-1] Phase B — 実装完了後の実アサーション。
+  //
+  // Planner が「未確認」と報告した穴: 直上の既存テスト
+  // ("isAdmin=true で編集ボタンを押すと navigate が...") は `expect.objectContaining` を
+  // 使っており、navigate に渡る第2引数が practiceId/teamId 以外にどんなキーを含んでいても
+  // (含んでいなくても) 常に PASS する。そのため「遷移後に PracticeTabFormScreen まで
+  // 編集可能な状態で届くか」を一切検証していない — これが本 Sprint Contract のバグの
+  // 実際の到達経路 (admin 編集導線 → シム → PracticeTabFormScreen) を素通ししていた穴。
+  //
+  // 【契約更新 (Critical-1 の PM 裁定)】 Phase A 時点の QA 案は「handleAdd には origin が
+  // 付かない」を非退行対照として書いていたが、これは誤りだった。PM 実測:
+  //   PracticeTabFormScreen.tsx:151-154 の isEditMode は route params ではなく
+  //   resolvedPracticeId という **state** 由来で、新規作成の親 INSERT 成功直後
+  //   (:713 setResolvedPracticeId) に false→true へ転落する。子ログ/画像の後続処理が
+  //   途中で失敗すると setIsSaved(true) に到達せず画面はそのまま残り、次の再レンダーで
+  //   isEditMode=true の canEditPracticeDetails が再評価される。origin が無いと、
+  //   まさにこの瞬間に管理者自身の新規作成フォームが無言で編集不可に落ちる
+  //   (Critical-1 の再発シナリオ。回帰テストは
+  //   PracticeTabFormScreen.createFlipRegression.test.tsx に分離)。
+  //   そのため handleAdd も handleEdit と同じく origin: "teamAdmin" を付与するのが正しい
+  //   契約であり、TPL-2 はこれを検証する形に反転させた。
+  //   対照実験としての「origin が付かない導線」は、admin 判定を経由しない
+  //   handleAddLog の非 admin 分岐 (:158 の navigate("PracticeTabForm", { ...,
+  //   initialTab: "log" })) に置き換える (TPL-3)。
+  describe("[Sprint Contract #PM-1] 管理者ビュー編集・追加ボタンの origin=teamAdmin 転送", () => {
+    it("[TPL-1] isAdmin=true で編集ボタンを押すと、navigate の第2引数が { practiceId, teamId, origin: 'teamAdmin' } と厳密一致する", () => {
+      const practice = makePractice({ id: "p-tpl1", title: "TPL1検証練習" });
+      mocks.useTeamPracticesQuery.mockReturnValue({
+        data: [practice],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamPracticeList teamId="team-tpl1" isAdmin={true} />);
+
+      const editIcon = screen.getByTestId("icon-edit-2");
+      const editButton = editIcon.closest("button");
+      expect(editButton, "編集アイコンの button が見つからない").not.toBeNull();
+      fireEvent.click(editButton as HTMLButtonElement);
+
+      expect(mocks.navigate).toHaveBeenCalledTimes(1);
+      const [screenName, params] = mocks.navigate.mock.calls[0] as [string, Record<string, unknown>];
+      expect(screenName).toBe("PracticeForm");
+      expect(params).toEqual({ practiceId: "p-tpl1", teamId: "team-tpl1", origin: "teamAdmin" });
+    });
+
+    it("[TPL-2 / 契約更新により反転] isAdmin=true で「追加」ボタン (handleAdd, 新規作成) を押した場合も origin: 'teamAdmin' が付与される (新規作成保存直後の isEditMode flip で basicData が無言ロックされる Critical-1 の再発防止)", () => {
+      mocks.useTeamPracticesQuery.mockReturnValue({
+        data: [],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamPracticeList teamId="team-tpl2" isAdmin={true} />);
+
+      const addButtons = screen.getAllByRole("button", { name: "練習を追加" });
+      const headerAddButton = addButtons.find((el) => el.querySelector('[data-testid="icon-plus"]'));
+      expect(headerAddButton, "ヘッダーの追加ボタンが見つからない").toBeDefined();
+      fireEvent.click(headerAddButton!);
+
+      expect(mocks.navigate).toHaveBeenCalledTimes(1);
+      const [screenName, params] = mocks.navigate.mock.calls[0] as [string, Record<string, unknown>];
+      expect(screenName).toBe("PracticeForm");
+      expect(params).toMatchObject({ teamId: "team-tpl2", origin: "teamAdmin" });
+      expect(Object.prototype.hasOwnProperty.call(params, "origin")).toBe(true);
+      expect(params.origin).toBe("teamAdmin");
+    });
+
+    it("[TPL-3 / 対照実験] 非admin の「記録追加」導線 (handleAddLog) は origin を付与しない (admin 判定を経由しない導線には不要)", () => {
+      const practice = makePractice({ id: "p-tpl3", title: "TPL3検証練習" });
+      mocks.useTeamPracticesQuery.mockReturnValue({
+        data: [practice],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<TeamPracticeList teamId="team-tpl3" isAdmin={false} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "記録追加" }));
+
+      expect(mocks.navigate).toHaveBeenCalledTimes(1);
+      const [screenName, params] = mocks.navigate.mock.calls[0] as [string, Record<string, unknown>];
+      expect(screenName).toBe("PracticeTabForm");
+      expect(params).toEqual({ practiceId: "p-tpl3", teamId: "team-tpl3", initialTab: "log" });
+      expect(Object.prototype.hasOwnProperty.call(params, "origin")).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Sprint 3 検証: [S3-V-A1] addLog ボタンが存在し、PracticeLogForm に teamId で遷移する
   //
   // 【QA Phase A 書き換えメモ (今回の Sprint Contract SC-1)】

@@ -123,9 +123,16 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
   const deleteMutation = useDeleteTeamPracticeMutation(supabase);
 
   const handleAdd = useCallback(() => {
+    // isEditMode は着地先 (PracticeTabFormScreen) の route params ではなく state
+    // (resolvedPracticeId) から導出され、新規作成の親 INSERT 成功直後に false→true へ
+    // flip する。そのため「新規作成だから origin は不要」は誤りで、保存後に
+    // canEditPracticeDetails が false に転落し basicData が無言でグレーアウト/破棄される
+    // (PM 裁定 Critical-1, Sprint Contract #PM-1)。管理者ビューの練習フォーム導線は
+    // 追加・編集のどちらも origin: "teamAdmin" を付与する。
     navigation.navigate("PracticeForm", {
       teamId,
       date: format(new Date(), "yyyy-MM-dd"),
+      origin: "teamAdmin",
     });
   }, [navigation, teamId]);
 
@@ -137,9 +144,12 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
   }, [navigation, teamId]);
 
   const handleEdit = useCallback((practice: Practice) => {
+    // 管理者ビューの鉛筆ボタンからの編集導線であることを明示する (Sprint Contract #PM-1)。
+    // handleAdd (新規作成) も同じ理由で origin を付与している (handleAdd 側コメント参照)。
     navigation.navigate("PracticeForm", {
       practiceId: practice.id,
       teamId,
+      origin: "teamAdmin",
     });
   }, [navigation, teamId]);
 
