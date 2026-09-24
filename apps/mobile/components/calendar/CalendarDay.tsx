@@ -148,7 +148,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       const teamName = item.metadata?.team?.name || t("teams.mobile.fallbackTeamName");
       displayTitle = `${teamName} - ${item.title}`;
     } else if (item.type === "entry" || item.type === "record") {
-      displayTitle = item.metadata?.competition?.title || item.title || t("teams.mobile.fallbackCompetitionName");
+      displayTitle = item.metadata?.competition?.title || item.title || t("competition.client.competitionFallback");
     }
 
     return displayTitle;

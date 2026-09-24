@@ -72,6 +72,11 @@ export const RecordsScreen: React.FC = () => {
   // 行タップで開く日付詳細モーダル（ダッシュボードと同一のDayDetailModal）
   const [modalDate, setModalDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
+  // タップした記録1件(またはエントリー済みの大会1件)のみに絞り込むための対象id/見出し
+  // (大会タブ経由の1件モード)
+  const [targetId, setTargetId] = useState<string | undefined>(undefined);
+  const [targetRecordId, setTargetRecordId] = useState<string | undefined>(undefined);
+  const [titleOverride, setTitleOverride] = useState<string | undefined>(undefined);
 
   // 大会未紐付けレコード（一括入力）単体の詳細モーダル
   const [standaloneRecord, setStandaloneRecord] = useState<RecordWithDetails | null>(null);
@@ -322,6 +327,9 @@ export const RecordsScreen: React.FC = () => {
     const parsedDate = parseISO(item.date);
     if (!isValid(parsedDate)) return;
     setModalDate(parsedDate);
+    setTargetId(item.competitionId);
+    setTargetRecordId(undefined);
+    setTitleOverride(item.competitionName);
     setShowDayDetail(true);
   }, []);
 
@@ -557,18 +565,24 @@ export const RecordsScreen: React.FC = () => {
   // - 大会に紐づく記録: 該当日の DayDetailModal(calendar_view 単位)を開く
   // - 大会未紐付けレコード（一括入力。competition が存在しない）: 単体の詳細モーダルを開く。
   //   calendar_view には現れないため created_at 等へフォールバックしない
-  const handleRecordPress = useCallback((record: RecordWithDetails) => {
-    if (!record.competition) {
-      setStandaloneRecord(record);
-      return;
-    }
-    const dateStr = record.competition.date;
-    if (!dateStr) return;
-    const parsedDate = parseISO(dateStr);
-    if (!isValid(parsedDate)) return;
-    setModalDate(parsedDate);
-    setShowDayDetail(true);
-  }, []);
+  const handleRecordPress = useCallback(
+    (record: RecordWithDetails) => {
+      if (!record.competition) {
+        setStandaloneRecord(record);
+        return;
+      }
+      const dateStr = record.competition.date;
+      if (!dateStr) return;
+      const parsedDate = parseISO(dateStr);
+      if (!isValid(parsedDate)) return;
+      setModalDate(parsedDate);
+      setTargetId(record.competition.id);
+      setTargetRecordId(record.id);
+      setTitleOverride(record.competition.title || t("competition.client.competitionFallback"));
+      setShowDayDetail(true);
+    },
+    [t],
+  );
 
   // 大会未紐付けレコードの削除（ダッシュボードと同一の Alert.alert 確認、Platform分岐なし）
   const deleteStandaloneRecordMutation = useDeleteRecordMutation(supabase);
@@ -736,12 +750,18 @@ export const RecordsScreen: React.FC = () => {
           date={modalDate}
           entries={dayEntries}
           scope="competition"
+          targetId={targetId}
+          targetRecordId={targetRecordId}
+          titleOverride={titleOverride}
           isLoading={isDayEntriesLoading}
           isError={isDayEntriesError}
           onRetry={refetchDayEntries}
           onClose={() => {
             setShowDayDetail(false);
             setModalDate(null);
+            setTargetId(undefined);
+            setTargetRecordId(undefined);
+            setTitleOverride(undefined);
           }}
           onEntryPress={handleEntryPress}
           onAddPractice={handleAddPractice}

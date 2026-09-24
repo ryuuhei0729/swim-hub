@@ -60,8 +60,6 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
   onAddEntry,
   onEditCompetition,
   onDeleteCompetition,
-  onPracticeTimeLoaded,
-  onMediaLoaded,
 }) => {
   // 未カスタマイズ(渡された色が旧デフォルト値と一致)なら内側の識別色要素を旧来の
   // 見た目に固定する。カスタム色時のみ、枠線/バッジ/アクセントを淡いアルファ合成にする
@@ -190,12 +188,10 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
       // practice-images は private バケットのため署名付きURLを解決する（Issue #36）
       const accessToken = await getAccessToken();
       if (isCancelled()) return;
-      let hasImages = false;
       if (accessToken) {
         try {
           const images = await resolveGalleryImages("practice-images", imagePaths, accessToken);
           if (!isCancelled()) setPracticeImages(images);
-          hasImages = images.length > 0;
         } catch (err) {
           console.warn("練習画像の取得に失敗:", err);
           // 取得失敗時に古い練習の画像を表示し続けない（RecordDetail と同一の挙動）
@@ -233,14 +229,13 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
 
       if (!isCancelled()) {
         setPracticeLogs(formattedLogs);
-        onMediaLoaded?.(item.id, hasImages);
       }
     } catch (error) {
       console.error("練習ログの取得エラー:", error);
     } finally {
       if (!isCancelled()) setLoading(false);
     }
-  }, [isPractice, practiceId, supabase, getAccessToken, item.id, onMediaLoaded]);
+  }, [isPractice, practiceId, supabase, getAccessToken]);
 
   useEffect(() => {
     if (!isPractice || !practiceId) return;
@@ -327,7 +322,6 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
       });
 
       const logPracticeId = log.practice_id;
-      let hasImages = false;
       if (logPracticeId) {
         try {
           const { data: practiceData, error: practiceError } = await supabase
@@ -346,7 +340,6 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
             if (accessToken) {
               const images = await resolveGalleryImages("practice-images", imagePaths, accessToken);
               if (!isCancelled()) setPracticeLogImages(images);
-              hasImages = images.length > 0;
             } else {
               // トークンが取得できない場合、古い private 画像を表示し続けないよう空にする
               setPracticeLogImages([]);
@@ -361,18 +354,12 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
         // 紐づく practice が無い場合も前の画像を残さない
         setPracticeLogImages([]);
       }
-
-      if (isCancelled()) return;
-      if (onPracticeTimeLoaded) {
-        onPracticeTimeLoaded(item.id, times.length > 0);
-      }
-      onMediaLoaded?.(item.id, Boolean(log.video_path) || hasImages);
     } catch (error) {
       console.error("練習ログ詳細の取得エラー:", error);
     } finally {
       if (!isCancelled()) setLoadingLogDetail(false);
     }
-  }, [isPracticeLog, item.id, supabase, getAccessToken, onPracticeTimeLoaded, onMediaLoaded]);
+  }, [isPracticeLog, item.id, supabase, getAccessToken]);
 
   useEffect(() => {
     if (!isPracticeLog || !item.id) return;

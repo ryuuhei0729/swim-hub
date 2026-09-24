@@ -13,6 +13,20 @@ export interface DayDetailModalProps {
    * "practice"/"competition" は該当する種別のみ表示し、汎用追加チューザーを非表示にする。
    */
   scope?: DayDetailScope;
+  /**
+   * 練習タブ/大会タブ経由で開いた際、絞り込み対象の1件(または1大会)の id。
+   * scope="practice" のときは対象の CalendarItem.id (practice_log.id または
+   * ログ0件の practice.id)、scope="competition" のときは対象の大会id。
+   * 未指定時(ダッシュボード)は絞り込みを行わない。
+   */
+  targetId?: string;
+  /** ヘッダー見出しに日付の代わりに表示するタイトル(練習/大会タブ経由のときのみ指定) */
+  titleOverride?: string;
+  /**
+   * 大会タブでタップした記録1件の id。指定時は RecordDetail 側の内部クエリで
+   * その記録1件だけに絞る。エントリー済み(記録未登録)行タップ時は未指定のままにする。
+   */
+  targetRecordId?: string;
   /** entries の取得がまだ完了していない（初回ロード中）かどうか。未指定時は false */
   isLoading?: boolean;
   /** entries の取得に失敗したかどうか。未指定時は false */
@@ -65,8 +79,6 @@ export interface PracticeLogDetailProps {
   onAddEntry?: (competitionId: string, date: string) => void;
   onEditCompetition?: (item: CalendarItem) => void;
   onDeleteCompetition?: (competitionId: string, isTeamCompetition: boolean) => void;
-  onPracticeTimeLoaded?: (practiceLogId: string, hasTimes: boolean) => void;
-  onMediaLoaded?: (entryId: string, hasMedia: boolean) => void;
 }
 
 // TimeTableのProps
@@ -85,6 +97,11 @@ export interface RecordDetailProps {
   note?: string;
   records: CalendarItem[];
   isTeamCompetition: boolean;
+  /**
+   * 指定時、内部クエリを対象の記録1件のみに絞り込む(大会タブでタップした記録1件だけ
+   * 表示するモード)。未指定時は従来どおりその大会の全記録を取得する。
+   */
+  targetRecordId?: string;
   /** チームID（isTeamCompetition時のみ）。出欠確認ボタンの表示・データ取得に使用 */
   teamId?: string | null;
   /** 識別色(記録色カスタマイズ)。未指定時は旧来のデフォルト青(#2563EB)を使う */
@@ -95,7 +112,6 @@ export interface RecordDetailProps {
   onEditRecord?: (item: CalendarItem) => void;
   onDeleteRecord?: (recordId: string) => void;
   onClose?: () => void;
-  onMediaLoaded?: (entryId: string, hasMedia: boolean) => void;
 }
 
 // EntryDetailのProps

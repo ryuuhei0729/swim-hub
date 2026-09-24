@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useMemo } from "react";
 import { View, Text, Modal, Pressable, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -13,8 +13,7 @@ import { styles } from "./styles";
 import { MemoizedPracticeLogDetail, RecordDetail, EntryDetail } from "./components";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
-import { computeDayDetailMinHeight } from "./minHeight";
-import { filterEntriesByScope } from "./domainFilter";
+import { filterEntriesByScope, filterEntriesByTargetId, getCompetitionId } from "./domainFilter";
 import type { DayDetailModalProps } from "./types";
 
 /**
@@ -117,6 +116,9 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   date,
   entries,
   scope = "day",
+  targetId,
+  titleOverride,
+  targetRecordId,
   isLoading = false,
   isError = false,
   onRetry,
@@ -144,7 +146,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   const locale = useDateLocale();
   const formattedDate = formatDate(date, "shortWithWeekday", locale);
   const fallbackTeamName = t("teams.mobile.fallbackTeamName");
-  const fallbackCompetitionName = t("teams.mobile.fallbackCompetitionName");
+  const fallbackCompetitionName = t("competition.client.competitionFallback");
 
   // 「記録を追加」チューザー(空状態の大きい2ボタン)のアイコン色。
   // 個人の練習/大会色を resolver で解決し、未カスタマイズ(デフォルト色)ならピクセル一致で
@@ -160,48 +162,12 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       ? "#10B981"
       : resolvedPersonalPracticeColor;
 
-  // PracticeLogのPracticeTimeの有無を追跡
-  const [practiceLogsWithTimes, setPracticeLogsWithTimes] = useState<Set<string>>(new Set());
-  // エントリーの画像/動画メディアの有無を追跡
-  const [entriesWithMedia, setEntriesWithMedia] = useState<Set<string>>(new Set());
-
-  // PracticeTimeの有無を更新するコールバック
-  const handlePracticeTimeLoaded = useCallback((practiceLogId: string, hasTimes: boolean) => {
-    setPracticeLogsWithTimes((prev) => {
-      const next = new Set(prev);
-      if (hasTimes) {
-        next.add(practiceLogId);
-      } else {
-        next.delete(practiceLogId);
-      }
-      return next;
-    });
-  }, []);
-
-  // メディア（画像/動画）の有無を更新するコールバック
-  const handleMediaLoaded = useCallback((entryId: string, hasMedia: boolean) => {
-    setEntriesWithMedia((prev) => {
-      const next = new Set(prev);
-      if (hasMedia) {
-        next.add(entryId);
-      } else {
-        next.delete(entryId);
-      }
-      return next;
-    });
-  }, []);
-
-  // scope に応じて表示対象のエントリーを絞り込む(scope="day"は非破壊でそのまま)
-  const scopedEntries = useMemo(() => filterEntriesByScope(entries, scope), [entries, scope]);
-
-  // エントリー数と種類、メディアの有無に応じて最小高さを動的に計算
-  const minHeight = useMemo(
-    () => computeDayDetailMinHeight(scopedEntries, practiceLogsWithTimes, entriesWithMedia),
-    [scopedEntries, practiceLogsWithTimes, entriesWithMedia],
+  // scope に応じて表示対象のエントリーを絞り込む(scope="day"は非破壊でそのまま)。
+  // 練習タブ/大会タブ経由(targetId 指定時)はさらに、タップした1件(または1大会)のみに絞る
+  const scopedEntries = useMemo(
+    () => filterEntriesByTargetId(filterEntriesByScope(entries, scope), scope, targetId),
+    [entries, scope, targetId],
   );
-
-  // 動的なスタイルを生成
-  const modalContentStyle = useMemo(() => [styles.modalContent, { minHeight }], [minHeight]);
 
   // エントリータイプをフィルタリング・グループ化
   const { otherItems, entriesByCompetition, recordsByCompetition } = useMemo(() => {
@@ -211,8 +177,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     // 記録を大会IDでグループ化
     const recordsByComp = new Map<string, CalendarItem[]>();
     recordItems.forEach((record) => {
-      const competitionId =
-        record.metadata?.competition?.id || record.metadata?.record?.competition_id || record.id;
+      const competitionId = getCompetitionId(record) ?? record.id;
       if (!recordsByComp.has(competitionId)) {
         recordsByComp.set(competitionId, []);
       }
@@ -222,8 +187,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
     // エントリーを大会IDでグループ化
     const entriesByComp = new Map<string, CalendarItem[]>();
     entryItems.forEach((entry) => {
-      const competitionId =
-        entry.metadata?.competition?.id || entry.metadata?.entry?.competition_id;
+      const competitionId = getCompetitionId(entry);
       if (competitionId) {
         if (!entriesByComp.has(competitionId)) {
           entriesByComp.set(competitionId, []);
@@ -262,10 +226,12 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <SafeAreaView edges={["bottom"]} style={styles.safeAreaContainer} pointerEvents="box-none">
-          <View style={modalContentStyle}>
+          <View style={styles.modalContent}>
             {/* ヘッダー */}
             <View style={styles.header}>
-              <Text style={styles.title}>{formattedDate}{t("dashboard.dayDetail.headerTitleSuffix")}</Text>
+              <Text style={styles.title} numberOfLines={titleOverride ? 1 : undefined}>
+                {titleOverride ?? `${formattedDate}${t("dashboard.dayDetail.headerTitleSuffix")}`}
+              </Text>
               <Pressable style={styles.closeButton} onPress={onClose}>
                 <Feather name="x" size={24} color="#6B7280" />
               </Pressable>
@@ -344,9 +310,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           ? scopedEntries.some(
                               (e) =>
                                 (e.type === "entry" || e.type === "record") &&
-                                (e.metadata?.competition?.id === competitionId ||
-                                  e.metadata?.entry?.competition_id === competitionId ||
-                                  e.metadata?.record?.competition_id === competitionId),
+                                getCompetitionId(e) === competitionId,
                             )
                           : false;
 
@@ -375,8 +339,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           onAddEntry={onAddEntry}
                           onEditCompetition={onEditCompetition}
                           onDeleteCompetition={onDeleteCompetition}
-                          onPracticeTimeLoaded={handlePracticeTimeLoaded}
-                          onMediaLoaded={handleMediaLoaded}
                         />
                       );
                     })}
@@ -472,6 +434,7 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           note={note}
                           records={records}
                           isTeamCompetition={isTeamCompetition}
+                          targetRecordId={targetRecordId}
                           teamId={recordTeamId}
                           color={getEntryDisplayColor(firstRecord, colorSettings)}
                           onEditCompetition={() => {
@@ -517,7 +480,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                           onEditRecord={onEditRecord}
                           onDeleteRecord={onDeleteRecord}
                           onClose={onClose}
-                          onMediaLoaded={handleMediaLoaded}
                         />
                       );
                     })}
@@ -526,7 +488,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                   {/* 記録追加セクション */}
                   {scope === "day" && (
                     <View style={styles.addRecordSection}>
-                      <Text style={styles.addRecordSectionTitle}>{t("dashboard.dayDetail.addSection")}</Text>
                       <View style={styles.addRecordButtonContainer}>
                         {onAddRecord && (
                           <Pressable
@@ -537,7 +498,14 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             }}
                           >
                             <Feather name="droplet" size={20} color={chooserRecordIconColor} />
-                            <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addRecordShort")}</Text>
+                            <Text
+                              style={styles.addRecordButtonText}
+                              numberOfLines={1}
+                              adjustsFontSizeToFit
+                              minimumFontScale={0.8}
+                            >
+                              {t("dashboard.dayDetail.addRecord")}
+                            </Text>
                           </Pressable>
                         )}
                         {onAddPractice && (
@@ -549,7 +517,14 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                             }}
                           >
                             <Feather name="activity" size={20} color={chooserPracticeIconColor} />
-                            <Text style={styles.addRecordButtonText}>{t("dashboard.dayDetail.addPracticeShort")}</Text>
+                            <Text
+                              style={styles.addRecordButtonText}
+                              numberOfLines={1}
+                              adjustsFontSizeToFit
+                              minimumFontScale={0.8}
+                            >
+                              {t("dashboard.dayDetail.addPractice")}
+                            </Text>
                           </Pressable>
                         )}
                       </View>

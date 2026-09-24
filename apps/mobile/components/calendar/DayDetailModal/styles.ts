@@ -30,7 +30,9 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
   },
@@ -38,6 +40,7 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#111827",
+    flexShrink: 1,
   },
   closeButton: {
     width: 32,
@@ -48,16 +51,15 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   body: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   bodyContent: {
     paddingBottom: 20,
-    flexGrow: 1,
   },
   emptyContainer: {
     padding: 16,
     paddingTop: 16,
-    flex: 1,
   },
   emptyTextMain: {
     fontSize: 16,
@@ -66,13 +68,17 @@ export const styles = StyleSheet.create({
     textAlign: "center",
   },
   addButtonContainer: {
-    flex: 1,
     flexDirection: "row",
     gap: 12,
   },
+  // 以前はこのボタンの高さを modalContent.minHeight (削除済みの minHeight.ts) からの
+  // flex:1 連鎖で間接的に受け取っていたが、その minHeight 自体が根拠のない値だったため
+  // 追従はせず、自前で高さを持つ。アイコン28 + marginBottom 8 + テキスト行高17 ≒ 53 に対し
+  // ボタン高 ≒133 になる。折り返しで自然に伸びる余地を残すため minHeight ではなく padding。
   addButton: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingVertical: 40,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -96,20 +102,17 @@ export const styles = StyleSheet.create({
     color: "#374151",
   },
   entriesContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
     gap: 12,
   },
   addRecordSection: {
-    padding: 16,
-    paddingTop: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
     borderTopWidth: 1,
     borderTopColor: "#E5E7EB",
-  },
-  addRecordSectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 12,
   },
   addRecordButtonContainer: {
     flexDirection: "row",
@@ -137,9 +140,10 @@ export const styles = StyleSheet.create({
     elevation: 1,
   },
   addRecordButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: "#111827",
+    flexShrink: 1,
   },
   entryItem: {
     backgroundColor: "#FFFFFF",
