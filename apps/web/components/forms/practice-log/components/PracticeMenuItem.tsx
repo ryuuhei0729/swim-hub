@@ -11,6 +11,7 @@ import { SWIM_STYLES, SWIM_CATEGORIES, DISTANCE_PRESETS } from "../types";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import { cn } from "@/utils/cn";
 import { SelectChips, chipClass } from "./SelectChips";
+import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 
 interface PracticeMenuItemProps {
   menu: PracticeMenu;
@@ -143,7 +144,10 @@ export default function PracticeMenuItem({
           <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
             {t("distanceLabel")} <span className="text-red-500">*</span>
           </label>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          <ChipScrollRow
+            className="gap-1.5 sm:gap-2"
+            data-testid="chiprow-practice-distance-preset"
+          >
             {DISTANCE_PRESETS.map((preset) => {
               const selected = !showCustomDistance && Number(menu.distance) === preset;
               return (
@@ -166,7 +170,7 @@ export default function PracticeMenuItem({
               // 「その他」ボタンがその場で入力欄に変化する
               //
               // 高さ・padding の根拠: components/ui/Input.tsx の「16px ズーム防止 box サイズ根拠」参照。
-              // 同じ flex-wrap 行に並ぶ SelectChips (chipClass, h-8 sm:h-10) と高さを揃える必要が
+              // 同じチップ行に並ぶ SelectChips (chipClass, h-8 sm:h-10) と高さを揃える必要が
               // あるため、箱の高さは変えず padding のみ py-0.5 sm:py-1.5 に縮小する
               // (h-9 等の非レスポンシブ高さにするとプリセットチップと数px ずれる)。
               <input
@@ -195,7 +199,7 @@ export default function PracticeMenuItem({
                 {t("distanceOther")}
               </button>
             )}
-          </div>
+          </ChipScrollRow>
         </div>
 
         {/* 4行目：本数、セット数、サークル（分/秒）— ステッパー */}

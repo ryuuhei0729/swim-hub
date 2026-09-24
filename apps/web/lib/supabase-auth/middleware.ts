@@ -40,15 +40,16 @@ export async function updateSession(request: NextRequest) {
     // Cookieを設定（既存のCookieを保持）
     // OAuthコールバック時は、まだセッションが確立されていないため、リクエストのCookieをそのまま転送
     // 重要: PKCE code verifier Cookieを確実に転送するため、Cookie属性も明示的に設定
-    const isLocal =
-      request.nextUrl.hostname === "localhost" || request.nextUrl.hostname === "127.0.0.1";
+    // ホスト名ではなくプロトコルで判定する。http 配信なのに Secure を付けると
+    // ブラウザが Cookie を破棄し、PKCE code verifier が失われる (lib/supabase.ts と同じ理由)。
+    const isHttps = request.nextUrl.protocol === "https:";
     request.cookies.getAll().forEach((cookie) => {
       if (cookie.value) {
         // Cookie属性を明示的に設定
         oauthResponse.cookies.set(cookie.name, cookie.value, {
           path: "/",
           sameSite: "lax",
-          secure: !isLocal, // ローカルはHTTP、本番はHTTPS
+          secure: isHttps, // http 配信時は付けない (付くと Cookie が破棄される)
           httpOnly: true,
         });
       }
@@ -100,20 +101,20 @@ export async function updateSession(request: NextRequest) {
   // 認証が必要なルート (locale プレフィックスなしで定義)
   // normalizedPathname と照合する
   // ---------------------------------------------
+  // ここに載せたルートだけが redirect_to 付きでログインへ飛ぶ。載せ忘れても後段の
+  // default-deny フォールバックが認証自体は守るが、redirect_to が付かないため
+  // ログイン後に元 URL へ戻れず dashboard 送りになる (共有されたチーム URL で顕在化する)。
   const protectedRoutes = [
     "/dashboard",
-    "/members",
     "/practice",
-    "/competitions",
-    "/records",
+    "/competition",
     "/goals",
-    "/schedule",
-    "/attendance",
-    "/announcements",
     "/settings",
-    "/profile",
     "/mypage",
     "/onboarding",
+    "/bulk-besttime",
+    "/teams",
+    "/teams-admin",
   ];
 
   // 認証が不要なルート（認証済みユーザーがアクセスした場合はリダイレクト）

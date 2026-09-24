@@ -2,15 +2,25 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  XMarkIcon,
+  PencilIcon,
+  TrashIcon,
+  PlusIcon,
+  ClipboardDocumentCheckIcon,
+} from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatTimeBest } from "@/utils/formatters";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { UserFacingError, toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
+import { isEntryTabVisible } from "@/utils/tabModalUtils";
+import type { EntryReturnOrigin } from "@/utils/entryReturnOrigin";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 interface TeamCompetitionEntryModalProps {
   isOpen: boolean;
@@ -18,6 +28,26 @@ interface TeamCompetitionEntryModalProps {
   competitionId: string;
   competitionTitle: string;
   teamId: string;
+  /**
+   * このモーダルを開いた往路のルート ("/teams/[teamId]" なら false、
+   * "/teams-admin/[teamId]" なら true)。`TeamCompetitions.tsx` 自身のルート固定 `isAdmin` prop
+   * をそのまま渡してもらう。**下の `data.isAdmin` (実ロール) とは別物** —
+   * 実ロール admin が利用者ビュー `/teams/[teamId]` を開いている場合、
+   * `routeIsAdmin` は false でも `data.isAdmin` は true になる。
+   * `handleAdminBulkEntryClick` の遷移先 origin クエリ (追加スプリント D12) の
+   * 決定にのみ使う。
+   */
+  routeIsAdmin: boolean;
+  /**
+   * 自分のエントリーを追加/編集する画面 (CompetitionTabModal のエントリータブ) を開く。
+   * 行の編集アイコンと「エントリーを追加」ボタン (D10改訂) の両方から呼ばれる (R6)。
+   * CompetitionTabModal 側が competitionId + 自分の user_id で対象大会の自分の
+   * 全エントリーを再取得するため、対象の絞り込みは不要だが、
+   * 編集アイコンから呼ぶ場合は `entryId` (D9) を渡すことで、その entry.id に対応する
+   * 項目タブがアクティブな状態で開く。「エントリーを追加」ボタンから呼ぶ場合は
+   * `entryId` を渡さず、先頭タブを開く (従来どおり)。
+   */
+  onOpenSelfEntry: (entryId?: string) => void;
 }
 
 /** `competitions` テーブルから直接取得する、このモーダルが必要とする最小限のフィールド */
@@ -59,15 +89,49 @@ function isValidEntryStatus(
   return status === "before" || status === "open" || status === "closed";
 }
 
+/**
+ * エントリー行が現在ログイン中のユーザー自身のものかどうかを判定する純関数。
+ */
+export function isOwnEntryRow(
+  entryUserId: string,
+  currentUserId: string | null | undefined,
+): boolean {
+  return !!currentUserId && entryUserId === currentUserId;
+}
+
+/**
+ * 自分のエントリー行に編集/削除アイコンを表示してよいかどうかを判定する純関数 (PM裁定 R1)。
+ *
+ * R1 の文言は「entry_status === "open" かつ大会日が過去でない」だが、web の編集導線が
+ * 実際に着地する先は CompetitionTabModal のエントリータブであり、そのタブは
+ * `isEntryTabVisible(date)` (未来日のみ true。今日は false) のときしか表示されない
+ * (CompetitionTabModal.tsx の showEntryTab)。ここで代わりに `isCompetitionDateInPast`
+ * (今日は false = 表示) を使うと、大会日が今日のときアイコンは表示されるのに、編集を
+ * 押した先の CompetitionTabModal はエントリータブを非表示にして "competition" タブへ
+ * 静かにフォールバックし (isEntryTabVisible(today) は false のため)、ユーザーは編集
+ * フォームに到達できない「見えているのに押しても意味が無い」状態になってしまう。
+ * 着地先の実際の編集可能性に一致させるため、ここでは `isEntryTabVisible` を使う。
+ */
+export function canEditOrDeleteEntry(
+  entryStatus: string | null | undefined,
+  competitionDate: string | null | undefined,
+): boolean {
+  return entryStatus === "open" && isEntryTabVisible(competitionDate);
+}
+
 export default function TeamCompetitionEntryModal({
   isOpen,
   onClose,
   competitionId,
   competitionTitle,
   teamId,
+  routeIsAdmin,
+  onOpenSelfEntry,
 }: TeamCompetitionEntryModalProps) {
-  const { supabase } = useAuth();
+  const { supabase, user } = useAuth();
+  const router = useRouter();
   const t = useTranslations("teams");
+  const tCommon = useTranslations("common");
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
   const recordApi = useMemo(() => new RecordAPI(supabase), [supabase]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +167,8 @@ export default function TeamCompetitionEntryModal({
   };
   const [data, setData] = useState<EntryByStyleData | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [pendingDeleteEntry, setPendingDeleteEntry] = useState<EntryRow | null>(null);
+  const [deletingEntry, setDeletingEntry] = useState(false);
 
   const loadEntries = useCallback(async () => {
     try {
@@ -232,6 +298,44 @@ export default function TeamCompetitionEntryModal({
     }
   };
 
+  // 自分のエントリー行の削除確認を開く (要件A / R2: 行単位のみ、他選手のレグ行には触れない)
+  const handleRequestDeleteEntry = (entry: EntryRow) => {
+    setPendingDeleteEntry(entry);
+  };
+
+  const handleCancelDeleteEntry = () => {
+    if (deletingEntry) return;
+    setPendingDeleteEntry(null);
+  };
+
+  const handleConfirmDeleteEntry = async () => {
+    if (!pendingDeleteEntry || deletingEntry) return;
+    setDeletingEntry(true);
+    try {
+      await entryApi.deleteEntry(pendingDeleteEntry.id);
+      setPendingDeleteEntry(null);
+      // SC9: 失敗時は一覧を書き換えず(実データのまま)エラーのみ表示する。
+      // 成功時のみ再取得し、削除した行だけが実際に消えたことを DB 実データで確認する。
+      await loadEntries();
+    } catch (err) {
+      console.error("エントリーの削除に失敗:", err);
+      setError(toUserFacingMessage(err, t("competitionEntryModal.deleteFailed")));
+      setPendingDeleteEntry(null);
+    } finally {
+      setDeletingEntry(false);
+    }
+  };
+
+  // admin: エントリー代理一括入力ページへ遷移 (要件B後半 / D4 でカードから移設)。
+  // 追加スプリント D12: 往路 (routeIsAdmin) を enum の origin クエリで運ぶ。
+  // クエリの値をパス文字列に直接埋め込まない (R11) — ここで埋め込むのは
+  // "member" | "admin" の2値のみに絞られた EntryReturnOrigin 型の値であり、
+  // 遷移先の entries/page.tsx がこれを再度 enum に正規化してから使う。
+  const handleAdminBulkEntryClick = () => {
+    const origin: EntryReturnOrigin = routeIsAdmin ? "admin" : "member";
+    router.push(`/teams/${teamId}/competitions/${competitionId}/entries?origin=${origin}`);
+  };
+
   const getStatusLabel = (status: "before" | "open" | "closed") => {
     switch (status) {
       case "before":
@@ -353,6 +457,41 @@ export default function TeamCompetitionEntryModal({
                   </div>
                 </div>
 
+                {/* セルフエントリー導線 (要件B後半 / D6): 非admin「エントリーを追加」(D10改訂) /
+                    admin「エントリーを代理入力」。admin 判定はこのモーダルが実測する
+                    data.isAdmin (実際のロール) を使う。TeamCompetitions.tsx の isAdmin prop は
+                    ルート (/teams vs /teams-admin) 固定値のため、実ロールと食い違う場合がある
+                    (実ロール admin のユーザーが /teams/[teamId] を開いた場合等)。
+                    admin 用ボタンは既存の「エントリー代理一括入力」ボタン (D4 でカードから移設)
+                    と同じ挙動・対象URLのため R1 のような状態ガードは付けない。
+                    非admin 用ボタンは着地先 (CompetitionTabModal のエントリータブ) が
+                    実際に編集可能な状態のときだけ表示する (R1 と同じ canEditOrDeleteEntry)。 */}
+                <div className="mb-6">
+                  {data.isAdmin ? (
+                    <button
+                      type="button"
+                      onClick={handleAdminBulkEntryClick}
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                      data-testid="team-competition-entry-bulk-button"
+                    >
+                      <ClipboardDocumentCheckIcon className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                      {t("competitionEntryModal.adminBulkEntryButton")}
+                    </button>
+                  ) : (
+                    canEditOrDeleteEntry(data.competition.entry_status, data.competition.date) && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenSelfEntry()}
+                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                        data-testid="team-competition-entry-self-button"
+                      >
+                        <PlusIcon className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                        {t("competitionEntryModal.selfEntryButton")}
+                      </button>
+                    )
+                  )}
+                </div>
+
                 {/* 種目別エントリー一覧 */}
                 <div className="space-y-6">
                   {Object.keys(data.entriesByStyle).length === 0 && (
@@ -372,40 +511,79 @@ export default function TeamCompetitionEntryModal({
                       className="border border-gray-200 rounded-lg overflow-hidden"
                       data-testid={`team-competition-entry-style-${styleId}`}
                     >
-                      {/* 種目ヘッダー */}
+                      {/* 種目ヘッダー (要件C / D8: 件数に単位「件」を付与) */}
                       <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
                         <h4 className="font-semibold text-blue-900">
-                          {styleData.style?.name_jp ?? t("competitionEntryModal.unknownStyle")} ({styleData.entries.length})
+                          {t("competitionEntryModal.styleGroupHeader", {
+                            style: styleData.style?.name_jp ?? t("competitionEntryModal.unknownStyle"),
+                            count: styleData.entries.length,
+                          })}
                         </h4>
                       </div>
 
                       {/* エントリー一覧 */}
                       <div className="divide-y divide-gray-200">
-                        {styleData.entries.map((entry, index: number) => (
-                          <div key={entry.id} className="px-4 py-3 hover:bg-gray-50">
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-900">
-                                  {index + 1}. {entry.users?.name ?? t("competitionEntryModal.unknownUser")}
-                                </p>
-                                {entry.entry_time && (
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    {t("competitionEntryModal.entryTimeLabel")}{" "}
-                                    <span className="font-mono font-semibold">
-                                      {formatTimeBest(entry.entry_time)}
-                                    </span>
+                        {styleData.entries.map((entry, index: number) => {
+                          const entryStyleName =
+                            styleData.style?.name_jp ?? t("competitionEntryModal.unknownStyle");
+                          // 要件A / SC3・SC8: 自分の行のみ（管理者自身の行も含む）に編集/削除を出す
+                          const canModify =
+                            isOwnEntryRow(entry.user_id, user?.id) &&
+                            canEditOrDeleteEntry(data.competition.entry_status, data.competition.date);
+                          return (
+                            <div key={entry.id} className="px-4 py-3 hover:bg-gray-50">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-900">
+                                    {index + 1}. {entry.users?.name ?? t("competitionEntryModal.unknownUser")}
                                   </p>
-                                )}
-                                {entry.note && (
-                                  <p className="text-sm text-gray-500 mt-1">{entry.note}</p>
-                                )}
-                              </div>
-                              <div className="text-right text-xs text-gray-400">
-                                {format(new Date(entry.created_at), "M月d日 HH:mm", { locale: ja })}
+                                  {entry.entry_time && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {t("competitionEntryModal.entryTimeLabel")}{" "}
+                                      <span className="font-mono font-semibold">
+                                        {formatTimeBest(entry.entry_time)}
+                                      </span>
+                                    </p>
+                                  )}
+                                  {entry.note && (
+                                    <p className="text-sm text-gray-500 mt-1">{entry.note}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {canModify && (
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => onOpenSelfEntry(entry.id)}
+                                        className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                        aria-label={t("competitionEntryModal.editEntryAria", {
+                                          style: entryStyleName,
+                                        })}
+                                        data-testid={`team-competition-entry-edit-${entry.id}`}
+                                      >
+                                        <PencilIcon className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRequestDeleteEntry(entry)}
+                                        className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                        aria-label={t("competitionEntryModal.deleteEntryAria", {
+                                          style: entryStyleName,
+                                        })}
+                                        data-testid={`team-competition-entry-delete-${entry.id}`}
+                                      >
+                                        <TrashIcon className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  )}
+                                  <div className="text-right text-xs text-gray-400 whitespace-nowrap">
+                                    {format(new Date(entry.created_at), "M月d日 HH:mm", { locale: ja })}
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -427,6 +605,17 @@ export default function TeamCompetitionEntryModal({
           </div>
         </div>
       </div>
+
+      {/* 削除確認ダイアログ (要件A) */}
+      <ConfirmDialog
+        isOpen={!!pendingDeleteEntry}
+        onConfirm={() => void handleConfirmDeleteEntry()}
+        onCancel={handleCancelDeleteEntry}
+        title={t("competitionEntryModal.deleteConfirmTitle")}
+        message={t("competitionEntryModal.deleteConfirmMessage")}
+        confirmLabel={tCommon("delete")}
+        variant="danger"
+      />
     </div>
   );
 }

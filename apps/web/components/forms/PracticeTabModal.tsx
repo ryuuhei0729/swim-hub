@@ -111,6 +111,13 @@ export interface PracticeTabModalProps {
   setAvailableTags: (tags: PracticeTag[] | ((prev: PracticeTag[]) => PracticeTag[])) => void;
   isLoading: boolean;
   initialTab?: PracticeTabId;
+  /**
+   * 親 (practices) 行の basicData 編集を許可するか。省略時は true (従来動作)。
+   * false のとき、練習タブ (basicData) のフィールドを disabled にする
+   * (タブ自体は非表示にしない。閲覧は可能)。呼び出し元は usePracticeTabSave に
+   * 渡す allowParentUpdate と同じ値を渡すこと (Sprint Contract 2, Reviewer 指摘 F1-3)。
+   */
+  allowParentUpdate?: boolean;
 }
 
 // =============================================================================
@@ -128,6 +135,7 @@ export default function PracticeTabModal({
   setAvailableTags,
   isLoading,
   initialTab = "practice",
+  allowParentUpdate = true,
 }: PracticeTabModalProps) {
   const t = useTranslations("forms.practice");
   const tTabModal = useTranslations("forms.tabModal");
@@ -710,6 +718,18 @@ export default function PracticeTabModal({
                 </div>
               )}
 
+              {/* 親 (practices) 行の basicData を編集できない場合の案内。
+                  タブ自体は非表示にせず、閲覧はできる (フィールドのみ disabled)。 */}
+              {!allowParentUpdate && (
+                <div
+                  role="alert"
+                  className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-3"
+                  data-testid="practice-tab-edit-restricted-notice"
+                >
+                  {tTabModal("practiceEditRestricted")}
+                </div>
+              )}
+
               {/* Grid: date, title, place */}
               <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
@@ -722,6 +742,7 @@ export default function PracticeTabModal({
                     setBasicValidationError(null);
                   }}
                   required
+                  disabled={!allowParentUpdate}
                   placeholder={t("date_placeholder")}
                   data-testid="practice-tab-date"
                 />
@@ -734,6 +755,7 @@ export default function PracticeTabModal({
                   value={basicData.title}
                   onChange={(e) => setBasicData({ ...basicData, title: e.target.value })}
                   placeholder={t("title_placeholder")}
+                  disabled={!allowParentUpdate}
                   data-testid="practice-tab-title"
                 />
 
@@ -745,6 +767,7 @@ export default function PracticeTabModal({
                   onChange={(value) => setBasicData({ ...basicData, place: value })}
                   suggestions={placeSuggestions}
                   placeholder={t("place_placeholder")}
+                  disabled={!allowParentUpdate}
                   data-testid="practice-tab-place"
                 />
               </div>
@@ -758,7 +781,8 @@ export default function PracticeTabModal({
                   value={basicData.note}
                   onChange={(e) => setBasicData({ ...basicData, note: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!allowParentUpdate}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50"
                   placeholder={t("note_placeholder")}
                   data-testid="practice-tab-note"
                 />
@@ -772,7 +796,7 @@ export default function PracticeTabModal({
                     onImagesChange={(newFiles: PracticeImageFile[], deletedIds: string[]) =>
                       setImageData({ newFiles, deletedIds })
                     }
-                    disabled={isLoading}
+                    disabled={isLoading || !allowParentUpdate}
                   />
                 ) : (
                   <PremiumBadge message={tPremium("imageUpload")} />

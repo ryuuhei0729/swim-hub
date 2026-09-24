@@ -107,6 +107,40 @@ vi.mock("expo-image", () => ({
   },
 }));
 
+// expo-clipboard のモック
+// build/ClipboardPasteButton.js が JSX を変換せずに配布されており、vite (rollup) の
+// SSR transform が `Parse failure: Expression expected` で落ちる
+// (expo-linear-gradient と同型の問題)。クリップボードへの書き込みは jsdom では
+// 検証できないので、成功する no-op に差し替える
+// (個別に検証したいテストはファイル内の vi.mock で上書きする)。
+vi.mock("expo-clipboard", () => ({
+  setStringAsync: vi.fn(async () => true),
+  getStringAsync: vi.fn(async () => ""),
+}));
+
+// expo-linear-gradient のモック
+// build/LinearGradient.js が JSX を変換せずに配布されており、vite (rollup) の SSR transform が
+// `Parse failure: Expression expected` で落ちる (react-native-purchases の Flow 構文と同型の問題)。
+// 本番では ChipScrollRow の右端フェード装飾にしか使っておらず、jsdom で検証したい挙動は無いので
+// 単なる div に差し替える。colors/start/end/locations は DOM に流すと React が unknown prop 警告を
+// 出すので落とす。
+vi.mock("expo-linear-gradient", () => ({
+  LinearGradient: ({
+    colors: _colors,
+    start: _start,
+    end: _end,
+    locations: _locations,
+    children,
+    ...props
+  }: {
+    colors?: readonly string[];
+    start?: { x: number; y: number };
+    end?: { x: number; y: number };
+    locations?: readonly number[];
+    children?: React.ReactNode;
+  } & Record<string, unknown>) => React.createElement("div", props, children),
+}));
+
 // 注意: @react-native-community/netinfoのモックは vitest.config.ts の resolve.alias で
 // __mocks__/@react-native-community/netinfo.ts にエイリアスされているため、ここでは不要
 

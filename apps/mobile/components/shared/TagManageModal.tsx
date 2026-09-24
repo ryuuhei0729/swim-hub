@@ -6,11 +6,14 @@ import {
   Pressable,
   Modal,
   StyleSheet,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
   Platform,
 } from "react-native";
+// SafeAreaView は必ず react-native-safe-area-context のものを使う。
+// react-native の同名コンポーネントは iOS 専用で Android では何もしないため、
+// Edge-to-Edge 強制下の Android ではフッターがシステムナビゲーションバーに埋まる。
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { PracticeTag } from "@apps/shared/types";
@@ -341,15 +344,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#111827",
   },
+  // パレットは必ず1行に収める。固定幅(44)だと色数×幅+gap が画面幅を超えて
+  // 折り返すため、スウォッチ側を flex で分配する
+  // (色数が変わっても端末幅が狭くても折り返さない)
   colorGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 12,
   },
   colorOption: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    flex: 1,
+    aspectRatio: 1,
+    // 幅が flex で決まるので固定値ではなく十分大きい値で円にする
+    borderRadius: 999,
     justifyContent: "center",
     alignItems: "center",
   },

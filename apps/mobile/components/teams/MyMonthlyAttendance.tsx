@@ -10,6 +10,8 @@ import {
   Modal,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { useAuth } from "@/contexts/AuthProvider";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import type { TeamAttendanceWithDetails } from "@swim-hub/shared/types/attendance";
@@ -54,6 +56,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const { supabase } = useAuth();
   const { t } = useTranslation();
   const locale = useDateLocale();
+  const insets = useSafeInsets();
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
 
   // 月リスト表示用の状態
@@ -1220,7 +1223,16 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
           </View>
 
           {/* モーダルコンテンツ */}
-          <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalScrollContent}>
+          {/* Android edge-to-edge: 全画面モーダルもシステムナビゲーションバーの
+              領域まで描画されるため、最下段の出欠ボタン/保存ボタンが埋没する。
+              スクロール余白に下部インセットを加算する (パターンB)。 */}
+          <ScrollView
+            style={styles.modalContent}
+            contentContainerStyle={[
+              styles.modalScrollContent,
+              { paddingBottom: getSafeFooterPadding(16, insets.bottom) },
+            ]}
+          >
             {loading ? (
               <View style={styles.loadingContainer}>
                 <Text style={styles.loadingText}>{t("common.loading")}</Text>

@@ -135,6 +135,7 @@ export default function RecordSetItem({
               <Input
                 id={timeId}
                 type="text"
+                inputMode="decimal"
                 value={
                   record.timeDisplayValue !== undefined
                     ? record.timeDisplayValue
@@ -235,6 +236,7 @@ export default function RecordSetItem({
           <div key={split.uiKey} className="flex items-center gap-2 mb-2">
             <Input
               type="text"
+              inputMode="decimal"
               placeholder={t("distance_placeholder")}
               value={split.distance}
               onChange={(e) => {
@@ -258,6 +260,7 @@ export default function RecordSetItem({
             <span className="text-gray-500">m:</span>
             <Input
               type="text"
+              inputMode="decimal"
               placeholder={t("time_placeholder")}
               value={
                 split.splitTimeDisplayValue !== undefined

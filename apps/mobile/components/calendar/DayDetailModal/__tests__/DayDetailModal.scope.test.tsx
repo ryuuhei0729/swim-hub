@@ -10,10 +10,11 @@
  *          (「大会記録を追加」「練習記録を追加」の2ボタン) が描画される
  *   [V-23] scope="practice" でエントリーが 0 件のとき、空状態チューザーは描画されない
  *   [V-24] scope="competition" でエントリーが 0 件のとき、空状態チューザーは描画されない
- *   [V-25] scope="day" かつエントリーが 1 件以上のとき、下部の「記録を追加」セクション
- *          (ショートボタン: 「大会記録」「練習記録」) が描画される
+ *   [V-25] scope="day" かつエントリーが 1 件以上のとき、下部の記録追加セクション
+ *          (2026-09-24 仕様変更: 見出し「記録を追加」は削除済み。長尺ラベルの2ボタン
+ *          「大会記録を追加」「練習記録を追加」のみが描画される) が描画される
  *   [V-26] scope="practice"/"competition" はエントリーが 1 件以上でも
- *          下部の「記録を追加」セクションを描画しない
+ *          下部の記録追加セクションを描画しない
  *
  * Reviewer Critical 修正 (scoped モードの白紙パネル) 再検証観点 (追加):
  *   [V-29] scope="practice"/"competition" で isLoading=true のとき、ローディング表示
@@ -230,7 +231,14 @@ describe("DayDetailModal — 空状態チューザーの scope 別出し分け",
 });
 
 describe("DayDetailModal — 下部「記録を追加」セクションの scope 別出し分け", () => {
-  it("[V-25] scope=\"day\" でエントリーがあるとき、下部の記録追加セクションが描画される", () => {
+  // 2026-09-24 仕様変更 (ユーザー追加依頼): 見出し「記録を追加」は削除され、ボタンラベルは
+  // 短縮形 (「大会記録」/「練習記録」) から長尺形 (「大会記録を追加」/「練習記録を追加」) に
+  // 変わった。この長尺ラベルは scope="day" かつエントリー0件時の空状態チューザー
+  // (addButtonContainer) でも同じ文言 (dashboard.dayDetail.addRecord/addPractice) を使う
+  // ため、「エントリーが1件以上ある」という前提が本当に空状態チューザーを排除しているかを
+  // 確認した上でテストを書く (トートロジー防止: 単純な文字列一致だけでは
+  // 「たまたま空状態チューザー側の文言を拾って green になる」誤検出を排除できない)。
+  it("[V-25] scope=\"day\" でエントリーがあるとき、下部の記録追加セクション(長尺ラベル2ボタン)が描画される", () => {
     render(
       <DayDetailModal
         visible={true}
@@ -242,9 +250,13 @@ describe("DayDetailModal — 下部「記録を追加」セクションの scope
       />,
     );
 
-    expect(screen.getByText("記録を追加")).toBeDefined();
-    expect(screen.getByText("大会記録")).toBeDefined();
-    expect(screen.getByText("練習記録")).toBeDefined();
+    // 見出し(旧仕様)が復活していないことも合わせて固定する
+    expect(screen.queryByText("記録を追加")).toBeNull();
+    // エントリーが1件以上あるため空状態チューザー(同じ文言を使う別UI)は描画されず、
+    // 下部セクションのボタンとして1件ずつだけ出現するはず。getAllByText で件数を確認し、
+    // 「たまたま2箇所目(空状態チューザー)を拾って green になる」トートロジーを排除する。
+    expect(screen.getAllByText("大会記録を追加")).toHaveLength(1);
+    expect(screen.getAllByText("練習記録を追加")).toHaveLength(1);
   });
 
   it("[V-26] scope=\"practice\" はエントリーがあっても下部の記録追加セクションを描画しない", () => {
@@ -260,7 +272,8 @@ describe("DayDetailModal — 下部「記録を追加」セクションの scope
       />,
     );
 
-    expect(screen.queryByText("記録を追加")).toBeNull();
+    expect(screen.queryByText("大会記録を追加")).toBeNull();
+    expect(screen.queryByText("練習記録を追加")).toBeNull();
   });
 
   it("[V-26b] scope=\"competition\" はエントリーがあっても下部の記録追加セクションを描画しない", () => {
@@ -276,7 +289,8 @@ describe("DayDetailModal — 下部「記録を追加」セクションの scope
       />,
     );
 
-    expect(screen.queryByText("記録を追加")).toBeNull();
+    expect(screen.queryByText("大会記録を追加")).toBeNull();
+    expect(screen.queryByText("練習記録を追加")).toBeNull();
   });
 });
 

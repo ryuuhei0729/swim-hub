@@ -126,10 +126,11 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.targetTimeLabel")}</label>
           <Input
             type="text"
+            inputMode="decimal"
             value={timeDisplayValue}
             onChange={handleTimeChange}
             onBlur={handleTimeBlur}
-            placeholder="1:14.28"
+            placeholder="2.00.00"
             required
             className={timeError ? "border-red-500" : ""}
           />
@@ -313,10 +314,11 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.averageTimeLabel")}</label>
           <Input
             type="text"
+            inputMode="decimal"
             value={averageTimeDisplayValue}
             onChange={handleAverageTimeChange}
             onBlur={handleAverageTimeBlur}
-            placeholder="1:14.28"
+            placeholder="2.00.00"
             required
             className={averageTimeError ? "border-red-500" : ""}
           />

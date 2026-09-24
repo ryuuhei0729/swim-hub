@@ -7,11 +7,10 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 
 const DUMMY_EMAIL_DOMAIN = "@ryuhei.love";
 
@@ -111,10 +110,7 @@ export const EmailChangeSettings: React.FC = () => {
 
       {/* モーダル */}
       <Modal visible={isModalOpen} animationType="fade" transparent onRequestClose={closeModal}>
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
+        <FormKeyboardAvoidingView style={styles.modalOverlay} hasNativeHeader={false}>
           <Pressable style={styles.modalBackdrop} onPress={closeModal} />
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
@@ -217,7 +213,7 @@ export const EmailChangeSettings: React.FC = () => {
               </View>
             )}
           </View>
-        </KeyboardAvoidingView>
+        </FormKeyboardAvoidingView>
       </Modal>
     </>
   );

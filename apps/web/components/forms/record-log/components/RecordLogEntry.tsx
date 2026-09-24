@@ -13,7 +13,9 @@ import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
 import type { RecordLogFormState, StyleOption } from "../types";
 import type { BestTime } from "@/types/member-detail";
+import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
 import PremiumBadge from "@/components/ui/PremiumBadge";
+import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 
 const VideoUploader = dynamic(() => import("@/components/video/VideoUploader"), { ssr: false });
@@ -143,66 +145,17 @@ export default function RecordLogEntry({
   const canRelay =
     currentStyle != null && canStyleRelay(currentStyle.id, currentStyle.distance);
 
-  // 現在の種目・プールタイプ・リレーフラグに基づいてベストタイムを取得（優先順位付き）
-  // リレーOFFの場合: 1. 同じ水路・非リレー → 2. 同じ水路・リレー → 3. 異なる水路・非リレー → 4. 異なる水路・リレー
-  // リレーONの場合: 1. 同じ水路・リレー → 2. 同じ水路・非リレー → 3. 異なる水路・リレー → 4. 異なる水路・非リレー
+  // 現在の種目・プールタイプ・リレーフラグに基づいてベストタイム参照を取得する。
+  // 優先順位表は @apps/shared/utils/bestTimeForEntry が唯一の定義元 (web/mobile 共通)。
   const currentBestTime = useMemo((): { time: number; label: string } | null => {
-    if (!currentStyle || !bestTimes.length) return null;
-
-    const styleName = currentStyle.nameJp;
-    const isRelaying = formData.isRelaying;
-    const otherPoolType = poolType === 0 ? 1 : 0;
-    const otherPoolLabelKey = poolType === 0 ? "bestTimeLong" : "bestTimeShort";
-    const otherPoolRelayLabelKey = poolType === 0 ? "bestTimeLongRelay" : "bestTimeShortRelay";
-
-    // 同じ水路のベストタイムを検索
-    const samePool = bestTimes.find(
-      (bt) => bt.style.name_jp === styleName && bt.pool_type === poolType,
+    if (!currentStyle) return null;
+    const result = getBestTimeForEntry(
+      currentStyle.nameJp,
+      poolType,
+      formData.isRelaying,
+      bestTimes,
     );
-    // 異なる水路のベストタイムを検索
-    const otherPool = bestTimes.find(
-      (bt) => bt.style.name_jp === styleName && bt.pool_type === otherPoolType,
-    );
-
-    if (isRelaying) {
-      // リレーONの場合の優先順位
-      // 1. 同じ水路・リレー
-      if (samePool?.relayingTime) {
-        return { time: samePool.relayingTime.time, label: t("bestTimeRelay") };
-      }
-      // 2. 同じ水路・非リレー
-      if (samePool && !samePool.is_relaying) {
-        return { time: samePool.time, label: t("bestTimeLabel") };
-      }
-      // 3. 異なる水路・リレー
-      if (otherPool?.relayingTime) {
-        return { time: otherPool.relayingTime.time, label: t(otherPoolRelayLabelKey) };
-      }
-      // 4. 異なる水路・非リレー
-      if (otherPool && !otherPool.is_relaying) {
-        return { time: otherPool.time, label: t(otherPoolLabelKey) };
-      }
-    } else {
-      // リレーOFFの場合の優先順位
-      // 1. 同じ水路・非リレー
-      if (samePool && !samePool.is_relaying) {
-        return { time: samePool.time, label: t("bestTimeLabel") };
-      }
-      // 2. 同じ水路・リレー
-      if (samePool?.relayingTime) {
-        return { time: samePool.relayingTime.time, label: t("bestTimeRelay") };
-      }
-      // 3. 異なる水路・非リレー
-      if (otherPool && !otherPool.is_relaying) {
-        return { time: otherPool.time, label: t(otherPoolLabelKey) };
-      }
-      // 4. 異なる水路・リレー
-      if (otherPool?.relayingTime) {
-        return { time: otherPool.relayingTime.time, label: t(otherPoolRelayLabelKey) };
-      }
-    }
-
-    return null;
+    return result ? { time: result.time, label: t(result.labelKey) } : null;
   }, [currentStyle, bestTimes, poolType, formData.isRelaying, t]);
 
   // スプリットタイムを距離でソート
@@ -298,7 +251,13 @@ export default function RecordLogEntry({
         </label>
         <div className="space-y-1.5" data-testid={`record-style-${sectionIndex}`}>
           {/* 距離 */}
-          <div className="flex flex-wrap gap-1">
+          <ChipScrollRow
+            className="gap-1"
+            // 容器の testid は chiprow- 接頭辞の別名前空間。チップ側 testid
+            // (record-style-distance-{idx}-{d}) と先頭が異なるので、後から
+            // [data-testid^="record-style-distance-1-"] を書かれても衝突しない
+            data-testid={`chiprow-record-style-distance-${sectionIndex}`}
+          >
             {distanceOptions.map((d) => {
               const isActive = raceDistance === d;
               return (
@@ -323,9 +282,12 @@ export default function RecordLogEntry({
                 </button>
               );
             })}
-          </div>
+          </ChipScrollRow>
           {/* 泳法 — ラベルは practice.styles 翻訳 */}
-          <div className="flex flex-wrap gap-1">
+          <ChipScrollRow
+            className="gap-1"
+            data-testid={`chiprow-record-style-stroke-${sectionIndex}`}
+          >
             {codeKeysForCurrentDistance.map((ck) => {
               const isActive = currentCodeKey === ck;
               return (
@@ -348,7 +310,7 @@ export default function RecordLogEntry({
                 </button>
               );
             })}
-          </div>
+          </ChipScrollRow>
           {/* リレー (3行目: オンオフトグル) */}
           {canRelay && (
             <button
@@ -384,6 +346,7 @@ export default function RecordLogEntry({
           </label>
           <Input
             type="text"
+            inputMode="decimal"
             value={formData.timeDisplayValue}
             onChange={(e) => onTimeChange(e.target.value)}
             onBlur={(e) => {
@@ -466,23 +429,28 @@ export default function RecordLogEntry({
                 key={st.uiKey || `${index}-${originalIndex}`}
                 className="flex items-center space-x-2"
               >
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={st.distance === 0 || st.distance === "" ? "" : String(st.distance)}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "" || /^\d+(\.\d*)?$/.test(value)) {
-                      onSplitTimeChange(originalIndex, "distance", value);
-                    }
-                  }}
-                  placeholder={t("distance_placeholder")}
-                  className="w-24"
-                  data-testid={`record-split-distance-${sectionIndex}-${originalIndex + 1}`}
-                />
+                {/* 幅はラッパー側で持つ。Input に w-* を渡しても内部 base の w-full と
+                    同時に出力され、CSS 出力順で w-full が後勝ちして効かない */}
+                <div className="w-16 sm:w-24 shrink-0">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={st.distance === 0 || st.distance === "" ? "" : String(st.distance)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "" || /^\d+(\.\d*)?$/.test(value)) {
+                        onSplitTimeChange(originalIndex, "distance", value);
+                      }
+                    }}
+                    placeholder={t("distance_placeholder")}
+                    className="w-full"
+                    data-testid={`record-split-distance-${sectionIndex}-${originalIndex + 1}`}
+                  />
+                </div>
                 <div className="flex-1">
                   <Input
                     type="text"
+                    inputMode="decimal"
                     value={st.splitTimeDisplayValue || ""}
                     onChange={(e) => onSplitTimeChange(originalIndex, "splitTime", e.target.value)}
                     onBlur={(e) => {

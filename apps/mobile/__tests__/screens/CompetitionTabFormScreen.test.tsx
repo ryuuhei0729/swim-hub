@@ -338,34 +338,36 @@ describe("CompetitionTabFormScreen — 編集権限ガード (canEditCompetition
   });
 
   // -------------------------------------------------------------------------
-  // [C-03a] 大会オーナー本人は従来どおり編集できる (非退行)
+  // [C-03a / Sprint Contract 2 で仕様変更] 大会オーナー本人であっても、個人画面からは
+  // basicData を編集できない (owner 判定はもう使わない。team_id の有無のみ)
   // -------------------------------------------------------------------------
-  it("[C-03a] 大会オーナー本人が保存すると updateCompetitionMutation が呼ばれる", async () => {
+  it("[C-03a] 大会オーナー本人でも、team_id 付きなら個人画面からの保存で updateCompetitionMutation は呼ばれない", async () => {
+    // Sprint Contract 2 以前は「オーナー本人は role が admin でなくても編集できる」が
+    // 非退行の前提だったが、Contract 2 が「team_id 付きの行は個人画面から一律編集不可」に
+    // 上書きした (チームタブ /teams-admin/[teamId] からのみ編集可能)。
     const competitionRow = makeCompetitionRow({ user_id: "owner-1", team_id: "team-1" });
-    const { findByTestId, queryByText } = await renderScenario({
+    const { findByTestId, findByText } = await renderScenario({
       userId: "owner-1",
       competitionRow,
-      // オーナー自身は role が admin でなくても編集できることを確認する
       members: [{ user_id: "owner-1", role: "user" }],
     });
 
-    expect(queryByText("この大会の情報はチーム管理者のみ編集できます")).toBeNull();
+    await findByText("この大会の情報はチーム管理者のみ編集できます");
 
     const saveButton = await findByTestId("competition-tab-form-save");
     fireEvent.click(saveButton);
 
     await waitFor(() => expect(h.mockGoBack).toHaveBeenCalled());
-    expect(updateCompetitionMutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "comp-1" }),
-    );
+    expect(updateCompetitionMutateAsync).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
-  // [C-03b] チーム管理者は従来どおり編集できる (非退行)
+  // [C-03b / Sprint Contract 2 で仕様変更] チーム管理者であっても、個人画面からは
+  // basicData を編集できない (admin 判定はもう使わない)
   // -------------------------------------------------------------------------
-  it("[C-03b] チーム管理者 (オーナーではない) が保存すると updateCompetitionMutation が呼ばれる", async () => {
+  it("[C-03b] チーム管理者 (オーナーではない) でも、個人画面からの保存で updateCompetitionMutation は呼ばれない", async () => {
     const competitionRow = makeCompetitionRow({ user_id: "owner-1", team_id: "team-1" });
-    const { findByTestId, queryByText } = await renderScenario({
+    const { findByTestId, findByText } = await renderScenario({
       userId: "admin-1",
       competitionRow,
       members: [
@@ -374,15 +376,13 @@ describe("CompetitionTabFormScreen — 編集権限ガード (canEditCompetition
       ],
     });
 
-    expect(queryByText("この大会の情報はチーム管理者のみ編集できます")).toBeNull();
+    await findByText("この大会の情報はチーム管理者のみ編集できます");
 
     const saveButton = await findByTestId("competition-tab-form-save");
     fireEvent.click(saveButton);
 
     await waitFor(() => expect(h.mockGoBack).toHaveBeenCalled());
-    expect(updateCompetitionMutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "comp-1" }),
-    );
+    expect(updateCompetitionMutateAsync).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -408,24 +408,28 @@ describe("CompetitionTabFormScreen — 編集権限ガード (canEditCompetition
   });
 
   // -------------------------------------------------------------------------
-  // [C-04] チームメンバー取得中は読み取り専用 UI を早出しせず、ローディング表示のままにする
+  // [C-04 / Sprint Contract 2 で仕様変更] canEditCompetitionDetails は team_id の
+  // 有無のみで同期的に決まるため、useTeamMembersQuery が isLoading のままでも
+  // フォームは即座に表示される (admin 判定への依存が無くなったことの確認。
+  // 「権限確定待ち」のローディングガードはもう存在しない)
   // -------------------------------------------------------------------------
-  it("[C-04] チームメンバー取得中はローディング表示のままで、案内バナーも保存ボタンも出ない", async () => {
+  it("[C-04] チームメンバー取得中でも大会データ取得後はフォームが表示され、制限バナーが出る", async () => {
     const competitionRow = makeCompetitionRow({ user_id: "owner-1", team_id: "team-1" });
-    const { findByTestId, queryByTestId, queryByText } = await renderScenario({
+    const { findByTestId, findByText } = await renderScenario({
       userId: "user-1",
       competitionRow,
       members: [],
       membersLoading: true,
     });
 
-    // ローディング表示のまま
-    await findByTestId("loading-spinner");
-    // 管理者が一時的に読み取り専用に倒れて見えてしまう退行が無いこと
-    expect(queryByText("この大会の情報はチーム管理者のみ編集できます")).toBeNull();
-    expect(queryByTestId("competition-tab-form-save")).toBeNull();
+    // team_id が付いている行なので、membersLoading の値に関わらず制限バナーが出て
+    // 保存は実行されない (C-03a/b と同じ Contract 2 の挙動)。
+    await findByText("この大会の情報はチーム管理者のみ編集できます");
+
+    const saveButton = await findByTestId("competition-tab-form-save");
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(h.mockGoBack).toHaveBeenCalled());
 
     expect(updateCompetitionMutateAsync).not.toHaveBeenCalled();
-    expect(updateRecordMutateAsync).not.toHaveBeenCalled();
   });
 });

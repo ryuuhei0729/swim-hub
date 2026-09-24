@@ -9,7 +9,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  KeyboardAvoidingView,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
@@ -19,6 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import {
   useCreateCompetitionMutation,
   useUpdateCompetitionMutation,
@@ -29,22 +30,24 @@ import {
   useBestTimesQuery,
 } from "@apps/shared/hooks/queries/records";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
-import { useTeamMembersQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
+import { useTeamMembersQuery } from "@apps/shared/hooks/queries/teams";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { ErrorView } from "@/components/layout/ErrorView";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
+import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { VideoUploader } from "@/components/shared/VideoUploader";
-import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
 import { ItemTabs } from "@/components/forms/ItemTabs";
 import { StyleChipSelector } from "@/components/forms/StyleChipSelector";
+import { getStyleOption, canRelay } from "@/components/besttime/styleOptions";
 import { LapTimeDisplay, getBestTimeForEntry } from "@/components/records";
 import {
   uploadImagesViaApi,
@@ -56,16 +59,24 @@ import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
-import { normalizeReactionTime, toReactionTimeValue } from "@apps/shared/utils/reactionTime";
+import {
+  parseReactionTimeInput,
+  isReactionTimeInRange,
+  toReactionTimeValue,
+} from "@apps/shared/utils/reactionTime";
 import {
   hasUnsavedChanges,
   isEntryTabVisible,
   diffRecordDraft,
   isDefaultUntouchedEntry,
   getTabNavAdjacency,
+  mergeEntriesIntoRecords,
+  resolveSaveReturnTarget,
+  findLinkedRowDraftId,
 } from "@/utils/tabFormUtils";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
+import { resolveInitialEntryTabIndex } from "@/utils/entryTabIndex";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, RecordInsert } from "@apps/shared/types";
 
@@ -73,6 +84,14 @@ type CompetitionTabFormRouteProp = RouteProp<MainStackParamList, "CompetitionTab
 type CompetitionTabFormNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 type CompetitionTab = "competition" | "entry" | "record";
+
+// タブラベルの i18n キー。タブ一覧 (visibleTabs) から FormTabBar 用の配列を組み立てる
+// ときだけ使う。
+const COMPETITION_TAB_LABEL_KEYS: Record<CompetitionTab, string> = {
+  competition: "competition.form.tabCompetition",
+  entry: "competition.form.tabEntry",
+  record: "competition.form.tabRecord",
+};
 
 // ---- プール種別 ----
 type PoolTypeOption = { value: number; labelKey: string };
@@ -93,6 +112,16 @@ interface EntryDraftRow {
   note: string;
   /** リレー区分 (web EntryDraft.isRelaying と同一) */
   isRelaying: boolean;
+  /**
+   * この行のタイムがベストタイム流用ボタンで入れられたままか (ラッチ)。
+   * shared `EntryDraftRow` (apps/shared/types/team-entry.ts) の同名フィールドとは別物
+   * (あちらは代理入力用で数値 styleId + prefilledInput(string) を持つ)。混同しないこと。
+   *
+   * Sprint Contract v2 裁定2: 値の比較はしない。タイム欄の onChangeText が一度でも
+   * 発火したら (プリフィルと同じ文字列でも) 無条件で null に落とし、以後 "bestTime" に
+   * 戻す経路を持たない (EntriesClient.tsx の参照実装と同じラッチ方式)。
+   */
+  prefillSource: "bestTime" | null;
 }
 
 // ---- スプリットタイム ----
@@ -128,6 +157,7 @@ function createEmptyEntry(): EntryDraftRow {
     entryTimeDisplayValue: "",
     note: "",
     isRelaying: false,
+    prefillSource: null,
   };
 }
 
@@ -164,8 +194,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
     date: initialDateParam,
     teamId,
     initialTab,
+    targetEntryId,
+    origin,
   } = route.params;
-  const { supabase, user, subscription, getAccessToken } = useAuth();
+  const { supabase, user: authUser, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -182,7 +214,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // 既存データ取得時に competitions.team_id (source of truth) で上書きする。
   // handleSave 以降はこの competitionTeamId を唯一の参照先とし、route.params.teamId を
   // 直接参照しない (新規作成モードでは競技データ未取得のためこの初期値がそのまま使われる)。
-  const [competitionOwnerId, setCompetitionOwnerId] = useState<string | null>(null);
   const [competitionTeamId, setCompetitionTeamId] = useState<string | null>(teamId ?? null);
 
   // ---- 大会タブ state ----
@@ -222,6 +253,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // ---- レースレコードタブ state ----
   const [records, setRecords] = useState<RecordDraftRow[]>(initialRecordsRef.current);
   const [activeRecordIndex, setActiveRecordIndex] = useState(0);
+  // スプリットタイムの距離欄を編集中は表示順を固定する (編集完了 = blur 後に距離昇順へ再整列)。
+  // 編集中に生の distance 値で毎キー入力ごと再ソートすると、入力中の行が別の位置へ
+  // ジャンプしてキーボードの外へ出てしまう不具合を防ぐ。
+  const [frozenSplitOrder, setFrozenSplitOrder] = useState<number[] | null>(null);
   const [recordErrors, setRecordErrors] = useState<Record<string, string>>({});
   // 動画保留 (record.draftId → asset)
   // 配列 index キーだとレコード削除で index がずれ、動画の消失/誤添付が起きるため
@@ -238,11 +273,38 @@ export const CompetitionTabFormScreen: React.FC = () => {
   }, []);
 
   // ---- タブ state ----
-  // エントリータブ表示制御: 大会日付が未来のときのみ true
-  const showEntryTab = isEntryTabVisible(date);
-  // レコードタブ表示制御: showEntryTab の補完（今日・過去・空/不正 → true、未来 → false）
-  const showRecordTab = !isEntryTabVisible(date);
+  // visibleTabs はタブバー・フッターの前後タブ・バリデーションの遷移先・保存対象の
+  // 唯一の定義元。タブバーの表示だけを絞ると validateAll がタブバーに無いタブへ
+  // setActiveTab し (どのタブも選択状態にならないままコンテンツだけが描画される)、
+  // handleSave が画面に出していないタブのデータを書き込む。
+  //
+  // origin === "teamAdmin" (チーム管理者ビューの追加/編集導線) では大会タブのみ。
+  // エントリー/記録は一覧画面の一括エントリー・一括記録・エントリー受付モーダルへ
+  // 一本化した。
+  // 絞り込みは origin のみに依存させ、編集権限判定 (canEditCompetitionDetails:
+  // origin と実 admin 判定の AND) とは混ぜない。混ぜると非 admin のときだけ
+  // タブ構成が変わるという説明できない UI になる。
+  const visibleTabs = useMemo((): CompetitionTab[] => {
+    if (origin === "teamAdmin") return ["competition"];
+    const result: CompetitionTab[] = ["competition"];
+    if (isEntryTabVisible(date)) result.push("entry");
+    result.push("record");
+    return result;
+  }, [origin, date]);
+  // エントリータブ表示制御: タブバーにエントリータブがあるとき (= 大会日付が未来で
+  // かつチーム管理者ビューでない) のみ true
+  const showEntryTab = visibleTabs.includes("entry");
+  // レコードタブ表示制御: タブバーにレコードタブがあり、かつ大会日付が未来でないときのみ true。
+  // レコードタブは未来日でもタブバーには残り (中身はガードメッセージ)、
+  // チーム管理者ビューではタブごと消える。この差があるため visibleTabs の
+  // 包含だけでは決まらない。
+  const showRecordTab = visibleTabs.includes("record") && !isEntryTabVisible(date);
   const [activeTab, setActiveTab] = useState<CompetitionTab>(() => {
+    // チーム管理者ビューは大会タブしか存在しないので initialTab を無視して固定する。
+    // useState の初期化関数は初回レンダーでのみ評価されるため、ここで分岐せず
+    // useEffect で後から setActiveTab すると1フレームだけ存在しないタブが
+    // 選択された状態が描画される。
+    if (origin === "teamAdmin") return "competition";
     const requested = initialTab ?? "competition";
     // エントリータブが非表示なのにrequested="entry"の場合は"competition"に戻す
     if (requested === "entry" && !isEntryTabVisible(initialDateParam || "")) {
@@ -262,6 +324,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
   // ---- エントリー1行目に自動セットされたデフォルト種目ID (未編集判定用) ----
   const defaultEntryStyleIdRef = useRef("");
+
+  // ---- エントリー→記録の自動引き継ぎ済み styleId (画面マウント中のみ保持) ----
+  // 一度自動生成した styleId をここに記録し、ユーザーが手動削除した後にタブを
+  // 再度開いても復活させない (mergeEntriesIntoRecords 参照)。state化して再レンダーを
+  // 起こす必要はないので ref で保持する。
+  const mergedEntryStyleIdsRef = useRef<Set<string>>(new Set());
 
   // ---- 保存完了フラグ (usePreventRemove 制御) ----
   // usePreventRemove(preventRemove, ...) の preventRemove は render のたびに評価される
@@ -288,25 +356,71 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase);
 
   // ---- 大会の編集権限判定 ----
-  // competitions UPDATE RLS (user_id = auth.uid() OR is_team_admin(team_id, auth.uid())) と
-  // 同じ条件をクライアント側でも判定する。チーム大会でない場合は自分の大会なので常に true。
-  // メンバー一覧の取得・管理者判定は TeamDetailScreen (members.some(m => m.user_id === user.id
-  // && m.role === "admin")) と同じパターンを踏襲する。
-  const { data: competitionTeamMembers, isLoading: isCompetitionTeamMembersLoading } =
-    useTeamMembersQuery(supabase, competitionTeamId ?? undefined);
+  // 以下、origin === "teamAdmin" の判定が3箇所に現れる (このフック引数 /
+  // isResolvingCompetitionPermission / isCompetitionPermissionUnavailable)。
+  // 冗長に見えるが、それぞれが守る対象は別で、どれか1つを消すと別の1つが肩代わりする
+  // 一方、フック引数と後2者の両方を消すと個人フローで ErrorView が出るようになる
+  // (origin 無しでも fetch が走り、その失敗が画面全体のエラー表示に化ける)。
+  //   - フック引数: 不要な team_memberships フェッチを発生させない
+  //   - isResolvingCompetitionPermission: 答えが変わらない待ちでスピナーを出さない
+  //   - isCompetitionPermissionUnavailable: 個人フローの fetch 失敗を ErrorView にしない
+  // 消してよいのは「フック引数を残したまま後2者のどちらかを消す」か
+  // 「後2者を両方残したままフック引数を消す」場合だけ。
+  //
+  // teamId を渡すのは origin === "teamAdmin" のときだけ。それ以外の経路では
+  // canEditCompetitionDetails が competitionTeamId の有無だけで確定し、メンバー一覧の
+  // 取得結果は一切使われない。無条件に渡すと、ダッシュボード/カレンダーから他人の
+  // チーム大会を開いただけで、そのチームの非メンバーでも team_memberships への
+  // list クエリが飛ぶ。
+  const {
+    data: competitionTeamMembers,
+    isLoading: isCompetitionTeamMembersLoading,
+    isError: isCompetitionTeamMembersError,
+    refetch: refetchCompetitionTeamMembers,
+  } = useTeamMembersQuery(
+    supabase,
+    origin === "teamAdmin" ? (competitionTeamId ?? undefined) : undefined,
+  );
   const isCurrentUserCompetitionTeamAdmin = useMemo(() => {
-    if (!user || !competitionTeamId || !competitionTeamMembers) return false;
-    return competitionTeamMembers.some((m) => m.user_id === user.id && m.role === "admin");
-  }, [user, competitionTeamId, competitionTeamMembers]);
+    if (!authUser || !competitionTeamId || !competitionTeamMembers) return false;
+    // TeamMember.user_id は users.id (membership の id ではない)
+    return competitionTeamMembers.some((m) => m.user_id === authUser.id && m.role === "admin");
+  }, [authUser, competitionTeamId, competitionTeamMembers]);
+
+  // 個人画面 (dashboard/大会タブ・カレンダー) では、チーム大会の基本情報は admin で
+  // あっても編集不可。ただし「チーム管理者ビュー (管理者の追加/鉛筆ボタン)」経由の
+  // 編集は route params の origin==="teamAdmin" で明示され、かつ実際に当該チームの
+  // admin である場合のみ許可する。origin だけで許可すると UI が RLS より広くなり、
+  // 非 admin に編集可能なフォームと保存ボタンを見せた末に、RLS 拒否で 0 行 UPDATE →
+  // RecordAPI.updateCompetition の .select().single() が PGRST116 を throw して
+  // 「保存に失敗しました」で終わる。入力を最後まで書かせてから失敗させる UI になる。
+  // 作成者本人 (owner) 判定は使わない (チーム大会の基本情報はチームの持ち物)。
   const canEditCompetitionDetails = useMemo(() => {
     if (!isEditMode) return true; // 新規作成は常に自分の大会
     if (!competitionTeamId) return true; // 個人の大会は常に自分のもの
-    if (user && competitionOwnerId === user.id) return true;
-    return isCurrentUserCompetitionTeamAdmin;
-  }, [isEditMode, competitionTeamId, competitionOwnerId, user, isCurrentUserCompetitionTeamAdmin]);
-  // チーム大会の編集権限確定待ち (未確定のまま編集可能 UI を出さないためのローディングガード)
+    return origin === "teamAdmin" && isCurrentUserCompetitionTeamAdmin;
+  }, [isEditMode, competitionTeamId, origin, isCurrentUserCompetitionTeamAdmin]);
+  // チーム大会の編集権限確定待ち (未確定のまま編集可能 UI / バナー / 保存ボタンを
+  // 出さないためのローディングガード)。
+  // origin === "teamAdmin" のときだけ待つ: origin 無しの経路では
+  // canEditCompetitionDetails が competitionTeamId の有無だけで false に確定し、
+  // チームメンバーの取得結果は答えを変えない。答えが変わり得ない待ちで全画面
+  // スピナーを出すと、ダッシュボード/カレンダーからチーム大会を開いたときに
+  // 制限バナー付きフォームの表示が無意味に遅れる。
+  // PracticeTabFormScreen の isResolvingPracticePermission は origin を見ない。
+  // こちらは既にリリース済みの挙動をテストが固定しているため今回は追従させず、
+  // 別債務として残す。
   const isResolvingCompetitionPermission =
-    isEditMode && !!competitionTeamId && isCompetitionTeamMembersLoading;
+    origin === "teamAdmin" && isEditMode && !!competitionTeamId && isCompetitionTeamMembersLoading;
+  // 権限判定に必要なメンバー一覧の取得が失敗した状態。
+  // isError のときは isLoading=false / data=undefined になるため、放置すると
+  // isCurrentUserCompetitionTeamAdmin が false に倒れ、正規の管理者に制限バナーと
+  // 読み取り専用フォームが出たまま「保存して終了」が押せてしまう。その保存は
+  // 基本情報の更新をスキップし (canEditCompetitionDetails=false)、エントリー/
+  // レースレコードもタブごと非表示でスキップされるため、1件も書かずに画面が閉じて
+  // ユーザーには成功と区別がつかない。権限が確定できないことを明示して再試行させる。
+  const isCompetitionPermissionUnavailable =
+    origin === "teamAdmin" && isEditMode && !!competitionTeamId && isCompetitionTeamMembersError;
 
   // ---- EntryAPI ----
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
@@ -399,8 +513,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
         setPlace(competition.place || "");
         setPoolType(competition.pool_type);
         setCompetitionNote(competition.note || "");
-        // 編集権限判定 (competitions UPDATE RLS と同条件をクライアントでも反映する)
-        setCompetitionOwnerId(competition.user_id);
         setCompetitionTeamId(competition.team_id ?? null);
         // 保存用の生パスは表示用の解決結果と独立して常に保持する
         setSavedImagePaths(competition.image_paths ?? []);
@@ -433,9 +545,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
                 entryTimeDisplayValue: e.entry_time ? formatTimeBest(e.entry_time) : "",
                 note: e.note || "",
                 isRelaying: e.is_relaying ?? false,
+                // 既存 DB エントリーの復元行は流用ボタンを押していないので未流用扱い
+                prefillSource: null,
               }))
             : [createEmptyEntry()];
         setEntries(initialEntries);
+        // Sprint Contract D9: targetEntryId (entries.id) に対応する行の項目タブを開く。
+        // 未指定・該当行なしのときは resolveInitialEntryTabIndex が先頭 (0) を返す
+        // (既存呼び出し元の非退行、および他端末での直前削除等のフォールバック)。
+        setActiveEntryIndex(
+          resolveInitialEntryTabIndex(initialEntries, targetEntryId),
+        );
 
         // レースレコードデータ取得 (C-5: 編集モードで既存レコードを初期化)
         // RecordAPI に competition_id フィルタ付きメソッドが無いため getRecords() で全件取得後
@@ -525,6 +645,51 @@ export const CompetitionTabFormScreen: React.FC = () => {
     }
   }, [date, activeTab]);
 
+  // ---- 記録タブオープン時: エントリー入力を記録行へ引き継ぐ ----
+  // 旧 EntryLogFormScreen の「続けて大会記録を作成」相当。DB 復元エントリー
+  // (initialTab: "record" で直接開かれ、非同期取得が effect 実行後に完了するケース)
+  // からも引き継ぐ必要があるため、依存に entries を含める。records は含めない
+  // (records を依存に入れて setRecords すると自己再発火し無限ループになるため)。
+  //
+  // entries を依存に含めると、双方向リンク (handleRecordStyleChange 内の updateEntry
+  // 呼び出し。本ファイル内 handleRecordStyleChange 参照) により「record タブ内で
+  // 無関係な行の種目を変更しただけ」でも entries が変化しこの effect が再発火するが、
+  // 収束は以下の理由で保証される:
+  // 1. mergeEntriesIntoRecords は「追加すべき styleId が無ければ addedStyleIds: []」を
+  //    返す。呼び出し側は addedStyleIds が空なら setRecords 自体を呼ばない (下記)ため、
+  //    この場合は render も再実行されず、この effect も再発火しない。
+  // 2. handleRecordStyleChange は findLinkedRowDraftId (styleId 突き合わせ) で
+  //    見つかった対応エントリー行だけを新しい styleId に書き換える。その styleId は
+  //    同じ操作で records 側 (updateRecord 呼び出し先の同一行) にも既に反映済みで
+  //    あり、次に mergeEntriesIntoRecords が見る records の existingStyleIds に
+  //    含まれるため missingStyleIds に入らない (= addedStyleIds は空になる。
+  //    上記1に帰着)。対応するエントリー行が見つからない場合は updateEntry 自体が
+  //    呼ばれず entries は変化しないため、この effect も再発火しない。
+  // 3. mergedEntryStyleIdsRef による恒久ガードにより、仮に一度 addedStyleIds に
+  //    載った styleId があっても、その styleId は以後二度と addedStyleIds に
+  //    入らない (ユーザーが行を手動削除して entries だけが再度変化しても復活しない)。
+  //    styleId の集合は有限 (swimStyles の件数が上限) なので、この effect が
+  //    「setRecords を呼ぶ」回数は種目数を超えて増え続けることがなく、
+  //    有限回で「addedStyleIds が常に空」の状態に落ち着く。
+  useEffect(() => {
+    if (activeTab !== "record") return;
+    const result = mergeEntriesIntoRecords(
+      records,
+      entries,
+      defaultEntryStyleIdRef.current,
+      (styleId) => ({ ...createEmptyRecord(), styleId }),
+      mergedEntryStyleIdsRef.current,
+    );
+    // addedStyleIds が空 = records と同一参照。setRecords 自体を呼ばないことで
+    // 無駄な再レンダー (延いてはこの effect の再発火の起点) を作らない。
+    if (result.addedStyleIds.length === 0) return;
+    for (const styleId of result.addedStyleIds) {
+      mergedEntryStyleIdsRef.current.add(styleId);
+    }
+    setRecords(result.records);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, entries]);
+
   // ---- 開始日変更ハンドラ ----
   const handleStartDateChange = useCallback(
     (newDate: string) => {
@@ -544,19 +709,45 @@ export const CompetitionTabFormScreen: React.FC = () => {
   );
 
   // ---- 保存完了 → 前画面へ戻る ----
-  // setIsSaved(true) の直後に navigation.goBack() を同期で呼ぶと、preventRemove=false を
-  // 反映したレンダーが commit される前に REMOVE アクションが発行されてしまう。isSaved の
-  // 変化で再レンダーが commit されるのを待ってからこの effect 経由で goBack() することで、
-  // preventRemove=false が確定した状態で REMOVE を発行する。
+  // setIsSaved(true) の直後に navigation.goBack()/popTo() を同期で呼ぶと、
+  // preventRemove=false を反映したレンダーが commit される前に REMOVE アクションが
+  // 発行されてしまう。isSaved の変化で再レンダーが commit されるのを待ってからこの
+  // effect 経由で呼ぶことで、preventRemove=false が確定した状態で REMOVE を発行する
+  // (popTo も REMOVE 系アクションのため同じ制約を受ける)。
+  //
+  // チーム大会フロー (TeamCompetitionList の「追加」/「編集」から CompetitionForm
+  // 経由で replace されて開かれる) は goBack() だけだと TeamDetail まで戻れない。
+  // route.params.teamId (state 化した competitionTeamId ではなく生の route パラメータ)
+  // があれば popTo("TeamDetail") で一気に戻す。
+  // competitionTeamId は既存データ取得後に competitions.team_id で
+  // 上書きされるため (competitionTeamId の初期化コメント参照)、ダッシュボード発の個人フローで
+  // 「たまたまチームの大会を編集した」場合にも非 null になりうる。その場合に
+  // popTo してしまうと来歴に無い TeamDetail へ誤って飛ばす。route.params.teamId は
+  // TeamCompetitionList 発の経路でのみ渡され (useDayDetailHandlers 経由の個人フローでは
+  // 渡らない)、スタック上に TeamDetail が実在することの唯一の信頼できる手がかりのため
+  // こちらを使う。
+  // 個人フローは従来通り goBack() のままとする
+  // (resolveSaveReturnTarget の fallback: "goBack" で明示指定)。
+  // teamId が空文字のときもこの fallback により goBack となる。
   useEffect(() => {
-    if (isSaved) {
+    if (!isSaved) return;
+    const target = resolveSaveReturnTarget(teamId, { fallback: "goBack" });
+    if (target.kind === "team") {
+      navigation.popTo("TeamDetail", { teamId: target.teamId, initialTab: "competitions" });
+    } else if (target.kind === "goBack") {
       navigation.goBack();
+    } else {
+      navigation.popToTop();
     }
-  }, [isSaved, navigation]);
+  }, [isSaved, navigation, teamId]);
 
   // ---- 破棄確認 ----
   // snapshotRef の更新は必ず対応する state 変更を伴わせること (伴わないと memo が再計算されず stale になる)
   const changedFromSnapshot = useMemo(() => {
+    // スナップショット未確定 (ロード前) は「未変更」に倒す。比較対象が無い状態で
+    // 変更ありにすると、まだ何も入力していない画面を閉じるだけで破棄ダイアログが出る。
+    // handleSave の competitionBasicChanged は同じ null を逆向き (変更あり) に倒して
+    // いる。あちらは取りこぼすと入力が無言で消えるため。判定の目的が違うので向きも違う。
     if (!snapshotRef.current) return false;
     return hasUnsavedChanges(
       { date, endDate, title, place, poolType, note: competitionNote, entries, records },
@@ -621,10 +812,23 @@ export const CompetitionTabFormScreen: React.FC = () => {
   }, [date, endDate, t]);
 
   // ---- エントリータブ バリデーション (空→valid) ----
+  // 未編集のデフォルト行は検証対象から外す (validateRecordTab の「全フィールド空なら
+  // スキップ」と同じ形)。判定は handleSave の effectiveEntries フィルタ
+  // と同一の述語 isDefaultUntouchedEntry・同一の引数 defaultEntryStyleIdRef.current を
+  // 使う。validate 側と save 側が別の述語で「未編集」を判定すると、一方は通すのに
+  // 他方は捨てる (またはその逆) という不整合が起きるため、判定基準を1箇所に揃える。
+  // これが無いと、ユーザーが一切触っていない行のために「種目を選択してください」で
+  // save 全体がブロックされ、「デフォルト行に触らなければ登録しない」という
+  // isDefaultUntouchedEntry 本来の意図 (過去のエントリー誤登録バグの修正) が
+  // 検証の手前で無効化されてしまう。
+  // isDefaultUntouchedEntry は全フィールドが未入力のときだけ true を返すため、
+  // 種目だけ選んだ・タイムだけ入れた等「部分的に触られた行」はここでは false になり
+  // 従来通り下のチェック対象になる (スキップされるのは完全な未編集行のみ)。
   const validateEntryTab = useCallback((): boolean => {
     if (!showEntryTab) return true;
     const newErrors: Record<string, string> = {};
     entries.forEach((entry, index) => {
+      if (isDefaultUntouchedEntry(entry, defaultEntryStyleIdRef.current)) return;
       if (!entry.styleId) {
         newErrors[`style-${index}`] = t("competition.entry.selectStyleRequired");
       }
@@ -634,8 +838,13 @@ export const CompetitionTabFormScreen: React.FC = () => {
         newErrors[`entryTime-${index}`] = t("competition.entry.timeFormatInvalid");
       }
     });
-    // 種目重複チェック (web CompetitionTabModal validateAll と同一)
-    const styleIds = entries.filter((e) => e.styleId).map((e) => e.styleId);
+    // 種目重複チェック (web CompetitionTabModal validateAll と同一)。
+    // 未編集行は effectiveEntries でも保存対象から外れる (= 重複の実害が無い) ため、
+    // ここでも同じ述語で除外し、未編集行同士 (または未編集行と実際の入力行) の
+    // styleId 一致を「重複」として誤検知しないようにする。
+    const styleIds = entries
+      .filter((e) => e.styleId && !isDefaultUntouchedEntry(e, defaultEntryStyleIdRef.current))
+      .map((e) => e.styleId);
     if (styleIds.length !== new Set(styleIds).size) {
       newErrors.duplicate = t("forms.tabModal.duplicateEntryStyle");
     }
@@ -658,6 +867,15 @@ export const CompetitionTabFormScreen: React.FC = () => {
       if (rawTime !== "" && parseTimeFlexible(rawTime) === null) {
         newErrors[`time-${index}`] = t("recordMobile.form.timeFormatInvalid");
       }
+      const rawReactionTime = record.reactionTime.trim();
+      if (rawReactionTime !== "") {
+        const parsedReactionTime = parseReactionTimeInput(rawReactionTime);
+        if (parsedReactionTime === null) {
+          newErrors[`reactionTime-${index}`] = t("recordMobile.form.reactionTimeFormatInvalid");
+        } else if (!isReactionTimeInRange(parsedReactionTime)) {
+          newErrors[`reactionTime-${index}`] = t("recordMobile.form.reactionTimeRange");
+        }
+      }
     });
     setRecordErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -679,16 +897,19 @@ export const CompetitionTabFormScreen: React.FC = () => {
       setActiveTab("competition");
       return false;
     }
-    if (!entryValid && showEntryTab) {
+    // タブバーに存在しないタブへ setActiveTab しないこと。飛ばすとどのタブも選択状態に
+    // ならないまま、そのタブのコンテンツだけが描画される。遷移可否は visibleTabs
+    // (タブ一覧の唯一の定義元) で判定する。
+    if (!entryValid && visibleTabs.includes("entry")) {
       setActiveTab("entry");
       return false;
     }
-    if (!recordValid) {
+    if (!recordValid && visibleTabs.includes("record")) {
       setActiveTab("record");
       return false;
     }
     return true;
-  }, [validateCompetitionTab, validateEntryTab, validateRecordTab, showEntryTab]);
+  }, [validateCompetitionTab, validateEntryTab, validateRecordTab, visibleTabs]);
 
   // ---- 保存ハンドラ ----
   const handleSave = useCallback(async () => {
@@ -708,13 +929,63 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
       let savedCompetitionId = resolvedCompetitionId;
 
+      // --- 編集不可なのに基本情報が変わっている場合は「何も書かずに成功」を防ぐ ---
+      // チーム管理者ビューではエントリー/レースレコードのタブが無く、書き込み対象は
+      // 基本情報だけになる。その基本情報が canEditCompetitionDetails=false でスキップ
+      // されると handleSave は1件も書かずに setIsSaved(true) まで到達し、画面が閉じて
+      // ユーザーには保存成功と区別がつかない。フィールドは disabled なので通常は
+      // ここに到達しないが、編集中に権限判定が true→false へ変わった場合 (キャッシュ
+      // ヒットで編集を始めた後に refetch が失敗する等) に入力が無言で捨てられる。
+      // スナップショット未確定 (ロード前) は「変更あり」に倒す。比較対象が無いまま
+      // 未変更と見なすと、編集不可の状態で保存を素通しして無言の no-op 保存になる。
+      // 破棄確認の changedFromSnapshot は同じ null を逆向き (未変更) に倒している。
+      // あちらは誤検知するとユーザーを不要なダイアログで煩わせるため。
+      const savedSnapshot = snapshotRef.current;
+      const competitionBasicChanged =
+        !savedSnapshot ||
+        // hasUnsavedChanges は JSON.stringify 同士の文字列比較なので、下2つのリテラルは
+        // キーの並び順まで揃えること (順序が食い違うと値が同じでも常に差分ありになり、
+        // 個人フローの非 admin がチーム大会のエントリー/記録を保存できなくなる)。
+        hasUnsavedChanges(
+          { date, endDate, title, place, poolType, note: competitionNote },
+          {
+            date: savedSnapshot.date,
+            endDate: savedSnapshot.endDate,
+            title: savedSnapshot.title,
+            place: savedSnapshot.place,
+            poolType: savedSnapshot.poolType,
+            note: savedSnapshot.note,
+          },
+        ) ||
+        newImageFiles.length > 0 ||
+        deletedImageIds.length > 0;
+      if (
+        isEditMode &&
+        savedCompetitionId &&
+        !canEditCompetitionDetails &&
+        competitionBasicChanged
+      ) {
+        setSaveError(t("forms.tabModal.competitionSaveBlockedNoPermission"));
+        return;
+      }
+
       // --- 大会 INSERT or UPDATE ---
       if (isEditMode && savedCompetitionId) {
         // 更新: チーム大会かつ自分がオーナーでも管理者でもない場合は competitions
         // UPDATE RLS (user_id = auth.uid() OR is_team_admin) を満たさず 0 行ヒットで
         // 例外になる。その場合は大会本体の更新をスキップし、エントリー/レコード
         // (records の RLS は本人所有で許可される) の保存へ進む。
-        if (canEditCompetitionDetails) {
+        // isResolvingCompetitionPermission は「このチームの members をまだ一度も取得
+        // できていない」間だけ true になる防御で、画面全体のローディング表示が Save
+        // ボタンの描画自体をブロックする経路を保存ハンドラ側でも二重に塞ぐ
+        // (PracticeTabFormScreen の同名ガードと同型)。
+        // 【カバーしない経路】useTeamMembersQuery は staleTime: 5分 (apps/shared/hooks/
+        // queries/teams.ts) を持つため、直近5分以内に同じチームの members を取得済みだと
+        // isLoading=false・stale なキャッシュ値 (例: 剥奪前の admin=true) が返る。
+        // その場合このガードは効かないが、competitions UPDATE は実際の RLS で評価され、
+        // RecordAPI.updateCompetition の .select().single() が 0 行時に PGRST116 を
+        // throw するため、権限昇格や無言のデータ損失には至らない。
+        if (canEditCompetitionDetails && !isResolvingCompetitionPermission) {
           let newImagePaths: string[] = [];
           if (newImageFiles.length > 0) {
             const uploadResults = await uploadImagesViaApi(
@@ -816,7 +1087,26 @@ export const CompetitionTabFormScreen: React.FC = () => {
         }
       }
 
-      // --- エントリー保存 (大会日付が未来のときのみ) ---
+      // --- エントリー保存 (エントリータブを表示しているときのみ) ---
+      // 【画面に出していないタブのデータをどう扱うかの決定】
+      // 画面に出していないタブのデータは保存対象から「外す」。書き込みも削除もしない。
+      // 理由: チーム管理者ビュー (origin==="teamAdmin") ではエントリー/レースレコードの
+      // タブごと画面から消える。判定はすべて visibleTabs 由来だが、参照する式は箇所ごとに
+      // 違うので実態を書き残す:
+      //   - validate の中身とこの保存ブロック: showEntryTab / showRecordTab
+      //   - validate の遷移先 (setActiveTab): visibleTabs.includes("entry") /
+      //     visibleTabs.includes("record")
+      //   - entry コンテンツの描画: activeTab === "entry" && showEntryTab
+      //   - record コンテンツの描画: activeTab === "record" && visibleTabs.includes("record")
+      // コンテンツ描画で entry と record の形が違うのは意図的:
+      // showEntryTab は visibleTabs.includes("entry") の別名 (定義が完全に同値) なので
+      // どちらを書いても同じだが、showRecordTab は visibleTabs.includes("record") に
+      // && !isEntryTabVisible(date) が付いていて同値ではない。record コンテンツで
+      // showRecordTab を使うと、タブは存在する未来日でガードメッセージごと消えてしまう。
+      // ユーザーが見ても触ってもいない state を
+      // 書き込むと、フォームの初期値 (デフォルト1行) が意図しない登録になり、逆に
+      // 差分計算を通すと既存のエントリー/記録が「画面上で削除された」と解釈されて
+      // 消える。ブロックごとスキップすれば既存データは DB にそのまま残る。
       // 未編集のデフォルト行 (種目取得後に自動セットされた1行目が未操作のまま) は
       // 保存対象から除外する。編集モードの既存行 (existingEntryId あり) は対象外。
       const effectiveEntries = entries.filter(
@@ -892,8 +1182,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
         }
       }
 
-      // --- レースレコード保存 (大会日付が今日以前のときのみ) ---
+      // --- レースレコード保存 (レースレコードタブを表示しているときのみ) ---
       // diffRecordDraft が単一の権威となり creates/updates/deletes を決定する。
+      // タブを表示していないとき (未来日 / チーム管理者ビュー) はブロックごとスキップし、
+      // 既存レコードに触れない (上のエントリー保存と同じ決定)。
       if (savedCompetitionId && showRecordTab) {
         // プールタイプを取得
         const { data: competitionForPool } = await supabase
@@ -1023,6 +1315,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     resolvedCompetitionId,
     isEditMode,
     canEditCompetitionDetails,
+    isResolvingCompetitionPermission,
     date,
     endDate,
     title,
@@ -1066,6 +1359,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           entryTimeDisplayValue: "",
           note: "",
           isRelaying: false,
+          prefillSource: null,
         },
       ];
       setActiveEntryIndex(next.length - 1);
@@ -1096,7 +1390,14 @@ export const CompetitionTabFormScreen: React.FC = () => {
         if ("entryTimeDisplayValue" in updates) {
           const tv = updates.entryTimeDisplayValue || "";
           const parsed = tv.trim() !== "" ? (parseTimeFlexible(tv) ?? 0) : 0;
-          updated.entryTime = parsed;
+          // 呼び出し元が entryTime を明示的に渡した場合はそちらを権威とする
+          // (例: applyEntryBestTimePrefill はバッジと同じ生値を渡す。formatTimeBest ⇄
+          // parseTimeFlexible の往復は 1 ULP 非可逆なため、ここで再パース結果に
+          // 上書きすると保存値がバッジの値からずれる)。エラー表示の判定・更新は
+          // 手入力時と同じくこの再パース結果を使い続ける (ガードするのは代入のみ)。
+          if (!("entryTime" in updates)) {
+            updated.entryTime = parsed;
+          }
           if (tv.trim() !== "" && parsed <= 0) {
             setEntryErrors((prev) => ({
               ...prev,
@@ -1219,49 +1520,88 @@ export const CompetitionTabFormScreen: React.FC = () => {
     [],
   );
 
-  // ---- 双方向リンク: entry[i] <-> record[i] (web CompetitionTabModal :733-774 と同一) ----
+  // ---- 双方向リンク: entry ⇔ record (styleId 突き合わせ。web CompetitionTabModal の
+  // handleEntryStyleChange / handleLinkedRecordStyleChange 等の元実装は index 突き合わせ
+  // だったが、entries/records の行数・並び順が一致しなくなりうる理由は
+  // mergeEntriesIntoRecords の JSDoc を参照。mobile はここで styleId 突き合わせに変更した
+  // (linkedEntryTime のバッジ表示を styleId 突き合わせにしたのと同じ理由)。----
+  //
+  // findLinkedRowDraftId には必ず変更前の entries/records をそのまま渡すこと。
+  // updateEntry/updateRecord で state を更新する前に (＝この関数呼び出しの時点で
+  // まだ styleId が書き換わっていない entries/records を使って) 相手の draftId を
+  // 計算してから、その後で更新系の呼び出しを行う。
   const handleEntryStyleChange = useCallback(
-    (draftId: string, index: number, styleId: string) => {
-      updateEntry(draftId, { styleId });
-      const linkedRecord = records[index];
-      if (linkedRecord) {
-        updateRecord(linkedRecord.draftId, { styleId });
+    (draftId: string, styleId: string) => {
+      const linkedRecordDraftId = findLinkedRowDraftId(entries, draftId, records);
+      // 種目を変えたら流用状態をリセットする (別種目のベストタイムが
+      // 未編集扱いのまま残ると誤ったバッジが出るため。Sprint Contract v2 裁定2)
+      updateEntry(draftId, { styleId, prefillSource: null });
+      if (linkedRecordDraftId) {
+        updateRecord(linkedRecordDraftId, { styleId });
       }
     },
-    [updateEntry, updateRecord, records],
+    [updateEntry, updateRecord, entries, records],
   );
 
+  // ---- ベストタイム流用 (Sprint Contract 裁定1: バッジに表示されている値と常に同一) ----
+  // 呼び出し元は entryBestTime.time (バッジ算出と同じ getBestTimeForEntry の戻り値) を渡すこと。
+  // ここで別の取得経路を新設しない。
+  // entryTime は bestTimeValue をそのまま渡す (updateEntry 側で entryTime in updates を
+  // ガードにして再パース上書きを止めているため、保存値がバッジの生値と一致する。
+  // formatTimeBest ⇄ parseTimeFlexible の往復は 1 ULP 非可逆で、表示専用の
+  // entryTimeDisplayValue に頼ると保存値が劣化する)。
+  const applyEntryBestTimePrefill = useCallback(
+    (draftId: string, bestTimeValue: number) => {
+      updateEntry(draftId, {
+        entryTime: bestTimeValue,
+        entryTimeDisplayValue: formatTimeBest(bestTimeValue),
+        prefillSource: "bestTime",
+      });
+    },
+    [updateEntry],
+  );
+
+  // ---- 水路 (pool_type) 変更 ----
+  // poolType は大会1件に対して1値 (全エントリー行が共有) なので、水路を切り替えると
+  // getBestTimeForEntry の同水路/他水路フォールバックが行ごとに変わりうる。プリフィル済みの
+  // 値が表示中のベストタイムと対応しなくなるため、全エントリー行のラッチを落とす
+  // (1行だけではなく全行。Sprint Contract v2 裁定2)。
+  const handlePoolTypeChange = useCallback((value: number) => {
+    setPoolType(value);
+    setEntries((prev) => prev.map((e) => (e.prefillSource ? { ...e, prefillSource: null } : e)));
+  }, []);
+
   const handleEntryToggleRelaying = useCallback(
-    (draftId: string, index: number, next: boolean) => {
+    (draftId: string, next: boolean) => {
+      const linkedRecordDraftId = findLinkedRowDraftId(entries, draftId, records);
       updateEntry(draftId, { isRelaying: next });
-      const linkedRecord = records[index];
-      if (linkedRecord) {
-        updateRecord(linkedRecord.draftId, { isRelaying: next });
+      if (linkedRecordDraftId) {
+        updateRecord(linkedRecordDraftId, { isRelaying: next });
       }
     },
-    [updateEntry, updateRecord, records],
+    [updateEntry, updateRecord, entries, records],
   );
 
   const handleRecordStyleChange = useCallback(
-    (draftId: string, index: number, styleId: string) => {
+    (draftId: string, styleId: string) => {
+      const linkedEntryDraftId = findLinkedRowDraftId(records, draftId, entries);
       updateRecord(draftId, { styleId });
-      const linkedEntry = entries[index];
-      if (linkedEntry) {
-        updateEntry(linkedEntry.draftId, { styleId });
+      if (linkedEntryDraftId) {
+        updateEntry(linkedEntryDraftId, { styleId });
       }
     },
-    [updateRecord, updateEntry, entries],
+    [updateRecord, updateEntry, records, entries],
   );
 
   const handleRecordToggleRelaying = useCallback(
-    (draftId: string, index: number, next: boolean) => {
+    (draftId: string, next: boolean) => {
+      const linkedEntryDraftId = findLinkedRowDraftId(records, draftId, entries);
       updateRecord(draftId, { isRelaying: next });
-      const linkedEntry = entries[index];
-      if (linkedEntry) {
-        updateEntry(linkedEntry.draftId, { isRelaying: next });
+      if (linkedEntryDraftId) {
+        updateEntry(linkedEntryDraftId, { isRelaying: next });
       }
     },
-    [updateRecord, updateEntry, entries],
+    [updateRecord, updateEntry, records, entries],
   );
 
   // ---- タイム入力 ----
@@ -1350,14 +1690,48 @@ export const CompetitionTabFormScreen: React.FC = () => {
     [t],
   );
 
-  // ---- 反応時間: blur 時に shared/utils/reactionTime の範囲へクランプ ----
-  const handleReactionTimeBlur = useCallback((draftId: string) => {
-    setRecords((prev) =>
-      prev.map((r) =>
-        r.draftId === draftId ? { ...r, reactionTime: normalizeReactionTime(r.reactionTime) } : r,
-      ),
-    );
-  }, []);
+  // ---- 反応時間: blur 時に parseReactionTimeInput で構造ガードし、
+  // 解釈不能な入力・範囲外の入力は確定せずエラー表示する (タイム入力と同一方式) ----
+  const handleReactionTimeBlur = useCallback(
+    (draftId: string) => {
+      setRecords((prev) =>
+        prev.map((r, index) => {
+          if (r.draftId !== draftId) return r;
+          const raw = r.reactionTime.trim();
+          if (raw === "") {
+            setRecordErrors((prevErrors) => {
+              const next = { ...prevErrors };
+              delete next[`reactionTime-${index}`];
+              return next;
+            });
+            return { ...r, reactionTime: "" };
+          }
+          const parsed = parseReactionTimeInput(raw);
+          if (parsed === null) {
+            setRecordErrors((prevErrors) => ({
+              ...prevErrors,
+              [`reactionTime-${index}`]: t("recordMobile.form.reactionTimeFormatInvalid"),
+            }));
+            return r;
+          }
+          if (!isReactionTimeInRange(parsed)) {
+            setRecordErrors((prevErrors) => ({
+              ...prevErrors,
+              [`reactionTime-${index}`]: t("recordMobile.form.reactionTimeRange"),
+            }));
+            return r;
+          }
+          setRecordErrors((prevErrors) => {
+            const next = { ...prevErrors };
+            delete next[`reactionTime-${index}`];
+            return next;
+          });
+          return { ...r, reactionTime: String(Math.round(parsed * 100) / 100) };
+        }),
+      );
+    },
+    [t],
+  );
 
   // ---- スプリットタイム操作 ----
   // Free プランの課金対象カウントはゴール地点スプリット (distance === raceDistance) を除外する
@@ -1468,6 +1842,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
       setRecords((prev) =>
         prev.map((r) => {
           if (r.draftId !== draftId) return r;
+          const style = swimStyles.find((s) => s.id.toString() === r.styleId);
+          const raceDistance = style?.distance;
+          // ゴール地点スプリット (distance === raceDistance) のタイムを編集した場合は
+          // 逆方向にも同期する (タイム → スプリットは handleRecordTimeChange 側で対応済み)
+          let syncedTime: number | undefined;
+          let syncedTimeDisplayValue: string | undefined;
           const updatedSplitTimes = r.splitTimes.map((st, i) => {
             if (i !== splitIndex) return st;
             if (field === "distance") {
@@ -1477,17 +1857,31 @@ export const CompetitionTabFormScreen: React.FC = () => {
             }
             // blur / 保存時の確定値と同じ parseTimeFlexible 解釈。入力中は生文字列を保持する
             const parsedTime = value.trim() === "" ? 0 : (parseTimeFlexible(value) ?? 0);
+            if (
+              raceDistance != null &&
+              typeof st.distance === "number" &&
+              st.distance === raceDistance
+            ) {
+              syncedTime = parsedTime;
+              syncedTimeDisplayValue = value;
+            }
             return {
               ...st,
               splitTimeDisplayValue: value,
               splitTime: parsedTime,
             };
           });
-          return { ...r, splitTimes: updatedSplitTimes };
+          return {
+            ...r,
+            splitTimes: updatedSplitTimes,
+            ...(syncedTimeDisplayValue !== undefined
+              ? { time: syncedTime, timeDisplayValue: syncedTimeDisplayValue }
+              : {}),
+          };
         }),
       );
     },
-    [],
+    [swimStyles],
   );
 
   const handleRemoveSplitTime = useCallback((draftId: string, splitIndex: number) => {
@@ -1499,27 +1893,46 @@ export const CompetitionTabFormScreen: React.FC = () => {
     );
   }, []);
 
-  // スプリットタイムの blur 時に確定値へ再フォーマット (タイム欄と同じ UX)
+  // スプリットタイムの blur 時に確定値へ再フォーマット (タイム欄と同じ UX)。
+  // ゴール地点スプリットの場合はタイムへも同期する (逆方向の同期)
   const handleSplitTimeBlur = useCallback(
     (draftId: string, splitIndex: number) => {
       setRecords((prev) =>
         prev.map((r) => {
           if (r.draftId !== draftId) return r;
+          const style = swimStyles.find((s) => s.id.toString() === r.styleId);
+          const raceDistance = style?.distance;
+          let syncedTime: number | undefined;
+          let syncedTimeDisplayValue: string | undefined;
           const updatedSplitTimes = r.splitTimes.map((st, i) => {
             if (i !== splitIndex) return st;
             const parsed = parseTimeFlexible(st.splitTimeDisplayValue);
             if (parsed === null) return st;
+            if (
+              raceDistance != null &&
+              typeof st.distance === "number" &&
+              st.distance === raceDistance
+            ) {
+              syncedTime = parsed;
+              syncedTimeDisplayValue = formatTimeBest(parsed);
+            }
             return {
               ...st,
               splitTimeDisplayValue: formatTimeBest(parsed),
               splitTime: parsed,
             };
           });
-          return { ...r, splitTimes: updatedSplitTimes };
+          return {
+            ...r,
+            splitTimes: updatedSplitTimes,
+            ...(syncedTimeDisplayValue !== undefined
+              ? { time: syncedTime, timeDisplayValue: syncedTimeDisplayValue }
+              : {}),
+          };
         }),
       );
     },
-    [],
+    [swimStyles],
   );
 
   // スプリットタイムを距離昇順でソートして元インデックスを保持 (web RecordLogEntry :190-209)
@@ -1542,32 +1955,34 @@ export const CompetitionTabFormScreen: React.FC = () => {
       });
   }, []);
 
+  // 距離欄フォーカス時に現在の並び順を固定し、blur で解除して再整列させる
+  const handleSplitDistanceFocus = useCallback(
+    (splitTimes: SplitTimeData[]) => {
+      setFrozenSplitOrder(getSortedSplitIndices(splitTimes).map(({ idx }) => idx));
+    },
+    [getSortedSplitIndices],
+  );
+
+  const handleSplitDistanceBlur = useCallback(() => {
+    setFrozenSplitOrder(null);
+  }, []);
+
   // ---- タブ定義 ----
-  const tabs = useMemo((): FormTab<CompetitionTab>[] => {
-    const result: FormTab<CompetitionTab>[] = [
-      { id: "competition", label: t("competition.form.tabCompetition"), hasError: tabErrors.competition },
-      { id: "record", label: t("competition.form.tabRecord"), hasError: tabErrors.record },
-    ];
-    if (showEntryTab) {
-      // エントリータブは「大会」と「レコード」の間に挿入
-      result.splice(1, 0, {
-        id: "entry",
-        label: t("competition.form.tabEntry"),
-        hasError: tabErrors.entry,
-      });
-    }
-    return result;
-  }, [t, tabErrors, showEntryTab]);
+  // 表示するタブ・順序は visibleTabs が唯一の定義元。ここでラベルとエラーバッジだけを
+  // 付ける (タブ一覧を別途組み立てるとタブバーとフッターの前後タブが食い違う)。
+  const tabs = useMemo(
+    (): FormTab<CompetitionTab>[] =>
+      visibleTabs.map((id) => ({
+        id,
+        label: t(COMPETITION_TAB_LABEL_KEYS[id]),
+        hasError: tabErrors[id],
+      })),
+    [visibleTabs, t, tabErrors],
+  );
 
   // ---- フッターボタン用の前後タブ ----
   // record タブは showRecordTab=false (=未来日でエントリー表示中) のときガードする
   // (「次に進む」で無意味な非表示タブへ誘導しないため)
-  const visibleTabs = useMemo((): CompetitionTab[] => {
-    const result: CompetitionTab[] = ["competition"];
-    if (showEntryTab) result.push("entry");
-    result.push("record");
-    return result;
-  }, [showEntryTab]);
   const { prevTab, nextTab } = useMemo(
     () =>
       getTabNavAdjacency<CompetitionTab>(visibleTabs, activeTab, {
@@ -1586,13 +2001,32 @@ export const CompetitionTabFormScreen: React.FC = () => {
     );
   }
 
+  // ---- 権限の確定に失敗 ----
+  // フォームを出さずに再試行させる。編集可能かどうかが決まらないまま保存ボタンを
+  // 見せると、1件も書き込まないまま画面が閉じる経路に入る
+  // (isCompetitionPermissionUnavailable の定義コメント参照)。
+  if (isCompetitionPermissionUnavailable) {
+    return (
+      <View style={styles.container}>
+        <ErrorView
+          message={t("forms.tabModal.permissionCheckFailed")}
+          fullScreen
+          onRetry={() => {
+            void refetchCompetitionTeamMembers();
+          }}
+        />
+      </View>
+    );
+  }
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      {/* タブバー */}
-      <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="competition" />
+    <FormKeyboardAvoidingView style={styles.container}>
+      {/* タブバー: タブが1本しかないときは描画しない (画面の判別はヘッダータイトルで足りる)。
+          述語はタブ一覧 visibleTabs から導出する (origin を直接見ると絞り込みの定義元が
+          2箇所になり、片方だけ更新されて静かに食い違う) */}
+      {visibleTabs.length > 1 && (
+        <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="competition" />
+      )}
 
       {/* エラーバナー */}
       {saveError && (
@@ -1609,7 +2043,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
       >
         {/* ---- 大会タブ ---- */}
         {activeTab === "competition" && (
-          <View style={styles.form}>
+          <View style={[styles.form, styles.formCompact]}>
             {/* 編集権限なし (チーム大会の非管理者かつ非オーナー) の場合は読み取り専用にする */}
             {!canEditCompetitionDetails && (
               <View style={styles.guardMessage}>
@@ -1620,10 +2054,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
             )}
 
             {/* 日付 */}
-            <View style={styles.section}>
+            <View style={[styles.section, styles.sectionCompact]}>
               <View style={styles.dateRow}>
                 <View style={styles.dateColumn}>
-                  <Text style={styles.label}>
+                  <Text style={[styles.label, styles.labelCompact]}>
                     {t("competition.form.startDateLabel")}{" "}
                     <Text style={styles.required}>*</Text>
                   </Text>
@@ -1633,10 +2067,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     required
                     disabled={isSaving || !canEditCompetitionDetails}
                     error={competitionErrors.date}
+                    compact
                   />
                 </View>
                 <View style={styles.dateColumn}>
-                  <Text style={styles.label}>
+                  <Text style={[styles.label, styles.labelCompact]}>
                     {t("competition.form.endDateLabel")}{" "}
                     <Text style={styles.optional}>{t("competition.form.multiDayHint")}</Text>
                   </Text>
@@ -1647,16 +2082,24 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     disabled={isSaving || !canEditCompetitionDetails}
                     error={competitionErrors.endDate}
                     minDate={isValid(parseISO(date)) ? parseISO(date) : undefined}
+                    compact
                   />
                 </View>
               </View>
             </View>
 
             {/* 大会名 */}
-            <View style={styles.section}>
-              <Text style={styles.label}>{t("competition.form.nameLabel")}</Text>
+            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
+              <Text style={[styles.label, styles.horizontalLabel]}>
+                {t("competition.form.nameLabel")}
+              </Text>
               <TextInput
-                style={[styles.input, !canEditCompetitionDetails && styles.inputDisabled]}
+                style={[
+                  styles.input,
+                  styles.inputCompact,
+                  styles.horizontalInput,
+                  !canEditCompetitionDetails && styles.inputDisabled,
+                ]}
                 value={title}
                 onChangeText={setTitle}
                 placeholder={t("competition.form.namePlaceholder")}
@@ -1665,10 +2108,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
             </View>
 
             {/* 場所 */}
-            <View style={styles.section}>
-              <Text style={styles.label}>{t("competition.form.placeLabel")}</Text>
+            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
+              <Text style={[styles.label, styles.horizontalLabel]}>
+                {t("competition.form.placeLabel")}
+              </Text>
               <TextInput
-                style={[styles.input, !canEditCompetitionDetails && styles.inputDisabled]}
+                style={[
+                  styles.input,
+                  styles.inputCompact,
+                  styles.horizontalInput,
+                  !canEditCompetitionDetails && styles.inputDisabled,
+                ]}
                 value={place}
                 onChangeText={setPlace}
                 placeholder={t("competition.form.placePlaceholder")}
@@ -1677,21 +2127,22 @@ export const CompetitionTabFormScreen: React.FC = () => {
             </View>
 
             {/* プール種別 */}
-            <View style={styles.section}>
-              <Text style={styles.label}>
+            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
+              <Text style={[styles.label, styles.horizontalLabel]}>
                 {t("competition.form.poolTypeLabel")}{" "}
                 <Text style={styles.required}>*</Text>
               </Text>
-              <View style={styles.pickerContainer}>
+              <View style={[styles.pickerContainer, styles.horizontalInput]}>
                 {POOL_TYPES.map((type) => (
                   <Pressable
                     key={type.value}
                     style={[
                       styles.pickerOption,
+                      styles.pickerOptionCompact,
                       poolType === type.value && styles.pickerOptionSelected,
                       !canEditCompetitionDetails && styles.pickerOptionDisabled,
                     ]}
-                    onPress={() => setPoolType(type.value)}
+                    onPress={() => handlePoolTypeChange(type.value)}
                     disabled={isSaving || !canEditCompetitionDetails}
                   >
                     <Text
@@ -1708,12 +2159,16 @@ export const CompetitionTabFormScreen: React.FC = () => {
             </View>
 
             {/* メモ */}
-            <View style={styles.section}>
-              <Text style={styles.label}>{t("competition.form.memoLabel")}</Text>
+            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
+              <Text style={[styles.label, styles.horizontalLabel]}>
+                {t("competition.form.memoLabel")}
+              </Text>
               <TextInput
                 style={[
                   styles.input,
+                  styles.inputCompact,
                   styles.textArea,
+                  styles.horizontalInput,
                   !canEditCompetitionDetails && styles.inputDisabled,
                 ]}
                 value={competitionNote}
@@ -1726,7 +2181,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
             </View>
 
             {/* 画像 */}
-            <View style={styles.section}>
+            <View style={[styles.section, styles.sectionCompact]}>
               {canUploadImage(isPremium) ? (
                 <ImageUploader
                   existingImages={existingImages}
@@ -1749,8 +2204,6 @@ export const CompetitionTabFormScreen: React.FC = () => {
               <Text style={styles.sectionTitle}>{t("competition.entry.title")}</Text>
             </View>
 
-            <TimeInputHelp style={{ marginBottom: 12 }} />
-
             {/* 種目重複エラーバナー (web CompetitionTabModal entryValidationError と同一) */}
             {entryErrors.duplicate && (
               <View style={styles.errorBanner}>
@@ -1764,6 +2217,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
               const entryStyle = entry
                 ? swimStyles.find((s) => s.id.toString() === entry.styleId)
                 : undefined;
+              // リレー可否 (StyleChipSelector 内部の canRelay 判定と同一)
+              const entryStyleOption = entryStyle ? getStyleOption(entryStyle.id) : undefined;
+              const canRelayCurrentEntryStyle =
+                entryStyleOption != null && canRelay(entryStyleOption);
               const entryBestTime = entry
                 ? getBestTimeForEntry(
                     entryStyle?.name_jp ?? "",
@@ -1772,6 +2229,11 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     bestTimes,
                   )
                 : null;
+              // 未編集警告: ラッチのみで判定し、値の比較はしない (Sprint Contract v2 裁定2)。
+              // タイム欄への手入力が一度でも発火すると prefillSource は無条件で null に
+              // 落ち (プリフィルと同じ文字列を打ち直しても)、以後 "bestTime" に戻る経路が
+              // 無い (EntriesClient.tsx の参照実装と同じラッチ方式)。
+              const isEntryPrefillUntouched = entry?.prefillSource === "bestTime";
               return (
                 <ItemTabs
                   count={entries.length}
@@ -1800,7 +2262,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     </View>
                   )}
 
-                  {/* 種目選択 (距離チップ × 泳法チップ + リレートグル) */}
+                  {/* 種目選択 (距離チップ × 泳法チップ)。リレートグルはエントリータイム行にまとめて表示 */}
                   <View style={styles.section}>
                     <Text style={styles.label}>
                       {t("competition.entry.styleLabel")}{" "}
@@ -1810,14 +2272,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       styles={swimStyles}
                       value={entry.styleId}
                       onChange={(styleId) =>
-                        handleEntryStyleChange(entry.draftId, index, styleId)
+                        handleEntryStyleChange(entry.draftId, styleId)
                       }
                       disabled={isSaving}
-                      isRelaying={entry.isRelaying}
-                      onToggleRelaying={(next) =>
-                        handleEntryToggleRelaying(entry.draftId, index, next)
-                      }
-                      relayLabel={t("forms.entry.relayLabel")}
                       testID={`entry-style-${index + 1}`}
                     />
                     {entryErrors[`style-${index}`] && (
@@ -1825,34 +2282,101 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     )}
                   </View>
 
-                  {/* エントリータイム */}
-                  <View style={styles.section}>
-                    <Text style={styles.label}>{t("competition.entry.entryTimeLabel")}</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        entryErrors[`entryTime-${index}`] && styles.inputError,
-                      ]}
-                      value={entry.entryTimeDisplayValue}
-                      onChangeText={(text) =>
-                        updateEntry(entry.draftId, { entryTimeDisplayValue: text })
-                      }
-                      onBlur={() => handleEntryTimeBlur(entry.draftId)}
-                      placeholder={t("competition.entry.entryTimePlaceholder")}
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="decimal-pad"
-                      editable={!isSaving}
-                    />
-                    {entryErrors[`entryTime-${index}`] && (
-                      <Text style={styles.errorText}>{entryErrors[`entryTime-${index}`]}</Text>
-                    )}
-                    {entry.entryTime > 0 && !entryErrors[`entryTime-${index}`] && (
-                      <Text style={styles.timeHint}>
-                        {t("competition.entry.inputValueHint", {
-                          time: formatTimeBest(entry.entryTime),
-                        })}
-                      </Text>
-                    )}
+                  {/* エントリータイム + リレー */}
+                  <View style={styles.timeReactionRow}>
+                    <View style={styles.timeField}>
+                      <View style={styles.entryTimeHeaderRow}>
+                        <View style={styles.labelRow}>
+                          <Text style={[styles.label, styles.labelRowText]}>
+                            {t("competition.entry.entryTimeLabel")}
+                          </Text>
+                          <WaPointsInfoTooltip
+                            testID="entry-time-help-icon"
+                            ariaLabel={t("forms.timeInput.helpTitle")}
+                            tooltipText={t("forms.timeInput.helpBodyBasic")}
+                          />
+                        </View>
+                        <Pressable
+                          style={[
+                            styles.prefillButton,
+                            // records.time は numeric(10,2) NOT NULL だが CHECK(time > 0) が無い
+                            // (relay_records.total_time と異なり 0 を DB 制約で排除していない。
+                            // supabase/migrations/20251201014342_initial_schema.sql:764)。
+                            // entryBestTime.time === 0 を弾かずに流用すると formatTimeBest(0) →
+                            // parseTimeFlexible → 0 となり、updateEntry の parsed <= 0 分岐で
+                            // timeFormatInvalid エラーが出てしまう (裁定8)。
+                            (!entryBestTime || entryBestTime.time <= 0) &&
+                              styles.prefillButtonDisabled,
+                          ]}
+                          onPress={() =>
+                            entryBestTime &&
+                            entryBestTime.time > 0 &&
+                            applyEntryBestTimePrefill(entry.draftId, entryBestTime.time)
+                          }
+                          disabled={!entryBestTime || entryBestTime.time <= 0 || isSaving}
+                        >
+                          <Text style={styles.prefillButtonText}>
+                            {t("competition.entries.bestTimePrefillButton")}
+                          </Text>
+                        </Pressable>
+                      </View>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          entryErrors[`entryTime-${index}`] && styles.inputError,
+                        ]}
+                        value={entry.entryTimeDisplayValue}
+                        onChangeText={(text) =>
+                          // 手入力が一度でも発火したら無条件でラッチを落とす
+                          // (プリフィルと同じ文字列を打ち直しても "bestTime" には戻らない。Sprint Contract v2 裁定2)
+                          updateEntry(entry.draftId, {
+                            entryTimeDisplayValue: text,
+                            prefillSource: null,
+                          })
+                        }
+                        onBlur={() => handleEntryTimeBlur(entry.draftId)}
+                        placeholder={t("competition.entry.entryTimePlaceholder")}
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="decimal-pad"
+                        editable={!isSaving}
+                      />
+                      {entryErrors[`entryTime-${index}`] && (
+                        <Text style={styles.errorText}>{entryErrors[`entryTime-${index}`]}</Text>
+                      )}
+                      {entry.entryTime > 0 && !entryErrors[`entryTime-${index}`] && (
+                        <Text style={styles.timeHint}>
+                          {t("competition.entry.inputValueHint", {
+                            time: formatTimeBest(entry.entryTime),
+                          })}
+                        </Text>
+                      )}
+                      {isEntryPrefillUntouched && (
+                        <Text style={styles.prefillWarningText}>
+                          {t("competition.entries.bestTimePrefillBadge")}
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* リレー (種目がリレー対応の場合のみラベル・トグルとも表示。非表示時も横幅は詰めない) */}
+                    <View style={styles.relayField}>
+                      {canRelayCurrentEntryStyle ? (
+                        <>
+                          <Text style={styles.label}>{t("forms.entry.relayLabel")}</Text>
+                          <View style={styles.relaySwitchRow}>
+                            <Switch
+                              value={entry.isRelaying}
+                              onValueChange={(next) =>
+                                handleEntryToggleRelaying(entry.draftId, next)
+                              }
+                              disabled={isSaving}
+                              testID={`entry-style-${index + 1}-relay`}
+                            />
+                          </View>
+                        </>
+                      ) : (
+                        <View style={styles.relaySwitchSpacer} />
+                      )}
+                    </View>
                   </View>
 
                   {/* メモ */}
@@ -1878,14 +2402,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
         )}
 
         {/* ---- レースレコードタブ ---- */}
-        {activeTab === "record" && (
+        {/* visibleTabs を見るのは、タブバーに無いタブのコンテンツを描画しないため。
+            showRecordTab だとタブが存在する未来日でガードメッセージごと消えて退行する */}
+        {activeTab === "record" && visibleTabs.includes("record") && (
           <View style={styles.form}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t("recordMobile.form.sectionTitle")}</Text>
-            </View>
-
-            {showRecordTab && <TimeInputHelp style={{ marginBottom: 12 }} />}
-
             {!showRecordTab && (
               <View style={styles.guardMessage}>
                 <Text style={styles.guardMessageText}>
@@ -1901,11 +2421,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
                 ? swimStyles.find((s) => s.id.toString() === record.styleId)
                 : undefined;
               const raceDistance = recordStyle?.distance;
-              // 同インデックスのエントリータイム (web RecordLogEntry entryInfo バッジ相当)
-              const linkedEntryTime =
-                record && entries[index] && entries[index].entryTime > 0
-                  ? entries[index].entryTime
-                  : null;
+              // リレー可否 (StyleChipSelector 内部の canRelay 判定と同一)
+              const recordStyleOption = recordStyle ? getStyleOption(recordStyle.id) : undefined;
+              const canRelayCurrentStyle =
+                recordStyleOption != null && canRelay(recordStyleOption);
+              // 同一種目のエントリータイム (web RecordLogEntry entryInfo バッジ相当)。
+              // records と entries の行数が一致しなくなりうる理由は mergeEntriesIntoRecords
+              // の JSDoc を参照。配列インデックスではなく styleId で突き合わせる。
+              const linkedEntry = record
+                ? entries.find((e) => e.styleId === record.styleId && e.entryTime > 0)
+                : undefined;
+              const linkedEntryTime = linkedEntry ? linkedEntry.entryTime : null;
               // ベストタイム (水路フォールバック付き。web RecordLogEntry currentBestTime 相当)
               const recordBestTime = record
                 ? getBestTimeForEntry(
@@ -1931,6 +2457,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       return null;
                     })
                     .filter((st): st is { distance: number; splitTime: number } => st !== null)
+                : [];
+              // 距離欄編集中 (frozenSplitOrder あり) は並び順を固定し、それ以外は距離昇順
+              const sortedSplitEntries = record
+                ? frozenSplitOrder
+                  ? frozenSplitOrder
+                      .map((idx) => ({ st: record.splitTimes[idx], idx }))
+                      .filter(
+                        (entry): entry is { st: SplitTimeData; idx: number } =>
+                          entry.st !== undefined,
+                      )
+                  : getSortedSplitIndices(record.splitTimes)
                 : [];
               return (
                 <ItemTabs
@@ -1969,7 +2506,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     </View>
                   )}
 
-                  {/* 種目選択 (距離チップ × 泳法チップ + リレートグル) */}
+                  {/* 種目選択 (距離チップ × 泳法チップ)。リレートグルはタイム行にまとめて表示 */}
                   <View style={styles.field}>
                     <Text style={styles.label}>
                       {t("recordMobile.form.styleLabel")}{" "}
@@ -1979,14 +2516,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
                       styles={swimStyles}
                       value={record.styleId}
                       onChange={(styleId) =>
-                        handleRecordStyleChange(record.draftId, index, styleId)
+                        handleRecordStyleChange(record.draftId, styleId)
                       }
                       disabled={isSaving}
-                      isRelaying={record.isRelaying}
-                      onToggleRelaying={(next) =>
-                        handleRecordToggleRelaying(record.draftId, index, next)
-                      }
-                      relayLabel={t("forms.recordLog.relayLabel")}
                       testID={`record-style-${index + 1}`}
                     />
                     {recordErrors[`style-${index}`] && (
@@ -1994,85 +2526,78 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     )}
                   </View>
 
-                  {/* タイム */}
-                  <View style={styles.field}>
-                    <Text style={styles.label}>
-                      {t("recordMobile.form.timeLabel")}{" "}
-                      <Text style={styles.required}>*</Text>
-                    </Text>
-                    <TextInput
-                      style={[styles.input, recordErrors[`time-${index}`] && styles.inputError]}
-                      value={record.timeDisplayValue}
-                      onChangeText={(text) => handleRecordTimeChange(record.draftId, text)}
-                      onBlur={() => handleRecordTimeBlur(record.draftId)}
-                      placeholder={t("recordMobile.form.timePlaceholder2")}
-                      keyboardType="decimal-pad"
-                      editable={!isSaving}
-                    />
-                    {recordErrors[`time-${index}`] && (
-                      <Text style={styles.errorText}>{recordErrors[`time-${index}`]}</Text>
-                    )}
-                  </View>
+                  {/* タイム + 反応時間 */}
+                  <View style={styles.timeReactionRow}>
+                    <View style={styles.timeField}>
+                      <View style={styles.labelRow}>
+                        <Text style={[styles.label, styles.labelRowText]}>
+                          {t("recordMobile.form.timeLabel")}{" "}
+                          <Text style={styles.required}>*</Text>
+                        </Text>
+                        <WaPointsInfoTooltip
+                          testID="record-time-help-icon"
+                          ariaLabel={t("forms.timeInput.helpTitle")}
+                          tooltipText={t("forms.timeInput.helpBodyBasic")}
+                        />
+                      </View>
+                      <TextInput
+                        style={[styles.input, recordErrors[`time-${index}`] && styles.inputError]}
+                        value={record.timeDisplayValue}
+                        onChangeText={(text) => handleRecordTimeChange(record.draftId, text)}
+                        onBlur={() => handleRecordTimeBlur(record.draftId)}
+                        placeholder={t("recordMobile.form.timePlaceholder2")}
+                        keyboardType="decimal-pad"
+                        editable={!isSaving}
+                      />
+                      {recordErrors[`time-${index}`] && (
+                        <Text style={styles.errorText}>{recordErrors[`time-${index}`]}</Text>
+                      )}
+                    </View>
 
-                  {/* 反応時間 (web: step=0.01 / min=-1 / max=2) */}
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t("recordMobile.form.reactionTimeLabel")}</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={record.reactionTime}
-                      onChangeText={(text) => updateRecord(record.draftId, { reactionTime: text })}
-                      onBlur={() => handleReactionTimeBlur(record.draftId)}
-                      placeholder={t("recordMobile.form.reactionTimePlaceholder")}
-                      keyboardType="numbers-and-punctuation"
-                      editable={!isSaving}
-                    />
-                  </View>
-
-                  {/* メモ */}
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t("recordMobile.form.memoLabel")}</Text>
-                    <TextInput
-                      style={[styles.input, styles.textAreaSmall]}
-                      value={record.note}
-                      onChangeText={(text) => updateRecord(record.draftId, { note: text })}
-                      placeholder={t("recordMobile.form.memoPlaceholder")}
-                      multiline
-                      numberOfLines={3}
-                      editable={!isSaving}
-                    />
-                  </View>
-
-                  {/* 動画 (編集時は既存動画を表示し、削除・差し替え可能。web :1195-1197) */}
-                  <View style={styles.field}>
-                    <Text style={styles.label}>{t("recordMobile.form.videoLabel")}</Text>
-                    <VideoUploader
-                      key={record.draftId}
-                      type="record"
-                      id={record.existingRecordId}
-                      existingVideoPath={record.videoPath}
-                      existingThumbnailPath={record.videoThumbnailPath}
-                      isPremium={isPremium}
-                      onUploadComplete={(vPath, tPath) =>
-                        updateRecord(record.draftId, {
-                          videoPath: vPath,
-                          videoThumbnailPath: tPath,
-                        })
-                      }
-                      onDelete={() =>
-                        updateRecord(record.draftId, {
-                          videoPath: null,
-                          videoThumbnailPath: null,
-                        })
-                      }
-                      onPendingVideoAsset={(asset) => {
-                        if (asset) {
-                          pendingVideoAssetRef.current.set(record.draftId, asset);
-                        } else {
-                          pendingVideoAssetRef.current.delete(record.draftId);
+                    {/* 反応時間 (web: step=0.01 / min=-1 / max=2) */}
+                    <View style={styles.reactionTimeField}>
+                      <Text style={styles.label}>{t("recordMobile.form.reactionTimeLabel")}</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          recordErrors[`reactionTime-${index}`] && styles.inputError,
+                        ]}
+                        value={record.reactionTime}
+                        onChangeText={(text) =>
+                          updateRecord(record.draftId, { reactionTime: text })
                         }
-                        syncPendingVideoCount();
-                      }}
-                    />
+                        onBlur={() => handleReactionTimeBlur(record.draftId)}
+                        placeholder={t("recordMobile.form.reactionTimePlaceholder")}
+                        keyboardType="numbers-and-punctuation"
+                        editable={!isSaving}
+                      />
+                      {recordErrors[`reactionTime-${index}`] && (
+                        <Text style={styles.errorText}>
+                          {recordErrors[`reactionTime-${index}`]}
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* リレー (種目がリレー対応の場合のみラベル・トグルとも表示。非表示時も横幅は詰めない) */}
+                    <View style={styles.relayField}>
+                      {canRelayCurrentStyle ? (
+                        <>
+                          <Text style={styles.label}>{t("forms.recordLog.relayLabel")}</Text>
+                          <View style={styles.relaySwitchRow}>
+                            <Switch
+                              value={record.isRelaying}
+                              onValueChange={(next) =>
+                                handleRecordToggleRelaying(record.draftId, next)
+                              }
+                              disabled={isSaving}
+                              testID={`record-style-${index + 1}-relay`}
+                            />
+                          </View>
+                        </>
+                      ) : (
+                        <View style={styles.relaySwitchSpacer} />
+                      )}
+                    </View>
                   </View>
 
                   {/* スプリットタイム */}
@@ -2124,56 +2649,74 @@ export const CompetitionTabFormScreen: React.FC = () => {
                         </Pressable>
                       </View>
                     </View>
-                    {getSortedSplitIndices(record.splitTimes).map(
-                      ({ st: splitTime, idx: splitIndex }) => (
-                      <View key={splitIndex} style={styles.splitTimeRow}>
-                        <TextInput
-                          style={[styles.input, styles.splitTimeDistance]}
-                          value={
-                            typeof splitTime.distance === "number" && splitTime.distance > 0
-                              ? String(splitTime.distance)
-                              : typeof splitTime.distance === "string"
-                                ? splitTime.distance
-                                : ""
-                          }
-                          onChangeText={(text) => {
-                            if (text === "" || /^\d+(\.\d*)?$/.test(text)) {
-                              handleSplitTimeChange(record.draftId, splitIndex, "distance", text);
-                            }
-                          }}
-                          placeholder={t("recordMobile.form.distancePlaceholder")}
-                          keyboardType="decimal-pad"
-                          editable={!isSaving}
-                        />
-                        <Text style={styles.splitTimeSeparator}>m:</Text>
-                        <TextInput
-                          style={[styles.input, styles.splitTimeTime]}
-                          value={splitTime.splitTimeDisplayValue}
-                          onChangeText={(text) =>
-                            handleSplitTimeChange(record.draftId, splitIndex, "splitTime", text)
-                          }
-                          onBlur={() => handleSplitTimeBlur(record.draftId, splitIndex)}
-                          placeholder={t("recordMobile.form.splitPlaceholder")}
-                          keyboardType="decimal-pad"
-                          editable={!isSaving}
-                        />
-                        {/* ゴール地点スプリット (distance === raceDistance) は削除不可 (web :449-461) */}
-                        {!(
-                          typeof splitTime.distance === "number" &&
-                          splitTime.distance === raceDistance
-                        ) ? (
-                          <Pressable
-                            style={styles.removeButton}
-                            onPress={() => handleRemoveSplitTime(record.draftId, splitIndex)}
-                            disabled={isSaving}
+                    {sortedSplitEntries.length > 0 && (
+                      <View style={styles.splitTimeTable}>
+                        {sortedSplitEntries.map(
+                          ({ st: splitTime, idx: splitIndex }, rowIndex, rows) => (
+                          <View
+                            key={splitIndex}
+                            style={[
+                              styles.splitTimeRow,
+                              rowIndex === rows.length - 1 && styles.splitTimeRowLast,
+                            ]}
                           >
-                            <Feather name="trash-2" size={16} color="#EF4444" />
-                          </Pressable>
-                        ) : (
-                          <View style={styles.removeButtonSpacer} />
+                            <View style={styles.splitTimeDistance}>
+                              <TextInput
+                                style={[styles.input, styles.splitTimeDistanceValue]}
+                                value={
+                                  typeof splitTime.distance === "number" && splitTime.distance > 0
+                                    ? String(splitTime.distance)
+                                    : typeof splitTime.distance === "string"
+                                      ? splitTime.distance
+                                      : ""
+                                }
+                                onChangeText={(text) => {
+                                  if (text === "" || /^\d+(\.\d*)?$/.test(text)) {
+                                    handleSplitTimeChange(
+                                      record.draftId,
+                                      splitIndex,
+                                      "distance",
+                                      text,
+                                    );
+                                  }
+                                }}
+                                onFocus={() => handleSplitDistanceFocus(record.splitTimes)}
+                                onBlur={handleSplitDistanceBlur}
+                                keyboardType="decimal-pad"
+                                editable={!isSaving}
+                              />
+                              <Text style={styles.splitTimeUnitText}>m</Text>
+                            </View>
+                            <TextInput
+                              style={[styles.input, styles.splitTimeTime]}
+                              value={splitTime.splitTimeDisplayValue}
+                              onChangeText={(text) =>
+                                handleSplitTimeChange(record.draftId, splitIndex, "splitTime", text)
+                              }
+                              onBlur={() => handleSplitTimeBlur(record.draftId, splitIndex)}
+                              placeholder={t("recordMobile.form.splitPlaceholder")}
+                              keyboardType="decimal-pad"
+                              editable={!isSaving}
+                            />
+                            {/* ゴール地点スプリット (distance === raceDistance) は削除不可 (web :449-461) */}
+                            {!(
+                              typeof splitTime.distance === "number" &&
+                              splitTime.distance === raceDistance
+                            ) ? (
+                              <Pressable
+                                style={styles.removeButton}
+                                onPress={() => handleRemoveSplitTime(record.draftId, splitIndex)}
+                                disabled={isSaving}
+                              >
+                                <Feather name="trash-2" size={16} color="#EF4444" />
+                              </Pressable>
+                            ) : (
+                              <View style={styles.removeButtonSpacer} />
+                            )}
+                          </View>
+                          ),
                         )}
                       </View>
-                      ),
                     )}
 
                     {/* ラップタイムプレビュー (web RecordLogEntry :468) */}
@@ -2189,6 +2732,53 @@ export const CompetitionTabFormScreen: React.FC = () => {
                         <PremiumBadge feature="split_time_limit" compact />
                       </View>
                     )}
+                  </View>
+
+                  {/* メモ */}
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t("recordMobile.form.memoLabel")}</Text>
+                    <TextInput
+                      style={[styles.input, styles.textAreaSmall]}
+                      value={record.note}
+                      onChangeText={(text) => updateRecord(record.draftId, { note: text })}
+                      placeholder={t("recordMobile.form.memoPlaceholder")}
+                      multiline
+                      numberOfLines={3}
+                      editable={!isSaving}
+                    />
+                  </View>
+
+                  {/* 動画 (編集時は既存動画を表示し、削除・差し替え可能。web :1195-1197) */}
+                  <View style={styles.field}>
+                    <Text style={styles.label}>{t("recordMobile.form.videoLabel")}</Text>
+                    <VideoUploader
+                      key={record.draftId}
+                      type="record"
+                      id={record.existingRecordId}
+                      existingVideoPath={record.videoPath}
+                      existingThumbnailPath={record.videoThumbnailPath}
+                      isPremium={isPremium}
+                      onUploadComplete={(vPath, tPath) =>
+                        updateRecord(record.draftId, {
+                          videoPath: vPath,
+                          videoThumbnailPath: tPath,
+                        })
+                      }
+                      onDelete={() =>
+                        updateRecord(record.draftId, {
+                          videoPath: null,
+                          videoThumbnailPath: null,
+                        })
+                      }
+                      onPendingVideoAsset={(asset) => {
+                        if (asset) {
+                          pendingVideoAssetRef.current.set(record.draftId, asset);
+                        } else {
+                          pendingVideoAssetRef.current.delete(record.draftId);
+                        }
+                        syncPendingVideoCount();
+                      }}
+                    />
                   </View>
                     </View>
                   )}
@@ -2260,7 +2850,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
           )}
         </View>
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 
@@ -2405,12 +2995,93 @@ const styles = StyleSheet.create({
   pickerOptionDisabled: {
     opacity: 0.5,
   },
-  entryCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    padding: 16,
+  formCompact: {
+    gap: 14,
+  },
+  sectionCompact: {
+    marginBottom: 0,
+  },
+  labelCompact: {
+    marginBottom: 4,
+  },
+  inputCompact: {
+    paddingVertical: 8,
+  },
+  pickerOptionCompact: {
+    paddingVertical: 8,
+  },
+  horizontalField: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  horizontalLabel: {
+    width: 56,
+    marginBottom: 0,
+  },
+  horizontalInput: {
+    flex: 1,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 8,
+  },
+  labelRowText: {
+    marginBottom: 0,
+  },
+  // エントリータイムのラベル行 (ラベル+ヘルプアイコン) と流用ボタンを両端揃えにする行。
+  // labelRow 自体はレコードタブの同等箇所とも共有しているため、ここでは触らず外側に足す。
+  entryTimeHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  // TeamEntryBulkFormScreen.tsx の prefillButton/prefillButtonText (L1291-1299) を踏襲
+  prefillButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#2563EB",
+    backgroundColor: "#FFFFFF",
+  },
+  prefillButtonDisabled: {
+    opacity: 0.5,
+  },
+  prefillButtonText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
+  prefillWarningText: {
+    fontSize: 12,
+    color: "#B45309", // amber-700 (web EntriesClient.tsx の text-yellow-700 相当)
+    marginTop: 4,
+  },
+  timeReactionRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  timeField: {
+    flex: 1,
+  },
+  reactionTimeField: {
+    flex: 1,
+    maxWidth: "25%",
+  },
+  relayField: {
+    alignItems: "flex-start",
+  },
+  relaySwitchRow: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  relaySwitchSpacer: {
+    width: 51,
   },
   entryItemHeader: {
     flexDirection: "row",
@@ -2422,13 +3093,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#374151",
-  },
-  recordCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   recordItemHeader: {
     flexDirection: "row",
@@ -2473,7 +3137,7 @@ const styles = StyleSheet.create({
   splitTimeHeader: {
     flexDirection: "column",
     alignItems: "stretch",
-    gap: 8,
+    gap: 4,
     marginBottom: 8,
   },
   splitTimeButtons: {
@@ -2530,21 +3194,49 @@ const styles = StyleSheet.create({
   addButtonDisabled: {
     opacity: 0.4,
   },
+  splitTimeTable: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+  },
   splitTimeRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
+    alignItems: "stretch",
+    borderBottomWidth: 1,
+    borderBottomColor: "#D1D5DB",
+  },
+  splitTimeRowLast: {
+    borderBottomWidth: 0,
   },
   splitTimeDistance: {
-    width: 80,
+    flexDirection: "row",
+    alignItems: "center",
+    width: 88,
+    borderRightWidth: 1,
+    borderRightColor: "#D1D5DB",
+    paddingLeft: 12,
   },
-  splitTimeSeparator: {
+  splitTimeDistanceValue: {
+    flex: 1,
+    paddingHorizontal: 0,
+    paddingVertical: 6,
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: "transparent",
+  },
+  splitTimeUnitText: {
     fontSize: 14,
     color: "#6B7280",
+    paddingRight: 8,
   },
   splitTimeTime: {
     flex: 1,
+    paddingVertical: 6,
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: "transparent",
   },
   errorBanner: {
     backgroundColor: "#FEE2E2",

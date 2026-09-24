@@ -25,7 +25,7 @@ import StyleChipSelector from "@/components/forms/StyleChipSelector";
 import { useAuth } from "@/contexts";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { CompetitionAPI } from "@apps/shared/api";
-import { isEntryTabVisible, getTabNavAdjacency } from "@/utils/tabModalUtils";
+import { isEntryTabVisible, getTabNavAdjacency, resolveEntryTabIndex } from "@/utils/tabModalUtils";
 import { isDefaultUntouchedEntry } from "@/utils/tabModalDiff";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { formatTimeBest } from "@/utils/formatters";
@@ -128,8 +128,23 @@ export interface CompetitionTabModalProps {
   existingEntries?: EntryInfo[];
   isLoading: boolean;
   initialTab?: CompetitionTabId;
+  /**
+   * エントリータブの項目サブタブ (「項目1 / 項目2 / +」) を、この entry.id を持つ項目が
+   * アクティブな状態で開く (D9)。未指定、または一致するエントリーが無い場合は先頭タブ
+   * (index 0) にフォールバックする。対応付けは entry.id で行う (style_id ではない。
+   * リレーはレグ別行で同一 style が複数行に現れるため)。このパラメータを渡さない
+   * 既存の呼び出し元は従来どおり先頭タブで開く。
+   */
+  initialEntryId?: string;
   /** エントリー編集をロックする（チーム大会で entry_status が open でない場合など）。true のとき記録入力のみ許可 */
   entryLocked?: boolean;
+  /**
+   * 親 (competitions) 行の basicData 編集を許可するか。省略時は true (従来動作)。
+   * false のとき、大会タブ (basicData) のフィールドを disabled にする
+   * (タブ自体は非表示にしない。閲覧は可能)。呼び出し元は useCompetitionTabSave に
+   * 渡す allowParentUpdate と同じ値を渡すこと (Sprint Contract 2, Reviewer 指摘 F1-3)。
+   */
+  allowParentUpdate?: boolean;
 }
 
 // =============================================================================
@@ -143,6 +158,14 @@ interface EntryDraft {
   entryTimeDisplayValue: string;
   note: string;
   isRelaying: boolean;
+  /**
+   * 「ベストタイムを流用」ボタンで入れた値が未編集のまま残っているかどうかのラッチ (裁定2 v2)。
+   * タイム欄の onChange・種目変更・水路変更のいずれかが起きたら無条件に null に落とす。
+   * 値の比較はしない (formatTimeBest⇄parseTimeFlexible の往復が1ULP非可逆なため、
+   * 値比較方式だと「押した直後なのに警告が出ない」穴を構造的に抱える。参照実装
+   * (EntriesClient.tsx handleTimeInputChange) も同じラッチ方式)。
+   */
+  prefillSource: "bestTime" | null;
 }
 
 // =============================================================================
@@ -160,10 +183,13 @@ export default function CompetitionTabModal({
   existingEntries = [],
   isLoading,
   initialTab = "competition",
+  initialEntryId,
   entryLocked = false,
+  allowParentUpdate = true,
 }: CompetitionTabModalProps) {
   const t = useTranslations("forms.competition");
   const tEntry = useTranslations("forms.entry");
+  const tEntries = useTranslations("competition.entries");
   const tRecord = useTranslations("forms.recordLog");
   const tTabModal = useTranslations("forms.tabModal");
   const tPremium = useTranslations("forms.premium");
@@ -227,6 +253,7 @@ export default function CompetitionTabModal({
       entryTimeDisplayValue: "",
       note: "",
       isRelaying: false,
+      prefillSource: null,
     },
   ]);
   // 1行目のエントリーに自動セットされたデフォルト種目ID (未編集判定用)。
@@ -351,6 +378,11 @@ export default function CompetitionTabModal({
       initialRecordsSnapshotRef.current = "";
       return;
     }
+    // D9 保護: この one-shot ガードが無いと isOpen 中の再レンダーで毎回この effect が
+    // 走り、下の setActiveEntryIndex(resolveEntryTabIndex(...)) (:440) が initialEntryId
+    // ベースで毎回再計算され、ユーザーが手動で切り替えた後のタブ選択を勝手に戻してしまう。
+    // 「冗長な早期 return」に見えても削除しないこと (Reviewer 実測: この行があるため
+    // 現状は再現手順が無いと確認済み)。
     if (isInitialized) return;
 
     let initial = {
@@ -411,6 +443,8 @@ export default function CompetitionTabModal({
             entryTimeDisplayValue: rawTime > 0 ? formatTimeBest(rawTime) : "",
             note: String(entry.note ?? ""),
             isRelaying: Boolean(entry.isRelaying ?? entry.is_relaying ?? false),
+            // 呼び出し元から渡された編集用ペイロードは流用元の情報を持たないため未編集扱いにしない
+            prefillSource: null,
           };
         });
         setEntries(drafts);
@@ -420,6 +454,7 @@ export default function CompetitionTabModal({
           .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
         setOriginalEntryIds(dbIds);
         initialEntriesSnapshotRef.current = JSON.stringify(drafts);
+        setActiveEntryIndex(resolveEntryTabIndex(drafts, initialEntryId));
       }
     }
 
@@ -432,7 +467,7 @@ export default function CompetitionTabModal({
     }
     setIsInitialized(true);
     setActiveTab(initialTab);
-  }, [isOpen, isInitialized, editingData, editingCompetitionId, selectedDate, initialTab]);
+  }, [isOpen, isInitialized, editingData, editingCompetitionId, selectedDate, initialTab, initialEntryId]);
 
   // 編集モード: competition_id から大会本体を DB から再取得し、basicData を DB の実値で上書きする (D-1)。
   // 呼び出し元 (editingData) が渡す値は「初回描画用の暫定値」に過ぎない。mobile の
@@ -486,6 +521,10 @@ export default function CompetitionTabModal({
   // rawEntries(editData.editData.entries)が既にある場合はスキップ(二重ロード防止)
   useEffect(() => {
     if (!isOpen || !isInitialized || !editingCompetitionId || !user?.id) return;
+    // D9 保護: 上の isInitialized ガードと同じ理由。フェッチ済み後にこの effect が
+    // 再実行されると、下の setActiveEntryIndex(resolveEntryTabIndex(...)) (:545) が
+    // initialEntryId で再度上書きし、ユーザーが手動で切り替えたタブ選択を戻してしまう。
+    // 削除しないこと (Reviewer 実測: この行があるため現状は再現手順が無いと確認済み)。
     if (originalEntryIds.length > 0) return; // 既にフェッチ済み(rawEntriesまたは前回のfetch)
 
     const fetchEntries = async () => {
@@ -515,6 +554,8 @@ export default function CompetitionTabModal({
           entryTimeDisplayValue: rawTime > 0 ? formatTimeBest(rawTime) : "",
           note: r.note ?? "",
           isRelaying: r.is_relaying ?? false,
+          // DB から復元した既存エントリーは流用元の情報を持たないため未編集扱いにしない
+          prefillSource: null,
         };
       });
 
@@ -523,10 +564,12 @@ export default function CompetitionTabModal({
       setOriginalEntryIds(ids);
       // snapshot は EntryDraft[] で取る(hasUnsavedChangesと型を揃える)
       initialEntriesSnapshotRef.current = JSON.stringify(drafts);
+      // D9: 押した行の entry.id に対応する項目タブをアクティブにする (未指定/該当なしは先頭タブ)
+      setActiveEntryIndex(resolveEntryTabIndex(drafts, initialEntryId));
     };
 
     fetchEntries().catch(() => {});
-  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalEntryIds.length, supabase]);
+  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalEntryIds.length, supabase, initialEntryId]);
 
   // 編集モード: competition_id に紐づく全レコードを DB から取得してフォームを初期化
   useEffect(() => {
@@ -916,6 +959,7 @@ export default function CompetitionTabModal({
         entryTimeDisplayValue: "",
         note: "",
         isRelaying: false,
+        prefillSource: null,
       },
     ]);
   }, []);
@@ -939,7 +983,8 @@ export default function CompetitionTabModal({
   // Entry style changed → also update record[index] if it exists
   const handleEntryStyleChange = useCallback(
     (entryId: string, entryIndex: number, styleId: string) => {
-      updateEntry(entryId, { styleId });
+      // 種目を変えたら別種目のベストタイムが未編集扱いで残らないようリセットする (裁定2 v2)
+      updateEntry(entryId, { styleId, prefillSource: null });
       if (showEntryTab && recordFormDataList[entryIndex] !== undefined) {
         handleRecordStyleChange(entryIndex, styleId);
       }
@@ -979,6 +1024,29 @@ export default function CompetitionTabModal({
     },
     [handleRecordToggleRelaying, showEntryTab, entries, updateEntry],
   );
+
+  // 「ベストタイムを流用」ボタン: バッジに表示している値 (entryBestTime.time) をそのまま
+  // タイム欄へ入れる (裁定1)。別経路でベストタイムを取得し直さない。
+  // prefillSource は値を比較しないラッチ (裁定2 v2)。タイム欄の onChange / 種目変更 /
+  // 水路変更のいずれかが起きたら null に落とす。
+  const handleApplyBestTime = useCallback(
+    (entryId: string, time: number) => {
+      updateEntry(entryId, {
+        entryTime: time,
+        entryTimeDisplayValue: formatTimeBest(time),
+        prefillSource: "bestTime",
+      });
+    },
+    [updateEntry],
+  );
+
+  // 水路 (poolType) を変えると全行のベストタイムバッジが入れ替わり、プリフィル済みの値が
+  // 表示中のベストタイムと対応しなくなるため、1行だけでなく全エントリー行のラッチを外す
+  // (裁定2 v2)。
+  const handlePoolTypeChange = useCallback((poolType: number) => {
+    setBasicData((prev) => ({ ...prev, poolType }));
+    setEntries((prev) => prev.map((e) => (e.prefillSource ? { ...e, prefillSource: null } : e)));
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Existing images for image uploader
@@ -1071,6 +1139,18 @@ export default function CompetitionTabModal({
                 </div>
               )}
 
+              {/* 親 (competitions) 行の basicData を編集できない場合の案内。
+                  タブ自体は非表示にせず、閲覧はできる (フィールドのみ disabled)。 */}
+              {!allowParentUpdate && (
+                <div
+                  role="alert"
+                  className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-3"
+                  data-testid="competition-tab-edit-restricted-notice"
+                >
+                  {tTabModal("competitionEditRestricted")}
+                </div>
+              )}
+
               {/* Dates */}
               <div className="grid grid-cols-2 gap-4">
                 <DatePicker
@@ -1081,6 +1161,7 @@ export default function CompetitionTabModal({
                     setBasicValidationError(null);
                   }}
                   required
+                  disabled={!allowParentUpdate}
                   placeholder={t("start_date_label")}
                   data-testid="competition-tab-date"
                 />
@@ -1094,6 +1175,7 @@ export default function CompetitionTabModal({
                   minDate={basicData.date ? new Date(basicData.date) : undefined}
                   placeholder=""
                   popupAlign="right"
+                  disabled={!allowParentUpdate}
                   data-testid="competition-tab-end-date"
                 />
               </div>
@@ -1108,6 +1190,7 @@ export default function CompetitionTabModal({
                   value={basicData.title}
                   onChange={(e) => setBasicData((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder={t("name_placeholder")}
+                  disabled={!allowParentUpdate}
                   data-testid="competition-tab-title"
                 />
 
@@ -1121,6 +1204,7 @@ export default function CompetitionTabModal({
                       onChange={(value) => setBasicData((prev) => ({ ...prev, place: value }))}
                       suggestions={placeSuggestions}
                       placeholder="TAC"
+                      disabled={!allowParentUpdate}
                       data-testid="competition-tab-place"
                     />
                   </div>
@@ -1138,11 +1222,10 @@ export default function CompetitionTabModal({
                         <button
                           key={type.value}
                           type="button"
-                          onClick={() =>
-                            setBasicData((prev) => ({ ...prev, poolType: type.value }))
-                          }
+                          onClick={() => handlePoolTypeChange(type.value)}
+                          disabled={!allowParentUpdate}
                           aria-pressed={isActive}
-                          className={`h-8 sm:h-10 px-3 border text-sm font-medium whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          className={`h-8 sm:h-10 px-3 border text-sm font-medium whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
                             isFirst ? "rounded-l-md" : ""
                           } ${isLast ? "rounded-r-md" : ""} ${!isFirst ? "-ml-px" : ""} ${
                             isActive
@@ -1151,7 +1234,13 @@ export default function CompetitionTabModal({
                           }`}
                           data-testid={`competition-tab-pool-type-${type.value}`}
                         >
-                          {type.value === 0 ? t("pool_short") : t("pool_long")}
+                          {/* 狭幅では略称、sm 以上は従来のフル表記 */}
+                          <span className="sm:hidden">
+                            {type.value === 0 ? t("pool_short_abbrev") : t("pool_long_abbrev")}
+                          </span>
+                          <span className="hidden sm:inline">
+                            {type.value === 0 ? t("pool_short") : t("pool_long")}
+                          </span>
                         </button>
                       );
                     })}
@@ -1169,7 +1258,8 @@ export default function CompetitionTabModal({
                   onChange={(e) => setBasicData((prev) => ({ ...prev, note: e.target.value }))}
                   placeholder={t("note_placeholder")}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!allowParentUpdate}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50"
                   data-testid="competition-tab-note"
                 />
               </div>
@@ -1182,7 +1272,7 @@ export default function CompetitionTabModal({
                     onImagesChange={(newFiles: CompetitionImageFile[], deletedIds: string[]) =>
                       setImageData({ newFiles, deletedIds })
                     }
-                    disabled={isLoading}
+                    disabled={isLoading || !allowParentUpdate}
                   />
                 ) : (
                   <PremiumBadge message={tPremium("imageUpload")} />
@@ -1224,6 +1314,10 @@ export default function CompetitionTabModal({
                         bestTimes,
                       )
                     : null;
+                  // 未編集判定は prefillSource のラッチのみで行う (裁定2 v2)。値の比較はしない
+                  // (formatTimeBest⇄parseTimeFlexible の往復が1ULP非可逆なため、値比較方式だと
+                  // 「押した直後なのに警告が出ない」穴を構造的に抱える)。
+                  const isEntryPrefillUntouched = entry?.prefillSource === "bestTime";
                   return (
                     <ItemTabs
                       count={entries.length}
@@ -1288,31 +1382,52 @@ export default function CompetitionTabModal({
                                 <span className="hidden sm:inline">{tEntry("timeLabel")}</span>
                               </label>
                               <div className="flex-1 min-w-0">
-                                <Input
-                                  type="text"
-                                  value={entry.entryTimeDisplayValue}
-                                  onChange={(e) => {
-                                    // 構造ガード: "1.23.45" 等はクイック解釈で受理。解釈不能なら 0 のまま
-                                    const parsed = parseTimeFlexible(e.target.value);
-                                    updateEntry(entry.id, {
-                                      entryTimeDisplayValue: e.target.value,
-                                      entryTime: parsed ?? 0,
-                                    });
-                                  }}
-                                  onBlur={(e) => {
-                                    const parsed = parseTimeFlexible(e.target.value);
-                                    updateEntry(entry.id, {
-                                      // 不正形式は入力値を残してエラー表示する（誤値で整形しない）
-                                      entryTimeDisplayValue:
-                                        parsed !== null ? formatTimeBest(parsed) : e.target.value,
-                                      entryTime: parsed ?? 0,
-                                    });
-                                  }}
-                                  placeholder="1:23.45"
-                                  className="w-full h-8 sm:h-10"
-                                  disabled={isLoading}
-                                  data-testid={`entry-time-${clampedIndex + 1}`}
-                                />
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={entry.entryTimeDisplayValue}
+                                    onChange={(e) => {
+                                      // 構造ガード: "1.23.45" 等はクイック解釈で受理。解釈不能なら 0 のまま
+                                      const parsed = parseTimeFlexible(e.target.value);
+                                      updateEntry(entry.id, {
+                                        entryTimeDisplayValue: e.target.value,
+                                        entryTime: parsed ?? 0,
+                                        // 値が何であれ無条件にラッチを外す (裁定2 v2)
+                                        prefillSource: null,
+                                      });
+                                    }}
+                                    onBlur={(e) => {
+                                      const parsed = parseTimeFlexible(e.target.value);
+                                      updateEntry(entry.id, {
+                                        // 不正形式は入力値を残してエラー表示する（誤値で整形しない）
+                                        entryTimeDisplayValue:
+                                          parsed !== null ? formatTimeBest(parsed) : e.target.value,
+                                        entryTime: parsed ?? 0,
+                                      });
+                                    }}
+                                    placeholder="2.00.00"
+                                    className="flex-1 min-w-0 h-8 sm:h-10"
+                                    disabled={isLoading}
+                                    data-testid={`entry-time-${clampedIndex + 1}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      entryBestTime && handleApplyBestTime(entry.id, entryBestTime.time)
+                                    }
+                                    // records.time は numeric(10,2) NOT NULL だが CHECK (time > 0)
+                                    // が無い (relay_records.total_time と違い下限制約が無い)。
+                                    // time <= 0 の記録が DB に入り得るため、その値をそのまま流用
+                                    // すると "0.00" が入ってしまう。オブジェクトの truthiness だけ
+                                    // でなく time > 0 も見る。
+                                    disabled={isLoading || !entryBestTime || entryBestTime.time <= 0}
+                                    className="shrink-0 h-8 sm:h-10 px-3 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    data-testid={`entry-best-time-prefill-${clampedIndex + 1}`}
+                                  >
+                                    {tEntries("bestTimePrefillButton")}
+                                  </button>
+                                </div>
                                 {entry.entryTimeDisplayValue.trim() !== "" &&
                                   parseTimeFlexible(entry.entryTimeDisplayValue) === null && (
                                     <p
@@ -1322,6 +1437,14 @@ export default function CompetitionTabModal({
                                       {tTimeError("invalidTimeFormat")}
                                     </p>
                                   )}
+                                {isEntryPrefillUntouched && (
+                                  <p
+                                    className="mt-1 text-xs text-yellow-700"
+                                    data-testid={`entry-prefill-warning-${clampedIndex + 1}`}
+                                  >
+                                    {tEntries("bestTimePrefillBadge")}
+                                  </p>
+                                )}
                               </div>
                             </div>
 

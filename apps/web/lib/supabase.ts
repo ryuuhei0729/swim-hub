@@ -52,13 +52,18 @@ const { url, anonKey } = (() => {
   return validateSupabaseEnv();
 })();
 
-// ローカル環境かどうかを判定する関数
-function isLocalEnvironment(): boolean {
+// Secure Cookie を付けてよいか判定する関数
+//
+// 判定軸はホスト名ではなくプロトコル。Secure 属性付き Cookie は HTTP では
+// ブラウザに破棄されるため、http で配信している限り付けてはいけない。
+// ホスト名で判定していた頃は、実機スマホから LAN/tailnet IP (http) で開くと
+// secure: true になり認証 Cookie が保存されず、ログインしてもリダイレクトされなかった。
+// 本番は https 配信なので従来どおり secure: true になる。
+function shouldUseSecureCookies(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
-  const hostname = window.location.hostname;
-  return hostname === "localhost" || hostname === "127.0.0.1";
+  return window.location.protocol === "https:";
 }
 
 // ブラウザ環境でのみSupabaseクライアントを作成
@@ -75,7 +80,7 @@ export const supabase: SupabaseClient<Database> | undefined =
         {
           cookieOptions: {
             sameSite: "lax",
-            secure: !isLocalEnvironment(), // ローカルはHTTP、本番はHTTPS
+            secure: shouldUseSecureCookies(), // http 配信時は付けない (付くと Cookie が破棄される)
             path: "/", // すべてのパスでCookieが有効になるように設定
           },
         },

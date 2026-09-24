@@ -101,7 +101,9 @@ const PracticeItem = React.memo(function PracticeItem({
             : t("teams.mobile.teamPracticeList.addLog")
         }
       >
-        <Feather name="edit-3" size={13} color="#2563EB" />
+        {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-3 を維持する。
+            非admin は「記録追加」という追加操作に変わったため plus に切り替える。 */}
+        <Feather name={isAdmin ? "edit-3" : "plus"} size={13} color="#2563EB" />
         <Text style={styles.logButtonText}>
           {isAdmin
             ? t("teams.mobile.teamPracticeList.recordBulkButton")
@@ -121,16 +123,33 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
   const deleteMutation = useDeleteTeamPracticeMutation(supabase);
 
   const handleAdd = useCallback(() => {
+    // isEditMode は着地先 (PracticeTabFormScreen) の route params ではなく state
+    // (resolvedPracticeId) から導出され、新規作成の親 INSERT 成功直後に false→true へ
+    // flip する。そのため「新規作成だから origin は不要」は誤りで、保存後に
+    // canEditPracticeDetails が false に転落し basicData が無言でグレーアウト/破棄される
+    // (PM 裁定 Critical-1, Sprint Contract #PM-1)。管理者ビューの練習フォーム導線は
+    // 追加・編集のどちらも origin: "teamAdmin" を付与する。
     navigation.navigate("PracticeForm", {
       teamId,
       date: format(new Date(), "yyyy-MM-dd"),
+      origin: "teamAdmin",
     });
   }, [navigation, teamId]);
 
+  // 一括登録画面への導線（管理者ビュー専用。web admin タブの bulk-register 相当）。
+  // 以前は TeamDetailScreen 側で「追加」ボタンと別行に描画していたが、実機フィードバックを
+  // 受けてヘッダー行内で「追加」の左に並べる (isAdmin の表示条件は addButton と同一)
+  const handleBulkRegister = useCallback(() => {
+    navigation.navigate("TeamBulkRegister", { teamId });
+  }, [navigation, teamId]);
+
   const handleEdit = useCallback((practice: Practice) => {
+    // 管理者ビューの鉛筆ボタンからの編集導線であることを明示する (Sprint Contract #PM-1)。
+    // handleAdd (新規作成) も同じ理由で origin を付与している (handleAdd 側コメント参照)。
     navigation.navigate("PracticeForm", {
       practiceId: practice.id,
       teamId,
+      origin: "teamAdmin",
     });
   }, [navigation, teamId]);
 
@@ -143,9 +162,10 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
       });
       return;
     }
-    navigation.navigate("PracticeLogForm", {
+    navigation.navigate("PracticeTabForm", {
       practiceId: practice.id,
       teamId,
+      initialTab: "log",
     });
   }, [navigation, teamId, isAdmin]);
 
@@ -212,16 +232,29 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>
+        <Text style={styles.title} numberOfLines={1}>
           {t("teams.mobile.teamPracticeList.title", { count: items.length })}
         </Text>
         {isAdmin && (
-          <Pressable style={styles.addButton} onPress={handleAdd} accessibilityRole="button">
-            <Feather name="plus" size={16} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>
-              {t("teams.mobile.teamPracticeList.addButton")}
-            </Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.bulkRegisterButton}
+              onPress={handleBulkRegister}
+              accessibilityRole="button"
+              accessibilityLabel={t("teamsAdmin.tabs.bulkRegister")}
+            >
+              <Feather name="upload" size={14} color="#2563EB" />
+              <Text style={styles.bulkRegisterButtonText}>
+                {t("teamsAdmin.tabs.bulkRegister")}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.addButton} onPress={handleAdd} accessibilityRole="button">
+              <Feather name="plus" size={16} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>
+                {t("teams.mobile.teamPracticeList.addButton")}
+              </Text>
+            </Pressable>
+          </View>
         )}
       </View>
 
@@ -269,6 +302,32 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#111827",
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  bulkRegisterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    borderRadius: 6,
+    backgroundColor: "#FFFFFF",
+  },
+  bulkRegisterButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   addButton: {
     flexDirection: "row",

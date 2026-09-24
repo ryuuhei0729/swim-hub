@@ -230,7 +230,7 @@ describe("ロケール別フォーマット (V-06)", () => {
 
 // ------------------------------------------------------------------
 // V-05 / Boundary: 終了日 minDate 制約の統合シナリオ
-// CompetitionBasicFormScreen が minDate={parseISO(date)} を渡す挙動を再現
+// CompetitionTabFormScreen が minDate={parseISO(date)} を渡す挙動を再現
 // ------------------------------------------------------------------
 describe("終了日 minDate 制約の統合 (V-05)", () => {
   it("開始日 2026-06-10 のとき、終了日カレンダーで 6/9 は選択不可・6/10以降は可", () => {

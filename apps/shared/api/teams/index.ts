@@ -5,4 +5,7 @@ export * from "./core";
 export * from "./groups";
 export * from "./members";
 export * from "./practices";
+export * from "./rankings";
+export * from "./relayRankings";
+export * from "./relayRecords";
 export * from "./records";

@@ -101,10 +101,10 @@ const baseCompetition = {
 };
 
 const members = [
-  { id: "u-aoi", user_id: "u-aoi", role: "admin", users: { id: "u-aoi", name: "アオイ" } },
-  { id: "u-misaki", user_id: "u-misaki", role: "user", users: { id: "u-misaki", name: "ミサキ" } },
-  { id: "u-hikari", user_id: "u-hikari", role: "user", users: { id: "u-hikari", name: "ヒカリ" } },
-  { id: "u-sora", user_id: "u-sora", role: "user", users: { id: "u-sora", name: "ソラ" } },
+  { id: "u-aoi", user_id: "u-aoi", role: "admin", users: { id: "u-aoi", name: "アオイ", gender: 0 } },
+  { id: "u-misaki", user_id: "u-misaki", role: "user", users: { id: "u-misaki", name: "ミサキ", gender: 0 } },
+  { id: "u-hikari", user_id: "u-hikari", role: "user", users: { id: "u-hikari", name: "ヒカリ", gender: 0 } },
+  { id: "u-sora", user_id: "u-sora", role: "user", users: { id: "u-sora", name: "ソラ", gender: 0 } },
 ];
 
 type RecordClientPropsFull = Parameters<typeof RecordClient>[0];
@@ -171,6 +171,7 @@ function renderRecordClient(existingRecords: ExistingRecordFixture[]) {
       existingRecords={existingRecords}
       styles={STYLES}
       entries={[]}
+      bestTimesByUser={{}}
     />,
   );
 }

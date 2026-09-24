@@ -286,22 +286,26 @@ export function PracticeDetails({
             </div>
           </div>
           <div className="flex items-center space-x-2 ml-4">
-            <button
-              onClick={() => onEdit?.(practiceImages)}
-              className="p-2 text-gray-500 hover:text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-              title={tDash("practice.editTitle")}
-              data-testid="edit-practice-button"
-            >
-              <PencilIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={onDelete}
-              className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-              title={tDash("practice.deleteTitle")}
-              data-testid="delete-practice-button"
-            >
-              <TrashIcon className="h-5 w-5" />
-            </button>
+            {!isTeamPractice && (
+              <button
+                onClick={() => onEdit?.(practiceImages)}
+                className="p-2 text-gray-500 hover:text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                title={tDash("practice.editTitle")}
+                data-testid="edit-practice-button"
+              >
+                <PencilIcon className="h-5 w-5" />
+              </button>
+            )}
+            {!isTeamPractice && (
+              <button
+                onClick={onDelete}
+                className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                title={tDash("practice.deleteTitle")}
+                data-testid="delete-practice-button"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
 

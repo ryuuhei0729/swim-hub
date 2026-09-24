@@ -171,6 +171,7 @@ export default function GoalForm({
         <label className="block text-sm font-medium text-gray-700 mb-2">{t("form.targetTimeLabel")}</label>
         <Input
           type="text"
+          inputMode="decimal"
           placeholder={t("form.targetTimePlaceholder")}
           value={targetTime}
           onChange={(e) => onTargetTimeChange(e.target.value)}
@@ -184,6 +185,7 @@ export default function GoalForm({
         <div className="flex gap-2">
           <Input
             type="text"
+            inputMode="decimal"
             placeholder={t("form.startTimePlaceholder")}
             value={startTime}
             onChange={(e) => onStartTimeChange(e.target.value)}

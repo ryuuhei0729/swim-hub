@@ -1,23 +1,22 @@
 // =============================================================================
 // TeamMemberList.headerLayout.test.tsx
 // =============================================================================
-// mobile UI フィードバック: チーム詳細メンバータブの統計ヘッダーで
-//   - タイトル行 (「メンバー」) の右端 = 「WAポイントで比較」ボタン
-//   - 人数行 (「人数: N人」) の右端     = 「引き継ぎを含む」スイッチ
-// になるよう入れ替えた。変更前は逆 (タイトル行にスイッチ / 人数行の下にボタン) だった。
+// mobile UI フィードバック: チーム詳細メンバータブの上部を整理した。
+//   - 統計ヘッダーカード (タイトル「メンバー」+ 人数行) を撤去
+//   - 人数「人数: N人」はテーブル左上セル (旧「メンバー」ラベルの位置) へ移動
+//   - グループ表示のラベル「グループ表示:」を撤去
+//   - 「引き継ぎを含む」スイッチはグループ表示行 (カテゴリピルの行) の右端へ移動
 //
 // 検証観点:
-//   [V-HDR-01] 「WAポイントで比較」ボタンとタイトルが同一の直近コンテナ (タイトル行) にあり、
-//              ボタンがタイトルより後ろ (= 右端) に置かれている
-//   [V-HDR-02] 「引き継ぎを含む」スイッチと人数テキストが同一の直近コンテナ (人数行) にあり、
-//              スイッチが人数テキストより後ろ (= 右端) に置かれている
-//   [V-HDR-03] 交差ガード: ボタンはタイトル行に「だけ」、スイッチは人数行に「だけ」存在する
-//              (片方だけ移して逆側に残骸が残る／両方が同じ行に同居する退行を検出)
+//   [V-HDR-01 反転] 「WAポイントで比較」ボタンはメンバータブに存在しない (ランキングタブへ移設)
+//   [V-HDR-02 改] 「引き継ぎを含む」スイッチはグループ表示行にあり、カテゴリピルより後ろ (= 右端)
+//   [V-HDR-03 改] 交差ガード: 撤去したのは統計ヘッダーだけで、スイッチは1つだけ残っている
+//   [V-HDR-04 新] 人数はテーブルのヘッダー行の先頭セルにあり、旧ラベル「メンバー」は消えている
 //
 // 検出できないことの明示 (トートロジー/過大主張の防止):
-//   jsdom は Flexbox を解決しないため、justifyContent:"space-between" による
-//   実際の右寄せ描画は本テストでは検証できない (RN の実レイアウトは実機確認が必要)。
-//   ここで保証するのは DOM 上の「どの行に属するか」と「行内での前後関係」のみ。
+//   jsdom は Flexbox を解決しないため、実際の右寄せ描画は検証できない
+//   (RN の実レイアウトは実機確認が必要)。ここで保証するのは DOM 上の
+//   「どの行/どのセルに属するか」と「行内での前後関係」のみ。
 // =============================================================================
 
 import React, { useEffect } from "react";
@@ -134,67 +133,90 @@ const renderList = () => {
   );
 };
 
-/** 「WAポイントで比較」Pressable (モックにより button として描画される) */
-const getWaButton = () => screen.getByText("WAポイントで比較").closest("button") as HTMLElement;
 /** 「引き継ぎを含む」Switch (モックにより role="switch" の button として描画される) */
 const getRelaySwitch = () => screen.getByRole("switch", { name: "引き継ぎを含む" });
-/** 統計ヘッダーのタイトル Text (span) */
-const getTitle = () => screen.getByText("メンバー");
-/** 人数 Text (span)。「人数: 1人」のような文言なので前方一致で拾う */
-const getCountText = () => screen.getByText(/人数:/);
+/** グループ表示行のカテゴリピル (TeamMemberGroupFilter のモックが描画する Text) */
+const getGroupFilter = () => screen.getByText("group-filter");
+/** 人数 Text (span)。「人数: 1人」のような文言なので前方一致で拾う。
+ *  テーブルはベストタイム取得の解決後に描画されるので await が必要 */
+const findCountText = () => screen.findByText(/人数:/);
 
-describe("[V-HDR] TeamMemberList 統計ヘッダーの配置", () => {
+describe("[V-HDR] TeamMemberList 上部レイアウトの配置", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("[V-HDR-01] 「WAポイントで比較」ボタンはタイトルと同じ行にあり、タイトルより後ろに置かれる", () => {
+  // [V-HDR-01 反転] 「WAポイントで比較」はランキングタブへ移設された。
+  // **「ある」を pin していたテストを消さずに「無い」へ反転する。**
+  // 消してしまうと「どこにも無い」状態でも全 green になり、移設の失敗を検出できない。
+  // 「ランキングタブにある」側は
+  // components/teams/rankings/__tests__/TeamRankings.waPointsCompare.test.tsx が担保する。
+  it("[V-HDR-01 反転] 「WAポイントで比較」ボタンはメンバータブに存在しない (ランキングタブへ移設)", async () => {
     renderList();
 
-    const title = getTitle();
-    const waButton = getWaButton();
+    // --- 正のコントロール (先に置く) ---
+    // 「描画そのものが失敗したので見つからない」を「撤去できている」と誤読しないため、
+    // 上部エリアとテーブルが生きていることを先に確認する。これが無いと否定形は無意味になる
+    expect(getGroupFilter()).toBeTruthy();
+    expect(getRelaySwitch()).toBeTruthy();
+    expect(await findCountText()).toBeTruthy();
 
-    // タイトル(span)の親 = タイトル行(statsHeaderTop)。ボタンはその直下の兄弟であること。
-    expect(waButton.parentElement).toBe(title.parentElement);
-
-    // 行内の並び順: タイトル → ボタン (右端)
-    const rowChildren = Array.from(title.parentElement!.children);
-    expect(rowChildren.indexOf(waButton)).toBeGreaterThan(rowChildren.indexOf(title));
+    // --- 本体: ボタンが1つも無い ---
+    expect(screen.queryByText("WAポイントで比較")).toBeNull();
   });
 
-  it("[V-HDR-02] 「引き継ぎを含む」スイッチは人数テキストと同じ行にあり、人数より後ろに置かれる", () => {
+  it("[V-HDR-02] 「引き継ぎを含む」スイッチはグループ表示行にあり、カテゴリピルより後ろに置かれる", () => {
     renderList();
 
-    const countText = getCountText();
+    const groupFilter = getGroupFilter();
     const relaySwitch = getRelaySwitch();
-    const countRow = countText.parentElement!;
 
-    // 人数行(statsRow)がスイッチを子孫に含むこと (スイッチはラベルと共に
-    // includeRelayToggle でラップされるため parentElement 一致ではなく contains で見る)
-    expect(countRow.contains(relaySwitch)).toBe(true);
+    // グループ表示行 = カテゴリピルとスイッチの両方を含む最も近い共通コンテナ。
+    // ピルは TeamMemberGroupFilter (+ flex ラッパー) に、スイッチはラベルと共に
+    // includeRelayToggle に包まれるため、parentElement 一致ではなく contains で見る
+    const rowChildren = (el: Element) => Array.from(el.children);
+    let row: Element | null = groupFilter.parentElement;
+    while (row && !row.contains(relaySwitch)) {
+      row = row.parentElement;
+    }
+    expect(row).not.toBeNull();
 
-    // 行内の並び順: 人数テキスト → 引き継ぎトグル (右端)
-    const rowChildren = Array.from(countRow.children);
-    const toggleWrapperIndex = rowChildren.findIndex((el) => el.contains(relaySwitch));
-    expect(toggleWrapperIndex).toBeGreaterThan(rowChildren.indexOf(countText));
+    // 行内の並び順: カテゴリピル → 引き継ぎトグル (右端)
+    const children = rowChildren(row!);
+    const filterIndex = children.findIndex((el) => el.contains(groupFilter));
+    const toggleIndex = children.findIndex((el) => el.contains(relaySwitch));
+    expect(filterIndex).toBeGreaterThanOrEqual(0);
+    expect(toggleIndex).toBeGreaterThan(filterIndex);
   });
 
-  it("[V-HDR-03] 交差ガード: ボタンは人数行に、スイッチはタイトル行に存在しない", () => {
+  it("[V-HDR-03 改] 交差ガード: 統計ヘッダーは撤去され、スイッチは1つだけ残っている", async () => {
     renderList();
 
-    const titleRow = getTitle().parentElement!;
-    const countRow = getCountText().parentElement!;
-    const waButton = getWaButton();
-    const relaySwitch = getRelaySwitch();
+    // 撤去したのは統計ヘッダーカード (タイトル + 人数行)。
+    // 旧タイトル「メンバー」はテーブル左上セルのラベルも兼ねていたので、
+    // 画面上のどこにも単独の「メンバー」テキストは残らない
+    expect(screen.queryByText("メンバー")).toBeNull();
 
-    // 2行が別コンテナであること (前提が崩れると以下の否定形が無意味になる)
-    expect(titleRow).not.toBe(countRow);
-
-    expect(countRow.contains(waButton)).toBe(false);
-    expect(titleRow.contains(relaySwitch)).toBe(false);
-
-    // 画面全体でも各1個だけ (移動ではなく複製されていないことの確認)
-    expect(screen.getAllByText("WAポイントで比較")).toHaveLength(1);
+    // --- 対照: 消したのはヘッダーだけで、人数とスイッチは生きている ---
+    // (「まるごと壊れた」のを「ヘッダーだけ消えた」と誤読しないため)
+    expect(await findCountText()).toBeTruthy();
     expect(screen.getAllByRole("switch", { name: "引き継ぎを含む" })).toHaveLength(1);
+  });
+
+  it("[V-HDR-04] 人数はテーブルヘッダー行の先頭セルにあり、引き継ぎトグルの行には無い", async () => {
+    renderList();
+
+    const countText = await findCountText();
+    const countCell = countText.parentElement!;
+    const headerRow = countCell.parentElement!;
+
+    // 先頭セルであること (種目ヘッダーより前)
+    expect(Array.from(headerRow.children).indexOf(countCell)).toBe(0);
+    // 同じ行に種目ヘッダーが続いていること (= テーブルのヘッダー行だという前提の固定)
+    expect(headerRow.textContent).toContain("自由形");
+
+    // 人数はグループ表示行 (スイッチのある行) には無い
+    const relaySwitch = getRelaySwitch();
+    expect(countCell.contains(relaySwitch)).toBe(false);
   });
 });

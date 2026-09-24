@@ -21,12 +21,13 @@ import {
 } from "@apps/shared/hooks/queries/teams";
 import { useUpdateCompetitionMutation } from "@apps/shared/hooks/queries/records";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
-import type { Competition } from "@swim-hub/shared/types";
+import type { Competition, EntryWithDetails } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { formatDate, isCompetitionDateInPast } from "@apps/shared/utils/date";
 import { resolveEntryStatus } from "@apps/shared/utils/entryStatus";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { isEntryTabVisible } from "@/utils/tabFormUtils";
 import { TeamCompetitionEntryModal } from "./TeamCompetitionEntryModal";
 import { TeamCompetitionRecordsModal } from "./TeamCompetitionRecordsModal";
 
@@ -64,7 +65,6 @@ const CompetitionItem = React.memo(function CompetitionItem({
   onDelete,
   onEntry,
   onRecord,
-  onEntryBulk,
   onOpenRecords,
 }: {
   competition: Competition;
@@ -74,7 +74,6 @@ const CompetitionItem = React.memo(function CompetitionItem({
   onDelete: (competition: Competition) => void;
   onEntry: (competition: Competition) => void;
   onRecord: (competition: Competition) => void;
-  onEntryBulk: (competition: Competition) => void;
   onOpenRecords: (competition: Competition) => void;
 }) {
   const { t } = useTranslation();
@@ -169,18 +168,29 @@ const CompetitionItem = React.memo(function CompetitionItem({
     // 追い越せないため、elevation も併せて底上げする。iOS は elevation を無視し、
     // 影の見た目 (shadowColor/Offset/Opacity/Radius) はここで変更していないため
     // 副作用は出ない。
-    <View style={[styles.item, isStatusMenuOpen && styles.itemElevated]}>
-      {/* D-4: 編集/削除アイコンは「記録一覧モーダルを開く」Pressable の子要素にしない。
-          (テストハーネスの Pressable→<button> 変換ではクリックが DOM 上の祖先 <button> へ
-          バブリングするため、アイコンをネストすると誤って onOpenRecords も発火してしまう。
-          タイトル行/日付以下をそれぞれ独立した Pressable にし、編集/削除アイコンは
-          兄弟要素として itemHeader 内に配置する。) */}
+    <Pressable
+      style={[styles.item, isStatusMenuOpen && styles.itemElevated]}
+      onPress={() => onOpenRecords(competition)}
+      // Critical 対応: accessible を明示しないと Pressable は既定で true になり、
+      // 配下 (編集/削除/ステータス変更/代理入力等) がスクリーンリーダー上で1つの
+      // 不透明なボタンに畳み込まれ、個別要素にフォーカスできなくなる。
+      // カード全体は AT から見えなくし、タイトル行の Pressable だけを唯一の
+      // エントリポイントにする (既存実例: BottomSheet.tsx の grabHandleRow)。
+      // accessible={false} の要素は accessibility tree に現れないため
+      // accessibilityRole は無効になる。誤解を招くので付けない。
+      accessible={false}
+    >
+      {/* D-4: 各アクションは独立した Pressable としてネストしている。react-native
+          モックが実機同様に最深要素でタッチを専有するため、カード全体を Pressable
+          にしてもアクションボタンへの誤爆は発生しない。 */}
       <View style={styles.itemHeader}>
         <Pressable
           style={styles.itemTitleRow}
-          onPress={isAdmin ? () => onOpenRecords(competition) : undefined}
-          disabled={!isAdmin}
-          accessibilityRole={isAdmin ? "button" : undefined}
+          onPress={() => onOpenRecords(competition)}
+          accessibilityRole="button"
+          accessibilityLabel={t("teams.mobile.teamCompetitionList.viewRecordsAria", {
+            title: competition.title || t("teams.mobile.fallbackCompetitionTitle"),
+          })}
         >
           <Feather name="award" size={14} color="#2563EB" />
           <Text style={styles.itemTitle} numberOfLines={1}>
@@ -209,104 +219,194 @@ const CompetitionItem = React.memo(function CompetitionItem({
         )}
       </View>
 
-      <Pressable
-        onPress={isAdmin ? () => onOpenRecords(competition) : undefined}
-        disabled={!isAdmin}
-        accessibilityRole={isAdmin ? "button" : undefined}
-      >
-        <View style={styles.itemRow}>
-          <Feather name="calendar" size={12} color="#9CA3AF" />
-          <Text style={styles.itemDate}>{formatDate(competition.date, "longWithWeekday", dateLocale)}</Text>
-        </View>
-
-        {competition.place ? (
-          <View style={styles.itemRow}>
-            <Feather name="map-pin" size={12} color="#9CA3AF" />
-            <Text style={styles.itemPlace}>
-              {competition.place} {poolTypeParen}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.itemRow}>
-            <Feather name="droplet" size={12} color="#9CA3AF" />
-            <Text style={styles.itemMeta}>
-              {poolLabel} {poolTypeParen}
-            </Text>
-          </View>
-        )}
-
-        {competition.note && (
-          <Text style={styles.itemNote} numberOfLines={2}>{competition.note}</Text>
-        )}
-      </Pressable>
-      {/* D-2: 過去大会 (今日は含まない) は受付ステータス行そのものを描画しない */}
-      {!isPastCompetition && (
-        <View style={styles.statusRow}>
-          {isAdmin ? (
-            <View style={styles.statusDropdownWrapper}>
-              <Pressable
-                style={[
-                  styles.entryStatusBadge,
-                  styles.entryStatusBadgeAdmin,
-                  badge.container,
-                  isSavingStatus && styles.statusMenuItemDisabled,
-                ]}
-                onPress={() => setIsStatusMenuOpen((prev) => !prev)}
-                disabled={isSavingStatus}
-                accessibilityRole="button"
-                accessibilityLabel={t("teams.mobile.teamCompetitionList.entryStatusChangeAria", {
-                  status: entryStatusLabel,
-                })}
-                accessibilityState={{ expanded: isStatusMenuOpen, disabled: isSavingStatus }}
-                hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
-              >
-                <Text style={[styles.entryStatusBadgeText, badge.text]}>{entryStatusLabel}</Text>
-                <Feather name="chevron-down" size={12} color={badge.text.color} />
-              </Pressable>
-              {isStatusMenuOpen && (
-                <View style={styles.statusMenuPanel}>
-                  {STATUS_ORDER.map((s) => {
-                    const active = s === displayedEntryStatus;
-                    const optionLabel = t(`teams.competitions.entryStatus.${s}`);
-                    return (
-                      <Pressable
-                        key={s}
-                        style={[styles.statusMenuItem, isSavingStatus && styles.statusMenuItemDisabled]}
-                        onPress={() => handleStatusOptionPress(s)}
-                        disabled={isSavingStatus}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: active, disabled: isSavingStatus }}
-                        accessibilityLabel={t(
-                          "teams.mobile.teamCompetitionEntryModal.changeStatusAria",
-                          { status: optionLabel },
-                        )}
-                      >
-                        <Text
-                          style={[
-                            styles.statusMenuItemText,
-                            active && styles.statusMenuItemTextActive,
-                          ]}
-                        >
-                          {optionLabel}
-                        </Text>
-                        {active && <Feather name="check" size={14} color="#2563EB" />}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
+      {isAdmin ? (
+        // レイアウト要望 (ユーザー承認済み): admin ビューも利用者ビューと同じ左右分割
+        // (情報ブロック左 / ボタン群右、上:記録系・下:エントリー系) に揃える。
+        <View style={styles.itemBodyRow}>
+          <View style={styles.itemInfoColumn}>
+            <View style={styles.itemRow}>
+              <Feather name="calendar" size={12} color="#9CA3AF" />
+              <Text style={styles.itemDate}>{formatDate(competition.date, "longWithWeekday", dateLocale)}</Text>
             </View>
-          ) : (
-            <View style={[styles.entryStatusBadge, badge.container]}>
-              <Text style={[styles.entryStatusBadgeText, badge.text]}>{entryStatusLabel}</Text>
-            </View>
-          )}
-        </View>
-      )}
-      <View style={styles.entryRecordRow}>
-        {!isAdmin && (
-          <>
+
+            {competition.place ? (
+              <View style={styles.itemRow}>
+                <Feather name="map-pin" size={12} color="#9CA3AF" />
+                <Text style={styles.itemPlace}>
+                  {competition.place} {poolTypeParen}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.itemRow}>
+                <Feather name="droplet" size={12} color="#9CA3AF" />
+                <Text style={styles.itemMeta}>
+                  {poolLabel} {poolTypeParen}
+                </Text>
+              </View>
+            )}
+
+            {competition.note && (
+              <Text style={styles.itemNote} numberOfLines={2}>{competition.note}</Text>
+            )}
+
+            {/* D-2: 過去大会 (今日は含まない) は受付ステータス行そのものを描画しない */}
             {!isPastCompetition && (
+              <View style={styles.statusRow}>
+                <View style={styles.statusDropdownWrapper}>
+                  <Pressable
+                    style={[
+                      styles.entryStatusBadge,
+                      styles.entryStatusBadgeAdmin,
+                      badge.container,
+                      isSavingStatus && styles.statusMenuItemDisabled,
+                    ]}
+                    onPress={() => setIsStatusMenuOpen((prev) => !prev)}
+                    disabled={isSavingStatus}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("teams.mobile.teamCompetitionList.entryStatusChangeAria", {
+                      status: entryStatusLabel,
+                    })}
+                    accessibilityState={{ expanded: isStatusMenuOpen, disabled: isSavingStatus }}
+                    hitSlop={{ top: 16, bottom: 16, left: 8, right: 8 }}
+                  >
+                    <Text style={[styles.entryStatusBadgeText, badge.text]}>{entryStatusLabel}</Text>
+                    <Feather name="chevron-down" size={12} color={badge.text.color} />
+                  </Pressable>
+                  {isStatusMenuOpen && (
+                    // High 対応: 外殻カードが Pressable になったことで、パネル内の
+                    // 選択肢間の余白 (ハンドラを持たない要素) をタップすると祖先の
+                    // onOpenRecords まで浮上してしまう (statusMenuBackdrop はパネルを
+                    // 覆っていないため拾えない)。パネル自体を no-op Pressable にして
+                    // 委譲を遮断する。
+                    <Pressable
+                      style={styles.statusMenuPanel}
+                      onPress={() => {}}
+                      // accessible={false} で AT から隠すため accessibilityRole は付けない
+                      // (付けても accessibility tree に現れず無効。誤解を招く記述を避ける)。
+                      accessible={false}
+                    >
+                      {STATUS_ORDER.map((s) => {
+                        const active = s === displayedEntryStatus;
+                        const optionLabel = t(`teams.competitions.entryStatus.${s}`);
+                        return (
+                          <Pressable
+                            key={s}
+                            style={[styles.statusMenuItem, isSavingStatus && styles.statusMenuItemDisabled]}
+                            onPress={() => handleStatusOptionPress(s)}
+                            disabled={isSavingStatus}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: active, disabled: isSavingStatus }}
+                            accessibilityLabel={t(
+                              "teams.mobile.teamCompetitionEntryModal.changeStatusAria",
+                              { status: optionLabel },
+                            )}
+                          >
+                            <Text
+                              style={[
+                                styles.statusMenuItemText,
+                                active && styles.statusMenuItemTextActive,
+                              ]}
+                            >
+                              {optionLabel}
+                            </Text>
+                            {active && <Feather name="check" size={14} color="#2563EB" />}
+                          </Pressable>
+                        );
+                      })}
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            )}
+          </View>
+          {/* Reviewer 指摘対応: statusMenuPanel (zIndex 20) は左の itemInfoColumn から
+              右へはみ出して開く。itemInfoColumn に itemButtonColumn より高い zIndex
+              (下記 itemInfoColumn 定義) を与えて視覚的にボタン列より前面にし、
+              加えて展開中は pointerEvents="none" でボタン列自体のタップを無効化する
+              (パネルの実際の描画幅がボタンを覆いきらない場合でも誤タップを防ぐ)。 */}
+          <View
+            style={styles.itemButtonColumn}
+            pointerEvents={isStatusMenuOpen ? "none" : "auto"}
+          >
+            {/* PM 裁定 R3: admin の未来日ボタンは非admin と同じ「エントリー」(このモーダルを
+                開く) に統一する。代理入力への導線はモーダル内の「エントリーを代理入力」
+                ボタンに移動した (カード上に代理入力ボタンは残さない)。
+                それ以外(今日・過去・null・空文字・不正日付)は記録代理入力ボタンのみを排他表示する。
+                isEntryTabVisible は「未来のみ true」を保証するため、フォールバック側
+                (記録代理入力ボタン)に今日・過去・不正値がすべて自然に落ちる。 */}
+            {isEntryTabVisible(competition.date) ? (
+              <Pressable
+                style={styles.entryButton}
+                onPress={() => onEntry(competition)}
+                accessibilityRole="button"
+                accessibilityLabel={t("teams.mobile.teamCompetitionList.entryButton")}
+              >
+                <Feather name="log-in" size={13} color="#2563EB" />
+                <Text style={styles.entryButtonText}>
+                  {t("teams.mobile.teamCompetitionList.entryButton")}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={styles.recordButton}
+                onPress={() => onRecord(competition)}
+                accessibilityRole="button"
+                accessibilityLabel={t("teams.mobile.teamCompetitionList.recordBulkButton")}
+              >
+                <Feather name="clock" size={13} color="#059669" />
+                <Text style={styles.recordButtonText}>
+                  {t("teams.mobile.teamCompetitionList.recordBulkButton")}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      ) : (
+        // レイアウト要望: 利用者ビューのみ、情報ブロック (日付/場所/水路/受付ステータス) と
+        // ボタン群 (上:記録/下:エントリー) を左右に並べる。管理者ビューは対象外。
+        <View style={styles.itemBodyRow}>
+          <View style={styles.itemInfoColumn}>
+            <View style={styles.itemRow}>
+              <Feather name="calendar" size={12} color="#9CA3AF" />
+              <Text style={styles.itemDate}>{formatDate(competition.date, "longWithWeekday", dateLocale)}</Text>
+            </View>
+
+            {competition.place ? (
+              <View style={styles.itemRow}>
+                <Feather name="map-pin" size={12} color="#9CA3AF" />
+                <Text style={styles.itemPlace}>
+                  {competition.place} {poolTypeParen}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.itemRow}>
+                <Feather name="droplet" size={12} color="#9CA3AF" />
+                <Text style={styles.itemMeta}>
+                  {poolLabel} {poolTypeParen}
+                </Text>
+              </View>
+            )}
+
+            {competition.note && (
+              <Text style={styles.itemNote} numberOfLines={2}>{competition.note}</Text>
+            )}
+
+            {/* D-2: 過去大会 (今日は含まない) は受付ステータス行そのものを描画しない */}
+            {!isPastCompetition && (
+              <View style={styles.statusRow}>
+                <View style={[styles.entryStatusBadge, badge.container]}>
+                  <Text style={[styles.entryStatusBadgeText, badge.text]}>{entryStatusLabel}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+          <View style={styles.itemButtonColumn}>
+            {/* 未来日 (isEntryTabVisible=true) はエントリーボタンのみ、
+                それ以外(今日・過去・null・空文字・不正日付)は記録追加ボタンのみを排他表示する。
+                isEntryTabVisible は「未来のみ true」を保証するため、フォールバック側
+                (記録追加ボタン)に今日・過去・不正値がすべて自然に落ちる。
+                entryButton 側の中身 (アイコン/色/文言キー/onPress) は一切変更していない。 */}
+            {isEntryTabVisible(competition.date) ? (
               <Pressable
                 style={styles.entryButton}
                 onPress={() => onEntry(competition)}
@@ -316,54 +416,38 @@ const CompetitionItem = React.memo(function CompetitionItem({
                 <Feather name="log-in" size={13} color="#2563EB" />
                 <Text style={styles.entryButtonText}>{t("teams.mobile.teamCompetitionList.entryButton")}</Text>
               </Pressable>
+            ) : (
+              <Pressable
+                style={styles.recordButton}
+                onPress={() => onRecord(competition)}
+                accessibilityRole="button"
+                accessibilityLabel={t("teams.mobile.teamCompetitionList.recordButton")}
+              >
+                <Feather name="plus" size={13} color="#059669" />
+                <Text style={styles.recordButtonText}>{t("teams.mobile.teamCompetitionList.recordButton")}</Text>
+              </Pressable>
             )}
-            <Pressable
-              style={styles.recordButton}
-              onPress={() => onRecord(competition)}
-              accessibilityRole="button"
-              accessibilityLabel={t("teams.mobile.teamCompetitionList.recordButton")}
-            >
-              <Feather name="clock" size={13} color="#059669" />
-              <Text style={styles.recordButtonText}>{t("teams.mobile.teamCompetitionList.recordButton")}</Text>
-            </Pressable>
-          </>
-        )}
-        {isAdmin && (
-          <>
-            <Pressable
-              style={styles.recordButton}
-              onPress={() => onRecord(competition)}
-              accessibilityRole="button"
-              accessibilityLabel={t("teams.mobile.teamCompetitionList.recordBulkButton")}
-            >
-              <Feather name="clock" size={13} color="#059669" />
-              <Text style={styles.recordButtonText}>
-                {t("teams.mobile.teamCompetitionList.recordBulkButton")}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={styles.entryBulkButton}
-              onPress={() => onEntryBulk(competition)}
-              accessibilityRole="button"
-              accessibilityLabel={t("teams.mobile.teamCompetitionList.entryBulkButton")}
-            >
-              <Feather name="users" size={13} color="#7C3AED" />
-              <Text style={styles.entryBulkButtonText}>
-                {t("teams.mobile.teamCompetitionList.entryBulkButton")}
-              </Text>
-            </Pressable>
-          </>
-        )}
-      </View>
+          </View>
+        </View>
+      )}
       {/* D-3: カード上プルダウンの背景タップで閉じるオーバーレイ (RN Modal は使わない)。
-          statusRow (zIndex高め) より先に描画順で下にあるが、statusRow に高い zIndex を
-          与えているためパネル自体はこのオーバーレイより前面に来る。他の行 (タイトル/
-          日付/場所/備考/代理入力ボタン群) はこのオーバーレイの背後になり、開いている間は
-          タップがオーバーレイに吸収されてメニューを閉じる。 */}
+          このオーバーレイの真の兄弟は itemHeader / itemBodyRow / (このオーバーレイ自身)
+          の3つ (zIndex は兄弟間比較にしか効かないため、比較対象は常に直接の兄弟)。
+          itemBodyRow に zIndex:10 (backdrop の 5 より高い) を与えているため、
+          itemBodyRow の子孫である statusMenuPanel を含め、itemBodyRow 全体が
+          このオーバーレイより前面に来る。itemHeader は zIndex 指定なし (=0) であり、
+          真の兄弟である backdrop (5) より下位になる。これは意図的な設計であり
+          (zIndex による前後関係は視覚的な重なりの有無とは独立に決まるため、
+          「重ならないから問題ない」が理由なのではない)、展開中にタイトル行や
+          編集/削除アイコンをタップすると backdrop が正しく吸収してメニューを閉じ、
+          本来のアクション (記録一覧を開く/編集/削除) は発火しない。
+          開いている間、itemBodyRow 以外の領域 (=このオーバーレイの見えている部分) は
+          タップがオーバーレイに吸収されてメニューを閉じる
+          (itemButtonColumn は pointerEvents="none" でも二重に保護)。 */}
       {isStatusMenuOpen && (
         <Pressable style={styles.statusMenuBackdrop} onPress={() => setIsStatusMenuOpen(false)} />
       )}
-    </View>
+    </Pressable>
   );
 });
 
@@ -377,14 +461,28 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
 
   // エントリー受付状況モーダルの対象大会
   const [entryModalCompetition, setEntryModalCompetition] = useState<Competition | null>(null);
-  // D-4: 記録一覧モーダルの対象大会 (admin のみ、カード本体タップで開く)
+  // D-4: 記録一覧モーダルの対象大会 (admin/非admin 問わずカード本体タップで開く)
   const [recordsModalCompetition, setRecordsModalCompetition] = useState<Competition | null>(null);
 
+  // origin は「チーム管理者ビューの導線から来た」ことを示す唯一のシグナル
+  // (teamId の有無で代用しない)。フォーム側はこれで大会タブのみに絞り、実 admin 判定
+  // との AND で基本情報の編集を許可する。
+  // 新規作成側にも必ず渡すこと: 保存直後に resolvedCompetitionId が入って
+  // isEditMode が false→true へ flip するため、origin が無いと作成した直後に
+  // 自分の入力がグレーアウトし、続けて編集した内容が保存されない。
   const handleAdd = useCallback(() => {
     navigation.navigate("CompetitionForm", {
       teamId,
       date: format(new Date(), "yyyy-MM-dd"),
+      origin: "teamAdmin",
     });
+  }, [navigation, teamId]);
+
+  // 一括登録画面への導線（管理者ビュー専用。web admin タブの bulk-register 相当）。
+  // 以前は TeamDetailScreen 側で「追加」ボタンと別行に描画していたが、実機フィードバックを
+  // 受けてヘッダー行内で「追加」の左に並べる (isAdmin の表示条件は addButton と同一)
+  const handleBulkRegister = useCallback(() => {
+    navigation.navigate("TeamBulkRegister", { teamId });
   }, [navigation, teamId]);
 
   const handleEdit = useCallback((competition: Competition) => {
@@ -392,34 +490,41 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
       competitionId: competition.id,
       date: competition.date,
       teamId,
+      origin: "teamAdmin",
     });
   }, [navigation, teamId]);
 
-  // 「エントリー」ボタン: Web パリティで受付状況管理モーダルを開く
+  // 「エントリー」ボタン: PM 裁定 R3 により admin/非admin 共通でエントリー一覧モーダルを開く
+  // (admin も最初に見るのは代理入力ボタンではなく、このモーダル)。
   const handleEntry = useCallback((competition: Competition) => {
     setEntryModalCompetition(competition);
   }, []);
 
-  // モーダル内の「種目をエントリー」: 既存の選手セルフエントリー画面へ遷移（機能維持）。
-  // web は受付中(open)の大会のみセルフエントリーに到達するため(useTeamEntry.ts:59-64)、
+  // モーダル内の「エントリーを追加」(非admin): 既存の選手セルフエントリー画面へ遷移（機能維持）。
+  // web (apps/web/components/team/TeamCompetitionEntryModal.tsx の canEditOrDeleteEntry) も
+  // 受付中(open)の大会でのみ自分のエントリー導線を表示する方針であり、これに揃えて
   // 受付中以外では導線を出さない（モーダル側で非表示だが二重ガード）。
   const handleSelfEntry = useCallback((competition: Competition, currentStatus: EntryStatus) => {
-    // モーダル内の現在 status（楽観的更新後の値）でガードする。
-    // prop の competition.entry_status は再フェッチ前は stale なため使わない（dead-click 防止）。
+    // モーダルが表示している status（resolveEntryStatus の結果をそのまま保持した値。R5 で
+    // モーダル内の楽観的更新自体は削除済み）でガードする。
+    // この関数の引数 competition はモーダルを開いた時点でクローズオーバーした値であり、
+    // モーダルが開いている間に受付状況が変わった場合 competition.entry_status は
+    // 再フェッチ前の stale な値になりうるため使わない（dead-click 防止）。
     if (currentStatus !== "open") return;
     setEntryModalCompetition(null);
-    navigation.navigate("EntryForm", {
+    navigation.navigate("CompetitionTabForm", {
       competitionId: competition.id,
       date: competition.date,
       teamId,
+      initialTab: "entry",
     });
   }, [navigation, teamId]);
 
-  // 「エントリー代理入力」ボタン: admin 専用。管理者代理一括入力画面へ遷移する。
-  // handleEntry（受付状況管理モーダル）/ handleSelfEntry（本人用エントリー導線）とは
-  // 独立した新規ボタンであり、それらの既存動作には影響しない。
+  // モーダル内の「エントリーを代理入力」(admin 専用、要件B後半): 管理者代理一括入力画面へ遷移する。
+  // PM 裁定 R3 によりカード上の代理入力ボタンは撤去され、この導線はモーダル内に一本化された。
   const handleEntryBulk = useCallback((competition: Competition) => {
     if (isAdmin) {
+      setEntryModalCompetition(null);
       navigation.navigate("TeamEntryBulkForm", {
         competitionId: competition.id,
         teamId,
@@ -427,11 +532,31 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     }
   }, [navigation, teamId, isAdmin]);
 
+  // モーダル内、自分のエントリー行の編集アイコン (要件A / R6・D9): 既存の CompetitionTabFormScreen
+  // (entry タブ) へ遷移する。同画面はログイン中ユーザーの既存エントリーを user_id で
+  // プリフィルする実装を既に持つため、行ごとの entryId 自体は渡さないが、D9 により
+  // 「どの項目タブを開くか」の解決に entry.id (targetEntryId) を渡す。style_id では引かない
+  // (リレーのレグ別行は同一 style が複数行に現れうるため)。
+  const handleEditEntry = useCallback(
+    (competition: Competition, entry: EntryWithDetails) => {
+      setEntryModalCompetition(null);
+      navigation.navigate("CompetitionTabForm", {
+        competitionId: competition.id,
+        date: competition.date,
+        teamId,
+        initialTab: "entry",
+        targetEntryId: entry.id,
+      });
+    },
+    [navigation, teamId],
+  );
+
   const handleRecord = useCallback((competition: Competition) => {
     // admin は一括代理入力画面へ、非 admin は個人フロー(CompetitionTabForm)へ分岐。
     // team_id の有無に関わらず既存レコードを読み込む CompetitionTabForm に統一する
-    // (useDayDetailHandlers.handleEditRecord と同じ方針。RecordLogForm は recordId 未指定だと
-    // 既存レコードを検索せず重複作成を招くため使わない)。
+    // (useDayDetailHandlers.handleEditRecord と同じ方針。旧 RecordLogForm 画面は recordId
+    // 未指定だと既存レコードを検索せず重複作成を招く経路だったため、この統一に伴い画面/ルート
+    // ごと削除済み。ここから遷移する余地は無い)。
     if (isAdmin) {
       navigation.navigate("TeamRecordBulkForm", {
         competitionId: competition.id,
@@ -447,13 +572,12 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     });
   }, [navigation, teamId, isAdmin]);
 
-  // D-4: カード本体タップ (admin のみ) で記録一覧モーダルを開く。
+  // D-4: カード本体タップ (admin/非admin 問わず) で記録一覧モーダルを開く。
   // 従来この Pressable は onEdit を呼んでいたが、編集は編集アイコンに一本化されたため
   // 記録一覧モーダルを開く導線に置き換える。
   const handleOpenRecords = useCallback((competition: Competition) => {
-    if (!isAdmin) return;
     setRecordsModalCompetition(competition);
-  }, [isAdmin]);
+  }, []);
 
   const handleDelete = useCallback((competition: Competition) => {
     Alert.alert(
@@ -487,7 +611,6 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
       onDelete={handleDelete}
       onEntry={handleEntry}
       onRecord={handleRecord}
-      onEntryBulk={handleEntryBulk}
       onOpenRecords={handleOpenRecords}
     />
   ), [
@@ -497,7 +620,6 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     handleDelete,
     handleEntry,
     handleRecord,
-    handleEntryBulk,
     handleOpenRecords,
   ]);
 
@@ -531,16 +653,29 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>
+        <Text style={styles.title} numberOfLines={1}>
           {t("teams.mobile.teamCompetitionList.title", { count: items.length })}
         </Text>
         {isAdmin && (
-          <Pressable style={styles.addButton} onPress={handleAdd} accessibilityRole="button">
-            <Feather name="plus" size={16} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>
-              {t("teams.mobile.teamCompetitionList.addButton")}
-            </Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.bulkRegisterButton}
+              onPress={handleBulkRegister}
+              accessibilityRole="button"
+              accessibilityLabel={t("teamsAdmin.tabs.bulkRegister")}
+            >
+              <Feather name="upload" size={14} color="#2563EB" />
+              <Text style={styles.bulkRegisterButtonText}>
+                {t("teamsAdmin.tabs.bulkRegister")}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.addButton} onPress={handleAdd} accessibilityRole="button">
+              <Feather name="plus" size={16} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>
+                {t("teams.mobile.teamCompetitionList.addButton")}
+              </Text>
+            </Pressable>
+          </View>
         )}
       </View>
 
@@ -574,16 +709,17 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
           competitionTitle={
             entryModalCompetition.title || t("teams.mobile.fallbackCompetitionTitle")
           }
-          teamId={teamId}
+          // PM 裁定 R1: 生の entry_status ではなく、大会日が過去かどうかを織り込んだ
+          // 実効ステータス (resolveEntryStatus の戻り値) を渡す。モーダル内の行単位の
+          // 編集/削除アイコン表示判定・セルフエントリー導線もこの値を基準にする。
           entryStatus={resolveEntryStatus(
             entryModalCompetition.date,
             entryModalCompetition.entry_status,
           )}
-          // 現在の導線は過去日で isPastCompetition によりゲート済みのため true にはならないが、
-          // 直接呼び出し（テスト等）に対する保険として渡し続ける。
-          isPastDate={isCompetitionDateInPast(entryModalCompetition.date)}
           isAdmin={isAdmin}
           onSelfEntry={(currentStatus) => handleSelfEntry(entryModalCompetition, currentStatus)}
+          onEditEntry={(entry) => handleEditEntry(entryModalCompetition, entry)}
+          onAdminBulkEntry={() => handleEntryBulk(entryModalCompetition)}
         />
       )}
 
@@ -620,6 +756,32 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#111827",
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  bulkRegisterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    borderRadius: 6,
+    backgroundColor: "#FFFFFF",
+  },
+  bulkRegisterButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   addButton: {
     flexDirection: "row",
@@ -777,10 +939,30 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 5,
   },
-  entryRecordRow: {
+  // レイアウト要望: 情報ブロックとボタン群を左右に並べる (admin/非admin 共通)
+  itemBodyRow: {
     flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    // Critical 対応: zIndex は兄弟間の順序にしか効かず、祖先の順位を子に代行させる
+    // ことはできない (子は親の兄弟を追い越せない)。statusMenuBackdrop (zIndex 5) の
+    // 真の兄弟はこの itemBodyRow 自身であり、その子孫の itemInfoColumn/statusMenuPanel
+    // ではないため、backdrop を上回るための zIndex はここに置く必要がある。
+    zIndex: 10,
+  },
+  itemInfoColumn: {
+    flex: 1,
+    // これは itemBodyRow の zIndex (上記、backdrop 用) とは別目的。
+    // itemButtonColumn (zIndex 指定なし=0) という「itemBodyRow の内側の兄弟」との
+    // 比較にのみ効く値で、admin の statusMenuPanel が右のボタン列より前面に
+    // 描画されるようにする (非admin はプルダウンが無いため実質無害)。
+    zIndex: 10,
+  },
+  itemButtonColumn: {
+    flexShrink: 0,
+    alignItems: "flex-end",
     gap: 8,
-    marginTop: 8,
   },
   entryButton: {
     flexDirection: "row",
@@ -811,21 +993,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#059669",
-  },
-  entryBulkButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#7C3AED",
-  },
-  entryBulkButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#7C3AED",
   },
   centerContainer: {
     flex: 1,

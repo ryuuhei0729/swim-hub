@@ -6,20 +6,29 @@ import { getServerUser } from "@/lib/supabase-server";
 import { RecordAPI } from "@apps/shared/api/records";
 import { isCompetitionDateInPast } from "@apps/shared/utils/date";
 import { isPoolType, type Competition, type Style } from "@apps/shared/types";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
+import { getEntryReturnPath, type EntryReturnOrigin } from "@/utils/entryReturnOrigin";
 import EntriesClient, { type ExistingEntryDisplay } from "../_client/EntriesClient";
 
 interface EntriesDataLoaderProps {
   teamId: string;
   competitionId: string;
+  /** page.tsx が enum に正規化した戻り先。そのまま EntriesClient に渡すだけ (追加スプリント D13) */
+  returnOrigin: EntryReturnOrigin;
 }
 
 interface ActiveTeamMember {
   id: string;
   user_id: string;
   role: string;
+  is_swimmer: boolean;
   users: {
     id: string;
     name: string;
+    birthday?: string | null;
+    // optional: 共有 MemberSelectModal (useMemberGroupSort の性別グルーピング) が
+    // 参照する。欠損時はモーダル側がフラット表示にフォールバックする (PM裁定 W10)
+    gender?: number;
   };
 }
 
@@ -46,7 +55,11 @@ interface EntryWithUser {
  * チーム大会エントリー代理一括入力ページの server loader。
  * `records/_server/RecordDataLoader.tsx` と同型のガード・並行データ取得を踏襲する。
  */
-export default async function EntriesDataLoader({ teamId, competitionId }: EntriesDataLoaderProps) {
+export default async function EntriesDataLoader({
+  teamId,
+  competitionId,
+  returnOrigin,
+}: EntriesDataLoaderProps) {
   const [user, supabase, locale] = await Promise.all([
     getServerUser(),
     createAuthenticatedServerClient(),
@@ -104,15 +117,17 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
         id,
         user_id,
         role,
+        is_swimmer,
         users!team_memberships_user_id_fkey (
           id,
-          name
+          name,
+          birthday,
+          gender
         )
       `,
         )
         .eq("team_id", teamId)
-        .eq("is_active", true)
-        .order("role", { ascending: false }),
+        .eq("is_active", true),
 
       // 既存のエントリーを取得（退会済みメンバーの表示名フォールバック用に users を join）
       supabase
@@ -156,9 +171,12 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
 
   const competition = competitionData as unknown as CompetitionWithDetails;
 
-  // 大会日が過去なら代理入力不可（仕様#10: server は redirect）
+  // 大会日が過去なら代理入力不可（仕様#10: server は redirect）。
+  // admin 確定後 (:159-161 の認可ガードとは別) のこの分岐は、往路 (returnOrigin) に
+  // 従って戻り先を分岐する (追加スプリント)。既定値は "admin" のため、
+  // origin 未指定時は従来どおり teams-admin へ戻る
   if (isCompetitionDateInPast(competition.date)) {
-    return redirect({ href: `/teams-admin/${teamId}?tab=competitions`, locale });
+    return redirect({ href: getEntryReturnPath(returnOrigin, teamId), locale });
   }
 
   if (membersResult.error) {
@@ -168,7 +186,10 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
     throw entriesResult.error;
   }
 
-  const members = (membersResult.data || []) as unknown as ActiveTeamMember[];
+  // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+  const members = ((membersResult.data || []) as unknown as ActiveTeamMember[]).sort(
+    compareMembersByBirthday,
+  );
   const entriesData = (entriesResult.data || []) as unknown as EntryWithUser[];
   const styles = (stylesResult.data || []) as Style[];
 
@@ -206,10 +227,17 @@ export default async function EntriesDataLoader({ teamId, competitionId }: Entri
         entry_status: competition.entry_status,
         teamName: competition.team?.name || t("pageTitle"),
       }}
-      activeMembers={members.map((m) => ({ user_id: m.user_id, role: m.role, name: m.users.name }))}
+      activeMembers={members.map((m) => ({
+        user_id: m.user_id,
+        role: m.role,
+        name: m.users.name,
+        is_swimmer: m.is_swimmer,
+        gender: m.users.gender,
+      }))}
       existingEntries={existingEntries}
       styles={styles}
       bestTimesByUser={bestTimesByUser}
+      returnOrigin={returnOrigin}
     />
   );
 }

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
-  View,
   Pressable,
   Animated,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 
 /** カード部分のフェード + スケールにかける時間(ms)。開くときも閉じるときも同じ長さを使う。 */
 const ANIMATION_DURATION = 160;
@@ -109,7 +109,7 @@ export const CenterModal: React.FC<CenterModalProps> = ({
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <View style={styles.overlay}>
+      <FormKeyboardAvoidingView style={styles.overlay} hasNativeHeader={false}>
         {/* 背面タップで閉じるための透明レイヤー。暗幕自体はアニメーションさせず即時表示する */}
         <Pressable
           style={StyleSheet.absoluteFill}
@@ -138,7 +138,7 @@ export const CenterModal: React.FC<CenterModalProps> = ({
           )}
           {children}
         </Animated.View>
-      </View>
+      </FormKeyboardAvoidingView>
     </Modal>
   );
 };

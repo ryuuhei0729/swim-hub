@@ -26,6 +26,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { Alert } from "react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import ja from "@apps/shared/messages/ja.json";
 
 vi.mock("react-native", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("react-native");
@@ -141,7 +142,7 @@ vi.mock("@apps/shared/api/records", () => ({
 }));
 
 // このテストの検証対象外の重量コンポーネントを薄いスタブに差し替える
-// (TeamRecordBulkFormScreen.invalidate.test.tsx と同じ方針)
+// (teamRecordBulk.detailScreenInvalidate.test.tsx と同じ方針)
 vi.mock("@/components/teams/MemberSelectModal", () => ({
   MemberSelectModal: () => null,
 }));
@@ -196,6 +197,53 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       error: null,
     };
   });
+
+  it(
+    "既存行にベストタイムがあると、その値が参考バッジとして表示される（人間の意図: " +
+      "従来は『ベストタイムを流用』ボタンが押せるかどうかでしか自己ベストの有無が分からず、" +
+      "値そのものは画面に出ていなかった。web の EntriesClient と同じ緑バッジを mobile にも出す。" +
+      "バッジは表示のみで、申告タイムの入力欄には入らない）",
+    async () => {
+      mocks.getBestTimesForUsers.mockResolvedValue(
+        new Map([
+          [
+            "user-1",
+            [
+              {
+                id: "best-1",
+                time: 58.0,
+                created_at: "2025-01-01T00:00:00Z",
+                pool_type: 0,
+                is_relaying: false,
+                style_id: 3,
+                style: { name_jp: "自由形100m", distance: 100 },
+              },
+            ],
+          ],
+        ]),
+      );
+
+      render(<TeamEntryBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+
+      // __mocks__/react-native.ts は testID を data-testid に変換するのを TextInput に
+      // 限定しているため、バッジ (View + Text) はテキストで引く。
+      // 期待ラベルは ja.json から組み立てる (訳文をテスト側にハードコードしない)。
+      const expected = `${ja.forms.recordLog.bestTimeLabel}: 58.00`;
+      await waitFor(() => {
+        const badges = screen.queryAllByText(
+          (_content, element) =>
+            element?.tagName === "SPAN" &&
+            (element.textContent ?? "").replace(/\s+/g, " ").trim() === expected,
+        );
+        expect(badges).toHaveLength(1);
+      });
+
+      // 自由形の行の入力欄は既存エントリーの申告タイム (60.5秒) のままで、
+      // ベストタイム (58.00) が流し込まれていない
+      expect(screen.getByDisplayValue("1:00.50")).toBeDefined();
+      expect(screen.queryByDisplayValue("58.00")).toBeNull();
+    },
+  );
 
   it(
     "既存2行 (entry-X: 自由形, entry-Y: 平泳ぎ) のうち entry-X の行を削除して、" +

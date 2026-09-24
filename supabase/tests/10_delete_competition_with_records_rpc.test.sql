@@ -2,12 +2,17 @@
 -- pgTAP: delete_competition_with_records RPC の実DB検証 (QA Sprint Contract)
 --
 -- 対象 migration: 20260826000000_delete_competition_with_records_rpc.sql
+--             (V-DB-06 のみ 20260919000000_team_delete_admin_only.sql で仕様変更)
 --
--- 確定仕様 (ユーザー明示決定、覆さない):
+-- 確定仕様 (2026-08-26時点。V-DB-06 は 2026-09-19 の Sprint Contract 追補で上書き):
 --   1. records を削除するのは個人大会 (team_id IS NULL) のみ。
 --      チーム大会 (team_id IS NOT NULL) の削除では records を削除しない。
---   2. チーム大会は「拒否」ではなく「大会だけ削除」が正しい
---      (拒否すると自分が作成したチーム大会を削除できなくなる退行)。
+--   2. (旧) チーム大会は「拒否」ではなく「大会だけ削除」が正しいとされていたが、
+--      「チーム大会/練習は個人画面から削除不可・チーム管理画面の別経路に限定する」
+--      という新要件により、本 RPC (個人フロー専用) はチーム大会を admin であっても
+--      拒否する方針に変更された (20260919000000)。旧テストが pin していた
+--      「拒否されず成功する」という挙動はバグ再発防止の観点で上書きされた仕様であり、
+--      古い確定仕様を理由に本変更を差し戻してはならない。
 --
 -- 観点:
 --   V-DB-01: 未認証 (anon ロール) は GRANT 層で EXECUTE 自体を拒否される。
@@ -18,9 +23,11 @@
 --            大会・records とも無変更。
 --   V-DB-05 (中核・回帰防止): 個人大会の削除は records と split_times を全削除し、
 --            deleted_record_count に実件数を返す。
---   V-DB-06 (中核・確定仕様): チーム大会の削除は "拒否されず成功" し、大会は
---            削除されるが records (他メンバーのものを含む) は1件も削除されない。
---            deleted_record_count は 0。
+--   V-DB-06 (中核・新仕様 2026-09-19): チーム大会の削除は作成者・管理者を問わず
+--            success:false で拒否され、大会 (competitions行) も records も
+--            1件も変更されない (この RPC は個人大会削除専用のため)。
+--            チーム大会の削除はチーム管理画面の別経路 (delete_team_preserving_records
+--            等) に限定する。
 --   V-DB-07 (ロールバック/原子性): 関数内で例外が起きた場合、records/competitions
 --            とも変更前の状態に戻る (中間状態が残らない)。
 --   V-DB-08: anon への GRANT が REVOKE 済みで authenticated のみ EXECUTE 可能。
@@ -292,24 +299,27 @@ select is(
 select public.qa_logout();
 
 -- =============================================================================
--- V-DB-06 (中核・確定仕様): チーム大会の削除は "成功" し、大会のみ消え records は残る
+-- V-DB-06 (中核・新仕様 2026-09-19): チーム大会の削除は admin/作成者を問わず拒否され、
+-- 大会・records とも無変更のままである (この RPC は個人大会削除専用のため)。
 -- =============================================================================
 select is(
   (select count(*)::int from public.records where competition_id = 'e0000000-0000-4000-a000-000000000002'),
   5,
   'V-DB-06 前提: チーム大会の records は5件存在する');
 
-select public.qa_login_as('c0000000-0000-4000-a000-000000000001'); -- owner_u (team_comp の作成者)
+select public.qa_login_as('c0000000-0000-4000-a000-000000000001'); -- owner_u (team_comp の作成者かつ team1 admin)
 
 select results_eq(
   $$ select (public.delete_competition_with_records('e0000000-0000-4000-a000-000000000002'::uuid)->>'success')::boolean $$,
-  $$ values (true) $$,
-  'V-DB-06a (退行検出): チーム大会の削除は "拒否されず" success:true を返す');
+  $$ values (false) $$,
+  'V-DB-06a (新仕様): チーム大会の削除は作成者/adminであっても success:false で拒否される');
+
+select public.qa_logout();
 
 select is(
   (select count(*)::int from public.competitions where id = 'e0000000-0000-4000-a000-000000000002'),
-  0,
-  'V-DB-06b: チーム大会 (competitions行) 自体は削除されている');
+  1,
+  'V-DB-06b: 拒否後もチーム大会 (competitions行) は削除されず残っている');
 
 select is(
   (select count(*)::int from public.records
@@ -321,7 +331,7 @@ select is(
      'f0000000-0000-4000-a000-000000000015'
    )),
   5,
-  'V-DB-06c (確定仕様の中核): チーム大会削除後も records は1件も削除されず5件のまま残っている');
+  'V-DB-06c: 拒否後も records は1件も削除されず5件のまま残っている');
 
 select is(
   (select count(*)::int from public.records

@@ -1,5 +1,25 @@
-- Zeiten und Ergebnisse lassen sich jetzt einfacher eingeben
-- Wettkampfergebnisse als Bildkarte teilen
-- Geschlecht im Profil festlegen
-- Stabilere Google-Kalender-Synchronisierung
-- Sicherheitsverbesserungen und zahlreiche Fehlerbehebungen
+Dieses Update bringt Team-Ranglisten, WA-Punkte zum Vergleich über Disziplinen hinweg und viele weitere Verbesserungen.
+
+NEU
+- Tab „Ranglisten“ für Teams: nach Disziplin, Strecke, Bahnlänge, Geschlecht und Saison filtern und die Platzierungen im Team sowie Staffel-Ranglisten einsehen
+- „Als Punkte anzeigen“ in der Bestzeiten-Tabelle: Ergebnisse über Disziplinen und Strecken hinweg mit WA-Punkten (offizielle Punkte von World Aquatics) vergleichen. Im Tab „Mitglieder“ lässt sich das ganze Team auf einen Blick vergleichen
+- Kalenderfarben für Training und Wettkämpfe auf dem Dashboard in den Einstellungen anpassen, auch getrennt pro Team
+- Trainingsprotokolle als Bildkarte teilen, genau wie Wettkampfergebnisse
+- Team-Admins können Wettkampfmeldungen stellvertretend für Mitglieder gesammelt eingeben
+- Anwesenheit: auf anstehende Termine direkt antworten und sehen, wie alle Mitglieder geantwortet haben
+- Die Wettkampfhistorie zeigt Meldungen ohne Ergebnis; die Mitgliedertabelle kann Staffel-Wechselzeiten einblenden
+
+VERBESSERT
+- Neu gestaltete Trainings- und Wettkampflisten mit Sortieren und Filtern im unteren Bereich sowie einer Karte pro Trainingsprotokoll
+- Zum Aktualisieren auf den Hauptbildschirmen nach unten ziehen
+- Meldungen schließen automatisch, sobald der Wettkampftag vorbei ist
+- Beim Löschen eines Wettkampfs wird die Anzahl der verknüpften Ergebnisse angezeigt und diese werden mitgelöscht
+- Die Tastatur verdeckt in Formularen keine Eingabefelder mehr, und die Animationen der Dialoge sind einheitlich
+- Verständlichere Fehlermeldungen
+- Sicherere Anmeldung
+
+BEHOBEN
+- Mitglieder ohne Antwort fehlten in der Anwesenheitsliste
+- „Neues Tag erstellen“ in Trainingsprotokollen öffnete sich manchmal nicht
+- Bestzeit-Details zeigen jetzt Wettkampfname und Anmerkungen gemeinsam an
+- Das NEW-Badge bei Bestzeiten richtet sich jetzt nach dem Wettkampfdatum statt nach dem Eintragsdatum

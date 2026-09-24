@@ -40,6 +40,15 @@ vi.mock("@/lib/video-upload-client", () => ({
   uploadVideoClient: vi.fn().mockResolvedValue(undefined),
 }));
 
+// processCompetitionImage は canvas/Image 読み込みを伴う重い処理のため、jsdom 環境で
+// 実物を動かさずダミーの処理結果を返すよう差し替える (usePracticeTabSave.test.tsx と同型)。
+vi.mock("@/utils/imageUtils", () => ({
+  processCompetitionImage: vi.fn().mockResolvedValue({
+    original: new File(["o"], "original.webp"),
+    thumbnail: new File(["t"], "thumb.webp"),
+  }),
+}));
+
 const wrapper = ({ children }: { children: ReactNode }) => (
   <NextIntlClientProvider locale="ja" messages={messages as unknown as AbstractIntlMessages}>
     {children}
@@ -96,6 +105,7 @@ describe("useCompetitionTabSave", () => {
   const setup = (
     user: { id: string } | null = { id: "user-1" },
     supabaseOpts: { teamId?: string | null; poolType?: 0 | 1 } = {},
+    options: { allowParentUpdate?: boolean } = {},
   ) => {
     const supabase = createFakeSupabase(supabaseOpts);
     createCompetition = vi.fn().mockResolvedValue({ id: "new-comp-id" });
@@ -132,6 +142,7 @@ describe("useCompetitionTabSave", () => {
           setCreatedEntries,
           closeCompetitionTabModal,
           onSaved,
+          ...options,
         }),
       { wrapper },
     );
@@ -306,5 +317,96 @@ describe("useCompetitionTabSave", () => {
     expect(setEditingCompetitionId).toHaveBeenCalledWith(null);
     expect(onSaved).toHaveBeenCalledTimes(1);
     expect(setCompetitionLoading).toHaveBeenCalledWith(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // Sprint Contract 2 (編集禁止) D2: 親子分離。allowParentUpdate=false のとき、
+  // 親 (competitions) の UPDATE と image_paths 書き込みをスキップし、子 (records)
+  // の保存は継続する。SC2 (既存のチーム大会に自分の記録を追加できる) の核心。
+  // -------------------------------------------------------------------------
+  describe("allowParentUpdate (Sprint Contract 2 D2: 親子分離)", () => {
+    it("[SC2-web-1] allowParentUpdate=false のとき、updateCompetition は呼ばれないが記録の保存は継続する", async () => {
+      const result = setup({ id: "user-1" }, {}, { allowParentUpdate: false });
+
+      await act(async () => {
+        await result.current(
+          baseParams({
+            editingCompetitionId: "comp-1",
+            basicData: {
+              date: "2026-07-10",
+              endDate: "",
+              title: "他人のチーム大会",
+              place: "",
+              poolType: 0,
+              note: "",
+            },
+            records: [
+              {
+                id: "temp-new",
+                styleId: "2",
+                time: 60.0,
+                note: "",
+                isRelaying: false,
+                videoPath: "",
+                reactionTime: "",
+                splitTimes: [],
+              },
+            ],
+          }),
+        );
+      });
+
+      expect(updateCompetition).not.toHaveBeenCalled();
+      expect(createRecord).toHaveBeenCalledTimes(1);
+      expect(createRecord).toHaveBeenCalledWith(
+        expect.objectContaining({ style_id: 2, time: 60.0, competition_id: "comp-1" }),
+      );
+      await waitFor(() => {
+        expect(closeCompetitionTabModal).toHaveBeenCalledTimes(1);
+      });
+      expect(onSaved).toHaveBeenCalledTimes(1);
+    });
+
+    it("[SC2-web-2] allowParentUpdate を省略した場合は従来どおり updateCompetition が呼ばれる (デフォルト true・チームタブ向け非退行)", async () => {
+      const result = setup(); // options 省略
+
+      await act(async () => {
+        await result.current(baseParams({ editingCompetitionId: "comp-1" }));
+      });
+
+      expect(updateCompetition).toHaveBeenCalledWith(
+        "comp-1",
+        expect.objectContaining({ date: "2026-07-10" }),
+      );
+    });
+
+    it(
+      "[SC6-web] allowParentUpdate=false のとき、画像を変更していても uploadCompetitionImage 自体が" +
+        "呼ばれない (アップロード後にスキップすると孤児ファイルが残るため、アップロード前に" +
+        "スキップしなければならない)",
+      async () => {
+        const result = setup({ id: "user-1" }, {}, { allowParentUpdate: false });
+        const file = new File(["dummy"], "photo.png", { type: "image/png" });
+
+        await act(async () => {
+          await result.current(
+            baseParams({
+              editingCompetitionId: "comp-1",
+              imageData: {
+                newFiles: [{ file, previewUrl: "blob://x" }],
+                deletedIds: [],
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any,
+            }),
+          );
+        });
+
+        expect(mocks.uploadCompetitionImage).not.toHaveBeenCalled();
+        expect(updateCompetition).not.toHaveBeenCalled();
+        await waitFor(() => {
+          expect(closeCompetitionTabModal).toHaveBeenCalledTimes(1);
+        });
+      },
+    );
   });
 });

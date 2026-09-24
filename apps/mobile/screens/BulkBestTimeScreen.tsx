@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import type { TFunction } from "i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -125,7 +126,7 @@ export const BulkBestTimeScreen: React.FC = () => {
   const tabStyles = getStylesForTab(activeTab);
 
   return (
-    <View style={styles.container}>
+    <FormKeyboardAvoidingView style={styles.container}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -239,7 +240,7 @@ export const BulkBestTimeScreen: React.FC = () => {
           )}
         </Pressable>
       </SafeAreaView>
-    </View>
+    </FormKeyboardAvoidingView>
   );
 };
 

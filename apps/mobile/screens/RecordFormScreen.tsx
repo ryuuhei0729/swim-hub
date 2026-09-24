@@ -11,8 +11,6 @@ import {
   Modal,
   Keyboard,
   Dimensions,
-  KeyboardAvoidingView,
-  Platform,
   Switch,
 } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
@@ -20,6 +18,9 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreateRecordMutation,
@@ -69,6 +70,12 @@ export const RecordFormScreen: React.FC = () => {
   const { supabase, subscription, getAccessToken } = useAuth();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  // Android の Edge-to-Edge 強制下ではシステムナビゲーションバー(3ボタン)の領域まで
+  // 描画されるため、ScrollView 最下部の保存ボタンがナビゲーションバーの背後に隠れる。
+  // contentContainerStyle に下部インセットを加算して回避する (パターンB:
+  // KeyboardAvoidingView の外側を SafeAreaView で包むとキーボード表示時に
+  // インセットぶんの隙間が空くため、スクロール余白として足す方式を採る)。
+  const insets = useSafeInsets();
   const isEditMode = !!recordId;
   const isPremium = checkIsPremium(subscription);
 
@@ -815,12 +822,16 @@ export const RecordFormScreen: React.FC = () => {
   // ドロップダウンを開く（ボタン位置を計測して表示）
   const screenHeight = Dimensions.get("window").height;
   const DROPDOWN_MAX_HEIGHT = 260;
+  // ドロップダウン下端とシステムバー上端のあいだに残す隙間 (dp)。
+  // 実際の下端余白は これ + 下部 inset で決まる (Android edge-to-edge 対応)。
+  const DROPDOWN_BOTTOM_GAP = 8;
 
   const openCompetitionPicker = useCallback(() => {
     Keyboard.dismiss();
     competitionButtonRef.current?.measureInWindow((x, y, width, height) => {
       const top = y + height + 4;
-      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40;
+      const fitsBelow =
+          top + DROPDOWN_MAX_HEIGHT < screenHeight - DROPDOWN_BOTTOM_GAP - insets.bottom;
       setDropdownLayout({
         top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
         left: x,
@@ -828,13 +839,14 @@ export const RecordFormScreen: React.FC = () => {
       });
       setShowCompetitionPicker(true);
     });
-  }, [screenHeight]);
+  }, [screenHeight, insets.bottom]);
 
   const openStylePicker = useCallback(() => {
     Keyboard.dismiss();
     styleButtonRef.current?.measureInWindow((x, y, width, height) => {
       const top = y + height + 4;
-      const fitsBelow = top + DROPDOWN_MAX_HEIGHT < screenHeight - 40;
+      const fitsBelow =
+          top + DROPDOWN_MAX_HEIGHT < screenHeight - DROPDOWN_BOTTOM_GAP - insets.bottom;
       setDropdownLayout({
         top: fitsBelow ? top : y - DROPDOWN_MAX_HEIGHT - 4,
         left: x,
@@ -842,7 +854,7 @@ export const RecordFormScreen: React.FC = () => {
       });
       setShowStylePicker(true);
     });
-  }, [screenHeight]);
+  }, [screenHeight, insets.bottom]);
 
   // 反応時間入力の処理
   // parseFloat は "0.65abc" → 0.65 と先頭だけ解釈するため、入力全体が数値の
@@ -914,11 +926,11 @@ export const RecordFormScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <FormKeyboardAvoidingView style={{ flex: 1 }}>
+      <ScrollView style={styles.container} contentContainerStyle={[
+          styles.content,
+          { paddingBottom: getSafeFooterPadding(16, insets.bottom) },
+        ]}>
         <View style={styles.form}>
           {/* 大会選択（大会未紐付けレコード=一括入力の編集時は選択不要のため静的表示に置き換え） */}
           {isStandaloneRecord ? (
@@ -1004,6 +1016,7 @@ export const RecordFormScreen: React.FC = () => {
               placeholder={t("recordMobile.form.timePlaceholder")}
               placeholderTextColor="#9CA3AF"
               editable={!storeLoading}
+              keyboardType="decimal-pad"
             />
             {errors.time && <Text style={styles.errorText}>{errors.time}</Text>}
           </View>
@@ -1152,6 +1165,7 @@ export const RecordFormScreen: React.FC = () => {
                   placeholder={t("recordMobile.form.timePlaceholder")}
                   placeholderTextColor="#9CA3AF"
                   editable={!storeLoading}
+                  keyboardType="decimal-pad"
                 />
                 {/* ゴール地点スプリット (distance === raceDistance) は削除不可 (web RecordLogEntry :449-461) */}
                 {!(
@@ -1395,7 +1409,7 @@ export const RecordFormScreen: React.FC = () => {
           </View>
         </Pressable>
       </Modal>
-    </KeyboardAvoidingView>
+    </FormKeyboardAvoidingView>
   );
 };
 

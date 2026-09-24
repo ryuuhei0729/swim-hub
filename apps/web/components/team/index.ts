@@ -16,6 +16,7 @@ export { default as TeamMembers } from "./TeamMembers";
 export { default as TeamPracticeForm } from "./TeamPracticeForm";
 export { default as TeamPracticeManager } from "./TeamPracticeManager";
 export { default as TeamPractices } from "./TeamPractices";
+export { TeamRankings } from "./rankings";
 export { default as TeamScheduleManager } from "./TeamScheduleManager";
 export { default as TeamSettings } from "./TeamSettings";
 export { default as TeamStatsCards } from "./TeamStatsCards";

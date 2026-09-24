@@ -20,7 +20,6 @@
         "recordCreate": "New race",
         "competitionInfo": "Meet info",
         "entryRegister": "Register entry",
-        "recordInput": "Enter results",
         "teamDetail": "Team details",
         "settings": "Settings",
         "bulkBestTime": "Bulk best time entry"
@@ -1156,6 +1155,9 @@
       "inputTimes": "Enter times",
       "registeredTimes": "Registered times",
       "timeInputTitle": "Enter times",
+      "timeInputNext": "Next",
+      "timeInputDone": "Done",
+      "timeInputHelpBody": "For the 1st one, separate the numbers with any non-digit character (. - : etc.).\nExamples: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1m12s3\" → 1:12.3.\n\nFrom the 2nd one onward, the tens digit from the previous entry is filled in automatically. Just type 2 more digits in a row — the ones digit and the first decimal digit — to complete the time.\nExample: if the previous entry was \"31.2\", \"3\" is pre-filled, then typing \"2\" \"1\" gives you \"32.1\".\nIf the tens digit is wrong, just backspace and retype.",
       "timeInputSubtitle": "Enter times for {setCount} sets × {repCount} reps",
       "setNumberLabel": "Set {setNumber}",
       "setAverageDetail": "Average: {avg} ({count} reps)",
@@ -1163,7 +1165,7 @@
       "overallAverage": "Overall average:",
       "fastest": "Fastest:",
       "premiumLimited": "Premium only",
-      "timeInputPlaceholder": "e.g. 31-2",
+      "timeInputPlaceholder": "2.00.00",
       "reauthRequired": "Authentication required. Please log in again.",
       "styleRequired": "Please select a style",
       "distanceRequired": "Please enter a distance",
@@ -1438,7 +1440,7 @@
       "addStyleButton": "Add an event",
       "styleModalTitle": "Choose an event",
       "removeStyleAria": "Remove {styleName}",
-      "timePlaceholder": "e.g. 1:23.45",
+      "timePlaceholder": "2.00.00",
       "timeAriaLabel": "Time for {styleName}",
       "poolTypeShort": "Short Course",
       "poolTypeLong": "Long Course",
@@ -1453,7 +1455,7 @@
       "completing": "Setting up...",
       "backButton": "Back",
       "inputHintTitle": "Enter as numbers",
-      "inputHintBody": "You can enter formats like 1:23.45, 23.45, 23-45, or 1-23-45",
+      "inputHintBody": "You can enter formats like 1.23.4, 2.00.00, 23.45, 1:23.45, or 1-23-45",
       "notePlaceholder": "Date, competition name, etc."
     },
     "completionFailed": "Failed to complete setup",
@@ -1610,8 +1612,6 @@
       "calendarSyncFailedMessage": "Competition info was saved, but failed to sync to your calendar.",
       "saveFailed": "Failed to save",
       "deleteFailed": "Failed to delete",
-      "continueToRecord": "Continue to record entry",
-      "continueToEntry": "Continue to entry",
       "noCompetitions": "No competitions",
       "selectCompetition": "Select a competition",
       "deleteConfirmTitle": "Confirm deletion",
@@ -1653,7 +1653,7 @@
       "styleLabel": "Event",
       "selectStyle": "Select an event",
       "entryTimeLabel": "Entry time",
-      "entryTimePlaceholder": "e.g. 2:05.00 or 2-05-00",
+      "entryTimePlaceholder": "2.00.00",
       "memoLabel": "Memo",
       "memoPlaceholder": "Memo (optional)",
       "skipButton": "Skip",
@@ -1678,8 +1678,8 @@
       "relayLegShort": "Leg {num}",
       "freeRelaySuffix": "Free Relay",
       "medleyRelaySuffix": "Medley Relay",
-      "relayTimePlaceholder": "e.g. 1:52.10",
-      "splitTimePlaceholder": "e.g. 30.50",
+      "relayTimePlaceholder": "2.00.00",
+      "splitTimePlaceholder": "2.00.00",
       "subtitle": "Enter records for each event by member",
       "competitionFallback": "Meet",
       "entryHeader": "Event {num}",
@@ -1687,7 +1687,7 @@
       "selectPlaceholder": "Select...",
       "individualEvents": "Individual Events",
       "selectSwimmer": "Select swimmer",
-      "timePlaceholder": "e.g. 1:30.50",
+      "timePlaceholder": "2.00.00",
       "distancePlaceholder": "Distance",
       "notePlaceholder": "Note",
       "videoHas": "Video attached",
@@ -1988,7 +1988,7 @@
     },
     "calendarColors": {
       "title": "Calendar Colors",
-      "description": "Customize the display colors for practice and competition records on the dashboard. You can also set different colors per team.",
+      "description": "Customize the display colors for practice and competition records on the dashboard. Per-team colors can be changed in each team's settings tab.",
       "personalSectionTitle": "Personal Colors",
       "teamSectionTitle": "Team Colors",
       "practiceLabel": "Practice",
@@ -2297,9 +2297,9 @@
       "styleLabel": "Stroke",
       "selectStylePlaceholder": "Select stroke",
       "targetTimeLabel": "Target Time",
-      "targetTimePlaceholder": "e.g. 1:23.45 or 83.45",
+      "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "Initial Time (optional)",
-      "startTimePlaceholder": "e.g. 1:25.00 or 85.00",
+      "startTimePlaceholder": "2.00.00",
       "getBestTimeButton": "Get from best time"
     },
     "milestoneForm": {
@@ -2392,6 +2392,7 @@
       "tabGroups": "Groups",
       "tabPractices": "Practices",
       "tabCompetitions": "Competitions",
+      "tabRankings": "Rankings",
       "tabAttendance": "Attendance",
       "memberLoading": "Loading members...",
       "memberFetchFailed": "Failed to fetch members",
@@ -2566,7 +2567,7 @@
       "bestTimeSection": "Best Time",
       "youBadge": "You",
       "birthdayLabel": "Birthday: {date}",
-      "adminControlsTitle": "Admin controls",
+      "adminControlsTitle": "Member Settings",
       "bestTimesEmpty": "No records yet",
       "bestTimesEmptySubText": "This member hasn't registered any records",
       "bestTimesIncludeRelaying": "Incl. relay",
@@ -2623,8 +2624,8 @@
       "tabAnnouncements": "Announcements",
       "adminToggle": {
         "label": "View",
-        "admin": "Admin View",
-        "user": "User View"
+        "admin": "Admin",
+        "user": "Member"
       },
       "pendingApproveConfirmTitle": "Confirm Approval",
       "pendingApproveConfirmMessage": "Approve {name}?",
@@ -2641,7 +2642,7 @@
         "fetchFailed": "Failed to load practice records",
         "deleteConfirm": "Delete this practice record? This cannot be undone.",
         "deleteFailed": "Failed to delete practice record",
-        "addLog": "Add Log",
+        "addLog": "Add Record",
         "recordBulkButton": "Enter Records"
       },
       "teamCompetitionList": {
@@ -2652,19 +2653,27 @@
         "deleteConfirm": "Delete this competition? This cannot be undone.",
         "deleteFailed": "Failed to delete competition",
         "entryButton": "Entry",
-        "recordButton": "Record",
+        "recordButton": "Add Record",
         "entryBulkButton": "Enter Entries",
         "recordBulkButton": "Enter Records",
-        "entryStatusChangeAria": "Entry status: {status}. Tap to change"
+        "entryStatusChangeAria": "Entry status: {status}. Tap to change",
+        "viewRecordsAria": "View records for {title}"
       },
       "teamCompetitionEntryModal": {
+        "styleGroupHeader": "{style} ({count} total)",
+        "adminBulkEntryButton": "Enter on behalf of members",
+        "editEntryAria": "Edit entry for {style}",
+        "deleteEntryAria": "Delete entry for {style}",
+        "deleteConfirmTitle": "Delete entry",
+        "deleteConfirmMessage": "Delete this entry? This action cannot be undone.",
+        "deleteFailed": "Failed to delete the entry",
         "title": "Entries for {title}",
         "totalEntries": "Total entries: {count}",
         "entryStatusLabel": "Entry acceptance status",
         "statusBefore": "Before",
         "statusOpen": "Open",
         "statusClosed": "Closed",
-        "selfEntryButton": "Enter events",
+        "selfEntryButton": "Add entry",
         "confirmTitle": "Change acceptance status",
         "confirmBefore": "Change entry acceptance status to \"Before\"?",
         "confirmOpen": "Change entry acceptance status to \"Open\"?",
@@ -2696,12 +2705,11 @@
         "eventLabel": "Event",
         "eventPlaceholder": "Select an event",
         "timeLabel": "Entry time",
-        "timePlaceholder": "e.g. 1:23.45",
+        "timePlaceholder": "2.00.00",
         "timeFormatInvalid": "Invalid time format",
         "memoLabel": "Memo",
         "memoPlaceholder": "Memo (optional)",
         "prefillButton": "Use Best Time",
-        "prefillUntouchedWarning": "⚠️ Best time left unedited",
         "duplicateError": "The same swimmer/event combination is duplicated",
         "closedStatusWarning": "Entry registration is closed, but admins can still enter entries on behalf of members.",
         "pastDateWarning": "This competition's date has already passed, so entries can no longer be entered on behalf of members.",
@@ -2718,7 +2726,8 @@
         "conflictingDeleteTitle": "Conflicts with an event pending deletion",
         "conflictingDeleteMessage": "Please save the deletion first, then save the event change.\n{list}",
         "saveFailedDuplicate": "Failed to save. This may be caused by a duplicate event. Please try again."
-      }
+      },
+      "tabSettings": "Settings"
     },
     "page": {
       "title": "My Teams",
@@ -2762,7 +2771,9 @@
       "attendance": "Attendance",
       "members": "Members",
       "practices": "Practices",
-      "competitions": "Competitions"
+      "competitions": "Competitions",
+      "rankings": "Rankings",
+      "settings": "Settings"
     },
     "createModal": {
       "errorTitle": "An error occurred",
@@ -2790,6 +2801,17 @@
         "copyButton": "Copy",
         "closeButton": "Close"
       }
+    },
+    "nonSwimmer": {
+      "segmentSwimmer": "Swimmer",
+      "segmentNonSwimmer": "Non-swimmer",
+      "infoAriaLabel": "About non-swimmer setting",
+      "infoText": "When set to \"Non-swimmer\", this member is collapsed into the \"Non-swimmers\" section at the bottom of the best times list on the Members tab, and is excluded from competition entry and practice log candidates. They will still appear in attendance checks.",
+      "sectionToggle": "Non-swimmers ({count})",
+      "updateFailed": "Failed to update non-swimmer setting",
+      "confirmTitle": "Confirm Swimmer Setting Change",
+      "confirmMessageToNonSwimmer": "Mark {name} as a non-swimmer?",
+      "confirmMessageToSwimmer": "Mark {name} as a swimmer?"
     },
     "practices": {
       "title": "Team Practices ({count})",
@@ -2836,7 +2858,12 @@
         "manageButton": "Manage",
         "editButton": "Edit",
         "deleteButton": "Delete",
-        "entryBulkInputButton": "Enter Entries"
+        "entryBulkInputButton": "Enter Entries",
+        "recordCount": "{count, plural, one {{count} record} other {{count} records}}",
+        "tapForDetails": "Tap for details",
+        "noRecords": "No records yet",
+        "addable": "Add a record",
+        "viewRecordsAriaLabel": "View records for {title}"
       },
       "entryStatus": {
         "before": "Not Open",
@@ -2880,6 +2907,100 @@
         "date": "Date"
       }
     },
+    "ranking": {
+      "title": "Team Record Rankings",
+      "filter": {
+        "style": "Stroke",
+        "distance": "Distance",
+        "poolType": "Pool Type",
+        "gender": "Gender",
+        "scope": "Scope",
+        "period": "Period",
+        "aggregation": "Aggregation"
+      },
+      "gender": {
+        "male": "Men",
+        "female": "Women"
+      },
+      "scope": {
+        "teamCompetitions": "Team competitions",
+        "allCompetitions": "All competitions",
+        "allCompetitionsNote": "Includes records from competitions members entered with other teams or individually."
+      },
+      "period": {
+        "allTime": "All time",
+        "fiscalYear": "FY{year}",
+        "fiscalYearOrEarlier": "FY{year} and earlier",
+        "fiscalYearNote": "Records not linked to a competition (bulk-registered) are excluded when a fiscal year is selected."
+      },
+      "aggregation": {
+        "personalBest": "Personal best",
+        "allRaces": "All races"
+      },
+      "col": {
+        "name": "Member",
+        "time": "Time",
+        "competition": "Competition",
+        "date": "Date"
+      },
+      "empty": {
+        "noMatchTitle": "No matching records",
+        "noMatchBody": "No records matched the selected stroke, distance, pool type or gender. Try changing the filters.",
+        "noRecordsTitle": "No race records in this team",
+        "noRecordsBody": "Rankings appear here once members add their race records."
+      },
+      "error": "Failed to load rankings",
+      "retry": "Retry",
+      "individualUnavailable": {
+        "fetchFailed": "Individual event rankings are unavailable because the stroke data could not be loaded. Relay rankings are still available.",
+        "empty": "Individual event rankings are unavailable because no stroke data was found. Relay rankings are still available."
+      },
+      "loading": "Loading...",
+      "showMore": "Show more",
+      "resultCount": "{count} results",
+      "truncatedNote": "Reached the fetch limit of {limit} results. Slower records may not be shown — narrow the filters.",
+      "relay": {
+        "filter": {
+          "genderCategory": "Category"
+        },
+        "kind": {
+          "free": "Freestyle relay",
+          "medley": "Medley relay"
+        },
+        "genderCategory": {
+          "male": "Men",
+          "female": "Women",
+          "mixed": "Mixed"
+        },
+        "col": {
+          "event": "Event",
+          "time": "Total time",
+          "competition": "Competition",
+          "date": "Date",
+          "legs": "Splits"
+        },
+        "eventLabel": "{distance}m×{legCount} {kind}",
+        "legDistanceOption": "{distance}m × {legCount}",
+        "legLabel": "Leg {num}",
+        "legHeader": {
+          "swimmer": "Swimmer",
+          "style": "Stroke",
+          "legTime": "Leg",
+          "cumulative": "Cumulative"
+        },
+        "expand": "Show leg times",
+        "collapse": "Hide leg times",
+        "retiredMember": "Former member",
+        "noLegs": "No swimmer details were saved for this record",
+        "empty": {
+          "noMatchTitle": "No matching relay records",
+          "noMatchBody": "No relay records matched the selected relay type, distance, pool type or category. Try changing the filters.",
+          "noRecordsTitle": "No relay records in this team",
+          "noRecordsBody": "Rankings appear here once a relay event is saved from a competition record entry."
+        },
+        "error": "Failed to load relay rankings"
+      }
+    },
     "memberDetail": {
       "hook": {
         "roleChangeFailed": "Failed to change the role",
@@ -2905,11 +3026,13 @@
       "leaveButton": "Leave Team",
       "removeButton": "Remove Member",
       "adminControls": {
-        "sectionTitle": "Admin Functions",
+        "sectionTitle": "Member Settings",
         "roleUser": "User",
         "roleAdmin": "Admin",
         "removing": "Removing...",
-        "removeFromTeam": "Remove from team"
+        "removeFromTeam": "Remove from team",
+        "roleInfoAriaLabel": "About admin permissions",
+        "roleInfoText": "Admins can:\n- Approve join requests\n- Change members' roles, change swimmer status, or remove members\n- Manage groups and announcements\n- Schedule practices/competitions and bulk-register them\n- Register attendance for other members and open/close attendance collection\n- Bulk-register competition entries\n- Change team settings and delete the team"
       },
       "roleChange": {
         "title": "Confirm Role Change",
@@ -3105,8 +3228,8 @@
       "styleLabel": "Stroke",
       "styleSelectPlaceholder": "Select",
       "entryTimeLabel": "Entry Time (optional)",
-      "entryTimePlaceholder": "e.g. 1:23.45",
-      "timeFormatHint": "Format: min:sec.millisec (e.g. 1:23.45) or sec.millisec (e.g. 65.23)",
+      "entryTimePlaceholder": "2.00.00",
+      "timeFormatHint": "Format: min.sec.millisec (e.g. 1.23.4) / min:sec.millisec (e.g. 1:23.45) / sec.millisec (e.g. 65.23)",
       "memoLabel": "Note (optional)",
       "memoPlaceholder": "Add any additional info",
       "registerButton": "Enter",
@@ -3150,27 +3273,33 @@
       "eventNumber": "Event {n}",
       "selectMemberButton": "Select Members",
       "selectedMemberCount": "{n} selected",
+      "groupNumber": "Entry {n}",
+      "addHeatButton": "Add entry {n}",
+      "noMembersSelected": "No members selected",
+      "removeMemberConfirmTitle": "Remove this swimmer?",
+      "removeMemberConfirmMessage": "The entered data for {name} will be deleted.",
+      "removeHeatConfirmTitle": "Remove this entry?",
+      "removeHeatConfirmMessage": "The entered data for entry {n} will be deleted.",
+      "removeHeatButtonLabel": "Remove entry {n}",
       "relaySwimmerPlaceholder": "Select swimmer",
       "totalTime": "Total Time",
-      "totalTimePlaceholder": "e.g. 1:52.10",
+      "totalTimePlaceholder": "2.00.00",
       "timeLabel": "Time",
-      "timePlaceholder": "e.g. 1:30.50",
-      "reactionTime": "Reaction Time",
+      "timePlaceholder": "2.00.00",
       "relay": "Relay",
       "memoLabel": "Note",
       "memoPlaceholder": "Note",
       "splitTimeLabel": "Split Times",
       "splitDistancePlaceholder": "Distance",
-      "splitTimePlaceholder": "e.g. 30.50",
+      "splitTimePlaceholder": "2.00.00",
       "videoWithFile": "Video attached",
       "videoSelect": "Select video",
       "addEventButton": "Add event",
       "cancelButton": "Cancel",
-      "addSplit25m": "Add (every 25m)",
-      "addSplit50m": "Add (every 50m)",
-      "addSplitManual": "Add",
       "memberSelectTitle": "Select members",
       "selectAll": "Select all",
+      "selectAllToggle": "Select all",
+      "selectAllToggleGroup": "Select all in {group}",
       "clearSelection": "Clear selection",
       "confirmSelection": "Confirm",
       "relayAllMembersRequired": "All 4 members must be selected for relay events",
@@ -3179,6 +3308,13 @@
       "noRecordsError": "Please enter at least one record",
       "saveFailed": "An error occurred while saving. Please try again.",
       "adminBadge": "Admin"
+    },
+    "recordList": {
+      "pageTitle": "Select Event",
+      "filledCountIndividual": "{n} swimmers",
+      "filledCountRelay": "{n} teams",
+      "emptyLabel": "Not entered",
+      "entryCountLabel": "({n} entries)"
     },
     "entrySection": {
       "title": "Open for Entry"
@@ -3262,15 +3398,23 @@
       "poolTypeLong": "Long Course",
       "poolTypeShort": "Short Course",
       "unknownUser": "Unknown",
-      "rankLabel": "Rank",
       "nameLabel": "Name",
       "timeLabel": "Time",
       "rtLabel": "RT",
       "noteLabel": "Note",
       "relay": "Relay",
-      "splitTimesLabel": "Split Times ({count})"
+      "splitTimesLabel": "Split Times ({count})",
+      "photoLabel": "Profile photo"
     },
     "competitionEntryModal": {
+      "styleGroupHeader": "{style} ({count} total)",
+      "selfEntryButton": "Add entry",
+      "adminBulkEntryButton": "Enter on behalf of members",
+      "editEntryAria": "Edit entry for {style}",
+      "deleteEntryAria": "Delete entry for {style}",
+      "deleteConfirmTitle": "Delete entry",
+      "deleteConfirmMessage": "Delete this entry? This action cannot be undone.",
+      "deleteFailed": "Failed to delete the entry",
       "titleSuffix": " - Entry Management",
       "totalEntries": "Total: {count} entries",
       "loading": "Loading...",
@@ -3347,6 +3491,40 @@
       "reactivateFailed": "Failed to reactivate membership",
       "approveFailed": "Failed to approve membership",
       "rejectFailed": "Failed to reject membership"
+    },
+    "settingsTab": {
+      "teamInfoTitle": "Team info",
+      "editTeamInfo": "Edit team info",
+      "inviteCodeTitle": "Invite code",
+      "inviteCodeDescription": "Share this code to let others join the team.",
+      "copyInviteCode": "Copy invite code",
+      "copied": "Copied",
+      "calendarColorTitle": "Colors for this team",
+      "calendarColorDescription": "Choose the colors used for this team's practices and competitions on the dashboard calendar.",
+      "teamActionsTitle": "Team actions",
+      "createTeam": "Create team",
+      "joinTeam": "Join with invite code",
+      "dangerZoneTitle": "Danger zone",
+      "leaveTeam": "Leave team",
+      "leaveConfirmTitle": "Leave this team?",
+      "leaveConfirmMessage": "You will leave “{name}”. Its practices, competitions and attendance will no longer appear.",
+      "leaveFailed": "Failed to leave the team",
+      "leaving": "Leaving...",
+      "lastAdminCannotLeave": "You are the last admin, so you cannot leave. Make another member an admin first.",
+      "deleteTeam": "Delete team",
+      "deleteConfirmTitle": "Delete this team?",
+      "deleteConfirmMessage": "“{name}” will be deleted. Its competitions, entries, announcements and member list cannot be restored. Practice and race records are kept as personal records, but the competition name will no longer be shown.",
+      "deleteFailed": "Failed to delete the team",
+      "deleting": "Deleting...",
+      "deleteErrors": {
+        "notAuthorized": "Only team admins can delete the team.",
+        "teamNotFound": "Team not found. It may have already been deleted.",
+        "authRequired": "Your session has expired. Please sign in again."
+      },
+      "leaveDescription": "After leaving, this team's practices, competitions and attendance will no longer appear. You will need an invite code to rejoin. Your own practice and race records are kept.",
+      "leaveButton": "Leave this team",
+      "deleteDescription": "Deleting the team permanently removes its competitions, entries, announcements and member list. This cannot be undone. Members' practice and race records are kept as personal records.",
+      "deleteButton": "Delete this team"
     }
   },
   "teamsAdmin": {
@@ -3377,6 +3555,7 @@
       "groups": "Groups",
       "practices": "Practices",
       "competitions": "Competitions",
+      "rankings": "Rankings",
       "bulkRegister": "Bulk Register",
       "settings": "Settings"
     },
@@ -3871,10 +4050,11 @@
       "styleLabel": "Event",
       "stylePlaceholder": "Select an event",
       "timeLabel": "Time",
-      "timePlaceholder": "e.g. 1:23.45 or 31-2",
-      "timePlaceholder2": "e.g. 2:00.00 or 2-0-0",
+      "timePlaceholder": "2.00.00",
+      "timePlaceholder2": "2.00.00",
       "reactionTimeLabel": "Reaction time (sec)",
       "reactionTimePlaceholder": "-1.00 to 2.00",
+      "reactionTimeFormatInvalid": "Invalid reaction time format",
       "splitTimeLabel": "Split time",
       "relayStyleLabel": "Relay event",
       "memoLabel": "Memo",
@@ -3885,7 +4065,7 @@
       "addEvery25m": "Add (every 25m)",
       "addEvery50m": "Add (every 50m)",
       "addButton": "Add",
-      "splitPlaceholder": "e.g. 28-0",
+      "splitPlaceholder": "2.00.00",
       "styleRequired": "Please select an event",
       "competitionRequired": "Please select a competition",
       "timeRequired": "Please enter a time",
@@ -3985,6 +4165,8 @@
       "pool_type_label": "Pool Type",
       "pool_short": "Short Course (25m)",
       "pool_long": "Long Course (50m)",
+      "pool_short_abbrev": "Short",
+      "pool_long_abbrev": "Long",
       "note_label": "Notes",
       "note_placeholder": "Notes about the competition (optional)",
       "save": "Save",
@@ -4054,8 +4236,8 @@
       "save": "Save",
       "cancel": "Cancel",
       "helpTitle": "Time Entry Tips",
-      "helpBodyBasic": "Separate numbers with any non-digit character (- . : etc.). Examples: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.",
-      "helpBody": "Separate numbers with any non-digit character (- . : etc.). Examples: \"31-2\" → 31.2, \"1:23.4\" → 1:23.4, \"1m12s3\" → 1:12.3.\n\nAfter typing \"33-2\" in one cell, just enter \"3-2\" in the next and it auto-fills to \"33.2\" (carrying over the tens digit). Clearing a cell resets the carry-over."
+      "helpBodyBasic": "Separate the numbers with any non-digit character (. - : etc.). Dots alone work, so you can type everything on the number keypad. Examples: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1m12s3\" → 1:12.3.",
+      "helpBody": "Separate the numbers with any non-digit character (. - : etc.). Dots alone work, so you can type everything on the number keypad. Examples: \"1.23.4\" → 1:23.4, \"2.00.00\" → 2:00.00, \"31-2\" → 31.2, \"1m12s3\" → 1:12.3.\n\nAfter typing \"33-2\" in one cell, just enter \"3-2\" in the next and it auto-fills to \"33.2\" (carrying over the tens digit). Clearing a cell resets the carry-over."
     },
     "record": {
       "title_create": "Add Record",
@@ -4082,7 +4264,7 @@
       "styleLabel": "Event",
       "stylePlaceholder": "Select event",
       "timeLabel": "Time",
-      "time_placeholder": "e.g. 1:30.50",
+      "time_placeholder": "2.00.00",
       "distance_placeholder": "Distance (m)",
       "reactionTimeLabel": "Reaction Time",
       "relayLabel": "Relay",
@@ -4130,7 +4312,7 @@
       "stylePlaceholder": "Select event",
       "relayLabel": "Relay",
       "timeLabel": "Time",
-      "time_placeholder": "e.g. 1:23.45   32.45",
+      "time_placeholder": "2.00.00",
       "reactionTime_placeholder": "e.g. 0.58  -0.01",
       "distance_placeholder": "Distance (m)",
       "reactionTimeLabelShort": "RT",
@@ -4265,7 +4447,10 @@
       },
       "recordFutureGuard": "Race records cannot be registered for future dates.",
       "competitionEditRestricted": "Only team admins can edit this competition's details.",
-      "practiceEditRestricted": "Only team admins can edit this practice's details."
+      "practiceEditRestricted": "Only team admins can edit this practice's details.",
+      "permissionCheckFailed": "Could not verify your edit permission. Check your connection and try again.",
+      "competitionSaveBlockedNoPermission": "Could not save the competition details because your edit permission could not be verified. Reopen this screen and try again.",
+      "practiceSaveBlockedNoPermission": "Could not save the practice details because your edit permission could not be verified. Reopen this screen and try again."
     },
     "premium": {
       "upgradeText": "Upgrade to Premium",
@@ -4287,7 +4472,7 @@
     "styleLabel": "Event",
     "distanceLabel": "Distance",
     "timeLabel": "Time",
-    "timePlaceholder": "1:23.45",
+    "timePlaceholder": "2.00.00",
     "invalidTimeFormat": "Invalid time format (e.g. 1:23.45 or 83.45)",
     "emptyEnterTime": "Please enter a time",
     "noStandardTime": "No standard time is available for this event/distance",

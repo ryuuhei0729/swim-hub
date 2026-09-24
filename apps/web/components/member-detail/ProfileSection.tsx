@@ -27,10 +27,8 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
 
         {/* 基本情報 */}
         <div className="flex-1">
-          <div className="flex items-center space-x-4 mb-5">
-            <h3 className="text-3xl font-bold text-gray-900">
-              {member.users?.name || "Unknown User"}
-            </h3>
+          {/* ロール・自分バッジは名前の上に表示する */}
+          <div className="flex items-center space-x-2 mb-2">
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                 member.role === "admin"
@@ -47,6 +45,9 @@ export function ProfileSection({ member, currentUserId }: ProfileSectionProps) {
             )}
             {member.role === "admin" && <StarIcon className="h-4 w-4 text-yellow-500" />}
           </div>
+          <h3 className="text-3xl font-bold text-gray-900 mb-5">
+            {member.users?.name || "Unknown User"}
+          </h3>
 
           <div className="text-sm text-gray-600 mb-4">
             {member.users?.birthday &&

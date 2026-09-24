@@ -1,13 +1,15 @@
 #!/bin/bash
 # =============================================================================
 # ローカル環境リセットスクリプト
-# supabase db reset（内部初期化）+ psqlでマイグレーション・seed適用
+# supabase db reset（migration 適用）+ psql で seed 適用・PIIマスク
 # =============================================================================
 #
 # 使い方:
-#   ./supabase/scripts/reset-local.sh          # seed.sql があれば適用
+#   ./supabase/scripts/reset-local.sh           # seed.sql があれば適用
 #   ./supabase/scripts/reset-local.sh --no-seed # seedなしでリセット
 #
+# seed.sql は本番ダンプなので、先に取得しておく:
+#   pnpm run db:dump-prod
 # =============================================================================
 
 set -euo pipefail
@@ -17,7 +19,10 @@ SUPABASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_DIR="$(cd "$SUPABASE_DIR/.." && pwd)"
 SEED_FILE="$SUPABASE_DIR/seed.sql"
 SANITIZE_FILE="$SCRIPT_DIR/sanitize-seed.sql"
-MIGRATIONS_DIR="$SUPABASE_DIR/migrations"
+
+# 除外テーブルの定義元は seed-excluded-tables.sh (dump-prod.sh と共有)
+# shellcheck source=./seed-excluded-tables.sh
+source "$SCRIPT_DIR/seed-excluded-tables.sh"
 
 LOCAL_DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 
@@ -36,7 +41,30 @@ if [ "$NO_SEED" = true ]; then
 elif [ -f "$SEED_FILE" ]; then
   FILESIZE=$(wc -c < "$SEED_FILE" | tr -d ' ')
   echo "モード: スキーマ + seed"
-  echo "Seed:   $SEED_FILE ($(echo "scale=1; $FILESIZE / 1024" | bc) KB)"
+  echo "Seed:   $SEED_FILE ($((FILESIZE / 1024)) KB)"
+
+  # seed に含めてはいけないテーブルが混ざっていないか検査する。
+  # 古い seed.sql をそのまま流すと psql の生エラー (重複キー / カラム不在)
+  # になって原因が分かりにくいので、適用前に理由付きで止める。
+  FOUND_FORBIDDEN=()
+  for t in "${SEED_EXCLUDED_TABLES[@]}"; do
+    SCHEMA="${t%%.*}"
+    TABLE="${t##*.}"
+    if grep -qE "INSERT INTO \"?${SCHEMA}\"?\.\"?${TABLE}\"?" "$SEED_FILE"; then
+      FOUND_FORBIDDEN+=("$t")
+    fi
+  done
+
+  if [ ${#FOUND_FORBIDDEN[@]} -gt 0 ]; then
+    echo ""
+    echo "エラー: seed.sql に含めてはいけないテーブルが入っています:"
+    printf '  %s\n' "${FOUND_FORBIDDEN[@]}"
+    echo ""
+    echo "理由は supabase/scripts/seed-excluded-tables.sh を参照。"
+    echo "対処: 本番データを取り直してください（除外して再ダンプされます）:"
+    echo "  pnpm run db:dump-prod"
+    exit 1
+  fi
 else
   echo "モード: スキーマのみ（seed.sql が見つかりません）"
   echo ""
@@ -46,73 +74,59 @@ else
 fi
 echo ""
 
-# --- Step 1: supabase db reset でクリーンなDB作成 ---
-echo "1/4 supabase db reset（Supabase内部初期化）..."
+# --- psql の存在確認（seed 適用に使う） ---
+if [ "$NO_SEED" = false ] && ! command -v psql >/dev/null 2>&1; then
+  echo "エラー: psql が見つかりません。"
+  echo "  brew install libpq && brew link --force libpq"
+  exit 1
+fi
+
+# 失敗時に psql を再実行すると、1回目が途中まで投入した行と衝突して
+# 「重複キー」という偽のエラーが出て本当の初回エラーが隠れる。
+# 1回だけ実行してログに落とし、失敗時はそのログを見せる。
+PSQL_LOG="$(mktemp)"
+trap 'rm -f "$PSQL_LOG"' EXIT
+
+apply_sql() {
+  psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -q -f "$1" > "$PSQL_LOG" 2>&1
+}
+
+# --- Step 1: supabase db reset（DB再作成 + migration 適用）---
+# 注意: --workdir は付けない。付けると CLI が config.toml を見つけられず
+# migrations ディレクトリを見失い、migration が1件も適用されない。
+echo "1/3 supabase db reset（DB再作成 + migration 適用）..."
 echo ""
 
 cd "$PROJECT_DIR"
-pnpm exec supabase db reset --workdir supabase || true
+pnpm exec supabase db reset
 
-# DBが使えるようになるまで待機
-echo ""
-echo "DB接続を確認中..."
-for i in $(seq 1 15); do
-  if psql "$LOCAL_DB_URL" -c "SELECT 1;" > /dev/null 2>&1; then
-    echo "DB接続OK"
-    break
-  fi
-  if [ "$i" -eq 15 ]; then
-    echo "エラー: DBに接続できません"
-    echo "Supabaseが起動しているか確認してください:"
-    echo "  pnpm exec supabase start --workdir supabase"
-    exit 1
-  fi
-  sleep 2
-done
-
-# --- Step 2: ユーザーマイグレーション適用 ---
-echo ""
-echo "2/4 マイグレーションを適用中..."
-
-MIGRATION_COUNT=0
-for migration_file in "$MIGRATIONS_DIR"/*.sql; do
-  if [ -f "$migration_file" ]; then
-    BASENAME=$(basename "$migration_file")
-    if ! psql "$LOCAL_DB_URL" -f "$migration_file" > /dev/null 2>&1; then
-      echo "  エラー: $BASENAME の適用に失敗"
-      psql "$LOCAL_DB_URL" -f "$migration_file" 2>&1 | grep -i "error" | head -5
-      exit 1
-    fi
-    MIGRATION_COUNT=$((MIGRATION_COUNT + 1))
-  fi
-done
-
-echo "マイグレーション適用完了（${MIGRATION_COUNT}件）"
-
-# --- Step 3: seed.sql を適用 ---
+# --- Step 2: seed.sql を適用 ---
 if [ "$NO_SEED" = false ]; then
   echo ""
-  echo "3/4 seed.sql を適用中..."
+  echo "2/3 seed.sql を適用中..."
 
-  if psql "$LOCAL_DB_URL" -f "$SEED_FILE" > /dev/null 2>&1; then
+  # ダンプ先頭の SET session_replication_role = replica; がトリガーとFKを
+  # 無効化するので、テーブルの投入順は問わない。
+  if apply_sql "$SEED_FILE"; then
     echo "seed.sql 適用完了"
   else
     echo ""
     echo "エラー: seed.sql の適用に失敗しました。詳細:"
-    psql "$LOCAL_DB_URL" -f "$SEED_FILE" 2>&1 | tail -20
+    tail -20 "$PSQL_LOG"
     exit 1
   fi
 
-  # --- Step 4: 個人情報マスク + テストユーザー追加 ---
+  # --- Step 3: 個人情報マスク + テストユーザー追加 ---
   echo ""
-  echo "4/4 個人情報マスク + テストユーザー追加..."
+  echo "3/3 個人情報マスク + テストユーザー追加..."
 
-  if psql "$LOCAL_DB_URL" -f "$SANITIZE_FILE" > /dev/null 2>&1; then
+  if apply_sql "$SANITIZE_FILE"; then
     echo "完了"
   else
     echo ""
-    echo "警告: マスク処理に失敗しました。詳細:"
-    psql "$LOCAL_DB_URL" -f "$SANITIZE_FILE" 2>&1 | tail -10
+    echo "エラー: マスク処理に失敗しました。本番の個人情報がローカルに残っています。詳細:"
+    tail -20 "$PSQL_LOG"
+    exit 1
   fi
 fi
 
@@ -127,5 +141,7 @@ echo "  Studio: http://127.0.0.1:54323"
 echo "  DB:     $LOCAL_DB_URL"
 if [ "$NO_SEED" = false ]; then
   echo ""
-  echo "テストユーザー: test@test.test / Pass1234"
+  echo "ログイン情報:"
+  echo "  全ユーザー     user_<連番>@example.com / Pass1234"
+  echo "  テストユーザー test@test.test / Pass1234"
 fi

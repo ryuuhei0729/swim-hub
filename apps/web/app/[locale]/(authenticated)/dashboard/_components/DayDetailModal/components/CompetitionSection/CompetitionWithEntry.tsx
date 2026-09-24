@@ -265,7 +265,7 @@ export function CompetitionWithEntry({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {onEditCompetition && (
+            {onEditCompetition && !isTeamCompetition && (
               <button
                 onClick={() => onEditCompetition(competitionImages)}
                 className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
@@ -275,7 +275,7 @@ export function CompetitionWithEntry({
                 <PencilIcon className="h-5 w-5" />
               </button>
             )}
-            {onDeleteCompetition && (
+            {onDeleteCompetition && !isTeamCompetition && (
               <button
                 onClick={onDeleteCompetition}
                 className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"

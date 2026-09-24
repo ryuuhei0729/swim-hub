@@ -158,21 +158,24 @@ describe("PracticeAPI", () => {
   });
 
   describe("練習記録削除", () => {
-    // deletePractice は delete().eq("id", id).select("id") というチェインで呼ばれる
-    // (RLS拒否時に0行でも正常終了扱いになる問題への対策として .select() で結果行を見る)。
-    // eq / select に渡された引数は戻り値経由でテストごとに検証できるようにし、
+    // deletePractice は delete().eq("id", id).is("team_id", null).select("id") という
+    // チェインで呼ばれる (RLS拒否時に0行でも正常終了扱いになる問題への対策として
+    // .select() で結果行を見る。加えて Sprint Contract D2 により、チーム練習
+    // (team_id IS NOT NULL) を第二防御として API 層でも除外する)。
+    // eq / is / select に渡された引数は戻り値経由でテストごとに検証できるようにし、
     // クエリの絞り込み対象・返却カラムを捨てない。
     const mockDeleteChain = (response: { data: unknown; error: unknown }) => {
       const selectMock = vi.fn().mockResolvedValue(response);
+      const isMock = vi.fn().mockReturnThis();
       const eqMock = vi.fn().mockReturnThis();
       const deleteMock = vi.fn().mockReturnThis();
-      const builder = { delete: deleteMock, eq: eqMock, select: selectMock };
+      const builder = { delete: deleteMock, eq: eqMock, is: isMock, select: selectMock };
       mockClient.from = vi.fn(() => builder) as unknown as typeof mockClient.from;
-      return { deleteMock, eqMock, selectMock };
+      return { deleteMock, eqMock, isMock, selectMock };
     };
 
     it("練習記録を削除できる", async () => {
-      const { deleteMock, eqMock, selectMock } = mockDeleteChain({
+      const { deleteMock, eqMock, isMock, selectMock } = mockDeleteChain({
         data: [{ id: "practice-1" }],
         error: null,
       });
@@ -182,6 +185,7 @@ describe("PracticeAPI", () => {
       expect(mockClient.from).toHaveBeenCalledWith("practices");
       expect(deleteMock).toHaveBeenCalled();
       expect(eqMock).toHaveBeenCalledWith("id", "practice-1");
+      expect(isMock).toHaveBeenCalledWith("team_id", null);
       expect(selectMock).toHaveBeenCalledWith("id");
     });
 
@@ -194,12 +198,13 @@ describe("PracticeAPI", () => {
 
     describe("RLS拒否時の無言失敗防止 (課題B回帰)", () => {
       it("[D-1] DELETEが0行を返した場合はエラーをthrowする", async () => {
-        const { eqMock, selectMock } = mockDeleteChain({ data: [], error: null });
+        const { eqMock, isMock, selectMock } = mockDeleteChain({ data: [], error: null });
 
         await expect(api.deletePractice("practice-1")).rejects.toThrow(
           "練習記録の削除に失敗しました",
         );
         expect(eqMock).toHaveBeenCalledWith("id", "practice-1");
+        expect(isMock).toHaveBeenCalledWith("team_id", null);
         expect(selectMock).toHaveBeenCalledWith("id");
       });
 
@@ -211,14 +216,15 @@ describe("PracticeAPI", () => {
         );
       });
 
-      it("[D-3] 1行返った場合は正常終了する(管理者による代理削除などの非退行)", async () => {
-        const { eqMock, selectMock } = mockDeleteChain({
+      it("[D-3] 1行返った場合は正常終了する(個人練習の通常削除の非退行)", async () => {
+        const { eqMock, isMock, selectMock } = mockDeleteChain({
           data: [{ id: "practice-99" }],
           error: null,
         });
 
         await expect(api.deletePractice("practice-99")).resolves.toBeUndefined();
         expect(eqMock).toHaveBeenCalledWith("id", "practice-99");
+        expect(isMock).toHaveBeenCalledWith("team_id", null);
         expect(selectMock).toHaveBeenCalledWith("id");
       });
 
@@ -227,6 +233,37 @@ describe("PracticeAPI", () => {
         mockDeleteChain({ data: null, error });
 
         await expect(api.deletePractice("practice-1")).rejects.toThrow(error);
+      });
+    });
+
+    // ---------------------------------------------------------------------
+    // Sprint Contract D2 (第二防御): team_id IS NOT NULL の行は
+    // API 層でも除外する (UI ガード・DELETE RLS が破られても最後の砦になる)。
+    // モック側で `.is()` を経由しない旧チェインのままだと TypeError で
+    // 気づけるようにし (実際に Phase A 実測でこの回帰を検出した)、
+    // 「id だけで絞り込んでいた旧実装に戻っていないこと」を回帰防止する。
+    // ---------------------------------------------------------------------
+    describe("チーム練習の削除拒否 (D2: team_id IS NULL スコープ)", () => {
+      it("[D-23] team_id を問わず、is('team_id', null) が必ず呼ばれる (idを変えても絞り込み条件は固定)", async () => {
+        const { isMock } = mockDeleteChain({ data: [{ id: "practice-team-1" }], error: null });
+
+        await api.deletePractice("practice-team-1");
+
+        expect(isMock).toHaveBeenCalledTimes(1);
+        expect(isMock).toHaveBeenCalledWith("team_id", null);
+      });
+
+      it("[D-24] チーム練習 (team_id IS NOT NULL) はサーバー側で is('team_id', null) に弾かれ0行になり、削除失敗として扱われる", async () => {
+        // .is("team_id", null) がクエリに含まれていれば、team_id が入っている行は
+        // サーバー側の絞り込みで対象外になり0行が返る。クライアントの filter ではなく
+        // クエリ引数として絞り込みが実際に送られていることを isMock で確認する。
+        const { isMock, selectMock } = mockDeleteChain({ data: [], error: null });
+
+        await expect(api.deletePractice("practice-team-1")).rejects.toThrow(
+          "練習記録の削除に失敗しました",
+        );
+        expect(isMock).toHaveBeenCalledWith("team_id", null);
+        expect(selectMock).toHaveBeenCalledWith("id");
       });
     });
   });

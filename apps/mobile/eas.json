@@ -60,6 +60,20 @@
       "env": {
         "EXPO_PUBLIC_ENVIRONMENT": "development"
       }
+    },
+    "development-device": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": false,
+        "image": "sdk-55"
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "development"
+      }
     }
   },
   "submit": {

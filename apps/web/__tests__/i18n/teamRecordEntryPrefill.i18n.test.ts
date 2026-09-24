@@ -16,8 +16,8 @@
  * `competition.entries.entryHeader` と `teams.record.eventNumber` が重複し
  * 統合した事故と同型)。よってこのテストの主眼は「新規キーの存在確認」ではなく
  * 「既存キー forms.recordLog.entryTimeLabel が5言語に存在し続けること」と
- * 「RecordClient.tsx / TeamRecordBulkFormScreen.tsx が実際に参照しているキーが
- * すべて揃っていること」の2点になる。
+ * 「RecordClient.tsx / TeamRecordStyleListScreen.tsx / TeamRecordStyleDetailScreen.tsx
+ * が実際に参照しているキーがすべて揃っていること」の2点になる。
  *
  * 後段のソース走査方式は前スプリント (teamEntryBulkInput.i18n.test.ts) の反省を
  * 踏襲する: ハードコードしたキー配列ではなく、実装ファイルを実際に走査して
@@ -28,9 +28,14 @@
  * 各バインディング (t→namespace) はソースコードを実際に読んで確認した実測値:
  *   - RecordClient.tsx (web): t→"teams", tCommon→"common",
  *     tRecords→"competition.records", tStyles→"practice.styles"
- *   - TeamRecordBulkFormScreen.tsx (mobile, react-i18next): t は常にフルパスの
- *     キーを直接渡す (namespace prefix なし) — forms.recordLog.entryTimeLabel は
- *     このパターンでソース走査に自動的に含まれる
+ *   - TeamRecordStyleListScreen.tsx / TeamRecordStyleDetailScreen.tsx (mobile,
+ *     react-i18next): t は常にフルパスのキーを直接渡す (namespace prefix なし) —
+ *     forms.recordLog.entryTimeLabel はこのパターンでソース走査に自動的に含まれる
+ *
+ * 【2026-09-17 修正】旧 TeamRecordBulkFormScreen.tsx (2,577行) は「組」入力の
+ * 2階層化に伴い削除され、TeamRecordStyleListScreen.tsx (種目一覧) と
+ * TeamRecordStyleDetailScreen.tsx (種目詳細・保存はこちらが担う) に分割された。
+ * 走査対象を新2画面に差し替える (存在しないファイルを読むと ENOENT で即死するため)。
  *
  * 動的キー (テンプレートリテラル) は対象外 (静的に決まらないため)。
  */
@@ -93,7 +98,11 @@ const SOURCE_FILES: Array<{ path: string; bindings: Record<string, string> }> = 
     },
   },
   {
-    path: "apps/mobile/screens/TeamRecordBulkFormScreen.tsx",
+    path: "apps/mobile/screens/TeamRecordStyleListScreen.tsx",
+    bindings: { t: "" }, // react-i18next: t は常にフルパスキー
+  },
+  {
+    path: "apps/mobile/screens/TeamRecordStyleDetailScreen.tsx",
     bindings: { t: "" }, // react-i18next: t は常にフルパスキー
   },
 ];
@@ -116,7 +125,8 @@ describe("チーム大会記録入力 — エントリー行初期反映機能 i
   );
 
   it.each(LOCALES)(
-    "%s: RecordClient.tsx / TeamRecordBulkFormScreen.tsx から実際に参照されている" +
+    "%s: RecordClient.tsx / TeamRecordStyleListScreen.tsx / TeamRecordStyleDetailScreen.tsx " +
+      "から実際に参照されている" +
       "翻訳キーがすべて存在し、空文字ではない (人間の意図: エントリー参考ラベル用の" +
       "新規キーを Developer が追加した瞬間、このテストは再抽出により自動的にその" +
       "キーを検証対象へ含める。ハードコードした『知っているキー』のリストでは" +

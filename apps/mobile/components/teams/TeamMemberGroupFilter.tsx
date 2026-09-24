@@ -155,7 +155,8 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{t("teams.mobile.groupDisplayLabel")}</Text>
+      {/* 「グループ表示:」ラベルは撤去済み。行の右端は親 (TeamMemberList) が
+          「引き継ぎを含む」トグルを置くため、ここではピルだけを描画する */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -184,13 +185,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#6B7280",
   },
   pillsContainer: {
     flexDirection: "row",

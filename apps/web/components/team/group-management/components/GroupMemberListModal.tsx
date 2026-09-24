@@ -8,6 +8,7 @@ import Avatar from "@/components/ui/Avatar";
 import { UsersIcon } from "@heroicons/react/24/outline";
 import type { TeamGroupWithCount } from "../hooks/useTeamGroups";
 import type { MemberDetail } from "@/types/member-detail";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 
 interface GroupMemberListModalProps {
   isOpen: boolean;
@@ -15,6 +16,13 @@ interface GroupMemberListModalProps {
   group: TeamGroupWithCount | null;
   teamId: string;
   onMemberClick: (member: MemberDetail) => void;
+  /**
+   * メンバー詳細モーダル (このモーダルの上に重ねて開く) での権限・泳者区分の変更を
+   * この一覧にも反映するためのトリガー。値が変わるたびにバックグラウンドで
+   * 再取得する (silent: ローディングスケルトンは出さない)。
+   * 初期値の `undefined` では再取得しない
+   */
+  membersRefreshSignal?: number;
 }
 
 export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
@@ -23,34 +31,36 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
   group,
   teamId,
   onMemberClick,
+  membersRefreshSignal,
 }) => {
   const t = useTranslations("teamsAdmin");
   const { supabase } = useAuth();
   const [members, setMembers] = useState<MemberDetail[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadMembers = useCallback(async () => {
-    if (!group) return;
-    setLoading(true);
-    try {
-      // グループに所属するuser_idを取得
-      const { data: groupMemberships, error: gmError } = await supabase
-        .from("team_group_memberships")
-        .select("user_id")
-        .eq("team_group_id", group.id);
-      if (gmError) throw gmError;
+  const loadMembers = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!group) return;
+      if (!options?.silent) setLoading(true);
+      try {
+        // グループに所属するuser_idを取得
+        const { data: groupMemberships, error: gmError } = await supabase
+          .from("team_group_memberships")
+          .select("user_id")
+          .eq("team_group_id", group.id);
+        if (gmError) throw gmError;
 
-      const userIds = (groupMemberships ?? []).map((m) => m.user_id);
-      if (userIds.length === 0) {
-        setMembers([]);
-        return;
-      }
+        const userIds = (groupMemberships ?? []).map((m) => m.user_id);
+        if (userIds.length === 0) {
+          setMembers([]);
+          return;
+        }
 
-      // team_membershipsからMemberDetail情報を取得
-      const { data, error: tmError } = await supabase
-        .from("team_memberships")
-        .select(
-          `
+        // team_membershipsからMemberDetail情報を取得
+        const { data, error: tmError } = await supabase
+          .from("team_memberships")
+          .select(
+            `
           id,
           user_id,
           role,
@@ -65,27 +75,38 @@ export const GroupMemberListModal: React.FC<GroupMemberListModalProps> = ({
             gender
           )
         `,
-        )
-        .eq("team_id", teamId)
-        .eq("status", "approved")
-        .eq("is_active", true)
-        .in("user_id", userIds)
-        .order("role", { ascending: true });
+          )
+          .eq("team_id", teamId)
+          .eq("status", "approved")
+          .eq("is_active", true)
+          .in("user_id", userIds);
 
-      if (tmError) throw tmError;
-      setMembers((data ?? []) as unknown as MemberDetail[]);
-    } catch (err) {
-      console.error("グループメンバー取得エラー:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [group, teamId, supabase]);
+        if (tmError) throw tmError;
+        // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+        setMembers(((data ?? []) as unknown as MemberDetail[]).sort(compareMembersByBirthday));
+      } catch (err) {
+        console.error("グループメンバー取得エラー:", err);
+      } finally {
+        if (!options?.silent) setLoading(false);
+      }
+    },
+    [group, teamId, supabase],
+  );
 
   useEffect(() => {
     if (isOpen && group) {
       loadMembers();
     }
   }, [isOpen, group, loadMembers]);
+
+  // メンバー詳細モーダル (このモーダルの上に開く) での変更をバックグラウンドで反映する
+  useEffect(() => {
+    if (membersRefreshSignal === undefined) return;
+    if (!isOpen || !group) return;
+    loadMembers({ silent: true });
+    // loadMembers 自体を deps に含めると group/teamId 変化のたびにも再実行されるが、
+    // それは元の isOpen effect と同じ読み込みなので害はない
+  }, [membersRefreshSignal, isOpen, group, loadMembers]);
 
   if (!group) return null;
 

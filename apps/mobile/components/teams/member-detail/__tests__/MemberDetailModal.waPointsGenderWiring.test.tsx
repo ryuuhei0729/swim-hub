@@ -49,6 +49,7 @@ vi.mock("@/contexts/AuthProvider", () => ({
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useUpdateMemberRoleMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useRemoveMemberMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateSwimmerStatusMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 const FR100_RECORD: BestTime = {

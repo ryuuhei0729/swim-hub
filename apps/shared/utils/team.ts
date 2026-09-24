@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { compareMembersByBirthday } from "./memberSort";
 
 /**
  * チームメンバーの基本情報
@@ -14,6 +15,8 @@ export interface TeamMember {
   /** ユーザーID（team_memberships.user_idから取得） */
   id: string;
   name: string;
+  /** 年上順ソート用。未設定の場合あり。表示に使わない呼び出し元は無視してよい */
+  birthday?: string | null;
 }
 
 /**
@@ -25,9 +28,10 @@ interface MemberData {
     | {
         id: string;
         name: string;
+        birthday?: string | null;
       }
     | null
-    | Array<{ id: string; name: string }>;
+    | Array<{ id: string; name: string; birthday?: string | null }>;
 }
 
 /**
@@ -49,7 +53,8 @@ export async function fetchTeamMembers(
       user_id,
       users:users!team_memberships_user_id_fkey (
         id,
-        name
+        name,
+        birthday
       )
     `,
     )
@@ -66,9 +71,18 @@ export async function fetchTeamMembers(
       return {
         id: m.user_id,
         name: user?.name || "Unknown User",
+        birthday: user?.birthday ?? null,
       };
     })
     .filter((m: TeamMember) => m.name !== "Unknown User");
 
-  return members;
+  // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元。
+  // TeamMember は user_id ではなく id を持つため、compareMembersByBirthday の
+  // BirthdaySortableMember 形状に合わせて比較の瞬間だけ変換する
+  return members.sort((a, b) =>
+    compareMembersByBirthday(
+      { user_id: a.id, users: { name: a.name, birthday: a.birthday } },
+      { user_id: b.id, users: { name: b.name, birthday: b.birthday } },
+    ),
+  );
 }

@@ -279,6 +279,7 @@ export const createMockTeamMembershipWithUser = (overrides = {}) => ({
   is_active: true,
   joined_at: "2025-01-01T00:00:00Z",
   left_at: null,
+  is_swimmer: true,
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
   users: {

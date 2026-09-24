@@ -1,25 +1,31 @@
 /**
  * ダッシュボード記録色カスタマイズ設定コンポーネント
- * 個人の練習/大会色と、所属チームごとの練習/大会色を設定する。
+ * 個人の練習/大会色を設定する。
  * Web版 (apps/web/components/settings/CalendarColorSettings.tsx) とロジックを揃えている。
+ *
+ * チーム別の記録色はチーム詳細の設定タブ
+ * (components/teams/settings/TeamCalendarColorSection.tsx) が
+ * そのチームのぶんだけ出す。スウォッチ選択 UI (ColorSwatchRow) はこのファイルが
+ * 唯一の定義元で、あちらは export したものを使う。
  */
 import React from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
-import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calendarColors";
-import { TAG_COLORS } from "@apps/shared/constants/tagColors";
+import { TAG_COLORS, STORABLE_TAG_COLORS } from "@apps/shared/constants/tagColors";
 import { DEFAULT_PRACTICE_COLOR, DEFAULT_COMPETITION_COLOR } from "@apps/shared/utils/calendarColorResolver";
 
 type ColorField = "practice_color" | "competition_color";
-// mutate() の入力は Zod (z.enum(TAG_COLORS)) 由来のパレット内リテラル型を要求する。
-// settings 側の型は汎用 string | null で保持しているため、ここで明示的にキャストする
-// (実行時の値は常にパレット内 or null であることを resolver/DB 制約側が保証している)。
-type PaletteColor = (typeof TAG_COLORS)[number];
+// mutate() の入力の検証対象は Zod の z.enum(STORABLE_TAG_COLORS) = 選択肢8色 + 旧色。
+// settings 側の型は汎用 string | null で保持しているため、ここで明示的にキャストする。
+// ⚠️ TAG_COLORS (ピッカーに出す8色) ではなく STORABLE_TAG_COLORS から導出すること。
+// この handleChange は「変更しない側の色を既存値のまま再送する」ため、旧色 (#7DD3FC 等) を
+// 保存済みのユーザーではパレット外の値がそのまま流れる。8色に絞ると型が実態と食い違う。
+type PaletteColor = (typeof STORABLE_TAG_COLORS)[number];
 
-interface ColorSwatchRowProps {
+export interface ColorSwatchRowProps {
   label: string;
   value: string | null;
   defaultColor: string;
@@ -30,7 +36,7 @@ interface ColorSwatchRowProps {
 }
 
 // スウォッチ選択UIは TagManageModal のパレット選択(グリッド状の丸ボタン)を踏襲する
-const ColorSwatchRow: React.FC<ColorSwatchRowProps> = ({
+export const ColorSwatchRow: React.FC<ColorSwatchRowProps> = ({
   label,
   value,
   defaultColor,
@@ -77,14 +83,12 @@ export const CalendarColorSettings: React.FC = () => {
   const { t } = useTranslation();
   const { supabase, user } = useAuth();
 
-  const { teams = [] } = useTeamsQuery(supabase, { enableRealtime: false });
-  const { settings, isLoading, updatePersonalColors, upsertTeamColors } =
-    useCalendarColorSettingsQuery(supabase, user?.id);
+  const { settings, isLoading, updatePersonalColors } = useCalendarColorSettingsQuery(
+    supabase,
+    user?.id,
+  );
 
-  // 承認待ち(pending)メンバーシップはチーム色設定の対象外
-  const approvedTeams = teams.filter((membership) => membership.status === "approved" && membership.is_active === true);
-
-  const isMutating = updatePersonalColors.isPending || upsertTeamColors.isPending;
+  const isMutating = updatePersonalColors.isPending;
 
   const handlePersonalChange = (field: ColorField, color: string | null) => {
     updatePersonalColors.mutate({
@@ -92,17 +96,6 @@ export const CalendarColorSettings: React.FC = () => {
       competition_color: (field === "competition_color"
         ? color
         : settings.personal.competition_color) as PaletteColor | null,
-    });
-  };
-
-  const handleTeamChange = (teamId: string, field: ColorField, color: string | null) => {
-    const current = settings.byTeam[teamId] ?? { practice_color: null, competition_color: null };
-    upsertTeamColors.mutate({
-      teamId,
-      practice_color: (field === "practice_color" ? color : current.practice_color) as PaletteColor | null,
-      competition_color: (field === "competition_color"
-        ? color
-        : current.competition_color) as PaletteColor | null,
     });
   };
 
@@ -152,45 +145,6 @@ export const CalendarColorSettings: React.FC = () => {
           <Text style={styles.warningText}>{t("settings.calendarColors.sameColorWarning")}</Text>
         )}
       </View>
-
-      {/* チーム別設定 (承認済みメンバーシップのみ) */}
-      {approvedTeams.length > 0 && (
-        <View style={[styles.section, styles.borderTop]}>
-          <Text style={styles.sectionTitle}>{t("settings.calendarColors.teamSectionTitle")}</Text>
-          {approvedTeams.map((membership) => {
-            const teamColors = settings.byTeam[membership.team_id] ?? {
-              practice_color: null,
-              competition_color: null,
-            };
-
-            return (
-              <View key={membership.team_id} style={styles.teamBlock}>
-                <View style={styles.teamHeaderRow}>
-                  <Text style={styles.teamName}>{membership.teams.name}</Text>
-                </View>
-                <ColorSwatchRow
-                  label={t("settings.calendarColors.practiceLabel")}
-                  value={teamColors.practice_color}
-                  defaultColor={effectivePersonalPractice}
-                  onChange={(color) => handleTeamChange(membership.team_id, "practice_color", color)}
-                  onReset={() => handleTeamChange(membership.team_id, "practice_color", null)}
-                  disabled={isMutating}
-                  resetLabel={t("settings.calendarColors.resetToDefault")}
-                />
-                <ColorSwatchRow
-                  label={t("settings.calendarColors.competitionLabel")}
-                  value={teamColors.competition_color}
-                  defaultColor={effectivePersonalCompetition}
-                  onChange={(color) => handleTeamChange(membership.team_id, "competition_color", color)}
-                  onReset={() => handleTeamChange(membership.team_id, "competition_color", null)}
-                  disabled={isMutating}
-                  resetLabel={t("settings.calendarColors.resetToDefault")}
-                />
-              </View>
-            );
-          })}
-        </View>
-      )}
     </View>
   );
 };
@@ -229,33 +183,10 @@ const styles = StyleSheet.create({
   section: {
     gap: 16,
   },
-  borderTop: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "600",
     color: "#111827",
-  },
-  teamBlock: {
-    gap: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 8,
-    padding: 12,
-  },
-  teamHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  teamName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
   },
   resetLink: {
     fontSize: 13,
@@ -274,15 +205,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#374151",
   },
+  // パレットは必ず1行に収める。固定幅だと色数×幅+gap が画面幅を超えた時点で
+  // 折り返して2行になるため、スウォッチ側を flex で分配する
+  // (色数が変わっても端末幅が狭くても折り返さない)
   colorGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 10,
   },
   colorOption: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    flex: 1,
+    aspectRatio: 1,
+    // 幅が flex で決まるので固定値ではなく十分大きい値で円にする
+    borderRadius: 999,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,

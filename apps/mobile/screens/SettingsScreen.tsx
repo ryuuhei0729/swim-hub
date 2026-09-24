@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert, Linking, ActivityIndicator, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
@@ -33,6 +35,12 @@ export const SettingsScreen: React.FC = () => {
   const isPremium = checkIsPremium(subscription);
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
+  // Android の Edge-to-Edge 強制下ではシステムナビゲーションバー(3ボタン)の領域まで
+  // 描画されるため、最下部のログアウトボタンがナビゲーションバーの背後に隠れる。
+  // ScrollView の contentContainerStyle に下部インセットを加算して回避する
+  // (フッター固定ではないためパターンB。iOS では従来のハードコード値 32 と
+  //  Home Indicator inset の大きい方が採用され、見た目はほぼ同値)。
+  const insets = useSafeInsets();
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -112,7 +120,10 @@ export const SettingsScreen: React.FC = () => {
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: getSafeFooterPadding(32, insets.bottom) },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

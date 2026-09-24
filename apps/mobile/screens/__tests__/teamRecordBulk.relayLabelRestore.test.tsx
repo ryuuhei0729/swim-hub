@@ -74,7 +74,7 @@
 //     並んでいることの確認を兼ねる)。
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -107,6 +107,7 @@ const mocks = vi.hoisted(() => {
           },
           eq: () => builder,
           order: () => builder,
+          in: () => builder,
           single: () => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
           then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
             resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
@@ -120,7 +121,7 @@ const mocks = vi.hoisted(() => {
     styles,
     responses,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1" } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -134,6 +135,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -155,12 +157,18 @@ vi.mock("@apps/shared/api/styles", () => ({
   },
 }));
 
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
+  },
+}));
+
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
 vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -227,7 +235,7 @@ function freeRelayRecordsViaPhase4() {
   ];
 }
 
-describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract V-01〜V-07)", () => {
+describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contract V-01〜V-07)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getStyles.mockResolvedValue(mocks.styles);
@@ -240,6 +248,14 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
   });
 
   describe("[V-01][V-07] メドレーリレー復元 (Phase 1/2 経路)", () => {
+    beforeEach(() => {
+      mocks.routeParams = {
+        competitionId: "comp-1",
+        teamId: "team-1",
+        relayEventId: "relay_4x50_medley",
+      };
+    });
+
     it(
       "[V-01] 4x50 メドレーリレー (背→平→バタ→自) の既存記録を復元して開くと、" +
         "種目欄に「50m×4 メドレーリレー」が表示される (styleName 空欄にならない)",
@@ -247,7 +263,7 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
         mocks.responses["select:records"] = { data: medleyRelayRecords(), error: null };
 
         const queryClient = makeQueryClient();
-        render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+        render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
         await waitFor(() => {
           expect(screen.getByText("50m×4 メドレーリレー")).toBeDefined();
@@ -262,7 +278,7 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
         mocks.responses["select:records"] = { data: medleyRelayRecords(), error: null };
 
         const queryClient1 = makeQueryClient();
-        const { unmount } = render(<TeamRecordBulkFormScreen />, {
+        const { unmount } = render(<TeamRecordStyleDetailScreen />, {
           wrapper: createWrapper(queryClient1),
         });
         await waitFor(() => {
@@ -273,7 +289,7 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
 
         // 画面を閉じて再度開く = 同じ records レスポンスに対して再度マウントする
         const queryClient2 = makeQueryClient();
-        render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient2) });
+        render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient2) });
         await waitFor(() => {
           expect(screen.getByText("50m×4 メドレーリレー")).toBeDefined();
         });
@@ -282,6 +298,14 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
   });
 
   describe("[V-02][V-07] フリーリレー復元 (Phase 4 二次検出経路)", () => {
+    beforeEach(() => {
+      mocks.routeParams = {
+        competitionId: "comp-1",
+        teamId: "team-1",
+        relayEventId: "relay_4x50_free",
+      };
+    });
+
     it(
       "[V-02] 同一 style_id (50m Fr) 4件の既存記録 (Phase 1 では検出されない並び) を" +
         "復元して開くと、種目欄に「50m×4 フリーリレー」が表示される (styleName 空欄にならない)",
@@ -289,7 +313,7 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
         mocks.responses["select:records"] = { data: freeRelayRecordsViaPhase4(), error: null };
 
         const queryClient = makeQueryClient();
-        render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+        render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
         await waitFor(() => {
           expect(screen.getByText("50m×4 フリーリレー")).toBeDefined();
@@ -303,7 +327,7 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
         mocks.responses["select:records"] = { data: freeRelayRecordsViaPhase4(), error: null };
 
         const queryClient1 = makeQueryClient();
-        const { unmount } = render(<TeamRecordBulkFormScreen />, {
+        const { unmount } = render(<TeamRecordStyleDetailScreen />, {
           wrapper: createWrapper(queryClient1),
         });
         await waitFor(() => {
@@ -313,7 +337,7 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
         cleanup();
 
         const queryClient2 = makeQueryClient();
-        render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient2) });
+        render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient2) });
         await waitFor(() => {
           expect(screen.getByText("50m×4 フリーリレー")).toBeDefined();
         });
@@ -326,10 +350,15 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
       "[V-03] メドレーリレー復元時、4名分の第N泳者ラベル " +
         '("第1泳者 (背泳ぎ)"〜"第4泳者 (自由形)") が legIndex 順に全て表示される',
       async () => {
+        mocks.routeParams = {
+          competitionId: "comp-1",
+          teamId: "team-1",
+          relayEventId: "relay_4x50_medley",
+        };
         mocks.responses["select:records"] = { data: medleyRelayRecords(), error: null };
 
         const queryClient = makeQueryClient();
-        render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+        render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
         await waitFor(() => {
           expect(screen.getByText("50m×4 メドレーリレー")).toBeDefined();
@@ -352,10 +381,15 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
     it(
       "[V-03] フリーリレー復元時も、4名分の第N泳者ラベルが legIndex 順に全て表示される",
       async () => {
+        mocks.routeParams = {
+          competitionId: "comp-1",
+          teamId: "team-1",
+          relayEventId: "relay_4x50_free",
+        };
         mocks.responses["select:records"] = { data: freeRelayRecordsViaPhase4(), error: null };
 
         const queryClient = makeQueryClient();
-        render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+        render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
         await waitFor(() => {
           expect(screen.getByText("50m×4 フリーリレー")).toBeDefined();
@@ -375,6 +409,10 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
   });
 
   describe("[V-04] 個人種目表示の非退行", () => {
+    beforeEach(() => {
+      mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+    });
+
     it(
       "[V-04] リレー未検出の個人種目記録を復元して開くと、従来通り種目欄に" +
         "localizedStyleName の結果 (「50m自由形」) が表示される (本修正による副作用が無いことの確認)",
@@ -387,7 +425,7 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
         };
 
         const queryClient = makeQueryClient();
-        render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+        render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
         await waitFor(() => {
           expect(screen.getByText("50m自由形")).toBeDefined();
@@ -398,20 +436,27 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
     );
   });
 
-  describe("[V-05] ピッカーで新規にリレーを選んだ直後の非退行", () => {
+  describe("[V-05] 新規にリレー種目詳細画面を開いた直後の非退行", () => {
+    // 移植メモ (2階層化): 旧画面は「大会全体の1フォーム内で種目選択ピッカーを
+    // 操作してリレー種目を選ぶ」UX だった (updateRelayEntry 経路)。新画面では
+    // 種目選択はリスト画面のカードタップに移り、詳細画面は route params の
+    // relayEventId を確定させた状態で開く (一覧→詳細の遷移で相当する)。
+    // 既存記録が無い新規リレー (buildEmptyRelayEntry 経路) でも種目欄・第N泳者
+    // ラベルが空欄化しないことが旧テストの本質的な観点であり、それはここで
+    // そのまま検証できる。
     it(
-      "[V-05] 種目選択ピッカーでメドレーリレーを新規選択した直後、種目欄に" +
-        "「50m×4 メドレーリレー」、各泳者行に第N泳者ラベルが表示される (updateRelayEntry 経路)",
+      "[V-05] 新規のメドレーリレー種目詳細画面を開くと、種目欄に「50m×4 メドレーリレー」、" +
+        "各泳者行に第N泳者ラベルが表示される (buildEmptyRelayEntry 経路)",
       async () => {
+        mocks.routeParams = {
+          competitionId: "comp-1",
+          teamId: "team-1",
+          relayEventId: "relay_4x50_medley",
+        };
+        mocks.responses["select:records"] = { data: [], error: null };
+
         const queryClient = makeQueryClient();
-        render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
-
-        // 初期プレースホルダー行の種目選択ボタンを押してピッカーを開く
-        const pickerButton = await screen.findByText("選択してください");
-        fireEvent.click(pickerButton);
-
-        const medleyOption = await screen.findByText("50m×4 メドレーリレー");
-        fireEvent.click(medleyOption);
+        render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
         await waitFor(() => {
           expect(screen.getByText("50m×4 メドレーリレー")).toBeDefined();
@@ -429,16 +474,17 @@ describe("TeamRecordBulkFormScreen — リレーラベル復元 (Sprint Contract
     );
 
     it(
-      "[V-05] 種目選択ピッカーでフリーリレーを新規選択した直後も同様に表示される",
+      "[V-05] 新規のフリーリレー種目詳細画面を開いた場合も同様に表示される",
       async () => {
+        mocks.routeParams = {
+          competitionId: "comp-1",
+          teamId: "team-1",
+          relayEventId: "relay_4x50_free",
+        };
+        mocks.responses["select:records"] = { data: [], error: null };
+
         const queryClient = makeQueryClient();
-        render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
-
-        const pickerButton = await screen.findByText("選択してください");
-        fireEvent.click(pickerButton);
-
-        const freeOption = await screen.findByText("50m×4 フリーリレー");
-        fireEvent.click(freeOption);
+        render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
         await waitFor(() => {
           expect(screen.getByText("50m×4 フリーリレー")).toBeDefined();

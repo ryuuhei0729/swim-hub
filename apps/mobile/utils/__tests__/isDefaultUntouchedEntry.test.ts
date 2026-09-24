@@ -154,6 +154,11 @@ describe("isDefaultUntouchedEntry — 境界値 (mobile)", () => {
     expect(isDefaultUntouchedEntry(entry, "")).toBe(true);
   });
 
+  it("styleId='' (未取得) だが defaultStyleId は既に非空 (種目取得 effect が既存データ初期化 effect より先に解決した場合) → true (OR 条件の左辺 styleId==='' 単独で除外される。isDefaultUntouchedEntry の JSDoc が明示する主眼のケース)", () => {
+    const entry = makeUntouchedDefaultEntry({ styleId: "" });
+    expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID)).toBe(true);
+  });
+
   it("entryTime が負数の行 (異常値) は false (0 と等価でないため保存対象・上位バリデーションに委ねる)", () => {
     const entry = makeUntouchedDefaultEntry({ entryTime: -1 });
     expect(isDefaultUntouchedEntry(entry, DEFAULT_STYLE_ID)).toBe(false);

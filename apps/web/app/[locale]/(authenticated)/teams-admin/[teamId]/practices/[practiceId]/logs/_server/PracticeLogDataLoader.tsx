@@ -5,6 +5,7 @@ import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { getServerUser } from "@/lib/supabase-server";
 import PracticeLogClient from "../_client/PracticeLogClient";
 import { PracticeTag, Practice } from "@apps/shared/types";
+import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 
 interface PracticeLogDataLoaderProps {
   teamId: string;
@@ -15,9 +16,15 @@ interface TeamMember {
   id: string;
   user_id: string;
   role: string;
+  // 呼び出し元 (この loader) が select に is_swimmer を含めるので必須で受け取る
+  // (PracticeLogClient 側は select 漏れの古いキャッシュ等も考慮して optional にしている)
+  is_swimmer: boolean;
   users: {
     id: string;
     name: string;
+    birthday?: string | null;
+    // 共有 MemberSelectModal (useMemberGroupSort の性別グルーピング) が参照する
+    gender?: number;
   };
 }
 
@@ -118,15 +125,17 @@ export default async function PracticeLogDataLoader({
         id,
         user_id,
         role,
+        is_swimmer,
         users!team_memberships_user_id_fkey (
           id,
-          name
+          name,
+          birthday,
+          gender
         )
       `,
       )
       .eq("team_id", teamId)
-      .eq("is_active", true)
-      .order("role", { ascending: false }),
+      .eq("is_active", true),
 
     // 既存のPractice_Logを取得
     supabase
@@ -163,14 +172,23 @@ export default async function PracticeLogDataLoader({
       .order("created_at", { ascending: true }),
 
     // 利用可能なタグを取得
-    supabase.from("practice_tags").select("id, name, color, user_id").order("name"),
+    supabase
+      .from("practice_tags")
+      .select("id, name, color, user_id")
+      .order("name"),
 
     // 出席情報を取得
-    supabase.from("team_attendance").select("id, user_id, status").eq("practice_id", practiceId),
+    supabase
+      .from("team_attendance")
+      .select("id, user_id, status")
+      .eq("practice_id", practiceId),
   ]);
 
   // エラーチェック
-  const membershipData = membershipResult.data as { id: string; role: string } | null;
+  const membershipData = membershipResult.data as {
+    id: string;
+    role: string;
+  } | null;
   if (membershipResult.error || !membershipData) {
     return notFound();
   }
@@ -190,13 +208,19 @@ export default async function PracticeLogDataLoader({
   }
 
   const practice = practiceData as unknown as PracticeWithDetails;
-  const members = (membersResult.data || []) as unknown as TeamMember[];
-  const practiceLogs = (practiceLogsResult.data || []) as unknown as PracticeLogWithDetails[];
+  // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+  const members = ((membersResult.data || []) as unknown as TeamMember[]).sort(
+    compareMembersByBirthday,
+  );
+  const practiceLogs = (practiceLogsResult.data ||
+    []) as unknown as PracticeLogWithDetails[];
   const tags = (tagsResult.data || []) as PracticeTag[];
   const attendance = (attendanceResult.data || []) as AttendanceRecord[];
 
   // 出席しているメンバーのuser_idリストを作成
-  const presentUserIds = attendance.filter((a) => a.status === "present").map((a) => a.user_id);
+  const presentUserIds = attendance
+    .filter((a) => a.status === "present")
+    .map((a) => a.user_id);
 
   return (
     <PracticeLogClient

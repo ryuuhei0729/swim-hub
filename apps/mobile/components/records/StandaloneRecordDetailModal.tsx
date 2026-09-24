@@ -71,7 +71,7 @@ export const StandaloneRecordDetailModal: React.FC<StandaloneRecordDetailModalPr
           style={dayDetailStyles.safeAreaContainer}
           pointerEvents="box-none"
         >
-          <View style={[dayDetailStyles.modalContent, localStyles.modalContent]}>
+          <View style={dayDetailStyles.modalContent}>
             <View style={dayDetailStyles.header}>
               <View style={localStyles.headerTitleRow}>
                 <Text style={dayDetailStyles.title} numberOfLines={1}>
@@ -111,9 +111,6 @@ export const StandaloneRecordDetailModal: React.FC<StandaloneRecordDetailModalPr
 };
 
 const localStyles = StyleSheet.create({
-  modalContent: {
-    minHeight: 260,
-  },
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "baseline",

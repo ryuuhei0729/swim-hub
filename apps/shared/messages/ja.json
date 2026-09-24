@@ -20,7 +20,6 @@
         "recordCreate": "大会記録作成",
         "competitionInfo": "大会情報",
         "entryRegister": "エントリー登録",
-        "recordInput": "記録入力",
         "teamDetail": "チーム詳細",
         "settings": "設定",
         "bulkBestTime": "ベストタイム一括入力"
@@ -1138,17 +1137,17 @@
       "dateInvalidFormat": "日付はYYYY-MM-DD形式で入力してください",
       "dateInvalid": "有効な日付を入力してください",
       "titleLabel": "タイトル",
-      "titlePlaceholder": "練習タイトル（任意）",
+      "titlePlaceholder": "例: Swim, AM, 16:00",
       "placeLabel": "場所",
-      "placePlaceholder": "練習場所（任意）",
-      "memoPlaceholder": "メモ（任意）",
+      "placePlaceholder": "例: 市営プール、学校プール",
+      "memoPlaceholder": "練習に関する特記事項（天候、体調など）",
       "imagesLabel": "画像",
       "videoLabel": "動画",
       "continueToLog": "続けて練習ログを作成",
       "menuSection": "練習メニュー",
       "menuNumber": "メニュー {index}",
       "tagsLabel": "タグ",
-      "styleLabel": "種目①",
+      "styleLabel": "種目",
       "categoryLabel": "種目②",
       "distanceLabel": "距離(m)",
       "repsLabel": "本数",
@@ -1159,6 +1158,9 @@
       "inputTimes": "タイムを入力",
       "registeredTimes": "登録済みタイム",
       "timeInputTitle": "タイム入力",
+      "timeInputNext": "次へ",
+      "timeInputDone": "完了",
+      "timeInputHelpBody": "1本目は数字のあいだを数字以外の文字（. - : など）で区切って入力します。\n例:「1.23.4」→ 1:23.4、「2.00.00」→ 2:00.00、「31-2」→ 31.2、「1分12秒3」→ 1:12.3。\n\n2本目以降は直前の本の十の位が自動で入力されます。続けて「一の位」「小数第1位」の2つの数字を連続で打つだけでタイムが完成します。\n例: 前の本が「31.2」なら「3」が自動入力された状態から「2」「1」と打つと「32.1」になります。\n十の位が違う場合はバックスペースで消して打ち直せます。",
       "timeInputSubtitle": "{setCount}セット × {repCount}本のタイムを入力してください",
       "setNumberLabel": "セット {setNumber}",
       "setAverageDetail": "平均: {avg} ({count}本)",
@@ -1166,7 +1168,7 @@
       "overallAverage": "全体平均:",
       "fastest": "最速:",
       "premiumLimited": "Premium限定",
-      "timeInputPlaceholder": "例: 31-2",
+      "timeInputPlaceholder": "2.00.00",
       "reauthRequired": "認証が必要です。再ログインしてください。",
       "styleRequired": "種目を選択してください",
       "distanceRequired": "距離を入力してください",
@@ -1441,7 +1443,7 @@
       "addStyleButton": "種目を追加",
       "styleModalTitle": "種目を選択",
       "removeStyleAria": "{styleName}を削除",
-      "timePlaceholder": "例: 1:23.45",
+      "timePlaceholder": "2.00.00",
       "timeAriaLabel": "{styleName}のタイム",
       "poolTypeShort": "短水路",
       "poolTypeLong": "長水路",
@@ -1456,7 +1458,7 @@
       "completing": "準備中...",
       "backButton": "戻る",
       "inputHintTitle": "半角数字で入力",
-      "inputHintBody": "1:23.45 / 23.45 / 23-45 / 1-23-45 など自由な形式で入力できます",
+      "inputHintBody": "1.23.4 / 2.00.00 / 23.45 / 1:23.45 / 1-23-45 など自由な形式で入力できます",
       "notePlaceholder": "日付、大会名など"
     },
     "completionFailed": "完了処理に失敗しました",
@@ -1613,8 +1615,6 @@
       "calendarSyncFailedMessage": "大会情報は保存されましたが、カレンダーへの同期に失敗しました。",
       "saveFailed": "保存に失敗しました",
       "deleteFailed": "削除に失敗しました",
-      "continueToRecord": "続けて記録を入力",
-      "continueToEntry": "続けてエントリーを作成",
       "noCompetitions": "大会がありません",
       "selectCompetition": "大会を選択",
       "deleteConfirmTitle": "削除確認",
@@ -1635,7 +1635,7 @@
       "namePlaceholder": "例: 全国大会, 対抗戦, タイムトライアル",
       "placeLabel": "場所",
       "placePlaceholder": "例: 東京アクアティクスセンター",
-      "poolTypeLabel": "プール種別",
+      "poolTypeLabel": "水路",
       "memoLabel": "メモ",
       "memoPlaceholder": "大会に関するメモ（任意）",
       "imagesLabel": "画像",
@@ -1656,7 +1656,7 @@
       "styleLabel": "種目",
       "selectStyle": "種目を選択",
       "entryTimeLabel": "エントリータイム",
-      "entryTimePlaceholder": "例: 2:05.00 または 2-05-00",
+      "entryTimePlaceholder": "2.00.00",
       "memoLabel": "メモ",
       "memoPlaceholder": "メモ（任意）",
       "skipButton": "スキップ",
@@ -1681,8 +1681,8 @@
       "relayLegShort": "第{num}泳者",
       "freeRelaySuffix": "フリーリレー",
       "medleyRelaySuffix": "メドレーリレー",
-      "relayTimePlaceholder": "例: 1:52.10",
-      "splitTimePlaceholder": "例: 30.50",
+      "relayTimePlaceholder": "2.00.00",
+      "splitTimePlaceholder": "2.00.00",
       "subtitle": "種目ごとにメンバーの記録を入力できます",
       "competitionFallback": "大会",
       "entryHeader": "種目 {num}",
@@ -1690,7 +1690,7 @@
       "selectPlaceholder": "選択してください",
       "individualEvents": "個人種目",
       "selectSwimmer": "泳者を選択",
-      "timePlaceholder": "例: 1:30.50",
+      "timePlaceholder": "2.00.00",
       "distancePlaceholder": "距離",
       "notePlaceholder": "メモ",
       "videoHas": "動画あり",
@@ -1991,7 +1991,7 @@
     },
     "calendarColors": {
       "title": "カレンダー記録色",
-      "description": "ダッシュボードの練習・大会記録の表示色をカスタマイズします。チーム別に色を分けることもできます。",
+      "description": "ダッシュボードの練習・大会記録の表示色をカスタマイズします。チーム別の色は、各チームの設定タブで変更できます。",
       "personalSectionTitle": "個人の記録色",
       "teamSectionTitle": "チーム別の記録色",
       "practiceLabel": "練習",
@@ -2300,9 +2300,9 @@
       "styleLabel": "種目",
       "selectStylePlaceholder": "種目を選択",
       "targetTimeLabel": "目標タイム",
-      "targetTimePlaceholder": "例: 1:23.45 または 83.45",
+      "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "初期タイム（任意）",
-      "startTimePlaceholder": "例: 1:25.00 または 85.00",
+      "startTimePlaceholder": "2.00.00",
       "getBestTimeButton": "ベストタイムから取得"
     },
     "milestoneForm": {
@@ -2395,6 +2395,7 @@
       "tabGroups": "グループ",
       "tabPractices": "練習",
       "tabCompetitions": "大会",
+      "tabRankings": "ランキング",
       "tabAttendance": "出欠",
       "memberLoading": "メンバーを読み込み中...",
       "memberFetchFailed": "メンバー一覧の取得に失敗しました",
@@ -2569,7 +2570,7 @@
       "bestTimeSection": "Best Time",
       "youBadge": "あなた",
       "birthdayLabel": "生年月日: {date}",
-      "adminControlsTitle": "管理者機能",
+      "adminControlsTitle": "メンバー設定",
       "bestTimesEmpty": "記録がありません",
       "bestTimesEmptySubText": "このメンバーはまだ記録を登録していません",
       "bestTimesIncludeRelaying": "引き継ぎ含む",
@@ -2626,8 +2627,8 @@
       "tabAnnouncements": "お知らせ",
       "adminToggle": {
         "label": "表示切替",
-        "admin": "管理者ビュー",
-        "user": "利用者ビュー"
+        "admin": "管理者",
+        "user": "利用者"
       },
       "pendingApproveConfirmTitle": "承認確認",
       "pendingApproveConfirmMessage": "{name}を承認しますか？",
@@ -2644,7 +2645,7 @@
         "fetchFailed": "練習記録の取得に失敗しました",
         "deleteConfirm": "この練習記録を削除しますか？この操作は取り消せません。",
         "deleteFailed": "練習記録の削除に失敗しました",
-        "addLog": "ログを記入",
+        "addLog": "記録追加",
         "recordBulkButton": "記録代理入力"
       },
       "teamCompetitionList": {
@@ -2655,19 +2656,27 @@
         "deleteConfirm": "この大会を削除しますか？この操作は取り消せません。",
         "deleteFailed": "大会の削除に失敗しました",
         "entryButton": "エントリー",
-        "recordButton": "記録",
+        "recordButton": "記録追加",
         "entryBulkButton": "エントリー代理入力",
         "recordBulkButton": "記録代理入力",
-        "entryStatusChangeAria": "エントリー受付状況: {status}。タップして変更"
+        "entryStatusChangeAria": "エントリー受付状況: {status}。タップして変更",
+        "viewRecordsAria": "{title} の記録一覧を表示"
       },
       "teamCompetitionEntryModal": {
+        "styleGroupHeader": "{style} ({count}件)",
+        "adminBulkEntryButton": "エントリーを代理入力",
+        "editEntryAria": "{style}のエントリーを編集",
+        "deleteEntryAria": "{style}のエントリーを削除",
+        "deleteConfirmTitle": "エントリーを削除",
+        "deleteConfirmMessage": "このエントリーを削除しますか？この操作は取り消せません。",
+        "deleteFailed": "エントリーの削除に失敗しました",
         "title": "{title} のエントリー",
         "totalEntries": "エントリー総数: {count}件",
         "entryStatusLabel": "エントリー受付状況",
         "statusBefore": "受付前",
         "statusOpen": "受付中",
         "statusClosed": "受付終了",
-        "selfEntryButton": "種目をエントリー",
+        "selfEntryButton": "エントリーを追加",
         "confirmTitle": "受付状況を変更",
         "confirmBefore": "エントリー受付状況を「受付前」に変更しますか？",
         "confirmOpen": "エントリー受付状況を「受付中」に変更しますか？",
@@ -2699,12 +2708,11 @@
         "eventLabel": "種目",
         "eventPlaceholder": "種目を選択",
         "timeLabel": "エントリータイム",
-        "timePlaceholder": "例: 1:23.45",
+        "timePlaceholder": "2.00.00",
         "timeFormatInvalid": "タイムの形式が正しくありません",
         "memoLabel": "メモ",
         "memoPlaceholder": "メモ（任意）",
         "prefillButton": "ベストタイムを流用",
-        "prefillUntouchedWarning": "⚠️ ベストタイムのまま未編集です",
         "duplicateError": "同じ選手・種目の行が重複しています",
         "closedStatusWarning": "エントリー受付は終了していますが、管理者は代理入力できます。",
         "pastDateWarning": "大会日を過ぎているため、代理入力はできません。",
@@ -2721,7 +2729,8 @@
         "conflictingDeleteTitle": "削除待ちの種目と重複しています",
         "conflictingDeleteMessage": "先に削除だけを保存してから、種目の変更を保存してください。\n{list}",
         "saveFailedDuplicate": "保存に失敗しました。種目の重複が原因の可能性があります。もう一度お試しください。"
-      }
+      },
+      "tabSettings": "設定"
     },
     "page": {
       "title": "マイチーム",
@@ -2765,7 +2774,9 @@
       "attendance": "出欠",
       "members": "メンバー",
       "practices": "練習",
-      "competitions": "大会"
+      "competitions": "大会",
+      "rankings": "ランキング",
+      "settings": "設定"
     },
     "createModal": {
       "errorTitle": "エラーが発生しました",
@@ -2793,6 +2804,17 @@
         "copyButton": "コピー",
         "closeButton": "閉じる"
       }
+    },
+    "nonSwimmer": {
+      "segmentSwimmer": "泳者",
+      "segmentNonSwimmer": "非泳者",
+      "infoAriaLabel": "非泳者設定について",
+      "infoText": "「非泳者」に設定すると、メンバータブのベストタイム一覧では最下部の「非泳者」に折りたたまれ、大会エントリー・練習の記録入力の対象者に表示されなくなります。出欠確認には引き続き表示されます。",
+      "sectionToggle": "非泳者 ({count})",
+      "updateFailed": "非泳者設定の更新に失敗しました",
+      "confirmTitle": "泳者設定の変更",
+      "confirmMessageToNonSwimmer": "{name}さんを非泳者にしますか？",
+      "confirmMessageToSwimmer": "{name}さんを泳者にしますか？"
     },
     "practices": {
       "title": "チーム練習記録 ({count}件)",
@@ -2839,7 +2861,12 @@
         "manageButton": "管理",
         "editButton": "編集",
         "deleteButton": "削除",
-        "entryBulkInputButton": "エントリー入力"
+        "entryBulkInputButton": "エントリー入力",
+        "recordCount": "登録記録: {count}件",
+        "tapForDetails": "タップで詳細",
+        "noRecords": "登録記録なし",
+        "addable": "追加可能",
+        "viewRecordsAriaLabel": "{title}の記録を閲覧"
       },
       "entryStatus": {
         "before": "受付前",
@@ -2886,6 +2913,100 @@
         "date": "日付"
       }
     },
+    "ranking": {
+      "title": "チーム記録ランキング",
+      "filter": {
+        "style": "種目",
+        "distance": "距離",
+        "poolType": "水路",
+        "gender": "性別",
+        "scope": "対象",
+        "period": "期間",
+        "aggregation": "集計"
+      },
+      "gender": {
+        "male": "男子",
+        "female": "女子"
+      },
+      "scope": {
+        "teamCompetitions": "チームの大会",
+        "allCompetitions": "すべての大会",
+        "allCompetitionsNote": "メンバーが他チームや個人で出場した大会の記録も含みます。"
+      },
+      "period": {
+        "allTime": "通算",
+        "fiscalYear": "{year}年度",
+        "fiscalYearOrEarlier": "{year}年度以前",
+        "fiscalYearNote": "年度を選ぶと、大会に紐づかない記録 (一括登録) は含まれません。"
+      },
+      "aggregation": {
+        "personalBest": "各自のベスト",
+        "allRaces": "全レース"
+      },
+      "col": {
+        "name": "メンバー",
+        "time": "タイム",
+        "competition": "大会",
+        "date": "日付"
+      },
+      "empty": {
+        "noMatchTitle": "該当する記録がありません",
+        "noMatchBody": "選択した種目・距離・水路・性別に一致する記録が見つかりませんでした。条件を変えてお試しください。",
+        "noRecordsTitle": "チームに大会記録がありません",
+        "noRecordsBody": "メンバーが大会記録を登録すると、ここにランキングが表示されます。"
+      },
+      "error": "ランキングの取得に失敗しました",
+      "retry": "再試行",
+      "individualUnavailable": {
+        "fetchFailed": "種目マスターの取得に失敗したため、個人種目のランキングを表示できません。リレーのランキングは表示できます。",
+        "empty": "種目マスターが登録されていないため、個人種目のランキングを表示できません。リレーのランキングは表示できます。"
+      },
+      "loading": "読み込み中...",
+      "showMore": "さらに表示",
+      "resultCount": "{count}件",
+      "truncatedNote": "取得上限の{limit}件に達しました。これより遅い記録は表示されていない可能性があります。条件を絞り込んでください。",
+      "relay": {
+        "filter": {
+          "genderCategory": "性別区分"
+        },
+        "kind": {
+          "free": "フリーリレー",
+          "medley": "メドレーリレー"
+        },
+        "genderCategory": {
+          "male": "男子",
+          "female": "女子",
+          "mixed": "混合"
+        },
+        "col": {
+          "event": "種目",
+          "time": "総合タイム",
+          "competition": "大会",
+          "date": "日付",
+          "legs": "ラップ"
+        },
+        "eventLabel": "{distance}m×{legCount} {kind}",
+        "legDistanceOption": "{distance}m × {legCount}",
+        "legLabel": "第{num}泳者",
+        "legHeader": {
+          "swimmer": "泳者",
+          "style": "種目",
+          "legTime": "区間",
+          "cumulative": "通算"
+        },
+        "expand": "ラップタイムを表示",
+        "collapse": "ラップタイムを閉じる",
+        "retiredMember": "退会したメンバー",
+        "noLegs": "この記録には泳者の情報が登録されていません",
+        "empty": {
+          "noMatchTitle": "該当するリレー記録がありません",
+          "noMatchBody": "選択した種類・距離・水路・性別区分に一致するリレー記録が見つかりませんでした。条件を変えてお試しください。",
+          "noRecordsTitle": "チームにリレー記録がありません",
+          "noRecordsBody": "大会の記録入力でリレー種目を登録すると、ここにランキングが表示されます。"
+        },
+        "error": "リレーランキングの取得に失敗しました"
+      }
+    },
     "memberDetail": {
       "hook": {
         "roleChangeFailed": "権限の変更に失敗しました",
@@ -2911,11 +3032,13 @@
       "leaveButton": "脱退する",
       "removeButton": "除名する",
       "adminControls": {
-        "sectionTitle": "管理者機能",
+        "sectionTitle": "メンバー設定",
         "roleUser": "ユーザー",
         "roleAdmin": "管理者",
         "removing": "削除中...",
-        "removeFromTeam": "チームから削除"
+        "removeFromTeam": "チームから削除",
+        "roleInfoAriaLabel": "管理者権限について",
+        "roleInfoText": "管理者は次の操作ができます:\n・参加申請の承認\n・メンバーの権限変更・泳者区分の変更・削除\n・グループとお知らせの管理\n・練習・大会の予定作成と一括登録\n・他メンバーの出欠登録と出欠受付の締切設定\n・大会エントリーの一括登録\n・チーム設定の変更とチームの削除"
       },
       "roleChange": {
         "title": "権限変更の確認",
@@ -3111,8 +3234,8 @@
       "styleLabel": "種目",
       "styleSelectPlaceholder": "選択してください",
       "entryTimeLabel": "エントリータイム（任意）",
-      "entryTimePlaceholder": "例: 1:23.45",
-      "timeFormatHint": "形式: 分:秒.ミリ秒（例: 1:23.45） または 秒.ミリ秒（例: 65.23）",
+      "entryTimePlaceholder": "2.00.00",
+      "timeFormatHint": "形式: 分.秒.ミリ秒（例: 1.23.4）/ 分:秒.ミリ秒（例: 1:23.45）/ 秒.ミリ秒（例: 65.23）",
       "memoLabel": "メモ（任意）",
       "memoPlaceholder": "補足情報があれば入力してください",
       "registerButton": "エントリーする",
@@ -3156,27 +3279,33 @@
       "eventNumber": "種目 {n}",
       "selectMemberButton": "メンバーを選択",
       "selectedMemberCount": "{n}名選択中",
+      "groupNumber": "{n}本目",
+      "addHeatButton": "{n}本目を追加",
+      "noMembersSelected": "メンバーが選択されていません",
+      "removeMemberConfirmTitle": "選手を削除しますか？",
+      "removeMemberConfirmMessage": "{name}の入力済みデータが削除されます。",
+      "removeHeatConfirmTitle": "この本目を削除しますか？",
+      "removeHeatConfirmMessage": "{n}本目の入力済みデータが削除されます。",
+      "removeHeatButtonLabel": "{n}本目を削除",
       "relaySwimmerPlaceholder": "泳者を選択",
       "totalTime": "合計タイム",
-      "totalTimePlaceholder": "例: 1:52.10",
+      "totalTimePlaceholder": "2.00.00",
       "timeLabel": "タイム",
-      "timePlaceholder": "例: 1:30.50",
-      "reactionTime": "リアクションタイム",
+      "timePlaceholder": "2.00.00",
       "relay": "リレー",
       "memoLabel": "メモ",
       "memoPlaceholder": "メモ",
       "splitTimeLabel": "スプリットタイム",
       "splitDistancePlaceholder": "距離",
-      "splitTimePlaceholder": "例: 30.50",
+      "splitTimePlaceholder": "2.00.00",
       "videoWithFile": "動画あり",
       "videoSelect": "動画を選択",
       "addEventButton": "種目を追加",
       "cancelButton": "キャンセル",
-      "addSplit25m": "追加(25mごと)",
-      "addSplit50m": "追加(50mごと)",
-      "addSplitManual": "追加",
       "memberSelectTitle": "対象メンバーを選択",
       "selectAll": "全員選択",
+      "selectAllToggle": "全選択",
+      "selectAllToggleGroup": "{group}を全選択",
       "clearSelection": "選択解除",
       "confirmSelection": "決定",
       "relayAllMembersRequired": "リレー種目はメンバー4名全員を選択してください",
@@ -3185,6 +3314,13 @@
       "noRecordsError": "少なくとも1つの記録を入力してください",
       "saveFailed": "保存中にエラーが発生しました。もう一度お試しください。",
       "adminBadge": "管理者"
+    },
+    "recordList": {
+      "pageTitle": "種目を選択",
+      "filledCountIndividual": "{n}人",
+      "filledCountRelay": "{n}チーム",
+      "emptyLabel": "未入力",
+      "entryCountLabel": "({n}人エントリー)"
     },
     "practiceForm": {
       "title": "練習記録を追加",
@@ -3265,15 +3401,23 @@
       "poolTypeLong": "長水路",
       "poolTypeShort": "短水路",
       "unknownUser": "不明",
-      "rankLabel": "順位",
       "nameLabel": "名前",
       "timeLabel": "タイム",
       "rtLabel": "RT",
       "noteLabel": "備考",
       "relay": "リレー",
-      "splitTimesLabel": "スプリットタイム ({count})"
+      "splitTimesLabel": "スプリットタイム ({count})",
+      "photoLabel": "プロフィール画像"
     },
     "competitionEntryModal": {
+      "styleGroupHeader": "{style} ({count}件)",
+      "selfEntryButton": "エントリーを追加",
+      "adminBulkEntryButton": "エントリーを代理入力",
+      "editEntryAria": "{style}のエントリーを編集",
+      "deleteEntryAria": "{style}のエントリーを削除",
+      "deleteConfirmTitle": "エントリーを削除",
+      "deleteConfirmMessage": "このエントリーを削除しますか？この操作は取り消せません。",
+      "deleteFailed": "エントリーの削除に失敗しました",
       "titleSuffix": " - エントリー管理",
       "totalEntries": "合計: {count}件のエントリー",
       "loading": "読み込み中...",
@@ -3350,6 +3494,40 @@
       "reactivateFailed": "メンバーシップの再アクティブ化に失敗しました",
       "approveFailed": "メンバーシップの承認に失敗しました",
       "rejectFailed": "メンバーシップの拒否に失敗しました"
+    },
+    "settingsTab": {
+      "teamInfoTitle": "チーム情報",
+      "editTeamInfo": "チーム情報を編集",
+      "inviteCodeTitle": "招待コード",
+      "inviteCodeDescription": "このコードを共有すると、チームに参加してもらえます。",
+      "copyInviteCode": "招待コードをコピー",
+      "copied": "コピーしました",
+      "calendarColorTitle": "このチームの記録色",
+      "calendarColorDescription": "ダッシュボードのカレンダーで、このチームの練習・大会を表示する色を設定します。",
+      "teamActionsTitle": "チーム操作",
+      "createTeam": "チームを作成",
+      "joinTeam": "招待コードで参加",
+      "dangerZoneTitle": "危険な操作",
+      "leaveTeam": "チームを脱退",
+      "leaveConfirmTitle": "チームを脱退しますか？",
+      "leaveConfirmMessage": "「{name}」を脱退します。チームの練習・大会・出欠は表示されなくなります。",
+      "leaveFailed": "チームの脱退に失敗しました",
+      "leaving": "脱退中...",
+      "lastAdminCannotLeave": "あなたが最後の管理者のため脱退できません。先に他のメンバーを管理者に変更してください。",
+      "deleteTeam": "チームを削除",
+      "deleteConfirmTitle": "チームを削除しますか？",
+      "deleteConfirmMessage": "「{name}」を削除します。大会・エントリー・お知らせ・メンバー情報は元に戻せません。練習記録とレース記録は個人の記録として残りますが、大会名は表示されなくなります。",
+      "deleteFailed": "チームの削除に失敗しました",
+      "deleting": "削除中...",
+      "deleteErrors": {
+        "notAuthorized": "チームの管理者のみ削除できます。",
+        "teamNotFound": "チームが見つかりませんでした。すでに削除された可能性があります。",
+        "authRequired": "ログインの有効期限が切れました。再度ログインしてください。"
+      },
+      "leaveDescription": "チームを脱退すると、このチームの練習・大会・出欠が表示されなくなります。再び参加するには招待コードが必要です。あなたの練習記録とレース記録は残ります。",
+      "leaveButton": "チームを脱退する",
+      "deleteDescription": "チームを削除すると、大会・エントリー・お知らせ・メンバー情報が完全に削除され、復元できません。メンバーの練習記録とレース記録は個人の記録として残ります。",
+      "deleteButton": "チームを削除する"
     }
   },
   "teamsAdmin": {
@@ -3380,6 +3558,7 @@
       "groups": "グループ",
       "practices": "練習",
       "competitions": "大会",
+      "rankings": "ランキング",
       "bulkRegister": "一括登録",
       "settings": "設定"
     },
@@ -3874,10 +4053,11 @@
       "styleLabel": "種目",
       "stylePlaceholder": "種目を選択",
       "timeLabel": "タイム",
-      "timePlaceholder": "例: 1:23.45 または 31-2",
-      "timePlaceholder2": "例: 2:00.00 または 2-0-0",
-      "reactionTimeLabel": "反応時間（秒）",
-      "reactionTimePlaceholder": "-1.00〜2.00",
+      "timePlaceholder": "2.00.00",
+      "timePlaceholder2": "2.00.00",
+      "reactionTimeLabel": "リアクション",
+      "reactionTimePlaceholder": "0.69",
+      "reactionTimeFormatInvalid": "リアクションの形式が正しくありません",
       "splitTimeLabel": "スプリットタイム",
       "relayStyleLabel": "リレー種目",
       "memoLabel": "メモ",
@@ -3885,10 +4065,10 @@
       "videoLabel": "動画",
       "imagesLabel": "画像",
       "distancePlaceholder": "距離 (m)",
-      "addEvery25m": "追加(25mごと)",
-      "addEvery50m": "追加(50mごと)",
+      "addEvery25m": "追加 /25m",
+      "addEvery50m": "追加 /50m",
       "addButton": "追加",
-      "splitPlaceholder": "例: 28-0",
+      "splitPlaceholder": "2.00.00",
       "styleRequired": "種目を選択してください",
       "competitionRequired": "大会を選択してください",
       "timeRequired": "タイムを入力してください",
@@ -3906,7 +4086,7 @@
       "noStyle": "種目を選択してください",
       "noLap": "ラップタイムを計算できません",
       "distanceHeader": "距離",
-      "splitTimeHeader": "スプリットタイム"
+      "splitTimeHeader": "Time"
     },
     "bestBadge": {
       "first": "初",
@@ -3988,6 +4168,8 @@
       "pool_type_label": "水路",
       "pool_short": "短水路 (25m)",
       "pool_long": "長水路 (50m)",
+      "pool_short_abbrev": "短水",
+      "pool_long_abbrev": "長水",
       "note_label": "メモ",
       "note_placeholder": "大会に関するメモ（任意）",
       "save": "保存",
@@ -4057,8 +4239,8 @@
       "save": "保存",
       "cancel": "キャンセル",
       "helpTitle": "タイム入力のコツ",
-      "helpBodyBasic": "数字のあいだを数字以外の文字（- . : など）で区切って入力します。例:「31-2」→ 31.2、「1：23、4」→ 1:23.4、「1分12秒3」→ 1:12.3。",
-      "helpBody": "数字のあいだを数字以外の文字（- . : など）で区切って入力します。例:「31-2」→ 31.2、「1：23、4」→ 1:23.4、「1分12秒3」→ 1:12.3。\n\n前のセルで「33-2」と入力すると、次のセルは「3-2」と入力するだけで「33.2」に自動補完されます（十の位を引き継ぐ）。セルを空にすると引き継ぎはリセットされます。"
+      "helpBodyBasic": "数字のあいだを数字以外の文字（. - : など）で区切って入力します。\n数字キーボードだけで打てる「.」区切りが便利です。\n例:「1.23.4」→ 1:23.4、「2.00.00」→ 2:00.00、「31-2」→ 31.2、「1分12秒3」→ 1:12.3。",
+      "helpBody": "数字のあいだを数字以外の文字（. - : など）で区切って入力します。\n数字キーボードだけで打てる「.」区切りが便利です。\n例:「1.23.4」→ 1:23.4、「2.00.00」→ 2:00.00、「31-2」→ 31.2、「1分12秒3」→ 1:12.3。\n\n前のセルで「33-2」と入力すると、次のセルは「3-2」と入力するだけで「33.2」に自動補完されます（十の位を引き継ぐ）。セルを空にすると引き継ぎはリセットされます。"
     },
     "record": {
       "title_create": "記録を追加",
@@ -4085,7 +4267,7 @@
       "styleLabel": "種目",
       "stylePlaceholder": "種目を選択",
       "timeLabel": "タイム",
-      "time_placeholder": "例: 1:30.50",
+      "time_placeholder": "2.00.00",
       "distance_placeholder": "距離 (m)",
       "reactionTimeLabel": "リアクションタイム",
       "relayLabel": "リレー",
@@ -4133,7 +4315,7 @@
       "stylePlaceholder": "種目を選択",
       "relayLabel": "リレー",
       "timeLabel": "タイム",
-      "time_placeholder": "例: 1:23.45   32.45",
+      "time_placeholder": "2.00.00",
       "reactionTime_placeholder": "例: 0.58  -0.01",
       "distance_placeholder": "距離 (m)",
       "reactionTimeLabelShort": "RT",
@@ -4268,7 +4450,10 @@
       },
       "recordFutureGuard": "未来の日付でレースレコードを登録することはできません",
       "competitionEditRestricted": "この大会の情報はチーム管理者のみ編集できます",
-      "practiceEditRestricted": "この練習の情報はチーム管理者のみ編集できます"
+      "practiceEditRestricted": "この練習の情報はチーム管理者のみ編集できます",
+      "permissionCheckFailed": "編集権限を確認できませんでした。通信状況を確認して再試行してください。",
+      "competitionSaveBlockedNoPermission": "編集権限が確認できないため、大会情報を保存できませんでした。画面を開き直して再試行してください。",
+      "practiceSaveBlockedNoPermission": "編集権限が確認できないため、練習情報を保存できませんでした。画面を開き直して再試行してください。"
     },
     "premium": {
       "upgradeText": "Premium にアップグレード",
@@ -4290,7 +4475,7 @@
     "styleLabel": "種目",
     "distanceLabel": "距離",
     "timeLabel": "タイム",
-    "timePlaceholder": "1:23.45",
+    "timePlaceholder": "2.00.00",
     "invalidTimeFormat": "タイムの形式が正しくありません（例: 1:23.45 または 83.45）",
     "emptyEnterTime": "タイムを入力してください",
     "noStandardTime": "この種目・距離の基準タイムはありません",

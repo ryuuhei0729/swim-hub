@@ -6,10 +6,17 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { TeamMembership, TeamMembershipWithUser } from "../../types";
 import { requireAuth, requireTeamAdmin } from "../auth-utils";
 import { UserFacingError } from "../../utils/userFacingError";
+import { compareMembersByBirthday } from "../../utils/memberSort";
 
 export class TeamMembersAPI {
   constructor(private supabase: SupabaseClient) {}
 
+  /**
+   * 承認済みメンバー一覧を年上順（生年月日昇順、未設定は末尾）で取得する。
+   * このメソッドを起点に useTeamsQuery / useTeamMembersQuery が全画面（メンバータブ・
+   * グループ分け・大会/練習の代理入力候補等）へ配信するため、比較関数は
+   * memberSort.ts の唯一の定義元を使う（画面側で個別に並べ替えない）。
+   */
   async list(teamId: string): Promise<TeamMembershipWithUser[]> {
     await requireAuth(this.supabase);
     const { data, error } = await this.supabase
@@ -19,7 +26,7 @@ export class TeamMembersAPI {
       .eq("status", "approved")
       .eq("is_active", true);
     if (error) throw error;
-    return data as unknown as TeamMembershipWithUser[];
+    return (data as unknown as TeamMembershipWithUser[]).sort(compareMembersByBirthday);
   }
 
   async join(inviteCode: string): Promise<TeamMembership> {
@@ -71,13 +78,22 @@ export class TeamMembersAPI {
     }
   }
 
+  /**
+   * 自分でチームを脱退する。
+   *
+   * `.select("*").single()` は remove()（管理者による除名）と同じ意図で必須。
+   * これが無いと RLS 拒否やメンバーシップ不在による 0 行更新が「エラー無し」で
+   * 返り、脱退できていないのに画面だけ脱退済みになる。
+   */
   async leave(teamId: string): Promise<void> {
     const userId = await requireAuth(this.supabase);
     const { error } = await this.supabase
       .from("team_memberships")
       .update({ is_active: false, left_at: new Date().toISOString() })
       .eq("team_id", teamId)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select("*")
+      .single();
     if (error) throw error;
 
     // 脱退したチームのカレンダー記録色カスタマイズ設定を削除する(自分の行のみ、RLSで安全)。
@@ -94,6 +110,29 @@ export class TeamMembersAPI {
     const { data, error } = await this.supabase
       .from("team_memberships")
       .update({ role })
+      .eq("team_id", teamId)
+      .eq("user_id", userId)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return data as TeamMembership;
+  }
+
+  /**
+   * 非泳者フラグを更新する（管理者のみ）
+   *
+   * updateRole() と同一パターン: requireTeamAdmin 先行 → update().eq().eq().select().single()。
+   */
+  async updateSwimmerStatus(
+    teamId: string,
+    userId: string,
+    isSwimmer: boolean,
+  ): Promise<TeamMembership> {
+    await requireTeamAdmin(this.supabase, teamId);
+
+    const { data, error } = await this.supabase
+      .from("team_memberships")
+      .update({ is_swimmer: isSwimmer })
       .eq("team_id", teamId)
       .eq("user_id", userId)
       .select("*")

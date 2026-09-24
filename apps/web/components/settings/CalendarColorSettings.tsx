@@ -3,7 +3,7 @@
 import React from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
-import { useTeamsQuery, useCalendarColorSettingsQuery } from "@apps/shared/hooks";
+import { useCalendarColorSettingsQuery } from "@apps/shared/hooks";
 import { TAG_COLORS, type TagColor } from "@apps/shared/constants/tagColors";
 import {
   DEFAULT_PRACTICE_COLOR,
@@ -26,7 +26,9 @@ interface ColorSwatchRowProps {
 }
 
 // スウォッチ選択UIは TagManagementModal.tsx の色選択グリッド(グリッド状の丸ボタン)を踏襲する
-function ColorSwatchRow({
+// チーム設定タブ (components/team/settings/TeamCalendarColorSection.tsx) も
+// このコンポーネントを再利用する。スウォッチ UI をもう一度書かないこと。
+export function ColorSwatchRow({
   label,
   testKey,
   value,
@@ -55,7 +57,10 @@ function ColorSwatchRow({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+      {/* 8色を1行に収める (10色時代は grid-cols-5 で狭い幅だと2行になっていた)。
+          スウォッチは w-8 (32px) + gap-2 (8px) なので 8列 = 312px。
+          カード内側の実幅が狭い端末でも折り返さないよう sm 未満は4列にする。 */}
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
         {TAG_COLORS.map((color) => {
           const isSelected = activeColor === color.toLowerCase();
           return (
@@ -82,17 +87,12 @@ function ColorSwatchRow({
 export default function CalendarColorSettings() {
   const t = useTranslations("settings.calendarColors");
   const { supabase, user } = useAuth();
-  const { teams } = useTeamsQuery(supabase);
-  const { settings, isLoading, updatePersonalColors, upsertTeamColors, deleteTeamColors } =
-    useCalendarColorSettingsQuery(supabase, user?.id);
-
-  // 承認待ち(pending)メンバーシップはチーム色設定の対象外
-  const approvedTeams = teams.filter(
-    (membership) => membership.status === "approved" && membership.is_active === true,
+  const { settings, isLoading, updatePersonalColors } = useCalendarColorSettingsQuery(
+    supabase,
+    user?.id,
   );
 
-  const isMutating =
-    updatePersonalColors.isPending || upsertTeamColors.isPending || deleteTeamColors.isPending;
+  const isMutating = updatePersonalColors.isPending;
 
   // color は TAG_COLORS からのスウォッチ選択(TagColor)または null(デフォルトに戻す)のみが渡る。
   // Supabase への実書き込み前の権威的なバリデーションは useCalendarColorSettingsQuery 側の
@@ -109,23 +109,9 @@ export default function CalendarColorSettings() {
     });
   };
 
-  const handleTeamChange = (teamId: string, field: ColorField, color: TagColor | null) => {
-    const current = settings.byTeam[teamId] ?? { practice_color: null, competition_color: null };
-    upsertTeamColors.mutate({
-      teamId,
-      practice_color:
-        field === "practice_color" ? color : (current.practice_color as TagColor | null),
-      competition_color:
-        field === "competition_color" ? color : (current.competition_color as TagColor | null),
-    });
-  };
-
-  const handleTeamResetAll = (teamId: string) => {
-    deleteTeamColors.mutate(teamId);
-  };
-
   const effectivePersonalPractice = settings.personal.practice_color ?? DEFAULT_PRACTICE_COLOR;
-  const effectivePersonalCompetition = settings.personal.competition_color ?? DEFAULT_COMPETITION_COLOR;
+  const effectivePersonalCompetition =
+    settings.personal.competition_color ?? DEFAULT_COMPETITION_COLOR;
   const showSameColorWarning =
     effectivePersonalPractice.toLowerCase() === effectivePersonalCompetition.toLowerCase();
 
@@ -148,95 +134,33 @@ export default function CalendarColorSettings() {
         <p className="text-sm text-gray-600 mt-1">{t("description")}</p>
       </div>
 
-      <div className="space-y-6">
-        {/* 個人設定 */}
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">{t("personalSectionTitle")}</h3>
-          <div className="space-y-4">
-            <ColorSwatchRow
-              label={t("practiceLabel")}
-              testKey="practice"
-              value={settings.personal.practice_color as TagColor | null}
-              defaultColor={DEFAULT_PRACTICE_COLOR}
-              onChange={(color) => handlePersonalChange("practice_color", color)}
-              onReset={() => handlePersonalChange("practice_color", null)}
-              disabled={isMutating}
-            />
-            <ColorSwatchRow
-              label={t("competitionLabel")}
-              testKey="competition"
-              value={settings.personal.competition_color as TagColor | null}
-              defaultColor={DEFAULT_COMPETITION_COLOR}
-              onChange={(color) => handlePersonalChange("competition_color", color)}
-              onReset={() => handlePersonalChange("competition_color", null)}
-              disabled={isMutating}
-            />
-          </div>
-          {showSameColorWarning && (
-            <p className="text-xs text-amber-600 mt-2">{t("sameColorWarning")}</p>
-          )}
+      {/* 個人設定のみ。チーム別の色はチーム詳細の「設定」タブ
+          (components/team/settings/TeamCalendarColorSection.tsx) へ移設した。
+          所属チームが増えるほどこの画面が縦に伸び、どのチームの色かも分かりにくかったため。 */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">{t("personalSectionTitle")}</h3>
+        <div className="space-y-4">
+          <ColorSwatchRow
+            label={t("practiceLabel")}
+            testKey="practice"
+            value={settings.personal.practice_color as TagColor | null}
+            defaultColor={DEFAULT_PRACTICE_COLOR}
+            onChange={(color) => handlePersonalChange("practice_color", color)}
+            onReset={() => handlePersonalChange("practice_color", null)}
+            disabled={isMutating}
+          />
+          <ColorSwatchRow
+            label={t("competitionLabel")}
+            testKey="competition"
+            value={settings.personal.competition_color as TagColor | null}
+            defaultColor={DEFAULT_COMPETITION_COLOR}
+            onChange={(color) => handlePersonalChange("competition_color", color)}
+            onReset={() => handlePersonalChange("competition_color", null)}
+            disabled={isMutating}
+          />
         </div>
-
-        {/* チーム別設定(承認済みメンバーシップのみ) */}
-        {approvedTeams.length > 0 && (
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">{t("teamSectionTitle")}</h3>
-            <div className="space-y-3">
-              {approvedTeams.map((membership) => {
-                const teamColors = settings.byTeam[membership.team_id] ?? {
-                  practice_color: null,
-                  competition_color: null,
-                };
-                const hasCustom =
-                  teamColors.practice_color !== null || teamColors.competition_color !== null;
-
-                return (
-                  <details
-                    key={membership.team_id}
-                    className="border border-gray-200 rounded-lg px-4 py-3"
-                    data-testid={`calendar-color-team-${membership.team_id}`}
-                  >
-                    <summary className="cursor-pointer text-sm font-medium text-gray-800 flex items-center justify-between">
-                      <span>{membership.teams.name}</span>
-                      {hasCustom && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleTeamResetAll(membership.team_id);
-                          }}
-                          disabled={isMutating}
-                          className="text-xs text-blue-600 hover:text-blue-700 disabled:opacity-50"
-                        >
-                          {t("resetTeamToDefault")}
-                        </button>
-                      )}
-                    </summary>
-                    <div className="mt-3 space-y-4">
-                      <ColorSwatchRow
-                        label={t("practiceLabel")}
-                        testKey="practice"
-                        value={teamColors.practice_color as TagColor | null}
-                        defaultColor={effectivePersonalPractice as TagColor}
-                        onChange={(color) => handleTeamChange(membership.team_id, "practice_color", color)}
-                        onReset={() => handleTeamChange(membership.team_id, "practice_color", null)}
-                        disabled={isMutating}
-                      />
-                      <ColorSwatchRow
-                        label={t("competitionLabel")}
-                        testKey="competition"
-                        value={teamColors.competition_color as TagColor | null}
-                        defaultColor={effectivePersonalCompetition as TagColor}
-                        onChange={(color) => handleTeamChange(membership.team_id, "competition_color", color)}
-                        onReset={() => handleTeamChange(membership.team_id, "competition_color", null)}
-                        disabled={isMutating}
-                      />
-                    </div>
-                  </details>
-                );
-              })}
-            </div>
-          </div>
+        {showSameColorWarning && (
+          <p className="text-xs text-amber-600 mt-2">{t("sameColorWarning")}</p>
         )}
       </div>
     </div>

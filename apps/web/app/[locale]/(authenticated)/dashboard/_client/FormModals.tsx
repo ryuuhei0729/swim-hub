@@ -11,7 +11,7 @@ import type {
   RecordFormDataInternal,
 } from "@/stores/types";
 import { convertRecordFormData } from "@/stores/types";
-import { getCompetitionId } from "../_utils/dashboardHelpers";
+import { getCompetitionId, getEditingDataTeamId } from "../_utils/dashboardHelpers";
 import { getEntryDataListForRecord } from "@/utils/getEntryDataListForRecord";
 import { useAuth } from "@/contexts";
 import { useCompetitionInfoQuery } from "@apps/shared/hooks/queries/records";
@@ -185,6 +185,7 @@ export function FormModals({
     styleId: string;
     entryTime: number;
     note: string;
+    prefillSource: "bestTime" | null;
   }> => {
     if (!editingData || typeof editingData !== "object") {
       return [];
@@ -208,6 +209,8 @@ export function FormModals({
                 ? entry.entry_time
                 : 0,
           note: String(entry.note ?? ""),
+          // 編集データ由来の既存エントリーは流用元の情報を持たないため未編集扱いにしない
+          prefillSource: null,
         }));
       }
     }
@@ -228,6 +231,8 @@ export function FormModals({
               ? entry.entry_time
               : 0,
         note: String(entry.note ?? ""),
+        // 編集データ由来の既存エントリーは流用元の情報を持たないため未編集扱いにしない
+        prefillSource: null,
       }));
     }
 
@@ -248,6 +253,8 @@ export function FormModals({
           styleId: String(legacy.styleId ?? legacy.style_id ?? ""),
           entryTime: legacy.entryTime ?? legacy.entry_time ?? 0,
           note: legacy.note ?? "",
+          // 編集データ由来の既存エントリーは流用元の情報を持たないため未編集扱いにしない
+          prefillSource: null,
         },
       ];
     }
@@ -259,6 +266,13 @@ export function FormModals({
     () => getEntryInitialEntries(competitionEditingData),
     [competitionEditingData],
   );
+
+  // 個人画面 (dashboard) は team_id の有無から明示的に導出する (Sprint Contract 2)。
+  // usePracticeTabSave/useCompetitionTabSave (useDashboardHandlers.ts) が親 basicData
+  // UPDATE のスキップに使う判定と同じ関数 (getEditingDataTeamId) を使い、
+  // PracticeTabModal/CompetitionTabModal のフィールド disable に反映する (Reviewer 指摘 F1-3)。
+  const allowPracticeParentUpdate = getEditingDataTeamId(editingData) == null;
+  const allowCompetitionParentUpdate = getEditingDataTeamId(competitionEditingData) == null;
 
   return (
     <>
@@ -442,6 +456,7 @@ export function FormModals({
         availableTags={availableTags}
         setAvailableTags={setAvailableTags}
         initialTab={practiceActiveTab}
+        allowParentUpdate={allowPracticeParentUpdate}
       />
 
       {/* タブモーダル: 大会 (3タブ統合) */}
@@ -461,6 +476,7 @@ export function FormModals({
         isLoading={competitionIsLoading}
         initialTab={competitionActiveTab}
         entryLocked={competitionEntryLocked}
+        allowParentUpdate={allowCompetitionParentUpdate}
       />
     </>
   );

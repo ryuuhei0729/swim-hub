@@ -383,22 +383,26 @@ export function CompetitionDetails({
             )}
           </div>
           <div className="flex items-center space-x-2 ml-4">
-            <button
-              onClick={() => onEdit?.(competitionImages)}
-              className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-              title={t("competition.editTitle")}
-              data-testid="edit-competition-button"
-            >
-              <PencilIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={onDelete}
-              className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-              title={t("competition.deleteTitle")}
-              data-testid="delete-competition-button"
-            >
-              <TrashIcon className="h-5 w-5" />
-            </button>
+            {!isTeamCompetition && (
+              <button
+                onClick={() => onEdit?.(competitionImages)}
+                className="p-2 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                title={t("competition.editTitle")}
+                data-testid="edit-competition-button"
+              >
+                <PencilIcon className="h-5 w-5" />
+              </button>
+            )}
+            {!isTeamCompetition && (
+              <button
+                onClick={onDelete}
+                className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                title={t("competition.deleteTitle")}
+                data-testid="delete-competition-button"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
 

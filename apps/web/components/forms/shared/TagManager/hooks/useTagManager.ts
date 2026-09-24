@@ -4,29 +4,22 @@ import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { PracticeTag } from "@apps/shared/types";
+import { DEFAULT_TAG_COLOR, TAG_COLORS } from "@apps/shared/constants/tagColors";
 
 export type Tag = PracticeTag;
 
-// パステルカラー定数
-export const PRESET_COLORS = [
-  "#93C5FD", // 青
-  "#7DD3FC", // 水色
-  "#86EFAC", // 緑
-  "#A3E635", // 黄緑
-  "#FCA5A5", // 赤
-  "#F9A8D4", // ピンク
-  "#FDBA74", // オレンジ
-  "#FDE047", // 黄色
-  "#C4B5FD", // 紫
-  "#D1D5DB", // グレー
-];
+// パステルカラー定数。
+// 🚨 **色を書き写さない。** 定義元は apps/shared/constants/tagColors.ts の TAG_COLORS。
+// 以前ここに同じ配列がハードコードされており、パレットを変えると
+// 「カレンダー色だけ変わってタグは古いまま」になる二重管理になっていた。
+export const PRESET_COLORS: readonly string[] = TAG_COLORS;
 
 /**
  * ランダムなプリセットカラーを取得
  */
 export const getRandomColor = (): string => {
   const index = Math.floor(Math.random() * PRESET_COLORS.length);
-  return PRESET_COLORS[index] ?? "#D1D5DB"; // index は 0〜PRESET_COLORS.length-1 の範囲に
+  return PRESET_COLORS[index] ?? DEFAULT_TAG_COLOR; // index は 0〜PRESET_COLORS.length-1 の範囲に
     // 必ず収まるため実際には到達しないフォールバックだが、型上は保証されないため
     // normalizeColor の無効値時と同じデフォルト色を安全側に返す
 };
@@ -35,7 +28,7 @@ export const getRandomColor = (): string => {
  * カラーコードを正規化
  */
 export const normalizeColor = (color: string): string => {
-  if (!color) return "#D1D5DB";
+  if (!color) return DEFAULT_TAG_COLOR;
 
   let normalized = color.startsWith("#") ? color : `#${color}`;
   normalized = normalized.toLowerCase();
@@ -47,7 +40,7 @@ export const normalizeColor = (color: string): string => {
 
   const hexPattern = /^#[0-9a-f]{6}$/;
   if (!hexPattern.test(normalized)) {
-    return "#D1D5DB";
+    return DEFAULT_TAG_COLOR;
   }
 
   return normalized;
@@ -58,7 +51,7 @@ export const normalizeColor = (color: string): string => {
  */
 export const isValidColor = (color: string): boolean => {
   const normalized = normalizeColor(color);
-  return normalized !== "#D1D5DB" || color === "#D1D5DB";
+  return normalized !== DEFAULT_TAG_COLOR || color === DEFAULT_TAG_COLOR;
 };
 
 export interface UseTagManagerOptions {

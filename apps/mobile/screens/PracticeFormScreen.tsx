@@ -19,15 +19,16 @@ type PracticeFormScreenNavigationProp = NativeStackNavigationProp<MainStackParam
 export const PracticeFormScreen: React.FC = () => {
   const route = useRoute<PracticeFormScreenRouteProp>();
   const navigation = useNavigation<PracticeFormScreenNavigationProp>();
-  const { practiceId, date, teamId } = route.params || {};
+  const { practiceId, date, teamId, origin } = route.params || {};
 
   useEffect(() => {
     navigation.replace("PracticeTabForm", {
       ...(practiceId ? { practiceId } : {}),
       ...(date ? { date } : {}),
       ...(teamId ? { teamId } : {}),
+      ...(origin ? { origin } : {}),
     });
-  }, [navigation, practiceId, date, teamId]);
+  }, [navigation, practiceId, date, teamId, origin]);
 
   return (
     <View style={styles.container}>

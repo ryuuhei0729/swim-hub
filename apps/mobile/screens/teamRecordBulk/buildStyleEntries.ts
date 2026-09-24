@@ -77,6 +77,14 @@ export interface ExistingRecord {
   note: string | null;
   split_times: { id: string; distance: number; split_time: number }[];
   users: { id: string; name: string } | null;
+  /**
+   * 種目詳細画面 (2階層化後) の動画プレビュー・upsert 保存でのみ参照する。
+   * buildStyleEntriesFromExisting は現状これらを MemberRecord へ写さない
+   * (既存の呼び出し元・テストへの影響を避けるため)。詳細画面は
+   * このフィールドを直接 `existingRecords` から引いて使う。
+   */
+  video_path?: string | null;
+  video_thumbnail_path?: string | null;
 }
 
 /**

@@ -7,8 +7,11 @@ import {
   FlatList,
   StyleSheet,
   Dimensions,
-  SafeAreaView,
 } from "react-native";
+// SafeAreaView は必ず react-native-safe-area-context のものを使う。
+// react-native の同名コンポーネントは iOS 専用で Android では何もしないため、
+// Edge-to-Edge 強制下の Android では閉じるボタンがステータスバーに埋まる。
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -71,7 +74,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
     return (
       <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
         <View style={styles.container}>
-          <SafeAreaView style={styles.safeArea}>
+          <SafeAreaView style={styles.safeArea} edges={["top"]}>
             <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel={t("common.aria.close")}>
               <Feather name="x" size={24} color="#FFFFFF" />
             </Pressable>
@@ -84,7 +87,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   return (
     <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
       <View style={styles.container}>
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={["top"]}>
           <View style={styles.header}>
             <Text style={styles.indexText}>
               {currentIndex + 1} / {images.length}

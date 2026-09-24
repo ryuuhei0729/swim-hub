@@ -481,7 +481,8 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   poolType,
   note,
   records,
-  isTeamCompetition = false,
+  isTeamCompetition,
+  targetRecordId,
   teamId = null,
   color = LEGACY_COMPETITION_ACCENT,
   onEditCompetition,
@@ -490,7 +491,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
   onEditRecord,
   onDeleteRecord,
   onClose,
-  onMediaLoaded,
 }) => {
   // 未カスタマイズ(渡された色が旧デフォルト青と一致)ならカード外枠・バッジを旧来の
   // 見た目に固定する。カスタム色時は「濃すぎる」ユーザーフィードバックを受け、
@@ -565,6 +565,11 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           query = query.eq("user_id", user.id);
         }
 
+        // 大会タブでタップした記録1件のみに絞る(同じ大会の他種目記録は出さない)
+        if (targetRecordId) {
+          query = query.eq("id", targetRecordId);
+        }
+
         const [{ data: competitionData }, { data, error }] = await Promise.all([
           supabase
             .from("competitions")
@@ -578,11 +583,9 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           (competitionData as { image_paths?: string[] | null } | null)?.image_paths ?? [];
         // competition-images は private バケットのため署名付きURLを解決する（Issue #36）
         const accessToken = await getAccessToken();
-        let hasCompetitionImages = false;
         if (accessToken) {
           const images = await resolveGalleryImages("competition-images", imagePaths, accessToken);
           setCompetitionImages(images);
-          hasCompetitionImages = images.length > 0;
         } else {
           // トークンが取得できない場合、古い private 画像を表示し続けないよう空にする
           setCompetitionImages([]);
@@ -632,14 +635,6 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
         });
 
         setActualRecords(formattedRecords);
-
-        // 画像は大会単位、動画は記録単位で紐づくため、いずれかがあればこの大会グループの
-        // エントリー（records: DayDetailModal から渡された CalendarItem 群）全てに反映する
-        if (onMediaLoaded) {
-          const hasVideo = formattedRecords.some((record) => Boolean(record.videoPath));
-          const hasMedia = hasCompetitionImages || hasVideo;
-          records.forEach((entry) => onMediaLoaded(entry.id, hasMedia));
-        }
       } catch (err) {
         console.error("記録の取得エラー:", err);
         setActualRecords([]);
@@ -652,7 +647,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
     loadRecords();
     // records は呼び出し側でメモ化されている前提の依存配列（Supabase への2往復を含むこの
     // effect が依存する）。非安定な配列参照を渡すと毎レンダーで再フェッチが多発するので注意。
-  }, [_competitionId, supabase, user?.id, isTeamCompetition, getAccessToken, t, records, onMediaLoaded]);
+  }, [_competitionId, supabase, user?.id, isTeamCompetition, targetRecordId, getAccessToken, t, records]);
 
   // スプリットタイムを取得
   useEffect(() => {
@@ -740,12 +735,12 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
             </View>
           </View>
           <View style={styles.competitionHeaderActions}>
-            {onEditCompetition && (
+            {onEditCompetition && !isTeamCompetition && (
               <Pressable style={styles.competitionHeaderButton} onPress={onEditCompetition}>
                 <Feather name="edit" size={18} color="#2563EB" />
               </Pressable>
             )}
-            {onDeleteCompetition && (
+            {onDeleteCompetition && !isTeamCompetition && (
               <Pressable style={styles.competitionHeaderButton} onPress={onDeleteCompetition}>
                 <Feather name="trash-2" size={20} color="#EF4444" />
               </Pressable>

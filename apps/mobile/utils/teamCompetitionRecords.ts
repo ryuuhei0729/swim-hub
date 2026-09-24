@@ -6,9 +6,21 @@
 // buildDisplaySplits / グルーピングロジックの mobile 移植。
 // users/styles は Supabase の JOIN 結果がオブジェクト/配列いずれの形でも
 // 返り得るため、どちらの形でも吸収する (web の getUserName/getStyle と同じ方針)。
+//
+// リレーのチーム記録 (`relay_records`) を関わるロジックについては
+// `RelayRecordWithLegs` (apps/shared/types/relayRecord.ts、境界契約は Web Dev 所有の
+// apps/shared/api/teams/relayRecords.ts `getByCompetition`) を読み取り元とする。
+// レグ単位の `styleId → 距離` のような対応表は新たに持たない
+// (`apps/shared/utils/relayEvents.ts` から導出する。CLAUDE.md
+// 「同一のドメイン対応表を2箇所にハードコードするな」)。
+
+import type { RelayKind, RelayRecordWithLegs } from "@apps/shared/types/relayRecord";
+import { RELAY_KIND_VALUES } from "@apps/shared/utils/relayEvents";
 
 export interface RecordUser {
   name: string;
+  /** private バケット内相対パス。未設定は null (avatar はイニシャルにフォールバック) */
+  profile_image_path: string | null;
 }
 
 export interface SplitTimeEntry {
@@ -32,6 +44,9 @@ export interface RecordEntry {
   time: number;
   reaction_time: number | null;
   is_relaying: boolean;
+  /** DB NOT NULL (0: 短水路, 1: 長水路)。Best バッジの絞り込みキーは記録自身のこの値を使う
+   * (大会の pool_type とは別物として扱う。両者が食い違うケースがあるため)。 */
+  pool_type: number;
   note: string | null;
   users: RecordUser | RecordUser[] | null;
   styles: StyleInfo | StyleInfo[] | null;
@@ -47,18 +62,12 @@ export interface CompetitionDetail {
   note: string | null;
 }
 
-/** 種目別グルーピング後、個人/リレーそれぞれ独立採番された記録 */
-export interface RankedRecordEntry extends RecordEntry {
-  /** 同一種目・同一区分 (個人/リレー) 内での順位 (1始まり、time昇順) */
-  rank: number;
-}
-
 export interface StyleRecordGroup {
   style: StyleInfo;
-  /** is_relaying === false の記録。time昇順で1始まりの独立採番 */
-  individual: RankedRecordEntry[];
-  /** is_relaying === true の記録。individual とは独立してtime昇順で1始まりの採番 */
-  relay: RankedRecordEntry[];
+  /** is_relaying === false の記録。time昇順 (速い順) */
+  individual: RecordEntry[];
+  /** is_relaying === true の記録。individual とは独立してtime昇順 (速い順) */
+  relay: RecordEntry[];
 }
 
 /** Supabase の JOIN 結果 (オブジェクト/配列いずれも取り得る) からユーザー名を取り出す */
@@ -71,6 +80,15 @@ export function getRecordUserName(
   return users.name || unknownLabel;
 }
 
+/** Supabase の JOIN 結果 (オブジェクト/配列いずれも取り得る) からアバター画像パスを取り出す */
+export function getRecordUserAvatarPath(
+  users: RecordUser | RecordUser[] | null | undefined,
+): string | null {
+  if (!users) return null;
+  if (Array.isArray(users)) return users[0]?.profile_image_path ?? null;
+  return users.profile_image_path ?? null;
+}
+
 /** Supabase の JOIN 結果 (オブジェクト/配列いずれも取り得る) から種目情報を取り出す */
 export function getRecordStyleInfo(
   styles: StyleInfo | StyleInfo[] | null | undefined,
@@ -80,18 +98,15 @@ export function getRecordStyleInfo(
   return styles;
 }
 
-/** time昇順にソートし、1始まりの rank を振る (個人/リレーどちらにも使う共通処理) */
-function rankByTimeAscending(records: RecordEntry[]): RankedRecordEntry[] {
-  return [...records]
-    .sort((a, b) => a.time - b.time)
-    .map((record, index) => ({ ...record, rank: index + 1 }));
+/** time昇順 (速い順) にソートする (個人/リレーどちらにも使う共通処理) */
+function sortByTimeAscending(records: RecordEntry[]): RecordEntry[] {
+  return [...records].sort((a, b) => a.time - b.time);
 }
 
 /**
  * 記録を種目 (style_id) でグルーピングし、種目名 (name_jp) の localeCompare 順に並べる。
- * 各種目内は個人記録 (is_relaying === false) をtime昇順で採番したのち、
- * リレー記録 (is_relaying === true) を個人記録とは独立してtime昇順で採番する
- * (リレーの1件目は必ず rank=1 になる)。
+ * 各種目内は個人記録 (is_relaying === false) をtime昇順で並べたのち、
+ * リレー記録 (is_relaying === true) を個人記録とは独立してtime昇順で並べる。
  * style 情報が取得できない記録 (JOIN欠落) は除外する。
  */
 export function groupRecordsByStyle(records: RecordEntry[]): StyleRecordGroup[] {
@@ -112,8 +127,8 @@ export function groupRecordsByStyle(records: RecordEntry[]): StyleRecordGroup[] 
   return Array.from(grouped.values())
     .map(({ style, records: styleRecords }) => ({
       style,
-      individual: rankByTimeAscending(styleRecords.filter((r) => !r.is_relaying)),
-      relay: rankByTimeAscending(styleRecords.filter((r) => r.is_relaying)),
+      individual: sortByTimeAscending(styleRecords.filter((r) => !r.is_relaying)),
+      relay: sortByTimeAscending(styleRecords.filter((r) => r.is_relaying)),
     }))
     .sort((a, b) => a.style.name_jp.localeCompare(b.style.name_jp));
 }
@@ -143,4 +158,149 @@ export function buildDisplaySplits(
   }
 
   return baseSplits;
+}
+
+// -----------------------------------------------------------------------------
+// relay_records 由来のチーム記録 (1チーム=1行、展開でレグを表示)
+// -----------------------------------------------------------------------------
+
+/**
+ * `relay_records` に取り込まれたリレーの各レグ ( `relay_record_legs.record_id` ) の
+ * `records.id` 集合を返す。
+ *
+ * 【なぜ個人一覧からの除外に使うか】PM 実測の DB 事実: リレー1本 = `records` 4行で、
+ * 先頭レグは `is_relaying = FALSE`。現行の個人一覧フィルタ (`is_relaying === false`)
+ * は、この先頭レグを個人種目の行として混入表示してしまう (現行バグ)。
+ * `relay_record_legs.record_id` に載っているレグは `is_relaying` の値に関わらず
+ * 個人一覧・旧来のリレー平置き一覧の両方から除外し、`relay_records` 側の
+ * チームまとめ行 (`groupRelayRecordsByEvent` の結果) でのみ表示する。
+ *
+ * legIndex 0 (`is_relaying=false`) も legIndex 1-3 (`is_relaying=true`) も同じ集合に
+ * 入れる (呼び出し元で `is_relaying` による絞り込みをしない)。
+ */
+export function getRelayLegRecordIds(
+  relayRecords: readonly RelayRecordWithLegs[],
+): Set<string> {
+  const ids = new Set<string>();
+  for (const relay of relayRecords) {
+    for (const leg of relay.legs) {
+      if (leg.recordId) ids.add(leg.recordId);
+    }
+  }
+  return ids;
+}
+
+/**
+ * `records` から、`relay_records` に取り込まれ済みの行 (レグ0〜3のいずれか) を除く。
+ * `groupedRecordIds` が空集合なら (バックフィル未実行・relay_records が0件の大会など)
+ * 何も除かず元の配列をそのまま返す — 事実4「relay_records に紐づかない is_relaying
+ * 行は従来どおり表示され、消失しない」を満たす。
+ */
+export function excludeGroupedRelayRecords(
+  records: RecordEntry[],
+  groupedRecordIds: ReadonlySet<string>,
+): RecordEntry[] {
+  if (groupedRecordIds.size === 0) return records;
+  return records.filter((record) => !groupedRecordIds.has(record.id));
+}
+
+/** リレー1本のレグ表示用。`RelayRecordWithLegs.legs` の解決済みフィールドをそのまま使う。 */
+export interface RelayLegDisplay {
+  legIndex: number;
+  userId: string | null;
+  userName: string | null;
+  profileImagePath: string | null;
+  styleId: number;
+  styleNameJp: string | null;
+  legTime: number;
+  reactionTime: number | null;
+  /** 退会 / records 行削除済みは null。アバター・Best バッジは安全に非表示へフォールバックする */
+  recordId: string | null;
+}
+
+/** リレー1本 = 1行 (チーム記録)。折りたたみ時はこの行だけ、展開すると legs が見える。 */
+export interface RelayTeamRow {
+  relayRecordId: string;
+  relayKind: RelayKind;
+  legDistance: number;
+  legCount: number;
+  poolType: number;
+  totalTime: number;
+  /** legIndex 昇順 (D3 契約: `getByCompetition` が返す順序をそのまま信用する) */
+  legs: RelayLegDisplay[];
+}
+
+/** `RelayRecordWithLegs` (API 境界の型) を表示用の `RelayTeamRow` に変換する */
+export function toRelayTeamRow(relay: RelayRecordWithLegs): RelayTeamRow {
+  return {
+    relayRecordId: relay.id,
+    relayKind: relay.relayKind,
+    legDistance: relay.legDistance,
+    legCount: relay.legCount,
+    poolType: relay.poolType,
+    totalTime: relay.totalTime,
+    legs: relay.legs.map((leg) => ({
+      legIndex: leg.legIndex,
+      userId: leg.userId,
+      userName: leg.userName,
+      profileImagePath: leg.profileImagePath,
+      styleId: leg.styleId,
+      styleNameJp: leg.styleNameJp,
+      legTime: leg.legTime,
+      reactionTime: leg.reactionTime,
+      recordId: leg.recordId,
+    })),
+  };
+}
+
+/**
+ * リレー種目 (relayKind + legDistance) でまとめた1グループ。
+ *
+ * **`legCount` を持たない (意図的)。** レグ数はチームごとに異なりうる (`relay_records.leg_count`
+ * は `CHECK (leg_count BETWEEN 2 AND 8)` で、同一種目に3人チームと4人チームが併存しうる)。
+ * かつて `legCount` をグループ側に置き「最初に挿入されたチームの値」を全チームのラベルに
+ * 適用してしまい、レグ数の異なるチームが混在すると誤表示するバグがあった (PM 修正依頼)。
+ * レグ数はチーム単位でのみ意味を持つので `RelayTeamRow.legCount` を読むこと。
+ */
+export interface RelayEventGroup {
+  relayKind: RelayKind;
+  legDistance: number;
+  /** totalTime昇順 (速い順) */
+  teams: RelayTeamRow[];
+}
+
+/**
+ * リレー記録をリレー種目 (relayKind + legDistance) でグルーピングし、totalTime昇順で
+ * 並べる。イベントの並び順は `RELAY_KIND_VALUES` (free → medley) → legDistance昇順。
+ * 距離の対応表を新たにハードコードしない (`relayEvents.ts` が唯一の定義元)。
+ */
+export function groupRelayRecordsByEvent(
+  relayRecords: readonly RelayRecordWithLegs[],
+): RelayEventGroup[] {
+  const grouped = new Map<string, RelayEventGroup>();
+
+  for (const relay of relayRecords) {
+    const key = `${relay.relayKind}:${relay.legDistance}`;
+    const existing = grouped.get(key);
+    const row = toRelayTeamRow(relay);
+    if (existing) {
+      existing.teams.push(row);
+    } else {
+      grouped.set(key, {
+        relayKind: relay.relayKind,
+        legDistance: relay.legDistance,
+        teams: [row],
+      });
+    }
+  }
+
+  for (const group of grouped.values()) {
+    group.teams.sort((a, b) => a.totalTime - b.totalTime);
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => {
+    const kindDiff = RELAY_KIND_VALUES.indexOf(a.relayKind) - RELAY_KIND_VALUES.indexOf(b.relayKind);
+    if (kindDiff !== 0) return kindDiff;
+    return a.legDistance - b.legDistance;
+  });
 }

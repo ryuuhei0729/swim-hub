@@ -11,8 +11,8 @@ import { RecordFormScreen } from "@/screens/RecordFormScreen";
 import { CompetitionBasicFormScreen } from "@/screens/CompetitionBasicFormScreen";
 import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
 import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
-import { RecordLogFormScreen } from "@/screens/RecordLogFormScreen";
-import { TeamRecordBulkFormScreen } from "@/screens/TeamRecordBulkFormScreen";
+import { TeamRecordStyleListScreen } from "@/screens/TeamRecordStyleListScreen";
+import { TeamRecordStyleDetailScreen } from "@/screens/TeamRecordStyleDetailScreen";
 import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
 import { TeamEntryBulkFormScreen } from "@/screens/TeamEntryBulkFormScreen";
 import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
@@ -125,16 +125,16 @@ export const MainStack: React.FC = () => {
         }}
       />
       <Stack.Screen
-        name="RecordLogForm"
-        component={RecordLogFormScreen}
+        name="TeamRecordBulkForm"
+        component={TeamRecordStyleListScreen}
         options={{
           ...baseHeaderOptions,
-          title: t("navigation.mobile.titles.recordInput"),
+          title: t("teams.recordList.pageTitle"),
         }}
       />
       <Stack.Screen
-        name="TeamRecordBulkForm"
-        component={TeamRecordBulkFormScreen}
+        name="TeamRecordBulkFormDetail"
+        component={TeamRecordStyleDetailScreen}
         options={{
           ...baseHeaderOptions,
           title: t("teams.record.pageTitle"),
@@ -159,10 +159,14 @@ export const MainStack: React.FC = () => {
       <Stack.Screen
         name="TeamDetail"
         component={TeamDetailScreen}
-        options={{
+        options={({ route }) => ({
           ...baseHeaderOptions,
+          // 既定タイトル。実際のチーム名は TeamDetailScreen の setOptions が上書きする
           title: t("navigation.mobile.titles.teamDetail"),
-        }}
+          // タブ経由 (instant) のときだけスライドを切る。既にチーム一覧が前面に
+          // 出ている上を詳細が覆うため、アニメーションがあると遷移していないように見える
+          animation: route.params?.instant ? "none" : "default",
+        })}
       />
       <Stack.Screen
         name="TeamBulkRegister"

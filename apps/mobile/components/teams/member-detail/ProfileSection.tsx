@@ -52,13 +52,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ member, currentU
 
         {/* 基本情報 */}
         <View style={styles.infoContainer}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={2}>
-              {user?.name || "Unknown User"}
-            </Text>
-            {member.role === "admin" && <Feather name="star" size={16} color="#EAB308" />}
-          </View>
-
           <View style={styles.badgeRow}>
             <View
               style={[
@@ -82,6 +75,13 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({ member, currentU
                 <Text style={styles.youBadgeText}>{t("teams.mobile.youBadge")}</Text>
               </View>
             )}
+          </View>
+
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={2}>
+              {user?.name || "Unknown User"}
+            </Text>
+            {member.role === "admin" && <Feather name="star" size={16} color="#EAB308" />}
           </View>
 
           {birthday && (

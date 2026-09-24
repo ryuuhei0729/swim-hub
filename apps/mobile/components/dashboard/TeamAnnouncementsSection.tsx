@@ -152,9 +152,10 @@ const TeamCard: React.FC<TeamCardProps> = ({
               key={entry.competitionId}
               style={styles.notificationItem}
               onPress={() =>
-                navigation.navigate("EntryForm", {
+                navigation.navigate("CompetitionTabForm", {
                   competitionId: entry.competitionId,
                   date: entry.competitionDate,
+                  initialTab: "entry",
                 })
               }
             >

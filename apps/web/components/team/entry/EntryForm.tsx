@@ -52,6 +52,7 @@ function EntryFormComponent({
           </label>
           <input
             type="text"
+            inputMode="decimal"
             value={formData.entryTime}
             onChange={(e) => onUpdateForm({ entryTime: e.target.value })}
             placeholder={t("entryForm.entryTimePlaceholder")}

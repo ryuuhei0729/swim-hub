@@ -32,6 +32,7 @@ export interface TeamMembership {
   is_active: boolean | null;
   joined_at: string | null;
   left_at: string | null;
+  is_swimmer: boolean;
   created_at: string | null;
   updated_at: string | null;
 }

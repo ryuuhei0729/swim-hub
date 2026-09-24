@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { TeamBulkRegisterAPI, type BulkRegisterInput } from "@apps/shared/api/teams/bulkRegister";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
@@ -53,6 +55,12 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
 }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
+  // Android の Edge-to-Edge 強制下では、スクロール最下部の登録ボタンと結果表示が
+  // システムナビゲーションバー(3ボタン)の背後に隠れる。下部インセットを
+  // スクロール余白に加算する。親画面 TeamBulkRegisterScreen の container が
+  // padding:12 を持つぶんクリアランスは 12dp 過剰になるが、余剰はスクロール
+  // 余白として現れるだけなので、親の padding に依存する減算はしない。
+  const insets = useSafeInsets();
   const api = useMemo(() => new TeamBulkRegisterAPI(supabase), [supabase]);
 
   const today = format(new Date(), "yyyy-MM-dd");
@@ -439,7 +447,13 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
         </Pressable>
       </View>
 
-      <ScrollView style={styles.formArea} contentContainerStyle={styles.formContent}>
+      <ScrollView
+        style={styles.formArea}
+        contentContainerStyle={[
+          styles.formContent,
+          { paddingBottom: getSafeFooterPadding(24, insets.bottom) },
+        ]}
+      >
         {error && (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{error}</Text>

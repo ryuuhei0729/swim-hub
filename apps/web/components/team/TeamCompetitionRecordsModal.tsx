@@ -12,9 +12,15 @@ import {
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTimeBest } from "@/utils/formatters";
 import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
+import Avatar from "@/components/ui/Avatar";
+import BestTimeBadge from "@/components/ui/BestTimeBadge";
+import { TeamRelayRecordsAPI } from "@apps/shared/api/teams/relayRecords";
+import { calcCumulativeTimes } from "@apps/shared/utils/relayEvents";
+import type { RelayRecordWithLegs } from "@apps/shared/types";
 
 interface RecordUser {
   name: string;
+  profile_image_path: string | null;
 }
 
 interface SplitTimeEntry {
@@ -83,10 +89,16 @@ export function buildDisplaySplits(
   return baseSplits;
 }
 
-function getUserName(users: RecordUser | RecordUser[] | null | undefined, unknownLabel: string): string {
-  if (!users) return unknownLabel;
-  if (Array.isArray(users)) return users[0]?.name || unknownLabel;
-  return users.name || unknownLabel;
+function getUser(users: RecordUser | RecordUser[] | null | undefined): RecordUser | null {
+  if (!users) return null;
+  return Array.isArray(users) ? (users[0] ?? null) : users;
+}
+
+function getUserName(
+  users: RecordUser | RecordUser[] | null | undefined,
+  unknownLabel: string,
+): string {
+  return getUser(users)?.name || unknownLabel;
 }
 
 function getStyle(styles: StyleInfo | StyleInfo[] | null | undefined): StyleInfo | null {
@@ -95,36 +107,82 @@ function getStyle(styles: StyleInfo | StyleInfo[] | null | undefined): StyleInfo
   return styles;
 }
 
-function ExpandableSplitTimes({
-  splitTimes,
-  raceDistance,
-  recordTime,
+/**
+ * タイム表示 + Best バッジ + スプリットトグルをまとめたセル。
+ *
+ * PM 最終仕様 (Critical-1 差し替え、旧「スプリットトグルと同じ行の1段下」案は撤回):
+ * - Best バッジは新規カラムにしない。タイムと**同じ行・すぐ隣**に `inline-flex gap-1.5` で置く
+ *   (ユーザー要望: 「タイムの近くに表示させたい」)。バッジがタイム行に常駐するため、
+ *   スプリット0件でもバッジは自然に描画される (旧 Critical-2 の「両方無いときだけ省略」
+ *   のための空スロット制御は不要になった)。
+ * - スプリットトグルはタイム行の下に単独の行として残す (トグルのみ)。
+ * - Best バッジは個人種目行・孤立リレー行の**両方**に出す (旧 `showBestBadge` フラグは
+ *   削除した)。`isRelaying={record.is_relaying}` を素通しすれば
+ *   `getListBestCandidates` が「引き継ぎありのベスト」と「通常スタートのベスト」を
+ *   別系統で正しく比較するため、`relay_records` にバックフィル済みか否かという
+ *   ユーザーから見えない内部状態でバッジの有無が変わる非対称を作らない
+ *   (PM 実測: `records.is_relaying=true` の115行中112行が未バックフィルの孤児で、
+ *   ここでバッジを隠すとほぼ全リレーレグでバッジが出なくなっていた)。
+ *
+ * PM 仕様変更 (SC5 差し替え): タイムの文字色・太さは順位・ベスト判定に関わらず一律で
+ * `text-blue-600 font-bold`。赤字判定・行レベルの Best 候補取得は廃止した
+ * (Best バッジの判定は `BestTimeBadge` 内部の shared 純関数呼び出しに一本化)。
+ */
+function RecordTimeCell({
+  record,
+  styleInfo,
+  recordDate,
 }: {
-  splitTimes: SplitTimeEntry[];
-  raceDistance: number;
-  recordTime: number;
+  record: RecordEntry;
+  styleInfo: StyleInfo | null;
+  recordDate: string | null;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const t = useTranslations("teams.competitionRecordsModal");
 
   const formattedSplits = useMemo(
-    () => buildDisplaySplits(splitTimes, raceDistance, recordTime),
-    [splitTimes, raceDistance, recordTime],
+    () => buildDisplaySplits(record.split_times, styleInfo?.distance ?? 0, record.time),
+    [record.split_times, styleInfo, record.time],
   );
-
-  if (formattedSplits.length === 0) return null;
+  const hasSplits = formattedSplits.length > 0;
 
   return (
-    <div className="mt-2">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-      >
-        {isOpen ? <ChevronUpIcon className="h-3 w-3" /> : <ChevronDownIcon className="h-3 w-3" />}
-        {t("splitTimesLabel", { count: formattedSplits.length })}
-      </button>
-      {isOpen && <LapTimeDisplay splitTimes={formattedSplits} raceDistance={raceDistance} />}
-    </div>
+    <>
+      <div className="inline-flex items-center gap-1.5">
+        <span className="text-blue-600 font-bold">{formatTimeBest(record.time)}</span>
+        <BestTimeBadge
+          recordId={record.id}
+          userId={record.user_id}
+          styleId={record.style_id}
+          currentTime={record.time}
+          recordDate={recordDate}
+          poolType={record.pool_type}
+          isRelaying={record.is_relaying}
+          compact
+        />
+      </div>
+
+      {hasSplits && (
+        <div className="mt-1">
+          <button
+            type="button"
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+          >
+            {isOpen ? (
+              <ChevronUpIcon className="h-3 w-3" />
+            ) : (
+              <ChevronDownIcon className="h-3 w-3" />
+            )}
+            {t("splitTimesLabel", { count: formattedSplits.length })}
+          </button>
+        </div>
+      )}
+
+      {isOpen && hasSplits && (
+        <LapTimeDisplay splitTimes={formattedSplits} raceDistance={styleInfo?.distance ?? 0} />
+      )}
+    </>
   );
 }
 
@@ -136,10 +194,15 @@ export default function TeamCompetitionRecordsModal({
 }: TeamCompetitionRecordsModalProps) {
   const { supabase } = useAuth();
   const t = useTranslations("teams.competitionRecordsModal");
+  // リレー種目ラベル・レグ表示は既存のランキング画面の文言を流用する
+  // (CLAUDE.md「種目コードの canonical」節と同じ理由で、二重管理にしない)。
+  const tRelay = useTranslations("teams.ranking");
   const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
   const [records, setRecords] = useState<RecordEntry[]>([]);
+  const [relayRecords, setRelayRecords] = useState<RelayRecordWithLegs[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedRelayIds, setExpandedRelayIds] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     if (!isOpen) return;
@@ -149,7 +212,7 @@ export default function TeamCompetitionRecordsModal({
         setLoading(true);
         setError(null);
 
-        const [compResult, recordsResult] = await Promise.all([
+        const [compResult, recordsResult, relayResult] = await Promise.all([
           supabase
             .from("competitions")
             .select("id, title, date, place, pool_type, note")
@@ -168,7 +231,8 @@ export default function TeamCompetitionRecordsModal({
               note,
               pool_type,
               users!records_user_id_fkey (
-                name
+                name,
+                profile_image_path
               ),
               styles (
                 id,
@@ -186,6 +250,7 @@ export default function TeamCompetitionRecordsModal({
             )
             .eq("competition_id", competitionId)
             .order("time", { ascending: true }),
+          TeamRelayRecordsAPI.getByCompetition(supabase, competitionId),
         ]);
 
         if (compResult.error) throw compResult.error;
@@ -193,6 +258,7 @@ export default function TeamCompetitionRecordsModal({
 
         setCompetition(compResult.data as CompetitionDetail);
         setRecords((recordsResult.data || []) as unknown as RecordEntry[]);
+        setRelayRecords(relayResult);
       } catch (err) {
         console.error("大会記録の取得エラー:", err);
         setError(t("loadError"));
@@ -204,7 +270,36 @@ export default function TeamCompetitionRecordsModal({
     loadData();
   }, [isOpen, competitionId, supabase, t]);
 
-  // 種目ごとにグルーピング
+  // relay_records に取り込まれたレグの元 records.id。個人種目一覧から除外するために使う
+  // (is_relaying の値に関わらず除外する。第1泳者は is_relaying=false でもここに載る)。
+  const relayLegRecordIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const relay of relayRecords) {
+      for (const leg of relay.legs) {
+        if (leg.recordId) ids.add(leg.recordId);
+      }
+    }
+    return ids;
+  }, [relayRecords]);
+
+  const sortedRelayRecords = useMemo(
+    () => [...relayRecords].sort((a, b) => a.totalTime - b.totalTime),
+    [relayRecords],
+  );
+
+  const toggleRelayExpanded = (relayRecordId: string) => {
+    setExpandedRelayIds((current) => {
+      const next = new Set(current);
+      if (next.has(relayRecordId)) {
+        next.delete(relayRecordId);
+      } else {
+        next.add(relayRecordId);
+      }
+      return next;
+    });
+  };
+
+  // 種目ごとにグルーピング (個人・リレー両方の生 records を含む。表示側で絞り込む)
   const recordsByStyle = useMemo(() => {
     const grouped: Record<number, { style: StyleInfo; records: RecordEntry[] }> = {};
 
@@ -227,6 +322,7 @@ export default function TeamCompetitionRecordsModal({
   if (!isOpen) return null;
 
   const poolTypeLabel = competition?.pool_type === 1 ? t("poolTypeLong") : t("poolTypeShort");
+  const recordDate = competition?.date ?? null;
 
   return (
     <div className="fixed inset-0 z-70 overflow-y-auto">
@@ -277,77 +373,84 @@ export default function TeamCompetitionRecordsModal({
                 )}
 
                 {/* 記録なし */}
-                {records.length === 0 && (
+                {records.length === 0 && relayRecords.length === 0 && (
                   <div className="text-center py-8 text-gray-500">{t("empty")}</div>
                 )}
 
                 {/* 種目ごとの記録 */}
                 <div className="space-y-6">
-                  {recordsByStyle.map(({ style, records: styleRecords }) => (
-                    <div key={style.id} className="bg-blue-50 rounded-lg p-4">
-                      {/* 種目ヘッダー */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-1 h-5 bg-blue-500 rounded-full" />
-                        <h4 className="text-base font-semibold text-blue-800">{style.name_jp}</h4>
-                        <span className="text-sm text-blue-600">({styleRecords.length}件)</span>
-                      </div>
+                  {recordsByStyle.map(({ style, records: styleRecords }) => {
+                    // リレー (relay_records) に取り込まれたレグは個人一覧から除外する
+                    // (現行バグの修正: 第1泳者は is_relaying=false のため従来はここに
+                    //  混入していた)。
+                    const individualRecords = styleRecords
+                      .filter((r) => !r.is_relaying && !relayLegRecordIds.has(r.id))
+                      .sort((a, b) => a.time - b.time);
+                    // relay_records に紐づかない is_relaying 行は従来どおり平置きで表示する
+                    // (Success Criteria 4: 消失させない)。
+                    const orphanRelayRecords = styleRecords
+                      .filter((r) => r.is_relaying && !relayLegRecordIds.has(r.id))
+                      .sort((a, b) => a.time - b.time);
+                    const visibleCount = individualRecords.length + orphanRelayRecords.length;
 
-                      {/* 記録テーブル */}
-                      <div className="bg-white rounded-lg border border-blue-200 overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-blue-200 bg-blue-50/50">
-                              <th className="text-left py-2 px-3 font-medium text-blue-800">
-                                {t("rankLabel")}
-                              </th>
-                              <th className="text-left py-2 px-3 font-medium text-blue-800">
-                                {t("nameLabel")}
-                              </th>
-                              <th className="text-center py-2 px-3 font-medium text-blue-800">
-                                {t("timeLabel")}
-                              </th>
-                              <th className="text-center py-2 px-3 font-medium text-blue-800 hidden sm:table-cell">
-                                {t("rtLabel")}
-                              </th>
-                              <th className="text-center py-2 px-3 font-medium text-blue-800 hidden sm:table-cell">
-                                {t("noteLabel")}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {styleRecords
-                              .filter((r) => !r.is_relaying)
-                              .sort((a, b) => a.time - b.time)
-                              .map((record, index) => {
+                    if (visibleCount === 0) return null;
+
+                    return (
+                      <div key={style.id} className="bg-blue-50 rounded-lg p-4">
+                        {/* 種目ヘッダー */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-1 h-5 bg-blue-500 rounded-full" />
+                          <h4 className="text-base font-semibold text-blue-800">{style.name_jp}</h4>
+                          <span className="text-sm text-blue-600">({visibleCount}件)</span>
+                        </div>
+
+                        {/* 記録テーブル */}
+                        <div className="bg-white rounded-lg border border-blue-200 overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-blue-200 bg-blue-50/50">
+                                <th className="py-2 px-3 font-medium text-blue-800 w-10">
+                                  <span className="sr-only">{t("photoLabel")}</span>
+                                </th>
+                                <th className="text-left py-2 px-3 font-medium text-blue-800">
+                                  {t("nameLabel")}
+                                </th>
+                                <th className="text-center py-2 px-3 font-medium text-blue-800">
+                                  {t("timeLabel")}
+                                </th>
+                                <th className="text-center py-2 px-3 font-medium text-blue-800 hidden sm:table-cell">
+                                  {t("rtLabel")}
+                                </th>
+                                <th className="text-center py-2 px-3 font-medium text-blue-800 hidden sm:table-cell">
+                                  {t("noteLabel")}
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {individualRecords.map((record) => {
                                 const styleInfo = getStyle(record.styles);
+                                const user = getUser(record.users);
                                 return (
                                   <tr
                                     key={record.id}
                                     className="border-b border-blue-100 last:border-b-0"
                                   >
-                                    <td className="py-2 px-3 text-gray-700 font-medium">
-                                      {index + 1}
+                                    <td className="py-2 px-3">
+                                      <Avatar
+                                        avatarUrl={user?.profile_image_path ?? null}
+                                        userName={getUserName(record.users, t("unknownUser"))}
+                                        size="sm"
+                                      />
                                     </td>
                                     <td className="py-2 px-3 text-gray-900">
                                       {getUserName(record.users, t("unknownUser"))}
                                     </td>
                                     <td className="py-2 px-3 text-center">
-                                      <span
-                                        className={
-                                          index === 0 ? "text-blue-600 font-bold" : "text-gray-900"
-                                        }
-                                      >
-                                        {formatTimeBest(record.time)}
-                                      </span>
-                                      {record.split_times &&
-                                        record.split_times.length > 0 &&
-                                        styleInfo && (
-                                          <ExpandableSplitTimes
-                                            splitTimes={record.split_times}
-                                            raceDistance={styleInfo.distance}
-                                            recordTime={record.time}
-                                          />
-                                        )}
+                                      <RecordTimeCell
+                                        record={record}
+                                        styleInfo={styleInfo}
+                                        recordDate={recordDate}
+                                      />
                                     </td>
                                     <td className="py-2 px-3 text-center text-gray-600 hidden sm:table-cell">
                                       {record.reaction_time ? record.reaction_time.toFixed(2) : "-"}
@@ -359,44 +462,46 @@ export default function TeamCompetitionRecordsModal({
                                 );
                               })}
 
-                            {/* リレー記録 */}
-                            {styleRecords.filter((r) => r.is_relaying).length > 0 && (
-                              <>
-                                <tr className="bg-gray-50">
-                                  <td
-                                    colSpan={5}
-                                    className="py-2 px-3 text-xs font-medium text-gray-500"
-                                  >
-                                    {t("relay")}
-                                  </td>
-                                </tr>
-                                {styleRecords
-                                  .filter((r) => r.is_relaying)
-                                  .sort((a, b) => a.time - b.time)
-                                  .map((record, index) => {
+                              {/* relay_records に紐づかないリレー記録 (バックフィル未対象の旧データ)。
+                                  Best バッジは個人種目行と同じく表示する (PM 裁定: バックフィル
+                                  済みか否かというユーザーから見えない内部状態でバッジの有無を
+                                  変えない)。`isRelaying={record.is_relaying}` (常に true) を
+                                  素通しすることで、getListBestCandidates が引き継ぎありのベスト
+                                  と正しく比較する。 */}
+                              {orphanRelayRecords.length > 0 && (
+                                <>
+                                  <tr className="bg-gray-50">
+                                    <td
+                                      colSpan={5}
+                                      className="py-2 px-3 text-xs font-medium text-gray-500"
+                                    >
+                                      {t("relay")}
+                                    </td>
+                                  </tr>
+                                  {orphanRelayRecords.map((record) => {
                                     const styleInfo = getStyle(record.styles);
+                                    const user = getUser(record.users);
                                     return (
                                       <tr
                                         key={record.id}
                                         className="border-b border-blue-100 last:border-b-0"
                                       >
-                                        <td className="py-2 px-3 text-gray-700 font-medium">
-                                          {index + 1}
+                                        <td className="py-2 px-3">
+                                          <Avatar
+                                            avatarUrl={user?.profile_image_path ?? null}
+                                            userName={getUserName(record.users, t("unknownUser"))}
+                                            size="sm"
+                                          />
                                         </td>
                                         <td className="py-2 px-3 text-gray-900">
                                           {getUserName(record.users, t("unknownUser"))}
                                         </td>
-                                        <td className="py-2 px-3 text-center text-gray-900">
-                                          {formatTimeBest(record.time)}
-                                          {record.split_times &&
-                                            record.split_times.length > 0 &&
-                                            styleInfo && (
-                                              <ExpandableSplitTimes
-                                                splitTimes={record.split_times}
-                                                raceDistance={styleInfo.distance}
-                                                recordTime={record.time}
-                                              />
-                                            )}
+                                        <td className="py-2 px-3 text-center">
+                                          <RecordTimeCell
+                                            record={record}
+                                            styleInfo={styleInfo}
+                                            recordDate={recordDate}
+                                          />
                                         </td>
                                         <td className="py-2 px-3 text-center text-gray-600 hidden sm:table-cell">
                                           {record.reaction_time
@@ -409,13 +514,260 @@ export default function TeamCompetitionRecordsModal({
                                       </tr>
                                     );
                                   })}
-                              </>
-                            )}
+                                </>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* リレー (relay_records): 1チーム=1行。展開すると各泳者の区間/通算タイム */}
+                  {sortedRelayRecords.length > 0 && (
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-1 h-5 bg-blue-500 rounded-full" />
+                        <h4 className="text-base font-semibold text-blue-800">{t("relay")}</h4>
+                        <span className="text-sm text-blue-600">
+                          ({sortedRelayRecords.length}件)
+                        </span>
+                      </div>
+
+                      <div className="bg-white rounded-lg border border-blue-200 overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-blue-200 bg-blue-50/50">
+                              <th className="py-2 px-3 font-medium text-blue-800 w-28">
+                                <span className="sr-only">{t("photoLabel")}</span>
+                              </th>
+                              <th className="text-left py-2 px-3 font-medium text-blue-800">
+                                {tRelay("relay.col.event")}
+                              </th>
+                              <th className="text-center py-2 px-3 font-medium text-blue-800">
+                                {tRelay("relay.col.time")}
+                              </th>
+                              <th className="text-right py-2 px-3 font-medium text-blue-800 w-10">
+                                <span className="sr-only">{tRelay("relay.col.legs")}</span>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortedRelayRecords.map((relay) => {
+                              const isExpanded = expandedRelayIds.has(relay.id);
+                              // 通算タイムはレグの区間タイムから導出する (配列順に完全に
+                              // 依存するので、API 境界の toRelayRecordWithLegs が
+                              // legIndex 昇順を確定させている)
+                              const cumulatives = calcCumulativeTimes(
+                                relay.legs.map((leg) => leg.legTime),
+                              );
+                              const eventLabel = tRelay("relay.eventLabel", {
+                                distance: relay.legDistance,
+                                legCount: relay.legCount,
+                                kind: tRelay(`relay.kind.${relay.relayKind}`),
+                              });
+
+                              return (
+                                <React.Fragment key={relay.id}>
+                                  {/* 行全体をクリック可能にする (ラベル/タイム部分をクリックしても
+                                      展開できるように)。チーム行に「その人のベスト」概念は無いため
+                                      赤字判定・Best バッジは適用しない (裁定3)。
+                                      ⚠️ 姉妹コンポーネント `rankings/RelayRankingTable.tsx` は
+                                      実 `<button>` だけをインタラクティブにするパターンだが、
+                                      本モーダルは意図的にこちらを採用していない。ここは行の面積が
+                                      広く (アバタースタック+種目名+タイム)、ボタンだけをタップ対象に
+                                      すると特にモバイル幅で誤タップ・操作性低下が起きるため、行全体
+                                      (`<tr role="button">`) をタップ対象にした (PM 裁定: 維持)。 */}
+                                  <tr
+                                    className="border-b border-blue-100 cursor-pointer hover:bg-blue-50/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                                    data-testid={`team-competition-relay-row-${relay.id}`}
+                                    onClick={() => toggleRelayExpanded(relay.id)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        toggleRelayExpanded(relay.id);
+                                      }
+                                    }}
+                                    tabIndex={0}
+                                    role="button"
+                                    aria-expanded={isExpanded}
+                                    aria-controls={`team-competition-relay-legs-${relay.id}`}
+                                    aria-label={
+                                      isExpanded ? tRelay("relay.collapse") : tRelay("relay.expand")
+                                    }
+                                  >
+                                    <td className="py-2 px-3">
+                                      {/* 4人のアバターを重ね合わせたスタック表示。
+                                          `-ml-3` は sibling combinator (`space-x-*`) を
+                                          使わず要素ごとに直接付与する (Tailwind v4 で
+                                          `space-x-*`/`space-y-*` が特異度0になる問題を
+                                          避けるため)。 */}
+                                      <div className="flex items-center">
+                                        {relay.legs.map((leg, i) => (
+                                          <div
+                                            key={leg.id}
+                                            className={i === 0 ? "relative" : "relative -ml-3"}
+                                            style={{ zIndex: relay.legs.length - i }}
+                                          >
+                                            <Avatar
+                                              avatarUrl={leg.profileImagePath}
+                                              userName={leg.userName ?? t("unknownUser")}
+                                              size="sm"
+                                              className="ring-2 ring-white"
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </td>
+                                    <td className="py-2 px-3 text-gray-900 whitespace-nowrap">
+                                      {eventLabel}
+                                    </td>
+                                    {/* SC5 改訂: 「1位以外の記録も全部青字」はチーム総合タイムも
+                                        対象 (mobile relayTotalTime と同じ扱い)。太字は 1位強調とは
+                                        無関係の「総合タイムを目立たせる」既存の意図のまま残す。 */}
+                                    <td className="py-2 px-3 text-center font-bold text-blue-600 tabular-nums">
+                                      {formatTimeBest(relay.totalTime)}
+                                    </td>
+                                    <td className="py-2 px-3 text-right">
+                                      {/* 視覚的な開閉インジケーター。行 (tr) 側が実体の
+                                          クリック/キーボード操作対象なので、二重のフォーカス
+                                          ストップ・二重トグルを避けるためこのボタン自体は
+                                          アクセシビリティツリーから外し (tabIndex=-1,
+                                          aria-hidden)、クリックは stopPropagation で
+                                          行の onClick と競合しないようにする。 */}
+                                      <button
+                                        type="button"
+                                        data-testid={`team-competition-relay-toggle-${relay.id}`}
+                                        tabIndex={-1}
+                                        aria-hidden="true"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleRelayExpanded(relay.id);
+                                        }}
+                                        className="inline-flex items-center justify-center rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                      >
+                                        {isExpanded ? (
+                                          <ChevronUpIcon className="h-4 w-4" />
+                                        ) : (
+                                          <ChevronDownIcon className="h-4 w-4" />
+                                        )}
+                                      </button>
+                                    </td>
+                                  </tr>
+
+                                  {isExpanded && (
+                                    <tr
+                                      id={`team-competition-relay-legs-${relay.id}`}
+                                      data-testid={`team-competition-relay-legs-${relay.id}`}
+                                      className="border-b border-blue-100 bg-gray-50"
+                                    >
+                                      <td colSpan={4} className="px-3 py-3">
+                                        {relay.legs.length === 0 ? (
+                                          // レグが1件も無いリレー記録 (親だけ残った異常データ)
+                                          <p className="text-xs text-gray-500">
+                                            {tRelay("relay.noLegs")}
+                                          </p>
+                                        ) : (
+                                          <table className="w-full text-xs">
+                                            <thead>
+                                              <tr className="text-gray-500">
+                                                <th className="py-1 px-2 w-10">
+                                                  <span className="sr-only">{t("photoLabel")}</span>
+                                                </th>
+                                                <th className="py-1 px-2 text-left font-medium">
+                                                  {tRelay("relay.legHeader.swimmer")}
+                                                </th>
+                                                <th className="py-1 px-2 text-left font-medium">
+                                                  {tRelay("relay.legHeader.style")}
+                                                </th>
+                                                <th className="py-1 px-2 text-right font-medium">
+                                                  {tRelay("relay.legHeader.legTime")}
+                                                </th>
+                                                <th className="py-1 px-2 text-right font-medium">
+                                                  {tRelay("relay.legHeader.cumulative")}
+                                                </th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {relay.legs.map((leg, index) => {
+                                                const swimmerName =
+                                                  leg.userName ?? tRelay("relay.retiredMember");
+                                                const legLabel = tRelay("relay.legLabel", {
+                                                  num: leg.legIndex + 1,
+                                                });
+                                                // Best バッジはレグの userId / recordId が
+                                                // null (退会 / records 行削除済み) の場合は
+                                                // 非表示にフォールバックする (PM 裁定3。
+                                                // 下記 JSX で `leg.userId && leg.recordId` を
+                                                // 直接判定式に書き、TS の narrowing を効かせる
+                                                // ことで `as` キャストを避ける)。
+                                                // アバターは mobile (RowAvatar) と揃え、
+                                                // null でも非表示にせずイニシャル等の
+                                                // 既存フォールバックを表示する。
+                                                return (
+                                                  <tr key={leg.id} className="text-gray-700">
+                                                    <td className="py-1 px-2">
+                                                      <Avatar
+                                                        avatarUrl={leg.profileImagePath}
+                                                        userName={leg.userName ?? t("unknownUser")}
+                                                        size="sm"
+                                                      />
+                                                    </td>
+                                                    <td className="py-1 px-2">
+                                                      <span
+                                                        className="block truncate"
+                                                        title={`${legLabel} / ${swimmerName}`}
+                                                      >
+                                                        {legLabel} / {swimmerName}
+                                                      </span>
+                                                    </td>
+                                                    <td className="py-1 px-2">
+                                                      {leg.styleNameJp ?? "-"}
+                                                    </td>
+                                                    <td className="py-1 px-2 text-right tabular-nums">
+                                                      <div className="inline-flex items-center gap-1.5">
+                                                        <span className="text-blue-600 font-bold">
+                                                          {formatTimeBest(leg.legTime)}
+                                                        </span>
+                                                        {leg.userId && leg.recordId && (
+                                                          <BestTimeBadge
+                                                            recordId={leg.recordId}
+                                                            userId={leg.userId}
+                                                            styleId={leg.styleId}
+                                                            currentTime={leg.legTime}
+                                                            recordDate={recordDate}
+                                                            poolType={relay.poolType}
+                                                            isRelaying
+                                                            compact
+                                                          />
+                                                        )}
+                                                      </div>
+                                                    </td>
+                                                    <td className="py-1 px-2 text-right tabular-nums font-medium">
+                                                      {(() => {
+                                                        const cumulative = cumulatives[index];
+                                                        return cumulative === undefined
+                                                          ? "-"
+                                                          : formatTimeBest(cumulative);
+                                                      })()}
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </>
             )}

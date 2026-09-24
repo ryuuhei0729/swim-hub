@@ -25,7 +25,9 @@ import {
 import { isCompetitionDateInPast, formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { formatTimeBest } from "@apps/shared/utils/time";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { styleIdToCodeKey, buildSwimStyleLabel } from "@/utils/swimStyle";
+import { getEntryReturnPath, type EntryReturnOrigin } from "@/utils/entryReturnOrigin";
 import MemberSelectModal, { type MemberSelectOption } from "@/components/team/MemberSelectModal";
 import EntryBulkConfirmModal, {
   type EntryBulkConfirmRow,
@@ -58,6 +60,8 @@ interface EntriesClientProps {
   existingEntries: ExistingEntryDisplay[];
   styles: Style[];
   bestTimesByUser: Record<string, BestTime[]>;
+  /** page.tsx (Server Component) が enum に正規化した戻り先 (R12)。DataLoader 経由で prop として渡ってくる */
+  returnOrigin: EntryReturnOrigin;
 }
 
 function buildInitialRows(existingEntries: ExistingEntryDisplay[]): EntryDraftRow[] {
@@ -82,6 +86,7 @@ export default function EntriesClient({
   existingEntries,
   styles,
   bestTimesByUser,
+  returnOrigin,
 }: EntriesClientProps) {
   const router = useRouter();
   const locale = useLocale();
@@ -89,6 +94,9 @@ export default function EntriesClient({
   const tCommon = useTranslations("common");
   const tEntries = useTranslations("competition.entries");
   const tStyles = useTranslations("practice.styles");
+  // 参考バッジ「ベストタイム:」は個人の大会入力画面と同じ forms.recordLog.bestTimeLabel を
+  // 再利用する (同義キーを増やさない)
+  const tRecordLog = useTranslations("forms.recordLog");
   const { supabase } = useAuth();
 
   const [rows, setRows] = useState<EntryDraftRow[]>(() => buildInitialRows(existingEntries));
@@ -159,6 +167,11 @@ export default function EntriesClient({
     });
     return map;
   }, [rows]);
+
+  // 「選手を選択」モーダルの候補一覧だけをフィルタする。activeMembers 自体は
+  // isMemberActive (退会済みバッジ判定) と createEmptyRow (名前解決) にも共用されているため、
+  // ここでフィルタ済みの生配列に置き換えてはならない (PM裁定 R4)。
+  const swimmerCandidates = useMemo(() => excludeNonSwimmers(activeMembers), [activeMembers]);
 
   const isMemberActive = (userId: string): boolean =>
     activeMembers.some((m) => m.user_id === userId);
@@ -458,7 +471,9 @@ export default function EntriesClient({
       }
 
       setShowConfirmModal(false);
-      router.push(`/teams-admin/${teamId}?tab=competitions`);
+      // 戻り先は往路 (returnOrigin) に従う。enum → ハードコードパス定数のマップ経由で
+      // 解決するため、クエリの値そのものがパス文字列に埋め込まれることはない (R11)
+      router.push(getEntryReturnPath(returnOrigin, teamId));
     } catch (err) {
       console.error("エントリー代理一括入力の保存に失敗:", err);
       // Postgres の UNIQUE 制約違反 (23505) は、事前バリデーションで弾けなかった
@@ -481,7 +496,8 @@ export default function EntriesClient({
   };
 
   const handleBack = () => {
-    router.push(`/teams-admin/${teamId}?tab=competitions`);
+    // キャンセル後も保存後と同じ戻り先ルールに従う (R11/SC22)
+    router.push(getEntryReturnPath(returnOrigin, teamId));
   };
 
   const saveDisabled = saving || isPastDate || duplicatePairs.size > 0;
@@ -648,6 +664,7 @@ export default function EntriesClient({
                               <div className="flex gap-2">
                                 <input
                                   type="text"
+                                  inputMode="decimal"
                                   value={row.entryTimeInput}
                                   onChange={(e) => handleTimeInputChange(row.localId, e.target.value)}
                                   placeholder={t("record.timePlaceholder")}
@@ -666,6 +683,14 @@ export default function EntriesClient({
                                   {tEntries("bestTimePrefillButton")}
                                 </button>
                               </div>
+                              {bestTime && (
+                                <p
+                                  data-testid={`entry-best-time-badge-${row.localId}`}
+                                  className="mt-1 text-xs text-green-800 bg-green-100 px-2 py-1 rounded-full inline-flex items-center"
+                                >
+                                  {tRecordLog("bestTimeLabel")}: {formatTimeBest(bestTime.time)}
+                                </p>
+                              )}
                               {untouchedPrefill && (
                                 <p className="mt-1 text-xs text-yellow-700">
                                   {tEntries("bestTimePrefillBadge")}
@@ -724,7 +749,9 @@ export default function EntriesClient({
 
       <MemberSelectModal
         isOpen={showMemberSelectModal}
-        members={activeMembers}
+        teamId={teamId}
+        supabase={supabase}
+        members={swimmerCandidates}
         selectedUserIds={memberOrder}
         onConfirm={confirmMemberSelection}
         onCancel={() => setShowMemberSelectModal(false)}

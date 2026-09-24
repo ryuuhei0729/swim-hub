@@ -10,7 +10,8 @@
 //   - 同一 DB エントリー id を二度 update しない（updates の id は一意）。
 //   - update の id と delete の id は互いに素（同じ id を update かつ delete しない）。
 //   - フォームに残った style の編集値が、後続反復で旧値に上書きされない（style 単位で最終意図を一元化）。
-// web apps/web/hooks/useTeamEntry.ts:230-242 の「既存あれば update / 無ければ create」セマンティクスに準拠。
+//   - 既存 DB エントリー (existingEntries) がある style は update、無い style は create という
+//     「既存優先」のセマンティクスで解決する。
 
 /** 解決処理への入力となる正規化済みフォーム行（表示文字列ではなく確定値で渡す）。 */
 export interface ResolveFormEntry {

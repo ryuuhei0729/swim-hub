@@ -31,6 +31,15 @@ import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// QA Phase B (回帰修正): web モーダルに `useRouter()` (`@/i18n/navigation` 経由) が
+// 新規追加されたため、ルーターコンテキスト無しで render すると
+// `invariant expected app router to be mounted` で落ちる。
+// `vi.mock("next/navigation")` では next-intl 経由の遷移を捕捉できない
+// (`project_swimhub_locale_navigation_debt_cleanup` の既知事項) ため、
+// `@/i18n/navigation` を直接モックする (既存 `TeamCompetitionsEntryButtonPastDate.test.tsx`
+// と同型)。
+vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+
 const mocks = vi.hoisted(() => ({
   // 個人スコープの getCompetitions は「他管理者作成のチーム大会」を含まない空配列を返す
   // ことで、ユーザー報告の前提条件 (旧バグが起きる状態) を固定する。
@@ -178,6 +187,8 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
         competitionId="comp-other-admin"
         competitionTitle="他管理者大会"
         teamId="team-1"
+        routeIsAdmin={false}
+        onOpenSelfEntry={vi.fn()}
       />,
     );
 
@@ -207,6 +218,8 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
         competitionId="comp-other-admin"
         competitionTitle="他管理者大会"
         teamId="team-1"
+        routeIsAdmin={false}
+        onOpenSelfEntry={vi.fn()}
       />,
     );
 
@@ -247,6 +260,8 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
         competitionId="comp-belongs-to-team-2"
         competitionTitle="他チーム限定大会"
         teamId="team-1"
+        routeIsAdmin={false}
+        onOpenSelfEntry={vi.fn()}
       />,
     );
 
@@ -288,6 +303,8 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
             competitionId="comp-1"
             competitionTitle="県大会"
             teamId="team-1"
+            routeIsAdmin={false}
+            onOpenSelfEntry={vi.fn()}
           />,
         );
 
@@ -315,6 +332,8 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
             competitionId="comp-1"
             competitionTitle="県大会"
             teamId="team-1"
+            routeIsAdmin={false}
+            onOpenSelfEntry={vi.fn()}
           />,
         );
 

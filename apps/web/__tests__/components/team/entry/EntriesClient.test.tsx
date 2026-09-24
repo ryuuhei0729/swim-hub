@@ -104,6 +104,9 @@ const activeMembers = [{ user_id: "user-1", role: "user", name: "選手A" }];
 function renderEntriesClient(
   existingEntries: ExistingEntryDisplay[],
   bestTimesByUser: Record<string, BestTime[]> = {},
+  // 追加スプリント (代理入力の戻り先) 前は戻り先が /teams-admin/ に固定だったため、
+  // 既定値は "admin" にして既存の assert (下記) を無改修で通す。
+  returnOrigin: "member" | "admin" = "admin",
 ) {
   return render(
     <EntriesClient
@@ -114,6 +117,7 @@ function renderEntriesClient(
       existingEntries={existingEntries}
       styles={[STYLE_FREE_100, STYLE_BREAST_50]}
       bestTimesByUser={bestTimesByUser}
+      returnOrigin={returnOrigin}
     />,
   );
 }
@@ -244,6 +248,51 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
   );
 
   it(
+    "returnOrigin=\"member\" で保存成功後は /teams/team-1?tab=competitions へ遷移する " +
+      "[SC21] (人間の意図: 追加スプリント。実ロール admin が利用者ビュー /teams/{teamId} 起点で" +
+      "代理入力した場合は、保存後に管理者ビューへ強制移動させず利用者ビューに戻す。" +
+      "/teams-admin/ へ遷移してしまう退行を検出する)",
+    async () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+      renderEntriesClient(existingEntries, {}, "member");
+
+      const select = screen.getByRole("combobox");
+      fireEvent.change(select, { target: { value: "9" } });
+
+      fireEvent.click(screen.getByRole("button", { name: "saveButton" }));
+      fireEvent.click(await screen.findByRole("button", { name: "confirmButton" }));
+
+      await waitFor(() => {
+        expect(mocks.push).toHaveBeenCalledTimes(1);
+      });
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1?tab=competitions");
+      expect(mocks.push).not.toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+    },
+  );
+
+  it(
+    "returnOrigin=\"member\" でヘッダーの戻るボタンを押すと /teams/team-1?tab=competitions へ" +
+      "遷移する [SC22] (保存成功後と同じ戻り先ルールがキャンセル経路にも適用されることの確認)",
+    () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+      renderEntriesClient(existingEntries, {}, "member");
+
+      fireEvent.click(screen.getByRole("button", { name: "record.backButton" }));
+
+      expect(mocks.push).toHaveBeenCalledTimes(1);
+      expect(mocks.push).toHaveBeenCalledWith("/teams/team-1?tab=competitions");
+      expect(mocks.push).not.toHaveBeenCalledWith("/teams-admin/team-1?tab=competitions");
+      expect(mocks.updateEntry).not.toHaveBeenCalled();
+      expect(mocks.createBulkEntries).not.toHaveBeenCalled();
+      expect(mocks.deleteBulkEntries).not.toHaveBeenCalled();
+    },
+  );
+
+  it(
     "保存中に Postgres の UNIQUE制約違反 (code: 23505) が発生した場合、" +
       "saveFailedDuplicate の分岐メッセージが表示される（人間の意図: 事前バリデーションで" +
       "弾けなかった同時編集等のレースコンディションに対するフォールバック文言。" +
@@ -354,8 +403,11 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
       renderEntriesClient([], bestTimesByUser);
 
       // 選手を選択して空行を1つ追加する
+      // [チップ化スプリント] MemberSelectModal は checkbox ではなく
+      // 選択チップ (button, aria-pressed) を使う。activeMembers は「選手A」1名のみ
+      // (admin バッジも無い) なので accessible name の完全一致で特定できる
       fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
-      fireEvent.click(await screen.findByRole("checkbox"));
+      fireEvent.click(await screen.findByRole("button", { name: "選手A" }));
       fireEvent.click(screen.getByRole("button", { name: "record.confirmSelection" }));
 
       const select = screen.getByRole("combobox") as unknown as HTMLSelectElement;
@@ -364,6 +416,53 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
 
       const timeInput = screen.getByPlaceholderText("record.timePlaceholder") as HTMLInputElement;
       expect(timeInput.value).toBe("58.00");
+    },
+  );
+
+  it(
+    "既存行にベストタイムがあると、その値が参考バッジとして画面に表示される（人間の意図: " +
+      "従来は『流用』ボタンが押せるかどうかでしか自己ベストの有無が分からず、値そのものは " +
+      "画面に出ていなかった。代理入力するコーチが桁違いの申告タイムに気付けるよう、" +
+      "記録の代理入力画面と同じ緑バッジで値を見せる。バッジは表示のみで入力欄には入らない）",
+    () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+      const bestTimesByUser: Record<string, BestTime[]> = {
+        "user-1": [
+          {
+            id: "best-1",
+            time: 58.0,
+            created_at: "2025-01-01T00:00:00Z",
+            pool_type: 0,
+            is_relaying: false,
+            style_id: 3,
+            style: { name_jp: "自由形100m", distance: 100 },
+          },
+        ],
+      };
+
+      renderEntriesClient(existingEntries, bestTimesByUser);
+
+      const badge = screen.getByTestId(/^entry-best-time-badge-/);
+      expect(badge.textContent?.replace(/\s+/g, " ").trim()).toBe("bestTimeLabel: 58.00");
+      // 入力欄は既存エントリーの申告タイムのまま (バッジは表示専用)
+      const timeInput = screen.getByPlaceholderText("record.timePlaceholder") as HTMLInputElement;
+      expect(timeInput.value).toBe("1:00.50");
+    },
+  );
+
+  it(
+    "ベストタイムを持たない選手・種目の行には参考バッジが出ない（人間の意図: " +
+      "ベストが無いときに 0.00 のような意味のない値を出さないこと）",
+    () => {
+      const existingEntries: ExistingEntryDisplay[] = [
+        { id: "entry-X", user_id: "user-1", style_id: 3, entry_time: 60.5, note: null, targetUserName: "選手A" },
+      ];
+
+      renderEntriesClient(existingEntries, {});
+
+      expect(screen.queryByTestId(/^entry-best-time-badge-/)).toBeNull();
     },
   );
 
@@ -436,9 +535,9 @@ describe("EntriesClient — 保存フロー回帰テスト", () => {
       renderEntriesClient([]);
 
       fireEvent.click(screen.getByRole("button", { name: "record.selectMemberButton" }));
-      // MemberSelectModal で選手Aを選択して確定する
-      const checkbox = await screen.findByRole("checkbox");
-      fireEvent.click(checkbox);
+      // MemberSelectModal で選手Aを選択して確定する (チップ化スプリント: checkbox → chip button)
+      const chip = await screen.findByRole("button", { name: "選手A" });
+      fireEvent.click(chip);
       fireEvent.click(screen.getByRole("button", { name: "record.confirmSelection" }));
 
       // 選手カードに種目行を1つ追加し、既定行と合わせて2行を同じ種目にする

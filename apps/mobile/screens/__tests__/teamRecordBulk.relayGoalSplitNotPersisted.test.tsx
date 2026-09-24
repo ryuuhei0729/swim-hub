@@ -36,17 +36,57 @@ const mocks = vi.hoisted(() => {
 
   const responses: Record<string, { data: unknown; error: unknown }> = {};
   const insertCalls: Array<{ table: string; payload: unknown }> = [];
+  const updateCalls: Array<{ table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> }> = [];
+  const deleteCalls: Array<{ table: string }> = [];
+  /**
+   * `.eq()` の列名・値を発生順に記録する。
+   *
+   * 🚨 引数を捨てないこと。捨てると「サーバー側で絞り込んでいるか」と
+   *    「一旦全部取ってクライアントで filter しているか」を区別できず、
+   *    情報露出が全 green のまま通り抜ける (既知のアンチパターン)。
+   */
+  const eqCalls: Array<{ table: string; op: string | null; column: string; value: unknown }> = [];
+  const inCalls: Array<{ table: string; op: string | null; column: string; values: unknown[] }> =
+    [];
+  /** `insert().select().single()` で払い出した id (テーブル名キー・発生順) */
+  const insertedIds: Record<string, string[]> = {};
+
+  /**
+   * `insert().select("id").single()` が id を払い出すテーブル。
+   *
+   * 第3弾で `relay_records` を追加した。従来のフェイクは `records` だけを
+   * 特別扱いしていたため、`relay_records` の insert が `{ data: null }` を返し、
+   * プロダクション側の `if (relayError || !newRelay)` が正しく「失敗」と
+   * 判定していた (= プロダクションのバグではなくテストダブルの欠落)。
+   */
+  const ID_ISSUING_TABLES = new Set(["records", "relay_records"]);
 
   function makeSupabase() {
+    const idSeq: Record<string, number> = {};
+
+    /**
+     * テーブル名を含む固有の id を払い出す。
+     * `relay_record_legs.record_id` が `records` の id を指しているのか
+     * `relay_records` の id を指しているのかをテスト側で区別できるようにする。
+     */
+    const issueId = (table: string): string => {
+      idSeq[table] = (idSeq[table] ?? 0) + 1;
+      const id = `fake-${table}-id-${idSeq[table]}`;
+      (insertedIds[table] ??= []).push(id);
+      return id;
+    };
+
     return {
       from: (table: string) => {
         let op: string | null = null;
+        let pendingUpdate: { table: string; payload: unknown; eq: Array<{ column: string; value: unknown }> } | null = null;
         const builder: {
           select: (..._a: unknown[]) => typeof builder;
-          eq: (..._a: unknown[]) => typeof builder;
+          eq: (column: string, value: unknown) => typeof builder;
           order: (..._a: unknown[]) => typeof builder;
-          in: (..._a: unknown[]) => typeof builder;
+          in: (column: string, values: unknown[]) => typeof builder;
           insert: (payload: unknown) => typeof builder;
+          update: (payload: unknown) => typeof builder;
           delete: (..._a: unknown[]) => typeof builder;
           single: () => Promise<{ data: unknown; error: unknown }>;
           then: (resolve: (v: { data: unknown; error: unknown }) => void) => void;
@@ -55,24 +95,41 @@ const mocks = vi.hoisted(() => {
             if (!op) op = "select";
             return builder;
           },
-          eq: () => builder,
+          eq: (column: string, value: unknown) => {
+            eqCalls.push({ table, op, column, value });
+            if (op === "update" && pendingUpdate) pendingUpdate.eq.push({ column, value });
+            return builder;
+          },
           order: () => builder,
-          in: () => builder,
+          in: (column: string, values: unknown[]) => {
+            inCalls.push({ table, op, column, values: [...values] });
+            return builder;
+          },
           insert: (payload: unknown) => {
             if (!op) op = "insert";
             insertCalls.push({ table, payload });
             return builder;
           },
-          delete: (..._a) => {
-            if (!op) op = "delete";
+          update: (payload: unknown) => {
+            op = "update";
+            pendingUpdate = { table, payload, eq: [] };
+            updateCalls.push(pendingUpdate);
             return builder;
           },
-          single: () =>
-            Promise.resolve(
-              op === "insert" && table === "records"
-                ? { data: { id: `new-record-${insertCalls.length}` }, error: null }
-                : (responses[`${op}:${table}`] ?? { data: null, error: null }),
-            ),
+          delete: (..._a) => {
+            if (!op) op = "delete";
+            deleteCalls.push({ table });
+            return builder;
+          },
+          single: () => {
+            // テストが明示した応答を最優先する (失敗注入をここで潰さない)
+            const override = responses[`${op}:${table}`];
+            if (override) return Promise.resolve(override);
+            if (op === "insert" && ID_ISSUING_TABLES.has(table)) {
+              return Promise.resolve({ data: { id: issueId(table) }, error: null });
+            }
+            return Promise.resolve({ data: null, error: null });
+          },
           then: (resolve) => resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
         };
         return builder;
@@ -87,9 +144,14 @@ const mocks = vi.hoisted(() => {
     style,
     responses,
     insertCalls,
+    updateCalls,
+    deleteCalls,
+    eqCalls,
+    inCalls,
+    insertedIds,
     teamMembers,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
+    routeParams: { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" } as Record<string, unknown>,
     goBack: vi.fn(),
     navigate: vi.fn(),
     getStyles: vi.fn(),
@@ -100,6 +162,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: mocks.routeParams }),
   useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -124,12 +187,18 @@ vi.mock("@apps/shared/api/styles", () => ({
   },
 }));
 
+vi.mock("@apps/shared/api/records", () => ({
+  RecordAPI: class {
+    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
+  },
+}));
+
 vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
 vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
 vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
 vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
 
-import { TeamRecordBulkFormScreen } from "../TeamRecordBulkFormScreen";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 const createWrapper = (queryClient: QueryClient) => {
   return ({ children }: { children: React.ReactNode }) => (
@@ -173,10 +242,16 @@ function makeRelayRecords() {
   }));
 }
 
-describe("TeamRecordBulkFormScreen — distance===legDist(=raceDistance) の split は保存経路で永続化されない (S15)", () => {
+describe("TeamRecordStyleDetailScreen — distance===legDist(=raceDistance) の split は保存経路で永続化されない (S15)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.insertCalls.length = 0;
+    mocks.updateCalls.length = 0;
+    mocks.deleteCalls.length = 0;
+    mocks.eqCalls.length = 0;
+    mocks.inCalls.length = 0;
+    for (const table of Object.keys(mocks.insertedIds)) delete mocks.insertedIds[table];
+    for (const key of Object.keys(mocks.responses)) delete mocks.responses[key];
     mocks.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
@@ -193,7 +268,7 @@ describe("TeamRecordBulkFormScreen — distance===legDist(=raceDistance) の spl
       mocks.responses["select:records"] = { data: makeRelayRecords(), error: null };
 
       const queryClient = makeQueryClient();
-      render(<TeamRecordBulkFormScreen />, { wrapper: createWrapper(queryClient) });
+      render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
         expect(screen.getByText("記録を保存")).toBeDefined();

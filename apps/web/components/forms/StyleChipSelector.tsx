@@ -4,6 +4,7 @@ import React from "react";
 import { useTranslations } from "next-intl";
 import type { StyleOption } from "@/components/forms/record-log/types";
 import { styleIdToCodeKey, canStyleRelay, type StyleCodeKey } from "@/utils/swimStyle";
+import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 
 interface StyleChipSelectorProps {
   /** 選択肢となる種目一覧(距離・泳法を内部で導出) */
@@ -79,7 +80,10 @@ export default function StyleChipSelector({
   const codeKeysToShow =
     raceDistance !== undefined ? codeKeysForCurrentDistance : codeKeyOrder;
 
-  const testId = (suffix: string) => (testIdPrefix ? `${testIdPrefix}-${suffix}` : undefined);
+  // ns="chiprow" はチップ行の容器用。チップ側 testid への前方一致セレクタ
+  // ([data-testid^="entry-style-1-distance-"] 等) と衝突しない別名前空間にする
+  const testId = (suffix: string, ns?: "chiprow") =>
+    testIdPrefix ? `${ns ? `${ns}-` : ""}${testIdPrefix}-${suffix}` : undefined;
 
   const showRelayToggle =
     onToggleRelaying &&
@@ -89,7 +93,7 @@ export default function StyleChipSelector({
   return (
     <div className="space-y-1.5" data-testid={testIdPrefix}>
       {/* 距離 */}
-      <div className="flex flex-wrap gap-1">
+      <ChipScrollRow className="gap-1" data-testid={testId("distance", "chiprow")}>
         {distanceOptions.map((d) => {
           const isActive = raceDistance === d;
           return (
@@ -112,9 +116,9 @@ export default function StyleChipSelector({
             </button>
           );
         })}
-      </div>
+      </ChipScrollRow>
       {/* 泳法 — ラベルは practice.styles 翻訳 */}
-      <div className="flex flex-wrap gap-1">
+      <ChipScrollRow className="gap-1" data-testid={testId("stroke", "chiprow")}>
         {codeKeysToShow.map((ck) => {
           const isActive = currentCodeKey === ck;
           return (
@@ -137,7 +141,7 @@ export default function StyleChipSelector({
             </button>
           );
         })}
-      </div>
+      </ChipScrollRow>
       {/* リレー (オンオフトグル) */}
       {showRelayToggle && (
         <button

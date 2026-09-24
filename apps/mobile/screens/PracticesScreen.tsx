@@ -28,7 +28,7 @@ import { useTranslation } from "react-i18next";
 import { DayDetailModal } from "@/components/calendar";
 import { useDayEntriesQuery } from "@/hooks/useDayEntriesQuery";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
-import type { PracticeWithLogs, PracticeTag } from "@swim-hub/shared/types";
+import type { PracticeTag } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
@@ -48,6 +48,9 @@ export const PracticesScreen: React.FC = () => {
   // 行タップで開く日付詳細モーダル（ダッシュボードと同一のDayDetailModal）
   const [modalDate, setModalDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
+  // タップした練習ログ1件のみに絞り込むための対象id/見出し(練習タブ経由の1件モード)
+  const [targetId, setTargetId] = useState<string | undefined>(undefined);
+  const [titleOverride, setTitleOverride] = useState<string | undefined>(undefined);
 
   const [displayCount, setDisplayCount] = useState(PAGE_INCREMENT);
 
@@ -327,13 +330,19 @@ export const PracticesScreen: React.FC = () => {
     handleDeleteCompetition,
   } = useDayDetailHandlers(supabase, refetchAfterMutation);
 
-  // 行タップで該当日のDayDetailModalを開く
-  const handlePracticePress = useCallback((practice: PracticeWithLogs) => {
-    const parsedDate = parseISO(practice.date);
-    if (!isValid(parsedDate)) return;
-    setModalDate(parsedDate);
-    setShowDayDetail(true);
-  }, []);
+  // 行タップで該当日のDayDetailModalを開く。練習タブ経由はタップしたログ1件のみに絞る
+  // (ログ0件の練習行は id: log?.id ?? practice.id の契約どおり practice.id が対象になる)
+  const handlePracticePress = useCallback(
+    (row: PracticeLogRow) => {
+      const parsedDate = parseISO(row.practice.date);
+      if (!isValid(parsedDate)) return;
+      setModalDate(parsedDate);
+      setTargetId(row.id);
+      setTitleOverride(row.practice.title || t("practice.client.practiceTitle"));
+      setShowDayDetail(true);
+    },
+    [t],
+  );
 
   // この画面が依存する全クエリ(練習一覧 + タグ一覧 + 開いている日付詳細)を尽くす
   const refreshAll = useCallback(async () => {
@@ -357,7 +366,11 @@ export const PracticesScreen: React.FC = () => {
   // 練習記録アイテムのレンダリング（メモ化）。1行 = 1練習ログ
   const renderItem = useCallback(
     ({ item }: { item: PracticeLogRow }) => (
-      <PracticeItem practice={item.practice} log={item.log} onPress={handlePracticePress} />
+      <PracticeItem
+        practice={item.practice}
+        log={item.log}
+        onPress={() => handlePracticePress(item)}
+      />
     ),
     [handlePracticePress],
   );
@@ -467,9 +480,13 @@ export const PracticesScreen: React.FC = () => {
           date={modalDate}
           entries={dayEntries}
           scope="practice"
+          targetId={targetId}
+          titleOverride={titleOverride}
           onClose={() => {
             setShowDayDetail(false);
             setModalDate(null);
+            setTargetId(undefined);
+            setTitleOverride(undefined);
           }}
           onEntryPress={handleEntryPress}
           onAddPractice={handleAddPractice}
