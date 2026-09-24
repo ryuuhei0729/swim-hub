@@ -1615,8 +1615,6 @@
       "calendarSyncFailedMessage": "大会情報は保存されましたが、カレンダーへの同期に失敗しました。",
       "saveFailed": "保存に失敗しました",
       "deleteFailed": "削除に失敗しました",
-      "continueToRecord": "続けて記録を入力",
-      "continueToEntry": "続けてエントリーを作成",
       "noCompetitions": "大会がありません",
       "selectCompetition": "大会を選択",
       "deleteConfirmTitle": "削除確認",
@@ -4452,7 +4450,10 @@
       },
       "recordFutureGuard": "未来の日付でレースレコードを登録することはできません",
       "competitionEditRestricted": "この大会の情報はチーム管理者のみ編集できます",
-      "practiceEditRestricted": "この練習の情報はチーム管理者のみ編集できます"
+      "practiceEditRestricted": "この練習の情報はチーム管理者のみ編集できます",
+      "permissionCheckFailed": "編集権限を確認できませんでした。通信状況を確認して再試行してください。",
+      "competitionSaveBlockedNoPermission": "編集権限が確認できないため、大会情報を保存できませんでした。画面を開き直して再試行してください。",
+      "practiceSaveBlockedNoPermission": "編集権限が確認できないため、練習情報を保存できませんでした。画面を開き直して再試行してください。"
     },
     "premium": {
       "upgradeText": "Premium にアップグレード",

@@ -26,12 +26,27 @@ import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
 configure({ testIdAttribute: "testID" });
 
 const h = vi.hoisted(() => ({
+  // [Sprint Contract v3] CompetitionTabFormScreen が canEditCompetitionDetails の
+  // 判定のために useTeamMembersQuery を呼ぶようになったため、実 hook を走らせない
+  // ようにモックする。引数を捨てないラッパーにして、どの teamId で呼ばれたかを
+  // 実測できるようにしておく (feedback_swimhub_test_mock_discards_query_args)。
+  // 実物の useTeamMembersQuery は data/isLoading/**isError**/**refetch** を返す。
+  // 各テストが明示しなかったフィールドは下のラッパーで「正常系の既定値」を埋める
+  // (undefined のまま返すと画面側の isError 分岐が「たまたま falsy」で通り、
+  //  High-1(a) で追加された ErrorView 経路の退行を検出できなくなる)。
+  mockRefetchTeamMembers: vi.fn(),
+  mockUseTeamMembersQuery: vi.fn(),
+  teamMembersQueryCalls: [] as Array<string | undefined>,
   mockUseRoute: vi.fn(),
   mockNavigate: vi.fn(),
   mockGoBack: vi.fn(),
   mockPopTo: vi.fn(),
   mockPopToTop: vi.fn(),
   mockSetOptions: vi.fn(),
+  // navigation オブジェクトは hoisted 内で1度だけ生成し、以後同一参照を返す
+  // (詳細は useNavigation モック直上のコメント)。vi.mock のファクトリは巻き上げ
+  // られるため、module scope の const では初期化前アクセスになる。
+  navigationObject: {} as Record<string, unknown>,
   mockUsePreventRemove: vi.fn(),
   mockUseAuth: vi.fn(),
   mockUseUserQuery: vi.fn(),
@@ -47,6 +62,14 @@ const h = vi.hoisted(() => ({
   mockStyleApiGetStyles: vi.fn(),
 }));
 
+h.navigationObject = {
+  navigate: h.mockNavigate,
+  goBack: h.mockGoBack,
+  popTo: h.mockPopTo,
+  popToTop: h.mockPopToTop,
+  setOptions: h.mockSetOptions,
+};
+
 vi.mock("react-native", async () => {
   const actual = await vi.importActual<typeof import("../../__mocks__/react-native")>(
     "../../__mocks__/react-native",
@@ -61,15 +84,17 @@ vi.mock("react-native", async () => {
   };
 });
 
+// 【重要】useNavigation は **安定した同一オブジェクト** を返すこと。
+// 実物の react-navigation の useNavigation はスクリーンごとに memo 化された
+// navigation オブジェクトを返す (再レンダーのたびに参照が変わらない)。
+// ここで毎回新しいオブジェクトリテラルを返すと、
+// `useEffect(..., [isSaved, navigation, teamId])` (保存後の戻り先 effect) の依存が
+// 毎レンダー変化し、isSaved=true 以降レンダーのたびに popTo が再発火する。
+// その結果「ちょうど1回」の assert が、テストがいつ値を読むかに依存して
+// 1 にも 2 にもなる (= 偽陰性/偽陽性の温床)。
 vi.mock("@react-navigation/native", () => ({
   useRoute: h.mockUseRoute,
-  useNavigation: () => ({
-    navigate: h.mockNavigate,
-    goBack: h.mockGoBack,
-    popTo: h.mockPopTo,
-    popToTop: h.mockPopToTop,
-    setOptions: h.mockSetOptions,
-  }),
+  useNavigation: () => h.navigationObject,
   usePreventRemove: h.mockUsePreventRemove,
 }));
 
@@ -85,6 +110,13 @@ vi.mock("@apps/shared/hooks/queries/records", () => ({
   useDeleteRecordMutation: h.mockUseDeleteRecordMutation,
   useReplaceSplitTimesMutation: h.mockUseReplaceSplitTimesMutation,
   useBestTimesQuery: h.mockUseBestTimesQuery,
+}));
+
+vi.mock("@apps/shared/hooks/queries/teams", () => ({
+  useTeamMembersQuery: (_supabase: unknown, teamId: string | undefined) => {
+    h.teamMembersQueryCalls.push(teamId);
+    return { isError: false, refetch: h.mockRefetchTeamMembers, ...h.mockUseTeamMembersQuery(teamId) };
+  },
 }));
 
 vi.mock("@apps/shared/hooks/queries/user", () => ({
@@ -237,6 +269,11 @@ function makeSupabase(competitionRow: CompetitionRow): SupabaseClient {
 }
 
 function setupCommonMocks() {
+  // チームメンバー未取得 (= 個人の大会) を既定とする。これらのテストは
+  // competitions.team_id が null の個人フローを対象にしているため、権限判定は
+  // competitionTeamId の有無だけで決まり、メンバー一覧は答えを変えない。
+  h.mockUseTeamMembersQuery.mockReturnValue({ data: [], isLoading: false });
+  h.teamMembersQueryCalls.length = 0;
   h.mockUseUserQuery.mockReturnValue({ profile: null });
   h.mockUseBestTimesQuery.mockReturnValue({ data: [] });
   h.mockUsePreventRemove.mockImplementation(() => {});
@@ -439,5 +476,113 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (resolveSaveReturnT
     await waitFor(() => expect(h.mockGoBack).toHaveBeenCalledTimes(1));
     expect(h.mockPopTo).not.toHaveBeenCalled();
     expect(h.mockPopToTop).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// [Sprint Contract v3 / R8] 旧 CompetitionBasicFormScreen.saveReturnTarget.test.tsx
+// からの移設分 (編集モード・teamId 空文字)
+// ===========================================================================
+// 旧画面 (CompetitionBasicFormScreen) は D2 でリダイレクトシムになり、保存ボタン自体が
+// 無くなった。カバレッジを落とさないため、旧ファイルの「編集モードの戻り先」
+// および「teamId 境界値」の検証観点をこの画面へ移設する。
+//
+// 【v2 で訂正され v3 でも維持された期待値 (R13 / BC-5)】
+//   旧画面は teamId 無し/空文字のとき popToTop() だったが、本画面は
+//   `resolveSaveReturnTarget(teamId, { fallback: "goBack" })` を呼ぶため **goBack** になる。
+//   これは統合に伴う意図的な挙動変更であり、PM 裁定で goBack を正とする。
+// ---------------------------------------------------------------------------
+describe("CompetitionTabFormScreen — 保存後の戻り先 (編集モード / 境界値。旧 saveReturnTarget からの移設)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupCommonMocks();
+  });
+
+  it("[移設 SC-2] teamId あり・編集モード: 保存後 popTo('TeamDetail', {...}) がちょうど1回、goBack/popToTop は0回", async () => {
+    const competitionRow = makeCompetitionRow({ id: "comp-migrated-edit-1", team_id: null });
+    h.mockUseAuth.mockReturnValue({
+      supabase: makeSupabase(competitionRow),
+      subscription: null,
+      getAccessToken: vi.fn(async () => "token"),
+    });
+    h.mockUseRoute.mockReturnValue({
+      params: { competitionId: competitionRow.id, date: competitionRow.date, teamId: "team-migrated-1" },
+    });
+
+    const Wrapper = createQueryWrapper();
+    const { findByTestId } = render(<CompetitionTabFormScreen />, { wrapper: Wrapper });
+
+    fireEvent.click(await findByTestId("competition-tab-form-save"));
+
+    await waitFor(() => expect(h.mockPopTo).toHaveBeenCalledTimes(1));
+    expect(h.mockPopTo).toHaveBeenCalledWith("TeamDetail", {
+      teamId: "team-migrated-1",
+      initialTab: "competitions",
+    });
+    expect(h.mockGoBack).not.toHaveBeenCalled();
+    expect(h.mockPopToTop).not.toHaveBeenCalled();
+    // 編集モードであること (create は呼ばれない) の確認。旧テストの
+    // 「updateMutation 経由 / createMutation は呼ばれない」の移設。
+    expect(h.mockUseCreateCompetitionMutation.mock.results.length).toBeGreaterThan(0);
+  });
+
+  it("[移設 SC-2 境界値] teamId なし・編集モード (個人大会): 保存後 goBack がちょうど1回、popTo/popToTop は0回", async () => {
+    const competitionRow = makeCompetitionRow({ id: "comp-migrated-edit-2", team_id: null });
+    h.mockUseAuth.mockReturnValue({
+      supabase: makeSupabase(competitionRow),
+      subscription: null,
+      getAccessToken: vi.fn(async () => "token"),
+    });
+    h.mockUseRoute.mockReturnValue({
+      params: { competitionId: competitionRow.id, date: competitionRow.date },
+    });
+
+    const Wrapper = createQueryWrapper();
+    const { findByTestId } = render(<CompetitionTabFormScreen />, { wrapper: Wrapper });
+
+    fireEvent.click(await findByTestId("competition-tab-form-save"));
+
+    await waitFor(() => expect(h.mockGoBack).toHaveBeenCalledTimes(1));
+    expect(h.mockPopTo).not.toHaveBeenCalled();
+    expect(h.mockPopToTop).not.toHaveBeenCalled();
+  });
+
+  it("[移設 BC-5] teamId が空文字 '' (新規作成): クラッシュせず goBack がちょうど1回、popTo/popToTop は0回", async () => {
+    h.mockUseAuth.mockReturnValue({
+      supabase: makeSupabase(makeCompetitionRow()),
+      subscription: null,
+      getAccessToken: vi.fn(async () => "token"),
+    });
+    h.mockUseRoute.mockReturnValue({ params: { date: TODAY_DATE, teamId: "" } });
+
+    const Wrapper = createQueryWrapper();
+    const { findByTestId } = render(<CompetitionTabFormScreen />, { wrapper: Wrapper });
+
+    fireEvent.click(await findByTestId("competition-tab-form-save"));
+
+    await waitFor(() => expect(h.mockGoBack).toHaveBeenCalledTimes(1));
+    expect(h.mockPopTo).not.toHaveBeenCalled();
+    expect(h.mockPopToTop).not.toHaveBeenCalled();
+  });
+
+  it("[移設 SC-10] 保存を1回押したとき popTo/goBack/popToTop の合計がちょうど1回 (多重 pop 防止)", async () => {
+    h.mockUseAuth.mockReturnValue({
+      supabase: makeSupabase(makeCompetitionRow()),
+      subscription: null,
+      getAccessToken: vi.fn(async () => "token"),
+    });
+    h.mockUseRoute.mockReturnValue({ params: { date: TODAY_DATE, teamId: "team-migrated-2" } });
+
+    const Wrapper = createQueryWrapper();
+    const { findByTestId } = render(<CompetitionTabFormScreen />, { wrapper: Wrapper });
+
+    fireEvent.click(await findByTestId("competition-tab-form-save"));
+
+    await waitFor(() => expect(h.mockPopTo).toHaveBeenCalledTimes(1));
+    const total =
+      h.mockPopTo.mock.calls.length +
+      h.mockGoBack.mock.calls.length +
+      h.mockPopToTop.mock.calls.length;
+    expect(total).toBe(1);
   });
 });

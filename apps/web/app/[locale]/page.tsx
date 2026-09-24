@@ -129,6 +129,7 @@ export default async function Home({
       {/* 白band: Pricing + Services */}
       <div style={{ background: "var(--lp-panel)" }}>
         <LpPricing
+          locale={locale}
           t={{
             label: t("pricing.label"),
             h2: t("pricing.h2"),

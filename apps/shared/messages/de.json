@@ -1615,8 +1615,6 @@
       "calendarSyncFailedMessage": "Die Wettkampfinformationen wurden gespeichert, aber die Synchronisierung mit Ihrem Kalender ist fehlgeschlagen.",
       "saveFailed": "Speichern fehlgeschlagen",
       "deleteFailed": "Löschen fehlgeschlagen",
-      "continueToRecord": "Weiter zur Ergebniseingabe",
-      "continueToEntry": "Weiter zur Meldung",
       "noCompetitions": "Keine Wettkämpfe",
       "selectCompetition": "Wettkampf auswählen",
       "deleteConfirmTitle": "Löschen bestätigen",
@@ -4452,7 +4450,10 @@
       },
       "recordFutureGuard": "Für zukünftige Daten können keine Rennergebnisse eingetragen werden.",
       "competitionEditRestricted": "Nur Team-Admins können die Angaben zu diesem Wettkampf bearbeiten.",
-      "practiceEditRestricted": "Nur Team-Admins können die Angaben zu diesem Training bearbeiten."
+      "practiceEditRestricted": "Nur Team-Admins können die Angaben zu diesem Training bearbeiten.",
+      "permissionCheckFailed": "Deine Bearbeitungsberechtigung konnte nicht geprüft werden. Prüfe die Verbindung und versuche es erneut.",
+      "competitionSaveBlockedNoPermission": "Die Wettkampfdaten konnten nicht gespeichert werden, da die Bearbeitungsberechtigung nicht geprüft werden konnte. Öffne den Bildschirm erneut und versuche es noch einmal.",
+      "practiceSaveBlockedNoPermission": "Die Trainingsdaten konnten nicht gespeichert werden, da die Bearbeitungsberechtigung nicht geprüft werden konnte. Öffne den Bildschirm erneut und versuche es noch einmal."
     },
     "premium": {
       "upgradeText": "Auf Premium upgraden",

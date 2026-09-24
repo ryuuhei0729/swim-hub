@@ -149,12 +149,15 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - api/* (Route Handlers; ロケールリダイレクトと Supabase 認証 chain を通さない)
-     * - guide/* (public/ 配下の静的な利用ガイド HTML; ロケールプレフィックスを付けない)
+     * - api/* (Route Handlers; ロケールリダイレクトと Supabase 認証 chain を通さない)。
+     *   guide と同じく境界 (?:/|$) が必須 — "api" だけだと /apiary 等も素通りする
+     * - guide.html / guide/* (public/ 配下の静的な利用ガイド; ロケールプレフィックスを
+     *   付けない)。境界 (?:\.html|/) は必須: 単に "guide" と書くと前方一致のため
+     *   /guidelines 等 "guide" で始まる任意のパスが認証チェックごと素通りする
      * - 静的アセット (画像・フォント・json)
      *   除外し忘れると next-intl がロケールを付けてリダイレクトし 404 になる
      *   (public/manifest.json と public/fonts/dseg/*.woff2 が実際に 404 していた)
      */
-    "/((?!_next/static|_next/image|favicon.ico|api|guide|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|woff|woff2)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|api(?:/|$)|guide(?:\\.html|/)|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|woff|woff2)$).*)",
   ],
 };

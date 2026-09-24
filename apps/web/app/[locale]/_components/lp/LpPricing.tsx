@@ -1,4 +1,10 @@
 interface LpPricingProps {
+  /**
+   * 現在の locale。href に必ず埋める。
+   * localePrefix: "always" なので省くとリダイレクトになり、
+   * 固定値を書くと他言語の閲覧者が強制的にその言語へ飛ばされる。
+   */
+  locale: string;
   t: {
     label: string;
     h2: string;
@@ -52,7 +58,7 @@ function CornerDiamonds({ color = "var(--lp-royal)" }: { color?: string }) {
  * Free / Premium の2カラムプランカード。
  * Premium は navy 反転。
  */
-export default function LpPricing({ t }: LpPricingProps) {
+export default function LpPricing({ locale, t }: LpPricingProps) {
   return (
     <section
       id="pricing"
@@ -194,7 +200,7 @@ export default function LpPricing({ t }: LpPricingProps) {
               whiteSpace:nowrap のまま overflow させずに収めるため。0.22em だと
               1カラム表示(~960px)で de テキストがカード幅を超えてしまう。 */}
           <a
-            href="https://swim-hub.app/ja/signup"
+            href={`/${locale}/signup`}
             style={{
               display: "flex",
               alignItems: "center",
@@ -297,7 +303,7 @@ export default function LpPricing({ t }: LpPricingProps) {
             ))}
           </ul>
           <a
-            href="https://swim-hub.app/ja/signup"
+            href={`/${locale}/signup`}
             style={{
               display: "flex",
               alignItems: "center",
@@ -325,7 +331,7 @@ export default function LpPricing({ t }: LpPricingProps) {
 
       {/* 詳細リンク */}
       <a
-        href="https://swim-hub.app/ja/pricing"
+        href={`/${locale}/pricing`}
         style={{
           display: "table",
           margin: "36px auto 0",

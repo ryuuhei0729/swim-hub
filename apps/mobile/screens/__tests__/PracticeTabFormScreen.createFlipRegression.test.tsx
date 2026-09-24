@@ -88,6 +88,8 @@ const mocks = vi.hoisted(() => {
     updateLogMutateAsync: vi.fn(),
     currentUserId: "admin-9801" as string,
     useTeamMembersQuery: vi.fn(),
+    refetchTeamMembers: vi.fn(),
+    useTeamMembersQueryCalls: [] as Array<string | undefined>,
     imagePathsResponses,
     supabase: makeSupabase(),
     // ImageUploader モックのボタンから発火する固定 fixture
@@ -150,7 +152,14 @@ vi.mock("@/contexts/AuthProvider", () => ({
 }));
 
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamMembersQuery: mocks.useTeamMembersQuery,
+  useTeamMembersQuery: (_supabase: unknown, teamId: string | undefined) => {
+    // 実物の useTeamMembersQuery は data/isLoading/**isError**/**refetch** を返す。
+    // テストが明示しなかったフィールドは既定値 (正常系) で埋める。undefined のまま
+    // 返すと D12 で追加された isError 分岐が「たまたま falsy」で通ってしまい、
+    // 退行を検出できないテストになる (大会側で同じ修正をしたのと同じ理由)。
+    mocks.useTeamMembersQueryCalls.push(teamId);
+    return { isError: false, refetch: mocks.refetchTeamMembers, ...mocks.useTeamMembersQuery(teamId) };
+  },
 }));
 
 vi.mock("@apps/shared/hooks/queries/practices", () => ({

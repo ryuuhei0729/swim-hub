@@ -222,14 +222,11 @@ export function findLinkedRowDraftId(
  * これが非空文字なら TeamDetail の大会タブへ戻す対象、そうでなければ個人フロー
  * (ダッシュボード起点) とみなす。
  *
- * 個人フロー (`teamId` なし) 時のフォールバックは呼び出し画面によって異なる:
- * - `CompetitionBasicFormScreen` は元々 `popToTop()` (ダッシュボードまで戻す)
- *   だったため、`options.fallback` 省略時は従来通り `popToTop` を返す
- *   (既存呼び出し元の挙動を変えないため)。
- * - `CompetitionTabFormScreen` は中間に別画面を挟まず直接開かれる経路 (ダッシュ
- *   ボード日次詳細・個人の大会一覧等) が主であり、元々 `goBack()` で正しく戻れて
- *   いた。ここを `popToTop` に変えるのは今回のスコープ外の挙動変更になるため、
- *   `options.fallback: "goBack"` を明示的に渡してもらう。
+ * 個人フロー (`teamId` なし) 時のフォールバックは呼び出し画面が `options.fallback` で
+ * 指定する。省略時は `popToTop` (この関数が導入された時点の既定値)。
+ * `CompetitionTabFormScreen` は中間に別画面を挟まず直接開かれる経路 (ダッシュボード
+ * 日次詳細・個人の大会一覧等) が主であり `goBack()` で正しく戻れるため、
+ * `options.fallback: "goBack"` を明示的に渡している。
  *
  * @param teamId 大会フォームの route.params.teamId。個人フローでは undefined。
  * @param options.fallback 個人フロー時のフォールバック種別 (省略時 "popToTop")

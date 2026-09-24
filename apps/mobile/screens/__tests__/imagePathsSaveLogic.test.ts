@@ -9,8 +9,8 @@
  *            既存 image_paths が失われないこと（データ損失回避の核心）。
  *   [IMG-03] 削除フロー (deletedImageIds) が生パスに対して正しく効くこと。
  *
- * 対象: CompetitionBasicFormScreen / RecordFormScreen / PracticeTabFormScreen /
- *       CompetitionTabFormScreen の4画面の保存ハンドラが共通で呼ぶ実装
+ * 対象: RecordFormScreen / PracticeTabFormScreen / CompetitionTabFormScreen の
+ *       3画面の保存ハンドラが共通で呼ぶ実装
  *       `mergeImagePaths` (apps/mobile/utils/imageUpload.ts) を直接検証する。
  */
 

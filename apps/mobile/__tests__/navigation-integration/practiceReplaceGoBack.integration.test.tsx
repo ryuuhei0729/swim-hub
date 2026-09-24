@@ -6,9 +6,9 @@
  *   ユーザー報告は「大会や練習」の両方に言及しているが、静的調査 (grep) 当時
  *   apps/mobile 全体で `navigation.popToTop()` の呼び出しは
  *   CompetitionBasicFormScreen.tsx / EntryLogFormScreen.tsx / RecordLogFormScreen.tsx の
- *   3箇所のみだった。その後 EntryLogFormScreen.tsx はリダイレクトシム化、
- *   RecordLogFormScreen.tsx は削除済みで、現在 popToTop() を呼ぶのは
- *   CompetitionBasicFormScreen.tsx / CompetitionTabFormScreen.tsx の2箇所のみ (実測)。
+ *   3箇所だった。その後 EntryLogFormScreen.tsx と CompetitionBasicFormScreen.tsx は
+ *   リダイレクトシム化、RecordLogFormScreen.tsx は削除済みで、現在 popToTop() を
+ *   呼ぶのは CompetitionTabFormScreen.tsx のみ (実測)。
  *   一方、練習系画面 (PracticeFormScreen / PracticeTabFormScreen /
  *   PracticeLogFormScreen / TeamPracticeLogBulkFormScreen) は当時から例外なく `goBack()`
  *   のみを使う (StackActions.reset 等も含め、練習側に popToTop 相当の呼び出しは一切無い。

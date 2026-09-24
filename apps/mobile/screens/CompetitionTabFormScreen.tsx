@@ -31,12 +31,14 @@ import {
 } from "@apps/shared/hooks/queries/records";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
+import { useTeamMembersQuery } from "@apps/shared/hooks/queries/teams";
 import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { ErrorView } from "@/components/layout/ErrorView";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
@@ -82,6 +84,14 @@ type CompetitionTabFormRouteProp = RouteProp<MainStackParamList, "CompetitionTab
 type CompetitionTabFormNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 type CompetitionTab = "competition" | "entry" | "record";
+
+// タブラベルの i18n キー。タブ一覧 (visibleTabs) から FormTabBar 用の配列を組み立てる
+// ときだけ使う。
+const COMPETITION_TAB_LABEL_KEYS: Record<CompetitionTab, string> = {
+  competition: "competition.form.tabCompetition",
+  entry: "competition.form.tabEntry",
+  record: "competition.form.tabRecord",
+};
 
 // ---- プール種別 ----
 type PoolTypeOption = { value: number; labelKey: string };
@@ -185,8 +195,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
     teamId,
     initialTab,
     targetEntryId,
+    origin,
   } = route.params;
-  const { supabase, subscription, getAccessToken } = useAuth();
+  const { supabase, user: authUser, subscription, getAccessToken } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -262,11 +273,38 @@ export const CompetitionTabFormScreen: React.FC = () => {
   }, []);
 
   // ---- タブ state ----
-  // エントリータブ表示制御: 大会日付が未来のときのみ true
-  const showEntryTab = isEntryTabVisible(date);
-  // レコードタブ表示制御: showEntryTab の補完（今日・過去・空/不正 → true、未来 → false）
-  const showRecordTab = !isEntryTabVisible(date);
+  // visibleTabs はタブバー・フッターの前後タブ・バリデーションの遷移先・保存対象の
+  // 唯一の定義元。タブバーの表示だけを絞ると validateAll がタブバーに無いタブへ
+  // setActiveTab し (どのタブも選択状態にならないままコンテンツだけが描画される)、
+  // handleSave が画面に出していないタブのデータを書き込む。
+  //
+  // origin === "teamAdmin" (チーム管理者ビューの追加/編集導線) では大会タブのみ。
+  // エントリー/記録は一覧画面の一括エントリー・一括記録・エントリー受付モーダルへ
+  // 一本化した。
+  // 絞り込みは origin のみに依存させ、編集権限判定 (canEditCompetitionDetails:
+  // origin と実 admin 判定の AND) とは混ぜない。混ぜると非 admin のときだけ
+  // タブ構成が変わるという説明できない UI になる。
+  const visibleTabs = useMemo((): CompetitionTab[] => {
+    if (origin === "teamAdmin") return ["competition"];
+    const result: CompetitionTab[] = ["competition"];
+    if (isEntryTabVisible(date)) result.push("entry");
+    result.push("record");
+    return result;
+  }, [origin, date]);
+  // エントリータブ表示制御: タブバーにエントリータブがあるとき (= 大会日付が未来で
+  // かつチーム管理者ビューでない) のみ true
+  const showEntryTab = visibleTabs.includes("entry");
+  // レコードタブ表示制御: タブバーにレコードタブがあり、かつ大会日付が未来でないときのみ true。
+  // レコードタブは未来日でもタブバーには残り (中身はガードメッセージ)、
+  // チーム管理者ビューではタブごと消える。この差があるため visibleTabs の
+  // 包含だけでは決まらない。
+  const showRecordTab = visibleTabs.includes("record") && !isEntryTabVisible(date);
   const [activeTab, setActiveTab] = useState<CompetitionTab>(() => {
+    // チーム管理者ビューは大会タブしか存在しないので initialTab を無視して固定する。
+    // useState の初期化関数は初回レンダーでのみ評価されるため、ここで分岐せず
+    // useEffect で後から setActiveTab すると1フレームだけ存在しないタブが
+    // 選択された状態が描画される。
+    if (origin === "teamAdmin") return "competition";
     const requested = initialTab ?? "competition";
     // エントリータブが非表示なのにrequested="entry"の場合は"competition"に戻す
     if (requested === "entry" && !isEntryTabVisible(initialDateParam || "")) {
@@ -318,12 +356,71 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const replaceSplitTimesMutation = useReplaceSplitTimesMutation(supabase);
 
   // ---- 大会の編集権限判定 ----
-  // 個人画面 (dashboard/大会タブ) では、チーム大会の basicData は admin であっても
-  // 編集不可 (Sprint Contract 2)。team_id の有無のみで判定し、admin 判定は使わない。
+  // 以下、origin === "teamAdmin" の判定が3箇所に現れる (このフック引数 /
+  // isResolvingCompetitionPermission / isCompetitionPermissionUnavailable)。
+  // 冗長に見えるが、それぞれが守る対象は別で、どれか1つを消すと別の1つが肩代わりする
+  // 一方、フック引数と後2者の両方を消すと個人フローで ErrorView が出るようになる
+  // (origin 無しでも fetch が走り、その失敗が画面全体のエラー表示に化ける)。
+  //   - フック引数: 不要な team_memberships フェッチを発生させない
+  //   - isResolvingCompetitionPermission: 答えが変わらない待ちでスピナーを出さない
+  //   - isCompetitionPermissionUnavailable: 個人フローの fetch 失敗を ErrorView にしない
+  // 消してよいのは「フック引数を残したまま後2者のどちらかを消す」か
+  // 「後2者を両方残したままフック引数を消す」場合だけ。
+  //
+  // teamId を渡すのは origin === "teamAdmin" のときだけ。それ以外の経路では
+  // canEditCompetitionDetails が competitionTeamId の有無だけで確定し、メンバー一覧の
+  // 取得結果は一切使われない。無条件に渡すと、ダッシュボード/カレンダーから他人の
+  // チーム大会を開いただけで、そのチームの非メンバーでも team_memberships への
+  // list クエリが飛ぶ。
+  const {
+    data: competitionTeamMembers,
+    isLoading: isCompetitionTeamMembersLoading,
+    isError: isCompetitionTeamMembersError,
+    refetch: refetchCompetitionTeamMembers,
+  } = useTeamMembersQuery(
+    supabase,
+    origin === "teamAdmin" ? (competitionTeamId ?? undefined) : undefined,
+  );
+  const isCurrentUserCompetitionTeamAdmin = useMemo(() => {
+    if (!authUser || !competitionTeamId || !competitionTeamMembers) return false;
+    // TeamMember.user_id は users.id (membership の id ではない)
+    return competitionTeamMembers.some((m) => m.user_id === authUser.id && m.role === "admin");
+  }, [authUser, competitionTeamId, competitionTeamMembers]);
+
+  // 個人画面 (dashboard/大会タブ・カレンダー) では、チーム大会の基本情報は admin で
+  // あっても編集不可。ただし「チーム管理者ビュー (管理者の追加/鉛筆ボタン)」経由の
+  // 編集は route params の origin==="teamAdmin" で明示され、かつ実際に当該チームの
+  // admin である場合のみ許可する。origin だけで許可すると UI が RLS より広くなり、
+  // 非 admin に編集可能なフォームと保存ボタンを見せた末に、RLS 拒否で 0 行 UPDATE →
+  // RecordAPI.updateCompetition の .select().single() が PGRST116 を throw して
+  // 「保存に失敗しました」で終わる。入力を最後まで書かせてから失敗させる UI になる。
+  // 作成者本人 (owner) 判定は使わない (チーム大会の基本情報はチームの持ち物)。
   const canEditCompetitionDetails = useMemo(() => {
     if (!isEditMode) return true; // 新規作成は常に自分の大会
-    return !competitionTeamId; // チーム大会は個人画面から編集不可
-  }, [isEditMode, competitionTeamId]);
+    if (!competitionTeamId) return true; // 個人の大会は常に自分のもの
+    return origin === "teamAdmin" && isCurrentUserCompetitionTeamAdmin;
+  }, [isEditMode, competitionTeamId, origin, isCurrentUserCompetitionTeamAdmin]);
+  // チーム大会の編集権限確定待ち (未確定のまま編集可能 UI / バナー / 保存ボタンを
+  // 出さないためのローディングガード)。
+  // origin === "teamAdmin" のときだけ待つ: origin 無しの経路では
+  // canEditCompetitionDetails が competitionTeamId の有無だけで false に確定し、
+  // チームメンバーの取得結果は答えを変えない。答えが変わり得ない待ちで全画面
+  // スピナーを出すと、ダッシュボード/カレンダーからチーム大会を開いたときに
+  // 制限バナー付きフォームの表示が無意味に遅れる。
+  // PracticeTabFormScreen の isResolvingPracticePermission は origin を見ない。
+  // こちらは既にリリース済みの挙動をテストが固定しているため今回は追従させず、
+  // 別債務として残す。
+  const isResolvingCompetitionPermission =
+    origin === "teamAdmin" && isEditMode && !!competitionTeamId && isCompetitionTeamMembersLoading;
+  // 権限判定に必要なメンバー一覧の取得が失敗した状態。
+  // isError のときは isLoading=false / data=undefined になるため、放置すると
+  // isCurrentUserCompetitionTeamAdmin が false に倒れ、正規の管理者に制限バナーと
+  // 読み取り専用フォームが出たまま「保存して終了」が押せてしまう。その保存は
+  // 基本情報の更新をスキップし (canEditCompetitionDetails=false)、エントリー/
+  // レースレコードもタブごと非表示でスキップされるため、1件も書かずに画面が閉じて
+  // ユーザーには成功と区別がつかない。権限が確定できないことを明示して再試行させる。
+  const isCompetitionPermissionUnavailable =
+    origin === "teamAdmin" && isEditMode && !!competitionTeamId && isCompetitionTeamMembersError;
 
   // ---- EntryAPI ----
   const entryApi = useMemo(() => new EntryAPI(supabase), [supabase]);
@@ -618,20 +715,20 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // effect 経由で呼ぶことで、preventRemove=false が確定した状態で REMOVE を発行する
   // (popTo も REMOVE 系アクションのため同じ制約を受ける)。
   //
-  // チーム大会フロー (CompetitionBasicFormScreen の「続けてエントリー/記録を作成」
-  // 経由で push される) は goBack() だけだと中間に挟まった CompetitionBasicFormScreen
-  // (保存済みの基本情報フォーム) に戻ってしまう。route.params.teamId (state 化した
-  // competitionTeamId ではなく生の route パラメータ) があれば popTo("TeamDetail") で
-  // 一気に戻す。competitionTeamId は既存データ取得後に competitions.team_id で
+  // チーム大会フロー (TeamCompetitionList の「追加」/「編集」から CompetitionForm
+  // 経由で replace されて開かれる) は goBack() だけだと TeamDetail まで戻れない。
+  // route.params.teamId (state 化した competitionTeamId ではなく生の route パラメータ)
+  // があれば popTo("TeamDetail") で一気に戻す。
+  // competitionTeamId は既存データ取得後に competitions.team_id で
   // 上書きされるため (competitionTeamId の初期化コメント参照)、ダッシュボード発の個人フローで
   // 「たまたまチームの大会を編集した」場合にも非 null になりうる。その場合に
   // popTo してしまうと来歴に無い TeamDetail へ誤って飛ばす。route.params.teamId は
-  // TeamCompetitionList / CompetitionBasicFormScreen の「続けて〜」経路でのみ渡され
-  // (useDayDetailHandlers 経由の個人フローでは渡らない)、スタック上に TeamDetail が
-  // 実在することの唯一の信頼できる手がかりのためこちらを使う。
-  // 個人フロー (中間画面を挟まない) は従来通り goBack() のままとする
-  // (resolveSaveReturnTarget の fallback: "goBack" で明示指定。省略時の popToTop は
-  // 他画面 (CompetitionBasicFormScreen 等) 向けの既定値のため)。
+  // TeamCompetitionList 発の経路でのみ渡され (useDayDetailHandlers 経由の個人フローでは
+  // 渡らない)、スタック上に TeamDetail が実在することの唯一の信頼できる手がかりのため
+  // こちらを使う。
+  // 個人フローは従来通り goBack() のままとする
+  // (resolveSaveReturnTarget の fallback: "goBack" で明示指定)。
+  // teamId が空文字のときもこの fallback により goBack となる。
   useEffect(() => {
     if (!isSaved) return;
     const target = resolveSaveReturnTarget(teamId, { fallback: "goBack" });
@@ -647,6 +744,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // ---- 破棄確認 ----
   // snapshotRef の更新は必ず対応する state 変更を伴わせること (伴わないと memo が再計算されず stale になる)
   const changedFromSnapshot = useMemo(() => {
+    // スナップショット未確定 (ロード前) は「未変更」に倒す。比較対象が無い状態で
+    // 変更ありにすると、まだ何も入力していない画面を閉じるだけで破棄ダイアログが出る。
+    // handleSave の competitionBasicChanged は同じ null を逆向き (変更あり) に倒して
+    // いる。あちらは取りこぼすと入力が無言で消えるため。判定の目的が違うので向きも違う。
     if (!snapshotRef.current) return false;
     return hasUnsavedChanges(
       { date, endDate, title, place, poolType, note: competitionNote, entries, records },
@@ -796,16 +897,19 @@ export const CompetitionTabFormScreen: React.FC = () => {
       setActiveTab("competition");
       return false;
     }
-    if (!entryValid && showEntryTab) {
+    // タブバーに存在しないタブへ setActiveTab しないこと。飛ばすとどのタブも選択状態に
+    // ならないまま、そのタブのコンテンツだけが描画される。遷移可否は visibleTabs
+    // (タブ一覧の唯一の定義元) で判定する。
+    if (!entryValid && visibleTabs.includes("entry")) {
       setActiveTab("entry");
       return false;
     }
-    if (!recordValid) {
+    if (!recordValid && visibleTabs.includes("record")) {
       setActiveTab("record");
       return false;
     }
     return true;
-  }, [validateCompetitionTab, validateEntryTab, validateRecordTab, showEntryTab]);
+  }, [validateCompetitionTab, validateEntryTab, validateRecordTab, visibleTabs]);
 
   // ---- 保存ハンドラ ----
   const handleSave = useCallback(async () => {
@@ -825,13 +929,63 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
       let savedCompetitionId = resolvedCompetitionId;
 
+      // --- 編集不可なのに基本情報が変わっている場合は「何も書かずに成功」を防ぐ ---
+      // チーム管理者ビューではエントリー/レースレコードのタブが無く、書き込み対象は
+      // 基本情報だけになる。その基本情報が canEditCompetitionDetails=false でスキップ
+      // されると handleSave は1件も書かずに setIsSaved(true) まで到達し、画面が閉じて
+      // ユーザーには保存成功と区別がつかない。フィールドは disabled なので通常は
+      // ここに到達しないが、編集中に権限判定が true→false へ変わった場合 (キャッシュ
+      // ヒットで編集を始めた後に refetch が失敗する等) に入力が無言で捨てられる。
+      // スナップショット未確定 (ロード前) は「変更あり」に倒す。比較対象が無いまま
+      // 未変更と見なすと、編集不可の状態で保存を素通しして無言の no-op 保存になる。
+      // 破棄確認の changedFromSnapshot は同じ null を逆向き (未変更) に倒している。
+      // あちらは誤検知するとユーザーを不要なダイアログで煩わせるため。
+      const savedSnapshot = snapshotRef.current;
+      const competitionBasicChanged =
+        !savedSnapshot ||
+        // hasUnsavedChanges は JSON.stringify 同士の文字列比較なので、下2つのリテラルは
+        // キーの並び順まで揃えること (順序が食い違うと値が同じでも常に差分ありになり、
+        // 個人フローの非 admin がチーム大会のエントリー/記録を保存できなくなる)。
+        hasUnsavedChanges(
+          { date, endDate, title, place, poolType, note: competitionNote },
+          {
+            date: savedSnapshot.date,
+            endDate: savedSnapshot.endDate,
+            title: savedSnapshot.title,
+            place: savedSnapshot.place,
+            poolType: savedSnapshot.poolType,
+            note: savedSnapshot.note,
+          },
+        ) ||
+        newImageFiles.length > 0 ||
+        deletedImageIds.length > 0;
+      if (
+        isEditMode &&
+        savedCompetitionId &&
+        !canEditCompetitionDetails &&
+        competitionBasicChanged
+      ) {
+        setSaveError(t("forms.tabModal.competitionSaveBlockedNoPermission"));
+        return;
+      }
+
       // --- 大会 INSERT or UPDATE ---
       if (isEditMode && savedCompetitionId) {
         // 更新: チーム大会かつ自分がオーナーでも管理者でもない場合は competitions
         // UPDATE RLS (user_id = auth.uid() OR is_team_admin) を満たさず 0 行ヒットで
         // 例外になる。その場合は大会本体の更新をスキップし、エントリー/レコード
         // (records の RLS は本人所有で許可される) の保存へ進む。
-        if (canEditCompetitionDetails) {
+        // isResolvingCompetitionPermission は「このチームの members をまだ一度も取得
+        // できていない」間だけ true になる防御で、画面全体のローディング表示が Save
+        // ボタンの描画自体をブロックする経路を保存ハンドラ側でも二重に塞ぐ
+        // (PracticeTabFormScreen の同名ガードと同型)。
+        // 【カバーしない経路】useTeamMembersQuery は staleTime: 5分 (apps/shared/hooks/
+        // queries/teams.ts) を持つため、直近5分以内に同じチームの members を取得済みだと
+        // isLoading=false・stale なキャッシュ値 (例: 剥奪前の admin=true) が返る。
+        // その場合このガードは効かないが、competitions UPDATE は実際の RLS で評価され、
+        // RecordAPI.updateCompetition の .select().single() が 0 行時に PGRST116 を
+        // throw するため、権限昇格や無言のデータ損失には至らない。
+        if (canEditCompetitionDetails && !isResolvingCompetitionPermission) {
           let newImagePaths: string[] = [];
           if (newImageFiles.length > 0) {
             const uploadResults = await uploadImagesViaApi(
@@ -933,7 +1087,26 @@ export const CompetitionTabFormScreen: React.FC = () => {
         }
       }
 
-      // --- エントリー保存 (大会日付が未来のときのみ) ---
+      // --- エントリー保存 (エントリータブを表示しているときのみ) ---
+      // 【画面に出していないタブのデータをどう扱うかの決定】
+      // 画面に出していないタブのデータは保存対象から「外す」。書き込みも削除もしない。
+      // 理由: チーム管理者ビュー (origin==="teamAdmin") ではエントリー/レースレコードの
+      // タブごと画面から消える。判定はすべて visibleTabs 由来だが、参照する式は箇所ごとに
+      // 違うので実態を書き残す:
+      //   - validate の中身とこの保存ブロック: showEntryTab / showRecordTab
+      //   - validate の遷移先 (setActiveTab): visibleTabs.includes("entry") /
+      //     visibleTabs.includes("record")
+      //   - entry コンテンツの描画: activeTab === "entry" && showEntryTab
+      //   - record コンテンツの描画: activeTab === "record" && visibleTabs.includes("record")
+      // コンテンツ描画で entry と record の形が違うのは意図的:
+      // showEntryTab は visibleTabs.includes("entry") の別名 (定義が完全に同値) なので
+      // どちらを書いても同じだが、showRecordTab は visibleTabs.includes("record") に
+      // && !isEntryTabVisible(date) が付いていて同値ではない。record コンテンツで
+      // showRecordTab を使うと、タブは存在する未来日でガードメッセージごと消えてしまう。
+      // ユーザーが見ても触ってもいない state を
+      // 書き込むと、フォームの初期値 (デフォルト1行) が意図しない登録になり、逆に
+      // 差分計算を通すと既存のエントリー/記録が「画面上で削除された」と解釈されて
+      // 消える。ブロックごとスキップすれば既存データは DB にそのまま残る。
       // 未編集のデフォルト行 (種目取得後に自動セットされた1行目が未操作のまま) は
       // 保存対象から除外する。編集モードの既存行 (existingEntryId あり) は対象外。
       const effectiveEntries = entries.filter(
@@ -1009,8 +1182,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
         }
       }
 
-      // --- レースレコード保存 (大会日付が今日以前のときのみ) ---
+      // --- レースレコード保存 (レースレコードタブを表示しているときのみ) ---
       // diffRecordDraft が単一の権威となり creates/updates/deletes を決定する。
+      // タブを表示していないとき (未来日 / チーム管理者ビュー) はブロックごとスキップし、
+      // 既存レコードに触れない (上のエントリー保存と同じ決定)。
       if (savedCompetitionId && showRecordTab) {
         // プールタイプを取得
         const { data: competitionForPool } = await supabase
@@ -1140,6 +1315,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     resolvedCompetitionId,
     isEditMode,
     canEditCompetitionDetails,
+    isResolvingCompetitionPermission,
     date,
     endDate,
     title,
@@ -1792,31 +1968,21 @@ export const CompetitionTabFormScreen: React.FC = () => {
   }, []);
 
   // ---- タブ定義 ----
-  const tabs = useMemo((): FormTab<CompetitionTab>[] => {
-    const result: FormTab<CompetitionTab>[] = [
-      { id: "competition", label: t("competition.form.tabCompetition"), hasError: tabErrors.competition },
-      { id: "record", label: t("competition.form.tabRecord"), hasError: tabErrors.record },
-    ];
-    if (showEntryTab) {
-      // エントリータブは「大会」と「レコード」の間に挿入
-      result.splice(1, 0, {
-        id: "entry",
-        label: t("competition.form.tabEntry"),
-        hasError: tabErrors.entry,
-      });
-    }
-    return result;
-  }, [t, tabErrors, showEntryTab]);
+  // 表示するタブ・順序は visibleTabs が唯一の定義元。ここでラベルとエラーバッジだけを
+  // 付ける (タブ一覧を別途組み立てるとタブバーとフッターの前後タブが食い違う)。
+  const tabs = useMemo(
+    (): FormTab<CompetitionTab>[] =>
+      visibleTabs.map((id) => ({
+        id,
+        label: t(COMPETITION_TAB_LABEL_KEYS[id]),
+        hasError: tabErrors[id],
+      })),
+    [visibleTabs, t, tabErrors],
+  );
 
   // ---- フッターボタン用の前後タブ ----
   // record タブは showRecordTab=false (=未来日でエントリー表示中) のときガードする
   // (「次に進む」で無意味な非表示タブへ誘導しないため)
-  const visibleTabs = useMemo((): CompetitionTab[] => {
-    const result: CompetitionTab[] = ["competition"];
-    if (showEntryTab) result.push("entry");
-    result.push("record");
-    return result;
-  }, [showEntryTab]);
   const { prevTab, nextTab } = useMemo(
     () =>
       getTabNavAdjacency<CompetitionTab>(visibleTabs, activeTab, {
@@ -1827,7 +1993,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
   );
 
   // ---- ローディング ----
-  if (loadingExisting || loadingStyles) {
+  if (loadingExisting || loadingStyles || isResolvingCompetitionPermission) {
     return (
       <View style={styles.container}>
         <LoadingSpinner fullScreen message={t("competition.mobile.loadingInfo")} />
@@ -1835,10 +2001,32 @@ export const CompetitionTabFormScreen: React.FC = () => {
     );
   }
 
+  // ---- 権限の確定に失敗 ----
+  // フォームを出さずに再試行させる。編集可能かどうかが決まらないまま保存ボタンを
+  // 見せると、1件も書き込まないまま画面が閉じる経路に入る
+  // (isCompetitionPermissionUnavailable の定義コメント参照)。
+  if (isCompetitionPermissionUnavailable) {
+    return (
+      <View style={styles.container}>
+        <ErrorView
+          message={t("forms.tabModal.permissionCheckFailed")}
+          fullScreen
+          onRetry={() => {
+            void refetchCompetitionTeamMembers();
+          }}
+        />
+      </View>
+    );
+  }
+
   return (
     <FormKeyboardAvoidingView style={styles.container}>
-      {/* タブバー */}
-      <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="competition" />
+      {/* タブバー: タブが1本しかないときは描画しない (画面の判別はヘッダータイトルで足りる)。
+          述語はタブ一覧 visibleTabs から導出する (origin を直接見ると絞り込みの定義元が
+          2箇所になり、片方だけ更新されて静かに食い違う) */}
+      {visibleTabs.length > 1 && (
+        <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="competition" />
+      )}
 
       {/* エラーバナー */}
       {saveError && (
@@ -2214,7 +2402,9 @@ export const CompetitionTabFormScreen: React.FC = () => {
         )}
 
         {/* ---- レースレコードタブ ---- */}
-        {activeTab === "record" && (
+        {/* visibleTabs を見るのは、タブバーに無いタブのコンテンツを描画しないため。
+            showRecordTab だとタブが存在する未来日でガードメッセージごと消えて退行する */}
+        {activeTab === "record" && visibleTabs.includes("record") && (
           <View style={styles.form}>
             {!showRecordTab && (
               <View style={styles.guardMessage}>

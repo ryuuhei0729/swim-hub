@@ -83,6 +83,11 @@ export type MainStackParamList = {
     competitionId?: string;
     date: string;
     teamId?: string;
+    /**
+     * チーム管理者ビューの編集導線から来たことを示す。個人画面からは決して渡さない。
+     * `teamId` の有無を代わりのシグナルに使ってはならない。
+     */
+    origin?: "teamAdmin";
   };
   /** 大会タブ統合フォーム(個人フロー) */
   CompetitionTabForm: {
@@ -97,6 +102,11 @@ export type MainStackParamList = {
      * (index 0) を開く (既存呼び出し元の非退行のため optional)。
      */
     targetEntryId?: string;
+    /**
+     * チーム管理者ビューの編集導線から来たことを示す。個人画面からは決して渡さない。
+     * `teamId` の有無を代わりのシグナルに使ってはならない。
+     */
+    origin?: "teamAdmin";
   };
   EntryForm: {
     competitionId: string;

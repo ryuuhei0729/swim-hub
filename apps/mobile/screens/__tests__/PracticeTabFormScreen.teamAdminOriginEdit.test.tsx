@@ -81,7 +81,12 @@ const mocks = vi.hoisted(() => {
     updateLogMutateAsync: vi.fn(),
     currentUserId: "user-1" as string,
     useTeamMembersQuery: vi.fn(),
+    refetchTeamMembers: vi.fn(),
     useTeamMembersQueryCalls: [] as Array<string | undefined>,
+    // [TAO-11] 書き換え (PM 裁定1) で practice_logs 側の書き込み件数を実測するため、
+    // PracticeAPI のメソッドを hoisted mock に紐付ける。
+    deletePracticeLog: vi.fn(),
+    replacePracticeTimes: vi.fn(),
     supabase: makeSupabase(),
   };
 });
@@ -146,7 +151,11 @@ vi.mock("@/contexts/AuthProvider", () => ({
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useTeamMembersQuery: (_supabase: unknown, teamId: string | undefined) => {
     mocks.useTeamMembersQueryCalls.push(teamId);
-    return mocks.useTeamMembersQuery(teamId);
+    // 実物の useTeamMembersQuery は data/isLoading/**isError**/**refetch** を返す。
+    // テストが明示しなかったフィールドは既定値 (正常系) で埋める。undefined のまま
+    // 返すと D12 で追加された isError 分岐が「たまたま falsy」で通ってしまい、
+    // 退行を検出できないテストになる (大会側で同じ修正をしたのと同じ理由)。
+    return { isError: false, refetch: mocks.refetchTeamMembers, ...mocks.useTeamMembersQuery(teamId) };
   },
 }));
 
@@ -188,8 +197,8 @@ vi.mock("@apps/shared/api/practices", () => ({
     getPracticeById = vi.fn();
     getTeamScopedPracticeById = mocks.getTeamScopedPracticeById;
     getUniquePlaces = mocks.getUniquePlaces;
-    deletePracticeLog = vi.fn();
-    replacePracticeTimes = vi.fn();
+    deletePracticeLog = mocks.deletePracticeLog;
+    replacePracticeTimes = mocks.replacePracticeTimes;
   },
 }));
 
@@ -247,6 +256,36 @@ const teamPracticeFixture = {
   updated_at: "2026-04-10T00:00:00Z",
   practice_logs: [],
 } satisfies PracticeWithLogs;
+
+const EXISTING_LOG_ID = "plog-9706-existing";
+
+/**
+ * [TAO-11 / TAO-11b] 用: 既存 practice_logs を1件持つチーム練習。
+ * 「log 側に書き込む余地がある」状態を作らないと「0件」の assert が
+ * 「そもそも誰も書かない」と区別できないため、対照ケースと同じ fixture を使う。
+ */
+function practiceWithOneLogFixture(): PracticeWithLogs {
+  return {
+    ...structuredClone(teamPracticeFixture),
+    practice_logs: [
+      {
+        id: EXISTING_LOG_ID,
+        practice_id: PRACTICE_ID,
+        style: "Fr",
+        swim_category: "Swim",
+        distance: 100,
+        rep_count: 4,
+        set_count: 1,
+        circle: 90,
+        note: "",
+        video_path: null,
+        video_thumbnail_path: null,
+        practice_times: [],
+        practice_log_tags: [],
+      },
+    ],
+  } as unknown as PracticeWithLogs;
+}
 
 function flushAsync(ms = 300) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -318,6 +357,8 @@ beforeEach(() => {
   mocks.deleteImagesViaApi.mockReset().mockResolvedValue(undefined);
   mocks.updateMutateAsync.mockReset().mockResolvedValue({ id: PRACTICE_ID });
   mocks.useTeamMembersQuery.mockReset().mockReturnValue({ data: [], isLoading: false });
+  mocks.deletePracticeLog.mockReset().mockResolvedValue(undefined);
+  mocks.replacePracticeTimes.mockReset().mockResolvedValue(undefined);
 
   vi.mocked(Alert.alert).mockClear();
 });
@@ -561,10 +602,23 @@ describe("PracticeTabFormScreen — origin=teamAdmin による basicData 編集�
   describe(
     "[SC4 非退行] canEditPracticeLogs (log タブ) は origin の影響を受けない",
     () => {
-      it("[TAO-11] origin=teamAdmin + 一般メンバー: basicData 用の origin は log タブに波及しない (2判定変数が独立していること)", async () => {
+      // ------------------------------------------------------------------
+      // 【Sprint Contract v3 / PM 裁定1 による書き換え】
+      // 旧 [TAO-11] は `testID="practicelog-item-tabs"` (log タブのコンテンツ) を
+      // 観測点にしていたが、D9 で origin==="teamAdmin" のとき log タブごと
+      // 消えたため観測点が失われた。
+      // 検証したい性質 —「basicData 用の origin は log 側の権限に波及しない」
+      // (canEditPracticeDetails と canEditPracticeLogs が独立した2変数である) —
+      // は失われていないので、**UI 描画ではなく保存挙動レベル**で測り直す。
+      //   TAO-11  : origin あり + 一般メンバー → 親も log も書き込み 0 件
+      //   TAO-11b : origin なし + **作成者本人** → 同じデータで log 側の書き込みは起きる
+      // 2つ揃えて初めて「origin を渡しただけでは log 側が開かない」ことが言える
+      // (TAO-11 単独だと「そもそも誰も log を書かない」実装でも green になる)。
+      // ------------------------------------------------------------------
+      it("[TAO-11] origin=teamAdmin + 一般メンバー: 保存しても親 UPDATE も practice_logs の書き込み/削除も0件", async () => {
         mocks.currentUserId = GENERAL_VIEWER_ID;
         mocks.routeParams.origin = "teamAdmin";
-        mocks.routeParams.initialTab = "log";
+        mocks.getTeamScopedPracticeById.mockResolvedValue(practiceWithOneLogFixture());
         mocks.useTeamMembersQuery.mockReturnValue({
           data: [
             { user_id: GENERAL_VIEWER_ID, role: "user" },
@@ -576,13 +630,61 @@ describe("PracticeTabFormScreen — origin=teamAdmin による basicData 編集�
         renderScreen();
 
         await waitFor(() => {
-          expect(screen.getByTestId("practicelog-item-tabs")).toBeTruthy();
+          expect(screen.getByDisplayValue(teamPracticeFixture.title as string)).toBeTruthy();
+        });
+        // basicData 側は origin があっても非 admin なので制限されたまま
+        expect(screen.getByText(EDIT_RESTRICTED_MESSAGE)).toBeTruthy();
+        // log タブは D9 で非表示。UI 上の書き込み導線も存在しない
+        expect(screen.queryByTestId("practicelog-item-tabs")).toBeNull();
+
+        await act(async () => {
+          fireEvent.click(screen.getByTestId("practice-tab-form-save"));
+          await flushAsync();
         });
 
-        // 一般メンバーは owner でも admin でもないため、origin=teamAdmin であっても
-        // log タブの「メニュー追加」ボタンは従来どおり非表示のまま
-        expect(screen.queryByTestId("item-tab-add")).toBeNull();
-        expect(screen.getByText(EDIT_RESTRICTED_MESSAGE)).toBeTruthy();
+        // 件数厳密。親も log も一切書き込まれていない
+        expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(0);
+        expect(mocks.createLogMutateAsync).toHaveBeenCalledTimes(0);
+        expect(mocks.updateLogMutateAsync).toHaveBeenCalledTimes(0);
+        expect(mocks.deletePracticeLog).toHaveBeenCalledTimes(0);
+        expect(mocks.replacePracticeTimes).toHaveBeenCalledTimes(0);
+      });
+
+      it("[TAO-11b / 対照] origin 無し + 作成者本人 (owner): 親 UPDATE は0件のまま、log 側の書き込みだけは起きる", async () => {
+        // canEditPracticeLogs は owner/admin 判定 (origin を見ない) なので、
+        // origin を渡さなくても owner なら log 側は書ける。
+        // → 「log 側の権限は origin とは別の導出である」ことの対照。
+        mocks.currentUserId = OWNER_ID;
+        mocks.routeParams.origin = undefined;
+        mocks.getTeamScopedPracticeById.mockResolvedValue(practiceWithOneLogFixture());
+        mocks.useTeamMembersQuery.mockReturnValue({
+          data: [
+            { user_id: GENERAL_VIEWER_ID, role: "user" },
+            { user_id: OWNER_ID, role: "user" },
+          ],
+          isLoading: false,
+        });
+
+        renderScreen();
+
+        await waitFor(() => {
+          expect(screen.getByDisplayValue(teamPracticeFixture.title as string)).toBeTruthy();
+        });
+
+        await act(async () => {
+          fireEvent.click(screen.getByTestId("practice-tab-form-save"));
+          await flushAsync();
+        });
+
+        // basicData は origin が無いので更新されない (2変数が独立していることの片側)
+        expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(0);
+        // log 側は owner 権限で書き込みが走る (もう片側)
+        const updatedLogIds = mocks.updateLogMutateAsync.mock.calls.map(
+          (call: unknown[]) => (call[0] as { id: string }).id,
+        );
+        expect(updatedLogIds).toEqual([EXISTING_LOG_ID]);
+        expect(mocks.deletePracticeLog).toHaveBeenCalledTimes(0);
+        expect(mocks.createLogMutateAsync).toHaveBeenCalledTimes(0);
       });
     },
   );

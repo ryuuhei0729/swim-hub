@@ -351,20 +351,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           { usePracticeFormStore },
           { usePracticeFilterStore },
           { usePracticeTimeStore },
-          { useCompetitionFormStore },
           { useRecordStore },
         ] = await Promise.all([
           import("@/stores/practiceFormStore"),
           import("@/stores/practiceFilterStore"),
           import("@/stores/practiceTimeStore"),
-          import("@/stores/competitionFormStore"),
           import("@/stores/recordStore"),
         ]);
 
         usePracticeFormStore.getState().reset();
         usePracticeFilterStore.getState().reset();
         usePracticeTimeStore.getState().reset();
-        useCompetitionFormStore.getState().reset();
         useRecordStore.getState().reset();
       } catch {
         // ストアがまだ読み込まれていない場合は無視
@@ -579,7 +576,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           import("@/stores/practiceFormStore"),
           import("@/stores/practiceFilterStore"),
           import("@/stores/practiceTimeStore"),
-          import("@/stores/competitionFormStore"),
           import("@/stores/recordStore"),
         ])
           .then(
@@ -587,13 +583,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               { usePracticeFormStore },
               { usePracticeFilterStore },
               { usePracticeTimeStore },
-              { useCompetitionFormStore },
               { useRecordStore },
             ]) => {
               usePracticeFormStore.getState().reset();
               usePracticeFilterStore.getState().reset();
               usePracticeTimeStore.getState().reset();
-              useCompetitionFormStore.getState().reset();
               useRecordStore.getState().reset();
             },
           )

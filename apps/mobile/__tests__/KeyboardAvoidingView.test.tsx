@@ -8,7 +8,10 @@
  * - PracticeFormScreen: 既存 ScrollView を維持して KAV でラップ
  * - PracticeLogFormScreen: 既存 ScrollView を維持して KAV でラップ
  * - RecordFormScreen: 既存 ScrollView を維持して KAV でラップ
- * - CompetitionBasicFormScreen: 既存 ScrollView を維持して KAV でラップ
+ * - (旧) CompetitionBasicFormScreen: Sprint Contract v3 D2 でリダイレクトシムに置換され、
+ *   ScrollView も KeyboardAvoidingView も持たなくなった。大会フォームの KAV は
+ *   CompetitionTabFormScreen が FormKeyboardAvoidingView 経由で持つ。
+ *   構造検証は components/forms/__tests__/FormKeyboardAvoidingView.test.tsx が担当する。
  * - EntryLogFormScreen: 既存 ScrollView を維持して KAV でラップ
  * - OnboardingProfile: 既存 ScrollView を維持して KAV でラップ
  *
@@ -130,12 +133,14 @@ describe("KeyboardAvoidingView 適用確認 (Sprint Contract #31)", () => {
   });
 
   // ----------------------------------------------------------
-  // [V-24] CompetitionBasicFormScreen: 既存 ScrollView を維持して KAV でラップ
+  // [V-24] CompetitionBasicFormScreen — Sprint Contract v3 D8 により削除
   // ----------------------------------------------------------
-  describe("CompetitionBasicFormScreen", () => {
-    it.todo("[V-24] CompetitionBasicFormScreen に KeyboardAvoidingView が存在すること");
-    it.todo("[V-24] CompetitionBasicFormScreen の ScrollView が KAV 配下に存在すること");
-  });
+  // D2 で CompetitionBasicFormScreen はリダイレクトシム (LoadingSpinner のみ) になり、
+  // ScrollView も KeyboardAvoidingView も持たない。この2件の it.todo は
+  // 「いつか実装する対象」ではなく**永久に成立しない前提**になったため削除する。
+  // 大会フォームの KAV 構造は CompetitionTabFormScreen が使う
+  // FormKeyboardAvoidingView 側 (components/forms/__tests__/FormKeyboardAvoidingView.test.tsx)
+  // で検証済みであり、カバレッジの純減は無い。
 
   // ----------------------------------------------------------
   // [V-25] EntryLogFormScreen: 既存 ScrollView を維持して KAV でラップ

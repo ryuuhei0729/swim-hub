@@ -101,20 +101,20 @@ export async function updateSession(request: NextRequest) {
   // 認証が必要なルート (locale プレフィックスなしで定義)
   // normalizedPathname と照合する
   // ---------------------------------------------
+  // ここに載せたルートだけが redirect_to 付きでログインへ飛ぶ。載せ忘れても後段の
+  // default-deny フォールバックが認証自体は守るが、redirect_to が付かないため
+  // ログイン後に元 URL へ戻れず dashboard 送りになる (共有されたチーム URL で顕在化する)。
   const protectedRoutes = [
     "/dashboard",
-    "/members",
     "/practice",
-    "/competitions",
-    "/records",
+    "/competition",
     "/goals",
-    "/schedule",
-    "/attendance",
-    "/announcements",
     "/settings",
-    "/profile",
     "/mypage",
     "/onboarding",
+    "/bulk-besttime",
+    "/teams",
+    "/teams-admin",
   ];
 
   // 認証が不要なルート（認証済みユーザーがアクセスした場合はリダイレクト）

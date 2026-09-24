@@ -1615,8 +1615,6 @@
       "calendarSyncFailedMessage": "대회 정보는 저장되었지만 캘린더 동기화에 실패했습니다.",
       "saveFailed": "저장에 실패했습니다",
       "deleteFailed": "삭제에 실패했습니다",
-      "continueToRecord": "이어서 기록 입력",
-      "continueToEntry": "이어서 엔트리 작성",
       "noCompetitions": "대회가 없습니다",
       "selectCompetition": "대회 선택",
       "deleteConfirmTitle": "삭제 확인",
@@ -4452,7 +4450,10 @@
       },
       "recordFutureGuard": "미래 날짜에는 레이스 기록을 등록할 수 없습니다.",
       "competitionEditRestricted": "이 대회 정보는 팀 관리자만 수정할 수 있습니다.",
-      "practiceEditRestricted": "이 연습 정보는 팀 관리자만 수정할 수 있습니다."
+      "practiceEditRestricted": "이 연습 정보는 팀 관리자만 수정할 수 있습니다.",
+      "permissionCheckFailed": "편집 권한을 확인할 수 없습니다. 통신 상태를 확인한 후 다시 시도해 주세요.",
+      "competitionSaveBlockedNoPermission": "편집 권한을 확인할 수 없어 대회 정보를 저장하지 못했습니다. 화면을 다시 열고 시도해 주세요.",
+      "practiceSaveBlockedNoPermission": "편집 권한을 확인할 수 없어 연습 정보를 저장하지 못했습니다. 화면을 다시 열고 시도해 주세요."
     },
     "premium": {
       "upgradeText": "Premium으로 업그레이드",

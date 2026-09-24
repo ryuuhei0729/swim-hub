@@ -2737,3 +2737,192 @@ describe("TeamCompetitionList", () => {
     });
   });
 });
+
+// ===========================================================================
+// [Sprint Contract v3 — D3] 管理者導線の origin: "teamAdmin" 付与
+// ===========================================================================
+// 既存の [S2-V-09] (handleAdd) / 編集アイコンのテストは `expect.objectContaining` で
+// navigate 引数を見ているため、**origin を足しても足さなくても常に PASS する**。
+// D3 (「新規作成側にも必ず origin を付ける」) の検証が現状ゼロなので、
+// ここで `toEqual` の厳密一致 + `hasOwnProperty("origin")` で pin する。
+//
+// なぜ厳密一致にするか: origin は「チーム管理者ビューから来た」ことを示す唯一の
+// シグナルであり、これが欠けると
+//   - フォームのタブが絞られない (SC-1/SC-15)
+//   - 保存直後に isEditMode が flip して自分の入力がグレーアウトし、
+//     続けて編集した内容が無言破棄される (BC-2)
+// という2つの事故が同時に起きる。objectContaining ではこの欠落を検出できない。
+// ---------------------------------------------------------------------------
+describe("TeamCompetitionList — 管理者導線の origin 付与 (Sprint Contract v3 D3)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.useDeleteTeamCompetitionMutation.mockReturnValue(makeMutationMock());
+    mocks.useUpdateCompetitionMutation.mockReturnValue({
+      mutateAsync: mocks.mutateAsync,
+      isPending: false,
+    });
+    mocks.mutateAsync.mockResolvedValue(undefined);
+  });
+
+  /** navigate の (routeName, params) を取り出す。呼ばれていなければ失敗させる。 */
+  function lastNavigateCall(): [string, Record<string, unknown>] {
+    const calls = mocks.navigate.mock.calls as Array<[string, Record<string, unknown>]>;
+    expect(calls.length, "navigation.navigate が一度も呼ばれていない").toBeGreaterThan(0);
+    return calls[calls.length - 1]!;
+  }
+
+  it("[TCL-1] admin の「追加」: CompetitionForm へ { teamId, date, origin:'teamAdmin' } が厳密一致で渡る", () => {
+    mocks.useTeamCompetitionsQuery.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
+
+    const addButtons = screen.getAllByRole("button", { name: "大会を追加" });
+    const headerAddButton = addButtons.find((el) => el.querySelector('[data-testid="icon-plus"]'));
+    expect(headerAddButton, "ヘッダーの追加ボタン(+アイコン付き)が見つからない").toBeDefined();
+    fireEvent.click(headerAddButton!);
+
+    expect(mocks.navigate).toHaveBeenCalledTimes(1);
+    const [routeName, params] = lastNavigateCall();
+    expect(routeName).toBe("CompetitionForm");
+    // date は「今日」が入るため値を固定せず、キー構成と origin の値を厳密に見る
+    expect(Object.keys(params).sort()).toEqual(["date", "origin", "teamId"]);
+    expect(params.teamId).toBe("team-1");
+    expect(params.origin).toBe("teamAdmin");
+    expect(Object.prototype.hasOwnProperty.call(params, "origin")).toBe(true);
+  });
+
+  it("[TCL-2] admin の「編集」(鉛筆): CompetitionForm へ { competitionId, date, teamId, origin:'teamAdmin' } が厳密一致で渡る", () => {
+    const comp = makeCompetition({ id: "c-edit-origin", title: "origin検証大会", date: "2026-08-10" });
+    mocks.useTeamCompetitionsQuery.mockReturnValue({
+      data: [comp],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
+
+    const editButton = screen.getByTestId("icon-edit-2").closest("button");
+    expect(editButton, "編集アイコンの button が見つからない").not.toBeNull();
+    fireEvent.click(editButton as HTMLButtonElement);
+
+    expect(mocks.navigate).toHaveBeenCalledTimes(1);
+    expect(mocks.navigate).toHaveBeenCalledWith("CompetitionForm", {
+      competitionId: "c-edit-origin",
+      date: "2026-08-10",
+      teamId: "team-1",
+      origin: "teamAdmin",
+    });
+  });
+
+  it("[TCL-3 / 対照] 非 admin の自己記録導線には origin が付かない (origin は管理者導線専用のシグナル)", () => {
+    // 過去日 = 非admin には「記録追加」だけが出る (排他表示)
+    const comp = makeCompetition({ id: "c-self-record", title: "非admin記録導線大会", date: PAST_DATE });
+    mocks.useTeamCompetitionsQuery.mockReturnValue({
+      data: [comp],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamCompetitionList teamId="team-1" isAdmin={false} />);
+
+    const recordButton = screen.getByRole("button", {
+      name: resolveJaKey("teams.mobile.teamCompetitionList.recordButton"),
+    });
+    fireEvent.click(recordButton);
+
+    expect(mocks.navigate).toHaveBeenCalledTimes(1);
+    const [routeName, params] = lastNavigateCall();
+    expect(routeName).toBe("CompetitionTabForm");
+    expect(Object.prototype.hasOwnProperty.call(params, "origin")).toBe(false);
+    expect(params).toEqual({
+      competitionId: "c-self-record",
+      date: PAST_DATE,
+      teamId: "team-1",
+      initialTab: "record",
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // [SC-13] R7 (「続けてエントリーを作成」ボタン廃止) の代替導線が生きていること
+  // -------------------------------------------------------------------------
+  // 旧 CompetitionBasicFormScreen の「続けてエントリーを作成」は R2/R7 で廃止された。
+  // 代替は「エントリー受付モーダル → エントリーを代理入力 (TeamEntryBulkForm)」。
+  // この配線を検証するテストは着手前時点で**存在しなかった** (QA 実測) ため、
+  // 旧テスト [SC-4] の移設先としてここに新設する。
+  it("[TCL-4 / SC-13] admin: エントリー受付モーダルの「代理入力」から TeamEntryBulkForm へ { competitionId, teamId } で遷移する", () => {
+    const comp = makeCompetition({ id: "c-bulk-entry", title: "代理エントリー大会", date: FUTURE_DATE });
+    mocks.useTeamCompetitionsQuery.mockReturnValue({
+      data: [comp],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
+
+    // エントリー受付モーダルを開く
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: resolveJaKey("teams.mobile.teamCompetitionList.entryButton"),
+      }),
+    );
+    expect(screen.getByText("ENTRY_MODAL_OPEN")).toBeDefined();
+
+    // モーダルに渡された onAdminBulkEntry (= 代理入力導線) を発火させる
+    const calls = mocks.entryModalSpy.mock.calls as Array<[Record<string, unknown>]>;
+    const lastProps = calls[calls.length - 1]?.[0];
+    expect(lastProps, "TeamCompetitionEntryModal に props が渡っていない").toBeDefined();
+    const onAdminBulkEntry = lastProps!.onAdminBulkEntry as (() => void) | undefined;
+    expect(
+      typeof onAdminBulkEntry,
+      "onAdminBulkEntry が渡っていない (一括エントリーの代替導線が死んでいる)",
+    ).toBe("function");
+
+    act(() => {
+      onAdminBulkEntry!();
+    });
+
+    expect(mocks.navigate).toHaveBeenCalledTimes(1);
+    expect(mocks.navigate).toHaveBeenCalledWith("TeamEntryBulkForm", {
+      competitionId: "c-bulk-entry",
+      teamId: "team-1",
+    });
+  });
+
+  it("[TCL-3b / 対照] admin の「記録代理入力」(TeamRecordBulkForm) にも origin は付かない (別画面のため不要)", () => {
+    const comp = makeCompetition({ id: "c-bulk-record", title: "代理記録大会", date: PAST_DATE });
+    mocks.useTeamCompetitionsQuery.mockReturnValue({
+      data: [comp],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<TeamCompetitionList teamId="team-1" isAdmin={true} />);
+
+    // admin ビューのラベルは recordBulkButton (「記録代理入力」)。非admin の
+    // recordButton (「記録追加」) とは別キーであることに注意。
+    const recordButton = screen.getByRole("button", {
+      name: resolveJaKey("teams.mobile.teamCompetitionList.recordBulkButton"),
+    });
+    fireEvent.click(recordButton);
+
+    expect(mocks.navigate).toHaveBeenCalledTimes(1);
+    expect(mocks.navigate).toHaveBeenCalledWith("TeamRecordBulkForm", {
+      competitionId: "c-bulk-record",
+      teamId: "team-1",
+    });
+  });
+});

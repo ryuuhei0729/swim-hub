@@ -32,6 +32,17 @@ import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
 configure({ testIdAttribute: "testID" });
 
 const h = vi.hoisted(() => ({
+  // [Sprint Contract v3] CompetitionTabFormScreen が canEditCompetitionDetails の
+  // 判定のために useTeamMembersQuery を呼ぶようになったため、実 hook を走らせない
+  // ようにモックする。引数を捨てないラッパーにして、どの teamId で呼ばれたかを
+  // 実測できるようにしておく (feedback_swimhub_test_mock_discards_query_args)。
+  // 実物の useTeamMembersQuery は data/isLoading/**isError**/**refetch** を返す。
+  // 各テストが明示しなかったフィールドは下のラッパーで「正常系の既定値」を埋める
+  // (undefined のまま返すと画面側の isError 分岐が「たまたま falsy」で通り、
+  //  High-1(a) で追加された ErrorView 経路の退行を検出できなくなる)。
+  mockRefetchTeamMembers: vi.fn(),
+  mockUseTeamMembersQuery: vi.fn(),
+  teamMembersQueryCalls: [] as Array<string | undefined>,
   mockUseRoute: vi.fn(),
   mockNavigate: vi.fn(),
   mockGoBack: vi.fn(),
@@ -118,6 +129,13 @@ vi.mock("@apps/shared/hooks/queries/records", () => ({
   useDeleteRecordMutation: h.mockUseDeleteRecordMutation,
   useReplaceSplitTimesMutation: h.mockUseReplaceSplitTimesMutation,
   useBestTimesQuery: h.mockUseBestTimesQuery,
+}));
+
+vi.mock("@apps/shared/hooks/queries/teams", () => ({
+  useTeamMembersQuery: (_supabase: unknown, teamId: string | undefined) => {
+    h.teamMembersQueryCalls.push(teamId);
+    return { isError: false, refetch: h.mockRefetchTeamMembers, ...h.mockUseTeamMembersQuery(teamId) };
+  },
 }));
 
 vi.mock("@apps/shared/hooks/queries/user", () => ({
@@ -261,6 +279,11 @@ function makeSupabase(): SupabaseClient {
 }
 
 function setupCommonMocks() {
+  // チームメンバー未取得 (= 個人の大会) を既定とする。これらのテストは
+  // competitions.team_id が null の個人フローを対象にしているため、権限判定は
+  // competitionTeamId の有無だけで決まり、メンバー一覧は答えを変えない。
+  h.mockUseTeamMembersQuery.mockReturnValue({ data: [], isLoading: false });
+  h.teamMembersQueryCalls.length = 0;
   h.mockUseUserQuery.mockReturnValue({ profile: null });
   h.mockUseBestTimesQuery.mockReturnValue({ data: [] });
   h.mockUsePreventRemove.mockImplementation(() => {});

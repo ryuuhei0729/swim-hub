@@ -464,10 +464,17 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
   // D-4: 記録一覧モーダルの対象大会 (admin/非admin 問わずカード本体タップで開く)
   const [recordsModalCompetition, setRecordsModalCompetition] = useState<Competition | null>(null);
 
+  // origin は「チーム管理者ビューの導線から来た」ことを示す唯一のシグナル
+  // (teamId の有無で代用しない)。フォーム側はこれで大会タブのみに絞り、実 admin 判定
+  // との AND で基本情報の編集を許可する。
+  // 新規作成側にも必ず渡すこと: 保存直後に resolvedCompetitionId が入って
+  // isEditMode が false→true へ flip するため、origin が無いと作成した直後に
+  // 自分の入力がグレーアウトし、続けて編集した内容が保存されない。
   const handleAdd = useCallback(() => {
     navigation.navigate("CompetitionForm", {
       teamId,
       date: format(new Date(), "yyyy-MM-dd"),
+      origin: "teamAdmin",
     });
   }, [navigation, teamId]);
 
@@ -483,6 +490,7 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
       competitionId: competition.id,
       date: competition.date,
       teamId,
+      origin: "teamAdmin",
     });
   }, [navigation, teamId]);
 

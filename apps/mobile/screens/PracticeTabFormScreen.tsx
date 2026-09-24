@@ -38,6 +38,7 @@ import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { useTagModalTransition } from "@/hooks/useTagModalTransition";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { ErrorView } from "@/components/layout/ErrorView";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { DatePickerField } from "@/components/ui/DatePickerField";
@@ -70,8 +71,16 @@ type PracticeTabFormNavigationProp = NativeStackNavigationProp<MainStackParamLis
 
 type PracticeTab = "practice" | "log";
 
-// タブ切替(前に戻る/次に進む)フッターボタン用の表示順序。ガード対象なし。
-const PRACTICE_VISIBLE_TABS: PracticeTab[] = ["practice", "log"];
+// タブの表示順序 (個人フロー)。ガード対象なし。
+const PRACTICE_TAB_ORDER: PracticeTab[] = ["practice", "log"];
+// チーム管理者ビュー (origin==="teamAdmin") で表示するタブ。ログは一覧画面の
+// 代理入力導線に一本化しているため練習タブのみ。
+const PRACTICE_TEAM_ADMIN_TAB_ORDER: PracticeTab[] = ["practice"];
+// タブラベルの i18n キー。タブ一覧から FormTabBar 用の配列を組み立てるときだけ使う。
+const PRACTICE_TAB_LABEL_KEYS: Record<PracticeTab, string> = {
+  practice: "practice.form.tabPractice",
+  log: "practice.form.tabLog",
+};
 
 // ---- 練習ログメニュー型 ----
 interface PracticeMenu {
@@ -143,7 +152,23 @@ export const PracticeTabFormScreen: React.FC = () => {
   const { t } = useTranslation();
 
   // ---- タブ状態 ----
-  const [activeTab, setActiveTab] = useState<PracticeTab>(initialTab ?? "practice");
+  // visibleTabs はタブバー・フッターの前後タブが参照する唯一の定義元。
+  // origin === "teamAdmin" (チーム管理者ビューの追加/編集導線) では練習タブのみ。
+  // 絞り込みは origin のみに依存させ、編集権限判定 (canEditPracticeDetails:
+  // origin と実 admin 判定の AND) とは混ぜない。
+  const visibleTabs = useMemo(
+    (): PracticeTab[] =>
+      origin === "teamAdmin" ? PRACTICE_TEAM_ADMIN_TAB_ORDER : PRACTICE_TAB_ORDER,
+    [origin],
+  );
+  const [activeTab, setActiveTab] = useState<PracticeTab>(() => {
+    // チーム管理者ビューは練習タブしか存在しないので initialTab を無視して固定する。
+    // useState の初期化関数は初回レンダーでのみ評価されるため、ここで分岐せず
+    // useEffect で後から setActiveTab すると1フレームだけ存在しないタブが
+    // 選択された状態が描画される。
+    if (origin === "teamAdmin") return "practice";
+    return initialTab ?? "practice";
+  });
   const [tabErrors, setTabErrors] = useState<Partial<Record<PracticeTab, boolean>>>({});
 
   // ---- 練習ID (新規作成後に取得) ----
@@ -247,8 +272,15 @@ export const PracticeTabFormScreen: React.FC = () => {
   // isCurrentUserPracticeTeamAdmin は canEditPracticeDetails / canEditPracticeLogs の
   // 両方から参照するため、両方より前に定義する (Sprint Contract #PM-1: 定義順の入れ替え。
   // ロジック自体は変更しない)。
-  const { data: practiceTeamMembers, isLoading: isPracticeTeamMembersLoading } =
-    useTeamMembersQuery(supabase, practiceTeamId ?? undefined);
+  // teamId は origin の有無に関わらず渡す。canEditPracticeDetails だけでなく
+  // canEditPracticeLogs もこのメンバー一覧を消費するため、個人画面 (origin 無し) でも
+  // 取得結果が判定を左右する。ここを origin で絞ると log タブの権限判定が壊れる。
+  const {
+    data: practiceTeamMembers,
+    isLoading: isPracticeTeamMembersLoading,
+    isError: isPracticeTeamMembersError,
+    refetch: refetchPracticeTeamMembers,
+  } = useTeamMembersQuery(supabase, practiceTeamId ?? undefined);
   const isCurrentUserPracticeTeamAdmin = useMemo(() => {
     if (!user || !practiceTeamId || !practiceTeamMembers) return false;
     return practiceTeamMembers.some((m) => m.user_id === user.id && m.role === "admin");
@@ -261,8 +293,7 @@ export const PracticeTabFormScreen: React.FC = () => {
   // admin である場合のみ許可する (Sprint Contract #PM-1)。origin だけで許可すると
   // UI が RLS より広くなり、非admin が保存ボタンを押した際に RLS 拒否の UPDATE が
   // 0行成功で無言破棄される (Sprint Contract 2 で実際に発生した failure mode)。
-  // CompetitionTabFormScreen の canEditCompetitionDetails とは、チーム管理者ビュー分岐が
-  // ある点で異なる (大会側は Out of Scope のため無変更)。
+  // CompetitionTabFormScreen の canEditCompetitionDetails も同じ4分岐に揃えてある。
   const canEditPracticeDetails = useMemo(() => {
     if (!isEditMode) return true; // 新規作成は常に自分の練習
     if (!practiceTeamId) return true; // 個人の練習は常に自分のもの
@@ -284,9 +315,26 @@ export const PracticeTabFormScreen: React.FC = () => {
     return isCurrentUserPracticeTeamAdmin;
   }, [isEditMode, practiceTeamId, practiceOwnerId, user, isCurrentUserPracticeTeamAdmin]);
   // チーム練習の log タブ編集権限確定待ち (未確定のまま編集可能 UI を出さないための
-  // ローディングガード。旧実装と同型)
+  // ローディングガード。旧実装と同型)。
+  // ここに origin === "teamAdmin" を足してはならない: canEditPracticeLogs は origin を
+  // 見ない。作成者本人 (owner) なら短絡して true になるが、非 owner の場合は
+  // isCurrentUserPracticeTeamAdmin — つまりメンバー一覧 — が答えを決めるため、
+  // 個人画面でも確定を待つ必要がある。
   const isResolvingPracticePermission =
     isEditMode && !!practiceTeamId && isPracticeTeamMembersLoading;
+  // メンバー一覧の取得が失敗し、練習タブの編集可否が確定できない状態。
+  // isError のときは isLoading=false / data=undefined になるため、放置すると
+  // isCurrentUserPracticeTeamAdmin が false に倒れ、正規の管理者に制限バナーと
+  // 読み取り専用フォームが出たまま「保存して終了」が押せてしまう。チーム管理者ビューでは
+  // log タブも画面に無いので、その保存は練習本体の更新をスキップしたうえログの差分も
+  // 空になり、1件も書かずに画面が閉じてユーザーには成功と区別がつかない。
+  //
+  // ここだけ origin === "teamAdmin" を見るのは、画面ごと ErrorView に差し替える強い
+  // 扱いだから。個人画面 (origin 無し) では練習タブの編集可否は practiceTeamId の有無
+  // だけで false に確定し、取得に失敗しても log タブの入力は従来どおり続けられる。
+  // そこで ErrorView を出すと、今まで使えていた画面が取得失敗のたびに丸ごと使えなくなる。
+  const isPracticePermissionUnavailable =
+    origin === "teamAdmin" && isEditMode && !!practiceTeamId && isPracticeTeamMembersError;
 
   // ---- 動画 (練習ログタブ) ----
   // メニューIDをキーに保留動画アセットを管理
@@ -508,6 +556,10 @@ export const PracticeTabFormScreen: React.FC = () => {
   // ---- 破棄確認 ----
   // snapshotRef の更新は必ず対応する state 変更を伴わせること (伴わないと memo が再計算されず stale になる)
   const changedFromSnapshot = useMemo(() => {
+    // スナップショット未確定 (ロード前) は「未変更」に倒す。比較対象が無い状態で
+    // 変更ありにすると、まだ何も入力していない画面を閉じるだけで破棄ダイアログが出る。
+    // handleSave の practiceBasicChanged は同じ null を逆向き (変更あり) に倒している。
+    // あちらは取りこぼすと入力が無言で消えるため。判定の目的が違うので向きも違う。
     if (!snapshotRef.current) return false;
     return hasUnsavedChanges(
       { practice: practiceTab, menus },
@@ -596,6 +648,54 @@ export const PracticeTabFormScreen: React.FC = () => {
       }
 
       let savedPracticeId = resolvedPracticeId;
+
+      // --- 編集不可なのに練習タブの内容が変わっている場合は「何も書かずに成功」を防ぐ ---
+      // 練習タブが canEditPracticeDetails=false でスキップされたとき、チーム管理者ビューでは
+      // log タブも画面に無いのでログの差分も空になり、handleSave は1件も書かずに
+      // setIsSaved(true) まで到達して画面が閉じる。ユーザーには保存成功と区別がつかない。
+      // フィールドと画像ピッカーは disabled なので通常はここに到達しないが、編集中に
+      // 権限判定が true→false へ変わった場合 (キャッシュヒットで編集を始めた後に refetch が
+      // 失敗する等) に入力が無言で捨てられる。
+      //
+      // 判定対象は練習タブの内容 (date/title/place/note と画像) だけに限る。個人画面の
+      // 一般メンバーがチーム練習に「自分のログだけ」を足す導線は生きており、そこでは
+      // canEditPracticeDetails=false のまま保存が成立しなければならない。log の変更は
+      // ここでは見ない。
+      //
+      // スナップショット未確定 (ロード前) は「変更あり」に倒す。比較対象が無いまま
+      // 未変更と見なすと、編集不可の状態で保存を素通しして無言の no-op 保存になる。
+      // 破棄確認の changedFromSnapshot は同じ null を逆向き (未変更) に倒している。
+      // あちらは誤検知するとユーザーを不要なダイアログで煩わせるため。
+      const savedSnapshot = snapshotRef.current;
+      // hasUnsavedChanges は JSON.stringify 同士の文字列比較なので、キーの並び順が
+      // 食い違うと値が同じでも常に差分ありになり、上記の「ログだけ保存する」導線が
+      // 権限エラーでブロックされる。
+      // ここでその事故が起きないのは、state と snapshot が同じオブジェクトを共有して
+      // いるから: 初期化時に setPracticeTab(x) と snapshotRef.current = { practice: x }
+      // へ同一の PracticeTabState を渡し、更新は setPracticeTab((prev) => ({ ...prev, … }))
+      // で prev の並びを引き継ぐ。だから PracticeTabState リテラルの並びを変えても
+      // 両側が同時に変わり、比較は一致したままになる。
+      // 【壊れるのは snapshot を別リテラルで組み直したとき】「スナップショットは防御的に
+      // コピーしよう」と snapshotRef に { date, place, title, note } のような新しい
+      // リテラルを組むと、参照の共有が切れて並び順が state とずれ、上記の導線が常に
+      // ブロックされる。同一オブジェクトを渡す形を崩さないこと。
+      // (CompetitionTabFormScreen の competitionBasicChanged は state を個別の値で
+      // 持つため比較地点で2つのリテラルを並べており、あちらは「リテラルのキー順を
+      // 揃えること」が防御機構になる。同じ関数を使っていても守り方が違う。)
+      const practiceBasicChanged =
+        !savedSnapshot ||
+        hasUnsavedChanges(practiceTab, savedSnapshot.practice) ||
+        newImageFiles.length > 0 ||
+        deletedImageIds.length > 0;
+      if (
+        isEditMode &&
+        savedPracticeId &&
+        !canEditPracticeDetails &&
+        practiceBasicChanged
+      ) {
+        setSaveError(t("forms.tabModal.practiceSaveBlockedNoPermission"));
+        return;
+      }
 
       // --- 練習 INSERT or UPDATE ---
       if (isEditMode && savedPracticeId) {
@@ -760,6 +860,13 @@ export const PracticeTabFormScreen: React.FC = () => {
       }
 
       // --- 練習ログ INSERT / UPDATE / DELETE ---
+      // 【画面に出していないタブのデータをどう扱うかの決定】
+      // log タブをタブバーから隠すチーム管理者ビューでも、menus は個人フローと
+      // まったく同じようにロードして state に保持し、この差分計算もそのまま通す。
+      // 保存対象から「外す」とは menus を空にすることではない: menus を空にすると
+      // snapshotExistingIds だけが残り、diff.deletes が既存 practice_logs を
+      // 全件 DELETE する。ロードしたまま通せば creates/deletes は空になり、
+      // 既存ログは触られない (= 意図せず消えない・意図せず増えない)。
       // diffPracticeLogDraft が単一の権威となり creates/updates/deletes を決定する。
       // 練習ログは opt-in (web と同じ): 既存ログが無く、メニューがスナップショット (デフォルト値)
       // から一切変更されていない場合は、デフォルトメニュー (100m×4本) を保存しない。
@@ -1153,26 +1260,22 @@ export const PracticeTabFormScreen: React.FC = () => {
   );
 
   // ---- タブ定義 ----
+  // 表示するタブ・順序は visibleTabs が唯一の定義元。ここでラベルとエラーバッジだけを
+  // 付ける (タブ一覧を別途組み立てるとタブバーとフッターの前後タブが食い違う)。
   const tabs = useMemo(
-    (): FormTab<PracticeTab>[] => [
-      {
-        id: "practice",
-        label: t("practice.form.tabPractice"),
-        hasError: tabErrors.practice,
-      },
-      {
-        id: "log",
-        label: t("practice.form.tabLog"),
-        hasError: tabErrors.log,
-      },
-    ],
-    [t, tabErrors],
+    (): FormTab<PracticeTab>[] =>
+      visibleTabs.map((id) => ({
+        id,
+        label: t(PRACTICE_TAB_LABEL_KEYS[id]),
+        hasError: tabErrors[id],
+      })),
+    [visibleTabs, t, tabErrors],
   );
 
   // ---- フッターボタン用の前後タブ (ガードなし) ----
   const { prevTab, nextTab } = useMemo(
-    () => getTabNavAdjacency<PracticeTab>(PRACTICE_VISIBLE_TABS, activeTab),
-    [activeTab],
+    () => getTabNavAdjacency<PracticeTab>(visibleTabs, activeTab),
+    [visibleTabs, activeTab],
   );
 
   // ---- ローディング ----
@@ -1184,10 +1287,32 @@ export const PracticeTabFormScreen: React.FC = () => {
     );
   }
 
+  // ---- 権限の確定に失敗 ----
+  // フォームを出さずに再試行させる。編集可能かどうかが決まらないまま保存ボタンを
+  // 見せると、1件も書き込まないまま画面が閉じる経路に入る
+  // (isPracticePermissionUnavailable の定義コメント参照)。
+  if (isPracticePermissionUnavailable) {
+    return (
+      <View style={styles.container}>
+        <ErrorView
+          message={t("forms.tabModal.permissionCheckFailed")}
+          fullScreen
+          onRetry={() => {
+            void refetchPracticeTeamMembers();
+          }}
+        />
+      </View>
+    );
+  }
+
   return (
     <FormKeyboardAvoidingView style={styles.container}>
-      {/* タブバー */}
-      <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="practice" />
+      {/* タブバー: タブが1本しかないときは描画しない (画面の判別はヘッダータイトルで足りる)。
+          述語はタブ一覧 visibleTabs から導出する (origin を直接見ると絞り込みの定義元が
+          2箇所になり、片方だけ更新されて静かに食い違う) */}
+      {visibleTabs.length > 1 && (
+        <FormTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} variant="practice" />
+      )}
 
       {/* エラーバナー */}
       {saveError && (
@@ -1280,7 +1405,14 @@ export const PracticeTabFormScreen: React.FC = () => {
                   editable={!isSaving && canEditPracticeDetails}
                 />
               </View>
-              {/* 過去に使った場所のサジェスト (web PlaceCombobox 相当) */}
+              {/* 過去に使った場所のサジェスト (web PlaceCombobox 相当)。
+                  リスト項目は canEditPracticeDetails で塞ぐこと: 日付/タイトル/場所/メモ/画像は
+                  すべて編集不可のとき入力できないが、ここは practiceTab.place を書き換えられる
+                  唯一の未ガード経路になる。現状は場所 TextInput が editable={false} で focus を
+                  受けないため placeFocused が true にならず到達しないが、その1点だけに依存して
+                  いる。編集不可のまま place が変わると handleSave の practiceBasicChanged が
+                  true になり、「ログだけ保存する」導線が権限エラーでブロックされる。
+                  しかも原因が場所サジェストだとユーザーには分からない。 */}
               {placeFocused &&
                 (() => {
                   const query = practiceTab.place.trim().toLowerCase();
@@ -1302,6 +1434,7 @@ export const PracticeTabFormScreen: React.FC = () => {
                             setPracticeTab((prev) => ({ ...prev, place: p }));
                             setPlaceFocused(false);
                           }}
+                          disabled={!canEditPracticeDetails}
                           accessibilityRole="button"
                           accessibilityLabel={p}
                         >

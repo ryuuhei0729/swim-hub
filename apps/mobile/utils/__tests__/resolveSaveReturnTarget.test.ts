@@ -13,12 +13,21 @@
  *   - teamId が非空文字列 → { kind: "team", teamId } (チーム大会/練習フロー)
  *   - teamId が undefined/null/空文字/空白のみ → { kind: "popToTop" } (個人フロー・フォールバック)
  *
- * 今回のスプリントで追加された `options.fallback` の検証観点:
- *   - options 省略時 → 従来通り { kind: "popToTop" } (CompetitionBasicFormScreen の
- *     既存呼び出し元の非退行。旧 RecordLogFormScreen も options 省略の呼び出し元
- *     だったが、当該画面は削除済み)
+ * `options.fallback` の検証観点:
+ *   - options 省略時 → { kind: "popToTop" } (この関数が導入された時点の既定値)
  *   - options.fallback: "goBack" + teamId なし → { kind: "goBack" }
  *   - teamId あり → fallback に関わらず { kind: "team" }
+ *
+ * 【Sprint Contract v3 / D6 によるコメント更新】
+ * かつてここには「options 省略時は CompetitionBasicFormScreen の既存呼び出し元の
+ * 非退行のため」と書かれていたが、D2 で CompetitionBasicFormScreen は
+ * CompetitionTabForm へのリダイレクトシムになり、この関数を呼ばなくなった。
+ * QA 実測 (grep): 現在この関数を呼ぶプロダクションコードは
+ * `screens/CompetitionTabFormScreen.tsx` の1箇所だけで、そこは
+ * `{ fallback: "goBack" }` を明示的に渡す (PracticeTabFormScreen はこの関数を使わず
+ * 常に `navigation.goBack()`)。つまり省略時の "popToTop" は現時点でプロダクション
+ * からは到達しない既定値であり、この単体テストが唯一の呼び出し元である
+ * (削除する場合は関数シグネチャ側と一緒に判断すること)。
  */
 
 import { describe, it, expect } from "vitest";

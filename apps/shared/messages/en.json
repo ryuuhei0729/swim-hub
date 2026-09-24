@@ -1612,8 +1612,6 @@
       "calendarSyncFailedMessage": "Competition info was saved, but failed to sync to your calendar.",
       "saveFailed": "Failed to save",
       "deleteFailed": "Failed to delete",
-      "continueToRecord": "Continue to record entry",
-      "continueToEntry": "Continue to entry",
       "noCompetitions": "No competitions",
       "selectCompetition": "Select a competition",
       "deleteConfirmTitle": "Confirm deletion",
@@ -4449,7 +4447,10 @@
       },
       "recordFutureGuard": "Race records cannot be registered for future dates.",
       "competitionEditRestricted": "Only team admins can edit this competition's details.",
-      "practiceEditRestricted": "Only team admins can edit this practice's details."
+      "practiceEditRestricted": "Only team admins can edit this practice's details.",
+      "permissionCheckFailed": "Could not verify your edit permission. Check your connection and try again.",
+      "competitionSaveBlockedNoPermission": "Could not save the competition details because your edit permission could not be verified. Reopen this screen and try again.",
+      "practiceSaveBlockedNoPermission": "Could not save the practice details because your edit permission could not be verified. Reopen this screen and try again."
     },
     "premium": {
       "upgradeText": "Upgrade to Premium",
