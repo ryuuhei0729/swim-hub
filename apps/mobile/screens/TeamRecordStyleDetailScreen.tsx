@@ -55,6 +55,8 @@ import { MemberSelectModal } from "@/components/teams/MemberSelectModal";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
 import { ItemTabs } from "@/components/forms/ItemTabs";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import type { MainStackParamList } from "@/navigation/types";
 import type { BestTime } from "@apps/shared/types/ui";
 import {
@@ -173,6 +175,10 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
   const queryClient = useQueryClient();
   const isPremium = checkIsPremium(subscription);
   const { parseInput } = useQuickTimeInput();
+  // フッターは SafeAreaView edges={["bottom"]} が消費するが、RN Modal は
+  // Android edge-to-edge 下でも自動回避しないため、泳者選択シートは
+  // シート自身の paddingBottom で bottom inset を消費する必要がある。
+  const insets = useSafeInsets();
 
   const parseTimeToSeconds = (value: string): number => {
     if (!value || value.trim() === "") return 0;
@@ -1896,7 +1902,10 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
         backdropAccessibilityLabel={t("common.close")}
         onClose={() => setLegPicker(null)}
         overlayColor="rgba(0,0,0,0.4)"
-        sheetStyle={styles.pickerSheet}
+        sheetStyle={[
+          styles.pickerSheet,
+          { paddingBottom: getSafeFooterPadding(16, insets.bottom) },
+        ]}
       >
         <View style={styles.pickerSheetHeader}>
           <Text style={styles.pickerSheetTitle}>
@@ -2185,12 +2194,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   permissionButtonText: { fontSize: 14, fontWeight: "600", color: "#FFFFFF" },
+  // paddingBottom はここに置かない。Android edge-to-edge の bottom inset を
+  // 取り込む必要があるため、呼び出し側で getSafeFooterPadding(16, insets.bottom)
+  // を sheetStyle 配列に重ねて指定している (基準値 16 の定義元はそちら)。
   pickerSheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: "70%",
-    paddingBottom: 16,
   },
   pickerSheetHeader: {
     flexDirection: "row",

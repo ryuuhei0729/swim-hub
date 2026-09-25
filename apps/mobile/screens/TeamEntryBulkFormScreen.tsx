@@ -44,6 +44,8 @@ import { ErrorView } from "@/components/layout/ErrorView";
 import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import { MemberSelectModal } from "@/components/teams/MemberSelectModal";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import type { MainStackParamList } from "@/navigation/types";
 import type { Style, PoolType, BestTime } from "@apps/shared/types";
 import type { EntryDraftRow } from "@apps/shared/types/team-entry";
@@ -97,6 +99,10 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  // 画面フッターと確認シートのフッターは SafeAreaView edges={["bottom"]} が
+  // 消費するが、RN Modal は Android edge-to-edge 下でも自動回避しないため、
+  // フッターを持たない種目選択シートはシート自身で bottom inset を消費する。
+  const insets = useSafeInsets();
 
   // メンバー一覧（権限判定・選手選択に使用。is_active=true のみ）
   const { members, isLoading: membersLoading } = useTeamsQuery(supabase, {
@@ -964,7 +970,10 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
         backdropAccessibilityLabel={t("common.close")}
         onClose={() => setStylePickerRowId(null)}
         overlayColor="rgba(0,0,0,0.4)"
-        sheetStyle={styles.pickerSheet}
+        sheetStyle={[
+          styles.pickerSheet,
+          { paddingBottom: getSafeFooterPadding(16, insets.bottom) },
+        ]}
       >
         <View style={styles.pickerSheetHeader}>
           <Text style={styles.pickerSheetTitle}>
@@ -1393,12 +1402,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   permissionButtonText: { fontSize: 14, fontWeight: "600", color: "#FFFFFF" },
+  // paddingBottom はここに置かない。Android edge-to-edge の bottom inset を
+  // 取り込む必要があるため、呼び出し側で getSafeFooterPadding(16, insets.bottom)
+  // を sheetStyle 配列に重ねて指定している (基準値 16 の定義元はそちら)。
   pickerSheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: "70%",
-    paddingBottom: 16,
   },
   pickerSheetHeader: {
     flexDirection: "row",

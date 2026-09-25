@@ -11,6 +11,8 @@ import { localizedStyleName } from "@/utils/styleName";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import type { MainStackParamList } from "@/navigation/types";
 import {
   loadTeamRecordCompetitionData,
@@ -44,6 +46,10 @@ export const TeamRecordStyleListScreen: React.FC = () => {
   const { competitionId, teamId } = route.params;
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
+  // MainStack に直接載る画面なので TabNavigator の SafeAreaView の保護外。
+  // Android edge-to-edge では最下段のカード行がシステムナビゲーションバーに
+  // 食われるため、この画面自身で bottom inset を消費する。
+  const insets = useSafeInsets();
 
   const { members, isLoading: membersLoading } = useTeamsQuery(supabase, {
     teamId,
@@ -183,7 +189,12 @@ export const TeamRecordStyleListScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: getSafeFooterPadding(32, insets.bottom) },
+        ]}
+      >
         <Text style={styles.compTitle}>
           {data?.competition.title || t("competition.records.competitionFallback")}
         </Text>
