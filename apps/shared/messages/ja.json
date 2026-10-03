@@ -1473,11 +1473,13 @@
       "dashboard": "ダッシュボード",
       "practice": "練習履歴",
       "competition": "大会履歴",
+      "goals": "目標管理",
       "mypage": "マイページ",
       "team": "チーム",
       "dashboardDesc": "お知らせとスケジュール",
       "practiceDesc": "練習内容とタイム記録",
       "competitionDesc": "大会結果とタイム記録",
+      "goalsDesc": "目標設定と達成状況",
       "mypageDesc": "プロフィールとベストタイム",
       "teamDesc": "チームの参加・管理",
       "teamAdmin": "チーム管理",
@@ -2128,7 +2130,7 @@
       "loadError": "目標一覧の取得に失敗しました",
       "retry": "再読み込み",
       "empty": "目標がありません",
-      "emptyDesc": "右上のボタンから新規作成してください",
+      "emptyDesc": "下のボタンから新規作成してください",
       "achievedBadge": "達成！",
       "targetTimePrefix": "目標:",
       "deleteConfirm": "この目標を削除しますか？",
@@ -2136,7 +2138,9 @@
       "edit": "編集",
       "delete": "削除",
       "competitionFallback": "大会",
-      "styleFallback": "種目"
+      "styleFallback": "種目",
+      "competitionInfoUnavailable": "大会情報なし",
+      "editUnavailableReason": "大会情報がないため編集できません"
     },
     "detail": {
       "loadError": "目標詳細の取得に失敗しました",
@@ -2201,7 +2205,8 @@
       "updateFailed": "目標の更新に失敗しました",
       "undecided": "未定",
       "competitionFallback": "大会",
-      "styleFallback": "種目"
+      "styleFallback": "種目",
+      "goToGoalsLink": "目標管理を見る"
     },
     "milestone": {
       "empty": "マイルストーンがありません",
@@ -2286,7 +2291,8 @@
       "deadlineLabel": "期限:",
       "otherPrefix": "その他: {note}",
       "saveFailed": "内省メモの保存に失敗しました",
-      "actionFailed": "処理に失敗しました"
+      "actionFailed": "処理に失敗しました",
+      "goToGoalsLink": "目標管理を見る"
     },
     "form": {
       "competitionLabel": "大会",
@@ -2303,7 +2309,9 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "初期タイム（任意）",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "ベストタイムから取得"
+      "getBestTimeButton": "ベストタイムから取得",
+      "personalCompetitionGroup": "個人",
+      "teamCompetitionGroupFallback": "チーム大会"
     },
     "milestoneForm": {
       "templateLabel": "テンプレート（任意）",

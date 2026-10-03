@@ -15,6 +15,7 @@ import { PracticeAPI } from "@apps/shared/api";
 import type { PracticeLogTagInsert } from "@apps/shared/types";
 import { computePracticeLogDiff } from "@/utils/tabModalDiff";
 import { uploadVideoClient } from "@/lib/video-upload-client";
+import { refreshMilestonesAfterPracticeSave } from "@/utils/practiceMilestoneRefresh";
 import type { PracticeTabSaveParams } from "@/components/forms/PracticeTabModal";
 
 export interface UsePracticeTabSaveProps {
@@ -27,18 +28,22 @@ export interface UsePracticeTabSaveProps {
     id: string,
     updates: import("@swim-hub/shared/types").PracticeUpdate,
   ) => Promise<import("@swim-hub/shared/types").Practice>;
+  /**
+   * skipMilestoneUpdate: true のときはこのログ保存単体ではマイルストーン判定を
+   * 行わない。呼び出し元 (このフック自身) が、タイムも保存する場合に true を渡す。
+   * 対応する useCreatePracticeLogMutation/useUpdatePracticeLogMutation にそのまま
+   * 転送すること。
+   */
   createPracticeLog: (
     log: Omit<import("@swim-hub/shared/types").PracticeLogInsert, "user_id">,
+    skipMilestoneUpdate?: boolean,
   ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
   updatePracticeLog: (
     id: string,
     updates: import("@swim-hub/shared/types").PracticeLogUpdate,
+    skipMilestoneUpdate?: boolean,
   ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
   deletePracticeLog?: (id: string) => Promise<void>;
-  createPracticeTime: (
-    time: import("@swim-hub/shared/types").PracticeTimeInsert,
-  ) => Promise<import("@swim-hub/shared/types").PracticeTime>;
-  deletePracticeTime: (id: string) => Promise<void>;
   setPracticeLoading: (loading: boolean) => void;
   setEditingPracticeId: (id: string | null) => void;
   closePracticeTabModal: () => void;
@@ -66,8 +71,6 @@ export function usePracticeTabSave({
   createPracticeLog,
   updatePracticeLog,
   deletePracticeLog,
-  createPracticeTime,
-  deletePracticeTime,
   setPracticeLoading,
   setEditingPracticeId,
   closePracticeTabModal,
@@ -196,6 +199,14 @@ export function usePracticeTabSave({
         if (deletePracticeLog) await deletePracticeLog(id);
       }
 
+      // ログ保存に使う createPracticeLog/updatePracticeLog は呼び出し元の
+      // react-query ミューテーションに判定ロジックが内蔵されている場合があるため、
+      // このフックからは常に skipMilestoneUpdate=true を渡して抑止する。
+      // 判定はこのフックに一本化し、ADD/UPDATE 全件の保存が終わった後に
+      // 1回の保存につき1回だけ実行する。
+      const practiceAPI = new PracticeAPI(supabase);
+      let hasLogChanges = false;
+
       // ADD
       for (const menu of diff.toAdd) {
         const logInput = {
@@ -208,7 +219,8 @@ export function usePracticeTabSave({
           circle: menu.circleTime || null,
           note: menu.note || "",
         };
-        const createdLog = await createPracticeLog(logInput);
+        const createdLog = await createPracticeLog(logInput, true);
+        hasLogChanges = true;
         if (menu.tags?.length && createdLog) {
           const qb = supabase.from("practice_log_tags") as unknown as {
             insert: (v: PracticeLogTagInsert) => Promise<{ error: { message: string } | null }>;
@@ -219,19 +231,20 @@ export function usePracticeTabSave({
             if (error) throw new Error(t("insertPracticeTagFailed"));
           }
         }
-        if (menu.times?.length && createdLog) {
-          await Promise.all(
-            menu.times
-              .filter((te) => te.time > 0)
-              .map((te) =>
-                createPracticeTime({
+        const validTimes = (menu.times ?? []).filter((te) => te.time > 0);
+        if (validTimes.length > 0 && createdLog) {
+          // 一括作成 (複数形) を使う。マイルストーン判定はループ終了後に1回だけ行う。
+          await practiceAPI.createPracticeTimes(
+            validTimes.map(
+              (te) =>
+                ({
                   user_id: user.id,
                   practice_log_id: createdLog.id,
                   set_number: te.setNumber,
                   rep_number: te.repNumber,
                   time: te.time,
-                } as import("@swim-hub/shared/types").PracticeTimeInsert),
-              ),
+                }) as import("@swim-hub/shared/types").PracticeTimeInsert,
+            ),
           );
         }
         if (menu.pendingVideo && createdLog) {
@@ -243,15 +256,20 @@ export function usePracticeTabSave({
 
       // UPDATE
       for (const { id, data: menu } of diff.toUpdate) {
-        await updatePracticeLog(id, {
-          style: menu.style || "Fr",
-          swim_category: menu.swimCategory || "Swim",
-          rep_count: Number(menu.reps) || 1,
-          set_count: Number(menu.sets) || 1,
-          distance: Number(menu.distance) || 100,
-          circle: menu.circleTime || null,
-          note: menu.note || "",
-        });
+        await updatePracticeLog(
+          id,
+          {
+            style: menu.style || "Fr",
+            swim_category: menu.swimCategory || "Swim",
+            rep_count: Number(menu.reps) || 1,
+            set_count: Number(menu.sets) || 1,
+            distance: Number(menu.distance) || 100,
+            circle: menu.circleTime || null,
+            note: menu.note || "",
+          },
+          true,
+        );
+        hasLogChanges = true;
         // タグ再同期
         await supabase.from("practice_log_tags").delete().eq("practice_log_id", id);
         if (menu.tags?.length) {
@@ -264,32 +282,25 @@ export function usePracticeTabSave({
             if (error) throw new Error(t("insertPracticeTagFailed"));
           }
         }
-        // 時間再同期
-        const { data: existingTimes } = await supabase
-          .from("practice_times")
-          .select("id")
-          .eq("practice_log_id", id);
-        if (existingTimes?.length) {
-          await Promise.all(
-            (existingTimes as Array<{ id: string }>).map((t) => deletePracticeTime(t.id)),
-          );
-        }
-        if (menu.times?.length) {
-          await Promise.all(
-            menu.times
-              .filter((te) => te.time > 0)
-              .map((te) =>
-                createPracticeTime({
-                  user_id: user.id,
-                  practice_log_id: id,
-                  set_number: te.setNumber,
-                  rep_number: te.repNumber,
-                  time: te.time,
-                } as import("@swim-hub/shared/types").PracticeTimeInsert),
-              ),
-          );
-        }
+        // 時間再同期 (削除+再作成をまとめて1回で行う。タイム無しの場合も既存タイムのクリアとして働く)
+        const validTimes = (menu.times ?? []).filter((te) => te.time > 0);
+        await practiceAPI.replacePracticeTimes(
+          id,
+          validTimes.map((te) => ({
+            set_number: te.setNumber,
+            rep_number: te.repNumber,
+            time: te.time,
+          })),
+        );
       }
+
+      // タイム永続化後、練習一覧・カレンダー等のキャッシュ無効化 → マイルストーン判定を
+      // 1回の保存につき1回だけ行う (ADD/UPDATE のいずれか1件でもあった場合のみ)。
+      // ログ側ミューテーションの invalidate はタイム保存より前に走るため、ここで
+      // 改めて invalidate しないと保存直後の一覧に新しいタイムが反映されない。
+      // useDashboardHandlers.handlePracticeLogSubmit と共通の後処理のため、
+      // 実処理は practiceMilestoneRefresh.ts に一本化してある。
+      await refreshMilestonesAfterPracticeSave(supabase, user.id, hasLogChanges);
 
       // 全成功 → モーダルを閉じる
       setEditingPracticeId(null);
@@ -305,8 +316,6 @@ export function usePracticeTabSave({
       createPracticeLog,
       updatePracticeLog,
       deletePracticeLog,
-      createPracticeTime,
-      deletePracticeTime,
       setPracticeLoading,
       setEditingPracticeId,
       closePracticeTabModal,

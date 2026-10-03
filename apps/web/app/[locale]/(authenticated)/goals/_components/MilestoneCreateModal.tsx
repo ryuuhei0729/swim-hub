@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { PracticeLogTemplateAPI } from "@swim-hub/shared/api";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
+import { isMilestoneTimeValueValid } from "@apps/shared/types/goals";
 import { useTranslations } from "next-intl";
 import type {
   GoalWithMilestones,
@@ -54,6 +55,14 @@ export default function MilestoneCreateModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isGoalSetModalOpen, setIsGoalSetModalOpen] = useState(false);
   const [addToTemplate, setAddToTemplate] = useState(false);
+  // 目標タイム欄 (target_time/target_average_time) が 0以下のまま submit されたときに true。
+  // ユーザーが再入力すると (handleParamsChange 発火時に) false に戻す
+  const [timeFieldInvalid, setTimeFieldInvalid] = useState(false);
+
+  const handleParamsChange = (newParams: MilestoneParams) => {
+    setParams(newParams);
+    if (timeFieldInvalid) setTimeFieldInvalid(false);
+  };
 
   const goalAPI = new GoalAPI(supabase);
   const templateAPI = new PracticeLogTemplateAPI(supabase);
@@ -105,6 +114,7 @@ export default function MilestoneCreateModal({
       setSelectedTemplate("time_trial");
       setParams(timeTrialParams);
       setTitle(t(`template.${template.nameKey}`)); // タイトルを自動設定
+      setTimeFieldInvalid(false);
       return;
     }
 
@@ -112,6 +122,7 @@ export default function MilestoneCreateModal({
     setSelectedTemplate(templateId);
     setParams(template.defaultParams);
     setTitle(t(`template.${template.nameKey}`)); // タイトルを自動設定
+    setTimeFieldInvalid(false);
   };
 
   // ゴールセット計算結果を適用
@@ -138,6 +149,7 @@ export default function MilestoneCreateModal({
     setSelectedTemplate("goalset_50m_6x3");
     setParams(goalSetParams);
     setTitle(t("milestoneCreate.goalSetDefaultTitle")); // タイトルを自動設定
+    setTimeFieldInvalid(false);
     setIsGoalSetModalOpen(false);
   };
 
@@ -151,10 +163,18 @@ export default function MilestoneCreateModal({
     } else {
       setParams(DEFAULT_SET_PARAMS);
     }
+    setTimeFieldInvalid(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 目標タイム欄 (target_time/target_average_time) が読み取れない入力のまま
+    // 0 で確定していないか確認する。set 型はタイムを持たないため常に true
+    if (!isMilestoneTimeValueValid(params)) {
+      setTimeFieldInvalid(true);
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -212,6 +232,7 @@ export default function MilestoneCreateModal({
     setSelectedTemplate("");
     setParams(DEFAULT_TIME_PARAMS);
     setAddToTemplate(false);
+    setTimeFieldInvalid(false);
     onClose();
   };
 
@@ -245,10 +266,11 @@ export default function MilestoneCreateModal({
                 title={title}
                 onTitleChange={setTitle}
                 params={params}
-                onParamsChange={setParams}
+                onParamsChange={handleParamsChange}
                 deadline={deadline}
                 onDeadlineChange={setDeadline}
                 goalCompetitionDate={goalCompetitionDate}
+                timeFieldInvalid={timeFieldInvalid}
                 showTemplateSelector={true}
                 selectedTemplate={selectedTemplate}
                 onTemplateSelect={handleTemplateSelect}

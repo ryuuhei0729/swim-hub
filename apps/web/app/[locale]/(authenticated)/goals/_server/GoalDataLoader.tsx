@@ -1,6 +1,6 @@
 import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
 import { GoalAPI } from "@apps/shared/api/goals";
-import { RecordAPI } from "@apps/shared/api/records";
+import { runMilestoneJudgment } from "@/utils/milestoneJudgment";
 import { getStyles } from "@/lib/data-loaders/common";
 import type { Goal, Style, Competition } from "@apps/shared/types";
 import GoalsClient from "../_client/GoalsClient";
@@ -16,6 +16,13 @@ export default async function GoalDataLoader() {
   if (!user) {
     return <GoalsClient initialGoals={[]} initialCompetitions={[]} styles={[]} />;
   }
+
+  // 代理入力 (チーム管理者による練習・大会記録の代理保存) は保存時点では判定しない
+  // (遅延評価)。本人がこのページを開いたこのセッションで判定を1回走らせてから
+  // 一覧を取得することで、代理保存分も一覧・振り返りモーダルに反映された状態で
+  // 表示する。一覧取得と並列にすると判定前の一覧を返しうるため、あえて直列にする
+  // (初回表示が遅くなるが、正しい状態を見せることを優先する)。
+  await runMilestoneJudgment(new GoalAPI(supabase), user.id);
 
   // すべてのデータ取得を並行実行（真の並列取得）
   const [stylesResult, goalsResult, competitionsResult] = await Promise.all([
@@ -38,11 +45,13 @@ export default async function GoalDataLoader() {
         return [] as Goal[];
       }
     })(),
-    // 大会一覧取得（competition情報表示用）
+    // 大会一覧取得（competition情報表示用）。個人大会 + 所属チームの大会
+    // (RecordAPI.getCompetitions() は個人大会限定のため、チーム大会を対象にした
+    // 目標のタイトルが解決できず「大会情報なし」に誤って落ちる)
     (async () => {
       try {
-        const recordAPI = new RecordAPI(supabase);
-        return await recordAPI.getCompetitions();
+        const goalAPI = new GoalAPI(supabase);
+        return await goalAPI.getSelectableCompetitions();
       } catch (error) {
         console.error("大会一覧取得エラー:", error);
         return [] as Competition[];

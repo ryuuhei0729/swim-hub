@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { format } from "date-fns";
@@ -150,7 +151,11 @@ export default function ReflectionModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose} />
-        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="relative bg-white rounded-lg shadow-xl w-full max-w-lg"
+        >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{t("reflection.title")}</h3>
@@ -170,6 +175,13 @@ export default function ReflectionModal({
                   </p>
                 )}
               </div>
+              <Link
+                href="/goals"
+                onClick={handleClose}
+                className="inline-block mt-2 text-xs text-blue-600 hover:underline"
+              >
+                {t("reflection.goToGoalsLink")}
+              </Link>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

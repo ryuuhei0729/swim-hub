@@ -1473,11 +1473,13 @@
       "dashboard": "Dashboard",
       "practice": "Trainingsverlauf",
       "competition": "Wettkampfverlauf",
+      "goals": "Ziele",
       "mypage": "Meine Seite",
       "team": "Team",
       "dashboardDesc": "Mitteilungen und Termine",
       "practiceDesc": "Trainingsinhalte und Zeiten",
       "competitionDesc": "Wettkampfergebnisse und Zeiten",
+      "goalsDesc": "Ziele setzen und Fortschritt verfolgen",
       "mypageDesc": "Profil und Bestzeiten",
       "teamDesc": "Teams beitreten und verwalten",
       "teamAdmin": "Teamverwaltung",
@@ -2128,7 +2130,7 @@
       "loadError": "Ziele konnten nicht geladen werden",
       "retry": "Erneut laden",
       "empty": "Keine Ziele vorhanden",
-      "emptyDesc": "Erstellen Sie ein Ziel über die Schaltfläche oben rechts",
+      "emptyDesc": "Erstellen Sie ein Ziel über die Schaltfläche unten",
       "achievedBadge": "Erreicht!",
       "targetTimePrefix": "Ziel:",
       "deleteConfirm": "Dieses Ziel löschen?",
@@ -2136,7 +2138,9 @@
       "edit": "Bearbeiten",
       "delete": "Löschen",
       "competitionFallback": "Wettkampf",
-      "styleFallback": "Disziplin"
+      "styleFallback": "Disziplin",
+      "competitionInfoUnavailable": "Keine Wettkampfinformationen",
+      "editUnavailableReason": "Bearbeitung nicht möglich, da keine Wettkampfinformationen vorliegen"
     },
     "detail": {
       "loadError": "Zieldetails konnten nicht geladen werden",
@@ -2201,7 +2205,8 @@
       "updateFailed": "Ziel konnte nicht aktualisiert werden",
       "undecided": "Offen",
       "competitionFallback": "Wettkampf",
-      "styleFallback": "Disziplin"
+      "styleFallback": "Disziplin",
+      "goToGoalsLink": "Ziele ansehen"
     },
     "milestone": {
       "empty": "Keine Meilensteine vorhanden",
@@ -2286,7 +2291,8 @@
       "deadlineLabel": "Frist:",
       "otherPrefix": "Sonstiges: {note}",
       "saveFailed": "Rückblicknotiz konnte nicht gespeichert werden",
-      "actionFailed": "Aktion fehlgeschlagen"
+      "actionFailed": "Aktion fehlgeschlagen",
+      "goToGoalsLink": "Ziele ansehen"
     },
     "form": {
       "competitionLabel": "Wettkampf",
@@ -2303,7 +2309,9 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "Ausgangszeit (optional)",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "Aus Bestzeit übernehmen"
+      "getBestTimeButton": "Aus Bestzeit übernehmen",
+      "personalCompetitionGroup": "Persönlich",
+      "teamCompetitionGroupFallback": "Team-Wettkampf"
     },
     "milestoneForm": {
       "templateLabel": "Vorlage (optional)",

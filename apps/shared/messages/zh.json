@@ -1473,11 +1473,13 @@
       "dashboard": "仪表盘",
       "practice": "训练历史",
       "competition": "比赛历史",
+      "goals": "目标管理",
       "mypage": "我的页面",
       "team": "团队",
       "dashboardDesc": "通知与日程",
       "practiceDesc": "训练内容与成绩记录",
       "competitionDesc": "比赛结果与成绩记录",
+      "goalsDesc": "目标设定与达成情况",
       "mypageDesc": "个人资料与最佳成绩",
       "teamDesc": "加入与管理团队",
       "teamAdmin": "团队管理",
@@ -2128,7 +2130,7 @@
       "loadError": "加载目标列表失败",
       "retry": "重新加载",
       "empty": "暂无目标",
-      "emptyDesc": "请使用右上角的按钮新建",
+      "emptyDesc": "请使用下方的按钮新建",
       "achievedBadge": "已达成！",
       "targetTimePrefix": "目标：",
       "deleteConfirm": "确定要删除该目标吗？",
@@ -2136,7 +2138,9 @@
       "edit": "编辑",
       "delete": "删除",
       "competitionFallback": "比赛",
-      "styleFallback": "项目"
+      "styleFallback": "项目",
+      "competitionInfoUnavailable": "无大会信息",
+      "editUnavailableReason": "因缺少大会信息，无法编辑"
     },
     "detail": {
       "loadError": "加载目标详情失败",
@@ -2201,7 +2205,8 @@
       "updateFailed": "更新目标失败",
       "undecided": "待定",
       "competitionFallback": "比赛",
-      "styleFallback": "项目"
+      "styleFallback": "项目",
+      "goToGoalsLink": "查看目标管理"
     },
     "milestone": {
       "empty": "暂无里程碑",
@@ -2286,7 +2291,8 @@
       "deadlineLabel": "截止日期：",
       "otherPrefix": "其他：{note}",
       "saveFailed": "保存复盘笔记失败",
-      "actionFailed": "处理失败"
+      "actionFailed": "处理失败",
+      "goToGoalsLink": "查看目标管理"
     },
     "form": {
       "competitionLabel": "比赛",
@@ -2303,7 +2309,9 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "初始成绩（可选）",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "从最佳成绩获取"
+      "getBestTimeButton": "从最佳成绩获取",
+      "personalCompetitionGroup": "个人",
+      "teamCompetitionGroupFallback": "团队比赛"
     },
     "milestoneForm": {
       "templateLabel": "模板（可选）",

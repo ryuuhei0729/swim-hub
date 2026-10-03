@@ -1,37 +1,38 @@
 "use client";
 
 import React from "react";
+import { SelectChips } from "@/components/forms/practice-log/components/SelectChips";
 import { SWIM_CATEGORIES } from "../constants";
 
 interface SwimCategorySelectorProps {
   value: "Swim" | "Pull" | "Kick";
   onChange: (value: "Swim" | "Pull" | "Kick") => void;
-  required?: boolean;
   disabled?: boolean;
 }
 
 /**
- * Swim/Pull/Kick選択コンポーネント
+ * Swim/Pull/Kick選択コンポーネント。練習入力 (PracticeMenuItem) と同じ
+ * SelectChips を使い、入力 UX を揃える。
  */
 export default function SwimCategorySelector({
   value,
   onChange,
-  required = false,
   disabled = false,
 }: SwimCategorySelectorProps) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as "Swim" | "Pull" | "Kick")}
-      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-      required={required}
-      disabled={disabled}
+    <div
+      className={disabled ? "pointer-events-none opacity-50" : undefined}
+      aria-disabled={disabled}
     >
-      {SWIM_CATEGORIES.map((category) => (
-        <option key={category.value} value={category.value}>
-          {category.label}
-        </option>
-      ))}
-    </select>
+      <SelectChips
+        options={SWIM_CATEGORIES.map((category) => ({
+          value: category.value,
+          label: category.label,
+        }))}
+        value={value}
+        onChange={(v) => onChange(v as "Swim" | "Pull" | "Kick")}
+        testIdPrefix="goal-milestone-swim-category"
+      />
+    </div>
   );
 }

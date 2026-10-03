@@ -24,6 +24,9 @@
 import { describe, it, expect } from "vitest";
 import jaMessages from "../../../shared/messages/ja.json";
 import enMessages from "../../../shared/messages/en.json";
+import zhMessages from "../../../shared/messages/zh.json";
+import koMessages from "../../../shared/messages/ko.json";
+import deMessages from "../../../shared/messages/de.json";
 
 // ---------------------------------------------------------------------------
 // ヘルパー: ネストしたキーをフラットなパスで列挙
@@ -333,29 +336,35 @@ describe("[V-C1-02d] onboarding namespace の必須キー確認", () => {
 //                 "設定" / "ログアウト" / "関連サービス"
 // ---------------------------------------------------------------------------
 
+// 目標管理 (goals) Sidebar 導入 (Sprint Contract U1) で追加されたキーを含む、
+// 現行の sidebar 必須キー一覧。[V-C1-02e] (ja/en) と [V-I18N-03] (5言語) の
+// 両方から参照する唯一の定義元 (重複定義しない)。
+const SIDEBAR_REQUIRED_KEYS = [
+  // ナビゲーション名 (baseNavigation の name)
+  "sidebar.nav.dashboard",
+  "sidebar.nav.practice",
+  "sidebar.nav.competition",
+  "sidebar.nav.goals",
+  "sidebar.nav.mypage",
+  "sidebar.nav.team",
+  // ナビゲーション description
+  "sidebar.nav.dashboardDesc",
+  "sidebar.nav.practiceDesc",
+  "sidebar.nav.competitionDesc",
+  "sidebar.nav.goalsDesc",
+  "sidebar.nav.mypageDesc",
+  "sidebar.nav.teamDesc",
+  // チーム管理（管理者専用セクション）
+  "sidebar.nav.teamAdmin",
+  "sidebar.nav.teamAdminDesc",
+  // スマホ用メニュー
+  "sidebar.settings",
+  "sidebar.logout",
+  // 関連サービス
+  "sidebar.relatedServices",
+] as const;
+
 describe("[V-C1-02e] sidebar namespace の必須キー確認", () => {
-  const SIDEBAR_REQUIRED_KEYS = [
-    // ナビゲーション名 (baseNavigation の name)
-    "sidebar.nav.dashboard",
-    "sidebar.nav.practice",
-    "sidebar.nav.competition",
-    "sidebar.nav.mypage",
-    "sidebar.nav.team",
-    // ナビゲーション description
-    "sidebar.nav.dashboardDesc",
-    "sidebar.nav.practiceDesc",
-    "sidebar.nav.competitionDesc",
-    "sidebar.nav.mypageDesc",
-    "sidebar.nav.teamDesc",
-    // チーム管理（管理者専用セクション）
-    "sidebar.nav.teamAdmin",
-    "sidebar.nav.teamAdminDesc",
-    // スマホ用メニュー
-    "sidebar.settings",
-    "sidebar.logout",
-    // 関連サービス
-    "sidebar.relatedServices",
-  ] as const;
 
   for (const key of SIDEBAR_REQUIRED_KEYS) {
     it(`ja.json に "${key}" が存在する`, () => {
@@ -574,4 +583,97 @@ describe("[V-C1-06] Phase 1-C-1 実装後の ja/en キー集合完全一致", ()
       `ja.json に以下のキーが欠損しています:\n${missingInJa.join("\n")}`,
     ).toHaveLength(0);
   });
+});
+
+// ---------------------------------------------------------------------------
+// 目標管理 (goals) Sidebar 復元 (Sprint Contract U1) — 5言語対応の追加検証
+//
+// 既存の Phase 1-C-1 テスト (上記) は ja/en の2言語のみを見ている。
+// U1 は Sidebar 復元に伴い5言語 (ja/en/zh/ko/de) への追加を明示的に要求しているため、
+// ここでは5言語版の検証を追加する。goals namespace 本体の5言語化は Out of Scope
+// (Contract に明記なし) であり、ここでは sidebar.nav.goals* のみを対象にする。
+// ---------------------------------------------------------------------------
+
+const LOCALES = [
+  { name: "ja", messages: jaMessages, expectJapanese: true },
+  { name: "en", messages: enMessages, expectJapanese: false },
+  { name: "zh", messages: zhMessages, expectJapanese: false },
+  { name: "ko", messages: koMessages, expectJapanese: false },
+  { name: "de", messages: deMessages, expectJapanese: false },
+] as const;
+
+describe("[V-I18N-01] sidebar.nav.goals / goalsDesc の5言語存在確認", () => {
+  it("5言語全てで sidebar.nav.goals が空文字列でない文字列として存在する", () => {
+    const missing: string[] = [];
+    for (const { name, messages } of LOCALES) {
+      const keys = flattenKeys(messages as unknown as Record<string, unknown>);
+      if (!keys.includes("sidebar.nav.goals")) {
+        missing.push(name);
+        continue;
+      }
+      const value = (messages as { sidebar?: { nav?: Record<string, unknown> } }).sidebar?.nav
+        ?.goals;
+      if (typeof value !== "string" || value.trim() === "") {
+        missing.push(name);
+      }
+    }
+    expect(missing, `sidebar.nav.goals が空/欠落しているロケール: ${missing.join(", ")}`).toEqual(
+      [],
+    );
+  });
+
+  it("5言語全てで sidebar.nav.goalsDesc が空文字列でない文字列として存在する", () => {
+    const missing: string[] = [];
+    for (const { name, messages } of LOCALES) {
+      const keys = flattenKeys(messages as unknown as Record<string, unknown>);
+      if (!keys.includes("sidebar.nav.goalsDesc")) {
+        missing.push(name);
+        continue;
+      }
+      const value = (messages as { sidebar?: { nav?: Record<string, unknown> } }).sidebar?.nav
+        ?.goalsDesc;
+      if (typeof value !== "string" || value.trim() === "") {
+        missing.push(name);
+      }
+    }
+    expect(
+      missing,
+      `sidebar.nav.goalsDesc が空/欠落しているロケール: ${missing.join(", ")}`,
+    ).toEqual([]);
+  });
+});
+
+describe("[V-I18N-02] en/zh/ko/de に日本語ハードコードが無い", () => {
+  for (const { name, messages, expectJapanese } of LOCALES) {
+    if (expectJapanese) continue; // ja自身は対象外
+    // zh.json は中国語漢字が CJK統合漢字範囲に含まれるため日本語検出から除外する
+    // (既存の messages-tab-modal.test.ts と同じ規約。containsJapanese はひらがな/
+    // カタカナも含む正規表現なので、漢字のみの中国語訳は原理的に判別できない)。
+    if (name === "zh") continue;
+
+    it(`${name}.json の sidebar.nav.goals / goalsDesc に日本語文字が含まれない`, () => {
+      const nav = (messages as { sidebar?: { nav?: Record<string, unknown> } }).sidebar?.nav;
+      expect(
+        containsJapanese(nav?.goals),
+        `${name}.json の sidebar.nav.goals に日本語が含まれています`,
+      ).toBe(false);
+      expect(
+        containsJapanese(nav?.goalsDesc),
+        `${name}.json の sidebar.nav.goalsDesc に日本語が含まれています`,
+      ).toBe(false);
+    });
+  }
+});
+
+describe("[V-I18N-03] Phase 1-C-1 sidebar 必須キー非退行 (5言語版)", () => {
+  for (const { name, messages } of LOCALES) {
+    it(`${name}.json に SIDEBAR_REQUIRED_KEYS (goals追加後) が全て存在する`, () => {
+      const keys = flattenKeys(messages as unknown as Record<string, unknown>);
+      const missing = SIDEBAR_REQUIRED_KEYS.filter((key) => !keys.includes(key));
+      expect(
+        missing,
+        `${name}.json に以下の sidebar 必須キーが欠落しています:\n${missing.join("\n")}`,
+      ).toHaveLength(0);
+    });
+  }
 });

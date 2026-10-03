@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { formatTimeBest } from "@/utils/formatters";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
@@ -33,7 +33,8 @@ export default function GoalDetail({
   const { supabase } = useAuth();
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
 
-  const [progress, setProgress] = useState(0);
+  // null = 計算不能 (水路が分からない。大会情報なしの目標)
+  const [progress, setProgress] = useState<number | null>(0);
 
   // 達成率を計算
   useEffect(() => {
@@ -57,6 +58,15 @@ export default function GoalDetail({
       : 0;
 
   const style = styles.find((s) => s.id === goal.style_id);
+  // competition は null になりうる (個人大会削除・チーム退会によるRLS不可視化)。
+  // 判定条件は goal.competition === null の1つに統一する。
+  // competitionFallback は competition はあるが title が空のときだけ使う。
+  const competition = goal.competition;
+  const competitionUnavailable = competition === null;
+  const competitionTitle =
+    competition === null ? t("list.competitionInfoUnavailable") : competition.title || t("list.competitionFallback");
+  const competitionDate = competition?.date;
+  const goalCompetitionDate = competitionDate ?? "";
 
   return (
     <div className="bg-white rounded-lg shadow p-6 space-y-6">
@@ -64,11 +74,17 @@ export default function GoalDetail({
       <div>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{goal.competition.title || t("list.competitionFallback")}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{competitionTitle}</h2>
             <p className="text-gray-600 mt-1">
               {style?.name_jp || t("list.styleFallback")} |{" "}
-              {format(new Date(goal.competition.date), "yyyy年M月d日", { locale: ja })}
+              {competitionDate && isValid(new Date(competitionDate))
+                ? format(new Date(competitionDate), "yyyy年M月d日", { locale: ja })
+                : t("list.competitionInfoUnavailable")}
             </p>
+            {/* 大会情報が無い目標は編集できない理由を明示する */}
+            {competitionUnavailable && (
+              <p className="text-xs text-amber-600 mt-1">{t("list.editUnavailableReason")}</p>
+            )}
           </div>
         </div>
 
@@ -88,13 +104,14 @@ export default function GoalDetail({
           </div>
         </div>
 
-        {/* 達成率 */}
+        {/* 達成率。null = 計算不能 (水路が分からない) は既存の「未設定」表示パターンに合わせ、
+            ProgressBar 自体を描画しない (0% と誤解させないため) */}
         <div>
           <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
             <span>{t("detail.achievement")}</span>
-            <span>{progress.toFixed(0)}%</span>
+            <span>{progress !== null ? `${progress.toFixed(0)}%` : t("detail.notSet")}</span>
           </div>
-          <ProgressBar progress={progress} />
+          {progress !== null && <ProgressBar progress={progress} />}
         </div>
       </div>
 
@@ -125,7 +142,7 @@ export default function GoalDetail({
         <MilestoneList
           milestones={goal.milestones}
           styles={styles}
-          goalCompetitionDate={goal.competition.date}
+          goalCompetitionDate={goalCompetitionDate}
           onUpdate={onUpdate}
         />
       </div>
@@ -138,7 +155,7 @@ export default function GoalDetail({
         goalId={goal.id}
         goal={goal}
         styles={styles}
-        goalCompetitionDate={goal.competition.date}
+        goalCompetitionDate={goalCompetitionDate}
       />
     </div>
   );

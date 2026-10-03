@@ -5,6 +5,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
+import { isMilestoneTimeValueValid } from "@apps/shared/types/goals";
 import { useTranslations } from "next-intl";
 import { parseISO, isValid, format } from "date-fns";
 import type {
@@ -46,8 +47,16 @@ export default function MilestoneEditModal({
   const [deadline, setDeadline] = useState("");
   const [params, setParams] = useState<MilestoneParams>(DEFAULT_TIME_PARAMS);
   const [isLoading, setIsLoading] = useState(false);
+  // 目標タイム欄 (target_time/target_average_time) が 0以下のまま submit されたときに true。
+  // ユーザーが再入力すると (handleParamsChange 発火時に) false に戻す
+  const [timeFieldInvalid, setTimeFieldInvalid] = useState(false);
 
   const goalAPI = new GoalAPI(supabase);
+
+  const handleParamsChange = (newParams: MilestoneParams) => {
+    setParams(newParams);
+    if (timeFieldInvalid) setTimeFieldInvalid(false);
+  };
 
   // 既存のマイルストーンデータでフォームを初期化
   useEffect(() => {
@@ -68,6 +77,7 @@ export default function MilestoneEditModal({
         setDeadline("");
       }
       setParams(milestone.params);
+      setTimeFieldInvalid(false);
     }
   }, [isOpen, milestone]);
 
@@ -81,10 +91,18 @@ export default function MilestoneEditModal({
     } else {
       setParams(DEFAULT_SET_PARAMS);
     }
+    setTimeFieldInvalid(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 目標タイム欄 (target_time/target_average_time) が読み取れない入力のまま
+    // 0 で確定していないか確認する。set 型はタイムを持たないため常に true
+    if (!isMilestoneTimeValueValid(params)) {
+      setTimeFieldInvalid(true);
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -147,10 +165,11 @@ export default function MilestoneEditModal({
                 title={title}
                 onTitleChange={setTitle}
                 params={params}
-                onParamsChange={setParams}
+                onParamsChange={handleParamsChange}
                 deadline={deadline}
                 onDeadlineChange={setDeadline}
                 goalCompetitionDate={goalCompetitionDate}
+                timeFieldInvalid={timeFieldInvalid}
                 showTemplateSelector={false}
               />
 

@@ -2,7 +2,7 @@
  * useDashboardHandlers.handleRecordLogSubmit — 実際の呼び出し元 (RecordLogForm) を
  * 通した失敗系の回帰テスト。
  *
- * 背景 (Reviewer Critical, PM裁定によりQAが追加):
+ * 背景:
  * 「テストが1件でも『実際の呼び出し元を通した失敗系』を書いていれば、デッドコードは
  * 一撃で発覚したはず」という指摘への対応。onSubmit を無条件にモックして直接
  * resolve/reject させるだけのテストでは、useDashboardHandlers 内部の
@@ -16,7 +16,7 @@
  *  - DB書き込み層に相当する createRecord だけをモックし、reject させる
  * という構成で、rethrow が正しく行われ、モーダルが無言で閉じないことを検証する。
  *
- * 【追記 (PM裁定: Warning 1 修正に伴う更新)】
+ * 【追記】
  * `RecordLogForm` は catch した error を `toUserFacingMessage(error, tCommon("error"))`
  * で表示用文字列に変換するようになった。生の `Error` (生の DB エラーのシミュレーション)
  * は `common.error` (「エラーが発生しました」) にフォールバックする。期待値を汎用
@@ -92,6 +92,11 @@ function Harness({
     updatePractice: vi.fn(),
     createPracticeLog: vi.fn(),
     updatePracticeLog: vi.fn(),
+    // usePracticeTabSave 専用の別経路。このテストは handleRecordLogSubmit
+    // (練習タブモーダルとは無関係) のみを検証するため未使用だが、
+    // UseDashboardHandlersProps の必須プロパティとして満たす必要がある。
+    createPracticeLogForTabSave: vi.fn(),
+    updatePracticeLogForTabSave: vi.fn(),
     deletePracticeLog: vi.fn(),
     createPracticeTime: vi.fn(),
     deletePracticeTime: vi.fn(),

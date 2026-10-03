@@ -23,6 +23,8 @@ interface MilestoneFormProps {
   deadline: string;
   onDeadlineChange: (deadline: string) => void;
   goalCompetitionDate: string;
+  /** 目標タイム欄 (target_time/target_average_time) が保存できない値のまま submit された場合に true */
+  timeFieldInvalid?: boolean;
   showTemplateSelector?: boolean;
   selectedTemplate?: string;
   onTemplateSelect?: (templateId: string) => void;
@@ -42,6 +44,7 @@ export default function MilestoneForm({
   deadline,
   onDeadlineChange,
   goalCompetitionDate,
+  timeFieldInvalid = false,
   showTemplateSelector = false,
   selectedTemplate = "",
   onTemplateSelect,
@@ -155,11 +158,19 @@ export default function MilestoneForm({
 
       {/* パラメータフォーム */}
       {type === "time" && isMilestoneTimeParams(params) && (
-        <TimeParamsForm params={params} onChange={(p) => onParamsChange(p)} />
+        <TimeParamsForm
+          params={params}
+          onChange={(p) => onParamsChange(p)}
+          targetTimeInvalid={timeFieldInvalid}
+        />
       )}
 
       {type === "reps_time" && isMilestoneRepsTimeParams(params) && (
-        <RepsTimeParamsForm params={params} onChange={(p) => onParamsChange(p)} />
+        <RepsTimeParamsForm
+          params={params}
+          onChange={(p) => onParamsChange(p)}
+          targetAverageTimeInvalid={timeFieldInvalid}
+        />
       )}
 
       {type === "set" && isMilestoneSetParams(params) && (

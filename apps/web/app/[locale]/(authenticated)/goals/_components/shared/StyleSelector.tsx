@@ -2,38 +2,35 @@
 
 import React from "react";
 import { useTranslations } from "next-intl";
+import { SelectChips } from "@/components/forms/practice-log/components/SelectChips";
 import { SWIM_STYLES } from "../constants";
 
 interface StyleSelectorProps {
   value: string;
   onChange: (value: string) => void;
-  required?: boolean;
   disabled?: boolean;
 }
 
 /**
- * 泳法選択コンポーネント
+ * 泳法選択コンポーネント。練習入力 (PracticeMenuItem) と同じ SelectChips を使い、
+ * 入力 UX を揃える。
  */
-export default function StyleSelector({
-  value,
-  onChange,
-  required = false,
-  disabled = false,
-}: StyleSelectorProps) {
+export default function StyleSelector({ value, onChange, disabled = false }: StyleSelectorProps) {
   const tPractice = useTranslations("practice");
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-      required={required}
-      disabled={disabled}
+    <div
+      className={disabled ? "pointer-events-none opacity-50" : undefined}
+      aria-disabled={disabled}
     >
-      {SWIM_STYLES.map((style) => (
-        <option key={style.value} value={style.value}>
-          {tPractice(`styles.${style.value}`)}
-        </option>
-      ))}
-    </select>
+      <SelectChips
+        options={SWIM_STYLES.map((style) => ({
+          value: style.value,
+          label: tPractice(`styles.${style.value}`),
+        }))}
+        value={value}
+        onChange={onChange}
+        testIdPrefix="goal-milestone-style"
+      />
+    </div>
   );
 }

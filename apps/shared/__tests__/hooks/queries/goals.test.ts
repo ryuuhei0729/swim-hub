@@ -6,22 +6,18 @@ import {
   createMockStyle,
 } from "../../../__mocks__/supabase";
 import { GoalAPI } from "../../../api/goals";
-import { RecordAPI } from "../../../api/records";
 import { useGoalsQuery, useGoalDetailQuery, goalKeys } from "../../../hooks/queries/goals";
 import { renderQueryHook, createTestQueryClient } from "../../utils/test-utils";
 import type { Goal, GoalWithMilestones } from "../../../types";
 
-// APIをモック化
+// APIをモック化。useGoalsQuery は L3 (RecordAPI.getCompetitions ではなく
+// GoalAPI.getSelectableCompetitions を使う。個人大会+所属チームの大会を対象にするため)
+// に伴い RecordAPI へは依存しなくなった (課題C)。
 vi.mock("../../../api/goals", () => ({
   GoalAPI: vi.fn().mockImplementation(() => ({
     getGoals: vi.fn(),
     getGoalWithMilestones: vi.fn(),
-  })),
-}));
-
-vi.mock("../../../api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    getCompetitions: vi.fn(),
+    getSelectableCompetitions: vi.fn(),
   })),
 }));
 
@@ -35,6 +31,9 @@ const createMockGoal = (overrides: Partial<Goal> = {}): Goal => ({
   start_time: 60.0,
   status: "active",
   achieved_at: null,
+  // M3 (reflection_note 追加) 後、Goal 型は非 optional なので fixture にも必須
+  // (Developer 報告の課題D。欠落させると tsc エラーになる)。
+  reflection_note: null,
   created_at: "2025-01-15T10:00:00Z",
   updated_at: "2025-01-15T10:00:00Z",
   ...overrides,
@@ -70,9 +69,7 @@ describe("Goal Query Hooks", () => {
   let mockGoalApi: {
     getGoals: ReturnType<typeof vi.fn>;
     getGoalWithMilestones: ReturnType<typeof vi.fn>;
-  };
-  let mockRecordApi: {
-    getCompetitions: ReturnType<typeof vi.fn>;
+    getSelectableCompetitions: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -81,14 +78,11 @@ describe("Goal Query Hooks", () => {
     mockGoalApi = {
       getGoals: vi.fn(),
       getGoalWithMilestones: vi.fn(),
-    };
-    mockRecordApi = {
-      getCompetitions: vi.fn(),
+      getSelectableCompetitions: vi.fn(),
     };
 
     // コンストラクタがモックAPIインスタンスを返すように設定
     vi.mocked(GoalAPI).mockImplementation(() => mockGoalApi as unknown as GoalAPI);
-    vi.mocked(RecordAPI).mockImplementation(() => mockRecordApi as unknown as RecordAPI);
   });
 
   describe("useGoalsQuery", () => {
@@ -107,7 +101,7 @@ describe("Goal Query Hooks", () => {
       ];
 
       mockGoalApi.getGoals.mockResolvedValue(mockGoals);
-      mockRecordApi.getCompetitions.mockResolvedValue(mockCompetitions);
+      mockGoalApi.getSelectableCompetitions.mockResolvedValue(mockCompetitions);
 
       const { result } = renderQueryHook(() => useGoalsQuery(mockSupabase, { styles: mockStyles }));
 
@@ -128,10 +122,10 @@ describe("Goal Query Hooks", () => {
       });
     });
 
-    it("competition_idに一致する大会がない場合はundefinedになる", async () => {
+    it("competition_idに一致する大会がない場合はnullになる (GoalList/GoalDetail の `=== null` 判定と一致させるため)", async () => {
       const mockGoals = [createMockGoal({ competition_id: "comp-unknown" })];
       mockGoalApi.getGoals.mockResolvedValue(mockGoals);
-      mockRecordApi.getCompetitions.mockResolvedValue([]);
+      mockGoalApi.getSelectableCompetitions.mockResolvedValue([]);
 
       const { result } = renderQueryHook(() => useGoalsQuery(mockSupabase, { styles: [] }));
 
@@ -139,14 +133,17 @@ describe("Goal Query Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      // mockGoals は1件のみ返すため、data[0] は必ず存在する
-      expect(result.current.data![0]!.competition).toBeUndefined();
+      // mockGoals は1件のみ返すため、data[0] は必ず存在する。
+      // 旧実装は undefined を返しており (GoalList/GoalDetail の `=== null` 判定と
+      // 噛み合わず「大会情報なし」表示・編集ボタン非表示が発火しない実バグの原因だった)、
+      // このテスト自体がその挙動を pin していた。修正後は null を返す。
+      expect(result.current.data![0]!.competition).toBeNull();
       expect(result.current.data![0]!.style).toBeUndefined();
     });
 
     it("invalidate()がgoalKeys.allでinvalidateQueriesを呼び出す", async () => {
       mockGoalApi.getGoals.mockResolvedValue([]);
-      mockRecordApi.getCompetitions.mockResolvedValue([]);
+      mockGoalApi.getSelectableCompetitions.mockResolvedValue([]);
 
       const queryClient = createTestQueryClient();
       const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");

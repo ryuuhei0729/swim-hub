@@ -15,6 +15,7 @@ import {
   HomeIcon,
   ChartBarIcon,
   TrophyIcon,
+  FlagIcon,
   ChevronRightIcon,
   UsersIcon,
   UserIcon,
@@ -37,24 +38,38 @@ const baseNavigation: NavigationItem[] = [
   { href: "/dashboard", icon: HomeIcon },
   { href: "/practice", icon: ChartBarIcon },
   { href: "/competition", icon: TrophyIcon },
+  { href: "/goals", icon: FlagIcon },
   { href: "/mypage", icon: UserIcon },
   { href: "/teams", icon: UsersIcon },
 ];
 
-type NavHref = "/dashboard" | "/practice" | "/competition" | "/mypage" | "/teams";
+type NavHref = "/dashboard" | "/practice" | "/competition" | "/goals" | "/mypage" | "/teams";
 
-const NAV_NAME_KEYS: Record<NavHref, "nav.dashboard" | "nav.practice" | "nav.competition" | "nav.mypage" | "nav.team"> = {
+const NAV_NAME_KEYS: Record<
+  NavHref,
+  "nav.dashboard" | "nav.practice" | "nav.competition" | "nav.goals" | "nav.mypage" | "nav.team"
+> = {
   "/dashboard": "nav.dashboard",
   "/practice": "nav.practice",
   "/competition": "nav.competition",
+  "/goals": "nav.goals",
   "/mypage": "nav.mypage",
   "/teams": "nav.team",
 };
 
-const NAV_DESC_KEYS: Record<NavHref, "nav.dashboardDesc" | "nav.practiceDesc" | "nav.competitionDesc" | "nav.mypageDesc" | "nav.teamDesc"> = {
+const NAV_DESC_KEYS: Record<
+  NavHref,
+  | "nav.dashboardDesc"
+  | "nav.practiceDesc"
+  | "nav.competitionDesc"
+  | "nav.goalsDesc"
+  | "nav.mypageDesc"
+  | "nav.teamDesc"
+> = {
   "/dashboard": "nav.dashboardDesc",
   "/practice": "nav.practiceDesc",
   "/competition": "nav.competitionDesc",
+  "/goals": "nav.goalsDesc",
   "/mypage": "nav.mypageDesc",
   "/teams": "nav.teamDesc",
 };

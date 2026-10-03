@@ -1470,11 +1470,13 @@
       "dashboard": "Dashboard",
       "practice": "Practice History",
       "competition": "Race History",
+      "goals": "Goals",
       "mypage": "My Page",
       "team": "Team",
       "dashboardDesc": "Announcements and schedule",
       "practiceDesc": "Practice content and times",
       "competitionDesc": "Race results and times",
+      "goalsDesc": "Set goals and track progress",
       "mypageDesc": "Profile and best times",
       "teamDesc": "Join and manage teams",
       "teamAdmin": "Team Admin",
@@ -2125,7 +2127,7 @@
       "loadError": "Failed to load goals",
       "retry": "Retry",
       "empty": "No goals yet",
-      "emptyDesc": "Create one using the button in the top right",
+      "emptyDesc": "Create one using the button below",
       "achievedBadge": "Achieved!",
       "targetTimePrefix": "Target:",
       "deleteConfirm": "Delete this goal?",
@@ -2133,7 +2135,9 @@
       "edit": "Edit",
       "delete": "Delete",
       "competitionFallback": "Meet",
-      "styleFallback": "Event"
+      "styleFallback": "Event",
+      "competitionInfoUnavailable": "Meet info unavailable",
+      "editUnavailableReason": "Cannot edit because meet info is unavailable"
     },
     "detail": {
       "loadError": "Failed to load goal details",
@@ -2198,7 +2202,8 @@
       "updateFailed": "Failed to update goal",
       "undecided": "TBD",
       "competitionFallback": "Meet",
-      "styleFallback": "Event"
+      "styleFallback": "Event",
+      "goToGoalsLink": "View goals"
     },
     "milestone": {
       "empty": "No milestones yet",
@@ -2283,7 +2288,8 @@
       "deadlineLabel": "Deadline:",
       "otherPrefix": "Other: {note}",
       "saveFailed": "Failed to save reflection note",
-      "actionFailed": "Action failed"
+      "actionFailed": "Action failed",
+      "goToGoalsLink": "View goals"
     },
     "form": {
       "competitionLabel": "Competition",
@@ -2300,7 +2306,9 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "Initial Time (optional)",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "Get from best time"
+      "getBestTimeButton": "Get from best time",
+      "personalCompetitionGroup": "Personal",
+      "teamCompetitionGroupFallback": "Team meet"
     },
     "milestoneForm": {
       "templateLabel": "Template (optional)",

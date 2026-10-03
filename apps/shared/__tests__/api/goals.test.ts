@@ -25,6 +25,9 @@ const createMockGoal = (overrides = {}): Goal => ({
   start_time: 70,
   status: "active",
   achieved_at: null,
+  // M3 (reflection_note 追加) 後、Goal 型は非 optional なので fixture にも必須。
+  // 欠落させると tsc エラーになる (Developer 報告の課題D)。
+  reflection_note: null,
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
   ...overrides,
@@ -404,7 +407,10 @@ describe("GoalAPI", () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
-              data: mockGoal,
+              // calculateGoalProgress は select("*, competition:competitions(pool_type)")
+              // で水路を取得し、それが無いと計算不能 (null) を返す。goal.competition が
+              // 存在するフィクスチャでなければ「計算できる」ケースを検証できない。
+              data: { ...mockGoal, competition: { pool_type: 1 } },
               error: null,
             }),
           };
@@ -735,20 +741,14 @@ describe("GoalAPI", () => {
       });
 
       mockClient.from = vi.fn((table: string) => {
-        if (table === "milestones") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: milestone,
-              error: null,
-            }),
-          };
-        }
         if (table === "practice_logs") {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            // 実装 (C1) は canonical 化した style を .ilike("style", ...) で問い合わせる
+            // (.eq ではない)。ilike が定義されていないとチェーンが TypeError になる
+            // (課題A)。
+            ilike: vi.fn().mockReturnThis(),
             order: vi.fn().mockResolvedValue({
               data: [
                 {
@@ -763,7 +763,7 @@ describe("GoalAPI", () => {
         return createMockQueryBuilder([]);
       }) as unknown as typeof mockClient.from;
 
-      const result = await api.checkMilestoneAchievement("milestone-1");
+      const result = await api.checkMilestoneAchievement(milestone);
 
       expect(result.achieved).toBe(true);
       expect(result.achievementData?.achievedValue.time).toBe(59);
@@ -773,7 +773,9 @@ describe("GoalAPI", () => {
       mockClient = createMockSupabaseClient({ userId: "" });
       api = new GoalAPI(mockClient);
 
-      await expect(api.checkMilestoneAchievement("milestone-1")).rejects.toThrow("認証が必要です");
+      await expect(api.checkMilestoneAchievement(createMockMilestone())).rejects.toThrow(
+        "認証が必要です",
+      );
     });
   });
 
@@ -895,6 +897,9 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
             return {
               select: vi.fn().mockReturnThis(),
               eq: vi.fn().mockReturnThis(),
+              // hasTimeRecords は canonical 化した style を .ilike("style", ...) で
+              // 問い合わせる (課題A: ilike 未定義だと TypeError)。
+              ilike: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [
                   {
@@ -910,6 +915,7 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            ilike: vi.fn().mockReturnThis(),
             limit: vi.fn().mockResolvedValue({
               data: [],
               error: null,
@@ -951,6 +957,7 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
             return {
               select: vi.fn().mockReturnThis(),
               eq: vi.fn().mockReturnThis(),
+              ilike: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [],
                 error: null,
@@ -961,6 +968,7 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
+            ilike: vi.fn().mockReturnThis(),
             limit: vi.fn().mockResolvedValue({
               data: [],
               error: null,
@@ -995,7 +1003,12 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
           reps: 4,
           sets: 1,
           target_average_time: 65,
-          style: "freestyle",
+          // C1 (PM暫定判断): canonical でない値 (旧: "freestyle") は
+          // toStyleCode で null になり、practice_logs へのクエリを送らず
+          // 早期 false 判定になる (goals.practiceLogStyleFilter.test.ts 参照)。
+          // 「レコードが実在すれば in_progress になる」ことを検証するこの
+          // フィクスチャは canonical 値でなければ成立しないため "Fr" に修正する。
+          style: "Fr",
           swim_category: "Swim",
           circle: 1,
         } as MilestoneRepsTimeParams,
@@ -1024,6 +1037,9 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
             return {
               select: vi.fn().mockReturnThis(),
               eq: vi.fn().mockReturnThis(),
+              // hasRepsTimeRecords は canonical 化した style を .ilike("style", ...) で
+              // 問い合わせる (課題A と同型)。
+              ilike: vi.fn().mockReturnThis(),
               gte: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [
@@ -1073,6 +1089,7 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
             return {
               select: vi.fn().mockReturnThis(),
               eq: vi.fn().mockReturnThis(),
+              ilike: vi.fn().mockReturnThis(),
               gte: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [],
@@ -1109,7 +1126,8 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
           distance: 100,
           reps: 4,
           sets: 3,
-          style: "freestyle",
+          // C1 (PM暫定判断): 上記 reps_time型フィクスチャと同じ理由で canonical 化。
+          style: "Fr",
           swim_category: "Swim",
           circle: 1,
         } as MilestoneSetParams,
@@ -1138,6 +1156,9 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
             return {
               select: vi.fn().mockReturnThis(),
               eq: vi.fn().mockReturnThis(),
+              // hasSetRecords は canonical 化した style を .ilike("style", ...) で
+              // 問い合わせる (課題A と同型)。
+              ilike: vi.fn().mockReturnThis(),
               gte: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [{ id: "log-1" }],
@@ -1182,6 +1203,7 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
             return {
               select: vi.fn().mockReturnThis(),
               eq: vi.fn().mockReturnThis(),
+              ilike: vi.fn().mockReturnThis(),
               gte: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [],
@@ -1219,7 +1241,10 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
         params: {
           distance: 100,
           target_time: 60,
-          style: "freestyle",
+          // checkMilestoneAchievement は spyOn で完全に差し替えているため
+          // hasRecordsForMilestone には到達しない (status が "not_started" でないため)。
+          // 実行経路には影響しないが、他フィクスチャと同様 canonical 値に揃える。
+          style: "Fr",
         } as MilestoneTimeParams,
         deadline: null,
         status: "in_progress",

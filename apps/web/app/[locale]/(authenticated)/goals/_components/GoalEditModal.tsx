@@ -7,8 +7,8 @@ import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { RecordAPI } from "@apps/shared/api/records";
-import { parseTimeToSeconds, formatTimeBest } from "@/utils/formatters";
-import type { Style, GoalWithMilestones, Competition, UpdateGoalInput } from "@apps/shared/types";
+import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
+import type { Style, GoalWithMilestones, Competition } from "@apps/shared/types";
 import { format } from "date-fns";
 import GoalForm from "./forms/GoalForm";
 
@@ -16,7 +16,10 @@ interface GoalEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => Promise<void>;
-  goal: GoalWithMilestones;
+  // 大会情報が無い目標 (goal.competition === null) は編集不可。
+  // 呼び出し元 (GoalList) が編集導線自体を出さないため、ここでは
+  // competition が必ず存在するもののみを受け取る (呼び出し元でガード済み)
+  goal: GoalWithMilestones & { competition: Competition };
   styles: Style[];
 }
 
@@ -42,28 +45,36 @@ export default function GoalEditModal({
     poolType: 0,
   });
   const [styleId, setStyleId] = useState<string>("");
-  const [targetTime, setTargetTime] = useState<string>("");
-  const [startTime, setStartTime] = useState<string>("");
+  const [targetTime, setTargetTime] = useState<number | null>(null);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const [useBestTime, setUseBestTime] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
   const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
+  // チーム大会の optgroup 表示名解決用 (U2)
+  const { teams } = useTeamsQuery(supabase);
+  const teamNames = useMemo(
+    () => Object.fromEntries(teams.map((m) => [m.team_id, m.teams.name])),
+    [teams],
+  );
 
-  // 大会一覧を取得（未来の大会 + 編集中目標の大会）
+  // 大会一覧を取得（未来の大会 + 編集中目標の大会。個人大会+所属チームの大会）。
+  // goal.competition は必ず存在する (呼び出し元でガード済み) ため、
+  // goal.competition.id をそのまま既存大会IDとして使う。
   useEffect(() => {
     if (isOpen && competitionMode === "existing") {
       const today = format(new Date(), "yyyy-MM-dd");
-      const existingCompetitionId = goal?.competition_id;
+      const existingCompetitionId = goal.competition.id;
 
-      recordAPI
-        .getCompetitions(today)
+      goalAPI
+        .getSelectableCompetitions(today)
         .then(async (futureCompetitions) => {
           // 既存の大会が未来の大会リストに含まれているか確認
           const existingIncluded = futureCompetitions.some((c) => c.id === existingCompetitionId);
 
-          if (existingCompetitionId && !existingIncluded) {
+          if (!existingIncluded) {
             // 既存の大会が含まれていない場合、個別に取得してマージ
             const { data: existingCompetition } = await supabase
               .from("competitions")
@@ -85,34 +96,46 @@ export default function GoalEditModal({
           setCompetitions([]);
         });
     }
-  }, [isOpen, competitionMode, supabase, recordAPI, goal?.competition_id]);
+  }, [isOpen, competitionMode, supabase, goalAPI, goal.competition.id]);
 
   // 既存の目標データでフォームを初期化
   useEffect(() => {
     if (isOpen && goal) {
-      setSelectedCompetitionId(goal.competition_id);
+      setSelectedCompetitionId(goal.competition.id);
       setCompetitionMode("existing");
       setStyleId(goal.style_id.toString());
-      setTargetTime(formatTimeBest(goal.target_time));
-      setStartTime(goal.start_time ? formatTimeBest(goal.start_time) : "");
+      setTargetTime(goal.target_time);
+      setStartTime(goal.start_time ?? null);
       setUseBestTime(false);
       setValidationError(null);
     }
   }, [isOpen, goal]);
 
-  // ベストタイムを取得
+  // 対象大会の水路（0: 短水路, 1: 長水路）。新規大会作成時は入力値、既存大会選択時は選択した大会の値
+  const selectedPoolType =
+    competitionMode === "new"
+      ? newCompetition.poolType
+      : competitions.find((c) => c.id === selectedCompetitionId)?.pool_type;
+
+  // ベストタイムを取得（対象大会と同じ水路の自己ベストのみを対象にする: U3）
   const handleGetBestTime = async () => {
     if (!styleId || !user) return;
 
     try {
-      const selectedStyle = styles.find((s) => s.id === parseInt(styleId, 10));
-      if (!selectedStyle) return;
+      const parsedStyleId = parseInt(styleId, 10);
+      if (selectedPoolType === undefined) {
+        // 大会未選択（水路不明）のため取得できない。GoalForm 側でボタンは
+        // 種目未選択時のみ無効化されるため、ここでは静かに抜ける
+        return;
+      }
 
       const bestTimes = await recordAPI.getBestTimes();
-      const bestTime = bestTimes.find((bt) => bt.style.name_jp === selectedStyle.name_jp);
+      const bestTime = bestTimes.find(
+        (bt) => bt.style_id === parsedStyleId && bt.pool_type === selectedPoolType,
+      );
 
       if (bestTime) {
-        setStartTime(formatTimeBest(bestTime.time));
+        setStartTime(bestTime.time);
         setUseBestTime(true);
       } else {
         alert(t("edit.bestTimeNotFound"));
@@ -133,36 +156,23 @@ export default function GoalEditModal({
     setValidationError(null);
 
     try {
-      // タイムを秒数に変換
-      const targetTimeSeconds = parseTimeToSeconds(targetTime);
-      const startTimeSeconds = startTime ? parseTimeToSeconds(startTime) : null;
+      // タイムは TimeSecondsInput が既に秒数へ変換済み
+      const targetTimeSeconds = targetTime;
+      const startTimeSeconds = startTime;
       const parsedStyleId = parseInt(styleId, 10);
 
       // バリデーション: targetTimeSeconds（必須）
-      if (
-        !Number.isFinite(targetTimeSeconds) ||
-        Number.isNaN(targetTimeSeconds) ||
-        targetTimeSeconds <= 0 ||
-        targetTimeSeconds > 3600
-      ) {
+      if (targetTimeSeconds === null || targetTimeSeconds <= 0 || targetTimeSeconds > 3600) {
         setValidationError(t("edit.validation.targetTimeInvalid"));
         setIsLoading(false);
         return;
       }
 
       // バリデーション: startTimeSeconds（startTimeが提供されている場合のみ）
-      if (startTime) {
-        if (
-          startTimeSeconds === null ||
-          !Number.isFinite(startTimeSeconds) ||
-          Number.isNaN(startTimeSeconds) ||
-          startTimeSeconds <= 0 ||
-          startTimeSeconds > 3600
-        ) {
-          setValidationError(t("edit.validation.startTimeInvalid"));
-          setIsLoading(false);
-          return;
-        }
+      if (startTimeSeconds !== null && (startTimeSeconds <= 0 || startTimeSeconds > 3600)) {
+        setValidationError(t("edit.validation.startTimeInvalid"));
+        setIsLoading(false);
+        return;
       }
 
       // バリデーション: styleId（必須）
@@ -193,11 +203,13 @@ export default function GoalEditModal({
         styleId: parsedStyleId,
         targetTime: targetTimeSeconds,
         startTime: startTimeSeconds,
-      } as Omit<UpdateGoalInput, "id">);
+      });
 
       await onSuccess();
       handleClose();
     } catch (error) {
+      // RLS (P2 WITH CHECK) がチーム退会後の競技会参照を拒否した場合もここに来るが、
+      // 生の Supabase エラー文言は出さずユーザー向け固定文言のみを表示する
       console.error("目標更新エラー:", error);
       alert(t("edit.updateFailed"));
     } finally {
@@ -215,8 +227,8 @@ export default function GoalEditModal({
       poolType: 0,
     });
     setStyleId("");
-    setTargetTime("");
-    setStartTime("");
+    setTargetTime(null);
+    setStartTime(null);
     setUseBestTime(false);
     setValidationError(null);
     onClose();
@@ -258,6 +270,7 @@ export default function GoalEditModal({
                 competitionMode={competitionMode}
                 onCompetitionModeChange={setCompetitionMode}
                 competitions={competitions}
+                teamNames={teamNames}
                 selectedCompetitionId={selectedCompetitionId}
                 onSelectedCompetitionIdChange={setSelectedCompetitionId}
                 newCompetition={newCompetition}

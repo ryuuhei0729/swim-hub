@@ -1473,11 +1473,13 @@
       "dashboard": "대시보드",
       "practice": "연습 기록",
       "competition": "대회 기록",
+      "goals": "목표 관리",
       "mypage": "마이페이지",
       "team": "팀",
       "dashboardDesc": "공지와 일정",
       "practiceDesc": "연습 내용과 타임 기록",
       "competitionDesc": "대회 결과와 타임 기록",
+      "goalsDesc": "목표 설정과 달성 현황",
       "mypageDesc": "프로필과 베스트 타임",
       "teamDesc": "팀 참여·관리",
       "teamAdmin": "팀 관리",
@@ -2128,7 +2130,7 @@
       "loadError": "목표 목록을 불러오지 못했습니다",
       "retry": "다시 불러오기",
       "empty": "목표가 없습니다",
-      "emptyDesc": "오른쪽 상단 버튼으로 새로 만들어 주세요",
+      "emptyDesc": "아래 버튼으로 새로 만들어 주세요",
       "achievedBadge": "달성!",
       "targetTimePrefix": "목표:",
       "deleteConfirm": "이 목표를 삭제하시겠습니까?",
@@ -2136,7 +2138,9 @@
       "edit": "편집",
       "delete": "삭제",
       "competitionFallback": "대회",
-      "styleFallback": "종목"
+      "styleFallback": "종목",
+      "competitionInfoUnavailable": "대회 정보 없음",
+      "editUnavailableReason": "대회 정보가 없어 수정할 수 없습니다"
     },
     "detail": {
       "loadError": "목표 상세 정보를 불러오지 못했습니다",
@@ -2201,7 +2205,8 @@
       "updateFailed": "목표 업데이트에 실패했습니다",
       "undecided": "미정",
       "competitionFallback": "대회",
-      "styleFallback": "종목"
+      "styleFallback": "종목",
+      "goToGoalsLink": "목표 관리 보기"
     },
     "milestone": {
       "empty": "마일스톤이 없습니다",
@@ -2286,7 +2291,8 @@
       "deadlineLabel": "기한:",
       "otherPrefix": "기타: {note}",
       "saveFailed": "회고 메모 저장에 실패했습니다",
-      "actionFailed": "처리에 실패했습니다"
+      "actionFailed": "처리에 실패했습니다",
+      "goToGoalsLink": "목표 관리 보기"
     },
     "form": {
       "competitionLabel": "대회",
@@ -2303,7 +2309,9 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "초기 기록 (선택)",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "베스트 기록에서 가져오기"
+      "getBestTimeButton": "베스트 기록에서 가져오기",
+      "personalCompetitionGroup": "개인",
+      "teamCompetitionGroupFallback": "팀 대회"
     },
     "milestoneForm": {
       "templateLabel": "템플릿 (선택)",

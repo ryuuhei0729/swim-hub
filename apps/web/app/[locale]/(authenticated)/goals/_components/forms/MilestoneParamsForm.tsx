@@ -1,117 +1,45 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Input from "@/components/ui/Input";
+import React from "react";
+import NumberStepper from "@/components/ui/NumberStepper";
+import { DistanceInput } from "@/components/forms/practice-log/components";
 import type {
   MilestoneTimeParams,
   MilestoneRepsTimeParams,
   MilestoneSetParams,
 } from "@apps/shared/types";
-import { formatTimeBest, parseTimeToSeconds } from "@/utils/formatters";
 import StyleSelector from "../shared/StyleSelector";
 import SwimCategorySelector from "../shared/SwimCategorySelector";
+import TimeSecondsInput from "../shared/TimeSecondsInput";
 import { useTranslations } from "next-intl";
 
 interface TimeParamsFormProps {
   params: MilestoneTimeParams;
   onChange: (params: MilestoneTimeParams) => void;
+  /** target_time が保存できない値 (0以下) のまま submit された場合に true にする */
+  targetTimeInvalid?: boolean;
 }
 
-export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
+export function TimeParamsForm({ params, onChange, targetTimeInvalid = false }: TimeParamsFormProps) {
   const t = useTranslations("goals");
-  const [timeDisplayValue, setTimeDisplayValue] = useState<string>("");
-  const [timeError, setTimeError] = useState<string>("");
-  const [distanceValue, setDistanceValue] = useState<string>(
-    params.distance > 0 ? String(params.distance) : "",
-  );
-
-  // params.target_timeが変更されたときに表示値を更新
-  useEffect(() => {
-    if (params.target_time > 0) {
-      setTimeDisplayValue(formatTimeBest(params.target_time));
-      setTimeError("");
-    } else {
-      setTimeDisplayValue("");
-    }
-  }, [params.target_time]);
-
-  // params.distanceが変更されたときに表示値を更新
-  useEffect(() => {
-    if (params.distance > 0) {
-      setDistanceValue(String(params.distance));
-    }
-  }, [params.distance]);
-
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setTimeDisplayValue(value);
-
-    // 空の場合はエラーをクリア
-    if (value.trim() === "") {
-      setTimeError("");
-      onChange({ ...params, target_time: 0 });
-      return;
-    }
-
-    // 入力値を秒数に変換
-    const seconds = parseTimeToSeconds(value);
-
-    // 有効な値の場合のみ更新
-    if (!isNaN(seconds) && seconds >= 0) {
-      setTimeError("");
-      onChange({ ...params, target_time: seconds });
-    } else {
-      // 無効な値の場合はエラーを表示（ただし入力中は表示しない）
-      // フォーカスが外れたときにエラーを表示するため、ここではエラーを設定しない
-    }
-  };
-
-  const handleTimeBlur = () => {
-    // フォーカスが外れたときにバリデーション
-    if (timeDisplayValue.trim() === "") {
-      setTimeError(t("paramsForm.timeRequired"));
-      return;
-    }
-
-    const seconds = parseTimeToSeconds(timeDisplayValue);
-    if (isNaN(seconds) || seconds < 0) {
-      setTimeError(t("paramsForm.timeInvalid"));
-    } else {
-      setTimeError("");
-      // 表示値を正規化
-      setTimeDisplayValue(formatTimeBest(seconds));
-    }
-  };
-
-  const handleDistanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setDistanceValue(value);
-    const parsed = parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, distance: parsed });
-    }
-  };
+  const tPracticeMenu = useTranslations("forms.practiceMenu");
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.distanceLabel")}</label>
-          <Input
-            type="number"
-            value={distanceValue}
-            onChange={handleDistanceChange}
-            placeholder="100"
-            min="1"
-            required
-          />
-        </div>
+      <DistanceInput
+        value={params.distance}
+        onChange={(value) => onChange({ ...params, distance: value === "" ? 0 : Number(value) })}
+        label={t("paramsForm.distanceLabel")}
+        otherLabel={tPracticeMenu("distanceOther")}
+        testIdPrefix="goal-milestone-time-distance"
+        autoFocusCustomInput={false}
+      />
+      <div className="grid grid-cols-3 gap-2">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.styleLabel")}</label>
           <StyleSelector
             value={params.style}
             onChange={(value) => onChange({ ...params, style: value })}
-            required
           />
         </div>
         <div>
@@ -119,24 +47,20 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
           <SwimCategorySelector
             value={params.swim_category}
             onChange={(value) => onChange({ ...params, swim_category: value })}
-            required
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.targetTimeLabel")}</label>
-          <Input
-            type="text"
-            inputMode="decimal"
-            value={timeDisplayValue}
-            onChange={handleTimeChange}
-            onBlur={handleTimeBlur}
-            placeholder="2.00.00"
+          <TimeSecondsInput
+            value={params.target_time}
+            onChange={(seconds) => onChange({ ...params, target_time: seconds ?? 0 })}
             required
-            className={timeError ? "border-red-500" : ""}
+            requiredErrorMessage={t("paramsForm.timeRequired")}
+            invalidErrorMessage={t("paramsForm.timeInvalid")}
+            forceInvalid={targetTimeInvalid}
           />
         </div>
       </div>
-      {timeError && <p className="text-xs text-red-500">{timeError}</p>}
     </div>
   );
 }
@@ -144,196 +68,95 @@ export function TimeParamsForm({ params, onChange }: TimeParamsFormProps) {
 interface RepsTimeParamsFormProps {
   params: MilestoneRepsTimeParams;
   onChange: (params: MilestoneRepsTimeParams) => void;
+  /** target_average_time が保存できない値 (0以下) のまま submit された場合に true にする */
+  targetAverageTimeInvalid?: boolean;
 }
 
-export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps) {
+export function RepsTimeParamsForm({
+  params,
+  onChange,
+  targetAverageTimeInvalid = false,
+}: RepsTimeParamsFormProps) {
   const t = useTranslations("goals");
-  const [averageTimeDisplayValue, setAverageTimeDisplayValue] = useState<string>("");
-  const [averageTimeError, setAverageTimeError] = useState<string>("");
-  const [circleMin, setCircleMin] = useState<string>(
-    params.circle > 0 ? String(Math.floor(params.circle / 60)) : "",
-  );
-  const [circleSec, setCircleSec] = useState<string>(
-    params.circle > 0 ? String(params.circle % 60) : "",
-  );
-  const [distanceValue, setDistanceValue] = useState<string>(
-    params.distance > 0 ? String(params.distance) : "",
-  );
-  const [repsValue, setRepsValue] = useState<string>(params.reps > 0 ? String(params.reps) : "");
-  const [setsValue, setSetsValue] = useState<string>(params.sets > 0 ? String(params.sets) : "");
+  const tPracticeMenu = useTranslations("forms.practiceMenu");
 
-  // params.target_average_timeが変更されたときに表示値を更新
-  useEffect(() => {
-    if (params.target_average_time > 0) {
-      setAverageTimeDisplayValue(formatTimeBest(params.target_average_time));
-      setAverageTimeError("");
-    } else {
-      setAverageTimeDisplayValue("");
-    }
-  }, [params.target_average_time]);
+  const circleMin = params.circle > 0 ? Math.floor(params.circle / 60) : "";
+  const circleSec = params.circle > 0 ? params.circle % 60 : "";
 
-  // params.circleが変更されたときに分・秒を更新
-  useEffect(() => {
-    if (params.circle > 0) {
-      setCircleMin(String(Math.floor(params.circle / 60)));
-      setCircleSec(String(params.circle % 60));
-    }
-  }, [params.circle]);
-
-  // params.distance, reps, setsが変更されたときに表示値を更新
-  useEffect(() => {
-    if (params.distance > 0) setDistanceValue(String(params.distance));
-  }, [params.distance]);
-  useEffect(() => {
-    if (params.reps > 0) setRepsValue(String(params.reps));
-  }, [params.reps]);
-  useEffect(() => {
-    if (params.sets > 0) setSetsValue(String(params.sets));
-  }, [params.sets]);
-
-  const handleAverageTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setAverageTimeDisplayValue(value);
-
-    if (value.trim() === "") {
-      setAverageTimeError("");
-      onChange({ ...params, target_average_time: 0 });
-      return;
-    }
-
-    const seconds = parseTimeToSeconds(value);
-    if (!isNaN(seconds) && seconds >= 0) {
-      setAverageTimeError("");
-      onChange({ ...params, target_average_time: seconds });
-    }
-  };
-
-  const handleAverageTimeBlur = () => {
-    if (averageTimeDisplayValue.trim() === "") {
-      setAverageTimeError(t("paramsForm.averageTimeRequired"));
-      return;
-    }
-
-    const seconds = parseTimeToSeconds(averageTimeDisplayValue);
-    if (isNaN(seconds) || seconds < 0) {
-      setAverageTimeError(t("paramsForm.timeInvalid"));
-    } else {
-      setAverageTimeError("");
-      setAverageTimeDisplayValue(formatTimeBest(seconds));
-    }
-  };
-
-  const handleDistanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setDistanceValue(value);
-    const parsed = parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, distance: parsed });
-    }
-  };
-
-  const handleRepsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setRepsValue(value);
-    const parsed = parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, reps: parsed });
-    }
-  };
-
-  const handleSetsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSetsValue(value);
-    const parsed = parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, sets: parsed });
-    }
-  };
-
-  const handleCircleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCircleMin(value);
+  const handleCircleMinChange = (value: string) => {
     const min = value === "" ? 0 : parseInt(value, 10);
-    const parsedSec = circleSec === "" ? 0 : parseInt(circleSec, 10);
-    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0;
-    if (clampedSec !== parsedSec && circleSec !== "") {
-      setCircleSec(String(clampedSec));
-    }
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec;
-    onChange({ ...params, circle: totalSeconds });
+    const sec = typeof circleSec === "number" ? circleSec : 0;
+    onChange({ ...params, circle: (Number.isFinite(min) ? min : 0) * 60 + sec });
   };
 
-  const handleCircleSecChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  const handleCircleSecChange = (value: string) => {
     const parsedSec = value === "" ? 0 : parseInt(value, 10);
     const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0;
-    setCircleSec(value === "" ? "" : String(clampedSec));
-    const min = circleMin === "" ? 0 : parseInt(circleMin, 10);
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec;
-    onChange({ ...params, circle: totalSeconds });
+    const min = typeof circleMin === "number" ? circleMin : 0;
+    onChange({ ...params, circle: min * 60 + clampedSec });
   };
 
   return (
     <div className="space-y-3">
-      {/* 1行目：距離、本数、セット数、平均目標タイム */}
-      <div className="grid grid-cols-4 gap-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.distanceLabel")}</label>
-          <Input
-            type="number"
-            value={distanceValue}
-            onChange={handleDistanceChange}
-            placeholder="100"
-            min="1"
-            required
-          />
-        </div>
+      <DistanceInput
+        value={params.distance}
+        onChange={(value) => onChange({ ...params, distance: value === "" ? 0 : Number(value) })}
+        label={t("paramsForm.distanceLabel")}
+        otherLabel={tPracticeMenu("distanceOther")}
+        testIdPrefix="goal-milestone-repstime-distance"
+        autoFocusCustomInput={false}
+      />
+
+      {/* 本数・セット数・平均目標タイム */}
+      <div className="grid grid-cols-3 gap-2">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.repsLabel")}</label>
-          <Input
-            type="number"
-            value={repsValue}
-            onChange={handleRepsChange}
+          <NumberStepper
+            value={params.reps > 0 ? params.reps : ""}
+            onChange={(v) => onChange({ ...params, reps: v === "" ? 0 : Number(v) })}
+            min={1}
             placeholder="4"
-            min="1"
-            required
+            ariaLabel={t("paramsForm.repsLabel")}
+            fieldLabel={t("paramsForm.repsLabel")}
+            decreaseLabel={tPracticeMenu("decrease")}
+            increaseLabel={tPracticeMenu("increase")}
+            data-testid="goal-milestone-repstime-reps"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.setsLabel")}</label>
-          <Input
-            type="number"
-            value={setsValue}
-            onChange={handleSetsChange}
+          <NumberStepper
+            value={params.sets > 0 ? params.sets : ""}
+            onChange={(v) => onChange({ ...params, sets: v === "" ? 0 : Number(v) })}
+            min={1}
             placeholder="1"
-            min="1"
-            required
+            ariaLabel={t("paramsForm.setsLabel")}
+            fieldLabel={t("paramsForm.setsLabel")}
+            decreaseLabel={tPracticeMenu("decrease")}
+            increaseLabel={tPracticeMenu("increase")}
+            data-testid="goal-milestone-repstime-sets"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.averageTimeLabel")}</label>
-          <Input
-            type="text"
-            inputMode="decimal"
-            value={averageTimeDisplayValue}
-            onChange={handleAverageTimeChange}
-            onBlur={handleAverageTimeBlur}
-            placeholder="2.00.00"
+          <TimeSecondsInput
+            value={params.target_average_time}
+            onChange={(seconds) => onChange({ ...params, target_average_time: seconds ?? 0 })}
             required
-            className={averageTimeError ? "border-red-500" : ""}
+            requiredErrorMessage={t("paramsForm.averageTimeRequired")}
+            invalidErrorMessage={t("paramsForm.timeInvalid")}
+            forceInvalid={targetAverageTimeInvalid}
           />
         </div>
       </div>
-      {averageTimeError && <p className="text-xs text-red-500">{averageTimeError}</p>}
 
-      {/* 2行目：種目、Swim/Pull/Kick、サークル（分）、サークル（秒） */}
+      {/* 種目、Swim/Pull/Kick、サークル（分・秒） */}
       <div className="grid grid-cols-4 gap-2">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.styleLabel")}</label>
           <StyleSelector
             value={params.style}
             onChange={(value) => onChange({ ...params, style: value })}
-            required
           />
         </div>
         <div>
@@ -341,28 +164,36 @@ export function RepsTimeParamsForm({ params, onChange }: RepsTimeParamsFormProps
           <SwimCategorySelector
             value={params.swim_category}
             onChange={(value) => onChange({ ...params, swim_category: value })}
-            required
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.circleMinLabel")}</label>
-          <Input
-            type="number"
+          <NumberStepper
             value={circleMin}
             onChange={handleCircleMinChange}
+            min={0}
             placeholder="1"
-            min="0"
+            ariaLabel={t("paramsForm.circleMinLabel")}
+            fieldLabel={t("paramsForm.circleMinLabel")}
+            decreaseLabel={tPracticeMenu("decrease")}
+            increaseLabel={tPracticeMenu("increase")}
+            data-testid="goal-milestone-repstime-circle-min"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.circleSecLabel")}</label>
-          <Input
-            type="number"
+          <NumberStepper
             value={circleSec}
             onChange={handleCircleSecChange}
+            min={0}
+            max={59}
+            step={10}
             placeholder="30"
-            min="0"
-            max="59"
+            ariaLabel={t("paramsForm.circleSecLabel")}
+            fieldLabel={t("paramsForm.circleSecLabel")}
+            decreaseLabel={tPracticeMenu("decrease")}
+            increaseLabel={tPracticeMenu("increase")}
+            data-testid="goal-milestone-repstime-circle-sec"
           />
         </div>
       </div>
@@ -377,134 +208,74 @@ interface SetParamsFormProps {
 
 export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
   const t = useTranslations("goals");
-  const [circleMin, setCircleMin] = useState<string>(
-    params.circle > 0 ? String(Math.floor(params.circle / 60)) : "",
-  );
-  const [circleSec, setCircleSec] = useState<string>(
-    params.circle > 0 ? String(params.circle % 60) : "",
-  );
-  const [distanceValue, setDistanceValue] = useState<string>(
-    params.distance > 0 ? String(params.distance) : "",
-  );
-  const [repsValue, setRepsValue] = useState<string>(params.reps > 0 ? String(params.reps) : "");
-  const [setsValue, setSetsValue] = useState<string>(params.sets > 0 ? String(params.sets) : "");
+  const tPracticeMenu = useTranslations("forms.practiceMenu");
 
-  // params.circleが変更されたときに分・秒を更新
-  useEffect(() => {
-    if (params.circle > 0) {
-      setCircleMin(String(Math.floor(params.circle / 60)));
-      setCircleSec(String(params.circle % 60));
-    }
-  }, [params.circle]);
+  const circleMin = params.circle > 0 ? Math.floor(params.circle / 60) : "";
+  const circleSec = params.circle > 0 ? params.circle % 60 : "";
 
-  // params.distance, reps, setsが変更されたときに表示値を更新
-  useEffect(() => {
-    if (params.distance > 0) setDistanceValue(String(params.distance));
-  }, [params.distance]);
-  useEffect(() => {
-    if (params.reps > 0) setRepsValue(String(params.reps));
-  }, [params.reps]);
-  useEffect(() => {
-    if (params.sets > 0) setSetsValue(String(params.sets));
-  }, [params.sets]);
-
-  const handleDistanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setDistanceValue(value);
-    const parsed = parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, distance: parsed });
-    }
-  };
-
-  const handleRepsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setRepsValue(value);
-    const parsed = parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, reps: parsed });
-    }
-  };
-
-  const handleSetsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSetsValue(value);
-    const parsed = parseInt(value, 10);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      onChange({ ...params, sets: parsed });
-    }
-  };
-
-  const handleCircleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCircleMin(value);
+  const handleCircleMinChange = (value: string) => {
     const min = value === "" ? 0 : parseInt(value, 10);
-    const parsedSec = circleSec === "" ? 0 : parseInt(circleSec, 10);
-    const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0;
-    if (clampedSec !== parsedSec && circleSec !== "") {
-      setCircleSec(String(clampedSec));
-    }
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec;
-    onChange({ ...params, circle: totalSeconds });
+    const sec = typeof circleSec === "number" ? circleSec : 0;
+    onChange({ ...params, circle: (Number.isFinite(min) ? min : 0) * 60 + sec });
   };
 
-  const handleCircleSecChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  const handleCircleSecChange = (value: string) => {
     const parsedSec = value === "" ? 0 : parseInt(value, 10);
     const clampedSec = Number.isFinite(parsedSec) ? Math.max(0, Math.min(parsedSec, 59)) : 0;
-    setCircleSec(value === "" ? "" : String(clampedSec));
-    const min = circleMin === "" ? 0 : parseInt(circleMin, 10);
-    const totalSeconds = (Number.isFinite(min) ? min : 0) * 60 + clampedSec;
-    onChange({ ...params, circle: totalSeconds });
+    const min = typeof circleMin === "number" ? circleMin : 0;
+    onChange({ ...params, circle: min * 60 + clampedSec });
   };
 
   return (
     <div className="space-y-3">
-      {/* 1行目：距離、本数、セット数 */}
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.distanceLabel")}</label>
-          <Input
-            type="number"
-            value={distanceValue}
-            onChange={handleDistanceChange}
-            placeholder="100"
-            min="1"
-            required
-          />
-        </div>
+      <DistanceInput
+        value={params.distance}
+        onChange={(value) => onChange({ ...params, distance: value === "" ? 0 : Number(value) })}
+        label={t("paramsForm.distanceLabel")}
+        otherLabel={tPracticeMenu("distanceOther")}
+        testIdPrefix="goal-milestone-set-distance"
+        autoFocusCustomInput={false}
+      />
+
+      {/* 本数、セット数 */}
+      <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.repsLabel")}</label>
-          <Input
-            type="number"
-            value={repsValue}
-            onChange={handleRepsChange}
+          <NumberStepper
+            value={params.reps > 0 ? params.reps : ""}
+            onChange={(v) => onChange({ ...params, reps: v === "" ? 0 : Number(v) })}
+            min={1}
             placeholder="4"
-            min="1"
-            required
+            ariaLabel={t("paramsForm.repsLabel")}
+            fieldLabel={t("paramsForm.repsLabel")}
+            decreaseLabel={tPracticeMenu("decrease")}
+            increaseLabel={tPracticeMenu("increase")}
+            data-testid="goal-milestone-set-reps"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.setsLabel")}</label>
-          <Input
-            type="number"
-            value={setsValue}
-            onChange={handleSetsChange}
+          <NumberStepper
+            value={params.sets > 0 ? params.sets : ""}
+            onChange={(v) => onChange({ ...params, sets: v === "" ? 0 : Number(v) })}
+            min={1}
             placeholder="1"
-            min="1"
-            required
+            ariaLabel={t("paramsForm.setsLabel")}
+            fieldLabel={t("paramsForm.setsLabel")}
+            decreaseLabel={tPracticeMenu("decrease")}
+            increaseLabel={tPracticeMenu("increase")}
+            data-testid="goal-milestone-set-sets"
           />
         </div>
       </div>
 
-      {/* 2行目：種目、S/P/K、サークル（分）、サークル（秒） */}
+      {/* 種目、S/P/K、サークル（分・秒） */}
       <div className="grid grid-cols-4 gap-2">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.styleLabel")}</label>
           <StyleSelector
             value={params.style}
             onChange={(value) => onChange({ ...params, style: value })}
-            required
           />
         </div>
         <div>
@@ -512,28 +283,36 @@ export function SetParamsForm({ params, onChange }: SetParamsFormProps) {
           <SwimCategorySelector
             value={params.swim_category}
             onChange={(value) => onChange({ ...params, swim_category: value })}
-            required
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.circleMinLabel")}</label>
-          <Input
-            type="number"
+          <NumberStepper
             value={circleMin}
             onChange={handleCircleMinChange}
+            min={0}
             placeholder="1"
-            min="0"
+            ariaLabel={t("paramsForm.circleMinLabel")}
+            fieldLabel={t("paramsForm.circleMinLabel")}
+            decreaseLabel={tPracticeMenu("decrease")}
+            increaseLabel={tPracticeMenu("increase")}
+            data-testid="goal-milestone-set-circle-min"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.circleSecLabel")}</label>
-          <Input
-            type="number"
+          <NumberStepper
             value={circleSec}
             onChange={handleCircleSecChange}
+            min={0}
+            max={59}
+            step={10}
             placeholder="30"
-            min="0"
-            max="59"
+            ariaLabel={t("paramsForm.circleSecLabel")}
+            fieldLabel={t("paramsForm.circleSecLabel")}
+            decreaseLabel={tPracticeMenu("decrease")}
+            increaseLabel={tPracticeMenu("increase")}
+            data-testid="goal-milestone-set-circle-sec"
           />
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { XMarkIcon, TrophyIcon, FlagIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { format, isValid } from "date-fns";
@@ -77,7 +78,7 @@ export default function GoalReflectionModal({
   const handleNotAchieved = async () => {
     setIsLoading(true);
     try {
-      // 振り返りメモを構築（将来的にDBに保存する際に使用）
+      // 振り返りメモを構築
       const optionLabels: Record<string, string> = {
         goal_too_high: t("goalReflection.options.goalTooHigh"),
         period_too_short: t("goalReflection.options.periodTooShort"),
@@ -85,16 +86,17 @@ export default function GoalReflectionModal({
         condition_poor: t("goalReflection.options.conditionPoor"),
         other: t("goalReflection.options.other"),
       };
-      const _reflectionNote = [
+      const reflectionNote = [
         ...selectedOptions.map((id) => optionLabels[id] ?? id),
         otherNote ? t("goalReflection.otherPrefix", { note: otherNote }) : "",
       ]
         .filter(Boolean)
         .join("\n");
 
-      // 目標をキャンセル状態に更新
+      // 目標をキャンセル状態に更新し、振り返りメモを永続化する (P3/L4)
       await goalAPI.updateGoal(goal.id, {
         status: "cancelled",
+        reflectionNote: reflectionNote || null,
       });
 
       await onSave();
@@ -123,7 +125,11 @@ export default function GoalReflectionModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose} />
-        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="relative bg-white rounded-lg shadow-xl w-full max-w-lg"
+        >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{t("goalReflection.title")}</h3>
@@ -135,7 +141,11 @@ export default function GoalReflectionModal({
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">{t("goalReflection.expiredDesc")}</p>
               <div className="bg-gray-50 rounded-lg p-4">
-                <p className="font-medium text-gray-900">{goal.competition.title || t("goalReflection.competitionFallback")}</p>
+                <p className="font-medium text-gray-900">
+                  {goal.competition === null
+                    ? t("list.competitionInfoUnavailable")
+                    : goal.competition.title || t("goalReflection.competitionFallback")}
+                </p>
                 <p className="text-sm text-gray-600 mt-1">
                   {goal.style?.name_jp || t("goalReflection.styleFallback")} | {t("goalReflection.targetLabel")} {formatTimeBest(goal.target_time)}
                 </p>
@@ -146,7 +156,7 @@ export default function GoalReflectionModal({
                 )}
                 <p className="text-xs text-gray-500 mt-1">
                   {t("goalReflection.competitionDateLabel")}{" "}
-                  {goal.competition.date && isValid(new Date(goal.competition.date))
+                  {goal.competition?.date && isValid(new Date(goal.competition.date))
                     ? format(new Date(goal.competition.date), "yyyy年M月d日", { locale: ja })
                     : t("goalReflection.undecided")}
                 </p>
@@ -156,6 +166,13 @@ export default function GoalReflectionModal({
                   </p>
                 )}
               </div>
+              <Link
+                href="/goals"
+                onClick={handleClose}
+                className="inline-block mt-2 text-xs text-blue-600 hover:underline"
+              >
+                {t("goalReflection.goToGoalsLink")}
+              </Link>
             </div>
 
             {/* 達成したかどうかの選択 */}

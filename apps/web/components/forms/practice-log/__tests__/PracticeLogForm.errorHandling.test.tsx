@@ -1,7 +1,7 @@
 /**
  * PracticeLogForm — 保存失敗時のエラーハンドリング回帰テスト。
  *
- * 背景 (Reviewer Critical, PM裁定によりQAが追加):
+ * 背景:
  * 「テストが1件でも『実際の呼び出し元を通した失敗系』を書いていれば、デッドコードは
  * 一撃で発覚したはず」という指摘への対応。
  *
@@ -17,7 +17,7 @@
  *     テンプレート保存モーダル内 (template-save-form-error) に表示されること、
  *     モーダルが閉じないこと、本体の保存 (onSubmit) が呼ばれないことを検証する。
  *
- * 【追記 (PM裁定: Warning 1 修正に伴う更新)】
+ * 【追記】
  * `PracticeLogForm` は catch した error を `toUserFacingMessage(error, tCommon("error"))`
  * で表示用文字列に変換するようになった。生の `Error` (生の DB エラーのシミュレーション)
  * は `common.error` (「エラーが発生しました」) にフォールバックし、`UserFacingError`
@@ -43,6 +43,17 @@ vi.mock("@/contexts/AuthProvider", () => ({
 }));
 
 vi.mock("@/components/video/VideoUploader", () => ({ default: () => null }));
+
+// handlePracticeLogSubmit の保存成功パスは refreshMilestonesAfterPracticeSave 経由で
+// GoalAPI.updateAllMilestoneStatuses を呼ぶ。supabase は {} (本テストの関心事はDBアクセス
+// ではない) のため、実クラスのままだと this.supabase.from が無く TypeError になり、
+// runMilestoneJudgment の try/catch に握りつぶされて本テストが何も検証しないまま
+// green になる。GoalAPI 自体をモックして握りつぶしに頼らないようにする。
+vi.mock("@apps/shared/api/goals", () => ({
+  GoalAPI: vi.fn().mockImplementation(() => ({
+    updateAllMilestoneStatuses: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
 
 // テンプレート選択モーダルは本テストの対象外 (react-query/next-intl navigation への
 // 依存を避けるための境界モック。本体フォームの挙動には無関係)。
@@ -84,6 +95,11 @@ function DashboardHandlerHarness({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     createPracticeLog: createPracticeLog as any,
     updatePracticeLog: vi.fn(),
+    // usePracticeTabSave 専用の別経路。このテストは handlePracticeLogSubmit
+    // (練習タブモーダルとは無関係) のみを検証するため未使用だが、
+    // UseDashboardHandlersProps の必須プロパティとして満たす必要がある。
+    createPracticeLogForTabSave: vi.fn(),
+    updatePracticeLogForTabSave: vi.fn(),
     deletePracticeLog: vi.fn(),
     createPracticeTime: vi.fn(),
     deletePracticeTime: vi.fn(),

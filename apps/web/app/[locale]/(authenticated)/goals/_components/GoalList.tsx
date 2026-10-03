@@ -10,7 +10,13 @@ import type { Goal } from "@apps/shared/types";
 import ProgressBar from "./ProgressBar";
 
 interface GoalListProps {
-  goals: (Goal & { competition?: { title: string | null }; style?: { name_jp: string } })[];
+  goals: (Goal & {
+    // null = 大会情報なし (個人大会削除・チーム退会)。呼び出し元 (useGoalsQuery の select)
+    // が必ず null に正規化して渡すため undefined は来ない (GoalsClient.tsx の1箇所のみから
+    // 渡される)。判定は === null の1本のまま緩めない
+    competition?: { title: string | null } | null;
+    style?: { name_jp: string };
+  })[];
   selectedGoalId: string | null;
   onSelectGoal: (goalId: string) => void;
   onDeleteGoal: () => Promise<void>;
@@ -29,13 +35,14 @@ export default function GoalList({
 }: GoalListProps) {
   const t = useTranslations("goals");
   const { supabase } = useAuth();
-  const [progressMap, setProgressMap] = useState<Record<string, number>>({});
+  // null = 計算不能 (水路が分からない。大会情報なしの目標)
+  const [progressMap, setProgressMap] = useState<Record<string, number | null>>({});
   const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
 
   // 各目標の達成率を計算
   useEffect(() => {
     const calculateProgresses = async () => {
-      const newProgressMap: Record<string, number> = {};
+      const newProgressMap: Record<string, number | null> = {};
       for (const goal of goals) {
         try {
           const progress = await goalAPI.calculateGoalProgress(goal.id);
@@ -71,7 +78,12 @@ export default function GoalList({
     onEditGoal(goalId);
   };
 
-  const getCompetitionName = (goal: Goal & { competition?: { title: string | null } }): string => {
+  // 判定条件は goal.competition === null の1つに統一する。
+  // competitionFallback は competition はあるが title が空のときだけ使う。
+  const getCompetitionName = (goal: {
+    competition?: { title: string | null } | null;
+  }): string => {
+    if (goal.competition === null) return t("list.competitionInfoUnavailable");
     return goal.competition?.title || t("list.competitionFallback");
   };
 
@@ -94,9 +106,15 @@ export default function GoalList({
   return (
     <div className="space-y-3">
       {goals.map((goal) => {
-        const progress = progressMap[goal.id] || 0;
+        // progressMap[goal.id] は 計算中 (undefined) と 計算不能 (null) をどちらも
+        // 「達成率を表示できない」として扱う。ProgressBar には number しか渡せないため
+        // (?? 0 で誤魔化すと計算不能なのに 0% のバーが出てしまう)、どちらの場合も
+        // バー自体を描画しない
+        const progress = progressMap[goal.id];
         const isSelected = selectedGoalId === goal.id;
         const isAchieved = goal.status === "achieved";
+        // 大会情報が無い目標 (大会削除後・チーム退会後) は閲覧・削除のみ。編集導線を出さない
+        const competitionUnavailable = goal.competition === null;
 
         return (
           <div
@@ -121,16 +139,23 @@ export default function GoalList({
                   )}
                 </div>
                 <p className="text-xs text-gray-600 mt-1">{getStyleName(goal)}</p>
+                {competitionUnavailable && (
+                  <p className="text-[10px] text-amber-600 mt-0.5">
+                    {t("list.editUnavailableReason")}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-1">
-                <button
-                  onClick={(e) => handleEdit(e, goal.id)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                  title={t("list.edit")}
-                  aria-label={t("list.edit")}
-                >
-                  <PencilIcon className="w-4 h-4" />
-                </button>
+                {!competitionUnavailable && (
+                  <button
+                    onClick={(e) => handleEdit(e, goal.id)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                    title={t("list.edit")}
+                    aria-label={t("list.edit")}
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   onClick={(e) => handleDelete(e, goal.id)}
                   className="text-gray-400 hover:text-red-600 transition-colors p-1"
@@ -145,9 +170,11 @@ export default function GoalList({
             <div className="mt-3">
               <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                 <span>{t("list.targetTimePrefix")} {formatTimeBest(goal.target_time)}</span>
-                <span>{progress.toFixed(0)}%</span>
+                <span>
+                  {progress != null ? `${progress.toFixed(0)}%` : t("detail.notSet")}
+                </span>
               </div>
-              <ProgressBar progress={progress} />
+              {progress != null && <ProgressBar progress={progress} />}
             </div>
           </div>
         );

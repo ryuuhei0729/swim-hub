@@ -1,17 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import NumberStepper from "@/components/ui/NumberStepper";
 import { TrashIcon, ClockIcon } from "@heroicons/react/24/outline";
 import TagInput from "../../TagInput";
 import type { PracticeMenu, Tag } from "../types";
-import { SWIM_STYLES, SWIM_CATEGORIES, DISTANCE_PRESETS } from "../types";
+import { SWIM_STYLES, SWIM_CATEGORIES } from "../types";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
-import { cn } from "@/utils/cn";
-import { SelectChips, chipClass } from "./SelectChips";
-import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
+import { SelectChips } from "./SelectChips";
+import DistanceInput from "./DistanceInput";
 
 interface PracticeMenuItemProps {
   menu: PracticeMenu;
@@ -52,12 +51,6 @@ export default function PracticeMenuItem({
 }: PracticeMenuItemProps) {
   const t = useTranslations("forms.practiceMenu");
   const tPractice = useTranslations("practice");
-  // 距離がプリセット外(空含む)なら「その他」入力モードで開始
-  const [showCustomDistance, setShowCustomDistance] = useState(
-    () =>
-      menu.distance === "" ||
-      !(DISTANCE_PRESETS as readonly number[]).includes(Number(menu.distance)),
-  );
   return (
     <div
       className={
@@ -140,67 +133,13 @@ export default function PracticeMenuItem({
         </div>
 
         {/* 3行目：距離（プリセットチップ + その他で直接入力）*/}
-        <div>
-          <label className="block text-[10px] sm:text-sm font-medium text-gray-700 mb-0.5 sm:mb-2">
-            {t("distanceLabel")} <span className="text-red-500">*</span>
-          </label>
-          <ChipScrollRow
-            className="gap-1.5 sm:gap-2"
-            data-testid="chiprow-practice-distance-preset"
-          >
-            {DISTANCE_PRESETS.map((preset) => {
-              const selected = !showCustomDistance && Number(menu.distance) === preset;
-              return (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => {
-                    setShowCustomDistance(false);
-                    onUpdate("distance", String(preset));
-                  }}
-                  className={cn(chipClass(selected), "min-w-12")}
-                  aria-pressed={selected}
-                  data-testid={`practice-distance-preset-${preset}`}
-                >
-                  {preset}
-                </button>
-              );
-            })}
-            {showCustomDistance ? (
-              // 「その他」ボタンがその場で入力欄に変化する
-              //
-              // 高さ・padding の根拠: components/ui/Input.tsx の「16px ズーム防止 box サイズ根拠」参照。
-              // 同じチップ行に並ぶ SelectChips (chipClass, h-8 sm:h-10) と高さを揃える必要が
-              // あるため、箱の高さは変えず padding のみ py-0.5 sm:py-1.5 に縮小する
-              // (h-9 等の非レスポンシブ高さにするとプリセットチップと数px ずれる)。
-              <input
-                type="number"
-                inputMode="numeric"
-                value={menu.distance}
-                onChange={(e) => onUpdate("distance", e.target.value)}
-                placeholder="100"
-                min={1}
-                required
-                autoFocus
-                aria-label={t("distanceLabel")}
-                data-testid="practice-distance"
-                className="h-8 sm:h-10 w-20 px-3 py-0.5 sm:py-1.5 rounded-md border border-blue-600 bg-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  onUpdate("distance", "");
-                  setShowCustomDistance(true);
-                }}
-                className={chipClass(false)}
-                data-testid="practice-distance-other"
-              >
-                {t("distanceOther")}
-              </button>
-            )}
-          </ChipScrollRow>
-        </div>
+        <DistanceInput
+          value={menu.distance}
+          onChange={(value) => onUpdate("distance", value)}
+          label={t("distanceLabel")}
+          otherLabel={t("distanceOther")}
+          testIdPrefix="practice-distance"
+        />
 
         {/* 4行目：本数、セット数、サークル（分/秒）— ステッパー */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">

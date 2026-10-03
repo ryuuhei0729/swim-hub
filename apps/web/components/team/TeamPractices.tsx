@@ -384,13 +384,14 @@ export default function TeamPractices({
       const api = new TeamPracticesAPI(supabase);
       return await api.update(id, updates);
     },
+    // 注: 生の PracticeAPI 呼び出しのため skipMilestoneUpdate 引数は無視される
+    // (判定を持たない raw API のため無害)。タイムの一括保存とマイルストーン判定は
+    // usePracticeTabSave 内部で一本化されている。従来このセルフログ追加
+    // フローには判定が無かったが、共通化の結果として他2経路 (PracticeClient/
+    // dashboard) と同様に判定されるようになった (意図した副次効果)。
     createPracticeLog: async (log) => practiceApiForLog.createPracticeLog(log),
-    updatePracticeLog: async (id, updates) =>
-      practiceApiForLog.updatePracticeLog(id, updates),
+    updatePracticeLog: async (id, updates) => practiceApiForLog.updatePracticeLog(id, updates),
     deletePracticeLog: async (id) => practiceApiForLog.deletePracticeLog(id),
-    createPracticeTime: async (time) =>
-      practiceApiForLog.createPracticeTime(time),
-    deletePracticeTime: async (id) => practiceApiForLog.deletePracticeTime(id),
     setPracticeLoading: setFormLoading,
     setEditingPracticeId,
     closePracticeTabModal: closeTabModal,

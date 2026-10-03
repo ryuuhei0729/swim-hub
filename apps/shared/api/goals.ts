@@ -25,33 +25,13 @@ import {
   UpdateGoalInput,
   UpdateMilestoneInput,
 } from "../types/goals";
-import type { Competition, Style, SwimStyle } from "../types";
+import type { Competition, Style } from "../types";
 
 // Supabaseクエリ結果の型（配列/単一オブジェクトの不整合に対応）
 interface GoalQueryResult extends Goal {
-  competition?: Competition | Competition[];
+  competition?: Competition | Competition[] | null;
   style?: Style | Style[];
   milestones?: Milestone | Milestone[];
-}
-
-// スタイルコード→日本語名のマッピング（practice_logsは日本語名で格納されている）
-const STYLE_CODE_TO_JAPANESE: Record<SwimStyle, string> = {
-  Fr: "自由形",
-  Ba: "背泳ぎ",
-  Br: "平泳ぎ",
-  Fly: "バタフライ",
-  IM: "個人メドレー",
-};
-
-/**
- * スタイルコードを日本語名に変換
- * practice_logsのstyleカラムは日本語名で格納されているため、クエリ時に変換が必要。
- * 入力ケーシングに依存させないため toStyleCode で canonical 化してから引く
- * (旧コード "fr" 等・DB 由来のタイトルケース値のどちらが来ても同じ結果になる)。
- */
-function getStyleJapanese(styleCode: string): string {
-  const canonical = toStyleCode(styleCode);
-  return canonical ? STYLE_CODE_TO_JAPANESE[canonical] : styleCode;
 }
 
 export class GoalAPI {
@@ -99,10 +79,15 @@ export class GoalAPI {
       throw new Error("大会IDまたは大会情報が必要です");
     }
 
-    // ベストタイムを取得（startTimeが指定されていない場合）
+    // ベストタイムを取得（startTimeが指定されていない場合）。対象大会と同じ
+    // 水路（poolType）の記録に絞る。水路が分からない場合は自動取得自体を行わない
+    // (絞り込みなしで取得すると短水路の記録が混入しうるため。フォールバックは禁止)。
     let startTime = input.startTime;
     if (startTime === undefined) {
-      startTime = await this.getBestTimeForStyle(user.id, input.styleId);
+      startTime =
+        input.poolType !== undefined
+          ? await this.getBestTimeForStyle(user.id, input.styleId, input.poolType)
+          : null;
     }
 
     const goalInsert: GoalInsert = {
@@ -166,6 +151,37 @@ export class GoalAPI {
   }
 
   /**
+   * 目標の対象大会として選択可能な大会一覧を取得する。
+   * 個人大会 + 所属チームの大会 (RLS の competitions SELECT ポリシー
+   * (20260705000000: 本人 or チームメンバー or チーム管理者) にすべて委ねる)。
+   * `RecordAPI.getCompetitions()` は個人大会限定 (既存テスト・利用箇所が前提にしているため
+   * 変更しない) なのでチーム大会が必要な目標フォームは本メソッドを使う。
+   */
+  async getSelectableCompetitions(startDate?: string, endDate?: string): Promise<Competition[]> {
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
+    if (!user) throw new Error("認証が必要です");
+
+    let query = this.supabase
+      .from("competitions")
+      .select("*")
+      .order("date", { ascending: false });
+
+    if (startDate) {
+      query = query.gte("date", startDate);
+    }
+    if (endDate) {
+      query = query.lte("date", endDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  /**
    * 大会目標詳細取得（マイルストーン含む）
    */
   async getGoalWithMilestones(goalId: string): Promise<GoalWithMilestones | null> {
@@ -225,6 +241,9 @@ export class GoalAPI {
         updateData.achieved_at = new Date().toISOString();
       }
     }
+    if (updates.reflectionNote !== undefined) {
+      updateData.reflection_note = updates.reflectionNote;
+    }
 
     const { data, error } = await this.supabase
       .from("goals")
@@ -257,14 +276,25 @@ export class GoalAPI {
 
   /**
    * 種目ごとのベストタイム取得
+   * poolType (対象大会と同じ水路) で必ず絞り込む（長水路の目標に短水路の記録が
+   * 混入するのを防ぐ）。水路が分からない場合はこの関数を呼び出さないこと
+   * (呼び出し元で「計算不能」を返す。絞り込み無しのフォールバックは禁止)。
    * @private
    */
-  private async getBestTimeForStyle(userId: string, styleId: number): Promise<number | null> {
+  private async getBestTimeForStyle(
+    userId: string,
+    styleId: number,
+    poolType: number,
+  ): Promise<number | null> {
     const { data, error } = await this.supabase
       .from("records")
       .select("time")
       .eq("user_id", userId)
       .eq("style_id", styleId)
+      .eq("pool_type", poolType)
+      // リレーの引き継ぎ (is_relaying=true) は個人の自己ベストの集計から除く
+      // (RecordAPI の「ベストタイム取得」等アプリ全体の扱いに揃える)。
+      .eq("is_relaying", false)
       .order("time", { ascending: true })
       .limit(1)
       .single();
@@ -280,8 +310,11 @@ export class GoalAPI {
   /**
    * 大会目標の達成率を計算
    * 差分ベース: (初期タイム - 最新ベスト) / (初期タイム - 目標タイム)
+   * 大会情報が取得できない場合 (競技会削除・チーム退会等で水路が分からない場合) は
+   * 自己ベストを取得せず null (計算不能) を返す。呼び出し側は既存の空・未設定
+   * 表示パターンで扱うこと。
    */
-  async calculateGoalProgress(goalId: string): Promise<number> {
+  async calculateGoalProgress(goalId: string): Promise<number | null> {
     const {
       data: { user },
     } = await this.supabase.auth.getUser();
@@ -289,7 +322,7 @@ export class GoalAPI {
 
     const { data: goal, error: goalError } = await this.supabase
       .from("goals")
-      .select("*")
+      .select("*, competition:competitions(pool_type)")
       .eq("id", goalId)
       .single();
 
@@ -301,8 +334,20 @@ export class GoalAPI {
       return 0; // 初期タイムがない場合は0%
     }
 
+    const competition = normalizeRelation(
+      goal.competition as { pool_type: number } | { pool_type: number }[] | null | undefined,
+    );
+
+    if (competition?.pool_type === undefined) {
+      return null; // 水路が分からない場合は計算不能 (短水路混入を防ぐため取得自体をしない)
+    }
+
     // 最新ベストタイムを取得
-    const currentBest = await this.getBestTimeForStyle(user.id, goal.style_id);
+    const currentBest = await this.getBestTimeForStyle(
+      user.id,
+      goal.style_id,
+      competition.pool_type,
+    );
     if (!currentBest) {
       return 0;
     }
@@ -562,8 +607,11 @@ export class GoalAPI {
 
   /**
    * マイルストーン達成判定（自動実行）
+   *
+   * @param milestone 判定対象のマイルストーンの行。呼び出し元 (updateAllMilestoneStatuses)
+   *   が既に取得済みの行をそのまま渡す (再取得しない)
    */
-  async checkMilestoneAchievement(milestoneId: string): Promise<{
+  async checkMilestoneAchievement(milestone: Milestone): Promise<{
     achieved: boolean;
     achievementData?: {
       practiceLogId?: string;
@@ -575,16 +623,6 @@ export class GoalAPI {
       data: { user },
     } = await this.supabase.auth.getUser();
     if (!user) throw new Error("認証が必要です");
-
-    // マイルストーン情報を取得
-    const { data: milestone, error: milestoneError } = await this.supabase
-      .from("milestones")
-      .select("*")
-      .eq("id", milestoneId)
-      .single();
-
-    if (milestoneError) throw milestoneError;
-    if (!milestone) throw new Error("マイルストーンが見つかりません");
 
     let achieved = false;
     let achievementData:
@@ -629,8 +667,24 @@ export class GoalAPI {
   }> {
     const params = milestone.params as MilestoneTimeParams;
 
-    // 練習記録から検索（practice_logsのstyleは日本語名で格納されている）
-    const styleJp = getStyleJapanese(params.style);
+    // milestones.params は JSONB でサーバー側の enum バリデーションが無く、
+    // 認証済みユーザーが自分の milestone に任意の params.style ("%" 等) を
+    // 書き込める。ilike に渡す前に canonical 化してワイルドカードを含む値を弾く
+    // (canonical 外なら practice_logs/styles マスターに一致する行は存在しえない
+    // ので、クエリを送らず未達成として扱う)。practice_logs 側・records 側の
+    // 両方でこの1回の判定を使い回す。
+    const styleCode = toStyleCode(params.style);
+    if (!styleCode) {
+      return { achieved: false };
+    }
+
+    // 練習記録から検索。practice_logs.style は CHECK 制約の無い自由記述列で
+    // canonical (タイトルケース) 書き込みを規約とするが、大文字小文字の揺れを
+    // 吸収するため ilike で照合する (styles.style と同型のパターン)。
+    // swim_category は practice_logs.swim_category が Postgres の ENUM 型
+    // ("Swim"/"Pull"/"Kick" の3値のみ) なので style と違って表記揺れが
+    // DB に入り得ず、.eq の完全一致で絞ってよい (reps_time/set 型の判定と同じ絞り方)。
+    // これが無いとキックの練習タイムでもスイムの目標が達成扱いになってしまう。
     const { data: practiceLogs, error: practiceError } = await this.supabase
       .from("practice_logs")
       .select(
@@ -641,7 +695,8 @@ export class GoalAPI {
       )
       .eq("user_id", userId)
       .eq("distance", params.distance)
-      .eq("style", styleJp)
+      .ilike("style", styleCode)
+      .eq("swim_category", params.swim_category)
       .order("created_at", { ascending: false });
 
     if (!practiceError && practiceLogs) {
@@ -668,16 +723,7 @@ export class GoalAPI {
       }
     }
 
-    // 大会記録から検索。milestones.params は JSONB でサーバー側の enum
-    // バリデーションが無く、認証済みユーザーが自分の milestone に任意の
-    // params.style ("%" 等) を書き込める。ilike に渡す前に canonical 化して
-    // ワイルドカードを含む値を弾く (canonical 外なら styles マスターに
-    // 一致する行は存在しえないので、クエリを送らず未達成として扱う)。
-    const styleCode = toStyleCode(params.style);
-    if (!styleCode) {
-      return { achieved: false };
-    }
-
+    // 大会記録から検索。
     const { data: records, error: recordError } = await this.supabase
       .from("records")
       .select(
@@ -705,6 +751,9 @@ export class GoalAPI {
       // 確認できたら、.eq に戻してインデックス効率を回復する選択肢がある。
       // styleCode は toStyleCode で検証済みの canonical 値のみ (ワイルドカード不可)。
       .ilike("styles.style", styleCode)
+      // リレーの引き継ぎ (is_relaying=true) は達成に数えない (getBestTimeForStyle と
+      // 同じ扱いに揃える)。
+      .eq("is_relaying", false)
       .lte("time", params.target_time)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -745,8 +794,14 @@ export class GoalAPI {
   }> {
     const params = milestone.params as MilestoneRepsTimeParams;
 
-    // 条件に一致するpractice_logsを取得（practice_logsのstyleは日本語名で格納されている）
-    const styleJp = getStyleJapanese(params.style);
+    // canonical 外なら practice_logs マスターに一致する行は存在しえないので、
+    // クエリを送らず未達成として扱う (checkTimeAchievement と同型)。
+    const styleCode = toStyleCode(params.style);
+    if (!styleCode) {
+      return { achieved: false };
+    }
+
+    // 条件に一致するpractice_logsを取得
     const { data: logs, error: logError } = await this.supabase
       .from("practice_logs")
       .select(
@@ -757,7 +812,7 @@ export class GoalAPI {
       )
       .eq("user_id", userId)
       .eq("distance", params.distance)
-      .eq("style", styleJp)
+      .ilike("style", styleCode)
       .eq("swim_category", params.swim_category)
       .gte("rep_count", params.reps)
       .order("created_at", { ascending: false });
@@ -829,14 +884,20 @@ export class GoalAPI {
   }> {
     const params = milestone.params as MilestoneSetParams;
 
-    // 条件に一致するpractice_logsを取得（practice_logsのstyleは日本語名で格納されている）
-    const styleJp = getStyleJapanese(params.style);
+    // canonical 外なら practice_logs マスターに一致する行は存在しえないので、
+    // クエリを送らず未達成として扱う (checkTimeAchievement と同型)。
+    const styleCode = toStyleCode(params.style);
+    if (!styleCode) {
+      return { achieved: false };
+    }
+
+    // 条件に一致するpractice_logsを取得
     const { data: logs, error: logError } = await this.supabase
       .from("practice_logs")
       .select("id")
       .eq("user_id", userId)
       .eq("distance", params.distance)
-      .eq("style", styleJp)
+      .ilike("style", styleCode)
       .eq("swim_category", params.swim_category)
       .eq("rep_count", params.reps)
       .gte("set_count", params.sets)
@@ -888,7 +949,15 @@ export class GoalAPI {
    */
   private async hasTimeRecords(userId: string, milestone: Milestone): Promise<boolean> {
     const params = milestone.params as MilestoneTimeParams;
-    const styleJp = getStyleJapanese(params.style);
+
+    // ilike に渡す前に canonical 化する理由は checkTimeAchievement 内の
+    // 同型クエリのコメント参照 (ワイルドカード注入対策。canonical 外なら
+    // practice_logs/styles マスターに一致する行は存在しえないのでクエリを
+    // 送らず false とする)。practice_logs 側・records 側の両方で使い回す。
+    const styleCode = toStyleCode(params.style);
+    if (!styleCode) {
+      return false;
+    }
 
     // 練習記録を確認（practice_timesが存在するか）
     const { data: practiceLogs, error: practiceError } = await this.supabase
@@ -901,7 +970,11 @@ export class GoalAPI {
       )
       .eq("user_id", userId)
       .eq("distance", params.distance)
-      .eq("style", styleJp)
+      .ilike("style", styleCode)
+      // swim_category は checkTimeAchievement と同じ理由 (ENUM 型で表記揺れ無し) で
+      // .eq の完全一致で絞る。判定 (checkTimeAchievement) と条件がずれると
+      // 「記録はあるのに達成判定はされない」等の不整合が起きるため揃える。
+      .eq("swim_category", params.swim_category)
       .limit(1);
 
     if (!practiceError && practiceLogs && practiceLogs.length > 0) {
@@ -918,14 +991,7 @@ export class GoalAPI {
       }
     }
 
-    // 大会記録を確認。ilike に渡す前に canonical 化する理由は checkTimeAchievement
-    // 内の同型クエリのコメント参照 (ワイルドカード注入対策。canonical 外なら
-    // styles マスターに一致する行は存在しえないのでクエリを送らず false とする)。
-    const styleCode = toStyleCode(params.style);
-    if (!styleCode) {
-      return false;
-    }
-
+    // 大会記録を確認。
     const { data: records, error: recordError } = await this.supabase
       .from("records")
       .select(
@@ -939,6 +1005,9 @@ export class GoalAPI {
       // ケース非依存にする理由・デプロイ順序の注意点は checkTimeAchievement 内の
       // 同型クエリのコメント参照 (移行期の暫定措置。恒久固定ではない)。
       .ilike("styles.style", styleCode)
+      // 判定 (checkTimeAchievement) と条件をそろえる。引き継ぎの記録は
+      // 「記録あり」判定にも数えない。
+      .eq("is_relaying", false)
       .limit(1);
 
     if (!recordError && records && records.length > 0) {
@@ -954,7 +1023,13 @@ export class GoalAPI {
    */
   private async hasRepsTimeRecords(userId: string, milestone: Milestone): Promise<boolean> {
     const params = milestone.params as MilestoneRepsTimeParams;
-    const styleJp = getStyleJapanese(params.style);
+
+    // canonical 外なら practice_logs マスターに一致する行は存在しえないので、
+    // クエリを送らず false とする (hasTimeRecords と同型)。
+    const styleCode = toStyleCode(params.style);
+    if (!styleCode) {
+      return false;
+    }
 
     // 条件に一致するpractice_logsを確認（practice_timesが存在するか）
     const { data: logs, error: logError } = await this.supabase
@@ -967,7 +1042,7 @@ export class GoalAPI {
       )
       .eq("user_id", userId)
       .eq("distance", params.distance)
-      .eq("style", styleJp)
+      .ilike("style", styleCode)
       .eq("swim_category", params.swim_category)
       .gte("rep_count", params.reps)
       .limit(1);
@@ -997,7 +1072,13 @@ export class GoalAPI {
    */
   private async hasSetRecords(userId: string, milestone: Milestone): Promise<boolean> {
     const params = milestone.params as MilestoneSetParams;
-    const styleJp = getStyleJapanese(params.style);
+
+    // canonical 外なら practice_logs マスターに一致する行は存在しえないので、
+    // クエリを送らず false とする (hasTimeRecords と同型)。
+    const styleCode = toStyleCode(params.style);
+    if (!styleCode) {
+      return false;
+    }
 
     // 条件に一致するpractice_logsを確認
     const { data: logs, error: logError } = await this.supabase
@@ -1005,7 +1086,7 @@ export class GoalAPI {
       .select("id")
       .eq("user_id", userId)
       .eq("distance", params.distance)
-      .eq("style", styleJp)
+      .ilike("style", styleCode)
       .eq("swim_category", params.swim_category)
       .eq("rep_count", params.reps)
       .gte("set_count", params.sets)
@@ -1041,124 +1122,148 @@ export class GoalAPI {
 
     const today = format(new Date(), "yyyy-MM-dd"); // ローカル日付のYYYY-MM-DD形式
 
-    for (const milestone of milestones) {
-      // 達成判定
-      const { achieved, achievementData } = await this.checkMilestoneAchievement(milestone.id);
+    // マイルストーンごとの判定・更新は互いに独立しているため並列実行する
+    // (1件の失敗が残り全件の判定を止めないようにする)。主キーで取得した
+    // 行の配列なので同一マイルストーンが重複することはない。
+    const results = await Promise.allSettled(
+      milestones.map((milestone) => this.processMilestoneStatusUpdate(userId, milestone, today)),
+    );
+    results.forEach((result, index) => {
+      if (result.status === "rejected" && process.env.NODE_ENV !== "production") {
+        console.error(
+          `マイルストーン ${milestones[index]?.id} のステータス更新中にエラー:`,
+          result.reason,
+        );
+      }
+    });
+  }
 
-      if (achieved && milestone.status !== "achieved") {
-        // 達成状態に更新
-        await this.updateMilestoneStatus(milestone.id, "achieved", new Date().toISOString());
+  /**
+   * 単一マイルストーンの達成判定・ステータス更新・期限切れチェック。
+   * updateAllMilestoneStatuses から並列に呼ばれる (1件分の処理を独立させたもの)。
+   * @private
+   */
+  private async processMilestoneStatusUpdate(
+    userId: string,
+    milestone: Milestone,
+    today: string,
+  ): Promise<void> {
+    // 達成判定
+    const { achieved, achievementData } = await this.checkMilestoneAchievement(milestone);
 
-        // ローカル変数も更新（期限切れチェックで正しく判定するため）
-        milestone.status = "achieved";
+    if (achieved && milestone.status !== "achieved") {
+      // 達成状態に更新
+      await this.updateMilestoneStatus(milestone.id, "achieved", new Date().toISOString());
 
-        // 達成記録を保存（milestone_achievements）
-        if (achievementData) {
-          try {
-            // 重複チェック: 既に同じマイルストーン・同じレコードのachievementが存在するか確認
-            let shouldInsert = true;
+      // ローカル変数も更新（期限切れチェックで正しく判定するため）
+      milestone.status = "achieved";
 
-            if (achievementData.practiceLogId) {
-              const existingCheck = await this.supabase
-                .from("milestone_achievements")
-                .select("id")
-                .eq("milestone_id", milestone.id)
-                .eq("practice_log_id", achievementData.practiceLogId)
-                .maybeSingle();
+      // 達成記録を保存（milestone_achievements）
+      if (achievementData) {
+        try {
+          // 重複チェック: 既に同じマイルストーン・同じレコードのachievementが存在するか確認
+          let shouldInsert = true;
 
-              if (existingCheck.error && existingCheck.error.code !== "PGRST116") {
-                // PGRST116は「not found」エラー（正常なケース）
-                console.warn(
-                  `マイルストーン ${milestone.id} の達成記録重複チェック中にエラー:`,
-                  existingCheck.error,
-                );
-              } else if (existingCheck.data) {
-                // 既に存在する場合はスキップ（並行実行時の重複防止）
-                shouldInsert = false;
-              }
-            } else if (achievementData.recordId) {
-              const existingCheck = await this.supabase
-                .from("milestone_achievements")
-                .select("id")
-                .eq("milestone_id", milestone.id)
-                .eq("record_id", achievementData.recordId)
-                .maybeSingle();
+          if (achievementData.practiceLogId) {
+            const existingCheck = await this.supabase
+              .from("milestone_achievements")
+              .select("id")
+              .eq("milestone_id", milestone.id)
+              .eq("practice_log_id", achievementData.practiceLogId)
+              .maybeSingle();
 
-              if (existingCheck.error && existingCheck.error.code !== "PGRST116") {
-                // PGRST116は「not found」エラー（正常なケース）
-                console.warn(
-                  `マイルストーン ${milestone.id} の達成記録重複チェック中にエラー:`,
-                  existingCheck.error,
-                );
-              } else if (existingCheck.data) {
-                // 既に存在する場合はスキップ（並行実行時の重複防止）
-                shouldInsert = false;
-              }
+            if (existingCheck.error && existingCheck.error.code !== "PGRST116") {
+              // PGRST116は「not found」エラー（正常なケース）
+              console.warn(
+                `マイルストーン ${milestone.id} の達成記録重複チェック中にエラー:`,
+                existingCheck.error,
+              );
+            } else if (existingCheck.data) {
+              // 既に存在する場合はスキップ（並行実行時の重複防止）
+              shouldInsert = false;
             }
+          } else if (achievementData.recordId) {
+            const existingCheck = await this.supabase
+              .from("milestone_achievements")
+              .select("id")
+              .eq("milestone_id", milestone.id)
+              .eq("record_id", achievementData.recordId)
+              .maybeSingle();
 
-            // 達成記録を挿入（重複がない場合のみ）
-            if (shouldInsert) {
-              const { error: achievementError } = await this.supabase
-                .from("milestone_achievements")
-                .insert({
-                  milestone_id: milestone.id,
-                  practice_log_id: achievementData.practiceLogId || null,
-                  record_id: achievementData.recordId || null,
-                  achieved_value: achievementData.achievedValue,
-                });
-
-              if (achievementError) {
-                // ユニーク制約エラー（重複）の場合は警告のみで続行
-                // その他のエラーもログに記録して続行（他のマイルストーンの処理を中断しない）
-                const isDuplicateError =
-                  achievementError.code === "23505" || // PostgreSQL unique violation
-                  achievementError.message?.includes("duplicate") ||
-                  achievementError.message?.includes("unique");
-
-                if (isDuplicateError) {
-                  console.warn(
-                    `マイルストーン ${milestone.id} の達成記録は既に存在します（並行実行による重複）:`,
-                    achievementError.message,
-                  );
-                } else {
-                  console.error(
-                    `マイルストーン ${milestone.id} の達成記録の保存に失敗:`,
-                    achievementError,
-                  );
-                }
-                // エラーが発生してもループを継続（他のマイルストーンの処理を続行）
-              }
+            if (existingCheck.error && existingCheck.error.code !== "PGRST116") {
+              // PGRST116は「not found」エラー（正常なケース）
+              console.warn(
+                `マイルストーン ${milestone.id} の達成記録重複チェック中にエラー:`,
+                existingCheck.error,
+              );
+            } else if (existingCheck.data) {
+              // 既に存在する場合はスキップ（並行実行時の重複防止）
+              shouldInsert = false;
             }
-          } catch (error) {
-            // 予期しないエラーもキャッチしてログに記録し、処理を続行
-            console.error(
-              `マイルストーン ${milestone.id} の達成記録保存中に予期しないエラー:`,
-              error,
-            );
-            // エラーが発生してもループを継続
           }
-        }
-      } else if (!achieved && milestone.status === "not_started") {
-        // 関連レコードが存在する場合のみ「進行中」に変更
-        const hasRecords = await this.hasRecordsForMilestone(userId, milestone);
-        if (hasRecords) {
-          await this.updateMilestoneStatus(milestone.id, "in_progress");
-          // ローカル変数も更新（期限切れチェックで正しく判定するため）
-          milestone.status = "in_progress";
+
+          // 達成記録を挿入（重複がない場合のみ）
+          if (shouldInsert) {
+            const { error: achievementError } = await this.supabase
+              .from("milestone_achievements")
+              .insert({
+                milestone_id: milestone.id,
+                practice_log_id: achievementData.practiceLogId || null,
+                record_id: achievementData.recordId || null,
+                achieved_value: achievementData.achievedValue,
+              });
+
+            if (achievementError) {
+              // ユニーク制約エラー（重複）の場合は警告のみで続行
+              // その他のエラーもログに記録して続行（他のマイルストーンの処理を中断しない）
+              const isDuplicateError =
+                achievementError.code === "23505" || // PostgreSQL unique violation
+                achievementError.message?.includes("duplicate") ||
+                achievementError.message?.includes("unique");
+
+              if (isDuplicateError) {
+                console.warn(
+                  `マイルストーン ${milestone.id} の達成記録は既に存在します（並行実行による重複）:`,
+                  achievementError.message,
+                );
+              } else {
+                console.error(
+                  `マイルストーン ${milestone.id} の達成記録の保存に失敗:`,
+                  achievementError,
+                );
+              }
+              // エラーが発生してもループを継続（他のマイルストーンの処理を続行）
+            }
+          }
+        } catch (error) {
+          // 予期しないエラーもキャッチしてログに記録し、処理を続行
+          console.error(
+            `マイルストーン ${milestone.id} の達成記録保存中に予期しないエラー:`,
+            error,
+          );
+          // エラーが発生してもループを継続
         }
       }
+    } else if (!achieved && milestone.status === "not_started") {
+      // 関連レコードが存在する場合のみ「進行中」に変更
+      const hasRecords = await this.hasRecordsForMilestone(userId, milestone);
+      if (hasRecords) {
+        await this.updateMilestoneStatus(milestone.id, "in_progress");
+        // ローカル変数も更新（期限切れチェックで正しく判定するため）
+        milestone.status = "in_progress";
+      }
+    }
 
-      // 期限切れチェック
-      if (milestone.deadline) {
-        // deadlineは既にYYYY-MM-DD形式の文字列として格納されているため、そのまま使用
-        // ただし、Dateオブジェクトの場合はformatで変換
-        const deadline =
-          typeof milestone.deadline === "string"
-            ? milestone.deadline
-            : format(new Date(milestone.deadline), "yyyy-MM-dd");
-        if (deadline < today && milestone.status !== "achieved") {
-          await this.updateMilestoneStatus(milestone.id, "expired");
-        }
+    // 期限切れチェック
+    if (milestone.deadline) {
+      // deadlineは既にYYYY-MM-DD形式の文字列として格納されているため、そのまま使用
+      // ただし、Dateオブジェクトの場合はformatで変換
+      const deadline =
+        typeof milestone.deadline === "string"
+          ? milestone.deadline
+          : format(new Date(milestone.deadline), "yyyy-MM-dd");
+      if (deadline < today && milestone.status !== "achieved") {
+        await this.updateMilestoneStatus(milestone.id, "expired");
       }
     }
   }

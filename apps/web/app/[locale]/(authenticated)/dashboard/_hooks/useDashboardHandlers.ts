@@ -30,6 +30,7 @@ import {
 } from "../_utils/dashboardHelpers";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
 import { useCompetitionTabSave } from "@/hooks/useCompetitionTabSave";
+import { refreshMilestonesAfterPracticeSave } from "@/utils/practiceMilestoneRefresh";
 
 interface UseDashboardHandlersProps {
   supabase: SupabaseClient<Database>;
@@ -43,17 +44,39 @@ interface UseDashboardHandlersProps {
     id: string,
     updates: import("@swim-hub/shared/types").PracticeUpdate,
   ) => Promise<import("@swim-hub/shared/types").Practice>;
+  /**
+   * skipMilestoneUpdate: true のときはこのログ保存単体ではマイルストーン判定を
+   * 行わない。handlePracticeLogSubmit がタイム永続化後に1回だけ判定するため常に
+   * true を渡す (usePracticeTabSave の createPracticeLog と同じ契約)。
+   */
   createPracticeLog: (
     log: Omit<import("@swim-hub/shared/types").PracticeLogInsert, "user_id">,
+    skipMilestoneUpdate?: boolean,
   ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
   updatePracticeLog: (
     id: string,
     updates: import("@swim-hub/shared/types").PracticeLogUpdate,
+    skipMilestoneUpdate?: boolean,
   ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
   createPracticeTime: (
     time: import("@swim-hub/shared/types").PracticeTimeInsert,
   ) => Promise<import("@swim-hub/shared/types").PracticeTime>;
   deletePracticeTime: (id: string) => Promise<void>;
+  /**
+   * タブモーダル一括保存 (usePracticeTabSave) 専用。handlePracticeLogSubmit 等の
+   * 既存フローが使う上記 createPracticeLog/updatePracticeLog とは別に、タイム保存後に
+   * 1回だけマイルストーン判定を行う経路として渡す。タイムの一括保存自体は
+   * usePracticeTabSave 内部で行う (呼び出し元からは createPracticeTimes 等を渡す必要はない)。
+   */
+  createPracticeLogForTabSave: (
+    log: Omit<import("@swim-hub/shared/types").PracticeLogInsert, "user_id">,
+    skipMilestoneUpdate?: boolean,
+  ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
+  updatePracticeLogForTabSave: (
+    id: string,
+    updates: import("@swim-hub/shared/types").PracticeLogUpdate,
+    skipMilestoneUpdate?: boolean,
+  ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
   deletePractice: (id: string) => Promise<void>;
   deletePracticeLog?: (id: string) => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
@@ -125,6 +148,8 @@ export function useDashboardHandlers({
   deletePracticeLog,
   createPracticeTime,
   deletePracticeTime,
+  createPracticeLogForTabSave,
+  updatePracticeLogForTabSave,
   deletePractice,
   createRecord,
   updateRecord,
@@ -362,7 +387,9 @@ export function useDashboardHandlers({
 
           if (!editingData.id) throw new Error("Editing data ID is required");
           const practiceLogId = editingData.id;
-          await updatePracticeLog(practiceLogId, logInput);
+          // 判定自体はここでは行わない (skipMilestoneUpdate=true)。タイム永続化後に
+          // 1回だけ判定する (usePracticeTabSave と同じ形に揃える)。
+          await updatePracticeLog(practiceLogId, logInput, true);
 
           await supabase.from("practice_log_tags").delete().eq("practice_log_id", practiceLogId);
 
@@ -419,6 +446,10 @@ export function useDashboardHandlers({
                 ),
             );
           }
+
+          // タイム永続化後、キャッシュ無効化 → マイルストーン判定を1回だけ行う
+          // (usePracticeTabSave.ts と共通の後処理)。
+          await refreshMilestonesAfterPracticeSave(supabase, user.id, true);
         } else {
           // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
           const { createdPracticeId: storePracticeId, editingData: storeEditingData } =
@@ -429,6 +460,8 @@ export function useDashboardHandlers({
           if (!practiceId) {
             throw new Error("Practice ID が見つかりません");
           }
+
+          let hasLogChanges = false;
 
           for (const menu of menus) {
             const logInput = {
@@ -442,7 +475,10 @@ export function useDashboardHandlers({
               note: menu.note || "",
             };
 
-            const createdLog = await createPracticeLog(logInput);
+            // ログ保存 (=判定トリガー) はタイム永続化の前に行うが、判定自体は
+            // 全メニューのタイム永続化が終わった後に1回だけ行う。
+            const createdLog = await createPracticeLog(logInput, true);
+            hasLogChanges = true;
 
             if (menu.tags && menu.tags.length > 0 && createdLog) {
               // タグを並列insert
@@ -501,6 +537,10 @@ export function useDashboardHandlers({
               }
             }
           }
+
+          // タイム永続化後、キャッシュ無効化 → マイルストーン判定を1回だけ行う
+          // (usePracticeTabSave.ts と共通の後処理)。
+          await refreshMilestonesAfterPracticeSave(supabase, user.id, hasLogChanges);
         }
 
         closePracticeLogForm();
@@ -1168,11 +1208,9 @@ export function useDashboardHandlers({
     user,
     createPractice,
     updatePractice,
-    createPracticeLog,
-    updatePracticeLog,
+    createPracticeLog: createPracticeLogForTabSave,
+    updatePracticeLog: updatePracticeLogForTabSave,
     deletePracticeLog,
-    createPracticeTime,
-    deletePracticeTime,
     setPracticeLoading,
     setEditingPracticeId,
     closePracticeTabModal,

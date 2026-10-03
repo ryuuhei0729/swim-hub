@@ -166,8 +166,6 @@ describe("usePracticeTabSave — issue #48: image_paths SELECT の error 未処�
   let createPracticeLog: ReturnType<typeof vi.fn>;
   let updatePracticeLog: ReturnType<typeof vi.fn>;
   let deletePracticeLog: ReturnType<typeof vi.fn>;
-  let createPracticeTime: ReturnType<typeof vi.fn>;
-  let deletePracticeTime: ReturnType<typeof vi.fn>;
   let setPracticeLoading: ReturnType<typeof vi.fn>;
   let setEditingPracticeId: ReturnType<typeof vi.fn>;
   let closePracticeTabModal: ReturnType<typeof vi.fn>;
@@ -180,8 +178,6 @@ describe("usePracticeTabSave — issue #48: image_paths SELECT の error 未処�
     createPracticeLog = vi.fn().mockResolvedValue({ id: "new-log-id" });
     updatePracticeLog = vi.fn().mockResolvedValue({ id: "log-1" });
     deletePracticeLog = vi.fn().mockResolvedValue(undefined);
-    createPracticeTime = vi.fn().mockResolvedValue({});
-    deletePracticeTime = vi.fn().mockResolvedValue(undefined);
     setPracticeLoading = vi.fn();
     setEditingPracticeId = vi.fn();
     closePracticeTabModal = vi.fn();
@@ -198,8 +194,6 @@ describe("usePracticeTabSave — issue #48: image_paths SELECT の error 未処�
           createPracticeLog,
           updatePracticeLog,
           deletePracticeLog,
-          createPracticeTime,
-          deletePracticeTime,
           setPracticeLoading,
           setEditingPracticeId,
           closePracticeTabModal,

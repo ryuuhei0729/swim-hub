@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo } from "react";
 import { RecordAPI, type ListBestCandidates } from "../../api/records";
 import { GoalAPI } from "../../api/goals";
+import { goalKeys } from "./goals";
 import type {
   Competition,
   CompetitionInsert,
@@ -519,6 +520,9 @@ export function useDeleteCompetitionMutation(
       // records も削除するため、ランキングも落とす。落とさないと最大5分間
       // 「存在しない記録」が順位表に残る。
       invalidateTeamRankings(queryClient);
+      // 同 RPC は個人大会に紐づく goals も削除する (Sprint #goals P1)。
+      // 落とさないと削除済み大会を指す目標カードがキャッシュに残り続ける。
+      queryClient.invalidateQueries({ queryKey: goalKeys.all });
     },
   });
 }

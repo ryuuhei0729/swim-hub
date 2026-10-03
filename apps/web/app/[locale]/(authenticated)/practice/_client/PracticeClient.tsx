@@ -20,8 +20,6 @@ import {
   useCreatePracticeLogMutation,
   useUpdatePracticeLogMutation,
   useDeletePracticeLogMutation,
-  useCreatePracticeTimeMutation,
-  useDeletePracticeTimeMutation,
 } from "@apps/shared/hooks/queries/practices";
 import type { PracticeTag, PracticeWithLogs, Style } from "@apps/shared/types";
 import { getStyleOrderIndex, toStyleCode } from "@apps/shared/utils/swimStyles";
@@ -240,8 +238,6 @@ export default function PracticeClient({
   const createPracticeLogMutation = useCreatePracticeLogMutation(supabase);
   const updatePracticeLogMutation = useUpdatePracticeLogMutation(supabase);
   const deletePracticeLogMutation = useDeletePracticeLogMutation(supabase);
-  const createPracticeTimeMutation = useCreatePracticeTimeMutation(supabase);
-  const deletePracticeTimeMutation = useDeletePracticeTimeMutation(supabase);
 
   // React Query mutation状態から派生
   const isAnyMutating =
@@ -460,11 +456,11 @@ export default function PracticeClient({
     user,
     createPractice: async (practice) => createPracticeMutation.mutateAsync(practice),
     updatePractice: async (id, updates) => updatePracticeMutation.mutateAsync({ id, updates }),
-    createPracticeLog: async (log) => createPracticeLogMutation.mutateAsync(log),
-    updatePracticeLog: async (id, updates) => updatePracticeLogMutation.mutateAsync({ id, updates }),
+    createPracticeLog: async (log, skipMilestoneUpdate) =>
+      createPracticeLogMutation.mutateAsync({ ...log, skipMilestoneUpdate }),
+    updatePracticeLog: async (id, updates, skipMilestoneUpdate) =>
+      updatePracticeLogMutation.mutateAsync({ id, updates, skipMilestoneUpdate }),
     deletePracticeLog: async (id) => deletePracticeLogMutation.mutateAsync(id),
-    createPracticeTime: async (time) => createPracticeTimeMutation.mutateAsync(time),
-    deletePracticeTime: async (id) => deletePracticeTimeMutation.mutateAsync(id),
     setPracticeLoading: setTabLoading,
     setEditingPracticeId,
     closePracticeTabModal,

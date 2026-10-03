@@ -8,7 +8,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { GoalAPI } from "../../api/goals";
-import { RecordAPI } from "../../api/records";
 import type { Goal, GoalWithMilestones, Style } from "../../types";
 
 // クエリキー定義
@@ -20,7 +19,7 @@ export const goalKeys = {
 } as const;
 
 type GoalWithDetails = Goal & {
-  competition?: { title: string | null };
+  competition: { title: string | null } | null;
   style?: { name_jp: string };
 };
 
@@ -42,15 +41,18 @@ export function useGoalsQuery(
   invalidate: () => Promise<void>;
 } {
   const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
-  const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
   const queryClient = useQueryClient();
 
   const query = useQuery<GoalsQueryData, Error, GoalWithDetails[]>({
     queryKey: goalKeys.list(),
     queryFn: async () => {
+      // getSelectableCompetitions() は個人大会 + 所属チームの大会 (RLS 経由で
+      // 見えるもの) を返す。RecordAPI.getCompetitions() (個人大会限定) だと
+      // チーム大会を対象にした目標のタイトルが解決できず「大会情報なし」に
+      // 誤って落ちるため、こちらを使う。
       const [goals, competitions] = await Promise.all([
         goalAPI.getGoals(),
-        recordAPI.getCompetitions(),
+        goalAPI.getSelectableCompetitions(),
       ]);
 
       return { goals, competitions };
@@ -61,7 +63,7 @@ export function useGoalsQuery(
         const style = options.styles?.find((s) => s.id === goal.style_id);
         return {
           ...goal,
-          competition: competition ? { title: competition.title } : undefined,
+          competition: competition ? { title: competition.title } : null,
           style: style ? { name_jp: style.name_jp } : undefined,
         };
       }),

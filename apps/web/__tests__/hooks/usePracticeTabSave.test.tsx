@@ -6,9 +6,18 @@
  * 「親(practice) INSERT/UPDATE 分岐」「子(practice_logs) diff の ADD/UPDATE/DELETE」
  * 「画像アップロード失敗時のロールバック」という既存契約を回帰させないことを検証する。
  *
+ * マイルストーン判定の設計:
+ *   ログ保存は常に skipMilestoneUpdate=true (createPracticeLog/updatePracticeLog の
+ *   onSuccess では個別に判定しない)。タイムは PracticeAPI.createPracticeTimes /
+ *   replacePracticeTimes で保存し、ADD/UPDATE 全ループ後に
+ *   (1) getQueryClient().invalidateQueries、(2) goalAPI.updateAllMilestoneStatuses を
+ *   「変更があれば1回だけ」呼ぶ。
+ *   「Nメニュー保存でも判定1回」「判定/invalidateがタイム永続化の後」であることを
+ *   呼び出し順序・回数で assert する。
+ *
  * トートロジー防止メモ:
  *   実装のロジックをそのままコピーしたアサーションにならないよう、
- *   「呼ばれた関数と引数」「呼ばれなかった関数」の観点で検証する。
+ *   「呼ばれた関数と引数」「呼ばれなかった関数」「呼び出し順序」の観点で検証する。
  */
 
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -25,13 +34,49 @@ import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
 const mocks = vi.hoisted(() => ({
   uploadPracticeImage: vi.fn(),
   deletePracticeImage: vi.fn(),
+  createPracticeTimes: vi.fn(),
+  replacePracticeTimes: vi.fn(),
+  invalidateQueries: vi.fn(),
+  updateAllMilestoneStatuses: vi.fn(),
+  // 呼び出し順序を記録する共有配列。各 it の beforeEach で空にする。
+  callOrder: [] as string[],
 }));
 
 vi.mock("@apps/shared/api", () => ({
   PracticeAPI: class {
     uploadPracticeImage = mocks.uploadPracticeImage;
     deletePracticeImage = mocks.deletePracticeImage;
+    createPracticeTimes = (...args: unknown[]) => {
+      mocks.callOrder.push("createPracticeTimes");
+      return mocks.createPracticeTimes(...args);
+    };
+    replacePracticeTimes = (...args: unknown[]) => {
+      mocks.callOrder.push("replacePracticeTimes");
+      return mocks.replacePracticeTimes(...args);
+    };
   },
+}));
+
+// usePracticeTabSave 内部で `new GoalAPI(supabase)` して直接呼ぶため、
+// react-query の mutation 経由ではなく API クラスそのものをモックする。
+vi.mock("@apps/shared/api/goals", () => ({
+  GoalAPI: class {
+    updateAllMilestoneStatuses = (...args: unknown[]) => {
+      mocks.callOrder.push("updateAllMilestoneStatuses");
+      return mocks.updateAllMilestoneStatuses(...args);
+    };
+  },
+}));
+
+// usePracticeTabSave は useQueryClient() (React Context) ではなく
+// getQueryClient() (シングルトン取得関数) を直接呼ぶ実装。
+vi.mock("@/providers/QueryProvider", () => ({
+  getQueryClient: () => ({
+    invalidateQueries: (...args: unknown[]) => {
+      mocks.callOrder.push("invalidateQueries");
+      return mocks.invalidateQueries(...args);
+    },
+  }),
 }));
 
 vi.mock("@/lib/video-upload-client", () => ({
@@ -82,8 +127,6 @@ describe("usePracticeTabSave", () => {
   let createPracticeLog: ReturnType<typeof vi.fn>;
   let updatePracticeLog: ReturnType<typeof vi.fn>;
   let deletePracticeLog: ReturnType<typeof vi.fn>;
-  let createPracticeTime: ReturnType<typeof vi.fn>;
-  let deletePracticeTime: ReturnType<typeof vi.fn>;
   let setPracticeLoading: ReturnType<typeof vi.fn>;
   let setEditingPracticeId: ReturnType<typeof vi.fn>;
   let closePracticeTabModal: ReturnType<typeof vi.fn>;
@@ -99,8 +142,6 @@ describe("usePracticeTabSave", () => {
     createPracticeLog = vi.fn().mockResolvedValue({ id: "new-log-id" });
     updatePracticeLog = vi.fn().mockResolvedValue({ id: "log-1" });
     deletePracticeLog = vi.fn().mockResolvedValue(undefined);
-    createPracticeTime = vi.fn().mockResolvedValue({});
-    deletePracticeTime = vi.fn().mockResolvedValue(undefined);
     setPracticeLoading = vi.fn();
     setEditingPracticeId = vi.fn();
     closePracticeTabModal = vi.fn();
@@ -117,8 +158,6 @@ describe("usePracticeTabSave", () => {
           createPracticeLog,
           updatePracticeLog,
           deletePracticeLog,
-          createPracticeTime,
-          deletePracticeTime,
           setPracticeLoading,
           setEditingPracticeId,
           closePracticeTabModal,
@@ -132,6 +171,10 @@ describe("usePracticeTabSave", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.callOrder.length = 0;
+    mocks.createPracticeTimes.mockResolvedValue(undefined);
+    mocks.replacePracticeTimes.mockResolvedValue(undefined);
+    mocks.updateAllMilestoneStatuses.mockResolvedValue(undefined);
   });
 
   it("user が null の場合は認証エラーを投げ、createPractice/updatePractice は呼ばれない", async () => {
@@ -217,23 +260,38 @@ describe("usePracticeTabSave", () => {
       );
     });
 
-    // 新規ログ (tempMenuId なし) → createPracticeLog
+    // 新規ログ (tempMenuId なし) → createPracticeLog。このフックからは常に
+    // skipMilestoneUpdate=true (第2引数) を渡す (判定はこのフックに一本化するため、
+    // react-query 側の個別判定を毎回抑止する)。
     expect(createPracticeLog).toHaveBeenCalledTimes(1);
     expect(createPracticeLog).toHaveBeenCalledWith(
       expect.objectContaining({ practice_id: "practice-1", style: "Br", distance: 50 }),
+      true,
     );
 
-    // 既存ログ (originalLogIds に含まれる UUID) → updatePracticeLog
+    // 既存ログ (originalLogIds に含まれる UUID) → updatePracticeLog (同様に skipMilestoneUpdate=true)
     expect(updatePracticeLog).toHaveBeenCalledTimes(1);
     expect(updatePracticeLog).toHaveBeenCalledWith(
       "11111111-1111-1111-1111-111111111111",
       expect.objectContaining({ style: "Fr", distance: 100 }),
+      true,
     );
 
     // originalLogIds にあったが draft に残っていない ID → deletePracticeLog
     // (isDbUuid でないダミーIDは "log-to-delete-uuid0000" のように UUID 形式でない値を使っている点に注意:
     //  toDelete は「originalLogIds のうち draft の draftIdSet に含まれない ID」全てが対象になる)
     expect(deletePracticeLog).toHaveBeenCalledWith("log-to-delete-uuid0000");
+
+    // 時間の永続化はこのフック内部で PracticeAPI.replacePracticeTimes を直接呼ぶ
+    // (react-query の createPracticeTime/deletePracticeTime 経由ではない)。
+    // 更新ログの times は [] なので、既存タイムのクリアとして呼ばれる (空配列)。
+    expect(mocks.replacePracticeTimes).toHaveBeenCalledWith(
+      "11111111-1111-1111-1111-111111111111",
+      [],
+    );
+    // 新規ログは times: [] のため createPracticeTimes 自体は呼ばれない
+    // (バリデーション: time > 0 の要素が無い)
+    expect(mocks.createPracticeTimes).not.toHaveBeenCalled();
   });
 
   it("全成功後に setEditingPracticeId(null) / closePracticeTabModal / onSaved / setPracticeLoading(false) が呼ばれる", async () => {
@@ -316,6 +374,7 @@ describe("usePracticeTabSave", () => {
       expect(createPracticeLog).toHaveBeenCalledTimes(1);
       expect(createPracticeLog).toHaveBeenCalledWith(
         expect.objectContaining({ practice_id: "practice-1", style: "Fr", distance: 100 }),
+        true,
       );
       await waitFor(() => {
         expect(closePracticeTabModal).toHaveBeenCalledTimes(1);
@@ -443,5 +502,166 @@ describe("usePracticeTabSave", () => {
         expect(updatePractice).toHaveBeenCalledTimes(1);
       },
     );
+  });
+
+  // -------------------------------------------------------------------------
+  // タイム永続化後に1回だけ判定する。「N メニュー保存でも判定は1回」
+  // 「判定/invalidate はタイム永続化の後」を呼び出し回数・呼び出し順序で assert する
+  // (引数を足すだけの弱い追従にしない)。
+  // -------------------------------------------------------------------------
+  describe("タイム永続化後のマイルストーン判定 (1回の保存につき1回)", () => {
+    it("複数メニュー (2件、両方ともタイムあり) を保存しても updateAllMilestoneStatuses は1回だけ呼ばれる", async () => {
+      const result = setup();
+
+      await act(async () => {
+        await result.current(
+          baseParams({
+            editingPracticeId: "practice-1",
+            logs: [
+              {
+                style: "Fr",
+                swimCategory: "Swim",
+                distance: 100,
+                reps: 1,
+                sets: 1,
+                circleTime: 90,
+                note: "",
+                tags: [],
+                times: [{ setNumber: 1, repNumber: 1, time: 65 }],
+                // tempMenuId なし = 新規追加その1
+              },
+              {
+                style: "Br",
+                swimCategory: "Swim",
+                distance: 50,
+                reps: 1,
+                sets: 1,
+                circleTime: 60,
+                note: "",
+                tags: [],
+                times: [{ setNumber: 1, repNumber: 1, time: 40 }],
+                // tempMenuId なし = 新規追加その2
+              },
+            ],
+          }),
+        );
+      });
+
+      // メニューごとに createPracticeTimes は個別に呼ばれる (2回)
+      expect(mocks.createPracticeTimes).toHaveBeenCalledTimes(2);
+      // しかしマイルストーン判定は保存1回につき1回だけ (メニュー数に比例しない)
+      expect(mocks.updateAllMilestoneStatuses).toHaveBeenCalledTimes(1);
+      expect(mocks.updateAllMilestoneStatuses).toHaveBeenCalledWith("user-1");
+      // invalidate もタイム永続化1回の保存につき1回
+      expect(mocks.invalidateQueries).toHaveBeenCalledTimes(1);
+    });
+
+    it("呼び出し順序: 全メニューのタイム永続化 → invalidateQueries → updateAllMilestoneStatuses の順で1回ずつ実行される", async () => {
+      const result = setup();
+
+      await act(async () => {
+        await result.current(
+          baseParams({
+            editingPracticeId: "practice-1",
+            logs: [
+              {
+                style: "Fr",
+                swimCategory: "Swim",
+                distance: 100,
+                reps: 1,
+                sets: 1,
+                circleTime: 90,
+                note: "",
+                tags: [],
+                times: [{ setNumber: 1, repNumber: 1, time: 65 }],
+              },
+              {
+                style: "Br",
+                swimCategory: "Swim",
+                distance: 50,
+                reps: 1,
+                sets: 1,
+                circleTime: 60,
+                note: "",
+                tags: [],
+                times: [{ setNumber: 1, repNumber: 1, time: 40 }],
+              },
+            ],
+          }),
+        );
+      });
+
+      // callOrder は "createPracticeTimes" が (メニュー数分) 先頭に並び、
+      // その後 "invalidateQueries"、最後に "updateAllMilestoneStatuses" が
+      // ちょうど1回ずつ来ることを厳密に確認する (実装のコピーではなく
+      // 観測可能な順序・回数のみを固定する)。
+      expect(mocks.callOrder).toEqual([
+        "createPracticeTimes",
+        "createPracticeTimes",
+        "invalidateQueries",
+        "updateAllMilestoneStatuses",
+      ]);
+    });
+
+    it("ログの変更が無い保存 (basicData のみの更新等) では updateAllMilestoneStatuses は呼ばれない (invalidateQueries はログ変更の有無に関わらず呼ばれる)", async () => {
+      const result = setup();
+
+      await act(async () => {
+        await result.current(
+          baseParams({
+            editingPracticeId: "practice-1",
+            basicData: { date: "2026-07-11", title: "タイトルのみ変更", place: "", note: "" },
+            logs: [],
+            originalLogIds: [],
+          }),
+        );
+      });
+
+      expect(mocks.createPracticeTimes).not.toHaveBeenCalled();
+      expect(mocks.replacePracticeTimes).not.toHaveBeenCalled();
+      // updateAllMilestoneStatuses は ADD/UPDATE が1件も無ければ呼ばれない
+      // (hasLogChanges ガード)。invalidateQueries はログ変更の有無に関わらず
+      // 実装上常に呼ばれるため、ここでは判定の抑止のみを固定する。
+      expect(mocks.updateAllMilestoneStatuses).not.toHaveBeenCalled();
+    });
+
+    it("更新ログ (UPDATE 分岐) のタイム再同期のみでも、判定は1回だけ行われる", async () => {
+      const result = setup();
+
+      await act(async () => {
+        await result.current(
+          baseParams({
+            editingPracticeId: "practice-1",
+            originalLogIds: ["11111111-1111-1111-1111-111111111111"],
+            logs: [
+              {
+                style: "Fr",
+                swimCategory: "Swim",
+                distance: 100,
+                reps: 1,
+                sets: 1,
+                circleTime: 90,
+                note: "",
+                tags: [],
+                times: [{ setNumber: 1, repNumber: 1, time: 58 }],
+                tempMenuId: "11111111-1111-1111-1111-111111111111",
+              },
+            ],
+          }),
+        );
+      });
+
+      expect(mocks.replacePracticeTimes).toHaveBeenCalledTimes(1);
+      expect(mocks.replacePracticeTimes).toHaveBeenCalledWith(
+        "11111111-1111-1111-1111-111111111111",
+        [{ set_number: 1, rep_number: 1, time: 58 }],
+      );
+      expect(mocks.updateAllMilestoneStatuses).toHaveBeenCalledTimes(1);
+      expect(mocks.callOrder).toEqual([
+        "replacePracticeTimes",
+        "invalidateQueries",
+        "updateAllMilestoneStatuses",
+      ]);
+    });
   });
 });
