@@ -7,7 +7,7 @@
 // 食われる。
 //
 // 原因: `TeamRecordStyleListScreen` は MainStack に直接載る画面であり、
-// タブ5画面を包む `TabNavigator` の `SafeAreaView edges={["bottom"]}` の
+// タブ6画面を包む `TabNavigator` の `SafeAreaView edges={["bottom"]}` の
 // 保護外にある。にもかかわらず contentContainerStyle の paddingBottom が
 // 固定 32 で、3ボタンナビの inset (48dp) より小さかった。
 // (この画面は 2026-09-19 に追加されており、2026-09-08 の Edge-to-Edge

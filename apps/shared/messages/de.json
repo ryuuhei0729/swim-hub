@@ -6,7 +6,8 @@
         "practices": "Training",
         "competitions": "Wettkämpfe",
         "teams": "Teams",
-        "myPage": "Mein Bereich"
+        "myPage": "Mein Bereich",
+        "goals": "Ziele"
       },
       "titles": {
         "practiceDetail": "Trainingsdetails",
@@ -22,7 +23,8 @@
         "entryRegister": "Meldung eintragen",
         "teamDetail": "Teamdetails",
         "settings": "Einstellungen",
-        "bulkBestTime": "Bestzeiten-Sammeleingabe"
+        "bulkBestTime": "Bestzeiten-Sammeleingabe",
+        "goalDetail": "Zieldetails"
       }
     }
   },
@@ -2311,7 +2313,8 @@
       "startTimePlaceholder": "2.00.00",
       "getBestTimeButton": "Aus Bestzeit übernehmen",
       "personalCompetitionGroup": "Persönlich",
-      "teamCompetitionGroupFallback": "Team-Wettkampf"
+      "teamCompetitionGroupFallback": "Team-Wettkampf",
+      "competitionDatePast": "Bitte wählen Sie für einen neuen Wettkampf das heutige oder ein späteres Datum"
     },
     "milestoneForm": {
       "templateLabel": "Vorlage (optional)",
@@ -2347,7 +2350,8 @@
       "averageTimeLabel": "Durchschn. Zielzeit",
       "circleMinLabel": "Intervall (Min.)",
       "circleSecLabel": "Intervall (Sek.)",
-      "averageTimeRequired": "Bitte geben Sie eine durchschnittliche Zielzeit ein"
+      "averageTimeRequired": "Bitte geben Sie eine durchschnittliche Zielzeit ein",
+      "paramsInvalid": "Einige Felder sind leer oder 0. Bitte geben Sie einen Wert ab 1 ein"
     },
     "deadlineInput": {
       "defaultLabel": "Frist (optional)",
@@ -2368,6 +2372,16 @@
       "timeTrialDesc": "Zeiten aus Training und Wettkämpfen automatisch erfassen",
       "goalSet": "Goal Set",
       "goalSetDesc": "50m × 6 Wdh. × 3 Sätze (aus der 100m-Zielzeit berechnet)"
+    },
+    "milestoneSummary": {
+      "time": "{distance}m × 1 Wdh.: {time}",
+      "repsTime": "{distance}m × {reps} Wdh. @{time} Ø",
+      "set": "{distance}m × {reps} Wdh. × {sets} Sätze (@{circle} Intervall) komplett"
+    },
+    "mobile": {
+      "notFound": "Ziel nicht gefunden",
+      "milestoneNotFound": "Meilenstein nicht gefunden",
+      "noSelectableCompetitions": "Keine Wettkämpfe verfügbar. Bitte legen Sie einen neuen an."
     }
   },
   "teams": {

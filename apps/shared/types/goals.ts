@@ -173,6 +173,36 @@ export function isMilestoneTimeValueValid(params: MilestoneParams): boolean {
   return true;
 }
 
+/**
+ * マイルストーンの params が保存可能かを判定する。0 や空欄 (フォーム上は 0 に変換される) の
+ * まま保存すると達成判定が成立しなくなる (reps=0 → 0/0=NaN 等) ため、type ごとに必須値を検査する。
+ * - 共通: distance > 0
+ * - time: target_time > 0
+ * - reps_time: reps >= 1, sets >= 1, target_average_time > 0 (circle は判定にも要約文にも使わないので不問)
+ * - set: reps >= 1, sets >= 1, circle > 0
+ * type と params の型が食い違う場合は false。
+ */
+export function isMilestoneParamsSavable(
+  type: "time" | "reps_time" | "set",
+  params: MilestoneParams,
+): boolean {
+  if (!(params.distance > 0)) return false;
+  if (type === "time") {
+    return isMilestoneTimeParams(params) && params.target_time > 0;
+  }
+  if (type === "reps_time") {
+    return (
+      isMilestoneRepsTimeParams(params) &&
+      params.reps >= 1 &&
+      params.sets >= 1 &&
+      params.target_average_time > 0
+    );
+  }
+  return (
+    isMilestoneSetParams(params) && params.reps >= 1 && params.sets >= 1 && params.circle > 0
+  );
+}
+
 // =============================================================================
 // 4. フォーム用型定義（camelCase）
 // =============================================================================
@@ -183,6 +213,8 @@ export interface CreateGoalInput {
   competitionData?: {
     title: string;
     date: string;
+    /** 複数日開催の終了日。単日・未指定は null / undefined */
+    endDate?: string | null;
     place: string | null;
     poolType: number;
   };

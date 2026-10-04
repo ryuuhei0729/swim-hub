@@ -59,6 +59,7 @@ export class GoalAPI {
         user_id: user.id,
         title: input.competitionData.title,
         date: input.competitionData.date,
+        end_date: input.competitionData.endDate ?? null,
         place: input.competitionData.place,
         pool_type: input.competitionData.poolType,
         entry_status: "before",

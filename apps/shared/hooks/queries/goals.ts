@@ -19,13 +19,13 @@ export const goalKeys = {
 } as const;
 
 type GoalWithDetails = Goal & {
-  competition: { title: string | null } | null;
+  competition: { title: string | null; date: string } | null;
   style?: { name_jp: string };
 };
 
 type GoalsQueryData = {
   goals: Goal[];
-  competitions: { id: string; title: string | null }[];
+  competitions: { id: string; title: string | null; date: string }[];
 };
 
 /**
@@ -63,7 +63,7 @@ export function useGoalsQuery(
         const style = options.styles?.find((s) => s.id === goal.style_id);
         return {
           ...goal,
-          competition: competition ? { title: competition.title } : null,
+          competition: competition ? { title: competition.title, date: competition.date } : null,
           style: style ? { name_jp: style.name_jp } : undefined,
         };
       }),

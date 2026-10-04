@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { addMonths, subMonths, format as formatDate } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCalendarQuery } from "@/hooks/useCalendarQuery";
@@ -18,6 +20,10 @@ import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import { TeamAnnouncementsSection } from "@/components/dashboard/TeamAnnouncementsSection";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useExpiredGoalCheck } from "@/hooks/useExpiredGoalCheck";
+import { GoalReflectionModal } from "@/components/goals/GoalReflectionModal";
+import { ReflectionModal } from "@/components/goals/ReflectionModal";
+import type { MainStackParamList } from "@/navigation/types";
 
 // 未設定 (取得前・未カスタマイズ) の色設定。resolver がデフォルト色にフォールバックするための空値。
 const DEFAULT_CALENDAR_COLOR_SETTINGS: CalendarColorSettings = {
@@ -36,6 +42,17 @@ export const DashboardScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayDetail, setShowDayDetail] = useState(false);
   const queryClient = useQueryClient();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+
+  // 期限切れの目標・マイルストーンの振り返り (マウント時に1回だけ確認)
+  const {
+    expiredGoal,
+    expiredMilestone,
+    handleGoalSaved,
+    handleMilestoneSaved,
+    skipGoal,
+    skipMilestone,
+  } = useExpiredGoalCheck(supabase, user?.id);
 
   // チーム一覧取得（お知らせ表示用）
   const { teams = [], refetch: refetchTeams } = useTeamsQuery(supabase, {
@@ -183,6 +200,30 @@ export const DashboardScreen: React.FC = () => {
           colorSettings={colorSettings}
         />
       </ScrollView>
+
+      {/* 期限切れ目標の振り返り (優先) */}
+      {expiredGoal && (
+        <GoalReflectionModal
+          key={expiredGoal.id}
+          goal={expiredGoal}
+          onSkip={skipGoal}
+          onSaved={handleGoalSaved}
+        />
+      )}
+
+      {/* 期限切れマイルストーンの振り返り (期限切れ目標が無いときだけ) */}
+      {!expiredGoal && expiredMilestone && (
+        <ReflectionModal
+          key={expiredMilestone.id}
+          milestone={expiredMilestone}
+          onSkip={skipMilestone}
+          onSaved={handleMilestoneSaved}
+          onGoToGoals={() => {
+            skipMilestone();
+            navigation.navigate("MainTabs", { screen: "Goals" });
+          }}
+        />
+      )}
 
       {/* 日付詳細モーダル */}
       {selectedDate && (

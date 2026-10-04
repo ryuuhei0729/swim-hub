@@ -12,6 +12,11 @@ import { format, isValid } from "date-fns";
 import { ja } from "date-fns/locale";
 import { formatTimeBest } from "@/utils/formatters";
 import type { GoalWithMilestones } from "@apps/shared/types";
+import {
+  REFLECTION_OPTIONS,
+  REFLECTION_OTHER_ID,
+  buildReflectionNote,
+} from "@apps/shared/utils/goalReflection";
 
 interface GoalReflectionModalProps {
   isOpen: boolean;
@@ -39,13 +44,10 @@ export default function GoalReflectionModal({
 
   const goalAPI = new GoalAPI(supabase);
 
-  const reflectionOptions = [
-    { id: "goal_too_high", label: t("goalReflection.options.goalTooHigh") },
-    { id: "period_too_short", label: t("goalReflection.options.periodTooShort") },
-    { id: "practice_insufficient", label: t("goalReflection.options.practiceInsufficient") },
-    { id: "condition_poor", label: t("goalReflection.options.conditionPoor") },
-    { id: "other", label: t("goalReflection.options.other") },
-  ];
+  const reflectionOptions = REFLECTION_OPTIONS.map(({ id, labelKey }) => ({
+    id,
+    label: t(`goalReflection.options.${labelKey}`),
+  }));
 
   const handleOptionToggle = (optionId: string) => {
     setSelectedOptions((prev) => {
@@ -78,25 +80,17 @@ export default function GoalReflectionModal({
   const handleNotAchieved = async () => {
     setIsLoading(true);
     try {
-      // 振り返りメモを構築
-      const optionLabels: Record<string, string> = {
-        goal_too_high: t("goalReflection.options.goalTooHigh"),
-        period_too_short: t("goalReflection.options.periodTooShort"),
-        practice_insufficient: t("goalReflection.options.practiceInsufficient"),
-        condition_poor: t("goalReflection.options.conditionPoor"),
-        other: t("goalReflection.options.other"),
-      };
-      const reflectionNote = [
-        ...selectedOptions.map((id) => optionLabels[id] ?? id),
-        otherNote ? t("goalReflection.otherPrefix", { note: otherNote }) : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
+      const reflectionNote = buildReflectionNote({
+        selectedIds: selectedOptions,
+        resolveLabel: (id) => reflectionOptions.find((o) => o.id === id)?.label ?? id,
+        otherNote,
+        formatOtherNote: (note) => t("goalReflection.otherPrefix", { note }),
+      });
 
       // 目標をキャンセル状態に更新し、振り返りメモを永続化する (P3/L4)
       await goalAPI.updateGoal(goal.id, {
         status: "cancelled",
-        reflectionNote: reflectionNote || null,
+        reflectionNote,
       });
 
       await onSave();
@@ -224,7 +218,7 @@ export default function GoalReflectionModal({
                 </div>
 
                 {/* その他（自由記述） */}
-                {selectedOptions.includes("other") && (
+                {selectedOptions.includes(REFLECTION_OTHER_ID) && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t("goalReflection.otherLabel")}

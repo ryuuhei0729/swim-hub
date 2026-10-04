@@ -6,7 +6,8 @@
         "practices": "練習",
         "competitions": "大会",
         "teams": "チーム",
-        "myPage": "マイページ"
+        "myPage": "マイページ",
+        "goals": "目標"
       },
       "titles": {
         "practiceDetail": "練習記録詳細",
@@ -22,7 +23,8 @@
         "entryRegister": "エントリー登録",
         "teamDetail": "チーム詳細",
         "settings": "設定",
-        "bulkBestTime": "ベストタイム一括入力"
+        "bulkBestTime": "ベストタイム一括入力",
+        "goalDetail": "目標詳細"
       }
     }
   },
@@ -2311,7 +2313,8 @@
       "startTimePlaceholder": "2.00.00",
       "getBestTimeButton": "ベストタイムから取得",
       "personalCompetitionGroup": "個人",
-      "teamCompetitionGroupFallback": "チーム大会"
+      "teamCompetitionGroupFallback": "チーム大会",
+      "competitionDatePast": "新規大会の日付は今日以降を選択してください"
     },
     "milestoneForm": {
       "templateLabel": "テンプレート（任意）",
@@ -2347,7 +2350,8 @@
       "averageTimeLabel": "平均目標タイム",
       "circleMinLabel": "サークル(分)",
       "circleSecLabel": "サークル(秒)",
-      "averageTimeRequired": "平均目標タイムを入力してください"
+      "averageTimeRequired": "平均目標タイムを入力してください",
+      "paramsInvalid": "未入力または0の項目があります。1以上の値を入力してください"
     },
     "deadlineInput": {
       "defaultLabel": "期限日（任意）",
@@ -2368,6 +2372,16 @@
       "timeTrialDesc": "練習,大会でのタイム測定を自動的に観測",
       "goalSet": "ゴールセット",
       "goalSetDesc": "50m×6本×3セット（100m目標タイムから逆算）"
+    },
+    "milestoneSummary": {
+      "time": "{distance}m × 1本: {time}",
+      "repsTime": "{distance}m × {reps}本 @{time} 平均",
+      "set": "{distance}m × {reps}本 × {sets}セット (@{circle}サークル) 完遂"
+    },
+    "mobile": {
+      "notFound": "目標が見つかりませんでした",
+      "milestoneNotFound": "マイルストーンが見つかりませんでした",
+      "noSelectableCompetitions": "選択できる大会がありません。新規大会を作成してください"
     }
   },
   "teams": {

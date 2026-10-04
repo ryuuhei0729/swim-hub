@@ -10,7 +10,7 @@ interface NumberStepperProps {
   onChange: (value: string) => void;
   min?: number;
   max?: number;
-  /** −/+ ボタン1回あたりの増減幅 */
+  /** −/+ ボタン1回あたりの増減幅。input の step 属性には渡さない (直接入力値や既定値が倍数でなくても form 送信をブロックしないため) */
   step?: number;
   placeholder?: string;
   /** 中央 input の aria-label(フィールド名) */
@@ -79,7 +79,7 @@ export default function NumberStepper({
         placeholder={placeholder}
         min={min}
         max={max}
-        step={step}
+        step={Number.isInteger(step) ? 1 : "any"}
         aria-label={ariaLabel}
         data-testid={dataTestid}
         className="w-full min-w-0 text-center text-sm text-gray-900 bg-transparent border-0 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"

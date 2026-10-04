@@ -75,6 +75,11 @@ vi.mock("@/screens/PracticeLogTemplatesScreen", () => ({
 }));
 vi.mock("@/screens/BulkBestTimeScreen", () => ({ BulkBestTimeScreen: () => null }));
 vi.mock("@/screens/PaywallScreen", () => ({ PaywallScreen: () => null }));
+// 目標管理 (6タブ化) で MainStack に増えた3画面。未モックだと実物が AuthProvider 経由で
+// expo-modules-core (CodedError 未モック) に到達して落ちる。
+vi.mock("@/screens/GoalDetailScreen", () => ({ GoalDetailScreen: () => null }));
+vi.mock("@/screens/GoalFormScreen", () => ({ GoalFormScreen: () => null }));
+vi.mock("@/screens/MilestoneFormScreen", () => ({ MilestoneFormScreen: () => null }));
 vi.mock("../TabNavigator", () => ({ TabNavigator: () => null }));
 
 interface CapturedScreenProps {
@@ -194,5 +199,34 @@ describe("MainStack — TeamDetail の instant 遷移", () => {
     const options = getTeamDetailOptions({ teamId: "team-1" });
     expect(typeof options.title).toBe("string");
     expect(options.title).not.toBe("");
+  });
+
+  it("[goals-D3] 目標管理の stack 画面 GoalDetail / GoalForm / MilestoneForm が登録され、Goals (タブ側) は MainStack に無い", () => {
+    const names = stackMocks.screens.map((s) => s.name);
+    for (const n of ["GoalDetail", "GoalForm", "MilestoneForm"]) {
+      expect(names.filter((x) => x === n), n).toHaveLength(1);
+    }
+    expect(names).not.toContain("Goals");
+  });
+
+  it("[goals-D3] GoalDetail のタイトルは navigation.mobile.titles.goalDetail の ja 値", () => {
+    const screen = stackMocks.screens.find((s) => s.name === "GoalDetail");
+    const options = screen?.options as { title?: string };
+    expect(typeof options.title).toBe("string");
+    expect(options.title).toBe("目標詳細");
+  });
+
+  it("[goals-D3] GoalForm / MilestoneForm のタイトルは params の goalId / milestoneId で作成・編集を切り替える", () => {
+    const resolve = (name: string, params?: Record<string, unknown>) => {
+      const screen = stackMocks.screens.find((s) => s.name === name);
+      expect(typeof screen?.options, `${name} の options は関数`).toBe("function");
+      return (
+        screen!.options as (a: { route: { params?: Record<string, unknown> } }) => { title?: string }
+      )({ route: { params } }).title;
+    };
+    expect(resolve("GoalForm", {})).toBe("新規目標作成");
+    expect(resolve("GoalForm", { goalId: "g1" })).toBe("目標編集");
+    expect(resolve("MilestoneForm", { goalId: "g1" })).toBe("マイルストーン作成");
+    expect(resolve("MilestoneForm", { goalId: "g1", milestoneId: "m1" })).toBe("マイルストーン編集");
   });
 });

@@ -6,7 +6,8 @@
         "practices": "연습",
         "competitions": "대회",
         "teams": "팀",
-        "myPage": "마이페이지"
+        "myPage": "마이페이지",
+        "goals": "목표"
       },
       "titles": {
         "practiceDetail": "연습 기록 상세",
@@ -22,7 +23,8 @@
         "entryRegister": "엔트리 등록",
         "teamDetail": "팀 상세",
         "settings": "설정",
-        "bulkBestTime": "베스트 타임 일괄 입력"
+        "bulkBestTime": "베스트 타임 일괄 입력",
+        "goalDetail": "목표 상세"
       }
     }
   },
@@ -2311,7 +2313,8 @@
       "startTimePlaceholder": "2.00.00",
       "getBestTimeButton": "베스트 기록에서 가져오기",
       "personalCompetitionGroup": "개인",
-      "teamCompetitionGroupFallback": "팀 대회"
+      "teamCompetitionGroupFallback": "팀 대회",
+      "competitionDatePast": "새 대회 날짜는 오늘 이후로 선택해 주세요"
     },
     "milestoneForm": {
       "templateLabel": "템플릿 (선택)",
@@ -2347,7 +2350,8 @@
       "averageTimeLabel": "평균 목표 기록",
       "circleMinLabel": "서클 (분)",
       "circleSecLabel": "서클 (초)",
-      "averageTimeRequired": "평균 목표 기록을 입력해 주세요"
+      "averageTimeRequired": "평균 목표 기록을 입력해 주세요",
+      "paramsInvalid": "입력하지 않았거나 0인 항목이 있습니다. 1 이상의 값을 입력해 주세요"
     },
     "deadlineInput": {
       "defaultLabel": "기한일 (선택)",
@@ -2368,6 +2372,16 @@
       "timeTrialDesc": "연습, 대회에서의 기록 측정을 자동으로 관측",
       "goalSet": "골 세트",
       "goalSetDesc": "50m×6개×3세트 (100m 목표 기록에서 역산)"
+    },
+    "milestoneSummary": {
+      "time": "{distance}m × 1개: {time}",
+      "repsTime": "{distance}m × {reps}개 @{time} 평균",
+      "set": "{distance}m × {reps}개 × {sets}세트 (@{circle} 서클) 완주"
+    },
+    "mobile": {
+      "notFound": "목표를 찾을 수 없습니다",
+      "milestoneNotFound": "마일스톤을 찾을 수 없습니다",
+      "noSelectableCompetitions": "선택할 수 있는 대회가 없습니다. 새 대회를 만들어 주세요"
     }
   },
   "teams": {

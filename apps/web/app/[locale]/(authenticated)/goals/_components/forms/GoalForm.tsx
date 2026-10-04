@@ -6,7 +6,7 @@ import Input from "@/components/ui/Input";
 import DatePicker from "@/components/ui/DatePicker";
 import StyleChipSelector from "@/components/forms/StyleChipSelector";
 import TimeSecondsInput from "../shared/TimeSecondsInput";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import type { Style, Competition } from "@apps/shared/types";
 import { POOL_TYPES } from "../constants";
 import { useTranslations } from "next-intl";
@@ -165,6 +165,7 @@ export default function GoalForm({
               label={t("form.competitionDateLabel")}
               value={newCompetition.date}
               onChange={(date) => onNewCompetitionChange({ ...newCompetition, date })}
+              minDate={startOfDay(new Date())}
               required
             />
             <Input

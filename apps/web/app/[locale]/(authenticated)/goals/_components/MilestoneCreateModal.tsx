@@ -7,8 +7,9 @@ import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { PracticeLogTemplateAPI } from "@swim-hub/shared/api";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
-import { isMilestoneTimeValueValid } from "@apps/shared/types/goals";
+import { isMilestoneParamsSavable, isMilestoneTimeValueValid } from "@apps/shared/types/goals";
 import { useTranslations } from "next-intl";
+import { formatMilestoneSummary } from "@apps/shared/utils/milestoneSummary";
 import type {
   GoalWithMilestones,
   Style,
@@ -58,10 +59,12 @@ export default function MilestoneCreateModal({
   // 目標タイム欄 (target_time/target_average_time) が 0以下のまま submit されたときに true。
   // ユーザーが再入力すると (handleParamsChange 発火時に) false に戻す
   const [timeFieldInvalid, setTimeFieldInvalid] = useState(false);
+  const [paramsInvalid, setParamsInvalid] = useState(false);
 
   const handleParamsChange = (newParams: MilestoneParams) => {
     setParams(newParams);
     if (timeFieldInvalid) setTimeFieldInvalid(false);
+    if (paramsInvalid) setParamsInvalid(false);
   };
 
   const goalAPI = new GoalAPI(supabase);
@@ -115,6 +118,7 @@ export default function MilestoneCreateModal({
       setParams(timeTrialParams);
       setTitle(t(`template.${template.nameKey}`)); // タイトルを自動設定
       setTimeFieldInvalid(false);
+      setParamsInvalid(false);
       return;
     }
 
@@ -123,6 +127,7 @@ export default function MilestoneCreateModal({
     setParams(template.defaultParams);
     setTitle(t(`template.${template.nameKey}`)); // タイトルを自動設定
     setTimeFieldInvalid(false);
+    setParamsInvalid(false);
   };
 
   // ゴールセット計算結果を適用
@@ -134,14 +139,13 @@ export default function MilestoneCreateModal({
     // (practice_logs.style の教訓: 想定外時に別種目へ静かに化けるのを避ける)。
     const styleValue = toStyleCode(goal.style.style) ?? goal.style.style;
 
+    const goalSetTemplate = MILESTONE_TEMPLATES.find((tpl) => tpl.id === "goalset_50m_6x3");
+    if (!goalSetTemplate) return;
+
     const goalSetParams: MilestoneGoalSetParams = {
-      distance: 50,
-      reps: 6,
-      sets: 3,
+      ...(goalSetTemplate.defaultParams as MilestoneGoalSetParams),
       target_average_time: targetAverageTime,
       style: styleValue,
-      swim_category: "Swim",
-      circle: 90,
       practice_pool_type: practicePoolType,
     };
 
@@ -150,6 +154,7 @@ export default function MilestoneCreateModal({
     setParams(goalSetParams);
     setTitle(t("milestoneCreate.goalSetDefaultTitle")); // タイトルを自動設定
     setTimeFieldInvalid(false);
+    setParamsInvalid(false);
     setIsGoalSetModalOpen(false);
   };
 
@@ -164,15 +169,20 @@ export default function MilestoneCreateModal({
       setParams(DEFAULT_SET_PARAMS);
     }
     setTimeFieldInvalid(false);
+    setParamsInvalid(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 目標タイム欄 (target_time/target_average_time) が読み取れない入力のまま
-    // 0 で確定していないか確認する。set 型はタイムを持たないため常に true
-    if (!isMilestoneTimeValueValid(params)) {
-      setTimeFieldInvalid(true);
+    // 距離・本数・セット数・サークル・タイムのいずれかが 0 や空欄のままだと達成判定が成立しない。
+    // タイム欄だけの不正は欄内エラー、それ以外は全体エラーで知らせる
+    if (!isMilestoneParamsSavable(type, params)) {
+      if (!isMilestoneTimeValueValid(params)) {
+        setTimeFieldInvalid(true);
+      } else {
+        setParamsInvalid(true);
+      }
       return;
     }
 
@@ -180,7 +190,7 @@ export default function MilestoneCreateModal({
     try {
       await goalAPI.createMilestone({
         goalId,
-        title: title || getDefaultTitle(type, params),
+        title: title || getDefaultTitle(params),
         type,
         params,
         deadline: deadline || null,
@@ -188,7 +198,7 @@ export default function MilestoneCreateModal({
 
       // テンプレートにも追加する場合
       if (addToTemplate && (type === "reps_time" || type === "set")) {
-        const milestoneTitle = title || getDefaultTitle(type, params);
+        const milestoneTitle = title || getDefaultTitle(params);
         const p = params as MilestoneRepsTimeParams | MilestoneSetParams;
 
         await templateAPI.createTemplate({
@@ -212,18 +222,8 @@ export default function MilestoneCreateModal({
     }
   };
 
-  const getDefaultTitle = (milestoneType: string, params: MilestoneParams): string => {
-    if (milestoneType === "time") {
-      const p = params as MilestoneTimeParams;
-      return `${p.distance}m × 1本: ${p.target_time}秒`;
-    } else if (milestoneType === "reps_time") {
-      const p = params as MilestoneRepsTimeParams;
-      return `${p.distance}m × ${p.reps}本 @${p.target_average_time}秒 平均`;
-    } else {
-      const p = params as MilestoneSetParams;
-      return `${p.distance}m × ${p.reps}本 × ${p.sets}セット (@${p.circle}秒サークル) 完遂`;
-    }
-  };
+  const getDefaultTitle = (params: MilestoneParams): string =>
+    formatMilestoneSummary({ params, title: "" }, t);
 
   const handleClose = () => {
     setType("time");
@@ -233,6 +233,7 @@ export default function MilestoneCreateModal({
     setParams(DEFAULT_TIME_PARAMS);
     setAddToTemplate(false);
     setTimeFieldInvalid(false);
+    setParamsInvalid(false);
     onClose();
   };
 
@@ -276,6 +277,11 @@ export default function MilestoneCreateModal({
                 onTemplateSelect={handleTemplateSelect}
                 availableTemplates={availableTemplates}
               />
+              {paramsInvalid && (
+                <p role="alert" className="text-sm text-red-600">
+                  {t("paramsForm.paramsInvalid")}
+                </p>
+              )}
 
               {/* ボタン行（チェックボックス含む） */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">

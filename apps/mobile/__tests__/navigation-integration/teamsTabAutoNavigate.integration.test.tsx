@@ -51,6 +51,10 @@ vi.mock("@/screens/PracticesScreen", () => ({ PracticesScreen: () => null }));
 vi.mock("@/screens/CompetitionsScreen", () => ({ CompetitionsScreen: () => null }));
 vi.mock("@/screens/TeamsScreen", () => ({ TeamsScreen: () => null }));
 vi.mock("@/screens/MyPageScreen", () => ({ MyPageScreen: () => null }));
+// 6タブ化 (目標タブ) で TabNavigator が GoalsScreen を import する。実物は usePullToRefresh ->
+// useNetworkStatus -> @react-native-community/netinfo (nav 設定は ESM 変換できない) に到達して
+// 読み込み時に落ちるため、他タブ画面と同様にスタブにする。
+vi.mock("@/screens/GoalsScreen", () => ({ GoalsScreen: () => null }));
 vi.mock("@/contexts/AuthProvider", () => ({ useAuth: () => ({ supabase: {}, user: { id: "u1" } }) }));
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useTeamsQuery: () => ({ teams: mocks.teams, isLoading: false, isError: false, refetch: vi.fn() }),

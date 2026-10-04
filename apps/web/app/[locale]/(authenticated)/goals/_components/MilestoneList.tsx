@@ -8,17 +8,12 @@ import {
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { formatTimeBest } from "@/utils/formatters";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import type { Milestone, Style } from "@apps/shared/types";
-import {
-  isMilestoneTimeParams,
-  isMilestoneRepsTimeParams,
-  isMilestoneSetParams,
-} from "@apps/shared/types/goals";
+import { formatMilestoneSummary } from "@apps/shared/utils/milestoneSummary";
 import MilestoneEditModal from "./MilestoneEditModal";
 import { useTranslations } from "next-intl";
 
@@ -54,17 +49,6 @@ export default function MilestoneList({
       default:
         return <ClockIcon className="w-5 h-5 text-gray-400" />;
     }
-  };
-
-  const formatMilestoneTitle = (milestone: Milestone): string => {
-    if (isMilestoneTimeParams(milestone.params)) {
-      return `${milestone.params.distance}m × 1本: ${formatTimeBest(milestone.params.target_time)}`;
-    } else if (isMilestoneRepsTimeParams(milestone.params)) {
-      return `${milestone.params.distance}m × ${milestone.params.reps}本 @${formatTimeBest(milestone.params.target_average_time)} 平均`;
-    } else if (isMilestoneSetParams(milestone.params)) {
-      return `${milestone.params.distance}m × ${milestone.params.reps}本 × ${milestone.params.sets}セット (@${formatTimeBest(milestone.params.circle)}サークル) 完遂`;
-    }
-    return milestone.title;
   };
 
   const handleEdit = (milestone: Milestone) => {
@@ -121,7 +105,7 @@ export default function MilestoneList({
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-600 mt-1">{formatMilestoneTitle(milestone)}</p>
+                <p className="text-sm text-gray-600 mt-1">{formatMilestoneSummary(milestone, t)}</p>
                 {milestone.deadline && (
                   <p className="text-xs text-gray-500 mt-1">
                     {t("milestone.deadlineLabel")} {format(new Date(milestone.deadline), "yyyy年M月d日", { locale: ja })}

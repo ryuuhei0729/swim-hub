@@ -6,7 +6,8 @@
         "practices": "训练",
         "competitions": "比赛",
         "teams": "团队",
-        "myPage": "我的"
+        "myPage": "我的",
+        "goals": "目标"
       },
       "titles": {
         "practiceDetail": "训练记录详情",
@@ -22,7 +23,8 @@
         "entryRegister": "报名登记",
         "teamDetail": "团队详情",
         "settings": "设置",
-        "bulkBestTime": "批量录入最好成绩"
+        "bulkBestTime": "批量录入最好成绩",
+        "goalDetail": "目标详情"
       }
     }
   },
@@ -2311,7 +2313,8 @@
       "startTimePlaceholder": "2.00.00",
       "getBestTimeButton": "从最佳成绩获取",
       "personalCompetitionGroup": "个人",
-      "teamCompetitionGroupFallback": "团队比赛"
+      "teamCompetitionGroupFallback": "团队比赛",
+      "competitionDatePast": "新建比赛的日期请选择今天或之后"
     },
     "milestoneForm": {
       "templateLabel": "模板（可选）",
@@ -2347,7 +2350,8 @@
       "averageTimeLabel": "平均目标成绩",
       "circleMinLabel": "循环(分)",
       "circleSecLabel": "循环(秒)",
-      "averageTimeRequired": "请输入平均目标成绩"
+      "averageTimeRequired": "请输入平均目标成绩",
+      "paramsInvalid": "有未填写或为0的项目，请输入1以上的值"
     },
     "deadlineInput": {
       "defaultLabel": "截止日期（可选）",
@@ -2368,6 +2372,16 @@
       "timeTrialDesc": "自动观测训练、比赛中的计时成绩",
       "goalSet": "目标组",
       "goalSetDesc": "50m×6组×3轮（由100m目标成绩反推）"
+    },
+    "milestoneSummary": {
+      "time": "{distance}m × 1组：{time}",
+      "repsTime": "{distance}m × {reps}组 @{time} 平均",
+      "set": "{distance}m × {reps}组 × {sets}轮（@{circle}循环）完成"
+    },
+    "mobile": {
+      "notFound": "未找到该目标",
+      "milestoneNotFound": "未找到该里程碑",
+      "noSelectableCompetitions": "没有可选择的比赛，请新建比赛"
     }
   },
   "teams": {

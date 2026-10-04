@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
@@ -35,6 +35,10 @@ export default function GoalEditModal({
 }: GoalEditModalProps) {
   const t = useTranslations("goals");
   const { supabase, user } = useAuth();
+  const createdCompetitionRef = useRef<{
+    id: string;
+    input: { title: string; date: string; place: string | null; pool_type: number; note: null };
+  } | null>(null);
   const [competitionMode, setCompetitionMode] = useState<"existing" | "new">("existing");
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>("");
@@ -187,14 +191,32 @@ export default function GoalEditModal({
 
       // 新規大会を作成する場合
       if (competitionMode === "new") {
-        const newComp = await recordAPI.createCompetition({
+        if (newCompetition.date < format(new Date(), "yyyy-MM-dd")) {
+          alert(t("form.competitionDatePast"));
+          setIsLoading(false);
+          return;
+        }
+        const competitionInput = {
           title: newCompetition.title,
           date: newCompetition.date,
           place: newCompetition.place || null,
           pool_type: newCompetition.poolType,
           note: null,
-        });
-        competitionId = newComp.id;
+        };
+        // updateGoal が失敗して再送信されても大会を二重作成しない。
+        // 再送信時に入力が変わっていれば、作成済みの大会を更新して反映する
+        const created = createdCompetitionRef.current;
+        if (!created) {
+          const newComp = await recordAPI.createCompetition(competitionInput);
+          createdCompetitionRef.current = { id: newComp.id, input: competitionInput };
+          competitionId = newComp.id;
+        } else {
+          if (JSON.stringify(created.input) !== JSON.stringify(competitionInput)) {
+            await recordAPI.updateCompetition(created.id, competitionInput);
+            createdCompetitionRef.current = { id: created.id, input: competitionInput };
+          }
+          competitionId = created.id;
+        }
       }
 
       // バリデーション済みの値のみを使用して目標を更新
@@ -205,6 +227,7 @@ export default function GoalEditModal({
         startTime: startTimeSeconds,
       });
 
+      createdCompetitionRef.current = null;
       await onSuccess();
       handleClose();
     } catch (error) {
@@ -218,6 +241,7 @@ export default function GoalEditModal({
   };
 
   const handleClose = () => {
+    createdCompetitionRef.current = null;
     setCompetitionMode("existing");
     setSelectedCompetitionId("");
     setNewCompetition({

@@ -41,7 +41,7 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
-import { DatePickerField } from "@/components/ui/DatePickerField";
+import { CompetitionBasicFields } from "@/components/competitions/CompetitionBasicFields";
 import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
@@ -92,13 +92,6 @@ const COMPETITION_TAB_LABEL_KEYS: Record<CompetitionTab, string> = {
   entry: "competition.form.tabEntry",
   record: "competition.form.tabRecord",
 };
-
-// ---- プール種別 ----
-type PoolTypeOption = { value: number; labelKey: string };
-const POOL_TYPES: PoolTypeOption[] = [
-  { value: 0, labelKey: "competition.form.poolTypeShort" },
-  { value: 1, labelKey: "competition.form.poolTypeLong" },
-];
 
 // ---- エントリー行 ----
 interface EntryDraftRow {
@@ -2053,110 +2046,21 @@ export const CompetitionTabFormScreen: React.FC = () => {
               </View>
             )}
 
-            {/* 日付 */}
-            <View style={[styles.section, styles.sectionCompact]}>
-              <View style={styles.dateRow}>
-                <View style={styles.dateColumn}>
-                  <Text style={[styles.label, styles.labelCompact]}>
-                    {t("competition.form.startDateLabel")}{" "}
-                    <Text style={styles.required}>*</Text>
-                  </Text>
-                  <DatePickerField
-                    value={date}
-                    onChange={handleStartDateChange}
-                    required
-                    disabled={isSaving || !canEditCompetitionDetails}
-                    error={competitionErrors.date}
-                    compact
-                  />
-                </View>
-                <View style={styles.dateColumn}>
-                  <Text style={[styles.label, styles.labelCompact]}>
-                    {t("competition.form.endDateLabel")}{" "}
-                    <Text style={styles.optional}>{t("competition.form.multiDayHint")}</Text>
-                  </Text>
-                  <DatePickerField
-                    value={endDate}
-                    onChange={setEndDate}
-                    allowClear
-                    disabled={isSaving || !canEditCompetitionDetails}
-                    error={competitionErrors.endDate}
-                    minDate={isValid(parseISO(date)) ? parseISO(date) : undefined}
-                    compact
-                  />
-                </View>
-              </View>
-            </View>
-
-            {/* 大会名 */}
-            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
-              <Text style={[styles.label, styles.horizontalLabel]}>
-                {t("competition.form.nameLabel")}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.inputCompact,
-                  styles.horizontalInput,
-                  !canEditCompetitionDetails && styles.inputDisabled,
-                ]}
-                value={title}
-                onChangeText={setTitle}
-                placeholder={t("competition.form.namePlaceholder")}
-                editable={!isSaving && canEditCompetitionDetails}
-              />
-            </View>
-
-            {/* 場所 */}
-            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
-              <Text style={[styles.label, styles.horizontalLabel]}>
-                {t("competition.form.placeLabel")}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.inputCompact,
-                  styles.horizontalInput,
-                  !canEditCompetitionDetails && styles.inputDisabled,
-                ]}
-                value={place}
-                onChangeText={setPlace}
-                placeholder={t("competition.form.placePlaceholder")}
-                editable={!isSaving && canEditCompetitionDetails}
-              />
-            </View>
-
-            {/* プール種別 */}
-            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
-              <Text style={[styles.label, styles.horizontalLabel]}>
-                {t("competition.form.poolTypeLabel")}{" "}
-                <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={[styles.pickerContainer, styles.horizontalInput]}>
-                {POOL_TYPES.map((type) => (
-                  <Pressable
-                    key={type.value}
-                    style={[
-                      styles.pickerOption,
-                      styles.pickerOptionCompact,
-                      poolType === type.value && styles.pickerOptionSelected,
-                      !canEditCompetitionDetails && styles.pickerOptionDisabled,
-                    ]}
-                    onPress={() => handlePoolTypeChange(type.value)}
-                    disabled={isSaving || !canEditCompetitionDetails}
-                  >
-                    <Text
-                      style={[
-                        styles.pickerOptionText,
-                        poolType === type.value && styles.pickerOptionTextSelected,
-                      ]}
-                    >
-                      {t(type.labelKey)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
+            <CompetitionBasicFields
+              date={date}
+              endDate={endDate}
+              title={title}
+              place={place}
+              poolType={poolType}
+              onDateChange={handleStartDateChange}
+              onEndDateChange={setEndDate}
+              onTitleChange={setTitle}
+              onPlaceChange={setPlace}
+              onPoolTypeChange={handlePoolTypeChange}
+              errors={competitionErrors}
+              disabled={isSaving || !canEditCompetitionDetails}
+              locked={!canEditCompetitionDetails}
+            />
 
             {/* メモ */}
             <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
@@ -2920,13 +2824,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-  dateRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  dateColumn: {
-    flex: 1,
-  },
   label: {
     fontSize: 14,
     fontWeight: "600",
@@ -2935,11 +2832,6 @@ const styles = StyleSheet.create({
   },
   required: {
     color: "#EF4444",
-  },
-  optional: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    fontWeight: "400",
   },
   input: {
     borderWidth: 1,
@@ -2966,35 +2858,6 @@ const styles = StyleSheet.create({
     minHeight: 60,
     textAlignVertical: "top",
   },
-  pickerContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  pickerOption: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-  },
-  pickerOptionSelected: {
-    borderColor: "#2563EB",
-    backgroundColor: "#EFF6FF",
-  },
-  pickerOptionText: {
-    fontSize: 14,
-    color: "#374151",
-  },
-  pickerOptionTextSelected: {
-    color: "#2563EB",
-    fontWeight: "600",
-  },
-  pickerOptionDisabled: {
-    opacity: 0.5,
-  },
   formCompact: {
     gap: 14,
   },
@@ -3005,9 +2868,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   inputCompact: {
-    paddingVertical: 8,
-  },
-  pickerOptionCompact: {
     paddingVertical: 8,
   },
   horizontalField: {

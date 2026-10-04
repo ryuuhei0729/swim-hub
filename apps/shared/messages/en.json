@@ -6,7 +6,8 @@
         "practices": "Practices",
         "competitions": "Competitions",
         "teams": "Teams",
-        "myPage": "My Page"
+        "myPage": "My Page",
+        "goals": "Goals"
       },
       "titles": {
         "practiceDetail": "Practice details",
@@ -22,7 +23,8 @@
         "entryRegister": "Register entry",
         "teamDetail": "Team details",
         "settings": "Settings",
-        "bulkBestTime": "Bulk best time entry"
+        "bulkBestTime": "Bulk best time entry",
+        "goalDetail": "Goal Details"
       }
     }
   },
@@ -2308,7 +2310,8 @@
       "startTimePlaceholder": "2.00.00",
       "getBestTimeButton": "Get from best time",
       "personalCompetitionGroup": "Personal",
-      "teamCompetitionGroupFallback": "Team meet"
+      "teamCompetitionGroupFallback": "Team meet",
+      "competitionDatePast": "Choose today or a later date for a new competition"
     },
     "milestoneForm": {
       "templateLabel": "Template (optional)",
@@ -2344,7 +2347,8 @@
       "averageTimeLabel": "Avg Target Time",
       "circleMinLabel": "Circle (min)",
       "circleSecLabel": "Circle (sec)",
-      "averageTimeRequired": "Please enter an average target time"
+      "averageTimeRequired": "Please enter an average target time",
+      "paramsInvalid": "Some fields are empty or 0. Enter a value of 1 or more"
     },
     "deadlineInput": {
       "defaultLabel": "Deadline (optional)",
@@ -2365,6 +2369,16 @@
       "timeTrialDesc": "Automatically observe times from practice and meets",
       "goalSet": "Goal Set",
       "goalSetDesc": "50m × 6 reps × 3 sets (calculated from 100m target)"
+    },
+    "milestoneSummary": {
+      "time": "{distance}m × 1 rep: {time}",
+      "repsTime": "{distance}m × {reps} reps @{time} avg",
+      "set": "{distance}m × {reps} reps × {sets} sets (@{circle} circle) complete"
+    },
+    "mobile": {
+      "notFound": "Goal not found",
+      "milestoneNotFound": "Milestone not found",
+      "noSelectableCompetitions": "No competitions available. Please create a new one."
     }
   },
   "teams": {

@@ -137,6 +137,12 @@ export default function GoalCreateModal({
         competitionId = selectedCompetitionId;
       }
 
+      if (competitionMode === "new" && newCompetition.date < format(new Date(), "yyyy-MM-dd")) {
+        alert(t("form.competitionDatePast"));
+        setIsLoading(false);
+        return;
+      }
+
       await goalAPI.createGoal({
         userId: user.id,
         competitionId: competitionId,
