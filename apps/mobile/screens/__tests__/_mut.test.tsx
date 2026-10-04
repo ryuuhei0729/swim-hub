@@ -102,7 +102,7 @@ vi.mock("@/components/ui/SlideUpModal", () => ({
 }));
 
 import { Alert } from "react-native";
-import { GoalFormScreen } from "../__mut__/GoalFormScreen_touched";
+import { GoalFormScreen } from "../__mut__/GoalFormScreen_guard";
 
 const STYLES = [
   { id: 1, name_jp: "100m 自由形", name: "100m Fr", style: "Fr", distance: 100 },
