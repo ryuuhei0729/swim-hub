@@ -101,12 +101,12 @@ describe("[V-A01〜A03] TeamTabs 設定タブ", () => {
     expect(onTabChange).toHaveBeenCalledWith("settings");
   });
 
-  it("[V-A06] 描画されるタブ数は 非管理者 6 / 管理者 8 である", () => {
+  it("[V-A06] 描画されるタブ数は 非管理者 6 / 管理者 9 である", () => {
     const { rerender } = render(<TeamTabs {...makeProps({ isAdmin: false })} />);
     expect(screen.getAllByRole("button")).toHaveLength(6);
 
     rerender(<TeamTabs activeTab="members" isAdmin onTabChange={vi.fn()} />);
-    expect(screen.getAllByRole("button")).toHaveLength(8);
+    expect(screen.getAllByRole("button")).toHaveLength(9);
   });
 
   // 「描画」と「定義」が同じ1本から出ていることの確認。
@@ -126,13 +126,14 @@ describe("[V-A04/A05] タブ定義の単一定義元", () => {
       "competitions",
       "attendance",
       "rankings",
+      "goals",
       "announcements",
       "settings",
     ]);
   });
 
-  it("[V-A05] ADMIN_ONLY_TEAM_TAB_IDS は groups と announcements のみ (settings は含まない)", () => {
-    expect([...ADMIN_ONLY_TEAM_TAB_IDS]).toEqual(["groups", "announcements"]);
+  it("[V-A05] ADMIN_ONLY_TEAM_TAB_IDS は groups / goals / announcements のみ (settings は含まない)", () => {
+    expect([...ADMIN_ONLY_TEAM_TAB_IDS]).toEqual(["groups", "goals", "announcements"]);
   });
 
   it("[V-A05 補助] ADMIN_ONLY_TEAM_TAB_IDS は TEAM_TAB_IDS の部分集合である", () => {

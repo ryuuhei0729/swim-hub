@@ -2384,6 +2384,38 @@
       "noSelectableCompetitions": "没有可选择的比赛，请新建比赛"
     }
   },
+  "teamMemberGoals": {
+    "title": "成员目标",
+    "memberLabel": "成员",
+    "memberPlaceholder": "选择成员",
+    "memberSelectTitle": "选择成员",
+    "selectMemberHint": "选择成员后将显示该成员的目标",
+    "noSelectableMembers": "没有可选择的成员",
+    "empty": "暂无目标",
+    "emptyDesc": "该成员尚未设定目标",
+    "loadError": "目标加载失败",
+    "retry": "重试",
+    "snapshotNote": "显示的是成员最后一次在应用中更新时的状态",
+    "progressUnavailable": "缺少比赛信息，无法计算达成率",
+    "section": {
+      "upcoming": "即将进行的比赛",
+      "past": "过去的比赛",
+      "noCompetition": "无比赛信息"
+    },
+    "status": {
+      "goal": {
+        "active": "进行中",
+        "achieved": "已达成",
+        "cancelled": "已取消"
+      },
+      "milestone": {
+        "not_started": "未开始",
+        "in_progress": "进行中",
+        "achieved": "已达成",
+        "expired": "已过期"
+      }
+    }
+  },
   "teams": {
     "mobile": {
       "fetchListFailed": "获取团队列表失败",
@@ -2418,6 +2450,7 @@
       "tabPractices": "训练",
       "tabCompetitions": "比赛",
       "tabRankings": "排行榜",
+      "tabGoals": "目标",
       "tabAttendance": "出勤",
       "memberLoading": "正在加载成员...",
       "memberFetchFailed": "获取成员列表失败",
@@ -3581,6 +3614,7 @@
       "practices": "训练",
       "competitions": "比赛",
       "rankings": "排行榜",
+      "goals": "目标",
       "bulkRegister": "批量登记",
       "settings": "设置"
     },

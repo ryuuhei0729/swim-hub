@@ -27,6 +27,7 @@ import { TeamAnnouncementForm } from "@/components/teams/TeamAnnouncementForm";
 import { TeamPracticeList } from "@/components/teams/TeamPracticeList";
 import { TeamCompetitionList } from "@/components/teams/TeamCompetitionList";
 import { TeamRankings } from "@/components/teams/rankings";
+import { TeamMemberGoalsTab } from "@/components/teams/member-goals/TeamMemberGoalsTab";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
@@ -247,6 +248,11 @@ export const TeamDetailScreen: React.FC = () => {
         // 管理者専用ではない (一般メンバーも閲覧する)。
         // members は「WAポイントで比較」用。ここで詰め替えないこと
         return <TeamRankings teamId={teamId} members={members || []} />;
+      case "goals":
+        // 管理者ビュー時のみ描画 (RPC 側も管理者以外を拒否する)
+        return effectiveIsAdminView ? (
+          <TeamMemberGoalsTab teamId={teamId} members={members ?? []} />
+        ) : null;
       case "attendance":
         return effectiveIsAdminView ? (
           <AdminMonthlyAttendance teamId={teamId} />

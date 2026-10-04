@@ -7,6 +7,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { format, parseISO, isValid, startOfDay } from "date-fns";
 import { CompetitionInsert } from "../types";
 import { normalizeRelation, normalizeRelationArray } from "../utils/supabase-helpers";
+import { computeGoalProgress } from "../utils/goalProgress";
 import { toStyleCode } from "../utils/swimStyles";
 import {
   CreateGoalInput,
@@ -280,6 +281,11 @@ export class GoalAPI {
    * poolType (対象大会と同じ水路) で必ず絞り込む（長水路の目標に短水路の記録が
    * 混入するのを防ぐ）。水路が分からない場合はこの関数を呼び出さないこと
    * (呼び出し元で「計算不能」を返す。絞り込み無しのフォールバックは禁止)。
+   *
+   * ⚠️ この条件は SQL 関数 `get_team_member_goals` (supabase/migrations/
+   * 20261004000000_get_team_member_goals_rpc.sql) の `current_best_time` と同一定義。
+   * チーム管理者の閲覧画面の達成率はそちらを使う。片方だけ変えると同じ目標で
+   * 本人画面と管理者画面の達成率が静かに乖離する。必ず両方を同時に直すこと。
    * @private
    */
   private async getBestTimeForStyle(
@@ -349,19 +355,13 @@ export class GoalAPI {
       goal.style_id,
       competition.pool_type,
     );
-    if (!currentBest) {
-      return 0;
-    }
 
-    const improvement = goal.start_time - currentBest;
-    const targetImprovement = goal.start_time - goal.target_time;
-
-    if (targetImprovement <= 0) {
-      return 0; // 目標が初期タイム以下の場合
-    }
-
-    const progress = (improvement / targetImprovement) * 100;
-    return Math.min(Math.max(progress, 0), 100); // 0-100%にクランプ
+    // 式は computeGoalProgress が唯一の定義元 (チーム管理者の閲覧画面と共有)
+    return computeGoalProgress({
+      startTime: goal.start_time,
+      targetTime: goal.target_time,
+      currentBestTime: currentBest,
+    });
   }
 
   // =========================================================================

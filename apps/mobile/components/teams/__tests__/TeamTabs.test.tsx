@@ -85,11 +85,11 @@ describe("TeamTabs", () => {
     expect(screen.getByTestId("icon-layers")).toBeTruthy();
   });
 
-  // S1-V-05: 管理者にはちょうど 7 タブすべてが表示される
-  it("管理者にはちょうど 8 タブすべてが表示される", () => {
+  // S1-V-05: 管理者にはちょうど 9 タブすべてが表示される (goals 追加後)
+  it("管理者にはちょうど 9 タブすべてが表示される (目標はランキングの直後)", () => {
     render(<TeamTabs {...makeProps({ isAdmin: true })} />);
 
-    expect(screen.getAllByRole("button")).toHaveLength(8);
+    expect(screen.getAllByRole("button")).toHaveLength(9);
     expect(screen.getAllByRole("button").map((tab) => tab.textContent)).toEqual([
       "メンバー",
       "グループ",
@@ -97,6 +97,7 @@ describe("TeamTabs", () => {
       "大会",
       "出欠",
       "ランキング",
+      "目標",
       "お知らせ",
       "設定",
     ]);
@@ -106,6 +107,7 @@ describe("TeamTabs", () => {
     expect(screen.getByTestId("icon-award")).toBeTruthy();
     expect(screen.getByTestId("icon-clipboard")).toBeTruthy();
     expect(screen.getByTestId("icon-bar-chart-2")).toBeTruthy();
+    expect(screen.getByTestId("icon-target")).toBeTruthy();
     expect(screen.getByTestId("icon-bell")).toBeTruthy();
     expect(screen.getByTestId("icon-settings")).toBeTruthy();
   });

@@ -2381,6 +2381,38 @@
       "noSelectableCompetitions": "No competitions available. Please create a new one."
     }
   },
+  "teamMemberGoals": {
+    "title": "Member goals",
+    "memberLabel": "Member",
+    "memberPlaceholder": "Select a member",
+    "memberSelectTitle": "Select a member",
+    "selectMemberHint": "Select a member to see their goals",
+    "noSelectableMembers": "No members available to select",
+    "empty": "No goals",
+    "emptyDesc": "This member has not set any goals yet",
+    "loadError": "Failed to load goals",
+    "retry": "Retry",
+    "snapshotNote": "Shows the state as of the member's last update in the app",
+    "progressUnavailable": "Progress cannot be calculated because competition information is missing",
+    "section": {
+      "upcoming": "Upcoming competitions",
+      "past": "Past competitions",
+      "noCompetition": "No competition info"
+    },
+    "status": {
+      "goal": {
+        "active": "In progress",
+        "achieved": "Achieved",
+        "cancelled": "Cancelled"
+      },
+      "milestone": {
+        "not_started": "Not started",
+        "in_progress": "In progress",
+        "achieved": "Achieved",
+        "expired": "Expired"
+      }
+    }
+  },
   "teams": {
     "mobile": {
       "fetchListFailed": "Failed to fetch team list",
@@ -2415,6 +2447,7 @@
       "tabPractices": "Practices",
       "tabCompetitions": "Competitions",
       "tabRankings": "Rankings",
+      "tabGoals": "Goals",
       "tabAttendance": "Attendance",
       "memberLoading": "Loading members...",
       "memberFetchFailed": "Failed to fetch members",
@@ -3578,6 +3611,7 @@
       "practices": "Practices",
       "competitions": "Competitions",
       "rankings": "Rankings",
+      "goals": "Goals",
       "bulkRegister": "Bulk Register",
       "settings": "Settings"
     },

@@ -2384,6 +2384,38 @@
       "noSelectableCompetitions": "선택할 수 있는 대회가 없습니다. 새 대회를 만들어 주세요"
     }
   },
+  "teamMemberGoals": {
+    "title": "멤버 목표",
+    "memberLabel": "멤버",
+    "memberPlaceholder": "멤버 선택",
+    "memberSelectTitle": "멤버 선택",
+    "selectMemberHint": "멤버를 선택하면 해당 멤버의 목표가 표시됩니다",
+    "noSelectableMembers": "선택할 수 있는 멤버가 없습니다",
+    "empty": "목표가 없습니다",
+    "emptyDesc": "이 멤버는 아직 목표를 설정하지 않았습니다",
+    "loadError": "목표를 불러오지 못했습니다",
+    "retry": "다시 시도",
+    "snapshotNote": "멤버가 앱에서 마지막으로 업데이트한 시점의 상태입니다",
+    "progressUnavailable": "대회 정보가 없어 달성률을 계산할 수 없습니다",
+    "section": {
+      "upcoming": "예정된 대회",
+      "past": "지난 대회",
+      "noCompetition": "대회 정보 없음"
+    },
+    "status": {
+      "goal": {
+        "active": "진행 중",
+        "achieved": "달성",
+        "cancelled": "취소"
+      },
+      "milestone": {
+        "not_started": "시작 전",
+        "in_progress": "진행 중",
+        "achieved": "달성",
+        "expired": "기한 만료"
+      }
+    }
+  },
   "teams": {
     "mobile": {
       "fetchListFailed": "팀 목록을 불러오지 못했습니다",
@@ -2418,6 +2450,7 @@
       "tabPractices": "연습",
       "tabCompetitions": "대회",
       "tabRankings": "랭킹",
+      "tabGoals": "목표",
       "tabAttendance": "출결",
       "memberLoading": "멤버를 불러오는 중...",
       "memberFetchFailed": "멤버 목록을 불러오지 못했습니다",
@@ -3581,6 +3614,7 @@
       "practices": "연습",
       "competitions": "대회",
       "rankings": "랭킹",
+      "goals": "목표",
       "bulkRegister": "일괄 등록",
       "settings": "설정"
     },

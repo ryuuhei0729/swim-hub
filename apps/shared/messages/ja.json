@@ -2384,6 +2384,38 @@
       "noSelectableCompetitions": "選択できる大会がありません。新規大会を作成してください"
     }
   },
+  "teamMemberGoals": {
+    "title": "メンバーの目標",
+    "memberLabel": "メンバー",
+    "memberPlaceholder": "メンバーを選択",
+    "memberSelectTitle": "メンバーを選択",
+    "selectMemberHint": "メンバーを選択すると、そのメンバーの目標が表示されます",
+    "noSelectableMembers": "選択できるメンバーがいません",
+    "empty": "目標がありません",
+    "emptyDesc": "このメンバーはまだ目標を設定していません",
+    "loadError": "目標の取得に失敗しました",
+    "retry": "再試行",
+    "snapshotNote": "メンバーが最後にアプリで更新した時点の状態です",
+    "progressUnavailable": "大会情報がないため達成率を計算できません",
+    "section": {
+      "upcoming": "今後の大会",
+      "past": "過去の大会",
+      "noCompetition": "大会情報なし"
+    },
+    "status": {
+      "goal": {
+        "active": "進行中",
+        "achieved": "達成",
+        "cancelled": "中止"
+      },
+      "milestone": {
+        "not_started": "未着手",
+        "in_progress": "進行中",
+        "achieved": "達成",
+        "expired": "期限切れ"
+      }
+    }
+  },
   "teams": {
     "mobile": {
       "fetchListFailed": "チーム一覧の取得に失敗しました",
@@ -2418,6 +2450,7 @@
       "tabPractices": "練習",
       "tabCompetitions": "大会",
       "tabRankings": "ランキング",
+      "tabGoals": "目標",
       "tabAttendance": "出欠",
       "memberLoading": "メンバーを読み込み中...",
       "memberFetchFailed": "メンバー一覧の取得に失敗しました",
@@ -3581,6 +3614,7 @@
       "practices": "練習",
       "competitions": "大会",
       "rankings": "ランキング",
+      "goals": "目標",
       "bulkRegister": "一括登録",
       "settings": "設定"
     },

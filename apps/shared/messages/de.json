@@ -2384,6 +2384,38 @@
       "noSelectableCompetitions": "Keine Wettkämpfe verfügbar. Bitte legen Sie einen neuen an."
     }
   },
+  "teamMemberGoals": {
+    "title": "Ziele des Mitglieds",
+    "memberLabel": "Mitglied",
+    "memberPlaceholder": "Mitglied auswählen",
+    "memberSelectTitle": "Mitglied auswählen",
+    "selectMemberHint": "Wähle ein Mitglied aus, um dessen Ziele zu sehen",
+    "noSelectableMembers": "Keine Mitglieder zur Auswahl vorhanden",
+    "empty": "Keine Ziele",
+    "emptyDesc": "Dieses Mitglied hat noch keine Ziele festgelegt",
+    "loadError": "Ziele konnten nicht geladen werden",
+    "retry": "Erneut versuchen",
+    "snapshotNote": "Zeigt den Stand der letzten Aktualisierung des Mitglieds in der App",
+    "progressUnavailable": "Der Fortschritt kann ohne Wettkampfinformationen nicht berechnet werden",
+    "section": {
+      "upcoming": "Kommende Wettkämpfe",
+      "past": "Vergangene Wettkämpfe",
+      "noCompetition": "Keine Wettkampfinformationen"
+    },
+    "status": {
+      "goal": {
+        "active": "Laufend",
+        "achieved": "Erreicht",
+        "cancelled": "Abgebrochen"
+      },
+      "milestone": {
+        "not_started": "Nicht begonnen",
+        "in_progress": "Laufend",
+        "achieved": "Erreicht",
+        "expired": "Abgelaufen"
+      }
+    }
+  },
   "teams": {
     "mobile": {
       "fetchListFailed": "Teamliste konnte nicht geladen werden",
@@ -2418,6 +2450,7 @@
       "tabPractices": "Trainings",
       "tabCompetitions": "Wettkämpfe",
       "tabRankings": "Ranglisten",
+      "tabGoals": "Ziele",
       "tabAttendance": "Anwesenheit",
       "memberLoading": "Mitglieder werden geladen...",
       "memberFetchFailed": "Mitglieder konnten nicht geladen werden",
@@ -3581,6 +3614,7 @@
       "practices": "Trainings",
       "competitions": "Wettkämpfe",
       "rankings": "Ranglisten",
+      "goals": "Ziele",
       "bulkRegister": "Sammelregistrierung",
       "settings": "Einstellungen"
     },

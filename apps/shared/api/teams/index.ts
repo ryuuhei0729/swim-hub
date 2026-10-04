@@ -3,6 +3,7 @@ export * from "./attendances";
 export * from "./bulkRegister";
 export * from "./core";
 export * from "./groups";
+export * from "./memberGoals";
 export * from "./members";
 export * from "./practices";
 export * from "./rankings";

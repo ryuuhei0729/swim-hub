@@ -14,6 +14,7 @@ export * from "./queries/teams";
 export * from "./queries/useInvalidateTeamRankings";
 export * from "./queries/user";
 export * from "./queries/goals";
+export * from "./queries/teamMemberGoals";
 export * from "./queries/practiceLogTemplates";
 export * from "./queries/dashboard";
 export * from "./queries/notifications";

@@ -12,6 +12,7 @@ import {
   ClipboardDocumentCheckIcon,
   DocumentArrowUpIcon,
   TagIcon,
+  FlagIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -35,6 +36,7 @@ const TEAM_ADMIN_TAB_DEFS = [
   { id: "practices", labelKey: "tabs.practices", icon: ClockIcon },
   { id: "competitions", labelKey: "tabs.competitions", icon: TrophyIcon },
   { id: "rankings", labelKey: "tabs.rankings", icon: ChartBarIcon },
+  { id: "goals", labelKey: "tabs.goals", icon: FlagIcon },
   { id: "bulk-register", labelKey: "tabs.bulkRegister", icon: DocumentArrowUpIcon },
   { id: "settings", labelKey: "tabs.settings", icon: CogIcon },
 ] as const;
