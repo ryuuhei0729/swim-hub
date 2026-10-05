@@ -12,6 +12,20 @@ const SCRATCHPAD = "test-results/lp-screenshots";
 
 // ---- helpers ----
 
+/**
+ * 証跡用スクリーンショット。ウェブフォント読み込み待ちで Playwright のスクショが
+ * タイムアウトすることがあるため、先に document.fonts.ready を待つ。
+ * スクショは検証ではなく証跡なので、失敗しても警告のみで続行する (assertion は別途行う)。
+ */
+async function captureEvidence(page: Page, path: string) {
+  try {
+    await page.evaluate(() => document.fonts.ready.then(() => undefined));
+    await page.screenshot({ path, timeout: 30000 });
+  } catch (e) {
+    console.warn(`スクリーンショット取得に失敗 (証跡のみ・続行): ${path}`, e instanceof Error ? e.message : e);
+  }
+}
+
 async function getNavState(page: Page) {
   return page.evaluate(() => {
     const loginEl = document.querySelector<HTMLElement>(".lp-nav-login");
@@ -155,7 +169,7 @@ test.describe("W-01: nav signup ボタン nowrap", () => {
     expect(menuSignup!.whiteSpace, "signup whiteSpace:nowrap").toBe("nowrap");
     expect(menuSignup!.wrapped, `signup 改行なし (text="${menuSignup!.text}")`).toBe(false);
 
-    await page.screenshot({ path: `${SCRATCHPAD}/w01-375-ja.png`, timeout: 15000 });
+    await captureEvidence(page, `${SCRATCHPAD}/w01-375-ja.png`);
   });
 
   test("[W-01] 375px de: ハンバーガー内 Kostenlos registrieren が nowrap で改行なし", async ({ page }) => {
@@ -173,7 +187,7 @@ test.describe("W-01: nav signup ボタン nowrap", () => {
     expect(menuSignup!.whiteSpace, "de signup whiteSpace:nowrap").toBe("nowrap");
     expect(menuSignup!.wrapped, `de signup 改行なし (text="${menuSignup!.text}")`).toBe(false);
 
-    await page.screenshot({ path: `${SCRATCHPAD}/w01-375-de.png`, timeout: 15000 });
+    await captureEvidence(page, `${SCRATCHPAD}/w01-375-de.png`);
   });
 
   test("[W-01] 1280px de: スクロールバー存在時も signup が nowrap で改行なし", async ({ page }) => {
@@ -190,7 +204,7 @@ test.describe("W-01: nav signup ボタン nowrap", () => {
     expect(nav.signupWrapped, `de 1280px signup 改行なし (text="${nav.signupText}")`).toBe(false);
     expect(nav.signupVisible, "de 1280px signup 表示").toBe(true);
 
-    await page.screenshot({ path: `${SCRATCHPAD}/w01-1280-de-scrolled.png`, timeout: 15000 });
+    await captureEvidence(page, `${SCRATCHPAD}/w01-1280-de-scrolled.png`);
   });
 });
 
@@ -237,7 +251,7 @@ test.describe("W-02: 320px/375px ハンバーガー内に login+signup 両方表
         `${width}px ${locale}: メニュー内 signup 表示 (text="${menu?.signupText}")`,
       ).toBe(true);
 
-      await page.screenshot({ path: `${SCRATCHPAD}/w02-${width}-${locale}.png`, timeout: 15000 });
+      await captureEvidence(page, `${SCRATCHPAD}/w02-${width}-${locale}.png`);
     });
   }
 });
@@ -261,7 +275,7 @@ test.describe("回帰: Hero/Scanner CTA nowrap — 横スクロール発生な�
         `${width}px ${locale}: 横スクロールなし (scroll=${overflow.scrollWidth} client=${overflow.clientWidth})`,
       ).toBe(false);
 
-      await page.screenshot({ path: `${SCRATCHPAD}/regression-hero-${width}-${locale}.png`, timeout: 15000 });
+      await captureEvidence(page, `${SCRATCHPAD}/regression-hero-${width}-${locale}.png`);
     });
   }
 
@@ -345,7 +359,7 @@ test.describe("回帰: Pricing badge/CTA 1行維持", () => {
         expect(result.freeCta?.wrapped, `${locale} free CTA 改行なし (text="${result.freeCta?.text}")`).toBe(false);
       }
 
-      await page.screenshot({ path: `${SCRATCHPAD}/regression-pricing-1280-${locale}.png`, timeout: 15000 });
+      await captureEvidence(page, `${SCRATCHPAD}/regression-pricing-1280-${locale}.png`);
     });
   }
 });

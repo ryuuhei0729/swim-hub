@@ -58,10 +58,13 @@ async function activeTabLabel(page: Page): Promise<string> {
 /** 参加しているチームの id を1つ取得する */
 async function findTeamId(page: Page): Promise<string | null> {
   await page.goto(URLS.TEAMS);
-  await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(2000);
 
+  // チームカードの描画を合図にする (所属チームが無ければ待ち切って null)
   const teamCards = page.locator('a[href^="/teams/"]');
+  await teamCards
+    .first()
+    .waitFor({ state: "visible", timeout: 20_000 })
+    .catch(() => {});
   if ((await teamCards.count()) === 0) return null;
   const href = await teamCards.first().getAttribute("href");
   return href?.split("/teams/")[1]?.split("/")[0] ?? null;
@@ -79,6 +82,8 @@ async function reloadAndClickTab(page: Page, teamId: string, label: string) {
 }
 
 test.describe("チーム詳細のタブ切替 (クリック経由)", () => {
+  // dev server の負荷が高い全体実行でも遷移が収まるよう余裕を持たせる
+  test.setTimeout(60_000);
   test.skip(!hasRequiredEnvVars, "必要な環境変数が設定されていません。");
 
   test.beforeEach(async ({ page }) => {

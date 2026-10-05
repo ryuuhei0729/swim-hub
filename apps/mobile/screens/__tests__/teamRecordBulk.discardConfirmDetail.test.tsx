@@ -12,134 +12,29 @@
 // (apps/mobile/__tests__/screens/CompetitionTabFormScreen.test.tsx の
 // mockUsePreventRemove パターンを踏襲)。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor, fireEvent, configure } from "@testing-library/react";
 import React from "react";
 import { Alert } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
+import {
+  buildDetailScreenSupabaseMock,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 // __mocks__/react-native.ts の TextInput は onChangeText を DOM の onChange に
 // 結線しないため fireEvent.change でテキスト入力を再現できない
-// (PracticeTabFormScreen.practiceScopeRowWipe.test.tsx と同じ対処: このファイルに
-//  限定して onChangeText → onChange を結線する TextInput に差し替える)。
+// (PracticeTabFormScreen.practiceScopeRowWipe.test.tsx と同じ対処)。
+harness.rawTextInput = true;
 configure({ testIdAttribute: "testID" });
-
-vi.mock("react-native", async (importOriginal) => {
-  const original = await importOriginal<typeof import("react-native")>();
-  return {
-    ...original,
-    KeyboardAvoidingView: original.View,
-    TextInput: ({
-      onChangeText,
-      value,
-      ...props
-    }: { onChangeText?: (text: string) => void; value?: string } & Record<string, unknown>) =>
-      React.createElement("input", {
-        type: "text",
-        ...props,
-        value,
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChangeText?.(e.target.value),
-      }),
-  };
-});
-
-// loadTeamRecordCompetitionData (select 系: competitions/records/entries) と
-// saveStyleRecords (update/insert/delete) の両方をこの1つのモックで賄う。
-// `buildRecordSaveSupabaseMock` は select/insert/update/delete をすべて
-// サポートするため、自前で組み立てない (テストハーネスの二重管理を避ける)。
-// ただし loadTeamRecordCompetitionData は `.order()` を呼ぶ (保存スコープの検証には
-// 出てこないので意図的に非対応) ため、このファイルだけ `.order()` を
-// no-op で通すラッパーを被せる。
-import {
-  buildRecordSaveSupabaseMock,
-  type RecordSaveSupabaseMockOptions,
-} from "./supabaseRecordSaveMock";
-
-function buildDetailScreenSupabaseMock(options: RecordSaveSupabaseMockOptions = {}) {
-  const base = buildRecordSaveSupabaseMock(options);
-  const from = (table: string) => {
-    const builder = base.supabase.from(table) as Record<string, unknown> & {
-      order?: (...args: unknown[]) => unknown;
-    };
-    builder.order = (..._args: unknown[]) => builder;
-    return builder;
-  };
-  return { ...base, supabase: { from } };
-}
-
-const mocks = vi.hoisted(() => ({
-  goBack: vi.fn(),
-  navigate: vi.fn(),
-  dispatch: vi.fn(),
-  getStyles: vi.fn(),
-  getAccessToken: vi.fn(async () => "test-access-token"),
-  membersBox: { current: [] as unknown[] },
-  routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
-  // beforeEach で buildRecordSaveSupabaseMock() に差し替える
-  supabaseMock: { supabase: { from: () => ({}) } } as { supabase: unknown },
-}));
-
-const preventRemoveCalls: Array<{
-  shouldPreventRemove: boolean;
-  listener: (e: { data: { action: unknown } }) => void;
-}> = [];
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({
-    navigate: mocks.navigate,
-    goBack: mocks.goBack,
-    dispatch: mocks.dispatch,
-  }),
-  usePreventRemove: (
-    shouldPreventRemove: boolean,
-    listener: (e: { data: { action: unknown } }) => void,
-  ) => {
-    preventRemoveCalls.push({ shouldPreventRemove, listener });
-  },
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabaseMock.supabase,
-    subscription: null,
-    user: { id: "admin-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.membersBox.current, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
-vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
-
-import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
-
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
+harness.currentUserId = "admin-1";
 
 function lastPreventRemoveCall() {
-  const call = preventRemoveCalls[preventRemoveCalls.length - 1];
+  const call = harness.preventRemoveCalls[harness.preventRemoveCalls.length - 1];
   if (!call) throw new Error("usePreventRemove がまだ呼ばれていない");
   return call;
 }
@@ -151,13 +46,11 @@ describe("[V-07] 種目詳細画面の破棄確認", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    preventRemoveCalls.length = 0;
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
+    harness.preventRemoveCalls.length = 0;
+    queryClient = makeQueryClient();
 
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [
@@ -175,11 +68,11 @@ describe("[V-07] 種目詳細画面の破棄確認", () => {
         ],
         entries: [],
       },
-    });
-    mocks.getStyles.mockResolvedValue([
+    }).supabase;
+    harness.getStyles.mockResolvedValue([
       { id: 2, name_jp: "自由形50m", name: "Freestyle", style: "Fr", distance: 50 },
     ]);
-    mocks.membersBox.current = [
+    harness.members = [
       { user_id: "admin-1", role: "admin", is_swimmer: true, users: { id: "admin-1", name: "管理者" } },
     ];
   });
@@ -225,7 +118,7 @@ describe("[V-07] 種目詳細画面の破棄確認", () => {
     fireEvent.click(screen.getByText(ja.teams.record.saveButton));
 
     await waitFor(() => {
-      expect(mocks.goBack).toHaveBeenCalled();
+      expect(harness.goBack).toHaveBeenCalled();
     });
 
     // isSaved が立った後は shouldPreventRemove が false に戻る
@@ -254,10 +147,10 @@ describe("[V-07] 種目詳細画面の破棄確認", () => {
 
     // キャンセル: dispatch は呼ばれない (画面に留まる)
     cancelButton?.onPress?.();
-    expect(mocks.dispatch).not.toHaveBeenCalled();
+    expect(harness.dispatch).not.toHaveBeenCalled();
 
     // 破棄: dispatch(navData.action) が呼ばれる (画面が閉じる)
     discardButton?.onPress?.();
-    expect(mocks.dispatch).toHaveBeenCalledWith(FAKE_LEAVE_ACTION);
+    expect(harness.dispatch).toHaveBeenCalledWith(FAKE_LEAVE_ACTION);
   });
 });

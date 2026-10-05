@@ -28,45 +28,29 @@
 // UI 操作 (種目/メンバー選択) なしで即座に保存可能な状態を作る
 // (この画面のフルインタラクションE2Eは実機/Playwright 側で別途行う)。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, configure } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { recordKeys, teamKeys } from "@apps/shared/hooks/queries/keys";
 import { Alert } from "react-native";
+import {
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
-// このファイル限定で TextInput を onChange 結線済みに差し替えるため (下記 vi.mock)、
-// RN の `testID` prop がそのまま DOM の `testid` 属性になる (`data-testid` にならない)。
-// RTL のクエリ対象属性を合わせて切り替える (CompetitionTabFormScreen.test.tsx と同じ対処)。
+// __mocks__/react-native.ts の TextInput は onChangeText を DOM の onChange に
+// 結線しないため fireEvent.change でテキスト入力を再現できない。V-M32 の
+// delete 経路 (既存行のタイムを0クリアして削除対象にする) を再現するために
+// 結線版に切り替える。RN の `testID` prop がそのまま DOM の `testid` 属性になる
+// (`data-testid` にならない) ので、RTL のクエリ対象属性も合わせて切り替える
+// (CompetitionTabFormScreen.test.tsx と同じ対処)。
+harness.rawTextInput = true;
 configure({ testIdAttribute: "testID" });
 
-// react-native の静的モックには KeyboardAvoidingView が含まれないため、
-// この画面専用に補完する (RecordFormScreen.standalone.test.tsx と同じ方針。
-// 共有モック __mocks__/react-native.ts 自体は変更しない)
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return {
-    ...actual,
-    KeyboardAvoidingView: actual.View,
-    // __mocks__/react-native.ts の TextInput は onChangeText を DOM の onChange に
-    // 結線しないため fireEvent.change でテキスト入力を再現できない。V-M32 の
-    // delete 経路 (既存行のタイムを0クリアして削除対象にする) を再現するために
-    // このファイル限定で結線する。
-    TextInput: ({
-      onChangeText,
-      value,
-      ...props
-    }: { onChangeText?: (text: string) => void; value?: string } & Record<string, unknown>) =>
-      React.createElement("input", {
-        type: "text",
-        ...props,
-        value,
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChangeText?.(e.target.value),
-      }),
-  };
-});
-
-const mocks = vi.hoisted(() => {
+const mocks = (() => {
   const style = {
     id: 2,
     name_jp: "50m自由形",
@@ -155,73 +139,14 @@ const mocks = vi.hoisted(() => {
     existingRecord2,
     responses,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getAccessToken: vi.fn(async () => "test-access-token"),
   };
-});
+})();
 
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    subscription: null, // isPremium=false -> 代理動画アップロード分岐は通らない
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({
-    members: [
-      { user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } },
-      { user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎" } },
-    ],
-    isLoading: false,
-  }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
-  },
-}));
-
-// 本テストの検証対象外の重量コンポーネントを薄いスタブに差し替える
-// (RecordFormScreen.standalone.test.tsx と同じ方針)
-vi.mock("@/components/shared/VideoUploader", () => ({
-  VideoUploader: () => null,
-}));
-vi.mock("@/components/shared/PremiumBadge", () => ({
-  PremiumBadge: () => null,
-}));
-vi.mock("@/components/records/LapTimeDisplay", () => ({
-  LapTimeDisplay: () => null,
-}));
-vi.mock("@/components/teams/MemberSelectModal", () => ({
-  MemberSelectModal: () => null,
-}));
-
-import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
-
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
+harness.supabase = mocks.supabase;
+harness.members = [
+  { user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } },
+  { user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎" } },
+];
 
 describe("TeamRecordStyleDetailScreen — 保存成功後のキャッシュ無効化 (V-03)", () => {
   let queryClient: QueryClient;
@@ -229,12 +154,10 @@ describe("TeamRecordStyleDetailScreen — 保存成功後のキャッシュ無�
 
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
+    queryClient = makeQueryClient();
     invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-    mocks.getStyles.mockResolvedValue([mocks.style]);
+    harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
@@ -344,12 +267,10 @@ describe("[V-M32] 部分失敗時のランキングキャッシュ無効化 (M-1
 
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
+    queryClient = makeQueryClient();
     invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-    mocks.getStyles.mockResolvedValue([mocks.style]);
+    harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
@@ -421,7 +342,7 @@ describe("[V-M32] 部分失敗時のランキングキャッシュ無効化 (M-1
     // その上で、無効化が飛ばされていないこと (太郎の UPDATE は既に確定しているため)
     expect(rankingInvalidateCount()).toBeGreaterThanOrEqual(1);
     // 画面に留まる (リダイレクトしない) のも Web 準拠の既存挙動
-    expect(mocks.goBack).not.toHaveBeenCalled();
+    expect(harness.goBack).not.toHaveBeenCalled();
   });
 
   it("[V-M32] 部分失敗時は記録一覧・大会・カレンダーのキャッシュも一緒に落ちる", async () => {

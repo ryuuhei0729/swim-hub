@@ -2,6 +2,7 @@ export * from "./announcements";
 export * from "./attendances";
 export * from "./bulkRegister";
 export * from "./core";
+export * from "./goalTargets";
 export * from "./groups";
 export * from "./memberGoals";
 export * from "./members";

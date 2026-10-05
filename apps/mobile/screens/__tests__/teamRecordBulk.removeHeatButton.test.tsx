@@ -29,95 +29,18 @@
 // waitFor すると、再レンダー前の DOM に対して assertion がたまたま成立し、
 // ガードを壊しても赤くならない偽陰性になる。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor, configure } from "@testing-library/react";
 import React from "react";
 import { Alert } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
-
-configure({ testIdAttribute: "testID" });
-
-vi.mock("react-native", async (importOriginal) => {
-  const original = await importOriginal<typeof import("react-native")>();
-  return {
-    ...original,
-    KeyboardAvoidingView: original.View,
-    TextInput: ({
-      onChangeText,
-      value,
-      ...props
-    }: { onChangeText?: (text: string) => void; value?: string } & Record<string, unknown>) =>
-      React.createElement("input", {
-        type: "text",
-        ...props,
-        value,
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChangeText?.(e.target.value),
-      }),
-  };
-});
-
 import {
-  buildRecordSaveSupabaseMock,
-  type RecordSaveSupabaseMockOptions,
-} from "./supabaseRecordSaveMock";
-
-function buildDetailScreenSupabaseMock(options: RecordSaveSupabaseMockOptions = {}) {
-  const base = buildRecordSaveSupabaseMock(options);
-  const from = (table: string) => {
-    const builder = base.supabase.from(table) as Record<string, unknown> & {
-      order?: (...args: unknown[]) => unknown;
-    };
-    builder.order = (..._args: unknown[]) => builder;
-    return builder;
-  };
-  return { ...base, supabase: { from } };
-}
-
-const mocks = vi.hoisted(() => ({
-  goBack: vi.fn(),
-  navigate: vi.fn(),
-  getStyles: vi.fn(),
-  getAccessToken: vi.fn(async () => "test-access-token"),
-  membersBox: { current: [] as unknown[] },
-  routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
-  supabaseMock: { supabase: { from: () => ({}) } } as { supabase: unknown },
-}));
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabaseMock.supabase,
-    subscription: null,
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.membersBox.current, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
+  buildDetailScreenSupabaseMock,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 type CapturedMemberSelectProps = {
   visible: boolean;
@@ -125,25 +48,11 @@ type CapturedMemberSelectProps = {
   onConfirm: (ids: string[]) => void;
   onCancel: () => void;
 };
-const capturedMemberSelectProps: CapturedMemberSelectProps[] = [];
-vi.mock("@/components/teams/MemberSelectModal", () => ({
-  MemberSelectModal: (props: CapturedMemberSelectProps) => {
-    capturedMemberSelectProps.push(props);
-    return null;
-  },
-}));
 
-import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
+harness.rawTextInput = true;
+configure({ testIdAttribute: "testID" });
 
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
-
-function makeQueryClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-}
+const capturedMemberSelectProps = harness.memberSelectProps as CapturedMemberSelectProps[];
 
 const STYLE = { id: 2, name_jp: "50m自由形", name: "Freestyle", style: "Fr", distance: 50 };
 
@@ -174,9 +83,9 @@ function getAlertButtons() {
 beforeEach(() => {
   vi.clearAllMocks();
   capturedMemberSelectProps.length = 0;
-  mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
-  mocks.getStyles.mockResolvedValue([STYLE]);
-  mocks.membersBox.current = [
+  harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+  harness.getStyles.mockResolvedValue([STYLE]);
+  harness.members = [
     { user_id: "user-1", role: "admin", is_swimmer: true, users: { id: "user-1", name: "太郎" } },
     { user_id: "user-2", role: "user", is_swimmer: true, users: { id: "user-2", name: "次郎" } },
   ];
@@ -184,7 +93,7 @@ beforeEach(() => {
 
 describe("[V-01/V-02] 削除アイコンの表示条件 (1本目には出ない・2本目以降には出る)", () => {
   it("1本目には record-remove-heat-button が存在せず、2本目には存在する", async () => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [
@@ -193,7 +102,7 @@ describe("[V-01/V-02] 削除アイコンの表示条件 (1本目には出ない�
         ],
         entries: [],
       },
-    });
+    }).supabase;
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -204,13 +113,13 @@ describe("[V-01/V-02] 削除アイコンの表示条件 (1本目には出ない�
   });
 
   it("本目が1件しか無いときは見出し行自体が出ず、削除アイコンも存在しない", async () => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [record({ id: "record-1", time: 30.1 })],
         entries: [],
       },
-    });
+    }).supabase;
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -224,7 +133,7 @@ describe("[V-01/V-02] 削除アイコンの表示条件 (1本目には出ない�
 
 describe("[V-03/V-04] 入力済みの本目の × は確認ダイアログを経由する", () => {
   beforeEach(() => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [
@@ -233,7 +142,7 @@ describe("[V-03/V-04] 入力済みの本目の × は確認ダイアログを経
         ],
         entries: [],
       },
-    });
+    }).supabase;
   });
 
   it("× を押すと Alert.alert が呼ばれ、キャンセルすると本目は残る", async () => {
@@ -290,13 +199,13 @@ describe("[V-03/V-04] 入力済みの本目の × は確認ダイアログを経
 
 describe("[V-05] 未入力の本目の × は確認ダイアログ無しで即削除される", () => {
   it("「n本目を追加」で作った空の本目はすぐに消える", async () => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [record({ id: "record-1", time: 30.1 })],
         entries: [],
       },
-    });
+    }).supabase;
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -326,7 +235,7 @@ describe("[V-05] 未入力の本目の × は確認ダイアログ無しで即�
 
 describe("[V-06/V-07/V-08] 3本目まである状態で2本目を削除すると見出しが振り直される", () => {
   beforeEach(() => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [
@@ -342,7 +251,7 @@ describe("[V-06/V-07/V-08] 3本目まである状態で2本目を削除すると
         ],
         entries: [],
       },
-    });
+    }).supabase;
   });
 
   it(
@@ -405,8 +314,8 @@ describe("[V-06/V-07/V-08] 3本目まである状態で2本目を削除すると
 
 describe("[V-10] リレー種目には削除アイコンが出ない", () => {
   it("リレーの代理入力画面に record-remove-heat-button は一切現れない", async () => {
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [
@@ -427,7 +336,7 @@ describe("[V-10] リレー種目には削除アイコンが出ない", () => {
         })),
         entries: [],
       },
-    });
+    }).supabase;
 
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
@@ -456,7 +365,7 @@ describe("[V-09] 保存契約: 削除した本目は保存対象から外れる"
           entries: [],
         },
       });
-      mocks.supabaseMock = { supabase: saveMock.supabase };
+      harness.supabase = saveMock.supabase;
       const queryClient = makeQueryClient();
       render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -472,7 +381,7 @@ describe("[V-09] 保存契約: 削除した本目は保存対象から外れる"
       fireEvent.click(screen.getByText(ja.teams.record.saveButton));
 
       await waitFor(() => {
-        expect(mocks.goBack).toHaveBeenCalled();
+        expect(harness.goBack).toHaveBeenCalled();
       });
 
       const updateCalls = saveMock.updateCalls.filter((c) => c.table === "records");
@@ -500,7 +409,7 @@ describe("[V-09] 保存契約: 削除した本目は保存対象から外れる"
           entries: [],
         },
       });
-      mocks.supabaseMock = { supabase: saveMock.supabase };
+      harness.supabase = saveMock.supabase;
       const queryClient = makeQueryClient();
       render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -518,7 +427,7 @@ describe("[V-09] 保存契約: 削除した本目は保存対象から外れる"
       fireEvent.click(screen.getByText(ja.teams.record.saveButton));
 
       await waitFor(() => {
-        expect(mocks.goBack).toHaveBeenCalled();
+        expect(harness.goBack).toHaveBeenCalled();
       });
 
       const updateCalls = saveMock.updateCalls.filter((c) => c.table === "records");

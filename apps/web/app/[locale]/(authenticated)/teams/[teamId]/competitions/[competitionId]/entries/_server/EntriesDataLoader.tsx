@@ -3,6 +3,8 @@ import { redirect } from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { getServerUser } from "@/lib/supabase-server";
+import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
+import type { TeamGoalTarget } from "@apps/shared/types/goalTargets";
 import { RecordAPI } from "@apps/shared/api/records";
 import { isCompetitionDateInPast } from "@apps/shared/utils/date";
 import { isPoolType, type Competition, type Style } from "@apps/shared/types";
@@ -214,6 +216,15 @@ export default async function EntriesDataLoader({
       : new Map();
   const bestTimesByUser = Object.fromEntries(bestTimesMap);
 
+  // 目標バッジ用に、大会内の全メンバーの目標を RPC 1回で取得する (メンバーごとに呼ばない)。
+  // 取得失敗 (RPC 未適用を含む) は目標を出さないだけで続行する — 入力そのものをブロックしない。
+  let goalTargets: TeamGoalTarget[] = [];
+  try {
+    goalTargets = await new TeamGoalTargetsAPI(supabase).listForCompetition(teamId, competitionId);
+  } catch (error) {
+    console.error("目標タイム参照の取得に失敗しました:", error);
+  }
+
   return (
     <EntriesClient
       teamId={teamId}
@@ -237,6 +248,7 @@ export default async function EntriesDataLoader({
       existingEntries={existingEntries}
       styles={styles}
       bestTimesByUser={bestTimesByUser}
+      goalTargets={goalTargets}
       returnOrigin={returnOrigin}
     />
   );

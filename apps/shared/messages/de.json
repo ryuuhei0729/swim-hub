@@ -4362,6 +4362,7 @@
       "eventHeader": "Disziplin {n}",
       "entryTimeLabel": "Meldezeit:",
       "bestTimeLabel": "Bestzeit",
+      "goalTargetLabel": "Ziel",
       "bestTimeRelay": "Bestzeit (Ablösung)",
       "bestTimeLong": "Bestzeit (Langbahn)",
       "bestTimeLongRelay": "Bestzeit (Langbahn Ablösung)",

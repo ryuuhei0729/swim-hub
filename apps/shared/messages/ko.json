@@ -4362,6 +4362,7 @@
       "eventHeader": "종목 {n}",
       "entryTimeLabel": "엔트리 기록:",
       "bestTimeLabel": "베스트 기록",
+      "goalTargetLabel": "목표",
       "bestTimeRelay": "베스트 기록 (인계)",
       "bestTimeLong": "베스트 기록 (장수로)",
       "bestTimeLongRelay": "베스트 기록 (장수로 인계)",

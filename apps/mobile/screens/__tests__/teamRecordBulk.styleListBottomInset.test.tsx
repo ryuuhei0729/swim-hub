@@ -21,10 +21,17 @@
 // ミューテーション確認方法: contentContainerStyle を `styles.scrollContent`
 // 単体に戻すと paddingBottom は 32 のままになり赤になる。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { render, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createResponseMapSupabase,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { StyleSheet } from "react-native";
+import { TeamRecordStyleListScreen } from "../TeamRecordStyleListScreen";
 
 /** 実機の Android 3ボタンナビゲーションバー相当 (48dp)。 */
 const NAV_BAR_INSET = 48;
@@ -42,92 +49,15 @@ vi.mock("react-native-safe-area-context", () => ({
   },
 }));
 
-// ScrollView に渡された contentContainerStyle を捕捉する。
-// (__mocks__/react-native.ts の ScrollView は style 系 prop を DOM に落として
-//  しまい検査できないため、prop そのものを記録する薄いラッパーで包む)
-const captured = vi.hoisted(() => ({ contentContainerStyles: [] as unknown[] }));
+// ScrollView に渡された contentContainerStyle は harness.scrollContentContainerStyles に
+// 記録される (__mocks__/react-native.ts の ScrollView は style 系 prop を DOM に落として
+// しまい検査できないため)。
 
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  const ReactLib = await vi.importActual<typeof import("react")>("react");
-  const ActualScrollView = actual.ScrollView as React.ComponentType<
-    Record<string, unknown>
-  >;
-  return {
-    ...actual,
-    ScrollView: ({
-      contentContainerStyle,
-      ...props
-    }: { contentContainerStyle?: unknown } & Record<string, unknown>) => {
-      captured.contentContainerStyles.push(contentContainerStyle);
-      return ReactLib.createElement(ActualScrollView, props);
-    },
-  };
-});
+const mocks = createResponseMapSupabase();
 
-const mocks = vi.hoisted(() => {
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {};
-        builder.select = vi.fn((..._a: unknown[]) => {
-          if (!op) op = "select";
-          return builder;
-        });
-        builder.eq = vi.fn(() => builder);
-        builder.order = vi.fn(() => builder);
-        builder.in = vi.fn(() => builder);
-        builder.single = vi.fn(() =>
-          Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-        );
-        builder.then = (resolve: (v: { data: unknown; error: unknown }) => void) =>
-          resolve(responses[`${op}:${table}`] ?? { data: null, error: null });
-        return builder;
-      },
-    };
-  }
-
-  return {
-    responses,
-    supabase: makeSupabase(),
-    getStyles: vi.fn(),
-    membersBox: { current: [] as unknown[] },
-  };
-});
-
-// useFocusEffect はマウント時に1回だけ発火させる (teamRecordBulk.styleListGrid
-// .test.tsx と同一の理由: vitest.setup.ts のグローバルモックはレンダーのたびに
-// callback を再実行するため、load の setState と組み合わさって無限ループになる)。
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: { competitionId: "comp-1", teamId: "team-1" } }),
-  useNavigation: () => ({ navigate: vi.fn(), goBack: vi.fn() }),
-  useFocusEffect: (callback: () => void) => {
-    React.useEffect(() => {
-      callback();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-  },
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({ supabase: mocks.supabase, user: { id: "admin-1" } }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.membersBox.current, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-import { StyleSheet } from "react-native";
-import { TeamRecordStyleListScreen } from "../TeamRecordStyleListScreen";
+harness.supabase = mocks.supabase;
+harness.currentUserId = "admin-1";
+harness.routeParams = { competitionId: "comp-1", teamId: "team-1" };
 
 /** id・name_jp のみのダミー22種目 (可視判定に効くのは id だけ)。 */
 const DUMMY_22_STYLES = Array.from({ length: 22 }, (_, i) => ({
@@ -143,18 +73,16 @@ describe("TeamRecordStyleListScreen — Android Edge-to-Edge の下部インセ�
 
   beforeEach(() => {
     vi.clearAllMocks();
-    captured.contentContainerStyles = [];
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
-    mocks.getStyles.mockResolvedValue(DUMMY_22_STYLES);
+    harness.scrollContentContainerStyles = [];
+    queryClient = makeQueryClient();
+    harness.getStyles.mockResolvedValue(DUMMY_22_STYLES);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
     };
     mocks.responses["select:records"] = { data: [], error: null };
     mocks.responses["select:entries"] = { data: [], error: null };
-    mocks.membersBox.current = [
+    harness.members = [
       { user_id: "admin-1", role: "admin", users: { id: "admin-1", name: "管理者" } },
     ];
   });
@@ -172,8 +100,8 @@ describe("TeamRecordStyleListScreen — Android Edge-to-Edge の下部インセ�
       expect(container.querySelectorAll("button")).toHaveLength(29);
     });
 
-    expect(captured.contentContainerStyles.length).toBeGreaterThan(0);
-    const flattened = StyleSheet.flatten(captured.contentContainerStyles[0]) as {
+    expect(harness.scrollContentContainerStyles.length).toBeGreaterThan(0);
+    const flattened = StyleSheet.flatten(harness.scrollContentContainerStyles[0]) as {
       paddingBottom?: number;
     };
     expect(flattened.paddingBottom).toBe(NAV_BAR_INSET);

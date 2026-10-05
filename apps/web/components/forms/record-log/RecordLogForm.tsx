@@ -14,6 +14,8 @@ import type { RecordLogFormProps, StyleOption } from "./types";
 import type { EntryInfo } from "@apps/shared/types/ui";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { useAuth } from "@/contexts";
+import { useGoalTargetsQuery } from "@apps/shared/hooks/queries/goalTargets";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 
@@ -29,7 +31,7 @@ export default function RecordLogForm({
   isOpen,
   onClose,
   onSubmit,
-  competitionId: _competitionId,
+  competitionId,
   competitionTitle,
   competitionDate,
   poolType = 0,
@@ -71,6 +73,8 @@ export default function RecordLogForm({
   const { supabase, user, subscription } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const { bestTimes, loadBestTimes } = useBestTimes(supabase);
+  // 目標バッジ用。取得失敗・読み込み中は data が無いまま目標を出さないだけ (エラー文は出さない)
+  const { data: goalTargets } = useGoalTargetsQuery(supabase, { enabled: isOpen });
 
   // ベストタイムを取得
   useEffect(() => {
@@ -339,6 +343,16 @@ export default function RecordLogForm({
                     styles={styles}
                     poolType={poolType}
                     bestTimes={bestTimes}
+                    goalTargetTime={
+                      user?.id
+                        ? findGoalTargetTime(goalTargets ?? [], {
+                            userId: user.id,
+                            competitionId,
+                            styleId: Number(formData.styleId),
+                            isRelaying: formData.isRelaying,
+                          })
+                        : null
+                    }
                     isLoading={isLoading}
                     onTimeChange={(value) => handleTimeChange(index, value)}
                     onToggleRelaying={(checked) => handleToggleRelaying(index, checked)}

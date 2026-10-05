@@ -13,6 +13,7 @@ import { LapTimeDisplay } from "../../LapTimeDisplay";
 import type { EntryInfo } from "@apps/shared/types/ui";
 import type { RecordLogFormState, StyleOption } from "../types";
 import type { BestTime } from "@/types/member-detail";
+import GoalTargetBadge from "@/components/forms/GoalTargetBadge";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
 import PremiumBadge from "@/components/ui/PremiumBadge";
 import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
@@ -32,6 +33,8 @@ interface RecordLogEntryProps {
   poolType: number;
   /** ユーザーのベストタイム一覧 */
   bestTimes: BestTime[];
+  /** この種目・大会の目標タイム。null / 未指定なら目標バッジを出さない (解決は呼び出し側) */
+  goalTargetTime?: number | null;
   isLoading: boolean;
   onTimeChange: (value: string) => void;
   onToggleRelaying: (checked: boolean) => void;
@@ -72,6 +75,7 @@ export default function RecordLogEntry({
   styles,
   poolType,
   bestTimes,
+  goalTargetTime = null,
   isLoading,
   onTimeChange,
   onToggleRelaying,
@@ -207,7 +211,8 @@ export default function RecordLogEntry({
     >
       {(showTitle ||
         (entryMatchesCurrentStyle && entryInfo && entryInfo.entryTime && entryInfo.entryTime > 0) ||
-        currentBestTime) && (
+        currentBestTime ||
+        goalTargetTime !== null) && (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         {showTitle && (
           <div className="flex items-center gap-2">
@@ -233,11 +238,23 @@ export default function RecordLogEntry({
               </span>
             </div>
           )}
-          {currentBestTime && (
-            <div className="text-xs text-green-800 bg-green-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
-              <span className="text-green-700">
-                {currentBestTime.label}: {formatTimeBest(currentBestTime.time)}
-              </span>
+          {(currentBestTime || goalTargetTime !== null) && (
+            // ベストの真下に同じ右端で目標を置く。ベストが無いときは目標がその位置に来る
+            <div className="flex flex-col items-end gap-1">
+              {currentBestTime && (
+                <div className="text-xs text-green-800 bg-green-100 px-3 py-1 rounded-full inline-flex items-center gap-2">
+                  <span className="text-green-700">
+                    {currentBestTime.label}: {formatTimeBest(currentBestTime.time)}
+                  </span>
+                </div>
+              )}
+              {goalTargetTime !== null && (
+                <GoalTargetBadge
+                  variant="chip"
+                  time={goalTargetTime}
+                  data-testid={`record-goal-target-badge-${sectionIndex}`}
+                />
+              )}
             </div>
           )}
         </div>

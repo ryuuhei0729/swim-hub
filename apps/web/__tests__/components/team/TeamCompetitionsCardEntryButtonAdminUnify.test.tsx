@@ -36,6 +36,12 @@ const NOW = new Date();
 const PAST_DATE = format(subDays(NOW, 5), "yyyy-MM-dd");
 const FUTURE_DATE = format(addDays(NOW, 5), "yyyy-MM-dd");
 
+// 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
+// (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
+vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
+  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
+}));
+
 vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));

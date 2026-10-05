@@ -47,7 +47,10 @@ import { SlideUpModal } from "@/components/ui/SlideUpModal";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import type { MainStackParamList } from "@/navigation/types";
-import type { Style, PoolType, BestTime } from "@apps/shared/types";
+import type { Style, PoolType, BestTime, TeamGoalTarget } from "@apps/shared/types";
+import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
+import { GoalTargetBadge } from "@/components/records/GoalTargetBadge";
 import type { EntryDraftRow } from "@apps/shared/types/team-entry";
 
 type RouteProps = RouteProp<MainStackParamList, "TeamEntryBulkForm">;
@@ -127,6 +130,8 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
   const [retiredMemberNames, setRetiredMemberNames] = useState<
     Map<string, string>
   >(new Map());
+  // 大会内の全メンバーの目標 (RPC 1 回)。失敗時は空配列 = 目標を出さないだけ
+  const [goalTargets, setGoalTargets] = useState<TeamGoalTarget[]>([]);
   const [bestTimesByUserId, setBestTimesByUserId] = useState<
     Map<string, BestTime[]>
   >(new Map());
@@ -299,6 +304,27 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
       isMounted = false;
     };
   }, [supabase, members, competition]);
+
+  // 目標の参照バッジ用 (RPC 1 回)。ベスト取得とは独立に取る。失敗時は目標を出さないだけ
+  useEffect(() => {
+    let isMounted = true;
+    const loadGoalTargets = async () => {
+      try {
+        const targets = await new TeamGoalTargetsAPI(supabase).listForCompetition(
+          teamId,
+          competitionId,
+        );
+        if (isMounted) setGoalTargets(targets);
+      } catch (err) {
+        console.error("目標タイム取得エラー:", err);
+        if (isMounted) setGoalTargets([]);
+      }
+    };
+    loadGoalTargets();
+    return () => {
+      isMounted = false;
+    };
+  }, [supabase, teamId, competitionId]);
 
   const isPastDate = useMemo(
     () => isCompetitionDateInPast(competition?.date),
@@ -789,6 +815,14 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                   row.targetUserId,
                   row.styleId,
                 );
+                const goalTarget =
+                  row.styleId !== ""
+                    ? findGoalTargetTime(goalTargets, {
+                        userId: row.targetUserId,
+                        competitionId,
+                        styleId: row.styleId,
+                      })
+                    : null;
                 const isDuplicate =
                   row.styleId !== "" &&
                   duplicatePairs.has(`${row.targetUserId}:${row.styleId}`);
@@ -905,6 +939,11 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                             {t("forms.recordLog.bestTimeLabel")}:{" "}
                             {formatTimeBest(bestTime.time)}
                           </Text>
+                        </View>
+                      )}
+                      {goalTarget != null && (
+                        <View style={styles.goalBadgeRow}>
+                          <GoalTargetBadge time={goalTarget} />
                         </View>
                       )}
                     </View>
@@ -1334,6 +1373,8 @@ const styles = StyleSheet.create({
   inputError: { borderColor: "#DC2626" },
   errorText: { fontSize: 12, color: "#DC2626", marginTop: 4 },
   // 参考バッジ (web の green-100/green-700 と同色。CompetitionTabFormScreen と共通の見た目)
+  // 目標バッジはベストバッジの直下の独立した行
+  goalBadgeRow: { alignItems: "flex-start", marginTop: 6 },
   bestTimeBadge: {
     backgroundColor: "#DCFCE7", // green-100
     borderRadius: 9999,

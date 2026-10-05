@@ -18,15 +18,10 @@
 //   [回帰-04] オフライン中のフォーカス復帰では再取得がスキップされる
 //             (useRefreshOnFocus が useNetworkStatus を見ている)
 //
-// react-navigation の useFocusEffect はこのファイル専用に「フォーカス」を
-// 明示的にシミュレートできるレジストリ形式で上書きする。グローバルモック
-// (vitest.setup.ts の `vi.fn((callback) => callback())`) は callback が呼ばれる
-// たびに同期実行されるため、setState を伴う実 fetch (load) と組み合わせると
-// 「setState → 再レンダー → callback 再実行 → setState → …」の無限ループになる
-// (teamRecordBulk.styleListGrid.test.tsx 等の修復時に実測済み)。
-// このファイルは逆に「フォーカスされた」ことを明示的な操作 (triggerFocus) で
-// 制御したいため、マウント時に1回発火 + 以降は明示トリガーのみで発火する
-// レジストリ実装にする。
+// react-navigation の useFocusEffect は teamRecordBulkScreenHarness が
+// 「マウント時に1回発火 + 以降は harness.focusListeners 経由の明示トリガーのみで
+// 発火する」形で上書きしている。このファイルは「フォーカスされた」ことを
+// その明示的な操作 (triggerFocus) で制御する。
 //
 // ミューテーション確認 (このテストが本当にバグを検出できることの証明) は
 // QA 報告に記載する。手順:
@@ -37,107 +32,24 @@
 //      [回帰-01] が FAIL することを確認する (フォーカス復帰しても再取得されない)
 //   3. 元の行に戻し、green に復帰することを確認する
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import NetInfo, { NetInfoStateType } from "@react-native-community/netinfo";
-
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return { ...actual, KeyboardAvoidingView: actual.View };
-});
-
-const mocks = vi.hoisted(() => {
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-  const selectCallCounts: Record<string, number> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {};
-        builder.select = (..._a: unknown[]) => {
-          if (!op) {
-            op = "select";
-            selectCallCounts[table] = (selectCallCounts[table] ?? 0) + 1;
-          }
-          return builder;
-        };
-        builder.eq = () => builder;
-        builder.order = () => builder;
-        builder.in = () => builder;
-        builder.single = () =>
-          Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null });
-        builder.then = (resolve: (v: { data: unknown; error: unknown }) => void) =>
-          resolve(responses[`${op}:${table}`] ?? { data: null, error: null });
-        return builder;
-      },
-    };
-  }
-
-  return {
-    responses,
-    selectCallCounts,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
-    navigate: vi.fn(),
-    goBack: vi.fn(),
-    getStyles: vi.fn(),
-    membersBox: { current: [] as unknown[] },
-  };
-});
-
-// フォーカスイベントを明示的にシミュレートできるレジストリ。
-// マウント時に1回 (isFirstMount ガードで無視される) + triggerFocus() での
-// 明示呼び出しのみで発火し、通常の再レンダーでは自動発火しない。
-const focusRegistry = vi.hoisted(() => ({
-  listeners: new Set<() => void>(),
-}));
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  useFocusEffect: (callback: () => void) => {
-    // callback (= useRefreshOnFocus 内の useCallback([refetch, isConnected])) は
-    // isConnected が変化するたびに新しい関数になる。ref で常に最新の callback を
-    // 指すようにしないと、triggerFocus() が「マウント時点の isConnected」を
-    // 閉じ込めた古い closure を呼んでしまい、オフライン化の検証ができない
-    // (実際の react-navigation も内部で同様に ref 経由の最新 callback 呼び出しを行う)。
-    const callbackRef = React.useRef(callback);
-    callbackRef.current = callback;
-    React.useEffect(() => {
-      const listener = () => callbackRef.current();
-      focusRegistry.listeners.add(listener);
-      listener();
-      return () => {
-        focusRegistry.listeners.delete(listener);
-      };
-    }, []);
-  },
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({ supabase: mocks.supabase, user: { id: "admin-1" } }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.membersBox.current, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
+import {
+  createResponseMapSupabase,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
 import { TeamRecordStyleListScreen } from "../TeamRecordStyleListScreen";
 
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
+const mocks = createResponseMapSupabase();
+
+harness.supabase = mocks.supabase;
+harness.currentUserId = "admin-1";
+harness.routeParams = { competitionId: "comp-1", teamId: "team-1" };
 
 const STYLE_FREE_50 = {
   id: 2,
@@ -161,7 +73,7 @@ function entryRow(id: string, userId: string, styleId: number, entryTime: number
 /** 「詳細画面から goBack して戻ってきた」相当のフォーカス復帰をシミュレートする */
 function triggerFocus() {
   act(() => {
-    focusRegistry.listeners.forEach((cb) => cb());
+    harness.focusListeners.forEach((cb) => cb());
   });
 }
 
@@ -197,21 +109,19 @@ describe("TeamRecordStyleListScreen — フォーカス復帰時の再取得 (Re
 
   beforeEach(() => {
     vi.clearAllMocks();
-    focusRegistry.listeners.clear();
+    harness.focusListeners.clear();
     for (const key of Object.keys(mocks.selectCallCounts)) delete mocks.selectCallCounts[key];
     setOnline();
 
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
-    mocks.getStyles.mockResolvedValue([STYLE_FREE_50]);
+    queryClient = makeQueryClient();
+    harness.getStyles.mockResolvedValue([STYLE_FREE_50]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
     };
     mocks.responses["select:records"] = { data: [], error: null };
     mocks.responses["select:entries"] = { data: [], error: null };
-    mocks.membersBox.current = [
+    harness.members = [
       { user_id: "admin-1", role: "admin", users: { id: "admin-1", name: "管理者" } },
     ];
   });
@@ -240,12 +150,12 @@ describe("TeamRecordStyleListScreen — フォーカス復帰時の再取得 (Re
     renderScreen(queryClient);
 
     await waitFor(() => {
-      expect(mocks.getStyles).toHaveBeenCalled();
+      expect(harness.getStyles).toHaveBeenCalled();
     });
     // 非同期解決 (NetInfo.fetch 含む) が落ち着くのを待ってから数える
     await flush();
 
-    expect(mocks.getStyles).toHaveBeenCalledTimes(1);
+    expect(harness.getStyles).toHaveBeenCalledTimes(1);
     expect(mocks.selectCallCounts.competitions).toBe(1);
     expect(mocks.selectCallCounts.records).toBe(1);
     expect(mocks.selectCallCounts.entries).toBe(1);
@@ -280,7 +190,7 @@ describe("TeamRecordStyleListScreen — フォーカス復帰時の再取得 (Re
     await screen.findByText("50m自由形");
     await flush();
 
-    const stylesCallsBeforeOffline = mocks.getStyles.mock.calls.length;
+    const stylesCallsBeforeOffline = harness.getStyles.mock.calls.length;
 
     act(() => {
       setOffline();
@@ -296,7 +206,7 @@ describe("TeamRecordStyleListScreen — フォーカス復帰時の再取得 (Re
     triggerFocus();
     await flush();
 
-    expect(mocks.getStyles.mock.calls.length).toBe(stylesCallsBeforeOffline);
+    expect(harness.getStyles.mock.calls.length).toBe(stylesCallsBeforeOffline);
     expect(screen.queryByText(/エントリー\)$/)).toBeNull();
 
     // オンライン復帰後は改めて再取得され、バッジが反映される

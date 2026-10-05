@@ -25,103 +25,17 @@
 // スプリントごとに採番し直される非グローバルな識別子のため、番号だけを見て
 // 別スプリントの観点と混同しないこと。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, configure } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
-
-// 【確定 (Phase B)】「n本目を追加」ボタンの testID は Developer/Reviewer 協議の結果
-// `record-add-heat-button` に決定 (仮値だった record-add-repeat-button ではない)。
-configure({ testIdAttribute: "testID" });
-
-vi.mock("react-native", async (importOriginal) => {
-  const original = await importOriginal<typeof import("react-native")>();
-  return {
-    ...original,
-    KeyboardAvoidingView: original.View,
-    // record-bulk-member-time (TextInput) を testID 属性のまま (data-testid へ
-    // 変換せず) 描画する。item-tab-* 等 (Pressable/View 系, testID 属性そのまま)
-    // と同じ属性名で一貫してクエリできるようにする
-    // (detailScreenInvalidate.test.tsx / discardConfirmDetail.test.tsx と同じ対処)。
-    TextInput: ({
-      onChangeText,
-      value,
-      ...props
-    }: { onChangeText?: (text: string) => void; value?: string } & Record<string, unknown>) =>
-      React.createElement("input", {
-        type: "text",
-        ...props,
-        value,
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChangeText?.(e.target.value),
-      }),
-  };
-});
-
 import {
-  buildRecordSaveSupabaseMock,
-  type RecordSaveSupabaseMockOptions,
-} from "./supabaseRecordSaveMock";
-
-function buildDetailScreenSupabaseMock(options: RecordSaveSupabaseMockOptions = {}) {
-  const base = buildRecordSaveSupabaseMock(options);
-  const from = (table: string) => {
-    const builder = base.supabase.from(table) as Record<string, unknown> & {
-      order?: (...args: unknown[]) => unknown;
-    };
-    builder.order = (..._args: unknown[]) => builder;
-    return builder;
-  };
-  return { ...base, supabase: { from } };
-}
-
-const mocks = vi.hoisted(() => ({
-  goBack: vi.fn(),
-  navigate: vi.fn(),
-  getStyles: vi.fn(),
-  getAccessToken: vi.fn(async () => "test-access-token"),
-  membersBox: { current: [] as unknown[] },
-  routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
-  supabaseMock: { supabase: { from: () => ({}) } } as { supabase: unknown },
-}));
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabaseMock.supabase,
-    subscription: null,
-    // membersBox の user-1 (role: "admin") と一致させる。過去にここが "admin-1" のまま
-    // membersBox 側と噛み合っておらず isCurrentUserAdmin が常に false になり、
-    // 権限ゲート画面で全テストが停止していた (実装に一度も到達していなかった)。
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.membersBox.current, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
+  buildDetailScreenSupabaseMock,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 type CapturedMemberSelectProps = {
   visible: boolean;
@@ -129,25 +43,18 @@ type CapturedMemberSelectProps = {
   onConfirm: (ids: string[]) => void;
   onCancel: () => void;
 };
-const capturedMemberSelectProps: CapturedMemberSelectProps[] = [];
-vi.mock("@/components/teams/MemberSelectModal", () => ({
-  MemberSelectModal: (props: CapturedMemberSelectProps) => {
-    capturedMemberSelectProps.push(props);
-    return null;
-  },
-}));
 
-import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
+// record-bulk-member-time (TextInput) を testID 属性のまま (data-testid へ変換せず)
+// 描画する。item-tab-* 等 (Pressable/View 系, testID 属性そのまま) と同じ属性名で
+// 一貫してクエリできるようにする。
+harness.rawTextInput = true;
+configure({ testIdAttribute: "testID" });
 
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
+// ログインユーザーは harness 既定の user-1 で、beforeEach の members で admin にしている。
+// 過去にここが "admin-1" のまま members 側と噛み合っておらず isCurrentUserAdmin が
+// 常に false になり、権限ゲート画面で全テストが停止していた (実装に一度も到達していなかった)。
 
-function makeQueryClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-}
+const capturedMemberSelectProps = harness.memberSelectProps as CapturedMemberSelectProps[];
 
 function latestMemberSelectProps(): CapturedMemberSelectProps {
   const last = capturedMemberSelectProps[capturedMemberSelectProps.length - 1];
@@ -160,9 +67,9 @@ const STYLE = { id: 2, name_jp: "50m自由形", name: "Freestyle", style: "Fr", 
 beforeEach(() => {
   vi.clearAllMocks();
   capturedMemberSelectProps.length = 0;
-  mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
-  mocks.getStyles.mockResolvedValue([STYLE]);
-  mocks.membersBox.current = [
+  harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+  harness.getStyles.mockResolvedValue([STYLE]);
+  harness.members = [
     { user_id: "user-1", role: "admin", is_swimmer: true, users: { id: "user-1", name: "太郎" } },
     { user_id: "user-2", role: "user", is_swimmer: true, users: { id: "user-2", name: "次郎" } },
   ];
@@ -170,13 +77,13 @@ beforeEach(() => {
 
 describe("[#1] compHeader の再設計 (個人種目)", () => {
   it("大会名 (競技会タイトル) が表示されなくなる", async () => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [],
         entries: [],
       },
-    });
+    }).supabase;
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -185,13 +92,13 @@ describe("[#1] compHeader の再設計 (個人種目)", () => {
   });
 
   it("TimeInputHelp (タイム入力のコツ) が表示されなくなる", async () => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [],
         entries: [],
       },
-    });
+    }).supabase;
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -200,13 +107,13 @@ describe("[#1] compHeader の再設計 (個人種目)", () => {
   });
 
   it("種目名とメンバーを選択ボタンが1行のカードに表示される", async () => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [],
         entries: [],
       },
-    });
+    }).supabase;
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -217,7 +124,7 @@ describe("[#1] compHeader の再設計 (個人種目)", () => {
 
 describe("[#2] ItemTabs の単位が「選手」になる (個人種目)", () => {
   beforeEach(() => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [
@@ -246,7 +153,7 @@ describe("[#2] ItemTabs の単位が「選手」になる (個人種目)", () =>
         ],
         entries: [],
       },
-    });
+    }).supabase;
   });
 
   it("タブのラベルが選手のフルネームになる (組番号ではない)", async () => {
@@ -282,7 +189,7 @@ describe("[#2] ItemTabs の単位が「選手」になる (個人種目)", () =>
 
 describe("[#3] タブの + はメンバー選択モーダルを開く (空の組を追加しない)", () => {
   it("+ を押しても新しいタブは増えず、モーダルの visible が true になる", async () => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [
@@ -300,7 +207,7 @@ describe("[#3] タブの + はメンバー選択モーダルを開く (空の組
         ],
         entries: [],
       },
-    });
+    }).supabase;
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -318,7 +225,7 @@ describe("[#3] タブの + はメンバー選択モーダルを開く (空の組
 
 describe("[#4] 「n本目を追加」ボタン", () => {
   beforeEach(() => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [
@@ -347,7 +254,7 @@ describe("[#4] 「n本目を追加」ボタン", () => {
         ],
         entries: [],
       },
-    });
+    }).supabase;
   });
 
   it(
@@ -429,13 +336,13 @@ describe("[#4] 「n本目を追加」ボタン", () => {
 
 describe("[#7] 選手0人のときの空状態", () => {
   it("選手が1人も選択されていなくても render は成功し、メンバーを選択ボタンから追加できる", async () => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [],
         entries: [],
       },
-    });
+    }).supabase;
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -447,13 +354,13 @@ describe("[#7] 選手0人のときの空状態", () => {
   });
 
   it("選手0人のときは「メンバーが選択されていません」の空状態文言が表示される", async () => {
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [],
         entries: [],
       },
-    });
+    }).supabase;
     const queryClient = makeQueryClient();
     render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
@@ -464,8 +371,8 @@ describe("[#7] 選手0人のときの空状態", () => {
 
 describe("リレー種目は無改修であること (compHeader は共通描画のため実測が必要)", () => {
   beforeEach(() => {
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
-    mocks.supabaseMock = buildDetailScreenSupabaseMock({
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
+    harness.supabase = buildDetailScreenSupabaseMock({
       selectRows: {
         competitions: [{ id: "comp-1", title: "テスト大会", pool_type: 0 }],
         records: [
@@ -486,8 +393,8 @@ describe("リレー種目は無改修であること (compHeader は共通描画
         })),
         entries: [],
       },
-    });
-    mocks.getStyles.mockResolvedValue([STYLE]);
+    }).supabase;
+    harness.getStyles.mockResolvedValue([STYLE]);
   });
 
   it("リレーの ItemTabs は引き続き「組」単位 (n本目) のラベルのままである", async () => {
@@ -555,7 +462,7 @@ describe("保存契約: 選手Aの1本目/2本目・選手Bの1本目がそれ�
         entries: [],
       },
     });
-    mocks.supabaseMock = { supabase: saveMock.supabase };
+    harness.supabase = saveMock.supabase;
   });
 
   it(
@@ -596,7 +503,7 @@ describe("保存契約: 選手Aの1本目/2本目・選手Bの1本目がそれ�
       fireEvent.click(screen.getByText(ja.teams.record.saveButton));
 
       await waitFor(() => {
-        expect(mocks.goBack).toHaveBeenCalled();
+        expect(harness.goBack).toHaveBeenCalled();
       });
 
       const updateCalls = saveMock.updateCalls.filter(

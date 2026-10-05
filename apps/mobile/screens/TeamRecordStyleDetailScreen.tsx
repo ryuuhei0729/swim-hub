@@ -46,6 +46,10 @@ import { formatTimeBest } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
 import { getBestTimeForEntry } from "@/components/records/bestTimeForEntry";
+import { GoalTargetBadge } from "@/components/records/GoalTargetBadge";
+import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
+import type { TeamGoalTarget } from "@apps/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -261,6 +265,8 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
   const [bestTimesByUserId, setBestTimesByUserId] = useState<
     Map<string, BestTime[]>
   >(new Map());
+  // 大会内の全メンバーの目標 (RPC 1 回)。失敗時は空配列 = 目標を出さないだけ
+  const [goalTargets, setGoalTargets] = useState<TeamGoalTarget[]>([]);
 
   // この種目の全「組」に属する既存 records.id 集合 (画面オープン時点のスナップショット)。
   // 保存時の diff (computeRecordSaveDiff) の削除スコープに使う。
@@ -395,6 +401,27 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
     };
   }, [supabase, members]);
 
+  // 目標の参照バッジ用 (RPC 1 回)。ベスト取得とは独立に取る。失敗時は目標を出さないだけ
+  useEffect(() => {
+    let cancelled = false;
+    const loadGoalTargets = async () => {
+      try {
+        const targets = await new TeamGoalTargetsAPI(supabase).listForCompetition(
+          teamId,
+          competitionId,
+        );
+        if (!cancelled) setGoalTargets(targets);
+      } catch (err) {
+        console.error("目標タイム参照の取得に失敗しました:", err);
+        if (!cancelled) setGoalTargets([]);
+      }
+    };
+    loadGoalTargets();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, teamId, competitionId]);
+
   const changedFromSnapshot = useMemo(() => {
     if (entries.length === 0 || snapshotRef.current === null) return false;
     return hasUnsavedChanges(
@@ -437,6 +464,20 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
       bestTimesByUserId.get(memberUserId) ?? [],
     );
     return result ? { time: result.time, label: t(result.labelKey) } : null;
+  };
+
+  const goalTargetFor = (
+    memberUserId: string,
+    forStyleId: number | "" | undefined,
+    isRelaying: boolean,
+  ): number | null => {
+    if (!memberUserId || forStyleId === "" || forStyleId === undefined) return null;
+    return findGoalTargetTime(goalTargets, {
+      userId: memberUserId,
+      competitionId,
+      styleId: forStyleId,
+      isRelaying,
+    });
   };
 
   // ---- モーダル state ----
@@ -1419,6 +1460,18 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                       </View>
                     );
                   })()}
+                  {(() => {
+                    const goal = goalTargetFor(
+                      mr.memberUserId,
+                      mr.relayLegStyleId,
+                      mr.isRelaying,
+                    );
+                    return goal != null ? (
+                      <View style={styles.goalBadgeRow}>
+                        <GoalTargetBadge time={goal} />
+                      </View>
+                    ) : null;
+                  })()}
                   <View style={styles.rtField}>
                     <Text style={styles.smallLabel}>
                       {t("recordMobile.form.reactionTimeLabel")}
@@ -1628,6 +1681,18 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                         </Text>
                       </View>
                     );
+                  })()}
+                  {(() => {
+                    const goal = goalTargetFor(
+                      mr.memberUserId,
+                      entry.styleId,
+                      mr.isRelaying,
+                    );
+                    return goal != null ? (
+                      <View style={styles.goalBadgeRow}>
+                        <GoalTargetBadge time={goal} />
+                      </View>
+                    ) : null;
                   })()}
 
                   {/* タイム / リアクション / リレー (参照元 CompetitionTabFormScreen.tsx の
@@ -2081,6 +2146,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   entryTimeBadgeText: { fontSize: 12, color: "#1D4ED8" },
+  // 目標バッジはベストバッジの直下の独立した行。bestTimeBadge と同じ下余白
+  goalBadgeRow: { alignItems: "flex-start", marginBottom: 10 },
   bestTimeBadge: {
     backgroundColor: "#DCFCE7",
     borderRadius: 9999,

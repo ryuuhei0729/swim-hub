@@ -27,124 +27,26 @@
 //   「入力した値が画面に反映されるか」という観察可能な結果だけを assert する。
 // =============================================================================
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-// __mocks__/react-native.ts の TextInput は onChangeText を DOM の onChange に
-// 結線しないため fireEvent.change でテキスト入力を再現できない。3件目のテスト
-// (RT に新しい値を入力する) のためにこのファイル限定で結線する
-// (teamRecordBulk.detailScreenInvalidate.test.tsx と同じ対処)。
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return {
-    ...actual,
-    KeyboardAvoidingView: actual.View,
-    TextInput: ({
-      onChangeText,
-      value,
-      ...props
-    }: { onChangeText?: (text: string) => void; value?: string } & Record<string, unknown>) =>
-      React.createElement("input", {
-        type: "text",
-        ...props,
-        value,
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChangeText?.(e.target.value),
-      }),
-  };
-});
-
-const mocks = vi.hoisted(() => {
-  const styles = [{ id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 }];
-
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {
-          select: (..._a: unknown[]) => {
-            if (!op) op = "select";
-            return builder;
-          },
-          eq: () => builder,
-          order: () => builder,
-          in: () => builder,
-          single: () => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-          then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
-            resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-        };
-        return builder;
-      },
-    };
-  }
-
-  return {
-    styles,
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getAccessToken: vi.fn(async () => "test-access-token"),
-    getBestTimesDetailedForUsers: vi.fn(),
-    teamMembers: [
-      { user_id: "user-1", role: "admin", users: { id: "user-1", name: "管理者" } },
-    ] as Array<{ user_id: string; role: string; users: { id: string; name: string } }>,
-  };
-});
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    subscription: null,
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.teamMembers, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = mocks.getBestTimesDetailedForUsers;
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
-vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
-
+import {
+  createResponseMapSupabase,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
 import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
-const createWrapper = (queryClient: QueryClient) =>
-  ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+harness.rawTextInput = true;
 
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-}
+const mocks = {
+  ...createResponseMapSupabase(),
+  styles: [{ id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 }],
+};
+
+harness.supabase = mocks.supabase;
+harness.members = [{ user_id: "user-1", role: "admin", users: { id: "user-1", name: "管理者" } }];
 
 function makeRecord(opts: {
   id: string;
@@ -180,9 +82,9 @@ function getRelaySwitch(container: HTMLElement): HTMLButtonElement {
 describe("TeamRecordStyleDetailScreen — リレー ON でも RT (リアクションタイム) を入力できる", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
-    mocks.getStyles.mockResolvedValue(mocks.styles);
-    mocks.getBestTimesDetailedForUsers.mockResolvedValue(new Map());
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+    harness.getStyles.mockResolvedValue(mocks.styles);
+    harness.getBestTimesDetailedForUsers.mockResolvedValue(new Map());
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,

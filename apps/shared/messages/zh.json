@@ -4362,6 +4362,7 @@
       "eventHeader": "项目 {n}",
       "entryTimeLabel": "报名成绩：",
       "bestTimeLabel": "最佳成绩",
+      "goalTargetLabel": "目标",
       "bestTimeRelay": "最佳成绩(接力)",
       "bestTimeLong": "最佳成绩(长池)",
       "bestTimeLongRelay": "最佳成绩(长池接力)",

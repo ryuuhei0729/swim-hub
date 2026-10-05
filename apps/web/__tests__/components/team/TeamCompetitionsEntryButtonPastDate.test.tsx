@@ -32,6 +32,12 @@ const TODAY_DATE = format(NOW, "yyyy-MM-dd"); // 今日 (過去に含めない�
 const FUTURE_DATE = format(addDays(NOW, 1), "yyyy-MM-dd"); // 明日 (未来)
 const INVALID_DATE = "not-a-date"; // 不正フォーマット (境界値)
 
+// 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
+// (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
+vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
+  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
+}));
+
 vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));

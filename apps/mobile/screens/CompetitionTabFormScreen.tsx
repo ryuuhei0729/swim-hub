@@ -59,6 +59,9 @@ import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
+import { useGoalTargetsQuery } from "@apps/shared/hooks/queries/goalTargets";
+import { GoalTargetBadge } from "@/components/records/GoalTargetBadge";
 import {
   parseReactionTimeInput,
   isReactionTimeInRange,
@@ -421,6 +424,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // ---- ベストタイム (エントリー/レコードの参照バッジ用。web useBestTimes 相当) ----
   const { data: bestTimesData } = useBestTimesQuery(supabase, {});
   const bestTimes = useMemo(() => bestTimesData ?? [], [bestTimesData]);
+  // 本人の目標 (失敗・ローディング中は空 = 目標を出さないだけ)。大会未保存 (resolvedCompetitionId 無し) では
+  // findGoalTargetTime が null を返す
+  const goalTargetsQuery = useGoalTargetsQuery(supabase);
+  const goalTargets = useMemo(() => goalTargetsQuery.data ?? [], [goalTargetsQuery.data]);
 
   // ---- 種目一覧取得 ----
   useEffect(() => {
@@ -2133,6 +2140,14 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     bestTimes,
                   )
                 : null;
+              const entryGoalTarget =
+                entry && authUser
+                  ? findGoalTargetTime(goalTargets, {
+                      userId: authUser.id,
+                      competitionId: resolvedCompetitionId,
+                      styleId: Number(entry.styleId),
+                    })
+                  : null;
               // 未編集警告: ラッチのみで判定し、値の比較はしない (Sprint Contract v2 裁定2)。
               // タイム欄への手入力が一度でも発火すると prefillSource は無条件で null に
               // 落ち (プリフィルと同じ文字列を打ち直しても)、以後 "bestTime" に戻る経路が
@@ -2156,12 +2171,18 @@ export const CompetitionTabFormScreen: React.FC = () => {
                   {entry != null && (
                     <View key={entry.draftId}>
                   {/* ベストタイム参照バッジ (web CompetitionTabModal :1034-1040) */}
-                  {entryBestTime && (
+                  {(entryBestTime || entryGoalTarget != null) && (
                     <View style={styles.bestTimeBadgeRow}>
-                      <View style={styles.bestTimeBadge}>
-                        <Text style={styles.bestTimeBadgeText}>
-                          {t(entryBestTime.labelKey)}: {formatTimeBest(entryBestTime.time)}
-                        </Text>
+                      {/* 目標はベストバッジの真下 (同じ横位置)。ベストが無ければベストの位置に出る */}
+                      <View style={styles.badgeColumn}>
+                        {entryBestTime && (
+                          <View style={styles.bestTimeBadge}>
+                            <Text style={styles.bestTimeBadgeText}>
+                              {t(entryBestTime.labelKey)}: {formatTimeBest(entryBestTime.time)}
+                            </Text>
+                          </View>
+                        )}
+                        {entryGoalTarget != null && <GoalTargetBadge time={entryGoalTarget} />}
                       </View>
                     </View>
                   )}
@@ -2345,6 +2366,15 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     bestTimes,
                   )
                 : null;
+              const recordGoalTarget =
+                record && authUser
+                  ? findGoalTargetTime(goalTargets, {
+                      userId: authUser.id,
+                      competitionId: resolvedCompetitionId,
+                      styleId: Number(record.styleId),
+                      isRelaying: record.isRelaying,
+                    })
+                  : null;
               // ラップタイムプレビュー用の有効スプリット (web RecordLogEntry :211-225)
               const validSplitTimes = record
                 ? record.splitTimes
@@ -2391,7 +2421,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                   {record != null && (
                     <View key={record.draftId}>
                   {/* 参照バッジ: エントリータイム (blue) + ベストタイム (green) */}
-                  {(linkedEntryTime != null || recordBestTime) && (
+                  {(linkedEntryTime != null || recordBestTime || recordGoalTarget != null) && (
                     <View style={styles.bestTimeBadgeRow}>
                       {linkedEntryTime != null && (
                         <View style={styles.entryTimeBadge}>
@@ -2400,11 +2430,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
                           </Text>
                         </View>
                       )}
-                      {recordBestTime && (
-                        <View style={styles.bestTimeBadge}>
-                          <Text style={styles.bestTimeBadgeText}>
-                            {t(recordBestTime.labelKey)}: {formatTimeBest(recordBestTime.time)}
-                          </Text>
+                      {/* 目標はベストバッジの真下 (同じ横位置)。ベストが無ければベストの位置に出る */}
+                      {(recordBestTime || recordGoalTarget != null) && (
+                        <View style={styles.badgeColumn}>
+                          {recordBestTime && (
+                            <View style={styles.bestTimeBadge}>
+                              <Text style={styles.bestTimeBadgeText}>
+                                {t(recordBestTime.labelKey)}: {formatTimeBest(recordBestTime.time)}
+                              </Text>
+                            </View>
+                          )}
+                          {recordGoalTarget != null && <GoalTargetBadge time={recordGoalTarget} />}
                         </View>
                       )}
                     </View>
@@ -3010,6 +3046,8 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
+  // ベストバッジと目標バッジを縦に積む (同じ左端)
+  badgeColumn: { gap: 4, alignItems: "flex-start" },
   bestTimeBadge: {
     backgroundColor: "#DCFCE7", // green-100
     borderRadius: 9999,

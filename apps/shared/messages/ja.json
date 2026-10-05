@@ -4362,6 +4362,7 @@
       "eventHeader": "種目 {n}",
       "entryTimeLabel": "エントリータイム:",
       "bestTimeLabel": "ベストタイム",
+      "goalTargetLabel": "目標",
       "bestTimeRelay": "ベストタイム(引継)",
       "bestTimeLong": "ベストタイム(長水路)",
       "bestTimeLongRelay": "ベストタイム(長水路引継)",

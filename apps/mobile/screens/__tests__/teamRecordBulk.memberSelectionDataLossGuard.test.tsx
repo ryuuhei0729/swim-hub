@@ -26,113 +26,17 @@
 // 選択状態を変えずに決定を押すだけで再現する — 本質的なバグの引き金は
 // 「selectedUserIds に対して選手ごとに .find() で1件だけ引く」ことそのもの)。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor, configure } from "@testing-library/react";
 import React from "react";
 import { Alert } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-configure({ testIdAttribute: "testID" });
-
-vi.mock("react-native", async (importOriginal) => {
-  const original = await importOriginal<typeof import("react-native")>();
-  return {
-    ...original,
-    KeyboardAvoidingView: original.View,
-    // __mocks__/react-native.ts の TextInput は testID を data-testid に変換するため、
-    // このファイルの `configure({ testIdAttribute: "testID" })` と噛み合わず
-    // record-bulk-member-time が一切引けなくなる (findAllByTestId が常に空を返す =
-    // 実装に到達せず全テストが無意味に赤くなる)。detailScreenInvalidate /
-    // discardConfirmDetail / styleDetailMemberTabs と同じくローカルで
-    // testID をそのまま DOM 属性として描画する TextInput に差し替える。
-    TextInput: ({
-      onChangeText,
-      value,
-      ...props
-    }: { onChangeText?: (text: string) => void; value?: string } & Record<string, unknown>) =>
-      React.createElement("input", {
-        type: "text",
-        ...props,
-        value,
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChangeText?.(e.target.value),
-      }),
-  };
-});
-
-const mocks = vi.hoisted(() => {
-  const style = { id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 };
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {
-          select: (..._a: unknown[]) => {
-            if (!op) op = "select";
-            return builder;
-          },
-          eq: () => builder,
-          order: () => builder,
-          in: () => builder,
-          single: () => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-          then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
-            resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-        };
-        return builder;
-      },
-    };
-  }
-
-  return {
-    style,
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
-    goBack: vi.fn(),
-    getAccessToken: vi.fn(async () => "test-access-token"),
-    teamMembers: [
-      { user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } },
-      { user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎" } },
-    ] as Array<{ user_id: string; role: string; users: { id: string; name: string } }>,
-    getStyles: vi.fn(),
-  };
-});
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: vi.fn(), goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    subscription: null,
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.teamMembers, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
+import {
+  createResponseMapSupabase,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
 // MemberSelectModal の props (特に onConfirm) を捕捉するスタブ。
 // teamEntryBulk.nonSwimmerAdminGuard.test.tsx と同じ方式 (捕捉のみで描画は行わない)。
@@ -140,25 +44,26 @@ type CapturedMemberSelectProps = {
   selectedUserIds: string[];
   onConfirm: (ids: string[]) => void;
 };
-const capturedMemberSelectProps: CapturedMemberSelectProps[] = [];
-vi.mock("@/components/teams/MemberSelectModal", () => ({
-  MemberSelectModal: (props: CapturedMemberSelectProps) => {
-    capturedMemberSelectProps.push(props);
-    return null;
-  },
-}));
 
-import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
+// __mocks__/react-native.ts の TextInput は testID を data-testid に変換するため、
+// `configure({ testIdAttribute: "testID" })` と噛み合わず record-bulk-member-time が
+// 一切引けなくなる (findAllByTestId が常に空を返す = 実装に到達せず全テストが無意味に
+// 赤くなる)。testID をそのまま DOM 属性として描画する TextInput に切り替える。
+harness.rawTextInput = true;
+configure({ testIdAttribute: "testID" });
 
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+const mocks = {
+  ...createResponseMapSupabase(),
+  style: { id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 },
 };
 
-function makeQueryClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-}
+harness.supabase = mocks.supabase;
+harness.members = [
+  { user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } },
+  { user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎" } },
+];
+
+const capturedMemberSelectProps = harness.memberSelectProps as CapturedMemberSelectProps[];
 
 function latestMemberSelectProps(): CapturedMemberSelectProps {
   const last = capturedMemberSelectProps[capturedMemberSelectProps.length - 1];
@@ -170,7 +75,7 @@ describe("[#5] confirmMemberSelection のデータ消失防止 (.find() → .fil
   beforeEach(() => {
     vi.clearAllMocks();
     capturedMemberSelectProps.length = 0;
-    mocks.getStyles.mockResolvedValue([mocks.style]);
+    harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
@@ -295,7 +200,7 @@ describe("[#6] タブの × は選手の全ての本目を解除し、入力済�
   beforeEach(() => {
     vi.clearAllMocks();
     capturedMemberSelectProps.length = 0;
-    mocks.getStyles.mockResolvedValue([mocks.style]);
+    harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,

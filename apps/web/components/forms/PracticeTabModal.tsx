@@ -11,6 +11,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { XMarkIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import ItemTabs from "@/components/forms/ItemTabs";
@@ -243,9 +244,22 @@ export default function PracticeTabModal({
   /** 編集前に DB に存在していた練習ログ ID (diff 用スナップショット) */
   const [originalLogIds, setOriginalLogIds] = useState<string[]>([]);
   const initialMenusSnapshotRef = useRef<string>("");
+  const editingDataRef = useRef(editingData);
+  editingDataRef.current = editingData;
+  const availableTagsRef = useRef(availableTags);
+  availableTagsRef.current = availableTags;
+  /**
+   * 編集モードの既存ログ取得が終わった (成功・0件・失敗のいずれでも) か。
+   * 終わるまでタブ本文を入力不可にする。応答前の入力を DB 値が巻き戻すのを、
+   * 重ね合わせではなく「入力させない」ことで防ぐ。新規作成 (取得なし) では使わない。
+   */
+  const [logsFetchSettled, setLogsFetchSettled] = useState(false);
+  const needsLogsFetch = !!editingPracticeId && isDbUuid(editingPracticeId);
+  const isHydrating = isOpen && needsLogsFetch && !logsFetchSettled;
 
   useEffect(() => {
     if (!isOpen) {
+      setLogsFetchSettled(false);
       setIsInitialized(false);
       setActiveTab(initialTab);
       setBasicData({ date: "", title: "", place: "", note: "" });
@@ -305,94 +319,114 @@ export default function PracticeTabModal({
   }, [isOpen, isInitialized, editingData, selectedDate, initialTab, editingPracticeId]);
 
   // 編集モード: 練習IDに紐づく既存ログを全件 fetch して menus に初期化
+  //
+  // 開いている間に1回だけ取得する (成功・失敗・0件・例外のどれでも settled になったら再取得しない。
+  // 失敗しても、開き直せば取り直せる)。取得の最中は入力不可 (isHydrating) なので、応答が
+  // ユーザー入力を巻き戻すことは無い。availableTags / editingData は参照が頻繁に変わるため
+  // deps に入れず ref で読む (入れると cancel が繰り返されて settled にならない)。
   useEffect(() => {
     if (!isOpen || !isInitialized) return;
     // editingPracticeId が DB UUID の場合のみフェッチ
     if (!editingPracticeId || !isDbUuid(editingPracticeId)) return;
-    // 既に originalLogIds が設定済みなら再フェッチしない
-    if (originalLogIds.length > 0) return;
+    if (logsFetchSettled) return;
 
-    supabase
-      .from("practice_logs")
-      .select("id, style, swim_category, distance, rep_count, set_count, circle, note, video_path, video_thumbnail_path, practice_log_tags(practice_tag_id), practice_times(set_number, rep_number, time)")
-      .eq("practice_id", editingPracticeId)
-      .order("created_at", { ascending: true })
-      .then(({ data, error }) => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("practice_logs")
+          .select("id, style, swim_category, distance, rep_count, set_count, circle, note, video_path, video_thumbnail_path, practice_log_tags(practice_tag_id), practice_times(set_number, rep_number, time)")
+          .eq("practice_id", editingPracticeId)
+          .order("created_at", { ascending: true });
+        if (cancelled) return;
+        // 失敗しても入力不能のまま固めない (既存どおり menus は既定値のまま編集できる)
         if (error || !data) return;
-        const ids = data.map((row: { id: string }) => row.id);
-        setOriginalLogIds(ids);
-        // menus を DB 値で上書き（各 menu.id = DB UUID）
-        const newMenus = data.map((row: Record<string, unknown>) => {
-          const circleTime = (row.circle as number) || 0;
-          const tagIds = (row.practice_log_tags as Array<{ practice_tag_id: string }>)?.map((t) => t.practice_tag_id) ?? [];
-          const tags = availableTags.filter((tag) => tagIds.includes(tag.id));
-          return {
-            id: row.id as string,
-            // practice_logs.style は CHECK 制約の無い自由記述列で legacy な小文字行が
-            // 混在し得るため toStyleCode() で正規化する(このパスは usePracticeLogForm の
-            // 内部正規化を経由せず setMenus() で直接 state を上書きするため、ここで
-            // 正規化しないと <select>/SelectChips が既存の種目を選択済み表示できない)。
-            // 正規化できない場合は "Fr" に潰さず元の値を保持する(編集フォームの初期値を
-            // "Fr" に潰すと、種目欄を触らず保存しただけで元の値が自由形として静かに
-            // 上書きされる)。
-            style: toStyleCode(row.style as string) ?? (row.style as string),
-            swimCategory: ((row.swim_category as string) || "Swim") as "Swim" | "Pull" | "Kick",
-            distance: (row.distance as number) || 100,
-            reps: (row.rep_count as number) || 1,
-            sets: (row.set_count as number) || 1,
-            circleMin: Math.floor(circleTime / 60),
-            circleSec: circleTime % 60,
-            note: (row.note as string) || "",
-            tags,
-            // 既存のタイムを読み込む。読み込まないと保存時に diff が空となり既存タイムが削除される。
-            times: (
-              (row.practice_times as
-                | Array<{ set_number: number; rep_number: number; time: number }>
-                | undefined) ?? []
-            ).map((time) => ({
-              setNumber: time.set_number,
-              repNumber: time.rep_number,
-              time: time.time,
-            })),
-            videoPath: (row.video_path as string | null) ?? null,
-            videoThumbnailPath: (row.video_thumbnail_path as string | null) ?? null,
-          };
-        });
-        // テンプレート追記モード: 既存ログの末尾にテンプレ行を1件追加
-        let finalMenus: PracticeMenu[] = newMenus.length > 0 ? newMenus : [];
-        if (isTemplateAppendMode && !templateAppendedRef.current && editingData && typeof editingData === "object") {
-          templateAppendedRef.current = true;
-          const d = editingData as Record<string, unknown>;
-          const circleTime = (d.circle as number) || 0;
-          const tagIds = (d.tag_ids as string[] | undefined) ?? [];
-          const templateTags = availableTags.filter((tag) => tagIds.includes(tag.id));
-          // isTemplateAppendMode は typeof d.style === "string" を前提条件として
-          // 判定済みだが、d は Record<string, unknown> 経由のため型上は保証されない。
-          // 正規化できない場合は "Fr" に潰さず元の値を保持する(既存ログ相当のデータを
-          // 追記するモードのため、"Fr" に潰すと想定外の種目が自由形にすり替わる)。
-          const dStyle = typeof d.style === "string" ? d.style : "Fr";
-          const templateMenu: PracticeMenu = {
-            id: String(Date.now()),
-            style: toStyleCode(dStyle) ?? dStyle,
-            swimCategory: ((d.swim_category as string) || "Swim") as "Swim" | "Pull" | "Kick",
-            distance: (d.distance as number) || 100,
-            reps: (d.rep_count as number) || 1,
-            sets: (d.set_count as number) || 1,
-            circleMin: Math.floor(circleTime / 60),
-            circleSec: circleTime % 60,
-            note: String(d.note || ""),
-            tags: templateTags,
-            times: [],
-          };
-          finalMenus = [...finalMenus, templateMenu];
-        }
-        if (finalMenus.length > 0) setMenus(finalMenus);
-        // snapshot は DB から取得した既存ログ分のみ(newMenus)で取る。
-        // テンプレ追記行は意図的に snapshot に含めない → 保存せず閉じると「未保存の変更あり」警告が出る。
-        // ログが0件の練習にテンプレ追記した場合は finalMenus(=テンプレ行のみ)をそのまま使う。
-        initialMenusSnapshotRef.current = JSON.stringify(newMenus.length > 0 ? newMenus : finalMenus);
-      });
-  }, [isOpen, isInitialized, editingPracticeId, originalLogIds.length, supabase, availableTags, setMenus, isTemplateAppendMode, editingData]);
+          const ids = data.map((row: { id: string }) => row.id);
+          setOriginalLogIds(ids);
+          // menus を DB 値で上書き（各 menu.id = DB UUID）
+          const newMenus = data.map((row: Record<string, unknown>) => {
+            const circleTime = (row.circle as number) || 0;
+            const tagIds = (row.practice_log_tags as Array<{ practice_tag_id: string }>)?.map((t) => t.practice_tag_id) ?? [];
+            const tags = availableTagsRef.current.filter((tag) => tagIds.includes(tag.id));
+            return {
+              id: row.id as string,
+              // practice_logs.style は CHECK 制約の無い自由記述列で legacy な小文字行が
+              // 混在し得るため toStyleCode() で正規化する(このパスは usePracticeLogForm の
+              // 内部正規化を経由せず setMenus() で直接 state を上書きするため、ここで
+              // 正規化しないと <select>/SelectChips が既存の種目を選択済み表示できない)。
+              // 正規化できない場合は "Fr" に潰さず元の値を保持する(編集フォームの初期値を
+              // "Fr" に潰すと、種目欄を触らず保存しただけで元の値が自由形として静かに
+              // 上書きされる)。
+              style: toStyleCode(row.style as string) ?? (row.style as string),
+              swimCategory: ((row.swim_category as string) || "Swim") as "Swim" | "Pull" | "Kick",
+              distance: (row.distance as number) || 100,
+              reps: (row.rep_count as number) || 1,
+              sets: (row.set_count as number) || 1,
+              circleMin: Math.floor(circleTime / 60),
+              circleSec: circleTime % 60,
+              note: (row.note as string) || "",
+              tags,
+              // 既存のタイムを読み込む。読み込まないと保存時に diff が空となり既存タイムが削除される。
+              times: (
+                (row.practice_times as
+                  | Array<{ set_number: number; rep_number: number; time: number }>
+                  | undefined) ?? []
+              ).map((time) => ({
+                setNumber: time.set_number,
+                repNumber: time.rep_number,
+                time: time.time,
+              })),
+              videoPath: (row.video_path as string | null) ?? null,
+              videoThumbnailPath: (row.video_thumbnail_path as string | null) ?? null,
+            };
+          });
+          // テンプレート追記モード: 既存ログの末尾にテンプレ行を1件追加
+          let finalMenus: PracticeMenu[] = newMenus.length > 0 ? newMenus : [];
+          if (isTemplateAppendMode && !templateAppendedRef.current && editingDataRef.current && typeof editingDataRef.current === "object") {
+            templateAppendedRef.current = true;
+            const d = editingDataRef.current as Record<string, unknown>;
+            const circleTime = (d.circle as number) || 0;
+            const tagIds = (d.tag_ids as string[] | undefined) ?? [];
+            const templateTags = availableTagsRef.current.filter((tag) => tagIds.includes(tag.id));
+            // isTemplateAppendMode は typeof d.style === "string" を前提条件として
+            // 判定済みだが、d は Record<string, unknown> 経由のため型上は保証されない。
+            // 正規化できない場合は "Fr" に潰さず元の値を保持する(既存ログ相当のデータを
+            // 追記するモードのため、"Fr" に潰すと想定外の種目が自由形にすり替わる)。
+            const dStyle = typeof d.style === "string" ? d.style : "Fr";
+            const templateMenu: PracticeMenu = {
+              id: String(Date.now()),
+              style: toStyleCode(dStyle) ?? dStyle,
+              swimCategory: ((d.swim_category as string) || "Swim") as "Swim" | "Pull" | "Kick",
+              distance: (d.distance as number) || 100,
+              reps: (d.rep_count as number) || 1,
+              sets: (d.set_count as number) || 1,
+              circleMin: Math.floor(circleTime / 60),
+              circleSec: circleTime % 60,
+              note: String(d.note || ""),
+              tags: templateTags,
+              times: [],
+            };
+            finalMenus = [...finalMenus, templateMenu];
+          }
+          if (finalMenus.length > 0) setMenus(finalMenus);
+          // snapshot は DB から取得した既存ログ分のみ(newMenus)で取る。
+          // テンプレ追記行は意図的に snapshot に含めない → 保存せず閉じると「未保存の変更あり」警告が出る。
+          // ログが0件の練習にテンプレ追記した場合は finalMenus(=テンプレ行のみ)をそのまま使う。
+          initialMenusSnapshotRef.current = JSON.stringify(newMenus.length > 0 ? newMenus : finalMenus);
+      } finally {
+        // どの経路 (成功・失敗・0件・例外) でも必ず settled にする
+        if (!cancelled) setLogsFetchSettled(true);
+      }
+    };
+
+    load().catch((err) => {
+      console.error("練習ログの初期化取得に失敗:", err);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isInitialized, editingPracticeId, logsFetchSettled, supabase, setMenus, isTemplateAppendMode]);
 
   // Fetch place suggestions when modal opens
   useEffect(() => {
@@ -702,7 +736,23 @@ export default function PracticeTabModal({
           </div>
 
           {/* Tab panels */}
-          <div className="flex-1 overflow-y-auto">
+          {/* 読み込み中の表示は inert の外 (兄弟) に置く。inert の中だとスクリーンリーダーに届かない */}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            {isHydrating && (
+              <div
+                role="status"
+                className="absolute inset-0 z-10 flex items-center justify-center bg-white/70"
+                data-testid="practice-tab-modal-hydrating"
+              >
+                <LoadingSpinner size="md" message={tCommon("loading")} />
+              </div>
+            )}
+            <div
+              className="flex-1 overflow-y-auto"
+              // 既存データの読み込みが終わるまで入力・フォーカスを受け付けない
+              inert={isHydrating}
+              aria-busy={isHydrating}
+            >
             {/* ---- Practice tab ---- */}
             <div
               role="tabpanel"
@@ -918,6 +968,7 @@ export default function PracticeTabModal({
               )}
             </div>
           </div>
+          </div>
 
           {/* Footer */}
           <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -960,7 +1011,7 @@ export default function PracticeTabModal({
                 type="button"
                 onClick={() => void handleSave()}
                 variant={nextTab ? "outline" : "primary"}
-                disabled={isLoading || isPracticeTimeLimitReached}
+                disabled={isLoading || isHydrating || isPracticeTimeLimitReached}
                 className="w-full sm:w-auto"
                 data-testid="practice-tab-modal-save"
               >

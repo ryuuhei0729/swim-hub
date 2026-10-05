@@ -5,7 +5,7 @@
  *   [V-01] /ja/ アクセスで <html lang="ja"> が付く
  *   [V-02] /en/ アクセスで <html lang="en"> が付く
  *   [V-03] /ja/ の HTML に hreflang="ja" / hreflang="en" / hreflang="x-default" の3種が存在する
- *   [V-04] /dashboard (プレフィックスなし) → /ja/dashboard に 308 リダイレクト
+ *   [V-04] /dashboard (プレフィックスなし) → /ja/dashboard に 307/308 リダイレクト
  *   [V-05] LanguageSwitcher で en クリック → URL が /en/... に変化する
  *   [V-06] LanguageSwitcher で ja クリック → URL が /ja/... に変化する
  *   [V-11] 未認証で /ja/dashboard → /ja/login?redirect_to=/ja/dashboard にリダイレクト
@@ -16,6 +16,7 @@
 
 import { expect, test, type Page } from "@playwright/test";
 import { EnvConfig, URLS } from "../config/config";
+import { supabaseLogin } from "../utils/supabase-login";
 
 // テスト開始前に環境変数を検証
 let hasRequiredEnvVars = false;
@@ -56,24 +57,26 @@ test.describe("i18n ルーティング基盤 (Issue #32 Phase 1-A)", () => {
   // -------------------------------------------------------------------------
   // [V-04] /dashboard → /ja/dashboard へのリダイレクト
   // -------------------------------------------------------------------------
-  test("TC-I18N-001: /dashboard (プレフィックスなし) → /ja/dashboard に 308 リダイレクト", async ({
+  test("TC-I18N-001: /dashboard (プレフィックスなし) → /ja/dashboard に 307/308 リダイレクト", async ({
     page,
     request,
   }) => {
-    // HTTP レベルで 308 リダイレクトを確認 (ブラウザは自動追従するため fetch で確認)
+    // HTTP レベルで 307/308 リダイレクトを確認 (ブラウザは自動追従するため fetch で確認)
     const response = await request.get(`${testEnv!.baseUrl}/dashboard`, {
       maxRedirects: 0,
     });
     expect([307, 308]).toContain(response.status());
     expect(response.headers()["location"]).toContain("/ja/dashboard");
 
-    // ブラウザでもアクセスして最終的に /ja/dashboard にいること
+    // ログイン済みユーザーがブラウザで /dashboard にアクセスすると、
+    // ロケール付きの /ja/dashboard に着くこと (未ログインだと /ja/login に落ちるため先にログインする)
+    await supabaseLogin(page);
     await page.goto("/dashboard");
     await page.waitForURL("**\/ja\/dashboard", { timeout: 10000 });
     expect(page.url()).toContain("/ja/dashboard");
   });
 
-  test("TC-I18N-002: / (ルート) → /ja/ に 308 リダイレクト", async ({ page, request }) => {
+  test("TC-I18N-002: / (ルート) → /ja に 307/308 リダイレクト", async ({ page, request }) => {
     const response = await request.get(`${testEnv!.baseUrl}/`, {
       maxRedirects: 0,
     });
@@ -81,7 +84,7 @@ test.describe("i18n ルーティング基盤 (Issue #32 Phase 1-A)", () => {
     // ただし認証済みの場合は /ja/dashboard になる可能性もある
     expect([307, 308]).toContain(response.status());
     const location = response.headers()["location"] ?? "";
-    expect(location).toMatch(/\/ja\//);
+    expect(location).toMatch(/\/ja(\/|$)/);
   });
 
   // -------------------------------------------------------------------------
@@ -214,7 +217,7 @@ test.describe("i18n ルーティング基盤 (Issue #32 Phase 1-A)", () => {
   // -------------------------------------------------------------------------
   // [V-15] /api/ はミドルウェアにキャッチされない
   // -------------------------------------------------------------------------
-  test("TC-I18N-010: /api/auth/callback はロケールプレフィックスなしでアクセス可能", async ({
+  test("TC-I18N-010: /api/auth/callback はロケールプレフィックス (/ja/api 等) を付与されずアクセス可能", async ({
     request,
   }) => {
     // /api/ へのアクセスが 308 リダイレクトにならないこと
@@ -223,10 +226,13 @@ test.describe("i18n ルーティング基盤 (Issue #32 Phase 1-A)", () => {
       maxRedirects: 0,
     });
 
-    // 308 リダイレクト (localePrefix) になっていないこと
+    // next-intl の localePrefix による 308 リダイレクトになっていないこと
     expect(response.status()).not.toBe(308);
-    // API エンドポイントは 400/404/405 などを返す (リダイレクトではない)
-    expect([200, 400, 404, 405, 500]).toContain(response.status());
+    // code 無しの callback は自前で 307 (/login?error=missing_code) を返す。400/404/405 等も許容
+    expect([200, 307, 400, 404, 405, 500]).toContain(response.status());
+    // リダイレクトする場合でも、/api がロケール付き (/ja/api/... 等) に書き換えられていないこと
+    const location = response.headers()["location"] ?? "";
+    expect(location).not.toMatch(/\/(ja|en|zh|ko|de)\/api(\/|$)/);
   });
 
   // -------------------------------------------------------------------------

@@ -4359,6 +4359,7 @@
       "eventHeader": "Event {n}",
       "entryTimeLabel": "Entry Time:",
       "bestTimeLabel": "Best Time",
+      "goalTargetLabel": "Target",
       "bestTimeRelay": "Best Time (Relay)",
       "bestTimeLong": "Best Time (Long Course)",
       "bestTimeLongRelay": "Best Time (Long Course Relay)",
