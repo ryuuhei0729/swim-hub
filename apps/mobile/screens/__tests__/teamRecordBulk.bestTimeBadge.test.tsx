@@ -23,117 +23,32 @@
 //   fixture の氏名にも期待文字列の部分文字列を含めない。
 // =============================================================================
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
+import {
+  createResponseMapSupabase,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return {
-    ...actual,
-    KeyboardAvoidingView: actual.View,
-  };
-});
-
-const mocks = vi.hoisted(() => {
-  const styles = [
+const mocks = {
+  ...createResponseMapSupabase(),
+  styles: [
     { id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 },
     { id: 9, name_jp: "50m平泳ぎ", name: "50m Breaststroke", style: "Br", distance: 50 },
     { id: 13, name_jp: "50m背泳ぎ", name: "50m Backstroke", style: "Ba", distance: 50 },
     { id: 17, name_jp: "50mバタフライ", name: "50m Butterfly", style: "Fly", distance: 50 },
-  ];
+  ],
+};
 
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {
-          select: (..._a: unknown[]) => {
-            if (!op) op = "select";
-            return builder;
-          },
-          eq: () => builder,
-          order: () => builder,
-          in: () => builder,
-          single: () => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-          then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
-            resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-        };
-        return builder;
-      },
-    };
-  }
-
-  return {
-    styles,
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" } as Record<string, unknown>,
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getAccessToken: vi.fn(async () => "test-access-token"),
-    getBestTimesDetailedForUsers: vi.fn(),
-    teamMembers: [
-      { user_id: "user-1", role: "admin", users: { id: "user-1", name: "管理者" } },
-    ] as Array<{ user_id: string; role: string; users: { id: string; name: string } }>,
-  };
-});
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    subscription: null,
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.teamMembers, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = mocks.getBestTimesDetailedForUsers;
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
-vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
-
-import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
+harness.supabase = mocks.supabase;
+harness.members = [{ user_id: "user-1", role: "admin", users: { id: "user-1", name: "管理者" } }];
 
 const LABEL = ja.forms.recordLog;
-
-const createWrapper = (queryClient: QueryClient) =>
-  ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-}
 
 function makeRecord(opts: {
   id: string;
@@ -235,9 +150,9 @@ const waitForBadges = async (expectedCount: number): Promise<string[]> => {
 describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
-    mocks.getStyles.mockResolvedValue(mocks.styles);
-    mocks.getBestTimesDetailedForUsers.mockResolvedValue(new Map());
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+    harness.getStyles.mockResolvedValue(mocks.styles);
+    harness.getBestTimesDetailedForUsers.mockResolvedValue(new Map());
     mocks.responses["select:competitions"] = {
       // pool_type=0 (短水路)。他水路フォールバックのラベル向きを検証するために固定する
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
@@ -255,7 +170,7 @@ describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", ()
         ],
         error: null,
       };
-      mocks.getBestTimesDetailedForUsers.mockResolvedValue(
+      harness.getBestTimesDetailedForUsers.mockResolvedValue(
         new Map([["user-10", [makeBestTime({ styleId: 2, time: 26.5, poolType: 0 })]]]),
       );
 
@@ -275,7 +190,7 @@ describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", ()
         ],
         error: null,
       };
-      mocks.getBestTimesDetailedForUsers.mockResolvedValue(
+      harness.getBestTimesDetailedForUsers.mockResolvedValue(
         new Map([["user-10", [makeBestTime({ styleId: 2, time: 28.4, poolType: 1 })]]]),
       );
 
@@ -292,7 +207,7 @@ describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", ()
         ],
         error: null,
       };
-      mocks.getBestTimesDetailedForUsers.mockResolvedValue(
+      harness.getBestTimesDetailedForUsers.mockResolvedValue(
         new Map([["user-10", [makeBestTime({ styleId: 9, time: 33.0, poolType: 0 })]]]),
       );
 
@@ -303,7 +218,7 @@ describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", ()
         expect(screen.getByDisplayValue("27.00")).toBeDefined();
       });
       await waitFor(() => {
-        expect(mocks.getBestTimesDetailedForUsers).toHaveBeenCalled();
+        expect(harness.getBestTimesDetailedForUsers).toHaveBeenCalled();
       });
       expect(badgeTexts()).toEqual([]);
     });
@@ -311,9 +226,9 @@ describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", ()
 
   describe("リレー4レグ", () => {
     beforeEach(() => {
-      mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_medley" };
+      harness.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_medley" };
       mocks.responses["select:records"] = { data: medleyRelayRecords(), error: null };
-      mocks.getBestTimesDetailedForUsers.mockResolvedValue(
+      harness.getBestTimesDetailedForUsers.mockResolvedValue(
         new Map([
           // 第1泳者 (背泳ぎ): 引き継ぎベストも持つが通常スタートなので使わない
           ["user-10", [makeBestTime({ styleId: 13, time: 30.2, poolType: 0, relayingTime: 29.7 })]],
@@ -346,7 +261,7 @@ describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", ()
     });
 
     it("各レグは自分が泳ぐ種目のベストを引く (平泳ぎのレグに自由形のベストが出ない)", async () => {
-      mocks.getBestTimesDetailedForUsers.mockResolvedValue(
+      harness.getBestTimesDetailedForUsers.mockResolvedValue(
         new Map([
           // レグ2 の泳者が持つのは自由形 (= 代表 styleId 側ではなくレグ4 の種目) のベストだけ
           ["user-11", [makeBestTime({ styleId: 2, time: 24.0, poolType: 0, relayingTime: 23.5 })]],
@@ -357,7 +272,7 @@ describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", ()
       render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       await waitFor(() => {
-        expect(mocks.getBestTimesDetailedForUsers).toHaveBeenCalled();
+        expect(harness.getBestTimesDetailedForUsers).toHaveBeenCalled();
       });
       // 自由形のベストしか持たない泳者が平泳ぎのレグに入っているので、
       // 4レグのどこにも 24.00/23.50 は出ない

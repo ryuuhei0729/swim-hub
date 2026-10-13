@@ -5,15 +5,14 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
+import { isMilestoneParamsSavable, isMilestoneTimeValueValid } from "@apps/shared/types/goals";
 import { useTranslations } from "next-intl";
+import { formatMilestoneSummary } from "@apps/shared/utils/milestoneSummary";
 import { parseISO, isValid, format } from "date-fns";
 import type {
   Style,
   Milestone,
   MilestoneParams,
-  MilestoneTimeParams,
-  MilestoneRepsTimeParams,
-  MilestoneSetParams,
   UpdateMilestoneInput,
 } from "@apps/shared/types";
 import MilestoneForm from "./forms/MilestoneForm";
@@ -46,8 +45,18 @@ export default function MilestoneEditModal({
   const [deadline, setDeadline] = useState("");
   const [params, setParams] = useState<MilestoneParams>(DEFAULT_TIME_PARAMS);
   const [isLoading, setIsLoading] = useState(false);
+  // 目標タイム欄 (target_time/target_average_time) が 0以下のまま submit されたときに true。
+  // ユーザーが再入力すると (handleParamsChange 発火時に) false に戻す
+  const [timeFieldInvalid, setTimeFieldInvalid] = useState(false);
+  const [paramsInvalid, setParamsInvalid] = useState(false);
 
   const goalAPI = new GoalAPI(supabase);
+
+  const handleParamsChange = (newParams: MilestoneParams) => {
+    setParams(newParams);
+    if (timeFieldInvalid) setTimeFieldInvalid(false);
+    if (paramsInvalid) setParamsInvalid(false);
+  };
 
   // 既存のマイルストーンデータでフォームを初期化
   useEffect(() => {
@@ -68,6 +77,8 @@ export default function MilestoneEditModal({
         setDeadline("");
       }
       setParams(milestone.params);
+      setTimeFieldInvalid(false);
+      setParamsInvalid(false);
     }
   }, [isOpen, milestone]);
 
@@ -81,16 +92,29 @@ export default function MilestoneEditModal({
     } else {
       setParams(DEFAULT_SET_PARAMS);
     }
+    setTimeFieldInvalid(false);
+    setParamsInvalid(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 距離・本数・セット数・サークル・タイムのいずれかが 0 や空欄のままだと達成判定が成立しない。
+    // タイム欄だけの不正は欄内エラー、それ以外は全体エラーで知らせる
+    if (!isMilestoneParamsSavable(type, params)) {
+      if (!isMilestoneTimeValueValid(params)) {
+        setTimeFieldInvalid(true);
+      } else {
+        setParamsInvalid(true);
+      }
+      return;
+    }
+
     setIsLoading(true);
     try {
       await goalAPI.updateMilestone(milestone.id, {
         type,
-        title: title || getDefaultTitle(type, params),
+        title: title || getDefaultTitle(params),
         params,
         deadline: deadline || null,
       } as Omit<UpdateMilestoneInput, "id">);
@@ -104,18 +128,8 @@ export default function MilestoneEditModal({
     }
   };
 
-  const getDefaultTitle = (milestoneType: string, params: MilestoneParams): string => {
-    if (milestoneType === "time") {
-      const p = params as MilestoneTimeParams;
-      return `${p.distance}m × 1本: ${p.target_time}秒`;
-    } else if (milestoneType === "reps_time") {
-      const p = params as MilestoneRepsTimeParams;
-      return `${p.distance}m × ${p.reps}本 @${p.target_average_time}秒 平均`;
-    } else {
-      const p = params as MilestoneSetParams;
-      return `${p.distance}m × ${p.reps}本 × ${p.sets}セット (@${p.circle}秒サークル) 完遂`;
-    }
-  };
+  const getDefaultTitle = (params: MilestoneParams): string =>
+    formatMilestoneSummary({ params, title: "" }, t);
 
   if (!isOpen) return null;
 
@@ -147,12 +161,18 @@ export default function MilestoneEditModal({
                 title={title}
                 onTitleChange={setTitle}
                 params={params}
-                onParamsChange={setParams}
+                onParamsChange={handleParamsChange}
                 deadline={deadline}
                 onDeadlineChange={setDeadline}
                 goalCompetitionDate={goalCompetitionDate}
+                timeFieldInvalid={timeFieldInvalid}
                 showTemplateSelector={false}
               />
+              {paramsInvalid && (
+                <p role="alert" className="text-sm text-red-600">
+                  {t("paramsForm.paramsInvalid")}
+                </p>
+              )}
 
               {/* ボタン */}
               <div className="flex justify-end gap-3 pt-4">

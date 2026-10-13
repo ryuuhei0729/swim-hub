@@ -41,7 +41,7 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
-import { DatePickerField } from "@/components/ui/DatePickerField";
+import { CompetitionBasicFields } from "@/components/competitions/CompetitionBasicFields";
 import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { VideoUploader } from "@/components/shared/VideoUploader";
 import { FormTabBar, FormTab } from "@/components/forms/FormTabBar";
@@ -59,6 +59,9 @@ import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
+import { useGoalTargetsQuery } from "@apps/shared/hooks/queries/goalTargets";
+import { GoalTargetBadge } from "@/components/records/GoalTargetBadge";
 import {
   parseReactionTimeInput,
   isReactionTimeInRange,
@@ -92,13 +95,6 @@ const COMPETITION_TAB_LABEL_KEYS: Record<CompetitionTab, string> = {
   entry: "competition.form.tabEntry",
   record: "competition.form.tabRecord",
 };
-
-// ---- プール種別 ----
-type PoolTypeOption = { value: number; labelKey: string };
-const POOL_TYPES: PoolTypeOption[] = [
-  { value: 0, labelKey: "competition.form.poolTypeShort" },
-  { value: 1, labelKey: "competition.form.poolTypeLong" },
-];
 
 // ---- エントリー行 ----
 interface EntryDraftRow {
@@ -428,6 +424,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // ---- ベストタイム (エントリー/レコードの参照バッジ用。web useBestTimes 相当) ----
   const { data: bestTimesData } = useBestTimesQuery(supabase, {});
   const bestTimes = useMemo(() => bestTimesData ?? [], [bestTimesData]);
+  // 本人の目標 (失敗・ローディング中は空 = 目標を出さないだけ)。大会未保存 (resolvedCompetitionId 無し) では
+  // findGoalTargetTime が null を返す
+  const goalTargetsQuery = useGoalTargetsQuery(supabase);
+  const goalTargets = useMemo(() => goalTargetsQuery.data ?? [], [goalTargetsQuery.data]);
 
   // ---- 種目一覧取得 ----
   useEffect(() => {
@@ -2053,110 +2053,21 @@ export const CompetitionTabFormScreen: React.FC = () => {
               </View>
             )}
 
-            {/* 日付 */}
-            <View style={[styles.section, styles.sectionCompact]}>
-              <View style={styles.dateRow}>
-                <View style={styles.dateColumn}>
-                  <Text style={[styles.label, styles.labelCompact]}>
-                    {t("competition.form.startDateLabel")}{" "}
-                    <Text style={styles.required}>*</Text>
-                  </Text>
-                  <DatePickerField
-                    value={date}
-                    onChange={handleStartDateChange}
-                    required
-                    disabled={isSaving || !canEditCompetitionDetails}
-                    error={competitionErrors.date}
-                    compact
-                  />
-                </View>
-                <View style={styles.dateColumn}>
-                  <Text style={[styles.label, styles.labelCompact]}>
-                    {t("competition.form.endDateLabel")}{" "}
-                    <Text style={styles.optional}>{t("competition.form.multiDayHint")}</Text>
-                  </Text>
-                  <DatePickerField
-                    value={endDate}
-                    onChange={setEndDate}
-                    allowClear
-                    disabled={isSaving || !canEditCompetitionDetails}
-                    error={competitionErrors.endDate}
-                    minDate={isValid(parseISO(date)) ? parseISO(date) : undefined}
-                    compact
-                  />
-                </View>
-              </View>
-            </View>
-
-            {/* 大会名 */}
-            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
-              <Text style={[styles.label, styles.horizontalLabel]}>
-                {t("competition.form.nameLabel")}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.inputCompact,
-                  styles.horizontalInput,
-                  !canEditCompetitionDetails && styles.inputDisabled,
-                ]}
-                value={title}
-                onChangeText={setTitle}
-                placeholder={t("competition.form.namePlaceholder")}
-                editable={!isSaving && canEditCompetitionDetails}
-              />
-            </View>
-
-            {/* 場所 */}
-            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
-              <Text style={[styles.label, styles.horizontalLabel]}>
-                {t("competition.form.placeLabel")}
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.inputCompact,
-                  styles.horizontalInput,
-                  !canEditCompetitionDetails && styles.inputDisabled,
-                ]}
-                value={place}
-                onChangeText={setPlace}
-                placeholder={t("competition.form.placePlaceholder")}
-                editable={!isSaving && canEditCompetitionDetails}
-              />
-            </View>
-
-            {/* プール種別 */}
-            <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
-              <Text style={[styles.label, styles.horizontalLabel]}>
-                {t("competition.form.poolTypeLabel")}{" "}
-                <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={[styles.pickerContainer, styles.horizontalInput]}>
-                {POOL_TYPES.map((type) => (
-                  <Pressable
-                    key={type.value}
-                    style={[
-                      styles.pickerOption,
-                      styles.pickerOptionCompact,
-                      poolType === type.value && styles.pickerOptionSelected,
-                      !canEditCompetitionDetails && styles.pickerOptionDisabled,
-                    ]}
-                    onPress={() => handlePoolTypeChange(type.value)}
-                    disabled={isSaving || !canEditCompetitionDetails}
-                  >
-                    <Text
-                      style={[
-                        styles.pickerOptionText,
-                        poolType === type.value && styles.pickerOptionTextSelected,
-                      ]}
-                    >
-                      {t(type.labelKey)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
+            <CompetitionBasicFields
+              date={date}
+              endDate={endDate}
+              title={title}
+              place={place}
+              poolType={poolType}
+              onDateChange={handleStartDateChange}
+              onEndDateChange={setEndDate}
+              onTitleChange={setTitle}
+              onPlaceChange={setPlace}
+              onPoolTypeChange={handlePoolTypeChange}
+              errors={competitionErrors}
+              disabled={isSaving || !canEditCompetitionDetails}
+              locked={!canEditCompetitionDetails}
+            />
 
             {/* メモ */}
             <View style={[styles.section, styles.sectionCompact, styles.horizontalField]}>
@@ -2229,6 +2140,14 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     bestTimes,
                   )
                 : null;
+              const entryGoalTarget =
+                entry && authUser
+                  ? findGoalTargetTime(goalTargets, {
+                      userId: authUser.id,
+                      competitionId: resolvedCompetitionId,
+                      styleId: Number(entry.styleId),
+                    })
+                  : null;
               // 未編集警告: ラッチのみで判定し、値の比較はしない (Sprint Contract v2 裁定2)。
               // タイム欄への手入力が一度でも発火すると prefillSource は無条件で null に
               // 落ち (プリフィルと同じ文字列を打ち直しても)、以後 "bestTime" に戻る経路が
@@ -2252,12 +2171,18 @@ export const CompetitionTabFormScreen: React.FC = () => {
                   {entry != null && (
                     <View key={entry.draftId}>
                   {/* ベストタイム参照バッジ (web CompetitionTabModal :1034-1040) */}
-                  {entryBestTime && (
+                  {(entryBestTime || entryGoalTarget != null) && (
                     <View style={styles.bestTimeBadgeRow}>
-                      <View style={styles.bestTimeBadge}>
-                        <Text style={styles.bestTimeBadgeText}>
-                          {t(entryBestTime.labelKey)}: {formatTimeBest(entryBestTime.time)}
-                        </Text>
+                      {/* 目標はベストバッジの真下 (同じ横位置)。ベストが無ければベストの位置に出る */}
+                      <View style={styles.badgeColumn}>
+                        {entryBestTime && (
+                          <View style={styles.bestTimeBadge}>
+                            <Text style={styles.bestTimeBadgeText}>
+                              {t(entryBestTime.labelKey)}: {formatTimeBest(entryBestTime.time)}
+                            </Text>
+                          </View>
+                        )}
+                        {entryGoalTarget != null && <GoalTargetBadge time={entryGoalTarget} />}
                       </View>
                     </View>
                   )}
@@ -2441,6 +2366,15 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     bestTimes,
                   )
                 : null;
+              const recordGoalTarget =
+                record && authUser
+                  ? findGoalTargetTime(goalTargets, {
+                      userId: authUser.id,
+                      competitionId: resolvedCompetitionId,
+                      styleId: Number(record.styleId),
+                      isRelaying: record.isRelaying,
+                    })
+                  : null;
               // ラップタイムプレビュー用の有効スプリット (web RecordLogEntry :211-225)
               const validSplitTimes = record
                 ? record.splitTimes
@@ -2487,7 +2421,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                   {record != null && (
                     <View key={record.draftId}>
                   {/* 参照バッジ: エントリータイム (blue) + ベストタイム (green) */}
-                  {(linkedEntryTime != null || recordBestTime) && (
+                  {(linkedEntryTime != null || recordBestTime || recordGoalTarget != null) && (
                     <View style={styles.bestTimeBadgeRow}>
                       {linkedEntryTime != null && (
                         <View style={styles.entryTimeBadge}>
@@ -2496,11 +2430,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
                           </Text>
                         </View>
                       )}
-                      {recordBestTime && (
-                        <View style={styles.bestTimeBadge}>
-                          <Text style={styles.bestTimeBadgeText}>
-                            {t(recordBestTime.labelKey)}: {formatTimeBest(recordBestTime.time)}
-                          </Text>
+                      {/* 目標はベストバッジの真下 (同じ横位置)。ベストが無ければベストの位置に出る */}
+                      {(recordBestTime || recordGoalTarget != null) && (
+                        <View style={styles.badgeColumn}>
+                          {recordBestTime && (
+                            <View style={styles.bestTimeBadge}>
+                              <Text style={styles.bestTimeBadgeText}>
+                                {t(recordBestTime.labelKey)}: {formatTimeBest(recordBestTime.time)}
+                              </Text>
+                            </View>
+                          )}
+                          {recordGoalTarget != null && <GoalTargetBadge time={recordGoalTarget} />}
                         </View>
                       )}
                     </View>
@@ -2920,13 +2860,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-  dateRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  dateColumn: {
-    flex: 1,
-  },
   label: {
     fontSize: 14,
     fontWeight: "600",
@@ -2935,11 +2868,6 @@ const styles = StyleSheet.create({
   },
   required: {
     color: "#EF4444",
-  },
-  optional: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    fontWeight: "400",
   },
   input: {
     borderWidth: 1,
@@ -2966,35 +2894,6 @@ const styles = StyleSheet.create({
     minHeight: 60,
     textAlignVertical: "top",
   },
-  pickerContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  pickerOption: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-  },
-  pickerOptionSelected: {
-    borderColor: "#2563EB",
-    backgroundColor: "#EFF6FF",
-  },
-  pickerOptionText: {
-    fontSize: 14,
-    color: "#374151",
-  },
-  pickerOptionTextSelected: {
-    color: "#2563EB",
-    fontWeight: "600",
-  },
-  pickerOptionDisabled: {
-    opacity: 0.5,
-  },
   formCompact: {
     gap: 14,
   },
@@ -3005,9 +2904,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   inputCompact: {
-    paddingVertical: 8,
-  },
-  pickerOptionCompact: {
     paddingVertical: 8,
   },
   horizontalField: {
@@ -3150,6 +3046,8 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
+  // ベストバッジと目標バッジを縦に積む (同じ左端)
+  badgeColumn: { gap: 4, alignItems: "flex-start" },
   bestTimeBadge: {
     backgroundColor: "#DCFCE7", // green-100
     borderRadius: 9999,

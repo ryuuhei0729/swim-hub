@@ -31,20 +31,18 @@
 //   期待値 (総合 112.10 / 区間 27.50, 28.70, 28.30, 27.60) は fixture から
 //   手で計算したリテラル。プロダクションの calcCumulativeTimes を呼ばない。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Alert } from "react-native";
+import {
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return {
-    ...actual,
-    KeyboardAvoidingView: actual.View,
-  };
-});
-
-const mocks = vi.hoisted(() => {
+const mocks = (() => {
   /** styles.id 2 = 50m 自由形 → 4 レグ揃うと relay_4x50_free が検出される */
   const style = {
     id: 2,
@@ -177,24 +175,6 @@ const mocks = vi.hoisted(() => {
    * (記録が書かれた後にその泳者がチームを離れると `members` から消えるが
    *  `records.user_id` は残る)。`gender` を undefined にする経路ではない。
    */
-  const teamMembers: Array<{
-    user_id: string;
-    role: string;
-    users: { id: string; name: string; gender?: number };
-  }> = [
-    { user_id: "user-lead", role: "admin", users: { id: "user-lead", name: "リード", gender: 0 } },
-    {
-      user_id: "user-second",
-      role: "user",
-      users: { id: "user-second", name: "セカンド", gender: 0 },
-    },
-    { user_id: "user-third", role: "user", users: { id: "user-third", name: "サード", gender: 0 } },
-    {
-      user_id: "user-anchor",
-      role: "user",
-      users: { id: "user-anchor", name: "アンカー", gender: 0 },
-    },
-  ];
 
   return {
     style,
@@ -206,73 +186,18 @@ const mocks = vi.hoisted(() => {
     eqCalls,
     inCalls,
     insertedIds,
-    teamMembers,
     supabase: makeSupabase(),
-    routeParams: {
-      competitionId: "comp-thrush",
-      teamId: "team-thrush",
-      relayEventId: "relay_4x50_free",
-    } as Record<string, unknown>,
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getAccessToken: vi.fn(async () => "test-access-token"),
   };
-});
+})();
 
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    subscription: null,
-    user: { id: "user-lead" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({
-    members: mocks.teamMembers,
-    isLoading: false,
-  }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
-vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
-
-import { Alert } from "react-native";
-import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
-
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
-
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-}
+harness.supabase = mocks.supabase;
+harness.currentUserId = "user-lead";
+harness.members = [
+  { user_id: "user-lead", role: "admin", users: { id: "user-lead", name: "リード", gender: 0 } },
+  { user_id: "user-second", role: "user", users: { id: "user-second", name: "セカンド", gender: 0 } },
+  { user_id: "user-third", role: "user", users: { id: "user-third", name: "サード", gender: 0 } },
+  { user_id: "user-anchor", role: "user", users: { id: "user-anchor", name: "アンカー", gender: 0 } },
+];
 
 /**
  * 区間タイム 27.50 / 28.70 / 28.30 / 27.60、総合 112.10 (手計算)。
@@ -325,7 +250,7 @@ function resetMocks() {
   for (const table of Object.keys(mocks.insertedIds)) delete mocks.insertedIds[table];
   for (const key of Object.keys(mocks.responses)) delete mocks.responses[key];
 
-  mocks.getStyles.mockResolvedValue([mocks.style]);
+  harness.getStyles.mockResolvedValue([mocks.style]);
   mocks.responses["select:competitions"] = {
     data: { id: "comp-thrush", title: "ツグミ記録会", pool_type: 0 },
     error: null,
@@ -335,7 +260,7 @@ function resetMocks() {
   // describe ブロックが独自に上書きしない限りリレー種目詳細画面が既定になるよう
   // 毎回リセットする (V-MG-06 が個人種目用に上書きした状態が後続 describe に
   // 漏れ残ると、テスト順序に依存する偽の green/red を生む)。
-  mocks.routeParams = {
+  harness.routeParams = {
     competitionId: "comp-thrush",
     teamId: "team-thrush",
     relayEventId: "relay_4x50_free",
@@ -387,7 +312,7 @@ describe("[V-MG-01] records が1件でも失敗したら relay 側を1行も書�
     expect(mocks.updateCalls.filter((call) => call.table === "records")).toHaveLength(4);
     expect(mocks.insertCalls.filter((call) => call.table === "records")).toHaveLength(0);
     // 保存に失敗したので画面も戻らない
-    expect(mocks.goBack).not.toHaveBeenCalled();
+    expect(harness.goBack).not.toHaveBeenCalled();
 
     expect(relayInserts()).toHaveLength(0);
     expect(legInserts()).toHaveLength(0);
@@ -397,7 +322,7 @@ describe("[V-MG-01] records が1件でも失敗したら relay 側を1行も書�
   it("すべて成功した場合は relay_records に 1 本だけ insert する (対照)", async () => {
     await renderAndSave();
 
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     expect(relayInserts()).toHaveLength(1);
     expect(legInserts()).toHaveLength(1);
@@ -438,7 +363,7 @@ describe("[V-MG-02] 古い行の delete は全計画が成功したときだけ 
   it("すべて成功したら古い行を明示 id で delete する (対照)", async () => {
     await renderAndSave();
 
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     expect(mocks.inCalls.filter((call) => call.table === "relay_records")).toEqual([
       { table: "relay_records", op: "delete", column: "id", values: ["stale-relay-row"] },
@@ -463,7 +388,7 @@ describe("[V-MG-03] 差し替え順序と delete の条件 (mobile)", () => {
 
   it("relay_records の操作順は (画面ロード時の relay_record_legs select) → insert → (レグ insert) → delete である", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const relayOps = mocks.operations
       .filter((op) => op.table === "relay_records" || op.table === "relay_record_legs")
@@ -483,7 +408,7 @@ describe("[V-MG-03] 差し替え順序と delete の条件 (mobile)", () => {
 
   it("delete は明示 id で行い、team_id / competition_id の条件 delete にしない", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const deleteFilters = mocks.eqCalls.filter(
       (call) => call.table === "relay_records" && call.op === "delete",
@@ -512,7 +437,7 @@ describe("[V-MG-03] 差し替え順序と delete の条件 (mobile)", () => {
   // .in(record_id, この種目詳細画面が読み込んだ records.id 集合)」へ移す。
   it("差し替え前の取得は relay_record_legs を record_id (この種目詳細画面が読み込んだ records.id 集合) でサーバー絞り込みする", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const legScopeIn = mocks.inCalls.filter(
       (call) => call.table === "relay_record_legs" && call.op === "select",
@@ -568,7 +493,7 @@ describe("[V-MG-04] レグ insert 失敗で親を巻き戻す (mobile)", () => {
 
   it("レグ insert が成功したときは巻き戻しの delete を発行しない (対照)", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     expect(
       mocks.eqCalls.filter((call) => call.table === "relay_records" && call.op === "delete"),
@@ -587,7 +512,7 @@ describe("[V-MG-05] created_by をクライアントから送らない (mobile)"
 
   it("relay_records の insert payload に created_by が無い", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const payload = relayInserts()[0]?.payload as Record<string, unknown>;
     expect(payload).toBeDefined();
@@ -597,7 +522,7 @@ describe("[V-MG-05] created_by をクライアントから送らない (mobile)"
 
   it("insert payload が契約どおりの列だけを持つ (web と同一の形)", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const payload = relayInserts()[0]?.payload as Record<string, unknown>;
     // note は PM 裁定で列そのものが廃止された。8 列 → 7 列
@@ -621,7 +546,7 @@ describe("[V-MG-06] 個人種目だけの保存は relay_records に一切触れ
   beforeEach(() => {
     resetMocks();
     // 個人種目詳細画面として開く (relayEventId ではなく styleId スコープ)
-    mocks.routeParams = { competitionId: "comp-thrush", teamId: "team-thrush", styleId: 2 };
+    harness.routeParams = { competitionId: "comp-thrush", teamId: "team-thrush", styleId: 2 };
     mocks.responses["select:records"] = {
       data: [
         {
@@ -642,7 +567,7 @@ describe("[V-MG-06] 個人種目だけの保存は relay_records に一切触れ
 
   it("is_relaying の記録が無い保存では relay_records を select も insert もしない", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     // existing-record-solo は保存前から存在する既存行なので UPDATE される
     expect(mocks.insertCalls.filter((call) => call.table === "records")).toHaveLength(0);
@@ -660,7 +585,7 @@ describe("[V-MG-07] レグの payload (mobile)", () => {
 
   it("leg_index は 0-based で 0..3、leg_time は区間タイム (通算ではない)", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const legRows = legInserts()[0]?.payload as Array<Record<string, unknown>>;
     expect(legRows).toHaveLength(4);
@@ -673,7 +598,7 @@ describe("[V-MG-07] レグの payload (mobile)", () => {
 
   it("record_id が保存された records の id を指す (relayRecordRows は既存行なので UPDATE で id 保持)", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     // relayRecordRows() の4行は保存前から存在するので UPDATE され、id は新規採番されず
     // 既存の records.id (updateCalls の eq 条件) のまま保持される。
@@ -693,7 +618,7 @@ describe("[V-MG-07] レグの payload (mobile)", () => {
 
   it("user_id は 4 レグそれぞれの泳者になる (第1泳者に潰れない)", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const legRows = legInserts()[0]?.payload as Array<Record<string, unknown>>;
     expect(legRows.map((row) => row.user_id)).toEqual([...RELAY_USER_IDS]);
@@ -708,24 +633,24 @@ describe("[V-MG-08] 性別区分の prefill (mobile)", () => {
 
   it("メンバー一覧に居ない泳者を含む編成は mixed になる (?? 0 で男性に寄せない)", async () => {
     // 第4泳者 (user-anchor) を一覧から外す = チームを離れた後の状態
-    const removed = mocks.teamMembers.pop();
+    const removed = harness.members.pop();
     if (!removed) throw new Error("fixture が壊れている");
 
     try {
       await renderAndSave();
-      await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+      await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
       const payload = relayInserts()[0]?.payload as Record<string, unknown>;
       expect(payload.gender_category).toBe("mixed");
       expect(payload.gender_category).not.toBe("male");
     } finally {
-      mocks.teamMembers.push(removed);
+      harness.members.push(removed);
     }
   });
 
   it("4 人全員 gender=0 なら male になる (対照。常に mixed ではない)", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const payload = relayInserts()[0]?.payload as Record<string, unknown>;
     expect(payload.gender_category).toBe("male");
@@ -741,7 +666,7 @@ describe("[V-MG-09] web とのパリティ (mobile)", () => {
 
   it("relay_kind / leg_distance / leg_count / total_time / pool_type が web と同じ値になる", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const payload = relayInserts()[0]?.payload as Record<string, unknown>;
     expect(payload.team_id).toBe("team-thrush");
@@ -765,7 +690,7 @@ describe("[V-MG-09] web とのパリティ (mobile)", () => {
     };
 
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     expect(mocks.inCalls.filter((call) => call.table === "relay_records")).toEqual([
       {
@@ -779,7 +704,7 @@ describe("[V-MG-09] web とのパリティ (mobile)", () => {
 
   it("insert payload に note を送らない (DB に列が無いので送ると insert が落ちる)", async () => {
     await renderAndSave();
-    await waitFor(() => expect(mocks.goBack).toHaveBeenCalled());
+    await waitFor(() => expect(harness.goBack).toHaveBeenCalled());
 
     const payload = relayInserts()[0]?.payload as Record<string, unknown>;
     expect(Object.keys(payload)).not.toContain("note");

@@ -28,6 +28,7 @@ export type TabParamList = {
   Practices: undefined;
   Competitions: undefined;
   Teams: undefined;
+  Goals: undefined;
   MyPage: undefined;
 };
 
@@ -154,6 +155,11 @@ export type MainStackParamList = {
   /** 練習ログテンプレート管理 */
   PracticeLogTemplates: undefined;
   BulkBestTime: undefined;
+  GoalDetail: { goalId: string };
+  /** goalId あり = 編集、なし = 新規作成 */
+  GoalForm: { goalId?: string };
+  /** milestoneId あり = 編集、なし = 新規作成 */
+  MilestoneForm: { goalId: string; milestoneId?: string };
   Paywall: undefined;
 };
 

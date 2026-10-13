@@ -19,11 +19,15 @@ import { supabaseLogin } from "../utils/supabase-login";
 async function navigateToTeamAttendanceTab(page: Page): Promise<string | null> {
   // チームページに移動
   await page.goto(URLS.TEAMS);
-  await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(2000);
 
   // 参加しているチームを探す
+  // チームカードが描画されたことを合図にする。所属チームが無い環境では
+  // 一定時間待ってもカードが出ないので null を返す (networkidle/固定待機は使わない)
   const teamCards = page.locator('a[href^="/teams/"]');
+  await teamCards
+    .first()
+    .waitFor({ state: "visible", timeout: 20_000 })
+    .catch(() => {});
   const cardCount = await teamCards.count();
 
   if (cardCount === 0) {
@@ -38,8 +42,21 @@ async function navigateToTeamAttendanceTab(page: Page): Promise<string | null> {
   // URLパラメータで直接出席タブを指定して遷移
   if (teamId) {
     await page.goto(`/teams/${teamId}?tab=attendance`);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(3000);
+    // 出欠タブの内容 (今月/来月タブ・月一覧・直近の出欠・空メッセージのいずれか) が
+    // 描画されたことを合図にする
+    await page
+      .locator(
+        [
+          'button:has-text("今月")',
+          'button:has-text("年")',
+          "text=直近の出欠",
+          "text=表示できる月がありません",
+          "text=イベントがありません",
+        ].join(", "),
+      )
+      .first()
+      .waitFor({ state: "visible", timeout: 25_000 })
+      .catch(() => {});
   }
 
   return teamId;
@@ -55,6 +72,8 @@ try {
 }
 
 test.describe("出席管理のテスト", () => {
+  // dev server の負荷が高い全体実行でも遷移が収まるよう余裕を持たせる
+  test.setTimeout(60_000);
   // 環境変数が不足している場合はテストスイートをスキップ
   test.skip(!hasRequiredEnvVars, "必要な環境変数が設定されていません。");
 
@@ -229,11 +248,11 @@ test.describe("出席管理のテスト", () => {
       return;
     }
 
-    await page.waitForTimeout(3000);
-
     // ステップ2: 今月/来月タブが表示されることを確認
     const currentMonthTab = page.locator('button:has-text("今月")');
     const nextMonthTab = page.locator('button:has-text("来月")');
+    // 読み込み完了 (スケルトンが消えてタブが出る) を待つ。出なければ下の分岐で扱う
+    await currentMonthTab.waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
 
     const hasCurrentMonthTab = await currentMonthTab.isVisible().catch(() => false);
     const hasNextMonthTab = await nextMonthTab.isVisible().catch(() => false);

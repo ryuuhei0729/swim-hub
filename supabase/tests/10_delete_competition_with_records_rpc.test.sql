@@ -3,6 +3,8 @@
 --
 -- 対象 migration: 20260826000000_delete_competition_with_records_rpc.sql
 --             (V-DB-06 のみ 20260919000000_team_delete_admin_only.sql で仕様変更)
+--             (V-DB-11 は 20260929000001_delete_competition_with_records_also_deletes_goals.sql
+--              で追加。目標管理 本導入 Sprint Contract P1 の中核検証)
 --
 -- 確定仕様 (2026-08-26時点。V-DB-06 は 2026-09-19 の Sprint Contract 追補で上書き):
 --   1. records を削除するのは個人大会 (team_id IS NULL) のみ。
@@ -31,6 +33,10 @@
 --   V-DB-07 (ロールバック/原子性): 関数内で例外が起きた場合、records/competitions
 --            とも変更前の状態に戻る (中間状態が残らない)。
 --   V-DB-08: anon への GRANT が REVOKE 済みで authenticated のみ EXECUTE 可能。
+--   V-DB-11 (P1・目標管理 本導入): 個人大会の削除は紐づく goals も削除する
+--            (records と同じ「個人大会削除は記録も消す」方針への統一)。
+--            チーム大会の削除はこの RPC 自体が拒否される (V-DB-06) ため、
+--            goals が残ることは自明であり別途の分岐検証は不要。
 --   V-DB-09/10 (PM追加指摘・Critical再発防止): competitions.user_id は NULLABLE。
 --            認可ガードが `v_competition_owner <> v_caller` のような素朴な比較だと、
 --            user_id IS NULL の大会に対して NULL <> uuid が NULL になり plpgsql の
@@ -50,7 +56,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(32);
+select plan(34);
 
 -- -----------------------------------------------------------------------------
 -- ヘルパー: JWT クレーム + ロール切替
@@ -141,6 +147,11 @@ insert into public.split_times (id, record_id, distance, split_time) values
   ('a1000000-0000-4000-a000-000000000001', 'f0000000-0000-4000-a000-000000000001', 25, 15.00),
   ('a1000000-0000-4000-a000-000000000002', 'f0000000-0000-4000-a000-000000000002', 25, 15.00),
   ('a1000000-0000-4000-a000-000000000003', 'f0000000-0000-4000-a000-000000000003', 25, 15.00);
+
+-- V-DB-11 用: 個人大会 (personal_comp) を対象にした goal (P1: 個人大会削除で goals も削除される)
+insert into public.goals (id, user_id, competition_id, style_id, target_time, status) values
+  ('90000000-0000-4000-a000-000000000001', 'c0000000-0000-4000-a000-000000000001',
+   'e0000000-0000-4000-a000-000000000001', 1, 29.50, 'active');
 
 -- チーム大会の records 5件 (owner_u 2件 + member_u 3件、team_id 付き)
 insert into public.records (id, user_id, competition_id, team_id, style_id, time, pool_type) values
@@ -269,6 +280,11 @@ select is(
   7,
   'V-DB-05 前提: 個人大会の records は7件存在する');
 
+select is(
+  (select count(*)::int from public.goals where competition_id = 'e0000000-0000-4000-a000-000000000001'),
+  1,
+  'V-DB-11 前提: 個人大会に紐づく goal が1件存在する');
+
 select public.qa_login_as('c0000000-0000-4000-a000-000000000001'); -- owner_u
 
 select results_eq(
@@ -295,6 +311,11 @@ select is(
    )),
   0,
   'V-DB-05e: 個人大会の records に紐づいていた split_times も CASCADE で削除されている');
+
+select is(
+  (select count(*)::int from public.goals where id = '90000000-0000-4000-a000-000000000001'),
+  0,
+  'V-DB-11: 個人大会削除に伴い、紐づく goal も削除されている (P1)');
 
 select public.qa_logout();
 

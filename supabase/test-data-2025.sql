@@ -144,7 +144,7 @@ DECLARE
     v_practice_places TEXT[] := ARRAY['東京プール', '大阪プール', '名古屋プール', '横浜プール', '福岡プール'];
     v_competition_places TEXT[] := ARRAY['東京プール', '大阪プール', '名古屋プール', '横浜プール', '福岡プール', '札幌プール'];
     v_competition_titles TEXT[] := ARRAY['春季大会', '夏季大会', '秋季大会', '冬季大会', '関東大会', '関西大会', '全国大会', '地区大会'];
-    v_styles TEXT[] := ARRAY['自由形', '平泳ぎ', '背泳ぎ', 'バタフライ', '個人メドレー'];
+    v_styles TEXT[] := ARRAY['Fr', 'Br', 'Ba', 'Fly', 'IM'];
     v_practice_id UUID;
     v_competition_id UUID;
     v_practice_log_id UUID;

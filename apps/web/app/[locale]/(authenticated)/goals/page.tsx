@@ -7,9 +7,9 @@ import GoalDataLoader from "./_server/GoalDataLoader";
  */
 export default async function GoalsPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Suspense
-        fallback={
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50">
           <div className="p-6 space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="animate-pulse">
@@ -18,10 +18,10 @@ export default async function GoalsPage() {
               </div>
             </div>
           </div>
-        }
-      >
-        <GoalDataLoader />
-      </Suspense>
-    </div>
+        </div>
+      }
+    >
+      <GoalDataLoader />
+    </Suspense>
   );
 }

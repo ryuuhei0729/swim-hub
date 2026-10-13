@@ -4,23 +4,19 @@ import React, { useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useTranslations } from "next-intl";
-import type {
-  Milestone,
-  MilestoneTimeParams,
-  MilestoneRepsTimeParams,
-  MilestoneSetParams,
-  UpdateMilestoneInput,
-} from "@apps/shared/types";
+import type { Milestone, UpdateMilestoneInput } from "@apps/shared/types";
 import {
-  isMilestoneTimeParams,
-  isMilestoneRepsTimeParams,
-  isMilestoneSetParams,
-} from "@apps/shared/types/goals";
+  REFLECTION_OPTIONS,
+  REFLECTION_OTHER_ID,
+  buildReflectionNote,
+} from "@apps/shared/utils/goalReflection";
+import { formatMilestoneSummary } from "@apps/shared/utils/milestoneSummary";
 
 interface ReflectionModalProps {
   isOpen: boolean;
@@ -39,34 +35,16 @@ export default function ReflectionModal({
   onSave,
 }: ReflectionModalProps) {
   const t = useTranslations("goals");
-  const REFLECTION_OPTIONS = [
-    { id: "goal_too_high", label: t("reflection.options.goalTooHigh") },
-    { id: "period_too_short", label: t("reflection.options.periodTooShort") },
-    { id: "practice_insufficient", label: t("reflection.options.practiceInsufficient") },
-    { id: "condition_poor", label: t("reflection.options.conditionPoor") },
-    { id: "other", label: t("reflection.options.other") },
-  ];
+  const reflectionOptions = REFLECTION_OPTIONS.map(({ id, labelKey }) => ({
+    id,
+    label: t(`reflection.options.${labelKey}`),
+  }));
   const { supabase } = useAuth();
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [otherNote, setOtherNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const goalAPI = new GoalAPI(supabase);
-
-  const formatMilestoneTitle = (): string => {
-    const params = milestone.params;
-    if (isMilestoneTimeParams(params)) {
-      const p = params as MilestoneTimeParams;
-      return `${p.distance}m × 1本: ${p.target_time}秒`;
-    } else if (isMilestoneRepsTimeParams(params)) {
-      const p = params as MilestoneRepsTimeParams;
-      return `${p.distance}m × ${p.reps}本 @${p.target_average_time}秒 平均`;
-    } else if (isMilestoneSetParams(params)) {
-      const p = params as MilestoneSetParams;
-      return `${p.distance}m × ${p.reps}本 × ${p.sets}セット (@${p.circle}秒サークル) 完遂`;
-    }
-    return milestone.title;
-  };
 
   const handleOptionToggle = (optionId: string) => {
     setSelectedOptions((prev) => {
@@ -78,24 +56,21 @@ export default function ReflectionModal({
     });
   };
 
+  const currentNote = buildReflectionNote({
+    selectedIds: selectedOptions,
+    resolveLabel: (id) => reflectionOptions.find((o) => o.id === id)?.label ?? id,
+    otherNote,
+    formatOtherNote: (note) => t("reflection.otherPrefix", { note }),
+  });
+  const canSave = currentNote !== null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setIsLoading(true);
     try {
-      // 内省メモを構築
-      const reflectionNote = [
-        ...selectedOptions.map((id) => {
-          const option = REFLECTION_OPTIONS.find((o) => o.id === id);
-          return option?.label || id;
-        }),
-        otherNote ? t("reflection.otherPrefix", { note: otherNote }) : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-
       await goalAPI.updateMilestone(milestone.id, {
-        reflectionNote: reflectionNote || null,
+        reflectionNote: currentNote,
       } as Omit<UpdateMilestoneInput, "id">);
 
       await onSave();
@@ -112,19 +87,8 @@ export default function ReflectionModal({
     setIsLoading(true);
 
     try {
-      // 内省メモを構築して保存
-      const reflectionNote = [
-        ...selectedOptions.map((id) => {
-          const option = REFLECTION_OPTIONS.find((o) => o.id === id);
-          return option?.label || id;
-        }),
-        otherNote ? t("reflection.otherPrefix", { note: otherNote }) : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-
       await goalAPI.updateMilestone(milestone.id, {
-        reflectionNote: reflectionNote || null,
+        reflectionNote: currentNote,
       } as Omit<UpdateMilestoneInput, "id">);
 
       // 新しいマイルストーンを作成 → 振り返りを保存してモーダルを閉じる
@@ -150,7 +114,11 @@ export default function ReflectionModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black/40 transition-opacity" onClick={handleClose} />
-        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg">
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="relative bg-white rounded-lg shadow-xl w-full max-w-lg"
+        >
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{t("reflection.title")}</h3>
@@ -163,13 +131,20 @@ export default function ReflectionModal({
               <p className="text-sm text-gray-600 mb-2">{t("reflection.expiredDesc")}</p>
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="font-medium text-gray-900">{milestone.title}</p>
-                <p className="text-sm text-gray-600 mt-1">{formatMilestoneTitle()}</p>
+                <p className="text-sm text-gray-600 mt-1">{formatMilestoneSummary(milestone, t)}</p>
                 {milestone.deadline && (
                   <p className="text-xs text-gray-500 mt-1">
                     {t("reflection.deadlineLabel")} {format(new Date(milestone.deadline), "yyyy年M月d日", { locale: ja })}
                   </p>
                 )}
               </div>
+              <Link
+                href="/goals"
+                onClick={handleClose}
+                className="inline-block mt-2 text-xs text-blue-600 hover:underline"
+              >
+                {t("reflection.goToGoalsLink")}
+              </Link>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -179,7 +154,7 @@ export default function ReflectionModal({
                   {t("reflection.reflectionLabel")}
                 </label>
                 <div className="space-y-2">
-                  {REFLECTION_OPTIONS.map((option) => (
+                  {reflectionOptions.map((option) => (
                     <label key={option.id} className="flex items-center">
                       <input
                         type="checkbox"
@@ -194,7 +169,7 @@ export default function ReflectionModal({
               </div>
 
               {/* その他（自由記述） */}
-              {selectedOptions.includes("other") && (
+              {selectedOptions.includes(REFLECTION_OTHER_ID) && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t("reflection.otherLabel")}
@@ -216,7 +191,7 @@ export default function ReflectionModal({
                     type="button"
                     variant="outline"
                     className="w-full"
-                    disabled={isLoading}
+                    disabled={isLoading || !canSave}
                     onClick={handleAction}
                   >
                     {t("reflection.createMilestoneButton")}
@@ -229,7 +204,7 @@ export default function ReflectionModal({
                 <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
                   {t("reflection.skipButton")}
                 </Button>
-                <Button type="submit" loading={isLoading}>
+                <Button type="submit" loading={isLoading} disabled={!canSave}>
                   {t("reflection.saveButton")}
                 </Button>
               </div>

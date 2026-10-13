@@ -40,6 +40,9 @@ const TeamCompetitions = dynamic(() => import("@/components/team/TeamCompetition
 const TeamRankings = dynamic(() => import("@/components/team/rankings/TeamRankings"), {
   loading: TabLoadingSkeleton,
 });
+const TeamMemberGoals = dynamic(() => import("@/components/team/member-goals/TeamMemberGoals"), {
+  loading: TabLoadingSkeleton,
+});
 const TeamSettings = dynamic(() => import("@/components/team/TeamSettings"), {
   loading: TabLoadingSkeleton,
 });
@@ -238,6 +241,8 @@ export default function TeamAdminClient({
         return <TeamCompetitions teamId={teamId} isAdmin={true} />;
       case "rankings":
         return <TeamRankings teamId={teamId} />;
+      case "goals":
+        return <TeamMemberGoals teamId={teamId} />;
       case "attendance":
         return <AdminMonthlyAttendance teamId={teamId} />;
       case "bulk-register":

@@ -5,6 +5,10 @@ export const routing = defineRouting({
   defaultLocale: "ja",
   localePrefix: "always",
   localeDetection: false,
+  // next-intl v4 では localeDetection: false が locale cookie を止めなくなったため明示する。
+  // v3 は localeDetection と localeCookie の両方が有効なときだけ cookie を書いていたので、
+  // このアプリはこれまで一度も cookie を発行していない (locale は URL プレフィックスが唯一の情報源)
+  localeCookie: false,
 });
 
 export type Locale = (typeof routing.locales)[number];

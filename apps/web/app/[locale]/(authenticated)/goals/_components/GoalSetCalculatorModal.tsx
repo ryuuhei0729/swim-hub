@@ -44,9 +44,11 @@ export default function GoalSetCalculatorModal({
     return calculateAge(profile.birthday);
   }, [profile?.birthday]);
 
-  // 逆算結果を計算
+  // 逆算結果を計算。競技会情報 (対象大会の水路) が無い場合は計算できない
+  // (大会削除・チーム退会による competition null 化: U6)
   const calculatedTargetTime = useMemo(() => {
     if (!age) return null;
+    if (!goal.competition) return null;
 
     // 性別が未設定の場合は計算を中止
     if (profile?.gender === null || profile?.gender === undefined) {
@@ -86,7 +88,7 @@ export default function GoalSetCalculatorModal({
     return { value: result, warning: false };
   }, [
     goal.target_time,
-    goal.competition.pool_type,
+    goal.competition,
     age,
     profile?.gender,
     practicePoolType,
@@ -137,7 +139,11 @@ export default function GoalSetCalculatorModal({
                   <div className="flex justify-between">
                     <span className="text-gray-600">{t("goalSetCalculator.poolTypeLabel")}</span>
                     <span className="font-medium">
-                      {goal.competition.pool_type === 1 ? t("goalSetCalculator.poolTypeLongDisplay") : t("goalSetCalculator.poolTypeShortDisplay")}
+                      {goal.competition
+                        ? goal.competition.pool_type === 1
+                          ? t("goalSetCalculator.poolTypeLongDisplay")
+                          : t("goalSetCalculator.poolTypeShortDisplay")
+                        : t("list.competitionInfoUnavailable")}
                     </span>
                   </div>
                   {isProfileLoading ? (
@@ -187,7 +193,11 @@ export default function GoalSetCalculatorModal({
               </div>
 
               {/* 計算結果 */}
-              {calculatedTargetTime &&
+              {!goal.competition ? (
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                  <div className="text-sm text-red-700">{t("list.competitionInfoUnavailable")}</div>
+                </div>
+              ) : calculatedTargetTime &&
               age !== null &&
               (profile?.gender === 0 || profile?.gender === 1) ? (
                 <div

@@ -6,7 +6,8 @@
         "practices": "연습",
         "competitions": "대회",
         "teams": "팀",
-        "myPage": "마이페이지"
+        "myPage": "마이페이지",
+        "goals": "목표"
       },
       "titles": {
         "practiceDetail": "연습 기록 상세",
@@ -22,7 +23,8 @@
         "entryRegister": "엔트리 등록",
         "teamDetail": "팀 상세",
         "settings": "설정",
-        "bulkBestTime": "베스트 타임 일괄 입력"
+        "bulkBestTime": "베스트 타임 일괄 입력",
+        "goalDetail": "목표 상세"
       }
     }
   },
@@ -1473,11 +1475,13 @@
       "dashboard": "대시보드",
       "practice": "연습 기록",
       "competition": "대회 기록",
+      "goals": "목표 관리",
       "mypage": "마이페이지",
       "team": "팀",
       "dashboardDesc": "공지와 일정",
       "practiceDesc": "연습 내용과 타임 기록",
       "competitionDesc": "대회 결과와 타임 기록",
+      "goalsDesc": "목표 설정과 달성 현황",
       "mypageDesc": "프로필과 베스트 타임",
       "teamDesc": "팀 참여·관리",
       "teamAdmin": "팀 관리",
@@ -2128,7 +2132,7 @@
       "loadError": "목표 목록을 불러오지 못했습니다",
       "retry": "다시 불러오기",
       "empty": "목표가 없습니다",
-      "emptyDesc": "오른쪽 상단 버튼으로 새로 만들어 주세요",
+      "emptyDesc": "아래 버튼으로 새로 만들어 주세요",
       "achievedBadge": "달성!",
       "targetTimePrefix": "목표:",
       "deleteConfirm": "이 목표를 삭제하시겠습니까?",
@@ -2136,7 +2140,9 @@
       "edit": "편집",
       "delete": "삭제",
       "competitionFallback": "대회",
-      "styleFallback": "종목"
+      "styleFallback": "종목",
+      "competitionInfoUnavailable": "대회 정보 없음",
+      "editUnavailableReason": "대회 정보가 없어 수정할 수 없습니다"
     },
     "detail": {
       "loadError": "목표 상세 정보를 불러오지 못했습니다",
@@ -2154,8 +2160,6 @@
       "submitButton": "만들기",
       "cancelButton": "취소",
       "closeAriaLabel": "닫기",
-      "bestTimeNotFound": "이 종목의 베스트 기록을 찾을 수 없습니다",
-      "bestTimeFetchFailed": "베스트 기록을 불러오지 못했습니다",
       "targetTimeInvalid": "목표 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
       "startTimeInvalid": "시작 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
       "competitionRequired": "대회를 선택해 주세요",
@@ -2166,8 +2170,6 @@
       "submitButton": "업데이트",
       "cancelButton": "취소",
       "closeAriaLabel": "닫기",
-      "bestTimeNotFound": "이 종목의 베스트 기록을 찾을 수 없습니다",
-      "bestTimeFetchFailed": "베스트 기록을 불러오지 못했습니다",
       "updateFailed": "목표 업데이트에 실패했습니다",
       "validation": {
         "targetTimeInvalid": "목표 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
@@ -2201,7 +2203,8 @@
       "updateFailed": "목표 업데이트에 실패했습니다",
       "undecided": "미정",
       "competitionFallback": "대회",
-      "styleFallback": "종목"
+      "styleFallback": "종목",
+      "goToGoalsLink": "목표 관리 보기"
     },
     "milestone": {
       "empty": "마일스톤이 없습니다",
@@ -2286,7 +2289,8 @@
       "deadlineLabel": "기한:",
       "otherPrefix": "기타: {note}",
       "saveFailed": "회고 메모 저장에 실패했습니다",
-      "actionFailed": "처리에 실패했습니다"
+      "actionFailed": "처리에 실패했습니다",
+      "goToGoalsLink": "목표 관리 보기"
     },
     "form": {
       "competitionLabel": "대회",
@@ -2303,7 +2307,9 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "초기 기록 (선택)",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "베스트 기록에서 가져오기"
+      "personalCompetitionGroup": "개인",
+      "teamCompetitionGroupFallback": "팀 대회",
+      "competitionDatePast": "새 대회 날짜는 오늘 이후로 선택해 주세요"
     },
     "milestoneForm": {
       "templateLabel": "템플릿 (선택)",
@@ -2339,7 +2345,8 @@
       "averageTimeLabel": "평균 목표 기록",
       "circleMinLabel": "서클 (분)",
       "circleSecLabel": "서클 (초)",
-      "averageTimeRequired": "평균 목표 기록을 입력해 주세요"
+      "averageTimeRequired": "평균 목표 기록을 입력해 주세요",
+      "paramsInvalid": "입력하지 않았거나 0인 항목이 있습니다. 1 이상의 값을 입력해 주세요"
     },
     "deadlineInput": {
       "defaultLabel": "기한일 (선택)",
@@ -2360,6 +2367,48 @@
       "timeTrialDesc": "연습, 대회에서의 기록 측정을 자동으로 관측",
       "goalSet": "골 세트",
       "goalSetDesc": "50m×6개×3세트 (100m 목표 기록에서 역산)"
+    },
+    "milestoneSummary": {
+      "time": "{distance}m × 1개: {time}",
+      "repsTime": "{distance}m × {reps}개 @{time} 평균",
+      "set": "{distance}m × {reps}개 × {sets}세트 (@{circle} 서클) 완주"
+    },
+    "mobile": {
+      "notFound": "목표를 찾을 수 없습니다",
+      "milestoneNotFound": "마일스톤을 찾을 수 없습니다",
+      "noSelectableCompetitions": "선택할 수 있는 대회가 없습니다. 새 대회를 만들어 주세요"
+    }
+  },
+  "teamMemberGoals": {
+    "title": "멤버 목표",
+    "memberLabel": "멤버",
+    "memberPlaceholder": "멤버 선택",
+    "memberSelectTitle": "멤버 선택",
+    "selectMemberHint": "멤버를 선택하면 해당 멤버의 목표가 표시됩니다",
+    "noSelectableMembers": "선택할 수 있는 멤버가 없습니다",
+    "empty": "목표가 없습니다",
+    "emptyDesc": "이 멤버는 아직 목표를 설정하지 않았습니다",
+    "loadError": "목표를 불러오지 못했습니다",
+    "retry": "다시 시도",
+    "snapshotNote": "멤버가 앱에서 마지막으로 업데이트한 시점의 상태입니다",
+    "progressUnavailable": "대회 정보가 없어 달성률을 계산할 수 없습니다",
+    "section": {
+      "upcoming": "예정된 대회",
+      "past": "지난 대회",
+      "noCompetition": "대회 정보 없음"
+    },
+    "status": {
+      "goal": {
+        "active": "진행 중",
+        "achieved": "달성",
+        "cancelled": "취소"
+      },
+      "milestone": {
+        "not_started": "시작 전",
+        "in_progress": "진행 중",
+        "achieved": "달성",
+        "expired": "기한 만료"
+      }
     }
   },
   "teams": {
@@ -2396,6 +2445,7 @@
       "tabPractices": "연습",
       "tabCompetitions": "대회",
       "tabRankings": "랭킹",
+      "tabGoals": "목표",
       "tabAttendance": "출결",
       "memberLoading": "멤버를 불러오는 중...",
       "memberFetchFailed": "멤버 목록을 불러오지 못했습니다",
@@ -3559,6 +3609,7 @@
       "practices": "연습",
       "competitions": "대회",
       "rankings": "랭킹",
+      "goals": "목표",
       "bulkRegister": "일괄 등록",
       "settings": "설정"
     },
@@ -4306,6 +4357,7 @@
       "eventHeader": "종목 {n}",
       "entryTimeLabel": "엔트리 기록:",
       "bestTimeLabel": "베스트 기록",
+      "goalTargetLabel": "목표",
       "bestTimeRelay": "베스트 기록 (인계)",
       "bestTimeLong": "베스트 기록 (장수로)",
       "bestTimeLongRelay": "베스트 기록 (장수로 인계)",

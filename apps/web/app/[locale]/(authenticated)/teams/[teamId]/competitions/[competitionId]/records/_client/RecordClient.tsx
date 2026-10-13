@@ -54,6 +54,9 @@ import {
   buildEntryTimeReferenceLookup,
   type EntryRowForRecordMerge,
 } from "@swim-hub/shared/utils/entryRecordMerge";
+import type { TeamGoalTarget } from "@apps/shared/types/goalTargets";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
+import GoalTargetBadge from "@/components/forms/GoalTargetBadge";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
 import type { BestTime } from "@apps/shared/types/ui";
 import MemberSelectModal, {
@@ -158,7 +161,11 @@ interface RecordClientProps {
    *  ベストタイムが初期値として入ると実測値と区別できなくなる)。
    */
   bestTimesByUser: Record<string, BestTime[]>;
+  /** 大会内メンバーの目標 (status 未絞り)。省略・空なら目標バッジを出さない */
+  goalTargets?: TeamGoalTarget[];
 }
+
+const EMPTY_GOAL_TARGETS: TeamGoalTarget[] = [];
 
 export default function RecordClient({
   teamId,
@@ -170,6 +177,7 @@ export default function RecordClient({
   styles,
   entries,
   bestTimesByUser,
+  goalTargets = EMPTY_GOAL_TARGETS,
 }: RecordClientProps) {
   const router = useRouter();
   const t = useTranslations("teams");
@@ -358,6 +366,24 @@ export default function RecordClient({
     return result
       ? { time: result.time, label: tRecordLog(result.labelKey) }
       : null;
+  };
+
+  /**
+   * 「目標: xx.xx」バッジ用。表示対象 status・引き継ぎありの除外は findGoalTargetTime が決める
+   * (ここで legIndex 等を見て再実装しない。isRelaying は行の計算済みの値をそのまま渡す)。
+   */
+  const goalTargetTimeFor = (
+    memberUserId: string,
+    styleId: number | "" | undefined,
+    isRelaying: boolean,
+  ): number | null => {
+    if (!memberUserId || styleId === "" || styleId === undefined) return null;
+    return findGoalTargetTime(goalTargets, {
+      userId: memberUserId,
+      competitionId,
+      styleId,
+      isRelaying,
+    });
   };
 
   /** リレーのレグラベルを relayEventId から導出する。復元経路では state の relayLegLabel が undefined のため */
@@ -2134,6 +2160,22 @@ export default function RecordClient({
                               </p>
                             );
                           })()}
+                          {(() => {
+                            const goalTime = goalTargetTimeFor(
+                              mr.memberUserId,
+                              mr.relayLegStyleId,
+                              mr.isRelaying,
+                            );
+                            if (goalTime === null) return null;
+                            return (
+                              <div>
+                                <GoalTargetBadge
+                                  time={goalTime}
+                                  data-testid={`relay-leg-goal-target-badge-${mrIndex}`}
+                                />
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}
@@ -2371,14 +2413,31 @@ export default function RecordClient({
                             entry.styleId,
                             mr.isRelaying,
                           );
-                          if (!best) return null;
+                          const goalTime = goalTargetTimeFor(
+                            mr.memberUserId,
+                            entry.styleId,
+                            mr.isRelaying,
+                          );
+                          if (!best && goalTime === null) return null;
+                          // ベストの真下に同じ右端で目標を置く。ベストが無いときは目標がその位置に来る
                           return (
-                            <span
-                              data-testid={`record-best-time-badge-${mr.memberUserId}`}
-                              className="text-xs text-green-800 bg-green-100 px-3 py-1 rounded-full inline-flex items-center"
-                            >
-                              {best.label}: {formatTimeBest(best.time)}
-                            </span>
+                            <div className="flex flex-col items-end gap-1">
+                              {best && (
+                                <span
+                                  data-testid={`record-best-time-badge-${mr.memberUserId}`}
+                                  className="text-xs text-green-800 bg-green-100 px-3 py-1 rounded-full inline-flex items-center"
+                                >
+                                  {best.label}: {formatTimeBest(best.time)}
+                                </span>
+                              )}
+                              {goalTime !== null && (
+                                <GoalTargetBadge
+                                  variant="chip"
+                                  time={goalTime}
+                                  data-testid={`record-goal-target-badge-${mr.memberUserId}`}
+                                />
+                              )}
+                            </div>
                           );
                         })()}
                       </div>

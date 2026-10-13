@@ -6,7 +6,8 @@
         "practices": "训练",
         "competitions": "比赛",
         "teams": "团队",
-        "myPage": "我的"
+        "myPage": "我的",
+        "goals": "目标"
       },
       "titles": {
         "practiceDetail": "训练记录详情",
@@ -22,7 +23,8 @@
         "entryRegister": "报名登记",
         "teamDetail": "团队详情",
         "settings": "设置",
-        "bulkBestTime": "批量录入最好成绩"
+        "bulkBestTime": "批量录入最好成绩",
+        "goalDetail": "目标详情"
       }
     }
   },
@@ -1473,11 +1475,13 @@
       "dashboard": "仪表盘",
       "practice": "训练历史",
       "competition": "比赛历史",
+      "goals": "目标管理",
       "mypage": "我的页面",
       "team": "团队",
       "dashboardDesc": "通知与日程",
       "practiceDesc": "训练内容与成绩记录",
       "competitionDesc": "比赛结果与成绩记录",
+      "goalsDesc": "目标设定与达成情况",
       "mypageDesc": "个人资料与最佳成绩",
       "teamDesc": "加入与管理团队",
       "teamAdmin": "团队管理",
@@ -2128,7 +2132,7 @@
       "loadError": "加载目标列表失败",
       "retry": "重新加载",
       "empty": "暂无目标",
-      "emptyDesc": "请使用右上角的按钮新建",
+      "emptyDesc": "请使用下方的按钮新建",
       "achievedBadge": "已达成！",
       "targetTimePrefix": "目标：",
       "deleteConfirm": "确定要删除该目标吗？",
@@ -2136,7 +2140,9 @@
       "edit": "编辑",
       "delete": "删除",
       "competitionFallback": "比赛",
-      "styleFallback": "项目"
+      "styleFallback": "项目",
+      "competitionInfoUnavailable": "无大会信息",
+      "editUnavailableReason": "因缺少大会信息，无法编辑"
     },
     "detail": {
       "loadError": "加载目标详情失败",
@@ -2154,8 +2160,6 @@
       "submitButton": "创建",
       "cancelButton": "取消",
       "closeAriaLabel": "关闭",
-      "bestTimeNotFound": "未找到该项目的最佳成绩",
-      "bestTimeFetchFailed": "获取最佳成绩失败",
       "targetTimeInvalid": "请正确输入目标成绩（大于0秒且在60分钟以内）",
       "startTimeInvalid": "请正确输入初始成绩（大于0秒且在60分钟以内）",
       "competitionRequired": "请选择比赛",
@@ -2166,8 +2170,6 @@
       "submitButton": "更新",
       "cancelButton": "取消",
       "closeAriaLabel": "关闭",
-      "bestTimeNotFound": "未找到该项目的最佳成绩",
-      "bestTimeFetchFailed": "获取最佳成绩失败",
       "updateFailed": "更新目标失败",
       "validation": {
         "targetTimeInvalid": "请正确输入目标成绩（大于0秒且在60分钟以内）",
@@ -2201,7 +2203,8 @@
       "updateFailed": "更新目标失败",
       "undecided": "待定",
       "competitionFallback": "比赛",
-      "styleFallback": "项目"
+      "styleFallback": "项目",
+      "goToGoalsLink": "查看目标管理"
     },
     "milestone": {
       "empty": "暂无里程碑",
@@ -2286,7 +2289,8 @@
       "deadlineLabel": "截止日期：",
       "otherPrefix": "其他：{note}",
       "saveFailed": "保存复盘笔记失败",
-      "actionFailed": "处理失败"
+      "actionFailed": "处理失败",
+      "goToGoalsLink": "查看目标管理"
     },
     "form": {
       "competitionLabel": "比赛",
@@ -2303,7 +2307,9 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "初始成绩（可选）",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "从最佳成绩获取"
+      "personalCompetitionGroup": "个人",
+      "teamCompetitionGroupFallback": "团队比赛",
+      "competitionDatePast": "新建比赛的日期请选择今天或之后"
     },
     "milestoneForm": {
       "templateLabel": "模板（可选）",
@@ -2339,7 +2345,8 @@
       "averageTimeLabel": "平均目标成绩",
       "circleMinLabel": "循环(分)",
       "circleSecLabel": "循环(秒)",
-      "averageTimeRequired": "请输入平均目标成绩"
+      "averageTimeRequired": "请输入平均目标成绩",
+      "paramsInvalid": "有未填写或为0的项目，请输入1以上的值"
     },
     "deadlineInput": {
       "defaultLabel": "截止日期（可选）",
@@ -2360,6 +2367,48 @@
       "timeTrialDesc": "自动观测训练、比赛中的计时成绩",
       "goalSet": "目标组",
       "goalSetDesc": "50m×6组×3轮（由100m目标成绩反推）"
+    },
+    "milestoneSummary": {
+      "time": "{distance}m × 1组：{time}",
+      "repsTime": "{distance}m × {reps}组 @{time} 平均",
+      "set": "{distance}m × {reps}组 × {sets}轮（@{circle}循环）完成"
+    },
+    "mobile": {
+      "notFound": "未找到该目标",
+      "milestoneNotFound": "未找到该里程碑",
+      "noSelectableCompetitions": "没有可选择的比赛，请新建比赛"
+    }
+  },
+  "teamMemberGoals": {
+    "title": "成员目标",
+    "memberLabel": "成员",
+    "memberPlaceholder": "选择成员",
+    "memberSelectTitle": "选择成员",
+    "selectMemberHint": "选择成员后将显示该成员的目标",
+    "noSelectableMembers": "没有可选择的成员",
+    "empty": "暂无目标",
+    "emptyDesc": "该成员尚未设定目标",
+    "loadError": "目标加载失败",
+    "retry": "重试",
+    "snapshotNote": "显示的是成员最后一次在应用中更新时的状态",
+    "progressUnavailable": "缺少比赛信息，无法计算达成率",
+    "section": {
+      "upcoming": "即将进行的比赛",
+      "past": "过去的比赛",
+      "noCompetition": "无比赛信息"
+    },
+    "status": {
+      "goal": {
+        "active": "进行中",
+        "achieved": "已达成",
+        "cancelled": "已取消"
+      },
+      "milestone": {
+        "not_started": "未开始",
+        "in_progress": "进行中",
+        "achieved": "已达成",
+        "expired": "已过期"
+      }
     }
   },
   "teams": {
@@ -2396,6 +2445,7 @@
       "tabPractices": "训练",
       "tabCompetitions": "比赛",
       "tabRankings": "排行榜",
+      "tabGoals": "目标",
       "tabAttendance": "出勤",
       "memberLoading": "正在加载成员...",
       "memberFetchFailed": "获取成员列表失败",
@@ -3559,6 +3609,7 @@
       "practices": "训练",
       "competitions": "比赛",
       "rankings": "排行榜",
+      "goals": "目标",
       "bulkRegister": "批量登记",
       "settings": "设置"
     },
@@ -4306,6 +4357,7 @@
       "eventHeader": "项目 {n}",
       "entryTimeLabel": "报名成绩：",
       "bestTimeLabel": "最佳成绩",
+      "goalTargetLabel": "目标",
       "bestTimeRelay": "最佳成绩(接力)",
       "bestTimeLong": "最佳成绩(长池)",
       "bestTimeLongRelay": "最佳成绩(长池接力)",

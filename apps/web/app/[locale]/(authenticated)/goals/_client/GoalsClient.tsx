@@ -33,7 +33,11 @@ export default function GoalsClient({
   );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<GoalWithMilestones | null>(null);
+  // 大会情報が無い目標 (goal.competition === null) は編集不可のため、
+  // GoalEditModal には competition が必ず存在するもののみを渡す
+  const [editingGoal, setEditingGoal] = useState<
+    (GoalWithMilestones & { competition: Competition }) | null
+  >(null);
 
   // React Query: 目標一覧
   const {
@@ -81,11 +85,19 @@ export default function GoalsClient({
   };
 
   // 目標編集ボタンが押されたときのハンドラー
+  // 大会情報が無い目標 (goal.competition === null) は GoalList 側で
+  // 編集導線自体を出していないため通常は起こらないが、一覧取得後に大会削除・
+  // チーム退会が発生する競合を考慮し、フェッチ結果側でも保険的に確認する
   const handleEditGoal = async (goalId: string) => {
     try {
       const goalAPI = new GoalAPI(supabase);
       const goal = await goalAPI.getGoalWithMilestones(goalId);
-      setEditingGoal(goal);
+      if (!goal || !goal.competition) {
+        alert(t("client.fetchFailed"));
+        return;
+      }
+      const competition = goal.competition;
+      setEditingGoal({ ...goal, competition });
       setIsEditModalOpen(true);
     } catch (error) {
       console.error("目標詳細取得エラー:", error);
@@ -106,48 +118,30 @@ export default function GoalsClient({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* ヘッダー */}
-        <div className="hidden lg:flex mb-6 items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{t("page.title")}</h1>
-            <p className="text-gray-600 mt-1">{t("page.description")}</p>
-          </div>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <PlusIcon className="w-5 h-5" />
-            {t("page.createButton")}
-          </button>
-        </div>
-        {/* モバイル用: 新規目標作成ボタンのみ */}
-        <div className="flex lg:hidden mb-4 justify-end">
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-          >
-            <PlusIcon className="w-4 h-4" />
-            {t("page.createButton")}
-          </button>
-        </div>
+    <div className="space-y-3 sm:space-y-6">
+      {/* ヘッダー（デスクトップのみ）。「新規目標作成」ボタンは一覧の下に移したため、
+          practice/競技会履歴/マイページと同じ見出し+説明文のみの title card に戻す */}
+      <div className="hidden lg:block bg-white rounded-lg shadow p-4 sm:p-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{t("page.title")}</h1>
+        <p className="text-sm sm:text-base text-gray-600">{t("page.description")}</p>
+      </div>
 
-        {/* メインコンテンツ: リスト+詳細レイアウト */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
-          {/* 左側: 大会目標リスト */}
-          <div className="lg:col-span-1">
-            {goalsError ? (
-              <div className="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
-                <p className="text-red-600 mb-3 text-sm sm:text-base">{t("list.loadError")}</p>
-                <button
-                  onClick={() => invalidateGoals()}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  {t("list.retry")}
-                </button>
-              </div>
-            ) : (
+      {/* メインコンテンツ: リスト+詳細レイアウト */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
+        {/* 左側: 大会目標リスト */}
+        <div className="lg:col-span-1 space-y-3">
+          {goalsError ? (
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
+              <p className="text-red-600 mb-3 text-sm sm:text-base">{t("list.loadError")}</p>
+              <button
+                onClick={() => invalidateGoals()}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {t("list.retry")}
+              </button>
+            </div>
+          ) : (
+            <>
               <GoalList
                 goals={goals}
                 selectedGoalId={selectedGoalId}
@@ -155,66 +149,78 @@ export default function GoalsClient({
                 onDeleteGoal={handleGoalDeleted}
                 onEditGoal={handleEditGoal}
               />
-            )}
-          </div>
-
-          {/* 右側: 目標詳細 */}
-          <div className="lg:col-span-2">
-            {goalError ? (
-              <div className="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
-                <p className="text-red-600 mb-3 text-sm sm:text-base">{t("detail.loadError")}</p>
-                <button
-                  onClick={() => invalidateGoalDetail()}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  {t("detail.retry")}
-                </button>
-              </div>
-            ) : isLoading ? (
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="animate-pulse">
-                  <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              </div>
-            ) : selectedGoal ? (
-              <GoalDetail
-                goal={selectedGoal}
-                styles={styles}
-                onUpdate={handleGoalUpdated}
-                onDelete={handleGoalDeleted}
-              />
-            ) : (
-              <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
-                <p className="text-gray-500 text-xs sm:text-lg">{t("page.selectHint")}</p>
-              </div>
-            )}
-          </div>
+              {/* 新規目標作成ボタン: 一覧 (0件時は空の案内カード) の下に置く。
+                  一覧とボタンの間隔は lg:col-span-1 の space-y-3 により一覧内の
+                  カード間隔と揃う。見た目は settings/practice-log-templates の
+                  一覧下ボタン (PracticeLogTemplateList.tsx) と同じ様式 */}
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="w-full py-3 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors border-gray-300 text-gray-600 hover:border-blue-500 hover:text-blue-600"
+              >
+                <PlusIcon className="h-5 w-5" />
+                {t("page.createButton")}
+              </button>
+            </>
+          )}
         </div>
 
-        {/* 目標作成モーダル */}
-        <GoalCreateModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={handleGoalCreated}
+        {/* 右側: 目標詳細 */}
+        <div className="lg:col-span-2">
+          {goalError ? (
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
+              <p className="text-red-600 mb-3 text-sm sm:text-base">{t("detail.loadError")}</p>
+              <button
+                onClick={() => invalidateGoalDetail()}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {t("detail.retry")}
+              </button>
+            </div>
+          ) : isLoading ? (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="animate-pulse">
+                <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              </div>
+            </div>
+          ) : selectedGoal ? (
+            <GoalDetail
+              goal={selectedGoal}
+              styles={styles}
+              onUpdate={handleGoalUpdated}
+              onDelete={handleGoalDeleted}
+            />
+          ) : (
+            <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
+              <p className="text-gray-500 text-xs sm:text-lg">{t("page.selectHint")}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 目標作成モーダル */}
+      <GoalCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleGoalCreated}
+        styles={styles}
+      />
+
+      {/* 目標編集モーダル */}
+      {editingGoal && (
+        <GoalEditModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingGoal(null);
+          }}
+          onSuccess={handleGoalEdited}
+          goal={editingGoal}
           styles={styles}
         />
-
-        {/* 目標編集モーダル */}
-        {editingGoal && (
-          <GoalEditModal
-            isOpen={isEditModalOpen}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              setEditingGoal(null);
-            }}
-            onSuccess={handleGoalEdited}
-            goal={editingGoal}
-            styles={styles}
-          />
-        )}
-      </div>
+      )}
     </div>
   );
 }

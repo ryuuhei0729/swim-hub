@@ -46,6 +46,10 @@ import { formatTimeBest } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
 import { getBestTimeForEntry } from "@/components/records/bestTimeForEntry";
+import { GoalTargetBadge } from "@/components/records/GoalTargetBadge";
+import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
+import type { TeamGoalTarget } from "@apps/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -55,6 +59,8 @@ import { MemberSelectModal } from "@/components/teams/MemberSelectModal";
 import { SlideUpModal } from "@/components/ui/SlideUpModal";
 import { ItemTabs } from "@/components/forms/ItemTabs";
 import { useQuickTimeInput } from "@/hooks/useQuickTimeInput";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import type { MainStackParamList } from "@/navigation/types";
 import type { BestTime } from "@apps/shared/types/ui";
 import {
@@ -173,6 +179,10 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
   const queryClient = useQueryClient();
   const isPremium = checkIsPremium(subscription);
   const { parseInput } = useQuickTimeInput();
+  // フッターは SafeAreaView edges={["bottom"]} が消費するが、RN Modal は
+  // Android edge-to-edge 下でも自動回避しないため、泳者選択シートは
+  // シート自身の paddingBottom で bottom inset を消費する必要がある。
+  const insets = useSafeInsets();
 
   const parseTimeToSeconds = (value: string): number => {
     if (!value || value.trim() === "") return 0;
@@ -255,6 +265,8 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
   const [bestTimesByUserId, setBestTimesByUserId] = useState<
     Map<string, BestTime[]>
   >(new Map());
+  // 大会内の全メンバーの目標 (RPC 1 回)。失敗時は空配列 = 目標を出さないだけ
+  const [goalTargets, setGoalTargets] = useState<TeamGoalTarget[]>([]);
 
   // この種目の全「組」に属する既存 records.id 集合 (画面オープン時点のスナップショット)。
   // 保存時の diff (computeRecordSaveDiff) の削除スコープに使う。
@@ -389,6 +401,27 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
     };
   }, [supabase, members]);
 
+  // 目標の参照バッジ用 (RPC 1 回)。ベスト取得とは独立に取る。失敗時は目標を出さないだけ
+  useEffect(() => {
+    let cancelled = false;
+    const loadGoalTargets = async () => {
+      try {
+        const targets = await new TeamGoalTargetsAPI(supabase).listForCompetition(
+          teamId,
+          competitionId,
+        );
+        if (!cancelled) setGoalTargets(targets);
+      } catch (err) {
+        console.error("目標タイム参照の取得に失敗しました:", err);
+        if (!cancelled) setGoalTargets([]);
+      }
+    };
+    loadGoalTargets();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, teamId, competitionId]);
+
   const changedFromSnapshot = useMemo(() => {
     if (entries.length === 0 || snapshotRef.current === null) return false;
     return hasUnsavedChanges(
@@ -431,6 +464,20 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
       bestTimesByUserId.get(memberUserId) ?? [],
     );
     return result ? { time: result.time, label: t(result.labelKey) } : null;
+  };
+
+  const goalTargetFor = (
+    memberUserId: string,
+    forStyleId: number | "" | undefined,
+    isRelaying: boolean,
+  ): number | null => {
+    if (!memberUserId || forStyleId === "" || forStyleId === undefined) return null;
+    return findGoalTargetTime(goalTargets, {
+      userId: memberUserId,
+      competitionId,
+      styleId: forStyleId,
+      isRelaying,
+    });
   };
 
   // ---- モーダル state ----
@@ -1413,6 +1460,18 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                       </View>
                     );
                   })()}
+                  {(() => {
+                    const goal = goalTargetFor(
+                      mr.memberUserId,
+                      mr.relayLegStyleId,
+                      mr.isRelaying,
+                    );
+                    return goal != null ? (
+                      <View style={styles.goalBadgeRow}>
+                        <GoalTargetBadge time={goal} />
+                      </View>
+                    ) : null;
+                  })()}
                   <View style={styles.rtField}>
                     <Text style={styles.smallLabel}>
                       {t("recordMobile.form.reactionTimeLabel")}
@@ -1622,6 +1681,18 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                         </Text>
                       </View>
                     );
+                  })()}
+                  {(() => {
+                    const goal = goalTargetFor(
+                      mr.memberUserId,
+                      entry.styleId,
+                      mr.isRelaying,
+                    );
+                    return goal != null ? (
+                      <View style={styles.goalBadgeRow}>
+                        <GoalTargetBadge time={goal} />
+                      </View>
+                    ) : null;
                   })()}
 
                   {/* タイム / リアクション / リレー (参照元 CompetitionTabFormScreen.tsx の
@@ -1896,7 +1967,10 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
         backdropAccessibilityLabel={t("common.close")}
         onClose={() => setLegPicker(null)}
         overlayColor="rgba(0,0,0,0.4)"
-        sheetStyle={styles.pickerSheet}
+        sheetStyle={[
+          styles.pickerSheet,
+          { paddingBottom: getSafeFooterPadding(16, insets.bottom) },
+        ]}
       >
         <View style={styles.pickerSheetHeader}>
           <Text style={styles.pickerSheetTitle}>
@@ -2072,6 +2146,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   entryTimeBadgeText: { fontSize: 12, color: "#1D4ED8" },
+  // 目標バッジはベストバッジの直下の独立した行。bestTimeBadge と同じ下余白
+  goalBadgeRow: { alignItems: "flex-start", marginBottom: 10 },
   bestTimeBadge: {
     backgroundColor: "#DCFCE7",
     borderRadius: 9999,
@@ -2185,12 +2261,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   permissionButtonText: { fontSize: 14, fontWeight: "600", color: "#FFFFFF" },
+  // paddingBottom はここに置かない。Android edge-to-edge の bottom inset を
+  // 取り込む必要があるため、呼び出し側で getSafeFooterPadding(16, insets.bottom)
+  // を sheetStyle 配列に重ねて指定している (基準値 16 の定義元はそちら)。
   pickerSheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: "70%",
-    paddingBottom: 16,
   },
   pickerSheetHeader: {
     flexDirection: "row",

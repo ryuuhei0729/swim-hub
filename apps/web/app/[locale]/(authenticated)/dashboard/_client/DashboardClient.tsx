@@ -8,6 +8,7 @@ import TeamAnnouncementsSection from "../_components/TeamAnnouncementsSection";
 import ReflectionModal from "@/app/[locale]/(authenticated)/goals/_components/ReflectionModal";
 import GoalReflectionModal from "@/app/[locale]/(authenticated)/goals/_components/GoalReflectionModal";
 import { GoalAPI } from "@apps/shared/api/goals";
+import { runMilestoneJudgment } from "@/utils/milestoneJudgment";
 import type { Milestone, GoalWithMilestones } from "@apps/shared/types";
 import {
   useCreatePracticeMutation,
@@ -131,10 +132,17 @@ export default function DashboardClient({
   useEffect(() => {
     if (!user || hasCheckedExpiredRef.current) return;
     hasCheckedExpiredRef.current = true;
+    const userId = user.id;
 
     const checkExpired = async () => {
       try {
         const goalAPI = new GoalAPI(supabase);
+
+        // 代理入力 (チーム管理者による練習・大会記録の代理保存) は保存時点では
+        // 判定しない (遅延評価)。本人がこの画面を開いたこのセッションで判定を
+        // 1回走らせてから期限切れをチェックすることで、代理保存分も反映され、
+        // 既に達成済みのマイルストーンに「未達成」の振り返りが出ないようにする。
+        await runMilestoneJudgment(goalAPI, userId);
 
         // まず期限切れ目標をチェック（優先）
         const expiredGoals = await goalAPI.getExpiredGoals();
@@ -190,16 +198,22 @@ export default function DashboardClient({
   ) => {
     return await updatePracticeMutation.mutateAsync({ id, updates });
   };
+  // createPracticeLog/updatePracticeLog は handlePracticeLogSubmit (簡易フォーム) と
+  // usePracticeTabSave (タブモーダル一括保存) の両方から使われる。どちらも
+  // skipMilestoneUpdate を呼び出し元から渡せる必要があるため、
+  // 実装を1つに揃え、ForTabSave という別名では複製しない。
   const createPracticeLog = async (
     log: Parameters<typeof createPracticeLogMutation.mutateAsync>[0],
+    skipMilestoneUpdate?: boolean,
   ) => {
-    return await createPracticeLogMutation.mutateAsync(log);
+    return await createPracticeLogMutation.mutateAsync({ ...log, skipMilestoneUpdate });
   };
   const updatePracticeLog = async (
     id: string,
     updates: Parameters<typeof updatePracticeLogMutation.mutateAsync>[0]["updates"],
+    skipMilestoneUpdate?: boolean,
   ) => {
-    return await updatePracticeLogMutation.mutateAsync({ id, updates });
+    return await updatePracticeLogMutation.mutateAsync({ id, updates, skipMilestoneUpdate });
   };
   const createPracticeTime = async (
     time: Parameters<typeof createPracticeTimeMutation.mutateAsync>[0],
@@ -209,6 +223,10 @@ export default function DashboardClient({
   const deletePracticeTime = async (id: string) => {
     return await deletePracticeTimeMutation.mutateAsync(id);
   };
+  // タブモーダル一括保存 (usePracticeTabSave) 専用ラッパー。createPracticeLog/updatePracticeLog と
+  // 実体は同じだが、useDashboardHandlers 側の props 名を分けて意図を明示する。
+  const createPracticeLogForTabSave = createPracticeLog;
+  const updatePracticeLogForTabSave = updatePracticeLog;
   const deletePractice = async (id: string) => {
     return await deletePracticeMutation.mutateAsync(id);
   };
@@ -278,6 +296,8 @@ export default function DashboardClient({
     deletePracticeLog,
     createPracticeTime,
     deletePracticeTime,
+    createPracticeLogForTabSave,
+    updatePracticeLogForTabSave,
     deletePractice,
     createRecord,
     updateRecord,

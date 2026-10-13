@@ -1,25 +1,28 @@
-Dieses Update bringt Team-Ranglisten, WA-Punkte zum Vergleich über Disziplinen hinweg und viele weitere Verbesserungen.
+Dieses Update bringt die Tabs „Ranglisten“ und „Einstellungen“ für Teams und erleichtert die stellvertretende Eingabe von Ergebnissen deutlich.
 
 NEU
-- Tab „Ranglisten“ für Teams: nach Disziplin, Strecke, Bahnlänge, Geschlecht und Saison filtern und die Platzierungen im Team sowie Staffel-Ranglisten einsehen
-- „Als Punkte anzeigen“ in der Bestzeiten-Tabelle: Ergebnisse über Disziplinen und Strecken hinweg mit WA-Punkten (offizielle Punkte von World Aquatics) vergleichen. Im Tab „Mitglieder“ lässt sich das ganze Team auf einen Blick vergleichen
-- Kalenderfarben für Training und Wettkämpfe auf dem Dashboard in den Einstellungen anpassen, auch getrennt pro Team
-- Trainingsprotokolle als Bildkarte teilen, genau wie Wettkampfergebnisse
-- Team-Admins können Wettkampfmeldungen stellvertretend für Mitglieder gesammelt eingeben
-- Anwesenheit: auf anstehende Termine direkt antworten und sehen, wie alle Mitglieder geantwortet haben
-- Die Wettkampfhistorie zeigt Meldungen ohne Ergebnis; die Mitgliedertabelle kann Staffel-Wechselzeiten einblenden
+- Tab „Ranglisten“ für Teams: nach Disziplin, Strecke, Bahnlänge, Geschlecht und Zeitraum filtern und die Platzierungen im Team sowie Staffel-Ranglisten einsehen. „Nach WA-Punkten vergleichen“ befindet sich jetzt ebenfalls hier
+- Tab „Einstellungen“ für Teams: Teaminfos, Einladungscode und die Kalenderfarbe des Teams an einem Ort ansehen und ändern
+- Team-Admins können Mitglieder als „Nicht-Schwimmer“ markieren. Sie werden in der Bestzeitenliste eingeklappt und bei Wettkampfmeldungen und Trainingsergebnissen nicht mehr zur Auswahl angeboten, erscheinen aber weiterhin in der Anwesenheit
+- Schaltfläche „Bestzeit übernehmen“ bei der Wettkampfmeldung; auf den Bildschirmen zur stellvertretenden Eingabe werden die Bestzeiten der Mitglieder angezeigt
+- Schaltfläche „Sammelregistrierung“ in den Wettkampf- und Trainingslisten des Teams für Admins
 
 VERBESSERT
-- Neu gestaltete Trainings- und Wettkampflisten mit Sortieren und Filtern im unteren Bereich sowie einer Karte pro Trainingsprotokoll
-- Zum Aktualisieren auf den Hauptbildschirmen nach unten ziehen
-- Meldungen schließen automatisch, sobald der Wettkampftag vorbei ist
-- Beim Löschen eines Wettkampfs wird die Anzahl der verknüpften Ergebnisse angezeigt und diese werden mitgelöscht
+- Neu gestaltete stellvertretende Ergebniseingabe: Disziplin wählen und Ergebnisse in einem eigenen Tab pro Schwimmer eingeben, inklusive weiterer Läufe pro Schwimmer
+- Die Mitgliederauswahl nutzt jetzt Chips, mit Überschriften nach Geschlecht und Gruppe sowie „Alle auswählen“
+- Die stellvertretende Eingabe von Trainingsprotokollen nutzt denselben Bildschirm wie die eigenen Trainingsprotokolle
+- Ergebnisse und Meldungen aus dem Teams-Tab nutzen dieselben Bildschirme wie das Dashboard; gemeldete Disziplinen werden automatisch in die Ergebniseingabe übernommen
+- Die Wettkampfergebnisse des Teams zeigen jede Staffel als Gruppe von vier Schwimmern
+- Wer nur einem Team angehört, gelangt über den Teams-Tab direkt zum Team; der Teamname steht in der Kopfzeile
+- Beim Tippen auf eine Kalenderkarte wird nur dieses Training bzw. Ergebnis angezeigt, und die Detailansicht passt sich dem Inhalt an
+- Team-Wettkämpfe und -Trainings können nur noch von Admins im Teams-Tab bearbeitet oder gelöscht werden
 - Die Tastatur verdeckt in Formularen keine Eingabefelder mehr, und die Animationen der Dialoge sind einheitlich
 - Verständlichere Fehlermeldungen
-- Sicherere Anmeldung
 
 BEHOBEN
-- Mitglieder ohne Antwort fehlten in der Anwesenheitsliste
+- „Nach WA-Punkten vergleichen“ im Tab „Mitglieder“ zeigte keinen Inhalt
 - „Neues Tag erstellen“ in Trainingsprotokollen öffnete sich manchmal nicht
 - Bestzeit-Details zeigen jetzt Wettkampfname und Anmerkungen gemeinsam an
 - Das NEW-Badge bei Bestzeiten richtet sich jetzt nach dem Wettkampfdatum statt nach dem Eintragsdatum
+- Die Zeit des ersten Staffelschwimmers erschien in den Wettkampfergebnissen des Teams als Einzeldisziplin
+- Nach dem Speichern eines Ergebnisses oder einer Meldung im Teams-Tab ging es zurück zur Teamliste statt zum Team

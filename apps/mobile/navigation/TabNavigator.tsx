@@ -11,17 +11,25 @@ import { DashboardScreen } from "@/screens/DashboardScreen";
 import { PracticesScreen } from "@/screens/PracticesScreen";
 import { CompetitionsScreen } from "@/screens/CompetitionsScreen";
 import { TeamsScreen } from "@/screens/TeamsScreen";
+import { GoalsScreen } from "@/screens/GoalsScreen";
 import { MyPageScreen } from "@/screens/MyPageScreen";
+import { TabBarLabel } from "./TabBarLabel";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { getSoleApprovedTeamId } from "@/utils/teamMembershipGroups";
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
+/** カスタムラベルは accessibilityLabel を自動導出しないため、表示文言を明示的に渡す */
+const tabLabelOptions = (label: string) => ({
+  tabBarLabel: ({ color }: { color: string }) => <TabBarLabel color={color}>{label}</TabBarLabel>,
+  tabBarAccessibilityLabel: label,
+});
+
 /**
  * タブナビゲーター
  * 認証済みユーザー向けのメイン画面遷移を管理
- * ダッシュボード、練習、大会、チーム、マイページの5つのタブ
+ * ダッシュボード、練習、大会、チーム、目標、マイページの6つのタブ
  */
 export const TabNavigator: React.FC = () => {
   const { t } = useTranslation();
@@ -54,13 +62,9 @@ export const TabNavigator: React.FC = () => {
           borderTopWidth: 1,
           paddingTop: 8,
           paddingBottom: 8,
-          paddingHorizontal: 12,
+          // 6タブで360dp幅でも各ラベルの幅を確保するため左右の余白は取らない
+          paddingHorizontal: 0,
           height: 64,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "500",
-          marginTop: 2,
         },
         tabBarIconStyle: {
           marginTop: 4,
@@ -71,7 +75,7 @@ export const TabNavigator: React.FC = () => {
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          tabBarLabel: t("navigation.mobile.tabs.home"),
+          ...tabLabelOptions(t("navigation.mobile.tabs.home")),
           tabBarButtonTestID: "tab-dashboard",
           tabBarIcon: ({ color }) => <Feather name="home" size={20} color={color} />,
         }}
@@ -80,7 +84,7 @@ export const TabNavigator: React.FC = () => {
         name="Practices"
         component={PracticesScreen}
         options={{
-          tabBarLabel: t("navigation.mobile.tabs.practices"),
+          ...tabLabelOptions(t("navigation.mobile.tabs.practices")),
           tabBarButtonTestID: "tab-practices",
           tabBarIcon: ({ color }) => <Feather name="bar-chart-2" size={20} color={color} />,
         }}
@@ -89,7 +93,7 @@ export const TabNavigator: React.FC = () => {
         name="Competitions"
         component={CompetitionsScreen}
         options={{
-          tabBarLabel: t("navigation.mobile.tabs.competitions"),
+          ...tabLabelOptions(t("navigation.mobile.tabs.competitions")),
           tabBarButtonTestID: "tab-competitions",
           tabBarIcon: ({ color }) => <Feather name="award" size={20} color={color} />,
         }}
@@ -98,7 +102,7 @@ export const TabNavigator: React.FC = () => {
         name="Teams"
         component={TeamsScreen}
         options={{
-          tabBarLabel: t("navigation.mobile.tabs.teams"),
+          ...tabLabelOptions(t("navigation.mobile.tabs.teams")),
           tabBarButtonTestID: "tab-teams",
           tabBarIcon: ({ color }) => <Feather name="users" size={20} color={color} />,
         }}
@@ -133,10 +137,19 @@ export const TabNavigator: React.FC = () => {
         }}
       />
       <Tab.Screen
+        name="Goals"
+        component={GoalsScreen}
+        options={{
+          ...tabLabelOptions(t("navigation.mobile.tabs.goals")),
+          tabBarButtonTestID: "tab-goals",
+          tabBarIcon: ({ color }) => <Feather name="target" size={20} color={color} />,
+        }}
+      />
+      <Tab.Screen
         name="MyPage"
         component={MyPageScreen}
         options={{
-          tabBarLabel: t("navigation.mobile.tabs.myPage"),
+          ...tabLabelOptions(t("navigation.mobile.tabs.myPage")),
           tabBarButtonTestID: "tab-mypage",
           tabBarIcon: ({ color }) => <Feather name="user" size={20} color={color} />,
         }}

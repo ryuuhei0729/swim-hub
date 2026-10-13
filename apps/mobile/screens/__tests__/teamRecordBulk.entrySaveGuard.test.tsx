@@ -16,20 +16,17 @@
 // に渡された **実際のペイロード件数と user_id** を検証する (TeamRecordBulkFormScreen.
 // invalidate.test.tsx と同じ実測方式)。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return {
-    ...actual,
-    KeyboardAvoidingView: actual.View,
-  };
-});
-
-const mocks = vi.hoisted(() => {
+const mocks = (() => {
   const style = {
     id: 2,
     name_jp: "50m自由形",
@@ -152,9 +149,6 @@ const mocks = vi.hoisted(() => {
     };
   }
 
-  const teamMembers: Array<{ user_id: string; role: string; users: { id: string; name: string } }> =
-    [{ user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } }];
-
   return {
     style,
     responses,
@@ -164,68 +158,12 @@ const mocks = vi.hoisted(() => {
     eqCalls,
     inCalls,
     insertedIds,
-    teamMembers,
     supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getAccessToken: vi.fn(async () => "test-access-token"),
   };
-});
+})();
 
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    subscription: null,
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({
-    members: mocks.teamMembers,
-    isLoading: false,
-  }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
-vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
-
-import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
-
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
-
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-}
+harness.supabase = mocks.supabase;
+harness.members = [{ user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } }];
 
 describe("TeamRecordStyleDetailScreen — 空タイム行は保存されない (仕様#3の回帰確認)", () => {
   beforeEach(() => {
@@ -237,20 +175,20 @@ describe("TeamRecordStyleDetailScreen — 空タイム行は保存されない (
     mocks.inCalls.length = 0;
     for (const table of Object.keys(mocks.insertedIds)) delete mocks.insertedIds[table];
     for (const key of Object.keys(mocks.responses)) delete mocks.responses[key];
-    mocks.getStyles.mockResolvedValue([mocks.style]);
+    harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
     };
     mocks.responses["delete:records"] = { data: null, error: null };
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     // 【テスト分離バグの修正】末尾の「非 admin の権限ガード」describe が
-    // mocks.teamMembers (vi.hoisted の共有配列) を非 admin 1名だけに書き換えたまま
+    // harness.members (テストファイル内で共有される配列) を非 admin 1名だけに書き換えたまま
     // 復元していない。--sequence.shuffle でその describe が先に走ると、この
     // describe のテストが権限ゲートに阻まれて全滅する (実測済み: 通常順序では
     // 隠れるが shuffle で毎回再現する)。各 describe で admin 状態に明示的に戻す。
-    mocks.teamMembers.length = 0;
-    mocks.teamMembers.push({ user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } });
+    harness.members.length = 0;
+    harness.members.push({ user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } });
   });
 
   it(
@@ -296,7 +234,7 @@ describe("TeamRecordStyleDetailScreen — 空タイム行は保存されない (
       fireEvent.click(screen.getByText("記録を保存"));
 
       await waitFor(() => {
-        expect(mocks.goBack).toHaveBeenCalled();
+        expect(harness.goBack).toHaveBeenCalled();
       });
 
       // record-1/record-2 は保存前から存在する既存行なので INSERT ではなく
@@ -328,20 +266,20 @@ describe("TeamRecordStyleDetailScreen — リレー検出された StyleEntry �
     mocks.inCalls.length = 0;
     for (const table of Object.keys(mocks.insertedIds)) delete mocks.insertedIds[table];
     for (const key of Object.keys(mocks.responses)) delete mocks.responses[key];
-    mocks.getStyles.mockResolvedValue([mocks.style]);
+    harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
     };
     mocks.responses["delete:records"] = { data: null, error: null };
-    mocks.routeParams = {
+    harness.routeParams = {
       competitionId: "comp-1",
       teamId: "team-1",
       relayEventId: "relay_4x50_free",
     };
     // 【テスト分離バグの修正】上記コメント参照 (末尾 describe の非 admin 書き換えの復元)。
-    mocks.teamMembers.length = 0;
-    mocks.teamMembers.push({ user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } });
+    harness.members.length = 0;
+    harness.members.push({ user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } });
   });
 
   it(
@@ -379,7 +317,7 @@ describe("TeamRecordStyleDetailScreen — リレー検出された StyleEntry �
       fireEvent.click(screen.getByText("記録を保存"));
 
       await waitFor(() => {
-        expect(mocks.goBack).toHaveBeenCalled();
+        expect(harness.goBack).toHaveBeenCalled();
       });
 
       // relay-record-0〜3 は保存前から存在する既存行なので UPDATE される (INSERT ではない)
@@ -434,7 +372,7 @@ describe("TeamRecordStyleDetailScreen — リレー検出された StyleEntry �
       fireEvent.click(screen.getByText("記録を保存"));
 
       await waitFor(() => {
-        expect(mocks.goBack).toHaveBeenCalled();
+        expect(harness.goBack).toHaveBeenCalled();
       });
 
       const legScopeIn = mocks.inCalls.filter(
@@ -462,14 +400,14 @@ describe("TeamRecordStyleDetailScreen — 非 admin の権限ガード (既存�
     mocks.inCalls.length = 0;
     for (const table of Object.keys(mocks.insertedIds)) delete mocks.insertedIds[table];
     for (const key of Object.keys(mocks.responses)) delete mocks.responses[key];
-    mocks.getStyles.mockResolvedValue([mocks.style]);
+    harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
     };
     mocks.responses["select:records"] = { data: [], error: null };
     mocks.responses["delete:records"] = { data: null, error: null };
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
   });
 
   it(
@@ -477,8 +415,8 @@ describe("TeamRecordStyleDetailScreen — 非 admin の権限ガード (既存�
       "（人間の意図: この機能はエントリー行の初期反映だけを追加するものであり、" +
       "既存の isCurrentUserAdmin による client 側ガードを後退させてはならない）",
     async () => {
-      mocks.teamMembers.length = 0;
-      mocks.teamMembers.push({ user_id: "user-1", role: "user", users: { id: "user-1", name: "太郎" } });
+      harness.members.length = 0;
+      harness.members.push({ user_id: "user-1", role: "user", users: { id: "user-1", name: "太郎" } });
 
       const queryClient = makeQueryClient();
       render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });

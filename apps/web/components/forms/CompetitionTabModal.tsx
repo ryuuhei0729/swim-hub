@@ -29,6 +29,10 @@ import { isEntryTabVisible, getTabNavAdjacency, resolveEntryTabIndex } from "@/u
 import { isDefaultUntouchedEntry } from "@/utils/tabModalDiff";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { formatTimeBest } from "@/utils/formatters";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import GoalTargetBadge from "@/components/forms/GoalTargetBadge";
+import { useGoalTargetsQuery } from "@apps/shared/hooks/queries/goalTargets";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
 import { parseTimeFlexible } from "@apps/shared/utils/time";
 import type { CompetitionImageFile, ExistingImage } from "@/components/forms/CompetitionImageUploader";
@@ -199,6 +203,20 @@ export default function CompetitionTabModal({
   const { subscription, user, supabase } = useAuth();
   const isPremium = checkIsPremium(subscription);
   const { bestTimes, loadBestTimes } = useBestTimes(supabase);
+  // 目標バッジ用。大会が未保存 (editingCompetitionId === null) の間は目標が存在しえないので取得もしない。
+  // 取得失敗・読み込み中は data が無いまま目標を出さないだけ
+  const { data: goalTargets } = useGoalTargetsQuery(supabase, {
+    enabled: isOpen && editingCompetitionId !== null,
+  });
+  const goalTargetFor = (styleId: string, isRelaying?: boolean): number | null =>
+    user?.id
+      ? findGoalTargetTime(goalTargets ?? [], {
+          userId: user.id,
+          competitionId: editingCompetitionId,
+          styleId: Number(styleId),
+          isRelaying,
+        })
+      : null;
 
   // ---------------------------------------------------------------------------
   // Active tab
@@ -344,6 +362,22 @@ export default function CompetitionTabModal({
   // editingData なし(新規作成)の場合は解決不要のため true。
   const [competitionRowResolved, setCompetitionRowResolved] = useState(false);
   const initialDraftRef = useRef<string>("");
+  // 編集モードの初期読み込み (大会本体 / エントリー / レコード) が、それぞれ終わった
+  // (成功・0件・失敗のいずれでも) か。3つとも終わるまでタブ本文を入力不可にする。
+  // 応答前の入力を DB 値が巻き戻すのを、重ね合わせではなく「入力させない」ことで防ぐ。
+  // 新規作成 (取得なし) では使わない。
+  // styles は呼び出し元が描画のたびに新しい配列で渡すことがあり、deps に入れると取得が cancel され
+  // 続けて settled にならない。中身は ref で読み、「準備完了 (空→非空)」だけを deps にする。
+  const stylesRef = useRef(styles);
+  stylesRef.current = styles;
+  const stylesReady = styles.length > 0;
+  const [rowFetchSettled, setRowFetchSettled] = useState(false);
+  const [entriesFetchSettled, setEntriesFetchSettled] = useState(false);
+  const [recordsFetchSettled, setRecordsFetchSettled] = useState(false);
+  const isHydrating =
+    isOpen &&
+    !!editingCompetitionId &&
+    !(rowFetchSettled && entriesFetchSettled && recordsFetchSettled);
   const [tabErrors, setTabErrors] = useState<Record<CompetitionTabId, boolean>>({
     competition: false,
     entry: false,
@@ -357,6 +391,9 @@ export default function CompetitionTabModal({
 
   useEffect(() => {
     if (!isOpen) {
+      setRowFetchSettled(false);
+      setEntriesFetchSettled(false);
+      setRecordsFetchSettled(false);
       setIsInitialized(false);
       setActiveTab(initialTab);
       setBasicData({ date: "", endDate: "", title: "", place: "", poolType: 0, note: "" });
@@ -475,6 +512,8 @@ export default function CompetitionTabModal({
   // 取得できるまでの間は競技会本体の UPDATE を発行させない (競技会 UPDATE 側のガードは D-3 / useCompetitionTabSave 側)。
   useEffect(() => {
     if (!isOpen || !isInitialized || !editingCompetitionId || competitionRowResolved) return;
+    // 開いている間に1回だけ取得する。失敗しても再取得しない (開き直せば取り直せる)
+    if (rowFetchSettled) return;
 
     let isCancelled = false;
     const fetchCompetition = async () => {
@@ -485,7 +524,11 @@ export default function CompetitionTabModal({
         .single();
 
       if (isCancelled) return;
-      if (error || !data) return; // 解決失敗: 暫定値のまま保持し、resolved は true にしない (D-3)
+      if (error || !data) {
+        // 解決失敗: 暫定値のまま保持し、resolved は true にしない (D-3)。入力不能のまま固めない
+        setRowFetchSettled(true);
+        return;
+      }
 
       const row = data as {
         date: string;
@@ -509,23 +552,45 @@ export default function CompetitionTabModal({
       setBasicData(resolved);
       initialDraftRef.current = JSON.stringify(resolved);
       setCompetitionRowResolved(true);
+      setRowFetchSettled(true);
     };
 
-    fetchCompetition().catch(() => {});
+    fetchCompetition()
+      .catch(() => {
+        // 通信例外でも入力不能のまま固めない
+        if (!isCancelled) setRowFetchSettled(true);
+      });
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, isInitialized, editingCompetitionId, competitionRowResolved, supabase]);
+  }, [isOpen, isInitialized, editingCompetitionId, competitionRowResolved, rowFetchSettled, supabase]);
 
   // 編集モード: competition_id に紐づく全エントリーを DB から取得してフォームを初期化
   // rawEntries(editData.editData.entries)が既にある場合はスキップ(二重ロード防止)
   useEffect(() => {
-    if (!isOpen || !isInitialized || !editingCompetitionId || !user?.id) return;
+    if (!isOpen || !isInitialized || !editingCompetitionId) return;
+    // 開いている間に1回だけ取得する。失敗・0件でも再取得しない (開き直せば取り直せる)
+    if (entriesFetchSettled) return;
+    // ユーザーが無ければ取得せず settled 扱いにする (入力不可のまま固めない)
+    if (!user?.id) {
+      setEntriesFetchSettled(true);
+      return;
+    }
     // D9 保護: 上の isInitialized ガードと同じ理由。フェッチ済み後にこの effect が
     // 再実行されると、下の setActiveEntryIndex(resolveEntryTabIndex(...)) (:545) が
     // initialEntryId で再度上書きし、ユーザーが手動で切り替えたタブ選択を戻してしまう。
     // 削除しないこと (Reviewer 実測: この行があるため現状は再現手順が無いと確認済み)。
-    if (originalEntryIds.length > 0) return; // 既にフェッチ済み(rawEntriesまたは前回のfetch)
+    if (originalEntryIds.length > 0) {
+      // 既にフェッチ済み(rawEntriesまたは前回のfetch)
+      setEntriesFetchSettled(true);
+      return;
+    }
+
+    // deps が変わって effect が再実行された場合 (initialEntryId 等)、古い fetch の応答が
+    // 遅れて返ってユーザーの編集を DB の値で巻き戻さないよう、cleanup で stale にする。
+    // 適用 (setOriginalEntryIds) は同期ブロック内で完結するので、適用で deps が変わって
+    // 走る cleanup は無害。
+    let cancelled = false;
 
     const fetchEntries = async () => {
       const { data } = await supabase
@@ -535,7 +600,11 @@ export default function CompetitionTabModal({
         .eq("user_id", user.id)
         .order("created_at", { ascending: true });
 
-      if (!data || data.length === 0) return;
+      if (cancelled) return;
+      if (!data || data.length === 0) {
+        setEntriesFetchSettled(true);
+        return;
+      }
 
       const rows = data as Array<{
         id: string;
@@ -566,15 +635,40 @@ export default function CompetitionTabModal({
       initialEntriesSnapshotRef.current = JSON.stringify(drafts);
       // D9: 押した行の entry.id に対応する項目タブをアクティブにする (未指定/該当なしは先頭タブ)
       setActiveEntryIndex(resolveEntryTabIndex(drafts, initialEntryId));
+      setEntriesFetchSettled(true);
     };
 
-    fetchEntries().catch(() => {});
-  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalEntryIds.length, supabase, initialEntryId]);
+    fetchEntries().catch(() => {
+      // 通信例外でも入力不能のまま固めない
+      if (!cancelled) setEntriesFetchSettled(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalEntryIds.length, entriesFetchSettled, supabase, initialEntryId]);
 
   // 編集モード: competition_id に紐づく全レコードを DB から取得してフォームを初期化
   useEffect(() => {
-    if (!isOpen || !isInitialized || !editingCompetitionId || !user?.id) return;
-    if (originalRecordIds.length > 0) return; // 既にフェッチ済み
+    if (!isOpen || !isInitialized || !editingCompetitionId) return;
+    // 開いている間に1回だけ取得する。失敗・0件でも再取得しない (開き直せば取り直せる)
+    if (recordsFetchSettled) return;
+    // ユーザーが無ければ取得せず settled 扱いにする (入力不可のまま固めない)
+    if (!user?.id) {
+      setRecordsFetchSettled(true);
+      return;
+    }
+    if (originalRecordIds.length > 0) {
+      // 既にフェッチ済み
+      setRecordsFetchSettled(true);
+      return;
+    }
+
+    // deps (styles の読み込み完了など) が変わって effect が再実行されると fetch が2本走り、
+    // 遅れて返った方が setInitialRecords でフォームを再初期化してユーザーの編集を巻き戻す。
+    // cleanup で stale にし、各 await の後で確認する。setOriginalRecordIds は最後に
+    // setInitialRecords と同じ同期ブロックで行う (途中で deps が変わって自分自身を
+    // cancel しないため)。
+    let cancelled = false;
 
     const fetchRecords = async () => {
       const { data } = await supabase
@@ -584,7 +678,11 @@ export default function CompetitionTabModal({
         .eq("user_id", user.id)
         .order("created_at", { ascending: true });
 
-      if (!data || data.length === 0) return;
+      if (cancelled) return;
+      if (!data || data.length === 0) {
+        setRecordsFetchSettled(true);
+        return;
+      }
 
       const rows = data as Array<{
         id: string;
@@ -597,7 +695,6 @@ export default function CompetitionTabModal({
       }>;
 
       const ids = rows.map((r) => r.id);
-      setOriginalRecordIds(ids);
 
       // 各レコードのスプリットタイムを別テーブルから取得する
       // (records テーブルに split は含まれないため、別途 in() でまとめて取得)
@@ -606,6 +703,8 @@ export default function CompetitionTabModal({
         .select("record_id, distance, split_time")
         .in("record_id", ids)
         .order("distance", { ascending: true });
+
+      if (cancelled) return;
 
       const splitsByRecord = new Map<string, Array<{ distance: number; splitTime: number }>>();
       ((splitData ?? []) as Array<{ record_id: string; distance: number; split_time: number }>).forEach(
@@ -620,7 +719,7 @@ export default function CompetitionTabModal({
         // DB の split はゴールタイム(種目距離=タイム)を保存しないため、表示用に補完する
         // (詳細表示 RecordSplitTimes と同じ扱い。保存時は prepareSubmitData が再度除外する)
         const dbSplits = splitsByRecord.get(r.id) ?? [];
-        const style = styles.find((s) => s.id?.toString() === String(r.style_id));
+        const style = stylesRef.current.find((s) => s.id?.toString() === String(r.style_id));
         const raceDistance = style?.distance;
         const splitTimes = [...dbSplits];
         if (raceDistance && r.time > 0 && !splitTimes.some((st) => st.distance === raceDistance)) {
@@ -637,11 +736,19 @@ export default function CompetitionTabModal({
           splitTimes,
         };
       });
+      setOriginalRecordIds(ids);
       setInitialRecords(records);
+      setRecordsFetchSettled(true);
     };
 
-    fetchRecords().catch(() => {});
-  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalRecordIds.length, supabase, styles]);
+    fetchRecords().catch(() => {
+      // 通信例外でも入力不能のまま固めない
+      if (!cancelled) setRecordsFetchSettled(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isInitialized, editingCompetitionId, user?.id, originalRecordIds.length, recordsFetchSettled, supabase, stylesReady]);
 
   // initialRecords が hook に反映されて recordFormDataList が populate された後に snapshot を取る
   // 長さが一致 かつ 先頭 styleId が initialRecords 由来の値と一致した時点で hook の反映が完了している
@@ -1123,7 +1230,23 @@ export default function CompetitionTabModal({
           </div>
 
           {/* Tab panels */}
-          <div className="flex-1 overflow-y-auto">
+          {/* 読み込み中の表示は inert の外 (兄弟) に置く。inert の中だとスクリーンリーダーに届かない */}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            {isHydrating && (
+              <div
+                role="status"
+                className="absolute inset-0 z-10 flex items-center justify-center bg-white/70"
+                data-testid="competition-tab-modal-hydrating"
+              >
+                <LoadingSpinner size="md" message={tCommon("loading")} />
+              </div>
+            )}
+            <div
+              className="flex-1 overflow-y-auto"
+              // 既存データの読み込みが終わるまで入力・フォーカスを受け付けない
+              inert={isHydrating}
+              aria-busy={isHydrating}
+            >
             {/* ---- Competition tab ---- */}
             <div
               role="tabpanel"
@@ -1314,6 +1437,8 @@ export default function CompetitionTabModal({
                         bestTimes,
                       )
                     : null;
+                  // エントリー行は引き継ぎ区分を目標の判定に使わない (isRelaying は渡さない)
+                  const entryGoalTarget = entry ? goalTargetFor(entry.styleId) : null;
                   // 未編集判定は prefillSource のラッチのみで行う (裁定2 v2)。値の比較はしない
                   // (formatTimeBest⇄parseTimeFlexible の往復が1ULP非可逆なため、値比較方式だと
                   // 「押した直後なのに警告が出ない」穴を構造的に抱える)。
@@ -1428,6 +1553,13 @@ export default function CompetitionTabModal({
                                     {tEntries("bestTimePrefillButton")}
                                   </button>
                                 </div>
+                                {entryGoalTarget !== null && (
+                                  <GoalTargetBadge
+                                    variant="inline"
+                                    time={entryGoalTarget}
+                                    data-testid={`entry-goal-target-badge-${clampedIndex + 1}`}
+                                  />
+                                )}
                                 {entry.entryTimeDisplayValue.trim() !== "" &&
                                   parseTimeFlexible(entry.entryTimeDisplayValue) === null && (
                                     <p
@@ -1515,6 +1647,7 @@ export default function CompetitionTabModal({
                           styles={styles}
                           poolType={basicData.poolType}
                           bestTimes={bestTimes}
+                          goalTargetTime={goalTargetFor(formData.styleId, formData.isRelaying)}
                           isLoading={isLoading}
                           isPremium={isPremium}
                           isSplitTimeLimitReached={isRecordSplitTimeLimitReached(clampedIndex)}
@@ -1563,6 +1696,7 @@ export default function CompetitionTabModal({
               )}
             </div>
           </div>
+          </div>
 
           {/* Footer */}
           <div className="shrink-0 bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
@@ -1582,7 +1716,7 @@ export default function CompetitionTabModal({
               type="button"
               onClick={() => void handleSave()}
               variant={nextTab ? "outline" : "primary"}
-              disabled={isLoading}
+              disabled={isLoading || isHydrating}
               className="w-full sm:w-auto"
               data-testid="competition-tab-modal-save"
             >

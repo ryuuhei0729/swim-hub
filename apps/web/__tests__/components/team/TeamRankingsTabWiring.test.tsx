@@ -182,7 +182,7 @@ describe("[V-30b] web 管理者タブ (TeamAdminTabs)", () => {
     vi.clearAllMocks();
   });
 
-  it("タブがちょうど 9 つで、ランキングは大会の直後にある", () => {
+  it("タブがちょうど 10 個で、ランキングは大会の直後にある (目標タブはランキングの直後)", () => {
     wrap(<TeamAdminTabs activeTab="members" onTabChange={vi.fn()} />);
 
     const labels = screen.getAllByRole("button").map((button) => button.textContent?.trim());
@@ -194,6 +194,7 @@ describe("[V-30b] web 管理者タブ (TeamAdminTabs)", () => {
       messages.teamsAdmin.tabs.practices,
       messages.teamsAdmin.tabs.competitions,
       messages.teamsAdmin.tabs.rankings,
+      messages.teamsAdmin.tabs.goals,
       messages.teamsAdmin.tabs.bulkRegister,
       messages.teamsAdmin.tabs.settings,
     ]);
@@ -408,7 +409,7 @@ describe("[V-33] タブ定義の単一定義元", () => {
     expect(screen.getAllByRole("button")).toHaveLength(expectedIds.length);
   });
 
-  it("管理者タブ: 描画される9タブがすべて isTeamAdminTabType を通る", async () => {
+  it("管理者タブ: 描画される10タブがすべて isTeamAdminTabType を通る", async () => {
     const { isTeamAdminTabType } = await import("@/components/team/TeamAdminTabs");
 
     const expectedIds = [
@@ -419,6 +420,7 @@ describe("[V-33] タブ定義の単一定義元", () => {
       "practices",
       "competitions",
       "rankings",
+      "goals",
       "bulk-register",
       "settings",
     ];

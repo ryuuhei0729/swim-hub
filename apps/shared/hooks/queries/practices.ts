@@ -528,17 +528,37 @@ export function useDeletePracticeMutation(
 export function useCreatePracticeLogMutation(
   supabase: SupabaseClient,
   api?: PracticeAPI,
-): UseMutationResult<PracticeLog, Error, Omit<PracticeLogInsert, "user_id"> & { user_id?: string }> {
+): UseMutationResult<
+  PracticeLog,
+  Error,
+  Omit<PracticeLogInsert, "user_id"> & {
+    user_id?: string;
+    /**
+     * true の場合、このミューテーションではマイルストーン判定を行わない。
+     * 呼び出し元がこのログにタイムを追加保存する場合、タイム側のミューテーション
+     * (useCreatePracticeTimesMutation 等) が保存後に判定を行うため、ここで先に
+     * 判定すると保存直後のタイムが判定に間に合わない二重実行になる。
+     * タイム無しでログのみ保存する経路では省略する (このミューテーションが
+     * 唯一の判定経路のため)。
+     */
+    skipMilestoneUpdate?: boolean;
+  }
+> {
   const queryClient = useQueryClient();
   const practiceApi = useMemo(() => api ?? new PracticeAPI(supabase), [supabase, api]);
 
   return useMutation({
-    mutationFn: async (log: Omit<PracticeLogInsert, "user_id"> & { user_id?: string }) => {
-      return await practiceApi.createPracticeLog(log);
+    mutationFn: async (
+      log: Omit<PracticeLogInsert, "user_id"> & { user_id?: string; skipMilestoneUpdate?: boolean },
+    ) => {
+      const { skipMilestoneUpdate: _skipMilestoneUpdate, ...insert } = log;
+      return await practiceApi.createPracticeLog(insert);
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
       // 関連するクエリを無効化して再取得（リレーションデータも含める）
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
+
+      if (variables.skipMilestoneUpdate) return;
 
       // マイルストーンのステータスを自動更新
       try {
@@ -564,17 +584,31 @@ export function useCreatePracticeLogMutation(
 export function useUpdatePracticeLogMutation(
   supabase: SupabaseClient,
   api?: PracticeAPI,
-): UseMutationResult<PracticeLog, Error, { id: string; updates: PracticeLogUpdate }> {
+): UseMutationResult<
+  PracticeLog,
+  Error,
+  { id: string; updates: PracticeLogUpdate; skipMilestoneUpdate?: boolean }
+> {
   const queryClient = useQueryClient();
   const practiceApi = useMemo(() => api ?? new PracticeAPI(supabase), [supabase, api]);
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: PracticeLogUpdate }) => {
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: PracticeLogUpdate;
+      skipMilestoneUpdate?: boolean;
+    }) => {
       return await practiceApi.updatePracticeLog(id, updates);
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
       // 関連するクエリを無効化して再取得
       queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
+
+      // skipMilestoneUpdate の理由は useCreatePracticeLogMutation のコメント参照
+      if (variables.skipMilestoneUpdate) return;
 
       // マイルストーンのステータスを自動更新
       try {

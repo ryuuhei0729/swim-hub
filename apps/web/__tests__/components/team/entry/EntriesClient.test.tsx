@@ -48,11 +48,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: vi.fn().mockImplementation(() => ({
-    createBulkEntries: mocks.createBulkEntries,
-    updateEntry: mocks.updateEntry,
-    deleteBulkEntries: mocks.deleteBulkEntries,
-  })),
+  EntryAPI: vi.fn().mockImplementation(function () {
+    return {
+      createBulkEntries: mocks.createBulkEntries,
+      updateEntry: mocks.updateEntry,
+      deleteBulkEntries: mocks.deleteBulkEntries,
+    };
+  }),
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({

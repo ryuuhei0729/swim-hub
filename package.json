@@ -81,7 +81,7 @@
     "prettier": "^3.8.1",
     "supabase": "^2.71.1",
     "tapable": "^2.3.0",
-    "turbo": "^2.6.0",
+    "turbo": "^2.9.14",
     "typescript": "^5"
   },
   "pnpm": {
@@ -93,7 +93,7 @@
     "overrides": {
       "jsdom": "^26.1.0",
       "tar": "^7.5.21",
-      "brace-expansion": "^5.0.9",
+      "brace-expansion": "^5.0.12",
       "js-yaml@3": "^3.15.2",
       "js-yaml@4": "^4.3.2",
       "diff": "^5.2.2",
@@ -101,19 +101,19 @@
       "@aws-sdk/client-sts": "^3.750.0",
       "flatted": ">=3.4.2",
       "browserslist": ">=4.28.7",
-      "fast-xml-parser": ">=5.5.7",
+      "fast-xml-parser": "^5.7.0",
       "fast-xml-builder": ">=1.1.7",
       "uuid": ">=14.0.0",
-      "exceljs>uuid": "^10.0.0",
+      "exceljs>uuid": "^11.1.1",
       "minimatch": "^10.2.3",
       "@supabase/supabase-js": "^2.97.0",
-      "undici": ">=7.29.0 <8",
+      "undici": ">=7.29.1 <8",
       "ws": ">=8.21.0",
       "form-data": ">=4.0.6",
       "vite": "6.4.3",
       "node-forge": ">=1.4.0",
       "path-to-regexp": ">=8.4.0",
-      "esbuild": ">=0.25.0",
+      "esbuild": "^0.28.1",
       "picomatch@2": "2.3.2",
       "picomatch@3": "3.0.2",
       "picomatch@4": "4.0.4",
@@ -121,16 +121,29 @@
       "react-dom": "19.2.4",
       "@xmldom/xmldom": "^0.8.15",
       "expo-image-loader": "~55.0.1",
-      "shell-quote": ">=1.9.0",
+      "shell-quote": ">=1.11.0",
       "tmp": ">=0.2.6",
       "postcss": "^8.5.25",
-      "sharp": "^0.35.4",
-      "nanoid@3": "^3.3.17"
+      "sharp": "^0.35.5",
+      "nanoid@3": "^3.3.17",
+      "proxy-addr": "^2.0.8",
+      "compression": "^1.8.2",
+      "source-map-js": "^1.2.2",
+      "@babel/core": "^7.29.6",
+      "@humanfs/node": "^0.16.8",
+      "body-parser@2": "^2.3.0",
+      "qs": "^6.16.0",
+      "yaml@2": "^2.8.3",
+      "@tailwindcss/typography>postcss-selector-parser": "^7.1.6"
     },
     "auditConfig": {
       "ignoreGhsas": [
         "GHSA-w3rx-r6r6-pgpr",
-        "GHSA-5p2g-fcmc-qvqq"
+        "GHSA-5p2g-fcmc-qvqq",
+        "GHSA-vfj7-8cjw-p6xm",
+        "GHSA-86w9-cpqp-85rv",
+        "GHSA-hp3w-g68c-fv3c",
+        "GHSA-vcc3-ghjq-m6fr"
       ]
     }
   },

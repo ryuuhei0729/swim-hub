@@ -13,153 +13,38 @@
 // 対象種目の詳細画面を直接開くことで元の観点をそのまま検証できる。「別カードとして
 // 追加される」観点 (旧テスト4本目) だけは一覧画面のカード件数表示に観点が移る。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return {
-    ...actual,
-    KeyboardAvoidingView: actual.View,
-  };
-});
-
-const mocks = vi.hoisted(() => {
-  const style = {
-    id: 2,
-    name_jp: "50m自由形",
-    name: "50m Freestyle",
-    style: "Fr",
-    distance: 50,
-  };
-  const styleBreast = {
-    id: 9,
-    name_jp: "50m平泳ぎ",
-    name: "50m Breaststroke",
-    style: "Br",
-    distance: 50,
-  };
-
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {
-          select: (..._a: unknown[]) => {
-            if (!op) op = "select";
-            return builder;
-          },
-          eq: () => builder,
-          order: () => builder,
-          in: () => builder,
-          single: () => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-          then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
-            resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-        };
-        return builder;
-      },
-    };
-  }
-
-  return {
-    style,
-    styleBreast,
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1", styleId: 2 } as Record<string, unknown>,
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getAccessToken: vi.fn(async () => "test-access-token"),
-    teamMembers: [
-      { user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } },
-      { user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎" } },
-    ] as Array<{ user_id: string; role: string; users: { id: string; name: string } }>,
-  };
-});
-
-// useFocusEffect はマウント時に1回だけ callback を実行する実装で上書きする
-// (RecordsScreen.refreshDrift.test.tsx 等と同一パターン)。空の vi.fn() にはしない
-// (フォーカス時再取得が一切実行されなくなり回帰検知能力を失う) が、グローバルモック
-// (vitest.setup.ts の `vi.fn((callback) => callback())`) をそのまま持ち込むと、
-// このファイルの callback は `load` (setState を伴う実 fetch) であるため、
-// 「レンダーのたびに再実行される」globalモックの挙動と組み合わさり
-// setState → 再レンダー → callback 再実行 → setState → ... の無限ループになる
-// (実測済み: "Too many re-renders" で検証)。このファイルの関心事はフォーカス時
-// 再取得の再現ではなく通常表示なので、マウント1回だけ発火させれば十分。
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-  useFocusEffect: (callback: () => void) => {
-    React.useEffect(() => {
-      callback();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-  },
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    subscription: null,
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.teamMembers, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
-vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
-
+import {
+  createResponseMapSupabase,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
 import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 import { TeamRecordStyleListScreen } from "../TeamRecordStyleListScreen";
 
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+const mocks = {
+  ...createResponseMapSupabase(),
+  style: { id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 },
+  styleBreast: { id: 9, name_jp: "50m平泳ぎ", name: "50m Breaststroke", style: "Br", distance: 50 },
 };
 
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-}
+harness.supabase = mocks.supabase;
 
 describe("TeamRecordStyleDetailScreen — エントリー行の初期反映 (仕様#1・仕様#2)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getStyles.mockResolvedValue([mocks.style, mocks.styleBreast]);
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+    harness.getStyles.mockResolvedValue([mocks.style, mocks.styleBreast]);
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
     };
     mocks.responses["select:records"] = { data: [], error: null };
-    mocks.teamMembers.length = 0;
-    mocks.teamMembers.push(
+    harness.members.length = 0;
+    harness.members.push(
       { user_id: "user-1", role: "admin", users: { id: "user-1", name: "太郎" } },
       { user_id: "user-2", role: "user", users: { id: "user-2", name: "次郎" } },
     );
@@ -299,7 +184,7 @@ describe("TeamRecordStyleDetailScreen — エントリー行の初期反映 (仕
     "リレー検出済みの StyleEntry と別種目のエントリーが同時にあっても、リレーカードの" +
       "泳者選択 (4名) は変化しない (仕様#2 リレー不可侵。詳細画面をリレー種目で開く)",
     async () => {
-      mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
+      harness.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
       mocks.responses["select:records"] = {
         data: [
           { time: 27.5, is_relaying: false, user_id: "user-a" },
@@ -348,7 +233,7 @@ describe("TeamRecordStyleDetailScreen — エントリー行の初期反映 (仕
     "リレー検出済みの StyleEntry と別種目のエントリーが同時にあっても、エントリー由来行は" +
       "一覧画面で別カードとして反映される (仕様#2 リレー不可侵。一覧画面側の観点)",
     async () => {
-      mocks.routeParams = { competitionId: "comp-1", teamId: "team-1" };
+      harness.routeParams = { competitionId: "comp-1", teamId: "team-1" };
       mocks.responses["select:records"] = {
         data: [
           { time: 27.5, is_relaying: false, user_id: "user-a" },

@@ -15,6 +15,9 @@ import {
 import { useAuth } from "@/contexts/AuthProvider";
 import { EntryAPI } from "@apps/shared/api/entries";
 import type { BestTime, EntryDraftRow, PoolType, Style } from "@apps/shared/types";
+import type { TeamGoalTarget } from "@apps/shared/types/goalTargets";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
+import GoalTargetBadge from "@/components/forms/GoalTargetBadge";
 import {
   diffEntryRows,
   findDuplicateMemberStylePairs,
@@ -52,6 +55,8 @@ interface EntriesCompetitionInfo {
   teamName: string;
 }
 
+const EMPTY_GOAL_TARGETS: TeamGoalTarget[] = [];
+
 interface EntriesClientProps {
   teamId: string;
   competitionId: string;
@@ -60,6 +65,8 @@ interface EntriesClientProps {
   existingEntries: ExistingEntryDisplay[];
   styles: Style[];
   bestTimesByUser: Record<string, BestTime[]>;
+  /** 大会内メンバーの目標 (status 未絞り)。省略・空なら目標バッジを出さない */
+  goalTargets?: TeamGoalTarget[];
   /** page.tsx (Server Component) が enum に正規化した戻り先 (R12)。DataLoader 経由で prop として渡ってくる */
   returnOrigin: EntryReturnOrigin;
 }
@@ -86,6 +93,7 @@ export default function EntriesClient({
   existingEntries,
   styles,
   bestTimesByUser,
+  goalTargets = EMPTY_GOAL_TARGETS,
   returnOrigin,
 }: EntriesClientProps) {
   const router = useRouter();
@@ -604,6 +612,15 @@ export default function EntriesClient({
                       const untouchedPrefill = isPrefillUntouched(row);
                       const bestTime =
                         row.styleId !== "" ? findBestTime(row.targetUserId, row.styleId) : undefined;
+                      // エントリー行は引き継ぎ区分を持たないので isRelaying は渡さない
+                      const goalTargetTime =
+                        row.styleId !== ""
+                          ? findGoalTargetTime(goalTargets, {
+                              userId: row.targetUserId,
+                              competitionId,
+                              styleId: row.styleId,
+                            })
+                          : null;
 
                       return (
                         <div
@@ -690,6 +707,15 @@ export default function EntriesClient({
                                 >
                                   {tRecordLog("bestTimeLabel")}: {formatTimeBest(bestTime.time)}
                                 </p>
+                              )}
+                              {goalTargetTime !== null && (
+                                // ベストの <p> は inline-flex で横に並ぶため、div で包んで真下の行に置く
+                                <div>
+                                  <GoalTargetBadge
+                                    time={goalTargetTime}
+                                    data-testid={`entry-goal-target-badge-${row.localId}`}
+                                  />
+                                </div>
                               )}
                               {untouchedPrefill && (
                                 <p className="mt-1 text-xs text-yellow-700">

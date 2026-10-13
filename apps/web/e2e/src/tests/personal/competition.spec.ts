@@ -26,6 +26,50 @@ try {
   console.error("環境変数の検証に失敗しました:", error instanceof Error ? error.message : error);
 }
 
+type AdminClient = ReturnType<typeof createClient>;
+
+function createAdminClient(): AdminClient {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY environment variable is not set.");
+  }
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+/** 種目マスター (styles) の id を style + distance で解決する。見つからなければ例外 */
+async function resolveStyleId(
+  supabase: AdminClient,
+  style: string,
+  distance: number,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("styles")
+    .select("id")
+    .eq("style", style)
+    .eq("distance", distance)
+    .single();
+  if (error || data?.id == null) {
+    throw new Error(`styles に ${distance}m ${style} が見つかりません: ${error?.message ?? "no row"}`);
+  }
+  return data.id as number;
+}
+
+/** E2E テストユーザーの id を取得する。見つからなければ例外 */
+async function getTestUserId(supabase: AdminClient): Promise<string> {
+  const testEmail = (
+    process.env.E2E_EMAIL ||
+    process.env.E2E_TEST_EMAIL ||
+    "e2e-test@swimhub.com"
+  ).toLowerCase();
+  const { data: users } = await supabase.auth.admin.listUsers();
+  const user = users?.users?.find((u) => u.email?.toLowerCase() === testEmail);
+  if (!user) throw new Error(`E2E テストユーザーが見つかりません: ${testEmail}`);
+  return user.id;
+}
+
 test.describe("個人大会記録のテスト", () => {
   test.describe.configure({ timeout: 60000 });
 
@@ -107,14 +151,8 @@ test.describe("個人大会記録のテスト", () => {
 
     console.log(`✅ テスト大会を作成しました: ${newComp.id}`);
 
-    // 200m自由形 の style_id を取得
-    const { data: style } = await supabase
-      .from("styles")
-      .select("id")
-      .eq("name", "200m Freestyle")
-      .single();
-
-    const styleId = style?.id || 5; // フォールバック
+    // 200m自由形 の style_id を style + distance で解決する (見つからなければ例外)
+    const styleId = await resolveStyleId(supabase, "Fr", 200);
 
     // レコードを作成（リレー種目、タイム 2:00.00 = 120.00秒）
     const { data: newRecord, error: recordError } = await supabase
@@ -263,35 +301,46 @@ test.describe("個人大会記録のテスト", () => {
     }
     await editButton.click();
 
-    // 大会記録編集フォーム（CompetitionBasicForm）が表示されるのを待つ
-    await page.waitForSelector('[data-testid="competition-form-modal"]', { timeout: 10000 });
+    // 大会タブ式モーダル（CompetitionTabModal）が大会タブで開くのを待つ
+    await page.waitForSelector('[data-testid="competition-tab-modal"]', { timeout: 10000 });
+    await expect(page.getByRole("tab", { name: "大会", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    // 編集モードの初期読み込み (既存データの取得) が終わるまで、タブ本文は入力不可で
+    // 読み込み中オーバーレイが出る。消えるのを待てば、以降の入力は巻き戻らない。
+    await page.waitForSelector('[data-testid="competition-tab-modal-hydrating"]', { state: "detached", timeout: 15000 });
 
     // ステップ4: 既存の値が表示されていることを確認
-    const titleValue = await page.locator('[data-testid="competition-title"]').inputValue();
+    const titleValue = await page.locator('[data-testid="competition-tab-title"]').inputValue();
     expect(titleValue).toBeTruthy();
     expect(titleValue.length).toBeGreaterThan(0);
 
-    const placeValue = await page.locator('[data-testid="competition-place"]').inputValue();
+    const placeValue = await page.locator('[data-testid="competition-tab-place"]').inputValue();
     expect(placeValue).toBeTruthy();
     expect(placeValue.length).toBeGreaterThan(0);
 
     // ステップ5: 大会名を変更
-    await page.fill('[data-testid="competition-title"]', "△△水泳大会");
+    await page.fill('[data-testid="competition-tab-title"]', "△△水泳大会");
 
     // ステップ6: 場所を変更
-    await page.fill('[data-testid="competition-place"]', "□□プール");
+    await page.fill('[data-testid="competition-tab-place"]', "□□プール");
 
-    // ステップ7: プール種別を変更（短水路）
-    await page.selectOption('[data-testid="competition-pool-type"]', "0");
+    // ステップ7: プール種別を変更（短水路 = 0）
+    await page.click('[data-testid="competition-tab-pool-type-0"]');
+    await expect(page.locator('[data-testid="competition-tab-pool-type-0"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     // ステップ8: メモを変更
-    await page.fill('[data-testid="competition-note"]', "全国大会本選");
+    await page.fill('[data-testid="competition-tab-note"]', "全国大会本選");
 
-    // ステップ9: 「更新」ボタンをクリック
-    await page.click('[data-testid="competition-update-button"]');
+    // ステップ9: 「保存して閉じる」ボタンをクリック
+    await page.click('[data-testid="competition-tab-modal-save"]');
 
-    // ステップ10: フォームが閉じるのを待つ
-    await page.waitForSelector('[data-testid="competition-form-modal"]', {
+    // ステップ10: モーダルが閉じるのを待つ
+    await page.waitForSelector('[data-testid="competition-tab-modal"]', {
       state: "hidden",
       timeout: 15000,
     });
@@ -318,6 +367,89 @@ test.describe("個人大会記録のテスト", () => {
     await expect(competitionPlace).toBeVisible({ timeout: 5000 });
     const placeText = await competitionPlace.textContent();
     expect(placeText).toContain("□□プール");
+  });
+
+  /**
+   * TC-COMPETITION-008: 編集モーダルの読み込み中は入力できず、読み込み完了直後の編集は保存される
+   * (「開いて即編集すると DB 値に巻き戻る」既知バグの回帰テスト)
+   */
+  test("TC-COMPETITION-008: 読み込み中は入力できず、読み込み完了直後の編集は保存される", async ({
+    page,
+  }) => {
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+
+    await page.waitForSelector('[data-testid="calendar-day"]', { timeout: 10000 });
+    await page.locator(`[data-testid="calendar-day"][data-date="${todayKey}"]`).click();
+    await page.waitForSelector(
+      '[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"], [data-testid="record-detail-modal"]',
+      { timeout: 10000 },
+    );
+    await page.waitForTimeout(1000);
+    await page
+      .waitForFunction(() => !document.body.textContent?.includes("読み込み中"), { timeout: 20000 })
+      .catch(() => {});
+
+    const editButton = page.locator('[data-testid="edit-competition-button"]').first();
+    await editButton.waitFor({ state: "visible", timeout: 10000 });
+
+    // モーダルの初期化 fetch (大会本体・エントリー・レコードの GET) だけを遅延させ、
+    // 読み込み中の状態を確実に観測できるようにする
+    const isModalFetch = (url: URL) => /\/rest\/v1\/(competitions|entries|records)$/.test(url.pathname);
+    const slowRoute = async (route: import("@playwright/test").Route) => {
+      if (route.request().method() === "GET") {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+      await route.continue();
+    };
+    await page.route(isModalFetch, slowRoute);
+
+    await editButton.click();
+    await page.waitForSelector('[data-testid="competition-tab-modal"]', { timeout: 10000 });
+
+    // 読み込み中: オーバーレイが出て、保存ボタンは無効
+    const hydrating = page.locator('[data-testid="competition-tab-modal-hydrating"]');
+    await expect(hydrating).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="competition-tab-modal-save"]')).toBeDisabled();
+
+    // 読み込み中にクリック・キー入力しても値は入らない (inert)
+    const noteInput = page.locator('[data-testid="competition-tab-note"]');
+    await noteInput.click({ force: true, timeout: 2000 }).catch(() => {});
+    await page.keyboard.type("TYPED-DURING-LOAD");
+    await expect(noteInput).not.toHaveValue(/TYPED-DURING-LOAD/);
+
+    // 読み込み完了 (オーバーレイが消える)。以降の遅延応答は編集を巻き戻さない
+    await page.waitForSelector('[data-testid="competition-tab-modal-hydrating"]', {
+      state: "detached",
+      timeout: 20000,
+    });
+    await page.unroute(isModalFetch, slowRoute);
+    await expect(noteInput).not.toHaveValue(/TYPED-DURING-LOAD/);
+
+    // 読み込み完了直後に編集して保存する
+    await noteInput.fill("AFTER-LOAD-NOTE");
+    await page.click('[data-testid="competition-tab-modal-save"]');
+    await page.waitForSelector('[data-testid="competition-tab-modal"]', {
+      state: "hidden",
+      timeout: 15000,
+    });
+
+    // DB に編集後の値が保存されている (読み込み中の入力は保存されていない)
+    const admin = createAdminClient();
+    const userId = await getTestUserId(admin);
+    await expect
+      .poll(
+        async () => {
+          const { data } = await admin
+            .from("competitions")
+            .select("note")
+            .eq("user_id", userId)
+            .eq("date", todayKey)
+            .single();
+          return data?.note;
+        },
+        { timeout: 10000 },
+      )
+      .toBe("AFTER-LOAD-NOTE");
   });
 
   /**
@@ -361,78 +493,89 @@ test.describe("個人大会記録のテスト", () => {
     }
     await editRecordButton.click();
 
-    // 記録編集フォーム（RecordLogForm）が表示されるのを待つ
-    await page.waitForSelector('[data-testid="record-form-modal"]', { timeout: 10000 });
+    // 大会タブ式モーダルが「レースレコード」タブ選択状態で開くのを待つ
+    await page.waitForSelector('[data-testid="competition-tab-modal"]', { timeout: 10000 });
+    await expect(page.getByRole("tab", { name: "レースレコード", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await page.waitForSelector('[data-testid="record-time-1"]', { timeout: 10000 });
+    // 編集モードの初期読み込み (既存データの取得) が終わるまで、タブ本文は入力不可で
+    // 読み込み中オーバーレイが出る。消えるのを待てば、以降の入力は巻き戻らない。
+    await page.waitForSelector('[data-testid="competition-tab-modal-hydrating"]', { state: "detached", timeout: 15000 });
 
     // ステップ4: 既存の値が表示されていることを確認
     const timeValue = await page.locator('[data-testid="record-time-1"]').inputValue();
     expect(timeValue).toContain("2:00");
 
-    const relayChecked = await page.locator('[data-testid="record-relay-1"]').isChecked();
-    expect(relayChecked).toBeTruthy();
+    // リレートグルは role="switch" (aria-checked)
+    await expect(page.locator('[data-testid="record-relay-1"]')).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
 
-    // ステップ5: 種目を変更
-    const recordStyleSelect = page.locator('[data-testid="record-style-1"]');
-    const recordOptions = await recordStyleSelect.locator("option").allTextContents();
-    let selectedRecordStyleId = "";
-    for (const optionText of recordOptions) {
-      if (
-        optionText.includes("バタフライ") ||
-        optionText.includes("Fly") ||
-        optionText.includes("200")
-      ) {
-        const optionValue = await recordStyleSelect
-          .locator(`option:has-text("${optionText}")`)
-          .getAttribute("value");
-        if (optionValue) {
-          selectedRecordStyleId = optionValue;
-          break;
-        }
-      }
-    }
-    if (selectedRecordStyleId) {
-      await recordStyleSelect.selectOption(selectedRecordStyleId);
-    }
+    // 種目は距離×泳法のチップ式。シードは 200m Fr
+    await expect(page.locator('[data-testid="record-style-distance-1-200"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(page.locator('[data-testid="record-style-stroke-1-Fr"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
-    // ステップ6: タイムを変更
+    // ステップ5: リレー種目のトグルをオフにする (種目変更でトグルが消えうるため先に行う)
+    await page.click('[data-testid="record-relay-1"]');
+    await expect(page.locator('[data-testid="record-relay-1"]')).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+
+    // ステップ6: 種目を 200m Fly に変更 (距離チップは 200 のまま、泳法チップを Fly へ)
+    await page.click('[data-testid="record-style-stroke-1-Fly"]');
+    await expect(page.locator('[data-testid="record-style-stroke-1-Fly"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // ステップ7: タイムを変更
     await page.fill('[data-testid="record-time-1"]', "1:58.50");
-
-    // ステップ7: リレー種目のチェックボックスを外す
-    await page.uncheck('[data-testid="record-relay-1"]');
 
     // ステップ8: メモを変更
     await page.fill('[data-testid="record-note-1"]', "第2泳者");
 
     // ステップ9: 既存のスプリットタイムを編集（1つ目のスプリットタイムを変更）
+    await expect(page.locator('[data-testid="record-split-time-1-1"]')).toHaveValue(/28/);
     await page.fill('[data-testid="record-split-time-1-1"]', "27.50");
 
-    // ステップ10: スプリットタイムを追加
-    const splitAddButton = page.locator('[data-testid="record-split-add-button-1"]');
-    await splitAddButton.click();
+    // ステップ10: スプリットタイムを追加 (既存行数 + 1 番目の行が現れる)
+    const splitRows = page.locator('[data-testid^="record-split-distance-1-"]');
+    const splitCountBefore = await splitRows.count();
+    expect(splitCountBefore).toBeGreaterThanOrEqual(3);
+    await page.click('[data-testid="record-split-add-button-1"]');
 
     // ステップ11: 追加したスプリットタイムの距離とタイムを入力
-    await page.waitForSelector('[data-testid="record-split-distance-1-4"]', {
+    const newSplitIndex = splitCountBefore + 1;
+    await page.waitForSelector(`[data-testid="record-split-distance-1-${newSplitIndex}"]`, {
       state: "visible",
       timeout: 5000,
     });
-    await page.fill('[data-testid="record-split-distance-1-4"]', "200");
-    await page.fill('[data-testid="record-split-time-1-4"]', "1:58.50");
+    await page.fill(`[data-testid="record-split-distance-1-${newSplitIndex}"]`, "175");
+    await page.fill(`[data-testid="record-split-time-1-${newSplitIndex}"]`, "1:45.50");
 
     // ステップ12: 既存のスプリットタイムを削除（2つ目を削除）
     const removeSplitButton = page.locator('[data-testid="record-split-remove-button-1-2"]');
-    if ((await removeSplitButton.count()) > 0) {
-      const splitDistance2 = page.locator('[data-testid="record-split-distance-1-2"]');
-      await Promise.all([
-        splitDistance2.waitFor({ state: "hidden", timeout: 5000 }).catch(() => {}),
-        removeSplitButton.click(),
-      ]);
-    }
+    await expect(removeSplitButton).toHaveCount(1);
+    await removeSplitButton.click();
+    await expect(page.locator('[data-testid^="record-split-distance-1-"]')).toHaveCount(
+      splitCountBefore,
+    );
 
-    // ステップ13: 「保存」ボタンをクリック
-    await page.click('[data-testid="update-record-button"]');
+    // ステップ13: 「保存して閉じる」ボタンをクリック
+    await page.click('[data-testid="competition-tab-modal-save"]');
 
-    // ステップ14: フォームが閉じるのを待つ
-    await page.waitForSelector('[data-testid="record-form-modal"]', {
+    // ステップ14: モーダルが閉じるのを待つ
+    await page.waitForSelector('[data-testid="competition-tab-modal"]', {
       state: "hidden",
       timeout: 15000,
     });
@@ -460,6 +603,42 @@ test.describe("個人大会記録のテスト", () => {
     const recordTimeDisplay = page.locator('[data-testid="record-time-display"]').first();
     await expect(recordTimeDisplay).toBeVisible({ timeout: 5000 });
     await expect(recordTimeDisplay).toContainText("1:58.50");
+
+    // ステップ16: DB を直接引き、リレー OFF・種目 200m Fly・メモ・スプリット件数も保存されていること
+    const admin = createAdminClient();
+    const userId = await getTestUserId(admin);
+    const flyStyleId = await resolveStyleId(admin, "Fly", 200);
+    const { data: comp, error: compErr } = await admin
+      .from("competitions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("date", todayKey)
+      .single();
+    expect(compErr).toBeNull();
+    const { data: savedRecords, error: recErr } = await admin
+      .from("records")
+      .select("id, style_id, time, is_relaying, note")
+      .eq("competition_id", comp!.id);
+    expect(recErr).toBeNull();
+    expect(savedRecords).toHaveLength(1);
+    const saved = savedRecords![0]!;
+    expect(saved.is_relaying).toBe(false);
+    expect(saved.style_id).toBe(flyStyleId);
+    expect(Number(saved.time)).toBeCloseTo(118.5, 2);
+    expect(saved.note).toBe("第2泳者");
+
+    // スプリット: シード 50/100/150 → 50 を 27.50 に編集、175 を追加、100 を削除 → 50/150/175 の3件
+    // (種目距離 = ゴールタイムの行は保存されない)
+    const { data: savedSplits, error: splitErr } = await admin
+      .from("split_times")
+      .select("distance, split_time")
+      .eq("record_id", saved.id)
+      .order("distance", { ascending: true });
+    expect(splitErr).toBeNull();
+    expect(savedSplits).toHaveLength(3);
+    expect(savedSplits!.map((x) => Number(x.distance))).toEqual([50, 150, 175]);
+    expect(Number(savedSplits![0]!.split_time)).toBeCloseTo(27.5, 2);
+    expect(Number(savedSplits![2]!.split_time)).toBeCloseTo(105.5, 2);
   });
 
   /**

@@ -41,10 +41,12 @@ vi.mock("@/contexts/AuthProvider", () => ({
 const mockGetPreviousBestTime = vi.hoisted(() => vi.fn());
 const mockGetListBestCandidates = vi.hoisted(() => vi.fn());
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    getPreviousBestTime: mockGetPreviousBestTime,
-    getListBestCandidates: mockGetListBestCandidates,
-  })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return {
+      getPreviousBestTime: mockGetPreviousBestTime,
+      getListBestCandidates: mockGetListBestCandidates,
+    };
+  }),
 }));
 
 import BestTimeBadge, { getBadgeState } from "../BestTimeBadge";

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 import { EnvConfig, URLS } from "../config/config";
 import { generateTestEmail, generateTestPassword } from "../utils/test-data";
 
@@ -37,7 +38,31 @@ try {
   console.error("環境変数の検証に失敗しました:", error instanceof Error ? error.message : error);
 }
 
+/** TC-AUTH-005 がサインアップで作ったユーザー (afterEach で削除する) */
+const signedUpEmails: string[] = [];
+
+async function deleteSignedUpUsers() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey || signedUpEmails.length === 0) return;
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321",
+    serviceKey,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  for (const email of signedUpEmails.splice(0)) {
+    const user = data?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    if (!user) continue;
+    const { error } = await admin.auth.admin.deleteUser(user.id);
+    if (error) console.warn(`サインアップ用ユーザーの削除に失敗: ${email}`, error.message);
+  }
+}
+
 test.describe("認証フローのテスト", () => {
+  test.afterEach(async () => {
+    await deleteSignedUpUsers();
+  });
+
   // 環境変数が不足している場合はテストスイートをスキップ
   test.skip(
     !hasRequiredEnvVars,
@@ -174,6 +199,7 @@ test.describe("認証フローのテスト", () => {
 
     // ステップ3: 新規ユーザー情報を入力
     const testEmail = generateTestEmail("e2e-signup");
+    signedUpEmails.push(testEmail);
     const testPassword = generateTestPassword("E2ESignup");
 
     await page.fill('[data-testid="signup-name-input"]', "E2Eテストユーザー");
@@ -183,9 +209,12 @@ test.describe("認証フローのテスト", () => {
     // ステップ4: サインアップボタンをクリック
     await page.click('[data-testid="signup-button"]');
 
-    // ステップ5: ダッシュボードのカレンダーが表示されることを確認
-    await page.waitForSelector('[data-testid="calendar"]', { timeout: 15000 });
-    await expect(page.locator('[data-testid="calendar"]')).toBeVisible();
+    // ステップ5: 新規ユーザーは onboarding_completed=false のため、オンボーディングに遷移する
+    await page.waitForURL("**/ja/onboarding**", { timeout: 15000 });
+    expect(page.url()).toContain("/ja/onboarding");
+    await expect(page.getByRole("heading", { level: 1, name: /ようこそ/ })).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   /**
@@ -230,11 +259,40 @@ test.describe("認証フローのテスト", () => {
   });
 
   /**
-   * TC-AUTH-007: ログインモード切り替え
-   * ログイン↔サインアップモードの切り替え
+   * TC-AUTH-007a: サインアップ画面のモード切り替え
+   * /signup/email の AuthForm でサインアップ↔ログインモードを切り替える
    */
-  test("TC-AUTH-007: ログインモード切り替え", async ({ page }) => {
-    // ステップ1: ログインページに移動
+  test("TC-AUTH-007a: サインアップ画面のモード切り替え", async ({ page }) => {
+    // ステップ1: サインアップページ (メール) に移動
+    await page.goto(`${URLS.SIGNUP}/email`);
+    await page.waitForLoadState("networkidle");
+
+    // ステップ2: サインアップフォームが表示されることを確認
+    await page.waitForSelector('[data-testid="signup-button"]', { timeout: 10000 });
+    await expect(page.locator('[data-testid="signup-button"]')).toBeVisible();
+
+    // ステップ3: モード切り替えボタンをクリック
+    const toggleButton = page.locator('[data-testid="toggle-auth-mode-button"]');
+    await toggleButton.click();
+
+    // ステップ4: ログインフォームに切り替わることを確認
+    await expect(page.locator('[data-testid="login-button"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="signup-name-input"]')).toHaveCount(0);
+
+    // ステップ5: 再度モード切り替えボタンをクリック
+    await toggleButton.click();
+
+    // ステップ6: サインアップフォームに戻ることを確認
+    await expect(page.locator('[data-testid="signup-button"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="signup-name-input"]')).toBeVisible();
+  });
+
+  /**
+   * TC-AUTH-007b: ログイン画面からサインアップ画面への遷移
+   * /login/email にはモード切替ボタンは無く、サインアップへの誘導リンクで遷移する
+   */
+  test("TC-AUTH-007b: ログイン画面のリンクからサインアップ画面へ遷移", async ({ page }) => {
+    // ステップ1: ログインページ (メール) に移動
     await page.goto(`${URLS.LOGIN}/email`);
     await page.waitForLoadState("networkidle");
 
@@ -242,18 +300,11 @@ test.describe("認証フローのテスト", () => {
     await page.waitForSelector('[data-testid="login-button"]', { timeout: 10000 });
     await expect(page.locator('[data-testid="login-button"]')).toBeVisible();
 
-    // ステップ3: モード切り替えボタンをクリック
-    const toggleButton = page.locator('[data-testid="toggle-auth-mode-button"]');
-    await toggleButton.click();
+    // ステップ3: 「アカウントをお持ちでない方はこちら」リンクをクリック
+    await page.getByRole("link", { name: "アカウントをお持ちでない方はこちら" }).click();
 
-    // ステップ4: サインアップフォームに切り替わることを確認
-    await expect(page.locator('[data-testid="signup-button"]')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('[data-testid="signup-name-input"]')).toBeVisible();
-
-    // ステップ5: 再度モード切り替えボタンをクリック
-    await toggleButton.click();
-
-    // ステップ6: ログインフォームに戻ることを確認
-    await expect(page.locator('[data-testid="login-button"]')).toBeVisible({ timeout: 5000 });
+    // ステップ4: サインアップページに遷移することを確認
+    await page.waitForURL("**/ja/signup**", { timeout: 10000 });
+    expect(page.url()).toContain("/ja/signup");
   });
 });

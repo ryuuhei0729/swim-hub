@@ -34,6 +34,9 @@ import { useUserQuery } from "@apps/shared/hooks/queries/user";
 import { useTeamMembersQuery } from "@apps/shared/hooks/queries/teams";
 import { practiceKeys, teamKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
+import { GoalAPI } from "@apps/shared/api/goals";
+import { goalKeys } from "@apps/shared/hooks/queries/goals";
+import { runMilestoneJudgment } from "@apps/shared/utils/milestoneJudgment";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { useTagModalTransition } from "@/hooks/useTagModalTransition";
@@ -880,6 +883,8 @@ export const PracticeTabFormScreen: React.FC = () => {
 
       if (savedPracticeId) {
         const api = new PracticeAPI(supabase);
+        // ログの追加/更新があったか。ログ変更が無い保存ではマイルストーン判定を走らせない
+        let hasLogChanges = false;
 
         // スナップショット時点の既存ログ ID を収集して差分を計算
         // 新規作成モードでは existingIds は空なので全て creates になる
@@ -914,7 +919,14 @@ export const PracticeTabFormScreen: React.FC = () => {
             circle: circleTime > 0 ? circleTime : null,
             note: menu.note.trim() || null,
           };
-          await updateLogMutation.mutateAsync({ id: menu.existingLogId, updates: logData });
+          // マイルストーン判定はタイムの保存が全部終わった後に1回だけ行うため、
+          // ここ (ログ保存の onSuccess) では判定させない
+          await updateLogMutation.mutateAsync({
+            id: menu.existingLogId,
+            updates: logData,
+            skipMilestoneUpdate: true,
+          });
+          hasLogChanges = true;
           await api.replacePracticeTimes(
             menu.existingLogId,
             menu.times.map((ti) => ({
@@ -966,7 +978,11 @@ export const PracticeTabFormScreen: React.FC = () => {
             note: menu.note.trim() || null,
             user_id: practiceOwnerId ?? user?.id,
           };
-          const createdLog = await createLogMutation.mutateAsync(logData);
+          const createdLog = await createLogMutation.mutateAsync({
+            ...logData,
+            skipMilestoneUpdate: true,
+          });
+          hasLogChanges = true;
           await api.replacePracticeTimes(
             createdLog.id,
             menu.times.map((ti) => ({
@@ -1005,6 +1021,14 @@ export const PracticeTabFormScreen: React.FC = () => {
             pendingVideoAssetRef.current.delete(menu.id);
             syncPendingVideoCount();
           }
+        }
+
+        // 全ログ・全タイムの保存が終わった後に1回だけ判定する。タイム保存より前に判定すると
+        // 保存したタイムが判定に反映されない。replacePracticeTimes が失敗した場合はここに
+        // 到達しない (次に目標タブを開いたときの判定で拾われる)
+        if (hasLogChanges && user?.id) {
+          await runMilestoneJudgment(new GoalAPI(supabase), user.id);
+          queryClient.invalidateQueries({ queryKey: goalKeys.all });
         }
       }
 

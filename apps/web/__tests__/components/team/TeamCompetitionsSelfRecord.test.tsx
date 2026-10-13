@@ -68,6 +68,12 @@ const mocks = vi.hoisted(() => ({
   getStyles: vi.fn(),
 }));
 
+// 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
+// (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
+vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
+  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
+}));
+
 vi.mock("@apps/shared/api/teams/records", () => ({
   TeamRecordsAPI: vi.fn().mockImplementation(() => ({
     update: mocks.update,

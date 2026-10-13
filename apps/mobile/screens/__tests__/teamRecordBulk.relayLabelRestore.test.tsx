@@ -73,114 +73,30 @@
 //     DOM 順序をそのまま配列比較することで検証する (memberRecords が legIndex 順に
 //     並んでいることの確認を兼ねる)。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createResponseMapSupabase,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
+import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return {
-    ...actual,
-    KeyboardAvoidingView: actual.View,
-  };
-});
-
-const mocks = vi.hoisted(() => {
-  const styles = [
+const mocks = {
+  ...createResponseMapSupabase(),
+  styles: [
     { id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 },
     { id: 9, name_jp: "50m平泳ぎ", name: "50m Breaststroke", style: "Br", distance: 50 },
     { id: 13, name_jp: "50m背泳ぎ", name: "50m Backstroke", style: "Ba", distance: 50 },
     { id: 17, name_jp: "50mバタフライ", name: "50m Butterfly", style: "Fly", distance: 50 },
-  ];
-
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {
-          select: (..._a: unknown[]) => {
-            if (!op) op = "select";
-            return builder;
-          },
-          eq: () => builder,
-          order: () => builder,
-          in: () => builder,
-          single: () => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-          then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
-            resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-        };
-        return builder;
-      },
-    };
-  }
-
-  return {
-    styles,
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" } as Record<string, unknown>,
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getAccessToken: vi.fn(async () => "test-access-token"),
-    teamMembers: [
-      { user_id: "user-1", role: "admin", users: { id: "user-1", name: "管理者" } },
-    ] as Array<{ user_id: string; role: string; users: { id: string; name: string } }>,
-  };
-});
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    subscription: null,
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.teamMembers, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = vi.fn(async () => new Map());
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
-vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
-
-import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
-
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+  ],
 };
 
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-}
+harness.supabase = mocks.supabase;
+harness.members = [{ user_id: "user-1", role: "admin", users: { id: "user-1", name: "管理者" } }];
+harness.routeParams = { competitionId: "comp-1", teamId: "team-1" };
 
 /** ExistingRecord 相当の最小フィクスチャを組み立てるヘルパー */
 function makeRecord(opts: {
@@ -238,7 +154,7 @@ function freeRelayRecordsViaPhase4() {
 describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contract V-01〜V-07)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getStyles.mockResolvedValue(mocks.styles);
+    harness.getStyles.mockResolvedValue(mocks.styles);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
@@ -249,7 +165,7 @@ describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contr
 
   describe("[V-01][V-07] メドレーリレー復元 (Phase 1/2 経路)", () => {
     beforeEach(() => {
-      mocks.routeParams = {
+      harness.routeParams = {
         competitionId: "comp-1",
         teamId: "team-1",
         relayEventId: "relay_4x50_medley",
@@ -299,7 +215,7 @@ describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contr
 
   describe("[V-02][V-07] フリーリレー復元 (Phase 4 二次検出経路)", () => {
     beforeEach(() => {
-      mocks.routeParams = {
+      harness.routeParams = {
         competitionId: "comp-1",
         teamId: "team-1",
         relayEventId: "relay_4x50_free",
@@ -350,7 +266,7 @@ describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contr
       "[V-03] メドレーリレー復元時、4名分の第N泳者ラベル " +
         '("第1泳者 (背泳ぎ)"〜"第4泳者 (自由形)") が legIndex 順に全て表示される',
       async () => {
-        mocks.routeParams = {
+        harness.routeParams = {
           competitionId: "comp-1",
           teamId: "team-1",
           relayEventId: "relay_4x50_medley",
@@ -381,7 +297,7 @@ describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contr
     it(
       "[V-03] フリーリレー復元時も、4名分の第N泳者ラベルが legIndex 順に全て表示される",
       async () => {
-        mocks.routeParams = {
+        harness.routeParams = {
           competitionId: "comp-1",
           teamId: "team-1",
           relayEventId: "relay_4x50_free",
@@ -410,7 +326,7 @@ describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contr
 
   describe("[V-04] 個人種目表示の非退行", () => {
     beforeEach(() => {
-      mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+      harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     });
 
     it(
@@ -448,7 +364,7 @@ describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contr
       "[V-05] 新規のメドレーリレー種目詳細画面を開くと、種目欄に「50m×4 メドレーリレー」、" +
         "各泳者行に第N泳者ラベルが表示される (buildEmptyRelayEntry 経路)",
       async () => {
-        mocks.routeParams = {
+        harness.routeParams = {
           competitionId: "comp-1",
           teamId: "team-1",
           relayEventId: "relay_4x50_medley",
@@ -476,7 +392,7 @@ describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contr
     it(
       "[V-05] 新規のフリーリレー種目詳細画面を開いた場合も同様に表示される",
       async () => {
-        mocks.routeParams = {
+        harness.routeParams = {
           competitionId: "comp-1",
           teamId: "team-1",
           relayEventId: "relay_4x50_free",

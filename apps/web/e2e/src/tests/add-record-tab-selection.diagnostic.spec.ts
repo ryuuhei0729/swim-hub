@@ -138,6 +138,38 @@ test.describe("診断: 過去大会・記録0件で「記録を追加」を押�
     );
   });
 
+  test.afterAll(async () => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://127.0.0.1:54321";
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) return;
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const warnOnError = (what: string, error: { message: string } | null) => {
+      if (error) console.warn(`afterAll クリーンアップ失敗 (${what}): ${error.message}`);
+    };
+    warnOnError(
+      "個人大会",
+      (await supabase.from("competitions").delete().eq("title", PERSONAL_TITLE)).error,
+    );
+    warnOnError(
+      "チーム大会",
+      (await supabase.from("competitions").delete().eq("title", TEAM_TITLE)).error,
+    );
+    const { data: teams, error: teamsErr } = await supabase
+      .from("teams")
+      .select("id")
+      .eq("name", "診断E2Eチーム");
+    warnOnError("チーム取得", teamsErr);
+    for (const t of teams ?? []) {
+      warnOnError(
+        "メンバーシップ",
+        (await supabase.from("team_memberships").delete().eq("team_id", t.id)).error,
+      );
+      warnOnError("チーム", (await supabase.from("teams").delete().eq("id", t.id)).error);
+    }
+  });
+
   test.beforeEach(async ({ page }) => {
     await supabaseLogin(page);
     await page.goto("/dashboard");
@@ -227,7 +259,7 @@ test.describe("診断: 過去大会・記録0件で「記録を追加」を押�
         `tabBarWithinViewport=${tabBarWithinViewport} recordTabBox=${JSON.stringify(recordTabBox)}`,
     );
 
-    const screenshotPath = `/private/tmp/claude-501/-Users-ryuuhei-0729-SwimHub/4f13f8ad-c71c-4bb3-b588-552ba11d688f/scratchpad/${screenshotPrefix}.png`;
+    const screenshotPath = `test-results/add-record-tab-selection/${screenshotPrefix}.png`;
     await page.screenshot({ path: screenshotPath, fullPage: false });
     console.log(`[スクリーンショット] ${screenshotPath}`);
 
@@ -237,8 +269,43 @@ test.describe("診断: 過去大会・記録0件で「記録を追加」を押�
     expect(competitionPanelMarkerVisible).toBe(false);
   }
 
+  /**
+   * 表示中の月 (month-year-display の「yyyy年M月」) と対象日の月の差だけ
+   * prev/next-month-button を押して、対象日のセルがあるカレンダーへ移動する。
+   * 同月なら何もしない (今日が15日以降なら -14/-15 日は同月、1〜14日なら前月)。
+   */
+  async function navigateToMonthOf(page: Page, date: string) {
+    const display = page.locator('[data-testid="month-year-display"]');
+    const readDisplayedMonthIndex = async () => {
+      const text = (await display.textContent()) ?? "";
+      const m = text.match(/(\d{4})年\s*(\d{1,2})月/);
+      if (!m) throw new Error(`表示月を解釈できない: "${text}"`);
+      return Number(m[1]) * 12 + (Number(m[2]) - 1);
+    };
+    const [ty, tm] = date.split("-").map(Number);
+    const targetIndex = ty! * 12 + (tm! - 1);
+    let current = await readDisplayedMonthIndex();
+    while (current !== targetIndex) {
+      const before = current;
+      const button = page.locator(
+        current > targetIndex
+          ? '[data-testid="prev-month-button"]'
+          : '[data-testid="next-month-button"]',
+      );
+      await button.click();
+      await expect
+        .poll(readDisplayedMonthIndex, { timeout: 10000 })
+        .not.toBe(before);
+      current = await readDisplayedMonthIndex();
+    }
+  }
+
   async function openCardAndClickAddRecord(page: Page, date: string) {
     await page.waitForSelector('[data-testid="calendar-day"]', { timeout: 15000 });
+    await navigateToMonthOf(page, date);
+    await page.waitForSelector(`[data-testid="calendar-day"][data-date="${date}"]`, {
+      timeout: 15000,
+    });
     const dayCell = page.locator(`[data-testid="calendar-day"][data-date="${date}"]`);
     await dayCell.click();
 

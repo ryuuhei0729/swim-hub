@@ -66,6 +66,12 @@ const h = vi.hoisted(() => ({
 // (apps/mobile/__mocks__/react-native.ts は未対応。CompetitionTabFormScreen が
 //  直接 import しているため、このファイル内だけの上書きで解決する)
 // ---------------------------------------------------------------------------
+// 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
+// (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
+vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
+  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
+}));
+
 vi.mock("react-native", async () => {
   const actual = await vi.importActual<typeof import("../../__mocks__/react-native")>(
     "../../__mocks__/react-native",
@@ -113,25 +119,31 @@ vi.mock("@apps/shared/hooks/queries/teams", () => ({
 }));
 
 vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: vi.fn().mockImplementation(() => ({
-    getEntriesByCompetition: h.mockEntryApiGetEntriesByCompetition,
-    createTeamEntry: vi.fn(),
-    createPersonalEntry: vi.fn(),
-    updateEntry: vi.fn(),
-    deleteEntry: vi.fn(),
-  })),
+  EntryAPI: vi.fn().mockImplementation(function () {
+    return {
+      getEntriesByCompetition: h.mockEntryApiGetEntriesByCompetition,
+      createTeamEntry: vi.fn(),
+      createPersonalEntry: vi.fn(),
+      updateEntry: vi.fn(),
+      deleteEntry: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    getRecords: h.mockRecordApiGetRecords,
-  })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return {
+      getRecords: h.mockRecordApiGetRecords,
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: vi.fn().mockImplementation(() => ({
-    getStyles: h.mockStyleApiGetStyles,
-  })),
+  StyleAPI: vi.fn().mockImplementation(function () {
+    return {
+      getStyles: h.mockStyleApiGetStyles,
+    };
+  }),
 }));
 
 vi.mock("@/hooks/useIOSCalendarSync", () => ({

@@ -6,7 +6,8 @@
         "practices": "練習",
         "competitions": "大会",
         "teams": "チーム",
-        "myPage": "マイページ"
+        "myPage": "マイページ",
+        "goals": "目標"
       },
       "titles": {
         "practiceDetail": "練習記録詳細",
@@ -22,7 +23,8 @@
         "entryRegister": "エントリー登録",
         "teamDetail": "チーム詳細",
         "settings": "設定",
-        "bulkBestTime": "ベストタイム一括入力"
+        "bulkBestTime": "ベストタイム一括入力",
+        "goalDetail": "目標詳細"
       }
     }
   },
@@ -1473,11 +1475,13 @@
       "dashboard": "ダッシュボード",
       "practice": "練習履歴",
       "competition": "大会履歴",
+      "goals": "目標管理",
       "mypage": "マイページ",
       "team": "チーム",
       "dashboardDesc": "お知らせとスケジュール",
       "practiceDesc": "練習内容とタイム記録",
       "competitionDesc": "大会結果とタイム記録",
+      "goalsDesc": "目標設定と達成状況",
       "mypageDesc": "プロフィールとベストタイム",
       "teamDesc": "チームの参加・管理",
       "teamAdmin": "チーム管理",
@@ -2128,7 +2132,7 @@
       "loadError": "目標一覧の取得に失敗しました",
       "retry": "再読み込み",
       "empty": "目標がありません",
-      "emptyDesc": "右上のボタンから新規作成してください",
+      "emptyDesc": "下のボタンから新規作成してください",
       "achievedBadge": "達成！",
       "targetTimePrefix": "目標:",
       "deleteConfirm": "この目標を削除しますか？",
@@ -2136,7 +2140,9 @@
       "edit": "編集",
       "delete": "削除",
       "competitionFallback": "大会",
-      "styleFallback": "種目"
+      "styleFallback": "種目",
+      "competitionInfoUnavailable": "大会情報なし",
+      "editUnavailableReason": "大会情報がないため編集できません"
     },
     "detail": {
       "loadError": "目標詳細の取得に失敗しました",
@@ -2154,8 +2160,6 @@
       "submitButton": "作成",
       "cancelButton": "キャンセル",
       "closeAriaLabel": "閉じる",
-      "bestTimeNotFound": "この種目のベストタイムが見つかりませんでした",
-      "bestTimeFetchFailed": "ベストタイムの取得に失敗しました",
       "targetTimeInvalid": "目標タイムを正しく入力してください（0秒超〜60分以内）",
       "startTimeInvalid": "開始タイムを正しく入力してください（0秒超〜60分以内）",
       "competitionRequired": "大会を選択してください",
@@ -2166,8 +2170,6 @@
       "submitButton": "更新",
       "cancelButton": "キャンセル",
       "closeAriaLabel": "閉じる",
-      "bestTimeNotFound": "この種目のベストタイムが見つかりませんでした",
-      "bestTimeFetchFailed": "ベストタイムの取得に失敗しました",
       "updateFailed": "目標の更新に失敗しました",
       "validation": {
         "targetTimeInvalid": "目標タイムを正しく入力してください（0秒超〜60分以内）",
@@ -2201,7 +2203,8 @@
       "updateFailed": "目標の更新に失敗しました",
       "undecided": "未定",
       "competitionFallback": "大会",
-      "styleFallback": "種目"
+      "styleFallback": "種目",
+      "goToGoalsLink": "目標管理を見る"
     },
     "milestone": {
       "empty": "マイルストーンがありません",
@@ -2286,7 +2289,8 @@
       "deadlineLabel": "期限:",
       "otherPrefix": "その他: {note}",
       "saveFailed": "内省メモの保存に失敗しました",
-      "actionFailed": "処理に失敗しました"
+      "actionFailed": "処理に失敗しました",
+      "goToGoalsLink": "目標管理を見る"
     },
     "form": {
       "competitionLabel": "大会",
@@ -2303,7 +2307,9 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "初期タイム（任意）",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "ベストタイムから取得"
+      "personalCompetitionGroup": "個人",
+      "teamCompetitionGroupFallback": "チーム大会",
+      "competitionDatePast": "新規大会の日付は今日以降を選択してください"
     },
     "milestoneForm": {
       "templateLabel": "テンプレート（任意）",
@@ -2339,7 +2345,8 @@
       "averageTimeLabel": "平均目標タイム",
       "circleMinLabel": "サークル(分)",
       "circleSecLabel": "サークル(秒)",
-      "averageTimeRequired": "平均目標タイムを入力してください"
+      "averageTimeRequired": "平均目標タイムを入力してください",
+      "paramsInvalid": "未入力または0の項目があります。1以上の値を入力してください"
     },
     "deadlineInput": {
       "defaultLabel": "期限日（任意）",
@@ -2360,6 +2367,48 @@
       "timeTrialDesc": "練習,大会でのタイム測定を自動的に観測",
       "goalSet": "ゴールセット",
       "goalSetDesc": "50m×6本×3セット（100m目標タイムから逆算）"
+    },
+    "milestoneSummary": {
+      "time": "{distance}m × 1本: {time}",
+      "repsTime": "{distance}m × {reps}本 @{time} 平均",
+      "set": "{distance}m × {reps}本 × {sets}セット (@{circle}サークル) 完遂"
+    },
+    "mobile": {
+      "notFound": "目標が見つかりませんでした",
+      "milestoneNotFound": "マイルストーンが見つかりませんでした",
+      "noSelectableCompetitions": "選択できる大会がありません。新規大会を作成してください"
+    }
+  },
+  "teamMemberGoals": {
+    "title": "メンバーの目標",
+    "memberLabel": "メンバー",
+    "memberPlaceholder": "メンバーを選択",
+    "memberSelectTitle": "メンバーを選択",
+    "selectMemberHint": "メンバーを選択すると、そのメンバーの目標が表示されます",
+    "noSelectableMembers": "選択できるメンバーがいません",
+    "empty": "目標がありません",
+    "emptyDesc": "このメンバーはまだ目標を設定していません",
+    "loadError": "目標の取得に失敗しました",
+    "retry": "再試行",
+    "snapshotNote": "メンバーが最後にアプリで更新した時点の状態です",
+    "progressUnavailable": "大会情報がないため達成率を計算できません",
+    "section": {
+      "upcoming": "今後の大会",
+      "past": "過去の大会",
+      "noCompetition": "大会情報なし"
+    },
+    "status": {
+      "goal": {
+        "active": "進行中",
+        "achieved": "達成",
+        "cancelled": "中止"
+      },
+      "milestone": {
+        "not_started": "未着手",
+        "in_progress": "進行中",
+        "achieved": "達成",
+        "expired": "期限切れ"
+      }
     }
   },
   "teams": {
@@ -2396,6 +2445,7 @@
       "tabPractices": "練習",
       "tabCompetitions": "大会",
       "tabRankings": "ランキング",
+      "tabGoals": "目標",
       "tabAttendance": "出欠",
       "memberLoading": "メンバーを読み込み中...",
       "memberFetchFailed": "メンバー一覧の取得に失敗しました",
@@ -3559,6 +3609,7 @@
       "practices": "練習",
       "competitions": "大会",
       "rankings": "ランキング",
+      "goals": "目標",
       "bulkRegister": "一括登録",
       "settings": "設定"
     },
@@ -4306,6 +4357,7 @@
       "eventHeader": "種目 {n}",
       "entryTimeLabel": "エントリータイム:",
       "bestTimeLabel": "ベストタイム",
+      "goalTargetLabel": "目標",
       "bestTimeRelay": "ベストタイム(引継)",
       "bestTimeLong": "ベストタイム(長水路)",
       "bestTimeLongRelay": "ベストタイム(長水路引継)",

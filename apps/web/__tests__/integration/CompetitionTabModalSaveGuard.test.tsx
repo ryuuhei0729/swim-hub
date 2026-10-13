@@ -21,7 +21,7 @@ import React from "react";
 import { act } from "react";
 import { renderWithI18n as render, screen, waitFor } from "../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { StyleOption } from "@/components/forms/record-log/types";
 import type { EditingData } from "@/stores/types";
 import { useCompetitionTabSave } from "@/hooks/useCompetitionTabSave";
@@ -177,6 +177,12 @@ function createFakeSupabase(fixtures: {
 
 let currentAuth: { user: { id: string }; subscription: null; supabase: ReturnType<typeof createFakeSupabase> };
 
+// 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
+// (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
+vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
+  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
+}));
+
 vi.mock("@/contexts", () => ({
   useAuth: () => currentAuth,
 }));
@@ -230,19 +236,19 @@ function Harness({
   editingCompetitionId: string | null;
   selectedDate?: Date;
   saveMocks: {
-    createCompetition: ReturnType<typeof vi.fn>;
-    updateCompetition: ReturnType<typeof vi.fn>;
-    createRecord: ReturnType<typeof vi.fn>;
-    updateRecord: ReturnType<typeof vi.fn>;
-    deleteRecord: ReturnType<typeof vi.fn>;
-    deleteEntry: ReturnType<typeof vi.fn>;
-    createSplitTimes: ReturnType<typeof vi.fn>;
-    replaceSplitTimes: ReturnType<typeof vi.fn>;
-    setCompetitionLoading: ReturnType<typeof vi.fn>;
-    setEditingCompetitionId: ReturnType<typeof vi.fn>;
-    setCreatedEntries: ReturnType<typeof vi.fn>;
-    closeCompetitionTabModal: ReturnType<typeof vi.fn>;
-    onSaved: ReturnType<typeof vi.fn>;
+    createCompetition: Mock;
+    updateCompetition: Mock;
+    createRecord: Mock;
+    updateRecord: Mock;
+    deleteRecord: Mock;
+    deleteEntry: Mock;
+    createSplitTimes: Mock;
+    replaceSplitTimes: Mock;
+    setCompetitionLoading: Mock;
+    setEditingCompetitionId: Mock;
+    setCreatedEntries: Mock;
+    closeCompetitionTabModal: Mock;
+    onSaved: Mock;
   };
 }) {
   const handleSave = useCompetitionTabSave({

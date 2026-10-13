@@ -11,112 +11,30 @@
 // 「旧ラベルが一切現れない」ことも合わせて確認する。
 // =============================================================================
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return { ...actual, KeyboardAvoidingView: actual.View };
-});
-
-const mocks = vi.hoisted(() => {
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {
-          select: (..._a: unknown[]) => {
-            if (!op) op = "select";
-            return builder;
-          },
-          eq: () => builder,
-          order: () => builder,
-          in: () => builder,
-          single: () => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-          then: (resolve: (v: { data: unknown; error: unknown }) => void) =>
-            resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-        };
-        return builder;
-      },
-    };
-  }
-
-  return {
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" } as Record<string, unknown>,
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getAccessToken: vi.fn(async () => "test-access-token"),
-    getBestTimesDetailedForUsers: vi.fn(),
-    teamMembers: [
-      { user_id: "user-1", role: "admin", users: { id: "user-1", name: "管理者" } },
-    ] as Array<{ user_id: string; role: string; users: { id: string; name: string } }>,
-  };
-});
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    subscription: null,
-    user: { id: "user-1" },
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.teamMembers, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesDetailedForUsers = mocks.getBestTimesDetailedForUsers;
-  },
-}));
-
-vi.mock("@/components/shared/VideoUploader", () => ({ VideoUploader: () => null }));
-vi.mock("@/components/shared/PremiumBadge", () => ({ PremiumBadge: () => null }));
-vi.mock("@/components/records/LapTimeDisplay", () => ({ LapTimeDisplay: () => null }));
-vi.mock("@/components/teams/MemberSelectModal", () => ({ MemberSelectModal: () => null }));
-
+import {
+  createResponseMapSupabase,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
 import { TeamRecordStyleDetailScreen } from "../TeamRecordStyleDetailScreen";
 
-const createWrapper = (queryClient: QueryClient) =>
-  ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+const mocks = createResponseMapSupabase();
 
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-}
+harness.supabase = mocks.supabase;
+harness.members = [{ user_id: "user-1", role: "admin", users: { id: "user-1", name: "管理者" } }];
 
 describe("[変更B] 個人種目カードのリアクションラベルは「リアクション」(旧「リアクションタイム」は出ない)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
-    mocks.getStyles.mockResolvedValue([
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
+    harness.getStyles.mockResolvedValue([
       { id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 },
     ]);
-    mocks.getBestTimesDetailedForUsers.mockResolvedValue(new Map());
+    harness.getBestTimesDetailedForUsers.mockResolvedValue(new Map());
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,
@@ -154,11 +72,11 @@ describe("[変更B] 個人種目カードのリアクションラベルは「リ
 describe("[変更B] リレーレグのリアクションラベルは「リアクション」(旧「リアクションタイム」は出ない)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
-    mocks.getStyles.mockResolvedValue([
+    harness.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
+    harness.getStyles.mockResolvedValue([
       { id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 },
     ]);
-    mocks.getBestTimesDetailedForUsers.mockResolvedValue(new Map());
+    harness.getBestTimesDetailedForUsers.mockResolvedValue(new Map());
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
       error: null,

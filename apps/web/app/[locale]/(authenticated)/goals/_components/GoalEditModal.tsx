@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { RecordAPI } from "@apps/shared/api/records";
-import { parseTimeToSeconds, formatTimeBest } from "@/utils/formatters";
-import type { Style, GoalWithMilestones, Competition, UpdateGoalInput } from "@apps/shared/types";
+import { useGoalStartTimeAutofill } from "@apps/shared/hooks/useGoalStartTimeAutofill";
+import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
+import type { Style, GoalWithMilestones, Competition } from "@apps/shared/types";
 import { format } from "date-fns";
 import GoalForm from "./forms/GoalForm";
 
@@ -16,7 +17,10 @@ interface GoalEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => Promise<void>;
-  goal: GoalWithMilestones;
+  // 大会情報が無い目標 (goal.competition === null) は編集不可。
+  // 呼び出し元 (GoalList) が編集導線自体を出さないため、ここでは
+  // competition が必ず存在するもののみを受け取る (呼び出し元でガード済み)
+  goal: GoalWithMilestones & { competition: Competition };
   styles: Style[];
 }
 
@@ -31,7 +35,12 @@ export default function GoalEditModal({
   styles,
 }: GoalEditModalProps) {
   const t = useTranslations("goals");
+  const tCommon = useTranslations("common");
   const { supabase, user } = useAuth();
+  const createdCompetitionRef = useRef<{
+    id: string;
+    input: { title: string; date: string; place: string | null; pool_type: number; note: null };
+  } | null>(null);
   const [competitionMode, setCompetitionMode] = useState<"existing" | "new">("existing");
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string>("");
@@ -42,28 +51,41 @@ export default function GoalEditModal({
     poolType: 0,
   });
   const [styleId, setStyleId] = useState<string>("");
-  const [targetTime, setTargetTime] = useState<string>("");
-  const [startTime, setStartTime] = useState<string>("");
-  const [useBestTime, setUseBestTime] = useState(false);
+  const [targetTime, setTargetTime] = useState<number | null>(null);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [startTimeInvalid, setStartTimeInvalid] = useState(false);
+  // 保存を拒否したあとだけ初期タイム欄にエラーを出す (入力途中では出さない)
+  const [showStartTimeInvalid, setShowStartTimeInvalid] = useState(false);
+  // 既存値の流し込み完了 (自動入力の基準キーを記録してよい状態) と、その回数 (開くたび・目標が変わるたび)
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [initSeq, setInitSeq] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
   const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
+  // チーム大会の optgroup 表示名解決用 (U2)
+  const { teams } = useTeamsQuery(supabase);
+  const teamNames = useMemo(
+    () => Object.fromEntries(teams.map((m) => [m.team_id, m.teams.name])),
+    [teams],
+  );
 
-  // 大会一覧を取得（未来の大会 + 編集中目標の大会）
+  // 大会一覧を取得（未来の大会 + 編集中目標の大会。個人大会+所属チームの大会）。
+  // goal.competition は必ず存在する (呼び出し元でガード済み) ため、
+  // goal.competition.id をそのまま既存大会IDとして使う。
   useEffect(() => {
     if (isOpen && competitionMode === "existing") {
       const today = format(new Date(), "yyyy-MM-dd");
-      const existingCompetitionId = goal?.competition_id;
+      const existingCompetitionId = goal.competition.id;
 
-      recordAPI
-        .getCompetitions(today)
+      goalAPI
+        .getSelectableCompetitions(today)
         .then(async (futureCompetitions) => {
           // 既存の大会が未来の大会リストに含まれているか確認
           const existingIncluded = futureCompetitions.some((c) => c.id === existingCompetitionId);
 
-          if (existingCompetitionId && !existingIncluded) {
+          if (!existingIncluded) {
             // 既存の大会が含まれていない場合、個別に取得してマージ
             const { data: existingCompetition } = await supabase
               .from("competitions")
@@ -85,84 +107,88 @@ export default function GoalEditModal({
           setCompetitions([]);
         });
     }
-  }, [isOpen, competitionMode, supabase, recordAPI, goal?.competition_id]);
+  }, [isOpen, competitionMode, supabase, goalAPI, goal.competition.id]);
 
   // 既存の目標データでフォームを初期化
   useEffect(() => {
     if (isOpen && goal) {
-      setSelectedCompetitionId(goal.competition_id);
+      setSelectedCompetitionId(goal.competition.id);
       setCompetitionMode("existing");
       setStyleId(goal.style_id.toString());
-      setTargetTime(formatTimeBest(goal.target_time));
-      setStartTime(goal.start_time ? formatTimeBest(goal.start_time) : "");
-      setUseBestTime(false);
+      setTargetTime(goal.target_time);
+      setStartTime(goal.start_time ?? null);
+      setStartTimeInvalid(false);
+      setShowStartTimeInvalid(false);
       setValidationError(null);
+      setIsInitialized(true);
+      setInitSeq((n) => n + 1);
+    } else {
+      setIsInitialized(false);
     }
   }, [isOpen, goal]);
 
-  // ベストタイムを取得
-  const handleGetBestTime = async () => {
-    if (!styleId || !user) return;
+  // 対象大会の水路（0: 短水路, 1: 長水路）。新規大会作成時は入力値、既存大会選択時は選択した大会の値
+  const selectedPoolType =
+    competitionMode === "new"
+      ? newCompetition.poolType
+      : competitions.find((c) => c.id === selectedCompetitionId)?.pool_type;
 
-    try {
-      const selectedStyle = styles.find((s) => s.id === parseInt(styleId, 10));
-      if (!selectedStyle) return;
+  // 初期タイムは「種目 × 対象大会の水路」の自己ベストを自動入力する。
+  // 開いた直後は保存済みの値を守り、種目か大会 (水路) を変えたときだけ入れ直す
+  const startTimeAutofill = useGoalStartTimeAutofill({
+    supabase,
+    active: isOpen,
+    isInitialized,
+    isEdit: true,
+    styleId,
+    poolType: selectedPoolType,
+    resetSignal: initSeq,
+    onApply: (best) => {
+      setStartTime(best);
+      setStartTimeInvalid(false);
+      setShowStartTimeInvalid(false);
+    },
+  });
 
-      const bestTimes = await recordAPI.getBestTimes();
-      const bestTime = bestTimes.find((bt) => bt.style.name_jp === selectedStyle.name_jp);
-
-      if (bestTime) {
-        setStartTime(formatTimeBest(bestTime.time));
-        setUseBestTime(true);
-      } else {
-        alert(t("edit.bestTimeNotFound"));
-        setUseBestTime(false);
-      }
-    } catch (error) {
-      console.error("ベストタイム取得エラー:", error);
-      alert(t("edit.bestTimeFetchFailed"));
-      setUseBestTime(false);
-    }
+  const handleStartTimeChange = (seconds: number | null) => {
+    startTimeAutofill.markTouched();
+    setShowStartTimeInvalid(false);
+    setStartTime(seconds);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    setIsLoading(true);
     setValidationError(null);
 
+    // 初期タイム欄にパースできない文字列が残っている間は保存しない
+    if (startTimeInvalid) {
+      setShowStartTimeInvalid(true);
+      setValidationError(t("edit.validation.startTimeInvalid"));
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
-      // タイムを秒数に変換
-      const targetTimeSeconds = parseTimeToSeconds(targetTime);
-      const startTimeSeconds = startTime ? parseTimeToSeconds(startTime) : null;
+      // タイムは TimeSecondsInput が既に秒数へ変換済み
+      const targetTimeSeconds = targetTime;
+      const startTimeSeconds = startTime;
       const parsedStyleId = parseInt(styleId, 10);
 
       // バリデーション: targetTimeSeconds（必須）
-      if (
-        !Number.isFinite(targetTimeSeconds) ||
-        Number.isNaN(targetTimeSeconds) ||
-        targetTimeSeconds <= 0 ||
-        targetTimeSeconds > 3600
-      ) {
+      if (targetTimeSeconds === null || targetTimeSeconds <= 0 || targetTimeSeconds > 3600) {
         setValidationError(t("edit.validation.targetTimeInvalid"));
         setIsLoading(false);
         return;
       }
 
       // バリデーション: startTimeSeconds（startTimeが提供されている場合のみ）
-      if (startTime) {
-        if (
-          startTimeSeconds === null ||
-          !Number.isFinite(startTimeSeconds) ||
-          Number.isNaN(startTimeSeconds) ||
-          startTimeSeconds <= 0 ||
-          startTimeSeconds > 3600
-        ) {
-          setValidationError(t("edit.validation.startTimeInvalid"));
-          setIsLoading(false);
-          return;
-        }
+      if (startTimeSeconds !== null && (startTimeSeconds <= 0 || startTimeSeconds > 3600)) {
+        setValidationError(t("edit.validation.startTimeInvalid"));
+        setIsLoading(false);
+        return;
       }
 
       // バリデーション: styleId（必須）
@@ -177,14 +203,32 @@ export default function GoalEditModal({
 
       // 新規大会を作成する場合
       if (competitionMode === "new") {
-        const newComp = await recordAPI.createCompetition({
+        if (newCompetition.date < format(new Date(), "yyyy-MM-dd")) {
+          alert(t("form.competitionDatePast"));
+          setIsLoading(false);
+          return;
+        }
+        const competitionInput = {
           title: newCompetition.title,
           date: newCompetition.date,
           place: newCompetition.place || null,
           pool_type: newCompetition.poolType,
           note: null,
-        });
-        competitionId = newComp.id;
+        };
+        // updateGoal が失敗して再送信されても大会を二重作成しない。
+        // 再送信時に入力が変わっていれば、作成済みの大会を更新して反映する
+        const created = createdCompetitionRef.current;
+        if (!created) {
+          const newComp = await recordAPI.createCompetition(competitionInput);
+          createdCompetitionRef.current = { id: newComp.id, input: competitionInput };
+          competitionId = newComp.id;
+        } else {
+          if (JSON.stringify(created.input) !== JSON.stringify(competitionInput)) {
+            await recordAPI.updateCompetition(created.id, competitionInput);
+            createdCompetitionRef.current = { id: created.id, input: competitionInput };
+          }
+          competitionId = created.id;
+        }
       }
 
       // バリデーション済みの値のみを使用して目標を更新
@@ -193,11 +237,14 @@ export default function GoalEditModal({
         styleId: parsedStyleId,
         targetTime: targetTimeSeconds,
         startTime: startTimeSeconds,
-      } as Omit<UpdateGoalInput, "id">);
+      });
 
+      createdCompetitionRef.current = null;
       await onSuccess();
       handleClose();
     } catch (error) {
+      // RLS (P2 WITH CHECK) がチーム退会後の競技会参照を拒否した場合もここに来るが、
+      // 生の Supabase エラー文言は出さずユーザー向け固定文言のみを表示する
       console.error("目標更新エラー:", error);
       alert(t("edit.updateFailed"));
     } finally {
@@ -206,6 +253,7 @@ export default function GoalEditModal({
   };
 
   const handleClose = () => {
+    createdCompetitionRef.current = null;
     setCompetitionMode("existing");
     setSelectedCompetitionId("");
     setNewCompetition({
@@ -215,9 +263,10 @@ export default function GoalEditModal({
       poolType: 0,
     });
     setStyleId("");
-    setTargetTime("");
-    setStartTime("");
-    setUseBestTime(false);
+    setTargetTime(null);
+    setStartTime(null);
+    setStartTimeInvalid(false);
+    setShowStartTimeInvalid(false);
     setValidationError(null);
     onClose();
   };
@@ -258,6 +307,7 @@ export default function GoalEditModal({
                 competitionMode={competitionMode}
                 onCompetitionModeChange={setCompetitionMode}
                 competitions={competitions}
+                teamNames={teamNames}
                 selectedCompetitionId={selectedCompetitionId}
                 onSelectedCompetitionIdChange={setSelectedCompetitionId}
                 newCompetition={newCompetition}
@@ -268,9 +318,14 @@ export default function GoalEditModal({
                 targetTime={targetTime}
                 onTargetTimeChange={setTargetTime}
                 startTime={startTime}
-                onStartTimeChange={setStartTime}
-                useBestTime={useBestTime}
-                onGetBestTime={handleGetBestTime}
+                onStartTimeChange={handleStartTimeChange}
+                // 自動入力と既存値の流し込み直しのどちらでも欄を作り直す (どちらも単調増加なので和は必ず変わる)
+                startTimeResetKey={startTimeAutofill.resetKey + initSeq}
+                startTimePlaceholder={
+                  startTimeAutofill.isLoadingBest ? tCommon("loading") : undefined
+                }
+                onStartTimeInvalidChange={setStartTimeInvalid}
+                startTimeForceInvalid={startTimeInvalid && showStartTimeInvalid}
               />
 
               {/* ボタン */}

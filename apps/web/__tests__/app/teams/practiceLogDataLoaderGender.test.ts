@@ -29,7 +29,10 @@ vi.mock("next-intl/server", () => ({
   getLocale: mockGetLocale,
   getTranslations: vi.fn().mockResolvedValue((key: string) => key),
 }));
-vi.mock("next/navigation", () => ({
+// next-intl (@/i18n/navigation) の redirect は本物の next/navigation.redirect を呼ぶ。
+// next-intl v4 は Vitest で inline 処理されこのモックが内部にも効くため、notFound 以外は実物を残す
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
   notFound: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),

@@ -64,8 +64,8 @@
 // モックは効かず、書き直しが必要になる。これは Contract 自体の記述不足に起因する
 // ため、Phase B 開始時に PM/Developer と要すり合わせ (最終報告に明記する)。
 //
-// テスト方針: TabNavigator 全体 (5画面ぶんの Tab.Navigator) を丸ごと重量描画する
-// のは避け、5画面はすべて null スタブに差し替える。かわりに
+// テスト方針: TabNavigator 全体 (6画面ぶんの Tab.Navigator) を丸ごと重量描画する
+// のは避け、6画面はすべて null スタブに差し替える。かわりに
 // `@react-navigation/bottom-tabs` の createBottomTabNavigator をこのファイル内限定で
 // 上書きし、各 <Tab.Screen> に渡された props (name, listeners 等) を配列に記録する
 // ことで、「Teams の listeners.tabPress」を実プロダクションコードの実行結果として
@@ -81,6 +81,7 @@ vi.mock("@/screens/PracticesScreen", () => ({ PracticesScreen: () => null }));
 vi.mock("@/screens/CompetitionsScreen", () => ({ CompetitionsScreen: () => null }));
 vi.mock("@/screens/TeamsScreen", () => ({ TeamsScreen: () => null }));
 vi.mock("@/screens/MyPageScreen", () => ({ MyPageScreen: () => null }));
+vi.mock("@/screens/GoalsScreen", () => ({ GoalsScreen: () => null }));
 
 const navMocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -94,7 +95,7 @@ const navMocks = vi.hoisted(() => ({
   state: {
     routes: [{ name: "MainTabs", state: { index: 3, routes: [
       { name: "Dashboard" }, { name: "Practices" }, { name: "Competitions" },
-      { name: "Teams" }, { name: "MyPage" },
+      { name: "Teams" }, { name: "Goals" }, { name: "MyPage" },
     ] } }],
   } as unknown,
 }));

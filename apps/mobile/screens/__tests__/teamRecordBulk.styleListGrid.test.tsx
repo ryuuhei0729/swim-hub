@@ -13,93 +13,23 @@
 // 用意する。id の値だけが可視判定に効くため、実際の泳法名を複製する必要はない) +
 // `RELAY_EVENTS` (実物 import。ここでは複製しない)。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return { ...actual, KeyboardAvoidingView: actual.View };
-});
-
-const mocks = vi.hoisted(() => {
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {};
-        builder.select = vi.fn((..._a: unknown[]) => {
-          if (!op) op = "select";
-          return builder;
-        });
-        builder.eq = vi.fn(() => builder);
-        builder.order = vi.fn(() => builder);
-        builder.in = vi.fn(() => builder);
-        builder.single = vi.fn(() =>
-          Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-        );
-        builder.then = (resolve: (v: { data: unknown; error: unknown }) => void) =>
-          resolve(responses[`${op}:${table}`] ?? { data: null, error: null });
-        return builder;
-      },
-    };
-  }
-
-  return {
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
-    navigate: vi.fn(),
-    goBack: vi.fn(),
-    getStyles: vi.fn(),
-    membersBox: { current: [] as unknown[] },
-  };
-});
-
-// useFocusEffect はマウント時に1回だけ callback を実行する実装で上書きする
-// (RecordsScreen.refreshDrift.test.tsx 等と同一パターン)。空の vi.fn() にはしない
-// (フォーカス時再取得が一切実行されなくなり回帰検知能力を失う) が、グローバルモック
-// (vitest.setup.ts の `vi.fn((callback) => callback())`) をそのまま持ち込むと、
-// このファイルの callback は `load` (setState を伴う実 fetch) であるため、
-// 「レンダーのたびに再実行される」globalモックの挙動と組み合わさり
-// setState → 再レンダー → callback 再実行 → setState → ... の無限ループになる
-// (実測済み: "Too many re-renders" で検証)。このファイルの関心事はフォーカス時
-// 再取得の再現ではなく通常表示なので、マウント1回だけ発火させれば十分。
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  useFocusEffect: (callback: () => void) => {
-    React.useEffect(() => {
-      callback();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-  },
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({ supabase: mocks.supabase, user: { id: "admin-1" } }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.membersBox.current, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
+import {
+  createResponseMapSupabase,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
 import { TeamRecordStyleListScreen } from "../TeamRecordStyleListScreen";
 
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
+const mocks = createResponseMapSupabase();
+
+harness.supabase = mocks.supabase;
+harness.currentUserId = "admin-1";
+harness.routeParams = { competitionId: "comp-1", teamId: "team-1" };
 
 /**
  * id・name_jp のみのダミー22種目。id の値だけが長水路の既定非表示判定に効く。
@@ -125,13 +55,11 @@ describe("[V-06a] 種目一覧グリッドの基本表示", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
-    mocks.getStyles.mockResolvedValue(DUMMY_22_STYLES);
+    queryClient = makeQueryClient();
+    harness.getStyles.mockResolvedValue(DUMMY_22_STYLES);
     mocks.responses["select:records"] = { data: [], error: null };
     mocks.responses["select:entries"] = { data: [], error: null };
-    mocks.membersBox.current = [
+    harness.members = [
       { user_id: "admin-1", role: "admin", users: { id: "admin-1", name: "管理者" } },
     ];
   });
@@ -188,7 +116,7 @@ describe("[V-06a] 種目一覧グリッドの基本表示", () => {
     const card = await screen.findByText("ダミー種目1");
     card.closest("button")?.click();
 
-    expect(mocks.navigate).toHaveBeenCalledWith("TeamRecordBulkFormDetail", {
+    expect(harness.navigate).toHaveBeenCalledWith("TeamRecordBulkFormDetail", {
       competitionId: "comp-1",
       teamId: "team-1",
       styleId: 1,
@@ -201,15 +129,13 @@ describe("[V-06b] 水路フィルタの例外 (既存記録・エントリーが
 
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
-    mocks.getStyles.mockResolvedValue(DUMMY_22_STYLES);
+    queryClient = makeQueryClient();
+    harness.getStyles.mockResolvedValue(DUMMY_22_STYLES);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 1 },
       error: null,
     };
-    mocks.membersBox.current = [
+    harness.members = [
       { user_id: "admin-1", role: "admin", users: { id: "admin-1", name: "管理者" } },
     ];
   });

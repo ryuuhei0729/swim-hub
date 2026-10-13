@@ -36,3 +36,9 @@ export * from "./relayRecord";
 
 // チームリレーランキング型
 export * from "./teamRelayRanking";
+
+// チーム管理者向けメンバー目標閲覧型
+export * from "./teamMemberGoals";
+
+// 入力画面の目標バッジ用型
+export * from "./goalTargets";

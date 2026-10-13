@@ -11,6 +11,9 @@ import { formatTimeBest, isInvalidTimeInput, parseTimeFlexible } from "@apps/sha
 import { format } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
 import { useBestTimes } from "@/hooks/useBestTimes";
+import GoalTargetBadge from "@/components/forms/GoalTargetBadge";
+import { useGoalTargetsQuery } from "@apps/shared/hooks/queries/goalTargets";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
 import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
 import type { EntryFormData } from "@/stores/types";
 import { useAuth } from "@/contexts";
@@ -71,7 +74,7 @@ export default function EntryLogForm({
   onClose,
   onSubmit,
   onSkip,
-  competitionId: _competitionId,
+  competitionId,
   competitionTitle,
   competitionDate,
   poolType = 0,
@@ -112,6 +115,8 @@ export default function EntryLogForm({
 
   const { supabase, user } = useAuth();
   const { bestTimes, loadBestTimes } = useBestTimes(supabase);
+  // 目標バッジ用。取得失敗・読み込み中は data が無いまま目標を出さないだけ
+  const { data: goalTargets } = useGoalTargetsQuery(supabase, { enabled: isOpen });
 
   // ベストタイムを取得
   useEffect(() => {
@@ -455,6 +460,14 @@ export default function EntryLogForm({
 
                 {entries.map((entry, index) => {
                   const entryBestTime = getEntryBestTime(entry.styleId);
+                  // エントリー行は引き継ぎ区分を持たないので isRelaying は渡さない
+                  const goalTargetTime = user?.id
+                    ? findGoalTargetTime(goalTargets ?? [], {
+                        userId: user.id,
+                        competitionId,
+                        styleId: Number(entry.styleId),
+                      })
+                    : null;
                   // 未編集判定は prefillSource のラッチのみで行う (裁定2 v2)。値の比較はしない。
                   const isPrefillUntouched = entry.prefillSource === "bestTime";
                   return (
@@ -597,6 +610,13 @@ export default function EntryLogForm({
                             <p className="text-xs text-gray-500 mt-1">
                               {tRecordLog(entryBestTime.labelKey)}: {formatTimeBest(entryBestTime.time)}
                             </p>
+                          )}
+                          {goalTargetTime !== null && (
+                            <GoalTargetBadge
+                              variant="text"
+                              time={goalTargetTime}
+                              data-testid={`entry-goal-target-badge-${index + 1}`}
+                            />
                           )}
                           {isPrefillUntouched && (
                             <p

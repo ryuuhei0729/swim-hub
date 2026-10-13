@@ -19,85 +19,24 @@
 //    検証後に shasum 一致を確認して復元し、テストには実装を再実装していない)。
 // =============================================================================
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { STYLE_CARD_BACKGROUND_HEX } from "../teamRecordBulk/styleCardColors";
-
-vi.mock("react-native", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>("react-native");
-  return { ...actual, KeyboardAvoidingView: actual.View };
-});
-
-const mocks = vi.hoisted(() => {
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        let op: string | null = null;
-        const builder: Record<string, unknown> = {};
-        builder.select = vi.fn((..._a: unknown[]) => {
-          if (!op) op = "select";
-          return builder;
-        });
-        builder.eq = vi.fn(() => builder);
-        builder.order = vi.fn(() => builder);
-        builder.in = vi.fn(() => builder);
-        builder.single = vi.fn(() =>
-          Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }),
-        );
-        builder.then = (resolve: (v: { data: unknown; error: unknown }) => void) =>
-          resolve(responses[`${op}:${table}`] ?? { data: null, error: null });
-        return builder;
-      },
-    };
-  }
-
-  return {
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
-    navigate: vi.fn(),
-    goBack: vi.fn(),
-    getStyles: vi.fn(),
-    membersBox: { current: [] as unknown[] },
-  };
-});
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  useFocusEffect: (callback: () => void) => {
-    React.useEffect(() => {
-      callback();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-  },
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({ supabase: mocks.supabase, user: { id: "admin-1" } }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({ members: mocks.membersBox.current, isLoading: false }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
+import {
+  createResponseMapSupabase,
+  createWrapper,
+  harness,
+  makeQueryClient,
+} from "./teamRecordBulkScreenHarness";
 import { TeamRecordStyleListScreen } from "../TeamRecordStyleListScreen";
 
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
+const mocks = createResponseMapSupabase();
+
+harness.supabase = mocks.supabase;
+harness.currentUserId = "admin-1";
+harness.routeParams = { competitionId: "comp-1", teamId: "team-1" };
 
 /** hex ("#RRGGBB") → jsdom が正規化して返す "rgb(r, g, b)" 形式への変換 (テスト用の汎用ヘルパー、種目色ロジックの複製ではない) */
 function hexToRgbString(hex: string): string {
@@ -139,17 +78,15 @@ describe("[V-06a] 種目一覧カードの配色は canonical コードで正し
 
   beforeEach(() => {
     vi.clearAllMocks();
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    });
-    mocks.getStyles.mockResolvedValue(STYLES_WITH_CANONICAL_CODE);
+    queryClient = makeQueryClient();
+    harness.getStyles.mockResolvedValue(STYLES_WITH_CANONICAL_CODE);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "配色検証大会", pool_type: 0 },
       error: null,
     };
     mocks.responses["select:records"] = { data: [], error: null };
     mocks.responses["select:entries"] = { data: [], error: null };
-    mocks.membersBox.current = [
+    harness.members = [
       { user_id: "admin-1", role: "admin", users: { id: "admin-1", name: "管理者" } },
     ];
   });

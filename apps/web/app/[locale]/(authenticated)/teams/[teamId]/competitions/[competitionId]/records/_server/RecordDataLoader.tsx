@@ -6,6 +6,8 @@ import { getServerUser } from "@/lib/supabase-server";
 import RecordClient from "../_client/RecordClient";
 import { Competition, Style } from "@apps/shared/types";
 import { RecordAPI } from "@apps/shared/api/records";
+import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
+import type { TeamGoalTarget } from "@apps/shared/types/goalTargets";
 import type { BestTime } from "@apps/shared/types/ui";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 
@@ -257,6 +259,15 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
     }
   }
 
+  // 目標バッジ用に、大会内の全メンバーの目標を RPC 1回で取得する (メンバーごとに呼ばない)。
+  // 取得失敗 (RPC 未適用を含む) は目標を出さないだけで続行する — 入力そのものをブロックしない。
+  let goalTargets: TeamGoalTarget[] = [];
+  try {
+    goalTargets = await new TeamGoalTargetsAPI(supabase).listForCompetition(teamId, competitionId);
+  } catch (error) {
+    console.error("目標タイム参照の取得に失敗しました:", error);
+  }
+
   return (
     <RecordClient
       teamId={teamId}
@@ -268,6 +279,7 @@ export default async function RecordDataLoader({ teamId, competitionId }: Record
       styles={styles}
       entries={entries}
       bestTimesByUser={bestTimesByUser}
+      goalTargets={goalTargets}
     />
   );
 }

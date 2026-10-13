@@ -311,19 +311,26 @@ test.describe("個人練習記録のテスト", () => {
     }
     await editPracticeButton.first().click();
 
-    // ステップ4: 既存の値が表示されていることを確認
-    await page.waitForSelector('[data-testid="practice-form-modal"]', { timeout: 10000 });
-    const placeValue = await page.locator('[data-testid="practice-place"]').inputValue();
+    // ステップ4: 練習タブ式モーダル (PracticeTabModal) が練習タブで開き、既存の値が表示されている
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', { timeout: 10000 });
+    await expect(page.getByRole("tab", { name: "練習", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    // 編集モードの初期読み込み (既存データの取得) が終わるまで、タブ本文は入力不可で
+    // 読み込み中オーバーレイが出る。消えるのを待てば、以降の入力は巻き戻らない。
+    await page.waitForSelector('[data-testid="practice-tab-modal-hydrating"]', { state: "detached", timeout: 15000 });
+    const placeValue = await page.locator('[data-testid="practice-tab-place"]').inputValue();
     expect(placeValue).toBeTruthy();
 
     // ステップ5: 場所を変更
-    await page.fill('[data-testid="practice-place"]', "△△プール");
+    await page.fill('[data-testid="practice-tab-place"]', "△△プール");
 
-    // ステップ6: 「練習予定を更新」ボタンをクリック
-    await page.click('[data-testid="update-practice-button"]');
+    // ステップ6: 「保存して閉じる」ボタンをクリック
+    await page.click('[data-testid="practice-tab-modal-save"]');
 
     // 自動でモーダルが閉じ、再度練習内容が表示されることを確認
-    await page.waitForSelector('[data-testid="practice-form-modal"]', {
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', {
       state: "hidden",
       timeout: 15000,
     });
@@ -333,6 +340,100 @@ test.describe("個人練習記録のテスト", () => {
       '[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]',
       { state: "visible", timeout: 10000 },
     );
+
+    // 変更した場所が日別詳細に反映されていることを確認
+    await expect(
+      page
+        .locator('[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]')
+        .first()
+        .locator("text=△△プール")
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
+  });
+
+  /**
+   * TC-PRACTICE-007: 編集モーダルの読み込み中は入力できず、読み込み完了直後の編集は保存される
+   * (「開いて即編集すると DB 値に巻き戻る」既知バグの回帰テスト)
+   */
+  test("TC-PRACTICE-007: 読み込み中は入力できず、読み込み完了直後の編集は保存される", async ({ page }) => {
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+
+    await page.waitForSelector('[data-testid="calendar-day"]', { timeout: 10000 });
+    await page.locator(`[data-testid="calendar-day"][data-date="${todayKey}"]`).click();
+    await page.waitForSelector(
+      '[data-testid="practice-detail-modal"], [data-testid="day-detail-modal"]',
+      { timeout: 10000 },
+    );
+    await page.waitForTimeout(1000);
+    await page
+      .waitForFunction(() => !document.body.textContent?.includes("練習詳細を読み込み中"), {
+        timeout: 20000,
+      })
+      .catch(() => {});
+
+    const editButton = page.locator('[data-testid="edit-practice-button"]').first();
+    await editButton.waitFor({ state: "visible", timeout: 10000 });
+
+    // 既存練習ログの取得 (GET) だけを遅延させ、読み込み中の状態を確実に観測できるようにする
+    const isLogsFetch = (url: URL) => /\/rest\/v1\/practice_logs$/.test(url.pathname);
+    const slowRoute = async (route: import("@playwright/test").Route) => {
+      if (route.request().method() === "GET") {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+      await route.continue();
+    };
+    await page.route(isLogsFetch, slowRoute);
+
+    await editButton.click();
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', { timeout: 10000 });
+
+    // 読み込み中: オーバーレイが出て、保存ボタンは無効
+    const hydrating = page.locator('[data-testid="practice-tab-modal-hydrating"]');
+    await expect(hydrating).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="practice-tab-modal-save"]')).toBeDisabled();
+
+    // 読み込み中にクリック・キー入力しても値は入らない (inert)
+    const noteInput = page.locator('[data-testid="practice-tab-note"]');
+    await noteInput.click({ force: true, timeout: 2000 }).catch(() => {});
+    await page.keyboard.type("TYPED-DURING-LOAD");
+    await expect(noteInput).not.toHaveValue(/TYPED-DURING-LOAD/);
+
+    // 読み込み完了 (オーバーレイが消える)
+    await page.waitForSelector('[data-testid="practice-tab-modal-hydrating"]', {
+      state: "detached",
+      timeout: 20000,
+    });
+    await page.unroute(isLogsFetch, slowRoute);
+    await expect(noteInput).not.toHaveValue(/TYPED-DURING-LOAD/);
+
+    // 読み込み完了直後に編集して保存する
+    await noteInput.fill("AFTER-LOAD-NOTE");
+    await page.click('[data-testid="practice-tab-modal-save"]');
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', {
+      state: "hidden",
+      timeout: 15000,
+    });
+
+    // DB に編集後の値が保存されている (読み込み中の入力は保存されていない)
+    const admin = createAdminClient();
+    const { data: users } = await admin.auth.admin.listUsers({ perPage: 500 });
+    const testUser = users?.users?.find((u) => u.email?.toLowerCase() === getTestEmail().toLowerCase());
+    if (!testUser) throw new Error("E2E テストユーザーが見つかりません");
+    await expect
+      .poll(
+        async () => {
+          const { data } = await admin
+            .from("practices")
+            .select("note")
+            .eq("user_id", testUser.id)
+            .eq("date", todayKey)
+            .is("team_id", null)
+            .single();
+          return data?.note;
+        },
+        { timeout: 10000 },
+      )
+      .toBe("AFTER-LOAD-NOTE");
   });
 
   /**
@@ -364,7 +465,14 @@ test.describe("個人練習記録のテスト", () => {
     await editLogButton.first().click();
 
     // ステップ3: 既存の値が表示されていることを確認
-    await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', { timeout: 10000 });
+    await expect(page.getByRole("tab", { name: "練習ログ", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    // 編集モードの初期読み込み (既存データの取得) が終わるまで、タブ本文は入力不可で
+    // 読み込み中オーバーレイが出る。消えるのを待てば、以降の入力は巻き戻らない。
+    await page.waitForSelector('[data-testid="practice-tab-modal-hydrating"]', { state: "detached", timeout: 15000 });
     // 距離はプリセットチップ式。チップ群が表示されていることを確認
     await expect(page.locator('[data-testid="practice-distance-preset-100"]')).toBeVisible();
     const repCountValue = await page.locator('[data-testid="practice-rep-count"]').inputValue();
@@ -408,10 +516,10 @@ test.describe("個人練習記録のテスト", () => {
     await page.click('[data-testid="practice-swim-category-Pull"]');
 
     // ステップ10: 「練習記録を更新」ボタンをクリック
-    await page.click('[data-testid="update-practice-log-button"]');
+    await page.click('[data-testid="practice-tab-modal-save"]');
 
     // ステップ11: フォームが閉じ、日別詳細モーダルが自動で開く
-    await page.waitForSelector('[data-testid="practice-log-form-modal"]', {
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', {
       state: "hidden",
       timeout: 15000,
     });
@@ -466,7 +574,10 @@ test.describe("個人練習記録のテスト", () => {
     await editLogButton.first().click();
 
     // ステップ3: 既存のタイムが表示されていることを確認
-    await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', { timeout: 10000 });
+    // 編集モードの初期読み込み (既存データの取得) が終わるまで、タブ本文は入力不可で
+    // 読み込み中オーバーレイが出る。消えるのを待てば、以降の入力は巻き戻らない。
+    await page.waitForSelector('[data-testid="practice-tab-modal-hydrating"]', { state: "detached", timeout: 15000 });
     // フォームのレンダリングを待つ
     await page.waitForSelector(
       '[data-testid="practice-overall-average"], [data-testid="practice-overall-fastest"]',
@@ -524,8 +635,8 @@ test.describe("個人練習記録のテスト", () => {
       state: "hidden",
       timeout: 10000,
     });
-    await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 10000 });
-    const practiceLogForm = page.locator('[data-testid="practice-log-form-modal"]');
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', { timeout: 10000 });
+    const practiceLogForm = page.locator('[data-testid="practice-tab-modal"]');
     await practiceLogForm
       .locator('[data-testid="practice-overall-average"]')
       .first()
@@ -539,10 +650,10 @@ test.describe("個人練習記録のテスト", () => {
     ).toBeVisible({ timeout: 5000 });
 
     // ステップ12: 「練習記録を更新」ボタンをクリック
-    await page.click('[data-testid="update-practice-log-button"]');
+    await page.click('[data-testid="practice-tab-modal-save"]');
 
     // ステップ13: フォームが閉じる
-    await page.waitForSelector('[data-testid="practice-log-form-modal"]', {
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', {
       state: "hidden",
       timeout: 15000,
     });
@@ -595,16 +706,19 @@ test.describe("個人練習記録のテスト", () => {
       return;
     }
     await editLogButton.first().click();
-    await page.waitForSelector('[data-testid="practice-log-form-modal"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', { timeout: 10000 });
+    // 編集モードの初期読み込み (既存データの取得) が終わるまで、タブ本文は入力不可で
+    // 読み込み中オーバーレイが出る。消えるのを待てば、以降の入力は巻き戻らない。
+    await page.waitForSelector('[data-testid="practice-tab-modal-hydrating"]', { state: "detached", timeout: 15000 });
 
     // ステップ2: ANタグが選択されている場合は解除
     const tagInput = page.locator(
-      '[data-testid="practice-log-form-modal"] [data-testid="tag-input"]',
+      '[data-testid="practice-tab-modal"] [data-testid="tag-input"]',
     );
     await tagInput.waitFor({ state: "visible", timeout: 10000 });
 
     const selectedAnTag = page
-      .locator('[data-testid="practice-log-form-modal"] [data-testid^="selected-tag-"]')
+      .locator('[data-testid="practice-tab-modal"] [data-testid^="selected-tag-"]')
       .filter({
         hasText: "AN",
       })
@@ -634,7 +748,7 @@ test.describe("個人練習記録のテスト", () => {
       await page.waitForTimeout(1000);
 
       const selectedTags = page.locator(
-        '[data-testid="practice-log-form-modal"] [data-testid^="selected-tag-"]',
+        '[data-testid="practice-tab-modal"] [data-testid^="selected-tag-"]',
       );
       const selectedTagCount = await selectedTags.count();
       if (selectedTagCount > 0) {
@@ -749,7 +863,7 @@ test.describe("個人練習記録のテスト", () => {
     // ステップ13: 更新されたタグをクリックして追加
     await updatedTagRow.click();
     const selectedTag = page
-      .locator('[data-testid="practice-log-form-modal"] [data-testid^="selected-tag-"]')
+      .locator('[data-testid="practice-tab-modal"] [data-testid^="selected-tag-"]')
       .filter({
         hasText: "EDITED_TAG",
       })
@@ -757,10 +871,10 @@ test.describe("個人練習記録のテスト", () => {
     await expect(selectedTag).toBeVisible({ timeout: 5000 });
 
     // ステップ14: 「練習記録を更新」ボタンをクリック
-    await page.click('[data-testid="update-practice-log-button"]');
+    await page.click('[data-testid="practice-tab-modal-save"]');
 
     // ステップ15: 日別詳細モーダルで更新されたタグが表示されていることを確認
-    await page.waitForSelector('[data-testid="practice-log-form-modal"]', {
+    await page.waitForSelector('[data-testid="practice-tab-modal"]', {
       state: "hidden",
       timeout: 15000,
     });

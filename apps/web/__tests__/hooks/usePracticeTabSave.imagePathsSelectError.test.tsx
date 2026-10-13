@@ -43,7 +43,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
 import type { PracticeTabSaveParams } from "@/components/forms/PracticeTabModal";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
@@ -161,17 +161,15 @@ const newImageFile = (name = "new-photo.jpg") => ({
 });
 
 describe("usePracticeTabSave — issue #48: image_paths SELECT の error 未処理による全置換", () => {
-  let createPractice: ReturnType<typeof vi.fn>;
-  let updatePractice: ReturnType<typeof vi.fn>;
-  let createPracticeLog: ReturnType<typeof vi.fn>;
-  let updatePracticeLog: ReturnType<typeof vi.fn>;
-  let deletePracticeLog: ReturnType<typeof vi.fn>;
-  let createPracticeTime: ReturnType<typeof vi.fn>;
-  let deletePracticeTime: ReturnType<typeof vi.fn>;
-  let setPracticeLoading: ReturnType<typeof vi.fn>;
-  let setEditingPracticeId: ReturnType<typeof vi.fn>;
-  let closePracticeTabModal: ReturnType<typeof vi.fn>;
-  let onSaved: ReturnType<typeof vi.fn>;
+  let createPractice: Mock;
+  let updatePractice: Mock;
+  let createPracticeLog: Mock;
+  let updatePracticeLog: Mock;
+  let deletePracticeLog: Mock;
+  let setPracticeLoading: Mock;
+  let setEditingPracticeId: Mock;
+  let closePracticeTabModal: Mock;
+  let onSaved: Mock;
 
   const setup = (imagePathsResponse: { data: { image_paths: string[] | null } | null; error: unknown }) => {
     const fake = createFakeSupabase(imagePathsResponse);
@@ -180,8 +178,6 @@ describe("usePracticeTabSave — issue #48: image_paths SELECT の error 未処�
     createPracticeLog = vi.fn().mockResolvedValue({ id: "new-log-id" });
     updatePracticeLog = vi.fn().mockResolvedValue({ id: "log-1" });
     deletePracticeLog = vi.fn().mockResolvedValue(undefined);
-    createPracticeTime = vi.fn().mockResolvedValue({});
-    deletePracticeTime = vi.fn().mockResolvedValue(undefined);
     setPracticeLoading = vi.fn();
     setEditingPracticeId = vi.fn();
     closePracticeTabModal = vi.fn();
@@ -198,8 +194,6 @@ describe("usePracticeTabSave — issue #48: image_paths SELECT の error 未処�
           createPracticeLog,
           updatePracticeLog,
           deletePracticeLog,
-          createPracticeTime,
-          deletePracticeTime,
           setPracticeLoading,
           setEditingPracticeId,
           closePracticeTabModal,

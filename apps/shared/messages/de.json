@@ -6,7 +6,8 @@
         "practices": "Training",
         "competitions": "Wettkämpfe",
         "teams": "Teams",
-        "myPage": "Mein Bereich"
+        "myPage": "Mein Bereich",
+        "goals": "Ziele"
       },
       "titles": {
         "practiceDetail": "Trainingsdetails",
@@ -22,7 +23,8 @@
         "entryRegister": "Meldung eintragen",
         "teamDetail": "Teamdetails",
         "settings": "Einstellungen",
-        "bulkBestTime": "Bestzeiten-Sammeleingabe"
+        "bulkBestTime": "Bestzeiten-Sammeleingabe",
+        "goalDetail": "Zieldetails"
       }
     }
   },
@@ -1473,11 +1475,13 @@
       "dashboard": "Dashboard",
       "practice": "Trainingsverlauf",
       "competition": "Wettkampfverlauf",
+      "goals": "Ziele",
       "mypage": "Meine Seite",
       "team": "Team",
       "dashboardDesc": "Mitteilungen und Termine",
       "practiceDesc": "Trainingsinhalte und Zeiten",
       "competitionDesc": "Wettkampfergebnisse und Zeiten",
+      "goalsDesc": "Ziele setzen und Fortschritt verfolgen",
       "mypageDesc": "Profil und Bestzeiten",
       "teamDesc": "Teams beitreten und verwalten",
       "teamAdmin": "Teamverwaltung",
@@ -2128,7 +2132,7 @@
       "loadError": "Ziele konnten nicht geladen werden",
       "retry": "Erneut laden",
       "empty": "Keine Ziele vorhanden",
-      "emptyDesc": "Erstellen Sie ein Ziel über die Schaltfläche oben rechts",
+      "emptyDesc": "Erstellen Sie ein Ziel über die Schaltfläche unten",
       "achievedBadge": "Erreicht!",
       "targetTimePrefix": "Ziel:",
       "deleteConfirm": "Dieses Ziel löschen?",
@@ -2136,7 +2140,9 @@
       "edit": "Bearbeiten",
       "delete": "Löschen",
       "competitionFallback": "Wettkampf",
-      "styleFallback": "Disziplin"
+      "styleFallback": "Disziplin",
+      "competitionInfoUnavailable": "Keine Wettkampfinformationen",
+      "editUnavailableReason": "Bearbeitung nicht möglich, da keine Wettkampfinformationen vorliegen"
     },
     "detail": {
       "loadError": "Zieldetails konnten nicht geladen werden",
@@ -2154,8 +2160,6 @@
       "submitButton": "Erstellen",
       "cancelButton": "Abbrechen",
       "closeAriaLabel": "Schließen",
-      "bestTimeNotFound": "Für diese Disziplin wurde keine Bestzeit gefunden",
-      "bestTimeFetchFailed": "Bestzeit konnte nicht abgerufen werden",
       "targetTimeInvalid": "Bitte geben Sie eine gültige Zielzeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
       "startTimeInvalid": "Bitte geben Sie eine gültige Ausgangszeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
       "competitionRequired": "Bitte wählen Sie einen Wettkampf aus",
@@ -2166,8 +2170,6 @@
       "submitButton": "Aktualisieren",
       "cancelButton": "Abbrechen",
       "closeAriaLabel": "Schließen",
-      "bestTimeNotFound": "Für diese Disziplin wurde keine Bestzeit gefunden",
-      "bestTimeFetchFailed": "Bestzeit konnte nicht abgerufen werden",
       "updateFailed": "Ziel konnte nicht aktualisiert werden",
       "validation": {
         "targetTimeInvalid": "Bitte geben Sie eine gültige Zielzeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
@@ -2201,7 +2203,8 @@
       "updateFailed": "Ziel konnte nicht aktualisiert werden",
       "undecided": "Offen",
       "competitionFallback": "Wettkampf",
-      "styleFallback": "Disziplin"
+      "styleFallback": "Disziplin",
+      "goToGoalsLink": "Ziele ansehen"
     },
     "milestone": {
       "empty": "Keine Meilensteine vorhanden",
@@ -2286,7 +2289,8 @@
       "deadlineLabel": "Frist:",
       "otherPrefix": "Sonstiges: {note}",
       "saveFailed": "Rückblicknotiz konnte nicht gespeichert werden",
-      "actionFailed": "Aktion fehlgeschlagen"
+      "actionFailed": "Aktion fehlgeschlagen",
+      "goToGoalsLink": "Ziele ansehen"
     },
     "form": {
       "competitionLabel": "Wettkampf",
@@ -2303,7 +2307,9 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "Ausgangszeit (optional)",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "Aus Bestzeit übernehmen"
+      "personalCompetitionGroup": "Persönlich",
+      "teamCompetitionGroupFallback": "Team-Wettkampf",
+      "competitionDatePast": "Bitte wählen Sie für einen neuen Wettkampf das heutige oder ein späteres Datum"
     },
     "milestoneForm": {
       "templateLabel": "Vorlage (optional)",
@@ -2339,7 +2345,8 @@
       "averageTimeLabel": "Durchschn. Zielzeit",
       "circleMinLabel": "Intervall (Min.)",
       "circleSecLabel": "Intervall (Sek.)",
-      "averageTimeRequired": "Bitte geben Sie eine durchschnittliche Zielzeit ein"
+      "averageTimeRequired": "Bitte geben Sie eine durchschnittliche Zielzeit ein",
+      "paramsInvalid": "Einige Felder sind leer oder 0. Bitte geben Sie einen Wert ab 1 ein"
     },
     "deadlineInput": {
       "defaultLabel": "Frist (optional)",
@@ -2360,6 +2367,48 @@
       "timeTrialDesc": "Zeiten aus Training und Wettkämpfen automatisch erfassen",
       "goalSet": "Goal Set",
       "goalSetDesc": "50m × 6 Wdh. × 3 Sätze (aus der 100m-Zielzeit berechnet)"
+    },
+    "milestoneSummary": {
+      "time": "{distance}m × 1 Wdh.: {time}",
+      "repsTime": "{distance}m × {reps} Wdh. @{time} Ø",
+      "set": "{distance}m × {reps} Wdh. × {sets} Sätze (@{circle} Intervall) komplett"
+    },
+    "mobile": {
+      "notFound": "Ziel nicht gefunden",
+      "milestoneNotFound": "Meilenstein nicht gefunden",
+      "noSelectableCompetitions": "Keine Wettkämpfe verfügbar. Bitte legen Sie einen neuen an."
+    }
+  },
+  "teamMemberGoals": {
+    "title": "Ziele des Mitglieds",
+    "memberLabel": "Mitglied",
+    "memberPlaceholder": "Mitglied auswählen",
+    "memberSelectTitle": "Mitglied auswählen",
+    "selectMemberHint": "Wähle ein Mitglied aus, um dessen Ziele zu sehen",
+    "noSelectableMembers": "Keine Mitglieder zur Auswahl vorhanden",
+    "empty": "Keine Ziele",
+    "emptyDesc": "Dieses Mitglied hat noch keine Ziele festgelegt",
+    "loadError": "Ziele konnten nicht geladen werden",
+    "retry": "Erneut versuchen",
+    "snapshotNote": "Zeigt den Stand der letzten Aktualisierung des Mitglieds in der App",
+    "progressUnavailable": "Der Fortschritt kann ohne Wettkampfinformationen nicht berechnet werden",
+    "section": {
+      "upcoming": "Kommende Wettkämpfe",
+      "past": "Vergangene Wettkämpfe",
+      "noCompetition": "Keine Wettkampfinformationen"
+    },
+    "status": {
+      "goal": {
+        "active": "Laufend",
+        "achieved": "Erreicht",
+        "cancelled": "Abgebrochen"
+      },
+      "milestone": {
+        "not_started": "Nicht begonnen",
+        "in_progress": "Laufend",
+        "achieved": "Erreicht",
+        "expired": "Abgelaufen"
+      }
     }
   },
   "teams": {
@@ -2396,6 +2445,7 @@
       "tabPractices": "Trainings",
       "tabCompetitions": "Wettkämpfe",
       "tabRankings": "Ranglisten",
+      "tabGoals": "Ziele",
       "tabAttendance": "Anwesenheit",
       "memberLoading": "Mitglieder werden geladen...",
       "memberFetchFailed": "Mitglieder konnten nicht geladen werden",
@@ -3559,6 +3609,7 @@
       "practices": "Trainings",
       "competitions": "Wettkämpfe",
       "rankings": "Ranglisten",
+      "goals": "Ziele",
       "bulkRegister": "Sammelregistrierung",
       "settings": "Einstellungen"
     },
@@ -4306,6 +4357,7 @@
       "eventHeader": "Disziplin {n}",
       "entryTimeLabel": "Meldezeit:",
       "bestTimeLabel": "Bestzeit",
+      "goalTargetLabel": "Ziel",
       "bestTimeRelay": "Bestzeit (Ablösung)",
       "bestTimeLong": "Bestzeit (Langbahn)",
       "bestTimeLongRelay": "Bestzeit (Langbahn Ablösung)",

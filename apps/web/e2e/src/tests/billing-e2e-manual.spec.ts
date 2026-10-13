@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Browser } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
 import { URLS, TIMEOUTS } from "../config/config";
 
 /**
@@ -27,6 +28,15 @@ async function newCleanPage(browser: Browser) {
 // ========================================
 // Supabase Admin クライアント（Premium ユーザー作成用）
 // ========================================
+/**
+ * Stripe の実 API を叩くテストは test mode のキー (sk_test_) のときだけ実行する。
+ * 本番キー (sk_live_) で顧客や Checkout セッションを作る事故を防ぐ。
+ */
+const STRIPE_KEY = process.env.STRIPE_SECRET_KEY ?? "";
+const HAS_STRIPE_TEST_KEY = STRIPE_KEY.startsWith("sk_test_");
+const STRIPE_SKIP_REASON =
+  "STRIPE_SECRET_KEY が未設定、または test mode (sk_test_) のキーではないためスキップ";
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "http://localhost:54321";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
@@ -84,9 +94,11 @@ async function createPremiumUser(
     status?: "active" | "trialing" | "past_due";
     cancelAtPeriodEnd?: boolean;
     trialDaysRemaining?: number;
+    /** 指定しない場合は実在しない偽の `cus_test_<timestamp>` を DB に入れる */
+    stripeCustomerId?: string;
   } = {},
 ) {
-  const { status = "active", cancelAtPeriodEnd = false, trialDaysRemaining } = options;
+  const { status = "active", cancelAtPeriodEnd = false, trialDaysRemaining, stripeCustomerId } = options;
 
   // まず Free ユーザーを作成
   const user = await createFreeUser(page, suffix);
@@ -117,7 +129,7 @@ async function createPremiumUser(
       trial_start: trialEnd ? now.toISOString() : null,
       trial_end: trialEnd ? trialEnd.toISOString() : null,
       cancel_at_period_end: cancelAtPeriodEnd,
-      stripe_customer_id: `cus_test_${Date.now()}`,
+      stripe_customer_id: stripeCustomerId ?? `cus_test_${Date.now()}`,
     },
     { onConflict: "id" },
   );
@@ -533,7 +545,7 @@ test.describe("Free プランの機能制限", () => {
 // ========================================
 test.describe("Stripe 購入フロー", () => {
   // Stripe テストは STRIPE_SECRET_KEY が必要（CI では未設定のためスキップ）
-  test.skip(!process.env.STRIPE_SECRET_KEY, "STRIPE_SECRET_KEY が設定されていないためスキップ");
+  test.skip(!HAS_STRIPE_TEST_KEY, STRIPE_SKIP_REASON);
   test.describe.configure({ mode: "serial", timeout: 90000 });
 
   let purchaseUser: { email: string; password: string };
@@ -792,7 +804,11 @@ test.describe("Stripe 購入フロー", () => {
     await context.close();
   });
 
-  test("No.18: 3Dセキュア認証カードで購入できる", async ({ browser }) => {
+  test("No.18: 3Dセキュア認証カードで購入できる (E2E_STRIPE_3DS=1 のときのみ実行: Stripe ホストページの 3DS iframe DOM に依存する手動確認扱い)", async ({ browser }) => {
+    test.skip(
+      process.env.E2E_STRIPE_3DS !== "1",
+      "E2E_STRIPE_3DS=1 が未設定のためスキップ (Stripe 外部ページの 3DS iframe DOM に依存する手動確認扱い)",
+    );
     const { page, context } = await newCleanPage(browser);
     const threeDSUser = await createFreeUser(page, "-3ds");
     await page.goto(URLS.SETTINGS);
@@ -847,7 +863,8 @@ test.describe("Stripe 購入フロー", () => {
             threeDSCompleted = true;
           }
         } catch {
-          // 3DS iframe が表示されない場合もあるので失敗扱いにしない
+          // 3DS iframe が表示されない場合は threeDSCompleted=false のまま。
+          // 下の recordResult(18, threeDSCompleted && ...) で失敗として扱う (握りつぶさない)
           threeDSCompleted = false;
         }
 
@@ -872,12 +889,34 @@ test.describe("Stripe 購入フロー", () => {
 // プラン管理テスト (No.19〜22)
 // ========================================
 test.describe("プラン管理", () => {
+  // No.19 が test mode の Stripe に作成した顧客 ID。afterAll で削除する
+  const createdStripeCustomerIds: string[] = [];
+
+  test.afterAll(async () => {
+    if (!HAS_STRIPE_TEST_KEY || createdStripeCustomerIds.length === 0) return;
+    const stripe = new Stripe(STRIPE_KEY);
+    for (const id of createdStripeCustomerIds) {
+      await stripe.customers.del(id).catch((e: unknown) => {
+        console.warn(`Stripe 顧客の削除に失敗: ${id}`, e instanceof Error ? e.message : e);
+      });
+    }
+  });
+
   test("No.19: 「プランを管理」から Stripe Portal に遷移できる", async ({ browser }) => {
-    test.skip(!process.env.STRIPE_SECRET_KEY, "STRIPE_SECRET_KEY が設定されていないためスキップ");
+    test.skip(!HAS_STRIPE_TEST_KEY, STRIPE_SKIP_REASON);
     const { page, context } = await newCleanPage(browser);
-    // Stripe Customer ID が必要なので、実際に Stripe 購入した No.13 のユーザーが理想的
-    // ここでは DB 直接設定の Premium ユーザーで Portal API の動作を確認
-    const portalUser = await createPremiumUser(page, "-portal", { status: "active" });
+    // Portal セッションの作成には Stripe 上に実在する顧客が必要。
+    // test mode の顧客を作成し、その ID を DB (user_subscriptions.stripe_customer_id) に入れる
+    const stripe = new Stripe(STRIPE_KEY);
+    const stripeCustomer = await stripe.customers.create({
+      name: "E2E Portal Test",
+      metadata: { e2e: "billing-e2e-manual-no19" },
+    });
+    createdStripeCustomerIds.push(stripeCustomer.id);
+    const portalUser = await createPremiumUser(page, "-portal", {
+      status: "active",
+      stripeCustomerId: stripeCustomer.id,
+    });
 
     await page.goto(URLS.SETTINGS);
     await page.waitForLoadState("domcontentloaded");
@@ -891,14 +930,22 @@ test.describe("プラン管理", () => {
       ]);
 
       if (response) {
+        // 成功時は API 応答直後にクライアントが Stripe へ遷移するため、応答ボディが
+        // 読めないことがある (ナビゲーションで破棄される)。その場合は遷移先 URL で判定する。
         const data = await response.json().catch(() => null);
-        const portalUrl = data?.url;
+        let portalUrl: string | undefined = data?.url;
+        if (!portalUrl && response.status() === 200) {
+          await page
+            .waitForURL(/billing\.stripe\.com/, { timeout: 15000 })
+            .catch(() => {});
+          portalUrl = page.url();
+        }
 
-        if (portalUrl && portalUrl.includes("billing.stripe.com")) {
+        if (response.status() === 200 && portalUrl && portalUrl.includes("billing.stripe.com")) {
           recordResult(19, true, `Portal URL 取得成功: ${portalUrl.substring(0, 50)}...`);
         } else {
-          // API は成功したがURLが想定と異なる（テスト環境ではStripe Customer未設定の場合）
-          recordResult(19, false, `Portal URL 不正 or 取得不可（テスト環境ではStripe Customer が存在しない可能性）: status=${response.status()}`);
+          // URL が取得できない (Stripe test mode の Customer Portal 設定未済などの可能性)
+          recordResult(19, false, `Portal URL 不正 or 取得不可: status=${response.status()} url=${String(portalUrl).substring(0, 60)} error=${String(data?.error)}`);
         }
       } else {
         // Portal API が呼ばれなかった場合、ページ遷移をチェック

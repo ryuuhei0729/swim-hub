@@ -24,6 +24,7 @@ export const TEAM_TAB_DEFS = [
   { id: "attendance", nameKey: "teams.mobile.tabAttendance", icon: "clipboard", adminOnly: false },
   // ランキングは一般メンバーも閲覧するため管理者限定にしない
   { id: "rankings", nameKey: "teams.mobile.tabRankings", icon: "bar-chart-2", adminOnly: false },
+  { id: "goals", nameKey: "teams.mobile.tabGoals", icon: "target", adminOnly: true },
   { id: "announcements", nameKey: "teams.mobile.tabAnnouncements", icon: "bell", adminOnly: true },
   // 設定は「管理者ビュー切替」と独立した全メンバー向けタブ。中身の出し分け
   // (編集・削除) は TeamSettingsTab が isAdmin で行う

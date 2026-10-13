@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
-import Button from "@/components/ui/Button";
+import React, { useMemo } from "react";
 import Input from "@/components/ui/Input";
 import DatePicker from "@/components/ui/DatePicker";
-import { format } from "date-fns";
+import StyleChipSelector from "@/components/forms/StyleChipSelector";
+import TimeSecondsInput from "../shared/TimeSecondsInput";
+import { format, startOfDay } from "date-fns";
 import type { Style, Competition } from "@apps/shared/types";
 import { POOL_TYPES } from "../constants";
 import { useTranslations } from "next-intl";
@@ -14,6 +15,8 @@ interface GoalFormProps {
   competitionMode: "existing" | "new";
   onCompetitionModeChange: (mode: "existing" | "new") => void;
   competitions: Competition[];
+  /** team_id -> チーム名。個人大会 (team_id なし) 以外の optgroup ラベルに使う */
+  teamNames?: Record<string, string>;
   selectedCompetitionId: string;
   onSelectedCompetitionIdChange: (id: string) => void;
   newCompetition: {
@@ -32,13 +35,18 @@ interface GoalFormProps {
   styles: Style[];
   styleId: string;
   onStyleIdChange: (id: string) => void;
-  // タイム入力
-  targetTime: string;
-  onTargetTimeChange: (time: string) => void;
-  startTime: string;
-  onStartTimeChange: (time: string) => void;
-  useBestTime: boolean;
-  onGetBestTime: () => void;
+  // タイム入力 (秒数。null は未入力)
+  targetTime: number | null;
+  onTargetTimeChange: (seconds: number | null) => void;
+  startTime: number | null;
+  onStartTimeChange: (seconds: number | null) => void;
+  /** 自動入力のたびに増やす。初期タイム欄を再マウントして不正入力の表示を作り直す */
+  startTimeResetKey: number;
+  /** ベスト取得中などで差し替える初期タイム欄の placeholder (未指定なら通常の文言) */
+  startTimePlaceholder?: string;
+  onStartTimeInvalidChange: (invalid: boolean) => void;
+  /** true の間、初期タイム欄にエラーを表示する (保存拒否時) */
+  startTimeForceInvalid: boolean;
 }
 
 /**
@@ -48,6 +56,7 @@ export default function GoalForm({
   competitionMode,
   onCompetitionModeChange,
   competitions,
+  teamNames = {},
   selectedCompetitionId,
   onSelectedCompetitionIdChange,
   newCompetition,
@@ -59,11 +68,36 @@ export default function GoalForm({
   onTargetTimeChange,
   startTime,
   onStartTimeChange,
-  useBestTime,
-  onGetBestTime,
+  startTimeResetKey,
+  startTimePlaceholder,
+  onStartTimeInvalidChange,
+  startTimeForceInvalid,
 }: GoalFormProps) {
   const t = useTranslations("goals");
   const tCommon = useTranslations("common");
+
+  // 種目チップ選択(StyleChipSelector)向けにid/nameJp/distanceの形へ変換
+  const styleOptions = useMemo(
+    () => styles.map((s) => ({ id: s.id, nameJp: s.name_jp, distance: s.distance })),
+    [styles],
+  );
+
+  // 大会一覧を「個人」/チームごとに分類 (U2: optgroup)
+  const { personalCompetitions, teamCompetitionGroups } = useMemo(() => {
+    const personal: Competition[] = [];
+    const byTeam = new Map<string, Competition[]>();
+    for (const comp of competitions) {
+      if (!comp.team_id) {
+        personal.push(comp);
+        continue;
+      }
+      const list = byTeam.get(comp.team_id) ?? [];
+      list.push(comp);
+      byTeam.set(comp.team_id, list);
+    }
+    return { personalCompetitions: personal, teamCompetitionGroups: Array.from(byTeam.entries()) };
+  }, [competitions]);
+
   return (
     <div className="space-y-4">
       {/* 大会選択 */}
@@ -100,10 +134,28 @@ export default function GoalForm({
             required
           >
             <option value="">{t("form.selectCompetitionPlaceholder")}</option>
-            {competitions.map((comp) => (
-              <option key={comp.id} value={comp.id}>
-                {comp.title || t("form.competitionFallback")} - {format(new Date(comp.date), "yyyy/MM/dd")}
-              </option>
+            {personalCompetitions.length > 0 && (
+              <optgroup label={t("form.personalCompetitionGroup")}>
+                {personalCompetitions.map((comp) => (
+                  <option key={comp.id} value={comp.id}>
+                    {comp.title || t("form.competitionFallback")} -{" "}
+                    {format(new Date(comp.date), "yyyy/MM/dd")}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {teamCompetitionGroups.map(([teamId, comps]) => (
+              <optgroup
+                key={teamId}
+                label={teamNames[teamId] ?? t("form.teamCompetitionGroupFallback")}
+              >
+                {comps.map((comp) => (
+                  <option key={comp.id} value={comp.id}>
+                    {comp.title || t("form.competitionFallback")} -{" "}
+                    {format(new Date(comp.date), "yyyy/MM/dd")}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         ) : (
@@ -119,6 +171,7 @@ export default function GoalForm({
               label={t("form.competitionDateLabel")}
               value={newCompetition.date}
               onChange={(date) => onNewCompetitionChange({ ...newCompetition, date })}
+              minDate={startOfDay(new Date())}
               required
             />
             <Input
@@ -148,53 +201,47 @@ export default function GoalForm({
         )}
       </div>
 
-      {/* 種目選択 */}
+      {/* 種目選択(大会記録入力と同じ StyleChipSelector) */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">{t("form.styleLabel")}</label>
-        <select
-          value={styleId}
-          onChange={(e) => onStyleIdChange(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md"
-          required
-        >
-          <option value="">{t("form.selectStylePlaceholder")}</option>
-          {styles.map((style) => (
-            <option key={style.id} value={style.id}>
-              {style.name_jp}
-            </option>
-          ))}
-        </select>
+        {styleOptions.length > 0 ? (
+          <StyleChipSelector
+            styles={styleOptions}
+            value={styleId}
+            onChange={onStyleIdChange}
+            testIdPrefix="goal-style"
+          />
+        ) : (
+          <p className="text-sm text-gray-500">{t("form.selectStylePlaceholder")}</p>
+        )}
       </div>
 
       {/* 目標タイム */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">{t("form.targetTimeLabel")}</label>
-        <Input
-          type="text"
-          inputMode="decimal"
-          placeholder={t("form.targetTimePlaceholder")}
+        <TimeSecondsInput
           value={targetTime}
-          onChange={(e) => onTargetTimeChange(e.target.value)}
+          onChange={onTargetTimeChange}
+          placeholder={t("form.targetTimePlaceholder")}
           required
+          requiredErrorMessage={t("paramsForm.timeRequired")}
+          invalidErrorMessage={t("paramsForm.timeInvalid")}
         />
       </div>
 
       {/* 初期タイム */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">{t("form.startTimeLabel")}</label>
-        <div className="flex gap-2">
-          <Input
-            type="text"
-            inputMode="decimal"
-            placeholder={t("form.startTimePlaceholder")}
-            value={startTime}
-            onChange={(e) => onStartTimeChange(e.target.value)}
-            disabled={useBestTime}
-          />
-          <Button type="button" variant="outline" onClick={onGetBestTime} disabled={!styleId}>
-            {t("form.getBestTimeButton")}
-          </Button>
-        </div>
+        <TimeSecondsInput
+          key={startTimeResetKey}
+          value={startTime}
+          onChange={onStartTimeChange}
+          onInvalidChange={onStartTimeInvalidChange}
+          forceInvalid={startTimeForceInvalid}
+          placeholder={startTimePlaceholder ?? t("form.startTimePlaceholder")}
+          invalidErrorMessage={t("paramsForm.timeInvalid")}
+          data-testid="goal-start-time"
+        />
       </div>
     </div>
   );

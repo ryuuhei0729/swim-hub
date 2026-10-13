@@ -21,6 +21,9 @@ import { SettingsScreen } from "@/screens/SettingsScreen";
 import { PracticeLogTemplatesScreen } from "@/screens/PracticeLogTemplatesScreen";
 import { BulkBestTimeScreen } from "@/screens/BulkBestTimeScreen";
 import { PaywallScreen } from "@/screens/PaywallScreen";
+import { GoalDetailScreen } from "@/screens/GoalDetailScreen";
+import { GoalFormScreen } from "@/screens/GoalFormScreen";
+import { MilestoneFormScreen } from "@/screens/MilestoneFormScreen";
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -199,6 +202,32 @@ export const MainStack: React.FC = () => {
           ...baseHeaderOptions,
           title: t("navigation.mobile.titles.bulkBestTime"),
         }}
+      />
+      <Stack.Screen
+        name="GoalDetail"
+        component={GoalDetailScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.goalDetail"),
+        }}
+      />
+      <Stack.Screen
+        name="GoalForm"
+        component={GoalFormScreen}
+        options={({ route }) => ({
+          ...baseHeaderOptions,
+          title: route.params?.goalId ? t("goals.edit.title") : t("goals.create.title"),
+        })}
+      />
+      <Stack.Screen
+        name="MilestoneForm"
+        component={MilestoneFormScreen}
+        options={({ route }) => ({
+          ...baseHeaderOptions,
+          title: route.params?.milestoneId
+            ? t("goals.milestoneEdit.title")
+            : t("goals.milestoneCreate.title"),
+        })}
       />
       <Stack.Screen
         name="Paywall"
