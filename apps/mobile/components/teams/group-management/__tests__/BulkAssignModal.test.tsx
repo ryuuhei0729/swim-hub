@@ -213,10 +213,12 @@ vi.mock("react-native-reanimated", () => {
 });
 
 vi.mock("@apps/shared/api/teams/groups", () => ({
-  TeamGroupsAPI: vi.fn().mockImplementation(() => ({
-    listAllMemberships: vi.fn().mockResolvedValue([]),
-    setGroupMembers: vi.fn().mockResolvedValue(undefined),
-  })),
+  TeamGroupsAPI: vi.fn().mockImplementation(function () {
+    return {
+      listAllMemberships: vi.fn().mockResolvedValue([]),
+      setGroupMembers: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
 }));
 
 import { BulkAssignModal } from "../BulkAssignModal";
@@ -587,11 +589,12 @@ describe("BulkAssignModal - draggedUserId のリセット経路 [scrollEnabled �
       resolveSetGroupMembers = resolve;
     });
     vi.mocked(TeamGroupsAPI).mockImplementation(
-      () =>
-        ({
+      function () {
+        return {
           listAllMemberships: vi.fn().mockResolvedValue([]),
           setGroupMembers: vi.fn(() => pendingSave),
-        }) as unknown as InstanceType<typeof TeamGroupsAPI>,
+        } as unknown as InstanceType<typeof TeamGroupsAPI>;
+      },
     );
 
     renderModal();
@@ -931,11 +934,12 @@ describe("BulkAssignModal - 保存中ガード / 保存失敗時のエラーと�
       resolveSave = resolve;
     });
     vi.mocked(TeamGroupsAPI).mockImplementation(
-      () =>
-        ({
+      function () {
+        return {
           listAllMemberships: vi.fn().mockResolvedValue([]),
           setGroupMembers: vi.fn(() => pendingSave),
-        }) as unknown as InstanceType<typeof TeamGroupsAPI>,
+        } as unknown as InstanceType<typeof TeamGroupsAPI>;
+      },
     );
 
     renderModal();
@@ -959,11 +963,12 @@ describe("BulkAssignModal - 保存中ガード / 保存失敗時のエラーと�
     const onClose = vi.fn();
     const onSaved = vi.fn();
     vi.mocked(TeamGroupsAPI).mockImplementation(
-      () =>
-        ({
+      function () {
+        return {
           listAllMemberships: vi.fn().mockResolvedValue([]),
           setGroupMembers: vi.fn().mockRejectedValue(new Error("network down")),
-        }) as unknown as InstanceType<typeof TeamGroupsAPI>,
+        } as unknown as InstanceType<typeof TeamGroupsAPI>;
+      },
     );
 
     render(
@@ -993,11 +998,12 @@ describe("BulkAssignModal - 保存中ガード / 保存失敗時のエラーと�
     const onSaved = vi.fn();
     const setGroupMembers = vi.fn().mockRejectedValueOnce(new Error("network down")).mockResolvedValue(undefined);
     vi.mocked(TeamGroupsAPI).mockImplementation(
-      () =>
-        ({
+      function () {
+        return {
           listAllMemberships: vi.fn().mockResolvedValue([]),
           setGroupMembers,
-        }) as unknown as InstanceType<typeof TeamGroupsAPI>,
+        } as unknown as InstanceType<typeof TeamGroupsAPI>;
+      },
     );
 
     render(

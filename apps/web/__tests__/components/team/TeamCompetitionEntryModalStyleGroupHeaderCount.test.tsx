@@ -30,15 +30,19 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: vi.fn().mockImplementation(() => ({
-    getEntriesByCompetition: mocks.getEntriesByCompetition,
-  })),
+  EntryAPI: vi.fn().mockImplementation(function () {
+    return {
+      getEntriesByCompetition: mocks.getEntriesByCompetition,
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    updateCompetition: vi.fn(),
-  })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return {
+      updateCompetition: vi.fn(),
+    };
+  }),
 }));
 
 type ChainResponse = { data: unknown; error: unknown };

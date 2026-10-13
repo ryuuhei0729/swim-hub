@@ -14,11 +14,13 @@ import type { Goal, GoalWithMilestones } from "../../../types";
 // GoalAPI.getSelectableCompetitions を使う。個人大会+所属チームの大会を対象にするため)
 // に伴い RecordAPI へは依存しなくなった (課題C)。
 vi.mock("../../../api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({
-    getGoals: vi.fn(),
-    getGoalWithMilestones: vi.fn(),
-    getSelectableCompetitions: vi.fn(),
-  })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return {
+      getGoals: vi.fn(),
+      getGoalWithMilestones: vi.fn(),
+      getSelectableCompetitions: vi.fn(),
+    };
+  }),
 }));
 
 // フィクスチャデータ
@@ -82,7 +84,9 @@ describe("Goal Query Hooks", () => {
     };
 
     // コンストラクタがモックAPIインスタンスを返すように設定
-    vi.mocked(GoalAPI).mockImplementation(() => mockGoalApi as unknown as GoalAPI);
+    vi.mocked(GoalAPI).mockImplementation(function () {
+      return mockGoalApi as unknown as GoalAPI;
+    });
   });
 
   describe("useGoalsQuery", () => {

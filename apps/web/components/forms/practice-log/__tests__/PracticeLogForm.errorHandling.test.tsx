@@ -50,9 +50,11 @@ vi.mock("@/components/video/VideoUploader", () => ({ default: () => null }));
 // runMilestoneJudgment の try/catch に握りつぶされて本テストが何も検証しないまま
 // green になる。GoalAPI 自体をモックして握りつぶしに頼らないようにする。
 vi.mock("@apps/shared/api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({
-    updateAllMilestoneStatuses: vi.fn().mockResolvedValue(undefined),
-  })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return {
+      updateAllMilestoneStatuses: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
 }));
 
 // テンプレート選択モーダルは本テストの対象外 (react-query/next-intl navigation への

@@ -21,7 +21,7 @@ import React from "react";
 import { act } from "react";
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { StyleOption } from "@/components/forms/record-log/types";
 import type { EditingData } from "@/stores/types";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
@@ -155,7 +155,7 @@ function renderModal(opts: {
   editingCompetitionId: string | null;
   competitionFixture?: CompetitionFixtureResolver;
   entryLocked?: boolean;
-  onSave?: ReturnType<typeof vi.fn>;
+  onSave?: Mock;
 }) {
   currentAuth = {
     user: { id: "user-1" },

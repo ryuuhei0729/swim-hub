@@ -49,16 +49,20 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    getCompetitions: mocks.getCompetitions,
-    updateCompetition: mocks.updateCompetition,
-  })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return {
+      getCompetitions: mocks.getCompetitions,
+      updateCompetition: mocks.updateCompetition,
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: vi.fn().mockImplementation(() => ({
-    getEntriesByCompetition: mocks.getEntriesByCompetition,
-  })),
+  EntryAPI: vi.fn().mockImplementation(function () {
+    return {
+      getEntriesByCompetition: mocks.getEntriesByCompetition,
+    };
+  }),
 }));
 
 // 意図的に未来日 (2099年) にする: 「過去日だから壊れる」のではなく

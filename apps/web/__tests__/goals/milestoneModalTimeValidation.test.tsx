@@ -57,16 +57,20 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@apps/shared/api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({
-    createMilestone: mocks.createMilestone,
-    updateMilestone: mocks.updateMilestone,
-  })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return {
+      createMilestone: mocks.createMilestone,
+      updateMilestone: mocks.updateMilestone,
+    };
+  }),
 }));
 
 vi.mock("@swim-hub/shared/api", () => ({
-  PracticeLogTemplateAPI: vi.fn().mockImplementation(() => ({
-    createTemplate: vi.fn().mockResolvedValue({}),
-  })),
+  PracticeLogTemplateAPI: vi.fn().mockImplementation(function () {
+    return {
+      createTemplate: vi.fn().mockResolvedValue({}),
+    };
+  }),
 }));
 
 import MilestoneCreateModal from "../../app/[locale]/(authenticated)/goals/_components/MilestoneCreateModal";

@@ -48,26 +48,32 @@ vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
 }));
 
 vi.mock("@apps/shared/api/teams/records", () => ({
-  TeamRecordsAPI: vi.fn().mockImplementation(() => ({
-    update: mocks.update,
-    remove: mocks.remove,
-    create: mocks.create,
-  })),
+  TeamRecordsAPI: vi.fn().mockImplementation(function () {
+    return {
+      update: mocks.update,
+      remove: mocks.remove,
+      create: mocks.create,
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    createRecord: mocks.createRecord,
-    createSplitTimes: mocks.createSplitTimes,
-    updateRecord: mocks.updateRecord,
-    replaceSplitTimes: mocks.replaceSplitTimes,
-  })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return {
+      createRecord: mocks.createRecord,
+      createSplitTimes: mocks.createSplitTimes,
+      updateRecord: mocks.updateRecord,
+      replaceSplitTimes: mocks.replaceSplitTimes,
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: vi.fn().mockImplementation(() => ({
-    getStyles: mocks.getStyles,
-  })),
+  StyleAPI: vi.fn().mockImplementation(function () {
+    return {
+      getStyles: mocks.getStyles,
+    };
+  }),
 }));
 
 // 「自分の記録を追加」フローが entries テーブルに一切副作用を出さないことのガード

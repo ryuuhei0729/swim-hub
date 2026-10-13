@@ -51,11 +51,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@apps/shared/api/teams/practices", () => ({
-  TeamPracticesAPI: vi.fn().mockImplementation(() => ({
-    update: mocks.update,
-    remove: mocks.remove,
-    create: mocks.create,
-  })),
+  TeamPracticesAPI: vi.fn().mockImplementation(function () {
+    return {
+      update: mocks.update,
+      remove: mocks.remove,
+      create: mocks.create,
+    };
+  }),
 }));
 
 vi.mock("@/i18n/navigation", () => ({

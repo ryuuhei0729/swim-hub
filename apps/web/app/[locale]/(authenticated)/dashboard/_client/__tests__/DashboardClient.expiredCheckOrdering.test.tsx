@@ -37,24 +37,28 @@ vi.mock("@/contexts", () => ({
 }));
 
 vi.mock("@apps/shared/api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({
-    updateAllMilestoneStatuses: (...args: unknown[]) => {
-      mocks.callOrder.push("updateAllMilestoneStatuses");
-      return mocks.updateAllMilestoneStatuses(...args);
-    },
-    getExpiredGoals: (...args: unknown[]) => {
-      mocks.callOrder.push("getExpiredGoals");
-      return mocks.getExpiredGoals(...args);
-    },
-    getExpiredMilestones: (...args: unknown[]) => {
-      mocks.callOrder.push("getExpiredMilestones");
-      return mocks.getExpiredMilestones(...args);
-    },
-  })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return {
+      updateAllMilestoneStatuses: (...args: unknown[]) => {
+        mocks.callOrder.push("updateAllMilestoneStatuses");
+        return mocks.updateAllMilestoneStatuses(...args);
+      },
+      getExpiredGoals: (...args: unknown[]) => {
+        mocks.callOrder.push("getExpiredGoals");
+        return mocks.getExpiredGoals(...args);
+      },
+      getExpiredMilestones: (...args: unknown[]) => {
+        mocks.callOrder.push("getExpiredMilestones");
+        return mocks.getExpiredMilestones(...args);
+      },
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api", () => ({
-  EntryAPI: vi.fn().mockImplementation(() => ({ deleteEntry: vi.fn() })),
+  EntryAPI: vi.fn().mockImplementation(function () {
+    return { deleteEntry: vi.fn() };
+  }),
 }));
 
 vi.mock("@apps/shared/hooks/queries/practices", () => ({

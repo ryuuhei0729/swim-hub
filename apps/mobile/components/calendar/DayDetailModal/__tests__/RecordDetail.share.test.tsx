@@ -40,9 +40,11 @@ vi.mock("@/contexts/AuthProvider", () => ({
 // --- RecordAPI モック（getPreviousBestTime のみ差し替え） ---
 const mockGetPreviousBestTime = vi.hoisted(() => vi.fn());
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    getPreviousBestTime: mockGetPreviousBestTime,
-  })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return {
+      getPreviousBestTime: mockGetPreviousBestTime,
+    };
+  }),
 }));
 
 // --- expo-sharing / react-native-view-shot（ShareCardModal 実体が使う） ---

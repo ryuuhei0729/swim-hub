@@ -19,9 +19,11 @@ import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 const mockBulkRegister = vi.fn();
 
 vi.mock("@apps/shared/api/teams/bulkRegister", () => ({
-  TeamBulkRegisterAPI: vi.fn().mockImplementation(() => ({
-    bulkRegister: mockBulkRegister,
-  })),
+  TeamBulkRegisterAPI: vi.fn().mockImplementation(function () {
+    return {
+      bulkRegister: mockBulkRegister,
+    };
+  }),
 }));
 
 vi.mock("@/contexts", () => ({

@@ -139,25 +139,31 @@ vi.mock("@apps/shared/hooks/queries/user", () => ({
 }));
 
 vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: vi.fn().mockImplementation(() => ({
-    getEntriesByCompetition: h.mockEntryApiGetEntriesByCompetition,
-    createTeamEntry: vi.fn(),
-    createPersonalEntry: vi.fn(),
-    updateEntry: vi.fn(),
-    deleteEntry: vi.fn(),
-  })),
+  EntryAPI: vi.fn().mockImplementation(function () {
+    return {
+      getEntriesByCompetition: h.mockEntryApiGetEntriesByCompetition,
+      createTeamEntry: vi.fn(),
+      createPersonalEntry: vi.fn(),
+      updateEntry: vi.fn(),
+      deleteEntry: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    getRecords: h.mockRecordApiGetRecords,
-  })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return {
+      getRecords: h.mockRecordApiGetRecords,
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: vi.fn().mockImplementation(() => ({
-    getStyles: h.mockStyleApiGetStyles,
-  })),
+  StyleAPI: vi.fn().mockImplementation(function () {
+    return {
+      getStyles: h.mockStyleApiGetStyles,
+    };
+  }),
 }));
 
 vi.mock("@/hooks/useIOSCalendarSync", () => ({

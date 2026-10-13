@@ -19,9 +19,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockCreate = vi.fn();
 
 vi.mock("@apps/shared/api/teams/records", () => ({
-  TeamRecordsAPI: vi.fn().mockImplementation(() => ({
-    create: mockCreate,
-  })),
+  TeamRecordsAPI: vi.fn().mockImplementation(function () {
+    return {
+      create: mockCreate,
+    };
+  }),
 }));
 
 let currentAuthMock: {

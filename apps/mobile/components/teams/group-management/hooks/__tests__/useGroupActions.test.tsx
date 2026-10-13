@@ -36,13 +36,15 @@ const mockListGroupMembers = vi.fn();
 const mockSetGroupMembers = vi.fn();
 
 vi.mock("@apps/shared/api/teams/groups", () => ({
-  TeamGroupsAPI: vi.fn().mockImplementation(() => ({
-    create: mockCreate,
-    update: mockUpdate,
-    remove: mockRemove,
-    listGroupMembers: mockListGroupMembers,
-    setGroupMembers: mockSetGroupMembers,
-  })),
+  TeamGroupsAPI: vi.fn().mockImplementation(function () {
+    return {
+      create: mockCreate,
+      update: mockUpdate,
+      remove: mockRemove,
+      listGroupMembers: mockListGroupMembers,
+      setGroupMembers: mockSetGroupMembers,
+    };
+  }),
 }));
 
 import { useGroupActions } from "../useGroupActions";

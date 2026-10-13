@@ -26,7 +26,7 @@
 // そのため @/lib/supabase-server ではなく @supabase/ssr をモックする (rpc/from も
 // このクライアントに直接ぶら下がる形に変わる)。POST (google-calendar/connect) 側は
 // 従来通り @supabase/supabase-js の createClient を直接使うため変更なし。
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
 import { NextRequest } from "next/server";
 import { decrypt as realDecrypt, isEncrypted as realIsEncrypted } from "@/lib/encryption";
 
@@ -116,7 +116,7 @@ function makeCalendarConnectRequest(): NextRequest {
   return makeRequest(`${ORIGIN}/api/auth/callback?code=pkce-code&calendar_connect=true`);
 }
 
-let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+let consoleErrorSpy: MockInstance;
 
 beforeEach(() => {
   vi.clearAllMocks();

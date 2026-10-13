@@ -33,7 +33,9 @@ vi.mock("@/contexts", () => ({ useAuth: () => ({ supabase: {} }) }));
 
 const mocks = vi.hoisted(() => ({ updateMilestone: vi.fn().mockResolvedValue({}) }));
 vi.mock("@apps/shared/api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({ updateMilestone: mocks.updateMilestone })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return { updateMilestone: mocks.updateMilestone };
+  }),
 }));
 
 import ReflectionModal from "../../app/[locale]/(authenticated)/goals/_components/ReflectionModal";

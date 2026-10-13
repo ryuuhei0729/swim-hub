@@ -82,28 +82,34 @@ vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
 }));
 
 vi.mock("@apps/shared/api/teams/records", () => ({
-  TeamRecordsAPI: vi.fn().mockImplementation(() => ({
-    update: vi.fn(),
-    remove: vi.fn(),
-    create: vi.fn(),
-  })),
+  TeamRecordsAPI: vi.fn().mockImplementation(function () {
+    return {
+      update: vi.fn(),
+      remove: vi.fn(),
+      create: vi.fn(),
+    };
+  }),
 }));
 
 // DB 書き込み境界のみをモックする。handleSelfRecordSubmit 自体はモックしない
 // (実際のハンドラを通し、throw 伝播と resetUnsavedChanges 未実行を実測する)。
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    createRecord: mocks.createRecord,
-    createSplitTimes: mocks.createSplitTimes,
-    updateRecord: mocks.updateRecord,
-    replaceSplitTimes: mocks.replaceSplitTimes,
-  })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return {
+      createRecord: mocks.createRecord,
+      createSplitTimes: mocks.createSplitTimes,
+      updateRecord: mocks.updateRecord,
+      replaceSplitTimes: mocks.replaceSplitTimes,
+    };
+  }),
 }));
 
 vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: vi.fn().mockImplementation(() => ({
-    getStyles: mocks.getStyles,
-  })),
+  StyleAPI: vi.fn().mockImplementation(function () {
+    return {
+      getStyles: mocks.getStyles,
+    };
+  }),
 }));
 
 vi.mock("@/i18n/navigation", () => ({

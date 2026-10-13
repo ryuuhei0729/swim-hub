@@ -19,7 +19,7 @@
 
 import React from "react";
 import { renderWithI18n as render, screen, fireEvent, waitFor } from "../../utils/render";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import EntryLogForm from "@/components/forms/EntryLogForm";
 
 interface BestTimeFixture {
@@ -69,7 +69,7 @@ function renderForm(
   opts: {
     bestTimes?: BestTimeFixture[];
     poolType?: number;
-    onSubmit?: ReturnType<typeof vi.fn>;
+    onSubmit?: Mock;
   } = {},
 ) {
   currentBestTimes = opts.bestTimes ?? [];

@@ -19,16 +19,18 @@ import { renderQueryHook } from "../../utils/test-utils";
 vi.mock("../../../api/teams", () => ({
   TeamCoreAPI: vi.fn(),
   TeamAnnouncementsAPI: vi.fn(),
-  TeamMembersAPI: vi.fn().mockImplementation(() => ({
-    listPending: vi.fn(),
-    approve: vi.fn(),
-    reject: vi.fn(),
-    list: vi.fn(),
-    join: vi.fn(),
-    leave: vi.fn(),
-    updateRole: vi.fn(),
-    remove: vi.fn(),
-  })),
+  TeamMembersAPI: vi.fn().mockImplementation(function () {
+    return {
+      listPending: vi.fn(),
+      approve: vi.fn(),
+      reject: vi.fn(),
+      list: vi.fn(),
+      join: vi.fn(),
+      leave: vi.fn(),
+      updateRole: vi.fn(),
+      remove: vi.fn(),
+    };
+  }),
 }));
 
 // S1-V-01 相当: useListPendingMembersQuery
@@ -40,7 +42,9 @@ describe("useListPendingMembersQuery", () => {
     vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockMembersApi = { listPending: vi.fn() };
-    (TeamMembersAPI as ReturnType<typeof vi.fn>).mockImplementation(() => mockMembersApi);
+    (TeamMembersAPI as ReturnType<typeof vi.fn>).mockImplementation(function () {
+      return mockMembersApi;
+    });
   });
 
   it("teamId を指定すると承認待ちメンバー一覧を取得できる", async () => {
@@ -124,7 +128,9 @@ describe("useApproveMemberMutation", () => {
       approve: vi.fn(),
       listPending: vi.fn(),
     };
-    (TeamMembersAPI as ReturnType<typeof vi.fn>).mockImplementation(() => mockMembersApi);
+    (TeamMembersAPI as ReturnType<typeof vi.fn>).mockImplementation(function () {
+      return mockMembersApi;
+    });
   });
 
   it("membershipId と teamId を渡すと approve が呼ばれ、キャッシュが無効化される", async () => {
@@ -186,7 +192,9 @@ describe("useRejectMemberMutation", () => {
       reject: vi.fn(),
       listPending: vi.fn(),
     };
-    (TeamMembersAPI as ReturnType<typeof vi.fn>).mockImplementation(() => mockMembersApi);
+    (TeamMembersAPI as ReturnType<typeof vi.fn>).mockImplementation(function () {
+      return mockMembersApi;
+    });
   });
 
   it("membershipId と teamId を渡すと reject が呼ばれる", async () => {

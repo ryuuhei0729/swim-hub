@@ -65,11 +65,13 @@ vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
 }));
 
 vi.mock("@apps/shared/api/teams/records", () => ({
-  TeamRecordsAPI: vi.fn().mockImplementation(() => ({
-    update: mocks.update,
-    remove: mocks.remove,
-    create: mocks.create,
-  })),
+  TeamRecordsAPI: vi.fn().mockImplementation(function () {
+    return {
+      update: mocks.update,
+      remove: mocks.remove,
+      create: mocks.create,
+    };
+  }),
 }));
 
 vi.mock("@/i18n/navigation", () => ({

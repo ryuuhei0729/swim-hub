@@ -381,7 +381,7 @@ describe("ChipScrollRow", () => {
       const callbacks: ResizeObserverCallback[] = [];
       vi.stubGlobal(
         "ResizeObserver",
-        vi.fn().mockImplementation((cb: ResizeObserverCallback) => {
+        vi.fn().mockImplementation(function (cb: ResizeObserverCallback) {
           callbacks.push(cb);
           return { observe, unobserve, disconnect };
         }),

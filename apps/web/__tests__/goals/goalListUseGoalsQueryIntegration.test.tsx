@@ -43,12 +43,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@apps/shared/api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({
-    getGoals: mocks.getGoals,
-    getSelectableCompetitions: mocks.getSelectableCompetitions,
-    calculateGoalProgress: mocks.calculateGoalProgress,
-    updateGoal: vi.fn().mockResolvedValue({}),
-  })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return {
+      getGoals: mocks.getGoals,
+      getSelectableCompetitions: mocks.getSelectableCompetitions,
+      calculateGoalProgress: mocks.calculateGoalProgress,
+      updateGoal: vi.fn().mockResolvedValue({}),
+    };
+  }),
 }));
 
 function Harness() {

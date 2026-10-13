@@ -38,20 +38,22 @@ vi.mock("@/lib/data-loaders/common", () => ({
 }));
 
 vi.mock("@apps/shared/api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({
-    updateAllMilestoneStatuses: (...args: unknown[]) => {
-      mocks.callOrder.push("updateAllMilestoneStatuses");
-      return mocks.updateAllMilestoneStatuses(...args);
-    },
-    getGoals: (...args: unknown[]) => {
-      mocks.callOrder.push("getGoals");
-      return mocks.getGoals(...args);
-    },
-    getSelectableCompetitions: (...args: unknown[]) => {
-      mocks.callOrder.push("getSelectableCompetitions");
-      return mocks.getSelectableCompetitions(...args);
-    },
-  })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return {
+      updateAllMilestoneStatuses: (...args: unknown[]) => {
+        mocks.callOrder.push("updateAllMilestoneStatuses");
+        return mocks.updateAllMilestoneStatuses(...args);
+      },
+      getGoals: (...args: unknown[]) => {
+        mocks.callOrder.push("getGoals");
+        return mocks.getGoals(...args);
+      },
+      getSelectableCompetitions: (...args: unknown[]) => {
+        mocks.callOrder.push("getSelectableCompetitions");
+        return mocks.getSelectableCompetitions(...args);
+      },
+    };
+  }),
 }));
 
 vi.mock("../../_client/GoalsClient", () => ({

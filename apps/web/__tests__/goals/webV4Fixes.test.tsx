@@ -44,18 +44,24 @@ const mocks = vi.hoisted(() => ({
   pickDate: "2000-01-01",
 }));
 vi.mock("@apps/shared/api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({
-    createMilestone: mocks.createMilestone,
-    updateMilestone: mocks.updateMilestone,
-    updateGoal: mocks.updateGoal,
-    getSelectableCompetitions: mocks.getSelectableCompetitions,
-  })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return {
+      createMilestone: mocks.createMilestone,
+      updateMilestone: mocks.updateMilestone,
+      updateGoal: mocks.updateGoal,
+      getSelectableCompetitions: mocks.getSelectableCompetitions,
+    };
+  }),
 }));
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({ createCompetition: mocks.createCompetition, updateCompetition: mocks.updateCompetition, getBestTimes: vi.fn().mockResolvedValue([]) })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return { createCompetition: mocks.createCompetition, updateCompetition: mocks.updateCompetition, getBestTimes: vi.fn().mockResolvedValue([]) };
+  }),
 }));
 vi.mock("@swim-hub/shared/api", () => ({
-  PracticeLogTemplateAPI: vi.fn().mockImplementation(() => ({ createTemplate: vi.fn().mockResolvedValue({}) })),
+  PracticeLogTemplateAPI: vi.fn().mockImplementation(function () {
+    return { createTemplate: vi.fn().mockResolvedValue({}) };
+  }),
 }));
 vi.mock("@/components/ui/DatePicker", () => ({
   default: ({ onChange, minDate }: { onChange: (d: string) => void; minDate?: Date }) => {

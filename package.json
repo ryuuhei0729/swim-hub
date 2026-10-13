@@ -129,7 +129,6 @@
       "proxy-addr": "^2.0.8",
       "compression": "^1.8.2",
       "source-map-js": "^1.2.2",
-      "tinypool": "^2.1.2",
       "@babel/core": "^7.29.6",
       "@humanfs/node": "^0.16.8",
       "body-parser@2": "^2.3.0",

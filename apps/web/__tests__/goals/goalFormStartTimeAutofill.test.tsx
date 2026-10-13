@@ -45,18 +45,22 @@ const mocks = vi.hoisted(() => ({
   updateCompetition: vi.fn(),
 }));
 vi.mock("@apps/shared/api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({
-    createGoal: mocks.createGoal,
-    updateGoal: mocks.updateGoal,
-    getSelectableCompetitions: mocks.getSelectableCompetitions,
-  })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return {
+      createGoal: mocks.createGoal,
+      updateGoal: mocks.updateGoal,
+      getSelectableCompetitions: mocks.getSelectableCompetitions,
+    };
+  }),
 }));
 vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: vi.fn().mockImplementation(() => ({
-    getBestTimes: mocks.getBestTimes,
-    createCompetition: mocks.createCompetition,
-    updateCompetition: mocks.updateCompetition,
-  })),
+  RecordAPI: vi.fn().mockImplementation(function () {
+    return {
+      getBestTimes: mocks.getBestTimes,
+      createCompetition: mocks.createCompetition,
+      updateCompetition: mocks.updateCompetition,
+    };
+  }),
 }));
 vi.mock("@/components/ui/DatePicker", () => ({
   default: () => <div data-testid="date-pick" />,

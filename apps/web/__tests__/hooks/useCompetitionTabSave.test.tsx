@@ -10,7 +10,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
 import type { Style } from "@apps/shared/types";
 import type { CompetitionTabSaveParams } from "@/components/forms/CompetitionTabModal";
@@ -88,19 +88,19 @@ function createFakeSupabase(opts: { teamId?: string | null; poolType?: 0 | 1 } =
 }
 
 describe("useCompetitionTabSave", () => {
-  let createCompetition: ReturnType<typeof vi.fn>;
-  let updateCompetition: ReturnType<typeof vi.fn>;
-  let createRecord: ReturnType<typeof vi.fn>;
-  let updateRecord: ReturnType<typeof vi.fn>;
-  let deleteRecord: ReturnType<typeof vi.fn>;
-  let deleteEntry: ReturnType<typeof vi.fn>;
-  let createSplitTimes: ReturnType<typeof vi.fn>;
-  let replaceSplitTimes: ReturnType<typeof vi.fn>;
-  let setCompetitionLoading: ReturnType<typeof vi.fn>;
-  let setEditingCompetitionId: ReturnType<typeof vi.fn>;
-  let setCreatedEntries: ReturnType<typeof vi.fn>;
-  let closeCompetitionTabModal: ReturnType<typeof vi.fn>;
-  let onSaved: ReturnType<typeof vi.fn>;
+  let createCompetition: Mock;
+  let updateCompetition: Mock;
+  let createRecord: Mock;
+  let updateRecord: Mock;
+  let deleteRecord: Mock;
+  let deleteEntry: Mock;
+  let createSplitTimes: Mock;
+  let replaceSplitTimes: Mock;
+  let setCompetitionLoading: Mock;
+  let setEditingCompetitionId: Mock;
+  let setCreatedEntries: Mock;
+  let closeCompetitionTabModal: Mock;
+  let onSaved: Mock;
 
   const setup = (
     user: { id: string } | null = { id: "user-1" },

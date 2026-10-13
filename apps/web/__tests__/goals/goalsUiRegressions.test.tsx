@@ -75,14 +75,16 @@ vi.mock("@apps/shared/hooks/queries/user", () => ({
 }));
 
 vi.mock("@apps/shared/api/goals", () => ({
-  GoalAPI: vi.fn().mockImplementation(() => ({
-    // competition が null (水路不明) の目標は達成率が計算不能 (null) を返す。
-    // 本ファイルの [V-UI-NULLGUARD-01]/[V-UI-NULLCOMP-EDIT] は competition null の
-    // goal しか扱わないため、実際の本番挙動 (null) に揃える (0 にすると ProgressBar
-    // 非表示の検証ができない)。
-    calculateGoalProgress: vi.fn().mockResolvedValue(null),
-    updateGoal: vi.fn().mockResolvedValue({}),
-  })),
+  GoalAPI: vi.fn().mockImplementation(function () {
+    return {
+      // competition が null (水路不明) の目標は達成率が計算不能 (null) を返す。
+      // 本ファイルの [V-UI-NULLGUARD-01]/[V-UI-NULLCOMP-EDIT] は competition null の
+      // goal しか扱わないため、実際の本番挙動 (null) に揃える (0 にすると ProgressBar
+      // 非表示の検証ができない)。
+      calculateGoalProgress: vi.fn().mockResolvedValue(null),
+      updateGoal: vi.fn().mockResolvedValue({}),
+    };
+  }),
 }));
 
 vi.mock(

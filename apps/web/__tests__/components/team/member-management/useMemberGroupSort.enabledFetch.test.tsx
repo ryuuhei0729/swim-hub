@@ -34,10 +34,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@apps/shared/api/teams/groups", () => ({
-  TeamGroupsAPI: vi.fn().mockImplementation(() => ({
-    list: mocks.list,
-    listAllMemberships: mocks.listAllMemberships,
-  })),
+  TeamGroupsAPI: vi.fn().mockImplementation(function () {
+    return {
+      list: mocks.list,
+      listAllMemberships: mocks.listAllMemberships,
+    };
+  }),
 }));
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
