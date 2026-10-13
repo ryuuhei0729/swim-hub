@@ -47,15 +47,6 @@ const nextConfig = {
     ],
   },
 
-  // Turbopack 設定（Next.js 16 デフォルト、bundle-analyzer の webpack 設定との共存用）
-  // next-intl v3 + Turbopack 環境では plugin の alias 注入が一部効かないため、
-  // `next-intl/config` を i18n/request.ts に解決する alias を明示的に追加する。
-  turbopack: {
-    resolveAlias: {
-      "next-intl/config": "./i18n/request.ts",
-    },
-  },
-
   // 画像設定
   images: {
     // Cloudflare Workers環境では画像最適化が利用できないため無効化
