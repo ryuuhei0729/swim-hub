@@ -2160,8 +2160,6 @@
       "submitButton": "作成",
       "cancelButton": "キャンセル",
       "closeAriaLabel": "閉じる",
-      "bestTimeNotFound": "この種目のベストタイムが見つかりませんでした",
-      "bestTimeFetchFailed": "ベストタイムの取得に失敗しました",
       "targetTimeInvalid": "目標タイムを正しく入力してください（0秒超〜60分以内）",
       "startTimeInvalid": "開始タイムを正しく入力してください（0秒超〜60分以内）",
       "competitionRequired": "大会を選択してください",
@@ -2172,8 +2170,6 @@
       "submitButton": "更新",
       "cancelButton": "キャンセル",
       "closeAriaLabel": "閉じる",
-      "bestTimeNotFound": "この種目のベストタイムが見つかりませんでした",
-      "bestTimeFetchFailed": "ベストタイムの取得に失敗しました",
       "updateFailed": "目標の更新に失敗しました",
       "validation": {
         "targetTimeInvalid": "目標タイムを正しく入力してください（0秒超〜60分以内）",
@@ -2311,7 +2307,6 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "初期タイム（任意）",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "ベストタイムから取得",
       "personalCompetitionGroup": "個人",
       "teamCompetitionGroupFallback": "チーム大会",
       "competitionDatePast": "新規大会の日付は今日以降を選択してください"

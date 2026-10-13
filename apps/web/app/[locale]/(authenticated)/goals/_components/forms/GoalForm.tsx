@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useMemo } from "react";
-import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import DatePicker from "@/components/ui/DatePicker";
 import StyleChipSelector from "@/components/forms/StyleChipSelector";
@@ -41,8 +40,13 @@ interface GoalFormProps {
   onTargetTimeChange: (seconds: number | null) => void;
   startTime: number | null;
   onStartTimeChange: (seconds: number | null) => void;
-  useBestTime: boolean;
-  onGetBestTime: () => void;
+  /** 自動入力のたびに増やす。初期タイム欄を再マウントして不正入力の表示を作り直す */
+  startTimeResetKey: number;
+  /** ベスト取得中などで差し替える初期タイム欄の placeholder (未指定なら通常の文言) */
+  startTimePlaceholder?: string;
+  onStartTimeInvalidChange: (invalid: boolean) => void;
+  /** true の間、初期タイム欄にエラーを表示する (保存拒否時) */
+  startTimeForceInvalid: boolean;
 }
 
 /**
@@ -64,8 +68,10 @@ export default function GoalForm({
   onTargetTimeChange,
   startTime,
   onStartTimeChange,
-  useBestTime,
-  onGetBestTime,
+  startTimeResetKey,
+  startTimePlaceholder,
+  onStartTimeInvalidChange,
+  startTimeForceInvalid,
 }: GoalFormProps) {
   const t = useTranslations("goals");
   const tCommon = useTranslations("common");
@@ -226,20 +232,16 @@ export default function GoalForm({
       {/* 初期タイム */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">{t("form.startTimeLabel")}</label>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <TimeSecondsInput
-              value={startTime}
-              onChange={onStartTimeChange}
-              placeholder={t("form.startTimePlaceholder")}
-              disabled={useBestTime}
-              invalidErrorMessage={t("paramsForm.timeInvalid")}
-            />
-          </div>
-          <Button type="button" variant="outline" onClick={onGetBestTime} disabled={!styleId}>
-            {t("form.getBestTimeButton")}
-          </Button>
-        </div>
+        <TimeSecondsInput
+          key={startTimeResetKey}
+          value={startTime}
+          onChange={onStartTimeChange}
+          onInvalidChange={onStartTimeInvalidChange}
+          forceInvalid={startTimeForceInvalid}
+          placeholder={startTimePlaceholder ?? t("form.startTimePlaceholder")}
+          invalidErrorMessage={t("paramsForm.timeInvalid")}
+          data-testid="goal-start-time"
+        />
       </div>
     </div>
   );

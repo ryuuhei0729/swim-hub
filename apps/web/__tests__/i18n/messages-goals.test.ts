@@ -91,7 +91,6 @@
  *     種目ラベル / 種目選択placeholder
  *     目標タイムラベル / 目標タイムplaceholder
  *     初期タイムラベル / 初期タイムplaceholder
- *     ベストタイムから取得ボタン
  *   MilestoneForm.tsx →
  *     テンプレートラベル / テンプレート選択placeholder
  *     タイプラベル / タイプ選択肢 × 3（ラベル + 説明）
@@ -130,6 +129,9 @@
 import { describe, it, expect } from "vitest";
 import jaMessages from "../../../shared/messages/ja.json";
 import enMessages from "../../../shared/messages/en.json";
+import deMessages from "../../../shared/messages/de.json";
+import koMessages from "../../../shared/messages/ko.json";
+import zhMessages from "../../../shared/messages/zh.json";
 
 // ---------------------------------------------------------------------------
 // ヘルパー: ネストしたキーをフラットなパスで列挙
@@ -253,7 +255,6 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 //     種目ラベル / 種目placeholder
 //     目標タイムラベル / 目標タイムplaceholder
 //     初期タイムラベル / 初期タイムplaceholder
-//     ベストタイムから取得ボタン
 //   MilestoneForm.tsx →
 //     テンプレートラベル / テンプレート選択placeholder
 //     タイプラベル
@@ -446,7 +447,6 @@ describe("[V-C2B-01] goals namespace の必須キー確認", () => {
     "goals.form.targetTimePlaceholder",
     "goals.form.startTimeLabel",
     "goals.form.startTimePlaceholder",
-    "goals.form.getBestTimeButton",
 
     // --------------------------------------------------------
     // MilestoneForm.tsx
@@ -677,4 +677,37 @@ describe("[V-C2B-05] Phase 1-C-2-B 実装後の ja/en キー集合完全一致",
       `ja.json に以下のキーが欠損しています:\n${missingInJa.join("\n")}`,
     ).toHaveLength(0);
   });
+});
+
+// ---------------------------------------------------------------------------
+// 初期タイムの自動入力化で撤去した「ベストタイムから取得」系キー。5言語のどこにも復活させない
+// ---------------------------------------------------------------------------
+describe("撤去済みの「ベストタイムから取得」系キーが5言語に存在しない", () => {
+  const REMOVED_KEYS = [
+    "goals.form.getBestTimeButton",
+    "goals.create.bestTimeNotFound",
+    "goals.create.bestTimeFetchFailed",
+    "goals.edit.bestTimeNotFound",
+    "goals.edit.bestTimeFetchFailed",
+  ] as const;
+  const LOCALE_MESSAGES = {
+    ja: jaMessages,
+    en: enMessages,
+    de: deMessages,
+    ko: koMessages,
+    zh: zhMessages,
+  } as const;
+
+  for (const [locale, messages] of Object.entries(LOCALE_MESSAGES)) {
+    const keys = flattenKeys(messages as unknown as Record<string, unknown>);
+    // 比較元が空だと「存在しない」が自明に成立するので、読めていることを先に固定する
+    it(`${locale}.json が読めている (goals.form.startTimeLabel が在る)`, () => {
+      expect(keys).toContain("goals.form.startTimeLabel");
+    });
+    for (const key of REMOVED_KEYS) {
+      it(`${locale}.json に "${key}" が無い`, () => {
+        expect(keys).not.toContain(key);
+      });
+    }
+  }
 });

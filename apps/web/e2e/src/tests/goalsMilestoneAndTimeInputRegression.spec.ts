@@ -178,7 +178,7 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
       await page.keyboard.press("Escape").catch(() => {});
     });
 
-    test("初期タイム欄も1文字ずつの入力で崩れず、「ベストタイムから取得」で自己ベストが反映される", async ({
+    test("初期タイム欄は種目と大会が揃うと自己ベストが自動入力され、ボタンは無く、1文字ずつの手入力でも崩れない", async ({
       page,
     }) => {
       await page.goto("/goals");
@@ -192,24 +192,27 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
       const modal = page.locator('[role="dialog"]');
       await modal.waitFor({ state: "visible", timeout: 10000 });
 
+      // 「ベストタイムから取得」ボタンは廃止された
+      await expect(modal.locator('button:has-text("ベストタイムから取得")')).toHaveCount(0);
+
+      // 新規大会 (既定は短水路) + 100m Fr を選んだ瞬間に、短水路の自己ベスト (シード 58.30) が入る
       await modal.locator('input[type="radio"][value="new"]').click();
       await modal.locator('input[placeholder="大会名"]').fill("E2E-Goals時間入力大会-初期タイム");
       await modal.locator('[data-testid="goal-style-distance-100"]').click();
       await modal.locator('[data-testid="goal-style-stroke-Fr"]').click();
 
-      const timeInputs = modal.locator('input[placeholder="2.00.00"]');
-      const startTimeInput = timeInputs.nth(1);
+      const startTimeInput = modal.locator('[data-testid="goal-start-time"]');
+      await expect(startTimeInput).toHaveValue("58.30", { timeout: 15000 });
+      await expect(startTimeInput).toBeEnabled();
 
+      // 手入力: 1文字ずつ入力しても表示が崩れず、blur 後も同じ。自動入力で上書きされない
       await startTimeInput.click();
+      await startTimeInput.fill("");
       await startTimeInput.pressSequentially("1:05.00", { delay: 30 });
       await expect(startTimeInput).toHaveValue("1:05.00");
-      await modal.locator('input[placeholder="大会名"]').click();
+      await modal.locator('input[placeholder="大会名"]').click(); // blur させる
       await expect(startTimeInput).toHaveValue("1:05.00");
-
-      // 手入力した値を「ベストタイムから取得」で上書きし、シードした自己ベスト
-      // (58.30秒 = "58.30") に更新されることを確認する。
-      await modal.locator('button:has-text("ベストタイムから取得")').click();
-      await expect(startTimeInput).toHaveValue("58.30");
+      await expect(startTimeInput).toBeEnabled();
 
       await page.keyboard.press("Escape").catch(() => {});
     });

@@ -6,7 +6,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
-import { RecordAPI } from "@apps/shared/api/records";
+import { useGoalStartTimeAutofill } from "@apps/shared/hooks/useGoalStartTimeAutofill";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import type { Style, Competition } from "@apps/shared/types";
 import { format } from "date-fns";
@@ -29,6 +29,7 @@ export default function GoalCreateModal({
   styles,
 }: GoalCreateModalProps) {
   const t = useTranslations("goals");
+  const tCommon = useTranslations("common");
   const { supabase, user } = useAuth();
   const [competitionMode, setCompetitionMode] = useState<"existing" | "new">("existing");
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -42,11 +43,12 @@ export default function GoalCreateModal({
   const [styleId, setStyleId] = useState<string>("");
   const [targetTime, setTargetTime] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [useBestTime, setUseBestTime] = useState(false);
+  const [startTimeInvalid, setStartTimeInvalid] = useState(false);
+  // 保存を拒否したあとだけ初期タイム欄にエラーを出す (入力途中では出さない)
+  const [showStartTimeInvalid, setShowStartTimeInvalid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
-  const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
   // チーム大会の optgroup 表示名解決用 (U2)
   const { teams } = useTeamsQuery(supabase);
   const teamNames = useMemo(
@@ -74,39 +76,38 @@ export default function GoalCreateModal({
       ? newCompetition.poolType
       : competitions.find((c) => c.id === selectedCompetitionId)?.pool_type;
 
-  // ベストタイムを取得（対象大会と同じ水路の自己ベストのみを対象にする: U3）
-  const handleGetBestTime = async () => {
-    if (!styleId || !user) return;
+  // 初期タイムは「種目 × 対象大会の水路」の自己ベストを自動入力する (大会未選択なら何もしない)
+  const startTimeAutofill = useGoalStartTimeAutofill({
+    supabase,
+    active: isOpen,
+    isInitialized: true,
+    isEdit: false,
+    styleId,
+    poolType: selectedPoolType,
+    resetSignal: isOpen,
+    onApply: (best) => {
+      setStartTime(best);
+      setStartTimeInvalid(false);
+      setShowStartTimeInvalid(false);
+    },
+  });
 
-    try {
-      const parsedStyleId = parseInt(styleId, 10);
-      if (selectedPoolType === undefined) {
-        alert(t("create.competitionRequired"));
-        return;
-      }
-
-      const bestTimes = await recordAPI.getBestTimes();
-      const bestTime = bestTimes.find(
-        (bt) => bt.style_id === parsedStyleId && bt.pool_type === selectedPoolType,
-      );
-
-      if (bestTime) {
-        setStartTime(bestTime.time);
-        setUseBestTime(true);
-      } else {
-        alert(t("create.bestTimeNotFound"));
-        setUseBestTime(false);
-      }
-    } catch (error) {
-      console.error("ベストタイム取得エラー:", error);
-      alert(t("create.bestTimeFetchFailed"));
-      setUseBestTime(false);
-    }
+  const handleStartTimeChange = (seconds: number | null) => {
+    startTimeAutofill.markTouched();
+    setShowStartTimeInvalid(false);
+    setStartTime(seconds);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // 初期タイム欄にパースできない文字列が残っている間は保存しない
+    if (startTimeInvalid) {
+      setShowStartTimeInvalid(true);
+      alert(t("create.startTimeInvalid"));
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -183,7 +184,8 @@ export default function GoalCreateModal({
     setStyleId("");
     setTargetTime(null);
     setStartTime(null);
-    setUseBestTime(false);
+    setStartTimeInvalid(false);
+    setShowStartTimeInvalid(false);
     onClose();
   };
 
@@ -226,9 +228,13 @@ export default function GoalCreateModal({
                 targetTime={targetTime}
                 onTargetTimeChange={setTargetTime}
                 startTime={startTime}
-                onStartTimeChange={setStartTime}
-                useBestTime={useBestTime}
-                onGetBestTime={handleGetBestTime}
+                onStartTimeChange={handleStartTimeChange}
+                startTimeResetKey={startTimeAutofill.resetKey}
+                startTimePlaceholder={
+                  startTimeAutofill.isLoadingBest ? tCommon("loading") : undefined
+                }
+                onStartTimeInvalidChange={setStartTimeInvalid}
+                startTimeForceInvalid={startTimeInvalid && showStartTimeInvalid}
               />
 
               {/* ボタン */}

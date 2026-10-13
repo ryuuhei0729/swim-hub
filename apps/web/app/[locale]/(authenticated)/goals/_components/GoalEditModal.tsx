@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { RecordAPI } from "@apps/shared/api/records";
+import { useGoalStartTimeAutofill } from "@apps/shared/hooks/useGoalStartTimeAutofill";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import type { Style, GoalWithMilestones, Competition } from "@apps/shared/types";
 import { format } from "date-fns";
@@ -34,6 +35,7 @@ export default function GoalEditModal({
   styles,
 }: GoalEditModalProps) {
   const t = useTranslations("goals");
+  const tCommon = useTranslations("common");
   const { supabase, user } = useAuth();
   const createdCompetitionRef = useRef<{
     id: string;
@@ -51,7 +53,12 @@ export default function GoalEditModal({
   const [styleId, setStyleId] = useState<string>("");
   const [targetTime, setTargetTime] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [useBestTime, setUseBestTime] = useState(false);
+  const [startTimeInvalid, setStartTimeInvalid] = useState(false);
+  // 保存を拒否したあとだけ初期タイム欄にエラーを出す (入力途中では出さない)
+  const [showStartTimeInvalid, setShowStartTimeInvalid] = useState(false);
+  // 既存値の流し込み完了 (自動入力の基準キーを記録してよい状態) と、その回数 (開くたび・目標が変わるたび)
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [initSeq, setInitSeq] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -110,8 +117,13 @@ export default function GoalEditModal({
       setStyleId(goal.style_id.toString());
       setTargetTime(goal.target_time);
       setStartTime(goal.start_time ?? null);
-      setUseBestTime(false);
+      setStartTimeInvalid(false);
+      setShowStartTimeInvalid(false);
       setValidationError(null);
+      setIsInitialized(true);
+      setInitSeq((n) => n + 1);
+    } else {
+      setIsInitialized(false);
     }
   }, [isOpen, goal]);
 
@@ -121,43 +133,43 @@ export default function GoalEditModal({
       ? newCompetition.poolType
       : competitions.find((c) => c.id === selectedCompetitionId)?.pool_type;
 
-  // ベストタイムを取得（対象大会と同じ水路の自己ベストのみを対象にする: U3）
-  const handleGetBestTime = async () => {
-    if (!styleId || !user) return;
+  // 初期タイムは「種目 × 対象大会の水路」の自己ベストを自動入力する。
+  // 開いた直後は保存済みの値を守り、種目か大会 (水路) を変えたときだけ入れ直す
+  const startTimeAutofill = useGoalStartTimeAutofill({
+    supabase,
+    active: isOpen,
+    isInitialized,
+    isEdit: true,
+    styleId,
+    poolType: selectedPoolType,
+    resetSignal: initSeq,
+    onApply: (best) => {
+      setStartTime(best);
+      setStartTimeInvalid(false);
+      setShowStartTimeInvalid(false);
+    },
+  });
 
-    try {
-      const parsedStyleId = parseInt(styleId, 10);
-      if (selectedPoolType === undefined) {
-        // 大会未選択（水路不明）のため取得できない。GoalForm 側でボタンは
-        // 種目未選択時のみ無効化されるため、ここでは静かに抜ける
-        return;
-      }
-
-      const bestTimes = await recordAPI.getBestTimes();
-      const bestTime = bestTimes.find(
-        (bt) => bt.style_id === parsedStyleId && bt.pool_type === selectedPoolType,
-      );
-
-      if (bestTime) {
-        setStartTime(bestTime.time);
-        setUseBestTime(true);
-      } else {
-        alert(t("edit.bestTimeNotFound"));
-        setUseBestTime(false);
-      }
-    } catch (error) {
-      console.error("ベストタイム取得エラー:", error);
-      alert(t("edit.bestTimeFetchFailed"));
-      setUseBestTime(false);
-    }
+  const handleStartTimeChange = (seconds: number | null) => {
+    startTimeAutofill.markTouched();
+    setShowStartTimeInvalid(false);
+    setStartTime(seconds);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    setIsLoading(true);
     setValidationError(null);
+
+    // 初期タイム欄にパースできない文字列が残っている間は保存しない
+    if (startTimeInvalid) {
+      setShowStartTimeInvalid(true);
+      setValidationError(t("edit.validation.startTimeInvalid"));
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       // タイムは TimeSecondsInput が既に秒数へ変換済み
@@ -253,7 +265,8 @@ export default function GoalEditModal({
     setStyleId("");
     setTargetTime(null);
     setStartTime(null);
-    setUseBestTime(false);
+    setStartTimeInvalid(false);
+    setShowStartTimeInvalid(false);
     setValidationError(null);
     onClose();
   };
@@ -305,9 +318,14 @@ export default function GoalEditModal({
                 targetTime={targetTime}
                 onTargetTimeChange={setTargetTime}
                 startTime={startTime}
-                onStartTimeChange={setStartTime}
-                useBestTime={useBestTime}
-                onGetBestTime={handleGetBestTime}
+                onStartTimeChange={handleStartTimeChange}
+                // 自動入力と既存値の流し込み直しのどちらでも欄を作り直す (どちらも単調増加なので和は必ず変わる)
+                startTimeResetKey={startTimeAutofill.resetKey + initSeq}
+                startTimePlaceholder={
+                  startTimeAutofill.isLoadingBest ? tCommon("loading") : undefined
+                }
+                onStartTimeInvalidChange={setStartTimeInvalid}
+                startTimeForceInvalid={startTimeInvalid && showStartTimeInvalid}
               />
 
               {/* ボタン */}

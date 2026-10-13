@@ -2160,8 +2160,6 @@
       "submitButton": "만들기",
       "cancelButton": "취소",
       "closeAriaLabel": "닫기",
-      "bestTimeNotFound": "이 종목의 베스트 기록을 찾을 수 없습니다",
-      "bestTimeFetchFailed": "베스트 기록을 불러오지 못했습니다",
       "targetTimeInvalid": "목표 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
       "startTimeInvalid": "시작 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
       "competitionRequired": "대회를 선택해 주세요",
@@ -2172,8 +2170,6 @@
       "submitButton": "업데이트",
       "cancelButton": "취소",
       "closeAriaLabel": "닫기",
-      "bestTimeNotFound": "이 종목의 베스트 기록을 찾을 수 없습니다",
-      "bestTimeFetchFailed": "베스트 기록을 불러오지 못했습니다",
       "updateFailed": "목표 업데이트에 실패했습니다",
       "validation": {
         "targetTimeInvalid": "목표 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
@@ -2311,7 +2307,6 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "초기 기록 (선택)",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "베스트 기록에서 가져오기",
       "personalCompetitionGroup": "개인",
       "teamCompetitionGroupFallback": "팀 대회",
       "competitionDatePast": "새 대회 날짜는 오늘 이후로 선택해 주세요"

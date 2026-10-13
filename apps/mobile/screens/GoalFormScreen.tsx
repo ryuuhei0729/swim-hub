@@ -32,9 +32,10 @@ import { useDateLocale } from "@/hooks/useDateLocale";
 import type { MainStackParamList } from "@/navigation/types";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { RecordAPI } from "@apps/shared/api/records";
+import { useGoalStartTimeAutofill } from "@apps/shared/hooks/useGoalStartTimeAutofill";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { goalKeys, useGoalDetailQuery } from "@apps/shared/hooks/queries/goals";
-import { recordKeys, styleKeys } from "@apps/shared/hooks/queries/keys";
+import { styleKeys } from "@apps/shared/hooks/queries/keys";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { formatDate } from "@apps/shared/utils/date";
 
@@ -108,12 +109,6 @@ export const GoalFormScreen: React.FC = () => {
       pool_type: number;
     };
   } | null>(null);
-  // 種目 × 水路の自動入力を最後に反映したキー。編集で開いた直後は保存済みの初期タイムを守るため基準にだけ使う
-  const autofillKeyRef = useRef<string | null>(null);
-  // ユーザーが初期タイムを手入力した種目 × 水路のキー。そのキーでは自動入力で上書きしない
-  const startTimeTouchedKeyRef = useRef<string | null>(null);
-  // 自動入力で初期タイム欄の表示 (不正入力の残骸を含む) を作り直すためのキー
-  const [startTimeResetKey, setStartTimeResetKey] = useState(0);
   const snapshotRef = useRef<string | null>(null);
 
   const patchForm = useCallback((patch: Partial<GoalFormState>) => {
@@ -195,40 +190,24 @@ export const GoalFormScreen: React.FC = () => {
   const selectedPoolType =
     form.competitionMode === "new" ? form.newCompetition.poolType : selectedCompetition?.pool_type;
 
-  // 初期タイムは「種目 × 対象大会の水路」の自己ベストを自動入力する。全種目のベストを1回取得して
-  // 手元で引くので、種目を素早く切り替えても古い応答に上書きされない。リレー引き継ぎは除く。
-  // 記録画面で更新した直後のベストを使うため、キャッシュを持たず (gcTime 0)、この画面を開いた後に
-  // 取得したデータ (isFetchedAfterMount) でだけ自動入力する
-  const bestTimesQuery = useQuery({
-    queryKey: [...recordKeys.all, "bestTimesForForm"],
-    queryFn: () => recordAPI.getBestTimes(),
-    gcTime: 0,
+  // 初期タイムは「種目 × 対象大会の水路」の自己ベストを自動入力する (web と共通のフック)
+  const handleAutofillApply = useCallback(
+    (startTime: number | null) => {
+      patchForm({ startTime });
+      setStartTimeInvalid(false);
+    },
+    [patchForm],
+  );
+  const { markTouched, resetKey: startTimeResetKey, isLoadingBest } = useGoalStartTimeAutofill({
+    supabase,
+    active: true,
+    isInitialized,
+    isEdit,
+    styleId: form.styleId,
+    poolType: selectedPoolType,
+    resetSignal: 0,
+    onApply: handleAutofillApply,
   });
-  const bestTimes = bestTimesQuery.isFetchedAfterMount ? bestTimesQuery.data : undefined;
-  const autofillKey =
-    form.styleId && selectedPoolType !== undefined ? `${form.styleId}:${selectedPoolType}` : null;
-  useEffect(() => {
-    if (!isInitialized || autofillKey === null) return;
-    if (autofillKey === autofillKeyRef.current) return;
-    // 別のキーへ移ったら手入力の記録は破棄する (戻ってきたときは通常どおり自動入力する)
-    if (startTimeTouchedKeyRef.current !== autofillKey) startTimeTouchedKeyRef.current = null;
-    if (isEdit && autofillKeyRef.current === null) {
-      autofillKeyRef.current = autofillKey;
-      return;
-    }
-    // 取得中・取得失敗のあいだは初期タイムを変えない
-    if (!bestTimes) return;
-    autofillKeyRef.current = autofillKey;
-    // このキーで既に手入力されていれば上書きしない
-    if (startTimeTouchedKeyRef.current === autofillKey) return;
-    const styleId = parseInt(form.styleId, 10);
-    const best = bestTimes.find(
-      (bt) => bt.style_id === styleId && bt.pool_type === selectedPoolType && !bt.is_relaying,
-    );
-    setForm((prev) => ({ ...prev, startTime: best?.time ?? null }));
-    setStartTimeInvalid(false);
-    setStartTimeResetKey((k) => k + 1);
-  }, [isInitialized, isEdit, autofillKey, form.styleId, selectedPoolType, bestTimes]);
 
   // 新規大会の入力エラー (保存時の検証と同じ条件をその場で表示する)
   const newCompetitionErrors =
@@ -531,13 +510,13 @@ export const GoalFormScreen: React.FC = () => {
               key={startTimeResetKey}
               value={form.startTime}
               onChange={(startTime) => {
-                startTimeTouchedKeyRef.current = autofillKey;
+                markTouched();
                 patchForm({ startTime });
               }}
               onInvalidChange={setStartTimeInvalid}
               forceInvalid={startTimeInvalid && !!saveError}
               placeholder={
-                autofillKey !== null && !bestTimes && bestTimesQuery.isFetching
+                isLoadingBest
                   ? t("common.loading")
                   : t("goals.form.startTimePlaceholder")
               }

@@ -2160,8 +2160,6 @@
       "submitButton": "创建",
       "cancelButton": "取消",
       "closeAriaLabel": "关闭",
-      "bestTimeNotFound": "未找到该项目的最佳成绩",
-      "bestTimeFetchFailed": "获取最佳成绩失败",
       "targetTimeInvalid": "请正确输入目标成绩（大于0秒且在60分钟以内）",
       "startTimeInvalid": "请正确输入初始成绩（大于0秒且在60分钟以内）",
       "competitionRequired": "请选择比赛",
@@ -2172,8 +2170,6 @@
       "submitButton": "更新",
       "cancelButton": "取消",
       "closeAriaLabel": "关闭",
-      "bestTimeNotFound": "未找到该项目的最佳成绩",
-      "bestTimeFetchFailed": "获取最佳成绩失败",
       "updateFailed": "更新目标失败",
       "validation": {
         "targetTimeInvalid": "请正确输入目标成绩（大于0秒且在60分钟以内）",
@@ -2311,7 +2307,6 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "初始成绩（可选）",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "从最佳成绩获取",
       "personalCompetitionGroup": "个人",
       "teamCompetitionGroupFallback": "团队比赛",
       "competitionDatePast": "新建比赛的日期请选择今天或之后"

@@ -2157,8 +2157,6 @@
       "submitButton": "Create",
       "cancelButton": "Cancel",
       "closeAriaLabel": "Close",
-      "bestTimeNotFound": "No best time found for this event",
-      "bestTimeFetchFailed": "Failed to retrieve best time",
       "targetTimeInvalid": "Please enter a valid target time (must be more than 0 seconds and within 60 minutes)",
       "startTimeInvalid": "Please enter a valid start time (must be more than 0 seconds and within 60 minutes)",
       "competitionRequired": "Please select a competition",
@@ -2169,8 +2167,6 @@
       "submitButton": "Update",
       "cancelButton": "Cancel",
       "closeAriaLabel": "Close",
-      "bestTimeNotFound": "No best time found for this event",
-      "bestTimeFetchFailed": "Failed to retrieve best time",
       "updateFailed": "Failed to update goal",
       "validation": {
         "targetTimeInvalid": "Please enter a valid target time (must be more than 0 seconds and within 60 minutes)",
@@ -2308,7 +2304,6 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "Initial Time (optional)",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "Get from best time",
       "personalCompetitionGroup": "Personal",
       "teamCompetitionGroupFallback": "Team meet",
       "competitionDatePast": "Choose today or a later date for a new competition"

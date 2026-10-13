@@ -24,6 +24,11 @@ interface TimeSecondsInputProps {
    * ユーザーが再度入力すると (handleChange 発火時に) 呼び出し元が false に戻す想定。
    */
   forceInvalid?: boolean;
+  /**
+   * 入力欄にパースできない文字列が残っているかが変わるたびに通知する。
+   * 呼び出し元が「不正入力が残ったままの保存」を拒否するために使う。
+   */
+  onInvalidChange?: (invalid: boolean) => void;
   "data-testid"?: string;
 }
 
@@ -54,6 +59,7 @@ export default function TimeSecondsInput({
   requiredErrorMessage,
   invalidErrorMessage,
   forceInvalid = false,
+  onInvalidChange,
   "data-testid": dataTestId,
 }: TimeSecondsInputProps) {
   const [displayValue, setDisplayValue] = useState<string>(() => {
@@ -91,6 +97,7 @@ export default function TimeSecondsInput({
     if (raw.trim() === "") {
       setError("");
       lastNotifiedValueRef.current = null;
+      onInvalidChange?.(false);
       onChange(null);
       return;
     }
@@ -99,12 +106,14 @@ export default function TimeSecondsInput({
     if (seconds !== null) {
       setError("");
       lastNotifiedValueRef.current = normalizeForComparison(seconds);
+      onInvalidChange?.(false);
       onChange(seconds);
     } else {
       // 入力途中でまだパースできない値。Enter 押下 (blur を経ない submit) で
       // 古い確定値が残らないよう、親には null を通知しておく。
       // エラー表示自体は blur 時のみ行う (途中入力でエラーを出さないため)。
       lastNotifiedValueRef.current = null;
+      onInvalidChange?.(true);
       onChange(null);
     }
   };

@@ -2160,8 +2160,6 @@
       "submitButton": "Erstellen",
       "cancelButton": "Abbrechen",
       "closeAriaLabel": "Schließen",
-      "bestTimeNotFound": "Für diese Disziplin wurde keine Bestzeit gefunden",
-      "bestTimeFetchFailed": "Bestzeit konnte nicht abgerufen werden",
       "targetTimeInvalid": "Bitte geben Sie eine gültige Zielzeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
       "startTimeInvalid": "Bitte geben Sie eine gültige Ausgangszeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
       "competitionRequired": "Bitte wählen Sie einen Wettkampf aus",
@@ -2172,8 +2170,6 @@
       "submitButton": "Aktualisieren",
       "cancelButton": "Abbrechen",
       "closeAriaLabel": "Schließen",
-      "bestTimeNotFound": "Für diese Disziplin wurde keine Bestzeit gefunden",
-      "bestTimeFetchFailed": "Bestzeit konnte nicht abgerufen werden",
       "updateFailed": "Ziel konnte nicht aktualisiert werden",
       "validation": {
         "targetTimeInvalid": "Bitte geben Sie eine gültige Zielzeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
@@ -2311,7 +2307,6 @@
       "targetTimePlaceholder": "2.00.00",
       "startTimeLabel": "Ausgangszeit (optional)",
       "startTimePlaceholder": "2.00.00",
-      "getBestTimeButton": "Aus Bestzeit übernehmen",
       "personalCompetitionGroup": "Persönlich",
       "teamCompetitionGroupFallback": "Team-Wettkampf",
       "competitionDatePast": "Bitte wählen Sie für einen neuen Wettkampf das heutige oder ein späteres Datum"
