@@ -2,28 +2,32 @@
  * apps/shared/__tests__/api/goals.relayRecordExclusion.test.ts
  *
  * 実機で発見された不具合の回帰ガード:
- *   未達成の目標 (50m自由形・短水路、目標23.45・初期23.80) が達成率100%と誤表示された。
- *   原因: 短水路の自己記録にリレーの引き継ぎ (is_relaying=true, 23.19) があり、
- *   GoalAPI.getBestTimeForStyle がこれを自己ベストとして拾っていた。
+ *   未達成の目標 (50m自由形・短水路、目標23.45) で、短水路の自己記録にリレーの引き継ぎ
+ *   (is_relaying=true, 23.19) があり、GoalAPI.getBestTimeForStyle がこれを自己ベストとして
+ *   拾っていた (当時は初期タイム基準の達成率が100%と誤表示された)。
  *   「ベストタイム取得」ボタン (RecordAPI.getBestTimes 経由) は元々引き継ぎを除いて
  *   23.80 を返しており、目標管理側の3箇所 (getBestTimeForStyle /
  *   checkTimeAchievement の大会記録側 / hasTimeRecords の大会記録側) だけが
  *   引き継ぎを含めてしまっていた (アプリ内で「引き継ぎタイムの扱い」が2箇所で
  *   食い違っていた状態)。
  *
+ * 初期タイムと時間ベースの達成率は Sprint Contract v2 で全廃された。GoalAPI の自己ベストは
+ * 一覧・詳細の「現在のベスト」(getGoalCurrentBestTime) で使うので、ベストの定義 (リレー除外) は
+ * この経路で固定する (フォームのベストタイムラベルは v4 でエントリーと同じ getBestTimeForEntry になった)。
+ *
  * 本ファイルは:
  *  1. 3箇所それぞれが records への問い合わせに `.eq("is_relaying", false)` を
  *     含めることを、引数を記録するモックで確認する。
  *  2. 「引き継ぎの記録の方が速い」という実際のバグ条件を再現する振る舞いモックで、
- *     自己ベスト (calculateGoalProgress 経由)・time型マイルストーンの達成
+ *     自己ベスト (getGoalCurrentBestTime 経由)・time型マイルストーンの達成
  *     (checkMilestoneAchievement 経由)・「記録あり」判定 (updateAllMilestoneStatuses
  *     経由の hasTimeRecords) のいずれも引き継ぎの記録を無視することを確認する。
  *  3. 「ベストタイム取得」ボタンが使う RecordAPI.getBestTimes() の集計結果と、
- *     GoalAPI 内部の自己ベスト (calculateGoalProgress が使う値) が、
+ *     GoalAPI の自己ベスト (getGoalCurrentBestTime) が、
  *     引き継ぎを含むデータに対して一致することを確認する (今回のずれの再発防止)。
  *
  * トートロジー防止メモ: 引数記録だけでなく、実際にフィルタを適用する振る舞いモックで
- * 「達成/未達成」「進捗の値」という観測可能な結果まで固定する。
+ * 「達成/未達成」「ベストの値」という観測可能な結果まで固定する。
  */
 import { describe, expect, it, vi } from "vitest";
 import { GoalAPI } from "../../api/goals";
@@ -37,6 +41,8 @@ import type { Milestone, MilestoneTimeParams } from "../../types/goals";
 type TrackingBuilder = {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  gt: ReturnType<typeof vi.fn>;
+  gte: ReturnType<typeof vi.fn>;
   ilike: ReturnType<typeof vi.fn>;
   lte: ReturnType<typeof vi.fn>;
   in: ReturnType<typeof vi.fn>;
@@ -54,6 +60,8 @@ function createTrackingBuilder(data: unknown, error: unknown = null) {
     eqCalls.push([col, val]);
     return builder;
   });
+  builder.gt = vi.fn(() => builder);
+  builder.gte = vi.fn(() => builder);
   builder.ilike = vi.fn(() => builder);
   builder.lte = vi.fn(() => builder);
   // updateAllMilestoneStatuses のマイルストーン一覧取得 (.in("status", [...])) 用。
@@ -85,14 +93,10 @@ function createMockMilestone(overrides: Partial<Milestone> = {}): Milestone {
 }
 
 describe("GoalAPI — 引き継ぎタイム (is_relaying=true) を自己ベスト・達成判定から除外する", () => {
-  describe("getBestTimeForStyle (createGoal 経由で間接的に確認)", () => {
+  describe("getBestTimeForStyle (getGoalCurrentBestTime 経由で確認)", () => {
     it("records への問い合わせに .eq('is_relaying', false) が含まれる", async () => {
       const { builder, eqCalls } = createTrackingBuilder({ time: 23.8 }, null);
-      const goalsBuilder = {
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: { id: "goal-1", start_time: 23.8 }, error: null }),
-      };
+      const { builder: goalsBuilder } = createTrackingBuilder({ style_id: 2, competition: { pool_type: 0 } }, null);
       const from = vi.fn((table: string) => {
         if (table === "records") return builder;
         if (table === "goals") return goalsBuilder;
@@ -104,12 +108,7 @@ describe("GoalAPI — 引き継ぎタイム (is_relaying=true) を自己ベス�
       };
       const api = new GoalAPI(supabase as never);
 
-      await api.createGoal({
-        styleId: 2,
-        targetTime: 23.45,
-        competitionId: "comp-1",
-        poolType: 0,
-      } as never);
+      await api.getGoalCurrentBestTime("goal-1");
 
       expect(eqCalls).toContainEqual(["is_relaying", false]);
     });
@@ -191,7 +190,7 @@ type RecordRow = {
   styles: { distance: number; style: string };
 };
 
-/** `.eq()`/`.ilike()`/`.lte()` を実際にデータへ適用する records 用フェイクテーブル */
+/** `.eq()`/`.gt()`/`.ilike()`/`.lte()` を実際にデータへ適用する records 用フェイクテーブル */
 function makeFilteringRecordsBuilder(rows: RecordRow[]) {
   return () => {
     const filters: Array<(row: RecordRow) => boolean> = [];
@@ -215,6 +214,12 @@ function makeFilteringRecordsBuilder(rows: RecordRow[]) {
       filters.push((row) => Number(resolvePath(row, col)) <= value);
       return builder;
     });
+    builder.gt = vi.fn((col: string, value: number) => {
+      filters.push((row) => Number(resolvePath(row, col)) > value);
+      return builder;
+    });
+    // 大会日 (マイルストーン作成日以降) の絞り込みは、このテストの rows に大会日が無いので素通しにする
+    builder.gte = vi.fn(() => builder);
     builder.order = vi.fn((col: string, opts?: { ascending?: boolean }) => {
       orderCol = col;
       ascending = opts?.ascending ?? true;
@@ -269,22 +274,13 @@ describe("実バグの再現条件 (引き継ぎの記録の方が速い) での
     styles: { distance: 50, style: "Fr" },
   };
 
-  it("calculateGoalProgress: 引き継ぎ (23.19) を無視し、自己記録 (23.80=初期タイムのまま) を基準にすると進捗0%になる (100%と誤表示しない)", async () => {
+  function bestTimeApi(rows: RecordRow[], goal?: unknown) {
+    const recordsBuilder = makeFilteringRecordsBuilder(rows);
     const goalsBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          id: "goal-1",
-          style_id: 2,
-          start_time: 23.8,
-          target_time: 23.45,
-          competition: { pool_type: 0 },
-        },
-        error: null,
-      }),
+      single: vi.fn().mockResolvedValue({ data: goal ?? null, error: null }),
     };
-    const recordsBuilder = makeFilteringRecordsBuilder([relayingRow, ownRow]);
     const from = vi.fn((table: string) => {
       if (table === "goals") return goalsBuilder;
       if (table === "records") return recordsBuilder();
@@ -294,13 +290,19 @@ describe("実バグの再現条件 (引き継ぎの記録の方が速い) での
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } }, error: null }) },
       from,
     };
-    const api = new GoalAPI(supabase as never);
+    return new GoalAPI(supabase as never);
+  }
 
-    const progress = await api.calculateGoalProgress("goal-1");
+  it("getGoalCurrentBestTime: 引き継ぎ (23.19) を無視し、自己記録 (23.80) を現在のベストとして返す", async () => {
+    const api = bestTimeApi([relayingRow, ownRow], { style_id: 2, competition: { pool_type: 0 } });
 
-    // 自己ベスト (23.80) は初期タイムと同値なので改善量0 → 進捗0%。
-    // 引き継ぎ (23.19) を採用していれば target_time (23.45) を上回り 100% 超になっていたはず。
-    expect(progress).toBe(0);
+    await expect(api.getGoalCurrentBestTime("goal-1")).resolves.toBe(23.8);
+  });
+
+  it("getGoalCurrentBestTime: 引き継ぎの記録しか無い種目 × 水路は null (記録なし) になる", async () => {
+    const api = bestTimeApi([relayingRow], { style_id: 2, competition: { pool_type: 0 } });
+
+    await expect(api.getGoalCurrentBestTime("goal-1")).resolves.toBeNull();
   });
 
   it("checkMilestoneAchievement (time型): 引き継ぎの記録だけでは達成にならない", async () => {
@@ -311,6 +313,7 @@ describe("実バグの再現条件 (引き継ぎの記録の方が速い) での
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       ilike: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     };
     const recordsBuilder = makeFilteringRecordsBuilder([relayingRow]);
@@ -338,6 +341,7 @@ describe("実バグの再現条件 (引き継ぎの記録の方が速い) での
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       ilike: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     };
     const recordsBuilder = makeFilteringRecordsBuilder([ownRow]);
@@ -366,6 +370,7 @@ describe("実バグの再現条件 (引き継ぎの記録の方が速い) での
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       ilike: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
     };
     const recordsBuilder = makeFilteringRecordsBuilder([relayingRow, fastOwnRow]);
@@ -399,6 +404,7 @@ describe("実バグの再現条件 (引き継ぎの記録の方が速い) での
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       ilike: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: [], error: null }),
       limit: vi.fn().mockResolvedValue({ data: [], error: null }),
     };
@@ -437,9 +443,9 @@ describe("実バグの再現条件 (引き継ぎの記録の方が速い) での
 // =============================================================================
 
 describe("「ベストタイム取得」ボタンとの整合性 (再発防止)", () => {
-  it("引き継ぎを含むデータで、RecordAPI.aggregateBestTimes の非引き継ぎベストと GoalAPI.calculateGoalProgress が使う自己ベストが一致する", async () => {
+  it("引き継ぎを含むデータで、RecordAPI.aggregateBestTimes の非引き継ぎベストと GoalAPI の自己ベスト (getGoalCurrentBestTime) が一致する", async () => {
     // RecordAPI.getBestTimes() が内部で使う aggregateBestTimes に、
-    // GoalAPI.calculateGoalProgress のテストと全く同じレコード群を渡し、
+    // GoalAPI のテストと全く同じレコード群を渡し、
     // 両者が同じ「自己ベスト」(23.80、引き継ぎの23.19は除く) に一致することを確認する。
     const sourceRecords = [
       {
@@ -466,19 +472,16 @@ describe("「ベストタイム取得」ボタンとの整合性 (再発防止)"
     const button = bestTimes.find((bt) => bt.style_id === 2 && bt.pool_type === 0);
     expect(button?.time).toBe(23.8);
 
-    // GoalAPI 側 (calculateGoalProgress が使う getBestTimeForStyle) も同じ23.80を返す。
+    const rows: RecordRow[] = [
+      { id: "record-relay", user_id: "user-1", style_id: 2, pool_type: 0, is_relaying: true, time: 23.19, styles: { distance: 50, style: "Fr" } },
+      { id: "record-own", user_id: "user-1", style_id: 2, pool_type: 0, is_relaying: false, time: 23.8, styles: { distance: 50, style: "Fr" } },
+    ];
     const goalsBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: { id: "goal-1", style_id: 2, start_time: 23.8, target_time: 23.45, competition: { pool_type: 0 } },
-        error: null,
-      }),
+      single: vi.fn().mockResolvedValue({ data: { style_id: 2, competition: { pool_type: 0 } }, error: null }),
     };
-    const recordsBuilder = makeFilteringRecordsBuilder([
-      { id: "record-relay", user_id: "user-1", style_id: 2, pool_type: 0, is_relaying: true, time: 23.19, styles: { distance: 50, style: "Fr" } },
-      { id: "record-own", user_id: "user-1", style_id: 2, pool_type: 0, is_relaying: false, time: 23.8, styles: { distance: 50, style: "Fr" } },
-    ]);
+    const recordsBuilder = makeFilteringRecordsBuilder(rows);
     const from = vi.fn((table: string) => {
       if (table === "goals") return goalsBuilder;
       if (table === "records") return recordsBuilder();
@@ -490,11 +493,7 @@ describe("「ベストタイム取得」ボタンとの整合性 (再発防止)"
     };
     const api = new GoalAPI(supabase as never);
 
-    // start_time と自己ベストが同値 (23.80) → 進捗0%になることで、間接的に
-    // GoalAPI 側も 23.80 を自己ベストとして採用していることを確認する
-    // (23.19 を採用していれば進捗は0%を超える)。
-    const progress = await api.calculateGoalProgress("goal-1");
-    expect(progress).toBe(0);
+    await expect(api.getGoalCurrentBestTime("goal-1")).resolves.toBe(button?.time);
   });
 });
 

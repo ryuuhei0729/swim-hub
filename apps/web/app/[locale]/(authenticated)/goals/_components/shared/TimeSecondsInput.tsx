@@ -45,10 +45,9 @@ function normalizeForComparison(value: number | null): number | null {
 }
 
 /**
- * 目標タイム/初期タイム等の「単発タイム入力欄」共通部品。
+ * 目標タイム等の「単発タイム入力欄」共通部品。
  * 練習・大会記録入力と同じ parseTimeFlexible による柔軟パース + blur 時の正規化表示。
- * GoalForm (目標タイム・初期タイム) / MilestoneParamsForm (目標タイム・平均目標タイム)
- * の4箇所から利用する。
+ * GoalForm (目標タイム) と MilestoneParamsForm (目標タイム・平均目標タイム) から利用する。
  */
 export default function TimeSecondsInput({
   value,

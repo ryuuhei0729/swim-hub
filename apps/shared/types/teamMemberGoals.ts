@@ -16,13 +16,12 @@ export type TeamMemberMilestone = Pick<
 /**
  * RPC `get_team_member_goals` の1行。
  * 大会 NULL の目標では competition_* と current_best_time がすべて null。
- * current_best_time は生の MIN(time) で、0 の扱いは computeGoalProgress が決める。
+ * current_best_time は time > 0 の行の MIN(time) (GoalAPI.getBestTimeForStyle と同一定義)。
  */
 export interface TeamMemberGoal {
   id: string;
   style_id: number;
   target_time: number;
-  start_time: number | null;
   status: Goal["status"];
   achieved_at: string | null;
   created_at: string;

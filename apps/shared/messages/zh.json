@@ -2142,18 +2142,24 @@
       "competitionFallback": "比赛",
       "styleFallback": "项目",
       "competitionInfoUnavailable": "无大会信息",
-      "editUnavailableReason": "因缺少大会信息，无法编辑"
+      "editUnavailableReason": "因缺少大会信息，无法编辑",
+      "diffFromBest": "(最佳{diff})"
     },
     "detail": {
       "loadError": "加载目标详情失败",
       "retry": "重新加载",
       "targetTime": "目标成绩",
-      "initialTime": "初始成绩",
       "notSet": "未设定",
-      "achievement": "达成率",
       "milestoneSection": "里程碑",
       "milestoneRatio": "里程碑达成率",
-      "milestoneAdd": "添加"
+      "milestoneAdd": "添加",
+      "currentBest": "当前最佳",
+      "noRecord": "暂无成绩",
+      "remainingSeconds": "还差{seconds}秒",
+      "targetReached": "已达到目标成绩",
+      "daysLeft": "还有{days}天",
+      "competitionToday": "今天",
+      "competitionFinished": "已结束"
     },
     "create": {
       "title": "新建目标",
@@ -2161,7 +2167,6 @@
       "cancelButton": "取消",
       "closeAriaLabel": "关闭",
       "targetTimeInvalid": "请正确输入目标成绩（大于0秒且在60分钟以内）",
-      "startTimeInvalid": "请正确输入初始成绩（大于0秒且在60分钟以内）",
       "competitionRequired": "请选择比赛",
       "createFailed": "创建目标失败"
     },
@@ -2173,7 +2178,6 @@
       "updateFailed": "更新目标失败",
       "validation": {
         "targetTimeInvalid": "请正确输入目标成绩（大于0秒且在60分钟以内）",
-        "startTimeInvalid": "请正确输入初始成绩（大于0秒且在60分钟以内）",
         "styleNotSelected": "尚未选择项目。"
       }
     },
@@ -2181,7 +2185,6 @@
       "title": "比赛目标复盘",
       "expiredDesc": "以下比赛目标已到期",
       "targetLabel": "目标：",
-      "initialTimeLabel": "初始成绩：",
       "competitionDateLabel": "比赛日期：",
       "milestoneAchievedText": "里程碑达成：{achieved}/{total}",
       "achievedQuestion": "你达成目标了吗？",
@@ -2299,14 +2302,11 @@
       "selectCompetitionPlaceholder": "选择比赛",
       "competitionNamePlaceholder": "比赛名称",
       "competitionPlacePlaceholder": "地点（可选）",
-      "competitionDateLabel": "比赛日期",
       "competitionFallback": "比赛",
       "styleLabel": "项目",
       "selectStylePlaceholder": "选择项目",
       "targetTimeLabel": "目标成绩",
       "targetTimePlaceholder": "2.00.00",
-      "startTimeLabel": "初始成绩（可选）",
-      "startTimePlaceholder": "2.00.00",
       "personalCompetitionGroup": "个人",
       "teamCompetitionGroupFallback": "团队比赛",
       "competitionDatePast": "新建比赛的日期请选择今天或之后"
@@ -2369,9 +2369,11 @@
       "goalSetDesc": "50m×6组×3轮（由100m目标成绩反推）"
     },
     "milestoneSummary": {
-      "time": "{distance}m × 1组：{time}",
+      "time": "{distance}m：{time}",
       "repsTime": "{distance}m × {reps}组 @{time} 平均",
-      "set": "{distance}m × {reps}组 × {sets}轮（@{circle}循环）完成"
+      "repsTimeWithSets": "{distance}m × {reps}组 × {sets}轮 @{time} 平均",
+      "set": "{distance}m × {reps}组（{circle}循环）完成",
+      "setWithSets": "{distance}m × {reps}组 × {sets}轮（{circle}循环）完成"
     },
     "mobile": {
       "notFound": "未找到该目标",
@@ -2391,7 +2393,6 @@
     "loadError": "目标加载失败",
     "retry": "重试",
     "snapshotNote": "显示的是成员最后一次在应用中更新时的状态",
-    "progressUnavailable": "缺少比赛信息，无法计算达成率",
     "section": {
       "upcoming": "即将进行的比赛",
       "past": "过去的比赛",

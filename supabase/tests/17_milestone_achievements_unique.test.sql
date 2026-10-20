@@ -51,8 +51,8 @@ declare
 begin
   select id into v_style_id from public.styles where style = 'Fr' and distance = 100 limit 1;
 
-  insert into public.goals (id, user_id, competition_id, style_id, target_time, start_time, status)
-  values ('88888888-8888-4888-a888-000000000001', '77777777-7777-4777-a777-000000000001', null, v_style_id, 60.0, 70.0, 'active')
+  insert into public.goals (id, user_id, competition_id, style_id, target_time, status)
+  values ('88888888-8888-4888-a888-000000000001', '77777777-7777-4777-a777-000000000001', null, v_style_id, 60.0, 'active')
   returning id into v_goal_id;
 
   insert into public.milestones (id, goal_id, title, type, params, status)

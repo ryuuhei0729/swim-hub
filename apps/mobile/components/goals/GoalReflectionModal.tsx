@@ -106,11 +106,6 @@ export const GoalReflectionModal: React.FC<GoalReflectionModalProps> = ({
             |{" "}
             {t("goals.goalReflection.targetLabel")} {formatTimeBest(goal.target_time)}
           </Text>
-          {goal.start_time ? (
-            <Text style={styles.summaryMeta}>
-              {t("goals.goalReflection.initialTimeLabel")} {formatTimeBest(goal.start_time)}
-            </Text>
-          ) : null}
           <Text style={styles.summaryMeta}>
             {t("goals.goalReflection.competitionDateLabel")}{" "}
             {goal.competition?.date

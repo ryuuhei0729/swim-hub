@@ -1,8 +1,10 @@
 /**
- * 管理者「目標」タブ (web) — Sprint Contract v1 S8
+ * 管理者「目標」タブ (web) — Sprint Contract v1 S8 / v2 (初期タイム全廃) SC6 / SC7 / SC7b / D1 / D2
  * 観点: 未選択 / ローディング / エラー(再試行・生文言非表示) / 空 / 選択肢が空 / 一覧、
  *       メンバー切替で前メンバーの目標が DOM に無い、非泳者除外、閲覧のみ(書き込み0回)、
- *       「—」のとき「0%」が出ない、大会NULLに水路ラベルが出ない、注記、振り返りの語が出ない。
+ *       大会NULLに水路ラベルが出ない、注記、振り返りの語が出ない。
+ *       v2: 達成率はマイルストーン達成率だけ (0件は「未設定」で % もバーも出さない。大会NULLでも「—」にしない)。
+ *       目標タイムの横に Best 差 (目標 − current_best_time。null なら出さない)。初期タイムは出さない。
  * Supabase は rpc / from を呼び出し記録つきスパイにして、書き込み系が呼ばれないことを実証する。
  */
 import React from "react";
@@ -42,7 +44,7 @@ const member = (id: string, name: string, isSwimmer?: boolean) => ({
 
 function goal(over: Partial<TeamMemberGoal> & { id: string }): TeamMemberGoal {
   return {
-    style_id: 1, target_time: 60, start_time: 70, status: "active", achieved_at: null,
+    style_id: 1, target_time: 60, status: "active", achieved_at: null,
     created_at: "2026-01-01T00:00:00Z", competition_id: "c1", competition_title: "県大会",
     competition_date: "2099-05-01", competition_pool_type: 1, current_best_time: 65, milestones: [],
     ...over,
@@ -199,31 +201,109 @@ describe("表示内容", () => {
     await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
   }
 
-  it("達成率: start=70 target=60 best=65 は 50% で progressbar の値も 50", async () => {
-    await showGoals([goal({ id: "g1" })]);
+  const MS = (id: string, status: "achieved" | "in_progress" | "expired" | "not_started") => ({
+    id, title: `MS_${id}`, type: "time" as const, params: { style: "Fr", distance: 50, target_time: 30.5 } as never,
+    deadline: null, status, achieved_at: status === "achieved" ? "2026-02-04T00:00:00Z" : null,
+  });
+  const article = () => screen.getByRole("article");
+  const notSet = messages.goals.detail.notSet;
+  // 初期タイムと「達成率を計算できません」の文言 (どちらも v2 で撤去。キー削除後も文字列で探す)
+  const REMOVED_TEXTS = ["初期タイム", "大会情報がないため達成率を計算できません"];
+
+  it("[SC7] 達成率はマイルストーン達成率: 2件中1件達成で 50%・progressbar の値も 50 (ベストや目標タイムに依存しない)", async () => {
+    await showGoals([goal({ id: "g1", current_best_time: 59, milestones: [MS("a", "achieved"), MS("b", "in_progress")] })]);
     expect(await screen.findByText("50%")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
   });
 
-  it("大会NULL: 達成率は「—」で「0%」は出ない。水路ラベル(短水路/長水路)も大会日も出ない", async () => {
+  it("[D8] 達成率の見出しは「マイルストーン達成率」(goals.detail.milestoneRatio)。progressbar の aria-label も同じで、「達成率」単独の見出しは無い", async () => {
+    await showGoals([goal({ id: "g1", milestones: [MS("a", "achieved"), MS("b", "in_progress")] })]);
+    expect(await within(article()).findByText(messages.goals.detail.milestoneRatio)).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: messages.goals.detail.milestoneRatio })).toHaveAttribute("aria-valuenow", "50");
+    expect(within(article()).queryByText("達成率")).toBeNull();
+  });
+
+  it("[D8] マイルストーン0件でも見出しは「マイルストーン達成率」で、値は「未設定」", async () => {
+    await showGoals([goal({ id: "g0", milestones: [] })]);
+    expect(await within(article()).findByText(messages.goals.detail.milestoneRatio)).toBeInTheDocument();
+    expect(within(article()).getByText(notSet)).toBeInTheDocument();
+    expect(within(article()).queryByText("達成率")).toBeNull();
+  });
+
+  it("[SC7] 全件達成で 100%、達成0件 (1件以上あり) は 0% で progressbar あり", async () => {
     await showGoals([
+      goal({ id: "gA", competition_title: "ALL_DONE", milestones: [MS("a", "achieved"), MS("b", "achieved")] }),
+      goal({ id: "gZ", competition_title: "NONE_DONE", competition_date: "2099-06-01", milestones: [MS("c", "expired")] }),
+    ]);
+    const done = (await screen.findByText("ALL_DONE")).closest("article")!;
+    const none = screen.getByText("NONE_DONE").closest("article")!;
+    expect(done.textContent).toContain("100%");
+    expect(within(done).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+    expect(none.textContent).toContain("0%");
+    expect(none.textContent).not.toContain(notSet);
+    expect(within(none).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+  });
+
+  it("[D2] マイルストーン0件: 「未設定」を出し、% も progressbar も出さない", async () => {
+    await showGoals([goal({ id: "g0", milestones: [] })]);
+    expect(await within(article()).findByText(notSet)).toBeInTheDocument();
+    expect(article().textContent).not.toMatch(/%/);
+    expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+
+  it("[SC7] 大会NULL: 水路ラベル・大会日・Best 差は出さないが、達成率はマイルストーンから出す (「—」にしない)", async () => {
+    await showGoals([
+      goal({
+        id: "gN", competition_id: null, competition_title: null, competition_date: null,
+        competition_pool_type: null, current_best_time: null, milestones: [MS("a", "achieved"), MS("b", "in_progress")],
+      }),
+    ]);
+    expect(await screen.findByText("50%")).toBeInTheDocument();
+    expect(screen.queryByText("—")).toBeNull();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+    expect(screen.queryByText(new RegExp(messages.common.poolTypeShort))).toBeNull();
+    expect(screen.queryByText(new RegExp(messages.common.poolTypeLong))).toBeNull();
+    expect(article().textContent).toContain(messages.goals.list.competitionInfoUnavailable);
+    expect(article().textContent).not.toMatch(/Best/);
+  });
+
+  it("[SC7b] 目標タイムの横に Best 差 (目標 60.00 − ベスト 65.00 = (Best-5.00)) を出す", async () => {
+    await showGoals([goal({ id: "g1", target_time: 60, current_best_time: 65 })]);
+    const diff = await within(article()).findByText(/\(Best-5\.00\)/);
+    const block = diff.parentElement!;
+    expect(block.textContent).toContain("1:00.00");
+    expect(block.textContent!.indexOf("1:00.00")).toBeLessThan(block.textContent!.indexOf("(Best-5.00)"));
+    // 目標タイムと Best 差のまとまりにマイルストーンは混ざらない
+    expect(block.textContent).not.toContain(messages.goals.detail.milestoneSection);
+  });
+
+  it.each([
+    ["目標がベストより遅い (既に上回っている)", 60, 58.5, "(Best+1.50)"],
+    ["目標とベストが同タイム", 60, 60, "(Best+0.00)"],
+    ["浮動小数の端数を出さない", 23.79, 23.8, "(Best-0.01)"],
+  ])("[SC7b] %s: %s − %s は %s", async (_label, target, best, expected) => {
+    await showGoals([goal({ id: "g1", target_time: target, current_best_time: best })]);
+    expect(await within(article()).findByText(new RegExp(expected.replace(/[()+.]/g, "\\$&")))).toBeInTheDocument();
+  });
+
+  it("[SC7b] 大会あり・ベストなし (current_best_time=null): Best 差を出さない。達成率はマイルストーンで決まる", async () => {
+    await showGoals([goal({ id: "g0", current_best_time: null, milestones: [MS("a", "achieved")] })]);
+    expect(await screen.findByText("100%")).toBeInTheDocument();
+    expect(article().textContent).not.toMatch(/Best/);
+    expect(article().textContent).toContain("1:00.00");
+  });
+
+  it("[SC6] 初期タイムと「達成率を計算できません」の文言を出さない (大会あり・大会NULL・マイルストーン0件のいずれでも)", async () => {
+    await showGoals([
+      goal({ id: "g1", competition_title: "WITH_COMP" }),
       goal({
         id: "gN", competition_id: null, competition_title: null, competition_date: null,
         competition_pool_type: null, current_best_time: null,
       }),
     ]);
-    expect(await screen.findByText("—")).toBeInTheDocument();
-    expect(screen.queryByText("0%")).toBeNull();
-    expect(screen.queryByRole("progressbar")).toBeNull();
-    expect(screen.queryByText(new RegExp(messages.common.poolTypeShort))).toBeNull();
-    expect(screen.queryByText(new RegExp(messages.common.poolTypeLong))).toBeNull();
-    expect(screen.getByRole("article").textContent).toContain(messages.goals.list.competitionInfoUnavailable);
-  });
-
-  it("大会あり・ベストなしは 0% (「—」ではない)", async () => {
-    await showGoals([goal({ id: "g0", current_best_time: null })]);
-    expect(await screen.findByText("0%")).toBeInTheDocument();
-    expect(screen.queryByText("—")).toBeNull();
+    await screen.findByText("WITH_COMP");
+    for (const text of REMOVED_TEXTS) expect(document.body.textContent).not.toContain(text);
+    expect(screen.getAllByRole("article")).toHaveLength(2);
   });
 
   it("水路ラベル: 短水路(0)と長水路(1)が正しく出る", async () => {
@@ -282,8 +362,8 @@ describe("表示内容", () => {
       b.then = (f: (v: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(f);
       return b;
     });
-    await showGoals([goal({ id: "g1", milestones: [] })]);
-    await screen.findByText("50%");
+    await showGoals([goal({ id: "g1", competition_title: "WRITE_CHECK", milestones: [] })]);
+    await screen.findByText("WRITE_CHECK");
     for (const spy of Object.values(writes)) expect(spy).not.toHaveBeenCalled();
     expect(new Set(h.rpc.mock.calls.map((c) => c[0]))).toEqual(new Set(["get_team_member_goals"]));
   });

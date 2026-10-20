@@ -2139,18 +2139,24 @@
       "competitionFallback": "Meet",
       "styleFallback": "Event",
       "competitionInfoUnavailable": "Meet info unavailable",
-      "editUnavailableReason": "Cannot edit because meet info is unavailable"
+      "editUnavailableReason": "Cannot edit because meet info is unavailable",
+      "diffFromBest": "(Best{diff})"
     },
     "detail": {
       "loadError": "Failed to load goal details",
       "retry": "Retry",
       "targetTime": "Target Time",
-      "initialTime": "Initial Time",
       "notSet": "Not set",
-      "achievement": "Achievement",
       "milestoneSection": "Milestones",
       "milestoneRatio": "Milestone Achievement",
-      "milestoneAdd": "Add"
+      "milestoneAdd": "Add",
+      "currentBest": "Current Best",
+      "noRecord": "No record",
+      "remainingSeconds": "{seconds}s to go",
+      "targetReached": "Target reached",
+      "daysLeft": "Days left: {days}",
+      "competitionToday": "Today",
+      "competitionFinished": "Finished"
     },
     "create": {
       "title": "New Goal",
@@ -2158,7 +2164,6 @@
       "cancelButton": "Cancel",
       "closeAriaLabel": "Close",
       "targetTimeInvalid": "Please enter a valid target time (must be more than 0 seconds and within 60 minutes)",
-      "startTimeInvalid": "Please enter a valid start time (must be more than 0 seconds and within 60 minutes)",
       "competitionRequired": "Please select a competition",
       "createFailed": "Failed to create goal"
     },
@@ -2170,7 +2175,6 @@
       "updateFailed": "Failed to update goal",
       "validation": {
         "targetTimeInvalid": "Please enter a valid target time (must be more than 0 seconds and within 60 minutes)",
-        "startTimeInvalid": "Please enter a valid start time (must be more than 0 seconds and within 60 minutes)",
         "styleNotSelected": "No stroke selected."
       }
     },
@@ -2178,7 +2182,6 @@
       "title": "Competition Goal Review",
       "expiredDesc": "The following competition goal has reached its deadline",
       "targetLabel": "Target:",
-      "initialTimeLabel": "Initial Time:",
       "competitionDateLabel": "Competition Date:",
       "milestoneAchievedText": "Milestones achieved: {achieved}/{total}",
       "achievedQuestion": "Did you achieve your goal?",
@@ -2296,14 +2299,11 @@
       "selectCompetitionPlaceholder": "Select competition",
       "competitionNamePlaceholder": "Competition name",
       "competitionPlacePlaceholder": "Venue (optional)",
-      "competitionDateLabel": "Competition Date",
       "competitionFallback": "Meet",
       "styleLabel": "Stroke",
       "selectStylePlaceholder": "Select stroke",
       "targetTimeLabel": "Target Time",
       "targetTimePlaceholder": "2.00.00",
-      "startTimeLabel": "Initial Time (optional)",
-      "startTimePlaceholder": "2.00.00",
       "personalCompetitionGroup": "Personal",
       "teamCompetitionGroupFallback": "Team meet",
       "competitionDatePast": "Choose today or a later date for a new competition"
@@ -2366,9 +2366,11 @@
       "goalSetDesc": "50m × 6 reps × 3 sets (calculated from 100m target)"
     },
     "milestoneSummary": {
-      "time": "{distance}m × 1 rep: {time}",
+      "time": "{distance}m: {time}",
       "repsTime": "{distance}m × {reps} reps @{time} avg",
-      "set": "{distance}m × {reps} reps × {sets} sets (@{circle} circle) complete"
+      "repsTimeWithSets": "{distance}m × {reps} reps × {sets} sets @{time} avg",
+      "set": "{distance}m × {reps} reps ({circle} circle) complete",
+      "setWithSets": "{distance}m × {reps} reps × {sets} sets ({circle} circle) complete"
     },
     "mobile": {
       "notFound": "Goal not found",
@@ -2388,7 +2390,6 @@
     "loadError": "Failed to load goals",
     "retry": "Retry",
     "snapshotNote": "Shows the state as of the member's last update in the app",
-    "progressUnavailable": "Progress cannot be calculated because competition information is missing",
     "section": {
       "upcoming": "Upcoming competitions",
       "past": "Past competitions",

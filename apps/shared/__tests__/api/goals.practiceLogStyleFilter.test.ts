@@ -38,6 +38,7 @@ type TrackingBuilder = {
   eq: ReturnType<typeof vi.fn>;
   ilike: ReturnType<typeof vi.fn>;
   gte: ReturnType<typeof vi.fn>;
+  gt: ReturnType<typeof vi.fn>;
   lte: ReturnType<typeof vi.fn>;
   in: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
@@ -63,6 +64,7 @@ function createTrackingBuilder(
     return builder;
   });
   builder.gte = vi.fn(() => builder);
+  builder.gt = vi.fn(() => builder);
   builder.lte = vi.fn(() => builder);
   builder.in = vi.fn(() => builder);
   builder.order = vi.fn(() => builder);
@@ -457,6 +459,8 @@ describe("GoalAPI - practice_logs.style フィルタの canonical 化 (C1)", () 
           return builder;
         });
         builder.order = vi.fn(() => builder);
+        // practices.date (マイルストーン作成日以降) の絞り込みは、このテストの rows に日付が無いので素通しにする
+        builder.gte = vi.fn(() => builder);
         builder.then = (resolve: (v: unknown) => void) => {
           const filtered = rows.filter((row) => filters.every((f) => f(row)));
           const data = filtered.map((row) => ({
@@ -475,7 +479,7 @@ describe("GoalAPI - practice_logs.style フィルタの canonical 化 (C1)", () 
       function makeEmptyRecordsBuilder() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const builder: any = {};
-        for (const name of ["select", "eq", "ilike", "lte", "order", "limit"]) {
+        for (const name of ["select", "eq", "ilike", "gte", "gt", "lte", "order", "limit"]) {
           builder[name] = vi.fn(() => builder);
         }
         builder.then = (resolve: (v: unknown) => void) => resolve({ data: [], error: null });

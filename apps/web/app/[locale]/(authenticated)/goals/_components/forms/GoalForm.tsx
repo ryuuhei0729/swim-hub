@@ -5,10 +5,25 @@ import Input from "@/components/ui/Input";
 import DatePicker from "@/components/ui/DatePicker";
 import StyleChipSelector from "@/components/forms/StyleChipSelector";
 import TimeSecondsInput from "../shared/TimeSecondsInput";
-import { format, startOfDay } from "date-fns";
+import { parseISO, startOfDay } from "date-fns";
 import type { Style, Competition } from "@apps/shared/types";
+import { useAuth } from "@/contexts";
+import { formatTimeBest } from "@/utils/formatters";
+import { getBestTimeForEntry } from "@/utils/bestTimeForEntry";
+import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { POOL_TYPES } from "../constants";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+
+export interface NewCompetitionInput {
+  title: string;
+  /** 開始日 (yyyy-MM-dd) */
+  date: string;
+  /** 終了日 (yyyy-MM-dd)。空文字は単日開催 */
+  endDate: string;
+  place: string;
+  poolType: number;
+}
 
 interface GoalFormProps {
   // 大会選択
@@ -19,18 +34,8 @@ interface GoalFormProps {
   teamNames?: Record<string, string>;
   selectedCompetitionId: string;
   onSelectedCompetitionIdChange: (id: string) => void;
-  newCompetition: {
-    title: string;
-    date: string;
-    place: string;
-    poolType: number;
-  };
-  onNewCompetitionChange: (competition: {
-    title: string;
-    date: string;
-    place: string;
-    poolType: number;
-  }) => void;
+  newCompetition: NewCompetitionInput;
+  onNewCompetitionChange: (competition: NewCompetitionInput) => void;
   // 種目選択
   styles: Style[];
   styleId: string;
@@ -38,15 +43,39 @@ interface GoalFormProps {
   // タイム入力 (秒数。null は未入力)
   targetTime: number | null;
   onTargetTimeChange: (seconds: number | null) => void;
-  startTime: number | null;
-  onStartTimeChange: (seconds: number | null) => void;
-  /** 自動入力のたびに増やす。初期タイム欄を再マウントして不正入力の表示を作り直す */
-  startTimeResetKey: number;
-  /** ベスト取得中などで差し替える初期タイム欄の placeholder (未指定なら通常の文言) */
-  startTimePlaceholder?: string;
-  onStartTimeInvalidChange: (invalid: boolean) => void;
-  /** true の間、初期タイム欄にエラーを表示する (保存拒否時) */
-  startTimeForceInvalid: boolean;
+}
+
+/**
+ * 目標タイム欄の右に出すベストタイムラベル。エントリー・大会記録入力と同じ出し方
+ * (getBestTimeForEntry をリレー OFF で呼ぶ: 同じ水路の自己記録 → 別の水路の自己記録の順で、
+ * 出どころをラベルに書く。引継だけの記録は出さない)。
+ * ベストが無い・取得中・取得失敗のときは出さない。
+ */
+function GoalBestTimeLabel({
+  styleName,
+  poolType,
+}: {
+  styleName: string | null;
+  poolType: number | null;
+}) {
+  const tRecord = useTranslations("forms.recordLog");
+  const { supabase } = useAuth();
+  const { data: bestTimes } = useBestTimesQuery(supabase);
+
+  if (!styleName || poolType === null || !bestTimes) return null;
+  const best = getBestTimeForEntry(styleName, poolType, false, bestTimes);
+  if (!best) return null;
+
+  return (
+    <div
+      data-testid="goal-best-time-label"
+      className="shrink-0 self-center text-xs text-green-800 bg-green-100 px-3 py-1 rounded-full inline-flex items-center gap-2"
+    >
+      <span className="text-green-700">
+        {tRecord(best.labelKey)}: {formatTimeBest(best.time)}
+      </span>
+    </div>
+  );
 }
 
 /**
@@ -66,21 +95,24 @@ export default function GoalForm({
   onStyleIdChange,
   targetTime,
   onTargetTimeChange,
-  startTime,
-  onStartTimeChange,
-  startTimeResetKey,
-  startTimePlaceholder,
-  onStartTimeInvalidChange,
-  startTimeForceInvalid,
 }: GoalFormProps) {
   const t = useTranslations("goals");
-  const tCommon = useTranslations("common");
+  const tCompetition = useTranslations("forms.competition");
+  const locale = useLocale() as SupportedLocale;
 
   // 種目チップ選択(StyleChipSelector)向けにid/nameJp/distanceの形へ変換
   const styleOptions = useMemo(
     () => styles.map((s) => ({ id: s.id, nameJp: s.name_jp, distance: s.distance })),
     [styles],
   );
+
+  // 対象大会の水路 (0: 短水路, 1: 長水路)。新規大会は入力値、既存大会は選択した大会の値 (未選択なら未確定)
+  const poolType =
+    competitionMode === "new"
+      ? newCompetition.poolType
+      : (competitions.find((c) => c.id === selectedCompetitionId)?.pool_type ?? null);
+
+  const styleName = styles.find((s) => String(s.id) === styleId)?.name_jp ?? null;
 
   // 大会一覧を「個人」/チームごとに分類 (U2: optgroup)
   const { personalCompetitions, teamCompetitionGroups } = useMemo(() => {
@@ -138,8 +170,8 @@ export default function GoalForm({
               <optgroup label={t("form.personalCompetitionGroup")}>
                 {personalCompetitions.map((comp) => (
                   <option key={comp.id} value={comp.id}>
-                    {comp.title || t("form.competitionFallback")} -{" "}
-                    {format(new Date(comp.date), "yyyy/MM/dd")}
+                    {formatDate(comp.date, "numeric", locale)}{" "}
+                    {comp.title || t("form.competitionFallback")}
                   </option>
                 ))}
               </optgroup>
@@ -151,52 +183,98 @@ export default function GoalForm({
               >
                 {comps.map((comp) => (
                   <option key={comp.id} value={comp.id}>
-                    {comp.title || t("form.competitionFallback")} -{" "}
-                    {format(new Date(comp.date), "yyyy/MM/dd")}
+                    {formatDate(comp.date, "numeric", locale)}{" "}
+                    {comp.title || t("form.competitionFallback")}
                   </option>
                 ))}
               </optgroup>
             ))}
           </select>
         ) : (
+          // 大会記録の登録 (CompetitionTabModal の大会タブ) と同じ並び。場所と水路は同じ行
           <div className="space-y-3">
-            <Input
-              type="text"
-              placeholder={t("form.competitionNamePlaceholder")}
-              value={newCompetition.title}
-              onChange={(e) => onNewCompetitionChange({ ...newCompetition, title: e.target.value })}
-              required
-            />
-            <DatePicker
-              label={t("form.competitionDateLabel")}
-              value={newCompetition.date}
-              onChange={(date) => onNewCompetitionChange({ ...newCompetition, date })}
-              minDate={startOfDay(new Date())}
-              required
-            />
-            <Input
-              type="text"
-              placeholder={t("form.competitionPlacePlaceholder")}
-              value={newCompetition.place}
-              onChange={(e) => onNewCompetitionChange({ ...newCompetition, place: e.target.value })}
-            />
-            <select
-              value={newCompetition.poolType}
-              onChange={(e) =>
-                onNewCompetitionChange({
-                  ...newCompetition,
-                  poolType: parseInt(e.target.value, 10),
-                })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              required
-            >
-              {POOL_TYPES.map((pt) => (
-                <option key={pt.value} value={pt.value}>
-                  {pt.value === 0 ? tCommon("poolTypeShort") : tCommon("poolTypeLong")}
-                </option>
-              ))}
-            </select>
+            <div className="grid grid-cols-2 gap-4">
+              <DatePicker
+                label={tCompetition("start_date_label")}
+                value={newCompetition.date}
+                onChange={(date) => onNewCompetitionChange({ ...newCompetition, date })}
+                minDate={startOfDay(new Date())}
+                required
+                placeholder={tCompetition("start_date_label")}
+                data-testid="goal-new-competition-date"
+              />
+              <DatePicker
+                label={tCompetition("end_date_label")}
+                value={newCompetition.endDate}
+                onChange={(endDate) => onNewCompetitionChange({ ...newCompetition, endDate })}
+                minDate={newCompetition.date ? parseISO(newCompetition.date) : startOfDay(new Date())}
+                placeholder=""
+                popupAlign="right"
+                data-testid="goal-new-competition-end-date"
+              />
+            </div>
+            <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                {tCompetition("name_label")}
+              </label>
+              <Input
+                type="text"
+                placeholder={t("form.competitionNamePlaceholder")}
+                value={newCompetition.title}
+                onChange={(e) => onNewCompetitionChange({ ...newCompetition, title: e.target.value })}
+                required
+              />
+
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                {tCompetition("place_label")}
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <Input
+                    type="text"
+                    placeholder={t("form.competitionPlacePlaceholder")}
+                    value={newCompetition.place}
+                    onChange={(e) => onNewCompetitionChange({ ...newCompetition, place: e.target.value })}
+                  />
+                </div>
+                <div
+                  className="flex shrink-0"
+                  role="group"
+                  aria-label={tCompetition("pool_type_label")}
+                  data-testid="goal-new-competition-pool-type"
+                >
+                  {POOL_TYPES.map((type, idx) => {
+                    const isActive = newCompetition.poolType === type.value;
+                    const isFirst = idx === 0;
+                    const isLast = idx === POOL_TYPES.length - 1;
+                    return (
+                      <button
+                        key={type.value}
+                        type="button"
+                        onClick={() => onNewCompetitionChange({ ...newCompetition, poolType: type.value })}
+                        aria-pressed={isActive}
+                        className={`h-8 sm:h-10 px-3 border text-sm font-medium whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          isFirst ? "rounded-l-md" : ""
+                        } ${isLast ? "rounded-r-md" : ""} ${!isFirst ? "-ml-px" : ""} ${
+                          isActive
+                            ? "relative z-10 bg-blue-600 border-blue-600 text-white"
+                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                        }`}
+                        data-testid={`goal-new-competition-pool-type-${type.value}`}
+                      >
+                        {/* 狭幅では略称、sm 以上はフル表記 (大会記録の登録と同じ) */}
+                        <span className="sm:hidden">
+                          {type.value === 0 ? tCompetition("pool_short_abbrev") : tCompetition("pool_long_abbrev")}
+                        </span>
+                        <span className="hidden sm:inline">
+                          {type.value === 0 ? tCompetition("pool_short") : tCompetition("pool_long")}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -219,29 +297,20 @@ export default function GoalForm({
       {/* 目標タイム */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">{t("form.targetTimeLabel")}</label>
-        <TimeSecondsInput
-          value={targetTime}
-          onChange={onTargetTimeChange}
-          placeholder={t("form.targetTimePlaceholder")}
-          required
-          requiredErrorMessage={t("paramsForm.timeRequired")}
-          invalidErrorMessage={t("paramsForm.timeInvalid")}
-        />
-      </div>
-
-      {/* 初期タイム */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">{t("form.startTimeLabel")}</label>
-        <TimeSecondsInput
-          key={startTimeResetKey}
-          value={startTime}
-          onChange={onStartTimeChange}
-          onInvalidChange={onStartTimeInvalidChange}
-          forceInvalid={startTimeForceInvalid}
-          placeholder={startTimePlaceholder ?? t("form.startTimePlaceholder")}
-          invalidErrorMessage={t("paramsForm.timeInvalid")}
-          data-testid="goal-start-time"
-        />
+        {/* 狭い幅でベストタイムラベルが並び切らなければ、入力欄の下に回る */}
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+          <div className="min-w-[10rem] flex-1">
+            <TimeSecondsInput
+              value={targetTime}
+              onChange={onTargetTimeChange}
+              placeholder={t("form.targetTimePlaceholder")}
+              required
+              requiredErrorMessage={t("paramsForm.timeRequired")}
+              invalidErrorMessage={t("paramsForm.timeInvalid")}
+            />
+          </div>
+          <GoalBestTimeLabel styleName={styleName} poolType={poolType} />
+        </div>
       </div>
     </div>
   );

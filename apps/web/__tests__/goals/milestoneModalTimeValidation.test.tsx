@@ -84,7 +84,6 @@ const baseGoal: GoalWithMilestones = {
   competition_id: null,
   style_id: 1,
   target_time: 60,
-  start_time: 70,
   status: "active",
   achieved_at: null,
   reflection_note: null,

@@ -25,7 +25,7 @@ const h = vi.hoisted(() => ({
   judge: vi.fn(),
   getGoals: vi.fn(),
   getSelectableCompetitions: vi.fn(),
-  calculateGoalProgress: vi.fn(),
+  getGoalCurrentBestTime: vi.fn(),
   deleteGoal: vi.fn(),
   getStyles: vi.fn(),
   navigate: vi.fn(),
@@ -44,7 +44,7 @@ vi.mock("@apps/shared/api/goals", () => ({
     updateAllMilestoneStatuses = h.judge;
     getGoals = h.getGoals;
     getSelectableCompetitions = h.getSelectableCompetitions;
-    calculateGoalProgress = h.calculateGoalProgress;
+    getGoalCurrentBestTime = h.getGoalCurrentBestTime;
     deleteGoal = h.deleteGoal;
   },
 }));
@@ -65,6 +65,9 @@ vi.mock("@react-navigation/native", () => ({
     }, [cb]);
   },
 }));
+vi.mock("@/components/goals/GoalProgressBar", () => ({
+  GoalProgressBar: ({ progress }: { progress: number }) => <div data-testid="goal-progress-bar" data-progress={String(progress)} />,
+}));
 vi.mock("@/hooks/usePullToRefresh", () => ({
   usePullToRefresh: (refresh: () => Promise<void>) => {
     h.refresh = refresh;
@@ -78,11 +81,12 @@ import { GoalsScreen } from "../GoalsScreen";
 const STYLE = { id: 1, name_jp: "100m 自由形", name: "100m Freestyle", style: "Fr", distance: 100 };
 function goal(id: string, over: Record<string, unknown> = {}) {
   return {
-    id, user_id: "user-1", competition_id: `c-${id}`, style_id: 1, target_time: 60, start_time: null,
+    id, user_id: "user-1", competition_id: `c-${id}`, style_id: 1, target_time: 60,
     status: "active", achieved_at: null, reflection_note: null, created_at: "", updated_at: "", ...over,
   };
 }
-const comp = (id: string, title: string) => ({ id, title, date: "2026-12-01", team_id: null, pool_type: 0 });
+// 実時計で判定されるため、過去日として隠れないよう遠い未来の日付にする
+const comp = (id: string, title: string) => ({ id, title, date: "2099-12-01", team_id: null, pool_type: 0 });
 
 let qc: QueryClient;
 const invalidateKeys: unknown[] = [];
@@ -116,7 +120,7 @@ beforeEach(() => {
   h.judge.mockReset().mockImplementation(async () => { h.calls.push("judge"); });
   h.getGoals.mockReset().mockImplementation(async () => { h.calls.push("fetch"); return [goal("g1", { competition_id: "c1" })]; });
   h.getSelectableCompetitions.mockReset().mockResolvedValue([comp("c1", "テスト大会")]);
-  h.calculateGoalProgress.mockReset().mockResolvedValue(50);
+  h.getGoalCurrentBestTime.mockReset().mockResolvedValue(null);
   h.deleteGoal.mockReset().mockResolvedValue(undefined);
   h.getStyles.mockReset().mockResolvedValue([STYLE]);
   h.navigate.mockReset();
@@ -345,28 +349,39 @@ describe("一覧の内容", () => {
     expect(byLabel("編集")).toHaveLength(1);
   });
 
-  it("達成率: null -> '未設定'、reject -> '0%'、数値 -> 'N%'", async () => {
+  // 2026-10-14 web の一覧カードに揃えた (D3 の「Best 差を出さない」を上書き): 目標タイムの横に Best 差
+  it("一覧カードは目標タイムと Best 差 (大会情報があり記録があるときだけ) を出し、達成率 (% / 未設定 / バー) は出さない", async () => {
     h.getGoals.mockImplementation(async () => [
-      goal("g1", { competition_id: "c1" }), goal("g2", { competition_id: "c1" }), goal("g3", { competition_id: "c1" }),
+      goal("g1", { competition_id: "c1" }), goal("g2", { competition_id: "c1", target_time: 30.5 }),
+      goal("g3", { competition_id: "missing" }),
     ]);
-    h.calculateGoalProgress.mockImplementation(async (id: string) => {
-      if (id === "g1") return null;
-      if (id === "g2") throw new Error("boom");
-      return 75;
+    // g2 は記録なし。g3 は大会情報なし (水路が分からない) なので API が値を返しても Best 差を出さない
+    h.getGoalCurrentBestTime.mockImplementation(async (id: string) => (id === "g2" ? null : 60.01));
+    renderScreen();
+    await flush();
+    // g1 と g3 は目標タイム 60 秒、g2 は 30.5 秒。「目標:」の接頭辞は付けない
+    expect(screen.getAllByText("1:00.00")).toHaveLength(2);
+    expect(screen.getAllByText("30.50")).toHaveLength(1);
+    expect(screen.getAllByText("(Best-0.01)")).toHaveLength(1);
+    const text = document.body.textContent ?? "";
+    expect(text).not.toContain("目標:");
+    expect(text).not.toMatch(/%/);
+    expect(text).not.toContain("未設定");
+    expect(text).not.toContain("—");
+    expect(document.querySelectorAll('[data-testid="goal-progress-bar"]')).toHaveLength(0);
+  });
+
+  it("一覧は達成率を問い合わせず、現在のベストは目標ごとに1回だけ問い合わせる (getGoals は1回)", async () => {
+    h.getGoals.mockImplementation(async () => {
+      h.calls.push("fetch");
+      return [goal("g1", { competition_id: "c1" }), goal("g2", { competition_id: "c1" }), goal("g3", { competition_id: "c1" })];
     });
     renderScreen();
     await flush();
-    expect(screen.getByText("未設定")).toBeTruthy();
-    expect(screen.getByText("0%")).toBeTruthy();
-    expect(screen.getByText("75%")).toBeTruthy();
-  });
-
-  it("達成率は目標ごとに並列取得: 3件を未解決のままにしても3件とも呼び出しが開始される (逐次 await でない)", async () => {
-    h.getGoals.mockImplementation(async () => [goal("g1", { competition_id: "c1" }), goal("g2", { competition_id: "c1" }), goal("g3", { competition_id: "c1" })]);
-    h.calculateGoalProgress.mockImplementation(() => new Promise(() => {}));
-    renderScreen();
-    await flush();
-    expect(h.calculateGoalProgress.mock.calls.map((c) => c[0]).sort()).toEqual(["g1", "g2", "g3"]);
+    const keys = qc.getQueryCache().getAll().map((q) => JSON.stringify(q.queryKey));
+    expect(keys.filter((k) => /progress/i.test(k))).toEqual([]);
+    expect(h.getGoalCurrentBestTime.mock.calls.map((c) => c[0]).sort()).toEqual(["g1", "g2", "g3"]);
+    expect(h.calls.filter((c) => c === "fetch")).toHaveLength(1);
   });
 
   it("achieved の目標は達成バッジ。active には出ない", async () => {

@@ -3,8 +3,9 @@ import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { TeamMemberGoal } from "@apps/shared/types";
 import { formatDate } from "@apps/shared/utils/date";
-import { computeGoalProgress } from "@apps/shared/utils/goalProgress";
 import { GOAL_STATUS_DISPLAY } from "@apps/shared/utils/goalStatusDisplay";
+import { computeMilestoneRatio } from "@apps/shared/utils/milestoneRatio";
+import { formatSignedSeconds } from "@apps/shared/utils/time";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { formatTime } from "@/utils/formatters";
 import { GoalProgressBar } from "@/components/goals/GoalProgressBar";
@@ -22,15 +23,7 @@ export const TeamMemberGoalCard: React.FC<TeamMemberGoalCardProps> = ({ goal, st
   const display = GOAL_STATUS_DISPLAY[goal.status];
   const colors = TONE_COLORS[display.tone];
 
-  // 大会 NULL (水路不明) のときだけ「—」。0% と区別する
-  const progress =
-    goal.competition_pool_type === null
-      ? null
-      : computeGoalProgress({
-          startTime: goal.start_time,
-          targetTime: goal.target_time,
-          currentBestTime: goal.current_best_time,
-        });
+  const milestoneRatio = computeMilestoneRatio(goal.milestones);
   const hasCompetition = goal.competition_id !== null;
   const title = hasCompetition
     ? goal.competition_title || t("goals.list.competitionFallback")
@@ -63,26 +56,27 @@ export const TeamMemberGoalCard: React.FC<TeamMemberGoalCardProps> = ({ goal, st
       <View style={styles.timeRow}>
         <View style={styles.timeCol}>
           <Text style={styles.label}>{t("goals.detail.targetTime")}</Text>
-          <Text style={styles.value}>{formatTime(goal.target_time)}</Text>
-        </View>
-        <View style={styles.timeCol}>
-          <Text style={styles.label}>{t("goals.detail.initialTime")}</Text>
-          <Text style={styles.value}>
-            {goal.start_time !== null ? formatTime(goal.start_time) : t("goals.detail.notSet")}
-          </Text>
+          <View style={styles.targetRow}>
+            <Text style={styles.value}>{formatTime(goal.target_time)}</Text>
+            {goal.current_best_time !== null && (
+              <Text style={styles.diff}>
+                {t("goals.list.diffFromBest", {
+                  diff: formatSignedSeconds(goal.target_time - goal.current_best_time),
+                })}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
 
       <View style={styles.progressBlock}>
         <View style={styles.progressRow}>
-          <Text style={styles.label}>{t("goals.detail.achievement")}</Text>
-          <Text style={styles.value}>{progress === null ? "—" : `${progress.toFixed(0)}%`}</Text>
+          <Text style={styles.label}>{t("goals.detail.milestoneRatio")}</Text>
+          <Text style={styles.value}>
+            {milestoneRatio === null ? t("goals.detail.notSet") : `${milestoneRatio.toFixed(0)}%`}
+          </Text>
         </View>
-        {progress === null ? (
-          <Text style={styles.unavailable}>{t("teamMemberGoals.progressUnavailable")}</Text>
-        ) : (
-          <GoalProgressBar progress={progress} />
-        )}
+        {milestoneRatio !== null && <GoalProgressBar progress={milestoneRatio} />}
       </View>
 
       {goal.status === "achieved" && goal.achieved_at && (
@@ -119,7 +113,8 @@ const styles = StyleSheet.create({
   value: { fontSize: 15, fontWeight: "600", color: "#111827" },
   progressBlock: { marginTop: 6, gap: 6 },
   progressRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  unavailable: { fontSize: 11, color: "#6B7280" },
+  targetRow: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+  diff: { fontSize: 12, color: "#6B7280" },
   achievedAt: { fontSize: 12, color: "#16A34A", marginTop: 4 },
   milestones: { marginTop: 10, gap: 6 },
   sectionLabel: { fontSize: 13, fontWeight: "600", color: "#374151" },

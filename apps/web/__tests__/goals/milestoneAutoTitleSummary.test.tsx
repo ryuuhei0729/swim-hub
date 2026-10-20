@@ -2,7 +2,7 @@
  * apps/web/__tests__/goals/milestoneAutoTitleSummary.test.tsx
  *
  * Contract v3 C3: マイルストーンの自動タイトルは shared formatMilestoneSummary 経由の
- * `formatTimeBest` 形式 (ja: `100m × 1本: 1:23.45`)。旧: 生の秒数 `83.45秒` (廃止)。
+ * `formatTimeBest` 形式 (ja: `100m: 1:23.45`。タイム目標は常に1本1セットなので本数を出さない (2026-10-15))。旧: 生の秒数 `83.45秒` (廃止)。
  * タイトルが入力済みならそれが優先される。期待文字列はリテラル (formatTimeBest で組み立てない)。
  * 実 ja メッセージ + 実 next-intl (NextIntlClientProvider) で描画する。
  */
@@ -40,7 +40,7 @@ import MilestoneEditModal from "../../app/[locale]/(authenticated)/goals/_compon
 
 const style: Style = { id: 1, name_jp: "自由形", name: "Freestyle", style: "Fr", distance: 100 };
 const goal: GoalWithMilestones = {
-  id: "goal-1", user_id: "u", competition_id: null, style_id: 1, target_time: 60, start_time: 70,
+  id: "goal-1", user_id: "u", competition_id: null, style_id: 1, target_time: 60,
   status: "active", achieved_at: null, reflection_note: null, created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z", competition: null, style, milestones: [],
 };
@@ -66,22 +66,22 @@ const createModal = () => (
 describe("MilestoneCreateModal — 自動タイトル (C3)", () => {
   beforeEach(() => mocks.createMilestone.mockClear());
 
-  it("タイトル空・既定 time 型 (50m / 30秒) で作成 -> title は '50m × 1本: 30.00' (秒+'秒' ではない)", async () => {
+  it("タイトル空・既定 time 型 (50m / 30秒) で作成 -> title は '50m: 30.00' (秒+'秒' ではない)", async () => {
     const user = userEvent.setup();
     wrap(createModal());
     await user.click(screen.getByRole("button", { name: "作成" }));
     expect(mocks.createMilestone).toHaveBeenCalledTimes(1);
-    expect(mocks.createMilestone.mock.calls[0]![0].title).toBe("50m × 1本: 30.00");
+    expect(mocks.createMilestone.mock.calls[0]![0].title).toBe("50m: 30.00");
   });
 
-  it("目標タイムを 1:23.45 に変えて作成 -> '50m × 1本: 1:23.45'", async () => {
+  it("目標タイムを 1:23.45 に変えて作成 -> '50m: 1:23.45'", async () => {
     const user = userEvent.setup();
     wrap(createModal());
     const input = screen.getByPlaceholderText("2.00.00");
     await user.clear(input);
     await user.type(input, "1:23.45");
     await user.click(screen.getByRole("button", { name: "作成" }));
-    expect(mocks.createMilestone.mock.calls[0]![0].title).toBe("50m × 1本: 1:23.45");
+    expect(mocks.createMilestone.mock.calls[0]![0].title).toBe("50m: 1:23.45");
   });
 
   it("タイトルを入力済みならそれが優先される", async () => {
@@ -100,14 +100,14 @@ describe("MilestoneCreateModal — 自動タイトル (C3)", () => {
     wrap(createModal(), "en", enMessages);
     await user.click(screen.getByRole("button", { name: enMessages.goals.milestoneCreate.submitButton }));
     const title = mocks.createMilestone.mock.calls[0]![0].title as string;
-    expect(title).toBe("50m × 1 rep: 30.00");
+    expect(title).toBe("50m: 30.00");
     expect(title).not.toMatch(/[぀-ヿ一-鿿]/);
   });
 });
 
 describe("MilestoneEditModal — 自動タイトル (C3)", () => {
   beforeEach(() => mocks.updateMilestone.mockClear());
-  it("タイトルを空にして更新 -> '100m × 1本: 1:23.45'", async () => {
+  it("タイトルを空にして更新 -> '100m: 1:23.45'", async () => {
     const user = userEvent.setup();
     wrap(
       <MilestoneEditModal isOpen onClose={() => {}} onSuccess={async () => {}} milestone={milestone} styles={[style]} goalCompetitionDate="" />,
@@ -115,7 +115,7 @@ describe("MilestoneEditModal — 自動タイトル (C3)", () => {
     await user.click(screen.getByRole("button", { name: jaMessages.goals.milestoneEdit.submitButton }));
     expect(mocks.updateMilestone).toHaveBeenCalledTimes(1);
     const arg = mocks.updateMilestone.mock.calls[0]!;
-    expect(JSON.stringify(arg)).toContain("100m × 1本: 1:23.45");
+    expect(JSON.stringify(arg)).toContain("100m: 1:23.45");
     expect(JSON.stringify(arg)).not.toContain("83.45秒");
   });
 });

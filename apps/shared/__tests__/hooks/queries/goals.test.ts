@@ -30,7 +30,6 @@ const createMockGoal = (overrides: Partial<Goal> = {}): Goal => ({
   competition_id: "comp-1",
   style_id: 1,
   target_time: 55.0,
-  start_time: 60.0,
   status: "active",
   achieved_at: null,
   // M3 (reflection_note 追加) 後、Goal 型は非 optional なので fixture にも必須
@@ -124,6 +123,27 @@ describe("Goal Query Hooks", () => {
         competition: { title: "夏季大会" },
         style: { name_jp: "背泳ぎ" },
       });
+    });
+
+    it("competition に終了日 (end_date) を残す。単日開催 (end_date なし) は null", async () => {
+      const mockGoals = [
+        createMockGoal({ id: "goal-1", competition_id: "comp-1" }),
+        createMockGoal({ id: "goal-2", competition_id: "comp-2" }),
+      ];
+      mockGoalApi.getGoals.mockResolvedValue(mockGoals);
+      mockGoalApi.getSelectableCompetitions.mockResolvedValue([
+        createMockCompetition({ id: "comp-1", date: "2026-10-12", end_date: "2026-10-14" }),
+        createMockCompetition({ id: "comp-2", date: "2026-10-20" }), // end_date 列なし
+      ]);
+
+      const { result } = renderQueryHook(() => useGoalsQuery(mockSupabase, { styles: [] }));
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(result.current.data![0]!.competition).toMatchObject({ date: "2026-10-12", end_date: "2026-10-14" });
+      expect(result.current.data![1]!.competition).toMatchObject({ date: "2026-10-20", end_date: null });
     });
 
     it("competition_idに一致する大会がない場合はnullになる (GoalList/GoalDetail の `=== null` 判定と一致させるため)", async () => {

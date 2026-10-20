@@ -13,13 +13,6 @@ interface MilestoneListProps {
   onDelete: (milestone: Milestone) => void;
 }
 
-const STATUS_ICON: Record<Milestone["status"], { name: "check-circle" | "clock" | "alert-triangle"; color: string }> = {
-  achieved: { name: "check-circle", color: "#16A34A" },
-  in_progress: { name: "clock", color: "#2563EB" },
-  expired: { name: "alert-triangle", color: "#CA8A04" },
-  not_started: { name: "clock", color: "#9CA3AF" },
-};
-
 export const MilestoneList: React.FC<MilestoneListProps> = ({ milestones, onEdit, onDelete }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
@@ -38,11 +31,10 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({ milestones, onEdit
     <View style={styles.list}>
       {milestones.map((milestone) => {
         const achieved = milestone.status === "achieved";
-        const icon = STATUS_ICON[milestone.status];
         return (
           <View key={milestone.id} style={[styles.item, achieved && styles.itemAchieved]}>
-            <Feather name={icon.name} size={20} color={icon.color} />
-            <View style={styles.body}>
+            {/* 編集・削除はタイトルの行にだけ置き、概要と日付はカードの全幅を使う */}
+            <View style={styles.header}>
               <View style={styles.titleRow}>
                 <Text style={styles.title}>{milestone.title}</Text>
                 {achieved && (
@@ -51,39 +43,43 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({ milestones, onEdit
                   </View>
                 )}
               </View>
-              <Text style={styles.summary}>{summarize(milestone)}</Text>
-              {milestone.deadline && (
-                <Text style={styles.meta}>
-                  {t("goals.milestone.deadlineLabel")} {formatDate(milestone.deadline, "long", locale)}
-                </Text>
-              )}
-              {achieved && milestone.achieved_at && (
-                <Text style={styles.achievedMeta}>
-                  {t("goals.milestone.achievedDateLabel")}{" "}
-                  {formatDate(milestone.achieved_at, "long", locale)}
-                </Text>
-              )}
+              <View style={styles.actions}>
+                <Pressable
+                  onPress={() => onEdit(milestone)}
+                  hitSlop={8}
+                  style={styles.iconButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("goals.milestone.edit")}
+                >
+                  <Feather name="edit-2" size={16} color="#6B7280" />
+                </Pressable>
+                <Pressable
+                  onPress={() => onDelete(milestone)}
+                  hitSlop={8}
+                  style={styles.iconButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("goals.milestone.delete")}
+                >
+                  <Feather name="trash-2" size={16} color="#6B7280" />
+                </Pressable>
+              </View>
             </View>
-            <View style={styles.actions}>
-              <Pressable
-                onPress={() => onEdit(milestone)}
-                hitSlop={8}
-                style={styles.iconButton}
-                accessibilityRole="button"
-                accessibilityLabel={t("goals.milestone.edit")}
-              >
-                <Feather name="edit-2" size={16} color="#6B7280" />
-              </Pressable>
-              <Pressable
-                onPress={() => onDelete(milestone)}
-                hitSlop={8}
-                style={styles.iconButton}
-                accessibilityRole="button"
-                accessibilityLabel={t("goals.milestone.delete")}
-              >
-                <Feather name="trash-2" size={16} color="#6B7280" />
-              </Pressable>
-            </View>
+            <Text style={styles.summary}>{summarize(milestone)}</Text>
+            {(milestone.deadline || (achieved && milestone.achieved_at)) && (
+              <View style={styles.metaRow}>
+                {milestone.deadline && (
+                  <Text style={styles.meta}>
+                    {t("goals.milestone.deadlineLabel")} {formatDate(milestone.deadline, "long", locale)}
+                  </Text>
+                )}
+                {achieved && milestone.achieved_at && (
+                  <Text style={styles.achievedMeta}>
+                    {t("goals.milestone.achievedDateLabel")}{" "}
+                    {formatDate(milestone.achieved_at, "long", locale)}
+                  </Text>
+                )}
+              </View>
+            )}
           </View>
         );
       })}
@@ -110,9 +106,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   item: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
@@ -123,10 +116,16 @@ const styles = StyleSheet.create({
     borderColor: "#86EFAC",
     backgroundColor: "#F0FDF4",
   },
-  body: {
-    flex: 1,
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
   },
   titleRow: {
+    flex: 1,
+    // 1行目をアイコン (タップ領域 28pt) の中心に揃える
+    paddingTop: 4,
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
@@ -150,16 +149,23 @@ const styles = StyleSheet.create({
   },
   summary: {
     marginTop: 4,
-    fontSize: 13,
-    color: "#4B5563",
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    fontVariant: ["tabular-nums"],
+  },
+  metaRow: {
+    marginTop: 4,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 16,
+    rowGap: 2,
   },
   meta: {
-    marginTop: 4,
     fontSize: 12,
     color: "#6B7280",
   },
   achievedMeta: {
-    marginTop: 4,
     fontSize: 12,
     color: "#16A34A",
   },

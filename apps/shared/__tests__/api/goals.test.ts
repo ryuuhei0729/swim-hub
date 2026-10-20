@@ -22,7 +22,6 @@ const createMockGoal = (overrides = {}): Goal => ({
   competition_id: "comp-1",
   style_id: 1,
   target_time: 60,
-  start_time: 70,
   status: "active",
   achieved_at: null,
   // M3 (reflection_note 追加) 後、Goal 型は非 optional なので fixture にも必須。
@@ -65,35 +64,41 @@ describe("GoalAPI", () => {
   });
 
   describe("createGoal", () => {
-    it("既存の大会IDで目標を作成できる", async () => {
-      const mockGoal = createMockGoal();
-
+    /**
+     * goals への insert payload を捕まえる (引数を捨てない)。
+     * records を引いたら記録する: 初期タイムの自動取得は撤去済みなので、createGoal は
+     * records に一切問い合わせない (Sprint Contract v2 SC5)。
+     */
+    function trackCreateGoal(mockGoal: Goal, competition = createMockCompetition()) {
+      const goalInserts: unknown[] = [];
+      const competitionInserts: unknown[] = [];
+      const tables: string[] = [];
       mockClient.from = vi.fn((table: string) => {
-        if (table === "records") {
-          // ベストタイム取得
+        tables.push(table);
+        if (table === "competitions") {
           return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockReturnThis(),
-            limit: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: { time: 65 },
-              error: null,
+            insert: vi.fn((v: unknown) => {
+              competitionInserts.push(v);
+              return { select: () => ({ single: async () => ({ data: competition, error: null }) }) };
             }),
           };
         }
         if (table === "goals") {
           return {
-            insert: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: mockGoal,
-              error: null,
+            insert: vi.fn((v: unknown) => {
+              goalInserts.push(v);
+              return { select: () => ({ single: async () => ({ data: mockGoal, error: null }) }) };
             }),
           };
         }
         return createMockQueryBuilder();
       }) as unknown as typeof mockClient.from;
+      return { goalInserts, competitionInserts, tables };
+    }
+
+    it("既存の大会IDで目標を作成できる。goals の insert payload は5列だけ (初期タイムの列を含まない)", async () => {
+      const mockGoal = createMockGoal();
+      const { goalInserts, tables } = trackCreateGoal(mockGoal);
 
       const result = await api.createGoal({
         userId: "test-user-id",
@@ -103,47 +108,22 @@ describe("GoalAPI", () => {
       });
 
       expect(result).toEqual(mockGoal);
+      expect(goalInserts).toEqual([
+        {
+          user_id: "test-user-id",
+          competition_id: "comp-1",
+          style_id: 1,
+          target_time: 60,
+          status: "active",
+        },
+      ]);
+      expect(tables).not.toContain("records");
     });
 
-    it("新規大会と一緒に目標を作成できる", async () => {
-      const mockCompetition = createMockCompetition();
+    it("新規大会と一緒に目標を作成できる。goals の insert payload は5列だけで、大会は1回だけ insert される", async () => {
+      const mockCompetition = createMockCompetition({ id: "comp-new" });
       const mockGoal = createMockGoal();
-
-      mockClient.from = vi.fn((table: string) => {
-        if (table === "competitions") {
-          return {
-            insert: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: mockCompetition,
-              error: null,
-            }),
-          };
-        }
-        if (table === "records") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockReturnThis(),
-            limit: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: null,
-              error: { code: "PGRST116" },
-            }),
-          };
-        }
-        if (table === "goals") {
-          return {
-            insert: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: mockGoal,
-              error: null,
-            }),
-          };
-        }
-        return createMockQueryBuilder();
-      }) as unknown as typeof mockClient.from;
+      const { goalInserts, competitionInserts, tables } = trackCreateGoal(mockGoal, mockCompetition);
 
       const result = await api.createGoal({
         userId: "test-user-id",
@@ -158,6 +138,54 @@ describe("GoalAPI", () => {
       });
 
       expect(result).toEqual(mockGoal);
+      expect(competitionInserts).toHaveLength(1);
+      expect(goalInserts).toEqual([
+        {
+          user_id: "test-user-id",
+          competition_id: "comp-new",
+          style_id: 1,
+          target_time: 60,
+          status: "active",
+        },
+      ]);
+      expect(tables).not.toContain("records");
+    });
+
+    it("[撤去の検証] 旧フォームの入力 (初期タイム・水路) が混ざって渡っても、insert payload に初期タイムの列は乗らず records も引かない", async () => {
+      const mockGoal = createMockGoal();
+      const { goalInserts, tables } = trackCreateGoal(mockGoal);
+
+      // 旧 CreateGoalInput の startTime / poolType を型を迂回して渡す (書き戻しが起きたら赤)
+      await api.createGoal({
+        userId: "test-user-id",
+        competitionId: "comp-1",
+        styleId: 1,
+        targetTime: 60,
+        startTime: 70,
+        poolType: 1,
+      } as never);
+
+      expect(goalInserts).toEqual([
+        {
+          user_id: "test-user-id",
+          competition_id: "comp-1",
+          style_id: 1,
+          target_time: 60,
+          status: "active",
+        },
+      ]);
+      expect(tables).not.toContain("records");
+    });
+
+    it("goals の insert が失敗したらエラーを投げる", async () => {
+      const insertError = { code: "42501", message: "rls" };
+      mockClient.from = vi.fn(() => ({
+        insert: vi.fn(() => ({ select: () => ({ single: async () => ({ data: null, error: insertError }) }) })),
+      })) as unknown as typeof mockClient.from;
+
+      await expect(
+        api.createGoal({ userId: "test-user-id", competitionId: "comp-1", styleId: 1, targetTime: 60 }),
+      ).rejects.toBe(insertError);
     });
 
     it("未認証の場合はエラーを投げる", async () => {
@@ -280,22 +308,48 @@ describe("GoalAPI", () => {
   });
 
   describe("updateGoal", () => {
-    it("目標を更新できる", async () => {
-      const updatedGoal = createMockGoal({ target_time: 55 });
-
-      mockClient.from = vi.fn().mockReturnValue({
+    function trackUpdateGoal(returned: Goal) {
+      const builder = {
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: updatedGoal,
-          error: null,
-        }),
-      }) as unknown as typeof mockClient.from;
+        single: vi.fn().mockResolvedValue({ data: returned, error: null }),
+      };
+      mockClient.from = vi.fn().mockReturnValue(builder) as unknown as typeof mockClient.from;
+      return builder;
+    }
+
+    it("目標を更新できる。update payload は渡した項目だけ ({ target_time })", async () => {
+      const builder = trackUpdateGoal(createMockGoal({ target_time: 55 }));
 
       const result = await api.updateGoal("goal-1", { targetTime: 55 });
 
       expect(result.target_time).toBe(55);
+      expect(builder.update).toHaveBeenCalledTimes(1);
+      expect(builder.update).toHaveBeenCalledWith({ target_time: 55 });
+      expect(builder.eq).toHaveBeenCalledWith("id", "goal-1");
+    });
+
+    it("フォームの更新 (大会・種目・目標タイム) の payload は3列だけ (初期タイムの列を含まない)", async () => {
+      const builder = trackUpdateGoal(createMockGoal());
+
+      await api.updateGoal("goal-1", { competitionId: "comp-2", styleId: 3, targetTime: 59.5 });
+
+      expect(builder.update).toHaveBeenCalledWith({
+        competition_id: "comp-2",
+        style_id: 3,
+        target_time: 59.5,
+      });
+    });
+
+    it("[撤去の検証] 旧フォームの初期タイム (startTime) が混ざって渡っても update payload に乗らない", async () => {
+      const builder = trackUpdateGoal(createMockGoal());
+
+      // 旧 UpdateGoalInput の startTime を型を迂回して渡す (書き戻しが起きたら赤)
+      await api.updateGoal("goal-1", { targetTime: 55, startTime: 70 } as never);
+      await api.updateGoal("goal-1", { targetTime: 55, startTime: null } as never);
+
+      expect(builder.update.mock.calls).toEqual([[{ target_time: 55 }], [{ target_time: 55 }]]);
     });
 
     it("達成済みに変更すると achieved_at が設定される", async () => {
@@ -394,69 +448,6 @@ describe("GoalAPI", () => {
 
         await expect(api.deleteGoal("goal-1")).rejects.toThrow(error);
       });
-    });
-  });
-
-  describe("calculateGoalProgress", () => {
-    it("進捗率を計算できる", async () => {
-      const mockGoal = createMockGoal({ start_time: 70, target_time: 60 });
-
-      mockClient.from = vi.fn((table: string) => {
-        if (table === "goals") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              // calculateGoalProgress は select("*, competition:competitions(pool_type)")
-              // で水路を取得し、それが無いと計算不能 (null) を返す。goal.competition が
-              // 存在するフィクスチャでなければ「計算できる」ケースを検証できない。
-              data: { ...mockGoal, competition: { pool_type: 1 } },
-              error: null,
-            }),
-          };
-        }
-        if (table === "records") {
-          return {
-            select: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockReturnThis(),
-            order: vi.fn().mockReturnThis(),
-            limit: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({
-              data: { time: 65 }, // 5秒短縮（目標10秒短縮の50%達成）
-              error: null,
-            }),
-          };
-        }
-        return createMockQueryBuilder();
-      }) as unknown as typeof mockClient.from;
-
-      const progress = await api.calculateGoalProgress("goal-1");
-
-      expect(progress).toBe(50); // (70-65)/(70-60) * 100 = 50%
-    });
-
-    it("初期タイムがない場合は0を返す", async () => {
-      const mockGoal = createMockGoal({ start_time: null });
-
-      mockClient.from = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: mockGoal,
-          error: null,
-        }),
-      }) as unknown as typeof mockClient.from;
-
-      const progress = await api.calculateGoalProgress("goal-1");
-
-      expect(progress).toBe(0);
-    });
-
-    it("未認証の場合はエラーを投げる", async () => {
-      mockClient = createMockSupabaseClient({ userId: "" });
-      api = new GoalAPI(mockClient);
-
-      await expect(api.calculateGoalProgress("goal-1")).rejects.toThrow("認証が必要です");
     });
   });
 
@@ -749,6 +740,8 @@ describe("GoalAPI", () => {
             // (.eq ではない)。ilike が定義されていないとチェーンが TypeError になる
             // (課題A)。
             ilike: vi.fn().mockReturnThis(),
+            gte: vi.fn().mockReturnThis(),
+            gt: vi.fn().mockReturnThis(),
             order: vi.fn().mockResolvedValue({
               data: [
                 {
@@ -900,6 +893,8 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
               // hasTimeRecords は canonical 化した style を .ilike("style", ...) で
               // 問い合わせる (課題A: ilike 未定義だと TypeError)。
               ilike: vi.fn().mockReturnThis(),
+              gte: vi.fn().mockReturnThis(),
+              gt: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [
                   {
@@ -916,6 +911,8 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             ilike: vi.fn().mockReturnThis(),
+            gte: vi.fn().mockReturnThis(),
+            gt: vi.fn().mockReturnThis(),
             limit: vi.fn().mockResolvedValue({
               data: [],
               error: null,
@@ -958,6 +955,8 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
               select: vi.fn().mockReturnThis(),
               eq: vi.fn().mockReturnThis(),
               ilike: vi.fn().mockReturnThis(),
+              gte: vi.fn().mockReturnThis(),
+              gt: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [],
                 error: null,
@@ -969,6 +968,8 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             ilike: vi.fn().mockReturnThis(),
+            gte: vi.fn().mockReturnThis(),
+            gt: vi.fn().mockReturnThis(),
             limit: vi.fn().mockResolvedValue({
               data: [],
               error: null,
@@ -1041,6 +1042,7 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
               // 問い合わせる (課題A と同型)。
               ilike: vi.fn().mockReturnThis(),
               gte: vi.fn().mockReturnThis(),
+              gt: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [
                   {
@@ -1091,6 +1093,7 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
               eq: vi.fn().mockReturnThis(),
               ilike: vi.fn().mockReturnThis(),
               gte: vi.fn().mockReturnThis(),
+              gt: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [],
                 error: null,
@@ -1160,6 +1163,7 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
               // 問い合わせる (課題A と同型)。
               ilike: vi.fn().mockReturnThis(),
               gte: vi.fn().mockReturnThis(),
+              gt: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [{ id: "log-1" }],
                 error: null,
@@ -1205,6 +1209,7 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
               eq: vi.fn().mockReturnThis(),
               ilike: vi.fn().mockReturnThis(),
               gte: vi.fn().mockReturnThis(),
+              gt: vi.fn().mockReturnThis(),
               limit: vi.fn().mockResolvedValue({
                 data: [],
                 error: null,

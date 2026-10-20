@@ -1,5 +1,5 @@
 // =============================================================================
-// マイルストーン概要文 (例: "100m × 1本: 1:23.45") の i18n 対応整形
+// マイルストーン概要文 (例: "100m: 1:23.45") の i18n 対応整形
 // =============================================================================
 
 import type { Milestone } from "../types";
@@ -8,7 +8,7 @@ import {
   isMilestoneSetParams,
   isMilestoneTimeParams,
 } from "../types/goals";
-import { formatTimeBest } from "./time";
+import { formatCircle, formatTimeBest } from "./time";
 
 /**
  * goals 名前空間からの相対キー ("milestoneSummary.time" 等) を受け取る翻訳関数。
@@ -18,10 +18,16 @@ import { formatTimeBest } from "./time";
 export type MilestoneSummaryKey =
   | "milestoneSummary.time"
   | "milestoneSummary.repsTime"
-  | "milestoneSummary.set";
+  | "milestoneSummary.repsTimeWithSets"
+  | "milestoneSummary.set"
+  | "milestoneSummary.setWithSets";
 
 export type SummaryTranslate = (key: MilestoneSummaryKey, values: Record<string, string>) => string;
 
+/**
+ * セット数は2セット以上のときだけ出す (1セットは「× 1セット」を付けない)。
+ * タイム目標は常に1本1セットなので本数もセット数も出さない
+ */
 export function formatMilestoneSummary(
   milestone: Pick<Milestone, "params" | "title">,
   t: SummaryTranslate,
@@ -35,18 +41,19 @@ export function formatMilestoneSummary(
     });
   }
   if (isMilestoneRepsTimeParams(params)) {
-    return t("milestoneSummary.repsTime", {
+    return t(params.sets >= 2 ? "milestoneSummary.repsTimeWithSets" : "milestoneSummary.repsTime", {
       distance: String(params.distance),
       reps: String(params.reps),
+      sets: String(params.sets),
       time: formatTimeBest(params.target_average_time),
     });
   }
   if (isMilestoneSetParams(params)) {
-    return t("milestoneSummary.set", {
+    return t(params.sets >= 2 ? "milestoneSummary.setWithSets" : "milestoneSummary.set", {
       distance: String(params.distance),
       reps: String(params.reps),
       sets: String(params.sets),
-      circle: formatTimeBest(params.circle),
+      circle: formatCircle(params.circle),
     });
   }
   return milestone.title;

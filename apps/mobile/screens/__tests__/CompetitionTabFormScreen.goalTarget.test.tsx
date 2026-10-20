@@ -342,7 +342,6 @@ const goal = (over: Record<string, unknown> = {}) => ({
   competition_id: COMP_ID,
   style_id: STYLE_FREE_50.id,
   target_time: 28.5,
-  start_time: 30,
   status: "active",
   ...over,
 });

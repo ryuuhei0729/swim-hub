@@ -281,8 +281,8 @@ test.describe("目標管理のテスト", () => {
       await modal.locator('[data-testid="goal-style-distance-100"]').click();
       await modal.locator('[data-testid="goal-style-stroke-Fr"]').click();
 
-      // 目標タイム欄はプレースホルダー "2.00.00" の *先頭* を構造的に特定する
-      // (目標タイムが初期タイムより先に描画されるため .first() で確定できる)
+      // 目標タイム欄はプレースホルダー "2.00.00" で構造的に特定する
+      // (このプレースホルダーの入力欄は目標フォーム内で目標タイム欄だけ)
       const targetTimeInput = modal.locator('input[placeholder="2.00.00"]').first();
       await targetTimeInput.fill("1.00.00");
 

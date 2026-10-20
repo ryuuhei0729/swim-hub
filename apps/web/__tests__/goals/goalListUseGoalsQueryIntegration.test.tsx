@@ -29,6 +29,7 @@ vi.mock("next-intl", async (importOriginal) => {
       ((key: string) => (namespace ? `${namespace}.${key}` : key)) as unknown as ReturnType<
         typeof original.useTranslations
       >,
+    useLocale: () => "ja",
   };
 });
 
@@ -39,7 +40,7 @@ vi.mock("@/contexts", () => ({
 const mocks = vi.hoisted(() => ({
   getGoals: vi.fn(),
   getSelectableCompetitions: vi.fn(),
-  calculateGoalProgress: vi.fn(),
+  getGoalCurrentBestTime: vi.fn(),
 }));
 
 vi.mock("@apps/shared/api/goals", () => ({
@@ -47,7 +48,7 @@ vi.mock("@apps/shared/api/goals", () => ({
     return {
       getGoals: mocks.getGoals,
       getSelectableCompetitions: mocks.getSelectableCompetitions,
-      calculateGoalProgress: mocks.calculateGoalProgress,
+      getGoalCurrentBestTime: mocks.getGoalCurrentBestTime,
       updateGoal: vi.fn().mockResolvedValue({}),
     };
   }),
@@ -86,7 +87,7 @@ describe("GoalList × useGoalsQuery 統合 (実データ経路)", () => {
     vi.mocked(GoalAPI).mockClear();
     mocks.getGoals.mockReset();
     mocks.getSelectableCompetitions.mockReset();
-    mocks.calculateGoalProgress.mockReset().mockResolvedValue(null);
+    mocks.getGoalCurrentBestTime.mockReset().mockResolvedValue(null);
   });
 
   it("competition_id が指すレコードが getSelectableCompetitions() の結果に無い場合、GoalList は編集ボタンを出さず『大会情報なし』文言を表示する", async () => {
@@ -97,7 +98,6 @@ describe("GoalList × useGoalsQuery 統合 (実データ経路)", () => {
         competition_id: "comp-unresolvable",
         style_id: 1,
         target_time: 60,
-        start_time: 70,
         status: "active",
         achieved_at: null,
         reflection_note: null,
@@ -126,7 +126,6 @@ describe("GoalList × useGoalsQuery 統合 (実データ経路)", () => {
         competition_id: "comp-1",
         style_id: 1,
         target_time: 60,
-        start_time: 70,
         status: "active",
         achieved_at: null,
         reflection_note: null,
@@ -135,7 +134,7 @@ describe("GoalList × useGoalsQuery 統合 (実データ経路)", () => {
       },
     ]);
     mocks.getSelectableCompetitions.mockResolvedValue([{ id: "comp-1", title: "解決できる大会" }]);
-    mocks.calculateGoalProgress.mockResolvedValue(50);
+    mocks.getGoalCurrentBestTime.mockResolvedValue(65.5);
 
     renderWithQueryClient();
 

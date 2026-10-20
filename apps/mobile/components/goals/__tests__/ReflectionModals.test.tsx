@@ -39,7 +39,7 @@ import { GoalReflectionModal } from "../GoalReflectionModal";
 import { ReflectionModal } from "../ReflectionModal";
 
 const goal = (over: Record<string, unknown> = {}) => ({
-  id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, start_time: 70, status: "active",
+  id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, status: "active",
   achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
   competition: { id: "c1", title: "県大会", date: "2026-01-01", pool_type: 0, team_id: null },
   style: { id: 1, name_jp: "100m 自由形", name: "100m Fr", style: "Fr", distance: 100 },
@@ -75,13 +75,13 @@ describe("GoalReflectionModal", () => {
     return { onSkip, onSaved };
   }
 
-  it("概要: 大会名・目標タイム・初期タイム・マイルストーン達成 1/2", () => {
+  it("概要: 大会名・目標タイム・マイルストーン達成 1/2。初期タイムの行は出さない (Contract v2 SC6)", () => {
     setup();
     const text = document.body.textContent ?? "";
     expect(text).toContain("県大会");
     expect(text).toContain("1:00.00");
-    expect(text).toContain("1:10.00");
     expect(text).toContain("マイルストーン達成: 1/2");
+    expect(text).not.toContain("初期タイム");
   });
 
   it("大会情報なし (competition null) でも描画でき '大会情報なし' を表示", () => {
@@ -176,9 +176,9 @@ describe("ReflectionModal (マイルストーン)", () => {
   }
   const saveBtn = () => screen.getByText("保存").closest("button") as HTMLButtonElement;
 
-  it("概要文は formatTimeBest 形式 ('100m × 1本: 1:23.45')。旧 web の '83.45秒' ではない", () => {
+  it("概要文は formatTimeBest 形式 ('100m: 1:23.45')。旧 web の '83.45秒' ではない", () => {
     setup();
-    expect(screen.getByText("100m × 1本: 1:23.45")).toBeTruthy();
+    expect(screen.getByText("100m: 1:23.45")).toBeTruthy();
     expect(document.body.textContent).not.toContain("83.45秒");
   });
 

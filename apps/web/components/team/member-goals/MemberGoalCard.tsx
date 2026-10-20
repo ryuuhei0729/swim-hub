@@ -2,10 +2,10 @@
 
 import React from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { computeGoalProgress } from "@apps/shared/utils/goalProgress";
+import { computeMilestoneRatio } from "@apps/shared/utils/milestoneRatio";
 import { GOAL_STATUS_DISPLAY } from "@apps/shared/utils/goalStatusDisplay";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
-import { formatTime } from "@apps/shared/utils/time";
+import { formatSignedSeconds, formatTime } from "@apps/shared/utils/time";
 import type { TeamMemberGoal } from "@apps/shared/types/teamMemberGoals";
 import MemberMilestoneList from "./MemberMilestoneList";
 import { STATUS_BADGE_CLASS } from "./statusTone";
@@ -24,15 +24,13 @@ export default function MemberGoalCard({ goal, styleLabel }: MemberGoalCardProps
 
   const display = GOAL_STATUS_DISPLAY[goal.status];
   const isAchieved = goal.status === "achieved";
-  // 水路が分からない (大会 NULL) ときだけ「—」。0% とは区別する
-  const progressUnavailable = goal.competition_pool_type === null;
-  const progress = progressUnavailable
-    ? null
-    : computeGoalProgress({
-        startTime: goal.start_time,
-        targetTime: goal.target_time,
-        currentBestTime: goal.current_best_time,
-      });
+  const progress = computeMilestoneRatio(goal.milestones);
+  const diffFromBest =
+    goal.current_best_time === null
+      ? null
+      : tGoals("list.diffFromBest", {
+          diff: formatSignedSeconds(goal.target_time - goal.current_best_time),
+        });
 
   const hasCompetition = goal.competition_id !== null;
   const competitionName = hasCompetition
@@ -71,36 +69,31 @@ export default function MemberGoalCard({ goal, styleLabel }: MemberGoalCardProps
         </span>
       </div>
 
-      <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+      <dl className="mt-3 text-xs">
         <div>
           <dt className="text-gray-500">{tGoals("detail.targetTime")}</dt>
-          <dd className="font-medium text-gray-900">{formatTime(goal.target_time)}</dd>
-        </div>
-        <div>
-          <dt className="text-gray-500">{tGoals("detail.initialTime")}</dt>
           <dd className="font-medium text-gray-900">
-            {goal.start_time === null ? tGoals("detail.notSet") : formatTime(goal.start_time)}
+            {formatTime(goal.target_time)}
+            {diffFromBest && <span className="ml-1 text-xs text-gray-500">{diffFromBest}</span>}
           </dd>
         </div>
       </dl>
 
       <div className="mt-3">
         <div className="mb-1 flex items-center justify-between text-xs text-gray-600">
-          <span>{tGoals("detail.achievement")}</span>
+          <span>{tGoals("detail.milestoneRatio")}</span>
           <span className="font-medium text-gray-900">
-            {progress === null ? "—" : `${progress.toFixed(0)}%`}
+            {progress === null ? tGoals("detail.notSet") : `${progress.toFixed(0)}%`}
           </span>
         </div>
-        {progress === null ? (
-          <p className="text-[11px] text-amber-600">{tMember("progressUnavailable")}</p>
-        ) : (
+        {progress !== null && (
           <div
             className="h-2 w-full overflow-hidden rounded-full bg-gray-200"
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress)}
-            aria-label={tGoals("detail.achievement")}
+            aria-label={tGoals("detail.milestoneRatio")}
           >
             <div className="h-full rounded-full bg-blue-500" style={{ width: `${progress}%` }} />
           </div>

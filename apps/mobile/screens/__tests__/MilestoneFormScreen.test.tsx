@@ -72,7 +72,7 @@ const style100 = { id: 1, name_jp: "100m 自由形", name: "100m Fr", style: "Fr
 const style50 = { id: 2, name_jp: "50m 自由形", name: "50m Fr", style: "Fr", distance: 50 };
 function goalFx(over: Record<string, unknown> = {}) {
   return {
-    id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, start_time: null, status: "active",
+    id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, status: "active",
     achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
     competition: { id: "c1", title: "県大会", date: "2099-12-01", pool_type: 0, team_id: null },
     style: style100, milestones: [], ...over,
@@ -113,13 +113,13 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("S4 作成: 3 type", () => {
-  it("time (既定): createMilestone が期待 params / 自動タイトル '50m × 1本: 30.00' / deadline null で1回", async () => {
+  it("time (既定): createMilestone が期待 params / 自動タイトル '50m: 30.00' / deadline null で1回", async () => {
     renderScreen();
     await flush();
     await submit();
     expect(h.createMilestone).toHaveBeenCalledTimes(1);
     expect(h.createMilestone).toHaveBeenCalledWith({
-      goalId: "g1", title: "50m × 1本: 30.00", type: "time",
+      goalId: "g1", title: "50m: 30.00", type: "time",
       params: { distance: 50, target_time: 30, style: "Fr", swim_category: "Swim" }, deadline: null,
     });
     await flush();
@@ -137,13 +137,13 @@ describe("S4 作成: 3 type", () => {
     });
   });
 
-  it("set: サークルイン目標に切替 -> 既定値 + 自動タイトル '200m × 4本 × 3セット (@2:20.00サークル) 完遂'", async () => {
+  it("set: サークルイン目標に切替 -> 既定値 + 自動タイトル '200m × 4本 × 3セット (2'20\"サークル) 完遂'", async () => {
     renderScreen();
     await flush();
     fireEvent.click(screen.getByText("サークルイン目標"));
     await submit();
     expect(h.createMilestone).toHaveBeenCalledWith({
-      goalId: "g1", title: "200m × 4本 × 3セット (@2:20.00サークル) 完遂", type: "set",
+      goalId: "g1", title: "200m × 4本 × 3セット (2'20\"サークル) 完遂", type: "set",
       params: { distance: 200, reps: 4, sets: 3, circle: 140, style: "Fr", swim_category: "Swim" }, deadline: null,
     });
   });
@@ -159,7 +159,7 @@ describe("S4 作成: 3 type", () => {
     await flush();
     fireEvent.change(byLabel("タイトル（任意、空欄の場合は自動生成）")[0]!, { target: { value: "   " } });
     await submit();
-    expect(h.createMilestone.mock.calls[0]![0].title).toBe("50m × 1本: 30.00");
+    expect(h.createMilestone.mock.calls[0]![0].title).toBe("50m: 30.00");
   });
 
   it("目標タイムを編集して保存しても shared の DEFAULT_TIME_PARAMS (共有参照) を破壊しない", async () => {

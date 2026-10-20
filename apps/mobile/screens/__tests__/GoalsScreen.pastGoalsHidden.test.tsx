@@ -13,7 +13,6 @@ const h = vi.hoisted(() => ({
   judge: vi.fn(),
   getGoals: vi.fn(),
   getSelectableCompetitions: vi.fn(),
-  calculateGoalProgress: vi.fn(),
   deleteGoal: vi.fn(),
   getStyles: vi.fn(),
   navigate: vi.fn(),
@@ -32,7 +31,7 @@ vi.mock("@apps/shared/api/goals", () => ({
     updateAllMilestoneStatuses = h.judge;
     getGoals = h.getGoals;
     getSelectableCompetitions = h.getSelectableCompetitions;
-    calculateGoalProgress = h.calculateGoalProgress;
+    getGoalCurrentBestTime = async () => null;
     deleteGoal = h.deleteGoal;
   },
 }));
@@ -66,10 +65,11 @@ import { GoalsScreen } from "../GoalsScreen";
 
 const STYLE = { id: 1, name_jp: "100m 自由形", name: "100m Freestyle", style: "Fr", distance: 100 };
 const goal = (id: string, compId: string | null, status = "active") => ({
-  id, user_id: "user-1", competition_id: compId, style_id: 1, target_time: 60, start_time: null,
+  id, user_id: "user-1", competition_id: compId, style_id: 1, target_time: 60,
   status, achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
 });
-const comp = (id: string, title: string, date: string) => ({ id, title, date, team_id: null, pool_type: 0 });
+const comp = (id: string, title: string, date: string, end_date: string | null = null) =>
+  ({ id, title, date, end_date, team_id: null, pool_type: 0 });
 
 function renderScreen() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
@@ -94,7 +94,6 @@ beforeEach(() => {
   h.judge.mockReset().mockResolvedValue(undefined);
   h.getGoals.mockReset();
   h.getSelectableCompetitions.mockReset().mockResolvedValue([]);
-  h.calculateGoalProgress.mockReset().mockResolvedValue(50);
   h.deleteGoal.mockReset().mockResolvedValue(undefined);
   h.getStyles.mockReset().mockResolvedValue([STYLE]);
   h.navigate.mockReset();
@@ -147,12 +146,29 @@ describe("v6: 過去の日付の目標は目標タブに表示しない (境界 
     expect(screen.getByText("下のボタンから新規作成してください")).toBeTruthy();
   });
 
-  it("達成率の問い合わせは表示する目標の id だけ (非表示の gY では呼ばれない)", async () => {
+  it("複数日開催は終了日で判定する: 開催中 (昨日〜明日)・最終日 (〜今日) は出る / 終了日が昨日なら出ない", async () => {
+    setup(
+      [goal("gM", "cM"), goal("gL", "cL"), goal("gE", "cE")],
+      [
+        comp("cM", "開催中大会", "2026-10-03", "2026-10-05"),
+        comp("cL", "最終日大会", "2026-10-02", "2026-10-04"),
+        comp("cE", "終了大会", "2026-10-01", "2026-10-03"),
+      ],
+    );
+    renderScreen();
+    await flush();
+    expect(screen.getByText("開催中大会")).toBeTruthy();
+    expect(screen.getByText("最終日大会")).toBeTruthy();
+    expect(screen.queryByText("終了大会")).toBeNull();
+  });
+
+  it("表示する目標 (今日・明日) のカードは目標タイムを出し、達成率 (%) を出さない。非表示の gY のカードは無い", async () => {
     setup(goals3, comps3);
     renderScreen();
     await flush();
-    const ids = h.calculateGoalProgress.mock.calls.map((c) => c[0]).sort();
-    expect(ids).toEqual(["gF", "gT"]);
+    expect(screen.getAllByText("1:00.00")).toHaveLength(2);
+    expect(screen.queryByText("昨日大会")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/%/);
   });
 
   it("達成判定は従来どおり呼ばれる (非表示の目標があっても userId 引数で1回)", async () => {

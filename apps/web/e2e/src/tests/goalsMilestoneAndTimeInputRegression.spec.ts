@@ -4,16 +4,22 @@ import { createClient } from "@supabase/supabase-js";
 import { EnvConfig } from "../config/config";
 import { supabaseLogin } from "../utils/supabase-login";
 
+// マイルストーンは「作った後に登録した記録」(練習日・大会日も作成日の前日以降) だけで達成になる (2026-10-15)。
+// このテストで作る記録より前に作ったことにして、日付・登録順の条件と切り離す
+const MILESTONE_CREATED_AT = subDays(new Date(), 30).toISOString();
+
 /**
  * 目標管理 (goals) の実機回帰テスト。実ブラウザ・実 dev サーバー・実ローカル
  * Supabase で以下を検証する:
- *   - TimeSecondsInput: 目標タイム/初期タイム欄・マイルストーンの目標タイム欄
+ *   - TimeSecondsInput: 目標タイム欄・マイルストーンの目標タイム欄
  *     (time型)/平均目標タイム欄 (reps_time型) への1文字ずつの入力が崩れず、
- *     blur で正規化される。「ベストタイムから取得」が初期タイムに反映される。
- *     途中入力のまま保存しようとするとエラーになり保存されない。
+ *     blur で正規化される。途中入力のまま保存しようとするとエラーになり保存されない。
+ *   - 目標フォームに初期タイム欄は無く、目標タイム欄の右に「種目 × 大会の水路」の自己ベストが
+ *     エントリーと同じ緑のラベル「ベストタイム: {time}」で出る (Sprint Contract v4 V4-1)。
+ *     新規大会の水路ボタン (V4-2) で切り替わり、入力欄の値は変わらない。
  *   - チーム離脱後、対象大会が解決できなくなった目標は一覧 (GoalList) でも
- *     編集ボタンが無く「大会情報なし」表示になる。進捗が計算不能な場合は
- *     進捗バーも表示されない (calculateGoalProgress が competition 不明で null を返す経路)。
+ *     編集ボタンが無く「大会情報なし」表示になる。水路が分からないので目標タイムの横に
+ *     Best 差 (Best-x.xx) を出さず、カードに進捗バーは無い。
  *   - ダッシュボードの練習記録入力からタイム付き練習ログを保存すると、
  *     直後にマイルストーンが achieved になる (作成分岐・更新分岐の両方)。
  *
@@ -88,7 +94,7 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
   test.describe.configure({ timeout: 60000 });
   test.skip(!hasRequiredEnvVars, "必要な環境変数が設定されていません。");
 
-  test.describe("TimeSecondsInput: 1文字ずつの入力・ベストタイム取得", () => {
+  test.describe("TimeSecondsInput: 1文字ずつの入力・ベストラベル", () => {
     let testUserId = "";
     let styleId = 0;
 
@@ -105,8 +111,9 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
         .ilike("title", "E2E-Goals時間入力%");
       await supabase.from("records").delete().eq("user_id", testUserId).eq("note", "E2E-Goalsベストタイム");
 
-      // 「ベストタイムから取得」用の自己ベスト (短水路 pool_type=0。
-      // GoalCreateModal の新規大会作成時のデフォルト poolType=0 と一致させる)。
+      // ベストタイムラベル用の自己ベスト。短水路 (pool_type=0) は GoalCreateModal の新規大会作成時の
+      // デフォルト poolType=0 と一致させる。長水路 (pool_type=1) は水路の切り替えの確認用。
+      // リレー引き継ぎ (is_relaying=true) の速い記録も入れ、ラベルに採られないことを見る。
       const { data: comp } = await supabase
         .from("competitions")
         .insert({
@@ -119,15 +126,11 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
         .select("id")
         .single();
 
-      await supabase.from("records").insert({
-        user_id: testUserId,
-        competition_id: comp!.id,
-        style_id: styleId,
-        pool_type: 0,
-        time: 58.3,
-        is_relaying: false,
-        note: "E2E-Goalsベストタイム",
-      });
+      await supabase.from("records").insert([
+        { user_id: testUserId, competition_id: comp!.id, style_id: styleId, pool_type: 0, time: 58.3, is_relaying: false, note: "E2E-Goalsベストタイム" },
+        { user_id: testUserId, competition_id: comp!.id, style_id: styleId, pool_type: 0, time: 52.1, is_relaying: true, note: "E2E-Goalsベストタイム" },
+        { user_id: testUserId, competition_id: comp!.id, style_id: styleId, pool_type: 1, time: 61.2, is_relaying: false, note: "E2E-Goalsベストタイム" },
+      ]);
     });
 
     test.afterAll(async () => {
@@ -178,7 +181,7 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
       await page.keyboard.press("Escape").catch(() => {});
     });
 
-    test("初期タイム欄は種目と大会が揃うと自己ベストが自動入力され、ボタンは無く、1文字ずつの手入力でも崩れない", async ({
+    test("初期タイム欄は無く、種目と大会 (水路) が揃うと目標タイム欄の右にベストタイムラベルが出て、水路ボタンで切り替わる", async ({
       page,
     }) => {
       await page.goto("/goals");
@@ -192,27 +195,40 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
       const modal = page.locator('[role="dialog"]');
       await modal.waitFor({ state: "visible", timeout: 10000 });
 
-      // 「ベストタイムから取得」ボタンは廃止された
+      // 初期タイム欄 (入力欄・ラベル) は無い。「ベストタイムから取得」ボタンも無い
+      await expect(modal.locator('[data-testid="goal-start-time"]')).toHaveCount(0);
+      await expect(modal).not.toContainText("初期タイム");
       await expect(modal.locator('button:has-text("ベストタイムから取得")')).toHaveCount(0);
 
-      // 新規大会 (既定は短水路) + 100m Fr を選んだ瞬間に、短水路の自己ベスト (シード 58.30) が入る
+      const bestLabel = modal.locator('[data-testid="goal-best-time-label"]');
+      // 種目が未選択・水路が未確定のあいだはラベルを出さない (「記録なし」「—」も出さない)
+      await expect(bestLabel).toHaveCount(0);
+
+      // 新規大会 (既定は短水路) + 100m Fr を選ぶと、短水路の自己ベスト (シード 58.30。
+      // isRelaying=false なのでリレー引き継ぎ 52.10 は出さない) がエントリーと同じ緑のラベルで出る
       await modal.locator('input[type="radio"][value="new"]').click();
-      await modal.locator('input[placeholder="大会名"]').fill("E2E-Goals時間入力大会-初期タイム");
+      await expect(modal.locator("select")).toHaveCount(0); // 水路の select は廃止 (ボタンにした)
+      await modal.locator('input[placeholder="大会名"]').fill("E2E-Goals時間入力大会-ベストラベル");
       await modal.locator('[data-testid="goal-style-distance-100"]').click();
       await modal.locator('[data-testid="goal-style-stroke-Fr"]').click();
+      await expect(bestLabel).toHaveText("ベストタイム: 58.30", { timeout: 15000 });
+      await expect(bestLabel).toHaveClass(/bg-green-100/);
 
-      const startTimeInput = modal.locator('[data-testid="goal-start-time"]');
-      await expect(startTimeInput).toHaveValue("58.30", { timeout: 15000 });
-      await expect(startTimeInput).toBeEnabled();
-
-      // 手入力: 1文字ずつ入力しても表示が崩れず、blur 後も同じ。自動入力で上書きされない
-      await startTimeInput.click();
-      await startTimeInput.fill("");
-      await startTimeInput.pressSequentially("1:05.00", { delay: 30 });
-      await expect(startTimeInput).toHaveValue("1:05.00");
+      // 目標タイムを入れてから水路ボタンで長水路に変えると、ラベルだけが長水路の自己ベスト (シード 1:01.20) に変わる (入力欄の値は変わらない)
+      const targetTimeInput = modal.locator('input[placeholder="2.00.00"]').first();
+      await targetTimeInput.click();
+      await targetTimeInput.pressSequentially("57.50", { delay: 30 });
       await modal.locator('input[placeholder="大会名"]').click(); // blur させる
-      await expect(startTimeInput).toHaveValue("1:05.00");
-      await expect(startTimeInput).toBeEnabled();
+      const longButton = modal.locator('[data-testid="goal-new-competition-pool-type-1"]');
+      await longButton.click();
+      await expect(longButton).toHaveAttribute("aria-pressed", "true");
+      await expect(bestLabel).toHaveText("ベストタイム: 1:01.20", { timeout: 15000 });
+      await expect(targetTimeInput).toHaveValue("57.50");
+
+      // 短水路に戻すと再び 58.30
+      await modal.locator('[data-testid="goal-new-competition-pool-type-0"]').click();
+      await expect(bestLabel).toHaveText("ベストタイム: 58.30", { timeout: 15000 });
+      await expect(targetTimeInput).toHaveValue("57.50");
 
       await page.keyboard.press("Escape").catch(() => {});
     });
@@ -280,8 +296,6 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
         .single();
       if (compErr) throw new Error(`チーム大会作成失敗: ${compErr.message}`);
 
-      // start_time を設定 (calculateGoalProgress は start_time が無いと競技会解決前に 0 を
-      // 返してしまい、「進捗計算不能 (null)」の経路を通らないため必須)。
       const { data: goal, error: goalErr } = await supabase
         .from("goals")
         .insert({
@@ -289,7 +303,6 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
           competition_id: teamComp.id,
           style_id: styleId,
           target_time: 61.0,
-          start_time: 70.0,
           status: "active",
         })
         .select("id")
@@ -347,8 +360,10 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
       // 編集できない理由の文言
       await expect(card).toContainText("大会情報がないため編集できません");
 
-      // 進捗が計算不能 (null) のため、% 表示ではなく「未設定」、進捗バーも非表示。
-      await expect(card).toContainText("未設定");
+      // 水路が分からないため Best 差 (Best-x.xx) は出さない。目標タイム (61.00 → 1:01.00) は出す。
+      // カードに進捗バーは無い。
+      await expect(card).toContainText("1:01.00");
+      await expect(card).not.toContainText("Best");
       await expect(card.locator(".bg-blue-600.h-2")).toHaveCount(0);
     });
   });
@@ -392,7 +407,6 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
           competition_id: null,
           style_id: styleId,
           target_time: 62.0,
-          start_time: 70.0,
           status: "active",
         })
         .select("id")
@@ -407,6 +421,7 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
         .from("milestones")
         .insert({
           goal_id: goalId,
+          created_at: MILESTONE_CREATED_AT,
           title: "E2E-Goals作成分岐マイルストーン",
           type: "set",
           params: { distance: 100, style: "Fr", swim_category: "Swim", reps: 4, sets: 1, circle: 90 },
@@ -423,6 +438,7 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
         .from("milestones")
         .insert({
           goal_id: goalId,
+          created_at: MILESTONE_CREATED_AT,
           title: "E2E-Goals更新分岐マイルストーン",
           type: "set",
           params: { distance: 100, style: "Fr", swim_category: "Pull", reps: 4, sets: 1, circle: 90 },
@@ -640,7 +656,6 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
           competition_id: null,
           style_id: styleId,
           target_time: 63.0,
-          start_time: 90.0,
           status: "active",
         })
         .select("id")

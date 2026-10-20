@@ -100,3 +100,40 @@ describe("isMilestoneTimeValueValid", () => {
     });
   });
 });
+
+// =============================================================================
+// Sprint Contract v3 (初期タイム全廃) SC5 / D9: 目標の型から初期タイムと poolType が消えている
+// =============================================================================
+// expectTypeOf は条件が偽でも無音で通ることがあるため、「キーが在るか」を真偽の型にして素の代入で固定する。
+// 型にキーが残っていれば `const x: false = true` 相当になり tsc が赤になる (vitest の実行時は何もしない)。
+import type { Database } from "../../types/supabase-schema";
+import type { CreateGoalInput, Goal, GoalInsert, GoalUpdate, UpdateGoalInput } from "../../types/goals";
+import type { TeamMemberGoal } from "../../types/teamMemberGoals";
+
+type HasKey<T, K extends PropertyKey> = K extends keyof T ? true : false;
+type GoalsTable = Database["public"]["Tables"]["goals"];
+
+describe("目標の型に初期タイム (start_time / startTime) と CreateGoalInput.poolType が無い (tsc で検査)", () => {
+  it("Goal / GoalInsert / GoalUpdate / TeamMemberGoal / goals テーブルの Row・Insert・Update に start_time が無い", () => {
+    const goal: HasKey<Goal, "start_time"> = false;
+    const insert: HasKey<GoalInsert, "start_time"> = false;
+    const update: HasKey<GoalUpdate, "start_time"> = false;
+    const member: HasKey<TeamMemberGoal, "start_time"> = false;
+    const row: HasKey<GoalsTable["Row"], "start_time"> = false;
+    const tableInsert: HasKey<GoalsTable["Insert"], "start_time"> = false;
+    const tableUpdate: HasKey<GoalsTable["Update"], "start_time"> = false;
+    expect([goal, insert, update, member, row, tableInsert, tableUpdate]).toEqual(Array(7).fill(false));
+  });
+
+  it("CreateGoalInput に startTime / poolType が無く、UpdateGoalInput に startTime が無い (新規大会の competitionData.poolType は残る)", () => {
+    const createStart: HasKey<CreateGoalInput, "startTime"> = false;
+    const createPool: HasKey<CreateGoalInput, "poolType"> = false;
+    const updateStart: HasKey<UpdateGoalInput, "startTime"> = false;
+    const competitionPool: HasKey<NonNullable<CreateGoalInput["competitionData"]>, "poolType"> = true;
+    // 残すべきキー (空振りでないことの確認)
+    const target: HasKey<CreateGoalInput, "targetTime"> = true;
+    const memberBest: HasKey<TeamMemberGoal, "current_best_time"> = true;
+    expect([createStart, createPool, updateStart]).toEqual([false, false, false]);
+    expect([competitionPool, target, memberBest]).toEqual([true, true, true]);
+  });
+});

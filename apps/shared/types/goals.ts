@@ -15,7 +15,6 @@ export interface Goal {
   competition_id: string | null;
   style_id: number;
   target_time: number;
-  start_time: number | null;
   status: "active" | "achieved" | "cancelled";
   achieved_at: string | null;
   // 期限切れ振り返り（未達成）メモ。milestones.reflection_note と同型
@@ -220,10 +219,6 @@ export interface CreateGoalInput {
   };
   styleId: number;
   targetTime: number;
-  startTime?: number | null;
-  // 対象大会の水路（0: 短水路, 1: 長水路）。startTime 未指定時の自己ベスト
-  // 自動取得 (getBestTimeForStyle) を対象大会と同じ水路に絞るために使う
-  poolType?: number;
 }
 
 export interface UpdateGoalInput {
@@ -231,7 +226,6 @@ export interface UpdateGoalInput {
   competitionId?: string;
   styleId?: number;
   targetTime?: number;
-  startTime?: number | null;
   status?: "active" | "achieved" | "cancelled";
   reflectionNote?: string | null;
 }

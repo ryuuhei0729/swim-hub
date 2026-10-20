@@ -8,14 +8,13 @@ import {
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import type { Milestone, Style } from "@apps/shared/types";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { formatMilestoneSummary } from "@apps/shared/utils/milestoneSummary";
 import MilestoneEditModal from "./MilestoneEditModal";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 interface MilestoneListProps {
   milestones: Milestone[];
@@ -34,6 +33,7 @@ export default function MilestoneList({
   onUpdate,
 }: MilestoneListProps) {
   const t = useTranslations("goals");
+  const locale = useLocale() as SupportedLocale;
   const { supabase } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
@@ -96,7 +96,7 @@ export default function MilestoneList({
           >
             <div className="flex items-start gap-3">
               {getStatusIcon(milestone.status)}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium text-gray-900">{milestone.title}</h4>
                   {isAchieved && (
@@ -105,17 +105,23 @@ export default function MilestoneList({
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-600 mt-1">{formatMilestoneSummary(milestone, t)}</p>
-                {milestone.deadline && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {t("milestone.deadlineLabel")} {format(new Date(milestone.deadline), "yyyy年M月d日", { locale: ja })}
-                  </p>
-                )}
-                {isAchieved && milestone.achieved_at && (
-                  <p className="text-xs text-green-600 mt-1">
-                    {t("milestone.achievedDateLabel")}{" "}
-                    {format(new Date(milestone.achieved_at), "yyyy年M月d日", { locale: ja })}
-                  </p>
+                <p className="mt-1 text-lg font-bold text-gray-900 tabular-nums">
+                  {formatMilestoneSummary(milestone, t)}
+                </p>
+                {(milestone.deadline || (isAchieved && milestone.achieved_at)) && (
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
+                    {milestone.deadline && (
+                      <span className="text-gray-500">
+                        {t("milestone.deadlineLabel")} {formatDate(milestone.deadline, "long", locale)}
+                      </span>
+                    )}
+                    {isAchieved && milestone.achieved_at && (
+                      <span className="text-green-600">
+                        {t("milestone.achievedDateLabel")}{" "}
+                        {formatDate(milestone.achieved_at, "long", locale)}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="flex items-center gap-1">
