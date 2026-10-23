@@ -1,3 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# 公開から7日未満の版は解決しない (npm のサプライチェーン汚染は公開後数日で検知・取り下げされる)。
+# 範囲内に7日経過した版が1つも無いと `pnpm install` / `pnpm add` が ERR_PNPM_NO_MATCHING_VERSION で止まる
+# (CI の --frozen-lockfile は影響しない)。公開直後の版が必要なときは minimumReleaseAgeExclude に
+# パッケージ名を足し、7日経ったら外す。推移的依存 (例: @opennextjs/aws, workerd, miniflare, @dotenvx/*) も
+# 止まるので、エラーに出た名前を順に足す。
+minimumReleaseAge: 10080

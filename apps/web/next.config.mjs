@@ -47,6 +47,19 @@ const nextConfig = {
     ],
   },
 
+  turbopack: {
+    // @ffmpeg/ffmpeg 0.12.15 の load() には classWorkerURL を new URL() に渡す分岐があり、
+    // Next 16.4 の Turbopack はこれを静的解決しようとして "Can't resolve (<dynamic> | 'undefined')"
+    // でビルドを止める (vercel/next.js#99965 は未マージ)。本アプリは classWorkerURL を渡さず
+    // 同梱 worker.js の分岐しか通らないので、このファイル由来の解決エラーだけを抑止する。
+    ignoreIssue: [
+      {
+        path: /@ffmpeg\/ffmpeg\/dist\/esm\/classes\.js$/,
+        title: /Can't resolve \(<dynamic>/,
+      },
+    ],
+  },
+
   // 画像設定
   images: {
     // Cloudflare Workers環境では画像最適化が利用できないため無効化
