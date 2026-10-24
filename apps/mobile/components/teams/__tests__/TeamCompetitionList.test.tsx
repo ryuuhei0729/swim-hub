@@ -347,7 +347,6 @@ function getStatusMenuBackdrop(container: HTMLElement): HTMLElement {
 
 describe("TeamCompetitionList", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.useDeleteTeamCompetitionMutation.mockReturnValue(makeMutationMock());
     mocks.useUpdateCompetitionMutation.mockReturnValue({
       mutateAsync: mocks.mutateAsync,
@@ -2755,7 +2754,6 @@ describe("TeamCompetitionList", () => {
 // ---------------------------------------------------------------------------
 describe("TeamCompetitionList — 管理者導線の origin 付与 (Sprint Contract v3 D3)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.useDeleteTeamCompetitionMutation.mockReturnValue(makeMutationMock());
     mocks.useUpdateCompetitionMutation.mockReturnValue({
       mutateAsync: mocks.mutateAsync,

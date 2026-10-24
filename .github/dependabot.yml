@@ -9,9 +9,9 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 5
     reviewers:
-      - "ryuuhei_0729"
+      - "ryuuhei0729"
     assignees:
-      - "ryuuhei_0729"
+      - "ryuuhei0729"
     commit-message:
       prefix: "chore"
       include: "scope"
@@ -21,16 +21,23 @@ updates:
 
   # GitHub Actions - keep as-is (low risk)
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # "/" は .github/workflows しか見ない。composite action (.github/actions/*/action.yml) の中の
+    # actions/setup-node・pnpm/action-setup・supabase/setup-cli は列挙しないと更新されない
+    directories:
+      - "/"
+      - "/.github/actions/*"
+    # default ブランチは develop だが、変更は main に直接入れている。develop 基準で作られると
+    # main と衝突するので main に向ける (target-branch はセキュリティ更新には効かない)
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 5
     reviewers:
-      - "ryuuhei_0729"
+      - "ryuuhei0729"
     assignees:
-      - "ryuuhei_0729"
+      - "ryuuhei0729"
     commit-message:
       prefix: "chore"
       include: "scope"

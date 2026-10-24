@@ -36,15 +36,13 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
 import type { EntryInfo } from "@apps/shared/types/ui";
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({
@@ -83,10 +81,6 @@ const DUPLICATE_STYLE_ENTRY_DATA_LIST: EntryInfo[] = [
 ];
 
 describe("RecordLogForm — entryDataList 経由の同一styleId自動生成カード (FormModals/CompetitionClient相当)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it(
     "[A] 2枚のカードが両方リレートグルを操作せず(isRelaying=false同士のまま)保存されると、" +
       "真の重複としてformError_duplicateStyleでブロックされる(正しい挙動、PM裁定2026-08-21)",

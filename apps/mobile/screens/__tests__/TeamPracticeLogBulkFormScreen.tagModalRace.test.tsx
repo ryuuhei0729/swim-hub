@@ -124,6 +124,7 @@ vi.mock("@react-navigation/native", () => ({
     goBack: mocks.goBack,
     addListener: () => () => {},
   }),
+  usePreventRemove: () => undefined,
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({

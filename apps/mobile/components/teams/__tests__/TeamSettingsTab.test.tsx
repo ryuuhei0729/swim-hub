@@ -233,10 +233,6 @@ const renderTab = (
   );
 
 describe("[V-A50〜A55] TeamSettingsTab セクションの出し分け", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ⚠️ 見出しの assert を消すだけにしないこと。「チーム操作」「危険な操作」は
   // 見出しを廃止したので、**セクションごと消えても緑**になりうる。
   // 見出しが無くなったぶん、存在は**中のコントロール**で担保する。
@@ -443,7 +439,6 @@ describe("[V-A50〜A55] TeamSettingsTab セクションの出し分け", () => {
 
 describe("[V-A56/A57] 最後の管理者の脱退ブロック (PM 裁定 C)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     Alert.alert = vi.fn();
   });
 
@@ -545,7 +540,6 @@ describe("[V-A56/A57] 最後の管理者の脱退ブロック (PM 裁定 C)", ()
 // =============================================================================
 describe("[V-D5/V-D6] チーム削除フックが配線されていないこと", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     Alert.alert = vi.fn(); // [V-D5] が確認ダイアログ経由の脱退フローで使う
   });
 

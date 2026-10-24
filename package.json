@@ -85,11 +85,7 @@
     "typescript": "^5"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "sharp",
-      "unrs-resolver"
-    ],
+    "onlyBuiltDependencies": ["esbuild", "sharp", "unrs-resolver"],
     "overrides": {
       "jsdom": "^26.1.0",
       "tar": "^7.5.21",
@@ -107,12 +103,12 @@
       "exceljs>uuid": "^11.1.1",
       "minimatch": "^10.2.3",
       "@supabase/supabase-js": "^2.97.0",
-      "undici": ">=7.29.1 <8",
+      "undici": ">=7.30.1 <8",
       "ws": ">=8.21.0",
       "form-data": ">=4.0.6",
-      "vite": "6.4.3",
+      "vite": "6.4.4",
       "node-forge": ">=1.4.0",
-      "path-to-regexp": ">=8.4.0",
+      "router>path-to-regexp": "^8.4.0",
       "esbuild": "^0.28.1",
       "picomatch@2": "2.3.2",
       "picomatch@3": "3.0.2",
@@ -131,10 +127,12 @@
       "source-map-js": "^1.2.2",
       "@babel/core": "^7.29.6",
       "@humanfs/node": "^0.16.8",
-      "body-parser@2": "^2.3.0",
+      "body-parser@2": "^2.4.0",
+      "zod@4": "^4.6.6",
       "qs": "^6.16.0",
       "yaml@2": "^2.8.3",
-      "@tailwindcss/typography>postcss-selector-parser": "^7.1.6"
+      "@tailwindcss/typography>postcss-selector-parser": "^7.1.6",
+      "glob@10": "^10.5.0"
     },
     "auditConfig": {
       "ignoreGhsas": [
@@ -143,12 +141,13 @@
         "GHSA-vfj7-8cjw-p6xm",
         "GHSA-86w9-cpqp-85rv",
         "GHSA-hp3w-g68c-fv3c",
-        "GHSA-vcc3-ghjq-m6fr"
+        "GHSA-vcc3-ghjq-m6fr",
+        "GHSA-mrhx-c7xc-m3w5"
       ]
     }
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "repository": {
     "type": "git",

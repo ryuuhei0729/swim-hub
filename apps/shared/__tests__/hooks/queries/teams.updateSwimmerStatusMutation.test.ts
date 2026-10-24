@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Issue #49 QA テスト (Phase A スケルトン): useUpdateSwimmerStatusMutation
  *
@@ -34,7 +35,6 @@ describe("useUpdateSwimmerStatusMutation", () => {
   let fakeApi: { updateSwimmerStatus: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     fakeApi = { updateSwimmerStatus: vi.fn() };
   });

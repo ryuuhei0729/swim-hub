@@ -14,21 +14,26 @@ interface UseUnsavedChangesWarningReturn {
   showConfirmDialog: boolean;
   /** 確認ダイアログのコンテキスト（'close': 閉じるボタン, 'back': ブラウザバック） */
   confirmContext: "close" | "back";
-  /** モーダルを閉じようとした時のハンドラ（未保存変更がある場合は確認ダイアログを表示） */
+  /** 閉じる・離れる操作のハンドラ（未保存変更がある場合は確認ダイアログを表示） */
   handleClose: () => boolean;
-  /** 確認ダイアログで「閉じる」を選択した時のハンドラ */
+  /**
+   * 確認ダイアログで「閉じる/戻る」を選択した時のハンドラ。close 文脈は onClose を呼ぶ。
+   * back 文脈 (ブラウザバック) はページの履歴を2つ戻ってこのページを離れる
+   * (戻り先が無ければダイアログを閉じて留まる)。モーダルの中だけで使う用途には向かない
+   */
   handleConfirmClose: () => void;
   /** 確認ダイアログで「キャンセル」を選択した時のハンドラ */
   handleCancelClose: () => void;
 }
 
 /**
- * 未保存の変更がある場合に離脱警告を表示するフック（拡張版）
+ * 未保存の変更がある場合に離脱警告を表示するフック（拡張版）。ページ単位で使う
+ * (OnboardingWizard / チーム代理入力ページ)。
  *
  * 機能:
  * - ブラウザのbeforeunloadイベントで警告を表示
- * - ブラウザバック時に確認ダイアログを表示
- * - モーダル閉じるボタン押下時に確認ダイアログを表示
+ * - ブラウザバック時に確認ダイアログを表示し、「戻る」で直前のページへ戻る
+ * - 閉じる・戻るボタン押下時に確認ダイアログを表示
  * - ConfirmDialogコンポーネントとの連携をサポート
  *
  * @example
@@ -64,6 +69,9 @@ export function useUnsavedChangesWarning({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmContext, setConfirmContext] = useState<"close" | "back">("close");
   const ignorePopStateRef = useRef(false);
+  // 確認で「戻る」を選んで離れる途中。別ドキュメントへ戻るときにブラウザ標準の
+  // 離脱確認 (beforeunload) まで重ねて出さないために使う
+  const leavingRef = useRef(false);
   const pushedRef = useRef(false);
 
   // モーダルが閉じた時にリセット
@@ -80,6 +88,7 @@ export function useUnsavedChangesWarning({
     if (!isOpen || !hasUnsavedChanges || isSubmitted) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (leavingRef.current) return;
       e.preventDefault();
       e.returnValue = "";
     };
@@ -123,8 +132,17 @@ export function useUnsavedChangesWarning({
   const handleConfirmClose = useCallback(() => {
     setShowConfirmDialog(false);
     if (confirmContext === "back") {
-      ignorePopStateRef.current = true;
-      window.history.back();
+      // ブラウザバックの popstate では、上の handlePopState が同じ URL を積み直して
+      // このページに留めている。1つ戻るだけではその積み直しの手前 (同じ URL) に着くので
+      // ページを離れない。2つ戻って、ブラウザバックで本来行きたかったページへ移る。
+      // 積み直しで先の履歴は消えているので、いまは履歴の末尾にいる。2つ前があるのは
+      // length >= 3 のときだけ。新しいタブで開いた等で戻り先が無ければ、ダイアログを
+      // 閉じて留まる (フラグも立てないので、以後の離脱確認はそのまま効く)
+      if (window.history.length >= 3) {
+        ignorePopStateRef.current = true;
+        leavingRef.current = true;
+        window.history.go(-2);
+      }
     } else if (onClose) {
       onClose();
     }

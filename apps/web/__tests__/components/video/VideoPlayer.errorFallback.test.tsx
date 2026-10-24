@@ -14,16 +14,12 @@
 
 import React from "react";
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 import VideoPlayer from "@/components/video/VideoPlayer";
 
 describe("VideoPlayer — 署名付きURL取得失敗時のエラー表示 — 情報露出防止の対テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   afterEach(() => {
     vi.unstubAllGlobals();
   });

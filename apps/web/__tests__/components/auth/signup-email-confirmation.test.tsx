@@ -211,7 +211,6 @@ import SignupPage from "@/app/[locale]/(unauthenticated)/signup/page";
 
 describe("[V-01] サインアップ成功時のメール確認ボックス表示と状態維持", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUseAuth.mockReturnValue(makeAuthContext({}));
   });
 
@@ -302,7 +301,6 @@ describe("[V-01] サインアップ成功時のメール確認ボックス表示
 
 describe("[V-02] 緑ボックス内「ログイン画面に戻る」リンクの存在確認", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUseAuth.mockReturnValue(makeAuthContext({}));
   });
 
@@ -364,7 +362,6 @@ describe("[V-02] 緑ボックス内「ログイン画面に戻る」リンクの
 
 describe("[V-03] signin フローに影響がない（onSuccess が signin 成功時に呼ばれる）", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUseAuth.mockReturnValue(makeAuthContext({}));
   });
 
@@ -445,7 +442,6 @@ describe("[V-03] signin フローに影響がない（onSuccess が signin 成�
 
 describe("[V-04] signup エラー時はメール確認ボックスが表示されない", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUseAuth.mockReturnValue(makeAuthContext({}));
   });
 
@@ -516,10 +512,6 @@ describe("[V-04] signup エラー時はメール確認ボックスが表示さ�
 // ===========================================================================
 
 describe("[V-05] email_confirmed_at=null のとき isAuthenticated=true でも /onboarding にリダイレクトされない", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("email_confirmed_at=null かつ session あり の仮セッション状態では router.push が呼ばれない", async () => {
     // Supabase がメール確認必須設定で仮セッション付き SIGNED_IN を発行した状態を再現
     // user は存在するが email_confirmed_at は null
@@ -581,10 +573,6 @@ describe("[V-05] email_confirmed_at=null のとき isAuthenticated=true でも /
 });
 
 describe("[V-06] email_confirmed_at がセット済みのとき /onboarding に遷移する", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("email_confirmed_at が ISO 日時文字列のとき router.push('/onboarding') が呼ばれる", async () => {
     // メール確認済みの正規ユーザー（通常ログイン後の状態）
     mockUseAuth.mockReturnValue(makeAuthContext({

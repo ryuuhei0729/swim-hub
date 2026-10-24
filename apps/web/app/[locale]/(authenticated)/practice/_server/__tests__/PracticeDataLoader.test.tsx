@@ -53,7 +53,6 @@ vi.mock("../../_client/PracticeClient", () => ({
 
 describe("PracticeDataLoader - prefetch エラーハンドリング", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getServerUser.mockResolvedValue({ id: "user-1" });
     mocks.createAuthenticatedServerClient.mockResolvedValue({});
     mocks.getStyles.mockResolvedValue([]);

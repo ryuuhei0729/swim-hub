@@ -22,7 +22,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { StyleOption } from "@/components/forms/record-log/types";
@@ -66,9 +66,7 @@ const fakeSupabase = {
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@/contexts", () => ({
   useAuth: () => ({ user: { id: "user-1" }, subscription: null, supabase: fakeSupabase }),
@@ -136,10 +134,6 @@ const competitionMessages = (m: Messages) =>
   ((m.forms as Messages).competition as Record<string, string>);
 
 describe("CompetitionTabModal — 水路トグルの略称/フル表記 2 span 構成", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[P-01] 短水路ボタンが sm:hidden の略称 span と hidden sm:inline のフル span を両方持つ", async () => {
     renderModal("ja", jaMessages as unknown as Messages);
     const button = await screen.findByTestId("competition-tab-pool-type-0");

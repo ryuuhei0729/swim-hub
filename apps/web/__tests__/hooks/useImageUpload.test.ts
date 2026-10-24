@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { act } from "@testing-library/react";
 import { renderHookWithI18n as renderHook } from "../utils/render";
 import { afterEach, beforeEach, describe, expect, it, vi, Mock } from "vitest";
@@ -37,7 +38,6 @@ describe("useImageUpload", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
 
     // URL APIのモック
     mockCreateObjectURL.mockImplementation(() => `blob:${URL.name}/${Math.random()}`);

@@ -107,7 +107,6 @@ import { useTeamAdminViewStore } from "@/stores/teamAdminViewStore";
 
 describe("TeamDetailScreen — goals タブ", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.routeParams.teamId = "team-1";
     mocks.routeParams.initialTab = undefined;
     mocks.nonAdminTeamIds.clear();

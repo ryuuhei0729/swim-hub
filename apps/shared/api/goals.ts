@@ -7,7 +7,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { format, parseISO, isValid, startOfDay } from "date-fns";
 import { CompetitionInsert } from "../types";
 import { normalizeRelation, normalizeRelationArray } from "../utils/supabase-helpers";
-import { computeGoalProgress } from "../utils/goalProgress";
 import { toStyleCode } from "../utils/swimStyles";
 import {
   CreateGoalInput,
@@ -33,6 +32,34 @@ interface GoalQueryResult extends Goal {
   competition?: Competition | Competition[] | null;
   style?: Style | Style[];
   milestones?: Milestone | Milestone[];
+}
+
+// 日本時間 (UTC+9、夏時間なし)。web の subscription status の getTodayJST と同じ求め方
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/**
+ * 達成・進行中の判定で数える練習・大会記録の範囲。作る前の記録を数えると、既に出している
+ * タイムの目標が作った瞬間に達成になる。次の両方を満たす行だけを数える。
+ * - createdAfter: マイルストーンを作った後に登録した行 (同じ日の、作る前に入れた記録も数えない)
+ * - earliestDate: 練習日 (practices.date)・大会日 (competitions.date) が作成日 (日本時間) 以降。
+ *   作る前の泳ぎを後から登録した行 (前日の大会結果を翌日に入れる等) を数えないための下限。
+ *   判定は端末でもサーバー (Cloudflare Workers は UTC) でも走るので、実行環境のタイムゾーンに
+ *   よらず日本時間の暦日で出す。日本より西の利用者は作った日の練習を数えないことがあり、
+ *   東の利用者は作る前日の記録を作った後に登録すると数えることがある
+ * 大会記録は大会の開始日で比べるので、作る前に始まった複数日の大会のレースは数えない。
+ * 大会に紐づかない記録 (一括登録したベスト等) は日付が無いので数えない。
+ * created_at が読めないときは今 (作る前の記録を数えない側に倒す)
+ */
+function milestoneCountingRange(milestone: Pick<Milestone, "created_at">): {
+  createdAfter: string;
+  earliestDate: string;
+} {
+  const created = milestone.created_at ? parseISO(milestone.created_at) : new Date(NaN);
+  const base = isValid(created) ? created : new Date();
+  return {
+    createdAfter: base.toISOString(),
+    earliestDate: new Date(base.getTime() + JST_OFFSET_MS).toISOString().slice(0, 10),
+  };
 }
 
 export class GoalAPI {
@@ -81,23 +108,11 @@ export class GoalAPI {
       throw new Error("大会IDまたは大会情報が必要です");
     }
 
-    // ベストタイムを取得（startTimeが指定されていない場合）。対象大会と同じ
-    // 水路（poolType）の記録に絞る。水路が分からない場合は自動取得自体を行わない
-    // (絞り込みなしで取得すると短水路の記録が混入しうるため。フォールバックは禁止)。
-    let startTime = input.startTime;
-    if (startTime === undefined) {
-      startTime =
-        input.poolType !== undefined
-          ? await this.getBestTimeForStyle(user.id, input.styleId, input.poolType)
-          : null;
-    }
-
     const goalInsert: GoalInsert = {
       user_id: user.id,
       competition_id: competitionId,
       style_id: input.styleId,
       target_time: input.targetTime,
-      start_time: startTime,
       status: "active",
     };
 
@@ -234,9 +249,6 @@ export class GoalAPI {
     if (updates.targetTime !== undefined) {
       updateData.target_time = updates.targetTime;
     }
-    if (updates.startTime !== undefined) {
-      updateData.start_time = updates.startTime;
-    }
     if (updates.status !== undefined) {
       updateData.status = updates.status;
       if (updates.status === "achieved") {
@@ -280,12 +292,13 @@ export class GoalAPI {
    * 種目ごとのベストタイム取得
    * poolType (対象大会と同じ水路) で必ず絞り込む（長水路の目標に短水路の記録が
    * 混入するのを防ぐ）。水路が分からない場合はこの関数を呼び出さないこと
-   * (呼び出し元で「計算不能」を返す。絞り込み無しのフォールバックは禁止)。
+   * (呼び出し元で null (取得不能) を返す。絞り込み無しのフォールバックは禁止)。
    *
-   * ⚠️ この条件は SQL 関数 `get_team_member_goals` (supabase/migrations/
-   * 20261004000000_get_team_member_goals_rpc.sql) の `current_best_time` と同一定義。
-   * チーム管理者の閲覧画面の達成率はそちらを使う。片方だけ変えると同じ目標で
-   * 本人画面と管理者画面の達成率が静かに乖離する。必ず両方を同時に直すこと。
+   * ⚠️ この条件は SQL 関数 `get_team_member_goals` (最新定義:
+   * supabase/migrations/ の get_team_member_goals の最新版) の `current_best_time`
+   * と同一定義 (水路一致・リレー引き継ぎ除外・time > 0 の MIN)。
+   * チーム管理者の閲覧画面の Best 差はそちらを使う。片方だけ変えると同じ目標で
+   * 本人画面と管理者画面のベストが静かに乖離する。必ず両方を同時に直すこと。
    * @private
    */
   private async getBestTimeForStyle(
@@ -302,6 +315,8 @@ export class GoalAPI {
       // リレーの引き継ぎ (is_relaying=true) は個人の自己ベストの集計から除く
       // (RecordAPI の「ベストタイム取得」等アプリ全体の扱いに揃える)。
       .eq("is_relaying", false)
+      // 0秒の行が有効な記録を隠して「記録なし」にならないよう time > 0 に絞る
+      .gt("time", 0)
       .order("time", { ascending: true })
       .limit(1)
       .single();
@@ -315,13 +330,12 @@ export class GoalAPI {
   }
 
   /**
-   * 大会目標の達成率を計算
-   * 差分ベース: (初期タイム - 最新ベスト) / (初期タイム - 目標タイム)
-   * 大会情報が取得できない場合 (競技会削除・チーム退会等で水路が分からない場合) は
-   * 自己ベストを取得せず null (計算不能) を返す。呼び出し側は既存の空・未設定
-   * 表示パターンで扱うこと。
+   * 目標の「現在のタイム」= 対象大会と同じ水路・同じ種目の自己ベスト。
+   * 一覧・詳細の「現在のベスト」に使う値 (getBestTimeForStyle)。
+   * 記録が無い場合と、大会情報が取得できず水路が分からない場合は null
+   * (水路で絞らない取得はしない。後者は呼び出し側が goal.competition === null で区別する)。
    */
-  async calculateGoalProgress(goalId: string): Promise<number | null> {
+  async getGoalCurrentBestTime(goalId: string): Promise<number | null> {
     const {
       data: { user },
     } = await this.supabase.auth.getUser();
@@ -329,39 +343,18 @@ export class GoalAPI {
 
     const { data: goal, error: goalError } = await this.supabase
       .from("goals")
-      .select("*, competition:competitions(pool_type)")
+      .select("style_id, competition:competitions(pool_type)")
       .eq("id", goalId)
       .single();
 
-    if (goalError || !goal) {
-      return 0;
-    }
-
-    if (!goal.start_time) {
-      return 0; // 初期タイムがない場合は0%
-    }
+    if (goalError) throw goalError;
 
     const competition = normalizeRelation(
       goal.competition as { pool_type: number } | { pool_type: number }[] | null | undefined,
     );
+    if (competition?.pool_type === undefined) return null;
 
-    if (competition?.pool_type === undefined) {
-      return null; // 水路が分からない場合は計算不能 (短水路混入を防ぐため取得自体をしない)
-    }
-
-    // 最新ベストタイムを取得
-    const currentBest = await this.getBestTimeForStyle(
-      user.id,
-      goal.style_id,
-      competition.pool_type,
-    );
-
-    // 式は computeGoalProgress が唯一の定義元 (チーム管理者の閲覧画面と共有)
-    return computeGoalProgress({
-      startTime: goal.start_time,
-      targetTime: goal.target_time,
-      currentBestTime: currentBest,
-    });
+    return this.getBestTimeForStyle(user.id, goal.style_id, competition.pool_type);
   }
 
   // =========================================================================
@@ -667,6 +660,7 @@ export class GoalAPI {
     };
   }> {
     const params = milestone.params as MilestoneTimeParams;
+    const range = milestoneCountingRange(milestone);
 
     // milestones.params は JSONB でサーバー側の enum バリデーションが無く、
     // 認証済みユーザーが自分の milestone に任意の params.style ("%" 等) を
@@ -691,13 +685,16 @@ export class GoalAPI {
       .select(
         `
         id,
-        practice_times(time)
+        practice_times(time),
+        practices!inner(date)
       `,
       )
       .eq("user_id", userId)
       .eq("distance", params.distance)
       .ilike("style", styleCode)
       .eq("swim_category", params.swim_category)
+      .gte("practices.date", range.earliestDate)
+      .gte("created_at", range.createdAfter)
       .order("created_at", { ascending: false });
 
     if (!practiceError && practiceLogs) {
@@ -708,7 +705,8 @@ export class GoalAPI {
             ? [log.practice_times]
             : [];
         for (const time of times) {
-          if (time.time <= params.target_time) {
+          // 0秒の行 (未入力の本) で達成にしない
+          if (time.time > 0 && time.time <= params.target_time) {
             return {
               achieved: true,
               achievementData: {
@@ -732,10 +730,13 @@ export class GoalAPI {
         id,
         time,
         style_id,
-        styles!inner(distance, style)
+        styles!inner(distance, style),
+        competitions!inner(date)
       `,
       )
       .eq("user_id", userId)
+      .gte("competitions.date", range.earliestDate)
+      .gte("created_at", range.createdAfter)
       .eq("styles.distance", params.distance)
       // styles.style の照合はケース非依存にする (移行期の暫定措置。恒久固定ではない)。
       // コードと migration (styles.style をタイトルケースへ移行, Issue #13) を
@@ -755,6 +756,7 @@ export class GoalAPI {
       // リレーの引き継ぎ (is_relaying=true) は達成に数えない (getBestTimeForStyle と
       // 同じ扱いに揃える)。
       .eq("is_relaying", false)
+      .gt("time", 0)
       .lte("time", params.target_time)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -794,6 +796,7 @@ export class GoalAPI {
     };
   }> {
     const params = milestone.params as MilestoneRepsTimeParams;
+    const range = milestoneCountingRange(milestone);
 
     // canonical 外なら practice_logs マスターに一致する行は存在しえないので、
     // クエリを送らず未達成として扱う (checkTimeAchievement と同型)。
@@ -808,7 +811,8 @@ export class GoalAPI {
       .select(
         `
         id,
-        practice_times(time, set_number, rep_number)
+        practice_times(time, set_number, rep_number),
+        practices!inner(date)
       `,
       )
       .eq("user_id", userId)
@@ -816,6 +820,8 @@ export class GoalAPI {
       .ilike("style", styleCode)
       .eq("swim_category", params.swim_category)
       .gte("rep_count", params.reps)
+      .gte("practices.date", range.earliestDate)
+      .gte("created_at", range.createdAfter)
       .order("created_at", { ascending: false });
 
     if (logError || !logs) {
@@ -824,11 +830,14 @@ export class GoalAPI {
 
     // 各ログのタイムを検証（set単位で平均計算）
     for (const log of logs) {
-      const times = Array.isArray(log.practice_times)
-        ? log.practice_times
-        : log.practice_times
-          ? [log.practice_times]
-          : [];
+      // 0秒の行 (未入力の本) は平均に入れない (入れると平均が下がって達成になる)
+      const times = (
+        Array.isArray(log.practice_times)
+          ? log.practice_times
+          : log.practice_times
+            ? [log.practice_times]
+            : []
+      ).filter((t) => t.time > 0);
 
       // set_numberごとにグループ化
       const setGroups = new Map<number, typeof times>();
@@ -884,6 +893,7 @@ export class GoalAPI {
     };
   }> {
     const params = milestone.params as MilestoneSetParams;
+    const range = milestoneCountingRange(milestone);
 
     // canonical 外なら practice_logs マスターに一致する行は存在しえないので、
     // クエリを送らず未達成として扱う (checkTimeAchievement と同型)。
@@ -895,13 +905,15 @@ export class GoalAPI {
     // 条件に一致するpractice_logsを取得
     const { data: logs, error: logError } = await this.supabase
       .from("practice_logs")
-      .select("id")
+      .select("id, practices!inner(date)")
       .eq("user_id", userId)
       .eq("distance", params.distance)
       .ilike("style", styleCode)
       .eq("swim_category", params.swim_category)
       .eq("rep_count", params.reps)
       .gte("set_count", params.sets)
+      .gte("practices.date", range.earliestDate)
+      .gte("created_at", range.createdAfter)
       .order("created_at", { ascending: false })
       .limit(1);
 
@@ -950,6 +962,8 @@ export class GoalAPI {
    */
   private async hasTimeRecords(userId: string, milestone: Milestone): Promise<boolean> {
     const params = milestone.params as MilestoneTimeParams;
+    // 判定 (checkTimeAchievement) と同じく、マイルストーンを作った後に登録した記録だけを見る
+    const range = milestoneCountingRange(milestone);
 
     // ilike に渡す前に canonical 化する理由は checkTimeAchievement 内の
     // 同型クエリのコメント参照 (ワイルドカード注入対策。canonical 外なら
@@ -966,12 +980,15 @@ export class GoalAPI {
       .select(
         `
         id,
-        practice_times(id)
+        practice_times(id),
+        practices!inner(date)
       `,
       )
       .eq("user_id", userId)
       .eq("distance", params.distance)
       .ilike("style", styleCode)
+      .gte("practices.date", range.earliestDate)
+      .gte("created_at", range.createdAfter)
       // swim_category は checkTimeAchievement と同じ理由 (ENUM 型で表記揺れ無し) で
       // .eq の完全一致で絞る。判定 (checkTimeAchievement) と条件がずれると
       // 「記録はあるのに達成判定はされない」等の不整合が起きるため揃える。
@@ -998,10 +1015,13 @@ export class GoalAPI {
       .select(
         `
         id,
-        styles!inner(distance, style)
+        styles!inner(distance, style),
+        competitions!inner(date)
       `,
       )
       .eq("user_id", userId)
+      .gte("competitions.date", range.earliestDate)
+      .gte("created_at", range.createdAfter)
       .eq("styles.distance", params.distance)
       // ケース非依存にする理由・デプロイ順序の注意点は checkTimeAchievement 内の
       // 同型クエリのコメント参照 (移行期の暫定措置。恒久固定ではない)。
@@ -1024,6 +1044,7 @@ export class GoalAPI {
    */
   private async hasRepsTimeRecords(userId: string, milestone: Milestone): Promise<boolean> {
     const params = milestone.params as MilestoneRepsTimeParams;
+    const range = milestoneCountingRange(milestone);
 
     // canonical 外なら practice_logs マスターに一致する行は存在しえないので、
     // クエリを送らず false とする (hasTimeRecords と同型)。
@@ -1038,7 +1059,8 @@ export class GoalAPI {
       .select(
         `
         id,
-        practice_times(id)
+        practice_times(id),
+        practices!inner(date)
       `,
       )
       .eq("user_id", userId)
@@ -1046,6 +1068,8 @@ export class GoalAPI {
       .ilike("style", styleCode)
       .eq("swim_category", params.swim_category)
       .gte("rep_count", params.reps)
+      .gte("practices.date", range.earliestDate)
+      .gte("created_at", range.createdAfter)
       .limit(1);
 
     if (logError || !logs || logs.length === 0) {
@@ -1073,6 +1097,7 @@ export class GoalAPI {
    */
   private async hasSetRecords(userId: string, milestone: Milestone): Promise<boolean> {
     const params = milestone.params as MilestoneSetParams;
+    const range = milestoneCountingRange(milestone);
 
     // canonical 外なら practice_logs マスターに一致する行は存在しえないので、
     // クエリを送らず false とする (hasTimeRecords と同型)。
@@ -1084,13 +1109,15 @@ export class GoalAPI {
     // 条件に一致するpractice_logsを確認
     const { data: logs, error: logError } = await this.supabase
       .from("practice_logs")
-      .select("id")
+      .select("id, practices!inner(date)")
       .eq("user_id", userId)
       .eq("distance", params.distance)
       .ilike("style", styleCode)
       .eq("swim_category", params.swim_category)
       .eq("rep_count", params.reps)
       .gte("set_count", params.sets)
+      .gte("practices.date", range.earliestDate)
+      .gte("created_at", range.createdAfter)
       .limit(1);
 
     if (logError || !logs || logs.length === 0) {

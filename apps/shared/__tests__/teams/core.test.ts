@@ -7,7 +7,6 @@ describe("TeamCoreAPI", () => {
   let api: TeamCoreAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabaseMock = createSupabaseMock();
     api = new TeamCoreAPI(supabaseMock.client);
   });

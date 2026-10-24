@@ -30,9 +30,7 @@ const mocks = vi.hoisted(() => ({
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@apps/shared/api/teams/records", () => ({
   TeamRecordsAPI: vi.fn().mockImplementation(function () {
@@ -72,9 +70,7 @@ vi.mock("@apps/shared/api/entries", () => ({
   }),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 vi.mock("@/components/forms/CompetitionBasicForm", () => ({ default: () => null }));
 vi.mock("../../../components/team/TeamCompetitionEntryModal", () => ({ default: () => null }));
@@ -86,15 +82,9 @@ vi.mock("@/hooks/useBestTimes", () => ({
 
 const STYLE_FR50 = { id: 2, name_jp: "50m自由形", distance: 50 };
 
-let currentAuthMock: {
-  user: { id: string };
-  supabase: ReturnType<typeof buildSupabaseCompetitionsMock>["supabase"];
-  subscription: null;
-};
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitions from "@/components/team/TeamCompetitions";
 
@@ -106,7 +96,6 @@ const openSelfRecordForm = async (user: ReturnType<typeof userEvent.setup>) => {
 
 describe("TeamCompetitions — UPDATE 時の video_thumbnail_path 保持 (R4修正確認)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.updateRecord.mockResolvedValue({ id: "record-existing-1" });
     mocks.createSplitTimes.mockResolvedValue(undefined);
     mocks.replaceSplitTimes.mockResolvedValue([]);
@@ -145,11 +134,11 @@ describe("TeamCompetitions — UPDATE 時の video_thumbnail_path 保持 (R4修�
       ],
     };
 
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "member-1" },
       supabase: buildSupabaseCompetitionsMock([row]).supabase,
       subscription: null,
-    };
+    }));
   });
 
   it(

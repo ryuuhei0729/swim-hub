@@ -23,7 +23,7 @@ jobs:
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
       with:
-        node-version: '20.x'
+        node-version: '22.x'
 
     - name: Run pnpm audit
       run: pnpm audit --json > audit-report.json || true

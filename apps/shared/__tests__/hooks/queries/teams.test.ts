@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { waitFor, act } from "@testing-library/react";
 import {
@@ -70,7 +71,6 @@ describe("Team Query Hooks", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockCoreApi = {
       getMyTeams: vi.fn(),

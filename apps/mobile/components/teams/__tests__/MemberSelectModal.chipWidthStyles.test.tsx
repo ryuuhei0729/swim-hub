@@ -23,68 +23,11 @@
 // (スタイルオブジェクトの再実装/参照そのものになってしまうため)。
 // =============================================================================
 
-import React, { useEffect } from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TeamMembershipWithUser } from "@apps/shared/types";
+import { render, within } from "@testing-library/react";
 
-vi.mock("../TeamMemberGroupFilter", () => ({
-  TeamMemberGroupFilter: ({
-    members,
-    onGroupedMembersChange,
-  }: {
-    members: TeamMembershipWithUser[];
-    onGroupedMembersChange: (
-      sorted: TeamMembershipWithUser[],
-      headers: Map<number, string>,
-    ) => void;
-  }) => {
-    useEffect(() => {
-      onGroupedMembersChange(members, new Map());
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [members]);
-    return null;
-  },
-}));
-
+import { dummySupabase, buildMember, findChipButtonByMemberName } from "./memberSelectModalHarness";
 import { MemberSelectModal } from "../MemberSelectModal";
-
-const dummySupabase = {} as unknown as SupabaseClient;
-
-const buildMember = (overrides: {
-  id: string;
-  user_id: string;
-  name: string;
-  role?: "admin" | "user";
-}): TeamMembershipWithUser =>
-  ({
-    team_id: "team-1",
-    role: "user",
-    status: "approved",
-    is_active: true,
-    is_swimmer: true,
-    joined_at: "2025-01-01T00:00:00Z",
-    left_at: null,
-    created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
-    ...overrides,
-    users: {
-      id: overrides.user_id,
-      name: overrides.name,
-      gender: 0,
-      birthday: null,
-    },
-  }) as unknown as TeamMembershipWithUser;
-
-function findChipButtonByMemberName(name: string): HTMLElement {
-  const buttons = screen.getAllByRole("button");
-  const found = buttons.find((b) => (b.textContent ?? "").includes(name));
-  if (!found) {
-    throw new Error(`メンバー名 "${name}" を含むチップボタンが見つからない`);
-  }
-  return found;
-}
 
 describe("[V-19] チップ幅対策 (修正5) のスタイル値", () => {
   it("[V-19] chip は maxWidth:100%/flexShrink:1、chipText は flexShrink:1、adminBadge には flexShrink が無い", () => {

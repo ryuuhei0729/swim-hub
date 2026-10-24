@@ -115,11 +115,9 @@ function buildAuthMock({
   return { user: { id: isAdmin ? "admin-1" : "member-1" }, supabase };
 }
 
-let currentAuthMock: ReturnType<typeof buildAuthMock>;
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 vi.mock("@/components/forms/PracticeBasicForm", () => ({
   default: (props: { isOpen: boolean; editData?: { title?: string | null } }) =>
@@ -138,13 +136,12 @@ import TeamPractices from "@/components/team/TeamPractices";
 
 describe("TeamPractices — 管理者向け編集・削除 (D3)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.remove.mockResolvedValue(undefined);
     mocks.update.mockResolvedValue({});
-    currentAuthMock = buildAuthMock({
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext(buildAuthMock({
       isAdmin: true,
       supabase: buildSupabaseMock([RAW_PRACTICE_ROW]),
-    });
+    })));
   });
 
   it("[V-D3P-01] admin: 練習カードに編集ボタンが表示される", async () => {
@@ -206,10 +203,10 @@ describe("TeamPractices — 管理者向け編集・削除 (D3)", () => {
   });
 
   it("[V-D3P-06] 非admin: 編集/削除ボタンが表示されない", async () => {
-    currentAuthMock = buildAuthMock({
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext(buildAuthMock({
       isAdmin: false,
       supabase: buildSupabaseMock([RAW_PRACTICE_ROW]),
-    });
+    })));
     render(<TeamPractices teamId="team-1" isAdmin={false} />);
     await screen.findByText("朝練");
 

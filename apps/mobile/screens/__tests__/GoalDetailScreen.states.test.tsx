@@ -1,8 +1,12 @@
 // =============================================================================
-// screens/__tests__/GoalDetailScreen.states.test.tsx  (S2, S3, S4 一覧部, S9, Boundary, v4 L7)
+// screens/__tests__/GoalDetailScreen.states.test.tsx  (S2, S3, S4 一覧部, S9, Boundary, v4 L7 /
+//   Contract v2 (初期タイム全廃): SC6 SC7 D2)
 // =============================================================================
 // 壊したら赤: 目標なし時の白画面 / 削除失敗の握りつぶし / 生エラー表示 / 編集導線の出し分け(=== null) /
-//   削除後の notFound フラッシュ (v4 L7: 修正前は赤でよい)
+//   削除後の notFound フラッシュ (v4 L7) /
+//   v2: 初期タイムや時間ベースの達成率を出す / マイルストーン0件で 0% やバーを出す (「未設定」にする) /
+//   大会情報なしでマイルストーン達成率を「—」にする
+// GoalProgressBar は data-progress つきの要素に差し替えて、バーの有無と値を観測する。
 // =============================================================================
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,19 +15,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const h = vi.hoisted(() => ({
   getGoalWithMilestones: vi.fn(),
-  calculateGoalProgress: vi.fn(),
   deleteGoal: vi.fn(),
   deleteMilestone: vi.fn(),
   navigate: vi.fn(),
   goBack: vi.fn(),
   supabase: {},
+  refresh: null as null | (() => Promise<unknown>),
+  // computeMilestoneRatio の差し替え口。既定は本物をそのまま呼ぶ (配線の検証だけセンチネルを返す)
+  ratio: vi.fn(),
+  actualRatio: null as null | ((milestones: ReadonlyArray<{ status: string }>) => number | null),
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({ useAuth: () => ({ supabase: h.supabase, user: { id: "u1" } }) }));
 vi.mock("@apps/shared/api/goals", () => ({
   GoalAPI: class {
     getGoalWithMilestones = h.getGoalWithMilestones;
-    calculateGoalProgress = h.calculateGoalProgress;
     deleteGoal = h.deleteGoal;
     deleteMilestone = h.deleteMilestone;
   },
@@ -33,7 +39,19 @@ vi.mock("@react-navigation/native", () => ({
   useRoute: () => ({ params: { goalId: "g1" } }),
 }));
 vi.mock("@/hooks/usePullToRefresh", () => ({
-  usePullToRefresh: (refresh: () => Promise<unknown>) => ({ refreshing: false, handleRefresh: refresh }),
+  usePullToRefresh: (refresh: () => Promise<unknown>) => {
+    h.refresh = refresh;
+    return { refreshing: false, handleRefresh: refresh };
+  },
+}));
+vi.mock("@apps/shared/utils/milestoneRatio", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@apps/shared/utils/milestoneRatio")>();
+  h.actualRatio = actual.computeMilestoneRatio;
+  h.ratio.mockImplementation(actual.computeMilestoneRatio);
+  return { ...actual, computeMilestoneRatio: h.ratio };
+});
+vi.mock("@/components/goals/GoalProgressBar", () => ({
+  GoalProgressBar: ({ progress }: { progress: number }) => <div data-testid="goal-progress-bar" data-progress={String(progress)} />,
 }));
 
 import { Alert } from "react-native";
@@ -50,7 +68,7 @@ function ms(id: string, over: Record<string, unknown> = {}) {
 }
 function goalFixture(over: Record<string, unknown> = {}) {
   return {
-    id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, start_time: 70,
+    id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60,
     status: "active", achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
     competition: { id: "c1", title: "県大会", date: "2026-12-01", pool_type: 0, team_id: null },
     style, milestones: [ms("m1"), ms("m2", { status: "achieved", achieved_at: "2026-01-01" })], ...over,
@@ -70,8 +88,9 @@ const confirmDestructive = async (callIndex = 0) => {
 };
 
 beforeEach(() => {
+  h.ratio.mockReset();
+  if (h.actualRatio) h.ratio.mockImplementation(h.actualRatio);
   h.getGoalWithMilestones.mockReset().mockResolvedValue(goalFixture());
-  h.calculateGoalProgress.mockReset().mockResolvedValue(40);
   h.deleteGoal.mockReset().mockResolvedValue(undefined);
   h.deleteMilestone.mockReset().mockResolvedValue(undefined);
   h.navigate.mockReset();
@@ -121,28 +140,99 @@ describe("S9 状態表示 (詳細)", () => {
 });
 
 describe("詳細の内容", () => {
-  it("大会名・種目・目標タイム/初期タイム・達成率・マイルストーン達成数を表示", async () => {
+  const bars = () => Array.from(document.querySelectorAll('[data-testid="goal-progress-bar"]')) as HTMLElement[];
+  /** 「マイルストーン達成率」の行 (ラベルと値) */
+  const ratioRow = () => screen.getByText("マイルストーン達成率").parentElement as HTMLElement;
+
+  it("大会名・種目・目標タイム・マイルストーン達成数と達成率 (1/2 = 50%) を表示する", async () => {
     renderScreen();
     await flush();
     const text = document.body.textContent ?? "";
     expect(text).toContain("県大会");
     expect(text).toContain("1:00.00");
-    expect(text).toContain("1:10.00");
-    expect(text).toContain("40%");
     expect(text).toContain("(1/2)");
+    expect(ratioRow().textContent).toContain("50%");
+    expect(bars().map((b) => b.dataset.progress)).toEqual(["50"]);
   });
 
-  it("マイルストーン概要は ja で '100m × 1本: 1:23.45' (shared 整形・リテラル)", async () => {
+  it("[SC6] 初期タイムのセルと時間ベースの『達成率』ブロックを出さない (ラベル『達成率』単独の行が無い)", async () => {
     renderScreen();
     await flush();
-    expect(screen.getAllByText("100m × 1本: 1:23.45").length).toBeGreaterThanOrEqual(1);
+    expect(document.body.textContent).not.toContain("初期タイム");
+    expect(screen.queryByText("達成率")).toBeNull();
+    // 目標タイムのセルだけが残る (1:10.00 等の別のタイムが無い)
+    expect(document.body.textContent).not.toMatch(/1:10\.00/);
+    expect(qc.getQueryCache().getAll().map((q) => JSON.stringify(q.queryKey)).filter((k) => k.includes("progress"))).toEqual([]);
   });
 
-  it("初期タイム未設定は '未設定'", async () => {
-    h.getGoalWithMilestones.mockResolvedValue(goalFixture({ start_time: null }));
+  it("[D2] マイルストーン0件: 達成率は『未設定』で、% もバーも出さない", async () => {
+    h.getGoalWithMilestones.mockResolvedValue(goalFixture({ milestones: [] }));
     renderScreen();
     await flush();
-    expect(screen.getAllByText("未設定").length).toBeGreaterThanOrEqual(1);
+    expect(ratioRow().textContent).toContain("未設定");
+    expect(ratioRow().textContent).not.toMatch(/%/);
+    expect(document.body.textContent).not.toMatch(/\d+%/);
+    expect(bars()).toHaveLength(0);
+    expect(screen.getByText("マイルストーンがありません")).toBeTruthy();
+  });
+
+  it("[SC7] マイルストーンがあって達成0件は 0% とバー (0件の『未設定』とは区別する)。全件達成は 100%", async () => {
+    h.getGoalWithMilestones.mockResolvedValue(goalFixture({ milestones: [ms("m1"), ms("m2", { status: "expired" })] }));
+    renderScreen();
+    await flush();
+    expect(ratioRow().textContent).toContain("0%");
+    expect(ratioRow().textContent).not.toContain("未設定");
+    expect(bars().map((b) => b.dataset.progress)).toEqual(["0"]);
+
+    cleanup();
+    h.getGoalWithMilestones.mockResolvedValue(
+      goalFixture({ milestones: [ms("m1", { status: "achieved" }), ms("m2", { status: "achieved" })] }),
+    );
+    renderScreen();
+    await flush();
+    expect(ratioRow().textContent).toContain("100%");
+    expect(bars().map((b) => b.dataset.progress)).toEqual(["100"]);
+  });
+
+  it("[SC7] 大会情報なしの目標でもマイルストーン達成率を出す (『—』にしない)", async () => {
+    h.getGoalWithMilestones.mockResolvedValue(goalFixture({ competition: null }));
+    renderScreen();
+    await flush();
+    expect(ratioRow().textContent).toContain("50%");
+    expect(ratioRow().textContent).not.toContain("—");
+    expect(bars()).toHaveLength(1);
+  });
+
+  it("[SC7 単一定義] 達成率は computeMilestoneRatio の結果をそのまま出す (センチネル 37 -> 37% / null -> 未設定でバーなし)", async () => {
+    h.ratio.mockReturnValue(37);
+    renderScreen();
+    await flush();
+    expect(ratioRow().textContent).toContain("37%");
+    expect(ratioRow().textContent).not.toContain("50%");
+    expect(bars().map((b) => b.dataset.progress)).toEqual(["37"]);
+    expect(h.ratio).toHaveBeenCalledWith(goalFixture().milestones);
+
+    cleanup();
+    h.ratio.mockReturnValue(null);
+    renderScreen();
+    await flush();
+    expect(ratioRow().textContent).toContain("未設定");
+    expect(bars()).toHaveLength(0);
+  });
+
+  it("マイルストーン概要は ja で '100m: 1:23.45' (shared 整形・リテラル。タイム目標は本数を出さない)", async () => {
+    renderScreen();
+    await flush();
+    expect(screen.getAllByText("100m: 1:23.45").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("pull-to-refresh (usePullToRefresh に渡す refresh) は目標を取り直し、失敗しない (達成率の別クエリは無い)", async () => {
+    renderScreen();
+    await flush();
+    const before = h.getGoalWithMilestones.mock.calls.length;
+    expect(h.refresh, "usePullToRefresh に refresh が渡っていない").toBeTypeOf("function");
+    await act(async () => { await h.refresh!(); });
+    expect(h.getGoalWithMilestones.mock.calls.length).toBeGreaterThan(before);
   });
 });
 

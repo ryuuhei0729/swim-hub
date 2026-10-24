@@ -19,20 +19,16 @@
 import React from "react";
 import { renderWithI18n as render, screen, cleanup } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { addDays, format } from "date-fns";
 
 const FUTURE_DATE = format(addDays(new Date(), 5), "yyyy-MM-dd");
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 const mocks = vi.hoisted(() => ({
   entryModalSpy: vi.fn(),
@@ -86,19 +82,13 @@ function buildSupabaseMock(rows: ReturnType<typeof buildCompetitionRow>[]) {
   return { from: fromMock };
 }
 
-let currentAuthMock: { user: { id: string }; supabase: ReturnType<typeof buildSupabaseMock> };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitions from "@/components/team/TeamCompetitions";
 
 describe("TeamCompetitions — routeIsAdmin 配線の検証 (符号反転・取り違え検出)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   afterEach(() => {
     cleanup();
   });
@@ -111,12 +101,12 @@ describe("TeamCompetitions — routeIsAdmin 配線の検証 (符号反転・取�
       const user = userEvent.setup();
 
       // --- 利用者ルート相当: isAdmin=false ---
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
         supabase: buildSupabaseMock([
           buildCompetitionRow({ id: "c-member-route", title: "利用者ルート検証大会" }),
         ]),
-      };
+      }));
       const { unmount } = render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
       await screen.findByText("利用者ルート検証大会");
@@ -134,12 +124,12 @@ describe("TeamCompetitions — routeIsAdmin 配線の検証 (符号反転・取�
       vi.clearAllMocks();
 
       // --- 管理者ルート相当: isAdmin=true ---
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock([
           buildCompetitionRow({ id: "c-admin-route", title: "管理者ルート検証大会" }),
         ]),
-      };
+      }));
       render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
       await screen.findByText("管理者ルート検証大会");

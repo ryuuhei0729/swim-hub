@@ -15,7 +15,7 @@
 
 import React from "react";
 import { render, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { EntryLogFormScreen } from "@/screens/EntryLogFormScreen";
 
 const h = vi.hoisted(() => ({
@@ -31,10 +31,6 @@ vi.mock("@react-navigation/native", () => ({
 }));
 
 describe("EntryLogFormScreen — リダイレクトシム", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("teamId あり: マウント直後に CompetitionTabForm へ { competitionId, date, teamId, initialTab: 'entry' } で replace される", async () => {
     h.mockUseRoute.mockReturnValue({
       params: { competitionId: "comp-1", date: "2026-06-16", teamId: "team-1" },

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { TeamPracticesAPI } from "../../api/teams/practices";
 import { createSupabaseMock } from "../utils/supabase-mock";
 
@@ -7,7 +7,6 @@ describe("TeamPracticesAPI", () => {
   let api: TeamPracticesAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabaseMock = createSupabaseMock();
     api = new TeamPracticesAPI(supabaseMock.client);
   });

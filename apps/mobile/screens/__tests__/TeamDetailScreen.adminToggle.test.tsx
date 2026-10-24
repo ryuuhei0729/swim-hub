@@ -175,7 +175,6 @@ function requireHeaderRight(): () => React.ReactElement {
 
 describe("TeamDetailScreen — 管理者/利用者ビュートグルの1タップ同時反映 (B-3, V-04)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.routeParams.teamId = "team-1";
     mocks.routeParams.initialTab = undefined;
     mocks.nonAdminTeamIds.clear();

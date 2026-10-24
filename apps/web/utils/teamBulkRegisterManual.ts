@@ -56,12 +56,33 @@ const trimToNull = (value: string): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+/**
+ * 何も入力されていない行。検証・送信の対象外にする (「+ 行を追加」で足したまま使わなかった行)。
+ * 日付だけの行は登録対象なので空行ではない。mobile TeamBulkRegisterForm と同じ規則
+ */
+export function isBlankPracticeRow(row: PracticeRow): boolean {
+  return !row.date.trim() && !row.title.trim() && !row.place.trim() && !row.note.trim();
+}
+
+/** 何も入力されていない行。poolType は既定値 (0: 短水路) のままなら未入力とみなす */
+export function isBlankCompetitionRow(row: CompetitionRow): boolean {
+  return (
+    row.poolType === 0 &&
+    !row.date.trim() &&
+    !row.endDate.trim() &&
+    !row.title.trim() &&
+    !row.place.trim() &&
+    !row.note.trim()
+  );
+}
+
 export function validatePracticeRows(
   rows: PracticeRow[],
   t: ManualErrorTranslator = defaultErrorMessage,
 ): string[] {
   const errors: string[] = [];
   rows.forEach((row, idx) => {
+    if (isBlankPracticeRow(row)) return;
     if (!row.date.trim()) {
       errors.push(t("dateRequired", idx + 1));
     }
@@ -75,6 +96,7 @@ export function validateCompetitionRows(
 ): string[] {
   const errors: string[] = [];
   rows.forEach((row, idx) => {
+    if (isBlankCompetitionRow(row)) return;
     if (!row.date.trim()) {
       errors.push(t("startDateRequired", idx + 1));
     }

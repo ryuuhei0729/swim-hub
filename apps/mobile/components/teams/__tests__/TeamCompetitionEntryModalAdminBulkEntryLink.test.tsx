@@ -59,7 +59,6 @@ const baseProps = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
   mocks.user = { id: "u-1" };
   mocks.getEntriesByCompetition.mockResolvedValue([]);
   mocks.useUpdateCompetitionMutation.mockReturnValue({

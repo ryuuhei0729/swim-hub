@@ -1018,7 +1018,6 @@
       "unknown": "Unbekannter Fehler"
     },
     "handlers": {
-      "fetchPracticeFailed": "Trainingsdaten konnten nicht abgerufen werden",
       "updateImagePathFailed": "Bildpfad konnte nicht aktualisiert werden",
       "practiceCreatedButImageFailed": "Das Training wurde erstellt, aber der Bild-Upload ist fehlgeschlagen",
       "authRequired": "Ein authentifizierter Benutzer ist erforderlich",
@@ -2142,18 +2141,24 @@
       "competitionFallback": "Wettkampf",
       "styleFallback": "Disziplin",
       "competitionInfoUnavailable": "Keine Wettkampfinformationen",
-      "editUnavailableReason": "Bearbeitung nicht möglich, da keine Wettkampfinformationen vorliegen"
+      "editUnavailableReason": "Bearbeitung nicht möglich, da keine Wettkampfinformationen vorliegen",
+      "diffFromBest": "(Bestzeit{diff})"
     },
     "detail": {
       "loadError": "Zieldetails konnten nicht geladen werden",
       "retry": "Erneut laden",
       "targetTime": "Zielzeit",
-      "initialTime": "Ausgangszeit",
       "notSet": "Nicht festgelegt",
-      "achievement": "Zielerreichung",
       "milestoneSection": "Meilensteine",
       "milestoneRatio": "Meilenstein-Erreichung",
-      "milestoneAdd": "Hinzufügen"
+      "milestoneAdd": "Hinzufügen",
+      "currentBest": "Aktuelle Bestzeit",
+      "noRecord": "Keine Zeit",
+      "remainingSeconds": "Noch {seconds} s",
+      "targetReached": "Zielzeit erreicht",
+      "daysLeft": "Verbleibende Tage: {days}",
+      "competitionToday": "Heute",
+      "competitionFinished": "Beendet"
     },
     "create": {
       "title": "Neues Ziel",
@@ -2161,7 +2166,6 @@
       "cancelButton": "Abbrechen",
       "closeAriaLabel": "Schließen",
       "targetTimeInvalid": "Bitte geben Sie eine gültige Zielzeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
-      "startTimeInvalid": "Bitte geben Sie eine gültige Ausgangszeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
       "competitionRequired": "Bitte wählen Sie einen Wettkampf aus",
       "createFailed": "Ziel konnte nicht erstellt werden"
     },
@@ -2173,7 +2177,6 @@
       "updateFailed": "Ziel konnte nicht aktualisiert werden",
       "validation": {
         "targetTimeInvalid": "Bitte geben Sie eine gültige Zielzeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
-        "startTimeInvalid": "Bitte geben Sie eine gültige Ausgangszeit ein (mehr als 0 Sekunden und höchstens 60 Minuten)",
         "styleNotSelected": "Keine Lage ausgewählt."
       }
     },
@@ -2181,7 +2184,6 @@
       "title": "Wettkampfziel-Rückblick",
       "expiredDesc": "Das folgende Wettkampfziel hat seine Frist erreicht",
       "targetLabel": "Ziel:",
-      "initialTimeLabel": "Ausgangszeit:",
       "competitionDateLabel": "Wettkampfdatum:",
       "milestoneAchievedText": "Erreichte Meilensteine: {achieved}/{total}",
       "achievedQuestion": "Haben Sie Ihr Ziel erreicht?",
@@ -2299,14 +2301,11 @@
       "selectCompetitionPlaceholder": "Wettkampf auswählen",
       "competitionNamePlaceholder": "Wettkampfname",
       "competitionPlacePlaceholder": "Ort (optional)",
-      "competitionDateLabel": "Wettkampfdatum",
       "competitionFallback": "Wettkampf",
       "styleLabel": "Lage",
       "selectStylePlaceholder": "Lage auswählen",
       "targetTimeLabel": "Zielzeit",
       "targetTimePlaceholder": "2.00.00",
-      "startTimeLabel": "Ausgangszeit (optional)",
-      "startTimePlaceholder": "2.00.00",
       "personalCompetitionGroup": "Persönlich",
       "teamCompetitionGroupFallback": "Team-Wettkampf",
       "competitionDatePast": "Bitte wählen Sie für einen neuen Wettkampf das heutige oder ein späteres Datum"
@@ -2369,9 +2368,11 @@
       "goalSetDesc": "50m × 6 Wdh. × 3 Sätze (aus der 100m-Zielzeit berechnet)"
     },
     "milestoneSummary": {
-      "time": "{distance}m × 1 Wdh.: {time}",
+      "time": "{distance}m: {time}",
       "repsTime": "{distance}m × {reps} Wdh. @{time} Ø",
-      "set": "{distance}m × {reps} Wdh. × {sets} Sätze (@{circle} Intervall) komplett"
+      "repsTimeWithSets": "{distance}m × {reps} Wdh. × {sets} Sätze @{time} Ø",
+      "set": "{distance}m × {reps} Wdh. ({circle} Intervall) komplett",
+      "setWithSets": "{distance}m × {reps} Wdh. × {sets} Sätze ({circle} Intervall) komplett"
     },
     "mobile": {
       "notFound": "Ziel nicht gefunden",
@@ -2391,7 +2392,6 @@
     "loadError": "Ziele konnten nicht geladen werden",
     "retry": "Erneut versuchen",
     "snapshotNote": "Zeigt den Stand der letzten Aktualisierung des Mitglieds in der App",
-    "progressUnavailable": "Der Fortschritt kann ohne Wettkampfinformationen nicht berechnet werden",
     "section": {
       "upcoming": "Kommende Wettkämpfe",
       "past": "Vergangene Wettkämpfe",
@@ -3995,8 +3995,8 @@
         "labelNote": "Notiz",
         "poolShort": "Kurzbahn (25m)",
         "poolLong": "Langbahn (50m)",
-        "addPracticeRowButton": "+ Training hinzufügen",
-        "addCompetitionRowButton": "+ Wettkampf hinzufügen",
+        "addPracticeRowButton": "Training hinzufügen",
+        "addCompetitionRowButton": "Wettkampf hinzufügen",
         "deleteRowButton": "Löschen",
         "submitButton": "Registrieren",
         "submitting": "Wird registriert...",
@@ -4233,9 +4233,6 @@
       "cancel": "Abbrechen"
     },
     "practiceLog": {
-      "title_create": "Trainingsprotokoll hinzufügen",
-      "title_edit": "Trainingsprotokoll bearbeiten",
-      "close_aria": "Trainingsprotokoll schließen",
       "templateFrom": "Vorlage",
       "templateFromLong": "Aus Vorlage erstellen",
       "addMenu": "Menü hinzufügen",
@@ -4246,8 +4243,6 @@
       "cancel": "Abbrechen",
       "save": "Speichern",
       "saving": "Wird gespeichert ...",
-      "update": "Aktualisieren",
-      "updating": "Wird aktualisiert ...",
       "videoLabel": "Video",
       "menuHeader": "Menü {n}"
     },
@@ -4513,6 +4508,10 @@
       "videoUpload": "Videoanhänge sind eine Premium-Funktion",
       "splitTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte Einträge",
       "practiceTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte Einträge"
+    },
+    "itemTabs": {
+      "removeConfirmTitle": "{label} löschen?",
+      "removeConfirmMessage": "Die erfassten Daten von {label} werden gelöscht."
     }
   },
   "timeLevel": {

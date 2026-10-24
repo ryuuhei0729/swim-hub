@@ -33,6 +33,7 @@ import { PracticeAPI } from "@apps/shared/api";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { isDbUuid } from "@/utils/isDbUuid";
 import { getTabNavAdjacency } from "@/utils/tabModalUtils";
+import { hasPracticeMenuData } from "@/utils/tabModalDiff";
 import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 import type { PracticeImageFile, ExistingImage } from "@/components/forms/PracticeImageUploader";
 import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
@@ -615,28 +616,35 @@ export default function PracticeTabModal({
     }
   }, [templateName, menus, createTemplateMutation, executeSave]);
 
+  // ボタンは各メニューカードの中にあるので、表示中のメニュー1件の設定欄だけを上書きする。
+  // タイム・動画・既存ログ ID と他のメニューは変えない (mobile PracticeTabFormScreen と同じ)。
+  // 全メニューを置き換えると、入力済みのタイムや他のメニューが確認なしで消え、
+  // 編集中なら保存時に既存ログが DB から削除される。
   const handleTemplateSelect = useCallback((template: PracticeLogTemplate) => {
     const circleTime = template.circle || 0;
-    const circleMin = Math.floor(circleTime / 60);
-    const circleSec = circleTime % 60;
     const templateTags = template.tag_ids
       ? availableTags.filter((tag) => template.tag_ids.includes(tag.id))
       : [];
-    const newMenu: PracticeMenu = {
-      id: String(Date.now()),
-      style: template.style,
-      swimCategory: template.swim_category,
-      distance: template.distance,
-      reps: template.rep_count,
-      sets: template.set_count,
-      circleMin,
-      circleSec,
-      note: template.note || "",
-      tags: templateTags,
-      times: [],
-    };
-    setMenus([newMenu]);
-  }, [availableTags, setMenus]);
+    setMenus((prev) => {
+      const targetIndex = Math.min(activePracticeIndex, Math.max(0, prev.length - 1));
+      return prev.map((menu, i) =>
+        i === targetIndex
+          ? {
+              ...menu,
+              style: template.style,
+              swimCategory: template.swim_category,
+              distance: template.distance,
+              reps: template.rep_count,
+              sets: template.set_count,
+              circleMin: Math.floor(circleTime / 60),
+              circleSec: circleTime % 60,
+              note: template.note || "",
+              tags: templateTags,
+            }
+          : menu,
+      );
+    });
+  }, [availableTags, setMenus, activePracticeIndex]);
 
   // ---------------------------------------------------------------------------
   // Close handling
@@ -878,6 +886,13 @@ export default function PracticeTabModal({
                       if (!target) return;
                       removeMenu(target.id);
                       setActivePracticeIndex((prev) => Math.min(prev, menus.length - 2));
+                    }}
+                    shouldConfirmRemove={(i) => {
+                      const target = menus[i];
+                      return (
+                        !!target &&
+                        hasPracticeMenuData(target, pendingVideosRef.current.has(target.id))
+                      );
                     }}
                     label={(i) => tPracticeLog("menuHeader", { n: i + 1 })}
                     accent="green"

@@ -1,9 +1,13 @@
 -- =============================================================================
 -- pgTAP: get_team_member_goals RPC (チーム管理者がメンバーの目標を閲覧)
 --
--- 対象 migration: 20261004000000_get_team_member_goals_rpc.sql
+-- 対象 migration: 20261004000000_get_team_member_goals_rpc.sql (初版)
+--                 20261013000000_drop_goals_start_time.sql (start_time を戻り値と goals から削除して作り直し)
 -- 基準: Sprint Contract v1 (スコープ = 選択メンバーの全目標 / 振り返り・achievements 非公開 /
---       拒否は RAISE EXCEPTION / current_best_time は生の MIN)
+--       拒否は RAISE EXCEPTION)
+--       Sprint Contract v2 (初期タイム全廃): 戻り列から start_time だけを削除し current_best_time は残す。
+--       作り直しても authenticated は EXECUTE 可・anon / PUBLIC は不可。認可の例外は維持。
+--       Sprint Contract v3 D7: current_best_time は time > 0 の行の MIN (0秒の行が有効な記録を隠さない)。
 --
 -- 方針:
 --   - 期待値はフィクスチャの「正解」から書く。RPC の SQL を転記しない。
@@ -17,7 +21,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(40);
+select plan(44);
 
 create function public.qa_login_as(p_uid uuid) returns void language plpgsql as $$
 begin
@@ -108,13 +112,15 @@ insert into public.competitions (id, title, date, pool_type, team_id, user_id, c
 --   g_null:     大会 NULL / 種目2 (M は種目2・長水路の記録を持つが NULL でなければならない)
 --   g_admin:    管理者 a1 自身の目標 (自己閲覧)
 --   g_plain:    別ユーザー a6 の目標 (混入しないこと)
-insert into public.goals (id, user_id, competition_id, style_id, target_time, start_time, status, reflection_note, created_at) values
-  ('dddddddd-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7', 'cccccccc-0000-4000-a000-000000000001', 3, 58.00, 62.00, 'active',   'SECRET-GOAL-NOTE', '2026-01-01'),
-  ('dddddddd-0000-4000-a000-000000000002', 'aaaaaaaa-0000-4000-a000-0000000000a7', 'cccccccc-0000-4000-a000-000000000002', 1, 28.00, 32.00, 'active',   'SECRET-GOAL-NOTE', '2026-01-02'),
-  ('dddddddd-0000-4000-a000-000000000003', 'aaaaaaaa-0000-4000-a000-0000000000a7', 'cccccccc-0000-4000-a000-000000000003', 5, 60.00, 65.00, 'achieved', 'SECRET-GOAL-NOTE', '2026-01-03'),
-  ('dddddddd-0000-4000-a000-000000000004', 'aaaaaaaa-0000-4000-a000-0000000000a7', null,                                   2, 29.00, 31.00, 'cancelled','SECRET-GOAL-NOTE', '2026-01-04'),
-  ('dddddddd-0000-4000-a000-000000000005', 'aaaaaaaa-0000-4000-a000-0000000000a1', null,                                   2, 29.00, 31.00, 'active',   null, '2026-01-05'),
-  ('dddddddd-0000-4000-a000-000000000006', 'aaaaaaaa-0000-4000-a000-0000000000a6', 'cccccccc-0000-4000-a000-000000000002', 1, 28.00, 32.00, 'active',   null, '2026-01-06');
+insert into public.goals (id, user_id, competition_id, style_id, target_time, status, reflection_note, created_at) values
+  ('dddddddd-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7', 'cccccccc-0000-4000-a000-000000000001', 3, 58.00, 'active',   'SECRET-GOAL-NOTE', '2026-01-01'),
+  ('dddddddd-0000-4000-a000-000000000002', 'aaaaaaaa-0000-4000-a000-0000000000a7', 'cccccccc-0000-4000-a000-000000000002', 1, 28.00, 'active',   'SECRET-GOAL-NOTE', '2026-01-02'),
+  ('dddddddd-0000-4000-a000-000000000003', 'aaaaaaaa-0000-4000-a000-0000000000a7', 'cccccccc-0000-4000-a000-000000000003', 5, 60.00, 'achieved', 'SECRET-GOAL-NOTE', '2026-01-03'),
+  ('dddddddd-0000-4000-a000-000000000004', 'aaaaaaaa-0000-4000-a000-0000000000a7', null,                                   2, 29.00, 'cancelled','SECRET-GOAL-NOTE', '2026-01-04'),
+  ('dddddddd-0000-4000-a000-000000000005', 'aaaaaaaa-0000-4000-a000-0000000000a1', null,                                   2, 29.00, 'active',   null, '2026-01-05'),
+  ('dddddddd-0000-4000-a000-000000000006', 'aaaaaaaa-0000-4000-a000-0000000000a6', 'cccccccc-0000-4000-a000-000000000002', 1, 28.00, 'active',   null, '2026-01-06'),
+  -- g_zero: 個人大会 (長水路) / 種目4。種目4・長水路の記録は 0 秒だけ (D7: best は NULL)
+  ('dddddddd-0000-4000-a000-000000000007', 'aaaaaaaa-0000-4000-a000-0000000000a7', 'cccccccc-0000-4000-a000-000000000001', 4, 70.00, 'active',   null, '2026-01-07');
 
 -- マイルストーン。g_team1 に2件 (created_at 降順 = 本人画面 getMilestones と同じ並び)
 insert into public.milestones (id, goal_id, title, type, params, deadline, status, achieved_at, reflection_done, reflection_note, created_at) values
@@ -131,7 +137,8 @@ insert into public.milestones (id, goal_id, title, type, params, deadline, statu
 --   r_short       24.00  短水路 (pool_type=0)                  → 除外
 --   r_style       23.00  別種目 (種目2)                        → 除外 (g_null の罠も兼ねる)
 --   r_user        22.00  別ユーザー a6                         → 除外
--- g_personal (種目3・長水路): time=0 の記録と 31.00 → 生の MIN = 0
+-- g_personal (種目3・長水路): time=0 の記録と 31.00 → time > 0 の MIN = 31.00 (D7。0秒の行は採らない)
+-- g_zero     (種目4・長水路): time=0 の記録だけ → NULL (D7)
 insert into public.records (user_id, style_id, pool_type, time, is_relaying, team_id, competition_id) values
   ('aaaaaaaa-0000-4000-a000-0000000000a7', 1, 1, 30.00, false, null,                                   null),
   ('aaaaaaaa-0000-4000-a000-0000000000a7', 1, 1, 28.50, false, 'bbbbbbbb-0000-4000-a000-000000000002', null),
@@ -140,7 +147,9 @@ insert into public.records (user_id, style_id, pool_type, time, is_relaying, tea
   ('aaaaaaaa-0000-4000-a000-0000000000a7', 2, 1, 23.00, false, null,                                   null),
   ('aaaaaaaa-0000-4000-a000-0000000000a6', 1, 1, 22.00, false, null,                                   null),
   ('aaaaaaaa-0000-4000-a000-0000000000a7', 3, 1, 0.00,  false, null,                                   null),
-  ('aaaaaaaa-0000-4000-a000-0000000000a7', 3, 1, 31.00, false, null,                                   null);
+  ('aaaaaaaa-0000-4000-a000-0000000000a7', 3, 1, 31.00, false, null,                                   null),
+  ('aaaaaaaa-0000-4000-a000-0000000000a7', 4, 1, 0.00,  false, null,                                   null),
+  ('aaaaaaaa-0000-4000-a000-0000000000a7', 4, 1, 0.00,  false, 'bbbbbbbb-0000-4000-a000-000000000002', null);
 
 -- check_source 制約により record_id か practice_log_id が必須
 insert into public.milestone_achievements (milestone_id, record_id, achieved_value, achieved_at)
@@ -181,10 +190,29 @@ select is(
    join pg_namespace ns on ns.oid = p.pronamespace
    cross join lateral unnest(p.proargnames, p.proargmodes) with ordinality as a(n, m, o)
    where ns.nspname = 'public' and p.proname = 'get_team_member_goals' and a.m = 't'),
-  array['id','style_id','target_time','start_time','status','achieved_at','created_at',
+  array['id','style_id','target_time','status','achieved_at','created_at',
         'competition_id','competition_title','competition_date','competition_pool_type',
         'current_best_time','milestones']::text[],
-  'V-01g: 戻り列は Contract の13列だけ (reflection_note 等を含まない・順序も固定)');
+  'V-01g: 戻り列は Contract v2 の12列だけ (start_time と reflection_note 等を含まず、current_best_time は残す・順序も固定)');
+
+select hasnt_column('public', 'goals', 'start_time',
+  'V-01h: goals に start_time 列が無い (20261013000000 で削除)');
+
+-- 作り直しで既定の権限 (PUBLIC に EXECUTE) に戻っていないこと。proacl が NULL = 既定権限なので acldefault で補う
+select ok(
+  not exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    where n.nspname = 'public' and p.proname = 'get_team_member_goals'
+      and a.grantee = 0 and a.privilege_type = 'EXECUTE'),
+  'V-01i: PUBLIC に EXECUTE が無い (REVOKE ALL FROM PUBLIC が再付与されている)');
+
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'get_team_member_goals'),
+  1, 'V-01j: get_team_member_goals は (uuid, uuid) の1つだけ (旧定義や別シグネチャが残っていない)');
 
 -- =============================================================================
 -- 認可 (V-02)。拒否はすべて RAISE EXCEPTION (P0001)。ここでは例外であることを固定する
@@ -254,8 +282,9 @@ select is(
   (select array_agg(id::text order by id) from public.get_team_member_goals(
      'bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7')),
   array['dddddddd-0000-4000-a000-000000000001','dddddddd-0000-4000-a000-000000000002',
-        'dddddddd-0000-4000-a000-000000000003','dddddddd-0000-4000-a000-000000000004']::text[],
-  'V-03a: 対象の全目標 (個人大会/自チーム大会/他チーム大会/大会NULL) だけが返る。他人の目標は混ざらない');
+        'dddddddd-0000-4000-a000-000000000003','dddddddd-0000-4000-a000-000000000004',
+        'dddddddd-0000-4000-a000-000000000007']::text[],
+  'V-03a: 対象の全目標 (個人大会/自チーム大会/他チーム大会/大会NULL/0秒の記録だけの種目) だけが返る。他人の目標は混ざらない');
 
 select is(
   (select row(competition_title, competition_date, competition_pool_type)::text
@@ -286,11 +315,11 @@ select is(
   'V-03e: 大会NULLの目標も返り、大会列と current_best_time は全て NULL (水路不明で短水路混入させない)');
 
 select is(
-  (select row(target_time, start_time, status)::text
+  (select row(target_time, status)::text
    from public.get_team_member_goals('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7')
    where id = 'dddddddd-0000-4000-a000-000000000003'),
-  '(60.00,65.00,achieved)',
-  'V-03f: 達成済み・過去大会の目標も返り target/start/status が正しい');
+  '(60.00,achieved)',
+  'V-03f: 達成済み・過去大会の目標も返り target/status が正しい');
 
 select is(
   (select count(*)::int from public.get_team_member_goals(
@@ -301,7 +330,7 @@ select public.qa_login_as('aaaaaaaa-0000-4000-a000-0000000000a5');
 select is(
   (select count(*)::int from public.get_team_member_goals(
      'bbbbbbbb-0000-4000-a000-000000000002', 'aaaaaaaa-0000-4000-a000-0000000000a7')),
-  4, 'V-03h: team2 の管理者が team2 のメンバー a7 を見ると全目標4件 (チーム横断の全目標)');
+  5, 'V-03h: team2 の管理者が team2 のメンバー a7 を見ると全目標5件 (チーム横断の全目標)');
 select public.qa_login_as('aaaaaaaa-0000-4000-a000-0000000000a1');
 
 -- =============================================================================
@@ -363,8 +392,8 @@ select is(
   (select current_best_time from public.get_team_member_goals(
      'bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7')
    where id = 'dddddddd-0000-4000-a000-000000000001'),
-  0.00::numeric,
-  'V-07b: time=0 の記録が最小ならそのまま 0 を返す (生の MIN。0 の扱いは TS の computeGoalProgress 側)');
+  31.00::numeric,
+  'V-07b: time=0 の記録 (最小) と 31.00 があれば 31.00 (D7: time > 0 の行の MIN。0秒が有効な記録を隠さない)');
 
 select is(
   (select current_best_time from public.get_team_member_goals(
@@ -378,7 +407,14 @@ select is(
      'bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7')
    where current_best_time is not null),
   2,
-  'V-07d: best が非NULLなのは g_personal(0.00) と g_team1(28.50) の2件だけ。大会NULLの目標は種目2の記録があっても NULL');
+  'V-07d: best が非NULLなのは g_personal(31.00) と g_team1(28.50) の2件だけ。大会NULLの目標は種目2の記録があっても NULL、0秒の記録だけの g_zero も NULL');
+
+select is(
+  (select current_best_time from public.get_team_member_goals(
+     'bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7')
+   where id = 'dddddddd-0000-4000-a000-000000000007'),
+  null::numeric,
+  'V-07e: 0秒の記録しか無い種目 × 水路は NULL (D7: 0 を返さない。管理者カードは Best 差を出さない)');
 
 select public.qa_logout();
 select * from finish();

@@ -745,48 +745,6 @@ export function useReplacePracticeTimesMutation(
 }
 
 /**
- * 練習タイム作成ミューテーション
- */
-export function useCreatePracticeTimeMutation(
-  supabase: SupabaseClient,
-  api?: PracticeAPI,
-): UseMutationResult<PracticeTime, Error, PracticeTimeInsert> {
-  const queryClient = useQueryClient();
-  const practiceApi = useMemo(() => api ?? new PracticeAPI(supabase), [supabase, api]);
-
-  return useMutation({
-    mutationFn: async (time: PracticeTimeInsert) => {
-      return await practiceApi.createPracticeTime(time);
-    },
-    onSuccess: () => {
-      // 関連するクエリを無効化して再取得
-      queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
-    },
-  });
-}
-
-/**
- * 練習タイム削除ミューテーション
- */
-export function useDeletePracticeTimeMutation(
-  supabase: SupabaseClient,
-  api?: PracticeAPI,
-): UseMutationResult<void, Error, string> {
-  const queryClient = useQueryClient();
-  const practiceApi = useMemo(() => api ?? new PracticeAPI(supabase), [supabase, api]);
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      await practiceApi.deletePracticeTime(id);
-    },
-    onSuccess: () => {
-      // 関連するクエリを無効化して再取得
-      queryClient.invalidateQueries({ queryKey: practiceKeys.lists() });
-    },
-  });
-}
-
-/**
  * 練習タグ一覧取得クエリ
  */
 export function usePracticeTagsQuery(

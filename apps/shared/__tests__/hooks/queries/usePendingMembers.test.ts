@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // =============================================================================
 // usePendingMembers*.test.ts - QA Engineer Sprint 1 検証
 // useListPendingMembersQuery / useApproveMemberMutation / useRejectMemberMutation
@@ -39,7 +40,6 @@ describe("useListPendingMembersQuery", () => {
   let mockMembersApi: { listPending: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockMembersApi = { listPending: vi.fn() };
     (TeamMembersAPI as ReturnType<typeof vi.fn>).mockImplementation(function () {
@@ -122,7 +122,6 @@ describe("useApproveMemberMutation", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockMembersApi = {
       approve: vi.fn(),
@@ -186,7 +185,6 @@ describe("useRejectMemberMutation", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockMembersApi = {
       reject: vi.fn(),

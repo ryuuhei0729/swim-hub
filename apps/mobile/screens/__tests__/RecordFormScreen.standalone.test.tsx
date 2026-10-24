@@ -16,314 +16,87 @@
 //
 // トートロジー防止メモ: handleSave 内の式をそのまま検証するのではなく、
 // 実際に Save ボタンを押した結果 updateMutation.mutateAsync に渡される引数を検証する。
-//
-// 実装上の注意: このモジュールのモックは全て `vi.hoisted` 内で一度だけ生成した
-// 安定参照 (同一オブジェクト/配列/関数) を返すこと。フックのモックが呼ばれるたびに
-// 新しいオブジェクト/配列リテラルを生成すると、依存配列に非プリミティブ値を持つ
-// useEffect が再レンダーのたびに再実行され続け、無限ループ (OOM) を起こす。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { useRecordStore } from "@/stores/recordStore";
-
-// react-native の静的モックには Dimensions/Keyboard/KeyboardAvoidingView が
-// 含まれないため、この画面専用に補完する (他の画面では未使用のため共有モックには追加しない)
-vi.mock("react-native", async () => {
-  const actual =
-    await vi.importActual<Record<string, unknown>>("react-native");
-  return {
-    ...actual,
-    Dimensions: { get: () => ({ width: 375, height: 812 }) },
-    Keyboard: { dismiss: () => {} },
-    KeyboardAvoidingView: actual.View,
-  };
-});
-
-// -----------------------------------------------------------------------
-// 安定参照のフィクスチャ・モック関数 (vi.hoisted 内で一度だけ生成)
-// -----------------------------------------------------------------------
-const mocks = vi.hoisted(() => {
-  const style = {
-    id: 2,
-    name_jp: "50m自由形",
-    name: "50m Freestyle",
-    style: "Fr",
-    distance: 50,
-  };
-
-  // 大会未紐付けレコード（一括入力）: competition が null、pool_type=1 (長水路)
-  const standaloneRecord = {
-    id: "record-1",
-    user_id: "user-1",
-    competition_id: null,
-    style_id: 2,
-    time: 30.5,
-    note: null,
-    is_relaying: false,
-    reaction_time: null,
-    pool_type: 1, // 長水路。大会が無いのでここが唯一の pool_type 情報源
-    created_at: "2026-07-01T00:00:00Z",
-    updated_at: "2026-07-01T00:00:00Z",
-    competition: null,
-    style,
-    split_times: [],
-  };
-
-  // 大会紐付けレコード（通常フロー、非退行確認用）: competition_id あり、pool_type=0 (短水路)
-  const linkedCompetition = {
-    id: "comp-1",
-    title: "テスト大会",
-    date: "2026-07-01",
-    pool_type: 1, // 大会側は長水路 (record.pool_type=0 とはあえて変えて「大会から導出される」ことを確認)
-    image_paths: [] as string[],
-  };
-  const linkedRecord = {
-    id: "record-2",
-    user_id: "user-1",
-    competition_id: "comp-1",
-    style_id: 2,
-    time: 40.0,
-    note: null,
-    is_relaying: false,
-    reaction_time: null,
-    pool_type: 0,
-    created_at: "2026-07-02T00:00:00Z",
-    updated_at: "2026-07-02T00:00:00Z",
-    competition: linkedCompetition,
-    style,
-    split_times: [],
-  };
-
-  const recordsFixture = [standaloneRecord, linkedRecord];
-  const stylesFixture = [style];
-  const competitionsFixture: unknown[] = [linkedCompetition];
-  // #47 修正 (App Developer): 保存時の pool_type 取得が competitions.find() から
-  // supabase.from("competitions").select("pool_type").eq("id", ...).single() の
-  // 直接取得に変わったため、linkedRecord (competition_id="comp-1") の保存経路が
-  // このスタブを経由する。standaloneRecord の保存は isStandaloneRecord=true のため
-  // このスタブを呼ばずに済む (loadedRecordPoolType を直接使う)。
-  //
-  // クエリ引数を捨てない: この画面は同じ id に対して `.select("pool_type")` (保存直前)
-  // と `.select("image_paths, title")` (表示用、linkedRecord のように大会紐付けの場合に
-  // マウント時に飛ぶ) の複数種類の ID 直指定クエリを投げる。以前は select() の columns と
-  // eq() の column 名を無視して常に { pool_type } だけを返しており、これが原因で
-  // 「大会名を ID 直指定の title で表示する」実装追加時に非退行テストが誤って red 化した
-  // (今スプリント Critical の再発防止)。手本:
-  // RecordFormScreen.competitionScopeImagePaths.test.tsx の normalizeColumns。列名は
-  // 「カンマ区切り→trim→ソート→再結合」で正規化し、id と組み合わせてキーにすることで
-  // クエリ種別ごとに別々の応答を返す。
-  const competitionByIdResponses: Record<
-    string,
-    { data: Record<string, unknown> | null; error: unknown }
-  > = {
-    [`pool_type:${linkedCompetition.id}`]: {
-      data: { pool_type: linkedCompetition.pool_type },
-      error: null,
-    },
-    [`image_paths,title:${linkedCompetition.id}`]: {
-      data: { image_paths: linkedCompetition.image_paths, title: linkedCompetition.title },
-      error: null,
-    },
-  };
-  const competitionFetchCalls: Array<{ table: string; columns: string; id: string }> = [];
-
-  function normalizeColumns(columns: string): string {
-    return columns
-      .split(",")
-      .map((c) => c.trim())
-      .filter(Boolean)
-      .sort()
-      .join(",");
-  }
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => ({
-        select: (columns: string) => ({
-          eq: (_column: string, id: string) => {
-            competitionFetchCalls.push({ table, columns, id });
-            const responseKey = `${normalizeColumns(columns)}:${id}`;
-            return {
-              single: () =>
-                Promise.resolve(
-                  competitionByIdResponses[responseKey] ?? {
-                    data: null,
-                    error: new Error(`no mock response for ${table}.${responseKey}`),
-                  },
-                ),
-            };
-          },
-        }),
-      }),
-    };
-  }
-  const supabaseFixture = makeSupabase();
-  // useRoute のモックが参照する可変な route params (テストごとに recordId を切り替える)
-  const routeParams: { recordId?: string } = { recordId: "record-1" };
-
-  return {
-    style,
-    standaloneRecord,
-    linkedRecord,
-    linkedCompetition,
-    recordsFixture,
-    stylesFixture,
-    competitionsFixture,
-    competitionByIdResponses,
-    competitionFetchCalls,
-    supabaseFixture,
-    routeParams,
-    navigate: vi.fn(),
-    goBack: vi.fn(),
-    updateMutateAsync: vi.fn(),
-    createMutateAsync: vi.fn(),
-    replaceSplitTimesMutateAsync: vi.fn(),
-    updateCompetitionMutateAsync: vi.fn(),
-    getStyles: vi.fn(),
-    getAccessToken: vi.fn(),
-    // useRecordByIdQuery モックの分岐制御用フラグ (V-04: ローディング/エラー/不存在の3状態検証)
-    recordByIdError: false,
-    recordByIdLoading: false,
-    // エラー状態からのリトライ中 (isFetching=true) を模すためのフラグ。
-    // デフォルト false (react-query の初回ロード以外は isFetching=false が通常)
-    recordByIdFetching: false,
-    refetchRecordById: vi.fn(),
-  };
-});
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabaseFixture,
-    subscription: null,
-    getAccessToken: mocks.getAccessToken,
-  }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/hooks/queries/records", () => ({
-  // 大会選択ドロップダウン用の一覧のみを提供する (編集対象レコードの解決には使わない。
-  // App Developer による B-1 修正で、編集対象レコードの解決は useRecordsQuery の一覧
-  // キャッシュへの依存をやめ、useRecordByIdQuery (recordId から直接解決) に置き換わった)
-  useRecordsQuery: () => ({
-    competitions: mocks.competitionsFixture,
-    isLoading: false,
-  }),
-  // W-05 修正 (2026-08-01): RecordFormScreen は大会選択ドロップダウンのために
-  // useRecordsQuery (records 一覧まで不要にフェッチする) ではなく、大会一覧専用の
-  // useCompetitionsListQuery を使うよう置換された。react-query の UseQueryResult
-  // 形状 (data/isLoading/isError 等) を模したモックを提供する。
-  useCompetitionsListQuery: () => ({
-    data: mocks.competitionsFixture,
-    isLoading: false,
-    isError: false,
-    error: null,
-    refetch: vi.fn(),
-  }),
-  // recordId を引数として受け取り、recordsFixture から直接解決する
-  // (「どの画面を先に訪問したか」に依存しないことを実際の関数シグネチャで模する)
-  useRecordByIdQuery: (_supabase: unknown, recordId: string) => {
-    if (!recordId) {
-      return {
-        data: undefined,
-        isLoading: false,
-        isFetching: false,
-        isError: false,
-        refetch: mocks.refetchRecordById,
-      };
-    }
-    if (mocks.recordByIdError) {
-      return {
-        data: null,
-        isLoading: false,
-        // リトライ中 (再フェッチ中) かどうかは isFetching で表現する (react-query の
-        // isLoading は初回ロード専用で、リトライ中は false のまま)
-        isFetching: mocks.recordByIdFetching,
-        isError: true,
-        refetch: mocks.refetchRecordById,
-      };
-    }
-    if (mocks.recordByIdLoading) {
-      return {
-        data: undefined,
-        isLoading: true,
-        isFetching: true,
-        isError: false,
-        refetch: mocks.refetchRecordById,
-      };
-    }
-    const found = mocks.recordsFixture.find((r) => r.id === recordId) ?? null;
-    return {
-      data: found,
-      isLoading: false,
-      isFetching: false,
-      isError: false,
-      refetch: mocks.refetchRecordById,
-    };
-  },
-  useCreateRecordMutation: () => ({ mutateAsync: mocks.createMutateAsync, isPending: false }),
-  useUpdateRecordMutation: () => ({ mutateAsync: mocks.updateMutateAsync, isPending: false }),
-  useReplaceSplitTimesMutation: () => ({
-    mutateAsync: mocks.replaceSplitTimesMutateAsync,
-    isPending: false,
-  }),
-  useUpdateCompetitionMutation: () => ({
-    mutateAsync: mocks.updateCompetitionMutateAsync,
-    isPending: false,
-  }),
-}));
-
-// 画像/動画/Premiumバッジ/ラップタイム表示は本テストの検証対象外のため薄いスタブに差し替える。
-// ImageUploader は「表示されるかどうか (!isStandaloneRecord ゲート)」自体を検証するため
-// 目印となるテキストを描画するスタブにする (null だと表示有無を判定できない)。
-vi.mock("@/components/shared/ImageUploader", () => ({
-  ImageUploader: () => <>画像アップローダー</>,
-}));
-vi.mock("@/components/shared/VideoUploader", () => ({
-  VideoUploader: () => null,
-}));
-vi.mock("@/components/shared/PremiumBadge", () => ({
-  PremiumBadge: () => null,
-}));
-vi.mock("@/components/records", () => ({
-  LapTimeDisplay: () => null,
-}));
-
+import { createWrapper, harness, resetRecordFormHarness } from "./recordFormScreenHarness";
 import { RecordFormScreen } from "../RecordFormScreen";
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+const style = {
+  id: 2,
+  name_jp: "50m自由形",
+  name: "50m Freestyle",
+  style: "Fr",
+  distance: 50,
 };
+
+// 大会未紐付けレコード（一括入力）: competition が null、pool_type=1 (長水路)
+const standaloneRecord = {
+  id: "record-1",
+  user_id: "user-1",
+  competition_id: null,
+  style_id: 2,
+  time: 30.5,
+  note: null,
+  is_relaying: false,
+  reaction_time: null,
+  pool_type: 1, // 長水路。大会が無いのでここが唯一の pool_type 情報源
+  created_at: "2026-07-01T00:00:00Z",
+  updated_at: "2026-07-01T00:00:00Z",
+  competition: null,
+  style,
+  split_times: [],
+};
+
+// 大会紐付けレコード（通常フロー、非退行確認用）: competition_id あり、pool_type=0 (短水路)
+const linkedCompetition = {
+  id: "comp-1",
+  title: "テスト大会",
+  date: "2026-07-01",
+  pool_type: 1, // 大会側は長水路 (record.pool_type=0 とはあえて変えて「大会から導出される」ことを確認)
+  image_paths: [] as string[],
+};
+const linkedRecord = {
+  id: "record-2",
+  user_id: "user-1",
+  competition_id: "comp-1",
+  style_id: 2,
+  time: 40.0,
+  note: null,
+  is_relaying: false,
+  reaction_time: null,
+  pool_type: 0,
+  created_at: "2026-07-02T00:00:00Z",
+  updated_at: "2026-07-02T00:00:00Z",
+  competition: linkedCompetition,
+  style,
+  split_times: [],
+};
+
+const recordsFixture = [standaloneRecord, linkedRecord];
+const stylesFixture = [style];
+const competitionsFixture: unknown[] = [linkedCompetition];
 
 describe("RecordFormScreen — 大会未紐付けレコード(一括入力)の編集", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     useRecordStore.getState().reset();
-    mocks.competitionFetchCalls.length = 0;
-    mocks.routeParams.recordId = "record-1";
-    mocks.recordByIdError = false;
-    mocks.recordByIdLoading = false;
-    mocks.recordByIdFetching = false;
-    mocks.getStyles.mockResolvedValue(mocks.stylesFixture);
-    mocks.getAccessToken.mockResolvedValue("test-access-token");
-    mocks.updateMutateAsync.mockResolvedValue({ id: "record-1" });
-    mocks.replaceSplitTimesMutateAsync.mockResolvedValue([]);
+    resetRecordFormHarness();
+    harness.records = recordsFixture;
+    harness.competitions = competitionsFixture;
+    harness.competitionByIdResponses[`pool_type:${linkedCompetition.id}`] = {
+      data: { pool_type: linkedCompetition.pool_type },
+      error: null,
+    };
+    harness.competitionByIdResponses[`image_paths,title:${linkedCompetition.id}`] = {
+      data: { image_paths: linkedCompetition.image_paths, title: linkedCompetition.title },
+      error: null,
+    };
+    harness.routeParams.recordId = "record-1";
+    harness.getStyles.mockResolvedValue(stylesFixture);
+    harness.getAccessToken.mockResolvedValue("test-access-token");
+    harness.updateMutateAsync.mockResolvedValue({ id: "record-1" });
+    harness.replaceSplitTimesMutateAsync.mockResolvedValue([]);
   });
 
   it("[isStandaloneRecord 検出] 大会選択UIが「(一括入力)」の disabled 表示になり、画像アップロードUIは表示されない", async () => {
@@ -348,10 +121,10 @@ describe("RecordFormScreen — 大会未紐付けレコード(一括入力)の�
     fireEvent.click(screen.getByText("保存"));
 
     await waitFor(() => {
-      expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(1);
+      expect(harness.updateMutateAsync).toHaveBeenCalledTimes(1);
     });
 
-    const [{ id, updates }] = mocks.updateMutateAsync.mock.calls[0]!; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
+    const [{ id, updates }] = harness.updateMutateAsync.mock.calls[0]!; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
     expect(id).toBe("record-1");
     expect(updates.competition_id).toBeNull();
     expect(updates.pool_type).toBe(1); // レコード自身の pool_type (長水路) が保持される
@@ -369,17 +142,23 @@ describe("RecordFormScreen — 大会未紐付けレコード(一括入力)の�
 // ---------------------------------------------------------------------------
 describe("RecordFormScreen — 大会紐付けレコードの通常編集フロー (非退行)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     useRecordStore.getState().reset();
-    mocks.competitionFetchCalls.length = 0;
-    mocks.routeParams.recordId = "record-2"; // linkedRecord (competition_id="comp-1")
-    mocks.recordByIdError = false;
-    mocks.recordByIdLoading = false;
-    mocks.recordByIdFetching = false;
-    mocks.getStyles.mockResolvedValue(mocks.stylesFixture);
-    mocks.getAccessToken.mockResolvedValue("test-access-token");
-    mocks.updateMutateAsync.mockResolvedValue({ id: "record-2" });
-    mocks.replaceSplitTimesMutateAsync.mockResolvedValue([]);
+    resetRecordFormHarness();
+    harness.records = recordsFixture;
+    harness.competitions = competitionsFixture;
+    harness.competitionByIdResponses[`pool_type:${linkedCompetition.id}`] = {
+      data: { pool_type: linkedCompetition.pool_type },
+      error: null,
+    };
+    harness.competitionByIdResponses[`image_paths,title:${linkedCompetition.id}`] = {
+      data: { image_paths: linkedCompetition.image_paths, title: linkedCompetition.title },
+      error: null,
+    };
+    harness.routeParams.recordId = "record-2"; // linkedRecord (competition_id="comp-1")
+    harness.getStyles.mockResolvedValue(stylesFixture);
+    harness.getAccessToken.mockResolvedValue("test-access-token");
+    harness.updateMutateAsync.mockResolvedValue({ id: "record-2" });
+    harness.replaceSplitTimesMutateAsync.mockResolvedValue([]);
   });
 
   it("[非退行] isStandaloneRecord=false のとき、通常の大会選択UI・画像アップロードUIが表示される (「(一括入力)」は出ない)", async () => {
@@ -404,10 +183,10 @@ describe("RecordFormScreen — 大会紐付けレコードの通常編集フロ�
     fireEvent.click(screen.getByText("保存"));
 
     await waitFor(() => {
-      expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(1);
+      expect(harness.updateMutateAsync).toHaveBeenCalledTimes(1);
     });
 
-    const [{ id, updates }] = mocks.updateMutateAsync.mock.calls[0]!; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
+    const [{ id, updates }] = harness.updateMutateAsync.mock.calls[0]!; // 直前の toHaveBeenCalledTimes(1) で存在は保証済み
     expect(id).toBe("record-2");
     expect(updates.competition_id).toBe("comp-1");
     // linkedCompetition.pool_type=1 (長水路) が使われる。record.pool_type=0 (短水路) ではない
@@ -426,19 +205,25 @@ describe("RecordFormScreen — 大会紐付けレコードの通常編集フロ�
 // ---------------------------------------------------------------------------
 describe("RecordFormScreen — 編集対象レコード解決の3状態 (V-04)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     useRecordStore.getState().reset();
-    mocks.competitionFetchCalls.length = 0;
-    mocks.routeParams.recordId = "record-1";
-    mocks.recordByIdError = false;
-    mocks.recordByIdLoading = false;
-    mocks.recordByIdFetching = false;
-    mocks.getStyles.mockResolvedValue(mocks.stylesFixture);
-    mocks.getAccessToken.mockResolvedValue("test-access-token");
+    resetRecordFormHarness();
+    harness.records = recordsFixture;
+    harness.competitions = competitionsFixture;
+    harness.competitionByIdResponses[`pool_type:${linkedCompetition.id}`] = {
+      data: { pool_type: linkedCompetition.pool_type },
+      error: null,
+    };
+    harness.competitionByIdResponses[`image_paths,title:${linkedCompetition.id}`] = {
+      data: { image_paths: linkedCompetition.image_paths, title: linkedCompetition.title },
+      error: null,
+    };
+    harness.routeParams.recordId = "record-1";
+    harness.getStyles.mockResolvedValue(stylesFixture);
+    harness.getAccessToken.mockResolvedValue("test-access-token");
   });
 
   it("[V-04: ローディング] 取得中は無限に固まらず、ローディング表示になる", async () => {
-    mocks.recordByIdLoading = true;
+    harness.recordByIdLoading = true;
 
     render(<RecordFormScreen />, { wrapper: createWrapper() });
 
@@ -450,7 +235,7 @@ describe("RecordFormScreen — 編集対象レコード解決の3状態 (V-04)",
   });
 
   it("[V-04: エラー] 取得エラー時は白紙にならず、エラーメッセージとリトライ導線が表示される", async () => {
-    mocks.recordByIdError = true;
+    harness.recordByIdError = true;
 
     render(<RecordFormScreen />, { wrapper: createWrapper() });
 
@@ -461,7 +246,7 @@ describe("RecordFormScreen — 編集対象レコード解決の3状態 (V-04)",
 
     // リトライ導線が refetch を呼び出す
     fireEvent.click(screen.getByText("再試行"));
-    expect(mocks.refetchRecordById).toHaveBeenCalledTimes(1);
+    expect(harness.refetchRecordById).toHaveBeenCalledTimes(1);
   });
 
   it(
@@ -470,8 +255,8 @@ describe("RecordFormScreen — 編集対象レコード解決の3状態 (V-04)",
     async () => {
       // エラーからのリトライ中: isError は true のまま、isFetching だけが true になる
       // (react-query の isLoading は初回ロード専用のため、リトライ中は isLoading=false のまま)
-      mocks.recordByIdError = true;
-      mocks.recordByIdFetching = true;
+      harness.recordByIdError = true;
+      harness.recordByIdFetching = true;
 
       render(<RecordFormScreen />, { wrapper: createWrapper() });
 
@@ -488,7 +273,7 @@ describe("RecordFormScreen — 編集対象レコード解決の3状態 (V-04)",
   it("[V-04: 不存在] エラーではないが対象レコードが見つからない場合、専用メッセージが表示され保存導線は出ない (リトライボタンは無し)", async () => {
     // recordByIdError=false かつ data=null (recordsFixture に無い id) を再現するため、
     // 存在しない recordId を指定する
-    mocks.routeParams.recordId = "record-does-not-exist";
+    harness.routeParams.recordId = "record-does-not-exist";
 
     render(<RecordFormScreen />, { wrapper: createWrapper() });
 

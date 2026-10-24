@@ -73,7 +73,6 @@ function clickSwatch(label: string, color: string) {
 
 describe("TeamCalendarColorSection — 旧色の素通し", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.byTeam = {};
   });
 

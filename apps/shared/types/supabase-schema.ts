@@ -248,7 +248,6 @@ export type Database = {
           competition_id: string;
           created_at: string | null;
           id: string;
-          start_time: number | null;
           status: string;
           style_id: number;
           target_time: number;
@@ -260,7 +259,6 @@ export type Database = {
           competition_id: string;
           created_at?: string | null;
           id?: string;
-          start_time?: number | null;
           status?: string;
           style_id: number;
           target_time: number;
@@ -272,7 +270,6 @@ export type Database = {
           competition_id?: string;
           created_at?: string | null;
           id?: string;
-          start_time?: number | null;
           status?: string;
           style_id?: number;
           target_time?: number;

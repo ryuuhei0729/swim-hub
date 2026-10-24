@@ -28,10 +28,6 @@ function createMockSupabaseClient(options?: {
 }
 
 describe("generateUUID", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("expo-cryptoのrandomUUIDを呼び出す", () => {
     const result = generateUUID();
     expect(randomUUID).toHaveBeenCalled();
@@ -51,10 +47,6 @@ describe("generateUUID", () => {
 });
 
 describe("deleteImage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("画像を正常に削除できる", async () => {
     const removeMock = vi.fn().mockResolvedValue({ error: null });
     const mockSupabase = {
@@ -94,10 +86,6 @@ describe("deleteImage", () => {
 });
 
 describe("deleteImages", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("複数の画像を正常に削除できる", async () => {
     const removeMock = vi.fn().mockResolvedValue({ error: null });
     const mockSupabase = {
@@ -179,7 +167,6 @@ describe("getSignedImageUrl", () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
     global.fetch = fetchMock as unknown as typeof fetch;
   });
 
@@ -259,7 +246,6 @@ describe("resolveGalleryImages", () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
     global.fetch = fetchMock as unknown as typeof fetch;
   });
 
@@ -372,7 +358,6 @@ describe("uploadProfileImageViaApi", () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
     global.fetch = fetchMock as unknown as typeof fetch;
   });
 
@@ -488,7 +473,6 @@ describe("deleteProfileImageViaApi", () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
     global.fetch = fetchMock as unknown as typeof fetch;
   });
 

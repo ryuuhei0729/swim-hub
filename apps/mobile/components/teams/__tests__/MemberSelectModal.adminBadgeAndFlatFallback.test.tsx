@@ -41,67 +41,14 @@
 //   数量的な観測結果で判定する (これも実装の分岐条件を再現しない)。
 // =============================================================================
 
-import React, { useEffect } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TeamMembershipWithUser } from "@apps/shared/types";
 
-const mocks = vi.hoisted(() => ({
-  currentHeaders: new Map<number, string>(),
-}));
-
-vi.mock("../TeamMemberGroupFilter", () => ({
-  TeamMemberGroupFilter: ({
-    members,
-    onGroupedMembersChange,
-  }: {
-    members: TeamMembershipWithUser[];
-    onGroupedMembersChange: (
-      sorted: TeamMembershipWithUser[],
-      headers: Map<number, string>,
-    ) => void;
-  }) => {
-    useEffect(() => {
-      onGroupedMembersChange(members, mocks.currentHeaders);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [members]);
-    return null;
-  },
-}));
-
+import { harness, dummySupabase, buildMember, findChipButtonByMemberName } from "./memberSelectModalHarness";
 import { MemberSelectModal } from "../MemberSelectModal";
 
-const dummySupabase = {} as unknown as SupabaseClient;
-
 const ADMIN_BADGE_TEXT = "管理者";
-
-const buildMember = (
-  overrides: Partial<TeamMembershipWithUser> & {
-    id: string;
-    user_id: string;
-    name: string;
-    role?: "admin" | "user";
-  },
-): TeamMembershipWithUser =>
-  ({
-    team_id: "team-1",
-    role: "user",
-    status: "approved",
-    is_active: true,
-    is_swimmer: true,
-    joined_at: "2025-01-01T00:00:00Z",
-    left_at: null,
-    created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
-    ...overrides,
-    users: {
-      id: overrides.user_id,
-      name: overrides.name,
-      gender: 0,
-      birthday: null,
-    },
-  }) as unknown as TeamMembershipWithUser;
 
 const renderModal = (members: TeamMembershipWithUser[]) =>
   render(
@@ -116,20 +63,9 @@ const renderModal = (members: TeamMembershipWithUser[]) =>
     />,
   );
 
-/** メンバー名を含むボタン (チップ本体) を、完全一致ではなく textContent の
- *  部分一致で特定する (R9: バッジ同居後も壊れないクエリ)。 */
-function findChipButtonByMemberName(name: string): HTMLElement {
-  const buttons = screen.getAllByRole("button");
-  const found = buttons.find((b) => (b.textContent ?? "").includes(name));
-  if (!found) {
-    throw new Error(`メンバー名 "${name}" を含むチップボタンが見つからない`);
-  }
-  return found;
-}
-
 describe("[V-12] 管理者バッジ (R9 復活対象)", () => {
   beforeEach(() => {
-    mocks.currentHeaders = new Map();
+    harness.groupHeaders = new Map();
   });
 
   it("[V-12] role==='admin' のメンバーのチップには管理者バッジが表示される", () => {
@@ -182,7 +118,7 @@ describe("[V-12] 管理者バッジ (R9 復活対象)", () => {
 describe("[V-13] グルーピング無効時 (activeCategory===null) の見出し無しフォールバック (R10)", () => {
   beforeEach(() => {
     // TeamMemberGroupFilter が activeCategory===null のとき返す形を再現する
-    mocks.currentHeaders = new Map();
+    harness.groupHeaders = new Map();
   });
 
   it("[V-13a] 見出しが1つも描画されず、全メンバーのチップがフラットに表示される", () => {

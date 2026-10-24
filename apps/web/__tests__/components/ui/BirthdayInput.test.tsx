@@ -15,14 +15,10 @@
 
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import BirthdayInput from "../../../components/ui/BirthdayInput";
 
 describe("BirthdayInput", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ---------------------------------------------------------------------------
   // [A] レイアウト: 3 フィールドが存在する
   // ---------------------------------------------------------------------------

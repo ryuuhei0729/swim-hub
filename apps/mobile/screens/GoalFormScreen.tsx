@@ -28,16 +28,18 @@ import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { CompetitionPickerSheet } from "@/components/goals/CompetitionPickerSheet";
 import { TimeSecondsInput } from "@/components/goals/TimeSecondsInput";
 import { CompetitionBasicFields } from "@/components/competitions/CompetitionBasicFields";
+import { getBestTimeForEntry } from "@/components/records";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import type { MainStackParamList } from "@/navigation/types";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { RecordAPI } from "@apps/shared/api/records";
-import { useGoalStartTimeAutofill } from "@apps/shared/hooks/useGoalStartTimeAutofill";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { goalKeys, useGoalDetailQuery } from "@apps/shared/hooks/queries/goals";
+import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 import { styleKeys } from "@apps/shared/hooks/queries/keys";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { formatDate } from "@apps/shared/utils/date";
+import { formatTimeBest } from "@apps/shared/utils/time";
 
 type NavProp = NativeStackNavigationProp<MainStackParamList>;
 type RouteProps = RouteProp<MainStackParamList, "GoalForm">;
@@ -58,7 +60,6 @@ interface GoalFormState {
   };
   styleId: string;
   targetTime: number | null;
-  startTime: number | null;
 }
 
 function createInitialForm(today: string): GoalFormState {
@@ -68,7 +69,6 @@ function createInitialForm(today: string): GoalFormState {
     newCompetition: { title: "", date: today, endDate: "", place: "", poolType: 0 },
     styleId: "",
     targetTime: null,
-    startTime: null,
   };
 }
 
@@ -95,7 +95,6 @@ export const GoalFormScreen: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [startTimeInvalid, setStartTimeInvalid] = useState(false);
   const savingRef = useRef(false);
   // 編集時に新規大会を作成した後 updateGoal だけ失敗しても、再保存で大会を重複作成しない
   // 作成時の入力も保持し、再保存で入力が変わっていれば作成済みの大会を更新する
@@ -157,7 +156,6 @@ export const GoalFormScreen: React.FC = () => {
       selectedCompetitionId: goal.competition.id,
       styleId: String(goal.style_id),
       targetTime: goal.target_time,
-      startTime: goal.start_time,
     };
     snapshotRef.current = JSON.stringify(next);
     setForm(next);
@@ -190,24 +188,16 @@ export const GoalFormScreen: React.FC = () => {
   const selectedPoolType =
     form.competitionMode === "new" ? form.newCompetition.poolType : selectedCompetition?.pool_type;
 
-  // 初期タイムは「種目 × 対象大会の水路」の自己ベストを自動入力する (web と共通のフック)
-  const handleAutofillApply = useCallback(
-    (startTime: number | null) => {
-      patchForm({ startTime });
-      setStartTimeInvalid(false);
-    },
-    [patchForm],
-  );
-  const { markTouched, resetKey: startTimeResetKey, isLoadingBest } = useGoalStartTimeAutofill({
-    supabase,
-    active: true,
-    isInitialized,
-    isEdit,
-    styleId: form.styleId,
-    poolType: selectedPoolType,
-    resetSignal: 0,
-    onApply: handleAutofillApply,
-  });
+  // 目標タイム欄の下に出すベストタイムラベル (入力欄には反映しない)。エントリー・大会記録入力と同じ出し方
+  // (getBestTimeForEntry をリレー OFF で呼ぶ: 同じ水路の自己記録 → 別の水路の自己記録の順で、
+  // 出どころをラベルに書く。引継だけの記録は出さない)。
+  // ベストが無い・取得中・取得失敗・種目か水路が未確定のときは出さない
+  const { data: bestTimesData } = useBestTimesQuery(supabase, {});
+  const selectedStyleName = stylesQuery.data?.find((s) => String(s.id) === form.styleId)?.name_jp;
+  const entryBestTime =
+    selectedStyleName && selectedPoolType != null && bestTimesData
+      ? getBestTimeForEntry(selectedStyleName, selectedPoolType, false, bestTimesData)
+      : null;
 
   // 新規大会の入力エラー (保存時の検証と同じ条件をその場で表示する)
   const newCompetitionErrors =
@@ -240,16 +230,6 @@ export const GoalFormScreen: React.FC = () => {
       return isEdit
         ? t("goals.edit.validation.targetTimeInvalid")
         : t("goals.create.targetTimeInvalid");
-    }
-    if (startTimeInvalid) {
-      return isEdit
-        ? t("goals.edit.validation.startTimeInvalid")
-        : t("goals.create.startTimeInvalid");
-    }
-    if (form.startTime !== null && (form.startTime <= 0 || form.startTime > MAX_TIME_SECONDS)) {
-      return isEdit
-        ? t("goals.edit.validation.startTimeInvalid")
-        : t("goals.create.startTimeInvalid");
     }
     return null;
   };
@@ -305,7 +285,6 @@ export const GoalFormScreen: React.FC = () => {
           competitionId,
           styleId,
           targetTime,
-          startTime: form.startTime,
         });
       } else {
         await goalAPI.createGoal({
@@ -315,8 +294,6 @@ export const GoalFormScreen: React.FC = () => {
           competitionData: form.competitionMode === "new" ? newCompetition : undefined,
           styleId,
           targetTime,
-          startTime: form.startTime,
-          poolType: selectedPoolType,
         });
       }
       void queryClient.invalidateQueries({ queryKey: goalKeys.all });
@@ -381,7 +358,7 @@ export const GoalFormScreen: React.FC = () => {
   }
 
   const selectedCompetitionLabel = selectedCompetition
-    ? `${selectedCompetition.title || t("goals.form.competitionFallback")} - ${formatDate(selectedCompetition.date, "numeric", locale)}`
+    ? `${formatDate(selectedCompetition.date, "numeric", locale)} ${selectedCompetition.title || t("goals.form.competitionFallback")}`
     : null;
 
   return (
@@ -475,56 +452,27 @@ export const GoalFormScreen: React.FC = () => {
           )}
         </View>
 
-        {/* 目標タイム・初期タイム (初期タイムは種目 × 水路の自己ベストが自動で入る) */}
-        <View style={styles.timeRow}>
-          <View style={styles.timeColumn}>
-            <Text
-              style={styles.timeLabel}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
-            >
-              {t("goals.form.targetTimeLabel")}
-            </Text>
-            <TimeSecondsInput
-              value={form.targetTime}
-              onChange={(targetTime) => patchForm({ targetTime })}
-              placeholder={t("goals.form.targetTimePlaceholder")}
-              required
-              requiredErrorMessage={t("goals.paramsForm.timeRequired")}
-              invalidErrorMessage={t("goals.paramsForm.timeInvalid")}
-              accessibilityLabel={t("goals.form.targetTimeLabel")}
-              testID="goal-target-time"
-            />
-          </View>
-          <View style={styles.timeColumn}>
-            <Text
-              style={styles.timeLabel}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
-            >
-              {t("goals.form.startTimeLabel")}
-            </Text>
-            <TimeSecondsInput
-              key={startTimeResetKey}
-              value={form.startTime}
-              onChange={(startTime) => {
-                markTouched();
-                patchForm({ startTime });
-              }}
-              onInvalidChange={setStartTimeInvalid}
-              forceInvalid={startTimeInvalid && !!saveError}
-              placeholder={
-                isLoadingBest
-                  ? t("common.loading")
-                  : t("goals.form.startTimePlaceholder")
-              }
-              invalidErrorMessage={t("goals.paramsForm.timeInvalid")}
-              accessibilityLabel={t("goals.form.startTimeLabel")}
-              testID="goal-start-time"
-            />
-          </View>
+        {/* 目標タイム・ベストラベル */}
+        <View style={styles.timeColumn}>
+          <Text style={styles.timeLabel}>{t("goals.form.targetTimeLabel")}</Text>
+          <TimeSecondsInput
+            value={form.targetTime}
+            onChange={(targetTime) => patchForm({ targetTime })}
+            placeholder={t("goals.form.targetTimePlaceholder")}
+            required
+            requiredErrorMessage={t("goals.paramsForm.timeRequired")}
+            invalidErrorMessage={t("goals.paramsForm.timeInvalid")}
+            accessibilityLabel={t("goals.form.targetTimeLabel")}
+            testID="goal-target-time"
+          />
+          {/* ベストタイム参照バッジ (CompetitionTabFormScreen と同じ見た目) */}
+          {entryBestTime && (
+            <View style={styles.bestTimeBadge} testID="goal-best-time-label">
+              <Text style={styles.bestTimeBadgeText}>
+                {t(entryBestTime.labelKey)}: {formatTimeBest(entryBestTime.time)}
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -637,14 +585,20 @@ const styles = StyleSheet.create({
   newCompetition: {
     gap: 14,
   },
-  timeRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-  },
   timeColumn: {
-    flex: 1,
     gap: 8,
+  },
+  // ベストタイム参照バッジ (CompetitionTabFormScreen の bestTimeBadge と同じ見た目)
+  bestTimeBadge: {
+    backgroundColor: "#DCFCE7", // green-100
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+  },
+  bestTimeBadgeText: {
+    fontSize: 12,
+    color: "#15803D", // green-700
   },
   timeLabel: {
     fontSize: 14,

@@ -1018,7 +1018,6 @@
       "unknown": "알 수 없는 오류"
     },
     "handlers": {
-      "fetchPracticeFailed": "연습 데이터를 불러오지 못했습니다",
       "updateImagePathFailed": "이미지 경로 업데이트에 실패했습니다",
       "practiceCreatedButImageFailed": "연습은 생성되었지만 이미지 업로드에 실패했습니다",
       "authRequired": "인증된 사용자가 필요합니다",
@@ -2142,18 +2141,24 @@
       "competitionFallback": "대회",
       "styleFallback": "종목",
       "competitionInfoUnavailable": "대회 정보 없음",
-      "editUnavailableReason": "대회 정보가 없어 수정할 수 없습니다"
+      "editUnavailableReason": "대회 정보가 없어 수정할 수 없습니다",
+      "diffFromBest": "(베스트{diff})"
     },
     "detail": {
       "loadError": "목표 상세 정보를 불러오지 못했습니다",
       "retry": "다시 불러오기",
       "targetTime": "목표 기록",
-      "initialTime": "초기 기록",
       "notSet": "설정 안 됨",
-      "achievement": "달성률",
       "milestoneSection": "마일스톤",
       "milestoneRatio": "마일스톤 달성률",
-      "milestoneAdd": "추가"
+      "milestoneAdd": "추가",
+      "currentBest": "현재 베스트",
+      "noRecord": "기록 없음",
+      "remainingSeconds": "{seconds}초 남음",
+      "targetReached": "목표 기록 달성",
+      "daysLeft": "{days}일 남음",
+      "competitionToday": "오늘",
+      "competitionFinished": "종료"
     },
     "create": {
       "title": "새 목표 만들기",
@@ -2161,7 +2166,6 @@
       "cancelButton": "취소",
       "closeAriaLabel": "닫기",
       "targetTimeInvalid": "목표 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
-      "startTimeInvalid": "시작 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
       "competitionRequired": "대회를 선택해 주세요",
       "createFailed": "목표 생성에 실패했습니다"
     },
@@ -2173,7 +2177,6 @@
       "updateFailed": "목표 업데이트에 실패했습니다",
       "validation": {
         "targetTimeInvalid": "목표 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
-        "startTimeInvalid": "시작 기록을 올바르게 입력해 주세요 (0초 초과~60분 이내)",
         "styleNotSelected": "종목이 선택되지 않았습니다."
       }
     },
@@ -2181,7 +2184,6 @@
       "title": "대회 목표 돌아보기",
       "expiredDesc": "다음 대회 목표가 기한에 도달했습니다",
       "targetLabel": "목표:",
-      "initialTimeLabel": "초기 기록:",
       "competitionDateLabel": "대회일:",
       "milestoneAchievedText": "마일스톤 달성: {achieved}/{total}",
       "achievedQuestion": "목표를 달성하셨나요?",
@@ -2299,14 +2301,11 @@
       "selectCompetitionPlaceholder": "대회 선택",
       "competitionNamePlaceholder": "대회명",
       "competitionPlacePlaceholder": "장소 (선택)",
-      "competitionDateLabel": "대회일",
       "competitionFallback": "대회",
       "styleLabel": "종목",
       "selectStylePlaceholder": "종목 선택",
       "targetTimeLabel": "목표 기록",
       "targetTimePlaceholder": "2.00.00",
-      "startTimeLabel": "초기 기록 (선택)",
-      "startTimePlaceholder": "2.00.00",
       "personalCompetitionGroup": "개인",
       "teamCompetitionGroupFallback": "팀 대회",
       "competitionDatePast": "새 대회 날짜는 오늘 이후로 선택해 주세요"
@@ -2369,9 +2368,11 @@
       "goalSetDesc": "50m×6개×3세트 (100m 목표 기록에서 역산)"
     },
     "milestoneSummary": {
-      "time": "{distance}m × 1개: {time}",
+      "time": "{distance}m: {time}",
       "repsTime": "{distance}m × {reps}개 @{time} 평균",
-      "set": "{distance}m × {reps}개 × {sets}세트 (@{circle} 서클) 완주"
+      "repsTimeWithSets": "{distance}m × {reps}개 × {sets}세트 @{time} 평균",
+      "set": "{distance}m × {reps}개 ({circle} 서클) 완주",
+      "setWithSets": "{distance}m × {reps}개 × {sets}세트 ({circle} 서클) 완주"
     },
     "mobile": {
       "notFound": "목표를 찾을 수 없습니다",
@@ -2391,7 +2392,6 @@
     "loadError": "목표를 불러오지 못했습니다",
     "retry": "다시 시도",
     "snapshotNote": "멤버가 앱에서 마지막으로 업데이트한 시점의 상태입니다",
-    "progressUnavailable": "대회 정보가 없어 달성률을 계산할 수 없습니다",
     "section": {
       "upcoming": "예정된 대회",
       "past": "지난 대회",
@@ -3995,8 +3995,8 @@
         "labelNote": "비고",
         "poolShort": "단수로 (25m)",
         "poolLong": "장수로 (50m)",
-        "addPracticeRowButton": "+ 연습 추가",
-        "addCompetitionRowButton": "+ 대회 추가",
+        "addPracticeRowButton": "연습 추가",
+        "addCompetitionRowButton": "대회 추가",
         "deleteRowButton": "삭제",
         "submitButton": "등록하기",
         "submitting": "등록 중...",
@@ -4233,9 +4233,6 @@
       "cancel": "취소"
     },
     "practiceLog": {
-      "title_create": "연습 기록 추가",
-      "title_edit": "연습 기록 편집",
-      "close_aria": "연습 기록 닫기",
       "templateFrom": "템플릿",
       "templateFromLong": "템플릿에서 만들기",
       "addMenu": "메뉴 추가",
@@ -4246,8 +4243,6 @@
       "cancel": "취소",
       "save": "저장",
       "saving": "저장 중...",
-      "update": "업데이트",
-      "updating": "업데이트 중...",
       "videoLabel": "동영상",
       "menuHeader": "메뉴 {n}"
     },
@@ -4513,6 +4508,10 @@
       "videoUpload": "동영상 첨부는 Premium 회원 전용입니다",
       "splitTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로",
       "practiceTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로"
+    },
+    "itemTabs": {
+      "removeConfirmTitle": "{label}을(를) 삭제하시겠습니까?",
+      "removeConfirmMessage": "{label}의 입력된 데이터가 삭제됩니다."
     }
   },
   "timeLevel": {

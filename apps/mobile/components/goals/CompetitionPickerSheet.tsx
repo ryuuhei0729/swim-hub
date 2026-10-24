@@ -93,8 +93,8 @@ export const CompetitionPickerSheet: React.FC<CompetitionPickerSheetProps> = ({
                     accessibilityState={{ selected }}
                   >
                     <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
-                      {competition.title || t("goals.form.competitionFallback")} -{" "}
-                      {formatDate(competition.date, "numeric", locale)}
+                      {formatDate(competition.date, "numeric", locale)}{" "}
+                      {competition.title || t("goals.form.competitionFallback")}
                     </Text>
                     {selected && <Feather name="check" size={18} color="#2563EB" />}
                   </Pressable>

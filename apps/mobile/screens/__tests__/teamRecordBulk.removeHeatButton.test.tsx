@@ -32,7 +32,7 @@
 import { act, fireEvent, render, screen, waitFor, configure } from "@testing-library/react";
 import React from "react";
 import { Alert } from "react-native";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
 import {
   buildDetailScreenSupabaseMock,
@@ -81,7 +81,6 @@ function getAlertButtons() {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   capturedMemberSelectProps.length = 0;
   harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
   harness.getStyles.mockResolvedValue([STYLE]);

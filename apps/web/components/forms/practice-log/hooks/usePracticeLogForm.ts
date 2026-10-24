@@ -49,7 +49,7 @@ function createDefaultMenu(id: string = "1"): PracticeMenu {
 }
 
 /**
- * PracticeLogForm の状態管理フック
+ * 練習ログ (メニュー) 入力の状態管理フック (PracticeTabModal が使う)
  */
 export const usePracticeLogForm = ({
   isOpen,

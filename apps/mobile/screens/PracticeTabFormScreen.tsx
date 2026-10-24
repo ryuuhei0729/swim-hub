@@ -62,7 +62,12 @@ import {
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
-import { hasUnsavedChanges, diffPracticeLogDraft, getTabNavAdjacency } from "@/utils/tabFormUtils";
+import {
+  hasUnsavedChanges,
+  diffPracticeLogDraft,
+  getTabNavAdjacency,
+  hasPracticeMenuData,
+} from "@/utils/tabFormUtils";
 import { usePracticeTimeStore } from "@/stores/practiceTimeStore";
 import type { MainStackParamList } from "@/navigation/types";
 import type { PracticeTag, PracticeWithLogs } from "@apps/shared/types";
@@ -1135,32 +1140,39 @@ export const PracticeTabFormScreen: React.FC = () => {
     }
   }, [templateName, menus, createTemplateMutation, executeSave, t]);
 
-  // ---- テンプレートから作成 (web handleTemplateSelect と同じ: メニューをテンプレート1件で置き換え) ----
+  // ---- テンプレートから作成 ----
+  // ボタンは各メニューカードの中にあるので、表示中のメニュー1件の設定欄だけを上書きする。
+  // タイム・動画・既存ログ ID と他のメニューは変えない (チーム代理入力
+  // TeamPracticeLogBulkFormScreen.handleTemplateSelect と同じ)。全メニューを置き換えると、
+  // 入力済みのタイムや他のメニューが確認なしで消え、編集中なら保存時に既存ログが
+  // DB から削除される。
   const handleTemplateSelect = useCallback(
     (template: PracticeLogTemplate) => {
+      const targetIndex = activeMenuIndex;
       const circleTime = template.circle || 0;
       const templateTags = template.tag_ids
         ? availableTags.filter((tag) => template.tag_ids.includes(tag.id))
         : [];
-      const templateMenu: PracticeMenu = {
-        id: `menu-${Date.now()}-${Math.random()}`,
-        style: template.style,
-        swimCategory: template.swim_category,
-        distance: template.distance,
-        reps: template.rep_count,
-        sets: template.set_count,
-        circleMin: Math.floor(circleTime / 60),
-        circleSec: circleTime % 60,
-        note: template.note || "",
-        tags: templateTags,
-        times: [],
-        videoPath: null,
-        videoThumbnailPath: null,
-      };
-      setMenus([templateMenu]);
-      setActiveMenuIndex(0);
+      setMenus((prev) =>
+        prev.map((menu, i) =>
+          i === targetIndex
+            ? {
+                ...menu,
+                style: template.style,
+                swimCategory: template.swim_category,
+                distance: template.distance,
+                reps: template.rep_count,
+                sets: template.set_count,
+                circleMin: Math.floor(circleTime / 60),
+                circleSec: circleTime % 60,
+                note: template.note || "",
+                tags: templateTags,
+              }
+            : menu,
+        ),
+      );
     },
-    [availableTags],
+    [availableTags, activeMenuIndex],
   );
 
   // ---- メニュー操作 ----
@@ -1548,6 +1560,13 @@ export const PracticeTabFormScreen: React.FC = () => {
                           }
                         : undefined
                     }
+                    shouldConfirmRemove={(i) => {
+                      const target = menus[i];
+                      return (
+                        !!target &&
+                        hasPracticeMenuData(target, pendingVideoAssetRef.current.has(target.id))
+                      );
+                    }}
                     label={(i) => t("practice.details.menuNumber", { n: i + 1 })}
                     accent="green"
                     disabled={isSaving}

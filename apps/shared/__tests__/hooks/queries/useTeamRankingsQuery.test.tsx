@@ -117,7 +117,6 @@ describe("useTeamRankingsQuery", () => {
   let supabase: ReturnType<typeof createMockSupabaseClient>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabase = createMockSupabaseClient();
   });
 
@@ -224,7 +223,6 @@ describe("useTeamHasAnyRecordQuery", () => {
   let supabase: ReturnType<typeof createMockSupabaseClient>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabase = createMockSupabaseClient();
   });
 

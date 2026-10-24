@@ -143,11 +143,6 @@ export default function GoalReflectionModal({
                 <p className="text-sm text-gray-600 mt-1">
                   {goal.style?.name_jp || t("goalReflection.styleFallback")} | {t("goalReflection.targetLabel")} {formatTimeBest(goal.target_time)}
                 </p>
-                {goal.start_time && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {t("goalReflection.initialTimeLabel")} {formatTimeBest(goal.start_time)}
-                  </p>
-                )}
                 <p className="text-xs text-gray-500 mt-1">
                   {t("goalReflection.competitionDateLabel")}{" "}
                   {goal.competition?.date && isValid(new Date(goal.competition.date))

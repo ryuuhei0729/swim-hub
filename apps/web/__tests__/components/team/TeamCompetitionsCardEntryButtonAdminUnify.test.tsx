@@ -38,13 +38,9 @@ const FUTURE_DATE = format(addDays(NOW, 5), "yyyy-MM-dd");
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 const mocks = vi.hoisted(() => ({
   entryModalSpy: vi.fn(),
@@ -98,31 +94,28 @@ function buildSupabaseMock(rows: ReturnType<typeof buildCompetitionRow>[]) {
   return { from: fromMock };
 }
 
-let currentAuthMock: { user: { id: string }; supabase: ReturnType<typeof buildSupabaseMock> };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitions from "@/components/team/TeamCompetitions";
 
 describe("TeamCompetitions — 大会カードのエントリーボタン統一 (admin/非admin 同一導線, web)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "member-1" },
       supabase: buildSupabaseMock([]),
-    };
+    }));
   });
 
   describe("[V-W-05] SC5: admin が最初に見るボタンが「エントリー」であり、同じモーダルが開く", () => {
     it("admin ビューのカードで最初に表示されるボタンのラベルが「エントリー」である", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock([
           buildCompetitionRow({ date: FUTURE_DATE, title: "admin統一検証大会" }),
         ]),
-      };
+      }));
       render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
       await screen.findByText("admin統一検証大会");
@@ -130,12 +123,12 @@ describe("TeamCompetitions — 大会カードのエントリーボタン統一 
     });
 
     it("admin がそのボタンを押すと、非admin と同じ TeamCompetitionEntryModal が isOpen: true で開く", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock([
           buildCompetitionRow({ id: "c-admin-open", date: FUTURE_DATE, title: "admin遷移検証大会" }),
         ]),
-      };
+      }));
       const user = userEvent.setup();
       render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
@@ -154,12 +147,12 @@ describe("TeamCompetitions — 大会カードのエントリーボタン統一 
     });
 
     it("[回帰] admin 専用の「エントリー入力」ボタン (entryBulkInputButton) はカード上に存在しない", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock([
           buildCompetitionRow({ date: FUTURE_DATE, title: "admin回帰検証大会" }),
         ]),
-      };
+      }));
       render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
       await screen.findByText("admin回帰検証大会");
@@ -167,12 +160,12 @@ describe("TeamCompetitions — 大会カードのエントリーボタン統一 
     });
 
     it("[非退行] 非admin のカードのエントリーボタンの見た目・遷移は変わらない", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
         supabase: buildSupabaseMock([
           buildCompetitionRow({ id: "c-nonadmin", date: FUTURE_DATE, title: "非admin検証大会" }),
         ]),
-      };
+      }));
       const user = userEvent.setup();
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
@@ -187,12 +180,12 @@ describe("TeamCompetitions — 大会カードのエントリーボタン統一 
     // R9 (実測): admin は過去日でも「エントリー」ボタンが見える (代理入力への到達能力維持)。
     // 非admin は過去日で従来どおり非表示 (TeamCompetitionsEntryButtonPastDate.test.tsx [V-01] と同じ)。
     it("[R9/非退行] admin は過去日でも「エントリー」ボタンが表示される (過去大会への到達能力維持)", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock([
           buildCompetitionRow({ date: PAST_DATE, title: "admin過去大会検証" }),
         ]),
-      };
+      }));
       render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
       await screen.findByText("admin過去大会検証");

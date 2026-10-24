@@ -2,18 +2,22 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { formatTimeBest } from "@apps/shared/utils/time";
-import { GoalProgressBar } from "./GoalProgressBar";
+import { useAuth } from "@/contexts/AuthProvider";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { useGoalCurrentBestTimeQuery } from "@apps/shared/hooks/queries/goals";
+import { formatDate } from "@apps/shared/utils/date";
+import { formatSignedSeconds, formatTimeBest } from "@apps/shared/utils/time";
 
 interface GoalCardProps {
+  goalId: string;
   /** null = 大会情報なし (個人大会削除・チーム退会)。判定は === null の1本 */
   competitionTitle: string | null | undefined;
+  /** 大会日 (yyyy-MM-dd)。大会情報なしは undefined */
+  competitionDate: string | null | undefined;
   competitionUnavailable: boolean;
   styleName: string;
   targetTime: number;
   achieved: boolean;
-  /** undefined = 計算中、null = 計算不能 (水路が分からない) */
-  progress: number | null | undefined;
   onPress: () => void;
   /** 大会情報なしの目標では渡さない (編集導線を出さない) */
   onEdit?: () => void;
@@ -21,20 +25,30 @@ interface GoalCardProps {
 }
 
 export const GoalCard: React.FC<GoalCardProps> = ({
+  goalId,
   competitionTitle,
+  competitionDate,
   competitionUnavailable,
   styleName,
   targetTime,
   achieved,
-  progress,
   onPress,
   onEdit,
   onDelete,
 }) => {
   const { t } = useTranslation();
+  const { supabase } = useAuth();
+  const locale = useDateLocale();
+  const { data: currentBestTime } = useGoalCurrentBestTimeQuery(supabase, goalId);
   const title = competitionUnavailable
     ? t("goals.list.competitionInfoUnavailable")
     : competitionTitle || t("goals.list.competitionFallback");
+  // 目標タイムと現在のベストの差 (Best-0.01)。ベストが分からない (取得中・失敗・記録なし・
+  // 大会情報なしで水路が分からない) ときは出さない
+  const diffFromBest =
+    !competitionUnavailable && currentBestTime != null
+      ? t("goals.list.diffFromBest", { diff: formatSignedSeconds(targetTime - currentBestTime) })
+      : null;
 
   return (
     <Pressable
@@ -45,17 +59,15 @@ export const GoalCard: React.FC<GoalCardProps> = ({
     >
       <View style={styles.header}>
         <View style={styles.headerText}>
+          {/* 1行に収める。大会名が長いときは … で省略する (日付は縮めない) */}
           <View style={styles.titleRow}>
+            {competitionDate ? (
+              <Text style={styles.date}>{formatDate(competitionDate, "numeric", locale)}</Text>
+            ) : null}
             <Text style={styles.title} numberOfLines={1}>
               {title}
             </Text>
-            {achieved && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{t("goals.list.achievedBadge")}</Text>
-              </View>
-            )}
           </View>
-          <Text style={styles.style}>{styleName}</Text>
           {competitionUnavailable && (
             <Text style={styles.unavailable}>{t("goals.list.editUnavailableReason")}</Text>
           )}
@@ -84,20 +96,21 @@ export const GoalCard: React.FC<GoalCardProps> = ({
         </View>
       </View>
 
-      <View style={styles.progressBlock}>
-        <View style={styles.progressRow}>
-          <Text style={styles.progressText}>
-            {t("goals.list.targetTimePrefix")} {formatTimeBest(targetTime)}
-          </Text>
-          <Text style={styles.progressText}>
-            {progress === undefined
-              ? ""
-              : progress !== null
-                ? `${progress.toFixed(0)}%`
-                : t("goals.detail.notSet")}
-          </Text>
+      {/* 種目名と並び切らないときは、タイムを右寄せのまま次の行に回す */}
+      <View style={styles.styleRow}>
+        {/* 達成バッジは種目名の横に置く。並び切らなければバッジの方を次の行に回す */}
+        <View style={styles.styleBlock}>
+          <Text style={styles.style}>{styleName}</Text>
+          {achieved && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{t("goals.list.achievedBadge")}</Text>
+            </View>
+          )}
         </View>
-        {progress != null && <GoalProgressBar progress={progress} />}
+        <View style={styles.timeBlock}>
+          <Text style={styles.targetTime}>{formatTimeBest(targetTime)}</Text>
+          {diffFromBest && <Text style={styles.diff}>{diffFromBest}</Text>}
+        </View>
       </View>
     </Pressable>
   );
@@ -129,11 +142,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  date: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    fontVariant: ["tabular-nums"],
+  },
   title: {
     flexShrink: 1,
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111827",
+    fontSize: 14,
+    color: "#6B7280",
   },
   badge: {
     paddingHorizontal: 8,
@@ -146,10 +164,25 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#166534",
   },
-  style: {
+  styleRow: {
     marginTop: 4,
-    fontSize: 13,
-    color: "#4B5563",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    columnGap: 8,
+  },
+  styleBlock: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    columnGap: 8,
+    rowGap: 4,
+  },
+  style: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1D4ED8",
   },
   unavailable: {
     marginTop: 4,
@@ -164,16 +197,21 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 6,
   },
-  progressBlock: {
-    marginTop: 12,
-    gap: 6,
-  },
-  progressRow: {
+  timeBlock: {
+    marginLeft: "auto",
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: 4,
   },
-  progressText: {
+  targetTime: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1D4ED8",
+    fontVariant: ["tabular-nums"],
+  },
+  diff: {
     fontSize: 12,
-    color: "#4B5563",
+    color: "#6B7280",
+    fontVariant: ["tabular-nums"],
   },
 });

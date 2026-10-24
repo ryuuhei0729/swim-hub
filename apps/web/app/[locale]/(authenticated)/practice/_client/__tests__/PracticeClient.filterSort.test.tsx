@@ -37,8 +37,6 @@ vi.mock("@apps/shared/hooks/queries/practices", () => ({
   useCreatePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdatePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeletePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useCreatePracticeTimeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeletePracticeTimeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/components/forms/PracticeTabModal", () => ({

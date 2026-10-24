@@ -97,17 +97,21 @@ describe.each(NAMESPACES)("%s: 5言語の一致", (ns) => {
   });
 });
 
-describe("goals.milestoneSummary (D1 完了済み): 実在・3キー・補間変数", () => {
-  it("ja に time / repsTime / set の3キーが厳密に実在する (空走査で緑にならない)", () => {
+// 2026-10-15: セット数は2セット以上のときだけ出すため、1セット用 (repsTime / set) と
+// 2セット以上用 (repsTimeWithSets / setWithSets) に分けた。1セット用は {sets} を含まない
+describe("goals.milestoneSummary: 実在・5キー・補間変数", () => {
+  it("ja に time / repsTime / repsTimeWithSets / set / setWithSets の5キーが厳密に実在する (空走査で緑にならない)", () => {
     const sec = pick(ja as unknown as Tree, "goals.milestoneSummary");
-    expect(Object.keys(sec ?? {}).sort()).toEqual(["repsTime", "set", "time"]);
+    expect(Object.keys(sec ?? {}).sort()).toEqual(["repsTime", "repsTimeWithSets", "set", "setWithSets", "time"]);
   });
-  it.each(LOCALES.map(([l]) => l))("%s: 各キーの補間変数が仕様どおり (time={distance,time} / repsTime={distance,reps,time} / set={circle,distance,reps,sets})", (loc) => {
+  it.each(LOCALES.map(([l]) => l))("%s: 各キーの補間変数が仕様どおり (time={distance,time} / repsTime={distance,reps,time} / repsTimeWithSets={distance,reps,sets,time} / set={circle,distance,reps} / setWithSets={circle,distance,reps,sets})", (loc) => {
     const tree = LOCALES.find(([l]) => l === loc)![1];
     const f = flatten(pick(tree, "goals.milestoneSummary") ?? {});
     expect(placeholders(f.time as string)).toEqual(["distance", "time"]);
     expect(placeholders(f.repsTime as string)).toEqual(["distance", "reps", "time"]);
-    expect(placeholders(f.set as string)).toEqual(["circle", "distance", "reps", "sets"]);
+    expect(placeholders(f.repsTimeWithSets as string)).toEqual(["distance", "reps", "sets", "time"]);
+    expect(placeholders(f.set as string)).toEqual(["circle", "distance", "reps"]);
+    expect(placeholders(f.setWithSets as string)).toEqual(["circle", "distance", "reps", "sets"]);
   });
 });
 
@@ -212,7 +216,7 @@ function walkSrc(dir: string, out: string[] = []): string[] {
 }
 const MOBILE_FILES = [
   "screens/GoalsScreen.tsx", "screens/GoalDetailScreen.tsx", "screens/GoalFormScreen.tsx", "screens/MilestoneFormScreen.tsx",
-  "hooks/useExpiredGoalCheck.ts", "hooks/useGoalProgress.ts", "hooks/useMilestoneSummary.ts",
+  "hooks/useExpiredGoalCheck.ts", "hooks/useMilestoneSummary.ts",
   "navigation/TabNavigator.tsx", "navigation/MainStack.tsx", "navigation/TabBarLabel.tsx",
   ...walkSrc(path.join(APPS, "mobile/components/goals")).map((f) => path.relative(path.join(APPS, "mobile"), f)),
 ].map((f) => path.join(APPS, "mobile", f));
@@ -238,22 +242,18 @@ const exists = (tree: Tree, dotted: string) => {
 describe("S10 使用キーの実在 (静的 t('…') を抽出)", () => {
   it("mobile: 目標関連ソースの完全修飾キーが5言語に実在する", () => {
     const keys = new Set<string>();
-    let dynamic = 0;
     for (const f of MOBILE_FILES) {
       const r = extractKeys(readFileSync(f, "utf8"));
       r.statics.forEach((k) => keys.add(k));
-      dynamic += r.dynamic;
     }
     // 空走査防止: 画面・コンポーネント群から相当数のキーが取れていること
     expect(keys.size).toBeGreaterThan(80);
     const missing = [...keys].flatMap((k) => LOCALES.filter(([, tree]) => !exists(tree, k)).map(([l]) => `${l}:${k}`));
     expect(missing).toEqual([]);
-    console.log(`[S10 mobile] 静的キー ${keys.size} 件を検証、動的キー (対象外) ${dynamic} 件`);
   });
 
   it("web: goals 配下の useTranslations('goals') 相対キーが5言語の goals.* に実在する", () => {
     const keys = new Set<string>();
-    let dynamic = 0;
     let files = 0;
     for (const f of WEB_GOALS) {
       const src = readFileSync(f, "utf8");
@@ -261,13 +261,11 @@ describe("S10 使用キーの実在 (静的 t('…') を抽出)", () => {
       files++;
       const r = extractKeys(src);
       r.statics.forEach((k) => keys.add(`goals.${k}`));
-      dynamic += r.dynamic;
     }
     expect(files).toBeGreaterThan(5);
     expect(keys.size).toBeGreaterThan(80);
     const missing = [...keys].flatMap((k) => LOCALES.filter(([, tree]) => !exists(tree, k)).map(([l]) => `${l}:${k}`));
     expect(missing).toEqual([]);
-    console.log(`[S10 web] ${files} ファイルの静的キー ${keys.size} 件を検証、動的キー (対象外) ${dynamic} 件`);
   });
 
   it("抽出関数が欠落キーを実際に検出する (自己検査)", () => {

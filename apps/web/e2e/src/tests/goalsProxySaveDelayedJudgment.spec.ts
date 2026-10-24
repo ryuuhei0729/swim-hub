@@ -4,6 +4,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { EnvConfig } from "../config/config";
 import { supabaseLogin } from "../utils/supabase-login";
 
+// マイルストーンは「作った後に登録した記録」(練習日・大会日も作成日の前日以降) だけで達成になる (2026-10-15)。
+// このテストで作る記録より前に作ったことにして、日付・登録順の条件と切り離す
+const MILESTONE_CREATED_AT = subDays(new Date(), 30).toISOString();
+
 /**
  * 目標管理: チーム代理入力・mobile 保存分のマイルストーン判定 (遅延評価) の実機検証。
  *
@@ -168,7 +172,6 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
         competition_id: null,
         style_id: styleId,
         target_time: 65.0,
-        start_time: 90.0,
         status: "active",
       })
       .select("id")
@@ -181,6 +184,7 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
       .from("milestones")
       .insert({
         goal_id: goalId,
+        created_at: MILESTONE_CREATED_AT,
         title: "E2Eプロキシ練習マイルストーン",
         type: "set",
         // style は Br にして time型マイルストーン (M2, distance=100/style=Fr) と
@@ -202,6 +206,7 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
       .from("milestones")
       .insert({
         goal_id: goalId,
+        created_at: MILESTONE_CREATED_AT,
         title: "E2Eプロキシ大会マイルストーン",
         type: "time",
         params: { distance: 100, target_time: 60, style: "Fr", swim_category: "Swim" },
@@ -219,6 +224,7 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
       .from("milestones")
       .insert({
         goal_id: goalId,
+        created_at: MILESTONE_CREATED_AT,
         title: "E2Eプロキシ期限切れマイルストーン",
         type: "set",
         params: { distance: 150, style: "Fr", swim_category: "Swim", reps: 4, sets: 1, circle: 90 },
@@ -235,6 +241,7 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
       .from("milestones")
       .insert({
         goal_id: goalId,
+        created_at: MILESTONE_CREATED_AT,
         title: "E2Eプロキシmobileマイルストーン",
         type: "set",
         params: { distance: 200, style: "Fr", swim_category: "Swim", reps: 4, sets: 1, circle: 90 },
@@ -251,6 +258,7 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
       .from("milestones")
       .insert({
         goal_id: goalId,
+        created_at: MILESTONE_CREATED_AT,
         title: "E2Eプロキシgoals直接マイルストーン",
         type: "set",
         params: { distance: 250, style: "Fr", swim_category: "Swim", reps: 4, sets: 1, circle: 90 },

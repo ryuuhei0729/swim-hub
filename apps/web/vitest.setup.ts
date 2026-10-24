@@ -9,10 +9,9 @@ import { afterEach, vi } from "vitest";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 
-// 各テスト後にクリーンアップ
+// 各テスト後にクリーンアップ (モックの呼び出し履歴は vitest.config の clearMocks が各テスト前に消す)
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
 });
 
 // グローバルなモック設定
@@ -33,23 +32,26 @@ global.IntersectionObserver = vi.fn().mockImplementation(function () {
   };
 });
 
-// matchMedia のモック
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: vi.fn().mockImplementation((query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
+// .ts のテストは node 環境で動くため window が無い (vitest.config.ts の projects)
+if (typeof window !== "undefined") {
+  // matchMedia のモック
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
 
-// scrollTo のモック
-Object.defineProperty(window, "scrollTo", {
-  writable: true,
-  value: vi.fn(),
-});
+  // scrollTo のモック
+  Object.defineProperty(window, "scrollTo", {
+    writable: true,
+    value: vi.fn(),
+  });
+}

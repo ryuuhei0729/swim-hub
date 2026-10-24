@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { AttendanceAPI } from "../../api/attendance";
 import type { AttendanceStatus, TeamAttendance } from "../../types";
 import { createSupabaseMock } from "../utils/supabase-mock";
@@ -80,10 +80,6 @@ const countEditMarks = (note: string | null): number => {
 };
 
 describe("改修1: bulkUpdateMyAttendances の締切後編集マーク", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("V-01 getEditMark 締切後ケースの文言", () => {
     it("note 空での締切後編集は「(MM/dd HH:mm締切後編集)」のみになる", async () => {
       const { finalNote } = await runClosedBulkUpdate(null);

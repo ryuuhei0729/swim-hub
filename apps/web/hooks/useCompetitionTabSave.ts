@@ -109,6 +109,7 @@ export function useCompetitionTabSave({
         editingCompetitionId: paramEditingId,
         originalEntryIds,
         originalRecordIds,
+        originalSplitRecordIds,
         competitionRowResolved,
       } = params;
 
@@ -287,6 +288,7 @@ export function useCompetitionTabSave({
       const poolType = isPoolType(basicData.poolType) ? basicData.poolType : 0;
 
       const recordDiff = computeRecordDiff(records, originalRecordIds);
+      const splitRecordIdSet = new Set(originalSplitRecordIds);
 
       // DELETE removed records
       for (const id of recordDiff.toDelete) {
@@ -305,7 +307,11 @@ export function useCompetitionTabSave({
           pool_type: poolType,
           reaction_time: formData.reactionTime?.trim() ? parseFloat(formData.reactionTime) : null,
         });
-        if (formData.splitTimes?.length) {
+        // 途中スプリットを全部消したときも空配列で置き換えて DB から消す
+        // (0 件で呼ばないと、消したはずのスプリットが DB に残る)。
+        // 読み込み時に無かった記録では呼ばない (不要な DELETE を出さない・読み込みに
+        // 失敗して空に見えている記録の既存スプリットを消さない)
+        if (formData.splitTimes?.length || splitRecordIdSet.has(id)) {
           await replaceSplitTimes({
             recordId: id,
             splitTimes: formData.splitTimes.map((st) => ({

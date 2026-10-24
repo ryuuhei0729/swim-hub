@@ -75,11 +75,9 @@ function buildSupabaseMock(responses: Record<string, ChainResponse>) {
   };
 }
 
-let currentAuthMock: { supabase: ReturnType<typeof buildSupabaseMock> };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitionEntryModal from "@/components/team/TeamCompetitionEntryModal";
 
@@ -99,12 +97,13 @@ function renderModal(
   // 往路を検証対象にしていないため、既定値は false (= /teams/ 起点) に固定する。
   routeIsAdmin = false,
 ) {
-  currentAuthMock = {
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+    user: null,
     supabase: buildSupabaseMock({
       competitions: { data: makeCompetitionRow({ entry_status: entryStatus }), error: null },
       team_memberships: { data: { role }, error: null },
     }),
-  };
+  }));
   return render(
     <TeamCompetitionEntryModal
       isOpen={true}
@@ -119,7 +118,6 @@ function renderModal(
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   mocks.getEntriesByCompetition.mockResolvedValue([]);
 });
 

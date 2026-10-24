@@ -21,6 +21,7 @@
  * 「例外を投げたマイルストーン以外の最終ステータス」という観測可能な副作用のみを固定する。
  */
 import { describe, expect, it, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { GoalAPI } from "../../api/goals";
 import type { Milestone } from "../../types";
 
@@ -64,8 +65,7 @@ function createFakeSupabase(options: {
   function makeMilestonesBuilder() {
     let single = false;
     let pendingStatus: string | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const builder: any = {};
+    const builder: Record<string, unknown> = {};
     for (const name of ["select", "in"]) {
       builder[name] = vi.fn(() => builder);
     }
@@ -98,8 +98,7 @@ function createFakeSupabase(options: {
 
   function makePracticeLogsBuilder() {
     let currentDistance: number | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const builder: any = {};
+    const builder: Record<string, unknown> = {};
     for (const name of ["select", "ilike", "order", "gte", "lte", "limit"]) {
       builder[name] = vi.fn(() => builder);
     }
@@ -130,8 +129,7 @@ function createFakeSupabase(options: {
   }
 
   function makeUpdateStatusBuilder() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const builder: any = {};
+    const builder: Record<string, unknown> = {};
     for (const name of ["update", "eq", "select", "insert"]) {
       builder[name] = vi.fn(() => builder);
     }
@@ -150,8 +148,7 @@ function createFakeSupabase(options: {
    */
   function makeMilestoneAchievementsBuilder() {
     let isInsert = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const builder: any = {};
+    const builder: Record<string, unknown> = {};
     for (const name of ["select", "eq"]) {
       builder[name] = vi.fn(() => builder);
     }
@@ -180,8 +177,7 @@ function createFakeSupabase(options: {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }),
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any;
+  } as unknown as SupabaseClient;
 
   return { supabase, fromCalls, practiceLogsStartTimes, practiceLogsEndTimes, statusUpdates };
 }

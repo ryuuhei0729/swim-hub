@@ -27,10 +27,8 @@
  *     目標タイム行: ラベル
  *   GoalDetail.tsx →
  *     目標タイム: ラベル
- *     初期タイム: ラベル / 未設定テキスト
- *     達成率: ラベル
  *     マイルストーンセクション: タイトル
- *     マイルストーン達成率: ラベル
+ *     マイルストーン達成率: ラベル / 未設定テキスト (マイルストーン0件)
  *     マイルストーン追加ボタン
  *   GoalCreateModal.tsx →
  *     モーダルタイトル
@@ -87,10 +85,10 @@
  *   GoalForm.tsx →
  *     大会ラベル / 既存大会選択ラジオ / 新規大会作成ラジオ
  *     大会選択placeholder / 大会名placeholder / 場所placeholder
- *     大会日ラベル
  *     種目ラベル / 種目選択placeholder
  *     目標タイムラベル / 目標タイムplaceholder
- *     初期タイムラベル / 初期タイムplaceholder
+ *     (新規大会の開始日・終了日・大会名・水路・場所のラベルと、ベストタイムラベルは forms.competition.* /
+ *      forms.recordLog.* を使う。Contract v4)
  *   MilestoneForm.tsx →
  *     テンプレートラベル / テンプレート選択placeholder
  *     タイプラベル / タイプ選択肢 × 3（ラベル + 説明）
@@ -120,7 +118,7 @@
  *   - ProgressBar コンポーネント (描画のみ)
  *
  * Boundary Cases:
- *   - 目標タイムの「未設定」テキスト (start_time が null の場合)
+ *   - マイルストーン達成率の「未設定」テキスト (マイルストーン0件の場合)
  *   - マイルストーン 0/n 表示 (goal.milestones 空の場合)
  *   - ゴールセット計算時の「年齢未設定」「性別未設定」エラー (profile 未設定)
  *   - DeadlineInput の label prop デフォルト値「期限日（任意）」
@@ -206,14 +204,13 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 //     達成バッジ: ラベル
 //     目標タイム行: ラベル接頭辞
 //   GoalDetail.tsx →
-//     目標タイムラベル / 初期タイムラベル / 未設定テキスト
-//     達成率ラベル
+//     目標タイムラベル / 未設定テキスト (マイルストーン0件)
 //     マイルストーンセクションタイトル / マイルストーン達成率ラベル
 //     マイルストーン追加ボタン
 //   GoalCreateModal.tsx → タイトル / 作成ボタン / キャンセルボタン
 //   GoalEditModal.tsx → タイトル / 更新ボタン / キャンセルボタン
 //   GoalReflectionModal.tsx →
-//     タイトル / 期限到来文 / 目標ラベル / 初期タイムラベル / 大会日ラベル
+//     タイトル / 期限到来文 / 目標ラベル / 大会日ラベル
 //     マイルストーン達成テキスト / 達成判定ラベル
 //     達成ボタン / 未達成ボタン
 //     振り返りラベル / 選択肢 × 5
@@ -251,10 +248,8 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 //   GoalForm.tsx →
 //     大会ラベル / 既存大会ラジオ / 新規大会ラジオ
 //     大会選択placeholder / 大会名placeholder / 場所placeholder
-//     大会日ラベル
 //     種目ラベル / 種目placeholder
 //     目標タイムラベル / 目標タイムplaceholder
-//     初期タイムラベル / 初期タイムplaceholder
 //   MilestoneForm.tsx →
 //     テンプレートラベル / テンプレート選択placeholder
 //     タイプラベル
@@ -308,12 +303,20 @@ describe("[V-C2B-01] goals namespace の必須キー確認", () => {
     // GoalDetail.tsx
     // --------------------------------------------------------
     "goals.detail.targetTime",
-    "goals.detail.initialTime",
     "goals.detail.notSet",
-    "goals.detail.achievement",
     "goals.detail.milestoneSection",
     "goals.detail.milestoneRatio",
     "goals.detail.milestoneAdd",
+    // GoalList.tsx: 目標タイムと現在のベストの差 (Best-0.01)
+    "goals.list.diffFromBest",
+    // GoalBeforeAfter.tsx (詳細): 現在のベスト・目標までの残り・大会までの残り日数
+    "goals.detail.currentBest",
+    "goals.detail.noRecord",
+    "goals.detail.remainingSeconds",
+    "goals.detail.targetReached",
+    "goals.detail.daysLeft",
+    "goals.detail.competitionToday",
+    "goals.detail.competitionFinished",
 
     // --------------------------------------------------------
     // GoalCreateModal.tsx
@@ -335,7 +338,6 @@ describe("[V-C2B-01] goals namespace の必須キー確認", () => {
     "goals.goalReflection.title",
     "goals.goalReflection.expiredDesc",
     "goals.goalReflection.targetLabel",
-    "goals.goalReflection.initialTimeLabel",
     "goals.goalReflection.competitionDateLabel",
     "goals.goalReflection.milestoneAchievedText",
     "goals.goalReflection.achievedQuestion",
@@ -440,13 +442,10 @@ describe("[V-C2B-01] goals namespace の必須キー確認", () => {
     "goals.form.selectCompetitionPlaceholder",
     "goals.form.competitionNamePlaceholder",
     "goals.form.competitionPlacePlaceholder",
-    "goals.form.competitionDateLabel",
     "goals.form.styleLabel",
     "goals.form.selectStylePlaceholder",
     "goals.form.targetTimeLabel",
     "goals.form.targetTimePlaceholder",
-    "goals.form.startTimeLabel",
-    "goals.form.startTimePlaceholder",
 
     // --------------------------------------------------------
     // MilestoneForm.tsx
@@ -618,6 +617,10 @@ describe("[V-C2B-04] ICU Message Format プレースホルダーの ja/en 対称
     // 達成率パーセント: 現時点ではシンプルな文字列の可能性が高いが念のため
     "goals.goalSetCalculator.ageLabel",
     "goals.goalSetCalculator.resultDescription",
+    // 目標との Best 差 / 目標までの残り秒数 / 大会までの残り日数
+    "goals.list.diffFromBest",
+    "goals.detail.remainingSeconds",
+    "goals.detail.daysLeft",
   ] as const;
 
   for (const key of ICU_KEYS_TO_CHECK) {
@@ -701,13 +704,115 @@ describe("撤去済みの「ベストタイムから取得」系キーが5言語
   for (const [locale, messages] of Object.entries(LOCALE_MESSAGES)) {
     const keys = flattenKeys(messages as unknown as Record<string, unknown>);
     // 比較元が空だと「存在しない」が自明に成立するので、読めていることを先に固定する
-    it(`${locale}.json が読めている (goals.form.startTimeLabel が在る)`, () => {
-      expect(keys).toContain("goals.form.startTimeLabel");
+    it(`${locale}.json が読めている (goals.form.targetTimeLabel が在る)`, () => {
+      expect(keys).toContain("goals.form.targetTimeLabel");
     });
     for (const key of REMOVED_KEYS) {
       it(`${locale}.json に "${key}" が無い`, () => {
         expect(keys).not.toContain(key);
       });
     }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 目標管理の「Best差」「現在のベスト」「あと○秒」「あと○日」(2026-10-13 追加) は5言語すべてに在り、
+// プレースホルダーが ja と同じであること (ja/en 以外で欠けると画面にキー名や {days} が出る)
+// ---------------------------------------------------------------------------
+describe("目標管理の Best 差・現在のベスト・残り表示のキーが5言語に揃っている", () => {
+  const KEYS = {
+    "goals.list.diffFromBest": ["{diff}"],
+    "goals.detail.currentBest": [],
+    "goals.detail.noRecord": [],
+    "goals.detail.remainingSeconds": ["{seconds}"],
+    "goals.detail.targetReached": [],
+    "goals.detail.daysLeft": ["{days}"],
+    "goals.detail.competitionToday": [],
+    "goals.detail.competitionFinished": [],
+  } as const;
+  const LOCALE_MESSAGES = {
+    ja: jaMessages,
+    en: enMessages,
+    de: deMessages,
+    ko: koMessages,
+    zh: zhMessages,
+  } as const;
+
+  for (const [locale, messages] of Object.entries(LOCALE_MESSAGES)) {
+    for (const [key, placeholders] of Object.entries(KEYS)) {
+      it(`${locale}.json の "${key}" が空でない文字列で、プレースホルダーが [${placeholders.join(", ")}]`, () => {
+        const value = getNestedValue(messages as unknown as Record<string, unknown>, key);
+        expect(typeof value).toBe("string");
+        expect((value as string).trim()).not.toBe("");
+        expect([...extractPlaceholders(value)].sort()).toEqual([...placeholders].sort());
+      });
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 初期タイム (goals.start_time) 全廃 (Sprint Contract v2 SC10) と v4 で撤去したキーを5言語のどこにも残さない。
+// 目標フォームが v4 で使う forms.competition.* / forms.recordLog.* のキーは5言語に在る
+// ---------------------------------------------------------------------------
+describe("初期タイムの撤去: 削除したキーが5言語に存在しない", () => {
+  const REMOVED_KEYS = [
+    "goals.detail.initialTime",
+    "goals.goalReflection.initialTimeLabel",
+    "goals.form.startTimeLabel",
+    "goals.form.startTimePlaceholder",
+    "goals.create.startTimeInvalid",
+    "goals.edit.validation.startTimeInvalid",
+    "teamMemberGoals.progressUnavailable",
+    // D8: 管理者カードの見出しも goals.detail.milestoneRatio にしたので、時間ベースの「達成率」は5言語から削除
+    "goals.detail.achievement",
+    // v4: ベストタイムラベルはエントリーと同じ forms.recordLog.* に、新規大会の日付は forms.competition.* に変えた
+    "goals.form.bestTimeLabel",
+    "goals.form.competitionDateLabel",
+  ] as const;
+  // D2 で使うので残すキー (消すと「未設定」が出せない)。記録なしは詳細の「現在のベスト」で使う
+  const KEPT_KEYS = ["goals.detail.notSet", "goals.detail.noRecord", "goals.list.diffFromBest"] as const;
+  const LOCALE_MESSAGES = { ja: jaMessages, en: enMessages, de: deMessages, ko: koMessages, zh: zhMessages } as const;
+
+  for (const [locale, messages] of Object.entries(LOCALE_MESSAGES)) {
+    const keys = flattenKeys(messages as unknown as Record<string, unknown>);
+    it(`${locale}.json: 残すキー (${KEPT_KEYS.join(" / ")}) は在り、削除したキーは無い`, () => {
+      for (const key of KEPT_KEYS) expect(keys, key).toContain(key);
+      for (const key of REMOVED_KEYS) expect(keys, key).not.toContain(key);
+    });
+  }
+});
+
+describe("v4: 目標フォームが使う forms.competition.* / forms.recordLog.* のキーが5言語に在る", () => {
+  const KEYS = [
+    // V4-2 新規大会の入力 (大会記録の登録と同じ部品)
+    "forms.competition.start_date_label",
+    "forms.competition.end_date_label",
+    "forms.competition.end_date_error",
+    "forms.competition.name_label",
+    "forms.competition.place_label",
+    "forms.competition.pool_type_label",
+    "forms.competition.pool_short",
+    "forms.competition.pool_long",
+    "forms.competition.pool_short_abbrev",
+    "forms.competition.pool_long_abbrev",
+    // V4-1 ベストタイムラベル (getBestTimeForEntry の labelKey 6種)
+    "forms.recordLog.bestTimeLabel",
+    "forms.recordLog.bestTimeRelay",
+    "forms.recordLog.bestTimeLong",
+    "forms.recordLog.bestTimeLongRelay",
+    "forms.recordLog.bestTimeShort",
+    "forms.recordLog.bestTimeShortRelay",
+  ] as const;
+  const LOCALE_MESSAGES = { ja: jaMessages, en: enMessages, de: deMessages, ko: koMessages, zh: zhMessages } as const;
+
+  for (const [locale, messages] of Object.entries(LOCALE_MESSAGES)) {
+    it(`${locale}.json に ${KEYS.length} キーが空でない文字列で在り、プレースホルダーを持たない`, () => {
+      for (const key of KEYS) {
+        const value = getNestedValue(messages as unknown as Record<string, unknown>, key);
+        expect(typeof value, key).toBe("string");
+        expect((value as string).trim(), key).not.toBe("");
+        expect([...extractPlaceholders(value)], key).toEqual([]);
+      }
+    });
   }
 });

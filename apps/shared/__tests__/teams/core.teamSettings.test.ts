@@ -59,7 +59,6 @@ describe("TeamCoreAPI.updateTeam — requireTeamAdmin ガード", () => {
   let api: TeamCoreAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabaseMock = createSupabaseMock();
     api = new TeamCoreAPI(supabaseMock.client);
   });
@@ -139,7 +138,6 @@ describe("TeamCoreAPI.deleteTeam — records を残す RPC 経由の削除", () 
   let api: TeamCoreAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabaseMock = createSupabaseMock();
     api = new TeamCoreAPI(supabaseMock.client);
   });

@@ -72,13 +72,9 @@ const mocks = vi.hoisted(() => ({
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 vi.mock("@apps/shared/api/teams/records", () => ({
   TeamRecordsAPI: vi.fn().mockImplementation(() => ({
@@ -158,25 +154,19 @@ function buildSupabaseMock(rows: typeof WITH_RECORDS_ROW[]) {
   return { from: fromMock };
 }
 
-let currentAuthMock: { user: { id: string }; supabase: ReturnType<typeof buildSupabaseMock> };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitions from "@/components/team/TeamCompetitions";
 
 describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲覧できる (Phase A2)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("[V-W1][V-W2] 非admin: hasRecords=true のカードはクリック/キーボードでモーダルが開く", () => {
     beforeEach(() => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
         supabase: buildSupabaseMock([WITH_RECORDS_ROW]),
-      };
+      }));
     });
 
     it("[V-W1] クリックで記録一覧モーダルが開き、対象大会の props が渡る", async () => {
@@ -237,10 +227,10 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
 
   describe("[V-W3] 非admin: hasRecords=false のカードはクリックしてもモーダルが開かない (既知の残差異・非退行)", () => {
     it("記録0件のカードは role=button を持たず、クリックしても recordsModalSpy が visible で呼ばれない", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
         supabase: buildSupabaseMock([NO_RECORDS_ROW]),
-      };
+      }));
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
       await screen.findByText("記録なし大会");
 
@@ -257,10 +247,10 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
 
   describe("[V-W4] 非admin: モーダルを開いても admin 専用 UI が露出しない (回帰ガード)", () => {
     it("編集/削除ボタン・エントリー代理入力ボタン・記録入力ボタンが表示されない", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
         supabase: buildSupabaseMock([WITH_RECORDS_ROW]),
-      };
+      }));
       const user = userEvent.setup();
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
       await screen.findByText("記録あり大会");
@@ -292,10 +282,10 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
 
   describe("[V-W5] 非admin にも記録情報ブロックが i18n キー経由で表示される", () => {
     it("記録1件以上: 登録記録件数とタップで詳細の文言が新規キーから表示される", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
         supabase: buildSupabaseMock([WITH_RECORDS_ROW]),
-      };
+      }));
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
       await screen.findByText("記録あり大会");
 
@@ -307,10 +297,10 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
     });
 
     it("記録0件: 登録記録なし/追加可能の文言が新規キーから表示される", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
         supabase: buildSupabaseMock([NO_RECORDS_ROW]),
-      };
+      }));
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
       await screen.findByText("記録なし大会");
 
@@ -325,10 +315,10 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
 
   describe("[V-W6] admin の既存挙動に回帰がない", () => {
     beforeEach(() => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock([WITH_RECORDS_ROW]),
-      };
+      }));
     });
 
     it("admin: hasRecords=true のカードをクリックすると引き続きモーダルが開く", async () => {
@@ -347,10 +337,10 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
     });
 
     it("admin: hasRecords=false のカードは引き続きクリック不可 (残差異が admin 側にも一貫している)", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock([NO_RECORDS_ROW]),
-      };
+      }));
       render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
       await screen.findByText("記録なし大会");
 
@@ -367,10 +357,10 @@ describe("TeamCompetitions (web) — 利用者ビューでも記録一覧を閲�
         title: "エントリーあり大会",
         entries: [{ id: "e1", user_id: "member-1", style_id: 1, entry_time: null }],
       };
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "member-1" },
         supabase: buildSupabaseMock([rowWithEntries]),
-      };
+      }));
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
       await screen.findByText("エントリーあり大会");
 

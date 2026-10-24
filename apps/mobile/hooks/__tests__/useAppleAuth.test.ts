@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // =============================================================================
 // useAppleAuth.test.ts - Apple認証フックのユニットテスト
 // =============================================================================
@@ -67,7 +68,6 @@ import { useAppleAuth } from "../useAppleAuth";
 
 describe("useAppleAuth", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
 
     // デフォルト状態にリセット
     mocks.platformOS = "ios";

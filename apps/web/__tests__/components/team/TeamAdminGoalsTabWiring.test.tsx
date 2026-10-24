@@ -123,10 +123,7 @@ const MEMBERSHIP_ADMIN: never = {
   is_active: true,
 } as unknown as never;
 
-
 describe("管理者タブの goals 配線", () => {
-  beforeEach(() => vi.clearAllMocks());
-
   it("タブはちょうど10個で、目標はランキングの直後・一括登録の前", () => {
     wrap(<TeamAdminTabs activeTab="members" onTabChange={vi.fn()} />);
     const labels = screen.getAllByRole("button").map((b) => b.textContent?.trim());
@@ -159,7 +156,6 @@ describe("管理者タブの goals 配線", () => {
 
 describe("TeamAdminClient の goals case", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.searchParams = new URLSearchParams();
   });
 

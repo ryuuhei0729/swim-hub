@@ -35,7 +35,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import NetInfo, { NetInfoStateType } from "@react-native-community/netinfo";
 import {
   createResponseMapSupabase,
@@ -108,7 +108,6 @@ describe("TeamRecordStyleListScreen — フォーカス復帰時の再取得 (Re
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.focusListeners.clear();
     for (const key of Object.keys(mocks.selectCallCounts)) delete mocks.selectCallCounts[key];
     setOnline();

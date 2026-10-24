@@ -224,7 +224,6 @@ function renderAuthProvider() {
 
 describe("[DLH-01] cold start — getInitialURL が auth callback URL を返すとき setSession を呼ぶ", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setSession.mockResolvedValue({ error: null });
     setupImmediateInitialSession({ user: { id: "uid-1" }, access_token: "tok" });
@@ -261,7 +260,6 @@ describe("[DLH-01] cold start — getInitialURL が auth callback URL を返す�
 
 describe("[DLH-02] warm start — addEventListener 'url' イベントで setSession を呼ぶ", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     mocks.setSession.mockResolvedValue({ error: null });
@@ -291,7 +289,6 @@ describe("[DLH-02] warm start — addEventListener 'url' イベントで setSess
 
 describe("[DLH-03] cleanup — unmount 時に Linking subscription が remove される", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     setupImmediateInitialSession();
@@ -316,7 +313,6 @@ describe("[DLH-03] cleanup — unmount 時に Linking subscription が remove �
 
 describe("[DLH-04] oauthSessionGuard — active=true のとき setSession が呼ばれない", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     // テスト間汚染を防ぐため、各テスト前に guard を明示的に false にリセット
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
@@ -344,7 +340,6 @@ describe("[DLH-04] oauthSessionGuard — active=true のとき setSession が呼
 
 describe("[DLH-05] error 経路 — URL に #error= があるとき Alert が表示され setSession は呼ばれない", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     setupImmediateInitialSession();
@@ -385,7 +380,6 @@ describe("[DLH-05] error 経路 — URL に #error= があるとき Alert が表
 
 describe("[DLH-06] tokens missing 経路 — access_token なし refresh_token なし で Alert", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     setupImmediateInitialSession();
@@ -411,7 +405,6 @@ describe("[DLH-06] tokens missing 経路 — access_token なし refresh_token �
 
 describe("[DLH-07] setSession error — setSession が error を返すとき Alert が表示される", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     mocks.setSession.mockResolvedValue({ error: { message: "Invalid JWT" } });
@@ -441,7 +434,6 @@ describe("[DLH-07] setSession error — setSession が error を返すとき Ale
 
 describe("[DLH-08] 無関係 URL は無視される", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     setupImmediateInitialSession();
@@ -482,7 +474,6 @@ describe("[DLH-08] 無関係 URL は無視される", () => {
 
 describe("[DLH-09] getInitialURL reject — Promise が reject してもクラッシュしない", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     setupImmediateInitialSession({ user: { id: "uid-1" }, access_token: "tok" });
   });
@@ -534,7 +525,6 @@ describe("[DLH-09] getInitialURL reject — Promise が reject してもクラ�
 
 describe("[DLH-10] 正常復旧 — フラグあり + flow=calendar-connect + provider_refresh_token あり", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     mocks.setSession.mockResolvedValue({ error: null });
@@ -575,7 +565,6 @@ describe("[DLH-10] 正常復旧 — フラグあり + flow=calendar-connect + pr
 
 describe("[DLH-11] 誤爆防止 — フラグあり(TTL内) だが無関係なメール確認 URL", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     mocks.setSession.mockResolvedValue({ error: null });
@@ -611,7 +600,6 @@ describe("[DLH-11] 誤爆防止 — フラグあり(TTL内) だが無関係な�
 
 describe("[DLH-12] token 欠落 — フラグあり + flow=calendar-connect だが refresh_token なし", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     setupImmediateInitialSession();
@@ -642,7 +630,6 @@ describe("[DLH-12] token 欠落 — フラグあり + flow=calendar-connect だ�
 
 describe("[DLH-13] 保存 API 失敗 — エラー Alert のみでリトライ・フラグ復活が無い", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     mocks.setSession.mockResolvedValue({ error: null });
@@ -716,7 +703,6 @@ describe("[DLH-13] 保存 API 失敗 — エラー Alert のみでリトライ�
 
 describe("[DLH-14] Warning3 — 復旧中に #error= が付いたコールバックを受けた場合", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     setupImmediateInitialSession();
@@ -763,7 +749,6 @@ describe("[DLH-14] Warning3 — 復旧中に #error= が付いたコールバッ
 
 describe("[DLH-15] PKCE 正常復旧 — フラグあり + flow=calendar-connect + code (PKCE) あり", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     mocks.saveGoogleCalendarRefreshToken.mockResolvedValue({ success: true });
@@ -805,7 +790,6 @@ describe("[DLH-15] PKCE 正常復旧 — フラグあり + flow=calendar-connect
 
 describe("[DLH-16] PKCE 最大リスク — exchangeCodeForSession 成功でも provider_refresh_token がセッションに無い", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     setupImmediateInitialSession();
@@ -840,7 +824,6 @@ describe("[DLH-16] PKCE 最大リスク — exchangeCodeForSession 成功でも 
 
 describe("[DLH-17] PKCE エラー経路 — exchangeCodeForSession が error を返す (code_verifier 欠落等)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     setupImmediateInitialSession();
@@ -890,7 +873,6 @@ describe("[DLH-17] PKCE エラー経路 — exchangeCodeForSession が error を
 
 describe("[DLH-18] PKCE 通常メール確認 (回帰) — flow=calendar-connect が無い通常の code コールバック", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.oauthGuardActive = false;
     mocks.setInitialUrl(null);
     setupImmediateInitialSession();

@@ -33,6 +33,19 @@ interface CompetitionRow {
   note: string;
 }
 
+/** 何も入力されていない行。検証・送信の対象外にする (日付だけの行は登録対象) */
+const isBlankPracticeRow = (row: PracticeRow): boolean =>
+  !row.date.trim() && !row.title.trim() && !row.place.trim() && !row.note.trim();
+
+/** 何も入力されていない行。poolType は既定値 (0: 短水路) のままなら未入力とみなす */
+const isBlankCompetitionRow = (row: CompetitionRow): boolean =>
+  row.poolType === 0 &&
+  !row.date.trim() &&
+  !row.endDate.trim() &&
+  !row.title.trim() &&
+  !row.place.trim() &&
+  !row.note.trim();
+
 interface TeamBulkRegisterFormProps {
   teamId: string;
   onSuccess?: () => void;
@@ -76,8 +89,10 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result>(null);
 
+  // 追加行の日付は空で始める。今日の日付を入れておくと、何も入力していない行まで
+  // 「今日の無題の練習」として登録されてしまうため (空行は検証・送信の対象外)
   const handleAddPracticeRow = () => {
-    setPracticeRows((prev) => [...prev, { date: today, title: "", place: "", note: "" }]);
+    setPracticeRows((prev) => [...prev, { date: "", title: "", place: "", note: "" }]);
   };
 
   const handleRemovePracticeRow = (index: number) => {
@@ -97,7 +112,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
   const handleAddCompetitionRow = () => {
     setCompetitionRows((prev) => [
       ...prev,
-      { date: today, endDate: "", title: "", place: "", poolType: 0, note: "" },
+      { date: "", endDate: "", title: "", place: "", poolType: 0, note: "" },
     ]);
   };
 
@@ -122,6 +137,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
   const validatePracticeRows = (): string[] => {
     const errors: string[] = [];
     practiceRows.forEach((row, idx) => {
+      if (isBlankPracticeRow(row)) return;
       if (!row.date.trim()) {
         errors.push(t("teams.mobile.bulkRegister.errorDateRequired", { row: idx + 1 }));
       }
@@ -132,6 +148,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
   const validateCompetitionRows = (): string[] => {
     const errors: string[] = [];
     competitionRows.forEach((row, idx) => {
+      if (isBlankCompetitionRow(row)) return;
       if (!row.date.trim()) {
         errors.push(t("teams.mobile.bulkRegister.errorStartDateRequired", { row: idx + 1 }));
       }
@@ -204,12 +221,15 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
       if (result.success && onSuccess) {
         onSuccess();
       }
-      // 正常終了時はフォームをリセット
+      // 正常終了時は送信したタブだけリセットする (もう片方のタブの入力は送信していないので残す)
       if (result.success) {
-        setPracticeRows([{ date: today, title: "", place: "", note: "" }]);
-        setCompetitionRows([
-          { date: today, endDate: "", title: "", place: "", poolType: 0, note: "" },
-        ]);
+        if (mode === "practice") {
+          setPracticeRows([{ date: today, title: "", place: "", note: "" }]);
+        } else {
+          setCompetitionRows([
+            { date: today, endDate: "", title: "", place: "", poolType: 0, note: "" },
+          ]);
+        }
       }
     } catch (err) {
       const message = toUserFacingMessage(err, t("teams.mobile.bulkRegisterFailed"));
@@ -454,15 +474,17 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
           { paddingBottom: getSafeFooterPadding(24, insets.bottom) },
         ]}
       >
+        {mode === "practice" ? renderPracticeRows() : renderCompetitionRows()}
+
+        {renderPreview()}
+
+        {/* エラー表示: 押した登録ボタンの直上に出す (スクロール領域の先頭だと行が多いとき画面外になり、
+            押しても何も起きないように見えるため) */}
         {error && (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-
-        {mode === "practice" ? renderPracticeRows() : renderCompetitionRows()}
-
-        {renderPreview()}
 
         {/* 登録ボタン */}
         <Pressable

@@ -111,7 +111,6 @@ describe("TeamPracticeLogBulkFormScreen - 非泳者管理者の締め出し回�
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     capturedMemberSelectProps.length = 0;
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

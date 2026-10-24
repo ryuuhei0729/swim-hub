@@ -1018,7 +1018,6 @@
       "unknown": "不明なエラー"
     },
     "handlers": {
-      "fetchPracticeFailed": "練習データの取得に失敗しました",
       "updateImagePathFailed": "画像パスの更新に失敗しました",
       "practiceCreatedButImageFailed": "練習は作成されましたが、画像のアップロードに失敗しました",
       "authRequired": "認証されたユーザーが必要です",
@@ -2142,18 +2141,24 @@
       "competitionFallback": "大会",
       "styleFallback": "種目",
       "competitionInfoUnavailable": "大会情報なし",
-      "editUnavailableReason": "大会情報がないため編集できません"
+      "editUnavailableReason": "大会情報がないため編集できません",
+      "diffFromBest": "(Best{diff})"
     },
     "detail": {
       "loadError": "目標詳細の取得に失敗しました",
       "retry": "再読み込み",
       "targetTime": "目標タイム",
-      "initialTime": "初期タイム",
       "notSet": "未設定",
-      "achievement": "達成率",
       "milestoneSection": "マイルストーン",
       "milestoneRatio": "マイルストーン達成率",
-      "milestoneAdd": "追加"
+      "milestoneAdd": "追加",
+      "currentBest": "現在のベスト",
+      "noRecord": "記録なし",
+      "remainingSeconds": "あと{seconds}秒",
+      "targetReached": "目標タイム到達",
+      "daysLeft": "あと{days}日",
+      "competitionToday": "本日",
+      "competitionFinished": "終了"
     },
     "create": {
       "title": "新規目標作成",
@@ -2161,7 +2166,6 @@
       "cancelButton": "キャンセル",
       "closeAriaLabel": "閉じる",
       "targetTimeInvalid": "目標タイムを正しく入力してください（0秒超〜60分以内）",
-      "startTimeInvalid": "開始タイムを正しく入力してください（0秒超〜60分以内）",
       "competitionRequired": "大会を選択してください",
       "createFailed": "目標の作成に失敗しました"
     },
@@ -2173,7 +2177,6 @@
       "updateFailed": "目標の更新に失敗しました",
       "validation": {
         "targetTimeInvalid": "目標タイムを正しく入力してください（0秒超〜60分以内）",
-        "startTimeInvalid": "開始タイムを正しく入力してください（0秒超〜60分以内）",
         "styleNotSelected": "種目が選択されていません。"
       }
     },
@@ -2181,7 +2184,6 @@
       "title": "大会目標の振り返り",
       "expiredDesc": "以下の大会目標が期限を迎えました",
       "targetLabel": "目標:",
-      "initialTimeLabel": "初期タイム:",
       "competitionDateLabel": "大会日:",
       "milestoneAchievedText": "マイルストーン達成: {achieved}/{total}",
       "achievedQuestion": "目標は達成できましたか？",
@@ -2299,14 +2301,11 @@
       "selectCompetitionPlaceholder": "大会を選択",
       "competitionNamePlaceholder": "大会名",
       "competitionPlacePlaceholder": "場所（任意）",
-      "competitionDateLabel": "大会日",
       "competitionFallback": "大会",
       "styleLabel": "種目",
       "selectStylePlaceholder": "種目を選択",
       "targetTimeLabel": "目標タイム",
       "targetTimePlaceholder": "2.00.00",
-      "startTimeLabel": "初期タイム（任意）",
-      "startTimePlaceholder": "2.00.00",
       "personalCompetitionGroup": "個人",
       "teamCompetitionGroupFallback": "チーム大会",
       "competitionDatePast": "新規大会の日付は今日以降を選択してください"
@@ -2369,9 +2368,11 @@
       "goalSetDesc": "50m×6本×3セット（100m目標タイムから逆算）"
     },
     "milestoneSummary": {
-      "time": "{distance}m × 1本: {time}",
+      "time": "{distance}m: {time}",
       "repsTime": "{distance}m × {reps}本 @{time} 平均",
-      "set": "{distance}m × {reps}本 × {sets}セット (@{circle}サークル) 完遂"
+      "repsTimeWithSets": "{distance}m × {reps}本 × {sets}セット @{time} 平均",
+      "set": "{distance}m × {reps}本 ({circle}サークル) 完遂",
+      "setWithSets": "{distance}m × {reps}本 × {sets}セット ({circle}サークル) 完遂"
     },
     "mobile": {
       "notFound": "目標が見つかりませんでした",
@@ -2391,7 +2392,6 @@
     "loadError": "目標の取得に失敗しました",
     "retry": "再試行",
     "snapshotNote": "メンバーが最後にアプリで更新した時点の状態です",
-    "progressUnavailable": "大会情報がないため達成率を計算できません",
     "section": {
       "upcoming": "今後の大会",
       "past": "過去の大会",
@@ -3995,8 +3995,8 @@
         "labelNote": "備考",
         "poolShort": "短水路 (25m)",
         "poolLong": "長水路 (50m)",
-        "addPracticeRowButton": "+ 練習を追加",
-        "addCompetitionRowButton": "+ 大会を追加",
+        "addPracticeRowButton": "練習を追加",
+        "addCompetitionRowButton": "大会を追加",
         "deleteRowButton": "削除",
         "submitButton": "登録する",
         "submitting": "登録中...",
@@ -4233,9 +4233,6 @@
       "cancel": "キャンセル"
     },
     "practiceLog": {
-      "title_create": "練習記録を追加",
-      "title_edit": "練習記録を編集",
-      "close_aria": "練習記録を閉じる",
       "templateFrom": "テンプレート",
       "templateFromLong": "テンプレートから作成",
       "addMenu": "メニューを追加",
@@ -4246,8 +4243,6 @@
       "cancel": "キャンセル",
       "save": "保存",
       "saving": "保存中...",
-      "update": "更新",
-      "updating": "更新中...",
       "videoLabel": "動画",
       "menuHeader": "メニュー {n}"
     },
@@ -4513,6 +4508,10 @@
       "videoUpload": "動画の添付は Premium 会員限定です",
       "splitTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に",
       "practiceTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に"
+    },
+    "itemTabs": {
+      "removeConfirmTitle": "{label}を削除しますか？",
+      "removeConfirmMessage": "{label}の入力済みデータが削除されます。"
     }
   },
   "timeLevel": {

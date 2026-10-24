@@ -79,7 +79,6 @@ function makeRequest(url: string) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   authenticateApiRequest.mockResolvedValue({
     user: { id: "caller-uid" },
     supabase: makeSupabase({

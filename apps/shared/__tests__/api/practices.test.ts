@@ -12,7 +12,6 @@ describe("PracticeAPI", () => {
   let api: PracticeAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     api = new PracticeAPI(mockClient);
   });

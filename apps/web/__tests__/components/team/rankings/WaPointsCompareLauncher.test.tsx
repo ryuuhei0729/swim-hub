@@ -200,7 +200,6 @@ const lastModalProps = () => modalMock.props[modalMock.props.length - 1]!;
 
 describe("[V-B40〜B46] web ランキングタブの WAポイント比較ランチャー", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     modalMock.props = [];
     hookMocks.members = MEMBERS;
     hookMocks.memberBestTimes = new Map();

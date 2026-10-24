@@ -143,6 +143,22 @@ export function formatTimeBest(seconds: number): string {
 }
 
 /**
+ * サークル (秒) を水泳の表記にフォーマットする。1分未満は秒だけ、1分以上は分'秒"。
+ * サークルに小数は無いので秒は切り捨てる。
+ * 練習ログの formatCircleTime (mobile/utils/formatters.ts ほか) は 1分未満も 0'40" と出す別の表記。
+ *
+ * @example formatCircle(40) => "40\""
+ * @example formatCircle(90) => "1'30\""
+ * @example formatCircle(120) => "2'00\""
+ */
+export function formatCircle(seconds: number): string {
+  const total = Math.floor(seconds);
+  const minutes = Math.floor(total / 60);
+  const secs = total % 60;
+  return minutes > 0 ? `${minutes}'${String(secs).padStart(2, "0")}"` : `${secs}"`;
+}
+
+/**
  * 符号付き秒数 (すでに計算済みの差分) を "+1.42" / "-1.42" 形式にフォーマットする。
  * 符号付け・桁数 (小数第2位) のロジックの唯一の定義元。`formatTimeDiff` はこの関数に
  * 委譲する (2箇所で同じフォーマットロジックを持たない)。

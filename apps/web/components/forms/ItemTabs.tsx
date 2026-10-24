@@ -1,7 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export interface ItemTabsProps {
   count: number;
@@ -10,6 +12,11 @@ export interface ItemTabsProps {
   onAdd: () => void;
   /** タブ内の × で項目を削除。未指定の場合は × を表示しない */
   onRemove?: (i: number) => void;
+  /**
+   * × を押したとき、onRemove の前に削除確認を出すか。入力済みの項目を確認なしで
+   * 消さないために、呼び出し側が項目の中身から判定する。未指定なら確認しない
+   */
+  shouldConfirmRemove?: (i: number) => boolean;
   /** ピルラベル生成。例: (i) => `種目 ${i + 1}` */
   label: (i: number) => string;
   accent?: "blue" | "green";
@@ -35,6 +42,7 @@ export default function ItemTabs({
   onSelect,
   onAdd,
   onRemove,
+  shouldConfirmRemove,
   label,
   accent = "blue",
   canAdd = true,
@@ -50,6 +58,19 @@ export default function ItemTabs({
   const focusRing = accent === "green" ? "focus:ring-green-500" : "focus:ring-blue-500";
 
   const showRemove = typeof onRemove === "function" && count > 1;
+  const t = useTranslations("forms.itemTabs");
+  const tCommon = useTranslations("common");
+  // 削除確認中の項目の index。null なら確認ダイアログは閉じている
+  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
+
+  const handleRemoveClick = (i: number) => {
+    if (!onRemove) return;
+    if (shouldConfirmRemove?.(i)) {
+      setPendingRemoveIndex(i);
+      return;
+    }
+    onRemove(i);
+  };
 
   return (
     <div className="flex flex-col">
@@ -94,7 +115,7 @@ export default function ItemTabs({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onRemove?.(i);
+                    handleRemoveClick(i);
                   }}
                   disabled={disabled}
                   aria-label="remove item"
@@ -142,6 +163,22 @@ export default function ItemTabs({
       >
         {children}
       </div>
+
+      {pendingRemoveIndex !== null && (
+        <ConfirmDialog
+          isOpen
+          variant="danger"
+          title={t("removeConfirmTitle", { label: label(pendingRemoveIndex) })}
+          message={t("removeConfirmMessage", { label: label(pendingRemoveIndex) })}
+          confirmLabel={tCommon("delete")}
+          onConfirm={() => {
+            const index = pendingRemoveIndex;
+            setPendingRemoveIndex(null);
+            onRemove?.(index);
+          }}
+          onCancel={() => setPendingRemoveIndex(null)}
+        />
+      )}
     </div>
   );
 }

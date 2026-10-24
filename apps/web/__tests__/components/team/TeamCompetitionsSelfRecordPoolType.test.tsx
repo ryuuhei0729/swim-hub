@@ -28,9 +28,7 @@ const mocks = vi.hoisted(() => ({
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@apps/shared/api/teams/records", () => ({
   TeamRecordsAPI: vi.fn().mockImplementation(function () {
@@ -70,9 +68,7 @@ vi.mock("@apps/shared/api/entries", () => ({
   }),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 vi.mock("@/components/forms/CompetitionBasicForm", () => ({ default: () => null }));
 vi.mock("../../../components/team/TeamCompetitionEntryModal", () => ({ default: () => null }));
@@ -84,15 +80,9 @@ vi.mock("@/hooks/useBestTimes", () => ({
 
 const STYLE_FR50 = { id: 2, name_jp: "50m自由形", distance: 50 };
 
-let currentAuthMock: {
-  user: { id: string };
-  supabase: ReturnType<typeof buildSupabaseCompetitionsMock>["supabase"];
-  subscription: null;
-};
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitions from "@/components/team/TeamCompetitions";
 
@@ -141,7 +131,6 @@ function makeRow(overrides: { title: string; poolType: 0 | 1 }) {
 
 describe("TeamCompetitions — 自分の記録の保存 (既存記録 UPDATE) と records.pool_type 自己修復 (D-6)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.createRecord.mockResolvedValue({ id: "record-new" });
     mocks.updateRecord.mockResolvedValue({ id: "record-existing-1" });
     mocks.createSplitTimes.mockResolvedValue(undefined);
@@ -150,11 +139,11 @@ describe("TeamCompetitions — 自分の記録の保存 (既存記録 UPDATE) �
 
   it("[D-6/V-11] 長水路(1)の大会で既存記録を保存すると、records.pool_type が 1 に揃う", async () => {
     const row = makeRow({ title: "長水路大会", poolType: 1 });
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "member-1" },
       supabase: buildSupabaseCompetitionsMock([row]).supabase,
       subscription: null,
-    };
+    }));
     const user = userEvent.setup();
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
     await openSelfRecordForm(user, "長水路大会");
@@ -172,11 +161,11 @@ describe("TeamCompetitions — 自分の記録の保存 (既存記録 UPDATE) �
 
   it("[D-6/V-11] 短水路(0)の大会で既存記録を保存すると、records.pool_type が 0 に揃う (誤って長水路化しない)", async () => {
     const row = makeRow({ title: "短水路大会", poolType: 0 });
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "member-1" },
       supabase: buildSupabaseCompetitionsMock([row]).supabase,
       subscription: null,
-    };
+    }));
     const user = userEvent.setup();
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
     await openSelfRecordForm(user, "短水路大会");

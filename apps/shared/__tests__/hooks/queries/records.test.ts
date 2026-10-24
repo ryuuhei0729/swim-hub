@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, Mock } from "vitest";
 import { waitFor, act } from "@testing-library/react";
 import {
@@ -71,7 +72,6 @@ describe("Record Query Hooks", () => {
   let mockApi: MockRecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockApi = {
       getRecords: vi.fn(),

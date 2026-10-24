@@ -14,16 +14,14 @@
 
 import React from "react";
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import jaMessages from "@apps/shared/messages/ja.json";
 import enMessages from "@apps/shared/messages/en.json";
 import deMessages from "@apps/shared/messages/de.json";
 import koMessages from "@apps/shared/messages/ko.json";
 import zhMessages from "@apps/shared/messages/zh.json";
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 const mocks = vi.hoisted(() => ({
   getEntriesByCompetition: vi.fn(),
@@ -65,11 +63,9 @@ function buildSupabaseMock(responses: Record<string, ChainResponse>) {
   };
 }
 
-let currentAuthMock: { supabase: ReturnType<typeof buildSupabaseMock> };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitionEntryModal from "@/components/team/TeamCompetitionEntryModal";
 
@@ -86,7 +82,8 @@ const makeEntry = (overrides: Record<string, unknown> = {}) => ({
 });
 
 function renderModal() {
-  currentAuthMock = {
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+    user: null,
     supabase: buildSupabaseMock({
       competitions: {
         data: { team_id: "team-1", title: "春季大会", date: "2099-01-01", place: null, entry_status: "open" },
@@ -94,7 +91,7 @@ function renderModal() {
       },
       team_memberships: { data: { role: "user" }, error: null },
     }),
-  };
+  }));
   return render(
     <TeamCompetitionEntryModal
       isOpen={true}
@@ -107,10 +104,6 @@ function renderModal() {
     />,
   );
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("TeamCompetitionEntryModal — 種目見出しの件数単位 (web)", () => {
   describe("[V-W-07] SC7: 「{style} ({count}件)」形式", () => {

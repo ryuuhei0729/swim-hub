@@ -16,7 +16,6 @@ describe("TeamMembersAPI.updateRole - requireTeamAdmin ガード", () => {
   let api: TeamMembersAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabaseMock = createSupabaseMock(); // userId = "test-user-id"
     api = new TeamMembersAPI(supabaseMock.client);
   });

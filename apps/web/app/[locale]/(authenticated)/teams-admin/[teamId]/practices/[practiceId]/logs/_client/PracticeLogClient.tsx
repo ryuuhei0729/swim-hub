@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
@@ -40,6 +40,7 @@ const TeamVideoUploader = dynamic(
 );
 
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { openTimesheetPrintWindow } from "@/utils/generateTimesheetHtml";
 import { format, parseISO, isValid } from "date-fns";
 import { ja, enUS } from "date-fns/locale";
@@ -137,6 +138,9 @@ export default function PracticeLogClient({
 }: PracticeLogClientProps) {
   const t = useTranslations("teamsAdmin");
   const tPractice = useTranslations("practice");
+  const tUnsaved = useTranslations("forms.unsavedChanges");
+  const tItemTabs = useTranslations("forms.itemTabs");
+  const tCommon = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
   const { supabase, subscription } = useAuth();
@@ -329,6 +333,15 @@ export default function PracticeLogClient({
   };
 
   const [menus, setMenus] = useState<PracticeMenu[]>(buildMenusFromLogs);
+  // 開いた時点のメニュー (JSON)。未保存の変更があるかの比較元。初回レンダーの menus から一度だけ作る
+  const [initialMenusJson] = useState(() => JSON.stringify(menus));
+  const [isSaved, setIsSaved] = useState(false);
+  // 既存ログから復元したメニューの ID。消すと保存時に DB のログも消えるため、中身に関わらず確認する
+  const [loadedLogMenuIds] = useState(
+    () => new Set(existingLogs.length > 0 ? menus.map((menu) => menu.id) : []),
+  );
+  // 削除確認中のメニュー ID。null なら確認ダイアログは閉じている
+  const [pendingRemoveMenuId, setPendingRemoveMenuId] = useState<string | null>(null);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [currentMenuId, setCurrentMenuId] = useState<string | null>(null);
 
@@ -359,6 +372,22 @@ export default function PracticeLogClient({
     if (menus.length > 1) {
       setMenus((prev) => prev.filter((menu) => menu.id !== menuId));
     }
+  };
+
+  /** 削除前に確認するか: 既存ログのメニュー、またはタイム・動画・メモ・タグがあるメニュー */
+  const shouldConfirmMenuRemove = (menu: PracticeMenu): boolean =>
+    loadedLogMenuIds.has(menu.id) ||
+    menu.times.some((entry) => entry.times.some((ti) => ti.time > 0 || ti.displayValue.trim() !== "")) ||
+    Object.values(menu.videoFiles ?? {}).some((file) => file != null) ||
+    menu.note.trim() !== "" ||
+    menu.tags.length > 0;
+
+  const requestRemoveMenu = (menu: PracticeMenu) => {
+    if (shouldConfirmMenuRemove(menu)) {
+      setPendingRemoveMenuId(menu.id);
+      return;
+    }
+    removeMenu(menu.id);
   };
 
   const updateMenu = <K extends keyof PracticeMenu>(
@@ -709,7 +738,8 @@ export default function PracticeLogClient({
         }
       }
 
-      // 成功時はリダイレクト
+      // 成功時はリダイレクト (保存済みなので離脱確認は出さない)
+      setIsSaved(true);
       router.push(`/teams-admin/${teamId}?tab=practices`);
     } catch (err) {
       console.error("チーム練習ログ作成エラー:", err);
@@ -719,8 +749,25 @@ export default function PracticeLogClient({
     }
   };
 
-  const handleBack = () => {
+  // 戻るボタン・ブラウザバック・タブを閉じる操作で、全員分の代理入力タイムが確認なしに
+  // 消えないようにする (mobile TeamPracticeLogBulkFormScreen の usePreventRemove と同じ目的)
+  const leaveToPractices = useCallback(() => {
     router.push(`/teams-admin/${teamId}?tab=practices`);
+  }, [router, teamId]);
+  const {
+    showConfirmDialog: showLeaveConfirm,
+    handleClose: requestLeave,
+    handleConfirmClose: confirmLeave,
+    handleCancelClose: cancelLeave,
+  } = useUnsavedChangesWarning({
+    isOpen: true,
+    hasUnsavedChanges: JSON.stringify(menus) !== initialMenusJson,
+    isSubmitted: isSaved,
+    onClose: leaveToPractices,
+  });
+
+  const handleBack = () => {
+    if (requestLeave()) leaveToPractices();
   };
 
   // OCR結果をフォームに反映
@@ -881,7 +928,7 @@ export default function PracticeLogClient({
                 {menus.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => removeMenu(menu.id)}
+                    onClick={() => requestRemoveMenu(menu)}
                     className="text-red-600 hover:text-red-800"
                     data-testid={`team-practice-log-remove-menu-${index + 1}`}
                   >
@@ -1381,6 +1428,42 @@ export default function PracticeLogClient({
           onCancel={() => setVideoUploadModal(null)}
         />
       )}
+
+      {/* メニュー削除の確認 (入力済みのメニューを確認なしで消さない) */}
+      {pendingRemoveMenuId !== null && (
+        <ConfirmDialog
+          isOpen
+          variant="danger"
+          title={tItemTabs("removeConfirmTitle", {
+            label: t("practiceLog.menuTitle", {
+              index: menus.findIndex((menu) => menu.id === pendingRemoveMenuId) + 1,
+            }),
+          })}
+          message={tItemTabs("removeConfirmMessage", {
+            label: t("practiceLog.menuTitle", {
+              index: menus.findIndex((menu) => menu.id === pendingRemoveMenuId) + 1,
+            }),
+          })}
+          confirmLabel={tCommon("delete")}
+          onConfirm={() => {
+            removeMenu(pendingRemoveMenuId);
+            setPendingRemoveMenuId(null);
+          }}
+          onCancel={() => setPendingRemoveMenuId(null)}
+        />
+      )}
+
+      {/* 未保存の代理入力の破棄確認 */}
+      <ConfirmDialog
+        isOpen={showLeaveConfirm}
+        onConfirm={confirmLeave}
+        onCancel={cancelLeave}
+        title={tUnsaved("title")}
+        message={tUnsaved("messageBack")}
+        confirmLabel={tUnsaved("confirmBack")}
+        cancelLabel={tUnsaved("cancel")}
+        variant="warning"
+      />
 
       {/* OCR上書き確認ダイアログ */}
       <ConfirmDialog

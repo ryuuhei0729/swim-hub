@@ -73,9 +73,7 @@ const h = vi.hoisted(() => ({
 // と同じ方式。共有モック自体は変更しない)。
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("react-native", async () => {
   const actual = await vi.importActual<typeof import("../../__mocks__/react-native")>(
@@ -349,7 +347,6 @@ function setEntryTime(utils: ReturnType<typeof render>, value: string) {
 
 describe("CompetitionTabFormScreen — validateEntryTab 未編集行スキップ (2-B)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupCommonMocks();
   });
 
@@ -467,7 +464,6 @@ describe("CompetitionTabFormScreen — validateEntryTab 未編集行スキップ
 
 describe("CompetitionTabFormScreen — 種目重複チェック (2-C・指示外の変更の実証)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupCommonMocks();
   });
 

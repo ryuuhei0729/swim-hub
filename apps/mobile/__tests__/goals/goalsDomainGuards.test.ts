@@ -5,7 +5,8 @@
 // 空走査防止: 対象ファイル数を最初に assert。各ルールは in-memory のサンプル文字列で
 //   「違反を実際に検出する」ことを同じファイル内で実証する (ミューテーション証明の代替)。
 // 検査関数は構文パターン検査であり、プロダクションロジックの再実装ではない。
-// 対象: screens/Goal*.tsx, screens/MilestoneFormScreen.tsx, components/goals/**, hooks/{useExpiredGoalCheck,useGoalProgress,useMilestoneSummary}.ts, navigation/TabBarLabel.tsx
+// 対象: screens/Goal*.tsx, screens/MilestoneFormScreen.tsx, components/goals/**, hooks/{useExpiredGoalCheck,useMilestoneSummary}.ts, navigation/TabBarLabel.tsx
+// (時間ベースの達成率フックは Contract v2 (初期タイム全廃) で削除。削除の固定は apps/shared/__tests__/goalsStartTimeRemoval.static.test.ts)
 // =============================================================================
 import { readFileSync, readdirSync, statSync } from "fs";
 import path from "path";
@@ -13,7 +14,7 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = path.resolve(__dirname, "../..");
 const SCREENS = ["screens/GoalsScreen.tsx", "screens/GoalDetailScreen.tsx", "screens/GoalFormScreen.tsx", "screens/MilestoneFormScreen.tsx"];
-const HOOKS = ["hooks/useExpiredGoalCheck.ts", "hooks/useGoalProgress.ts", "hooks/useMilestoneSummary.ts", "navigation/TabBarLabel.tsx"];
+const HOOKS = ["hooks/useExpiredGoalCheck.ts", "hooks/useMilestoneSummary.ts", "navigation/TabBarLabel.tsx"];
 
 function listTsx(dir: string): string[] {
   return readdirSync(path.join(ROOT, dir))
@@ -67,10 +68,10 @@ function centerModalOffenders(src: string): string[] {
 }
 
 describe("空走査防止", () => {
-  it("対象ファイルが実在する (画面4 + goals コンポーネント >= 10 + hook/ラベル4)", () => {
+  it("対象ファイルが実在する (画面4 + goals コンポーネント >= 10 + hook/ラベル3)", () => {
     for (const f of [...SCREENS, ...HOOKS]) expect(() => read(f), f).not.toThrow();
     expect(COMPONENTS.length).toBeGreaterThanOrEqual(10);
-    expect(SCOPE.length).toBeGreaterThanOrEqual(18);
+    expect(SCOPE.length).toBeGreaterThanOrEqual(17);
   });
 });
 

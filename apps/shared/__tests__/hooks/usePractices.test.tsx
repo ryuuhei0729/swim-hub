@@ -34,7 +34,6 @@ describe("usePracticesQuery", () => {
   let mockApi: PracticeAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockApi = new PracticeAPI(mockClient);
   });
@@ -92,7 +91,6 @@ describe("useCreatePracticeMutation", () => {
   let mockApi: PracticeAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockApi = new PracticeAPI(mockClient);
   });
@@ -124,7 +122,6 @@ describe("useUpdatePracticeMutation", () => {
   let mockApi: PracticeAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockApi = new PracticeAPI(mockClient);
   });
@@ -155,7 +152,6 @@ describe("useDeletePracticeMutation", () => {
   let mockApi: PracticeAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockApi = new PracticeAPI(mockClient);
   });

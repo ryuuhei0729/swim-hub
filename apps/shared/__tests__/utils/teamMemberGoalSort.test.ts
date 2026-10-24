@@ -13,7 +13,6 @@ function goal(id: string, date: string | null, createdAt = "2026-01-01T00:00:00Z
     id,
     style_id: 1,
     target_time: 60,
-    start_time: 70,
     status: "active",
     achieved_at: null,
     created_at: createdAt,

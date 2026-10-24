@@ -21,7 +21,7 @@ import React from "react";
 import { act } from "react";
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, type Mock } from "vitest";
 import type { StyleOption } from "@/components/forms/record-log/types";
 import type { EditingData } from "@/stores/types";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
@@ -120,9 +120,7 @@ let currentAuth: { user: { id: string }; subscription: null; supabase: ReturnTyp
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@/contexts", () => ({
   useAuth: () => currentAuth,
@@ -196,10 +194,6 @@ const PROVISIONAL_EDITING_DATA_VARIANTS: Array<[string, EditingData]> = [
 // NOTE: `onSave.mock.calls[0]!` を多用する。各テストは直前に `toHaveBeenCalledTimes(1)` で
 // 呼び出し回数を確認済み。
 describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe.each(PROVISIONAL_EDITING_DATA_VARIANTS)(
     "[V-1][V-2][V-3] 暫定 editingData: %s",
     (_label, editingData) => {

@@ -4,14 +4,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { GoalCard } from "@/components/goals/GoalCard";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
-import { goalProgressQuery } from "@/hooks/useGoalProgress";
 import { localizedStyleName } from "@/utils/styleName";
 import { isCompetitionDateInPast, toISODateString } from "@apps/shared/utils/date";
 import type { MainStackParamList } from "@/navigation/types";
@@ -126,9 +125,13 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
     staleTime: 24 * 60 * 60 * 1000,
   });
   const goalsQuery = useGoalsQuery(supabase);
-  // 大会日が過去の目標は目標タブに出さない (大会情報なしの目標は削除できるよう残す)
+  // 大会日が過去の目標は目標タブに出さない (大会情報なしの目標は削除できるよう残す)。
+  // 複数日開催は終了日で判定する (開催中の2日目以降も出す)
   const goals = useMemo(
-    () => goalsQuery.data?.filter((goal) => !isCompetitionDateInPast(goal.competition?.date)),
+    () =>
+      goalsQuery.data?.filter(
+        (goal) => !isCompetitionDateInPast(goal.competition?.end_date ?? goal.competition?.date),
+      ),
     // today は式の中では使わない。日付が変わったときに再計算させるための deps
     // (再取得結果が同じだとデータ参照が変わらず、フィルタが再実行されないため)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,11 +142,6 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
     () => new Map((stylesQuery.data ?? []).map((s) => [s.id, s])),
     [stylesQuery.data],
   );
-
-  // 達成率は目標ごとに並列で取得する (逐次 await の N+1 にしない)
-  const progressResults = useQueries({
-    queries: (goals ?? []).map((goal) => goalProgressQuery(goalAPI, goal.id)),
-  });
 
   const handleDelete = useCallback(
     (goalId: string) => {
@@ -213,17 +211,18 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
           <Text style={styles.emptyText}>{t("goals.list.emptyDesc")}</Text>
         </View>
       ) : (
-        goals.map((goal, index) => {
+        goals.map((goal) => {
           const style = stylesById.get(goal.style_id);
           return (
             <GoalCard
               key={goal.id}
+              goalId={goal.id}
               competitionTitle={goal.competition?.title}
+              competitionDate={goal.competition?.date}
               competitionUnavailable={goal.competition === null}
               styleName={style ? localizedStyleName(style, t) : t("goals.list.styleFallback")}
               targetTime={goal.target_time}
               achieved={goal.status === "achieved"}
-              progress={progressResults[index]?.data}
               onPress={() => navigation.navigate("GoalDetail", { goalId: goal.id })}
               onEdit={
                 goal.competition === null

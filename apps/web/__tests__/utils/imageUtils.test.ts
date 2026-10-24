@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi, Mock } from "vitest";
 import {
   getAspectRatio,
@@ -200,7 +201,6 @@ describe("getCroppedImg", () => {
   let mockImage: HTMLImageElement;
 
   beforeEach(() => {
-    vi.clearAllMocks();
 
     // Canvas contextのモック
     mockContext = {

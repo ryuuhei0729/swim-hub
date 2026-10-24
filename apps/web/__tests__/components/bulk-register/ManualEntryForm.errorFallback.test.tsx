@@ -13,7 +13,7 @@
 import React from "react";
 import { renderWithI18n as render, screen } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 const mockBulkRegister = vi.fn();
@@ -33,10 +33,6 @@ vi.mock("@/contexts", () => ({
 import ManualEntryForm from "@/components/bulk-register/ManualEntryForm";
 
 describe("ManualEntryForm — 一括登録失敗時のエラー表示 — 情報露出防止の対テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it(
     "[V-ERR-01] bulkRegister が生の Error (RLSポリシー詳細等) で失敗した場合、" +
       "汎用フォールバック文言 (common.error) が表示され、生のエラー文字列は表示されない",

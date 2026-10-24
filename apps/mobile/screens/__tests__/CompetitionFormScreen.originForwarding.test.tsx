@@ -27,7 +27,7 @@
 
 import React from "react";
 import { render, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CompetitionBasicFormScreen } from "@/screens/CompetitionBasicFormScreen";
 
 const h = vi.hoisted(() => ({
@@ -54,10 +54,6 @@ function ownKeys(): string[] {
 }
 
 describe("CompetitionBasicFormScreen — リダイレクトシムの params 転送 (Sprint Contract v3 D2/BC-1)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[CFS-1] origin='teamAdmin' が competitionId/date/teamId と共存して厳密一致で転送される", async () => {
     h.mockUseRoute.mockReturnValue({
       params: {

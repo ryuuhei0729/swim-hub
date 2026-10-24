@@ -34,7 +34,6 @@ const selectImageAndAnalyze = async (user: ReturnType<typeof userEvent.setup>) =
 
 describe("OcrScanModal — 解析失敗時のエラー表示 — 情報露出防止の対テスト", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     // jsdom は URL.createObjectURL/revokeObjectURL を実装していないため、
     // OcrScanModal のプレビュー表示ロジック用にスタブする (今回のテストの関心事ではない)。
     vi.stubGlobal("URL", {

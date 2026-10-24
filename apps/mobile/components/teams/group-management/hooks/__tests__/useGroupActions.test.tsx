@@ -24,7 +24,7 @@
 // =============================================================================
 
 import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { UserFacingError } from "@apps/shared/utils/userFacingError";
 
@@ -54,10 +54,6 @@ const fakeSupabase = {} as unknown as SupabaseClient;
 
 const setup = (onSuccess?: () => void) =>
   renderHook(() => useGroupActions(TEAM_ID, fakeSupabase, onSuccess));
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("useGroupActions - createGroup", () => {
   it("成功時は作成された TeamGroup を返し onSuccess を呼ぶ", async () => {

@@ -157,7 +157,6 @@ describe("resolveSafeLocalRedirect", () => {
       const start = performance.now();
       const result = resolveSafeLocalRedirect(input);
       const elapsed = performance.now() - start;
-      console.log(`[perf] depth=1000 inputLen=${input.length} elapsed=${elapsed.toFixed(3)}ms`);
       expect(result).toBe("/dashboard");
       expect(elapsed).toBeLessThan(500); // 極端に遅くないこと (無限ループ化していないことのガード)
     });
@@ -170,7 +169,6 @@ describe("resolveSafeLocalRedirect", () => {
         result = resolveSafeLocalRedirect(input);
       }).not.toThrow();
       const elapsed = performance.now() - start;
-      console.log(`[perf] depth=100000 inputLen=${input.length} elapsed=${elapsed.toFixed(3)}ms`);
       expect(result).toBe("/dashboard");
       // ループ回数(100,000)に比例する程度で完了すること。指数的/無限ループなら
       // このテスト自体がタイムアウトする (vitest のデフォルトテストタイムアウトで検出される)。
@@ -189,9 +187,6 @@ describe("resolveSafeLocalRedirect", () => {
       resolveSafeLocalRedirect(large);
       const largeElapsed = performance.now() - t2;
 
-      console.log(
-        `[perf] small(depth=1000)=${smallElapsed.toFixed(3)}ms large(depth=10000)=${largeElapsed.toFixed(3)}ms ratio=${(largeElapsed / Math.max(smallElapsed, 0.001)).toFixed(2)}`,
-      );
       // 線形なら概ね10倍程度で収まるはず。指数的悪化なら桁違いに大きくなる。
       // 測定誤差(GC・JIT等)を考慮し、余裕を持って100倍未満をガードラインとする。
       expect(largeElapsed).toBeLessThan(Math.max(smallElapsed, 1) * 100);

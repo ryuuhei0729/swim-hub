@@ -42,7 +42,7 @@ function normalizeForComparison(value: number | null): number | null {
 }
 
 /**
- * 目標タイム・初期タイム・マイルストーンの目標タイム等の単発タイム入力欄。
+ * 目標タイム・マイルストーンの目標タイム等の単発タイム入力欄。
  * 練習・大会記録入力と同じ parseTimeFlexible で柔軟にパースし、blur で m:ss.cc に正規化する。
  * web の goals/_components/shared/TimeSecondsInput.tsx の RN 版。
  */

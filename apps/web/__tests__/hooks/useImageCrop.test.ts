@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,7 +19,6 @@ describe("useImageCrop", () => {
   let mockOnCancel: () => void;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockOnCropComplete = vi.fn() as (croppedFile: File) => void;
     mockOnCancel = vi.fn() as () => void;
   });

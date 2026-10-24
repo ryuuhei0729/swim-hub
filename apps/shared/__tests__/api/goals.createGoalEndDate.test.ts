@@ -16,16 +16,13 @@ function setup() {
         insert: vi.fn((v: unknown) => { inserts.goals!.push(v); return { select: () => ({ single: async () => ({ data: { id: "g1" }, error: null }) }) }; }),
       };
     }
-    // records (ベストタイム自動取得): 該当なし
-    const b: Record<string, unknown> = {};
-    for (const k of ["select", "eq", "order", "limit"]) b[k] = () => b;
-    b.single = async () => ({ data: null, error: { code: "PGRST116" } });
-    return b;
+    // createGoal が触るのは competitions と goals だけ (初期タイムの自動取得は撤去済み)
+    throw new Error(`unexpected table: ${table}`);
   });
   const supabase = { from, auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) } } as never;
   return { api: new GoalAPI(supabase), inserts };
 }
-const base = { userId: "u1", styleId: 1, targetTime: 60, startTime: 70 };
+const base = { userId: "u1", styleId: 1, targetTime: 60 };
 
 describe("createGoal 新規大会の end_date", () => {
   it("endDate 指定: 大会 INSERT が {title,date,end_date,place,pool_type} を持つ", async () => {

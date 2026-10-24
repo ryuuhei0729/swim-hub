@@ -80,7 +80,6 @@ const makeMutationMock = () => ({
 
 describe("TeamPracticeList", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.useDeleteTeamPracticeMutation.mockReturnValue(makeMutationMock());
   });
 

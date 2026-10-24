@@ -19,7 +19,7 @@
 
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // モック設定
@@ -37,10 +37,6 @@ vi.mock("next-intl", () => ({
 // ---------------------------------------------------------------------------
 
 describe("LanguageSwitcher コンポーネント (Issue #32 / プルダウン版)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // -------------------------------------------------------------------------
   // [V-09-LS] トリガーとメニュー展開
   // -------------------------------------------------------------------------

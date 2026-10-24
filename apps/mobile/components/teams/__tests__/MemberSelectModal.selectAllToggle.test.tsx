@@ -38,73 +38,13 @@
 //   性別判定などの実ロジックを模倣・再実装しない。
 // =============================================================================
 
-import React, { useEffect } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TeamMembershipWithUser } from "@apps/shared/types";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 
-// -----------------------------------------------------------------------------
-// TeamMemberGroupFilter スタブ
-// -----------------------------------------------------------------------------
-// `mocks.currentHeaders` を各テストの beforeEach / it 内で差し替えることで、
-// 「グループなし (フラット)」と「2グループ」の両方のシナリオを同一モックで再現する。
-// members はそのまま素通しする (並べ替え・フィルタは一切しない = R7 の前提を守るため)。
-const mocks = vi.hoisted(() => ({
-  currentHeaders: new Map<number, string>(),
-}));
-
-vi.mock("../TeamMemberGroupFilter", () => ({
-  TeamMemberGroupFilter: ({
-    members,
-    onGroupedMembersChange,
-  }: {
-    members: TeamMembershipWithUser[];
-    onGroupedMembersChange: (
-      sorted: TeamMembershipWithUser[],
-      headers: Map<number, string>,
-    ) => void;
-  }) => {
-    useEffect(() => {
-      onGroupedMembersChange(members, mocks.currentHeaders);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [members]);
-    return null;
-  },
-}));
-
+import { harness, dummySupabase, buildMember, findGroupToggleButton, findGlobalToggleButton } from "./memberSelectModalHarness";
 import { MemberSelectModal } from "../MemberSelectModal";
-
-const dummySupabase = {} as unknown as SupabaseClient;
-
-const buildMember = (
-  overrides: Partial<TeamMembershipWithUser> & {
-    id: string;
-    user_id: string;
-    name: string;
-    gender?: number;
-    birthday?: string | null;
-  },
-): TeamMembershipWithUser =>
-  ({
-    team_id: "team-1",
-    role: "user",
-    status: "approved",
-    is_active: true,
-    is_swimmer: true,
-    joined_at: "2025-01-01T00:00:00Z",
-    left_at: null,
-    created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
-    ...overrides,
-    users: {
-      id: overrides.user_id,
-      name: overrides.name,
-      gender: overrides.gender ?? 0,
-      birthday: overrides.birthday ?? null,
-    },
-  }) as unknown as TeamMembershipWithUser;
 
 /** hex → jsdom が inline style を計算した後の rgb() 表記へ変換する
  *  (teamRecordBulk.styleCardColors.test.tsx と同じ変換規則) */
@@ -144,32 +84,9 @@ const renderModal = (props?: {
   );
 };
 
-/** 見出しテキストを含む最も近い共通コンテナ (行) を、その中に "全選択" ボタンが
- *  見つかるまで遡って特定する (TeamMemberList.headerLayout.test.tsx と同じ手法)。 */
-function findGroupToggleButton(headerText: string): HTMLElement {
-  const header = screen.getByText(headerText);
-  const allToggleButtons = screen.getAllByRole("button", { name: "全選択" });
-  let row: Element | null = header.parentElement;
-  while (row) {
-    const found = allToggleButtons.find((b) => row!.contains(b));
-    if (found) return found as HTMLElement;
-    row = row.parentElement;
-  }
-  throw new Error(`グループ見出し "${headerText}" の近くに全選択トグルが見つからない`);
-}
-
-/** グループ内に閉じ込められていない = グローバルの全選択ボタンを特定する。 */
-function findGlobalToggleButton(groupHeaderTexts: string[]): HTMLElement {
-  const allToggleButtons = screen.getAllByRole("button", { name: "全選択" });
-  const groupButtons = groupHeaderTexts.map((h) => findGroupToggleButton(h));
-  const remaining = allToggleButtons.filter((b) => !groupButtons.includes(b));
-  expect(remaining).toHaveLength(1);
-  return remaining[0]!;
-}
-
 describe("[TG] MemberSelectModal 全選択トグル", () => {
   beforeEach(() => {
-    mocks.currentHeaders = new Map();
+    harness.groupHeaders = new Map();
   });
 
   describe("[TG-1] グローバル全選択ボタンの3遷移 (グループなしフラットリスト)", () => {
@@ -233,7 +150,7 @@ describe("[TG] MemberSelectModal 全選択トグル", () => {
 
   describe("[TG-2] グループ見出しのミニ全選択トグルは他グループへ波及しない", () => {
     beforeEach(() => {
-      mocks.currentHeaders = new Map<number, string>([
+      harness.groupHeaders = new Map<number, string>([
         [0, "男性"],
         [2, "女性"],
       ]);

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * 対象: apps/shared/hooks/queries/teams.ts
  *   - useUpdateMemberRoleMutation()
@@ -90,7 +91,6 @@ describe("メンバー変更ミューテーションの楽観的更新", () => {
   let mockSupabase: ReturnType<typeof createMockSupabaseClient>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
   });
 

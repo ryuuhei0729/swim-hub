@@ -51,7 +51,6 @@ const goal = (over: Partial<Goal> = {}) =>
     competition_id: "competition-1",
     style_id: 3,
     target_time: 58.5,
-    start_time: 62,
     status: "active",
     ...over,
   }) as Goal;

@@ -14,13 +14,15 @@ concurrency:
 
 jobs:
   regression-tests:
-    runs-on: ubuntu-latest
+    # ubuntu-latest が 26.04 になり、Playwright 1.58 は chromium を入れられない
+    # (`Playwright does not support chromium on ubuntu26.04-x64`)。対応版に上げるまで 24.04 に固定する
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x, 24.x]
 
     steps:
     - name: Checkout code
@@ -35,9 +37,6 @@ jobs:
       # apps/{web,mobile} は @ryuuhei0729/swimhub-oauth を exports 経由 (= dist/) で解決する。
       # dist は gitignore 対象で checkout では復元されないため明示ビルドする。
       run: pnpm --filter @ryuuhei0729/swimhub-oauth build
-
-    - name: Ensure Rollup native binaries are installed
-      run: pnpm add -D @rollup/rollup-linux-x64-gnu --filter @swim-hub/web || true
 
     - name: Run shared package tests
       run: pnpm --filter @swim-hub/shared test
@@ -78,13 +77,13 @@ jobs:
       continue-on-error: true
 
     - name: Generate coverage report
-      if: ${{ matrix.node-version == '20.x' }}
+      if: ${{ matrix.node-version == '22.x' }}
       run: |
         pnpm --filter @swim-hub/shared test:coverage
         pnpm --filter @swim-hub/web test:coverage
 
     - name: Upload coverage to Codecov
-      if: ${{ matrix.node-version == '20.x' }}
+      if: ${{ matrix.node-version == '22.x' }}
       uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
       with:
         files: ./apps/shared/coverage/lcov.info,./apps/web/coverage/lcov.info

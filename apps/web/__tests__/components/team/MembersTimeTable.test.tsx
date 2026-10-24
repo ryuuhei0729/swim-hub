@@ -67,7 +67,7 @@ import React, { useEffect, useState } from "react";
 import { render, screen, within, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { MembersTimeTable } from "../../../components/team/member-management/components/MembersTimeTable";
 import { useMemberBestTimes } from "../../../components/team/shared/hooks/useMemberBestTimes";
@@ -128,10 +128,6 @@ const buildMember = (overrides: Partial<TeamMember> = {}): TeamMember => ({
 const VALID_CELL_COUNT = 17;
 
 describe("MembersTimeTable", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ---------------------------------------------------------------------
   // [V-01] 根本原因の再現: 実 DB データ（日本語 name_jp）が実際にセルに表示される
   // ---------------------------------------------------------------------

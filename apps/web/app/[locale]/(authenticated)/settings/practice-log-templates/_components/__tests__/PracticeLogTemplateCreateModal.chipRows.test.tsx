@@ -11,7 +11,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderWithI18n as render, screen, fireEvent, within } from "@/__tests__/utils/render";
 import { DISTANCE_PRESETS } from "@/components/forms/practice-log/types";
@@ -79,10 +79,6 @@ const renderModal = () => {
 };
 
 describe("PracticeLogTemplateCreateModal — チップ行のカルーセル化 (M-4)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[TM-01] 種目行 / カテゴリ行 / 距離行それぞれに chiprow- の行 testid がある", () => {
     renderModal();
     expect(screen.getByTestId(STYLE_ROW)).toBeInTheDocument();

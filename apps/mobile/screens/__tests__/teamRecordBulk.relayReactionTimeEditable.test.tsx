@@ -29,7 +29,7 @@
 
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createResponseMapSupabase,
   createWrapper,
@@ -81,7 +81,6 @@ function getRelaySwitch(container: HTMLElement): HTMLButtonElement {
 
 describe("TeamRecordStyleDetailScreen — リレー ON でも RT (リアクションタイム) を入力できる", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     harness.getStyles.mockResolvedValue(mocks.styles);
     harness.getBestTimesDetailedForUsers.mockResolvedValue(new Map());

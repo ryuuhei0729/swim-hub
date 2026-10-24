@@ -3,31 +3,31 @@ import { View, Text, ScrollView, Pressable, Alert, StyleSheet, RefreshControl } 
 import { Feather } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { GoalBeforeAfter } from "@/components/goals/GoalBeforeAfter";
 import { GoalProgressBar } from "@/components/goals/GoalProgressBar";
 import { MilestoneList } from "@/components/goals/MilestoneList";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
-import { goalProgressQuery } from "@/hooks/useGoalProgress";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { localizedStyleName } from "@/utils/styleName";
 import type { MainStackParamList } from "@/navigation/types";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { goalKeys, useGoalDetailQuery } from "@apps/shared/hooks/queries/goals";
 import type { Milestone } from "@apps/shared/types";
+import { computeMilestoneRatio } from "@apps/shared/utils/milestoneRatio";
 import { formatDate } from "@apps/shared/utils/date";
-import { formatTimeBest } from "@apps/shared/utils/time";
 
 type NavProp = NativeStackNavigationProp<MainStackParamList>;
 type RouteProps = RouteProp<MainStackParamList, "GoalDetail">;
 
 /**
- * 目標詳細。目標タイム・初期タイム・達成率とマイルストーン一覧を表示し、
+ * 目標詳細。目標タイムと現在のベスト・マイルストーン達成率とマイルストーン一覧を表示し、
  * 目標の編集・削除、マイルストーンの追加・編集・削除への導線を持つ。
  */
 export const GoalDetailScreen: React.FC = () => {
@@ -44,11 +44,15 @@ export const GoalDetailScreen: React.FC = () => {
 
   const goalQuery = useGoalDetailQuery(supabase, goalId);
   const goal = goalQuery.data;
-  const progressQuery = useQuery(goalProgressQuery(goalAPI, goalId));
 
+  // 現在のベスト (GoalBeforeAfter) も取り直す。別端末で記録が増えた場合に引っ張って更新で反映する
   const refresh = useCallback(
-    () => Promise.allSettled([goalQuery.refetch(), progressQuery.refetch()]),
-    [goalQuery, progressQuery],
+    () =>
+      Promise.allSettled([
+        goalQuery.refetch(),
+        queryClient.refetchQueries({ queryKey: goalKeys.currentBestTime(goalId) }),
+      ]),
+    [goalQuery, queryClient, goalId],
   );
   const { refreshing, handleRefresh } = usePullToRefresh(refresh);
 
@@ -154,9 +158,7 @@ export const GoalDetailScreen: React.FC = () => {
   const styleName = goal.style ? localizedStyleName(goal.style, t) : t("goals.list.styleFallback");
 
   const achievedCount = goal.milestones.filter((m) => m.status === "achieved").length;
-  const milestoneRatio =
-    goal.milestones.length > 0 ? (achievedCount / goal.milestones.length) * 100 : 0;
-  const progress = progressQuery.data;
+  const milestoneRatio = computeMilestoneRatio(goal.milestones);
 
   return (
     <ScrollView
@@ -172,62 +174,67 @@ export const GoalDetailScreen: React.FC = () => {
       }
     >
       <View style={styles.card}>
-        <Text style={styles.competitionTitle}>{competitionTitle}</Text>
-        <Text style={styles.subtitle}>
-          {styleName} | {competitionUnavailable ? t("goals.list.competitionInfoUnavailable") : formatDate(competition.date, "long", locale)}
-        </Text>
-        {competitionUnavailable && (
-          <Text style={styles.unavailable}>{t("goals.list.editUnavailableReason")}</Text>
-        )}
-
-        <View style={styles.timeRow}>
-          <View style={styles.timeCell}>
-            <Text style={styles.label}>{t("goals.detail.targetTime")}</Text>
-            <Text style={styles.timeValue}>{formatTimeBest(goal.target_time)}</Text>
+        <View>
+          {/* 1行目に大会日、2行目に大会名 (水路)。編集・削除は右上のアイコン */}
+          <View style={styles.headerRow}>
+            <View style={styles.headerText}>
+              {competition?.date ? (
+                <Text style={styles.metaDate}>{formatDate(competition.date, "numeric", locale)}</Text>
+              ) : null}
+              {/* 大会名が長いときは … で省略する (水路は縮めない) */}
+              <View style={styles.metaRow}>
+                <Text style={styles.metaTitle} numberOfLines={1}>
+                  {competitionTitle}
+                </Text>
+                {competition && (
+                  <Text style={styles.metaPool}>
+                    ({competition.pool_type === 1 ? t("common.poolTypeLong") : t("common.poolTypeShort")})
+                  </Text>
+                )}
+              </View>
+            </View>
+            <View style={styles.headerActions}>
+              {!competitionUnavailable && (
+                <Pressable
+                  onPress={() => navigation.navigate("GoalForm", { goalId })}
+                  hitSlop={8}
+                  style={styles.iconButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("goals.list.edit")}
+                >
+                  <Feather name="edit-2" size={18} color="#6B7280" />
+                </Pressable>
+              )}
+              <Pressable
+                onPress={handleDeleteGoal}
+                hitSlop={8}
+                style={styles.iconButton}
+                accessibilityRole="button"
+                accessibilityLabel={t("goals.list.delete")}
+              >
+                <Feather name="trash-2" size={18} color="#6B7280" />
+              </Pressable>
+            </View>
           </View>
-          <View style={styles.timeCell}>
-            <Text style={styles.label}>{t("goals.detail.initialTime")}</Text>
-            <Text style={styles.timeValue}>
-              {goal.start_time ? formatTimeBest(goal.start_time) : t("goals.detail.notSet")}
+
+          {/* 種目名 → 目標タイム ← 現在のベスト を横並び。狭いときはタイムの並びが種目名の下に回る */}
+          <View style={styles.headlineRow}>
+            <Text style={styles.styleHeading} accessibilityRole="header">
+              {styleName}
             </Text>
+            <GoalBeforeAfter
+              goalId={goal.id}
+              targetTime={goal.target_time}
+              competitionDate={competition?.date}
+              competitionEndDate={competition?.end_date}
+              competitionUnavailable={competitionUnavailable}
+            />
           </View>
-        </View>
 
-        <View style={styles.progressBlock}>
-          <View style={styles.progressRow}>
-            <Text style={styles.label}>{t("goals.detail.achievement")}</Text>
-            <Text style={styles.label}>
-              {progress === undefined
-                ? ""
-                : progress !== null
-                  ? `${progress.toFixed(0)}%`
-                  : t("goals.detail.notSet")}
-            </Text>
-          </View>
-          {progress != null && <GoalProgressBar progress={progress} />}
-        </View>
-
-        <View style={styles.goalActions}>
-          {!competitionUnavailable && (
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={() => navigation.navigate("GoalForm", { goalId })}
-              accessibilityRole="button"
-              accessibilityLabel={t("goals.list.edit")}
-            >
-              <Feather name="edit-2" size={16} color="#374151" />
-              <Text style={styles.secondaryButtonText}>{t("goals.list.edit")}</Text>
-            </Pressable>
+          {/* 大会情報が無い目標は編集できない理由を明示する */}
+          {competitionUnavailable && (
+            <Text style={styles.unavailable}>{t("goals.list.editUnavailableReason")}</Text>
           )}
-          <Pressable
-            style={styles.dangerButton}
-            onPress={handleDeleteGoal}
-            accessibilityRole="button"
-            accessibilityLabel={t("goals.list.delete")}
-          >
-            <Feather name="trash-2" size={16} color="#DC2626" />
-            <Text style={styles.dangerButtonText}>{t("goals.list.delete")}</Text>
-          </Pressable>
         </View>
       </View>
 
@@ -250,9 +257,11 @@ export const GoalDetailScreen: React.FC = () => {
         <View style={styles.progressBlock}>
           <View style={styles.progressRow}>
             <Text style={styles.label}>{t("goals.detail.milestoneRatio")}</Text>
-            <Text style={styles.label}>{milestoneRatio.toFixed(0)}%</Text>
+            <Text style={styles.label}>
+              {milestoneRatio === null ? t("goals.detail.notSet") : `${milestoneRatio.toFixed(0)}%`}
+            </Text>
           </View>
-          <GoalProgressBar progress={milestoneRatio} />
+          {milestoneRatio !== null && <GoalProgressBar progress={milestoneRatio} />}
         </View>
 
         <MilestoneList
@@ -282,37 +291,65 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
-  competitionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
   },
-  subtitle: {
-    marginTop: -8,
+  headerText: {
+    flex: 1,
+    gap: 2,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  iconButton: {
+    padding: 6,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  metaDate: {
     fontSize: 14,
-    color: "#4B5563",
+    fontWeight: "600",
+    color: "#374151",
+    fontVariant: ["tabular-nums"],
+  },
+  metaTitle: {
+    flexShrink: 1,
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  metaPool: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  headlineRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    columnGap: 24,
+    rowGap: 8,
+  },
+  styleHeading: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1D4ED8",
   },
   unavailable: {
-    marginTop: -8,
+    marginTop: 4,
     fontSize: 12,
     color: "#D97706",
-  },
-  timeRow: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  timeCell: {
-    flex: 1,
   },
   label: {
     fontSize: 13,
     color: "#4B5563",
-  },
-  timeValue: {
-    marginTop: 2,
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
   },
   progressBlock: {
     gap: 6,
@@ -320,42 +357,6 @@ const styles = StyleSheet.create({
   progressRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-  },
-  goalActions: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  secondaryButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  dangerButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#FCA5A5",
-  },
-  dangerButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#DC2626",
   },
   sectionHeader: {
     flexDirection: "row",

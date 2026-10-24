@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // =============================================================================
 // QA: Sprint 4 - useAttendanceByPracticeQuery / useAttendanceByCompetitionQuery
 //               / useUpdateAttendanceStatusMutation 検証テスト
@@ -36,7 +37,6 @@ describe("useAttendanceByPracticeQuery", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockAttendancesApi = {
       listByPractice: vi.fn(),
@@ -138,7 +138,6 @@ describe("useAttendanceByCompetitionQuery", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockAttendancesApi = {
       listByPractice: vi.fn(),
@@ -192,7 +191,6 @@ describe("useUpdateAttendanceStatusMutation", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockAttendancesApi = {
       listByPractice: vi.fn(),

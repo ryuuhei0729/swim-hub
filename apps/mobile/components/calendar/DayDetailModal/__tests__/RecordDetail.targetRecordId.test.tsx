@@ -34,10 +34,9 @@
 import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const mockUseAuth = vi.hoisted(() => vi.fn());
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: mockUseAuth,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/helpers/authContext";
 
 vi.mock("expo-sharing", () => ({
   isAvailableAsync: vi.fn().mockResolvedValue(true),
@@ -96,13 +95,13 @@ function renderRecordDetail(
     single: () => Promise.resolve({ data: { image_paths: [] }, error: null }),
   };
 
-  mockUseAuth.mockReturnValue({
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({
     supabase: {
       from: (table: string) => (table === "records" ? recordsChain : competitionsChain),
     },
     user: { id: "user-1" },
     getAccessToken: vi.fn().mockResolvedValue(null),
-  });
+  }));
 
   return render(
     <RecordDetail
@@ -119,7 +118,7 @@ function renderRecordDetail(
 
 describe("RecordDetail — targetRecordId による内部クエリの絞り込み", () => {
   beforeEach(() => {
-    mockUseAuth.mockReset();
+    vi.mocked(useAuth).mockReset();
   });
 
   it("[V-46] targetRecordId 指定時、records クエリに eq(\"id\", targetRecordId) が発行される", async () => {

@@ -115,7 +115,6 @@ const renderModal = (overrides: Partial<Props> = {}) => {
 
 describe("CompetitionDetailModal", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     countRecordsByCompetitionMock.mockReset().mockResolvedValue(0);
   });
 
@@ -335,7 +334,6 @@ describe("CompetitionDetailModal — 大会削除の件数フェッチ レース
   }
 
   beforeEach(() => {
-    vi.clearAllMocks();
     countRecordsByCompetitionMock.mockReset();
   });
 

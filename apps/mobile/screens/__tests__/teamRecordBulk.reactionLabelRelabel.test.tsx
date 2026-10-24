@@ -13,7 +13,7 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createResponseMapSupabase,
   createWrapper,
@@ -29,7 +29,6 @@ harness.members = [{ user_id: "user-1", role: "admin", users: { id: "user-1", na
 
 describe("[変更B] 個人種目カードのリアクションラベルは「リアクション」(旧「リアクションタイム」は出ない)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     harness.getStyles.mockResolvedValue([
       { id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 },
@@ -71,7 +70,6 @@ describe("[変更B] 個人種目カードのリアクションラベルは「リ
 
 describe("[変更B] リレーレグのリアクションラベルは「リアクション」(旧「リアクションタイム」は出ない)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.routeParams = { competitionId: "comp-1", teamId: "team-1", relayEventId: "relay_4x50_free" };
     harness.getStyles.mockResolvedValue([
       { id: 2, name_jp: "50m自由形", name: "50m Freestyle", style: "Fr", distance: 50 },

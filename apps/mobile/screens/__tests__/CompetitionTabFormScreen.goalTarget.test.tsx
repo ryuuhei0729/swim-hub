@@ -330,7 +330,6 @@ async function renderEntryTab(bestTimes: BestTimeFixture[] = []): Promise<Utils>
   return utils;
 }
 
-
 const GOAL_LABEL = ja.forms.recordLog.goalTargetLabel;
 const goalText = (t: string) => `${GOAL_LABEL}: ${t}`;
 const COMP_ID = "comp-1";
@@ -342,7 +341,6 @@ const goal = (over: Record<string, unknown> = {}) => ({
   competition_id: COMP_ID,
   style_id: STYLE_FREE_50.id,
   target_time: 28.5,
-  start_time: 30,
   status: "active",
   ...over,
 });
@@ -416,7 +414,6 @@ const goalBadges = (utils: Utils): string[] =>
 
 describe("CompetitionTabFormScreen — 目標バッジ (M1 エントリー行)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     h.goalQuery = { data: [], isError: false, isPending: false };
     h.goalOptionsSeen = [];
   });
@@ -479,7 +476,6 @@ describe("CompetitionTabFormScreen — 目標バッジ (M1 エントリー行)",
 
 describe("CompetitionTabFormScreen — 目標バッジ (M1' 記録行)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     h.goalQuery = { data: [], isError: false, isPending: false };
     h.goalOptionsSeen = [];
   });
@@ -505,7 +501,6 @@ describe("CompetitionTabFormScreen — 目標バッジ (M1' 記録行)", () => {
 
 describe("CompetitionTabFormScreen — 目標バッジの位置 (badgeColumn)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     h.goalQuery = { data: [goal()], isError: false, isPending: false };
     h.goalOptionsSeen = [];
   });

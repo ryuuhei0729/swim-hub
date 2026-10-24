@@ -11,7 +11,7 @@
 import React from "react";
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import type { UserProfile } from "@apps/shared/types";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
@@ -33,10 +33,6 @@ const CONNECTED_PROFILE = {
 } as unknown as UserProfile;
 
 describe("GoogleCalendarSyncSettings — 一括同期失敗時のエラー表示 — 情報露出防止の対テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   afterEach(() => {
     vi.unstubAllGlobals();
   });

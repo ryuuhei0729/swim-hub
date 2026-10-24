@@ -14,7 +14,7 @@
 import React from "react";
 import { renderWithI18n as render, screen } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 const mockCreate = vi.fn();
 
@@ -26,21 +26,13 @@ vi.mock("@apps/shared/api/teams/records", () => ({
   }),
 }));
 
-let currentAuthMock: {
-  supabase: { auth: { getUser: ReturnType<typeof vi.fn> } };
-};
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitionForm from "@/components/team/TeamCompetitionForm";
 
 describe("TeamCompetitionForm — 作成失敗時のエラー表示 — 情報露出防止の対テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   const submitForm = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByTestId("team-competition-submit-button"));
   };
@@ -50,11 +42,12 @@ describe("TeamCompetitionForm — 作成失敗時のエラー表示 — 情報�
       "汎用フォールバック文言 (createFailed) が表示され、生のエラー文字列は表示されない",
     async () => {
       const user = userEvent.setup();
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+        user: null,
         supabase: {
           auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } }, error: null }) },
         },
-      };
+      }));
       mockCreate.mockRejectedValueOnce(
         new Error('relation "competitions" violates row-level security policy'),
       );
@@ -76,11 +69,12 @@ describe("TeamCompetitionForm — 作成失敗時のエラー表示 — 情報�
       "そのメッセージがそのまま表示される (対照実験)",
     async () => {
       const user = userEvent.setup();
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+        user: null,
         supabase: {
           auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
         },
-      };
+      }));
       render(
         <TeamCompetitionForm isOpen={true} onClose={vi.fn()} teamId="team-1" onSuccess={vi.fn()} />,
       );

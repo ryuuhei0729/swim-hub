@@ -115,7 +115,6 @@ function buildRecordDataLoaderSupabaseMock(
 // ---------------------------------------------------------------------------
 describe("[V-03w] RecordDataLoader の select 列", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "user-1" });
     mockGetLocale.mockResolvedValue("ja");
   });

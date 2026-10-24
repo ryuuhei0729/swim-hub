@@ -7,7 +7,6 @@ describe("TeamBulkRegisterAPI", () => {
   let api: TeamBulkRegisterAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabaseMock = createSupabaseMock();
     api = new TeamBulkRegisterAPI(supabaseMock.client);
   });

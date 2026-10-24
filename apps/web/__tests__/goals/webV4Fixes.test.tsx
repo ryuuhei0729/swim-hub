@@ -27,6 +27,7 @@ vi.mock("next-intl", async (importOriginal) => {
       t.raw = () => ["日", "月", "火", "水", "木", "金", "土"];
       return t as unknown as ReturnType<typeof original.useTranslations>;
     },
+    useLocale: () => "ja",
   };
 });
 vi.mock("@/contexts", () => ({ useAuth: () => ({ supabase: { from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: null }) }) }) }) }, user: { id: "u1" }, subscription: null }) }));
@@ -40,7 +41,7 @@ const mocks = vi.hoisted(() => ({
   getSelectableCompetitions: vi.fn(),
   createCompetition: vi.fn(),
   updateCompetition: vi.fn(),
-  datePickerProps: [] as Array<{ minDate?: Date }>,
+  datePickerProps: [] as Array<{ minDate?: Date; testId?: string }>,
   pickDate: "2000-01-01",
 }));
 vi.mock("@apps/shared/api/goals", () => ({
@@ -55,6 +56,7 @@ vi.mock("@apps/shared/api/goals", () => ({
 }));
 vi.mock("@apps/shared/api/records", () => ({
   RecordAPI: vi.fn().mockImplementation(function () {
+    // getBestTimes は目標フォームのベストタイムラベル用 (本ファイルの検証対象外。ベストなし)
     return { createCompetition: mocks.createCompetition, updateCompetition: mocks.updateCompetition, getBestTimes: vi.fn().mockResolvedValue([]) };
   }),
 }));
@@ -63,10 +65,12 @@ vi.mock("@swim-hub/shared/api", () => ({
     return { createTemplate: vi.fn().mockResolvedValue({}) };
   }),
 }));
+// 押すと mocks.pickDate を選ぶボタン。目標の新規大会は開始日 (goal-new-competition-date) と終了日の2つあるので、
+// 渡された data-testid を使う (無いときは date-pick)
 vi.mock("@/components/ui/DatePicker", () => ({
-  default: ({ onChange, minDate }: { onChange: (d: string) => void; minDate?: Date }) => {
-    mocks.datePickerProps.push({ minDate });
-    return <button type="button" data-testid="date-pick" onClick={() => onChange(mocks.pickDate)}>pick</button>;
+  default: ({ onChange, minDate, "data-testid": testId }: { onChange: (d: string) => void; minDate?: Date; "data-testid"?: string }) => {
+    mocks.datePickerProps.push({ minDate, testId });
+    return <button type="button" data-testid={testId ?? "date-pick"} onClick={() => onChange(mocks.pickDate)}>pick</button>;
   },
 }));
 
@@ -77,7 +81,7 @@ import GoalEditModal from "../../app/[locale]/(authenticated)/goals/_components/
 const style: Style = { id: 1, name_jp: "100m 自由形", name: "100m Fr", style: "Fr", distance: 100 };
 const competition: Competition = { id: "c1", title: "県大会", date: "2099-12-01", pool_type: 0, team_id: null } as unknown as Competition;
 const goal = {
-  id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, start_time: 70, status: "active",
+  id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, status: "active",
   achieved_at: null, reflection_note: null, created_at: "", updated_at: "", competition, style, milestones: [],
 } as unknown as GoalWithMilestones & { competition: Competition };
 const repsMilestone = {
@@ -241,10 +245,10 @@ describe("M3 / M4 (web) GoalEditModal の新規大会", () => {
   const submit = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole("button", { name: "goals.edit.submitButton" }));
   const today = () => format(new Date(), "yyyy-MM-dd");
 
-  it("[M3] 新規大会の DatePicker に minDate=今日 (時刻 0:00) が渡る", async () => {
+  it("[M3] 新規大会の開始日の DatePicker に minDate=今日 (時刻 0:00) が渡る", async () => {
     const user = userEvent.setup();
     await openNewCompetition(user);
-    const last = mocks.datePickerProps[mocks.datePickerProps.length - 1]!;
+    const last = [...mocks.datePickerProps].reverse().find((p) => p.testId === "goal-new-competition-date")!;
     expect(last.minDate).toBeInstanceOf(Date);
     expect(format(last.minDate!, "yyyy-MM-dd")).toBe(today());
     expect(last.minDate!.getHours()).toBe(0);
@@ -253,14 +257,14 @@ describe("M3 / M4 (web) GoalEditModal の新規大会", () => {
   it("[M3] 過去日は拒否 (alert competitionDatePast、createCompetition/updateGoal 未呼び出し)。今日は可", async () => {
     const user = userEvent.setup();
     await openNewCompetition(user);
-    await user.click(screen.getByTestId("date-pick")); // 2000-01-01
+    await user.click(screen.getByTestId("goal-new-competition-date")); // 2000-01-01
     await submit(user);
     expect(window.alert).toHaveBeenCalledWith("goals.form.competitionDatePast");
     expect(mocks.createCompetition).not.toHaveBeenCalled();
     expect(mocks.updateGoal).not.toHaveBeenCalled();
 
     mocks.pickDate = today();
-    await user.click(screen.getByTestId("date-pick"));
+    await user.click(screen.getByTestId("goal-new-competition-date"));
     await submit(user);
     expect(mocks.createCompetition).toHaveBeenCalledTimes(1);
     expect(mocks.updateGoal).toHaveBeenCalledTimes(1);
@@ -271,7 +275,7 @@ describe("M3 / M4 (web) GoalEditModal の新規大会", () => {
     mocks.updateGoal.mockRejectedValueOnce(new Error("rls")).mockRejectedValueOnce(new Error("rls"));
     await openNewCompetition(user);
     mocks.pickDate = today();
-    await user.click(screen.getByTestId("date-pick"));
+    await user.click(screen.getByTestId("goal-new-competition-date"));
     await submit(user);
     expect(mocks.createCompetition).toHaveBeenCalledTimes(1);
     // 無変更で再送信 -> updateCompetition なし
@@ -295,7 +299,7 @@ describe("M3 / M4 (web) GoalEditModal の新規大会", () => {
     mocks.updateGoal.mockRejectedValueOnce(new Error("rls"));
     await openNewCompetition(user);
     mocks.pickDate = today();
-    await user.click(screen.getByTestId("date-pick"));
+    await user.click(screen.getByTestId("goal-new-competition-date"));
     await submit(user);
     expect(mocks.createCompetition).toHaveBeenCalledTimes(1);
     expect(mocks.updateGoal).toHaveBeenCalledTimes(1);

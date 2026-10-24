@@ -40,7 +40,7 @@
 
 import React from "react";
 import { render, screen, fireEvent, within } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import MemberSelectModal, {
   type MemberSelectOption,
@@ -104,10 +104,6 @@ function renderModal(
 }
 
 describe("MemberSelectModal (web, 共有基盤) — チップ化後の契約", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it(
     "[WV-01] チームメンバーが選択チップ (button, aria-pressed) として表示される" +
       "（人間の意図: checkbox一覧をチップグリッドに置き換える。チップの初期状態は未選択）",

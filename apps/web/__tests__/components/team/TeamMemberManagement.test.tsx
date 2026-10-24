@@ -82,7 +82,6 @@ const buildMember = (overrides: Partial<TeamMember> = {}): TeamMember => ({
 
 describe("TeamMemberManagement", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
 
     usePendingMembersMock.mockReturnValue({
       pendingMembers: [],

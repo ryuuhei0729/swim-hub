@@ -189,7 +189,6 @@ function makeRelayRecords(legSplits: Array<{ distance: number; split_time: numbe
 
 describe("TeamRecordStyleDetailScreen — リレー split の事前バリデーション (D3・Success Criteria S6)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.insertCalls.length = 0;
     mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;

@@ -1,4 +1,5 @@
 // Contract v6: useGoalsQuery の select は competition を { title, date } で返す (後方互換の追加)。
+// 2026-10-14: 複数日開催の過去判定 (mobile 目標タブ) 用に end_date も返す (単日開催は null)。
 // 大会が見つからない目標は null のまま。壊したら赤: date を落とす / 見つからない場合に undefined を返す。
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,7 +16,7 @@ vi.mock("../../api/goals", () => ({
 import { useGoalsQuery } from "../../hooks/queries/goals";
 
 describe("useGoalsQuery の competition", () => {
-  it("{ title, date } を返し、見つからない大会は null", async () => {
+  it("{ title, date, end_date } を返し、見つからない大会は null", async () => {
     h.getGoals.mockResolvedValue([
       { id: "g1", competition_id: "c1", style_id: 1 },
       { id: "g2", competition_id: "missing", style_id: 1 },
@@ -26,7 +27,7 @@ describe("useGoalsQuery の competition", () => {
       wrapper: ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>,
     });
     await waitFor(() => expect(result.current.data).toBeDefined());
-    expect(result.current.data![0]!.competition).toEqual({ title: "県大会", date: "2026-10-03" });
+    expect(result.current.data![0]!.competition).toEqual({ title: "県大会", date: "2026-10-03", end_date: null });
     expect(result.current.data![1]!.competition).toBeNull();
   });
 });

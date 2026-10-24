@@ -35,7 +35,8 @@
 
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SWIM_STYLES as CANONICAL_SWIM_STYLES } from "@apps/shared/types/common";
 import { SWIM_STYLES as GOALS_SWIM_STYLES } from "../../app/[locale]/(authenticated)/goals/_components/constants";
 import type { GoalWithMilestones, Style } from "@apps/shared/types";
@@ -53,6 +54,7 @@ vi.mock("next-intl", async (importOriginal) => {
         const full = namespace ? `${namespace}.${key}` : key;
         return values ? `${full}:${JSON.stringify(values)}` : full;
       }) as unknown as ReturnType<typeof original.useTranslations>,
+    useLocale: () => "ja",
   };
 });
 
@@ -77,11 +79,10 @@ vi.mock("@apps/shared/hooks/queries/user", () => ({
 vi.mock("@apps/shared/api/goals", () => ({
   GoalAPI: vi.fn().mockImplementation(function () {
     return {
-      // competition が null (水路不明) の目標は達成率が計算不能 (null) を返す。
-      // 本ファイルの [V-UI-NULLGUARD-01]/[V-UI-NULLCOMP-EDIT] は competition null の
-      // goal しか扱わないため、実際の本番挙動 (null) に揃える (0 にすると ProgressBar
-      // 非表示の検証ができない)。
-      calculateGoalProgress: vi.fn().mockResolvedValue(null),
+      // competition が null (水路不明) の目標は現在のタイムを取得できず null を返す。
+      // 本ファイルの [V-UI-NULLGUARD-01]/[V-UI-NULLCOMP-EDIT] は主に competition null の
+      // goal を扱うため、実際の本番挙動 (null) に揃える。
+      getGoalCurrentBestTime: vi.fn().mockResolvedValue(null),
       updateGoal: vi.fn().mockResolvedValue({}),
     };
   }),
@@ -102,6 +103,12 @@ import GoalReflectionModal from "../../app/[locale]/(authenticated)/goals/_compo
 import GoalList from "../../app/[locale]/(authenticated)/goals/_components/GoalList";
 import StyleSelector from "../../app/[locale]/(authenticated)/goals/_components/shared/StyleSelector";
 
+// GoalList / GoalDetail は「現在のタイム」を React Query で取得するため Provider が要る
+function renderWithQueryClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 const baseStyle: Style = { id: 1, name_jp: "自由形", name: "Freestyle", style: "Fr", distance: 100 };
 
 function createGoalWithNullCompetition(overrides: Partial<GoalWithMilestones> = {}): GoalWithMilestones {
@@ -111,7 +118,6 @@ function createGoalWithNullCompetition(overrides: Partial<GoalWithMilestones> = 
     competition_id: null,
     style_id: 1,
     target_time: 60,
-    start_time: 70,
     status: "active",
     achieved_at: null,
     reflection_note: null,
@@ -150,12 +156,12 @@ describe("[V-UI-CONST-01] constants.ts SWIM_STYLES は canonical から導出さ
 });
 
 describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げない", () => {
-  it("GoalDetail に competition: null を含む goal を渡してもレンダリングが例外を投げず、大会名/日付は所定のフォールバック文言で表示される", async () => {
+  it("GoalDetail に competition: null を含む goal を渡してもレンダリングが例外を投げず、大会名は所定のフォールバック文言・現在のタイムは「—」で表示される", async () => {
     const goal = createGoalWithNullCompetition();
 
     let container!: HTMLElement;
     expect(() => {
-      ({ container } = render(
+      ({ container } = renderWithQueryClient(
         <GoalDetail
           goal={goal}
           styles={[baseStyle]}
@@ -168,23 +174,25 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
     // goal.competition が null のときの表示文言は全画面で
     // list.competitionInfoUnavailable に統一されている (competitionFallback は
     // competition はあるが title が空のときだけ使う別のキー)。
-    // GoalDetail は見出し (大会名相当。単独ノードとして一致) と日付欄
-    // (「種目名 | goals.list.competitionInfoUnavailable」の複合テキストの一部として
-    // 出現するため getByText の完全一致では拾えない。textContent の出現回数で数える)
-    // の両方にこのキーを表示する。
+    // 大会日が分からないので日付行 (と残り日数) は出さない。
     await screen.findByText("goals.list.competitionInfoUnavailable");
     const occurrences = (
       container.textContent?.match(/goals\.list\.competitionInfoUnavailable/g) ?? []
     ).length;
-    expect(occurrences).toBeGreaterThanOrEqual(2);
+    expect(occurrences).toBe(1);
+    expect(container.textContent).not.toMatch(/daysLeft|competitionToday|competitionFinished/);
 
-    // 達成率が計算不能 (null) のときは目標本体の ProgressBar 自体を
-    // 描画しない (0% バーが出ると「達成率0%」と誤解されるため)。「未設定」文言のみを表示する。
-    // GoalDetail は「達成率」と「マイルストーン達成率」の2本の ProgressBar を持つため、
-    // 本体側が非表示になれば描画本数は1本 (マイルストーン側のみ) に減ることで確認する
-    // (マイルストーン側は goal.milestones から独立に計算されるため null-guard の対象外)。
-    expect(screen.getByText("goals.detail.notSet")).toBeInTheDocument();
-    expect(container.querySelectorAll(".bg-blue-600.h-2")).toHaveLength(1);
+    // 水路が分からないので現在のタイムは「—」(記録なしとは区別する)。残り秒数も出さない
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.queryByText("goals.detail.noRecord")).not.toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/remainingSeconds|targetReached/);
+
+    // 目標本体の達成率は表示しない。マイルストーン達成率は0件なので「未設定」で、% もバーも出さない (D2)
+    expect(screen.queryByText("goals.detail.achievement")).not.toBeInTheDocument();
+    const ratioRow = screen.getByText("goals.detail.milestoneRatio").parentElement!;
+    expect(within(ratioRow).getByText("goals.detail.notSet")).toBeInTheDocument();
+    expect(ratioRow.textContent).not.toMatch(/%|—/);
+    expect(container.querySelectorAll(".bg-blue-600.h-2")).toHaveLength(0);
   });
 
   it("GoalSetCalculatorModal は goal.competition が null のとき計算結果に「大会情報なし」フォールバックを表示し、TypeError で画面全体が落ちない", () => {
@@ -240,7 +248,6 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
       competition_id: "comp-deleted",
       style_id: 1,
       target_time: 60,
-      start_time: 70,
       status: "active" as const,
       achieved_at: null,
       reflection_note: null,
@@ -253,7 +260,7 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
     };
 
     expect(() =>
-      render(
+      renderWithQueryClient(
         <GoalList
           goals={[goalWithNullCompetition]}
           selectedGoalId={null}
@@ -264,7 +271,7 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
       ),
     ).not.toThrow();
 
-    // GoalList 内部の calculateGoalProgress (非同期) が完了して state 更新が
+    // GoalList 内部の現在のタイム取得 (非同期) が完了して state 更新が
     // 落ち着くまで待つ (act() 警告防止。他のテストと同じ settle パターン)。
     await screen.findByText("goals.list.competitionInfoUnavailable");
   });
@@ -281,7 +288,6 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
       competition_id: "comp-deleted",
       style_id: 1,
       target_time: 60,
-      start_time: 70,
       status: "active" as const,
       achieved_at: null,
       reflection_note: null,
@@ -291,7 +297,7 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
       style: { name_jp: "自由形" },
     };
 
-    render(
+    renderWithQueryClient(
       <GoalList
         goals={[goalWithNullCompetition]}
         selectedGoalId={null}
@@ -301,7 +307,7 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
       />,
     );
 
-    // GoalAPI.calculateGoalProgress (モック) の非同期解決を待って act 警告を避ける
+    // GoalAPI.getGoalCurrentBestTime (モック) の非同期解決を待って act 警告を避ける
     await screen.findByText("自由形");
     expect(screen.queryByLabelText("goals.list.edit")).not.toBeInTheDocument();
     expect(screen.getByText("goals.list.editUnavailableReason")).toBeInTheDocument();
@@ -313,7 +319,7 @@ describe("[V-UI-NULLCOMP-EDIT] goal.competition が null の目標は編集不�
   it("competition が null の目標カードには編集ボタンが無く、削除ボタンはあり、理由文言 (editUnavailableReason) が表示される", async () => {
     const nullGoal = createGoalWithNullCompetition({ id: "goal-null" });
 
-    const { container } = render(
+    const { container } = renderWithQueryClient(
       <GoalList
         goals={[nullGoal]}
         selectedGoalId={null}
@@ -323,12 +329,12 @@ describe("[V-UI-NULLCOMP-EDIT] goal.competition が null の目標は編集不�
       />,
     );
 
-    // GoalAPI.calculateGoalProgress (モック) の非同期解決を待って act 警告を避ける
+    // GoalAPI.getGoalCurrentBestTime (モック) の非同期解決を待って act 警告を避ける
     await screen.findByText("goals.list.editUnavailableReason");
     expect(screen.queryByLabelText("goals.list.edit")).not.toBeInTheDocument();
     expect(screen.getByLabelText("goals.list.delete")).toBeInTheDocument();
-    // 達成率が計算不能 (null) のときは ProgressBar 自体を描画しない
-    expect(screen.getByText("goals.detail.notSet")).toBeInTheDocument();
+    // 水路が分からないので Best 差は出さない。カードに進捗バーは無い
+    expect(screen.queryByText(/diffFromBest/)).not.toBeInTheDocument();
     expect(container.querySelector(".bg-blue-600.h-2")).toBeNull();
   });
 
@@ -338,7 +344,7 @@ describe("[V-UI-NULLCOMP-EDIT] goal.competition が null の目標は編集不�
       competition: { id: "comp-1", title: "テスト大会", date: "2026-01-01", pool_type: 1 } as never,
     });
 
-    render(
+    renderWithQueryClient(
       <GoalList
         goals={[normalGoal]}
         selectedGoalId={null}

@@ -151,7 +151,6 @@ const validPracticeRow = {
 
 describe("PracticeLogDataLoader — 管理者権限ガード (V-11: 変更禁止の回帰確認)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "user-1" });
     mockGetLocale.mockResolvedValue("ja");
   });

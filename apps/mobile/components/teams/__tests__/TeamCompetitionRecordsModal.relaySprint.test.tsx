@@ -209,7 +209,6 @@ function renderModal(props: Partial<React.ComponentProps<typeof TeamCompetitionR
 
 describe("TeamCompetitionRecordsModal (mobile) — relay grouping & best badge sprint", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getByCompetition.mockResolvedValue([]);
   });
 

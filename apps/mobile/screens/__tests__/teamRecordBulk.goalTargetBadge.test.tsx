@@ -185,7 +185,6 @@ function medleyRelayRecords() {
   ];
 }
 
-
 const GOAL_LABEL = ja.forms.recordLog.goalTargetLabel;
 const goalText = (time: string) => `${GOAL_LABEL}: ${time}`;
 const goalBadges = (): string[] =>
@@ -212,7 +211,6 @@ function renderScreen() {
 
 describe("TeamRecordStyleDetailScreen — 目標バッジ (M2)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     mocks.getStyles.mockResolvedValue(mocks.styles);
     mocks.getBestTimesDetailedForUsers.mockResolvedValue(new Map());

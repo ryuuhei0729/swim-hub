@@ -193,7 +193,6 @@ describe("PracticesScreen — 行タップで DayDetailModal に渡る targetId/
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     capturedModalProps.current = null;
     apiMocks.getPracticeTags.mockResolvedValue([]);
     apiMocks.getCalendarEntries.mockResolvedValue([]);

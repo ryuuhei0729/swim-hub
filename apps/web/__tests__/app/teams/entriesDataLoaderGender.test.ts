@@ -16,7 +16,7 @@
  * [WV-10] を参照。
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGetServerUser = vi.fn();
 const mockCreateAuthenticatedServerClient = vi.fn();
@@ -62,6 +62,11 @@ async function loadEntriesDataLoader() {
   );
   return mod.default;
 }
+
+// サーバーコンポーネント一式の初回 import (変換) は 5 秒を超えることがあるので、最初のテストの枠から外す
+beforeAll(async () => {
+  await loadEntriesDataLoader();
+});
 
 type QueuedResponse = { data: unknown; error: unknown };
 
@@ -118,7 +123,6 @@ const memberRow = (userId: string, name: string, gender: number, role = "user") 
 
 describe("EntriesDataLoader — gender の追加 [WV-10, PM裁定W10]", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "user-1" });
     mockGetLocale.mockResolvedValue("ja");
     mockGetBestTimesForUsers.mockResolvedValue(new Map());

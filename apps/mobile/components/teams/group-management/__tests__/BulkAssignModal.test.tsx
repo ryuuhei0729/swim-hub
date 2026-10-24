@@ -77,7 +77,6 @@ let zoneMeasureCallCount = 0;
 
 vi.mock("react-native", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-native")>();
-  const RN = require("react");
   // BulkAssignModal はドロップゾーンの絶対座標計測に View.measureInWindow (ネイティブ専用)
   // を使う。共有モックの View にはこれが無いため、このファイル内限定で forwardRef 化し、
   // 呼び出し順に応じて縦にずらした矩形を返すダミー実装を与える。
@@ -93,8 +92,8 @@ vi.mock("react-native", async (importOriginal) => {
   // 実 View インスタンスは再レンダーごとに再生成されないため起こらない現象)。
   // 依存配列を [] にして「実際に View インスタンスが mount/unmount されたときだけ」
   // ハンドルが (再)生成されるようにし、本物の View の挙動に合わせる。
-  const ViewWithMeasure = RN.forwardRef((props: Record<string, unknown>, ref: unknown) => {
-    RN.useImperativeHandle(
+  const ViewWithMeasure = React.forwardRef((props: Record<string, unknown>, ref: React.ForwardedRef<unknown>) => {
+    React.useImperativeHandle(
       ref,
       () => ({
         measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => {
@@ -104,7 +103,7 @@ vi.mock("react-native", async (importOriginal) => {
       }),
       [],
     );
-    return RN.createElement("div", props);
+    return React.createElement("div", props);
   });
   return {
     ...original,
@@ -124,7 +123,6 @@ type PanHandlers = {
 const capturedPanGestures: PanHandlers[] = [];
 
 vi.mock("react-native-gesture-handler", () => {
-  const RN = require("react");
 
   function panBuilder(handlers: PanHandlers) {
     return {
@@ -150,7 +148,7 @@ vi.mock("react-native-gesture-handler", () => {
 
   return {
     GestureHandlerRootView: ({ children, ...props }: { children?: React.ReactNode }) =>
-      RN.createElement("div", props, children),
+      React.createElement("div", props, children),
     GestureDetector: ({ children }: { children?: React.ReactNode }) => children,
     Gesture: {
       Pan: () => {
@@ -168,7 +166,7 @@ vi.mock("react-native-gesture-handler", () => {
       // container.innerHTML からは観測できない (実測済み)。そのためコンポーネントへ実際に
       // 渡された prop の値をこの配列に記録し、DOM ではなく prop 経由で検証する。
       scrollEnabledLog.push(scrollEnabled);
-      return RN.createElement("div", props, children);
+      return React.createElement("div", props, children);
     },
   };
 });
@@ -182,11 +180,10 @@ vi.mock("react-native-gesture-handler", () => {
 const scrollEnabledLog: (boolean | undefined)[] = [];
 
 vi.mock("react-native-reanimated", () => {
-  const RN = require("react");
   return {
     default: {
       View: ({ children, ...props }: { children?: React.ReactNode }) =>
-        RN.createElement("div", props, children),
+        React.createElement("div", props, children),
     },
     // 【本ファイルで実際に発生した不具合】単に `(v) => ({ value: v })` と実装すると、
     // 呼び出し元コンポーネントが再レンダーされるたびに新しいオブジェクトを返してしまう
@@ -198,7 +195,7 @@ vi.mock("react-native-reanimated", () => {
     // (V-B3-18) が偽陽性の失敗を起こしていた。useRef で包み、初回レンダーでのみ
     // オブジェクトを生成することで実物の挙動に合わせる。
     useSharedValue: (initial: unknown) => {
-      const ref = RN.useRef(null) as { current: { value: unknown } | null };
+      const ref = React.useRef(null) as { current: { value: unknown } | null };
       if (ref.current === null) {
         ref.current = { value: initial };
       }

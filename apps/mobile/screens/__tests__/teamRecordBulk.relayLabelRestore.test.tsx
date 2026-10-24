@@ -75,7 +75,7 @@
 
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createResponseMapSupabase,
   createWrapper,
@@ -153,7 +153,6 @@ function freeRelayRecordsViaPhase4() {
 
 describe("TeamRecordStyleDetailScreen — リレーラベル復元 (Sprint Contract V-01〜V-07)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.getStyles.mockResolvedValue(mocks.styles);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },

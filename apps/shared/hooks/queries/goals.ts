@@ -16,16 +16,18 @@ export const goalKeys = {
   lists: () => [...goalKeys.all, "list"] as const,
   list: (filters?: { status?: string }) => [...goalKeys.lists(), filters] as const,
   detail: (id: string) => [...goalKeys.all, "detail", id] as const,
+  currentBestTime: (id: string) => [...goalKeys.all, "currentBestTime", id] as const,
 } as const;
 
 type GoalWithDetails = Goal & {
-  competition: { title: string | null; date: string } | null;
+  /** end_date は複数日開催の終了日 (単日開催は null) */
+  competition: { title: string | null; date: string; end_date: string | null } | null;
   style?: { name_jp: string };
 };
 
 type GoalsQueryData = {
   goals: Goal[];
-  competitions: { id: string; title: string | null; date: string }[];
+  competitions: { id: string; title: string | null; date: string; end_date?: string | null }[];
 };
 
 /**
@@ -63,7 +65,9 @@ export function useGoalsQuery(
         const style = options.styles?.find((s) => s.id === goal.style_id);
         return {
           ...goal,
-          competition: competition ? { title: competition.title, date: competition.date } : null,
+          competition: competition
+            ? { title: competition.title, date: competition.date, end_date: competition.end_date ?? null }
+            : null,
           style: style ? { name_jp: style.name_jp } : undefined,
         };
       }),
@@ -77,6 +81,25 @@ export function useGoalsQuery(
   };
 
   return { ...query, invalidate };
+}
+
+/**
+ * 目標の「現在のベスト」取得クエリ (GoalAPI.getGoalCurrentBestTime)。
+ * 一覧カードと詳細で同じキーを共有し、goalKeys.all の invalidate で取り直される。
+ */
+export function useGoalCurrentBestTimeQuery(
+  supabase: SupabaseClient,
+  goalId: string,
+): UseQueryResult<number | null, Error> {
+  const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
+
+  return useQuery<number | null, Error>({
+    queryKey: goalKeys.currentBestTime(goalId),
+    queryFn: () => goalAPI.getGoalCurrentBestTime(goalId),
+    // 記録の登録・編集・削除 (大会記録画面・ダッシュボード等) は goalKeys を invalidate しないため、
+    // 画面を開くたびに取り直す (キャッシュは取り直すまでの表示に使う)
+    staleTime: 0,
+  });
 }
 
 /**

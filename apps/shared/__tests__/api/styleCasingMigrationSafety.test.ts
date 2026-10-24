@@ -59,6 +59,7 @@ function createRecordingQueryBuilder(
     limit: () => builder,
     lte: () => builder,
     gte: () => builder,
+    gt: () => builder,
     eq: (column: string, value: unknown) => {
       calls.push({ method: "eq", column, value });
       return builder;

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * useBestTimes フックテスト (マイページ ベストタイム表用データ取得フック)
  *
@@ -23,7 +24,7 @@
  */
 
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { useBestTimes } from "../../hooks/useBestTimes";
 
@@ -42,10 +43,6 @@ const createMockSupabase = (mockData: unknown[] | null = [], mockError: Error | 
 // NOTE: `bestTimes[0]!` / `mock.calls[0]!` を多用する。各テストは直前に `toHaveLength(1)` /
 // `toHaveBeenCalledTimes(1)` で件数を確認済みで、その範囲内のインデックスのみアクセスしている。
 describe("useBestTimes", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ---------------------------------------------------------------------
   // [V-HOOK-01] クエリ文字列そのものに note 列が含まれる (バグ2回帰防止)
   // ---------------------------------------------------------------------

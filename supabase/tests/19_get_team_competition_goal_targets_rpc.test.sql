@@ -100,24 +100,24 @@ insert into public.competitions (id, title, date, pool_type, team_id, user_id, c
     'bbbbbbbb-1900-4000-a000-000000000001', null, 'aaaaaaaa-1900-4000-a000-0000000000a1');
 
 -- c1 の目標 (期待される返却は a1/s4, a7/s1(cancelled), a7/s2, a7/s3(achieved), a8/s2 の5行)
-insert into public.goals (id, user_id, competition_id, style_id, target_time, start_time, status, reflection_note) values
-  ('dddddddd-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000001', 2, 28.00, 30.00, 'active',    'SECRET-NOTE'),
-  ('dddddddd-1900-4000-a000-000000000002', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000001', 3, 60.00, 64.00, 'achieved',  null),
-  ('dddddddd-1900-4000-a000-000000000003', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000001', 1, 25.00, 27.00, 'cancelled', null),
-  ('dddddddd-1900-4000-a000-000000000004', 'aaaaaaaa-1900-4000-a000-0000000000a8', 'cccccccc-1900-4000-a000-000000000001', 2, 29.00, 31.00, 'active',    null),
-  ('dddddddd-1900-4000-a000-000000000005', 'aaaaaaaa-1900-4000-a000-0000000000a1', 'cccccccc-1900-4000-a000-000000000001', 4, 55.00, 60.00, 'active',    null),
+insert into public.goals (id, user_id, competition_id, style_id, target_time, status, reflection_note) values
+  ('dddddddd-1900-4000-a000-000000000001', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000001', 2, 28.00, 'active',    'SECRET-NOTE'),
+  ('dddddddd-1900-4000-a000-000000000002', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000001', 3, 60.00, 'achieved',  null),
+  ('dddddddd-1900-4000-a000-000000000003', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000001', 1, 25.00, 'cancelled', null),
+  ('dddddddd-1900-4000-a000-000000000004', 'aaaaaaaa-1900-4000-a000-0000000000a8', 'cccccccc-1900-4000-a000-000000000001', 2, 29.00, 'active',    null),
+  ('dddddddd-1900-4000-a000-000000000005', 'aaaaaaaa-1900-4000-a000-0000000000a1', 'cccccccc-1900-4000-a000-000000000001', 4, 55.00, 'active',    null),
   -- 返してはいけない行 (退会済み / 承認待ち / 非所属 / is_active=NULL)
-  ('dddddddd-1900-4000-a000-000000000006', 'aaaaaaaa-1900-4000-a000-0000000000a9', 'cccccccc-1900-4000-a000-000000000001', 2, 31.00, 33.00, 'active',    null),
-  ('dddddddd-1900-4000-a000-000000000007', 'aaaaaaaa-1900-4000-a000-0000000000b1', 'cccccccc-1900-4000-a000-000000000001', 2, 32.00, 34.00, 'active',    null),
-  ('dddddddd-1900-4000-a000-000000000008', 'aaaaaaaa-1900-4000-a000-0000000000b2', 'cccccccc-1900-4000-a000-000000000001', 2, 33.00, 35.00, 'active',    null),
-  ('dddddddd-1900-4000-a000-000000000009', 'aaaaaaaa-1900-4000-a000-0000000000b4', 'cccccccc-1900-4000-a000-000000000001', 2, 34.00, 36.00, 'active',    null),
+  ('dddddddd-1900-4000-a000-000000000006', 'aaaaaaaa-1900-4000-a000-0000000000a9', 'cccccccc-1900-4000-a000-000000000001', 2, 31.00, 'active',    null),
+  ('dddddddd-1900-4000-a000-000000000007', 'aaaaaaaa-1900-4000-a000-0000000000b1', 'cccccccc-1900-4000-a000-000000000001', 2, 32.00, 'active',    null),
+  ('dddddddd-1900-4000-a000-000000000008', 'aaaaaaaa-1900-4000-a000-0000000000b2', 'cccccccc-1900-4000-a000-000000000001', 2, 33.00, 'active',    null),
+  ('dddddddd-1900-4000-a000-000000000009', 'aaaaaaaa-1900-4000-a000-0000000000b4', 'cccccccc-1900-4000-a000-000000000001', 2, 34.00, 'active',    null),
   -- 別の大会の目標 (c2 = team1 の別大会 / c4 = a7 の個人大会)。c1 の結果に混ざってはいけない
-  ('dddddddd-1900-4000-a000-00000000000a', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000002', 5, 70.00, 75.00, 'active',    null),
-  ('dddddddd-1900-4000-a000-00000000000b', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000004', 6, 80.00, 85.00, 'active',    null),
+  ('dddddddd-1900-4000-a000-00000000000a', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000002', 5, 70.00, 'active',    null),
+  ('dddddddd-1900-4000-a000-00000000000b', 'aaaaaaaa-1900-4000-a000-0000000000a7', 'cccccccc-1900-4000-a000-000000000004', 6, 80.00, 'active',    null),
   -- team2 のみに所属するユーザー b5 の c1 (team1 の大会) への目標。p_team_id (team1) のメンバーではないので返してはいけない
-  ('dddddddd-1900-4000-a000-00000000000d', 'aaaaaaaa-1900-4000-a000-0000000000b5', 'cccccccc-1900-4000-a000-000000000001', 4, 40.00, 42.00, 'active',    null),
+  ('dddddddd-1900-4000-a000-00000000000d', 'aaaaaaaa-1900-4000-a000-0000000000b5', 'cccccccc-1900-4000-a000-000000000001', 4, 40.00, 'active',    null),
   -- team2 の大会 c3 の目標 (team2 管理者から見える正常系)
-  ('dddddddd-1900-4000-a000-00000000000c', 'aaaaaaaa-1900-4000-a000-0000000000b5', 'cccccccc-1900-4000-a000-000000000003', 2, 26.00, 28.00, 'active',    null);
+  ('dddddddd-1900-4000-a000-00000000000c', 'aaaaaaaa-1900-4000-a000-0000000000b5', 'cccccccc-1900-4000-a000-000000000003', 2, 26.00, 'active',    null);
 
 -- =============================================================================
 -- 属性・権限・戻り列 (V-01)
@@ -154,7 +154,7 @@ select is(
    cross join lateral unnest(p.proargnames, p.proargmodes) with ordinality as a(n, m, o)
    where ns.nspname = 'public' and p.proname = 'get_team_competition_goal_targets' and a.m = 't'),
   array['user_id','style_id','target_time','status']::text[],
-  'V-01g: 戻り列は user_id / style_id / target_time / status の4つだけ (reflection_note・start_time 等を含まない)');
+  'V-01g: 戻り列は user_id / style_id / target_time / status の4つだけ (reflection_note 等を含まない)');
 
 -- =============================================================================
 -- 認可 (V-02)。拒否はすべて RAISE EXCEPTION (P0001)。anon だけは権限エラー (42501)

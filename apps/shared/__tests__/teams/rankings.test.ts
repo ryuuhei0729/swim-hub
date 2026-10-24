@@ -122,7 +122,6 @@ describe("TeamRankingsAPI", () => {
   let rpc: Mock;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabaseMock = createSupabaseMock();
     rpc = supabaseMock.client.rpc as unknown as Mock;
     api = new TeamRankingsAPI(supabaseMock.client);

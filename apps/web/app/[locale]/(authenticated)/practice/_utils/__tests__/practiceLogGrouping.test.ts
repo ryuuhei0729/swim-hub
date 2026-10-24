@@ -15,6 +15,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import type { PracticeSortColumn } from "@/stores/practice/practiceStore";
 import type { PracticeWithLogs, PracticeLogWithTags } from "@apps/shared/types";
 import type { PracticeLogRow } from "@apps/shared/utils/practiceLogRows";
 import {
@@ -108,10 +109,8 @@ describe("getPracticeLogRowSortValue (V-WP-04/05/06: ソート値は date/place 
       "想定外の値が来てもクラッシュせず null を返す(防御的デフォルト)",
     () => {
       const row = makeRow(makePractice());
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(getPracticeLogRowSortValue(row, "distance" as any)).toBeNull();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      expect(getPracticeLogRowSortValue(row, "style" as any)).toBeNull();
+      expect(getPracticeLogRowSortValue(row, "distance" as unknown as PracticeSortColumn)).toBeNull();
+      expect(getPracticeLogRowSortValue(row, "style" as unknown as PracticeSortColumn)).toBeNull();
     },
   );
 });
@@ -179,8 +178,8 @@ describe("buildPracticeLogLine (1ログ=1カード本文)", () => {
         id: "log-a",
         practice_log_tags: [
           { practice_tag_id: "tag-a", practice_tags: tagA },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 意図的にDB不整合(joined tag削除済み)を再現する
-          { practice_tag_id: "tag-deleted", practice_tags: null as any },
+          // 意図的にDB不整合(joined tag削除済み)を再現する
+          { practice_tag_id: "tag-deleted", practice_tags: null as unknown as typeof tagA },
         ],
       });
 

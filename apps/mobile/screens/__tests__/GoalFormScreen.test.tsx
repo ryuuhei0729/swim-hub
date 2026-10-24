@@ -1,16 +1,20 @@
 // =============================================================================
-// screens/__tests__/GoalFormScreen.test.tsx  (S1, S2, S6, U5, Boundary / Contract v4: M3 M4 L2 の仕様で記述)
+// screens/__tests__/GoalFormScreen.test.tsx  (S1, S2, S6, U5, Boundary / Contract v4: M3 M4 L2 /
+//   目標の初期タイム全廃 Contract v2: SC1 SC5 / v3: D9 / v4: V4-1 ベストタイムラベル)
 // =============================================================================
-// 方針: GoalAPI / RecordAPI のモックは呼び出し引数を assert。getBestTimes の fixture には「避けるべき行」
-//   (別水路・リレー引継ぎのみ) を必ず含める (含めないと水路/リレー判定が無保護になる)。
-// 注: v4 の仕様 (M3 過去日拒否 / M4 孤児大会防止 / L2 不正タイム保存拒否 / L3) は修正前は赤でよい。
+// 方針: GoalAPI / RecordAPI のモックは呼び出し引数を assert。
+//   ベストタイムラベル (testID goal-best-time-label) はエントリーと同じ出し方 (useBestTimesQuery +
+//   getBestTimeForEntry、isRelaying=false)。RecordAPI.getBestTimes は BestTime[] (aggregateBestTimes の形) を返す。
+//   文言は「t(forms.recordLog.<labelKey>): formatTimeBest(time)」(ja: 「ベストタイム: 58.00」等)。目標タイム欄の下。
+//   種目が未選択・水路が未確定・一覧が取得中 / 失敗・該当なしのときは出さない (「記録なし」「—」は無い)。
 // 何を壊したら赤くなるべきか:
-//   - ベスト検索の pool_type 比較を緩める (`==` / `?? 0`) -> 長水路大会で短水路ベストが入る -> 赤
-//   - is_relaying 除外を外す -> リレー引継ぎのみの種目で値が入る -> 赤
+//   - 水路が未確定 (大会未選択) でもラベルを出す / 短水路 (0) を未確定扱いにする -> 赤
+//   - 種目・水路を変えてもラベルが変わらない / isRelaying を true で引く (引継が先に出る) -> 赤
+//   - createGoal / updateGoal に初期タイムや poolType を渡す -> 赤
 //   - savingRef を外す -> 二重タップで createGoal 2回 -> 赤
 // =============================================================================
 import * as React from "react";
-import { QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, act, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -32,7 +36,6 @@ const h = vi.hoisted(() => ({
   pickDate: "2099-12-31",
   pickEndDate: "2100-01-02",
   dateProps: [] as Array<{ label: string; minDate?: Date; value: string }>,
-  bestResolvers: [] as Array<() => void>,
 }));
 
 vi.mock("react-native", async (importOriginal) => {
@@ -64,6 +67,13 @@ vi.mock("@apps/shared/api/records", () => ({
   },
 }));
 vi.mock("@apps/shared/api/styles", () => ({ StyleAPI: class { getStyles = h.getStyles; } }));
+// `@/components/records` の barrel は画像・権限まわりの部品も読み込む (expo-modules-core の createPermissionHook を要求する)。
+// GoalFormScreen が使うのは mobile 用ラッパーの getBestTimeForEntry (labelKey に forms.recordLog. を前置する) だけなので、
+// CompetitionTabFormScreen.*.test.tsx と同じく、それだけを本物で返す
+vi.mock("@/components/records", async () => {
+  const { getBestTimeForEntry } = await import("@/components/records/bestTimeForEntry");
+  return { getBestTimeForEntry };
+});
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useTeamsQuery: () => ({ teams: [{ team_id: "t1", teams: { name: "Aチーム" } }], isLoading: false }),
 }));
@@ -107,15 +117,27 @@ import { GoalFormScreen } from "../GoalFormScreen";
 const STYLES = [
   { id: 1, name_jp: "100m 自由形", name: "100m Fr", style: "Fr", distance: 100 },
   { id: 2, name_jp: "50m 自由形", name: "50m Fr", style: "Fr", distance: 50 },
+  { id: 3, name_jp: "200m 自由形", name: "200m Fr", style: "Fr", distance: 200 },
 ];
 const COMPS = [
   { id: "c1", title: "短水路杯", date: "2099-11-01", pool_type: 0, team_id: null, place: null },
   { id: "c2", title: "長水路杯", date: "2099-12-01", pool_type: 1, team_id: null, place: null },
   { id: "c3", title: "チーム杯", date: "2099-12-15", pool_type: 0, team_id: "t1", place: null },
 ];
-const bt = (o: Record<string, unknown>) => ({
-  id: "b", created_at: "", is_relaying: false, style: { name_jp: "x", distance: 100 }, ...o,
-});
+/** RecordAPI.getBestTimes の1行 (aggregateBestTimes の形: 種目 × 水路ごとに1件。引継は非リレーの行に relayingTime で付く) */
+const bt = (styleIndex: number, pool_type: number, time: number, extra: Record<string, unknown> = {}) => {
+  const style = STYLES[styleIndex]!;
+  return {
+    id: `${style.id}-${pool_type}`, created_at: "", is_relaying: false, style_id: style.id,
+    style: { name_jp: style.name_jp, distance: style.distance }, pool_type, time, ...extra,
+  };
+};
+// 種目1 (100m Fr): 短水路 55 (それより速い引継 50 が付く) / 長水路 58。種目2 (50m Fr): 長水路 27 だけ。種目3 (200m Fr): 無し
+const BESTS = [
+  bt(0, 0, 55, { relayingTime: { id: "r", time: 50, created_at: "" } }),
+  bt(0, 1, 58),
+  bt(1, 1, 27),
+];
 
 let qc: QueryClient;
 function renderScreen(existing?: QueryClient) {
@@ -147,13 +169,12 @@ beforeEach(() => {
   h.dateProps.length = 0;
   h.pickDate = "2099-12-31";
   h.pickEndDate = "2100-01-02";
-  h.bestResolvers.length = 0;
   h.preventRemove.prevent = false;
   h.createGoal.mockReset().mockResolvedValue({ id: "new" });
   h.updateGoal.mockReset().mockResolvedValue({});
   h.getSelectableCompetitions.mockReset().mockResolvedValue(COMPS);
   h.getGoalWithMilestones.mockReset();
-  h.getBestTimes.mockReset().mockResolvedValue([]);
+  h.getBestTimes.mockReset().mockResolvedValue(BESTS);
   h.createCompetition.mockReset().mockResolvedValue({ id: "newc" });
   h.updateCompetition.mockReset().mockResolvedValue({ id: "newc" });
   h.getStyles.mockReset().mockResolvedValue(STYLES);
@@ -162,6 +183,19 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+describe("大会の選択肢の表記 (2026-10-15 ユーザー指定: 日付を先に出す)", () => {
+  it("ピッカーの選択肢と、選んだあとの表示は「YYYY/MM/DD 大会名」の順", async () => {
+    renderScreen();
+    await flush();
+    fireEvent.click(byLabel("大会")[0]!);
+    const options = Array.from(document.querySelectorAll('[data-testid="sheet"] button')).map((b) => b.textContent);
+    expect(options).toEqual(expect.arrayContaining(["2099/11/01 短水路杯", "2099/12/01 長水路杯", "2099/12/15 チーム杯"]));
+    expect(options.some((o) => / - \d{4}\//.test(o ?? ""))).toBe(false);
+    fireEvent.click(Array.from(document.querySelectorAll('[data-testid="sheet"] button')).find((b) => b.textContent === "2099/11/01 短水路杯")!);
+    expect(screen.getByText("2099/11/01 短水路杯")).toBeTruthy();
+  });
+});
 
 describe("S1 作成", () => {
   it("既存個人大会 + 種目 + 目標タイムで作成 -> createGoal が期待 input で1回、goBack", async () => {
@@ -172,9 +206,11 @@ describe("S1 作成", () => {
     typeInto("goal-target-time", "1:00.00");
     await submit();
     expect(h.createGoal).toHaveBeenCalledTimes(1);
-    expect(h.createGoal).toHaveBeenCalledWith({
-      userId: "u1", competitionId: "c1", competitionData: undefined, styleId: 1, targetTime: 60, startTime: null, poolType: 0,
-    });
+    const arg = h.createGoal.mock.calls[0]![0];
+    expect(arg).toMatchObject({ userId: "u1", competitionId: "c1", competitionData: undefined, styleId: 1, targetTime: 60 });
+    // [SC5] 初期タイムは渡さない / [D9] CreateGoalInput.poolType は削除
+    expect(arg).not.toHaveProperty("startTime");
+    expect(arg).not.toHaveProperty("poolType");
     await flush();
     expect(h.goBack).toHaveBeenCalledTimes(1);
   });
@@ -204,7 +240,7 @@ describe("S1 作成", () => {
     expect(arg).toBe(today);
   });
 
-  it("新規大会に切替: createGoal は competitionData つき・competitionId 未指定・poolType は選んだ水路", async () => {
+  it("新規大会に切替: createGoal は competitionData つき (水路は選んだもの)・competitionId 未指定・初期タイムと poolType なし", async () => {
     renderScreen();
     await flush();
     fireEvent.click(screen.getByText("新規大会を作成"));
@@ -218,7 +254,8 @@ describe("S1 作成", () => {
     const arg = h.createGoal.mock.calls[0]![0];
     expect(arg.competitionId).toBeUndefined();
     expect(arg.competitionData).toEqual({ title: "新規杯", date: "2099-12-31", endDate: null, place: null, poolType: 1 });
-    expect(arg.poolType).toBe(1);
+    expect(arg).not.toHaveProperty("startTime");
+    expect(arg).not.toHaveProperty("poolType");
     expect(h.createCompetition).not.toHaveBeenCalled();
   });
 
@@ -315,26 +352,14 @@ describe("バリデーション (Boundary)", () => {
     expect(h.createGoal.mock.calls[0]![0].targetTime).toBe(3600);
   });
 
-  it("初期タイム 0 / 3601 秒 -> 保存不可 + startTimeInvalid", async () => {
-    for (const raw of ["0", "60:01"]) {
-      cleanup();
-      h.createGoal.mockClear();
-      await fillValid();
-      typeInto("goal-target-time", "1:00.00");
-      typeInto("goal-start-time", raw);
-      await submit();
-      expect(h.createGoal, raw).not.toHaveBeenCalled();
-      expect(errorText(), raw).toContain("開始タイムを正しく入力してください（0秒超〜60分以内）");
-    }
-  });
-
-  it("[v4 L2] 初期タイムに不正な文字列が残ったままの保存は拒否される (黙って null 保存しない)", async () => {
-    await fillValid();
-    typeInto("goal-target-time", "1:00.00");
-    typeInto("goal-start-time", "abc");
-    await submit();
-    expect(h.createGoal).not.toHaveBeenCalled();
-    expect(errorText().length).toBeGreaterThan(0);
+  it("[SC1] 初期タイム欄 (入力欄・ラベル) が無い。タイムの入力欄は目標タイムの1つだけ", async () => {
+    renderScreen();
+    await flush();
+    expect(screen.queryByTestId("goal-start-time")).toBeNull();
+    expect(document.body.textContent).not.toContain("初期タイム");
+    expect(byLabel("初期タイム（任意）")).toHaveLength(0);
+    // 新規大会モードでなければ、テキスト入力は目標タイムだけ
+    expect(Array.from(document.querySelectorAll("input")).map((i) => i.getAttribute("data-testid"))).toEqual(["goal-target-time"]);
   });
 
   it("[v4 L2] 目標タイムに途中入力 ('1:') が残ったままの保存も拒否される", async () => {
@@ -378,216 +403,170 @@ describe("バリデーション (Boundary)", () => {
 });
 
 // =============================================================================
-// v7 A: 初期タイムの自動入力 (「ベストタイムから取得」ボタンとロックは廃止)
+// Contract v4 V4-1: 目標タイム欄の下のベストタイムラベル (testID goal-best-time-label)
 // =============================================================================
-// 条件: 種目 × 対象大会の水路 (===) のベスト。リレー引き継ぎ (is_relaying) 除外。水路未確定なら入れない。
-// fixture は「避けるべき行」(別水路・リレーのみ・別種目) を必ず含める。
-// 壊したら赤: 水路条件の脱落 / 古い応答を捨てない / 編集モード初期表示での上書き / ボタンやロックの残存
-const BESTS = [
-  bt({ id: "s1-short", style_id: 1, pool_type: 0, time: 55 }),
-  bt({ id: "s1-long", style_id: 1, pool_type: 1, time: 58, relayingTime: { id: "r", time: 50, created_at: "" } }),
-  bt({ id: "s2-long", style_id: 2, pool_type: 1, time: 27 }),
-  bt({ id: "s2-short-relay", style_id: 2, pool_type: 0, time: 20, is_relaying: true }),
-];
-const startVal = () => tid("goal-start-time").value;
+// mobile の react-native モックは View / Text の testID を data-testid に変換しないため、属性 testid で引く。
+const bestLabel = () => document.querySelector('[testid="goal-best-time-label"]') as HTMLElement | null;
+const bestText = () => bestLabel()?.textContent?.trim() ?? null;
 const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 80)); });
 const pickStyle = async (id: number) => { fireEvent.click(screen.getByTestId(`style-${id}`)); await settle(); };
 
-describe("v7 A: 初期タイムの自動入力", () => {
-  beforeEach(() => { h.getBestTimes.mockResolvedValue(BESTS); });
-
-  it("「ベストタイムから取得」ボタンが存在しない。初期タイム欄は常に編集可能 (自動入力後も disabled でない)", async () => {
+describe("V4-1 ベストタイムラベル: 出さないとき", () => {
+  it("開いた直後 (種目・大会とも未選択) は出さない", async () => {
     renderScreen();
     await flush();
-    expect(screen.queryByText("ベストタイムから取得")).toBeNull();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    expect(startVal()).toBe("58.00");
-    expect(tid("goal-start-time").disabled).toBe(false);
-    typeInto("goal-start-time", "1:10.00");
-    expect(startVal()).toBe("1:10.00");
+    expect(bestLabel()).toBeNull();
   });
 
-  it("種目を選ぶと『その種目 × 対象大会の水路』のベストだけが入る (長水路: 短水路 55 とリレーは選ばない)", async () => {
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    expect(startVal()).toBe("58.00");
-  });
-
-  it("短水路大会 (pool_type=0): 0 を falsy として取りこぼさず 55.00 が入る", async () => {
-    renderScreen();
-    await flush();
-    await pickCompetition("短水路杯");
-    await pickStyle(1);
-    expect(startVal()).toBe("55.00");
-  });
-
-  it("種目を先に選び、後から大会を選んでも (種目と大会が揃った時点で) 自動入力される", async () => {
+  it("種目だけ (大会未選択 = 水路不明) では出さない (短水路に倒さない)。大会を選ぶと出る", async () => {
     renderScreen();
     await flush();
     await pickStyle(1);
-    expect(startVal()).toBe("");
+    expect(bestLabel()).toBeNull();
     await pickCompetition("長水路杯");
     await settle();
-    expect(startVal()).toBe("58.00");
+    expect(bestText()).toBe("ベストタイム: 58.00");
   });
 
-  it("種目を変えると入れ直す: 直前の手入力も上書きされる (style1 長水路 58 -> 手入力 -> style2 長水路 27)", async () => {
+  it("大会だけ (種目未選択) では出さない。種目を選ぶと出る", async () => {
+    renderScreen();
+    await flush();
+    await pickCompetition("長水路杯");
+    await settle();
+    expect(bestLabel()).toBeNull();
+    await pickStyle(1);
+    expect(bestText()).toBe("ベストタイム: 58.00");
+  });
+
+  it("どの水路にもベストが無い種目 (200m Fr) は出さない (「記録なし」「—」も出さない)", async () => {
+    renderScreen();
+    await flush();
+    await pickCompetition("長水路杯");
+    await pickStyle(3);
+    expect(bestLabel()).toBeNull();
+    expect(document.body.textContent).not.toMatch(/記録なし|—/);
+  });
+
+  it("ベスト一覧の取得中は出さず、届くと出す", async () => {
+    let resolve!: (v: unknown[]) => void;
+    h.getBestTimes.mockImplementation(() => new Promise((r) => (resolve = r)));
     renderScreen();
     await flush();
     await pickCompetition("長水路杯");
     await pickStyle(1);
-    typeInto("goal-start-time", "9:99.00");
-    fireEvent.change(tid("goal-start-time"), { target: { value: "1:10.00" } });
-    await pickStyle(2);
-    expect(startVal()).toBe("27.00");
+    expect(bestLabel()).toBeNull();
+    await act(async () => { resolve(BESTS); await new Promise((r) => setTimeout(r, 80)); });
+    expect(bestText()).toBe("ベストタイム: 58.00");
   });
 
-  it("手入力した種目に戻ってきても入れ直す: style1 (58) -> 手入力 -> style2 (27) -> style1 に戻すと 58 (手入力済みキーの『上書きしない』が残って B の値のままにならない)", async () => {
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    expect(startVal()).toBe("58.00");
-    fireEvent.change(tid("goal-start-time"), { target: { value: "" } });
-    typeInto("goal-start-time", "1:10.00");
-    await pickStyle(2);
-    expect(startVal()).toBe("27.00");
-    await pickStyle(1);
-    expect(startVal()).toBe("58.00");
-  });
-
-  it("手入力のあと、同じ種目・同じ大会のまま他の操作 (大会再選択で同じ水路) をしても勝手に上書きしない", async () => {
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    fireEvent.change(tid("goal-start-time"), { target: { value: "" } });
-    typeInto("goal-start-time", "1:10.00");
-    await settle();
-    expect(startVal()).toBe("1:10.00");
-  });
-
-  it("既存大会を選び直すと入れ直す (長水路杯 58 -> 短水路杯 55)", async () => {
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    expect(startVal()).toBe("58.00");
-    await pickCompetition("短水路杯");
-    await settle();
-    expect(startVal()).toBe("55.00");
-  });
-
-  it("新規大会の水路を切り替えると入れ直す (短水路 55 -> 長水路 58 -> 短水路 55)。リレーのみの種目 2 短水路は空", async () => {
-    renderScreen();
-    await flush();
-    fireEvent.click(screen.getByText("新規大会を作成"));
-    await pickStyle(1);
-    expect(startVal()).toBe("55.00");
-    fireEvent.click(poolBtn(true));
-    await settle();
-    expect(startVal()).toBe("58.00");
-    fireEvent.click(poolBtn(false));
-    await settle();
-    expect(startVal()).toBe("55.00");
-    await pickStyle(2); // 短水路の style2 はリレー引き継ぎのみ -> 該当なし
-    expect(startVal()).toBe("");
-  });
-
-  it("既存 ↔ 新規の切替で水路が変わる場合も入れ直す (長水路杯 58 -> 新規 (既定 短水路) 55)", async () => {
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    expect(startVal()).toBe("58.00");
-    fireEvent.click(screen.getByText("新規大会を作成"));
-    await settle();
-    expect(startVal()).toBe("55.00");
-  });
-
-  it("該当なし (その水路にベストが無い) は初期タイムを空にし、アラート・エラーは出さない", async () => {
-    h.getBestTimes.mockResolvedValue([bt({ id: "x", style_id: 1, pool_type: 1, time: 58 })]);
-    renderScreen();
-    await flush();
-    await pickCompetition("短水路杯");
-    typeInto("goal-start-time", "1:10.00");
-    await pickStyle(1);
-    expect(startVal()).toBe("");
-    expect(errorText()).toEqual([]);
-    expect(Alert.alert).not.toHaveBeenCalled();
-  });
-
-  it("取得失敗: 初期タイムは据え置き (手入力値が残る)、アラート・エラーは出さない、生エラー非表示", async () => {
+  it("ベスト一覧の取得に失敗したら出さない。アラート・エラー文言・生エラーは出さず、そのまま保存できる", async () => {
     h.getBestTimes.mockRejectedValue(new Error("SECRET_RAW_BT"));
     renderScreen();
     await flush();
     await pickCompetition("長水路杯");
-    typeInto("goal-start-time", "1:10.00");
     await pickStyle(1);
-    expect(startVal()).toBe("1:10.00");
+    expect(bestLabel()).toBeNull();
     expect(errorText()).toEqual([]);
     expect(Alert.alert).not.toHaveBeenCalled();
-    expect(document.body.textContent).not.toContain("SECRET_RAW_BT");
-  });
-
-  it("大会未選択 (水路不明) では入らない。短水路にフォールバックして入れない", async () => {
-    renderScreen();
-    await flush();
-    await pickStyle(1);
-    expect(startVal()).toBe("");
-  });
-
-  it("種目を素早く A -> B と切り替え、応答の順序を入れ替えても (A が後着) 最終的に B のベストになる", async () => {
-    const pending: Array<() => void> = [];
-    h.getBestTimes.mockImplementation(() => new Promise((r) => { pending.push(() => r(BESTS)); }));
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    fireEvent.click(screen.getByTestId("style-1"));
-    fireEvent.click(screen.getByTestId("style-2"));
-    await settle();
-    // 新しい問い合わせ (最後) から先に解決し、古い問い合わせを後から解決する
-    await act(async () => { [...pending].reverse().forEach((f) => f()); await new Promise((r) => setTimeout(r, 80)); });
-    expect(startVal()).toBe("27.00");
-  });
-
-  it("[H1 回帰] 初期タイムに 'abc' -> 保存拒否 -> 種目の選び直しで自動入力 -> そのまま保存できる (復旧不能にならない)", async () => {
-    renderScreen();
-    await flush();
-    await pickCompetition("短水路杯");
-    await pickStyle(1);
+    expect(document.body.textContent).not.toMatch(/SECRET_RAW_BT|—/);
     typeInto("goal-target-time", "1:00.00");
-    typeInto("goal-start-time", "abc");
-    await submit();
-    expect(h.createGoal).not.toHaveBeenCalled();
-    expect(errorText().length).toBeGreaterThan(0);
-    await pickStyle(2); // 短水路の style2 はリレーのみ -> 空。もう一度 style1 で自動入力
-    await pickStyle(1);
-    expect(startVal()).toBe("55.00");
     await submit();
     expect(h.createGoal).toHaveBeenCalledTimes(1);
-    expect(h.createGoal.mock.calls[0]![0].startTime).toBe(55);
-  });
-
-  it("初期タイムを空にして保存すると startTime=null (不正入力フラグが残らない)", async () => {
-    renderScreen();
-    await flush();
-    await pickCompetition("短水路杯");
-    await pickStyle(1);
-    typeInto("goal-target-time", "1:00.00");
-    typeInto("goal-start-time", "abc");
-    fireEvent.change(tid("goal-start-time"), { target: { value: "" } });
-    await submit();
-    expect(h.createGoal.mock.calls[0]![0].startTime).toBeNull();
+    expect(h.createGoal.mock.calls[0]![0]).toMatchObject({ competitionId: "c2", styleId: 1, targetTime: 60 });
   });
 });
 
-describe("v7 A (編集モード): 開いた直後は保存済みの初期タイムを上書きしない", () => {
+describe("V4-1 ベストタイムラベル: 出し方 (エントリーと同じ)", () => {
+  it("同じ水路のベストを出す: 長水路杯 + 種目1 は『ベストタイム: 58.00』、短水路杯に変えると『ベストタイム: 55.00』(引継の 50.00 は出さない = isRelaying は false)", async () => {
+    renderScreen();
+    await flush();
+    await pickCompetition("長水路杯");
+    await pickStyle(1);
+    expect(bestText()).toBe("ベストタイム: 58.00");
+    await pickCompetition("短水路杯");
+    await settle();
+    expect(bestText()).toBe("ベストタイム: 55.00");
+  });
+
+  it("同じ水路に無ければ別の水路のベストを出し、出どころを書く (短水路杯 + 種目2 → 『ベストタイム(長水路): 27.00』)", async () => {
+    renderScreen();
+    await flush();
+    await pickCompetition("短水路杯");
+    await pickStyle(2);
+    expect(bestText()).toBe("ベストタイム(長水路): 27.00");
+  });
+
+  it("1分を超えるベストは M:SS.cc (長水路 65.5 → 『ベストタイム: 1:05.50』)", async () => {
+    h.getBestTimes.mockResolvedValue([bt(0, 1, 65.5)]);
+    renderScreen();
+    await flush();
+    await pickCompetition("長水路杯");
+    await pickStyle(1);
+    expect(bestText()).toBe("ベストタイム: 1:05.50");
+  });
+
+  it("種目を変えるとその種目のベストに切り替わり、目標タイム欄の値は変わらない", async () => {
+    renderScreen();
+    await flush();
+    await pickCompetition("長水路杯");
+    await pickStyle(1);
+    typeInto("goal-target-time", "1:00.00");
+    await pickStyle(2);
+    expect(bestText()).toBe("ベストタイム: 27.00");
+    expect(tid("goal-target-time").value).toBe("1:00.00");
+  });
+
+  it("新規大会の水路を切り替えると入れ替わる (短水路 55 -> 長水路 58 -> 短水路 55)。目標タイム欄の値は変わらない", async () => {
+    renderScreen();
+    await flush();
+    fireEvent.click(screen.getByText("新規大会を作成"));
+    await pickStyle(1);
+    typeInto("goal-target-time", "59.00");
+    expect(bestText()).toBe("ベストタイム: 55.00");
+    fireEvent.click(poolBtn(true));
+    await settle();
+    expect(bestText()).toBe("ベストタイム: 58.00");
+    fireEvent.click(poolBtn(false));
+    await settle();
+    expect(bestText()).toBe("ベストタイム: 55.00");
+    expect(tid("goal-target-time").value).toBe("59.00");
+  });
+
+  it("既存 ↔ 新規の切替で水路が変わると入れ替わる (長水路杯 58 -> 新規 (既定 短水路) 55)", async () => {
+    renderScreen();
+    await flush();
+    await pickCompetition("長水路杯");
+    await pickStyle(1);
+    expect(bestText()).toBe("ベストタイム: 58.00");
+    fireEvent.click(screen.getByText("新規大会を作成"));
+    await settle();
+    expect(bestText()).toBe("ベストタイム: 55.00");
+  });
+
+  it("位置は目標タイム欄の下 (同じ縦並びの列で入力欄の後ろ)。見た目は大会記録入力の bestTimeBadge と同じ緑の丸いラベル", async () => {
+    renderScreen();
+    await flush();
+    await pickCompetition("長水路杯");
+    await pickStyle(1);
+    const target = tid("goal-target-time");
+    const label = bestLabel()!;
+    expect(label, "ラベルが無い").not.toBeNull();
+    let node: HTMLElement | null = target.parentElement;
+    while (node && !node.contains(label)) node = node.parentElement;
+    expect(node).not.toBeNull();
+    expect(node!.style.flexDirection).not.toBe("row");
+    expect(node!.querySelectorAll("input")).toHaveLength(1);
+    expect(target.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(node!.textContent).toContain("目標タイム");
+    // CompetitionTabFormScreen の bestTimeBadge (green-100 の背景・丸み 9999) と同じ
+    expect(label.style.backgroundColor).toBe("rgb(220, 252, 231)");
+    expect(label.style.borderRadius).toBe("9999px");
+  });
+});
+
+describe("V4-1 / SC5 編集モード: 保存済みの目標のベストを出し、初期タイムを渡さない", () => {
   const goalFx = () => ({
-    id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, start_time: 70, status: "active",
+    id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, status: "active",
     achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
     competition: { id: "c1", title: "短水路杯", date: "2099-11-01", pool_type: 0, team_id: null },
     style: STYLES[0], milestones: [],
@@ -595,199 +574,40 @@ describe("v7 A (編集モード): 開いた直後は保存済みの初期タイ�
   beforeEach(() => {
     h.params = { goalId: "g1" };
     h.getGoalWithMilestones.mockResolvedValue(goalFx());
-    h.getBestTimes.mockResolvedValue(BESTS); // style1 短水路のベストは 55 (保存済みは 70)
   });
 
-  it("開いた直後 (ベスト取得の完了後も) 初期タイムは保存済みの 1:10.00 のまま", async () => {
+  it("開くと保存済みの大会 (短水路杯) × 種目1 の『ベストタイム: 55.00』を出す", async () => {
     renderScreen();
     await flush();
     await settle();
-    expect(startVal()).toBe("1:10.00");
+    expect(bestText()).toBe("ベストタイム: 55.00");
   });
 
-  it("開いた直後に何も触らず更新: updateGoal の startTime は保存済みの 70", async () => {
+  it("種目を変えるとラベルだけが変わり (短水路の種目2 は長水路のベストを出す)、目標タイム欄は保存済みの 1:00.00 のまま", async () => {
+    renderScreen();
+    await flush();
+    await settle();
+    await pickStyle(2);
+    expect(bestText()).toBe("ベストタイム(長水路): 27.00");
+    expect(tid("goal-target-time").value).toBe("1:00.00");
+  });
+
+  it("大会を長水路杯に変えると『ベストタイム: 58.00』", async () => {
+    renderScreen();
+    await flush();
+    await settle();
+    await pickCompetition("長水路杯");
+    await settle();
+    expect(bestText()).toBe("ベストタイム: 58.00");
+  });
+
+  it("何も触らず更新: updateGoal('g1', { competitionId, styleId, targetTime }) だけを渡す (初期タイムを含まない)", async () => {
     renderScreen();
     await flush();
     await settle();
     await submit("更新");
-    expect(h.updateGoal.mock.calls[0]![1].startTime).toBe(70);
-  });
-
-  it("ユーザーが種目を変えたときだけ自動入力される (style2 短水路はリレーのみ -> 空)。style1 に戻すと 55", async () => {
-    renderScreen();
-    await flush();
-    await settle();
-    await pickStyle(2);
-    expect(startVal()).toBe("");
-    await pickStyle(1);
-    expect(startVal()).toBe("55.00");
-  });
-
-  it("ユーザーが大会を長水路杯に変えたときだけ入れ直す (58)", async () => {
-    renderScreen();
-    await flush();
-    await settle();
-    await pickCompetition("長水路杯");
-    await settle();
-    expect(startVal()).toBe("58.00");
-  });
-});
-
-describe("v7 A (ベストの取得タイミング): 取得中・取得失敗中に種目を変える / 編集モードで取得が遅い", () => {
-  it("ベスト取得中に種目を A -> B と変え、その後データが届くと B のベストが入る", async () => {
-    let resolve!: () => void;
-    h.getBestTimes.mockImplementation(() => new Promise((r) => { resolve = () => r(BESTS); }));
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    await pickStyle(2);
-    expect(startVal()).toBe("");
-    await act(async () => { resolve(); await new Promise((r) => setTimeout(r, 80)); });
-    expect(startVal()).toBe("27.00");
-  });
-
-  it("ベスト取得失敗中に種目を変え、再取得で成功すると、そのときの種目のベストが入る", async () => {
-    h.getBestTimes.mockRejectedValue(new Error("fail"));
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    await pickStyle(2);
-    expect(startVal()).toBe("");
-    h.getBestTimes.mockResolvedValue(BESTS);
-    await act(async () => { await qc.refetchQueries(); await new Promise((r) => setTimeout(r, 80)); });
-    expect(startVal()).toBe("27.00");
-  });
-
-  it("編集モードでベスト取得が遅い (データ未着のまま描画 -> 到着) 場合も、保存済みの初期タイムを上書きしない", async () => {
-    h.params = { goalId: "g1" };
-    h.getGoalWithMilestones.mockResolvedValue({
-      id: "g1", user_id: "u1", competition_id: "c1", style_id: 1, target_time: 60, start_time: 70, status: "active",
-      achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
-      competition: { id: "c1", title: "短水路杯", date: "2099-11-01", pool_type: 0, team_id: null },
-      style: STYLES[0], milestones: [],
-    });
-    let resolve!: () => void;
-    h.getBestTimes.mockImplementation(() => new Promise((r) => { resolve = () => r(BESTS); }));
-    renderScreen();
-    await flush();
-    await settle();
-    expect(startVal()).toBe("1:10.00");
-    await act(async () => { resolve(); await new Promise((r) => setTimeout(r, 80)); });
-    expect(startVal()).toBe("1:10.00");
-    await submit("更新");
-    expect(h.updateGoal.mock.calls[0]![1].startTime).toBe(70);
-  });
-});
-
-describe("v7 M1/L1: ベストの鮮度と手入力の保護", () => {
-  const placeholder = () => tid("goal-start-time").placeholder;
-
-  it("[M1] 古いベストがキャッシュにある状態でフォームを開き直すと、古い値 (1:00.00) は入れず、新しい取得結果 (58.00) が届いて入る。開くたびに getBestTimes が呼ばれる", async () => {
-    // 1回目: 古いベスト (60) で自動入力させ、そのクエリを別の observer で生かしておく (他画面が購読している状況)
-    h.getBestTimes.mockResolvedValue([bt({ id: "old", style_id: 1, pool_type: 1, time: 60 })]);
-    const first = renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    expect(startVal()).toBe("1:00.00");
-    const shared = qc;
-    const cached = shared.getQueryCache().getAll().find((q) => JSON.stringify(q.queryKey).includes("bestTimesForForm"));
-    expect(cached, "ベスト用クエリが見つからない (キー名に bestTimesForForm を含む前提)").toBeTruthy();
-    const keepAlive = new QueryObserver(shared, { queryKey: cached!.queryKey, queryFn: () => [], gcTime: Infinity, enabled: false }).subscribe(() => {});
-    first.unmount();
-    const callsBefore = h.getBestTimes.mock.calls.length;
-
-    // 2回目: 新しい取得は遅延。届くまで古い値を入れない
-    let resolve!: () => void;
-    h.getBestTimes.mockImplementation(() => new Promise((r) => { resolve = () => r([bt({ id: "new", style_id: 1, pool_type: 1, time: 58 })]); }));
-    renderScreen(shared);
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    expect(startVal()).not.toBe("1:00.00");
-    expect(startVal()).toBe("");
-    await act(async () => { resolve(); await new Promise((r) => setTimeout(r, 80)); });
-    expect(startVal()).toBe("58.00");
-    expect(h.getBestTimes.mock.calls.length).toBeGreaterThan(callsBefore);
-    keepAlive();
-  });
-
-  it("[L1] 種目と大会が揃い取得中に手入力 -> 取得完了しても手入力が残る。その後に種目を変えると自動入力される", async () => {
-    let resolve!: () => void;
-    h.getBestTimes.mockImplementation(() => new Promise((r) => { resolve = () => r(BESTS); }));
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    typeInto("goal-start-time", "1:10.00");
-    await act(async () => { resolve(); await new Promise((r) => setTimeout(r, 80)); });
-    expect(startVal()).toBe("1:10.00");
-    await pickStyle(2);
-    expect(startVal()).toBe("27.00");
-  });
-
-  it("[L1] 取得中は初期タイム欄の placeholder が読み込み中の文言、取得完了で通常の placeholder に戻る", async () => {
-    let resolve!: () => void;
-    h.getBestTimes.mockImplementation(() => new Promise((r) => { resolve = () => r(BESTS); }));
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    expect(placeholder()).toBe("読み込み中...");
-    await act(async () => { resolve(); await new Promise((r) => setTimeout(r, 80)); });
-    expect(placeholder()).toBe("2.00.00");
-  });
-
-  it("[L1] ベスト取得が失敗したら placeholder は通常に戻る (読み込み中の文言が残らない)。初期タイムは変えない", async () => {
-    h.getBestTimes.mockRejectedValue(new Error("fail"));
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    await settle();
-    expect(placeholder()).toBe("2.00.00");
-    expect(startVal()).toBe("");
-  });
-
-  it("[L2] 目標系の invalidate (goalKeys.all) でベスト用クエリが再取得されない", async () => {
-    h.getBestTimes.mockResolvedValue(BESTS);
-    renderScreen();
-    await flush();
-    await pickCompetition("長水路杯");
-    await pickStyle(1);
-    const before = h.getBestTimes.mock.calls.length;
-    await act(async () => { await qc.invalidateQueries({ queryKey: ["goals"] }); await new Promise((r) => setTimeout(r, 80)); });
-    expect(h.getBestTimes.mock.calls.length).toBe(before);
-  });
-});
-
-// =============================================================================
-// v7 B: 目標タイムと初期タイムは同じ行 (構造)
-// =============================================================================
-describe("v7 B: 目標タイムと初期タイムが同じ行 (同じ親の横並び)", () => {
-  it("2つの入力欄の最も近い共通祖先が flexDirection: row で、他の入力欄を含まない。目標が左 (先)、初期が右 (後)", async () => {
-    renderScreen();
-    await flush();
-    const target = tid("goal-target-time");
-    const start = tid("goal-start-time");
-    let node: HTMLElement | null = target.parentElement;
-    while (node && !node.contains(start)) node = node.parentElement;
-    expect(node).not.toBeNull();
-    expect(node!.style.flexDirection).toBe("row");
-    expect(node!.querySelectorAll("input")).toHaveLength(2);
-    expect(target.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it("ラベルは各欄の上: 目標タイム / 初期タイム (任意) のラベル文言が各入力欄より前にある", async () => {
-    renderScreen();
-    await flush();
-    const text = (el: Element) => el.textContent ?? "";
-    const row = (() => { let n: HTMLElement | null = tid("goal-target-time").parentElement; while (n && !n.contains(tid("goal-start-time"))) n = n.parentElement; return n!; })();
-    expect(text(row)).toContain("目標タイム");
-    expect(text(row)).toContain("初期タイム（任意）");
-    expect(text(row).indexOf("目標タイム")).toBeLessThan(text(row).indexOf("初期タイム（任意）"));
+    expect(h.updateGoal).toHaveBeenCalledTimes(1);
+    expect(h.updateGoal.mock.calls[0]).toEqual(["g1", { competitionId: "c1", styleId: 1, targetTime: 60 }]);
   });
 });
 
@@ -879,7 +699,7 @@ describe("v7 C: 新規大会の開始日・終了日・大会名・場所・水�
     beforeEach(() => {
       h.params = { goalId: "g1" };
       h.getGoalWithMilestones.mockResolvedValue({
-        id: "g1", user_id: "u1", competition_id: "c9", style_id: 1, target_time: 60, start_time: 70, status: "active",
+        id: "g1", user_id: "u1", competition_id: "c9", style_id: 1, target_time: 60, status: "active",
         achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
         competition: { id: "c9", title: "元の大会", date: "2099-01-01", pool_type: 0, team_id: null },
         style: STYLES[0], milestones: [],
@@ -932,7 +752,7 @@ describe("v7 C: 新規大会の開始日・終了日・大会名・場所・水�
 
 describe("S2 編集", () => {
   const goalFx = (over: Record<string, unknown> = {}) => ({
-    id: "g1", user_id: "u1", competition_id: "c9", style_id: 1, target_time: 60, start_time: 70, status: "active",
+    id: "g1", user_id: "u1", competition_id: "c9", style_id: 1, target_time: 60, status: "active",
     achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
     competition: { id: "c9", title: "過去の短水路杯", date: "2000-01-01", pool_type: 0, team_id: null },
     style: STYLES[0], milestones: [], ...over,
@@ -943,11 +763,11 @@ describe("S2 編集", () => {
     renderScreen();
     await flush();
     expect(tid("goal-target-time").value).toBe("1:00.00");
-    expect(tid("goal-start-time").value).toBe("1:10.00");
+    expect(screen.queryByTestId("goal-start-time")).toBeNull();
     expect(document.body.textContent).toContain("過去の短水路杯");
   });
 
-  it("更新 -> updateGoal('g1', {competitionId, styleId, targetTime, startTime}) の引数 assert", async () => {
+  it("更新 -> updateGoal('g1', {competitionId, styleId, targetTime}) の引数 assert (初期タイムを含まない)", async () => {
     renderScreen();
     await flush();
     typeInto("goal-target-time", "");
@@ -955,7 +775,7 @@ describe("S2 編集", () => {
     typeInto("goal-target-time", "59.50");
     await submit("更新");
     expect(h.updateGoal).toHaveBeenCalledTimes(1);
-    expect(h.updateGoal).toHaveBeenCalledWith("g1", { competitionId: "c9", styleId: 1, targetTime: 59.5, startTime: 70 });
+    expect(h.updateGoal.mock.calls[0]).toEqual(["g1", { competitionId: "c9", styleId: 1, targetTime: 59.5 }]);
   });
 
   it("更新失敗: 固定文言 updateFailed。生エラーは出ない", async () => {
@@ -1001,7 +821,7 @@ describe("S2 編集", () => {
 
 describe("v5 M-A: 編集で新規大会 -> updateGoal 失敗 -> 入力を直して再保存", () => {
   const goalFx = () => ({
-    id: "g1", user_id: "u1", competition_id: "c9", style_id: 1, target_time: 60, start_time: 70, status: "active",
+    id: "g1", user_id: "u1", competition_id: "c9", style_id: 1, target_time: 60, status: "active",
     achieved_at: null, reflection_note: null, created_at: "", updated_at: "",
     competition: { id: "c9", title: "元の大会", date: "2099-01-01", pool_type: 0, team_id: null },
     style: STYLES[0], milestones: [],

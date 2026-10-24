@@ -58,7 +58,6 @@ function makeRequest(path: string, options?: { headers?: Record<string, string> 
 describe("swim-hub middleware — i18n chain (Issue #32 Phase 1-A)", () => {
   beforeEach(() => {
     vi.resetModules();
-    vi.clearAllMocks();
   });
 
   // -------------------------------------------------------------------------

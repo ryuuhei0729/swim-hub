@@ -11,94 +11,18 @@
  * 導いたユーザー可視の挙動(表示されるカードの大会名、ボタンの有無)を検証する。
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import messages from "@apps/shared/messages/ja.json";
 import type { Record as RecordType, Style } from "@apps/shared/types";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
-
-// -----------------------------------------------------------------------
-// vi.hoisted — モック関数の巻き上げ対策 (既存 CompetitionClient.test.tsx と同型)
-// -----------------------------------------------------------------------
-const mocks = vi.hoisted(() => ({
-  useRecordsQuery: vi.fn(),
-  deleteRecordMutateAsync: vi.fn(),
-  deleteCompetitionMutateAsync: vi.fn(),
-}));
-
-function createFakeSupabase(entries: unknown[] = [], records: unknown[] = []) {
-  const builder = (table: string) => {
-    const chain = {
-      select: () => chain,
-      eq: () => chain,
-      then: (resolve: (v: { data: unknown; error: null }) => void) => {
-        if (table === "entries") return Promise.resolve(resolve({ data: entries, error: null }));
-        if (table === "records") return Promise.resolve(resolve({ data: records, error: null }));
-        return Promise.resolve(resolve({ data: [], error: null }));
-      },
-    };
-    return chain;
-  };
-
-  return {
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }),
-    },
-    from: builder,
-  };
-}
-
-let fakeSupabase = createFakeSupabase();
-
-vi.mock("@/contexts", () => ({
-  useAuth: () => ({ user: { id: "user-1" }, supabase: fakeSupabase }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/records", () => ({
-  useRecordsQuery: mocks.useRecordsQuery,
-  useCreateRecordMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useUpdateRecordMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeleteRecordMutation: () => ({ mutateAsync: mocks.deleteRecordMutateAsync, isPending: false }),
-  useCreateCompetitionMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useUpdateCompetitionMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeleteCompetitionMutation: () => ({
-    mutateAsync: mocks.deleteCompetitionMutateAsync,
-    isPending: false,
-  }),
-  useCreateSplitTimesMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useReplaceSplitTimesMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  // CompetitionRecordCard に組み込まれた BestTimeBadge が呼ぶため必須(欠くと全テストがクラッシュする)
-  useListBestCandidatesQuery: () => ({ data: undefined, error: null }),
-}));
-
-vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: class {
-    deleteEntry = vi.fn();
-  },
-}));
-
-vi.mock("@/components/forms/CompetitionTabModal", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
-vi.mock("@/app/[locale]/(authenticated)/competition/_components/CompetitionDetailModal", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
-vi.mock("@/app/[locale]/(authenticated)/competition/_components/RecordDetailModal", () => ({
-  __esModule: true,
-  default: () => null,
-}));
 
 vi.mock("@/components/forms/RecordLogForm", () => ({
   __esModule: true,
   default: () => null,
 }));
 
+import { harness, createFakeSupabase, renderWithMessages, setRecords } from "./competitionClientHarness";
 import CompetitionClient from "../CompetitionClient";
 
 // 種目マスター(距離接頭辞除去後のラベル確認用に name_jp を "50m自由形" 形式にしておく)
@@ -161,19 +85,9 @@ const makeRecord = (opts: MakeRecordOptions): RecordType =>
   }) as RecordType;
 
 const renderClient = (records: RecordType[], styles: Style[] = STYLES_MASTER) => {
-  fakeSupabase = createFakeSupabase([], []);
-  mocks.useRecordsQuery.mockReturnValue({
-    records,
-    isLoading: false,
-    error: null,
-    refetch: vi.fn(),
-  });
-
-  return render(
-    <NextIntlClientProvider locale="ja" messages={messages as unknown as AbstractIntlMessages}>
-      <CompetitionClient styles={styles} />
-    </NextIntlClientProvider>,
-  );
+  harness.supabase = createFakeSupabase([], []);
+  setRecords(records);
+  return renderWithMessages(<CompetitionClient styles={styles} />);
 };
 
 const getCardRows = (): HTMLElement[] => screen.queryAllByRole("button", { name: /^大会記録詳細を表示\(/ });
@@ -189,7 +103,6 @@ const cardHasTitle = (title: string): boolean =>
 
 describe("CompetitionClient", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     useCompetitionStore.getState().closeTabModal();
     useCompetitionStore.getState().resetFilter();
     useCompetitionStore.setState({ styles: [] });
@@ -210,7 +123,7 @@ describe("CompetitionClient", () => {
 
       // エントリー済み(記録未登録)取得の非同期 effect が act() 外で解決しないよう待つ
       await waitFor(() => {
-        expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+        expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
       });
     });
 

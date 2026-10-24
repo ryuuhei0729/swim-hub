@@ -75,7 +75,6 @@ const selectAndCompleteEditing = async (user: ReturnType<typeof userEvent.setup>
 
 describe("VideoUploader — アップロード失敗時のエラー表示 — 情報露出防止の対テスト", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     FakeXHR.mode = "success";
     vi.stubGlobal("XMLHttpRequest", FakeXHR);
   });

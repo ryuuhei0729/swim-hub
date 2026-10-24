@@ -32,7 +32,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -268,10 +268,6 @@ async function lastRpcArgs(fake: FakeSupabase, atLeast = 1) {
 }
 
 describe("TeamRankings (web)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // -------------------------------------------------------------------------
   // [V-01] 初期表示の RPC 引数
   // -------------------------------------------------------------------------
@@ -1956,7 +1952,6 @@ describe("TeamRankings (web)", () => {
     });
   });
 
-
   // -------------------------------------------------------------------------
   // [V-W1] 🚨 セッション中に styles マスターが変わったときの派生フォールバック
   //
@@ -2129,8 +2124,6 @@ describe("TeamRankings (web)", () => {
       expect((fake.rpcCalls.at(-1)?.args ?? {}).p_style_id).toBe(11);
     });
   });
-
-
 
   // -------------------------------------------------------------------------
   // [V-P2-41〜43] 🚨 取得上限に達したことの明示

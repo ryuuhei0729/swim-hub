@@ -140,7 +140,6 @@ describe("PasswordChangeModal — スタイル修正 (Bug2 D2)", () => {
 
 describe("PasswordChangeModal — 入力・送信 (回帰)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.updatePassword.mockResolvedValue({ error: null });
   });
 

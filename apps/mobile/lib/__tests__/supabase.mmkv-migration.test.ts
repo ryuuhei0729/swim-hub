@@ -101,7 +101,6 @@ describe("lib/supabase.ts — M-3 Expo Go 相当フォールバック (V25, Vite
 
   afterEach(() => {
     global.fetch = originalFetch;
-    vi.clearAllMocks();
   });
 
   it("V25: react-native-mmkv 等が require() できない環境でも supabase クライアント自体はクラッシュせず作られる", async () => {

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * useUnsubmittedEntriesQuery テスト (Reviewer Critical C-1 再評価: Phase 5b)
  *

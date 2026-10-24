@@ -24,7 +24,7 @@ vi.mock("@apps/shared/api/entries", () => ({
 vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({ user: { id: "admin-1" }, supabase: {} }),
 }));
-vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/i18n/navigation");
 vi.mock("next-intl", async (importOriginal) => {
   const original = await importOriginal<typeof import("next-intl")>();
   return {

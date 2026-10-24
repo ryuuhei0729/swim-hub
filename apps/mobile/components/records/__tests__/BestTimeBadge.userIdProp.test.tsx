@@ -48,7 +48,6 @@ const defaultProps = {
 
 describe("BestTimeBadge userId prop (mobile, D2)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetListBestCandidates.mockResolvedValue({ competitionRows: [], bulkRows: [] });
   });
 

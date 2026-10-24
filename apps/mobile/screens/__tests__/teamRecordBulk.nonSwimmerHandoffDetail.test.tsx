@@ -13,7 +13,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createResponseMapSupabase,
   createWrapper,
@@ -35,7 +35,6 @@ describe("[V-09] 詳細画面での非泳者フィルタ引き継ぎ", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     capturedMemberSelectProps.length = 0;
     queryClient = makeQueryClient();
     harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
