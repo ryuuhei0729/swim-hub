@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
@@ -168,6 +168,14 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // 保存成功後の戻り。isSaved を state にし、commit 後の effect で goBack することで
+  // usePreventRemove の preventRemove=false が確定してから画面を外す (TeamEntryBulkFormScreen と同じ)
+  const [isSaved, setIsSaved] = useState(false);
+  // 読み込み完了時点のメニュー (JSON)。未保存の変更があるかの比較元。読み込み前は null
+  const [loadedMenusJson, setLoadedMenusJson] = useState<string | null>(null);
+  // 既存ログから復元したメニューの ID。編集中に × で消すと保存時に DB のログも消えるため、
+  // 中身に関わらず削除確認を出す
+  const loadedLogMenuIdsRef = useRef<Set<string>>(new Set());
 
   // ItemTabs サブタブ化 (個人側 PracticeTabFormScreen と同型)。表示中のメニュー1件のみを
   // レンダリングする。
@@ -324,7 +332,10 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
         setPractice(practiceData);
         setPresentUserIds(present);
         setIsEditMode(logs.length > 0);
-        setMenus(buildMenusFromLogs(logs, present));
+        const builtMenus = buildMenusFromLogs(logs, present);
+        setMenus(builtMenus);
+        setLoadedMenusJson(JSON.stringify(builtMenus));
+        loadedLogMenuIdsRef.current = new Set(logs.length > 0 ? builtMenus.map((m) => m.id) : []);
         initializedRef.current = true;
       } catch (err) {
         if (!isMounted) return;
@@ -342,6 +353,37 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
     // members が確定してから初期メニューのデフォルト対象を決めたいので members も依存に含める
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, practiceId, teamId, members.length]);
+
+  // ---- 未保存の変更の破棄確認 ----
+  // キャンセル・スワイプ・ヘッダーの戻るで、全員分の代理入力タイムが確認なしに消えないようにする
+  const hasUnsavedMenus = loadedMenusJson !== null && JSON.stringify(menus) !== loadedMenusJson;
+
+  usePreventRemove(!isSaved && hasUnsavedMenus, ({ data }) => {
+    Alert.alert(t("common.discardTitle"), t("common.discardMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.discard"),
+        style: "destructive",
+        onPress: () => navigation.dispatch(data.action),
+      },
+    ]);
+  });
+
+  useEffect(() => {
+    if (isSaved) {
+      navigation.goBack();
+    }
+  }, [isSaved, navigation]);
+
+  /** × で消す前に確認するか: 既存ログのメニュー、またはタイム・動画・メモ・タグがあるメニュー */
+  const shouldConfirmMenuRemove = (menu: PracticeMenu): boolean =>
+    loadedLogMenuIdsRef.current.has(menu.id) ||
+    Object.values(menu.times).some((entries) =>
+      entries.some((e) => e.time > 0 || e.displayValue.trim() !== ""),
+    ) ||
+    Object.values(menu.videoAssets).some((asset) => asset != null) ||
+    menu.note.trim() !== "" ||
+    menu.tags.length > 0;
 
   // ---- メニュー操作（Web PracticeLogClient と同ロジック）----
 
@@ -674,13 +716,13 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
           t("teamsAdmin.practiceLog.videoPartialFailureSaved", {
             errors: videoErrors.join("\n"),
           }),
-          [{ text: "OK", onPress: () => navigation.goBack() }],
+          [{ text: "OK", onPress: () => setIsSaved(true) }],
         );
         setSaving(false);
         return;
       }
 
-      navigation.goBack();
+      setIsSaved(true);
     } catch (err) {
       console.error("チーム練習ログ作成エラー:", err);
       Alert.alert(
@@ -765,6 +807,10 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
               onRemove={(i) => {
                 const target = menus[i];
                 if (target) removeMenu(target.id);
+              }}
+              shouldConfirmRemove={(i) => {
+                const target = menus[i];
+                return !!target && shouldConfirmMenuRemove(target);
               }}
               label={(i) => t("practice.details.menuNumber", { n: i + 1 })}
               accent="green"

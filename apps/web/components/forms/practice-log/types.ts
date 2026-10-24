@@ -1,5 +1,5 @@
 /**
- * PracticeLogForm関連の型定義
+ * 練習ログ (メニュー) 入力フォーム関連の型定義 (PracticeTabModal などが使う)
  */
 
 import { PracticeTag } from "@apps/shared/types";
@@ -57,18 +57,6 @@ export interface PracticeLogEditData {
     memberId: string;
     times: TimeEntry[];
   }>;
-}
-
-export interface PracticeLogFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: PracticeLogSubmitData[]) => Promise<void>;
-  practiceId: string;
-  editData?: PracticeLogEditData | null;
-  isLoading?: boolean;
-  availableTags: Tag[];
-  setAvailableTags: (tags: Tag[] | ((prev: Tag[]) => Tag[])) => void;
-  styles?: Array<{ id: string | number; name_jp: string; distance: number }>;
 }
 
 // 種目の選択肢

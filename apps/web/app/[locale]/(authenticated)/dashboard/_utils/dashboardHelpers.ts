@@ -35,15 +35,6 @@ function isEditingDataWithCompetition(
 }
 
 /**
- * editingDataがpracticeIdを持つオブジェクトかどうかをチェック
- */
-function isEditingDataWithPractice(
-  value: unknown,
-): value is { practiceId: string | null | undefined } {
-  return isObject(value) && hasStringProperty(value, "practiceId");
-}
-
-/**
  * metadataオブジェクトを持つかチェック
  */
 function hasMetadata(value: unknown): value is {
@@ -58,44 +49,6 @@ function hasMetadata(value: unknown): value is {
 // =============================================================================
 // ヘルパー関数
 // =============================================================================
-
-/**
- * 練習IDを取得するヘルパー関数
- */
-export function getPracticeId(createdId: string | null, editingData: unknown): string | undefined {
-  if (createdId) return createdId;
-
-  // 直接practiceIdをチェック
-  if (isEditingDataWithPractice(editingData)) {
-    const practiceId = editingData.practiceId;
-    if (typeof practiceId === "string") {
-      return practiceId;
-    }
-  }
-
-  // CalendarItemの場合: metadata.practice.id または metadata.practice_id をチェック
-  if (hasMetadata(editingData)) {
-    const metadata = editingData.metadata;
-
-    // metadata.practice.id をチェック
-    if ("practice" in metadata && isObject(metadata.practice) && "id" in metadata.practice) {
-      const practiceId = metadata.practice.id;
-      if (typeof practiceId === "string") {
-        return practiceId;
-      }
-    }
-
-    // metadata.practice_id をチェック
-    if ("practice_id" in metadata) {
-      const practiceId = metadata.practice_id;
-      if (typeof practiceId === "string") {
-        return practiceId;
-      }
-    }
-  }
-
-  return undefined;
-}
 
 /**
  * 大会IDを取得するヘルパー関数

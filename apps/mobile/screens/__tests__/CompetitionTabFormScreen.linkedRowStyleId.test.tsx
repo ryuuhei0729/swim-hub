@@ -40,7 +40,8 @@
  */
 
 import React from "react";
-import { render, fireEvent, waitFor, configure } from "@testing-library/react";
+import { render, fireEvent, waitFor, configure, act } from "@testing-library/react";
+import { Alert } from "react-native";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createQueryWrapper } from "../../__tests__/helpers/testUtils";
@@ -366,7 +367,15 @@ async function setupOrphanedRecord(utils: Utils): Promise<void> {
   await waitFor(() => expect(utils.queryByTestId("item-tab-2")).not.toBeNull());
 
   // entry1 (styleB) を削除する → record0 (styleB) が取り残された orphan になる。
+  // 種目を変えたエントリーは入力ありとして削除確認が出るので「削除」を押す。
+  vi.mocked(Alert.alert).mockClear();
   fireEvent.click(utils.getByTestId("item-tab-remove-1"));
+  const removeButtons = vi.mocked(Alert.alert).mock.calls[0]?.[2] as
+    | Array<{ style?: string; onPress?: () => void }>
+    | undefined;
+  const confirmRemove = removeButtons?.find((b) => b.style === "destructive")?.onPress;
+  expect(confirmRemove).toBeTypeOf("function");
+  act(() => confirmRemove?.());
   await waitFor(() => expect(utils.queryByTestId("item-tab-2")).toBeNull());
   await waitFor(() => expect(currentEntryStyle(utils, 1)).toBe(String(STYLE_C.id)));
 }

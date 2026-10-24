@@ -76,6 +76,8 @@ import {
   mergeEntriesIntoRecords,
   resolveSaveReturnTarget,
   findLinkedRowDraftId,
+  hasRecordInput,
+  hasRecordInputBesidesTime,
 } from "@/utils/tabFormUtils";
 import { resolveEntryMutations } from "@/utils/entryMutations";
 import type { ResolveExistingEntry, ResolveFormEntry } from "@/utils/entryMutations";
@@ -856,9 +858,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const validateRecordTab = useCallback((): boolean => {
     if (!showRecordTab) return true;
     const newErrors: Record<string, string> = {};
+    let firstErrorIndex: number | undefined;
     records.forEach((record, index) => {
+      const raceDistance = swimStyles.find((s) => String(s.id) === record.styleId)?.distance;
+      const hasInputBesidesTime = hasRecordInputBesidesTime(
+        record,
+        raceDistance,
+        pendingVideoAssetRef.current.has(record.draftId),
+      );
       // 全フィールド空ならスキップ
-      if (!record.styleId && record.time === 0) return;
+      if (!record.styleId && record.time === 0 && !hasInputBesidesTime) return;
+      const errorCountBefore = Object.keys(newErrors).length;
       if (!record.styleId) {
         newErrors[`style-${index}`] = t("recordMobile.form.styleRequired");
       }
@@ -866,6 +876,12 @@ export const CompetitionTabFormScreen: React.FC = () => {
       const rawTime = record.timeDisplayValue.trim();
       if (rawTime !== "" && parseTimeFlexible(rawTime) === null) {
         newErrors[`time-${index}`] = t("recordMobile.form.timeFormatInvalid");
+      } else if (!(record.time > 0) && hasInputBesidesTime) {
+        // タイムが無い行は handleSave の validRecords で除外される。タイム以外の入力
+        // (スプリット・メモ・動画など) を黙って捨てたり、編集中の既存記録を確認なしで
+        // DB から削除したりしないよう、ここで止める。記録を消すときは × (記録が1件だけの
+        // ときは記録の詳細画面の削除) を使う
+        newErrors[`time-${index}`] = t("recordMobile.form.timeRequired");
       }
       const rawReactionTime = record.reactionTime.trim();
       if (rawReactionTime !== "") {
@@ -876,10 +892,16 @@ export const CompetitionTabFormScreen: React.FC = () => {
           newErrors[`reactionTime-${index}`] = t("recordMobile.form.reactionTimeRange");
         }
       }
+      if (firstErrorIndex === undefined && Object.keys(newErrors).length > errorCountBefore) {
+        firstErrorIndex = index;
+      }
     });
     setRecordErrors(newErrors);
+    // エラーは表示中の記録の欄にしか出ないため、エラーのある記録を開く
+    // (開かないと保存を押しても何も起きないように見える)
+    if (firstErrorIndex !== undefined) setActiveRecordIndex(firstErrorIndex);
     return Object.keys(newErrors).length === 0;
-  }, [records, showRecordTab, t]);
+  }, [records, showRecordTab, swimStyles, t]);
 
   // ---- 全タブ横断バリデーション ----
   const validateAll = useCallback((): boolean => {
@@ -1200,7 +1222,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
         // スナップショット時点の既存レコード ID と現在ドラフトを比較
         // 新規作成モードでは existingIds は空なので全て creates になる
-        const snapshotExistingRecordIds = (snapshotRef.current?.records ?? [])
+        const snapshotRecords = snapshotRef.current?.records ?? [];
+        const snapshotExistingRecordIds = snapshotRecords
           .map((r) => r.existingRecordId)
           .filter((id): id is string => !!id);
         const recordDiff = diffRecordDraft(
@@ -1226,7 +1249,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
           };
           await updateRecordMutation.mutateAsync({ id: record.existingRecordId, updates });
           const validSplitTimes = buildValidSplitTimes(record.splitTimes, record.styleId, swimStyles);
-          if (validSplitTimes.length > 0) {
+          const snapshotRecord = snapshotRecords.find(
+            (r) => r.existingRecordId === record.existingRecordId,
+          );
+          const hadSplitsOnLoad =
+            snapshotRecord != null &&
+            buildValidSplitTimes(snapshotRecord.splitTimes, snapshotRecord.styleId, swimStyles)
+              .length > 0;
+          // 途中スプリットを全部消したときも空配列で置き換えて DB から消す
+          // (0 件で呼ばないと、消したはずのスプリットが DB に残る)。
+          // 読み込み時に無かった記録では呼ばない (不要な DELETE を出さない)
+          if (validSplitTimes.length > 0 || hadSplitsOnLoad) {
             await replaceSplitTimesMutation.mutateAsync({
               recordId: record.existingRecordId,
               splitTimes: validSplitTimes,
@@ -1637,6 +1670,13 @@ export const CompetitionTabFormScreen: React.FC = () => {
                 splitTimeDisplayValue: formatSecondsToDisplay(newTime),
               });
             }
+          } else if (raceDistance && value.trim() === "") {
+            // タイムを消したら、タイムから作った最終地点のスプリット行も消す (残すと古い値が
+            // 表示され続ける。この行は画面から削除できない)。入力途中の解釈できない値では
+            // 消さない (打鍵ごとに行が消えて出る)
+            updatedSplitTimes = updatedSplitTimes.filter(
+              (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+            );
           }
           return {
             ...r,
@@ -2163,6 +2203,13 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     const target = entries[i];
                     if (target) removeEntry(target.draftId);
                   }}
+                  shouldConfirmRemove={(i) => {
+                    const target = entries[i];
+                    return (
+                      !!target &&
+                      !isDefaultUntouchedEntry(target, defaultEntryStyleIdRef.current)
+                    );
+                  }}
                   label={(i) => t("competition.entry.styleNumber", { index: i + 1 })}
                   accent="blue"
                   disabled={isSaving}
@@ -2413,6 +2460,18 @@ export const CompetitionTabFormScreen: React.FC = () => {
                     const target = records[i];
                     if (target) removeRecord(target.draftId);
                   }}
+                  shouldConfirmRemove={(i) => {
+                    const target = records[i];
+                    if (!target) return false;
+                    const raceDistance = swimStyles.find(
+                      (s) => String(s.id) === target.styleId,
+                    )?.distance;
+                    return hasRecordInput(
+                      target,
+                      raceDistance,
+                      pendingVideoAssetRef.current.has(target.draftId),
+                    );
+                  }}
                   label={(i) => t("recordMobile.form.recordNumber", { n: i + 1 })}
                   accent="blue"
                   disabled={isSaving}
@@ -2488,6 +2547,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
                         placeholder={t("recordMobile.form.timePlaceholder2")}
                         keyboardType="decimal-pad"
                         editable={!isSaving}
+                        testID={`record-time-${index + 1}`}
                       />
                       {recordErrors[`time-${index}`] && (
                         <Text style={styles.errorText}>{recordErrors[`time-${index}`]}</Text>

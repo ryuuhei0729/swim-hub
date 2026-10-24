@@ -1018,7 +1018,6 @@
       "unknown": "不明なエラー"
     },
     "handlers": {
-      "fetchPracticeFailed": "練習データの取得に失敗しました",
       "updateImagePathFailed": "画像パスの更新に失敗しました",
       "practiceCreatedButImageFailed": "練習は作成されましたが、画像のアップロードに失敗しました",
       "authRequired": "認証されたユーザーが必要です",
@@ -3996,8 +3995,8 @@
         "labelNote": "備考",
         "poolShort": "短水路 (25m)",
         "poolLong": "長水路 (50m)",
-        "addPracticeRowButton": "+ 練習を追加",
-        "addCompetitionRowButton": "+ 大会を追加",
+        "addPracticeRowButton": "練習を追加",
+        "addCompetitionRowButton": "大会を追加",
         "deleteRowButton": "削除",
         "submitButton": "登録する",
         "submitting": "登録中...",
@@ -4234,9 +4233,6 @@
       "cancel": "キャンセル"
     },
     "practiceLog": {
-      "title_create": "練習記録を追加",
-      "title_edit": "練習記録を編集",
-      "close_aria": "練習記録を閉じる",
       "templateFrom": "テンプレート",
       "templateFromLong": "テンプレートから作成",
       "addMenu": "メニューを追加",
@@ -4247,8 +4243,6 @@
       "cancel": "キャンセル",
       "save": "保存",
       "saving": "保存中...",
-      "update": "更新",
-      "updating": "更新中...",
       "videoLabel": "動画",
       "menuHeader": "メニュー {n}"
     },
@@ -4514,6 +4508,10 @@
       "videoUpload": "動画の添付は Premium 会員限定です",
       "splitTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に",
       "practiceTimeLimit": "Freeプランでは{limit}個まで登録できます。Premiumにアップグレードすると無制限に"
+    },
+    "itemTabs": {
+      "removeConfirmTitle": "{label}を削除しますか？",
+      "removeConfirmMessage": "{label}の入力済みデータが削除されます。"
     }
   },
   "timeLevel": {

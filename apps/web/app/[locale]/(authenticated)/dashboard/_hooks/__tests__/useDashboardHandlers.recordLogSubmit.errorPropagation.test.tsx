@@ -96,16 +96,12 @@ function Harness({
     styles: [],
     createPractice: vi.fn(),
     updatePractice: vi.fn(),
-    createPracticeLog: vi.fn(),
-    updatePracticeLog: vi.fn(),
     // usePracticeTabSave 専用の別経路。このテストは handleRecordLogSubmit
     // (練習タブモーダルとは無関係) のみを検証するため未使用だが、
     // UseDashboardHandlersProps の必須プロパティとして満たす必要がある。
     createPracticeLogForTabSave: vi.fn(),
     updatePracticeLogForTabSave: vi.fn(),
     deletePracticeLog: vi.fn(),
-    createPracticeTime: vi.fn(),
-    deletePracticeTime: vi.fn(),
     deletePractice: vi.fn(),
     deleteRecord: vi.fn(),
     deleteEntry: vi.fn(),
@@ -118,20 +114,16 @@ function Harness({
     createSplitTimes: vi.fn(),
     replaceSplitTimes: vi.fn(),
     editingData: null,
-    createdPracticeId: null,
     competitionEditingData: null,
     createdCompetitionId: "comp-1",
     setPracticeLoading: vi.fn(),
     setCompetitionLoading: vi.fn(),
-    closePracticeBasicForm: vi.fn(),
-    closePracticeLogForm: vi.fn(),
     closeCompetitionBasicForm: vi.fn(),
     closeEntryLogForm: vi.fn(),
     closeRecordLogForm: () => {
       closeRecordLogFormSpy();
       setIsOpen(false);
     },
-    openPracticeLogForm: vi.fn(),
     setCreatedEntries: vi.fn(),
     openEntryLogForm: vi.fn(),
     openRecordLogForm: vi.fn(),

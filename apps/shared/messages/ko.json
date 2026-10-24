@@ -1018,7 +1018,6 @@
       "unknown": "알 수 없는 오류"
     },
     "handlers": {
-      "fetchPracticeFailed": "연습 데이터를 불러오지 못했습니다",
       "updateImagePathFailed": "이미지 경로 업데이트에 실패했습니다",
       "practiceCreatedButImageFailed": "연습은 생성되었지만 이미지 업로드에 실패했습니다",
       "authRequired": "인증된 사용자가 필요합니다",
@@ -3996,8 +3995,8 @@
         "labelNote": "비고",
         "poolShort": "단수로 (25m)",
         "poolLong": "장수로 (50m)",
-        "addPracticeRowButton": "+ 연습 추가",
-        "addCompetitionRowButton": "+ 대회 추가",
+        "addPracticeRowButton": "연습 추가",
+        "addCompetitionRowButton": "대회 추가",
         "deleteRowButton": "삭제",
         "submitButton": "등록하기",
         "submitting": "등록 중...",
@@ -4234,9 +4233,6 @@
       "cancel": "취소"
     },
     "practiceLog": {
-      "title_create": "연습 기록 추가",
-      "title_edit": "연습 기록 편집",
-      "close_aria": "연습 기록 닫기",
       "templateFrom": "템플릿",
       "templateFromLong": "템플릿에서 만들기",
       "addMenu": "메뉴 추가",
@@ -4247,8 +4243,6 @@
       "cancel": "취소",
       "save": "저장",
       "saving": "저장 중...",
-      "update": "업데이트",
-      "updating": "업데이트 중...",
       "videoLabel": "동영상",
       "menuHeader": "메뉴 {n}"
     },
@@ -4514,6 +4508,10 @@
       "videoUpload": "동영상 첨부는 Premium 회원 전용입니다",
       "splitTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로",
       "practiceTimeLimit": "Free 플랜에서는 {limit}개까지 등록할 수 있습니다. Premium으로 업그레이드하면 무제한으로"
+    },
+    "itemTabs": {
+      "removeConfirmTitle": "{label}을(를) 삭제하시겠습니까?",
+      "removeConfirmMessage": "{label}의 입력된 데이터가 삭제됩니다."
     }
   },
   "timeLevel": {

@@ -7,6 +7,7 @@ describe("useUnsavedChangesWarning", () => {
   let addEventListenerSpy: MockInstance;
   let removeEventListenerSpy: MockInstance;
   let historyBackSpy: MockInstance;
+  let historyGoSpy: MockInstance;
   let historyPushStateSpy: MockInstance;
 
   beforeEach(() => {
@@ -14,6 +15,7 @@ describe("useUnsavedChangesWarning", () => {
     addEventListenerSpy = vi.spyOn(window, "addEventListener");
     removeEventListenerSpy = vi.spyOn(window, "removeEventListener");
     historyBackSpy = vi.spyOn(window.history, "back").mockImplementation(() => {});
+    historyGoSpy = vi.spyOn(window.history, "go").mockImplementation(() => {});
     historyPushStateSpy = vi.spyOn(window.history, "pushState").mockImplementation(() => {});
   });
 
@@ -21,6 +23,9 @@ describe("useUnsavedChangesWarning", () => {
     addEventListenerSpy.mockRestore();
     removeEventListenerSpy.mockRestore();
     historyBackSpy.mockRestore();
+    historyGoSpy.mockRestore();
+    // 個別のテストで差し替えた history.length 等も戻す
+    vi.restoreAllMocks();
     historyPushStateSpy.mockRestore();
   });
 
@@ -259,7 +264,9 @@ describe("useUnsavedChangesWarning", () => {
   });
 
   describe("handleConfirmClose", () => {
-    it("confirmContext=backの場合、history.back()が呼ばれる", () => {
+    it("confirmContext=backの場合、history.go(-2) で popstate 時に積み直した分も越えて戻る", () => {
+      // 戻り先がある: [直前のページ, このページ, 積み直し]
+      vi.spyOn(window.history, "length", "get").mockReturnValue(3);
       const { result } = renderHook(() =>
         useUnsavedChangesWarning({
           isOpen: true,
@@ -279,7 +286,70 @@ describe("useUnsavedChangesWarning", () => {
         result.current.handleConfirmClose();
       });
 
-      expect(historyBackSpy).toHaveBeenCalled();
+      // history.back() (1つ戻る) は積み直した同じ URL に着くだけでページを離れない
+      expect(historyGoSpy).toHaveBeenCalledWith(-2);
+      expect(historyBackSpy).not.toHaveBeenCalled();
+    });
+
+    it("confirmContext=back で離れるとき、ブラウザ標準の離脱確認 (beforeunload) は重ねて出さない", () => {
+      vi.spyOn(window.history, "length", "get").mockReturnValue(3);
+      const { result } = renderHook(() =>
+        useUnsavedChangesWarning({ isOpen: true, hasUnsavedChanges: true, isSubmitted: false }),
+      );
+      const fireBeforeUnload = () => {
+        const event = new Event("beforeunload", { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      };
+      // 対照: 確認前は標準の離脱確認を出す
+      expect(fireBeforeUnload()).toBe(true);
+
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      act(() => {
+        result.current.handleConfirmClose();
+      });
+
+      // go(-2) で別ドキュメントへ戻るときに発火する beforeunload を止めない
+      expect(fireBeforeUnload()).toBe(false);
+    });
+
+    it("confirmContext=back でも戻り先が無い (履歴の先頭で開いた) なら、ダイアログを閉じて留まり、離脱確認は効いたまま", () => {
+      // 戻り先が無い: [このページ, 積み直し]
+      vi.spyOn(window.history, "length", "get").mockReturnValue(2);
+      const onCloseMock = vi.fn();
+      const { result } = renderHook(() =>
+        useUnsavedChangesWarning({
+          isOpen: true,
+          hasUnsavedChanges: true,
+          isSubmitted: false,
+          onClose: onCloseMock,
+        }),
+      );
+
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      act(() => {
+        result.current.handleConfirmClose();
+      });
+
+      expect(result.current.showConfirmDialog).toBe(false);
+      expect(historyGoSpy).not.toHaveBeenCalled();
+      // onClose (アプリ内の離脱先へ移る処理) は close 文脈専用で、ここでは呼ばない
+      expect(onCloseMock).not.toHaveBeenCalled();
+
+      // 留まったので、タブを閉じる・リロードの離脱確認は効いたまま
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+
+      // 次のブラウザバックでも確認ダイアログを出す (popstate を無視するフラグが残っていない)
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      expect(result.current.showConfirmDialog).toBe(true);
     });
 
     it("confirmContext=closeの場合、onCloseが呼ばれる", () => {
@@ -306,6 +376,7 @@ describe("useUnsavedChangesWarning", () => {
 
       expect(onCloseMock).toHaveBeenCalled();
       expect(historyBackSpy).not.toHaveBeenCalled();
+      expect(historyGoSpy).not.toHaveBeenCalled();
     });
 
     it("handleConfirmClose後に確認ダイアログが閉じる", () => {

@@ -14,6 +14,7 @@ import type { PendingVideoData } from "@/stores/types";
 import { isInvalidTimeInput, parseTimeFlexible } from "@apps/shared/utils/time";
 import { formatSecondsToDisplay } from "../utils/formatters";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
+import { hasRecordInputBesidesTime } from "@/utils/tabModalDiff";
 
 interface UseRecordLogFormOptions {
   isOpen: boolean;
@@ -54,6 +55,8 @@ interface UseRecordLogFormReturn {
   prepareSubmitData: () => {
     hasStyleError: boolean;
     hasTimeFormatError: boolean;
+    /** タイムが空なのにタイム以外の入力 (または既存 DB 行) がある最初の行。無ければ null */
+    timeRequiredIndex: number | null;
     submitList: RecordLogFormData[];
   };
   isSplitTimeLimitReached: (entryIndex: number) => boolean;
@@ -236,6 +239,12 @@ export const useRecordLogForm = ({
               },
             ];
           }
+        } else if (raceDistance && value.trim() === "") {
+          // タイムを消したら、タイムから作った最終地点のスプリット行も消す (残すと古い値が
+          // 表示され続ける)。入力途中の解釈できない値では消さない (打鍵ごとに行が消えて出る)
+          updatedSplitTimes = updatedSplitTimes.filter(
+            (st) => !(typeof st.distance === "number" && st.distance === raceDistance),
+          );
         }
 
         return {
@@ -557,9 +566,12 @@ export const useRecordLogForm = ({
   const prepareSubmitData = useCallback((): {
     hasStyleError: boolean;
     hasTimeFormatError: boolean;
+    /** タイムが空なのにタイム以外の入力 (または既存 DB 行) がある最初の行。無ければ null */
+    timeRequiredIndex: number | null;
     submitList: RecordLogFormData[];
   } => {
     let hasStyleError = false;
+    let timeRequiredIndex: number | null = null;
     // 不正形式のタイム入力（"1.23.45" 等）が残っている場合は保存をブロックする
     // （time=0 として静かにレコードを落とさない）
     const hasTimeFormatError = formDataList.some(
@@ -568,7 +580,7 @@ export const useRecordLogForm = ({
         data.splitTimes.some((st) => isInvalidTimeInput(st.splitTimeDisplayValue)),
     );
     const submitList: RecordLogFormData[] = formDataList.reduce<RecordLogFormData[]>(
-      (acc, data) => {
+      (acc, data, index) => {
         const styleId = data.styleId;
 
         if (!styleId) {
@@ -576,13 +588,19 @@ export const useRecordLogForm = ({
           return acc;
         }
 
-        if (data.time <= 0) {
-          return acc;
-        }
-
         // 種目の距離を取得
         const style = styles.find((s) => s.id.toString() === styleId);
         const raceDistance = style?.distance;
+
+        if (data.time <= 0) {
+          // タイムが無い行は送信対象から外れる。タイム以外の入力 (スプリット・メモ・動画など)
+          // を黙って捨てたり、編集中の既存記録を確認なしで DB から削除したりしないよう、
+          // 呼び出し側で保存を止められるように位置を返す
+          if (timeRequiredIndex === null && hasRecordInputBesidesTime(data, raceDistance)) {
+            timeRequiredIndex = index;
+          }
+          return acc;
+        }
 
         const validSplitTimes = data.splitTimes
           .map((st) => {
@@ -612,7 +630,7 @@ export const useRecordLogForm = ({
       [],
     );
 
-    return { hasStyleError, hasTimeFormatError, submitList };
+    return { hasStyleError, hasTimeFormatError, timeRequiredIndex, submitList };
   }, [formDataList, styles]);
 
   const isSplitTimeLimitReached = useCallback(

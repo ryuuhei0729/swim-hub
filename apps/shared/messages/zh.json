@@ -1018,7 +1018,6 @@
       "unknown": "未知错误"
     },
     "handlers": {
-      "fetchPracticeFailed": "获取训练数据失败",
       "updateImagePathFailed": "更新图片路径失败",
       "practiceCreatedButImageFailed": "训练已创建，但图片上传失败",
       "authRequired": "需要已认证的用户",
@@ -3996,8 +3995,8 @@
         "labelNote": "备注",
         "poolShort": "短池 (25m)",
         "poolLong": "长池 (50m)",
-        "addPracticeRowButton": "+ 添加训练",
-        "addCompetitionRowButton": "+ 添加比赛",
+        "addPracticeRowButton": "添加训练",
+        "addCompetitionRowButton": "添加比赛",
         "deleteRowButton": "删除",
         "submitButton": "登记",
         "submitting": "登记中...",
@@ -4234,9 +4233,6 @@
       "cancel": "取消"
     },
     "practiceLog": {
-      "title_create": "添加训练记录",
-      "title_edit": "编辑训练记录",
-      "close_aria": "关闭训练记录",
       "templateFrom": "模板",
       "templateFromLong": "从模板创建",
       "addMenu": "添加菜单",
@@ -4247,8 +4243,6 @@
       "cancel": "取消",
       "save": "保存",
       "saving": "保存中…",
-      "update": "更新",
-      "updating": "更新中…",
       "videoLabel": "视频",
       "menuHeader": "菜单 {n}"
     },
@@ -4514,6 +4508,10 @@
       "videoUpload": "添加视频为 Premium 会员专属功能",
       "splitTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记",
       "practiceTimeLimit": "Free 套餐最多可登记 {limit} 个。升级到 Premium 即可无限登记"
+    },
+    "itemTabs": {
+      "removeConfirmTitle": "确定要删除{label}吗？",
+      "removeConfirmMessage": "{label}已输入的数据将被删除。"
     }
   },
   "timeLevel": {

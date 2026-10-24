@@ -21,7 +21,8 @@
  * DashboardClient 本体のレンダリングに必要な他の依存 (CalendarContainer 等の
  * 表示コンポーネント、useCalendarHandlers 等) は本テストの関心事ではないためスタブ化する。
  * useDashboardHandlers 自体もモックし、DashboardClient から渡された props オブジェクト
- * (createPracticeLog/updatePracticeLog を含む) を捕捉する入口として使う
+ * (このラッパーを createPracticeLogForTabSave/updatePracticeLogForTabSave として含む) を
+ * 捕捉する入口として使う
  * (このテストが検証したいのは useDashboardHandlers の内部ロジックではなく、
  * DashboardClient 側のラッパーの転送処理そのものであるため)。
  */
@@ -70,8 +71,6 @@ vi.mock("@apps/shared/hooks/queries/practices", () => ({
     isPending: false,
   }),
   useDeletePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useCreatePracticeTimeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeletePracticeTimeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@apps/shared/hooks/queries/records", () => ({
@@ -91,7 +90,6 @@ vi.mock("../../_hooks/useDashboardHandlers", () => ({
   useDashboardHandlers: (props: Record<string, unknown>) => {
     mocks.capturedHandlerProps(props);
     return {
-      handlePracticeLogSubmit: vi.fn(),
       handleDeleteItem: vi.fn(),
       handleEntrySubmit: vi.fn(),
       handleEntrySkip: vi.fn(),
@@ -167,10 +165,10 @@ describe("DashboardClient — createPracticeLog/updatePracticeLog ラッパー�
 
     await waitFor(() => expect(mocks.capturedHandlerProps).toHaveBeenCalled());
     const props = mocks.capturedHandlerProps.mock.calls[0]![0] as {
-      createPracticeLog: (log: Record<string, unknown>, skipMilestoneUpdate?: boolean) => unknown;
+      createPracticeLogForTabSave: (log: Record<string, unknown>, skipMilestoneUpdate?: boolean) => unknown;
     };
 
-    await props.createPracticeLog({ practice_id: "practice-1", style: "Fr" }, true);
+    await props.createPracticeLogForTabSave({ practice_id: "practice-1", style: "Fr" }, true);
 
     expect(mocks.createPracticeLogMutateAsync).toHaveBeenCalledTimes(1);
     const variables = mocks.createPracticeLogMutateAsync.mock.calls[0]![0];
@@ -186,14 +184,14 @@ describe("DashboardClient — createPracticeLog/updatePracticeLog ラッパー�
 
     await waitFor(() => expect(mocks.capturedHandlerProps).toHaveBeenCalled());
     const props = mocks.capturedHandlerProps.mock.calls[0]![0] as {
-      updatePracticeLog: (
+      updatePracticeLogForTabSave: (
         id: string,
         updates: Record<string, unknown>,
         skipMilestoneUpdate?: boolean,
       ) => unknown;
     };
 
-    await props.updatePracticeLog("log-1", { style: "Br" }, true);
+    await props.updatePracticeLogForTabSave("log-1", { style: "Br" }, true);
 
     expect(mocks.updatePracticeLogMutateAsync).toHaveBeenCalledTimes(1);
     const variables = mocks.updatePracticeLogMutateAsync.mock.calls[0]![0];
@@ -209,10 +207,10 @@ describe("DashboardClient — createPracticeLog/updatePracticeLog ラッパー�
 
     await waitFor(() => expect(mocks.capturedHandlerProps).toHaveBeenCalled());
     const props = mocks.capturedHandlerProps.mock.calls[0]![0] as {
-      createPracticeLog: (log: Record<string, unknown>, skipMilestoneUpdate?: boolean) => unknown;
+      createPracticeLogForTabSave: (log: Record<string, unknown>, skipMilestoneUpdate?: boolean) => unknown;
     };
 
-    await props.createPracticeLog({ practice_id: "practice-1", style: "Fr" });
+    await props.createPracticeLogForTabSave({ practice_id: "practice-1", style: "Fr" });
 
     const variables = mocks.createPracticeLogMutateAsync.mock.calls[0]![0];
     expect(variables.skipMilestoneUpdate).toBeUndefined();

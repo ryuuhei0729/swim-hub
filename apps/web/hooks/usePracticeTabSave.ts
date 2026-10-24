@@ -298,8 +298,7 @@ export function usePracticeTabSave({
       // 1回の保存につき1回だけ行う (ADD/UPDATE のいずれか1件でもあった場合のみ)。
       // ログ側ミューテーションの invalidate はタイム保存より前に走るため、ここで
       // 改めて invalidate しないと保存直後の一覧に新しいタイムが反映されない。
-      // useDashboardHandlers.handlePracticeLogSubmit と共通の後処理のため、
-      // 実処理は practiceMilestoneRefresh.ts に一本化してある。
+      // 実処理は practiceMilestoneRefresh.ts にある。
       await refreshMilestonesAfterPracticeSave(supabase, user.id, hasLogChanges);
 
       // 全成功 → モーダルを閉じる

@@ -1331,6 +1331,18 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
     : memberGroups.length > 0
       ? requestRemoveMemberGroup
       : undefined;
+  // 個人種目の選手タブは requestRemoveMemberGroup が自前で確認を出すので、ここではリレーの
+  // グループだけを対象にする (タイム等の入力済みグループを確認なしで消さない)
+  const tabsShouldConfirmRemove = isRelayEntry
+    ? (i: number) => {
+        const group = entries[i];
+        return (
+          !!group &&
+          (group.memberRecords.some((mr) => hasMemberRecordData(mr)) ||
+            (group.relaySplitTimes ?? []).some((st) => st.splitTime > 0))
+        );
+      }
+    : undefined;
   const tabsLabel = isRelayEntry
     ? (i: number) => t("teams.record.groupNumber", { n: i + 1 })
     : (i: number) => memberGroups[i]?.memberName ?? "";
@@ -1397,6 +1409,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
           onSelect={tabsOnSelect}
           onAdd={tabsOnAdd}
           onRemove={tabsOnRemove}
+          shouldConfirmRemove={tabsShouldConfirmRemove}
           label={tabsLabel}
           accent="blue"
           disabled={saving}

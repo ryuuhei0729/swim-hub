@@ -26,16 +26,10 @@ const MILESTONE_CREATED_AT = subDays(new Date(), 30).toISOString();
  * 実機調査で判明した重要な事実 (詳細は各テスト内のコメント参照):
  *   Dashboard 上でユーザーが実際にクリックできる「+」(新規追加) も、既存ログの
  *   編集アイコンも、すべて PracticeTabModal (usePracticeTabSave 経由) を開く。
- *   useDashboardHandlers.ts の handlePracticeLogSubmit (create/update 分岐・
- *   skipMilestoneUpdate・refreshMilestonesAfterPracticeSave の配線を持つ) を
- *   実際に呼び出す簡易フォーム (PracticeLogForm /
- *   data-testid="practice-log-form-modal") を開く唯一の呼び出し箇所は、
- *   useDashboardHandlers.ts 内に既存の「この関数は現状 UI から到達不能」という
- *   コメントが示すとおり、DashboardClient.tsx から配線されておらず、現在の画面
- *   からは到達不能。そのため本ファイルの「ダッシュボード練習記録入力→即時達成」
- *   検証は、実際に画面から到達できる PracticeTabModal (usePracticeTabSave) 経由で
- *   行う。これは同時にタブモーダル経由の練習保存が (作成分岐・更新分岐の両方とも)
- *   問題なく動作しているかの実機確認も兼ねる。
+ *   ダッシュボードの練習保存経路はこれだけなので、本ファイルの「ダッシュボード練習記録
+ *   入力→即時達成」検証は PracticeTabModal (usePracticeTabSave) 経由で行う。これは
+ *   同時にタブモーダル経由の練習保存が (作成分岐・更新分岐の両方とも) 問題なく動作して
+ *   いるかの実機確認も兼ねる。
  */
 
 let hasRequiredEnvVars = false;
@@ -511,14 +505,7 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
       page,
     }) => {
       // Dashboard の「+」(day-add-button) も、練習カード内の「メニュー追加」
-      // (add-new-button) も、実際には両方とも PracticeTabModal (usePracticeTabSave)
-      // を開く。useDashboardHandlers.ts の handlePracticeLogSubmit を直接呼ぶ
-      // 簡易フォーム (PracticeLogForm / data-testid="practice-log-form-modal") を
-      // 開く唯一の呼び出し箇所 (openPracticeLogForm(createdPracticeRef?.id)、
-      // handlePracticeBasicSubmit 内) は、DashboardClient.tsx がこの関数への
-      // 配線を持たないため現在の画面から到達不能 (useDashboardHandlers.ts 内の
-      // 既存コメント「この関数は現状 UI から到達不能」のとおり既知の状態)。
-      // そのため本テストは実際に画面から到達できる PracticeTabModal 経由で検証する。
+      // (add-new-button) も、両方とも PracticeTabModal (usePracticeTabSave) を開く。
       await page.waitForLoadState("networkidle").catch(() => {});
       await page.waitForSelector('[data-testid="calendar-day"]', { timeout: 15000 });
 
