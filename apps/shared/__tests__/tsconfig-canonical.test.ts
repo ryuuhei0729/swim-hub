@@ -19,7 +19,7 @@ import path from "node:path";
  *   `tsc --showConfig` は tsconfig の `extends` チェーンを解決した「実効設定」を返す。
  *   このテストは PM_RULINGS.md 第3部の canonical 値と「維持する per-project 逸脱」を
  *   実効設定に対して assert する。CI が緑でも tsc --noEmit が走っていないプロジェクト
- *   (result-of-swimming / scraping。PM_RULINGS.md 第4部) があるため、
+ *   (scraping。PM_RULINGS.md 第4部) があるため、
  *   「型チェックが通るか」とは独立に「設定が将来サイレントに巻き戻らないか」を守る。
  *
  * なぜここに置くか (CI から実行される場所):
@@ -28,8 +28,8 @@ import path from "node:path";
  *   (0エラーであれば緩い設定でも通る)。一方 `unit-tests` ジョブは
  *   `pnpm --filter @swim-hub/shared test` を明示的に呼ぶため、このファイルは確実に CI で実行される。
  *   apps/shared は web/mobile 双方から参照される中心的パッケージであり、
- *   result-of-swimming は pnpm workspace 外だが同じ git リポジトリ内なので、
- *   相対パスで `tsc --showConfig` を直接叩けば「型チェックは CI 未カバーでも設定ドリフトだけは検知できる」。
+ *   packages/result-of-swimming も相対パスで `tsc --showConfig` を直接叩いて設定ドリフトを検知する
+ *   (pnpm workspace の一員なので型チェック自体は `pnpm -r --if-present type-check` でも CI 実行される)。
  *   scraping だけは事情が違う (下記「検証できないこと」を参照)。
  *
  * 検証できないこと (既知の限界。QA report 参照):
@@ -122,7 +122,7 @@ describe("Sprint #14 tsconfig canonical values (swim-hub)", () => {
   });
 
   it("result-of-swimming: target/lib は既に canonical。noUncheckedIndexedAccess と library系(declaration等) が新規に true化される", () => {
-    const co = showConfig("../../result-of-swimming/tsconfig.json");
+    const co = showConfig("../../packages/result-of-swimming/tsconfig.json");
     expect(co).toMatchObject({ ...CANONICAL_CORE, target: "es2022" });
     expect(normalizeLib(co.lib)).toEqual(["es2022"]);
     // PM_RULINGS.md 第3部 library系バケットに result-of-swimming が明記されている。
