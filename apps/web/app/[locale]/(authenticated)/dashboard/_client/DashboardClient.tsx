@@ -17,8 +17,6 @@ import {
   useCreatePracticeLogMutation,
   useUpdatePracticeLogMutation,
   useDeletePracticeLogMutation,
-  useCreatePracticeTimeMutation,
-  useDeletePracticeTimeMutation,
 } from "@apps/shared/hooks/queries/practices";
 import {
   useCreateRecordMutation,
@@ -71,11 +69,7 @@ export default function DashboardClient({
 
   const {
     editingData,
-    createdPracticeId,
     openTabModal: openPracticeTabModal,
-    openLogForm: openPracticeLogForm,
-    closeBasicForm: closePracticeBasicForm,
-    closeLogForm: closePracticeLogForm,
     closeTabModal: closePracticeTabModal,
     closeAll: closePracticeStoreAll,
     setSelectedDate,
@@ -173,8 +167,6 @@ export default function DashboardClient({
   const createPracticeLogMutation = useCreatePracticeLogMutation(supabase);
   const updatePracticeLogMutation = useUpdatePracticeLogMutation(supabase);
   const deletePracticeLogMutation = useDeletePracticeLogMutation(supabase);
-  const createPracticeTimeMutation = useCreatePracticeTimeMutation(supabase);
-  const deletePracticeTimeMutation = useDeletePracticeTimeMutation(supabase);
 
   // 大会記録用のミューテーションフック
   const createRecordMutation = useCreateRecordMutation(supabase);
@@ -198,10 +190,8 @@ export default function DashboardClient({
   ) => {
     return await updatePracticeMutation.mutateAsync({ id, updates });
   };
-  // createPracticeLog/updatePracticeLog は handlePracticeLogSubmit (簡易フォーム) と
-  // usePracticeTabSave (タブモーダル一括保存) の両方から使われる。どちらも
-  // skipMilestoneUpdate を呼び出し元から渡せる必要があるため、
-  // 実装を1つに揃え、ForTabSave という別名では複製しない。
+  // usePracticeTabSave (タブモーダル一括保存) が skipMilestoneUpdate を呼び出し元から渡せるよう、
+  // mutation の variables にそのまま転送する。
   const createPracticeLog = async (
     log: Parameters<typeof createPracticeLogMutation.mutateAsync>[0],
     skipMilestoneUpdate?: boolean,
@@ -215,16 +205,7 @@ export default function DashboardClient({
   ) => {
     return await updatePracticeLogMutation.mutateAsync({ id, updates, skipMilestoneUpdate });
   };
-  const createPracticeTime = async (
-    time: Parameters<typeof createPracticeTimeMutation.mutateAsync>[0],
-  ) => {
-    return await createPracticeTimeMutation.mutateAsync(time);
-  };
-  const deletePracticeTime = async (id: string) => {
-    return await deletePracticeTimeMutation.mutateAsync(id);
-  };
-  // タブモーダル一括保存 (usePracticeTabSave) 専用ラッパー。createPracticeLog/updatePracticeLog と
-  // 実体は同じだが、useDashboardHandlers 側の props 名を分けて意図を明示する。
+  // useDashboardHandlers 側の props 名に合わせた別名 (タブモーダル一括保存用)
   const createPracticeLogForTabSave = createPracticeLog;
   const updatePracticeLogForTabSave = updatePracticeLog;
   const deletePractice = async (id: string) => {
@@ -278,7 +259,6 @@ export default function DashboardClient({
 
   // ハンドラー関数は useDashboardHandlers カスタムフックから取得
   const {
-    handlePracticeLogSubmit,
     handleDeleteItem: originalHandleDeleteItem,
     handleEntrySubmit: originalHandleEntrySubmit,
     handleEntrySkip,
@@ -291,11 +271,7 @@ export default function DashboardClient({
     styles,
     createPractice,
     updatePractice,
-    createPracticeLog,
-    updatePracticeLog,
     deletePracticeLog,
-    createPracticeTime,
-    deletePracticeTime,
     createPracticeLogForTabSave,
     updatePracticeLogForTabSave,
     deletePractice,
@@ -309,17 +285,13 @@ export default function DashboardClient({
     createSplitTimes,
     replaceSplitTimes,
     editingData,
-    createdPracticeId,
     competitionEditingData,
     createdCompetitionId,
     setPracticeLoading,
     setCompetitionLoading,
-    closePracticeBasicForm,
-    closePracticeLogForm,
     closeCompetitionBasicForm,
     closeEntryLogForm,
     closeRecordLogForm,
-    openPracticeLogForm,
     setCreatedEntries,
     openEntryLogForm,
     openRecordLogForm,
@@ -408,7 +380,6 @@ export default function DashboardClient({
 
         {/* フォームモーダル */}
         <FormModals
-          onPracticeLogSubmit={handlePracticeLogSubmit}
           onEntrySubmit={handleEntrySubmit}
           onEntrySkip={handleEntrySkip}
           onRecordLogSubmit={handleRecordLogSubmit}

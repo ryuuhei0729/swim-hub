@@ -84,12 +84,14 @@ export default function ManualEntryForm({ teamId, onSuccess }: ManualEntryFormPr
     );
   };
 
-  const addPracticeRow = () => setPracticeRows((prev) => [...prev, emptyPracticeRow(today)]);
+  // 追加行の日付は空で始める。今日の日付を入れておくと、何も入力していない行まで
+  // 「今日の無題の練習」として登録されてしまうため (空行は検証・送信の対象外)
+  const addPracticeRow = () => setPracticeRows((prev) => [...prev, emptyPracticeRow("")]);
   const removePracticeRow = (index: number) =>
     setPracticeRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
 
   const addCompetitionRow = () =>
-    setCompetitionRows((prev) => [...prev, emptyCompetitionRow(today)]);
+    setCompetitionRows((prev) => [...prev, emptyCompetitionRow("")]);
   const removeCompetitionRow = (index: number) =>
     setCompetitionRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
 
@@ -121,9 +123,12 @@ export default function ManualEntryForm({ teamId, onSuccess }: ManualEntryFormPr
       const res = await api.bulkRegister(teamId, input);
       setResult(res);
       if (res.success) {
-        // 成功時はフォームをリセットし、親に通知
-        setPracticeRows([emptyPracticeRow(today)]);
-        setCompetitionRows([emptyCompetitionRow(today)]);
+        // 成功時は送信したタブだけリセットし (もう片方のタブの入力は送信していないので残す)、親に通知
+        if (mode === "practice") {
+          setPracticeRows([emptyPracticeRow(today)]);
+        } else {
+          setCompetitionRows([emptyCompetitionRow(today)]);
+        }
         onSuccess?.();
       }
     } catch (err) {
@@ -176,13 +181,6 @@ export default function ManualEntryForm({ teamId, onSuccess }: ManualEntryFormPr
           {t("manual.tabCompetition")}
         </button>
       </div>
-
-      {/* エラー表示 */}
-      {error && (
-        <div className="mb-4 whitespace-pre-line rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          {error}
-        </div>
-      )}
 
       {/* 練習行 */}
       {mode === "practice" && (
@@ -393,6 +391,17 @@ export default function ManualEntryForm({ teamId, onSuccess }: ManualEntryFormPr
             <PlusIcon className="h-4 w-4" />
             {t("manual.addCompetitionRowButton")}
           </button>
+        </div>
+      )}
+
+      {/* エラー表示: 押した「登録する」ボタンの直上に出す (フォーム上部だと行が多いとき画面外になり、
+          押しても何も起きないように見えるため) */}
+      {error && (
+        <div
+          role="alert"
+          className="mt-5 whitespace-pre-line rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+        >
+          {error}
         </div>
       )}
 

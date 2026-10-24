@@ -35,8 +35,6 @@ vi.mock("@apps/shared/hooks/queries/practices", () => ({
   useCreatePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdatePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeletePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useCreatePracticeTimeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeletePracticeTimeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 // PracticeClient.test.tsx (配線ロジック中心) とは別に、ここでは PracticeClient が

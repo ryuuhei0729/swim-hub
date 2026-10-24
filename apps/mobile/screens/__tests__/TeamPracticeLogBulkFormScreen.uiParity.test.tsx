@@ -39,6 +39,7 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PracticeTag } from "@apps/shared/types";
 import type { PracticeLogTemplate } from "@apps/shared/types/practiceLogTemplate";
+import { Alert } from "react-native";
 
 const mocks = vi.hoisted(() => ({
   routeParams: { practiceId: "practice-1", teamId: "team-1" },
@@ -213,6 +214,17 @@ function getAddMenuTabButton(container: HTMLElement): HTMLElement {
 /** ItemTabs の「× (削除)」ボタンを DOM 出現順で取得する
  *  (accessibilityLabel="remove item" は全タブ共通のハードコード文字列で index 別に
  *   区別できないため、DOM 上の並び順 = タブの表示順であることを利用する) */
+/** 直近の削除確認 Alert で「削除」(destructive) を押す */
+function pressLastAlertDestructive(): void {
+  const calls = vi.mocked(Alert.alert).mock.calls;
+  const buttons = calls[calls.length - 1]?.[2] as
+    | Array<{ style?: string; onPress?: () => void }>
+    | undefined;
+  const destructive = buttons?.find((b) => b.style === "destructive")?.onPress;
+  expect(destructive).toBeTypeOf("function");
+  act(() => destructive?.());
+}
+
 function getRemoveTabButtons(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll('[accessibilitylabel="remove item"]')) as HTMLElement[];
 }
@@ -693,6 +705,8 @@ describe("TeamPracticeLogBulkFormScreen [removeMenu] メニュー削除の3分�
     const removeButtons = getRemoveTabButtons(container);
     expect(removeButtons).toHaveLength(3);
     fireEvent.click(removeButtons[0]!);
+    // 既存ログのメニューなので削除確認が出る
+    pressLastAlertDestructive();
 
     // タブは2枚になり、位置0 (表示上「メニュー 1」) に MENU-B の内容がアクティブのまま表示される
     await waitFor(() => {
@@ -720,6 +734,7 @@ describe("TeamPracticeLogBulkFormScreen [removeMenu] メニュー削除の3分�
     // アクティブ自身 (末尾) を削除する
     const removeButtons = getRemoveTabButtons(container);
     fireEvent.click(removeButtons[2]!);
+    pressLastAlertDestructive();
 
     // 残り2枚のうち、1つ前 (MENU-B) にクランプされてアクティブ表示される
     await waitFor(() => {

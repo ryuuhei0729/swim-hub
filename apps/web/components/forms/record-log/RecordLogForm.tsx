@@ -161,7 +161,8 @@ export default function RecordLogForm({
     setFormError(null);
     setIsSubmitted(true);
 
-    const { hasStyleError, hasTimeFormatError, submitList } = prepareSubmitData();
+    const { hasStyleError, hasTimeFormatError, timeRequiredIndex, submitList } =
+      prepareSubmitData();
 
     if (hasStyleError) {
       setFormError(t("formError_noStyle"));
@@ -175,7 +176,8 @@ export default function RecordLogForm({
       return;
     }
 
-    if (submitList.length === 0) {
+    // タイムが空なのに他の入力がある行は、黙って捨てずに保存を止める
+    if (timeRequiredIndex !== null || submitList.length === 0) {
       setFormError(t("formError_noTime"));
       setIsSubmitted(false);
       return;

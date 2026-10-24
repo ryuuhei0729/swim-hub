@@ -26,7 +26,7 @@ import { useAuth } from "@/contexts";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { CompetitionAPI } from "@apps/shared/api";
 import { isEntryTabVisible, getTabNavAdjacency, resolveEntryTabIndex } from "@/utils/tabModalUtils";
-import { isDefaultUntouchedEntry } from "@/utils/tabModalDiff";
+import { isDefaultUntouchedEntry, hasRecordInput } from "@/utils/tabModalDiff";
 import { useBestTimes } from "@/hooks/useBestTimes";
 import { formatTimeBest } from "@/utils/formatters";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -112,6 +112,12 @@ export interface CompetitionTabSaveParams {
   originalEntryIds: string[];
   /** 編集前に DB に存在していたレコード ID 一覧 */
   originalRecordIds: string[];
+  /**
+   * originalRecordIds のうち、読み込み時に途中スプリットを持っていたレコード ID。
+   * 保存側はこれに含まれる記録だけ、スプリットが0件でも空配列で書き戻す
+   * (全部消したスプリットを DB から消すため。読み込みに失敗した記録は含まれないので消さない)
+   */
+  originalSplitRecordIds: string[];
   /**
    * 編集時、competitionId から大会本体を DB 再取得できたか (新規作成時は常に true)。
    * false の場合、basicData は暫定値の可能性があるため、保存側は競技会本体の UPDATE を
@@ -279,8 +285,11 @@ export default function CompetitionTabModal({
   // 変化しても handleSave 時の判定基準がズレないようにする。
   const defaultEntryStyleIdRef = useRef(styles[0]?.id?.toString() || "");
   const [entryValidationError, setEntryValidationError] = useState<string | null>(null);
+  const [recordValidationError, setRecordValidationError] = useState<string | null>(null);
   const [originalEntryIds, setOriginalEntryIds] = useState<string[]>([]);
   const [originalRecordIds, setOriginalRecordIds] = useState<string[]>([]);
+  // 読み込み時に途中スプリットを持っていた記録 ID (保存時の空配列書き戻し判定に使う)
+  const [originalSplitRecordIds, setOriginalSplitRecordIds] = useState<string[]>([]);
   const [activeEntryIndex, setActiveEntryIndex] = useState(0);
   const [activeRecordIndex, setActiveRecordIndex] = useState(0);
   const [initialRecords, setInitialRecords] = useState<import("@/components/forms/record-log/types").RecordLogEditData[] | undefined>(undefined);
@@ -400,6 +409,7 @@ export default function CompetitionTabModal({
       setImageData({ newFiles: [], deletedIds: [] });
       setBasicValidationError(null);
       setEntryValidationError(null);
+      setRecordValidationError(null);
       setCompetitionRowResolved(false);
       setTabErrors({ competition: false, entry: false, record: false });
       setIsSubmitted(false);
@@ -408,6 +418,7 @@ export default function CompetitionTabModal({
       initialDraftRef.current = "";
       setOriginalEntryIds([]);
       setOriginalRecordIds([]);
+      setOriginalSplitRecordIds([]);
       setInitialRecords(undefined);
       setActiveEntryIndex(0);
       setActiveRecordIndex(0);
@@ -737,6 +748,17 @@ export default function CompetitionTabModal({
         };
       });
       setOriginalRecordIds(ids);
+      // 種目距離と同じ距離 (ゴール地点) のスプリットは保存されない表示用の補完なので数えない
+      setOriginalSplitRecordIds(
+        rows
+          .filter((r) => {
+            const raceDistance = stylesRef.current.find(
+              (s) => s.id?.toString() === String(r.style_id),
+            )?.distance;
+            return (splitsByRecord.get(r.id) ?? []).some((st) => st.distance !== raceDistance);
+          })
+          .map((r) => r.id),
+      );
       setInitialRecords(records);
       setRecordsFetchSettled(true);
     };
@@ -866,6 +888,9 @@ export default function CompetitionTabModal({
   // ---------------------------------------------------------------------------
   const handleSave = useCallback(async () => {
     if (isSubmittingRef.current) return;
+    // 記録タブのエラー表示は保存のたびに出し直す (直したあとや、別のタブの理由で止まったときに
+    // 前回のエラーを出し続けないため)
+    setRecordValidationError(null);
     if (!validateAll()) return;
 
     isSubmittingRef.current = true;
@@ -967,19 +992,30 @@ export default function CompetitionTabModal({
       let recordListWithIds: Array<RecordLogFormData & { id?: string }> = [];
       let effectiveOriginalRecordIds: string[] = [];
       if (showRecordTab) {
-        const { hasStyleError, hasTimeFormatError, submitList: recordList } =
-          prepareRecordSubmitData();
-        if (hasStyleError || hasTimeFormatError) {
+        const {
+          hasStyleError,
+          hasTimeFormatError,
+          timeRequiredIndex,
+          submitList: recordList,
+        } = prepareRecordSubmitData();
+        if (hasStyleError || hasTimeFormatError || timeRequiredIndex !== null) {
           setTabErrors((prev) => ({ ...prev, record: true }));
           setActiveTab("record");
+          if (timeRequiredIndex !== null) {
+            // エラーの記録を開き、何が足りないかを文で出す (タブの印だけでは気づけない)
+            setActiveRecordIndex(timeRequiredIndex);
+            setRecordValidationError(tRecord("formError_noTime"));
+          }
           isSubmittingRef.current = false;
           setIsSubmitted(false);
           return;
         }
-        // 編集時は既存レコードの DB ID をインデックス順に注入する
-        recordListWithIds = recordList.map((r, i) => ({
+        // 既存レコードの DB ID は各行が持つ existingRecordId で対応付ける。
+        // 送信リストの並び順で originalRecordIds を割り当てると、途中の行が除外・削除された
+        // ときに後ろの行の ID がずれ、別の記録の内容で上書きしたうえ末尾の記録を削除してしまう
+        recordListWithIds = recordList.map((r) => ({
           ...r,
-          id: originalRecordIds[i],
+          id: r.existingRecordId,
         }));
         effectiveOriginalRecordIds = originalRecordIds;
       }
@@ -994,6 +1030,7 @@ export default function CompetitionTabModal({
         editingCompetitionId,
         originalEntryIds: showEntryTab ? originalEntryIds : [],
         originalRecordIds: effectiveOriginalRecordIds,
+        originalSplitRecordIds: showRecordTab ? originalSplitRecordIds : [],
         competitionRowResolved: saveCompetitionRowResolved,
       });
     } catch (error) {
@@ -1014,10 +1051,12 @@ export default function CompetitionTabModal({
     editingCompetitionId,
     originalEntryIds,
     originalRecordIds,
+    originalSplitRecordIds,
     competitionRowResolved,
     supabase,
     tHandlers,
     tCommon,
+    tRecord,
     onSave,
   ]);
 
@@ -1458,6 +1497,13 @@ export default function CompetitionTabModal({
                         removeEntry(target.id);
                         setActiveEntryIndex((prev) => Math.min(prev, entries.length - 2));
                       }}
+                      shouldConfirmRemove={(i) => {
+                        const target = entries[i];
+                        return (
+                          !!target &&
+                          !isDefaultUntouchedEntry(target, defaultEntryStyleIdRef.current)
+                        );
+                      }}
                       label={(i) => tEntry("eventHeader", { n: i + 1 })}
                       accent="blue"
                       disabled={isLoading}
@@ -1610,6 +1656,14 @@ export default function CompetitionTabModal({
               hidden={activeTab !== "record"}
               className="p-3 sm:p-6 space-y-3 sm:space-y-6"
             >
+              {showRecordTab && recordValidationError && (
+                <div
+                  role="alert"
+                  className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3"
+                >
+                  {recordValidationError}
+                </div>
+              )}
               {showRecordTab ? (
                 (() => {
                   const clampedIndex = Math.min(activeRecordIndex, Math.max(0, recordFormDataList.length - 1));
@@ -1630,6 +1684,14 @@ export default function CompetitionTabModal({
                         setActiveRecordIndex((prev) =>
                           Math.min(prev, recordFormDataList.length - 2),
                         );
+                      }}
+                      shouldConfirmRemove={(i) => {
+                        const target = recordFormDataList[i];
+                        if (!target) return false;
+                        const raceDistance = styles.find(
+                          (s) => s.id?.toString() === target.styleId,
+                        )?.distance;
+                        return hasRecordInput(target, raceDistance);
                       }}
                       label={(i) => tRecord("recordNumber", { n: i + 1 })}
                       accent="blue"

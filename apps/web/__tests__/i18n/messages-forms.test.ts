@@ -14,9 +14,9 @@
  *
  * 対象 namespace (Phase 1-C-D 追加分):
  *   - forms.unsavedChanges  (9 フォーム共通の未保存変更確認ダイアログ)
- *   - forms.practice        (PracticeBasicForm, PracticeLogForm)
+ *   - forms.practice        (PracticeBasicForm, PracticeTabModal)
  *   - forms.competition     (CompetitionBasicForm)
- *   - forms.practiceLog     (PracticeLogForm, practice-log/PracticeLogForm)
+ *   - forms.practiceLog     (PracticeTabModal の練習ログタブ)
  *   - forms.practiceMenu    (practice-log/components/PracticeMenuItem)
  *   - forms.timeInput       (TimeInputModal, shared/TimeInput)
  *   - forms.record          (record/RecordForm, record/components/RecordBasicInfo, RecordSetItem)
@@ -37,7 +37,7 @@
  *   6. components/forms/record/components/RecordSetItem.tsx
  *   7. components/forms/record/RecordForm.tsx
  *   8. components/forms/practice-log/components/PracticeMenuItem.tsx
- *   9. components/forms/practice-log/PracticeLogForm.tsx
+ *   9. (削除済み) components/forms/practice-log/PracticeLogForm.tsx
  *   10. components/forms/record-log/components/RecordLogEntry.tsx
  *   11. components/forms/record-log/RecordLogForm.tsx
  *   12. components/forms/PracticeBasicForm.tsx
@@ -237,18 +237,13 @@ describe("[V-CD-02] forms 必須キー存在チェック", () => {
     "forms.competition.next_record",
 
     // --------------------------------------------------------
-    // forms.practiceLog (practice-log/PracticeLogForm)
+    // forms.practiceLog (PracticeTabModal の練習ログタブ)
     // --------------------------------------------------------
-    "forms.practiceLog.title_create",
-    "forms.practiceLog.title_edit",
-    "forms.practiceLog.close_aria",
     "forms.practiceLog.addMenu",
     "forms.practiceLog.saveAsTemplate",
     "forms.practiceLog.cancel",
     "forms.practiceLog.save",
     "forms.practiceLog.saving",
-    "forms.practiceLog.update",
-    "forms.practiceLog.updating",
     "forms.practiceLog.videoLabel",
 
     // --------------------------------------------------------

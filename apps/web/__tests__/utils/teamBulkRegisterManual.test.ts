@@ -29,9 +29,11 @@
  *   ): BulkRegisterInput  // 空行除外・trim・型変換込みで TeamBulkRegisterAPI.bulkRegister に渡せる形
  *
  * Sprint Contract 検証観点 (mobile 実装からの移植 + web 追加境界値):
- *   [V-D6-01] 練習行: date が空文字だとエラー ("N行目: 日付は必須です" 相当)
+ *   [V-D6-01] 練習行: 他の欄に入力があって date が空文字だとエラー ("N行目: 日付は必須です" 相当)
+ *   [V-D6-13] 何も入力していない行 (「+ 行を追加」で足したまま使わなかった行) はエラーにせず無視する
+ *             (追加行の日付は空で始まる。以前は今日の日付が入っていて、空行まで登録されていた)
  *   [V-D6-02] 練習行: date のみ入力・他は空でもエラー無し (title/place/note は任意)
- *   [V-D6-03] 大会行: date(開始日) が空文字だとエラー
+ *   [V-D6-03] 大会行: 他の欄に入力があって date(開始日) が空文字だとエラー
  *   [V-D6-04] 大会行: endDate が date より前だとエラー ("終了日は開始日以降" 相当)
  *   [V-D6-05] 大会行: endDate が date と同日は許容 (境界値: 同日はエラーにしない)
  *   [V-D6-06] 大会行: endDate 未入力は許容 (単日開催)
@@ -76,9 +78,21 @@ const competitionRow = (overrides: Partial<CompetitionRow> = {}): CompetitionRow
 });
 
 describe("validatePracticeRows (D6)", () => {
-  it("[V-D6-01] date が空文字だとエラーになる", () => {
-    const errors = validatePracticeRows([practiceRow({ date: "" })]);
-    expect(errors.length).toBeGreaterThan(0);
+  it("[V-D6-01] 他の欄に入力があって date が空文字だとエラーになる", () => {
+    const errors = validatePracticeRows([practiceRow({ date: "", title: "朝練" })]);
+    expect(errors).toEqual(["1行目: 日付は必須です"]);
+  });
+
+  it("[V-D6-13] 何も入力していない行はエラーにしない (空行は無視する)", () => {
+    const errors = validatePracticeRows([practiceRow(), practiceRow({ date: "" })]);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("[V-D6-13] 空白だけの行も何も入力していない行として扱う", () => {
+    const errors = validatePracticeRows([
+      practiceRow({ date: " ", title: " ", place: " ", note: " " }),
+    ]);
+    expect(errors).toHaveLength(0);
   });
 
   it("[V-D6-02] date のみ入力なら他項目が空でもエラーにならない", () => {
@@ -87,15 +101,30 @@ describe("validatePracticeRows (D6)", () => {
   });
 
   it("複数行のうち1行だけ date 未入力ならその行のみエラーになる", () => {
-    const errors = validatePracticeRows([practiceRow(), practiceRow({ date: "" })]);
-    expect(errors).toHaveLength(1);
+    const errors = validatePracticeRows([practiceRow(), practiceRow({ date: "", place: "市民プール" })]);
+    expect(errors).toEqual(["2行目: 日付は必須です"]);
   });
 });
 
 describe("validateCompetitionRows (D6)", () => {
-  it("[V-D6-03] date(開始日) が空文字だとエラーになる", () => {
-    const errors = validateCompetitionRows([competitionRow({ date: "" })]);
-    expect(errors.length).toBeGreaterThan(0);
+  it("[V-D6-03] 他の欄に入力があって date(開始日) が空文字だとエラーになる", () => {
+    const errors = validateCompetitionRows([competitionRow({ date: "", title: "秋季記録会" })]);
+    expect(errors).toEqual(["1行目: 開始日は必須です"]);
+  });
+
+  it("[V-D6-13] 何も入力していない行はエラーにしない (poolType の既定値 0 は入力とみなさない)", () => {
+    const errors = validateCompetitionRows([competitionRow(), competitionRow({ date: "", poolType: 0 })]);
+    expect(errors).toHaveLength(0);
+  });
+
+  it("[V-D6-13] 水路だけ長水路に変えた行は空行ではないので、黙って無視せずエラーにする", () => {
+    const errors = validateCompetitionRows([competitionRow({ date: "", poolType: 1 })]);
+    expect(errors).toEqual(["1行目: 開始日は必須です"]);
+  });
+
+  it("[V-D6-13] 終了日だけ入っている行は空行ではないのでエラーになる", () => {
+    const errors = validateCompetitionRows([competitionRow({ date: "", endDate: "2026-08-02" })]);
+    expect(errors).toContain("1行目: 開始日は必須です");
   });
 
   it("[V-D6-04] endDate が date より前だとエラーになる", () => {

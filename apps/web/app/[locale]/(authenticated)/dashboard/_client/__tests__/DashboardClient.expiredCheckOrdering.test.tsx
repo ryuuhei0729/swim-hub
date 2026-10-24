@@ -68,8 +68,6 @@ vi.mock("@apps/shared/hooks/queries/practices", () => ({
   useCreatePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdatePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeletePracticeLogMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useCreatePracticeTimeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeletePracticeTimeMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@apps/shared/hooks/queries/records", () => ({
@@ -85,7 +83,6 @@ vi.mock("@apps/shared/hooks/queries/records", () => ({
 
 vi.mock("../../_hooks/useDashboardHandlers", () => ({
   useDashboardHandlers: () => ({
-    handlePracticeLogSubmit: vi.fn(),
     handleDeleteItem: vi.fn(),
     handleEntrySubmit: vi.fn(),
     handleEntrySkip: vi.fn(),

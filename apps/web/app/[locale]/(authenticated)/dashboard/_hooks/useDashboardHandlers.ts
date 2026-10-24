@@ -2,21 +2,18 @@
 // ダッシュボードハンドラー関数用カスタムフック
 // =============================================================================
 
-import type { PracticeImageData } from "@/components/forms/PracticeBasicForm";
 import type { CompetitionImageData } from "@/components/forms/CompetitionBasicForm";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
-import { usePracticeStore } from "@/stores/practice/practiceStore";
 import type {
   EditingData,
   EntryFormData,
   EntryWithStyle,
-  PracticeMenuFormData,
   RecordFormDataInternal,
 } from "@/stores/types";
-import { processCompetitionImage, processPracticeImage } from "@/utils/imageUtils";
+import { processCompetitionImage } from "@/utils/imageUtils";
 import { uploadVideoClient } from "@/lib/video-upload-client";
-import { EntryAPI, PracticeAPI, CompetitionAPI } from "@apps/shared/api";
-import type { Style, PracticeLogTagInsert } from "@apps/shared/types";
+import { EntryAPI, CompetitionAPI } from "@apps/shared/api";
+import type { Style } from "@apps/shared/types";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
@@ -24,13 +21,11 @@ import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import {
   getCompetitionId,
-  getPracticeId,
   getRecordCompetitionId,
   getEditingDataTeamId,
 } from "../_utils/dashboardHelpers";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
 import { useCompetitionTabSave } from "@/hooks/useCompetitionTabSave";
-import { refreshMilestonesAfterPracticeSave } from "@/utils/practiceMilestoneRefresh";
 
 interface UseDashboardHandlersProps {
   supabase: SupabaseClient<Database>;
@@ -45,27 +40,8 @@ interface UseDashboardHandlersProps {
     updates: import("@swim-hub/shared/types").PracticeUpdate,
   ) => Promise<import("@swim-hub/shared/types").Practice>;
   /**
-   * skipMilestoneUpdate: true のときはこのログ保存単体ではマイルストーン判定を
-   * 行わない。handlePracticeLogSubmit がタイム永続化後に1回だけ判定するため常に
-   * true を渡す (usePracticeTabSave の createPracticeLog と同じ契約)。
-   */
-  createPracticeLog: (
-    log: Omit<import("@swim-hub/shared/types").PracticeLogInsert, "user_id">,
-    skipMilestoneUpdate?: boolean,
-  ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
-  updatePracticeLog: (
-    id: string,
-    updates: import("@swim-hub/shared/types").PracticeLogUpdate,
-    skipMilestoneUpdate?: boolean,
-  ) => Promise<import("@swim-hub/shared/types").PracticeLog>;
-  createPracticeTime: (
-    time: import("@swim-hub/shared/types").PracticeTimeInsert,
-  ) => Promise<import("@swim-hub/shared/types").PracticeTime>;
-  deletePracticeTime: (id: string) => Promise<void>;
-  /**
-   * タブモーダル一括保存 (usePracticeTabSave) 専用。handlePracticeLogSubmit 等の
-   * 既存フローが使う上記 createPracticeLog/updatePracticeLog とは別に、タイム保存後に
-   * 1回だけマイルストーン判定を行う経路として渡す。タイムの一括保存自体は
+   * タブモーダル一括保存 (usePracticeTabSave) 用。skipMilestoneUpdate: true のときはこのログ保存
+   * 単体ではマイルストーン判定を行わず、タイム保存後に1回だけ判定する。タイムの一括保存自体は
    * usePracticeTabSave 内部で行う (呼び出し元からは createPracticeTimes 等を渡す必要はない)。
    */
   createPracticeLogForTabSave: (
@@ -107,17 +83,13 @@ interface UseDashboardHandlersProps {
   }) => Promise<import("@swim-hub/shared/types").SplitTime[]>;
   // Form store actions
   editingData: EditingData | null;
-  createdPracticeId: string | null;
   competitionEditingData: EditingData | null;
   createdCompetitionId: string | null;
   setPracticeLoading: (loading: boolean) => void;
   setCompetitionLoading: (loading: boolean) => void;
-  closePracticeBasicForm: () => void;
-  closePracticeLogForm: () => void;
   closeCompetitionBasicForm: () => void;
   closeEntryLogForm: () => void;
   closeRecordLogForm: () => void;
-  openPracticeLogForm: (practiceId?: string, editData?: EditingData) => void;
   setCreatedEntries: (entries: EntryWithStyle[]) => void;
   openEntryLogForm: (competitionId: string) => void;
   openRecordLogForm: (
@@ -143,11 +115,7 @@ export function useDashboardHandlers({
   styles,
   createPractice,
   updatePractice,
-  createPracticeLog,
-  updatePracticeLog,
   deletePracticeLog,
-  createPracticeTime,
-  deletePracticeTime,
   createPracticeLogForTabSave,
   updatePracticeLogForTabSave,
   deletePractice,
@@ -161,17 +129,13 @@ export function useDashboardHandlers({
   createSplitTimes,
   replaceSplitTimes,
   editingData,
-  createdPracticeId,
   competitionEditingData,
   createdCompetitionId,
   setPracticeLoading,
   setCompetitionLoading,
-  closePracticeBasicForm,
-  closePracticeLogForm,
   closeCompetitionBasicForm,
   closeEntryLogForm,
   closeRecordLogForm,
-  openPracticeLogForm,
   setCreatedEntries,
   openEntryLogForm,
   openRecordLogForm,
@@ -186,388 +150,6 @@ export function useDashboardHandlers({
   // (dashboard.dayDetail.deleteFailed) を使うため、"dashboard.handlers" スコープの t とは
   // 別に "dashboard.dayDetail" スコープの翻訳関数を用意する。
   const tDayDetail = useTranslations("dashboard.dayDetail");
-  // 練習予定作成・更新
-  const handlePracticeBasicSubmit = useCallback(
-    async (
-      basicData: { date: string; title: string; place: string; note: string },
-      imageData?: PracticeImageData,
-      continueToNext: boolean = true,
-    ) => {
-      setPracticeLoading(true);
-      try {
-        // 有効なPracticeInsert/Updateフィールドのみを送信
-        const payload = {
-          date: basicData.date,
-          title: basicData.title || null,
-          place: basicData.place || null,
-          note: basicData.note || null,
-        };
-
-        let practiceId: string | undefined;
-        let isNewPractice = false;
-        let createdPracticeRef: { id: string } | undefined;
-        // Reviewer 指摘 (F2): この関数は現状 UI から到達不能 (DashboardClient.tsx が
-        // 呼び出し配線を持たない) だが、削除ではなくガードで安全側に倒す。再配線されても
-        // 個人画面から team_id 付き練習の basicData/image_paths を書き換えられないようにする。
-        const canUpdateParent = getEditingDataTeamId(editingData) == null;
-
-        if (editingData && editingData.id) {
-          if (canUpdateParent) {
-            await updatePractice(editingData.id, payload);
-          }
-          practiceId = editingData.id;
-        } else {
-          const createdPractice = await createPractice(payload);
-          practiceId = createdPractice?.id;
-          isNewPractice = true;
-          createdPracticeRef = createdPractice;
-        }
-
-        // 画像の処理（安全な順序: アップロード → DB更新 → ストレージ削除）
-        // NOTE: 画像アップロードを画面遷移より先に実行する（新規時にアンマウントされると fetch が abort される問題の回避）
-        // NOTE: 画像パスはpractices.image_pathsで管理（practice_imagesテーブルは廃止）
-        if (practiceId && imageData && canUpdateParent) {
-          const practiceAPI = new PracticeAPI(supabase);
-          const uploadedPaths: string[] = [];
-
-          try {
-            // Step 1: 新規画像をアップロード（圧縮版のみ）
-            if (imageData.newFiles.length > 0) {
-              const processedImages = await Promise.all(
-                imageData.newFiles.map(async (fileData) => {
-                  const { thumbnail } = await processPracticeImage(fileData.file);
-                  return thumbnail;
-                }),
-              );
-
-              // API Route経由でアップロード（R2優先、Supabase Storageフォールバック）
-              for (const file of processedImages) {
-                const path = await practiceAPI.uploadPracticeImage(practiceId, file);
-                uploadedPaths.push(path);
-              }
-            }
-
-            // Step 2: 既存のimage_pathsを取得
-            // NOTE: Supabaseの型推論が環境によってneverになることがあるため、型アサーションを使用
-            const { data: currentPractice, error: selectError } = await supabase
-              .from("practices")
-              .select("image_paths")
-              .eq("id", practiceId)
-              .single();
-
-            if (selectError) {
-              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
-              console.error("練習データの取得エラー:", selectError);
-              throw new UserFacingError(t("fetchPracticeFailed"));
-            }
-
-            const practiceData = currentPractice as { image_paths?: string[] | null } | null;
-            const existingPaths: string[] = practiceData?.image_paths || [];
-
-            // Step 3: image_pathsを更新（既存 - 削除 + 新規）
-            // NOTE: DBを先に更新してから、ストレージの画像を削除する（DBとストレージの整合性を保つため）
-            const newImagePaths = [
-              ...existingPaths.filter((p) => !imageData.deletedIds.includes(p)),
-              ...uploadedPaths,
-            ];
-
-            const { error: updateError } = await supabase
-              .from("practices")
-              .update({ image_paths: newImagePaths })
-              .eq("id", practiceId);
-
-            if (updateError) {
-              // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
-              console.error("練習の画像パス更新エラー:", updateError);
-              throw new UserFacingError(t("updateImagePathFailed"));
-            }
-
-            // Step 4: 削除対象のパスをストレージから削除（DB更新成功後に実行）
-            // NOTE: DB更新後なので、削除失敗してもDBは正しい状態。ストレージに孤立ファイルが残る可能性があるが、
-            // DBに存在しない画像への参照が残るよりは安全
-            if (imageData.deletedIds.length > 0) {
-              const deleteErrors: Array<{ path: string; error: unknown }> = [];
-              for (const path of imageData.deletedIds) {
-                try {
-                  await practiceAPI.deletePracticeImage(path);
-                } catch (deleteError) {
-                  console.error(`画像 ${path} の削除に失敗:`, deleteError);
-                  deleteErrors.push({ path, error: deleteError });
-                }
-              }
-              // 削除エラーがあった場合は警告をスロー（DBは更新済みなので、呼び出し元で適切に処理可能）
-              if (deleteErrors.length > 0) {
-                console.warn(
-                  `${deleteErrors.length}件の画像削除に失敗しましたが、DB更新は完了しています`,
-                );
-              }
-            }
-          } catch (imageError) {
-            console.error("画像処理エラー:", imageError);
-
-            // ロールバック - アップロードした画像を削除
-            if (uploadedPaths.length > 0) {
-              try {
-                for (const path of uploadedPaths) {
-                  await practiceAPI.deletePracticeImage(path);
-                }
-              } catch {
-                // ロールバック失敗は無視（メインのエラーを優先）
-              }
-            }
-
-            throw new UserFacingError(t("practiceCreatedButImageFailed"));
-          }
-        }
-
-        // 画像アップロード完了後に画面遷移（新規時）/ フォームを閉じる（編集時）
-        if (isNewPractice) {
-          closePracticeBasicForm();
-          if (continueToNext) {
-            openPracticeLogForm(createdPracticeRef?.id);
-          }
-        } else {
-          closePracticeBasicForm();
-        }
-
-        refreshCalendar();
-      } catch (error) {
-        console.error("練習予定の処理に失敗しました:", error);
-        throw error;
-      } finally {
-        setPracticeLoading(false);
-      }
-    },
-    [
-      editingData,
-      updatePractice,
-      createPractice,
-      closePracticeBasicForm,
-      openPracticeLogForm,
-      refreshCalendar,
-      setPracticeLoading,
-      supabase,
-      t,
-    ],
-  );
-
-  // 練習メニュー作成・更新処理
-  const handlePracticeLogSubmit = useCallback(
-    async (formDataArray: PracticeMenuFormData[]) => {
-      if (!user || !user.id) {
-        throw new UserFacingError(t("authRequired"));
-      }
-
-      setPracticeLoading(true);
-      try {
-        const menus = Array.isArray(formDataArray) ? formDataArray : [];
-
-        if (editingData) {
-          const menu = menus[0];
-          if (!menu) {
-            // TODO(#14-B real-bug candidate): formDataArray が空配列だと menu が undefined になり
-            // 以前は menu.style で実行時例外が発生していた（catch で握り潰され console.error のみ、
-            // ユーザーには何も表示されない無言失敗）。呼び出し元
-            // (PracticeLogForm.executeSubmit -> usePracticeLogForm.prepareSubmitData) は
-            // menus の長さを常に1以上に保つ設計（removeMenu が1件以下への削除を拒否する）だが、
-            // その保証はここから3ファイル離れており本関数のスコープからは見えない。
-            // 早期 return で「無言でデフォルト値の練習メニューが保存される」より安全側に倒す。
-            // PM 裁定済み (裁定23): 早期 return を最終形とする。?? {} で握り潰すと無言でデフォルト値が保存されるため。
-            return;
-          }
-          const logInput = {
-            style: menu.style || "Fr",
-            swim_category: menu.swimCategory || "Swim",
-            rep_count: Number(menu.reps) || 1,
-            set_count: Number(menu.sets) || 1,
-            distance: Number(menu.distance) || 100,
-            circle: menu.circleTime || null,
-            note: menu.note || "",
-          };
-
-          if (!editingData.id) throw new Error("Editing data ID is required");
-          const practiceLogId = editingData.id;
-          // 判定自体はここでは行わない (skipMilestoneUpdate=true)。タイム永続化後に
-          // 1回だけ判定する (usePracticeTabSave と同じ形に揃える)。
-          await updatePracticeLog(practiceLogId, logInput, true);
-
-          await supabase.from("practice_log_tags").delete().eq("practice_log_id", practiceLogId);
-
-          if (menu.tags && menu.tags.length > 0) {
-            // タグを並列insert
-            const queryBuilder = supabase.from("practice_log_tags") as unknown as {
-              insert: (
-                values: PracticeLogTagInsert,
-              ) => Promise<{ error: { message: string } | null }>;
-            };
-            const tagResults = await Promise.all(
-              menu.tags.map((tag) => {
-                const insertData: PracticeLogTagInsert = {
-                  practice_log_id: practiceLogId,
-                  practice_tag_id: tag.id,
-                };
-                return queryBuilder.insert(insertData);
-              }),
-            );
-            for (const { error } of tagResults) {
-              if (error) {
-                console.error("練習ログタグの挿入に失敗しました:", error);
-                // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
-                throw new UserFacingError(t("insertPracticeTagFailed"));
-              }
-            }
-          }
-
-          const { data: existingTimes } = await supabase
-            .from("practice_times")
-            .select("id")
-            .eq("practice_log_id", practiceLogId);
-
-          if (existingTimes && existingTimes.length > 0) {
-            // 時間を並列delete
-            await Promise.all(
-              (existingTimes as Array<{ id: string }>).map((time) => deletePracticeTime(time.id)),
-            );
-          }
-
-          if (menu.times && menu.times.length > 0) {
-            // 時間を並列create
-            await Promise.all(
-              menu.times
-                .filter((timeEntry) => timeEntry.time > 0)
-                .map((timeEntry) =>
-                  createPracticeTime({
-                    user_id: user.id,
-                    practice_log_id: practiceLogId,
-                    set_number: timeEntry.setNumber,
-                    rep_number: timeEntry.repNumber,
-                    time: timeEntry.time,
-                  } as import("@swim-hub/shared/types").PracticeTimeInsert),
-                ),
-            );
-          }
-
-          // タイム永続化後、キャッシュ無効化 → マイルストーン判定を1回だけ行う
-          // (usePracticeTabSave.ts と共通の後処理)。
-          await refreshMilestonesAfterPracticeSave(supabase, user.id, true);
-        } else {
-          // ストアから直接最新の値を取得（useCallbackのクロージャー問題を回避）
-          const { createdPracticeId: storePracticeId, editingData: storeEditingData } =
-            usePracticeStore.getState();
-          const practiceId =
-            getPracticeId(storePracticeId, storeEditingData) ||
-            getPracticeId(createdPracticeId, editingData);
-          if (!practiceId) {
-            throw new Error("Practice ID が見つかりません");
-          }
-
-          let hasLogChanges = false;
-
-          for (const menu of menus) {
-            const logInput = {
-              practice_id: practiceId,
-              style: menu.style || "Fr",
-              swim_category: menu.swimCategory || "Swim",
-              rep_count: Number(menu.reps) || 1,
-              set_count: Number(menu.sets) || 1,
-              distance: Number(menu.distance) || 100,
-              circle: menu.circleTime || null,
-              note: menu.note || "",
-            };
-
-            // ログ保存 (=判定トリガー) はタイム永続化の前に行うが、判定自体は
-            // 全メニューのタイム永続化が終わった後に1回だけ行う。
-            const createdLog = await createPracticeLog(logInput, true);
-            hasLogChanges = true;
-
-            if (menu.tags && menu.tags.length > 0 && createdLog) {
-              // タグを並列insert
-              const queryBuilder = supabase.from("practice_log_tags") as unknown as {
-                insert: (
-                  values: PracticeLogTagInsert,
-                ) => Promise<{ error: { message: string } | null }>;
-              };
-              const tagResults = await Promise.all(
-                menu.tags.map((tag) => {
-                  const insertData: PracticeLogTagInsert = {
-                    practice_log_id: createdLog.id,
-                    practice_tag_id: tag.id,
-                  };
-                  return queryBuilder.insert(insertData);
-                }),
-              );
-              for (const { error } of tagResults) {
-                if (error) {
-                  console.error("練習ログタグの挿入に失敗しました:", error);
-                  // 生の PostgrestError.message はテーブル名等を含みうるためテンプレートに埋め込まない（情報露出対策）
-                throw new UserFacingError(t("insertPracticeTagFailed"));
-                }
-              }
-            }
-
-            if (menu.times && menu.times.length > 0 && createdLog) {
-              // 時間を並列create
-              await Promise.all(
-                menu.times
-                  .filter((timeEntry) => timeEntry.time > 0)
-                  .map((timeEntry) =>
-                    createPracticeTime({
-                      user_id: user.id,
-                      practice_log_id: createdLog.id,
-                      set_number: timeEntry.setNumber,
-                      rep_number: timeEntry.repNumber,
-                      time: timeEntry.time,
-                    }),
-                  ),
-              );
-            }
-
-            // 新規作成時の動画アップロード（pending video がある場合）
-            if (menu.pendingVideo && createdLog) {
-              try {
-                await uploadVideoClient({
-                  type: "practice-log",
-                  id: createdLog.id,
-                  file: menu.pendingVideo.file,
-                  thumbnail: menu.pendingVideo.thumbnail,
-                });
-              } catch (uploadErr) {
-                console.error("動画アップロードエラー:", uploadErr);
-                alert(t("videoUploadPartialPractice"));
-              }
-            }
-          }
-
-          // タイム永続化後、キャッシュ無効化 → マイルストーン判定を1回だけ行う
-          // (usePracticeTabSave.ts と共通の後処理)。
-          await refreshMilestonesAfterPracticeSave(supabase, user.id, hasLogChanges);
-        }
-
-        closePracticeLogForm();
-        refreshCalendar();
-      } catch (error) {
-        console.error("練習記録の処理に失敗しました:", error);
-        throw error;
-      } finally {
-        setPracticeLoading(false);
-      }
-    },
-    [
-      editingData,
-      createdPracticeId,
-      supabase,
-      user,
-      updatePracticeLog,
-      createPracticeLog,
-      deletePracticeTime,
-      createPracticeTime,
-      refreshCalendar,
-      setPracticeLoading,
-      closePracticeLogForm,
-      t,
-    ],
-  );
-
   // アイテム削除ハンドラー
   const handleDeleteItem = useCallback(
     async (
@@ -1242,8 +824,6 @@ export function useDashboardHandlers({
   });
 
   return {
-    handlePracticeBasicSubmit,
-    handlePracticeLogSubmit,
     handleDeleteItem,
     handleCompetitionBasicSubmit,
     handleEntrySubmit,

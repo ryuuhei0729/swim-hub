@@ -1015,7 +1015,6 @@
       "unknown": "Unknown error"
     },
     "handlers": {
-      "fetchPracticeFailed": "Failed to fetch practice data",
       "updateImagePathFailed": "Failed to update image path",
       "practiceCreatedButImageFailed": "Practice was created, but image upload failed",
       "authRequired": "An authenticated user is required",
@@ -3993,8 +3992,8 @@
         "labelNote": "Note",
         "poolShort": "Short course (25m)",
         "poolLong": "Long course (50m)",
-        "addPracticeRowButton": "+ Add Practice",
-        "addCompetitionRowButton": "+ Add Competition",
+        "addPracticeRowButton": "Add Practice",
+        "addCompetitionRowButton": "Add Competition",
         "deleteRowButton": "Delete",
         "submitButton": "Register",
         "submitting": "Registering...",
@@ -4231,9 +4230,6 @@
       "cancel": "Cancel"
     },
     "practiceLog": {
-      "title_create": "Add Practice Log",
-      "title_edit": "Edit Practice Log",
-      "close_aria": "Close practice log",
       "templateFrom": "Template",
       "templateFromLong": "Create from Template",
       "addMenu": "Add Menu",
@@ -4244,8 +4240,6 @@
       "cancel": "Cancel",
       "save": "Save",
       "saving": "Saving...",
-      "update": "Update",
-      "updating": "Updating...",
       "videoLabel": "Video",
       "menuHeader": "Menu {n}"
     },
@@ -4511,6 +4505,10 @@
       "videoUpload": "Video attachments are a Premium feature",
       "splitTimeLimit": "Free plan allows up to {limit} entries. Upgrade to Premium for unlimited",
       "practiceTimeLimit": "Free plan allows up to {limit} entries. Upgrade to Premium for unlimited"
+    },
+    "itemTabs": {
+      "removeConfirmTitle": "Delete {label}?",
+      "removeConfirmMessage": "The entered data for {label} will be deleted."
     }
   },
   "timeLevel": {

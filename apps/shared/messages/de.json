@@ -1018,7 +1018,6 @@
       "unknown": "Unbekannter Fehler"
     },
     "handlers": {
-      "fetchPracticeFailed": "Trainingsdaten konnten nicht abgerufen werden",
       "updateImagePathFailed": "Bildpfad konnte nicht aktualisiert werden",
       "practiceCreatedButImageFailed": "Das Training wurde erstellt, aber der Bild-Upload ist fehlgeschlagen",
       "authRequired": "Ein authentifizierter Benutzer ist erforderlich",
@@ -3996,8 +3995,8 @@
         "labelNote": "Notiz",
         "poolShort": "Kurzbahn (25m)",
         "poolLong": "Langbahn (50m)",
-        "addPracticeRowButton": "+ Training hinzufügen",
-        "addCompetitionRowButton": "+ Wettkampf hinzufügen",
+        "addPracticeRowButton": "Training hinzufügen",
+        "addCompetitionRowButton": "Wettkampf hinzufügen",
         "deleteRowButton": "Löschen",
         "submitButton": "Registrieren",
         "submitting": "Wird registriert...",
@@ -4234,9 +4233,6 @@
       "cancel": "Abbrechen"
     },
     "practiceLog": {
-      "title_create": "Trainingsprotokoll hinzufügen",
-      "title_edit": "Trainingsprotokoll bearbeiten",
-      "close_aria": "Trainingsprotokoll schließen",
       "templateFrom": "Vorlage",
       "templateFromLong": "Aus Vorlage erstellen",
       "addMenu": "Menü hinzufügen",
@@ -4247,8 +4243,6 @@
       "cancel": "Abbrechen",
       "save": "Speichern",
       "saving": "Wird gespeichert ...",
-      "update": "Aktualisieren",
-      "updating": "Wird aktualisiert ...",
       "videoLabel": "Video",
       "menuHeader": "Menü {n}"
     },
@@ -4514,6 +4508,10 @@
       "videoUpload": "Videoanhänge sind eine Premium-Funktion",
       "splitTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte Einträge",
       "practiceTimeLimit": "Der Free-Tarif erlaubt bis zu {limit} Einträge. Upgraden Sie auf Premium für unbegrenzte Einträge"
+    },
+    "itemTabs": {
+      "removeConfirmTitle": "{label} löschen?",
+      "removeConfirmMessage": "Die erfassten Daten von {label} werden gelöscht."
     }
   },
   "timeLevel": {

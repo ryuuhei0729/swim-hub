@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet, Alert } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 export interface ItemTabsProps {
   count: number;
@@ -10,6 +11,11 @@ export interface ItemTabsProps {
   onAdd?: () => void;
   /** タブ内の × で項目を削除。未指定の場合は × を表示しない */
   onRemove?: (i: number) => void;
+  /**
+   * × を押したとき、onRemove の前に削除確認を出すか。入力済みの項目を確認なしで
+   * 消さないために、呼び出し側が項目の中身から判定する。未指定なら確認しない
+   */
+  shouldConfirmRemove?: (i: number) => boolean;
   label: (i: number) => string;
   accent?: "blue" | "green";
   disabled?: boolean;
@@ -35,16 +41,35 @@ export function ItemTabs({
   onSelect,
   onAdd,
   onRemove,
+  shouldConfirmRemove,
   label,
   accent = "blue",
   disabled = false,
   testID,
   children,
 }: ItemTabsProps): React.ReactElement {
+  const { t } = useTranslation();
   const accentColor = accent === "green" ? ACCENT_GREEN : ACCENT_BLUE;
   const accentBg = accent === "green" ? ACCENT_GREEN_BG : ACCENT_BLUE_BG;
   const showRemove = typeof onRemove === "function" && count > 1;
   const showAdd = typeof onAdd === "function";
+
+  const handleRemovePress = (i: number) => {
+    if (!onRemove) return;
+    if (!shouldConfirmRemove?.(i)) {
+      onRemove(i);
+      return;
+    }
+    const itemLabel = label(i);
+    Alert.alert(
+      t("forms.itemTabs.removeConfirmTitle", { label: itemLabel }),
+      t("forms.itemTabs.removeConfirmMessage", { label: itemLabel }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.delete"), style: "destructive", onPress: () => onRemove(i) },
+      ],
+    );
+  };
 
   return (
     <View style={styles.container} testID={testID}>
@@ -85,7 +110,7 @@ export function ItemTabs({
               </Pressable>
               {showRemove && (
                 <Pressable
-                  onPress={() => onRemove?.(i)}
+                  onPress={() => handleRemovePress(i)}
                   disabled={disabled}
                   accessibilityRole="button"
                   accessibilityLabel="remove item"

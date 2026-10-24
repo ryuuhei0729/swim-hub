@@ -1,21 +1,15 @@
 "use client";
 
 import React from "react";
-import type { PracticeTag, Style } from "@apps/shared/types";
-import type { TimeEntry } from "@apps/shared/types/ui";
+import type { Style } from "@apps/shared/types";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
-import type {
-  PracticeMenuFormData,
-  EntryFormData,
-  RecordFormDataInternal,
-} from "@/stores/types";
+import type { EntryFormData, RecordFormDataInternal } from "@/stores/types";
 import { convertRecordFormData } from "@/stores/types";
 import { getCompetitionId, getEditingDataTeamId } from "../_utils/dashboardHelpers";
 import { getEntryDataListForRecord } from "@/utils/getEntryDataListForRecord";
 import { useAuth } from "@/contexts";
 import { useCompetitionInfoQuery } from "@apps/shared/hooks/queries/records";
-import PracticeLogForm from "@/components/forms/PracticeLogForm";
 import EntryLogForm from "@/components/forms/EntryLogForm";
 import RecordLogForm from "@/components/forms/RecordLogForm";
 import PracticeTabModal from "@/components/forms/PracticeTabModal";
@@ -24,7 +18,6 @@ import type { PracticeTabSaveParams } from "@/components/forms/PracticeTabModal"
 import type { CompetitionTabSaveParams } from "@/components/forms/CompetitionTabModal";
 
 interface FormModalsProps {
-  onPracticeLogSubmit: (formDataArray: PracticeMenuFormData[]) => Promise<void>;
   onEntrySubmit: (entriesData: EntryFormData[]) => Promise<void>;
   onEntrySkip: () => void;
   onRecordLogSubmit: (formDataList: RecordFormDataInternal[]) => Promise<void>;
@@ -34,7 +27,6 @@ interface FormModalsProps {
 }
 
 export function FormModals({
-  onPracticeLogSubmit,
   onEntrySubmit,
   onEntrySkip,
   onRecordLogSubmit,
@@ -45,16 +37,13 @@ export function FormModals({
   const { supabase } = useAuth();
 
   const {
-    isLogFormOpen: isPracticeLogFormOpen,
     isOpen: isPracticeTabModalOpen,
     selectedDate,
     editingData,
-    createdPracticeId,
     editingPracticeId,
     isLoading,
     availableTags,
     activeTab: practiceActiveTab,
-    closeLogForm: closePracticeLogForm,
     closeTabModal: closePracticeTabModal,
     setAvailableTags,
   } = usePracticeStore();
@@ -276,56 +265,6 @@ export function FormModals({
 
   return (
     <>
-      {/* 練習メニューフォーム (個別ログ追加・編集) */}
-      <>
-        <PracticeLogForm
-          isOpen={isPracticeLogFormOpen}
-          onClose={closePracticeLogForm}
-          onSubmit={onPracticeLogSubmit}
-          practiceId={
-            createdPracticeId ||
-            (editingData && typeof editingData === "object" && "practiceId" in editingData
-              ? editingData.practiceId || ""
-              : "")
-          }
-          editData={(() => {
-            if (!editingData || typeof editingData !== "object" || !("style" in editingData)) {
-              return undefined;
-            }
-
-            const data = editingData as {
-              id?: string;
-              style: string;
-              swim_category?: "Swim" | "Pull" | "Kick";
-              distance?: number;
-              rep_count?: number;
-              set_count?: number;
-              circle?: number | null;
-              note?: string | null;
-              tags?: PracticeTag[];
-              times?: Array<{ memberId: string; times: TimeEntry[] }>;
-            };
-
-            return {
-              id: data.id,
-              style: String(data.style || "Fr"),
-              swim_category: data.swim_category || "Swim",
-              distance: data.distance,
-              rep_count: data.rep_count,
-              set_count: data.set_count,
-              circle: data.circle,
-              note: data.note,
-              tags: data.tags,
-              times: data.times,
-            };
-          })()}
-          isLoading={isLoading}
-          availableTags={availableTags}
-          setAvailableTags={setAvailableTags}
-          styles={[]}
-        />
-      </>
-
       {/* エントリー登録フォーム（個別エントリー編集・チーム大会） */}
       <>
         <EntryLogForm

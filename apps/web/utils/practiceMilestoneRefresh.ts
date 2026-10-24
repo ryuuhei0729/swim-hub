@@ -1,9 +1,8 @@
 // =============================================================================
 // 練習ログ保存後の後処理 (キャッシュ無効化 + マイルストーン判定) — 共通関数
 // =============================================================================
-// usePracticeTabSave (タブモーダル一括保存) と useDashboardHandlers.handlePracticeLogSubmit
-// (「練習記録を追加」の単一メニュー簡易フォーム) の両方から呼ばれる。同じ後処理を
-// 2箇所に書かないための唯一の定義元。
+// usePracticeTabSave (タブモーダル一括保存) から呼ばれる。練習ログ保存後の後処理の
+// 唯一の定義元 (保存経路を増やすときもここを使い、後処理を複製しない)。
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";

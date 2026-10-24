@@ -20,12 +20,10 @@ interface PracticeFormState {
 
   // 後方互換: 旧来のオープン状態（TeamPracticeForm 等の旧経路が参照）
   isBasicFormOpen: boolean;
-  isLogFormOpen: boolean;
 
   // データ
   selectedDate: Date | null;
   editingData: EditingData | null;
-  createdPracticeId: string | null;
   availableTags: PracticeTag[];
 
   // UI状態
@@ -56,15 +54,12 @@ interface PracticeFormActions {
 
   // 後方互換: 旧来のモーダル操作（TeamPracticeForm 等の旧経路が参照）
   openBasicForm: (date?: Date, editData?: EditingData) => void;
-  openLogForm: (practiceId?: string, editData?: EditingData) => void;
   closeBasicForm: () => void;
-  closeLogForm: () => void;
   closeAll: () => void;
 
   // データ操作
   setSelectedDate: (date: Date | null) => void;
   setEditingData: (data: EditingData | null) => void;
-  setCreatedPracticeId: (id: string | null) => void;
   setAvailableTags: (tags: PracticeTag[] | ((prev: PracticeTag[]) => PracticeTag[])) => void;
   setLoading: (loading: boolean) => void;
 
@@ -96,10 +91,8 @@ const initialFormState: PracticeFormState = {
   activeTab: "practice",
   editingPracticeId: null,
   isBasicFormOpen: false,
-  isLogFormOpen: false,
   selectedDate: null,
   editingData: null,
-  createdPracticeId: null,
   availableTags: [],
   isLoading: false,
 };
@@ -134,10 +127,8 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
       editingPracticeId: editData?.id || null,
       selectedDate: date || null,
       editingData: editData || null,
-      createdPracticeId: null,
       // 後方互換フィールドも更新
       isBasicFormOpen: false,
-      isLogFormOpen: false,
     });
   },
 
@@ -148,7 +139,6 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
       editingPracticeId: null,
       selectedDate: null,
       editingData: null,
-      createdPracticeId: null,
     });
   },
 
@@ -162,19 +152,8 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
   openBasicForm: (date, editData) => {
     set({
       isBasicFormOpen: true,
-      isLogFormOpen: false,
       selectedDate: date || null,
       editingData: editData || null,
-      createdPracticeId: null,
-    });
-  },
-
-  openLogForm: (practiceId, editData) => {
-    set({
-      isBasicFormOpen: false,
-      isLogFormOpen: true,
-      editingData: editData || null,
-      createdPracticeId: practiceId || null,
     });
   },
 
@@ -183,16 +162,6 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
       isBasicFormOpen: false,
       selectedDate: null,
       editingData: null,
-      createdPracticeId: null,
-    });
-  },
-
-  closeLogForm: () => {
-    set({
-      isLogFormOpen: false,
-      selectedDate: null,
-      editingData: null,
-      createdPracticeId: null,
     });
   },
 
@@ -202,10 +171,8 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
       activeTab: "practice",
       editingPracticeId: null,
       isBasicFormOpen: false,
-      isLogFormOpen: false,
       selectedDate: null,
       editingData: null,
-      createdPracticeId: null,
     });
   },
 
@@ -214,7 +181,6 @@ export const usePracticeStore = create<PracticeState & PracticeActions>()((set) 
   // ---------------------------------------------------------------------------
   setSelectedDate: (date) => set({ selectedDate: date }),
   setEditingData: (data) => set({ editingData: data }),
-  setCreatedPracticeId: (id) => set({ createdPracticeId: id }),
   setAvailableTags: (tags) =>
     set((state) => ({
       availableTags: typeof tags === "function" ? tags(state.availableTags) : tags,

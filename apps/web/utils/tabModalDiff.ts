@@ -175,3 +175,84 @@ export function computeRecordDiff(
   const toDelete = originalIds.filter((id) => !draftIdSet.has(id));
   return { toAdd, toUpdate, toDelete };
 }
+
+// =============================================================================
+// 入力の有無 (削除確認・タイム必須の判定)
+// =============================================================================
+
+/** hasRecordInputBesidesTime / hasRecordInput が見るレコード行の部分集合 */
+export interface RecordRowForInputCheck {
+  existingRecordId?: string;
+  time: number;
+  timeDisplayValue?: string;
+  note: string;
+  reactionTime: string;
+  splitTimes: Array<{ distance: number | string; splitTime: number }>;
+  videoPath?: string | null;
+  pendingVideo?: unknown;
+}
+
+/**
+ * タイム以外に、保存されずに消えると困る入力 (または既存 DB 行) があるかを判定する。
+ * タイムが空のレコードは prepareSubmitData で除外されるため、これが true なのにタイムが
+ * 空なら保存を止める (黙って捨てる・既存行を消すのを防ぐ)。mobile の同名関数と同じ規則。
+ *
+ * 種目と isRelaying は数えない: 種目は既定値が自動セットされ、エントリーから自動生成される
+ * 行も種目とリレー区分だけを持つため、これを数えると未入力の行で保存できなくなる。
+ * 種目距離と同じ距離のスプリット (ゴール地点) も数えない: タイムから自動生成・表示用に
+ * 補完される写しで保存されないため。
+ *
+ * @param raceDistance 選択中の種目の距離。未選択なら undefined
+ */
+export function hasRecordInputBesidesTime(
+  record: RecordRowForInputCheck,
+  raceDistance: number | undefined,
+): boolean {
+  if (record.existingRecordId) return true;
+  if (record.note.trim() !== "") return true;
+  if (record.reactionTime.trim() !== "") return true;
+  if (record.videoPath) return true;
+  if (record.pendingVideo) return true;
+  return record.splitTimes.some(
+    (st) => st.splitTime > 0 && Number(st.distance) !== raceDistance,
+  );
+}
+
+/** レコード行に何かしらの入力 (タイムを含む) があるか。× で削除する前の確認要否に使う */
+export function hasRecordInput(
+  record: RecordRowForInputCheck,
+  raceDistance: number | undefined,
+): boolean {
+  if (record.time > 0) return true;
+  if ((record.timeDisplayValue ?? "").trim() !== "") return true;
+  return hasRecordInputBesidesTime(record, raceDistance);
+}
+
+/** hasPracticeMenuData が見る練習メニューの部分集合 */
+export interface PracticeMenuForDataCheck {
+  id: string;
+  times: unknown[];
+  note: string;
+  tags: unknown[];
+  videoPath?: string | null;
+}
+
+/**
+ * 練習メニューに、消えると入力し直しになるデータ (既存 DB ログ・タイム・メモ・タグ・動画)
+ * があるか。× で削除する前の確認要否に使う。
+ * 既存ログ (id が DB UUID = computePracticeLogDiff と同じ既存判定規約) は保存時に DB から
+ * 削除されるので中身に関わらず数える。種目・距離・本数などの設定値は数えない。
+ */
+export function hasPracticeMenuData(
+  menu: PracticeMenuForDataCheck,
+  hasPendingVideo: boolean,
+): boolean {
+  return (
+    isDbUuid(menu.id) ||
+    menu.times.length > 0 ||
+    menu.note.trim() !== "" ||
+    menu.tags.length > 0 ||
+    !!menu.videoPath ||
+    hasPendingVideo
+  );
+}

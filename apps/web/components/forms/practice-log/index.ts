@@ -1,9 +1,5 @@
-// メインコンポーネント
-export { default as PracticeLogForm, default } from "./PracticeLogForm";
-
 // 型定義
 export type {
-  PracticeLogFormProps,
   PracticeLogSubmitData,
   PracticeLogEditData,
   PracticeMenu,
