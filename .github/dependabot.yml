@@ -9,9 +9,9 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 5
     reviewers:
-      - "ryuuhei_0729"
+      - "ryuuhei0729"
     assignees:
-      - "ryuuhei_0729"
+      - "ryuuhei0729"
     commit-message:
       prefix: "chore"
       include: "scope"
@@ -32,9 +32,9 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 5
     reviewers:
-      - "ryuuhei_0729"
+      - "ryuuhei0729"
     assignees:
-      - "ryuuhei_0729"
+      - "ryuuhei0729"
     commit-message:
       prefix: "chore"
       include: "scope"
