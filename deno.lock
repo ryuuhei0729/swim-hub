@@ -168,7 +168,7 @@
         "npm:stripe@^20.4.1",
         "npm:supabase@^2.71.1",
         "npm:tapable@^2.3.0",
-        "npm:turbo@^2.6.0",
+        "npm:turbo@^2.9.14",
         "npm:typescript@5"
       ]
     }
