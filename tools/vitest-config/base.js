@@ -29,18 +29,19 @@ export const createVitestConfig = (options = {}) => {
       },
     },
     alias = {},
+    projects,
   } = options;
 
   return defineConfig({
     test: {
-      name,
       globals: true,
-      environment,
       setupFiles,
-      include,
       exclude,
       clearMocks,
       coverage,
+      // projects に extends: true で継承させると include が連結されるので、projects を使うときは
+      // name / environment / include を親に置かない
+      ...(projects ? { projects } : { name, environment, include }),
     },
     resolve: {
       alias,

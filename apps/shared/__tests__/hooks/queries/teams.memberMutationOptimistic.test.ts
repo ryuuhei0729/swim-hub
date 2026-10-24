@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * 対象: apps/shared/hooks/queries/teams.ts
  *   - useUpdateMemberRoleMutation()

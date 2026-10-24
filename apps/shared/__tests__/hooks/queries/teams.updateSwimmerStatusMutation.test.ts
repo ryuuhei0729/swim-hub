@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Issue #49 QA テスト (Phase A スケルトン): useUpdateSwimmerStatusMutation
  *

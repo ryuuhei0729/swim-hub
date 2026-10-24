@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * useSignedImageUrl.test.ts - 署名付き画像URL取得フックのユニットテスト
  * (Issue #36 CodeRabbit指摘: isLoading 固着 + 未処理 rejection 修正の検証)

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * useBestTimes フックテスト (マイページ ベストタイム表用データ取得フック)
  *

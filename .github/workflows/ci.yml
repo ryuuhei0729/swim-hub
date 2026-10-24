@@ -17,44 +17,17 @@ concurrency:
 
 env:
   NODE_VERSION: 22.x
-  PLAYWRIGHT_BROWSERS_PATH: ~/.cache/ms-playwright
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: Setup Node.js and Install dependencies
-      uses: ./.github/actions/setup-node
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-
-    - name: Upload node_modules artifact
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-      with:
-        name: node-modules
-        path: |
-          node_modules
-          apps/*/node_modules
-          packages/*/node_modules
-        retention-days: 1
-        compression-level: 9
-
+  # 各ジョブは setup-node で pnpm store キャッシュから install する (約 20 秒)。
+  # 以前は node_modules を artifact で配っていたが、圧縮付きアップロードだけで 3 分近くかかり、
+  # 受け取った側も結局 install していたので廃止した。
   lint:
-    needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: Download node_modules artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-      with:
-        name: node-modules
-        path: .
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -73,18 +46,11 @@ jobs:
         CI: true
 
   type-check:
-    needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: Download node_modules artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-      with:
-        name: node-modules
-        path: .
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -101,7 +67,7 @@ jobs:
       run: pnpm -r --if-present type-check
 
   unit-tests:
-    needs: [lint, type-check]
+    # lint / type-check を待たずに並行して走らせる。デプロイを止める判定は build の needs で行う
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -109,15 +75,11 @@ jobs:
       fail-fast: false
       matrix:
         node-version: [ 22.x ]
+        # 1 ジョブで順に回すと web と mobile の合計がそのまま待ち時間になるので、パッケージごとに分ける
+        package: [ shared, web, mobile ]
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: Download node_modules artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-      with:
-        name: node-modules
-        path: .
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -130,21 +92,27 @@ jobs:
       # (lint/type-check は `pnpm -r` で turbo を経由しないため dependsOn:["^build"] が効かない)
       run: pnpm --filter @ryuuhei0729/swimhub-oauth build
 
-    - name: Ensure Rollup native binaries are installed
-      run: pnpm add -D @rollup/rollup-linux-x64-gnu --filter @swim-hub/web || true
-
     - name: Run shared package tests
+      if: matrix.package == 'shared'
       run: pnpm --filter @swim-hub/shared test
 
+    - name: Run oauth package tests
+      # 数秒で終わるので、専用のジョブは立てず shared と同じジョブで回す
+      if: matrix.package == 'shared'
+      run: pnpm --filter @ryuuhei0729/swimhub-oauth test
+
     - name: Run web package tests
+      if: matrix.package == 'web'
       run: pnpm --filter @swim-hub/web test
 
     - name: Run mobile package tests
       # apps/mobile も @ryuuhei0729/swimhub-oauth に依存するようになったため、
       # CI で退行を検知できるようにテストを実行する (従来 CI 未組込のギャップ)。
+      if: matrix.package == 'mobile'
       run: pnpm --filter @swim-hub/mobile test
 
     - name: Run mobile navigation integration tests
+      if: matrix.package == 'mobile'
       # 既定の mobile テストは react-native を静的モックに、@react-navigation/* を
       # スタブに差し替えているため、**BottomTabBar の実 onPress が一度も走らない**。
       # 実際にそこで起きたバグ (リスナー内の同期 push が既定 dispatch に打ち消され、
@@ -157,9 +125,6 @@ jobs:
       # **このステップを消すと 6 件が永久に実行されなくなる。**
       run: pnpm --filter @swim-hub/mobile test:nav
 
-    - name: Run oauth package tests
-      run: pnpm --filter @ryuuhei0729/swimhub-oauth test
-
   e2e-build:
     needs: [lint, type-check]
     runs-on: ubuntu-latest
@@ -168,12 +133,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: Download node_modules artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-      with:
-        name: node-modules
-        path: .
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -192,7 +151,7 @@ jobs:
 
     - name: Build oauth package
       # @ryuuhei0729/swimhub-oauth は exports が dist/** のみを指す npm パッケージで、
-      # dist は gitignore 対象。node_modules artifact にも含まれないため、
+      # dist は gitignore 対象で checkout では復元されないため、
       # next build / opennextjs-cloudflare build を直接叩くジョブでも明示ビルドが必要。
       run: pnpm --filter @ryuuhei0729/swimhub-oauth build
 
@@ -230,16 +189,13 @@ jobs:
     - name: Restore Playwright browsers cache
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       with:
-        path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+        # Playwright の既定のインストール先。以前は PLAYWRIGHT_BROWSERS_PATH に `~/.cache/ms-playwright` を
+        # 渡していたが、Playwright は `~` を展開せずカレント配下の `~` ディレクトリに入れるため、
+        # このパスには何も無く、キャッシュが一度も保存されていなかった
+        path: ~/.cache/ms-playwright
         key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
         restore-keys: |
           playwright-${{ runner.os }}-
-
-    - name: Download node_modules artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-      with:
-        name: node-modules
-        path: .
 
     - name: Download E2E build artifact
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -272,20 +228,16 @@ jobs:
       continue-on-error: true
 
   build:
-    needs: [unit-tests, e2e-tests]
-    # e2e-testsがスキップされた場合でも実行
-    if: always() && needs.unit-tests.result == 'success' && (needs.e2e-tests.result == 'success' || needs.e2e-tests.result == 'skipped')
+    needs: [lint, type-check, unit-tests, e2e-build, e2e-tests]
+    # e2e を実行しないイベント (develop への push) では e2e-build / e2e-tests とも skipped になるので、それは通す。
+    # 上流が落ちたときも依存先は skipped になるため、skipped だけを見ると失敗のまま deploy まで進む。
+    # lint / type-check と e2e-build は直接確認する
+    if: always() && needs.lint.result == 'success' && needs.type-check.result == 'success' && needs.unit-tests.result == 'success' && (needs.e2e-tests.result == 'success' || (needs.e2e-tests.result == 'skipped' && needs.e2e-build.result == 'skipped'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: Download node_modules artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-      with:
-        name: node-modules
-        path: .
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -294,7 +246,7 @@ jobs:
 
     - name: Build oauth package
       # @ryuuhei0729/swimhub-oauth は exports が dist/** のみを指す npm パッケージで、
-      # dist は gitignore 対象。node_modules artifact にも含まれないため、
+      # dist は gitignore 対象で checkout では復元されないため、
       # next build / opennextjs-cloudflare build を直接叩くジョブでも明示ビルドが必要。
       run: pnpm --filter @ryuuhei0729/swimhub-oauth build
 
@@ -342,12 +294,6 @@ jobs:
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-    - name: Download node_modules artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-      with:
-        name: node-modules
-        path: .
-
     - name: Download build output artifact
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
@@ -390,12 +336,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-    - name: Download node_modules artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-      with:
-        name: node-modules
-        path: .
 
     - name: Download build output artifact
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

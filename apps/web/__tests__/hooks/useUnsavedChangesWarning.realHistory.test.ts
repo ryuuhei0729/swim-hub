@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * useUnsavedChangesWarning — 実際の履歴でのブラウザバック (history をモックしない)
  *
