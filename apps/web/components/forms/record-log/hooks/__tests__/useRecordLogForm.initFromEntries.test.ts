@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * useRecordLogForm — entryDataList からの自動初期化フロー テスト
  *

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // =============================================================================
 // usePendingMembers*.test.ts - QA Engineer Sprint 1 検証
 // useListPendingMembersQuery / useApproveMemberMutation / useRejectMemberMutation

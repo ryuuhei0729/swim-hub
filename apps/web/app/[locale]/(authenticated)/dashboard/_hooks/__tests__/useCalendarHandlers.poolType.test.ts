@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * useCalendarHandlers — editingData ビルダー #2/#3/#4/#5 の pool_type 伝搬テスト
  * (Sprint Contract D-5 / V-2)

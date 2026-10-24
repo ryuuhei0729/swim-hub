@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * useAttendanceGrouping テスト (Sprint Contract Phase A — T-5/T-6 の土台となる既存共有ロジック)
  *

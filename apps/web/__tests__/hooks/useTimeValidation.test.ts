@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { renderHookWithI18n as renderHook } from "../utils/render";
 import { describe, expect, it } from "vitest";
 

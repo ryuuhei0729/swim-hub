@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // =============================================================================
 // QA: Sprint 4 - useAttendanceByPracticeQuery / useAttendanceByCompetitionQuery
 //               / useUpdateAttendanceStatusMutation 検証テスト

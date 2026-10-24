@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * useTableSort テスト（実装 / Phase B・Critical 2 再検証で tuple 比較に修正）
  *

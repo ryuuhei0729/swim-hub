@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // =============================================================================
 // QA: useTeamPracticesQuery / useTeamCompetitionsQuery 検証テスト
 // Sprint 2 - Phase B

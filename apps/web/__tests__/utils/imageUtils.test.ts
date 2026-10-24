@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi, Mock } from "vitest";
 import {
   getAspectRatio,

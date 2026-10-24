@@ -14,10 +14,28 @@ export default defineConfig({
     }),
   ],
   ...createVitestConfig({
-    name: "mobile",
-    environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
-    include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    // jsdom の起動はファイルごとにかかり、DOM を使わないテストでは実行時間の大半を占める。
+    // .ts は node、.tsx は jsdom で動かす。.ts で DOM が要るファイルは先頭に
+    // `// @vitest-environment jsdom` を書く。
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "mobile",
+          environment: "node",
+          include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "mobile:dom",
+          environment: "jsdom",
+          include: ["**/*.{test,spec}.{jsx,tsx}"],
+        },
+      },
+    ],
     // `__tests__/navigation-integration/` は **別プロジェクト** (vitest.nav.config.ts) で動かす。
     // あちらは react-navigation を実物で、`react-native` を `react-native-web` で解決して
     // BottomTabBar の実 onPress まで走らせるため、この設定 (RN 静的モック +
