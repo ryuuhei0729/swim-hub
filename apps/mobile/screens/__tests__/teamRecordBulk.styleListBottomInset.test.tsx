@@ -44,8 +44,7 @@ vi.mock("react-native-safe-area-context", () => ({
     children,
     ...props
   }: { children?: React.ReactNode } & Record<string, unknown>) => {
-    const ReactLib = require("react");
-    return ReactLib.createElement("div", props, children);
+    return React.createElement("div", props, children);
   },
 }));
 
@@ -72,7 +71,6 @@ describe("TeamRecordStyleListScreen — Android Edge-to-Edge の下部インセ�
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.scrollContentContainerStyles = [];
     queryClient = makeQueryClient();
     harness.getStyles.mockResolvedValue(DUMMY_22_STYLES);

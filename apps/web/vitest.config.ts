@@ -1,4 +1,3 @@
-// @ts-nocheck
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vitest/config";
@@ -20,6 +19,8 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    // モックの呼び出し履歴は各テスト前に自動で消す (テストファイル側で vi.clearAllMocks() を書かない)
+    clearMocks: true,
     include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     exclude: ["node_modules", "dist", ".next", "e2e"],
     server: {

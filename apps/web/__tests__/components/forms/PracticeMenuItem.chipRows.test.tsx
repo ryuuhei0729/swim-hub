@@ -17,7 +17,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderWithI18n as render, screen, fireEvent, within } from "../../utils/render";
 import PracticeMenuItem from "../../../components/forms/practice-log/components/PracticeMenuItem";
 import { SelectChips, chipClass } from "../../../components/forms/practice-log/components/SelectChips";
@@ -127,10 +127,6 @@ describe("SelectChips — ChipScrollRow 置換後の契約", () => {
 });
 
 describe("PracticeMenuItem — チップ行のカルーセル化", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[M-05] role='group' が 種目行 + カテゴリ行 の 2 個ちょうど残る", () => {
     // SelectChips は種目行とカテゴリ行の 2 箇所だけで使われる (距離行は素の ChipScrollRow)。
     // 「2 個以上」だと片方が消えて別の場所に増えても気づけないので厳密一致 + 内訳を見る。

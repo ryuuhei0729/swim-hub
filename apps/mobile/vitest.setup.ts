@@ -14,10 +14,9 @@ if (typeof globalThis !== "undefined") {
   (globalThis as unknown as { React: typeof React }).React = React;
 }
 
-// 各テスト後にクリーンアップ
+// 各テスト後にクリーンアップ (モックの呼び出し履歴は vitest.config の clearMocks が各テスト前に消す)
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
 });
 
 // 注意: React Nativeのモックは vitest.config.ts の resolve.alias で

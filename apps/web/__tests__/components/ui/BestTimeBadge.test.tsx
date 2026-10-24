@@ -70,7 +70,6 @@ const defaultProps = {
 
 describe("BestTimeBadge (web 一覧用・3状態常時表示)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.useAuth.mockReturnValue({ user: { id: "user-1" }, supabase: {} });
   });
 

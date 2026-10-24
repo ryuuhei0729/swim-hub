@@ -67,7 +67,6 @@ import { useAppleAuth } from "../useAppleAuth";
 
 describe("useAppleAuth", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
 
     // デフォルト状態にリセット
     mocks.platformOS = "ios";

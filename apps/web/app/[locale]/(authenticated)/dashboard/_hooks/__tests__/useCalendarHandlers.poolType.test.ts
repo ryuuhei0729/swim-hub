@@ -20,7 +20,9 @@
  */
 
 import { renderHookWithI18n as renderHook } from "../../../../../../__tests__/utils/render";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@swim-hub/shared/types";
 import { useCalendarHandlers } from "../useCalendarHandlers";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import type { EditingData } from "@/stores/types";
@@ -51,8 +53,7 @@ function setupHandlers(supabase: ReturnType<typeof createProjectionAwareSupabase
   const openCompetitionTabModal = vi.fn();
   const { result } = renderHook(() =>
     useCalendarHandlers({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase: supabase as any,
+      supabase: supabase as unknown as SupabaseClient<Database>,
       openPracticeTabModal: vi.fn(),
       openCompetitionTabModal,
       openEntryLogForm: vi.fn(),
@@ -80,10 +81,6 @@ const baseEntryItem = (overrides: Partial<CalendarItem> = {}): CalendarItem =>
 // NOTE: `mock.calls[0]!` を多用する。各テストは直前に `toHaveBeenCalledTimes(1)` で
 // 呼び出し回数を確認済み。
 describe("useCalendarHandlers — pool_type 伝搬 (D-5 #2〜#5)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[V-2 #2] onEditItem: チーム大会のエントリー編集で pool_type=1 が editingData に渡る", async () => {
     const supabase = createProjectionAwareSupabase({
       entry_status: "open",

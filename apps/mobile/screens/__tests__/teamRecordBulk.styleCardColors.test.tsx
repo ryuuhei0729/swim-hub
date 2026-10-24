@@ -22,7 +22,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { STYLE_CARD_BACKGROUND_HEX } from "../teamRecordBulk/styleCardColors";
 import {
   createResponseMapSupabase,
@@ -77,7 +77,6 @@ describe("[V-06a] 種目一覧カードの配色は canonical コードで正し
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     queryClient = makeQueryClient();
     harness.getStyles.mockResolvedValue(STYLES_WITH_CANONICAL_CODE);
     mocks.responses["select:competitions"] = {

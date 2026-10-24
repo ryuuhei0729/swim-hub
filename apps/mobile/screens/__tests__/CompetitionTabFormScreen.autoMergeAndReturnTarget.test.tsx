@@ -72,9 +72,7 @@ h.navigationObject = {
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("react-native", async () => {
   const actual = await vi.importActual<typeof import("../../__mocks__/react-native")>(
@@ -323,7 +321,6 @@ function setupCommonMocks() {
 // 実装のバグではない。修正内容は各アサーション直上のコメントを参照。
 describe("CompetitionTabFormScreen — SC-6 自動引き継ぎ・削除行の復活防止", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupCommonMocks();
   });
 
@@ -440,7 +437,6 @@ describe("CompetitionTabFormScreen — SC-6 自動引き継ぎ・削除行の復
 
 describe("CompetitionTabFormScreen — 保存後の戻り先 (resolveSaveReturnTarget)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupCommonMocks();
   });
 
@@ -506,7 +502,6 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (resolveSaveReturnT
 // ---------------------------------------------------------------------------
 describe("CompetitionTabFormScreen — 保存後の戻り先 (編集モード / 境界値。旧 saveReturnTarget からの移設)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupCommonMocks();
   });
 

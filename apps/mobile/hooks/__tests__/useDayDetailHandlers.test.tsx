@@ -30,6 +30,7 @@
 import { Alert } from "react-native";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -108,11 +109,9 @@ function getConfirmOnPress(alertMock: typeof Alert.alert) {
 
 describe("useDayDetailHandlers", () => {
   const refetch = vi.fn();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = {} as any;
+  const supabase = {} as unknown as SupabaseClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.countRecordsByCompetition.mockResolvedValue(0);
   });
 

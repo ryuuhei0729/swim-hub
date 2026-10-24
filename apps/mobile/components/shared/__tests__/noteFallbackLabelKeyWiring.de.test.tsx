@@ -41,11 +41,10 @@ vi.mock("@shopify/flash-list", () => ({
 // de.json 解決に上書きする。ICU風の {var} 補間も同様に処理する。
 function resolveDeKey(key: string): string | undefined {
   const parts = key.split(".");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let cur: any = deMessages;
+  let cur: unknown = deMessages;
   for (const p of parts) {
     if (cur && typeof cur === "object" && p in cur) {
-      cur = cur[p];
+      cur = (cur as Record<string, unknown>)[p];
     } else {
       return undefined;
     }

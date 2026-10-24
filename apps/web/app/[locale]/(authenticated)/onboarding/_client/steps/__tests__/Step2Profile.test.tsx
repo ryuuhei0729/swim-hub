@@ -14,7 +14,7 @@
 
 import { render as _render, screen as _screen, waitFor as _waitFor } from "@testing-library/react";
 import _userEvent from "@testing-library/user-event";
-import { describe, expect as _expect, it, vi, beforeEach } from "vitest";
+import { describe, expect as _expect, it, vi } from "vitest";
 
 // Step2Profile (Developer が実装予定)
 // import Step2Profile from "../Step2Profile";
@@ -31,10 +31,6 @@ const _createDefaultProps = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe("Step2Profile", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ---------------------------------------------------------------------------
   // レンダリング
   // ---------------------------------------------------------------------------

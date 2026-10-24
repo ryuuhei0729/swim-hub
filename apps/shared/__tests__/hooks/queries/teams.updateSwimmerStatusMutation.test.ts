@@ -34,7 +34,6 @@ describe("useUpdateSwimmerStatusMutation", () => {
   let fakeApi: { updateSwimmerStatus: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     fakeApi = { updateSwimmerStatus: vi.fn() };
   });

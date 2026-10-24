@@ -58,9 +58,7 @@ function createSupabaseMock() {
   };
 }
 
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 vi.mock("@/contexts", () => ({
   useAuth: () => ({ user: state.user, subscription: null, supabase: state.supabase }),
 }));

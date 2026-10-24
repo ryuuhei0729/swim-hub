@@ -38,7 +38,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // (`project_swimhub_locale_navigation_debt_cleanup` の既知事項) ため、
 // `@/i18n/navigation` を直接モックする (既存 `TeamCompetitionsEntryButtonPastDate.test.tsx`
 // と同型)。
-vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock("@/i18n/navigation");
 
 const mocks = vi.hoisted(() => ({
   // 個人スコープの getCompetitions は「他管理者作成のチーム大会」を含まない空配列を返す
@@ -159,17 +159,14 @@ function buildRowFilteringSupabaseMock(competitionRow: {
   };
 }
 
-let currentAuthMock: { supabase: ReturnType<typeof buildSupabaseMock> };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitionEntryModal from "@/components/team/TeamCompetitionEntryModal";
 
 describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     // 旧バグの前提条件を固定: 個人スコープの getCompetitions は対象大会を含まない
     mocks.getCompetitions.mockResolvedValue([]);
     mocks.getEntriesByCompetition.mockResolvedValue([]);
@@ -177,12 +174,13 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
   });
 
   it("[V-09] 非admin: 他管理者が作成したチーム大会でも「大会が見つかりません」エラーにならず、大会情報が表示される", async () => {
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+      user: null,
       supabase: buildSupabaseMock({
         competitions: { data: OTHER_ADMIN_COMPETITION_ROW, error: null },
         team_memberships: { data: { role: "user" }, error: null },
       }),
-    };
+    }));
 
     render(
       <TeamCompetitionEntryModal
@@ -207,12 +205,13 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
   });
 
   it("[V-10] admin: 他管理者が作成したチーム大会でもステータス変更 (updateCompetition) が成功する", async () => {
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+      user: null,
       supabase: buildSupabaseMock({
         competitions: { data: OTHER_ADMIN_COMPETITION_ROW, error: null },
         team_memberships: { data: { role: "admin" }, error: null },
       }),
-    };
+    }));
     const user = userEvent.setup();
 
     render(
@@ -246,7 +245,8 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
   it("[V-14] 別チームが所有する大会 ID を渡されても、その大会情報を表示しない (team_id スコープの検証)", async () => {
     // 実データ: この大会は "team-2" が所有する。しかしモーダルには自分のチーム
     // "team-1" として開かれる (URL 改竄や別チームの competitionId 混入を想定)。
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+      user: null,
       supabase: buildRowFilteringSupabaseMock({
         id: "comp-belongs-to-team-2",
         team_id: "team-2",
@@ -255,7 +255,7 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
         place: "他チーム会場",
         entry_status: "open",
       }),
-    };
+    }));
 
     render(
       <TeamCompetitionEntryModal
@@ -291,14 +291,15 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
       "[V-ERR-01] competitions テーブルの取得が生の Error (RLSポリシー詳細等) で失敗した場合、" +
         "汎用フォールバック文言 (fetchFailed) が表示され、生のエラー文字列は表示されない",
       async () => {
-        currentAuthMock = {
+        vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+          user: null,
           supabase: buildSupabaseMock({
             competitions: {
               data: null,
               error: new Error('relation "competitions" violates row-level security policy'),
             },
           }),
-        };
+        }));
 
         render(
           <TeamCompetitionEntryModal
@@ -323,11 +324,12 @@ describe("TeamCompetitionEntryModal — 他管理者作成のチーム大会", (
       "[V-ERR-02] competitions テーブルの取得が UserFacingError (i18n 済みメッセージ) で" +
         "失敗した場合、そのメッセージがそのまま表示される (対照実験: competitionNotFound)",
       async () => {
-        currentAuthMock = {
+        vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+          user: null,
           supabase: buildSupabaseMock({
             competitions: { data: null, error: null },
           }),
-        };
+        }));
 
         render(
           <TeamCompetitionEntryModal

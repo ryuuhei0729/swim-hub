@@ -37,7 +37,6 @@ describe("useImageUpload", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
 
     // URL APIのモック
     mockCreateObjectURL.mockImplementation(() => `blob:${URL.name}/${Math.random()}`);

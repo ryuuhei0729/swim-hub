@@ -80,10 +80,6 @@ function makeSupabaseStorage(opts: {
   return { supabase: { storage: { from } }, spies: { list, upload, remove, from } };
 }
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
 // NOTE: `mock.invocationCallOrder[0]!` / `mock.calls[0]![0]` を多用する。各テストは直前に
 // `await POST(...)` を実行しモックが実際に呼ばれたことを前提にしている。
 describe("POST /api/storage/profile — R2分岐", () => {

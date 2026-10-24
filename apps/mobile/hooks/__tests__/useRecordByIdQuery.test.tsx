@@ -63,7 +63,6 @@ describe("useRecordByIdQuery", () => {
   let mockClient: MockSupabaseClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient({ userId: "test-user-id" });
   });
 

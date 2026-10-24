@@ -14,7 +14,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
 import {
   createResponseMapSupabase,
@@ -32,7 +32,6 @@ describe("[V-08] 種目詳細画面の管理者ゲート", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     queryClient = makeQueryClient();
 
     harness.getStyles.mockResolvedValue([

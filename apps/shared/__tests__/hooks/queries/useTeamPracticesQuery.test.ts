@@ -50,7 +50,6 @@ describe("useTeamPracticesQuery", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockPracticesApi = {
       list: vi.fn(),
@@ -138,7 +137,6 @@ describe("useDeleteTeamPracticeMutation", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockPracticesApi = {
       list: vi.fn(),
@@ -218,7 +216,6 @@ describe("useTeamCompetitionsQuery", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockRecordsApi = {
       list: vi.fn(),
@@ -285,7 +282,6 @@ describe("useDeleteTeamCompetitionMutation", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockRecordsApi = {
       list: vi.fn(),

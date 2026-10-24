@@ -38,10 +38,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createMockSupabaseClient } from "@/__mocks__/supabase";
 import type { CalendarItem } from "@apps/shared/types/ui";
 
-const mockUseAuth = vi.hoisted(() => vi.fn());
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: mockUseAuth,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/helpers/authContext";
 
 vi.mock("@/components/share", () => ({
   ShareCardModal: () => null,
@@ -110,7 +109,7 @@ function renderItem(
 describe("PracticeLogDetail (その他アイテム) 削除ボタンの isTeamCompetition 引き渡し", () => {
   beforeEach(() => {
     const supabase = createMockSupabaseClient({ queryData: null });
-    mockUseAuth.mockReturnValue({ supabase, getAccessToken: vi.fn().mockResolvedValue(null) });
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase, getAccessToken: vi.fn().mockResolvedValue(null) }));
   });
 
   it("[V-M-C06] type=competition (個人大会) の削除ボタンは onDeleteCompetition(id, false) を呼ぶ", () => {
@@ -175,7 +174,7 @@ describe("PracticeLogDetail (その他アイテム) 削除ボタンの isTeamCom
 describe("PracticeLogDetail (その他アイテム) 編集ボタンの isTeamCompetition ガード", () => {
   beforeEach(() => {
     const supabase = createMockSupabaseClient({ queryData: null });
-    mockUseAuth.mockReturnValue({ supabase, getAccessToken: vi.fn().mockResolvedValue(null) });
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase, getAccessToken: vi.fn().mockResolvedValue(null) }));
   });
 
   it("[V-M-CE06] type=competition (個人大会) の編集ボタンは onEditCompetition(item) を呼ぶ", () => {

@@ -71,7 +71,6 @@ describe("Record Query Hooks", () => {
   let mockApi: MockRecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockApi = {
       getRecords: vi.fn(),

@@ -38,9 +38,7 @@ const mocks = vi.hoisted(() => ({
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@apps/shared/api/teams/records", () => ({
   TeamRecordsAPI: vi.fn().mockImplementation(function () {
@@ -80,9 +78,7 @@ vi.mock("@apps/shared/api/entries", () => ({
   }),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 vi.mock("@/components/forms/CompetitionBasicForm", () => ({ default: () => null }));
 vi.mock("../../../components/team/TeamCompetitionEntryModal", () => ({ default: () => null }));
@@ -97,15 +93,9 @@ const STYLE_FR50 = { id: 2, name_jp: "50m自由形", distance: 50 };
 const STYLE_BA100 = { id: 13, name_jp: "100m背泳ぎ", distance: 100 };
 const STYLE_FR100 = { id: 3, name_jp: "100m自由形", distance: 100 };
 
-let currentAuthMock: {
-  user: { id: string };
-  supabase: ReturnType<typeof buildSupabaseCompetitionsMock>["supabase"];
-  subscription: null;
-};
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitions from "@/components/team/TeamCompetitions";
 
@@ -139,7 +129,6 @@ function buildRow(
 
 describe("TeamCompetitions — 重複styleId事前バリデーション(W2)のリレー区分false-positive修正", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.createRecord.mockResolvedValue({ id: "record-new" });
     mocks.updateRecord.mockResolvedValue({ id: "record-existing" });
     mocks.createSplitTimes.mockResolvedValue(undefined);
@@ -183,7 +172,7 @@ describe("TeamCompetitions — 重複styleId事前バリデーション(W2)の�
       );
 
       const { supabase } = buildSupabaseCompetitionsMock([row]);
-      currentAuthMock = { user: { id: "member-1" }, supabase, subscription: null };
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: { id: "member-1" }, supabase, subscription: null }));
 
       const user = userEvent.setup();
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
@@ -225,7 +214,7 @@ describe("TeamCompetitions — 重複styleId事前バリデーション(W2)の�
       );
 
       const { supabase } = buildSupabaseCompetitionsMock([row]);
-      currentAuthMock = { user: { id: "member-1" }, supabase, subscription: null };
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: { id: "member-1" }, supabase, subscription: null }));
 
       const user = userEvent.setup();
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
@@ -294,7 +283,7 @@ describe("TeamCompetitions — 重複styleId事前バリデーション(W2)の�
       );
 
       const { supabase } = buildSupabaseCompetitionsMock([row]);
-      currentAuthMock = { user: { id: "member-1" }, supabase, subscription: null };
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: { id: "member-1" }, supabase, subscription: null }));
 
       const user = userEvent.setup();
       render(<TeamCompetitions teamId="team-1" isAdmin={false} />);

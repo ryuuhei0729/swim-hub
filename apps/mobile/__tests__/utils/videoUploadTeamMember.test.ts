@@ -13,7 +13,7 @@
  * [TM-03] MissingThumbnailError は instanceof Error かつ name='MissingThumbnailError'
  * [TM-04] team-assign が 400 を返したら Error をスロー (サムネありの場合)
  */
-import { describe, it, vi, beforeEach, expect } from "vitest";
+import { describe, it, vi, expect } from "vitest";
 
 const mockGetThumbnailAsync = vi.hoisted(() => vi.fn());
 
@@ -99,8 +99,6 @@ const BASE_PARAMS = {
 };
 
 describe("[TM-01] サムネ生成成功 → team-assign 完了", () => {
-  beforeEach(() => vi.clearAllMocks());
-
   it("team-assign が呼ばれ finalVideoPath/finalThumbnailPath を返す", async () => {
     setupMocks({ thumbnailSuccess: true, teamAssignOk: true });
 
@@ -124,8 +122,6 @@ describe("[TM-01] サムネ生成成功 → team-assign 完了", () => {
 });
 
 describe("[TM-02] サムネ生成失敗 → team-assign を呼ばず MissingThumbnailError", () => {
-  beforeEach(() => vi.clearAllMocks());
-
   it("MissingThumbnailError をスローする (握りつぶさない)", async () => {
     setupMocks({ thumbnailSuccess: false });
 
@@ -172,8 +168,6 @@ describe("[TM-03] MissingThumbnailError の型", () => {
 });
 
 describe("[TM-04] team-assign 失敗 (サムネあり)", () => {
-  beforeEach(() => vi.clearAllMocks());
-
   it("team-assign が 400 を返すと Error をスロー (MissingThumbnailError ではない)", async () => {
     setupMocks({ thumbnailSuccess: true, teamAssignOk: false });
 

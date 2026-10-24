@@ -22,7 +22,7 @@
  * QA Engineer (Evaluator) が Sprint Contract に基づいて独立に作成。
  * Developer 実装コードをコピーせず、仕様から観点を導出している。
  */
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import { TeamMembersAPI } from "../../api/teams/members";
 import { createSupabaseMock } from "../utils/supabase-mock";
 
@@ -31,7 +31,6 @@ describe("TeamMembersAPI.updateSwimmerStatus - requireTeamAdmin ガード", () =
   let api: TeamMembersAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabaseMock = createSupabaseMock(); // userId = "test-user-id"
     api = new TeamMembersAPI(supabaseMock.client);
   });

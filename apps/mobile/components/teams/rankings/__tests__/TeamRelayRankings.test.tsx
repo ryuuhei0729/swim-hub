@@ -42,7 +42,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UserFacingError } from "@apps/shared/utils/userFacingError";
@@ -233,7 +233,6 @@ async function lastRpcArgs(fake: ReturnType<typeof makeSupabase>, atLeast = 1) {
   return fake.rpcCalls.at(-1)?.args as Record<string, unknown>;
 }
 
-
 /** リレー1本のカード = 展開ボタンを持つ最上位 View。展開ボタンから親をたどる */
 function cardOf(toggle: HTMLElement): HTMLElement {
   const card = toggle.parentElement;
@@ -246,10 +245,6 @@ function toggleFor(label: string): HTMLElement {
 }
 
 describe("TeamRelayRankings (mobile)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // -------------------------------------------------------------------------
   // [V-MR-01] web とのパリティ: 既定条件
   // -------------------------------------------------------------------------

@@ -60,7 +60,6 @@ describe("Practice Query Hooks", () => {
   let mockApi: MockPracticeAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockApi = {
       getPractices: vi.fn(),

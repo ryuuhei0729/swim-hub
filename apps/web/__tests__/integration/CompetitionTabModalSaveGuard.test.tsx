@@ -21,7 +21,7 @@ import React from "react";
 import { act } from "react";
 import { renderWithI18n as render, screen, waitFor } from "../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { describe, it, expect, vi, type Mock } from "vitest";
 import type { StyleOption } from "@/components/forms/record-log/types";
 import type { EditingData } from "@/stores/types";
 import { useCompetitionTabSave } from "@/hooks/useCompetitionTabSave";
@@ -179,9 +179,7 @@ let currentAuth: { user: { id: string }; subscription: null; supabase: ReturnTyp
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@/contexts", () => ({
   useAuth: () => currentAuth,
@@ -314,10 +312,6 @@ async function editTitleOnlyAndSave(user: ReturnType<typeof userEvent.setup>, ne
 }
 
 describe("CompetitionTabModal × useCompetitionTabSave 統合 — D-3 ガード / pool_type 保持", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[V-1] 競技会行の再取得に成功していれば、エントリーのみ保存しても pool_type=1 で UPDATE される", async () => {
     currentAuth = {
       user: { id: "user-1" },

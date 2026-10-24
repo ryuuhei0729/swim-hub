@@ -101,7 +101,6 @@ vi.mock("@/contexts", () => ({
 }));
 
 beforeEach(() => {
-  vi.clearAllMocks();
   mocks.useLocale.mockReturnValue("ja");
   mocks.supabaseSignInWithOAuth.mockResolvedValue({
     data: { url: "https://accounts.google.com/o/oauth2/dummy" },

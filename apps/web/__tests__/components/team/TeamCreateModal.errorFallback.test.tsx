@@ -18,7 +18,7 @@
 import React from "react";
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 const mockCreateTeamMutateAsync = vi.fn();
@@ -37,10 +37,6 @@ vi.mock("@/contexts", () => ({
 import TeamCreateModal from "@/components/team/TeamCreateModal";
 
 describe("TeamCreateModal — 保存失敗時のエラー表示 — 情報露出防止の対テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   const fillAndSubmit = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.type(screen.getByTestId("team-name-input"), "テストチーム");
     await user.click(screen.getByTestId("team-create-submit-button"));

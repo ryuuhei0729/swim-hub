@@ -80,7 +80,6 @@ const EDIT_MARK_RE = /\(\d{2}\/\d{2}\s\d{2}:\d{2}締切後編集\)/;
 
 describe("useAttendanceEdit (修正3-A)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     // closed イベント編集時の confirm を常に承認
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });

@@ -112,7 +112,6 @@ function makeRequest(opts: {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   authenticateApiRequest.mockResolvedValue({
     user: { id: USER_ID },
     supabase: makeSupabase(),

@@ -148,7 +148,6 @@ const validCompetitionRow = {
 
 describe("RecordDataLoader — 管理者権限ガード (既存挙動の回帰確認)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "user-1" });
     mockGetLocale.mockResolvedValue("ja");
   });

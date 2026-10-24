@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react";
 import { renderHookWithI18n as renderHook } from "../utils/render";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { BestTime } from "../../components/team/shared/hooks/useMemberBestTimes";
 import { useMemberBestTimes } from "../../components/team/shared/hooks/useMemberBestTimes";
@@ -20,10 +20,6 @@ const createMockSupabase = (mockData: unknown[] | null = [], mockError: Error | 
 
 // NOTE: `bestTimes[0]!` を多用する。各テストは直前に `toHaveLength(1)` で件数を確認済み。
 describe("useMemberBestTimes", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ヘルパー: 基本的なモックSupabaseを返す
   const getBasicMockSupabase = () => createMockSupabase([], null);
 

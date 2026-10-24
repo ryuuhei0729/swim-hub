@@ -24,6 +24,8 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@swim-hub/shared/types";
 import messages from "@apps/shared/messages/ja.json";
 import type { PracticeTabSaveParams } from "@/components/forms/PracticeTabModal";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
@@ -150,8 +152,7 @@ describe("usePracticeTabSave", () => {
     const { result } = renderHook(
       () =>
         usePracticeTabSave({
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          supabase: supabase as any,
+          supabase: supabase as unknown as SupabaseClient<Database>,
           user,
           createPractice,
           updatePractice,
@@ -170,7 +171,6 @@ describe("usePracticeTabSave", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.callOrder.length = 0;
     mocks.createPracticeTimes.mockResolvedValue(undefined);
     mocks.replacePracticeTimes.mockResolvedValue(undefined);
@@ -321,10 +321,9 @@ describe("usePracticeTabSave", () => {
           baseParams({
             editingPracticeId: "practice-1",
             imageData: {
-              newFiles: [{ file, previewUrl: "blob://x" }],
+              newFiles: [{ id: "img-1", file, previewUrl: "blob://x" }],
               deletedIds: [],
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } as any,
+            },
           }),
         );
       } catch (e) {
@@ -405,10 +404,9 @@ describe("usePracticeTabSave", () => {
           baseParams({
             editingPracticeId: "practice-1",
             imageData: {
-              newFiles: [{ file, previewUrl: "blob://x" }],
+              newFiles: [{ id: "img-1", file, previewUrl: "blob://x" }],
               deletedIds: [],
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } as any,
+            },
           }),
         );
       });

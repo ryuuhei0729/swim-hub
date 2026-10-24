@@ -70,9 +70,7 @@ const mocks = vi.hoisted(() => ({
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@apps/shared/api/teams/records", () => ({
   TeamRecordsAPI: vi.fn().mockImplementation(() => ({
@@ -95,9 +93,7 @@ vi.mock("@apps/shared/api/styles", () => ({
   })),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 vi.mock("@/components/forms/CompetitionBasicForm", () => ({ default: () => null }));
 vi.mock("../../../components/team/TeamCompetitionEntryModal", () => ({ default: () => null }));
@@ -172,24 +168,22 @@ function buildSupabaseMock() {
 // useAuth() が呼ばれるたびに新しい supabase 参照を生成すると、production 側の
 // useEffect 依存に supabase を含めた場合に無限再取得ループを誘発する
 // (TeamCompetitionsAdminActions.test.tsx と同じ安定パターンに統一)。
-let currentAuthMock: { user: { id: string }; supabase: ReturnType<typeof buildSupabaseMock> };
 
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitions from "@/components/team/TeamCompetitions";
 
 describe("TeamCompetitions — 自己記録導線 (D4)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.createRecord.mockResolvedValue({ id: "record-1" });
     mocks.createSplitTimes.mockResolvedValue(undefined);
     mocks.getStyles.mockResolvedValue([]);
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "member-1" },
       supabase: buildSupabaseMock(),
-    };
+    }));
   });
 
   it("[V-D4C-01] 非admin: 「自分の記録を追加」ボタンが表示される", async () => {

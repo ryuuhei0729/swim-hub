@@ -39,8 +39,7 @@ function makeFilteringTable(rows: Row[]) {
     const addFilter = (col: string, pred: (v: unknown) => boolean) => {
       if (appliesToParent(col)) filters.push((r) => pred(resolvePath(r, col)));
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const builder: any = {};
+    const builder: Record<string, unknown> = {};
     builder.select = vi.fn((text: string) => {
       selectText = text;
       return builder;

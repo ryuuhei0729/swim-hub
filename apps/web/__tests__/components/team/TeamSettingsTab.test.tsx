@@ -68,7 +68,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import messages from "@apps/shared/messages/ja.json";
 
@@ -224,10 +224,6 @@ function renderTab(overrides: Partial<React.ComponentProps<typeof TeamSettingsTa
 }
 
 describe("[V-A70〜A75] web 設定タブのセクション出し分け", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ===========================================================================
   // [V-A70] セクション構成
   //
@@ -481,10 +477,6 @@ describe("[V-A70〜A75] web 設定タブのセクション出し分け", () => {
 });
 
 describe("[V-A76/A77] web 最後の管理者の脱退ブロック", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[V-A76] 最後の管理者が「脱退する」を押すと leave API を呼ばずにエラー文言が出る", async () => {
     renderTab({
       isAdmin: true,

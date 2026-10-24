@@ -16,7 +16,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor, fireEvent, configure } from "@testing-library/react";
 import React from "react";
 import { Alert } from "react-native";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
 import {
   buildDetailScreenSupabaseMock,
@@ -45,7 +45,6 @@ describe("[V-07] 種目詳細画面の破棄確認", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.preventRemoveCalls.length = 0;
     queryClient = makeQueryClient();
 

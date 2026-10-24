@@ -33,10 +33,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createMockSupabaseClient } from "@/__mocks__/supabase";
 
 // --- AuthProvider モック ---
-const mockUseAuth = vi.hoisted(() => vi.fn());
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: mockUseAuth,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/helpers/authContext";
 
 // --- ShareCardModal spy スタブ ---
 const mockShareCardModal = vi.hoisted(() => vi.fn());
@@ -116,7 +115,7 @@ function setupSupabase(practiceLogs: Record<string, unknown>[]) {
       practice_logs: practiceLogs,
     },
   });
-  mockUseAuth.mockReturnValue({ supabase, getAccessToken: vi.fn().mockResolvedValue(null) });
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase, getAccessToken: vi.fn().mockResolvedValue(null) }));
   return supabase;
 }
 
@@ -241,7 +240,7 @@ describe("PracticeLogDetail practice share (isPractice block)", () => {
     const supabase = createMockSupabaseClient({
       queryData: makePracticeLogRow({ id: "log-solo", distance: 100 }),
     });
-    mockUseAuth.mockReturnValue({ supabase, getAccessToken: vi.fn().mockResolvedValue(null) });
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase, getAccessToken: vi.fn().mockResolvedValue(null) }));
 
     renderPracticeLogDetail({
       isPractice: false,

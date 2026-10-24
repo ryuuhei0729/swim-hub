@@ -47,7 +47,6 @@ describe("useUserQuery", () => {
   let mockClient: MockSupabaseClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient({ queryData: null, queryError: null });
   });
 
@@ -158,7 +157,6 @@ describe("useUserProfileQuery", () => {
   let mockClient: MockSupabaseClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient({ queryData: null, queryError: null });
   });
 

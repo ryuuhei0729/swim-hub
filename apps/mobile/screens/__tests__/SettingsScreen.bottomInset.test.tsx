@@ -34,8 +34,7 @@ vi.mock("react-native-safe-area-context", () => ({
     children,
     ...props
   }: { children?: React.ReactNode } & Record<string, unknown>) => {
-    const ReactLib = require("react");
-    return ReactLib.createElement("div", props, children);
+    return React.createElement("div", props, children);
   },
 }));
 
@@ -114,7 +113,6 @@ import { SettingsScreen } from "../SettingsScreen";
 
 describe("SettingsScreen — Android Edge-to-Edge の下部インセット", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     captured.contentContainerStyles = [];
     supabaseMock = createTableDispatchSupabase({
       userId: USER_ID,

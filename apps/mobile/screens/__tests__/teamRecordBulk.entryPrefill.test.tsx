@@ -15,7 +15,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createResponseMapSupabase,
   createWrapper,
@@ -35,7 +35,6 @@ harness.supabase = mocks.supabase;
 
 describe("TeamRecordStyleDetailScreen — エントリー行の初期反映 (仕様#1・仕様#2)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.getStyles.mockResolvedValue([mocks.style, mocks.styleBreast]);
     harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     mocks.responses["select:competitions"] = {

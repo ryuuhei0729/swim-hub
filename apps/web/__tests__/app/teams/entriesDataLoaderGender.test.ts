@@ -118,7 +118,6 @@ const memberRow = (userId: string, name: string, gender: number, role = "user") 
 
 describe("EntriesDataLoader — gender の追加 [WV-10, PM裁定W10]", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "user-1" });
     mockGetLocale.mockResolvedValue("ja");
     mockGetBestTimesForUsers.mockResolvedValue(new Map());

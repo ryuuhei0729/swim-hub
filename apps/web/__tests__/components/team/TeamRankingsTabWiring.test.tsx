@@ -138,10 +138,6 @@ const MEMBERSHIP_MEMBER: never = {
 } as unknown as never;
 
 describe("[V-30a] web 一般タブ (TeamTabs)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // 本スプリントで全メンバー向けの「設定」タブが末尾に追加された (5→6)。
   // **実装が正で期待値が古い赤**だったため期待値側を更新している。
   it("タブがちょうど 6 つで、順序は 出欠 / メンバー / 練習 / 大会 / ランキング / 設定", () => {
@@ -178,10 +174,6 @@ describe("[V-30a] web 一般タブ (TeamTabs)", () => {
 });
 
 describe("[V-30b] web 管理者タブ (TeamAdminTabs)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("タブがちょうど 10 個で、ランキングは大会の直後にある (目標タブはランキングの直後)", () => {
     wrap(<TeamAdminTabs activeTab="members" onTabChange={vi.fn()} />);
 
@@ -223,7 +215,6 @@ describe("[V-30b] web 管理者タブ (TeamAdminTabs)", () => {
 
 describe("[V-31a] 一般ページの ?tab=rankings", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.searchParams = new URLSearchParams();
   });
 
@@ -264,7 +255,6 @@ describe("[V-31a] 一般ページの ?tab=rankings", () => {
 
 describe("[V-31b] 管理者ページの ?tab=rankings", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.searchParams = new URLSearchParams();
   });
 
@@ -310,7 +300,6 @@ describe("[V-31b] 管理者ページの ?tab=rankings", () => {
 // ---------------------------------------------------------------------------
 describe("[V-32] ?tab= 着地後のタブ切替", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.searchParams = new URLSearchParams();
   });
 
@@ -378,10 +367,6 @@ describe("[V-32] ?tab= 着地後のタブ切替", () => {
 // 実際に描画されるタブの集合が一致することを確認します。
 // ---------------------------------------------------------------------------
 describe("[V-33] タブ定義の単一定義元", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("一般タブ: 描画される6タブがすべて isTeamTabType を通り、rankings / settings も含まれる", async () => {
     const { isTeamTabType } = await import("@/components/team/TeamTabs");
 

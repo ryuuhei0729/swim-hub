@@ -96,10 +96,6 @@ function mockAlertSelectLibrary() {
 }
 
 describe("VideoUploader — onPendingVideoUri prop (Bug 4(a))", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("id が undefined（新規作成フロー）", () => {
     it("動画選択後に onPendingVideoUri(uri) が呼ばれる", async () => {
       const onPendingVideoUri = vi.fn();
@@ -218,10 +214,6 @@ describe("VideoUploader — onPendingVideoUri prop (Bug 4(a))", () => {
 });
 
 describe("VideoUploader — 既存動作の回帰テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("isPremium=false かつ idle 状態のとき video_upload 用の PremiumBadge が表示される", () => {
     render(<VideoUploader {...BASE_PROPS} isPremium={false} />);
     const badge = screen.getByTestId("premium-badge");
@@ -295,7 +287,6 @@ async function setPlatformOS(os: "android" | "ios" | "web") {
 
 describe("VideoUploader — Android の権限分岐 (READ_MEDIA_* 撤去)", () => {
   beforeEach(async () => {
-    vi.clearAllMocks();
     await setPlatformOS("android");
     mocks.requestMediaLibraryPermissionsAsync.mockResolvedValue({ status: "granted" });
     mocks.requestCameraPermissionsAsync.mockResolvedValue({ status: "granted" });

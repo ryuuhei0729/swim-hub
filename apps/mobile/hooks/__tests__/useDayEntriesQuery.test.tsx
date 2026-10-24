@@ -29,7 +29,6 @@ describe("useDayEntriesQuery", () => {
   let mockClient: ReturnType<typeof createMockSupabaseClient>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
   });
 

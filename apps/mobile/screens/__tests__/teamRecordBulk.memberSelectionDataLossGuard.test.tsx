@@ -29,7 +29,7 @@
 import { act, fireEvent, render, screen, waitFor, configure } from "@testing-library/react";
 import React from "react";
 import { Alert } from "react-native";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createResponseMapSupabase,
   createWrapper,
@@ -73,7 +73,6 @@ function latestMemberSelectProps(): CapturedMemberSelectProps {
 
 describe("[#5] confirmMemberSelection のデータ消失防止 (.find() → .filter() 化)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     capturedMemberSelectProps.length = 0;
     harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
@@ -198,7 +197,6 @@ describe("[#5] confirmMemberSelection のデータ消失防止 (.find() → .fil
 
 describe("[#6] タブの × は選手の全ての本目を解除し、入力済みなら確認ダイアログを出す", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     capturedMemberSelectProps.length = 0;
     harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {

@@ -25,7 +25,7 @@
 
 import React from "react";
 import { render, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PracticeFormScreen } from "@/screens/PracticeFormScreen";
 
 const h = vi.hoisted(() => ({
@@ -41,10 +41,6 @@ vi.mock("@react-navigation/native", () => ({
 }));
 
 describe("PracticeFormScreen — リダイレクトシムの origin 転送 (Sprint Contract #PM-1)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[PFS-1] origin='teamAdmin' が practiceId/teamId と共存して厳密一致で転送される", async () => {
     h.mockUseRoute.mockReturnValue({
       params: { practiceId: "practice-1", teamId: "team-1", origin: "teamAdmin" },

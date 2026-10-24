@@ -17,7 +17,7 @@
 import React from "react";
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 vi.mock("@/i18n/navigation", () => ({
@@ -34,10 +34,6 @@ vi.mock("@/contexts", () => ({
 import AccountDeleteSettings from "@/components/settings/AccountDeleteSettings";
 
 describe("AccountDeleteSettings — 削除失敗時のエラー表示 — 情報露出防止の対テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   afterEach(() => {
     vi.unstubAllGlobals();
   });

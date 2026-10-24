@@ -15,6 +15,7 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GoalAPI } from "@apps/shared/api/goals";
@@ -57,8 +58,7 @@ vi.mock("@apps/shared/api/goals", () => ({
 function Harness() {
   // apps/web の GoalsClient.tsx が実際に使っているのと同じフック。
   // supabase の実体は使わないため空オブジェクトで十分 (GoalAPI 自体をモックしているため)。
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, isSuccess } = useGoalsQuery({} as any, { styles: [] });
+  const { data, isSuccess } = useGoalsQuery({} as unknown as SupabaseClient, { styles: [] });
   if (!isSuccess || !data) return <div data-testid="loading" />;
   return (
     <GoalList

@@ -15,7 +15,7 @@
 
 import React from "react";
 import { render, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PracticeLogFormScreen } from "@/screens/PracticeLogFormScreen";
 
 const h = vi.hoisted(() => ({
@@ -31,10 +31,6 @@ vi.mock("@react-navigation/native", () => ({
 }));
 
 describe("PracticeLogFormScreen — リダイレクトシム", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("teamId あり: マウント直後に PracticeTabForm へ { practiceId, teamId, initialTab: 'log' } で replace される", async () => {
     h.mockUseRoute.mockReturnValue({
       params: { practiceId: "practice-1", teamId: "team-1" },

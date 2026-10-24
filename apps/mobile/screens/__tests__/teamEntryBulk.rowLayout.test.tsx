@@ -17,114 +17,27 @@
 // このファイルは既存の teamEntryBulk.adminProxy.test.tsx / .nonSwimmerAdminGuard.test.tsx
 // とは独立したファイルとして新規追加する (既存2ファイル・12件は変更しない)。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mocks = vi.hoisted(() => {
-  const styleFree = {
-    id: 3,
-    name_jp: "自由形100m",
-    name: "Freestyle",
-    style: "fr",
-    distance: 100,
-  };
-  const styleBreast = {
-    id: 9,
-    name_jp: "平泳ぎ50m",
-    name: "Breaststroke",
-    style: "br",
-    distance: 50,
-  };
-
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        const op = "select";
-        const builder: Record<string, unknown> = {};
-        const chain = () => builder;
-        builder.select = vi.fn(chain);
-        builder.eq = vi.fn(chain);
-        builder.order = vi.fn(() => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }));
-        builder.single = vi.fn(() => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }));
-        return builder;
-      },
-    };
-  }
-
-  return {
-    styleFree,
-    styleBreast,
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getBestTimesForUsers: vi.fn(),
-    createBulkEntries: vi.fn().mockResolvedValue([]),
-    updateEntry: vi.fn().mockResolvedValue({}),
-    deleteBulkEntries: vi.fn().mockResolvedValue(undefined),
-  };
-});
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    user: { id: "admin-1" },
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({
-    members: [
-      { user_id: "admin-1", role: "admin", users: { id: "admin-1", name: "管理者" } },
-      { user_id: "user-1", role: "user", users: { id: "user-1", name: "選手A" } },
-    ],
-    isLoading: false,
-  }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: class {
-    createBulkEntries = mocks.createBulkEntries;
-    updateEntry = mocks.updateEntry;
-    deleteBulkEntries = mocks.deleteBulkEntries;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesForUsers = mocks.getBestTimesForUsers;
-  },
-}));
-
-vi.mock("@/components/teams/MemberSelectModal", () => ({
-  MemberSelectModal: () => null,
-}));
-
+import { beforeEach, describe, expect, it } from "vitest";
+import { createWrapper, harness } from "./teamEntryBulkScreenHarness";
 import { TeamEntryBulkFormScreen } from "../TeamEntryBulkFormScreen";
 
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+const styleFree = {
+  id: 3,
+  name_jp: "自由形100m",
+  name: "Freestyle",
+  style: "fr",
+  distance: 100,
 };
+const styleBreast = {
+  id: 9,
+  name_jp: "平泳ぎ50m",
+  name: "Breaststroke",
+  style: "br",
+  distance: 50,
+};
+
 
 /**
  * 与えられた要素から、style.flexDirection === "row" を持つ最も近い祖先要素を返す。
@@ -143,22 +56,21 @@ describe("TeamEntryBulkFormScreen — 行レイアウト (種目ラベル数字�
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
 
-    mocks.getStyles.mockResolvedValue([mocks.styleFree, mocks.styleBreast]);
-    mocks.getBestTimesForUsers.mockResolvedValue(new Map());
-    mocks.createBulkEntries.mockResolvedValue([]);
-    mocks.updateEntry.mockResolvedValue({});
-    mocks.deleteBulkEntries.mockResolvedValue(undefined);
+    harness.getStyles.mockResolvedValue([styleFree, styleBreast]);
+    harness.getBestTimesForUsers.mockResolvedValue(new Map());
+    harness.createBulkEntries.mockResolvedValue([]);
+    harness.updateEntry.mockResolvedValue({});
+    harness.deleteBulkEntries.mockResolvedValue(undefined);
 
-    mocks.responses["select:competitions"] = {
+    harness.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0, date: "2999-01-01", entry_status: "open" },
       error: null,
     };
-    mocks.responses["select:entries"] = {
+    harness.responses["select:entries"] = {
       data: [
         {
           id: "entry-X",

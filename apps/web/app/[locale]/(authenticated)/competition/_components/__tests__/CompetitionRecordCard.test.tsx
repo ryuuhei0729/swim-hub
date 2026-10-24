@@ -23,7 +23,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
 import type { Record as RecordType } from "@apps/shared/types";
 import type { ListBestCandidates } from "@apps/shared/api/records";
@@ -104,10 +104,6 @@ const candidates = (partial: Partial<ListBestCandidates> = {}): ListBestCandidat
 });
 
 describe("CompetitionRecordCard", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("情報欠落なし(2026-07-22 mobile型2行レイアウト後)", () => {
     it("日付/大会名/場所/プール/種目/タイムが全て描画される", () => {
       mocks.useListBestCandidatesQuery.mockReturnValue({ data: undefined, error: null });

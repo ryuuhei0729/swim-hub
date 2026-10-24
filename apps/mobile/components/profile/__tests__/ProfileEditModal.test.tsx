@@ -99,7 +99,6 @@ function renderModal(overrides: Partial<React.ComponentProps<typeof ProfileEditM
 
 describe("ProfileEditModal — 画像アップロード (Bug1 D1-b)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("mock-token");
     mocks.uploadProfileImageViaApi.mockResolvedValue({ path: "user-1/new-avatar.jpg" });
   });
@@ -187,7 +186,6 @@ describe("ProfileEditModal — 画像アップロード (Bug1 D1-b)", () => {
 
 describe("ProfileEditModal — 画像未変更時の通常更新 (回帰)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("mock-token");
   });
 

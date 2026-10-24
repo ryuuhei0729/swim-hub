@@ -14,7 +14,7 @@
 import React from "react";
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 vi.mock("@/contexts", () => ({
@@ -36,10 +36,6 @@ import PracticeTabModal from "@/components/forms/PracticeTabModal";
 const FUTURE_DATE = new Date("2099-01-01");
 
 describe("PracticeTabModal — 保存失敗時のエラー表示 — 情報露出防止の対テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it(
     "[V-ERR-01] onSave が生の Error (RLSポリシー詳細等) で失敗した場合、" +
       "汎用フォールバック文言 (common.error) が表示され、生のエラー文字列は表示されない",

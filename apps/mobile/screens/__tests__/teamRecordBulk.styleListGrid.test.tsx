@@ -16,7 +16,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createResponseMapSupabase,
   createWrapper,
@@ -54,7 +54,6 @@ describe("[V-06a] 種目一覧グリッドの基本表示", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     queryClient = makeQueryClient();
     harness.getStyles.mockResolvedValue(DUMMY_22_STYLES);
     mocks.responses["select:records"] = { data: [], error: null };
@@ -128,7 +127,6 @@ describe("[V-06b] 水路フィルタの例外 (既存記録・エントリーが
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     queryClient = makeQueryClient();
     harness.getStyles.mockResolvedValue(DUMMY_22_STYLES);
     mocks.responses["select:competitions"] = {

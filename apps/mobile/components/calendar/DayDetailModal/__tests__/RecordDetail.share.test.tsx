@@ -32,10 +32,9 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // --- AuthProvider モック（RecordCard は useAuth() から supabase を取得する） ---
-const mockUseAuth = vi.hoisted(() => vi.fn());
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: mockUseAuth,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/helpers/authContext";
 
 // --- RecordAPI モック（getPreviousBestTime のみ差し替え） ---
 const mockGetPreviousBestTime = vi.hoisted(() => vi.fn());
@@ -118,7 +117,7 @@ function makeCalendarRecords(date = "2026-07-01"): CalendarItem[] {
 }
 
 function renderRecordCard(props: Partial<React.ComponentProps<typeof RecordCard>> = {}) {
-  mockUseAuth.mockReturnValue({ supabase: {} });
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase: {} }));
   return render(
     <RecordCard
       record={props.record ?? makeRecord()}

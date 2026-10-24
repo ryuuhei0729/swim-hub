@@ -300,7 +300,6 @@ describe("RecordsScreen — pull-to-refresh のクエリ網羅性 (ドリフト�
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     captured.refreshAll = null;
 
     supabaseMock = createTableDispatchSupabase({

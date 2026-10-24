@@ -15,6 +15,8 @@
 //   - inFlightRef 削除                        -> 並行ケース (judge 1回) 赤
 //   - judge の例外を握りつぶさない             -> 判定例外でも一覧表示 赤
 // =============================================================================
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
@@ -263,7 +265,7 @@ describe("S9 状態表示 (一覧)", () => {
   });
 
   it("[L3] GoalsScreen のローディング3箇所はすべて <LoadingSpinner fullScreen ...> (ソースの現在内容)", () => {
-    const src = require("fs").readFileSync(require("path").resolve(__dirname, "../GoalsScreen.tsx"), "utf8") as string;
+    const src = readFileSync(path.resolve(__dirname, "../GoalsScreen.tsx"), "utf8");
     expect((src.match(/<LoadingSpinner fullScreen/g) ?? []).length).toBe(3);
     expect(src).not.toMatch(/<LoadingSpinner\s*\/>/);
   });

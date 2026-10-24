@@ -8,6 +8,8 @@ export const createVitestConfig = (options = {}) => {
     setupFiles = [],
     include = ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     exclude = ["node_modules", "dist"],
+    // モックの呼び出し履歴は各テスト前に自動で消す (テストファイル側で vi.clearAllMocks() を書かない)
+    clearMocks = true,
     coverage = {
       provider: "v8",
       reporter: ["text", "json", "html"],
@@ -37,6 +39,7 @@ export const createVitestConfig = (options = {}) => {
       setupFiles,
       include,
       exclude,
+      clearMocks,
       coverage,
     },
     resolve: {

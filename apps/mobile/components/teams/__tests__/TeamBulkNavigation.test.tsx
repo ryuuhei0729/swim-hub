@@ -97,7 +97,6 @@ const practice = {
 
 describe("[Gate] TeamCompetitionList 記録ボタンの admin 分岐", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.useDeleteTeamCompetitionMutation.mockReturnValue(makeMutationMock());
     mocks.useUpdateCompetitionMutation.mockReturnValue(makeMutationMock());
     mocks.useTeamCompetitionsQuery.mockReturnValue({
@@ -149,7 +148,6 @@ describe("[Gate] TeamCompetitionList 記録ボタンの admin 分岐", () => {
 
 describe("[Gate] TeamPracticeList ログボタンの admin 分岐", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.useDeleteTeamPracticeMutation.mockReturnValue(makeMutationMock());
     mocks.useTeamPracticesQuery.mockReturnValue({
       data: [practice],

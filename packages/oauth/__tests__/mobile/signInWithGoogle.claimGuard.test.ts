@@ -22,7 +22,7 @@
  * 本ファイル内・他ファイル (signInWithGoogle.raceIntegration.test.ts) とも
  * 一意な code 文字列を用いる。
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 vi.mock("expo-web-browser", () => ({
@@ -61,10 +61,6 @@ function makeSupabaseMock(): { auth: SupabaseAuthMock } {
 function asSupabase(mock: { auth: SupabaseAuthMock }): SupabaseClient {
   return mock as unknown as SupabaseClient;
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("signInWithGoogle — signInWithOAuth 呼び出し内容 (V-19, V-20, V-21)", () => {
   it("[V-19] additionalScopes が基本スコープに追加結合されて signInWithOAuth に渡る", async () => {

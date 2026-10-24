@@ -150,7 +150,6 @@ describe("AdminMonthlyAttendance", () => {
   const idleQuery = { isLoading: false, isError: false, isSuccess: false, data: undefined, fetchStatus: "idle" };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.updateStatusMutation.mutateAsync = vi.fn().mockResolvedValue(undefined);
     mocks.updateStatusMutation.isPending = false;
     mocks.updateStatusMutation.variables = undefined;

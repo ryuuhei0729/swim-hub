@@ -134,7 +134,6 @@ const BASE_PROPS = {
 
 describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロップ)", () => {
   beforeEach(async () => {
-    vi.clearAllMocks();
     await setPlatform("android");
     mocks.launchImageLibraryAsync.mockResolvedValue({ canceled: true, assets: [] });
     setupManipulatorChain({ uri: "file:///cropped.jpg", base64: "CROPPEDBASE64" });
@@ -436,7 +435,6 @@ describe("AvatarUpload — Android Photo Picker (権限撤去・自前クロッ�
 
 describe("AvatarUpload — iOS legacy Picker (回帰: クロップ・権限フロー維持)", () => {
   beforeEach(async () => {
-    vi.clearAllMocks();
     await setPlatform("ios");
     mocks.requestMediaLibraryPermissionsAsync.mockResolvedValue({ status: "granted" });
     mocks.launchImageLibraryAsync.mockResolvedValue({ canceled: true, assets: [] });
@@ -543,7 +541,6 @@ describe("AvatarUpload — iOS legacy Picker (回帰: クロップ・権限フ�
 
 describe("AvatarUpload — アバター削除 (Photo Picker 移行と無関係な既存動作の回帰)", () => {
   beforeEach(async () => {
-    vi.clearAllMocks();
     await setPlatform("android");
     mocks.getAccessToken.mockResolvedValue("mock-token");
     mocks.deleteProfileImageViaApi.mockResolvedValue(undefined);

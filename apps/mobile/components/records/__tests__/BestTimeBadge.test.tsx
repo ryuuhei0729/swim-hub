@@ -24,7 +24,7 @@
 
 import React from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createMockSupabaseClient } from "@/__mocks__/supabase";
 import type { MockSupabaseClient } from "@/__mocks__/supabase";
 import { createQueryWrapper } from "@/__tests__/helpers/testUtils";
@@ -106,10 +106,6 @@ function expectNoBadge() {
 // ---------------------------------------------------------------------------
 
 describe("BestTimeBadge", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ------------------------------------------------------------------
   // 1. getBadgeState 純関数のユニットテスト
   // ------------------------------------------------------------------

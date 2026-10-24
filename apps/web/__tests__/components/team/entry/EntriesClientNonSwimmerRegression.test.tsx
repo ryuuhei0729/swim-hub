@@ -33,7 +33,7 @@
  */
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { BestTime, Style } from "@apps/shared/types";
 import EntriesClient, {
   type ExistingEntryDisplay,
@@ -113,10 +113,6 @@ function renderEntriesClient(existingEntries: ExistingEntryDisplay[]) {
 }
 
 describe("EntriesClient — 非泳者回帰テスト (R4)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[V-10-01] 既存エントリーを持つ非泳者メンバーに「退会済み」バッジが誤って付かない", () => {
     const existingEntries: ExistingEntryDisplay[] = [
       {

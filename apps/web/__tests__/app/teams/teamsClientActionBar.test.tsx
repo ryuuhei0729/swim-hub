@@ -31,22 +31,16 @@
  * (Verification Checklist 側にその旨を明記する)。
  *
  * 代わりに、このファイルには「今後 Developer が dynamic() を ssr:false 付きに揃える等で
- * 描画可能になった場合に有効化する」ためのテスト本体を it.skip で残し、
+ * 描画可能になった場合に有効化する」ためのテスト本体を it.todo で残し、
  * 実際に有効化する際のセレクタ・アサーション内容の合意 (Sprint Contract) として機能させる。
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it } from "vitest";
 
 describe("TeamsClient — 常設アクションバー (D5)", () => {
-  it(
-    "[メモ] このファイルのコンポーネントレンダリングテストは jsdom ハングのため無効化されている。" +
-      " D5 の検証は Playwright E2E / ブラウザ実機確認で行う (Verification Checklist 参照)。",
-    () => {
-      expect(true).toBe(true);
-    },
-  );
-
-  it.skip(
+  // このファイルのコンポーネントレンダリングテストは jsdom ハングのため todo 化している。
+  // D5 の検証は Playwright E2E / ブラウザ実機確認で行う (Verification Checklist 参照)。
+  it.todo(
     "[V-D5-01/04] チームが存在する状態でも常設の作成/参加ボタンが表示される" +
       " (dynamic() の ssr:false 化などで描画可能になり次第、有効化すること)",
     () => {
@@ -56,12 +50,12 @@ describe("TeamsClient — 常設アクションバー (D5)", () => {
     },
   );
 
-  it.skip("[V-D5-02] 常設ボタン押下でモーダルが開く", () => {
+  it.todo("[V-D5-02] 常設ボタン押下でモーダルが開く", () => {
     // await user.click(screen.getByRole("button", { name: /作成/ }));
     // expect(screen.getByTestId("team-create-modal-stub")).toBeInTheDocument();
   });
 
-  it.skip(
+  it.todo(
     "[V-D5-03] 重複排除: チーム0件の空状態でも「作成」ボタンは1つだけ",
     () => {
       // render(<TeamsClient initialTeams={[]} />);

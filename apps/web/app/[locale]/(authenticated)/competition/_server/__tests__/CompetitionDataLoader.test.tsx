@@ -64,7 +64,6 @@ const RECORDS_QUERY_KEY = recordKeys.list({
 
 describe("CompetitionDataLoader - prefetch エラーハンドリング", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getServerUser.mockResolvedValue({ id: "user-1" });
     mocks.createAuthenticatedServerClient.mockResolvedValue({});
     mocks.getStyles.mockResolvedValue([]);

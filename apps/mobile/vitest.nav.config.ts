@@ -5,6 +5,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react({ jsxRuntime: "automatic" })],
   test: {
+    clearMocks: true,
     name: "mobile-nav",
     environment: "jsdom",
     setupFiles: ["./__tests__/navigation-integration/setup.ts"],

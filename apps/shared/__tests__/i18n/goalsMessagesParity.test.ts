@@ -242,22 +242,18 @@ const exists = (tree: Tree, dotted: string) => {
 describe("S10 使用キーの実在 (静的 t('…') を抽出)", () => {
   it("mobile: 目標関連ソースの完全修飾キーが5言語に実在する", () => {
     const keys = new Set<string>();
-    let dynamic = 0;
     for (const f of MOBILE_FILES) {
       const r = extractKeys(readFileSync(f, "utf8"));
       r.statics.forEach((k) => keys.add(k));
-      dynamic += r.dynamic;
     }
     // 空走査防止: 画面・コンポーネント群から相当数のキーが取れていること
     expect(keys.size).toBeGreaterThan(80);
     const missing = [...keys].flatMap((k) => LOCALES.filter(([, tree]) => !exists(tree, k)).map(([l]) => `${l}:${k}`));
     expect(missing).toEqual([]);
-    console.log(`[S10 mobile] 静的キー ${keys.size} 件を検証、動的キー (対象外) ${dynamic} 件`);
   });
 
   it("web: goals 配下の useTranslations('goals') 相対キーが5言語の goals.* に実在する", () => {
     const keys = new Set<string>();
-    let dynamic = 0;
     let files = 0;
     for (const f of WEB_GOALS) {
       const src = readFileSync(f, "utf8");
@@ -265,13 +261,11 @@ describe("S10 使用キーの実在 (静的 t('…') を抽出)", () => {
       files++;
       const r = extractKeys(src);
       r.statics.forEach((k) => keys.add(`goals.${k}`));
-      dynamic += r.dynamic;
     }
     expect(files).toBeGreaterThan(5);
     expect(keys.size).toBeGreaterThan(80);
     const missing = [...keys].flatMap((k) => LOCALES.filter(([, tree]) => !exists(tree, k)).map(([l]) => `${l}:${k}`));
     expect(missing).toEqual([]);
-    console.log(`[S10 web] ${files} ファイルの静的キー ${keys.size} 件を検証、動的キー (対象外) ${dynamic} 件`);
   });
 
   it("抽出関数が欠落キーを実際に検出する (自己検査)", () => {

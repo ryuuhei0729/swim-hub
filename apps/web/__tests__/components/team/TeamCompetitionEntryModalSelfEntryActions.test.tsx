@@ -32,9 +32,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 const mocks = vi.hoisted(() => ({
   deleteEntry: vi.fn(),
@@ -80,11 +78,9 @@ function buildSupabaseMock(responses: Record<string, ChainResponse>, currentUser
   };
 }
 
-let currentAuthMock: { supabase: ReturnType<typeof buildSupabaseMock>; user: { id: string } };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitionEntryModal from "@/components/team/TeamCompetitionEntryModal";
 
@@ -127,15 +123,14 @@ function renderModal(
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   mocks.getEntriesByCompetition.mockResolvedValue([]);
-  currentAuthMock = {
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({
     user: { id: "u-1" },
     supabase: buildSupabaseMock({
       competitions: { data: makeCompetitionRow(), error: null },
       team_memberships: { data: { role: "user" }, error: null },
     }),
-  };
+  }));
 });
 
 describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削除アイコン (web)", () => {
@@ -223,10 +218,15 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
 
   describe("[V-W-04] SC4 / R1: 実効ステータスによる表示条件", () => {
     it("entry_status='before' のとき自分の行にも編集/削除アイコンが出ない", async () => {
-      currentAuthMock.supabase = buildSupabaseMock({
-        competitions: { data: makeCompetitionRow({ entry_status: "before" }), error: null },
-        team_memberships: { data: { role: "user" }, error: null },
-      });
+      vi.mocked(useAuth).mockReturnValue(
+        buildAuthContext({
+          user: { id: "u-1" },
+          supabase: buildSupabaseMock({
+            competitions: { data: makeCompetitionRow({ entry_status: "before" }), error: null },
+            team_memberships: { data: { role: "user" }, error: null },
+          }),
+        }),
+      );
       mocks.getEntriesByCompetition.mockResolvedValue([makeEntry({ id: "e-1" })]);
       renderModal();
 
@@ -236,10 +236,15 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
     });
 
     it("entry_status='closed' のとき自分の行にも編集/削除アイコンが出ない", async () => {
-      currentAuthMock.supabase = buildSupabaseMock({
-        competitions: { data: makeCompetitionRow({ entry_status: "closed" }), error: null },
-        team_memberships: { data: { role: "user" }, error: null },
-      });
+      vi.mocked(useAuth).mockReturnValue(
+        buildAuthContext({
+          user: { id: "u-1" },
+          supabase: buildSupabaseMock({
+            competitions: { data: makeCompetitionRow({ entry_status: "closed" }), error: null },
+            team_memberships: { data: { role: "user" }, error: null },
+          }),
+        }),
+      );
       mocks.getEntriesByCompetition.mockResolvedValue([makeEntry({ id: "e-1" })]);
       renderModal();
 
@@ -249,13 +254,18 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
     });
 
     it("[境界値] entry_status='open' だが大会日が過去のとき、編集/削除アイコンが出ない (実効ステータスで判定)", async () => {
-      currentAuthMock.supabase = buildSupabaseMock({
-        competitions: {
+      vi.mocked(useAuth).mockReturnValue(
+        buildAuthContext({
+          user: { id: "u-1" },
+          supabase: buildSupabaseMock({
+            competitions: {
           data: makeCompetitionRow({ entry_status: "open", date: "2020-01-01" }),
           error: null,
-        },
-        team_memberships: { data: { role: "user" }, error: null },
-      });
+            },
+            team_memberships: { data: { role: "user" }, error: null },
+          }),
+        }),
+      );
       mocks.getEntriesByCompetition.mockResolvedValue([makeEntry({ id: "e-1" })]);
       renderModal();
 
@@ -269,10 +279,15 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
     it("[非退行/境界] entry_status='open' かつ大会日が今日のとき、編集/削除アイコンは出ない (isEntryTabVisible は今日を含まない)", async () => {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-      currentAuthMock.supabase = buildSupabaseMock({
-        competitions: { data: makeCompetitionRow({ entry_status: "open", date: todayStr }), error: null },
-        team_memberships: { data: { role: "user" }, error: null },
-      });
+      vi.mocked(useAuth).mockReturnValue(
+        buildAuthContext({
+          user: { id: "u-1" },
+          supabase: buildSupabaseMock({
+            competitions: { data: makeCompetitionRow({ entry_status: "open", date: todayStr }), error: null },
+            team_memberships: { data: { role: "user" }, error: null },
+          }),
+        }),
+      );
       mocks.getEntriesByCompetition.mockResolvedValue([makeEntry({ id: "e-1" })]);
       renderModal();
 
@@ -282,10 +297,15 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
     });
 
     it("[非退行] entry_status='open' かつ大会日が未来のとき、編集/削除アイコンが出る", async () => {
-      currentAuthMock.supabase = buildSupabaseMock({
-        competitions: { data: makeCompetitionRow({ entry_status: "open", date: "2099-01-01" }), error: null },
-        team_memberships: { data: { role: "user" }, error: null },
-      });
+      vi.mocked(useAuth).mockReturnValue(
+        buildAuthContext({
+          user: { id: "u-1" },
+          supabase: buildSupabaseMock({
+            competitions: { data: makeCompetitionRow({ entry_status: "open", date: "2099-01-01" }), error: null },
+            team_memberships: { data: { role: "user" }, error: null },
+          }),
+        }),
+      );
       mocks.getEntriesByCompetition.mockResolvedValue([makeEntry({ id: "e-1" })]);
       renderModal();
 
@@ -297,7 +317,7 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
 
   describe("[V-W-08] SC8: admin 自身のエントリーにも同様にアイコンが出る", () => {
     it("admin がエントリーを持つ場合、admin 自身の行にも編集/削除アイコンが出る", async () => {
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
         user: { id: "admin-1" },
         supabase: buildSupabaseMock(
           {
@@ -306,7 +326,7 @@ describe("TeamCompetitionEntryModal — 自分のエントリー行の編集/削
           },
           "admin-1",
         ),
-      };
+      }));
       mocks.getEntriesByCompetition.mockResolvedValue([
         makeEntry({ id: "e-admin", user_id: "admin-1", user: { id: "admin-1", name: "管理者本人" } }),
       ]);

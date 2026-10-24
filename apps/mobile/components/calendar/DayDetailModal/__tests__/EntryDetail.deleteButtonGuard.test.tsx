@@ -32,10 +32,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { CalendarItem } from "@apps/shared/types/ui";
 
-const mockUseAuth = vi.hoisted(() => vi.fn());
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: mockUseAuth,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/helpers/authContext";
 
 import { EntryDetail } from "../components/EntryDetail";
 import type { EntryDetailProps } from "../types";
@@ -65,7 +64,7 @@ function renderEntryDetail(
         Promise.resolve({ data: [], error: null }).then(resolve),
     })),
   };
-  mockUseAuth.mockReturnValue({ supabase });
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase }));
 
   return render(
     <EntryDetail
@@ -81,7 +80,7 @@ function renderEntryDetail(
 
 describe("EntryDetail 削除ボタンの isTeamCompetition ガード", () => {
   beforeEach(() => {
-    mockUseAuth.mockReset();
+    vi.mocked(useAuth).mockReset();
   });
 
   it("[V-M-E01] isTeamCompetition=true のとき削除ボタンが描画されない", async () => {

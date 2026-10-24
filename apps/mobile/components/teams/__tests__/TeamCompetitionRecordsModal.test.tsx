@@ -26,7 +26,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { createQueryWrapper } from "@/__tests__/helpers/testUtils";
 
@@ -132,10 +132,6 @@ function baseCompetitionRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe("TeamCompetitionRecordsModal", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("[V-12] competition_id で絞り込んだクエリを発行する (クエリ引数自体を検証)", () => {
     it("competitions は eq('id', competitionId) + single()、records は eq('competition_id', competitionId) + order('time', {ascending:true}) で取得する", async () => {
       const { supabase, fromCalls, compEqCalls, recordsEqCalls, recordsOrderCalls } =

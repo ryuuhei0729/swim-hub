@@ -1,6 +1,6 @@
 import { renderWithI18n as render, screen, waitFor, within } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import RecordForm from "../../../components/forms/RecordForm";
 
 // Next.js Router をモック
@@ -46,10 +46,6 @@ describe("RecordForm", () => {
     { id: "1", nameJp: "自由形", distance: 50 },
     { id: "2", nameJp: "背泳ぎ", distance: 100 },
   ];
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
 
   describe("レンダリング", () => {
     it("フォームが開いているときに表示される", () => {

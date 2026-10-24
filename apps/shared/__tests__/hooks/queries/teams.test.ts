@@ -70,7 +70,6 @@ describe("Team Query Hooks", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockCoreApi = {
       getMyTeams: vi.fn(),

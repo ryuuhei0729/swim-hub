@@ -10,7 +10,7 @@
  * 実引用文字列そのものを capture して assert する。
  */
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 
 vi.mock("@/hooks/useSignedImageUrl", () => ({
@@ -53,10 +53,6 @@ function buildSupabaseMock(membershipsData: unknown[], groupMembershipsData: unk
     selectCalls,
   } as unknown as { from: (table: string) => unknown; selectCalls: string[] };
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("GroupMemberListModal (mobile) - メンバー一覧の年上順ソート", () => {
   it("select() に渡す文字列に birthday が含まれる（未select化の検出）", async () => {

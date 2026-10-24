@@ -9,10 +9,9 @@ import { afterEach, vi } from "vitest";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 
-// 各テスト後にクリーンアップ
+// 各テスト後にクリーンアップ (モックの呼び出し履歴は vitest.config の clearMocks が各テスト前に消す)
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
 });
 
 // グローバルなモック設定

@@ -29,7 +29,6 @@ describe("useCalendarQuery", () => {
   let mockApi: DashboardAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockApi = new DashboardAPI(mockClient);
   });

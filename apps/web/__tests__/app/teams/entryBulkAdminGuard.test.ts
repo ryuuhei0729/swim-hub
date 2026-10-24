@@ -146,7 +146,6 @@ function buildSupabaseMock(
 
 describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "user-1" });
     mockGetBestTimesForUsers.mockResolvedValue(new Map());
     mockGetLocale.mockResolvedValue("ja");

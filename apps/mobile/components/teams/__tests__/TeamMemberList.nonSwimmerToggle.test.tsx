@@ -57,92 +57,16 @@
 // selectBestTime/formatTime をそのまま実行させ、期待値だけテスト側で計算する)。
 // =============================================================================
 
-import React, { useEffect } from "react";
-import { Pressable, Text } from "react-native";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import ja from "@apps/shared/messages/ja.json";
-
-const mocks = vi.hoisted(() => {
-  const supabaseFrom = vi.fn();
-  // TeamMemberGroupFilter スタブが onGroupedMembersChange に渡す groupHeaders を
-  // テストごとに差し替えるための箱。既定は空 Map (グルーピングなし)。
-  const groupHeadersBox = { current: new Map<number, string>() };
-  return { supabaseFrom, authValue: { supabase: { from: supabaseFrom } }, groupHeadersBox };
-});
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => mocks.authValue,
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useUpdateMemberRoleMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useRemoveMemberMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}));
-
-vi.mock("../member-detail", () => ({
-  MemberDetailModal: ({
-    isOpen,
-    member,
-  }: {
-    isOpen: boolean;
-    member: { users: { name: string } } | null;
-  }) =>
-    isOpen && member
-      ? React.createElement(Text, null, `member-detail-open:${member.users.name}`)
-      : null,
-}));
-
-vi.mock("../TeamMemberGroupFilter", () => ({
-  TeamMemberGroupFilter: ({
-    members,
-    onGroupedMembersChange,
-  }: {
-    members: TeamMembershipWithUser[];
-    onGroupedMembersChange: (sorted: TeamMembershipWithUser[], headers: Map<number, string>) => void;
-  }) => {
-    useEffect(() => {
-      // 【Critical 2 回帰防止】このスタブが常に空 Map を返していたため、
-      // remapGroupHeadersForSwimmers の付け替えロジックが一度も実行されないまま
-      // 全 green になっていた (Reviewer がコード読解で発見)。
-      // mocks.groupHeadersBox を経由してテストごとに非空の Map を注入できるようにする。
-      onGroupedMembersChange(members, mocks.groupHeadersBox.current);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [members]);
-    return React.createElement(Pressable, null, React.createElement(Text, null, "group-filter-stub"));
-  },
-}));
-
-vi.mock("@shopify/flash-list", () => ({
-  FlashList: ({
-    data,
-    renderItem,
-    keyExtractor,
-    ListEmptyComponent,
-    ...props
-  }: {
-    data?: unknown[];
-    renderItem?: (info: { item: unknown; index: number }) => React.ReactNode;
-    keyExtractor?: (item: unknown, index: number) => string | number;
-    ListEmptyComponent?: React.ReactNode;
-  } & Record<string, unknown>) =>
-    React.createElement(
-      "div",
-      props,
-      data && data.length > 0
-        ? data.map((item, index) =>
-            React.createElement(
-              "div",
-              { key: keyExtractor ? keyExtractor(item, index) : index },
-              renderItem ? renderItem({ item, index }) : null,
-            ),
-          )
-        : (ListEmptyComponent ?? null),
-    ),
-}));
-
+import { harness, mockEmptyRecordsQuery, mockRecordsQuery } from "./teamMemberListHarness";
 import { TeamMemberList } from "../TeamMemberList";
+
+harness.groupFilterLabel = "group-filter-stub";
+harness.showOpenedMemberDetail = true;
+harness.groupHeaders = new Map<number, string>();
 
 type MemberWithSwimmer = TeamMembershipWithUser & { is_swimmer: boolean };
 
@@ -163,28 +87,9 @@ const buildMember = (
     ...overrides,
   }) as unknown as MemberWithSwimmer;
 
-const mockEmptyRecordsQuery = () => {
-  mocks.supabaseFrom.mockImplementation((_table: string) => ({
-    select: vi.fn(() => ({
-      in: vi.fn(() => ({
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      })),
-    })),
-  }));
-};
-
 // ベストタイム表示 (V-13-03) 検証専用: 指定した records 行をそのまま返すよう差し替える。
 // 中身の突合ロジック (getBestTime の name_jp/distance 照合) はテスト側で再実装せず、
 // 本番の TeamMemberList にそのまま流し込んで検証する (トートロジー回避)。
-const mockRecordsQuery = (records: unknown[]) => {
-  mocks.supabaseFrom.mockImplementation((_table: string) => ({
-    select: vi.fn(() => ({
-      in: vi.fn(() => ({
-        order: vi.fn().mockResolvedValue({ data: records, error: null }),
-      })),
-    })),
-  }));
-};
 
 const renderList = (members: TeamMembershipWithUser[]) =>
   render(
@@ -205,9 +110,8 @@ const expectedToggleLabel = (count: number) => sectionToggleTemplate.replace("{c
 
 describe("mobile TeamMemberList - 非泳者アコーディオン", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockEmptyRecordsQuery();
-    mocks.groupHeadersBox.current = new Map();
+    harness.groupHeaders = new Map();
   });
 
   it("[V-13-01] グリッド本体には泳者の名前だけが表示され、非泳者の名前は出ない", async () => {
@@ -328,7 +232,7 @@ describe("mobile TeamMemberList - 非泳者アコーディオン", () => {
   //
   // 従来のスタブは onGroupedMembersChange に常に空 Map を渡していたため、
   // このロジックの実行経路が一度もテストされていなかった (Reviewer 指摘)。
-  // groupHeadersBox 経由で非空の Map を実際に注入し、web と共通の単一定義元
+  // harness.groupHeaders で非空の Map を実際に注入し、web と共通の単一定義元
   // (apps/shared/utils/swimmerFilter.ts の remapGroupHeadersForSwimmers) が
   // mobile 側でも正しく呼び出されていることを検証する。
   // ---------------------------------------------------------------------
@@ -339,7 +243,7 @@ describe("mobile TeamMemberList - 非泳者アコーディオン", () => {
         buildMember({ id: "m2", user_id: "u-swimmer", name: "泳ぐ次郎", is_swimmer: true }),
       ];
       // グループ「Aチーム」は元の並び (フィルタ前) の index0 (見学花子) から始まる
-      mocks.groupHeadersBox.current = new Map([[0, "Aチーム"]]);
+      harness.groupHeaders = new Map([[0, "Aチーム"]]);
 
       renderList(members);
 
@@ -365,7 +269,7 @@ describe("mobile TeamMemberList - 非泳者アコーディオン", () => {
         buildMember({ id: "m3", user_id: "u-swimmer", name: "泳ぐ三郎", is_swimmer: true }),
       ];
       // 「Bチーム」は全員非泳者のグループ (index0-1)。「Cチーム」は泳者のグループ (index2)
-      mocks.groupHeadersBox.current = new Map([
+      harness.groupHeaders = new Map([
         [0, "Bチーム"],
         [2, "Cチーム"],
       ]);
@@ -387,7 +291,7 @@ describe("mobile TeamMemberList - 非泳者アコーディオン", () => {
         buildMember({ id: "m3", user_id: "u-swimmer2", name: "泳ぐ三郎", is_swimmer: true }),
       ];
       // 「Aチーム」は元の並び index1 (泳者 泳ぐ次郎) から始まる
-      mocks.groupHeadersBox.current = new Map([[1, "Aチーム"]]);
+      harness.groupHeaders = new Map([[1, "Aチーム"]]);
 
       renderList(members);
 

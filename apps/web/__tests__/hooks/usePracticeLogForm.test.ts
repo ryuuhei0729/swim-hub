@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { usePracticeLogForm } from "../../components/forms/practice-log/hooks/usePracticeLogForm";
 import type { PracticeLogEditData, Tag } from "../../components/forms/practice-log/types";
@@ -11,10 +11,6 @@ import type { TimeEntry } from "@apps/shared/types/ui";
 // 変換するため submitData の長さも menus と一致する。fixture(hook初期状態)がこの不変条件を
 // 保証しているため、noUncheckedIndexedAccess の non-null assertion で対応する。
 describe("usePracticeLogForm", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("初期状態", () => {
     it("isOpen=trueのときデフォルトメニューが1つ作成される", () => {
       const { result } = renderHook(() => usePracticeLogForm({ isOpen: true, editData: null }));

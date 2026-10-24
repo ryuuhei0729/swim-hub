@@ -75,7 +75,6 @@ async function run() {
 
 describe("EntriesDataLoader — 目標取得", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "admin-1" });
     vi.spyOn(console, "error").mockImplementation(() => {});
   });

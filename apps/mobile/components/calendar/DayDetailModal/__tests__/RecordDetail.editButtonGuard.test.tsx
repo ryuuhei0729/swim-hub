@@ -17,10 +17,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const mockUseAuth = vi.hoisted(() => vi.fn());
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: mockUseAuth,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/helpers/authContext";
 
 vi.mock("expo-sharing", () => ({
   isAvailableAsync: vi.fn().mockResolvedValue(true),
@@ -64,11 +63,11 @@ function renderRecordDetail(
     then: (resolve: (v: { data: unknown[]; error: null }) => unknown) =>
       Promise.resolve({ data: [], error: null }).then(resolve),
   };
-  mockUseAuth.mockReturnValue({
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({
     supabase: { from: () => chain },
     user: { id: "user-1" },
     getAccessToken: vi.fn().mockResolvedValue(null),
-  });
+  }));
 
   return render(
     <RecordDetail
@@ -85,7 +84,7 @@ function renderRecordDetail(
 
 describe("RecordDetail 編集ボタンの isTeamCompetition ガード", () => {
   beforeEach(() => {
-    mockUseAuth.mockReset();
+    vi.mocked(useAuth).mockReset();
   });
 
   it("[V-M-RE01] isTeamCompetition=true のとき編集ボタンが描画されない", () => {

@@ -16,7 +16,7 @@
 
 import React from "react";
 import { render, fireEvent, waitFor, configure } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createQueryWrapper } from "../../__tests__/helpers/testUtils";
 import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
@@ -64,9 +64,7 @@ const h = vi.hoisted(() => ({
 // (entryValidationAndDuplicate.test.tsx と同じ方式。共有モック自体は変更しない)。
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("react-native", async () => {
   const actual = await vi.importActual<typeof import("../../__mocks__/react-native")>(
@@ -352,10 +350,6 @@ function timeInput(utils: Utils): HTMLInputElement {
 }
 
 describe("CompetitionTabFormScreen — ベストタイムを流用ボタン [M1]", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[SC4] entryBestTime が存在する行でボタンを押すと、入力欄の値が formatTimeBest(entryBestTime.time) と一致する", async () => {
     const utils = await renderEntryTab([makeBestTime({ time: 28.5 })]);
 

@@ -153,7 +153,6 @@ describe("TeamRecordStyleDetailScreen — 保存成功後のキャッシュ無�
   let invalidateSpy: MockInstance<QueryClient["invalidateQueries"]>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     queryClient = makeQueryClient();
     invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -266,7 +265,6 @@ describe("[V-M32] 部分失敗時のランキングキャッシュ無効化 (M-1
     }).length;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     queryClient = makeQueryClient();
     invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 

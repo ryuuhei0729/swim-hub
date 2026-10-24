@@ -101,7 +101,6 @@ const memberRow = (userId: string, name: string, gender: number, role = "user") 
 
 describe("PracticeLogDataLoader — gender の配線 [WV-17, PM裁定修正B]", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "user-1" });
     mockGetLocale.mockResolvedValue("ja");
   });

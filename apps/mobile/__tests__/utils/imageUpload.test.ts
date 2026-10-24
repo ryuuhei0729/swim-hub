@@ -15,7 +15,7 @@
  * [IM-08] uploadImagesViaApi — 401 レスポンス時に「認証が必要」エラーが throw される (既存仕様の確認)
  */
 
-import { describe, it, vi, beforeEach, expect } from "vitest";
+import { describe, it, vi, expect } from "vitest";
 
 // env モック (webApiUrl の解決用)
 vi.mock("@/lib/env", () => ({
@@ -38,10 +38,6 @@ const PRACTICE_BUCKET: ImageBucket = "practice-images";
 const COMPETITION_BUCKET: ImageBucket = "competition-images";
 
 describe("[IM-01] uploadImageViaApi — 正常系", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("有効な access_token と practice バケットを指定すると /api/storage/images/practice に POST され { path } が返る", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -86,10 +82,6 @@ describe("[IM-01] uploadImageViaApi — 正常系", () => {
 });
 
 describe("[IM-02] uploadImageViaApi — 認証エラー (401)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("fetch が 401 を返したとき Error をスローし、エラーメッセージに API レスポンスの error フィールドが含まれる", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -118,10 +110,6 @@ describe("[IM-02] uploadImageViaApi — 認証エラー (401)", () => {
 });
 
 describe("[IM-03] uploadImagesViaApi — 複数画像", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("3 枚の画像を渡すと fetch が 3 回呼ばれ、3 件の { path } 配列が返る", async () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: async () => ({ path: "path/img1.jpg" }) })
@@ -148,10 +136,6 @@ describe("[IM-03] uploadImagesViaApi — 複数画像", () => {
 });
 
 describe("[IM-04] uploadImagesViaApi — ロールバック", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("2 枚目のアップロードが失敗したとき、1 枚目の path に対して DELETE リクエストが発行される", async () => {
     // 1枚目: 成功
     mockFetch
@@ -202,10 +186,6 @@ describe("[IM-04] uploadImagesViaApi — ロールバック", () => {
 });
 
 describe("[IM-05] uploadImageViaApi — access_token の境界値", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("access_token が空文字のとき Authorization ヘッダは 'Bearer ' になる（API は 401 を返す想定）", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -225,10 +205,6 @@ describe("[IM-05] uploadImageViaApi — access_token の境界値", () => {
 });
 
 describe("[IM-06~07] getSignedImageUrl — 署名付きURL解決 (Issue #36: private バケット対応)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[IM-06] 相対パスの場合、presigned-url API を Bearer 認証付きで GET し、署名付きURLを返す", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -281,10 +257,6 @@ describe("[IM-06~07] getSignedImageUrl — 署名付きURL解決 (Issue #36: pri
 });
 
 describe("[IM-08] uploadImagesViaApi — 401 レスポンス時の動作 (既存仕様確認)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("401 レスポンス時に Error が throw される (token が正しく Authorization ヘッダに載る)", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

@@ -197,8 +197,7 @@ function makeFilteringRecordsBuilder(rows: RecordRow[]) {
     let orderCol: string | null = null;
     let ascending = true;
     let asSingle = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const builder: any = {};
+    const builder: Record<string, unknown> = {};
     builder.select = vi.fn(() => builder);
     builder.eq = vi.fn((col: string, value: unknown) => {
       filters.push((row) => resolvePath(row, col) === value);

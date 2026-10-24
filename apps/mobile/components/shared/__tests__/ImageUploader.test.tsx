@@ -80,7 +80,6 @@ const BASE_PROPS = {
 
 describe("ImageUploader — Android Photo Picker (権限撤去・JPEG再エンコード)", () => {
   beforeEach(async () => {
-    vi.clearAllMocks();
     await setPlatform("android");
     mocks.launchImageLibraryAsync.mockResolvedValue({ canceled: true, assets: [] });
     setupManipulatorChain({ uri: "file:///reencoded.jpg", base64: "JPEGBASE64" });
@@ -256,7 +255,6 @@ describe("ImageUploader — Android Photo Picker (権限撤去・JPEG再エン�
 
 describe("ImageUploader — iOS legacy Picker (回帰: getFileExtensionFromAsset 経由を維持)", () => {
   beforeEach(async () => {
-    vi.clearAllMocks();
     await setPlatform("ios");
     mocks.requestMediaLibraryPermissionsAsync.mockResolvedValue({ status: "granted" });
     mocks.launchImageLibraryAsync.mockResolvedValue({ canceled: true, assets: [] });

@@ -106,7 +106,6 @@ function renderList(competitions: ReturnType<typeof makeCompetition>[], isAdmin:
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   mocks.useUpdateCompetitionMutation.mockReturnValue({
     mutateAsync: mocks.mutateAsync,
     isPending: false,

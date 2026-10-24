@@ -12,7 +12,7 @@
 // @/lib/supabase-server の createRouteHandlerClient ではなく共有パッケージ内部の
 // createCallbackSupabaseClient (@supabase/ssr の createServerClient) が生成する。
 // モック対象をそちらへ移す (timer/scanner の route.test.ts と同じ形)。
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("next/headers", () => ({
@@ -43,10 +43,6 @@ function location(res: Response): string {
 }
 
 const ORIGIN = "http://localhost:3000";
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("GET /api/auth/callback — token_hash フロー (verifyOtp)", () => {
   it("signup: 成功時に /onboarding へリダイレクトされる", async () => {

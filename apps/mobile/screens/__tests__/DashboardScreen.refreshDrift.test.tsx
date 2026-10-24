@@ -253,7 +253,6 @@ describe("DashboardScreen — pull-to-refresh のクエリ網羅性 (ドリフ�
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     captured.refreshAll = null;
 
     supabaseMock = createTableDispatchSupabase({

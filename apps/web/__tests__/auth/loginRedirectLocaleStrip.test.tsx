@@ -103,7 +103,6 @@ import LoginEmailPage from "../../app/[locale]/(unauthenticated)/login/email/pag
 import { EmailSignInForm } from "../../components/auth/EmailSignInForm";
 
 beforeEach(() => {
-  vi.clearAllMocks();
   mocks.signIn.mockResolvedValue({ error: null });
 });
 

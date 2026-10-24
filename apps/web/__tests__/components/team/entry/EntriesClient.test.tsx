@@ -126,7 +126,6 @@ function renderEntriesClient(
 
 describe("EntriesClient — 保存フロー回帰テスト", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.createBulkEntries.mockResolvedValue([]);
     mocks.updateEntry.mockResolvedValue({});
     mocks.deleteBulkEntries.mockResolvedValue(undefined);

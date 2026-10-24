@@ -221,7 +221,6 @@ function setupImmediateInitialSession(
 
 describe("[AP-01] getAccessToken() — 有効なセッション", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupImmediateInitialSession();
     setupDefaultFromMock();
   });
@@ -246,7 +245,6 @@ describe("[AP-01] getAccessToken() — 有効なセッション", () => {
 
 describe("[AP-02] getAccessToken() — 期限切れセッション (リフレッシュ)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupImmediateInitialSession();
     setupDefaultFromMock();
   });
@@ -289,7 +287,6 @@ describe("[AP-02] getAccessToken() — 期限切れセッション (リフレッ
 
 describe("[AP-03] getAccessToken() — セッション完全 null", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupImmediateInitialSession(null);
     setupDefaultFromMock();
   });
@@ -311,7 +308,6 @@ describe("[AP-03] getAccessToken() — セッション完全 null", () => {
 
 describe("[AP-04] getAccessToken() — 内部例外", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupImmediateInitialSession(null);
     setupDefaultFromMock();
   });
@@ -395,7 +391,6 @@ describe("[AP-06] useAuth — TOKEN_REFRESHED イベント", () => {
 
 describe("[AP-07] updateOnboardingCompleted — 正常系", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupImmediateInitialSession({ user: { id: "user-1" }, access_token: "tok" });
   });
 
@@ -468,7 +463,6 @@ describe("[AP-08] updateOnboardingCompleted — user null", () => {
 
 describe("[AP-09] updateOnboardingCompleted — DB 更新失敗", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     setupImmediateInitialSession({ user: { id: "user-1" }, access_token: "tok" });
   });
 
