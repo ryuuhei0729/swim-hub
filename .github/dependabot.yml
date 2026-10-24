@@ -21,7 +21,11 @@ updates:
 
   # GitHub Actions - keep as-is (low risk)
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # "/" は .github/workflows しか見ない。composite action (.github/actions/*/action.yml) の中の
+    # actions/setup-node・pnpm/action-setup・supabase/setup-cli は列挙しないと更新されない
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "weekly"
       day: "monday"
