@@ -25,7 +25,7 @@
  *
  * トートロジー防止メモ:
  *   期待値 (どのケースでどの id が targetId になるべきか) は Planner が実測した
- *   buildPracticeLogRows の id 契約 (`id: log?.id ?? practice.id`, apps/shared/utils/
+ *   buildPracticeLogRows の id 契約 (`id: log?.id ?? practice.id`, packages/shared/utils/
  *   practiceLogRows.ts) と PM 確定仕様 (タップした1件のみ) から導出したものであり、
  *   PracticesScreen.tsx の実装を読んでコピーしたものではない。
  */

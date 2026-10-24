@@ -4,7 +4,7 @@
  * 実測 (2026-08-11, Phase A): 再発事例が実在する。
  *   `apps/web/app/[locale]/(authenticated)/bulk-besttime/_client/BulkBestTimeClient.tsx:42-64`
  *   が `STYLES: StyleDefinition[] = [...]` として、正規定義
- *   `apps/shared/utils/swimStyles.ts` を使わず種目マスターをローカル再定義している。
+ *   `packages/shared/utils/swimStyles.ts` を使わず種目マスターをローカル再定義している。
  *
  * 実測 (2026-08-12, Phase B) による方針の精緻化:
  *   entries機能のUIは RecordClient.tsx (承認済み前例) と同じ「DBから取得した
@@ -87,7 +87,7 @@ describe("entries機能 — 種目マスターのローカル再定義禁止 (Sp
   );
 
   it(
-    "entries機能がタイム表示に formatTimeBest を ( `apps/shared/utils/time.ts` から) 使っている" +
+    "entries機能がタイム表示に formatTimeBest を ( `packages/shared/utils/time.ts` から) 使っている" +
       "（人間の意図: タイム表示『分:秒.コンマ秒』統一というドメイン品質基準の遵守を" +
       "機械的に確認する）",
     () => {

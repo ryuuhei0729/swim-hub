@@ -166,7 +166,7 @@
 
 - ウェブ: `useQuickTimeInput` フック (`apps/web/components/forms/shared/TimeInput/hooks/useQuickTimeInput.ts`)
 - モバイル: `useQuickTimeInput` フック (`apps/mobile/hooks/useQuickTimeInput.ts`)
-- パーサー: `parseQuickTime` (`apps/shared/utils/quickTimeParser.ts`)
+- パーサー: `parseQuickTime` (`packages/shared/utils/quickTimeParser.ts`)
 
 ### 画像アップロードの実装
 

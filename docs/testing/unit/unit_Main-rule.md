@@ -81,11 +81,11 @@
 
 このプロジェクトでは以下のテスト対象を扱います：
 
-1. **APIクラス** (`apps/shared/api/`)
+1. **APIクラス** (`packages/shared/api/`)
    - Supabaseクライアントを使用するAPIクラス
    - 例: `RecordAPI`, `PracticeAPI`, `StyleAPI`
 
-2. **React Hooks** (`apps/shared/hooks/`)
+2. **React Hooks** (`packages/shared/hooks/`)
    - カスタムフック
    - 例: `usePractices`, `useRecords`, `useTeams`
 
@@ -93,7 +93,7 @@
    - UIコンポーネント
    - 例: `PracticeForm`, `RecordForm`
 
-4. **ユーティリティ関数** (`apps/shared/utils/`, `apps/web/utils/`)
+4. **ユーティリティ関数** (`packages/shared/utils/`, `apps/web/utils/`)
    - 純粋関数
    - 例: `formatTime`, `validateDate`
 
@@ -434,7 +434,7 @@ describe("RecordAPI", () => {
 - Branches: 80%
 - Statements: 75%
 
-（`apps/shared/vitest.config.ts`参照）
+（`packages/shared/vitest.config.ts`参照）
 
 ---
 
@@ -527,7 +527,7 @@ pnpm run test:watch          # ウォッチモード
 pnpm run test:coverage       # カバレッジレポート生成
 
 # 特定のテストのみ実行
-pnpm exec vitest run apps/shared/__tests__/api/records.test.ts
+pnpm exec vitest run packages/shared/__tests__/api/records.test.ts
 ```
 
 ---

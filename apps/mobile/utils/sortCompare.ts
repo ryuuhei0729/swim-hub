@@ -1,12 +1,12 @@
 // =============================================================================
 // null 末尾固定の比較ヘルパー
 // =============================================================================
-// web `apps/shared/hooks/useTableSort.ts` の compareSortValues と同一セマンティクス
+// web `packages/shared/hooks/useTableSort.ts` の compareSortValues と同一セマンティクス
 // (null/undefined は asc/desc に関わらず常に末尾固定、非nil同士の比較結果のみを
 // sortOrder に応じて反転する)を、mobile のスカラー値ソート(date/time/place)向けに
 // 最小限だけ複製したもの。
 //
-// TODO: apps/shared/hooks/useTableSort.ts が compareSortValues (または同等の
+// TODO: packages/shared/hooks/useTableSort.ts が compareSortValues (または同等の
 // null-last 比較関数)を export するようになったら、mobile 側のこの複製は廃止し
 // そちらに委譲する。現時点(2026-07-23)では shared 側は useTableSort フック本体
 // (タプル対応の3状態ソート込み)のみを export しており、単体の比較関数は

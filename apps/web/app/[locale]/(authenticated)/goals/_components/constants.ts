@@ -10,7 +10,7 @@ export const POOL_TYPES = [
   { value: 1 },
 ] as const;
 
-// 泳法。canonical (Fr/Br/Ba/Fly/IM、apps/shared/types/common.ts の SWIM_STYLES) から導出する。
+// 泳法。canonical (Fr/Br/Ba/Fly/IM、packages/shared/types/common.ts の SWIM_STYLES) から導出する。
 // 独立したリテラル配列を持たない (CLAUDE.md: 同一のドメイン対応表を2箇所にハードコードするな)。
 export const SWIM_STYLES = CANONICAL_SWIM_STYLES.map((value) => ({ value })) as ReadonlyArray<{
   value: (typeof CANONICAL_SWIM_STYLES)[number];

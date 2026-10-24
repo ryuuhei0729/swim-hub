@@ -24,7 +24,7 @@
 //          巻き込んで消さないこと (Critical #1 そのものの回帰防止。ミューテーションで
 //          赤を実証する — 手順は本ファイル末尾のコメント参照)
 //
-// `TeamRelayRecordsAPI` (apps/shared/api/teams/relayRecords.ts) を実物 import し
+// `TeamRelayRecordsAPI` (packages/shared/api/teams/relayRecords.ts) を実物 import し
 // 直接呼び出す。screen は render しない。
 // =============================================================================
 
@@ -135,7 +135,7 @@ describe("[V-02] TeamRelayRecordsAPI.replace() の relayRecordIds (id ベース)
 // relay_records が消えない (Critical #1 そのものの回帰防止)
 //
 // ミューテーション手順 (PM 用・本レポートで実施・復元済み):
-//   apps/shared/api/teams/relayRecords.ts の `replace()` 内、
+//   packages/shared/api/teams/relayRecords.ts の `replace()` 内、
 //     const staleIds = [...scope.relayRecordIds];
 //   を
 //     const staleIds = [...scope.relayRecordIds, "team-b-relay-existing"];

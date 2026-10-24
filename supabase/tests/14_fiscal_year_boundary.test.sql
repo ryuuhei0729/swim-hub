@@ -237,12 +237,12 @@ select results_eq(
 --      リレー + 年度                 → 出さない … 下記の理由で事象が発生しえない
 --
 --    ⚠️ **リレーで出さない根拠は「型」である** (コメントではない)。
---       `apps/shared/api/teams/relayRecords.ts` の
+--       `packages/shared/api/teams/relayRecords.ts` の
 --       `RelayRecordReplaceScope.competitionId` は **`string` (非 nullable)** で、
 --       insert ビルダーも必須にしている。つまり
 --       **`relay_records.competition_id = NULL` の行を作るアプリ経路が存在しない。**
 --       列が nullable なのは将来の直接入力のための予約
---       (`apps/shared/types/relayRecord.ts` の `competitionId` の docstring)。
+--       (`packages/shared/types/relayRecord.ts` の `competitionId` の docstring)。
 --
 --    ⚠️ **将来の復活条件**: `RelayRecordReplaceScope.competitionId` が
 --       `string | null` になる / 大会に紐づかないリレーの入力 UI が入る、

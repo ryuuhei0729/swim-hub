@@ -4,7 +4,7 @@
  * Sprint Contract で合意した新規キーの存在を固定する
  * (apps/web/__tests__/i18n/messages-web-mobile-parity-sprint.test.ts と同方針)。
  * キー集合の ja/en/zh/ko/de 完全一致・ICUプレースホルダー対称性等の網羅チェックは
- * apps/shared/__tests__/messages-coverage.test.ts が動的に全キーを対象にしているため、
+ * packages/shared/__tests__/messages-coverage.test.ts が動的に全キーを対象にしているため、
  * ここでは重複させず「本スプリントで追加すべき正確なキー名」のみを固定する。
  *
  * Sprint Contract 検証観点:

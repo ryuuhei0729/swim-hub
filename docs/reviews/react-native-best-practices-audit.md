@@ -269,13 +269,13 @@ const { styleId, time, note } = useRecordStore(
 
 **状態**: 完璧
 
-全ネイティブ依存（`react-native`, `expo-*`, `react-native-screens`等）が`apps/mobile/package.json`に配置。`apps/shared/package.json`には含まれていない。
+全ネイティブ依存（`react-native`, `expo-*`, `react-native-screens`等）が`apps/mobile/package.json`に配置。`packages/shared/package.json`には含まれていない。
 
 ### 依存バージョン統一
 
 **状態**: 完璧
 
-| パッケージ              | apps/mobile | apps/shared   |
+| パッケージ              | apps/mobile | packages/shared   |
 | ----------------------- | ----------- | ------------- |
 | `@tanstack/react-query` | ^5.90.10    | ^5.90.10      |
 | `@supabase/supabase-js` | ^2.80.0     | ^2.80.0       |

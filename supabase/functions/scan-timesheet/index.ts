@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
     // 構造で、読み取りと加算の間に競合窓があった。同一ユーザーが同時に2リクエスト
     // を送ると両方が「まだ枠が残っている」と判定して Gemini を呼べてしまう。
     // reserve_user_daily_usage RPC (service_role 限定) は Premium 判定 (関数内部
-    // で user_subscriptions から導出。apps/shared/utils/premium.ts の
+    // で user_subscriptions から導出。packages/shared/utils/premium.ts の
     // checkIsPremium() と同一ロジック) と全アプリ横断の使用量加算を
     // pg_advisory_xact_lock で直列化した単一トランザクションで行うため、
     // この競合窓が閉じる。

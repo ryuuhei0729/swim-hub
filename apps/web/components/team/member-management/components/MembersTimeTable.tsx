@@ -102,7 +102,7 @@ export const MembersTimeTable: React.FC<MembersTimeTableProps> = ({
 
   // 非泳者は表の本体行には出さず、最下行の「非泳者 (N)」トグル行をクリックすると
   // 同じ tbody 内でその場に展開するアコーディオンとして表示する (下部に別テーブルは出さない)。
-  // (単一定義元 apps/shared/utils/swimmerFilter.ts を使う。生の members 配列そのものは
+  // (単一定義元 packages/shared/utils/swimmerFilter.ts を使う。生の members 配列そのものは
   // ここでは書き換えない)。
   const swimmerMembers = useMemo(() => excludeNonSwimmers(members), [members]);
   const nonSwimmerMembers = useMemo(() => selectNonSwimmers(members), [members]);

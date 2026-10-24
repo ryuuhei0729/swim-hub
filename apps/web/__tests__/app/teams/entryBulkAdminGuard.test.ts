@@ -391,6 +391,6 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
 
   // V-10（非adminがAPI越しに他人のエントリーを作成→拒否）は
   // server loader (画面ガード) ではなく API 層の責務。
-  // 重複実装を避けるため apps/shared/__tests__/api/entries.test.ts の
+  // 重複実装を避けるため packages/shared/__tests__/api/entries.test.ts の
   // 「管理者権限を持たないユーザーが呼び出すとエラーになる」に検証を一本化する。
 });

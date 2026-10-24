@@ -231,7 +231,7 @@ describe("useImageUpload", () => {
 
   describe("validateFile - 例外発生", () => {
     // NOTE (情報露出防止): `validateFile` が投げた値は `toUserFacingMessage` を経由して
-    // エラーに設定される (`apps/shared/utils/userFacingError.ts` docstring 参照)。
+    // エラーに設定される (`packages/shared/utils/userFacingError.ts` docstring 参照)。
     // `PostgrestError` 等の生 `Error` は「テーブル名・カラム名・RLS ポリシー詳細を含む」
     // 可能性があるため、メッセージをそのまま表示せず `forms.imageUploader.invalidFile`
     // (ja: "無効なファイルです") の汎用フォールバックに置き換える。

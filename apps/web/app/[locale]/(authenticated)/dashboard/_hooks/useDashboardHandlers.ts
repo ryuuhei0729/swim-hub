@@ -173,7 +173,7 @@ export function useDashboardHandlers({
           // Google Calendar同期を含むミューテーションを使用
           await deletePractice(itemId);
         } else if (itemType === "practice_log") {
-          // 共有API (apps/shared/api/practices.ts の deletePracticeLog) 経由に統一。
+          // 共有API (packages/shared/api/practices.ts の deletePracticeLog) 経由に統一。
           // PostgREST は RLS が DELETE を拒否しても error を返さず0行削除で正常終了するため、
           // 共有API側で .select("id") + 0行 throw のガードが入っている。インラインで
           // supabase.from("practice_logs").delete() を再実装すると同じテーブルの削除ロジックが
@@ -195,7 +195,7 @@ export function useDashboardHandlers({
         console.error("記録の削除に失敗しました:", error);
         // deletePractice/deletePracticeLog等が投げるエラーはここまで握りつぶされ、
         // 呼び出し元 (DashboardClient.tsx) にはエラー表示手段が無いため、ここで
-        // ユーザーに見える形にする。API 層 (apps/shared/api/practices.ts 等) が
+        // ユーザーに見える形にする。API 層 (packages/shared/api/practices.ts 等) が
         // 投げるのは i18n されていない生の Error/PostgrestError であり、そのまま
         // メッセージを表示すると多言語ユーザーへの誤表示や情報露出になるため、
         // UserFacingError 由来のメッセージのみを通し、それ以外は i18n 済みの

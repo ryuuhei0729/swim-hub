@@ -15,7 +15,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@shared/racePace": path.resolve(__dirname, "../../apps/shared/utils/racePace"),
+      "@shared/racePace": path.resolve(__dirname, "../shared/utils/racePace"),
       "@fixtures": path.resolve(__dirname, "./fixtures"),
     },
   },

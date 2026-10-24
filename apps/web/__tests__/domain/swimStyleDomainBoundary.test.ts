@@ -14,7 +14,7 @@
  *   方向に緩めてしまうリスクがある (このスプリントの本来の目的を破壊する)。
  *
  * 検証観点:
- *   [V-3-01] 種目マスタードメイン (`SWIM_STYLES`, apps/shared/types/common.ts) の
+ *   [V-3-01] 種目マスタードメイン (`SWIM_STYLES`, packages/shared/types/common.ts) の
  *            値集合と、練習ログドメイン (`SWIM_STYLES`,
  *            apps/web/components/forms/practice-log/types.ts) の値集合が
  *            (順序を問わず) 完全に一致する
@@ -28,7 +28,7 @@
  *   跨リポ CI が存在しないため、この一致を自動テストで保証することはできない
  *   (前スプリントの `tsconfig-canonical.test.ts` と同じ制約)。3リポ間の一致は
  *   人間が値を変更する際に手動で3ファイルを同期することに依存する:
- *     - swim-hub/apps/shared/types/common.ts (SWIM_STYLES, このファイルが参照)
+ *     - swim-hub/packages/shared/types/common.ts (SWIM_STYLES, このファイルが参照)
  *     - swimhub-scanner/apps/shared/types/api.ts (SwimStroke)
  *     - (timer は種目コードを扱わないため対象外)
  *

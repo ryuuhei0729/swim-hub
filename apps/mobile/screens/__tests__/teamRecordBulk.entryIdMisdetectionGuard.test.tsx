@@ -17,7 +17,7 @@
 //
 // `saveStyleRecords` / `scopeExistingRecordIdsForEntries` を実物 import して
 // 直接呼び出す (screen は render しない)。判定は
-// `computeRecordSaveDiff` (apps/shared/utils/recordSaveDiff.ts) の
+// `computeRecordSaveDiff` (packages/shared/utils/recordSaveDiff.ts) の
 // membership 判定に委譲されるので、ここではその結果を saveStyleRecords 経由の
 // 実際の insert/update 呼び出しとして観測する。
 //

@@ -15,7 +15,7 @@
  *   lp.footer / lp.deviceMockup を含む。これらはリグレッションとして保護する。
  *
  *   Developer への要求:
- *     `apps/shared/messages/{ja,en,zh,ko,de}.json` に `lp.v42` 名前空間を追加し、
+ *     `packages/shared/messages/{ja,en,zh,ko,de}.json` に `lp.v42` 名前空間を追加し、
  *     以下のキーを5言語同時に実装すること:
  *
  *     lp.v42:
@@ -48,7 +48,7 @@ import * as path from "path";
 
 const MESSAGES_DIR = path.resolve(
   __dirname,
-  "../../../../shared/messages"
+  "../../../../../packages/shared/messages"
 );
 const LOCALES = ["ja", "en", "zh", "ko", "de"] as const;
 

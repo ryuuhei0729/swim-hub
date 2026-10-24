@@ -17,7 +17,7 @@ async function hashIp(ip: string): Promise<string> {
 
 /**
  * 今日の日付を JST (Asia/Tokyo) の YYYY-MM-DD で返す。
- * scanner の apps/shared/utils/date.ts の getTodayJST と同型 (swim-hub 側には
+ * scanner の packages/shared/utils/date.ts の getTodayJST と同型 (swim-hub 側には
  * 対応する共有ユーティリティが無いため、この用途専用にローカルで持つ)。
  */
 function getTodayJST(): string {

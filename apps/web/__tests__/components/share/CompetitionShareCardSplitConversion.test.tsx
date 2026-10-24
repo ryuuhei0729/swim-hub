@@ -4,7 +4,7 @@
  * Sprint Contract: GitHub Issue #13 Stage1 (SplitTime 同一リポ内衝突の解消)
  *
  * 背景 (PM 裁定):
- *   `apps/shared/types/record.ts` の `SplitTime` (DB レコード型,
+ *   `packages/shared/types/record.ts` の `SplitTime` (DB レコード型,
  *   `{ id, record_id, distance, split_time, created_at }`) と
  *   `apps/web/utils/lapTimeCalculator.ts` の `SplitTime` (UI 計算型,
  *   `{ distance, splitTime }`) が同一リポ内で名前衝突している。

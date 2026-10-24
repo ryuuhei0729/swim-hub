@@ -4,7 +4,7 @@
  * web apps/web/utils/lapTimeCalculator.ts の挙動を mobile に複製したもの（shared 統合はしない）。
  */
 
-// 注意: apps/shared/types/record.ts の DB レコード型 `SplitTime`
+// 注意: packages/shared/types/record.ts の DB レコード型 `SplitTime`
 // ({id, record_id, distance, split_time, created_at}) とは別物 (UI 計算用の中間値)。
 // 同一リポ内で名前が衝突していたため `LapSplitPoint` にリネームした
 // (apps/web/utils/lapTimeCalculator.ts の対応する型と名称を揃えている)。

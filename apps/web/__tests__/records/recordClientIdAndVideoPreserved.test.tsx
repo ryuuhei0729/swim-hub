@@ -21,7 +21,7 @@
 //      mobile 側には select が必要
 // つまり **mobile は必要・web は不要という非対称が正しい状態**であり、web に
 // select 列を追加すると「読まれないフィールドを増やさない」原則
-// (`apps/shared/api/teams/relayRecords.ts` の `RelayRecordReplaceResult` の
+// (`packages/shared/api/teams/relayRecords.ts` の `RelayRecordReplaceResult` の
 // docstring と同じ考え方) に反する。
 //
 // 🚨 次の担当者へ: 「mobile にあって web に無いのは漏れだ」と早合点しないこと。

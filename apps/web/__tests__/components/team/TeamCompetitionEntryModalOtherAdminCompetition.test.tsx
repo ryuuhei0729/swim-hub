@@ -6,7 +6,7 @@
  *
  * PM 実測で確定した真因 (日付ではない):
  *   TeamCompetitionEntryModal.tsx:72 / :163 の `recordApi.getCompetitions().find(...)` は
- *   `apps/shared/api/records.ts:743 getCompetitions()` の
+ *   `packages/shared/api/records.ts:743 getCompetitions()` の
  *   `.or("user_id.eq.<自分>,user_id.is.null")` により「個人スコープ」でしか大会を取れない。
  *   そのため、自分以外の管理者が作成したチーム大会は `.find()` で必ず見つからず
  *   `competitionEntryModal.competitionNotFound` ("大会が見つかりません") が投げられる。

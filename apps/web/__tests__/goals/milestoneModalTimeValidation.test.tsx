@@ -9,12 +9,12 @@
  * MilestoneParamsForm はその null を `target_time ?? 0` のように 0 へ変換して
  * state に保持する。0 は「意味の無い目標タイム」であり、そのまま保存すると
  * 達成判定が成立しない目標タイム 0 秒のマイルストーンが保存されてしまう。
- * `isMilestoneTimeValueValid` (apps/shared/types/goals.ts) による submit 前検証は
+ * `isMilestoneTimeValueValid` (packages/shared/types/goals.ts) による submit 前検証は
  * これを防ぐガード。
  *
  * トートロジー防止メモ: 「保存 API が呼ばれないこと」と「エラー文言が表示されること」を
  * 実際にモーダルを render・操作して確認する。isMilestoneTimeValueValid 自体の
- * 単体テストは apps/shared/__tests__/types/goals.test.ts が別途持つ。
+ * 単体テストは packages/shared/__tests__/types/goals.test.ts が別途持つ。
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";

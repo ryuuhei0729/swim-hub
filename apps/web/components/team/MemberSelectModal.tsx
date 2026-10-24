@@ -13,7 +13,7 @@ export interface MemberSelectOption {
   role: string;
   name: string;
   // optional: 呼び出し元によっては is_swimmer を select していない場合がある。
-  // undefined は「泳者」として扱う (apps/shared/utils/swimmerFilter.ts と同じ判定)。
+  // undefined は「泳者」として扱う (packages/shared/utils/swimmerFilter.ts と同じ判定)。
   is_swimmer?: boolean;
   // optional: 呼び出し元によっては gender を select していない場合がある (PM裁定 W10)。
   // グルーピング (useMemberGroupSort の性別カテゴリ) にのみ使う。undefined のときは

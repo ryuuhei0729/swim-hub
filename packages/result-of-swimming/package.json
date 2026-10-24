@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Result of Swimming のレースデータ収集・LAP統計集計パイプライン",
-  "comment": "ランタイム依存ゼロ (node 組み込みの fetch/fs のみ)。CJS として解決する (apps/shared に type:module が無く ESM からは named import できないため)。tsx は CLI 実行用の dev 依存。テスト/型検査は swim-hub ルートの vitest/tsc を使う (pnpm workspace の一員なので CI の pnpm -r type-check でも型検査される)。",
+  "comment": "ランタイム依存ゼロ (node 組み込みの fetch/fs のみ)。CJS として解決する (packages/shared に type:module が無く ESM からは named import できないため)。tsx は CLI 実行用の dev 依存。テスト/型検査は swim-hub ルートの vitest/tsc を使う (pnpm workspace の一員なので CI の pnpm -r type-check でも型検査される)。",
   "scripts": {
     "test": "vitest run",
     "type-check": "tsc --noEmit",

@@ -49,7 +49,7 @@ import { UserFacingError } from "@apps/shared/utils/userFacingError";
 import type { TeamRelayRankingFilters } from "@apps/shared/types";
 import { buildDefaultRelayRankingFilters } from "@apps/shared/utils/relayRankingAxis";
 import { TeamRelayRankings } from "../TeamRelayRankings";
-import jaMessages from "../../../../../shared/messages/ja.json";
+import jaMessages from "../../../../../../packages/shared/messages/ja.json";
 
 // ⚠️ ランキング系のコンポーネントは **プロフィール画像を描画しない**ので
 //    `useSignedImageUrl` を import しない (ユーザー依頼で撤去済み)。
@@ -211,7 +211,7 @@ vi.mock("@/contexts/AuthProvider", () => ({
  *   - ツールバー / 要約 / 絞り込みシート / バッジはここに存在しない
  * 絞り込み経由の検証は親の `./TeamRankings.test.tsx` に移した。
  * 選択肢の並びと引き継ぎ規則は
- * `apps/shared/__tests__/utils/rankingEventAxis.test.ts` が定義元。
+ * `packages/shared/__tests__/utils/rankingEventAxis.test.ts` が定義元。
  *
  * ここで検証するのは「渡された条件をそのまま RPC に流し、結果を描く」ことである。
  */

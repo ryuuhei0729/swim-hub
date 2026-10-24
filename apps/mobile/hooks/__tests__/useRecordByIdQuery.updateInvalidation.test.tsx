@@ -8,7 +8,7 @@
 //   に置き換えられた。これにより「一括入力直後に大会タブから初回編集する」ケース
 //   (V-01/V-02) は解消される一方、useUpdateRecordMutation の onSuccess は
 //   recordKeys.lists() のみを invalidate し、recordKeys.detail(id) を
-//   invalidate しない (apps/shared/hooks/queries/records.ts, 変更なし=既存の
+//   invalidate しない (packages/shared/hooks/queries/records.ts, 変更なし=既存の
 //   潜在バグ)。recordKeys.detail は recordKeys.lists() 配下ではなく
 //   recordKeys.all の直下の兄弟ノードのため、lists() の invalidate では
 //   prefix マッチしない。

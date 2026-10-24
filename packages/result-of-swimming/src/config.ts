@@ -2,7 +2,7 @@
 // config.ts - 出力先とクロールの既定値
 // =============================================================================
 // import.meta.url を使わないのは、この package を CJS として解決する必要が
-// あるため (apps/shared に "type": "module" が無く、ESM から named import
+// あるため (packages/shared に "type": "module" が無く、ESM から named import
 // できない)。CLI は package scripts 経由で package ルートから実行されるので
 // process.cwd() を基準にして問題ない。ROS_DATA_DIR で上書きできる。
 // =============================================================================

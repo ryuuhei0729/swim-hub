@@ -13,7 +13,7 @@
 // 「非重複エラーはメッセージをそのまま透過する」等のテストは元々「生の Error メッセージが
 // そのまま error state に入る」ことを正解として固定していたが、これは情報露出 (テーブル名・
 // RLS ポリシー詳細を含む生の Postgres/RLS エラーをユーザーに見せてしまう) を仕様として肯定
-// する記述だった。useGroupActions.ts は toUserFacingMessage (apps/shared/utils/
+// する記述だった。useGroupActions.ts は toUserFacingMessage (packages/shared/utils/
 // userFacingError.ts) を使い、UserFacingError インスタンス以外は詳細を出さず i18n 済みの
 // 汎用フォールバックに置き換える設計へ是正済みのため、期待値をフォールバック文言に更新した。
 // 各関数につき、生の Error → フォールバックのテストと対を成す形で、UserFacingError が

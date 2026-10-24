@@ -10,7 +10,7 @@
 ## 1. 背景・課題
 
 Web 版にはベストタイムの手動一括登録画面 `/bulk-besttime`
-（[BulkBestTimeClient.tsx](../apps/web/app/[locale]/(authenticated)/bulk-besttime/_client/BulkBestTimeClient.tsx)）が
+（[BulkBestTimeClient.tsx](../../apps/web/app/[locale]/(authenticated)/bulk-besttime/_client/BulkBestTimeClient.tsx)）が
 存在し、マイページのベストタイム表から「一括入力」ボタンで遷移できる。
 
 **モバイルには同等機能が無い。** モバイルでベストタイムを複数登録するには、
@@ -20,7 +20,7 @@ Web 版にはベストタイムの手動一括登録画面 `/bulk-besttime`
 ### 既存資産（再利用前提）
 
 モバイルのオンボーディングには、**カード追加型の一括ベストタイム入力UIが既に完成している**:
-[`apps/mobile/components/onboarding/OnboardingBestTime.tsx`](../apps/mobile/components/onboarding/OnboardingBestTime.tsx)
+[`apps/mobile/components/onboarding/OnboardingBestTime.tsx`](../../apps/mobile/components/onboarding/OnboardingBestTime.tsx)
 
 - 「種目を追加」→ ボトムシートで種目選択 → カードが増える
 - 各カード: 種目名 / 短水路・長水路トグル / タイム入力（`TextInput`）/ 削除
@@ -55,8 +55,8 @@ Web のグリッド（5種目 × 7距離 × 短/長 × 通常/引継ぎ）をそ
 | タイム保存形式 | `numeric(10,2)` 秒単位（例 `83.45` = 1:23.45） | `records.time` |
 | `pool_type` | `0` = 短水路(SCM/25m), `1` = 長水路(LCM/50m) | `records.pool_type` |
 | `is_relaying` | 引き継ぎ有無。本機能は `false` 固定 | `records.is_relaying` |
-| 種目マスタ | `styles` テーブル / フロントは `STYLES` 定数（id 1–22）と同期 | [OnboardingBestTime.tsx:52-75](../apps/mobile/components/onboarding/OnboardingBestTime.tsx#L52-L75) |
-| タイム入力 → 秒 | `parseTime("1:23.45")` / クイック `"31-2"` 対応 | [apps/shared/utils/time.ts](../apps/shared/utils/time.ts) |
+| 種目マスタ | `styles` テーブル / フロントは `STYLES` 定数（id 1–22）と同期 | [OnboardingBestTime.tsx:52-75](../../apps/mobile/components/onboarding/OnboardingBestTime.tsx#L52-L75) |
+| タイム入力 → 秒 | `parseTime("1:23.45")` / クイック `"31-2"` 対応 | [packages/shared/utils/time.ts](../../packages/shared/utils/time.ts) |
 | 長水路で無効な組合せ | 25m 全種目、100m 個人メドレー | Web `isValidForLongCourse` |
 
 種目マスタ（id・距離・種目）は `OnboardingBestTime.STYLES` と完全一致させる。
@@ -86,7 +86,7 @@ Web のグリッド（5種目 × 7距離 × 短/長 × 通常/引継ぎ）をそ
 
 ### 画面遷移の方針
 - `RecordForm` / `Settings` と同じく **`MainStackParamList` のモーダル/スタック画面**として追加する
-  （[apps/mobile/navigation/types.ts](../apps/mobile/navigation/types.ts) / `MainStack.tsx`）
+  （[apps/mobile/navigation/types.ts](../../apps/mobile/navigation/types.ts) / `MainStack.tsx`）
 - パラメータ不要: `BulkBestTime: undefined`
 
 ---
@@ -146,8 +146,8 @@ const result = await recordAPI.createBulkRecords(records);
 
 ## 6. マイページ側の変更: `MyPageScreen`
 
-[apps/mobile/screens/MyPageScreen.tsx](../apps/mobile/screens/MyPageScreen.tsx) のベストタイムセクションに
-「一括入力」導線を追加する。Web の [MyPageClient.tsx:228-234](../apps/web/app/[locale]/(authenticated)/mypage/_client/MyPageClient.tsx#L228-L234) と対応。
+[apps/mobile/screens/MyPageScreen.tsx](../../apps/mobile/screens/MyPageScreen.tsx) のベストタイムセクションに
+「一括入力」導線を追加する。Web の [MyPageClient.tsx:228-234](../../apps/web/app/[locale]/(authenticated)/mypage/_client/MyPageClient.tsx#L228-L234) と対応。
 
 - ベストタイムセクション見出し行の右側に `Pressable`（アイコン + ラベル）を配置
 - `onPress={() => navigation.navigate("BulkBestTime")}`
@@ -163,7 +163,7 @@ const result = await recordAPI.createBulkRecords(records);
 | 抽出対象 | 内容 | 置き場所(案) |
 |---------|------|-------------|
 | `STYLES` / `formatStyleDisplay` / `genKey` | 種目マスタ・表示・キー生成 | `apps/mobile/components/besttime/styleOptions.ts` |
-| `hasDuplicates` / `getDuplicateKeys` / `canSave` | バリデーション | 同上 or `apps/shared/utils` |
+| `hasDuplicates` / `getDuplicateKeys` / `canSave` | バリデーション | 同上 or `packages/shared/utils` |
 | `EntryRow` / 種目選択モーダル | カードUI・ボトムシート | `apps/mobile/components/besttime/` |
 
 - オンボーディングは「戻る/スキップ/`onComplete`」、マイページは「戻る/`goBack`」とフッターのみ差し替え
@@ -174,7 +174,7 @@ const result = await recordAPI.createBulkRecords(records);
 
 ## 8. データ・既知の制約
 
-- `createBulkRecords` は **INSERT 専用**（[apps/shared/api/records.ts:190](../apps/shared/api/records.ts#L190)）。
+- `createBulkRecords` は **INSERT 専用**（[packages/shared/api/records.ts:190](../../packages/shared/api/records.ts#L190)）。
   同じ種目を再度一括登録すると `records` 行が重複して増える。本機能はベストタイムを
   「複数の記録のうち最速」で表示しているため表示上の不整合は出にくいが、
   **「既存ベストの上書き・置き換え」は提供しない**ことを画面文言で明示する（誤解防止）。
@@ -186,7 +186,7 @@ const result = await recordAPI.createBulkRecords(records);
 
 ## 9. i18n
 
-- 翻訳は `apps/shared/messages/{ja,en}.json`、参照は `react-i18next` の `useTranslation()`。
+- 翻訳は `packages/shared/messages/{ja,en}.json`、参照は `react-i18next` の `useTranslation()`。
 - 既存 `bulkBestTime.*`（ja.json:1737〜）と `onboarding.step3.*`（ja.json:1173〜）を再利用。
 - 追加が必要になりうるキー（実装時に既存有無を確認、無ければ追加）:
   - `mypage.mobile.bulkInput`（マイページの導線ラベル, 既存 web は `mypage.bulkInput`）
@@ -245,7 +245,7 @@ const result = await recordAPI.createBulkRecords(records);
 | マイページ画面 | `apps/mobile/screens/MyPageScreen.tsx` |
 | ベストタイム表示 | `apps/mobile/components/profile/BestTimesTable.tsx` |
 | ナビゲーション型 | `apps/mobile/navigation/types.ts` / `navigation/MainStack.tsx` |
-| 共有 API | `apps/shared/api/records.ts`（`createBulkRecords` L190） |
-| タイムパース | `apps/shared/utils/time.ts`（`parseTime`） |
+| 共有 API | `packages/shared/api/records.ts`（`createBulkRecords` L190） |
+| タイムパース | `packages/shared/utils/time.ts`（`parseTime`） |
 | Web 参考実装 | `apps/web/app/[locale]/(authenticated)/bulk-besttime/_client/BulkBestTimeClient.tsx` |
-| i18n | `apps/shared/messages/{ja,en}.json`（`bulkBestTime.*`, `onboarding.step3.*`） |
+| i18n | `packages/shared/messages/{ja,en}.json`（`bulkBestTime.*`, `onboarding.step3.*`） |

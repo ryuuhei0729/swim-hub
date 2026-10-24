@@ -4,7 +4,7 @@
 
 このドキュメントは、Swim HubのWebアプリケーション（Next.js）をベースに、React Nativeでモバイルアプリを実装するためのロードマップです。
 
-現在のレポジトリ構造を最大限活用し、`apps/shared`配下のAPI層、型定義、React QueryフックをWeb/Mobileで共通利用する設計になっています。
+現在のレポジトリ構造を最大限活用し、`packages/shared`配下のAPI層、型定義、React QueryフックをWeb/Mobileで共通利用する設計になっています。
 
 ## 現在のアーキテクチャ
 
@@ -75,7 +75,7 @@ swim-hub/
 **注意点**:
 
 - `package.json`にFlutter関連のスクリプトがあるため、React Native用に更新が必要
-- モノレポ構成を維持し、`apps/shared`を依存関係として追加
+- モノレポ構成を維持し、`packages/shared`を依存関係として追加
 - **重要**: React 19.2を使用するには、React Native 0.78+とExpo SDK 53+が必要。WebアプリとReactバージョンを統一するため、この組み合わせを推奨
 
 #### 1.2 Supabaseクライアントの初期化
@@ -87,7 +87,7 @@ swim-hub/
 - [x] React Native用Supabaseクライアント作成（`apps/mobile/lib/supabase.ts`）
 - [x] AsyncStorageアダプターの設定（認証トークン保存）
 - [x] 環境変数の管理（`.env`ファイル）
-- [x] 型定義の共有（`apps/shared/types`を使用）
+- [x] 型定義の共有（`packages/shared/types`を使用）
 
 **実装例**:
 
@@ -130,21 +130,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 
 - Webの`AuthProvider`を参考に、React Native用に調整
 - ナビゲーションは後で実装するため、認証状態のみ管理
-- `apps/shared`のAPI層をそのまま使用可能
+- `packages/shared`のAPI層をそのまま使用可能
 
 #### 1.4 React Query設定
 
-**目標**: `apps/shared`のReact QueryフックをReact Nativeで使用可能にする
+**目標**: `packages/shared`のReact QueryフックをReact Nativeで使用可能にする
 
 **タスク**:
 
 - [x] `QueryClientProvider`の設定
-- [x] `apps/shared/lib/react-query.ts`の`createQueryClient`を使用
+- [x] `packages/shared/lib/react-query.ts`の`createQueryClient`を使用
 - [x] プロバイダーの階層構造を構築
 
 **確認事項**:
 
-- `apps/shared/hooks/queries/*.ts`の`'use client'`ディレクティブはReact Nativeでは無視される（問題なし）
+- `packages/shared/hooks/queries/*.ts`の`'use client'`ディレクティブはReact Nativeでは無視される（問題なし）
 - React QueryはReact Nativeでも完全に動作する
 
 ### Phase 2: 認証機能の実装
@@ -249,14 +249,14 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **タスク**:
 
 - [x] 一覧画面の実装
-- [x] `apps/shared/hooks/queries/practices.ts`の`usePracticesQuery`を使用
+- [x] `packages/shared/hooks/queries/practices.ts`の`usePracticesQuery`を使用
 - [x] 日付フィルター機能
 - [x] プルリフレッシュ機能
 - [x] 無限スクロール（ページネーション）
 
 **実装方針**:
 
-- `apps/shared`のAPI層とReact Queryフックをそのまま使用
+- `packages/shared`のAPI層とReact Queryフックをそのまま使用
 - Webの実装を参考に、React Nativeコンポーネントに置き換え
 
 #### 4.2 練習記録詳細
@@ -279,7 +279,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 - [x] 作成画面の実装
 - [x] 編集画面の実装
 - [x] フォーム状態管理（Zustandを使用、Webと同様）
-- [x] `apps/shared/hooks/queries/practices.ts`のミューテーションフックを使用
+- [x] `packages/shared/hooks/queries/practices.ts`のミューテーションフックを使用
 - [x] バリデーション
 
 **実装方針**:
@@ -305,7 +305,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **タスク**:
 
 - [x] 一覧画面の実装
-- [x] `apps/shared/hooks/queries/records.ts`を使用
+- [x] `packages/shared/hooks/queries/records.ts`を使用
 - [x] フィルター機能（種目、年度、プールタイプ）
 - [x] ソート機能
 
@@ -345,7 +345,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **タスク**:
 
 - [x] カレンダーコンポーネントの実装（ライブラリ使用可）
-- [x] `apps/shared/api/dashboard.ts`を使用
+- [x] `packages/shared/api/dashboard.ts`を使用
 - [x] 日付タップで詳細表示
 - [x] 月の切り替え
 
@@ -368,7 +368,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **タスク**:
 
 - [x] 一覧画面の実装
-- [x] `apps/shared/hooks/queries/teams.ts`を使用
+- [x] `packages/shared/hooks/queries/teams.ts`を使用
 - [x] チーム作成ボタン
 
 #### 7.2 チーム詳細
@@ -461,18 +461,18 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 
 #### ✅ そのまま使用可能
 
-1. **API層** (`apps/shared/api/`)
+1. **API層** (`packages/shared/api/`)
    - Supabaseクライアントを受け取る設計のため、React Nativeでも問題なく動作
    - クラスベースの実装で、プラットフォーム非依存
 
-2. **型定義** (`apps/shared/types/`)
+2. **型定義** (`packages/shared/types/`)
    - TypeScriptの型定義のため、完全に共通利用可能
 
-3. **ユーティリティ** (`apps/shared/utils/`)
+3. **ユーティリティ** (`packages/shared/utils/`)
    - `date-fns`はReact Nativeでも動作
    - 純粋な関数のため、プラットフォーム非依存
 
-4. **React Queryフック** (`apps/shared/hooks/queries/`)
+4. **React Queryフック** (`packages/shared/hooks/queries/`)
    - `'use client'`ディレクティブはReact Nativeでは無視される（問題なし）
    - React QueryはReact Nativeでも完全に動作
 
@@ -496,7 +496,7 @@ WebのZustandストア（`apps/web/stores/`）は基本的にそのまま使用�
 
 **推奨アプローチ**:
 
-- 共通ロジックは`apps/shared/stores/`に移動（将来のリファクタリング）
+- 共通ロジックは`packages/shared/stores/`に移動（将来のリファクタリング）
 - プラットフォーム固有の部分は各アプリで実装
 
 ### ナビゲーション
@@ -555,7 +555,7 @@ WebのTailwind CSSベースのコンポーネントを、React Nativeコンポ�
 
 ### リスク1: sharedパッケージの'use client'ディレクティブ
 
-**リスク**: `apps/shared/hooks/queries/*.ts`に`'use client'`があるが、React Nativeでは無視される
+**リスク**: `packages/shared/hooks/queries/*.ts`に`'use client'`があるが、React Nativeでは無視される
 
 **対策**: 問題なし。React Nativeでは`'use client'`は無視されるため、そのまま使用可能
 

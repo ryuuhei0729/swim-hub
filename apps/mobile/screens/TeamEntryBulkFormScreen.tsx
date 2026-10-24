@@ -93,7 +93,7 @@ interface CompetitionInfo {
  * - 個人種目のみ（リレー・split_times・動画添付はスコープ外の縮小版）
  * - 選手ごとに複数種目のエントリータイムを代理入力
  * - 種目選択時にベストタイムを自動プリフィル + 「流用」ボタン併設
- * - 保存前に新規/更新/削除/変更なしの差分確認モーダルを表示（apps/shared/utils/entryDiff を使用）
+ * - 保存前に新規/更新/削除/変更なしの差分確認モーダルを表示（packages/shared/utils/entryDiff を使用）
  */
 export const TeamEntryBulkFormScreen: React.FC = () => {
   const route = useRoute<RouteProps>();
@@ -620,7 +620,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
       // 呼び出し順序: createBulkEntries (upsert) → updateEntry → deleteBulkEntries の順で実行する。
       // 上記の事前バリデーションにより、この時点で toDelete と toCreate/toUpdate の自然キーが
       // 衝突するケースは到達しないため、UNIQUE制約違反は起きない
-      // (apps/shared/api/entries.ts の deleteBulkEntries doc コメントに準拠)。
+      // (packages/shared/api/entries.ts の deleteBulkEntries doc コメントに準拠)。
       if (diffResult.toCreate.length > 0) {
         await entryApi.createBulkEntries(
           teamId,

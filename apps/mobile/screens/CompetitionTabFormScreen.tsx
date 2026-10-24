@@ -112,7 +112,7 @@ interface EntryDraftRow {
   isRelaying: boolean;
   /**
    * この行のタイムがベストタイム流用ボタンで入れられたままか (ラッチ)。
-   * shared `EntryDraftRow` (apps/shared/types/team-entry.ts) の同名フィールドとは別物
+   * shared `EntryDraftRow` (packages/shared/types/team-entry.ts) の同名フィールドとは別物
    * (あちらは代理入力用で数値 styleId + prefilledInput(string) を持つ)。混同しないこと。
    *
    * Sprint Contract v2 裁定2: 値の比較はしない。タイム欄の onChangeText が一度でも
@@ -1001,7 +1001,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
         // できていない」間だけ true になる防御で、画面全体のローディング表示が Save
         // ボタンの描画自体をブロックする経路を保存ハンドラ側でも二重に塞ぐ
         // (PracticeTabFormScreen の同名ガードと同型)。
-        // 【カバーしない経路】useTeamMembersQuery は staleTime: 5分 (apps/shared/hooks/
+        // 【カバーしない経路】useTeamMembersQuery は staleTime: 5分 (packages/shared/hooks/
         // queries/teams.ts) を持つため、直近5分以内に同じチームの members を取得済みだと
         // isLoading=false・stale なキャッシュ値 (例: 剥奪前の admin=true) が返る。
         // その場合このガードは効かないが、competitions UPDATE は実際の RLS で評価され、

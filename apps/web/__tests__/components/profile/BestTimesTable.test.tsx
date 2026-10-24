@@ -55,7 +55,7 @@
  * ## 期待値の作成方法 (トートロジー回避)
  * WAポイントの期待値は全て `node -e` で P=floor(1000*(B/T)^3) を独立に計算した
  * ハードコード値。BestTimesTable/waPoints.ts の実装を呼び出して期待値を生成していない。
- * base time は apps/shared/utils/waPoints.ts の BASE_TIME_TABLE (PM確定済み実数値):
+ * base time は packages/shared/utils/waPoints.ts の BASE_TIME_TABLE (PM確定済み実数値):
  *   SCM(poolType=0) 男子 Fr100: 44.84 / LCM(poolType=1) 男子 Fr100: 46.40
  *   SCM 男子 IM100: 49.28 (LCM 男子 IM100は公式表に存在しない → null)
  *

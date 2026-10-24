@@ -52,7 +52,7 @@ interface TeamMember {
   user_id: string;
   role: string;
   // optional: 呼び出し元の select 漏れ・古いキャッシュでは無い場合がある。
-  // undefined は「泳者」として扱う (apps/shared/utils/swimmerFilter.ts と同じ判定)。
+  // undefined は「泳者」として扱う (packages/shared/utils/swimmerFilter.ts と同じ判定)。
   // PracticeLogDataLoader.tsx は select 済み (修正A)
   is_swimmer?: boolean;
   users: {

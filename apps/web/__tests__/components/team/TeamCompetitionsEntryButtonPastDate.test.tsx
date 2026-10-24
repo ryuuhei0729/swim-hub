@@ -6,7 +6,7 @@
  *
  * PM 確定方針: 過去の大会 (昨日以前 = `date < today`) では「エントリー」ボタンを
  * 非表示にする (web / mobile 両方)。判定は既存の純粋関数
- * `isCompetitionDateInPast` (`apps/shared/utils/date.ts`) を使う
+ * `isCompetitionDateInPast` (`packages/shared/utils/date.ts`) を使う
  * (`date < today` で true。今日・未来・null・無効な日付は false)。
  *
  * このテストは TeamCompetitions.tsx (apps/web/components/team/TeamCompetitions.tsx:731-738

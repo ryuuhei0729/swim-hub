@@ -18,7 +18,7 @@ const resolveToMonorepo = {
 };
 
 // @apps/shared エイリアスの実パス
-const sharedRoot = path.resolve(projectRoot, "../shared");
+const sharedRoot = path.resolve(projectRoot, "../../packages/shared");
 
 config.resolver = {
   ...config.resolver,

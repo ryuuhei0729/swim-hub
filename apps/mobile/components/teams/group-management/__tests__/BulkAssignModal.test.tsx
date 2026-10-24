@@ -907,7 +907,7 @@ describe("BulkAssignModal - ゾーン参照の再アタッチ/削除 [null ク�
  *
  * トートロジー防止メモ: ここではボタンの disabled 状態・エラーバナーの文言・
  * 再試行後の成功という「ユーザーから観測可能な結果」のみを検証する。
- * 期待文言は apps/shared/messages/ja.json の実際の値を直接書き出しており、
+ * 期待文言は packages/shared/messages/ja.json の実際の値を直接書き出しており、
  * 実装のエラーメッセージ構築ロジックをそのままコピーしていない。
  */
 describe("BulkAssignModal - 保存中ガード / 保存失敗時のエラーと再試行", () => {

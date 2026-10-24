@@ -185,7 +185,7 @@ unique index の作り直しと全行の再キー付けが必要になるため)
 
 ## Phase 1 実装済み (純粋ロジック)
 
-`swim-hub/apps/shared/utils/racePace/` — I/O を持たない純粋関数のみ。
+`swim-hub/packages/shared/utils/racePace/` — I/O を持たない純粋関数のみ。
 web / mobile / 本パイプラインが共用する (ロジックの二重化を避ける)。
 
 | ファイル | 内容 |
@@ -199,7 +199,7 @@ web / mobile / 本パイプラインが共用する (ロジックの二重化を
 | `buckets.ts` | `TIME_BUCKET_CONFIG` (ms・差し替え可) / `getTimeBucket` |
 | `targetLaps.ts` | `generateTargetLaps` / `interpolateLapRatios` |
 
-テスト: `apps/shared/__tests__/utils/racePace/` 54件。
+テスト: `packages/shared/__tests__/utils/racePace/` 54件。
 ミューテーションテストで3つの変異 (合計保証の廃止 / float 経由 / 失格判定の順序入れ替え)
 がいずれもテストを落とすことを確認済み。
 
@@ -334,8 +334,8 @@ pnpm ros:test
   ストリームへの差し替えも可能。
 
 - **この package は CJS**
-  `apps/shared` に `"type": "module"` が無く、ESM から named import
-  すると `default` だけになる。`apps/shared` 側に手を入れる方が
+  `packages/shared` に `"type": "module"` が無く、ESM から named import
+  すると `default` だけになる。`packages/shared` 側に手を入れる方が
   影響範囲が広いので、こちらを CJS に合わせた。
 
 - **50m 種目はモデルにしない**

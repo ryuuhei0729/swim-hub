@@ -4,11 +4,11 @@
 // Phase 0 実測値。API は {code, name} を返すため、可能なら name を優先して
 // 判定する (code の意味が既存 scraping/types.ts のコメントと食い違っていた前例あり)。
 //
-// RawStroke (../types.ts) は @shared/racePace の Stroke (= apps/shared の
+// RawStroke (../types.ts) は @shared/racePace の Stroke (= packages/shared の
 // SwimStyle 型エイリアス) から導出している。つまりこのファイルは
 // result-of-swimming 独自の閉じた語彙ではなく swim-hub 全体の canonical に
 // 直結しており、STROKE_BY_CODE は「外部 API のコード (1-5) -> canonical」の
-// 境界変換層そのもの。SwimStyle (apps/shared/types/common.ts) の値集合が
+// 境界変換層そのもの。SwimStyle (packages/shared/types/common.ts) の値集合が
 // 変わったときはこのファイルも追従が必要 (このパッケージは他スプリントの
 // 変更範囲から漏れやすいので明記する)。
 // =============================================================================

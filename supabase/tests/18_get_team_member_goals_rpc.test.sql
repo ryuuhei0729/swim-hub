@@ -11,7 +11,7 @@
 --
 -- 方針:
 --   - 期待値はフィクスチャの「正解」から書く。RPC の SQL を転記しない。
---   - current_best_time は apps/shared/api/goals.ts の getBestTimeForStyle と同一定義
+--   - current_best_time は packages/shared/api/goals.ts の getBestTimeForStyle と同一定義
 --     (user_id / style_id / pool_type=大会の水路 / is_relaying=false / MIN(time))。
 --     records.team_id では絞らない。管理者から RLS で不可視の他チーム記録も拾う。
 --   - 各アサーションは「条件を1つ外すと赤になる」ようフィクスチャに罠行を置いてある。

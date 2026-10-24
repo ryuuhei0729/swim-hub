@@ -173,7 +173,7 @@ describe("[Gate] TeamPracticeList ログボタンの admin 分岐", () => {
   });
 
   // 【QA Phase A 書き換えメモ (今回の Sprint Contract SC-1)】ラベルは
-  // 「ログを記入」→「記録追加」に変わった (apps/shared/messages/ja.json 実測で確認済み)。
+  // 「ログを記入」→「記録追加」に変わった (packages/shared/messages/ja.json 実測で確認済み)。
   // 【QA Phase A 再書き換え (今回のスプリント: 旧画面の統合タブ画面への一本化)】
   // 遷移先が PracticeLogForm から PracticeTabForm(initialTab:"log") に変わった
   // (旧画面 PracticeLogFormScreen はリダイレクトシム化された)。

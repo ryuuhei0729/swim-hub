@@ -9,7 +9,7 @@
 //
 // 保存方針 (PM確定):
 //   - `existingRecordIds` への membership のみで INSERT/UPDATE/DELETE を振り分ける
-//     (computeRecordSaveDiff、apps/shared/utils/recordSaveDiff.ts が唯一の定義元)
+//     (computeRecordSaveDiff、packages/shared/utils/recordSaveDiff.ts が唯一の定義元)
 //   - UPDATE の SET句に video_path/video_thumbnail_path を絶対含めない
 //     (触れなければ自動的に保持される。含めると undefined で上書きして悪化する)
 //   - 動画アップロード対象は「保存成功した insert 行 + update 行」の両方
@@ -80,7 +80,7 @@ export function scopeExistingRecordIdsForEntries(
  * relay_record_legs 経由でその relay_records.id を解決する。
  *
  * 【修正ラウンド 2026-09-17】実体は shared 側に移設した
- * (`apps/shared/api/teams/relayRecords.ts` の `TeamRelayRecordsAPI.resolveRelayRecordIdsForRecords`)。
+ * (`packages/shared/api/teams/relayRecords.ts` の `TeamRelayRecordsAPI.resolveRelayRecordIdsForRecords`)。
  * web もリレー保存で同じ逆引きが必要になったため、二重管理を避けて shared に
  * 集約している。この関数は既存の呼び出し元 (`TeamRecordStyleDetailScreen.tsx`) の
  * import を変えずに済ませるための薄い委譲のみ。挙動 (失敗時に空集合を返す等) は

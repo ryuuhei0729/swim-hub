@@ -78,7 +78,7 @@ interface TeamMember {
   user_id: string;
   role: string;
   // optional: 呼び出し元の select 漏れ・古いキャッシュでは無い場合がある。
-  // undefined は「泳者」として扱う (apps/shared/utils/swimmerFilter.ts と同じ判定)。
+  // undefined は「泳者」として扱う (packages/shared/utils/swimmerFilter.ts と同じ判定)。
   is_swimmer?: boolean;
   users: {
     id: string;
@@ -1473,7 +1473,7 @@ export default function RecordClient({
       // (`supabase/migrations/20260908000000_add_relay_records.sql:176`、コメントに
       // 「元になった records 行を消してもリレー記録は残す」とある通り、records 単体の
       // 削除はこの画面のリレー保存フローの外側でも起こりうる前提で設計されている)。
-      // 個別の `records` 行は `apps/shared/api/records.ts` の `RecordAPI.deleteRecord`
+      // 個別の `records` 行は `packages/shared/api/records.ts` の `RecordAPI.deleteRecord`
       // 経由でも消せ、これは relay_records/relay_record_legs を一切関知しない。
       // これにより「is_relaying=true の脚 (第2〜4泳者) だけが既に他経路で削除されて
       // record_id が NULL 化され、is_relaying=false の第1泳者だけが解決の手がかりとして
@@ -1606,7 +1606,7 @@ export default function RecordClient({
         }
         if (!updatedRows || updatedRows.length === 0) {
           // INSERT へのフォールバックは「データが消えるより重複が残る方を選ぶ」という
-          // 既存方針 (`apps/shared/api/teams/relayRecords.ts` の `replace()` docstring
+          // 既存方針 (`packages/shared/api/teams/relayRecords.ts` の `replace()` docstring
           // 参照) と同じ判断。対象行が他セッションで削除済み (空配列) でも、上の
           // 異常系 (null) でも、ここで INSERT を諦めるとユーザーの入力がそのまま
           // 消える。稀に重複行が残る方を、入力を握りつぶすより優先する。
@@ -1762,7 +1762,7 @@ export default function RecordClient({
             poolType: competition.pool_type,
             // DB 列条件 (relay_kind + leg_distance) ではなく、大会全体で読み込んだ
             // records.id から解決した relay_records.id だけを渡す
-            // (`apps/shared/api/teams/relayRecords.ts` の事実1)。
+            // (`packages/shared/api/teams/relayRecords.ts` の事実1)。
             relayRecordIds: Array.from(relayRecordIds),
           },
           savableRelayPlans,
@@ -2468,7 +2468,7 @@ export default function RecordClient({
                             {/* リレー中も RT 欄は表示する。保存側 (buildRecordPayload) は
                                 is_relaying に関わらず reaction_time を常に書き込んでおり、
                                 「リレー中は RT を無視する」というルールは存在しない。
-                                REACTION_TIME_MIN (apps/shared/utils/reactionTime.ts) が
+                                REACTION_TIME_MIN (packages/shared/utils/reactionTime.ts) が
                                 「リレー引き継ぎのマイナス反応を許容する」ために -1 に
                                 設定されているのは、リレーでの入力を前提としている証拠。
                                 以前の非表示は歴史的な不整合であり、意図的な仕様ではない。 */}

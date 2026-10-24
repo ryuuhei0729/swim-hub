@@ -49,8 +49,8 @@ Swim Hub（Web: Next.js / Mobile: Expo）をマネタイズするために、以
 - Web（保存ハンドラー）: `apps/web/app/(authenticated)/dashboard/_hooks/useDashboardHandlers.ts`（`createPracticeTime`）
 - Mobile（入力UI）: `apps/mobile/screens/PracticeTimeFormScreen.tsx`（`handleSave`でストアへ保存→後段でDB反映）
 - 共通API/フック:
-  - `apps/shared/api/practices.ts`（`practice_times`リレーションを含めて取得）
-  - `apps/shared/hooks/queries/practices.ts`（`useCreatePracticeTimeMutation` 等）
+  - `packages/shared/api/practices.ts`（`practice_times`リレーションを含めて取得）
+  - `packages/shared/hooks/queries/practices.ts`（`useCreatePracticeTimeMutation` 等）
 
 ### 大会スプリット（split_times = lap_time想定）
 
@@ -58,7 +58,7 @@ Swim Hub（Web: Next.js / Mobile: Expo）をマネタイズするために、以
 - Web（チーム記録）: `apps/web/app/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient.tsx`
 - Mobile（入力UI）: `apps/mobile/screens/RecordFormScreen.tsx` / `apps/mobile/screens/RecordLogFormScreen.tsx`
 - 共通フック:
-  - `apps/shared/hooks/queries/records.ts`（`useCreateSplitTimesMutation` / `useReplaceSplitTimesMutation`）
+  - `packages/shared/hooks/queries/records.ts`（`useCreateSplitTimesMutation` / `useReplaceSplitTimesMutation`）
 
 > リワード広告ゲートは「DB保存の直前」ではなく、**UIの保存ボタン押下直前**に入れるのが安全です（失敗時の救済、UXの一貫性、Web/Mobileの実装差を吸収しやすい）。
 

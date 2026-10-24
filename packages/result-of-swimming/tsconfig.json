@@ -11,8 +11,8 @@
     "sourceMap": true,
     "types": ["node"],
     "paths": {
-      "@shared/racePace": ["../../apps/shared/utils/racePace/index.ts"],
-      "@shared/racePace/*": ["../../apps/shared/utils/racePace/*"]
+      "@shared/racePace": ["../shared/utils/racePace/index.ts"],
+      "@shared/racePace/*": ["../shared/utils/racePace/*"]
     }
   },
   "include": ["src/**/*.ts", "__tests__/**/*.ts", "*.ts"],

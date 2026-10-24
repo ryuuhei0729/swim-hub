@@ -12,7 +12,7 @@
  * 2枚のカードが自動生成される。
  *
  * PM裁定 (2026-08-21): [A] の「保存がブロックされる」挙動は限界ではなく **正しい仕様**。
- * `EntryInfo` 型 (apps/shared/types/ui.ts) は isRelaying 相当のフィールドを
+ * `EntryInfo` 型 (packages/shared/types/ui.ts) は isRelaying 相当のフィールドを
  * 持たないため、自動生成される2枚のカードは両方 isRelaying=false で初期化される。
  * この状態のまま (どちらもリレー区分を表明せず) 保存すると、同一大会・同一種目の
  * 個人記録が2行できてしまう — これはまさに W2 が防ぐべき **真の重複** であり、
@@ -163,7 +163,7 @@ describe("RecordLogForm — entryDataList 経由の同一styleId自動生成カ�
   // 状態まで伝播させ、entryDataList 経由で自動生成されたカードがユーザーの手動
   // トグル操作なしで正しい isRelaying を持つようにする。
   // 実装が必要な範囲 (shared型のため全consumerに波及、本スプリントのスコープ外):
-  //   - apps/shared/types/ui.ts: EntryInfo に isRelaying?: boolean を追加
+  //   - packages/shared/types/ui.ts: EntryInfo に isRelaying?: boolean を追加
   //   - apps/web/utils/getEntryDataListForRecord.ts: 各分岐で is_relaying/isRelaying
   //     を読み取って EntryInfo.isRelaying に反映する
   //   - apps/web/components/team/TeamCompetitions.tsx: selfRecordEntryDataList が

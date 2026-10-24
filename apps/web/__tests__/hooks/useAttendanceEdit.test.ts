@@ -18,7 +18,7 @@ import { useAttendanceEdit } from "../../components/team/monthly-attendance/hook
 //  - closed/open を問わず更新経路の挙動は撤去前と同一 (API がマークを担当)
 //
 // 注意: bulkUpdateMyAttendances 内部の addEditMark/getEditMark のロジック自体は
-//       apps/shared 側の attendance-edit-mark.test.ts で検証済み。本テストは
+//       packages/shared 側の attendance-edit-mark.test.ts で検証済み。本テストは
 //       「クライアントが API に何を渡すか / insert に何を書くか」のみを検証する。
 // =============================================================================
 

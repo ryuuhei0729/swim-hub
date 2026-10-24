@@ -13,7 +13,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@apps/shared/*": ["../shared/*"]
+      "@apps/shared/*": ["../../packages/shared/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

@@ -6,13 +6,13 @@
  * PM 実測により、DB CHECK 制約を写した型が result-of-swimming にも存在することが
  * 判明した:
  *   `src/types.ts:14` — `export type RawStroke = Stroke | "unknown";`
- *   (`Stroke` は `@shared/racePace` 経由で `apps/shared/utils/racePace/types.ts` から、
- *   さらに `apps/shared/types/common.ts` の `SwimStyle` (canonical) から導出されている)
+ *   (`Stroke` は `@shared/racePace` 経由で `packages/shared/utils/racePace/types.ts` から、
+ *   さらに `packages/shared/types/common.ts` の `SwimStyle` (canonical) から導出されている)
  *
  * このファイルは「RawStroke が独立したリテラルユニオンとして再導入されていないか
  * (Stroke からの導出関係が維持されているか)」を型レベルで検証する。
  * 型レベルの関係は実行時 assert では検証できない (型情報はコンパイル時に消える) ため、
- * apps/shared/__tests__/types/common.test.ts の [V-0-C] と同じ Equal<X,Y> 手法で
+ * packages/shared/__tests__/types/common.test.ts の [V-0-C] と同じ Equal<X,Y> 手法で
  * `tsc --noEmit` のコンパイルによって検証する。vitest run (esbuild, 型チェックなし) は
  * この不一致を検出できないため、CI では必ず `tsc --noEmit` もあわせて実行すること。
  */

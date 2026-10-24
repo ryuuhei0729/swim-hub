@@ -55,7 +55,7 @@
  *          外れていることの証跡。2件に分割し、どちらの退行かを区別できるようにした)
  *   旧 [V-A58]/[V-A59] (削除失敗時の文言変換・成功時の遷移) はクリック導線が
  *   無くなったため撤去。deleteTeam / getDeleteTeamErrorMessageKey 自体の検証は
- *   apps/shared/__tests__/deleteTeamErrorMessageKey.test.ts が引き続き担う。
+ *   packages/shared/__tests__/deleteTeamErrorMessageKey.test.ts が引き続き担う。
  *
  * ■ jsdom で検証できないことの明示
  *   - Tailwind のクラスは jsdom では解決されないため、セクションの縦積み・余白・
@@ -317,7 +317,7 @@ describe("[V-A70〜A75] web 設定タブのセクション出し分け", () => {
   // data-testid="team-settings-delete" が出る) を反転する。shared の
   // deleteTeam API / useDeleteTeamMutation / getDeleteTeamErrorMessageKey /
   // i18n の `teams.settingsTab.delete*` キー自体は PM 裁定により意図的に残置
-  // されている (apps/shared/__tests__/ 配下は変更禁止)。ここで見るのは
+  // されている (packages/shared/__tests__/ 配下は変更禁止)。ここで見るのは
   // **web のこのコンポーネントから配線が外れたこと** のみ。
   // ===========================================================================
   it.each([
@@ -526,7 +526,7 @@ describe("[V-A76/A77] web 最後の管理者の脱退ブロック", () => {
 
 // [V-A58/A59] 削除失敗コードの文言変換と成功経路のテストは削除 UI 撤去 (2026-09-21)
 // に伴い撤去した。deleteTeam / getDeleteTeamErrorMessageKey 自体の検証は
-// apps/shared/__tests__/deleteTeamErrorMessageKey.test.ts が引き続き担う
+// packages/shared/__tests__/deleteTeamErrorMessageKey.test.ts が引き続き担う
 // (PM 裁定により変更禁止)。web 側のクリック導線が無くなったため
 // clickDeleteAndConfirm 経由のテストは成立しない ([V-W1]〜[V-W3] が代替)。
 

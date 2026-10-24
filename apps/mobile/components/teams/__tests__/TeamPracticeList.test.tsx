@@ -359,7 +359,7 @@ describe("TeamPracticeList", () => {
   //
   // 【QA Phase A 書き換えメモ (今回の Sprint Contract SC-1)】
   // 旧ラベル「ログを記入」は SC-1 でボタン文言「記録追加」に置き換わった。
-  // 実測: apps/shared/messages/ja.json は既に非admin用 addLog キーの値が
+  // 実測: packages/shared/messages/ja.json は既に非admin用 addLog キーの値が
   // "ログを記入" → "記録追加" に更新済み (git diff で確認: 全5ロケール同様に
   // 旧値→新値へ書き換え済み。entryButton 相当キーは今回対象外で無変更)。
   // 以下2件は「ログを記入」を期待する pin だったため、新文言「記録追加」に
@@ -644,7 +644,7 @@ describe("TeamPracticeList", () => {
   // [Sprint Contract SC-8] i18n: addLog キーが5ロケール全てで新文言に変わり、
   // キー名自体は不変であること
   //
-  // 実測ベース: apps/shared/messages/*.json を直接読み込み、Sprint 着手前の
+  // 実測ベース: packages/shared/messages/*.json を直接読み込み、Sprint 着手前の
   // 実測値 (OLD_ADD_LOG, git diff で確認済み) との差分で「変わったこと」を検証する。
   // 加えて、PM 経由で報告された App Developer の実測新文言 (NEW_ADD_LOG) との
   // 厳密一致も検証する (この表も鵜呑みにせず、実ファイル読み込み側で照合するので
