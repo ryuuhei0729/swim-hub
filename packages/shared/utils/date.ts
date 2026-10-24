@@ -177,6 +177,28 @@ export function isCompetitionDateInPast(date: string | null | undefined): boolea
 }
 
 /**
+ * 大会が終わっているか (最終日が今日より前か)。目標一覧から外す判定に使う。
+ * 複数日開催は終了日で判定する (開催中の2日目以降は false)。日付が無い・無効なら false。
+ *
+ * @param date - 大会開始日 (YYYY-MM-DD)
+ * @param endDate - 大会終了日 (YYYY-MM-DD)。単日開催は null/undefined
+ * @param today - 基準日 (YYYY-MM-DD)。省略時は端末の今日。サーバー描画とブラウザで
+ *   今日がずれる画面では、ブラウザで決めた今日を渡す
+ */
+export function isCompetitionOver(
+  date: string | null | undefined,
+  endDate: string | null | undefined,
+  today: string = toISODateString(new Date()),
+): boolean {
+  const lastDay = endDate || date;
+  if (!lastDay) return false;
+  const parsedLastDay = parseISO(lastDay);
+  const parsedToday = parseISO(today);
+  if (!isValid(parsedLastDay) || !isValid(parsedToday)) return false;
+  return parsedLastDay < parsedToday;
+}
+
+/**
  * 日本の年度 (4/1 〜 翌3/31) を返す。1〜3月は前年の年度に属する。
  *
  * 4月以降ならその年、1〜3月なら前年。**単純に `getFullYear()` を使うと年度末の

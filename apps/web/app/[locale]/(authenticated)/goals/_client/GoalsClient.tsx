@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import type { Goal, Style, GoalWithMilestones, Competition } from "@apps/shared/types";
 import { useGoalsQuery, useGoalDetailQuery } from "@apps/shared/hooks/queries/goals";
 import { GoalAPI } from "@apps/shared/api/goals";
+import { selectUpcomingGoals } from "@apps/shared/utils/upcomingGoals";
+import { useBrowserToday } from "@/hooks/useBrowserToday";
 import GoalList from "../_components/GoalList";
 import GoalDetail from "../_components/GoalDetail";
 import GoalCreateModal from "../_components/GoalCreateModal";
@@ -28,9 +30,8 @@ export default function GoalsClient({
 }: GoalsClientProps) {
   const t = useTranslations("goals");
   const { supabase } = useAuth();
-  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(
-    initialGoals.length > 0 ? initialGoals[0]!.id : null, // initialGoals.length > 0 を三項演算子内で確認済み
-  );
+  const today = useBrowserToday();
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   // 大会情報が無い目標 (goal.competition === null) は編集不可のため、
@@ -52,13 +53,26 @@ export default function GoalsClient({
         : undefined,
   });
 
+  // 大会が終わった目標は出さない (大会情報なしの目標は削除できるよう残す)。
+  // 複数日開催は終了日で判定する。今日が決まるまで (サーバー描画中) は null
+  const visibleGoals = useMemo(
+    () => (today ? selectUpcomingGoals(goals, today) : null),
+    [goals, today],
+  );
+
+  // 選択中の目標が一覧に無い (未選択・削除済み・大会が終わった) ときは一覧の先頭を選ぶ
+  const activeGoalId =
+    visibleGoals?.some((goal) => goal.id === selectedGoalId)
+      ? selectedGoalId
+      : (visibleGoals?.[0]?.id ?? null);
+
   // React Query: 選択中の目標詳細
   const {
     data: selectedGoal,
     isLoading,
     error: goalError,
     invalidate: invalidateGoalDetail,
-  } = useGoalDetailQuery(supabase, selectedGoalId);
+  } = useGoalDetailQuery(supabase, activeGoalId);
 
   // 目標作成後のコールバック
   const handleGoalCreated = async () => {
@@ -66,16 +80,13 @@ export default function GoalsClient({
     setIsCreateModalOpen(false);
   };
 
-  // 目標削除後のコールバック
+  // 目標削除後のコールバック。削除した目標を選択していた場合は、
+  // 一覧から消えた時点で activeGoalId が一覧の先頭に移る
   const handleGoalDeleted = async () => {
     try {
       await invalidateGoals();
     } catch (e) {
       console.error("キャッシュ無効化エラー:", e);
-    } finally {
-      if (selectedGoalId) {
-        setSelectedGoalId(null);
-      }
     }
   };
 
@@ -140,11 +151,18 @@ export default function GoalsClient({
                 {t("list.retry")}
               </button>
             </div>
+          ) : !visibleGoals ? (
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+              <div className="animate-pulse space-y-3">
+                <div className="h-16 bg-gray-200 rounded"></div>
+                <div className="h-16 bg-gray-200 rounded"></div>
+              </div>
+            </div>
           ) : (
             <>
               <GoalList
-                goals={goals}
-                selectedGoalId={selectedGoalId}
+                goals={visibleGoals}
+                selectedGoalId={activeGoalId}
                 onSelectGoal={setSelectedGoalId}
                 onDeleteGoal={handleGoalDeleted}
                 onEditGoal={handleEditGoal}
@@ -177,7 +195,7 @@ export default function GoalsClient({
                 {t("detail.retry")}
               </button>
             </div>
-          ) : isLoading ? (
+          ) : isLoading || !visibleGoals ? (
             <div className="bg-white rounded-lg shadow p-6">
               <div className="animate-pulse">
                 <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>

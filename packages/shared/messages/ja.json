@@ -2130,7 +2130,7 @@
     "list": {
       "loadError": "目標一覧の取得に失敗しました",
       "retry": "再読み込み",
-      "empty": "目標がありません",
+      "empty": "今後の大会の目標はありません",
       "emptyDesc": "下のボタンから新規作成してください",
       "achievedBadge": "達成！",
       "targetTimePrefix": "目標:",
@@ -2387,14 +2387,13 @@
     "memberSelectTitle": "メンバーを選択",
     "selectMemberHint": "メンバーを選択すると、そのメンバーの目標が表示されます",
     "noSelectableMembers": "選択できるメンバーがいません",
-    "empty": "目標がありません",
-    "emptyDesc": "このメンバーはまだ目標を設定していません",
+    "empty": "今後の大会の目標はありません",
+    "emptyDesc": "大会が終わった目標は表示されません",
     "loadError": "目標の取得に失敗しました",
     "retry": "再試行",
     "snapshotNote": "メンバーが最後にアプリで更新した時点の状態です",
     "section": {
       "upcoming": "今後の大会",
-      "past": "過去の大会",
       "noCompetition": "大会情報なし"
     },
     "status": {

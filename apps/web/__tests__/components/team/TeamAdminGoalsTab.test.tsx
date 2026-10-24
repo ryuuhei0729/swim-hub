@@ -46,7 +46,7 @@ function goal(over: Partial<TeamMemberGoal> & { id: string }): TeamMemberGoal {
   return {
     style_id: 1, target_time: 60, status: "active", achieved_at: null,
     created_at: "2026-01-01T00:00:00Z", competition_id: "c1", competition_title: "県大会",
-    competition_date: "2099-05-01", competition_pool_type: 1, current_best_time: 65, milestones: [],
+    competition_date: "2099-05-01", competition_end_date: null, competition_pool_type: 1, current_best_time: 65, milestones: [],
     ...over,
   };
 }
@@ -317,22 +317,30 @@ describe("表示内容", () => {
     expect(long.textContent).toContain(messages.common.poolTypeLong);
   });
 
-  it("セクション順: 今後 → 過去 → 大会情報なし。過去・達成済みの目標も出る", async () => {
+  it("セクション順: 今後 → 大会情報なし。大会が終わった目標は出ず、開催中の複数日大会は出る", async () => {
     await showGoals([
       goal({ id: "gn", competition_id: null, competition_title: null, competition_date: null, competition_pool_type: null, current_best_time: null }),
       goal({ id: "gp", competition_title: "PAST", competition_date: "2020-01-01", status: "achieved", achieved_at: "2020-01-02T00:00:00Z" }),
+      goal({ id: "go", competition_title: "ONGOING", competition_date: "2020-01-01", competition_end_date: "2099-12-31" }),
       goal({ id: "gf", competition_title: "FUTURE", competition_date: "2099-01-01" }),
     ]);
     await screen.findByText("FUTURE");
     const heads = screen.getAllByRole("heading", { level: 3 }).map((e) => e.textContent);
     const idx = (s: string) => heads.indexOf(s);
-    for (const k of ["upcoming", "past", "noCompetition"] as const) {
-      expect(idx(T.section[k]), `${k} の見出しが無い`).toBeGreaterThanOrEqual(0);
-    }
-    expect(idx(T.section.upcoming)).toBeLessThan(idx(T.section.past));
-    expect(idx(T.section.past)).toBeLessThan(idx(T.section.noCompetition));
-    expect(screen.getByText("PAST")).toBeInTheDocument();
-    expect(screen.getByText(T.status.goal.achieved)).toBeInTheDocument();
+    expect(idx(T.section.upcoming)).toBeGreaterThanOrEqual(0);
+    expect(idx(T.section.upcoming)).toBeLessThan(idx(T.section.noCompetition));
+    expect(idx("ONGOING")).toBeLessThan(idx("FUTURE"));
+    expect(screen.getByText("ONGOING")).toBeInTheDocument();
+    expect(screen.queryByText("PAST")).not.toBeInTheDocument();
+  });
+
+  it("大会が終わった目標しか無いときは空の案内を出す", async () => {
+    await showGoals([
+      goal({ id: "gp", competition_title: "PAST", competition_date: "2020-01-01", competition_end_date: "2020-01-03" }),
+    ]);
+    expect(await screen.findByText(T.empty, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(T.emptyDesc, { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText("PAST")).not.toBeInTheDocument();
   });
 
   it("マイルストーン: タイトル・状態・期限が出て、編集/削除/振り返りの操作と文言が無い", async () => {
