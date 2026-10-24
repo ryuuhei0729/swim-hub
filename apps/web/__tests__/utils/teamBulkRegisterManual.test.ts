@@ -4,7 +4,7 @@
  * D6: components/team/TeamBulkRegister.tsx にファイル/手動入力モード切替を追加し、
  * 手動入力(practice/competition 行入力)を新規実装する。手本 = mobile
  * components/teams/TeamBulkRegisterForm.tsx。共有API
- * apps/shared/api/teams/bulkRegister.ts の TeamBulkRegisterAPI.bulkRegister を再利用する。
+ * packages/shared/api/teams/bulkRegister.ts の TeamBulkRegisterAPI.bulkRegister を再利用する。
  *
  * 【QA から Developer への実装インターフェース提案】
  * mobile 版 (TeamBulkRegisterForm.tsx) はバリデーション/変換ロジックをコンポーネント内部の

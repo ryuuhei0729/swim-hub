@@ -1731,7 +1731,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                         {t("recordMobile.form.reactionTimeLabel")}
                       </Text>
                       {/* isRelaying による editable 分岐を意図的に持たない。
-                        REACTION_TIME_MIN (apps/shared/utils/reactionTime.ts) が
+                        REACTION_TIME_MIN (packages/shared/utils/reactionTime.ts) が
                         「-1 を下限とするのはリレー引き継ぎのマイナス反応を許容するため」
                         と明記している通り、RT はリレーの引き継ぎでこそ意味を持つ値であり、
                         isRelaying=true のときに入力させないのは仕様と矛盾する。保存側

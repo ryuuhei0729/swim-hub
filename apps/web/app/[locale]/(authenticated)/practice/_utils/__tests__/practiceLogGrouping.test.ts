@@ -7,7 +7,7 @@
  *   - buildPracticeLogLine (1ログ=1カード本文の組み立て)
  *
  * 行の生成 (buildPracticeLogRows) と per-log のタグ判定 (logMatchesAllTags) は
- * web/mobile 共通実装に移したため、`apps/shared/__tests__/utils/practiceLogRows.test.ts`
+ * web/mobile 共通実装に移したため、`packages/shared/__tests__/utils/practiceLogRows.test.ts`
  * で検証している。
  *
  * トートロジー防止メモ: 実装の if 分岐をそのままなぞらず、「一覧のカードに何が

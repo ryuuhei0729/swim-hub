@@ -11,7 +11,7 @@
 --
 -- 観点:
 --   V-DB-40: styles マスターのグラウンドトゥルース。25m×4種目 と 1500mFr が実在する
---            (apps/shared/__tests__/utils/rankingStyleAxis.test.ts の fixture の裏付け)
+--            (packages/shared/__tests__/utils/rankingStyleAxis.test.ts の fixture の裏付け)
 --   V-DB-41: 関数のセキュリティ属性と実行権限 (SECURITY DEFINER / STABLE /
 --            search_path 固定 / anon 実行不可 / authenticated と service_role のみ可)
 --   V-DB-42: 返す列がランキング表示に必要な14列だけであること。

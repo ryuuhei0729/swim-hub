@@ -3,7 +3,7 @@
  *
  * Sprint Contract で「新規に必要」と合意した i18n キーの存在を固定する。
  * キー集合の ja/en/zh/ko/de 完全一致・日本語リーク・ICUプレースホルダー対称性は
- * apps/shared/__tests__/messages-coverage.test.ts が全キーを対象に動的網羅しているため、
+ * packages/shared/__tests__/messages-coverage.test.ts が全キーを対象に動的網羅しているため、
  * ここでは重複させず「このスプリントで追加すべき正確なキー名」のみを固定する
  * (messages-teams-admin.test.ts と同じ方針)。
  *
@@ -28,8 +28,8 @@
  */
 
 import { describe, it, expect } from "vitest";
-import jaMessages from "../../../shared/messages/ja.json";
-import enMessages from "../../../shared/messages/en.json";
+import jaMessages from "../../../../packages/shared/messages/ja.json";
+import enMessages from "../../../../packages/shared/messages/en.json";
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
   const keys: string[] = [];

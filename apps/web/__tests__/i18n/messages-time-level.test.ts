@@ -4,8 +4,8 @@
  * ## 実装先行に関する注記 (PM 報告済み)
  * 本来 Phase A (Sprint Contract 確定) の時点ではキーは未実装のはずだったが、QA が
  * VERIFIED_DATA.md/Sprint Contract を精査中に、並行セッションによる実装
- * (`apps/shared/utils/regionalStandardTimes.ts` / `apps/web/app/[locale]/(unauthenticated)/time-level/`
- * / `apps/shared/messages/*.json` の `timeLevel.*` キー / `lib/supabase-auth/middleware.ts`
+ * (`packages/shared/utils/regionalStandardTimes.ts` / `apps/web/app/[locale]/(unauthenticated)/time-level/`
+ * / `packages/shared/messages/*.json` の `timeLevel.*` キー / `lib/supabase-auth/middleware.ts`
  * への `/time-level` 追加) が既に完了していることを検出した。
  * 本テストは QA が独自設計した仮の名前空間案 (`genderOptions.male` 等のネスト構造) ではなく
  * **実際に実装された** キー名 (`genderMale`/`genderFemale` のフラット構造、水路ラベルは
@@ -13,7 +13,7 @@
  * 正としてピン留めする。詳細は QA 報告の「残論点」を参照。
  *
  * 一般的なキー構造の完全一致・翻訳漏れ(日本語リーク)検出は
- * `apps/shared/__tests__/messages-coverage.test.ts` (5言語版) が担う既存の safety net。
+ * `packages/shared/__tests__/messages-coverage.test.ts` (5言語版) が担う既存の safety net。
  * 本テストはそれとは独立に「timeLevel 機能が必要とする正確なキー名」を
  * 5言語 (ja/en/de/ko/zh) 全てで固定する、この機能専用のピン留めテストである
  * (D9: 既存 messages.test.ts は ja/en 間のみの検証で zh/ko/de は対象外のため)。
@@ -29,11 +29,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import jaMessages from "../../../shared/messages/ja.json";
-import enMessages from "../../../shared/messages/en.json";
-import deMessages from "../../../shared/messages/de.json";
-import koMessages from "../../../shared/messages/ko.json";
-import zhMessages from "../../../shared/messages/zh.json";
+import jaMessages from "../../../../packages/shared/messages/ja.json";
+import enMessages from "../../../../packages/shared/messages/en.json";
+import deMessages from "../../../../packages/shared/messages/de.json";
+import koMessages from "../../../../packages/shared/messages/ko.json";
+import zhMessages from "../../../../packages/shared/messages/zh.json";
 
 function getValue(obj: Record<string, unknown>, dottedKey: string): unknown {
   const parts = dottedKey.split(".");

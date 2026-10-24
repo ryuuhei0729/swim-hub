@@ -8,10 +8,10 @@
 // 返り得るため、どちらの形でも吸収する (web の getUserName/getStyle と同じ方針)。
 //
 // リレーのチーム記録 (`relay_records`) を関わるロジックについては
-// `RelayRecordWithLegs` (apps/shared/types/relayRecord.ts、境界契約は Web Dev 所有の
-// apps/shared/api/teams/relayRecords.ts `getByCompetition`) を読み取り元とする。
+// `RelayRecordWithLegs` (packages/shared/types/relayRecord.ts、境界契約は Web Dev 所有の
+// packages/shared/api/teams/relayRecords.ts `getByCompetition`) を読み取り元とする。
 // レグ単位の `styleId → 距離` のような対応表は新たに持たない
-// (`apps/shared/utils/relayEvents.ts` から導出する。CLAUDE.md
+// (`packages/shared/utils/relayEvents.ts` から導出する。CLAUDE.md
 // 「同一のドメイン対応表を2箇所にハードコードするな」)。
 
 import type { RelayKind, RelayRecordWithLegs } from "@apps/shared/types/relayRecord";

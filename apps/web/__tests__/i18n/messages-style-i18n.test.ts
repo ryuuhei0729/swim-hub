@@ -34,11 +34,11 @@ import {
   type StyleCodeKey,
 } from "../../utils/swimStyle";
 
-import jaMessages from "../../../shared/messages/ja.json";
-import enMessages from "../../../shared/messages/en.json";
-import koMessages from "../../../shared/messages/ko.json";
-import zhMessages from "../../../shared/messages/zh.json";
-import deMessages from "../../../shared/messages/de.json";
+import jaMessages from "../../../../packages/shared/messages/ja.json";
+import enMessages from "../../../../packages/shared/messages/en.json";
+import koMessages from "../../../../packages/shared/messages/ko.json";
+import zhMessages from "../../../../packages/shared/messages/zh.json";
+import deMessages from "../../../../packages/shared/messages/de.json";
 
 // ---------------------------------------------------------------------------
 // ヘルパー

@@ -166,7 +166,7 @@ vi.mock("expo-localization", () => {
 
 // react-i18next のモック: 実際の ja.json から値を取得し、ICU 風の {var} 補間も処理する。
 // これにより既存テストの「日本語期待値」がそのまま通り、t() 化したコンポーネントもテスト可能になる。
-import jaMessages from "../shared/messages/ja.json";
+import jaMessages from "../../packages/shared/messages/ja.json";
 
 function resolveKey(key: string): string | undefined {
   const parts = key.split(".");
@@ -217,7 +217,7 @@ vi.mock("react-i18next", () => ({
 // 注: vi.mock のファクトリは hoist されるため、外部の tMock を直接参照すると
 // undefined になる。await import で動的に解決する。
 vi.mock("i18next", async () => {
-  const jaModule = (await import("../shared/messages/ja.json")) as {
+  const jaModule = (await import("../../packages/shared/messages/ja.json")) as {
     default: Record<string, unknown>;
   };
   const ja = jaModule.default ?? jaModule;

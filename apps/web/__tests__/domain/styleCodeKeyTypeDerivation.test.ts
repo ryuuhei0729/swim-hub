@@ -6,7 +6,7 @@
  * `apps/web/utils/swimStyle.ts` の `StyleCodeKey` は当初「web担当が導出/独立を
  * 判断中」の pending 項目だったが、Developer が `export type StyleCodeKey =
  * SwimStyle;` として導出する方針に決定した。このファイルは他の型ミラー
- * (apps/shared/__tests__/types/common.test.ts の Stroke、
+ * (packages/shared/__tests__/types/common.test.ts の Stroke、
  * result-of-swimming/__tests__/rawStrokeTypeDerivation.test.ts の RawStroke) と
  * 同じ Equal<X,Y> 手法で、独立したリテラルユニオンとして再導入されていないかを
  * 型レベルで検証する (実行時 assert では検証できないため tsc --noEmit のコンパイルで

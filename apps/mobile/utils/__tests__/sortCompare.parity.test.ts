@@ -2,7 +2,7 @@
  * sortCompare パリティテスト (Sprint Contract Phase B 修正ループ再検証)
  *
  * [V-SH-03] mobile の `compareWithNullsLast`(apps/mobile/utils/sortCompare.ts)が、
- * web/shared の `compareSortValues`(apps/shared/hooks/useTableSort.ts)と
+ * web/shared の `compareSortValues`(packages/shared/hooks/useTableSort.ts)と
  * 同一セマンティクスであることを、**同一入力に対する出力(=ソート結果の順序)が一致する**
  * という観点で直接検証する。
  *

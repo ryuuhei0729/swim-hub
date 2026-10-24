@@ -20,7 +20,7 @@
  *     正解として `toBe("getSize failed")` / `toBe("削除に失敗しました")` のように固定していたが、
  *     これは情報露出 (テーブル名・RLS ポリシー詳細等の生エラーをユーザーに見せてしまう) を
  *     仕様として肯定する記述だった。AvatarUpload.tsx は `toUserFacingMessage(err, fallback)`
- *     (apps/shared/utils/userFacingError.ts) を使い、`UserFacingError` インスタンス以外は
+ *     (packages/shared/utils/userFacingError.ts) を使い、`UserFacingError` インスタンス以外は
  *     詳細を出さず i18n 済みの汎用フォールバックに置き換える設計に是正済みのため、期待値を
  *     フォールバック文言 (common.upload.imageSelectFailed / imageDeleteFailed) に更新した。
  *   - [V-P-14d-2] / [V-P-26b] は対照実験として `UserFacingError` を注入し、そのメッセージが

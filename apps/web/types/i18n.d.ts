@@ -2,7 +2,7 @@
 // See: https://next-intl.dev/docs/workflows/typescript
 declare module "next-intl" {
   interface AppConfig {
-    Messages: typeof import("../../shared/messages/ja.json");
+    Messages: typeof import("../../../packages/shared/messages/ja.json");
   }
 }
 

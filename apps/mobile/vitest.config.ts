@@ -64,14 +64,14 @@ export default defineConfig({
     },
     alias: {
       "@": path.resolve(__dirname, "./"),
-      "@apps/shared": path.resolve(__dirname, "../shared"),
+      "@apps/shared": path.resolve(__dirname, "../../packages/shared"),
     },
   }),
   resolve: {
     alias: {
       // パスエイリアス（トップレベルでも設定）
       "@": path.resolve(__dirname, "./"),
-      "@apps/shared": path.resolve(__dirname, "../shared"),
+      "@apps/shared": path.resolve(__dirname, "../../packages/shared"),
       // トップレベルでもエイリアスを設定（スコープ付きパッケージ用）
       "@react-native-community/netinfo": path.resolve(
         __dirname,

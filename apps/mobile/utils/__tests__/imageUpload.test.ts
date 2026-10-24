@@ -63,7 +63,7 @@ describe("deleteImage", () => {
     expect(removeMock).toHaveBeenCalledWith(["user1/record1/image.jpg"]);
   });
 
-  // 情報露出の是正 (根拠: apps/shared/utils/userFacingError.ts のクラスコメント):
+  // 情報露出の是正 (根拠: packages/shared/utils/userFacingError.ts のクラスコメント):
   // Supabase Storage の生エラー (バケット名等を含みうる) をそのままユーザーに表示すると
   // 情報露出になるため、imageUpload.ts は common.upload.imageDeleteFailedDetail
   // (生 error.message を {detail} に埋め込む) から imageDeleteFailedSimple

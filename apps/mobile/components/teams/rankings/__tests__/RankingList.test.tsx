@@ -31,7 +31,7 @@ import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { RankingList } from "../RankingList";
 import type { TeamRankingRow } from "@apps/shared/types";
-import jaMessages from "../../../../../shared/messages/ja.json";
+import jaMessages from "../../../../../../packages/shared/messages/ja.json";
 
 /**
  * 署名付き URL 解決 (Supabase Storage) の呼び出し回数を数えるためのスパイ。

@@ -207,7 +207,7 @@ vi.mock("@/contexts", () => ({
  *    絞り込み UI 経由の検証は親の
  *    `./TeamRankings.test.tsx` の `[V-RL-F]` に移した。
  *    選択肢の並び・距離の引き継ぎ規則そのものは
- *    `apps/shared/__tests__/utils/rankingEventAxis.test.ts` が定義元。
+ *    `packages/shared/__tests__/utils/rankingEventAxis.test.ts` が定義元。
  *
  * ここで検証するのは「渡された条件をそのまま RPC に流し、結果を描く」ことである。
  */

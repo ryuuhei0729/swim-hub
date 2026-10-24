@@ -34,7 +34,7 @@
  *        モーダルも開いてしまう不具合の回帰ガード。Phase C 時点で正式テストスイートに
  *        存在しなかった経路)
  * [V-16] TeamPracticeList は本ファイルの対象外 (別ファイルで回帰確認、変更なしのはず)
- * [V-17] i18n 5言語パリティは `apps/shared/__tests__/messages-coverage.test.ts` の
+ * [V-17] i18n 5言語パリティは `packages/shared/__tests__/messages-coverage.test.ts` の
  *        汎用キー構造一致テスト (V-01/V-01-ext) が担保する。今回のスプリントは既存キー
  *        (`teams.competitions.entryStatus.*` 等) の再利用のみで新規キーを増やさない前提。
  * [V-12]〜[V-15] は新規コンポーネント `TeamCompetitionRecordsModal.test.tsx` 側で検証する
@@ -494,7 +494,7 @@ describe("TeamCompetitionList", () => {
   // makeCompetition() のデフォルト日付は FUTURE_DATE。旧仕様は「エントリー」と
   // 「記録」が未来日で両方同時に表示される前提だったが、今回の Sprint Contract は
   // 非admin を日付で排他表示にする (未来=エントリーのみ/それ以外=記録追加のみ)。
-  // 実測: apps/shared/messages/ja.json は既に recordButton キーの値が
+  // 実測: packages/shared/messages/ja.json は既に recordButton キーの値が
   // "記録" → "記録追加" に更新済み (SC-2)。網羅的な排他性検証は本ファイル末尾の
   // 新設ブロック [Sprint Contract SC-1〜SC-8] に集約したため、ここでは
   // 「未来日でエントリーボタンが出る」既存 pin のみ残し、「記録ボタンが出る」pin は
@@ -2665,7 +2665,7 @@ describe("TeamCompetitionList", () => {
     // [SC-8] i18n: recordButton (競合キー) が5ロケール全てで新文言に変わり、
     // entryButton は旧値のまま (全ロケール不変) であること
     //
-    // 実測ベース: apps/shared/messages/*.json を直接 import し、Sprint 着手前の
+    // 実測ベース: packages/shared/messages/*.json を直接 import し、Sprint 着手前の
     // 実測値 (git diff で確認済み) との差分で「変わったこと/変わっていないこと」を
     // 検証する。ja の新文言のみ Contract 本文の指定リテラル値で厳密一致検証する。
     // -----------------------------------------------------------------------

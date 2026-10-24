@@ -27,7 +27,7 @@
  *
  * モック方針: supabase クライアントの `team_memberships` / `records` テーブルへの呼び出しを
  * 実際に受け取り、`.eq()` / `.update()` に渡された引数を記録して検証する (クエリ条件を
- * 握り潰す不良モックを避ける)。`requireTeamAdmin` (`apps/shared/api/auth-utils.ts`) が
+ * 握り潰す不良モックを避ける)。`requireTeamAdmin` (`packages/shared/api/auth-utils.ts`) が
  * `auth.getUser()` → `team_memberships.select("role").eq(...).eq(...).eq(...).eq(...).single()`
  * を呼ぶため、汎用のチェイン可能スタブを用意する。
  */

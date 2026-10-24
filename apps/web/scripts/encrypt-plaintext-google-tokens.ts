@@ -43,7 +43,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { encrypt, isEncrypted } from "../lib/encryption";
-import type { Database } from "../../shared/types/supabase-schema";
+import type { Database } from "../../../packages/shared/types/supabase-schema";
 
 const PAGE_SIZE = 500;
 

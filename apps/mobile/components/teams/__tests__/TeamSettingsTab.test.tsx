@@ -14,7 +14,7 @@
 //   このテストが撤去してはいけない。旧 [V-A54] (管理者に削除が出る) は本追補で
 //   反転し、旧 [V-A58]/[V-A59] (削除失敗時のエラーコード変換 / 成功時コールバック)
 //   は削除ボタンが存在しなくなったため成立せず撤去した。変換ロジック自体の
-//   検証は apps/shared/__tests__/teams/deleteTeamErrorMessageKey.test.ts が
+//   検証は packages/shared/__tests__/teams/deleteTeamErrorMessageKey.test.ts が
 //   継続して担当する。
 //
 // ■ Sprint Contract 検証観点 (縦積みセクション)
@@ -76,7 +76,7 @@ import jaMessages from "@apps/shared/messages/ja.json";
 // 存在しない export をモックすると vi.mock はそのモジュール全体を差し替えるため、
 // 実物が返しているものが欠落しても気づけず、しかも実装が壊れても検出できない。
 //
-// 実物 `apps/shared/hooks/queries/calendarColors.ts` の
+// 実物 `packages/shared/hooks/queries/calendarColors.ts` の
 // `useCalendarColorSettingsQuery` は **1つのフックが3つの mutation を同梱した
 // オブジェクト**を返す (L166-175 実測):
 //   settings / isLoading / isError / error / refetch /

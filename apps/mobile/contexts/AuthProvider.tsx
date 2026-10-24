@@ -32,7 +32,7 @@ import { localizeAuthError } from "@/utils/authErrorLocalizer";
  * Mobile 固有の AuthState 拡張
  * onboardingCompleted: null = 取得中, false = 未完了, true = 完了
  *
- * TODO: apps/shared/types/auth.ts の AuthState に onboardingCompleted が追加されたら
+ * TODO: packages/shared/types/auth.ts の AuthState に onboardingCompleted が追加されたら
  *       このローカル拡張を削除し、共通型を参照するように変更すること。
  */
 type MobileAuthState = AuthState & {

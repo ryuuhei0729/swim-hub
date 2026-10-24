@@ -10,7 +10,7 @@ import { toStyleCode } from "@apps/shared/utils/swimStyles";
 type StyleAbbrev = "Fr" | "Ba" | "Br" | "Fly" | "IM";
 
 // 種目コード ("Fr"/"fr"/"FR" 等、任意ケーシング) → 公式略称の正規化は
-// canonical 定義元の toStyleCode() (apps/shared/utils/swimStyles.ts) に委譲する。
+// canonical 定義元の toStyleCode() (packages/shared/utils/swimStyles.ts) に委譲する。
 // styles.style の CHECK 制約がタイトルケースに統一された (Issue #13) ことで
 // SwimStyle の値集合 = StyleAbbrev の値集合となったため、ローカルの変換表は不要。
 

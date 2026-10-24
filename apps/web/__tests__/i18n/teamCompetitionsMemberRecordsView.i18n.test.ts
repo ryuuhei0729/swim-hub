@@ -19,7 +19,7 @@
  *   (どちらかだけ直す部分実装を許さない)。
  *
  * 過去の教訓 (`feedback_swimhub_i18n_key_handoff_gap` / `feedback_swimhub_i18n_text_only_change_not_local`):
- *   apps/shared/messages/*.json は web+mobile 共有の唯一の定義元。tsc/lint/build は
+ *   packages/shared/messages/*.json は web+mobile 共有の唯一の定義元。tsc/lint/build は
  *   キー欠落を検出しない。5ロケール全てへの機械的な存在確認を必須とする。
  *
  * 【Reviewer Low 3件対応 (2026-09-19)】

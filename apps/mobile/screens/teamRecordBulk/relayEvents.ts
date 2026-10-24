@@ -2,7 +2,7 @@
 // リレー種目定義 — @apps/shared/utils/relayEvents への re-export バリア
 // =============================================================================
 //
-// 実装は `apps/shared/utils/relayEvents.ts` に移設した (唯一の定義元)。
+// 実装は `packages/shared/utils/relayEvents.ts` に移設した (唯一の定義元)。
 // 以前はこのファイル (214行) と
 // `apps/web/app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/relayEvents.ts`
 // (263行) が同じ実装を全複製しており、片方だけ更新されて静かに壊れる状態だった。

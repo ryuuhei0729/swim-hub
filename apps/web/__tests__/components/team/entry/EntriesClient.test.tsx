@@ -29,7 +29,7 @@
  * このテストは EntryAPI を丸ごとモックし、実際の DB 書き込みは行わず
  * 「どのAPIメソッドが何回・何を引数に呼ばれたか (0回であることを含む)」
  * 「確認モーダルに何が表示されるか」のみを検証する (DB実測は
- * apps/shared/__tests__/api/entries.test.ts に委譲する)。
+ * packages/shared/__tests__/api/entries.test.ts に委譲する)。
  */
 
 import React from "react";

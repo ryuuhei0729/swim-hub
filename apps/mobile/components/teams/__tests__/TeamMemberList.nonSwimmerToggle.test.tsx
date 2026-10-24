@@ -233,7 +233,7 @@ describe("mobile TeamMemberList - 非泳者アコーディオン", () => {
   // 従来のスタブは onGroupedMembersChange に常に空 Map を渡していたため、
   // このロジックの実行経路が一度もテストされていなかった (Reviewer 指摘)。
   // harness.groupHeaders で非空の Map を実際に注入し、web と共通の単一定義元
-  // (apps/shared/utils/swimmerFilter.ts の remapGroupHeadersForSwimmers) が
+  // (packages/shared/utils/swimmerFilter.ts の remapGroupHeadersForSwimmers) が
   // mobile 側でも正しく呼び出されていることを検証する。
   // ---------------------------------------------------------------------
   describe("[Critical 2] グループ見出しの付け替え", () => {

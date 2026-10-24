@@ -3,7 +3,7 @@
  *
  * goalsUiRegressions.test.tsx の GoalList テストは `competition: null` を手で
  * 組み立てて渡しているが、それとは別に、実際に `useGoalsQuery`
- * (apps/shared/hooks/queries/goals.ts) の select が返す結果をそのまま GoalList に
+ * (packages/shared/hooks/queries/goals.ts) の select が返す結果をそのまま GoalList に
  * 渡す経路でも検証する。
  *
  * この統合テストは GoalAPI (getGoals/getSelectableCompetitions) だけをモックし、

@@ -10,7 +10,7 @@
 //        (TeamEntryBulkFormScreen.tsx:289-308 の実装コメントに明記)。
 //        検証すべきは「DBに1行も書き込まれない」ことそのもの。
 //   PM指示: web と mobile で diffEntryRows の結果が一致することを検証する
-//        (同じ入力 → 同じ4分類。計算ロジック自体は apps/shared/__tests__/utils/entryDiff.test.ts
+//        (同じ入力 → 同じ4分類。計算ロジック自体は packages/shared/__tests__/utils/entryDiff.test.ts
 //        で検証済みのため、ここでは「画面が計算結果をそのまま使っているか」を実際の
 //        保存API呼び出しで確認する)
 //   「選択を解除」(clearRowStyle): 既存行に対して行うと削除意図として扱われること

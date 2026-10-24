@@ -6,7 +6,7 @@
 //   「違反を実際に検出する」ことを同じファイル内で実証する (ミューテーション証明の代替)。
 // 検査関数は構文パターン検査であり、プロダクションロジックの再実装ではない。
 // 対象: screens/Goal*.tsx, screens/MilestoneFormScreen.tsx, components/goals/**, hooks/{useExpiredGoalCheck,useMilestoneSummary}.ts, navigation/TabBarLabel.tsx
-// (時間ベースの達成率フックは Contract v2 (初期タイム全廃) で削除。削除の固定は apps/shared/__tests__/goalsStartTimeRemoval.static.test.ts)
+// (時間ベースの達成率フックは Contract v2 (初期タイム全廃) で削除。削除の固定は packages/shared/__tests__/goalsStartTimeRemoval.static.test.ts)
 // =============================================================================
 import { readFileSync, readdirSync, statSync } from "fs";
 import path from "path";

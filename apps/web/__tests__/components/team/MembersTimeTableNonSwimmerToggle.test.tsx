@@ -258,7 +258,7 @@ describe("MembersTimeTable - 非泳者アコーディオン", () => {
   // [Critical 2 回帰防止] グループ見出しの付け替え (remapGroupHeadersForSwimmers)
   //
   // web と mobile (TeamMemberList.nonSwimmerToggle.test.tsx) の両方が
-  // apps/shared/utils/swimmerFilter.ts の remapGroupHeadersForSwimmers を
+  // packages/shared/utils/swimmerFilter.ts の remapGroupHeadersForSwimmers を
   // 単一定義元として呼んでいることの回帰防止。PM指摘: 「片方のテストしか
   // このロジックを実行できていないと、共有関数を壊しても半分しか検出できない」。
   // ---------------------------------------------------------------------

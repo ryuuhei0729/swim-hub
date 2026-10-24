@@ -43,7 +43,7 @@ export default function RelayRankingTable({ rows }: RelayRankingTableProps) {
   //    🚨 web/mobile パリティ監査で「同じ列の文言が違う」差異として拾っても
   //    **揃えないこと。** 揃えると mobile 側で泳法名が省略される
   //    (このプロジェクトには実際にパリティ監査の慣習があり、
-  //     docs/web-mobile-feature-gap.md が古い前提のまま差異を「欠陥」として
+  //     docs/reviews/web-mobile-feature-gap.md が古い前提のまま差異を「欠陥」として
   //     扱っていた実例がある)。
   const tStyles = useTranslations("practice.styles");
   const locale = useLocale();

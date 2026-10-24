@@ -9,7 +9,7 @@
 //
 // web の i18n 名前空間は "teamsAdmin.groupManagement.errors" (mobile の
 // "teams.mobile.group*" とはキー体系が異なる) のため、期待文言は
-// apps/shared/messages/ja.json の実際の値を使う (推測しない)。
+// packages/shared/messages/ja.json の実際の値を使う (推測しない)。
 // =============================================================================
 
 import { act } from "@testing-library/react";

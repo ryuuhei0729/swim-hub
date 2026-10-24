@@ -64,11 +64,11 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import jaMessages from "../../../../../shared/messages/ja.json";
-import enMessages from "../../../../../shared/messages/en.json";
-import deMessages from "../../../../../shared/messages/de.json";
-import koMessages from "../../../../../shared/messages/ko.json";
-import zhMessages from "../../../../../shared/messages/zh.json";
+import jaMessages from "../../../../../../packages/shared/messages/ja.json";
+import enMessages from "../../../../../../packages/shared/messages/en.json";
+import deMessages from "../../../../../../packages/shared/messages/de.json";
+import koMessages from "../../../../../../packages/shared/messages/ko.json";
+import zhMessages from "../../../../../../packages/shared/messages/zh.json";
 
 // ---------------------------------------------------------------------------
 // react-i18next をファイル単位で上書きする。
@@ -79,9 +79,9 @@ const mocks = vi.hoisted(() => ({ locale: { current: "ja" as "ja" | "en" | "de" 
 
 vi.mock("react-i18next", async () => {
   const bundles = {
-    ja: (await import("../../../../../shared/messages/ja.json")).default,
-    en: (await import("../../../../../shared/messages/en.json")).default,
-    de: (await import("../../../../../shared/messages/de.json")).default,
+    ja: (await import("../../../../../../packages/shared/messages/ja.json")).default,
+    en: (await import("../../../../../../packages/shared/messages/en.json")).default,
+    de: (await import("../../../../../../packages/shared/messages/de.json")).default,
   } as Record<string, unknown>;
 
   const resolve = (locale: string, key: string): string | undefined => {

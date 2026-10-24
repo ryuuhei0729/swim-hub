@@ -11,7 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./"),
-      "@apps/shared": path.resolve(__dirname, "../shared"),
+      "@apps/shared": path.resolve(__dirname, "../../packages/shared"),
     },
   },
   test: {

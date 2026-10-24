@@ -11,7 +11,7 @@
  *
  * [V-UI-CONST-01] goals/_components/constants.ts の SWIM_STYLES 順序バグ
  *   goals 用の SWIM_STYLES (goals/_components/constants.ts) は
- *   apps/shared/types/common.ts の canonical な SWIM_STYLES (["Fr", "Br", "Ba", "Fly", "IM"])
+ *   packages/shared/types/common.ts の canonical な SWIM_STYLES (["Fr", "Br", "Ba", "Fly", "IM"])
  *   から導出しているはずだが、独自に ["Fr", "Ba", "Br", "Fly", "IM"] のように
  *   Ba/Br の順序を取り違えて再定義してしまう回帰がありうる。値の集合一致ではなく
  *   **順序も含めて** canonical と一致することを固定する。
@@ -23,7 +23,7 @@
  *   GoalReflectionModal.tsx
  *
  * [V-UI-NULLCOMP-EDIT] GoalList.tsx は `goal.competition?.title` でクラッシュしない。
- *   `useGoalsQuery` (apps/shared/hooks/queries/goals.ts の select) が対象大会を
+ *   `useGoalsQuery` (packages/shared/hooks/queries/goals.ts の select) が対象大会を
  *   見つけられない場合 `competition: null` を返し (型も `| null`)、GoalList/GoalDetail
  *   はこれを `goal.competition === null` で判定して「大会情報なし」表示・編集ボタン
  *   非表示を行う。select が返す値と GoalList 側の判定基準が噛み合っていないと
@@ -131,7 +131,7 @@ function createGoalWithNullCompetition(overrides: Partial<GoalWithMilestones> = 
 }
 
 describe("[V-UI-CONST-01] constants.ts SWIM_STYLES は canonical から導出される", () => {
-  it("goals/_components/constants.ts の SWIM_STYLES が apps/shared/types/common.ts の SWIM_STYLES と*順序も含めて*完全一致する", () => {
+  it("goals/_components/constants.ts の SWIM_STYLES が packages/shared/types/common.ts の SWIM_STYLES と*順序も含めて*完全一致する", () => {
     const goalsOrder = GOALS_SWIM_STYLES.map((s) => s.value);
     expect(goalsOrder).toEqual([...CANONICAL_SWIM_STYLES]);
     // 回帰防止のため具体値でも固定する (canonical 自体が将来変わっても意図的な変更として気づけるように)
@@ -253,7 +253,7 @@ describe("[V-UI-NULLGUARD-01] goal.competition が null でも例外を投げな
       reflection_note: null,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-01T00:00:00Z",
-      // useGoalsQuery の select (apps/shared/hooks/queries/goals.ts:66) が
+      // useGoalsQuery の select (packages/shared/hooks/queries/goals.ts:66) が
       // 該当する大会を見つけられなかった場合に実際に返す形 (null)。
       competition: null,
       style: { name_jp: "自由形" },

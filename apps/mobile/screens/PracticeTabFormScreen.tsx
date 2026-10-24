@@ -717,7 +717,7 @@ export const PracticeTabFormScreen: React.FC = () => {
         // 取得していない)」の間だけ true になる防御であり、画面全体のローディング表示
         // (line ~1161) が Save ボタンの描画自体をブロックする経路を、保存ハンドラ側でも
         // 二重に塞ぐためのもの (Sprint Contract #PM-1)。
-        // 【カバーしない経路】useTeamMembersQuery は staleTime: 5分 (apps/shared/hooks/
+        // 【カバーしない経路】useTeamMembersQuery は staleTime: 5分 (packages/shared/hooks/
         // queries/teams.ts) を持つため、直近5分以内に同じチームの members を取得済みだと
         // queryKey 切替の瞬間から isLoading=false・stale なキャッシュ値(例: 剥奪前の
         // admin=true) が返る。この経路では isResolvingPracticePermission は false のまま
@@ -725,7 +725,7 @@ export const PracticeTabFormScreen: React.FC = () => {
         // 【この穴が実害にならない理由】上記の stale 経路をすり抜けて canEditPracticeDetails
         // が誤って true になっても、practices UPDATE は実際の RLS (is_team_admin) で
         // 評価されるため権限昇格やデータ損失には至らない。PracticeAPI.updatePractice
-        // (apps/shared/api/practices.ts) は .select().single() を使っており、RLS 拒否で
+        // (packages/shared/api/practices.ts) は .select().single() を使っており、RLS 拒否で
         // 0行 UPDATE になった場合は PGRST116 として throw される (無言破棄にはならず、
         // ユーザーにはエラーアラートが出る)。稀な経路 (5分以内に admin 剥奪 かつ管理者
         // ビューに残存) のために staleTime 短縮や isFetching ベースへの変更は今スプリント

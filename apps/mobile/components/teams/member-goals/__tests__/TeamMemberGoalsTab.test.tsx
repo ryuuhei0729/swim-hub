@@ -11,7 +11,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TeamMemberGoalsTab } from "../TeamMemberGoalsTab";
 import { TeamMemberGoalCard } from "../TeamMemberGoalCard";
-import ja from "../../../../../shared/messages/ja.json";
+import ja from "../../../../../../packages/shared/messages/ja.json";
 import type { TeamMemberGoal } from "@apps/shared/types/teamMemberGoals";
 
 const h = vi.hoisted(() => ({

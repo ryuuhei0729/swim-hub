@@ -14,7 +14,7 @@
  * 直接参照するため、5 言語すべてに存在しないと「キー名がそのまま画面に表示される」
  * 退行になる。
  *
- * このテストは apps/shared/messages/*.json の実データを読み込み、モックを一切使わずに
+ * このテストは packages/shared/messages/*.json の実データを読み込み、モックを一切使わずに
  * 検証する (relayLegShort.i18n.test.ts と同じ方針)。
  */
 

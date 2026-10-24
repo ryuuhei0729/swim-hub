@@ -13,7 +13,7 @@ export default defineConfig({
     server: { deps: { inline: [/@react-navigation/, /react-native-web/] } },
     alias: {
       "@": path.resolve(__dirname, "./"),
-      "@apps/shared": path.resolve(__dirname, "../shared"),
+      "@apps/shared": path.resolve(__dirname, "../../packages/shared"),
       "react-native": "react-native-web",
       "react-native-safe-area-context": path.resolve(__dirname, "./__tests__/navigation-integration/__stubs__/safe-area-context.tsx"),
     },
@@ -21,7 +21,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./"),
-      "@apps/shared": path.resolve(__dirname, "../shared"),
+      "@apps/shared": path.resolve(__dirname, "../../packages/shared"),
       "react-native": "react-native-web",
       "react-native-safe-area-context": path.resolve(__dirname, "./__tests__/navigation-integration/__stubs__/safe-area-context.tsx"),
       react: path.resolve(__dirname, "../../node_modules/react"),

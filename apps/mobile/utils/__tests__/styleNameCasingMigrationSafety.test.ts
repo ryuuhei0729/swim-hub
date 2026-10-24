@@ -6,7 +6,7 @@
  * 移行リスクの監視対象に挙げられた。
  *
  * 実測更新 (2026-09-02): その後 Developer が styleName.ts のローカル変換表を廃し、
- * canonical 定義元である `toStyleCode()` (apps/shared/utils/swimStyles.ts) に委譲する
+ * canonical 定義元である `toStyleCode()` (packages/shared/utils/swimStyles.ts) に委譲する
  * 設計へリファクタした。さらに Reviewer 指摘 (High: 大小無視マッチが "FR" (フリーリレー
  * 略称) を "Fr" (自由形) に潰す) を受け、`toStyleCode()` 自体が
  *   ① canonical との完全一致 (大小区別あり)

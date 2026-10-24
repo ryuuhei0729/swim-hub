@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 // @ryuuhei0729/swimhub-oauth は React/JSX に依存しないプラットフォーム非依存のロジック層
 // (mobile は expo-*、web は next/server 型のみを使用) のため、
-// apps/shared/eslint.config.mjs を参考にしつつ react / react-hooks プラグインは
+// packages/shared/eslint.config.mjs を参考にしつつ react / react-hooks プラグインは
 // 含めない最小限の構成にする。
 export default [
   js.configs.recommended,
