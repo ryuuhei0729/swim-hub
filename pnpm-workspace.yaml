@@ -8,3 +8,6 @@ packages:
 # パッケージ名を足し、7日経ったら外す。推移的依存 (例: @opennextjs/aws, workerd, miniflare, @dotenvx/*) も
 # 止まるので、エラーに出た名前を順に足す。
 minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  # GHSA-27r3-jxmh-p828 の修正版 2.4.0 (2026-10-22 公開)。2026-10-29 以降に外す
+  - body-parser
