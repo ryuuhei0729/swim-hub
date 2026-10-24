@@ -70,6 +70,9 @@ Thumbs.db
 # Logs
 *.log
 
+# pnpm audit 出力 (CI の security.yml が生成)
+/audit-report.json
+
 # Runtime data
 pids
 *.pid
@@ -127,6 +130,8 @@ next-env.d.ts
 /apps/mobile/.expo/
 # Root app.json (should not exist, created by mistake)
 /app.json
+# Root eas.json (EAS は apps/mobile/eas.json を使う)
+/eas.json
 /apps/mobile/dist/
 /apps/mobile/web-build/
 /apps/mobile/expo-env.d.ts
