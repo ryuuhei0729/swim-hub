@@ -215,7 +215,9 @@ jobs:
 
   e2e-tests:
     needs: e2e-build
-    runs-on: ubuntu-latest
+    # ubuntu-latest が 26.04 になり、Playwright 1.58 は chromium を入れられない
+    # (`Playwright does not support chromium on ubuntu26.04-x64`)。対応版に上げるまで 24.04 に固定する
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
