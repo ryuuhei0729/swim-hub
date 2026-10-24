@@ -26,6 +26,9 @@ updates:
     directories:
       - "/"
       - "/.github/actions/*"
+    # default ブランチは develop だが、変更は main に直接入れている。develop 基準で作られると
+    # main と衝突するので main に向ける (target-branch はセキュリティ更新には効かない)
+    target-branch: "main"
     schedule:
       interval: "weekly"
       day: "monday"
