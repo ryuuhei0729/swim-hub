@@ -8,6 +8,9 @@ name: Supabase Database
 # paths には deno.lock とこのワークフロー自身も含める。テスト/型チェックは
 # deno.lock を --frozen で参照しており、lock だけの変更やワークフロー自体の変更でも
 # 結果が変わるため、これらを対象外にすると検証を素通りさせてしまう。
+# ルートの package.json も含める。Deno はルートの package.json の依存一覧を deno.lock の
+# workspace.packageJson に写すため、そこだけ変えた PR でも --frozen が落ちるようになる。
+# 対象外だった 2026-10-13 に turbo の版だけを上げた PR が素通りし、以降の全実行が落ちていた。
 on:
   push:
     branches: [ main, develop ]
@@ -15,6 +18,7 @@ on:
       - 'supabase/migrations/**'
       - 'supabase/functions/**'
       - 'deno.lock'
+      - 'package.json'
       - '.github/workflows/supabase.yml'
   pull_request:
     branches: [ main, develop ]
@@ -22,6 +26,7 @@ on:
       - 'supabase/migrations/**'
       - 'supabase/functions/**'
       - 'deno.lock'
+      - 'package.json'
       - '.github/workflows/supabase.yml'
 
 permissions:
@@ -38,7 +43,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -46,7 +51,7 @@ jobs:
         node-version: '22.x'
 
     - name: Setup Supabase CLI
-      uses: supabase/setup-cli@b60b5899c73b63a2d2d651b1e90db8d4c9392f51 # v1.6.0
+      uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
       with:
         version: latest
 
@@ -87,7 +92,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Setup Node.js and Install dependencies
       uses: ./.github/actions/setup-node
@@ -95,7 +100,7 @@ jobs:
         node-version: '22.x'
 
     - name: Setup Supabase CLI
-      uses: supabase/setup-cli@b60b5899c73b63a2d2d651b1e90db8d4c9392f51 # v1.6.0
+      uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
       with:
         version: latest
 
@@ -193,7 +198,7 @@ jobs:
     # deno.lock が全依存を integrity ハッシュ付きで固定しているため、DENO_DIR をキャッシュして
     # 通常の実行では CDN に一切触らせない。
     - name: Cache Deno modules
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.cache/deno
         key: deno-2.9.4-${{ runner.os }}-${{ hashFiles('deno.lock') }}
@@ -220,6 +225,9 @@ jobs:
           sleep $((attempt * 15))
         done
         echo "::error::deno cache failed after 3 attempts (CDN 障害か deno.lock が古い)"
+        # 「lockfile is out of date」なら deno.lock を更新する。pnpm install 済みの状態で実行すること
+        # (node_modules が無いと Deno が pnpm-workspace.yaml を package.json の workspaces に書き写してしまう)
+        echo "::error::lockfile is out of date の場合: pnpm install のあと、find supabase/functions -name '*.ts' | xargs deno cache で deno.lock を更新してコミットする"
         exit 1
 
     # デプロイされる Edge Function 本体の型チェック。Node 側の tsconfig は
