@@ -2127,7 +2127,7 @@
     "list": {
       "loadError": "Failed to load goals",
       "retry": "Retry",
-      "empty": "No goals yet",
+      "empty": "No upcoming goals",
       "emptyDesc": "Create one using the button below",
       "achievedBadge": "Achieved!",
       "targetTimePrefix": "Target:",
@@ -2384,14 +2384,13 @@
     "memberSelectTitle": "Select a member",
     "selectMemberHint": "Select a member to see their goals",
     "noSelectableMembers": "No members available to select",
-    "empty": "No goals",
-    "emptyDesc": "This member has not set any goals yet",
+    "empty": "No upcoming goals",
+    "emptyDesc": "Goals for competitions that have ended are not shown",
     "loadError": "Failed to load goals",
     "retry": "Retry",
     "snapshotNote": "Shows the state as of the member's last update in the app",
     "section": {
       "upcoming": "Upcoming competitions",
-      "past": "Past competitions",
       "noCompetition": "No competition info"
     },
     "status": {

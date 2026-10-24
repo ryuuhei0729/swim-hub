@@ -2130,7 +2130,7 @@
     "list": {
       "loadError": "Ziele konnten nicht geladen werden",
       "retry": "Erneut laden",
-      "empty": "Keine Ziele vorhanden",
+      "empty": "Keine Ziele für kommende Wettkämpfe",
       "emptyDesc": "Erstellen Sie ein Ziel über die Schaltfläche unten",
       "achievedBadge": "Erreicht!",
       "targetTimePrefix": "Ziel:",
@@ -2387,14 +2387,13 @@
     "memberSelectTitle": "Mitglied auswählen",
     "selectMemberHint": "Wähle ein Mitglied aus, um dessen Ziele zu sehen",
     "noSelectableMembers": "Keine Mitglieder zur Auswahl vorhanden",
-    "empty": "Keine Ziele",
-    "emptyDesc": "Dieses Mitglied hat noch keine Ziele festgelegt",
+    "empty": "Keine Ziele für kommende Wettkämpfe",
+    "emptyDesc": "Ziele für beendete Wettkämpfe werden nicht angezeigt",
     "loadError": "Ziele konnten nicht geladen werden",
     "retry": "Erneut versuchen",
     "snapshotNote": "Zeigt den Stand der letzten Aktualisierung des Mitglieds in der App",
     "section": {
       "upcoming": "Kommende Wettkämpfe",
-      "past": "Vergangene Wettkämpfe",
       "noCompetition": "Keine Wettkampfinformationen"
     },
     "status": {

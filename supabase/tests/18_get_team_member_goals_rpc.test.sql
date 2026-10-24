@@ -21,7 +21,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(44);
+select plan(45);
 
 create function public.qa_login_as(p_uid uuid) returns void language plpgsql as $$
 begin
@@ -97,12 +97,12 @@ insert into public.team_memberships (team_id, user_id, role, status, is_active, 
 --   c_personal: target の個人大会 (長水路)
 --   c_team1:    team1 の大会 (長水路)
 --   c_team2:    team2 = 管理者 a1 から見て「他チーム」の大会 (短水路)
-insert into public.competitions (id, title, date, pool_type, team_id, user_id, created_by) values
-  ('cccccccc-0000-4000-a000-000000000001', 'QA MG Personal Meet', '2027-05-01', 1, null,
+insert into public.competitions (id, title, date, end_date, pool_type, team_id, user_id, created_by) values
+  ('cccccccc-0000-4000-a000-000000000001', 'QA MG Personal Meet', '2027-05-01', null, 1, null,
     'aaaaaaaa-0000-4000-a000-0000000000a7', 'aaaaaaaa-0000-4000-a000-0000000000a7'),
-  ('cccccccc-0000-4000-a000-000000000002', 'QA MG Team1 Meet', '2027-06-01', 1,
+  ('cccccccc-0000-4000-a000-000000000002', 'QA MG Team1 Meet', '2027-06-01', '2027-06-03', 1,
     'bbbbbbbb-0000-4000-a000-000000000001', null, 'aaaaaaaa-0000-4000-a000-0000000000a1'),
-  ('cccccccc-0000-4000-a000-000000000003', 'QA MG Team2 Meet', '2026-03-01', 0,
+  ('cccccccc-0000-4000-a000-000000000003', 'QA MG Team2 Meet', '2026-03-01', null, 0,
     'bbbbbbbb-0000-4000-a000-000000000002', null, 'aaaaaaaa-0000-4000-a000-0000000000a5');
 
 -- 目標。reflection_note / achievements には探知用の文字列 SECRET-* を入れる
@@ -191,9 +191,9 @@ select is(
    cross join lateral unnest(p.proargnames, p.proargmodes) with ordinality as a(n, m, o)
    where ns.nspname = 'public' and p.proname = 'get_team_member_goals' and a.m = 't'),
   array['id','style_id','target_time','status','achieved_at','created_at',
-        'competition_id','competition_title','competition_date','competition_pool_type',
-        'current_best_time','milestones']::text[],
-  'V-01g: 戻り列は Contract v2 の12列だけ (start_time と reflection_note 等を含まず、current_best_time は残す・順序も固定)');
+        'competition_id','competition_title','competition_date','competition_end_date',
+        'competition_pool_type','current_best_time','milestones']::text[],
+  'V-01g: 戻り列は Contract v3 の13列だけ (start_time と reflection_note 等を含まず、current_best_time は残す・順序も固定)');
 
 select hasnt_column('public', 'goals', 'start_time',
   'V-01h: goals に start_time 列が無い (20261013000000 で削除)');
@@ -306,6 +306,14 @@ select is(
    where id = 'dddddddd-0000-4000-a000-000000000002'),
   '("QA MG Team1 Meet",2027-06-01,1)',
   'V-03d: 自チーム大会の目標は大会名・日付・水路つき');
+
+select is(
+  (select array_agg(coalesce(competition_end_date::text, 'NULL') order by id)
+   from public.get_team_member_goals('bbbbbbbb-0000-4000-a000-000000000001', 'aaaaaaaa-0000-4000-a000-0000000000a7')
+   where id in ('dddddddd-0000-4000-a000-000000000001', 'dddddddd-0000-4000-a000-000000000002',
+                'dddddddd-0000-4000-a000-000000000004')),
+  array['NULL','2027-06-03','NULL']::text[],
+  'V-03d2: competition_end_date は複数日開催の大会だけ終了日、単日開催・大会NULLは NULL');
 
 select is(
   (select row(competition_id, competition_title, competition_date, competition_pool_type, current_best_time)::text

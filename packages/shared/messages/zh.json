@@ -2130,7 +2130,7 @@
     "list": {
       "loadError": "加载目标列表失败",
       "retry": "重新加载",
-      "empty": "暂无目标",
+      "empty": "暂无即将进行的比赛目标",
       "emptyDesc": "请使用下方的按钮新建",
       "achievedBadge": "已达成！",
       "targetTimePrefix": "目标：",
@@ -2387,14 +2387,13 @@
     "memberSelectTitle": "选择成员",
     "selectMemberHint": "选择成员后将显示该成员的目标",
     "noSelectableMembers": "没有可选择的成员",
-    "empty": "暂无目标",
-    "emptyDesc": "该成员尚未设定目标",
+    "empty": "暂无即将进行的比赛目标",
+    "emptyDesc": "已结束比赛的目标不会显示",
     "loadError": "目标加载失败",
     "retry": "重试",
     "snapshotNote": "显示的是成员最后一次在应用中更新时的状态",
     "section": {
       "upcoming": "即将进行的比赛",
-      "past": "过去的比赛",
       "noCompetition": "无比赛信息"
     },
     "status": {
