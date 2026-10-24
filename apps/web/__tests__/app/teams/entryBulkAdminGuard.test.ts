@@ -35,7 +35,7 @@
  * notFound は引き続き "next/navigation" から直接 import されているため変更していない。
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getURLFromRedirectError } from "next/dist/client/components/redirect";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 
@@ -116,6 +116,11 @@ async function loadEntriesDataLoader() {
   );
   return mod.default;
 }
+
+// サーバーコンポーネント一式の初回 import (変換) は 5 秒を超えることがあるので、最初のテストの枠から外す
+beforeAll(async () => {
+  await loadEntriesDataLoader();
+});
 
 type ChainResponse = { data: unknown; error: unknown };
 
