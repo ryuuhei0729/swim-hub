@@ -50,7 +50,6 @@ const VALID_BODY = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
   insertMock.mockResolvedValue({ error: null });
   sendContactNotification.mockResolvedValue(undefined);
 });

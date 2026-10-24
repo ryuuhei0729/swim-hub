@@ -176,7 +176,6 @@ describe("TeamsScreen — pull-to-refresh のクエリ網羅性 (ドリフト検
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     captured.refreshAll = null;
     apiMocks.getMyTeams.mockResolvedValue([]);
     queryClient = new QueryClient({

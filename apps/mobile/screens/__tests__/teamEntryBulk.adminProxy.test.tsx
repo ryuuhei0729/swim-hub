@@ -21,13 +21,17 @@
 //   存在しない (grep実測: 0件)。衝突検出時のアラートが翻訳されずキー名のまま
 //   表示される可能性がある。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { Alert } from "react-native";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
 
+// 共有モックの __modalMountRegistry は「マウント時点の props」しか保持しないため、
+// onRequestClose がマウント時のクロージャ (saving=false) に固定されてしまう。
+// 実機の RN では戻るボタンは常に「現在レンダーされている」ハンドラを呼ぶので、
+// レンダーごとの最新 props を記録して、そちらを発火できるようにする。
+const modalRenders = vi.hoisted(() => [] as Record<string, unknown>[]);
 vi.mock("react-native", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("react-native");
   // vi.mock ファクトリは巻き上げられるため、ファイル冒頭の import 済み React ではなく
@@ -37,145 +41,53 @@ vi.mock("react-native", async () => {
   return {
     ...actual,
     KeyboardAvoidingView: actual.View,
-    // 共有モックの __modalMountRegistry は「マウント時点の props」しか保持しないため、
-    // onRequestClose がマウント時のクロージャ (saving=false) に固定されてしまう。
-    // 実機の RN では戻るボタンは常に「現在レンダーされている」ハンドラを呼ぶので、
-    // レンダーごとの最新 props を記録して、そちらを発火できるようにする。
     Modal: (props: Record<string, unknown>) => {
-      mocks.modalRenders.push(props);
+      modalRenders.push(props);
       return ReactActual.createElement(ActualModal, props);
     },
   };
 });
 
-const mocks = vi.hoisted(() => {
-  const styleFree: { id: number; name_jp: string; name: string; style: string; distance: number } = {
-    id: 3,
-    name_jp: "自由形100m",
-    name: "Freestyle",
-    style: "fr",
-    distance: 100,
-  };
-  const styleBreast = {
-    id: 9,
-    name_jp: "平泳ぎ50m",
-    name: "Breaststroke",
-    style: "br",
-    distance: 50,
-  };
-
-  const responses: Record<string, { data: unknown; error: unknown }> = {};
-
-  function makeSupabase() {
-    return {
-      from: (table: string) => {
-        const op = "select";
-        const builder: Record<string, unknown> = {};
-        const chain = () => builder;
-        builder.select = vi.fn(chain);
-        builder.eq = vi.fn(chain);
-        builder.order = vi.fn(() => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }));
-        builder.single = vi.fn(() => Promise.resolve(responses[`${op}:${table}`] ?? { data: null, error: null }));
-        return builder;
-      },
-    };
-  }
-
-  return {
-    modalRenders: [] as Record<string, unknown>[],
-    styleFree,
-    styleBreast,
-    responses,
-    supabase: makeSupabase(),
-    routeParams: { competitionId: "comp-1", teamId: "team-1" },
-    goBack: vi.fn(),
-    navigate: vi.fn(),
-    getStyles: vi.fn(),
-    getBestTimesForUsers: vi.fn(),
-    createBulkEntries: vi.fn().mockResolvedValue([]),
-    updateEntry: vi.fn().mockResolvedValue({}),
-    deleteBulkEntries: vi.fn().mockResolvedValue(undefined),
-  };
-});
-
-vi.mock("@react-navigation/native", () => ({
-  useRoute: () => ({ params: mocks.routeParams }),
-  useNavigation: () => ({ navigate: mocks.navigate, goBack: mocks.goBack }),
-  usePreventRemove: () => undefined,
-}));
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({
-    supabase: mocks.supabase,
-    user: { id: "admin-1" },
-  }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useTeamsQuery: () => ({
-    members: [
-      { user_id: "admin-1", role: "admin", users: { id: "admin-1", name: "管理者" } },
-      { user_id: "user-1", role: "user", users: { id: "user-1", name: "選手A" } },
-    ],
-    isLoading: false,
-  }),
-}));
-
-vi.mock("@apps/shared/api/styles", () => ({
-  StyleAPI: class {
-    getStyles = mocks.getStyles;
-  },
-}));
-
-vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: class {
-    createBulkEntries = mocks.createBulkEntries;
-    updateEntry = mocks.updateEntry;
-    deleteBulkEntries = mocks.deleteBulkEntries;
-  },
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimesForUsers = mocks.getBestTimesForUsers;
-  },
-}));
-
-// このテストの検証対象外の重量コンポーネントを薄いスタブに差し替える
-// (teamRecordBulk.detailScreenInvalidate.test.tsx と同じ方針)
-vi.mock("@/components/teams/MemberSelectModal", () => ({
-  MemberSelectModal: () => null,
-}));
-
+import { createWrapper, harness } from "./teamEntryBulkScreenHarness";
 import { TeamEntryBulkFormScreen } from "../TeamEntryBulkFormScreen";
+import { Alert } from "react-native";
 
-const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+const styleFree: { id: number; name_jp: string; name: string; style: string; distance: number } = {
+  id: 3,
+  name_jp: "自由形100m",
+  name: "Freestyle",
+  style: "fr",
+  distance: 100,
 };
+const styleBreast = {
+  id: 9,
+  name_jp: "平泳ぎ50m",
+  name: "Breaststroke",
+  style: "br",
+  distance: 50,
+};
+
 
 describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.modalRenders.length = 0;
+    modalRenders.length = 0;
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
 
-    mocks.getStyles.mockResolvedValue([mocks.styleFree, mocks.styleBreast]);
-    mocks.getBestTimesForUsers.mockResolvedValue(new Map());
-    mocks.createBulkEntries.mockResolvedValue([]);
-    mocks.updateEntry.mockResolvedValue({});
-    mocks.deleteBulkEntries.mockResolvedValue(undefined);
+    harness.getStyles.mockResolvedValue([styleFree, styleBreast]);
+    harness.getBestTimesForUsers.mockResolvedValue(new Map());
+    harness.createBulkEntries.mockResolvedValue([]);
+    harness.updateEntry.mockResolvedValue({});
+    harness.deleteBulkEntries.mockResolvedValue(undefined);
 
-    mocks.responses["select:competitions"] = {
+    harness.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0, date: "2999-01-01", entry_status: "open" },
       error: null,
     };
-    mocks.responses["select:entries"] = {
+    harness.responses["select:entries"] = {
       data: [
         {
           id: "entry-X",
@@ -204,7 +116,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       "値そのものは画面に出ていなかった。web の EntriesClient と同じ緑バッジを mobile にも出す。" +
       "バッジは表示のみで、申告タイムの入力欄には入らない）",
     async () => {
-      mocks.getBestTimesForUsers.mockResolvedValue(
+      harness.getBestTimesForUsers.mockResolvedValue(
         new Map([
           [
             "user-1",
@@ -265,11 +177,11 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       fireEvent.click(await screen.findByText("確定"));
 
       await waitFor(() => {
-        expect(mocks.deleteBulkEntries).toHaveBeenCalledWith("team-1", ["entry-X"]);
+        expect(harness.deleteBulkEntries).toHaveBeenCalledWith("team-1", ["entry-X"]);
       });
       // 残った entry-Y は変更されていないため update/create の対象にならない
-      expect(mocks.updateEntry).not.toHaveBeenCalled();
-      expect(mocks.createBulkEntries).not.toHaveBeenCalled();
+      expect(harness.updateEntry).not.toHaveBeenCalled();
+      expect(harness.createBulkEntries).not.toHaveBeenCalled();
     },
   );
 
@@ -295,7 +207,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       fireEvent.click(await screen.findByText("確定"));
 
       await waitFor(() => {
-        expect(mocks.deleteBulkEntries).toHaveBeenCalledWith(
+        expect(harness.deleteBulkEntries).toHaveBeenCalledWith(
           "team-1",
           expect.arrayContaining(["entry-X", "entry-Y"]),
         );
@@ -344,9 +256,9 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       expect(Alert.alert).toHaveBeenCalled();
 
       // DBには1行も書き込まれていない
-      expect(mocks.updateEntry).not.toHaveBeenCalled();
-      expect(mocks.deleteBulkEntries).not.toHaveBeenCalled();
-      expect(mocks.createBulkEntries).not.toHaveBeenCalled();
+      expect(harness.updateEntry).not.toHaveBeenCalled();
+      expect(harness.deleteBulkEntries).not.toHaveBeenCalled();
+      expect(harness.createBulkEntries).not.toHaveBeenCalled();
     },
   );
 
@@ -412,7 +324,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       fireEvent.click(await screen.findByText("確定"));
 
       await waitFor(() => {
-        expect(mocks.deleteBulkEntries).toHaveBeenCalledWith(
+        expect(harness.deleteBulkEntries).toHaveBeenCalledWith(
           "team-1",
           expect.arrayContaining(["entry-X"]),
         );
@@ -450,9 +362,9 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       // entry-Y (平泳ぎ) の行だけが残っていることを確認する
       expect(screen.getAllByTestId("icon-trash-2")).toHaveLength(1);
       // 保存APIは一切呼ばれていない
-      expect(mocks.updateEntry).not.toHaveBeenCalled();
-      expect(mocks.deleteBulkEntries).not.toHaveBeenCalled();
-      expect(mocks.createBulkEntries).not.toHaveBeenCalled();
+      expect(harness.updateEntry).not.toHaveBeenCalled();
+      expect(harness.deleteBulkEntries).not.toHaveBeenCalled();
+      expect(harness.createBulkEntries).not.toHaveBeenCalled();
     },
   );
 
@@ -462,12 +374,12 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
       "web (EntriesClient.tsx) と同型の分岐を mobile でも保証する。PM確定仕様により " +
       "App Developer が追加した分岐の回帰テスト）",
     async () => {
-      mocks.updateEntry.mockRejectedValueOnce({ code: "23505", message: "duplicate key" });
+      harness.updateEntry.mockRejectedValueOnce({ code: "23505", message: "duplicate key" });
       // entry-X (style_id=3) のベストタイムを用意し、「流用」ボタン (Pressable) で
       // 種目に触れずタイムだけを更新する。RN TextInput モックは onChangeText を
       // DOM の onChange に結線しないため、fireEvent.change でテキスト入力は再現できない
       // (Pressable の onPress は onClick に結線されるため、ボタン操作で代替する)
-      mocks.getBestTimesForUsers.mockResolvedValue(
+      harness.getBestTimesForUsers.mockResolvedValue(
         new Map([["user-1", [{ id: "best-1", time: 65.0, style_id: 3 }]]]),
       );
 
@@ -516,8 +428,8 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
     async () => {
       const rawMessage =
         'update or delete on table "entries" violates foreign key constraint "entries_team_id_fkey"';
-      mocks.updateEntry.mockRejectedValueOnce(new Error(rawMessage));
-      mocks.getBestTimesForUsers.mockResolvedValue(
+      harness.updateEntry.mockRejectedValueOnce(new Error(rawMessage));
+      harness.getBestTimesForUsers.mockResolvedValue(
         new Map([["user-1", [{ id: "best-1", time: 65.0, style_id: 3 }]]]),
       );
 
@@ -573,7 +485,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
     async () => {
       // deleteBulkEntries を保留させ、保存中 (saving=true) の状態を維持する
       let resolveDelete: (() => void) | undefined;
-      mocks.deleteBulkEntries.mockImplementation(
+      harness.deleteBulkEntries.mockImplementation(
         () =>
           new Promise<void>((resolve) => {
             resolveDelete = () => resolve();
@@ -596,13 +508,13 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
 
       fireEvent.click(confirmButton);
       await waitFor(() => {
-        expect(mocks.deleteBulkEntries).toHaveBeenCalled();
+        expect(harness.deleteBulkEntries).toHaveBeenCalled();
       });
 
       // 保存が進行中 (deleteBulkEntries 未解決) の状態で、確認モーダルの <Modal> が
       // 「今」受け取っている onRequestClose を取り出す。実機の Android 戻るボタンも
       // 現在レンダーされているハンドラを呼ぶため、マウント時ではなく最新を使う。
-      const visibleModalProps = mocks.modalRenders.filter((p) => p.visible === true);
+      const visibleModalProps = modalRenders.filter((p) => p.visible === true);
       const confirmModalProps = visibleModalProps[visibleModalProps.length - 1];
       if (!confirmModalProps) throw new Error("[test setup] 表示中の <Modal> が記録されていない");
       const onRequestClose = confirmModalProps.onRequestClose as (() => void) | undefined;
@@ -626,7 +538,7 @@ describe("TeamEntryBulkFormScreen — 保存フロー回帰テスト", () => {
 
       resolveDelete?.();
       await waitFor(() => {
-        expect(mocks.goBack).toHaveBeenCalled();
+        expect(harness.goBack).toHaveBeenCalled();
       });
     },
   );

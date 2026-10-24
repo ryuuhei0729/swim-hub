@@ -16,56 +16,15 @@
  * は `common.error` (「エラーが発生しました」) にフォールバックする。期待値を汎用
  * メッセージに更新し、生のエラー文字列が画面に出ないことを assert する。
  */
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import messages from "@apps/shared/messages/ja.json";
 import type { Record as RecordType, Style } from "@apps/shared/types";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 
-const mocks = vi.hoisted(() => ({
-  useRecordsQuery: vi.fn(),
-  deleteRecordMutateAsync: vi.fn(),
-  deleteCompetitionMutateAsync: vi.fn(),
-  updateRecordMutateAsync: vi.fn(),
-  replaceSplitTimesMutateAsync: vi.fn(),
-  entryApiDeleteEntry: vi.fn(),
-}));
-
-function createFakeSupabase(entries: unknown[] = [], records: unknown[] = []) {
-  const builder = (table: string) => {
-    const chain = {
-      select: () => chain,
-      eq: () => chain,
-      then: (resolve: (v: { data: unknown; error: null }) => void) => {
-        if (table === "entries") return Promise.resolve(resolve({ data: entries, error: null }));
-        if (table === "records") return Promise.resolve(resolve({ data: records, error: null }));
-        return Promise.resolve(resolve({ data: [], error: null }));
-      },
-    };
-    return chain;
-  };
-
-  return {
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }),
-    },
-    from: builder,
-  };
-}
-
-const fakeSupabase = createFakeSupabase();
-
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
-
-vi.mock("@/contexts", () => ({
-  useAuth: () => ({ user: { id: "user-1" }, supabase: fakeSupabase, subscription: null }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 // RecordLogForm 内部が使う useBestTimes / VideoUploader は本テストの対象外の境界。
 vi.mock("@/hooks/useBestTimes", () => ({
@@ -73,62 +32,10 @@ vi.mock("@/hooks/useBestTimes", () => ({
 }));
 vi.mock("@/components/video/VideoUploader", () => ({ default: () => null }));
 
-vi.mock("@apps/shared/hooks/queries/records", () => ({
-  useRecordsQuery: mocks.useRecordsQuery,
-  useCreateRecordMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useUpdateRecordMutation: () => ({
-    mutateAsync: mocks.updateRecordMutateAsync,
-    isPending: false,
-    error: null,
-  }),
-  useDeleteRecordMutation: () => ({
-    mutateAsync: mocks.deleteRecordMutateAsync,
-    isPending: false,
-  }),
-  useCreateCompetitionMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useUpdateCompetitionMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeleteCompetitionMutation: () => ({
-    mutateAsync: mocks.deleteCompetitionMutateAsync,
-    isPending: false,
-  }),
-  useCreateSplitTimesMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useReplaceSplitTimesMutation: () => ({
-    mutateAsync: mocks.replaceSplitTimesMutateAsync,
-    isPending: false,
-    error: null,
-  }),
-  useListBestCandidatesQuery: () => ({ data: undefined, error: null }),
-}));
-
-vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: class {
-    deleteEntry = mocks.entryApiDeleteEntry;
-  },
-}));
-
-vi.mock("@/components/forms/CompetitionTabModal", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
-vi.mock("@/app/[locale]/(authenticated)/competition/_components/CompetitionDetailModal", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
-vi.mock("@/app/[locale]/(authenticated)/competition/_components/RecordDetailModal", () => ({
-  __esModule: true,
-  default: (props: { isOpen: boolean; record: { id: string }; onEdit: () => void }) =>
-    props.isOpen ? (
-      <div data-testid="record-standalone-modal-stub">
-        <button onClick={() => props.onEdit()}>単体レコードを編集</button>
-      </div>
-    ) : null,
-}));
-
 // RecordLogForm は本物を使う (barrel: "@/components/forms/RecordLogForm" は
 // "./record-log/RecordLogForm" を re-export しているだけなのでモックしない)。
 
+import { harness, renderWithMessages, setRecords } from "./competitionClientHarness";
 import CompetitionClient from "../CompetitionClient";
 
 const STYLE_FR50: Style = { id: 2, name_jp: "50m自由形", distance: 50 } as Style;
@@ -152,23 +59,12 @@ const makeStandaloneRecord = (overrides: Partial<RecordType> = {}): RecordType =
   }) as RecordType;
 
 const renderClient = (records: RecordType[]) => {
-  mocks.useRecordsQuery.mockReturnValue({
-    records,
-    isLoading: false,
-    error: null,
-    refetch: vi.fn(),
-  });
-
-  return render(
-    <NextIntlClientProvider locale="ja" messages={messages as unknown as AbstractIntlMessages}>
-      <CompetitionClient styles={[STYLE_FR50]} />
-    </NextIntlClientProvider>,
-  );
+  setRecords(records);
+  return renderWithMessages(<CompetitionClient styles={[STYLE_FR50]} />);
 };
 
 describe("CompetitionClient.handleStandaloneRecordSubmit — RecordLogForm(本物)を通した失敗系", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     useCompetitionStore.getState().closeTabModal();
     useCompetitionStore.getState().resetFilter();
     useCompetitionStore.setState({ styles: [] });
@@ -182,7 +78,7 @@ describe("CompetitionClient.handleStandaloneRecordSubmit — RecordLogForm(本�
       const user = userEvent.setup();
       // 生の Error = 生の DB エラーのシミュレーション。UserFacingError ではないため
       // toUserFacingMessage は fallback (common.error) を返すはず。
-      mocks.updateRecordMutateAsync.mockRejectedValue(new Error("DB更新に失敗しました"));
+      harness.updateRecordMutateAsync.mockRejectedValue(new Error("DB更新に失敗しました"));
 
       renderClient([makeStandaloneRecord()]);
 
@@ -200,9 +96,9 @@ describe("CompetitionClient.handleStandaloneRecordSubmit — RecordLogForm(本�
       expect(errorBox).not.toHaveTextContent("DB更新に失敗しました");
       expect(screen.queryByText(/DB更新に失敗しました/)).not.toBeInTheDocument();
 
-      expect(mocks.updateRecordMutateAsync).toHaveBeenCalledTimes(1);
+      expect(harness.updateRecordMutateAsync).toHaveBeenCalledTimes(1);
       // 失敗時は split times の置き換えまで到達しない
-      expect(mocks.replaceSplitTimesMutateAsync).not.toHaveBeenCalled();
+      expect(harness.replaceSplitTimesMutateAsync).not.toHaveBeenCalled();
       // モーダルはDOM上に残ったまま(standaloneEditRecordがリセットされていない)
       expect(screen.getByTestId("record-form-modal")).toBeInTheDocument();
     },
@@ -213,8 +109,8 @@ describe("CompetitionClient.handleStandaloneRecordSubmit — RecordLogForm(本�
       "(上のテストが実際に失敗系の差分を検知できることの確認)",
     async () => {
       const user = userEvent.setup();
-      mocks.updateRecordMutateAsync.mockResolvedValue({ id: "record-1" });
-      mocks.replaceSplitTimesMutateAsync.mockResolvedValue([]);
+      harness.updateRecordMutateAsync.mockResolvedValue({ id: "record-1" });
+      harness.replaceSplitTimesMutateAsync.mockResolvedValue([]);
 
       renderClient([makeStandaloneRecord()]);
 

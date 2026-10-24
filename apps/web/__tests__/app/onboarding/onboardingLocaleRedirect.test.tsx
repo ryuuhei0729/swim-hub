@@ -95,7 +95,6 @@ async function captureRedirectUrl(run: () => Promise<unknown>): Promise<string> 
 
 describe("onboarding/page.tsx — redirect() の locale 対応 (項目3)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetLocale.mockResolvedValue("ja");
   });
 

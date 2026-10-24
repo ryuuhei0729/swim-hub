@@ -44,6 +44,8 @@ import { act, renderHook } from "@testing-library/react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@swim-hub/shared/types";
 import messages from "@apps/shared/messages/ja.json";
 import type { PracticeTabSaveParams } from "@/components/forms/PracticeTabModal";
 import { usePracticeTabSave } from "@/hooks/usePracticeTabSave";
@@ -186,8 +188,7 @@ describe("usePracticeTabSave — issue #48: image_paths SELECT の error 未処�
     const { result } = renderHook(
       () =>
         usePracticeTabSave({
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          supabase: fake as unknown as any,
+          supabase: fake as unknown as SupabaseClient<Database>,
           user: { id: "user-1" },
           createPractice,
           updatePractice,
@@ -205,7 +206,6 @@ describe("usePracticeTabSave — issue #48: image_paths SELECT の error 未処�
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.uploadPracticeImage.mockResolvedValue("practices/practice-1/new-upload.jpg");
     mocks.deletePracticeImage.mockResolvedValue(undefined);
   });

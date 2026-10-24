@@ -31,7 +31,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TeamRankings } from "../TeamRankings";
@@ -252,10 +252,6 @@ async function waitForRankingsError(fake: ReturnType<typeof makeSupabase>) {
 }
 
 describe("TeamRankings (mobile)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // -------------------------------------------------------------------------
   // [V-M20] web とのパリティ: 既定条件
   // -------------------------------------------------------------------------
@@ -1143,7 +1139,6 @@ describe("TeamRankings (mobile)", () => {
     });
   });
 
-
   // -------------------------------------------------------------------------
   // [V-M33] 🚨 派生フォールバックの担保 = 4つの消費側すべてが `active.state` を読む
   //
@@ -1453,7 +1448,6 @@ describe("TeamRankings (mobile)", () => {
       expect(source).toContain("numberOfLines={3}");
     });
   });
-
 
   // -------------------------------------------------------------------------
   // [V-P2-41] 🚨 取得上限に達したことの明示 (mobile 個人)

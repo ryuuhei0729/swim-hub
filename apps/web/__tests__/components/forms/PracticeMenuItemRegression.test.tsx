@@ -12,7 +12,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderWithI18n as render, screen, fireEvent } from "../../utils/render";
 import PracticeMenuItem from "../../../components/forms/practice-log/components/PracticeMenuItem";
 import type { PracticeMenu, Tag } from "../../../components/forms/practice-log/types";
@@ -54,10 +54,6 @@ const DEFAULT_PROPS = {
 };
 
 describe("PracticeMenuItem - SelectChips 切り出し + DISTANCE_PRESETS 移動後の回帰 (V-08)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("種目チップ (SWIM_STYLES)", () => {
     it("Fr/Ba/Br/Fly/IM の 5 種のチップが表示されること", () => {
       render(<PracticeMenuItem {...DEFAULT_PROPS} />);

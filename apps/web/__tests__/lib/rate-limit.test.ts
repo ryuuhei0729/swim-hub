@@ -26,7 +26,6 @@ import { reserveContactSubmission } from "@/lib/rate-limit";
 const RAW_IP = "203.0.113.55";
 
 beforeEach(() => {
-  vi.clearAllMocks();
   singleMock.mockResolvedValue({ data: { allowed: true, remaining: 9 }, error: null });
 });
 

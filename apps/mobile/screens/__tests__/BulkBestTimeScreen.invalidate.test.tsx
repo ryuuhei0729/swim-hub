@@ -94,7 +94,6 @@ describe("BulkBestTimeScreen — 保存成功後のキャッシュ無効化 (B-2
   let invalidateSpy: MockInstance<QueryClient["invalidateQueries"]>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });

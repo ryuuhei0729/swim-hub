@@ -19,7 +19,7 @@
  * [VU-12] confirmUpload — DB 更新 API が 500 を返したとき Error をスローする
  */
 
-import { describe, it, vi, beforeEach, expect } from "vitest";
+import { describe, it, vi, expect } from "vitest";
 
 // vi.hoisted でモック関数を先に定義（hoisting 問題を回避）
 const mockGetThumbnailAsync = vi.hoisted(() => vi.fn());
@@ -104,10 +104,6 @@ function setupUploadVideoMocks({
 // --------------------------------------------------------------------------
 
 describe("[VU-01] generateThumbnail — 通常 URI", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("file:// URI を渡すと getThumbnailAsync が呼ばれ { uri, width, height } を返す", async () => {
     const expected = { uri: "file:///tmp/thumb.jpg", width: 1280, height: 720 };
     mockGetThumbnailAsync.mockResolvedValueOnce(expected);
@@ -120,10 +116,6 @@ describe("[VU-01] generateThumbnail — 通常 URI", () => {
 });
 
 describe("[VU-02] generateThumbnail — iOS ph:// URI (問題の顕在化)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("ph:// URI を渡すと getThumbnailAsync が例外をスローする（現行実装の問題記録）", async () => {
     mockGetThumbnailAsync.mockRejectedValueOnce(
       new Error("Cannot read ph:// URI in video thumbnail"),
@@ -134,10 +126,6 @@ describe("[VU-02] generateThumbnail — iOS ph:// URI (問題の顕在化)", () 
 });
 
 describe("[VU-04] requestUploadUrl — 正常系", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("type='practice-log', id, contentType='video/mp4', accessToken を渡すと POST され UploadUrlResponse が返る", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -174,10 +162,6 @@ describe("[VU-04] requestUploadUrl — 正常系", () => {
 });
 
 describe("[VU-05] requestUploadUrl — contentType 伝達", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("contentType='video/quicktime' を渡すと body.contentType が 'video/quicktime' になる（iOS MOV 対応）", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -208,10 +192,6 @@ describe("[VU-05] requestUploadUrl — contentType 伝達", () => {
 });
 
 describe("[VU-06] requestUploadUrl — 認証エラー", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("API が 401 を返すと Error をスローする", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -238,10 +218,6 @@ describe("[VU-06] requestUploadUrl — 認証エラー", () => {
 });
 
 describe("[VU-07] uploadVideoToR2 — PUT アップロード", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("fileUri から fetch で blob を取得し、presignedUrl へ Content-Type 付きで PUT する", async () => {
     const mockBlob = new Blob(["video-binary-data"]);
     // 1回目: fileUri から blob 取得
@@ -290,10 +266,6 @@ describe("[VU-07] uploadVideoToR2 — PUT アップロード", () => {
 });
 
 describe("[VU-08] uploadVideoToR2 — PUT 失敗", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("PUT が 403 を返すと '動画アップロード失敗: HTTP 403' を含む Error をスローする", async () => {
     mockFetch
       .mockResolvedValueOnce({ ok: true, blob: async () => new Blob() })
@@ -306,10 +278,6 @@ describe("[VU-08] uploadVideoToR2 — PUT 失敗", () => {
 });
 
 describe("[VU-09] uploadVideo — 全フロー正常系", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("完了後に { videoPath, thumbnailPath } を返す", async () => {
     setupUploadVideoMocks({ thumbnailSuccess: true });
 
@@ -349,10 +317,6 @@ describe("[VU-09] uploadVideo — 全フロー正常系", () => {
 });
 
 describe("[VU-10] uploadVideo — サムネイル生成失敗時のフォールバック", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("generateThumbnail が失敗した場合もアップロードが継続され videoPath を返す", async () => {
     setupUploadVideoMocks({ thumbnailSuccess: false });
 
@@ -385,10 +349,6 @@ describe("[VU-10] uploadVideo — サムネイル生成失敗時のフォール�
 });
 
 describe("[VU-11] uploadVideo — contentType を mimeType から決定", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("mimeType が 'video/quicktime' のとき requestUploadUrl へ contentType='video/quicktime' が渡る", async () => {
     setupUploadVideoMocks({ thumbnailSuccess: true });
 
@@ -456,10 +416,6 @@ describe("[VU-11] uploadVideo — contentType を mimeType から決定", () => 
 });
 
 describe("[VU-12] confirmUpload — DB 更新失敗", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("API が 500 を返すと 'DB更新に失敗しました' を含む Error をスローする", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

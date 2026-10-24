@@ -41,9 +41,7 @@ vi.mock("@apps/shared/api/teams/practices", () => ({
   })),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 vi.mock("@/components/forms/PracticeBasicForm", () => ({ default: () => null }));
 vi.mock("@/components/forms/PracticeTabModal", () => ({ default: () => null }));
@@ -71,7 +69,6 @@ import TeamPractices from "@/components/team/TeamPractices";
 
 describe("TeamPractices — 自己ログ導線 + ストア安全策 (D4)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     // 各テスト前に確実にクリーンな状態から開始する
     act(() => {
       usePracticeStore.getState().closeAll();

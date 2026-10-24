@@ -164,7 +164,6 @@ async function expandFirstEventCard() {
 
 describe("AdminMonthlyAttendance attendance grouping", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.updateStatusMutation.mutateAsync = vi.fn().mockResolvedValue(undefined);
     mocks.updateStatusMutation.isPending = false;
     mocks.updateStatusMutation.variables = undefined;

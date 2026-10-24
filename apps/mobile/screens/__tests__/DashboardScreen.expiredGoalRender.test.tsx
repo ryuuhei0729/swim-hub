@@ -169,7 +169,6 @@ vi.mock("@apps/shared/api/dashboard", () => ({
 
 const USER_ID = "user-1";
 
-
 let supabaseMock: ReturnType<typeof createTableDispatchSupabase>;
 
 vi.mock("@/contexts/AuthProvider", () => ({
@@ -183,7 +182,6 @@ function createWrapper(queryClient: QueryClient) {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
-
 
 // =============================================================================
 // DashboardScreen.expiredGoalRender.test.tsx (L4)
@@ -201,7 +199,6 @@ async function mountDashboard() {
 
 describe("DashboardScreen — 期限切れ振り返りモーダルの描画切替", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     check.state.expiredGoal = null;
     check.state.expiredMilestone = null;
     supabaseMock = createTableDispatchSupabase({

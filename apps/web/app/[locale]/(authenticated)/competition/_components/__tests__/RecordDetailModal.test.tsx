@@ -16,7 +16,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
 import type { Record as RecordType } from "@apps/shared/types";
 
@@ -68,10 +68,6 @@ const renderModal = (overrides: Partial<Props> = {}) => {
 };
 
 describe("RecordDetailModal", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("isOpen=false のとき何も描画しない", () => {
     renderModal({ isOpen: false });
     expect(screen.queryByTestId("record-standalone-detail-modal")).not.toBeInTheDocument();

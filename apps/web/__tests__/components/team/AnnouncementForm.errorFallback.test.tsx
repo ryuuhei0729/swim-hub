@@ -16,7 +16,7 @@
 import React from "react";
 import { renderWithI18n as render, screen } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 const mockCreateMutateAsync = vi.fn();
 const mockUpdateMutateAsync = vi.fn();
@@ -32,19 +32,13 @@ vi.mock("@apps/shared/hooks/queries/announcements", () => ({
   }),
 }));
 
-let currentAuthMock: { supabase: { auth: { getUser: ReturnType<typeof vi.fn> } } };
-
-vi.mock("@/contexts", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts");
+import { useAuth } from "@/contexts";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import { AnnouncementForm } from "@/components/team/AnnouncementForm";
 
 describe("AnnouncementForm — 保存失敗時のエラー表示 — 情報露出防止の対テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   const fillRequiredFields = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.type(screen.getByLabelText(/タイトル/), "テストお知らせ");
     await user.type(screen.getByLabelText(/内容/), "テスト本文");
@@ -55,11 +49,12 @@ describe("AnnouncementForm — 保存失敗時のエラー表示 — 情報露�
       "汎用フォールバック文言 (common.error) が表示され、生のエラー文字列は表示されない",
     async () => {
       const user = userEvent.setup();
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+        user: null,
         supabase: {
           auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
         },
-      };
+      }));
       mockCreateMutateAsync.mockRejectedValueOnce(
         new Error('relation "team_announcements" violates row-level security policy'),
       );
@@ -79,11 +74,12 @@ describe("AnnouncementForm — 保存失敗時のエラー表示 — 情報露�
       "そのメッセージがそのまま表示される (対照実験)",
     async () => {
       const user = userEvent.setup();
-      currentAuthMock = {
+      vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+        user: null,
         supabase: {
           auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
         },
-      };
+      }));
       render(<AnnouncementForm isOpen={true} onClose={vi.fn()} teamId="team-1" />);
 
       await fillRequiredFields(user);

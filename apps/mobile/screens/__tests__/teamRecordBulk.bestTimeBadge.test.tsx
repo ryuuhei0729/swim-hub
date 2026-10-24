@@ -25,7 +25,7 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
 import {
   createResponseMapSupabase,
@@ -149,7 +149,6 @@ const waitForBadges = async (expectedCount: number): Promise<string[]> => {
 
 describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
     harness.getStyles.mockResolvedValue(mocks.styles);
     harness.getBestTimesDetailedForUsers.mockResolvedValue(new Map());

@@ -23,9 +23,7 @@ const mocks = vi.hoisted(() => ({
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@apps/shared/api/teams/records", () => ({
   TeamRecordsAPI: vi.fn().mockImplementation(() => ({
@@ -35,9 +33,7 @@ vi.mock("@apps/shared/api/teams/records", () => ({
   })),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 const RAW_COMPETITION_ROW = {
   id: "competition-1",
@@ -76,11 +72,9 @@ function buildSupabaseMock(rows: typeof RAW_COMPETITION_ROW[]) {
   return { from: fromMock };
 }
 
-let currentAuthMock: { user: { id: string }; supabase: ReturnType<typeof buildSupabaseMock> };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 // editData 全体を可視化するスタブ (pool_type/end_date の直接検証用)
 vi.mock("@/components/forms/CompetitionBasicForm", () => ({
@@ -106,11 +100,10 @@ import TeamCompetitions from "@/components/team/TeamCompetitions";
 
 describe("TeamCompetitions — handleEditCompetition の pool_type/end_date 伝搬 (D-4)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "admin-1" },
       supabase: buildSupabaseMock([RAW_COMPETITION_ROW]),
-    };
+    }));
   });
 
   it("[V-2] 長水路(1)の大会を編集ボタンから開くと、editData.pool_type が 1 で渡る", async () => {

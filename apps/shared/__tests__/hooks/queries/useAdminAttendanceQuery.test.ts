@@ -36,7 +36,6 @@ describe("useAttendanceByPracticeQuery", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockAttendancesApi = {
       listByPractice: vi.fn(),
@@ -138,7 +137,6 @@ describe("useAttendanceByCompetitionQuery", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockAttendancesApi = {
       listByPractice: vi.fn(),
@@ -192,7 +190,6 @@ describe("useUpdateAttendanceStatusMutation", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockAttendancesApi = {
       listByPractice: vi.fn(),

@@ -31,7 +31,7 @@ import type { Style } from "@apps/shared/types";
 import RecordClient from "../../app/[locale]/(authenticated)/teams/[teamId]/competitions/[competitionId]/records/_client/RecordClient";
 
 vi.mock("@/components/video/TeamVideoUploader", () => ({ default: () => null }));
-vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/i18n/navigation");
 
 vi.mock("next-intl", async (importOriginal) => {
   const original = await importOriginal<typeof import("next-intl")>();

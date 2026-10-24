@@ -200,7 +200,6 @@ describe("getCroppedImg", () => {
   let mockImage: HTMLImageElement;
 
   beforeEach(() => {
-    vi.clearAllMocks();
 
     // Canvas contextのモック
     mockContext = {

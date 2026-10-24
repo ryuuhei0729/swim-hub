@@ -61,7 +61,6 @@ function baseConfig(request: NextRequest, overrides: Record<string, unknown> = {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   createCallbackSupabaseClientMock.mockReturnValue({
     supabase: { auth: { verifyOtp, exchangeCodeForSession } },
     cookiesToSet: [],

@@ -11,7 +11,6 @@ describe("RecordAPI", () => {
   let api: RecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     api = new RecordAPI(mockClient);
   });

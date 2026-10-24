@@ -21,7 +21,7 @@
  * 防ぐという契約を検証したいので)、本テストでは「どちらが勝つか」ではなく
  * 「合計1回しか交換が起きず、両者が一貫した結果を受け取る」ことだけを assert する。
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 vi.mock("expo-web-browser", () => ({
@@ -54,10 +54,6 @@ function makeSupabaseMock() {
 function asSupabase(mock: ReturnType<typeof makeSupabaseMock>): SupabaseClient {
   return mock as unknown as SupabaseClient;
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("signInWithGoogle — 同一 code を複数呼び出しが疑似同時に奪い合う (V-35, V-36)", () => {
   it("[V-35] 同一 code で signInWithGoogle を2回疑似同時に (Promise.all で) 呼び出すと、exchangeCodeForSession は合計1回だけ呼ばれ、両方とも一貫した成功結果を返す", async () => {

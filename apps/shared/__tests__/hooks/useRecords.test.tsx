@@ -34,7 +34,6 @@ describe("useRecordsQuery", () => {
   let mockApi: RecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockApi = new RecordAPI(mockClient);
   });
@@ -100,7 +99,6 @@ describe("useCreateRecordMutation", () => {
   let mockApi: RecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockApi = new RecordAPI(mockClient);
   });
@@ -137,7 +135,6 @@ describe("useUpdateRecordMutation", () => {
   let mockApi: RecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockApi = new RecordAPI(mockClient);
   });
@@ -167,7 +164,6 @@ describe("useDeleteRecordMutation", () => {
   let mockApi: RecordAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockApi = new RecordAPI(mockClient);
   });

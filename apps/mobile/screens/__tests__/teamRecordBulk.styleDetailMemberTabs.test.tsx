@@ -27,7 +27,7 @@
 
 import { fireEvent, render, screen, waitFor, configure } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import ja from "@apps/shared/messages/ja.json";
 import {
   buildDetailScreenSupabaseMock,
@@ -65,7 +65,6 @@ function latestMemberSelectProps(): CapturedMemberSelectProps {
 const STYLE = { id: 2, name_jp: "50m自由形", name: "Freestyle", style: "Fr", distance: 50 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
   capturedMemberSelectProps.length = 0;
   harness.routeParams = { competitionId: "comp-1", teamId: "team-1", styleId: 2 };
   harness.getStyles.mockResolvedValue([STYLE]);

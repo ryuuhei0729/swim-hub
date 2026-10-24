@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { useRecordForm } from "../../components/forms/record/hooks/useRecordForm";
 import type { SwimStyle, EditData } from "../../components/forms/record/types";
@@ -19,10 +19,6 @@ describe("useRecordForm", () => {
     { id: "style-2", nameJp: "平泳ぎ200m", distance: 200 },
     { id: "style-3", nameJp: "背泳ぎ50m", distance: 50 },
   ];
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
 
   describe("初期状態", () => {
     it("isOpen=falseのとき、デフォルトの初期値を持つ", () => {

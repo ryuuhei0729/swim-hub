@@ -9,6 +9,8 @@ export default defineConfig({
     name: "shared",
     globals: true,
     environment: "jsdom",
+    // モックの呼び出し履歴は各テスト前に自動で消す (テストファイル側で vi.clearAllMocks() を書かない)
+    clearMocks: true,
     include: ["**/*.{test,spec}.{js,mjs,cjs,ts,tsx,mts,cts}"],
     exclude: ["node_modules", "dist"],
     coverage: {

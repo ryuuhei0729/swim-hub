@@ -74,7 +74,6 @@ describe("Goal Query Hooks", () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
     mockGoalApi = {
       getGoals: vi.fn(),

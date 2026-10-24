@@ -18,7 +18,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createWrapper,
   harness,
@@ -167,7 +167,6 @@ harness.members = [{ user_id: "user-1", role: "admin", users: { id: "user-1", na
 
 describe("TeamRecordStyleDetailScreen — 空タイム行は保存されない (仕様#3の回帰確認)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.insertCalls.length = 0;
     mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;
@@ -258,7 +257,6 @@ describe("TeamRecordStyleDetailScreen — 空タイム行は保存されない (
 
 describe("TeamRecordStyleDetailScreen — リレー検出された StyleEntry の構造保持 (仕様#2 前提の回帰確認)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.insertCalls.length = 0;
     mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;
@@ -392,7 +390,6 @@ describe("TeamRecordStyleDetailScreen — リレー検出された StyleEntry �
 
 describe("TeamRecordStyleDetailScreen — 非 admin の権限ガード (既存挙動の回帰確認)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.insertCalls.length = 0;
     mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;

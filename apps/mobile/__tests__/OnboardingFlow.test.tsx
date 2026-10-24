@@ -87,10 +87,6 @@ vi.mock("@/navigation/OnboardingStack", () => ({
 // [V-M01〜M03] AppNavigator の 3 状態テスト
 // ---------------------------------------------------------------------------
 describe("[V-M01〜M03] AppNavigator — onboardingCompleted 3 状態", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it.todo(
     "[V-M01] onboardingCompleted=false のとき OnboardingStack が表示される (MainStack は非表示)",
   );
@@ -109,7 +105,6 @@ describe("[V-M01〜M03] AppNavigator — onboardingCompleted 3 状態", () => {
 // ---------------------------------------------------------------------------
 describe("[V-M04] OnboardingScreen — Step 遷移", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUseAuth.mockReturnValue({
       user: { id: "user-1", email: "test@example.com" },
       isAuthenticated: true,
@@ -155,7 +150,6 @@ describe("[V-M07] Step4Guide — 完了処理", () => {
   const mockUpdateProfile = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUpdateProfile.mockResolvedValue({ error: null });
     mockUseAuth.mockReturnValue({
       user: { id: "user-1", email: "test@example.com" },

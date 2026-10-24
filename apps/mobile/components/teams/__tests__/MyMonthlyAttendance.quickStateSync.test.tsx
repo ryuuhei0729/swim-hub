@@ -132,7 +132,6 @@ describe("MyMonthlyAttendance - 即回答セクションの状態保護 (PM裁�
   const practicesData = [makePractice("prac-A", "Aプール"), makePractice("prac-B", "Bプール")];
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getMyAttendancesByMonth.mockResolvedValue([]);
     mocks.getUser.mockResolvedValue({ data: { user: { id: "me" } } });
     mocks.insert.mockResolvedValue({ error: null });

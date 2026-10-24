@@ -27,127 +27,20 @@
 // - MemberDetailModal もスタブ化し、ソート挙動の検証に無関係な依存を切り離す。
 // =============================================================================
 
-import React, { useEffect } from "react";
-import { Pressable, Text } from "react-native";
 import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
-
-// useAuth() は TeamMemberList のレンダーごとに呼ばれる。戻り値オブジェクトの参照が
-// 毎回変わると loadBestTimes の useCallback 依存 ([members, supabase]) が壊れ、
-// ソート操作の re-render のたびにレコード再取得（ローディング状態への逆戻り）が
-// 起きてしまうため、必ず同一参照を返す。
-const mocks = vi.hoisted(() => {
-  const supabaseFrom = vi.fn();
-  return { supabaseFrom, authValue: { supabase: { from: supabaseFrom } } };
-});
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => mocks.authValue,
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useUpdateMemberRoleMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useRemoveMemberMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}));
-
-// MemberDetailModal はソート検証と無関係なので描画しない
-vi.mock("../member-detail", () => ({
-  MemberDetailModal: () => null,
-}));
-
-// TeamMemberGroupFilter: 既定はグルーピングなし（素通し）。
-// 「toggle-2groups」ボタンで members を前半/後半の2グループに分けて
-// onGroupedMembersChange へ通知する（グループ内反転の検証用）。
-vi.mock("../TeamMemberGroupFilter", () => ({
-  TeamMemberGroupFilter: ({
-    members,
-    onGroupedMembersChange,
-  }: {
-    members: TeamMembershipWithUser[];
-    onGroupedMembersChange: (sorted: TeamMembershipWithUser[], headers: Map<number, string>) => void;
-  }) => {
-    useEffect(() => {
-      onGroupedMembersChange(members, new Map());
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [members]);
-
-    return React.createElement(
-      Pressable,
-      {
-        onPress: () => {
-          const half = Math.ceil(members.length / 2);
-          const headers = new Map<number, string>([
-            [0, "グループA"],
-            [half, "グループB"],
-          ]);
-          onGroupedMembersChange(members, headers);
-        },
-      },
-      React.createElement(Text, null, "toggle-2groups"),
-    );
-  },
-}));
-
-// @shopify/flash-list はソースが素の .ts (型キャスト構文込み) のまま配布されており、
-// このリポジトリの vitest 環境では変換に失敗する
-// (`SyntaxError: Unexpected token 'typeof'` @ isNewArch.ts)。
-// TeamMemberList は「WAポイントで比較」ボタン経由で WaPointsCompareModal (FlashList使用) を
-// import するようになったため、このファイルは既存の全テストを含めて suite ごと collection
-// failure になっていた (前任 QA/Developer 未着手分)。
-// `screens/__tests__/TeamsScreen.refreshDrift.test.tsx` が確立している
-// 「ネイティブ境界のみをファイルローカルでモックする」方式を踏襲し、このテストファイル内
-// 限定で最小スタブに置き換える (グローバルモックは追加しない)。
-vi.mock("@shopify/flash-list", () => ({
-  FlashList: ({
-    data,
-    renderItem,
-    keyExtractor,
-    ListEmptyComponent,
-    ...props
-  }: {
-    data?: unknown[];
-    renderItem?: (info: { item: unknown; index: number }) => React.ReactNode;
-    keyExtractor?: (item: unknown, index: number) => string | number;
-    ListEmptyComponent?: React.ReactNode;
-  } & Record<string, unknown>) =>
-    React.createElement(
-      "div",
-      props,
-      data && data.length > 0
-        ? data.map((item, index) =>
-            React.createElement(
-              "div",
-              { key: keyExtractor ? keyExtractor(item, index) : index },
-              renderItem ? renderItem({ item, index }) : null,
-            ),
-          )
-        : (ListEmptyComponent ?? null),
-    ),
-}));
-
+import { harness, buildMember } from "./teamMemberListHarness";
 import { TeamMemberList } from "../TeamMemberList";
 
-const buildMember = (
-  overrides: Partial<TeamMembershipWithUser> & { id: string; user_id: string; name: string },
-): TeamMembershipWithUser =>
-  ({
-    team_id: "team-1",
-    role: "user",
-    status: "approved",
-    is_active: true,
-    joined_at: "2025-01-01T00:00:00Z",
-    left_at: null,
-    created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
-    users: { id: overrides.user_id, name: overrides.name, gender: 0 },
-    ...overrides,
-  }) as unknown as TeamMembershipWithUser;
+harness.groupFilterLabel = "toggle-2groups";
+harness.groupFilterTogglesTwoGroups = true;
+
 
 // records クエリ: .from("records").select(...).in("user_id", ids).order("time",...)
 // user_id ごとのベストタイム行を dataByUser から返す静的モック
 const mockRecordsQuery = (dataByUser: Record<string, unknown[]>) => {
-  mocks.supabaseFrom.mockImplementation((_table: string) => ({
+  harness.supabaseFrom.mockImplementation((_table: string) => ({
     select: vi.fn(() => ({
       in: vi.fn(() => ({
         order: vi.fn().mockResolvedValue({
@@ -182,10 +75,6 @@ const getRowOrder = () => {
 };
 
 describe("TeamMemberList - ソート3状態サイクル", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   const buildFourMemberFixture = () => {
     const medium = buildMember({ id: "m-medium", user_id: "u-medium", name: "中太郎" });
     const slow = buildMember({ id: "m-slow", user_id: "u-slow", name: "遅い次郎" });
@@ -362,10 +251,6 @@ describe("TeamMemberList - ソート3状態サイクル", () => {
 // トートロジー防止メモ: 期待値(具体的な秒数文字列・"R"/"L"サフィックス)はテスト側で
 // ハードコードしており、TeamMemberList.tsx 内の selectBestTime 呼び出しをコピーしていない。
 describe("TeamMemberList - 引き継ぎタイムを含むトグル (T-4)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   const bodyText = () => document.body.textContent ?? "";
 
   const relayRecord = (userId: string, time: number, poolType: 0 | 1, isRelaying: boolean) => ({
@@ -545,15 +430,11 @@ describe("TeamMemberList - 引き継ぎタイムを含むトグル (T-4)", () =>
 // competition.date と created_at を別の値にして優先順位を判別可能にしている。
 // =============================================================================
 describe("TeamMemberList - D-1 クエリのフィールド網羅性 + セル詳細シート配線", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // loadBestTimes 用の select() 引数キャプチャ付きモック
   // (order() のみをサポート。WAポイント比較モーダルの .eq() 経路は別 describe で検証する)
   const buildCapturingRecordsMock = (rows: unknown[]) => {
     const selectCalls: string[] = [];
-    mocks.supabaseFrom.mockImplementation((_table: string) => ({
+    harness.supabaseFrom.mockImplementation((_table: string) => ({
       select: vi.fn((sel: string) => {
         selectCalls.push(sel);
         return {
@@ -810,16 +691,12 @@ describe("TeamMemberList - D-1 クエリのフィールド網羅性 + セル詳�
 // 「どこにも無い」状態が全 green で通る。
 // =============================================================================
 describe("[V-N1-01 反転] メンバータブから WAポイント比較の導線が撤去されている", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[V-N1-01 反転] メンバータブに比較ボタンが無く、比較用クエリ (eq(is_relaying,false)) も発行されない", async () => {
     const m1 = buildMember({ id: "m-1", user_id: "u-1", name: "比較アルファ" });
     const m2 = buildMember({ id: "m-2", user_id: "u-2", name: "比較ベータ" });
 
     const eqCalls: { column: string; value: unknown }[] = [];
-    mocks.supabaseFrom.mockImplementation((_table: string) => ({
+    harness.supabaseFrom.mockImplementation((_table: string) => ({
       select: vi.fn(() => ({
         in: vi.fn(() => ({
           // loadBestTimes (テーブル一覧) 用

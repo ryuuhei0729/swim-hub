@@ -7,11 +7,9 @@ import {
 } from "@/app/[locale]/(authenticated)/dashboard/_providers/CalendarProvider";
 import type { CalendarItem } from "@apps/shared/types/ui";
 
-const mockUseAuth = vi.hoisted(() => vi.fn());
-
-vi.mock("@/contexts", () => ({
-  useAuth: mockUseAuth,
-}));
+vi.mock("@/contexts");
+import { useAuth } from "@/contexts";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 const mockGetCalendarEntries = vi.fn();
 const mockGetMonthlySummary = vi.fn();
@@ -36,7 +34,7 @@ const CalendarConsumer = ({
 
 describe("CalendarProvider", () => {
   beforeEach(() => {
-    mockUseAuth.mockReset();
+    vi.mocked(useAuth).mockReset();
     mockGetCalendarEntries.mockReset();
     mockGetMonthlySummary.mockReset();
   });
@@ -56,11 +54,12 @@ describe("CalendarProvider", () => {
     ];
     const initialSummary = { practiceCount: 3, recordCount: 1 };
 
-    mockUseAuth.mockReturnValue({
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+      user: null,
       supabase: {
         auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
       },
-    });
+    }));
 
     let contextValue: ReturnType<typeof useCalendar> | null = null;
 
@@ -87,7 +86,7 @@ describe("CalendarProvider", () => {
         getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }),
       },
     };
-    mockUseAuth.mockReturnValue({ supabase: supabaseMock });
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase: supabaseMock }));
 
     const fetchedItems: CalendarItem[] = [
       {
@@ -170,13 +169,14 @@ describe("CalendarProvider", () => {
   });
 
   it("refetch resets state when API call fails (e.g. user not authenticated)", async () => {
-    mockUseAuth.mockReturnValue({
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
+      user: null,
       supabase: {
         auth: {
           getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }),
         },
       },
-    });
+    }));
 
     // 初回は成功、2回目以降は失敗（認証切れをシミュレート）
     mockGetCalendarEntries

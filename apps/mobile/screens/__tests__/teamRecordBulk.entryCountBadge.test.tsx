@@ -16,7 +16,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createResponseMapSupabase,
   createWrapper,
@@ -56,7 +56,6 @@ describe("[新機能] 種目一覧カードのエントリー人数バッジ (en
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     queryClient = makeQueryClient();
     harness.getStyles.mockResolvedValue([STYLE_FREE_50]);
     mocks.responses["select:competitions"] = {

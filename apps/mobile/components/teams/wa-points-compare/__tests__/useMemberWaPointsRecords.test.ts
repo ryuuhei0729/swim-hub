@@ -25,6 +25,7 @@
 
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { useMemberWaPointsRecords } from "../useMemberWaPointsRecords";
 
 interface FakeRow {
@@ -59,8 +60,7 @@ function buildSupabaseMock(rows: FakeRow[]) {
     }),
   }));
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = { from } as any;
+  const supabase = { from } as unknown as SupabaseClient;
   return { supabase, from, selectCalls, inCalls, eqCalls };
 }
 
@@ -225,8 +225,7 @@ describe("useMemberWaPointsRecords - チャンク分割 (USER_ID_CHUNK_SIZE)", (
       };
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = { from } as any;
+    const supabase = { from } as unknown as SupabaseClient;
     return { supabase, fromCalls, inCalls };
   }
 
@@ -346,8 +345,7 @@ describe("useMemberWaPointsRecords - 競合するリクエストの解決順序 
       })),
     }));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = { from } as any;
+    const supabase = { from } as unknown as SupabaseClient;
     return { supabase, calls };
   }
 

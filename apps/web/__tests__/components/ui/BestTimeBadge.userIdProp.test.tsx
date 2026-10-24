@@ -50,7 +50,6 @@ const defaultProps = {
 
 describe("BestTimeBadge userId prop (web, D1)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.useListBestCandidatesQuery.mockReturnValue({ data: undefined, error: null });
   });
 

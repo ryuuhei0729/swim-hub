@@ -21,153 +21,11 @@
  *             再現してから mount することがポイント。
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import messages from "@apps/shared/messages/ja.json";
-import type { Record as RecordType, Style } from "@apps/shared/types";
+import type { Record as RecordType } from "@apps/shared/types";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
-
-// -----------------------------------------------------------------------
-// vi.hoisted — モック関数の巻き上げ対策
-// -----------------------------------------------------------------------
-const mocks = vi.hoisted(() => ({
-  useRecordsQuery: vi.fn(),
-  deleteRecordMutateAsync: vi.fn(),
-  deleteCompetitionMutateAsync: vi.fn(),
-  updateRecordMutateAsync: vi.fn(),
-  replaceSplitTimesMutateAsync: vi.fn(),
-  entryApiDeleteEntry: vi.fn(),
-}));
-
-// 大会一覧の useEffect (entryOnlyItems 取得) 用の最小 fake supabase クライアント。
-// from(table).select().eq() のチェーンを thenable として実装する。
-function createFakeSupabase(entries: unknown[] = [], records: unknown[] = []) {
-  const builder = (table: string) => {
-    const chain = {
-      select: () => chain,
-      eq: () => chain,
-      then: (resolve: (v: { data: unknown; error: null }) => void) => {
-        if (table === "entries") return Promise.resolve(resolve({ data: entries, error: null }));
-        if (table === "records") return Promise.resolve(resolve({ data: records, error: null }));
-        return Promise.resolve(resolve({ data: [], error: null }));
-      },
-    };
-    return chain;
-  };
-
-  return {
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }),
-    },
-    from: builder,
-  };
-}
-
-let fakeSupabase = createFakeSupabase();
-
-vi.mock("@/contexts", () => ({
-  useAuth: () => ({ user: { id: "user-1" }, supabase: fakeSupabase }),
-}));
-
-vi.mock("@apps/shared/hooks/queries/records", () => ({
-  useRecordsQuery: mocks.useRecordsQuery,
-  useCreateRecordMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useUpdateRecordMutation: () => ({
-    mutateAsync: mocks.updateRecordMutateAsync,
-    isPending: false,
-  }),
-  useDeleteRecordMutation: () => ({
-    mutateAsync: mocks.deleteRecordMutateAsync,
-    isPending: false,
-  }),
-  useCreateCompetitionMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useUpdateCompetitionMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useDeleteCompetitionMutation: () => ({
-    mutateAsync: mocks.deleteCompetitionMutateAsync,
-    isPending: false,
-  }),
-  useCreateSplitTimesMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useReplaceSplitTimesMutation: () => ({
-    mutateAsync: mocks.replaceSplitTimesMutateAsync,
-    isPending: false,
-  }),
-  // 2026-07-22 Sprint: CompetitionRecordCard に組み込まれた BestTimeBadge が
-  // useListBestCandidatesQuery を呼ぶため、このモジュール全体モックに追加しないと
-  // 全テストが "No export is defined" でクラッシュする。既定はロード中相当(data未解決)
-  // にしてバッジを非表示のままにし、既存の情報表示テストと干渉しないようにする。
-  useListBestCandidatesQuery: () => ({ data: undefined, error: null }),
-}));
-
-vi.mock("@apps/shared/api/entries", () => ({
-  EntryAPI: class {
-    deleteEntry = mocks.entryApiDeleteEntry;
-  },
-}));
-
-vi.mock("@/components/forms/CompetitionTabModal", () => ({
-  __esModule: true,
-  default: (props: {
-    isOpen: boolean;
-    initialTab?: string;
-    editingCompetitionId?: string | null;
-  }) =>
-    props.isOpen ? (
-      <div data-testid="competition-tab-modal-stub">
-        <span data-testid="tab-initial-tab">{props.initialTab}</span>
-        <span data-testid="tab-editing-id">{props.editingCompetitionId ?? ""}</span>
-      </div>
-    ) : null,
-}));
-
-vi.mock("@/app/[locale]/(authenticated)/competition/_components/CompetitionDetailModal", () => ({
-  __esModule: true,
-  default: (props: {
-    isOpen: boolean;
-    mode: "record" | "entry";
-    competitionId: string;
-    onEditCompetition: () => void;
-    onOpenRecordTab: () => void;
-    onOpenEntryTab?: () => void;
-    onDeleteCompetition: () => void;
-    onDeleteRecord: (recordId: string) => void;
-    onDeleteEntry?: (entryId: string) => void;
-    onClose: () => void;
-  }) =>
-    props.isOpen ? (
-      <div data-testid="competition-detail-modal-stub">
-        <span data-testid="detail-mode">{props.mode}</span>
-        <span data-testid="detail-competition-id">{props.competitionId}</span>
-        <button onClick={() => props.onEditCompetition()}>詳細から大会編集</button>
-        <button onClick={() => props.onOpenRecordTab()}>詳細から記録編集</button>
-        <button onClick={() => props.onOpenEntryTab?.()}>詳細からエントリー編集</button>
-        <button onClick={() => props.onDeleteCompetition()}>詳細から大会削除</button>
-        <button onClick={() => props.onDeleteRecord("record-1")}>詳細から記録削除</button>
-        <button onClick={() => props.onDeleteEntry?.("entry-1")}>詳細からエントリー削除</button>
-        <button onClick={() => props.onClose()}>詳細を閉じる</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock("@/app/[locale]/(authenticated)/competition/_components/RecordDetailModal", () => ({
-  __esModule: true,
-  default: (props: {
-    isOpen: boolean;
-    record: { id: string };
-    onEdit: () => void;
-    onDelete: () => void;
-    onClose: () => void;
-  }) =>
-    props.isOpen ? (
-      <div data-testid="record-standalone-modal-stub">
-        <span data-testid="standalone-record-id">{props.record.id}</span>
-        <button onClick={() => props.onEdit()}>単体レコードを編集</button>
-        <button onClick={() => props.onDelete()}>単体レコードを削除</button>
-        <button onClick={() => props.onClose()}>単体詳細を閉じる</button>
-      </div>
-    ) : null,
-}));
 
 vi.mock("@/components/forms/RecordLogForm", () => ({
   __esModule: true,
@@ -203,57 +61,10 @@ vi.mock("@/components/forms/RecordLogForm", () => ({
     ) : null,
 }));
 
-import CompetitionClient from "../CompetitionClient";
-
-const makeRecord = (overrides: Partial<RecordType> = {}): RecordType =>
-  ({
-    id: "record-1",
-    user_id: "user-1",
-    competition_id: "comp-1",
-    style_id: 2,
-    time: 30.5,
-    note: null,
-    is_relaying: false,
-    reaction_time: null,
-    pool_type: 0,
-    created_at: "2026-07-01T00:00:00Z",
-    updated_at: "2026-07-01T00:00:00Z",
-    competition: {
-      id: "comp-1",
-      user_id: "user-1",
-      date: "2026-07-01",
-      end_date: null,
-      title: "テスト大会",
-      place: "テストプール",
-      pool_type: 0,
-      team_id: null,
-      note: null,
-      created_at: "2026-07-01T00:00:00Z",
-      updated_at: "2026-07-01T00:00:00Z",
-    },
-    style: { id: 2, name_jp: "50m自由形", distance: 50 } as unknown as RecordType["style"],
-    ...overrides,
-  }) as RecordType;
-
-const renderClient = (records: RecordType[], entries: unknown[] = [], recordRows: unknown[] = []) => {
-  fakeSupabase = createFakeSupabase(entries, recordRows);
-  mocks.useRecordsQuery.mockReturnValue({
-    records,
-    isLoading: false,
-    error: null,
-    refetch: vi.fn(),
-  });
-
-  return render(
-    <NextIntlClientProvider locale="ja" messages={messages as unknown as AbstractIntlMessages}>
-      <CompetitionClient styles={[] as Style[]} />
-    </NextIntlClientProvider>,
-  );
-};
+import { harness, makeRecord, renderClient } from "./competitionClientHarness";
 
 describe("CompetitionClient", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     useCompetitionStore.getState().closeTabModal();
     useCompetitionStore.getState().resetFilter();
     useCompetitionStore.setState({ styles: [] });
@@ -285,27 +96,27 @@ describe("CompetitionClient", () => {
 
   it("[V-W-C07] 記録削除は確認なしで即時に deleteRecordMutation が呼ばれる", async () => {
     const user = userEvent.setup();
-    mocks.deleteRecordMutateAsync.mockResolvedValue(undefined);
+    harness.deleteRecordMutateAsync.mockResolvedValue(undefined);
     renderClient([makeRecord()]);
 
     await user.click(screen.getByText("テスト大会"));
     await user.click(screen.getByText("詳細から記録削除"));
 
     await waitFor(() => {
-      expect(mocks.deleteRecordMutateAsync).toHaveBeenCalledWith("record-1");
+      expect(harness.deleteRecordMutateAsync).toHaveBeenCalledWith("record-1");
     });
   });
 
   it("[V-W-C08] 大会削除は deleteCompetitionMutation に委譲される", async () => {
     const user = userEvent.setup();
-    mocks.deleteCompetitionMutateAsync.mockResolvedValue(undefined);
+    harness.deleteCompetitionMutateAsync.mockResolvedValue(undefined);
     renderClient([makeRecord()]);
 
     await user.click(screen.getByText("テスト大会"));
     await user.click(screen.getByText("詳細から大会削除"));
 
     await waitFor(() => {
-      expect(mocks.deleteCompetitionMutateAsync).toHaveBeenCalledWith("comp-1");
+      expect(harness.deleteCompetitionMutateAsync).toHaveBeenCalledWith("comp-1");
     });
   });
 
@@ -400,7 +211,7 @@ describe("CompetitionClient", () => {
     expect(screen.getByText("大会記録がありません")).toBeInTheDocument();
     // エントリー済みアイテム取得の非同期 effect が act() 外で解決しないよう待つ
     await waitFor(() => {
-      expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+      expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
     });
   });
 
@@ -426,7 +237,7 @@ describe("CompetitionClient", () => {
 
       // entryOnlyItems 取得の非同期 effect が act() 外で解決しないよう待つ
       await waitFor(() => {
-        expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+        expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
       });
     });
 
@@ -481,7 +292,7 @@ describe("CompetitionClient", () => {
       expect(card.textContent).toContain("-");
 
       await waitFor(() => {
-        expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+        expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
       });
     });
   });
@@ -503,7 +314,7 @@ describe("CompetitionClient", () => {
 
       // エントリー済みアイテム取得の非同期 effect が act() 外で解決しないよう待つ
       await waitFor(() => {
-        expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+        expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
       });
     });
 
@@ -521,7 +332,7 @@ describe("CompetitionClient", () => {
         expect(listWrapper?.className).toContain("sm:space-y-3");
 
         await waitFor(() => {
-          expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+          expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
         });
       },
     );
@@ -543,7 +354,7 @@ describe("CompetitionClient", () => {
 
       // エントリー済みアイテム取得の非同期 effect が act() 外で解決しないよう待つ
       await waitFor(() => {
-        expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+        expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
       });
     });
 
@@ -555,7 +366,7 @@ describe("CompetitionClient", () => {
       expect(nameCell.className).not.toContain("text-gray-400");
 
       await waitFor(() => {
-        expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+        expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
       });
     });
 
@@ -596,8 +407,8 @@ describe("CompetitionClient", () => {
 
     it("[保存] RecordLogForm の保存で updateRecordMutation が呼ばれ、split times も置き換えられる", async () => {
       const user = userEvent.setup();
-      mocks.updateRecordMutateAsync.mockResolvedValue({ id: "record-1" });
-      mocks.replaceSplitTimesMutateAsync.mockResolvedValue([]);
+      harness.updateRecordMutateAsync.mockResolvedValue({ id: "record-1" });
+      harness.replaceSplitTimesMutateAsync.mockResolvedValue([]);
       renderClient([makeRecord({ competition: null, competition_id: null })]);
 
       await user.click(screen.getByText("(一括入力)"));
@@ -605,28 +416,28 @@ describe("CompetitionClient", () => {
       await user.click(screen.getByText("単体レコードを保存"));
 
       await waitFor(() => {
-        expect(mocks.updateRecordMutateAsync).toHaveBeenCalledWith(
+        expect(harness.updateRecordMutateAsync).toHaveBeenCalledWith(
           expect.objectContaining({
             id: "record-1",
             updates: expect.objectContaining({ style_id: 2, time: 31.0 }),
           }),
         );
       });
-      expect(mocks.replaceSplitTimesMutateAsync).toHaveBeenCalledWith(
+      expect(harness.replaceSplitTimesMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ recordId: "record-1" }),
       );
     });
 
     it("[削除] 単体詳細モーダルの削除ボタンから deleteRecordMutation が呼ばれる (DeleteConfirmModal は RecordDetailModal 側で完結)", async () => {
       const user = userEvent.setup();
-      mocks.deleteRecordMutateAsync.mockResolvedValue(undefined);
+      harness.deleteRecordMutateAsync.mockResolvedValue(undefined);
       renderClient([makeRecord({ competition: null, competition_id: null })]);
 
       await user.click(screen.getByText("(一括入力)"));
       await user.click(screen.getByText("単体レコードを削除"));
 
       await waitFor(() => {
-        expect(mocks.deleteRecordMutateAsync).toHaveBeenCalledWith("record-1");
+        expect(harness.deleteRecordMutateAsync).toHaveBeenCalledWith("record-1");
       });
     });
   });
@@ -789,7 +600,7 @@ describe("CompetitionClient", () => {
 
         // エントリー済みアイテム取得の非同期 effect が act() 外で解決しないよう待つ
         await waitFor(() => {
-          expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+          expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
         });
       },
     );
@@ -876,7 +687,7 @@ describe("CompetitionClient", () => {
       expect(screen.getByText("長水路大会")).toBeInTheDocument();
 
       await waitFor(() => {
-        expect(mocks.deleteRecordMutateAsync).not.toHaveBeenCalled();
+        expect(harness.deleteRecordMutateAsync).not.toHaveBeenCalled();
       });
     });
   });

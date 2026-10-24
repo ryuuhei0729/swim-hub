@@ -11,7 +11,6 @@ describe("EntryAPI", () => {
   let api: EntryAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     api = new EntryAPI(mockClient);
   });

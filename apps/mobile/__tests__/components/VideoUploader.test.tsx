@@ -98,7 +98,6 @@ function mockAlertSelectLibrary() {
 
 describe("[VC-01] idle — Premium ユーザーに追加ボタンが表示される", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("valid-token");
   });
 
@@ -110,7 +109,6 @@ describe("[VC-01] idle — Premium ユーザーに追加ボタンが表示され
 
 describe("[VC-02] idle — 非 Premium ユーザーに PremiumBadge が表示される", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("valid-token");
   });
 
@@ -124,7 +122,6 @@ describe("[VC-02] idle — 非 Premium ユーザーに PremiumBadge が表示さ
 
 describe("[VC-03] pickVideo — id あり: 即アップロード", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("valid-token");
   });
 
@@ -221,7 +218,6 @@ describe("[VC-03] pickVideo — id あり: 即アップロード", () => {
 
 describe("[VC-04] pickVideo — id なし: 保留フロー", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("valid-token");
   });
 
@@ -245,7 +241,6 @@ describe("[VC-04] pickVideo — id なし: 保留フロー", () => {
 
 describe("[VC-05] pickVideo — onPendingVideoUri コールバック", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("valid-token");
   });
 
@@ -272,10 +267,6 @@ describe("[VC-05] pickVideo — onPendingVideoUri コールバック", () => {
 });
 
 describe("[VC-06] pickVideo — getAccessToken 失敗", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("getAccessToken() が null を返すとき Alert が呼ばれ、uploadVideo は呼ばれない", async () => {
     // id ありフローでトークン取得失敗をシミュレート
     mocks.getAccessToken.mockResolvedValue(null);
@@ -299,7 +290,6 @@ describe("[VC-06] pickVideo — getAccessToken 失敗", () => {
 
 describe("[VC-08] selected 状態 — 取り消し", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("valid-token");
   });
 
@@ -336,7 +326,6 @@ describe("[VC-08] selected 状態 — 取り消し", () => {
 
 describe("[VC-14] ファイルサイズ超過", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("valid-token");
   });
 
@@ -399,7 +388,6 @@ async function setPlatformOS(os: "android" | "ios" | "web") {
 
 describe("[Android] pickVideo — READ_MEDIA_* 撤去後のライブラリ選択", () => {
   beforeEach(async () => {
-    vi.clearAllMocks();
     mocks.getAccessToken.mockResolvedValue("valid-token");
     await setPlatformOS("android");
     mocks.requestMediaLibraryPermissionsAsync.mockResolvedValue({ status: "granted" });

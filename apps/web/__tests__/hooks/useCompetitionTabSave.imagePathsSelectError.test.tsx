@@ -45,6 +45,8 @@ import { act, renderHook } from "@testing-library/react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@swim-hub/shared/types";
 import messages from "@apps/shared/messages/ja.json";
 import type { Style } from "@apps/shared/types";
 import type { CompetitionTabSaveParams } from "@/components/forms/CompetitionTabModal";
@@ -205,8 +207,7 @@ describe("useCompetitionTabSave — issue #48: image_paths SELECT の error 未�
     const { result } = renderHook(
       () =>
         useCompetitionTabSave({
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          supabase: fake as unknown as any,
+          supabase: fake as unknown as SupabaseClient<Database>,
           user: { id: "user-1" },
           styles,
           createCompetition,
@@ -229,7 +230,6 @@ describe("useCompetitionTabSave — issue #48: image_paths SELECT の error 未�
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.uploadCompetitionImage.mockResolvedValue("competitions/comp-1/new-upload.jpg");
     mocks.deleteCompetitionImage.mockResolvedValue(undefined);
   });

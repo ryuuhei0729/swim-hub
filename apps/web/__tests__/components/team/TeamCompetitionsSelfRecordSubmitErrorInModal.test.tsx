@@ -77,9 +77,7 @@ const mocks = vi.hoisted(() => ({
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@apps/shared/api/teams/records", () => ({
   TeamRecordsAPI: vi.fn().mockImplementation(function () {
@@ -112,9 +110,7 @@ vi.mock("@apps/shared/api/styles", () => ({
   }),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 vi.mock("@/components/forms/CompetitionBasicForm", () => ({ default: () => null }));
 vi.mock("../../../components/team/TeamCompetitionEntryModal", () => ({ default: () => null }));
@@ -129,15 +125,9 @@ vi.mock("@/hooks/useBestTimes", () => ({
 
 const STYLE_FR50 = { id: 2, name_jp: "50m自由形", distance: 50 };
 
-let currentAuthMock: {
-  user: { id: string };
-  supabase: ReturnType<typeof buildSupabaseCompetitionsMock>["supabase"];
-  subscription: null;
-};
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 // 実 RecordLogForm を通す (スタブ化しない)。これが旧 [V-D4C-04] との決定的な違い。
 import TeamCompetitions from "@/components/team/TeamCompetitions";
@@ -174,14 +164,13 @@ const openSelfRecordFormAndEnterTime = async (user: ReturnType<typeof userEvent.
 
 describe("TeamCompetitions — 自己記録導線: 保存失敗時のエラー表示・未保存ガード (Critical 回帰)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.createSplitTimes.mockResolvedValue(undefined);
     mocks.getStyles.mockResolvedValue([STYLE_FR50]);
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "member-1" },
       supabase: buildSupabaseCompetitionsMock([ROW]).supabase,
       subscription: null,
-    };
+    }));
   });
 
   it(

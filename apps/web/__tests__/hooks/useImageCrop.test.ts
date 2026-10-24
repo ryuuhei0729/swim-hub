@@ -18,7 +18,6 @@ describe("useImageCrop", () => {
   let mockOnCancel: () => void;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockOnCropComplete = vi.fn() as (croppedFile: File) => void;
     mockOnCancel = vi.fn() as () => void;
   });

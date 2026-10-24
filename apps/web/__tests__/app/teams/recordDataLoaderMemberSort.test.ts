@@ -124,7 +124,6 @@ const memberRow = (userId: string, name: string, birthday: string | null, role =
 
 describe("RecordDataLoader — メンバー一覧の年上順ソート [並び順スプリント]", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "user-1" });
     mockGetLocale.mockResolvedValue("ja");
     mockGetBestTimesDetailedForUsers.mockResolvedValue(new Map());

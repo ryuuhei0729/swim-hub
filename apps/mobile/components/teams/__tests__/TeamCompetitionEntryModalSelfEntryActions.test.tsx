@@ -88,7 +88,6 @@ function queryByAccessibilityLabel(container: HTMLElement, label: string): HTMLE
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   mocks.user = { id: "u-1" };
 });
 

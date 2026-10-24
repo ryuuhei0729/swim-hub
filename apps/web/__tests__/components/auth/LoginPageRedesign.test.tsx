@@ -81,10 +81,6 @@ vi.mock("@/utils/redirect", () => ({
 // ---------------------------------------------------------------------------
 
 describe("OAuthButtons コンポーネント", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[V-01][V-02] Google → Apple の順で DOM に出現する", () => {
     const { container } = render(
       <OAuthButtons
@@ -224,7 +220,6 @@ describe("[V-05] email-signin-button のゴーストスタイル (コード仕�
 
 describe("EmailSignInForm コンポーネント", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSignIn.mockResolvedValue({ error: null });
   });
 

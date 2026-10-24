@@ -21,7 +21,6 @@ describe("PracticeLogTemplateAPI", () => {
   let api: PracticeLogTemplateAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     api = new PracticeLogTemplateAPI(mockClient);
   });

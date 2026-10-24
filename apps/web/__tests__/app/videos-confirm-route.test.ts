@@ -5,7 +5,7 @@
 // トートロジー回避: 0 行検出ロジックを再実装せず、実ハンドラをそのまま import し、
 // 依存 (auth / premium / thumbnail upload / supabase update) を vi.mock で差し替える。
 // supabase の .update().eq().select() が返す行数だけを変え、ステータスコードを観測する。
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 // ---- 依存モジュールのモック ----
 const authenticateApiRequest = vi.fn();
@@ -90,10 +90,6 @@ function makeRequest(type: "record" | "practice-log") {
     formData: () => Promise.resolve(fd),
   } as unknown as Parameters<typeof POST>[0];
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("POST /api/storage/videos/confirm — 0 行検出", () => {
   it("record: UPDATE が 1 行 → 200 success", async () => {

@@ -7,7 +7,6 @@ describe("DashboardAPI", () => {
   let api: DashboardAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     api = new DashboardAPI(mockClient);
   });

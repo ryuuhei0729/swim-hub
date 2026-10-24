@@ -90,7 +90,6 @@ describe("メンバー変更ミューテーションの楽観的更新", () => {
   let mockSupabase: ReturnType<typeof createMockSupabaseClient>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockSupabase = createMockSupabaseClient();
   });
 

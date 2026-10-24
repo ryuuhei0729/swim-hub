@@ -18,7 +18,7 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createResponseMapSupabase,
   createWrapper,
@@ -37,7 +37,6 @@ harness.members = [{ user_id: "user-1", role: "admin", users: { id: "user-1", na
 
 describe("TeamRecordStyleDetailScreen — entries 取得失敗の回帰 (Critical, 2026-08-12着地確認)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
@@ -91,7 +90,6 @@ describe("TeamRecordStyleDetailScreen — entries 取得失敗の回帰 (Critica
 
 describe("TeamRecordStyleDetailScreen — userName フォールバックの i18n 化 (Warning 1, 2026-08-12着地確認)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },
@@ -129,7 +127,6 @@ describe("TeamRecordStyleDetailScreen — userName フォールバックの i18n
 
 describe("TeamRecordStyleDetailScreen — entry_time=0 のバッジ非表示 (Warning 2, 2026-08-12着地確認)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     harness.getStyles.mockResolvedValue([mocks.style]);
     mocks.responses["select:competitions"] = {
       data: { id: "comp-1", title: "テスト大会", pool_type: 0 },

@@ -69,7 +69,6 @@ function restoreEnvVar(key: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_A
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   createServerClientMock.mockImplementation((_url: string, _key: string, config: unknown) => ({
     __config: config,
     auth: {},

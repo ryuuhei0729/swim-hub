@@ -29,7 +29,6 @@ import { useSignedImageUrl } from "../useSignedImageUrl";
 
 describe("useSignedImageUrl", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUseAuth.mockReturnValue({ session: { access_token: "valid-token" } });
   });
 

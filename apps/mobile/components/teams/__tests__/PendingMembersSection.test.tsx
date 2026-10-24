@@ -60,7 +60,6 @@ const makeMutationStub = (overrides: Record<string, unknown> = {}) => ({
 
 describe("PendingMembersSection", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUseApproveMemberMutation.mockReturnValue(makeMutationStub());
     mockUseRejectMemberMutation.mockReturnValue(makeMutationStub());
   });

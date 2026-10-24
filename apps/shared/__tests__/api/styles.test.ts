@@ -11,7 +11,6 @@ describe("StyleAPI", () => {
   let api: StyleAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     api = new StyleAPI(mockClient);
   });

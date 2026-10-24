@@ -112,7 +112,6 @@ const memberRow = (userId: string, name: string, isSwimmer: boolean, role = "use
 
 describe("PracticeLogDataLoader — is_swimmer の配線 [WV-07, PM裁定W7]", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockGetServerUser.mockResolvedValue({ id: "user-1" });
     mockGetLocale.mockResolvedValue("ja");
   });

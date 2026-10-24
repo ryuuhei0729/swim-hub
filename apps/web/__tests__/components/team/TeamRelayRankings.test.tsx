@@ -41,7 +41,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -230,10 +230,6 @@ async function lastRpcArgs(fake: FakeSupabase, atLeast = 1) {
 }
 
 describe("TeamRelayRankings (web)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // -------------------------------------------------------------------------
   // [V-RL-01] 初期表示の RPC 引数
   // -------------------------------------------------------------------------

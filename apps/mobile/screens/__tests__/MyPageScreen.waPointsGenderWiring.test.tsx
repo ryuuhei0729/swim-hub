@@ -35,70 +35,15 @@
 // モックしない)。
 // =============================================================================
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTableDispatchSupabase } from "./utils/tableSupabaseMock";
-
-vi.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({ navigate: vi.fn(), goBack: vi.fn(), setOptions: vi.fn() }),
-  useFocusEffect: (callback: () => void) => {
-    React.useEffect(() => {
-      callback();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-  },
-}));
-
-vi.mock("@/hooks/usePullToRefresh", () => ({
-  usePullToRefresh: (refresh: () => Promise<unknown>) => ({ refreshing: false, handleRefresh: refresh }),
-}));
-
-// ProfileEditModal はバレル export (@/components/profile) 経由で
-// expo-image-picker に依存する AvatarUpload を eager import する。
-vi.mock("expo-image-picker", () => ({
-  launchImageLibraryAsync: vi.fn(),
-  requestMediaLibraryPermissionsAsync: vi.fn(),
-}));
-vi.mock("expo-image-manipulator", () => ({
-  ImageManipulator: { manipulate: vi.fn() },
-  SaveFormat: { JPEG: "jpeg", PNG: "png", WEBP: "webp" },
-}));
-
-const apiMocks = vi.hoisted(() => ({
-  getMyTeams: vi.fn(),
-  getBestTimes: vi.fn(),
-}));
-
-vi.mock("@apps/shared/api/teams", () => ({
-  TeamCoreAPI: class {
-    getMyTeams = apiMocks.getMyTeams;
-  },
-  TeamMembersAPI: class {},
-  TeamAnnouncementsAPI: class {},
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimes = apiMocks.getBestTimes;
-  },
-}));
-
-const USER_ID = "user-1";
-let supabaseMock: ReturnType<typeof createTableDispatchSupabase>;
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({ supabase: supabaseMock.client, user: { id: USER_ID } }),
-}));
-
+import { createWrapper, harness, USER_ID } from "./myPageScreenHarness";
 import { MyPageScreen } from "../MyPageScreen";
 
-function createWrapper(queryClient: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-}
+let supabaseMock: ReturnType<typeof createTableDispatchSupabase>;
+
 
 // トグルのラベル文言 (`mypage.bestTimesTable.waPointsToggleShort`) は文言変更スプリントで
 // 「WAポイント」→「点数化」に変更された。表示文言は今後も変わりうるため、テキストではなく
@@ -130,8 +75,9 @@ function setup(usersFixtureOverrides: Record<string, unknown> = {}) {
       users: { data: { id: USER_ID, name: "テストユーザー", ...usersFixtureOverrides } },
     },
   });
-  apiMocks.getMyTeams.mockResolvedValue([]);
-  apiMocks.getBestTimes.mockResolvedValue([FR100_RECORD]);
+  harness.supabase = supabaseMock.client;
+  harness.getMyTeams.mockResolvedValue([]);
+  harness.getBestTimes.mockResolvedValue([FR100_RECORD]);
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -141,10 +87,6 @@ function setup(usersFixtureOverrides: Record<string, unknown> = {}) {
 }
 
 describe("[V-GENDER-WIRING] MyPageScreen は profile.gender をそのまま BestTimesTable に配線する", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
   });

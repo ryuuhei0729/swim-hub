@@ -56,7 +56,6 @@ import PasswordChangeSettings from "@/components/settings/PasswordChangeSettings
 
 describe("PasswordChangeSettings (D2)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.updateUser.mockResolvedValue({ error: null });
   });
 

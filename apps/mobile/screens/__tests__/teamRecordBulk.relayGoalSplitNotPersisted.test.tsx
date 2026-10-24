@@ -14,7 +14,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   createWrapper,
   harness,
@@ -184,7 +184,6 @@ function makeRelayRecords() {
 
 describe("TeamRecordStyleDetailScreen — distance===legDist(=raceDistance) の split は保存経路で永続化されない (S15)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.insertCalls.length = 0;
     mocks.updateCalls.length = 0;
     mocks.deleteCalls.length = 0;

@@ -22,7 +22,6 @@ const createState = (
 
 describe("useNetworkStatus", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     // 静的モックの状態をリセット
     (NetInfo as unknown as { _setState: (state: Partial<NetInfoState>) => void })._setState({
       isConnected: true,

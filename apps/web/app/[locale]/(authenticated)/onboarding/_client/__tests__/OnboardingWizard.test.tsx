@@ -81,7 +81,6 @@ import OnboardingWizard from "../OnboardingWizard";
 
 describe("OnboardingWizard", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUpdateProfile.mockResolvedValue({ error: null });
   });
 

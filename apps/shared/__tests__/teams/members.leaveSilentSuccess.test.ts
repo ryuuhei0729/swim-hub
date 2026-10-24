@@ -30,7 +30,7 @@
 //   テスト側の欠陥として扱うこと。
 // =============================================================================
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { TeamMembersAPI } from "../../api/teams/members";
 import { createSupabaseMock } from "../utils/supabase-mock";
 
@@ -47,7 +47,6 @@ describe("TeamMembersAPI.leave — 0行サイレント成功の封じ込め", ()
   let api: TeamMembersAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     supabaseMock = createSupabaseMock();
     api = new TeamMembersAPI(supabaseMock.client);
   });

@@ -10,78 +10,16 @@
 // そのまま全 active query を尽くしていることの回帰確認としても機能する
 // (= このテストは現行実装に対して green であることが期待される)。
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { act, render, waitFor } from "@testing-library/react";
-import React from "react";
 import type { Query } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTableDispatchSupabase } from "./utils/tableSupabaseMock";
-
-vi.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({ navigate: vi.fn(), goBack: vi.fn(), setOptions: vi.fn() }),
-  useFocusEffect: (callback: () => void) => {
-    React.useEffect(() => {
-      callback();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-  },
-}));
-
-const captured = vi.hoisted(() => ({
-  refreshAll: null as null | (() => Promise<unknown>),
-}));
-
-vi.mock("@/hooks/usePullToRefresh", () => ({
-  usePullToRefresh: (refresh: () => Promise<unknown>) => {
-    captured.refreshAll = refresh;
-    return { refreshing: false, handleRefresh: refresh };
-  },
-}));
-
-// ProfileEditModal はバレル export (@/components/profile) 経由で
-// expo-image-picker に依存する AvatarUpload を eager import する。
-vi.mock("expo-image-picker", () => ({
-  launchImageLibraryAsync: vi.fn(),
-  requestMediaLibraryPermissionsAsync: vi.fn(),
-}));
-vi.mock("expo-image-manipulator", () => ({
-  ImageManipulator: { manipulate: vi.fn() },
-  SaveFormat: { JPEG: "jpeg", PNG: "png", WEBP: "webp" },
-}));
-
-const apiMocks = vi.hoisted(() => ({
-  getMyTeams: vi.fn(),
-  getBestTimes: vi.fn(),
-}));
-
-vi.mock("@apps/shared/api/teams", () => ({
-  TeamCoreAPI: class {
-    getMyTeams = apiMocks.getMyTeams;
-  },
-  TeamMembersAPI: class {},
-  TeamAnnouncementsAPI: class {},
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimes = apiMocks.getBestTimes;
-  },
-}));
-
-const USER_ID = "user-1";
-let supabaseMock: ReturnType<typeof createTableDispatchSupabase>;
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({ supabase: supabaseMock.client, user: { id: USER_ID } }),
-}));
-
+import { createWrapper, harness, USER_ID } from "./myPageScreenHarness";
 import { MyPageScreen } from "../MyPageScreen";
 
-function createWrapper(queryClient: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-}
+let supabaseMock: ReturnType<typeof createTableDispatchSupabase>;
+
 
 async function waitForQuiescence(queryClient: QueryClient) {
   await waitFor(
@@ -107,8 +45,7 @@ describe("MyPageScreen — pull-to-refresh のクエリ網羅性 (ドリフト�
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    captured.refreshAll = null;
+    harness.refreshAll = null;
 
     supabaseMock = createTableDispatchSupabase({
       userId: USER_ID,
@@ -116,8 +53,9 @@ describe("MyPageScreen — pull-to-refresh のクエリ網羅性 (ドリフト�
         users: { data: { id: USER_ID, name: "テストユーザー" } },
       },
     });
-    apiMocks.getMyTeams.mockResolvedValue([]);
-    apiMocks.getBestTimes.mockResolvedValue([]);
+    harness.supabase = supabaseMock.client;
+    harness.getMyTeams.mockResolvedValue([]);
+    harness.getBestTimes.mockResolvedValue([]);
 
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -139,9 +77,9 @@ describe("MyPageScreen — pull-to-refresh のクエリ網羅性 (ドリフト�
       expect(before.length).toBeGreaterThan(0);
       const beforeCounts = new Map(before.map((q) => [q.queryHash, q.state.dataUpdateCount]));
 
-      expect(captured.refreshAll).not.toBeNull();
+      expect(harness.refreshAll).not.toBeNull();
       await act(async () => {
-        await captured.refreshAll!();
+        await harness.refreshAll!();
       });
       await waitForQuiescence(queryClient);
 

@@ -11,7 +11,7 @@
 import React from "react";
 import { renderWithI18n as render, screen, waitFor } from "../../utils/render";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { UserFacingError } from "@swim-hub/shared/utils/userFacingError";
 
 vi.mock("@/contexts", () => ({
@@ -25,10 +25,6 @@ vi.mock("@/lib/image-url", () => ({
 import AvatarUpload from "@/components/profile/AvatarUpload";
 
 describe("AvatarUpload — 削除失敗時のエラー表示 — 情報露出防止の対テスト", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   afterEach(() => {
     vi.unstubAllGlobals();
   });

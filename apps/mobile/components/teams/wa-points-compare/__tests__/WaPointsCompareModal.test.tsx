@@ -32,6 +32,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 // mobile UI フィードバック #2 の実装で WaPointsCompareModal.tsx は `FlashList`
@@ -90,8 +91,7 @@ function buildSupabaseMock(dataByUser: Record<string, FakeRow[]>) {
       })),
     })),
   }));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { supabase: { from: fromSpy } as any, fromSpy };
+  return { supabase: { from: fromSpy } as unknown as SupabaseClient, fromSpy };
 }
 
 const record = (
@@ -240,8 +240,7 @@ describe("WaPointsCompareModal", () => {
         })),
       })),
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = { from: fromSpy } as any;
+    const supabase = { from: fromSpy } as unknown as SupabaseClient;
 
     render(
       <WaPointsCompareModal visible={true} onClose={vi.fn()} members={[member]} supabase={supabase} />,
@@ -280,8 +279,7 @@ describe("WaPointsCompareModal", () => {
         })),
       })),
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = { from: fromSpy } as any;
+    const supabase = { from: fromSpy } as unknown as SupabaseClient;
 
     render(
       <WaPointsCompareModal visible={true} onClose={vi.fn()} members={[member]} supabase={supabase} />,
@@ -349,8 +347,7 @@ describe("WaPointsCompareModal", () => {
         }),
       })),
     }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = { from: fromSpy } as any;
+    const supabase = { from: fromSpy } as unknown as SupabaseClient;
 
     render(
       <WaPointsCompareModal

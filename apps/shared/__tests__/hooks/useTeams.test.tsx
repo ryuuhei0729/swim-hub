@@ -36,7 +36,6 @@ describe("useTeamsQuery", () => {
   let mockAnnouncementsApi: TeamAnnouncementsAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockCoreApi = new TeamCoreAPI(mockClient);
     mockMembersApi = new TeamMembersAPI(mockClient);
@@ -96,7 +95,6 @@ describe("useCreateTeamMutation", () => {
   let mockCoreApi: TeamCoreAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockCoreApi = new TeamCoreAPI(mockClient);
   });
@@ -126,7 +124,6 @@ describe("useUpdateTeamMutation", () => {
   let mockCoreApi: TeamCoreAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockCoreApi = new TeamCoreAPI(mockClient);
   });
@@ -155,7 +152,6 @@ describe("useDeleteTeamMutation", () => {
   let mockCoreApi: TeamCoreAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     mockCoreApi = new TeamCoreAPI(mockClient);
   });

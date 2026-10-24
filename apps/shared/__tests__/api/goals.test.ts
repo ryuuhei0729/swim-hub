@@ -58,7 +58,6 @@ describe("GoalAPI", () => {
   let api: GoalAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     api = new GoalAPI(mockClient);
   });
@@ -818,7 +817,6 @@ describe("GoalAPI - マイルストーン状態遷移", () => {
   let api: GoalAPI;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     mockClient = createMockSupabaseClient();
     api = new GoalAPI(mockClient);
   });

@@ -26,69 +26,16 @@
 // 実物 react-query フック経由で MyPageScreen をレンダリングする。
 // =============================================================================
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createTableDispatchSupabase } from "./utils/tableSupabaseMock";
 import jaMessages from "@apps/shared/messages/ja.json";
-
-vi.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({ navigate: vi.fn(), goBack: vi.fn(), setOptions: vi.fn() }),
-  useFocusEffect: (callback: () => void) => {
-    React.useEffect(() => {
-      callback();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-  },
-}));
-
-vi.mock("@/hooks/usePullToRefresh", () => ({
-  usePullToRefresh: (refresh: () => Promise<unknown>) => ({ refreshing: false, handleRefresh: refresh }),
-}));
-
-vi.mock("expo-image-picker", () => ({
-  launchImageLibraryAsync: vi.fn(),
-  requestMediaLibraryPermissionsAsync: vi.fn(),
-}));
-vi.mock("expo-image-manipulator", () => ({
-  ImageManipulator: { manipulate: vi.fn() },
-  SaveFormat: { JPEG: "jpeg", PNG: "png", WEBP: "webp" },
-}));
-
-const apiMocks = vi.hoisted(() => ({
-  getMyTeams: vi.fn(),
-  getBestTimes: vi.fn(),
-}));
-
-vi.mock("@apps/shared/api/teams", () => ({
-  TeamCoreAPI: class {
-    getMyTeams = apiMocks.getMyTeams;
-  },
-  TeamMembersAPI: class {},
-  TeamAnnouncementsAPI: class {},
-}));
-
-vi.mock("@apps/shared/api/records", () => ({
-  RecordAPI: class {
-    getBestTimes = apiMocks.getBestTimes;
-  },
-}));
-
-const USER_ID = "user-1";
-let supabaseMock: ReturnType<typeof createTableDispatchSupabase>;
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({ supabase: supabaseMock.client, user: { id: USER_ID } }),
-}));
-
+import { createWrapper, harness, USER_ID } from "./myPageScreenHarness";
 import { MyPageScreen } from "../MyPageScreen";
 
-function createWrapper(queryClient: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-}
+let supabaseMock: ReturnType<typeof createTableDispatchSupabase>;
+
 
 const FR100_RECORD = {
   id: "rec-1",
@@ -109,8 +56,9 @@ function setup() {
       users: { data: { id: USER_ID, name: "テストユーザー", gender: 0 } },
     },
   });
-  apiMocks.getMyTeams.mockResolvedValue([]);
-  apiMocks.getBestTimes.mockResolvedValue([FR100_RECORD]);
+  harness.supabase = supabaseMock.client;
+  harness.getMyTeams.mockResolvedValue([]);
+  harness.getBestTimes.mockResolvedValue([FR100_RECORD]);
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

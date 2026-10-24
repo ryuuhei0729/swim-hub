@@ -443,8 +443,7 @@ describe("GoalAPI - practice_logs.style フィルタの canonical 化 (C1)", () 
     ) {
       function makeBuilder() {
         const filters: Array<(row: (typeof rows)[number]) => boolean> = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const builder: any = {};
+        const builder: Record<string, unknown> = {};
         builder.select = vi.fn(() => builder);
         builder.eq = vi.fn((col: string, value: unknown) => {
           filters.push((row) => (row as unknown as Record<string, unknown>)[col] === value);
@@ -477,8 +476,7 @@ describe("GoalAPI - practice_logs.style フィルタの canonical 化 (C1)", () 
       // 必ず records へも問い合わせるため、実際のクエリと同じチェーン
       // (select/eq/ilike/lte/order/limit) を一通り受けられるスタブが必要。
       function makeEmptyRecordsBuilder() {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const builder: any = {};
+        const builder: Record<string, unknown> = {};
         for (const name of ["select", "eq", "ilike", "gte", "gt", "lte", "order", "limit"]) {
           builder[name] = vi.fn(() => builder);
         }

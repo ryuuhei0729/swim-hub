@@ -81,7 +81,6 @@ const buildMember = (overrides: Partial<SwimmerMember> & { id: string; user_id: 
 
 describe("TeamMemberManagement - 統計ヘッダーの母数 (R1: 非泳者を除外しない)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     usePendingMembersMock.mockReturnValue({
       pendingMembers: [],
       loading: false,

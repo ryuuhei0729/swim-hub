@@ -66,7 +66,6 @@ const baseProps = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
   mocks.user = { id: "u-1" };
 });
 

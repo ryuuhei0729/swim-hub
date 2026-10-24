@@ -60,9 +60,7 @@ const mocks = vi.hoisted(() => ({
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
 vi.mock("@apps/shared/api/teams/records", () => ({
   TeamRecordsAPI: vi.fn().mockImplementation(function () {
@@ -74,9 +72,7 @@ vi.mock("@apps/shared/api/teams/records", () => ({
   }),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 const RAW_COMPETITION_ROW = {
   id: "competition-1",
@@ -113,11 +109,9 @@ function buildSupabaseMock(rows: typeof RAW_COMPETITION_ROW[]) {
   return { from: fromMock };
 }
 
-let currentAuthMock: { user: { id: string }; supabase: ReturnType<typeof buildSupabaseMock> };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 // V-D3C-07/08 の検証用に、実際に onSubmit を発火できる送信ボタンを持つスタブ。
 // basicData の中身はテストの関心事ではないため固定のダミー値を渡す。
@@ -157,13 +151,12 @@ import TeamCompetitions from "@/components/team/TeamCompetitions";
 
 describe("TeamCompetitions — 管理者向け編集・削除 (D3)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.remove.mockResolvedValue(undefined);
     mocks.update.mockResolvedValue({});
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "admin-1" },
       supabase: buildSupabaseMock([RAW_COMPETITION_ROW]),
-    };
+    }));
   });
 
   it("[V-D3C-01] admin: 大会カードに編集ボタンが表示される", async () => {
@@ -223,10 +216,10 @@ describe("TeamCompetitions — 管理者向け編集・削除 (D3)", () => {
   });
 
   it("[V-D3C-06] 非admin: 編集/削除ボタンが表示されない", async () => {
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "member-1" },
       supabase: buildSupabaseMock([RAW_COMPETITION_ROW]),
-    };
+    }));
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
     await screen.findByText("県大会");
 

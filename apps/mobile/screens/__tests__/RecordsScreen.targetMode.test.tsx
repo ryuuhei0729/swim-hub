@@ -320,7 +320,6 @@ describe("RecordsScreen — 行タップで DayDetailModal に渡る targetId/ta
   let queryClient: QueryClient;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     // clearAllMocks は呼び出し履歴のみ消去し実装は保持するはずだが、明示的に再設定して
     // テスト間の実装漏れを防ぐ (t の呼び出しキーを検証するテストの前提条件)
     tSpy.mockImplementation((key: string, options?: { defaultValue?: string }) => {

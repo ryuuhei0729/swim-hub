@@ -20,7 +20,7 @@
  *       実際のキーボード回避動作の確認は iOS 実機テストで代替すること。
  */
 
-import { describe, it, vi, beforeEach } from "vitest";
+import { describe, it, vi } from "vitest";
 
 // ============================================================
 // モック設定
@@ -51,10 +51,6 @@ vi.mock("@react-navigation/native", () => ({
 // ============================================================
 
 describe("KeyboardAvoidingView 適用確認 (Sprint Contract #31)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   // ----------------------------------------------------------
   // [V-20] LoginForm: KAV でラップされていること
   // ----------------------------------------------------------

@@ -9,7 +9,7 @@
  * expo-auth-session はネイティブ専用モジュールに依存するため vi.mock で完全に
  * 差し替える (実体を import・解決しない)。
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 const makeRedirectUriMock = vi.fn();
 vi.mock("expo-auth-session", () => ({
@@ -17,10 +17,6 @@ vi.mock("expo-auth-session", () => ({
 }));
 
 import { getRedirectUri } from "../../src/mobile/getRedirectUri";
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("getRedirectUri", () => {
   it("[V-17] makeRedirectUri に { scheme, path: 'auth/callback', native: `${scheme}://auth/callback` } を渡す", () => {

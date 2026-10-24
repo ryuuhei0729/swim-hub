@@ -119,7 +119,6 @@ function makeCalendarConnectRequest(): NextRequest {
 let consoleErrorSpy: MockInstance;
 
 beforeEach(() => {
-  vi.clearAllMocks();
   vi.stubEnv("TOKEN_ENCRYPTION_KEY", TEST_ENCRYPTION_KEY);
   consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 

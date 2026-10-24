@@ -68,7 +68,6 @@ const defaultProps = {
 
 describe("AttendanceGroupModal", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     mocks.getAttendanceByPractice.mockResolvedValue([]);
     mocks.fetchTeamMembers.mockResolvedValue([]);
   });

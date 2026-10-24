@@ -45,7 +45,7 @@
 
 import React from "react";
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { usePracticesQuery } from "@apps/shared/hooks/queries/practices";
 import { practiceKeys } from "@apps/shared/hooks/queries/keys";
@@ -88,10 +88,6 @@ describe("PracticeDataLoader.getDefaultDateRange()", () => {
 
 describe("SSR prefetch ⇄ CSR usePracticesQuery queryKey 契約 (Bug B)", () => {
   const ssrPractices = [{ id: "ssr-practice-1" }] as unknown as PracticeWithLogs[];
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
 
   it("[V-TZ-03] PracticeDataLoader の getDefaultDateRange() の戻り値を SSR prefetch と CSR 両方に使うと cache hit し、queryFn (getPractices) を呼ばない", async () => {
     // getDefaultDateRange() は本物の PracticeDataLoader からの named export を1回だけ

@@ -30,7 +30,6 @@ describe("RecordItem", () => {
   // 各テスト前に useAuth モックをセットアップ (BestTimeBadge が useAuth を呼ぶため)
   const mockSupabase = createMockSupabaseClient({ userId: "user-1", queryData: [] });
   beforeEach(() => {
-    vi.clearAllMocks();
     mockUseAuth.mockReturnValue({ supabase: mockSupabase });
   });
 

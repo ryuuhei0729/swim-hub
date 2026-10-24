@@ -65,8 +65,7 @@ function createMockVisualViewport(height = 844): MockVisualViewport {
 // ============================================================
 
 describe("useScrollIntoViewOnFocus", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let originalVisualViewport: any;
+  let originalVisualViewport: typeof window.visualViewport;
   let mockVisualViewport: MockVisualViewport;
   let mockScrollIntoView: ReturnType<typeof vi.fn>;
 

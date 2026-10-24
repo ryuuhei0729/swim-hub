@@ -34,13 +34,9 @@ const INVALID_DATE = "not-a-date"; // 不正フォーマット (境界値)
 
 // 本人の目標バッジ用フック (React Query)。この画面テストの関心外なので「目標なし」で固定する
 // (QueryClientProvider を持たないテストで useQuery が落ちるのを避ける)
-vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
-  useGoalTargetsQuery: () => ({ data: [], isError: false, isPending: false }),
-}));
+vi.mock("@apps/shared/hooks/queries/goalTargets");
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-}));
+vi.mock("@/i18n/navigation");
 
 const mocks = vi.hoisted(() => ({
   entryModalSpy: vi.fn(),
@@ -96,27 +92,29 @@ function buildSupabaseMock(rows: ReturnType<typeof buildCompetitionRow>[]) {
   return { from: fromMock };
 }
 
-let currentAuthMock: { user: { id: string }; supabase: ReturnType<typeof buildSupabaseMock> };
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => currentAuthMock,
-}));
+vi.mock("@/contexts/AuthProvider");
+import { useAuth } from "@/contexts/AuthProvider";
+import { buildAuthContext } from "@/__tests__/utils/authContext";
 
 import TeamCompetitions from "@/components/team/TeamCompetitions";
 
 describe("TeamCompetitions — 過去大会のエントリーボタン非表示", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "member-1" },
       supabase: buildSupabaseMock([]),
-    };
+    }));
   });
 
   it("[V-01] 過去日 (昨日) の大会ではエントリーボタンが表示されない", async () => {
-    currentAuthMock.supabase = buildSupabaseMock([
-      buildCompetitionRow({ date: PAST_DATE, title: "過去大会V01" }),
-    ]);
+    vi.mocked(useAuth).mockReturnValue(
+      buildAuthContext({
+        user: { id: "member-1" },
+        supabase: buildSupabaseMock([
+          buildCompetitionRow({ date: PAST_DATE, title: "過去大会V01" }),
+        ]),
+      }),
+    );
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("過去大会V01");
@@ -124,9 +122,14 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
   });
 
   it("[境界値 V-02] 今日の大会ではエントリーボタンが表示される (今日は過去に含めない)", async () => {
-    currentAuthMock.supabase = buildSupabaseMock([
-      buildCompetitionRow({ date: TODAY_DATE, title: "本日大会V02" }),
-    ]);
+    vi.mocked(useAuth).mockReturnValue(
+      buildAuthContext({
+        user: { id: "member-1" },
+        supabase: buildSupabaseMock([
+          buildCompetitionRow({ date: TODAY_DATE, title: "本日大会V02" }),
+        ]),
+      }),
+    );
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("本日大会V02");
@@ -134,9 +137,14 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
   });
 
   it("[境界値 V-03] 明日の大会ではエントリーボタンが表示される", async () => {
-    currentAuthMock.supabase = buildSupabaseMock([
-      buildCompetitionRow({ date: FUTURE_DATE, title: "明日大会V03" }),
-    ]);
+    vi.mocked(useAuth).mockReturnValue(
+      buildAuthContext({
+        user: { id: "member-1" },
+        supabase: buildSupabaseMock([
+          buildCompetitionRow({ date: FUTURE_DATE, title: "明日大会V03" }),
+        ]),
+      }),
+    );
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("明日大会V03");
@@ -152,9 +160,14 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
   // `date NOT NULL` (initial_schema.sql:666) で実運用データでは到達不能なケースだが、
   // 防御的な境界値として引き続き検証する。
   it("[境界値 V-04] date が不正フォーマットの場合はエントリーボタンが表示される (isCompetitionDateInPast=false)", async () => {
-    currentAuthMock.supabase = buildSupabaseMock([
-      buildCompetitionRow({ date: INVALID_DATE, title: "不正日付大会V04" }),
-    ]);
+    vi.mocked(useAuth).mockReturnValue(
+      buildAuthContext({
+        user: { id: "member-1" },
+        supabase: buildSupabaseMock([
+          buildCompetitionRow({ date: INVALID_DATE, title: "不正日付大会V04" }),
+        ]),
+      }),
+    );
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("不正日付大会V04");
@@ -162,9 +175,14 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
   });
 
   it("[境界値 V-05] date が null (防御的: 型はstringだが実データ異常を想定) の場合はエントリーボタンが表示される", async () => {
-    currentAuthMock.supabase = buildSupabaseMock([
-      buildCompetitionRow({ date: null, title: "日付なし大会V05" }),
-    ]);
+    vi.mocked(useAuth).mockReturnValue(
+      buildAuthContext({
+        user: { id: "member-1" },
+        supabase: buildSupabaseMock([
+          buildCompetitionRow({ date: null, title: "日付なし大会V05" }),
+        ]),
+      }),
+    );
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("日付なし大会V05");
@@ -183,12 +201,12 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
   // 「エントリー入力」ボタン (entryBulkInputButton) はカードから撤去済みで、その代替が
   // この統合済み「エントリー」ボタンであるため、旧ボタン名でのアサーションは削除する。
   it("[SC19] admin: 過去日でも「エントリー」ボタンが表示される (代理入力への到達能力を維持)", async () => {
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "admin-1" },
       supabase: buildSupabaseMock([
         buildCompetitionRow({ date: PAST_DATE, title: "過去大会admin" }),
       ]),
-    };
+    }));
     render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
     await screen.findByText("過去大会admin");
@@ -199,12 +217,12 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
   });
 
   it("[SC20] 非admin: 過去日では「エントリー」ボタンが表示されない (従来どおり)", async () => {
-    currentAuthMock = {
+    vi.mocked(useAuth).mockReturnValue(buildAuthContext({
       user: { id: "member-1" },
       supabase: buildSupabaseMock([
         buildCompetitionRow({ date: PAST_DATE, title: "過去大会非admin" }),
       ]),
-    };
+    }));
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("過去大会非admin");
@@ -212,9 +230,14 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
   });
 
   it("[V-07] 過去日で「自分の記録を追加」ボタンは引き続き表示される (エントリーボタンのみが対象)", async () => {
-    currentAuthMock.supabase = buildSupabaseMock([
-      buildCompetitionRow({ date: PAST_DATE, title: "過去大会V07" }),
-    ]);
+    vi.mocked(useAuth).mockReturnValue(
+      buildAuthContext({
+        user: { id: "member-1" },
+        supabase: buildSupabaseMock([
+          buildCompetitionRow({ date: PAST_DATE, title: "過去大会V07" }),
+        ]),
+      }),
+    );
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("過去大会V07");
@@ -223,9 +246,14 @@ describe("TeamCompetitions — 過去大会のエントリーボタン非表示"
   });
 
   it("[V-08] 過去日ではエントリーボタンが押せないため、エントリー管理モーダルは一度も開かれない", async () => {
-    currentAuthMock.supabase = buildSupabaseMock([
-      buildCompetitionRow({ date: PAST_DATE, title: "過去大会V08" }),
-    ]);
+    vi.mocked(useAuth).mockReturnValue(
+      buildAuthContext({
+        user: { id: "member-1" },
+        supabase: buildSupabaseMock([
+          buildCompetitionRow({ date: PAST_DATE, title: "過去大会V08" }),
+        ]),
+      }),
+    );
     render(<TeamCompetitions teamId="team-1" isAdmin={false} />);
 
     await screen.findByText("過去大会V08");

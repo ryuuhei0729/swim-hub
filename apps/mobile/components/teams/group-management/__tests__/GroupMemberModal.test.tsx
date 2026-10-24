@@ -33,7 +33,7 @@
  */
 
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
 // 共有モック __mocks__/react-native.ts の TextInput は onChangeText (RN 標準の変更
@@ -91,10 +91,6 @@ const baseProps = {
   saving: false,
   loading: false,
 };
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("GroupMemberModal - メンバー一覧の表示", () => {
   it("[V-B1-01] teamMembers に渡した全員が行として表示される", () => {

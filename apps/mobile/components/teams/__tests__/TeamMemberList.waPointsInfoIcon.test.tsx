@@ -21,105 +21,12 @@
 //   ここで保証するのは DOM 上の所属コンテナと前後関係、および開くモーダルの中身のみ。
 // =============================================================================
 
-import React, { useEffect } from "react";
-import { Pressable, Text } from "react-native";
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
+import { describe, it, expect } from "vitest";
 import jaMessages from "@apps/shared/messages/ja.json";
-
-const mocks = vi.hoisted(() => {
-  const supabaseFrom = vi.fn();
-  return { supabaseFrom, authValue: { supabase: { from: supabaseFrom } } };
-});
-
-vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => mocks.authValue,
-}));
-
-vi.mock("@apps/shared/hooks/queries/teams", () => ({
-  useUpdateMemberRoleMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useRemoveMemberMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}));
-
-vi.mock("../member-detail", () => ({
-  MemberDetailModal: () => null,
-}));
-
-// グルーピングなしで素通し (TeamMemberList.headerLayout.test.tsx と同じ手法)
-vi.mock("../TeamMemberGroupFilter", () => ({
-  TeamMemberGroupFilter: ({
-    members,
-    onGroupedMembersChange,
-  }: {
-    members: TeamMembershipWithUser[];
-    onGroupedMembersChange: (sorted: TeamMembershipWithUser[], headers: Map<number, string>) => void;
-  }) => {
-    useEffect(() => {
-      onGroupedMembersChange(members, new Map());
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [members]);
-    return React.createElement(Pressable, {}, React.createElement(Text, null, "group-filter"));
-  },
-}));
-
-// @shopify/flash-list は素の .ts 配布でこの vitest 環境では変換できないため
-// ファイルローカルで最小スタブに差し替える (TeamMemberList.test.tsx と同じ理由)
-vi.mock("@shopify/flash-list", () => ({
-  FlashList: ({
-    data,
-    renderItem,
-    keyExtractor,
-    ListEmptyComponent,
-    ...props
-  }: {
-    data?: unknown[];
-    renderItem?: (info: { item: unknown; index: number }) => React.ReactNode;
-    keyExtractor?: (item: unknown, index: number) => string | number;
-    ListEmptyComponent?: React.ReactNode;
-  } & Record<string, unknown>) =>
-    React.createElement(
-      "div",
-      props,
-      data && data.length > 0
-        ? data.map((item, index) =>
-            React.createElement(
-              "div",
-              { key: keyExtractor ? keyExtractor(item, index) : index },
-              renderItem ? renderItem({ item, index }) : null,
-            ),
-          )
-        : (ListEmptyComponent ?? null),
-    ),
-}));
-
+import { buildMember, mockEmptyRecordsQuery } from "./teamMemberListHarness";
 import { TeamMemberList } from "../TeamMemberList";
 
-const buildMember = (
-  overrides: Partial<TeamMembershipWithUser> & { id: string; user_id: string; name: string },
-): TeamMembershipWithUser =>
-  ({
-    team_id: "team-1",
-    role: "user",
-    status: "approved",
-    is_active: true,
-    joined_at: "2025-01-01T00:00:00Z",
-    left_at: null,
-    created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
-    users: { id: overrides.user_id, name: overrides.name, gender: 0 },
-    ...overrides,
-  }) as unknown as TeamMembershipWithUser;
-
-const mockEmptyRecordsQuery = () => {
-  mocks.supabaseFrom.mockImplementation(() => ({
-    select: vi.fn(() => ({
-      in: vi.fn(() => ({
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      })),
-    })),
-  }));
-};
 
 const renderList = () => {
   mockEmptyRecordsQuery();
@@ -152,7 +59,6 @@ const MEMBER_DETAIL_BODY = jaMessages.teams.memberDetail.bestTimesTable.pointsIn
  */
 const getTitle = () => screen.getByRole("switch", { name: jaMessages.teams.memberStats.includeRelay });
 
-
 // CenterModal の `<Modal animationType="none">` は DOM モックで `animationtype="none"`
 // 属性としてそのまま転記される。比較モーダル (SlideUpModal) は別の animationType なので、
 // この属性で info ポップアップの subtree だけを特定できる
@@ -174,10 +80,6 @@ describe("[V-WAI 反転] TeamMemberList から WAポイント比較ボタン + i
   //   components/teams/rankings/__tests__/TeamRankings.waPointsCompare.test.tsx
   // の [V-B36]〜[V-B38] が引き継いでいる。
   // ---------------------------------------------------------------------------
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("[V-WAI-01 反転] メンバータブに「WAポイントで比較」ボタンと info アイコンが存在しない", () => {
     const { container } = renderList();
 

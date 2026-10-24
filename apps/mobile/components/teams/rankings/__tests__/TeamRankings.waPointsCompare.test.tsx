@@ -169,7 +169,6 @@ function renderRankings(members: TeamMembershipWithUser[] = MEMBERS) {
 
 describe("[V-B30〜B35] TeamRankings の「WAポイントで比較」", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     modalMock.props = [];
     stylesMock.impl = async () => [
       { id: 3, style: "Fr", distance: 100, name: "Fr100", name_jp: "100m自由形" },

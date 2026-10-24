@@ -27,7 +27,9 @@
 import { act, renderHook } from "@testing-library/react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@swim-hub/shared/types";
 import messages from "@apps/shared/messages/ja.json";
 import type { Style } from "@apps/shared/types";
 import type { CompetitionTabSaveParams } from "@/components/forms/CompetitionTabModal";
@@ -171,8 +173,7 @@ describe("useCompetitionTabSave — D-6 records.pool_type 自己修復 / V-11 �
     const { result } = renderHook(
       () =>
         useCompetitionTabSave({
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          supabase: fake as unknown as any,
+          supabase: fake as unknown as SupabaseClient<Database>,
           user: { id: "user-1" },
           styles,
           createCompetition,
@@ -206,10 +207,6 @@ describe("useCompetitionTabSave — D-6 records.pool_type 自己修復 / V-11 �
       splitTimes: [],
     },
   ];
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
 
   // ---------------------------------------------------------------------------
   // V-7 (D-3 ガード): 大会本体 UPDATE の競技会行未解決ガード。R2 の記録側リファクタとは
