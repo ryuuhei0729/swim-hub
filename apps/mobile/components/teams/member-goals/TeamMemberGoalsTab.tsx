@@ -9,7 +9,7 @@ import { StyleAPI } from "@apps/shared/api/styles";
 import { styleKeys } from "@apps/shared/hooks/queries/keys";
 import { useTeamMemberGoalsQuery } from "@apps/shared/hooks/queries/teamMemberGoals";
 import { sortTeamMemberGoals } from "@apps/shared/utils/teamMemberGoalSort";
-import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { isCompetitionOver } from "@apps/shared/utils/date";
 import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { TeamMemberGoal, TeamMembershipWithUser } from "@swim-hub/shared/types";
@@ -20,14 +20,13 @@ interface TeamMemberGoalsTabProps {
   members: TeamMembershipWithUser[];
 }
 
-type SectionKey = "upcoming" | "past" | "noCompetition";
+type SectionKey = "upcoming" | "noCompetition";
 
 function sectionOf(goal: TeamMemberGoal): SectionKey {
-  if (goal.competition_date === null) return "noCompetition";
-  return isCompetitionDateInPast(goal.competition_date) ? "past" : "upcoming";
+  return goal.competition_date === null ? "noCompetition" : "upcoming";
 }
 
-const SECTION_ORDER: readonly SectionKey[] = ["upcoming", "past", "noCompetition"];
+const SECTION_ORDER: readonly SectionKey[] = ["upcoming", "noCompetition"];
 
 /** 管理者ビュー専用: メンバーを1人選び、そのメンバーの目標とマイルストーンを読み取り専用で表示する */
 export const TeamMemberGoalsTab: React.FC<TeamMemberGoalsTabProps> = ({ teamId, members }) => {
@@ -57,13 +56,23 @@ export const TeamMemberGoalsTab: React.FC<TeamMemberGoalsTabProps> = ({ teamId, 
     [stylesQuery.data],
   );
 
-  const sections = useMemo(() => {
-    const sorted = sortTeamMemberGoals(goalsQuery.data ?? []);
-    return SECTION_ORDER.map((key) => ({
-      key,
-      goals: sorted.filter((g) => sectionOf(g) === key),
-    })).filter((s) => s.goals.length > 0);
-  }, [goalsQuery.data]);
+  // 大会が終わった目標は出さない (本人の目標画面と同じ。複数日開催は終了日で判定)
+  const visibleGoals = useMemo(
+    () =>
+      sortTeamMemberGoals(goalsQuery.data ?? []).filter(
+        (g) => !isCompetitionOver(g.competition_date, g.competition_end_date),
+      ),
+    [goalsQuery.data],
+  );
+
+  const sections = useMemo(
+    () =>
+      SECTION_ORDER.map((key) => ({
+        key,
+        goals: visibleGoals.filter((g) => sectionOf(g) === key),
+      })).filter((s) => s.goals.length > 0),
+    [visibleGoals],
+  );
 
   const renderBody = () => {
     if (options.length === 0) {
@@ -97,7 +106,7 @@ export const TeamMemberGoalsTab: React.FC<TeamMemberGoalsTabProps> = ({ teamId, 
         </View>
       );
     }
-    if (goalsQuery.data.length === 0) {
+    if (visibleGoals.length === 0) {
       return (
         <View style={styles.center}>
           <Text style={styles.emptyTitle}>{t("teamMemberGoals.empty")}</Text>

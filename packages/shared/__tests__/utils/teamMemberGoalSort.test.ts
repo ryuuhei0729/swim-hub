@@ -19,6 +19,7 @@ function goal(id: string, date: string | null, createdAt = "2026-01-01T00:00:00Z
     competition_id: date ? `c-${id}` : null,
     competition_title: date ? `meet-${id}` : null,
     competition_date: date,
+    competition_end_date: null,
     competition_pool_type: date ? 1 : null,
     current_best_time: null,
     milestones: [],
@@ -53,6 +54,11 @@ describe("sortTeamMemberGoals", () => {
   it("今日の大会は「今後」(過去グループの先頭ではなく今後グループの先頭)", () => {
     const input = [goal("yesterday", "2026-10-03"), goal("tomorrow", "2026-10-05"), goal("today", "2026-10-04")];
     expect(ids(sortTeamMemberGoals(input))).toEqual(["today", "tomorrow", "yesterday"]);
+  });
+
+  it("開催中の複数日大会 (開始日は過去・終了日は今日以降) は「今後」", () => {
+    const input = [goal("past", "2026-09-30"), { ...goal("ongoing", "2026-10-02"), competition_end_date: "2026-10-04" }];
+    expect(ids(sortTeamMemberGoals(input))).toEqual(["ongoing", "past"]);
   });
 
   it("同日は created_at 昇順", () => {

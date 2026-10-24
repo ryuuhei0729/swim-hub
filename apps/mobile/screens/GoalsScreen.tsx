@@ -12,7 +12,8 @@ import { ErrorView } from "@/components/layout/ErrorView";
 import { GoalCard } from "@/components/goals/GoalCard";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { localizedStyleName } from "@/utils/styleName";
-import { isCompetitionDateInPast, toISODateString } from "@apps/shared/utils/date";
+import { toISODateString } from "@apps/shared/utils/date";
+import { selectUpcomingGoals } from "@apps/shared/utils/upcomingGoals";
 import type { MainStackParamList } from "@/navigation/types";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { StyleAPI } from "@apps/shared/api/styles";
@@ -125,16 +126,10 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
     staleTime: 24 * 60 * 60 * 1000,
   });
   const goalsQuery = useGoalsQuery(supabase);
-  // 大会日が過去の目標は目標タブに出さない (大会情報なしの目標は削除できるよう残す)。
+  // 大会が終わった目標は目標タブに出さない (大会情報なしの目標は削除できるよう残す)。
   // 複数日開催は終了日で判定する (開催中の2日目以降も出す)
   const goals = useMemo(
-    () =>
-      goalsQuery.data?.filter(
-        (goal) => !isCompetitionDateInPast(goal.competition?.end_date ?? goal.competition?.date),
-      ),
-    // today は式の中では使わない。日付が変わったときに再計算させるための deps
-    // (再取得結果が同じだとデータ参照が変わらず、フィルタが再実行されないため)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => (goalsQuery.data ? selectUpcomingGoals(goalsQuery.data, today) : undefined),
     [goalsQuery.data, today],
   );
 

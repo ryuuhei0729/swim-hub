@@ -1,11 +1,11 @@
 // =============================================================================
 // チーム管理者向けメンバー目標の並び順
 // =============================================================================
-// 今後の大会 (大会日昇順。今日を含む) → 過去の大会 (大会日降順) → 大会 NULL。
+// 今後の大会 (大会日昇順。今日・開催中を含む) → 過去の大会 (大会日降順) → 大会 NULL。
 // 同日・同グループ内は created_at 昇順 → id 昇順。
 
 import type { TeamMemberGoal } from "../types/teamMemberGoals";
-import { isCompetitionDateInPast } from "./date";
+import { isCompetitionOver } from "./date";
 
 function compareStrings(a: string, b: string): number {
   if (a < b) return -1;
@@ -19,10 +19,10 @@ function compareCreatedThenId(a: TeamMemberGoal, b: TeamMemberGoal): number {
   return compareStrings(a.id, b.id);
 }
 
-/** 0 = 今後 (今日を含む), 1 = 過去, 2 = 大会情報なし */
+/** 0 = 今後 (今日・開催中を含む), 1 = 過去, 2 = 大会情報なし */
 function groupOf(goal: TeamMemberGoal): 0 | 1 | 2 {
   if (!goal.competition_date) return 2;
-  return isCompetitionDateInPast(goal.competition_date) ? 1 : 0;
+  return isCompetitionOver(goal.competition_date, goal.competition_end_date) ? 1 : 0;
 }
 
 export function sortTeamMemberGoals(goals: readonly TeamMemberGoal[]): TeamMemberGoal[] {

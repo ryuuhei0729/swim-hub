@@ -138,11 +138,11 @@ describe("v6: 過去の日付の目標は目標タブに表示しない (境界 
     expect(h.deleteGoal).toHaveBeenCalledWith("gN");
   });
 
-  it("全部が過去なら既存の空状態 (新しい文言は足さない)", async () => {
+  it("全部が過去なら空状態 (今後の大会の目標が無い旨の文言)", async () => {
     setup([goal("gY", "cY", "achieved"), goal("gY2", "cY2")], [comp("cY", "昨日大会", "2026-10-03"), comp("cY2", "先月大会", "2026-09-01")]);
     renderScreen();
     await flush();
-    expect(screen.getByText("目標がありません")).toBeTruthy();
+    expect(screen.getByText("今後の大会の目標はありません")).toBeTruthy();
     expect(screen.getByText("下のボタンから新規作成してください")).toBeTruthy();
   });
 

@@ -67,7 +67,7 @@ function renderDetail() {
 function renderMemberCard() {
   const goal: TeamMemberGoal = {
     id: "g1", style_id: 1, target_time: 60, status: "active", achieved_at: null, created_at: "2026-01-01T00:00:00Z",
-    competition_id: "c1", competition_title: "県大会", competition_date: "2099-05-01", competition_pool_type: 1,
+    competition_id: "c1", competition_title: "県大会", competition_date: "2099-05-01", competition_end_date: null, competition_pool_type: 1,
     current_best_time: 65,
     milestones: milestones.map(({ id, title, type, params, deadline, status, achieved_at }) => ({ id, title, type, params, deadline, status, achieved_at })),
   };

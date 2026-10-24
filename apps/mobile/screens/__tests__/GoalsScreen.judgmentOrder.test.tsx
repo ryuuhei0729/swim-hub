@@ -289,7 +289,7 @@ describe("S9 状態表示 (一覧)", () => {
     h.getGoals.mockImplementation(async () => []);
     const c = renderScreen();
     await flush();
-    expect(screen.getByText("目標がありません")).toBeTruthy();
+    expect(screen.getByText("今後の大会の目標はありません")).toBeTruthy();
     expect(screen.queryByText("目標管理")).toBeNull();
     c.unmount();
   });
@@ -298,7 +298,7 @@ describe("S9 状態表示 (一覧)", () => {
     h.getGoals.mockImplementation(async () => { h.calls.push("fetch"); return []; });
     renderScreen();
     await flush();
-    expect(screen.getByText("目標がありません")).toBeTruthy();
+    expect(screen.getByText("今後の大会の目標はありません")).toBeTruthy();
     expect(screen.getByText("下のボタンから新規作成してください")).toBeTruthy();
     expect(byLabel("新規目標作成")).toHaveLength(1);
   });

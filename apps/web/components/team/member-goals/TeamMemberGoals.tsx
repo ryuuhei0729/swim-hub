@@ -9,7 +9,7 @@ import { styleKeys } from "@apps/shared/hooks/queries/keys";
 import { useTeamMemberGoalsQuery } from "@apps/shared/hooks/queries/teamMemberGoals";
 import { sortTeamMemberGoals } from "@apps/shared/utils/teamMemberGoalSort";
 import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
-import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { isCompetitionOver } from "@apps/shared/utils/date";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { TeamMemberGoal } from "@apps/shared/types/teamMemberGoals";
 import { buildSwimStyleLabel, styleIdToCodeKey } from "@/utils/swimStyle";
@@ -20,11 +20,10 @@ interface TeamMemberGoalsProps {
   teamId: string;
 }
 
-type SectionKey = "upcoming" | "past" | "noCompetition";
+type SectionKey = "upcoming" | "noCompetition";
 
 function sectionOf(goal: TeamMemberGoal): SectionKey {
-  if (!goal.competition_date) return "noCompetition";
-  return isCompetitionDateInPast(goal.competition_date) ? "past" : "upcoming";
+  return goal.competition_date ? "upcoming" : "noCompetition";
 }
 
 /**
@@ -65,16 +64,23 @@ export default function TeamMemberGoals({ teamId }: TeamMemberGoalsProps) {
 
   const goalsQuery = useTeamMemberGoalsQuery(supabase, teamId, activeMemberId || undefined);
 
+  // 大会が終わった目標は出さない (本人の目標画面と同じ。複数日開催は終了日で判定)
+  const visibleGoals = useMemo(
+    () =>
+      sortTeamMemberGoals(goalsQuery.data ?? []).filter(
+        (goal) => !isCompetitionOver(goal.competition_date, goal.competition_end_date),
+      ),
+    [goalsQuery.data],
+  );
+
   const sections = useMemo(() => {
-    const sorted = sortTeamMemberGoals(goalsQuery.data ?? []);
     const grouped: Record<SectionKey, TeamMemberGoal[]> = {
       upcoming: [],
-      past: [],
       noCompetition: [],
     };
-    for (const goal of sorted) grouped[sectionOf(goal)].push(goal);
+    for (const goal of visibleGoals) grouped[sectionOf(goal)].push(goal);
     return grouped;
-  }, [goalsQuery.data]);
+  }, [visibleGoals]);
 
   const styleLabelOf = (goal: TeamMemberGoal): string => {
     const style = stylesQuery.data?.find((s) => s.id === goal.style_id);
@@ -112,7 +118,7 @@ export default function TeamMemberGoals({ teamId }: TeamMemberGoalsProps) {
         </div>
       );
     }
-    if (goalsQuery.data.length === 0) {
+    if (visibleGoals.length === 0) {
       return (
         <p className="py-8 text-center text-sm text-gray-500">
           {t("empty")}
@@ -123,7 +129,7 @@ export default function TeamMemberGoals({ teamId }: TeamMemberGoalsProps) {
     }
     return (
       <div className="space-y-6">
-        {(["upcoming", "past", "noCompetition"] as const).map((key) =>
+        {(["upcoming", "noCompetition"] as const).map((key) =>
           sections[key].length === 0 ? null : (
             <section key={key}>
               <h3 className="mb-2 text-sm font-semibold text-gray-700">{t(`section.${key}`)}</h3>
