@@ -9,7 +9,7 @@
  *   3. team/group-management/TeamGroupManagement.tsx → GroupMemberListModal 経由 (本スプリントで
  *      `gender` を追加配線)
  *
- * PM 実測により、経路3は `apps/shared/api/teams/groups.ts` の `listGroupMembers` を経由せず、
+ * PM 実測により、経路3は `packages/shared/api/teams/groups.ts` の `listGroupMembers` を経由せず、
  * このファイル内のインライン `supabase.from("team_memberships").select(...)` を直接使う。
  * よって `groups.ts` への `gender` 追加だけでは経路3は保護されず、このファイル自身の
  * SELECT 文字列に `gender` が含まれることを実測する必要がある。

@@ -3,7 +3,7 @@
  *
  * 大会未紐付けレコード（一括ベストタイム入力）分岐対応で追加されたキー。
  * web (CompetitionClient.tsx) と mobile (StandaloneRecordDetailModal.tsx) が
- * 同一の shared JSON (apps/shared/messages/*.json) を編集したため、
+ * 同一の shared JSON (packages/shared/messages/*.json) を編集したため、
  * 重複キーによる上書き破損が無いことを含めて検証する。
  *
  * Sprint Contract 検証観点:
@@ -20,7 +20,7 @@ import koMessages from "@apps/shared/messages/ko.json";
 import zhMessages from "@apps/shared/messages/zh.json";
 import deMessages from "@apps/shared/messages/de.json";
 
-const MESSAGES_DIR = path.resolve(__dirname, "../../../shared/messages");
+const MESSAGES_DIR = path.resolve(__dirname, "../../../../packages/shared/messages");
 
 const EXPECTED: Record<string, string> = {
   ja: "一括入力",

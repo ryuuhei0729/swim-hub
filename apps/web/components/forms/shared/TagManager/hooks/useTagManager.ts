@@ -9,7 +9,7 @@ import { DEFAULT_TAG_COLOR, TAG_COLORS } from "@apps/shared/constants/tagColors"
 export type Tag = PracticeTag;
 
 // パステルカラー定数。
-// 🚨 **色を書き写さない。** 定義元は apps/shared/constants/tagColors.ts の TAG_COLORS。
+// 🚨 **色を書き写さない。** 定義元は packages/shared/constants/tagColors.ts の TAG_COLORS。
 // 以前ここに同じ配列がハードコードされており、パレットを変えると
 // 「カレンダー色だけ変わってタグは古いまま」になる二重管理になっていた。
 export const PRESET_COLORS: readonly string[] = TAG_COLORS;

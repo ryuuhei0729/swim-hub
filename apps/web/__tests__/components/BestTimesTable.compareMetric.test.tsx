@@ -37,7 +37,7 @@
  *
  * ## 期待値の作成方法 (トートロジー回避)
  * 得点の期待値は `node -e` で P=floor(1000*(B/T)^3) を独立に計算したハードコード値。
- * base time は apps/shared/utils/waPoints.ts の BASE_TIME_TABLE の実数値:
+ * base time は packages/shared/utils/waPoints.ts の BASE_TIME_TABLE の実数値:
  *   WA(SCM男子Fr100)=44.84 / 日本記録(同)=46.22 / 高校記録(同)=47.07 / 中学記録(同)=48.35
  * 比較指標説明アイコンの本文は完全一致で pin せず「非空である」「metric切替で内容が変わらない
  * (静的である)」「既存WA専用アイコンとは別要素である」という構造的な条件のみ検証する。
@@ -60,7 +60,7 @@ const MESSAGES: Record<Locale, AbstractIntlMessages> = {
   en: enMessages as unknown as AbstractIntlMessages,
 };
 
-// AgeCategory は apps/shared/utils/domesticRecords.ts (未実装) の型のため、ここではリテラルの
+// AgeCategory は packages/shared/utils/domesticRecords.ts (未実装) の型のため、ここではリテラルの
 // 文字列 union として直接使う (import すると未実装時に本ファイル全体が import 解決エラーで
 // 全滅してしまい、[V-CM] 系の意図を持つ failure と区別できなくなるため)。
 type AgeCategoryLiteral = "elementary" | "juniorHigh" | "highSchool" | "university" | "general";

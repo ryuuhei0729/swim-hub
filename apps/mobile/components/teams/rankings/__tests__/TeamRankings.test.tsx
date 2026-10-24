@@ -36,7 +36,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TeamRankings } from "../TeamRankings";
 import { styleKeys } from "@apps/shared/hooks/queries/keys";
-import jaMessages from "../../../../../shared/messages/ja.json";
+import jaMessages from "../../../../../../packages/shared/messages/ja.json";
 
 // ⚠️ ランキング系のコンポーネントは **プロフィール画像を描画しない**ので
 //    `useSignedImageUrl` を import しない (ユーザー依頼で撤去済み)。

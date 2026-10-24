@@ -9,7 +9,7 @@ module.exports = function (api) {
           root: ["."],
           alias: {
             "@": ".",
-            "@apps/shared": "../shared",
+            "@apps/shared": "../../packages/shared",
           },
         },
       ],

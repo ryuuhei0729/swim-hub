@@ -2,9 +2,9 @@
  * カレンダー記録色カスタマイズ(カスタム色時)の枠線・文字色を導出するための
  * 色調整ユーティリティ。CalendarDay / DayDetailModal 系コンポーネントで共有する。
  *
- * 背景色のアルファ合成(淡色化)は apps/shared/utils/colorAlpha.ts の hexToRgba を使う。
+ * 背景色のアルファ合成(淡色化)は packages/shared/utils/colorAlpha.ts の hexToRgba を使う。
  * こちらは「ベタ塗りの選択色そのままだと濃すぎる」文字色向けに、hue を保ったまま
- * 暗くする用途のみを担う(mobile 固有の表示ロジックのため apps/shared には置かない)。
+ * 暗くする用途のみを担う(mobile 固有の表示ロジックのため packages/shared には置かない)。
  */
 
 /**

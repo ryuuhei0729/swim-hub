@@ -5,7 +5,7 @@
  *
  * 背景 (PM 裁定):
  *   `apps/mobile/utils/lapTimeCalculator.ts` の `SplitTime` (UI 計算型,
- *   `{ distance, splitTime }`) は web 版と同じ名前で `apps/shared/types/record.ts` の
+ *   `{ distance, splitTime }`) は web 版と同じ名前で `packages/shared/types/record.ts` の
  *   DB レコード型 `SplitTime` (`{ distance, split_time, ... }`) と概念が衝突している。
  *   Stage1 で mobile 側の lapTimeCalculator の `SplitTime` も別名にリネームする。
  *

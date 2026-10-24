@@ -26,7 +26,7 @@ import koMessages from "@apps/shared/messages/ko.json";
 import zhMessages from "@apps/shared/messages/zh.json";
 import deMessages from "@apps/shared/messages/de.json";
 
-const MESSAGES_DIR = path.resolve(__dirname, "../../../shared/messages");
+const MESSAGES_DIR = path.resolve(__dirname, "../../../../packages/shared/messages");
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const LOCALES = ["ja", "en", "ko", "zh", "de"] as const;
 type Locale = (typeof LOCALES)[number];

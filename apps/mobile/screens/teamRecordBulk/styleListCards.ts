@@ -4,7 +4,7 @@
 //
 // カードの表示要否・入力済み人数の算出はここに集約する (画面コンポーネントには
 // JSX の組み立てのみを残す)。29カードの canonical な定義元は既存の styles
-// マスター + apps/shared/utils/relayEvents.ts の RELAY_EVENTS であり、ここでは
+// マスター + packages/shared/utils/relayEvents.ts の RELAY_EVENTS であり、ここでは
 // 複製しない (複製すると「片方だけ更新されて静かに壊れる」既知の罠を再生産する)。
 
 import {

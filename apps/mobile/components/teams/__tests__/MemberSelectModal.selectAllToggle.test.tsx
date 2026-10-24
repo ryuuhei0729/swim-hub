@@ -238,10 +238,10 @@ describe("[TG] MemberSelectModal 全選択トグル", () => {
     it("[TG-3] compareMembersByBirthday で並べた順序そのままチップが描画される", () => {
       // 実際の運用では useTeamsQuery → TeamMembersAPI.list() がこの並べ替えを行い、
       // MemberSelectModal には既にソート済みの配列が members として渡される
-      // (apps/shared/api/teams/members.ts:29)。ここでは「わざと乱れた順」から実物の
+      // (packages/shared/api/teams/members.ts:29)。ここでは「わざと乱れた順」から実物の
       // compareMembersByBirthday で1回だけ並べ替えたものを fixture として使い、
       // MemberSelectModal がそれをそのままの順で描画する (独自に並べ替え直さない) ことを
-      // 検証する。並べ替えの中身自体は apps/shared/__tests__/utils/memberSort.test.ts が
+      // 検証する。並べ替えの中身自体は packages/shared/__tests__/utils/memberSort.test.ts が
       // 別途担保しているので、ここで再実装・再検証はしない。
       const raw = [
         buildMember({ id: "m-c", user_id: "u-c", name: "C選手", birthday: "2008-05-01" }),

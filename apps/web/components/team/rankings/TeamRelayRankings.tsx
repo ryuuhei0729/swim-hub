@@ -132,7 +132,7 @@ export default function TeamRelayRankings({ teamId, filters }: TeamRelayRankings
             - リレー RPC はスコープ軸を持たず、`relay_records.team_id` が行に
               付いているので構造上チーム内に閉じている
             - `competition_id = NULL` のリレー記録を作る経路が**存在しない**
-              (根拠: `apps/shared/types/relayRecord.ts` の `competitionId` の
+              (根拠: `packages/shared/types/relayRecord.ts` の `competitionId` の
               docstring — あの null 許容は「大会に紐づかないリレー記録を直接
               入力する」機能のための**予約**であり、現状その行を生む経路は無い)
 

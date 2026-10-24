@@ -1567,7 +1567,7 @@ describe("TeamRankings (web)", () => {
     //
     // 「gender 未入力ユーザーが男子ランキングに出る」という別事実は
     // `users.gender NOT NULL DEFAULT 0` 由来で、上の V-08b が担っている。
-    // (写像の単体検証は apps/shared/__tests__/teams/rankings.test.ts の [V-21]。
+    // (写像の単体検証は packages/shared/__tests__/teams/rankings.test.ts の [V-21]。
     //  こちらは **UI 操作から RPC 引数まで**の経路で同じことを確かめる)
     // -----------------------------------------------------------------------
     /** このブロック用の setup (V-06/V-07 ブロックの setup とはスコープが別) */
@@ -1726,7 +1726,7 @@ describe("TeamRankings (web)", () => {
   // をここへ移設したもの (子はもう絞り込みを描かない)。
   //
   // 選択肢の並び・距離の引き継ぎ規則そのものの定義元は
-  // `apps/shared/__tests__/utils/rankingEventAxis.test.ts`。ここで見るのは
+  // `packages/shared/__tests__/utils/rankingEventAxis.test.ts`。ここで見るのは
   // **UI がその規則どおりに描き、その条件で実際に RPC を叩くか**である。
   // -------------------------------------------------------------------------
   describe("[V-RL-F] リレー種目を選んだときの絞り込みと往復", () => {

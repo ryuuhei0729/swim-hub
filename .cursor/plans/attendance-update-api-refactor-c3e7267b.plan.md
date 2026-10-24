@@ -3,7 +3,7 @@
 
 ## 概要
 
-`apps/web/app/api/attendance/update/route.ts`の機能を`apps/shared/api/teams/attendances.ts`に移動し、API Route Handlerを削除します。
+`apps/web/app/api/attendance/update/route.ts`の機能を`packages/shared/api/teams/attendances.ts`に移動し、API Route Handlerを削除します。
 
 現在の`/api/attendance/update`は、`practices`または`competitions`テーブルの`attendance_status`（'before' | 'open' | 'closed'）を更新する管理者向けの機能です。
 
@@ -11,7 +11,7 @@
 
 ### 新規・更新
 
-- **更新**: `apps/shared/api/teams/attendances.ts`
+- **更新**: `packages/shared/api/teams/attendances.ts`
 - 管理者権限チェックのヘルパーメソッド`requireTeamAdmin`を追加
 - `updatePracticeAttendanceStatus(practiceId: string, status: 'before' | 'open' | 'closed' | null)`メソッドを追加
 - `updateCompetitionAttendanceStatus(competitionId: string, status: 'before' | 'open' | 'closed' | null)`メソッドを追加
@@ -24,7 +24,7 @@
 ### 削除
 
 - **削除**: `apps/web/app/api/attendance/update/route.ts`
-- 機能が`apps/shared/api/teams/attendances.ts`に移動したため不要
+- 機能が`packages/shared/api/teams/attendances.ts`に移動したため不要
 
 ## 主要実装ステップ
 

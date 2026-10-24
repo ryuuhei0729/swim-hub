@@ -5,7 +5,7 @@
  * 5言語 (ja/en/zh/ko/de) 存在・値を固定する。
  *
  * 一般的なキー構造の完全一致・翻訳漏れ(日本語リーク)検出は
- * `apps/shared/__tests__/messages-coverage.test.ts` が担う (既存の safety net)。
+ * `packages/shared/__tests__/messages-coverage.test.ts` が担う (既存の safety net)。
  * 本テストはそれとは独立に「このスプリントで追加すべき正確なキー名と値」を
  * 5言語全てで固定する、この機能専用のピン留めテストである
  * (既存の `apps/web/__tests__/i18n/messages-wa-points-compare.test.ts` と同方針)。
@@ -24,11 +24,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import jaMessages from "../../../shared/messages/ja.json";
-import enMessages from "../../../shared/messages/en.json";
-import zhMessages from "../../../shared/messages/zh.json";
-import koMessages from "../../../shared/messages/ko.json";
-import deMessages from "../../../shared/messages/de.json";
+import jaMessages from "../../../../packages/shared/messages/ja.json";
+import enMessages from "../../../../packages/shared/messages/en.json";
+import zhMessages from "../../../../packages/shared/messages/zh.json";
+import koMessages from "../../../../packages/shared/messages/ko.json";
+import deMessages from "../../../../packages/shared/messages/de.json";
 
 function getValue(obj: Record<string, unknown>, dottedKey: string): unknown {
   const parts = dottedKey.split(".");

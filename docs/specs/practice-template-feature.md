@@ -141,7 +141,7 @@ CREATE POLICY "Users can manage own templates"
 ### 4.2 TypeScript型定義
 
 ```typescript
-// apps/shared/types/template.ts
+// packages/shared/types/template.ts
 
 export interface PracticeLogTemplate {
   id: string;
@@ -336,7 +336,7 @@ Goal詳細 → マイルストーン作成モーダル
 ### 6.1 API クラス
 
 ```typescript
-// apps/shared/api/templates.ts
+// packages/shared/api/templates.ts
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PracticeLogTemplate, CreatePracticeLogTemplateInput } from "../types/template";

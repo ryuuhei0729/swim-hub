@@ -35,7 +35,7 @@ export function calculateOverallAverage(times: PracticeTime[]): number | null {
 
 /**
  * 平均タイムを "M:SS.cc" 形式にフォーマットする(小数第2位まで)。
- * apps/shared/utils/time.ts の formatTime は小数第1位までのため、既存の練習ページ表示
+ * packages/shared/utils/time.ts の formatTime は小数第1位までのため、既存の練習ページ表示
  * (小数第2位)を変えないよう独立の関数として維持する。
  */
 export function formatAverageTime(seconds: number): string {

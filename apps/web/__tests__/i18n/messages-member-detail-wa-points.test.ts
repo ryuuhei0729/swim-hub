@@ -5,7 +5,7 @@
  * 5言語 (ja/en/de/ko/zh) 存在を固定する。
  *
  * 一般的なキー構造の完全一致・翻訳漏れ(日本語リーク)検出は
- * `apps/shared/__tests__/messages-coverage.test.ts` が担う (既存の safety net)。
+ * `packages/shared/__tests__/messages-coverage.test.ts` が担う (既存の safety net)。
  * 本テストはそれとは独立に「このスプリントで追加すべき正確なキー名」を
  * 5言語全てで固定する、この機能専用のピン留めテストである
  * (既存の `apps/web/__tests__/i18n/messages-wa-points-compare.test.ts` と同方針)。

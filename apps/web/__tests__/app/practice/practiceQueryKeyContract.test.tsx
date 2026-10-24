@@ -6,7 +6,7 @@
  *   startDate/endDate を使い、
  *   queryClient.prefetchQuery({ queryKey: practiceKeys.list({ startDate, endDate, page: 1, pageSize: 1000 }) })
  *   で React Query キャッシュに投入する。
- * - CSR (usePracticesQuery, apps/shared) はフック内部で
+ * - CSR (usePracticesQuery, packages/shared) はフック内部で
  *   `defaultStartDate = startDate ?? (クライアントTZ基準で計算した既定値)` を computed し、
  *   その値で queryKey (practiceKeys.list) を生成する。
  * - fix 前は PracticeClient が startDate/endDate を一切渡していなかったため、CSR 側は

@@ -60,13 +60,13 @@
     "android": "cd apps/mobile && expo run:android",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md}\"",
-    "ros:crawl": "cd result-of-swimming && npm run ros:crawl --",
-    "ros:parse": "cd result-of-swimming && npm run ros:parse --",
-    "ros:validate": "cd result-of-swimming && npm run ros:validate --",
-    "ros:aggregate": "cd result-of-swimming && npm run ros:aggregate --",
-    "ros:export": "cd result-of-swimming && npm run ros:export --",
-    "ros:test": "cd result-of-swimming && npm test",
-    "ros:probe": "cd result-of-swimming && npm run ros:probe --"
+    "ros:crawl": "pnpm --filter @swim-hub/result-of-swimming ros:crawl",
+    "ros:parse": "pnpm --filter @swim-hub/result-of-swimming ros:parse",
+    "ros:validate": "pnpm --filter @swim-hub/result-of-swimming ros:validate",
+    "ros:aggregate": "pnpm --filter @swim-hub/result-of-swimming ros:aggregate",
+    "ros:export": "pnpm --filter @swim-hub/result-of-swimming ros:export",
+    "ros:test": "pnpm --filter @swim-hub/result-of-swimming test",
+    "ros:probe": "pnpm --filter @swim-hub/result-of-swimming ros:probe"
   },
   "devDependencies": {
     "@alloc/quick-lru": "^5.2.0",

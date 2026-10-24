@@ -33,7 +33,7 @@
  *
  * トートロジー防止メモ:
  *   4グループの件数表示・未回答差分ロジックの期待値は
- *   apps/shared/hooks/useAttendanceGrouping.ts（既存の共有フック、web と共通利用）と
+ *   packages/shared/hooks/useAttendanceGrouping.ts（既存の共有フック、web と共通利用）と
  *   apps/web/components/admin-attendance/AttendanceGroupingDisplay.tsx の描画仕様、
  *   および PM 裁定(fetchTeamMembers 失敗時は「未回答」にエラー行を出し0件表示にしない)
  *   から導出したものであり、mobile 実装コードの diff を読んでコピーしたものではない。

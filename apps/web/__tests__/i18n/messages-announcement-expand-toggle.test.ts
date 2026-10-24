@@ -3,7 +3,7 @@
  *
  * Sprint Contract で合意した新規キー `teamsAdmin.announcementList.showMore` /
  * `teamsAdmin.announcementList.showLess` の存在を固定する。5言語の完全一致・
- * 日本語リークの一般網羅は apps/shared/__tests__/messages-coverage.test.ts に
+ * 日本語リークの一般網羅は packages/shared/__tests__/messages-coverage.test.ts に
  * 委譲するため (messages-web-mobile-parity-sprint.test.ts と同じ方針)、
  * ここでは「このスプリントで追加すべき正確なキー名」のみを固定する。
  *
@@ -16,8 +16,8 @@
  */
 
 import { describe, it, expect } from "vitest";
-import jaMessages from "../../../shared/messages/ja.json";
-import enMessages from "../../../shared/messages/en.json";
+import jaMessages from "../../../../packages/shared/messages/ja.json";
+import enMessages from "../../../../packages/shared/messages/en.json";
 
 function getValue(obj: Record<string, unknown>, dottedKey: string): unknown {
   const parts = dottedKey.split(".");

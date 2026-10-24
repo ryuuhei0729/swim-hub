@@ -86,7 +86,7 @@ jobs:
       if: ${{ matrix.node-version == '22.x' }}
       uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
       with:
-        files: ./apps/shared/coverage/lcov.info,./apps/web/coverage/lcov.info
+        files: ./packages/shared/coverage/lcov.info,./apps/web/coverage/lcov.info
         flags: nightly
         name: codecov-nightly
         fail_ci_if_error: false

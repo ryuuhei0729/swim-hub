@@ -111,8 +111,8 @@ export EXPO_TOKEN=your_token_here
 
 ## モノレポ構成
 
-このプロジェクトはモノレポ構成で、`apps/shared`パッケージを共通利用しています。
+このプロジェクトはモノレポ構成で、`packages/shared`パッケージを共通利用しています。
 
-- `apps/shared` - Web/Mobile共通のAPI層、型定義、React Queryフック
+- `packages/shared` - Web/Mobile共通のAPI層、型定義、React Queryフック
 - `apps/web` - Next.js Webアプリケーション
 - `apps/mobile` - React Nativeモバイルアプリケーション

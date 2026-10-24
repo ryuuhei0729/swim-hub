@@ -29,7 +29,7 @@
  *   `buildStyleEntriesFromExisting` の Phase 1 と**同じ**:
  *     created_at 昇順で4行連続 かつ is_relaying が [false, true, true, true]
  *     かつ 4件の style_id の組が RELAY_EVENTS に一致 (detectRelayEventId)
- *   `detectRelayEventId` は shared (`apps/shared/utils/relayEvents.ts`) の
+ *   `detectRelayEventId` は shared (`packages/shared/utils/relayEvents.ts`) の
  *   実装をそのまま使う。判定を書き写さない。
  *
  * 【スキップ方針】
@@ -43,9 +43,9 @@ import {
   calcCumulativeTimes,
   detectRelayEventId,
   fromRelayEventId,
-} from "../apps/shared/utils/relayEvents";
-import { resolveRelayGenderCategory } from "../apps/shared/utils/relayRecordSave";
-import type { RelayGenderCategory } from "../apps/shared/types/relayRecord";
+} from "../packages/shared/utils/relayEvents";
+import { resolveRelayGenderCategory } from "../packages/shared/utils/relayRecordSave";
+import type { RelayGenderCategory } from "../packages/shared/types/relayRecord";
 
 // 環境変数は dotenvx が自動注入（apps/web/.env.local）
 
