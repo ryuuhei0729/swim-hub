@@ -54,6 +54,9 @@ export const TabNavigator: React.FC = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        // タブ切替時に左右へ少しずらしながらフェードさせる。
+        // 移動方向(左右のタブ)に応じて入ってくる向きが変わる
+        animation: "shift",
         tabBarActiveTintColor: "#2563EB",
         tabBarInactiveTintColor: "#6B7280",
         tabBarStyle: {
