@@ -56,6 +56,12 @@ export const tabNavigatorScreenOptions: BottomTabNavigationOptions = {
   },
 };
 
+/**
+ * JS 描画版は `animation: "shift"` で切り替えが動くので、画面を包む必要はない
+ * (ネイティブ版は tabBar.native.tsx でフェードインの部品を差し込む)
+ */
+export const tabNavigatorScreenLayout = undefined;
+
 /** カスタムラベルは accessibilityLabel を自動導出しないため、表示文言を明示的に渡す */
 export const tabScreenOptions = (tab: TabVisual): BottomTabNavigationOptions => ({
   tabBarLabel: ({ color }) => <TabBarLabel color={color}>{tab.label}</TabBarLabel>,

@@ -1,4 +1,13 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { StyleSheet } from "react-native";
+import { useNavigationState } from "@react-navigation/native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import {
   createNativeBottomTabNavigator,
   type NativeBottomTabNavigationOptions,
@@ -69,3 +78,53 @@ export const tabScreenOptions = (tab: TabVisual): BottomTabNavigationOptions =>
     title: tab.label,
     tabBarIcon: { type: "image", source: TAB_ICONS[tab.feather] },
   }) satisfies NativeBottomTabNavigationOptions as unknown as BottomTabNavigationOptions;
+
+/** タブを切り替えたときに中身をふわっと出す時間 (ms) */
+const TAB_FADE_MS = 150;
+
+/**
+ * タブの中身のフェードイン
+ *
+ * OS 標準のタブバーは切り替えアニメーションを持たない (一瞬で切り替わる) ので、
+ * 画面の中身の方を reanimated でふわっと出す。
+ * 「選ばれているか」は useIsFocused ではなくタブナビゲーター自身の state で見る。
+ * useIsFocused だと、上にスタックの画面 (チーム詳細など) を積んだだけでも false になり、
+ * 戻るときのスライドの間に中身が透明のまま見えてしまうため。
+ * 選ばれていない間は透明にしておき、選ばれた瞬間から不透明へ動かす
+ * (先に不透明のまま一瞬見えてから消える、というちらつきを防ぐ)。
+ * OS の「視差効果を減らす」設定が有効なときは動かさない。
+ */
+const TabFadeIn: React.FC<{ routeKey: string; children: React.ReactNode }> = ({
+  routeKey,
+  children,
+}) => {
+  const selected = useNavigationState((state) => state.routes[state.index]?.key === routeKey);
+  const reduceMotion = useReducedMotion();
+  const opacity = useSharedValue(selected ? 0 : 1);
+
+  // shared value の読み書きは `.get()` / `.set()` で行う (React Compiler の lint の都合)
+  useEffect(() => {
+    if (reduceMotion) {
+      opacity.set(1);
+      return;
+    }
+    opacity.set(
+      selected ? withTiming(1, { duration: TAB_FADE_MS, easing: Easing.out(Easing.quad) }) : 0,
+    );
+  }, [opacity, reduceMotion, selected]);
+
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+
+  return <Animated.View style={[styles.fill, animatedStyle]}>{children}</Animated.View>;
+};
+
+/** Tab.Navigator の screenLayout。各タブ画面を TabFadeIn で包む */
+export const tabNavigatorScreenLayout: NonNullable<
+  React.ComponentProps<JsTabNavigator["Navigator"]>["screenLayout"]
+> = ({ route, children }) => <TabFadeIn routeKey={route.key}>{children}</TabFadeIn>;
+
+const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
+});

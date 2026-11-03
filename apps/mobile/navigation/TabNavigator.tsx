@@ -11,6 +11,7 @@ import { MyPageScreen } from "@/screens/MyPageScreen";
 import {
   createTabNavigator,
   TabBarShell,
+  tabNavigatorScreenLayout,
   tabNavigatorScreenOptions,
   tabScreenOptions,
 } from "./tabBar";
@@ -40,7 +41,10 @@ export const TabNavigator: React.FC = () => {
 
   return (
     <TabBarShell>
-      <Tab.Navigator screenOptions={tabNavigatorScreenOptions}>
+      <Tab.Navigator
+        screenOptions={tabNavigatorScreenOptions}
+        screenLayout={tabNavigatorScreenLayout}
+      >
         <Tab.Screen
           name="Dashboard"
           component={DashboardScreen}
