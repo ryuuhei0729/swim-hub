@@ -8,7 +8,8 @@
 //
 //   react-native                        Dimensions / Keyboard / KeyboardAvoidingView を補完
 //   @react-navigation/native            useRoute (harness.routeParams) / useNavigation
-//   @/contexts/AuthProvider             supabase (harness.supabase) / getAccessToken
+//   @/contexts/AuthProvider             supabase (harness.supabase) / user (harness.user) / getAccessToken
+//   @apps/shared/hooks/queries/goalTargets  useGoalTargetsQuery (harness.goalTargetsQuery)
 //   @apps/shared/api/styles             getStyles
 //   @apps/shared/hooks/queries/records  大会一覧 (harness.competitions)・編集対象
 //                                       (harness.records から recordId で解決)・各 mutation
@@ -93,6 +94,10 @@ const harness = vi.hoisted(() => {
     recordByIdLoading: false,
     recordByIdFetching: false,
     imageUploaderActions: [] as ImageUploaderAction[],
+    /** useAuth().user。null でログイン前 (目標バッジが出ない) を表す */
+    user: { id: "user-1" } as { id: string } | null,
+    /** useGoalTargetsQuery の戻り値。data: undefined で読み込み中/失敗 (目標バッジが出ない) を表す */
+    goalTargetsQuery: { data: [] as unknown[] | undefined },
     navigate: vi.fn(),
     goBack: vi.fn(),
     updateMutateAsync: vi.fn(),
@@ -124,9 +129,14 @@ vi.mock("@react-navigation/native", () => ({
 vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({
     supabase: harness.supabase,
+    user: harness.user,
     subscription: null,
     getAccessToken: harness.getAccessToken,
   }),
+}));
+
+vi.mock("@apps/shared/hooks/queries/goalTargets", () => ({
+  useGoalTargetsQuery: () => harness.goalTargetsQuery,
 }));
 
 vi.mock("@apps/shared/api/styles", () => ({
@@ -229,6 +239,8 @@ export function resetRecordFormHarness() {
   harness.recordByIdError = false;
   harness.recordByIdLoading = false;
   harness.recordByIdFetching = false;
+  harness.user = { id: "user-1" };
+  harness.goalTargetsQuery = { data: [] };
 }
 
 export const createWrapper = () => {

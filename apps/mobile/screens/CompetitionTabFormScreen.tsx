@@ -37,6 +37,7 @@ import { EntryAPI } from "@apps/shared/api/entries";
 import { RecordAPI } from "@apps/shared/api/records";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { createOrUpdateById } from "@apps/shared/utils/idempotentWrite";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
@@ -57,6 +58,7 @@ import {
   resolveGalleryImages,
   mergeImagePaths,
 } from "@/utils/imageUpload";
+import { randomUUID } from "expo-crypto";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
@@ -311,6 +313,18 @@ export const CompetitionTabFormScreen: React.FC = () => {
 
   // ---- 二重送信防止 ----
   const isSubmittingRef = useRef(false);
+
+  // ---- 再保存で二重登録しないための ID 管理 ----
+  // 低速回線では保存の途中 (記録の作成後、スプリットや動画の保存中など) で失敗したり、
+  // サーバーでは保存済みなのに応答だけ戻らなかったりする。利用者が再保存したときに
+  // 大会や記録がもう1件登録されないよう、新規作成する行の ID をクライアントで先に決め、
+  // この画面で作成済みの行は以降の保存で更新として扱う。
+  // 新規大会の ID (最初の保存で決め、再保存でも同じ ID を使う)
+  const draftCompetitionIdRef = useRef<string | null>(null);
+  // ドラフト行 (draftId) ごとの新規記録の ID
+  const draftRecordIdsRef = useRef<Map<string, string>>(new Map());
+  // この画面で作成済みの記録 (draftId → 記録 ID)
+  const createdRecordIdsRef = useRef<Map<string, string>>(new Map());
 
   // ---- エントリー1行目に自動セットされたデフォルト種目ID (未編集判定用) ----
   const defaultEntryStyleIdRef = useRef("");
@@ -1058,7 +1072,15 @@ export const CompetitionTabFormScreen: React.FC = () => {
           note: competitionNote.trim() || null,
           ...(competitionTeamId ? { team_id: competitionTeamId } : {}),
         };
-        const newCompetition = await createCompetitionMutation.mutateAsync(formData);
+        if (!draftCompetitionIdRef.current) draftCompetitionIdRef.current = randomUUID();
+        const newCompetitionId = draftCompetitionIdRef.current;
+        // 前回の保存がサーバーには届いていた (応答だけ失われた) 場合は更新に切り替わる
+        const newCompetition = await createOrUpdateById({
+          table: "competitions",
+          create: () => createCompetitionMutation.mutateAsync({ ...formData, id: newCompetitionId }),
+          update: () =>
+            updateCompetitionMutation.mutateAsync({ id: newCompetitionId, updates: formData }),
+        });
         savedCompetitionId = newCompetition.id;
         // 親INSERT成功 → 編集モードへ遷移
         setResolvedCompetitionId(newCompetition.id);
@@ -1226,6 +1248,15 @@ export const CompetitionTabFormScreen: React.FC = () => {
         for (const recordId of recordDiff.deletes) {
           await deleteRecordMutation.mutateAsync(recordId);
         }
+        // 前回の (途中で失敗した) 保存で作成済みだが、その後フォームから外された記録も削除する
+        // (スナップショットに無いので recordDiff.deletes には含まれない)
+        const validDraftIds = new Set(validRecords.map((r) => r.draftId));
+        for (const [draftId, createdId] of Array.from(createdRecordIdsRef.current.entries())) {
+          if (validDraftIds.has(draftId)) continue;
+          await deleteRecordMutation.mutateAsync(createdId);
+          createdRecordIdsRef.current.delete(draftId);
+          draftRecordIdsRef.current.delete(draftId);
+        }
 
         // UPDATE: recordDiff.updates に含まれる既存レコード ID を持つドラフトを更新
         const updateRecordSet = new Set(recordDiff.updates);
@@ -1274,9 +1305,27 @@ export const CompetitionTabFormScreen: React.FC = () => {
             is_relaying: record.isRelaying,
             pool_type: poolTypeValue,
           };
-          const savedRecord = await createRecordMutation.mutateAsync(recordData);
+          // 前回の保存で作成済みなら更新、未作成なら ID を決めて作成する。どちらでも
+          // この draft に対応する記録は1件だけになる (再保存での二重登録を防ぐ)
+          const alreadyCreatedId = createdRecordIdsRef.current.get(record.draftId);
+          let newRecordId = alreadyCreatedId ?? draftRecordIdsRef.current.get(record.draftId);
+          if (!newRecordId) {
+            newRecordId = randomUUID();
+            draftRecordIdsRef.current.set(record.draftId, newRecordId);
+          }
+          const recordIdForSave = newRecordId;
+          const savedRecord = alreadyCreatedId
+            ? await updateRecordMutation.mutateAsync({ id: alreadyCreatedId, updates: recordData })
+            : await createOrUpdateById({
+                table: "records",
+                create: () => createRecordMutation.mutateAsync({ ...recordData, id: recordIdForSave }),
+                update: () =>
+                  updateRecordMutation.mutateAsync({ id: recordIdForSave, updates: recordData }),
+              });
+          createdRecordIdsRef.current.set(record.draftId, savedRecord.id);
           const validSplitTimes = buildValidSplitTimes(record.splitTimes, record.styleId, swimStyles);
-          if (savedRecord && validSplitTimes.length > 0) {
+          // 作成済みの記録を再保存するときは、スプリットを全部消した場合も空配列で置き換える
+          if (savedRecord && (validSplitTimes.length > 0 || alreadyCreatedId)) {
             await replaceSplitTimesMutation.mutateAsync({
               recordId: savedRecord.id,
               splitTimes: validSplitTimes,

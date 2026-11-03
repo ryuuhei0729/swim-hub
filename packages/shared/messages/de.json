@@ -116,6 +116,15 @@
       "maxReached": "Maximale Anzahl erreicht"
     },
     "offlineBanner": "Sie sind offline. Einige Funktionen sind eingeschränkt.",
+    "network": {
+      "offline": "Sie sind offline, daher konnte der Vorgang nicht abgeschlossen werden. Bitte versuchen Sie es an einem Ort mit Empfang erneut.",
+      "timeout": "Die Verbindung hat zu lange gedauert und wurde abgebrochen. Bitte versuchen Sie es an einem Ort mit besserem Empfang erneut.",
+      "failed": "Keine Verbindung möglich. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+    },
+    "staleData": {
+      "failed": "Die neuesten Daten konnten nicht geladen werden. Es wird der zuletzt geladene Stand angezeigt.",
+      "offline": "Sie sind offline. Es wird der zuletzt geladene Stand angezeigt."
+    },
     "aria": {
       "close": "Schließen",
       "previousImage": "Vorheriges Bild",
@@ -2038,7 +2047,8 @@
         "title": "Vorlage löschen",
         "message": "„{name}“ löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.",
         "confirmLabel": "Löschen"
-      }
+      },
+      "deleteFailed": "Vorlage konnte nicht gelöscht werden"
     },
     "createModal": {
       "createTitle": "Neue Vorlage erstellen",
@@ -2242,11 +2252,6 @@
       "closeAriaLabel": "Schließen",
       "updateFailed": "Meilenstein konnte nicht aktualisiert werden"
     },
-    "milestoneSelector": {
-      "title": "Aus Meilenstein erstellen",
-      "loading": "Wird geladen ...",
-      "empty": "Keine Meilensteine verfügbar"
-    },
     "goalSetCalculator": {
       "closeAriaLabel": "Schließen",
       "title": "Goal-Set-Zielzeitrechner",
@@ -2290,14 +2295,11 @@
       },
       "otherLabel": "Sonstiges (Freitext)",
       "otherPlaceholder": "Details eingeben",
-      "nextActionLabel": "Nächster Schritt",
-      "createMilestoneButton": "Neuen Meilenstein erstellen",
       "skipButton": "Überspringen",
       "saveButton": "Speichern",
       "deadlineLabel": "Frist:",
       "otherPrefix": "Sonstiges: {note}",
       "saveFailed": "Rückblicknotiz konnte nicht gespeichert werden",
-      "actionFailed": "Aktion fehlgeschlagen",
       "goToGoalsLink": "Ziele ansehen"
     },
     "form": {

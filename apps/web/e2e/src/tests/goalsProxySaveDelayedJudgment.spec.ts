@@ -3,6 +3,7 @@ import { addDays, format, subDays } from "date-fns";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { EnvConfig } from "../config/config";
 import { supabaseLogin } from "../utils/supabase-login";
+import { confirmAchievementPrompts } from "../utils/milestone-achievement";
 
 // マイルストーンは「作った後に登録した記録」(練習日・大会日も作成日の前日以降) だけで達成になる (2026-10-15)。
 // このテストで作る記録より前に作ったことにして、日付・登録順の条件と切り離す
@@ -13,6 +14,8 @@ const MILESTONE_CREATED_AT = subDays(new Date(), 30).toISOString();
  *
  * 方式: 代理保存の時点では判定しない。メンバー本人が web の /dashboard か /goals を
  * 開いたとき、本人のセッションで GoalAPI.updateAllMilestoneStatuses(user.id) を実行する。
+ * 判定は mobile と同じ確認モードなので、条件を満たしたマイルストーンには達成候補が置かれ、
+ * 確認ダイアログ (MilestoneAchievementPrompter) の「達成！」で achieved になる。
  *
  * 検証方法についての注記:
  *   管理者による代理保存の UI (PracticeLogClient.tsx の replace_practice_logs RPC /
@@ -288,7 +291,7 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
     }
   });
 
-  test("[1] 練習の代理入力 (replace_practice_logs RPC) で保存したタイム付き練習記録が、本人が /dashboard を開いたときに反映されマイルストーンが achieved になる", async ({
+  test("[1] 練習の代理入力 (replace_practice_logs RPC) で保存したタイム付き練習記録が、本人が /dashboard を開いたときに反映され、確認ダイアログの「達成！」でマイルストーンが achieved になる", async ({
     page,
   }) => {
     const supabase = createAdminClient();
@@ -356,6 +359,9 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
     await supabaseLogin(page, { navigateTo: "/dashboard" });
     await page.waitForLoadState("networkidle").catch(() => {});
 
+    // web も確認モード: 判定では達成候補を置くだけ。確認ダイアログの「達成！」で achieved になる
+    await confirmAchievementPrompts(page);
+
     await expect
       .poll(
         async () => {
@@ -380,7 +386,7 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
     expect(expiredMilestoneData?.status).toBe("achieved");
   });
 
-  test("[1b] 代理保存分が /goals を直接開いた経路でも achieved になる (未判定の新しい milestone で確認)", async ({
+  test("[1b] 代理保存分が /goals を直接開いた経路でも確認ダイアログが出て achieved になる (未判定の新しい milestone で確認)", async ({
     page,
   }) => {
     const supabase = createAdminClient();
@@ -424,6 +430,9 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
     await supabaseLogin(page, { navigateTo: "/goals" });
     await page.waitForLoadState("networkidle").catch(() => {});
 
+    // web も確認モード: 判定では達成候補を置くだけ。確認ダイアログの「達成！」で achieved になる
+    await confirmAchievementPrompts(page);
+
     await expect
       .poll(
         async () => {
@@ -439,7 +448,7 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
       .toBe("achieved");
   });
 
-  test("[2] 大会記録の代理一括入力 (records 直接 insert) で保存した記録が、本人が開いたときに反映され time型マイルストーンが achieved になる", async ({
+  test("[2] 大会記録の代理一括入力 (records 直接 insert) で保存した記録が、本人が開いたときに反映され、確認ダイアログの「達成！」で time型マイルストーンが achieved になる", async ({
     page,
   }) => {
     const supabase = createAdminClient();
@@ -483,6 +492,9 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
     await supabaseLogin(page, { navigateTo: "/dashboard" });
     await page.waitForLoadState("networkidle").catch(() => {});
 
+    // web も確認モード: 判定では達成候補を置くだけ。確認ダイアログの「達成！」で achieved になる
+    await confirmAchievementPrompts(page);
+
     await expect
       .poll(
         async () => {
@@ -518,7 +530,7 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
     await expect(page.getByRole("heading", { name: "マイルストーンの振り返り" })).not.toBeVisible();
   });
 
-  test("[4] mobile 保存を模した直接 practice_logs/practice_times 作成分も、web を開くと achieved になる", async ({
+  test("[4] mobile 保存を模した直接 practice_logs/practice_times 作成分も、web を開くと確認ダイアログが出て、「達成！」で achieved になる", async ({
     page,
   }) => {
     const supabase = createAdminClient();
@@ -570,6 +582,9 @@ test.describe("目標管理: 代理入力・mobile 保存分のマイルスト�
 
     await supabaseLogin(page, { navigateTo: "/dashboard" });
     await page.waitForLoadState("networkidle").catch(() => {});
+
+    // web も確認モード: 判定では達成候補を置くだけ。確認ダイアログの「達成！」で achieved になる
+    await confirmAchievementPrompts(page);
 
     await expect
       .poll(

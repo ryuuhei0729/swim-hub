@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   TextInput,
 } from "react-native";
+import { useBulkRecordIds } from "@/hooks/useBulkRecordIds";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -59,6 +61,7 @@ export const BulkBestTimeScreen: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const savingRef = useRef(false);
+  const bulkRecordIds = useBulkRecordIds();
 
   const recordAPI = useMemo(() => {
     if (!supabase) return null;
@@ -90,8 +93,19 @@ export const BulkBestTimeScreen: React.FC = () => {
     setSaving(true);
     setSaveError(null);
     try {
+      // セル (種目 × 水路 × リレー区分) ごとに records.id を固定し、再保存でも二重登録しない
+      const keyFor = (r: (typeof records)[number]) =>
+        `${r.styleId}_${r.poolType}_${r.isRelaying ? 1 : 0}`;
+      // 前回の (途中で失敗した) 保存で登録済みだが、その後入力を消したセルの記録を削除する
+      const staleIds = bulkRecordIds.staleSavedIds(records.map(keyFor));
+      for (const staleId of staleIds) {
+        await recordAPI.deleteRecord(staleId);
+      }
+      bulkRecordIds.forget(staleIds);
+
       const result = await recordAPI.createBulkRecords(
         records.map((r) => ({
+          id: bulkRecordIds.idFor(keyFor(r)),
           style_id: r.styleId,
           time: r.time,
           is_relaying: r.isRelaying,
@@ -99,6 +113,7 @@ export const BulkBestTimeScreen: React.FC = () => {
           pool_type: r.poolType,
         })),
       );
+      bulkRecordIds.markSaved(result.savedIds);
 
       if (result.errors.length > 0) {
         setSaveError(t("bulkBestTime.error.partialFailure", { errors: result.errors.join(", ") }));
@@ -114,13 +129,13 @@ export const BulkBestTimeScreen: React.FC = () => {
       // 完了はダイアログで止めずにトーストで知らせ、そのままマイページへ戻る
       navigation.goBack();
       toast.success(t("bulkBestTime.success.registered", { n: result.created }));
-    } catch {
-      setSaveError(t("bulkBestTime.error.registerFailed"));
+    } catch (error) {
+      setSaveError(toUserFacingMessage(error, t("bulkBestTime.error.registerFailed")));
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [records, recordAPI, isSaveable, queryClient, user?.id, t, navigation, toast]);
+  }, [records, recordAPI, isSaveable, queryClient, user?.id, t, navigation, toast, bulkRecordIds]);
 
   const tabStyles = getStylesForTab(activeTab);
 

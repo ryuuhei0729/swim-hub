@@ -29,6 +29,10 @@ export interface Competition {
   updated_at: string;
 }
 
-export type CompetitionInsert = Omit<Competition, "id" | "created_at" | "updated_at">;
+/**
+ * id は通常 DB が採番する。再保存で二重登録しないよう、クライアントで先に決めた
+ * ID を渡すこともできる (utils/idempotentWrite.ts 参照)。
+ */
+export type CompetitionInsert = Omit<Competition, "id" | "created_at" | "updated_at"> & { id?: string };
 export type CompetitionUpdate = Partial<Omit<CompetitionInsert, "user_id">>;
 

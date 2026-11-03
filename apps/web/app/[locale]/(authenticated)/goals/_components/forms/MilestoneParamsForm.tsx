@@ -3,82 +3,34 @@
 import React from "react";
 import NumberStepper from "@/components/ui/NumberStepper";
 import { DistanceInput } from "@/components/forms/practice-log/components";
-import type {
-  MilestoneTimeParams,
-  MilestoneRepsTimeParams,
-  MilestoneSetParams,
-} from "@apps/shared/types";
+import type { MilestoneRepsTimeParams, MilestoneSetParams } from "@apps/shared/types";
 import StyleSelector from "../shared/StyleSelector";
 import SwimCategorySelector from "../shared/SwimCategorySelector";
 import TimeSecondsInput from "../shared/TimeSecondsInput";
 import { useTranslations } from "next-intl";
+import { isSinglePracticeTime } from "./milestoneFormModel";
 
-interface TimeParamsFormProps {
-  params: MilestoneTimeParams;
-  onChange: (params: MilestoneTimeParams) => void;
-  /** target_time が保存できない値 (0以下) のまま submit された場合に true にする */
-  targetTimeInvalid?: boolean;
-}
-
-export function TimeParamsForm({ params, onChange, targetTimeInvalid = false }: TimeParamsFormProps) {
-  const t = useTranslations("goals");
-  const tPracticeMenu = useTranslations("forms.practiceMenu");
-
-  return (
-    <div className="space-y-3">
-      <DistanceInput
-        value={params.distance}
-        onChange={(value) => onChange({ ...params, distance: value === "" ? 0 : Number(value) })}
-        label={t("paramsForm.distanceLabel")}
-        otherLabel={tPracticeMenu("distanceOther")}
-        testIdPrefix="goal-milestone-time-distance"
-        autoFocusCustomInput={false}
-      />
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.styleLabel")}</label>
-          <StyleSelector
-            value={params.style}
-            onChange={(value) => onChange({ ...params, style: value })}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.swimCategoryLabel")}</label>
-          <SwimCategorySelector
-            value={params.swim_category}
-            onChange={(value) => onChange({ ...params, swim_category: value })}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.targetTimeLabel")}</label>
-          <TimeSecondsInput
-            value={params.target_time}
-            onChange={(seconds) => onChange({ ...params, target_time: seconds ?? 0 })}
-            required
-            requiredErrorMessage={t("paramsForm.timeRequired")}
-            invalidErrorMessage={t("paramsForm.timeInvalid")}
-            forceInvalid={targetTimeInvalid}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface RepsTimeParamsFormProps {
+interface PracticeTimeParamsFormProps {
   params: MilestoneRepsTimeParams;
   onChange: (params: MilestoneRepsTimeParams) => void;
   /** target_average_time が保存できない値 (0以下) のまま submit された場合に true にする */
   targetAverageTimeInvalid?: boolean;
 }
 
-export function RepsTimeParamsForm({
+/**
+ * 練習タイム目標 (旧タイム目標と練習平均タイム目標を1つにまとめた入力欄。mobile の
+ * PracticeTimeParamsFields と同じ)。1本×1セットなら「目標タイム」(大会記録でも判定)、
+ * それ以外は「平均目標タイム」。保存はどちらも reps_time 型。
+ */
+export function PracticeTimeParamsForm({
   params,
   onChange,
   targetAverageTimeInvalid = false,
-}: RepsTimeParamsFormProps) {
+}: PracticeTimeParamsFormProps) {
   const t = useTranslations("goals");
   const tPracticeMenu = useTranslations("forms.practiceMenu");
+  const isSingle = isSinglePracticeTime(params);
+  const timeLabel = isSingle ? t("paramsForm.targetTimeLabel") : t("paramsForm.averageTimeLabel");
 
   const circleMin = params.circle > 0 ? Math.floor(params.circle / 60) : "";
   const circleSec = params.circle > 0 ? params.circle % 60 : "";
@@ -138,12 +90,14 @@ export function RepsTimeParamsForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">{t("paramsForm.averageTimeLabel")}</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{timeLabel}</label>
           <TimeSecondsInput
             value={params.target_average_time}
             onChange={(seconds) => onChange({ ...params, target_average_time: seconds ?? 0 })}
             required
-            requiredErrorMessage={t("paramsForm.averageTimeRequired")}
+            requiredErrorMessage={
+              isSingle ? t("paramsForm.timeRequired") : t("paramsForm.averageTimeRequired")
+            }
             invalidErrorMessage={t("paramsForm.timeInvalid")}
             forceInvalid={targetAverageTimeInvalid}
           />

@@ -91,8 +91,9 @@ export function useTeamsQuery(supabase: SupabaseClient, options: UseTeamsQueryOp
     // initialDataが空配列の場合はundefinedにして、必ずクエリを実行する
     initialData: initialTeams && initialTeams.length > 0 ? initialTeams : undefined,
     staleTime: 5 * 60 * 1000, // 5分
-    refetchOnMount: true, // マウント時に必ず再取得
-    refetchOnWindowFocus: true, // ウィンドウフォーカス時に再取得
+    // refetchOnMount / refetchOnWindowFocus は QueryClient の既定値に任せる
+    // (web は true。mobile は「オンライン時のみ」にしており、ここで true を指定すると
+    // 圏外でも再取得して、表示中のチーム一覧がエラーに置き換わってしまう)
   });
 
   // チーム詳細取得クエリ（teamIdが指定されている場合のみ）

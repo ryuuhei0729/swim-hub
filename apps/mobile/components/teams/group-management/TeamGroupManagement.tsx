@@ -15,6 +15,7 @@ import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 import { useTeamGroups, useGroupActions, type TeamGroupWithCount } from "./hooks";
 import { CategorySection } from "./CategorySection";
+import { usePendingAction } from "@/hooks/usePendingAction";
 import { GroupFormModal } from "./GroupFormModal";
 import { GroupMemberModal } from "./GroupMemberModal";
 import { GroupMemberListModal } from "./GroupMemberListModal";
@@ -64,6 +65,13 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
     setGroupMembers,
     clearError,
   } = useGroupActions(teamId, supabase, loadGroups);
+
+  // 低速回線で削除中に再度押されないよう、グループの削除は同時に1件だけにする
+  const {
+    pendingKey: deletingGroupId,
+    run: runGroupDelete,
+    isBusy: isGroupDeleteBusy,
+  } = usePendingAction();
 
   // チームメンバー一覧（メンバー割り当て用）
   const [teamMembers, setTeamMembers] = useState<TeamMemberForSelection[]>([]);
@@ -149,6 +157,7 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
   // グループ削除ハンドラ
   const handleDeleteGroup = useCallback(
     (group: TeamGroupWithCount) => {
+      if (isGroupDeleteBusy()) return;
       Alert.alert(
         t("teams.mobile.groupConfirmTitle"),
         t("teams.mobile.groupDeleteConfirmMessage", { name: group.name }),
@@ -157,12 +166,17 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
           {
             text: t("teams.mobile.deleteConfirmText"),
             style: "destructive",
-            onPress: () => deleteGroup(group.id),
+            onPress: () => {
+              // deleteGroup は失敗時に例外を投げず、エラー文言を actionError に入れる
+              void runGroupDelete(group.id, async () => {
+                await deleteGroup(group.id);
+              });
+            },
           },
         ],
       );
     },
-    [deleteGroup, t],
+    [deleteGroup, t, runGroupDelete, isGroupDeleteBusy],
   );
 
   // メンバー編集モーダルを開く
@@ -295,6 +309,7 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
                   onDeleteGroup={handleDeleteGroup}
                   onManageMembers={handleManageMembers}
                   onBulkAssign={handleBulkAssign}
+                  deletingGroupId={deletingGroupId}
                 />
               );
             })}

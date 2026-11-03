@@ -1088,6 +1088,50 @@ describe("RecordAPI", () => {
       expect(result.errors).toHaveLength(0);
     });
 
+    it("全件に ID を指定すると ID で upsert し、保存できた ID を返す (再保存で二重登録しない)", async () => {
+      const upsert = vi.fn().mockReturnThis();
+      const insert = vi.fn().mockReturnThis();
+      mockClient.from = vi.fn(() => ({
+        upsert,
+        insert,
+        select: vi.fn().mockResolvedValue({
+          data: [{ id: "client-1" }, { id: "client-2" }],
+          error: null,
+        }),
+      })) as unknown as typeof mockClient.from;
+
+      const result = await api.createBulkRecords([
+        { id: "client-1", style_id: 1, time: 60.5, pool_type: 0, is_relaying: false, note: null },
+        { id: "client-2", style_id: 2, time: 120, pool_type: 0, is_relaying: false, note: null },
+      ]);
+
+      expect(insert).not.toHaveBeenCalled();
+      expect(upsert).toHaveBeenCalledTimes(1);
+      const [rows, options] = upsert.mock.calls[0] as [Array<{ id: string }>, unknown];
+      expect(rows.map((r) => r.id)).toEqual(["client-1", "client-2"]);
+      expect(options).toEqual({ onConflict: "id" });
+      expect(result.savedIds).toEqual(["client-1", "client-2"]);
+    });
+
+    it("ID を指定しない (または一部だけの) ときは従来どおり insert する", async () => {
+      const upsert = vi.fn().mockReturnThis();
+      const insert = vi.fn().mockReturnThis();
+      mockClient.from = vi.fn(() => ({
+        upsert,
+        insert,
+        select: vi.fn().mockResolvedValue({ data: [{ id: "db-1" }, { id: "db-2" }], error: null }),
+      })) as unknown as typeof mockClient.from;
+
+      await api.createBulkRecords([
+        { id: "client-1", style_id: 1, time: 60.5, pool_type: 0, is_relaying: false, note: null },
+        { style_id: 2, time: 120, pool_type: 0, is_relaying: false, note: null },
+      ]);
+
+      expect(upsert).not.toHaveBeenCalled();
+      const [rows] = insert.mock.calls[0] as [Array<Record<string, unknown>>];
+      expect(rows.every((r) => !("id" in r))).toBe(true);
+    });
+
     it("認証されていないときエラーになる", async () => {
       mockClient = createMockSupabaseClient({ userId: "" });
       api = new RecordAPI(mockClient);

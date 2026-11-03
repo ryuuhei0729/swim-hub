@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient, RealtimePostgresChangesFilter } from "@supabase/supabase-js";
+import { authRequiredError } from "./auth-utils";
 import {
   Practice,
   PracticeInsert,
@@ -60,8 +61,9 @@ export class PracticeAPI {
   ): Promise<PracticeWithLogs[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     let query = this.supabase
       .from("practices")
@@ -107,8 +109,9 @@ export class PracticeAPI {
   async countPractices(startDate: string, endDate: string): Promise<number> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { count, error } = await this.supabase
       .from("practices")
@@ -127,8 +130,9 @@ export class PracticeAPI {
   async getPracticesByDate(date: string): Promise<PracticeWithLogs[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practices")
@@ -163,8 +167,9 @@ export class PracticeAPI {
   async getPracticeById(id: string): Promise<PracticeWithLogs | null> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practices")
@@ -215,8 +220,9 @@ export class PracticeAPI {
   async createPractice(practice: Omit<PracticeInsert, "user_id">): Promise<Practice> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practices")
@@ -282,8 +288,9 @@ export class PracticeAPI {
   ): Promise<PracticeLog> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practice_logs")
@@ -304,8 +311,9 @@ export class PracticeAPI {
   ): Promise<PracticeLog[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const logsWithUserId = logs.map((log) => ({ ...log, user_id: log.user_id ?? user.id }));
     const { data, error } = await this.supabase
@@ -364,8 +372,9 @@ export class PracticeAPI {
   async createPracticeTime(time: PracticeTimeInsert): Promise<PracticeTime> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practice_times")
@@ -384,8 +393,9 @@ export class PracticeAPI {
   async createPracticeTimes(times: PracticeTimeInsert[]): Promise<PracticeTime[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase.from("practice_times").insert(times).select();
 
@@ -409,8 +419,9 @@ export class PracticeAPI {
   ): Promise<PracticeTime[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     // 既存のタイムを削除
     // practice_log_id単位の削除のため、既存タイムが0件のログでは0行が正当な結果となる
@@ -525,8 +536,9 @@ export class PracticeAPI {
   async getPracticeTags(): Promise<import("../types").PracticeTag[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practice_tags")
@@ -544,8 +556,9 @@ export class PracticeAPI {
   async createPracticeTag(name: string, color: string): Promise<import("../types").PracticeTag> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practice_tags")
@@ -571,8 +584,9 @@ export class PracticeAPI {
   ): Promise<import("../types").PracticeTag> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practice_tags")
@@ -595,8 +609,9 @@ export class PracticeAPI {
   async deletePracticeTag(id: string): Promise<void> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     // PostgRESTはRLSでDELETEが拒否された場合もerrorを返さず0行削除で正常終了する。
     // .select() で削除された行を返させ、件数で成否を判定する（deletePracticeと同型）。
@@ -784,8 +799,9 @@ export class PracticeAPI {
   async getUniquePlaces(): Promise<string[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practices")

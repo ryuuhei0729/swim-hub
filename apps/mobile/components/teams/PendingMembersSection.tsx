@@ -93,6 +93,7 @@ export const PendingMembersSection: React.FC<PendingMembersSectionProps> = ({ te
       <View style={styles.errorContainer}>
         <ErrorView
           message={error.message || t("teams.mobile.pendingFetchFailed")}
+          error={error}
           onRetry={() => refetch()}
         />
       </View>

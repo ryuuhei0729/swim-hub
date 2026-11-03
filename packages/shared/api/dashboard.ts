@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { authRequiredError } from "./auth-utils";
 import { CalendarItemType } from "../types";
 import { CalendarItem } from "../types/ui";
 
@@ -16,8 +17,9 @@ export class DashboardAPI {
   async getCalendarEntries(startDate: string, endDate: string): Promise<CalendarItem[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     // カレンダービューから一括取得
     const { data: calendarData, error } = await this.supabase
@@ -81,8 +83,9 @@ export class DashboardAPI {
   async getMonthlySummary(year: number, month: number) {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     // 月の開始日と終了日を正確に計算
     const startDate = new Date(year, month - 1, 1);

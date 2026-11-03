@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { env } from "@/lib/env";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { cardSurface } from "@/constants/theme";
+import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 
 const WEB_API_URL = env.webApiUrl;
 
@@ -25,7 +26,7 @@ export const AccountDeleteSettings: React.FC = () => {
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`${WEB_API_URL}/api/account/delete`, {
+      const response = await fetchWithTimeout(`${WEB_API_URL}/api/account/delete`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session.access_token}`,

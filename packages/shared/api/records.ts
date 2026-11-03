@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient, RealtimePostgresChangesFilter } from "@supabase/supabase-js";
+import { authRequiredError } from "./auth-utils";
 import {
   Competition,
   CompetitionInsert,
@@ -204,8 +205,9 @@ export class RecordAPI {
   ): Promise<RecordWithDetails[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     let query = this.supabase
       .from("records")
@@ -250,8 +252,9 @@ export class RecordAPI {
   async countRecords(startDate?: string, endDate?: string, styleId?: number): Promise<number> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     let query = this.supabase
       .from("records")
@@ -280,8 +283,9 @@ export class RecordAPI {
   async createRecord(record: Omit<RecordInsert, "user_id">): Promise<Record> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("records")
@@ -332,8 +336,9 @@ export class RecordAPI {
   async getRecordById(recordId: string): Promise<RecordWithDetails | null> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("records")
@@ -358,6 +363,12 @@ export class RecordAPI {
    */
   async createBulkRecords(
     records: Array<{
+      /**
+       * クライアントで決めた records.id (任意)。全件に指定すると、同じ ID の行は
+       * 新規作成ではなく今回の内容で更新する (upsert)。低速回線で一部のバッチだけ
+       * 保存できた後に再保存しても、保存済みの行が二重に登録されない。
+       */
+      id?: string;
       style_id: number;
       time: number;
       is_relaying: boolean;
@@ -365,21 +376,29 @@ export class RecordAPI {
       pool_type: number;
       reaction_time?: number | null;
     }>,
-  ): Promise<{ created: number; errors: string[] }> {
+  ): Promise<{ created: number; errors: string[]; savedIds: string[] }> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const results = {
       created: 0,
       errors: [] as string[],
+      /** 保存できた records.id (一部のバッチが失敗しても、成功したバッチの分は入る) */
+      savedIds: [] as string[],
     };
 
     // バッチ処理（1度に100件ずつ）
     const batchSize = 100;
     for (let i = 0; i < records.length; i += batchSize) {
-      const batch = records.slice(i, i + batchSize).map((record) => ({
+      const sliced = records.slice(i, i + batchSize);
+      // 全件に ID があるときだけ upsert にする (一部だけ ID がある配列を upsert すると、
+      // ID の無い行で列の揃わない一括 INSERT になってしまうため)
+      const useUpsert = sliced.every((record) => !!record.id);
+      const batch = sliced.map((record) => ({
+        ...(useUpsert ? { id: record.id } : {}),
         user_id: user.id,
         style_id: record.style_id,
         time: record.time,
@@ -393,7 +412,9 @@ export class RecordAPI {
         reaction_time: record.reaction_time || null,
       }));
 
-      const { data, error } = await this.supabase.from("records").insert(batch).select();
+      const { data, error } = useUpsert
+        ? await this.supabase.from("records").upsert(batch, { onConflict: "id" }).select()
+        : await this.supabase.from("records").insert(batch).select();
 
       if (error) {
         results.errors.push(
@@ -401,6 +422,7 @@ export class RecordAPI {
         );
       } else {
         results.created += data.length;
+        results.savedIds.push(...data.map((row: { id: string }) => row.id));
       }
     }
 
@@ -417,8 +439,9 @@ export class RecordAPI {
     if (!targetUserId) {
       const {
         data: { user },
+        error: authError,
       } = await this.supabase.auth.getUser();
-      if (!user) throw new Error("認証が必要です");
+      if (!user) throw authRequiredError(authError);
       targetUserId = user.id;
     }
 
@@ -523,8 +546,9 @@ export class RecordAPI {
     // (機能的には RLS が最終防衛線だが、規約からの逸脱を防ぐ)
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("records")
@@ -658,8 +682,9 @@ export class RecordAPI {
     // クラス内の他メソッド (getBestTimes 等) と同じ明示的な認証チェック規約に揃える
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("records")
@@ -881,8 +906,9 @@ export class RecordAPI {
   async getCompetitions(startDate?: string, endDate?: string): Promise<Competition[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     let query = this.supabase
       .from("competitions")
@@ -909,8 +935,9 @@ export class RecordAPI {
   async createCompetition(competition: Omit<CompetitionInsert, "user_id">): Promise<Competition> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("competitions")

@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { authRequiredError } from "./auth-utils";
 import { format, parseISO, isValid, startOfDay } from "date-fns";
 import { CompetitionInsert } from "../types";
 import { normalizeRelation, normalizeRelationArray } from "../utils/supabase-helpers";
@@ -125,10 +126,13 @@ export class GoalAPI {
   async createGoal(input: CreateGoalInput): Promise<Goal> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     let competitionId = input.competitionId;
+    // この呼び出しで新規作成した大会 (目標の保存に失敗したときに消す)
+    let createdCompetitionId: string | null = null;
 
     // 大会が未作成の場合は新規作成
     if (!competitionId && input.competitionData) {
@@ -143,14 +147,17 @@ export class GoalAPI {
         note: null,
       };
 
-      const { data: competition, error: compError } = await this.supabase
-        .from("competitions")
-        .insert(competitionInsert)
-        .select()
-        .single();
+      const { data: competition, error: compError } = input.newCompetitionId
+        ? await this.supabase
+            .from("competitions")
+            .upsert({ ...competitionInsert, id: input.newCompetitionId }, { onConflict: "id" })
+            .select()
+            .single()
+        : await this.supabase.from("competitions").insert(competitionInsert).select().single();
 
       if (compError) throw compError;
       competitionId = competition.id;
+      createdCompetitionId = competition.id;
     }
 
     if (!competitionId) {
@@ -165,9 +172,26 @@ export class GoalAPI {
       status: "active",
     };
 
-    const { data, error } = await this.supabase.from("goals").insert(goalInsert).select().single();
+    const { data, error } = input.goalId
+      ? await this.supabase
+          .from("goals")
+          .upsert({ ...goalInsert, id: input.goalId }, { onConflict: "id" })
+          .select()
+          .single()
+      : await this.supabase.from("goals").insert(goalInsert).select().single();
 
-    if (error) throw error;
+    if (error) {
+      // 目標の保存に失敗したら、この呼び出しで作った大会を消して孤児を残さない
+      // (削除自体が通信で失敗しても、元のエラーを優先して投げる)
+      if (createdCompetitionId) {
+        try {
+          await this.supabase.from("competitions").delete().eq("id", createdCompetitionId);
+        } catch (rollbackError) {
+          console.error("目標作成失敗時の大会ロールバックに失敗:", rollbackError);
+        }
+      }
+      throw error;
+    }
     return data;
   }
 
@@ -180,8 +204,9 @@ export class GoalAPI {
   }): Promise<Goal[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     let query = this.supabase
       .from("goals")
@@ -226,8 +251,9 @@ export class GoalAPI {
   async getSelectableCompetitions(startDate?: string, endDate?: string): Promise<Competition[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     let query = this.supabase
       .from("competitions")
@@ -387,8 +413,9 @@ export class GoalAPI {
   async getGoalCurrentBestTime(goalId: string): Promise<number | null> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data: goal, error: goalError } = await this.supabase
       .from("goals")
@@ -545,8 +572,9 @@ export class GoalAPI {
   async getExpiredGoals(): Promise<GoalWithMilestones[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const todayDate = startOfDay(new Date());
     const todayStr = format(todayDate, "yyyy-MM-dd");
@@ -602,8 +630,9 @@ export class GoalAPI {
   async getExpiredMilestones(): Promise<Milestone[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const today = format(new Date(), "yyyy-MM-dd"); // ローカル日付のYYYY-MM-DD形式
 
@@ -705,8 +734,9 @@ export class GoalAPI {
   async getPendingAchievementMilestones(): Promise<Milestone[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("milestones")
@@ -794,8 +824,9 @@ export class GoalAPI {
   }> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     let achieved = false;
     let achievementData:

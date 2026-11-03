@@ -47,7 +47,11 @@ export interface Practice extends BasePractice {
   practice_logs?: PracticeLog[];
 }
 
-export type PracticeInsert = Omit<BasePractice, "id" | "created_at" | "updated_at">;
+/**
+ * id は通常 DB が採番する。再保存で二重登録しないよう、クライアントで先に決めた
+ * ID を渡すこともできる (utils/idempotentWrite.ts 参照)。
+ */
+export type PracticeInsert = Omit<BasePractice, "id" | "created_at" | "updated_at"> & { id?: string };
 export type PracticeUpdate = Partial<Omit<PracticeInsert, "user_id">>;
 
 // 練習ログ（セット単位）
@@ -68,7 +72,11 @@ export interface PracticeLog {
   updated_at: string;
 }
 
-export type PracticeLogInsert = Omit<PracticeLog, "id" | "created_at" | "updated_at">;
+/**
+ * id は通常 DB が採番する。再保存で二重登録しないよう、クライアントで先に決めた
+ * ID を渡すこともできる (utils/idempotentWrite.ts 参照)。
+ */
+export type PracticeLogInsert = Omit<PracticeLog, "id" | "created_at" | "updated_at"> & { id?: string };
 export type PracticeLogUpdate = Partial<Omit<PracticeLogInsert, "practice_id">>;
 
 // 練習タイム

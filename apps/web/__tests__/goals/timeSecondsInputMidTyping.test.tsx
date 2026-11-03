@@ -235,18 +235,18 @@ describe("TimeSecondsInput — 外部からの値変更・blur を経ない subm
  * TimeSecondsInput 単体 (ControlledHarness: onChange で受け取った null をそのまま
  * value に戻す) では検出できなかった不具合の回帰ガード。
  *
- * MilestoneParamsForm (TimeParamsForm/RepsTimeParamsForm) は
- * `onChange={(seconds) => onChange({ ...params, target_time: seconds ?? 0 })}` の
+ * MilestoneParamsForm (PracticeTimeParamsForm) は
+ * `onChange={(seconds) => onChange({ ...params, target_average_time: seconds ?? 0 })}` の
  * ように、途中入力でパースできず通知される null を「0」に変換してから
  * TimeSecondsInput へ書き戻す。ControlledHarness のように null をそのまま
  * 保持する経路ではこの「null→0」変換が再現できないため、実際に
  * MilestoneCreateModal/MilestoneEditModal が使っているのと同じ
- * TimeParamsForm/RepsTimeParamsForm を経由して検証する。
+ * PracticeTimeParamsForm (1本×1セット = 目標タイム / 複数本 = 平均目標タイム) を経由して検証する。
  */
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import messages from "@apps/shared/messages/ja.json";
-import { TimeParamsForm, RepsTimeParamsForm } from "../../app/[locale]/(authenticated)/goals/_components/forms/MilestoneParamsForm";
-import type { MilestoneTimeParams, MilestoneRepsTimeParams } from "@apps/shared/types";
+import { PracticeTimeParamsForm } from "../../app/[locale]/(authenticated)/goals/_components/forms/MilestoneParamsForm";
+import type { MilestoneRepsTimeParams } from "@apps/shared/types";
 
 function renderWithIntl(ui: React.ReactElement) {
   return render(
@@ -256,23 +256,27 @@ function renderWithIntl(ui: React.ReactElement) {
   );
 }
 
-function TimeParamsFormHarness({
+/** 1本×1セットの練習タイム目標 (旧タイム目標) */
+function SingleTimeParamsFormHarness({
   onCommit,
 }: {
-  onCommit?: (params: MilestoneTimeParams) => void;
+  onCommit?: (params: MilestoneRepsTimeParams) => void;
 }) {
-  const [params, setParams] = useState<MilestoneTimeParams>({
+  const [params, setParams] = useState<MilestoneRepsTimeParams>({
     distance: 100,
-    target_time: 0,
+    reps: 1,
+    sets: 1,
+    target_average_time: 0,
     style: "Fr",
     swim_category: "Swim",
+    circle: 0,
   });
   return (
     <div>
-      <button type="button" onClick={() => setParams((p) => ({ ...p, target_time: 0 }))}>
+      <button type="button" onClick={() => setParams((p) => ({ ...p, target_average_time: 0 }))}>
         リセット
       </button>
-      <TimeParamsForm
+      <PracticeTimeParamsForm
         params={params}
         onChange={(p) => {
           setParams(p);
@@ -293,20 +297,20 @@ function RepsTimeParamsFormHarness() {
     swim_category: "Swim",
     circle: 90,
   });
-  return <RepsTimeParamsForm params={params} onChange={setParams} />;
+  return <PracticeTimeParamsForm params={params} onChange={setParams} />;
 }
 
-describe("TimeParamsForm/RepsTimeParamsForm (MilestoneParamsForm) を通した TimeSecondsInput — null→0 の往復を含む経路", () => {
-  it("[time型 目標タイム] '45.50' を1文字ずつ入力しても、途中で target_time が 0 に変換されて書き戻される影響で表示が消えない", async () => {
+describe("PracticeTimeParamsForm (MilestoneParamsForm) を通した TimeSecondsInput — null→0 の往復を含む経路", () => {
+  it("[1本×1セット 目標タイム] '45.50' を1文字ずつ入力しても、途中で target_average_time が 0 に変換されて書き戻される影響で表示が消えない", async () => {
     const user = userEvent.setup();
-    renderWithIntl(<TimeParamsFormHarness />);
+    renderWithIntl(<SingleTimeParamsFormHarness />);
 
     const input = screen.getByPlaceholderText("2.00.00") as HTMLInputElement;
     await user.click(input);
     await user.type(input, "45.50");
 
     // 実装上の想定挙動: "45." の時点で parseTimeFlexible が失敗し親へ null が
-    // 通知される → MilestoneParamsForm が target_time: 0 に変換して書き戻す。
+    // 通知される → MilestoneParamsForm が target_average_time: 0 に変換して書き戻す。
     // TimeSecondsInput が「自分がついさっき null を通知した直後の 0」を外部変更と
     // 誤認すると、この時点で displayValue が "" にリセットされ、続けて打った
     // "50" が孤立した入力として残ってしまう (=表示が消える不具合の再現条件)。
@@ -316,7 +320,7 @@ describe("TimeParamsForm/RepsTimeParamsForm (MilestoneParamsForm) を通した T
     expect(input.value).toBe("45.50"); // formatTimeBest(45.5) と同一表記
   });
 
-  it("[reps_time型 平均目標タイム] '1:05.00' を1文字ずつ入力しても表示が消えない", async () => {
+  it("[複数本 平均目標タイム] '1:05.00' を1文字ずつ入力しても表示が消えない", async () => {
     const user = userEvent.setup();
     renderWithIntl(<RepsTimeParamsFormHarness />);
 
@@ -330,9 +334,9 @@ describe("TimeParamsForm/RepsTimeParamsForm (MilestoneParamsForm) を通した T
     expect(input.value).toBe("1:05.00");
   });
 
-  it("[非退行] 親が target_time を明示的に 0 にリセットすると (種類変更・テンプレート適用等)、表示が空欄に戻る", async () => {
+  it("[非退行] 親が target_average_time を明示的に 0 にリセットすると (種類変更・テンプレート適用等)、表示が空欄に戻る", async () => {
     const user = userEvent.setup();
-    renderWithIntl(<TimeParamsFormHarness />);
+    renderWithIntl(<SingleTimeParamsFormHarness />);
 
     const input = screen.getByPlaceholderText("2.00.00") as HTMLInputElement;
     await user.click(input);

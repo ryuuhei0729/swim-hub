@@ -6,7 +6,7 @@
 // (オフライン表示自体は components/layout/OfflineBanner.tsx が全画面で担保する)。
 
 import { useCallback, useState } from "react";
-import { useNetworkStatus } from "./useNetworkStatus";
+import { isNetInfoOnline, useNetworkStatus } from "./useNetworkStatus";
 
 /**
  * Pull to refresh の spinner state を一元管理するフック
@@ -17,11 +17,11 @@ export function usePullToRefresh(refresh: () => Promise<unknown>): {
   refreshing: boolean;
   handleRefresh: () => Promise<void>;
 } {
-  const { isConnected } = useNetworkStatus();
+  const isOnline = isNetInfoOnline(useNetworkStatus());
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = useCallback(async () => {
-    if (!isConnected) return;
+    if (!isOnline) return;
 
     setRefreshing(true);
     try {
@@ -36,7 +36,7 @@ export function usePullToRefresh(refresh: () => Promise<unknown>): {
     } finally {
       setRefreshing(false);
     }
-  }, [isConnected, refresh]);
+  }, [isOnline, refresh]);
 
   return { refreshing, handleRefresh };
 }

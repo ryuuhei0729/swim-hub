@@ -32,5 +32,28 @@ export class UserFacingError extends Error {
  */
 export function toUserFacingMessage(error: unknown, fallback: string): string {
   if (error instanceof UserFacingError) return error.message;
+  const networkMessage = networkMessageResolver?.(error);
+  if (networkMessage) return networkMessage;
   return fallback;
+}
+
+/**
+ * 通信起因のエラーに対して表示する文言を返す関数。文言を返さない (null) ときは
+ * 通常どおり fallback を使う。
+ */
+export type NetworkErrorMessageResolver = (error: unknown) => string | null;
+
+let networkMessageResolver: NetworkErrorMessageResolver | null = null;
+
+/**
+ * 通信起因のエラーを「保存に失敗しました」のような汎用文言で済ませず、
+ * 「通信できませんでした」と分かる文言に差し替えるための設定。
+ *
+ * 文言の翻訳やオフライン判定はアプリごとに持つため、共通パッケージは判定関数を
+ * 受け取るだけにしている。アプリ起動時に1回呼ぶ (未設定なら従来どおり fallback)。
+ */
+export function configureNetworkErrorMessage(
+  resolver: NetworkErrorMessageResolver | null,
+): void {
+  networkMessageResolver = resolver;
 }

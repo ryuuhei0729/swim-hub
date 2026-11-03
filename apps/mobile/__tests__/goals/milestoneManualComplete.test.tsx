@@ -114,6 +114,29 @@ describe("MilestoneList: 手動完了ボタン", () => {
   });
 });
 
+describe("MilestoneList: ステータスアイコン (web getStatusIcon と同じ対応)", () => {
+  it.each([
+    ["achieved", "達成", "icon-check-circle", "#16A34A"],
+    ["in_progress", "進行中", "icon-clock", "#2563EB"],
+    ["expired", "期限切れ", "icon-alert-triangle", "#CA8A04"],
+    ["not_started", "未着手", "icon-clock", "#9CA3AF"],
+  ] as const)("%s は『%s』ラベル付きで %s (%s) を出す", (status, label, iconTestId, color) => {
+    render(
+      <MilestoneList
+        milestones={[milestone({ id: "s", status })]}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onToggleComplete={() => {}}
+      />,
+    );
+    const [indicator] = byLabel(label);
+    expect(indicator).toBeDefined();
+    const icon = indicator!.querySelector(`[data-testid="${iconTestId}"]`);
+    expect(icon).not.toBeNull();
+    expect(icon!.getAttribute("color")).toBe(color);
+  });
+});
+
 describe("GoalDetailScreen: 手動完了の保存", () => {
   it("『完了にする』は確認なしで setMilestoneCompletion(milestone, true)", async () => {
     await renderDetail([otherMilestone()]);

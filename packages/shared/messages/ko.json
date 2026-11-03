@@ -116,6 +116,15 @@
       "maxReached": "최대 개수에 도달했습니다"
     },
     "offlineBanner": "오프라인 상태입니다. 일부 기능이 제한됩니다.",
+    "network": {
+      "offline": "오프라인 상태라 처리하지 못했습니다. 신호가 잡히는 곳에서 다시 시도해 주세요.",
+      "timeout": "통신 시간이 너무 오래 걸려 중단했습니다. 신호가 좋은 곳에서 다시 시도해 주세요.",
+      "failed": "연결할 수 없습니다. 네트워크 상태를 확인한 후 다시 시도해 주세요."
+    },
+    "staleData": {
+      "failed": "최신 정보를 가져오지 못했습니다. 이전에 불러온 내용을 표시하고 있습니다.",
+      "offline": "오프라인 상태라 이전에 불러온 내용을 표시하고 있습니다."
+    },
     "aria": {
       "close": "닫기",
       "previousImage": "이전 이미지",
@@ -2038,7 +2047,8 @@
         "title": "템플릿 삭제",
         "message": "「{name}」을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
         "confirmLabel": "삭제"
-      }
+      },
+      "deleteFailed": "템플릿을 삭제하지 못했습니다"
     },
     "createModal": {
       "createTitle": "새 템플릿 만들기",
@@ -2242,11 +2252,6 @@
       "closeAriaLabel": "닫기",
       "updateFailed": "마일스톤 업데이트에 실패했습니다"
     },
-    "milestoneSelector": {
-      "title": "마일스톤에서 만들기",
-      "loading": "불러오는 중...",
-      "empty": "사용 가능한 마일스톤이 없습니다"
-    },
     "goalSetCalculator": {
       "closeAriaLabel": "닫기",
       "title": "골 세트 목표 기록 계산",
@@ -2290,14 +2295,11 @@
       },
       "otherLabel": "기타 (자유 기술)",
       "otherPlaceholder": "상세 내용을 입력해 주세요",
-      "nextActionLabel": "다음 액션",
-      "createMilestoneButton": "새 마일스톤 만들기",
       "skipButton": "건너뛰기",
       "saveButton": "저장",
       "deadlineLabel": "기한:",
       "otherPrefix": "기타: {note}",
       "saveFailed": "회고 메모 저장에 실패했습니다",
-      "actionFailed": "처리에 실패했습니다",
       "goToGoalsLink": "목표 관리 보기"
     },
     "form": {

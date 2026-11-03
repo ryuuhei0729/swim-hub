@@ -152,7 +152,18 @@ vi.mock("@/components/records", () => ({
   getBestTimeForEntry: () => null,
 }));
 vi.mock("@/components/forms/StyleChipSelector", () => ({
-  StyleChipSelector: () => null,
+  // 種目選択はチップ UI を再現せず、「種目を選ぶ」ボタン1つで 100m 自由形を選べるようにする
+  StyleChipSelector: ({
+    onChange,
+    testID,
+  }: {
+    onChange: (styleId: string) => void;
+    testID?: string;
+  }) =>
+    React.createElement("button", {
+      ...(testID ? { testID: `${testID}-pick` } : {}),
+      onClick: () => onChange("2"), // STYLE_100FR.id
+    }),
 }));
 vi.mock("@/utils/imageUpload", () => ({
   uploadImagesViaApi: vi.fn(async () => []),
@@ -161,6 +172,17 @@ vi.mock("@/utils/imageUpload", () => ({
   mergeImagePaths: vi.fn((saved: string[]) => saved),
 }));
 vi.mock("@/utils/videoUpload", () => ({ uploadVideo: vi.fn(async () => {}) }));
+
+// 新規記録の ID はクライアントで決める (再保存での二重登録防止)。どの呼び出しで
+// どの ID が使われたかを区別できるよう、連番を返す
+const uuidSeq = vi.hoisted(() => ({ n: 0 }));
+
+vi.mock("expo-crypto", () => ({
+  randomUUID: () => {
+    uuidSeq.n += 1;
+    return `client-uuid-${uuidSeq.n}`;
+  },
+}));
 
 import { CompetitionTabFormScreen } from "@/screens/CompetitionTabFormScreen";
 
@@ -388,5 +410,94 @@ describe("記録サブタブの ×", () => {
     pressSave();
     await waitFor(() => expect(h.mockDeleteRecordMutateAsync).toHaveBeenCalledTimes(1));
     expect(h.mockDeleteRecordMutateAsync).toHaveBeenCalledWith(RECORD_WITH_SPLIT_ID);
+  });
+});
+
+describe("低速回線での再保存 (二重登録しない)", () => {
+  /** n 番目の記録に 100m 自由形とタイムを入れる */
+  function fillRecord(n: number, time: string) {
+    fireEvent.click(screen.getByTestId(`record-style-${n}-pick`));
+    fireEvent.change(screen.getByTestId(`record-time-${n}`), { target: { value: time } });
+  }
+
+  async function saveAndSettle() {
+    pressSave();
+    await act(async () => {
+      await flushAsync();
+    });
+  }
+
+  it("[RDL-8] 新規記録の作成が通信で失敗して再保存しても、同じ ID で作成し直す (届いていれば主キー重複で検知できる)", async () => {
+    h.mockRecordApiGetRecords.mockResolvedValue([]);
+    h.mockCreateRecordMutateAsync
+      .mockRejectedValueOnce({ message: "TimeoutError: Network request timed out", code: "" })
+      .mockImplementation(async (data: { id: string }) => ({ id: data.id }));
+    await renderEditScreenOnRecordTab();
+
+    fillRecord(1, "1:00.00");
+    await saveAndSettle();
+    expect(h.mockCreateRecordMutateAsync).toHaveBeenCalledTimes(1);
+
+    await saveAndSettle();
+    expect(h.mockCreateRecordMutateAsync).toHaveBeenCalledTimes(2);
+
+    const firstId = (h.mockCreateRecordMutateAsync.mock.calls[0]![0] as { id: string }).id;
+    const secondId = (h.mockCreateRecordMutateAsync.mock.calls[1]![0] as { id: string }).id;
+    expect(firstId).toMatch(/^client-uuid-/);
+    expect(secondId).toBe(firstId);
+  });
+
+  it("[RDL-9] 前回の作成がサーバーに届いていた (主キー重複) ときは、作成ではなく同じ ID の更新で保存する", async () => {
+    h.mockRecordApiGetRecords.mockResolvedValue([]);
+    h.mockCreateRecordMutateAsync.mockRejectedValue({
+      code: "23505",
+      message: 'duplicate key value violates unique constraint "records_pkey"',
+    });
+    h.mockUpdateRecordMutateAsync.mockImplementation(async ({ id }: { id: string }) => ({ id }));
+    await renderEditScreenOnRecordTab();
+
+    fillRecord(1, "1:00.00");
+    await saveAndSettle();
+
+    expect(h.mockUpdateRecordMutateAsync).toHaveBeenCalledTimes(1);
+    const createdId = (h.mockCreateRecordMutateAsync.mock.calls[0]![0] as { id: string }).id;
+    const [{ id: updatedId, updates }] = h.mockUpdateRecordMutateAsync.mock.calls[0] as [
+      { id: string; updates: { time: number } },
+    ];
+    expect(updatedId).toBe(createdId);
+    expect(updates.time).toBe(60);
+  });
+
+  it("[RDL-10] 2件中1件だけ作成できて失敗した後の再保存では、作成済みの1件は作成し直さず更新する", async () => {
+    h.mockRecordApiGetRecords.mockResolvedValue([]);
+    let createCalls = 0;
+    h.mockCreateRecordMutateAsync.mockImplementation(async (data: { id: string }) => {
+      createCalls += 1;
+      // 1回目の保存の2件目だけ通信で失敗する
+      if (createCalls === 2) throw { message: "TypeError: Network request failed", code: "" };
+      return { id: data.id };
+    });
+    h.mockUpdateRecordMutateAsync.mockImplementation(async ({ id }: { id: string }) => ({ id }));
+    await renderEditScreenOnRecordTab();
+
+    fillRecord(1, "1:00.00");
+    fireEvent.click(screen.getByTestId("item-tab-add"));
+    fillRecord(2, "1:01.00");
+    await saveAndSettle();
+    expect(h.mockCreateRecordMutateAsync).toHaveBeenCalledTimes(2);
+    const firstRecordId = (h.mockCreateRecordMutateAsync.mock.calls[0]![0] as { id: string }).id;
+    const secondRecordId = (h.mockCreateRecordMutateAsync.mock.calls[1]![0] as { id: string }).id;
+    expect(secondRecordId).not.toBe(firstRecordId);
+
+    await saveAndSettle();
+
+    // 作成し直すのは失敗した2件目だけ (同じ ID で)。1件目は更新になる
+    expect(h.mockCreateRecordMutateAsync).toHaveBeenCalledTimes(3);
+    expect((h.mockCreateRecordMutateAsync.mock.calls[2]![0] as { id: string }).id).toBe(
+      secondRecordId,
+    );
+    expect(h.mockUpdateRecordMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ id: firstRecordId }),
+    );
   });
 });

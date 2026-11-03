@@ -2,8 +2,7 @@
 // NetworkProvider - ネットワーク状態を管理するプロバイダー
 // =============================================================================
 
-import React, { useEffect, createContext, useContext } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import React, { createContext, useContext } from "react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 interface NetworkContextType {
@@ -21,22 +20,13 @@ interface NetworkProviderProps {
 }
 
 /**
- * ネットワーク状態を管理し、オンライン復帰時にデータを同期するプロバイダー
+ * ネットワーク状態を画面へ配るプロバイダー
+ *
+ * オンライン復帰時の再取得は React Query の onlineManager (QueryProvider で NetInfo と連動)
+ * の refetchOnReconnect に任せる。ここで refetchQueries を呼ぶと二重に取得してしまう。
  */
 export function NetworkProvider({ children }: NetworkProviderProps) {
   const { isConnected, isInternetReachable } = useNetworkStatus();
-  const queryClient = useQueryClient();
-
-  // オンライン復帰時にデータを再取得
-  useEffect(() => {
-    if (isConnected && isInternetReachable) {
-      // オンライン復帰時、staleなクエリを再取得
-      queryClient.refetchQueries({
-        type: "active", // アクティブなクエリのみ
-        stale: true, // staleなクエリのみ
-      });
-    }
-  }, [isConnected, isInternetReachable, queryClient]);
 
   return (
     <NetworkContext.Provider value={{ isConnected, isInternetReachable }}>

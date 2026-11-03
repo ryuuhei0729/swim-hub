@@ -196,7 +196,8 @@ describe("一覧カード: 日付・大会名 / 種目名・目標タイム (Bes
     const competition = screen.getByText("新水フェスティバル");
     const style = screen.getByRole("heading", { level: 3 });
     const target = screen.getByText("23.79");
-    expect(style).toHaveTextContent("50m自由形");
+    // 種目名はロケールの泳法名 (practice.styles.*) で組み立てる (useTranslations はキーをそのまま返す)
+    expect(style).toHaveTextContent("50mpractice.styles.Fr");
     // 日付と大会名は同じ行、目標タイムと Best 差は同じ塊
     expect(date.parentElement).toBe(competition.parentElement);
     expect(target.parentElement).toBe(diff.parentElement);
@@ -380,7 +381,9 @@ describe("詳細: 見出し・達成率 (初期タイムは出さない)", () =>
     renderDetail(detailGoal());
 
     await screen.findByText("23.80");
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("50m自由形");
+    // 種目名は name_jp を直接出さず、ロケールの泳法名 (practice.styles.*) で組み立てる
+    // (このテストの useTranslations はキーをそのまま返す)
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("50mpractice.styles.Fr");
     expect(
       screen.getAllByRole("heading").some((h) => h.textContent?.includes("新水フェスティバル")),
     ).toBe(false);

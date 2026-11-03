@@ -4,16 +4,42 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { UserFacingError } from "../utils/userFacingError";
+import { isNetworkError } from "../utils/networkError";
+
+/**
+ * `auth.getUser()` でユーザーが取れなかったときに投げるエラーを決める。
+ *
+ * `getUser()` はサーバーに問い合わせるため、通信できないときも user が null になる。
+ * そのまま「認証が必要です」にすると、圏外や低速回線での失敗が「ログインしていない」
+ * ように見えてしまい、利用者は再試行すればよいことに気付けない。通信起因のときは
+ * 元のエラーをそのまま投げ、表示側で「通信できませんでした」と出せるようにする。
+ */
+export function authRequiredError(
+  authError: unknown,
+  message = "認証が必要です",
+): Error {
+  if (isNetworkError(authError)) {
+    return authError instanceof Error
+      ? authError
+      : new Error(String(authError));
+  }
+  return new Error(message);
+}
 
 /**
  * 認証必須ガード
  * @throws {UserFacingError} 認証されていない場合 (表示してよい固定文言)
+ * @throws 通信できなかった場合は auth-js の通信エラーをそのまま投げる
  */
 export async function requireAuth(supabase: SupabaseClient): Promise<string> {
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
-  if (!user) throw new UserFacingError("認証が必要です");
+  if (!user) {
+    if (isNetworkError(authError)) throw authRequiredError(authError);
+    throw new UserFacingError("認証が必要です");
+  }
   return user.id;
 }
 

@@ -3,6 +3,7 @@ import { addDays, format, subDays } from "date-fns";
 import { createClient } from "@supabase/supabase-js";
 import { EnvConfig } from "../config/config";
 import { supabaseLogin } from "../utils/supabase-login";
+import { confirmAchievementPrompts } from "../utils/milestone-achievement";
 
 // マイルストーンは「作った後に登録した記録」(練習日・大会日も作成日の前日以降) だけで達成になる (2026-10-15)。
 // このテストで作る記録より前に作ったことにして、日付・登録順の条件と切り離す
@@ -21,7 +22,8 @@ const MILESTONE_CREATED_AT = subDays(new Date(), 30).toISOString();
  *     編集ボタンが無く「大会情報なし」表示になる。水路が分からないので目標タイムの横に
  *     Best 差 (Best-x.xx) を出さず、カードに進捗バーは無い。
  *   - ダッシュボードの練習記録入力からタイム付き練習ログを保存すると、
- *     直後にマイルストーンが achieved になる (作成分岐・更新分岐の両方)。
+ *     直後に達成候補が置かれて確認ダイアログが出て、「達成！」で achieved になる
+ *     (作成分岐・更新分岐の両方)。
  *
  * 実機調査で判明した重要な事実 (詳細は各テスト内のコメント参照):
  *   Dashboard 上でユーザーが実際にクリックできる「+」(新規追加) も、既存ログの
@@ -501,7 +503,7 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
       await supabaseLogin(page, { navigateTo: "/dashboard" });
     });
 
-    test("[作成分岐/タブモーダル経由] 空の練習に新規ログを追加して保存すると、直後にマイルストーンが achieved になる", async ({
+    test("[作成分岐/タブモーダル経由] 空の練習に新規ログを追加して保存すると、直後に達成の確認ダイアログが出て、「達成！」で achieved になる", async ({
       page,
     }) => {
       // Dashboard の「+」(day-add-button) も、練習カード内の「メニュー追加」
@@ -537,7 +539,24 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
       await formModal.locator('[data-testid="practice-tab-modal-save"]').click();
       await expect(formModal).toBeHidden({ timeout: 10000 });
 
+      // web も確認モード: 保存直後の判定では達成にせず達成候補を置き、確認ダイアログを出す
       const supabase = createAdminClient();
+      await expect
+        .poll(
+          async () => {
+            const { data } = await supabase
+              .from("milestones")
+              .select("status, achievement_candidate")
+              .eq("id", milestoneCreateId)
+              .single();
+            return data?.status !== "achieved" && data?.achievement_candidate != null;
+          },
+          { timeout: 15000, intervals: [500, 1000, 1500] },
+        )
+        .toBe(true);
+
+      // 「もしかしてマイルストーンを達成しましたか？」で「達成！」を押すと達成になる
+      await confirmAchievementPrompts(page);
       await expect
         .poll(
           async () => {
@@ -553,7 +572,7 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
         .toBe("achieved");
     });
 
-    test("[更新分岐/タブモーダル経由] 既存ログを編集して条件を満たすと、直後にマイルストーンが achieved になる", async ({
+    test("[更新分岐/タブモーダル経由] 既存ログを編集して条件を満たすと、直後に達成の確認ダイアログが出て、「達成！」で achieved になる", async ({
       page,
     }) => {
       await page.waitForLoadState("networkidle").catch(() => {});
@@ -600,7 +619,24 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
       await formModal.locator('[data-testid="practice-tab-modal-save"]').click();
       await expect(formModal).toBeHidden({ timeout: 10000 });
 
+      // web も確認モード: 保存直後の判定では達成にせず達成候補を置き、確認ダイアログを出す
       const supabase = createAdminClient();
+      await expect
+        .poll(
+          async () => {
+            const { data } = await supabase
+              .from("milestones")
+              .select("status, achievement_candidate")
+              .eq("id", milestoneUpdateId)
+              .single();
+            return data?.status !== "achieved" && data?.achievement_candidate != null;
+          },
+          { timeout: 15000, intervals: [500, 1000, 1500] },
+        )
+        .toBe(true);
+
+      // 「もしかしてマイルストーンを達成しましたか？」で「達成！」を押すと達成になる
+      await confirmAchievementPrompts(page);
       await expect
         .poll(
           async () => {
@@ -725,8 +761,11 @@ test.describe("目標管理 実機回帰テスト (時間入力・チーム離�
     }) => {
       const modal = await openMilestoneCreateModal(page);
 
-      // マイルストーンタイプを「練習平均タイム目標」(reps_time) に切り替える。
-      await modal.locator('label:has(input[value="reps_time"])').click();
+      // タイプは「練習タイム目標」(reps_time 型。旧タイム目標・練習平均タイム目標を統合) が既定。
+      // 本数を増やすと「平均目標タイム」欄になる。
+      await expect(modal.locator('input[value="practice_time"]')).toBeChecked();
+      await modal.locator('[data-testid="goal-milestone-repstime-reps"]').fill("4");
+      await expect(modal.getByText("平均目標タイム", { exact: true })).toBeVisible();
 
       const averageTimeInput = modal.locator('input[placeholder="2.00.00"]').first();
       await averageTimeInput.click();

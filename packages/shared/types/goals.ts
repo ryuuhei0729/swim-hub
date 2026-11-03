@@ -298,6 +298,13 @@ export interface CreateGoalInput {
   };
   styleId: number;
   targetTime: number;
+  /**
+   * クライアントで決めた goals.id / 新規大会の competitions.id (任意)。
+   * 指定すると同じ ID の行は新規作成ではなく更新 (upsert) になり、低速回線で
+   * 保存できたのに応答だけ失われた後の再保存でも二重登録しない。
+   */
+  goalId?: string;
+  newCompetitionId?: string;
 }
 
 export interface UpdateGoalInput {

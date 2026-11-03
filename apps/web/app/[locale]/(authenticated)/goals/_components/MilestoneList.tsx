@@ -2,13 +2,16 @@
 
 import React, { useState } from "react";
 import {
+  ArrowUturnLeftIcon,
   CheckCircleIcon,
+  CheckIcon,
   ClockIcon,
   ExclamationTriangleIcon,
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { GoalAPI } from "@apps/shared/api/goals";
 import type { Milestone, Style } from "@apps/shared/types";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
@@ -37,6 +40,9 @@ export default function MilestoneList({
   const { supabase } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
+  const [deletingMilestone, setDeletingMilestone] = useState<Milestone | null>(null);
+  const [uncompletingMilestone, setUncompletingMilestone] = useState<Milestone | null>(null);
+  const [busyMilestoneId, setBusyMilestoneId] = useState<string | null>(null);
   const goalAPI = new GoalAPI(supabase);
   const getStatusIcon = (status: Milestone["status"]) => {
     switch (status) {
@@ -56,15 +62,33 @@ export default function MilestoneList({
     setIsEditModalOpen(true);
   };
 
-  const handleDelete = async (milestoneId: string) => {
-    if (confirm(t("milestone.deleteConfirm"))) {
-      try {
-        await goalAPI.deleteMilestone(milestoneId);
-        await onUpdate();
-      } catch (error) {
-        console.error("マイルストーン削除エラー:", error);
-        alert(t("milestone.deleteFailed"));
-      }
+  const handleDelete = async (milestone: Milestone) => {
+    setDeletingMilestone(null);
+    try {
+      await goalAPI.deleteMilestone(milestone.id);
+      await onUpdate();
+    } catch (error) {
+      console.error("マイルストーン削除エラー:", error);
+      alert(t("milestone.deleteFailed"));
+    }
+  };
+
+  /**
+   * 手動で完了にする / 未完了に戻す (mobile と同じ)。完了はワンクリック、
+   * 未完了に戻すのは確認してから (戻した時点より前の記録では自動判定で再び達成候補にしない)
+   */
+  const handleSetCompletion = async (milestone: Milestone, completed: boolean) => {
+    if (busyMilestoneId) return;
+    setUncompletingMilestone(null);
+    setBusyMilestoneId(milestone.id);
+    try {
+      await goalAPI.setMilestoneCompletion(milestone, completed);
+      await onUpdate();
+    } catch (error) {
+      console.error("マイルストーン完了状態の更新エラー:", error);
+      alert(t("milestone.completionFailed"));
+    } finally {
+      setBusyMilestoneId(null);
     }
   };
 
@@ -127,28 +151,78 @@ export default function MilestoneList({
                 )}
               </div>
               <div className="flex items-center gap-1">
-                {/* 「その他」タイプの編集は現状モバイルのみ対応 (Web のフォームは水泳の条件しか持たない) */}
-                {milestone.type !== "other" && (
-                  <button
-                    onClick={() => handleEdit(milestone)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                    title={t("milestone.edit")}
-                  >
-                    <PencilIcon className="w-4 h-4" />
-                  </button>
-                )}
                 <button
-                  onClick={() => handleDelete(milestone.id)}
+                  type="button"
+                  onClick={() => handleEdit(milestone)}
+                  className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+                  title={t("milestone.edit")}
+                  aria-label={t("milestone.edit")}
+                >
+                  <PencilIcon className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeletingMilestone(milestone)}
                   className="text-gray-400 hover:text-red-600 transition-colors p-1"
                   title={t("milestone.delete")}
+                  aria-label={t("milestone.delete")}
                 >
                   <TrashIcon className="w-4 h-4" />
                 </button>
               </div>
             </div>
+            {/* 手動で完了にする / 未完了に戻す */}
+            <div className="mt-3 flex justify-end">
+              {isAchieved ? (
+                <button
+                  type="button"
+                  onClick={() => setUncompletingMilestone(milestone)}
+                  disabled={busyMilestoneId === milestone.id}
+                  data-testid="milestone-mark-incomplete"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  <ArrowUturnLeftIcon className="w-3.5 h-3.5" />
+                  {t("milestone.markIncomplete")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleSetCompletion(milestone, true)}
+                  disabled={busyMilestoneId === milestone.id}
+                  data-testid="milestone-mark-complete"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 border border-green-300 rounded-md bg-white hover:bg-green-50 disabled:opacity-50 transition-colors"
+                >
+                  <CheckIcon className="w-3.5 h-3.5" />
+                  {t("milestone.markComplete")}
+                </button>
+              )}
+            </div>
           </div>
         );
       })}
+
+      <ConfirmDialog
+        isOpen={deletingMilestone !== null}
+        onConfirm={() => {
+          if (deletingMilestone) void handleDelete(deletingMilestone);
+        }}
+        onCancel={() => setDeletingMilestone(null)}
+        title={t("milestone.delete")}
+        message={t("milestone.deleteConfirm")}
+        confirmLabel={t("milestone.delete")}
+        variant="danger"
+      />
+      <ConfirmDialog
+        isOpen={uncompletingMilestone !== null}
+        onConfirm={() => {
+          if (uncompletingMilestone) void handleSetCompletion(uncompletingMilestone, false);
+        }}
+        onCancel={() => setUncompletingMilestone(null)}
+        title={t("milestone.markIncomplete")}
+        message={t("milestone.markIncompleteConfirm")}
+        confirmLabel={t("milestone.markIncomplete")}
+        variant="info"
+      />
 
       {/* マイルストーン編集モーダル */}
       {editingMilestone && (

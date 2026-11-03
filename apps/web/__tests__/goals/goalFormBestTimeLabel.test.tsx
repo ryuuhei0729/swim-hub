@@ -637,3 +637,23 @@ describe("GoalEditModal", () => {
     });
   });
 });
+
+// ============================== 作成: 種目未選択 ==============================
+describe("GoalCreateModal — 種目未選択", () => {
+  it("種目を選ばずに作成すると createGoal を呼ばず (styleId: NaN を送らない)、styleNotSelected を出す", async () => {
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={qc}>
+        <GoalCreateModal isOpen onClose={() => {}} onSuccess={async () => {}} styles={STYLES} />
+      </QueryClientProvider>,
+    );
+    await settle();
+    await pickCompetition(user, "c1");
+    await user.type(targetInput(), "58.00");
+    await user.tab();
+    await user.click(screen.getByRole("button", { name: "goals.create.submitButton" }));
+    await settle();
+    expect(mocks.createGoal).not.toHaveBeenCalled();
+    expect(window.alert).toHaveBeenCalledWith("goals.edit.validation.styleNotSelected");
+  });
+});

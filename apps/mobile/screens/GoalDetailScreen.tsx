@@ -1,5 +1,14 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { View, Text, ScrollView, Pressable, Alert, StyleSheet, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Alert,
+  StyleSheet,
+  RefreshControl,
+  ActivityIndicator,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -22,6 +31,7 @@ import { goalKeys, useGoalDetailQuery } from "@apps/shared/hooks/queries/goals";
 import type { Milestone } from "@apps/shared/types";
 import { computeMilestoneRatio } from "@apps/shared/utils/milestoneRatio";
 import { formatDate } from "@apps/shared/utils/date";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 type NavProp = NativeStackNavigationProp<MainStackParamList>;
 type RouteProps = RouteProp<MainStackParamList, "GoalDetail">;
@@ -41,6 +51,9 @@ export const GoalDetailScreen: React.FC = () => {
   const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
   const busyRef = useRef(false);
   const [isDeleted, setIsDeleted] = useState(false);
+  // 削除中の対象 ("goal" またはマイルストーン id)。低速回線で削除の完了を待つ間、
+  // 削除ボタンを押せなくしてスピナーを出すために使う (busyRef はロジック側のガード)
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   const goalQuery = useGoalDetailQuery(supabase, goalId);
   const goal = goalQuery.data;
@@ -57,6 +70,7 @@ export const GoalDetailScreen: React.FC = () => {
   const { refreshing, handleRefresh } = usePullToRefresh(refresh);
 
   const handleDeleteGoal = useCallback(() => {
+    if (busyRef.current) return;
     Alert.alert(t("goals.list.delete"), t("goals.list.deleteConfirm"), [
       { text: t("common.cancel"), style: "cancel" },
       {
@@ -65,6 +79,7 @@ export const GoalDetailScreen: React.FC = () => {
         onPress: async () => {
           if (busyRef.current) return;
           busyRef.current = true;
+          setDeletingKey("goal");
           try {
             await goalAPI.deleteGoal(goalId);
             // 削除後の再取得で「見つかりません」が一瞬出ないよう、先に描画をローディングへ固定してから戻る
@@ -73,9 +88,13 @@ export const GoalDetailScreen: React.FC = () => {
             void queryClient.invalidateQueries({ queryKey: goalKeys.all });
           } catch (error) {
             console.error("Failed to delete goal:", error);
-            Alert.alert(t("common.alertErrorTitle"), t("goals.list.deleteFailed"));
+            Alert.alert(
+              t("common.alertErrorTitle"),
+              toUserFacingMessage(error, t("goals.list.deleteFailed")),
+            );
           } finally {
             busyRef.current = false;
+            setDeletingKey(null);
           }
         },
       },
@@ -84,6 +103,7 @@ export const GoalDetailScreen: React.FC = () => {
 
   const handleDeleteMilestone = useCallback(
     (milestone: Milestone) => {
+      if (busyRef.current) return;
       Alert.alert(t("goals.milestone.delete"), t("goals.milestone.deleteConfirm"), [
         { text: t("common.cancel"), style: "cancel" },
         {
@@ -92,14 +112,19 @@ export const GoalDetailScreen: React.FC = () => {
           onPress: async () => {
             if (busyRef.current) return;
             busyRef.current = true;
+            setDeletingKey(milestone.id);
             try {
               await goalAPI.deleteMilestone(milestone.id);
               await queryClient.invalidateQueries({ queryKey: goalKeys.all });
             } catch (error) {
               console.error("Failed to delete milestone:", error);
-              Alert.alert(t("common.alertErrorTitle"), t("goals.milestone.deleteFailed"));
+              Alert.alert(
+                t("common.alertErrorTitle"),
+                toUserFacingMessage(error, t("goals.milestone.deleteFailed")),
+              );
             } finally {
               busyRef.current = false;
+              setDeletingKey(null);
             }
           },
         },
@@ -147,7 +172,12 @@ export const GoalDetailScreen: React.FC = () => {
   if (goalQuery.isError && goal === undefined) {
     return (
       <View style={styles.container}>
-        <ErrorView message={t("goals.detail.loadError")} onRetry={() => void goalQuery.refetch()} fullScreen />
+        <ErrorView
+          message={t("goals.detail.loadError")}
+          error={goalQuery.error}
+          onRetry={() => void goalQuery.refetch()}
+          fullScreen
+        />
       </View>
     );
   }
@@ -235,12 +265,18 @@ export const GoalDetailScreen: React.FC = () => {
               )}
               <Pressable
                 onPress={handleDeleteGoal}
+                disabled={deletingKey !== null}
                 hitSlop={8}
-                style={styles.iconButton}
+                style={[styles.iconButton, deletingKey !== null && styles.iconButtonDisabled]}
                 accessibilityRole="button"
                 accessibilityLabel={t("goals.list.delete")}
+                accessibilityState={{ disabled: deletingKey !== null, busy: deletingKey === "goal" }}
               >
-                <Feather name="trash-2" size={18} color="#EF4444" />
+                {deletingKey === "goal" ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <Feather name="trash-2" size={18} color="#EF4444" />
+                )}
               </Pressable>
             </View>
           </View>
@@ -299,6 +335,8 @@ export const GoalDetailScreen: React.FC = () => {
           }
           onDelete={handleDeleteMilestone}
           onToggleComplete={handleToggleMilestoneComplete}
+          deletingMilestoneId={deletingKey === "goal" ? null : deletingKey}
+          deleteDisabled={deletingKey !== null}
         />
       </View>
     </ScrollView>
@@ -337,6 +375,9 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 6,
+  },
+  iconButtonDisabled: {
+    opacity: 0.4,
   },
   metaRow: {
     flexDirection: "row",

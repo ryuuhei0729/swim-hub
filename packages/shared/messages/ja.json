@@ -116,6 +116,15 @@
       "maxReached": "最大枚数に達しました"
     },
     "offlineBanner": "オフラインです。一部の機能が制限されます。",
+    "network": {
+      "offline": "オフラインのため通信できませんでした。電波の届く場所で再度お試しください。",
+      "timeout": "通信に時間がかかりすぎたため中断しました。電波の良い場所で再度お試しください。",
+      "failed": "通信できませんでした。電波状況を確認して再度お試しください。"
+    },
+    "staleData": {
+      "failed": "最新の情報を取得できませんでした。前回読み込んだ内容を表示しています。",
+      "offline": "オフラインのため、前回読み込んだ内容を表示しています。"
+    },
     "aria": {
       "close": "閉じる",
       "previousImage": "前の画像",
@@ -2038,7 +2047,8 @@
         "title": "テンプレートを削除",
         "message": "「{name}」を削除しますか？この操作は取り消せません。",
         "confirmLabel": "削除"
-      }
+      },
+      "deleteFailed": "テンプレートの削除に失敗しました"
     },
     "createModal": {
       "createTitle": "新しいテンプレートを作成",
@@ -2242,11 +2252,6 @@
       "closeAriaLabel": "閉じる",
       "updateFailed": "マイルストーンの更新に失敗しました"
     },
-    "milestoneSelector": {
-      "title": "マイルストーンから作成",
-      "loading": "読み込み中...",
-      "empty": "利用可能なマイルストーンがありません"
-    },
     "goalSetCalculator": {
       "closeAriaLabel": "閉じる",
       "title": "ゴールセット目標タイム計算",
@@ -2290,14 +2295,11 @@
       },
       "otherLabel": "その他（自由記述）",
       "otherPlaceholder": "詳細を入力してください",
-      "nextActionLabel": "次のアクション",
-      "createMilestoneButton": "新しいマイルストーンを作成",
       "skipButton": "スキップ",
       "saveButton": "保存",
       "deadlineLabel": "期限:",
       "otherPrefix": "その他: {note}",
       "saveFailed": "内省メモの保存に失敗しました",
-      "actionFailed": "処理に失敗しました",
       "goToGoalsLink": "目標管理を見る"
     },
     "form": {
