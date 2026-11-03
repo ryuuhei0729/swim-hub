@@ -48,7 +48,6 @@ export const TabNavigator: React.FC = () => {
             label: t("navigation.mobile.tabs.home"),
             testID: "tab-dashboard",
             feather: "home",
-            sfSymbol: "house",
           })}
         />
         <Tab.Screen
@@ -58,7 +57,6 @@ export const TabNavigator: React.FC = () => {
             label: t("navigation.mobile.tabs.records"),
             testID: "tab-records",
             feather: "clipboard",
-            sfSymbol: "list.bullet.clipboard",
           })}
         />
         <Tab.Screen
@@ -68,7 +66,6 @@ export const TabNavigator: React.FC = () => {
             label: t("navigation.mobile.tabs.teams"),
             testID: "tab-teams",
             feather: "users",
-            sfSymbol: "person.2",
           })}
           listeners={{
             tabPress: (e) => {
@@ -87,21 +84,24 @@ export const TabNavigator: React.FC = () => {
               // TeamDetail が上書きで捨てられる (POP ではないので beforeRemove も出ない)。
               // ＝ホーム等の別タブから押したときだけ遷移が消える、という不具合になる。
               //
-              // そこで preventDefault でライブラリ側の dispatch を止め、タブ切替と push の
-              // 両方を我々の navigation から同一 tick で連続 dispatch する。こちらは毎回
-              // 最新 state を読むため打ち消しが起きず、2つが同じコミットに畳まれるので
-              // 「チーム一覧が1フレームだけ見える」中間描画も発生しない。
+              // そこで preventDefault でライブラリ側の dispatch を止め、タブ切替を我々の
+              // navigation から行う (JS 描画版はこれで打ち消しが起きない)。
               //
-              // ネイティブのタブバー (tabBar.native.tsx) の tabPress は打ち消し不可で emit される
-              // (イベントに preventDefault が無い)。こちらは emit 後に navigate(Teams) を
-              // dispatch するが、その時点で既に Teams が選ばれているため何も起きず、
-              // ここで積んだ TeamDetail はそのまま残る。打ち消しは JS 描画版のときだけ行う。
+              // ネイティブのタブバー (tabBar.native.tsx) の tabPress は打ち消し不可で emit され
+              // (イベントに preventDefault が無い)、emit の直後に必ず navigate(Teams) を
+              // タブナビゲーターへ dispatch する。ここで TeamDetail を同期で push してしまうと、
+              // その navigate が「TeamDetail の下にある MainTabs をフォーカスする」扱いになり、
+              // StackRouter.getStateForRouteFocus が TeamDetail を取り除く (= 直行しない)。
+              // そのため push はマイクロタスクに回し、ライブラリ側の dispatch が終わってから行う。
+              // JS 描画版でも同じ順序で問題なく動く。
               //
               // ⚠️ タブ切替(1行目)を省くと、タブバーのハイライトがホームのまま残り、
               // 戻るボタンでもチーム一覧ではなくホームに着地してしまう。2行はセット。
               e.preventDefault?.();
               navigation.navigate("MainTabs", { screen: "Teams" });
-              navigation.navigate("TeamDetail", { teamId: targetTeamId, instant: true });
+              queueMicrotask(() => {
+                navigation.navigate("TeamDetail", { teamId: targetTeamId, instant: true });
+              });
             },
           }}
         />
@@ -112,7 +112,6 @@ export const TabNavigator: React.FC = () => {
             label: t("navigation.mobile.tabs.goals"),
             testID: "tab-goals",
             feather: "target",
-            sfSymbol: "target",
           })}
         />
         <Tab.Screen
@@ -122,7 +121,6 @@ export const TabNavigator: React.FC = () => {
             label: t("navigation.mobile.tabs.myPage"),
             testID: "tab-mypage",
             feather: "user",
-            sfSymbol: "person.crop.circle",
           })}
         />
       </Tab.Navigator>

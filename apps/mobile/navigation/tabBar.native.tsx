@@ -1,5 +1,4 @@
 import React from "react";
-import { Platform } from "react-native";
 import {
   createNativeBottomTabNavigator,
   type NativeBottomTabNavigationOptions,
@@ -19,7 +18,9 @@ import type { TabFeatherIcon, TabVisual } from "./tabBarTypes";
  * - iOS 26 以降: 半透明の Liquid Glass のバーになり、スクロールで小さくなる
  * - iOS 18 以前: 標準の UITabBar
  * - Android: Material 3 の BottomNavigationView (選択中はピルで示す)
- * アイコンは iOS が SF Symbols、Android が Feather と同じ形の PNG (assets/icons/tabs)。
+ * アイコンは両 OS とも Feather と同じ形の PNG (assets/icons/tabs)。iOS の SF Symbols は
+ * タブバーが太めに描き、太さを指定する API も無いため、線の細い PNG を template として
+ * 渡し OS に色を塗らせる (JS 描画版の見た目とも揃う)。
  *
  * 型について: `TabNavigator` は JS 描画版 (`tabBar.tsx`) と同じ型で扱えるように、
  * ネイティブ版の navigator / options を JS 版の型にキャストして公開する。
@@ -28,8 +29,8 @@ import type { TabFeatherIcon, TabVisual } from "./tabBarTypes";
  */
 type JsTabNavigator = ReturnType<typeof createBottomTabNavigator<TabParamList>>;
 
-/** Android 用のアイコン。Material のタブバーが選択状態に応じて色を塗るので黒 1 色で用意する */
-const ANDROID_ICONS: Record<TabFeatherIcon, number> = {
+/** タブのアイコン。OS が選択状態に応じて色を塗るので黒 1 色で用意する */
+const TAB_ICONS: Record<TabFeatherIcon, number> = {
   home: require("../assets/icons/tabs/home.png"),
   clipboard: require("../assets/icons/tabs/clipboard.png"),
   "bar-chart-2": require("../assets/icons/tabs/bar-chart-2.png"),
@@ -51,6 +52,8 @@ export const tabNavigatorScreenOptions = {
   headerShown: false,
   tabBarActiveTintColor: "#2563EB",
   tabBarInactiveTintColor: "#6B7280",
+  // 既定 (iOS は medium) だとラベルが太く見えるので通常の太さにする
+  tabBarLabelStyle: { fontWeight: "400", fontSize: 10 },
   // iOS 26: 下へスクロールしている間はバーを小さくして、一覧を広く見せる
   tabBarMinimizeBehavior: "onScrollDown",
   // Android (Material 3): 選択中のタブの背後に出るピルの色
@@ -62,8 +65,5 @@ export const tabNavigatorScreenOptions = {
 export const tabScreenOptions = (tab: TabVisual): BottomTabNavigationOptions =>
   ({
     title: tab.label,
-    tabBarIcon:
-      Platform.OS === "ios"
-        ? { type: "sfSymbol", name: tab.sfSymbol }
-        : { type: "image", source: ANDROID_ICONS[tab.feather] },
+    tabBarIcon: { type: "image", source: TAB_ICONS[tab.feather] },
   }) satisfies NativeBottomTabNavigationOptions as unknown as BottomTabNavigationOptions;

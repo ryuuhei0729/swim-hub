@@ -1,6 +1,4 @@
-import type { SFSymbol } from "sf-symbols-typescript";
-
-/** Android 用 PNG (assets/icons/tabs) と JS 描画で使う Feather のアイコン名 */
+/** Feather のアイコン名。JS 描画はこの名前で描き、ネイティブは同じ形の PNG (assets/icons/tabs) を使う */
 export type TabFeatherIcon =
   | "home"
   | "clipboard"
@@ -19,6 +17,4 @@ export interface TabVisual {
   /** JS 描画のタブボタンに付く testID (ナビゲーション統合テストが参照する) */
   testID: string;
   feather: TabFeatherIcon;
-  /** iOS のネイティブタブバーで使う SF Symbol */
-  sfSymbol: SFSymbol;
 }
