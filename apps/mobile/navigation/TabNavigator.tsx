@@ -92,13 +92,14 @@ export const TabNavigator: React.FC = () => {
               // 最新 state を読むため打ち消しが起きず、2つが同じコミットに畳まれるので
               // 「チーム一覧が1フレームだけ見える」中間描画も発生しない。
               //
-              // ネイティブのタブバー (tabBar.native.tsx) は tabPress の emit 後に最新 state で
-              // navigate(Teams) を dispatch するが、その時点で既に Teams が選ばれているため
-              // 何も起きず、ここで積んだ TeamDetail はそのまま残る。
+              // ネイティブのタブバー (tabBar.native.tsx) の tabPress は打ち消し不可で emit される
+              // (イベントに preventDefault が無い)。こちらは emit 後に navigate(Teams) を
+              // dispatch するが、その時点で既に Teams が選ばれているため何も起きず、
+              // ここで積んだ TeamDetail はそのまま残る。打ち消しは JS 描画版のときだけ行う。
               //
               // ⚠️ タブ切替(1行目)を省くと、タブバーのハイライトがホームのまま残り、
               // 戻るボタンでもチーム一覧ではなくホームに着地してしまう。2行はセット。
-              e.preventDefault();
+              e.preventDefault?.();
               navigation.navigate("MainTabs", { screen: "Teams" });
               navigation.navigate("TeamDetail", { teamId: targetTeamId, instant: true });
             },
