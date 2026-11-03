@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { Milestone } from "@apps/shared/types";
@@ -13,6 +13,10 @@ interface MilestoneListProps {
   onDelete: (milestone: Milestone) => void;
   /** 手動で完了にする (completed=true) / 未完了に戻す (completed=false) */
   onToggleComplete: (milestone: Milestone, completed: boolean) => void;
+  /** 削除中のマイルストーン id (スピナーを出す) */
+  deletingMilestoneId?: string | null;
+  /** 削除ボタンを押せないか (目標・マイルストーンのいずれかを削除中) */
+  deleteDisabled?: boolean;
 }
 
 export const MilestoneList: React.FC<MilestoneListProps> = ({
@@ -20,6 +24,8 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({
   onEdit,
   onDelete,
   onToggleComplete,
+  deletingMilestoneId = null,
+  deleteDisabled = false,
 }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
@@ -62,12 +68,21 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({
                 </Pressable>
                 <Pressable
                   onPress={() => onDelete(milestone)}
+                  disabled={deleteDisabled}
                   hitSlop={8}
-                  style={styles.iconButton}
+                  style={[styles.iconButton, deleteDisabled && styles.iconButtonDisabled]}
                   accessibilityRole="button"
                   accessibilityLabel={t("goals.milestone.delete")}
+                  accessibilityState={{
+                    disabled: deleteDisabled,
+                    busy: deletingMilestoneId === milestone.id,
+                  }}
                 >
-                  <Feather name="trash-2" size={16} color="#EF4444" />
+                  {deletingMilestoneId === milestone.id ? (
+                    <ActivityIndicator size="small" color="#EF4444" />
+                  ) : (
+                    <Feather name="trash-2" size={16} color="#EF4444" />
+                  )}
                 </Pressable>
               </View>
             </View>
@@ -211,6 +226,9 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 6,
+  },
+  iconButtonDisabled: {
+    opacity: 0.4,
   },
   footer: {
     marginTop: 10,

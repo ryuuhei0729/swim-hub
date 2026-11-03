@@ -31,6 +31,7 @@ import { isEntryTabVisible } from "@/utils/tabFormUtils";
 import { TeamCompetitionEntryModal } from "./TeamCompetitionEntryModal";
 import { TeamCompetitionRecordsModal } from "./TeamCompetitionRecordsModal";
 import { cardSurface, colors } from "@/constants/theme";
+import { usePendingAction } from "@/hooks/usePendingAction";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -67,6 +68,8 @@ const CompetitionItem = React.memo(function CompetitionItem({
   onEntry,
   onRecord,
   onOpenRecords,
+  isDeleting,
+  deleteDisabled,
 }: {
   competition: Competition;
   teamId: string;
@@ -76,6 +79,10 @@ const CompetitionItem = React.memo(function CompetitionItem({
   onEntry: (competition: Competition) => void;
   onRecord: (competition: Competition) => void;
   onOpenRecords: (competition: Competition) => void;
+  /** この大会を削除中か (スピナーを出す) */
+  isDeleting: boolean;
+  /** 削除ボタンを押せないか (いずれかの削除を実行中) */
+  deleteDisabled: boolean;
 }) {
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
@@ -209,12 +216,18 @@ const CompetitionItem = React.memo(function CompetitionItem({
               <Feather name="edit-2" size={14} color="#2563EB" />
             </Pressable>
             <Pressable
-              style={styles.deleteButton}
+              style={[styles.deleteButton, deleteDisabled && styles.deleteButtonDisabled]}
               onPress={() => onDelete(competition)}
+              disabled={deleteDisabled}
               accessibilityRole="button"
               accessibilityLabel={t("common.delete")}
+              accessibilityState={{ disabled: deleteDisabled, busy: isDeleting }}
             >
-              <Feather name="trash-2" size={14} color="#EF4444" />
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#EF4444" />
+              ) : (
+                <Feather name="trash-2" size={14} color="#EF4444" />
+              )}
             </Pressable>
           </View>
         )}
@@ -580,7 +593,16 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     setRecordsModalCompetition(competition);
   }, []);
 
+  // 低速回線で削除中に再度押されないよう、削除は同時に1件だけにする
+  const {
+    pendingKey: deletingId,
+    isPending: isDeletePending,
+    run: runDelete,
+    isBusy: isDeleteBusy,
+  } = usePendingAction();
+
   const handleDelete = useCallback((competition: Competition) => {
+    if (isDeleteBusy()) return;
     Alert.alert(
       t("teams.mobile.deleteConfirmTitle"),
       t("teams.mobile.teamCompetitionList.deleteConfirm"),
@@ -589,19 +611,23 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
         {
           text: t("common.delete"),
           style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteMutation.mutateAsync({ id: competition.id, teamId });
-            } catch {
-              Alert.alert(t("common.error"), t("teams.mobile.teamCompetitionList.deleteFailed"), [
-                { text: "OK" },
-              ]);
-            }
+          onPress: () => {
+            void runDelete(competition.id, async () => {
+              try {
+                await deleteMutation.mutateAsync({ id: competition.id, teamId });
+              } catch (error) {
+                Alert.alert(
+                  t("common.error"),
+                  toUserFacingMessage(error, t("teams.mobile.teamCompetitionList.deleteFailed")),
+                  [{ text: "OK" }],
+                );
+              }
+            });
           },
         },
       ],
     );
-  }, [deleteMutation, teamId, t]);
+  }, [deleteMutation, teamId, t, runDelete, isDeleteBusy]);
 
   const renderItem = useCallback(({ item }: { item: Competition }) => (
     <CompetitionItem
@@ -613,6 +639,8 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
       onEntry={handleEntry}
       onRecord={handleRecord}
       onOpenRecords={handleOpenRecords}
+      isDeleting={deletingId === item.id}
+      deleteDisabled={isDeletePending}
     />
   ), [
     teamId,
@@ -622,6 +650,8 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     handleEntry,
     handleRecord,
     handleOpenRecords,
+    deletingId,
+    isDeletePending,
   ]);
 
   const keyExtractor = useCallback((item: Competition) => item.id, []);
@@ -697,6 +727,7 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
           data={items}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
+          extraData={deletingId}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
@@ -857,6 +888,9 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 4,
+  },
+  deleteButtonDisabled: {
+    opacity: 0.4,
   },
   itemRow: {
     flexDirection: "row",

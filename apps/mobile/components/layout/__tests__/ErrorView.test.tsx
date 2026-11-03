@@ -4,6 +4,8 @@
 
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import { NetworkTimeoutError } from "@apps/shared/utils/networkError";
+import i18n from "@/i18n";
 import { ErrorView } from "../ErrorView";
 
 describe("ErrorView", () => {
@@ -61,5 +63,24 @@ describe("ErrorView", () => {
 
     expect(screen.getByText("エラー")).toBeTruthy();
     expect(screen.getByText("再試行")).toBeTruthy();
+  });
+
+  it("生の通信エラー文言 (TypeError: Network request failed) は通信エラーの文言に置き換える", () => {
+    render(<ErrorView message="TypeError: Network request failed" />);
+
+    expect(screen.queryByText("TypeError: Network request failed")).toBeNull();
+    expect(screen.getByText(i18n.t("common.network.failed"))).toBeTruthy();
+  });
+
+  it("error にタイムアウトを渡すと、タイムアウトの文言を出す", () => {
+    render(<ErrorView message="読み込みに失敗しました" error={new NetworkTimeoutError()} />);
+
+    expect(screen.getByText(i18n.t("common.network.timeout"))).toBeTruthy();
+  });
+
+  it("通信と無関係なエラーなら message をそのまま出す", () => {
+    render(<ErrorView message="読み込みに失敗しました" error={new Error("boom")} />);
+
+    expect(screen.getByText("読み込みに失敗しました")).toBeTruthy();
   });
 });

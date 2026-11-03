@@ -594,12 +594,13 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
     );
   }
 
-  // エラー状態
-  if (isError && error) {
+  // エラー状態 (表示できるメンバーが無いときだけ。再取得の失敗は親画面のバナーで伝える)
+  if (isError && error && members.length === 0) {
     return (
       <View style={styles.container}>
         <ErrorView
           message={error.message || t("teams.mobile.memberFetchFailed")}
+          error={error}
           onRetry={onRetry}
         />
       </View>

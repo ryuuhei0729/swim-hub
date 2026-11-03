@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { authRequiredError } from "./auth-utils";
 
 export class CompetitionAPI {
   constructor(private supabase: SupabaseClient) {}
@@ -179,8 +180,9 @@ export class CompetitionAPI {
   async getUniqueCompetitionPlaces(): Promise<string[]> {
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("competitions")

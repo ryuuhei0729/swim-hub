@@ -113,6 +113,15 @@
       "maxReached": "Maximum number reached"
     },
     "offlineBanner": "You are offline. Some features may be limited.",
+    "network": {
+      "offline": "You're offline, so this couldn't be completed. Please try again where you have a signal.",
+      "timeout": "The connection took too long and was stopped. Please try again where the signal is better.",
+      "failed": "Couldn't connect. Please check your connection and try again."
+    },
+    "staleData": {
+      "failed": "Couldn't load the latest data. Showing what was loaded last time.",
+      "offline": "You're offline. Showing what was loaded last time."
+    },
     "aria": {
       "close": "Close",
       "previousImage": "Previous image",
@@ -2035,7 +2044,8 @@
         "title": "Delete template",
         "message": "Delete \"{name}\"? This action cannot be undone.",
         "confirmLabel": "Delete"
-      }
+      },
+      "deleteFailed": "Failed to delete the template"
     },
     "createModal": {
       "createTitle": "Create new template",

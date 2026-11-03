@@ -13,6 +13,7 @@ import { resolveAgeCategory } from "@apps/shared/utils/domesticRecords";
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from "@/components/profile";
 import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { ProfileSkeleton } from "@/components/ui/ScreenSkeletons";
 import type { MainStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@swim-hub/shared/types";
@@ -124,12 +125,13 @@ export const MyPageScreen: React.FC = () => {
     [user, supabase, refetchProfile],
   );
 
-  // エラー状態
-  if (isError && error) {
+  // エラー状態 (前回取得したプロフィールが無いときだけ全画面エラーにする)
+  if (isError && error && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <ErrorView
           message={error.message || t("mypage.mobile.dataFetchFailed")}
+          error={error}
           onRetry={() => {
             refetchProfile();
             refetchBestTimes();
@@ -176,6 +178,13 @@ export const MyPageScreen: React.FC = () => {
           <Text style={styles.pageHeaderSettingsText}>{t("mypage.mobile.settingsButton")}</Text>
         </Pressable>
       </View>
+      <StaleDataBanner
+        visible={isError}
+        onRetry={() => {
+          refetchProfile();
+          refetchBestTimes();
+        }}
+      />
 
       <ScrollView
         style={styles.scrollView}

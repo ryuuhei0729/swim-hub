@@ -30,10 +30,13 @@ import { TeamRankings } from "@/components/teams/rankings";
 import { TeamMemberGoalsTab } from "@/components/teams/member-goals/TeamMemberGoalsTab";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
 import { useTeamAdminViewStore } from "@/stores/teamAdminViewStore";
 import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
+import { usePendingAction } from "@/hooks/usePendingAction";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 type TeamDetailScreenRouteProp = RouteProp<MainStackParamList, "TeamDetail">;
 type TeamDetailNavigationProp = NativeStackNavigationProp<MainStackParamList>;
@@ -83,6 +86,12 @@ export const TeamDetailScreen: React.FC = () => {
   const pendingCount = pendingMembers?.length ?? 0;
 
   const deleteAnnouncementMutation = useDeleteAnnouncementMutation(supabase);
+  // 低速回線で削除中に再度押されないよう、お知らせの削除は同時に1件だけにする
+  const {
+    pendingKey: deletingAnnouncementId,
+    run: runAnnouncementDelete,
+    isBusy: isAnnouncementDeleteBusy,
+  } = usePendingAction();
 
   // チーム切替・画面離脱時に管理者ビュー状態をリセットする
   // （ストアはモジュール単位のシングルトンのため、画面スコープを明示的に区切る。
@@ -148,12 +157,13 @@ export const TeamDetailScreen: React.FC = () => {
     );
   }
 
-  // エラー状態
-  if (isError && error) {
+  // エラー状態 (前回取得したチーム情報が無いときだけ全画面エラーにする)
+  if (isError && error && !currentTeam) {
     return (
       <View style={styles.container}>
         <ErrorView
           message={error.message || t("teams.mobile.fetchTeamFailed")}
+          error={error}
           onRetry={() => refetch()}
           fullScreen
         />
@@ -182,6 +192,7 @@ export const TeamDetailScreen: React.FC = () => {
   }
 
   const handleAnnouncementDelete = (announcementId: string) => {
+    if (isAnnouncementDeleteBusy()) return;
     Alert.alert(
       t("teams.mobile.deleteConfirmTitle"),
       t("teams.mobile.deleteConfirmText"),
@@ -190,14 +201,18 @@ export const TeamDetailScreen: React.FC = () => {
         {
           text: t("common.delete"),
           style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteAnnouncementMutation.mutateAsync(announcementId);
-            } catch {
-              Alert.alert(t("common.error"), t("teams.mobile.announcementDeleteFailed"), [
-                { text: "OK" },
-              ]);
-            }
+          onPress: () => {
+            void runAnnouncementDelete(announcementId, async () => {
+              try {
+                await deleteAnnouncementMutation.mutateAsync(announcementId);
+              } catch (deleteError) {
+                Alert.alert(
+                  t("common.error"),
+                  toUserFacingMessage(deleteError, t("teams.mobile.announcementDeleteFailed")),
+                  [{ text: "OK" }],
+                );
+              }
+            });
           },
         },
       ],
@@ -278,6 +293,7 @@ export const TeamDetailScreen: React.FC = () => {
                 setAnnouncementFormVisible(true);
               }}
               onDelete={handleAnnouncementDelete}
+              deletingId={deletingAnnouncementId}
             />
             <TeamAnnouncementForm
               visible={announcementFormVisible}
@@ -324,6 +340,8 @@ export const TeamDetailScreen: React.FC = () => {
         isAdmin={effectiveIsAdminView}
         pendingCount={isCurrentUserAdmin ? pendingCount : 0}
       />
+      {/* 再取得に失敗しても、前回取得した内容をそのまま表示する */}
+      <StaleDataBanner visible={isError} onRetry={() => refetch()} />
 
       {/* タブコンテンツ（スクロール可能） */}
       <View style={styles.tabContent}>{renderTabContent()}</View>

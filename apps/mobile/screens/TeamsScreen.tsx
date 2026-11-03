@@ -10,6 +10,7 @@ import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { TeamItem, TeamCreateModal, TeamJoinModal } from "@/components/teams";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { TeamListSkeleton } from "@/components/ui/ScreenSkeletons";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
@@ -96,8 +97,11 @@ export const TeamsScreen: React.FC = () => {
     [navigation],
   );
 
-  // エラー状態
-  if (isError && error) {
+  // 再取得に失敗しても、前回取得したチーム一覧があれば全画面エラーにせず表示を続ける
+  const hasCachedTeams = teams.length > 0;
+
+  // エラー状態 (表示できるデータが無いときだけ全画面エラーにする)
+  if (isError && error && !hasCachedTeams) {
     const errorMessage = toUserFacingMessage(error, t("teams.mobile.fetchListFailed"));
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
@@ -139,6 +143,8 @@ export const TeamsScreen: React.FC = () => {
           </PressableScale>
         </View>
       )}
+
+      <StaleDataBanner visible={isError && hasCachedTeams} onRetry={() => refetch()} />
 
       {/* チーム一覧 */}
       {displayTeams.length > 0 ? (

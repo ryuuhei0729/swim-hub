@@ -12,6 +12,21 @@ export interface NetworkStatus {
 }
 
 /**
+ * NetInfo の状態から「通信できる」とみなすかを判定する。
+ *
+ * isConnected だけを見ると、施設 Wi-Fi のログイン画面 (キャプティブポータル) のように
+ * 「つながってはいるがインターネットに出られない」状態をオンラインと誤認する。
+ * isInternetReachable が明示的に false のときもオフラインとして扱う
+ * (null = まだ判定中のときは、誤ってオフライン表示しないようオンライン扱い)。
+ */
+export function isNetInfoOnline(state: {
+  isConnected: boolean | null;
+  isInternetReachable: boolean | null;
+}): boolean {
+  return state.isConnected !== false && state.isInternetReachable !== false;
+}
+
+/**
  * ネットワーク状態を監視するフック
  *
  * @returns {NetworkStatus} ネットワーク状態情報

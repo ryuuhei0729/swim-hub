@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { Alert, Linking } from "react-native";
 import { claimOAuthCode } from "@ryuuhei0729/swimhub-oauth/mobile";
 import { supabase, clearMmkvCaches } from "@/lib/supabase";
@@ -12,6 +12,12 @@ import type { Database } from "@swim-hub/shared/types";
 import type { AuthState, AuthContextType, SubscriptionInfo } from "@swim-hub/shared/types/auth";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getQueryClient } from "@/providers/QueryProvider";
+import { onlineManager } from "@tanstack/react-query";
+import { isNetworkError } from "@apps/shared/utils/networkError";
+import {
+  loadCachedOnboardingCompleted,
+  saveCachedOnboardingCompleted,
+} from "@/lib/onboardingCache";
 import i18n from "@/i18n";
 import {
   getRedirectUri,
@@ -130,20 +136,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // オンボーディング完了状態を users テーブルから取得
-  const fetchOnboardingCompleted = useCallback(async (userId: string): Promise<boolean | null> => {
-    if (!supabase) return null;
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("onboarding_completed")
-        .eq("id", userId)
-        .single();
-      if (error || !data) return null;
-      return (data as { onboarding_completed: boolean }).onboarding_completed;
-    } catch {
-      return null;
-    }
-  }, []);
+  // completed: 取得できた値 (取得失敗時は null)
+  // networkError: 失敗の原因が通信 (圏外・タイムアウト) かどうか
+  const fetchOnboardingCompleted = useCallback(
+    async (userId: string): Promise<{ completed: boolean | null; networkError: boolean }> => {
+      if (!supabase) return { completed: null, networkError: false };
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .select("onboarding_completed")
+          .eq("id", userId)
+          .single();
+        if (error || !data) {
+          return { completed: null, networkError: isNetworkError(error) };
+        }
+        return {
+          completed: (data as { onboarding_completed: boolean }).onboarding_completed,
+          networkError: false,
+        };
+      } catch (err) {
+        return { completed: null, networkError: isNetworkError(err) };
+      }
+    },
+    [],
+  );
 
   // オンボーディング完了状態を DB に保存し、ローカル state を更新
   const updateOnboardingCompleted = useCallback(
@@ -163,6 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { error: new Error(error.message) };
         }
         setAuthState((prev) => ({ ...prev, onboardingCompleted: value }));
+        void saveCachedOnboardingCompleted(authState.user.id, value);
         return { error: null };
       } catch (err) {
         console.error("updateOnboardingCompleted error:", err);
@@ -476,23 +493,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return removeListener;
   }, [authState.user, fetchSubscription]);
 
+  // 通信できずにオンボーディング状態を確定できなかったユーザー ID。
+  // 電波が戻ったら問い合わせ直す (下の onlineManager 購読)。
+  const onboardingRevalidateUserIdRef = useRef<string | null>(null);
+
+  /**
+   * オンボーディング状態を決める。
+   *
+   * 1. 端末に覚えている値があれば先に反映する (圏外・低速回線でも起動を待たせない)
+   * 2. サーバーに問い合わせ、取れたらその値で上書きして覚え直す
+   * 3. 通信で失敗したときは覚えている値を使う。覚えていない場合も、ログイン状態が
+   *    残っている利用者はほぼ確実にオンボーディング済みなので「完了」として扱い、
+   *    電波が戻ったら問い合わせ直す (未完了だった場合はそこでオンボーディングに切り替わる)
+   * 4. 通信以外の理由で失敗したとき (users 行が無い等) は従来どおり「未完了」
+   */
+  const resolveOnboardingCompleted = useCallback(
+    async (userId: string, isCurrent: () => boolean) => {
+      const cached = await loadCachedOnboardingCompleted(userId);
+      if (!isCurrent()) return;
+      if (cached !== null) {
+        setAuthState((prev) =>
+          prev.onboardingCompleted === null ? { ...prev, onboardingCompleted: cached } : prev,
+        );
+      }
+
+      const { completed, networkError } = await fetchOnboardingCompleted(userId);
+      if (!isCurrent()) return;
+
+      if (completed !== null) {
+        onboardingRevalidateUserIdRef.current = null;
+        setAuthState((prev) => ({ ...prev, onboardingCompleted: completed }));
+        void saveCachedOnboardingCompleted(userId, completed);
+        return;
+      }
+
+      if (networkError) {
+        onboardingRevalidateUserIdRef.current = userId;
+        setAuthState((prev) => ({ ...prev, onboardingCompleted: cached ?? true }));
+        return;
+      }
+
+      onboardingRevalidateUserIdRef.current = null;
+      setAuthState((prev) => ({ ...prev, onboardingCompleted: false }));
+    },
+    [fetchOnboardingCompleted],
+  );
+
   // user が変わったらサブスクリプション + オンボーディング状態を取得 & RevenueCat にログイン
   useEffect(() => {
     if (authState.user) {
-      loginRevenueCat(authState.user.id);
-      fetchSubscription(authState.user.id).then((sub) => {
+      const userId = authState.user.id;
+      let isCurrent = true;
+      loginRevenueCat(userId);
+      fetchSubscription(userId).then((sub) => {
         if (sub !== null) {
           setAuthState((prev) => ({ ...prev, subscription: sub }));
         }
       });
-      fetchOnboardingCompleted(authState.user.id).then((completed) => {
-        // null は取得失敗 — デフォルト false (未完了) として扱い、オンボーディングを再表示
-        setAuthState((prev) => ({ ...prev, onboardingCompleted: completed ?? false }));
-      });
-    } else {
-      setAuthState((prev) => ({ ...prev, subscription: null, onboardingCompleted: null }));
+      void resolveOnboardingCompleted(userId, () => isCurrent);
+      return () => {
+        isCurrent = false;
+      };
     }
-  }, [authState.user, fetchSubscription, fetchOnboardingCompleted]);
+    onboardingRevalidateUserIdRef.current = null;
+    setAuthState((prev) => ({ ...prev, subscription: null, onboardingCompleted: null }));
+    return undefined;
+  }, [authState.user, fetchSubscription, resolveOnboardingCompleted]);
+
+  // 圏外で確定できなかったオンボーディング状態を、電波が戻ったときに問い合わせ直す
+  const currentUserId = authState.user?.id ?? null;
+  useEffect(() => {
+    if (!currentUserId) return undefined;
+    let isCurrent = true;
+    const unsubscribe = onlineManager.subscribe((online) => {
+      if (!online || onboardingRevalidateUserIdRef.current !== currentUserId) return;
+      void resolveOnboardingCompleted(currentUserId, () => isCurrent);
+    });
+    return () => {
+      isCurrent = false;
+      unsubscribe();
+    };
+  }, [currentUserId, resolveOnboardingCompleted]);
 
   useEffect(() => {
     let isMounted = true;

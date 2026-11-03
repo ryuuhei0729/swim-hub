@@ -7,6 +7,7 @@ import { randomUUID } from "expo-crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import i18n from "@/i18n";
 import { env } from "@/lib/env";
+import { fetchWithTimeout, UPLOAD_TIMEOUT_MS } from "@/lib/fetchWithTimeout";
 
 export type ImageBucket = "profile-images" | "practice-images" | "competition-images";
 
@@ -123,7 +124,7 @@ export async function getSignedImageUrlWithExpiry(
 
   try {
     const params = new URLSearchParams({ bucket, path });
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${env.webApiUrl}/api/storage/images/presigned-url?${params.toString()}`,
       {
         headers: {
@@ -208,13 +209,18 @@ export async function uploadImageViaApi(
     formData.append("competitionId", id);
   }
 
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
+  // 画像本体の送信は数MBになるため、通常の書き込みより長い上限にする
+  const res = await fetchWithTimeout(
+    endpoint,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: formData,
     },
-    body: formData,
-  });
+    UPLOAD_TIMEOUT_MS,
+  );
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
@@ -238,7 +244,7 @@ export async function deleteImageViaApi(
       : `${env.webApiUrl}/api/storage/images/competition`;
 
   const deleteUrl = `${endpoint}?path=${encodeURIComponent(path)}`;
-  const res = await fetch(deleteUrl, {
+  const res = await fetchWithTimeout(deleteUrl, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -292,7 +298,7 @@ export async function uploadImagesViaApi(
     for (const result of results) {
       try {
         const deleteUrl = `${endpoint}?path=${encodeURIComponent(result.path)}`;
-        await fetch(deleteUrl, {
+        await fetchWithTimeout(deleteUrl, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -328,13 +334,18 @@ export async function uploadProfileImageViaApi(
     name: `image.${file.fileExtension}`,
   } as unknown as Blob);
 
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
+  // 画像本体の送信は数MBになるため、通常の書き込みより長い上限にする
+  const res = await fetchWithTimeout(
+    endpoint,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: formData,
     },
-    body: formData,
-  });
+    UPLOAD_TIMEOUT_MS,
+  );
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
@@ -353,7 +364,7 @@ export async function uploadProfileImageViaApi(
 export async function deleteProfileImageViaApi(accessToken: string): Promise<void> {
   const endpoint = `${env.webApiUrl}/api/storage/profile`;
 
-  const res = await fetch(endpoint, {
+  const res = await fetchWithTimeout(endpoint, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${accessToken}`,

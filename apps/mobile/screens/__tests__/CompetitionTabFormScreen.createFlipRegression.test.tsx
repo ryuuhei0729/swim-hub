@@ -285,13 +285,15 @@ beforeEach(() => {
   h.mockEntryApiGetEntriesByCompetition.mockResolvedValue([]);
   h.mockRecordApiGetRecords.mockResolvedValue([]);
   h.mockCreateMutateAsync.mockImplementation(async (formData: Record<string, unknown>) => {
+    // formData にはクライアントで決めた id (再保存での二重登録防止) が入るが、
+    // このテストは作成後の ID を NEW_COMPETITION_ID に固定して追跡するため後勝ちで上書きする
     createdRow = {
-      id: NEW_COMPETITION_ID,
       end_date: null,
       image_paths: [],
       ...formData,
+      id: NEW_COMPETITION_ID,
     };
-    return { id: NEW_COMPETITION_ID, ...formData };
+    return { ...formData, id: NEW_COMPETITION_ID };
   });
   h.mockUpdateMutateAsync.mockResolvedValue({ id: NEW_COMPETITION_ID });
   vi.mocked(Alert.alert).mockClear();

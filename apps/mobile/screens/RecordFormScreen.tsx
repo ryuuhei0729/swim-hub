@@ -35,6 +35,7 @@ import { useRecordStore } from "@/stores/recordStore";
 import { useShallow } from "zustand/react/shallow";
 import { StyleAPI } from "@apps/shared/api/styles";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { createOrUpdateById } from "@apps/shared/utils/idempotentWrite";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { ImageUploader, ImageFile, ExistingImage } from "@/components/shared/ImageUploader";
@@ -46,6 +47,7 @@ import {
   resolveGalleryImages,
   mergeImagePaths,
 } from "@/utils/imageUpload";
+import { randomUUID } from "expo-crypto";
 import { uploadVideo } from "@/utils/videoUpload";
 import { localizedStyleName } from "@/utils/styleName";
 import { canRelay, getStyleOption } from "@/components/besttime/styleOptions";
@@ -304,6 +306,14 @@ export const RecordFormScreen: React.FC = () => {
   // 二重送信防止用のref
   const isSubmittingRef = useRef(false);
 
+  // 新規作成する記録の ID。最初の保存で決めて、再保存でも同じ ID を使う。
+  // 低速回線で「保存できたが応答が戻らなかった」後に再保存しても、同じ ID の行が
+  // 既にあることで判別でき、記録が二重に登録されない (createOrUpdateById)。
+  const draftRecordIdRef = useRef<string | null>(null);
+  // この画面で作成済みの記録 ID。スプリットタイム等の後続の保存で失敗して再保存したときは、
+  // 作成ではなく更新として扱う。
+  const createdRecordIdRef = useRef<string | null>(null);
+
   // 編集モード切り替え・レコードID変更時に初期化フラグをリセット
   useEffect(() => {
     if (!isEditMode || !recordId) {
@@ -484,15 +494,24 @@ export const RecordFormScreen: React.FC = () => {
       };
 
       let savedRecord;
-      if (isEditMode && recordId) {
+      // 編集中の記録、または前回の保存で作成済みの記録 (後続の保存に失敗して再保存しているケース)
+      const existingRecordId = (isEditMode && recordId) || createdRecordIdRef.current;
+      if (existingRecordId) {
         // 更新
         savedRecord = await updateMutation.mutateAsync({
-          id: recordId,
+          id: existingRecordId,
           updates: recordData,
         });
       } else {
-        // 作成
-        savedRecord = await createMutation.mutateAsync(recordData);
+        // 作成 (ID をクライアントで決め、再保存でも二重登録しない)
+        if (!draftRecordIdRef.current) draftRecordIdRef.current = randomUUID();
+        const newRecordId = draftRecordIdRef.current;
+        savedRecord = await createOrUpdateById({
+          table: "records",
+          create: () => createMutation.mutateAsync({ ...recordData, id: newRecordId }),
+          update: () => updateMutation.mutateAsync({ id: newRecordId, updates: recordData }),
+        });
+        createdRecordIdRef.current = savedRecord.id;
 
         // 新規作成時：保留中の動画をアップロード
         if (pendingVideoAssetRef.current) {

@@ -61,6 +61,7 @@ export const TeamBulkRegisterScreen: React.FC = () => {
       <View style={styles.container}>
         <ErrorView
           message={error?.message || t("teams.mobile.fetchTeamFailed")}
+          error={error}
           onRetry={() => refetch()}
           fullScreen
         />

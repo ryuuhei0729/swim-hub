@@ -30,6 +30,7 @@ import {
 } from "@/utils/recordFilter";
 import { buildEntryOnlyItems, type EntryOnlyEntryRow, type EntryOnlyItem } from "@/utils/entryOnlyFilter";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { RecordListSkeleton } from "@/components/ui/ScreenSkeletons";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
@@ -675,12 +676,16 @@ export const RecordsScreen: React.FC<RecordsScreenProps> = ({ embedded }) => {
     [entryOnlyItems, isEntryOnlyLoading, isEntryOnlyError, refetchEntryOnly, handleEntryOnlyPress],
   );
 
-  // エラー状態
-  if (isError && error) {
+  // 再取得に失敗しても、前回取得した記録があれば全画面エラーにせず表示を続ける
+  const hasCachedRecords = records.length > 0;
+
+  // エラー状態 (表示できるデータが無いときだけ全画面エラーにする)
+  if (isError && error && !hasCachedRecords) {
     return (
       <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
         <ErrorView
           message={error.message || t("recordMobile.fetchFailed")}
+          error={error}
           onRetry={() => refetch()}
           fullScreen
         />
@@ -705,6 +710,7 @@ export const RecordsScreen: React.FC<RecordsScreenProps> = ({ embedded }) => {
         onFilterClick={handleOpenFilterSheet}
         activeFilterCount={activeFilterCount}
       />
+      <StaleDataBanner visible={isError && hasCachedRecords} onRetry={() => refetch()} />
 
       <FlashList
         data={displayRecords}

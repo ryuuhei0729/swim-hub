@@ -324,6 +324,16 @@ export class EntryAPI {
 
     if (error) throw error;
     if (!data || data.length === 0) {
+      // 0件削除は「RLS で拒否された」か「既に削除済み」のどちらか。低速回線では前回の削除が
+      // サーバーには届いていて応答だけ失われることがあり、再保存のたびにここで失敗すると
+      // 利用者は保存を完了できなくなる。対象が1件も残っていなければ削除済みとして成功扱いにする
+      const { data: remaining, error: remainingError } = await this.supabase
+        .from("entries")
+        .select("id")
+        .eq("team_id", teamId)
+        .in("id", entryIds);
+      if (remainingError) throw remainingError;
+      if ((remaining ?? []).length === 0) return;
       throw new Error("エントリーの一括削除に失敗しました");
     }
   }

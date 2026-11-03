@@ -12,6 +12,7 @@ import { useCalendarQuery } from "@/hooks/useCalendarQuery";
 import { CalendarView } from "@/components/calendar";
 import { DayDetailModal } from "@/components/calendar";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { CalendarSkeleton } from "@/components/ui/ScreenSkeletons";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calendarColors";
@@ -65,7 +66,7 @@ export const DashboardScreen: React.FC = () => {
 
   // カレンダーデータ取得
   const {
-    data: entries = [],
+    data: calendarData,
     isLoading,
     isError,
     error,
@@ -73,6 +74,9 @@ export const DashboardScreen: React.FC = () => {
   } = useCalendarQuery(supabase, {
     currentDate,
   });
+  const entries = useMemo(() => calendarData ?? [], [calendarData]);
+  // 再取得に失敗しても、前回取得したカレンダーがあれば全画面エラーにせず表示を続ける
+  const hasCachedEntries = calendarData !== undefined;
 
   // 記録色カスタマイズ設定 (未設定・取得前はデフォルト色を使うフォールバック値)
   const {
@@ -155,12 +159,13 @@ export const DashboardScreen: React.FC = () => {
     handleDeleteCompetition,
   } = useDayDetailHandlers(supabase, refetch);
 
-  // エラー状態
-  if (isError && error) {
+  // エラー状態 (表示できるデータが無いときだけ全画面エラーにする)
+  if (isError && error && !hasCachedEntries) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <ErrorView
           message={error.message || t("dashboard.mobile.calendarFetchFailed")}
+          error={error}
           onRetry={() => refetch()}
           fullScreen
         />
@@ -193,6 +198,7 @@ export const DashboardScreen: React.FC = () => {
           />
         }
       >
+        <StaleDataBanner visible={isError && hasCachedEntries} onRetry={() => refetch()} />
         <TeamAnnouncementsSection teams={teams} />
         <CalendarView
           currentDate={currentDate}

@@ -160,7 +160,12 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
   }
 
   if (goalsQuery.isError && !goals) {
-    return <ErrorView message={t("goals.list.loadError")} onRetry={handleRetry} fullScreen />;
+    return <ErrorView
+        message={t("goals.list.loadError")}
+        error={goalsQuery.error}
+        onRetry={handleRetry}
+        fullScreen
+      />;
   }
 
   if (!goals) {

@@ -63,6 +63,95 @@ describe("GoalAPI", () => {
   });
 
   describe("createGoal", () => {
+    describe("再保存で二重登録しない (クライアントで決めた ID)", () => {
+      function trackUpserts(options: { goalError?: unknown } = {}) {
+        const calls: Array<{ table: string; op: string; value?: unknown; options?: unknown }> = [];
+        const competition = createMockCompetition({ id: "client-comp" });
+        const goal = createMockGoal({ id: "client-goal" });
+        mockClient.from = vi.fn((table: string) => {
+          const single = async () =>
+            table === "goals"
+              ? { data: options.goalError ? null : goal, error: options.goalError ?? null }
+              : { data: competition, error: null };
+          return {
+            upsert: vi.fn((value: unknown, opts: unknown) => {
+              calls.push({ table, op: "upsert", value, options: opts });
+              return { select: () => ({ single }) };
+            }),
+            insert: vi.fn((value: unknown) => {
+              calls.push({ table, op: "insert", value });
+              return { select: () => ({ single }) };
+            }),
+            delete: vi.fn(() => {
+              calls.push({ table, op: "delete" });
+              return { eq: vi.fn(async () => ({ error: null })) };
+            }),
+          };
+        }) as unknown as typeof mockClient.from;
+        return calls;
+      }
+
+      it("goalId / newCompetitionId を渡すと、大会と目標を ID で upsert する", async () => {
+        const calls = trackUpserts();
+
+        await api.createGoal({
+          userId: "test-user-id",
+          competitionData: { title: "大会", date: "2026-11-01", place: null, poolType: 0 },
+          styleId: 1,
+          targetTime: 60,
+          goalId: "client-goal",
+          newCompetitionId: "client-comp",
+        });
+
+        expect(calls.map((c) => `${c.table}:${c.op}`)).toEqual([
+          "competitions:upsert",
+          "goals:upsert",
+        ]);
+        expect((calls[0]?.value as { id: string }).id).toBe("client-comp");
+        expect((calls[1]?.value as { id: string; competition_id: string }).id).toBe("client-goal");
+        expect(calls[1]?.options).toEqual({ onConflict: "id" });
+      });
+
+      it("目標の保存に失敗したら、この呼び出しで作った大会を消して孤児を残さない", async () => {
+        const goalError = { message: "TypeError: Network request failed", code: "" };
+        const calls = trackUpserts({ goalError });
+
+        await expect(
+          api.createGoal({
+            userId: "test-user-id",
+            competitionData: { title: "大会", date: "2026-11-01", place: null, poolType: 0 },
+            styleId: 1,
+            targetTime: 60,
+            goalId: "client-goal",
+            newCompetitionId: "client-comp",
+          }),
+        ).rejects.toBe(goalError);
+
+        expect(calls.map((c) => `${c.table}:${c.op}`)).toEqual([
+          "competitions:upsert",
+          "goals:upsert",
+          "competitions:delete",
+        ]);
+      });
+
+      it("既存の大会を選んだときは、目標の保存に失敗しても大会は消さない", async () => {
+        const goalError = { message: "boom", code: "XX000" };
+        const calls = trackUpserts({ goalError });
+
+        await expect(
+          api.createGoal({
+            userId: "test-user-id",
+            competitionId: "existing-comp",
+            styleId: 1,
+            targetTime: 60,
+            goalId: "client-goal",
+          }),
+        ).rejects.toBe(goalError);
+
+        expect(calls.map((c) => `${c.table}:${c.op}`)).toEqual(["goals:upsert"]);
+      });
+    });
+
     /**
      * goals への insert payload を捕まえる (引数を捨てない)。
      * records を引いたら記録する: 初期タイムの自動取得は撤去済みなので、createGoal は

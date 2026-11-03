@@ -39,6 +39,7 @@ import { GoalAPI } from "@apps/shared/api/goals";
 import { goalKeys } from "@apps/shared/hooks/queries/goals";
 import { runMilestoneJudgment } from "@apps/shared/utils/milestoneJudgment";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { createOrUpdateById } from "@apps/shared/utils/idempotentWrite";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import { useTagModalTransition } from "@/hooks/useTagModalTransition";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
@@ -60,6 +61,7 @@ import {
   resolveGalleryImages,
   mergeImagePaths,
 } from "@/utils/imageUpload";
+import { randomUUID } from "expo-crypto";
 import { uploadVideo } from "@/utils/videoUpload";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { formatTime, formatTimeAverage } from "@/utils/formatters";
@@ -238,6 +240,18 @@ export const PracticeTabFormScreen: React.FC = () => {
 
   // ---- 二重送信防止 ----
   const isSubmittingRef = useRef(false);
+
+  // ---- 再保存で二重登録しないための ID 管理 ----
+  // 低速回線では保存の途中 (練習の作成後、ログやタイムの保存中など) で失敗したり、
+  // サーバーでは保存済みなのに応答だけ戻らなかったりする。利用者が再保存したときに
+  // 練習やログがもう1件登録されないよう、新規作成する行の ID をクライアントで先に決め、
+  // この画面で作成済みの行は以降の保存で更新として扱う。
+  // 新規練習の ID (最初の保存で決め、再保存でも同じ ID を使う)
+  const draftPracticeIdRef = useRef<string | null>(null);
+  // メニュー (menu.id) ごとの新規ログの ID
+  const draftLogIdsRef = useRef<Map<string, string>>(new Map());
+  // この画面で作成済みのログ (menu.id → ログ ID)
+  const createdLogIdsRef = useRef<Map<string, string>>(new Map());
   const initializedRef = useRef(false);
 
   // ---- iOSカレンダー同期用の読み込み済み練習行 ----
@@ -829,7 +843,14 @@ export const PracticeTabFormScreen: React.FC = () => {
           note: practiceTab.note.trim() || null,
           ...(teamId ? { team_id: teamId } : {}),
         };
-        const createdPractice = await createPracticeMutation.mutateAsync(formData);
+        if (!draftPracticeIdRef.current) draftPracticeIdRef.current = randomUUID();
+        const newPracticeId = draftPracticeIdRef.current;
+        // 前回の保存がサーバーには届いていた (応答だけ失われた) 場合は更新に切り替わる
+        const createdPractice = await createOrUpdateById({
+          table: "practices",
+          create: () => createPracticeMutation.mutateAsync({ ...formData, id: newPracticeId }),
+          update: () => updatePracticeMutation.mutateAsync({ id: newPracticeId, updates: formData }),
+        });
         savedPracticeId = createdPractice.id;
         // 親INSERT成功 → 編集モードへ遷移（子INSERT失敗でもIDを保持）
         setResolvedPracticeId(createdPractice.id);
@@ -907,6 +928,15 @@ export const PracticeTabFormScreen: React.FC = () => {
         // DELETE: スナップショット後に除去されたログを削除
         for (const logId of diff.deletes) {
           await api.deletePracticeLog(logId);
+        }
+        // 前回の (途中で失敗した) 保存で作成済みだが、その後フォームから外されたログも削除する
+        // (スナップショットに無いので diff.deletes には含まれない)
+        const validMenuIds = new Set(validMenus.map((m) => m.id));
+        for (const [menuId, createdId] of Array.from(createdLogIdsRef.current.entries())) {
+          if (validMenuIds.has(menuId)) continue;
+          await api.deletePracticeLog(createdId);
+          createdLogIdsRef.current.delete(menuId);
+          draftLogIdsRef.current.delete(menuId);
         }
 
         // UPDATE: diff.updates に含まれる既存ログ ID を持つメニューを更新
@@ -986,10 +1016,31 @@ export const PracticeTabFormScreen: React.FC = () => {
             note: menu.note.trim() || null,
             user_id: practiceOwnerId ?? user?.id,
           };
-          const createdLog = await createLogMutation.mutateAsync({
-            ...logData,
-            skipMilestoneUpdate: true,
-          });
+          // 前回の保存で作成済みなら更新、未作成なら ID を決めて作成する。どちらでも
+          // このメニューに対応するログは1件だけになる (再保存での二重登録を防ぐ)
+          const alreadyCreatedLogId = createdLogIdsRef.current.get(menu.id);
+          let newLogId = alreadyCreatedLogId ?? draftLogIdsRef.current.get(menu.id);
+          if (!newLogId) {
+            newLogId = randomUUID();
+            draftLogIdsRef.current.set(menu.id, newLogId);
+          }
+          const logIdForSave = newLogId;
+          const { user_id: _logOwnerId, ...logUpdates } = logData;
+          const updateCreatedLog = (id: string) =>
+            updateLogMutation.mutateAsync({ id, updates: logUpdates, skipMilestoneUpdate: true });
+          const createdLog = alreadyCreatedLogId
+            ? await updateCreatedLog(alreadyCreatedLogId)
+            : await createOrUpdateById({
+                table: "practice_logs",
+                create: () =>
+                  createLogMutation.mutateAsync({
+                    ...logData,
+                    id: logIdForSave,
+                    skipMilestoneUpdate: true,
+                  }),
+                update: () => updateCreatedLog(logIdForSave),
+              });
+          createdLogIdsRef.current.set(menu.id, createdLog.id);
           hasLogChanges = true;
           await api.replacePracticeTimes(
             createdLog.id,
@@ -1000,7 +1051,8 @@ export const PracticeTabFormScreen: React.FC = () => {
             })),
             practiceOwnerId ?? user?.id,
           );
-          if (menu.tags.length > 0) {
+          // 作成済みのログを再保存するときは、タグを全部外した場合も空で置き換える
+          if (menu.tags.length > 0 || alreadyCreatedLogId) {
             const { error: tagError } = await supabase.rpc("replace_practice_log_tags", {
               p_practice_log_id: createdLog.id,
               p_tag_ids: menu.tags.map((tg) => tg.id),

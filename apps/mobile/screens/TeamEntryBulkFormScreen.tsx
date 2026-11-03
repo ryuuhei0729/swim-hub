@@ -648,6 +648,9 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
         await entryApi.updateEntry(id, patch);
       }
 
+      // 作成は自然キーでの upsert、更新は id 指定、削除は「既に消えている行は成功扱い」
+      // (deleteBulkEntries) なので、低速回線で途中まで書けた後に再保存しても二重登録や
+      // 「何度保存しても失敗する」状態にはならない
       await entryApi.deleteBulkEntries(teamId, diffResult.toDelete);
 
       queryClient.invalidateQueries({ queryKey: ["calendar"] });
