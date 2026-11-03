@@ -22,6 +22,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+// 読み込み中はスケルトン (components/ui/Skeleton.tsx) を出す。土台が progressbar として
+// 支援技術に「読み込み中...」を伝えるので、それを読み込み中表示の検証面にする
+const SKELETON = '[accessibilityrole="progressbar"]';
+
 const h = vi.hoisted(() => ({
   calls: [] as string[],
   judge: vi.fn(),
@@ -235,12 +239,12 @@ describe("フォーカス / pull-to-refresh / 並行防止 (inFlightRef)", () =>
 });
 
 describe("S9 状態表示 (一覧)", () => {
-  it("ローディング: 初回の判定中は一覧クエリを開始せず、Loading 表示 (画面タイトルは表示しない)", async () => {
+  it("ローディング: 初回の判定中は一覧クエリを開始せず、スケルトン表示 (画面タイトルは表示しない)", async () => {
     h.judge.mockImplementation(() => new Promise<void>(() => {}));
     renderScreen();
     await flush();
     expect(screen.queryByText("目標管理")).toBeNull();
-    expect(screen.getByText("Loading...")).toBeTruthy();
+    expect(document.querySelector(SKELETON)).not.toBeNull();
     expect(h.getGoals).not.toHaveBeenCalled();
   });
 
@@ -252,22 +256,23 @@ describe("S9 状態表示 (一覧)", () => {
     expect(screen.queryByText("目標管理")).toBeNull();
   });
 
-  it("[L3] ローディングは fullScreen の LoadingSpinner (ダッシュボードと同じ): 全面コンテナ (flex:1) + 読み込み中の文言。初回の判定中と一覧取得中の両方", async () => {
+  it("[L3] ローディングは全面のスケルトン (ダッシュボードと同じ): 全面コンテナ (flex:1) + 支援技術向けの読み込み中ラベル。初回の判定中と一覧取得中の両方", async () => {
     h.judge.mockImplementation(() => new Promise<void>(() => {}));
     renderScreen();
     await flush();
-    expect(screen.getByText("読み込み中...")).toBeTruthy();
-    const spinner = screen.getByText("Loading...");
-    let n: HTMLElement | null = spinner.parentElement;
+    const skeleton = document.querySelector<HTMLElement>(SKELETON);
+    expect(skeleton).not.toBeNull();
+    expect(skeleton?.getAttribute("accessibilitylabel")).toBe("読み込み中...");
+    let n: HTMLElement | null = skeleton?.parentElement ?? null;
     let flexFill = false;
     while (n) { if (n.style.flex === "1 1 0%" || n.style.flexGrow === "1") { flexFill = true; break; } n = n.parentElement; }
     expect(flexFill).toBe(true);
   });
 
-  it("[L3] GoalsScreen のローディング3箇所はすべて <LoadingSpinner fullScreen ...> (ソースの現在内容)", () => {
+  it("[L3] GoalsScreen のローディング3箇所はすべて <GoalListSkeleton /> (ソースの現在内容)", () => {
     const src = readFileSync(path.resolve(__dirname, "../GoalsScreen.tsx"), "utf8");
-    expect((src.match(/<LoadingSpinner fullScreen/g) ?? []).length).toBe(3);
-    expect(src).not.toMatch(/<LoadingSpinner\s*\/>/);
+    expect((src.match(/<GoalListSkeleton \/>/g) ?? []).length).toBe(3);
+    expect(src).not.toMatch(/LoadingSpinner/);
   });
 
   it("[タイトル削除] ローディング・エラー・空・一覧のすべてで『目標管理』の画面タイトルが描画されない", async () => {
@@ -318,7 +323,7 @@ describe("S9 状態表示 (一覧)", () => {
 });
 
 describe("v4 L6: エラー画面の再試行中はローディング表示 (修正前は赤でよい)", () => {
-  it("再試行を押して判定が走っている間は、エラー画面を出し続けず Loading を表示する", async () => {
+  it("再試行を押して判定が走っている間は、エラー画面を出し続けずスケルトンを表示する", async () => {
     h.getGoals.mockImplementation(async () => { h.calls.push("fetch"); throw new Error("x"); });
     renderScreen();
     await flush();
@@ -326,7 +331,7 @@ describe("v4 L6: エラー画面の再試行中はローディング表示 (修�
     let release!: () => void;
     h.judge.mockImplementation(() => new Promise<void>((r) => { release = r; }));
     await act(async () => { fireEvent.click(screen.getByText("再試行")); await new Promise((r) => setTimeout(r, 20)); });
-    expect(screen.getByText("Loading...")).toBeTruthy();
+    expect(document.querySelector(SKELETON)).not.toBeNull();
     expect(screen.queryByText("目標一覧の取得に失敗しました")).toBeNull();
     await act(async () => { release(); await new Promise((r) => setTimeout(r, 50)); });
   });

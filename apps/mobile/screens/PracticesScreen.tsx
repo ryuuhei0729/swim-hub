@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState } from "react";
-import { View, Text, StyleSheet, RefreshControl, Pressable } from "react-native";
+import { View, Text, StyleSheet, RefreshControl } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -20,8 +20,10 @@ import {
   type PracticeSortColumn,
 } from "@/utils/practiceLogFilter";
 import { buildPracticeLogRows, type PracticeLogRow } from "@apps/shared/utils/practiceLogRows";
-import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { PracticeListSkeleton } from "@/components/ui/ScreenSkeletons";
+import { PressableScale } from "@/components/ui/PressableScale";
+import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
 import { usePracticeFilterStore } from "@/stores/practiceFilterStore";
 import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "react-i18next";
@@ -363,16 +365,21 @@ export const PracticesScreen: React.FC = () => {
     setDisplayCount((count) => count + PAGE_INCREMENT);
   }, [displayCount, sortedRows.length]);
 
+  // 一覧が初めてデータ付きで出るときだけ、行を時間差でふわっと出す
+  const listEnterEnabled = useListEnterOnce(!isLoading && allPractices.length > 0);
+
   // 練習記録アイテムのレンダリング（メモ化）。1行 = 1練習ログ
   const renderItem = useCallback(
-    ({ item }: { item: PracticeLogRow }) => (
-      <PracticeItem
-        practice={item.practice}
-        log={item.log}
-        onPress={() => handlePracticePress(item)}
-      />
+    ({ item, index }: { item: PracticeLogRow; index: number }) => (
+      <ListItemEnter index={index} enabled={listEnterEnabled}>
+        <PracticeItem
+          practice={item.practice}
+          log={item.log}
+          onPress={() => handlePracticePress(item)}
+        />
+      </ListItemEnter>
     ),
-    [handlePracticePress],
+    [handlePracticePress, listEnterEnabled],
   );
 
   // エラー状態
@@ -392,7 +399,7 @@ export const PracticesScreen: React.FC = () => {
   if (isLoading && allPractices.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message={t("practice.mobile.loading")} />
+        <PracticeListSkeleton />
       </SafeAreaView>
     );
   }
@@ -438,13 +445,13 @@ export const PracticesScreen: React.FC = () => {
             {/* データ自体は存在するが絞り込み条件に一致が無い場合のみ、フィルタ全解除の導線を出す
                 (web PracticeClient と同様、「データが0件」とは区別する) */}
             {allPractices.length > 0 && activeFilterCount > 0 && (
-              <Pressable
+              <PressableScale
                 style={styles.resetFilterButton}
                 onPress={handleResetAllFilters}
                 accessibilityRole="button"
               >
                 <Text style={styles.resetFilterButtonText}>{t("competition.filter.resetButton")}</Text>
-              </Pressable>
+              </PressableScale>
             )}
           </View>
         }

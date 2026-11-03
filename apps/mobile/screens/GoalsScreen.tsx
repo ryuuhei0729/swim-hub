@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, ScrollView, Pressable, Alert, StyleSheet, RefreshControl } from "react-native";
+import { View, Text, ScrollView, Alert, StyleSheet, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -7,8 +7,10 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
-import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { GoalListSkeleton } from "@/components/ui/ScreenSkeletons";
+import { PressableScale } from "@/components/ui/PressableScale";
+import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
 import { GoalCard } from "@/components/goals/GoalCard";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { localizedStyleName } from "@/utils/styleName";
@@ -29,7 +31,6 @@ type NavProp = NativeStackNavigationProp<MainStackParamList>;
  * 判定前の一覧を見せないため、初回だけは1周が終わるまで一覧クエリを開始しない。
  */
 export const GoalsScreen: React.FC = () => {
-  const { t } = useTranslation();
   const { supabase, user } = useAuth();
   const queryClient = useQueryClient();
   const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
@@ -79,7 +80,7 @@ export const GoalsScreen: React.FC = () => {
   if (!firstRoundDone) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message={t("common.loading")} />
+        <GoalListSkeleton />
       </SafeAreaView>
     );
   }
@@ -138,6 +139,9 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
     [stylesQuery.data],
   );
 
+  // 一覧が初めてデータ付きで出るときだけ、カードを時間差でふわっと出す
+  const listEnterEnabled = useListEnterOnce(goals !== undefined && goals.length > 0);
+
   const handleDelete = useCallback(
     (goalId: string) => {
       Alert.alert(t("goals.list.delete"), t("goals.list.deleteConfirm"), [
@@ -183,7 +187,7 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
   };
 
   if (isRetrying) {
-    return <LoadingSpinner fullScreen message={t("common.loading")} />;
+    return <GoalListSkeleton />;
   }
 
   if (goalsQuery.isError && !goals) {
@@ -191,7 +195,7 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
   }
 
   if (!goals) {
-    return <LoadingSpinner fullScreen message={t("common.loading")} />;
+    return <GoalListSkeleton />;
   }
 
   return (
@@ -206,30 +210,31 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
           <Text style={styles.emptyText}>{t("goals.list.emptyDesc")}</Text>
         </View>
       ) : (
-        goals.map((goal) => {
+        goals.map((goal, index) => {
           const style = stylesById.get(goal.style_id);
           return (
-            <GoalCard
-              key={goal.id}
-              goalId={goal.id}
-              competitionTitle={goal.competition?.title}
-              competitionDate={goal.competition?.date}
-              competitionUnavailable={goal.competition === null}
-              styleName={style ? localizedStyleName(style, t) : t("goals.list.styleFallback")}
-              targetTime={goal.target_time}
-              achieved={goal.status === "achieved"}
-              onPress={() => navigation.navigate("GoalDetail", { goalId: goal.id })}
-              onEdit={
-                goal.competition === null
-                  ? undefined
-                  : () => navigation.navigate("GoalForm", { goalId: goal.id })
-              }
-              onDelete={() => handleDelete(goal.id)}
-            />
+            <ListItemEnter key={goal.id} index={index} enabled={listEnterEnabled}>
+              <GoalCard
+                goalId={goal.id}
+                competitionTitle={goal.competition?.title}
+                competitionDate={goal.competition?.date}
+                competitionUnavailable={goal.competition === null}
+                styleName={style ? localizedStyleName(style, t) : t("goals.list.styleFallback")}
+                targetTime={goal.target_time}
+                achieved={goal.status === "achieved"}
+                onPress={() => navigation.navigate("GoalDetail", { goalId: goal.id })}
+                onEdit={
+                  goal.competition === null
+                    ? undefined
+                    : () => navigation.navigate("GoalForm", { goalId: goal.id })
+                }
+                onDelete={() => handleDelete(goal.id)}
+              />
+            </ListItemEnter>
           );
         })
       )}
-      <Pressable
+      <PressableScale
         style={styles.createButton}
         onPress={() => navigation.navigate("GoalForm", {})}
         accessibilityRole="button"
@@ -237,7 +242,7 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
       >
         <Feather name="plus" size={18} color="#4B5563" />
         <Text style={styles.createButtonText}>{t("goals.page.createButton")}</Text>
-      </Pressable>
+      </PressableScale>
     </ScrollView>
   );
 };

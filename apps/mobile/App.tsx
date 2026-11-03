@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthProvider";
 import QueryProvider from "./providers/QueryProvider";
 import { NetworkProvider, useNetwork } from "./providers/NetworkProvider";
 import { I18nProvider } from "./providers/I18nProvider";
+import { ToastProvider } from "./providers/ToastProvider";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
 import { AuthStack } from "./navigation/AuthStack";
 import { MainStack } from "./navigation/MainStack";
@@ -112,7 +113,10 @@ export default function App() {
           <QueryProvider>
             <NetworkProvider>
               <AuthProvider>
-                <AppNavigator />
+                {/* トーストは画面全体の上に出すため、ナビゲーターの外側で 1 つだけ持つ */}
+                <ToastProvider>
+                  <AppNavigator />
+                </ToastProvider>
               </AuthProvider>
             </NetworkProvider>
           </QueryProvider>

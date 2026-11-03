@@ -330,6 +330,124 @@ vi.mock("react-native-safe-area-context", () => {
   };
 });
 
+// react-native-reanimated のモック
+// components/ui の共通部品 (PressableScale / Skeleton / ListItemEnter / Toast) が使うため、
+// ここで一括してスタブ化する。ネイティブ部分は jsdom では動かないので、アニメーションは
+// 「終端の値を即時に返す」形にし、構造 (子要素・props の素通し) だけを検証できるようにする。
+//   - useSharedValue はコンポーネントの生存期間で同一オブジェクトを返す (実物と同じ。
+//     毎回新しいオブジェクトを返すと、依存配列に入れた useMemo/useCallback が毎回作り直される)
+//   - Animated.View 等は entering/exiting/layout (レイアウトアニメーション指定) を DOM に
+//     流さない (オブジェクトを属性にすると React が警告を出す)
+//   - FadeIn 等のビルダーはメソッドチェーンがすべて自身を返す
+// 個別のテストで挙動を差し替えたい場合はファイル内の vi.mock で上書きできる
+// (BulkAssignModal.test.tsx が先例)。
+vi.mock("react-native-reanimated", async () => {
+  const React = await import("react");
+  const RN = await import("react-native");
+  type AnyProps = Record<string, unknown> & { children?: React.ReactNode };
+  const stripLayoutProps = ({
+    entering: _entering,
+    exiting: _exiting,
+    layout: _layout,
+    ...props
+  }: AnyProps) => props;
+  const createAnimatedComponent =
+    (Component: React.ComponentType<AnyProps>) => (props: AnyProps) =>
+      React.createElement(Component, stripLayoutProps(props));
+  const chainable = () => {
+    const builder: Record<string, unknown> = {};
+    for (const method of [
+      "delay",
+      "duration",
+      "springify",
+      "damping",
+      "stiffness",
+      "mass",
+      "easing",
+      "withInitialValues",
+      "withCallback",
+      "reduceMotion",
+      "randomDelay",
+      "build",
+    ]) {
+      builder[method] = () => builder;
+    }
+    return builder;
+  };
+  const identity = <T,>(value: T) => value;
+  const easing = (t: number) => t;
+  const easingFactory = () => easing;
+  return {
+    default: {
+      View: createAnimatedComponent(RN.View as React.ComponentType<AnyProps>),
+      Text: createAnimatedComponent(RN.Text as React.ComponentType<AnyProps>),
+      ScrollView: createAnimatedComponent(RN.ScrollView as React.ComponentType<AnyProps>),
+      createAnimatedComponent,
+    },
+    createAnimatedComponent,
+    // 実物と同じく `.value` と `.get()` / `.set()` の両方を持つ
+    // (本番コードは React Compiler の lint の都合で get/set を使う)
+    useSharedValue: (initial: unknown) => {
+      const ref = React.useRef<{
+        value: unknown;
+        get: () => unknown;
+        set: (next: unknown) => void;
+      } | null>(null);
+      if (ref.current === null) {
+        const shared = {
+          value: initial,
+          get: () => shared.value,
+          set: (next: unknown) => {
+            shared.value = typeof next === "function" ? next(shared.value) : next;
+          },
+        };
+        ref.current = shared;
+      }
+      return ref.current;
+    },
+    useAnimatedStyle: (fn: () => unknown) => fn(),
+    useDerivedValue: (fn: () => unknown) => ({ value: fn() }),
+    useAnimatedReaction: () => {},
+    useReducedMotion: () => false,
+    withTiming: identity,
+    withSpring: identity,
+    withRepeat: identity,
+    withDecay: identity,
+    withDelay: (_delayMs: number, value: unknown) => value,
+    withSequence: (...values: unknown[]) => values[values.length - 1],
+    cancelAnimation: () => {},
+    runOnJS:
+      (fn: (...args: unknown[]) => unknown) =>
+      (...args: unknown[]) =>
+        fn(...args),
+    runOnUI:
+      (fn: (...args: unknown[]) => unknown) =>
+      (...args: unknown[]) =>
+        fn(...args),
+    Easing: {
+      linear: easing,
+      ease: easing,
+      quad: easing,
+      cubic: easing,
+      sin: easing,
+      exp: easing,
+      in: easingFactory,
+      out: easingFactory,
+      inOut: easingFactory,
+      bezier: easingFactory,
+    },
+    ReduceMotion: { System: "system", Always: "always", Never: "never" },
+    FadeIn: chainable(),
+    FadeInDown: chainable(),
+    FadeInUp: chainable(),
+    FadeOut: chainable(),
+    FadeOutDown: chainable(),
+    FadeOutUp: chainable(),
+    LinearTransition: chainable(),
+    Layout: chainable(),
+  };
+});
+
 // グローバルなモック設定
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),

@@ -12,8 +12,8 @@ import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { resolveAgeCategory } from "@apps/shared/utils/domesticRecords";
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from "@/components/profile";
 import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
-import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { ProfileSkeleton } from "@/components/ui/ScreenSkeletons";
 import type { MainStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
@@ -143,7 +143,7 @@ export const MyPageScreen: React.FC = () => {
   if (isLoading && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message={t("mypage.mobile.loadingData")} />
+        <ProfileSkeleton />
       </SafeAreaView>
     );
   }

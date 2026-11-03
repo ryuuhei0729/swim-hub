@@ -22,6 +22,7 @@ import { IdentityLinkSettings } from "@/components/settings/IdentityLinkSettings
 import { AccountDeleteSettings } from "@/components/settings/AccountDeleteSettings";
 import { PasswordChangeModal } from "@/components/profile";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { useToast } from "@/providers/ToastProvider";
 import type { MainStackParamList } from "@/navigation/types";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
@@ -42,6 +43,7 @@ export const SettingsScreen: React.FC = () => {
   //  Home Indicator inset の大きい方が採用され、見た目はほぼ同値)。
   const insets = useSafeInsets();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -86,13 +88,13 @@ export const SettingsScreen: React.FC = () => {
     try {
       await restorePurchases();
       await refreshSubscription();
-      Alert.alert(t("settings.mobile.restoreSuccessTitle"), t("settings.mobile.restoreSuccessMessage"));
+      toast.success(t("settings.mobile.restoreSuccessMessage"));
     } catch {
       Alert.alert(t("common.error"), t("settings.mobile.restoreFailed"));
     } finally {
       setIsRestoring(false);
     }
-  }, [refreshSubscription, t]);
+  }, [refreshSubscription, t, toast]);
 
   // この画面と子孫(CalendarColorSettings が保持する useCalendarColorSettingsQuery /
   // useTeamsQuery)が依存する全クエリを尽くす。子孫が queryKey を握っているため

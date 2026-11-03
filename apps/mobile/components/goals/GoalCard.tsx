@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useDateLocale } from "@/hooks/useDateLocale";
+import { PressableScale } from "@/components/ui/PressableScale";
 import { useGoalCurrentBestTimeQuery } from "@apps/shared/hooks/queries/goals";
 import { formatDate } from "@apps/shared/utils/date";
 import { formatSignedSeconds, formatTimeBest } from "@apps/shared/utils/time";
@@ -51,7 +52,7 @@ export const GoalCard: React.FC<GoalCardProps> = ({
       : null;
 
   return (
-    <Pressable
+    <PressableScale
       style={[styles.card, achieved && styles.cardAchieved]}
       onPress={onPress}
       accessibilityRole="button"
@@ -112,7 +113,7 @@ export const GoalCard: React.FC<GoalCardProps> = ({
           {diffFromBest && <Text style={styles.diff}>{diffFromBest}</Text>}
         </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 };
 

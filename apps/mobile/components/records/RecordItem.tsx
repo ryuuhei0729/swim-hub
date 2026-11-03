@@ -1,9 +1,10 @@
 import React, { useMemo, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { parseISO } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { useTranslation } from "react-i18next";
+import { PressableScale } from "@/components/ui/PressableScale";
 import { formatDate } from "@apps/shared/utils/date";
 import { formatStyleAbbrev } from "@apps/shared/utils/swimStyles";
 import { formatTime } from "@/utils/formatters";
@@ -71,12 +72,8 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
   }, [onPress, record]);
 
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        isStandalone && styles.containerStandalone,
-        pressed && styles.pressed,
-      ]}
+    <PressableScale
+      style={[styles.container, isStandalone && styles.containerStandalone]}
       onPress={handlePress}
     >
       <View style={styles.content}>
@@ -123,7 +120,7 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
           </View>
         </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 };
 
@@ -142,9 +139,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
-  },
-  pressed: {
-    opacity: 0.7,
   },
   containerStandalone: {
     backgroundColor: "#F3F4F6",

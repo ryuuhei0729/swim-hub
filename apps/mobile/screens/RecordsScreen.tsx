@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { View, Text, StyleSheet, RefreshControl, Alert, Pressable } from "react-native";
+import { View, Text, StyleSheet, RefreshControl, Alert } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -29,8 +29,10 @@ import {
   type RecordSortBy,
 } from "@/utils/recordFilter";
 import { buildEntryOnlyItems, type EntryOnlyEntryRow, type EntryOnlyItem } from "@/utils/entryOnlyFilter";
-import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { RecordListSkeleton } from "@/components/ui/ScreenSkeletons";
+import { PressableScale } from "@/components/ui/PressableScale";
+import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
 import { DayDetailModal } from "@/components/calendar";
 import { useDayEntriesQuery } from "@/hooks/useDayEntriesQuery";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
@@ -634,11 +636,18 @@ export const RecordsScreen: React.FC = () => {
   // ベストバッジは RecordItem 内 BestTimeBadge が「記録日時点で自己ベストだったか」を
   // 判定する（判定完了まで非表示）。候補取得は種目グループ単位の共有キャッシュクエリ
   // (useListBestCandidatesQuery) に集約されるため、行ごとのクエリは発行されない
+  // 一覧が初めてデータ付きで出るときだけ、行を時間差でふわっと出す
+  const listEnterEnabled = useListEnterOnce(!isLoading && records.length > 0);
+
   const renderItem = useCallback(
-    ({ item }: { item: RecordWithDetails }) => {
-      return <RecordItem record={item} onPress={handleRecordPress} />;
+    ({ item, index }: { item: RecordWithDetails; index: number }) => {
+      return (
+        <ListItemEnter index={index} enabled={listEnterEnabled}>
+          <RecordItem record={item} onPress={handleRecordPress} />
+        </ListItemEnter>
+      );
     },
-    [handleRecordPress],
+    [handleRecordPress, listEnterEnabled],
   );
 
   // エントリー済み(記録未登録)セクション(FlashList ListHeaderComponent としてメモ化して渡す)
@@ -672,7 +681,7 @@ export const RecordsScreen: React.FC = () => {
   if (isLoading && records.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message={t("recordMobile.loading")} />
+        <RecordListSkeleton />
       </SafeAreaView>
     );
   }
@@ -708,13 +717,13 @@ export const RecordsScreen: React.FC = () => {
             {/* データ自体は存在するが絞り込み条件に一致が無い場合のみ、フィルタ全解除の導線を出す
                 (web PracticeClient/CompetitionClient と同様、「データが0件」とは区別する) */}
             {records.length > 0 && activeFilterCount > 0 && (
-              <Pressable
+              <PressableScale
                 style={styles.resetFilterButton}
                 onPress={handleResetAllFilters}
                 accessibilityRole="button"
               >
                 <Text style={styles.resetFilterButtonText}>{t("competition.filter.resetButton")}</Text>
-              </Pressable>
+              </PressableScale>
             )}
           </View>
         }

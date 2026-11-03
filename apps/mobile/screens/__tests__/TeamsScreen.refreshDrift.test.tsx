@@ -29,11 +29,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // externalize されるため)。
 // 解決方針: `components/teams/group-management/__tests__/BulkAssignModal.test.tsx`
 // が既に確立している「ネイティブ境界のみをファイルローカルでモックする」方式を踏襲し、
-// このテストファイル内限定で react-native-gesture-handler / react-native-reanimated を
-// 最小スタブに置き換える (グローバル設定は変更しない)。TeamsScreen 自身も
-// TeamGroupManagement もこのテストでは実際にレンダーされる UI として検証対象外
-// (関心事はクエリ網羅性のみ) のため、スタブは「import が例外を投げずに完了する」
-// 最低限の形で十分。
+// このテストファイル内限定で react-native-gesture-handler を最小スタブに置き換える。
+// react-native-reanimated は共通 UI 部品 (components/ui の PressableScale / Skeleton /
+// ListItemEnter) が使うようになったため vitest.setup.ts で一括してスタブ化しており、
+// ここでは上書きしない (上書きすると TeamItem 等が使う createAnimatedComponent /
+// FadeInDown が欠けて落ちる)。TeamsScreen 自身も TeamGroupManagement もこのテストでは
+// 実際にレンダーされる UI として検証対象外 (関心事はクエリ網羅性のみ) のため、
+// スタブは「import が例外を投げずに完了する」最低限の形で十分。
 vi.mock("react-native-gesture-handler", () => ({
   GestureHandlerRootView: ({ children }: { children?: React.ReactNode }) => children,
   GestureDetector: ({ children }: { children?: React.ReactNode }) => children,
@@ -57,15 +59,6 @@ vi.mock("react-native-gesture-handler", () => ({
     }),
   },
   ScrollView: ({ children }: { children?: React.ReactNode }) => children,
-}));
-vi.mock("react-native-reanimated", () => ({
-  default: { View: ({ children }: { children?: React.ReactNode }) => children },
-  useSharedValue: (initial: unknown) => ({ value: initial }),
-  useAnimatedStyle: (fn: () => unknown) => fn(),
-  runOnJS:
-    (fn: (...args: unknown[]) => void) =>
-    (...args: unknown[]) =>
-      fn(...args),
 }));
 
 vi.mock("@react-navigation/native", () => ({
