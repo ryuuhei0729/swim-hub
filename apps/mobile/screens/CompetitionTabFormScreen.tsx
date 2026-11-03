@@ -18,6 +18,7 @@ import { format, parseISO, isValid, isBefore } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import {
@@ -199,6 +200,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const toast = useToast();
 
   // ---- 大会ID (新規作成後に取得) ----
   const [resolvedCompetitionId, setResolvedCompetitionId] = useState<string | undefined>(
@@ -733,6 +735,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // teamId が空文字のときもこの fallback により goBack となる。
   useEffect(() => {
     if (!isSaved) return;
+    toast.success(t("common.savedToast"));
     const target = resolveSaveReturnTarget(teamId, { fallback: "goBack" });
     if (target.kind === "team") {
       navigation.popTo("TeamDetail", { teamId: target.teamId, initialTab: "competitions" });
@@ -741,7 +744,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     } else {
       navigation.popToTop();
     }
-  }, [isSaved, navigation, teamId]);
+  }, [isSaved, navigation, teamId, t, toast]);
 
   // ---- 破棄確認 ----
   // snapshotRef の更新は必ず対応する state 変更を伴わせること (伴わないと memo が再計算されず stale になる)

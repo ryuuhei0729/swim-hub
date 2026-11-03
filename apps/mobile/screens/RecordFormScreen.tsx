@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
@@ -70,6 +71,7 @@ export const RecordFormScreen: React.FC = () => {
   const { supabase, subscription, getAccessToken } = useAuth();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const toast = useToast();
   // Android の Edge-to-Edge 強制下ではシステムナビゲーションバー(3ボタン)の領域まで
   // 描画されるため、ScrollView 最下部の保存ボタンがナビゲーションバーの背後に隠れる。
   // contentContainerStyle に下部インセットを加算して回避する (パターンB:
@@ -630,6 +632,7 @@ export const RecordFormScreen: React.FC = () => {
 
       // 成功: 前の画面に戻る
       reset();
+      toast.success(t("common.savedToast"));
       navigation.goBack();
     } catch (error) {
       console.error("保存エラー:", error);

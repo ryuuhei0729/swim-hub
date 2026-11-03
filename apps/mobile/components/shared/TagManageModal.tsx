@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import type { PracticeTag } from "@apps/shared/types";
 import { PRESET_TAG_COLORS, getColorForName } from "@/constants/tagColors";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
@@ -46,6 +47,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
   onClosed,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [name, setName] = useState("");
   // PRESET_TAG_COLORS[0] は固定の定数配列の先頭要素で構造的に必ず存在するが、
   // 型上は string | undefined になるため、既存の「未選択時のデフォルト」と同じ
@@ -144,6 +146,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
     setIsSaving(true);
     try {
       await onSave(trimmedName, color);
+      toast.success(t("common.savedToast"));
       onClose();
     } catch (error) {
       console.error("タグ保存エラー:", error);

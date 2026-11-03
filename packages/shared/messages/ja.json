@@ -55,6 +55,7 @@
     "alertErrorTitle": "エラー",
     "notice": "お知らせ",
     "loading": "読み込み中...",
+    "savedToast": "保存しました",
     "error": "エラーが発生しました",
     "save": "保存",
     "cancel": "キャンセル",

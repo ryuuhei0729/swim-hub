@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { CenterModal } from "@/components/ui/CenterModal";
 import type { TeamGroupWithCount } from "./hooks";
 
@@ -44,6 +45,7 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
   loading,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
     new Set(),
   );
@@ -84,6 +86,7 @@ export const GroupMemberModal: React.FC<GroupMemberModalProps> = ({
     if (!group) return;
     const success = await onSave(group.id, [...selectedUserIds]);
     if (success) {
+      toast.success(t("common.savedToast"));
       onClose();
     }
   };

@@ -55,6 +55,7 @@
     "alertErrorTitle": "错误",
     "notice": "提示",
     "loading": "加载中...",
+    "savedToast": "已保存",
     "error": "发生错误",
     "save": "保存",
     "cancel": "取消",

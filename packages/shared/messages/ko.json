@@ -55,6 +55,7 @@
     "alertErrorTitle": "오류",
     "notice": "알림",
     "loading": "불러오는 중...",
+    "savedToast": "저장했습니다",
     "error": "오류가 발생했습니다",
     "save": "저장",
     "cancel": "취소",

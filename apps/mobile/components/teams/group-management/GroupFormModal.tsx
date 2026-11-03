@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { CenterModal } from "@/components/ui/CenterModal";
 import type { TeamGroupWithCount } from "./hooks";
 
@@ -31,6 +32,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
   error,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const [categoryMode, setCategoryMode] = useState<"existing" | "new">(
     "existing",
   );
@@ -74,6 +76,7 @@ export const GroupFormModal: React.FC<GroupFormModalProps> = ({
         : selectedCategory || null;
     const success = await onSubmit(category, name.trim());
     if (success) {
+      toast.success(t("common.savedToast"));
       onClose();
     }
   };

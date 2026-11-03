@@ -52,6 +52,7 @@
     "alertErrorTitle": "Error",
     "notice": "Notice",
     "loading": "Loading...",
+    "savedToast": "Saved",
     "error": "An error occurred",
     "save": "Save",
     "cancel": "Cancel",

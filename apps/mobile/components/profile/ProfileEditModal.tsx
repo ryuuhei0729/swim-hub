@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { AvatarUpload } from "./AvatarUpload";
 import { BirthdayInput } from "@/components/ui/BirthdayInput";
 import { GenderToggle } from "@/components/ui/GenderToggle";
@@ -36,6 +37,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
   onAvatarChange,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const { user, getAccessToken } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
@@ -120,8 +122,9 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         gender: formData.gender,
       });
 
-      // 成功時は即時にモーダルを閉じる
+      // 成功時は即時にモーダルを閉じる (トーストはモーダルの上には出ないので閉じてから見える)
       setSelectedImageData(null);
+      toast.success(t("common.savedToast"));
       handleClose();
     } catch (err) {
       console.error("プロフィール更新エラー:", err);

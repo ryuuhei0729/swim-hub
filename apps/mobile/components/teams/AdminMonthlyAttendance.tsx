@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import type { TFunction } from "i18next";
 import { format, isValid, parseISO } from "date-fns";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -556,6 +557,7 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({
 }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   const locale = useDateLocale();
 
   const [events, setEvents] = useState<TeamEvent[]>([]);
@@ -714,6 +716,7 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({
         }
         await loadFutureEvents();
         setBulkSheetVisible(false);
+        toast.success(t("common.savedToast"));
       } catch (err) {
         console.error(
           "AdminMonthlyAttendance: failed to bulk update status",
@@ -728,7 +731,7 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({
         setBulkSaving(false);
       }
     },
-    [events, updateStatusMutation, loadFutureEvents, t],
+    [events, updateStatusMutation, loadFutureEvents, t, toast],
   );
 
   if (loading) {

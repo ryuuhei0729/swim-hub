@@ -14,6 +14,7 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
@@ -201,6 +202,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
   onSaved,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const insets = useSafeInsets();
   const [assignments, setAssignments] = useState<Map<string, string | null>>(new Map());
   const [loading, setLoading] = useState(false);
@@ -335,6 +337,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
         const userIds = members.map((m) => m.user_id);
         await api.setGroupMembers(group.id, userIds);
       }
+      toast.success(t("common.savedToast"));
       onSaved();
       onClose();
     } catch (err) {
@@ -345,7 +348,7 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
     } finally {
       setSaving(false);
     }
-  }, [supabase, groups, membersByGroup, onSaved, onClose, t]);
+  }, [supabase, groups, membersByGroup, onSaved, onClose, t, toast]);
 
   const handleClose = () => {
     if (saving) return;
