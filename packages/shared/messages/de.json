@@ -2219,7 +2219,11 @@
       "edit": "Bearbeiten",
       "delete": "Löschen",
       "deleteConfirm": "Diesen Meilenstein löschen?",
-      "deleteFailed": "Meilenstein konnte nicht gelöscht werden"
+      "deleteFailed": "Meilenstein konnte nicht gelöscht werden",
+      "markComplete": "Als erledigt markieren",
+      "markIncomplete": "Als offen markieren",
+      "markIncompleteConfirm": "Diesen Meilenstein wieder als offen markieren?",
+      "completionFailed": "Meilenstein konnte nicht aktualisiert werden"
     },
     "milestoneCreate": {
       "title": "Neuer Meilenstein",
@@ -2329,10 +2333,21 @@
         "set": {
           "label": "Circle-in-Ziel",
           "description": "Legen Sie eine Zielanzahl von Wiederholungen und Sätzen innerhalb eines Intervalls fest. Empfohlen für Disziplinen ab 200m."
+        },
+        "practiceTime": {
+          "label": "Trainingszeit-Ziel",
+          "description": "Lege eine Zielzeit für Training oder Zeitprüfung fest. Bei mehreren Wiederholungen/Serien zählt die Durchschnittszeit."
+        },
+        "other": {
+          "label": "Sonstiges",
+          "description": "Freies Ziel außerhalb der Schwimmzeiten, z. B. Kraft- oder Landtraining. Nach Erreichen manuell abschließen."
         }
       },
       "templateAppliedNote": "Vorlage angewendet: Typ kann nicht geändert werden",
-      "titleLabel": "Titel (optional, wird automatisch generiert, wenn leer)"
+      "titleLabel": "Titel (optional, wird automatisch generiert, wenn leer)",
+      "otherContentLabel": "Ziel",
+      "otherContentPlaceholder": "z. B. Bankdrücken 100 kg ×2, Täglich laufen",
+      "otherContentRequired": "Bitte gib das Ziel ein"
     },
     "paramsForm": {
       "distanceLabel": "Distanz (m)",
@@ -2380,6 +2395,12 @@
       "notFound": "Ziel nicht gefunden",
       "milestoneNotFound": "Meilenstein nicht gefunden",
       "noSelectableCompetitions": "Keine Wettkämpfe verfügbar. Bitte legen Sie einen neuen an."
+    },
+    "achievementPrompt": {
+      "title": "Hast du diesen Meilenstein erreicht?",
+      "confirm": "Erreicht!",
+      "recordTime": "Zeit: {time}",
+      "averageTime": "Durchschnitt: {time}"
     }
   },
   "teamMemberGoals": {

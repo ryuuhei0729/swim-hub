@@ -12,7 +12,7 @@ import type { MilestoneParams } from "../../types";
 const time = { distance: 100, target_time: 60, style: "Fr", swim_category: "Swim" };
 const reps = { distance: 50, reps: 6, sets: 3, target_average_time: 35, style: "Fr", swim_category: "Swim", circle: 90 };
 const set = { distance: 200, reps: 4, sets: 3, circle: 140, style: "Fr", swim_category: "Swim" };
-const ok = (t: "time" | "reps_time" | "set", p: Record<string, unknown>) => isMilestoneParamsSavable(t, p as unknown as MilestoneParams);
+const ok = (t: "time" | "reps_time" | "set" | "other", p: Record<string, unknown>) => isMilestoneParamsSavable(t, p as unknown as MilestoneParams);
 
 describe("正常系", () => {
   it("3 type の有効 params は true", () => {
@@ -63,5 +63,17 @@ describe("type と params の形が食い違う -> false", () => {
     expect(ok("reps_time", time)).toBe(false);
     expect(ok("set", reps)).toBe(false);
     expect(ok("reps_time", set)).toBe(false);
+  });
+});
+
+describe("other (自由記述) タイプ", () => {
+  it("params {} は true (水泳の条件を持たない。内容 = title の検査は呼び出し側)", () => {
+    expect(ok("other", {})).toBe(true);
+  });
+  it("other に水泳の params / 水泳タイプに {} の食い違いは false", () => {
+    expect(ok("other", time)).toBe(false);
+    expect(ok("time", {})).toBe(false);
+    expect(ok("reps_time", {})).toBe(false);
+    expect(ok("set", {})).toBe(false);
   });
 });

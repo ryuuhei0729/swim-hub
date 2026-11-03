@@ -96,7 +96,9 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
         <Text style={styles.description}>{t("goals.reflection.expiredDesc")}</Text>
         <View style={styles.summary}>
           <Text style={styles.summaryTitle}>{milestone.title}</Text>
-          <Text style={styles.summaryText}>{summarize(milestone)}</Text>
+          {milestone.type !== "other" && (
+            <Text style={styles.summaryText}>{summarize(milestone)}</Text>
+          )}
           {milestone.deadline && (
             <Text style={styles.summaryMeta}>
               {t("goals.reflection.deadlineLabel")} {formatDate(milestone.deadline, "long", locale)}

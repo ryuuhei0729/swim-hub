@@ -702,6 +702,7 @@ describe("GoalAPI", () => {
         not: vi.fn().mockReturnThis(),
         lt: vi.fn().mockReturnThis(),
         neq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({
           data: mockMilestones,
           error: null,

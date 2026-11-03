@@ -105,9 +105,11 @@ export default function MilestoneList({
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-lg font-bold text-gray-900 tabular-nums">
-                  {formatMilestoneSummary(milestone, t)}
-                </p>
+                {milestone.type !== "other" && (
+                  <p className="mt-1 text-lg font-bold text-gray-900 tabular-nums">
+                    {formatMilestoneSummary(milestone, t)}
+                  </p>
+                )}
                 {(milestone.deadline || (isAchieved && milestone.achieved_at)) && (
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
                     {milestone.deadline && (
@@ -125,13 +127,16 @@ export default function MilestoneList({
                 )}
               </div>
               <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleEdit(milestone)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                  title={t("milestone.edit")}
-                >
-                  <PencilIcon className="w-4 h-4" />
-                </button>
+                {/* 「その他」タイプの編集は現状モバイルのみ対応 (Web のフォームは水泳の条件しか持たない) */}
+                {milestone.type !== "other" && (
+                  <button
+                    onClick={() => handleEdit(milestone)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                    title={t("milestone.edit")}
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   onClick={() => handleDelete(milestone.id)}
                   className="text-gray-400 hover:text-red-600 transition-colors p-1"

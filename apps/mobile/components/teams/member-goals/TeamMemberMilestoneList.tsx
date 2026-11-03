@@ -37,7 +37,9 @@ export const TeamMemberMilestoneList: React.FC<TeamMemberMilestoneListProps> = (
                 </Text>
               </View>
             </View>
-            <Text style={styles.summary}>{summarize(milestone)}</Text>
+            {milestone.type !== "other" && (
+              <Text style={styles.summary}>{summarize(milestone)}</Text>
+            )}
             {milestone.deadline && (
               <Text style={styles.meta}>
                 {t("goals.milestone.deadlineLabel")} {formatDate(milestone.deadline, "long", locale)}

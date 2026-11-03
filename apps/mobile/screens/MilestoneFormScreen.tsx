@@ -28,9 +28,8 @@ import { ErrorView } from "@/components/layout/ErrorView";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { GoalSetCalculatorModal } from "@/components/goals/GoalSetCalculatorModal";
 import {
-  RepsTimeParamsFields,
+  PracticeTimeParamsFields,
   SetParamsFields,
-  TimeParamsFields,
 } from "@/components/goals/MilestoneParamsFields";
 import { DatePickerField } from "@/components/ui/DatePickerField";
 import { useMilestoneSummary } from "@/hooks/useMilestoneSummary";
@@ -45,9 +44,14 @@ import {
 import { goalKeys, useGoalDetailQuery } from "@apps/shared/hooks/queries/goals";
 import { useCreatePracticeLogTemplateMutation } from "@apps/shared/hooks/queries/practiceLogTemplates";
 import type {
+  Milestone,
   MilestoneGoalSetParams,
+  MilestoneOtherParams,
   MilestoneParams,
+  MilestoneRepsTimeParams,
+  MilestoneSetParams,
   MilestoneTimeParams,
+  MilestoneType,
 } from "@apps/shared/types";
 import {
   isMilestoneRepsTimeParams,
@@ -56,12 +60,20 @@ import {
   isMilestoneGoalSetParams,
   isMilestoneParamsSavable,
   isMilestoneTimeValueValid,
+  timeParamsToRepsTime,
 } from "@apps/shared/types/goals";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
 
 type NavProp = NativeStackNavigationProp<MainStackParamList>;
 type RouteProps = RouteProp<MainStackParamList, "MilestoneForm">;
-type MilestoneType = "time" | "reps_time" | "set";
+/**
+ * フォームのタブと DB の type:
+ * - practice_time: reps_time 型 (1本×1セットは旧タイム目標と同じく大会記録でも判定される)
+ * - set: set 型
+ * - other: other 型 (自由記述。内容は title)
+ */
+type FormTab = "practice_time" | "set" | "other";
+type FormParams = MilestoneRepsTimeParams | MilestoneSetParams | MilestoneOtherParams;
 
 const GOAL_SET_TEMPLATE_ID = "goalset_50m_6x3";
 const TIME_TRIAL_TEMPLATE_ID = "time_trial";
@@ -69,28 +81,65 @@ const TIME_TRIAL_TEMPLATE_ID = "time_trial";
 const TIME_TRIAL_RATIO = 1.01;
 
 interface MilestoneFormState {
-  type: MilestoneType;
+  tab: FormTab;
   title: string;
   /** yyyy-MM-dd。未設定は空文字 */
   deadline: string;
   selectedTemplate: string;
-  params: MilestoneParams;
+  params: FormParams;
   addToTemplate: boolean;
 }
 
-function defaultParamsFor(type: MilestoneType): MilestoneParams {
+/** 旧 time 型の params を練習タイム目標タブ (1本×1セット) の入力値に変換する */
+const timeToPracticeParams = timeParamsToRepsTime;
+
+function defaultParamsFor(tab: FormTab): FormParams {
   // shared の定数は共有オブジェクトなので、state に入れる前に必ず複製する
-  if (type === "time") return { ...DEFAULT_TIME_PARAMS };
-  if (type === "reps_time") return { ...DEFAULT_REPS_TIME_PARAMS };
-  return { ...DEFAULT_SET_PARAMS };
+  if (tab === "practice_time") {
+    // 本数・セット数を増やしたときに出るサークルは平均タイム目標の既定値にしておく
+    return { ...timeToPracticeParams(DEFAULT_TIME_PARAMS), circle: DEFAULT_REPS_TIME_PARAMS.circle };
+  }
+  if (tab === "set") return { ...DEFAULT_SET_PARAMS };
+  return {};
+}
+
+function isSinglePracticeTime(params: MilestoneRepsTimeParams): boolean {
+  return params.reps === 1 && params.sets === 1;
+}
+
+/** 保存済みのマイルストーン (type + params) をフォームのタブと入力値に変換する */
+function milestoneToForm(
+  milestone: Pick<Milestone, "type" | "params">,
+): Pick<MilestoneFormState, "tab" | "params"> {
+  const p = milestone.params;
+  if (milestone.type === "time" && isMilestoneTimeParams(p)) {
+    return { tab: "practice_time", params: timeToPracticeParams(p) };
+  }
+  if (milestone.type === "reps_time" && isMilestoneRepsTimeParams(p)) {
+    return { tab: "practice_time", params: p };
+  }
+  if (milestone.type === "set" && isMilestoneSetParams(p)) {
+    return { tab: "set", params: p };
+  }
+  return { tab: "other", params: {} };
+}
+
+/** フォームのタブと入力値を、保存する type + params に変換する */
+function formToMilestone(
+  tab: FormTab,
+  params: FormParams,
+): { type: MilestoneType; params: MilestoneParams } | null {
+  if (tab === "other") return { type: "other", params: {} };
+  if (tab === "set") return isMilestoneSetParams(params) ? { type: "set", params } : null;
+  return isMilestoneRepsTimeParams(params) ? { type: "reps_time", params } : null;
 }
 
 const INITIAL_FORM: MilestoneFormState = {
-  type: "time",
+  tab: "practice_time",
   title: "",
   deadline: "",
   selectedTemplate: "",
-  params: defaultParamsFor("time"),
+  params: defaultParamsFor("practice_time"),
   addToTemplate: false,
 };
 
@@ -103,7 +152,7 @@ function toDateInputValue(value: string): string {
 
 /**
  * マイルストーンフォーム (作成・編集兼用)。milestoneId があれば編集。
- * タイプ (time / reps_time / set) ごとに入力欄が切り替わり、作成時はテンプレートも選べる。
+ * タブ (練習タイム目標 / サークルイン目標 / その他) ごとに入力欄が切り替わり、作成時はテンプレートも選べる。
  */
 export const MilestoneFormScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -138,7 +187,7 @@ export const MilestoneFormScreen: React.FC = () => {
     setForm((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const handleParamsChange = useCallback((params: MilestoneParams) => {
+  const handleParamsChange = useCallback((params: FormParams) => {
     setForm((prev) => ({ ...prev, params }));
     setTimeFieldInvalid(false);
   }, []);
@@ -151,11 +200,10 @@ export const MilestoneFormScreen: React.FC = () => {
     }
     if (!milestone) return;
     const next: MilestoneFormState = {
-      type: milestone.type,
+      ...milestoneToForm(milestone),
       title: milestone.title,
       deadline: milestone.deadline ? toDateInputValue(milestone.deadline) : "",
       selectedTemplate: "",
-      params: milestone.params,
       addToTemplate: false,
     };
     snapshotRef.current = JSON.stringify(next);
@@ -225,18 +273,19 @@ export const MilestoneFormScreen: React.FC = () => {
       };
       setForm((prev) => ({
         ...prev,
-        type: "time",
+        tab: "practice_time",
         selectedTemplate: templateId,
-        params: timeTrialParams,
+        params: timeToPracticeParams(timeTrialParams),
         title: t(`goals.template.${template.nameKey}`),
       }));
       return;
     }
+    const tpl = milestoneToForm({ type: template.type, params: template.defaultParams });
     setForm((prev) => ({
       ...prev,
-      type: template.type,
+      tab: tpl.tab,
       selectedTemplate: templateId,
-      params: { ...template.defaultParams },
+      params: { ...tpl.params },
       title: t(`goals.template.${template.nameKey}`),
     }));
   };
@@ -259,17 +308,18 @@ export const MilestoneFormScreen: React.FC = () => {
     setTimeFieldInvalid(false);
     setForm((prev) => ({
       ...prev,
-      type: "reps_time",
+      tab: "practice_time",
       selectedTemplate: GOAL_SET_TEMPLATE_ID,
       params: goalSetParams,
       title: t("goals.milestoneCreate.goalSetDefaultTitle"),
     }));
   };
 
-  const handleTypeChange = (type: MilestoneType) => {
-    if (form.selectedTemplate) return;
+  const handleTabChange = (tab: FormTab) => {
+    if (form.selectedTemplate || tab === form.tab) return;
     setTimeFieldInvalid(false);
-    setForm((prev) => ({ ...prev, type, params: defaultParamsFor(type) }));
+    setSaveError(null);
+    setForm((prev) => ({ ...prev, tab, params: defaultParamsFor(tab) }));
   };
 
   const handleAlignDeadline = () => {
@@ -278,8 +328,14 @@ export const MilestoneFormScreen: React.FC = () => {
 
   const handleSave = async () => {
     if (savingRef.current) return;
+    const resolved = formToMilestone(form.tab, form.params);
+    // その他は内容 (title) が必須。自動生成する要約文が無い
+    if (form.tab === "other" && form.title.trim() === "") {
+      setSaveError(t("goals.milestoneForm.otherContentRequired"));
+      return;
+    }
     // 0 や空欄 (距離・本数・セット数・サークル・タイム) のまま保存すると達成判定が成立しない
-    if (!isMilestoneParamsSavable(form.type, form.params)) {
+    if (!resolved || !isMilestoneParamsSavable(resolved.type, resolved.params)) {
       if (!isMilestoneTimeValueValid(form.params)) {
         setTimeFieldInvalid(true);
         setSaveError(t("goals.paramsForm.timeInvalid"));
@@ -293,19 +349,24 @@ export const MilestoneFormScreen: React.FC = () => {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const title = form.title.trim() === "" ? summarize({ params: form.params, title: "" }) : form.title;
+      const title =
+        form.tab === "other"
+          ? form.title.trim()
+          : form.title.trim() === ""
+            ? summarize({ params: resolved.params, title: "" })
+            : form.title;
       if (isEdit) {
         await goalAPI.updateMilestone(milestoneId, {
-          type: form.type,
+          type: resolved.type,
           title,
-          params: form.params,
+          params: resolved.params,
           deadline: form.deadline || null,
         });
       } else {
         const values = {
           title,
-          type: form.type,
-          params: form.params,
+          type: resolved.type,
+          params: resolved.params,
           deadline: form.deadline || null,
         };
         if (createdMilestoneIdRef.current === null) {
@@ -315,7 +376,7 @@ export const MilestoneFormScreen: React.FC = () => {
           await goalAPI.updateMilestone(createdMilestoneIdRef.current, values);
         }
         // テンプレートにも追加する場合 (reps_time / set のみ)
-        const p = form.params;
+        const p = resolved.params;
         if (form.addToTemplate && (isMilestoneRepsTimeParams(p) || isMilestoneSetParams(p))) {
           await createTemplateMutation.mutateAsync({
             name: title,
@@ -375,26 +436,33 @@ export const MilestoneFormScreen: React.FC = () => {
     );
   }
 
-  const typeOptions: Array<{ value: MilestoneType; label: string; description: string }> = [
+  const tabOptions: Array<{ value: FormTab; label: string; description: string }> = [
     {
-      value: "time",
-      label: t("goals.milestoneForm.type.time.label"),
-      description: t("goals.milestoneForm.type.time.description"),
-    },
-    {
-      value: "reps_time",
-      label: t("goals.milestoneForm.type.repsTime.label"),
-      description: t("goals.milestoneForm.type.repsTime.description"),
+      value: "practice_time",
+      label: t("goals.milestoneForm.type.practiceTime.label"),
+      description: t("goals.milestoneForm.type.practiceTime.description"),
     },
     {
       value: "set",
       label: t("goals.milestoneForm.type.set.label"),
       description: t("goals.milestoneForm.type.set.description"),
     },
+    {
+      value: "other",
+      label: t("goals.milestoneForm.type.other.label"),
+      description: t("goals.milestoneForm.type.other.description"),
+    },
   ];
-  const activeTypeDescription = typeOptions.find((o) => o.value === form.type)?.description;
+  const activeTabDescription = tabOptions.find((o) => o.value === form.tab)?.description;
   const params = form.params;
-  const paramsKey = `${form.type}-${form.selectedTemplate}`;
+  const paramsKey = `${form.tab}-${form.selectedTemplate}`;
+  const isOther = form.tab === "other";
+  // テンプレート追加は練習メニューになる (本数×セットを持つ) ものだけ
+  const canAddToTemplate =
+    form.tab === "set" ||
+    (form.tab === "practice_time" &&
+      isMilestoneRepsTimeParams(params) &&
+      !isSinglePracticeTime(params));
 
   return (
     <FormKeyboardAvoidingView style={styles.container}>
@@ -434,8 +502,8 @@ export const MilestoneFormScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.label}>{t("goals.milestoneForm.typeLabel")}</Text>
           <View style={styles.segment} accessibilityLabel={t("goals.milestoneForm.typeAriaLabel")}>
-            {typeOptions.map((option) => {
-              const active = form.type === option.value;
+            {tabOptions.map((option) => {
+              const active = form.tab === option.value;
               return (
                 <Pressable
                   key={option.value}
@@ -444,7 +512,7 @@ export const MilestoneFormScreen: React.FC = () => {
                     active && styles.segmentButtonActive,
                     !!form.selectedTemplate && styles.segmentButtonLocked,
                   ]}
-                  onPress={() => handleTypeChange(option.value)}
+                  onPress={() => handleTabChange(option.value)}
                   disabled={!!form.selectedTemplate}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active, disabled: !!form.selectedTemplate }}
@@ -456,41 +524,52 @@ export const MilestoneFormScreen: React.FC = () => {
               );
             })}
           </View>
-          {activeTypeDescription && <Text style={styles.hint}>{activeTypeDescription}</Text>}
+          {activeTabDescription && <Text style={styles.hint}>{activeTabDescription}</Text>}
           {form.selectedTemplate !== "" && (
             <Text style={styles.hint}>{t("goals.milestoneForm.templateAppliedNote")}</Text>
           )}
         </View>
 
-        {/* タイトル */}
-        <View style={styles.section}>
-          <Text style={styles.label}>{t("goals.milestoneForm.titleLabel")}</Text>
-          <TextInput
-            style={styles.input}
-            value={form.title}
-            onChangeText={(title) => patchForm({ title })}
-            accessibilityLabel={t("goals.milestoneForm.titleLabel")}
-          />
-        </View>
+        {/* タイトル (その他タブでは目標の内容そのもの。必須) */}
+        {isOther ? (
+          <View style={styles.section}>
+            <Text style={styles.label}>{t("goals.milestoneForm.otherContentLabel")}</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={form.title}
+              onChangeText={(title) => {
+                patchForm({ title });
+                setSaveError(null);
+              }}
+              placeholder={t("goals.milestoneForm.otherContentPlaceholder")}
+              placeholderTextColor="#9CA3AF"
+              multiline
+              textAlignVertical="top"
+              accessibilityLabel={t("goals.milestoneForm.otherContentLabel")}
+            />
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.label}>{t("goals.milestoneForm.titleLabel")}</Text>
+            <TextInput
+              style={styles.input}
+              value={form.title}
+              onChangeText={(title) => patchForm({ title })}
+              accessibilityLabel={t("goals.milestoneForm.titleLabel")}
+            />
+          </View>
+        )}
 
         {/* パラメータ */}
-        {form.type === "time" && isMilestoneTimeParams(params) && (
-          <TimeParamsFields
-            key={paramsKey}
-            params={params}
-            onChange={handleParamsChange}
-            targetTimeInvalid={timeFieldInvalid}
-          />
-        )}
-        {form.type === "reps_time" && isMilestoneRepsTimeParams(params) && (
-          <RepsTimeParamsFields
+        {form.tab === "practice_time" && isMilestoneRepsTimeParams(params) && (
+          <PracticeTimeParamsFields
             key={paramsKey}
             params={params}
             onChange={handleParamsChange}
             targetAverageTimeInvalid={timeFieldInvalid}
           />
         )}
-        {form.type === "set" && isMilestoneSetParams(params) && (
+        {form.tab === "set" && isMilestoneSetParams(params) && (
           <SetParamsFields key={paramsKey} params={params} onChange={handleParamsChange} />
         )}
 
@@ -513,8 +592,8 @@ export const MilestoneFormScreen: React.FC = () => {
           </Pressable>
         </View>
 
-        {/* テンプレートにも追加 (作成時の reps_time / set のみ) */}
-        {!isEdit && (form.type === "reps_time" || form.type === "set") && (
+        {/* テンプレートにも追加 (作成時の平均タイム目標 / サークルイン目標のみ) */}
+        {!isEdit && canAddToTemplate && (
           <View style={styles.switchRow}>
             <View style={styles.switchLabelBlock}>
               <Text style={styles.switchLabel}>{t("goals.milestoneCreate.addToTemplateLabel")}</Text>
@@ -648,6 +727,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     fontSize: 15,
     color: "#111827",
+  },
+  textArea: {
+    height: undefined,
+    minHeight: 88,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   outlineButton: {
     alignItems: "center",
