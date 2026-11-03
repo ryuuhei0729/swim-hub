@@ -249,7 +249,7 @@ describe("TeamPracticeList", () => {
     // getByRole の name には拾えない。TeamCompetitionList.test.tsx と同じ
     // icon-edit-2 の testID から button を辿る方式に揃える。
     const editIcon = screen.getAllByTestId("icon-edit-2")[0];
-    const editButton = editIcon.closest("button");
+    const editButton = editIcon?.closest("button") ?? null;
     expect(editButton, "編集アイコンの button が見つからない").not.toBeNull();
     fireEvent.click(editButton as HTMLButtonElement);
 
@@ -298,7 +298,7 @@ describe("TeamPracticeList", () => {
       render(<TeamPracticeList teamId="team-tpl1" isAdmin={true} />);
 
       const editIcon = screen.getAllByTestId("icon-edit-2")[0];
-      const editButton = editIcon.closest("button");
+      const editButton = editIcon?.closest("button") ?? null;
       expect(editButton, "編集アイコンの button が見つからない").not.toBeNull();
       fireEvent.click(editButton as HTMLButtonElement);
 
