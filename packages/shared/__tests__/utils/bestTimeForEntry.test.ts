@@ -27,40 +27,40 @@ describe("getBestTimeForEntry — 引き継ぎフラグによる優先順位の�
     const result = getBestTimeForEntry("50m自由形", 0, true, [
       cand({ time: 25.0, relayingTime: { time: 24.1 } }),
     ]);
-    expect(result).toEqual({ time: 24.1, labelKey: "bestTimeRelay" });
+    expect(result).toEqual({ time: 24.1, labelKey: "bestTimeRelay", isRelaying: true });
   });
 
   it("リレーOFFのとき、引き継ぎベストの方が速くても通常ベストを出す (別レースなので混ぜない)", () => {
     const result = getBestTimeForEntry("50m自由形", 0, false, [
       cand({ time: 25.0, relayingTime: { time: 24.1 } }),
     ]);
-    expect(result).toEqual({ time: 25.0, labelKey: "bestTimeLabel" });
+    expect(result).toEqual({ time: 25.0, labelKey: "bestTimeLabel", isRelaying: false });
   });
 
   it("リレーONで同一水路に引き継ぎが無ければ、同一水路の通常ベストへ落ちる", () => {
     const result = getBestTimeForEntry("50m自由形", 0, true, [cand({ time: 25.0 })]);
-    expect(result).toEqual({ time: 25.0, labelKey: "bestTimeLabel" });
+    expect(result).toEqual({ time: 25.0, labelKey: "bestTimeLabel", isRelaying: false });
   });
 
   it("同一水路に記録が1件も無ければ他水路へ落ち、ラベルで他水路だと分かる (短水路の大会 → 長水路ベスト)", () => {
     const result = getBestTimeForEntry("50m自由形", 0, false, [
       cand({ time: 26.5, pool_type: 1 }),
     ]);
-    expect(result).toEqual({ time: 26.5, labelKey: "bestTimeLong" });
+    expect(result).toEqual({ time: 26.5, labelKey: "bestTimeLong", isRelaying: false });
   });
 
   it("長水路の大会で短水路ベストへ落ちるときは bestTimeShort を返す (ラベルの向きが逆にならない)", () => {
     const result = getBestTimeForEntry("50m自由形", 1, false, [
       cand({ time: 24.0, pool_type: 0 }),
     ]);
-    expect(result).toEqual({ time: 24.0, labelKey: "bestTimeShort" });
+    expect(result).toEqual({ time: 24.0, labelKey: "bestTimeShort", isRelaying: false });
   });
 
   it("リレーONで他水路まで落ちる場合は他水路の引き継ぎベストを先に見る", () => {
     const result = getBestTimeForEntry("50m自由形", 0, true, [
       cand({ time: 26.5, pool_type: 1, relayingTime: { time: 25.9 } }),
     ]);
-    expect(result).toEqual({ time: 25.9, labelKey: "bestTimeLongRelay" });
+    expect(result).toEqual({ time: 25.9, labelKey: "bestTimeLongRelay", isRelaying: true });
   });
 
   it("引き継ぎ記録しか無い種目 (is_relaying=true) は、リレーOFFのとき通常ベストとして採用しない", () => {

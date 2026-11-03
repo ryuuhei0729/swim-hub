@@ -41,6 +41,12 @@ export const BEST_TIME_LABEL_NAMESPACE = "forms.recordLog" as const;
 export interface BestTimeResult {
   time: number;
   labelKey: BestTimeLabelKey;
+  /**
+   * 選ばれたベストが引き継ぎ (リレー第2泳者以降) のタイムかどうか。
+   * labelKey にも同じ情報が入っているが、mobile のように「引継はラベルではなく
+   * タイム末尾の R で表す」表示形式のために、ラベルとは独立したフラグとして返す。
+   */
+  isRelaying: boolean;
 }
 
 /**
@@ -76,36 +82,36 @@ export function getBestTimeForEntry(
   if (isRelaying) {
     // 1. 同じ水路・リレー
     if (samePool?.relayingTime) {
-      return { time: samePool.relayingTime.time, labelKey: "bestTimeRelay" };
+      return { time: samePool.relayingTime.time, labelKey: "bestTimeRelay", isRelaying: true };
     }
     // 2. 同じ水路・非リレー
     if (samePool && !samePool.is_relaying) {
-      return { time: samePool.time, labelKey: "bestTimeLabel" };
+      return { time: samePool.time, labelKey: "bestTimeLabel", isRelaying: false };
     }
     // 3. 異なる水路・リレー
     if (otherPool?.relayingTime) {
-      return { time: otherPool.relayingTime.time, labelKey: otherPoolRelayLabelKey };
+      return { time: otherPool.relayingTime.time, labelKey: otherPoolRelayLabelKey, isRelaying: true };
     }
     // 4. 異なる水路・非リレー
     if (otherPool && !otherPool.is_relaying) {
-      return { time: otherPool.time, labelKey: otherPoolLabelKey };
+      return { time: otherPool.time, labelKey: otherPoolLabelKey, isRelaying: false };
     }
   } else {
     // 1. 同じ水路・非リレー
     if (samePool && !samePool.is_relaying) {
-      return { time: samePool.time, labelKey: "bestTimeLabel" };
+      return { time: samePool.time, labelKey: "bestTimeLabel", isRelaying: false };
     }
     // 2. 同じ水路・リレー
     if (samePool?.relayingTime) {
-      return { time: samePool.relayingTime.time, labelKey: "bestTimeRelay" };
+      return { time: samePool.relayingTime.time, labelKey: "bestTimeRelay", isRelaying: true };
     }
     // 3. 異なる水路・非リレー
     if (otherPool && !otherPool.is_relaying) {
-      return { time: otherPool.time, labelKey: otherPoolLabelKey };
+      return { time: otherPool.time, labelKey: otherPoolLabelKey, isRelaying: false };
     }
     // 4. 異なる水路・リレー
     if (otherPool?.relayingTime) {
-      return { time: otherPool.relayingTime.time, labelKey: otherPoolRelayLabelKey };
+      return { time: otherPool.relayingTime.time, labelKey: otherPoolRelayLabelKey, isRelaying: true };
     }
   }
 

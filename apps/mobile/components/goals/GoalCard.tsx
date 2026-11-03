@@ -1,6 +1,5 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useDateLocale } from "@/hooks/useDateLocale";
@@ -19,9 +18,6 @@ interface GoalCardProps {
   targetTime: number;
   achieved: boolean;
   onPress: () => void;
-  /** 大会情報なしの目標では渡さない (編集導線を出さない) */
-  onEdit?: () => void;
-  onDelete: () => void;
 }
 
 export const GoalCard: React.FC<GoalCardProps> = ({
@@ -33,8 +29,6 @@ export const GoalCard: React.FC<GoalCardProps> = ({
   targetTime,
   achieved,
   onPress,
-  onEdit,
-  onDelete,
 }) => {
   const { t } = useTranslation();
   const { supabase } = useAuth();
@@ -57,6 +51,7 @@ export const GoalCard: React.FC<GoalCardProps> = ({
       accessibilityRole="button"
       accessibilityLabel={`${title} ${styleName}`}
     >
+      {/* 編集・削除はカードには置かず、詳細画面に任せる (ユーザー裁定 2026-11-03) */}
       <View style={styles.header}>
         <View style={styles.headerText}>
           {/* 1行に収める。大会名が長いときは … で省略する (日付は縮めない) */}
@@ -71,28 +66,6 @@ export const GoalCard: React.FC<GoalCardProps> = ({
           {competitionUnavailable && (
             <Text style={styles.unavailable}>{t("goals.list.editUnavailableReason")}</Text>
           )}
-        </View>
-        <View style={styles.actions}>
-          {onEdit && (
-            <Pressable
-              onPress={onEdit}
-              hitSlop={8}
-              style={styles.iconButton}
-              accessibilityRole="button"
-              accessibilityLabel={t("goals.list.edit")}
-            >
-              <Feather name="edit-2" size={16} color="#6B7280" />
-            </Pressable>
-          )}
-          <Pressable
-            onPress={onDelete}
-            hitSlop={8}
-            style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel={t("goals.list.delete")}
-          >
-            <Feather name="trash-2" size={16} color="#6B7280" />
-          </Pressable>
         </View>
       </View>
 
@@ -188,14 +161,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 11,
     color: "#D97706",
-  },
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  iconButton: {
-    padding: 6,
   },
   timeBlock: {
     marginLeft: "auto",

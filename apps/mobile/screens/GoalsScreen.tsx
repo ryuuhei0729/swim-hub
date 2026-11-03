@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, ScrollView, Pressable, Alert, StyleSheet, RefreshControl } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -88,7 +88,6 @@ export const GoalsScreen: React.FC = () => {
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <GoalsContent
         today={today}
-        goalAPI={goalAPI}
         refreshing={refreshing}
         onRefresh={handleRefresh}
         onRetry={runRound}
@@ -99,7 +98,6 @@ export const GoalsScreen: React.FC = () => {
 
 interface GoalsContentProps {
   today: string;
-  goalAPI: GoalAPI;
   refreshing: boolean;
   onRefresh: () => Promise<void>;
   onRetry: () => Promise<void>;
@@ -107,7 +105,6 @@ interface GoalsContentProps {
 
 const GoalsContent: React.FC<GoalsContentProps> = ({
   today,
-  goalAPI,
   refreshing,
   onRefresh,
   onRetry,
@@ -115,8 +112,6 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
   const { t } = useTranslation();
   const { supabase } = useAuth();
   const navigation = useNavigation<NavProp>();
-  const queryClient = useQueryClient();
-  const deletingRef = useRef(false);
   const [isRetrying, setIsRetrying] = useState(false);
 
   // styles は固定マスタなので長めにキャッシュする
@@ -136,32 +131,6 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
   const stylesById = useMemo(
     () => new Map((stylesQuery.data ?? []).map((s) => [s.id, s])),
     [stylesQuery.data],
-  );
-
-  const handleDelete = useCallback(
-    (goalId: string) => {
-      Alert.alert(t("goals.list.delete"), t("goals.list.deleteConfirm"), [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: async () => {
-            if (deletingRef.current) return;
-            deletingRef.current = true;
-            try {
-              await goalAPI.deleteGoal(goalId);
-              await queryClient.invalidateQueries({ queryKey: goalKeys.all });
-            } catch (error) {
-              console.error("Failed to delete goal:", error);
-              Alert.alert(t("common.alertErrorTitle"), t("goals.list.deleteFailed"));
-            } finally {
-              deletingRef.current = false;
-            }
-          },
-        },
-      ]);
-    },
-    [goalAPI, queryClient, t],
   );
 
   const refreshControl = (
@@ -219,12 +188,6 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
               targetTime={goal.target_time}
               achieved={goal.status === "achieved"}
               onPress={() => navigation.navigate("GoalDetail", { goalId: goal.id })}
-              onEdit={
-                goal.competition === null
-                  ? undefined
-                  : () => navigation.navigate("GoalForm", { goalId: goal.id })
-              }
-              onDelete={() => handleDelete(goal.id)}
             />
           );
         })
