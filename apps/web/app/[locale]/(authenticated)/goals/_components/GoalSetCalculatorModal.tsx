@@ -13,6 +13,7 @@ import {
 } from "@/utils/goalSetCalculator";
 import { formatTimeBest } from "@/utils/formatters";
 import { useTranslations } from "next-intl";
+import { useStyleLabel } from "@/hooks/useStyleLabel";
 
 interface GoalSetCalculatorModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export default function GoalSetCalculatorModal({
   style,
 }: GoalSetCalculatorModalProps) {
   const t = useTranslations("goals");
+  const styleLabel = useStyleLabel();
   const { supabase } = useAuth();
   const [practicePoolType, setPracticePoolType] = useState<number>(0); // デフォルト: 短水路
   const { data: profile, isLoading: isProfileLoading } = useUserProfileQuery(supabase);
@@ -133,7 +135,7 @@ export default function GoalSetCalculatorModal({
                   <div className="flex justify-between">
                     <span className="text-gray-600">{t("goalSetCalculator.targetLabel")}</span>
                     <span className="font-medium">
-                      {style.name_jp} {formatTimeBest(goal.target_time)}
+                      {styleLabel(style)} {formatTimeBest(goal.target_time)}
                     </span>
                   </div>
                   <div className="flex justify-between">

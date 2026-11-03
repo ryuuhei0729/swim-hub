@@ -386,8 +386,10 @@ describe("マイルストーン: 期限と達成日", () => {
     expect(achieved.textContent).toContain("2026年2月10日");
   });
 
-  // 2026-10-15 ユーザー指定: 左の状態アイコン (時計・チェック) を消し、概要と日付は編集・削除アイコンの下まで使う
-  it("左の状態アイコンを出さない (達成・進行中・期限切れ・未着手のどれでも)", () => {
+  // 2026-10-15 ユーザー指定: 左の状態アイコン列を消し、概要と日付は編集・削除アイコンの下まで使う。
+  // 2026-11-03: web に揃えて状態アイコンを復活させたが、左の専用列ではなくタイトル行の先頭に置き、
+  // 概要と日付がカードの全幅を使うレイアウトは維持する (アイコン種別は milestoneManualComplete.test.tsx)
+  it("状態アイコンはタイトル行の中にあり、左に専用の列を作らない (達成・進行中・期限切れ・未着手のどれでも)", () => {
     render(
       <MilestoneList
         milestones={[
@@ -401,8 +403,13 @@ describe("マイルストーン: 期限と達成日", () => {
         onToggleComplete={() => {}}
       />,
     );
-    for (const name of ["check-circle", "clock", "alert-triangle"]) {
-      expect(document.querySelector(`[data-testid="icon-${name}"]`), name).toBeNull();
+    for (const id of ["a", "b", "c", "d"]) {
+      const indicator = document.querySelector(`[testid="milestone-status-icon-${id}"]`) as HTMLElement;
+      expect(indicator, id).not.toBeNull();
+      // タイトル行 (タイトルと同じ親) の中にある = カードの左端に専用の列を作っていない
+      const titleRow = indicator.parentElement!;
+      expect(titleRow.textContent, id).toContain("練習タイム：25秒台");
+      expect(titleRow.style.flexDirection, id).toBe("row");
     }
     expect(document.querySelectorAll('[data-testid="icon-edit-2"]')).toHaveLength(4);
   });

@@ -62,6 +62,8 @@ vi.mock("@apps/shared/api", () => ({
 // usePracticeTabSave 内部で `new GoalAPI(supabase)` して直接呼ぶため、
 // react-query の mutation 経由ではなく API クラスそのものをモックする。
 vi.mock("@apps/shared/api/goals", () => ({
+  // utils/milestoneJudgment.ts が読み込み時に判定モード (確認モード) を設定する
+  configureMilestoneJudgment: vi.fn(),
   GoalAPI: class {
     updateAllMilestoneStatuses = (...args: unknown[]) => {
       mocks.callOrder.push("updateAllMilestoneStatuses");
@@ -550,8 +552,8 @@ describe("usePracticeTabSave", () => {
       // しかしマイルストーン判定は保存1回につき1回だけ (メニュー数に比例しない)
       expect(mocks.updateAllMilestoneStatuses).toHaveBeenCalledTimes(1);
       expect(mocks.updateAllMilestoneStatuses).toHaveBeenCalledWith("user-1");
-      // invalidate もタイム永続化1回の保存につき1回
-      expect(mocks.invalidateQueries).toHaveBeenCalledTimes(1);
+      // invalidate も保存1回につき 練習一覧 → (判定) → 目標 の1回ずつ
+      expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2);
     });
 
     it("呼び出し順序: 全メニューのタイム永続化 → invalidateQueries → updateAllMilestoneStatuses の順で1回ずつ実行される", async () => {
@@ -598,6 +600,8 @@ describe("usePracticeTabSave", () => {
         "createPracticeTimes",
         "invalidateQueries",
         "updateAllMilestoneStatuses",
+        // 判定後に目標キャッシュ (一覧・達成の確認ダイアログ) を取り直す
+        "invalidateQueries",
       ]);
     });
 
@@ -659,6 +663,8 @@ describe("usePracticeTabSave", () => {
         "replacePracticeTimes",
         "invalidateQueries",
         "updateAllMilestoneStatuses",
+        // 判定後に目標キャッシュ (一覧・達成の確認ダイアログ) を取り直す
+        "invalidateQueries",
       ]);
     });
   });

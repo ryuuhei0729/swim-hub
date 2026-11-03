@@ -2242,11 +2242,6 @@
       "closeAriaLabel": "閉じる",
       "updateFailed": "マイルストーンの更新に失敗しました"
     },
-    "milestoneSelector": {
-      "title": "マイルストーンから作成",
-      "loading": "読み込み中...",
-      "empty": "利用可能なマイルストーンがありません"
-    },
     "goalSetCalculator": {
       "closeAriaLabel": "閉じる",
       "title": "ゴールセット目標タイム計算",
@@ -2290,14 +2285,11 @@
       },
       "otherLabel": "その他（自由記述）",
       "otherPlaceholder": "詳細を入力してください",
-      "nextActionLabel": "次のアクション",
-      "createMilestoneButton": "新しいマイルストーンを作成",
       "skipButton": "スキップ",
       "saveButton": "保存",
       "deadlineLabel": "期限:",
       "otherPrefix": "その他: {note}",
       "saveFailed": "内省メモの保存に失敗しました",
-      "actionFailed": "処理に失敗しました",
       "goToGoalsLink": "目標管理を見る"
     },
     "form": {

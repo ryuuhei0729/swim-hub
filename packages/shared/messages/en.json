@@ -2239,11 +2239,6 @@
       "closeAriaLabel": "Close",
       "updateFailed": "Failed to update milestone"
     },
-    "milestoneSelector": {
-      "title": "Create from Milestone",
-      "loading": "Loading...",
-      "empty": "No milestones available"
-    },
     "goalSetCalculator": {
       "closeAriaLabel": "Close",
       "title": "Goal Set Target Time Calculator",
@@ -2287,14 +2282,11 @@
       },
       "otherLabel": "Other (free text)",
       "otherPlaceholder": "Enter details",
-      "nextActionLabel": "Next Action",
-      "createMilestoneButton": "Create new milestone",
       "skipButton": "Skip",
       "saveButton": "Save",
       "deadlineLabel": "Deadline:",
       "otherPrefix": "Other: {note}",
       "saveFailed": "Failed to save reflection note",
-      "actionFailed": "Action failed",
       "goToGoalsLink": "View goals"
     },
     "form": {

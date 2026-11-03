@@ -7,9 +7,8 @@ import Input from "@/components/ui/Input";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import type { Milestone, UpdateMilestoneInput } from "@apps/shared/types";
 import {
   REFLECTION_OPTIONS,
@@ -35,6 +34,7 @@ export default function ReflectionModal({
   onSave,
 }: ReflectionModalProps) {
   const t = useTranslations("goals");
+  const locale = useLocale() as SupportedLocale;
   const reflectionOptions = REFLECTION_OPTIONS.map(({ id, labelKey }) => ({
     id,
     label: t(`reflection.options.${labelKey}`),
@@ -83,25 +83,6 @@ export default function ReflectionModal({
     }
   };
 
-  const handleAction = async () => {
-    setIsLoading(true);
-
-    try {
-      await goalAPI.updateMilestone(milestone.id, {
-        reflectionNote: currentNote,
-      } as Omit<UpdateMilestoneInput, "id">);
-
-      // 新しいマイルストーンを作成 → 振り返りを保存してモーダルを閉じる
-      await onSave();
-      handleClose();
-    } catch (error) {
-      console.error("アクション実行エラー:", error);
-      alert(t("reflection.actionFailed"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleClose = () => {
     setSelectedOptions([]);
     setOtherNote("");
@@ -136,7 +117,7 @@ export default function ReflectionModal({
                 )}
                 {milestone.deadline && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {t("reflection.deadlineLabel")} {format(new Date(milestone.deadline), "yyyy年M月d日", { locale: ja })}
+                    {t("reflection.deadlineLabel")} {formatDate(milestone.deadline, "long", locale)}
                   </p>
                 )}
               </div>
@@ -184,22 +165,6 @@ export default function ReflectionModal({
                   />
                 </div>
               )}
-
-              {/* 次のアクション */}
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">{t("reflection.nextActionLabel")}</p>
-                <div className="space-y-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    disabled={isLoading || !canSave}
-                    onClick={handleAction}
-                  >
-                    {t("reflection.createMilestoneButton")}
-                  </Button>
-                </div>
-              </div>
 
               {/* ボタン */}
               <div className="flex justify-end gap-3 pt-4">

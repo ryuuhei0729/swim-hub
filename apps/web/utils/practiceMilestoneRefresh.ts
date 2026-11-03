@@ -8,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { practiceKeys } from "@apps/shared/hooks/queries/keys";
+import { goalKeys } from "@apps/shared/hooks/queries/goals";
 import { getQueryClient } from "@/providers/QueryProvider";
 import { runMilestoneJudgment } from "./milestoneJudgment";
 
@@ -15,7 +16,9 @@ import { runMilestoneJudgment } from "./milestoneJudgment";
  * 練習ログ・タイムの保存が終わった後に1回だけ呼ぶ。
  * - hasLogChanges が false (ログの追加/更新が無かった) なら何もしない (invalidate も判定も、
  *   ログに変更が無いのに走らせない)。
- * - 練習一覧・カレンダー等のキャッシュ無効化 → マイルストーン判定 の順に1回ずつ行う。
+ * - 練習一覧・カレンダー等のキャッシュ無効化 → マイルストーン判定 → 目標キャッシュの無効化
+ *   の順に1回ずつ行う。判定でマイルストーンの状態・達成候補が変わるので、目標一覧と
+ *   達成の確認ダイアログ (MilestoneAchievementPrompter) が取り直す。
  *   getQueryClient() は useQueryClient() (React Context 経由) と異なり、
  *   QueryClientProvider を挟まないテストハーネスや React コンポーネントツリー外からも
  *   安全に呼べる (QueryProvider が実際に使うのと同一のシングルトンを返す純粋関数)。
@@ -33,4 +36,6 @@ export async function refreshMilestonesAfterPracticeSave(
 
   const goalAPI = new GoalAPI(supabase);
   await runMilestoneJudgment(goalAPI, userId);
+
+  getQueryClient().invalidateQueries({ queryKey: goalKeys.all });
 }

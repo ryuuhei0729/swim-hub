@@ -44,6 +44,7 @@ vi.mock("next-intl", async (importOriginal) => {
       t.raw = (_key: string) => ["日", "月", "火", "水", "木", "金", "土"];
       return t as unknown as ReturnType<typeof original.useTranslations>;
     },
+    useLocale: () => "ja",
   };
 });
 
