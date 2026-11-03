@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calendarColors";
 import { TAG_COLORS, STORABLE_TAG_COLORS } from "@apps/shared/constants/tagColors";
 import { DEFAULT_PRACTICE_COLOR, DEFAULT_COMPETITION_COLOR } from "@apps/shared/utils/calendarColorResolver";
+import { cardSurface } from "@/constants/theme";
 
 type ColorField = "practice_color" | "competition_color";
 // mutate() の入力の検証対象は Zod の z.enum(STORABLE_TAG_COLORS) = 選択肢8色 + 旧色。
@@ -151,14 +152,8 @@ export const CalendarColorSettings: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   header: {
     marginBottom: 16,

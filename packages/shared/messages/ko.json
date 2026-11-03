@@ -5,6 +5,7 @@
         "home": "홈",
         "practices": "연습",
         "competitions": "대회",
+        "records": "기록",
         "teams": "팀",
         "myPage": "마이페이지",
         "goals": "목표"
@@ -55,6 +56,7 @@
     "alertErrorTitle": "오류",
     "notice": "알림",
     "loading": "불러오는 중...",
+    "savedToast": "저장했습니다",
     "error": "오류가 발생했습니다",
     "save": "저장",
     "cancel": "취소",

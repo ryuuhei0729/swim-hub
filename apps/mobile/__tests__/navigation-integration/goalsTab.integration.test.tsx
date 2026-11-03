@@ -5,13 +5,14 @@
  * 画面コンポーネントだけを識別可能なスタブに差し替える。
  *
  * 判定対象:
- *   [GT-01] タブ順が厳密に Dashboard / Practices / Competitions / Teams / Goals / MyPage
+ *   [GT-01] タブ順が厳密に Dashboard / Records / Teams / Goals / MyPage
+ *           (iOS 標準タブバーは 5 つまでのため、練習と大会は Records タブ内の切り替えに統合)
  *   [GT-02] Goals タブのルート画面が GoalsScreen (スタブの testid が描画される)
  *   [GT-03] tab-goals を押すと Goals にフォーカスし、他タブへ戻れる
  *   [GT-04] Dashboard の「目標管理を見る」と同じ navigate("MainTabs", {screen:"Goals"}) で Goals タブにフォーカス
- *   [GT-05] 6タブ化後も Teams タブ (所属1件) の tabPress 直行が壊れていない
- *   [GT-06] タブラベルが i18n キー経由 (react-i18next の t が返した値) で、全6タブ分が描画される
- *   [GT-07] 目標タブのアイコンは Feather "target" (他5タブも Feather)
+ *   [GT-05] タブ構成が変わっても Teams タブ (所属1件) の tabPress 直行が壊れていない
+ *   [GT-06] タブラベルが i18n キー経由 (react-i18next の t が返した値) で、全5タブ分が描画される
+ *   [GT-07] 目標タブのアイコンは Feather "target" (他4タブも Feather)
  * 「押した/呼ばれた」ではなく実ナビゲーション状態 (routeNames[index]) で見る。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -24,8 +25,7 @@ import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 const mocks = vi.hoisted(() => ({ teams: [] as unknown[] }));
 
 vi.mock("@/screens/DashboardScreen", () => ({ DashboardScreen: () => <span data-testid="screen-dashboard" /> }));
-vi.mock("@/screens/PracticesScreen", () => ({ PracticesScreen: () => <span data-testid="screen-practices" /> }));
-vi.mock("@/screens/CompetitionsScreen", () => ({ CompetitionsScreen: () => <span data-testid="screen-competitions" /> }));
+vi.mock("@/screens/RecordsHubScreen", () => ({ RecordsHubScreen: () => <span data-testid="screen-records" /> }));
 vi.mock("@/screens/TeamsScreen", () => ({ TeamsScreen: () => <span data-testid="screen-teams" /> }));
 vi.mock("@/screens/GoalsScreen", () => ({ GoalsScreen: () => <span data-testid="screen-goals" /> }));
 vi.mock("@/screens/MyPageScreen", () => ({ MyPageScreen: () => <span data-testid="screen-mypage" /> }));
@@ -90,12 +90,10 @@ describe("目標タブ (6つ目のタブ) — 実ナビゲーション", () => {
   });
   afterEach(() => cleanup());
 
-  it("[GT-01] タブ順が厳密に Dashboard / Practices / Competitions / Teams / Goals / MyPage", async () => {
+  it("[GT-01] タブ順が厳密に Dashboard / Records / Teams / Goals / MyPage", async () => {
     renderApp();
     await settle();
-    expect(tabState()?.routeNames).toEqual([
-      "Dashboard", "Practices", "Competitions", "Teams", "Goals", "MyPage",
-    ]);
+    expect(tabState()?.routeNames).toEqual(["Dashboard", "Records", "Teams", "Goals", "MyPage"]);
   });
 
   it("[GT-03][GT-02] tab-goals を押すと Goals にフォーカスし、GoalsScreen が描画され、他タブへ戻れる", async () => {
@@ -128,7 +126,7 @@ describe("目標タブ (6つ目のタブ) — 実ナビゲーション", () => {
     expect(currentTab()).toBe("Goals");
   });
 
-  it("[GT-05] 6タブ化後も Teams (所属1件) の tabPress で TeamDetail が stack に残り、タブは Teams", async () => {
+  it("[GT-05] タブ構成が変わっても Teams (所属1件) の tabPress で TeamDetail が stack に残り、タブは Teams", async () => {
     mocks.teams = [
       {
         id: "m1", team_id: "team-alpha", user_id: "u1", role: "admin", status: "approved", is_active: true,
@@ -145,19 +143,19 @@ describe("目標タブ (6つ目のタブ) — 実ナビゲーション", () => {
     expect(currentTab()).toBe("Teams");
   });
 
-  it("[GT-06] 6タブすべてのラベルが i18n キー (navigation.mobile.tabs.*) 経由で描画される", async () => {
+  it("[GT-06] 5タブすべてのラベルが i18n キー (navigation.mobile.tabs.*) 経由で描画される", async () => {
     renderApp();
     await settle();
     const text = document.body.textContent ?? "";
-    for (const k of ["home", "practices", "competitions", "teams", "goals", "myPage"]) {
+    for (const k of ["home", "records", "teams", "goals", "myPage"]) {
       expect(text, k).toContain(`T(navigation.mobile.tabs.${k})`);
     }
   });
 
-  it("[GT-07] 目標タブのアイコンは Feather 'target'。6タブ分のアイコンが全て描画される", async () => {
+  it("[GT-07] 目標タブのアイコンは Feather 'target'。5タブ分のアイコンが全て描画される", async () => {
     renderApp();
     await settle();
-    for (const icon of ["home", "bar-chart-2", "award", "users", "target", "user"]) {
+    for (const icon of ["home", "clipboard", "users", "target", "user"]) {
       expect(document.querySelector(`[data-testid="icon-${icon}"]`), icon).not.toBeNull();
     }
   });

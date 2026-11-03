@@ -5,6 +5,7 @@
         "home": "首页",
         "practices": "训练",
         "competitions": "比赛",
+        "records": "记录",
         "teams": "团队",
         "myPage": "我的",
         "goals": "目标"
@@ -55,6 +56,7 @@
     "alertErrorTitle": "错误",
     "notice": "提示",
     "loading": "加载中...",
+    "savedToast": "已保存",
     "error": "发生错误",
     "save": "保存",
     "cancel": "取消",

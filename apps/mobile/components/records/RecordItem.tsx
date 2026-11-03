@@ -1,9 +1,11 @@
 import React, { useMemo, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { parseISO } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { useTranslation } from "react-i18next";
+import { PressableScale } from "@/components/ui/PressableScale";
+import { cardSurface } from "@/constants/theme";
 import { formatDate } from "@apps/shared/utils/date";
 import { formatStyleAbbrev } from "@apps/shared/utils/swimStyles";
 import { formatTime } from "@/utils/formatters";
@@ -71,12 +73,8 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
   }, [onPress, record]);
 
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        isStandalone && styles.containerStandalone,
-        pressed && styles.pressed,
-      ]}
+    <PressableScale
+      style={[styles.container, isStandalone && styles.containerStandalone]}
       onPress={handlePress}
     >
       <View style={styles.content}>
@@ -123,31 +121,20 @@ const RecordItemComponent: React.FC<RecordItemProps> = ({ record, onPress }) => 
           </View>
         </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     marginHorizontal: 16,
     marginVertical: 3,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  pressed: {
-    opacity: 0.7,
-  },
+  // 画面の背景もグレーになったので、白より一段だけ沈めた色で「大会未紐付け」を区別する
   containerStandalone: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#F8FAFC",
   },
   competitionNameStandalone: {
     color: "#9CA3AF",

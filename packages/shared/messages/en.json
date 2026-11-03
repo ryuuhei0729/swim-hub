@@ -5,6 +5,7 @@
         "home": "Home",
         "practices": "Practices",
         "competitions": "Competitions",
+        "records": "Records",
         "teams": "Teams",
         "myPage": "My Page",
         "goals": "Goals"
@@ -52,6 +53,7 @@
     "alertErrorTitle": "Error",
     "notice": "Notice",
     "loading": "Loading...",
+    "savedToast": "Saved",
     "error": "An error occurred",
     "save": "Save",
     "cancel": "Cancel",

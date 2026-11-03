@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { env } from "@/lib/env";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { cardSurface } from "@/constants/theme";
 
 const WEB_API_URL = env.webApiUrl;
 
@@ -87,14 +88,8 @@ export const AccountDeleteSettings: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    ...cardSurface,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   title: {
     fontSize: 16,

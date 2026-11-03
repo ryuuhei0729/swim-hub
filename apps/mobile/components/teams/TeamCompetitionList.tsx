@@ -30,6 +30,7 @@ import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { isEntryTabVisible } from "@/utils/tabFormUtils";
 import { TeamCompetitionEntryModal } from "./TeamCompetitionEntryModal";
 import { TeamCompetitionRecordsModal } from "./TeamCompetitionRecordsModal";
+import { cardSurface, colors } from "@/constants/theme";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -740,7 +741,7 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
@@ -802,16 +803,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   item: {
+    ...cardSurface,
     position: "relative",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
     padding: 12,
     gap: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 1,
-    elevation: 1,
   },
   // D-3: ステータスプルダウンを開いている間だけカード全体に適用する。
   // shadowColor/shadowOffset/shadowOpacity/shadowRadius (iOS の影の見た目) はここでは

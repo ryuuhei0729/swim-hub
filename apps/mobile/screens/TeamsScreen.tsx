@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { View, Text, StyleSheet, Pressable, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, RefreshControl } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -9,8 +9,10 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { TeamItem, TeamCreateModal, TeamJoinModal } from "@/components/teams";
-import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { TeamListSkeleton } from "@/components/ui/ScreenSkeletons";
+import { PressableScale } from "@/components/ui/PressableScale";
+import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
 import type { MainStackParamList } from "@/navigation/types";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
@@ -59,12 +61,19 @@ export const TeamsScreen: React.FC = () => {
     [navigation],
   );
 
+  // 一覧が初めてデータ付きで出るときだけ、行を時間差でふわっと出す
+  const listEnterEnabled = useListEnterOnce(!isLoading && teams.length > 0);
+
   // アイテムをレンダリング（メモ化）
   const renderItem = useCallback(
-    ({ item }: { item: TeamMembershipWithUser }) => {
-      return <TeamItem membership={item} onPress={handleTeamPress} />;
+    ({ item, index }: { item: TeamMembershipWithUser; index: number }) => {
+      return (
+        <ListItemEnter index={index} enabled={listEnterEnabled}>
+          <TeamItem membership={item} onPress={handleTeamPress} />
+        </ListItemEnter>
+      );
     },
-    [handleTeamPress],
+    [handleTeamPress, listEnterEnabled],
   );
 
   // チーム作成成功時の処理
@@ -101,7 +110,7 @@ export const TeamsScreen: React.FC = () => {
   if (isLoading && teams.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message={t("teams.mobile.loadingList")} />
+        <TeamListSkeleton />
       </SafeAreaView>
     );
   }
@@ -114,20 +123,20 @@ export const TeamsScreen: React.FC = () => {
       {/* アクションボタン(所属チームがある場合のみ。0チーム時は中央CTAと重複するため非表示) */}
       {displayTeams.length > 0 && (
         <View style={styles.actionBar}>
-          <Pressable
+          <PressableScale
             style={[styles.actionButton, styles.createButton]}
             onPress={() => setIsCreateModalOpen(true)}
             testID="teams-action-create"
           >
             <Text style={styles.createButtonText}>{t("teams.mobile.createTeamAction")}</Text>
-          </Pressable>
-          <Pressable
+          </PressableScale>
+          <PressableScale
             style={[styles.actionButton, styles.joinButton]}
             onPress={() => setIsJoinModalOpen(true)}
             testID="teams-action-join"
           >
             <Text style={styles.joinButtonText}>{t("teams.mobile.joinByInviteCodeAction")}</Text>
-          </Pressable>
+          </PressableScale>
         </View>
       )}
 
@@ -135,6 +144,8 @@ export const TeamsScreen: React.FC = () => {
       {displayTeams.length > 0 ? (
         <FlashList
           data={displayTeams}
+          // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
+          contentInsetAdjustmentBehavior="automatic"
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
@@ -160,7 +171,7 @@ export const TeamsScreen: React.FC = () => {
           </Text>
           <Text style={styles.emptySubtext}>{t("teams.mobile.noTeamsSubtext")}</Text>
           <View style={styles.emptyActions}>
-            <Pressable
+            <PressableScale
               style={[styles.actionButton, styles.createButton, styles.emptyActionButton]}
               onPress={() => setIsCreateModalOpen(true)}
               testID="teams-empty-cta-create"
@@ -168,8 +179,8 @@ export const TeamsScreen: React.FC = () => {
               <Text style={[styles.createButtonText, styles.emptyActionButtonText]}>
                 {t("teams.mobile.createTeamAction")}
               </Text>
-            </Pressable>
-            <Pressable
+            </PressableScale>
+            <PressableScale
               style={[styles.actionButton, styles.joinButton, styles.emptyActionButton]}
               onPress={() => setIsJoinModalOpen(true)}
               testID="teams-empty-cta-join"
@@ -177,7 +188,7 @@ export const TeamsScreen: React.FC = () => {
               <Text style={[styles.joinButtonText, styles.emptyActionButtonText]}>
                 {t("teams.mobile.joinByInviteCodeAction")}
               </Text>
-            </Pressable>
+            </PressableScale>
           </View>
         </View>
       )}
@@ -202,7 +213,7 @@ export const TeamsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#F1F5F9",
   },
   actionBar: {
     flexDirection: "row",

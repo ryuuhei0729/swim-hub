@@ -54,18 +54,27 @@ export const Text = ({
 export const Pressable = ({
   children,
   onPress,
+  // RN 専用の押下開始/終了ハンドラ (PressableScale が縮小アニメーションに使う)。
+  // DOM の button には同名の属性が無く、素通しすると React が unknown prop 警告を出すので落とす
+  onPressIn: _onPressIn,
+  onPressOut: _onPressOut,
   style,
   ...props
-}: { children?: React.ReactNode; onPress?: (event?: unknown) => void; style?: unknown } & Record<
-  string,
-  unknown
->) => {
+}: {
+  children?: React.ReactNode;
+  onPress?: (event?: unknown) => void;
+  onPressIn?: unknown;
+  onPressOut?: unknown;
+  style?: unknown;
+} & Record<string, unknown>) => {
   // styleプロップを処理（関数の場合は実行結果を使用）
   let processedStyle = style;
   if (typeof style === "function") {
     processedStyle = style({ pressed: false });
   } else if (Array.isArray(style)) {
-    processedStyle = Object.assign({}, ...style.filter(Boolean));
+    // 実機 RN と同じく入れ子の配列も平坦化する
+    // (PressableScale は `[呼び出し側の style(配列のことがある), アニメーション style]` を渡す)
+    processedStyle = Object.assign({}, ...style.flat(Infinity).filter(Boolean));
   }
   return React.createElement(
     "button",

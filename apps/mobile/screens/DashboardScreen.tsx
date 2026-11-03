@@ -10,8 +10,8 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useCalendarQuery } from "@/hooks/useCalendarQuery";
 import { CalendarView } from "@/components/calendar";
 import { DayDetailModal } from "@/components/calendar";
-import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { CalendarSkeleton } from "@/components/ui/ScreenSkeletons";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calendarColors";
 import { announcementKeys, notificationKeys } from "@apps/shared/hooks/queries/keys";
@@ -168,7 +168,7 @@ export const DashboardScreen: React.FC = () => {
   if (isLoading && entries.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message={t("dashboard.mobile.calendarLoading")} />
+        <CalendarSkeleton />
       </SafeAreaView>
     );
   }
@@ -178,6 +178,8 @@ export const DashboardScreen: React.FC = () => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
+        contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -262,7 +264,7 @@ export const DashboardScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#F1F5F9",
   },
   scrollView: {
     flex: 1,

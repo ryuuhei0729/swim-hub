@@ -27,6 +27,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
@@ -179,6 +180,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
   const { competitionId, teamId, styleId, relayEventId } = route.params;
   const { supabase, subscription, user, getAccessToken } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const isPremium = checkIsPremium(subscription);
   const { parseInput } = useQuickTimeInput();
@@ -447,8 +449,11 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
   // 保存完了 → 前画面へ戻る（isSaved の再レンダー commit 後に goBack することで
   // usePreventRemove の preventRemove=false が確定した状態で REMOVE を発行する）
   useEffect(() => {
-    if (isSaved) navigation.goBack();
-  }, [isSaved, navigation]);
+    if (isSaved) {
+      toast.success(t("common.savedToast"));
+      navigation.goBack();
+    }
+  }, [isSaved, navigation, t, toast]);
 
   const bestTimeBadgeFor = (
     memberUserId: string,

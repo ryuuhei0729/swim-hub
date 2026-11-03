@@ -1,10 +1,12 @@
 import React, { useMemo, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { parseISO } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
+import { PressableScale } from "@/components/ui/PressableScale";
+import { cardSurface } from "@/constants/theme";
 import { formatDate } from "@apps/shared/utils/date";
 import type { PracticeWithLogs, PracticeLogWithTags } from "@swim-hub/shared/types";
 import { formatCircleTime } from "@/utils/formatters";
@@ -106,10 +108,7 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, log, onP
   }, [onPress, practice]);
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.container, pressed && styles.pressed]}
-      onPress={handlePress}
-    >
+    <PressableScale style={styles.container} onPress={handlePress}>
       <View style={styles.content}>
         {/* 1行目: 日付、練習タイトル、場所 */}
         <View style={styles.row}>
@@ -157,29 +156,17 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, log, onP
           </View>
         )}
       </View>
-    </Pressable>
+    </PressableScale>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     marginHorizontal: 16,
     marginVertical: 3,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  pressed: {
-    opacity: 0.7,
   },
   content: {
     gap: 5,

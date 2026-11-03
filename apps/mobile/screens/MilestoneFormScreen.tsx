@@ -21,6 +21,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { format, isValid, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { ErrorView } from "@/components/layout/ErrorView";
@@ -106,6 +107,7 @@ function toDateInputValue(value: string): string {
  */
 export const MilestoneFormScreen: React.FC = () => {
   const { t } = useTranslation();
+  const toast = useToast();
   const navigation = useNavigation<NavProp>();
   const { goalId, milestoneId } = useRoute<RouteProps>().params;
   const isEdit = milestoneId !== undefined;
@@ -178,8 +180,11 @@ export const MilestoneFormScreen: React.FC = () => {
   });
 
   useEffect(() => {
-    if (isSaved) navigation.goBack();
-  }, [isSaved, navigation]);
+    if (isSaved) {
+      toast.success(t("common.savedToast"));
+      navigation.goBack();
+    }
+  }, [isSaved, navigation, t, toast]);
 
   const goalCompetitionDate = goal?.competition?.date ?? "";
 

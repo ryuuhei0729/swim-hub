@@ -165,10 +165,13 @@ describe("S11 Edge-to-Edge", () => {
     expect(src).toMatch(/getSafeFooterPadding\([^)]*insets\.bottom\)/);
   });
 
-  it("GoalsScreen はタブのルート画面: 下端はタブバー (TabNavigator の SafeAreaView edges bottom) が保護する。上端のみ SafeAreaView", () => {
+  it("GoalsScreen はタブのルート画面: 下端はタブバーが保護する (JS 描画版は tabBar.tsx の SafeAreaView edges bottom、ネイティブ版は OS が扱う)。上端のみ SafeAreaView", () => {
     const src = read("screens/GoalsScreen.tsx");
     expect(src).toMatch(/edges=\{\["top", "left", "right"\]\}/);
-    expect(read("navigation/TabNavigator.tsx")).toMatch(/<SafeAreaView[^>]*edges=\{\["bottom"\]\}/);
+    expect(read("navigation/tabBar.tsx")).toMatch(/<SafeAreaView[^>]*edges=\{\["bottom"\]\}/);
+    // TabNavigator はプラットフォーム別の TabBarShell で包む (実機は tabBar.native.tsx が解決される)
+    expect(read("navigation/TabNavigator.tsx")).toMatch(/<TabBarShell>/);
+    expect(read("navigation/tabBar.native.tsx")).toMatch(/export const TabBarShell/);
   });
 });
 
@@ -180,10 +183,12 @@ describe("U1 タブラベル (L10 OS フォント拡大の尊重)", () => {
     expect(src).toMatch(/maxFontSizeMultiplier/);
     expect(src).toMatch(/numberOfLines=\{1\}/);
   });
-  it("TabNavigator: タブバー固定高さ 64・paddingHorizontal 0・全6タブが TabBarLabel 経由", () => {
-    const src = read("navigation/TabNavigator.tsx");
-    expect(src).toMatch(/height:\s*64/);
-    expect(src).toMatch(/paddingHorizontal:\s*0/);
-    expect((src.match(/tabLabelOptions\(/g) ?? []).length).toBeGreaterThanOrEqual(6);
+  it("JS 描画のタブバー (tabBar.tsx): 固定高さ 64・paddingHorizontal 0・ラベルは TabBarLabel 経由。全5タブが tabScreenOptions を通る", () => {
+    const tabBar = read("navigation/tabBar.tsx");
+    expect(tabBar).toMatch(/height:\s*64/);
+    expect(tabBar).toMatch(/paddingHorizontal:\s*0/);
+    expect(tabBar).toMatch(/<TabBarLabel color=\{color\}>/);
+    const navigator = read("navigation/TabNavigator.tsx");
+    expect((navigator.match(/tabScreenOptions\(\{/g) ?? []).length).toBe(5);
   });
 });

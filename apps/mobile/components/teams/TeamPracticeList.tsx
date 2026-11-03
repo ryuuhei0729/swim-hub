@@ -22,6 +22,7 @@ import type { Practice } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { formatDate } from "@apps/shared/utils/date";
+import { cardSurface, colors } from "@/constants/theme";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -286,7 +287,7 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
@@ -348,14 +349,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   item: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     padding: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 1,
-    elevation: 1,
   },
   itemHeader: {
     flexDirection: "row",

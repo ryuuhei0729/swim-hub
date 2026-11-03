@@ -20,6 +20,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
@@ -101,6 +102,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
   const { competitionId, teamId } = route.params;
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   const queryClient = useQueryClient();
   // 画面フッターと確認シートのフッターは SafeAreaView edges={["bottom"]} が
   // 消費するが、RN Modal は Android edge-to-edge 下でも自動回避しないため、
@@ -428,9 +430,10 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
   // usePreventRemove の preventRemove=false が確定した状態で REMOVE を発行する）
   useEffect(() => {
     if (isSaved) {
+      toast.success(t("common.savedToast"));
       navigation.goBack();
     }
-  }, [isSaved, navigation]);
+  }, [isSaved, navigation, t, toast]);
 
   const getBestTimeForRow = (
     targetUserId: string,

@@ -12,10 +12,11 @@ import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { resolveAgeCategory } from "@apps/shared/utils/domesticRecords";
 import { ProfileDisplay, ProfileEditModal, BestTimesTable } from "@/components/profile";
 import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
-import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { ProfileSkeleton } from "@/components/ui/ScreenSkeletons";
 import type { MainStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@swim-hub/shared/types";
+import { colors, sectionSurface } from "@/constants/theme";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
@@ -143,7 +144,7 @@ export const MyPageScreen: React.FC = () => {
   if (isLoading && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message={t("mypage.mobile.loadingData")} />
+        <ProfileSkeleton />
       </SafeAreaView>
     );
   }
@@ -179,6 +180,8 @@ export const MyPageScreen: React.FC = () => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
+        contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -265,7 +268,7 @@ export const MyPageScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -275,16 +278,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   section: {
-    backgroundColor: "#FFFFFF",
+    ...sectionSurface,
     paddingVertical: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   sectionHeader: {
     flexDirection: "row",

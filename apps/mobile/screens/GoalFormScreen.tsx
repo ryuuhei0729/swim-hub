@@ -20,6 +20,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { StyleChipSelector } from "@/components/forms/StyleChipSelector";
@@ -78,6 +79,7 @@ function createInitialForm(today: string): GoalFormState {
  */
 export const GoalFormScreen: React.FC = () => {
   const { t } = useTranslation();
+  const toast = useToast();
   const navigation = useNavigation<NavProp>();
   const goalId = useRoute<RouteProps>().params?.goalId;
   const isEdit = goalId !== undefined;
@@ -180,8 +182,11 @@ export const GoalFormScreen: React.FC = () => {
 
   // isSaved の再レンダー commit 後に goBack することで preventRemove=false が確定した状態で戻る
   useEffect(() => {
-    if (isSaved) navigation.goBack();
-  }, [isSaved, navigation]);
+    if (isSaved) {
+      toast.success(t("common.savedToast"));
+      navigation.goBack();
+    }
+  }, [isSaved, navigation, t, toast]);
 
   // 対象大会の水路 (0: 短水路, 1: 長水路)。大会が未選択なら undefined (短水路に倒さない)
   const selectedCompetition = competitions.find((c) => c.id === form.selectedCompetitionId);

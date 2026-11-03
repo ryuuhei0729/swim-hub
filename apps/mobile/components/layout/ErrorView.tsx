@@ -1,7 +1,9 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { PressableScale } from "@/components/ui/PressableScale";
+import { colors } from "@/constants/theme";
 
 interface ErrorViewProps {
   message: string;
@@ -28,9 +30,9 @@ export const ErrorView: React.FC<ErrorViewProps> = ({
       )}
       <Text style={styles.message}>{message}</Text>
       {onRetry && (
-        <Pressable style={styles.retryButton} onPress={onRetry}>
+        <PressableScale style={styles.retryButton} onPress={onRetry} accessibilityRole="button">
           <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
-        </Pressable>
+        </PressableScale>
       )}
     </View>
   );
@@ -45,7 +47,7 @@ const styles = StyleSheet.create({
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: colors.background,
   },
   icon: {
     marginBottom: 8,
