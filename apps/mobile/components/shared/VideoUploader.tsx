@@ -294,7 +294,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
             </Pressable>
             {!disabled && (
               <Pressable style={styles.deleteButton} onPress={handleDelete}>
-                <Feather name="trash-2" size={16} color="#DC2626" />
+                <Feather name="trash-2" size={16} color="#EF4444" />
                 <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
               </Pressable>
             )}
@@ -318,7 +318,7 @@ export const VideoUploader: React.FC<VideoUploaderProps> = ({
               <Text style={styles.replaceText}>{t("common.upload.videoReplace")}</Text>
             </Pressable>
             <Pressable style={styles.deleteButton} onPress={handleDelete}>
-              <Feather name="trash-2" size={14} color="#DC2626" />
+              <Feather name="trash-2" size={14} color="#EF4444" />
               <Text style={styles.deleteText}>{t("common.upload.videoDelete")}</Text>
             </Pressable>
           </View>

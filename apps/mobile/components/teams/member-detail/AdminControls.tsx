@@ -69,7 +69,7 @@ export const AdminControls: React.FC<AdminControlsProps> = ({
           {isRemoving ? (
             <ActivityIndicator size="small" color="#DC2626" />
           ) : (
-            <Feather name="trash-2" size={14} color="#DC2626" />
+            <Feather name="trash-2" size={14} color="#EF4444" />
           )}
           <Text style={styles.removeButtonText} numberOfLines={1}>
             {isRemoving

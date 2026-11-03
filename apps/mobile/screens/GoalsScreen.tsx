@@ -224,7 +224,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 24,
-    gap: 12,
+    // 大会カード (RecordItem の marginVertical: 3 ×2) と同じ間隔
+    gap: 6,
   },
   emptyCard: {
     backgroundColor: "#FFFFFF",

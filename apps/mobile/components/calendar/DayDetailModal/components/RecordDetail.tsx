@@ -292,7 +292,7 @@ export const RecordCard: React.FC<{
                   onClose?.();
                 }}
               >
-                <Feather name="edit" size={18} color="#2563EB" />
+                <Feather name="edit-2" size={18} color="#2563EB" />
               </Pressable>
             )}
             {onDeleteRecord && (
@@ -737,7 +737,7 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           <View style={styles.competitionHeaderActions}>
             {onEditCompetition && !isTeamCompetition && (
               <Pressable style={styles.competitionHeaderButton} onPress={onEditCompetition}>
-                <Feather name="edit" size={18} color="#2563EB" />
+                <Feather name="edit-2" size={18} color="#2563EB" />
               </Pressable>
             )}
             {onDeleteCompetition && !isTeamCompetition && (

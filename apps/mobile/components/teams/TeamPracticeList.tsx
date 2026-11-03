@@ -74,7 +74,7 @@ const PracticeItem = React.memo(function PracticeItem({
                 accessibilityRole="button"
                 accessibilityLabel={t("common.delete")}
               >
-                <Feather name="trash-2" size={14} color="#DC2626" />
+                <Feather name="trash-2" size={14} color="#EF4444" />
               </Pressable>
             </View>
           )}
@@ -102,9 +102,9 @@ const PracticeItem = React.memo(function PracticeItem({
             : t("teams.mobile.teamPracticeList.addLog")
         }
       >
-        {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-3 を維持する。
+        {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-2 を維持する。
             非admin は「記録追加」という追加操作に変わったため plus に切り替える。 */}
-        <Feather name={isAdmin ? "edit-3" : "plus"} size={13} color="#2563EB" />
+        <Feather name={isAdmin ? "edit-2" : "plus"} size={13} color="#2563EB" />
         <Text style={styles.logButtonText}>
           {isAdmin
             ? t("teams.mobile.teamPracticeList.recordBulkButton")

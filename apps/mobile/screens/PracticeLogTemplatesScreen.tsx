@@ -202,7 +202,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
             accessibilityRole="button"
             accessibilityLabel={t("practiceLogTemplates.card.menuEdit")}
           >
-            <Feather name="edit-2" size={17} color="#6B7280" />
+            <Feather name="edit-2" size={17} color="#2563EB" />
           </Pressable>
           <Pressable
             onPress={() => handleDelete(template)}
@@ -210,7 +210,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
             accessibilityRole="button"
             accessibilityLabel={t("practiceLogTemplates.card.menuDelete")}
           >
-            <Feather name="trash-2" size={17} color="#DC2626" />
+            <Feather name="trash-2" size={17} color="#EF4444" />
           </Pressable>
         </View>
       </View>

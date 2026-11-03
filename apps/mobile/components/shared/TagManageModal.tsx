@@ -274,7 +274,7 @@ export const TagManageModal: React.FC<TagManageModalProps> = ({
                 <ActivityIndicator size="small" color="#DC2626" />
               ) : (
                 <>
-                  <Feather name="trash-2" size={18} color="#DC2626" />
+                  <Feather name="trash-2" size={18} color="#EF4444" />
                   <Text style={styles.deleteButtonText}>{t("forms.tag.actionDelete")}</Text>
                 </>
               )}

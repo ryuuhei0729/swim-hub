@@ -58,7 +58,7 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({
                   accessibilityRole="button"
                   accessibilityLabel={t("goals.milestone.edit")}
                 >
-                  <Feather name="edit-2" size={16} color="#6B7280" />
+                  <Feather name="edit-2" size={16} color="#2563EB" />
                 </Pressable>
                 <Pressable
                   onPress={() => onDelete(milestone)}
@@ -67,7 +67,7 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({
                   accessibilityRole="button"
                   accessibilityLabel={t("goals.milestone.delete")}
                 >
-                  <Feather name="trash-2" size={16} color="#6B7280" />
+                  <Feather name="trash-2" size={16} color="#EF4444" />
                 </Pressable>
               </View>
             </View>
