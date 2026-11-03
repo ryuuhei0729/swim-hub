@@ -180,6 +180,8 @@ export const MyPageScreen: React.FC = () => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
+        contentInsetAdjustmentBehavior="automatic"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

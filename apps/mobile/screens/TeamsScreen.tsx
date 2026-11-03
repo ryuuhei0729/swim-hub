@@ -144,6 +144,8 @@ export const TeamsScreen: React.FC = () => {
       {displayTeams.length > 0 ? (
         <FlashList
           data={displayTeams}
+          // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
+          contentInsetAdjustmentBehavior="automatic"
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}

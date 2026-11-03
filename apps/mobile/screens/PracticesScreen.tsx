@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useState } from "react";
 import { View, Text, StyleSheet, RefreshControl } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { parseISO, isValid } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -43,7 +43,18 @@ const PAGE_INCREMENT = 20;
  * 絞り込み/並べ替え/表示件数はすべてクライアント側(useMemo)で処理し、
  * サーバーからは過去1年分を一括取得する(pageSize=1000 相当。日付範囲ロジックは既存を維持)。
  */
-export const PracticesScreen: React.FC = () => {
+interface PracticesScreenProps {
+  /**
+   * 記録タブ (RecordsHubScreen) の中に置かれるとき true。親が上端の安全領域を
+   * 取っているので、この画面では上端のインセットを付けない
+   */
+  embedded?: boolean;
+}
+
+const safeAreaEdges = (embedded?: boolean): Edge[] =>
+  embedded ? ["left", "right"] : ["top", "left", "right"];
+
+export const PracticesScreen: React.FC<PracticesScreenProps> = ({ embedded }) => {
   const { supabase } = useAuth();
   const { t, i18n } = useTranslation();
 
@@ -385,7 +396,7 @@ export const PracticesScreen: React.FC = () => {
   // エラー状態
   if (error) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
         <ErrorView
           message={error.message || t("practice.mobile.fetchFailed")}
           onRetry={() => refetch()}
@@ -398,7 +409,7 @@ export const PracticesScreen: React.FC = () => {
   // ローディング状態（初回読み込み時）
   if (isLoading && allPractices.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
         <PracticeListSkeleton />
       </SafeAreaView>
     );
@@ -407,7 +418,7 @@ export const PracticesScreen: React.FC = () => {
   // データが空の場合（絞り込み前の全件が0件）
   if (allPractices.length === 0 && !isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>{t("practice.page.emptyTitle")}</Text>
         </View>
@@ -416,7 +427,7 @@ export const PracticesScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
       <ListToolbar
         itemCount={sortedRows.length}
         onSortClick={openSortSheet}
@@ -426,6 +437,8 @@ export const PracticesScreen: React.FC = () => {
 
       <FlashList
         data={displayRows}
+        // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
+        contentInsetAdjustmentBehavior="automatic"
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}

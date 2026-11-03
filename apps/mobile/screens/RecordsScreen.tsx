@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { View, Text, StyleSheet, RefreshControl, Alert } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -52,7 +52,18 @@ const PAGE_INCREMENT = 20;
  * 絞り込み/並べ替え/表示件数はすべてクライアント側(useMemo)で処理し、
  * サーバーからは十分大きい件数(pageSize=1000)を一括取得する(web CompetitionClient と同型)。
  */
-export const RecordsScreen: React.FC = () => {
+export interface RecordsScreenProps {
+  /**
+   * 記録タブ (RecordsHubScreen) の中に置かれるとき true。親が上端の安全領域を
+   * 取っているので、この画面では上端のインセットを付けない
+   */
+  embedded?: boolean;
+}
+
+const safeAreaEdges = (embedded?: boolean): Edge[] =>
+  embedded ? ["left", "right"] : ["top", "left", "right"];
+
+export const RecordsScreen: React.FC<RecordsScreenProps> = ({ embedded }) => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
   const { supabase, user } = useAuth();
   const { t, i18n } = useTranslation();
@@ -667,7 +678,7 @@ export const RecordsScreen: React.FC = () => {
   // エラー状態
   if (isError && error) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
         <ErrorView
           message={error.message || t("recordMobile.fetchFailed")}
           onRetry={() => refetch()}
@@ -680,14 +691,14 @@ export const RecordsScreen: React.FC = () => {
   // ローディング状態（初回のみ）
   if (isLoading && records.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
         <RecordListSkeleton />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
       <ListToolbar
         itemCount={sortedRecords.length}
         onSortClick={openSortSheet}
@@ -697,6 +708,8 @@ export const RecordsScreen: React.FC = () => {
 
       <FlashList
         data={displayRecords}
+        // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
+        contentInsetAdjustmentBehavior="automatic"
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}

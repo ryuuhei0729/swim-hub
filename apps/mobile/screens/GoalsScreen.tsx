@@ -202,6 +202,8 @@ const GoalsContent: React.FC<GoalsContentProps> = ({
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.scrollContent}
+      // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
+      contentInsetAdjustmentBehavior="automatic"
       refreshControl={refreshControl}
     >
       {goals.length === 0 ? (
