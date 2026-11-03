@@ -7,6 +7,7 @@ import {
   isMilestoneRepsTimeParams,
   isMilestoneSetParams,
   isMilestoneTimeParams,
+  isSingleRepsTimeParams,
 } from "../types/goals";
 import { formatCircle, formatTimeBest } from "./time";
 
@@ -38,6 +39,13 @@ export function formatMilestoneSummary(
     return t("milestoneSummary.time", {
       distance: String(params.distance),
       time: formatTimeBest(params.target_time),
+    });
+  }
+  // 練習タイム目標の 1本×1セット (旧タイム目標) は本数を出さず「50m: 30.00」
+  if (isSingleRepsTimeParams(params)) {
+    return t("milestoneSummary.time", {
+      distance: String(params.distance),
+      time: formatTimeBest(params.target_average_time),
     });
   }
   if (isMilestoneRepsTimeParams(params)) {

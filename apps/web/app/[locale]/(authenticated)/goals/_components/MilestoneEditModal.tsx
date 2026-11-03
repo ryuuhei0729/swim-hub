@@ -60,7 +60,8 @@ export default function MilestoneEditModal({
 
   // 既存のマイルストーンデータでフォームを初期化
   useEffect(() => {
-    if (isOpen && milestone) {
+    // 「その他」タイプは Web では編集できない (一覧で編集ボタンを出さない)
+    if (isOpen && milestone && milestone.type !== "other") {
       setType(milestone.type);
       setTitle(milestone.title);
       // タイムゾーンシフトを避けるため、YYYY-MM-DD形式の文字列はそのまま使用

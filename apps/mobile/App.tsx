@@ -17,8 +17,10 @@ import { AuthStack } from "./navigation/AuthStack";
 import { MainStack } from "./navigation/MainStack";
 import { OnboardingStack } from "./navigation/OnboardingStack";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { MilestoneAchievementPrompter } from "./components/goals/MilestoneAchievementPrompter";
 import { supabase } from "./lib/supabase";
 import { env } from "./lib/env";
+import { configureMilestoneJudgment } from "@apps/shared/api/goals";
 
 // ChakraPetch_700Bold is used for the brand wordmark on the welcome/onboarding screens.
 // Best-effort: failures fall back to the system font.
@@ -31,6 +33,10 @@ declare global {
   var __SWIM_HUB_WEB_API_URL__: string | undefined;
 }
 globalThis.__SWIM_HUB_WEB_API_URL__ = env.webApiUrl;
+
+// マイルストーンは記録から自動で達成にせず、達成候補として「もしかしてマイルストーンを
+// 達成しましたか？」と確認する (MilestoneAchievementPrompter)。web は従来どおり自動達成
+configureMilestoneJudgment({ autoAchieve: false });
 
 /**
  * Supabase未初期化時のエラー画面
@@ -96,6 +102,7 @@ const AppNavigator: React.FC = () => {
       <OfflineBanner visible={isOffline} />
       <NavigationContainer>
         {renderStack()}
+        {isAuthenticated && onboardingCompleted && <MilestoneAchievementPrompter />}
         <StatusBar style={isAuthenticated && !onboardingCompleted ? "light" : "auto"} />
       </NavigationContainer>
     </View>

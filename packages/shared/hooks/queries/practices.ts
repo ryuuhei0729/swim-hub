@@ -27,6 +27,7 @@ import type {
   PracticeUpdate,
   PracticeWithLogs,
 } from "../../types";
+import { goalKeys } from "./goals";
 import { practiceKeys } from "./keys";
 
 export interface UsePracticesQueryOptions {
@@ -334,6 +335,8 @@ export function useCreatePracticeMutation(
         if (user) {
           const goalAPI = new GoalAPI(supabase);
           await goalAPI.updateAllMilestoneStatuses(user.id);
+          // 判定でマイルストーンの状態・達成候補 (mobile の確認ダイアログ) が変わるので取り直す
+          void queryClient.invalidateQueries({ queryKey: goalKeys.all });
         }
       } catch (error) {
         // エラーは無視（メイン処理に影響しない）
@@ -568,6 +571,8 @@ export function useCreatePracticeLogMutation(
         if (user) {
           const goalAPI = new GoalAPI(supabase);
           await goalAPI.updateAllMilestoneStatuses(user.id);
+          // 判定でマイルストーンの状態・達成候補 (mobile の確認ダイアログ) が変わるので取り直す
+          void queryClient.invalidateQueries({ queryKey: goalKeys.all });
         }
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
@@ -618,6 +623,8 @@ export function useUpdatePracticeLogMutation(
         if (user) {
           const goalAPI = new GoalAPI(supabase);
           await goalAPI.updateAllMilestoneStatuses(user.id);
+          // 判定でマイルストーンの状態・達成候補 (mobile の確認ダイアログ) が変わるので取り直す
+          void queryClient.invalidateQueries({ queryKey: goalKeys.all });
         }
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
@@ -680,6 +687,8 @@ export function useCreatePracticeTimesMutation(
         if (user) {
           const goalAPI = new GoalAPI(supabase);
           await goalAPI.updateAllMilestoneStatuses(user.id);
+          // 判定でマイルストーンの状態・達成候補 (mobile の確認ダイアログ) が変わるので取り直す
+          void queryClient.invalidateQueries({ queryKey: goalKeys.all });
         }
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
@@ -734,6 +743,8 @@ export function useReplacePracticeTimesMutation(
         if (user) {
           const goalAPI = new GoalAPI(supabase);
           await goalAPI.updateAllMilestoneStatuses(user.id);
+          // 判定でマイルストーンの状態・達成候補 (mobile の確認ダイアログ) が変わるので取り直す
+          void queryClient.invalidateQueries({ queryKey: goalKeys.all });
         }
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {

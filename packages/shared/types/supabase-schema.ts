@@ -345,6 +345,8 @@ export type Database = {
           params: Json;
           reflection_done: boolean;
           reflection_note: string | null;
+          achievement_candidate: Json | null;
+          candidate_dismissed_at: string | null;
           status: string;
           title: string;
           type: string;
@@ -359,6 +361,8 @@ export type Database = {
           params: Json;
           reflection_done?: boolean;
           reflection_note?: string | null;
+          achievement_candidate?: Json | null;
+          candidate_dismissed_at?: string | null;
           status?: string;
           title: string;
           type: string;
@@ -373,6 +377,8 @@ export type Database = {
           params?: Json;
           reflection_done?: boolean;
           reflection_note?: string | null;
+          achievement_candidate?: Json | null;
+          candidate_dismissed_at?: string | null;
           status?: string;
           title?: string;
           type?: string;

@@ -2216,7 +2216,11 @@
       "edit": "Edit",
       "delete": "Delete",
       "deleteConfirm": "Delete this milestone?",
-      "deleteFailed": "Failed to delete milestone"
+      "deleteFailed": "Failed to delete milestone",
+      "markComplete": "Mark complete",
+      "markIncomplete": "Mark incomplete",
+      "markIncompleteConfirm": "Mark this milestone as incomplete?",
+      "completionFailed": "Failed to update the milestone"
     },
     "milestoneCreate": {
       "title": "New Milestone",
@@ -2326,10 +2330,21 @@
         "set": {
           "label": "Circle-in Goal",
           "description": "Set a target number of reps and sets within a circle. Recommended for 200m+ events."
+        },
+        "practiceTime": {
+          "label": "Practice Time Goal",
+          "description": "Set a target time for practice or time trial. With more reps/sets, the average time is judged."
+        },
+        "other": {
+          "label": "Other",
+          "description": "Write any non-swimming goal, such as strength or dryland training. Mark it complete manually when achieved."
         }
       },
       "templateAppliedNote": "Template applied: type cannot be changed",
-      "titleLabel": "Title (optional, auto-generated if blank)"
+      "titleLabel": "Title (optional, auto-generated if blank)",
+      "otherContentLabel": "Goal",
+      "otherContentPlaceholder": "e.g. Bench press 100kg x2, Run every day",
+      "otherContentRequired": "Please enter the goal"
     },
     "paramsForm": {
       "distanceLabel": "Distance (m)",
@@ -2377,6 +2392,12 @@
       "notFound": "Goal not found",
       "milestoneNotFound": "Milestone not found",
       "noSelectableCompetitions": "No competitions available. Please create a new one."
+    },
+    "achievementPrompt": {
+      "title": "Did you achieve this milestone?",
+      "confirm": "Achieved!",
+      "recordTime": "Time: {time}",
+      "averageTime": "Average: {time}"
     }
   },
   "teamMemberGoals": {

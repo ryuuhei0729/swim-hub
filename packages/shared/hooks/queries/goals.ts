@@ -17,6 +17,8 @@ export const goalKeys = {
   list: (filters?: { status?: string }) => [...goalKeys.lists(), filters] as const,
   detail: (id: string) => [...goalKeys.all, "detail", id] as const,
   currentBestTime: (id: string) => [...goalKeys.all, "currentBestTime", id] as const,
+  /** 達成の確認待ちのマイルストーン (mobile の確認ダイアログ) */
+  pendingAchievements: () => [...goalKeys.all, "pendingAchievements"] as const,
 } as const;
 
 type GoalWithDetails = Goal & {

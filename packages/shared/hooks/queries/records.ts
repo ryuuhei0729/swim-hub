@@ -232,6 +232,8 @@ export function useCreateRecordMutation(
         if (user) {
           const goalAPI = new GoalAPI(supabase);
           await goalAPI.updateAllMilestoneStatuses(user.id);
+          // 判定でマイルストーンの状態・達成候補 (mobile の確認ダイアログ) が変わるので取り直す
+          void queryClient.invalidateQueries({ queryKey: goalKeys.all });
         }
       } catch (error) {
         console.error("マイルストーンステータス更新エラー:", error);
@@ -270,6 +272,8 @@ export function useUpdateRecordMutation(
         if (user) {
           const goalAPI = new GoalAPI(supabase);
           await goalAPI.updateAllMilestoneStatuses(user.id);
+          // 判定でマイルストーンの状態・達成候補 (mobile の確認ダイアログ) が変わるので取り直す
+          void queryClient.invalidateQueries({ queryKey: goalKeys.all });
         }
       } catch (error) {
         console.error("マイルストーンステータス更新エラー:", error);

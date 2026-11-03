@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
+import { goalKeys } from "@apps/shared/hooks/queries/goals";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useCalendarQuery } from "@/hooks/useCalendarQuery";
 import { CalendarView } from "@/components/calendar";
@@ -52,7 +53,10 @@ export const DashboardScreen: React.FC = () => {
     handleMilestoneSaved,
     skipGoal,
     skipMilestone,
-  } = useExpiredGoalCheck(supabase, user?.id);
+  } = useExpiredGoalCheck(supabase, user?.id, () => {
+    // ログイン直後の判定で置かれた達成候補を、確認ダイアログ (MilestoneAchievementPrompter) に取り直させる
+    void queryClient.invalidateQueries({ queryKey: goalKeys.pendingAchievements() });
+  });
 
   // チーム一覧取得（お知らせ表示用）
   const { teams = [], refetch: refetchTeams } = useTeamsQuery(supabase, {

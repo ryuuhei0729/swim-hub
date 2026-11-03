@@ -9,12 +9,22 @@ import { runMilestoneJudgment } from "@apps/shared/utils/milestoneJudgment";
  * 達成判定を先に走らせ (代理入力分を反映し、達成済みマイルストーンに「未達成」の振り返りを
  * 出さないため)、期限切れ目標を優先し、無ければ期限切れマイルストーンを1件だけ返す。
  * アプリ復帰やタブ再フォーカスでは再実行しない。
+ * onJudged は判定の直後に呼ぶ (達成候補 = 確認ダイアログを取り直すため)。
  */
-export function useExpiredGoalCheck(supabase: SupabaseClient, userId: string | undefined) {
+export function useExpiredGoalCheck(
+  supabase: SupabaseClient,
+  userId: string | undefined,
+  onJudged?: () => void,
+) {
   const goalAPI = useMemo(() => new GoalAPI(supabase), [supabase]);
   const [expiredGoal, setExpiredGoal] = useState<GoalWithMilestones | null>(null);
   const [expiredMilestone, setExpiredMilestone] = useState<Milestone | null>(null);
   const hasCheckedRef = useRef(false);
+  // 判定は1回きりなので、最新のコールバックを ref で持つ (effect の依存に入れない)
+  const onJudgedRef = useRef(onJudged);
+  useEffect(() => {
+    onJudgedRef.current = onJudged;
+  }, [onJudged]);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -44,6 +54,7 @@ export function useExpiredGoalCheck(supabase: SupabaseClient, userId: string | u
     void (async () => {
       try {
         await runMilestoneJudgment(goalAPI, userId);
+        onJudgedRef.current?.();
         await loadNext();
       } catch (error) {
         console.error("Failed to check expired goals:", error);
