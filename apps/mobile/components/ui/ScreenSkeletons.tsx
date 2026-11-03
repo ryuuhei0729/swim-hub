@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Skeleton, SkeletonBlock } from "./Skeleton";
+import { cardSurface, sectionSurface } from "@/constants/theme";
 
 /**
  * 各画面の初回読み込み中に出すスケルトン
@@ -10,14 +11,6 @@ import { Skeleton, SkeletonBlock } from "./Skeleton";
  * 「くるくる → 一覧」より画面の組み替えが小さく見えるようにするため。
  * 文字幅は index ごとに少し変え、同じ形の繰り返しに見えないようにしている。
  */
-
-const CARD_SHADOW = {
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.1,
-  shadowRadius: 2,
-  elevation: 2,
-} as const;
 
 /** 行ごとに文字幅を揺らすための候補。`index % length` で選ぶ */
 const TITLE_WIDTHS = ["52%", "40%", "60%", "46%"] as const;
@@ -195,34 +188,28 @@ const styles = StyleSheet.create({
   },
   // PracticeItem.container
   practiceCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     marginHorizontal: 16,
     marginVertical: 3,
     paddingVertical: 10,
     paddingHorizontal: 12,
     gap: 8,
-    ...CARD_SHADOW,
   },
   // RecordItem.container
   recordCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     marginHorizontal: 16,
     marginVertical: 3,
     padding: 16,
     gap: 10,
-    ...CARD_SHADOW,
   },
   // TeamItem.container
   teamCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     marginHorizontal: 16,
     marginVertical: 6,
     padding: 16,
     gap: 8,
-    ...CARD_SHADOW,
   },
   teamRolePill: {
     marginTop: 4,
@@ -234,11 +221,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   goalCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    ...cardSurface,
     padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
     gap: 12,
   },
   // MyPageScreen.scrollContent / section
@@ -247,11 +231,10 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   profileSection: {
-    backgroundColor: "#FFFFFF",
+    ...sectionSurface,
     paddingVertical: 16,
     paddingHorizontal: 16,
     gap: 16,
-    ...CARD_SHADOW,
   },
   profileIdentity: {
     flexDirection: "row",
@@ -275,17 +258,12 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   announcementCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    ...cardSurface,
+    marginHorizontal: 16,
     padding: 16,
     marginTop: 16,
     marginBottom: 6,
     gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
   },
   calendar: {
     backgroundColor: "#FFFFFF",

@@ -11,6 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
+import { cardSurface } from "@/constants/theme";
 
 const DUMMY_EMAIL_DOMAIN = "@ryuhei.love";
 
@@ -221,14 +222,8 @@ export const EmailChangeSettings: React.FC = () => {
 
 const styles = StyleSheet.create({
   section: {
-    backgroundColor: "#FFFFFF",
+    ...cardSurface,
     padding: 20,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   sectionHeader: {
     flexDirection: "row",

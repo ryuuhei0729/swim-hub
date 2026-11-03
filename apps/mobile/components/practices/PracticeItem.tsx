@@ -6,6 +6,7 @@ import { toZonedTime } from "date-fns-tz";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { PressableScale } from "@/components/ui/PressableScale";
+import { cardSurface } from "@/constants/theme";
 import { formatDate } from "@apps/shared/utils/date";
 import type { PracticeWithLogs, PracticeLogWithTags } from "@swim-hub/shared/types";
 import { formatCircleTime } from "@/utils/formatters";
@@ -161,20 +162,11 @@ const PracticeItemComponent: React.FC<PracticeItemProps> = ({ practice, log, onP
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     marginHorizontal: 16,
     marginVertical: 3,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   content: {
     gap: 5,

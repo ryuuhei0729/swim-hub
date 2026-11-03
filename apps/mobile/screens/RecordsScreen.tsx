@@ -808,7 +808,7 @@ export const RecordsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#F1F5F9",
   },
   listContent: {
     paddingVertical: 8,

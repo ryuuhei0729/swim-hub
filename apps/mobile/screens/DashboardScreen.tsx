@@ -262,7 +262,7 @@ export const DashboardScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#F1F5F9",
   },
   scrollView: {
     flex: 1,

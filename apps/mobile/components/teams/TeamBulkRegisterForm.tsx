@@ -17,6 +17,7 @@ import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { TeamBulkRegisterAPI, type BulkRegisterInput } from "@apps/shared/api/teams/bulkRegister";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { cardSurface } from "@/constants/theme";
 
 interface PracticeRow {
   date: string;
@@ -578,16 +579,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   rowCard: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 10,
+    ...cardSurface,
     padding: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   rowHeader: {
     flexDirection: "row",

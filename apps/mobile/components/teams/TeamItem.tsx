@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { PressableScale } from "@/components/ui/PressableScale";
+import { cardSurface } from "@/constants/theme";
 
 interface TeamItemProps {
   membership: TeamMembershipWithUser;
@@ -75,19 +76,10 @@ const TeamItemComponent: React.FC<TeamItemProps> = ({ membership, onPress }) => 
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     marginHorizontal: 16,
     marginVertical: 6,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   pendingContainer: {
     borderLeftWidth: 4,

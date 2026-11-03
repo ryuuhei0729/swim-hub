@@ -1419,7 +1419,7 @@ export const RecordFormScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#F1F5F9",
   },
   content: {
     padding: 16,

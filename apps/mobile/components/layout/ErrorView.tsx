@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { PressableScale } from "@/components/ui/PressableScale";
+import { colors } from "@/constants/theme";
 
 interface ErrorViewProps {
   message: string;
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: colors.background,
   },
   icon: {
     marginBottom: 8,
