@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { format, isValid } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   useCreateAnnouncementMutation,
@@ -60,6 +61,7 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
 }) => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   const createMutation = useCreateAnnouncementMutation(supabase);
   const updateMutation = useUpdateAnnouncementMutation(supabase);
   const [title, setTitle] = useState("");
@@ -204,6 +206,7 @@ export const TeamAnnouncementForm: React.FC<TeamAnnouncementFormProps> = ({
         });
       }
 
+      toast.success(t("common.savedToast"));
       if (onSuccess) {
         onSuccess();
       }

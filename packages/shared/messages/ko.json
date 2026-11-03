@@ -5,6 +5,7 @@
         "home": "홈",
         "practices": "연습",
         "competitions": "대회",
+        "records": "기록",
         "teams": "팀",
         "myPage": "마이페이지",
         "goals": "목표"
@@ -55,6 +56,7 @@
     "alertErrorTitle": "오류",
     "notice": "알림",
     "loading": "불러오는 중...",
+    "savedToast": "저장했습니다",
     "error": "오류가 발생했습니다",
     "save": "저장",
     "cancel": "취소",
@@ -2217,7 +2219,11 @@
       "edit": "편집",
       "delete": "삭제",
       "deleteConfirm": "이 마일스톤을 삭제하시겠습니까?",
-      "deleteFailed": "마일스톤 삭제에 실패했습니다"
+      "deleteFailed": "마일스톤 삭제에 실패했습니다",
+      "markComplete": "완료로 표시",
+      "markIncomplete": "미완료로 되돌리기",
+      "markIncompleteConfirm": "이 마일스톤을 미완료로 되돌릴까요?",
+      "completionFailed": "마일스톤 업데이트에 실패했습니다"
     },
     "milestoneCreate": {
       "title": "마일스톤 만들기",
@@ -2327,10 +2333,21 @@
         "set": {
           "label": "서클인 목표",
           "description": "＠서클로 돌 수 있는 개수, 세트 수를 마일스톤으로 설정합니다. 200m 이상 종목에 추천합니다"
+        },
+        "practiceTime": {
+          "label": "연습 기록 목표",
+          "description": "연습이나 타임 트라이얼에서 내고 싶은 기록을 마일스톤으로 설정합니다. 횟수×세트를 늘리면 평균 기록으로 판정합니다"
+        },
+        "other": {
+          "label": "기타",
+          "description": "근력 운동이나 지상 훈련 등 수영 기록 이외의 목표를 자유롭게 작성합니다. 달성하면 수동으로 완료 처리합니다"
         }
       },
       "templateAppliedNote": "템플릿 적용 중: 타입은 변경할 수 없습니다",
-      "titleLabel": "제목 (선택, 비워두면 자동 생성)"
+      "titleLabel": "제목 (선택, 비워두면 자동 생성)",
+      "otherContentLabel": "목표 내용",
+      "otherContentPlaceholder": "예: 벤치프레스 100kg×2, 매일 달리기",
+      "otherContentRequired": "목표 내용을 입력해 주세요"
     },
     "paramsForm": {
       "distanceLabel": "거리 (m)",
@@ -2378,6 +2395,12 @@
       "notFound": "목표를 찾을 수 없습니다",
       "milestoneNotFound": "마일스톤을 찾을 수 없습니다",
       "noSelectableCompetitions": "선택할 수 있는 대회가 없습니다. 새 대회를 만들어 주세요"
+    },
+    "achievementPrompt": {
+      "title": "혹시 마일스톤을 달성했나요?",
+      "confirm": "달성!",
+      "recordTime": "기록: {time}",
+      "averageTime": "평균: {time}"
     }
   },
   "teamMemberGoals": {

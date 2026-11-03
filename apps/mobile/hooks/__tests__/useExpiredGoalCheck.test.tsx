@@ -61,6 +61,14 @@ describe("起動時チェック", () => {
     expect((result.current.expiredMilestone as unknown as { id: string }).id).toBe("m1");
   });
 
+  it("onJudged は判定の直後 (期限切れの取得より前) に1回呼ぶ (達成の確認ダイアログを取り直すため)", async () => {
+    const onJudged = vi.fn(() => { h.calls.push("onJudged"); });
+    renderHook(() => useExpiredGoalCheck(supabase, "u1", onJudged));
+    await settle();
+    expect(h.calls).toEqual(["judge", "onJudged", "goals", "milestones"]);
+    expect(onJudged).toHaveBeenCalledTimes(1);
+  });
+
   it("両方なし: どちらも null", async () => {
     const { result } = renderHook(() => useExpiredGoalCheck(supabase, "u1"));
     await settle();

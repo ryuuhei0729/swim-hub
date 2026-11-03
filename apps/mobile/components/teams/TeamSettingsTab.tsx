@@ -31,6 +31,7 @@ import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { TeamSettingsModal } from "./TeamSettingsModal";
 import { TeamCalendarColorSection } from "./settings/TeamCalendarColorSection";
 import { copyTextToClipboard } from "@/utils/copyToClipboard";
+import { cardSurface } from "@/constants/theme";
 
 /** コピー完了表示を出しておく時間(ms)。チーム情報カードの招待コードと揃える */
 const COPIED_FEEDBACK_DURATION = 2000;
@@ -259,15 +260,9 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   section: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     padding: 16,
     gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
   },
   sectionTitle: {
     fontSize: 15,
@@ -343,14 +338,8 @@ const styles = StyleSheet.create({
   },
   // settings/AccountDeleteSettings.tsx と同じカード構成（余白・角丸・配色を揃える）
   dangerCardBox: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    ...cardSurface,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   dangerCardTitle: {
     fontSize: 16,

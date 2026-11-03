@@ -11,11 +11,13 @@ import {
 } from "react-native";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { TeamBulkRegisterAPI, type BulkRegisterInput } from "@apps/shared/api/teams/bulkRegister";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { cardSurface } from "@/constants/theme";
 
 interface PracticeRow {
   date: string;
@@ -68,6 +70,7 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
 }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   // Android の Edge-to-Edge 強制下では、スクロール最下部の登録ボタンと結果表示が
   // システムナビゲーションバー(3ボタン)の背後に隠れる。下部インセットを
   // スクロール余白に加算する。親画面 TeamBulkRegisterScreen の container が
@@ -218,8 +221,9 @@ export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
         competitionsCreated: result.competitionsCreated,
         errors: result.errors,
       });
-      if (result.success && onSuccess) {
-        onSuccess();
+      if (result.success) {
+        toast.success(t("common.savedToast"));
+        if (onSuccess) onSuccess();
       }
       // 正常終了時は送信したタブだけリセットする (もう片方のタブの入力は送信していないので残す)
       if (result.success) {
@@ -575,16 +579,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   rowCard: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 10,
+    ...cardSurface,
     padding: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   rowHeader: {
     flexDirection: "row",

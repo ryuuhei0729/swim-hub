@@ -22,6 +22,7 @@ import {
 } from "@/lib/google-auth";
 import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
 import type { UserIdentity } from "@supabase/supabase-js";
+import { cardSurface } from "@/constants/theme";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -404,14 +405,8 @@ export const IdentityLinkSettings: React.FC = () => {
 
 const styles = StyleSheet.create({
   section: {
-    backgroundColor: "#FFFFFF",
+    ...cardSurface,
     padding: 20,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   sectionHeader: {
     flexDirection: "row",

@@ -17,6 +17,7 @@ import Svg, { Path } from "react-native-svg";
 import { useTranslation } from "react-i18next";
 import { useIOSCalendarSync } from "@/hooks/useIOSCalendarSync";
 import type { UserProfile } from "@swim-hub/shared/types";
+import { cardSurface } from "@/constants/theme";
 
 interface IOSCalendarSyncSettingsProps {
   /** ユーザープロフィール */
@@ -222,14 +223,8 @@ export const IOSCalendarSyncSettings: React.FC<IOSCalendarSyncSettingsProps> = (
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   header: {
     flexDirection: "row",

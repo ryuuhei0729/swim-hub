@@ -44,9 +44,11 @@ export default function MemberMilestoneList({ milestones }: MemberMilestoneListP
                 {tMember(display.labelKey)}
               </span>
             </div>
-            <p className="mt-1 text-xs text-gray-600 wrap-break-word">
-              {formatMilestoneSummary(milestone, (key, values) => tGoals(key, values))}
-            </p>
+            {milestone.type !== "other" && (
+              <p className="mt-1 text-xs text-gray-600 wrap-break-word">
+                {formatMilestoneSummary(milestone, (key, values) => tGoals(key, values))}
+              </p>
+            )}
             {milestone.deadline && (
               <p className="mt-1 text-xs text-gray-500">
                 {tGoals("milestone.deadlineLabel")} {formatDate(milestone.deadline, "long", locale)}

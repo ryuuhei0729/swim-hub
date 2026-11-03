@@ -400,16 +400,6 @@ describe("CompetitionTabFormScreen — ベストタイムを流用ボタン [M1]
     expect(timeInput(utils).value).toBe("31.20");
   });
 
-  it("[SC7] ボタン押下直後は未編集警告テキストが表示され、入力欄を書き換えると消える", async () => {
-    const utils = await renderEntryTab([makeBestTime({ time: 28.5 })]);
-
-    fireEvent.click(prefillButton(utils));
-    expect(utils.getByText("ベストタイム自動入力")).toBeTruthy();
-
-    fireEvent.change(timeInput(utils), { target: { value: "40.00" } });
-    expect(utils.queryByText("ベストタイム自動入力")).toBeNull();
-  });
-
   it("[SC6 非可逆値での確認] time=68.04 で、押下直後の入力欄表示値とバッジ値が厳密一致 (toBe。toBeCloseTo禁止) する", async () => {
     const utils = await renderEntryTab([makeBestTime({ time: 68.04 })]);
 
@@ -419,43 +409,31 @@ describe("CompetitionTabFormScreen — ベストタイムを流用ボタン [M1]
     expect(timeInput(utils).value).toBe("1:08.04");
   });
 
-  it("[SC12/裁定2改訂(v2)・ラッチ実証] 押下→警告あり→1文字入力→警告消滅→プリフィル値と同じ文字列を打ち直す→警告は復活しない", async () => {
+  it("ボタン押下後に「ベストタイム自動入力」の文言は表示しない (ユーザー裁定で撤去)", async () => {
     const utils = await renderEntryTab([makeBestTime({ time: 28.5 })]);
 
     fireEvent.click(prefillButton(utils));
-    expect(utils.getByText("ベストタイム自動入力")).toBeTruthy();
-
-    const input = timeInput(utils);
-    fireEvent.change(input, { target: { value: "28.5X" } });
-    expect(utils.queryByText("ベストタイム自動入力")).toBeNull();
-
-    fireEvent.change(input, { target: { value: "28.50" } });
+    expect(timeInput(utils).value).toBe("28.50");
     expect(utils.queryByText("ベストタイム自動入力")).toBeNull();
   });
 
-  it("[SC8/裁定2] StyleChipSelector で種目を変更すると未編集警告が消える", async () => {
+  it("StyleChipSelector で種目を変更すると、入力中のエントリータイムは空になる", async () => {
     const utils = await renderEntryTab([makeBestTime({ time: 28.5 })]);
 
-    fireEvent.click(prefillButton(utils));
-    expect(utils.getByText("ベストタイム自動入力")).toBeTruthy();
+    fireEvent.change(timeInput(utils), { target: { value: "40.00" } });
+    expect(timeInput(utils).value).toBe("40.00");
 
     fireEvent.click(await utils.findByTestId(`entry-style-1-option-${STYLE_BREAST_50.id}`));
-    expect(utils.queryByText("ベストタイム自動入力")).toBeNull();
+    expect(timeInput(utils).value).toBe("");
   });
 
-  it("[§6 境界 v2 新設: 水路切替] 押下後、水路を切り替えると未編集警告が消える", async () => {
-    const utils = await renderEntryTab([makeBestTime({ time: 28.5, pool_type: 0 })]);
+  it("同じ種目に解決されるチップ操作では入力中のエントリータイムを消さない", async () => {
+    const utils = await renderEntryTab([makeBestTime({ time: 28.5 })]);
 
-    fireEvent.click(prefillButton(utils));
-    expect(utils.getByText("ベストタイム自動入力")).toBeTruthy();
-
-    // プール種別 Pressable は「大会」基本タブ側にあるため、いったんタブを切り替える
-    fireEvent.click(await utils.findByText("大会"));
-    fireEvent.click(await utils.findByText("長水路 (50m)"));
-
-    fireEvent.click(await utils.findByText("エントリー"));
-    await utils.findByTestId("entry-item-tabs");
-    expect(utils.queryByText("ベストタイム自動入力")).toBeNull();
+    fireEvent.change(timeInput(utils), { target: { value: "40.00" } });
+    // 既に選択中の種目 (50m自由形) のチップをもう一度押す
+    fireEvent.click(await utils.findByTestId(`entry-style-1-option-${STYLE_FREE_50.id}`));
+    expect(timeInput(utils).value).toBe("40.00");
   });
 
   it("[境界: リレー行] isRelaying=true (Switch ON) の行でボタンを押すと、isRelaying=true 優先順位に従った値が入る", async () => {
@@ -468,7 +446,8 @@ describe("CompetitionTabFormScreen — ベストタイムを流用ボタン [M1]
       expect(utils.getByTestId("entry-style-1-relay").getAttribute("data-value")).toBe("true"),
     );
 
-    await utils.findByText("ベストタイム(引継): 29.00");
+    // 引継はラベルではなくタイム末尾の " R" で示す
+    await utils.findByText("ベストタイム: 29.00 R");
 
     fireEvent.click(prefillButton(utils));
     expect(timeInput(utils).value).toBe("29.00");

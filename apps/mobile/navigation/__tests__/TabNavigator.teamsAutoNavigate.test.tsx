@@ -77,8 +77,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 vi.mock("@/screens/DashboardScreen", () => ({ DashboardScreen: () => null }));
-vi.mock("@/screens/PracticesScreen", () => ({ PracticesScreen: () => null }));
-vi.mock("@/screens/CompetitionsScreen", () => ({ CompetitionsScreen: () => null }));
+vi.mock("@/screens/RecordsHubScreen", () => ({ RecordsHubScreen: () => null }));
 vi.mock("@/screens/TeamsScreen", () => ({ TeamsScreen: () => null }));
 vi.mock("@/screens/MyPageScreen", () => ({ MyPageScreen: () => null }));
 vi.mock("@/screens/GoalsScreen", () => ({ GoalsScreen: () => null }));

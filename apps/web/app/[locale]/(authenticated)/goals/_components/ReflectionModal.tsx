@@ -131,7 +131,9 @@ export default function ReflectionModal({
               <p className="text-sm text-gray-600 mb-2">{t("reflection.expiredDesc")}</p>
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="font-medium text-gray-900">{milestone.title}</p>
-                <p className="text-sm text-gray-600 mt-1">{formatMilestoneSummary(milestone, t)}</p>
+                {milestone.type !== "other" && (
+                  <p className="text-sm text-gray-600 mt-1">{formatMilestoneSummary(milestone, t)}</p>
+                )}
                 {milestone.deadline && (
                   <p className="text-xs text-gray-500 mt-1">
                     {t("reflection.deadlineLabel")} {format(new Date(milestone.deadline), "yyyy年M月d日", { locale: ja })}

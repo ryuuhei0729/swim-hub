@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
@@ -87,6 +88,7 @@ function formStateFromTemplate(template: PracticeLogTemplate): TemplateFormState
  */
 export const PracticeLogTemplatesScreen: React.FC = () => {
   const { t } = useTranslation();
+  const toast = useToast();
   // Android の Edge-to-Edge 強制下ではシステムナビゲーションバー(3ボタン)の領域まで
   // 描画されるため、一覧最下部のテンプレートカード(編集/削除ボタンを含む)が
   // ナビゲーションバーの背後に隠れる。下部インセットをスクロール余白に加算する。
@@ -141,6 +143,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
         await createMutation.mutateAsync(input);
       }
       setModalVisible(false);
+      toast.success(t("common.savedToast"));
     } catch (err) {
       console.error("テンプレート保存エラー:", err);
       Alert.alert(
@@ -150,7 +153,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [form, isSubmitting, editingTemplate, updateMutation, createMutation, t]);
+  }, [form, isSubmitting, editingTemplate, updateMutation, createMutation, t, toast]);
 
   const handleDelete = useCallback(
     (template: PracticeLogTemplate) => {
@@ -199,7 +202,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
             accessibilityRole="button"
             accessibilityLabel={t("practiceLogTemplates.card.menuEdit")}
           >
-            <Feather name="edit-2" size={17} color="#6B7280" />
+            <Feather name="edit-2" size={17} color="#2563EB" />
           </Pressable>
           <Pressable
             onPress={() => handleDelete(template)}
@@ -207,7 +210,7 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
             accessibilityRole="button"
             accessibilityLabel={t("practiceLogTemplates.card.menuDelete")}
           >
-            <Feather name="trash-2" size={17} color="#DC2626" />
+            <Feather name="trash-2" size={17} color="#EF4444" />
           </Pressable>
         </View>
       </View>

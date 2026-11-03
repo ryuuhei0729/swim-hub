@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator, StyleSheet
 import { Feather } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { CenterModal } from "@/components/ui/CenterModal";
 import { useDateLocale } from "@/hooks/useDateLocale";
@@ -31,6 +32,7 @@ export const GoalReflectionModal: React.FC<GoalReflectionModalProps> = ({
   onSaved,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const { supabase } = useAuth();
   const queryClient = useQueryClient();
   const locale = useDateLocale();
@@ -56,6 +58,7 @@ export const GoalReflectionModal: React.FC<GoalReflectionModalProps> = ({
     try {
       await new GoalAPI(supabase).updateGoal(goal.id, updates);
       void queryClient.invalidateQueries({ queryKey: goalKeys.all });
+      toast.success(t("common.savedToast"));
       await onSaved();
     } catch (error) {
       console.error("Failed to update goal:", error);

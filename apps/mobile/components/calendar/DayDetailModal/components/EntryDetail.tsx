@@ -207,7 +207,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                   }
                 }}
               >
-                <Feather name="edit" size={18} color="#2563EB" />
+                <Feather name="edit-2" size={18} color="#2563EB" />
               </Pressable>
             )}
             {onDeleteCompetition && !isTeamCompetition && (
@@ -242,7 +242,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
         ]}
       >
         <View style={styles.entrySectionHeader}>
-          <Feather name="edit-3" size={16} color="#9A3412" />
+          <Feather name="edit-2" size={16} color="#9A3412" />
           <Text style={[styles.entrySectionHeaderTitle, { color: entryBoxTextColor }]}>
             {t("dashboard.dayDetail.entryAlreadyTitle")}
           </Text>
@@ -273,7 +273,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
                 }
               }}
             >
-              <Feather name="edit" size={18} color="#2563EB" />
+              <Feather name="edit-2" size={18} color="#2563EB" />
             </Pressable>
           )}
         </View>

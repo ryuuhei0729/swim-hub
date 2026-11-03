@@ -23,6 +23,7 @@ import { getOfferings, purchasePackage, restorePurchases } from "@/lib/revenucat
 import { useAuth } from "@/contexts/AuthProvider";
 import type { MainStackParamList } from "@/navigation/types";
 import { PlanComparisonTable } from "@/components/shared/PlanComparisonTable";
+import { useToast } from "@/providers/ToastProvider";
 
 type BillingPeriod = "monthly" | "annual";
 
@@ -30,6 +31,7 @@ export const PaywallScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { subscription, refreshSubscription } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
 
   const [loadingOfferings, setLoadingOfferings] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -97,9 +99,9 @@ export const PaywallScreen: React.FC = () => {
       const info = await purchasePackage(pkg);
       if (info) {
         await refreshSubscription();
-        Alert.alert(t("paywallMobile.purchaseSuccessTitle"), t("paywallMobile.purchaseSuccessMessage"), [
-          { text: "OK", onPress: () => navigation.goBack() },
-        ]);
+        // ペイウォールはモーダル表示なので、閉じてからトーストを出す (開いたままだと隠れる)
+        navigation.goBack();
+        toast.success(t("paywallMobile.purchaseSuccessMessage"));
       }
     } catch (err) {
       Alert.alert(t("common.error"), t("paywallMobile.purchaseFailed"));
@@ -115,9 +117,8 @@ export const PaywallScreen: React.FC = () => {
     try {
       await restorePurchases();
       await refreshSubscription();
-      Alert.alert(t("paywallMobile.restoreSuccessTitle"), t("paywallMobile.restoreSuccessMessage"), [
-        { text: "OK", onPress: () => navigation.goBack() },
-      ]);
+      navigation.goBack();
+      toast.success(t("paywallMobile.restoreSuccessMessage"));
     } catch (err) {
       Alert.alert(t("common.error"), t("paywallMobile.restoreFailed"));
       console.error("リストアエラー:", err);

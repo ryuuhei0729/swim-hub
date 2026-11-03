@@ -20,6 +20,7 @@ import {
   resolveNumberOfLines,
   shouldShowToggle,
 } from "@/utils/announcementTruncation";
+import { cardSurface } from "@/constants/theme";
 
 const ANNOUNCEMENT_CONTENT_MAX_LINES = 2;
 
@@ -267,14 +268,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    ...cardSurface,
+    marginHorizontal: 16,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
   },
   cardHeader: {
     flexDirection: "row",

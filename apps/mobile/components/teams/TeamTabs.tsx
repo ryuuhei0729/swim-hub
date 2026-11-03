@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 import { TEAM_TAB_DEFS, type TeamTabType } from "./teamTabDefs";
+import { cardSurface } from "@/constants/theme";
 
 // タブの定義元は ./teamTabDefs.ts の 1 本。ここは描画だけを担う。
 // 既存の import 経路 (navigation/types.ts・TeamDetailScreen.tsx・
@@ -77,18 +78,10 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     marginHorizontal: 12,
     marginTop: 4,
     marginBottom: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
   },
   tabListContent: {
     // タブが画面幅に収まる場合 (非管理者・大画面) に左へ寄って詰まって見えないよう、

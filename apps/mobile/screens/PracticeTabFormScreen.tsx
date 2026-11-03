@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
@@ -158,6 +159,7 @@ export const PracticeTabFormScreen: React.FC = () => {
   const isPremium = checkIsPremium(subscription);
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const toast = useToast();
 
   // ---- タブ状態 ----
   // visibleTabs はタブバー・フッターの前後タブが参照する唯一の定義元。
@@ -557,9 +559,10 @@ export const PracticeTabFormScreen: React.FC = () => {
   // preventRemove=false が確定した状態で REMOVE を発行する。
   useEffect(() => {
     if (isSaved) {
+      toast.success(t("common.savedToast"));
       navigation.goBack();
     }
-  }, [isSaved, navigation]);
+  }, [isSaved, navigation, t, toast]);
 
   // ---- 破棄確認 ----
   // snapshotRef の更新は必ず対応する state 変更を伴わせること (伴わないと memo が再計算されず stale になる)

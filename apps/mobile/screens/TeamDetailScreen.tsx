@@ -334,7 +334,7 @@ export const TeamDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#F1F5F9",
   },
   tabContent: {
     flex: 1,

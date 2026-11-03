@@ -7,6 +7,7 @@ import { useDateLocale } from "@/hooks/useDateLocale";
 import type { TeamAnnouncement } from "@swim-hub/shared/types";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { cardSurface } from "@/constants/theme";
 
 interface TeamAnnouncementListProps {
   announcements: TeamAnnouncement[];
@@ -178,19 +179,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   announcementItem: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     padding: 16,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   announcementHeader: {
     marginBottom: 8,

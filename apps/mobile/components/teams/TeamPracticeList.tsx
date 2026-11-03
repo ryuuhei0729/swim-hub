@@ -22,6 +22,7 @@ import type { Practice } from "@swim-hub/shared/types";
 import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { formatDate } from "@apps/shared/utils/date";
+import { cardSurface, colors } from "@/constants/theme";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -73,7 +74,7 @@ const PracticeItem = React.memo(function PracticeItem({
                 accessibilityRole="button"
                 accessibilityLabel={t("common.delete")}
               >
-                <Feather name="trash-2" size={14} color="#DC2626" />
+                <Feather name="trash-2" size={14} color="#EF4444" />
               </Pressable>
             </View>
           )}
@@ -101,9 +102,9 @@ const PracticeItem = React.memo(function PracticeItem({
             : t("teams.mobile.teamPracticeList.addLog")
         }
       >
-        {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-3 を維持する。
+        {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-2 を維持する。
             非admin は「記録追加」という追加操作に変わったため plus に切り替える。 */}
-        <Feather name={isAdmin ? "edit-3" : "plus"} size={13} color="#2563EB" />
+        <Feather name={isAdmin ? "edit-2" : "plus"} size={13} color="#2563EB" />
         <Text style={styles.logButtonText}>
           {isAdmin
             ? t("teams.mobile.teamPracticeList.recordBulkButton")
@@ -286,7 +287,7 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
@@ -348,14 +349,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   item: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     padding: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 1,
-    elevation: 1,
   },
   itemHeader: {
     flexDirection: "row",

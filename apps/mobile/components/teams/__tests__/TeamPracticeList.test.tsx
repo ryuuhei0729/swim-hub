@@ -248,8 +248,8 @@ describe("TeamPracticeList", () => {
     // Pressable は accessibilityLabel を素通りの独自属性として出力するのみ) ため
     // getByRole の name には拾えない。TeamCompetitionList.test.tsx と同じ
     // icon-edit-2 の testID から button を辿る方式に揃える。
-    const editIcon = screen.getByTestId("icon-edit-2");
-    const editButton = editIcon.closest("button");
+    const editIcon = screen.getAllByTestId("icon-edit-2")[0];
+    const editButton = editIcon?.closest("button") ?? null;
     expect(editButton, "編集アイコンの button が見つからない").not.toBeNull();
     fireEvent.click(editButton as HTMLButtonElement);
 
@@ -297,8 +297,8 @@ describe("TeamPracticeList", () => {
 
       render(<TeamPracticeList teamId="team-tpl1" isAdmin={true} />);
 
-      const editIcon = screen.getByTestId("icon-edit-2");
-      const editButton = editIcon.closest("button");
+      const editIcon = screen.getAllByTestId("icon-edit-2")[0];
+      const editButton = editIcon?.closest("button") ?? null;
       expect(editButton, "編集アイコンの button が見つからない").not.toBeNull();
       fireEvent.click(editButton as HTMLButtonElement);
 
@@ -415,7 +415,7 @@ describe("TeamPracticeList", () => {
     );
   });
 
-  // [SC-1] 非admin: アイコンが edit-3 (旧) から plus (新) に変わる
+  // [SC-1] 非admin: アイコンが edit-2 から plus (新) に変わる
   it("[SC-1] isAdmin=false のとき、addLog ボタンのアイコンは plus であり、旧アイコン edit-3 は使われない", () => {
     const practice = makePractice({ id: "p-icon-1", title: "アイコン検証練習" });
     mocks.useTeamPracticesQuery.mockReturnValue({
@@ -430,7 +430,7 @@ describe("TeamPracticeList", () => {
 
     const logButton = screen.getByRole("button", { name: "記録追加" });
     expect(logButton.querySelector('[data-testid="icon-plus"]'), "plus アイコンが見つからない").not.toBeNull();
-    expect(logButton.querySelector('[data-testid="icon-edit-3"]'), "旧アイコン edit-3 が残っている").toBeNull();
+    expect(logButton.querySelector('[data-testid="icon-edit-2"]'), "旧アイコン edit-2 が残っている").toBeNull();
   });
 
   // -----------------------------------------------------------------------
@@ -595,10 +595,10 @@ describe("TeamPracticeList", () => {
 
       const button = screen.getByRole("button", { name: "記録追加" });
       expect(button.querySelector('[data-testid="icon-plus"]')).not.toBeNull();
-      expect(button.querySelector('[data-testid="icon-edit-3"]')).toBeNull();
+      expect(button.querySelector('[data-testid="icon-edit-2"]')).toBeNull();
     });
 
-    it("[SC-6 非退行] admin: ラベルは「記録代理入力」のまま、アイコンは edit-3 (旧アイコン) のままで plus には変わらない", () => {
+    it("[SC-6 非退行] admin: ラベルは「記録代理入力」のまま、アイコンは edit-2 のままで plus には変わらない", () => {
       const practice = makePractice({ id: "p-sc6-1", title: "SC-6検証練習" });
       mocks.useTeamPracticesQuery.mockReturnValue({
         data: [practice],
@@ -611,7 +611,7 @@ describe("TeamPracticeList", () => {
       render(<TeamPracticeList teamId="team-sc6" isAdmin={true} />);
 
       const button = screen.getByRole("button", { name: "記録代理入力" });
-      expect(button.querySelector('[data-testid="icon-edit-3"]')).not.toBeNull();
+      expect(button.querySelector('[data-testid="icon-edit-2"]')).not.toBeNull();
       expect(button.querySelector('[data-testid="icon-plus"]')).toBeNull();
       expect(screen.queryByRole("button", { name: "記録追加" })).toBeNull();
     });

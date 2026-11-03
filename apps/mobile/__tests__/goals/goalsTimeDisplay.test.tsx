@@ -74,8 +74,6 @@ function renderCard(over: Partial<React.ComponentProps<typeof GoalCard>> = {}) {
       targetTime={23.79}
       achieved={false}
       onPress={() => {}}
-      onEdit={() => {}}
-      onDelete={() => {}}
       {...over}
     />,
   );
@@ -148,7 +146,7 @@ describe("一覧カード: 日付・大会名 / 種目名・目標タイム (Bes
 
     expect(text()).not.toMatch(/%|あと\d+日|あと[\d.]+秒|現在のベスト|目標:|本日|終了/);
     expect(byTestId("goal-before-after-gap")).toBeNull();
-    expect(document.querySelector('[data-testid="icon-arrow-left"]')).toBeNull();
+    expect(byTestId("goal-before-after-arrow")).toBeNull();
   });
 
   it("目標がベストより遅い (既に上回っている) なら Best+x.xx", async () => {
@@ -217,7 +215,7 @@ describe("詳細: 現在のベストと目標までの残り", () => {
     const before = byTestId("goal-before")!;
     expect(after.textContent).toBe("目標タイム23.79");
     expect(gap.textContent).toBe("あと7日あと0.01秒");
-    expect(gap.querySelector('[data-testid="icon-arrow-left"]')).not.toBeNull();
+    expect(gap.querySelector('[testid="goal-before-after-arrow"]')).not.toBeNull();
     expect(before.textContent).toBe("現在のベスト23.80");
     // 並び順 (DOM 順) が After → 間 → Before
     expect(after.nextElementSibling).toBe(gap);
@@ -377,7 +375,7 @@ describe("詳細: 見出し (大会日・大会名・水路 / 種目)", () => {
 
 describe("マイルストーン: 期限と達成日", () => {
   it("達成済みは期限と達成日を同じ行 (横並びの同じ親要素) に並べ、概要とは別の行にする", () => {
-    render(<MilestoneList milestones={[milestone()]} onEdit={() => {}} onDelete={() => {}} />);
+    render(<MilestoneList milestones={[milestone()]} onEdit={() => {}} onDelete={() => {}} onToggleComplete={() => {}} />);
     const deadline = screen.getByText(/^期限:/);
     const achieved = screen.getByText(/^達成日:/);
     const row = deadline.parentElement!;
@@ -400,6 +398,7 @@ describe("マイルストーン: 期限と達成日", () => {
         ]}
         onEdit={() => {}}
         onDelete={() => {}}
+        onToggleComplete={() => {}}
       />,
     );
     for (const name of ["check-circle", "clock", "alert-triangle"]) {
@@ -409,7 +408,7 @@ describe("マイルストーン: 期限と達成日", () => {
   });
 
   it("編集・削除はタイトルと同じ行にあり、概要と日付はその行の下 (カードの全幅) に出す", () => {
-    render(<MilestoneList milestones={[milestone()]} onEdit={() => {}} onDelete={() => {}} />);
+    render(<MilestoneList milestones={[milestone()]} onEdit={() => {}} onDelete={() => {}} onToggleComplete={() => {}} />);
     const title = screen.getByText("練習タイム：25秒台");
     const edit = document.querySelector('[accessibilitylabel="編集"]') as HTMLElement;
     const del = document.querySelector('[accessibilitylabel="削除"]') as HTMLElement;
@@ -429,6 +428,7 @@ describe("マイルストーン: 期限と達成日", () => {
         milestones={[milestone({ status: "in_progress", achieved_at: null })]}
         onEdit={() => {}}
         onDelete={() => {}}
+        onToggleComplete={() => {}}
       />,
     );
     expect(screen.getByText(/^期限:/)).toBeTruthy();

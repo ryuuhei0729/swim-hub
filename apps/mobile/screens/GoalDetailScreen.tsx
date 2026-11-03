@@ -108,6 +108,34 @@ export const GoalDetailScreen: React.FC = () => {
     [goalAPI, queryClient, t],
   );
 
+  const handleToggleMilestoneComplete = useCallback(
+    (milestone: Milestone, completed: boolean) => {
+      const run = async () => {
+        if (busyRef.current) return;
+        busyRef.current = true;
+        try {
+          await goalAPI.setMilestoneCompletion(milestone, completed);
+          await queryClient.invalidateQueries({ queryKey: goalKeys.all });
+        } catch (error) {
+          console.error("Failed to update milestone completion:", error);
+          Alert.alert(t("common.alertErrorTitle"), t("goals.milestone.completionFailed"));
+        } finally {
+          busyRef.current = false;
+        }
+      };
+      // 完了はワンタップ。未完了に戻すのは達成日が消えるので確認する
+      if (completed) {
+        void run();
+        return;
+      }
+      Alert.alert(t("goals.milestone.markIncomplete"), t("goals.milestone.markIncompleteConfirm"), [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("goals.milestone.markIncomplete"), onPress: () => void run() },
+      ]);
+    },
+    [goalAPI, queryClient, t],
+  );
+
   if (isDeleted) {
     return (
       <View style={styles.container}>
@@ -202,7 +230,7 @@ export const GoalDetailScreen: React.FC = () => {
                   accessibilityRole="button"
                   accessibilityLabel={t("goals.list.edit")}
                 >
-                  <Feather name="edit-2" size={18} color="#6B7280" />
+                  <Feather name="edit-2" size={18} color="#2563EB" />
                 </Pressable>
               )}
               <Pressable
@@ -212,7 +240,7 @@ export const GoalDetailScreen: React.FC = () => {
                 accessibilityRole="button"
                 accessibilityLabel={t("goals.list.delete")}
               >
-                <Feather name="trash-2" size={18} color="#6B7280" />
+                <Feather name="trash-2" size={18} color="#EF4444" />
               </Pressable>
             </View>
           </View>
@@ -270,6 +298,7 @@ export const GoalDetailScreen: React.FC = () => {
             navigation.navigate("MilestoneForm", { goalId, milestoneId: milestone.id })
           }
           onDelete={handleDeleteMilestone}
+          onToggleComplete={handleToggleMilestoneComplete}
         />
       </View>
     </ScrollView>
@@ -279,7 +308,7 @@ export const GoalDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#F1F5F9",
   },
   content: {
     padding: 16,

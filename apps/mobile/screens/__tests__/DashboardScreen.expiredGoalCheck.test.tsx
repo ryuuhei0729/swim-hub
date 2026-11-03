@@ -17,9 +17,11 @@ const src = readFileSync(path.resolve(__dirname, "../DashboardScreen.tsx"), "utf
 const noComments = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 describe("DashboardScreen の期限切れチェック配線", () => {
-  it("useExpiredGoalCheck(supabase, user?.id) を1回呼び、結果を分割代入で受ける", () => {
+  it("useExpiredGoalCheck(supabase, user?.id, onJudged) を1回呼び、結果を分割代入で受ける", () => {
     expect((noComments.match(/useExpiredGoalCheck\(/g) ?? []).length).toBe(1);
-    expect(noComments).toMatch(/useExpiredGoalCheck\(supabase,\s*user\?\.id\)/);
+    expect(noComments).toMatch(/useExpiredGoalCheck\(supabase,\s*user\?\.id,/);
+    // 判定直後に達成候補 (確認ダイアログ) を取り直させる
+    expect(noComments).toMatch(/goalKeys\.pendingAchievements\(\)/);
     for (const name of ["expiredGoal", "expiredMilestone", "handleGoalSaved", "handleMilestoneSaved", "skipGoal", "skipMilestone"]) {
       expect(noComments, name).toContain(name);
     }

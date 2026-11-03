@@ -47,8 +47,7 @@ import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 const mocks = vi.hoisted(() => ({ teams: [] as unknown[] }));
 
 vi.mock("@/screens/DashboardScreen", () => ({ DashboardScreen: () => null }));
-vi.mock("@/screens/PracticesScreen", () => ({ PracticesScreen: () => null }));
-vi.mock("@/screens/CompetitionsScreen", () => ({ CompetitionsScreen: () => null }));
+vi.mock("@/screens/RecordsHubScreen", () => ({ RecordsHubScreen: () => null }));
 vi.mock("@/screens/TeamsScreen", () => ({ TeamsScreen: () => null }));
 vi.mock("@/screens/MyPageScreen", () => ({ MyPageScreen: () => null }));
 // 6タブ化 (目標タブ) で TabNavigator が GoalsScreen を import する。実物は usePullToRefresh ->

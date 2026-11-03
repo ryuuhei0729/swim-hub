@@ -47,7 +47,7 @@ export const MainStack: React.FC = () => {
       screenOptions={{
         headerShown: false,
         contentStyle: {
-          backgroundColor: "#EFF6FF",
+          backgroundColor: "#F1F5F9", // constants/theme.ts の colors.background と同じ
         },
       }}
     >

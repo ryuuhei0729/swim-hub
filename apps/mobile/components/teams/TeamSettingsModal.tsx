@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { CenterModal } from "@/components/ui/CenterModal";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUpdateTeamMutation } from "@apps/shared/hooks/queries/teams";
@@ -41,6 +42,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
 }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   const updateTeamMutation = useUpdateTeamMutation(supabase);
   const [name, setName] = useState(teamName);
   const [description, setDescription] = useState(teamDescription || "");
@@ -111,6 +113,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
         },
       });
 
+      toast.success(t("common.savedToast"));
       if (onSuccess) {
         onSuccess();
       }

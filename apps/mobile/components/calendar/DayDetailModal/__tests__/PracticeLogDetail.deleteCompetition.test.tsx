@@ -182,7 +182,7 @@ describe("PracticeLogDetail (その他アイテム) 編集ボタンの isTeamCom
     const item = makeItem("competition", "comp-personal-1");
     renderItem(item, { onEditCompetition });
 
-    fireEvent.click(screen.getByTestId("icon-edit").closest("button")!);
+    fireEvent.click(screen.getByTestId("icon-edit-2").closest("button")!);
 
     expect(onEditCompetition).toHaveBeenCalledTimes(1);
     expect(onEditCompetition).toHaveBeenCalledWith(item);
@@ -194,6 +194,6 @@ describe("PracticeLogDetail (その他アイテム) 編集ボタンの isTeamCom
 
     // V-M-CE06 で同じセレクタが個人大会では実際にヒットすることを確認済みのため、
     // ここで見つからないのはセレクタの不備ではなく team 系ガードが効いている証拠。
-    expect(screen.queryByTestId("icon-edit")).toBeNull();
+    expect(screen.queryByTestId("icon-edit-2")).toBeNull();
   });
 });

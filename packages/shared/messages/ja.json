@@ -5,6 +5,7 @@
         "home": "ホーム",
         "practices": "練習",
         "competitions": "大会",
+        "records": "記録",
         "teams": "チーム",
         "myPage": "マイページ",
         "goals": "目標"
@@ -55,6 +56,7 @@
     "alertErrorTitle": "エラー",
     "notice": "お知らせ",
     "loading": "読み込み中...",
+    "savedToast": "保存しました",
     "error": "エラーが発生しました",
     "save": "保存",
     "cancel": "キャンセル",
@@ -2217,7 +2219,11 @@
       "edit": "編集",
       "delete": "削除",
       "deleteConfirm": "このマイルストーンを削除しますか？",
-      "deleteFailed": "マイルストーンの削除に失敗しました"
+      "deleteFailed": "マイルストーンの削除に失敗しました",
+      "markComplete": "完了にする",
+      "markIncomplete": "未完了に戻す",
+      "markIncompleteConfirm": "このマイルストーンを未完了に戻しますか？",
+      "completionFailed": "マイルストーンの更新に失敗しました"
     },
     "milestoneCreate": {
       "title": "マイルストーン作成",
@@ -2327,10 +2333,21 @@
         "set": {
           "label": "サークルイン目標",
           "description": "＠サークル で回れる本数、セット数をマイルストーンに置く。200m以上の種目におすすめ"
+        },
+        "practiceTime": {
+          "label": "練習タイム目標",
+          "description": "練習やタイムトライアルで出したいタイムをマイルストーンに置く。本数×セット数を増やすと平均タイムで判定する"
+        },
+        "other": {
+          "label": "その他",
+          "description": "筋トレや陸トレなど、水泳の記録以外の目標を自由に書く。達成したら手動で完了にする"
         }
       },
       "templateAppliedNote": "テンプレート適用中: タイプは変更できません",
-      "titleLabel": "タイトル（任意、空欄の場合は自動生成）"
+      "titleLabel": "タイトル（任意、空欄の場合は自動生成）",
+      "otherContentLabel": "目標の内容",
+      "otherContentPlaceholder": "例: ベンチプレス100kg×2、ランニング毎日達成",
+      "otherContentRequired": "目標の内容を入力してください"
     },
     "paramsForm": {
       "distanceLabel": "距離 (m)",
@@ -2378,6 +2395,12 @@
       "notFound": "目標が見つかりませんでした",
       "milestoneNotFound": "マイルストーンが見つかりませんでした",
       "noSelectableCompetitions": "選択できる大会がありません。新規大会を作成してください"
+    },
+    "achievementPrompt": {
+      "title": "もしかしてマイルストーンを達成しましたか？",
+      "confirm": "達成！",
+      "recordTime": "記録: {time}",
+      "averageTime": "平均: {time}"
     }
   },
   "teamMemberGoals": {

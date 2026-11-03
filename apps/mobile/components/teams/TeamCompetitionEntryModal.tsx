@@ -260,7 +260,7 @@ export function TeamCompetitionEntryModal({
                 "teams.mobile.teamCompetitionEntryModal.selfEntryButton",
               )}
             >
-              <Feather name="edit-3" size={15} color="#2563EB" />
+              <Feather name="edit-2" size={15} color="#2563EB" />
               <Text style={styles.selfEntryButtonText}>
                 {t("teams.mobile.teamCompetitionEntryModal.selfEntryButton")}
               </Text>
@@ -362,7 +362,7 @@ export function TeamCompetitionEntryModal({
                                 { style: styleLabel },
                               )}
                             >
-                              <Feather name="edit" size={16} color="#2563EB" />
+                              <Feather name="edit-2" size={16} color="#2563EB" />
                             </Pressable>
                             <Pressable
                               style={[
@@ -381,7 +381,7 @@ export function TeamCompetitionEntryModal({
                                 { style: styleLabel },
                               )}
                             >
-                              <Feather name="trash-2" size={16} color="#DC2626" />
+                              <Feather name="trash-2" size={16} color="#EF4444" />
                             </Pressable>
                           </View>
                         )}

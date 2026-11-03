@@ -24,6 +24,9 @@ import {
   MilestoneUpdate,
   UpdateGoalInput,
   UpdateMilestoneInput,
+  isMilestoneTimeParams,
+  isSingleRepsTimeParams,
+  normalizeMilestoneTypeParams,
 } from "../types/goals";
 import type { Competition, Style } from "../types";
 
@@ -37,6 +40,43 @@ interface GoalQueryResult extends Goal {
 // 日本時間 (UTC+9、夏時間なし)。web の subscription status の getTodayJST と同じ求め方
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
+// =============================================================================
+// 達成判定のモード (アプリ全体で1つ)
+// =============================================================================
+// true (既定 = web): 条件を満たす記録が見つかったら自動で achieved にする。
+// false (mobile): 自動では達成にせず、achievement_candidate に根拠を置くだけにする。
+//   ユーザーが「もしかしてマイルストーンを達成しましたか？」で「達成！」を押したら
+//   confirmMilestoneAchievement で確定する。
+// 判定は shared の各ミューテーション (練習・大会記録の保存) の中からも呼ばれるため、
+// 呼び出し元ごとに引数で渡すのではなく、アプリ起動時に1回だけ設定する。
+let milestoneAutoAchieve = true;
+
+/** アプリ起動時に1回呼ぶ。mobile は { autoAchieve: false } */
+export function configureMilestoneJudgment(options: { autoAchieve: boolean }): void {
+  milestoneAutoAchieve = options.autoAchieve;
+}
+
+export function isMilestoneAutoAchieveEnabled(): boolean {
+  return milestoneAutoAchieve;
+}
+
+/** 練習タイム目標 1本×1セットを、旧 time 型の判定 (練習タイム1本 + 大会記録) に渡す形にする */
+function asSingleTimeMilestone(milestone: Milestone, params: MilestoneRepsTimeParams): Milestone {
+  const timeParams: MilestoneTimeParams = {
+    distance: params.distance,
+    target_time: params.target_average_time,
+    style: params.style,
+    swim_category: params.swim_category,
+  };
+  return { ...milestone, type: "time", params: timeParams };
+}
+
+/** 判定前に旧 time 型を reps_time (1本×1セット) にそろえる */
+function normalizeMilestone(milestone: Milestone): Milestone {
+  const { type, params } = normalizeMilestoneTypeParams(milestone.type, milestone.params);
+  return type === milestone.type ? milestone : { ...milestone, type, params };
+}
+
 /**
  * 達成・進行中の判定で数える練習・大会記録の範囲。作る前の記録を数えると、既に出している
  * タイムの目標が作った瞬間に達成になる。次の両方を満たす行だけを数える。
@@ -49,15 +89,24 @@ const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
  * 大会記録は大会の開始日で比べるので、作る前に始まった複数日の大会のレースは数えない。
  * 大会に紐づかない記録 (一括登録したベスト等) は日付が無いので数えない。
  * created_at が読めないときは今 (作る前の記録を数えない側に倒す)
+ * 達成の確認ダイアログを「キャンセル」した (candidate_dismissed_at) 後は、それより後に
+ * 登録した行だけを数える (同じ記録でもう一度ダイアログを出さない)。練習日・大会日の下限は
+ * 作成日のまま。
  */
-function milestoneCountingRange(milestone: Pick<Milestone, "created_at">): {
+function milestoneCountingRange(
+  milestone: Pick<Milestone, "created_at" | "candidate_dismissed_at">,
+): {
   createdAfter: string;
   earliestDate: string;
 } {
   const created = milestone.created_at ? parseISO(milestone.created_at) : new Date(NaN);
   const base = isValid(created) ? created : new Date();
+  const dismissed = milestone.candidate_dismissed_at
+    ? parseISO(milestone.candidate_dismissed_at)
+    : new Date(NaN);
+  const createdAfter = isValid(dismissed) && dismissed > base ? dismissed : base;
   return {
-    createdAfter: base.toISOString(),
+    createdAfter: createdAfter.toISOString(),
     earliestDate: new Date(base.getTime() + JST_OFFSET_MS).toISOString().slice(0, 10),
   };
 }
@@ -365,11 +414,13 @@ export class GoalAPI {
    * マイルストーン作成
    */
   async createMilestone(input: CreateMilestoneInput): Promise<Milestone> {
+    // 旧タイム目標 (time) は練習タイム目標の 1本×1セット (reps_time) として保存する
+    const normalized = normalizeMilestoneTypeParams(input.type, input.params);
     const milestoneInsert: MilestoneInsert = {
       goal_id: input.goalId,
       title: input.title,
-      type: input.type,
-      params: input.params,
+      type: normalized.type,
+      params: normalized.params,
       deadline: input.deadline || null,
       status: "not_started",
     };
@@ -431,14 +482,21 @@ export class GoalAPI {
   ): Promise<Milestone> {
     const updateData: MilestoneUpdate = {};
 
-    if (updates.type !== undefined) {
-      updateData.type = updates.type;
+    // 旧タイム目標 (time) は練習タイム目標の 1本×1セット (reps_time) として保存する
+    if (updates.params !== undefined && isMilestoneTimeParams(updates.params)) {
+      const normalized = normalizeMilestoneTypeParams("time", updates.params);
+      updateData.type = normalized.type;
+      updateData.params = normalized.params;
+    } else {
+      if (updates.type !== undefined) {
+        updateData.type = updates.type === "time" ? "reps_time" : updates.type;
+      }
+      if (updates.params !== undefined) {
+        updateData.params = updates.params;
+      }
     }
     if (updates.title !== undefined) {
       updateData.title = updates.title;
-    }
-    if (updates.params !== undefined) {
-      updateData.params = updates.params;
     }
     if (updates.deadline !== undefined) {
       updateData.deadline = updates.deadline;
@@ -562,6 +620,8 @@ export class GoalAPI {
       .not("deadline", "is", null)
       .lt("deadline", today)
       .neq("status", "achieved")
+      // 達成の確認待ち (候補あり) は「未達成の振り返り」を出さない。先に確認ダイアログで答えてもらう
+      .is("achievement_candidate", null)
       .order("deadline", { ascending: false });
 
     if (error) throw error;
@@ -595,6 +655,125 @@ export class GoalAPI {
     return data;
   }
 
+  /**
+   * マイルストーンを手動で完了にする / 未完了に戻す。
+   * 自動判定 (練習記録・大会記録) によらず、ユーザーの申告で達成扱いにするためのもの。
+   * 手動完了は記録に紐付かないので milestone_achievements には書かない
+   * (check_source 制約で practice_log_id / record_id のどちらかが必須)。
+   *
+   * 未完了に戻すときは、期限を過ぎていれば expired、そうでなければ not_started にする。
+   * 戻した時点を candidate_dismissed_at に残し、それまでに登録済みの記録では再び
+   * 達成 (web) / 達成候補 (mobile) にしない。どちらの場合も達成候補は消す。
+   */
+  async setMilestoneCompletion(
+    milestone: Pick<Milestone, "id" | "deadline">,
+    completed: boolean,
+  ): Promise<Milestone> {
+    const now = new Date();
+    let updateData: MilestoneUpdate;
+    if (completed) {
+      updateData = {
+        status: "achieved",
+        achieved_at: now.toISOString(),
+        achievement_candidate: null,
+      };
+    } else {
+      const today = format(now, "yyyy-MM-dd");
+      const deadline = milestone.deadline ? milestone.deadline.slice(0, 10) : null;
+      updateData = {
+        status: deadline !== null && deadline < today ? "expired" : "not_started",
+        achieved_at: null,
+        achievement_candidate: null,
+        candidate_dismissed_at: now.toISOString(),
+      };
+    }
+
+    const { data, error } = await this.supabase
+      .from("milestones")
+      .update(updateData)
+      .eq("id", milestone.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * 達成の確認待ち (achievement_candidate あり・未達成) のマイルストーンを古い順に取得 (mobile の確認ダイアログ用)
+   */
+  async getPendingAchievementMilestones(): Promise<Milestone[]> {
+    const {
+      data: { user },
+    } = await this.supabase.auth.getUser();
+    if (!user) throw new Error("認証が必要です");
+
+    const { data, error } = await this.supabase
+      .from("milestones")
+      .select(
+        `
+        *,
+        goals!inner(user_id)
+      `,
+      )
+      .eq("goals.user_id", user.id)
+      .not("achievement_candidate", "is", null)
+      .neq("status", "achieved")
+      .order("updated_at", { ascending: true });
+
+    if (error) throw error;
+    return (data || []).map(({ goals: _goals, ...milestone }) => milestone as Milestone);
+  }
+
+  /**
+   * 確認ダイアログで「達成！」: 達成にし、候補の根拠を milestone_achievements に残す。
+   * 根拠の保存に失敗しても達成は取り消さない (自動達成と同じ扱い)
+   */
+  async confirmMilestoneAchievement(
+    milestone: Pick<Milestone, "id" | "achievement_candidate">,
+  ): Promise<Milestone> {
+    const candidate = milestone.achievement_candidate ?? null;
+    const { data, error } = await this.supabase
+      .from("milestones")
+      .update({
+        status: "achieved",
+        achieved_at: new Date().toISOString(),
+        achievement_candidate: null,
+      } satisfies MilestoneUpdate)
+      .eq("id", milestone.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (candidate && (candidate.practice_log_id || candidate.record_id)) {
+      await this.saveAchievementRecord(milestone.id, {
+        practiceLogId: candidate.practice_log_id ?? undefined,
+        recordId: candidate.record_id ?? undefined,
+        achievedValue: candidate.achieved_value,
+      });
+    }
+    return data;
+  }
+
+  /**
+   * 確認ダイアログで「キャンセル」: 候補を消し、今より前に登録した記録では再び候補にしない
+   */
+  async dismissMilestoneCandidate(milestone: Pick<Milestone, "id">): Promise<Milestone> {
+    const { data, error } = await this.supabase
+      .from("milestones")
+      .update({
+        achievement_candidate: null,
+        candidate_dismissed_at: new Date().toISOString(),
+      } satisfies MilestoneUpdate)
+      .eq("id", milestone.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
   // =========================================================================
   // 達成判定ロジック
   // =========================================================================
@@ -605,7 +784,7 @@ export class GoalAPI {
    * @param milestone 判定対象のマイルストーンの行。呼び出し元 (updateAllMilestoneStatuses)
    *   が既に取得済みの行をそのまま渡す (再取得しない)
    */
-  async checkMilestoneAchievement(milestone: Milestone): Promise<{
+  async checkMilestoneAchievement(rawMilestone: Milestone): Promise<{
     achieved: boolean;
     achievementData?: {
       practiceLogId?: string;
@@ -626,6 +805,12 @@ export class GoalAPI {
           achievedValue: { [key: string]: unknown };
         }
       | undefined;
+
+    // 旧 time 型は reps_time (1本×1セット) にそろえ、1本×1セットは練習タイム1本 + 大会記録で判定する
+    const normalized = normalizeMilestone(rawMilestone);
+    const milestone = isSingleRepsTimeParams(normalized.params)
+      ? asSingleTimeMilestone(normalized, normalized.params)
+      : normalized;
 
     if (milestone.type === "time") {
       const result = await this.checkTimeAchievement(milestone, user.id);
@@ -945,7 +1130,14 @@ export class GoalAPI {
    * マイルストーンに関連するレコードが存在するか確認
    * @private
    */
-  private async hasRecordsForMilestone(userId: string, milestone: Milestone): Promise<boolean> {
+  private async hasRecordsForMilestone(
+    userId: string,
+    rawMilestone: Milestone,
+  ): Promise<boolean> {
+    const normalized = normalizeMilestone(rawMilestone);
+    const milestone = isSingleRepsTimeParams(normalized.params)
+      ? asSingleTimeMilestone(normalized, normalized.params)
+      : normalized;
     if (milestone.type === "time") {
       return await this.hasTimeRecords(userId, milestone);
     } else if (milestone.type === "reps_time") {
@@ -1169,6 +1361,7 @@ export class GoalAPI {
   /**
    * 単一マイルストーンの達成判定・ステータス更新・期限切れチェック。
    * updateAllMilestoneStatuses から並列に呼ばれる (1件分の処理を独立させたもの)。
+   * 自動達成モード (web) は達成にし、確認モード (mobile) は達成候補を置くだけにする。
    * @private
    */
   private async processMilestoneStatusUpdate(
@@ -1176,114 +1369,77 @@ export class GoalAPI {
     milestone: Milestone,
     today: string,
   ): Promise<void> {
-    // 達成判定
-    const { achieved, achievementData } = await this.checkMilestoneAchievement(milestone);
+    // 自由記述 (other) は記録から判定できない。期限切れだけ見る
+    const { achieved, achievementData } =
+      milestone.type === "other"
+        ? { achieved: false, achievementData: undefined }
+        : await this.checkMilestoneAchievement(milestone);
+    const hasCandidate = !!milestone.achievement_candidate;
 
     if (achieved && milestone.status !== "achieved") {
-      // 達成状態に更新
-      await this.updateMilestoneStatus(milestone.id, "achieved", new Date().toISOString());
-
-      // ローカル変数も更新（期限切れチェックで正しく判定するため）
-      milestone.status = "achieved";
-
-      // 達成記録を保存（milestone_achievements）
-      if (achievementData) {
-        try {
-          // 重複チェック: 既に同じマイルストーン・同じレコードのachievementが存在するか確認
-          let shouldInsert = true;
-
-          if (achievementData.practiceLogId) {
-            const existingCheck = await this.supabase
-              .from("milestone_achievements")
-              .select("id")
-              .eq("milestone_id", milestone.id)
-              .eq("practice_log_id", achievementData.practiceLogId)
-              .maybeSingle();
-
-            if (existingCheck.error && existingCheck.error.code !== "PGRST116") {
-              // PGRST116は「not found」エラー（正常なケース）
-              console.warn(
-                `マイルストーン ${milestone.id} の達成記録重複チェック中にエラー:`,
-                existingCheck.error,
-              );
-            } else if (existingCheck.data) {
-              // 既に存在する場合はスキップ（並行実行時の重複防止）
-              shouldInsert = false;
-            }
-          } else if (achievementData.recordId) {
-            const existingCheck = await this.supabase
-              .from("milestone_achievements")
-              .select("id")
-              .eq("milestone_id", milestone.id)
-              .eq("record_id", achievementData.recordId)
-              .maybeSingle();
-
-            if (existingCheck.error && existingCheck.error.code !== "PGRST116") {
-              // PGRST116は「not found」エラー（正常なケース）
-              console.warn(
-                `マイルストーン ${milestone.id} の達成記録重複チェック中にエラー:`,
-                existingCheck.error,
-              );
-            } else if (existingCheck.data) {
-              // 既に存在する場合はスキップ（並行実行時の重複防止）
-              shouldInsert = false;
-            }
-          }
-
-          // 達成記録を挿入（重複がない場合のみ）
-          if (shouldInsert) {
-            const { error: achievementError } = await this.supabase
-              .from("milestone_achievements")
-              .insert({
-                milestone_id: milestone.id,
-                practice_log_id: achievementData.practiceLogId || null,
-                record_id: achievementData.recordId || null,
-                achieved_value: achievementData.achievedValue,
-              });
-
-            if (achievementError) {
-              // ユニーク制約エラー（重複）の場合は警告のみで続行
-              // その他のエラーもログに記録して続行（他のマイルストーンの処理を中断しない）
-              const isDuplicateError =
-                achievementError.code === "23505" || // PostgreSQL unique violation
-                achievementError.message?.includes("duplicate") ||
-                achievementError.message?.includes("unique");
-
-              if (isDuplicateError) {
-                console.warn(
-                  `マイルストーン ${milestone.id} の達成記録は既に存在します（並行実行による重複）:`,
-                  achievementError.message,
-                );
-              } else {
-                console.error(
-                  `マイルストーン ${milestone.id} の達成記録の保存に失敗:`,
-                  achievementError,
-                );
-              }
-              // エラーが発生してもループを継続（他のマイルストーンの処理を続行）
-            }
-          }
-        } catch (error) {
-          // 予期しないエラーもキャッチしてログに記録し、処理を続行
-          console.error(
-            `マイルストーン ${milestone.id} の達成記録保存中に予期しないエラー:`,
-            error,
-          );
-          // エラーが発生してもループを継続
+      if (milestoneAutoAchieve) {
+        // 達成状態に更新 (mobile が置いた確認待ちの候補があれば一緒に消す)
+        if (hasCandidate) {
+          const { error } = await this.supabase
+            .from("milestones")
+            .update({
+              status: "achieved",
+              achieved_at: new Date().toISOString(),
+              achievement_candidate: null,
+            } satisfies MilestoneUpdate)
+            .eq("id", milestone.id);
+          if (error) throw error;
+        } else {
+          await this.updateMilestoneStatus(milestone.id, "achieved", new Date().toISOString());
         }
-      }
-    } else if (!achieved && milestone.status === "not_started") {
-      // 関連レコードが存在する場合のみ「進行中」に変更
-      const hasRecords = await this.hasRecordsForMilestone(userId, milestone);
-      if (hasRecords) {
-        await this.updateMilestoneStatus(milestone.id, "in_progress");
         // ローカル変数も更新（期限切れチェックで正しく判定するため）
-        milestone.status = "in_progress";
+        milestone.status = "achieved";
+        if (achievementData) {
+          await this.saveAchievementRecord(milestone.id, achievementData);
+        }
+      } else if (!hasCandidate) {
+        // 確認モード: 達成にはせず候補を置く (確認ダイアログで「達成！」を押すまで未達成のまま)。
+        // 既に候補があれば根拠を差し替えない (表示中のダイアログと食い違わないように)
+        const updateData: MilestoneUpdate = {
+          achievement_candidate: {
+            practice_log_id: achievementData?.practiceLogId ?? null,
+            record_id: achievementData?.recordId ?? null,
+            achieved_value: achievementData?.achievedValue ?? {},
+            detected_at: new Date().toISOString(),
+          },
+        };
+        if (milestone.status === "not_started") updateData.status = "in_progress";
+        const { error } = await this.supabase
+          .from("milestones")
+          .update(updateData)
+          .eq("id", milestone.id);
+        if (error) throw error;
+        if (updateData.status) milestone.status = "in_progress";
+        milestone.achievement_candidate = updateData.achievement_candidate;
+      }
+    } else if (!achieved) {
+      // 根拠の記録が消された・条件が変わった等で満たさなくなった候補は取り下げる
+      if (hasCandidate) {
+        const { error } = await this.supabase
+          .from("milestones")
+          .update({ achievement_candidate: null } satisfies MilestoneUpdate)
+          .eq("id", milestone.id);
+        if (error) throw error;
+        milestone.achievement_candidate = null;
+      }
+      if (milestone.status === "not_started" && milestone.type !== "other") {
+        // 関連レコードが存在する場合のみ「進行中」に変更
+        const hasRecords = await this.hasRecordsForMilestone(userId, milestone);
+        if (hasRecords) {
+          await this.updateMilestoneStatus(milestone.id, "in_progress");
+          // ローカル変数も更新（期限切れチェックで正しく判定するため）
+          milestone.status = "in_progress";
+        }
       }
     }
 
-    // 期限切れチェック
-    if (milestone.deadline) {
+    // 期限切れチェック。達成の確認待ち (候補あり) は記録上は達成しているので期限切れにしない
+    if (milestone.deadline && !milestone.achievement_candidate) {
       // deadlineは既にYYYY-MM-DD形式の文字列として格納されているため、そのまま使用
       // ただし、Dateオブジェクトの場合はformatで変換
       const deadline =
@@ -1293,6 +1449,79 @@ export class GoalAPI {
       if (deadline < today && milestone.status !== "achieved") {
         await this.updateMilestoneStatus(milestone.id, "expired");
       }
+    }
+  }
+
+  /**
+   * 達成記録 (milestone_achievements) を1件保存する。並行実行による重複はスキップし、
+   * 失敗してもログに残すだけで呼び出し元 (他のマイルストーンの処理・達成の確定) を止めない。
+   * @private
+   */
+  private async saveAchievementRecord(
+    milestoneId: string,
+    achievementData: {
+      practiceLogId?: string;
+      recordId?: string;
+      achievedValue: { [key: string]: unknown };
+    },
+  ): Promise<void> {
+    try {
+      // 重複チェック: 既に同じマイルストーン・同じレコードのachievementが存在するか確認
+      let shouldInsert = true;
+
+      if (achievementData.practiceLogId || achievementData.recordId) {
+        const column = achievementData.practiceLogId ? "practice_log_id" : "record_id";
+        const value = achievementData.practiceLogId ?? achievementData.recordId;
+        const existingCheck = await this.supabase
+          .from("milestone_achievements")
+          .select("id")
+          .eq("milestone_id", milestoneId)
+          .eq(column, value)
+          .maybeSingle();
+
+        if (existingCheck.error && existingCheck.error.code !== "PGRST116") {
+          // PGRST116は「not found」エラー（正常なケース）
+          console.warn(
+            `マイルストーン ${milestoneId} の達成記録重複チェック中にエラー:`,
+            existingCheck.error,
+          );
+        } else if (existingCheck.data) {
+          // 既に存在する場合はスキップ（並行実行時の重複防止）
+          shouldInsert = false;
+        }
+      }
+
+      // 達成記録を挿入（重複がない場合のみ）
+      if (shouldInsert) {
+        const { error: achievementError } = await this.supabase
+          .from("milestone_achievements")
+          .insert({
+            milestone_id: milestoneId,
+            practice_log_id: achievementData.practiceLogId || null,
+            record_id: achievementData.recordId || null,
+            achieved_value: achievementData.achievedValue,
+          });
+
+        if (achievementError) {
+          // ユニーク制約エラー（重複）の場合は警告のみで続行
+          const isDuplicateError =
+            achievementError.code === "23505" || // PostgreSQL unique violation
+            achievementError.message?.includes("duplicate") ||
+            achievementError.message?.includes("unique");
+
+          if (isDuplicateError) {
+            console.warn(
+              `マイルストーン ${milestoneId} の達成記録は既に存在します（並行実行による重複）:`,
+              achievementError.message,
+            );
+          } else {
+            console.error(`マイルストーン ${milestoneId} の達成記録の保存に失敗:`, achievementError);
+          }
+        }
+      }
+    } catch (error) {
+      // 予期しないエラーもキャッチしてログに記録し、処理を続行
+      console.error(`マイルストーン ${milestoneId} の達成記録保存中に予期しないエラー:`, error);
     }
   }
 }

@@ -11,3 +11,5 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   # GHSA-27r3-jxmh-p828 の修正版 2.4.0 (2026-10-22 公開)。2026-10-29 以降に外す
   - body-parser
+  # GHSA-7wch-p9px-956x ほか high 5 件の修正版 1.4.2 (2026-10-27 公開)。2026-11-04 以降に外す
+  - node-forge

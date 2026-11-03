@@ -22,11 +22,14 @@ export type AuthStackParamList = {
   ResetPassword: undefined;
 };
 
+/** 記録タブの中の切り替え (練習記録一覧 / 大会記録一覧) */
+export type RecordsSegment = "practices" | "competitions";
+
 // タブナビゲーターのパラメータ型
+// iOS 標準のタブバーは 5 つまでしか並ばないため、練習と大会は Records (記録) タブの中で切り替える
 export type TabParamList = {
   Dashboard: undefined;
-  Practices: undefined;
-  Competitions: undefined;
+  Records: { segment?: RecordsSegment } | undefined;
   Teams: undefined;
   Goals: undefined;
   MyPage: undefined;

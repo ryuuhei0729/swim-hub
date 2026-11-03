@@ -27,6 +27,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
@@ -45,7 +46,10 @@ import { hasUnsavedChanges } from "@/utils/tabFormUtils";
 import { formatTimeBest } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
-import { getBestTimeForEntry } from "@/components/records/bestTimeForEntry";
+import {
+  getBestTimeForEntry,
+  formatBestTimeBadgeText,
+} from "@/components/records/bestTimeForEntry";
 import { GoalTargetBadge } from "@/components/records/GoalTargetBadge";
 import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
 import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
@@ -176,6 +180,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
   const { competitionId, teamId, styleId, relayEventId } = route.params;
   const { supabase, subscription, user, getAccessToken } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const isPremium = checkIsPremium(subscription);
   const { parseInput } = useQuickTimeInput();
@@ -444,14 +449,17 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
   // 保存完了 → 前画面へ戻る（isSaved の再レンダー commit 後に goBack することで
   // usePreventRemove の preventRemove=false が確定した状態で REMOVE を発行する）
   useEffect(() => {
-    if (isSaved) navigation.goBack();
-  }, [isSaved, navigation]);
+    if (isSaved) {
+      toast.success(t("common.savedToast"));
+      navigation.goBack();
+    }
+  }, [isSaved, navigation, t, toast]);
 
   const bestTimeBadgeFor = (
     memberUserId: string,
     forStyleId: number | "" | undefined,
     isRelaying: boolean,
-  ): { time: number; label: string } | null => {
+  ): string | null => {
     if (!memberUserId || forStyleId === "" || forStyleId === undefined)
       return null;
     if (!data) return null;
@@ -463,7 +471,8 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
       isRelaying,
       bestTimesByUserId.get(memberUserId) ?? [],
     );
-    return result ? { time: result.time, label: t(result.labelKey) } : null;
+    // 「ベストタイム(長水路): 55.00 R」の形 (引継はタイム末尾の R)
+    return result ? formatBestTimeBadgeText(result, t) : null;
   };
 
   const goalTargetFor = (
@@ -1468,7 +1477,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                         style={styles.bestTimeBadge}
                       >
                         <Text style={styles.bestTimeBadgeText}>
-                          {best.label}: {formatTimeBest(best.time)}
+                          {best}
                         </Text>
                       </View>
                     );
@@ -1690,7 +1699,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                         style={styles.bestTimeBadge}
                       >
                         <Text style={styles.bestTimeBadgeText}>
-                          {best.label}: {formatTimeBest(best.time)}
+                          {best}
                         </Text>
                       </View>
                     );

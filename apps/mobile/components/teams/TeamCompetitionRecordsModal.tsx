@@ -479,7 +479,7 @@ export function TeamCompetitionRecordsModal({
                 <Text style={styles.metaText}>{poolTypeLabel}</Text>
                 {competition.note && (
                   <View style={styles.metaItem}>
-                    <Feather name="edit-3" size={14} color="#6B7280" />
+                    <Feather name="edit-2" size={14} color="#2563EB" />
                     <Text style={styles.metaText} numberOfLines={2}>
                       {competition.note}
                     </Text>

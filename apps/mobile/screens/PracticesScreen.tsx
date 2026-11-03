@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useState } from "react";
-import { View, Text, StyleSheet, RefreshControl, Pressable } from "react-native";
+import { View, Text, StyleSheet, RefreshControl } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { parseISO, isValid } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -20,8 +20,10 @@ import {
   type PracticeSortColumn,
 } from "@/utils/practiceLogFilter";
 import { buildPracticeLogRows, type PracticeLogRow } from "@apps/shared/utils/practiceLogRows";
-import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { PracticeListSkeleton } from "@/components/ui/ScreenSkeletons";
+import { PressableScale } from "@/components/ui/PressableScale";
+import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
 import { usePracticeFilterStore } from "@/stores/practiceFilterStore";
 import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "react-i18next";
@@ -41,7 +43,18 @@ const PAGE_INCREMENT = 20;
  * 絞り込み/並べ替え/表示件数はすべてクライアント側(useMemo)で処理し、
  * サーバーからは過去1年分を一括取得する(pageSize=1000 相当。日付範囲ロジックは既存を維持)。
  */
-export const PracticesScreen: React.FC = () => {
+interface PracticesScreenProps {
+  /**
+   * 記録タブ (RecordsHubScreen) の中に置かれるとき true。親が上端の安全領域を
+   * 取っているので、この画面では上端のインセットを付けない
+   */
+  embedded?: boolean;
+}
+
+const safeAreaEdges = (embedded?: boolean): Edge[] =>
+  embedded ? ["left", "right"] : ["top", "left", "right"];
+
+export const PracticesScreen: React.FC<PracticesScreenProps> = ({ embedded }) => {
   const { supabase } = useAuth();
   const { t, i18n } = useTranslation();
 
@@ -363,22 +376,27 @@ export const PracticesScreen: React.FC = () => {
     setDisplayCount((count) => count + PAGE_INCREMENT);
   }, [displayCount, sortedRows.length]);
 
+  // 一覧が初めてデータ付きで出るときだけ、行を時間差でふわっと出す
+  const listEnterEnabled = useListEnterOnce(!isLoading && allPractices.length > 0);
+
   // 練習記録アイテムのレンダリング（メモ化）。1行 = 1練習ログ
   const renderItem = useCallback(
-    ({ item }: { item: PracticeLogRow }) => (
-      <PracticeItem
-        practice={item.practice}
-        log={item.log}
-        onPress={() => handlePracticePress(item)}
-      />
+    ({ item, index }: { item: PracticeLogRow; index: number }) => (
+      <ListItemEnter index={index} enabled={listEnterEnabled}>
+        <PracticeItem
+          practice={item.practice}
+          log={item.log}
+          onPress={() => handlePracticePress(item)}
+        />
+      </ListItemEnter>
     ),
-    [handlePracticePress],
+    [handlePracticePress, listEnterEnabled],
   );
 
   // エラー状態
   if (error) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
         <ErrorView
           message={error.message || t("practice.mobile.fetchFailed")}
           onRetry={() => refetch()}
@@ -391,8 +409,8 @@ export const PracticesScreen: React.FC = () => {
   // ローディング状態（初回読み込み時）
   if (isLoading && allPractices.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <LoadingSpinner fullScreen message={t("practice.mobile.loading")} />
+      <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
+        <PracticeListSkeleton />
       </SafeAreaView>
     );
   }
@@ -400,7 +418,7 @@ export const PracticesScreen: React.FC = () => {
   // データが空の場合（絞り込み前の全件が0件）
   if (allPractices.length === 0 && !isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>{t("practice.page.emptyTitle")}</Text>
         </View>
@@ -409,7 +427,7 @@ export const PracticesScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
       <ListToolbar
         itemCount={sortedRows.length}
         onSortClick={openSortSheet}
@@ -419,6 +437,8 @@ export const PracticesScreen: React.FC = () => {
 
       <FlashList
         data={displayRows}
+        // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
+        contentInsetAdjustmentBehavior="automatic"
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
@@ -438,13 +458,13 @@ export const PracticesScreen: React.FC = () => {
             {/* データ自体は存在するが絞り込み条件に一致が無い場合のみ、フィルタ全解除の導線を出す
                 (web PracticeClient と同様、「データが0件」とは区別する) */}
             {allPractices.length > 0 && activeFilterCount > 0 && (
-              <Pressable
+              <PressableScale
                 style={styles.resetFilterButton}
                 onPress={handleResetAllFilters}
                 accessibilityRole="button"
               >
                 <Text style={styles.resetFilterButtonText}>{t("competition.filter.resetButton")}</Text>
-              </Pressable>
+              </PressableScale>
             )}
           </View>
         }
@@ -514,7 +534,7 @@ export const PracticesScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#F1F5F9",
   },
   listContent: {
     paddingVertical: 8,

@@ -250,7 +250,7 @@ export const AttendanceGroupModal: React.FC<AttendanceGroupModalProps> = ({
             onPress={onChangeLinkPress}
             accessibilityRole="button"
           >
-            <Feather name="edit-3" size={16} color="#FFFFFF" />
+            <Feather name="edit-2" size={16} color="#FFFFFF" />
             <Text style={styles.changeLinkButtonText}>
               {t("dashboard.attendance.changeButton")}
             </Text>

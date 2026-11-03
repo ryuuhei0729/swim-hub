@@ -33,32 +33,69 @@ export type GoalUpdate = Partial<Omit<GoalInsert, "user_id">> & {
   reflection_note?: string | null;
 };
 
+/**
+ * マイルストーンのタイプ。
+ * - reps_time: 練習タイム目標。1本×1セットは練習タイム1本 + 大会記録で、それ以外は
+ *   本数の平均タイムで判定する
+ * - set: サークルイン目標
+ * - other: 自由記述 (内容は title に持つ)。自動判定せず手動で完了にする
+ * - time: 旧「タイム目標」。reps_time (1本×1セット) に統合済み。新しいコードは書き込まず
+ *   (createMilestone / updateMilestone で reps_time に変換)、配布済みの古いアプリが
+ *   書いた行を読むためだけに残している
+ */
+export type MilestoneType = "time" | "reps_time" | "set" | "other";
+
 // マイルストーン
 export interface Milestone {
   id: string;
   goal_id: string;
   title: string;
-  type: "time" | "reps_time" | "set";
+  type: MilestoneType;
   params: MilestoneParams;
   deadline: string | null;
   status: MilestoneStatus;
   achieved_at: string | null;
   reflection_done: boolean;
   reflection_note: string | null;
+  /**
+   * 達成候補 (mobile の確認ダイアログ用)。判定で条件を満たす記録が見つかったが、
+   * まだユーザーが「達成！」を押していない状態。null は候補なし。
+   * 列追加前のデータ・テストの fixture では欠けるので optional
+   */
+  achievement_candidate?: MilestoneAchievementCandidate | null;
+  /** 確認ダイアログで「キャンセル」した日時。これ以前に登録した記録では再び候補にしない */
+  candidate_dismissed_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** 達成候補の根拠 (確定時に milestone_achievements へ書く内容) */
+export interface MilestoneAchievementCandidate {
+  practice_log_id: string | null;
+  record_id: string | null;
+  achieved_value: Record<string, unknown>;
+  detected_at: string;
 }
 
 export type MilestoneStatus = "not_started" | "in_progress" | "achieved" | "expired";
 
 export type MilestoneInsert = Omit<
   Milestone,
-  "id" | "created_at" | "updated_at" | "achieved_at" | "reflection_done" | "reflection_note"
+  | "id"
+  | "created_at"
+  | "updated_at"
+  | "achieved_at"
+  | "reflection_done"
+  | "reflection_note"
+  | "achievement_candidate"
+  | "candidate_dismissed_at"
 >;
 export type MilestoneUpdate = Partial<Omit<MilestoneInsert, "goal_id">> & {
   achieved_at?: string | null;
   reflection_done?: boolean;
   reflection_note?: string | null;
+  achievement_candidate?: MilestoneAchievementCandidate | null;
+  candidate_dismissed_at?: string | null;
 };
 
 // マイルストーンパラメータ（Union型）
@@ -66,7 +103,8 @@ export type MilestoneParams =
   | MilestoneTimeParams
   | MilestoneRepsTimeParams
   | MilestoneSetParams
-  | MilestoneGoalSetParams;
+  | MilestoneGoalSetParams
+  | MilestoneOtherParams;
 
 export interface MilestoneTimeParams {
   distance: number;
@@ -98,6 +136,9 @@ export interface MilestoneSetParams {
   style: string;
   swim_category: "Swim" | "Pull" | "Kick";
 }
+
+/** type: "other" の params。内容は title に持つので空オブジェクト ({}) で保存する */
+export type MilestoneOtherParams = Record<string, never>;
 
 // 達成記録
 export interface MilestoneAchievement {
@@ -161,6 +202,45 @@ export function isMilestoneGoalSetParams(
   return "practice_pool_type" in params && "target_average_time" in params && "reps" in params;
 }
 
+/** 練習タイム目標の 1本×1セット (= 旧タイム目標。大会記録でも判定する) */
+export function isSingleRepsTimeParams(
+  params: MilestoneParams,
+): params is MilestoneRepsTimeParams {
+  return isMilestoneRepsTimeParams(params) && params.reps === 1 && params.sets === 1;
+}
+
+/** 旧タイム目標の params を練習タイム目標 (1本×1セット) の params に変換する */
+export function timeParamsToRepsTime(params: MilestoneTimeParams): MilestoneRepsTimeParams {
+  return {
+    distance: params.distance,
+    reps: 1,
+    sets: 1,
+    target_average_time: params.target_time,
+    style: params.style,
+    swim_category: params.swim_category,
+    circle: 0,
+  };
+}
+
+/**
+ * 保存・判定の前に旧 time 型を reps_time (1本×1セット) にそろえる。
+ * time は配布済みの古いアプリが書くことがあるので、読む側でも必ず通す。
+ */
+export function normalizeMilestoneTypeParams(
+  type: MilestoneType,
+  params: MilestoneParams,
+): { type: MilestoneType; params: MilestoneParams } {
+  if (type === "time" && isMilestoneTimeParams(params)) {
+    return { type: "reps_time", params: timeParamsToRepsTime(params) };
+  }
+  return { type, params };
+}
+
+/** 水泳の条件 (距離) を持たない params = type: "other" */
+export function isMilestoneOtherParams(params: MilestoneParams): params is MilestoneOtherParams {
+  return !("distance" in params);
+}
+
 /**
  * マイルストーンの目標タイム欄 (type: "time" の target_time / type: "reps_time" の
  * target_average_time) が保存可能な値かどうかを判定する。0秒は意味の無い目標タイムであり
@@ -179,13 +259,12 @@ export function isMilestoneTimeValueValid(params: MilestoneParams): boolean {
  * - time: target_time > 0
  * - reps_time: reps >= 1, sets >= 1, target_average_time > 0 (circle は判定にも要約文にも使わないので不問)
  * - set: reps >= 1, sets >= 1, circle > 0
+ * - other: 水泳の条件を持たない (params は {})。内容 (title) の検査は呼び出し側で行う
  * type と params の型が食い違う場合は false。
  */
-export function isMilestoneParamsSavable(
-  type: "time" | "reps_time" | "set",
-  params: MilestoneParams,
-): boolean {
-  if (!(params.distance > 0)) return false;
+export function isMilestoneParamsSavable(type: MilestoneType, params: MilestoneParams): boolean {
+  if (type === "other") return isMilestoneOtherParams(params);
+  if (isMilestoneOtherParams(params) || !(params.distance > 0)) return false;
   if (type === "time") {
     return isMilestoneTimeParams(params) && params.target_time > 0;
   }
@@ -233,14 +312,14 @@ export interface UpdateGoalInput {
 export interface CreateMilestoneInput {
   goalId: string;
   title: string;
-  type: "time" | "reps_time" | "set";
+  type: MilestoneType;
   params: MilestoneParams;
   deadline?: string | null;
 }
 
 export interface UpdateMilestoneInput {
   id: string;
-  type?: "time" | "reps_time" | "set";
+  type?: MilestoneType;
   title?: string;
   params?: MilestoneParams;
   deadline?: string | null;

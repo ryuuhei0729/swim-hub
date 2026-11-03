@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { syncAllToGoogleCalendar } from "@/lib/google-calendar-api";
 import type { UserProfile } from "@swim-hub/shared/types";
+import { cardSurface } from "@/constants/theme";
 
 interface GoogleCalendarSyncSettingsProps {
   /** ユーザープロフィール */
@@ -314,14 +315,8 @@ export const GoogleCalendarSyncSettings: React.FC<GoogleCalendarSyncSettingsProp
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    ...cardSurface,
     padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   header: {
     flexDirection: "row",

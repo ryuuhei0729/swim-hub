@@ -11,9 +11,16 @@ interface MilestoneListProps {
   milestones: Milestone[];
   onEdit: (milestone: Milestone) => void;
   onDelete: (milestone: Milestone) => void;
+  /** 手動で完了にする (completed=true) / 未完了に戻す (completed=false) */
+  onToggleComplete: (milestone: Milestone, completed: boolean) => void;
 }
 
-export const MilestoneList: React.FC<MilestoneListProps> = ({ milestones, onEdit, onDelete }) => {
+export const MilestoneList: React.FC<MilestoneListProps> = ({
+  milestones,
+  onEdit,
+  onDelete,
+  onToggleComplete,
+}) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
   const summarize = useMilestoneSummary();
@@ -51,7 +58,7 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({ milestones, onEdit
                   accessibilityRole="button"
                   accessibilityLabel={t("goals.milestone.edit")}
                 >
-                  <Feather name="edit-2" size={16} color="#6B7280" />
+                  <Feather name="edit-2" size={16} color="#2563EB" />
                 </Pressable>
                 <Pressable
                   onPress={() => onDelete(milestone)}
@@ -60,11 +67,14 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({ milestones, onEdit
                   accessibilityRole="button"
                   accessibilityLabel={t("goals.milestone.delete")}
                 >
-                  <Feather name="trash-2" size={16} color="#6B7280" />
+                  <Feather name="trash-2" size={16} color="#EF4444" />
                 </Pressable>
               </View>
             </View>
-            <Text style={styles.summary}>{summarize(milestone)}</Text>
+            {/* その他タイプは内容 = タイトルなので、要約文 (= タイトル) を重ねて出さない */}
+            {milestone.type !== "other" && (
+              <Text style={styles.summary}>{summarize(milestone)}</Text>
+            )}
             {(milestone.deadline || (achieved && milestone.achieved_at)) && (
               <View style={styles.metaRow}>
                 {milestone.deadline && (
@@ -80,6 +90,31 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({ milestones, onEdit
                 )}
               </View>
             )}
+            <View style={styles.footer}>
+              {achieved ? (
+                <Pressable
+                  onPress={() => onToggleComplete(milestone, false)}
+                  hitSlop={6}
+                  style={styles.reopenButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("goals.milestone.markIncomplete")}
+                >
+                  <Feather name="rotate-ccw" size={13} color="#6B7280" />
+                  <Text style={styles.reopenButtonText}>{t("goals.milestone.markIncomplete")}</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => onToggleComplete(milestone, true)}
+                  hitSlop={6}
+                  style={styles.completeButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("goals.milestone.markComplete")}
+                >
+                  <Feather name="check" size={14} color="#16A34A" />
+                  <Text style={styles.completeButtonText}>{t("goals.milestone.markComplete")}</Text>
+                </Pressable>
+              )}
+            </View>
           </View>
         );
       })}
@@ -176,5 +211,37 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 6,
+  },
+  footer: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  completeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#86EFAC",
+    backgroundColor: "#FFFFFF",
+  },
+  completeButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#16A34A",
+  },
+  reopenButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  reopenButtonText: {
+    fontSize: 12,
+    color: "#6B7280",
   },
 });

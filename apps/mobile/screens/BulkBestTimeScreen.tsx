@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
   TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +20,7 @@ import { RecordAPI } from "@apps/shared/api/records";
 import { recordKeys } from "@apps/shared/hooks/queries/keys";
 import { parseTimeFlexible, formatTimeBest } from "@apps/shared/utils/time";
 import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
+import { useToast } from "@/providers/ToastProvider";
 import type { MainStackParamList } from "@/navigation/types";
 import {
   STYLE_TAB_IDS,
@@ -51,6 +51,7 @@ export const BulkBestTimeScreen: React.FC = () => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const toast = useToast();
 
   const [activeTab, setActiveTab] = useState<StyleTabId>("fr");
   const [activePool, setActivePool] = useState<0 | 1>(0);
@@ -110,18 +111,16 @@ export const BulkBestTimeScreen: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: recordKeys.lists() });
       await queryClient.invalidateQueries({ queryKey: ["calendar"] });
 
-      Alert.alert(
-        t("bulkBestTime.mobile.successTitle"),
-        t("bulkBestTime.success.registered", { n: result.created }),
-        [{ text: t("common.ok"), onPress: () => navigation.goBack() }],
-      );
+      // 完了はダイアログで止めずにトーストで知らせ、そのままマイページへ戻る
+      navigation.goBack();
+      toast.success(t("bulkBestTime.success.registered", { n: result.created }));
     } catch {
       setSaveError(t("bulkBestTime.error.registerFailed"));
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [records, recordAPI, isSaveable, queryClient, user?.id, t, navigation]);
+  }, [records, recordAPI, isSaveable, queryClient, user?.id, t, navigation, toast]);
 
   const tabStyles = getStylesForTab(activeTab);
 
@@ -401,7 +400,7 @@ const MatrixDistanceCard: React.FC<MatrixDistanceCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#F1F5F9",
   },
   scroll: {
     flex: 1,

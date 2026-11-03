@@ -23,6 +23,7 @@ import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useTranslation } from "react-i18next";
 import { useDateLocale } from "@/hooks/useDateLocale";
+import { useToast } from "@/providers/ToastProvider";
 import { AttendanceGroupModal } from "./AttendanceGroupModal";
 
 export interface MyMonthlyAttendanceProps {
@@ -55,6 +56,7 @@ interface MonthItem {
 export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   const locale = useDateLocale();
   const insets = useSafeInsets();
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
@@ -898,13 +900,9 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       // 月リストも更新
       await loadMonthList();
 
-      // 保存成功後、モーダルを閉じる
+      // 保存成功後、モーダルを閉じてからトーストで知らせる (モーダルの上には出ないため)
       handleCloseModal();
-      Alert.alert(
-        t("teams.mobile.attendanceSaveSuccessTitle"),
-        t("teams.mobile.attendanceSaveSuccessMessage"),
-        [{ text: "OK" }],
-      );
+      toast.success(t("teams.mobile.attendanceSaveSuccessMessage"));
     } catch (err) {
       console.error("出欠情報の保存に失敗:", err);
       const errorMessage = toUserFacingMessage(err, t("teams.mobile.attendanceSaveFailed"));

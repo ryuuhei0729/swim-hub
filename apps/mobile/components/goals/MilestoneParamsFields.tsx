@@ -190,6 +190,46 @@ export const RepsTimeParamsFields: React.FC<RepsTimeParamsFieldsProps> = ({
   );
 };
 
+/**
+ * 練習タイム目標 (time / reps_time を1つにまとめた入力欄)。
+ * 1本×1セットなら「目標タイム」(大会記録でも判定)、それ以外は「平均目標タイム」。保存はどちらも reps_time 型。
+ * 並びはサークルイン目標と同じ (距離・種目 → 本数・セット数 → サークル) で、その下に目標タイム。
+ */
+export const PracticeTimeParamsFields: React.FC<RepsTimeParamsFieldsProps> = ({
+  params,
+  onChange,
+  targetAverageTimeInvalid,
+}) => {
+  const { t } = useTranslation();
+  const isSingle = params.reps <= 1 && params.sets <= 1;
+  const timeLabel = isSingle
+    ? t("goals.paramsForm.targetTimeLabel")
+    : t("goals.paramsForm.averageTimeLabel");
+  return (
+    <View style={styles.container}>
+      <CommonFields params={params} onChange={onChange} />
+      <RepsSetsFields params={params} onChange={onChange} />
+      <CircleFields params={params} onChange={onChange} />
+      <Labeled label={timeLabel}>
+        <TimeSecondsInput
+          value={params.target_average_time}
+          onChange={(seconds) => onChange({ ...params, target_average_time: seconds ?? 0 })}
+          required
+          requiredErrorMessage={
+            isSingle
+              ? t("goals.paramsForm.timeRequired")
+              : t("goals.paramsForm.averageTimeRequired")
+          }
+          invalidErrorMessage={t("goals.paramsForm.timeInvalid")}
+          forceInvalid={targetAverageTimeInvalid}
+          accessibilityLabel={timeLabel}
+          testID="milestone-practice-time"
+        />
+      </Labeled>
+    </View>
+  );
+};
+
 export const SetParamsFields: React.FC<FieldProps<MilestoneSetParams>> = ({
   params,
   onChange,

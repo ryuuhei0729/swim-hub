@@ -96,6 +96,12 @@ const typeInto = (id: string, text: string) => { let acc = ""; for (const ch of 
 const setNumber = (label: string, v: string) => fireEvent.change(byLabel(label)[0]!, { target: { value: v } });
 const errorText = () => Array.from(document.querySelectorAll('[accessibilityrole="alert"]')).map((e) => e.textContent);
 const submit = (label = "作成") => act(async () => { fireEvent.click(screen.getByText(label)); await new Promise((r) => setTimeout(r, 20)); });
+/** タイプのタブ (セグメント) 内のボタンを押す。「その他」は種目チップにもあるのでタブに限定する */
+const clickTab = (label: string) => {
+  const seg = document.querySelector('[accessibilitylabel="マイルストーンタイプ選択"]')!;
+  const btn = Array.from(seg.querySelectorAll("button")).find((b) => b.textContent === label)!;
+  fireEvent.click(btn);
+};
 const toggleTemplateSwitch = () => fireEvent.click(document.querySelector('[aria-label="テンプレートにも追加"]')!);
 
 beforeEach(() => {
@@ -112,24 +118,24 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
-describe("S4 作成: 3 type", () => {
-  it("time (既定): createMilestone が期待 params / 自動タイトル '50m: 30.00' / deadline null で1回", async () => {
+describe("S4 作成: 3 タブ (練習タイム / サークルイン / その他)", () => {
+  it("練習タイム目標 (既定 1本×1セット): reps_time で保存 / 自動タイトル '50m: 30.00' / deadline null で1回", async () => {
     renderScreen();
     await flush();
     await submit();
     expect(h.createMilestone).toHaveBeenCalledTimes(1);
     expect(h.createMilestone).toHaveBeenCalledWith({
-      goalId: "g1", title: "50m: 30.00", type: "time",
-      params: { distance: 50, target_time: 30, style: "Fr", swim_category: "Swim" }, deadline: null,
+      goalId: "g1", title: "50m: 30.00", type: "reps_time",
+      params: { distance: 50, reps: 1, sets: 1, target_average_time: 30, style: "Fr", swim_category: "Swim", circle: 45 }, deadline: null,
     });
     await flush();
     expect(h.goBack).toHaveBeenCalledTimes(1);
   });
 
-  it("reps_time: 練習平均タイム目標に切替 -> shared 既定値 + 自動タイトル", async () => {
+  it("reps_time: 練習タイム目標で本数を 10 にする -> 平均タイム目標として保存 + 自動タイトル", async () => {
     renderScreen();
     await flush();
-    fireEvent.click(screen.getByText("練習平均タイム目標"));
+    setNumber("本数", "10"); // 練習タイム目標で本数を増やすと平均タイム目標 (reps_time)
     await submit();
     expect(h.createMilestone).toHaveBeenCalledWith({
       goalId: "g1", title: "50m × 10本 @30.00 平均", type: "reps_time",
@@ -165,9 +171,9 @@ describe("S4 作成: 3 type", () => {
   it("目標タイムを編集して保存しても shared の DEFAULT_TIME_PARAMS (共有参照) を破壊しない", async () => {
     renderScreen();
     await flush();
-    typeInto("milestone-target-time", "45.50");
+    typeInto("milestone-practice-time", "45.50");
     await submit();
-    expect(h.createMilestone.mock.calls[0]![0].params.target_time).toBe(45.5);
+    expect(h.createMilestone.mock.calls[0]![0].params.target_average_time).toBe(45.5);
     expect(DEFAULT_TIME_PARAMS).toEqual({ distance: 50, target_time: 30, style: "Fr", swim_category: "Swim" });
     expect(DEFAULT_REPS_TIME_PARAMS.reps).toBe(10);
     expect(DEFAULT_SET_PARAMS.circle).toBe(140);
@@ -192,19 +198,83 @@ describe("S4 作成: 3 type", () => {
   });
 });
 
+describe("タブ構成 / その他タブ", () => {
+  it("タブは 練習タイム目標 / サークルイン目標 / その他 の3つ (旧 タイム目標・練習平均タイム目標 は出ない)", async () => {
+    renderScreen();
+    await flush();
+    expect(screen.getByText("練習タイム目標")).toBeTruthy();
+    expect(screen.getByText("サークルイン目標")).toBeTruthy();
+    const seg = document.querySelector('[accessibilitylabel="マイルストーンタイプ選択"]')!;
+    expect(Array.from(seg.querySelectorAll("button")).map((b) => b.textContent)).toEqual([
+      "練習タイム目標", "サークルイン目標", "その他",
+    ]);
+    expect(screen.queryByText("タイム目標")).toBeNull();
+    expect(screen.queryByText("練習平均タイム目標")).toBeNull();
+  });
+
+  it("練習タイム目標: サークル欄は常に本数・セット数のすぐ下 (サークルイン目標と同じ並び)。1本×1セットは『目標タイム』、本数を増やすと『平均目標タイム』", async () => {
+    renderScreen();
+    await flush();
+    expect(byLabel("目標タイム")).toHaveLength(1);
+    const order = () =>
+      ["セット数", "サークル(分)", "サークル(秒)"].map((l) => byLabel(l)[0]!).concat(tid("milestone-practice-time"));
+    const [sets, cMin, cSec, time] = order();
+    // DOM 上の出現順: セット数 < サークル(分) < サークル(秒) < 目標タイム
+    expect(sets!.compareDocumentPosition(cMin!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cMin!.compareDocumentPosition(cSec!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cSec!.compareDocumentPosition(time!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    setNumber("本数", "4");
+    expect(byLabel("平均目標タイム")).toHaveLength(1);
+    expect(byLabel("サークル(分)")).toHaveLength(1);
+  });
+
+  it("練習タイム目標: 1本×1セットも reps_time なのでサークルも保存される", async () => {
+    renderScreen();
+    await flush();
+    setNumber("サークル(分)", "1");
+    await submit();
+    expect(h.createMilestone.mock.calls[0]![0]).toMatchObject({
+      type: "reps_time", params: { reps: 1, sets: 1, circle: 105 },
+    });
+  });
+
+  it("その他: 内容を title に、params は {} / type other で保存 (自動要約しない)", async () => {
+    renderScreen();
+    await flush();
+    clickTab("その他");
+    expect(byLabel("距離 (m)")).toHaveLength(0);
+    fireEvent.change(byLabel("目標の内容")[0]!, { target: { value: "  ベンチプレス100kg×2  " } });
+    await submit();
+    expect(h.createMilestone).toHaveBeenCalledWith({
+      goalId: "g1", title: "ベンチプレス100kg×2", type: "other", params: {}, deadline: null,
+    });
+    expect(h.createTemplate).not.toHaveBeenCalled();
+  });
+
+  it("その他: 内容が空 (空白のみ) は保存不可 + otherContentRequired", async () => {
+    renderScreen();
+    await flush();
+    clickTab("その他");
+    fireEvent.change(byLabel("目標の内容")[0]!, { target: { value: "   " } });
+    await submit();
+    expect(h.createMilestone).not.toHaveBeenCalled();
+    expect(errorText()).toContain("目標の内容を入力してください");
+  });
+});
+
 describe("v4 M1 保存前検証 (0/空 params は保存不可)", () => {
   it("time: 目標タイム空 -> 保存不可 + timeInvalid", async () => {
     renderScreen();
     await flush();
-    typeInto("milestone-target-time", "abc");
+    typeInto("milestone-practice-time", "abc");
     await submit();
     expect(h.createMilestone).not.toHaveBeenCalled();
     expect(errorText()).toContain("有効なタイム形式で入力してください（例: 1:14.28 または 74.28）");
   });
 
   it.each([
-    ["reps_time", "練習平均タイム目標", "本数", "0"],
-    ["reps_time", "練習平均タイム目標", "セット数", ""],
+    ["reps_time", "練習タイム目標", "本数", "0"],
+    ["reps_time", "練習タイム目標", "セット数", ""],
     ["set", "サークルイン目標", "本数", "0"],
     ["set", "サークルイン目標", "セット数", "0"],
   ])("%s: %s で '%s' を '%s' にすると保存不可 (達成判定が 0/0=NaN になる)", async (_t, typeLabel, field, value) => {
@@ -221,7 +291,7 @@ describe("v4 M1 保存前検証 (0/空 params は保存不可)", () => {
   it("[v5 L-c] reps_time は circle=0 (分も秒も 0) でも保存できる (達成判定・要約文は circle を使わない)", async () => {
     renderScreen();
     await flush();
-    fireEvent.click(screen.getByText("練習平均タイム目標"));
+    setNumber("本数", "10"); // 練習タイム目標で本数を増やすと平均タイム目標 (reps_time)
     setNumber("サークル(分)", "0");
     setNumber("サークル(秒)", "0");
     await submit();
@@ -258,8 +328,8 @@ describe("テンプレート / 期限 / テンプレートにも追加", () => {
     fireEvent.click(screen.getByText("タイムトライアル"));
     await submit();
     expect(h.createMilestone).toHaveBeenCalledWith({
-      goalId: "g1", title: "タイムトライアル", type: "time",
-      params: { distance: 100, target_time: 60.6, style: "Fr", swim_category: "Swim" }, deadline: null,
+      goalId: "g1", title: "タイムトライアル", type: "reps_time",
+      params: { distance: 100, reps: 1, sets: 1, target_average_time: 60.6, style: "Fr", swim_category: "Swim", circle: 0 }, deadline: null,
     });
   });
 
@@ -269,7 +339,7 @@ describe("テンプレート / 期限 / テンプレートにも追加", () => {
     await flush();
     fireEvent.click(screen.getByText("タイムトライアル"));
     await submit();
-    expect(h.createMilestone.mock.calls[0]![0].params.target_time).toBe(84.28);
+    expect(h.createMilestone.mock.calls[0]![0].params.target_average_time).toBe(84.28);
   });
 
   it("ゴールセットテンプレートは目標種目が 100m のときだけ表示 (50m では出ない)", async () => {
@@ -321,14 +391,14 @@ describe("テンプレート / 期限 / テンプレートにも追加", () => {
     renderScreen();
     await flush();
     expect(document.querySelector('[aria-label="テンプレートにも追加"]')).toBeNull();
-    fireEvent.click(screen.getByText("練習平均タイム目標"));
+    setNumber("本数", "10"); // 練習タイム目標で本数を増やすと平均タイム目標 (reps_time)
     await submit();
     expect(h.createTemplate).not.toHaveBeenCalled();
 
     cleanup(); h.createMilestone.mockClear();
     renderScreen();
     await flush();
-    fireEvent.click(screen.getByText("練習平均タイム目標"));
+    setNumber("本数", "10"); // 練習タイム目標で本数を増やすと平均タイム目標 (reps_time)
     toggleTemplateSwitch();
     await submit();
     expect(h.createTemplate).toHaveBeenCalledTimes(1);
@@ -436,7 +506,7 @@ describe("S4 編集", () => {
     renderScreen();
     await flush();
     expect((byLabel("タイトル（任意、空欄の場合は自動生成）")[0] as HTMLInputElement).value).toBe("既存タイトル");
-    expect(tid("milestone-target-time").value).toBe("1:23.45");
+    expect(tid("milestone-practice-time").value).toBe("1:23.45");
     expect(screen.getByTestId("deadline-field").getAttribute("data-value")).toBe("2099-01-02");
     expect(screen.queryByText("タイムトライアル")).toBeNull();
     expect(document.querySelector('[aria-label="テンプレートにも追加"]')).toBeNull();
@@ -445,14 +515,56 @@ describe("S4 編集", () => {
   it("更新 -> updateMilestone('m1', {type,title,params,deadline}) の引数 assert。createMilestone は呼ばれない", async () => {
     renderScreen();
     await flush();
-    typeInto("milestone-target-time", "");
-    fireEvent.change(tid("milestone-target-time"), { target: { value: "" } });
-    typeInto("milestone-target-time", "1:20.00");
+    typeInto("milestone-practice-time", "");
+    fireEvent.change(tid("milestone-practice-time"), { target: { value: "" } });
+    typeInto("milestone-practice-time", "1:20.00");
     await submit("更新");
     expect(h.createMilestone).not.toHaveBeenCalled();
     expect(h.updateMilestone).toHaveBeenCalledWith("m1", {
-      type: "time", title: "既存タイトル",
-      params: { distance: 100, target_time: 80, style: "Fr", swim_category: "Swim" }, deadline: "2099-01-02",
+      type: "reps_time", title: "既存タイトル",
+      params: { distance: 100, reps: 1, sets: 1, target_average_time: 80, style: "Fr", swim_category: "Swim", circle: 0 }, deadline: "2099-01-02",
+    });
+  });
+
+  it("旧 time 型を編集で 本数×セット を増やすと reps_time として更新される", async () => {
+    renderScreen();
+    await flush();
+    setNumber("本数", "3");
+    await submit("更新");
+    expect(h.updateMilestone).toHaveBeenCalledWith("m1", expect.objectContaining({
+      type: "reps_time",
+      params: expect.objectContaining({ distance: 100, reps: 3, sets: 1, target_average_time: 83.45 }),
+    }));
+  });
+
+  it("reps_time 型は 練習タイム目標タブで本数・平均タイムがプリフィルされ、1本×1セットに戻しても reps_time (サークルは残る) で更新", async () => {
+    h.getGoalWithMilestones.mockResolvedValue(goalFx({ milestones: [msFx({
+      type: "reps_time",
+      params: { distance: 50, reps: 6, sets: 3, target_average_time: 31.7, style: "Fr", swim_category: "Swim", circle: 90 },
+    })] }));
+    renderScreen();
+    await flush();
+    expect((byLabel("本数")[0] as HTMLInputElement).value).toBe("6");
+    expect(tid("milestone-practice-time").value).toBe("31.70");
+    setNumber("本数", "1");
+    setNumber("セット数", "1");
+    await submit("更新");
+    expect(h.updateMilestone).toHaveBeenCalledWith("m1", expect.objectContaining({
+      type: "reps_time",
+      params: { distance: 50, reps: 1, sets: 1, target_average_time: 31.7, style: "Fr", swim_category: "Swim", circle: 90 },
+    }));
+  });
+
+  it("other 型は その他タブで内容がプリフィルされ、type other / params {} で更新", async () => {
+    h.getGoalWithMilestones.mockResolvedValue(goalFx({ milestones: [msFx({
+      type: "other", title: "ランニング毎日達成", params: {},
+    })] }));
+    renderScreen();
+    await flush();
+    expect((byLabel("目標の内容")[0] as HTMLInputElement).value).toBe("ランニング毎日達成");
+    await submit("更新");
+    expect(h.updateMilestone).toHaveBeenCalledWith("m1", {
+      type: "other", title: "ランニング毎日達成", params: {}, deadline: "2099-01-02",
     });
   });
 
@@ -491,7 +603,7 @@ describe("U5 破棄確認", () => {
     renderScreen();
     await flush();
     expect(h.preventRemove.prevent).toBe(false);
-    typeInto("milestone-target-time", "40.00");
+    typeInto("milestone-practice-time", "40.00");
     expect(h.preventRemove.prevent).toBe(true);
     const action = { type: "GO_BACK" };
     h.preventRemove.cb!({ data: { action } });

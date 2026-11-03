@@ -1,5 +1,5 @@
 // =============================================================================
-// screens/__tests__/GoalsScreen.judgmentOrder.test.tsx  (S7, S9, D7, S3 一覧からの削除)
+// screens/__tests__/GoalsScreen.judgmentOrder.test.tsx  (S7, S9, D7)
 // =============================================================================
 // 順序保証: 呼び出しログ calls に各モックが push し、['judge','invalidate','fetch'] を厳密に比較。
 //   judge     = GoalAPI.updateAllMilestoneStatuses (userId 引数も assert)
@@ -21,6 +21,10 @@ import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// 読み込み中はスケルトン (components/ui/Skeleton.tsx) を出す。土台が progressbar として
+// 支援技術に「読み込み中...」を伝えるので、それを読み込み中表示の検証面にする
+const SKELETON = '[accessibilityrole="progressbar"]';
 
 const h = vi.hoisted(() => ({
   calls: [] as string[],
@@ -235,12 +239,12 @@ describe("フォーカス / pull-to-refresh / 並行防止 (inFlightRef)", () =>
 });
 
 describe("S9 状態表示 (一覧)", () => {
-  it("ローディング: 初回の判定中は一覧クエリを開始せず、Loading 表示 (画面タイトルは表示しない)", async () => {
+  it("ローディング: 初回の判定中は一覧クエリを開始せず、スケルトン表示 (画面タイトルは表示しない)", async () => {
     h.judge.mockImplementation(() => new Promise<void>(() => {}));
     renderScreen();
     await flush();
     expect(screen.queryByText("目標管理")).toBeNull();
-    expect(screen.getByText("Loading...")).toBeTruthy();
+    expect(document.querySelector(SKELETON)).not.toBeNull();
     expect(h.getGoals).not.toHaveBeenCalled();
   });
 
@@ -252,22 +256,23 @@ describe("S9 状態表示 (一覧)", () => {
     expect(screen.queryByText("目標管理")).toBeNull();
   });
 
-  it("[L3] ローディングは fullScreen の LoadingSpinner (ダッシュボードと同じ): 全面コンテナ (flex:1) + 読み込み中の文言。初回の判定中と一覧取得中の両方", async () => {
+  it("[L3] ローディングは全面のスケルトン (ダッシュボードと同じ): 全面コンテナ (flex:1) + 支援技術向けの読み込み中ラベル。初回の判定中と一覧取得中の両方", async () => {
     h.judge.mockImplementation(() => new Promise<void>(() => {}));
     renderScreen();
     await flush();
-    expect(screen.getByText("読み込み中...")).toBeTruthy();
-    const spinner = screen.getByText("Loading...");
-    let n: HTMLElement | null = spinner.parentElement;
+    const skeleton = document.querySelector<HTMLElement>(SKELETON);
+    expect(skeleton).not.toBeNull();
+    expect(skeleton?.getAttribute("accessibilitylabel")).toBe("読み込み中...");
+    let n: HTMLElement | null = skeleton?.parentElement ?? null;
     let flexFill = false;
     while (n) { if (n.style.flex === "1 1 0%" || n.style.flexGrow === "1") { flexFill = true; break; } n = n.parentElement; }
     expect(flexFill).toBe(true);
   });
 
-  it("[L3] GoalsScreen のローディング3箇所はすべて <LoadingSpinner fullScreen ...> (ソースの現在内容)", () => {
+  it("[L3] GoalsScreen のローディング3箇所はすべて <GoalListSkeleton /> (ソースの現在内容)", () => {
     const src = readFileSync(path.resolve(__dirname, "../GoalsScreen.tsx"), "utf8");
-    expect((src.match(/<LoadingSpinner fullScreen/g) ?? []).length).toBe(3);
-    expect(src).not.toMatch(/<LoadingSpinner\s*\/>/);
+    expect((src.match(/<GoalListSkeleton \/>/g) ?? []).length).toBe(3);
+    expect(src).not.toMatch(/LoadingSpinner/);
   });
 
   it("[タイトル削除] ローディング・エラー・空・一覧のすべてで『目標管理』の画面タイトルが描画されない", async () => {
@@ -318,7 +323,7 @@ describe("S9 状態表示 (一覧)", () => {
 });
 
 describe("v4 L6: エラー画面の再試行中はローディング表示 (修正前は赤でよい)", () => {
-  it("再試行を押して判定が走っている間は、エラー画面を出し続けず Loading を表示する", async () => {
+  it("再試行を押して判定が走っている間は、エラー画面を出し続けずスケルトンを表示する", async () => {
     h.getGoals.mockImplementation(async () => { h.calls.push("fetch"); throw new Error("x"); });
     renderScreen();
     await flush();
@@ -326,29 +331,31 @@ describe("v4 L6: エラー画面の再試行中はローディング表示 (修�
     let release!: () => void;
     h.judge.mockImplementation(() => new Promise<void>((r) => { release = r; }));
     await act(async () => { fireEvent.click(screen.getByText("再試行")); await new Promise((r) => setTimeout(r, 20)); });
-    expect(screen.getByText("Loading...")).toBeTruthy();
+    expect(document.querySelector(SKELETON)).not.toBeNull();
     expect(screen.queryByText("目標一覧の取得に失敗しました")).toBeNull();
     await act(async () => { release(); await new Promise((r) => setTimeout(r, 50)); });
   });
 });
 
 describe("一覧の内容", () => {
-  it("competition===null (選択可能大会に無い): '大会情報なし' + editUnavailableReason、編集ボタン無し、削除ボタン有り", async () => {
+  it("competition===null (選択可能大会に無い): '大会情報なし' + editUnavailableReason。カードに編集・削除ボタンは無い", async () => {
     h.getSelectableCompetitions.mockResolvedValue([]);
     renderScreen();
     await flush();
     expect(screen.getByText("大会情報なし")).toBeTruthy();
     expect(screen.getByText("大会情報がないため編集できません")).toBeTruthy();
     expect(byLabel("編集")).toHaveLength(0);
-    expect(byLabel("削除")).toHaveLength(1);
+    expect(byLabel("削除")).toHaveLength(0);
   });
 
-  it("competition あり: 編集ボタン有り。チーム大会でもタイトルが解決される", async () => {
+  // 2026-11-03 ユーザー裁定: 一覧カードの編集・削除ボタンは撤去 (詳細画面に編集・削除がある)
+  it("competition あり: チーム大会でもタイトルが解決される。カードに編集・削除ボタンは無い", async () => {
     h.getSelectableCompetitions.mockResolvedValue([{ ...comp("c1", "チーム大会X"), team_id: "t1" }]);
     renderScreen();
     await flush();
     expect(screen.getByText("チーム大会X")).toBeTruthy();
-    expect(byLabel("編集")).toHaveLength(1);
+    expect(byLabel("編集")).toHaveLength(0);
+    expect(byLabel("削除")).toHaveLength(0);
   });
 
   // 2026-10-14 web の一覧カードに揃えた (D3 の「Best 差を出さない」を上書き): 目標タイムの横に Best 差
@@ -393,56 +400,12 @@ describe("一覧の内容", () => {
     expect(screen.getAllByText("達成！")).toHaveLength(1);
   });
 
-  it("遷移: カード -> GoalDetail {goalId}、新規 -> GoalForm {}、編集 -> GoalForm {goalId}", async () => {
+  it("遷移: カード -> GoalDetail {goalId}、新規 -> GoalForm {}", async () => {
     renderScreen();
     await flush();
     fireEvent.click(byLabel("テスト大会 100m 自由形")[0]!);
     expect(h.navigate).toHaveBeenLastCalledWith("GoalDetail", { goalId: "g1" });
     fireEvent.click(byLabel("新規目標作成")[0]!);
     expect(h.navigate).toHaveBeenLastCalledWith("GoalForm", {});
-    fireEvent.click(byLabel("編集")[0]!);
-    expect(h.navigate).toHaveBeenLastCalledWith("GoalForm", { goalId: "g1" });
-  });
-});
-
-describe("S3 一覧からの削除", () => {
-  const pressDelete = () => { fireEvent.click(byLabel("削除")[0]!); };
-  const confirm = async () => {
-    const buttons = vi.mocked(Alert.alert).mock.calls[0]![2] as Array<{ style?: string; onPress?: () => Promise<void> }>;
-    await act(async () => { await buttons.find((b) => b.style === "destructive")!.onPress!(); });
-  };
-
-  it("削除タップ -> 確認ダイアログ。キャンセル側には onPress が無く deleteGoal は呼ばれない", async () => {
-    renderScreen();
-    await flush();
-    pressDelete();
-    expect(Alert.alert).toHaveBeenCalledTimes(1);
-    const [title, message, buttons] = vi.mocked(Alert.alert).mock.calls[0]!;
-    expect([title, message]).toEqual(["削除", "この目標を削除しますか？"]);
-    expect((buttons as Array<{ style?: string; onPress?: unknown }>).find((b) => b.style === "cancel")!.onPress).toBeUndefined();
-    expect(h.deleteGoal).not.toHaveBeenCalled();
-  });
-
-  it("確認 OK -> deleteGoal('g1') が1回 -> goalKeys.all を invalidate", async () => {
-    renderScreen();
-    await flush();
-    invalidateKeys.length = 0;
-    pressDelete();
-    await confirm();
-    expect(h.deleteGoal).toHaveBeenCalledTimes(1);
-    expect(h.deleteGoal).toHaveBeenCalledWith("g1");
-    expect(invalidateKeys).toEqual([["goals"]]);
-  });
-
-  it("deleteGoal が throw (RLS 0行相当) -> 固定文言で通知。生エラーは出さず握りつぶさない", async () => {
-    h.deleteGoal.mockRejectedValue(new Error("SECRET_RAW_RLS"));
-    renderScreen();
-    await flush();
-    pressDelete();
-    await confirm();
-    expect(Alert.alert).toHaveBeenCalledTimes(2);
-    const [t2, m2] = vi.mocked(Alert.alert).mock.calls[1]!;
-    expect(m2).toBe("目標の削除に失敗しました");
-    expect(String(t2) + String(m2)).not.toContain("SECRET_RAW_RLS");
   });
 });

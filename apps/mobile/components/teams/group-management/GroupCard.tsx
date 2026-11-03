@@ -54,7 +54,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
             accessibilityRole="button"
             accessibilityLabel={t("teams.mobile.groupManagement.cardEditAria", { name: group.name })}
           >
-            <Feather name="edit-2" size={16} color="#9CA3AF" />
+            <Feather name="edit-2" size={16} color="#2563EB" />
           </Pressable>
           <Pressable
             style={styles.actionButton}
@@ -62,7 +62,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
             accessibilityRole="button"
             accessibilityLabel={t("teams.mobile.groupManagement.cardDeleteAria", { name: group.name })}
           >
-            <Feather name="trash-2" size={16} color="#9CA3AF" />
+            <Feather name="trash-2" size={16} color="#EF4444" />
           </Pressable>
         </View>
       )}

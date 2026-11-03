@@ -15,6 +15,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
@@ -141,6 +142,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
   const { practiceId, teamId } = route.params;
   const { supabase, subscription, user, getAccessToken } = useAuth();
   const { t } = useTranslation();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const isPremium = checkIsPremium(subscription);
   const { parseInput } = useQuickTimeInput();
@@ -371,9 +373,10 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
 
   useEffect(() => {
     if (isSaved) {
+      toast.success(t("common.savedToast"));
       navigation.goBack();
     }
-  }, [isSaved, navigation]);
+  }, [isSaved, navigation, t, toast]);
 
   /** × で消す前に確認するか: 既存ログのメニュー、またはタイム・動画・メモ・タグがあるメニュー */
   const shouldConfirmMenuRemove = (menu: PracticeMenu): boolean =>

@@ -9,7 +9,7 @@
  * (必須 prop、F5 で必須化済み) を編集ボタンにも適用する。
  *
  * Sprint Contract 検証観点:
- *   [V-M-RE01] isTeamCompetition=true のとき編集ボタン(icon-edit)が描画されない
+ *   [V-M-RE01] isTeamCompetition=true のとき編集ボタン(icon-edit-2)が描画されない
  *   [V-M-RE02] isTeamCompetition=false (個人大会) のときは編集ボタンが描画される
  *              (同じセレクタが機能することの証明、V-M-RE01 の偽陽性防止)
  */
@@ -91,12 +91,12 @@ describe("RecordDetail 編集ボタンの isTeamCompetition ガード", () => {
     renderRecordDetail({ isTeamCompetition: true });
 
     expect(screen.getByText("テスト大会")).toBeTruthy();
-    expect(screen.queryByTestId("icon-edit")).toBeNull();
+    expect(screen.queryByTestId("icon-edit-2")).toBeNull();
   });
 
   it("[V-M-RE02] isTeamCompetition=false (個人大会) のとき編集ボタンが描画される (セレクタの健全性確認)", () => {
     renderRecordDetail({ isTeamCompetition: false });
 
-    expect(screen.getByTestId("icon-edit")).toBeTruthy();
+    expect(screen.getByTestId("icon-edit-2")).toBeTruthy();
   });
 });

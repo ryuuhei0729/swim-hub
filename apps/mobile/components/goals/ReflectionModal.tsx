@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { View, Text, ScrollView, Pressable, Alert, ActivityIndicator, StyleSheet } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useToast } from "@/providers/ToastProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { CenterModal } from "@/components/ui/CenterModal";
 import { useDateLocale } from "@/hooks/useDateLocale";
@@ -31,6 +32,7 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
   onGoToGoals,
 }) => {
   const { t } = useTranslation();
+  const toast = useToast();
   const { supabase } = useAuth();
   const queryClient = useQueryClient();
   const locale = useDateLocale();
@@ -65,6 +67,7 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
     try {
       await new GoalAPI(supabase).updateMilestone(milestone.id, { reflectionNote });
       void queryClient.invalidateQueries({ queryKey: goalKeys.all });
+      toast.success(t("common.savedToast"));
       await onSaved();
     } catch (error) {
       console.error("Failed to save milestone reflection:", error);
@@ -93,7 +96,9 @@ export const ReflectionModal: React.FC<ReflectionModalProps> = ({
         <Text style={styles.description}>{t("goals.reflection.expiredDesc")}</Text>
         <View style={styles.summary}>
           <Text style={styles.summaryTitle}>{milestone.title}</Text>
-          <Text style={styles.summaryText}>{summarize(milestone)}</Text>
+          {milestone.type !== "other" && (
+            <Text style={styles.summaryText}>{summarize(milestone)}</Text>
+          )}
           {milestone.deadline && (
             <Text style={styles.summaryMeta}>
               {t("goals.reflection.deadlineLabel")} {formatDate(milestone.deadline, "long", locale)}

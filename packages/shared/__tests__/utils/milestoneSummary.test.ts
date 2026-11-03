@@ -135,3 +135,19 @@ describe("formatCircle (サークルの表記)", () => {
     expect(formatCircle(90.5)).toBe("1'30\"");
   });
 });
+
+describe("練習タイム目標 1本×1セット (旧タイム目標)", () => {
+  it("reps_time の 1本×1セットは本数を出さず '50m: 30.00'", async () => {
+    const { formatMilestoneSummary } = await import("../../utils/milestoneSummary");
+    const t = (key: string, v: Record<string, string>) => `${key}|${JSON.stringify(v)}`;
+    expect(
+      formatMilestoneSummary(
+        {
+          title: "",
+          params: { distance: 50, reps: 1, sets: 1, target_average_time: 30, style: "Fr", swim_category: "Swim", circle: 45 },
+        },
+        t as never,
+      ),
+    ).toBe('milestoneSummary.time|{"distance":"50","time":"30.00"}');
+  });
+});
