@@ -5,6 +5,7 @@ import Header from "./Header";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
 import ScrollToTop from "./ScrollToTop";
+import MilestoneAchievementPrompter from "@/components/goals/MilestoneAchievementPrompter";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -24,6 +25,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <ScrollToTop />
+
+      {/* マイルストーン達成の確認ダイアログ (どの画面にいても出す) */}
+      <MilestoneAchievementPrompter />
 
       {/* ヘッダー */}
       <Header onMenuClick={handleMenuClick} />

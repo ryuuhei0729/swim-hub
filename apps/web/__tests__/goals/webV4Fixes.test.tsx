@@ -121,7 +121,7 @@ describe("M1 (web) マイルストーン保存前検証", () => {
   it("作成 reps_time: 本数を空にして作成 -> createMilestone 呼ばれず paramsInvalid の alert 表示。再入力で解除", async () => {
     const user = userEvent.setup();
     wrap(<MilestoneCreateModal isOpen onClose={() => {}} onSuccess={async () => {}} goalId="g1" goal={goal} styles={[style]} goalCompetitionDate="" />);
-    await user.click(screen.getByLabelText("goals.milestoneForm.type.repsTime.label"));
+    await user.click(screen.getByLabelText("goals.milestoneForm.type.practiceTime.label"));
     const reps = screen.getByLabelText("goals.paramsForm.repsLabel");
     await user.clear(reps);
     await submitSkippingNativeValidation(user);
@@ -145,14 +145,14 @@ describe("M1 (web) マイルストーン保存前検証", () => {
   it("[JS検証のみ・ネイティブ検証は迂回] 有効な既定値の reps_time は JS 検証を通る", async () => {
     const user = userEvent.setup();
     wrap(<MilestoneCreateModal isOpen onClose={() => {}} onSuccess={async () => {}} goalId="g1" goal={goal} styles={[style]} goalCompetitionDate="" />);
-    await user.click(screen.getByLabelText("goals.milestoneForm.type.repsTime.label"));
+    await user.click(screen.getByLabelText("goals.milestoneForm.type.practiceTime.label"));
     await submitSkippingNativeValidation(user);
     expect(mocks.createMilestone).toHaveBeenCalledTimes(1);
   });
 
   async function showParamsInvalid(user: ReturnType<typeof userEvent.setup>) {
     const view = wrap(<MilestoneCreateModal isOpen onClose={() => {}} onSuccess={async () => {}} goalId="g1" goal={goal} styles={[style]} goalCompetitionDate="" />);
-    await user.click(screen.getByLabelText("goals.milestoneForm.type.repsTime.label"));
+    await user.click(screen.getByLabelText("goals.milestoneForm.type.practiceTime.label"));
     await user.clear(screen.getByLabelText("goals.paramsForm.repsLabel"));
     await submitSkippingNativeValidation(user);
     expect(screen.getByRole("alert").textContent).toBe("goals.paramsForm.paramsInvalid");
@@ -185,7 +185,7 @@ describe("M1 (web) マイルストーン保存前検証", () => {
       );
     }
     wrap(<Host />);
-    await user.click(screen.getByLabelText("goals.milestoneForm.type.repsTime.label"));
+    await user.click(screen.getByLabelText("goals.milestoneForm.type.practiceTime.label"));
     await user.clear(screen.getByLabelText("goals.paramsForm.repsLabel"));
     await submitSkippingNativeValidation(user);
     expect(screen.getByRole("alert").textContent).toBe("goals.paramsForm.paramsInvalid");
@@ -197,7 +197,7 @@ describe("M1 (web) マイルストーン保存前検証", () => {
   it("[v5 L-c] reps_time は circle=0 でも作成できる (達成判定は circle を使わない)", async () => {
     const user = userEvent.setup();
     wrap(<MilestoneCreateModal isOpen onClose={() => {}} onSuccess={async () => {}} goalId="g1" goal={goal} styles={[style]} goalCompetitionDate="" />);
-    await user.click(screen.getByLabelText("goals.milestoneForm.type.repsTime.label"));
+    await user.click(screen.getByLabelText("goals.milestoneForm.type.practiceTime.label"));
     await user.clear(screen.getByLabelText("goals.paramsForm.circleMinLabel"));
     await user.clear(screen.getByLabelText("goals.paramsForm.circleSecLabel"));
     await submitSkippingNativeValidation(user);
@@ -207,7 +207,7 @@ describe("M1 (web) マイルストーン保存前検証", () => {
   it("[ネイティブ検証] reps_time の既定値のまま、実際の submit ボタンを click して createMilestone が呼ばれる (step mismatch で送信がブロックされない)", async () => {
     const user = userEvent.setup();
     wrap(<MilestoneCreateModal isOpen onClose={() => {}} onSuccess={async () => {}} goalId="g1" goal={goal} styles={[style]} goalCompetitionDate="" />);
-    await user.click(screen.getByLabelText("goals.milestoneForm.type.repsTime.label"));
+    await user.click(screen.getByLabelText("goals.milestoneForm.type.practiceTime.label"));
     const form = document.querySelector("form")!;
     const invalid = Array.from(form.elements).filter((e) => !(e as HTMLInputElement).validity?.valid);
     // 事実の捕捉: 既定値のままで検証エラーの input があってはならない (circle 秒 45 は step=10 の倍数でない)

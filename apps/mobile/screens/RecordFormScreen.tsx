@@ -52,6 +52,9 @@ import { canRelay, getStyleOption } from "@/components/besttime/styleOptions";
 import { checkIsPremium, canUploadImage } from "@swim-hub/shared/utils/premium";
 import { FREE_PLAN_LIMITS } from "@swim-hub/shared/constants/premium";
 import { LapTimeDisplay } from "@/components/records";
+import { GoalTargetBadge } from "@/components/records/GoalTargetBadge";
+import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
+import { useGoalTargetsQuery } from "@apps/shared/hooks/queries/goalTargets";
 import { parseTimeStrict } from "@apps/shared/utils/time";
 import { isReactionTimeInRange, parseReactionTimeInput } from "@apps/shared/utils/reactionTime";
 import type { MainStackParamList } from "@/navigation/types";
@@ -68,7 +71,7 @@ export const RecordFormScreen: React.FC = () => {
   const route = useRoute<RecordFormScreenRouteProp>();
   const navigation = useNavigation<RecordFormScreenNavigationProp>();
   const { recordId, competitionId: routeCompetitionId } = route.params || {};
-  const { supabase, subscription, getAccessToken } = useAuth();
+  const { supabase, user: authUser, subscription, getAccessToken } = useAuth();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const toast = useToast();
@@ -413,6 +416,29 @@ export const RecordFormScreen: React.FC = () => {
   // 保存に使うリレー区分。リレー不可の種目へ切り替えられた場合は、画面に見えていない
   // true がそのまま保存されないよう false に落とす
   const effectiveIsRelaying = canRelayCurrentStyle && isRelaying;
+
+  // 本人の目標 (失敗・ローディング中は空 = 目標を出さないだけ。CompetitionTabFormScreen と同じ)
+  const goalTargetsQuery = useGoalTargetsQuery(supabase);
+  const goalTargets = useMemo(() => goalTargetsQuery.data ?? [], [goalTargetsQuery.data]);
+  // 「目標: xx.xx」バッジ。大会未紐付けレコード (一括入力)・大会未選択・種目未選択・
+  // 引き継ぎあり (保存される is_relaying と同じ effectiveIsRelaying で判定) では出さない
+  const goalTargetTime = useMemo(() => {
+    if (!authUser || styleId === null || styleId === undefined) return null;
+    return findGoalTargetTime(goalTargets, {
+      userId: authUser.id,
+      competitionId: isStandaloneRecord ? null : routeCompetitionId || storeCompetitionId,
+      styleId,
+      isRelaying: effectiveIsRelaying,
+    });
+  }, [
+    authUser,
+    styleId,
+    goalTargets,
+    isStandaloneRecord,
+    routeCompetitionId,
+    storeCompetitionId,
+    effectiveIsRelaying,
+  ]);
 
   // 保存処理
   const handleSave = async () => {
@@ -972,6 +998,8 @@ export const RecordFormScreen: React.FC = () => {
 
           {/* 種目選択 */}
           <View style={styles.field}>
+            {/* 目標バッジ (CompetitionTabFormScreen の記録行と同じく種目選択の上に出す) */}
+            {goalTargetTime != null && <GoalTargetBadge time={goalTargetTime} />}
             <Text style={styles.label}>
               {t("recordMobile.form.styleLabel")} <Text style={styles.required}>*</Text>
             </Text>

@@ -1,13 +1,19 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
 import { PracticeLogTemplateAPI } from "@swim-hub/shared/api";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
-import { isMilestoneParamsSavable, isMilestoneTimeValueValid } from "@apps/shared/types/goals";
+import {
+  isMilestoneParamsSavable,
+  isMilestoneRepsTimeParams,
+  isMilestoneSetParams,
+  isMilestoneTimeValueValid,
+  timeParamsToRepsTime,
+} from "@apps/shared/types/goals";
 import { useTranslations } from "next-intl";
 import { formatMilestoneSummary } from "@apps/shared/utils/milestoneSummary";
 import type {
@@ -15,14 +21,19 @@ import type {
   Style,
   MilestoneParams,
   MilestoneTimeParams,
-  MilestoneRepsTimeParams,
-  MilestoneSetParams,
   MilestoneGoalSetParams,
 } from "@apps/shared/types";
 import { MILESTONE_TEMPLATES } from "./templates/milestoneTemplates";
 import MilestoneForm from "./forms/MilestoneForm";
+import {
+  canAddToPracticeTemplate,
+  defaultParamsFor,
+  formToMilestone,
+  milestoneToForm,
+  type MilestoneFormParams,
+  type MilestoneFormTab,
+} from "./forms/milestoneFormModel";
 import GoalSetCalculatorModal from "./GoalSetCalculatorModal";
-import { DEFAULT_TIME_PARAMS, DEFAULT_REPS_TIME_PARAMS, DEFAULT_SET_PARAMS } from "./constants";
 
 interface MilestoneCreateModalProps {
   isOpen: boolean;
@@ -48,11 +59,11 @@ export default function MilestoneCreateModal({
 }: MilestoneCreateModalProps) {
   const t = useTranslations("goals");
   const { supabase } = useAuth();
-  const [type, setType] = useState<"time" | "reps_time" | "set">("time");
+  const [tab, setTab] = useState<MilestoneFormTab>("practice_time");
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
-  const [params, setParams] = useState<MilestoneParams>(DEFAULT_TIME_PARAMS);
+  const [params, setParams] = useState<MilestoneFormParams>(() => defaultParamsFor("practice_time"));
   const [isLoading, setIsLoading] = useState(false);
   const [isGoalSetModalOpen, setIsGoalSetModalOpen] = useState(false);
   const [addToTemplate, setAddToTemplate] = useState(false);
@@ -60,8 +71,12 @@ export default function MilestoneCreateModal({
   // ユーザーが再入力すると (handleParamsChange 発火時に) false に戻す
   const [timeFieldInvalid, setTimeFieldInvalid] = useState(false);
   const [paramsInvalid, setParamsInvalid] = useState(false);
+  const [otherContentInvalid, setOtherContentInvalid] = useState(false);
+  // マイルストーン作成後にテンプレート作成だけ失敗して再保存されたとき、二重作成せず
+  // 作成済みの行を現在の入力値で更新する (mobile の MilestoneFormScreen と同じ)
+  const createdMilestoneIdRef = useRef<string | null>(null);
 
-  const handleParamsChange = (newParams: MilestoneParams) => {
+  const handleParamsChange = (newParams: MilestoneFormParams) => {
     setParams(newParams);
     if (timeFieldInvalid) setTimeFieldInvalid(false);
     if (paramsInvalid) setParamsInvalid(false);
@@ -86,6 +101,7 @@ export default function MilestoneCreateModal({
   // テンプレート適用
   const handleTemplateSelect = (templateId: string) => {
     const template = availableTemplates.find((t) => t.id === templateId);
+    // 未選択に戻したときは選択だけ外す (入力済みの値は残す)
     if (!template) {
       setSelectedTemplate("");
       return;
@@ -113,18 +129,20 @@ export default function MilestoneCreateModal({
         swim_category: "Swim",
       };
 
-      setType("time");
+      // 練習タイム目標の1本×1セット (旧タイム目標と同じく大会記録でも判定される)
+      setTab("practice_time");
       setSelectedTemplate("time_trial");
-      setParams(timeTrialParams);
+      setParams(timeParamsToRepsTime(timeTrialParams));
       setTitle(t(`template.${template.nameKey}`)); // タイトルを自動設定
       setTimeFieldInvalid(false);
       setParamsInvalid(false);
       return;
     }
 
-    setType(template.type);
+    const formValues = milestoneToForm({ type: template.type, params: template.defaultParams });
+    setTab(formValues.tab);
     setSelectedTemplate(templateId);
-    setParams(template.defaultParams);
+    setParams(formValues.params);
     setTitle(t(`template.${template.nameKey}`)); // タイトルを自動設定
     setTimeFieldInvalid(false);
     setParamsInvalid(false);
@@ -149,7 +167,7 @@ export default function MilestoneCreateModal({
       practice_pool_type: practicePoolType,
     };
 
-    setType("reps_time");
+    setTab("practice_time");
     setSelectedTemplate("goalset_50m_6x3");
     setParams(goalSetParams);
     setTitle(t("milestoneCreate.goalSetDefaultTitle")); // タイトルを自動設定
@@ -158,26 +176,34 @@ export default function MilestoneCreateModal({
     setIsGoalSetModalOpen(false);
   };
 
-  // タイプ変更時にパラメータをリセット
-  const handleTypeChange = (newType: "time" | "reps_time" | "set") => {
-    setType(newType);
-    if (newType === "time") {
-      setParams(DEFAULT_TIME_PARAMS);
-    } else if (newType === "reps_time") {
-      setParams(DEFAULT_REPS_TIME_PARAMS);
-    } else {
-      setParams(DEFAULT_SET_PARAMS);
-    }
+  // タブ変更時にパラメータをリセット
+  const handleTabChange = (newTab: MilestoneFormTab) => {
+    if (newTab === tab) return;
+    setTab(newTab);
+    setParams(defaultParamsFor(newTab));
     setTimeFieldInvalid(false);
     setParamsInvalid(false);
+    setOtherContentInvalid(false);
+  };
+
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    if (otherContentInvalid) setOtherContentInvalid(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // その他は内容 (title) が必須。自動生成する要約文が無い
+    if (tab === "other" && title.trim() === "") {
+      setOtherContentInvalid(true);
+      return;
+    }
+
     // 距離・本数・セット数・サークル・タイムのいずれかが 0 や空欄のままだと達成判定が成立しない。
     // タイム欄だけの不正は欄内エラー、それ以外は全体エラーで知らせる
-    if (!isMilestoneParamsSavable(type, params)) {
+    const resolved = formToMilestone(tab, params);
+    if (!resolved || !isMilestoneParamsSavable(resolved.type, resolved.params)) {
       if (!isMilestoneTimeValueValid(params)) {
         setTimeFieldInvalid(true);
       } else {
@@ -188,26 +214,35 @@ export default function MilestoneCreateModal({
 
     setIsLoading(true);
     try {
-      await goalAPI.createMilestone({
-        goalId,
-        title: title || getDefaultTitle(params),
-        type,
-        params,
+      const milestoneTitle =
+        tab === "other" ? title.trim() : title.trim() === "" ? getDefaultTitle(resolved.params) : title;
+      const values = {
+        title: milestoneTitle,
+        type: resolved.type,
+        params: resolved.params,
         deadline: deadline || null,
-      });
+      };
+      if (createdMilestoneIdRef.current === null) {
+        const created = await goalAPI.createMilestone({ goalId, ...values });
+        createdMilestoneIdRef.current = created.id;
+      } else {
+        await goalAPI.updateMilestone(createdMilestoneIdRef.current, values);
+      }
 
-      // テンプレートにも追加する場合
-      if (addToTemplate && (type === "reps_time" || type === "set")) {
-        const milestoneTitle = title || getDefaultTitle(params);
-        const p = params as MilestoneRepsTimeParams | MilestoneSetParams;
-
+      // テンプレートにも追加する場合 (本数×セットを持つものだけ)
+      const p = resolved.params;
+      if (
+        addToTemplate &&
+        canAddToPracticeTemplate(tab, params) &&
+        (isMilestoneRepsTimeParams(p) || isMilestoneSetParams(p))
+      ) {
         await templateAPI.createTemplate({
           name: milestoneTitle,
           style: p.style || "Fr",
-          swim_category: (p.swim_category as "Swim" | "Pull" | "Kick") || "Swim",
+          swim_category: p.swim_category || "Swim",
           distance: p.distance,
           rep_count: p.reps,
-          set_count: "sets" in p ? p.sets : 1,
+          set_count: p.sets,
           circle: p.circle || null,
         });
       }
@@ -226,14 +261,16 @@ export default function MilestoneCreateModal({
     formatMilestoneSummary({ params, title: "" }, t);
 
   const handleClose = () => {
-    setType("time");
+    setTab("practice_time");
     setTitle("");
     setDeadline("");
     setSelectedTemplate("");
-    setParams(DEFAULT_TIME_PARAMS);
+    setParams(defaultParamsFor("practice_time"));
     setAddToTemplate(false);
     setTimeFieldInvalid(false);
     setParamsInvalid(false);
+    setOtherContentInvalid(false);
+    createdMilestoneIdRef.current = null;
     onClose();
   };
 
@@ -262,16 +299,17 @@ export default function MilestoneCreateModal({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <MilestoneForm
-                type={type}
-                onTypeChange={handleTypeChange}
+                tab={tab}
+                onTabChange={handleTabChange}
                 title={title}
-                onTitleChange={setTitle}
+                onTitleChange={handleTitleChange}
                 params={params}
                 onParamsChange={handleParamsChange}
                 deadline={deadline}
                 onDeadlineChange={setDeadline}
                 goalCompetitionDate={goalCompetitionDate}
                 timeFieldInvalid={timeFieldInvalid}
+                otherContentInvalid={otherContentInvalid}
                 showTemplateSelector={true}
                 selectedTemplate={selectedTemplate}
                 onTemplateSelect={handleTemplateSelect}
@@ -285,8 +323,8 @@ export default function MilestoneCreateModal({
 
               {/* ボタン行（チェックボックス含む） */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                {/* テンプレートにも追加するチェックボックス（reps_timeまたはsetタイプの場合のみ） */}
-                {type === "reps_time" || type === "set" ? (
+                {/* テンプレートにも追加するチェックボックス（本数×セットを持つ練習タイム目標・サークルイン目標のみ） */}
+                {canAddToPracticeTemplate(tab, params) ? (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"

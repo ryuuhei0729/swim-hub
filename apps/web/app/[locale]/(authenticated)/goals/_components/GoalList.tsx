@@ -9,14 +9,15 @@ import { GoalAPI } from "@apps/shared/api/goals";
 import { useGoalCurrentBestTimeQuery } from "@apps/shared/hooks/queries/goals";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
 import { formatSignedSeconds } from "@apps/shared/utils/time";
-import type { Goal } from "@apps/shared/types";
+import type { Goal, Style } from "@apps/shared/types";
+import { useStyleLabel } from "@/hooks/useStyleLabel";
 
 type GoalListItem = Goal & {
   // null = 大会情報なし (個人大会削除・チーム退会)。呼び出し元 (useGoalsQuery の select)
   // が必ず null に正規化して渡すため undefined は来ない (GoalsClient.tsx の1箇所のみから
   // 渡される)。判定は === null の1本のまま緩めない
   competition?: { title: string | null; date: string } | null;
-  style?: { name_jp: string };
+  style?: Pick<Style, "name_jp"> & Partial<Pick<Style, "id" | "style" | "distance">>;
 };
 
 interface GoalListProps {
@@ -102,6 +103,7 @@ function GoalListCard({
 }) {
   const t = useTranslations("goals");
   const locale = useLocale() as SupportedLocale;
+  const styleLabel = useStyleLabel();
   const { supabase } = useAuth();
   const { data: currentBestTime } = useGoalCurrentBestTimeQuery(supabase, goal.id);
   const isAchieved = goal.status === "achieved";
@@ -111,7 +113,7 @@ function GoalListCard({
   const competitionName = competitionUnavailable
     ? t("list.competitionInfoUnavailable")
     : goal.competition?.title || t("list.competitionFallback");
-  const styleName = goal.style?.name_jp || t("list.styleFallback");
+  const styleName = styleLabel(goal.style) || t("list.styleFallback");
   const competitionDate = goal.competition?.date;
   // 目標タイムと現在のベストの差 (Best-0.01)。ベストが分からない (取得中・失敗・記録なし・
   // 大会情報なしで水路が分からない) ときは出さない

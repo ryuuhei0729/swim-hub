@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { XMarkIcon, TrophyIcon, FlagIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/contexts";
 import { GoalAPI } from "@apps/shared/api/goals";
-import { format, isValid } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
+import { useStyleLabel } from "@/hooks/useStyleLabel";
 import { formatTimeBest } from "@/utils/formatters";
 import type { GoalWithMilestones } from "@apps/shared/types";
 import {
@@ -36,6 +36,8 @@ export default function GoalReflectionModal({
   onSave,
 }: GoalReflectionModalProps) {
   const t = useTranslations("goals");
+  const locale = useLocale() as SupportedLocale;
+  const styleLabel = useStyleLabel();
   const { supabase } = useAuth();
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [otherNote, setOtherNote] = useState("");
@@ -112,6 +114,11 @@ export default function GoalReflectionModal({
 
   if (!isOpen) return null;
 
+  // 日付が無い・読めないときは「未定」(formatDate は読めない日付に "-" を返す)
+  const formattedCompetitionDate = formatDate(goal.competition?.date, "long", locale);
+  const competitionDateLabel =
+    formattedCompetitionDate === "-" ? t("goalReflection.undecided") : formattedCompetitionDate;
+
   const achievedMilestones = goal.milestones.filter((m) => m.status === "achieved");
   const totalMilestones = goal.milestones.length;
 
@@ -141,13 +148,11 @@ export default function GoalReflectionModal({
                     : goal.competition.title || t("goalReflection.competitionFallback")}
                 </p>
                 <p className="text-sm text-gray-600 mt-1">
-                  {goal.style?.name_jp || t("goalReflection.styleFallback")} | {t("goalReflection.targetLabel")} {formatTimeBest(goal.target_time)}
+                  {styleLabel(goal.style) || t("goalReflection.styleFallback")} | {t("goalReflection.targetLabel")} {formatTimeBest(goal.target_time)}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   {t("goalReflection.competitionDateLabel")}{" "}
-                  {goal.competition?.date && isValid(new Date(goal.competition.date))
-                    ? format(new Date(goal.competition.date), "yyyy年M月d日", { locale: ja })
-                    : t("goalReflection.undecided")}
+                  {competitionDateLabel}
                 </p>
                 {totalMilestones > 0 && (
                   <p className="text-xs text-gray-500 mt-1">

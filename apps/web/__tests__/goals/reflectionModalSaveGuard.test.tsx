@@ -3,7 +3,7 @@
  *
  * Contract v3 C1: マイルストーンの振り返り (ReflectionModal) は、何も選ばず自由記述も空のまま保存すると
  * reflectionNote=null になり GoalAPI.updateMilestone が reflection_done を立てない -> Dashboard が
- * 同じマイルストーンを出し続ける。よって「何か1つ選ぶか入力するまで保存・次アクションを無効」にする。
+ * 同じマイルストーンを出し続ける。よって「何か1つ選ぶか入力するまで保存を無効」にする。
  * スキップ / 閉じる / 背景クリックは常に可能。
  *
  * ミューテーション確認: ReflectionModal.tsx の `canSave = currentNote !== null` を `true` にすると
@@ -24,6 +24,7 @@ vi.mock("next-intl", async (importOriginal) => {
         (namespace ? `${namespace}.${key}` : key) + (values ? `|${JSON.stringify(values)}` : "");
       return t as unknown as ReturnType<typeof original.useTranslations>;
     },
+    useLocale: () => "ja",
   };
 });
 vi.mock("@/i18n/navigation", () => ({
@@ -54,18 +55,15 @@ function setup() {
   return { onClose, onSave, user: userEvent.setup() };
 }
 const saveBtn = () => screen.getByRole("button", { name: "goals.reflection.saveButton" }) as HTMLButtonElement;
-const actionBtn = () => screen.getByRole("button", { name: "goals.reflection.createMilestoneButton" }) as HTMLButtonElement;
 const skipBtn = () => screen.getByRole("button", { name: "goals.reflection.skipButton" }) as HTMLButtonElement;
 
 describe("ReflectionModal (web) — C1 保存ガード", () => {
   beforeEach(() => mocks.updateMilestone.mockClear());
 
-  it("何も選ばず otherNote 空: 保存と『新しいマイルストーン』が disabled、submit しても updateMilestone は呼ばれない", async () => {
+  it("何も選ばず otherNote 空: 保存が disabled、submit しても updateMilestone は呼ばれない", async () => {
     const { user, onSave } = setup();
     expect(saveBtn().disabled).toBe(true);
-    expect(actionBtn().disabled).toBe(true);
     await user.click(saveBtn());
-    await user.click(actionBtn());
     expect(mocks.updateMilestone).not.toHaveBeenCalled();
     expect(onSave).not.toHaveBeenCalled();
   });
@@ -74,7 +72,6 @@ describe("ReflectionModal (web) — C1 保存ガード", () => {
     const { user, onSave, onClose } = setup();
     await user.click(screen.getByLabelText("goals.reflection.options.goalTooHigh"));
     expect(saveBtn().disabled).toBe(false);
-    expect(actionBtn().disabled).toBe(false);
     await user.click(saveBtn());
     expect(mocks.updateMilestone).toHaveBeenCalledTimes(1);
     expect(mocks.updateMilestone).toHaveBeenCalledWith("ms-1", { reflectionNote: "goals.reflection.options.goalTooHigh" });

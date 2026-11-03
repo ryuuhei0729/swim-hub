@@ -8,6 +8,7 @@ import TeamAnnouncementsSection from "../_components/TeamAnnouncementsSection";
 import ReflectionModal from "@/app/[locale]/(authenticated)/goals/_components/ReflectionModal";
 import GoalReflectionModal from "@/app/[locale]/(authenticated)/goals/_components/GoalReflectionModal";
 import { GoalAPI } from "@apps/shared/api/goals";
+import { goalKeys } from "@apps/shared/hooks/queries/goals";
 import { runMilestoneJudgment } from "@/utils/milestoneJudgment";
 import type { Milestone, GoalWithMilestones } from "@apps/shared/types";
 import {
@@ -137,6 +138,8 @@ export default function DashboardClient({
         // 1回走らせてから期限切れをチェックすることで、代理保存分も反映され、
         // 既に達成済みのマイルストーンに「未達成」の振り返りが出ないようにする。
         await runMilestoneJudgment(goalAPI, userId);
+        // 判定で置かれた達成候補を、確認ダイアログ (MilestoneAchievementPrompter) が取り直す
+        void queryClient.invalidateQueries({ queryKey: goalKeys.all });
 
         // まず期限切れ目標をチェック（優先）
         const expiredGoals = await goalAPI.getExpiredGoals();
@@ -156,7 +159,7 @@ export default function DashboardClient({
     };
 
     checkExpired();
-  }, [user, supabase]);
+  }, [user, supabase, queryClient]);
 
   // カレンダーイベントハンドラーは useCalendarHandlers カスタムフックから取得
 

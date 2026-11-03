@@ -2242,11 +2242,6 @@
       "closeAriaLabel": "Schließen",
       "updateFailed": "Meilenstein konnte nicht aktualisiert werden"
     },
-    "milestoneSelector": {
-      "title": "Aus Meilenstein erstellen",
-      "loading": "Wird geladen ...",
-      "empty": "Keine Meilensteine verfügbar"
-    },
     "goalSetCalculator": {
       "closeAriaLabel": "Schließen",
       "title": "Goal-Set-Zielzeitrechner",
@@ -2290,14 +2285,11 @@
       },
       "otherLabel": "Sonstiges (Freitext)",
       "otherPlaceholder": "Details eingeben",
-      "nextActionLabel": "Nächster Schritt",
-      "createMilestoneButton": "Neuen Meilenstein erstellen",
       "skipButton": "Überspringen",
       "saveButton": "Speichern",
       "deadlineLabel": "Frist:",
       "otherPrefix": "Sonstiges: {note}",
       "saveFailed": "Rückblicknotiz konnte nicht gespeichert werden",
-      "actionFailed": "Aktion fehlgeschlagen",
       "goToGoalsLink": "Ziele ansehen"
     },
     "form": {

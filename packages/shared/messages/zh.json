@@ -2242,11 +2242,6 @@
       "closeAriaLabel": "关闭",
       "updateFailed": "更新里程碑失败"
     },
-    "milestoneSelector": {
-      "title": "从里程碑创建",
-      "loading": "加载中…",
-      "empty": "暂无可用的里程碑"
-    },
     "goalSetCalculator": {
       "closeAriaLabel": "关闭",
       "title": "目标组目标成绩计算",
@@ -2290,14 +2285,11 @@
       },
       "otherLabel": "其他（自由填写）",
       "otherPlaceholder": "请输入详情",
-      "nextActionLabel": "下一步行动",
-      "createMilestoneButton": "新建里程碑",
       "skipButton": "跳过",
       "saveButton": "保存",
       "deadlineLabel": "截止日期：",
       "otherPrefix": "其他：{note}",
       "saveFailed": "保存复盘笔记失败",
-      "actionFailed": "处理失败",
       "goToGoalsLink": "查看目标管理"
     },
     "form": {

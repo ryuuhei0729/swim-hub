@@ -10,6 +10,7 @@ import ProgressBar from "./ProgressBar";
 import MilestoneList from "./MilestoneList";
 import MilestoneCreateModal from "./MilestoneCreateModal";
 import GoalBeforeAfter from "./GoalBeforeAfter";
+import { useStyleLabel } from "@/hooks/useStyleLabel";
 
 interface GoalDetailProps {
   goal: GoalWithMilestones;
@@ -30,6 +31,7 @@ export default function GoalDetail({
   const t = useTranslations("goals");
   const tCommon = useTranslations("common");
   const locale = useLocale() as SupportedLocale;
+  const styleLabel = useStyleLabel();
   const [isMilestoneModalOpen, setIsMilestoneModalOpen] = useState(false);
 
   const milestoneProgress = computeMilestoneRatio(goal.milestones);
@@ -67,7 +69,7 @@ export default function GoalDetail({
         {/* 種目名 → 目標タイム ← 現在のベスト を横並び。狭いときはタイムの並びが種目名の下に回る */}
         <div className="mt-2 flex flex-wrap items-end gap-x-6 gap-y-2">
           <h2 className="text-2xl font-bold text-blue-700">
-            {style?.name_jp || t("list.styleFallback")}
+            {styleLabel(style) || t("list.styleFallback")}
           </h2>
           <GoalBeforeAfter
             goalId={goal.id}

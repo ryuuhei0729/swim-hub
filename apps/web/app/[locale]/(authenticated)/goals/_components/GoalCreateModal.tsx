@@ -80,6 +80,14 @@ export default function GoalCreateModal({
         return;
       }
 
+      // 種目のバリデーション（未選択のまま parseInt("") = NaN を送らない。編集・mobile と同じ）
+      const parsedStyleId = parseInt(styleId, 10);
+      if (!Number.isInteger(parsedStyleId) || parsedStyleId <= 0) {
+        alert(t("edit.validation.styleNotSelected"));
+        setIsLoading(false);
+        return;
+      }
+
       // competitionIdのバリデーション（既存大会選択時）
       let competitionId: string | undefined;
       if (competitionMode === "existing") {
@@ -115,7 +123,7 @@ export default function GoalCreateModal({
                 poolType: newCompetition.poolType,
               }
             : undefined,
-        styleId: parseInt(styleId, 10),
+        styleId: parsedStyleId,
         targetTime: targetTimeSeconds,
       });
 

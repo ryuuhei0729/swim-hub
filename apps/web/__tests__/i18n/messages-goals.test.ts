@@ -56,10 +56,6 @@
  *   MilestoneEditModal.tsx →
  *     モーダルタイトル
  *     ボタン: 更新 / キャンセル
- *   MilestoneSelectorModal.tsx →
- *     モーダルタイトル
- *     ローディング中テキスト
- *     空状態テキスト
  *   GoalSetCalculatorModal.tsx →
  *     モーダルタイトル
  *     自動取得情報セクション: タイトル / 目標ラベル / 大会水路ラベル / 年齢ラベル / 性別ラベル
@@ -224,8 +220,6 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 //     作成ボタン / キャンセルボタン
 //   MilestoneEditModal.tsx →
 //     タイトル / 更新ボタン / キャンセルボタン
-//   MilestoneSelectorModal.tsx →
-//     タイトル / ローディングテキスト / 空状態テキスト
 //   GoalSetCalculatorModal.tsx →
 //     タイトル / 自動取得情報セクションタイトル
 //     目標ラベル / 大会水路ラベル / 年齢ラベル / 性別ラベル
@@ -380,13 +374,6 @@ describe("[V-C2B-01] goals namespace の必須キー確認", () => {
     "goals.milestoneEdit.cancelButton",
 
     // --------------------------------------------------------
-    // MilestoneSelectorModal.tsx
-    // --------------------------------------------------------
-    "goals.milestoneSelector.title",
-    "goals.milestoneSelector.loading",
-    "goals.milestoneSelector.empty",
-
-    // --------------------------------------------------------
     // GoalSetCalculatorModal.tsx
     // --------------------------------------------------------
     "goals.goalSetCalculator.title",
@@ -427,8 +414,6 @@ describe("[V-C2B-01] goals namespace の必須キー確認", () => {
     "goals.reflection.options.other",
     "goals.reflection.otherLabel",
     "goals.reflection.otherPlaceholder",
-    "goals.reflection.nextActionLabel",
-    "goals.reflection.createMilestoneButton",
     "goals.reflection.skipButton",
     "goals.reflection.saveButton",
     "goals.reflection.deadlineLabel",

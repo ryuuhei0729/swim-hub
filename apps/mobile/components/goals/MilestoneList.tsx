@@ -4,8 +4,23 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { Milestone } from "@apps/shared/types";
 import { formatDate } from "@apps/shared/utils/date";
+import { MILESTONE_STATUS_DISPLAY } from "@apps/shared/utils/goalStatusDisplay";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { useMilestoneSummary } from "@/hooks/useMilestoneSummary";
+
+/**
+ * ステータスアイコン。色と形は web MilestoneList の getStatusIcon と同じ対応
+ * (達成=緑チェック / 進行中=青時計 / 期限切れ=黄警告 / 未着手=灰時計)
+ */
+const STATUS_ICON: Record<
+  Milestone["status"],
+  { name: React.ComponentProps<typeof Feather>["name"]; color: string }
+> = {
+  achieved: { name: "check-circle", color: "#16A34A" }, // green-600
+  in_progress: { name: "clock", color: "#2563EB" }, // blue-600
+  expired: { name: "alert-triangle", color: "#CA8A04" }, // yellow-600
+  not_started: { name: "clock", color: "#9CA3AF" }, // gray-400
+};
 
 interface MilestoneListProps {
   milestones: Milestone[];
@@ -38,11 +53,26 @@ export const MilestoneList: React.FC<MilestoneListProps> = ({
     <View style={styles.list}>
       {milestones.map((milestone) => {
         const achieved = milestone.status === "achieved";
+        // 想定外の status (型外の値) は web の default 分岐と同じく未着手扱い
+        const iconStatus = milestone.status in STATUS_ICON ? milestone.status : "not_started";
+        const statusIcon = STATUS_ICON[iconStatus];
         return (
           <View key={milestone.id} style={[styles.item, achieved && styles.itemAchieved]}>
             {/* 編集・削除はタイトルの行にだけ置き、概要と日付はカードの全幅を使う */}
             <View style={styles.header}>
               <View style={styles.titleRow}>
+                {/* 状態アイコンはタイトル行の先頭に置く (左に専用の列を作ると、概要と日付が
+                    カードの全幅を使えなくなるため。2026-10-15 のレイアウト指定を維持) */}
+                <View
+                  accessible
+                  accessibilityRole="image"
+                  accessibilityLabel={t(
+                    `teamMemberGoals.${MILESTONE_STATUS_DISPLAY[iconStatus].labelKey}`,
+                  )}
+                  testID={`milestone-status-icon-${milestone.id}`}
+                >
+                  <Feather name={statusIcon.name} size={18} color={statusIcon.color} />
+                </View>
                 <Text style={styles.title}>{milestone.title}</Text>
                 {achieved && (
                   <View style={styles.badge}>

@@ -42,6 +42,8 @@ vi.mock("@/contexts", () => ({
 }));
 
 vi.mock("@apps/shared/api/goals", () => ({
+  // utils/milestoneJudgment.ts が読み込み時に判定モード (確認モード) を設定する
+  configureMilestoneJudgment: vi.fn(),
   GoalAPI: vi.fn().mockImplementation(() => ({
     getExpiredGoals: vi.fn().mockResolvedValue([]),
     getExpiredMilestones: vi.fn().mockResolvedValue([]),

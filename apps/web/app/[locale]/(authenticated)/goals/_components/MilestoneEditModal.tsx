@@ -9,14 +9,15 @@ import { isMilestoneParamsSavable, isMilestoneTimeValueValid } from "@apps/share
 import { useTranslations } from "next-intl";
 import { formatMilestoneSummary } from "@apps/shared/utils/milestoneSummary";
 import { parseISO, isValid, format } from "date-fns";
-import type {
-  Style,
-  Milestone,
-  MilestoneParams,
-  UpdateMilestoneInput,
-} from "@apps/shared/types";
+import type { Style, Milestone, MilestoneParams } from "@apps/shared/types";
 import MilestoneForm from "./forms/MilestoneForm";
-import { DEFAULT_TIME_PARAMS, DEFAULT_REPS_TIME_PARAMS, DEFAULT_SET_PARAMS } from "./constants";
+import {
+  defaultParamsFor,
+  formToMilestone,
+  milestoneToForm,
+  type MilestoneFormParams,
+  type MilestoneFormTab,
+} from "./forms/milestoneFormModel";
 
 interface MilestoneEditModalProps {
   isOpen: boolean;
@@ -40,19 +41,20 @@ export default function MilestoneEditModal({
 }: MilestoneEditModalProps) {
   const t = useTranslations("goals");
   const { supabase } = useAuth();
-  const [type, setType] = useState<"time" | "reps_time" | "set">("time");
+  const [tab, setTab] = useState<MilestoneFormTab>("practice_time");
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [params, setParams] = useState<MilestoneParams>(DEFAULT_TIME_PARAMS);
+  const [params, setParams] = useState<MilestoneFormParams>(() => defaultParamsFor("practice_time"));
   const [isLoading, setIsLoading] = useState(false);
   // 目標タイム欄 (target_time/target_average_time) が 0以下のまま submit されたときに true。
   // ユーザーが再入力すると (handleParamsChange 発火時に) false に戻す
   const [timeFieldInvalid, setTimeFieldInvalid] = useState(false);
   const [paramsInvalid, setParamsInvalid] = useState(false);
+  const [otherContentInvalid, setOtherContentInvalid] = useState(false);
 
   const goalAPI = new GoalAPI(supabase);
 
-  const handleParamsChange = (newParams: MilestoneParams) => {
+  const handleParamsChange = (newParams: MilestoneFormParams) => {
     setParams(newParams);
     if (timeFieldInvalid) setTimeFieldInvalid(false);
     if (paramsInvalid) setParamsInvalid(false);
@@ -60,9 +62,10 @@ export default function MilestoneEditModal({
 
   // 既存のマイルストーンデータでフォームを初期化
   useEffect(() => {
-    // 「その他」タイプは Web では編集できない (一覧で編集ボタンを出さない)
-    if (isOpen && milestone && milestone.type !== "other") {
-      setType(milestone.type);
+    if (isOpen && milestone) {
+      // 旧タイム目標 (time) は練習タイム目標の1本×1セットとして開く
+      const formValues = milestoneToForm(milestone);
+      setTab(formValues.tab);
       setTitle(milestone.title);
       // タイムゾーンシフトを避けるため、YYYY-MM-DD形式の文字列はそのまま使用
       // それ以外の形式の場合はparseISOで安全にパース
@@ -77,32 +80,41 @@ export default function MilestoneEditModal({
       } else {
         setDeadline("");
       }
-      setParams(milestone.params);
+      setParams(formValues.params);
       setTimeFieldInvalid(false);
       setParamsInvalid(false);
+      setOtherContentInvalid(false);
     }
   }, [isOpen, milestone]);
 
-  // タイプ変更時にパラメータをリセット
-  const handleTypeChange = (newType: "time" | "reps_time" | "set") => {
-    setType(newType);
-    if (newType === "time") {
-      setParams(DEFAULT_TIME_PARAMS);
-    } else if (newType === "reps_time") {
-      setParams(DEFAULT_REPS_TIME_PARAMS);
-    } else {
-      setParams(DEFAULT_SET_PARAMS);
-    }
+  // タブ変更時にパラメータをリセット
+  const handleTabChange = (newTab: MilestoneFormTab) => {
+    if (newTab === tab) return;
+    setTab(newTab);
+    setParams(defaultParamsFor(newTab));
     setTimeFieldInvalid(false);
     setParamsInvalid(false);
+    setOtherContentInvalid(false);
+  };
+
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    if (otherContentInvalid) setOtherContentInvalid(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // その他は内容 (title) が必須。自動生成する要約文が無い
+    if (tab === "other" && title.trim() === "") {
+      setOtherContentInvalid(true);
+      return;
+    }
+
     // 距離・本数・セット数・サークル・タイムのいずれかが 0 や空欄のままだと達成判定が成立しない。
     // タイム欄だけの不正は欄内エラー、それ以外は全体エラーで知らせる
-    if (!isMilestoneParamsSavable(type, params)) {
+    const resolved = formToMilestone(tab, params);
+    if (!resolved || !isMilestoneParamsSavable(resolved.type, resolved.params)) {
       if (!isMilestoneTimeValueValid(params)) {
         setTimeFieldInvalid(true);
       } else {
@@ -114,11 +126,16 @@ export default function MilestoneEditModal({
     setIsLoading(true);
     try {
       await goalAPI.updateMilestone(milestone.id, {
-        type,
-        title: title || getDefaultTitle(params),
-        params,
+        type: resolved.type,
+        title:
+          tab === "other"
+            ? title.trim()
+            : title.trim() === ""
+              ? getDefaultTitle(resolved.params)
+              : title,
+        params: resolved.params,
         deadline: deadline || null,
-      } as Omit<UpdateMilestoneInput, "id">);
+      });
 
       await onSuccess();
     } catch (error) {
@@ -157,16 +174,17 @@ export default function MilestoneEditModal({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <MilestoneForm
-                type={type}
-                onTypeChange={handleTypeChange}
+                tab={tab}
+                onTabChange={handleTabChange}
                 title={title}
-                onTitleChange={setTitle}
+                onTitleChange={handleTitleChange}
                 params={params}
                 onParamsChange={handleParamsChange}
                 deadline={deadline}
                 onDeadlineChange={setDeadline}
                 goalCompetitionDate={goalCompetitionDate}
                 timeFieldInvalid={timeFieldInvalid}
+                otherContentInvalid={otherContentInvalid}
                 showTemplateSelector={false}
               />
               {paramsInvalid && (
