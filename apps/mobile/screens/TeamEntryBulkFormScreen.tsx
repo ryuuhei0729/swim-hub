@@ -483,21 +483,27 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
     setDraftRows((prev) =>
       prev.map((r) => {
         if (r.localId !== localId) return r;
-        // 未入力のときのみ、選択した種目のベストタイムを自動プリフィルする
-        if (r.entryTimeInput.trim() === "") {
-          const bestTime = getBestTimeForRow(r.targetUserId, styleId);
-          if (bestTime) {
-            const formatted = formatTimeBest(bestTime.time);
-            return {
-              ...r,
-              styleId,
-              entryTimeInput: formatted,
-              prefillSource: "bestTime",
-              prefilledInput: formatted,
-            };
-          }
+        if (r.styleId === styleId) return r;
+        // 種目を変えたら入力中のタイムは捨て (ユーザー裁定: 消してよい)、
+        // 選択した種目のベストタイムがあればそれを自動プリフィルする
+        const bestTime = getBestTimeForRow(r.targetUserId, styleId);
+        if (bestTime) {
+          const formatted = formatTimeBest(bestTime.time);
+          return {
+            ...r,
+            styleId,
+            entryTimeInput: formatted,
+            prefillSource: "bestTime",
+            prefilledInput: formatted,
+          };
         }
-        return { ...r, styleId };
+        return {
+          ...r,
+          styleId,
+          entryTimeInput: "",
+          prefillSource: null,
+          prefilledInput: null,
+        };
       }),
     );
   };

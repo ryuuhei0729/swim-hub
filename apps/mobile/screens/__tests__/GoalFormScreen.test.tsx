@@ -505,7 +505,7 @@ describe("V4-1 ベストタイムラベル: 出し方 (エントリーと同じ)
     expect(bestText()).toBe("ベストタイム: 1:05.50");
   });
 
-  it("種目を変えるとその種目のベストに切り替わり、目標タイム欄の値は変わらない", async () => {
+  it("種目を変えるとその種目のベストに切り替わり、入力中の目標タイム欄は空になる (ユーザー裁定)", async () => {
     renderScreen();
     await flush();
     await pickCompetition("長水路杯");
@@ -513,7 +513,7 @@ describe("V4-1 ベストタイムラベル: 出し方 (エントリーと同じ)
     typeInto("goal-target-time", "1:00.00");
     await pickStyle(2);
     expect(bestText()).toBe("ベストタイム: 27.00");
-    expect(tid("goal-target-time").value).toBe("1:00.00");
+    expect(tid("goal-target-time").value).toBe("");
   });
 
   it("新規大会の水路を切り替えると入れ替わる (短水路 55 -> 長水路 58 -> 短水路 55)。目標タイム欄の値は変わらない", async () => {
@@ -583,13 +583,13 @@ describe("V4-1 / SC5 編集モード: 保存済みの目標のベストを出し
     expect(bestText()).toBe("ベストタイム: 55.00");
   });
 
-  it("種目を変えるとラベルだけが変わり (短水路の種目2 は長水路のベストを出す)、目標タイム欄は保存済みの 1:00.00 のまま", async () => {
+  it("種目を変えるとラベルが変わり (短水路の種目2 は長水路のベストを出す)、保存済みの目標タイム欄も空になる (ユーザー裁定)", async () => {
     renderScreen();
     await flush();
     await settle();
     await pickStyle(2);
     expect(bestText()).toBe("ベストタイム(長水路): 27.00");
-    expect(tid("goal-target-time").value).toBe("1:00.00");
+    expect(tid("goal-target-time").value).toBe("");
   });
 
   it("大会を長水路杯に変えると『ベストタイム: 58.00』", async () => {
@@ -886,10 +886,11 @@ describe("U5 破棄確認 (usePreventRemove)", () => {
     renderScreen();
     await flush();
     expect(h.preventRemove.prevent).toBe(false);
-    typeInto("goal-target-time", "1:00.00");
-    expect(h.preventRemove.prevent).toBe(true);
+    // 種目の変更は入力中の目標タイムを消すので、大会・種目を選んでからタイムを入れる
     await pickCompetition("短水路杯");
     fireEvent.click(screen.getByTestId("style-1"));
+    typeInto("goal-target-time", "1:00.00");
+    expect(h.preventRemove.prevent).toBe(true);
     await submit();
     await flush();
     expect(h.preventRemove.prevent).toBe(false);

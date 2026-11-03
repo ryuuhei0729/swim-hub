@@ -116,14 +116,8 @@ function medleyRelayRecords() {
  *   <span> を DOM 順に拾う。リレーでは DOM 順 = レグ順なので、配列の完全一致で
  *   「どのレグにどのラベルのバッジが出たか」を順序ごと固定できる。
  */
-const BADGE_LABELS = [
-  LABEL.bestTimeLabel,
-  LABEL.bestTimeRelay,
-  LABEL.bestTimeLong,
-  LABEL.bestTimeLongRelay,
-  LABEL.bestTimeShort,
-  LABEL.bestTimeShortRelay,
-];
+// 引継はラベルに含めず、タイム末尾の " R" で表す (例: 「ベストタイム(長水路): 27.10 R」)
+const BADGE_LABELS = [LABEL.bestTimeLabel, LABEL.bestTimeLong, LABEL.bestTimeShort];
 
 const normalize = (value: string | null | undefined): string =>
   (value ?? "").replace(/\s+/g, " ").trim();
@@ -133,7 +127,7 @@ const badgeTexts = (): string[] =>
     .queryAllByText((_content, element) => {
       if (element?.tagName !== "SPAN") return false;
       const text = normalize(element.textContent);
-      // 「ベストタイム」は「ベストタイム(引継)」の接頭辞だが、直後の ": " まで含めて
+      // 「ベストタイム」は「ベストタイム(長水路)」の接頭辞だが、直後の ": " まで含めて
       // 判定するのでラベル同士が取り違わることはない
       return BADGE_LABELS.some((label) => text.startsWith(`${label}: `));
     })
@@ -241,13 +235,13 @@ describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", ()
       );
     });
 
-    it("第1泳者は通常ベスト、第2泳者は引き継ぎベストを表示する", async () => {
+    it("第1泳者は通常ベスト、第2泳者は引き継ぎベスト (タイム末尾に R) を表示する", async () => {
       const queryClient = makeQueryClient();
       render(<TeamRecordStyleDetailScreen />, { wrapper: createWrapper(queryClient) });
 
       const badges = await waitForBadges(4);
       expect(badges[0]).toBe(`${LABEL.bestTimeLabel}: 30.20`);
-      expect(badges[1]).toBe(`${LABEL.bestTimeRelay}: 33.10`);
+      expect(badges[1]).toBe(`${LABEL.bestTimeLabel}: 33.10 R`);
     });
 
     it("引き継ぎベストが無い泳者は同一水路の通常ベストへ、同一水路が無い泳者は他水路の引き継ぎベストへ落ちる", async () => {
@@ -256,7 +250,7 @@ describe("TeamRecordStyleDetailScreen — ベストタイム参照バッジ", ()
 
       const badges = await waitForBadges(4);
       expect(badges[2]).toBe(`${LABEL.bestTimeLabel}: 29.00`);
-      expect(badges[3]).toBe(`${LABEL.bestTimeLongRelay}: 27.10`);
+      expect(badges[3]).toBe(`${LABEL.bestTimeLong}: 27.10 R`);
     });
 
     it("各レグは自分が泳ぐ種目のベストを引く (平泳ぎのレグに自由形のベストが出ない)", async () => {

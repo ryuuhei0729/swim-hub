@@ -1,6 +1,5 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { differenceInCalendarDays, isValid, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -109,7 +108,16 @@ export const GoalBeforeAfter: React.FC<GoalBeforeAfterProps> = ({
             {countdown.label}
           </Text>
         )}
-        <Feather name="arrow-left" size={28} color="#9CA3AF" />
+        {/* 横長の左向き矢印 (Feather の arrow-left は正方形グリフで横に伸ばせないため View で描く) */}
+        <View
+          testID="goal-before-after-arrow"
+          style={styles.arrow}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <View style={styles.arrowHead} />
+          <View style={styles.arrowShaft} />
+        </View>
         {remaining && (
           <Text style={[styles.gapText, reached ? styles.reached : styles.accent]}>{remaining}</Text>
         )}
@@ -149,6 +157,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
+  },
+  // 矢印: 高さ 14 / 幅 56 (以前の Feather size=28 の約半分の縦幅・約2倍の横幅)
+  arrow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: 56,
+    height: 14,
+    marginVertical: 2,
+  },
+  // 矢頭: 左辺と下辺に線を引いた正方形を 45° 回して「<」にする (対角線 ≈ 14)
+  arrowHead: {
+    width: 10,
+    height: 10,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: "#9CA3AF",
+    transform: [{ rotate: "45deg" }],
+    marginRight: -6,
+  },
+  arrowShaft: {
+    flex: 1,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: "#9CA3AF",
   },
   accent: {
     color: "#2563EB",

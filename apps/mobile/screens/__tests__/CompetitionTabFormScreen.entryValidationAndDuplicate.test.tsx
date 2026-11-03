@@ -370,10 +370,11 @@ describe("CompetitionTabFormScreen — validateEntryTab 未編集行スキップ
   it("[B-2] タイムだけ入れて種目未選択の行 → 「種目を選択してください」のエラーが出て保存がブロックされる", async () => {
     const utils = await renderEntryTab();
 
-    setEntryTime(utils, "30.50");
     // fetchStyles 未完了時に起こりうる styleId="" の状態を模す (isDefaultUntouchedEntry.test.ts
-    // の境界値ケースと同一の前提)。
+    // の境界値ケースと同一の前提)。種目の変更は入力中のタイムを消すので、先に種目を外してから
+    // タイムを入れる。
     fireEvent.click(await utils.findByTestId("entry-style-1-clear"));
+    setEntryTime(utils, "30.50");
 
     fireEvent.click(await utils.findByTestId("competition-tab-form-save"));
 
