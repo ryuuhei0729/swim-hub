@@ -30,6 +30,7 @@ import { CompetitionPickerSheet } from "@/components/goals/CompetitionPickerShee
 import { TimeSecondsInput } from "@/components/goals/TimeSecondsInput";
 import { CompetitionBasicFields } from "@/components/competitions/CompetitionBasicFields";
 import { getBestTimeForEntry } from "@/components/records";
+import { formatBestTimeBadgeText } from "@/components/records/bestTimeForEntry";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import type { MainStackParamList } from "@/navigation/types";
 import { GoalAPI } from "@apps/shared/api/goals";
@@ -40,7 +41,6 @@ import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 import { styleKeys } from "@apps/shared/hooks/queries/keys";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { formatDate } from "@apps/shared/utils/date";
-import { formatTimeBest } from "@apps/shared/utils/time";
 
 type NavProp = NativeStackNavigationProp<MainStackParamList>;
 type RouteProps = RouteProp<MainStackParamList, "GoalForm">;
@@ -194,8 +194,8 @@ export const GoalFormScreen: React.FC = () => {
     form.competitionMode === "new" ? form.newCompetition.poolType : selectedCompetition?.pool_type;
 
   // 目標タイム欄の下に出すベストタイムラベル (入力欄には反映しない)。エントリー・大会記録入力と同じ出し方
-  // (getBestTimeForEntry をリレー OFF で呼ぶ: 同じ水路の自己記録 → 別の水路の自己記録の順で、
-  // 出どころをラベルに書く。引継だけの記録は出さない)。
+  // (目標に引継の区分は無いので getBestTimeForEntry をリレー OFF で呼ぶ: 同じ水路・引継なし →
+  // 同じ水路・引継 → 別の水路・引継なし → 別の水路・引継 の順。水路はラベル、引継はタイム末尾の R で示す)。
   // ベストが無い・取得中・取得失敗・種目か水路が未確定のときは出さない
   const { data: bestTimesData } = useBestTimesQuery(supabase, {});
   const selectedStyleName = stylesQuery.data?.find((s) => String(s.id) === form.styleId)?.name_jp;
@@ -449,7 +449,12 @@ export const GoalFormScreen: React.FC = () => {
             <StyleChipSelector
               styles={stylesQuery.data}
               value={form.styleId}
-              onChange={(styleId) => patchForm({ styleId })}
+              onChange={(styleId) => {
+                // 同じ種目に解決されたチップ操作では入力中の目標タイムを消さない
+                if (styleId === form.styleId) return;
+                // 種目を変えたら入力中の目標タイムは捨てる (ユーザー裁定: 消してよい)
+                patchForm({ styleId, targetTime: null });
+              }}
               testID="goal-style"
             />
           ) : (
@@ -474,7 +479,7 @@ export const GoalFormScreen: React.FC = () => {
           {entryBestTime && (
             <View style={styles.bestTimeBadge} testID="goal-best-time-label">
               <Text style={styles.bestTimeBadgeText}>
-                {t(entryBestTime.labelKey)}: {formatTimeBest(entryBestTime.time)}
+                {formatBestTimeBadgeText(entryBestTime, t)}
               </Text>
             </View>
           )}

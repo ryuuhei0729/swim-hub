@@ -74,8 +74,6 @@ function renderCard(over: Partial<React.ComponentProps<typeof GoalCard>> = {}) {
       targetTime={23.79}
       achieved={false}
       onPress={() => {}}
-      onEdit={() => {}}
-      onDelete={() => {}}
       {...over}
     />,
   );
@@ -148,7 +146,7 @@ describe("一覧カード: 日付・大会名 / 種目名・目標タイム (Bes
 
     expect(text()).not.toMatch(/%|あと\d+日|あと[\d.]+秒|現在のベスト|目標:|本日|終了/);
     expect(byTestId("goal-before-after-gap")).toBeNull();
-    expect(document.querySelector('[data-testid="icon-arrow-left"]')).toBeNull();
+    expect(byTestId("goal-before-after-arrow")).toBeNull();
   });
 
   it("目標がベストより遅い (既に上回っている) なら Best+x.xx", async () => {
@@ -217,7 +215,7 @@ describe("詳細: 現在のベストと目標までの残り", () => {
     const before = byTestId("goal-before")!;
     expect(after.textContent).toBe("目標タイム23.79");
     expect(gap.textContent).toBe("あと7日あと0.01秒");
-    expect(gap.querySelector('[data-testid="icon-arrow-left"]')).not.toBeNull();
+    expect(gap.querySelector('[testid="goal-before-after-arrow"]')).not.toBeNull();
     expect(before.textContent).toBe("現在のベスト23.80");
     // 並び順 (DOM 順) が After → 間 → Before
     expect(after.nextElementSibling).toBe(gap);

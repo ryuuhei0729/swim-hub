@@ -46,7 +46,10 @@ import { hasUnsavedChanges } from "@/utils/tabFormUtils";
 import { formatTimeBest } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import { LapTimeDisplay } from "@/components/records/LapTimeDisplay";
-import { getBestTimeForEntry } from "@/components/records/bestTimeForEntry";
+import {
+  getBestTimeForEntry,
+  formatBestTimeBadgeText,
+} from "@/components/records/bestTimeForEntry";
 import { GoalTargetBadge } from "@/components/records/GoalTargetBadge";
 import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
 import { findGoalTargetTime } from "@apps/shared/utils/goalTarget";
@@ -456,7 +459,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
     memberUserId: string,
     forStyleId: number | "" | undefined,
     isRelaying: boolean,
-  ): { time: number; label: string } | null => {
+  ): string | null => {
     if (!memberUserId || forStyleId === "" || forStyleId === undefined)
       return null;
     if (!data) return null;
@@ -468,7 +471,8 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
       isRelaying,
       bestTimesByUserId.get(memberUserId) ?? [],
     );
-    return result ? { time: result.time, label: t(result.labelKey) } : null;
+    // 「ベストタイム(長水路): 55.00 R」の形 (引継はタイム末尾の R)
+    return result ? formatBestTimeBadgeText(result, t) : null;
   };
 
   const goalTargetFor = (
@@ -1473,7 +1477,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                         style={styles.bestTimeBadge}
                       >
                         <Text style={styles.bestTimeBadgeText}>
-                          {best.label}: {formatTimeBest(best.time)}
+                          {best}
                         </Text>
                       </View>
                     );
@@ -1695,7 +1699,7 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                         style={styles.bestTimeBadge}
                       >
                         <Text style={styles.bestTimeBadgeText}>
-                          {best.label}: {formatTimeBest(best.time)}
+                          {best}
                         </Text>
                       </View>
                     );

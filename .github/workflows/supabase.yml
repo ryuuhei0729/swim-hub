@@ -197,6 +197,23 @@ jobs:
     # コードが正しくても CI が落ちる (swimhub-scanner で esm.sh の 522 により実際に発生)。
     # deno.lock が全依存を integrity ハッシュ付きで固定しているため、DENO_DIR をキャッシュして
     # 通常の実行では CDN に一切触らせない。
+    - name: "[tmp] Regenerate deno.lock on runner"
+      run: |
+        mkdir -p /tmp/lockdump
+        curl -s https://esm.sh/async-generator-function@1.0.0/denonext/async-generator-function.mjs -D /tmp/lockdump/headers.txt -o /tmp/lockdump/async-generator-function.mjs || true
+        # --reload でも lock の integrity 検査は走るので、remote ハッシュを落としてから再キャッシュする
+        jq 'del(.remote)' deno.lock > /tmp/deno.lock.stripped && mv /tmp/deno.lock.stripped deno.lock
+        find supabase/functions -name '*.ts' | sort | xargs deno cache || true
+        git --no-pager diff --stat deno.lock || true
+        cp deno.lock /tmp/lockdump/deno.lock
+
+    - name: "[tmp] Upload regenerated deno.lock"
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: runner-deno-lock
+        path: /tmp/lockdump
+
     - name: Cache Deno modules
       uses: actions/cache@v6
       with:

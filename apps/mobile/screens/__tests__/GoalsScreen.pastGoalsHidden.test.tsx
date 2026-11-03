@@ -124,18 +124,15 @@ describe("v6: 過去の日付の目標は目標タブに表示しない (境界 
     expect(screen.getByText("今日大会")).toBeTruthy();
   });
 
-  it("competition===null (大会が見えない) の目標は表示されたまま: 大会情報なし + 編集不可理由 + 削除できる", async () => {
+  it("competition===null (大会が見えない) の目標は表示されたまま: 大会情報なし + 編集不可理由。カードに編集・削除ボタンは無い (詳細画面に任せる)", async () => {
     setup([goal("gN", "cMissing"), goal("gY", "cY")], comps3);
     renderScreen();
     await flush();
     expect(screen.getByText("大会情報なし")).toBeTruthy();
     expect(screen.queryByText("昨日大会")).toBeNull();
-    const del = Array.from(document.querySelectorAll('[accessibilitylabel="削除"]')) as HTMLElement[];
-    expect(del).toHaveLength(1);
-    fireEvent.click(del[0]!);
-    const buttons = vi.mocked(Alert.alert).mock.calls[0]![2] as Array<{ style?: string; onPress?: () => Promise<void> }>;
-    await act(async () => { await buttons.find((b) => b.style === "destructive")!.onPress!(); });
-    expect(h.deleteGoal).toHaveBeenCalledWith("gN");
+    expect(document.querySelectorAll('[accessibilitylabel="削除"]')).toHaveLength(0);
+    expect(document.querySelectorAll('[accessibilitylabel="編集"]')).toHaveLength(0);
+    expect(h.deleteGoal).not.toHaveBeenCalled();
   });
 
   it("全部が過去なら空状態 (今後の大会の目標が無い旨の文言)", async () => {
