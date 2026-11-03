@@ -46,7 +46,8 @@
 //   3. 元の行に戻し、green に復帰することを確認する
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import i18n from "@/i18n";
 import React from "react";
 import type { Query } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -427,5 +428,25 @@ describe("RecordsScreen — pull-to-refresh のクエリ網羅性 (ドリフト�
     // recordKeys.bestCandidates() の invalidateQueries は getRecords の失敗と独立した
     // Promise.allSettled の別枝のため、getRecords が reject しても実行される
     expect(apiMocks.getListBestCandidates.mock.calls.length).toBeGreaterThan(bestCandidatesCallsBefore);
+  });
+
+  it("[キャッシュ優先] 再取得に失敗しても、表示中のデータを全画面エラーに置き換えず通知だけ出す", async () => {
+    render(<RecordsScreen />, { wrapper: createWrapper(queryClient) });
+    await waitForQuiescence(queryClient);
+    await waitFor(() => expect(apiMocks.getListBestCandidates).toHaveBeenCalled());
+    await waitForQuiescence(queryClient);
+
+    expect(screen.queryByText(i18n.t("common.staleData.failed"))).toBeNull();
+
+    // 以降の再取得はすべて失敗させる (電波の悪い場所で取り直しても失敗し続ける状況)
+    apiMocks.getRecords.mockRejectedValue(new Error("network down"));
+    await act(async () => {
+      await captured.refreshAll!();
+      await waitForQuiescence(queryClient);
+    });
+
+    await waitFor(() => expect(screen.getByText(i18n.t("common.staleData.failed"))).toBeTruthy());
+    // 全画面の ErrorView (生の error.message を出す) には切り替わらない
+    expect(screen.queryByText("network down")).toBeNull();
   });
 });

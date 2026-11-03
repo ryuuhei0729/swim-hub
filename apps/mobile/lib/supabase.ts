@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@swim-hub/shared/types";
 import { env } from "@/lib/env";
+import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 
 const supabaseUrl = env.supabaseUrl;
 const supabaseAnonKey = env.supabaseAnonKey;
@@ -294,6 +295,11 @@ if (supabaseUrl && supabaseAnonKey) {
         // 既定の "implicit" のままだと同一スキームを主張する悪意あるアプリに
         // コールバックを横取りされ、code_verifier 不要でセッションを奪取されうる。
         flowType: "pkce",
+      },
+      // 低速回線で読み込み・保存が終わらないまま固まらないよう、全リクエストに上限を設ける
+      // (読み取り15秒 / 書き込み30秒。lib/fetchWithTimeout.ts 参照)
+      global: {
+        fetch: (input, init) => fetchWithTimeout(input, init),
       },
     });
   } catch (error) {

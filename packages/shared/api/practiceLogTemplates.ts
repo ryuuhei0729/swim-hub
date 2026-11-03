@@ -3,6 +3,7 @@
 // =============================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { authRequiredError } from "./auth-utils";
 import type {
   PracticeLogTemplate,
   CreatePracticeLogTemplateInput,
@@ -71,8 +72,9 @@ export class PracticeLogTemplateAPI {
     // 認証ユーザーのIDを取得
     const {
       data: { user },
+      error: authError,
     } = await this.supabase.auth.getUser();
-    if (!user) throw new Error("認証が必要です");
+    if (!user) throw authRequiredError(authError);
 
     const { data, error } = await this.supabase
       .from("practice_log_templates")

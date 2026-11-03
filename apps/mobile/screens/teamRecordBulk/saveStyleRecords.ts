@@ -21,12 +21,19 @@
 //   - UPDATE は `.select("id")` で対象0件 (= 他セッションが既に削除済み) を検知したら
 //     INSERT にフォールバックする。PostgREST は対象0件の UPDATE でもエラーを返さないため、
 //     `error` だけを見ていると無言でユーザーの入力を失う (事実2)
+//   - 再保存で二重登録しない: 低速回線で途中まで書けて失敗した後に再保存すると、
+//     前回 INSERT できた行がもう一度 INSERT されていた。画面が持つ `createdRecordIds`
+//     (行 id → 作成済み records.id) を見て作成済みの行は UPDATE にし、新規行は
+//     `draftRecordIds` でクライアント側に決めた ID で INSERT する (応答だけ失われて
+//     いた場合は主キー重複で検知して UPDATE に切り替える)
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "expo-crypto";
 import type { RecordInsert, PoolType } from "@apps/shared/types";
 import { toReactionTimeValue } from "@apps/shared/utils/reactionTime";
 import { formatTimeBest } from "@apps/shared/utils/time";
 import { computeRecordSaveDiff } from "@apps/shared/utils/recordSaveDiff";
+import { isPrimaryKeyConflict } from "@apps/shared/utils/idempotentWrite";
 import {
   resolveRelayGenderCategory,
   type RelaySavePlan,
@@ -147,6 +154,19 @@ export interface SaveStyleRecordsParams {
   styles: readonly StyleLookup[];
   isPremium: boolean;
   getAccessToken: () => Promise<string | null>;
+  /**
+   * この画面で作成済みの records (フォームの行 id → records.id)。保存が途中で失敗しても
+   * 作成できた行はここに記録され、次の保存では INSERT ではなく UPDATE になる。
+   * 画面側で保存をまたいで同じ Map を渡し続けること (この関数が書き換える)。
+   */
+  createdRecordIds?: Map<string, string>;
+  /**
+   * 新規行に割り当てた records.id (フォームの行 id → クライアントで決めた UUID)。
+   * 応答だけ失われた INSERT の再試行を主キー重複で検知するために使う (この関数が書き換える)。
+   */
+  draftRecordIds?: Map<string, string>;
+  /** 新規 records.id の生成 (テスト差し替え用) */
+  generateRecordId?: () => string;
 }
 
 interface ValidRecordRow {
@@ -226,17 +246,43 @@ async function insertRecordWithSplits(
   row: ValidRecordRow,
   ctx: { competitionId: string; teamId: string; poolType: PoolType },
   findRaceDistance: (styleId: number) => number | undefined,
+  recordId?: string,
 ): Promise<InsertRecordOutcome | null> {
   const insertPayload = buildRecordWritePayload(row, ctx);
-  const { data: newRecord, error: recordError } = await supabase
+  let { data: newRecord, error: recordError } = await supabase
     .from("records")
-    .insert(insertPayload)
+    .insert(recordId ? { ...insertPayload, id: recordId } : insertPayload)
     .select("id")
     .single();
+
+  // 前回の INSERT がサーバーには届いていた (応答だけ失われた) 場合は、同じ ID の行を
+  // 今回の内容で更新し、前回分のスプリットを消してから入れ直す
+  let recoveredFromConflict = false;
+  if (recordId && isPrimaryKeyConflict(recordError, "records")) {
+    const updated = await supabase
+      .from("records")
+      .update(insertPayload)
+      .eq("id", recordId)
+      .select("id");
+    newRecord = (updated.data as Array<{ id: string }> | null)?.[0] ?? null;
+    recordError = updated.error;
+    recoveredFromConflict = !updated.error && !!newRecord;
+  }
 
   if (recordError || !newRecord) {
     console.error(`Record作成エラー (${row.memberName}):`, recordError);
     return null;
+  }
+
+  if (recoveredFromConflict) {
+    const { error: staleSplitError } = await supabase
+      .from("split_times")
+      .delete()
+      .eq("record_id", newRecord.id);
+    if (staleSplitError) {
+      console.error(`SplitTime再作成エラー (${row.memberName}):`, staleSplitError);
+      return { id: newRecord.id, splitError: true };
+    }
   }
 
   let splitError = false;
@@ -273,6 +319,9 @@ export async function saveStyleRecords(
     styles,
     isPremium,
     getAccessToken,
+    createdRecordIds = new Map<string, string>(),
+    draftRecordIds = new Map<string, string>(),
+    generateRecordId = randomUUID,
   } = params;
 
   // 詳細画面は常に styleId (個人) または relayEventId (リレー) を確定させて開くため
@@ -440,8 +489,16 @@ export async function saveStyleRecords(
   // `idx` は validRecords (= relay leg の validRecordIndex と同じ添字空間) 上の位置。
   // computeRecordSaveDiff に渡した後も relay_records へ渡す insertedRecordIds の
   // 添字を保つために保持する。
-  const indexedRows = validRecords.map((row, idx) => ({ row, idx }));
-  const diff = computeRecordSaveDiff(existingRecordIds, indexedRows, (item) => item.row.id);
+  // 前回の保存で作成済みの行は、その records.id を持つ既存行として扱う (UPDATE / DELETE の対象)。
+  // 作成済みの行がフォームから外されていれば toDeleteIds に入り削除される。
+  const formRowIdByRecordId = new Map<string, string>();
+  for (const [formRowId, recordId] of createdRecordIds) formRowIdByRecordId.set(recordId, formRowId);
+  const effectiveExistingIds = new Set<string>([...existingRecordIds, ...createdRecordIds.values()]);
+  const indexedRows = validRecords.map((row, idx) => {
+    const createdId = createdRecordIds.get(row.id);
+    return { row: createdId ? { ...row, id: createdId } : row, formRowId: row.id, idx };
+  });
+  const diff = computeRecordSaveDiff(effectiveExistingIds, indexedRows, (item) => item.row.id);
 
   const savedIdsByIndex: Array<string | null> = new Array(validRecords.length).fill(null);
   const savedRecords: Array<{ recordId: string; record: ValidRecordRow }> = [];
@@ -468,11 +525,19 @@ export async function saveStyleRecords(
     if (deleteError) {
       console.error("既存レコード削除エラー:", deleteError);
       hasError = true;
+    } else {
+      for (const deletedId of diff.toDeleteIds) {
+        const formRowId = formRowIdByRecordId.get(deletedId);
+        if (formRowId) {
+          createdRecordIds.delete(formRowId);
+          draftRecordIds.delete(formRowId);
+        }
+      }
     }
   }
 
   // ---- UPDATE (id 保持。旧 insert payload と同一の列集合で書く) ----
-  for (const { row, idx } of diff.toUpdate) {
+  for (const { row, formRowId, idx } of diff.toUpdate) {
     const updatePayload = buildRecordWritePayload(row, { competitionId, teamId, poolType });
     const { data: updatedRows, error: updateError } = await supabase
       .from("records")
@@ -504,6 +569,7 @@ export async function saveStyleRecords(
         hasError = true;
         continue;
       }
+      createdRecordIds.set(formRowId, inserted.id);
       savedIdsByIndex[idx] = inserted.id;
       savedRecords.push({ recordId: inserted.id, record: row });
       if (inserted.splitError) hasError = true;
@@ -543,17 +609,24 @@ export async function saveStyleRecords(
   }
 
   // ---- INSERT ----
-  for (const { row, idx } of diff.toInsert) {
+  for (const { row, formRowId, idx } of diff.toInsert) {
+    let draftId = draftRecordIds.get(formRowId);
+    if (!draftId) {
+      draftId = generateRecordId();
+      draftRecordIds.set(formRowId, draftId);
+    }
     const inserted = await insertRecordWithSplits(
       supabase,
       row,
       { competitionId, teamId, poolType },
       findRaceDistance,
+      draftId,
     );
     if (!inserted) {
       hasError = true;
       continue;
     }
+    createdRecordIds.set(formRowId, inserted.id);
     savedIdsByIndex[idx] = inserted.id;
     savedRecords.push({ recordId: inserted.id, record: row });
     if (inserted.splitError) hasError = true;

@@ -222,6 +222,22 @@ function renderAuthProvider() {
 
 // ---- テスト本体 ---------------------------------------------------------------
 
+// AsyncStorage.getItem のモックをキーごとに振り分ける。
+// AuthProvider はオンボーディング状態のキャッシュ (lib/onboardingCache.ts) も AsyncStorage から
+// 読むため、「次の getItem 1回」に値を積む mockResolvedValueOnce だと、カレンダー連携フラグ用の
+// 値をオンボーディングの読み込みが先に消費してしまう。フラグのキーにだけ値を返す。
+const CALENDAR_CONNECT_PENDING_KEY = "swimhub:googleCalendarConnectPending";
+let calendarPendingQueue: (string | null)[] = [];
+function queueCalendarPendingFlag(...values: (string | null)[]): void {
+  calendarPendingQueue.push(...values);
+}
+beforeEach(() => {
+  calendarPendingQueue = [];
+  vi.mocked(AsyncStorage.getItem).mockImplementation(async (key: string) =>
+    key === CALENDAR_CONNECT_PENDING_KEY ? (calendarPendingQueue.shift() ?? null) : null,
+  );
+});
+
 describe("[DLH-01] cold start — getInitialURL が auth callback URL を返すとき setSession を呼ぶ", () => {
   beforeEach(() => {
     mocks.oauthGuardActive = false;
@@ -534,7 +550,7 @@ describe("[DLH-10] 正常復旧 — フラグあり + flow=calendar-connect + pr
 
   it("saveGoogleCalendarRefreshToken が呼ばれ、成功 Alert が表示される", async () => {
     // 永続フラグが「有効期限内」で存在する状態を再現する
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    queueCalendarPendingFlag(String(Date.now()));
 
     await act(async () => {
       renderAuthProvider();
@@ -573,7 +589,7 @@ describe("[DLH-11] 誤爆防止 — フラグあり(TTL内) だが無関係な�
 
   it("flow クエリも provider_refresh_token も無いメール確認 URL では復旧処理に入らず、通常の setSession のみ実行される", async () => {
     // 別の中断済みカレンダー連携から残った、TTL内の永続フラグを再現する
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    queueCalendarPendingFlag(String(Date.now()));
 
     await act(async () => {
       renderAuthProvider();
@@ -606,7 +622,7 @@ describe("[DLH-12] token 欠落 — フラグあり + flow=calendar-connect だ�
   });
 
   it("googleCalendarPermissionDenied の Alert が表示され、保存 API は呼ばれない", async () => {
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    queueCalendarPendingFlag(String(Date.now()));
 
     await act(async () => {
       renderAuthProvider();
@@ -637,7 +653,7 @@ describe("[DLH-13] 保存 API 失敗 — エラー Alert のみでリトライ�
   });
 
   it("保存 API が失敗を返すとローカライズ済みエラー Alert が表示される (POST は1回のみ)", async () => {
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    queueCalendarPendingFlag(String(Date.now()));
     mocks.saveGoogleCalendarRefreshToken.mockResolvedValueOnce({
       success: false,
       error: "quota exceeded for calendar api",
@@ -664,9 +680,10 @@ describe("[DLH-13] 保存 API 失敗 — エラー Alert のみでリトライ�
   });
 
   it("フラグは consume 済みのため、直後に無関係なディープリンクが来ても復旧処理は再発火しない", async () => {
-    vi.mocked(AsyncStorage.getItem)
-      .mockResolvedValueOnce(String(Date.now())) // 1回目 (このテストの復旧フロー)
-      .mockResolvedValueOnce(null); // 2回目以降はフラグ無し (consume 済み)
+    queueCalendarPendingFlag(
+      String(Date.now()), // 1回目 (このテストの復旧フロー)
+      null, // 2回目以降はフラグ無し (consume 済み)
+    );
     mocks.saveGoogleCalendarRefreshToken.mockResolvedValueOnce({
       success: false,
       error: "quota exceeded for calendar api",
@@ -709,7 +726,7 @@ describe("[DLH-14] Warning3 — 復旧中に #error= が付いたコールバッ
   });
 
   it("フラグあり + flow=calendar-connect + error の場合、tokenExpired ではなく googleCalendarPermissionDenied が表示される", async () => {
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    queueCalendarPendingFlag(String(Date.now()));
 
     await act(async () => {
       renderAuthProvider();
@@ -756,7 +773,7 @@ describe("[DLH-15] PKCE 正常復旧 — フラグあり + flow=calendar-connect
   });
 
   it("exchangeCodeForSession が呼ばれ、provider_refresh_token 付きセッションなら saveGoogleCalendarRefreshToken が呼ばれ成功 Alert が表示される", async () => {
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    queueCalendarPendingFlag(String(Date.now()));
     mocks.exchangeCodeForSession.mockResolvedValue({
       data: {
         session: { access_token: "at-pkce-recover", provider_refresh_token: "prt-pkce-recover" },
@@ -796,7 +813,7 @@ describe("[DLH-16] PKCE 最大リスク — exchangeCodeForSession 成功でも 
   });
 
   it("saveGoogleCalendarRefreshToken を呼ばずサイレントスキップせず、googleCalendarPermissionDenied の Alert を出す", async () => {
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    queueCalendarPendingFlag(String(Date.now()));
     // exchangeCodeForSession 自体は成功するが、セッションに provider_refresh_token が
     // 含まれない (Google 側の consent 再表示スキップ等で起こりうる) ケース。
     mocks.exchangeCodeForSession.mockResolvedValue({
@@ -834,7 +851,7 @@ describe("[DLH-17] PKCE エラー経路 — exchangeCodeForSession が error を
   });
 
   it("カレンダー連携復旧中 (フラグ+flow=calendar-connect) のエラーは googleCalendarPermissionDenied を表示する", async () => {
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(String(Date.now()));
+    queueCalendarPendingFlag(String(Date.now()));
 
     await act(async () => {
       renderAuthProvider();

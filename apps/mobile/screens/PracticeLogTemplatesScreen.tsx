@@ -14,6 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
+import { usePendingAction } from "@/hooks/usePendingAction";
 import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -155,8 +156,17 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
     }
   }, [form, isSubmitting, editingTemplate, updateMutation, createMutation, t, toast]);
 
+  // 低速回線で削除中に再度押されないよう、削除は同時に1件だけにする
+  const {
+    pendingKey: deletingTemplateId,
+    isPending: isDeletePending,
+    run: runDelete,
+    isBusy: isDeleteBusy,
+  } = usePendingAction();
+
   const handleDelete = useCallback(
     (template: PracticeLogTemplate) => {
+      if (isDeleteBusy()) return;
       Alert.alert(
         t("practiceLogTemplates.card.deleteConfirm.title"),
         t("practiceLogTemplates.card.deleteConfirm.message", { name: template.name }),
@@ -165,12 +175,23 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
           {
             text: t("practiceLogTemplates.card.deleteConfirm.confirmLabel"),
             style: "destructive",
-            onPress: () => deleteMutation.mutate(template.id),
+            onPress: () => {
+              void runDelete(template.id, async () => {
+                try {
+                  await deleteMutation.mutateAsync(template.id);
+                } catch (error) {
+                  // 失敗するとテンプレートが残ったままになるので、必ず知らせる
+                  toast.error(
+                    toUserFacingMessage(error, t("practiceLogTemplates.card.deleteFailed")),
+                  );
+                }
+              });
+            },
           },
         ],
       );
     },
-    [t, deleteMutation],
+    [t, deleteMutation, runDelete, isDeleteBusy, toast],
   );
 
   const renderCard = (template: PracticeLogTemplate) => (
@@ -206,11 +227,21 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
           </Pressable>
           <Pressable
             onPress={() => handleDelete(template)}
+            disabled={isDeletePending}
+            style={isDeletePending ? styles.actionDisabled : undefined}
             hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel={t("practiceLogTemplates.card.menuDelete")}
+            accessibilityState={{
+              disabled: isDeletePending,
+              busy: deletingTemplateId === template.id,
+            }}
           >
-            <Feather name="trash-2" size={17} color="#EF4444" />
+            {deletingTemplateId === template.id ? (
+              <ActivityIndicator size="small" color="#EF4444" />
+            ) : (
+              <Feather name="trash-2" size={17} color="#EF4444" />
+            )}
           </Pressable>
         </View>
       </View>
@@ -569,6 +600,9 @@ export const PracticeLogTemplatesScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  actionDisabled: {
+    opacity: 0.4,
+  },
   container: {
     flex: 1,
     backgroundColor: "#F3F4F6",

@@ -277,6 +277,10 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
   // 保存時の diff (computeRecordSaveDiff) の削除スコープに使う。
   // entries の編集で書き換わってはいけないため live state ではなく ref に固定する。
   const existingRecordIdsRef = useRef<Set<string>>(new Set());
+  // 保存が途中で失敗した後の再保存で、作成済みの記録をもう一度作らないための記録
+  // (saveStyleRecords の createdRecordIds / draftRecordIds 参照)。読み込み直したら空に戻す
+  const createdRecordIdsRef = useRef<Map<string, string>>(new Map());
+  const draftRecordIdsRef = useRef<Map<string, string>>(new Map());
   // 上記のうちリレーのレグに該当する records.id を relay_record_legs 経由で解決した
   // relay_records.id 集合 (画面オープン時点のスナップショット)。TeamRelayRecordsAPI.replace()
   // の削除スコープに使う (事実1: DB 列条件でなく画面が読み込んだ id だけを渡す)。
@@ -348,6 +352,8 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
                     },
             ];
 
+      createdRecordIdsRef.current = new Map();
+      draftRecordIdsRef.current = new Map();
       existingRecordIdsRef.current = scopeExistingRecordIdsForEntries(
         result.existingRecords,
         initialEntries,
@@ -1205,6 +1211,8 @@ export const TeamRecordStyleDetailScreen: React.FC = () => {
         poolType: data.competition.pool_type,
         entries,
         existingRecordIds: existingRecordIdsRef.current,
+        createdRecordIds: createdRecordIdsRef.current,
+        draftRecordIds: draftRecordIdsRef.current,
         existingRelayRecordIds: existingRelayRecordIdsRef.current,
         memberGenderByUserId,
         styles: data.styles,

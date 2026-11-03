@@ -23,6 +23,8 @@ import type { MainStackParamList } from "@/navigation/types";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { formatDate } from "@apps/shared/utils/date";
 import { cardSurface, colors } from "@/constants/theme";
+import { usePendingAction } from "@/hooks/usePendingAction";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -37,12 +39,18 @@ const PracticeItem = React.memo(function PracticeItem({
   onEdit,
   onDelete,
   onAddLog,
+  isDeleting,
+  deleteDisabled,
 }: {
   practice: Practice;
   isAdmin: boolean;
   onEdit: (practice: Practice) => void;
   onDelete: (practice: Practice) => void;
   onAddLog: (practice: Practice) => void;
+  /** この練習を削除中か (スピナーを出す) */
+  isDeleting: boolean;
+  /** 削除ボタンを押せないか (いずれかの削除を実行中) */
+  deleteDisabled: boolean;
 }) {
   const { t } = useTranslation();
   const dateLocale = useDateLocale();
@@ -69,12 +77,18 @@ const PracticeItem = React.memo(function PracticeItem({
                 <Feather name="edit-2" size={14} color="#2563EB" />
               </Pressable>
               <Pressable
-                style={styles.deleteButton}
+                style={[styles.deleteButton, deleteDisabled && styles.deleteButtonDisabled]}
                 onPress={() => onDelete(practice)}
+                disabled={deleteDisabled}
                 accessibilityRole="button"
                 accessibilityLabel={t("common.delete")}
+                accessibilityState={{ disabled: deleteDisabled, busy: isDeleting }}
               >
-                <Feather name="trash-2" size={14} color="#EF4444" />
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <Feather name="trash-2" size={14} color="#EF4444" />
+                )}
               </Pressable>
             </View>
           )}
@@ -170,7 +184,16 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
     });
   }, [navigation, teamId, isAdmin]);
 
+  // 低速回線で削除中に再度押されないよう、削除は同時に1件だけにする
+  const {
+    pendingKey: deletingId,
+    isPending: isDeletePending,
+    run: runDelete,
+    isBusy: isDeleteBusy,
+  } = usePendingAction();
+
   const handleDelete = useCallback((practice: Practice) => {
+    if (isDeleteBusy()) return;
     Alert.alert(
       t("teams.mobile.deleteConfirmTitle"),
       t("teams.mobile.teamPracticeList.deleteConfirm"),
@@ -179,19 +202,23 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
         {
           text: t("common.delete"),
           style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteMutation.mutateAsync({ id: practice.id, teamId });
-            } catch {
-              Alert.alert(t("common.error"), t("teams.mobile.teamPracticeList.deleteFailed"), [
-                { text: "OK" },
-              ]);
-            }
+          onPress: () => {
+            void runDelete(practice.id, async () => {
+              try {
+                await deleteMutation.mutateAsync({ id: practice.id, teamId });
+              } catch (error) {
+                Alert.alert(
+                  t("common.error"),
+                  toUserFacingMessage(error, t("teams.mobile.teamPracticeList.deleteFailed")),
+                  [{ text: "OK" }],
+                );
+              }
+            });
           },
         },
       ],
     );
-  }, [deleteMutation, teamId, t]);
+  }, [deleteMutation, teamId, t, runDelete, isDeleteBusy]);
 
   const renderItem = useCallback(({ item }: { item: Practice }) => (
     <PracticeItem
@@ -200,8 +227,10 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
       onEdit={handleEdit}
       onDelete={handleDelete}
       onAddLog={handleAddLog}
+      isDeleting={deletingId === item.id}
+      deleteDisabled={isDeletePending}
     />
-  ), [isAdmin, handleEdit, handleDelete, handleAddLog]);
+  ), [isAdmin, handleEdit, handleDelete, handleAddLog, deletingId, isDeletePending]);
 
   const keyExtractor = useCallback((item: Practice) => item.id, []);
 
@@ -276,6 +305,7 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
           data={items}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
+          extraData={deletingId}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
@@ -377,6 +407,9 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 4,
+  },
+  deleteButtonDisabled: {
+    opacity: 0.4,
   },
   itemTitle: {
     fontSize: 14,

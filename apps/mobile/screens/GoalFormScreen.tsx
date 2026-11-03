@@ -41,6 +41,8 @@ import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
 import { styleKeys } from "@apps/shared/hooks/queries/keys";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { formatDate } from "@apps/shared/utils/date";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { randomUUID } from "expo-crypto";
 
 type NavProp = NativeStackNavigationProp<MainStackParamList>;
 type RouteProps = RouteProp<MainStackParamList, "GoalForm">;
@@ -98,6 +100,9 @@ export const GoalFormScreen: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const savingRef = useRef(false);
+  // 新規作成する目標・大会の ID (最初の保存で決め、再保存でも同じ ID を使う)
+  const draftGoalIdRef = useRef<string | null>(null);
+  const draftNewCompetitionIdRef = useRef<string | null>(null);
   // 編集時に新規大会を作成した後 updateGoal だけ失敗しても、再保存で大会を重複作成しない
   // 作成時の入力も保持し、再保存で入力が変わっていれば作成済みの大会を更新する
   const createdCompetitionRef = useRef<{
@@ -292,6 +297,10 @@ export const GoalFormScreen: React.FC = () => {
           targetTime,
         });
       } else {
+        // 目標と新規大会の ID を最初の保存で決め、再保存でも同じ ID を使う
+        // (応答だけ失われた後に再保存しても、目標や大会が二重に登録されない)
+        if (!draftGoalIdRef.current) draftGoalIdRef.current = randomUUID();
+        if (!draftNewCompetitionIdRef.current) draftNewCompetitionIdRef.current = randomUUID();
         await goalAPI.createGoal({
           userId: user.id,
           competitionId:
@@ -299,6 +308,9 @@ export const GoalFormScreen: React.FC = () => {
           competitionData: form.competitionMode === "new" ? newCompetition : undefined,
           styleId,
           targetTime,
+          goalId: draftGoalIdRef.current,
+          newCompetitionId:
+            form.competitionMode === "new" ? draftNewCompetitionIdRef.current : undefined,
         });
       }
       void queryClient.invalidateQueries({ queryKey: goalKeys.all });
@@ -306,7 +318,13 @@ export const GoalFormScreen: React.FC = () => {
     } catch (error) {
       // RLS 拒否などの生エラー文言は出さず、固定文言のみ表示する
       console.error("Failed to save goal:", error);
-      setSaveError(isEdit ? t("goals.edit.updateFailed") : t("goals.create.createFailed"));
+      // (圏外・タイムアウトのときだけ、通信が原因と分かる文言に差し替わる)
+      setSaveError(
+        toUserFacingMessage(
+          error,
+          isEdit ? t("goals.edit.updateFailed") : t("goals.create.createFailed"),
+        ),
+      );
     } finally {
       savingRef.current = false;
       setIsSaving(false);

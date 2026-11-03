@@ -14,6 +14,8 @@
  * [AP-07] updateOnboardingCompleted — 正常系
  * [AP-08] updateOnboardingCompleted — user null のとき Error を返す
  * [AP-09] updateOnboardingCompleted — DB 更新失敗時に Error を返す
+ * [AP-10] オンボーディング状態 — 圏外・タイムアウトで取得できなくても完了済みの利用者を
+ *         オンボーディングへ送らない (端末キャッシュを使い、電波が戻ったら問い合わせ直す)
  */
 
 import React from "react";
@@ -107,6 +109,8 @@ vi.mock("@/providers/QueryProvider", () => ({
   getQueryClient: mocks.getQueryClient,
 }));
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { onlineManager } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/contexts/AuthProvider";
 
 // --------------------------------------------------------------------------
@@ -485,5 +489,135 @@ describe("[AP-09] updateOnboardingCompleted — DB 更新失敗", () => {
       expect(result.error).toBeInstanceOf(Error);
       expect(result.error?.message).toContain("DB connection failed");
     });
+  });
+});
+
+// --------------------------------------------------------------------------
+// [AP-10] オンボーディング状態 — 通信できないとき
+// --------------------------------------------------------------------------
+
+/** onboardingCompleted を表示するコンポーネント */
+const OnboardingDisplay: React.FC = () => {
+  const { onboardingCompleted } = useAuth();
+  return <span data-testid="onboarding">{String(onboardingCompleted)}</span>;
+};
+
+/** postgrest-js が fetch の失敗を包んで返す形 (Error ではないプレーンオブジェクト) */
+const NETWORK_FAILURE = {
+  message: "TypeError: Network request failed",
+  details: "",
+  hint: "",
+  code: "",
+};
+
+/**
+ * users.select().eq().single() の結果を順に差し替える。
+ * サブスクリプション取得 (user_subscriptions) も同じチェーンを使うため、テーブル名で振り分ける。
+ */
+function setupSingleResult(...results: Array<{ data: unknown; error: unknown }>) {
+  const single = vi.fn();
+  for (const result of results) single.mockResolvedValueOnce(result);
+  single.mockResolvedValue(results[results.length - 1]);
+  const chain = (singleFn: ReturnType<typeof vi.fn>) => ({
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: singleFn,
+    update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+  });
+  const usersChain = chain(single);
+  const otherChain = chain(vi.fn().mockResolvedValue({ data: null, error: null }));
+  mocks.fromFn.mockImplementation((table: string) => (table === "users" ? usersChain : otherChain));
+}
+
+/** 端末に覚えている onboarding_completed を差し替える ("1" / "0" / null) */
+function setupCachedOnboarding(value: "1" | "0" | null) {
+  vi.mocked(AsyncStorage.getItem).mockImplementation(async (key: string) =>
+    key === "onboarding-completed:user-1" ? value : null,
+  );
+}
+
+describe("[AP-10] オンボーディング状態 — 通信できないとき", () => {
+  beforeEach(() => {
+    onlineManager.setOnline(true);
+    vi.mocked(AsyncStorage.setItem).mockClear();
+    setupImmediateInitialSession();
+  });
+
+  it("圏外で取得に失敗しても、完了済みを覚えていれば完了として扱う", async () => {
+    setupCachedOnboarding("1");
+    setupSingleResult({ data: null, error: NETWORK_FAILURE });
+
+    renderWithAuth(<OnboardingDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("onboarding").textContent).toBe("true"));
+  });
+
+  it("覚えている値が無くても、通信エラーなら未完了扱いにせず完了として扱う", async () => {
+    setupCachedOnboarding(null);
+    setupSingleResult({ data: null, error: NETWORK_FAILURE });
+
+    renderWithAuth(<OnboardingDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("onboarding").textContent).toBe("true"));
+  });
+
+  it("未完了を覚えていれば、通信エラーでも未完了のまま", async () => {
+    setupCachedOnboarding("0");
+    setupSingleResult({ data: null, error: NETWORK_FAILURE });
+
+    renderWithAuth(<OnboardingDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("onboarding").textContent).toBe("false"));
+  });
+
+  it("タイムアウトも通信エラーとして扱う", async () => {
+    setupCachedOnboarding("1");
+    setupSingleResult({
+      data: null,
+      error: { message: "TimeoutError: Network request timed out", code: "" },
+    });
+
+    renderWithAuth(<OnboardingDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("onboarding").textContent).toBe("true"));
+  });
+
+  it("通信以外の失敗 (行が無い等) は従来どおり未完了として扱う", async () => {
+    setupCachedOnboarding("1");
+    setupSingleResult({ data: null, error: { message: "no rows", code: "PGRST116" } });
+
+    renderWithAuth(<OnboardingDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("onboarding").textContent).toBe("false"));
+  });
+
+  it("取得できた値を端末に覚える", async () => {
+    setupCachedOnboarding(null);
+    setupSingleResult({ data: { onboarding_completed: true }, error: null });
+
+    renderWithAuth(<OnboardingDisplay />);
+
+    await waitFor(() => expect(screen.getByTestId("onboarding").textContent).toBe("true"));
+    await waitFor(() =>
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith("onboarding-completed:user-1", "1"),
+    );
+  });
+
+  it("圏外で確定できなかった場合、電波が戻ったら問い合わせ直してサーバーの値に合わせる", async () => {
+    setupCachedOnboarding(null);
+    setupSingleResult(
+      { data: null, error: NETWORK_FAILURE },
+      { data: { onboarding_completed: false }, error: null },
+    );
+
+    renderWithAuth(<OnboardingDisplay />);
+    await waitFor(() => expect(screen.getByTestId("onboarding").textContent).toBe("true"));
+
+    await act(async () => {
+      onlineManager.setOnline(false);
+      onlineManager.setOnline(true);
+    });
+
+    await waitFor(() => expect(screen.getByTestId("onboarding").textContent).toBe("false"));
   });
 });

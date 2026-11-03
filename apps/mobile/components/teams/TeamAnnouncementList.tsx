@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useTranslation } from "react-i18next";
 import { formatDateTime } from "@apps/shared/utils/date";
@@ -19,6 +19,8 @@ interface TeamAnnouncementListProps {
   onCreateNew?: () => void;
   onEdit?: (announcement: TeamAnnouncement) => void;
   onDelete?: (announcementId: string) => void;
+  /** 削除中のお知らせ id。削除中は全ての削除ボタンを押せなくする */
+  deletingId?: string | null;
 }
 
 /**
@@ -34,6 +36,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
   onCreateNew,
   onEdit,
   onDelete,
+  deletingId = null,
 }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
@@ -47,12 +50,13 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
     );
   }
 
-  // エラー状態
-  if (isError && error) {
+  // エラー状態 (表示できるお知らせが無いときだけ。再取得の失敗は親画面のバナーで伝える)
+  if (isError && error && announcements.length === 0) {
     return (
       <View style={styles.container}>
         <ErrorView
           message={error.message || t("teams.mobile.announcementFetchFailed")}
+          error={error}
           onRetry={onRetry}
         />
       </View>
@@ -80,6 +84,7 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
         <FlashList
           data={announcements}
           keyExtractor={(item) => item.id}
+          extraData={deletingId}
           renderItem={({ item }) => {
             const isPublished = item.is_published;
             const startAt = item.start_at ? formatAnnouncementDate(item.start_at) : null;
@@ -117,12 +122,27 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
                       )}
                       {onDelete && (
                         <Pressable
-                          style={[styles.actionButton, styles.deleteButton]}
+                          style={[
+                            styles.actionButton,
+                            styles.deleteButton,
+                            deletingId !== null && styles.deleteButtonDisabled,
+                          ]}
                           onPress={() => onDelete(item.id)}
+                          disabled={deletingId !== null}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("common.delete")}
+                          accessibilityState={{
+                            disabled: deletingId !== null,
+                            busy: deletingId === item.id,
+                          }}
                         >
-                          <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
-                            {t("common.delete")}
-                          </Text>
+                          {deletingId === item.id ? (
+                            <ActivityIndicator size="small" color="#DC2626" />
+                          ) : (
+                            <Text style={[styles.actionButtonText, styles.deleteButtonText]}>
+                              {t("common.delete")}
+                            </Text>
+                          )}
                         </Pressable>
                       )}
                     </View>
@@ -240,6 +260,9 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: "#DC2626",
+  },
+  deleteButtonDisabled: {
+    opacity: 0.4,
   },
   announcementContent: {
     fontSize: 14,

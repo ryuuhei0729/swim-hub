@@ -20,8 +20,12 @@
  *   メッセージだけを通す」設計になっていることを担保する。
  */
 
-import { describe, expect, it } from "vitest";
-import { UserFacingError, toUserFacingMessage } from "../../utils/userFacingError";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  UserFacingError,
+  configureNetworkErrorMessage,
+  toUserFacingMessage,
+} from "../../utils/userFacingError";
 
 describe("toUserFacingMessage", () => {
   it("[V-F1-01] RPC が返す内部識別子文字列 (生のError) はそのまま露出せず、fallback に畳まれる", () => {
@@ -58,5 +62,34 @@ describe("toUserFacingMessage", () => {
     const result = toUserFacingMessage("some raw string thrown without Error wrapper", "エラーが発生しました");
 
     expect(result).toBe("エラーが発生しました");
+  });
+});
+
+describe("configureNetworkErrorMessage", () => {
+  afterEach(() => {
+    configureNetworkErrorMessage(null);
+  });
+
+  it("未設定なら通信エラーでも fallback を返す (web の従来動作)", () => {
+    expect(toUserFacingMessage(new TypeError("Network request failed"), "保存に失敗しました")).toBe(
+      "保存に失敗しました",
+    );
+  });
+
+  it("設定すると、判定関数が返した文言を fallback より優先する", () => {
+    configureNetworkErrorMessage((error) =>
+      error instanceof TypeError ? "通信できませんでした" : null,
+    );
+    expect(toUserFacingMessage(new TypeError("Network request failed"), "保存に失敗しました")).toBe(
+      "通信できませんでした",
+    );
+    expect(toUserFacingMessage(new Error("boom"), "保存に失敗しました")).toBe("保存に失敗しました");
+  });
+
+  it("UserFacingError はそのまま表示する (判定関数より優先)", () => {
+    configureNetworkErrorMessage(() => "通信できませんでした");
+    expect(toUserFacingMessage(new UserFacingError("管理者権限が必要です"), "x")).toBe(
+      "管理者権限が必要です",
+    );
   });
 });

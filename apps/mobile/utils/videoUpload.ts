@@ -5,6 +5,7 @@
 import * as VideoThumbnails from "expo-video-thumbnails";
 import { env } from "@/lib/env";
 import i18n from "@/i18n";
+import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 
 const WEB_API_URL = env.webApiUrl;
 
@@ -42,7 +43,7 @@ export async function requestUploadUrl(
   contentType: string,
   accessToken: string,
 ): Promise<UploadUrlResponse> {
-  const res = await fetch(`${WEB_API_URL}/api/storage/videos/upload-url`, {
+  const res = await fetchWithTimeout(`${WEB_API_URL}/api/storage/videos/upload-url`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -163,7 +164,7 @@ export async function confirmUpload(
   formData.append("videoPath", videoPath);
   formData.append("thumbnailPath", thumbnailPath);
 
-  const res = await fetch(`${WEB_API_URL}/api/storage/videos/confirm`, {
+  const res = await fetchWithTimeout(`${WEB_API_URL}/api/storage/videos/confirm`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -190,7 +191,7 @@ export async function getPresignedUrl(
     params.set("thumbnailPath", thumbnailPath);
   }
 
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${WEB_API_URL}/api/storage/videos/presigned-url?${params.toString()}`,
     {
       headers: {
@@ -220,7 +221,7 @@ export async function deleteVideo(
       ? `${WEB_API_URL}/api/storage/videos/record?recordId=${id}`
       : `${WEB_API_URL}/api/storage/videos/practice-log?practiceLogId=${id}`;
 
-  const res = await fetch(endpoint, {
+  const res = await fetchWithTimeout(endpoint, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -253,7 +254,7 @@ export async function assignTeamVideo(params: {
   const { type, sourceId, targetUserId, teamId, tempVideoPath, tempThumbnailPath, accessToken } =
     params;
 
-  const res = await fetch(`${WEB_API_URL}/api/storage/videos/team-assign`, {
+  const res = await fetchWithTimeout(`${WEB_API_URL}/api/storage/videos/team-assign`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

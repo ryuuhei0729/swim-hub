@@ -1963,24 +1963,42 @@ describe("EntryAPI", () => {
     });
 
     describe("0行ガード (課題B展開・回帰)", () => {
-      const mockAdminAndEntries = (entriesResponse: { data: unknown; error: unknown }) => {
+      /**
+       * entries への1回目の問い合わせ (DELETE) は entriesResponse を返す。
+       * 0件削除のときに行われる2回目 (残っている行の確認 SELECT) は remainingResponse を返す。
+       */
+      const mockAdminAndEntries = (
+        entriesResponse: { data: unknown; error: unknown },
+        remainingResponse: { data: unknown; error: unknown } = {
+          data: [{ id: "entry-1" }],
+          error: null,
+        },
+      ) => {
         const entriesBuilder = createMockQueryBuilder(
           entriesResponse.data,
           entriesResponse.error,
         );
+        const remainingBuilder = createMockQueryBuilder(
+          remainingResponse.data,
+          remainingResponse.error,
+        );
+        let entriesCalls = 0;
         mockClient.from = vi.fn((table: string) => {
           if (table === "team_memberships") {
             const builder = createMockQueryBuilder([{ user_id: "user-1" }], null);
             builder.single.mockResolvedValue({ data: { role: "admin" }, error: null });
             return builder;
           }
-          if (table === "entries") return entriesBuilder;
+          if (table === "entries") {
+            entriesCalls += 1;
+            return entriesCalls === 1 ? entriesBuilder : remainingBuilder;
+          }
           return createMockQueryBuilder();
         }) as unknown as typeof mockClient.from;
         return entriesBuilder;
       };
 
-      it("[D-6] DELETEが0行を返した場合はエラーをthrowする", async () => {
+      it("[D-6] DELETEが0行で、対象がまだ残っている (RLS で拒否された) 場合はエラーをthrowする", async () => {
         const entriesBuilder = mockAdminAndEntries({ data: [], error: null });
 
         await expect(api.deleteBulkEntries("team-1", ["entry-1"])).rejects.toThrow(
@@ -1991,12 +2009,26 @@ describe("EntryAPI", () => {
         expect(entriesBuilder.select).toHaveBeenCalledWith("id");
       });
 
-      it("[D-7] dataがnullの場合もエラーをthrowする", async () => {
+      it("[D-7] dataがnullで、対象がまだ残っている場合もエラーをthrowする", async () => {
         mockAdminAndEntries({ data: null, error: null });
 
         await expect(api.deleteBulkEntries("team-1", ["entry-1"])).rejects.toThrow(
           "エントリーの一括削除に失敗しました",
         );
+      });
+
+      it("[D-7b] DELETEが0行でも、対象が既に存在しない (前回の削除が届いていた) 場合は成功扱い", async () => {
+        // 低速回線で前回の削除の応答だけが失われ、再保存したケース
+        mockAdminAndEntries({ data: [], error: null }, { data: [], error: null });
+
+        await expect(api.deleteBulkEntries("team-1", ["entry-1"])).resolves.toBeUndefined();
+      });
+
+      it("[D-7c] 残っている行の確認に失敗したらそのエラーを投げる", async () => {
+        const checkError = { message: "TypeError: Network request failed", code: "" };
+        mockAdminAndEntries({ data: [], error: null }, { data: null, error: checkError });
+
+        await expect(api.deleteBulkEntries("team-1", ["entry-1"])).rejects.toBe(checkError);
       });
 
       it("[D-8] 1行以上返った場合は正常終了する(非退行)", async () => {

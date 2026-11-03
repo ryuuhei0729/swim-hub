@@ -21,6 +21,7 @@ import {
 } from "@/utils/practiceLogFilter";
 import { buildPracticeLogRows, type PracticeLogRow } from "@apps/shared/utils/practiceLogRows";
 import { ErrorView } from "@/components/layout/ErrorView";
+import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { PracticeListSkeleton } from "@/components/ui/ScreenSkeletons";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
@@ -189,8 +190,9 @@ export const PracticesScreen: React.FC<PracticesScreenProps> = ({ embedded }) =>
   // 練習記録データ取得: 絞り込み/並べ替え/表示件数は全てクライアント側で処理するため
   // 十分大きい件数(pageSize=1000)を一括取得する(日付範囲=過去1年は既存ロジックを維持)
   const {
-    data: allPractices = [],
+    data: practicesData,
     error,
+    isError,
     isLoading,
     refetch,
   } = useQuery({
@@ -198,6 +200,9 @@ export const PracticesScreen: React.FC<PracticesScreenProps> = ({ embedded }) =>
     queryFn: async () => practiceApi.getPractices(defaultStartDate, defaultEndDate, 1000, 0),
     staleTime: 5 * 60 * 1000,
   });
+  const allPractices = useMemo(() => practicesData ?? [], [practicesData]);
+  // 再取得に失敗しても、前回取得した練習があれば全画面エラーにせず表示を続ける
+  const hasCachedPractices = allPractices.length > 0;
 
   // 場所/種目フィルタの選択肢生成(全件ベース)
   const participatedPlaces = useMemo(
@@ -393,12 +398,13 @@ export const PracticesScreen: React.FC<PracticesScreenProps> = ({ embedded }) =>
     [handlePracticePress, listEnterEnabled],
   );
 
-  // エラー状態
-  if (error) {
+  // エラー状態 (表示できるデータが無いときだけ全画面エラーにする)
+  if (error && !hasCachedPractices) {
     return (
       <SafeAreaView style={styles.container} edges={safeAreaEdges(embedded)}>
         <ErrorView
           message={error.message || t("practice.mobile.fetchFailed")}
+          error={error}
           onRetry={() => refetch()}
           fullScreen
         />
@@ -434,6 +440,7 @@ export const PracticesScreen: React.FC<PracticesScreenProps> = ({ embedded }) =>
         onFilterClick={openFilterSheet}
         activeFilterCount={activeFilterCount}
       />
+      <StaleDataBanner visible={isError && hasCachedPractices} onRetry={() => refetch()} />
 
       <FlashList
         data={displayRows}

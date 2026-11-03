@@ -14,6 +14,8 @@ interface CategorySectionProps {
   onDeleteGroup: (group: TeamGroupWithCount) => void;
   onManageMembers: (group: TeamGroupWithCount) => void;
   onBulkAssign?: (category: string) => void;
+  /** 削除中のグループ id。削除中は全ての削除ボタンを押せなくする */
+  deletingGroupId?: string | null;
 }
 
 export const CategorySection: React.FC<CategorySectionProps> = ({
@@ -25,6 +27,7 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
   onDeleteGroup,
   onManageMembers,
   onBulkAssign,
+  deletingGroupId = null,
 }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
@@ -73,6 +76,8 @@ export const CategorySection: React.FC<CategorySectionProps> = ({
               onEdit={onEditGroup}
               onDelete={onDeleteGroup}
               onManageMembers={onManageMembers}
+              isDeleting={deletingGroupId === group.id}
+              deleteDisabled={deletingGroupId !== null}
             />
           ))}
         </View>

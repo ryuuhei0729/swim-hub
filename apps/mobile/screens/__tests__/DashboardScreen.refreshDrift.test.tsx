@@ -39,7 +39,8 @@
 //  一時的に実施し証跡を報告した上で必ず元に戻す)
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import i18n from "@/i18n";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Query } from "@tanstack/react-query";
@@ -370,6 +371,26 @@ describe("DashboardScreen — pull-to-refresh のクエリ網羅性 (ドリフ�
     ).resolves.not.toThrow();
 
     expect(apiMocks.getMyTeams.mock.calls.length).toBeGreaterThan(teamsCallsBefore);
+  });
+
+  it("[キャッシュ優先] 再取得に失敗しても、表示中のデータを全画面エラーに置き換えず通知だけ出す", async () => {
+    render(<DashboardScreen />, { wrapper: createWrapper(queryClient) });
+    await waitForQuiescence(queryClient);
+    await waitFor(() => expect(apiMocks.announcementsList).toHaveBeenCalled());
+    await waitForQuiescence(queryClient);
+
+    expect(screen.queryByText(i18n.t("common.staleData.failed"))).toBeNull();
+
+    // 以降の再取得はすべて失敗させる (電波の悪い場所で取り直しても失敗し続ける状況)
+    apiMocks.getCalendarEntries.mockRejectedValue(new Error("network down"));
+    await act(async () => {
+      await captured.refreshAll!();
+      await waitForQuiescence(queryClient);
+    });
+
+    await waitFor(() => expect(screen.getByText(i18n.t("common.staleData.failed"))).toBeTruthy());
+    // 全画面の ErrorView (生の error.message を出す) には切り替わらない
+    expect(screen.queryByText("network down")).toBeNull();
   });
 });
 

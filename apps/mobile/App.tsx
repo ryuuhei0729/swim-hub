@@ -10,6 +10,7 @@ import { ChakraPetch_700Bold } from "@expo-google-fonts/chakra-petch";
 import { AuthProvider, useAuth } from "./contexts/AuthProvider";
 import QueryProvider from "./providers/QueryProvider";
 import { NetworkProvider, useNetwork } from "./providers/NetworkProvider";
+import { isNetInfoOnline } from "./hooks/useNetworkStatus";
 import { I18nProvider } from "./providers/I18nProvider";
 import { ToastProvider } from "./providers/ToastProvider";
 import { OfflineBanner } from "./components/layout/OfflineBanner";
@@ -21,6 +22,8 @@ import { MilestoneAchievementPrompter } from "./components/goals/MilestoneAchiev
 import { supabase } from "./lib/supabase";
 import { env } from "./lib/env";
 import { configureMilestoneJudgment } from "@apps/shared/api/goals";
+import { configureNetworkErrorMessage } from "@apps/shared/utils/userFacingError";
+import { getNetworkErrorMessage } from "./lib/networkErrorMessage";
 
 // ChakraPetch_700Bold is used for the brand wordmark on the welcome/onboarding screens.
 // Best-effort: failures fall back to the system font.
@@ -37,6 +40,10 @@ globalThis.__SWIM_HUB_WEB_API_URL__ = env.webApiUrl;
 // マイルストーンは記録から自動で達成にせず、達成候補として「もしかしてマイルストーンを
 // 達成しましたか？」と確認する (MilestoneAchievementPrompter)。web は従来どおり自動達成
 configureMilestoneJudgment({ autoAchieve: false });
+
+// 保存失敗などのエラー表示 (toUserFacingMessage) で、圏外・タイムアウトが原因のときは
+// 「保存に失敗しました」ではなく「通信できませんでした」系の文言を出す
+configureNetworkErrorMessage((error) => getNetworkErrorMessage(error));
 
 /**
  * Supabase未初期化時のエラー画面
@@ -87,8 +94,8 @@ const AppNavigator: React.FC = () => {
   }
 
   // オフライン判定（接続がない、またはインターネットに到達できない）
-  // isInternetReachableがnullの場合は、isConnectedがfalseの場合のみオフラインと判定
-  const isOffline = !isConnected || (isInternetReachable !== null && isInternetReachable === false);
+  // React Query の onlineManager と同じ基準 (isNetInfoOnline) で判定する
+  const isOffline = !isNetInfoOnline({ isConnected, isInternetReachable });
 
   // 認証状態 × オンボーディング状態に応じてスタックを切り替え
   const renderStack = () => {

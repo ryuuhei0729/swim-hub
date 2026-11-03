@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TeamGroupWithCount } from "./hooks";
@@ -11,6 +11,10 @@ interface GroupCardProps {
   onEdit: (group: TeamGroupWithCount) => void;
   onDelete: (group: TeamGroupWithCount) => void;
   onManageMembers: (group: TeamGroupWithCount) => void;
+  /** このグループを削除中か (スピナーを出す) */
+  isDeleting?: boolean;
+  /** 削除ボタンを押せないか (いずれかのグループを削除中) */
+  deleteDisabled?: boolean;
 }
 
 export const GroupCard: React.FC<GroupCardProps> = ({
@@ -20,6 +24,8 @@ export const GroupCard: React.FC<GroupCardProps> = ({
   onEdit,
   onDelete,
   onManageMembers,
+  isDeleting = false,
+  deleteDisabled = false,
 }) => {
   const { t } = useTranslation();
   return (
@@ -57,12 +63,18 @@ export const GroupCard: React.FC<GroupCardProps> = ({
             <Feather name="edit-2" size={16} color="#2563EB" />
           </Pressable>
           <Pressable
-            style={styles.actionButton}
+            style={[styles.actionButton, deleteDisabled && styles.actionButtonDisabled]}
             onPress={() => onDelete(group)}
+            disabled={deleteDisabled}
             accessibilityRole="button"
             accessibilityLabel={t("teams.mobile.groupManagement.cardDeleteAria", { name: group.name })}
+            accessibilityState={{ disabled: deleteDisabled, busy: isDeleting }}
           >
-            <Feather name="trash-2" size={16} color="#EF4444" />
+            {isDeleting ? (
+              <ActivityIndicator size="small" color="#EF4444" />
+            ) : (
+              <Feather name="trash-2" size={16} color="#EF4444" />
+            )}
           </Pressable>
         </View>
       )}
@@ -116,5 +128,8 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 6,
     borderRadius: 6,
+  },
+  actionButtonDisabled: {
+    opacity: 0.4,
   },
 });

@@ -4,6 +4,8 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { RecordAPI } from "@apps/shared/api/records";
+import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { useBulkRecordIds } from "@/hooks/useBulkRecordIds";
 import { parseTimeFlexible } from "@apps/shared/utils/time";
 import { TimeInputHelp } from "@/components/shared/TimeInputHelp";
 import {
@@ -42,6 +44,9 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showStyleModal, setShowStyleModal] = useState(false);
   const savingRef = useRef(false);
+  // 行ごとに records.id を固定する。ベストタイムの保存後にオンボーディング完了の保存だけ
+  // 失敗して再試行したときも、ベストタイムが二重に登録されない
+  const bulkRecordIds = useBulkRecordIds();
 
   const recordAPI = useMemo(() => {
     if (!supabase) return null;
@@ -87,6 +92,7 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({
       // canSave (parseTimeFlexible) が通した入力と同じ解釈で保存する。
       // parseTime だと "1.23.45" が 1.23 秒として誤保存されるため使わない
       const records = entries.map((e) => ({
+        id: bulkRecordIds.idFor(e.key),
         style_id: e.styleId,
         time: parseTimeFlexible(e.time) ?? 0,
         is_relaying: e.isRelaying,
@@ -94,20 +100,28 @@ export const OnboardingBestTime: React.FC<OnboardingBestTimeProps> = ({
         pool_type: e.poolType,
       }));
 
+      // 前回の (途中で失敗した) 保存で登録済みだが、その後削除した行の記録を消す
+      const staleIds = bulkRecordIds.staleSavedIds(entries.map((e) => e.key));
+      for (const staleId of staleIds) {
+        await recordAPI.deleteRecord(staleId);
+      }
+      bulkRecordIds.forget(staleIds);
+
       const result = await recordAPI.createBulkRecords(records);
+      bulkRecordIds.markSaved(result.savedIds);
       if (result.errors.length > 0) {
         setSaveError(t("onboarding.step3.partialFailure", { errors: result.errors.join(", ") }));
         return;
       }
 
       await onComplete();
-    } catch {
-      setSaveError(t("onboarding.step3.saveError"));
+    } catch (error) {
+      setSaveError(toUserFacingMessage(error, t("onboarding.step3.saveError")));
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [entries, recordAPI, onComplete, t]);
+  }, [entries, recordAPI, onComplete, t, bulkRecordIds]);
 
   const handleSkip = useCallback(async () => {
     if (savingRef.current) return;

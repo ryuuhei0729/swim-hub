@@ -98,7 +98,7 @@ describe("BulkBestTimeScreen — 保存成功後のキャッシュ無効化 (B-2
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
     invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-    mocks.createBulkRecords.mockResolvedValue({ created: 1, errors: [] });
+    mocks.createBulkRecords.mockResolvedValue({ created: 1, errors: [], savedIds: ["record-1"] });
   });
 
   it(
