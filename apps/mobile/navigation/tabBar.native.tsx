@@ -58,6 +58,8 @@ export const tabNavigatorScreenOptions = {
   tabBarMinimizeBehavior: "onScrollDown",
   // Android (Material 3): 選択中のタブの背後に出るピルの色
   tabBarActiveIndicatorColor: "#DBEAFE",
+  // Android (Material 3): 既定 (auto) は 4 タブ以上だと選択中しかラベルを出さないので、常に出す
+  tabBarLabelVisibilityMode: "labeled",
   // iOS 18 以前と Android のバー背景 (iOS 26 の Liquid Glass では無視される)
   tabBarStyle: { backgroundColor: "#FFFFFF" },
 } satisfies NativeBottomTabNavigationOptions as unknown as BottomTabNavigationOptions;
