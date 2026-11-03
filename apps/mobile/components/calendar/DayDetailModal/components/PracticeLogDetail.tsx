@@ -444,7 +444,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     onClose();
                   }}
                 >
-                  <Feather name="edit" size={18} color="#2563EB" />
+                  <Feather name="edit-2" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {onDeletePracticeLog && (
@@ -605,7 +605,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     onClose();
                   }}
                 >
-                  <Feather name="edit" size={18} color="#2563EB" />
+                  <Feather name="edit-2" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {isPractice && !isTeamItem && onDeletePractice && (
@@ -628,7 +628,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     onClose();
                   }}
                 >
-                  <Feather name="edit" size={18} color="#2563EB" />
+                  <Feather name="edit-2" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {item.type === "record" && onDeleteRecord && (
@@ -651,7 +651,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                     onClose();
                   }}
                 >
-                  <Feather name="edit" size={18} color="#2563EB" />
+                  <Feather name="edit-2" size={18} color="#2563EB" />
                 </Pressable>
               )}
               {item.type === "entry" && onDeleteEntry && (
@@ -676,7 +676,7 @@ export const PracticeLogDetail: React.FC<PracticeLogDetailProps> = ({
                       onClose();
                     }}
                   >
-                    <Feather name="edit" size={18} color="#2563EB" />
+                    <Feather name="edit-2" size={18} color="#2563EB" />
                   </Pressable>
                 )}
               {(item.type === "competition" || item.type === "team_competition") &&

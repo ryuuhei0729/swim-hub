@@ -202,7 +202,7 @@ export const GoalDetailScreen: React.FC = () => {
                   accessibilityRole="button"
                   accessibilityLabel={t("goals.list.edit")}
                 >
-                  <Feather name="edit-2" size={18} color="#6B7280" />
+                  <Feather name="edit-2" size={18} color="#2563EB" />
                 </Pressable>
               )}
               <Pressable
@@ -212,7 +212,7 @@ export const GoalDetailScreen: React.FC = () => {
                 accessibilityRole="button"
                 accessibilityLabel={t("goals.list.delete")}
               >
-                <Feather name="trash-2" size={18} color="#6B7280" />
+                <Feather name="trash-2" size={18} color="#EF4444" />
               </Pressable>
             </View>
           </View>

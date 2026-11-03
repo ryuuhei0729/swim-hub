@@ -6,12 +6,12 @@
  * (onEditCompetition && !isTeamCompetition の分岐)
  *
  * Sprint Contract 検証観点:
- *   [V-M-EE01] isTeamCompetition=true のとき編集ボタン(icon-edit)が描画されない
+ *   [V-M-EE01] isTeamCompetition=true のとき編集ボタン(icon-edit-2)が描画されない
  *   [V-M-EE02] isTeamCompetition=false (個人大会) のときは編集ボタンが描画される
  *              (同じセレクタが機能することの証明、V-M-EE01 の偽陽性防止)
  *
  * 注意: EntryDetail 内には各エントリー行にも "編集" 用ボタン (onEditEntry) が
- * 存在し、それも Feather name="edit" を使う。本テストの対象は大会本体の
+ * 存在し、それも Feather name="edit-2" を使う。本テストの対象は大会本体の
  * 編集ボタン (見出し行) のみのため、getAllByTestId で件数を比較して切り分ける。
  */
 
@@ -77,16 +77,16 @@ describe("EntryDetail 編集ボタンの isTeamCompetition ガード", () => {
     await waitFor(() => {
       expect(screen.getByText("テスト大会")).toBeTruthy();
     });
-    // onEditEntry を渡していないため、残る icon-edit は大会本体編集ボタンのみのはず。
-    // ガードが効いていれば1件も無い。
-    expect(screen.queryAllByTestId("icon-edit").length).toBe(0);
+    // onEditEntry を渡していないため、残る icon-edit-2 は大会本体編集ボタンと、
+    // エントリー欄見出しの装飾アイコン(1件)のみ。ガードが効いていれば後者だけ。
+    expect(screen.queryAllByTestId("icon-edit-2").length).toBe(1);
   });
 
   it("[V-M-EE02] isTeamCompetition=false (個人大会) のとき大会本体の編集ボタンが描画される (セレクタの健全性確認)", async () => {
     renderEntryDetail({ isTeamCompetition: false, onEditEntry: undefined });
 
     await waitFor(() => {
-      expect(screen.queryAllByTestId("icon-edit").length).toBeGreaterThan(0);
+      expect(screen.queryAllByTestId("icon-edit-2").length).toBeGreaterThan(1);
     });
   });
 });

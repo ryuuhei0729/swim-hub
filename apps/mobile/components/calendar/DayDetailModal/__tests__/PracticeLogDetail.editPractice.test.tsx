@@ -11,7 +11,7 @@
  * ガード除去時に赤くならない壊れたテストになる)。
  *
  * Sprint Contract 検証観点:
- *   [V-M-PE01] type=team_practice では練習編集ボタン(icon-edit)が描画されない
+ *   [V-M-PE01] type=team_practice では練習編集ボタン(icon-edit-2)が描画されない
  *   [V-M-PE02] type=practice (個人練習) では練習編集ボタンが描画され、押下で
  *              onEditPractice(item) が呼ばれる (同じセレクタが機能することの
  *              証明、V-M-PE01 の偽陽性防止・非退行)
@@ -98,7 +98,7 @@ describe("PracticeLogDetail (practice/team_practice) 練習編集ボタンの te
     const onEditPractice = vi.fn();
     renderItem(makeItem("team_practice", "practice-team-1", "team-x"), true, { onEditPractice });
 
-    expect(screen.queryByTestId("icon-edit")).toBeNull();
+    expect(screen.queryByTestId("icon-edit-2")).toBeNull();
   });
 
   it("[V-M-PE02] type=practice (個人練習) では練習編集ボタンが描画され、押下で onEditPractice(item) が呼ばれる (セレクタの健全性確認・非退行)", () => {
@@ -106,7 +106,7 @@ describe("PracticeLogDetail (practice/team_practice) 練習編集ボタンの te
     const item = makeItem("practice", "practice-personal-1");
     renderItem(item, true, { onEditPractice });
 
-    fireEvent.click(screen.getByTestId("icon-edit").closest("button")!);
+    fireEvent.click(screen.getByTestId("icon-edit-2").closest("button")!);
 
     expect(onEditPractice).toHaveBeenCalledTimes(1);
     expect(onEditPractice).toHaveBeenCalledWith(item);

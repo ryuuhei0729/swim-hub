@@ -894,7 +894,7 @@ export const TeamEntryBulkFormScreen: React.FC = () => {
                         accessibilityRole="button"
                         accessibilityLabel={t("common.delete")}
                       >
-                        <Feather name="trash-2" size={18} color="#DC2626" />
+                        <Feather name="trash-2" size={18} color="#EF4444" />
                       </Pressable>
                     </View>
 

@@ -6,8 +6,8 @@
 // 「どちらが描画されているか」「embedded が渡っているか」だけを見る。
 //
 // 検証観点:
-//   [V-RH-01] 既定は練習記録一覧。大会記録一覧は描画されない
-//   [V-RH-02] 「大会」を押すと大会記録一覧に切り替わり、練習記録一覧は外れる
+//   [V-RH-01] 既定は大会記録一覧。練習記録一覧は描画されない
+//   [V-RH-02] 「練習」を押すと練習記録一覧に切り替わり、大会記録一覧は外れる
 //   [V-RH-03] route.params.segment="competitions" で開くと最初から大会記録一覧
 //   [V-RH-04] 中の画面には embedded=true が渡る (上端インセットの二重取りを防ぐ)
 // =============================================================================
@@ -61,17 +61,17 @@ const renderHub = (params?: { segment?: "practices" | "competitions" }) =>
   );
 
 describe("RecordsHubScreen", () => {
-  it("[V-RH-01] 既定は練習記録一覧。大会記録一覧は描画されない", () => {
+  it("[V-RH-01] 既定は大会記録一覧。練習記録一覧は描画されない", () => {
     renderHub();
-    expect(screen.queryByTestId("screen-practices")).not.toBeNull();
-    expect(screen.queryByTestId("screen-competitions")).toBeNull();
-  });
-
-  it("[V-RH-02] 「大会」を押すと大会記録一覧に切り替わり、練習記録一覧は外れる", () => {
-    renderHub();
-    fireEvent.click(screen.getByText("大会"));
     expect(screen.queryByTestId("screen-competitions")).not.toBeNull();
     expect(screen.queryByTestId("screen-practices")).toBeNull();
+  });
+
+  it("[V-RH-02] 「練習」を押すと練習記録一覧に切り替わり、大会記録一覧は外れる", () => {
+    renderHub();
+    fireEvent.click(screen.getByText("練習"));
+    expect(screen.queryByTestId("screen-practices")).not.toBeNull();
+    expect(screen.queryByTestId("screen-competitions")).toBeNull();
   });
 
   it("[V-RH-03] route.params.segment='competitions' で開くと最初から大会記録一覧", () => {
@@ -81,8 +81,8 @@ describe("RecordsHubScreen", () => {
   });
 
   it("[V-RH-04] 中の画面には embedded=true が渡る", () => {
-    stubs.practicesProps.length = 0;
+    stubs.competitionsProps.length = 0;
     renderHub();
-    expect(stubs.practicesProps[0]).toMatchObject({ embedded: true });
+    expect(stubs.competitionsProps[0]).toMatchObject({ embedded: true });
   });
 });

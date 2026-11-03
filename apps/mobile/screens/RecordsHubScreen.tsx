@@ -23,7 +23,7 @@ type Props = BottomTabScreenProps<TabParamList, "Records">;
  */
 export const RecordsHubScreen: React.FC<Props> = ({ route }) => {
   const { t } = useTranslation();
-  const [segment, setSegment] = useState<RecordsSegment>(route.params?.segment ?? "practices");
+  const [segment, setSegment] = useState<RecordsSegment>(route.params?.segment ?? "competitions");
 
   const requestedSegment = route.params?.segment;
   useEffect(() => {

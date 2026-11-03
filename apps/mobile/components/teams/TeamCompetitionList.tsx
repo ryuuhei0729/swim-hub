@@ -214,7 +214,7 @@ const CompetitionItem = React.memo(function CompetitionItem({
               accessibilityRole="button"
               accessibilityLabel={t("common.delete")}
             >
-              <Feather name="trash-2" size={14} color="#DC2626" />
+              <Feather name="trash-2" size={14} color="#EF4444" />
             </Pressable>
           </View>
         )}

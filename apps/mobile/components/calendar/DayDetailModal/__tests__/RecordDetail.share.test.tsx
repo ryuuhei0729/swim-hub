@@ -232,7 +232,7 @@ describe("RecordCard share button", () => {
     const onDeleteRecord = vi.fn();
     renderRecordCard({ onEditRecord, onDeleteRecord });
 
-    fireEvent.click(screen.getByTestId("icon-edit").closest("button")!);
+    fireEvent.click(screen.getByTestId("icon-edit-2").closest("button")!);
     expect(onEditRecord).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId("icon-trash-2").closest("button")!);
