@@ -2699,6 +2699,11 @@
       "genderMale": "Männlich",
       "genderFemale": "Weiblich",
       "tabAnnouncements": "Ankündigungen",
+      "switcher": {
+        "title": "Team wechseln",
+        "openAria": "Team wechseln",
+        "pendingGroup": "Ausstehend"
+      },
       "adminToggle": {
         "label": "Ansicht",
         "admin": "Administrator",

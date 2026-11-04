@@ -82,6 +82,8 @@ export const TeamAnnouncementList: React.FC<TeamAnnouncementListProps> = ({
       {/* お知らせ一覧 */}
       {announcements.length > 0 ? (
         <FlashList
+          // チームタブは OS のタブバーの上に出るので、末尾がタブバーに隠れないよう OS に下端の余白を足させる
+          contentInsetAdjustmentBehavior="automatic"
           data={announcements}
           keyExtractor={(item) => item.id}
           extraData={deletingId}

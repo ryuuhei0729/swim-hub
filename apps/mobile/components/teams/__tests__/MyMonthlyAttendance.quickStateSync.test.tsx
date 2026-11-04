@@ -35,6 +35,8 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { notificationKeys } from "@apps/shared/hooks/queries/keys";
 
 // 共有モック __mocks__/react-native.ts の TextInput は onChangeText(RN標準の変更コールバック)を
 // DOM の onChange に橋渡ししていない(`{...props}` をそのまま <input> にスプレッドするだけ)ため、
@@ -91,6 +93,16 @@ vi.mock("@/contexts/AuthProvider", () => ({
 
 import { MyMonthlyAttendance } from "../MyMonthlyAttendance";
 
+let queryClient: QueryClient;
+function renderAttendance() {
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MyMonthlyAttendance teamId="team-1" />
+    </QueryClientProvider>,
+  );
+}
+
 function makeQueryBuilder(data: unknown[]) {
   const builder = {
     select: () => builder,
@@ -144,7 +156,7 @@ describe("MyMonthlyAttendance - 即回答セクションの状態保護 (PM裁�
   });
 
   it("[V-CRIT1] 月モーダルでイベントAを保存しても、即回答セクションのイベントBの未保存入力(備考・保存可否)は保持される", async () => {
-render(<MyMonthlyAttendance teamId="team-1" />);
+    renderAttendance();
 
     // 即回答セクションに A/B 両方のカードが表示されるまで待つ
     await screen.findByText("@Aプール");
@@ -202,5 +214,23 @@ render(<MyMonthlyAttendance teamId="team-1" />);
     expect(within(bCardQuick()).getByText("保存").closest("button")!.hasAttribute("disabled")).toBe(
       false,
     );
+  }, 15000);
+
+  it("[V-NOTIF] 回答を保存すると、ホームの「出欠未回答」とチームタブのバッジの件数 (notificationKeys) を取り直させる", async () => {
+    renderAttendance();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+
+    await screen.findByText("@Aプール");
+    const aCardQuick = () =>
+      screen.getAllByText("@Aプール")[0]!.closest("button")!.parentElement!; // getAllByText は1件以上見つからなければ throw するため必ず存在
+    fireEvent.click(within(aCardQuick()).getByText("出席"));
+    fireEvent.click(within(aCardQuick()).getByText("保存").closest("button")!);
+
+    await waitFor(() => {
+      expect(mocks.insert).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: notificationKeys.all });
+    });
   }, 15000);
 });

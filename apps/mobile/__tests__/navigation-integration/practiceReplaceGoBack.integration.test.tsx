@@ -32,21 +32,26 @@
  *     (プロダクションロジックの再実装ではなく、ナビゲーション機構そのものの検証)。
  *   - 「navigate/replace/goBack が呼ばれたか」ではなく
  *     `navigationRef.getRootState()` に**結果として何が残るか**を見る
- *     (teamsTabAutoNavigate.integration.test.tsx と同じ方針)。
- *   - TeamDetail 相当のスタブは内部に `useState` を持たせ、「戻ったときに同じ
+ *     (teamsTab.integration.test.tsx と同じ方針)。
+ *   - チームの画面のスタブは内部に `useState` を持たせ、「戻ったときに同じ
  *     コンポーネントインスタンスか (state が保持されるか)」を可視のテキストで検証する。
  *
- * ■ 検証観点
- *   [V-PRACTICE-01] TeamDetail → PracticeForm(replace)→PracticeTabForm → 保存(goBack) で
- *                    スタックは ["MainTabs","TeamDetail"] に戻り、TeamDetail の
- *                    activeTab state (画面遷移前に "practice" にしていたもの) が保持される
- *                    (= 別コンポーネントインスタンスへの再マウントではない)
- *   [V-PRACTICE-02] TeamDetail → PracticeLogForm(push、非 admin の「記録追加」相当)
- *                    → 保存(goBack) でも同様にスタックは TeamDetail に戻り、
- *                    MainTabs (チーム一覧) までは戻らない
+ * ■ チーム詳細のタブ内化 (2026-11) 以降の位置づけ
+ *   チーム詳細は stack に積む画面 (旧 TeamDetail) をやめ、チームタブ (MainTabs の中) に
+ *   表示するようになった。そのためチームの画面は stack の根 (MainTabs) にあり、
+ *   goBack と popToTop は同じ場所に戻る (= 「チーム一覧まで戻される」誤爆はもう起こり得ない)。
+ *   本ファイルは、チームタブから開いた練習フォームが replace でスタックを深くせず、
+ *   保存 (goBack) で stack が MainTabs だけに戻り、チームの画面の state
+ *   (開いていたタブ) が作り直されずに残ることを確かめる。
+ *   スタブの「チームタブ」はタブナビゲーターを省き、MainTabs ルートそのものとして置く。
  *
- * 結論 (実測に基づく): 上記2経路とも popToTop 相当の挙動は発生しない。
- * Planner の報告「練習側に popToTop は無い」は本テストで裏付けられる (判定: A)。
+ * ■ 検証観点
+ *   [V-PRACTICE-01] チームタブ → PracticeForm(replace)→PracticeTabForm → 保存(goBack) で
+ *                    スタックは ["MainTabs"] に戻り、チームの画面の activeTab state
+ *                    (画面遷移前に "practice" にしていたもの) が保持される
+ *                    (= 別コンポーネントインスタンスへの再マウントではない)
+ *   [V-PRACTICE-02] チームタブ → PracticeLogForm(push、非 admin の「記録追加」相当)
+ *                    → 保存(goBack) でも同様にスタックは ["MainTabs"] に戻り、state が残る
  */
 
 import React, { useState } from "react";
@@ -58,7 +63,6 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 type StubParamList = {
   MainTabs: undefined;
-  TeamDetail: { teamId: string; initialTab?: "members" | "practice" };
   PracticeForm: { teamId: string };
   PracticeTabForm: { teamId: string };
   PracticeLogForm: { teamId: string; practiceId: string };
@@ -68,38 +72,35 @@ const Stack = createNativeStackNavigator<StubParamList>();
 
 let navigationRef: NavigationContainerRefWithCurrent<StubParamList>;
 
-function MainTabsStub() {
-  return <span data-testid="screen-main-tabs" />;
-}
+const TEAM_ID = "team-1";
 
 /**
- * TeamDetailScreen の本質 (route.params.initialTab を初期値にした activeTab の
- * useState) だけを再現するスタブ。goBack 後に同一インスタンスが残るなら
- * activeTab はボタン操作前の値のまま表示され続ける。
+ * チームタブ (TeamsScreen → TeamDetailView) の本質 (開いているタブを持つ state) だけを
+ * 再現するスタブ。goBack 後に同一インスタンスが残るなら activeTab はボタン操作前の値のまま
+ * 表示され続ける。
  */
-function TeamDetailStub() {
-  const route = useRoute<import("@react-navigation/native").RouteProp<StubParamList, "TeamDetail">>();
+function TeamTabStub() {
   const navigation = useNavigation<import("@react-navigation/native-stack").NativeStackNavigationProp<StubParamList>>();
-  const [activeTab, setActiveTab] = useState(route.params.initialTab ?? "members");
+  const [activeTab, setActiveTab] = useState<"members" | "practice">("members");
 
   return (
     <div>
-      <span data-testid="screen-team-detail" data-active-tab={activeTab}>
-        team-detail:{route.params.teamId}:{activeTab}
+      <span data-testid="screen-team-tab" data-active-tab={activeTab}>
+        team-tab:{TEAM_ID}:{activeTab}
       </span>
       <button data-testid="switch-to-practice-tab" onClick={() => setActiveTab("practice")}>
         switch
       </button>
       <button
         data-testid="open-practice-form"
-        onClick={() => navigation.navigate("PracticeForm", { teamId: route.params.teamId })}
+        onClick={() => navigation.navigate("PracticeForm", { teamId: TEAM_ID })}
       >
         add-practice
       </button>
       <button
         data-testid="open-practice-log-form"
         onClick={() =>
-          navigation.navigate("PracticeLogForm", { teamId: route.params.teamId, practiceId: "p-1" })
+          navigation.navigate("PracticeLogForm", { teamId: TEAM_ID, practiceId: "p-1" })
         }
       >
         add-log
@@ -159,8 +160,7 @@ function renderApp() {
   return render(
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="MainTabs" component={MainTabsStub} />
-        <Stack.Screen name="TeamDetail" component={TeamDetailStub} />
+        <Stack.Screen name="MainTabs" component={TeamTabStub} />
         <Stack.Screen name="PracticeForm" component={PracticeFormStub} />
         <Stack.Screen name="PracticeTabForm" component={PracticeTabFormStub} />
         <Stack.Screen name="PracticeLogForm" component={PracticeLogFormStub} />
@@ -186,13 +186,10 @@ describe("練習フロー — replace/goBack の実挙動 (popToTop 誤爆の有
     cleanup();
   });
 
-  it("[V-PRACTICE-01] TeamDetail→PracticeForm(replace)→PracticeTabForm→保存(goBack) は TeamDetail に戻り、activeTab state を保持する (チーム一覧までは戻らない)", async () => {
+  it("[V-PRACTICE-01] チームタブ→PracticeForm(replace)→PracticeTabForm→保存(goBack) は MainTabs に戻り、チームの画面の state を保持する", async () => {
     const { container } = renderApp();
-    await act(async () => {
-      navigationRef.navigate("TeamDetail", { teamId: "team-1", initialTab: "members" });
-    });
     await settle();
-    expect(stackRouteNames()).toEqual(["MainTabs", "TeamDetail"]);
+    expect(stackRouteNames()).toEqual(["MainTabs"]);
 
     // ユーザーが練習タブに切り替えてから「練習を追加」を押す状況を再現
     await act(async () => {
@@ -204,44 +201,43 @@ describe("練習フロー — replace/goBack の実挙動 (popToTop 誤爆の有
     await settle();
 
     // PracticeForm が push され、マウント直後の replace で PracticeTabForm に
-    // 差し替わっている (スタックの深さは変わらず、TeamDetail はそのまま残る)
-    expect(stackRouteNames()).toEqual(["MainTabs", "TeamDetail", "PracticeTabForm"]);
+    // 差し替わっている (スタックの深さは変わらない)
+    expect(stackRouteNames()).toEqual(["MainTabs", "PracticeTabForm"]);
 
     await act(async () => {
       fireEvent.click(container.querySelector('[data-testid="save-practice"]')!);
     });
     await settle();
 
-    // 🚨 popToTop 相当が紛れ込んでいれば ["MainTabs"] まで縮む。実際は TeamDetail に戻る
-    expect(stackRouteNames()).toEqual(["MainTabs", "TeamDetail"]);
+    expect(stackRouteNames()).toEqual(["MainTabs"]);
 
     // 🚨 同一コンポーネントインスタンスなら activeTab="practice" が保持されたまま。
-    // popToTop→再 push のような別経路に置き換わっていれば "members" に巻き戻る
-    const teamDetailEl = container.querySelector('[data-testid="screen-team-detail"]');
-    expect(teamDetailEl?.getAttribute("data-active-tab")).toBe("practice");
+    // 作り直されていれば "members" に巻き戻る
+    const teamTabEl = container.querySelector('[data-testid="screen-team-tab"]');
+    expect(teamTabEl?.getAttribute("data-active-tab")).toBe("practice");
   });
 
-  it("[V-PRACTICE-02] TeamDetail→PracticeLogForm(push)→保存(goBack) も TeamDetail に戻る (非 admin「記録追加」相当)", async () => {
+  it("[V-PRACTICE-02] チームタブ→PracticeLogForm(push)→保存(goBack) も MainTabs に戻り state が残る (非 admin「記録追加」相当)", async () => {
     const { container } = renderApp();
-    await act(async () => {
-      navigationRef.navigate("TeamDetail", { teamId: "team-1", initialTab: "practice" });
-    });
     await settle();
+    await act(async () => {
+      fireEvent.click(container.querySelector('[data-testid="switch-to-practice-tab"]')!);
+    });
 
     await act(async () => {
       fireEvent.click(container.querySelector('[data-testid="open-practice-log-form"]')!);
     });
     await settle();
-    expect(stackRouteNames()).toEqual(["MainTabs", "TeamDetail", "PracticeLogForm"]);
+    expect(stackRouteNames()).toEqual(["MainTabs", "PracticeLogForm"]);
 
     await act(async () => {
       fireEvent.click(container.querySelector('[data-testid="save-practice-log"]')!);
     });
     await settle();
 
-    expect(stackRouteNames()).toEqual(["MainTabs", "TeamDetail"]);
+    expect(stackRouteNames()).toEqual(["MainTabs"]);
     expect(
-      container.querySelector('[data-testid="screen-team-detail"]')?.getAttribute("data-active-tab"),
+      container.querySelector('[data-testid="screen-team-tab"]')?.getAttribute("data-active-tab"),
     ).toBe("practice");
   });
 });

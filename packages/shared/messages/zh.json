@@ -2699,6 +2699,11 @@
       "genderMale": "男",
       "genderFemale": "女",
       "tabAnnouncements": "公告",
+      "switcher": {
+        "title": "切换团队",
+        "openAria": "切换团队",
+        "pendingGroup": "待审核"
+      },
       "adminToggle": {
         "label": "切换视图",
         "admin": "管理员",

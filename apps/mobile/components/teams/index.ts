@@ -8,7 +8,6 @@ export { TeamSettingsModal } from "./TeamSettingsModal";
 export { TeamSettingsTab } from "./TeamSettingsTab";
 export type { TeamSettingsTabProps } from "./TeamSettingsTab";
 export { TeamGroupManagement } from "./group-management";
-export { TeamItem } from "./TeamItem";
 export { TeamJoinModal } from "./TeamJoinModal";
 export { TeamMemberGroupFilter } from "./TeamMemberGroupFilter";
 export { TeamMemberList } from "./TeamMemberList";

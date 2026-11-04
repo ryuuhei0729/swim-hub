@@ -2699,6 +2699,11 @@
       "genderMale": "남성",
       "genderFemale": "여성",
       "tabAnnouncements": "공지사항",
+      "switcher": {
+        "title": "팀 전환",
+        "openAria": "팀 전환",
+        "pendingGroup": "승인 대기"
+      },
       "adminToggle": {
         "label": "보기 전환",
         "admin": "관리자",

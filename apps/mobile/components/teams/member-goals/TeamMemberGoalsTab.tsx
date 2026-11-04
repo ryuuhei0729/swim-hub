@@ -136,7 +136,11 @@ export const TeamMemberGoalsTab: React.FC<TeamMemberGoalsTabProps> = ({ teamId, 
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.scroll} contentContainerStyle={styles.content}
+      // チームタブは OS のタブバーの上に出るので、末尾がタブバーに隠れないよう OS に下端の余白を足させる
+      contentInsetAdjustmentBehavior="automatic"
+    >
       <Text style={styles.memberLabel}>{t("teamMemberGoals.memberLabel")}</Text>
       {options.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>

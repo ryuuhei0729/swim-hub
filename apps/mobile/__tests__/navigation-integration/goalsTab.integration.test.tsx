@@ -10,7 +10,8 @@
  *   [GT-02] Goals タブのルート画面が GoalsScreen (スタブの testid が描画される)
  *   [GT-03] tab-goals を押すと Goals にフォーカスし、他タブへ戻れる
  *   [GT-04] Dashboard の「目標管理を見る」と同じ navigate("MainTabs", {screen:"Goals"}) で Goals タブにフォーカス
- *   [GT-05] タブ構成が変わっても Teams タブ (所属1件) の tabPress 直行が壊れていない
+ *   [GT-05] Teams タブを押すとタブが切り替わるだけで、stack には何も積まれない
+ *           (チーム詳細はタブの中に表示する。以前の「所属1件なら詳細を push」は廃止)
  *   [GT-06] タブラベルが i18n キー経由 (react-i18next の t が返した値) で、全5タブ分が描画される
  *   [GT-07] 目標タブのアイコンは Feather "target" (他4タブも Feather)
  * 「押した/呼ばれた」ではなく実ナビゲーション状態 (routeNames[index]) で見る。
@@ -32,6 +33,10 @@ vi.mock("@/screens/MyPageScreen", () => ({ MyPageScreen: () => <span data-testid
 vi.mock("@/contexts/AuthProvider", () => ({ useAuth: () => ({ supabase: {}, user: { id: "u1" } }) }));
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useTeamsQuery: () => ({ teams: mocks.teams, isLoading: false, isError: false, refetch: vi.fn() }),
+  usePendingMembersCountQuery: () => 0,
+}));
+vi.mock("@apps/shared/hooks/queries/notifications", () => ({
+  useUnansweredAttendancesQuery: () => ({ data: [] }),
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (k: string) => `T(${k})`, i18n: { language: "ja", changeLanguage: vi.fn() } }),
@@ -45,17 +50,12 @@ import { TabNavigator } from "@/navigation/TabNavigator";
 const Stack = createNativeStackNavigator();
 let navigationRef: NavigationContainerRefWithCurrent<ReactNavigation.RootParamList>;
 
-function TeamDetailStub() {
-  return <span data-testid="screen-team-detail" />;
-}
-
 function renderApp() {
   navigationRef = createNavigationContainerRef();
   return render(
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainTabs" component={TabNavigator} />
-        <Stack.Screen name="TeamDetail" component={TeamDetailStub} />
       </Stack.Navigator>
     </NavigationContainer>,
   );
@@ -126,7 +126,7 @@ describe("目標タブ (6つ目のタブ) — 実ナビゲーション", () => {
     expect(currentTab()).toBe("Goals");
   });
 
-  it("[GT-05] タブ構成が変わっても Teams (所属1件) の tabPress で TeamDetail が stack に残り、タブは Teams", async () => {
+  it("[GT-05] Teams (所属1件) の tabPress はタブを切り替えるだけで、stack に画面を積まない", async () => {
     mocks.teams = [
       {
         id: "m1", team_id: "team-alpha", user_id: "u1", role: "admin", status: "approved", is_active: true,
@@ -139,7 +139,7 @@ describe("目標タブ (6つ目のタブ) — 実ナビゲーション", () => {
     await press("tab-teams");
     await settle();
     const names = (navigationRef.getRootState()?.routes ?? []).map((r) => r.name);
-    expect(names[names.length - 1]).toBe("TeamDetail");
+    expect(names).toEqual(["MainTabs"]);
     expect(currentTab()).toBe("Teams");
   });
 

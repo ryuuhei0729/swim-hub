@@ -3,10 +3,10 @@
  * teamId 有無 (Sprint Contract SC-6 回帰防止テスト)
  *
  * 背景: CompetitionTabFormScreen.handleSave は resolveSaveReturnTarget(teamId, options) の
- * 結果に応じて popTo("TeamDetail", ...) / goBack() / popToTop() を呼び分ける。この画面は
+ * 結果に応じて popTo(チームタブ) / goBack() / popToTop() を呼び分ける。この画面は
  * ダッシュボードの「エントリー未提出」通知からも teamId **無し**で開かれる経路がある
- * (この呼び出し元は「直前にいた TeamDetail」が存在しないダッシュボード起点のため、
- * 保存後に TeamDetail へ popTo するのは不適切で、従来通り popToTop/goBack であるべき)。
+ * (この呼び出し元はチームタブから来ていないダッシュボード起点のため、
+ * 保存後にチームタブへ popTo するのは不適切で、従来通り popToTop/goBack であるべき)。
  *
  * 【QA Phase A 書き換え】遷移先が EntryLogFormScreen ("EntryForm") から
  * CompetitionTabFormScreen ("CompetitionTabForm", initialTab: "entry") に変わったため
@@ -20,15 +20,19 @@
  *   [SC-6] 「エントリー未提出」タップ →
  *          navigation.navigate("CompetitionTabForm", { competitionId, date, initialTab: "entry" })
  *          に teamId キーが含まれない (含まれていれば非退行のはずが popTo 経路に迷い込む)
+ *   [AT-1] 「出欠未回答」タップ → チームタブのそのチームの出欠タブを、利用者ビュー (asMember) で開く
+ *          (以前は initialTab を渡しておらず、メンバータブが開いていた。管理者ビューの出欠タブでは
+ *          自分の回答ができないため、管理者でも利用者ビューで開く)
  */
 
 import React from "react";
 import { render, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
+  unansweredAttendances: [] as Array<{ teamId: string; eventId: string }>,
   unsubmittedEntries: [] as Array<{
     teamId: string;
     competitionId: string;
@@ -42,7 +46,7 @@ vi.mock("@apps/shared/hooks/queries/announcements", () => ({
 }));
 
 vi.mock("@apps/shared/hooks/queries/notifications", () => ({
-  useUnansweredAttendancesQuery: () => ({ data: [] }),
+  useUnansweredAttendancesQuery: () => ({ data: mocks.unansweredAttendances }),
   useUnsubmittedEntriesQuery: () => ({ data: mocks.unsubmittedEntries }),
 }));
 
@@ -69,6 +73,11 @@ const APPROVED_TEAM = {
 } as unknown as TeamMembershipWithUser;
 
 describe("TeamAnnouncementsSection — エントリー未提出通知 (SC-6 回帰防止)", () => {
+  beforeEach(() => {
+    mocks.unansweredAttendances = [];
+    mocks.unsubmittedEntries = [];
+  });
+
   it("[SC-6] タップ時、CompetitionTabForm へ teamId を渡さない (popTo ではなく従来通り popToTop/goBack 経路のまま)", () => {
     mocks.unsubmittedEntries = [
       {
@@ -91,5 +100,24 @@ describe("TeamAnnouncementsSection — エントリー未提出通知 (SC-6 回�
     // teamId キー自体が存在しないこと (undefined 代入ではなくキー欠如) を明示的に確認する
     const [, params] = mocks.navigate.mock.calls[0] as [string, Record<string, unknown>];
     expect(Object.prototype.hasOwnProperty.call(params, "teamId")).toBe(false);
+  });
+});
+
+describe("TeamAnnouncementsSection — 出欠未回答通知", () => {
+  beforeEach(() => {
+    mocks.unansweredAttendances = [];
+    mocks.unsubmittedEntries = [];
+  });
+
+  it("[AT-1] タップすると、チームタブでそのチームの出欠タブを利用者ビューで開く", () => {
+    mocks.unansweredAttendances = [{ teamId: "team-1", eventId: "practice-1" }];
+
+    const { getByText } = render(<TeamAnnouncementsSection teams={[APPROVED_TEAM]} />);
+    fireEvent.click(getByText(/出欠/));
+
+    expect(mocks.navigate).toHaveBeenCalledWith("MainTabs", {
+      screen: "Teams",
+      params: { teamId: "team-1", initialTab: "attendance", asMember: true },
+    });
   });
 });

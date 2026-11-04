@@ -136,7 +136,12 @@ const TeamCard: React.FC<TeamCardProps> = ({
       {unansweredAttendances.length > 0 && (
         <Pressable
           style={styles.notificationItem}
-          onPress={() => navigation.navigate("TeamDetail", { teamId })}
+          onPress={() =>
+            navigation.navigate("MainTabs", {
+              screen: "Teams",
+              params: { teamId, initialTab: "attendance", asMember: true },
+            })
+          }
         >
           <Text style={styles.notificationText}>
             {t("dashboard.announcements.unansweredAttendance", { count: unansweredAttendances.length })}

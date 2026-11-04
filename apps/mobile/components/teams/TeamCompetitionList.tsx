@@ -724,6 +724,8 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
         </View>
       ) : (
         <FlatList
+          // チームタブは OS のタブバーの上に出るので、末尾がタブバーに隠れないよう OS に下端の余白を足させる
+          contentInsetAdjustmentBehavior="automatic"
           data={items}
           renderItem={renderItem}
           keyExtractor={keyExtractor}

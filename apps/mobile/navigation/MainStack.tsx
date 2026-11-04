@@ -15,7 +15,6 @@ import { TeamRecordStyleListScreen } from "@/screens/TeamRecordStyleListScreen";
 import { TeamRecordStyleDetailScreen } from "@/screens/TeamRecordStyleDetailScreen";
 import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
 import { TeamEntryBulkFormScreen } from "@/screens/TeamEntryBulkFormScreen";
-import { TeamDetailScreen } from "@/screens/TeamDetailScreen";
 import { TeamBulkRegisterScreen } from "@/screens/TeamBulkRegisterScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
 import { PracticeLogTemplatesScreen } from "@/screens/PracticeLogTemplatesScreen";
@@ -158,18 +157,6 @@ export const MainStack: React.FC = () => {
           ...baseHeaderOptions,
           title: t("teams.mobile.entryBulk.pageTitle"),
         }}
-      />
-      <Stack.Screen
-        name="TeamDetail"
-        component={TeamDetailScreen}
-        options={({ route }) => ({
-          ...baseHeaderOptions,
-          // 既定タイトル。実際のチーム名は TeamDetailScreen の setOptions が上書きする
-          title: t("navigation.mobile.titles.teamDetail"),
-          // タブ経由 (instant) のときだけスライドを切る。既にチーム一覧が前面に
-          // 出ている上を詳細が覆うため、アニメーションがあると遷移していないように見える
-          animation: route.params?.instant ? "none" : "default",
-        })}
       />
       <Stack.Screen
         name="TeamBulkRegister"

@@ -61,7 +61,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
   };
 
   const handleTeamPress = (teamId: string) => {
-    navigation.navigate("TeamDetail", { teamId });
+    navigation.navigate("MainTabs", { screen: "Teams", params: { teamId } });
   };
 
   return (

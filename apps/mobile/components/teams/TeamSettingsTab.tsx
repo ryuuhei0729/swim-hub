@@ -15,7 +15,7 @@
  * PM 裁定で shared 側に意図的に残置されている (migration 巻き戻しと shared テストの
  * 改変を避けるため) が、どちらのアプリからも呼び出す形で復活させないこと。
  *
- * 画面遷移はこのコンポーネントでは行わず、親 (TeamDetailScreen) のコールバックに
+ * 画面遷移はこのコンポーネントでは行わず、親 (TeamDetailView) のコールバックに
  * 委ねる。ナビゲーションの起点を親に集約しておくと、タブ側は描画と API 呼び出しだけを
  * 持つ。
  */
@@ -47,7 +47,7 @@ export interface TeamSettingsTabProps {
    */
   isAdminView: boolean;
   /**
-   * 脱退ガードの判定に使う。TeamDetailScreen が既に持っている配列をそのまま渡すこと
+   * 脱退ガードの判定に使う。TeamDetailView が既に持っている配列をそのまま渡すこと
    * (詰め替えると user_id / role が落ちてガードが素通りする)
    */
   members: TeamMembershipWithUser[];
@@ -139,7 +139,11 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container} contentContainerStyle={styles.content}
+      // チームタブは OS のタブバーの上に出るので、末尾がタブバーに隠れないよう OS に下端の余白を足させる
+      contentInsetAdjustmentBehavior="automatic"
+    >
       {/* チーム情報（招待コードもこのカードに内包する） */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t("teams.settingsTab.teamInfoTitle")}</Text>

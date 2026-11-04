@@ -877,7 +877,10 @@ export const RecordDetail: React.FC<RecordDetailProps> = ({
           onChangeLinkPress={() => {
             setAttendanceModalVisible(false);
             onClose?.();
-            navigation.navigate("TeamDetail", { teamId, initialTab: "attendance" });
+            navigation.navigate("MainTabs", {
+              screen: "Teams",
+              params: { teamId, initialTab: "attendance", asMember: true },
+            });
           }}
         />
       )}

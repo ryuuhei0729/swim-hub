@@ -12,7 +12,7 @@
  *          対応する記録行として自動生成される
  *   [削除行の復活防止] 自動生成された行をユーザーが削除した後、記録タブから離れて
  *          戻ってきても復活しない (entries 自体は変化していないため)
- *   [戻り先] 保存後、route.params.teamId があれば popTo("TeamDetail", ...)、
+ *   [戻り先] 保存後、route.params.teamId があれば popTo("MainTabs", { screen: "Teams", ... })、
  *          なければ goBack() が呼ばれる (resolveSaveReturnTarget の fallback: "goBack")
  */
 
@@ -440,7 +440,7 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (resolveSaveReturnT
     setupCommonMocks();
   });
 
-  it("[戻り先] teamId あり: 保存後 popTo('TeamDetail', { teamId, initialTab: 'competitions' }) が呼ばれる", async () => {
+  it("[戻り先] teamId あり: 保存後 popTo('MainTabs', { screen: 'Teams', params: { teamId, initialTab: 'competitions' } }) が呼ばれる", async () => {
     h.mockUseAuth.mockReturnValue({
       supabase: makeSupabase(makeCompetitionRow()),
       subscription: null,
@@ -457,9 +457,9 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (resolveSaveReturnT
     fireEvent.click(saveButton);
 
     await waitFor(() => expect(h.mockPopTo).toHaveBeenCalledTimes(1));
-    expect(h.mockPopTo).toHaveBeenCalledWith("TeamDetail", {
-      teamId: "team-9",
-      initialTab: "competitions",
+    expect(h.mockPopTo).toHaveBeenCalledWith("MainTabs", {
+      screen: "Teams",
+      params: { teamId: "team-9", initialTab: "competitions" },
     });
     expect(h.mockGoBack).not.toHaveBeenCalled();
     expect(h.mockPopToTop).not.toHaveBeenCalled();
@@ -505,7 +505,7 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (編集モード / 
     setupCommonMocks();
   });
 
-  it("[移設 SC-2] teamId あり・編集モード: 保存後 popTo('TeamDetail', {...}) がちょうど1回、goBack/popToTop は0回", async () => {
+  it("[移設 SC-2] teamId あり・編集モード: 保存後 popTo('MainTabs' > Teams, {...}) がちょうど1回、goBack/popToTop は0回", async () => {
     const competitionRow = makeCompetitionRow({ id: "comp-migrated-edit-1", team_id: null });
     h.mockUseAuth.mockReturnValue({
       supabase: makeSupabase(competitionRow),
@@ -522,9 +522,9 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (編集モード / 
     fireEvent.click(await findByTestId("competition-tab-form-save"));
 
     await waitFor(() => expect(h.mockPopTo).toHaveBeenCalledTimes(1));
-    expect(h.mockPopTo).toHaveBeenCalledWith("TeamDetail", {
-      teamId: "team-migrated-1",
-      initialTab: "competitions",
+    expect(h.mockPopTo).toHaveBeenCalledWith("MainTabs", {
+      screen: "Teams",
+      params: { teamId: "team-migrated-1", initialTab: "competitions" },
     });
     expect(h.mockGoBack).not.toHaveBeenCalled();
     expect(h.mockPopToTop).not.toHaveBeenCalled();

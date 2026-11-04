@@ -722,16 +722,17 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // (popTo も REMOVE 系アクションのため同じ制約を受ける)。
   //
   // チーム大会フロー (TeamCompetitionList の「追加」/「編集」から CompetitionForm
-  // 経由で replace されて開かれる) は goBack() だけだと TeamDetail まで戻れない。
+  // 経由で replace されて開かれる) は、チームタブ (MainTabs の Teams) の大会タブへ
+  // popTo で一気に戻す。チームタブは最後に開いたチームを表示するので、teamId と
+  // initialTab を渡して「そのチームの大会タブ」に揃える。
   // route.params.teamId (state 化した competitionTeamId ではなく生の route パラメータ)
-  // があれば popTo("TeamDetail") で一気に戻す。
+  // があるときだけこうする。
   // competitionTeamId は既存データ取得後に competitions.team_id で
   // 上書きされるため (competitionTeamId の初期化コメント参照)、ダッシュボード発の個人フローで
   // 「たまたまチームの大会を編集した」場合にも非 null になりうる。その場合に
-  // popTo してしまうと来歴に無い TeamDetail へ誤って飛ばす。route.params.teamId は
+  // popTo してしまうと、ダッシュボードから来たのにチームタブへ飛ばされる。route.params.teamId は
   // TeamCompetitionList 発の経路でのみ渡され (useDayDetailHandlers 経由の個人フローでは
-  // 渡らない)、スタック上に TeamDetail が実在することの唯一の信頼できる手がかりのため
-  // こちらを使う。
+  // 渡らない)、チームタブから来たことの唯一の信頼できる手がかりのためこちらを使う。
   // 個人フローは従来通り goBack() のままとする
   // (resolveSaveReturnTarget の fallback: "goBack" で明示指定)。
   // teamId が空文字のときもこの fallback により goBack となる。
@@ -740,7 +741,10 @@ export const CompetitionTabFormScreen: React.FC = () => {
     toast.success(t("common.savedToast"));
     const target = resolveSaveReturnTarget(teamId, { fallback: "goBack" });
     if (target.kind === "team") {
-      navigation.popTo("TeamDetail", { teamId: target.teamId, initialTab: "competitions" });
+      navigation.popTo("MainTabs", {
+        screen: "Teams",
+        params: { teamId: target.teamId, initialTab: "competitions" },
+      });
     } else if (target.kind === "goBack") {
       navigation.goBack();
     } else {
