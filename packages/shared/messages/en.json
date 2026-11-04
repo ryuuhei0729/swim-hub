@@ -2696,6 +2696,11 @@
       "genderMale": "Male",
       "genderFemale": "Female",
       "tabAnnouncements": "Announcements",
+      "switcher": {
+        "title": "Switch team",
+        "openAria": "Switch team",
+        "pendingGroup": "Pending approval"
+      },
       "adminToggle": {
         "label": "View",
         "admin": "Admin",

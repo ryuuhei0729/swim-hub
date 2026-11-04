@@ -644,7 +644,7 @@ describe("CompetitionTabFormScreen — チーム管理者ビューのタブ絞�
       expect(h.mockPopToTop).toHaveBeenCalledTimes(0);
     });
 
-    it("[CTS-9b / 非退行] teamId あり: 保存後 popTo('TeamDetail', {...}) がちょうど1回、goBack/popToTop は0回", async () => {
+    it("[CTS-9b / 非退行] teamId あり: 保存後 popTo('MainTabs' > Teams, {...}) がちょうど1回、goBack/popToTop は0回", async () => {
       renderScreen({ origin: "teamAdmin", routeTeamId: TEAM_ID });
 
       await waitFor(() => expect(screen.getByTestId("competition-tab-form-save")).toBeTruthy());
@@ -655,9 +655,9 @@ describe("CompetitionTabFormScreen — チーム管理者ビューのタブ絞�
       });
 
       expect(h.mockPopTo).toHaveBeenCalledTimes(1);
-      expect(h.mockPopTo).toHaveBeenCalledWith("TeamDetail", {
-        teamId: TEAM_ID,
-        initialTab: "competitions",
+      expect(h.mockPopTo).toHaveBeenCalledWith("MainTabs", {
+        screen: "Teams",
+        params: { teamId: TEAM_ID, initialTab: "competitions" },
       });
       expect(h.mockGoBack).toHaveBeenCalledTimes(0);
       expect(h.mockPopToTop).toHaveBeenCalledTimes(0);

@@ -2699,6 +2699,11 @@
       "genderMale": "男性",
       "genderFemale": "女性",
       "tabAnnouncements": "お知らせ",
+      "switcher": {
+        "title": "チームを切り替え",
+        "openAria": "チームを切り替える",
+        "pendingGroup": "承認待ち"
+      },
       "adminToggle": {
         "label": "表示切替",
         "admin": "管理者",

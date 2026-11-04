@@ -7,7 +7,7 @@ import { TEAM_TAB_DEFS, type TeamTabType } from "./teamTabDefs";
 import { cardSurface } from "@/constants/theme";
 
 // タブの定義元は ./teamTabDefs.ts の 1 本。ここは描画だけを担う。
-// 既存の import 経路 (navigation/types.ts・TeamDetailScreen.tsx・
+// 既存の import 経路 (navigation/types.ts・TeamDetailView.tsx・
 // components/teams/index.ts) を維持するため型は再 export する
 export type { TeamTabType };
 

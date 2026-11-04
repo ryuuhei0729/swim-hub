@@ -27,18 +27,21 @@ export function groupTeamMemberships(
 }
 
 /**
- * 「承認済みちょうど1件かつ承認待ち0件」のときだけその team_id を返す。
- * それ以外 (0件 / 2件以上 / 承認待ちが1件以上ある / teams が undefined) は null。
+ * チームタブに表示するチームを決める。
+ * preferredTeamId (最後に開いたチーム・他画面からの指定) が承認済みか承認待ちの中にあればそれ、
+ * 無ければ承認済みの先頭、それも無ければ承認待ちの先頭。所属が無ければ null。
+ * 脱退・却下などで一覧から消えたチームを指したままでも、別のチームへ倒れる。
  */
-export function getSoleApprovedTeamId(
-  teams: readonly TeamMembershipWithUser[] | undefined,
-): string | null {
-  const { approvedTeams, pendingTeams } = groupTeamMemberships(teams);
-  const [soleTeam, ...extraTeams] = approvedTeams;
-
-  if (!soleTeam || extraTeams.length > 0 || pendingTeams.length > 0) {
-    return null;
+export function resolveSelectedTeam(
+  groups: TeamMembershipGroups,
+  preferredTeamId: string | null | undefined,
+): TeamMembershipWithUser | null {
+  const { approvedTeams, pendingTeams } = groups;
+  if (preferredTeamId) {
+    const preferred =
+      approvedTeams.find((m) => m.team_id === preferredTeamId) ??
+      pendingTeams.find((m) => m.team_id === preferredTeamId);
+    if (preferred) return preferred;
   }
-
-  return soleTeam.team_id;
+  return approvedTeams[0] ?? pendingTeams[0] ?? null;
 }

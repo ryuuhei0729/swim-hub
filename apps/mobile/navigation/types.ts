@@ -30,7 +30,21 @@ export type RecordsSegment = "practices" | "competitions";
 export type TabParamList = {
   Dashboard: undefined;
   Records: { segment?: RecordsSegment } | undefined;
-  Teams: undefined;
+  /**
+   * チームタブは最後に開いたチームを表示する。teamId / initialTab を渡すとそのチーム・タブを開く
+   * (ホームの出欠未回答・カレンダーの出欠変更・プロフィールの所属チーム・大会保存後の戻り先)
+   */
+  Teams:
+    | {
+        teamId?: string;
+        initialTab?: TeamTabType;
+        /**
+         * 自分の出欠に回答する導線 (ホームの出欠未回答・カレンダーの出欠変更) から開くときに true。
+         * そのチームの管理者ビューを OFF にして開く (管理者ビューの出欠タブでは自分の回答ができないため)
+         */
+        asMember?: boolean;
+      }
+    | undefined;
   Goals: undefined;
   MyPage: undefined;
 };
@@ -138,17 +152,6 @@ export type MainStackParamList = {
   TeamEntryBulkForm: {
     competitionId: string;
     teamId: string;
-  };
-  TeamDetail: {
-    teamId: string;
-    /** 起動時に開くタブ（未指定時は "members"）。DayDetailModal の出欠確認からの遷移で使用 */
-    initialTab?: TeamTabType;
-    /**
-     * 画面遷移アニメーションを切るか（未指定時は通常のスライド）。
-     * チームタブの tabPress のように「タブ切替で前面に出たチーム一覧の上を
-     * 詳細がスライドで覆う」見え方になる経路でのみ true を渡す。
-     */
-    instant?: boolean;
   };
   /** チーム練習・大会一括登録（管理者専用） */
   TeamBulkRegister: {

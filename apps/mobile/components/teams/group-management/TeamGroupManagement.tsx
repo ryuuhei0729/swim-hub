@@ -258,7 +258,11 @@ export const TeamGroupManagement: React.FC<TeamGroupManagementProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView} contentContainerStyle={styles.scrollContent}
+        // チームタブは OS のタブバーの上に出るので、末尾がタブバーに隠れないよう OS に下端の余白を足させる
+        contentInsetAdjustmentBehavior="automatic"
+      >
         {/* ヘッダー */}
         <View style={styles.headerRow}>
           <View style={styles.headerInfo}>

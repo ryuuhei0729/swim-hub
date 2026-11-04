@@ -68,6 +68,7 @@ export const tabScreenOptions = (tab: TabVisual): BottomTabNavigationOptions => 
   tabBarAccessibilityLabel: tab.label,
   tabBarButtonTestID: tab.testID,
   tabBarIcon: ({ color }) => <Feather name={tab.feather} size={20} color={color} />,
+  tabBarBadge: tab.badge,
 });
 
 const styles = StyleSheet.create({

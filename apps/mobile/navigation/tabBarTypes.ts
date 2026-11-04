@@ -17,4 +17,6 @@ export interface TabVisual {
   /** JS 描画のタブボタンに付く testID (ナビゲーション統合テストが参照する) */
   testID: string;
   feather: TabFeatherIcon;
+  /** タブアイコンに重ねる件数バッジ。undefined なら出さない */
+  badge?: string;
 }

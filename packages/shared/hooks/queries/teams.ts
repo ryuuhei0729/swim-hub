@@ -7,6 +7,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
   type QueryClient,
@@ -525,6 +526,28 @@ export function useListPendingMembersQuery(supabase: SupabaseClient, teamId?: st
     },
     enabled: !!teamId,
     staleTime: 5 * 60 * 1000, // 5分
+  });
+}
+
+/**
+ * 複数チームの承認待ちメンバー数の合計 (モバイルのチームタブのバッジ用)。
+ * useListPendingMembersQuery と同じ queryKey を使うので、承認・却下で invalidate されると追随する。
+ * 承認待ちの一覧は管理者しか読めないため、teamIds には自分が管理者のチームだけを渡すこと
+ */
+export function usePendingMembersCountQuery(
+  supabase: SupabaseClient,
+  teamIds: readonly string[],
+  api?: TeamMembersAPI,
+): number {
+  const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
+
+  return useQueries({
+    queries: teamIds.map((teamId) => ({
+      queryKey: teamKeys.pendingMembers(teamId),
+      queryFn: () => membersApi.listPending(teamId),
+      staleTime: 5 * 60 * 1000, // 5分
+    })),
+    combine: (results) => results.reduce((sum, result) => sum + (result.data?.length ?? 0), 0),
   });
 }
 

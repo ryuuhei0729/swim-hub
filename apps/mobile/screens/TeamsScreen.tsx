@@ -1,38 +1,60 @@
-import React, { useState, useMemo, useCallback } from "react";
-import { View, Text, StyleSheet, RefreshControl } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import React, { useState, useMemo, useCallback, useLayoutEffect, useRef } from "react";
+import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
+import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
-import { TeamItem, TeamCreateModal, TeamJoinModal } from "@/components/teams";
+import { TeamCreateModal } from "@/components/teams/TeamCreateModal";
+import { TeamJoinModal } from "@/components/teams/TeamJoinModal";
+import { TeamDetailView } from "@/components/teams/TeamDetailView";
+import { TeamSwitcherSheet } from "@/components/teams/TeamSwitcherSheet";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { TeamListSkeleton } from "@/components/ui/ScreenSkeletons";
 import { PressableScale } from "@/components/ui/PressableScale";
-import { ListItemEnter, useListEnterOnce } from "@/components/ui/ListItemEnter";
-import type { MainStackParamList } from "@/navigation/types";
-import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
+import type { TabParamList } from "@/navigation/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
-import { usePullToRefresh } from "@/hooks/usePullToRefresh";
-import { groupTeamMemberships } from "@/utils/teamMembershipGroups";
+import { useTeamViewHydrated } from "@/hooks/useTeamViewHydrated";
+import { useTeamViewStore } from "@/stores/teamViewStore";
+import { groupTeamMemberships, resolveSelectedTeam } from "@/utils/teamMembershipGroups";
 import { Feather } from "@expo/vector-icons";
 
-type TeamsScreenNavigationProp = NativeStackNavigationProp<MainStackParamList>;
+type Props = BottomTabScreenProps<TabParamList, "Teams">;
+
+/** 切替シートを閉じ終えてから開くモーダル (iOS はモーダルを同時に2つ提示できない) */
+type AfterSwitcherClose = "create" | "join" | null;
 
 /**
- * チーム一覧画面
- * 所属チームの一覧を表示し、チーム作成・参加機能を提供
+ * チームタブ
+ *
+ * 一覧を挟まず、最後に開いたチームをそのまま表示する (TeamDetailView)。
+ * 別のチームへはヘッダーのチーム名から開く切替シートで移り、作成・参加もそこから行う。
+ * 所属が無いときだけ、中央に作成・参加の CTA を出す。
+ *
+ * 他画面から特定のチーム・タブを開くときは
+ * `navigate("MainTabs", { screen: "Teams", params: { teamId, initialTab } })`。
+ * 受け取った指定は表示状態ストアに書き込んでから params を消す
+ * (同じ指定でもう一度来たときにも反応させるため)。
  */
-export const TeamsScreen: React.FC = () => {
-  const navigation = useNavigation<TeamsScreenNavigationProp>();
+export const TeamsScreen: React.FC<Props> = ({ route, navigation }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const afterSwitcherCloseRef = useRef<AfterSwitcherClose>(null);
+  // この画面で脱退したチーム。一覧の再取得が失敗して古い一覧が残っていても、脱退したチームへ倒れないよう除く
+  const [leftTeamIds, setLeftTeamIds] = useState<ReadonlySet<string>>(() => new Set());
+
+  const hydrated = useTeamViewHydrated();
+  const lastTeamId = useTeamViewStore((state) => state.lastTeamId);
+  const selectTeam = useTeamViewStore((state) => state.selectTeam);
+  const setTab = useTeamViewStore((state) => state.setTab);
+  const setAdminView = useTeamViewStore((state) => state.setAdminView);
 
   // チーム一覧取得
   const {
@@ -46,55 +68,109 @@ export const TeamsScreen: React.FC = () => {
   });
 
   // 承認済みチームと承認待ちチームを分ける
-  const { approvedTeams, pendingTeams } = useMemo(() => groupTeamMemberships(teams), [teams]);
-
-  // タブ遷移時にデータ再取得(子孫なし。チーム一覧のみが対象)
-  useRefreshOnFocus(refetch);
-
-  // プルリフレッシュ処理
-  const { refreshing, handleRefresh } = usePullToRefresh(refetch);
-
-  // チームタップ処理
-  const handleTeamPress = useCallback(
-    (membership: TeamMembershipWithUser) => {
-      navigation.navigate("TeamDetail", { teamId: membership.team_id });
-    },
-    [navigation],
+  const groups = useMemo(
+    () => groupTeamMemberships(teams.filter((m) => !leftTeamIds.has(m.team_id))),
+    [teams, leftTeamIds],
   );
 
-  // 一覧が初めてデータ付きで出るときだけ、行を時間差でふわっと出す
-  const listEnterEnabled = useListEnterOnce(!isLoading && teams.length > 0);
+  // 他画面からの指定を表示状態ストアへ移す。
+  // 端末からの読み込み前に書くと、読み込み結果で上書きされて指定が消えるので待つ。
+  // 描画前に反映させるため useLayoutEffect (前のチーム・タブが一瞬見えないように)
+  const requestedTeamId = route.params?.teamId;
+  const requestedTab = route.params?.initialTab;
+  const requestedAsMember = route.params?.asMember === true;
+  useLayoutEffect(() => {
+    if (!hydrated || !requestedTeamId) return;
+    selectTeam(requestedTeamId);
+    if (requestedTab) setTab(requestedTeamId, requestedTab);
+    if (requestedAsMember) setAdminView(requestedTeamId, false);
+    navigation.setParams({ teamId: undefined, initialTab: undefined, asMember: undefined });
+  }, [
+    hydrated,
+    requestedTeamId,
+    requestedTab,
+    requestedAsMember,
+    selectTeam,
+    setTab,
+    setAdminView,
+    navigation,
+  ]);
 
-  // アイテムをレンダリング（メモ化）
-  const renderItem = useCallback(
-    ({ item, index }: { item: TeamMembershipWithUser; index: number }) => {
-      return (
-        <ListItemEnter index={index} enabled={listEnterEnabled}>
-          <TeamItem membership={item} onPress={handleTeamPress} />
-        </ListItemEnter>
-      );
+  const selectedMembership = resolveSelectedTeam(groups, requestedTeamId ?? lastTeamId);
+  const focusedTeamId = selectedMembership?.team_id;
+
+  // タブに戻ってきたら、一覧と表示中のチームの情報 (メンバー・練習・大会・ランキング等、
+  // teamKeys.detail 配下) を取り直す。チームはタブの中に出しっぱなしなので、
+  // 開き直しによる再取得が起きない (他のメンバーの変更が反映されなくなる) ため
+  const queryClient = useQueryClient();
+  const refreshOnFocus = useCallback(() => {
+    void refetch();
+    if (focusedTeamId) {
+      void queryClient.invalidateQueries({ queryKey: teamKeys.detail(focusedTeamId) });
+    }
+  }, [refetch, queryClient, focusedTeamId]);
+  useRefreshOnFocus(refreshOnFocus);
+
+  const handleSelectTeam = useCallback(
+    (teamId: string) => {
+      selectTeam(teamId);
+      setIsSwitcherOpen(false);
     },
-    [handleTeamPress, listEnterEnabled],
+    [selectTeam],
   );
 
-  // チーム作成成功時の処理
+  const handleSwitcherClosed = useCallback(() => {
+    const next = afterSwitcherCloseRef.current;
+    afterSwitcherCloseRef.current = null;
+    if (next === "create") setIsCreateModalOpen(true);
+    if (next === "join") setIsJoinModalOpen(true);
+  }, []);
+
+  const openFromSwitcher = useCallback((next: Exclude<AfterSwitcherClose, null>) => {
+    afterSwitcherCloseRef.current = next;
+    setIsSwitcherOpen(false);
+  }, []);
+
+  // 作成・参加したチームを開く。一覧の再取得が終わる前に選ぶと、まだ一覧に無いため
+  // 別のチームへ倒れて一瞬表示されるので、再取得の後に選ぶ
+  const handleTeamAdded = useCallback(
+    (teamId: string) => {
+      // 脱退したチームに参加し直したときは、除外を解く
+      setLeftTeamIds((prev) => {
+        if (!prev.has(teamId)) return prev;
+        const next = new Set(prev);
+        next.delete(teamId);
+        return next;
+      });
+      void refetch().finally(() => selectTeam(teamId));
+    },
+    [refetch, selectTeam],
+  );
+
   const handleCreateSuccess = useCallback(
     (teamId: string) => {
       setIsCreateModalOpen(false);
-      // チーム詳細画面へ遷移
-      navigation.navigate("TeamDetail", { teamId });
+      handleTeamAdded(teamId);
     },
-    [navigation],
+    [handleTeamAdded],
   );
 
-  // チーム参加成功時の処理
   const handleJoinSuccess = useCallback(
     (teamId: string) => {
       setIsJoinModalOpen(false);
-      // チーム詳細画面へ遷移
-      navigation.navigate("TeamDetail", { teamId });
+      handleTeamAdded(teamId);
     },
-    [navigation],
+    [handleTeamAdded],
+  );
+
+  // 脱退したら、そのチームを一覧から除いて残りのチームへ倒し、一覧を取り直す
+  const handleLeftTeam = useCallback(
+    (leftTeamId: string) => {
+      setLeftTeamIds((prev) => new Set(prev).add(leftTeamId));
+      if (useTeamViewStore.getState().lastTeamId === leftTeamId) selectTeam(null);
+      void refetch();
+    },
+    [refetch, selectTeam],
   );
 
   // 再取得に失敗しても、前回取得したチーム一覧があれば全画面エラーにせず表示を続ける
@@ -110,8 +186,8 @@ export const TeamsScreen: React.FC = () => {
     );
   }
 
-  // ローディング状態
-  if (isLoading && teams.length === 0) {
+  // ローディング状態 (最後に開いたチームの読み込み前も、別のチームを一瞬出さないよう待つ)
+  if ((isLoading && teams.length === 0) || !hydrated) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         <TeamListSkeleton />
@@ -119,57 +195,25 @@ export const TeamsScreen: React.FC = () => {
     );
   }
 
-  // 表示用データ（承認済み + 承認待ち）
-  const displayTeams = [...approvedTeams, ...pendingTeams];
+  const modals = (
+    <>
+      <TeamCreateModal
+        visible={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleCreateSuccess}
+      />
+      <TeamJoinModal
+        visible={isJoinModalOpen}
+        onClose={() => setIsJoinModalOpen(false)}
+        onSuccess={handleJoinSuccess}
+      />
+    </>
+  );
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* アクションボタン(所属チームがある場合のみ。0チーム時は中央CTAと重複するため非表示) */}
-      {displayTeams.length > 0 && (
-        <View style={styles.actionBar}>
-          <PressableScale
-            style={[styles.actionButton, styles.createButton]}
-            onPress={() => setIsCreateModalOpen(true)}
-            testID="teams-action-create"
-          >
-            <Text style={styles.createButtonText}>{t("teams.mobile.createTeamAction")}</Text>
-          </PressableScale>
-          <PressableScale
-            style={[styles.actionButton, styles.joinButton]}
-            onPress={() => setIsJoinModalOpen(true)}
-            testID="teams-action-join"
-          >
-            <Text style={styles.joinButtonText}>{t("teams.mobile.joinByInviteCodeAction")}</Text>
-          </PressableScale>
-        </View>
-      )}
-
-      <StaleDataBanner visible={isError && hasCachedTeams} onRetry={() => refetch()} />
-
-      {/* チーム一覧 */}
-      {displayTeams.length > 0 ? (
-        <FlashList
-          data={displayTeams}
-          // iOS 26 の浮いたタブバーの下に末尾が隠れないよう、OS に下端の余白を足させる
-          contentInsetAdjustmentBehavior="automatic"
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={["#2563EB"]}
-              tintColor="#2563EB"
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>{t("teams.mobile.noTeams")}</Text>
-            </View>
-          }
-        />
-      ) : (
+  if (!selectedMembership) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+        <StaleDataBanner visible={isError && hasCachedTeams} onRetry={() => refetch()} />
         <View style={styles.emptyContainer}>
           <Feather name="users" size={56} color="#93C5FD" />
           <Text style={[styles.emptyText, styles.emptyTextLarge]}>
@@ -197,21 +241,35 @@ export const TeamsScreen: React.FC = () => {
             </PressableScale>
           </View>
         </View>
-      )}
+        {modals}
+      </SafeAreaView>
+    );
+  }
 
-      {/* チーム作成モーダル */}
-      <TeamCreateModal
-        visible={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleCreateSuccess}
+  const selectedTeamId = selectedMembership.team_id;
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <TeamDetailView
+        key={selectedTeamId}
+        teamId={selectedTeamId}
+        teamName={selectedMembership.teams?.name || t("teams.mobile.fallbackTeamName")}
+        onOpenSwitcher={() => setIsSwitcherOpen(true)}
+        onLeftTeam={() => handleLeftTeam(selectedTeamId)}
       />
 
-      {/* チーム参加モーダル */}
-      <TeamJoinModal
-        visible={isJoinModalOpen}
-        onClose={() => setIsJoinModalOpen(false)}
-        onSuccess={handleJoinSuccess}
+      <TeamSwitcherSheet
+        visible={isSwitcherOpen}
+        onClose={() => setIsSwitcherOpen(false)}
+        onClosed={handleSwitcherClosed}
+        approvedTeams={groups.approvedTeams}
+        pendingTeams={groups.pendingTeams}
+        selectedTeamId={selectedTeamId}
+        onSelect={handleSelectTeam}
+        onCreate={() => openFromSwitcher("create")}
+        onJoin={() => openFromSwitcher("join")}
       />
+      {modals}
     </SafeAreaView>
   );
 };
@@ -220,14 +278,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F1F5F9",
-  },
-  actionBar: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
   },
   actionButton: {
     flex: 1,
@@ -251,9 +301,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
-  },
-  listContent: {
-    paddingVertical: 8,
   },
   emptyContainer: {
     flex: 1,

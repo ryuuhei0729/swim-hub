@@ -741,6 +741,8 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
 
           {/* === スクロール可能なメンバー行 === */}
           <ScrollView
+            // チームタブは OS のタブバーの上に出るので、末尾がタブバーに隠れないよう OS に下端の余白を足させる
+            contentInsetAdjustmentBehavior="automatic"
             style={styles.tableBodyScroll}
             contentContainerStyle={styles.tableBodyScrollContent}
           >

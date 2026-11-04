@@ -22,6 +22,8 @@ import { startOfMonth, endOfMonth, addMonths, format, parseISO } from "date-fns"
 import { sanitizeTextInput } from "@swim-hub/shared/utils/sanitize";
 import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
+import { notificationKeys } from "@apps/shared/hooks/queries/keys";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { useToast } from "@/providers/ToastProvider";
 import { AttendanceGroupModal } from "./AttendanceGroupModal";
@@ -60,6 +62,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
   const locale = useDateLocale();
   const insets = useSafeInsets();
   const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
+  const queryClient = useQueryClient();
 
   // 月リスト表示用の状態
   const [monthList, setMonthList] = useState<MonthItem[]>([]);
@@ -452,6 +455,12 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
     return !(editState.status === null && editState.note === "");
   };
 
+  // 回答したら、ホームの「出欠未回答」とチームタブのバッジの件数を取り直させる
+  // (この画面の保存は React Query の mutation を通らないため、ここで明示的に落とす)
+  const invalidateUnansweredCounts = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+  }, [queryClient]);
+
   // 出欠1件分の保存処理（月モーダル・即回答セクションの両方から呼び出す共通ロジック）。
   // 締切後編集の確認ダイアログ→更新/新規作成の分岐は web useRecentAttendance.saveEvent と同一。
   // 確認ダイアログでキャンセルされた場合は null を返す。
@@ -487,6 +496,7 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
             note: editState.note || null,
           },
         ]);
+        invalidateUnansweredCounts();
         return { status: editState.status, note: editState.note || "" };
       }
 
@@ -521,9 +531,10 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
       });
       if (insertError) throw insertError;
 
+      invalidateUnansweredCounts();
       return { status: editState.status, note: note || "" };
     },
-    [supabase, attendanceAPI, t],
+    [supabase, attendanceAPI, t, invalidateUnansweredCounts],
   );
 
   // 出欠保存の確定結果を即回答セクションの state にも反映する。反映対象は「保存された
@@ -1004,7 +1015,11 @@ export const MyMonthlyAttendance: React.FC<MyMonthlyAttendanceProps> = ({ teamId
 
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.container} contentContainerStyle={styles.scrollContent}
+        // チームタブは OS のタブバーの上に出るので、末尾がタブバーに隠れないよう OS に下端の余白を足させる
+        contentInsetAdjustmentBehavior="automatic"
+      >
         {/* T-5a: 即回答セクション（今月/来月タブ + 個別保存） */}
         <View style={styles.quickSection}>
           <Text style={styles.quickSectionTitle}>{t("teams.recentAttendance.title")}</Text>

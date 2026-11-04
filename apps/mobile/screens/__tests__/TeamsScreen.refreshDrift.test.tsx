@@ -2,12 +2,11 @@
 // TeamsScreen.refreshDrift.test.tsx
 // =============================================================================
 //
-// Sprint Contract 検証観点: [V-04] TeamsScreen の pull-to-refresh / フォーカス復帰
-// (usePullToRefresh / useRefreshOnFocus に直接 refetch を渡す実装) が、
-// 画面が依存する全 active query を尽くしているかを観測ベースで検証する
-// (queryKey はハードコードしない)。TeamsScreen は子孫 (TeamItem/TeamCreateModal/
-// TeamJoinModal) が独自クエリを持たないため、このテストは現行実装に対して
-// green であることが期待される (回帰確認)。
+// Sprint Contract 検証観点: [V-04] TeamsScreen のフォーカス復帰 (useRefreshOnFocus に
+// 渡す再取得) が、画面が依存する全 active query を尽くしているかを観測ベースで検証する
+// (queryKey はハードコードしない)。所属0件の状態 (中央 CTA) を対象にする。
+// チームを表示している間の「表示中チームの情報も取り直す」ことは
+// TeamsScreen.teamHome.test.tsx [TH-10] が見る。
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, waitFor } from "@testing-library/react";
@@ -17,10 +16,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // -----------------------------------------------------------------------------
 // テスト基盤エラーの原因と修正 (前任QA未着手分):
-// TeamsScreen は `@/components/teams` バレル (index.ts) から TeamItem/TeamCreateModal/
-// TeamJoinModal を import する。バレルは ESM の静的 import であるため、実際に
-// 使わない `TeamGroupManagement` (./group-management バレル) も含めファイル全体が
-// eager evaluate される。group-management バレルは BulkAssignModal.tsx を経由して
+// TeamsScreen は TeamDetailView を import し、TeamDetailView は
+// `TeamGroupManagement` (./group-management バレル) を import する。所属0件では描画しないが
+// ESM の静的 import なのでファイル全体が eager evaluate される。group-management バレルは BulkAssignModal.tsx を経由して
 // react-native-gesture-handler / react-native-reanimated を import しており、
 // 前者の未トランスパイル TS ソース (`src/handlers/gestures/eventReceiver.ts`) が
 // このリポジトリの vitest 環境では `Unexpected token 'typeof'` でパースに失敗する
@@ -32,7 +30,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // このテストファイル内限定で react-native-gesture-handler を最小スタブに置き換える。
 // react-native-reanimated は共通 UI 部品 (components/ui の PressableScale / Skeleton /
 // ListItemEnter) が使うようになったため vitest.setup.ts で一括してスタブ化しており、
-// ここでは上書きしない (上書きすると TeamItem 等が使う createAnimatedComponent /
+// ここでは上書きしない (上書きすると PressableScale 等が使う createAnimatedComponent /
 // FadeInDown が欠けて落ちる)。TeamsScreen 自身も TeamGroupManagement もこのテストでは
 // 実際にレンダーされる UI として検証対象外 (関心事はクエリ網羅性のみ) のため、
 // スタブは「import が例外を投げずに完了する」最低限の形で十分。
@@ -112,10 +110,9 @@ const captured = vi.hoisted(() => ({
   refreshAll: null as null | (() => Promise<unknown>),
 }));
 
-vi.mock("@/hooks/usePullToRefresh", () => ({
-  usePullToRefresh: (refresh: () => Promise<unknown>) => {
+vi.mock("@/hooks/useRefreshOnFocus", () => ({
+  useRefreshOnFocus: (refresh: () => Promise<unknown>) => {
     captured.refreshAll = refresh;
-    return { refreshing: false, handleRefresh: refresh };
   },
 }));
 
@@ -138,6 +135,12 @@ vi.mock("@/contexts/AuthProvider", () => ({
 }));
 
 import { TeamsScreen } from "../TeamsScreen";
+
+type ScreenProps = React.ComponentProps<typeof TeamsScreen>;
+const screenProps = {
+  route: { key: "Teams-1", name: "Teams", params: undefined },
+  navigation: { setParams: vi.fn() },
+} as unknown as ScreenProps;
 
 function createWrapper(queryClient: QueryClient) {
   return ({ children }: { children: React.ReactNode }) => (
@@ -165,7 +168,7 @@ function activeQueries(queryClient: QueryClient): Query[] {
     .filter((q) => q.getObserversCount() > 0 && q.state.dataUpdateCount > 0);
 }
 
-describe("TeamsScreen — pull-to-refresh のクエリ網羅性 (ドリフト検出)", () => {
+describe("TeamsScreen — フォーカス復帰の再取得のクエリ網羅性 (ドリフト検出)", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -181,7 +184,7 @@ describe("TeamsScreen — pull-to-refresh のクエリ網羅性 (ドリフト検
   });
 
   it("[ドリフト検出] refreshAll (= refetch) 発火前から観測される全 active query が再取得される", async () => {
-    render(<TeamsScreen />, { wrapper: createWrapper(queryClient) });
+    render(<TeamsScreen {...screenProps} />, { wrapper: createWrapper(queryClient) });
     await waitForQuiescence(queryClient);
 
     const before = activeQueries(queryClient);

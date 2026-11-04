@@ -2,16 +2,13 @@
 // teamMembershipGroups.test.ts
 // =============================================================================
 //
-// Sprint Contract 検証観点 (チームタブ所属数分岐):
-//   [V-04] 承認済み1件 + 承認待ち0件 → getSoleApprovedTeamId はその team_id を返す
-//   [V-05] 承認済み1件 + 承認待ち1件 → null (自動遷移しない。承認待ちカードの情報が
-//          消えるのを防ぐため)
-//   [V-06] 承認済み2件以上 → null
-//   [V-07] 承認済み0件 + 承認待ち1件 → null (グループ分類自体は pendingTeams に1件)
+// 検証観点:
 //   [V-08] is_active === false の approved は承認済みに数えない
 //          (is_active === null の場合も同様。TeamMembership.is_active の型は
 //          boolean | null なので falsy 値全般を境界値として確認する)
-//   [V-09] teams === undefined / 空配列 → null (クラッシュしない)
+//   [V-09] teams === undefined / 空配列 → クラッシュしない
+//   [SEL-*] resolveSelectedTeam: チームタブに出すチームの決め方
+//           (指定チーム → 承認済みの先頭 → 承認待ちの先頭 → null)
 //
 // トートロジー防止: 分類・判定ロジックはテスト内で再実装せず、
 // utils/teamMembershipGroups.ts の実物を import して検証する。
@@ -21,7 +18,7 @@
 
 import { describe, expect, it } from "vitest";
 import { createMockTeamMembershipWithUser } from "@/__mocks__/supabase";
-import { getSoleApprovedTeamId, groupTeamMemberships } from "../teamMembershipGroups";
+import { groupTeamMemberships, resolveSelectedTeam } from "../teamMembershipGroups";
 import type { TeamMembershipWithUser } from "@swim-hub/shared/types";
 
 function approved(overrides: Partial<TeamMembershipWithUser> = {}): TeamMembershipWithUser {
@@ -99,54 +96,43 @@ describe("groupTeamMemberships", () => {
   });
 });
 
-describe("getSoleApprovedTeamId", () => {
-  it("[V-04] 承認済み1件 + 承認待ち0件 のとき、その team_id を返す", () => {
-    const sole = approved({ id: "membership-alpha", team_id: "team-alpha" });
+describe("resolveSelectedTeam", () => {
+  const alpha = approved({ id: "membership-alpha", team_id: "team-alpha" });
+  const beta = approved({ id: "membership-beta", team_id: "team-beta" });
+  const gamma = pending({ id: "membership-gamma", team_id: "team-gamma" });
 
-    expect(getSoleApprovedTeamId([sole])).toBe("team-alpha");
+  it("[SEL-1] 指定チームが承認済みにあればそれを返す (先頭でなくても)", () => {
+    const groups = groupTeamMemberships([alpha, beta]);
+    expect(resolveSelectedTeam(groups, "team-beta")?.team_id).toBe("team-beta");
   });
 
-  it("[V-05] 承認済み1件 + 承認待ち1件 のときは null (承認待ちカードを消さないため自動遷移しない)", () => {
-    const sole = approved({ id: "membership-alpha", team_id: "team-alpha" });
-    const waiting = pending({ id: "membership-beta", team_id: "team-beta" });
-
-    expect(getSoleApprovedTeamId([sole, waiting])).toBeNull();
+  it("[SEL-2] 指定チームが承認待ちにあればそれを返す", () => {
+    const groups = groupTeamMemberships([alpha, gamma]);
+    expect(resolveSelectedTeam(groups, "team-gamma")?.team_id).toBe("team-gamma");
   });
 
-  it("[V-06] 承認済み2件以上のときは null", () => {
-    const first = approved({ id: "membership-alpha", team_id: "team-alpha" });
-    const second = approved({ id: "membership-beta", team_id: "team-beta" });
-
-    expect(getSoleApprovedTeamId([first, second])).toBeNull();
+  it("[SEL-3] 指定チームが一覧に無い (脱退・別アカウントの保存値) ときは承認済みの先頭に倒れる", () => {
+    const groups = groupTeamMemberships([alpha, beta, gamma]);
+    expect(resolveSelectedTeam(groups, "team-left")?.team_id).toBe("team-alpha");
   });
 
-  it("[V-07] 承認済み0件 + 承認待ち1件 のときは null", () => {
-    const waiting = pending({ id: "membership-beta", team_id: "team-beta" });
-
-    expect(getSoleApprovedTeamId([waiting])).toBeNull();
+  it("[SEL-4] 指定なしでも承認待ちより承認済みを優先する", () => {
+    const groups = groupTeamMemberships([gamma, alpha]);
+    expect(resolveSelectedTeam(groups, null)?.team_id).toBe("team-alpha");
   });
 
-  it("[V-08] is_active===false の承認済みは対象に数えず null になる", () => {
-    const inactive = approved({ id: "membership-gamma", team_id: "team-gamma", is_active: false });
-
-    expect(getSoleApprovedTeamId([inactive])).toBeNull();
+  it("[SEL-5] 承認済みが無ければ承認待ちの先頭を返す", () => {
+    const groups = groupTeamMemberships([gamma]);
+    expect(resolveSelectedTeam(groups, undefined)?.team_id).toBe("team-gamma");
   });
 
-  it("[V-09] teams === undefined は null (クラッシュしない)", () => {
-    expect(getSoleApprovedTeamId(undefined)).toBeNull();
+  it("[SEL-6] is_active===false の承認済みは指定されていても選ばない", () => {
+    const inactive = approved({ id: "membership-delta", team_id: "team-delta", is_active: false });
+    const groups = groupTeamMemberships([inactive, alpha]);
+    expect(resolveSelectedTeam(groups, "team-delta")?.team_id).toBe("team-alpha");
   });
 
-  it("[V-09] teams === [] は null", () => {
-    expect(getSoleApprovedTeamId([])).toBeNull();
-  });
-
-  it("承認済み0件 + 承認待ち0件 (どちらも空) は null", () => {
-    const rejected = createMockTeamMembershipWithUser({
-      id: "membership-epsilon",
-      team_id: "team-epsilon",
-      status: "rejected",
-    }) as TeamMembershipWithUser;
-
-    expect(getSoleApprovedTeamId([rejected])).toBeNull();
+  it("[SEL-7] 所属が無ければ null", () => {
+    expect(resolveSelectedTeam(groupTeamMemberships([]), "team-alpha")).toBeNull();
   });
 });

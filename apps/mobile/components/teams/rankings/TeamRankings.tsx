@@ -166,7 +166,7 @@ export interface TeamRankingsProps {
   teamId: string;
   /**
    * 「WAポイントで比較」に渡すチームメンバー。
-   * **親 (TeamDetailScreen) が持っている配列をそのまま渡す。** 中間で詰め替えると
+   * **親 (TeamDetailView) が持っている配列をそのまま渡す。** 中間で詰め替えると
    * `users.gender` が落ちて全員男性換算になる既知障害があるため、加工・フィルタ禁止。
    */
   members: TeamMembershipWithUser[];

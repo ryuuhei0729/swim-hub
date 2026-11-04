@@ -760,6 +760,8 @@ export const AdminMonthlyAttendance: React.FC<AdminMonthlyAttendanceProps> = ({
 
   return (
     <ScrollView
+      // チームタブは OS のタブバーの上に出るので、末尾がタブバーに隠れないよう OS に下端の余白を足させる
+      contentInsetAdjustmentBehavior="automatic"
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
     >

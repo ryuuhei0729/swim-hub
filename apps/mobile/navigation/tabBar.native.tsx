@@ -77,6 +77,7 @@ export const tabScreenOptions = (tab: TabVisual): BottomTabNavigationOptions =>
   ({
     title: tab.label,
     tabBarIcon: { type: "image", source: TAB_ICONS[tab.feather] },
+    tabBarBadge: tab.badge,
   }) satisfies NativeBottomTabNavigationOptions as unknown as BottomTabNavigationOptions;
 
 /** タブを切り替えたときに中身をふわっと出す時間 (ms) */

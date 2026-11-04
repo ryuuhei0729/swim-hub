@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
-  // TeamItem.container
+  // 旧 TeamItem.container (チーム一覧のカード) と同じ寸法
   teamCard: {
     ...cardSurface,
     marginHorizontal: 16,

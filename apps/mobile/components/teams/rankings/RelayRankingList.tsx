@@ -355,6 +355,8 @@ export const RelayRankingList: React.FC<RelayRankingListProps> = ({ rows, emptyV
   return (
     <View style={styles.container}>
       <FlatList
+        // チームタブは OS のタブバーの上に出るので、末尾がタブバーに隠れないよう OS に下端の余白を足させる
+        contentInsetAdjustmentBehavior="automatic"
         data={visibleRows}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
