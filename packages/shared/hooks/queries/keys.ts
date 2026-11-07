@@ -189,6 +189,10 @@ export const userKeys = {
 export const dashboardKeys = {
   all: ["dashboard"] as const,
   stats: (userId: string, month: string) => [...dashboardKeys.all, "stats", userId, month] as const,
+  nextCompetition: (userId: string, today: string) =>
+    [...dashboardKeys.all, "nextCompetition", userId, today] as const,
+  unrecordedCompetitions: (userId: string, today: string) =>
+    [...dashboardKeys.all, "unrecordedCompetitions", userId, today] as const,
 } as const;
 
 /**

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -7,11 +7,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
-import { useBestTimesQuery } from "@apps/shared/hooks/queries/records";
-import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
-import { resolveAgeCategory } from "@apps/shared/utils/domesticRecords";
-import { ProfileDisplay, ProfileEditModal, BestTimesTable } from "@/components/profile";
-import { WaPointsInfoTooltip } from "@/components/ui/WaPointsInfoTooltip";
+import { ProfileDisplay, ProfileEditModal } from "@/components/profile";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { ProfileSkeleton } from "@/components/ui/ScreenSkeletons";
@@ -23,14 +19,13 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 /**
  * マイページ画面
- * プロフィール表示・編集、ベストタイム表
+ * プロフィール表示・編集 (ベストタイム表は 2026-11-07 にホームへ移した)
  */
 export const MyPageScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isWaPointsMode, setIsWaPointsMode] = useState(false);
 
   // プロフィールとチーム情報取得
   const {
@@ -44,30 +39,13 @@ export const MyPageScreen: React.FC = () => {
     enableRealtime: false, // モバイルでは一旦無効化
   });
 
-  // ベストタイム取得
-  const {
-    data: bestTimes = [],
-    isLoading: bestTimesLoading,
-    isError: bestTimesError,
-    error: bestTimesErrorObj,
-    refetch: refetchBestTimes,
-  } = useBestTimesQuery(supabase, {
-    userId: user?.id,
-  });
-
-  const isLoading = profileLoading || bestTimesLoading;
+  const isLoading = profileLoading;
   const isError = profileError;
   const error = profileErrorObj;
-  const bestTimesErrorMessage = bestTimesErrorObj
-    ? toUserFacingMessage(bestTimesErrorObj, t("mypage.mobile.bestTimesFetchFailed"))
-    : undefined;
-  // 区分記録基準の初期選択に使う年齢区分 (生年月日そのものは BestTimesTable に渡さない)
-  const ageCategory = useMemo(() => resolveAgeCategory(profile?.birthday), [profile?.birthday]);
-
-  // この画面が依存する全クエリ(プロフィール + ベストタイム)を尽くす
+  // この画面が依存する全クエリ (プロフィール) を尽くす
   const refreshAll = useCallback(async () => {
-    await Promise.allSettled([refetchProfile(), refetchBestTimes()]);
-  }, [refetchProfile, refetchBestTimes]);
+    await Promise.allSettled([refetchProfile()]);
+  }, [refetchProfile]);
 
   // タブ遷移時にデータ再取得
   useRefreshOnFocus(refreshAll);
@@ -134,7 +112,6 @@ export const MyPageScreen: React.FC = () => {
           error={error}
           onRetry={() => {
             refetchProfile();
-            refetchBestTimes();
           }}
           fullScreen
         />
@@ -182,7 +159,6 @@ export const MyPageScreen: React.FC = () => {
         visible={isError}
         onRetry={() => {
           refetchProfile();
-          refetchBestTimes();
         }}
       />
 
@@ -209,56 +185,6 @@ export const MyPageScreen: React.FC = () => {
             </Pressable>
           </View>
           <ProfileDisplay profile={profile} teams={teams} />
-        </View>
-
-        {/* ベストタイムセクション */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Best Time</Text>
-            <View style={styles.bestTimeHeaderActions}>
-              <Pressable
-                style={styles.bulkInputButton}
-                onPress={() => navigation.navigate("BulkBestTime")}
-                accessibilityRole="button"
-                accessibilityLabel={t("mypage.mobile.bulkInputAria")}
-              >
-                <Feather name="upload" size={14} color="#374151" />
-                <Text style={styles.bulkInputButtonText}>{t("mypage.mobile.bulkInput")}</Text>
-              </Pressable>
-              <View style={styles.waToggleWrapper}>
-                <Pressable
-                  testID="best-times-wa-points-toggle-mypage"
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isWaPointsMode }}
-                  style={[styles.waToggleButton, isWaPointsMode && styles.waToggleButtonActive]}
-                  onPress={() => setIsWaPointsMode((prev) => !prev)}
-                >
-                  <Text style={[styles.waToggleText, isWaPointsMode && styles.waToggleTextActive]}>
-                    {t("mypage.bestTimesTable.waPointsToggleShort")}
-                  </Text>
-                </Pressable>
-                <WaPointsInfoTooltip
-                  testID="best-times-wa-info-mypage"
-                  ariaLabel={t("mypage.bestTimesTable.pointsInfoAriaLabel")}
-                  tooltipText={t("mypage.bestTimesTable.pointsInfo")}
-                />
-              </View>
-            </View>
-          </View>
-          {bestTimesError ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>
-                {bestTimesErrorMessage || t("mypage.mobile.bestTimesFetchFailed")}
-              </Text>
-            </View>
-          ) : (
-            <BestTimesTable
-              bestTimes={bestTimes}
-              gender={profile?.gender}
-              isWaPointsMode={isWaPointsMode}
-              ageCategory={ageCategory}
-            />
-          )}
         </View>
       </ScrollView>
 
@@ -319,56 +245,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: "#374151",
-  },
-  bulkInputButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-  },
-  bulkInputButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  bestTimeHeaderActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    flexShrink: 1,
-    gap: 8,
-  },
-  waToggleWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  waToggleButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-  },
-  waToggleButtonActive: {
-    backgroundColor: "#2563EB",
-    borderColor: "#2563EB",
-  },
-  waToggleText: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  waToggleTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "600",
   },
   pageHeader: {
     flexDirection: "row",

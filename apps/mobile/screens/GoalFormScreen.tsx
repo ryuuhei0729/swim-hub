@@ -65,12 +65,15 @@ interface GoalFormState {
   targetTime: number | null;
 }
 
-function createInitialForm(today: string): GoalFormState {
+function createInitialForm(
+  today: string,
+  prefill?: { competitionId?: string; styleId?: number },
+): GoalFormState {
   return {
     competitionMode: "existing",
-    selectedCompetitionId: "",
+    selectedCompetitionId: prefill?.competitionId ?? "",
     newCompetition: { title: "", date: today, endDate: "", place: "", poolType: 0 },
-    styleId: "",
+    styleId: prefill?.styleId ? String(prefill.styleId) : "",
     targetTime: null,
   };
 }
@@ -83,7 +86,8 @@ export const GoalFormScreen: React.FC = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const navigation = useNavigation<NavProp>();
-  const goalId = useRoute<RouteProps>().params?.goalId;
+  const routeParams = useRoute<RouteProps>().params;
+  const goalId = routeParams?.goalId;
   const isEdit = goalId !== undefined;
   const { supabase, user } = useAuth();
   const queryClient = useQueryClient();
@@ -93,7 +97,15 @@ export const GoalFormScreen: React.FC = () => {
   const recordAPI = useMemo(() => new RecordAPI(supabase), [supabase]);
   const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
-  const [form, setForm] = useState<GoalFormState>(() => createInitialForm(today));
+  // 新規作成で大会・種目が渡されていれば、選んだ状態で始める (ホームの次の大会から)
+  const [form, setForm] = useState<GoalFormState>(() =>
+    createInitialForm(
+      today,
+      goalId === undefined
+        ? { competitionId: routeParams?.competitionId, styleId: routeParams?.styleId }
+        : undefined,
+    ),
+  );
   const [isInitialized, setIsInitialized] = useState(!isEdit);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

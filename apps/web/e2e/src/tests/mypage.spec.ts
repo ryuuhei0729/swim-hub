@@ -154,8 +154,9 @@ test.describe("マイページのテスト", () => {
    * ベストタイム一覧が正しく表示
    */
   test("TC-MYPAGE-004: ベストタイム表示", async ({ page }) => {
-    // ステップ1: マイページに移動
-    await page.goto(URLS.MYPAGE);
+    // ステップ1: ダッシュボードに移動
+    // ベストタイム表と一括入力は 2026-11-07 にマイページからダッシュボードへ移した
+    await page.goto(URLS.DASHBOARD);
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
 
@@ -185,8 +186,9 @@ test.describe("マイページのテスト", () => {
    * 一括入力リンクをクリックして遷移
    */
   test("TC-MYPAGE-005: ベストタイム一括入力ページへの遷移", async ({ page }) => {
-    // ステップ1: マイページに移動
-    await page.goto(URLS.MYPAGE);
+    // ステップ1: ダッシュボードに移動
+    // ベストタイム表と一括入力は 2026-11-07 にマイページからダッシュボードへ移した
+    await page.goto(URLS.DASHBOARD);
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
 

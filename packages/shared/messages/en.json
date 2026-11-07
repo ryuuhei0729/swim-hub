@@ -1044,6 +1044,49 @@
       "statusClosed": "Closed",
       "statusAlert": "Entries are {status}, so registration is not available. Proceeding to result entry.",
       "dataLoadError": "Failed to fetch data. Please try again after a moment."
+    },
+    "actionItems": {
+      "title": "Things to do",
+      "count": "{count}",
+      "open": "Show",
+      "close": "Hide",
+      "unansweredAttendance": "Attendance not answered: {count} · {teamName}",
+      "entryOpen": "Entries open · {name} ({date})",
+      "unrecorded": "Results not entered · {name} ({date})"
+    },
+    "nextCompetition": {
+      "title": "Next meet",
+      "daysLater": "days",
+      "today": "Today",
+      "ongoing": "In progress",
+      "columnEvent": "Event",
+      "columnEntryTime": "Entry",
+      "columnBest": "Best",
+      "columnTarget": "Goal",
+      "columnGap": "To goal",
+      "best": "Best {time}",
+      "target": "Goal",
+      "setGoal": "+ Set goal",
+      "setGoalShort": "+ Goal",
+      "achieved": "Achieved",
+      "firstTime": "1st",
+      "noEntriesTitle": "You haven't entered yet",
+      "entryOpen": "Entries are open",
+      "entryBefore": "Entries haven't opened yet",
+      "personalNoEntries": "Add the events you will swim",
+      "enter": "Enter",
+      "registerEvents": "Add events",
+      "noneTitle": "No upcoming meets",
+      "noneDescription": "Add a meet to see the days left, your events and how far you are from your goals",
+      "addCompetition": "+ Add meet",
+      "viewTeamCompetitions": "See team meets",
+      "loadError": "Couldn't load the next meet",
+      "relay": "Relay",
+      "titleWithDate": "Next meet ({date})",
+      "nameWithPool": "{name} ({pool})"
+    },
+    "bestTimes": {
+      "loadError": "Couldn't load best times"
     }
   },
   "practice": {

@@ -1047,6 +1047,49 @@
       "statusClosed": "접수 종료",
       "statusAlert": "엔트리가 {status}이므로 엔트리 등록을 할 수 없습니다. 기록 입력으로 진행합니다.",
       "dataLoadError": "데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
+    },
+    "actionItems": {
+      "title": "확인이 필요한 일",
+      "count": "{count}건",
+      "open": "펼치기",
+      "close": "접기",
+      "unansweredAttendance": "출결 미응답 {count}건 · {teamName}",
+      "entryOpen": "엔트리 접수 중 · {name} ({date})",
+      "unrecorded": "기록 미입력 · {name} ({date})"
+    },
+    "nextCompetition": {
+      "title": "다음 대회",
+      "daysLater": "일 후",
+      "today": "오늘",
+      "ongoing": "진행 중",
+      "columnEvent": "엔트리 종목",
+      "columnEntryTime": "엔트리",
+      "columnBest": "베스트",
+      "columnTarget": "목표",
+      "columnGap": "목표까지",
+      "best": "베스트 {time}",
+      "target": "목표",
+      "setGoal": "+ 목표 설정",
+      "setGoalShort": "+ 목표",
+      "achieved": "달성",
+      "firstTime": "첫",
+      "noEntriesTitle": "아직 엔트리하지 않았습니다",
+      "entryOpen": "엔트리 접수 중",
+      "entryBefore": "엔트리 접수가 아직 시작되지 않았습니다",
+      "personalNoEntries": "출전할 종목을 등록해 두세요",
+      "enter": "엔트리하기",
+      "registerEvents": "종목 등록",
+      "noneTitle": "예정된 대회가 없습니다",
+      "noneDescription": "대회를 등록하면 대회까지 남은 일수, 엔트리 종목, 목표와의 차이가 여기에 표시됩니다",
+      "addCompetition": "+ 대회 등록",
+      "viewTeamCompetitions": "팀 대회 보기",
+      "loadError": "다음 대회를 불러오지 못했습니다",
+      "relay": "계영",
+      "titleWithDate": "다음 대회 ({date})",
+      "nameWithPool": "{name} ({pool})"
+    },
+    "bestTimes": {
+      "loadError": "베스트 타임을 불러오지 못했습니다"
     }
   },
   "practice": {

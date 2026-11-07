@@ -32,10 +32,10 @@ export default function BulkBestTimeError({
             再試行
           </button>
           <a
-            href="/mypage"
+            href="/dashboard"
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
           >
-            マイページに戻る
+            ダッシュボードに戻る
           </a>
         </div>
       </div>

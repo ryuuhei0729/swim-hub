@@ -399,6 +399,38 @@ describe("GoalCreateModal", () => {
     });
   });
 
+  describe("最初から選んでおく大会・種目 (ダッシュボードの次の大会から開くとき)", () => {
+    it("initialCompetitionId / initialStyleId で開くと選ばれた状態で、目標タイムだけ入れれば保存できる", async () => {
+      const user = userEvent.setup();
+      render(
+        <QueryClientProvider client={qc}>
+          <GoalCreateModal
+            isOpen
+            onClose={() => {}}
+            onSuccess={async () => {}}
+            styles={STYLES}
+            initialCompetitionId="c2"
+            initialStyleId={2}
+          />
+        </QueryClientProvider>,
+      );
+      await settle();
+      expect(compSelect()).toHaveValue("c2");
+      // 長水路杯 × 100m Fr のベストが出る = 種目も選ばれている
+      expect(labelText()).toBe(bestLabel("bestTimeLabel", "58.00"));
+      await user.type(targetInput(), "1:00.00");
+      await submit(user);
+      expect(mocks.createGoal).toHaveBeenCalledTimes(1);
+      expect(mocks.createGoal.mock.calls[0]![0]).toMatchObject({ competitionId: "c2", styleId: 2, targetTime: 60 });
+    });
+
+    it("指定が無ければ従来どおり未選択で開く", async () => {
+      await open();
+      expect(compSelect()).toHaveValue("");
+      expect(label()).toBeNull();
+    });
+  });
+
   describe("[SC5] 保存 (大会作成・種目選択・保存失敗時の再送)", () => {
     it("既存大会: createGoal は大会 id・種目・目標タイムで1回呼ばれ、初期タイムと poolType を渡さない", async () => {
       const user = userEvent.setup();

@@ -290,7 +290,8 @@ export default function BulkBestTimeClient({ returnTo }: BulkBestTimeClientProps
     }
   }, [inputs, recordAPI, t]);
 
-  const backPath = isValidReturnTo(returnTo) ? returnTo : "/mypage";
+  // ベストタイム表は 2026-11-07 にマイページからダッシュボードへ移したので、戻り先もダッシュボード
+  const backPath = isValidReturnTo(returnTo) ? returnTo : "/dashboard";
 
   const handleBack = useCallback(() => {
     router.push(backPath);

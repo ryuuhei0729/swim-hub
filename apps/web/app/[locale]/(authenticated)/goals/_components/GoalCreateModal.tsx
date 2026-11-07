@@ -16,6 +16,10 @@ interface GoalCreateModalProps {
   onClose: () => void;
   onSuccess: () => Promise<void>;
   styles: Style[];
+  /** 開いたときに選んでおく大会 (ダッシュボードの次の大会から開くとき) */
+  initialCompetitionId?: string;
+  /** 開いたときに選んでおく種目 */
+  initialStyleId?: number;
 }
 
 /**
@@ -26,6 +30,8 @@ export default function GoalCreateModal({
   onClose,
   onSuccess,
   styles,
+  initialCompetitionId,
+  initialStyleId,
 }: GoalCreateModalProps) {
   const t = useTranslations("goals");
   const tCompetition = useTranslations("forms.competition");
@@ -51,6 +57,16 @@ export default function GoalCreateModal({
     () => Object.fromEntries(teams.map((m) => [m.team_id, m.teams.name])),
     [teams],
   );
+
+  // 開いたときに、呼び出し元が指定した大会・種目を選んでおく
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialCompetitionId) {
+      setCompetitionMode("existing");
+      setSelectedCompetitionId(initialCompetitionId);
+    }
+    if (initialStyleId) setStyleId(String(initialStyleId));
+  }, [isOpen, initialCompetitionId, initialStyleId]);
 
   // 大会一覧を取得（未来の日付のみ、個人大会+所属チームの大会）
   useEffect(() => {

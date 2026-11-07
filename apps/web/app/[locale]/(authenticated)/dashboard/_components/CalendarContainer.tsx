@@ -6,6 +6,13 @@ import CalendarView from "./CalendarView";
 import type { CalendarProps } from "@apps/shared/types/ui";
 import type { CalendarItem, MonthlySummary } from "@apps/shared/types/ui";
 
+/** 外から日付詳細を開く依頼。同じ日でも開き直せるよう seq を進めて渡す */
+export interface OpenDayRequest {
+  /** YYYY-MM-DD */
+  date: string;
+  seq: number;
+}
+
 interface CalendarContainerProps extends Omit<
   CalendarProps,
   "currentDate" | "onCurrentDateChange"
@@ -13,6 +20,7 @@ interface CalendarContainerProps extends Omit<
   initialCalendarItems?: CalendarItem[];
   initialMonthlySummary?: MonthlySummary;
   refreshKey?: number;
+  openDayRequest?: OpenDayRequest | null;
 }
 
 // カレンダーコンテナ（データ管理）
