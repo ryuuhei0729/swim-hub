@@ -8,6 +8,8 @@ const corsHeaders = {
 // --- Types ---
 
 interface RevenueCatEvent {
+  // イベントごとに一意。RevenueCat の再送は同じ id を使う
+  id: string;
   type: string;
   app_user_id: string;
   product_id: string;
@@ -152,14 +154,14 @@ type IdempotencyResult = "ok" | "duplicate" | "error";
 
 async function tryMarkAsProcessed(
   supabase: SupabaseClient,
-  transactionId: string,
+  eventId: string,
   appName: string,
 ): Promise<IdempotencyResult> {
   try {
     const { error } = await supabase
       .from("processed_webhook_events")
       .insert({
-        event_id: `rc_${transactionId}`,
+        event_id: `rc_${eventId}`,
         processed_at: new Date().toISOString(),
       });
 
@@ -307,16 +309,23 @@ export function createRevenueCatWebhookHandler(appName: string) {
         return jsonResponse({ error: "Invalid or missing event.environment" }, 400);
       }
 
+      // 重複判定のキーは event.id (RevenueCat の Webhooks ドキュメントが重複処理に使うよう勧めている)。
+      // transaction_id はストアの取引 ID でイベントごとに一意ではなく、キーにすると別のイベントが処理済みとして捨てられうる
+      if (typeof event.id !== "string" || event.id === "") {
+        console.error(`[${appName}] Invalid or missing event.id:`, event.id);
+        return jsonResponse({ error: "Invalid or missing event.id" }, 400);
+      }
+
       const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-      // Idempotency check: at-most-once processing using transaction_id
-      const idempotencyResult = await tryMarkAsProcessed(supabase, event.transaction_id, appName);
+      // Idempotency check: at-most-once processing using event.id
+      const idempotencyResult = await tryMarkAsProcessed(supabase, event.id, appName);
       if (idempotencyResult === "duplicate") {
-        console.log(`[${appName}] Already processed transaction: ${event.transaction_id}`);
+        console.log(`[${appName}] Already processed event: ${event.id}`);
         return jsonResponse({ received: true, message: "Already processed" });
       }
       if (idempotencyResult === "error") {
-        console.error(`[${appName}] Idempotency check failed for transaction: ${event.transaction_id}`);
+        console.error(`[${appName}] Idempotency check failed for event: ${event.id}`);
         return jsonResponse({ error: "Idempotency check failed" }, 500);
       }
 
