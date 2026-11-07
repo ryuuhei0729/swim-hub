@@ -898,8 +898,8 @@
     "announcements": {
       "title": "Announcements",
       "adminRole": "Admin",
-      "unansweredAttendance": "You have unanswered attendance in the past month. ({count} items)",
-      "unsubmittedEntries": "Unsubmitted entries ({count} items)"
+      "unansweredAttendance": "You have events with unanswered attendance this month. ({count} items)",
+      "unsubmittedEntry": "Your entry for {name} ({date}) has not been submitted."
     },
     "dayDetail": {
       "headerTitleSuffix": " records",

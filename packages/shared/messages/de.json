@@ -901,8 +901,8 @@
     "announcements": {
       "title": "Mitteilungen",
       "adminRole": "Administrator",
-      "unansweredAttendance": "Sie haben im letzten Monat unbeantwortete An-/Abwesenheiten für Trainings oder Wettkämpfe. ({count} Einträge)",
-      "unsubmittedEntries": "Nicht eingereichte Meldungen ({count} Einträge)"
+      "unansweredAttendance": "Diesen Monat gibt es Termine mit unbeantworteter An-/Abwesenheit. ({count} Einträge)",
+      "unsubmittedEntry": "Die Meldung für {name} ({date}) wurde noch nicht eingereicht."
     },
     "dayDetail": {
       "headerTitleSuffix": " – Einträge",

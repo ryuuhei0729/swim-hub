@@ -901,8 +901,8 @@
     "announcements": {
       "title": "のお知らせ",
       "adminRole": "管理者",
-      "unansweredAttendance": "直近1ヶ月で出欠が未回答の練習・大会があります。（{count}件）",
-      "unsubmittedEntries": "エントリー未提出 ({count}件)"
+      "unansweredAttendance": "今月、出欠が未回答のイベントがあります（{count}件）",
+      "unsubmittedEntry": "{name}（{date}）のエントリーが未提出です。"
     },
     "dayDetail": {
       "headerTitleSuffix": "の記録",

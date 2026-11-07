@@ -901,8 +901,8 @@
     "announcements": {
       "title": "님의 알림",
       "adminRole": "관리자",
-      "unansweredAttendance": "최근 1개월 내 출결이 미응답인 연습·대회가 있습니다. ({count}건)",
-      "unsubmittedEntries": "엔트리 미제출 ({count}건)"
+      "unansweredAttendance": "이번 달 출결이 미응답인 이벤트가 있습니다. ({count}건)",
+      "unsubmittedEntry": "{name} ({date}) 엔트리가 미제출입니다."
     },
     "dayDetail": {
       "headerTitleSuffix": "의 기록",

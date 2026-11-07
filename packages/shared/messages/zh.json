@@ -901,8 +901,8 @@
     "announcements": {
       "title": "的通知",
       "adminRole": "管理员",
-      "unansweredAttendance": "近一个月内有尚未回复出勤的训练或比赛。（{count}条）",
-      "unsubmittedEntries": "报名未提交（{count}条）"
+      "unansweredAttendance": "本月有尚未回复出勤的活动。（{count}条）",
+      "unsubmittedEntry": "{name}（{date}）的报名尚未提交。"
     },
     "dayDetail": {
       "headerTitleSuffix": "的记录",
