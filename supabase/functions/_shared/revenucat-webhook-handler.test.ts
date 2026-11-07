@@ -1,6 +1,6 @@
-// RevenueCat webhook の課金通知メール (Resend) のテスト。
+// RevenueCat webhook の課金通知メール (Resend) と重複判定のキー (event.id) のテスト。
 //
-// notifyBillingEmail は export していないため、`globalThis.fetch` を差し替えて
+// ハンドラ内部の関数は export していないため、`globalThis.fetch` を差し替えて
 // Supabase (PostgREST) と Resend の両方を横取りし、ハンドラ全体を通した振る舞いとして検証する。
 //
 // 実行方法:
@@ -45,7 +45,7 @@ interface ResendCall {
 }
 
 interface FetchMockOptions {
-  /** processed_webhook_events への INSERT の応答 */
+  /** processed_webhook_events への INSERT の応答。省略時は event_id の主キー制約を再現する */
   onMarkProcessed?: () => Response;
   /** user_subscriptions の SELECT (.single()) の応答 */
   onSelectSubscription?: () => Response;
@@ -58,6 +58,7 @@ interface FetchMockOptions {
 function installFetchMock(opts: FetchMockOptions = {}): {
   resendCalls: ResendCall[];
   updateCalls: number;
+  insertedEventIds: string[];
   restore: () => void;
 } {
   const original = globalThis.fetch;
@@ -66,7 +67,7 @@ function installFetchMock(opts: FetchMockOptions = {}): {
   // ハンドラは正常系でも console.log、エラー経路では console.error を出すので黙らせる
   console.log = () => {};
   console.error = () => {};
-  const state = { resendCalls: [] as ResendCall[], updateCalls: 0 };
+  const state = { resendCalls: [] as ResendCall[], updateCalls: 0, insertedEventIds: [] as string[] };
 
   globalThis.fetch = (async (input: Request | string | URL, init?: RequestInit) => {
     const req = input instanceof Request ? input : new Request(input, init);
@@ -82,7 +83,11 @@ function installFetchMock(opts: FetchMockOptions = {}): {
     }
 
     if (url.pathname === "/rest/v1/processed_webhook_events" && req.method === "POST") {
-      return opts.onMarkProcessed?.() ?? new Response(null, { status: 201 });
+      const { event_id } = JSON.parse(await req.text()) as { event_id: string };
+      if (opts.onMarkProcessed) return opts.onMarkProcessed();
+      if (state.insertedEventIds.includes(event_id)) return jsonError(409, "23505");
+      state.insertedEventIds.push(event_id);
+      return new Response(null, { status: 201 });
     }
 
     if (url.pathname === "/rest/v1/user_subscriptions" && req.method === "GET") {
@@ -110,6 +115,9 @@ function installFetchMock(opts: FetchMockOptions = {}): {
     get updateCalls() {
       return state.updateCalls;
     },
+    get insertedEventIds() {
+      return state.insertedEventIds;
+    },
     restore: () => {
       globalThis.fetch = original;
       console.log = originalLog;
@@ -120,6 +128,7 @@ function installFetchMock(opts: FetchMockOptions = {}): {
 
 function makeEvent(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
+    id: "evt_1",
     type: "INITIAL_PURCHASE",
     app_user_id: "11111111-2222-3333-4444-555555555555",
     product_id: "swimhub_premium_monthly",
@@ -322,3 +331,76 @@ Deno.test("Resend への fetch が例外を投げても webhook は 200 を返�
     restoreEnv();
   }
 });
+
+// --- 重複判定のキー (event.id) ---
+
+Deno.test("重複判定のキーは rc_ + event.id", async () => {
+  const restoreEnv = withEnv(BASE_ENV);
+  const mock = installFetchMock();
+  try {
+    const res = await handler(makeRequest(makeEvent({ id: "evt_abc" })));
+    assertEquals(res.status, 200);
+    assertEquals(mock.insertedEventIds, ["rc_evt_abc"]);
+  } finally {
+    mock.restore();
+    restoreEnv();
+  }
+});
+
+Deno.test("transaction_id が同じでも id が違う後続イベント (購入→解約) は両方処理して両方通知する", async () => {
+  const restoreEnv = withEnv(BASE_ENV);
+  const mock = installFetchMock();
+  try {
+    const purchase = await handler(makeRequest(makeEvent({ id: "evt_purchase" })));
+    const cancel = await handler(
+      makeRequest(makeEvent({ id: "evt_cancel", type: "CANCELLATION", price_in_purchased_currency: 0 })),
+    );
+    assertEquals(purchase.status, 200);
+    assertEquals(cancel.status, 200);
+    assertEquals(await cancel.json(), { received: true });
+    assertEquals(mock.updateCalls, 2);
+    assertEquals(
+      mock.resendCalls.map((c) => c.body.subject),
+      ["【課金】[iOS] 新規購入 swimhub_premium_monthly", "【課金】[iOS] 解約 swimhub_premium_monthly"],
+    );
+  } finally {
+    mock.restore();
+    restoreEnv();
+  }
+});
+
+Deno.test("同じ id の再送は処理済みとして DB 更新も通知もしない", async () => {
+  const restoreEnv = withEnv(BASE_ENV);
+  const mock = installFetchMock();
+  try {
+    const first = await handler(makeRequest(makeEvent({ id: "evt_retry" })));
+    const retry = await handler(makeRequest(makeEvent({ id: "evt_retry" })));
+    assertEquals(first.status, 200);
+    assertEquals(retry.status, 200);
+    assertEquals(await retry.json(), { received: true, message: "Already processed" });
+    assertEquals(mock.updateCalls, 1);
+    assertEquals(mock.resendCalls.length, 1);
+  } finally {
+    mock.restore();
+    restoreEnv();
+  }
+});
+
+for (const [label, id] of [["無い", undefined], ["空文字", ""], ["文字列でない", 123]] as const) {
+  Deno.test(`event.id が${label}ときは 400 を返し、DB に何も書かない`, async () => {
+    const restoreEnv = withEnv(BASE_ENV);
+    const mock = installFetchMock();
+    try {
+      const event = makeEvent({ id });
+      if (id === undefined) delete event.id;
+      const res = await handler(makeRequest(event));
+      assertEquals(res.status, 400);
+      assertEquals(mock.insertedEventIds.length, 0);
+      assertEquals(mock.updateCalls, 0);
+      assertEquals(mock.resendCalls.length, 0);
+    } finally {
+      mock.restore();
+      restoreEnv();
+    }
+  });
+}
