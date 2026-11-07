@@ -141,7 +141,6 @@ export const DashboardScreen: React.FC = () => {
   // DayDetailModal の編集/削除/追加ハンドラ（練習履歴/大会記録履歴タブと共通）
   const {
     isDeleting,
-    setIsDeleting,
     handleEntryPress,
     handleAddPractice,
     handleAddRecord,
@@ -264,7 +263,6 @@ export const DashboardScreen: React.FC = () => {
           onEditCompetition={handleEditCompetition}
           onDeleteCompetition={handleDeleteCompetition}
           isDeleting={isDeleting}
-          onDeletingChange={setIsDeleting}
         />
       )}
     </SafeAreaView>
