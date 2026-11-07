@@ -330,7 +330,6 @@ export const PracticesScreen: React.FC<PracticesScreenProps> = ({ embedded }) =>
   // DayDetailModal の編集/削除/追加ハンドラ（ダッシュボードと共通）
   const {
     isDeleting,
-    setIsDeleting,
     handleEntryPress,
     handleAddPractice,
     handleAddRecord,
@@ -531,7 +530,6 @@ export const PracticesScreen: React.FC<PracticesScreenProps> = ({ embedded }) =>
           onEditCompetition={handleEditCompetition}
           onDeleteCompetition={handleDeleteCompetition}
           isDeleting={isDeleting}
-          onDeletingChange={setIsDeleting}
         />
       )}
     </SafeAreaView>

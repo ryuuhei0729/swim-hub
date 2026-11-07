@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { ScrollView, StyleSheet, RefreshControl } from "react-native";
+import { ScrollView, StyleSheet, RefreshControl, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { addMonths, subMonths, format as formatDate } from "date-fns";
+import { addMonths, parseISO, subMonths, format as formatDate } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,10 +16,19 @@ import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { CalendarSkeleton } from "@/components/ui/ScreenSkeletons";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calendarColors";
-import { announcementKeys, notificationKeys } from "@apps/shared/hooks/queries/keys";
+import {
+  announcementKeys,
+  dashboardKeys,
+  notificationKeys,
+  recordKeys,
+  userKeys,
+} from "@apps/shared/hooks/queries/keys";
 import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
 import { TeamAnnouncementsSection } from "@/components/dashboard/TeamAnnouncementsSection";
+import { ActionItemsSection } from "@/components/dashboard/ActionItemsSection";
+import { NextCompetitionCard } from "@/components/dashboard/NextCompetitionCard";
+import { DashboardBestTimesSection } from "@/components/dashboard/DashboardBestTimesSection";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useExpiredGoalCheck } from "@/hooks/useExpiredGoalCheck";
@@ -35,7 +44,7 @@ const DEFAULT_CALENDAR_COLOR_SETTINGS: CalendarColorSettings = {
 
 /**
  * ダッシュボード画面
- * チームのお知らせとカレンダー(練習・大会)を表示
+ * 対応が必要なこと・次の大会・カレンダー(練習・大会)・ベストタイム・チームのお知らせを表示
  */
 export const DashboardScreen: React.FC = () => {
   const { supabase, user } = useAuth();
@@ -92,8 +101,9 @@ export const DashboardScreen: React.FC = () => {
     return entries.filter((item) => item.date === dateKey);
   }, [selectedDate, entries]);
 
-  // この画面と子孫(TeamAnnouncementsSection配下のTeamCard/useUnansweredAttendancesQuery等)が
-  // 依存する全クエリを尽くす。announcements/notifications は子孫が queryKey を握っているため
+  // この画面と子孫(ActionItemsSection・NextCompetitionCard・DashboardBestTimesSection・
+  // TeamAnnouncementsSection配下のTeamCard)が依存する全クエリを尽くす。
+  // announcements/notifications/dashboard は子孫が queryKey を握っているため
   // refetch を直接呼べず、queryClient.invalidateQueries で狙う
   // (子孫の query observer は announcements が0件でも active のまま維持されるため確実に再取得される)
   const refreshAll = useCallback(async () => {
@@ -103,8 +113,12 @@ export const DashboardScreen: React.FC = () => {
       refetchColorSettings(),
       queryClient.invalidateQueries({ queryKey: announcementKeys.lists() }),
       queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all }),
+      queryClient.invalidateQueries({ queryKey: recordKeys.bestTimes(user?.id) }),
+      // ベストタイム表の WA ポイント・区分記録に使う性別と生年月日
+      queryClient.invalidateQueries({ queryKey: userKeys.currentProfile() }),
     ]);
-  }, [refetch, refetchTeams, refetchColorSettings, queryClient]);
+  }, [refetch, refetchTeams, refetchColorSettings, queryClient, user?.id]);
 
   // タブ遷移時にデータ再取得
   useRefreshOnFocus(refreshAll);
@@ -138,10 +152,17 @@ export const DashboardScreen: React.FC = () => {
     setShowDayDetail(true);
   };
 
+  // 次の大会のカードから、その大会日の詳細を開く。
+  // 詳細の中身は表示中の月のカレンダーデータから取るので、カレンダーもその月へ移す
+  const handleOpenCompetitionDay = (date: string) => {
+    const day = parseISO(date);
+    setCurrentDate(day);
+    handleDateClick(day);
+  };
+
   // DayDetailModal の編集/削除/追加ハンドラ（練習履歴/大会記録履歴タブと共通）
   const {
     isDeleting,
-    setIsDeleting,
     handleEntryPress,
     handleAddPractice,
     handleAddRecord,
@@ -199,18 +220,26 @@ export const DashboardScreen: React.FC = () => {
         }
       >
         <StaleDataBanner visible={isError && hasCachedEntries} onRetry={() => refetch()} />
-        <TeamAnnouncementsSection teams={teams} />
-        <CalendarView
-          currentDate={currentDate}
-          entries={entries}
-          isLoading={isLoading}
-          onDateClick={handleDateClick}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          onTodayClick={handleTodayClick}
-          onMonthYearSelect={handleMonthYearSelect}
-          colorSettings={colorSettings}
+        <ActionItemsSection teams={teams} />
+        <NextCompetitionCard
+          hasTeams={teams.some((m) => m.status === "approved" && m.is_active)}
+          onOpenDay={handleOpenCompetitionDay}
         />
+        <View style={styles.calendar}>
+          <CalendarView
+            currentDate={currentDate}
+            entries={entries}
+            isLoading={isLoading}
+            onDateClick={handleDateClick}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+            onTodayClick={handleTodayClick}
+            onMonthYearSelect={handleMonthYearSelect}
+            colorSettings={colorSettings}
+          />
+        </View>
+        <DashboardBestTimesSection />
+        <TeamAnnouncementsSection teams={teams} />
       </ScrollView>
 
       {/* 期限切れ目標の振り返り (優先) */}
@@ -264,7 +293,6 @@ export const DashboardScreen: React.FC = () => {
           onEditCompetition={handleEditCompetition}
           onDeleteCompetition={handleDeleteCompetition}
           isDeleting={isDeleting}
-          onDeletingChange={setIsDeleting}
         />
       )}
     </SafeAreaView>
@@ -282,5 +310,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 8,
     paddingBottom: 16,
+  },
+  calendar: {
+    marginTop: 12,
   },
 });

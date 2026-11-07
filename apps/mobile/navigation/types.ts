@@ -162,8 +162,11 @@ export type MainStackParamList = {
   PracticeLogTemplates: undefined;
   BulkBestTime: undefined;
   GoalDetail: { goalId: string };
-  /** goalId あり = 編集、なし = 新規作成 */
-  GoalForm: { goalId?: string };
+  /**
+   * goalId あり = 編集、なし = 新規作成。
+   * 新規作成のとき competitionId / styleId を渡すと、その大会・種目を選んだ状態で開く (ホームの次の大会から)
+   */
+  GoalForm: { goalId?: string; competitionId?: string; styleId?: number };
   /** milestoneId あり = 編集、なし = 新規作成 */
   MilestoneForm: { goalId: string; milestoneId?: string };
   Paywall: undefined;

@@ -140,7 +140,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
   onEditCompetition,
   onDeleteCompetition,
   isDeleting = false,
-  onDeletingChange,
 }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
@@ -387,7 +386,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                               }
                             }}
                             onEditEntry={onEditEntry}
-                            onDeleteEntry={onDeleteEntry}
                             onAddRecord={(compId: string, dateParam: string) => {
                               if (onAddRecord) {
                                 onAddRecord(compId, dateParam);
@@ -395,7 +393,6 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({
                               }
                             }}
                             onClose={onClose}
-                            onDeletingChange={onDeletingChange}
                           />
                         );
                       },

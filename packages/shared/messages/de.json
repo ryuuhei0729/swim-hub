@@ -901,8 +901,8 @@
     "announcements": {
       "title": "Mitteilungen",
       "adminRole": "Administrator",
-      "unansweredAttendance": "Sie haben im letzten Monat unbeantwortete An-/Abwesenheiten für Trainings oder Wettkämpfe. ({count} Einträge)",
-      "unsubmittedEntries": "Nicht eingereichte Meldungen ({count} Einträge)"
+      "unansweredAttendance": "Diesen Monat gibt es Termine mit unbeantworteter An-/Abwesenheit. ({count} Einträge)",
+      "unsubmittedEntry": "Die Meldung für {name} ({date}) wurde noch nicht eingereicht."
     },
     "dayDetail": {
       "headerTitleSuffix": " – Einträge",
@@ -1047,6 +1047,49 @@
       "statusClosed": "Geschlossen",
       "statusAlert": "Die Meldung ist {status}, daher ist keine Registrierung möglich. Es wird mit der Ergebniseingabe fortgefahren.",
       "dataLoadError": "Daten konnten nicht abgerufen werden. Bitte versuchen Sie es später erneut."
+    },
+    "actionItems": {
+      "title": "Zu erledigen",
+      "count": "{count}",
+      "open": "Anzeigen",
+      "close": "Ausblenden",
+      "unansweredAttendance": "Anwesenheit offen: {count} · {teamName}",
+      "entryOpen": "Meldung offen · {name} ({date})",
+      "unrecorded": "Ergebnisse fehlen · {name} ({date})"
+    },
+    "nextCompetition": {
+      "title": "Nächster Wettkampf",
+      "daysLater": "Tage",
+      "today": "Heute",
+      "ongoing": "Läuft",
+      "columnEvent": "Strecke",
+      "columnEntryTime": "Meldezeit",
+      "columnBest": "Bestzeit",
+      "columnTarget": "Ziel",
+      "columnGap": "Bis zum Ziel",
+      "best": "Bestzeit {time}",
+      "target": "Ziel",
+      "setGoal": "+ Ziel festlegen",
+      "setGoalShort": "+ Ziel",
+      "achieved": "Erreicht",
+      "firstTime": "Neu",
+      "noEntriesTitle": "Noch nicht gemeldet",
+      "entryOpen": "Meldung ist offen",
+      "entryBefore": "Die Meldung hat noch nicht begonnen",
+      "personalNoEntries": "Trage die Strecken ein, die du schwimmst",
+      "enter": "Melden",
+      "registerEvents": "Strecken eintragen",
+      "noneTitle": "Keine anstehenden Wettkämpfe",
+      "noneDescription": "Füge einen Wettkampf hinzu, um die verbleibenden Tage, deine Strecken und den Abstand zu deinen Zielen zu sehen",
+      "addCompetition": "+ Wettkampf hinzufügen",
+      "viewTeamCompetitions": "Team-Wettkämpfe ansehen",
+      "loadError": "Der nächste Wettkampf konnte nicht geladen werden",
+      "relay": "Staffel",
+      "titleWithDate": "Nächster Wettkampf ({date})",
+      "nameWithPool": "{name} ({pool})"
+    },
+    "bestTimes": {
+      "loadError": "Bestzeiten konnten nicht geladen werden"
     }
   },
   "practice": {

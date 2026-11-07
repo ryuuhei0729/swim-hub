@@ -557,7 +557,6 @@ export const RecordsScreen: React.FC<RecordsScreenProps> = ({ embedded }) => {
   // DayDetailModal の編集/削除/追加ハンドラ（ダッシュボードと共通）
   const {
     isDeleting,
-    setIsDeleting,
     handleEntryPress,
     handleAddPractice,
     handleAddRecord,
@@ -807,7 +806,6 @@ export const RecordsScreen: React.FC<RecordsScreenProps> = ({ embedded }) => {
           onEditCompetition={handleEditCompetition}
           onDeleteCompetition={handleDeleteCompetition}
           isDeleting={isDeleting}
-          onDeletingChange={setIsDeleting}
         />
       )}
 

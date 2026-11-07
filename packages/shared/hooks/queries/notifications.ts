@@ -2,7 +2,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useQuery } from "@tanstack/react-query";
-import { addMonths, format } from "date-fns";
+import { endOfMonth, format } from "date-fns";
 import { notificationKeys } from "./keys";
 
 export interface UnansweredAttendance {
@@ -28,7 +28,7 @@ interface TeamInfo {
 }
 
 /**
- * 出欠未回答の練習・大会を取得するクエリ
+ * 今日から今月末までの、出欠未回答の練習・大会を取得するクエリ
  */
 export function useUnansweredAttendancesQuery(
   supabase: SupabaseClient,
@@ -41,9 +41,8 @@ export function useUnansweredAttendancesQuery(
     queryKey: notificationKeys.unanswered(userId ?? "", teamIds),
     queryFn: async () => {
       const now = new Date();
-      const oneMonthLater = addMonths(now, 1);
       const startDateStr = format(now, "yyyy-MM-dd");
-      const endDateStr = format(oneMonthLater, "yyyy-MM-dd");
+      const endDateStr = format(endOfMonth(now), "yyyy-MM-dd");
 
       // 全チームを並列で処理
       const results = await Promise.all(

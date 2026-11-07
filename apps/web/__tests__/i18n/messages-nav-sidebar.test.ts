@@ -116,7 +116,7 @@ describe("[V-C1-01] Phase 1-C-1 追加 namespace の存在確認", () => {
 // 対象コンポーネント:
 //   DashboardStats.tsx       → stats の title / unit
 //   CalendarHeader.tsx       → "カレンダー" / "今日" ボタン
-//   TeamAnnouncementsSection → "のお知らせ" / "管理者" / "直近1ヶ月..." / "エントリー未提出"
+//   TeamAnnouncementsSection → "のお知らせ" / "管理者" / "今月、出欠が..." / "…のエントリーが未提出です。"
 //   DayDetailModal.tsx       → "の記録" / "大会記録を追加" / "練習記録を追加" 等
 //   DeleteConfirmModal.tsx   → "記録を削除" / "本当に削除しますか？" / "削除" / "キャンセル"
 // ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ describe("[V-C1-02a] dashboard namespace の必須キー確認", () => {
     "dashboard.announcements.title",
     "dashboard.announcements.adminRole",
     "dashboard.announcements.unansweredAttendance",
-    "dashboard.announcements.unsubmittedEntries",
+    "dashboard.announcements.unsubmittedEntry",
     // DayDetailModal (空状態)
     "dashboard.dayDetail.addRecord",
     "dashboard.dayDetail.addPractice",
@@ -498,7 +498,7 @@ describe("[V-C1-04] Phase 1-B 以前の必須キーのリグレッション防�
 //
 // 検証対象キー (プレースホルダーを含む可能性が高いキー):
 //   - dashboard.announcements.unansweredAttendance  → {count}件 のような形式
-//   - dashboard.announcements.unsubmittedEntries    → {count}件 のような形式
+//   - dashboard.announcements.unsubmittedEntry      → {name}（{date}）のような形式
 //   - onboarding.step2.validation.nameTooLong       → {max}文字以内
 // ---------------------------------------------------------------------------
 
@@ -509,7 +509,7 @@ describe("[V-C1-05] ICU Message Format プレースホルダーの ja/en 対称�
    */
   const ICU_KEYS_TO_CHECK = [
     "dashboard.announcements.unansweredAttendance",
-    "dashboard.announcements.unsubmittedEntries",
+    "dashboard.announcements.unsubmittedEntry",
     "onboarding.step2.validation.nameTooLong",
     "onboarding.step2.bioCharCount",
   ] as const;

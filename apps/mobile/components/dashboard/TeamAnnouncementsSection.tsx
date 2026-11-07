@@ -1,20 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { parseISO, isValid } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { formatDateTime } from "@apps/shared/utils/date";
 import { useDateLocale } from "@/hooks/useDateLocale";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useTeamAnnouncementsQuery } from "@apps/shared/hooks/queries/announcements";
-import {
-  useUnansweredAttendancesQuery,
-  useUnsubmittedEntriesQuery,
-} from "@apps/shared/hooks/queries/notifications";
-import { formatDate } from "@apps/shared/utils/date";
 import type { TeamMembershipWithUser, TeamAnnouncement } from "@swim-hub/shared/types";
-import type { MainStackParamList } from "@/navigation/types";
 import {
   resolveIsTruncated,
   resolveNumberOfLines,
@@ -24,39 +16,19 @@ import { cardSurface } from "@/constants/theme";
 
 const ANNOUNCEMENT_CONTENT_MAX_LINES = 2;
 
-type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
-
 interface TeamAnnouncementsSectionProps {
   teams: TeamMembershipWithUser[];
 }
 
 /**
  * ダッシュボード用チームのお知らせセクション
- * 各チームのお知らせ・出欠未回答・エントリー未提出を表示
+ * 各チームのお知らせを表示する。出欠未回答・エントリー未提出は ActionItemsSection に出す
  */
 export const TeamAnnouncementsSection: React.FC<TeamAnnouncementsSectionProps> = ({ teams }) => {
-  const { supabase, user } = useAuth();
-  const navigation = useNavigation<NavigationProp>();
+  const { supabase } = useAuth();
 
   // 承認済みチームのみ
   const approvedTeams = teams.filter((t) => t.status === "approved" && t.is_active);
-
-  // notification hooks expect { team_id, team?: { name } } shape
-  const teamsForNotifications = approvedTeams.map((t) => ({
-    team_id: t.team_id,
-    team: t.teams ? { name: t.teams.name } : undefined,
-  }));
-
-  const { data: unansweredAttendances = [] } = useUnansweredAttendancesQuery(
-    supabase,
-    user?.id,
-    teamsForNotifications,
-  );
-  const { data: unsubmittedEntries = [] } = useUnsubmittedEntriesQuery(
-    supabase,
-    user?.id,
-    teamsForNotifications,
-  );
 
   if (approvedTeams.length === 0) {
     return null;
@@ -65,16 +37,7 @@ export const TeamAnnouncementsSection: React.FC<TeamAnnouncementsSectionProps> =
   return (
     <View style={styles.container}>
       {approvedTeams.map((membership) => (
-        <TeamCard
-          key={membership.team_id}
-          membership={membership}
-          unansweredAttendances={unansweredAttendances.filter(
-            (a) => a.teamId === membership.team_id,
-          )}
-          unsubmittedEntries={unsubmittedEntries.filter((e) => e.teamId === membership.team_id)}
-          navigation={navigation}
-          supabase={supabase}
-        />
+        <TeamCard key={membership.team_id} membership={membership} supabase={supabase} />
       ))}
     </View>
   );
@@ -82,30 +45,10 @@ export const TeamAnnouncementsSection: React.FC<TeamAnnouncementsSectionProps> =
 
 interface TeamCardProps {
   membership: TeamMembershipWithUser;
-  unansweredAttendances: Array<{
-    teamId: string;
-    eventId: string;
-    eventType: string;
-    eventName: string;
-    eventDate: string;
-  }>;
-  unsubmittedEntries: Array<{
-    teamId: string;
-    competitionId: string;
-    competitionName: string;
-    competitionDate: string;
-  }>;
-  navigation: NavigationProp;
   supabase: ReturnType<typeof useAuth>["supabase"];
 }
 
-const TeamCard: React.FC<TeamCardProps> = ({
-  membership,
-  unansweredAttendances,
-  unsubmittedEntries,
-  navigation,
-  supabase,
-}) => {
+const TeamCard: React.FC<TeamCardProps> = ({ membership, supabase }) => {
   const { t } = useTranslation();
   const teamId = membership.team_id;
   const teamName = membership.teams?.name || t("teams.mobile.fallbackTeamName");
@@ -116,10 +59,8 @@ const TeamCard: React.FC<TeamCardProps> = ({
     enableRealtime: false,
   });
 
-  const hasNotifications = unansweredAttendances.length > 0 || unsubmittedEntries.length > 0;
-
-  // 何も表示するものがなければスキップ
-  if (!hasNotifications && announcements.length === 0) {
+  // お知らせが無ければスキップ
+  if (announcements.length === 0) {
     return null;
   }
 
@@ -132,56 +73,12 @@ const TeamCard: React.FC<TeamCardProps> = ({
         )}
       </View>
 
-      {/* 出欠未回答 */}
-      {unansweredAttendances.length > 0 && (
-        <Pressable
-          style={styles.notificationItem}
-          onPress={() =>
-            navigation.navigate("MainTabs", {
-              screen: "Teams",
-              params: { teamId, initialTab: "attendance", asMember: true },
-            })
-          }
-        >
-          <Text style={styles.notificationText}>
-            {t("dashboard.announcements.unansweredAttendance", { count: unansweredAttendances.length })}
-          </Text>
-        </Pressable>
-      )}
-
-      {/* エントリー未提出 */}
-      {unsubmittedEntries.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("dashboard.announcements.unsubmittedEntries", { count: unsubmittedEntries.length })}</Text>
-          {unsubmittedEntries.map((entry) => (
-            <Pressable
-              key={entry.competitionId}
-              style={styles.notificationItem}
-              onPress={() =>
-                navigation.navigate("CompetitionTabForm", {
-                  competitionId: entry.competitionId,
-                  date: entry.competitionDate,
-                  initialTab: "entry",
-                })
-              }
-            >
-              <Text style={styles.notificationText}>
-                {entry.competitionName}{" "}
-                <Text style={styles.dateText}>({formatDate(entry.competitionDate, "short")})</Text>
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-
       {/* お知らせ */}
-      {announcements.length > 0 && (
-        <View style={[styles.section, hasNotifications && styles.sectionBorder]}>
-          {announcements.map((announcement) => (
-            <AnnouncementItem key={announcement.id} announcement={announcement} />
-          ))}
-        </View>
-      )}
+      <View style={styles.section}>
+        {announcements.map((announcement) => (
+          <AnnouncementItem key={announcement.id} announcement={announcement} />
+        ))}
+      </View>
     </View>
   );
 };
@@ -294,31 +191,6 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: 4,
-  },
-  sectionBorder: {
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-    paddingTop: 12,
-    marginTop: 12,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-  },
-  notificationItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  notificationText: {
-    fontSize: 14,
-    color: "#2563EB",
-    lineHeight: 20,
-  },
-  dateText: {
-    color: "#6B7280",
   },
   announcementItem: {
     paddingVertical: 10,
