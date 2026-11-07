@@ -3,8 +3,12 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts";
-import CalendarContainer from "../_components/CalendarContainer";
+import CalendarContainer, { type OpenDayRequest } from "../_components/CalendarContainer";
 import TeamAnnouncementsSection from "../_components/TeamAnnouncementsSection";
+import ActionItemsSection from "../_components/ActionItemsSection";
+import NextCompetitionCard from "../_components/NextCompetitionCard";
+import DashboardBestTimesCard from "../_components/DashboardBestTimesCard";
+import GoalCreateModal from "@/app/[locale]/(authenticated)/goals/_components/GoalCreateModal";
 import ReflectionModal from "@/app/[locale]/(authenticated)/goals/_components/ReflectionModal";
 import GoalReflectionModal from "@/app/[locale]/(authenticated)/goals/_components/GoalReflectionModal";
 import { GoalAPI } from "@apps/shared/api/goals";
@@ -32,13 +36,14 @@ import {
 import { EntryAPI } from "@apps/shared/api";
 import type { TeamMembership, Team, Style, PracticeTag } from "@apps/shared/types";
 import type { CalendarItem, MonthlySummary } from "@apps/shared/types/ui";
-import { notificationKeys } from "@apps/shared/hooks/queries/keys";
+import { dashboardKeys, notificationKeys } from "@apps/shared/hooks/queries/keys";
 import { usePracticeStore } from "@/stores/practice/practiceStore";
 import { useCompetitionStore } from "@/stores/competition/competitionStore";
 import { useUIStore } from "@/stores/ui/uiStore";
 import { FormModals } from "./FormModals";
 import { useDashboardHandlers } from "../_hooks/useDashboardHandlers";
 import { useCalendarHandlers } from "../_hooks/useCalendarHandlers";
+import { useDashboardRefreshOnSave } from "../_hooks/useDashboardRefreshOnSave";
 
 interface DashboardClientProps {
   // サーバー側で取得したデータ
@@ -64,9 +69,19 @@ export default function DashboardClient({
   const [expiredGoal, setExpiredGoal] = useState<GoalWithMilestones | null>(null);
   const [expiredMilestone, setExpiredMilestone] = useState<Milestone | null>(null);
   const hasCheckedExpiredRef = useRef(false);
+  // 次の大会の「目標を設定」から開く目標作成。null は閉じている
+  const [goalCreateTarget, setGoalCreateTarget] = useState<{
+    competitionId?: string;
+    styleId: number;
+  } | null>(null);
+  // 次の大会のカードから、その日の詳細をカレンダーに開かせる (seq を進めると同じ日でも開き直す)
+  const [openDayRequest, setOpenDayRequest] = useState<OpenDayRequest | null>(null);
 
   // Zustandストア
   const { calendarRefreshKey, refreshCalendar } = useUIStore();
+
+  // 保存でカレンダーが取り直されたら、ダッシュボードの各ブロックとベストタイムも取り直す
+  useDashboardRefreshOnSave(calendarRefreshKey, user?.id);
 
   const {
     editingData,
@@ -311,6 +326,7 @@ export default function DashboardClient({
   ) => {
     await originalHandleEntrySubmit(entriesData);
     queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
   };
 
   // エントリー削除時に通知を再読み込み
@@ -329,6 +345,7 @@ export default function DashboardClient({
     if (itemType === "entry") {
       queryClient.invalidateQueries({ queryKey: notificationKeys.all });
     }
+    queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
   };
 
   // カレンダーイベントハンドラー
@@ -359,26 +376,64 @@ export default function DashboardClient({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="w-full">
-        {/* チームのお知らせセクション */}
-        <TeamAnnouncementsSection teams={teams} openEntryLogForm={openEntryLogForm} />
+      <div className="w-full space-y-4">
+        {/* 対応が必要なこと (出欠の未回答・エントリー受付中・記録の未入力) */}
+        <ActionItemsSection
+          teams={teams}
+          openEntryLogForm={openEntryLogForm}
+          onAddRecord={(competitionId) => void onAddRecord({ competitionId })}
+        />
 
-        {/* カレンダーコンポーネント */}
-        <CalendarContainer
-          refreshKey={calendarRefreshKey}
-          initialCalendarItems={initialCalendarItems}
-          initialMonthlySummary={initialMonthlySummary}
-          onDateClick={onDateClick}
-          onAddItem={onAddItem}
-          onEditItem={onEditItem}
-          onDeleteItem={onDeleteCalendarItem}
-          onAddPracticeLog={onAddPracticeLog}
-          onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
-          onEditPracticeLog={onEditPracticeLog}
-          onDeletePracticeLog={onDeletePracticeLog}
-          onAddRecord={onAddRecord}
-          onEditRecord={onEditRecord}
-          onDeleteRecord={onDeleteRecord}
+        {/* ベストタイム表はマイページと同じ表で横幅が要るので、横並びは 2xl 以上だけ */}
+        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 2xl:items-start">
+          <NextCompetitionCard
+            hasTeams={teams.length > 0}
+            openEntryLogForm={openEntryLogForm}
+            onAddCompetition={() => onAddItem(new Date(), "record")}
+            onSetGoal={setGoalCreateTarget}
+            onOpenDay={(date) => setOpenDayRequest((prev) => ({ date, seq: (prev?.seq ?? 0) + 1 }))}
+          />
+          <DashboardBestTimesCard />
+        </div>
+
+        {/* カレンダーとチームのお知らせ。お知らせが無いときはカレンダーが全幅になる */}
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
+          <div className="min-w-0 flex-1">
+            <CalendarContainer
+              refreshKey={calendarRefreshKey}
+              initialCalendarItems={initialCalendarItems}
+              initialMonthlySummary={initialMonthlySummary}
+              onDateClick={onDateClick}
+              onAddItem={onAddItem}
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteCalendarItem}
+              onAddPracticeLog={onAddPracticeLog}
+              onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
+              onEditPracticeLog={onEditPracticeLog}
+              onDeletePracticeLog={onDeletePracticeLog}
+              onAddRecord={onAddRecord}
+              onEditRecord={onEditRecord}
+              onDeleteRecord={onDeleteRecord}
+              openDayRequest={openDayRequest}
+            />
+          </div>
+          <TeamAnnouncementsSection teams={teams} />
+        </div>
+
+        {/* 次の大会の「目標を設定」から開く */}
+        <GoalCreateModal
+          isOpen={goalCreateTarget !== null}
+          onClose={() => setGoalCreateTarget(null)}
+          initialCompetitionId={goalCreateTarget?.competitionId}
+          initialStyleId={goalCreateTarget?.styleId}
+          onSuccess={async () => {
+            setGoalCreateTarget(null);
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: dashboardKeys.all }),
+              queryClient.invalidateQueries({ queryKey: goalKeys.all }),
+            ]);
+          }}
+          styles={styles}
         />
 
         {/* フォームモーダル */}

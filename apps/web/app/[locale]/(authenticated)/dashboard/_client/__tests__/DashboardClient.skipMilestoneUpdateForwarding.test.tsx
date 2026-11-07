@@ -127,6 +127,13 @@ vi.mock("../../_components/TeamAnnouncementsSection", () => ({
   default: () => null,
 }));
 vi.mock("../FormModals", () => ({ FormModals: () => null }));
+vi.mock("../../_components/ActionItemsSection", () => ({ __esModule: true, default: () => null }));
+vi.mock("../../_components/NextCompetitionCard", () => ({ __esModule: true, default: () => null }));
+vi.mock("../../_components/DashboardBestTimesCard", () => ({ __esModule: true, default: () => null }));
+vi.mock("@/app/[locale]/(authenticated)/goals/_components/GoalCreateModal", () => ({
+  __esModule: true,
+  default: () => null,
+}));
 vi.mock("@/app/[locale]/(authenticated)/goals/_components/ReflectionModal", () => ({
   __esModule: true,
   default: () => null,

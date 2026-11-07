@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
-import { useUserQuery, userKeys, useBestTimesQuery } from "@apps/shared/hooks";
+import { useUserQuery, userKeys } from "@apps/shared/hooks";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { teamKeys } from "@apps/shared/hooks/queries/keys";
-import { resolveAgeCategory } from "@apps/shared/utils/domesticRecords";
 import { useQueryClient } from "@tanstack/react-query";
-import { TrophyIcon, DocumentArrowUpIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
-import BestTimesTable from "@/components/profile/BestTimesTable";
+import { Cog6ToothIcon } from "@heroicons/react/24/outline";
 import ProfileDisplay from "@/components/profile/ProfileDisplay";
 import ProfileEditModal from "@/components/profile/ProfileEditModal";
 import dynamic from "next/dynamic";
@@ -18,34 +16,6 @@ import dynamic from "next/dynamic";
 const TeamCreateModal = dynamic(() => import("@/components/team/TeamCreateModal"));
 const TeamJoinModal = dynamic(() => import("@/components/team/TeamJoinModal"));
 import type { UserUpdate } from "@apps/shared/types";
-
-interface BestTime {
-  id: string;
-  time: number;
-  created_at: string | null;
-  pool_type: number; // 0: 短水路, 1: 長水路
-  is_relaying: boolean;
-  note?: string;
-  style: {
-    name_jp: string;
-    distance: number;
-  };
-  competition?: {
-    title: string | null;
-    date: string;
-  };
-  // 引き継ぎありのタイム（オプショナル）
-  relayingTime?: {
-    id: string;
-    time: number;
-    created_at: string | null;
-    note?: string;
-    competition?: {
-      title: string | null;
-      date: string;
-    };
-  };
-}
 
 interface UserProfile {
   id: string;
@@ -60,13 +30,12 @@ interface UserProfile {
 interface MyPageClientProps {
   // サーバー側で取得したデータ
   initialProfile: UserProfile | null;
-  initialBestTimes: BestTime[];
 }
 
 /**
  * マイページのインタラクティブ部分を担当するClient Component
  */
-export default function MyPageClient({ initialProfile, initialBestTimes }: MyPageClientProps) {
+export default function MyPageClient({ initialProfile }: MyPageClientProps) {
   const t = useTranslations("mypage");
   const { user, supabase } = useAuth();
   const queryClient = useQueryClient();
@@ -77,10 +46,6 @@ export default function MyPageClient({ initialProfile, initialBestTimes }: MyPag
 
   // チーム一覧を取得（React Queryで管理）
   const { teams = [] } = useTeamsQuery(supabase);
-  // ベストタイム取得（React Queryでユーザーごとにキャッシュ管理）
-  const { data: bestTimes = initialBestTimes } = useBestTimesQuery(supabase, {
-    userId: user?.id,
-  });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
   const [isJoinTeamModalOpen, setIsJoinTeamModalOpen] = useState(false);
@@ -98,9 +63,6 @@ export default function MyPageClient({ initialProfile, initialBestTimes }: MyPag
       }
     : null;
 
-  // 年齢別ポイント比較用の区分。生の birthday はテーブルコンポーネントへ渡さない
-  // (必要なのは区分だけ。生年月日は gender より機微度が高い)
-  const ageCategory = useMemo(() => resolveAgeCategory(profile?.birthday), [profile?.birthday]);
 
   const handleProfileUpdate = useCallback(
     async (updatedProfile: Partial<UserProfile>) => {
@@ -221,25 +183,6 @@ export default function MyPageClient({ initialProfile, initialBestTimes }: MyPag
               onJoinTeam={() => setIsJoinTeamModalOpen(true)}
             />
           )}
-        </div>
-
-        {/* ベストタイム表 */}
-        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-          <div className="flex flex-row items-center justify-between mb-4">
-            <div className="flex items-center space-x-1.5 sm:space-x-2">
-              <TrophyIcon className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
-              <h2 className="text-base sm:text-2xl font-semibold text-gray-900">{t("bestTime.title")}</h2>
-            </div>
-            <Link
-              href="/bulk-besttime"
-              className="inline-flex items-center justify-center px-2 sm:px-3 py-1 sm:py-2 border border-gray-300 rounded-md shadow-sm text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              <DocumentArrowUpIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
-              {t("bulkInput")}
-            </Link>
-          </div>
-
-          <BestTimesTable bestTimes={bestTimes} gender={profile?.gender} ageCategory={ageCategory} />
         </div>
       </div>
 

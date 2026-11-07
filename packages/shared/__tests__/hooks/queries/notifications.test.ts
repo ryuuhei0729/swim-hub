@@ -23,13 +23,17 @@
  *   のに加えて、(b) 日付文字列を実際に比較してフィルタする専用の軽量モック
  *   (`createDateFilterableSupabase`) を自前で用意し、過去日が本当にデータから
  *   除外されること・今日/未来日が実際に残ることを「返り値」で検証する。
- * - 日付は `new Date()` からの相対 (subDays/addDays) で生成し、固定日付をハードコードしない。
+ * - useUnsubmittedEntriesQuery の日付は `new Date()` からの相対 (subDays/addDays) で生成する。
+ *   月末境界を見る useUnansweredAttendancesQuery だけは setSystemTime で今日を固定する。
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { waitFor } from "@testing-library/react";
 import { addDays, format, subDays } from "date-fns";
-import { useUnsubmittedEntriesQuery } from "../../../hooks/queries/notifications";
+import {
+  useUnansweredAttendancesQuery,
+  useUnsubmittedEntriesQuery,
+} from "../../../hooks/queries/notifications";
 import { renderQueryHook } from "../../utils/test-utils";
 
 const NOW = new Date();
@@ -45,11 +49,6 @@ interface CompetitionRow {
   entry_status: string;
 }
 
-interface EntryRow {
-  competition_id: string;
-  user_id: string;
-}
-
 interface FilterCall {
   table: string;
   method: string;
@@ -57,18 +56,15 @@ interface FilterCall {
 }
 
 /**
- * `.eq()`/`.gte()`/`.in()` を実際にデータへ適用する軽量 Supabase モック。
+ * `.eq()`/`.gte()`/`.lte()`/`.in()` を実際にデータへ適用する軽量 Supabase モック。
  * 共有モック (`createMockQueryBuilder`) と異なり、フィルタが呼ばれた時点で
  * 保持データを実際に絞り込む。`.order()` は date 昇順ソートのみ簡易対応する。
  */
-function createDateFilterableSupabase(tables: {
-  competitions: CompetitionRow[];
-  entries: EntryRow[];
-}) {
+function createDateFilterableSupabase(tables: Record<string, object[]>) {
   const calls: FilterCall[] = [];
 
-  const from = vi.fn((table: "competitions" | "entries") => {
-    let rows: Record<string, unknown>[] = [...(tables[table] as unknown as Record<string, unknown>[])];
+  const from = vi.fn((table: string) => {
+    let rows = [...((tables[table] ?? []) as Record<string, unknown>[])];
 
     const builder: Record<string, unknown> = {};
     const record = (method: string, args: unknown[]) => calls.push({ table, method, args });
@@ -82,6 +78,11 @@ function createDateFilterableSupabase(tables: {
     builder.gte = vi.fn((col: string, val: unknown) => {
       record("gte", [col, val]);
       rows = rows.filter((r) => (r[col] as string) >= (val as string));
+      return builder;
+    });
+    builder.lte = vi.fn((col: string, val: unknown) => {
+      record("lte", [col, val]);
+      rows = rows.filter((r) => (r[col] as string) <= (val as string));
       return builder;
     });
     builder.in = vi.fn((col: string, vals: unknown[]) => {
@@ -227,5 +228,47 @@ describe("useUnsubmittedEntriesQuery (Reviewer C-1 再評価)", () => {
     const gteCall = calls.find((c) => c.table === "competitions" && c.method === "gte");
     expect(gteCall, ".gte が competitions クエリで呼ばれていない").toBeDefined();
     expect(gteCall?.args).toEqual(["date", TODAY_STR]);
+  });
+});
+
+describe("useUnansweredAttendancesQuery (集計範囲は今日から今月末まで)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("今日から今月末までの未回答だけを返し、翌月1日以降と昨日以前は含めない", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 28, 9, 0, 0));
+
+    const practice = (id: string, date: string) => ({
+      id,
+      title: "練習",
+      date,
+      team_id: "team-1",
+      attendance_status: "open",
+    });
+    const { supabase, calls } = createDateFilterableSupabase({
+      practices: [
+        practice("p-yesterday", "2026-11-27"),
+        practice("p-today", "2026-11-28"),
+        practice("p-month-end", "2026-11-30"),
+        practice("p-next-month", "2026-12-01"),
+      ],
+      competitions: [],
+      team_attendance: [],
+    });
+
+    const { result } = renderQueryHook(() =>
+      useUnansweredAttendancesQuery(supabase, "user-1", TEAMS),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect((result.current.data ?? []).map((d) => d.eventId)).toEqual(["p-today", "p-month-end"]);
+    const lteCalls = calls.filter((c) => c.method === "lte").map((c) => [c.table, ...c.args]);
+    expect(lteCalls).toEqual([
+      ["practices", "date", "2026-11-30"],
+      ["competitions", "date", "2026-11-30"],
+    ]);
   });
 });

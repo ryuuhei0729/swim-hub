@@ -158,8 +158,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
   },
   content: {
     flexDirection: "row",
@@ -177,8 +177,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   todayButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#2563EB",
@@ -190,8 +190,8 @@ const styles = StyleSheet.create({
     color: "#2563EB",
   },
   navButton: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
@@ -203,8 +203,8 @@ const styles = StyleSheet.create({
   },
   monthYearButton: {
     minWidth: 100,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
     alignItems: "center",
   },

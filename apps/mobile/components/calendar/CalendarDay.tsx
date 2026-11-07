@@ -230,7 +230,8 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
 const styles = StyleSheet.create({
   dayContainer: {
     width: "100%",
-    minHeight: 80,
+    flexGrow: 1,
+    minHeight: 56,
     padding: 4,
     borderRightWidth: 0.5,
     borderBottomWidth: 0.5,
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   dayNumber: {
     fontSize: 10,
@@ -313,6 +314,5 @@ const styles = StyleSheet.create({
   moreEntriesText: {
     fontSize: 8,
     color: "#6B7280",
-    marginTop: 2,
   },
 });

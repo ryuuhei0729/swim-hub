@@ -1,28 +1,25 @@
-Dieses Update bringt die Tabs „Ranglisten“ und „Einstellungen“ für Teams und erleichtert die stellvertretende Eingabe von Ergebnissen deutlich.
+Dieses Update bringt eine Zielverwaltung, eine neue Tab-Leiste und ein überarbeitetes Design.
 
 NEU
-- Tab „Ranglisten“ für Teams: nach Disziplin, Strecke, Bahnlänge, Geschlecht und Zeitraum filtern und die Platzierungen im Team sowie Staffel-Ranglisten einsehen. „Nach WA-Punkten vergleichen“ befindet sich jetzt ebenfalls hier
-- Tab „Einstellungen“ für Teams: Teaminfos, Einladungscode und die Kalenderfarbe des Teams an einem Ort ansehen und ändern
-- Team-Admins können Mitglieder als „Nicht-Schwimmer“ markieren. Sie werden in der Bestzeitenliste eingeklappt und bei Wettkampfmeldungen und Trainingsergebnissen nicht mehr zur Auswahl angeboten, erscheinen aber weiterhin in der Anwesenheit
-- Schaltfläche „Bestzeit übernehmen“ bei der Wettkampfmeldung; auf den Bildschirmen zur stellvertretenden Eingabe werden die Bestzeiten der Mitglieder angezeigt
-- Schaltfläche „Sammelregistrierung“ in den Wettkampf- und Trainingslisten des Teams für Admins
+- Tab „Ziele“: für jeden Wettkampf Disziplin und Zielzeit festlegen und den Abstand zur aktuellen Bestzeit sowie die verbleibenden Tage bis zum Wettkampf sehen
+- Meilensteine für jedes Ziel in drei Typen: „Trainingszeit-Ziel“, „Circle-in-Ziel“ und „Sonstiges“
+- Wird ein Ergebnis eingetragen, das einen Meilenstein erfüllt, fragt die App nach, ob er erreicht wurde. Meilensteine lassen sich in der Liste auch selbst als erledigt oder offen markieren
+- „Goal-Set-Zielzeitrechner“ beim Erstellen von Meilensteinen: berechnet aus der Zielzeit über 100m die Durchschnittszeit, die im Training angestrebt werden sollte
+- Ist ein Wettkampf oder eine Frist vorbei, lassen sich Ziele und Meilensteine beim Öffnen des Startbildschirms rückblickend bewerten
+- Bei der Eingabe von Wettkampfergebnissen und Meldungen wird die Zielzeit der Disziplin angezeigt
+- Tab „Ziele“ im Team für Admins: Ziele und Fortschritt der Mitglieder einsehen
 
 VERBESSERT
-- Neu gestaltete stellvertretende Ergebniseingabe: Disziplin wählen und Ergebnisse in einem eigenen Tab pro Schwimmer eingeben, inklusive weiterer Läufe pro Schwimmer
-- Die Mitgliederauswahl nutzt jetzt Chips, mit Überschriften nach Geschlecht und Gruppe sowie „Alle auswählen“
-- Die stellvertretende Eingabe von Trainingsprotokollen nutzt denselben Bildschirm wie die eigenen Trainingsprotokolle
-- Ergebnisse und Meldungen aus dem Teams-Tab nutzen dieselben Bildschirme wie das Dashboard; gemeldete Disziplinen werden automatisch in die Ergebniseingabe übernommen
-- Die Wettkampfergebnisse des Teams zeigen jede Staffel als Gruppe von vier Schwimmern
-- Wer nur einem Team angehört, gelangt über den Teams-Tab direkt zum Team; der Teamname steht in der Kopfzeile
-- Beim Tippen auf eine Kalenderkarte wird nur dieses Training bzw. Ergebnis angezeigt, und die Detailansicht passt sich dem Inhalt an
-- Team-Wettkämpfe und -Trainings können nur noch von Admins im Teams-Tab bearbeitet oder gelöscht werden
-- Die Tastatur verdeckt in Formularen keine Eingabefelder mehr, und die Animationen der Dialoge sind einheitlich
-- Verständlichere Fehlermeldungen
+- Die Tab-Leiste nutzt jetzt das Standard-Design des Systems, unter iOS 26 mit Liquid Glass
+- Training und Wettkämpfe sind jetzt im Tab „Einträge“ zusammengefasst und lassen sich oben umschalten
+- Der Teams-Tab öffnet das eigene Team direkt. Über „Team wechseln“ geht es zu anderen Teams, und das zuletzt geöffnete Team wird gespeichert
+- Überarbeitetes Design in der ganzen App mit einheitlichen Hintergründen, Karten und Farben für Bearbeiten- und Löschen-Symbole
+- Beim Laden wird ein Platzhalter im Layout des Bildschirms angezeigt, nach dem Speichern erscheint unten „Gespeichert“
+- Schaltflächen und Karten reagieren beim Antippen, Tabs und Listen werden sanft eingeblendet
+- Vor dem Löschen ausgefüllter Tabs oder Zeilen und beim Verlassen eines Bildschirms mit ungespeicherten Änderungen wird nachgefragt
+- Besser bei schwachem Empfang und offline: Die App zeigt an, wenn keine Verbindung möglich ist, zeigt weiterhin den zuletzt geladenen Stand, und erneutes Speichern erzeugt keine doppelten Einträge
 
 BEHOBEN
-- „Nach WA-Punkten vergleichen“ im Tab „Mitglieder“ zeigte keinen Inhalt
-- „Neues Tag erstellen“ in Trainingsprotokollen öffnete sich manchmal nicht
-- Bestzeit-Details zeigen jetzt Wettkampfname und Anmerkungen gemeinsam an
-- Das NEW-Badge bei Bestzeiten richtet sich jetzt nach dem Wettkampfdatum statt nach dem Eintragsdatum
-- Die Zeit des ersten Staffelschwimmers erschien in den Wettkampfergebnissen des Teams als Einzeldisziplin
-- Nach dem Speichern eines Ergebnisses oder einer Meldung im Teams-Tab ging es zurück zur Teamliste statt zum Team
+- Wurde die Zeit eines vorhandenen Ergebnisses gelöscht und gespeichert, konnten andere Angaben wie Zwischenzeiten verloren gehen
+- Beim Erstellen eines Trainingsmenüs aus einer Vorlage konnten andere Menüs geleert werden
+- Beim Öffnen der App ohne Verbindung konnte erneut die Ersteinrichtung angezeigt werden

@@ -24,7 +24,7 @@ import type { TabFeatherIcon, TabVisual } from "./tabBarTypes";
  *
  * react-native-screens のネイティブタブ (React Navigation 7 の
  * `@react-navigation/bottom-tabs/unstable`) を使う。
- * - iOS 26 以降: 半透明の Liquid Glass のバーになり、スクロールで小さくなる
+ * - iOS 26 以降: 半透明の Liquid Glass のバーになる (スクロールでは小さくしない)
  * - iOS 18 以前: 標準の UITabBar
  * - Android: Material 3 の BottomNavigationView (選択中はピルで示す)
  * アイコンは両 OS とも Feather と同じ形の PNG (assets/icons/tabs)。iOS の SF Symbols は
@@ -63,8 +63,8 @@ export const tabNavigatorScreenOptions = {
   tabBarInactiveTintColor: "#6B7280",
   // 既定 (iOS は medium) だとラベルが太く見えるので通常の太さにする
   tabBarLabelStyle: { fontWeight: "400", fontSize: 10 },
-  // iOS 26: 下へスクロールしている間はバーを小さくして、一覧を広く見せる
-  tabBarMinimizeBehavior: "onScrollDown",
+  // iOS 26: スクロールしてもバーを小さくしない (2026-11-07 ユーザー指定。以前は onScrollDown)
+  tabBarMinimizeBehavior: "never",
   // Android (Material 3): 選択中のタブの背後に出るピルの色
   tabBarActiveIndicatorColor: "#DBEAFE",
   // Android (Material 3): 既定 (auto) は 4 タブ以上だと選択中しかラベルを出さないので、常に出す

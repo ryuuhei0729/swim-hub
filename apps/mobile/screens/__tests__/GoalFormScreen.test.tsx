@@ -30,7 +30,7 @@ const h = vi.hoisted(() => ({
   goBack: vi.fn(),
   dispatch: vi.fn(),
   preventRemove: { prevent: false as boolean, cb: null as null | ((a: { data: { action: unknown } }) => void) },
-  params: {} as { goalId?: string },
+  params: {} as { goalId?: string; competitionId?: string; styleId?: number },
   supabase: {},
   user: { id: "u1" },
   pickDate: "2099-12-31",
@@ -194,6 +194,32 @@ describe("大会の選択肢の表記 (2026-10-15 ユーザー指定: 日付を�
     expect(options.some((o) => / - \d{4}\//.test(o ?? ""))).toBe(false);
     fireEvent.click(Array.from(document.querySelectorAll('[data-testid="sheet"] button')).find((b) => b.textContent === "2099/11/01 短水路杯")!);
     expect(screen.getByText("2099/11/01 短水路杯")).toBeTruthy();
+  });
+});
+
+describe("ホームの次の大会から開く (大会・種目を選んだ状態で始める)", () => {
+  it("params の competitionId / styleId が選ばれた状態で開き、目標タイムだけで作成できる", async () => {
+    h.params = { competitionId: "c2", styleId: 1 };
+    renderScreen();
+    await flush();
+    expect(screen.getByText("2099/12/01 長水路杯")).toBeTruthy();
+    expect(document.querySelector('[data-value="1"]')).not.toBeNull();
+    // 何も触っていなければ「変更を破棄しますか」の対象にしない (初期値が比較元)
+    expect(h.preventRemove.prevent).toBe(false);
+    typeInto("goal-target-time", "1:00.00");
+    await submit();
+    expect(h.createGoal).toHaveBeenCalledTimes(1);
+    expect(h.createGoal.mock.calls[0]![0]).toMatchObject({ competitionId: "c2", styleId: 1, targetTime: 60 });
+  });
+
+  it("styleId だけなら種目だけが選ばれ、大会は未選択のまま (開催中の大会から来たとき)", async () => {
+    h.params = { styleId: 1 };
+    renderScreen();
+    await flush();
+    expect(document.querySelector('[data-value="1"]')).not.toBeNull();
+    typeInto("goal-target-time", "1:00.00");
+    await submit();
+    expect(h.createGoal).not.toHaveBeenCalled();
   });
 });
 

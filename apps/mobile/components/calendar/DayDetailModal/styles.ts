@@ -664,7 +664,6 @@ export const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: "#FED7AA",
-    marginTop: 12,
   },
   entrySectionHeader: {
     flexDirection: "row",
@@ -703,32 +702,15 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FED7AA",
   },
-  entryCardContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  entryCardInfo: {
-    flex: 1,
-    gap: 6,
-  },
-  entryCardInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  entryCardInfoLabel: {
+  entryCardStyleName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#9A3412",
-    minWidth: 100,
-  },
-  entryCardInfoValue: {
-    fontSize: 14,
-    fontWeight: "500",
     color: "#111827",
-    flex: 1,
+  },
+  entryCardEntryTime: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#9A3412",
   },
   entryCardInfoValueTime: {
     fontSize: 14,
@@ -736,14 +718,10 @@ export const styles = StyleSheet.create({
     color: "#111827",
     fontFamily: "monospace",
   },
-  entryCardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginLeft: 8,
-  },
-  entryCardDeleteButton: {
-    padding: 4,
+  entryCardNote: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginTop: 4,
   },
   competitionHeaderPlaceRow: {
     flexDirection: "row",
@@ -754,11 +732,6 @@ export const styles = StyleSheet.create({
   competitionHeaderPlace: {
     fontSize: 12,
     color: "#6B7280",
-  },
-  competitionHeaderPoolType: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
   },
   competitionNoteContainer: {
     backgroundColor: "#F9FAFB",

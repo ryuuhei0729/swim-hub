@@ -901,8 +901,8 @@
     "announcements": {
       "title": "的通知",
       "adminRole": "管理员",
-      "unansweredAttendance": "近一个月内有尚未回复出勤的训练或比赛。（{count}条）",
-      "unsubmittedEntries": "报名未提交（{count}条）"
+      "unansweredAttendance": "本月有尚未回复出勤的活动。（{count}条）",
+      "unsubmittedEntry": "{name}（{date}）的报名尚未提交。"
     },
     "dayDetail": {
       "headerTitleSuffix": "的记录",
@@ -1047,6 +1047,49 @@
       "statusClosed": "报名已截止",
       "statusAlert": "报名{status}，无法进行报名登记。将进入成绩录入。",
       "dataLoadError": "获取数据失败，请稍后重试。"
+    },
+    "actionItems": {
+      "title": "待处理事项",
+      "count": "{count}项",
+      "open": "展开",
+      "close": "收起",
+      "unansweredAttendance": "出勤未回复 {count}项 · {teamName}",
+      "entryOpen": "报名中 · {name} ({date})",
+      "unrecorded": "成绩未录入 · {name} ({date})"
+    },
+    "nextCompetition": {
+      "title": "下一场比赛",
+      "daysLater": "天后",
+      "today": "今天",
+      "ongoing": "进行中",
+      "columnEvent": "报名项目",
+      "columnEntryTime": "报名成绩",
+      "columnBest": "最佳",
+      "columnTarget": "目标",
+      "columnGap": "距目标",
+      "best": "最佳 {time}",
+      "target": "目标",
+      "setGoal": "+ 设定目标",
+      "setGoalShort": "+ 目标",
+      "achieved": "已达成",
+      "firstTime": "首",
+      "noEntriesTitle": "尚未报名",
+      "entryOpen": "报名中",
+      "entryBefore": "报名尚未开始",
+      "personalNoEntries": "先登记要参加的项目吧",
+      "enter": "报名",
+      "registerEvents": "登记项目",
+      "noneTitle": "暂无即将进行的比赛",
+      "noneDescription": "登记比赛后，这里会显示距比赛的天数、报名项目以及与目标的差距",
+      "addCompetition": "+ 登记比赛",
+      "viewTeamCompetitions": "查看团队比赛",
+      "loadError": "无法加载下一场比赛",
+      "relay": "接力",
+      "titleWithDate": "下一场比赛（{date}）",
+      "nameWithPool": "{name}（{pool}）"
+    },
+    "bestTimes": {
+      "loadError": "无法加载最佳成绩"
     }
   },
   "practice": {

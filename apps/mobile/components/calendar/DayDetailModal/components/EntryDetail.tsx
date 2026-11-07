@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, Pressable, Alert } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
-import { EntryAPI } from "@apps/shared/api/entries";
 import type { CalendarItem } from "@apps/shared/types/ui";
 import { hexToRgba, mixWithWhite, CALENDAR_COLOR_ALPHA } from "@apps/shared/utils/colorAlpha";
-import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import { darkenHex } from "@/utils/colorTone";
 import { styles } from "../styles";
 import type { EntryDetailProps, EntryData } from "../types";
@@ -38,10 +36,8 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
   onEditCompetition,
   onDeleteCompetition,
   onEditEntry,
-  onDeleteEntry,
   onAddRecord,
   onClose,
-  onDeletingChange,
 }) => {
   // 未カスタマイズなら旧来のカード外枠を維持。カスタム色時は「濃すぎる」フィードバックを
   // 受け、枠線はベタ塗りではなく淡いアルファ合成にする。
@@ -63,7 +59,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
     ? LEGACY_ENTRY_BOX_BORDER
     : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
   const entryBoxTextColor = isDefaultAccent ? LEGACY_ENTRY_BOX_TEXT : darkenHex(color, 0.65);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { supabase } = useAuth();
   const [actualEntries, setActualEntries] = useState<EntryData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,11 +142,20 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
     fetchEntries();
   }, [fetchEntries]);
 
-  const getPoolTypeText = (poolType: number) => {
-    return poolType === 1
-      ? t("dashboard.competition.poolTypeLong")
-      : t("dashboard.competition.poolTypeShort");
-  };
+  // 「新宿コズミックセンター（短水路）」のように会場と水路を1行で出す。
+  // 括弧は ja のみ全角 (styleOptions.ts の formatStyleDisplay と同じ言語判定)。
+  const poolTypeText =
+    poolType === undefined
+      ? null
+      : poolType === 1
+        ? t("common.poolTypeLong")
+        : t("common.poolTypeShort");
+  const isJa = (i18n.language ?? "").toLowerCase().startsWith("ja");
+  const placeLine = !poolTypeText
+    ? (place ?? "")
+    : isJa
+      ? `${place ?? ""}（${poolTypeText}）`
+      : [place, `(${poolTypeText})`].filter(Boolean).join(" ");
 
   // エントリーが0件で読み込み完了した場合は、コンポーネント全体を非表示にする
   if (!loading && actualEntries.length === 0) {
@@ -217,14 +222,11 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
             )}
           </View>
         </View>
-        {place && (
+        {placeLine !== "" && (
           <View style={styles.competitionHeaderPlaceRow}>
             <Feather name="map-pin" size={12} color="#6B7280" />
-            <Text style={styles.competitionHeaderPlace}>{place}</Text>
+            <Text style={styles.competitionHeaderPlace}>{placeLine}</Text>
           </View>
-        )}
-        {poolType !== undefined && (
-          <Text style={styles.competitionHeaderPoolType}>{getPoolTypeText(poolType)}</Text>
         )}
       </View>
 
@@ -286,82 +288,23 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
           <View style={styles.entryList}>
             {actualEntries.map((entry) => (
               <View key={entry.id} style={[styles.entryCard, { borderColor: entryBoxBorderColor }]}>
-                <View style={styles.entryCardContent}>
-                  <View style={styles.entryCardInfo}>
-                    <View style={styles.entryCardInfoRow}>
-                      <Text style={[styles.entryCardInfoLabel, { color: entryBoxTextColor }]}>
-                        {t("dashboard.dayDetail.fieldStyle")}
+                {/* 「100m自由形（エントリー 54.97）」。括弧は ja のみ全角 */}
+                <Text style={styles.entryCardStyleName}>
+                  {entry.styleName}
+                  {entry.entryTime != null && entry.entryTime > 0 && (
+                    <Text style={[styles.entryCardEntryTime, { color: entryBoxTextColor }]}>
+                      {isJa ? "（" : " ("}
+                      {t("dashboard.dayDetail.entryTypeLabel.entry")}{" "}
+                      <Text style={styles.entryCardInfoValueTime}>
+                        {formatTime(entry.entryTime)}
                       </Text>
-                      <Text style={styles.entryCardInfoValue}>{entry.styleName}</Text>
-                    </View>
-                    {entry.entryTime && entry.entryTime > 0 && (
-                      <View style={styles.entryCardInfoRow}>
-                        <Text style={[styles.entryCardInfoLabel, { color: entryBoxTextColor }]}>
-                          {t("dashboard.dayDetail.fieldEntryTime")}
-                        </Text>
-                        <Text style={styles.entryCardInfoValueTime}>
-                          {formatTime(entry.entryTime)}
-                        </Text>
-                      </View>
-                    )}
-                    {entry.note && entry.note.trim().length > 0 && (
-                      <View style={styles.entryCardInfoRow}>
-                        <Text style={[styles.entryCardInfoLabel, { color: entryBoxTextColor }]}>
-                          {t("dashboard.dayDetail.fieldMemo")}
-                        </Text>
-                        <Text style={styles.entryCardInfoValue}>{entry.note}</Text>
-                      </View>
-                    )}
-                  </View>
-                  {onDeleteEntry && (
-                    <Pressable
-                      style={styles.entryCardDeleteButton}
-                      onPress={async () => {
-                        Alert.alert(
-                          t("dashboard.dayDetail.entryDeleteConfirmTitle"),
-                          t("dashboard.dayDetail.entryDeleteConfirmMessage"),
-                          [
-                            {
-                              text: t("common.cancel"),
-                              style: "cancel",
-                            },
-                            {
-                              text: t("common.upload.removeChoice"),
-                              style: "destructive",
-                              onPress: async () => {
-                                onDeletingChange?.(true);
-                                try {
-                                  const api = new EntryAPI(supabase);
-                                  await api.deleteEntry(entry.id);
-                                  // 削除後にエントリー一覧を再取得
-                                  await fetchEntries();
-                                  // 親コンポーネントに削除完了を通知
-                                  if (onDeleteEntry) {
-                                    onDeleteEntry(entry.id);
-                                  }
-                                } catch (error) {
-                                  console.error("削除エラー:", error);
-                                  Alert.alert(
-                                    t("common.alertErrorTitle"),
-                                    toUserFacingMessage(
-                                      error,
-                                      t("dashboard.dayDetail.entryDeleteFailed"),
-                                    ),
-                                    [{ text: "OK" }],
-                                  );
-                                } finally {
-                                  onDeletingChange?.(false);
-                                }
-                              },
-                            },
-                          ],
-                        );
-                      }}
-                    >
-                      <Feather name="trash-2" size={16} color="#EF4444" />
-                    </Pressable>
+                      {isJa ? "）" : ")"}
+                    </Text>
                   )}
-                </View>
+                </Text>
+                {entry.note && entry.note.trim().length > 0 && (
+                  <Text style={styles.entryCardNote}>{entry.note}</Text>
+                )}
               </View>
             ))}
           </View>
@@ -381,7 +324,7 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
             }
           }}
         >
-          <Feather name="plus" size={20} color="#FFFFFF" />
+          <Feather name="plus" size={20} color="#111827" />
           <Text style={styles.addCompetitionRecordButtonText}>{t("dashboard.dayDetail.addCompetitionRecord")}</Text>
         </Pressable>
       )}

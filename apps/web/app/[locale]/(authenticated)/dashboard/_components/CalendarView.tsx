@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import type { OpenDayRequest } from "./CalendarContainer";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
@@ -37,7 +38,14 @@ export default function CalendarView({
   onDeleteRecord,
   isLoading: propLoading = false,
   userId: propUserId,
-}: Omit<CalendarProps, "currentDate" | "onCurrentDateChange">) {
+  openDayRequest,
+}: Omit<CalendarProps, "currentDate" | "onCurrentDateChange"> & {
+  /**
+   * 外 (ダッシュボードの次の大会) からこの日の詳細を開く依頼。seq が変わるたびに1回開く。
+   * 表示中の月と違えばその月へ移る (詳細の中身は表示中の月のデータから取るため)
+   */
+  openDayRequest?: OpenDayRequest | null;
+}) {
   const router = useRouter();
   const t = useTranslations("dashboard");
   const { supabase, user } = useAuth();
@@ -151,6 +159,18 @@ export default function CalendarView({
     setCurrentDate(newDate);
     // setCurrentDate内で自動的にデータ再取得が実行されるため、refetch()は不要
   };
+
+  // 処理済みの依頼の seq。setCurrentDate は currentDate が変わるたびに作り直される
+  // (CalendarProvider の useCallback の依存) ので、依存配列だけに頼ると月を移すたびに開き直す
+  const handledOpenDaySeqRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!openDayRequest || handledOpenDaySeqRef.current === openDayRequest.seq) return;
+    handledOpenDaySeqRef.current = openDayRequest.seq;
+    const date = parseISO(openDayRequest.date);
+    setCurrentDate(date);
+    setSelectedDate(date);
+    setShowDayDetail(true);
+  }, [openDayRequest, setCurrentDate]);
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);

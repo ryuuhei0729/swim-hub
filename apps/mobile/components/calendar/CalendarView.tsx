@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
   weekdayCell: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 3,
     alignItems: "center",
   },
   weekdayText: {
