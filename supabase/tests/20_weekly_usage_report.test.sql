@@ -45,7 +45,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(122);
+select plan(127);
 
 -- -----------------------------------------------------------------------------
 -- ヘルパー (rollback で消える)
@@ -118,15 +118,15 @@ delete from public.weekly_usage_reports where week_start = '2026-10-31';
 --   17 u_teamlog (チーム練習のログだけ。管理者の一括編集で週内に作り直された選手) /
 --   18 u_rebuild (J 節でチーム練習のログを週内の時刻で作り直す選手) / 19 u_plog (個人練習のログだけ) /
 --   37 c6 (コホート。7日以内の行動はチーム練習のログだけ) / 38 c7 (コホート。7日以内の行動は個人練習のログだけ) /
---   41-46 a1-a6 (app_daily_usage) / 51-69 s1-s19 (課金。s13 は W の初回集計の後で有料になる)
+--   41-46 a1-a6 (app_daily_usage) / 51-71 s1-s21 (課金。s13 は W の初回集計の後で有料になる)
 insert into auth.users (id, email)
 select public.qa_u(n), 'qa-wr-' || n || '@example.test'
 from unnest(array[1,2,3,4,5,6,7,8,9,10, 11,12,13,14,15,16,17,18,19, 21,22,23,24,25,26, 31,32,34,35,36,37,38,
-                  41,42,43,44,45,46, 51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69]) as n;
+                  41,42,43,44,45,46, 51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71]) as n;
 
 update public.users set created_at = '2025-12-30 00:00:00+09'
 where id in (select public.qa_u(n) from unnest(array[1,2,3,4,5,6,7,8,9,10, 11,12,13,14,15,16,17,18,19,
-             41,42,43,44,45,46, 51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69]) as n);
+             41,42,43,44,45,46, 51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71]) as n);
 
 update public.users u set created_at = v.ts from (values
   (21, timestamptz '2026-10-30 23:59:59+09'),  -- b1: S の1秒前 (週外。前週のコホートの最後)
@@ -386,9 +386,13 @@ insert into public.contact_messages (name, email, subject, message, created_at) 
 --   s12 provider NULL (→ キーは unknown)・premium_expires_at NULL (期限なしも有料会員) /
 --   s11 は W で provider NULL の有料になる / s9 は W で sandbox の trialing になる (billing.trialing に入らない)
 --   P の前週 (10-17) は保存行だけがありスナップショットは0行 = 「前週の premium 0 人」で比較あり
---   有料会員の対象外 (A・B とも): s14 stripe past_due (billing.past_due に入る) /
---   s15 revenucat active だが premium_expires_at が過去 (失効の webhook の取りこぼし) /
---   s17 revenucat active で premium_expires_at = 集計時刻ちょうど / s18 revenucat sandbox past_due
+--   支払い遅延 (A・B とも): s14 stripe 本番 past_due / s18 revenucat sandbox past_due。
+--     スナップショットには入るが有料会員数には入らず、本番の s14 だけが billing.past_due に入る
+--   スナップショットの対象外 (A・B とも): s15 revenucat active だが premium_expires_at が過去
+--     (失効の webhook の取りこぼし) / s17 revenucat active で premium_expires_at = 集計時刻ちょうど
+--   支払い遅延の遷移 (2026-11-10 再レビュー R1):
+--     s20 revenucat: P は active → W は past_due → 翌週 N (11-07) は active に回復。どの週でも有料終了・新規有料にならない
+--     s21 stripe:    P は active → W は past_due → N は past_due のまま期限切れ。N で有料終了になる
 --   s19 revenucat active (A は期限内、B では期限が過ぎたまま premium で残る → 有料終了) /
 --   s16 は W で stripe の trialing になる (新規有料に入り、billing.trialing に入る)
 --   期限は実行日に追従させる (now() 基準。now() はトランザクション開始時刻で、集計の間は変わらない)
@@ -406,7 +410,9 @@ from (values
   (58, 'active',   'revenucat', 'sandbox',    false),
   (60, 'active',   'revenucat', 'sandbox',    false),
   (62, 'active',   null,        null,         false),
-  (69, 'active',   'revenucat', 'production', false)
+  (69, 'active',   'revenucat', 'production', false),
+  (70, 'active',   'revenucat', 'production', false),
+  (71, 'active',   'stripe',    'production', false)
 ) as v(n, status, provider, env, cape)
 where us.id = public.qa_u(v.n);
 update public.user_subscriptions us set
@@ -441,6 +447,10 @@ from (values
 where us.id = public.qa_u(v.n);
 -- s19: plan / status は premium / active のまま、期限だけが過ぎた
 update public.user_subscriptions set premium_expires_at = now() - interval '1 hour' where id = public.qa_u(69);
+-- s20, s21: 更新の支払いに失敗して支払い遅延になった (期限は猶予期間として残る)。
+-- s21 は解約予約も付いているが、past_due なので解約予約中 (H-4) にも新規解約予約 (H-8) にも入らない
+update public.user_subscriptions set status = 'past_due' where id in (public.qa_u(70), public.qa_u(71));
+update public.user_subscriptions set cancel_at_period_end = true where id = public.qa_u(71);
 
 insert into qa_runs select 'w1', public.generate_weekly_usage_report('2026-10-31');
 
@@ -652,22 +662,21 @@ select ok(
   and pg_temp.qa_metric('p1', 'billing.churned') = 0
   and pg_temp.qa_metric('p1', 'billing.new_cancel_pending') = pg_temp.qa_metric('p1', 'billing.cancel_pending'),
   'H-1b: 前週 (10-17) の保存行があればスナップショットが0行 (premium 0 人) でも比較ありで、churned は 0');
-select is(
-  (select array_agg(k order by k) from jsonb_object_keys((select result->'metrics' from qa_runs where label = 'p1')) k
-   where k like 'billing.new_premium.%'),
-  (select array_agg('billing.new_premium.' || substr(k, length('billing.premium_total.') + 1) order by k)
-   from jsonb_object_keys((select result->'metrics' from qa_runs where label = 'p1')) k
-   where k like 'billing.premium_total.%'),
-  'H-1c: 前週 premium 0 人なら、今週の有料は provider ごとに全員が新規有料');
 select ok(
-  (select bool_and(pg_temp.qa_metric('p1', k) = pg_temp.qa_metric('p1', replace(k, 'billing.premium_total.', 'billing.new_premium.')))
+  (select bool_and(pg_temp.qa_metric('p1', replace(k, 'billing.premium_total.', 'billing.new_premium.')) is not null)
    from jsonb_object_keys((select result->'metrics' from qa_runs where label = 'p1')) k
    where k like 'billing.premium_total.%'),
-  'H-1d: その件数は provider ごとの有料会員数と同じ');
+  'H-1c: 前週の有料契約が 0 件なら、有料会員がいる provider には全て新規有料のキーがある');
+select is(
+  (select sum(value::text::numeric) from jsonb_each((select result->'metrics' from qa_runs where label = 'p1'))
+   where key like 'billing.new_premium.%'),
+  (select sum(value::text::numeric) from jsonb_each((select result->'metrics' from qa_runs where label = 'p1'))
+   where key like 'billing.premium_total.%') + pg_temp.qa_metric('p1', 'billing.past_due'),
+  'H-1d: 前週の有料契約が 0 件なら、新規有料の合計 = 有料会員数の合計 + 支払い遅延 (スナップショットの本番の全行)');
 select is(pg_temp.qa_delta('w1', 'billing.premium_total.stripe'), 4::numeric,
-  'H-2: 有料会員数 (stripe): s1, s4, s7, s16 (trialing)。past_due の s14 は入らない');
+  'H-2: 有料会員数 (stripe): s1, s4, s7, s16 (trialing)。past_due の s14・s21 は入らない');
 select is(pg_temp.qa_delta('w1', 'billing.premium_total.revenucat'), 3::numeric,
-  'H-3: 有料会員数 (revenucat): s2 (環境 NULL は本番扱い), s5 (canceled = 解約予約中), s6。sandbox の s8, s9、期限切れのまま残った s15・s19、期限が集計時刻ちょうどの s17 は入らない');
+  'H-3: 有料会員数 (revenucat): s2 (環境 NULL は本番扱い), s5 (canceled = 解約予約中), s6。sandbox の s8, s9、期限切れのまま残った s15・s19、期限が集計時刻ちょうどの s17、past_due の s20 は入らない');
 select is(pg_temp.qa_delta('w1', 'billing.premium_total.unknown'), 2::numeric,
   'H-3b: provider が NULL の有料はキーの末尾を unknown にする (s11, 期限なしの s12)');
 select ok(
@@ -675,9 +684,9 @@ select ok(
               where k in ('billing.premium_total.', 'billing.new_premium.') or k like '%.null'),
   'H-3c: provider が NULL でも、末尾が空や null のキーは作らない');
 select is(pg_temp.qa_delta('w1', 'billing.cancel_pending'), 3::numeric,
-  'H-4: うち解約予約中: canceled の s5 と cancel_at_period_end の s4, s7');
+  'H-4: うち解約予約中: canceled の s5 と cancel_at_period_end の s4, s7 (past_due で解約予約付きの s21 は入らない)');
 select is(pg_temp.qa_delta('w1', 'billing.sandbox_premium_total'), 2::numeric,
-  'H-5: sandbox の有料: s8, s9 (trialing)');
+  'H-5: sandbox の有料: s8, s9 (trialing)。sandbox の past_due の s18 は入らない');
 select is(pg_temp.qa_delta('w1', 'billing.new_premium.stripe'), 2::numeric,
   'H-6: 新規有料 (stripe): s7 と、トライアルを始めた s16');
 select is(pg_temp.qa_delta('w1', 'billing.new_premium.revenucat'), 1::numeric,
@@ -685,32 +694,37 @@ select is(pg_temp.qa_delta('w1', 'billing.new_premium.revenucat'), 1::numeric,
 select is(pg_temp.qa_delta('w1', 'billing.new_premium.unknown'), 1::numeric,
   'H-7b: 新規有料 (unknown): s11');
 select is(pg_temp.qa_delta('w1', 'billing.new_cancel_pending'), 2::numeric,
-  'H-8: 新規解約予約: 前週は解約予約でなかった s4 と、前週に無かった s7。前週から canceled の s5 は入らない');
+  'H-8: 新規解約予約: 前週は解約予約でなかった s4 と、前週に無かった s7。前週から canceled の s5、past_due の s21 は入らない');
 select is(pg_temp.qa_delta('w1', 'billing.churned'), 2::numeric,
-  'H-9: 有料終了: free になった s3 と、premium のまま期限が過ぎた s19 (sandbox から抜けた s10 は入らない)');
+  'H-9: 有料終了: free になった s3 と、premium のまま期限が過ぎた s19。支払い遅延になった s20・s21 は入らず、sandbox から抜けた s10 も入らない');
 select is(pg_temp.qa_delta('w1', 'billing.trialing'), 1::numeric,
   'H-9b: うちトライアル中: 本番の trialing は s16 だけ (sandbox の trialing の s9 は入らない)');
-select is(pg_temp.qa_delta('w1', 'billing.past_due'), 1::numeric,
-  'H-9c: 支払い遅延: 本番の premium かつ past_due は s14 だけ (sandbox の s18 は入らない)');
+select is(pg_temp.qa_delta('w1', 'billing.past_due'), 3::numeric,
+  'H-9c: 支払い遅延: 本番のスナップショットで past_due の s14, s20, s21 (sandbox の s18 は入らない)');
 select is(
   (select count(*)::int from public.user_subscription_snapshots
-   where user_id in (public.qa_u(64), public.qa_u(65), public.qa_u(67), public.qa_u(68))),
+   where user_id in (public.qa_u(65), public.qa_u(67))),
   0,
-  'H-9d: past_due (s14, s18)・期限切れ (s15)・期限が集計時刻ちょうど (s17) の行はどの週のスナップショットにも入らない');
+  'H-9d: 期限切れ (s15)・期限が集計時刻ちょうど (s17) の行はどの週のスナップショットにも入らない');
+select is(
+  (select array_agg(user_id::text || ':' || status order by user_id) from public.user_subscription_snapshots
+   where week_start = '2026-10-31' and user_id in (public.qa_u(64), public.qa_u(68), public.qa_u(70), public.qa_u(71))),
+  (select array_agg(public.qa_u(n)::text || ':past_due' order by public.qa_u(n)) from unnest(array[64, 68, 70, 71]) n),
+  'H-9f: 支払い遅延の行 (s14, s18, s20, s21) は W のスナップショットに past_due のまま入る');
 select is(
   (select array_agg(week_start order by week_start) from public.user_subscription_snapshots where user_id = public.qa_u(69)),
   array['2026-10-24'::date],
   'H-9e: s19 は期限内だった P にだけ入り、期限が過ぎた W には入らない');
 select is(
   (select count(*)::int from public.user_subscription_snapshots
-   where week_start = '2026-10-24' and user_id in (select public.qa_u(n) from generate_series(51, 69) n)),
-  9,
-  'H-10: P のスナップショットには有料会員の行が sandbox も含めて入る (s1-s5, s8, s10, s12, s19)');
+   where week_start = '2026-10-24' and user_id in (select public.qa_u(n) from generate_series(51, 71) n)),
+  13,
+  'H-10: P のスナップショットには有料契約の行が sandbox・past_due も含めて入る (s1-s5, s8, s10, s12, s14, s18, s19, s20, s21)');
 select is(
   (select count(*)::int from public.user_subscription_snapshots
-   where week_start = '2026-10-31' and user_id in (select public.qa_u(n) from generate_series(51, 69) n)),
-  11,
-  'H-11: W のスナップショット (s1, s2, s4-s9, s11, s12, s16)');
+   where week_start = '2026-10-31' and user_id in (select public.qa_u(n) from generate_series(51, 71) n)),
+  15,
+  'H-11: W のスナップショット (s1, s2, s4-s9, s11, s12, s14, s16, s18, s20, s21)');
 select is(
   (select row(status, provider, cancel_at_period_end, provider_environment, premium_expires_at)::text
    from public.user_subscription_snapshots where week_start = '2026-10-31' and user_id = public.qa_u(54)),
@@ -759,6 +773,9 @@ update public.user_subscriptions set plan = 'free', status = 'expired' where id 
 update public.user_subscriptions set cancel_at_period_end = true where id = public.qa_u(56);
 update public.user_subscriptions set plan = 'premium', status = 'active', provider = 'stripe',
   provider_environment = 'production', cancel_at_period_end = false where id = public.qa_u(63);
+-- 支払い遅延の s14 が回復する (集計時点の past_due は 3 → 2 になる)。billing.past_due はスナップショット由来なので
+-- 再実行しても変わらない (J-13, J-13b)
+update public.user_subscriptions set status = 'active' where id = public.qa_u(64);
 
 select public.mark_weekly_usage_report_sent('2026-10-31');
 select ok(
@@ -800,8 +817,8 @@ select is(
   'J-9: 前週が送信済みなら previous_email_sent_at にその時刻が入る');
 select is(
   (select count(*)::int from public.user_subscription_snapshots
-   where week_start = '2026-10-31' and user_id in (select public.qa_u(n) from generate_series(51, 69) n)),
-  11,
+   where week_start = '2026-10-31' and user_id in (select public.qa_u(n) from generate_series(51, 71) n)),
+  15,
   'J-10: 再実行してもスナップショットは重複せず、後から有料になった s13 も足さない');
 select is(
   (select row(status, provider, cancel_at_period_end)::text from public.user_subscription_snapshots
@@ -813,13 +830,15 @@ select is(
    where key like 'billing.%'),
   (select jsonb_object_agg(key, value) from jsonb_each((select result->'metrics' from qa_runs where label = 'w1'))
    where key like 'billing.%'),
-  'J-13: 再実行しても課金の指標は初回のスナップショットから計算され、変わらない');
+  'J-13: 再実行しても課金の指標 (billing.past_due を含む) は初回のスナップショットから計算され、変わらない');
+select is(pg_temp.qa_metric('w2', 'billing.past_due'), pg_temp.qa_metric('w1', 'billing.past_due'),
+  'J-13b: past_due の行を入れ替えた後の再実行でも billing.past_due は同じ (集計時点の user_subscriptions を数えない)');
 
 insert into qa_runs select 'p2', public.generate_weekly_usage_report('2026-10-24');
 select is(
   (select count(*)::int from public.user_subscription_snapshots
-   where week_start = '2026-10-24' and user_id in (select public.qa_u(n) from generate_series(51, 69) n)),
-  9,
+   where week_start = '2026-10-24' and user_id in (select public.qa_u(n) from generate_series(51, 71) n)),
+  13,
   'J-14: 過去の週 (P) を再実行しても、その週のスナップショットは今の状態で上書きされない');
 select is(
   (select jsonb_object_agg(key, value) from jsonb_each((select result->'metrics' from qa_runs where label = 'p2'))
@@ -827,6 +846,24 @@ select is(
   (select jsonb_object_agg(key, value) from jsonb_each((select result->'metrics' from qa_runs where label = 'p1'))
    where key like 'billing.%'),
   'J-15: 過去の週 (P) を再実行しても、その週の課金の指標は変わらない');
+-- 翌週 N (2026-11-07) の状態: s20 は active に回復、s21 は past_due のまま期限が過ぎた
+update public.user_subscriptions set status = 'active' where id = public.qa_u(70);
+update public.user_subscriptions set premium_expires_at = now() - interval '1 hour' where id = public.qa_u(71);
+insert into qa_runs select 'n1', public.generate_weekly_usage_report('2026-11-07');
+-- W → N の差分 (既存データの行は W と N で変わらないので、フローには入らない):
+--   有料終了 = s1 (free) と s21 (past_due のまま期限切れ)。新規有料 = s13 だけ (s20 の回復は入らない)
+select is(pg_temp.qa_metric('n1', 'billing.churned'), 2::numeric,
+  'J-16: 翌週の有料終了は s1 と、支払い遅延のまま期限が切れた s21。支払い遅延から回復した s20 は入らない');
+select is(
+  (select sum(value::text::numeric) from jsonb_each((select result->'metrics' from qa_runs where label = 'n1'))
+   where key like 'billing.new_premium.%'),
+  1::numeric,
+  'J-17: 翌週の新規有料は s13 だけ。支払い遅延から回復した s20 は新規有料にならない');
+select is(
+  (select status from public.user_subscription_snapshots where week_start = '2026-11-07' and user_id = public.qa_u(70)),
+  'active',
+  'J-18: 回復した s20 は翌週のスナップショットに active で入る');
+
 select is(
   (select metrics->'account.users_new' from public.weekly_usage_reports where week_start = '2026-10-17'),
   '999'::jsonb,

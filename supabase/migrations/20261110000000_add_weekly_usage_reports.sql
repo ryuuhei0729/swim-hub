@@ -34,7 +34,8 @@ REVOKE ALL ON TABLE "public"."weekly_usage_reports" FROM PUBLIC, "anon", "authen
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "public"."weekly_usage_reports" TO "service_role";
 
 -- -----------------------------------------------------------------------------
--- 2. user_subscription_snapshots: 週ごとの premium 行のスナップショット
+-- 2. user_subscription_snapshots: 週ごとの「有料契約が続いている行」のスナップショット
+--    (plan = 'premium' かつ status が active / trialing / canceled / past_due かつ期限内)
 --    user_subscriptions には状態遷移の履歴が無いため、前週との差分を取るために保存する。
 --    履歴として残すので users への外部キーは張らない。
 -- -----------------------------------------------------------------------------
@@ -50,8 +51,10 @@ CREATE TABLE IF NOT EXISTS "public"."user_subscription_snapshots" (
 );
 
 COMMENT ON TABLE "public"."user_subscription_snapshots" IS
-  'premium の user_subscriptions 行の週次スナップショット。その週の weekly_usage_reports 行がまだ
-無いときの初回集計で1回だけ取る。RLS はポリシー無し (default deny)。';
+  '有料契約が続いている user_subscriptions 行 (plan = premium・status が active / trialing / canceled /
+past_due・premium_expires_at が NULL か集計時刻より後) の週次スナップショット。past_due も入れる
+(外すと支払い遅延から回復した人が有料終了と新規有料に1回ずつ数えられる)。その週の
+weekly_usage_reports 行がまだ無いときの初回集計で1回だけ取る。RLS はポリシー無し (default deny)。';
 
 ALTER TABLE "public"."user_subscription_snapshots" ENABLE ROW LEVEL SECURITY;
 
@@ -132,7 +135,7 @@ BEGIN
     SELECT v_week, us.id, us.status, us.provider, us.cancel_at_period_end, us.provider_environment, us.premium_expires_at
     FROM public.user_subscriptions us
     WHERE us.plan = 'premium'
-      AND us.status IN ('active', 'trialing', 'canceled')
+      AND us.status IN ('active', 'trialing', 'canceled', 'past_due')
       AND (us.premium_expires_at IS NULL OR us.premium_expires_at > now())
     ON CONFLICT (week_start, user_id) DO NOTHING;
   END IF;
@@ -326,24 +329,28 @@ BEGIN
   -- 6. 課金。常にその週のスナップショットから計算する (本番 = provider_environment が
   --    sandbox でないもの。NULL は本番扱い)。前週の保存行が無いときはフローの指標を出さない
   -- ---------------------------------------------------------------------------
+  -- 有料会員数とその内訳・解約予約は status <> 'past_due' の行。支払い遅延 (past_due) は別に数える。
+  -- 新規有料・有料終了はスナップショットの行の有無 (past_due を含む集合) で判定する
   v_m := v_m || jsonb_build_object(
     'billing.cancel_pending', (SELECT count(*) FROM public.user_subscription_snapshots s
       WHERE s.week_start = v_week AND s.provider_environment IS DISTINCT FROM 'sandbox'
+        AND s.status <> 'past_due'
         AND (s.status = 'canceled' OR s.cancel_at_period_end IS TRUE)),
     'billing.sandbox_premium_total', (SELECT count(*) FROM public.user_subscription_snapshots s
-      WHERE s.week_start = v_week AND s.provider_environment = 'sandbox'),
+      WHERE s.week_start = v_week AND s.provider_environment = 'sandbox'
+        AND s.status <> 'past_due'),
     'billing.trialing', (SELECT count(*) FROM public.user_subscription_snapshots s
       WHERE s.week_start = v_week AND s.provider_environment IS DISTINCT FROM 'sandbox'
         AND s.status = 'trialing'),
-    -- 支払い遅延は有料会員数に含めない。スナップショットには入れず、集計時点の状態を数える参考値
-    'billing.past_due', (SELECT count(*) FROM public.user_subscriptions us
-      WHERE us.plan = 'premium' AND us.status = 'past_due'
-        AND us.provider_environment IS DISTINCT FROM 'sandbox')
+    'billing.past_due', (SELECT count(*) FROM public.user_subscription_snapshots s
+      WHERE s.week_start = v_week AND s.provider_environment IS DISTINCT FROM 'sandbox'
+        AND s.status = 'past_due')
   ) || coalesce((
     SELECT jsonb_object_agg('billing.premium_total.' || prov, n)
     FROM (SELECT coalesce(s.provider, 'unknown') AS prov, count(*) AS n
           FROM public.user_subscription_snapshots s
           WHERE s.week_start = v_week AND s.provider_environment IS DISTINCT FROM 'sandbox'
+            AND s.status <> 'past_due'
           GROUP BY 1) pt
   ), '{}'::jsonb);
 
@@ -351,10 +358,12 @@ BEGIN
     v_m := v_m || jsonb_build_object(
       'billing.new_cancel_pending', (SELECT count(*) FROM public.user_subscription_snapshots s
         WHERE s.week_start = v_week AND s.provider_environment IS DISTINCT FROM 'sandbox'
+          AND s.status <> 'past_due'
           AND (s.status = 'canceled' OR s.cancel_at_period_end IS TRUE)
           AND NOT EXISTS (SELECT 1 FROM public.user_subscription_snapshots p
             WHERE p.week_start = v_prev_week AND p.user_id = s.user_id
               AND p.provider_environment IS DISTINCT FROM 'sandbox'
+              AND p.status <> 'past_due'
               AND (p.status = 'canceled' OR p.cancel_at_period_end IS TRUE))),
       'billing.churned', (SELECT count(*) FROM public.user_subscription_snapshots p
         WHERE p.week_start = v_prev_week AND p.provider_environment IS DISTINCT FROM 'sandbox'
@@ -362,7 +371,7 @@ BEGIN
             WHERE s.week_start = v_week AND s.user_id = p.user_id
               AND s.provider_environment IS DISTINCT FROM 'sandbox'))
     ) || coalesce((
-      -- 今週の有料がいる provider は、新規有料が0件でも 0 で出す (出さないと 0 → N の週に「新規指標」と表示される)
+      -- 今週の契約がある provider は、新規有料が0件でも 0 で出す (出さないと 0 → N の週に「新規指標」と表示される)
       SELECT jsonb_object_agg('billing.new_premium.' || prov, n)
       FROM (SELECT coalesce(s.provider, 'unknown') AS prov,
                    count(*) FILTER (WHERE NOT EXISTS (

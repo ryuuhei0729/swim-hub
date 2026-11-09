@@ -44,6 +44,7 @@ pg_cron (毎週金曜 22:00 UTC = 土曜 07:00 JST)
 | `account.active_users` | アクティブユーザー (週内に何か登録した人) | 下の作成系テーブルのうち、週内に作られた行の作成者を重複なしで数える。作成者は行ごとに `coalesce(created_by, user_id)` で決める (practices の created_by はほとんど NULL なので、列単位で created_by を選ぶと作成者が落ちる)。対象: practices, practice_logs, practice_tags, practice_log_templates, competitions, entries, records, relay_records (created_by), goals (milestones は goals.user_id 経由), team_memberships, team_groups (created_by), announcements (created_by), teams (作成者の列がある場合のみ)、および出欠に回答した人 (`team_attendance` で status が NOT NULL、かつ updated_at が週内の user_id) |
 
 - `practice_logs` は、親の practice が個人練習 (`team_id IS NULL`) のものだけを数える。チーム練習のログは管理者の一括編集 (`replace_practice_logs`) で選手の `user_id` のまま作り直されるので、数えると保存のたびに選手全員がアクティブになる。チーム練習は practices の作成者で数える (2026-11-10 レビュー指摘で変更)
+- 制限: 選手が自分でチーム練習に付けたログも、一括編集の行と区別できないので数えない
 - 制限: 代理入力 (管理者が選手の entries / records を入力する) では、選手の `user_id` が作成者として数えられる。AI 読み取りの利用は区分7で別に数え、ここには含めない
 
 `user_sessions` は使わない。どのアプリからも書き込まれておらず、常に 0 件になるため。
@@ -95,29 +96,31 @@ pg_cron (毎週金曜 22:00 UTC = 土曜 07:00 JST)
 | `goal.milestones_achieved` | マイルストーン達成 | `milestones.achieved_at` が週内 |
 
 ### 6. 課金 (3アプリ共通)
-`user_subscriptions` には状態遷移の履歴が無い。そこで毎週、premium の行のスナップショットを `user_subscription_snapshots` に保存し、前週のスナップショットとの差分を取る。
+`user_subscriptions` には状態遷移の履歴が無い。そこで毎週、有料契約の行のスナップショットを `user_subscription_snapshots` に保存し、前週のスナップショットとの差分を取る。
 
-- スナップショットに入れる行は「有料会員」の行: `plan = 'premium'` かつ `status IN ('active', 'trialing', 'canceled')` かつ (`premium_expires_at IS NULL` または `premium_expires_at > 集計時刻`)。`canceled` で premium のままの行は RevenueCat の解約予約中 (期間の終わりまで支払い済み) で、Stripe は解約時点で free / expired に書き換える。`past_due` (支払い遅延) と、失効の webhook を取りこぼして期限が過ぎたまま残った行は含めない (2026-11-10 レビュー指摘で変更)。列は `week_start`, `user_id`, `status`, `provider`, `cancel_at_period_end`, `provider_environment`, `premium_expires_at`
-- スナップショットはその週で最初に集計したとき (その週の `weekly_usage_reports` の行がまだ無いとき) に1回だけ取る。行ごとの `ON CONFLICT DO NOTHING` だけでは、後から有料になった人が再実行のたびに足されるので足りない。同じ週を再実行・force 再送しても取り直さない。課金の指標は、常にその週のスナップショットから計算する。これは、過去の週を再実行したときに「今」の状態で上書きされ、翌週の差分が壊れるのを防ぐため
-- 「前週のスナップショットがあるか」は、前週の `weekly_usage_reports` の行があるかで判定する。前週の premium が 0 人でも「比較あり」として扱う
+- スナップショットに入れる行は「有料契約が続いている行」: `plan = 'premium'` かつ `status IN ('active', 'trialing', 'canceled', 'past_due')` かつ (`premium_expires_at IS NULL` または `premium_expires_at > 集計時刻`)。列は `week_start`, `user_id`, `status`, `provider`, `cancel_at_period_end`, `provider_environment`, `premium_expires_at`
+  - `canceled` で premium のままの行は RevenueCat の解約予約中 (期間の終わりまで支払い済み)。Stripe は解約時点で free / expired に書き換える
+  - `past_due` (支払い遅延) もスナップショットに入れる。外すと、支払い遅延から回復した人が「有料終了」と「新規有料」に1回ずつ数えられる (2026-11-10 再レビュー R1)
+  - 失効の webhook を取りこぼして期限が過ぎたまま残った行は入れない
+- 有料会員数とその内訳は、スナップショットのうち `status <> 'past_due'` の行で数える。支払い遅延はスナップショットの `status = 'past_due'` の行で別に数える
+- スナップショットはその週で最初に集計したとき (その週の `weekly_usage_reports` の行がまだ無いとき) に1回だけ取る。行ごとの `ON CONFLICT DO NOTHING` だけでは、後から有料になった人が再実行のたびに足されるので足りない。同じ週を再実行・force 再送しても取り直さない。課金の指標はすべて、その週のスナップショットから計算する。これは、過去の週を再実行したときに「今」の状態で上書きされ、翌週の差分が壊れるのを防ぐため
+- 「前週のスナップショットがあるか」は、前週の `weekly_usage_reports` の行があるかで判定する。前週の有料契約が 0 件でも「比較あり」として扱う
 - 集計は本番と sandbox を分ける。`provider_environment = 'sandbox'` だけを sandbox とし、NULL (2026-08 以前の行) は本番として扱う
-- provider が NULL の premium 行は、キーの末尾を `unknown` にする (例 `billing.premium_total.unknown`)
+- provider が NULL の行は、キーの末尾を `unknown` にする (例 `billing.premium_total.unknown`)
 
-| キー | 表示名 | 定義 |
+| キー | 表示名 | 定義 (いずれも本番のスナップショット行) |
 |---|---|---|
-| `billing.premium_total.<provider>` | 有料会員数 (集計時点) | 本番の premium 行を provider 別に数える |
+| `billing.premium_total.<provider>` | 有料会員数 (集計時点) | `status <> 'past_due'` の行を provider 別に数える |
 | `billing.trialing` | うちトライアル中 | `status = 'trialing'` |
-| `billing.cancel_pending` | うち解約予約中 | `status = 'canceled'` または `cancel_at_period_end = true` |
-| `billing.past_due` | 支払い遅延 (参考、有料会員数には含めない) | 本番の `plan = 'premium'` かつ `status = 'past_due'` の行を集計時点で数える |
-
-- `billing.past_due` だけは「課金の指標はその週のスナップショットから計算する」の例外で、集計時点の `user_subscriptions` を数える。過去の週を再実行すると、再実行した時点の値になる
-| `billing.new_premium.<provider>` | 新規有料 (トライアル開始を含む) | 今回にあり、前週に無い user_id |
+| `billing.cancel_pending` | うち解約予約中 | `status = 'canceled'` または `cancel_at_period_end = true` (`past_due` を除く) |
+| `billing.past_due` | 支払い遅延 (参考、有料会員数には含めない) | `status = 'past_due'` |
+| `billing.new_premium.<provider>` | 新規有料 (トライアル開始を含む) | 今回のスナップショットにあり、前週のスナップショットに無い user_id |
 | `billing.new_cancel_pending` | 新規解約予約 | 今回は解約予約中で、前週は無いか解約予約ではない |
-| `billing.churned` | 有料終了 | 前週にあり、今回に無い |
-| `billing.sandbox_premium_total` | sandbox の有料 (参考) | sandbox の premium 行の数 |
+| `billing.churned` | 有料終了 | 前週のスナップショットにあり、今回に無い |
+| `billing.sandbox_premium_total` | sandbox の有料 (参考) | sandbox のスナップショット行のうち `status <> 'past_due'` の数 |
 
 - 前週のスナップショットが無いとき (初回) は、フローの指標 (`new_*`・`churned`) を出さず、「比較なし」と表示する
-- 週の中で購入から失効まで終わったものは見えない。これは制限として受け入れる
+- 制限: 週の中で購入から失効まで終わったものは見えない。更新の webhook が集計時刻 (土曜 7:00) より遅れて届くと、期限切れとして一度「有料終了」になり、翌週に「新規有料」に戻る
 
 ### 7. Scanner (AI 読み取り)
 Timer の利用はサーバーに記録されていない (IndexedDB のみ。`app_daily_usage` に書くのは scanner と swim-hub の `scan-timesheet` だけ) ので、この区分は AI 読み取りの利用だけを表す。

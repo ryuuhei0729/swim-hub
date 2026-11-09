@@ -60,7 +60,7 @@ migration 適用時に NOTICE が出ていないか確かめる (`pg_net の有�
 
 - **cron の時刻 (土曜 07:00 JST) の前後に手動実行しない。** 同時実行でメールが二重に届く (advisory lock は generate の中だけで、送信は守っていない)。
 - **デプロイ後の初回確認は既定の週 (body `{}`) で行う。** 未集計の過去の週を後から作らない。スナップショットは実行時点の状態で取られるため、過去の週を作ると課金の差分の期間がずれる。
-- **pg_net の有効化で `net` スキーマ (`http_post`・`http_request_queue`・`_http_response`) が PUBLIC に開く。** cron secret はワーカーが処理するまで平文でキューに載る。現状 API が公開しているのは `public` スキーマだけなので、anon / authenticated から届く経路は無い。`public` に動的 SQL を実行する関数を作らないこと。
+- **pg_net の有効化で `net` スキーマ (`http_post`・`http_request_queue`・`_http_response`) が PUBLIC に開く。** cron secret はワーカーが処理するまで平文でキューに載る。現状 API が公開しているのは `public` スキーマだけなので、anon / authenticated から届く経路は無い (これは `config.toml` (ローカル) の設定で、本番は Dashboard の API 設定の Exposed schemas に `net` が無いことを確認する)。`public` に動的 SQL を実行する関数を作らないこと。
 - **generate が失敗 (500) すると、その週の行が残らない。** 翌週のメールが「先週データなし」になるだけで気づきにくい。メールが来なかったら §4 の確認クエリを見る。
 
 ## 3. 手動実行・再送
