@@ -168,14 +168,6 @@ interface EntryDraft {
   entryTimeDisplayValue: string;
   note: string;
   isRelaying: boolean;
-  /**
-   * 「ベストタイムを流用」ボタンで入れた値が未編集のまま残っているかどうかのラッチ (裁定2 v2)。
-   * タイム欄の onChange・種目変更・水路変更のいずれかが起きたら無条件に null に落とす。
-   * 値の比較はしない (formatTimeBest⇄parseTimeFlexible の往復が1ULP非可逆なため、
-   * 値比較方式だと「押した直後なのに警告が出ない」穴を構造的に抱える。参照実装
-   * (EntriesClient.tsx handleTimeInputChange) も同じラッチ方式)。
-   */
-  prefillSource: "bestTime" | null;
 }
 
 // =============================================================================
@@ -277,7 +269,6 @@ export default function CompetitionTabModal({
       entryTimeDisplayValue: "",
       note: "",
       isRelaying: false,
-      prefillSource: null,
     },
   ]);
   // 1行目のエントリーに自動セットされたデフォルト種目ID (未編集判定用)。
@@ -492,7 +483,6 @@ export default function CompetitionTabModal({
             note: String(entry.note ?? ""),
             isRelaying: Boolean(entry.isRelaying ?? entry.is_relaying ?? false),
             // 呼び出し元から渡された編集用ペイロードは流用元の情報を持たないため未編集扱いにしない
-            prefillSource: null,
           };
         });
         setEntries(drafts);
@@ -635,7 +625,6 @@ export default function CompetitionTabModal({
           note: r.note ?? "",
           isRelaying: r.is_relaying ?? false,
           // DB から復元した既存エントリーは流用元の情報を持たないため未編集扱いにしない
-          prefillSource: null,
         };
       });
 
@@ -1105,7 +1094,6 @@ export default function CompetitionTabModal({
         entryTimeDisplayValue: "",
         note: "",
         isRelaying: false,
-        prefillSource: null,
       },
     ]);
   }, []);
@@ -1129,8 +1117,7 @@ export default function CompetitionTabModal({
   // Entry style changed → also update record[index] if it exists
   const handleEntryStyleChange = useCallback(
     (entryId: string, entryIndex: number, styleId: string) => {
-      // 種目を変えたら別種目のベストタイムが未編集扱いで残らないようリセットする (裁定2 v2)
-      updateEntry(entryId, { styleId, prefillSource: null });
+      updateEntry(entryId, { styleId });
       if (showEntryTab && recordFormDataList[entryIndex] !== undefined) {
         handleRecordStyleChange(entryIndex, styleId);
       }
@@ -1173,25 +1160,18 @@ export default function CompetitionTabModal({
 
   // 「ベストタイムを流用」ボタン: バッジに表示している値 (entryBestTime.time) をそのまま
   // タイム欄へ入れる (裁定1)。別経路でベストタイムを取得し直さない。
-  // prefillSource は値を比較しないラッチ (裁定2 v2)。タイム欄の onChange / 種目変更 /
-  // 水路変更のいずれかが起きたら null に落とす。
   const handleApplyBestTime = useCallback(
     (entryId: string, time: number) => {
       updateEntry(entryId, {
         entryTime: time,
         entryTimeDisplayValue: formatTimeBest(time),
-        prefillSource: "bestTime",
       });
     },
     [updateEntry],
   );
 
-  // 水路 (poolType) を変えると全行のベストタイムバッジが入れ替わり、プリフィル済みの値が
-  // 表示中のベストタイムと対応しなくなるため、1行だけでなく全エントリー行のラッチを外す
-  // (裁定2 v2)。
   const handlePoolTypeChange = useCallback((poolType: number) => {
     setBasicData((prev) => ({ ...prev, poolType }));
-    setEntries((prev) => prev.map((e) => (e.prefillSource ? { ...e, prefillSource: null } : e)));
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -1478,10 +1458,6 @@ export default function CompetitionTabModal({
                     : null;
                   // エントリー行は引き継ぎ区分を目標の判定に使わない (isRelaying は渡さない)
                   const entryGoalTarget = entry ? goalTargetFor(entry.styleId) : null;
-                  // 未編集判定は prefillSource のラッチのみで行う (裁定2 v2)。値の比較はしない
-                  // (formatTimeBest⇄parseTimeFlexible の往復が1ULP非可逆なため、値比較方式だと
-                  // 「押した直後なのに警告が出ない」穴を構造的に抱える)。
-                  const isEntryPrefillUntouched = entry?.prefillSource === "bestTime";
                   return (
                     <ItemTabs
                       count={entries.length}
@@ -1544,16 +1520,17 @@ export default function CompetitionTabModal({
                             />
                           </div>
 
-                          {/* エントリータイム + メモ を1行に */}
-                          <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                          {/* エントリータイムとメモは別の行に置く。1行に並べるとタイム欄が潰れる
+                              (2026-11-09 ユーザー指定)。ラベル幅をそろえて入力欄の左端を合わせる */}
+                          <div className="flex flex-col gap-3">
                             {/* Entry time */}
-                            <div className="flex items-start gap-2 sm:flex-1">
-                              <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center">
+                            <div className="flex items-start gap-2">
+                              <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center sm:w-28">
                                 <span className="sm:hidden">{tEntry("timeLabelShort")}</span>
                                 <span className="hidden sm:inline">{tEntry("timeLabel")}</span>
                               </label>
                               <div className="flex-1 min-w-0">
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 sm:max-w-sm">
                                   <Input
                                     type="text"
                                     inputMode="decimal"
@@ -1564,8 +1541,6 @@ export default function CompetitionTabModal({
                                       updateEntry(entry.id, {
                                         entryTimeDisplayValue: e.target.value,
                                         entryTime: parsed ?? 0,
-                                        // 値が何であれ無条件にラッチを外す (裁定2 v2)
-                                        prefillSource: null,
                                       });
                                     }}
                                     onBlur={(e) => {
@@ -1594,9 +1569,12 @@ export default function CompetitionTabModal({
                                     // でなく time > 0 も見る。
                                     disabled={isLoading || !entryBestTime || entryBestTime.time <= 0}
                                     className="shrink-0 h-8 sm:h-10 px-3 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    aria-label={tEntries("bestTimePrefillButton")}
                                     data-testid={`entry-best-time-prefill-${clampedIndex + 1}`}
                                   >
-                                    {tEntries("bestTimePrefillButton")}
+                                    {/* スマホ幅は「ベスト流用」と短く出す (2026-11-09 ユーザー指定)。読み上げは aria-label の正式名 */}
+                                    <span className="sm:hidden">{tEntries("bestTimePrefillButtonShort")}</span>
+                                    <span className="hidden sm:inline">{tEntries("bestTimePrefillButton")}</span>
                                   </button>
                                 </div>
                                 {entryGoalTarget !== null && (
@@ -1615,31 +1593,25 @@ export default function CompetitionTabModal({
                                       {tTimeError("invalidTimeFormat")}
                                     </p>
                                   )}
-                                {isEntryPrefillUntouched && (
-                                  <p
-                                    className="mt-1 text-xs text-yellow-700"
-                                    data-testid={`entry-prefill-warning-${clampedIndex + 1}`}
-                                  >
-                                    {tEntries("bestTimePrefillBadge")}
-                                  </p>
-                                )}
                               </div>
                             </div>
 
                             {/* Note */}
-                            <div className="flex items-start gap-2 sm:flex-1">
-                              <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center">
+                            <div className="flex items-start gap-2">
+                              <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center sm:w-28">
                                 {tEntry("noteLabel")}
                               </label>
-                              <Input
-                                type="text"
-                                value={entry.note}
-                                onChange={(e) => updateEntry(entry.id, { note: e.target.value })}
-                                placeholder={tEntry("notePlaceholder")}
-                                className="flex-1 min-w-0 h-8 sm:h-10"
-                                disabled={isLoading}
-                                data-testid={`entry-note-${clampedIndex + 1}`}
-                              />
+                              <div className="flex-1 min-w-0">
+                                <Input
+                                  type="text"
+                                  value={entry.note}
+                                  onChange={(e) => updateEntry(entry.id, { note: e.target.value })}
+                                  placeholder={tEntry("notePlaceholder")}
+                                  className="w-full h-8 sm:h-10"
+                                  disabled={isLoading}
+                                  data-testid={`entry-note-${clampedIndex + 1}`}
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>

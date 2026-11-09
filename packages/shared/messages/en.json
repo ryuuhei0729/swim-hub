@@ -1045,6 +1045,14 @@
       "statusAlert": "Entries are {status}, so registration is not available. Proceeding to result entry.",
       "dataLoadError": "Failed to fetch data. Please try again after a moment."
     },
+    "notices": {
+      "title": "Updates",
+      "unansweredAttendance": "Attendance not answered ({count})",
+      "todoCount": "To do {count}",
+      "teamTitle": "{teamName} announcements",
+      "showAll": "Show all ({count})",
+      "showLess": "Show less"
+    },
     "actionItems": {
       "title": "Things to do",
       "count": "{count}",
@@ -1083,7 +1091,8 @@
       "loadError": "Couldn't load the next meet",
       "relay": "Relay",
       "titleWithDate": "Next meet ({date})",
-      "nameWithPool": "{name} ({pool})"
+      "placeWithPool": "{place} ({pool})",
+      "openGoal": "View goal {time}"
     },
     "bestTimes": {
       "loadError": "Couldn't load best times"
@@ -1360,6 +1369,7 @@
       "longCourse": "Long Course",
       "includeRelay": "Include relay times",
       "includeRelayShort": "Incl. relay",
+      "includeRelayCompact": "Relay",
       "bulkEntryNote": "Bulk entry",
       "distanceHeader": "Distance",
       "legend": {
@@ -1778,6 +1788,7 @@
       "pastDateBlocked": "This competition's date has already passed, so entries can no longer be entered on behalf of members",
       "closedWarning": "Entry registration is closed, but admins can still enter entries on behalf of members",
       "bestTimePrefillButton": "Use Best Time",
+      "bestTimePrefillButtonShort": "Use best",
       "bestTimePrefillBadge": "Auto-filled from best time",
       "duplicateMemberStyle": "The same member/event combination is entered more than once. Please check the rows.",
       "confirmModal": {

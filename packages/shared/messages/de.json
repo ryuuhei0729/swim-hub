@@ -1048,6 +1048,14 @@
       "statusAlert": "Die Meldung ist {status}, daher ist keine Registrierung möglich. Es wird mit der Ergebniseingabe fortgefahren.",
       "dataLoadError": "Daten konnten nicht abgerufen werden. Bitte versuchen Sie es später erneut."
     },
+    "notices": {
+      "title": "Neuigkeiten",
+      "unansweredAttendance": "Anwesenheit offen ({count})",
+      "todoCount": "Zu erledigen {count}",
+      "teamTitle": "Mitteilungen von {teamName}",
+      "showAll": "Alle anzeigen ({count})",
+      "showLess": "Weniger anzeigen"
+    },
     "actionItems": {
       "title": "Zu erledigen",
       "count": "{count}",
@@ -1086,7 +1094,8 @@
       "loadError": "Der nächste Wettkampf konnte nicht geladen werden",
       "relay": "Staffel",
       "titleWithDate": "Nächster Wettkampf ({date})",
-      "nameWithPool": "{name} ({pool})"
+      "placeWithPool": "{place} ({pool})",
+      "openGoal": "Ziel {time} anzeigen"
     },
     "bestTimes": {
       "loadError": "Bestzeiten konnten nicht geladen werden"
@@ -1363,6 +1372,7 @@
       "longCourse": "Langbahn",
       "includeRelay": "Staffelwechselzeiten einbeziehen",
       "includeRelayShort": "Inkl. Wechsel",
+      "includeRelayCompact": "Wechsel",
       "bulkEntryNote": "Sammeleintrag",
       "distanceHeader": "Distanz",
       "legend": {
@@ -1781,6 +1791,7 @@
       "pastDateBlocked": "Dieser Wettkampf liegt bereits in der Vergangenheit, daher können keine Anmeldungen mehr stellvertretend eingegeben werden",
       "closedWarning": "Die Anmeldung ist geschlossen, Administratoren können jedoch weiterhin stellvertretend Anmeldungen eingeben",
       "bestTimePrefillButton": "Bestzeit übernehmen",
+      "bestTimePrefillButtonShort": "Bestzeit",
       "bestTimePrefillBadge": "Automatisch aus Bestzeit übernommen",
       "duplicateMemberStyle": "Die gleiche Kombination aus Mitglied und Disziplin wurde mehrfach eingegeben. Bitte überprüfen Sie die Zeilen.",
       "confirmModal": {

@@ -9,7 +9,7 @@
  *
  * UI 契約 (Sprint Contract §4):
  * - ボタン: <button type="button">、data-testid: entry-best-time-prefill-<N>
- * - 未編集警告の data-testid: entry-prefill-warning-<N>
+ * - 未編集警告 (entry-prefill-warning-<N>「ベストタイム自動入力」) は 2026-11-09 に廃止。出ないことを確認する
  * - ベストタイム未取得時もボタンは DOM に存在し disabled
  *
  * モック方針: `@/hooks/useBestTimes` をモックし、bestTimes 配列をテストごとに差し替える。
@@ -163,14 +163,13 @@ describe("CompetitionTabModal — ベストタイムを流用ボタン [W1]", ()
     expect(screen.getByTestId("entry-time-1")).toHaveValue("31.20");
   });
 
-  it("[SC7] entry-best-time-prefill-1 押下直後は entry-prefill-warning-1 が表示される。その後 entry-time-1 を書き換えると消える", async () => {
+  it("「ベストタイムを流用」を押しても「ベストタイム自動入力」の表示は出さない (2026-11-09 ユーザー指定)", async () => {
     renderModal({ bestTimes: [makeBestTime({ time: 28.5 })] });
 
     fireEvent.click(await screen.findByTestId("entry-best-time-prefill-1"));
-    expect(screen.getByTestId("entry-prefill-warning-1")).toHaveTextContent("ベストタイム自動入力");
-
-    fireEvent.change(screen.getByTestId("entry-time-1"), { target: { value: "40.00" } });
-    expect(screen.queryByTestId("entry-prefill-warning-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("entry-time-1")).toHaveValue("28.50");
+    expect(screen.queryByText("ベストタイム自動入力")).toBeNull();
+    expect(screen.queryByTestId("entry-prefill-warning-1")).toBeNull();
   });
 
   it("[SC6 非可逆値での確認] time=68.04 (formatTimeBest⇄parseTimeFlexible が1 ULP で非可逆になる境界値) で、押下直後の表示値とバッジ値が厳密一致 (toBeを使用、toBeCloseTo禁止) する", async () => {
@@ -180,45 +179,6 @@ describe("CompetitionTabModal — ベストタイムを流用ボタン [W1]", ()
 
     fireEvent.click(screen.getByTestId("entry-best-time-prefill-1"));
     expect(screen.getByTestId("entry-time-1")).toHaveValue("1:08.04");
-  });
-
-  it("[SC12/裁定2改訂(v2)・ラッチ実証] 押下→警告あり→1文字入力→警告消滅→プリフィル値と同じ文字列を打ち直す→警告は復活しない", async () => {
-    renderModal({ bestTimes: [makeBestTime({ time: 28.5 })] });
-
-    fireEvent.click(await screen.findByTestId("entry-best-time-prefill-1"));
-    expect(screen.getByTestId("entry-prefill-warning-1")).toBeInTheDocument();
-
-    const input = screen.getByTestId("entry-time-1");
-    fireEvent.change(input, { target: { value: "28.5X" } });
-    expect(screen.queryByTestId("entry-prefill-warning-1")).not.toBeInTheDocument();
-
-    // プリフィル直後の表示値と全く同じ文字列を打ち直す
-    fireEvent.change(input, { target: { value: "28.50" } });
-    expect(screen.queryByTestId("entry-prefill-warning-1")).not.toBeInTheDocument();
-  });
-
-  it("[SC8/裁定2] 種目を別の種目に変更すると entry-prefill-warning-1 が消える", async () => {
-    renderModal({
-      bestTimes: [
-        makeBestTime({ time: 28.5, style: { name_jp: "50m自由形", distance: 50 } }),
-      ],
-    });
-
-    fireEvent.click(await screen.findByTestId("entry-best-time-prefill-1"));
-    expect(screen.getByTestId("entry-prefill-warning-1")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId("entry-style-1-stroke-Br"));
-    expect(screen.queryByTestId("entry-prefill-warning-1")).not.toBeInTheDocument();
-  });
-
-  it("[§6 境界 v2 新設: 水路切替] 押下後、水路を切り替えると entry-prefill-warning-1 が消える", async () => {
-    renderModal({ bestTimes: [makeBestTime({ time: 28.5, pool_type: 0 })] });
-
-    fireEvent.click(await screen.findByTestId("entry-best-time-prefill-1"));
-    expect(screen.getByTestId("entry-prefill-warning-1")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId("competition-tab-pool-type-1"));
-    expect(screen.queryByTestId("entry-prefill-warning-1")).not.toBeInTheDocument();
   });
 
   it("[境界: リレー行] entry.isRelaying=true の行で流用ボタンを押すと、isRelaying=true 優先順位に従った値が入る", async () => {

@@ -136,14 +136,13 @@ describe("EntryLogForm — ベストタイムを流用ボタン [W2]", () => {
     expect(screen.getByTestId("entry-time-1")).toHaveValue("31.20");
   });
 
-  it("[SC7] entry-best-time-prefill-1 押下直後は entry-prefill-warning-1 が表示され、entry-time-1 を書き換えると消える", async () => {
+  it("「ベストタイムを流用」を押しても「ベストタイム自動入力」の表示は出さない (2026-11-09 ユーザー指定)", async () => {
     renderForm({ bestTimes: [makeBestTime({ time: 28.5 })] });
 
     fireEvent.click(await screen.findByTestId("entry-best-time-prefill-1"));
-    expect(screen.getByTestId("entry-prefill-warning-1")).toHaveTextContent("ベストタイム自動入力");
-
-    fireEvent.change(screen.getByTestId("entry-time-1"), { target: { value: "40.00" } });
-    expect(screen.queryByTestId("entry-prefill-warning-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("entry-time-1")).toHaveValue("28.50");
+    expect(screen.queryByText("ベストタイム自動入力")).toBeNull();
+    expect(screen.queryByTestId("entry-prefill-warning-1")).toBeNull();
   });
 
   it("[SC6 非可逆値での確認] time=68.04 (1ULPで非可逆な境界値) で、押下直後の表示値とバッジ値が厳密一致 (toBe。toBeCloseTo禁止) する", async () => {
@@ -172,34 +171,6 @@ describe("EntryLogForm — ベストタイムを流用ボタン [W2]", () => {
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     const submittedEntryTime = onSubmit.mock.calls[0]![0][0].entryTime as number;
     expect(submittedEntryTime).toBe(68.04);
-  });
-
-  it("[SC12/裁定2改訂(v2)・ラッチ実証] 押下→警告あり→1文字入力→警告消滅→プリフィル値と同じ文字列を打ち直す→警告は復活しない", async () => {
-    renderForm({ bestTimes: [makeBestTime({ time: 28.5 })] });
-
-    fireEvent.click(await screen.findByTestId("entry-best-time-prefill-1"));
-    expect(screen.getByTestId("entry-prefill-warning-1")).toBeInTheDocument();
-
-    const input = screen.getByTestId("entry-time-1");
-    fireEvent.change(input, { target: { value: "28.5X" } });
-    expect(screen.queryByTestId("entry-prefill-warning-1")).not.toBeInTheDocument();
-
-    fireEvent.change(input, { target: { value: "28.50" } });
-    expect(screen.queryByTestId("entry-prefill-warning-1")).not.toBeInTheDocument();
-  });
-
-  it("[SC8/裁定2] 種目 (select) を変更すると entry-prefill-warning-1 が消える", async () => {
-    renderForm({
-      bestTimes: [
-        makeBestTime({ id: "bt-fr", time: 28.5, style: { name_jp: "50m自由形", distance: 50 } }),
-      ],
-    });
-
-    fireEvent.click(await screen.findByTestId("entry-best-time-prefill-1"));
-    expect(screen.getByTestId("entry-prefill-warning-1")).toBeInTheDocument();
-
-    fireEvent.change(screen.getByTestId("entry-style-1"), { target: { value: "2" } });
-    expect(screen.queryByTestId("entry-prefill-warning-1")).not.toBeInTheDocument();
   });
 
   // ---------------------------------------------------------------------------

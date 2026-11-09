@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  // DashboardScreen.scrollContent / TeamAnnouncementsSection.card / CalendarView
+  // DashboardScreen.scrollContent / DashboardNoticesSection.container / CalendarView
   calendarRoot: {
     paddingTop: 8,
   },

@@ -18,6 +18,8 @@ export const actionItemKey = {
   attendance: (eventType: string, eventId: string) => `attendance:${eventType}:${eventId}`,
   entry: (competitionId: string) => `entry:${competitionId}`,
   record: (competitionId: string) => `record:${competitionId}`,
+  /** mobile のホームはお知らせも同じカードに出すので、新しいお知らせでも開き直す */
+  announcement: (announcementId: string) => `announcement:${announcementId}`,
 } as const;
 
 /** 保存した文字列を読む。壊れていたら null (= 開いた状態) */

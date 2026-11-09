@@ -3,7 +3,7 @@
  * `onTextLayout` で得られる実測行数から、トグル表示の可否・
  * `numberOfLines` の値・展開状態の遷移を導出する。
  *
- * `AnnouncementItem` (components/dashboard/TeamAnnouncementsSection.tsx) から
+ * `AnnouncementItem` (components/dashboard/DashboardNoticesSection.tsx) から
  * 呼び出される想定。RN/DOM に依存しないため単体テスト可能。
  */
 
@@ -40,17 +40,4 @@ export function resolveNumberOfLines({
   maxLines,
 }: ResolveNumberOfLinesParams): number | undefined {
   return isExpanded ? undefined : maxLines;
-}
-
-interface ShouldShowToggleParams {
-  isTruncated: boolean;
-  isExpanded: boolean;
-}
-
-/**
- * 切り詰めトグル ("全文を表示" / "省略") を表示すべきかを解決する。
- * isTruncated が true であれば、展開中 ("省略" 表示用) でも表示する。
- */
-export function shouldShowToggle({ isTruncated }: ShouldShowToggleParams): boolean {
-  return isTruncated;
 }

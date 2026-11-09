@@ -119,15 +119,17 @@ describe("NextCompetitionCard", () => {
     const { getByText, queryByText } = render(<NextCompetitionCard hasTeams={false} onOpenDay={mocks.onOpenDay} />);
 
     expect(getByText(`次の大会（${format(addDays(new Date(), 12), "yyyy/MM/dd")}）`)).toBeTruthy();
-    expect(getByText("区民秋季水泳記録会（長水路）")).toBeTruthy();
+    expect(getByText("区民秋季水泳記録会")).toBeTruthy();
+    expect(getByText("区立総合体育館（長水路）")).toBeTruthy();
     expect(getByText("12")).toBeTruthy();
     expect(getByText("ベスト 56.12")).toBeTruthy();
-    // 目標は差 (-0.62) ではなく目標タイムで出す
-    expect(getByText("55.50")).toBeTruthy();
+    // 目標は差 (-0.62) ではなく目標タイムのラベルで出し、押すとその目標の詳細を開く
+    fireEvent.click(getByText("目標 55.50"));
+    expect(mocks.navigate).toHaveBeenCalledWith("GoalDetail", { goalId: "g1" });
     expect(queryByText("-0.62")).toBeNull();
-    // ベストが無い種目には「初」
-    expect(getByText("ベスト —")).toBeTruthy();
+    // ベストが無い種目には「初」を付け、「ベスト —」は出さない
     expect(getByText("初")).toBeTruthy();
+    expect(queryByText("ベスト —")).toBeNull();
     // その大会・種目を選んだ状態で目標フォームを開く
     fireEvent.click(getByText("＋ 目標"));
     expect(mocks.navigate).toHaveBeenCalledWith("GoalForm", { competitionId: "c1", styleId: 5 });
@@ -171,7 +173,7 @@ describe("NextCompetitionCard", () => {
       { id: "b1", time: 56.12, pool_type: 1, is_relaying: false, style_id: 2, created_at: "", style: { name_jp: "", distance: 100 } },
     ];
     const { getByText, queryByText } = render(<NextCompetitionCard hasTeams={false} onOpenDay={mocks.onOpenDay} />);
-    expect(getByText("57.00")).toBeTruthy();
+    expect(getByText("目標 57.00")).toBeTruthy();
     expect(queryByText("達成")).toBeNull();
   });
 
@@ -182,7 +184,13 @@ describe("NextCompetitionCard", () => {
       goals: [{ id: "g1", style_id: 2, target_time: 55.5 }],
     });
     const { getByText } = render(<NextCompetitionCard hasTeams={false} onOpenDay={mocks.onOpenDay} />);
-    expect(getByText("55.50")).toBeTruthy();
+    expect(getByText("目標 55.50")).toBeTruthy();
+  });
+
+  it("場所が無い大会は水路だけを出す", () => {
+    setData({ competition: competition({ place: null, pool_type: 0 }), entries: [], goals: [] });
+    const { getByText } = render(<NextCompetitionCard hasTeams={false} onOpenDay={mocks.onOpenDay} />);
+    expect(getByText("短水路")).toBeTruthy();
   });
 
   it("開催中の複数日大会は「開催中」を出す", () => {
@@ -214,7 +222,7 @@ describe("NextCompetitionCard", () => {
       goals: [],
     });
     const { getByText } = render(<NextCompetitionCard hasTeams={false} onOpenDay={mocks.onOpenDay} />);
-    fireEvent.click(getByText("区民秋季水泳記録会（長水路）"));
+    fireEvent.click(getByText("区民秋季水泳記録会"));
     expect(mocks.onOpenDay).toHaveBeenLastCalledWith(IN_12_DAYS);
     fireEvent.click(getByText("100m Fr"));
     expect(mocks.onOpenDay).toHaveBeenCalledTimes(2);

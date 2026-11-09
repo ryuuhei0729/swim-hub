@@ -4,7 +4,6 @@ import React, { useState, useMemo } from "react";
 import { CalendarIcon } from "@heroicons/react/24/outline";
 import { useLocale, useTranslations } from "next-intl";
 import { formatTimeBest, formatDate } from "../../utils/formatters";
-import { Tabs } from "../ui/Tabs";
 import { WaPointsInfoTooltip } from "../ui/WaPointsInfoTooltip";
 import {
   DISTANCES,
@@ -62,13 +61,23 @@ interface BestTimesTableProps {
   // resolveAgeCategory() の判定結果 (呼び出し元で算出)。birthday 自体は渡さない
   // (必要なのは区分だけ。生年月日は gender より機微度が高い)。null/undefined は「未設定」
   ageCategory?: AgeCategory | null;
+  /** 上の段の左端に出す見出し (水路の切り替え・引き継ぎの左) */
+  title?: React.ReactNode;
+  /** 下の段に出す操作 (点数化ボタンの右、凡例の左)。ダッシュボードでは一括入力 */
+  footerAction?: React.ReactNode;
 }
 
 // セルの data-testid を組み立てる (例: 自由形100m -> "best-times-cell-Fr-100")
 const cellTestId = (style: string, distance: number) =>
   `best-times-cell-${STYLE_KEY_MAP[style as keyof typeof STYLE_KEY_MAP]}-${distance}`;
 
-export default function BestTimesTable({ bestTimes, gender, ageCategory }: BestTimesTableProps) {
+export default function BestTimesTable({
+  bestTimes,
+  gender,
+  ageCategory,
+  title,
+  footerAction,
+}: BestTimesTableProps) {
   const t = useTranslations("mypage.bestTimesTable");
   const tStyles = useTranslations("practice.styles");
   const tStyleAbbrev = useTranslations("practice.styleAbbrev");
@@ -312,7 +321,9 @@ export default function BestTimesTable({ bestTimes, gender, ageCategory }: BestT
 
   if (bestTimes.length === 0) {
     return (
-      <div className="text-center py-8">
+      <div>
+        {title && <div className="mb-2">{title}</div>}
+        <div className="text-center py-8">
         <div className="text-gray-400 mb-4">
           <svg className="h-12 w-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -325,117 +336,66 @@ export default function BestTimesTable({ bestTimes, gender, ageCategory }: BestT
         </div>
         <p className="text-gray-600">{t("noRecords")}</p>
         <p className="text-sm text-gray-500 mt-1">{t("noRecordsDetail")}</p>
+        </div>
+        {footerAction}
       </div>
     );
   }
 
+  // 表の文字サイズ・余白は画面幅ではなくこの枠の幅で切り替える (@lg = 512px, @xl = 576px)。
+  // ダッシュボードでは「次の大会」と横並びになり、画面が広くても表の幅は半分程度になるため
   return (
-    <div>
-      {/* タブとチェックボックス */}
-      <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-        <Tabs
-          tabs={tabs}
-          activeTabId={activeTab}
-          onTabChange={(tabId) => setActiveTab(tabId as TabType)}
-        />
-        <div className="flex items-center gap-3">
-          <div className="relative inline-block shrink-0">
-            <button
-              type="button"
-              data-testid="best-times-wa-points-toggle"
-              aria-pressed={isWaPointsMode}
-              onClick={() => setIsWaPointsMode((prev) => !prev)}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border text-[10px] sm:text-sm font-medium transition-colors ${
-                isWaPointsMode
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-              }`}
-            >
-              {t("waPointsToggle")}
-            </button>
-            <WaPointsInfoTooltip
-              buttonTestId="best-times-wa-points-info-button"
-              ariaLabel={t("pointsInfoAriaLabel")}
-              tooltipText={t("pointsInfo")}
-            />
+    <div className="@container">
+      {/* 上の段: 見出し・水路の切り替え・引き継ぎ (2026-11-09 ユーザー指定) */}
+      <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+        {title}
+        {/* 水路の切り替えと引き継ぎは、PC (lg 以上) では右に寄せる (2026-11-09 ユーザー指定) */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 lg:ml-auto">
+          <div className="inline-flex rounded-md bg-gray-100 p-0.5" role="group">
+            {tabs.map((tab) => {
+              const isActive = tab.id === activeTab;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => setActiveTab(tab.id as TabType)}
+                  className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                    isActive ? "bg-white text-blue-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
-          <label className="flex items-center space-x-2 cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-1.5" title={t("includeRelay")}>
             <input
               type="checkbox"
               checked={includeRelaying}
               onChange={(e) => setIncludeRelaying(e.target.checked)}
-              className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              aria-label={t("includeRelay")}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-xs sm:text-sm text-gray-700">{t("includeRelay")}</span>
+            <span className="text-xs text-gray-700">{t("includeRelayCompact")}</span>
           </label>
         </div>
       </div>
-
-      {/* 比較指標プルダウン (ONのときだけ表示。初期選択は常にWA / jaロケール限定) */}
-      {/*
-        select のボックス指定 (h-9 / py-1 / pl-2 sm:pl-3 / pr-7) は
-        `components/ui/selectStyles.ts` の COMPACT_SELECT_CLASS が唯一の定義元。
-        ▼ の重なりと 640〜767px の高さ不足の根拠コメントはそこにある。
-        🚨 ここにクラス文字列を書き戻さないこと (片方だけ直されて再発する)。
-      */}
-      {isWaPointsMode && showCompareMetricPicker && (
-        <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="relative inline-block shrink-0">
-            <select
-              data-testid="best-times-compare-metric-select"
-              aria-label={t("compareMetricLabel")}
-              value={compareMetric}
-              onChange={(e) => setCompareMetric(e.target.value as CompareMetric)}
-              className={COMPACT_SELECT_CLASS}
-            >
-              <option value="wa">{t("compareMetric.wa")}</option>
-              <option value="nr">{t("compareMetric.nr")}</option>
-              <option value="age">{t("compareMetric.age")}</option>
-            </select>
-            <WaPointsInfoTooltip
-              buttonTestId="best-times-compare-metric-info-button"
-              ariaLabel={t("compareMetricInfoAriaLabel")}
-              tooltipText={t("compareMetricInfo")}
-            />
-          </div>
-
-          {compareMetric === "age" && (
-            <select
-              data-testid="best-times-age-category-select"
-              aria-label={t("ageCategoryLabel")}
-              value={effectiveAgeCategory ?? "unset"}
-              onChange={(e) =>
-                setAgeCategoryOverride(
-                  e.target.value === "unset" ? null : (e.target.value as AgeCategory),
-                )
-              }
-              className={COMPACT_SELECT_CLASS}
-            >
-              <option value="unset">{t("ageCategoryUnset")}</option>
-              {AGE_CATEGORY_ORDER.map((category) => (
-                <option key={category} value={category}>
-                  {t(`ageCategory.${category}`)}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
 
       <div className="bg-white rounded-none sm:rounded-xl shadow border-y sm:border border-gray-300 -mx-4 sm:mx-0">
         <table className="w-full table-fixed border-separate border-spacing-0">
           <thead className="sticky top-0 z-10">
             <tr>
-              <th className="px-0.5 sm:px-3 py-0.5 sm:py-2 text-left text-[9px] sm:text-xs md:text-sm font-semibold text-gray-700 border-r border-gray-300 w-[32px] sm:w-[72px] h-[24px] sm:h-[44px]">
+              <th className="px-0.5 @lg:px-2 py-0.5 @lg:py-1 text-left text-[9px] @lg:text-xs font-semibold text-gray-700 border-r border-gray-300 w-[32px] @lg:w-[52px] h-[24px] @lg:h-[32px]">
                 {t("distanceHeader")}
               </th>
               {STYLES.map((style) => (
                 <th
                   key={style}
-                  className={`px-0.5 sm:px-3 py-0.5 sm:py-2 text-center text-[9px] sm:text-xs md:text-sm font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 h-[24px] sm:h-[44px] ${styleHeaderBgClass[style]}`}
+                  className={`px-0.5 @lg:px-1 @xl:px-2 py-0.5 @lg:py-1 text-center text-[9px] @lg:text-xs font-semibold text-gray-800 border-r border-gray-300 last:border-r-0 h-[24px] @lg:h-[32px] ${styleHeaderBgClass[style]}`}
                 >
-                  <span className="sm:hidden">{tStyleAbbrev(STYLE_KEY_MAP[style])}</span>
-                  <span className="hidden sm:inline">{tStyles(STYLE_KEY_MAP[style])}</span>
+                  <span className="@lg:hidden">{tStyleAbbrev(STYLE_KEY_MAP[style])}</span>
+                  <span className="hidden @lg:inline">{tStyles(STYLE_KEY_MAP[style])}</span>
                 </th>
               ))}
             </tr>
@@ -444,7 +404,7 @@ export default function BestTimesTable({ bestTimes, gender, ageCategory }: BestT
             {DISTANCES.map((distance, rowIdx) => (
               <tr key={distance}>
                 <td
-                  className={`px-0.5 sm:px-3 py-1 sm:py-3 text-[9px] sm:text-xs md:text-sm font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 w-[32px] sm:w-[72px] h-[36px] sm:h-[64px] ${rowIdx > 0 ? "border-t border-gray-300" : ""}`}
+                  className={`px-0.5 @lg:px-2 py-0.5 @lg:py-1 text-[9px] @lg:text-xs font-semibold text-gray-600 border-r border-gray-300 bg-gray-50 w-[32px] @lg:w-[52px] h-[30px] @lg:h-[36px] ${rowIdx > 0 ? "border-t border-gray-300" : ""}`}
                 >
                   {distance}m
                 </td>
@@ -457,14 +417,14 @@ export default function BestTimesTable({ bestTimes, gender, ageCategory }: BestT
                     <td
                       key={style}
                       data-testid={cellTestId(style, distance)}
-                      className={`px-0.5 sm:px-3 py-1 sm:py-3 text-center text-[9px] sm:text-xs md:text-sm text-gray-900 border-r border-gray-300 last:border-r-0 h-[36px] sm:h-[64px] ${rowIdx > 0 ? "border-t border-gray-300" : ""} ${isInvalidCombination(style, distance) ? "bg-gray-200" : styleCellBgClass[style]}`}
+                      className={`px-0.5 @lg:px-2 py-0.5 @lg:py-1 text-center text-[9px] @lg:text-xs text-gray-900 border-r border-gray-300 last:border-r-0 h-[30px] @lg:h-[36px] ${rowIdx > 0 ? "border-t border-gray-300" : ""} ${isInvalidCombination(style, distance) ? "bg-gray-200" : styleCellBgClass[style]}`}
                     >
                       {isWaPointsMode ? (
                         pointsCell ? (
-                          <span className="font-semibold text-xs sm:text-base md:text-lg text-gray-900">
+                          <span className="font-semibold text-xs @lg:text-sm @xl:text-base text-gray-900">
                             {pointsCell.points}
                             {activeTab === "all" && pointsCell.poolType === 1 && (
-                              <span className="text-[8px] sm:text-xs ml-0.5 sm:ml-1">L</span>
+                              <span className="text-[8px] @lg:text-xs ml-0.5 @lg:ml-1">L</span>
                             )}
                           </span>
                         ) : (
@@ -472,16 +432,16 @@ export default function BestTimesTable({ bestTimes, gender, ageCategory }: BestT
                         )
                       ) : bestTime ? (
                         <div
-                          className={`group relative inline-block pt-1 sm:pt-2 ${isNew ? "pr-4 sm:pr-6" : ""}`}
+                          className={`group relative inline-block pt-1 ${isNew ? "pr-4 @lg:pr-5" : ""}`}
                         >
                           {isNew && (
-                            <span className="absolute -top-0.5 sm:-top-1 -right-2 sm:-right-3 text-[8px] sm:text-[10px] md:text-xs bg-red-500 text-white px-1 sm:px-1.5 py-0.5 rounded-full shadow">
+                            <span className="absolute -top-0.5 -right-2 @lg:-right-3 text-[8px] @lg:text-[9px] bg-red-500 text-white px-1 py-0.5 leading-none rounded-full shadow">
                               New
                             </span>
                           )}
                           {/* 通常表示：ベストタイム */}
                           <span
-                            className={`font-semibold text-xs sm:text-base md:text-lg ${isNew ? "text-red-600" : "text-gray-900"}`}
+                            className={`font-semibold text-xs @lg:text-sm @xl:text-base ${isNew ? "text-red-600" : "text-gray-900"}`}
                           >
                             {(() => {
                               const display = getTimeDisplay(bestTime);
@@ -489,7 +449,7 @@ export default function BestTimesTable({ bestTimes, gender, ageCategory }: BestT
                                 <>
                                   {display.main}
                                   {display.suffix && (
-                                    <span className="text-[8px] sm:text-xs ml-0.5 sm:ml-1">
+                                    <span className="text-[8px] @lg:text-xs ml-0.5 @lg:ml-1">
                                       {display.suffix}
                                     </span>
                                   )}
@@ -499,7 +459,7 @@ export default function BestTimesTable({ bestTimes, gender, ageCategory }: BestT
                           </span>
 
                           {/* ホバー時の詳細情報 */}
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-[11px] md:text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-[11px] @xl:text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
                             <div className="flex items-center space-x-1 mb-1">
                               <CalendarIcon className="h-3 w-3" />
                               <span>{formatDate(bestTime.competition?.date ?? bestTime.created_at, "numeric")}</span>
@@ -528,12 +488,80 @@ export default function BestTimesTable({ bestTimes, gender, ageCategory }: BestT
         </table>
       </div>
 
-      {/* 注釈 */}
-      <div
-        data-testid="best-times-legend"
-        className="mt-2 sm:mt-3 text-xs sm:text-sm text-red-600 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-1 sm:gap-0 sm:space-x-4"
-      >
-        <span>
+      {/* 下の段: 点数化・(比較指標)・一括入力など・凡例 (2026-11-09 ユーザー指定) */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="relative inline-block shrink-0">
+          <button
+            type="button"
+            data-testid="best-times-wa-points-toggle"
+            aria-pressed={isWaPointsMode}
+            onClick={() => setIsWaPointsMode((prev) => !prev)}
+            className={`px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${
+              isWaPointsMode
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            {t("waPointsToggle")}
+          </button>
+          <WaPointsInfoTooltip
+            buttonTestId="best-times-wa-points-info-button"
+            ariaLabel={t("pointsInfoAriaLabel")}
+            tooltipText={t("pointsInfo")}
+          />
+        </div>
+        {/* 比較指標プルダウン (ONのときだけ表示。初期選択は常にWA / jaロケール限定) */}
+        {/*
+          select のボックス指定 (h-9 / py-1 / pl-2 sm:pl-3 / pr-7) は
+          `components/ui/selectStyles.ts` の COMPACT_SELECT_CLASS が唯一の定義元。
+          ▼ の重なりと 640〜767px の高さ不足の根拠コメントはそこにある。
+          🚨 ここにクラス文字列を書き戻さないこと (片方だけ直されて再発する)。
+        */}
+        {isWaPointsMode && showCompareMetricPicker && (
+          <>
+            <div className="relative inline-block shrink-0">
+              <select
+                data-testid="best-times-compare-metric-select"
+                aria-label={t("compareMetricLabel")}
+                value={compareMetric}
+                onChange={(e) => setCompareMetric(e.target.value as CompareMetric)}
+                className={COMPACT_SELECT_CLASS}
+              >
+                <option value="wa">{t("compareMetric.wa")}</option>
+                <option value="nr">{t("compareMetric.nr")}</option>
+                <option value="age">{t("compareMetric.age")}</option>
+              </select>
+              <WaPointsInfoTooltip
+                buttonTestId="best-times-compare-metric-info-button"
+                ariaLabel={t("compareMetricInfoAriaLabel")}
+                tooltipText={t("compareMetricInfo")}
+              />
+            </div>
+
+            {compareMetric === "age" && (
+              <select
+                data-testid="best-times-age-category-select"
+                aria-label={t("ageCategoryLabel")}
+                value={effectiveAgeCategory ?? "unset"}
+                onChange={(e) =>
+                  setAgeCategoryOverride(
+                    e.target.value === "unset" ? null : (e.target.value as AgeCategory),
+                  )
+                }
+                className={COMPACT_SELECT_CLASS}
+              >
+                <option value="unset">{t("ageCategoryUnset")}</option>
+                {AGE_CATEGORY_ORDER.map((category) => (
+                  <option key={category} value={category}>
+                    {t(`ageCategory.${category}`)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </>
+        )}
+        {footerAction}
+        <span data-testid="best-times-legend" className="ml-auto text-xs text-red-600">
           {isWaPointsMode
             ? `※ ${t("legend.longCourse")}, ${t("legend.relayingExcludedFromWaPoints")}`
             : `※ ${t("legend.longCourse")}, ${t("legend.relaying")}`}

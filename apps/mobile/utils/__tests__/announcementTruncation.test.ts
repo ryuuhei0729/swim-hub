@@ -1,9 +1,9 @@
 /**
  * announcementTruncation 純関数テスト (Sprint Contract: お知らせ本文の全文表示/省略)
  *
- * 背景: TeamAnnouncementsSection の AnnouncementItem (L175〜) は
- * `numberOfLines={2}` で本文を常に2行に切り詰めている。`onTextLayout` で
- * 実際の行数を検出し、2行を超える場合のみ「…全文を表示」/「省略」トグルを出す。
+ * 背景: DashboardNoticesSection の AnnouncementItem は `numberOfLines` で本文を
+ * 常に1行に切り詰めている。`onTextLayout` で実際の行数を検出し、1行を超える場合だけ
+ * 行のタップで全文を開けるようにする (2026-11-07 までは TeamAnnouncementsSection で2行・トグル表示)。
  *
  * 【なぜ純関数として切り出すか】
  * apps/mobile/__mocks__/react-native.ts の `Text` モックは `numberOfLines` を
@@ -56,7 +56,6 @@ import { describe, it, expect } from "vitest";
 import {
   resolveIsTruncated,
   resolveNumberOfLines,
-  shouldShowToggle,
 } from "../announcementTruncation";
 
 const MAX_LINES = 2;
@@ -95,21 +94,6 @@ describe("announcementTruncation", () => {
 
     it("isExpanded=false のとき maxLines を返す", () => {
       expect(resolveNumberOfLines({ isExpanded: false, maxLines: MAX_LINES })).toBe(MAX_LINES);
-    });
-  });
-
-  describe("shouldShowToggle", () => {
-    it("[V-M4] isTruncated=true かつ isExpanded=false のとき true", () => {
-      expect(shouldShowToggle({ isTruncated: true, isExpanded: false })).toBe(true);
-    });
-
-    it("[V-M4] isTruncated=true かつ isExpanded=true (展開中) のとき true (「省略」を出すため)", () => {
-      expect(shouldShowToggle({ isTruncated: true, isExpanded: true })).toBe(true);
-    });
-
-    it("[V-M4] isTruncated=false のとき isExpanded に関わらず false", () => {
-      expect(shouldShowToggle({ isTruncated: false, isExpanded: false })).toBe(false);
-      expect(shouldShowToggle({ isTruncated: false, isExpanded: true })).toBe(false);
     });
   });
 });
