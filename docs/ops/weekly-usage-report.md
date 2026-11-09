@@ -41,12 +41,13 @@ select vault.update_secret((select id from vault.secrets where name = 'weekly_re
 
 3アプリは Supabase プロジェクトを共有しているので、swim-hub からデプロイする。
 
-`db push` は、本番に未適用の migration をすべて適用する。先に一覧を見て、この2本以外に未適用のものが無いかを確かめる (別の変更の migration が一緒に出ないように):
+`db push` は、本番に未適用の migration をすべて適用する。先に一覧を見て、この2本以外に未適用のものが無いかを確かめる (別の変更の migration が一緒に出ないように)。この2本以外にも未適用があったら、`db push` せずに止めて PM に相談する。
 
 ```bash
 cd swim-hub
+supabase link --project-ref <ref>
 supabase migration list --linked                 # Remote が空の行 = 未適用。20261110000000 / 20261110000001 だけであること
-supabase db push --project-ref <ref>
+supabase db push
 supabase functions deploy weekly-report --project-ref <ref>
 ```
 
@@ -54,6 +55,13 @@ migration 適用時に NOTICE が出ていないか確かめる (`pg_net の有�
 登録の確認: `select jobname, schedule from cron.job where jobname = 'weekly-usage-report';` (`0 22 * * 5`)。
 
 デプロイ後に、ゲートウェイで JWT の検証が無効になっているかを確かめる。認証なしで POST して、Edge Function 自身の 401 (`{"error":"Unauthorized"}`) が返れば無効になっている。ゲートウェイの JWT エラーが返る場合は、`config.toml` の `[functions.weekly-report] verify_jwt = false` が反映されていない (cron からの呼び出しも 401 になる)。
+
+### 注意
+
+- **cron の時刻 (土曜 07:00 JST) の前後に手動実行しない。** 同時実行でメールが二重に届く (advisory lock は generate の中だけで、送信は守っていない)。
+- **デプロイ後の初回確認は既定の週 (body `{}`) で行う。** 未集計の過去の週を後から作らない。スナップショットは実行時点の状態で取られるため、過去の週を作ると課金の差分の期間がずれる。
+- **pg_net の有効化で `net` スキーマ (`http_post`・`http_request_queue`・`_http_response`) が PUBLIC に開く。** cron secret はワーカーが処理するまで平文でキューに載る。現状 API が公開しているのは `public` スキーマだけなので、anon / authenticated から届く経路は無い。`public` に動的 SQL を実行する関数を作らないこと。
+- **generate が失敗 (500) すると、その週の行が残らない。** 翌週のメールが「先週データなし」になるだけで気づきにくい。メールが来なかったら §4 の確認クエリを見る。
 
 ## 3. 手動実行・再送
 

@@ -47,7 +47,9 @@ const STATIC_LABELS: ReadonlyArray<readonly [string, string]> = [
   ["goal.created", "目標設定"],
   ["goal.achieved", "目標達成"],
   ["goal.milestones_achieved", "マイルストーン達成"],
+  ["billing.trialing", "うちトライアル中"],
   ["billing.cancel_pending", "うち解約予約中"],
+  ["billing.past_due", "支払い遅延 (参考、有料会員数には含めない)"],
   ["billing.new_cancel_pending", "新規解約予約"],
   ["billing.churned", "有料終了"],
   ["billing.sandbox_premium_total", "sandbox の有料 (参考)"],
@@ -65,9 +67,10 @@ const STATIC_LABELS: ReadonlyArray<readonly [string, string]> = [
 const DYNAMIC_LABELS: ReadonlyArray<readonly [string, string, string]> = [
   ["goal.milestones_created.reps_time", "マイルストーン設定 (種類別)", "reps_time"],
   ["billing.premium_total.stripe", "有料会員数 (集計時点)", "stripe"],
-  ["billing.new_premium.revenucat", "新規有料", "revenucat"],
+  ["billing.new_premium.revenucat", "新規有料 (トライアル開始を含む)", "revenucat"],
   ["token.swimhub_scanner.scanner_scan", "AI 読み取り回数", "scanner_scan"],
-  ["usage.swimhub_timer.active_users", "アプリ別の利用者数", "swimhub_timer"],
+  // Timer の利用はサーバーに記録されないので、app は scanner と swimhub だけ
+  ["usage.swimhub_scanner.active_users", "AI 読み取りを使った人数", "swimhub_scanner"],
 ];
 
 function allLabeledMetrics(): Record<string, number> {
@@ -209,7 +212,7 @@ Deno.test("区分 1〜9、その他の指標、未分類テーブルの順に並
     ["チーム", metricLineIndex(text, "チーム作成", m["team.teams"]!)],
     ["目標", metricLineIndex(text, "目標設定", m["goal.created"]!)],
     ["課金", dynamicLineIndex(text, "有料会員数 (集計時点)", "stripe", m["billing.premium_total.stripe"]!)],
-    ["Scanner / Timer", dynamicLineIndex(text, "AI 読み取り回数", "scanner_scan", m["token.swimhub_scanner.scanner_scan"]!)],
+    ["Scanner (AI 読み取り)", dynamicLineIndex(text, "AI 読み取り回数", "scanner_scan", m["token.swimhub_scanner.scanner_scan"]!)],
     ["サポート", metricLineIndex(text, "問い合わせ", m["support.contact_messages"]!)],
     ["動線", metricLineIndex(text, "前週の新規登録者", m["funnel.cohort_size"]!)],
   ];
@@ -227,6 +230,11 @@ Deno.test("区分 1〜9、その他の指標、未分類テーブルの順に並
     const found = all.slice(from, first).some((l) => l.includes(heading));
     assert(found, `区分「${heading}」の見出しが、その区分の指標の直前に無い\n---\n${text}`);
   });
+});
+
+Deno.test("区分7は AI 読み取りだけを表し、Timer の利用を表すような見出しにしない", () => {
+  const { text } = formatWeeklyReport(makeReport());
+  assert(!text.includes("Timer"), `Timer の利用はサーバーに記録されないのに見出しや表示名に出ている\n${text}`);
 });
 
 Deno.test("ラベルの無いキーは「その他の指標」に出し、落とさない", () => {

@@ -43,7 +43,8 @@ pg_cron (毎週金曜 22:00 UTC = 土曜 07:00 JST)
 | `account.users_new` | 新規アカウント登録 | `users.created_at` が週内 |
 | `account.active_users` | アクティブユーザー (週内に何か登録した人) | 下の作成系テーブルのうち、週内に作られた行の作成者を重複なしで数える。作成者は行ごとに `coalesce(created_by, user_id)` で決める (practices の created_by はほとんど NULL なので、列単位で created_by を選ぶと作成者が落ちる)。対象: practices, practice_logs, practice_tags, practice_log_templates, competitions, entries, records, relay_records (created_by), goals (milestones は goals.user_id 経由), team_memberships, team_groups (created_by), announcements (created_by), teams (作成者の列がある場合のみ)、および出欠に回答した人 (`team_attendance` で status が NOT NULL、かつ updated_at が週内の user_id) |
 
-- 制限: 代理入力 (管理者が選手の entries / records を入力する) では、選手の `user_id` が作成者として数えられる。Scanner / Timer の利用は区分7で別に数え、ここには含めない
+- `practice_logs` は、親の practice が個人練習 (`team_id IS NULL`) のものだけを数える。チーム練習のログは管理者の一括編集 (`replace_practice_logs`) で選手の `user_id` のまま作り直されるので、数えると保存のたびに選手全員がアクティブになる。チーム練習は practices の作成者で数える (2026-11-10 レビュー指摘で変更)
+- 制限: 代理入力 (管理者が選手の entries / records を入力する) では、選手の `user_id` が作成者として数えられる。AI 読み取りの利用は区分7で別に数え、ここには含めない
 
 `user_sessions` は使わない。どのアプリからも書き込まれておらず、常に 0 件になるため。
 
@@ -96,7 +97,7 @@ pg_cron (毎週金曜 22:00 UTC = 土曜 07:00 JST)
 ### 6. 課金 (3アプリ共通)
 `user_subscriptions` には状態遷移の履歴が無い。そこで毎週、premium の行のスナップショットを `user_subscription_snapshots` に保存し、前週のスナップショットとの差分を取る。
 
-- スナップショットに入れる行は `plan = 'premium'` のもの。列は `week_start`, `user_id`, `status`, `provider`, `cancel_at_period_end`, `provider_environment`, `premium_expires_at`
+- スナップショットに入れる行は「有料会員」の行: `plan = 'premium'` かつ `status IN ('active', 'trialing', 'canceled')` かつ (`premium_expires_at IS NULL` または `premium_expires_at > 集計時刻`)。`canceled` で premium のままの行は RevenueCat の解約予約中 (期間の終わりまで支払い済み) で、Stripe は解約時点で free / expired に書き換える。`past_due` (支払い遅延) と、失効の webhook を取りこぼして期限が過ぎたまま残った行は含めない (2026-11-10 レビュー指摘で変更)。列は `week_start`, `user_id`, `status`, `provider`, `cancel_at_period_end`, `provider_environment`, `premium_expires_at`
 - スナップショットはその週で最初に集計したとき (その週の `weekly_usage_reports` の行がまだ無いとき) に1回だけ取る。行ごとの `ON CONFLICT DO NOTHING` だけでは、後から有料になった人が再実行のたびに足されるので足りない。同じ週を再実行・force 再送しても取り直さない。課金の指標は、常にその週のスナップショットから計算する。これは、過去の週を再実行したときに「今」の状態で上書きされ、翌週の差分が壊れるのを防ぐため
 - 「前週のスナップショットがあるか」は、前週の `weekly_usage_reports` の行があるかで判定する。前週の premium が 0 人でも「比較あり」として扱う
 - 集計は本番と sandbox を分ける。`provider_environment = 'sandbox'` だけを sandbox とし、NULL (2026-08 以前の行) は本番として扱う
@@ -105,8 +106,12 @@ pg_cron (毎週金曜 22:00 UTC = 土曜 07:00 JST)
 | キー | 表示名 | 定義 |
 |---|---|---|
 | `billing.premium_total.<provider>` | 有料会員数 (集計時点) | 本番の premium 行を provider 別に数える |
+| `billing.trialing` | うちトライアル中 | `status = 'trialing'` |
 | `billing.cancel_pending` | うち解約予約中 | `status = 'canceled'` または `cancel_at_period_end = true` |
-| `billing.new_premium.<provider>` | 新規有料 | 今回にあり、前週に無い user_id |
+| `billing.past_due` | 支払い遅延 (参考、有料会員数には含めない) | 本番の `plan = 'premium'` かつ `status = 'past_due'` の行を集計時点で数える |
+
+- `billing.past_due` だけは「課金の指標はその週のスナップショットから計算する」の例外で、集計時点の `user_subscriptions` を数える。過去の週を再実行すると、再実行した時点の値になる
+| `billing.new_premium.<provider>` | 新規有料 (トライアル開始を含む) | 今回にあり、前週に無い user_id |
 | `billing.new_cancel_pending` | 新規解約予約 | 今回は解約予約中で、前週は無いか解約予約ではない |
 | `billing.churned` | 有料終了 | 前週にあり、今回に無い |
 | `billing.sandbox_premium_total` | sandbox の有料 (参考) | sandbox の premium 行の数 |
@@ -114,11 +119,12 @@ pg_cron (毎週金曜 22:00 UTC = 土曜 07:00 JST)
 - 前週のスナップショットが無いとき (初回) は、フローの指標 (`new_*`・`churned`) を出さず、「比較なし」と表示する
 - 週の中で購入から失効まで終わったものは見えない。これは制限として受け入れる
 
-### 7. Scanner / Timer
+### 7. Scanner (AI 読み取り)
+Timer の利用はサーバーに記録されていない (IndexedDB のみ。`app_daily_usage` に書くのは scanner と swim-hub の `scan-timesheet` だけ) ので、この区分は AI 読み取りの利用だけを表す。
 | キー | 表示名 | 定義 |
 |---|---|---|
 | `token.<app>.<action_type>` | AI 読み取り回数 | `token_consumption_log.created_at` が週内。app と action_type で group by |
-| `usage.<app>.active_users` | アプリ別の利用者数 | `app_daily_usage` で `usage_date` が週内のもの。`usage_count > 0` の distinct user_id を app 別に |
+| `usage.<app>.active_users` | AI 読み取りを使った人数 (アプリ別) | `app_daily_usage` で `usage_date` が週内のもの。`usage_count > 0` の distinct user_id を app 別に |
 | `guest.scans` | ゲストの読み取り回数 | `guest_scan_daily_usage` の count の合計 |
 | `guest.unique_ips` | ゲストの IP 数 | 同じく distinct ip_hash |
 
@@ -133,7 +139,7 @@ pg_cron (毎週金曜 22:00 UTC = 土曜 07:00 JST)
 | キー | 表示名 | 行動 |
 |---|---|---|
 | `funnel.cohort_size` | 前週の新規登録者 | コホートの人数 |
-| `funnel.practice` | 7日以内に練習 | practices または practice_logs を作成 |
+| `funnel.practice` | 7日以内に練習 | practices を作成、または個人練習の practice_logs を作成 (チーム練習のログは数えない。区分1と同じ理由) |
 | `funnel.competition` | 7日以内に大会・記録 | competitions / entries / records を作成 |
 | `funnel.team` | 7日以内にチーム参加 | team_memberships を作成 |
 | `funnel.goal` | 7日以内に目標 | goals を作成 |

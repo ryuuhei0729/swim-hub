@@ -91,20 +91,22 @@ const SECTIONS: Section[] = [
     heading: "6. 課金",
     items: [
       { match: prefixed("billing.premium_total."), label: "有料会員数 (集計時点)" },
+      { key: "billing.trialing", label: "うちトライアル中" },
       { key: "billing.cancel_pending", label: "うち解約予約中" },
-      { match: prefixed("billing.new_premium."), label: "新規有料" },
+      { key: "billing.past_due", label: "支払い遅延 (参考、有料会員数には含めない)" },
+      { match: prefixed("billing.new_premium."), label: "新規有料 (トライアル開始を含む)" },
       { key: "billing.new_cancel_pending", label: "新規解約予約" },
       { key: "billing.churned", label: "有料終了" },
       { key: "billing.sandbox_premium_total", label: "sandbox の有料 (参考)" },
     ],
   },
   {
-    heading: "7. Scanner / Timer",
+    heading: "7. Scanner (AI 読み取り)",
     items: [
       { match: prefixed("token."), label: "AI 読み取り回数" },
       {
         match: (key) => /^usage\.(.+)\.active_users$/.exec(key)?.[1] ?? null,
-        label: "アプリ別の利用者数",
+        label: "AI 読み取りを使った人数",
       },
       { key: "guest.scans", label: "ゲストの読み取り回数" },
       { key: "guest.unique_ips", label: "ゲストの IP 数" },

@@ -132,6 +132,8 @@ BEGIN
     SELECT v_week, us.id, us.status, us.provider, us.cancel_at_period_end, us.provider_environment, us.premium_expires_at
     FROM public.user_subscriptions us
     WHERE us.plan = 'premium'
+      AND us.status IN ('active', 'trialing', 'canceled')
+      AND (us.premium_expires_at IS NULL OR us.premium_expires_at > now())
     ON CONFLICT (week_start, user_id) DO NOTHING;
   END IF;
 
@@ -143,7 +145,10 @@ BEGIN
     'account.active_users', (
       SELECT count(DISTINCT u) FROM (
         SELECT coalesce(created_by, user_id) AS u FROM public.practices WHERE created_at >= v_s AND created_at < v_e
-        UNION ALL SELECT user_id FROM public.practice_logs WHERE created_at >= v_s AND created_at < v_e
+        -- チーム練習のログは一括編集 (replace_practice_logs) で選手の user_id のまま作り直されるので、
+        -- 個人練習のログだけを数える。チーム練習は上の practices の作成者で数えている
+        UNION ALL SELECT l.user_id FROM public.practice_logs l JOIN public.practices lp ON lp.id = l.practice_id
+          WHERE lp.team_id IS NULL AND l.created_at >= v_s AND l.created_at < v_e
         UNION ALL SELECT user_id FROM public.practice_tags WHERE created_at >= v_s AND created_at < v_e
         UNION ALL SELECT user_id FROM public.practice_log_templates WHERE created_at >= v_s AND created_at < v_e
         UNION ALL SELECT coalesce(created_by, user_id) FROM public.competitions WHERE created_at >= v_s AND created_at < v_e
@@ -272,27 +277,48 @@ BEGIN
   v_m := v_m || (
     WITH cohort AS (
       SELECT id, created_at FROM public.users WHERE created_at >= v_cs AND created_at < v_s
+    ),
+    -- 行動ごとに、コホート始端以降 (period_end まで) に作られた行の作成者を1回だけ読み、コホートと JOIN する。
+    -- 人ごとの相関 EXISTS にしないのは、コホート人数 × 行動テーブルの全件走査になるため
+    practice_hits AS (
+      SELECT c.id FROM cohort c JOIN (
+        SELECT coalesce(created_by, user_id) AS uid, created_at FROM public.practices
+          WHERE created_at >= v_cs AND created_at < v_e
+        UNION ALL
+        -- チーム練習のログは一括編集で作り直されるので、個人練習のログだけ
+        SELECT l.user_id, l.created_at FROM public.practice_logs l
+          JOIN public.practices lp ON lp.id = l.practice_id
+          WHERE lp.team_id IS NULL AND l.created_at >= v_cs AND l.created_at < v_e
+      ) a ON a.uid = c.id AND a.created_at < c.created_at + interval '7 days'
+    ),
+    competition_hits AS (
+      SELECT c.id FROM cohort c JOIN (
+        SELECT coalesce(created_by, user_id) AS uid, created_at FROM public.competitions
+          WHERE created_at >= v_cs AND created_at < v_e
+        UNION ALL
+        SELECT user_id, created_at FROM public.entries WHERE created_at >= v_cs AND created_at < v_e
+        UNION ALL
+        SELECT user_id, created_at FROM public.records WHERE created_at >= v_cs AND created_at < v_e
+      ) a ON a.uid = c.id AND a.created_at < c.created_at + interval '7 days'
+    ),
+    team_hits AS (
+      SELECT c.id FROM cohort c JOIN (
+        SELECT user_id AS uid, created_at FROM public.team_memberships
+          WHERE created_at >= v_cs AND created_at < v_e
+      ) a ON a.uid = c.id AND a.created_at < c.created_at + interval '7 days'
+    ),
+    goal_hits AS (
+      SELECT c.id FROM cohort c JOIN (
+        SELECT user_id AS uid, created_at FROM public.goals
+          WHERE created_at >= v_cs AND created_at < v_e
+      ) a ON a.uid = c.id AND a.created_at < c.created_at + interval '7 days'
     )
     SELECT jsonb_build_object(
       'funnel.cohort_size', (SELECT count(*) FROM cohort),
-      'funnel.practice', (SELECT count(*) FROM cohort c WHERE
-        EXISTS (SELECT 1 FROM public.practices p WHERE coalesce(p.created_by, p.user_id) = c.id
-                  AND p.created_at < c.created_at + interval '7 days')
-        OR EXISTS (SELECT 1 FROM public.practice_logs l WHERE l.user_id = c.id
-                  AND l.created_at < c.created_at + interval '7 days')),
-      'funnel.competition', (SELECT count(*) FROM cohort c WHERE
-        EXISTS (SELECT 1 FROM public.competitions x WHERE coalesce(x.created_by, x.user_id) = c.id
-                  AND x.created_at < c.created_at + interval '7 days')
-        OR EXISTS (SELECT 1 FROM public.entries x WHERE x.user_id = c.id
-                  AND x.created_at < c.created_at + interval '7 days')
-        OR EXISTS (SELECT 1 FROM public.records x WHERE x.user_id = c.id
-                  AND x.created_at < c.created_at + interval '7 days')),
-      'funnel.team', (SELECT count(*) FROM cohort c WHERE
-        EXISTS (SELECT 1 FROM public.team_memberships x WHERE x.user_id = c.id
-                  AND x.created_at < c.created_at + interval '7 days')),
-      'funnel.goal', (SELECT count(*) FROM cohort c WHERE
-        EXISTS (SELECT 1 FROM public.goals x WHERE x.user_id = c.id
-                  AND x.created_at < c.created_at + interval '7 days'))
+      'funnel.practice', (SELECT count(DISTINCT id) FROM practice_hits),
+      'funnel.competition', (SELECT count(DISTINCT id) FROM competition_hits),
+      'funnel.team', (SELECT count(DISTINCT id) FROM team_hits),
+      'funnel.goal', (SELECT count(DISTINCT id) FROM goal_hits)
     )
   );
 
@@ -305,7 +331,14 @@ BEGIN
       WHERE s.week_start = v_week AND s.provider_environment IS DISTINCT FROM 'sandbox'
         AND (s.status = 'canceled' OR s.cancel_at_period_end IS TRUE)),
     'billing.sandbox_premium_total', (SELECT count(*) FROM public.user_subscription_snapshots s
-      WHERE s.week_start = v_week AND s.provider_environment = 'sandbox')
+      WHERE s.week_start = v_week AND s.provider_environment = 'sandbox'),
+    'billing.trialing', (SELECT count(*) FROM public.user_subscription_snapshots s
+      WHERE s.week_start = v_week AND s.provider_environment IS DISTINCT FROM 'sandbox'
+        AND s.status = 'trialing'),
+    -- 支払い遅延は有料会員数に含めない。スナップショットには入れず、集計時点の状態を数える参考値
+    'billing.past_due', (SELECT count(*) FROM public.user_subscriptions us
+      WHERE us.plan = 'premium' AND us.status = 'past_due'
+        AND us.provider_environment IS DISTINCT FROM 'sandbox')
   ) || coalesce((
     SELECT jsonb_object_agg('billing.premium_total.' || prov, n)
     FROM (SELECT coalesce(s.provider, 'unknown') AS prov, count(*) AS n
@@ -346,7 +379,7 @@ BEGIN
   -- 未分類テーブル (public の実テーブルのうち、分類済みにも除外リストにも無いもの)
   -- ---------------------------------------------------------------------------
   SELECT coalesce(array_agg(tablename::text ORDER BY tablename), '{}'::text[]) INTO v_uncategorized
-  FROM pg_tables
+  FROM pg_catalog.pg_tables
   WHERE schemaname = 'public'
     AND NOT (tablename::text = ANY (v_classified))
     AND NOT (tablename::text = ANY (v_excluded));

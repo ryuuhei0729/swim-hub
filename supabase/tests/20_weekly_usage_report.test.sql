@@ -45,7 +45,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(116);
+select plan(122);
 
 -- -----------------------------------------------------------------------------
 -- ヘルパー (rollback で消える)
@@ -115,15 +115,18 @@ delete from public.weekly_usage_reports where week_start = '2026-10-31';
 --   15 u_relay (リレー記録だけ) / 16 u_group (グループ作成だけ)
 --   11-13 m1-m3 (メンバーシップ・出欠の境界) / 21-26 b1-b6 (登録日時の境界) /
 --   31,32,34,35 c1,c2,c4,c5 (前週の登録 = コホート) / 36 n1 (コホートの1秒前) /
---   41-46 a1-a6 (app_daily_usage) / 51-63 s1-s13 (課金。s13 は W の初回集計の後で有料になる)
+--   17 u_teamlog (チーム練習のログだけ。管理者の一括編集で週内に作り直された選手) /
+--   18 u_rebuild (J 節でチーム練習のログを週内の時刻で作り直す選手) / 19 u_plog (個人練習のログだけ) /
+--   37 c6 (コホート。7日以内の行動はチーム練習のログだけ) / 38 c7 (コホート。7日以内の行動は個人練習のログだけ) /
+--   41-46 a1-a6 (app_daily_usage) / 51-69 s1-s19 (課金。s13 は W の初回集計の後で有料になる)
 insert into auth.users (id, email)
 select public.qa_u(n), 'qa-wr-' || n || '@example.test'
-from unnest(array[1,2,3,4,5,6,7,8,9,10, 11,12,13,14,15,16, 21,22,23,24,25,26, 31,32,34,35,36,
-                  41,42,43,44,45,46, 51,52,53,54,55,56,57,58,59,60,61,62,63]) as n;
+from unnest(array[1,2,3,4,5,6,7,8,9,10, 11,12,13,14,15,16,17,18,19, 21,22,23,24,25,26, 31,32,34,35,36,37,38,
+                  41,42,43,44,45,46, 51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69]) as n;
 
 update public.users set created_at = '2025-12-30 00:00:00+09'
-where id in (select public.qa_u(n) from unnest(array[1,2,3,4,5,6,7,8,9,10, 11,12,13,14,15,16,
-             41,42,43,44,45,46, 51,52,53,54,55,56,57,58,59,60,61,62,63]) as n);
+where id in (select public.qa_u(n) from unnest(array[1,2,3,4,5,6,7,8,9,10, 11,12,13,14,15,16,17,18,19,
+             41,42,43,44,45,46, 51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69]) as n);
 
 update public.users u set created_at = v.ts from (values
   (21, timestamptz '2026-10-30 23:59:59+09'),  -- b1: S の1秒前 (週外。前週のコホートの最後)
@@ -136,7 +139,9 @@ update public.users u set created_at = v.ts from (values
   (32, timestamptz '2026-10-26 10:00:00+09'),  -- c2
   (34, timestamptz '2026-10-28 12:00:00+09'),  -- c4
   (35, timestamptz '2026-10-27 09:00:00+09'),  -- c5
-  (36, timestamptz '2026-10-23 23:59:59+09')   -- n1: コホートの始端の1秒前 (コホート外)
+  (36, timestamptz '2026-10-23 23:59:59+09'),  -- n1: コホートの始端の1秒前 (コホート外)
+  (37, timestamptz '2026-10-27 08:00:00+09'),  -- c6
+  (38, timestamptz '2026-10-27 09:00:00+09')   -- c7
 ) as v(n, ts)
 where u.id = public.qa_u(v.n);
 
@@ -227,7 +232,15 @@ insert into public.practice_logs (id, user_id, practice_id, style, rep_count, se
   (public.qa_e(307), public.qa_u(2), public.qa_e(210), 'Fr', 1, 1, 50, '2026-11-02 12:00:00+09'), -- L4 チーム (TP1)
   (public.qa_e(308), public.qa_u(1), public.qa_e(201), 'Fr', 1, 1, 50, '2026-11-02 12:00:00+09'), -- L5 個人 (古い親)・タイムあり
   (public.qa_e(309), public.qa_u(2), public.qa_e(202), 'Fr', 1, 1, 50, '2026-11-02 12:00:00+09'), -- L6 チーム (古い親 TP_old)
-  (public.qa_e(310), public.qa_u(35), public.qa_e(215), 'Fr', 1, 1, 50, '2026-10-27 12:00:00+09'); -- c5 (前週)
+  (public.qa_e(310), public.qa_u(35), public.qa_e(215), 'Fr', 1, 1, 50, '2026-10-27 12:00:00+09'), -- c5 (前週)
+  -- 管理者の一括編集 (replace_practice_logs) がチーム練習 TP1 のログを週内に作り直し、選手 u_teamlog の
+  -- user_id で入った行。選手はアクティブに入らない (チーム練習は practices の作成者で数える)
+  (public.qa_e(312), public.qa_u(17), public.qa_e(210), 'Fr', 1, 1, 50, '2026-11-03 18:00:00+09'),
+  (public.qa_e(313), public.qa_u(19), public.qa_e(201), 'Fr', 1, 1, 50, '2026-11-04 08:00:00+09'), -- u_plog 個人練習のログだけ (週内)
+  -- c6: 登録の約1日後、チーム練習 TP_old のログだけ (一括編集で作られた行)。動線の練習に入らない
+  (public.qa_e(314), public.qa_u(37), public.qa_e(202), 'Fr', 1, 1, 50, '2026-10-28 10:00:00+09'),
+  -- c7: 登録の1時間後、個人練習のログだけ。動線の練習に入る
+  (public.qa_e(315), public.qa_u(38), public.qa_e(201), 'Fr', 1, 1, 50, '2026-10-27 10:00:00+09');
 
 insert into public.practice_times (user_id, practice_log_id, rep_number, set_number, time) values
   (public.qa_u(4), public.qa_e(304), 1, 1, 30.10),
@@ -370,13 +383,20 @@ insert into public.contact_messages (name, email, subject, message, created_at) 
 --   s1 stripe 本番 / s2 revenucat 環境 NULL (= 本番扱い) / s3 revenucat 本番 (→ W で終了) /
 --   s4 stripe 本番 (→ W で解約予約) / s5 revenucat canceled (A から解約予約中) /
 --   s6, s7, s9, s11 は free / s8 revenucat sandbox / s10 revenucat sandbox (→ W で終了) /
---   s12 provider NULL (→ キーは unknown) / s11 は W で provider NULL の有料になる
+--   s12 provider NULL (→ キーは unknown)・premium_expires_at NULL (期限なしも有料会員) /
+--   s11 は W で provider NULL の有料になる / s9 は W で sandbox の trialing になる (billing.trialing に入らない)
 --   P の前週 (10-17) は保存行だけがありスナップショットは0行 = 「前週の premium 0 人」で比較あり
+--   有料会員の対象外 (A・B とも): s14 stripe past_due (billing.past_due に入る) /
+--   s15 revenucat active だが premium_expires_at が過去 (失効の webhook の取りこぼし) /
+--   s17 revenucat active で premium_expires_at = 集計時刻ちょうど / s18 revenucat sandbox past_due
+--   s19 revenucat active (A は期限内、B では期限が過ぎたまま premium で残る → 有料終了) /
+--   s16 は W で stripe の trialing になる (新規有料に入り、billing.trialing に入る)
+--   期限は実行日に追従させる (now() 基準。now() はトランザクション開始時刻で、集計の間は変わらない)
 -- -----------------------------------------------------------------------------
 update public.user_subscriptions us set
   plan = 'premium', status = v.status, provider = v.provider,
   provider_environment = v.env, cancel_at_period_end = v.cape,
-  premium_expires_at = '2026-11-29 00:00:00+09'
+  premium_expires_at = now() + interval '30 days'
 from (values
   (51, 'active',   'stripe',    'production', false),
   (52, 'active',   'revenucat', null,         false),
@@ -385,8 +405,20 @@ from (values
   (55, 'canceled', 'revenucat', 'production', false),
   (58, 'active',   'revenucat', 'sandbox',    false),
   (60, 'active',   'revenucat', 'sandbox',    false),
-  (62, 'active',   null,        null,         false)
+  (62, 'active',   null,        null,         false),
+  (69, 'active',   'revenucat', 'production', false)
 ) as v(n, status, provider, env, cape)
+where us.id = public.qa_u(v.n);
+update public.user_subscriptions us set
+  plan = 'premium', status = v.status, provider = v.provider,
+  provider_environment = v.env, cancel_at_period_end = false, premium_expires_at = v.expires
+from (values
+  (62, 'active',   null,        null,         null::timestamptz),
+  (64, 'past_due', 'stripe',    'production', now() + interval '30 days'),
+  (65, 'active',   'revenucat', 'production', now() - interval '1 day'),
+  (67, 'active',   'revenucat', 'production', now()),
+  (68, 'past_due', 'revenucat', 'sandbox',    now() + interval '30 days')
+) as v(n, status, provider, env, expires)
 where us.id = public.qa_u(v.n);
 
 insert into qa_runs select 'p1', public.generate_weekly_usage_report('2026-10-24');
@@ -398,14 +430,17 @@ update public.user_subscriptions set cancel_at_period_end = true where id = publ
 update public.user_subscriptions us set
   plan = 'premium', status = v.status, provider = v.provider,
   provider_environment = v.env, cancel_at_period_end = v.cape,
-  premium_expires_at = '2026-11-29 00:00:00+09'
+  premium_expires_at = now() + interval '30 days'
 from (values
-  (56, 'active', 'revenucat', 'production', false),
-  (57, 'active', 'stripe',    'production', true),
-  (59, 'active', 'revenucat', 'sandbox',    false),
-  (61, 'active', null,        null,         false)
+  (56, 'active',   'revenucat', 'production', false),
+  (57, 'active',   'stripe',    'production', true),
+  (59, 'trialing', 'revenucat', 'sandbox',    false),
+  (61, 'active',   null,        null,         false),
+  (66, 'trialing', 'stripe',    'production', false)
 ) as v(n, status, provider, env, cape)
 where us.id = public.qa_u(v.n);
+-- s19: plan / status は premium / active のまま、期限だけが過ぎた
+update public.user_subscriptions set premium_expires_at = now() - interval '1 hour' where id = public.qa_u(69);
 
 insert into qa_runs select 'w1', public.generate_weekly_usage_report('2026-10-31');
 
@@ -462,6 +497,7 @@ select ok(
      'team.attendance','team.announcements','team.groups',
      'goal.created','goal.achieved','goal.milestones_achieved',
      'billing.cancel_pending','billing.sandbox_premium_total','billing.new_cancel_pending','billing.churned',
+     'billing.trialing','billing.past_due',
      'guest.scans','guest.unique_ips','support.contact_messages',
      'funnel.cohort_size','funnel.practice','funnel.competition','funnel.team','funnel.goal']
    from qa_runs where label = 'w1'),
@@ -522,8 +558,8 @@ select is(pg_temp.qa_delta('w1', 'practice.personal_practices'), 6::numeric,
   'D-1: 個人の練習: 境界1 + PP1〜PP4 + c4 (週内) = 6。チーム練習は入らない');
 select is(pg_temp.qa_delta('w1', 'practice.personal_practices_with_image'), 1::numeric,
   'D-2: 画像付き: 空配列と NULL は除き、PP1 だけ (チームの TP3 の画像は入らない)');
-select is(pg_temp.qa_delta('w1', 'practice.personal_logs'), 4::numeric,
-  'D-3: 個人のログ: 親の team_id で判定 (古い個人練習のログは入り、古いチーム練習のログは入らない)');
+select is(pg_temp.qa_delta('w1', 'practice.personal_logs'), 5::numeric,
+  'D-3: 個人のログ: 親の team_id で判定 (古い個人練習のログ・u_plog は入り、古いチーム練習のログ・一括編集で作り直されたチーム練習のログは入らない)');
 select is(pg_temp.qa_delta('w1', 'practice.personal_logs_with_times'), 2::numeric,
   'D-4: タイム付き: タイム0件のログを除き、タイムの行数ではなくログの件数 (L1, L5)');
 select is(pg_temp.qa_delta('w1', 'team.practices'), 4::numeric,
@@ -578,23 +614,24 @@ select ok(
 --   マイルストーン), u_act2 (加入申請), u_act3 (チーム作成), u_act4 (created_by NULL の練習),
 --   u_swim (ログ・エントリー・記録・加入・出欠), m2 (加入・出欠), b1 (加入), b2 (目標),
 --   c2 (大会・目標), c4 (練習), u_ms (マイルストーン → goals.user_id),
---   u_answer (出欠の回答だけ), u_relay (relay_records.created_by だけ), u_group (team_groups.created_by だけ) = 15人
+--   u_answer (出欠の回答だけ), u_relay (relay_records.created_by だけ), u_group (team_groups.created_by だけ),
+--   u_plog (個人練習のログだけ) = 16人。u_teamlog (一括編集で週内に作り直されたチーム練習のログだけ) は入らない
 --   入らない人: u_inactive (S-1s と E ちょうどの行だけ)、u_proxy (user_id だけで created_by は
 --   u_admin の練習)、m1・m3 (境界の外)、u_attnull (トリガが作った未回答の出欠行だけ)、
 --   a6 (AI 読み取りと app_daily_usage だけ)、a*・s*・新規登録だけの b3〜b6
 -- =============================================================================
-select is(pg_temp.qa_delta('w1', 'account.active_users'), 15::numeric,
-  'F-1: アクティブユーザーは15人 (テーブルをまたいで重複なし。週外の行・created_by がある行の user_id・未回答の出欠・Scanner/Timer の利用は数えない)');
+select is(pg_temp.qa_delta('w1', 'account.active_users'), 16::numeric,
+  'F-1: アクティブユーザーは16人 (テーブルをまたいで重複なし。週外の行・created_by がある行の user_id・未回答の出欠・AI 読み取りの利用・チーム練習のログは数えない)');
 
 -- =============================================================================
 -- G. 動線のコホート (成功条件 9)
---   コホート = [2026-10-24 00:00, 2026-10-31 00:00) JST に登録: c1 (始端ちょうど), c2, c4, c5, b1 (終端の1秒前)
+--   コホート = [2026-10-24 00:00, 2026-10-31 00:00) JST に登録: c1 (始端ちょうど), c2, c4, c5, c6, c7, b1 (終端の1秒前)
 --   コホート外: n1 (始端の1秒前), b2 (終端ちょうど)
 -- =============================================================================
-select is(pg_temp.qa_delta('w1', 'funnel.cohort_size'), 5::numeric,
-  'G-1: コホートは5人 (始端ちょうどは含み、終端ちょうどは含まない)');
-select is(pg_temp.qa_delta('w1', 'funnel.practice'), 2::numeric,
-  'G-2: 7日以内に練習: c1 と c5 (練習とログの両方がある c5 も1人)。c4 はちょうど7日後で入らず、n1 はコホート外');
+select is(pg_temp.qa_delta('w1', 'funnel.cohort_size'), 7::numeric,
+  'G-1: コホートは7人 (始端ちょうどは含み、終端ちょうどは含まない)');
+select is(pg_temp.qa_delta('w1', 'funnel.practice'), 3::numeric,
+  'G-2: 7日以内に練習: c1, c5 (練習とログの両方があっても1人), c7 (個人練習のログだけ)。c6 はチーム練習のログだけなので入らず、c4 はちょうど7日後で入らず、n1 はコホート外');
 select is(pg_temp.qa_delta('w1', 'funnel.competition'), 2::numeric,
   'G-3: 7日以内に大会・記録: c2 (6日23時間59分59秒後) と c5 (エントリーと記録で1人)');
 select is(pg_temp.qa_delta('w1', 'funnel.team'), 1::numeric,
@@ -627,12 +664,12 @@ select ok(
    from jsonb_object_keys((select result->'metrics' from qa_runs where label = 'p1')) k
    where k like 'billing.premium_total.%'),
   'H-1d: その件数は provider ごとの有料会員数と同じ');
-select is(pg_temp.qa_delta('w1', 'billing.premium_total.stripe'), 3::numeric,
-  'H-2: 有料会員数 (stripe): s1, s4, s7');
+select is(pg_temp.qa_delta('w1', 'billing.premium_total.stripe'), 4::numeric,
+  'H-2: 有料会員数 (stripe): s1, s4, s7, s16 (trialing)。past_due の s14 は入らない');
 select is(pg_temp.qa_delta('w1', 'billing.premium_total.revenucat'), 3::numeric,
-  'H-3: 有料会員数 (revenucat): s2 (環境 NULL は本番扱い), s5, s6。sandbox の s8, s9 は入らない');
+  'H-3: 有料会員数 (revenucat): s2 (環境 NULL は本番扱い), s5 (canceled = 解約予約中), s6。sandbox の s8, s9、期限切れのまま残った s15・s19、期限が集計時刻ちょうどの s17 は入らない');
 select is(pg_temp.qa_delta('w1', 'billing.premium_total.unknown'), 2::numeric,
-  'H-3b: provider が NULL の有料はキーの末尾を unknown にする (s11, s12)');
+  'H-3b: provider が NULL の有料はキーの末尾を unknown にする (s11, 期限なしの s12)');
 select ok(
   not exists (select 1 from jsonb_object_keys((select result->'metrics' from qa_runs where label = 'w1')) k
               where k in ('billing.premium_total.', 'billing.new_premium.') or k like '%.null'),
@@ -640,31 +677,44 @@ select ok(
 select is(pg_temp.qa_delta('w1', 'billing.cancel_pending'), 3::numeric,
   'H-4: うち解約予約中: canceled の s5 と cancel_at_period_end の s4, s7');
 select is(pg_temp.qa_delta('w1', 'billing.sandbox_premium_total'), 2::numeric,
-  'H-5: sandbox の有料: s8, s9');
-select is(pg_temp.qa_delta('w1', 'billing.new_premium.stripe'), 1::numeric,
-  'H-6: 新規有料 (stripe): s7');
+  'H-5: sandbox の有料: s8, s9 (trialing)');
+select is(pg_temp.qa_delta('w1', 'billing.new_premium.stripe'), 2::numeric,
+  'H-6: 新規有料 (stripe): s7 と、トライアルを始めた s16');
 select is(pg_temp.qa_delta('w1', 'billing.new_premium.revenucat'), 1::numeric,
   'H-7: 新規有料 (revenucat): s6 (sandbox で新しく有料になった s9 は入らない)');
 select is(pg_temp.qa_delta('w1', 'billing.new_premium.unknown'), 1::numeric,
   'H-7b: 新規有料 (unknown): s11');
 select is(pg_temp.qa_delta('w1', 'billing.new_cancel_pending'), 2::numeric,
   'H-8: 新規解約予約: 前週は解約予約でなかった s4 と、前週に無かった s7。前週から canceled の s5 は入らない');
-select is(pg_temp.qa_delta('w1', 'billing.churned'), 1::numeric,
-  'H-9: 有料終了: s3 だけ (sandbox から抜けた s10 は入らない)');
+select is(pg_temp.qa_delta('w1', 'billing.churned'), 2::numeric,
+  'H-9: 有料終了: free になった s3 と、premium のまま期限が過ぎた s19 (sandbox から抜けた s10 は入らない)');
+select is(pg_temp.qa_delta('w1', 'billing.trialing'), 1::numeric,
+  'H-9b: うちトライアル中: 本番の trialing は s16 だけ (sandbox の trialing の s9 は入らない)');
+select is(pg_temp.qa_delta('w1', 'billing.past_due'), 1::numeric,
+  'H-9c: 支払い遅延: 本番の premium かつ past_due は s14 だけ (sandbox の s18 は入らない)');
 select is(
   (select count(*)::int from public.user_subscription_snapshots
-   where week_start = '2026-10-24' and user_id in (select public.qa_u(n) from generate_series(51, 63) n)),
-  8,
-  'H-10: P のスナップショットには premium の行が sandbox も含めて入る (s1-s5, s8, s10, s12)');
+   where user_id in (public.qa_u(64), public.qa_u(65), public.qa_u(67), public.qa_u(68))),
+  0,
+  'H-9d: past_due (s14, s18)・期限切れ (s15)・期限が集計時刻ちょうど (s17) の行はどの週のスナップショットにも入らない');
+select is(
+  (select array_agg(week_start order by week_start) from public.user_subscription_snapshots where user_id = public.qa_u(69)),
+  array['2026-10-24'::date],
+  'H-9e: s19 は期限内だった P にだけ入り、期限が過ぎた W には入らない');
 select is(
   (select count(*)::int from public.user_subscription_snapshots
-   where week_start = '2026-10-31' and user_id in (select public.qa_u(n) from generate_series(51, 63) n)),
-  10,
-  'H-11: W のスナップショット (s1, s2, s4-s9, s11, s12)');
+   where week_start = '2026-10-24' and user_id in (select public.qa_u(n) from generate_series(51, 69) n)),
+  9,
+  'H-10: P のスナップショットには有料会員の行が sandbox も含めて入る (s1-s5, s8, s10, s12, s19)');
+select is(
+  (select count(*)::int from public.user_subscription_snapshots
+   where week_start = '2026-10-31' and user_id in (select public.qa_u(n) from generate_series(51, 69) n)),
+  11,
+  'H-11: W のスナップショット (s1, s2, s4-s9, s11, s12, s16)');
 select is(
   (select row(status, provider, cancel_at_period_end, provider_environment, premium_expires_at)::text
    from public.user_subscription_snapshots where week_start = '2026-10-31' and user_id = public.qa_u(54)),
-  row('active'::text, 'stripe'::text, true, 'production'::text, timestamptz '2026-11-29 00:00:00+09')::text,
+  row('active'::text, 'stripe'::text, true, 'production'::text, now() + interval '30 days')::text,
   'H-12: スナップショットの列 (status, provider, cancel_at_period_end, provider_environment, premium_expires_at)');
 select is(
   (select provider_environment from public.user_subscription_snapshots
@@ -698,9 +748,11 @@ insert into public.practice_times (user_id, practice_log_id, rep_number, set_num
 delete from public.split_times where record_id = public.qa_e(504);
 insert into public.split_times (record_id, distance, split_time) values
   (public.qa_e(504), 25, 27.90), (public.qa_e(504), 50, 58.80), (public.qa_e(504), 75, 90.00);
+-- チームの一括編集 (replace_practice_logs) と同じく、管理者が選手のログを週内の時刻で作り直す。
+-- 選手 u_rebuild はこのログしか持たないので、チーム練習のログを数えるとアクティブが1人増えて J-2 が赤になる
 delete from public.practice_logs where id in (public.qa_e(306), public.qa_e(307));
-insert into public.practice_logs (id, user_id, practice_id, style, rep_count, set_count, distance) values
-  (public.qa_e(311), public.qa_u(2), public.qa_e(210), 'Fr', 1, 1, 100);
+insert into public.practice_logs (id, user_id, practice_id, style, rep_count, set_count, distance, created_at) values
+  (public.qa_e(311), public.qa_u(18), public.qa_e(210), 'Fr', 1, 1, 100, '2026-11-05 20:00:00+09');
 
 -- W の初回集計の後で課金の状態を変える (再実行で取り直さないことを見る)
 update public.user_subscriptions set plan = 'free', status = 'expired' where id = public.qa_u(51);
@@ -748,8 +800,8 @@ select is(
   'J-9: 前週が送信済みなら previous_email_sent_at にその時刻が入る');
 select is(
   (select count(*)::int from public.user_subscription_snapshots
-   where week_start = '2026-10-31' and user_id in (select public.qa_u(n) from generate_series(51, 63) n)),
-  10,
+   where week_start = '2026-10-31' and user_id in (select public.qa_u(n) from generate_series(51, 69) n)),
+  11,
   'J-10: 再実行してもスナップショットは重複せず、後から有料になった s13 も足さない');
 select is(
   (select row(status, provider, cancel_at_period_end)::text from public.user_subscription_snapshots
@@ -766,8 +818,8 @@ select is(
 insert into qa_runs select 'p2', public.generate_weekly_usage_report('2026-10-24');
 select is(
   (select count(*)::int from public.user_subscription_snapshots
-   where week_start = '2026-10-24' and user_id in (select public.qa_u(n) from generate_series(51, 63) n)),
-  8,
+   where week_start = '2026-10-24' and user_id in (select public.qa_u(n) from generate_series(51, 69) n)),
+  9,
   'J-14: 過去の週 (P) を再実行しても、その週のスナップショットは今の状態で上書きされない');
 select is(
   (select jsonb_object_agg(key, value) from jsonb_each((select result->'metrics' from qa_runs where label = 'p2'))
@@ -803,13 +855,19 @@ select is(
 -- =============================================================================
 -- L. 既定の対象週 (引数 NULL)
 -- =============================================================================
+-- 実装と同じ式を写さず、「終わった直近の週」の性質で見る (JST の今日を T として)
+--   土曜である / 週が終わっている (week_start + 7 <= T) / 直近である (week_start + 14 > T)
 insert into qa_runs select 'dflt', public.generate_weekly_usage_report(null);
 select is(
-  (select (result->>'week_start')::date from qa_runs where label = 'dflt'),
-  (now() at time zone 'Asia/Tokyo')::date
-    - ((extract(isodow from (now() at time zone 'Asia/Tokyo'))::int + 1) % 7)  -- 今日以前の直近の土曜 (isodow: 土=6)
-    - 7,
-  'L-1: 引数が NULL なら、JST で今日以前の直近の土曜の7日前の週を集計する');
+  (select extract(isodow from (result->>'week_start')::date)::int from qa_runs where label = 'dflt'),
+  6,
+  'L-1a: 引数が NULL のときの週は土曜始まり');
+select ok(
+  (select (result->>'week_start')::date + 7 <= (now() at time zone 'Asia/Tokyo')::date from qa_runs where label = 'dflt'),
+  'L-1b: その週は JST の今日までに終わっている (week_start + 7 <= 今日)');
+select ok(
+  (select (result->>'week_start')::date + 14 > (now() at time zone 'Asia/Tokyo')::date from qa_runs where label = 'dflt'),
+  'L-1c: その週は終わった週のうち直近 (week_start + 14 > 今日)');
 
 select throws_ok(
   $$ select public.generate_weekly_usage_report('2026-11-01') $$,
