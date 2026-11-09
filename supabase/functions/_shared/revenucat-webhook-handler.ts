@@ -8,6 +8,8 @@ const corsHeaders = {
 // --- Types ---
 
 interface RevenueCatEvent {
+  // イベントごとに一意。RevenueCat の再送は同じ id を使う
+  id: string;
   type: string;
   app_user_id: string;
   product_id: string;
@@ -19,6 +21,11 @@ interface RevenueCatEvent {
   environment: "PRODUCTION" | "SANDBOX";
   original_transaction_id: string;
   transaction_id: string;
+  // app_id は store が PROMOTIONAL のとき省かれる。金額と通貨は RevenueCat のドキュメントで
+  // "Sometimes" (キー自体が無いこともある)。金額の null は不明、負数は返金
+  app_id?: string;
+  price_in_purchased_currency?: number | null;
+  currency?: string | null;
 }
 
 interface RevenueCatWebhookBody {
@@ -54,6 +61,74 @@ function msToISO(ms: number | null | undefined): string | null {
   return new Date(ms).toISOString();
 }
 
+// --- Billing Notification (運営者向けメール) ---
+
+const EVENT_LABELS: Record<string, string> = {
+  INITIAL_PURCHASE: "新規購入",
+  RENEWAL: "更新",
+  PRODUCT_CHANGE: "プラン変更",
+  UNCANCELLATION: "解約取り消し",
+  CANCELLATION: "解約",
+  EXPIRATION: "失効",
+  BILLING_ISSUE: "支払い問題",
+};
+
+const STORE_LABELS: Record<string, string> = {
+  APP_STORE: "iOS",
+  PLAY_STORE: "Android",
+};
+
+// RESEND_API_KEY と BILLING_NOTIFY_EMAIL が両方設定された環境でだけ送る。
+// 送信失敗で webhook を 500 にすると RevenueCat が再送し、処理済みとして弾かれるだけなので握りつぶす。
+async function notifyBillingEmail(appName: string, event: RevenueCatEvent): Promise<void> {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  const to = Deno.env.get("BILLING_NOTIFY_EMAIL");
+  if (!apiKey || !to) return;
+
+  const eventLabel = EVENT_LABELS[event.type] ?? event.type;
+  const storeLabel = STORE_LABELS[event.store] ?? event.store ?? "不明";
+  const sandboxPrefix = event.environment === "SANDBOX" ? "[SANDBOX] " : "";
+  const price =
+    event.price_in_purchased_currency != null
+      ? `${event.price_in_purchased_currency} ${event.currency ?? ""}`.trim()
+      : "-";
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "SwimHub <noreply@swim-hub.app>",
+        to,
+        // appName はデプロイ元の固定値で、複数アプリのイベントが同じ関数に届くとアプリを区別できない。
+        // アプリは product_id と RevenueCat の app_id で見分ける
+        subject: `${sandboxPrefix}【課金】[${storeLabel}] ${eventLabel} ${event.product_id}`,
+        text: [
+          `イベント: ${eventLabel} (${event.type})`,
+          `ストア: ${storeLabel} (${event.store ?? "-"})`,
+          `環境: ${event.environment}`,
+          `ユーザーID: ${event.app_user_id}`,
+          `商品: ${event.product_id}`,
+          `RevenueCat app_id: ${event.app_id ?? "-"}`,
+          `期間種別: ${event.period_type}`,
+          `金額: ${price}`,
+          `有効期限 (UTC): ${msToISO(event.expiration_at_ms) ?? "-"}`,
+          `transaction_id: ${event.transaction_id}`,
+        ].join("\n"),
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      console.error(`[${appName}] Billing notify email failed: ${res.status} ${await res.text()}`);
+    }
+  } catch (err) {
+    console.error(`[${appName}] Billing notify email error:`, err);
+  }
+}
+
 // --- Auth ---
 
 function verifyAuthorization(req: Request, expectedToken: string): boolean {
@@ -79,14 +154,14 @@ type IdempotencyResult = "ok" | "duplicate" | "error";
 
 async function tryMarkAsProcessed(
   supabase: SupabaseClient,
-  transactionId: string,
+  eventId: string,
   appName: string,
 ): Promise<IdempotencyResult> {
   try {
     const { error } = await supabase
       .from("processed_webhook_events")
       .insert({
-        event_id: `rc_${transactionId}`,
+        event_id: `rc_${eventId}`,
         processed_at: new Date().toISOString(),
       });
 
@@ -234,16 +309,23 @@ export function createRevenueCatWebhookHandler(appName: string) {
         return jsonResponse({ error: "Invalid or missing event.environment" }, 400);
       }
 
+      // 重複判定のキーは event.id (RevenueCat の Webhooks ドキュメントが重複処理に使うよう勧めている)。
+      // transaction_id はストアの取引 ID でイベントごとに一意ではなく、キーにすると別のイベントが処理済みとして捨てられうる
+      if (typeof event.id !== "string" || event.id === "") {
+        console.error(`[${appName}] Invalid or missing event.id:`, event.id);
+        return jsonResponse({ error: "Invalid or missing event.id" }, 400);
+      }
+
       const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-      // Idempotency check: at-most-once processing using transaction_id
-      const idempotencyResult = await tryMarkAsProcessed(supabase, event.transaction_id, appName);
+      // Idempotency check: at-most-once processing using event.id
+      const idempotencyResult = await tryMarkAsProcessed(supabase, event.id, appName);
       if (idempotencyResult === "duplicate") {
-        console.log(`[${appName}] Already processed transaction: ${event.transaction_id}`);
+        console.log(`[${appName}] Already processed event: ${event.id}`);
         return jsonResponse({ received: true, message: "Already processed" });
       }
       if (idempotencyResult === "error") {
-        console.error(`[${appName}] Idempotency check failed for transaction: ${event.transaction_id}`);
+        console.error(`[${appName}] Idempotency check failed for event: ${event.id}`);
         return jsonResponse({ error: "Idempotency check failed" }, 500);
       }
 
@@ -275,6 +357,7 @@ export function createRevenueCatWebhookHandler(appName: string) {
       }
 
       console.log(`[${appName}] Successfully processed ${event.type} for user ${userId}`);
+      await notifyBillingEmail(appName, event);
       return jsonResponse({ received: true });
     } catch (err) {
       console.error(`[${appName}] Unexpected error in revenucat-webhook:`, err);
