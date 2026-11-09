@@ -29,12 +29,16 @@
 --           -v ON_ERROR_STOP=0 -f supabase/tests/20_weekly_usage_report.test.sql
 --       全フィクスチャ・作り直した子・一時テーブル・一時ロール・外した CHECK 制約・止めたトリガは
 --       rollback で消える。
---       supabase start のスタックを使えないときは、同じ image の Postgres を単体で起動し
---       (public.ecr.aws/supabase/postgres:<版>)、次の2点を補ってから migration を順に流す:
---         - storage.buckets に public / file_size_limit / allowed_mime_types 列を足す
---           (storage-api が足す列。無いと initial_schema など4本が途中で止まる)
---         - auth.uid() / auth.role() / auth.email() / auth.jwt() を supabase start の DB と同じ定義にする
---           (image 同梱の auth.uid() は request.jwt.claims を読まず、role を切り替えるテストが全て赤になる)
+--       supabase start のスタックを使えないとき (他のセッションと共有しているときを含む) は、
+--       隔離した Postgres を作ってそこで流す:
+--         bash supabase/tests/fixtures/isolated-db/setup_db.sh
+--         PGPASSWORD=postgres psql -h 127.0.0.1 -p 54399 -U postgres -d postgres -tA \
+--           -f supabase/tests/20_weekly_usage_report.test.sql
+--       (ホストの psql -f で流す。docker exec の標準入力で流すと、09 番の `\ir ../migrations/...` が
+--        解決できずに偽の赤になる)
+--       setup_db.sh は同じ image の Postgres を単体で起動し、bare image に無い2点を supabase_admin で補う
+--       (postgres では permission denied になる): storage.buckets の列 / auth.uid() などを
+--       request.jwt.claims を読む定義にする (fixtures/isolated-db/auth_funcs.sql)。
 --       注意: milestones の CHECK 制約を一時的に外し、team_attendance の updated_at トリガを
 --       一時的に止めるため、実行中はこの2テーブルにロックがかかる (他のセッションが使っている DB では数秒止まる)。
 -- =============================================================================

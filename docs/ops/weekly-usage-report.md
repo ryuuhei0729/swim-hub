@@ -16,11 +16,23 @@ supabase secrets set WEEKLY_REPORT_CRON_SECRET=<値> --project-ref <ref>
 supabase secrets set WEEKLY_REPORT_EMAIL=<宛先> --project-ref <ref>
 ```
 
-vault (SQL Editor で実行):
+vault (SQL Editor で実行)。同じ名前の secret が既にあると `create_secret` は名前の重複で失敗するので、先に有無を確かめる:
+
+```sql
+select name from vault.secrets where name in ('project_url', 'weekly_report_cron_secret');
+```
+
+無いものは作る:
 
 ```sql
 select vault.create_secret('https://<ref>.supabase.co', 'project_url');
 select vault.create_secret('<WEEKLY_REPORT_CRON_SECRET と同じ値>', 'weekly_report_cron_secret');
+```
+
+既にあって値を変えるときは `update_secret` を使う:
+
+```sql
+select vault.update_secret((select id from vault.secrets where name = 'weekly_report_cron_secret'), '<新しい値>');
 ```
 
 `project_url` か `weekly_report_cron_secret` が vault に無い環境では、`invoke_weekly_usage_report()` は NOTICE を出して何もしない。
@@ -29,14 +41,19 @@ select vault.create_secret('<WEEKLY_REPORT_CRON_SECRET と同じ値>', 'weekly_r
 
 3アプリは Supabase プロジェクトを共有しているので、swim-hub からデプロイする。
 
+`db push` は、本番に未適用の migration をすべて適用する。先に一覧を見て、この2本以外に未適用のものが無いかを確かめる (別の変更の migration が一緒に出ないように):
+
 ```bash
 cd swim-hub
-supabase db push --project-ref <ref>             # migration 20261110000000 / 20261110000001
+supabase migration list --linked                 # Remote が空の行 = 未適用。20261110000000 / 20261110000001 だけであること
+supabase db push --project-ref <ref>
 supabase functions deploy weekly-report --project-ref <ref>
 ```
 
 migration 適用時に NOTICE が出ていないか確かめる (`pg_net の有効化に失敗しました` / `pg_cron が無効なため ... 登録しませんでした`)。
 登録の確認: `select jobname, schedule from cron.job where jobname = 'weekly-usage-report';` (`0 22 * * 5`)。
+
+デプロイ後に、ゲートウェイで JWT の検証が無効になっているかを確かめる。認証なしで POST して、Edge Function 自身の 401 (`{"error":"Unauthorized"}`) が返れば無効になっている。ゲートウェイの JWT エラーが返る場合は、`config.toml` の `[functions.weekly-report] verify_jwt = false` が反映されていない (cron からの呼び出しも 401 になる)。
 
 ## 3. 手動実行・再送
 

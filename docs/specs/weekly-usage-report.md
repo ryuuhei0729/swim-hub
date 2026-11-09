@@ -238,7 +238,7 @@ docs/ops/weekly-usage-report.md                          secret と vault の設
 | 16 | Resend の呼び方が既存と同じ。宛先のフォールバックと、未設定なら送らない動きも正しい | Deno: fetch モック |
 | 17 | 送信に失敗したら `email_sent_at` を更新しない。送信済みなら再送しない (`force` があれば再送する) | Deno |
 | 18 | 本文が区分 1〜9、その他の指標、未分類の順に並ぶ。先週比の表記が正しい | Deno (純関数) |
-| 19 | 既存のテストを壊さない。Deno は全件緑。pgTAP は着手前の基準線 (19本中14本が緑。05・06・07・09・13 は既に赤) から赤を増やさない | `deno test supabase/functions/` と、既存の pgTAP を隔離 DB で実行 |
+| 19 | 既存のテストを壊さない。Deno は全件緑。pgTAP は着手前の基準線 (19本中15本が緑。05・06・07・13 は既に赤) から赤を増やさない。09 は `\ir` で migration を相対パスで読むので、標準入力ではなく `psql -f` で流す | `deno test supabase/functions/` と、既存の pgTAP を隔離 DB で実行 |
 | 20 | ローカルの結合スモーク: `supabase start` → functions serve → 手動で POST → 行が保存される (送信は宛先未設定でスキップ) | 手動で実測し、ログを残す |
 
 ### 範囲外
