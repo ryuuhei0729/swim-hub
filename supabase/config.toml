@@ -361,6 +361,11 @@ verify_jwt = false
 [functions.delete-user-storage]
 verify_jwt = false
 
+# 週次利用レポートは pg_cron (pg_net) からの内部呼び出しで、Supabase JWT を送らず、
+# ハンドラ内で WEEKLY_REPORT_CRON_SECRET との定数時間比較を行うため JWT 検証を無効化する。
+[functions.weekly-report]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
