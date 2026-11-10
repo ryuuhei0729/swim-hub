@@ -18,10 +18,8 @@ import TabLoadingSkeleton from "@/components/team/TabLoadingSkeleton";
 // 作らないため、初回クリックのサスペンドが `page.tsx` の `<Suspense>` まで伝播し、
 // 隠されたツリーの effect が破棄される。
 //
-// 管理ページで「初回クリックが飲まれる」症状が出ていないのは、**この画面には
-// ストアを書き換える cleanup が無い**から (TeamAdminClient は unmount 時の
-// `reset()` を持たない)。effect の破棄自体は同様に起きており、
-// 将来この画面に cleanup を足した瞬間に同じバグが再発する。
+// この画面もチーム切替のため unmount 時に `reset()` する cleanup を持つので、
+// `loading` を外すと一般ページと同じ「初回クリックが飲まれる」バグが出る。
 // またスケルトンが無いとチャンク取得中に本文が空になり「押しても無反応」に見える。
 // 詳細は TabLoadingSkeleton.tsx の docstring を参照。**外さないこと。**
 const TeamAnnouncements = dynamic(
@@ -60,7 +58,6 @@ import type { MemberDetail } from "@/components/team/MemberDetailModal";
 import { TeamMembership, TeamWithMembers } from "@swim-hub/shared/types";
 import { useTeamAdminStore } from "@/stores/form/teamAdminStore";
 import { TeamMembersAPI } from "@apps/shared/api/teams/members";
-import { ClipboardDocumentIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 interface TeamAdminClientProps {
   teamId: string;
@@ -70,7 +67,9 @@ interface TeamAdminClientProps {
 }
 
 /**
- * チーム管理ページのインタラクティブ部分を担当するClient Component
+ * チーム画面の管理者ビュー (ヘッダーより下のタブと本文)。
+ * ヘッダー (チーム名・表示切替・招待コード) は TeamPageClient が持ち、
+ * 表示切替ではこのコンポーネントだけが利用者ビュー (TeamDetailClient) と入れ替わる。
  */
 export default function TeamAdminClient({
   teamId,
@@ -83,7 +82,6 @@ export default function TeamAdminClient({
   const t = useTranslations("teamsAdmin");
   const { user, supabase } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
-  const [isCopied, setIsCopied] = useState(false);
   // メンバー詳細モーダルでの権限・泳者区分の変更を、開いたまま裏側の一覧
   // (TeamMemberManagement) にもバックグラウンドで反映するためのシグナル。
   // undefined のままなら一覧側は再取得しない
@@ -104,6 +102,7 @@ export default function TeamAdminClient({
     closeMemberModal,
     appliedTabParam,
     setAppliedTabParam,
+    reset,
   } = useTeamAdminStore();
 
   // サーバー側から取得したデータをストアに設定
@@ -112,6 +111,15 @@ export default function TeamAdminClient({
     setMembership(initialMembership);
     setLoading(false);
   }, [initialTeam, initialMembership, setTeam, setMembership, setLoading]);
+
+  // useTeamAdminStore はモジュールシングルトン。利用者ビューへの切替・チーム切替でアンマウント
+  // したとき初期化しないと、直前の team / activeTab が次に開いたときの初回レンダーに乗る
+  // (一般ビュー TeamDetailClient と同じ理由。appliedTabParam も reset で同時に消える)
+  useEffect(() => {
+    return () => {
+      reset();
+    };
+  }, [reset]);
 
   // 表示用のデータ（ストアから取得、なければ初期データを使用）
   const displayTeam = team || initialTeam;
@@ -263,62 +271,12 @@ export default function TeamAdminClient({
 
   return (
     <div>
-      {/* チームヘッダー */}
-      <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 wrap-break-word">
-              {displayTeam.name}
-            </h1>
-            {displayTeam.description && (
-              <p className="text-xs sm:text-sm text-gray-600 wrap-break-word">
-                {displayTeam.description}
-              </p>
-            )}
-          </div>
-          {displayTeam.invite_code && (
-            <div className="w-full md:w-auto md:shrink-0">
-              <div className="bg-gray-50 rounded-lg p-2 sm:p-2.5 w-full md:w-auto">
-                <div className="flex flex-row items-center gap-2">
-                  <label className="block text-xs font-medium text-gray-700 whitespace-nowrap">
-                    {t("client.inviteCodeLabel")}
-                  </label>
-                  <input
-                    type="text"
-                    value={displayTeam.invite_code}
-                    readOnly
-                    className="flex-1 px-2 py-1 bg-white border border-gray-300 rounded-md shadow-sm text-xs font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(displayTeam.invite_code || "");
-                      setIsCopied(true);
-                      setTimeout(() => setIsCopied(false), 2000);
-                    }}
-                    className="inline-flex items-center justify-center px-2 py-1 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                    title={t("common.copyTitle")}
-                  >
-                    {isCopied ? (
-                      <CheckIcon className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <ClipboardDocumentIcon className="h-3 w-3" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* タブナビゲーション */}
-      <div className="mt-4">
-        <TeamAdminTabs
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          pendingCount={pendingCount}
-        />
-      </div>
+      <TeamAdminTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        pendingCount={pendingCount}
+      />
 
       {/* タブコンテンツ */}
       <div className="bg-white rounded-lg shadow">{renderTabContent()}</div>

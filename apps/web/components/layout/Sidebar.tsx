@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 
@@ -19,7 +19,6 @@ import {
   ChevronRightIcon,
   UsersIcon,
   UserIcon,
-  ShieldCheckIcon,
   ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
 
@@ -78,92 +77,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const t = useTranslations("sidebar");
   const pathname = usePathname();
   const router = useRouter();
-  const { user, supabase, signOut } = useAuth();
-  const [singleTeamId, setSingleTeamId] = useState<string | null>(null);
-  const [adminTeamIds, setAdminTeamIds] = useState<string[]>([]);
-  const [singleAdminTeamId, setSingleAdminTeamId] = useState<string | null>(null);
+  const { signOut } = useAuth();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-
-  // ユーザーのチーム一覧を取得してチーム数をチェック
-  useEffect(() => {
-    if (!user || !supabase) return;
-
-    const loadTeams = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("team_memberships")
-          .select("team_id, is_active")
-          .eq("user_id", user.id)
-          .eq("is_active", true);
-
-        if (error) throw error;
-
-        // チームが1つだけの場合はIDを保存
-        if (data && data.length === 1) {
-          setSingleTeamId(data[0]!.team_id); // data.length === 1 を直上の if で確認済み
-        } else {
-          setSingleTeamId(null);
-        }
-      } catch (error) {
-        console.error("チーム情報の取得に失敗:", error);
-        setSingleTeamId(null);
-      }
-    };
-
-    // 管理者権限を持つチーム一覧を取得
-    const loadAdminTeams = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("team_memberships")
-          .select("team_id")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .eq("is_active", true);
-
-        if (error) throw error;
-
-        const adminIds = data?.map((m) => m.team_id) || [];
-        setAdminTeamIds(adminIds);
-
-        // 管理者権限のチームが1つだけの場合はIDを保存
-        if (adminIds.length === 1) {
-          setSingleAdminTeamId(adminIds[0]);
-        } else {
-          setSingleAdminTeamId(null);
-        }
-      } catch (error) {
-        console.error("管理者チーム情報の取得に失敗:", error);
-        setAdminTeamIds([]);
-        setSingleAdminTeamId(null);
-      }
-    };
-
-    loadTeams();
-    loadAdminTeams();
-
-    // リアルタイム購読: チームメンバーシップの変更を監視
-    const channel = supabase
-      .channel("sidebar-team-memberships")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "team_memberships",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          // チームメンバーシップが変更されたら再取得
-          loadTeams();
-          loadAdminTeams();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, supabase]);
 
   return (
     <>
@@ -187,25 +102,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <nav className="mt-6 px-3 pb-6">
           <div className="space-y-2">
             {baseNavigation.map((item) => {
-              // チームの場合は、チームが1つだけの場合は直接チームページへ
-              const href =
-                item.href === "/teams" && singleTeamId ? `/teams/${singleTeamId}` : item.href;
+              const href = item.href;
 
-              // アクティブ判定
-              let isActive = pathname === item.href;
-
-              // チームの場合は特別処理
-              if (item.href === "/teams") {
-                if (singleTeamId) {
-                  // チームが1つの場合: チーム詳細ページ（/teams/[teamId]）にいる時はアクティブ
-                  isActive =
-                    pathname.startsWith(`/teams/${singleTeamId}`) &&
-                    !pathname.startsWith("/teams-admin");
-                } else {
-                  // チームが0個または2つ以上の場合: /teamsページにいる時はアクティブ
-                  isActive = pathname === "/teams";
-                }
-              }
+              // チームは /teams (入口) から最後に開いたチームの利用者ビュー (/teams/[teamId]) か
+              // 管理者ビュー (/teams-admin/[teamId]) へ移るので、その配下すべてでアクティブにする
+              const isActive =
+                item.href === "/teams"
+                  ? pathname === "/teams" ||
+                    pathname.startsWith("/teams/") ||
+                    pathname.startsWith("/teams-admin")
+                  : pathname === item.href;
 
               return (
                 <div key={item.href} className="group">
@@ -249,46 +155,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
               );
             })}
-
-            {/* チーム管理（管理者専用） */}
-            {adminTeamIds.length > 0 && (
-              <div className="group">
-                <Link
-                  href={singleAdminTeamId ? `/teams-admin/${singleAdminTeamId}` : "/teams-admin"}
-                  className={`
-                    group flex items-center px-3 py-2 lg:py-3 text-xs lg:text-sm font-medium rounded-lg transition-all duration-200 relative
-                    ${
-                      pathname.startsWith("/teams-admin")
-                        ? "bg-purple-50 text-purple-700 shadow-sm border-l-4 border-purple-500"
-                        : "text-purple-700 bg-purple-50/50 hover:text-purple-800 hover:bg-purple-100 hover:shadow-sm border-l-4 border-purple-300"
-                    }
-                  `}
-                  onClick={onClose}
-                  onMouseEnter={() =>
-                    router.prefetch(
-                      singleAdminTeamId ? `/teams-admin/${singleAdminTeamId}` : "/teams-admin",
-                    )
-                  }
-                >
-                  <ShieldCheckIcon
-                    className={`
-                      hidden lg:block mr-3 h-5 w-5 shrink-0 transition-colors duration-200
-                      ${pathname.startsWith("/teams-admin") ? "text-purple-600" : "text-purple-500 group-hover:text-purple-600"}
-                    `}
-                    aria-hidden="true"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="truncate">{t("nav.teamAdmin")}</span>
-                      {!pathname.startsWith("/teams-admin") && (
-                        <ChevronRightIcon className="h-4 w-4 text-purple-300 group-hover:text-purple-400 transition-colors duration-200" />
-                      )}
-                    </div>
-                    <p className="hidden lg:block text-xs text-purple-600 mt-1 truncate font-medium">{t("nav.teamAdminDesc")}</p>
-                  </div>
-                </Link>
-              </div>
-            )}
 
             {/* スマホ用：言語切り替え + 設定・ログアウト */}
             <div className="lg:hidden mt-2 pt-2 border-t border-gray-200 space-y-1">

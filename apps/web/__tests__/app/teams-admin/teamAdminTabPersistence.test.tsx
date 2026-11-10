@@ -1,7 +1,7 @@
 /**
  * teamAdminTabPersistence.test.tsx — QA 回帰ガード (teams-admin 側)
  *
- * 対象: apps/web/app/[locale]/(authenticated)/teams-admin/[teamId]/_client/TeamAdminClient.tsx
+ * 対象: apps/web/app/[locale]/(authenticated)/teams/[teamId]/_client/TeamAdminClient.tsx
  *
  * `TeamDetailClient` と**同一パターンが2箇所**にあるため、片方だけ直すと
  * もう片方が静かに残る。teams-admin 側にも同じ不変条件を張る。
@@ -68,7 +68,7 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
-import TeamAdminClient from "@/app/[locale]/(authenticated)/teams-admin/[teamId]/_client/TeamAdminClient";
+import TeamAdminClient from "@/app/[locale]/(authenticated)/teams/[teamId]/_client/TeamAdminClient";
 import { useTeamAdminStore } from "@/stores/form/teamAdminStore";
 
 const TEAM_ID = "team-kingfisher";
