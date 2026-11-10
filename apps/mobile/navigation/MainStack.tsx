@@ -16,7 +16,9 @@ import { TeamRecordStyleDetailScreen } from "@/screens/TeamRecordStyleDetailScre
 import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
 import { TeamEntryBulkFormScreen } from "@/screens/TeamEntryBulkFormScreen";
 import { TeamBulkRegisterScreen } from "@/screens/TeamBulkRegisterScreen";
-import { SettingsScreen } from "@/screens/SettingsScreen";
+import { AccountPlanScreen } from "@/screens/AccountPlanScreen";
+import { AccountCalendarScreen } from "@/screens/AccountCalendarScreen";
+import { AccountSecurityScreen } from "@/screens/AccountSecurityScreen";
 import { PracticeLogTemplatesScreen } from "@/screens/PracticeLogTemplatesScreen";
 import { BulkBestTimeScreen } from "@/screens/BulkBestTimeScreen";
 import { PaywallScreen } from "@/screens/PaywallScreen";
@@ -167,11 +169,27 @@ export const MainStack: React.FC = () => {
         }}
       />
       <Stack.Screen
-        name="Settings"
-        component={SettingsScreen}
+        name="AccountPlan"
+        component={AccountPlanScreen}
         options={{
           ...baseHeaderOptions,
-          title: t("navigation.mobile.titles.settings"),
+          title: t("account.mobile.rows.plan"),
+        }}
+      />
+      <Stack.Screen
+        name="AccountCalendar"
+        component={AccountCalendarScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("account.mobile.rows.calendar"),
+        }}
+      />
+      <Stack.Screen
+        name="AccountSecurity"
+        component={AccountSecurityScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("account.mobile.rows.security"),
         }}
       />
       <Stack.Screen

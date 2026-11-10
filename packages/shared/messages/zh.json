@@ -7,8 +7,8 @@
         "competitions": "比赛",
         "records": "记录",
         "teams": "团队",
-        "myPage": "我的",
-        "goals": "目标"
+        "goals": "目标",
+        "account": "账户"
       },
       "titles": {
         "practiceDetail": "训练记录详情",
@@ -23,7 +23,6 @@
         "competitionInfo": "比赛信息",
         "entryRegister": "报名登记",
         "teamDetail": "团队详情",
-        "settings": "设置",
         "bulkBestTime": "批量录入最好成绩",
         "goalDetail": "目标详情"
       }
@@ -1269,14 +1268,9 @@
       "dataFetchFailed": "数据获取失败",
       "loadingData": "正在加载数据...",
       "bestTimesFetchFailed": "最佳成绩获取失败",
-      "settingsButtonAria": "打开设置",
-      "profileSectionTitle": "个人资料",
-      "editButton": "编辑",
-      "settingsButton": "设置",
       "profileNotFound": "未找到个人资料",
       "bulkInput": "批量录入",
-      "bulkInputAria": "批量录入最佳成绩",
-      "pageTitle": "我的主页"
+      "bulkInputAria": "批量录入最佳成绩"
     },
     "title": "我的页面",
     "subtitle": "管理你的个人资料和最佳成绩",
@@ -4617,6 +4611,33 @@
     "toko": {
       "title": "都高积分",
       "note": "「都高积分」并非东京都高中体育联盟的官方评分制度，而是SwimHub将都高中大赛的出场限制成绩视为1000分独自换算的指标。"
+    }
+  },
+  "account": {
+    "mobile": {
+      "pageTitle": "账户",
+      "editProfile": "编辑个人资料",
+      "addTeamAria": "创建或加入团队",
+      "rows": {
+        "plan": "套餐",
+        "calendar": "日历",
+        "practiceLogTemplates": "练习日志模板",
+        "security": "登录与安全"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "试用中"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "ios": "iOS",
+        "notConnected": "未关联"
+      },
+      "plan": {
+        "manageNoteIos": "将打开 App Store",
+        "manageNoteAndroid": "将打开 Google Play"
+      }
     }
   }
 }

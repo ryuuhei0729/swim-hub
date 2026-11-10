@@ -24,7 +24,7 @@ const Tab = createTabNavigator();
 /**
  * タブナビゲーター
  * 認証済みユーザー向けのメイン画面遷移を管理
- * ホーム、記録 (練習/大会)、チーム、目標、マイページの5つのタブ
+ * ホーム、記録 (練習/大会)、チーム、目標、アカウントの5つのタブ
  * (iOS 標準のタブバーは 5 つまでしか並ばず、6 つ目以降は「その他」にまとめられてしまう)
  */
 export const TabNavigator: React.FC = () => {
@@ -107,7 +107,7 @@ export const TabNavigator: React.FC = () => {
           name="MyPage"
           component={MyPageScreen}
           options={tabScreenOptions({
-            label: t("navigation.mobile.tabs.myPage"),
+            label: t("navigation.mobile.tabs.account"),
             testID: "tab-mypage",
             feather: "user",
           })}

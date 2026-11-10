@@ -6,12 +6,13 @@
 // このファイルを import するだけで、下記モジュールが vi.mock される。
 // 画面ごとに差し替えたい値は `harness` のプロパティを書き換える。
 //
-//   @react-navigation/native       useNavigation / useFocusEffect (マウント時に1回だけ発火)
+//   @react-navigation/native       useNavigation (navigate は harness.navigate) / useFocusEffect (マウント時に1回だけ発火)
 //   @/hooks/usePullToRefresh       渡された refresh を harness.refreshAll に記録し、そのまま返す
 //   expo-image-picker / expo-image-manipulator  ネイティブ API を空のスタブにする
 //   @apps/shared/api/teams         TeamCoreAPI.getMyTeams
 //   @apps/shared/api/records       RecordAPI.getBestTimes
-//   @/contexts/AuthProvider        supabase (harness.supabase) / user (USER_ID)
+//   @/contexts/AuthProvider        supabase (harness.supabase) / user (USER_ID) /
+//                                  subscription (harness.subscription) / signOut (harness.signOut)
 //
 // supabase は react-query のフックを実物のまま動かすため、テーブル名で応答を返す
 // createTableDispatchSupabase (./utils/tableSupabaseMock) を各テストで作って harness.supabase に入れる。
@@ -36,10 +37,15 @@ const harness = vi.hoisted(() => ({
   getBestTimes: vi.fn(),
   /** usePullToRefresh に渡された最新の refresh 関数 */
   refreshAll: null as null | (() => Promise<unknown>),
+  /** useNavigation().navigate */
+  navigate: vi.fn(),
+  /** useAuth().subscription (アカウントタブの「プラン」行の値) */
+  subscription: null as unknown,
+  signOut: vi.fn(async () => ({ error: null })),
 }));
 
 vi.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({ navigate: vi.fn(), goBack: vi.fn(), setOptions: vi.fn() }),
+  useNavigation: () => ({ navigate: harness.navigate, goBack: vi.fn(), setOptions: vi.fn() }),
   useFocusEffect: (callback: () => void) => {
     React.useEffect(() => {
       callback();
@@ -79,7 +85,12 @@ vi.mock("@apps/shared/api/records", () => ({
 }));
 
 vi.mock("@/contexts/AuthProvider", () => ({
-  useAuth: () => ({ supabase: harness.supabase, user: { id: USER_ID } }),
+  useAuth: () => ({
+    supabase: harness.supabase,
+    user: { id: USER_ID },
+    subscription: harness.subscription,
+    signOut: harness.signOut,
+  }),
 }));
 
 export { harness };

@@ -14,26 +14,41 @@ import type { MainStackParamList } from "@/navigation/types";
 interface ProfileDisplayProps {
   profile: UserProfile;
   teams?: TeamMembershipWithUser[];
+  /** 「プロフィールを編集」ボタンを押したとき。渡さなければボタンを出さない */
+  onEdit?: () => void;
+  /** チップ列の末尾の「＋」を押したとき。渡さなければ「＋」を出さない */
+  onAddTeam?: () => void;
 }
 
 type ProfileDisplayNavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 /**
- * プロフィール表示コンポーネント
+ * プロフィールカード (アカウントタブの先頭)
+ * 画像・名前を中央に置き、生年月日・性別を 1 行、その下に自己紹介と所属チームを並べる
  */
-export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams = [] }) => {
+export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
+  profile,
+  teams = [],
+  onEdit,
+  onAddTeam,
+}) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
   const navigation = useNavigation<ProfileDisplayNavigationProp>();
   // profile-images は private バケットのため、パスから署名付きURLを解決して表示する（Issue #36）
   const { url: resolvedAvatarUrl } = useSignedImageUrl("profile-images", profile.profile_image_path);
 
-  const formatBirthday = (birthday: string | null | undefined): string => {
-    if (!birthday) return t("mypage.profileDisplay.notSet");
-    const date = parseISO(birthday);
-    if (!isValid(date)) return t("mypage.profileDisplay.notSet");
-    return formatDate(date, "long", locale);
-  };
+  // 生年月日・性別は入っているものだけを「・」でつなぐ (どちらも無ければ行ごと出さない)
+  const metaLine = useMemo(() => {
+    const parts: string[] = [];
+    if (profile.birthday) {
+      const date = parseISO(profile.birthday);
+      if (isValid(date)) parts.push(formatDate(date, "long", locale));
+    }
+    if (profile.gender === 0) parts.push(t("mypage.profileDisplay.genderMale"));
+    if (profile.gender === 1) parts.push(t("mypage.profileDisplay.genderFemale"));
+    return parts.join(" · ");
+  }, [profile.birthday, profile.gender, locale, t]);
 
   // 承認済みかつアクティブなチームのみフィルタリング
   const approvedTeams = useMemo(() => {
@@ -66,74 +81,77 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, teams =
 
   return (
     <View style={styles.container}>
-      {/* プロフィール画像と基本情報 */}
-      <View style={styles.profileRow}>
-        <View
-          style={[styles.avatarContainer, !!resolvedAvatarUrl && styles.avatarContainerWithImage]}
-        >
-          {renderAvatar()}
-        </View>
-        <View style={styles.infoContainer}>
-          <Text style={styles.name}>{profile.name}</Text>
-        </View>
+      <View
+        style={[styles.avatarContainer, !!resolvedAvatarUrl && styles.avatarContainerWithImage]}
+      >
+        {renderAvatar()}
       </View>
+      <Text style={styles.name}>{profile.name}</Text>
+      {metaLine ? <Text style={styles.meta}>{metaLine}</Text> : null}
 
-      {/* 生年月日と参加チーム */}
-      <View style={styles.detailsRow}>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>{t("mypage.profileDisplay.birthdayLabel")}</Text>
-          <Text style={styles.detailValue}>{formatBirthday(profile.birthday)}</Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>{t("mypage.profileDisplay.teamsLabel")}</Text>
-          {approvedTeams.length > 0 ? (
-            <View style={styles.teamsContainer}>
-              {approvedTeams.map((membership) => {
-                const teamName =
-                  "teams" in membership && membership.teams?.name
-                    ? membership.teams.name
-                    : t("mypage.profileDisplay.unknownTeam");
-                const teamId = membership.team_id;
-
-                return (
-                  <Pressable
-                    key={membership.id}
-                    style={styles.teamBadge}
-                    onPress={() => handleTeamPress(teamId)}
-                  >
-                    <Text style={styles.teamBadgeText} numberOfLines={1}>
-                      {teamName}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={styles.emptyText}>{t("mypage.profileDisplay.noTeams")}</Text>
-          )}
-        </View>
-      </View>
-
-      {/* 自己紹介 */}
-      <View style={styles.bioContainer}>
-        <Text style={styles.bioLabel}>{t("mypage.profileDisplay.bioLabel")}</Text>
+      {profile.bio ? (
         <View style={styles.bioContent}>
-          <Text style={styles.bioText}>{profile.bio || t("mypage.profileDisplay.notSet")}</Text>
+          <Text style={styles.bioText}>{profile.bio}</Text>
         </View>
-      </View>
+      ) : null}
+
+      {/* 所属チーム */}
+      {approvedTeams.length > 0 || onAddTeam ? (
+        <View style={styles.teamsContainer}>
+          {approvedTeams.map((membership) => {
+            const teamName =
+              "teams" in membership && membership.teams?.name
+                ? membership.teams.name
+                : t("mypage.profileDisplay.unknownTeam");
+            const teamId = membership.team_id;
+
+            return (
+              <Pressable
+                key={membership.id}
+                style={styles.teamBadge}
+                onPress={() => handleTeamPress(teamId)}
+                accessibilityRole="button"
+                accessibilityLabel={teamName}
+              >
+                <Text style={styles.teamBadgeText} numberOfLines={1}>
+                  {teamName}
+                </Text>
+              </Pressable>
+            );
+          })}
+          {onAddTeam ? (
+            <Pressable
+              style={styles.addTeamBadge}
+              onPress={onAddTeam}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={t("account.mobile.addTeamAria")}
+              testID="profile-add-team"
+            >
+              <Text style={styles.addTeamBadgeText}>＋</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
+      {onEdit ? (
+        <Pressable
+          style={({ pressed }) => [styles.editButton, pressed && styles.editButtonPressed]}
+          onPress={onEdit}
+          accessibilityRole="button"
+          testID="profile-edit-button"
+        >
+          <Text style={styles.editButtonText}>{t("account.mobile.editProfile")}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
-    paddingHorizontal: 16,
-  },
-  profileRow: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    paddingHorizontal: 16,
   },
   avatarContainer: {
     width: 80,
@@ -163,35 +181,36 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#FFFFFF",
   },
-  infoContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
   name: {
+    marginTop: 10,
     fontSize: 20,
     fontWeight: "bold",
     color: "#111827",
+    textAlign: "center",
   },
-  detailsRow: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  detailItem: {
-    flex: 1,
-    gap: 4,
-  },
-  detailLabel: {
-    fontSize: 12,
-    fontWeight: "500",
+  meta: {
+    marginTop: 2,
+    fontSize: 13,
     color: "#6B7280",
+    textAlign: "center",
   },
-  detailValue: {
+  bioContent: {
+    alignSelf: "stretch",
+    marginTop: 12,
+    backgroundColor: "#F9FAFB",
+    padding: 12,
+    borderRadius: 8,
+  },
+  bioText: {
     fontSize: 14,
-    color: "#111827",
+    color: "#374151",
+    lineHeight: 20,
   },
   teamsContainer: {
+    marginTop: 12,
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "center",
     gap: 8,
   },
   teamBadge: {
@@ -199,32 +218,43 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     backgroundColor: "#DBEAFE",
+    maxWidth: 220,
   },
   teamBadgeText: {
     fontSize: 12,
     fontWeight: "500",
     color: "#1E40AF",
   },
-  emptyText: {
-    fontSize: 14,
-    color: "#6B7280",
+  addTeamBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
   },
-  bioContainer: {
-    gap: 8,
-  },
-  bioLabel: {
+  addTeamBadgeText: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#6B7280",
   },
-  bioContent: {
-    backgroundColor: "#F9FAFB",
-    padding: 12,
+  editButton: {
+    alignSelf: "stretch",
+    marginTop: 14,
+    paddingVertical: 10,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
   },
-  bioText: {
+  editButtonPressed: {
+    backgroundColor: "#F3F4F6",
+  },
+  editButtonText: {
     fontSize: 14,
-    color: "#111827",
-    lineHeight: 20,
+    fontWeight: "600",
+    color: "#374151",
   },
 });

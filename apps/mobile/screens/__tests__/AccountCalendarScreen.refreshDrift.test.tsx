@@ -1,10 +1,11 @@
 // =============================================================================
-// SettingsScreen.refreshDrift.test.tsx
+// AccountCalendarScreen.refreshDrift.test.tsx
 // =============================================================================
 //
-// Sprint Contract 検証観点: [V-04] 6画面すべてで「画面と子孫が依存する全クエリ」に
-// 漏れがないこと。SettingsScreen の refreshAll (実体は usePullToRefresh(refetchProfile)
-// のみ) が、子孫コンポーネント CalendarColorSettings が持つ
+// Sprint Contract 検証観点: [V-04] 「画面と子孫が依存する全クエリ」に漏れがないこと。
+// 2026-11-09 に設定画面 (SettingsScreen) をアカウントタブ配下の3画面に分けたとき、
+// カレンダー記録色を持つのはこの画面になったので、旧 SettingsScreen.refreshDrift から移した。
+// AccountCalendarScreen の refreshAll が、子孫コンポーネント CalendarColorSettings が持つ
 // calendarColorKeys.settings(userId) クエリを尽くしているかを、
 // DashboardScreen.refreshDrift.test.tsx と同一の「観測ベース・非ハードコード」手法で検証する。
 //
@@ -33,36 +34,13 @@ vi.mock("@/hooks/usePullToRefresh", () => ({
   },
 }));
 
-// SettingsScreen の子孫のうち本テストの関心事 (query 網羅性) と無関係な
+// AccountCalendarScreen の子孫のうち本テストの関心事 (query 網羅性) と無関係な
 // ネイティブ依存の重い設定セクションはスタブする (react-native-svg / expo-*)。
 vi.mock("@/components/settings/GoogleCalendarSyncSettings", () => ({
   GoogleCalendarSyncSettings: () => null,
 }));
 vi.mock("@/components/settings/IOSCalendarSyncSettings", () => ({
   IOSCalendarSyncSettings: () => null,
-}));
-vi.mock("@/components/settings/EmailChangeSettings", () => ({
-  EmailChangeSettings: () => null,
-}));
-vi.mock("@/components/settings/IdentityLinkSettings", () => ({
-  IdentityLinkSettings: () => null,
-}));
-vi.mock("@/components/settings/AccountDeleteSettings", () => ({
-  AccountDeleteSettings: () => null,
-}));
-vi.mock("@/lib/revenucat", () => ({
-  restorePurchases: vi.fn(),
-}));
-// PasswordChangeModal はバレル export (@/components/profile) 経由で
-// expo-image-picker に依存する AvatarUpload を eager import する
-// (DashboardScreen.refreshDrift.test.tsx と同一パターン)。
-vi.mock("expo-image-picker", () => ({
-  launchImageLibraryAsync: vi.fn(),
-  requestMediaLibraryPermissionsAsync: vi.fn(),
-}));
-vi.mock("expo-image-manipulator", () => ({
-  ImageManipulator: { manipulate: vi.fn() },
-  SaveFormat: { JPEG: "jpeg", PNG: "png", WEBP: "webp" },
 }));
 
 const apiMocks = vi.hoisted(() => ({
@@ -90,7 +68,7 @@ vi.mock("@/contexts/AuthProvider", () => ({
   }),
 }));
 
-import { SettingsScreen } from "../SettingsScreen";
+import { AccountCalendarScreen } from "../AccountCalendarScreen";
 
 function createWrapper(queryClient: QueryClient) {
   return ({ children }: { children: React.ReactNode }) => (
@@ -121,7 +99,7 @@ function activeQueries(queryClient: QueryClient): Query[] {
     .filter((q) => q.getObserversCount() > 0 && q.state.dataUpdateCount > 0);
 }
 
-describe("SettingsScreen — pull-to-refresh のクエリ網羅性 (ドリフト検出)", () => {
+describe("AccountCalendarScreen — pull-to-refresh のクエリ網羅性 (ドリフト検出)", () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
@@ -153,10 +131,10 @@ describe("SettingsScreen — pull-to-refresh のクエリ網羅性 (ドリフト
   });
 
   it(
-    "[ドリフト検出] refreshAll (refetchProfile) が、子孫 CalendarColorSettings の " +
+    "[ドリフト検出] refreshAll が、子孫 CalendarColorSettings の " +
       "calendarColorSettings クエリまで尽くせているかを実測する",
     async () => {
-      render(<SettingsScreen />, { wrapper: createWrapper(queryClient) });
+      render(<AccountCalendarScreen />, { wrapper: createWrapper(queryClient) });
       await waitForQuiescence(queryClient);
 
       const before = activeQueries(queryClient);
@@ -180,12 +158,10 @@ describe("SettingsScreen — pull-to-refresh のクエリ網羅性 (ドリフト
         }
       }
 
-      // Sprint Contract V-04 の期待は「漏れが無いこと」。CalendarColorSettings セクションの
-      // calendarColorSettings クエリは refreshAll (refetchProfile のみ) の対象外であり、
-      // このテストは現行実装に対して FAIL することが期待される (= 発見したドリフトの証跡)。
+      // Sprint Contract V-04 の期待は「漏れが無いこと」。
       expect(
         failures,
-        `SettingsScreen の refreshAll から漏れている active query:\n${failures.join("\n")}`,
+        `AccountCalendarScreen の refreshAll から漏れている active query:\n${failures.join("\n")}`,
       ).toEqual([]);
     },
   );
