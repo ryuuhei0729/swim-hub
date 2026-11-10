@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import Link from "next/link";
 import { UsersIcon, PlusIcon, UserPlusIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { TeamMembershipWithUser } from "@apps/shared/types";
 import { useAuth } from "@/contexts";
@@ -10,6 +9,9 @@ import { teamKeys } from "@apps/shared/hooks/queries/keys";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
+import { useTeamViewStore } from "@/stores/team/teamViewStore";
+import { resolveTeamToOpen, shouldOpenAsAdmin, teamViewHref } from "@/utils/teamView";
 
 const TeamCreateModal = dynamic(() => import("@/components/team/TeamCreateModal"));
 const TeamJoinModal = dynamic(() => import("@/components/team/TeamJoinModal"));
@@ -25,7 +27,11 @@ interface TeamsClientProps {
 }
 
 /**
- * チームページのインタラクティブ部分を担当するClient Component
+ * チームの入口 (/teams)。
+ *
+ * モバイルのチームタブと同じく一覧は挟まず、最後に開いたチームを最後に使ったビュー
+ * (利用者 / 管理者) でそのまま開く。別のチームへはチーム画面のヘッダーのチーム名から移る。
+ * 承認済みのチームが無いときだけ、ここで承認待ちの状況と作成・参加の案内を出す。
  */
 export default function TeamsClient({ initialTeams }: TeamsClientProps) {
   const { supabase } = useAuth();
@@ -60,6 +66,19 @@ export default function TeamsClient({ initialTeams }: TeamsClientProps) {
   }, [teams]);
 
   const displayTeams = approvedTeams;
+
+  // 承認済みのチームがあれば、最後に開いたチームへ送る。
+  // 最後に開いたチーム・ビューは localStorage にあるのでクライアントで決める
+  const router = useRouter();
+  const teamToOpen = useMemo(
+    () => resolveTeamToOpen(approvedTeams, useTeamViewStore.getState().lastTeamId),
+    [approvedTeams],
+  );
+  useEffect(() => {
+    if (!teamToOpen) return;
+    const prefs = useTeamViewStore.getState().byTeam[teamToOpen.team_id];
+    router.replace(teamViewHref(teamToOpen.team_id, shouldOpenAsAdmin(teamToOpen, prefs)));
+  }, [teamToOpen, router]);
 
   // 承認待ちチームの招待コードを取得
   const [pendingTeamsWithInviteCode, setPendingTeamsWithInviteCode] = useState<
@@ -105,7 +124,7 @@ export default function TeamsClient({ initialTeams }: TeamsClientProps) {
     loadInviteCodes();
   }, [pendingTeams, supabase]);
 
-  if (teamsLoading && displayTeams.length === 0) {
+  if ((teamsLoading && displayTeams.length === 0) || teamToOpen) {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
@@ -188,7 +207,8 @@ export default function TeamsClient({ initialTeams }: TeamsClientProps) {
       )}
 
       {/* 参加中のチーム一覧 */}
-      {displayTeams.length === 0 && pendingTeams.length === 0 ? (
+      {/* 承認済みのチームはチーム画面へ送るので、ここに来るのは承認待ちのみ・所属なしのとき */}
+      {pendingTeams.length === 0 && (
         <div className="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
           <UsersIcon className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
           <h3 className="mt-3 sm:mt-4 text-sm sm:text-lg font-medium text-gray-900">
@@ -214,44 +234,16 @@ export default function TeamsClient({ initialTeams }: TeamsClientProps) {
             </button>
           </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {displayTeams.map((membership) => (
-            <Link
-              key={membership.team_id}
-              href={`/teams/${membership.team_id}`}
-              className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200"
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <UsersIcon className="h-10 w-10 text-blue-600" />
-                  {membership.role === "admin" && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {t("badge.admin")}
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {"teams" in membership ? membership.teams?.name : ""}
-                </h3>
-                {"teams" in membership && membership.teams?.description && (
-                  <p className="text-sm text-gray-500 line-clamp-2">
-                    {membership.teams.description}
-                  </p>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
       )}
 
       {/* チーム作成モーダル */}
       <TeamCreateModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(_teamId) => {
-          // ページをリロードして最新状態を反映
-          window.location.reload();
+        onSuccess={(teamId) => {
+          // 作成したチームをそのまま開く
+          queryClient.invalidateQueries({ queryKey: teamKeys.list() });
+          router.push(teamViewHref(teamId, false));
         }}
       />
 

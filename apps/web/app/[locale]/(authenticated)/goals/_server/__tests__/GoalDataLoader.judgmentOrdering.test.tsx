@@ -77,7 +77,7 @@ describe("GoalDataLoader — マイルストーン判定の呼び出し順序", 
   });
 
   it("updateAllMilestoneStatuses が getGoals/getSelectableCompetitions/getStyles より先に呼ばれる (呼び出し順)", async () => {
-    const element = await GoalDataLoader();
+    const element = await GoalDataLoader({});
     render(element);
 
     await waitFor(() => expect(mocks.getGoals).toHaveBeenCalledTimes(1));
@@ -108,7 +108,7 @@ describe("GoalDataLoader — マイルストーン判定の呼び出し順序", 
         }),
     );
 
-    const loaderPromise = GoalDataLoader();
+    const loaderPromise = GoalDataLoader({});
 
     // マイクロタスクを1周させても、判定が未解決の間は後続の一覧取得が呼ばれていない。
     await Promise.resolve();
@@ -131,7 +131,7 @@ describe("GoalDataLoader — マイルストーン判定の呼び出し順序", 
     let element!: React.ReactElement;
     await expect(
       (async () => {
-        element = await GoalDataLoader();
+        element = await GoalDataLoader({});
       })(),
     ).resolves.not.toThrow();
 

@@ -139,7 +139,7 @@ describe("NextCompetitionCard", () => {
   });
 
   describe("エントリーあり", () => {
-    it("「次の大会（日付）」「大会名（水路）」・日数と、種目ごとのベスト・目標・目標までの差を出す", () => {
+    it("「次の大会（日付）」「大会名」「場所（水路）」・日数と、種目ごとのベスト・目標を出す。目標までの差は出さない", () => {
       mocks.nextCompetition = {
         data: {
           competition: competition(),
@@ -159,13 +159,20 @@ describe("NextCompetitionCard", () => {
       const { onSetGoal } = renderCard();
 
       expect(screen.getByText("次の大会（2026/11/19）")).toBeInTheDocument();
-      expect(screen.getByText("区民秋季水泳記録会（長水路）")).toBeInTheDocument();
+      expect(screen.getByText("区民秋季水泳記録会")).toBeInTheDocument();
+      expect(screen.getByText("区立総合体育館（長水路）")).toBeInTheDocument();
       expect(screen.getByText("12")).toBeInTheDocument();
 
       const fr = screen.getByText("100m Fr").closest("tr")!;
       expect(within(fr).getByText("56.12")).toBeInTheDocument();
       expect(within(fr).getByText("55.50")).toBeInTheDocument();
-      expect(within(fr).getByText("-0.62")).toBeInTheDocument();
+      expect(within(fr).queryByText("-0.62")).toBeNull();
+      expect(screen.queryByText("目標まで")).toBeNull();
+      // 目標タイムはラベルで、押すと目標ページでその目標を選んだ状態で開く
+      expect(within(fr).getByRole("link", { name: "目標 55.50 の詳細を見る" })).toHaveAttribute(
+        "href",
+        "/goals?goalId=g1",
+      );
 
       const im = screen.getByText("200m IM").closest("tr")!;
       expect(within(im).getByText("2:13.48")).toBeInTheDocument();
@@ -185,7 +192,7 @@ describe("NextCompetitionCard", () => {
         isError: false,
       };
       const { onOpenDay, onSetGoal } = renderCard();
-      fireEvent.click(screen.getByText("区民秋季水泳記録会（長水路）"));
+      fireEvent.click(screen.getByText("区民秋季水泳記録会"));
       expect(onOpenDay).toHaveBeenCalledTimes(1);
       expect(onOpenDay).toHaveBeenLastCalledWith("2026-11-19");
       // 種目の行 (ボタン以外) を押しても開く
@@ -195,6 +202,38 @@ describe("NextCompetitionCard", () => {
       fireEvent.click(screen.getByRole("button", { name: "＋ 目標を設定" }));
       expect(onOpenDay).toHaveBeenCalledTimes(2);
       expect(onSetGoal).toHaveBeenCalledTimes(1);
+    });
+
+    it("場所が無い大会は水路だけを出す", () => {
+      mocks.nextCompetition = {
+        data: {
+          competition: competition({ place: null, pool_type: 0 }),
+          entries: [{ id: "e1", style_id: 2, entry_time: null, is_relaying: false, style: fr100 }],
+          goals: [],
+        },
+        isLoading: false,
+        isError: false,
+      };
+      renderCard();
+      expect(screen.getByText("短水路")).toBeInTheDocument();
+    });
+
+    it("目標タイムのラベルを押しても大会日の詳細は開かない", () => {
+      mocks.nextCompetition = {
+        data: {
+          competition: competition(),
+          entries: [{ id: "e1", style_id: 2, entry_time: null, is_relaying: false, style: fr100 }],
+          goals: [{ id: "g1", style_id: 2, target_time: 55.5 }],
+        },
+        isLoading: false,
+        isError: false,
+      };
+      const { onOpenDay } = renderCard();
+      const link = screen.getByRole("link", { name: "目標 55.50 の詳細を見る" });
+      // jsdom はページ遷移を実装していない (stderr に出る) ので、遷移だけ止める
+      link.addEventListener("click", (e) => e.preventDefault());
+      fireEvent.click(link);
+      expect(onOpenDay).not.toHaveBeenCalled();
     });
 
     it("ベストが無い種目に「初」を付ける", () => {
@@ -232,7 +271,7 @@ describe("NextCompetitionCard", () => {
       expect(within(row).queryByRole("button", { name: "＋ 目標を設定" })).toBeNull();
     });
 
-    it("ベストが目標に届いていれば「達成」を出す", () => {
+    it("ベストが目標に届いていれば、目標ラベルを緑にする (「達成」の列は出さない)", () => {
       mocks.nextCompetition = {
         data: {
           competition: competition(),
@@ -246,7 +285,10 @@ describe("NextCompetitionCard", () => {
         { id: "b1", time: 56.12, pool_type: 1, is_relaying: false, style_id: 2, created_at: "", style: { name_jp: "", distance: 100 } },
       ];
       renderCard();
-      expect(screen.getByText("達成")).toBeInTheDocument();
+      expect(screen.queryByText("達成")).toBeNull();
+      expect(screen.getByRole("link", { name: "目標 57.00 の詳細を見る" }).className).toContain(
+        "text-emerald-700",
+      );
     });
 
     it("大会当日は「今日」、開催中の複数日大会は「開催中」を出す", () => {

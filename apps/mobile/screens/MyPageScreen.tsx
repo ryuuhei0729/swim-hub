@@ -1,13 +1,26 @@
-import React, { useState, useCallback } from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from "react-native";
+import React, { useState, useCallback, useMemo } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  RefreshControl,
+  Alert,
+  Linking,
+  Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUserQuery } from "@apps/shared/hooks/queries/user";
+import { usePracticeLogTemplateCountQuery } from "@apps/shared/hooks/queries/practiceLogTemplates";
+import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { ProfileDisplay, ProfileEditModal } from "@/components/profile";
+import { ListGroup, ListRow } from "@/components/account/AccountList";
+import { TeamCreateModal } from "@/components/teams/TeamCreateModal";
+import { TeamJoinModal } from "@/components/teams/TeamJoinModal";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { ProfileSkeleton } from "@/components/ui/ScreenSkeletons";
@@ -17,15 +30,23 @@ import { colors, sectionSurface } from "@/constants/theme";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
+const TERMS_URL = "https://swim-hub.app/terms";
+const PRIVACY_URL = "https://swim-hub.app/privacy";
+
 /**
- * マイページ画面
- * プロフィール表示・編集 (ベストタイム表は 2026-11-07 にホームへ移した)
+ * アカウントタブ (旧マイページ + 設定)
+ * 上にプロフィールカード、下に iOS の設定アプリ風の一覧を置き、各行から詳細画面へ進む。
+ * (ベストタイム表は 2026-11-07 にホームへ、設定画面は 2026-11-09 にこの画面と
+ *  プラン / カレンダー / ログインとセキュリティ の3画面へ分けた)
  */
 export const MyPageScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { supabase, user } = useAuth();
+  const { supabase, user, subscription, signOut } = useAuth();
   const { t } = useTranslation();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
+  const [isJoinTeamModalOpen, setIsJoinTeamModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // プロフィールとチーム情報取得
   const {
@@ -39,13 +60,17 @@ export const MyPageScreen: React.FC = () => {
     enableRealtime: false, // モバイルでは一旦無効化
   });
 
+  // 「練習ログテンプレート」行の右に出す件数
+  const { data: templateCount, refetch: refetchTemplateCount } =
+    usePracticeLogTemplateCountQuery(supabase);
+
   const isLoading = profileLoading;
   const isError = profileError;
   const error = profileErrorObj;
-  // この画面が依存する全クエリ (プロフィール) を尽くす
+  // この画面が依存する全クエリ (プロフィール・テンプレート件数) を尽くす
   const refreshAll = useCallback(async () => {
-    await Promise.allSettled([refetchProfile()]);
-  }, [refetchProfile]);
+    await Promise.allSettled([refetchProfile(), refetchTemplateCount()]);
+  }, [refetchProfile, refetchTemplateCount]);
 
   // タブ遷移時にデータ再取得
   useRefreshOnFocus(refreshAll);
@@ -103,6 +128,79 @@ export const MyPageScreen: React.FC = () => {
     [user, supabase, refetchProfile],
   );
 
+  // 「プラン」行の右に出す値
+  const planValue = useMemo(() => {
+    if (subscription?.status === "trialing") return t("account.mobile.planValue.trialing");
+    return checkIsPremium(subscription)
+      ? t("account.mobile.planValue.premium")
+      : t("account.mobile.planValue.free");
+  }, [subscription, t]);
+
+  // 「カレンダー」行の右に出す値 (連携しているカレンダーを並べる)
+  const calendarValue = useMemo(() => {
+    const connected: string[] = [];
+    if (profile?.google_calendar_enabled) connected.push(t("account.mobile.calendarValue.google"));
+    if (Platform.OS === "ios" && profile?.ios_calendar_enabled) {
+      connected.push(t("account.mobile.calendarValue.ios"));
+    }
+    return connected.length > 0
+      ? connected.join(" · ")
+      : t("account.mobile.calendarValue.notConnected");
+  }, [profile?.google_calendar_enabled, profile?.ios_calendar_enabled, t]);
+
+  // チップ列の「＋」: 作成か参加かを選んでもらう
+  const handleAddTeam = useCallback(() => {
+    Alert.alert(t("account.mobile.addTeamAria"), undefined, [
+      {
+        text: t("mypage.profileDisplay.createTeam"),
+        onPress: () => setIsCreateTeamModalOpen(true),
+      },
+      {
+        text: t("mypage.profileDisplay.joinTeam"),
+        onPress: () => setIsJoinTeamModalOpen(true),
+      },
+      { text: t("common.cancel"), style: "cancel" },
+    ]);
+  }, [t]);
+
+  // 作成・参加したチームをチームタブで開く
+  const handleTeamAdded = useCallback(
+    (teamId: string) => {
+      setIsCreateTeamModalOpen(false);
+      setIsJoinTeamModalOpen(false);
+      void refetchProfile();
+      navigation.navigate("MainTabs", { screen: "Teams", params: { teamId } });
+    },
+    [navigation, refetchProfile],
+  );
+
+  const executeLogout = useCallback(async () => {
+    setIsLoggingOut(true);
+    try {
+      const { error: signOutError } = await signOut();
+      if (signOutError) {
+        console.error("ログアウトエラー:", signOutError);
+        Alert.alert(t("common.error"), t("settings.mobile.logoutFailed"));
+      }
+    } catch (err) {
+      console.error("ログアウト処理エラー:", err);
+      Alert.alert(t("common.error"), t("settings.mobile.logoutFailed"));
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, [signOut, t]);
+
+  const handleLogout = useCallback(() => {
+    Alert.alert(t("settings.mobile.logoutTitle"), t("settings.mobile.logoutConfirmMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("settings.mobile.logoutButtonText"),
+        style: "destructive",
+        onPress: executeLogout,
+      },
+    ]);
+  }, [executeLogout, t]);
+
   // エラー状態 (前回取得したプロフィールが無いときだけ全画面エラーにする)
   if (isError && error && !profile) {
     return (
@@ -143,17 +241,7 @@ export const MyPageScreen: React.FC = () => {
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       {/* ページヘッダー (スクロール固定) */}
       <View style={styles.pageHeader}>
-        <Text style={styles.pageHeaderTitle}>{t("mypage.mobile.pageTitle")}</Text>
-        <Pressable
-          style={styles.pageHeaderSettings}
-          onPress={() => navigation.navigate("Settings")}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={t("mypage.mobile.settingsButtonAria")}
-        >
-          <Feather name="settings" size={18} color="#6B7280" />
-          <Text style={styles.pageHeaderSettingsText}>{t("mypage.mobile.settingsButton")}</Text>
-        </Pressable>
+        <Text style={styles.pageHeaderTitle}>{t("account.mobile.pageTitle")}</Text>
       </View>
       <StaleDataBanner
         visible={isError}
@@ -176,16 +264,84 @@ export const MyPageScreen: React.FC = () => {
           />
         }
       >
-        {/* プロフィールセクション */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("mypage.mobile.profileSectionTitle")}</Text>
-            <Pressable style={styles.editButton} onPress={() => setIsEditModalOpen(true)}>
-              <Text style={styles.editButtonText}>{t("mypage.mobile.editButton")}</Text>
-            </Pressable>
-          </View>
-          <ProfileDisplay profile={profile} teams={teams} />
+        {/* プロフィール */}
+        <View style={styles.profileCard}>
+          <ProfileDisplay
+            profile={profile}
+            teams={teams}
+            onEdit={() => setIsEditModalOpen(true)}
+            onAddTeam={handleAddTeam}
+          />
         </View>
+
+        <ListGroup>
+          <ListRow
+            icon="star"
+            iconColor="#F59E0B"
+            label={t("account.mobile.rows.plan")}
+            value={planValue}
+            onPress={() => navigation.navigate("AccountPlan")}
+            testID="account-row-plan"
+          />
+        </ListGroup>
+
+        <ListGroup>
+          <ListRow
+            icon="calendar"
+            iconColor="#3B82F6"
+            label={t("account.mobile.rows.calendar")}
+            value={calendarValue}
+            onPress={() => navigation.navigate("AccountCalendar")}
+            testID="account-row-calendar"
+          />
+          <ListRow
+            icon="file-text"
+            iconColor="#22C55E"
+            label={t("account.mobile.rows.practiceLogTemplates")}
+            value={templateCount !== undefined ? String(templateCount) : undefined}
+            onPress={() => navigation.navigate("PracticeLogTemplates")}
+            testID="account-row-templates"
+          />
+          <ListRow
+            icon="lock"
+            iconColor="#6B7280"
+            label={t("account.mobile.rows.security")}
+            onPress={() => navigation.navigate("AccountSecurity")}
+            testID="account-row-security"
+          />
+        </ListGroup>
+
+        <ListGroup>
+          <ListRow
+            label={t("settings.mobile.termsLink")}
+            accessory="external"
+            onPress={() => Linking.openURL(TERMS_URL)}
+            accessibilityHint={TERMS_URL}
+          />
+          <ListRow
+            label={t("settings.mobile.privacyLink")}
+            accessory="external"
+            onPress={() => Linking.openURL(PRIVACY_URL)}
+            accessibilityHint={PRIVACY_URL}
+          />
+        </ListGroup>
+
+        <ListGroup>
+          <ListRow
+            label={
+              isLoggingOut
+                ? t("settings.mobile.logoutLoading")
+                : t("settings.mobile.logoutButtonText")
+            }
+            tone="destructive"
+            centered
+            disabled={isLoggingOut}
+            onPress={handleLogout}
+            accessibilityLabel={t("settings.mobile.logoutAriaLabel")}
+            accessibilityHint={t("settings.mobile.logoutAriaHint")}
+            testID="account-logout"
+          />
+        </ListGroup>
       </ScrollView>
 
       {/* プロフィール編集モーダル */}
@@ -195,6 +351,18 @@ export const MyPageScreen: React.FC = () => {
         profile={profile}
         onUpdate={handleProfileUpdate}
         onAvatarChange={handleAvatarChange}
+      />
+
+      {/* チーム作成・参加モーダル */}
+      <TeamCreateModal
+        visible={isCreateTeamModalOpen}
+        onClose={() => setIsCreateTeamModalOpen(false)}
+        onSuccess={handleTeamAdded}
+      />
+      <TeamJoinModal
+        visible={isJoinTeamModalOpen}
+        onClose={() => setIsJoinTeamModalOpen(false)}
+        onSuccess={handleTeamAdded}
       />
     </SafeAreaView>
   );
@@ -209,42 +377,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
     gap: 16,
   },
-  section: {
+  profileCard: {
     ...sectionSurface,
-    paddingVertical: 16,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    rowGap: 8,
-    marginBottom: 16,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-  },
-  editButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
+    paddingVertical: 20,
   },
   pageHeader: {
     flexDirection: "row",
@@ -260,30 +399,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
     color: "#111827",
-  },
-  pageHeaderSettings: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  pageHeaderSettingsText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#6B7280",
-  },
-  passwordButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-  },
-  passwordButtonText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#374151",
   },
   errorContainer: {
     padding: 20,

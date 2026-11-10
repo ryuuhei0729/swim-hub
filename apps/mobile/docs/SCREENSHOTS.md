@@ -30,7 +30,7 @@ build-sim.sh        seed-demo.sh              capture.sh                fastlane
 | 01 | Dashboard（カレンダー） | `tab-dashboard` |
 | 02 | Practices（練習一覧） | `tab-practices` |
 | 03 | Competitions（大会＝レース記録） | `tab-competitions` |
-| 04 | MyPage（プロフィール/ベストタイム） | `tab-mypage` |
+| 04 | アカウント（プロフィール + 設定の一覧） | `tab-mypage` |
 
 サイズ: iPhone 17 Pro Max (6.9") / iPad Pro 13"（App Store 必須2サイズ。iPhone のみで良ければ capture.sh の DEVICES から iPad 行を削除）
 

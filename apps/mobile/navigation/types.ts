@@ -46,6 +46,7 @@ export type TabParamList = {
       }
     | undefined;
   Goals: undefined;
+  /** アカウントタブ (ルート名は旧称のまま。プロフィール + 設定の入口) */
   MyPage: undefined;
 };
 
@@ -157,7 +158,12 @@ export type MainStackParamList = {
   TeamBulkRegister: {
     teamId: string;
   };
-  Settings: undefined;
+  /** アカウント > プラン */
+  AccountPlan: undefined;
+  /** アカウント > カレンダー (Google / iOS 連携・記録色) */
+  AccountCalendar: undefined;
+  /** アカウント > ログインとセキュリティ (メール・パスワード・ログイン連携・アカウント削除) */
+  AccountSecurity: undefined;
   /** 練習ログテンプレート管理 */
   PracticeLogTemplates: undefined;
   BulkBestTime: undefined;

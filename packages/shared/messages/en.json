@@ -7,8 +7,8 @@
         "competitions": "Competitions",
         "records": "Records",
         "teams": "Teams",
-        "myPage": "My Page",
-        "goals": "Goals"
+        "goals": "Goals",
+        "account": "Account"
       },
       "titles": {
         "practiceDetail": "Practice details",
@@ -23,7 +23,6 @@
         "competitionInfo": "Meet info",
         "entryRegister": "Register entry",
         "teamDetail": "Team details",
-        "settings": "Settings",
         "bulkBestTime": "Bulk best time entry",
         "goalDetail": "Goal Details"
       }
@@ -1045,6 +1044,14 @@
       "statusAlert": "Entries are {status}, so registration is not available. Proceeding to result entry.",
       "dataLoadError": "Failed to fetch data. Please try again after a moment."
     },
+    "notices": {
+      "title": "Updates",
+      "unansweredAttendance": "Attendance not answered ({count})",
+      "todoCount": "To do {count}",
+      "teamTitle": "{teamName} announcements",
+      "showAll": "Show all ({count})",
+      "showLess": "Show less"
+    },
     "actionItems": {
       "title": "Things to do",
       "count": "{count}",
@@ -1083,7 +1090,8 @@
       "loadError": "Couldn't load the next meet",
       "relay": "Relay",
       "titleWithDate": "Next meet ({date})",
-      "nameWithPool": "{name} ({pool})"
+      "placeWithPool": "{place} ({pool})",
+      "openGoal": "View goal {time}"
     },
     "bestTimes": {
       "loadError": "Couldn't load best times"
@@ -1266,14 +1274,9 @@
       "dataFetchFailed": "Failed to fetch data",
       "loadingData": "Loading data...",
       "bestTimesFetchFailed": "Failed to fetch best times",
-      "settingsButtonAria": "Open settings",
-      "profileSectionTitle": "Profile",
-      "editButton": "Edit",
-      "settingsButton": "Settings",
       "profileNotFound": "Profile not found",
       "bulkInput": "Bulk input",
-      "bulkInputAria": "Bulk register best times",
-      "pageTitle": "My Page"
+      "bulkInputAria": "Bulk register best times"
     },
     "title": "My Page",
     "subtitle": "Manage your profile and best times",
@@ -1360,6 +1363,7 @@
       "longCourse": "Long Course",
       "includeRelay": "Include relay times",
       "includeRelayShort": "Incl. relay",
+      "includeRelayCompact": "Relay",
       "bulkEntryNote": "Bulk entry",
       "distanceHeader": "Distance",
       "legend": {
@@ -1778,6 +1782,7 @@
       "pastDateBlocked": "This competition's date has already passed, so entries can no longer be entered on behalf of members",
       "closedWarning": "Entry registration is closed, but admins can still enter entries on behalf of members",
       "bestTimePrefillButton": "Use Best Time",
+      "bestTimePrefillButtonShort": "Use best",
       "bestTimePrefillBadge": "Auto-filled from best time",
       "duplicateMemberStyle": "The same member/event combination is entered more than once. Please check the rows.",
       "confirmModal": {
@@ -4614,6 +4619,33 @@
     "toko": {
       "title": "Toko Points",
       "note": "“Toko Points” is not an official scoring system of the Tokyo Senior High School Athletic Federation. It is SwimHub's own conversion that treats the entry-restriction time for the Tokyo High School Championship as 1000 points."
+    }
+  },
+  "account": {
+    "mobile": {
+      "pageTitle": "Account",
+      "editProfile": "Edit profile",
+      "addTeamAria": "Create or join a team",
+      "rows": {
+        "plan": "Plan",
+        "calendar": "Calendar",
+        "practiceLogTemplates": "Practice log templates",
+        "security": "Sign-in & security"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "On trial"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "ios": "iOS",
+        "notConnected": "Not connected"
+      },
+      "plan": {
+        "manageNoteIos": "Opens the App Store",
+        "manageNoteAndroid": "Opens Google Play"
+      }
     }
   }
 }

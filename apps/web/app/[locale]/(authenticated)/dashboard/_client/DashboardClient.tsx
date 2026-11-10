@@ -4,8 +4,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts";
 import CalendarContainer, { type OpenDayRequest } from "../_components/CalendarContainer";
-import TeamAnnouncementsSection from "../_components/TeamAnnouncementsSection";
-import ActionItemsSection from "../_components/ActionItemsSection";
+import DashboardNoticesSection from "../_components/DashboardNoticesSection";
 import NextCompetitionCard from "../_components/NextCompetitionCard";
 import DashboardBestTimesCard from "../_components/DashboardBestTimesCard";
 import GoalCreateModal from "@/app/[locale]/(authenticated)/goals/_components/GoalCreateModal";
@@ -376,16 +375,23 @@ export default function DashboardClient({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="w-full space-y-4">
-        {/* 対応が必要なこと (出欠の未回答・エントリー受付中・記録の未入力) */}
-        <ActionItemsSection
+      {/* スマホ・タブレット幅 (lg 未満) はカード同士を 6px に詰める (2026-11-09 ユーザー指定)。
+          スマホ幅 (sm 未満) はヘッダーとの間も詰める: ヘッダーの下端 57px に対し、共通レイアウトの
+          pt-16 + py-4 で 80px から始まるので、-mt-5 で 60px (すき間 3px) にする。
+          sm 以上はヘッダーが 81px あり、元のすき間も 7px しかないので変えない (詰めると重なる)。
+          共通レイアウトは他のページも使うので、ここだけで詰める。PC (lg 以上) は変えない */}
+      <div className="w-full -mt-5 space-y-1.5 sm:mt-0 lg:space-y-4">
+        {/* お知らせ (チームごとのやること・お知らせと、記録の未入力) */}
+        <DashboardNoticesSection
           teams={teams}
           openEntryLogForm={openEntryLogForm}
           onAddRecord={(competitionId) => void onAddRecord({ competitionId })}
         />
 
-        {/* ベストタイム表はマイページと同じ表で横幅が要るので、横並びは 2xl 以上だけ */}
-        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 2xl:items-start">
+        {/* 次の大会とベストタイム表は xl 以上で横並び (2026-11-09 ユーザー指定)。
+            ベストタイム表の方が横幅が要るので 2:3 で分ける。表の文字サイズはカードの幅で切り替わる
+            (BestTimesTable の @container)。xl 未満は縦に積む */}
+        <div className="grid grid-cols-1 gap-1.5 lg:gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] xl:items-start">
           <NextCompetitionCard
             hasTeams={teams.length > 0}
             openEntryLogForm={openEntryLogForm}
@@ -396,29 +402,24 @@ export default function DashboardClient({
           <DashboardBestTimesCard />
         </div>
 
-        {/* カレンダーとチームのお知らせ。お知らせが無いときはカレンダーが全幅になる */}
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
-          <div className="min-w-0 flex-1">
-            <CalendarContainer
-              refreshKey={calendarRefreshKey}
-              initialCalendarItems={initialCalendarItems}
-              initialMonthlySummary={initialMonthlySummary}
-              onDateClick={onDateClick}
-              onAddItem={onAddItem}
-              onEditItem={onEditItem}
-              onDeleteItem={onDeleteCalendarItem}
-              onAddPracticeLog={onAddPracticeLog}
-              onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
-              onEditPracticeLog={onEditPracticeLog}
-              onDeletePracticeLog={onDeletePracticeLog}
-              onAddRecord={onAddRecord}
-              onEditRecord={onEditRecord}
-              onDeleteRecord={onDeleteRecord}
-              openDayRequest={openDayRequest}
-            />
-          </div>
-          <TeamAnnouncementsSection teams={teams} />
-        </div>
+        {/* カレンダー (チームのお知らせは上の「お知らせ」にまとめたので全幅) */}
+        <CalendarContainer
+          refreshKey={calendarRefreshKey}
+          initialCalendarItems={initialCalendarItems}
+          initialMonthlySummary={initialMonthlySummary}
+          onDateClick={onDateClick}
+          onAddItem={onAddItem}
+          onEditItem={onEditItem}
+          onDeleteItem={onDeleteCalendarItem}
+          onAddPracticeLog={onAddPracticeLog}
+          onAddPracticeLogFromTemplate={onAddPracticeLogFromTemplate}
+          onEditPracticeLog={onEditPracticeLog}
+          onDeletePracticeLog={onDeletePracticeLog}
+          onAddRecord={onAddRecord}
+          onEditRecord={onEditRecord}
+          onDeleteRecord={onDeleteRecord}
+          openDayRequest={openDayRequest}
+        />
 
         {/* 次の大会の「目標を設定」から開く */}
         <GoalCreateModal

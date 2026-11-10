@@ -1,32 +1,17 @@
-import React, { Suspense } from "react";
-import AdminTeamsDataLoader from "./_server/AdminTeamsDataLoader";
+import { redirect } from "@/i18n/navigation";
 
 /**
- * 動的レンダリングを強制（認証が必要なページのため）
+ * 旧「チーム管理」一覧ページ。
+ *
+ * 管理者ビューはチーム画面のヘッダーにある「利用者 / 管理者」スイッチから切り替える形に
+ * まとめたため、一覧は /teams (最後に開いたチームを開く入口) へ寄せる。
+ * ブックマーク等の旧 URL のためにページ自体は残してリダイレクトする。
  */
-export const dynamic = "force-dynamic";
-
-/**
- * 管理者チーム一覧ページ（Server Component）
- * データ取得はサーバー側で並行実行される
- */
-export default async function AdminTeamsPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-gray-50">
-          <div className="p-6 space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-    >
-      <AdminTeamsDataLoader />
-    </Suspense>
-  );
+export default async function AdminTeamsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect({ href: "/teams", locale });
 }

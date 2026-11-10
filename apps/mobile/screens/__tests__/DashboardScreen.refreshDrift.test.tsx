@@ -4,7 +4,7 @@
 //
 // Sprint Contract 検証観点:
 //   ユーザー報告バグ「ホーム画面で pull-to-refresh しても、子孫コンポーネント
-//   (TeamAnnouncementsSection 配下の TeamCard) が持つお知らせクエリが再取得されず、
+//   (当時の TeamAnnouncementsSection 配下の TeamCard。現在は DashboardNoticesSection) が持つお知らせクエリが再取得されず、
 //   タスクキルするまで新規お知らせが表示されない」の再発防止。
 //
 // PM からの明示的要求 (最重要): 「実装がどの queryKey を列挙しているか」をテストに
@@ -22,7 +22,7 @@
 // 4. 手順2で列挙した「実測済みの active query 集合」の全てについて、
 //    dataUpdateCount が増加したことを assert する
 //
-// これにより、TeamAnnouncementsSection (または将来追加される別の子孫コンポーネント)
+// これにより、DashboardNoticesSection (または将来追加される別の子孫コンポーネント)
 // が新しいクエリを増やしたとき、refreshAll がそれを尽くしていなければ
 // このテストは自動的に FAIL する。
 //
@@ -321,7 +321,7 @@ describe("DashboardScreen — pull-to-refresh のクエリ網羅性 (ドリフ�
     },
   );
 
-  it("[観測前提] TeamAnnouncementsSection 配下の announcements クエリが実際に active として観測される", async () => {
+  it("[観測前提] DashboardNoticesSection の announcements クエリが実際に active として観測される", async () => {
     render(<DashboardScreen />, { wrapper: createWrapper(queryClient) });
     await waitForQuiescence(queryClient);
     await waitFor(() => {

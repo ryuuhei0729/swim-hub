@@ -5,7 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { TrophyIcon } from "@heroicons/react/24/outline";
 import { formatDate, type SupportedLocale } from "@apps/shared/utils/date";
-import { formatSignedSeconds, formatTimeBest } from "@apps/shared/utils/time";
+import { formatTimeBest } from "@apps/shared/utils/time";
 import {
   buildNextCompetitionRows,
   daysUntilCompetition,
@@ -37,7 +37,8 @@ const CARD_CLASS = "bg-white rounded-lg shadow p-4 sm:p-5";
 /**
  * ダッシュボードの「次の大会」。
  * 状態は none (予定なし) / noEntries (エントリー未登録) / entries (エントリーあり) の3つで、
- * entries のときは種目ごとにエントリータイム・ベスト・目標・目標までの差を出す。
+ * entries のときは種目ごとにエントリータイム・ベスト・目標を出す (「目標まで」の差の列は 2026-11-09 に外した。
+ * 届いているかは目標ラベルの色で示す)。
  * 目標が無い種目は「目標を設定」に置き換え、押すとその大会・種目を選んだ状態で目標作成を開く。
  */
 export default function NextCompetitionCard({
@@ -142,12 +143,15 @@ export default function NextCompetitionCard({
           data-testid="next-competition-open-day"
         >
           <span className="min-w-0">
-            {/* 「次の大会（YYYY/MM/DD）」「大会名（水路）」の2行 (2026-11-07 ユーザー指定) */}
-            <span className="block text-base font-semibold text-gray-900">
+            {/* 「次の大会（YYYY/MM/DD）」「大会名」「場所（水路）」の3行 (2026-11-07 ユーザー指定) */}
+            <span className="block text-sm font-semibold text-gray-700">
               {t("titleWithDate", { date: formatDate(competition.date, "numeric", locale) })}
             </span>
             <span className="mt-1 block truncate text-base font-bold text-gray-900">
-              {t("nameWithPool", { name: competition.title ?? "", pool: poolLabel })}
+              {competition.title ?? ""}
+            </span>
+            <span className="mt-0.5 block truncate text-sm text-gray-500">
+              {competition.place ? t("placeWithPool", { place: competition.place, pool: poolLabel }) : poolLabel}
             </span>
           </span>
           <span className="shrink-0 rounded-lg bg-blue-50 px-3 py-1.5 text-center">
@@ -227,18 +231,19 @@ function EntriesTable({
 }) {
   const t = useTranslations("dashboard.nextCompetition");
 
+  // エントリー列は画面幅ではなくカードの幅で出し分ける (@sm = 384px)。
+  // ダッシュボードではベストタイム表と横並びになり、広い画面でもカードが細くなるため
   return (
-    <div className="mt-4">
+    <div className="mt-4 @container">
       <table className="w-full text-sm tabular-nums">
         <thead>
           <tr className="border-b border-gray-100 text-xs text-gray-500">
             <th className="py-1.5 text-left font-medium">{t("columnEvent")}</th>
-            <th className="hidden py-1.5 text-right font-medium sm:table-cell">
+            <th className="hidden py-1.5 text-right font-medium @sm:table-cell">
               {t("columnEntryTime")}
             </th>
             <th className="py-1.5 text-right font-medium">{t("columnBest")}</th>
             <th className="py-1.5 text-right font-medium">{t("columnTarget")}</th>
-            <th className="py-1.5 text-right font-medium">{t("columnGap")}</th>
           </tr>
         </thead>
         <tbody>
@@ -257,18 +262,18 @@ function EntriesTable({
                   </span>
                 )}
               </td>
-              <td className="hidden py-2 text-right text-gray-700 sm:table-cell">
+              <td className="hidden py-2 text-right text-gray-700 @sm:table-cell">
                 {row.entryTime !== null ? formatTimeBest(row.entryTime) : "—"}
               </td>
               <td className="py-2 text-right text-gray-700">
                 {row.bestTime !== null ? formatTimeBest(row.bestTime) : "—"}
               </td>
               {row.isRelaying ? (
-                <td colSpan={2} className="py-2 text-right text-gray-400">
+                <td className="py-2 text-right text-gray-400">
                   —
                 </td>
               ) : row.targetTime === null ? (
-                <td colSpan={2} className="py-2 text-right">
+                <td className="py-2 text-right">
                   <button
                     type="button"
                     onClick={() => onSetGoal(row.styleId)}
@@ -278,12 +283,9 @@ function EntriesTable({
                   </button>
                 </td>
               ) : (
-                <>
-                  <td className="py-2 text-right text-gray-700">{formatTimeBest(row.targetTime)}</td>
-                  <td className="py-2 text-right">
-                    <GapCell gap={row.gapToTarget} />
-                  </td>
-                </>
+                <td className="py-2 text-right">
+                  <TargetLabel goalId={row.goalId} targetTime={row.targetTime} gap={row.gapToTarget} />
+                </td>
               )}
             </tr>
           ))}
@@ -293,9 +295,36 @@ function EntriesTable({
   );
 }
 
-function GapCell({ gap }: { gap: number | null }) {
+/**
+ * 目標タイムのラベル。押すと目標ページでその目標を選んだ状態で開く (2026-11-07 ユーザー指定)。
+ * 色: ベストが目標に届いていなければ橙、届いていれば緑、ベストが無ければ灰
+ */
+function TargetLabel({
+  goalId,
+  targetTime,
+  gap,
+}: {
+  goalId: string | null;
+  targetTime: number;
+  gap: number | null;
+}) {
   const t = useTranslations("dashboard.nextCompetition");
-  if (gap === null) return <span className="text-gray-400">—</span>;
-  if (gap >= 0) return <span className="font-medium text-emerald-700">{t("achieved")}</span>;
-  return <span className="font-medium text-amber-700">{formatSignedSeconds(gap)}</span>;
+  const time = formatTimeBest(targetTime);
+  const tone =
+    gap === null
+      ? "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+      : gap >= 0
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+        : "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100";
+  const className = `inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${tone}`;
+  if (!goalId) return <span className={className}>{time}</span>;
+  return (
+    <Link
+      href={`/goals?goalId=${encodeURIComponent(goalId)}`}
+      className={className}
+      aria-label={t("openGoal", { time })}
+    >
+      {time}
+    </Link>
+  );
 }

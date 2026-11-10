@@ -24,11 +24,6 @@ interface EntryData {
   entryTime: number; // 秒単位
   entryTimeDisplayValue?: string; // 入力中の表示用
   note: string;
-  /**
-   * 「ベストタイムを流用」ボタンで入れた値が未編集のまま残っているかどうかのラッチ (裁定2 v2)。
-   * タイム欄の onChange・種目変更のいずれかが起きたら無条件に null に落とす。値の比較はしない。
-   */
-  prefillSource: "bestTime" | null;
 }
 
 // 編集データの型定義
@@ -142,7 +137,6 @@ export default function EntryLogForm({
       styleId: styles[0]?.id || "",
       entryTime: 0,
       note: "",
-      prefillSource: null,
     },
   ]);
 
@@ -222,7 +216,6 @@ export default function EntryLogForm({
           (entry.entryTime && entry.entryTime > 0 ? formatTimeBest(entry.entryTime) : ""),
         note: entry.note || "",
         // 呼び出し元から渡された初期エントリーは流用元の情報を持たないため未編集扱いにしない
-        prefillSource: null,
       }));
     } else if (editData) {
       // 編集モード: 既存の値をセット
@@ -252,7 +245,6 @@ export default function EntryLogForm({
                   : "",
               note: entry.note || "",
               // 編集データ由来の既存エントリーは流用元の情報を持たないため未編集扱いにしない
-              prefillSource: null,
             }));
           }
         }
@@ -264,7 +256,6 @@ export default function EntryLogForm({
             entryTime: editData.entry_time || 0,
             entryTimeDisplayValue: editData.entry_time ? formatTimeBest(editData.entry_time) : "",
             note: editData.note || "",
-            prefillSource: null,
           },
         ];
       })();
@@ -276,7 +267,6 @@ export default function EntryLogForm({
           styleId: styles[0]?.id || "",
           entryTime: 0,
           note: "",
-          prefillSource: null,
         },
       ];
     }
@@ -359,7 +349,6 @@ export default function EntryLogForm({
       styleId: styles[0]?.id || "",
       entryTime: 0,
       note: "",
-      prefillSource: null,
     };
 
     setEntries((prev) => [...prev, newEntry]);
@@ -379,13 +368,10 @@ export default function EntryLogForm({
 
   // 「ベストタイムを流用」ボタン: バッジに表示している値 (getEntryBestTime の time) を
   // そのままタイム欄へ入れる (裁定1)。別経路でベストタイムを取得し直さない。
-  // prefillSource は値を比較しないラッチ (裁定2 v2)。タイム欄の onChange / 種目変更のいずれかが
-  // 起きたら null に落とす。
   const handleApplyBestTime = (entryId: string, time: number) => {
     updateEntry(entryId, {
       entryTime: time,
       entryTimeDisplayValue: formatTimeBest(time),
-      prefillSource: "bestTime",
     });
   };
 
@@ -468,8 +454,6 @@ export default function EntryLogForm({
                         styleId: Number(entry.styleId),
                       })
                     : null;
-                  // 未編集判定は prefillSource のラッチのみで行う (裁定2 v2)。値の比較はしない。
-                  const isPrefillUntouched = entry.prefillSource === "bestTime";
                   return (
                   <div
                     key={entry.id}
@@ -490,10 +474,12 @@ export default function EntryLogForm({
                       )}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                    {/* 種目・エントリータイム・メモは1行ずつ置く。種目と同じ行だとタイム欄が潰れる
+                        (2026-11-09 ユーザー指定)。ラベル幅をそろえて入力欄の左端を合わせる */}
+                    <div className="flex flex-col gap-3">
                       {/* 種目選択 */}
-                      <div className="flex items-start gap-2 sm:flex-1">
-                        <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center">
+                      <div className="flex items-start gap-2">
+                        <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center sm:w-28">
                           <span className="sm:hidden">{t("styleLabelShort")}</span>
                           <span className="hidden sm:inline">{t("styleLabel")}</span>
                           {" "}<span className="text-red-500">*</span>
@@ -509,13 +495,7 @@ export default function EntryLogForm({
                         */}
                         <select
                           value={entry.styleId}
-                          onChange={(e) =>
-                            // 種目を変えたら別種目のベストタイムが未編集扱いで残らないようリセットする (裁定2 v2)
-                            updateEntry(entry.id, {
-                              styleId: e.target.value,
-                              prefillSource: null,
-                            })
-                          }
+                          onChange={(e) => updateEntry(entry.id, { styleId: e.target.value })}
                           className="flex-1 min-w-0 h-8 sm:h-10 px-2 sm:px-3 py-0.5 sm:py-1.5 text-sm bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required
                           disabled={isLoading}
@@ -531,13 +511,13 @@ export default function EntryLogForm({
                       </div>
 
                       {/* エントリータイム */}
-                      <div className="flex items-start gap-2 sm:flex-1">
-                        <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center">
+                      <div className="flex items-start gap-2">
+                        <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 h-8 sm:h-10 flex items-center sm:w-28">
                           <span className="sm:hidden">{t("timeLabelShort")}</span>
                           <span className="hidden sm:inline">{t("timeLabel")}</span>
                         </label>
                         <div className="flex-1 min-w-0">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 sm:max-w-sm">
                             <Input
                               type="text"
                               inputMode="decimal"
@@ -550,10 +530,8 @@ export default function EntryLogForm({
                               }
                               onChange={(e) => {
                                 const timeStr = e.target.value;
-                                // 値が何であれ無条件にラッチを外す (裁定2 v2)
                                 updateEntry(entry.id, {
                                   entryTimeDisplayValue: timeStr,
-                                  prefillSource: null,
                                 });
                               }}
                               onBlur={(e) => {
@@ -593,9 +571,12 @@ export default function EntryLogForm({
                               // 入ってしまう。オブジェクトの truthiness だけでなく time > 0 も見る。
                               disabled={isLoading || !entryBestTime || entryBestTime.time <= 0}
                               className="shrink-0 h-8 sm:h-10 px-3 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                              aria-label={tEntries("bestTimePrefillButton")}
                               data-testid={`entry-best-time-prefill-${index + 1}`}
                             >
-                              {tEntries("bestTimePrefillButton")}
+                              {/* スマホ幅は「ベスト流用」と短く出す (2026-11-09 ユーザー指定)。読み上げは aria-label の正式名 */}
+                              <span className="sm:hidden">{tEntries("bestTimePrefillButtonShort")}</span>
+                              <span className="hidden sm:inline">{tEntries("bestTimePrefillButton")}</span>
                             </button>
                           </div>
                           {isInvalidTimeInput(entry.entryTimeDisplayValue) && (
@@ -618,21 +599,13 @@ export default function EntryLogForm({
                               data-testid={`entry-goal-target-badge-${index + 1}`}
                             />
                           )}
-                          {isPrefillUntouched && (
-                            <p
-                              className="mt-1 text-xs text-yellow-700"
-                              data-testid={`entry-prefill-warning-${index + 1}`}
-                            >
-                              {tEntries("bestTimePrefillBadge")}
-                            </p>
-                          )}
                         </div>
                       </div>
                     </div>
 
                     {/* メモ */}
                     <div className="flex items-center gap-2 w-full">
-                      <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">
+                      <label className="text-[10px] sm:text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 sm:w-28">
                         {t("noteLabel")}
                       </label>
                       {/* 高さ・padding の根拠: components/ui/Input.tsx の「16px ズーム防止 box サイズ根拠」参照 */}

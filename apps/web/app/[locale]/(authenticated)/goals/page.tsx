@@ -1,11 +1,17 @@
 import { Suspense } from "react";
 import GoalDataLoader from "./_server/GoalDataLoader";
 
+interface GoalsPageProps {
+  /** goalId: 最初に選んでおく目標 (ダッシュボードの「次の大会」の目標タイムから開いたとき) */
+  searchParams: Promise<{ goalId?: string | string[] }>;
+}
+
 /**
  * 目標管理ページ（Server Component）
  * データ取得をサーバー側で実行し、Client Componentに渡す
  */
-export default async function GoalsPage() {
+export default async function GoalsPage({ searchParams }: GoalsPageProps) {
+  const { goalId } = await searchParams;
   return (
     <Suspense
       fallback={
@@ -21,7 +27,7 @@ export default async function GoalsPage() {
         </div>
       }
     >
-      <GoalDataLoader />
+      <GoalDataLoader initialGoalId={typeof goalId === "string" ? goalId : undefined} />
     </Suspense>
   );
 }
