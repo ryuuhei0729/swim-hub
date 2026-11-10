@@ -1,4 +1,4 @@
-// RevenueCat webhook の課金通知メール (Resend) と重複判定のキー (event.id) のテスト。
+// RevenueCat webhook の課金通知メール (Resend)・重複判定のキー (event.id)・CANCELLATION の状態の書き方のテスト。
 //
 // ハンドラ内部の関数は export していないため、`globalThis.fetch` を差し替えて
 // Supabase (PostgREST) と Resend の両方を横取りし、ハンドラ全体を通した振る舞いとして検証する。
@@ -58,6 +58,7 @@ interface FetchMockOptions {
 function installFetchMock(opts: FetchMockOptions = {}): {
   resendCalls: ResendCall[];
   updateCalls: number;
+  updateBodies: Record<string, unknown>[];
   insertedEventIds: string[];
   restore: () => void;
 } {
@@ -67,7 +68,12 @@ function installFetchMock(opts: FetchMockOptions = {}): {
   // ハンドラは正常系でも console.log、エラー経路では console.error を出すので黙らせる
   console.log = () => {};
   console.error = () => {};
-  const state = { resendCalls: [] as ResendCall[], updateCalls: 0, insertedEventIds: [] as string[] };
+  const state = {
+    resendCalls: [] as ResendCall[],
+    updateCalls: 0,
+    updateBodies: [] as Record<string, unknown>[],
+    insertedEventIds: [] as string[],
+  };
 
   globalThis.fetch = (async (input: Request | string | URL, init?: RequestInit) => {
     const req = input instanceof Request ? input : new Request(input, init);
@@ -102,6 +108,7 @@ function installFetchMock(opts: FetchMockOptions = {}): {
 
     if (url.pathname === "/rest/v1/user_subscriptions" && req.method === "PATCH") {
       state.updateCalls++;
+      state.updateBodies.push(JSON.parse(await req.text()));
       return opts.onUpdateSubscription?.() ?? new Response(null, { status: 204 });
     }
 
@@ -114,6 +121,9 @@ function installFetchMock(opts: FetchMockOptions = {}): {
     },
     get updateCalls() {
       return state.updateCalls;
+    },
+    get updateBodies() {
+      return state.updateBodies;
     },
     get insertedEventIds() {
       return state.insertedEventIds;
@@ -198,7 +208,7 @@ Deno.test("SANDBOX / Android の CANCELLATION は件名に [SANDBOX] と Android
     );
     assertEquals(res.status, 200);
     assertEquals(mock.resendCalls.length, 1);
-    assertEquals(mock.resendCalls[0]!.body.subject, "[SANDBOX] 【課金】[Android] 解約 swimhub_premium_monthly");
+    assertEquals(mock.resendCalls[0]!.body.subject, "[SANDBOX] 【課金】[Android] 解約予約 swimhub_premium_monthly");
   } finally {
     mock.restore();
     restoreEnv();
@@ -361,7 +371,7 @@ Deno.test("transaction_id が同じでも id が違う後続イベント (購入
     assertEquals(mock.updateCalls, 2);
     assertEquals(
       mock.resendCalls.map((c) => c.body.subject),
-      ["【課金】[iOS] 新規購入 swimhub_premium_monthly", "【課金】[iOS] 解約 swimhub_premium_monthly"],
+      ["【課金】[iOS] 新規購入 swimhub_premium_monthly", "【課金】[iOS] 解約予約 swimhub_premium_monthly"],
     );
   } finally {
     mock.restore();
@@ -404,3 +414,115 @@ for (const [label, id] of [["無い", undefined], ["空文字", ""], ["文字列
     }
   });
 }
+
+// --- CANCELLATION: 解約予約は期間の終わりまで Premium、返金は即座に無料、支払い失敗は past_due ---
+
+const FUTURE_MS = Date.now() + 30 * 24 * 60 * 60 * 1000;
+const PAST_MS = Date.now() - 24 * 60 * 60 * 1000;
+
+async function runEvents(events: Record<string, unknown>[]) {
+  const restoreEnv = withEnv(BASE_ENV);
+  const mock = installFetchMock();
+  try {
+    for (const [i, e] of events.entries()) {
+      const res = await handler(makeRequest(makeEvent({ id: `evt_seq_${i}`, ...e })));
+      assertEquals(res.status, 200);
+    }
+    assertEquals(mock.updateBodies.length, events.length);
+    return {
+      updates: mock.updateBodies,
+      last: mock.updateBodies[mock.updateBodies.length - 1]!,
+      subjects: mock.resendCalls.map((c) => c.body.subject),
+      texts: mock.resendCalls.map((c) => c.body.text),
+    };
+  } finally {
+    mock.restore();
+    restoreEnv();
+  }
+}
+
+const cancel = (extra: Record<string, unknown>) => ({
+  type: "CANCELLATION",
+  expiration_at_ms: FUTURE_MS,
+  price_in_purchased_currency: 0,
+  ...extra,
+});
+
+for (const reason of ["UNSUBSCRIBE", "PRICE_INCREASE", "DEVELOPER_INITIATED", "UNKNOWN", undefined]) {
+  Deno.test(`解約予約 (cancel_reason=${reason ?? "なし"}) は active のまま cancel_at_period_end を立てる`, async () => {
+    const { last, subjects, texts } = await runEvents([cancel({ cancel_reason: reason })]);
+    assertEquals(last.plan, "premium");
+    assertEquals(last.status, "active");
+    assertEquals(last.cancel_at_period_end, true);
+    assertEquals(last.premium_expires_at, new Date(FUTURE_MS).toISOString());
+    assertEquals(subjects, ["【課金】[iOS] 解約予約 swimhub_premium_monthly"]);
+    assert(texts[0]!.includes(`解約理由: ${reason ?? "-"}`));
+  });
+}
+
+Deno.test("トライアル中の解約予約は trialing のまま", async () => {
+  const { last } = await runEvents([cancel({ cancel_reason: "UNSUBSCRIBE", period_type: "TRIAL" })]);
+  assertEquals(last.plan, "premium");
+  assertEquals(last.status, "trialing");
+  assertEquals(last.cancel_at_period_end, true);
+});
+
+Deno.test("返金 (CUSTOMER_SUPPORT) は即座に free / expired にする", async () => {
+  const { last, subjects } = await runEvents([
+    cancel({ cancel_reason: "CUSTOMER_SUPPORT", price_in_purchased_currency: null }),
+  ]);
+  assertEquals(last.plan, "free");
+  assertEquals(last.status, "expired");
+  assertEquals(last.cancel_at_period_end, false);
+  assertEquals(subjects, ["【課金】[iOS] 返金 swimhub_premium_monthly"]);
+});
+
+Deno.test("金額が負の CANCELLATION は cancel_reason が無くても返金として扱う", async () => {
+  const { last, subjects } = await runEvents([cancel({ price_in_purchased_currency: -480 })]);
+  assertEquals(last.plan, "free");
+  assertEquals(last.status, "expired");
+  assertEquals(subjects, ["【課金】[iOS] 返金 swimhub_premium_monthly"]);
+});
+
+Deno.test("支払い失敗の CANCELLATION (BILLING_ERROR) は BILLING_ISSUE と同じ past_due にする", async () => {
+  const { last, subjects } = await runEvents([cancel({ cancel_reason: "BILLING_ERROR" })]);
+  assertEquals(last.plan, "premium");
+  assertEquals(last.status, "past_due");
+  assertEquals(subjects, ["【課金】[iOS] 支払い問題 swimhub_premium_monthly"]);
+});
+
+Deno.test("BILLING_ISSUE と CANCELLATION(BILLING_ERROR) はどちらが後に届いても past_due", async () => {
+  const issue = { type: "BILLING_ISSUE", expiration_at_ms: FUTURE_MS };
+  const billingCancel = cancel({ cancel_reason: "BILLING_ERROR" });
+  const a = await runEvents([issue, billingCancel]);
+  const b = await runEvents([billingCancel, issue]);
+  assertEquals(a.last.status, "past_due");
+  assertEquals(b.last.status, "past_due");
+  assertEquals(a.last.plan, "premium");
+  assertEquals(b.last.plan, "premium");
+});
+
+Deno.test("期限が過ぎた後 (EXPIRATION の後) に届いた解約予約は Premium に戻さない", async () => {
+  const { last } = await runEvents([
+    { type: "EXPIRATION", expiration_at_ms: PAST_MS },
+    cancel({ cancel_reason: "UNSUBSCRIBE", expiration_at_ms: PAST_MS }),
+  ]);
+  assertEquals(last.plan, "free");
+  assertEquals(last.status, "expired");
+});
+
+Deno.test("期限の無い解約予約は Premium のまま残さない", async () => {
+  const { last } = await runEvents([cancel({ cancel_reason: "UNSUBSCRIBE", expiration_at_ms: null })]);
+  assertEquals(last.plan, "free");
+  assertEquals(last.status, "expired");
+});
+
+Deno.test("解約予約 → 解約取り消しで cancel_at_period_end が戻る", async () => {
+  const { updates } = await runEvents([
+    cancel({ cancel_reason: "UNSUBSCRIBE" }),
+    { type: "UNCANCELLATION", expiration_at_ms: FUTURE_MS },
+  ]);
+  assertEquals(updates[0]!.cancel_at_period_end, true);
+  assertEquals(updates[1]!.status, "active");
+  assertEquals(updates[1]!.cancel_at_period_end, false);
+});

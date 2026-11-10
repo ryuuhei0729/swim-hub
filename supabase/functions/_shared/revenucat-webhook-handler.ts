@@ -26,6 +26,8 @@ interface RevenueCatEvent {
   app_id?: string;
   price_in_purchased_currency?: number | null;
   currency?: string | null;
+  // CANCELLATION の理由 (UNSUBSCRIBE / BILLING_ERROR / CUSTOMER_SUPPORT など)
+  cancel_reason?: string | null;
 }
 
 interface RevenueCatWebhookBody {
@@ -61,6 +63,28 @@ function msToISO(ms: number | null | undefined): string | null {
   return new Date(ms).toISOString();
 }
 
+// RevenueCat の CANCELLATION は、自動更新の停止・支払いの失敗・返金のどれでも届く。
+// - 返金: cancel_reason が CUSTOMER_SUPPORT か、金額が負 (どちらか片方でも返金とみなす)
+// - 支払いの失敗: cancel_reason が BILLING_ERROR。BILLING_ISSUE と同じ支払いの失敗を表すので同じ状態を書く
+//   (どちらが後に届いても past_due になるように)
+// - それ以外 (UNSUBSCRIBE / PRICE_INCREASE / DEVELOPER_INITIATED / UNKNOWN / 理由なし): 自動更新の停止。
+//   アクセスを外すのは EXPIRATION が届いたとき
+type CancellationKind = "refund" | "billing_error" | "unsubscribe";
+
+function cancellationKind(event: RevenueCatEvent): CancellationKind {
+  if (event.cancel_reason === "CUSTOMER_SUPPORT" || (event.price_in_purchased_currency ?? 0) < 0) {
+    return "refund";
+  }
+  if (event.cancel_reason === "BILLING_ERROR") return "billing_error";
+  return "unsubscribe";
+}
+
+const CANCELLATION_LABELS: Record<CancellationKind, string> = {
+  refund: "返金",
+  billing_error: "支払い問題",
+  unsubscribe: "解約予約",
+};
+
 // --- Billing Notification (運営者向けメール) ---
 
 const EVENT_LABELS: Record<string, string> = {
@@ -68,7 +92,7 @@ const EVENT_LABELS: Record<string, string> = {
   RENEWAL: "更新",
   PRODUCT_CHANGE: "プラン変更",
   UNCANCELLATION: "解約取り消し",
-  CANCELLATION: "解約",
+  CANCELLATION: "解約予約",
   EXPIRATION: "失効",
   BILLING_ISSUE: "支払い問題",
 };
@@ -85,7 +109,10 @@ async function notifyBillingEmail(appName: string, event: RevenueCatEvent): Prom
   const to = Deno.env.get("BILLING_NOTIFY_EMAIL");
   if (!apiKey || !to) return;
 
-  const eventLabel = EVENT_LABELS[event.type] ?? event.type;
+  const eventLabel =
+    event.type === "CANCELLATION"
+      ? CANCELLATION_LABELS[cancellationKind(event)]
+      : (EVENT_LABELS[event.type] ?? event.type);
   const storeLabel = STORE_LABELS[event.store] ?? event.store ?? "不明";
   const sandboxPrefix = event.environment === "SANDBOX" ? "[SANDBOX] " : "";
   const price =
@@ -114,6 +141,7 @@ async function notifyBillingEmail(appName: string, event: RevenueCatEvent): Prom
           `商品: ${event.product_id}`,
           `RevenueCat app_id: ${event.app_id ?? "-"}`,
           `期間種別: ${event.period_type}`,
+          ...(event.type === "CANCELLATION" ? [`解約理由: ${event.cancel_reason ?? "-"}`] : []),
           `金額: ${price}`,
           `有効期限 (UTC): ${msToISO(event.expiration_at_ms) ?? "-"}`,
           `transaction_id: ${event.transaction_id}`,
@@ -228,13 +256,29 @@ function mapEventToUpdate(event: RevenueCatEvent): Record<string, unknown> | nul
         cancel_at_period_end: false,
       };
 
-    case "CANCELLATION":
+    case "CANCELLATION": {
+      const kind = cancellationKind(event);
+      if (kind === "billing_error") {
+        return { ...base, plan: "premium", status: "past_due" };
+      }
+      // 返金、または期限が既に過ぎている (EXPIRATION の後に届いた) ときは、その場で無料に戻す
+      if (
+        kind === "refund" ||
+        !event.expiration_at_ms ||
+        event.expiration_at_ms <= Date.now()
+      ) {
+        return { ...base, plan: "free", status: "expired", cancel_at_period_end: false };
+      }
+      // 自動更新の停止。期間の終わりまで Premium のまま (Stripe の解約予約と同じ表し方)。
+      // status を canceled にすると、status IN ('active','trialing') で判定する
+      // checkIsPremium と使用量予約 RPC が即座に Premium を外してしまう
       return {
         ...base,
         plan: "premium",
-        status: "canceled",
+        status: event.period_type === "TRIAL" ? "trialing" : "active",
         cancel_at_period_end: true,
       };
+    }
 
     case "EXPIRATION":
       return {
