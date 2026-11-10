@@ -7,8 +7,8 @@
         "competitions": "Competitions",
         "records": "Records",
         "teams": "Teams",
-        "myPage": "My Page",
-        "goals": "Goals"
+        "goals": "Goals",
+        "account": "Account"
       },
       "titles": {
         "practiceDetail": "Practice details",
@@ -23,7 +23,6 @@
         "competitionInfo": "Meet info",
         "entryRegister": "Register entry",
         "teamDetail": "Team details",
-        "settings": "Settings",
         "bulkBestTime": "Bulk best time entry",
         "goalDetail": "Goal Details"
       }
@@ -1266,14 +1265,9 @@
       "dataFetchFailed": "Failed to fetch data",
       "loadingData": "Loading data...",
       "bestTimesFetchFailed": "Failed to fetch best times",
-      "settingsButtonAria": "Open settings",
-      "profileSectionTitle": "Profile",
-      "editButton": "Edit",
-      "settingsButton": "Settings",
       "profileNotFound": "Profile not found",
       "bulkInput": "Bulk input",
-      "bulkInputAria": "Bulk register best times",
-      "pageTitle": "My Page"
+      "bulkInputAria": "Bulk register best times"
     },
     "title": "My Page",
     "subtitle": "Manage your profile and best times",
@@ -4614,6 +4608,33 @@
     "toko": {
       "title": "Toko Points",
       "note": "“Toko Points” is not an official scoring system of the Tokyo Senior High School Athletic Federation. It is SwimHub's own conversion that treats the entry-restriction time for the Tokyo High School Championship as 1000 points."
+    }
+  },
+  "account": {
+    "mobile": {
+      "pageTitle": "Account",
+      "editProfile": "Edit profile",
+      "addTeamAria": "Create or join a team",
+      "rows": {
+        "plan": "Plan",
+        "calendar": "Calendar",
+        "practiceLogTemplates": "Practice log templates",
+        "security": "Sign-in & security"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "On trial"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "ios": "iOS",
+        "notConnected": "Not connected"
+      },
+      "plan": {
+        "manageNoteIos": "Opens the App Store",
+        "manageNoteAndroid": "Opens Google Play"
+      }
     }
   }
 }

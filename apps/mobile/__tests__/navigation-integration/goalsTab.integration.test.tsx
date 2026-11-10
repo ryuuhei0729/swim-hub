@@ -147,7 +147,7 @@ describe("目標タブ (6つ目のタブ) — 実ナビゲーション", () => {
     renderApp();
     await settle();
     const text = document.body.textContent ?? "";
-    for (const k of ["home", "records", "teams", "goals", "myPage"]) {
+    for (const k of ["home", "records", "teams", "goals", "account"]) {
       expect(text, k).toContain(`T(navigation.mobile.tabs.${k})`);
     }
   });

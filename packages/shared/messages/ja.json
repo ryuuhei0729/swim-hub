@@ -7,8 +7,8 @@
         "competitions": "大会",
         "records": "記録",
         "teams": "チーム",
-        "myPage": "マイページ",
-        "goals": "目標"
+        "goals": "目標",
+        "account": "アカウント"
       },
       "titles": {
         "practiceDetail": "練習記録詳細",
@@ -23,7 +23,6 @@
         "competitionInfo": "大会情報",
         "entryRegister": "エントリー登録",
         "teamDetail": "チーム詳細",
-        "settings": "設定",
         "bulkBestTime": "ベストタイム一括入力",
         "goalDetail": "目標詳細"
       }
@@ -1269,14 +1268,9 @@
       "dataFetchFailed": "データの取得に失敗しました",
       "loadingData": "データを読み込み中...",
       "bestTimesFetchFailed": "ベストタイムの取得に失敗しました",
-      "settingsButtonAria": "設定画面を開く",
-      "profileSectionTitle": "プロフィール",
-      "editButton": "編集",
-      "settingsButton": "設定",
       "profileNotFound": "プロフィールが見つかりません",
       "bulkInput": "一括入力",
-      "bulkInputAria": "ベストタイムを一括入力する",
-      "pageTitle": "マイページ"
+      "bulkInputAria": "ベストタイムを一括入力する"
     },
     "title": "マイページ",
     "subtitle": "プロフィールとベストタイムを管理します",
@@ -4617,6 +4611,33 @@
     "toko": {
       "title": "都高ポイント",
       "note": "「都高ポイント」は東京都高等学校体育連盟の公式得点制度ではありません。都高校大会の出場制限タイムを1000点とみなしてSwimHubが独自に換算した指標です。"
+    }
+  },
+  "account": {
+    "mobile": {
+      "pageTitle": "アカウント",
+      "editProfile": "プロフィールを編集",
+      "addTeamAria": "チームを作成・参加する",
+      "rows": {
+        "plan": "プラン",
+        "calendar": "カレンダー",
+        "practiceLogTemplates": "練習ログテンプレート",
+        "security": "ログインとセキュリティ"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "トライアル中"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "ios": "iOS",
+        "notConnected": "未連携"
+      },
+      "plan": {
+        "manageNoteIos": "App Store の画面が開きます",
+        "manageNoteAndroid": "Google Play の画面が開きます"
+      }
     }
   }
 }

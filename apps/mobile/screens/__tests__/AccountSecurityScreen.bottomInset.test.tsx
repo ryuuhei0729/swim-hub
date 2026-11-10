@@ -1,21 +1,18 @@
 // =============================================================================
-// SettingsScreen.bottomInset.test.tsx
+// AccountSecurityScreen.bottomInset.test.tsx
 // =============================================================================
 //
-// ユーザー実機報告 (Android 3ボタンナビ): マイページ→設定 の最下部にある
-// ログアウトボタンがシステムナビゲーションバーと重なる。
-//
-// 原因: SettingsScreen はフッター固定ではなく ScrollView の最下段にログアウト
-// ボタンを置いているため、過去の Edge-to-Edge 一斉修正 (フッター固定パターンのみ)
-// の対象外だった。contentContainerStyle の paddingBottom が固定 32 で、
-// 3ボタンナビの inset (48dp) より小さい。
+// ユーザー実機報告 (Android 3ボタンナビ): 旧 設定画面 の最下部にあったボタンが
+// システムナビゲーションバーと重なった (旧 SettingsScreen.bottomInset.test.tsx)。
+// 2026-11-09 に設定画面をアカウントタブ配下の3画面に分け、最下部にアカウント削除を
+// 置くのはこの画面になったので、同じ検証をここへ移した。
 //
 // このテストは「下部 inset が ScrollView のスクロール余白に実際に反映されるか」を
 // 配線レベルで検証する。inset は vitest.setup.ts の共通モックでは 0 のため、
 // このファイルだけ bottom=48 を返すようにモックを差し替える。
 //
-// ミューテーション確認方法: SettingsScreen の contentContainerStyle を
-// `styles.scrollContent` 単体に戻すと paddingBottom は 32 のままになり赤になる。
+// ミューテーション確認方法: AccountSecurityScreen の contentContainerStyle を
+// `styles.scrollContent` 単体に戻すと paddingBottom が付かず赤になる。
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, waitFor } from "@testing-library/react";
@@ -66,7 +63,7 @@ vi.mock("@react-navigation/native", () => ({
 }));
 
 // 本テストの関心事 (スクロール余白) と無関係なネイティブ依存セクションはスタブする
-// (SettingsScreen.refreshDrift.test.tsx と同一パターン)。
+// (AccountCalendarScreen.refreshDrift.test.tsx と同一パターン)。
 vi.mock("@/components/settings/GoogleCalendarSyncSettings", () => ({
   GoogleCalendarSyncSettings: () => null,
 }));
@@ -109,9 +106,9 @@ vi.mock("@/contexts/AuthProvider", () => ({
 }));
 
 import { StyleSheet } from "react-native";
-import { SettingsScreen } from "../SettingsScreen";
+import { AccountSecurityScreen } from "../AccountSecurityScreen";
 
-describe("SettingsScreen — Android Edge-to-Edge の下部インセット", () => {
+describe("AccountSecurityScreen — Android Edge-to-Edge の下部インセット", () => {
   beforeEach(() => {
     captured.contentContainerStyles = [];
     supabaseMock = createTableDispatchSupabase({
@@ -130,13 +127,13 @@ describe("SettingsScreen — Android Edge-to-Edge の下部インセット", () 
     });
   });
 
-  it("ログアウトボタンを含むスクロール余白に下部インセットが反映される", async () => {
+  it("アカウント削除を含むスクロール余白に下部インセットが反映される", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
     render(
       <QueryClientProvider client={queryClient}>
-        <SettingsScreen />
+        <AccountSecurityScreen />
       </QueryClientProvider>,
     );
 
@@ -144,7 +141,7 @@ describe("SettingsScreen — Android Edge-to-Edge の下部インセット", () 
       expect(captured.contentContainerStyles.length).toBeGreaterThan(0);
     });
 
-    // 最初に描画される ScrollView が SettingsScreen 自身のもの (親→子の描画順)。
+    // 最初に描画される ScrollView が AccountSecurityScreen 自身のもの (親→子の描画順)。
     const flattened = StyleSheet.flatten(captured.contentContainerStyles[0]) as {
       paddingBottom?: number;
     };

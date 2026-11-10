@@ -7,8 +7,8 @@
         "competitions": "Wettkämpfe",
         "records": "Einträge",
         "teams": "Teams",
-        "myPage": "Mein Bereich",
-        "goals": "Ziele"
+        "goals": "Ziele",
+        "account": "Konto"
       },
       "titles": {
         "practiceDetail": "Trainingsdetails",
@@ -23,7 +23,6 @@
         "competitionInfo": "Wettkampfinfos",
         "entryRegister": "Meldung eintragen",
         "teamDetail": "Teamdetails",
-        "settings": "Einstellungen",
         "bulkBestTime": "Bestzeiten-Sammeleingabe",
         "goalDetail": "Zieldetails"
       }
@@ -1269,14 +1268,9 @@
       "dataFetchFailed": "Daten konnten nicht abgerufen werden",
       "loadingData": "Daten werden geladen...",
       "bestTimesFetchFailed": "Bestzeiten konnten nicht abgerufen werden",
-      "settingsButtonAria": "Einstellungen öffnen",
-      "profileSectionTitle": "Profil",
-      "editButton": "Bearbeiten",
-      "settingsButton": "Einstellungen",
       "profileNotFound": "Profil nicht gefunden",
       "bulkInput": "Sammeleingabe",
-      "bulkInputAria": "Bestzeiten in einem Vorgang erfassen",
-      "pageTitle": "Meine Seite"
+      "bulkInputAria": "Bestzeiten in einem Vorgang erfassen"
     },
     "title": "Meine Seite",
     "subtitle": "Verwalten Sie Ihr Profil und Ihre Bestzeiten",
@@ -4617,6 +4611,33 @@
     "toko": {
       "title": "Toko-Punkte",
       "note": "„Toko-Punkte“ ist kein offizielles Punktesystem des Tokioter High-School-Sportverbands, sondern eine eigene Umrechnung von SwimHub, bei der die Teilnahmezeitgrenze für die Tokyo High School Championship als 1000 Punkte gilt."
+    }
+  },
+  "account": {
+    "mobile": {
+      "pageTitle": "Konto",
+      "editProfile": "Profil bearbeiten",
+      "addTeamAria": "Team erstellen oder beitreten",
+      "rows": {
+        "plan": "Tarif",
+        "calendar": "Kalender",
+        "practiceLogTemplates": "Trainingslog-Vorlagen",
+        "security": "Anmeldung & Sicherheit"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "Testphase"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "ios": "iOS",
+        "notConnected": "Nicht verbunden"
+      },
+      "plan": {
+        "manageNoteIos": "Öffnet den App Store",
+        "manageNoteAndroid": "Öffnet Google Play"
+      }
     }
   }
 }

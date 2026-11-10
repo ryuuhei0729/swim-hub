@@ -43,7 +43,9 @@ vi.mock("@/screens/TeamPracticeLogBulkFormScreen", () => ({
 }));
 vi.mock("@/screens/TeamEntryBulkFormScreen", () => ({ TeamEntryBulkFormScreen: () => null }));
 vi.mock("@/screens/TeamBulkRegisterScreen", () => ({ TeamBulkRegisterScreen: () => null }));
-vi.mock("@/screens/SettingsScreen", () => ({ SettingsScreen: () => null }));
+vi.mock("@/screens/AccountPlanScreen", () => ({ AccountPlanScreen: () => null }));
+vi.mock("@/screens/AccountCalendarScreen", () => ({ AccountCalendarScreen: () => null }));
+vi.mock("@/screens/AccountSecurityScreen", () => ({ AccountSecurityScreen: () => null }));
 vi.mock("@/screens/PracticeLogTemplatesScreen", () => ({
   PracticeLogTemplatesScreen: () => null,
 }));
@@ -117,5 +119,20 @@ describe("MainStack — 登録された画面", () => {
     expect(resolve("GoalForm", { goalId: "g1" })).toBe("目標編集");
     expect(resolve("MilestoneForm", { goalId: "g1" })).toBe("マイルストーン作成");
     expect(resolve("MilestoneForm", { goalId: "g1", milestoneId: "m1" })).toBe("マイルストーン編集");
+  });
+
+  it("[account] 設定 (Settings) は無く、アカウント配下の3画面がアカウントの行と同じタイトルで登録されている", () => {
+    const names = stackMocks.screens.map((s) => s.name);
+    expect(names).not.toContain("Settings");
+    const titles: Record<string, string> = {
+      AccountPlan: "プラン",
+      AccountCalendar: "カレンダー",
+      AccountSecurity: "ログインとセキュリティ",
+    };
+    for (const [name, title] of Object.entries(titles)) {
+      const screen = stackMocks.screens.find((s) => s.name === name);
+      expect(screen, name).toBeTruthy();
+      expect((screen!.options as { title?: string }).title).toBe(title);
+    }
   });
 });

@@ -7,8 +7,8 @@
         "competitions": "대회",
         "records": "기록",
         "teams": "팀",
-        "myPage": "마이페이지",
-        "goals": "목표"
+        "goals": "목표",
+        "account": "계정"
       },
       "titles": {
         "practiceDetail": "연습 기록 상세",
@@ -23,7 +23,6 @@
         "competitionInfo": "대회 정보",
         "entryRegister": "엔트리 등록",
         "teamDetail": "팀 상세",
-        "settings": "설정",
         "bulkBestTime": "베스트 타임 일괄 입력",
         "goalDetail": "목표 상세"
       }
@@ -1269,14 +1268,9 @@
       "dataFetchFailed": "데이터를 불러오지 못했습니다",
       "loadingData": "데이터를 불러오는 중...",
       "bestTimesFetchFailed": "베스트 타임을 불러오지 못했습니다",
-      "settingsButtonAria": "설정 화면 열기",
-      "profileSectionTitle": "프로필",
-      "editButton": "편집",
-      "settingsButton": "설정",
       "profileNotFound": "프로필을 찾을 수 없습니다",
       "bulkInput": "일괄 입력",
-      "bulkInputAria": "베스트 타임을 일괄 입력하기",
-      "pageTitle": "마이페이지"
+      "bulkInputAria": "베스트 타임을 일괄 입력하기"
     },
     "title": "마이페이지",
     "subtitle": "프로필과 베스트 타임을 관리합니다",
@@ -4617,6 +4611,33 @@
     "toko": {
       "title": "도고 포인트",
       "note": "'도고 포인트'는 도쿄도 고등학교 체육연맹의 공식 점수 제도가 아닙니다. 도 고교대회 출전 제한 기록을 1000점으로 간주하여 SwimHub가 독자적으로 환산한 지표입니다."
+    }
+  },
+  "account": {
+    "mobile": {
+      "pageTitle": "계정",
+      "editProfile": "프로필 편집",
+      "addTeamAria": "팀 만들기 또는 참가",
+      "rows": {
+        "plan": "플랜",
+        "calendar": "캘린더",
+        "practiceLogTemplates": "연습 로그 템플릿",
+        "security": "로그인 및 보안"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "체험 중"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "ios": "iOS",
+        "notConnected": "연동 안 됨"
+      },
+      "plan": {
+        "manageNoteIos": "App Store 화면이 열립니다",
+        "manageNoteAndroid": "Google Play 화면이 열립니다"
+      }
     }
   }
 }
