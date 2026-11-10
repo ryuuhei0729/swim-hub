@@ -4,6 +4,11 @@ import { getTranslations } from "next-intl/server";
 import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import TeamDetailDataLoader from "./_server/TeamDetailDataLoader";
 
+/** URL の `?view=admin` (管理者ビュー)。サーバー側では client モジュールの関数を呼べないためここで判定する */
+function isAdminViewParam(value: string | string[] | undefined): boolean {
+  return value === "admin";
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -25,16 +30,16 @@ export async function generateMetadata({
 
 interface TeamDetailPageProps {
   params: Promise<{ teamId: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; view?: string | string[] }>;
 }
 
 /**
- * チーム詳細ページ（Server Component）
+ * チームページ（Server Component）。利用者ビューと管理者ビュー (`?view=admin`) を兼ねる
  * データ取得はサーバー側で並行実行される
  */
 export default async function TeamDetailPage({ params, searchParams }: TeamDetailPageProps) {
   const { teamId } = await params;
-  const { tab } = await searchParams;
+  const { tab, view } = await searchParams;
 
   return (
     <Suspense
@@ -51,7 +56,11 @@ export default async function TeamDetailPage({ params, searchParams }: TeamDetai
         </div>
       }
     >
-      <TeamDetailDataLoader teamId={teamId} initialTab={tab} />
+      <TeamDetailDataLoader
+        teamId={teamId}
+        initialTab={tab}
+        initialAdminView={isAdminViewParam(view)}
+      />
     </Suspense>
   );
 }

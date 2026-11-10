@@ -1,68 +1,26 @@
-import React, { Suspense } from "react";
-import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
-import TeamAdminDataLoader from "./_server/TeamAdminDataLoader";
+import { redirect } from "@/i18n/navigation";
 
 /**
- * 動的レンダリングを強制（認証が必要なページのため）
+ * 旧「チーム管理」ページ。
+ *
+ * 利用者ビューと管理者ビューはチーム画面 (/teams/[teamId]) 1つにまとめ、
+ * ヘッダーの「利用者 / 管理者」スイッチで本文だけを切り替える形にした。
+ * 管理者ビューは `/teams/[teamId]?view=admin`。
+ *
+ * 記録入力・エントリー・練習ログなどの戻り先や、ブックマークが
+ * `/teams-admin/[teamId]?tab=...` を指しているので、ページ自体は残してリダイレクトする。
+ * 権限の確認はリダイレクト先で行う (管理者でなければ利用者ビューで開く)。
  */
-export const dynamic = "force-dynamic";
-
-export async function generateMetadata({
+export default async function TeamAdminPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ teamId: string; locale: string }>;
-}): Promise<Metadata> {
+  searchParams: Promise<{ tab?: string | string[] }>;
+}) {
   const { teamId, locale } = await params;
-  const t = await getTranslations({ locale, namespace: "teamsAdmin" });
-  const supabase = await createAuthenticatedServerClient();
-  const { data: team } = await supabase
-    .from("teams")
-    .select("name")
-    .eq("id", teamId)
-    .single<{ name: string }>();
-
-  return {
-    title: team?.name
-      ? `${team.name} - ${t("page.title")} | SwimHub`
-      : `${t("page.title")} | SwimHub`,
-  };
-}
-
-interface TeamAdminPageProps {
-  params: Promise<{
-    teamId: string;
-  }>;
-  searchParams: Promise<{
-    tab?: string;
-  }>;
-}
-
-/**
- * チーム管理ページ（Server Component）
- * データ取得はサーバー側で並行実行される
- */
-export default async function TeamAdminPage({ params, searchParams }: TeamAdminPageProps) {
-  const { teamId } = await params;
   const { tab } = await searchParams;
-
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-gray-50">
-          <div className="p-6 space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="animate-pulse">
-                <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-    >
-      <TeamAdminDataLoader teamId={teamId} initialTab={tab} />
-    </Suspense>
-  );
+  const query = new URLSearchParams({ view: "admin" });
+  if (typeof tab === "string" && tab) query.set("tab", tab);
+  redirect({ href: `/teams/${encodeURIComponent(teamId)}?${query.toString()}`, locale });
 }

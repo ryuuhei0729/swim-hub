@@ -5,12 +5,13 @@
 import React from "react";
 import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
 import { TeamCoreAPI } from "@apps/shared/api/teams/core";
-import TeamDetailClient from "../_client/TeamDetailClient";
+import TeamPageClient from "../_client/TeamPageClient";
 import type { TeamMembership, TeamWithMembers } from "@apps/shared/types";
 
 interface TeamDetailDataLoaderProps {
   teamId: string;
   initialTab?: string;
+  initialAdminView: boolean;
 }
 
 /**
@@ -67,17 +68,19 @@ async function getTeamData(
 export default async function TeamDetailDataLoader({
   teamId,
   initialTab,
+  initialAdminView,
 }: TeamDetailDataLoaderProps) {
   // 認証情報とSupabaseクライアントを取得
   const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
 
   if (!user) {
     return (
-      <TeamDetailClient
+      <TeamPageClient
         teamId={teamId}
         initialTeam={null}
         initialMembership={null}
         initialTab={initialTab}
+        initialAdminView={false}
       />
     );
   }
@@ -89,11 +92,12 @@ export default async function TeamDetailDataLoader({
   });
 
   return (
-    <TeamDetailClient
+    <TeamPageClient
       teamId={teamId}
       initialTeam={teamDataResult.team}
       initialMembership={teamDataResult.membership}
       initialTab={initialTab}
+      initialAdminView={initialAdminView}
     />
   );
 }

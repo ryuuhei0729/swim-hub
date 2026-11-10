@@ -162,7 +162,7 @@ describe("TeamAdminClient の goals case", () => {
   async function renderAdminAt(tab?: string) {
     if (tab !== undefined) mocks.searchParams = new URLSearchParams(`tab=${tab}`);
     const { default: TeamAdminClient } = await import(
-      "../../../app/[locale]/(authenticated)/teams-admin/[teamId]/_client/TeamAdminClient"
+      "../../../app/[locale]/(authenticated)/teams/[teamId]/_client/TeamAdminClient"
     );
     const { useTeamAdminStore } = await import("@/stores/form/teamAdminStore");
     useTeamAdminStore.getState().setActiveTab("members");

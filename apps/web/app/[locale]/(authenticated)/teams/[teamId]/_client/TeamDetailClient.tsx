@@ -54,7 +54,9 @@ interface TeamDetailClientProps {
 }
 
 /**
- * チーム詳細ページのインタラクティブ部分を担当するClient Component
+ * チーム画面の利用者ビュー (ヘッダーより下のタブと本文)。
+ * ヘッダー (チーム名・表示切替・招待コード) は TeamPageClient が持ち、
+ * 表示切替ではこのコンポーネントだけが管理者ビュー (TeamAdminClient) と入れ替わる。
  */
 export default function TeamDetailClient({
   teamId,
@@ -243,12 +245,10 @@ export default function TeamDetailClient({
       {/* チーム名・招待コードのヘッダーカードは廃止した (2026-09-16)。
           タブの上に常時2行占有していたのをやめ、招待コードは設定タブの
           「チーム情報」カード内へ移設 (components/team/settings/TeamSettingsTab.tsx)。
-          チーム名は <title> (page.tsx の generateMetadata) に出る。 */}
+          チーム名と招待コードは TeamPageClient のヘッダー (TeamViewHeader) に1行で出す。 */}
 
       {/* タブナビゲーション */}
-      <div className="mt-4">
-        <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} isAdmin={false} />
-      </div>
+      <TeamTabs activeTab={activeTab} onTabChange={setActiveTab} isAdmin={false} />
 
       {/* タブコンテンツ */}
       <div className="bg-white rounded-lg shadow">{renderTabContent()}</div>
