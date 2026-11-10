@@ -4,6 +4,7 @@
  * - 開催中の複数日大会・今日の大会・大会情報なしは出す。並びは大会日昇順 → 大会情報なし
  * - 最初に選ばれるのは表示される一覧の先頭 (過去の目標の詳細を出さない)
  * - 選択中の目標が一覧から消えたら一覧の先頭に移る
+ * - initialGoalId (ダッシュボードの目標タイムから開いたとき) の目標を最初に選ぶ
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -117,6 +118,26 @@ describe("GoalsClient: 大会が終わった目標を出さない", () => {
     h.goals = [goal("a", "2026-11-01")];
     rerender(<GoalsClient initialGoals={[]} initialCompetitions={[]} styles={[]} />);
     expect(screen.getByTestId("goal-detail").textContent).toBe("a");
+  });
+
+  it("initialGoalId の目標を最初に選び、1カラム表示では詳細までスクロールする", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    h.goals = [goal("a", "2026-11-01"), goal("b", "2026-12-01")];
+    render(<GoalsClient initialGoals={[]} initialCompetitions={[]} styles={[]} initialGoalId="b" />);
+    expect(screen.getByTestId("goal-detail").textContent).toBe("b");
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
+  it("initialGoalId が一覧に無ければ (大会終了・削除済み) 一覧の先頭を選び、スクロールしない", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    h.goals = [goal("past", "2026-09-01"), goal("a", "2026-11-01")];
+    render(
+      <GoalsClient initialGoals={[]} initialCompetitions={[]} styles={[]} initialGoalId="past" />,
+    );
+    expect(screen.getByTestId("goal-detail").textContent).toBe("a");
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
   it("全部が過去なら空の一覧で、詳細は選択の案内", () => {

@@ -135,17 +135,22 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
     >
       <View style={styles.top}>
         <View style={styles.topText}>
-          {/* 「次の大会（YYYY/MM/DD）」「大会名（水路）」の2行 (2026-11-07 ユーザー指定) */}
+          {/* 「次の大会（YYYY/MM/DD）」「大会名」「場所（水路）」の3行 (2026-11-07 ユーザー指定) */}
           <Text style={styles.kicker}>
             {t("dashboard.nextCompetition.titleWithDate", {
               date: formatDate(competition.date, "numeric", locale),
             })}
           </Text>
           <Text style={styles.name} numberOfLines={1}>
-            {t("dashboard.nextCompetition.nameWithPool", {
-              name: competition.title ?? "",
-              pool: poolLabel,
-            })}
+            {competition.title ?? ""}
+          </Text>
+          <Text style={styles.place} numberOfLines={1}>
+            {competition.place
+              ? t("dashboard.nextCompetition.placeWithPool", {
+                  place: competition.place,
+                  pool: poolLabel,
+                })
+              : poolLabel}
           </Text>
         </View>
         <View style={styles.countdown}>
@@ -195,11 +200,10 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
                   <Text style={styles.firstBadge}>{t("dashboard.nextCompetition.firstTime")}</Text>
                 )}
               </View>
-              {!row.isRelaying && (
+              {/* ベストが無い種目は「初」を付けるので、「ベスト —」は出さない (2026-11-07 ユーザー指定) */}
+              {!row.isRelaying && row.bestTime !== null && (
                 <Text style={styles.rowBest}>
-                  {t("dashboard.nextCompetition.best", {
-                    time: row.bestTime !== null ? formatTimeBest(row.bestTime) : "—",
-                  })}
+                  {t("dashboard.nextCompetition.best", { time: formatTimeBest(row.bestTime) })}
                 </Text>
               )}
               <View style={styles.rowGoal}>
@@ -221,7 +225,12 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
                     <Text style={styles.setGoal}>{t("dashboard.nextCompetition.setGoalShort")}</Text>
                   </Pressable>
                 ) : (
-                  <TargetText gap={row.gapToTarget} targetTime={row.targetTime} />
+                  <TargetLabel
+                    gap={row.gapToTarget}
+                    targetTime={row.targetTime}
+                    goalId={row.goalId}
+                    onOpenGoal={(goalId) => navigation.navigate("GoalDetail", { goalId })}
+                  />
                 )}
               </View>
             </View>
@@ -233,17 +242,40 @@ export const NextCompetitionCard: React.FC<NextCompetitionCardProps> = ({ hasTea
 };
 
 /**
- * 目標の欄。差ではなく目標タイムそのものを出す (2026-11-07 ユーザー指定)。
- * 色: ベストが目標に届いていなければ橙、届いていれば緑、ベストが無ければ通常の文字色
+ * 目標の欄。目標タイムをラベルで出し、押すとその目標の詳細を開く (2026-11-07 ユーザー指定)。
+ * 色: ベストが目標に届いていなければ橙、届いていれば緑、ベストが無ければ灰
  */
-const TargetText: React.FC<{ gap: number | null; targetTime: number }> = ({ gap, targetTime }) => {
+const TargetLabel: React.FC<{
+  gap: number | null;
+  targetTime: number;
+  goalId: string | null;
+  onOpenGoal: (goalId: string) => void;
+}> = ({ gap, targetTime, goalId, onOpenGoal }) => {
   const { t } = useTranslation();
-  const timeStyle =
-    gap === null ? styles.targetTime : gap >= 0 ? [styles.targetTime, styles.targetReached] : [styles.targetTime, styles.targetNotReached];
+  const time = formatTimeBest(targetTime);
+  const tone =
+    gap === null ? styles.targetNeutral : gap >= 0 ? styles.targetReached : styles.targetNotReached;
+  const textTone =
+    gap === null
+      ? styles.targetNeutralText
+      : gap >= 0
+        ? styles.targetReachedText
+        : styles.targetNotReachedText;
   return (
-    <Text style={styles.rowTarget}>
-      {t("dashboard.nextCompetition.target")} <Text style={timeStyle}>{formatTimeBest(targetTime)}</Text>
-    </Text>
+    <Pressable
+      style={[styles.targetLabel, tone]}
+      onPress={goalId ? () => onOpenGoal(goalId) : undefined}
+      disabled={!goalId}
+      accessibilityRole="button"
+      accessibilityLabel={t("dashboard.nextCompetition.openGoal", { time })}
+      hitSlop={6}
+      testID="next-competition-target"
+    >
+      <Text style={[styles.targetLabelText, textTone]} numberOfLines={1}>
+        {t("dashboard.nextCompetition.target")} {time}
+      </Text>
+      {goalId && <Feather name="chevron-right" size={12} style={textTone} />}
+    </Pressable>
   );
 };
 
@@ -282,6 +314,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#111827",
+    marginTop: 1,
+  },
+  place: {
+    fontSize: 12,
+    color: "#6B7280",
     marginTop: 1,
   },
   countdown: {
@@ -348,21 +385,43 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   rowGoal: {
-    width: 104,
+    width: 120,
     alignItems: "flex-end",
   },
-  rowTarget: {
-    fontSize: 13,
-    color: "#111827",
+  targetLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingLeft: 8,
+    paddingRight: 6,
+    paddingVertical: 3,
   },
-  targetTime: {
+  targetLabelText: {
+    fontSize: 12,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
   },
+  targetNeutral: {
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+  },
+  targetNeutralText: {
+    color: "#374151",
+  },
   targetNotReached: {
+    backgroundColor: "#FFFBEB",
+    borderColor: "#FDE68A",
+  },
+  targetNotReachedText: {
     color: "#B45309",
   },
   targetReached: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
+  },
+  targetReachedText: {
     color: "#047857",
   },
   rowMuted: {

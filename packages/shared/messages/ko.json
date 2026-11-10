@@ -1047,6 +1047,14 @@
       "statusAlert": "엔트리가 {status}이므로 엔트리 등록을 할 수 없습니다. 기록 입력으로 진행합니다.",
       "dataLoadError": "데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
     },
+    "notices": {
+      "title": "알림",
+      "unansweredAttendance": "출석 미응답 {count}건",
+      "todoCount": "할 일 {count}",
+      "teamTitle": "{teamName} 공지",
+      "showAll": "모두 보기 ({count})",
+      "showLess": "접기"
+    },
     "actionItems": {
       "title": "확인이 필요한 일",
       "count": "{count}건",
@@ -1085,7 +1093,8 @@
       "loadError": "다음 대회를 불러오지 못했습니다",
       "relay": "계영",
       "titleWithDate": "다음 대회 ({date})",
-      "nameWithPool": "{name} ({pool})"
+      "placeWithPool": "{place} ({pool})",
+      "openGoal": "목표 {time} 상세 보기"
     },
     "bestTimes": {
       "loadError": "베스트 타임을 불러오지 못했습니다"
@@ -1357,6 +1366,7 @@
       "longCourse": "장수로",
       "includeRelay": "이어받기 타임 포함하여 표시",
       "includeRelayShort": "이어받기 포함",
+      "includeRelayCompact": "이어받기",
       "bulkEntryNote": "일괄 등록",
       "distanceHeader": "거리",
       "legend": {
@@ -1775,6 +1785,7 @@
       "pastDateBlocked": "이 대회는 개최일이 지나서 대리 입력할 수 없습니다",
       "closedWarning": "엔트리 접수는 마감되었지만 관리자는 대리로 입력할 수 있습니다",
       "bestTimePrefillButton": "베스트 타임 사용",
+      "bestTimePrefillButtonShort": "베스트 사용",
       "bestTimePrefillBadge": "베스트 타임 자동 입력",
       "duplicateMemberStyle": "동일한 선수·종목 조합이 여러 번 입력되었습니다. 행을 확인해 주세요.",
       "confirmModal": {

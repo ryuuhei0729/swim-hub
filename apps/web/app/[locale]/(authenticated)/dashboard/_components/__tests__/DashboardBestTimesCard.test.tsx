@@ -27,7 +27,12 @@ vi.mock("@/components/profile/BestTimesTable", () => ({
   __esModule: true,
   default: (props: Record<string, unknown>) => {
     mocks.tableProps = props;
-    return <div data-testid="best-times-table" />;
+    return (
+      <div data-testid="best-times-table">
+        {props.title as React.ReactNode}
+        {props.footerAction as React.ReactNode}
+      </div>
+    );
   },
 }));
 
@@ -61,5 +66,8 @@ describe("DashboardBestTimesCard", () => {
     renderWithI18n(<DashboardBestTimesCard />);
     expect(screen.getByText(jaMessages.dashboard.bestTimes.loadError)).toBeInTheDocument();
     expect(screen.queryByTestId("best-times-table")).toBeNull();
+    // 表が無くても見出しと一括入力は出す
+    expect(screen.getByRole("heading", { name: jaMessages.mypage.bestTime.title })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: jaMessages.mypage.bulkInput })).toBeInTheDocument();
   });
 });

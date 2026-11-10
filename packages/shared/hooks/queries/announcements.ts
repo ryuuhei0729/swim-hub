@@ -7,6 +7,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
   type UseMutationResult,
@@ -23,6 +24,43 @@ export interface UseTeamAnnouncementsQueryOptions {
   initialData?: TeamAnnouncement[];
   api?: TeamAnnouncementsAPI;
   viewOnly?: boolean;
+}
+
+export interface TeamAnnouncementsByTeam {
+  teamId: string;
+  announcements: TeamAnnouncement[];
+}
+
+function combineTeamAnnouncements(
+  results: { data?: TeamAnnouncement[] }[],
+  teamIds: readonly string[],
+): TeamAnnouncementsByTeam[] {
+  return teamIds.map((teamId, i) => ({ teamId, announcements: results[i]?.data ?? [] }));
+}
+
+/**
+ * 複数チームの公開中のお知らせ (ホームの「お知らせ」用)。チームの並びは teamIds の順。
+ * useTeamAnnouncementsQuery (viewOnly) と同じ queryKey を使うので、作成・更新・削除や
+ * announcementKeys.lists() の invalidate に追随する
+ */
+export function useTeamsAnnouncementsQuery(
+  supabase: SupabaseClient,
+  teamIds: readonly string[],
+  api?: TeamAnnouncementsAPI,
+): TeamAnnouncementsByTeam[] {
+  const announcementsApi = useMemo(
+    () => api ?? new TeamAnnouncementsAPI(supabase),
+    [supabase, api],
+  );
+
+  return useQueries({
+    queries: teamIds.map((teamId) => ({
+      queryKey: announcementKeys.list(teamId, true),
+      queryFn: () => announcementsApi.list(teamId, true),
+      staleTime: 5 * 60 * 1000, // 5分
+    })),
+    combine: (results) => combineTeamAnnouncements(results, teamIds),
+  });
 }
 
 /**

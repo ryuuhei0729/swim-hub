@@ -25,8 +25,7 @@ import {
 } from "@apps/shared/hooks/queries/keys";
 import type { CalendarColorSettings } from "@apps/shared/types/calendarColors";
 import { useDayDetailHandlers } from "@/hooks/useDayDetailHandlers";
-import { TeamAnnouncementsSection } from "@/components/dashboard/TeamAnnouncementsSection";
-import { ActionItemsSection } from "@/components/dashboard/ActionItemsSection";
+import { DashboardNoticesSection } from "@/components/dashboard/DashboardNoticesSection";
 import { NextCompetitionCard } from "@/components/dashboard/NextCompetitionCard";
 import { DashboardBestTimesSection } from "@/components/dashboard/DashboardBestTimesSection";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
@@ -101,8 +100,8 @@ export const DashboardScreen: React.FC = () => {
     return entries.filter((item) => item.date === dateKey);
   }, [selectedDate, entries]);
 
-  // この画面と子孫(ActionItemsSection・NextCompetitionCard・DashboardBestTimesSection・
-  // TeamAnnouncementsSection配下のTeamCard)が依存する全クエリを尽くす。
+  // この画面と子孫(DashboardNoticesSection・NextCompetitionCard・DashboardBestTimesSection)が
+  // 依存する全クエリを尽くす。
   // announcements/notifications/dashboard は子孫が queryKey を握っているため
   // refetch を直接呼べず、queryClient.invalidateQueries で狙う
   // (子孫の query observer は announcements が0件でも active のまま維持されるため確実に再取得される)
@@ -220,7 +219,7 @@ export const DashboardScreen: React.FC = () => {
         }
       >
         <StaleDataBanner visible={isError && hasCachedEntries} onRetry={() => refetch()} />
-        <ActionItemsSection teams={teams} />
+        <DashboardNoticesSection teams={teams} />
         <NextCompetitionCard
           hasTeams={teams.some((m) => m.status === "approved" && m.is_active)}
           onOpenDay={handleOpenCompetitionDay}
@@ -239,7 +238,6 @@ export const DashboardScreen: React.FC = () => {
           />
         </View>
         <DashboardBestTimesSection />
-        <TeamAnnouncementsSection teams={teams} />
       </ScrollView>
 
       {/* 期限切れ目標の振り返り (優先) */}

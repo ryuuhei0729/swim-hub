@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import type { Goal, Style, GoalWithMilestones, Competition } from "@apps/shared/types";
@@ -18,6 +18,8 @@ interface GoalsClientProps {
   initialGoals: Goal[];
   initialCompetitions: Competition[];
   styles: Style[];
+  /** 最初に選んでおく目標。一覧に無ければ (大会終了・削除済み) 一覧の先頭を選ぶ */
+  initialGoalId?: string;
 }
 
 /**
@@ -27,11 +29,12 @@ export default function GoalsClient({
   initialGoals,
   initialCompetitions,
   styles,
+  initialGoalId,
 }: GoalsClientProps) {
   const t = useTranslations("goals");
   const { supabase } = useAuth();
   const today = useBrowserToday();
-  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(initialGoalId ?? null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   // 大会情報が無い目標 (goal.competition === null) は編集不可のため、
@@ -73,6 +76,20 @@ export default function GoalsClient({
     error: goalError,
     invalidate: invalidateGoalDetail,
   } = useGoalDetailQuery(supabase, activeGoalId);
+
+  // 目標を指定して開いたとき (ダッシュボードの目標タイムから)、1カラム表示 (lg 未満) では
+  // 詳細が一覧の下にあり画面外になるので、詳細を読み込んだら1回だけそこまでスクロールする。
+  // 表示の切り替えではなくマウント後の1回の操作なので、幅は matchMedia で見る
+  const detailRef = useRef<HTMLDivElement>(null);
+  const scrolledToInitialGoal = useRef(false);
+  useEffect(() => {
+    if (scrolledToInitialGoal.current || !initialGoalId || selectedGoal?.id !== initialGoalId) {
+      return;
+    }
+    scrolledToInitialGoal.current = true;
+    if (window.matchMedia("(min-width: 1024px)").matches) return;
+    detailRef.current?.scrollIntoView({ block: "start" });
+  }, [initialGoalId, selectedGoal]);
 
   // 目標作成後のコールバック
   const handleGoalCreated = async () => {
@@ -183,8 +200,8 @@ export default function GoalsClient({
           )}
         </div>
 
-        {/* 右側: 目標詳細 */}
-        <div className="lg:col-span-2">
+        {/* 右側: 目標詳細。scroll-mt-20 は固定ヘッダー (高さ 65px) の下に止めるため */}
+        <div ref={detailRef} className="lg:col-span-2 scroll-mt-20">
           {goalError ? (
             <div className="bg-white rounded-lg shadow p-4 sm:p-6 text-center">
               <p className="text-red-600 mb-3 text-sm sm:text-base">{t("detail.loadError")}</p>

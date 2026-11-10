@@ -9,7 +9,7 @@ import GoalsClient from "../_client/GoalsClient";
  * 目標管理ページのデータを並行取得するServer Component
  * Waterfall問題を完全に解消
  */
-export default async function GoalDataLoader() {
+export default async function GoalDataLoader({ initialGoalId }: { initialGoalId?: string }) {
   // 認証情報とSupabaseクライアントを取得
   const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
 
@@ -64,6 +64,7 @@ export default async function GoalDataLoader() {
       initialGoals={goalsResult}
       initialCompetitions={competitionsResult}
       styles={stylesResult}
+      initialGoalId={initialGoalId}
     />
   );
 }

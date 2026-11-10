@@ -693,11 +693,14 @@ export default function EntriesClient({
                                 />
                                 <button
                                   type="button"
+                                  aria-label={tEntries("bestTimePrefillButton")}
                                   onClick={() => handleApplyBestTime(row.localId)}
                                   disabled={!bestTime}
                                   className="shrink-0 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md border border-blue-200 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
-                                  {tEntries("bestTimePrefillButton")}
+                                  {/* スマホ幅は「ベスト流用」と短く出す (2026-11-09 ユーザー指定)。読み上げは aria-label の正式名 */}
+                                  <span className="sm:hidden">{tEntries("bestTimePrefillButtonShort")}</span>
+                                  <span className="hidden sm:inline">{tEntries("bestTimePrefillButton")}</span>
                                 </button>
                               </div>
                               {bestTime && (
@@ -716,11 +719,6 @@ export default function EntriesClient({
                                     data-testid={`entry-goal-target-badge-${row.localId}`}
                                   />
                                 </div>
-                              )}
-                              {untouchedPrefill && (
-                                <p className="mt-1 text-xs text-yellow-700">
-                                  {tEntries("bestTimePrefillBadge")}
-                                </p>
                               )}
                             </div>
                           </div>

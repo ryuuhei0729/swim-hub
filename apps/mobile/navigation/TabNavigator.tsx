@@ -37,7 +37,7 @@ export const TabNavigator: React.FC = () => {
   });
 
   // チームタブのバッジ = 出欠未回答の件数 + 自分が管理者のチームの承認待ちメンバー数。
-  // 出欠未回答はホームの TeamAnnouncementsSection と同じ引数 (承認済みチームを一覧の順で) にして
+  // 出欠未回答はホームの DashboardNoticesSection と同じ引数 (承認済みチームを一覧の順で) にして
   // queryKey を揃え、同じキャッシュを使う
   const { approvedTeams } = useMemo(() => groupTeamMemberships(teams), [teams]);
   const teamsForNotifications = useMemo(
