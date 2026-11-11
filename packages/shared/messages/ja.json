@@ -1049,7 +1049,7 @@
     },
     "notices": {
       "title": "お知らせ",
-      "unansweredAttendance": "出欠が未回答 {count}件",
+      "unansweredAttendance": "未回答の出欠あり　{count}件",
       "todoCount": "やること {count}",
       "teamTitle": "{teamName}のお知らせ",
       "showAll": "すべて表示（{count}）",
@@ -1061,8 +1061,8 @@
       "open": "開く",
       "close": "閉じる",
       "unansweredAttendance": "出欠が未回答 {count}件 ・ {teamName}",
-      "entryOpen": "エントリー受付中 ・ {name} ({date})",
-      "unrecorded": "記録が未入力 ・ {name} ({date})"
+      "entryOpen": "エントリー受付中　{name} ({date})",
+      "unrecorded": "大会記録の入力を忘れていませんか？　{name} ({date})"
     },
     "nextCompetition": {
       "title": "次の大会",

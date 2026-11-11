@@ -1,7 +1,7 @@
 /**
  * DashboardNoticesSection (ダッシュボードの「お知らせ」= チームごとのやること + お知らせ)。
  * 旧 ActionItemsSection.test.tsx の観点 (遷移先・開閉の保存) を引き継ぐ。
- * 本文が1行に収まらないときの「押して全文」は jsdom が行の高さを計算しないので検証できない。
+ * お知らせの行はタイトルだけで、押すとポップアップ (BaseModal) で日時と本文を出す (2026-11-10)。
  */
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -118,14 +118,14 @@ describe("DashboardNoticesSection — 表示と遷移先", () => {
 
     const t1 = screen.getByText("SHスイミングのお知らせ");
     const t2 = screen.getByText("別チームのお知らせ");
-    const t1Attendance = screen.getByText("出欠が未回答 2件");
+    const t1Attendance = screen.getByText(/^未回答の出欠あり\s+2件$/);
     const entry = screen.getByText(/冬季短水路記録会/);
-    const t2Attendance = screen.getByText("出欠が未回答 1件");
+    const t2Attendance = screen.getByText(/^未回答の出欠あり\s+1件$/);
     expect(precedes(t1, t1Attendance) && precedes(t1Attendance, t2)).toBe(true);
     expect(precedes(t1, entry) && precedes(entry, t2)).toBe(true);
     expect(precedes(t2, t2Attendance)).toBe(true);
 
-    expect(screen.getByRole("link", { name: "出欠が未回答 2件" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^未回答の出欠あり\s+2件$/ })).toHaveAttribute(
       "href",
       "/teams/t1?tab=attendance",
     );
@@ -155,6 +155,29 @@ describe("DashboardNoticesSection — 表示と遷移先", () => {
     expect(screen.getByText("お知らせ a1")).toBeInTheDocument();
     expect(screen.queryByText("SHスイミングのお知らせ")).toBeNull();
     expect(screen.queryByText(/^やること \d/)).toBeNull();
+  });
+
+  it("お知らせの行はタイトルだけを出し、押すとポップアップで日時と本文を出す", () => {
+    mocks.announcements = { t1: [announcement("a1")] };
+    renderSection();
+    expect(screen.queryByText("本文 a1")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "お知らせ a1" }));
+
+    const detail = screen.getByTestId("announcement-detail-a1");
+    expect(within(detail).getByText("本文 a1")).toBeInTheDocument();
+    expect(within(detail).getByText(/11月1日/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "お知らせ a1" })).toBeInTheDocument();
+  });
+
+  it("やることの行は新しい文言で出し、右矢印のアイコンを付けない", () => {
+    renderSection();
+    const record = screen.getByRole("button", { name: /秋季公認記録会/ });
+    expect(record.textContent).toBe("大会記録の入力を忘れていませんか？　秋季公認記録会 (11月3日)");
+    expect(record.querySelectorAll("svg")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /冬季短水路記録会/ }).textContent).toBe(
+      "エントリー受付中　冬季短水路記録会 (12月6日)",
+    );
   });
 
   it("承認待ちのチームは対象にしない", () => {

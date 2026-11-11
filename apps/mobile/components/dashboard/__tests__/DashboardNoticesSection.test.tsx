@@ -1,16 +1,13 @@
 /**
  * DashboardNoticesSection (ホームの「お知らせ」= やること + チームごとのお知らせ)
  *
- * 旧 ActionItemsSection.test.tsx の観点 ([SC-6] [AT-1]・開閉の保存) と、
- * 旧 TeamAnnouncementsSection.expandToggle.test.tsx の構造契約をこのファイルで引き継ぐ。
+ * 旧 ActionItemsSection.test.tsx の観点 ([SC-6] [AT-1]・開閉の保存) をこのファイルで引き継ぐ。
  *
  *   [SC-6] エントリー未提出のタップ → CompetitionTabForm に teamId キーを渡さない
  *          (ダッシュボード起点なので、保存後にチームタブへ popTo してはいけない)
  *   [AT-1] 出欠未回答のタップ → そのチームの出欠タブを利用者ビュー (asMember) で開く
  *
- * 本文が1行に収まらないときの「タップで全文」は onTextLayout に依存し、
- * RN モックでは発火しないので検証できない (切り詰め判定の純関数は
- * utils/__tests__/announcementTruncation.test.ts)。シミュレータで確認する。
+ * お知らせの行はタイトルだけで、押すとポップアップ (CenterModal) で日時と本文を出す (2026-11-10)。
  * RN モックの Text は testID を `testid` 属性で出すので、testID は querySelector で引く。
  */
 
@@ -120,7 +117,7 @@ describe("DashboardNoticesSection — やることの遷移先", () => {
     ];
     const { getByText } = render(<DashboardNoticesSection teams={[TEAM_1]} />);
 
-    fireEvent.click(getByText("出欠が未回答 1件"));
+    fireEvent.click(getByText(/^未回答の出欠あり\s+1件$/));
 
     expect(mocks.navigate).toHaveBeenCalledWith("MainTabs", {
       screen: "Teams",
@@ -158,7 +155,7 @@ describe("DashboardNoticesSection — 表示", () => {
     const { getByText } = render(<DashboardNoticesSection teams={[TEAM_1]} />);
     expect(getByText("お知らせ")).toBeTruthy();
     expect(getByText("やること 1")).toBeTruthy();
-    expect(getByText("出欠が未回答 2件")).toBeTruthy();
+    expect(getByText(/^未回答の出欠あり\s+2件$/)).toBeTruthy();
   });
 
   it("チームのやること (出欠・エントリー) はそのチームの「{チーム名}のお知らせ」の中に、お知らせより先に出す", () => {
@@ -178,7 +175,7 @@ describe("DashboardNoticesSection — 表示", () => {
     const entry = text(/テスト大会/);
     const ann = text("お知らせ a1");
     const team2 = text("Gumaのお知らせ");
-    const attendance = text("出欠が未回答 1件");
+    const attendance = text(/^未回答の出欠あり\s+1件$/);
     // テストチーム: 見出し → エントリー (黄色) → お知らせ。Guma はお知らせが無くても、やることがあれば欄を出す
     expect(follows(team1, entry) && follows(entry, ann) && follows(ann, team2)).toBe(true);
     expect(follows(team2, attendance)).toBe(true);
@@ -248,20 +245,32 @@ describe("DashboardNoticesSection — 表示", () => {
     expect(queryByText(/すべて表示/)).toBeNull();
   });
 
-  it("読み上げ文はタイトル・日付・本文を1回ずつ (計測用 Text の本文を重ねて読まない)。押せない行は無効扱いにしない", () => {
-    mocks.announcements = { "team-1": [announcement("a1", { content: "短い本文" })] };
-    const { container } = render(<DashboardNoticesSection teams={[TEAM_1]} />);
-    const row = queryByRnTestId(container, "announcement-a1");
-    // RN モックの Pressable は props をそのまま DOM 属性にするので、属性名は小文字になる
-    expect(row?.getAttribute("accessibilitylabel")).toMatch(/^お知らせ a1、.+、短い本文$/);
-    expect(row?.hasAttribute("disabled")).toBe(false);
+  it("お知らせの行はタイトルだけを出し、押すとポップアップで日時と本文を出す", () => {
+    mocks.announcements = {
+      "team-1": [announcement("a1", { content: "本文です", updated_at: "2026-11-08T13:39:00Z" })],
+    };
+    const { container, getByText, queryByText } = render(
+      <DashboardNoticesSection teams={[TEAM_1]} />,
+    );
+    expect(getByText("お知らせ a1")).toBeTruthy();
+    expect(queryByText("本文です")).toBeNull();
+    expect(queryByRnTestId(container, "announcement-detail-a1")).toBeNull();
+
+    fireEvent.click(getByText("お知らせ a1"));
+
+    const detail = queryByRnTestId(container, "announcement-detail-a1");
+    expect(detail?.textContent).toContain("本文です");
+    expect(detail?.textContent).toMatch(/11月8日 \d{2}:39/);
   });
 
-  it("[構造契約] 本文は可視の Text と非表示の計測用 Text の2つで描く", () => {
-    mocks.announcements = { "team-1": [announcement("a1", { content: "短い本文" })] };
-    const { container } = render(<DashboardNoticesSection teams={[TEAM_1]} />);
-    expect(queryByRnTestId(container, "announcement-content-a1")?.textContent).toBe("短い本文");
-    expect(queryByRnTestId(container, "announcement-content-measure-a1")).toBeTruthy();
+  it("やることの行に右矢印のアイコンを付けない", () => {
+    mocks.unrecorded = [
+      { competitionId: "comp-2", competitionName: "秋季公認記録会", competitionDate: "2026-11-03" },
+    ];
+    const { getByRole } = render(<DashboardNoticesSection teams={[]} />);
+    const row = getByRole("button", { name: /秋季公認記録会/ });
+    expect(row.textContent).toBe("大会記録の入力を忘れていませんか？　秋季公認記録会 (11月3日)");
+    expect(row.innerHTML).not.toContain("chevron-right");
   });
 });
 

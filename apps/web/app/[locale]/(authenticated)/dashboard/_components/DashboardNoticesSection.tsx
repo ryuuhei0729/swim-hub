@@ -1,17 +1,16 @@
 "use client";
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
   BellIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
   ChevronUpIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { formatDate, formatDateTime, type SupportedLocale } from "@apps/shared/utils/date";
 import { useAuth } from "@/contexts";
+import BaseModal from "@/components/ui/BaseModal";
 import {
   useUnansweredAttendancesQuery,
   useUnsubmittedEntriesQuery,
@@ -226,7 +225,6 @@ function ActionItem({ row }: { row: ActionRow }) {
     <>
       <ExclamationTriangleIcon className="h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
       <span className="min-w-0 flex-1 truncate">{row.label}</span>
-      <ChevronRightIcon className="h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
     </>
   );
   return row.href ? (
@@ -298,80 +296,32 @@ function TeamNotices({
 }
 
 /**
- * お知らせ1件。タイトルと本文をそれぞれ1行で切り、どちらかが切れているときだけ行を押して全文を開く。
- * 切れているかは閉じた状態の大きさで測る (本文は AnnouncementList と同じく scrollHeight と clientHeight)
+ * お知らせ1件。行にはタイトルだけを出し、押すとポップアップで日時と本文を見せる (2026-11-10 ユーザー指定)
  */
 function AnnouncementItem({ announcement }: { announcement: TeamAnnouncement }) {
-  const t = useTranslations("teamsAdmin.announcementList");
   const locale = useLocale() as SupportedLocale;
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isTruncated, setIsTruncated] = useState(false);
-  const titleRef = useRef<HTMLSpanElement>(null);
-  const contentRef = useRef<HTMLSpanElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
-  // 編集でタイトル・本文が変わったら閉じる
-  useEffect(() => {
-    setIsExpanded(false);
-  }, [announcement.title, announcement.content]);
-
-  // タイトル (1行) か本文 (1行) のどちらかが切れていれば、押して全文を開けるようにする。
-  // 開いている間は切り詰めが外れて測れないので、閉じているときだけ測り直す
-  useLayoutEffect(() => {
-    if (isExpanded) return;
-    const measure = () => {
-      const title = titleRef.current;
-      const content = contentRef.current;
-      setIsTruncated(
-        (title !== null && title.scrollWidth > title.clientWidth) ||
-          (content !== null && content.scrollHeight > content.clientHeight),
-      );
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [announcement.title, announcement.content, isExpanded]);
-
-  const body = (
+  return (
     <>
-      <span className="flex items-start gap-2">
-        <span
-          ref={titleRef}
-          className={`min-w-0 flex-1 text-sm font-semibold text-gray-900 ${isExpanded ? "break-words" : "truncate"}`}
-        >
-          {announcement.title}
-        </span>
-        <span className="shrink-0 text-xs text-gray-500">
-          {formatDateTime(announcement.updated_at, "shortDate", locale)}
-        </span>
-        {isTruncated &&
-          (isExpanded ? (
-            <ChevronUpIcon className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
-          ) : (
-            <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-500" aria-hidden="true" />
-          ))}
-      </span>
-      <span
-        ref={contentRef}
-        className={`mt-0.5 whitespace-pre-line text-xs text-gray-600 ${isExpanded ? "block" : "line-clamp-1"}`}
-        data-testid={`announcement-content-${announcement.id}`}
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="block w-full truncate rounded-lg bg-gray-50 px-3 py-2 text-left text-sm font-semibold text-gray-900 hover:bg-gray-100"
+        title={announcement.title}
       >
-        {announcement.content}
-      </span>
+        {announcement.title}
+      </button>
+      <BaseModal isOpen={isOpen} onClose={() => setIsOpen(false)} title={announcement.title} size="md">
+        <div className="space-y-3" data-testid={`announcement-detail-${announcement.id}`}>
+          <p className="text-xs text-gray-500">
+            {formatDateTime(announcement.updated_at, "shortDate", locale)}
+          </p>
+          <p className="max-h-[60vh] overflow-y-auto whitespace-pre-line break-words text-sm text-gray-700">
+            {announcement.content}
+          </p>
+        </div>
+      </BaseModal>
     </>
-  );
-
-  const className = "block w-full rounded-lg bg-gray-50 px-3 py-2 text-left";
-  return isTruncated ? (
-    <button
-      type="button"
-      onClick={() => setIsExpanded((v) => !v)}
-      aria-expanded={isExpanded}
-      title={isExpanded ? t("showLess") : t("showMore")}
-      className={`${className} hover:bg-gray-100`}
-    >
-      {body}
-    </button>
-  ) : (
-    <div className={className}>{body}</div>
   );
 }

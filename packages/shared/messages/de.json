@@ -1049,7 +1049,7 @@
     },
     "notices": {
       "title": "Neuigkeiten",
-      "unansweredAttendance": "Anwesenheit offen ({count})",
+      "unansweredAttendance": "Offene Anwesenheit  {count}",
       "todoCount": "Zu erledigen {count}",
       "teamTitle": "Mitteilungen von {teamName}",
       "showAll": "Alle anzeigen ({count})",
@@ -1061,8 +1061,8 @@
       "open": "Anzeigen",
       "close": "Ausblenden",
       "unansweredAttendance": "Anwesenheit offen: {count} · {teamName}",
-      "entryOpen": "Meldung offen · {name} ({date})",
-      "unrecorded": "Ergebnisse fehlen · {name} ({date})"
+      "entryOpen": "Meldung offen  {name} ({date})",
+      "unrecorded": "Ergebnisse vergessen?  {name} ({date})"
     },
     "nextCompetition": {
       "title": "Nächster Wettkampf",
