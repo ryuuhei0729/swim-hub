@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 interface PremiumBadgeProps {
   /** 表示するメッセージ */
   message: string;
-  /** リンク先（デフォルト: /settings のサブスクリプションタブ） */
+  /** リンク先（デフォルト: アカウント画面のプラン） */
   href?: string;
   /** className の追加 */
   className?: string;
@@ -21,7 +21,7 @@ interface PremiumBadgeProps {
  */
 export default function PremiumBadge({
   message,
-  href = "/settings?tab=subscription",
+  href = "/account?tab=plan",
   className = "",
 }: PremiumBadgeProps) {
   const t = useTranslations("forms.premium");

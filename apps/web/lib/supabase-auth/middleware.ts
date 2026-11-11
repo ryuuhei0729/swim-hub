@@ -109,6 +109,7 @@ export async function updateSession(request: NextRequest) {
     "/practice",
     "/competition",
     "/goals",
+    "/account",
     "/settings",
     "/mypage",
     "/onboarding",

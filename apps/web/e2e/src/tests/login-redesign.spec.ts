@@ -334,58 +334,58 @@ test.describe("[V-17] メールログイン成功フロー", () => {
     page,
   }) => {
     test.skip(!hasRequiredEnvVars, "E2E_EMAIL, E2E_PASSWORD が未設定");
-    // バグ1本体の回帰確認: middleware が redirect_to=/ja/mypage (locale付き) で
+    // バグ1本体の回帰確認: middleware が redirect_to=/ja/account (locale付き) で
     // /ja/login にリダイレクトした場合と同じ状況を、/login/email に
-    // ?redirect_to=/ja/mypage (locale付き) を直接付与して再現する。
+    // ?redirect_to=/ja/account (locale付き) を直接付与して再現する。
     // 修正前は EmailSignInForm が getSafeRedirectUrl の戻り値をそのまま
     // @/i18n/navigation の router.push に渡すため、next-intl の localizeHref が
-    // 既に locale 付きの "/ja/mypage" にもう一段 prefix を足し "/ja/ja/mypage" になり
-    // 404 (app/[locale]/ja/mypage は存在しない) になる。
-    await page.goto(`${LOGIN_EMAIL_URL}?redirect_to=${encodeURIComponent("/ja/mypage")}`);
+    // 既に locale 付きの "/ja/account" にもう一段 prefix を足し "/ja/ja/account" になり
+    // 404 (app/[locale]/ja/account は存在しない) になる。
+    await page.goto(`${LOGIN_EMAIL_URL}?redirect_to=${encodeURIComponent("/ja/account")}`);
     await page.waitForLoadState("networkidle");
     await page.getByTestId("email-input").fill(testEnv!.credentials.email);
     await page.getByTestId("password-input").fill(testEnv!.credentials.password);
     await page.getByTestId("login-button").click();
 
-    // 404 に落ちず、意図した /ja/mypage に到達すること。
-    // waitForURL は "/ja/ja/mypage" でも "**/mypage**" にマッチしてしまい
+    // 404 に落ちず、意図した /ja/account に到達すること。
+    // waitForURL は "/ja/ja/account" でも "**/account**" にマッチしてしまい
     // 誤検出になるため、pathname の完全一致で待つ。
     // 項目5 (Sprint Contract, Phase A): playwright.config.ts:132 の
     // navigationTimeout グローバル既定が 15000 のため、この明示指定 (15000) は
     // 実質 no-op で、ローカル実行時の flaky の原因になっていた。25000 に
     // 引き上げて初めて意味を持つ (CI は本番ビルドのため原理的に再現しない)。
-    await page.waitForURL((url) => url.pathname === "/ja/mypage", { timeout: 25000 });
+    await page.waitForURL((url) => url.pathname === "/ja/account", { timeout: 25000 });
 
     const finalUrl = new URL(page.url());
     expect(finalUrl.pathname).not.toMatch(/\/ja\/ja\//);
-    expect(finalUrl.pathname).toBe("/ja/mypage");
+    expect(finalUrl.pathname).toBe("/ja/account");
   });
 
-  test("TC-LR-015b: [Reviewer Critical再検証] redirect_to 自体が二重 locale (/ja/ja/mypage) でもログイン成功後に /ja/mypage に到達する (404が再発しない)", async ({
+  test("TC-LR-015b: [Reviewer Critical再検証] redirect_to 自体が二重 locale (/ja/ja/account) でもログイン成功後に /ja/account に到達する (404が再発しない)", async ({
     page,
   }) => {
     test.skip(!hasRequiredEnvVars, "E2E_EMAIL, E2E_PASSWORD が未設定");
     // Reviewer Critical指摘の再現: stripLocale は1レイヤーしか剥がさないため、
-    // redirect_to 自体が既に二重 locale (/ja/ja/mypage) だった場合、
-    // 1回だけ適用する実装だと /ja/mypage まで剥がれず /ja/dashboard 相当の
+    // redirect_to 自体が既に二重 locale (/ja/ja/account) だった場合、
+    // 1回だけ適用する実装だと /ja/account まで剥がれず /ja/dashboard 相当の
     // 剥がし残しが残り、push 後に next-intl がもう一段 prefix を足して
-    // 再び /ja/ja/mypage に戻り 404 になる (resolveSafeLocalRedirect 導入前の穴)。
+    // 再び /ja/ja/account に戻り 404 になる (resolveSafeLocalRedirect 導入前の穴)。
     // resolveSafeLocalRedirect は剥がし切るまでループするため、
-    // 最終的に /ja/mypage (1層) に到達するはず。
-    await page.goto(`${LOGIN_EMAIL_URL}?redirect_to=${encodeURIComponent("/ja/ja/mypage")}`);
+    // 最終的に /ja/account (1層) に到達するはず。
+    await page.goto(`${LOGIN_EMAIL_URL}?redirect_to=${encodeURIComponent("/ja/ja/account")}`);
     await page.waitForLoadState("networkidle");
     await page.getByTestId("email-input").fill(testEnv!.credentials.email);
     await page.getByTestId("password-input").fill(testEnv!.credentials.password);
     await page.getByTestId("login-button").click();
 
-    // "**/mypage**" だと /ja/ja/mypage にもマッチしてしまうため、pathname の
+    // "**/account**" だと /ja/ja/account にもマッチしてしまうため、pathname の
     // 完全一致で待つ (剥がし残しの検出漏れを防ぐ)。
     // 項目5 (Sprint Contract, Phase A): 上の TC-LR-015 と同じ理由で 25000 に引き上げる。
-    await page.waitForURL((url) => url.pathname === "/ja/mypage", { timeout: 25000 });
+    await page.waitForURL((url) => url.pathname === "/ja/account", { timeout: 25000 });
 
     const finalUrl = new URL(page.url());
     expect(finalUrl.pathname).not.toMatch(/\/ja\/ja\//);
-    expect(finalUrl.pathname).toBe("/ja/mypage");
+    expect(finalUrl.pathname).toBe("/ja/account");
   });
 });
 

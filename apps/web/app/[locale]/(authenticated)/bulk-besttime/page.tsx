@@ -1,40 +1,14 @@
-import { Suspense } from "react";
-import BulkBestTimeClient from "./_client/BulkBestTimeClient";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "ベストタイム一括入力 | SwimHub",
-  description: "Excelファイルを使用してベストタイムを一括で登録できます",
-};
-
-export default async function BulkBestTimePage({
-  searchParams,
+/**
+ * 旧ベストタイム一括入力ページ。2026-11-11 にダッシュボードのベストタイム表がそのまま
+ * 入力モードに切り替わる形にしたので、ブックマークなどから来たらダッシュボードへ送る。
+ */
+export default async function BulkBestTimeRedirect({
+  params,
 }: {
-  searchParams: Promise<{ return_to?: string }>;
+  params: Promise<{ locale: string }>;
 }) {
-  const { return_to } = await searchParams;
-  return (
-    <Suspense fallback={<BulkBestTimeLoading />}>
-      <BulkBestTimeClient returnTo={return_to} />
-    </Suspense>
-  );
-}
-
-function BulkBestTimeLoading() {
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-        </div>
-      </div>
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-          <div className="h-10 bg-gray-200 rounded w-48"></div>
-        </div>
-      </div>
-    </div>
-  );
+  const { locale } = await params;
+  redirect(`/${locale}/dashboard`);
 }

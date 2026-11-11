@@ -399,6 +399,17 @@ export const Alert = {
   prompt: vi.fn(),
 };
 
+// Keyboard API (ホームのベストタイム表の入力モードが参照する)
+export const Keyboard = {
+  dismiss: vi.fn(),
+  addListener: vi.fn(() => ({ remove: vi.fn() })),
+};
+
+// BackHandler API (Android の戻るボタン。入力モード中のキャンセルに使う)
+export const BackHandler = {
+  addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+};
+
 // AppState (@tanstack/react-query focusManager 等が参照)
 export const AppState = {
   currentState: "active" as const,
@@ -424,6 +435,8 @@ const ReactNative = {
   Platform,
   PixelRatio,
   Alert,
+  Keyboard,
+  BackHandler,
   AppState,
   Animated,
   PanResponder,

@@ -1,10 +1,10 @@
 // =============================================================================
-// マイページデータローダー（すべてのデータを並行取得）
+// アカウント画面のデータローダー (プロフィールをサーバー側で先に取る)
 // =============================================================================
 
 import React from "react";
 import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
-import MyPageClient from "../_client/MyPageClient";
+import AccountClient from "../_client/AccountClient";
 
 interface UserProfileData {
   id: string;
@@ -70,15 +70,14 @@ async function getProfile(
 }
 
 /**
- * すべてのマイページデータを並行取得するServer Component
- * Waterfall問題を完全に解消
+ * アカウント画面のプロフィールを取得する Server Component
  */
-export default async function MyPageDataLoader() {
+export default async function AccountDataLoader() {
   // 認証情報とSupabaseクライアントを取得
   const [user, supabase] = await Promise.all([getServerUser(), createAuthenticatedServerClient()]);
 
   if (!user) {
-    return <MyPageClient initialProfile={null} />;
+    return <AccountClient initialProfile={null} />;
   }
 
   // ベストタイム表は 2026-11-07 にダッシュボードへ移したので、ここではプロフィールだけを取る
@@ -87,5 +86,5 @@ export default async function MyPageDataLoader() {
     return null;
   });
 
-  return <MyPageClient initialProfile={profileResult} />;
+  return <AccountClient initialProfile={profileResult} />;
 }

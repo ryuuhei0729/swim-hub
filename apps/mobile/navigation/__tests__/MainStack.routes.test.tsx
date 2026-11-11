@@ -49,7 +49,6 @@ vi.mock("@/screens/AccountSecurityScreen", () => ({ AccountSecurityScreen: () =>
 vi.mock("@/screens/PracticeLogTemplatesScreen", () => ({
   PracticeLogTemplatesScreen: () => null,
 }));
-vi.mock("@/screens/BulkBestTimeScreen", () => ({ BulkBestTimeScreen: () => null }));
 vi.mock("@/screens/PaywallScreen", () => ({ PaywallScreen: () => null }));
 // 目標管理 (6タブ化) で MainStack に増えた3画面。未モックだと実物が AuthProvider 経由で
 // expo-modules-core (CodedError 未モック) に到達して落ちる。

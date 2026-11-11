@@ -196,7 +196,7 @@ test.describe("個人大会記録のテスト", () => {
   test.beforeEach(async ({ page }) => {
     await supabaseLogin(page);
     // Supabase Auth セッションが安定するまで待機
-    await page.goto("/settings");
+    await page.goto("/account");
     await page.waitForLoadState("networkidle");
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");

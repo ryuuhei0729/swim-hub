@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${origin}/settings`,
+      return_url: `${origin}/account?tab=plan`,
     });
 
     // 4. session.url を返却

@@ -32,6 +32,20 @@ interface BestTimesTableProps {
    * (必要なのは区分だけ。生年月日は gender より機微度が高い)。null/undefined は「未設定」。
    */
   ageCategory?: AgeCategory | null;
+  /** 水路タブ・「引き継ぎ含む」と同じ行の左端に置く見出し (ホームの「Best Time」) */
+  title?: React.ReactNode;
+  /** 表と注釈の下 (左寄せ) に置く操作ボタン群 (一括入力・点数化)。記録0件のときも出す */
+  footer?: React.ReactNode;
+  /**
+   * 入力モード。渡すと表の代わりに render の結果を出す。
+   * 水路タブは「ALL」を外して短水路/長水路だけにし (登録には水路が必ず要る)、
+   * 「引き継ぎ」のチェックで引き継ぎタイムの入力に切り替える。見出しと切り替えの行はそのまま使う。
+   */
+  edit?: BestTimesTableEdit;
+}
+
+export interface BestTimesTableEdit {
+  render: (ctx: { poolType: 0 | 1; isRelaying: boolean }) => React.ReactNode;
 }
 
 type TabType = "all" | "short" | "long";
@@ -53,6 +67,9 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({
   gender,
   isWaPointsMode,
   ageCategory,
+  title,
+  footer,
+  edit,
 }) => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>("all");
@@ -225,19 +242,76 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({
     });
   };
 
+  const footerRow = footer ? <View style={styles.footer}>{footer}</View> : null;
+
+  if (edit) {
+    // 「ALL」のまま入力モードに入ったら短水路から始める (activeTab 自体は書き換えず、戻ったら ALL のまま)
+    const editTab: "short" | "long" = activeTab === "long" ? "long" : "short";
+    return (
+      <View style={styles.container}>
+        <View style={styles.controls}>
+          {title}
+          <View style={styles.tabs}>
+            {(
+              [
+                { id: "short", label: t("mypage.bestTimesTable.shortCourse") },
+                { id: "long", label: t("mypage.bestTimesTable.longCourse") },
+              ] as const
+            ).map((tab) => (
+              <Pressable
+                key={tab.id}
+                testID={`best-times-edit-pool-${tab.id}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: editTab === tab.id }}
+                style={[styles.tab, editTab === tab.id && styles.tabActive]}
+                onPress={() => setActiveTab(tab.id)}
+              >
+                <Text style={[styles.tabText, editTab === tab.id && styles.tabTextActive]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable
+            testID="best-times-edit-relay-toggle"
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: includeRelaying }}
+            style={styles.checkboxContainer}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            onPress={() => setIncludeRelaying(!includeRelaying)}
+          >
+            <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
+              {includeRelaying && <Feather name="check" size={10} color="#FFFFFF" />}
+            </View>
+            <Text style={styles.checkboxLabel}>
+              {t("mypage.bestTimesTable.includeRelayCompact")}
+            </Text>
+          </Pressable>
+        </View>
+        {edit.render({ poolType: editTab === "long" ? 1 : 0, isRelaying: includeRelaying })}
+        {footerRow}
+      </View>
+    );
+  }
+
   if (bestTimes.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>{t("mypage.bestTimesTable.noRecords")}</Text>
-        <Text style={styles.emptySubtext}>{t("mypage.bestTimesTable.noRecordsDetail")}</Text>
+      <View style={styles.container}>
+        {title ? <View style={styles.controls}>{title}</View> : null}
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>{t("mypage.bestTimesTable.noRecords")}</Text>
+          <Text style={styles.emptySubtext}>{t("mypage.bestTimesTable.noRecordsDetail")}</Text>
+        </View>
+        {footerRow}
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* タブとチェックボックス */}
+      {/* 見出し・タブ・チェックボックス (1行) */}
       <View style={styles.controls}>
+        {title}
         <View style={styles.tabs}>
           {[
             { id: "all" as TabType, label: "ALL" },
@@ -255,64 +329,16 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({
             </Pressable>
           ))}
         </View>
-        <View style={styles.rightControls}>
-          <Pressable
-            style={styles.checkboxContainer}
-            onPress={() => setIncludeRelaying(!includeRelaying)}
-          >
-            <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
-              {includeRelaying && <Feather name="check" size={10} color="#FFFFFF" />}
-            </View>
-            <Text style={styles.checkboxLabel}>{t("mypage.bestTimesTable.includeRelayShort")}</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* 比較指標ピッカー (ポイント表示モードONかつjaロケール限定。別行として追加し、
-          既存の controls 行の構造 (WAトグル/一括入力ボタンの隣接関係) には影響させない) */}
-      {isWaPointsMode && showCompareMetricPicker && (
-        <View style={styles.compareMetricRow}>
-          <View style={styles.compareMetricSegmentGroup}>
-            <View style={styles.tabs} testID="best-times-compare-metric-segment">
-              {(["wa", "nr", "age"] as const).map((metric) => (
-                <Pressable
-                  key={metric}
-                  testID={`best-times-compare-metric-${metric}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: compareMetric === metric }}
-                  style={[styles.tab, compareMetric === metric && styles.tabActive]}
-                  onPress={() => setCompareMetric(metric)}
-                >
-                  <Text style={[styles.tabText, compareMetric === metric && styles.tabTextActive]}>
-                    {t(`mypage.bestTimesTable.compareMetric.${metric}`)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <WaPointsInfoTooltip
-              testID="best-times-compare-metric-info"
-              ariaLabel={t("mypage.bestTimesTable.compareMetricInfoAriaLabel")}
-              tooltipText={t("mypage.bestTimesTable.compareMetricInfo")}
-            />
+        <Pressable
+          style={styles.checkboxContainer}
+          onPress={() => setIncludeRelaying(!includeRelaying)}
+        >
+          <View style={[styles.checkbox, includeRelaying && styles.checkboxChecked]}>
+            {includeRelaying && <Feather name="check" size={10} color="#FFFFFF" />}
           </View>
-          {compareMetric === "age" && (
-            <Pressable
-              testID="best-times-age-category-button"
-              style={styles.ageCategoryButton}
-              onPress={() => setIsAgeCategoryModalVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel={t("mypage.bestTimesTable.ageCategoryLabel")}
-            >
-              <Text style={styles.ageCategoryButtonText}>
-                {effectiveAgeCategory
-                  ? t(`mypage.bestTimesTable.ageCategory.${effectiveAgeCategory}`)
-                  : t("mypage.bestTimesTable.ageCategoryUnset")}
-              </Text>
-              <Feather name="chevron-down" size={14} color="#374151" />
-            </Pressable>
-          )}
-        </View>
-      )}
+          <Text style={styles.checkboxLabel}>{t("mypage.bestTimesTable.includeRelayShort")}</Text>
+        </Pressable>
+      </View>
 
       {/* テーブル */}
       <View style={styles.tableContainer}>
@@ -426,6 +452,54 @@ export const BestTimesTable: React.FC<BestTimesTableProps> = ({
         </Text>
       </View>
 
+      {footerRow}
+
+      {/* 比較指標 (WAポイント / 日本記録基準 / 区分記録基準)。ポイント表示モードONかつ ja ロケール限定。
+          「タイム / 点数」の切り替え (footer) の下の行に出す (2026-11-11 ユーザー指定。以前は表の上) */}
+      {isWaPointsMode && showCompareMetricPicker && (
+        <View style={styles.compareMetricRow}>
+          <View style={styles.compareMetricSegmentGroup}>
+            <View style={styles.tabs} testID="best-times-compare-metric-segment">
+              {(["wa", "nr", "age"] as const).map((metric) => (
+                <Pressable
+                  key={metric}
+                  testID={`best-times-compare-metric-${metric}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: compareMetric === metric }}
+                  style={[styles.tab, compareMetric === metric && styles.tabActive]}
+                  onPress={() => setCompareMetric(metric)}
+                >
+                  <Text style={[styles.tabText, compareMetric === metric && styles.tabTextActive]}>
+                    {t(`mypage.bestTimesTable.compareMetric.${metric}`)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <WaPointsInfoTooltip
+              testID="best-times-compare-metric-info"
+              ariaLabel={t("mypage.bestTimesTable.compareMetricInfoAriaLabel")}
+              tooltipText={t("mypage.bestTimesTable.compareMetricInfo")}
+            />
+          </View>
+          {compareMetric === "age" && (
+            <Pressable
+              testID="best-times-age-category-button"
+              style={styles.ageCategoryButton}
+              onPress={() => setIsAgeCategoryModalVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("mypage.bestTimesTable.ageCategoryLabel")}
+            >
+              <Text style={styles.ageCategoryButtonText}>
+                {effectiveAgeCategory
+                  ? t(`mypage.bestTimesTable.ageCategory.${effectiveAgeCategory}`)
+                  : t("mypage.bestTimesTable.ageCategoryUnset")}
+              </Text>
+              <Feather name="chevron-down" size={14} color="#374151" />
+            </Pressable>
+          )}
+        </View>
+      )}
+
       <BestTimeDetailSheet
         detail={selectedDetail}
         onClose={closeDetail}
@@ -469,7 +543,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: 12,
+    columnGap: 8,
+    rowGap: 8,
+    paddingHorizontal: 16,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
     paddingHorizontal: 16,
   },
   compareMetricRow: {
@@ -524,16 +607,10 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
   },
-  rightControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 12,
-  },
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
   },
   checkbox: {
     width: 16,
@@ -550,7 +627,7 @@ const styles = StyleSheet.create({
     borderColor: "#2563EB",
   },
   checkboxLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#374151",
   },
   tableContainer: {
@@ -643,12 +720,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#D1D5DB",
   },
+  // 凡例なので警告色にせず、表の左端にそろえて控えめに出す
   annotation: {
-    alignItems: "flex-end",
+    alignItems: "flex-start",
     paddingHorizontal: 16,
+    marginTop: -4,
   },
   annotationText: {
-    fontSize: 12,
-    color: "#DC2626",
+    fontSize: 11,
+    color: "#6B7280",
   },
 });

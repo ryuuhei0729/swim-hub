@@ -76,3 +76,19 @@ describe("BestTimesTable の並び", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 });
+
+describe("比較指標の並び (2026-11-11 ユーザー指定)", () => {
+  it("点数化を押すと、比較指標の選択欄は点数化ボタンの行ではなく、その下の行に出る", async () => {
+    renderTable([bestTime]);
+    const toggle = screen.getByTestId("best-times-wa-points-toggle");
+    expect(screen.queryByTestId("best-times-compare-metric-row")).toBeNull();
+
+    await userEvent.click(toggle);
+    const row = screen.getByTestId("best-times-compare-metric-row");
+    const select = screen.getByTestId("best-times-compare-metric-select");
+    expect(row).toContainElement(select);
+    expect(row).not.toContainElement(toggle);
+    // 点数化ボタン・凡例の行より後ろ (下) にある
+    expect(precedes(screen.getByTestId("best-times-legend"), row)).toBe(true);
+  });
+});

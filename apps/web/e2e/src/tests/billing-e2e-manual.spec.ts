@@ -462,12 +462,12 @@ test.describe("Free プランの機能制限", () => {
     await context.close();
   });
 
-  test("No.6: PremiumBadge から設定画面に遷移できる", async ({ browser }) => {
+  test("No.6: PremiumBadge からアカウント画面のプランに遷移できる", async ({ browser }) => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, freeUser.email, freeUser.password);
 
     // PR #239 以降: 記録タブの VideoUploader が Free ユーザーに PremiumBadge を表示する。
-    // PremiumBadge には href="/settings?tab=subscription" の「Premium にアップグレード」リンクがある。
+    // PremiumBadge には href="/account?tab=plan" の「Premium にアップグレード」リンクがある。
     await createCompetitionAndOpenRecordForm(page);
 
     // 「Premium にアップグレード」リンクをクリック
@@ -477,7 +477,7 @@ test.describe("Free プランの機能制限", () => {
       await page.waitForTimeout(TIMEOUTS.REDIRECT);
 
       const url = page.url();
-      const isSettingsPage = url.includes("/settings");
+      const isSettingsPage = url.includes("/account?tab=plan");
       recordResult(6, isSettingsPage, `url=${url}`);
     } else {
       recordResult(6, false, "アップグレードリンクが見つからない");
@@ -488,7 +488,7 @@ test.describe("Free プランの機能制限", () => {
   test("No.7: Free ユーザーにプランカードが表示される", async ({ browser }) => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, freeUser.email, freeUser.password);
-    await page.goto(URLS.SETTINGS, { timeout: 30000 });
+    await page.goto(URLS.ACCOUNT_PLAN, { timeout: 30000 });
     await page.waitForLoadState("domcontentloaded");
 
     // サブスクリプションデータの非同期読み込みを待つ
@@ -559,7 +559,7 @@ test.describe("Stripe 購入フロー", () => {
   test("No.13: 月額プラン ¥500 を購入できる", async ({ browser }) => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, purchaseUser.email, purchaseUser.password);
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     // 月額の「このプランを選択」ボタンをクリック
@@ -608,11 +608,11 @@ test.describe("Stripe 購入フロー", () => {
         const submitBtn = page.locator('button[type="submit"]').last();
         await submitBtn.click();
 
-        // /settings にリダイレクトされるのを待つ
-        await page.waitForURL("**/settings**", { timeout: 60000 }).catch(() => {});
+        // /account (プラン) にリダイレクトされるのを待つ
+        await page.waitForURL("**/account**", { timeout: 60000 }).catch(() => {});
 
         const finalUrl = page.url();
-        const redirectedToSettings = finalUrl.includes("/settings");
+        const redirectedToSettings = finalUrl.includes("/account");
         recordResult(13, redirectedToSettings, `stripe=${isStripe}, redirected=${redirectedToSettings}`);
       } else {
         recordResult(13, false, `Stripeに遷移しなかった: ${url}`);
@@ -626,7 +626,7 @@ test.describe("Stripe 購入フロー", () => {
   test("No.15: Stripe 画面でキャンセルして戻れる", async ({ browser }) => {
     const { page, context } = await newCleanPage(browser);
     const cancelUser = await createFreeUser(page, "-cancel");
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     const monthlyBtn = page.getByText("このプランを選択").first();
@@ -645,11 +645,11 @@ test.describe("Stripe 購入フロー", () => {
         }
 
         // 「認証情報を確認中...」ローディングが完了するのを待つ
-        await page.waitForURL("**/settings**", { timeout: 30000 }).catch(() => {});
+        await page.waitForURL("**/account**", { timeout: 30000 }).catch(() => {});
         await page.waitForLoadState("domcontentloaded").catch(() => {});
 
         const finalUrl = page.url();
-        const isSettings = finalUrl.includes("/settings");
+        const isSettings = finalUrl.includes("/account");
         recordResult(15, isSettings, `戻り先=${finalUrl}`);
       } else {
         recordResult(15, false, "Stripe未遷移");
@@ -661,7 +661,7 @@ test.describe("Stripe 購入フロー", () => {
   test("No.14: 年額プラン ¥5,000 を購入できる", async ({ browser }) => {
     const { page, context } = await newCleanPage(browser);
     const yearlyUser = await createFreeUser(page, "-yearly");
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     // 年額の「このプランを選択」ボタンをクリック（2番目のカード = last）
@@ -707,10 +707,10 @@ test.describe("Stripe 購入フロー", () => {
         const submitBtn = page.locator('button[type="submit"]').last();
         await submitBtn.click();
 
-        await page.waitForURL("**/settings**", { timeout: 60000 }).catch(() => {});
+        await page.waitForURL("**/account**", { timeout: 60000 }).catch(() => {});
 
         const finalUrl = page.url();
-        const redirectedToSettings = finalUrl.includes("/settings");
+        const redirectedToSettings = finalUrl.includes("/account");
         recordResult(14, redirectedToSettings, `stripe=${isStripe}, yearlyAmount=${hasYearlyAmount}, redirected=${redirectedToSettings}`);
       } else {
         recordResult(14, false, `Stripeに遷移しなかった: ${url}`);
@@ -727,7 +727,7 @@ test.describe("Stripe 購入フロー", () => {
     const dupUser = await createPremiumUser(page, "-dup-prevent", { status: "active" });
 
     // ログインして設定画面に遷移
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     // PricingCard（「このプランを選択」ボタン付きカード）が表示されないことを確認
@@ -752,7 +752,7 @@ test.describe("Stripe 購入フロー", () => {
   test("No.17: 決済失敗カードで適切にエラーが出る", async ({ browser }) => {
     const { page, context } = await newCleanPage(browser);
     const failUser = await createFreeUser(page, "-fail");
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     const monthlyBtn = page.getByText("このプランを選択").first();
@@ -811,7 +811,7 @@ test.describe("Stripe 購入フロー", () => {
     );
     const { page, context } = await newCleanPage(browser);
     const threeDSUser = await createFreeUser(page, "-3ds");
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     const monthlyBtn = page.getByText("このプランを選択").first();
@@ -868,13 +868,13 @@ test.describe("Stripe 購入フロー", () => {
           threeDSCompleted = false;
         }
 
-        // /settings にリダイレクトされるのを待つ
+        // /account (プラン) にリダイレクトされるのを待つ
         if (threeDSCompleted) {
-          await page.waitForURL("**/settings**", { timeout: 60000 }).catch(() => {});
+          await page.waitForURL("**/account**", { timeout: 60000 }).catch(() => {});
         }
 
         const finalUrl = page.url();
-        const redirectedToSettings = finalUrl.includes("/settings");
+        const redirectedToSettings = finalUrl.includes("/account");
 
         recordResult(18, threeDSCompleted && redirectedToSettings, `3dsCompleted=${threeDSCompleted}, redirected=${redirectedToSettings}`);
       } else {
@@ -918,7 +918,7 @@ test.describe("プラン管理", () => {
       stripeCustomerId: stripeCustomer.id,
     });
 
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     const manageBtn = page.getByText("プランを管理");
@@ -969,7 +969,7 @@ test.describe("プラン管理", () => {
       cancelAtPeriodEnd: true, // 解約予定をシミュレート
     });
 
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     // 「解約予定」の琥珀色バッジが表示されること
@@ -993,7 +993,7 @@ test.describe("プラン管理", () => {
       trialDaysRemaining: 5, // 残り5日
     });
 
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     // 「無料トライアル中」バッジ
@@ -1018,7 +1018,7 @@ test.describe("プラン管理", () => {
       status: "past_due",
     });
 
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     // 赤色バナー「お支払いが失敗しました」
@@ -1312,7 +1312,7 @@ test.describe("Premium プランの機能確認", () => {
   test("No.12: Premium: 設定画面の表示", async ({ browser }) => {
     const { page, context } = await newCleanPage(browser);
     await loginUser(page, premiumUser.email, premiumUser.password);
-    await page.goto(URLS.SETTINGS);
+    await page.goto(URLS.ACCOUNT_PLAN);
     await page.waitForLoadState("domcontentloaded");
 
     // 「Premium」バッジ

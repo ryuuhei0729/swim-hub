@@ -65,6 +65,17 @@ interface BestTimesTableProps {
   title?: React.ReactNode;
   /** 下の段に出す操作 (点数化ボタンの右、凡例の左)。ダッシュボードでは一括入力 */
   footerAction?: React.ReactNode;
+  /**
+   * 入力モード (ダッシュボードの一括入力)。渡すと表の代わりに render の結果を出し、下の段は footer にする。
+   * 水路は「ALL」を外して短水路/長水路だけにし (登録には水路が必ず要る)、
+   * 「引き継ぎ」のチェックで引き継ぎタイムの入力に切り替える。見出しと切り替えの行はそのまま使う。
+   */
+  edit?: BestTimesTableEdit;
+}
+
+export interface BestTimesTableEdit {
+  render: (ctx: { poolType: 0 | 1; isRelaying: boolean }) => React.ReactNode;
+  footer: React.ReactNode;
 }
 
 // セルの data-testid を組み立てる (例: 自由形100m -> "best-times-cell-Fr-100")
@@ -77,6 +88,7 @@ export default function BestTimesTable({
   ageCategory,
   title,
   footerAction,
+  edit,
 }: BestTimesTableProps) {
   const t = useTranslations("mypage.bestTimesTable");
   const tStyles = useTranslations("practice.styles");
@@ -319,6 +331,56 @@ export default function BestTimesTable({
     { id: "long", label: t("longCourse") },
   ];
 
+  if (edit) {
+    // 「ALL」のまま入力モードに入ったら短水路から始める (activeTab 自体は書き換えず、戻ったら ALL のまま)
+    const editTab: "short" | "long" = activeTab === "long" ? "long" : "short";
+    return (
+      <div className="@container">
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+          {title}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 lg:ml-auto">
+            <div className="inline-flex rounded-md bg-gray-100 p-0.5" role="group">
+              {(
+                [
+                  { id: "short", label: t("shortCourse") },
+                  { id: "long", label: t("longCourse") },
+                ] as const
+              ).map((tab) => {
+                const isActive = tab.id === editTab;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    data-testid={`best-times-edit-pool-${tab.id}`}
+                    aria-pressed={isActive}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                      isActive ? "bg-white text-blue-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+            <label className="flex cursor-pointer items-center gap-1.5 py-1">
+              <input
+                type="checkbox"
+                data-testid="best-times-edit-relay-toggle"
+                checked={includeRelaying}
+                onChange={(e) => setIncludeRelaying(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-xs text-gray-700">{t("includeRelayCompact")}</span>
+            </label>
+          </div>
+        </div>
+        {edit.render({ poolType: editTab === "long" ? 1 : 0, isRelaying: includeRelaying })}
+        <div className="mt-2 flex flex-wrap items-center gap-2">{edit.footer}</div>
+      </div>
+    );
+  }
+
   if (bestTimes.length === 0) {
     return (
       <div>
@@ -488,7 +550,7 @@ export default function BestTimesTable({
         </table>
       </div>
 
-      {/* 下の段: 点数化・(比較指標)・一括入力など・凡例 (2026-11-09 ユーザー指定) */}
+      {/* 下の段: 点数化・一括入力など・凡例 (2026-11-09 ユーザー指定)。比較指標はその下の行 */}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <div className="relative inline-block shrink-0">
           <button
@@ -510,56 +572,6 @@ export default function BestTimesTable({
             tooltipText={t("pointsInfo")}
           />
         </div>
-        {/* 比較指標プルダウン (ONのときだけ表示。初期選択は常にWA / jaロケール限定) */}
-        {/*
-          select のボックス指定 (h-9 / py-1 / pl-2 sm:pl-3 / pr-7) は
-          `components/ui/selectStyles.ts` の COMPACT_SELECT_CLASS が唯一の定義元。
-          ▼ の重なりと 640〜767px の高さ不足の根拠コメントはそこにある。
-          🚨 ここにクラス文字列を書き戻さないこと (片方だけ直されて再発する)。
-        */}
-        {isWaPointsMode && showCompareMetricPicker && (
-          <>
-            <div className="relative inline-block shrink-0">
-              <select
-                data-testid="best-times-compare-metric-select"
-                aria-label={t("compareMetricLabel")}
-                value={compareMetric}
-                onChange={(e) => setCompareMetric(e.target.value as CompareMetric)}
-                className={COMPACT_SELECT_CLASS}
-              >
-                <option value="wa">{t("compareMetric.wa")}</option>
-                <option value="nr">{t("compareMetric.nr")}</option>
-                <option value="age">{t("compareMetric.age")}</option>
-              </select>
-              <WaPointsInfoTooltip
-                buttonTestId="best-times-compare-metric-info-button"
-                ariaLabel={t("compareMetricInfoAriaLabel")}
-                tooltipText={t("compareMetricInfo")}
-              />
-            </div>
-
-            {compareMetric === "age" && (
-              <select
-                data-testid="best-times-age-category-select"
-                aria-label={t("ageCategoryLabel")}
-                value={effectiveAgeCategory ?? "unset"}
-                onChange={(e) =>
-                  setAgeCategoryOverride(
-                    e.target.value === "unset" ? null : (e.target.value as AgeCategory),
-                  )
-                }
-                className={COMPACT_SELECT_CLASS}
-              >
-                <option value="unset">{t("ageCategoryUnset")}</option>
-                {AGE_CATEGORY_ORDER.map((category) => (
-                  <option key={category} value={category}>
-                    {t(`ageCategory.${category}`)}
-                  </option>
-                ))}
-              </select>
-            )}
-          </>
-        )}
         {footerAction}
         <span data-testid="best-times-legend" className="ml-auto text-xs text-red-600">
           {isWaPointsMode
@@ -567,6 +579,57 @@ export default function BestTimesTable({
             : `※ ${t("legend.longCourse")}, ${t("legend.relaying")}`}
         </span>
       </div>
+      {/* 比較指標 (WAポイント / 日本記録基準 / 区分記録基準) のプルダウン。点数化 ON かつ ja ロケール限定、
+          初期選択は常に WA。点数化ボタンの行の下の行に出す (2026-11-11 ユーザー指定。以前は同じ行) */}
+      {/*
+        select のボックス指定 (h-9 / py-1 / pl-2 sm:pl-3 / pr-7) は
+        `components/ui/selectStyles.ts` の COMPACT_SELECT_CLASS が唯一の定義元。
+        ▼ の重なりと 640〜767px の高さ不足の根拠コメントはそこにある。
+        🚨 ここにクラス文字列を書き戻さないこと (片方だけ直されて再発する)。
+      */}
+      {isWaPointsMode && showCompareMetricPicker && (
+        <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="best-times-compare-metric-row">
+          <div className="relative inline-block shrink-0">
+            <select
+              data-testid="best-times-compare-metric-select"
+              aria-label={t("compareMetricLabel")}
+              value={compareMetric}
+              onChange={(e) => setCompareMetric(e.target.value as CompareMetric)}
+              className={COMPACT_SELECT_CLASS}
+            >
+              <option value="wa">{t("compareMetric.wa")}</option>
+              <option value="nr">{t("compareMetric.nr")}</option>
+              <option value="age">{t("compareMetric.age")}</option>
+            </select>
+            <WaPointsInfoTooltip
+              buttonTestId="best-times-compare-metric-info-button"
+              ariaLabel={t("compareMetricInfoAriaLabel")}
+              tooltipText={t("compareMetricInfo")}
+            />
+          </div>
+
+          {compareMetric === "age" && (
+            <select
+              data-testid="best-times-age-category-select"
+              aria-label={t("ageCategoryLabel")}
+              value={effectiveAgeCategory ?? "unset"}
+              onChange={(e) =>
+                setAgeCategoryOverride(
+                  e.target.value === "unset" ? null : (e.target.value as AgeCategory),
+                )
+              }
+              className={COMPACT_SELECT_CLASS}
+            >
+              <option value="unset">{t("ageCategoryUnset")}</option>
+              {AGE_CATEGORY_ORDER.map((category) => (
+                <option key={category} value={category}>
+                  {t(`ageCategory.${category}`)}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
     </div>
   );
 }
