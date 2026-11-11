@@ -329,7 +329,8 @@
     "practiceHistory": "训练历史",
     "competitionHistory": "比赛历史",
     "mypage": "我的",
-    "team": "团队"
+    "team": "团队",
+    "account": "账户"
   },
   "lp": {
     "hero": {
@@ -1049,7 +1050,7 @@
     },
     "notices": {
       "title": "通知",
-      "unansweredAttendance": "出勤未回复 {count}项",
+      "unansweredAttendance": "有未回复的出勤　{count}项",
       "todoCount": "待办 {count}",
       "teamTitle": "{teamName}的公告",
       "showAll": "显示全部（{count}）",
@@ -1061,8 +1062,8 @@
       "open": "展开",
       "close": "收起",
       "unansweredAttendance": "出勤未回复 {count}项 · {teamName}",
-      "entryOpen": "报名中 · {name} ({date})",
-      "unrecorded": "成绩未录入 · {name} ({date})"
+      "entryOpen": "报名中　{name} ({date})",
+      "unrecorded": "是否忘记录入比赛成绩？　{name} ({date})"
     },
     "nextCompetition": {
       "title": "下一场比赛",
@@ -1376,6 +1377,30 @@
       },
       "waPointsToggle": "换算为得分",
       "waPointsToggleShort": "得分",
+      "viewModeTime": "成绩",
+      "viewModePoints": "得分",
+      "edit": {
+        "tapHint": "点击空格输入成绩",
+        "relayModeHint": "正在输入接力交接成绩",
+        "currentBest": "当前最好成绩 {time}",
+        "noCurrentBest": "当前最好成绩：未登记",
+        "slowerThanBest": "比当前最好成绩慢（仍会作为记录保存）",
+        "addNote": "＋ 比赛名称·备注",
+        "notePlaceholder": "比赛名称·备注",
+        "clear": "清除",
+        "done": "完成",
+        "cancel": "取消",
+        "register": "登记{count}条",
+        "inputCount": "已输入 {count}条",
+        "relayTag": "接力交接",
+        "cellEmpty": "未输入",
+        "cellEntered": "已输入 {time}",
+        "discardTitle": "放弃已输入的内容？",
+        "discardMessage": "已输入的{count}条成绩将不会登记。",
+        "discardConfirm": "放弃",
+        "keepEditing": "继续输入",
+        "exitByBackdrop": "退出输入模式"
+      },
       "compareMetricLabel": "比较指标",
       "compareMetric": {
         "wa": "WA积分",
@@ -4648,6 +4673,39 @@
       "plan": {
         "manageNoteIos": "将打开 App Store",
         "manageNoteAndroid": "将打开 Google Play"
+      }
+    },
+    "web": {
+      "title": "账户",
+      "menuAriaLabel": "账户设置",
+      "backAriaLabel": "返回账户",
+      "editProfile": "编辑个人资料",
+      "addTeamAria": "创建或加入团队",
+      "opensInNewTab": "在新标签页中打开",
+      "logoutConfirm": "确定要退出登录吗？",
+      "rows": {
+        "plan": "套餐",
+        "calendar": "日历",
+        "templates": "练习日志模板",
+        "security": "登录与安全",
+        "terms": "服务条款",
+        "privacy": "隐私政策",
+        "logout": "退出登录"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "试用中"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "notConnected": "未关联"
+      },
+      "sections": {
+        "plan": "查看和更改订阅",
+        "calendar": "Google 日历同步与仪表板记录颜色",
+        "templates": "管理用于录入练习日志的模板",
+        "security": "邮箱、密码、登录方式及删除账户"
       }
     }
   }

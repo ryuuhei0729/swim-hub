@@ -329,7 +329,8 @@
     "practiceHistory": "練習履歴",
     "competitionHistory": "大会履歴",
     "mypage": "マイページ",
-    "team": "チーム"
+    "team": "チーム",
+    "account": "アカウント"
   },
   "lp": {
     "hero": {
@@ -1049,7 +1050,7 @@
     },
     "notices": {
       "title": "お知らせ",
-      "unansweredAttendance": "出欠が未回答 {count}件",
+      "unansweredAttendance": "未回答の出欠あり　{count}件",
       "todoCount": "やること {count}",
       "teamTitle": "{teamName}のお知らせ",
       "showAll": "すべて表示（{count}）",
@@ -1061,8 +1062,8 @@
       "open": "開く",
       "close": "閉じる",
       "unansweredAttendance": "出欠が未回答 {count}件 ・ {teamName}",
-      "entryOpen": "エントリー受付中 ・ {name} ({date})",
-      "unrecorded": "記録が未入力 ・ {name} ({date})"
+      "entryOpen": "エントリー受付中　{name} ({date})",
+      "unrecorded": "大会記録の入力を忘れていませんか？　{name} ({date})"
     },
     "nextCompetition": {
       "title": "次の大会",
@@ -1376,6 +1377,30 @@
       },
       "waPointsToggle": "泳力を点数化",
       "waPointsToggleShort": "点数化",
+      "viewModeTime": "タイム",
+      "viewModePoints": "点数",
+      "edit": {
+        "tapHint": "空いたマスをタップして入力",
+        "relayModeHint": "引き継ぎタイムを入力中",
+        "currentBest": "今のベスト {time}",
+        "noCurrentBest": "今のベスト: 未登録",
+        "slowerThanBest": "今のベストより遅いタイムです（記録としては登録されます）",
+        "addNote": "＋ 大会名・備考",
+        "notePlaceholder": "大会名・備考",
+        "clear": "クリア",
+        "done": "完了",
+        "cancel": "キャンセル",
+        "register": "{count}件を登録",
+        "inputCount": "入力済み {count}件",
+        "relayTag": "引き継ぎ",
+        "cellEmpty": "未入力",
+        "cellEntered": "入力 {time}",
+        "discardTitle": "入力を破棄しますか？",
+        "discardMessage": "入力した{count}件のタイムは登録されません。",
+        "discardConfirm": "破棄する",
+        "keepEditing": "入力を続ける",
+        "exitByBackdrop": "入力モードを終える"
+      },
       "compareMetricLabel": "比較指標",
       "compareMetric": {
         "wa": "WAポイント",
@@ -4648,6 +4673,39 @@
       "plan": {
         "manageNoteIos": "App Store の画面が開きます",
         "manageNoteAndroid": "Google Play の画面が開きます"
+      }
+    },
+    "web": {
+      "title": "アカウント",
+      "menuAriaLabel": "アカウントの設定",
+      "backAriaLabel": "アカウントに戻る",
+      "editProfile": "プロフィールを編集",
+      "addTeamAria": "チームを作成・参加する",
+      "opensInNewTab": "新しいタブで開きます",
+      "logoutConfirm": "ログアウトしますか？",
+      "rows": {
+        "plan": "プラン",
+        "calendar": "カレンダー",
+        "templates": "練習ログテンプレート",
+        "security": "ログインとセキュリティ",
+        "terms": "利用規約",
+        "privacy": "プライバシーポリシー",
+        "logout": "ログアウト"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "トライアル中"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "notConnected": "未連携"
+      },
+      "sections": {
+        "plan": "サブスクリプションの確認と変更",
+        "calendar": "Googleカレンダー連携と、ダッシュボードの記録の色",
+        "templates": "練習ログの入力に使うテンプレートの管理",
+        "security": "メールアドレス・パスワード・ログイン方法・アカウント削除"
       }
     }
   }

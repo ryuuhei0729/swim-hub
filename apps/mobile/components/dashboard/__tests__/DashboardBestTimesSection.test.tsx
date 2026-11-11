@@ -29,7 +29,11 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({ navigate: h.navigate }),
+  useNavigation: () => ({
+    navigate: h.navigate,
+    addListener: () => () => {},
+    getState: () => ({ index: 0, routes: [{ name: "Dashboard" }] }),
+  }),
 }));
 vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({ supabase: h.supabase, user: { id: USER_ID } }),
@@ -160,10 +164,12 @@ describe("見出し・一括入力・エラー", () => {
     expect(screen.queryByText(/マイページで見る/)).toBeNull();
   });
 
-  it("一括入力ボタンでベストタイム一括入力画面を開く", async () => {
-    setup({ gender: 0 });
-    fireEvent.click(await screen.findByText("一括入力"));
-    expect(h.navigate).toHaveBeenCalledWith("BulkBestTime");
+  it("一括入力ボタンは別画面へ移らず、その場の表を入力モードに切り替える", async () => {
+    const { container } = setup({ gender: 0 });
+    await screen.findByText("54.97");
+    fireEvent.click(screen.getByText("一括入力"));
+    expect(h.navigate).not.toHaveBeenCalled();
+    expect(rawTestId(container, "best-time-input-grid")).toBeTruthy();
   });
 
   it("ベストタイムの取得に失敗したら、生のエラーではなく固定の文言を出す", async () => {
@@ -173,5 +179,25 @@ describe("見出し・一括入力・エラー", () => {
       expect(screen.getByText(jaMessages.mypage.mobile.bestTimesFetchFailed)).toBeTruthy(),
     );
     expect(screen.queryByText(/SECRET_RAW_DB_ERROR/)).toBeNull();
+  });
+});
+
+describe("比較指標の並び (2026-11-11 ユーザー指定)", () => {
+  it("「点数」を押すと、比較指標 (WA / 日本記録 / 区分記録) は「タイム / 点数」の行の下に出る (表の上ではない)", async () => {
+    const { container } = setup({ gender: 0 });
+    await screen.findByText("54.97");
+    const toggle = rawTestId(container, "best-times-wa-points-toggle")!;
+    fireEvent.click(toggle);
+    const segment = await waitFor(() => {
+      const el = rawTestId(container, "best-times-compare-metric-segment");
+      expect(el).toBeTruthy();
+      return el!;
+    });
+    // 「タイム / 点数」より後ろ (下) にあり、表 (距離の見出し) よりも後ろにある
+    expect(toggle.compareDocumentPosition(segment) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const distanceHeader = screen.getByText(jaMessages.mypage.bestTimesTable.distanceHeader);
+    expect(
+      distanceHeader.compareDocumentPosition(segment) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

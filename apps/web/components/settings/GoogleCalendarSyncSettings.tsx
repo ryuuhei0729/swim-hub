@@ -43,7 +43,7 @@ export default function GoogleCalendarSyncSettings({
       typeof window !== "undefined"
         ? window.location.origin
         : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const callbackUrl = `${appUrl}/api/auth/callback?calendar_connect=true&redirect_to=/${locale}/settings`;
+    const callbackUrl = `${appUrl}/api/auth/callback?calendar_connect=true&redirect_to=${encodeURIComponent(`/${locale}/account?tab=calendar`)}`;
 
     const { error } = await signInWithOAuth("google", {
       redirectTo: callbackUrl,
@@ -197,8 +197,10 @@ export default function GoogleCalendarSyncSettings({
     if (calendarConnected === "true") {
       // カレンダー連携完了後、プロフィールを再取得
       onUpdate();
-      // URLパラメータをクリーンアップ
-      window.history.replaceState({}, "", "/settings");
+      // calendar_connected だけを取り除く (アカウント画面の ?tab は残す)
+      urlParams.delete("calendar_connected");
+      const rest = urlParams.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${rest ? `?${rest}` : ""}`);
     }
   }, [user, onUpdate]);
 

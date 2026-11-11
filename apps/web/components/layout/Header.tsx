@@ -12,7 +12,6 @@ import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import {
   Bars3Icon,
   ChevronDownIcon,
-  Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
@@ -42,8 +41,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
     router.replace("/login");
   };
 
-  const handleProfileClick = () => {
-    router.push("/mypage");
+  const displayName = profile?.name || user?.email?.split("@")[0] || tCommon("user");
+
+  const handleAccountClick = () => {
+    router.push("/account");
     setIsUserMenuOpen(false);
   };
 
@@ -100,6 +101,20 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
         {/* 右側：スマホはハンバーガー（メニュー統合）、デスクトップはプロフィール */}
         <div className="flex items-center space-x-2">
+          {/* スマホ用：アカウント画面への入口 (アバター) */}
+          <Link
+            href="/account"
+            className="sm:hidden inline-flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500"
+            aria-label={tNav("account")}
+            data-testid="header-account-link"
+          >
+            <Avatar
+              avatarUrl={profile?.profile_image_path || null}
+              userName={displayName}
+              size="sm"
+            />
+          </Link>
+
           {/* スマホ用：ハンバーガーメニューボタン（右側） */}
           <button
             type="button"
@@ -124,13 +139,13 @@ export default function Header({ onMenuClick }: HeaderProps) {
             >
               <div className="hidden sm:block text-right">
                 <div className="text-sm font-medium text-gray-900 truncate max-w-24 sm:max-w-32">
-                  {profile?.name || user?.email?.split("@")[0] || tCommon("user")}
+                  {displayName}
                 </div>
               </div>
               <div className="relative">
                 <Avatar
                   avatarUrl={profile?.profile_image_path || null}
-                  userName={profile?.name || user?.email?.split("@")[0] || tCommon("user")}
+                  userName={displayName}
                   size="md"
                 />
               </div>
@@ -146,27 +161,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
               <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 focus:outline-none z-50">
                 <div className="px-4 py-3">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {profile?.name || user?.email?.split("@")[0] || tCommon("user")}
+                    {displayName}
                   </p>
                   <p className="text-sm text-gray-500 truncate">{user?.email}</p>
                 </div>
                 <div className="py-1">
                   <button
-                    onClick={handleProfileClick}
+                    onClick={handleAccountClick}
                     className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                    data-testid="header-account-menu-item"
                   >
                     <UserIcon className="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" />
-                    {tNav("profile")}
-                  </button>
-                  <button
-                    onClick={() => {
-                      router.push("/settings");
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                  >
-                    <Cog6ToothIcon className="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" />
-                    {tNav("settings")}
+                    {tNav("account")}
                   </button>
                 </div>
                 <div className="py-1">

@@ -139,6 +139,32 @@ export function getStylesForTab(tab: StyleTabId): StyleOption[] {
   return STYLES.filter((s) => s.styleKey === key);
 }
 
+/** ホームの表を入力モードにしたときの行 (表示時の 50〜800m に、一括入力で登録できる 25m・1500m を足す) */
+export const INPUT_GRID_DISTANCES = [25, 50, 100, 200, 400, 800, 1500] as const;
+
+/** 表の列順 (ホームのベストタイム表と同じ) */
+export const INPUT_GRID_STYLE_KEYS: StyleKey[] = ["Fr", "Br", "Ba", "Fly", "IM"];
+
+/** 種目 × 距離に対応する種目マスター (存在しない組み合わせは undefined) */
+export function findStyleOption(styleKey: StyleKey, distance: number): StyleOption | undefined {
+  return STYLES.find((s) => s.styleKey === styleKey && s.distance === distance);
+}
+
+/**
+ * 入力モードの表でそのマスに入力できるか。
+ * 種目マスターに無い組み合わせ・長水路で行わない種目・引き継ぎの無い種目は入力できない。
+ */
+export function isEnterableCell(
+  style: StyleOption | undefined,
+  poolType: 0 | 1,
+  isRelaying: boolean,
+): style is StyleOption {
+  if (!style) return false;
+  if (poolType === 1 && !isValidForLongCourse(style)) return false;
+  if (isRelaying && !canRelay(style)) return false;
+  return true;
+}
+
 /** マトリクスのセルキー (Web 版 getInputKey と同一形式: `styleId_poolType_relay`) */
 export function getCellKey(styleId: number, poolType: 0 | 1, isRelaying: boolean): string {
   return `${styleId}_${poolType}_${isRelaying ? "1" : "0"}`;

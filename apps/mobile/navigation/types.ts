@@ -166,7 +166,6 @@ export type MainStackParamList = {
   AccountSecurity: undefined;
   /** 練習ログテンプレート管理 */
   PracticeLogTemplates: undefined;
-  BulkBestTime: undefined;
   GoalDetail: { goalId: string };
   /**
    * goalId あり = 編集、なし = 新規作成。

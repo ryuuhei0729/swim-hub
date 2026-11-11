@@ -186,7 +186,7 @@ export default function GoalsClient({
               />
               {/* 新規目標作成ボタン: 一覧 (0件時は空の案内カード) の下に置く。
                   一覧とボタンの間隔は lg:col-span-1 の space-y-3 により一覧内の
-                  カード間隔と揃う。見た目は settings/practice-log-templates の
+                  カード間隔と揃う。見た目は アカウント画面の練習ログテンプレートの
                   一覧下ボタン (PracticeLogTemplateList.tsx) と同じ様式 */}
               <button
                 type="button"

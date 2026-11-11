@@ -57,6 +57,14 @@ vi.mock("expo-modules-core", () => {
   };
 });
 
+// react-native-screens: Flow 構文のまま配布されていて vitest では読み込めない。
+// ホームのベストタイム表の入力モードで使う FullWindowOverlay (アプリ全体より上の層) は、
+// テストではその場に子要素を描くだけにする
+vi.mock("react-native-screens", () => ({
+  FullWindowOverlay: ({ children }: { children?: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+}));
+
 // expo-crypto: useAppleAuth 等で digestStringAsync / getRandomValues を使用
 vi.mock("expo-crypto", () => ({
   digestStringAsync: vi.fn(async () => "mock-digest"),

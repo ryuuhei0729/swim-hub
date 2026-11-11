@@ -22,6 +22,11 @@ interface ConfirmDialogProps {
   variant?: "danger" | "warning" | "info";
   onTertiary?: () => void;
   tertiaryLabel?: string;
+  /**
+   * 開いたときにフォーカスを当てるボタン (既定は確認ボタン)。
+   * 確認ボタンが取り消せない操作 (入力の破棄など) のときは "cancel" にして、Enter の押し間違いで実行されないようにする
+   */
+  initialFocus?: "confirm" | "cancel";
 }
 
 export default function ConfirmDialog({
@@ -35,19 +40,21 @@ export default function ConfirmDialog({
   variant = "warning",
   onTertiary,
   tertiaryLabel,
+  initialFocus = "confirm",
 }: ConfirmDialogProps) {
   const tCommon = useTranslations("common");
   const resolvedConfirmLabel = confirmLabel ?? tCommon("submit");
   const resolvedCancelLabel = cancelLabel ?? tCommon("cancel");
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // フォーカストラップとESCキーでの閉じる処理
   useEffect(() => {
     if (!isOpen) return;
 
-    // ダイアログが開いたらフォーカスを確認ボタンに移動
-    confirmButtonRef.current?.focus();
+    // ダイアログが開いたらフォーカスを確認ボタン (initialFocus="cancel" ならキャンセルボタン) に移動
+    (initialFocus === "cancel" ? cancelButtonRef : confirmButtonRef).current?.focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -81,7 +88,7 @@ export default function ConfirmDialog({
       document.removeEventListener("keydown", handleKeyDown);
       unlockScroll();
     };
-  }, [isOpen, onCancel]);
+  }, [isOpen, onCancel, initialFocus]);
 
   if (!isOpen) return null;
 
@@ -158,6 +165,7 @@ export default function ConfirmDialog({
           {/* ボタン */}
           <div className="mt-6 flex justify-end gap-3">
             <button
+              ref={cancelButtonRef}
               type="button"
               onClick={onCancel}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"

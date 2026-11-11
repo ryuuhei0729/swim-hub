@@ -63,18 +63,18 @@ describe("GET /api/auth/callback — token_hash フロー (verifyOtp)", () => {
     expect(location(res)).toBe(`${ORIGIN}/update-password`);
   });
 
-  it("email_change: 成功時に /settings へリダイレクトされる", async () => {
+  it("email_change: 成功時にアカウント画面の「ログインとセキュリティ」へリダイレクトされる", async () => {
     verifyOtp.mockResolvedValue({ data: { session: { access_token: "t" } }, error: null });
     const res = await GET(
       makeRequest(`${ORIGIN}/api/auth/callback?token_hash=abc123&type=email_change`),
     );
-    expect(location(res)).toBe(`${ORIGIN}/settings`);
+    expect(location(res)).toBe(`${ORIGIN}/account?tab=security`);
   });
 
-  it("email: 成功時に /settings へリダイレクトされる", async () => {
+  it("email: 成功時にアカウント画面の「ログインとセキュリティ」へリダイレクトされる", async () => {
     verifyOtp.mockResolvedValue({ data: { session: { access_token: "t" } }, error: null });
     const res = await GET(makeRequest(`${ORIGIN}/api/auth/callback?token_hash=abc123&type=email`));
-    expect(location(res)).toBe(`${ORIGIN}/settings`);
+    expect(location(res)).toBe(`${ORIGIN}/account?tab=security`);
   });
 
   it("magiclink: 成功時に /dashboard へリダイレクトされる", async () => {

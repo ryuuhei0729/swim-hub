@@ -23,6 +23,11 @@ export interface BulkRecordIds {
   staleSavedIds: (currentKeys: readonly string[]) => string[];
   /** 削除できた行を忘れる */
   forget: (ids: readonly string[]) => void;
+  /**
+   * 割り当て済みの ID をすべて忘れる。登録が終わって入力をやり直すときに呼ぶ
+   * (呼ばずに次の入力で同じキーを使うと、前回登録した記録を upsert で上書きしてしまう)
+   */
+  reset: () => void;
 }
 
 export function useBulkRecordIds(): BulkRecordIds {
@@ -61,5 +66,10 @@ export function useBulkRecordIds(): BulkRecordIds {
     }
   }, []);
 
-  return { idFor, markSaved, staleSavedIds, forget };
+  const reset = useCallback(() => {
+    idByKeyRef.current.clear();
+    savedIdsRef.current.clear();
+  }, []);
+
+  return { idFor, markSaved, staleSavedIds, forget, reset };
 }

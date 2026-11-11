@@ -326,7 +326,8 @@
     "practiceHistory": "Practice History",
     "competitionHistory": "Race History",
     "mypage": "My Page",
-    "team": "Team"
+    "team": "Team",
+    "account": "Account"
   },
   "lp": {
     "hero": {
@@ -1046,7 +1047,7 @@
     },
     "notices": {
       "title": "Updates",
-      "unansweredAttendance": "Attendance not answered ({count})",
+      "unansweredAttendance": "Unanswered attendance  {count}",
       "todoCount": "To do {count}",
       "teamTitle": "{teamName} announcements",
       "showAll": "Show all ({count})",
@@ -1058,8 +1059,8 @@
       "open": "Show",
       "close": "Hide",
       "unansweredAttendance": "Attendance not answered: {count} · {teamName}",
-      "entryOpen": "Entries open · {name} ({date})",
-      "unrecorded": "Results not entered · {name} ({date})"
+      "entryOpen": "Entries open  {name} ({date})",
+      "unrecorded": "Forgot to enter your results?  {name} ({date})"
     },
     "nextCompetition": {
       "title": "Next meet",
@@ -1373,6 +1374,30 @@
       },
       "waPointsToggle": "Show as points",
       "waPointsToggleShort": "Points",
+      "viewModeTime": "Time",
+      "viewModePoints": "Points",
+      "edit": {
+        "tapHint": "Tap an empty cell to enter a time",
+        "relayModeHint": "Entering relay times",
+        "currentBest": "Current best {time}",
+        "noCurrentBest": "Current best: none",
+        "slowerThanBest": "Slower than your current best (it will still be saved as a record)",
+        "addNote": "+ Meet / note",
+        "notePlaceholder": "Meet name, note",
+        "clear": "Clear",
+        "done": "Done",
+        "cancel": "Cancel",
+        "register": "Save {count}",
+        "inputCount": "{count} entered",
+        "relayTag": "Relay",
+        "cellEmpty": "Not entered",
+        "cellEntered": "Entered {time}",
+        "discardTitle": "Discard your entries?",
+        "discardMessage": "The {count} times you entered will not be saved.",
+        "discardConfirm": "Discard",
+        "keepEditing": "Keep editing",
+        "exitByBackdrop": "Exit input mode"
+      },
       "compareMetricLabel": "Compare by",
       "compareMetric": {
         "wa": "WA Points",
@@ -4645,6 +4670,39 @@
       "plan": {
         "manageNoteIos": "Opens the App Store",
         "manageNoteAndroid": "Opens Google Play"
+      }
+    },
+    "web": {
+      "title": "Account",
+      "menuAriaLabel": "Account settings",
+      "backAriaLabel": "Back to account",
+      "editProfile": "Edit profile",
+      "addTeamAria": "Create or join a team",
+      "opensInNewTab": "opens in a new tab",
+      "logoutConfirm": "Do you want to log out?",
+      "rows": {
+        "plan": "Plan",
+        "calendar": "Calendar",
+        "templates": "Practice log templates",
+        "security": "Sign-in & security",
+        "terms": "Terms of Service",
+        "privacy": "Privacy Policy",
+        "logout": "Log out"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "Trial"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "notConnected": "Not connected"
+      },
+      "sections": {
+        "plan": "Review and change your subscription",
+        "calendar": "Google Calendar sync and dashboard record colors",
+        "templates": "Manage templates for entering practice logs",
+        "security": "Email, password, sign-in methods, and account deletion"
       }
     }
   }

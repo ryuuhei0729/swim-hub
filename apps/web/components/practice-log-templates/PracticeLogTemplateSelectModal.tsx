@@ -52,7 +52,7 @@ export function PracticeLogTemplateSelectModal({
 
   const handleManageClick = useCallback(() => {
     onClose();
-    router.push("/settings/practice-log-templates");
+    router.push("/account?tab=templates");
   }, [router, onClose]);
 
   const handleKeyDown = useCallback(

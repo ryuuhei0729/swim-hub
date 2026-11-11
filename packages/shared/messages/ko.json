@@ -329,7 +329,8 @@
     "practiceHistory": "연습 이력",
     "competitionHistory": "대회 이력",
     "mypage": "마이페이지",
-    "team": "팀"
+    "team": "팀",
+    "account": "계정"
   },
   "lp": {
     "hero": {
@@ -1049,7 +1050,7 @@
     },
     "notices": {
       "title": "알림",
-      "unansweredAttendance": "출석 미응답 {count}건",
+      "unansweredAttendance": "미응답 출석 있음  {count}건",
       "todoCount": "할 일 {count}",
       "teamTitle": "{teamName} 공지",
       "showAll": "모두 보기 ({count})",
@@ -1061,8 +1062,8 @@
       "open": "펼치기",
       "close": "접기",
       "unansweredAttendance": "출결 미응답 {count}건 · {teamName}",
-      "entryOpen": "엔트리 접수 중 · {name} ({date})",
-      "unrecorded": "기록 미입력 · {name} ({date})"
+      "entryOpen": "엔트리 접수 중  {name} ({date})",
+      "unrecorded": "대회 기록 입력을 잊지 않으셨나요?  {name} ({date})"
     },
     "nextCompetition": {
       "title": "다음 대회",
@@ -1376,6 +1377,30 @@
       },
       "waPointsToggle": "점수로 환산",
       "waPointsToggleShort": "점수",
+      "viewModeTime": "타임",
+      "viewModePoints": "점수",
+      "edit": {
+        "tapHint": "빈 칸을 탭해서 입력",
+        "relayModeHint": "이어받기 타임 입력 중",
+        "currentBest": "현재 베스트 {time}",
+        "noCurrentBest": "현재 베스트: 미등록",
+        "slowerThanBest": "현재 베스트보다 느린 타임입니다 (기록으로는 등록됩니다)",
+        "addNote": "+ 대회명·비고",
+        "notePlaceholder": "대회명·비고",
+        "clear": "지우기",
+        "done": "완료",
+        "cancel": "취소",
+        "register": "{count}건 등록",
+        "inputCount": "입력 {count}건",
+        "relayTag": "이어받기",
+        "cellEmpty": "미입력",
+        "cellEntered": "입력 {time}",
+        "discardTitle": "입력을 취소할까요?",
+        "discardMessage": "입력한 {count}건의 타임은 등록되지 않습니다.",
+        "discardConfirm": "취소하기",
+        "keepEditing": "계속 입력",
+        "exitByBackdrop": "입력 모드 종료"
+      },
       "compareMetricLabel": "비교 지표",
       "compareMetric": {
         "wa": "WA 포인트",
@@ -4648,6 +4673,39 @@
       "plan": {
         "manageNoteIos": "App Store 화면이 열립니다",
         "manageNoteAndroid": "Google Play 화면이 열립니다"
+      }
+    },
+    "web": {
+      "title": "계정",
+      "menuAriaLabel": "계정 설정",
+      "backAriaLabel": "계정으로 돌아가기",
+      "editProfile": "프로필 편집",
+      "addTeamAria": "팀 만들기·참가하기",
+      "opensInNewTab": "새 탭에서 열림",
+      "logoutConfirm": "로그아웃하시겠습니까?",
+      "rows": {
+        "plan": "플랜",
+        "calendar": "캘린더",
+        "templates": "연습 로그 템플릿",
+        "security": "로그인 및 보안",
+        "terms": "이용약관",
+        "privacy": "개인정보처리방침",
+        "logout": "로그아웃"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "체험 중"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "notConnected": "연동 안 됨"
+      },
+      "sections": {
+        "plan": "구독 확인 및 변경",
+        "calendar": "Google 캘린더 연동과 대시보드 기록 색상",
+        "templates": "연습 로그 입력에 사용하는 템플릿 관리",
+        "security": "이메일·비밀번호·로그인 방법·계정 삭제"
       }
     }
   }

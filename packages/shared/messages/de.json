@@ -329,7 +329,8 @@
     "practiceHistory": "Trainingsverlauf",
     "competitionHistory": "Wettkampfverlauf",
     "mypage": "Mein Bereich",
-    "team": "Team"
+    "team": "Team",
+    "account": "Konto"
   },
   "lp": {
     "hero": {
@@ -1049,7 +1050,7 @@
     },
     "notices": {
       "title": "Neuigkeiten",
-      "unansweredAttendance": "Anwesenheit offen ({count})",
+      "unansweredAttendance": "Offene Anwesenheit  {count}",
       "todoCount": "Zu erledigen {count}",
       "teamTitle": "Mitteilungen von {teamName}",
       "showAll": "Alle anzeigen ({count})",
@@ -1061,8 +1062,8 @@
       "open": "Anzeigen",
       "close": "Ausblenden",
       "unansweredAttendance": "Anwesenheit offen: {count} · {teamName}",
-      "entryOpen": "Meldung offen · {name} ({date})",
-      "unrecorded": "Ergebnisse fehlen · {name} ({date})"
+      "entryOpen": "Meldung offen  {name} ({date})",
+      "unrecorded": "Ergebnisse vergessen?  {name} ({date})"
     },
     "nextCompetition": {
       "title": "Nächster Wettkampf",
@@ -1376,6 +1377,30 @@
       },
       "waPointsToggle": "Als Punkte anzeigen",
       "waPointsToggleShort": "Punkte",
+      "viewModeTime": "Zeit",
+      "viewModePoints": "Punkte",
+      "edit": {
+        "tapHint": "Tippe auf ein leeres Feld, um eine Zeit einzugeben",
+        "relayModeHint": "Staffelwechselzeiten werden eingegeben",
+        "currentBest": "Aktuelle Bestzeit {time}",
+        "noCurrentBest": "Aktuelle Bestzeit: keine",
+        "slowerThanBest": "Langsamer als deine aktuelle Bestzeit (wird trotzdem als Zeit gespeichert)",
+        "addNote": "+ Wettkampf / Notiz",
+        "notePlaceholder": "Wettkampf, Notiz",
+        "clear": "Löschen",
+        "done": "Fertig",
+        "cancel": "Abbrechen",
+        "register": "{count} speichern",
+        "inputCount": "{count} eingegeben",
+        "relayTag": "Wechsel",
+        "cellEmpty": "Nicht eingegeben",
+        "cellEntered": "Eingegeben {time}",
+        "discardTitle": "Eingaben verwerfen?",
+        "discardMessage": "Die {count} eingegebenen Zeiten werden nicht gespeichert.",
+        "discardConfirm": "Verwerfen",
+        "keepEditing": "Weiter bearbeiten",
+        "exitByBackdrop": "Eingabemodus beenden"
+      },
       "compareMetricLabel": "Vergleichsmaßstab",
       "compareMetric": {
         "wa": "WA-Punkte",
@@ -4648,6 +4673,39 @@
       "plan": {
         "manageNoteIos": "Öffnet den App Store",
         "manageNoteAndroid": "Öffnet Google Play"
+      }
+    },
+    "web": {
+      "title": "Konto",
+      "menuAriaLabel": "Kontoeinstellungen",
+      "backAriaLabel": "Zurück zum Konto",
+      "editProfile": "Profil bearbeiten",
+      "addTeamAria": "Team erstellen oder beitreten",
+      "opensInNewTab": "öffnet in neuem Tab",
+      "logoutConfirm": "Möchtest du dich abmelden?",
+      "rows": {
+        "plan": "Tarif",
+        "calendar": "Kalender",
+        "templates": "Trainingsprotokoll-Vorlagen",
+        "security": "Anmeldung & Sicherheit",
+        "terms": "Nutzungsbedingungen",
+        "privacy": "Datenschutzerklärung",
+        "logout": "Abmelden"
+      },
+      "planValue": {
+        "premium": "Premium",
+        "free": "Free",
+        "trialing": "Testphase"
+      },
+      "calendarValue": {
+        "google": "Google",
+        "notConnected": "Nicht verbunden"
+      },
+      "sections": {
+        "plan": "Abonnement ansehen und ändern",
+        "calendar": "Google-Kalender-Synchronisierung und Farben der Einträge im Dashboard",
+        "templates": "Vorlagen für die Eingabe von Trainingsprotokollen verwalten",
+        "security": "E-Mail, Passwort, Anmeldemethoden und Kontolöschung"
       }
     }
   }

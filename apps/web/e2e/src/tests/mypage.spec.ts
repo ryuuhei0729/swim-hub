@@ -3,7 +3,7 @@ import { EnvConfig, URLS } from "../config/config";
 import { supabaseLogin } from "../utils/supabase-login";
 
 /**
- * マイページのE2Eテスト
+ * アカウント画面 (旧マイページ) のE2Eテスト
  *
  * テストケース:
  * - TC-MYPAGE-001: プロフィール表示
@@ -34,29 +34,25 @@ test.describe("マイページのテスト", () => {
    * プロフィール情報が正しく表示
    */
   test("TC-MYPAGE-001: プロフィール表示", async ({ page }) => {
-    // ステップ1: マイページに移動
-    await page.goto(URLS.MYPAGE);
+    // ステップ1: アカウント画面に移動
+    await page.goto(URLS.ACCOUNT);
     await page.waitForLoadState("networkidle");
 
-    // ステップ2: マイページが表示されることを確認
-    await page.waitForSelector('h1:has-text("マイページ")', { timeout: 10000 });
-    await expect(page.locator('h1:has-text("マイページ")')).toBeVisible();
+    // ステップ2: アカウント画面が表示されることを確認 (2026-11 にマイページと設定を統合)
+    await page.waitForSelector('h1:has-text("アカウント")', { timeout: 10000 });
+    await expect(page.locator('h1:has-text("アカウント")')).toBeVisible();
 
-    // ステップ3: プロフィールセクションが表示されることを確認
-    await page.waitForSelector('h2:has-text("プロフィール")', { timeout: 5000 });
-    await expect(page.locator('h2:has-text("プロフィール")')).toBeVisible();
+    // ステップ3: プロフィールカードが表示されることを確認
+    const profileCard = page.locator('[data-testid="account-profile-card"]');
+    await expect(profileCard).toBeVisible({ timeout: 5000 });
 
     // ステップ4: 編集ボタンが表示されることを確認
-    const editButton = page.locator('button:has-text("編集")').first();
-    await expect(editButton).toBeVisible();
+    await expect(page.locator('[data-testid="account-edit-profile"]')).toBeVisible();
 
-    // ステップ5: ユーザー名が表示されることを確認
-    // プロフィール情報が読み込まれるのを待つ
-    await page.waitForTimeout(2000);
-
-    // プロフィール表示コンポーネントが存在することを確認
-    const profileSection = page.locator('h2:has-text("プロフィール")').locator("..");
-    await expect(profileSection).toBeVisible();
+    // ステップ5: 設定の一覧 (プラン・カレンダー・テンプレート・ログインとセキュリティ) が並ぶ
+    for (const tab of ["plan", "calendar", "templates", "security"]) {
+      await expect(page.locator(`[data-testid="account-row-${tab}"]`)).toBeVisible();
+    }
   });
 
   /**
@@ -64,13 +60,13 @@ test.describe("マイページのテスト", () => {
    * 名前・自己紹介の編集
    */
   test("TC-MYPAGE-002: プロフィール編集", async ({ page }) => {
-    // ステップ1: マイページに移動
-    await page.goto(URLS.MYPAGE);
+    // ステップ1: アカウント画面に移動
+    await page.goto(URLS.ACCOUNT);
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
 
     // ステップ2: 編集ボタンをクリック
-    const editButton = page.locator('button:has-text("編集")').first();
+    const editButton = page.locator('[data-testid="account-edit-profile"]');
     await editButton.waitFor({ state: "visible", timeout: 10000 });
     await editButton.click();
 
@@ -115,13 +111,13 @@ test.describe("マイページのテスト", () => {
    * 注: 実際のファイルアップロードはE2Eテストでは複雑なため、UIの確認のみ
    */
   test("TC-MYPAGE-003: アバター変更（UI確認）", async ({ page }) => {
-    // ステップ1: マイページに移動
-    await page.goto(URLS.MYPAGE);
+    // ステップ1: アカウント画面に移動
+    await page.goto(URLS.ACCOUNT);
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
 
     // ステップ2: 編集ボタンをクリック
-    const editButton = page.locator('button:has-text("編集")').first();
+    const editButton = page.locator('[data-testid="account-edit-profile"]');
     await editButton.waitFor({ state: "visible", timeout: 10000 });
     await editButton.click();
 
@@ -185,40 +181,34 @@ test.describe("マイページのテスト", () => {
    * TC-MYPAGE-005: ベストタイム一括入力ページへの遷移
    * 一括入力リンクをクリックして遷移
    */
-  test("TC-MYPAGE-005: ベストタイム一括入力ページへの遷移", async ({ page }) => {
-    // ステップ1: ダッシュボードに移動
-    // ベストタイム表と一括入力は 2026-11-07 にマイページからダッシュボードへ移した
+  test("TC-MYPAGE-005: 一括入力でダッシュボードのベストタイム表が入力モードになる", async ({ page }) => {
+    // 2026-11-11 に一括入力ページ (/bulk-besttime) をやめ、表がその場で入力モードに変わる形にした
     await page.goto(URLS.DASHBOARD);
     await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
 
-    // ステップ2: 一括入力リンクをクリック
-    const bulkInputLink = page.locator('a:has-text("一括入力")').first();
-    await bulkInputLink.waitFor({ state: "visible", timeout: 10000 });
-    await bulkInputLink.click();
+    const bulkInputButton = page.locator('button:has-text("一括入力")').first();
+    await bulkInputButton.waitFor({ state: "visible", timeout: 10000 });
+    await bulkInputButton.click();
 
-    // ステップ3: 一括入力ページに遷移することを確認
-    await page.waitForURL("**/bulk-besttime**", { timeout: 10000 });
-    expect(page.url()).toContain("/bulk-besttime");
-
-    // ステップ4: 一括入力ページが表示されることを確認
-    await page.waitForLoadState("networkidle");
-    const pageContent = await page.textContent("body");
-    // ページに何らかのコンテンツが表示されることを確認
-    expect(pageContent).toBeTruthy();
+    // ページは移らず、入力用の表とキャンセル・登録が出る
+    expect(page.url()).not.toContain("/bulk-besttime");
+    await expect(page.getByTestId("best-time-input-grid")).toBeVisible();
+    await expect(page.getByTestId("best-times-edit-cancel")).toBeVisible();
+    await expect(page.getByTestId("best-times-edit-save")).toBeVisible();
   });
 
   /**
    * TC-MYPAGE-006: チーム作成・参加ボタンの動作確認
-   * マイページからチーム作成・参加モーダルを開く
+   * アカウント画面からチーム作成・参加モーダルを開く
    */
   test("TC-MYPAGE-006: チーム作成・参加ボタンの動作確認", async ({ page }) => {
-    // ステップ1: マイページに移動
-    await page.goto(URLS.MYPAGE);
+    // ステップ1: アカウント画面に移動
+    await page.goto(URLS.ACCOUNT);
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
 
-    // ステップ2: チーム作成ボタンを探す
+    // ステップ2: チップ列の「＋」から作成・参加のメニューを開く
+    await page.locator('[data-testid="account-add-team"]').click();
     const createTeamButton = page
       .locator('button:has-text("チームを作成"), button:has-text("新しいチーム")')
       .first();
@@ -246,7 +236,8 @@ test.describe("マイページのテスト", () => {
       });
     }
 
-    // ステップ6: チーム参加ボタンが表示されている場合はクリック
+    // ステップ6: もう一度「＋」を開き、チーム参加ボタンが表示されている場合はクリック
+    await page.locator('[data-testid="account-add-team"]').click();
     if (await joinTeamButton.isVisible()) {
       await joinTeamButton.click();
 

@@ -240,7 +240,7 @@ describe("IdentityLinkSettings.tsx — アカウント連携の redirectTo に�
     fireEvent.click(linkButtons[index]!);
   }
 
-  it("[V-B4-05] locale='ja' の場合、Google連携の redirectTo は http://localhost:3000/?redirect_to=/ja/settings", async () => {
+  it("[V-B4-05] locale='ja' の場合、Google連携の redirectTo は http://localhost:3000/?redirect_to=/ja/account?tab=security (エンコード済み)", async () => {
     mocks.useLocale.mockReturnValue("ja");
     await renderAndClickLink("Google");
 
@@ -249,11 +249,11 @@ describe("IdentityLinkSettings.tsx — アカウント連携の redirectTo に�
     });
     expect(mocks.contextLinkIdentity).toHaveBeenCalledWith({
       provider: "google",
-      options: { redirectTo: "http://localhost:3000/?redirect_to=/ja/settings" },
+      options: { redirectTo: "http://localhost:3000/?redirect_to=%2Fja%2Faccount%3Ftab%3Dsecurity" },
     });
   });
 
-  it("[V-B4-06] locale='zh' の場合、redirectTo は http://localhost:3000/?redirect_to=/zh/settings (locale決め打ちでないことの確認)", async () => {
+  it("[V-B4-06] locale='zh' の場合、redirectTo は http://localhost:3000/?redirect_to=/zh/account?tab=security (エンコード済み) (locale決め打ちでないことの確認)", async () => {
     mocks.useLocale.mockReturnValue("zh");
     await renderAndClickLink("Google");
 
@@ -262,7 +262,7 @@ describe("IdentityLinkSettings.tsx — アカウント連携の redirectTo に�
     });
     expect(mocks.contextLinkIdentity).toHaveBeenCalledWith({
       provider: "google",
-      options: { redirectTo: "http://localhost:3000/?redirect_to=/zh/settings" },
+      options: { redirectTo: "http://localhost:3000/?redirect_to=%2Fzh%2Faccount%3Ftab%3Dsecurity" },
     });
   });
 });
@@ -282,7 +282,7 @@ describe("GoogleCalendarSyncSettings.tsx — カレンダー連携の redirectTo
     fireEvent.click(screen.getByText("disconnected.connectButton"));
   }
 
-  it("[V-B4-07] locale='ja' の場合、redirectTo は完全一致で http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=/ja/settings (calendar_connect=true が維持されていること)", async () => {
+  it("[V-B4-07] locale='ja' の場合、redirectTo は完全一致で http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=/ja/account?tab=calendar (エンコード済み) (calendar_connect=true が維持されていること)", async () => {
     mocks.useLocale.mockReturnValue("ja");
     await renderAndClickConnect();
 
@@ -291,11 +291,11 @@ describe("GoogleCalendarSyncSettings.tsx — カレンダー連携の redirectTo
     });
     const [, options] = mocks.contextSignInWithOAuth.mock.calls[0]!;
     expect(options.redirectTo).toBe(
-      "http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=/ja/settings",
+      "http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=%2Fja%2Faccount%3Ftab%3Dcalendar",
     );
   });
 
-  it("[V-B4-08] locale='ko' の場合、redirectTo は http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=/ko/settings (locale決め打ちでないことの確認)", async () => {
+  it("[V-B4-08] locale='ko' の場合、redirectTo は http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=/ko/account?tab=calendar (エンコード済み) (locale決め打ちでないことの確認)", async () => {
     mocks.useLocale.mockReturnValue("ko");
     await renderAndClickConnect();
 
@@ -304,7 +304,7 @@ describe("GoogleCalendarSyncSettings.tsx — カレンダー連携の redirectTo
     });
     const [, options] = mocks.contextSignInWithOAuth.mock.calls[0]!;
     expect(options.redirectTo).toBe(
-      "http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=/ko/settings",
+      "http://localhost:3000/api/auth/callback?calendar_connect=true&redirect_to=%2Fko%2Faccount%3Ftab%3Dcalendar",
     );
     expect(options.redirectTo).not.toContain("/ko/ko/");
   });
