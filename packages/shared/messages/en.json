@@ -1047,7 +1047,7 @@
     },
     "notices": {
       "title": "Updates",
-      "unansweredAttendance": "Attendance not answered ({count})",
+      "unansweredAttendance": "Unanswered attendance  {count}",
       "todoCount": "To do {count}",
       "teamTitle": "{teamName} announcements",
       "showAll": "Show all ({count})",
@@ -1059,8 +1059,8 @@
       "open": "Show",
       "close": "Hide",
       "unansweredAttendance": "Attendance not answered: {count} · {teamName}",
-      "entryOpen": "Entries open · {name} ({date})",
-      "unrecorded": "Results not entered · {name} ({date})"
+      "entryOpen": "Entries open  {name} ({date})",
+      "unrecorded": "Forgot to enter your results?  {name} ({date})"
     },
     "nextCompetition": {
       "title": "Next meet",

@@ -1050,7 +1050,7 @@
     },
     "notices": {
       "title": "通知",
-      "unansweredAttendance": "出勤未回复 {count}项",
+      "unansweredAttendance": "有未回复的出勤　{count}项",
       "todoCount": "待办 {count}",
       "teamTitle": "{teamName}的公告",
       "showAll": "显示全部（{count}）",
@@ -1062,8 +1062,8 @@
       "open": "展开",
       "close": "收起",
       "unansweredAttendance": "出勤未回复 {count}项 · {teamName}",
-      "entryOpen": "报名中 · {name} ({date})",
-      "unrecorded": "成绩未录入 · {name} ({date})"
+      "entryOpen": "报名中　{name} ({date})",
+      "unrecorded": "是否忘记录入比赛成绩？　{name} ({date})"
     },
     "nextCompetition": {
       "title": "下一场比赛",

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -23,13 +23,12 @@ import {
 import type { TeamAnnouncement, TeamMembershipWithUser } from "@swim-hub/shared/types";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useDateLocale } from "@/hooks/useDateLocale";
-import { resolveIsTruncated, resolveNumberOfLines } from "@/utils/announcementTruncation";
+import { CenterModal } from "@/components/ui/CenterModal";
 import { cardSurface } from "@/constants/theme";
 import type { MainStackParamList } from "@/navigation/types";
 
 /** チームごとに最初に出すお知らせの件数。残りは「すべて表示」で同じカードに広げる */
 const ANNOUNCEMENTS_PER_TEAM = 2;
-const ANNOUNCEMENT_CONTENT_MAX_LINES = 1;
 
 interface DashboardNoticesSectionProps {
   teams: TeamMembershipWithUser[];
@@ -251,7 +250,6 @@ const ActionItem: React.FC<{ label: string; onPress: () => void }> = ({ label, o
     <Text style={styles.actionItemText} numberOfLines={1}>
       {label}
     </Text>
-    <Feather name="chevron-right" size={16} color="#D97706" />
   </Pressable>
 );
 
@@ -303,88 +301,44 @@ const TeamNotices: React.FC<{
 };
 
 /**
- * お知らせ1件。本文は1行で切り、切れているときだけ行をタップして全文を開く。
- * 切れているかは、同じ本文を行数制限なしで描く非表示の Text で行数を測って決める
- * (可視の Text は常に行数で切るので、測ってから縮むような表示の揺れが出ない)
+ * お知らせ1件。行にはタイトルだけを出し、押すとポップアップで日時と本文を見せる (2026-11-10 ユーザー指定)
  */
 const AnnouncementItem: React.FC<{ announcement: TeamAnnouncement }> = ({ announcement }) => {
   const { t } = useTranslation();
   const locale = useDateLocale();
+  const [isOpen, setIsOpen] = useState(false);
   const parsedUpdatedAt = announcement.updated_at ? parseISO(announcement.updated_at) : null;
   const updatedAt =
     parsedUpdatedAt && isValid(parsedUpdatedAt)
       ? formatDateTime(parsedUpdatedAt, "shortDate", locale)
       : "-";
 
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isTruncated, setIsTruncated] = useState(false);
-
-  // 編集で本文が変わったら閉じる (id は変わらないので再マウントされない)
-  useEffect(() => {
-    setIsExpanded(false);
-  }, [announcement.content]);
-
-  // 行は1つの読み上げ要素になり、子の文字から読み上げ文を作る。非表示の計測用 Text も
-  // 拾って本文を2回読むので、読み上げ文は明示する。
-  // 切れていない行は押せないが、disabled にすると「無効」と読まれるので onPress を付けないだけにする
   return (
-    <Pressable
-      style={styles.announcement}
-      onPress={isTruncated ? () => setIsExpanded((v) => !v) : undefined}
-      accessible
-      accessibilityLabel={`${announcement.title}、${updatedAt}、${announcement.content}`}
-      accessibilityRole={isTruncated ? "button" : undefined}
-      accessibilityState={isTruncated ? { expanded: isExpanded } : undefined}
-      accessibilityHint={
-        isTruncated
-          ? isExpanded
-            ? t("teamsAdmin.announcementList.showLess")
-            : t("teamsAdmin.announcementList.showMore")
-          : undefined
-      }
-      testID={`announcement-${announcement.id}`}
-    >
-      <View style={styles.announcementHead}>
+    <>
+      <Pressable
+        style={styles.announcement}
+        onPress={() => setIsOpen(true)}
+        accessibilityRole="button"
+        testID={`announcement-${announcement.id}`}
+      >
         <Text style={styles.announcementTitle} numberOfLines={1}>
           {announcement.title}
         </Text>
-        <Text style={styles.announcementDate}>{updatedAt}</Text>
-        {isTruncated && (
-          <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color="#6B7280" />
-        )}
-      </View>
-      {/* 計測用 Text の幅を可視の本文とそろえるため、padding の無い枠に2つを入れる */}
-      <View>
-        <Text
-          style={styles.announcementContent}
-          numberOfLines={resolveNumberOfLines({
-            isExpanded,
-            maxLines: ANNOUNCEMENT_CONTENT_MAX_LINES,
-          })}
-          testID={`announcement-content-${announcement.id}`}
-        >
-          {announcement.content}
-        </Text>
-        <Text
-          style={[styles.announcementContent, styles.announcementContentMeasure]}
-          onTextLayout={(e) =>
-            setIsTruncated(
-              resolveIsTruncated({
-                measuredLines: e.nativeEvent.lines.length,
-                maxLines: ANNOUNCEMENT_CONTENT_MAX_LINES,
-                wasTruncated: false,
-              }),
-            )
-          }
-          pointerEvents="none"
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          testID={`announcement-content-measure-${announcement.id}`}
-        >
-          {announcement.content}
-        </Text>
-      </View>
-    </Pressable>
+      </Pressable>
+      <CenterModal
+        visible={isOpen}
+        onClose={() => setIsOpen(false)}
+        closeAccessibilityLabel={t("common.close")}
+      >
+        <View style={styles.detail} testID={`announcement-detail-${announcement.id}`}>
+          <Text style={styles.detailTitle}>{announcement.title}</Text>
+          <Text style={styles.detailDate}>{updatedAt}</Text>
+          <ScrollView style={styles.detailBody}>
+            <Text style={styles.detailContent}>{announcement.content}</Text>
+          </ScrollView>
+        </View>
+      </CenterModal>
+    </>
   );
 };
 
@@ -462,34 +416,32 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    gap: 3,
-  },
-  announcementHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
   },
   announcementTitle: {
-    flex: 1,
     fontSize: 14,
     fontWeight: "600",
     color: "#111827",
   },
-  announcementDate: {
-    fontSize: 11,
+  detail: {
+    gap: 4,
+    paddingRight: 24,
+  },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  detailDate: {
+    fontSize: 12,
     color: "#6B7280",
   },
-  announcementContent: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: "#4B5563",
+  detailBody: {
+    marginTop: 8,
+    maxHeight: 360,
   },
-  announcementContentMeasure: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    opacity: 0,
-    zIndex: -1,
+  detailContent: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: "#374151",
   },
 });

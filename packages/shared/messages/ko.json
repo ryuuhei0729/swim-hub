@@ -1050,7 +1050,7 @@
     },
     "notices": {
       "title": "알림",
-      "unansweredAttendance": "출석 미응답 {count}건",
+      "unansweredAttendance": "미응답 출석 있음  {count}건",
       "todoCount": "할 일 {count}",
       "teamTitle": "{teamName} 공지",
       "showAll": "모두 보기 ({count})",
@@ -1062,8 +1062,8 @@
       "open": "펼치기",
       "close": "접기",
       "unansweredAttendance": "출결 미응답 {count}건 · {teamName}",
-      "entryOpen": "엔트리 접수 중 · {name} ({date})",
-      "unrecorded": "기록 미입력 · {name} ({date})"
+      "entryOpen": "엔트리 접수 중  {name} ({date})",
+      "unrecorded": "대회 기록 입력을 잊지 않으셨나요?  {name} ({date})"
     },
     "nextCompetition": {
       "title": "다음 대회",
