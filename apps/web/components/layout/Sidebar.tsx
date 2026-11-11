@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 
@@ -8,8 +8,6 @@ import { useTranslations } from "next-intl";
 // Link / useRouter も @/i18n/navigation に統一して、href にロケールプレフィックスを
 // 含めずに済ませる (二重リダイレクト解消)。
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
-import { useAuth } from "@/contexts";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import {
   HomeIcon,
@@ -18,7 +16,6 @@ import {
   FlagIcon,
   ChevronRightIcon,
   UsersIcon,
-  UserIcon,
   ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
 
@@ -38,21 +35,20 @@ const baseNavigation: NavigationItem[] = [
   { href: "/practice", icon: ChartBarIcon },
   { href: "/competition", icon: TrophyIcon },
   { href: "/goals", icon: FlagIcon },
-  { href: "/mypage", icon: UserIcon },
   { href: "/teams", icon: UsersIcon },
 ];
 
-type NavHref = "/dashboard" | "/practice" | "/competition" | "/goals" | "/mypage" | "/teams";
+// マイページは 2026-11 に設定と統合して「アカウント」になり、入口はヘッダーのアバターに移した
+type NavHref = "/dashboard" | "/practice" | "/competition" | "/goals" | "/teams";
 
 const NAV_NAME_KEYS: Record<
   NavHref,
-  "nav.dashboard" | "nav.practice" | "nav.competition" | "nav.goals" | "nav.mypage" | "nav.team"
+  "nav.dashboard" | "nav.practice" | "nav.competition" | "nav.goals" | "nav.team"
 > = {
   "/dashboard": "nav.dashboard",
   "/practice": "nav.practice",
   "/competition": "nav.competition",
   "/goals": "nav.goals",
-  "/mypage": "nav.mypage",
   "/teams": "nav.team",
 };
 
@@ -62,14 +58,12 @@ const NAV_DESC_KEYS: Record<
   | "nav.practiceDesc"
   | "nav.competitionDesc"
   | "nav.goalsDesc"
-  | "nav.mypageDesc"
   | "nav.teamDesc"
 > = {
   "/dashboard": "nav.dashboardDesc",
   "/practice": "nav.practiceDesc",
   "/competition": "nav.competitionDesc",
   "/goals": "nav.goalsDesc",
-  "/mypage": "nav.mypageDesc",
   "/teams": "nav.teamDesc",
 };
 
@@ -77,8 +71,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const t = useTranslations("sidebar");
   const pathname = usePathname();
   const router = useRouter();
-  const { signOut } = useAuth();
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   return (
     <>
@@ -156,30 +148,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               );
             })}
 
-            {/* スマホ用：言語切り替え + 設定・ログアウト */}
-            <div className="lg:hidden mt-2 pt-2 border-t border-gray-200 space-y-1">
+            {/* スマホ用：言語切り替え (設定・ログアウトはヘッダーのアバター → アカウント画面へ移した) */}
+            <div className="lg:hidden mt-2 pt-2 border-t border-gray-200">
               <div className="px-3 py-2">
                 <LanguageSwitcher />
               </div>
-              <Link
-                href="/settings"
-                className={`
-                  flex items-center px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200
-                  ${pathname === "/settings" ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}
-                `}
-                onClick={onClose}
-              >
-                {t("settings")}
-              </Link>
-              <button
-                onClick={() => {
-                  onClose();
-                  setIsLogoutDialogOpen(true);
-                }}
-                className="flex items-center w-full px-3 py-2 text-xs font-medium rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200"
-              >
-                {t("logout")}
-              </button>
             </div>
           </div>
         </nav>
@@ -225,25 +198,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={isLogoutDialogOpen}
-        variant="danger"
-        title={t("logout")}
-        message={t("logoutConfirm")}
-        confirmLabel={t("logout")}
-        cancelLabel={t("cancel")}
-        onConfirm={async () => {
-          const { error } = await signOut();
-          setIsLogoutDialogOpen(false);
-          if (error) {
-            console.error("ログアウトエラー:", error);
-            return;
-          }
-          router.replace("/login");
-        }}
-        onCancel={() => setIsLogoutDialogOpen(false)}
-      />
     </>
   );
 }

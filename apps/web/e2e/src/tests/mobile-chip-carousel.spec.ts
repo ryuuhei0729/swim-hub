@@ -1067,7 +1067,7 @@ test.describe("スマホ幅 チップ行カルーセル + 水路トグル略称 
      * 「ボタンを総当たりで押す」方式は 375px で別要素を押して失敗したのでやめた。
      */
     async function openTemplateCreateModal(page: Page) {
-      await page.goto("/ja/settings/practice-log-templates");
+      await page.goto("/ja/account?tab=templates");
       await page.waitForLoadState("networkidle").catch(() => {});
 
       const createButton = page.getByRole("button", { name: "新しいテンプレートを作成" }).first();

@@ -66,6 +66,7 @@ const ROUTES_NEEDING_RETURN = [
   "/ja/dashboard",
   "/ja/practice",
   "/ja/competition",
+  "/ja/account",
   "/ja/mypage",
   "/ja/settings",
   "/ja/goals",

@@ -60,9 +60,14 @@ export const URLS = {
   DASHBOARD: "/ja/dashboard",
   PRACTICE: "/ja/practice",
   RECORD: "/ja/record",
+  ACCOUNT: "/ja/account",
+  /** 旧マイページ (/ja/account へリダイレクトされる) */
   MYPAGE: "/ja/mypage",
   TEAMS: "/ja/teams",
+  /** 旧設定画面 (/ja/account へリダイレクトされる) */
   SETTINGS: "/ja/settings",
+  /** アカウント画面のプラン (旧設定画面のサブスクリプション) */
+  ACCOUNT_PLAN: "/ja/account?tab=plan",
 } as const;
 
 /**

@@ -9,10 +9,10 @@ interface ErrorProps {
 }
 
 /**
- * マイページエラーバウンダリ
+ * アカウント画面のエラーバウンダリ
  * Next.js App Routerで自動的にエラーをキャッチする
  */
-export default function MyPageError({ error, reset }: ErrorProps) {
+export default function AccountError({ error, reset }: ErrorProps) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
@@ -24,7 +24,7 @@ export default function MyPageError({ error, reset }: ErrorProps) {
 
           {/* エラーメッセージ */}
           <h2 className="text-xl font-semibold text-gray-900 mb-2">エラーが発生しました</h2>
-          <p className="text-gray-600 mb-6">マイページの読み込み中に問題が発生しました。</p>
+          <p className="text-gray-600 mb-6">アカウント画面の読み込み中に問題が発生しました。</p>
 
           {/* エラー詳細（開発環境のみ） */}
           {process.env.NODE_ENV === "development" && (
@@ -47,7 +47,7 @@ export default function MyPageError({ error, reset }: ErrorProps) {
               再試行
             </button>
             <button
-              onClick={() => (window.location.href = "/mypage")}
+              onClick={() => window.location.reload()}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
               ページを再読み込み

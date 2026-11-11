@@ -1,24 +1,34 @@
-import React, { Suspense } from "react";
-import SettingsClient from "./_client/SettingsClient";
+import { redirect } from "next/navigation";
+import type { AccountTab } from "../account/_components/accountTabs";
 
 /**
- * 設定ページ（Server Component）
+ * 旧設定画面。2026-11 にマイページと統合して /account になったので、そちらへ送る。
+ * Stripe の戻り (session_id) や Google カレンダー連携の戻り (calendar_connected)、
+ * PremiumBadge の旧リンク (?tab=subscription) で来ることがあるため、
+ * クエリはそのまま引き継ぎ、対応する詳細タブを開く。
  */
-export default async function SettingsPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="space-y-4 sm:space-y-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-200 rounded w-1/6 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-            </div>
-          </div>
-        </div>
-      }
-    >
-      <SettingsClient />
-    </Suspense>
-  );
+export default async function SettingsRedirect({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [{ locale }, query] = await Promise.all([params, searchParams]);
+
+  const next = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (key === "tab") continue;
+    for (const v of Array.isArray(value) ? value : value === undefined ? [] : [value]) {
+      next.append(key, v);
+    }
+  }
+
+  let tab: AccountTab | null = null;
+  if (query.session_id !== undefined || query.tab === "subscription") tab = "plan";
+  else if (query.calendar_connected !== undefined) tab = "calendar";
+  if (tab) next.set("tab", tab);
+
+  const qs = next.toString();
+  redirect(`/${locale}/account${qs ? `?${qs}` : ""}`);
 }

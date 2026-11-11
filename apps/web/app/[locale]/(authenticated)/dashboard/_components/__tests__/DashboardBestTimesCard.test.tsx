@@ -5,6 +5,7 @@
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import jaMessages from "@apps/shared/messages/ja.json";
 import { useAuth } from "@/contexts";
 import { renderWithI18n } from "@/__tests__/utils/render";
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/contexts");
 vi.mock("@/i18n/navigation");
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@apps/shared/hooks/queries/records", () => ({
   useBestTimesQuery: () => mocks.bestTimes,
 }));
@@ -36,7 +38,14 @@ vi.mock("@/components/profile/BestTimesTable", () => ({
   },
 }));
 
-import DashboardBestTimesCard from "../DashboardBestTimesCard";
+import DashboardBestTimesCardBase from "../DashboardBestTimesCard";
+
+// 一括入力の登録処理が react-query を使うので Provider を挟む
+const DashboardBestTimesCard = () => (
+  <QueryClientProvider client={new QueryClient()}>
+    <DashboardBestTimesCardBase />
+  </QueryClientProvider>
+);
 
 beforeEach(() => {
   vi.mocked(useAuth).mockReturnValue(buildAuthContext());
@@ -45,13 +54,11 @@ beforeEach(() => {
 });
 
 describe("DashboardBestTimesCard", () => {
-  it("マイページと同じ見出し「Best Time」と、一括入力ページへのリンクを出す。「マイページで見る」は出さない", () => {
+  it("マイページと同じ見出し「Best Time」と、一括入力ボタンを出す (別ページへのリンクではない)。「マイページで見る」は出さない", () => {
     renderWithI18n(<DashboardBestTimesCard />);
     expect(screen.getByRole("heading", { name: jaMessages.mypage.bestTime.title })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: jaMessages.mypage.bulkInput })).toHaveAttribute(
-      "href",
-      "/bulk-besttime",
-    );
+    expect(screen.getByRole("button", { name: jaMessages.mypage.bulkInput })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: jaMessages.mypage.bulkInput })).toBeNull();
     expect(screen.queryByText(/マイページで見る/)).toBeNull();
   });
 
@@ -68,6 +75,6 @@ describe("DashboardBestTimesCard", () => {
     expect(screen.queryByTestId("best-times-table")).toBeNull();
     // 表が無くても見出しと一括入力は出す
     expect(screen.getByRole("heading", { name: jaMessages.mypage.bestTime.title })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: jaMessages.mypage.bulkInput })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: jaMessages.mypage.bulkInput })).toBeInTheDocument();
   });
 });

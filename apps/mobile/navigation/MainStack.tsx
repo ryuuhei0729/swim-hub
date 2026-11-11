@@ -20,7 +20,6 @@ import { AccountPlanScreen } from "@/screens/AccountPlanScreen";
 import { AccountCalendarScreen } from "@/screens/AccountCalendarScreen";
 import { AccountSecurityScreen } from "@/screens/AccountSecurityScreen";
 import { PracticeLogTemplatesScreen } from "@/screens/PracticeLogTemplatesScreen";
-import { BulkBestTimeScreen } from "@/screens/BulkBestTimeScreen";
 import { PaywallScreen } from "@/screens/PaywallScreen";
 import { GoalDetailScreen } from "@/screens/GoalDetailScreen";
 import { GoalFormScreen } from "@/screens/GoalFormScreen";
@@ -198,14 +197,6 @@ export const MainStack: React.FC = () => {
         options={{
           ...baseHeaderOptions,
           title: t("practiceLogTemplates.page.title"),
-        }}
-      />
-      <Stack.Screen
-        name="BulkBestTime"
-        component={BulkBestTimeScreen}
-        options={{
-          ...baseHeaderOptions,
-          title: t("navigation.mobile.titles.bulkBestTime"),
         }}
       />
       <Stack.Screen

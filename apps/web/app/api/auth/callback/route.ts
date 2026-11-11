@@ -14,7 +14,7 @@ type OtpType = "signup" | "recovery" | "email_change" | "email" | "magiclink";
  * OTP種別からデフォルトの遷移先パスを導出する
  * - signup: オンボーディングへ
  * - recovery: パスワード更新画面へ（resetPasswordForEmailの遷移先を維持）
- * - email_change / email: 設定画面へ（EmailChangeSettingsの遷移先を維持）
+ * - email_change / email: アカウント画面の「ログインとセキュリティ」へ（EmailChangeSettingsの遷移先）
  * - magiclink: ダッシュボードへ
  */
 function getDefaultRedirectForOtpType(type: OtpType): string {
@@ -25,7 +25,7 @@ function getDefaultRedirectForOtpType(type: OtpType): string {
       return "/update-password";
     case "email_change":
     case "email":
-      return "/settings";
+      return "/account?tab=security";
     case "magiclink":
       return "/dashboard";
   }
