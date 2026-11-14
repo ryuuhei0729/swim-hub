@@ -231,22 +231,23 @@ describe("useUnsubmittedEntriesQuery (Reviewer C-1 再評価)", () => {
   });
 });
 
-describe("useUnansweredAttendancesQuery (集計範囲は今日から今月末まで)", () => {
+describe("useUnansweredAttendancesQuery (受付中で未回答)", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("今日から今月末までの未回答だけを返し、翌月1日以降と昨日以前は含めない", async () => {
+  const practice = (id: string, date: string, attendance_status: string | null = "open") => ({
+    id,
+    title: "練習",
+    date,
+    team_id: "team-1",
+    attendance_status,
+  });
+
+  it("今日以降の受付中の未回答を、来月以降も含めて返す (昨日以前は含めない)", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 10, 28, 9, 0, 0));
 
-    const practice = (id: string, date: string) => ({
-      id,
-      title: "練習",
-      date,
-      team_id: "team-1",
-      attendance_status: "open",
-    });
     const { supabase, calls } = createDateFilterableSupabase({
       practices: [
         practice("p-yesterday", "2026-11-27"),
@@ -264,11 +265,57 @@ describe("useUnansweredAttendancesQuery (集計範囲は今日から今月末ま
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect((result.current.data ?? []).map((d) => d.eventId)).toEqual(["p-today", "p-month-end"]);
-    const lteCalls = calls.filter((c) => c.method === "lte").map((c) => [c.table, ...c.args]);
-    expect(lteCalls).toEqual([
-      ["practices", "date", "2026-11-30"],
-      ["competitions", "date", "2026-11-30"],
+    expect((result.current.data ?? []).map((d) => d.eventId)).toEqual([
+      "p-today",
+      "p-month-end",
+      "p-next-month",
     ]);
+    // 期間の上限は設けない
+    expect(calls.filter((c) => c.method === "lte")).toEqual([]);
+  });
+
+  it("締切のイベントは数えず、未設定 (null) は受付中として数える", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 28, 9, 0, 0));
+
+    const { supabase } = createDateFilterableSupabase({
+      practices: [
+        practice("p-closed", "2026-11-29", "closed"),
+        practice("p-unset", "2026-11-29", null),
+        practice("p-open", "2026-11-30", "open"),
+      ],
+      competitions: [],
+      team_attendance: [],
+    });
+
+    const { result } = renderQueryHook(() =>
+      useUnansweredAttendancesQuery(supabase, "user-1", TEAMS),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect((result.current.data ?? []).map((d) => d.eventId)).toEqual(["p-unset", "p-open"]);
+  });
+
+  it("自分が答えたイベントは数えない (行があっても status が null なら未回答)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 28, 9, 0, 0));
+
+    const { supabase } = createDateFilterableSupabase({
+      practices: [practice("p-answered", "2026-11-29"), practice("p-null-row", "2026-11-30")],
+      competitions: [],
+      team_attendance: [
+        { user_id: "user-1", practice_id: "p-answered", status: "present" },
+        { user_id: "user-1", practice_id: "p-null-row", status: null },
+      ],
+    });
+
+    const { result } = renderQueryHook(() =>
+      useUnansweredAttendancesQuery(supabase, "user-1", TEAMS),
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect((result.current.data ?? []).map((d) => d.eventId)).toEqual(["p-null-row"]);
   });
 });

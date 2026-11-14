@@ -905,7 +905,7 @@
     "announcements": {
       "title": "Mitteilungen",
       "adminRole": "Administrator",
-      "unansweredAttendance": "Diesen Monat gibt es Termine mit unbeantworteter An-/Abwesenheit. ({count} Einträge)",
+      "unansweredAttendance": "Es gibt Termine mit unbeantworteter An-/Abwesenheit. ({count} Einträge)",
       "unsubmittedEntry": "Die Meldung für {name} ({date}) wurde noch nicht eingereicht."
     },
     "dayDetail": {
@@ -2914,6 +2914,37 @@
         "rankingsDescription": "Teamranglisten nach Disziplin und Strecke",
         "goalsTitle": "Ziele der Mitglieder",
         "goalsDescription": "Ziele und Fortschritt der Meilensteine je Wettkampf"
+      },
+      "attendanceTab": {
+        "summaryTitle": "Offene Anwesenheit",
+        "unansweredCount": "{count} unbeantwortet",
+        "allAnswered": "Alle beantwortet",
+        "savedToast": "Anwesenheit gespeichert",
+        "statusChangedToast": "{count} auf „{status}“ gesetzt",
+        "closedTag": "Geschlossen",
+        "empty": "Keine anstehenden Trainings oder Wettkämpfe",
+        "rowAria": "Anwesenheit aller für {title} am {date} anzeigen",
+        "answerAria": "„{status}“ für {title} antworten",
+        "statusPillAria": "Status von {title} ändern (aktuell: {status})",
+        "selectAria": "{title} auswählen",
+        "adminHint": "Tippe rechts auf den Status, um ihn zu ändern",
+        "bulkChange": "Mehrere ändern",
+        "bulkSelected": "{count} ausgewählt",
+        "bulkToOpen": "Auf offen setzen",
+        "bulkToClosed": "Auf geschlossen setzen",
+        "statusHelpOpen": "Mitglieder können antworten",
+        "statusHelpClosed": "Antworten sind geschlossen. Spätere Änderungen fügen der Notiz die Bearbeitungszeit hinzu. Nach dem Termin wird automatisch geschlossen",
+        "statusSection": "Anwesenheitsstatus",
+        "myAnswer": "Deine Anwesenheit",
+        "myAnswerHint": "Wird beim Tippen gespeichert",
+        "myAnswerHintClosed": "Änderungen nach Schluss fügen der Notiz die Bearbeitungszeit hinzu",
+        "noteSave": "Notiz speichern",
+        "everyone": "Anwesenheit aller",
+        "editMember": "Ändern",
+        "editMemberAria": "Anwesenheit von {name} ändern",
+        "you": "du",
+        "noteAdd": "+ Notiz",
+        "noteEditAria": "Notiz für {title} eingeben"
       }
     },
     "page": {
