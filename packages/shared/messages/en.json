@@ -24,7 +24,11 @@
         "entryRegister": "Register entry",
         "teamDetail": "Team details",
         "bulkBestTime": "Bulk best time entry",
-        "goalDetail": "Goal Details"
+        "goalDetail": "Goal Details",
+        "teamSettings": "Team settings",
+        "teamAnnouncements": "Announcements",
+        "teamRankings": "Rankings",
+        "teamMemberGoals": "Member goals"
       }
     }
   },
@@ -2777,7 +2781,9 @@
       "adminToggle": {
         "label": "View",
         "admin": "Admin",
-        "user": "Member"
+        "user": "Member",
+        "switchedToAdmin": "Switched to admin view",
+        "switchedToUser": "Switched to member view"
       },
       "pendingApproveConfirmTitle": "Confirm Approval",
       "pendingApproveConfirmMessage": "Approve {name}?",
@@ -2879,7 +2885,33 @@
         "conflictingDeleteMessage": "Please save the deletion first, then save the event change.\n{list}",
         "saveFailedDuplicate": "Failed to save. This may be caused by a duplicate event. Please try again."
       },
-      "tabSettings": "Settings"
+      "tabSettings": "Settings",
+      "tabSchedule": "Schedule",
+      "tabOthers": "More",
+      "calendarColorDescription": "Choose the colors used for this team's practices and competitions on the home calendar.",
+      "headerAnnouncements": "Announcements",
+      "headerSettings": "Team settings",
+      "schedule": {
+        "filterAll": "All",
+        "filterPractices": "Practices",
+        "filterCompetitions": "Competitions",
+        "filterPast": "Past",
+        "add": "Add",
+        "addMenuTitle": "Add to schedule",
+        "emptyUpcoming": "No upcoming events",
+        "emptyPast": "No past events",
+        "emptyPractices": "No upcoming practices",
+        "emptyCompetitions": "No upcoming competitions",
+        "fetchFailed": "Failed to load the schedule",
+        "emptyPastPractices": "No past practices",
+        "emptyPastCompetitions": "No past competitions"
+      },
+      "others": {
+        "rankingsTitle": "Rankings",
+        "rankingsDescription": "Team rankings by event and distance",
+        "goalsTitle": "Member goals",
+        "goalsDescription": "Goals and milestone progress for each competition"
+      }
     },
     "page": {
       "title": "My Teams",

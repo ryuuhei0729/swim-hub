@@ -141,7 +141,7 @@ describe("チームタブへの遷移 — 実ナビゲーション状態", () =>
     expect(teamsScreen()?.getAttribute("data-initial-tab")).toBe("attendance");
   });
 
-  it("[TT-02] スタックの画面から popTo で MainTabs に戻り、チームタブの大会タブ指定が届く", async () => {
+  it("[TT-02] スタックの画面から popTo で MainTabs に戻り、チームタブの予定タブ指定が届く", async () => {
     renderApp();
     await settle();
 
@@ -156,7 +156,7 @@ describe("チームタブへの遷移 — 実ナビゲーション状態", () =>
         type: "POP_TO",
         payload: {
           name: "MainTabs",
-          params: { screen: "Teams", params: { teamId: "team-beta", initialTab: "competitions" } },
+          params: { screen: "Teams", params: { teamId: "team-beta", initialTab: "schedule" } },
         },
       });
     });
@@ -165,7 +165,7 @@ describe("チームタブへの遷移 — 実ナビゲーション状態", () =>
     expect(stackRouteNames()).toEqual(["MainTabs"]);
     expect(currentTab()).toBe("Teams");
     expect(teamsScreen()?.getAttribute("data-team-id")).toBe("team-beta");
-    expect(teamsScreen()?.getAttribute("data-initial-tab")).toBe("competitions");
+    expect(teamsScreen()?.getAttribute("data-initial-tab")).toBe("schedule");
   });
 
   it("[TT-03] バッジは出欠未回答 + 承認待ちの合計。0 件なら出さない", async () => {

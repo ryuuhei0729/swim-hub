@@ -24,7 +24,11 @@
         "entryRegister": "엔트리 등록",
         "teamDetail": "팀 상세",
         "bulkBestTime": "베스트 타임 일괄 입력",
-        "goalDetail": "목표 상세"
+        "goalDetail": "목표 상세",
+        "teamSettings": "팀 설정",
+        "teamAnnouncements": "공지",
+        "teamRankings": "랭킹",
+        "teamMemberGoals": "멤버 목표"
       }
     }
   },
@@ -2780,7 +2784,9 @@
       "adminToggle": {
         "label": "보기 전환",
         "admin": "관리자",
-        "user": "멤버"
+        "user": "멤버",
+        "switchedToAdmin": "관리자 보기로 전환했습니다",
+        "switchedToUser": "멤버 보기로 전환했습니다"
       },
       "pendingApproveConfirmTitle": "승인 확인",
       "pendingApproveConfirmMessage": "{name}을(를) 승인하시겠습니까?",
@@ -2882,7 +2888,33 @@
         "conflictingDeleteMessage": "먼저 삭제만 저장한 후, 종목 변경을 저장해 주세요.\n{list}",
         "saveFailedDuplicate": "저장에 실패했습니다. 종목 중복이 원인일 수 있습니다. 다시 시도해 주세요."
       },
-      "tabSettings": "설정"
+      "tabSettings": "설정",
+      "tabSchedule": "일정",
+      "tabOthers": "더보기",
+      "calendarColorDescription": "홈 캘린더에서 이 팀의 훈련과 대회를 표시할 색상을 설정합니다.",
+      "headerAnnouncements": "공지",
+      "headerSettings": "팀 설정",
+      "schedule": {
+        "filterAll": "전체",
+        "filterPractices": "훈련",
+        "filterCompetitions": "대회",
+        "filterPast": "지난 일정",
+        "add": "추가",
+        "addMenuTitle": "추가할 일정",
+        "emptyUpcoming": "예정된 일정이 없습니다",
+        "emptyPast": "지난 일정이 없습니다",
+        "emptyPractices": "예정된 훈련이 없습니다",
+        "emptyCompetitions": "예정된 대회가 없습니다",
+        "fetchFailed": "일정을 불러오지 못했습니다",
+        "emptyPastPractices": "지난 훈련이 없습니다",
+        "emptyPastCompetitions": "지난 대회가 없습니다"
+      },
+      "others": {
+        "rankingsTitle": "랭킹",
+        "rankingsDescription": "종목·거리별 팀 내 랭킹",
+        "goalsTitle": "멤버 목표",
+        "goalsDescription": "대회별 목표와 마일스톤 진행 상황"
+      }
     },
     "page": {
       "title": "내 팀",

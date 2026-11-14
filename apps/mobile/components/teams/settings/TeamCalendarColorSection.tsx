@@ -75,7 +75,8 @@ export const TeamCalendarColorSection: React.FC<TeamCalendarColorSectionProps> =
 
   return (
     <View style={styles.container}>
-      <Text style={styles.description}>{t("teams.settingsTab.calendarColorDescription")}</Text>
+      {/* web と共通の文言は「ダッシュボードのカレンダー」なので、モバイル (タブ名が「ホーム」) は専用の文言を使う */}
+      <Text style={styles.description}>{t("teams.mobile.calendarColorDescription")}</Text>
       <ColorSwatchRow
         label={t("settings.calendarColors.practiceLabel")}
         value={teamColors.practice_color}

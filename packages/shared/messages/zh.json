@@ -24,7 +24,11 @@
         "entryRegister": "报名登记",
         "teamDetail": "团队详情",
         "bulkBestTime": "批量录入最好成绩",
-        "goalDetail": "目标详情"
+        "goalDetail": "目标详情",
+        "teamSettings": "团队设置",
+        "teamAnnouncements": "公告",
+        "teamRankings": "排名",
+        "teamMemberGoals": "成员目标"
       }
     }
   },
@@ -2780,7 +2784,9 @@
       "adminToggle": {
         "label": "切换视图",
         "admin": "管理员",
-        "user": "成员"
+        "user": "成员",
+        "switchedToAdmin": "已切换到管理员视图",
+        "switchedToUser": "已切换到成员视图"
       },
       "pendingApproveConfirmTitle": "确认审批",
       "pendingApproveConfirmMessage": "是否审批通过 {name}？",
@@ -2882,7 +2888,33 @@
         "conflictingDeleteMessage": "请先单独保存删除操作，然后再保存项目变更。\n{list}",
         "saveFailedDuplicate": "保存失败。可能是由于项目重复导致的。请重试。"
       },
-      "tabSettings": "设置"
+      "tabSettings": "设置",
+      "tabSchedule": "日程",
+      "tabOthers": "更多",
+      "calendarColorDescription": "设置该团队的训练和比赛在首页日历中显示的颜色。",
+      "headerAnnouncements": "公告",
+      "headerSettings": "团队设置",
+      "schedule": {
+        "filterAll": "全部",
+        "filterPractices": "训练",
+        "filterCompetitions": "比赛",
+        "filterPast": "过去",
+        "add": "添加",
+        "addMenuTitle": "添加日程",
+        "emptyUpcoming": "暂无即将到来的日程",
+        "emptyPast": "暂无过去的日程",
+        "emptyPractices": "暂无即将到来的训练",
+        "emptyCompetitions": "暂无即将到来的比赛",
+        "fetchFailed": "日程加载失败",
+        "emptyPastPractices": "暂无过去的训练",
+        "emptyPastCompetitions": "暂无过去的比赛"
+      },
+      "others": {
+        "rankingsTitle": "排名",
+        "rankingsDescription": "按项目和距离的团队内排名",
+        "goalsTitle": "成员目标",
+        "goalsDescription": "每场比赛的目标和里程碑进度"
+      }
     },
     "page": {
       "title": "我的团队",

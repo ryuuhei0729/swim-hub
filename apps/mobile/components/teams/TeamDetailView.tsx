@@ -1,13 +1,11 @@
-import React, { useState, useMemo } from "react";
-import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
-import {
-  useTeamsQuery,
-  useDeleteAnnouncementMutation,
-  useListPendingMembersQuery,
-} from "@apps/shared/hooks/queries/teams";
+import { useListPendingMembersQuery } from "@apps/shared/hooks/queries/teams";
 import { TeamTabs, type TeamTabType } from "./TeamTabs";
 import { TeamMemberList } from "./TeamMemberList";
 import { MyMonthlyAttendance } from "./MyMonthlyAttendance";
@@ -15,21 +13,20 @@ import { PendingMembersSection } from "./PendingMembersSection";
 import { TeamGroupManagement } from "./group-management";
 import { AdminMonthlyAttendance } from "./AdminMonthlyAttendance";
 import { TeamHeaderAdminToggle } from "./TeamHeaderAdminToggle";
-import { TeamSettingsTab } from "./TeamSettingsTab";
-import { TeamAnnouncementList } from "./TeamAnnouncementList";
-import { TeamAnnouncementForm } from "./TeamAnnouncementForm";
-import { TeamPracticeList } from "./TeamPracticeList";
-import { TeamCompetitionList } from "./TeamCompetitionList";
-import { TeamRankings } from "./rankings";
-import { TeamMemberGoalsTab } from "./member-goals/TeamMemberGoalsTab";
+import { TeamScheduleList } from "./TeamScheduleList";
+import { TeamOthersTab } from "./TeamOthersTab";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
 import { useTeamViewStore } from "@/stores/teamViewStore";
-import type { TeamAnnouncement } from "@swim-hub/shared/types";
-import { usePendingAction } from "@/hooks/usePendingAction";
-import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
+import { useTeamAdminView } from "@/hooks/useTeamAdminView";
+import type { MainStackParamList } from "@/navigation/types";
+
+type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
+
+/** メンバータブ (管理者ビュー) の表示切替 */
+type MembersSegment = "members" | "groups";
 
 export interface TeamDetailViewProps {
   teamId: string;
@@ -37,73 +34,58 @@ export interface TeamDetailViewProps {
   teamName: string;
   /** ヘッダーのチーム名を押したとき (チーム切替シートを開く) */
   onOpenSwitcher: () => void;
-  /** 脱退に成功してこのチームを離れたとき */
-  onLeftTeam: () => void;
 }
 
 /**
  * チームタブの中身 (選択中のチーム1つ分)
- * ヘッダー (チーム名 = 切替ボタン・管理者ビュー切替) と、メンバー・練習・大会・出欠などのタブを表示する。
+ * ヘッダー (チーム名 = 切替ボタン・お知らせ・チーム設定・管理者ビュー切替) と、
+ * メンバー・予定・出欠・その他 の 4 タブを表示する。
+ *
+ * タブの数は管理者ビューでも変えない。管理者向けの機能は次の場所に置く:
+ *   - 承認待ち・グループ管理 … メンバータブ (「メンバー / グループ」切替)
+ *   - 練習・大会の追加・一括登録 … 予定タブ
+ *   - 出欠の受付管理 … 出欠タブ (管理者ビューでは管理用の表示に切り替わる)
+ *   - メンバーの目標 … その他タブ
+ *   - お知らせの作成 … ヘッダー 🔔 から開く画面
  *
  * 最後に開いていたタブと管理者ビューの ON/OFF は、チームごとに useTeamViewStore に保存して復元する。
  * 呼び出し側は teamId を key に渡し、チームを切り替えたら作り直すこと
- * (お知らせフォームなどのローカル state を別チームへ持ち越さないため)。
+ * (メンバータブの表示切替などのローカル state を別チームへ持ち越さないため)。
  */
 export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
   teamId,
   teamName,
   onOpenSwitcher,
-  onLeftTeam,
 }) => {
   const { supabase, user } = useAuth();
   const { t } = useTranslation();
+  const navigation = useNavigation<NavigationProp>();
   const storedTab = useTeamViewStore((state) => state.byTeam[teamId]?.tab);
-  const isAdminView = useTeamViewStore((state) => state.byTeam[teamId]?.adminView === true);
   const setTab = useTeamViewStore((state) => state.setTab);
-  const [announcementFormVisible, setAnnouncementFormVisible] = useState(false);
-  const [editingAnnouncement, setEditingAnnouncement] = useState<TeamAnnouncement | undefined>(undefined);
+  const [membersSegment, setMembersSegment] = useState<MembersSegment>("members");
 
-  // チームデータ取得
-  const { currentTeam, members, announcements, isLoading, isError, error, refetch } = useTeamsQuery(supabase, {
-    teamId,
-    enableRealtime: false, // モバイルでは一旦無効化
-  });
+  const {
+    currentTeam,
+    members,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isCurrentUserAdmin,
+    effectiveIsAdminView,
+  } = useTeamAdminView(teamId);
 
-  // 現在のユーザーが管理者かどうかを判定
-  const isCurrentUserAdmin = useMemo(() => {
-    if (!user || !members) return false;
-    return members.some((m) => m.user_id === user.id && m.role === "admin");
-  }, [user, members]);
-
-  // 実効的な管理者ビュー状態。保存された adminView は「表示の好み」で、端末に残った値が
-  // 管理者でなくなったチームや別アカウントで true のままのことがある。isCurrentUserAdmin との
-  // AND を1箇所で導出し、管理者専用要素の表示判定は必ずこの値のみを参照する
-  // (isAdminView 単独で判定しない) ことで、非管理者への漏れを構造的に防ぐ
-  const effectiveIsAdminView = isCurrentUserAdmin && isAdminView;
-
-  // 保存されたタブが管理者専用で、いまは管理者ビューでないなら members を表示する。
-  // 保存値そのものは書き換えない (メンバー情報の取得前は isCurrentUserAdmin が false のため、
-  // ここで書き換えると管理者が前回開いていたタブを取得待ちの間に失ってしまう)
   const activeTab = resolveActiveTabOnAdminViewToggle(storedTab ?? "members", effectiveIsAdminView);
   const handleTabChange = (tab: TeamTabType) => setTab(teamId, tab);
+  // グループ管理は管理者ビューでのみ選べる。利用者ビューに戻したらメンバー表を出す
+  const activeMembersSegment: MembersSegment = effectiveIsAdminView ? membersSegment : "members";
 
-  // 承認待ちメンバー数（管理者のみ取得可。web TeamAdminClient の countPending 相当）
   const { data: pendingMembers } = useListPendingMembersQuery(
     supabase,
     isCurrentUserAdmin ? teamId : undefined,
   );
   const pendingCount = pendingMembers?.length ?? 0;
 
-  const deleteAnnouncementMutation = useDeleteAnnouncementMutation(supabase);
-  // 低速回線で削除中に再度押されないよう、お知らせの削除は同時に1件だけにする
-  const {
-    pendingKey: deletingAnnouncementId,
-    run: runAnnouncementDelete,
-    isBusy: isAnnouncementDeleteBusy,
-  } = usePendingAction();
-
-  // ヘッダー。読み込み中・エラー・承認待ちでも出し、別のチームへ切り替えられるようにする
-  // (name は NOT NULL だが空文字だと無題になるため `||` で弾く)
   const header = (
     <View style={styles.header}>
       <Pressable
@@ -119,11 +101,32 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
         </Text>
         <Feather name="chevron-down" size={20} color="#6B7280" />
       </Pressable>
-      {isCurrentUserAdmin && <TeamHeaderAdminToggle teamId={teamId} />}
+      <View style={styles.headerActions}>
+        <Pressable
+          style={styles.headerIconButton}
+          onPress={() => navigation.navigate("TeamAnnouncements", { teamId })}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={t("teams.mobile.headerAnnouncements")}
+          testID="team-header-announcements"
+        >
+          <Feather name="bell" size={21} color="#374151" />
+        </Pressable>
+        <Pressable
+          style={styles.headerIconButton}
+          onPress={() => navigation.navigate("TeamSettings", { teamId })}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={t("teams.mobile.headerSettings")}
+          testID="team-header-settings"
+        >
+          <Feather name="settings" size={21} color="#374151" />
+        </Pressable>
+        {isCurrentUserAdmin && <TeamHeaderAdminToggle teamId={teamId} />}
+      </View>
     </View>
   );
 
-  // 承認待ち状態
   if (isError && error?.message === "PENDING_APPROVAL") {
     return (
       <View style={styles.container}>
@@ -141,7 +144,6 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
     );
   }
 
-  // エラー状態 (前回取得したチーム情報が無いときだけ全画面エラーにする)
   if (isError && error && !currentTeam) {
     return (
       <View style={styles.container}>
@@ -156,7 +158,6 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
     );
   }
 
-  // ローディング状態
   if (isLoading && !currentTeam) {
     return (
       <View style={styles.container}>
@@ -166,7 +167,6 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
     );
   }
 
-  // チームが見つからない場合
   if (!currentTeam) {
     return (
       <View style={styles.container}>
@@ -178,137 +178,73 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
     );
   }
 
-  const handleAnnouncementDelete = (announcementId: string) => {
-    if (isAnnouncementDeleteBusy()) return;
-    Alert.alert(
-      t("teams.mobile.deleteConfirmTitle"),
-      t("teams.mobile.deleteConfirmText"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: () => {
-            void runAnnouncementDelete(announcementId, async () => {
-              try {
-                await deleteAnnouncementMutation.mutateAsync(announcementId);
-              } catch (deleteError) {
-                Alert.alert(
-                  t("common.error"),
-                  toUserFacingMessage(deleteError, t("teams.mobile.announcementDeleteFailed")),
-                  [{ text: "OK" }],
-                );
-              }
-            });
-          },
-        },
-      ],
-    );
-  };
+  const renderMembersTab = () => (
+    <View style={styles.membersTabContent}>
+      {effectiveIsAdminView && (
+        <View style={styles.segment} accessibilityRole="tablist">
+          {(
+            [
+              ["members", "teams.mobile.tabMembers"],
+              ["groups", "teams.mobile.tabGroups"],
+            ] as const
+          ).map(([id, labelKey]) => {
+            const isActive = activeMembersSegment === id;
+            return (
+              <Pressable
+                key={id}
+                style={[styles.segmentButton, isActive && styles.segmentButtonActive]}
+                onPress={() => setMembersSegment(id)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}
+                testID={`team-members-segment-${id}`}
+              >
+                <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
+                  {t(labelKey)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+      {activeMembersSegment === "groups" ? (
+        <TeamGroupManagement
+          teamId={teamId}
+          members={members ?? []}
+          isCurrentUserAdmin={isCurrentUserAdmin}
+        />
+      ) : (
+        <>
+          {effectiveIsAdminView && <PendingMembersSection teamId={teamId} />}
+          <TeamMemberList
+            members={members || []}
+            teamId={teamId}
+            isLoading={isLoading}
+            isError={isError}
+            error={error || null}
+            currentUserId={user?.id || ""}
+            isCurrentUserAdmin={isCurrentUserAdmin}
+            onRetry={() => refetch()}
+            onMemberChange={() => refetch()}
+          />
+        </>
+      )}
+    </View>
+  );
 
-  // タブコンテンツのレンダリング
   const renderTabContent = () => {
     switch (activeTab) {
       case "members":
-        return (
-          <View style={styles.membersTabContent}>
-            {effectiveIsAdminView && <PendingMembersSection teamId={teamId} />}
-            <TeamMemberList
-              members={members || []}
-              teamId={teamId}
-              isLoading={isLoading}
-              isError={isError}
-              error={error || null}
-              currentUserId={user?.id || ""}
-              isCurrentUserAdmin={isCurrentUserAdmin}
-              onRetry={() => refetch()}
-              onMemberChange={() => refetch()}
-            />
-          </View>
-        );
-      case "groups":
-        return (
-          <TeamGroupManagement
-            teamId={teamId}
-            members={members ?? []}
-            isCurrentUserAdmin={isCurrentUserAdmin}
-          />
-        );
-      case "practices":
-        return (
-          <View style={styles.eventTabContent}>
-            <TeamPracticeList teamId={teamId} isAdmin={effectiveIsAdminView} />
-          </View>
-        );
-      case "competitions":
-        return (
-          <View style={styles.eventTabContent}>
-            <TeamCompetitionList teamId={teamId} isAdmin={effectiveIsAdminView} />
-          </View>
-        );
-      case "rankings":
-        // 管理者専用ではない (一般メンバーも閲覧する)。
-        // members は「WAポイントで比較」用。ここで詰め替えないこと
-        return <TeamRankings teamId={teamId} members={members || []} />;
-      case "goals":
-        // 管理者ビュー時のみ描画 (RPC 側も管理者以外を拒否する)
-        return effectiveIsAdminView ? (
-          <TeamMemberGoalsTab teamId={teamId} members={members ?? []} />
-        ) : null;
+        return renderMembersTab();
+      case "schedule":
+        return <TeamScheduleList teamId={teamId} isAdmin={effectiveIsAdminView} />;
       case "attendance":
         return effectiveIsAdminView ? (
           <AdminMonthlyAttendance teamId={teamId} />
         ) : (
           <MyMonthlyAttendance teamId={teamId} />
         );
-      case "announcements":
-        return (
-          <View style={styles.announcementsTabContent}>
-            <TeamAnnouncementList
-              announcements={announcements || []}
-              isLoading={isLoading}
-              isError={isError}
-              error={error || null}
-              isAdmin={effectiveIsAdminView}
-              onRetry={() => refetch()}
-              onCreateNew={() => {
-                setEditingAnnouncement(undefined);
-                setAnnouncementFormVisible(true);
-              }}
-              onEdit={(announcement) => {
-                setEditingAnnouncement(announcement);
-                setAnnouncementFormVisible(true);
-              }}
-              onDelete={handleAnnouncementDelete}
-              deletingId={deletingAnnouncementId}
-            />
-            <TeamAnnouncementForm
-              visible={announcementFormVisible}
-              onClose={() => {
-                setAnnouncementFormVisible(false);
-                setEditingAnnouncement(undefined);
-              }}
-              teamId={teamId}
-              editData={editingAnnouncement}
-              onSuccess={() => refetch()}
-            />
-          </View>
-        );
-      case "settings":
-        // 設定は全メンバー向けタブ。中身の出し分けは「管理者ビュー/利用者ビュー」トグルに
-        // 連動させる (ユーザー指示。以前は永続的な権限 isCurrentUserAdmin 基準だった)
-        return (
-          <TeamSettingsTab
-            teamId={teamId}
-            teamName={currentTeam.name}
-            teamDescription={currentTeam.description}
-            inviteCode={currentTeam.invite_code}
-            isAdminView={effectiveIsAdminView}
-            members={members || []}
-            onLeftTeam={onLeftTeam}
-            onTeamUpdated={() => refetch()}
-          />
-        );
+      case "others":
+        return <TeamOthersTab teamId={teamId} isAdminView={effectiveIsAdminView} />;
       default:
         return null;
     }
@@ -347,6 +283,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerIconButton: {
+    padding: 2,
+  },
   switcherButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -363,14 +307,36 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 400,
   },
-  eventTabContent: {
-    flex: 1,
-  },
   membersTabContent: {
     flex: 1,
   },
-  announcementsTabContent: {
+  // メンバータブ (管理者ビュー) の「メンバー / グループ」切替
+  segment: {
+    flexDirection: "row",
+    backgroundColor: "#E5E7EB",
+    borderRadius: 9,
+    padding: 2,
+    marginHorizontal: 12,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  segmentButton: {
     flex: 1,
+    alignItems: "center",
+    paddingVertical: 6,
+    borderRadius: 7,
+  },
+  segmentButtonActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#4B5563",
+  },
+  segmentTextActive: {
+    color: "#111827",
+    fontWeight: "700",
   },
   pendingContainer: {
     flex: 1,
