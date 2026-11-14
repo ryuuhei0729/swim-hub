@@ -20,7 +20,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { TEAM_TAB_IDS, type TeamTabType } from "@/components/teams/teamTabDefs";
+import { resolveTeamTabId, type TeamTabType } from "@/components/teams/teamTabDefs";
 import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
 
 export interface TeamViewPrefs {
@@ -61,13 +61,14 @@ export const useTeamViewStore = create<TeamViewState>()(
       version: 1,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ lastTeamId: state.lastTeamId, byTeam: state.byTeam }),
-      // タブ定義が変わって消えたタブ ID が残っていても members に倒れるよう、読み込み時に捨てる
+      // タブ定義が変わって消えたタブ ID は、対応する新しいタブへ読み替える
+      // (旧「練習」「大会」→ 予定、旧「ランキング」→ その他 など)。対応先が無ければ捨てて members に倒す
       merge: (persisted, current) => {
         const saved = (persisted ?? {}) as Partial<Pick<TeamViewState, "lastTeamId" | "byTeam">>;
         const byTeam: Record<string, TeamViewPrefs> = {};
         for (const [teamId, prefs] of Object.entries(saved.byTeam ?? {})) {
           byTeam[teamId] = {
-            tab: prefs.tab && TEAM_TAB_IDS.includes(prefs.tab) ? prefs.tab : undefined,
+            tab: resolveTeamTabId(prefs.tab),
             adminView: prefs.adminView === true,
           };
         }

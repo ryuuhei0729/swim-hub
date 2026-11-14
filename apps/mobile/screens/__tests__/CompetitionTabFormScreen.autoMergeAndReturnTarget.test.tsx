@@ -440,7 +440,7 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (resolveSaveReturnT
     setupCommonMocks();
   });
 
-  it("[戻り先] teamId あり: 保存後 popTo('MainTabs', { screen: 'Teams', params: { teamId, initialTab: 'competitions' } }) が呼ばれる", async () => {
+  it("[戻り先] teamId あり: 保存後 popTo('MainTabs', { screen: 'Teams', params: { teamId, initialTab: 'schedule' } }) が呼ばれる", async () => {
     h.mockUseAuth.mockReturnValue({
       supabase: makeSupabase(makeCompetitionRow()),
       subscription: null,
@@ -459,7 +459,7 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (resolveSaveReturnT
     await waitFor(() => expect(h.mockPopTo).toHaveBeenCalledTimes(1));
     expect(h.mockPopTo).toHaveBeenCalledWith("MainTabs", {
       screen: "Teams",
-      params: { teamId: "team-9", initialTab: "competitions" },
+      params: { teamId: "team-9", initialTab: "schedule" },
     });
     expect(h.mockGoBack).not.toHaveBeenCalled();
     expect(h.mockPopToTop).not.toHaveBeenCalled();
@@ -524,7 +524,7 @@ describe("CompetitionTabFormScreen — 保存後の戻り先 (編集モード / 
     await waitFor(() => expect(h.mockPopTo).toHaveBeenCalledTimes(1));
     expect(h.mockPopTo).toHaveBeenCalledWith("MainTabs", {
       screen: "Teams",
-      params: { teamId: "team-migrated-1", initialTab: "competitions" },
+      params: { teamId: "team-migrated-1", initialTab: "schedule" },
     });
     expect(h.mockGoBack).not.toHaveBeenCalled();
     expect(h.mockPopToTop).not.toHaveBeenCalled();

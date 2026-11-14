@@ -24,7 +24,11 @@
         "entryRegister": "Meldung eintragen",
         "teamDetail": "Teamdetails",
         "bulkBestTime": "Bestzeiten-Sammeleingabe",
-        "goalDetail": "Zieldetails"
+        "goalDetail": "Zieldetails",
+        "teamSettings": "Teameinstellungen",
+        "teamAnnouncements": "Mitteilungen",
+        "teamRankings": "Ranglisten",
+        "teamMemberGoals": "Ziele der Mitglieder"
       }
     }
   },
@@ -2780,7 +2784,9 @@
       "adminToggle": {
         "label": "Ansicht",
         "admin": "Administrator",
-        "user": "Mitglied"
+        "user": "Mitglied",
+        "switchedToAdmin": "Zur Administratoransicht gewechselt",
+        "switchedToUser": "Zur Mitgliederansicht gewechselt"
       },
       "pendingApproveConfirmTitle": "Genehmigung bestätigen",
       "pendingApproveConfirmMessage": "{name} genehmigen?",
@@ -2882,7 +2888,33 @@
         "conflictingDeleteMessage": "Speichern Sie zuerst nur die Löschung und anschließend die Disziplinänderung.\n{list}",
         "saveFailedDuplicate": "Speichern fehlgeschlagen. Dies könnte an einer doppelten Disziplin liegen. Bitte versuchen Sie es erneut."
       },
-      "tabSettings": "Einstellungen"
+      "tabSettings": "Einstellungen",
+      "tabSchedule": "Termine",
+      "tabOthers": "Mehr",
+      "calendarColorDescription": "Lege die Farben fest, mit denen Trainings und Wettkämpfe dieses Teams im Kalender auf der Startseite angezeigt werden.",
+      "headerAnnouncements": "Mitteilungen",
+      "headerSettings": "Teameinstellungen",
+      "schedule": {
+        "filterAll": "Alle",
+        "filterPractices": "Trainings",
+        "filterCompetitions": "Wettkämpfe",
+        "filterPast": "Vergangen",
+        "add": "Hinzufügen",
+        "addMenuTitle": "Termin hinzufügen",
+        "emptyUpcoming": "Keine anstehenden Termine",
+        "emptyPast": "Keine vergangenen Termine",
+        "emptyPractices": "Keine anstehenden Trainings",
+        "emptyCompetitions": "Keine anstehenden Wettkämpfe",
+        "fetchFailed": "Termine konnten nicht geladen werden",
+        "emptyPastPractices": "Keine vergangenen Trainings",
+        "emptyPastCompetitions": "Keine vergangenen Wettkämpfe"
+      },
+      "others": {
+        "rankingsTitle": "Ranglisten",
+        "rankingsDescription": "Teamranglisten nach Disziplin und Strecke",
+        "goalsTitle": "Ziele der Mitglieder",
+        "goalsDescription": "Ziele und Fortschritt der Meilensteine je Wettkampf"
+      }
     },
     "page": {
       "title": "Meine Teams",

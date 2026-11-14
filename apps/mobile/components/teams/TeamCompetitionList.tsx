@@ -59,7 +59,8 @@ interface TeamCompetitionListProps {
   isAdmin: boolean;
 }
 
-const CompetitionItem = React.memo(function CompetitionItem({
+/** 大会カード 1 枚。チーム大会一覧と予定タブ (TeamScheduleList) で共用する */
+export const CompetitionItem = React.memo(function CompetitionItem({
   competition,
   teamId,
   isAdmin,
@@ -465,12 +466,17 @@ const CompetitionItem = React.memo(function CompetitionItem({
   );
 });
 
-export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProps) {
+/**
+ * チーム大会カードの操作 (追加・一括登録・編集・エントリー・記録・削除) と、
+ * カードから開くモーダル (エントリー一覧・記録一覧)。
+ * チーム大会一覧と予定タブ (TeamScheduleList) で同じ導線を使うためにまとめている。
+ * 返り値の `modals` は一覧の末尾に描画すること。
+ */
+export function useTeamCompetitionActions(teamId: string, isAdmin: boolean) {
   const { supabase } = useAuth();
   const navigation = useNavigation<NavigationProp>();
   const { t } = useTranslation();
 
-  const { data: competitions, isLoading, isError, error, refetch } = useTeamCompetitionsQuery(supabase, teamId);
   const deleteMutation = useDeleteTeamCompetitionMutation(supabase);
 
   // エントリー受付状況モーダルの対象大会
@@ -629,6 +635,75 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
     );
   }, [deleteMutation, teamId, t, runDelete, isDeleteBusy]);
 
+  const modals = (
+    <>
+      {entryModalCompetition && (
+        <TeamCompetitionEntryModal
+          visible={entryModalCompetition !== null}
+          onClose={() => setEntryModalCompetition(null)}
+          competitionId={entryModalCompetition.id}
+          competitionTitle={
+            entryModalCompetition.title || t("teams.mobile.fallbackCompetitionTitle")
+          }
+          // PM 裁定 R1: 生の entry_status ではなく、大会日が過去かどうかを織り込んだ
+          // 実効ステータス (resolveEntryStatus の戻り値) を渡す。モーダル内の行単位の
+          // 編集/削除アイコン表示判定・セルフエントリー導線もこの値を基準にする。
+          entryStatus={resolveEntryStatus(
+            entryModalCompetition.date,
+            entryModalCompetition.entry_status,
+          )}
+          isAdmin={isAdmin}
+          onSelfEntry={(currentStatus) => handleSelfEntry(entryModalCompetition, currentStatus)}
+          onEditEntry={(entry) => handleEditEntry(entryModalCompetition, entry)}
+          onAdminBulkEntry={() => handleEntryBulk(entryModalCompetition)}
+        />
+      )}
+
+      {recordsModalCompetition && (
+        <TeamCompetitionRecordsModal
+          visible={recordsModalCompetition !== null}
+          onClose={() => setRecordsModalCompetition(null)}
+          competitionId={recordsModalCompetition.id}
+          competitionTitle={
+            recordsModalCompetition.title || t("teams.mobile.fallbackCompetitionTitle")
+          }
+        />
+      )}
+    </>
+  );
+
+  return {
+    handleAdd,
+    handleBulkRegister,
+    handleEdit,
+    handleEntry,
+    handleRecord,
+    handleOpenRecords,
+    handleDelete,
+    deletingId,
+    isDeletePending,
+    modals,
+  };
+}
+
+export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProps) {
+  const { supabase } = useAuth();
+  const { t } = useTranslation();
+
+  const { data: competitions, isLoading, isError, error, refetch } = useTeamCompetitionsQuery(supabase, teamId);
+  const {
+    handleAdd,
+    handleBulkRegister,
+    handleEdit,
+    handleEntry,
+    handleRecord,
+    handleOpenRecords,
+    handleDelete,
+    deletingId,
+    isDeletePending,
+    modals,
+  } = useTeamCompetitionActions(teamId, isAdmin);
+
   const renderItem = useCallback(({ item }: { item: Competition }) => (
     <CompetitionItem
       competition={item}
@@ -735,38 +810,7 @@ export function TeamCompetitionList({ teamId, isAdmin }: TeamCompetitionListProp
         />
       )}
 
-      {entryModalCompetition && (
-        <TeamCompetitionEntryModal
-          visible={entryModalCompetition !== null}
-          onClose={() => setEntryModalCompetition(null)}
-          competitionId={entryModalCompetition.id}
-          competitionTitle={
-            entryModalCompetition.title || t("teams.mobile.fallbackCompetitionTitle")
-          }
-          // PM 裁定 R1: 生の entry_status ではなく、大会日が過去かどうかを織り込んだ
-          // 実効ステータス (resolveEntryStatus の戻り値) を渡す。モーダル内の行単位の
-          // 編集/削除アイコン表示判定・セルフエントリー導線もこの値を基準にする。
-          entryStatus={resolveEntryStatus(
-            entryModalCompetition.date,
-            entryModalCompetition.entry_status,
-          )}
-          isAdmin={isAdmin}
-          onSelfEntry={(currentStatus) => handleSelfEntry(entryModalCompetition, currentStatus)}
-          onEditEntry={(entry) => handleEditEntry(entryModalCompetition, entry)}
-          onAdminBulkEntry={() => handleEntryBulk(entryModalCompetition)}
-        />
-      )}
-
-      {recordsModalCompetition && (
-        <TeamCompetitionRecordsModal
-          visible={recordsModalCompetition !== null}
-          onClose={() => setRecordsModalCompetition(null)}
-          competitionId={recordsModalCompetition.id}
-          competitionTitle={
-            recordsModalCompetition.title || t("teams.mobile.fallbackCompetitionTitle")
-          }
-        />
-      )}
+      {modals}
     </View>
   );
 }

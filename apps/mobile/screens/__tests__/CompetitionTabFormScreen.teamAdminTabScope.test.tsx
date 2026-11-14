@@ -657,7 +657,7 @@ describe("CompetitionTabFormScreen — チーム管理者ビューのタブ絞�
       expect(h.mockPopTo).toHaveBeenCalledTimes(1);
       expect(h.mockPopTo).toHaveBeenCalledWith("MainTabs", {
         screen: "Teams",
-        params: { teamId: TEAM_ID, initialTab: "competitions" },
+        params: { teamId: TEAM_ID, initialTab: "schedule" },
       });
       expect(h.mockGoBack).toHaveBeenCalledTimes(0);
       expect(h.mockPopToTop).toHaveBeenCalledTimes(0);

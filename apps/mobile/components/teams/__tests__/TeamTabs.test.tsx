@@ -1,165 +1,110 @@
 // =============================================================================
-// TeamTabs.test.tsx - QA Engineer 検証 (mobile チーム詳細タブ)
-// adminOnly フィルタ・タブ表示切り替え・タブ数の厳密一致
+// TeamTabs.test.tsx - mobile チーム詳細タブ
+// =============================================================================
 //
-// 更新履歴:
-//   Sprint 1 … adminOnly フィルタの検証として新規作成
-//   ランキング第1弾 … `rankings` タブ追加でタブ数が 4→5 / 6→7 に増えたため、
-//     「4 タブ」「6 タブ」というタイトルと本文が嘘になっていた。
-//     いずれも `getByTestId` の存在確認だけで **タブ数を数えていなかった**ため、
-//     タブが増えても減っても緑のまま通る状態だった。
-//     ここではタブ数を `getAllByRole("button")` の件数で**厳密一致**させ、
-//     さらにラベルの並びまで固定する (増減・並べ替えの両方を検出する)。
-//   設定タブ追加 … 全メンバー向けの `settings` タブが末尾に増え、5→6 / 7→8 になった。
-//     **実装が正で期待値が古い赤**だったため期待値側を更新した (Contract 上、
-//     設定タブは adminOnly ではないので非管理者側にも1つ増える)。
+// タブは「メンバー / 予定 / 出欠 / その他」の 4 つで固定し、管理者ビューでも数・並びを変えない。
+// (以前は管理者ビューで 7→9 タブに増え、横スクロールしないと右端が見えなかった)
+//
+// タブ数は getAllByRole("button") の件数で厳密一致させ、ラベルの並びまで固定する
+// (増減・並べ替えの両方を検出する)。
+// 旧タブ ID (端末に保存済みの「最後に開いていたタブ」) の読み替えもここで見る。
 // =============================================================================
 
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { TeamTabs, type TeamTabType } from "../TeamTabs";
+import {
+  ADMIN_ONLY_TEAM_TAB_IDS,
+  TEAM_TAB_IDS,
+  resolveTeamTabId,
+} from "../teamTabDefs";
+
+const EXPECTED_LABELS = ["メンバー", "予定", "出欠", "その他"];
 
 describe("TeamTabs", () => {
-  const makeProps = (overrides: Partial<{
-    activeTab: TeamTabType;
-    isAdmin: boolean;
-    onTabChange: (tab: TeamTabType) => void;
-  }> = {}) => ({
+  const makeProps = (
+    overrides: Partial<{
+      activeTab: TeamTabType;
+      isAdmin: boolean;
+      onTabChange: (tab: TeamTabType) => void;
+      pendingCount: number;
+    }> = {},
+  ) => ({
     activeTab: "members" as TeamTabType,
     isAdmin: false,
     onTabChange: vi.fn(),
     ...overrides,
   });
 
-  // S1-V-02: isAdmin=false のとき announcements タブが表示されない
-  it("isAdmin=false のとき announcements タブは表示されない", () => {
-    render(<TeamTabs {...makeProps({ isAdmin: false })} />);
-    expect(screen.queryByTestId("icon-bell")).toBeNull();
-  });
+  it.each([false, true])("isAdmin=%s でも、タブはちょうど 4 つで同じ並び", (isAdmin) => {
+    render(<TeamTabs {...makeProps({ isAdmin })} />);
 
-  // S1-V-03: isAdmin=true のとき announcements タブが表示される
-  it("isAdmin=true のとき announcements タブが表示される", () => {
-    render(<TeamTabs {...makeProps({ isAdmin: true })} />);
-    expect(screen.getByTestId("icon-bell")).toBeTruthy();
-  });
-
-  // S1-V-04 / #1: 非管理者には管理者専用タブ (groups / announcements) 以外が表示される
-  it("非管理者にはちょうど 6 タブが表示される（members/practices/competitions/attendance/rankings/settings）", () => {
-    render(<TeamTabs {...makeProps({ isAdmin: false })} />);
-
-    // 件数の厳密一致。タブが増えても減っても落ちる
-    expect(screen.getAllByRole("button")).toHaveLength(6);
-    // 並び順まで固定する (ラベルは shared/messages の ja.json 由来)
-    expect(screen.getAllByRole("button").map((tab) => tab.textContent)).toEqual([
-      "メンバー",
-      "練習",
-      "大会",
-      "出欠",
-      "ランキング",
-      "設定",
-    ]);
-    expect(screen.getByTestId("icon-users")).toBeTruthy();      // members
-    expect(screen.getByTestId("icon-clock")).toBeTruthy();      // practices
-    expect(screen.getByTestId("icon-award")).toBeTruthy();      // competitions
-    expect(screen.getByTestId("icon-clipboard")).toBeTruthy();  // attendance
-    expect(screen.getByTestId("icon-bar-chart-2")).toBeTruthy(); // rankings
-    expect(screen.getByTestId("icon-settings")).toBeTruthy();   // settings (全メンバー向け)
-    expect(screen.queryByTestId("icon-layers")).toBeNull();     // groups (adminOnly: 非表示)
-    expect(screen.queryByTestId("icon-bell")).toBeNull();       // announcements (adminOnly: 非表示)
-  });
-
-  // ランキングは一般メンバーも閲覧する (adminOnly を付けてはいけない)
-  it("ランキングタブは非管理者にも表示され、タップで onTabChange('rankings') が呼ばれる", () => {
-    const onTabChange = vi.fn();
-    render(<TeamTabs {...makeProps({ isAdmin: false, onTabChange })} />);
-
-    fireEvent.click(screen.getByText("ランキング"));
-
-    expect(onTabChange).toHaveBeenCalledTimes(1);
-    expect(onTabChange).toHaveBeenCalledWith("rankings");
-  });
-
-  // #1: groups タブは管理者のみ表示される
-  it("isAdmin=true のとき groups タブが表示される", () => {
-    render(<TeamTabs {...makeProps({ isAdmin: true })} />);
-    expect(screen.getByTestId("icon-layers")).toBeTruthy();
-  });
-
-  // S1-V-05: 管理者にはちょうど 9 タブすべてが表示される (goals 追加後)
-  it("管理者にはちょうど 9 タブすべてが表示される (目標はランキングの直後)", () => {
-    render(<TeamTabs {...makeProps({ isAdmin: true })} />);
-
-    expect(screen.getAllByRole("button")).toHaveLength(9);
-    expect(screen.getAllByRole("button").map((tab) => tab.textContent)).toEqual([
-      "メンバー",
-      "グループ",
-      "練習",
-      "大会",
-      "出欠",
-      "ランキング",
-      "目標",
-      "お知らせ",
-      "設定",
-    ]);
+    const tabs = screen.getAllByRole("button");
+    expect(tabs).toHaveLength(4);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(EXPECTED_LABELS);
     expect(screen.getByTestId("icon-users")).toBeTruthy();
-    expect(screen.getByTestId("icon-layers")).toBeTruthy();
-    expect(screen.getByTestId("icon-clock")).toBeTruthy();
-    expect(screen.getByTestId("icon-award")).toBeTruthy();
+    expect(screen.getByTestId("icon-calendar")).toBeTruthy();
     expect(screen.getByTestId("icon-clipboard")).toBeTruthy();
-    expect(screen.getByTestId("icon-bar-chart-2")).toBeTruthy();
-    expect(screen.getByTestId("icon-target")).toBeTruthy();
-    expect(screen.getByTestId("icon-bell")).toBeTruthy();
-    expect(screen.getByTestId("icon-settings")).toBeTruthy();
+    expect(screen.getByTestId("icon-grid")).toBeTruthy();
   });
 
-  // タブクリックで onTabChange が呼ばれる
-  it("タブをクリックすると onTabChange が該当タブ ID で呼ばれる", () => {
-    const onTabChange = vi.fn();
-    render(<TeamTabs {...makeProps({ isAdmin: true, onTabChange })} />);
-
-    // announcements タブ（管理者のみ）のテキストをクリック
-    const announcementsTab = screen.getByText("お知らせ");
-    fireEvent.click(announcementsTab);
-
-    expect(onTabChange).toHaveBeenCalledWith("announcements");
-  });
-
-  it("members タブをクリックすると onTabChange('members') が呼ばれる", () => {
+  it.each([
+    ["メンバー", "members"],
+    ["予定", "schedule"],
+    ["出欠", "attendance"],
+    ["その他", "others"],
+  ] as const)("「%s」をタップすると onTabChange('%s') が呼ばれる", (label, id) => {
     const onTabChange = vi.fn();
     render(<TeamTabs {...makeProps({ onTabChange })} />);
-    fireEvent.click(screen.getByText("メンバー"));
-    expect(onTabChange).toHaveBeenCalledWith("members");
+
+    fireEvent.click(screen.getByText(label));
+
+    expect(onTabChange).toHaveBeenCalledTimes(1);
+    expect(onTabChange).toHaveBeenCalledWith(id);
   });
 
-  // S1-V-06 関連: activeTab が announcements でも isAdmin=false のとき
-  // タブ自体は非表示（コンテンツ側は TeamDetailScreen で制御）
-  it("activeTab='announcements' で isAdmin=false のとき bell アイコンは表示されない", () => {
-    render(
-      <TeamTabs
-        activeTab="announcements"
-        isAdmin={false}
-        onTabChange={vi.fn()}
-      />,
-    );
-    expect(screen.queryByTestId("icon-bell")).toBeNull();
+  it("承認待ちがあればメンバータブにバッジを出す (99 件超は 99+)", () => {
+    const { rerender } = render(<TeamTabs {...makeProps({ isAdmin: true, pendingCount: 3 })} />);
+    expect(screen.getByText("3")).toBeTruthy();
+
+    rerender(<TeamTabs {...makeProps({ isAdmin: true, pendingCount: 120 })} />);
+    expect(screen.getByText("99+")).toBeTruthy();
+
+    rerender(<TeamTabs {...makeProps({ isAdmin: true, pendingCount: 0 })} />);
+    expect(screen.queryByText("0")).toBeNull();
+  });
+});
+
+describe("teamTabDefs", () => {
+  it("TEAM_TAB_IDS は表示順どおり", () => {
+    expect(TEAM_TAB_IDS).toEqual(["members", "schedule", "attendance", "others"]);
   });
 
-  // アクティブタブのスタイル検証: タブテキストの存在確認
-  it("activeTab='members' のときメンバーテキストが表示されている", () => {
-    render(<TeamTabs {...makeProps({ activeTab: "members" })} />);
-    expect(screen.getByText("メンバー")).toBeTruthy();
+  it("管理者専用のタブは無い (管理者ビューでもタブ数を変えない)", () => {
+    expect(ADMIN_ONLY_TEAM_TAB_IDS).toEqual([]);
   });
 
-  // isAdmin が true から false に変更されたとき announcements が消える
-  it("isAdmin が false に変わると announcements タブが消える", () => {
-    const { rerender } = render(
-      <TeamTabs activeTab="members" isAdmin={true} onTabChange={vi.fn()} />,
-    );
-    expect(screen.getByTestId("icon-bell")).toBeTruthy();
-
-    rerender(
-      <TeamTabs activeTab="members" isAdmin={false} onTabChange={vi.fn()} />,
-    );
-    expect(screen.queryByTestId("icon-bell")).toBeNull();
+  it.each([
+    ["members", "members"],
+    ["schedule", "schedule"],
+    ["attendance", "attendance"],
+    ["others", "others"],
+    // 旧タブ ID は対応する新しいタブへ読み替える
+    ["practices", "schedule"],
+    ["competitions", "schedule"],
+    ["rankings", "others"],
+    ["goals", "others"],
+    ["groups", "members"],
+    ["announcements", "members"],
+    ["settings", "members"],
+  ])("resolveTeamTabId(%s) は %s", (input, expected) => {
+    expect(resolveTeamTabId(input)).toBe(expected);
   });
+
+  it.each([undefined, null, 1, "", "unknown", "constructor"])(
+    "resolveTeamTabId(%s) は undefined (members に倒れる)",
+    (input) => {
+      expect(resolveTeamTabId(input)).toBeUndefined();
+    },
+  );
 });

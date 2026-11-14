@@ -10,10 +10,13 @@
 //                                      harness.nonAdminTeamIds に入れたチームでは一般メンバー、
 //                                      harness.membersLoading が true の間は members が未取得、
 //                                      harness.pendingApprovalTeamIds に入れたチームは承認待ち
-//   ../TeamMemberList ほかタブの中身    どのタブが出ているか分かるマーカー (MEMBERS_MARKER 等) を描く
-//   ../member-goals/TeamMemberGoalsTab GOALS_TAB_MARKER を描き、props を harness.goalsSpy に渡す
+//   ../TeamMemberList ほかタブの中身    どのタブが出ているか分かるマーカー (MEMBERS_MARKER 等) を描く。
+//                                      予定・その他タブは管理者ビューかどうかもマーカーに出す
+//                                      (SCHEDULE_MARKER:admin / SCHEDULE_MARKER:user など)
+//   @react-navigation/native           navigate を harness.navigate に渡す (ヘッダーの 🔔 / ⚙)
+//   @/providers/ToastProvider          success を harness.toastSuccess に渡す (管理者ビュー切替の通知)
 //
-// TeamTabs は検証対象 (管理者専用タブの出し分け) なので実物を使う。
+// TeamTabs は検証対象 (タブの並び・管理者ビューでも数が変わらないこと) なので実物を使う。
 // バレル (@/components/teams) は group-management 経由で react-native-gesture-handler を
 // 読み込みパースできないため、TeamDetailView が import する個別ファイルをモックしている。
 //
@@ -33,7 +36,8 @@ const harness = vi.hoisted(() => ({
   membersLoading: false,
   // このセットに含まれる teamId は承認待ち (useTeamsQuery が PENDING_APPROVAL エラーを返す)
   pendingApprovalTeamIds: new Set<string>(),
-  goalsSpy: vi.fn(),
+  navigate: vi.fn(),
+  toastSuccess: vi.fn(),
 }));
 
 // 共通モック (contexts/__mocks__/AuthProvider.tsx)。既定で user-1 がログイン済み
@@ -70,7 +74,19 @@ vi.mock("@apps/shared/hooks/queries/teams", () => ({
     };
   },
   useListPendingMembersQuery: () => ({ data: [] }),
-  useDeleteAnnouncementMutation: () => ({ mutateAsync: vi.fn() }),
+}));
+
+vi.mock("@react-navigation/native", () => ({
+  useNavigation: () => ({ navigate: harness.navigate, goBack: vi.fn() }),
+}));
+
+vi.mock("@/providers/ToastProvider", () => ({
+  useToast: () => ({
+    show: vi.fn(),
+    success: harness.toastSuccess,
+    error: vi.fn(),
+    info: vi.fn(),
+  }),
 }));
 
 vi.mock("../TeamMemberList", () => ({ TeamMemberList: () => <span>MEMBERS_MARKER</span> }));
@@ -82,17 +98,15 @@ vi.mock("../AdminMonthlyAttendance", () => ({
   AdminMonthlyAttendance: () => <span>ADMIN_ATTENDANCE_MARKER</span>,
 }));
 vi.mock("../group-management", () => ({ TeamGroupManagement: () => <span>GROUPS_MARKER</span> }));
-vi.mock("../TeamSettingsTab", () => ({ TeamSettingsTab: () => <span>SETTINGS_MARKER</span> }));
-vi.mock("../TeamAnnouncementList", () => ({ TeamAnnouncementList: () => null }));
-vi.mock("../TeamAnnouncementForm", () => ({ TeamAnnouncementForm: () => null }));
-vi.mock("../TeamPracticeList", () => ({ TeamPracticeList: () => <span>PRACTICES_MARKER</span> }));
-vi.mock("../TeamCompetitionList", () => ({ TeamCompetitionList: () => null }));
-vi.mock("../rankings", () => ({ TeamRankings: () => null }));
-vi.mock("../member-goals/TeamMemberGoalsTab", () => ({
-  TeamMemberGoalsTab: (props: { teamId: string }) => {
-    harness.goalsSpy(props);
-    return <span>GOALS_TAB_MARKER</span>;
-  },
+vi.mock("../TeamScheduleList", () => ({
+  TeamScheduleList: ({ isAdmin }: { isAdmin: boolean }) => (
+    <span>{`SCHEDULE_MARKER:${isAdmin ? "admin" : "user"}`}</span>
+  ),
+}));
+vi.mock("../TeamOthersTab", () => ({
+  TeamOthersTab: ({ isAdminView }: { isAdminView: boolean }) => (
+    <span>{`OTHERS_MARKER:${isAdminView ? "admin" : "user"}`}</span>
+  ),
 }));
 
 export { harness };

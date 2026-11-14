@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useLayoutEffect, useRef } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
@@ -173,6 +173,15 @@ export const TeamsScreen: React.FC<Props> = ({ route, navigation }) => {
     [refetch, selectTeam],
   );
 
+  // チーム設定画面 (TeamSettings) で脱退して戻ってきたとき。設定はチームタブの外の画面なので、
+  // 脱退したチーム ID を params で受け取って同じ処理に流す
+  const requestedLeftTeamId = route.params?.leftTeamId;
+  useEffect(() => {
+    if (!requestedLeftTeamId) return;
+    handleLeftTeam(requestedLeftTeamId);
+    navigation.setParams({ leftTeamId: undefined });
+  }, [requestedLeftTeamId, handleLeftTeam, navigation]);
+
   // 再取得に失敗しても、前回取得したチーム一覧があれば全画面エラーにせず表示を続ける
   const hasCachedTeams = teams.length > 0;
 
@@ -255,7 +264,6 @@ export const TeamsScreen: React.FC<Props> = ({ route, navigation }) => {
         teamId={selectedTeamId}
         teamName={selectedMembership.teams?.name || t("teams.mobile.fallbackTeamName")}
         onOpenSwitcher={() => setIsSwitcherOpen(true)}
-        onLeftTeam={() => handleLeftTeam(selectedTeamId)}
       />
 
       <TeamSwitcherSheet

@@ -5,6 +5,7 @@
 //   [goals-D3] 目標管理の stack 画面 (GoalDetail / GoalForm / MilestoneForm) の登録とタイトル
 //   [TD-1]     チーム詳細は stack に積む画面 (旧 TeamDetail) ではなく、チームタブの中に出す。
 //              TeamDetail が stack に再登録されていないこと
+//   [TD-2]     チームタブから開く画面 (チーム設定・お知らせ・ランキング・メンバーの目標) の登録とタイトル
 //
 // ■ テスト方針
 //   MainStack 全体を実描画すると 20 近い画面が起動するため、画面はすべて null
@@ -43,6 +44,10 @@ vi.mock("@/screens/TeamPracticeLogBulkFormScreen", () => ({
 }));
 vi.mock("@/screens/TeamEntryBulkFormScreen", () => ({ TeamEntryBulkFormScreen: () => null }));
 vi.mock("@/screens/TeamBulkRegisterScreen", () => ({ TeamBulkRegisterScreen: () => null }));
+vi.mock("@/screens/TeamSettingsScreen", () => ({ TeamSettingsScreen: () => null }));
+vi.mock("@/screens/TeamAnnouncementsScreen", () => ({ TeamAnnouncementsScreen: () => null }));
+vi.mock("@/screens/TeamRankingsScreen", () => ({ TeamRankingsScreen: () => null }));
+vi.mock("@/screens/TeamMemberGoalsScreen", () => ({ TeamMemberGoalsScreen: () => null }));
 vi.mock("@/screens/AccountPlanScreen", () => ({ AccountPlanScreen: () => null }));
 vi.mock("@/screens/AccountCalendarScreen", () => ({ AccountCalendarScreen: () => null }));
 vi.mock("@/screens/AccountSecurityScreen", () => ({ AccountSecurityScreen: () => null }));
@@ -89,6 +94,20 @@ describe("MainStack — 登録された画面", () => {
     const names = stackMocks.screens.map((s) => s.name);
     expect(names).not.toContain("TeamDetail");
     expect(names).toContain("MainTabs");
+  });
+
+  it("[TD-2] チームタブから開く 4 画面が 1 つずつ登録され、タイトルが付いている", () => {
+    const titles: Record<string, string> = {
+      TeamSettings: "チーム設定",
+      TeamAnnouncements: "お知らせ",
+      TeamRankings: "ランキング",
+      TeamMemberGoals: "メンバーの目標",
+    };
+    for (const [name, title] of Object.entries(titles)) {
+      const registered = stackMocks.screens.filter((s) => s.name === name);
+      expect(registered, name).toHaveLength(1);
+      expect((registered[0]!.options as { title?: string }).title).toBe(title);
+    }
   });
 
   it("[goals-D3] 目標管理の stack 画面 GoalDetail / GoalForm / MilestoneForm が登録され、Goals (タブ側) は MainStack に無い", () => {

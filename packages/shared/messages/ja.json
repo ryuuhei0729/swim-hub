@@ -24,7 +24,11 @@
         "entryRegister": "エントリー登録",
         "teamDetail": "チーム詳細",
         "bulkBestTime": "ベストタイム一括入力",
-        "goalDetail": "目標詳細"
+        "goalDetail": "目標詳細",
+        "teamSettings": "チーム設定",
+        "teamAnnouncements": "お知らせ",
+        "teamRankings": "ランキング",
+        "teamMemberGoals": "メンバーの目標"
       }
     }
   },
@@ -2780,7 +2784,9 @@
       "adminToggle": {
         "label": "表示切替",
         "admin": "管理者",
-        "user": "利用者"
+        "user": "利用者",
+        "switchedToAdmin": "管理者ビューに切り替えました",
+        "switchedToUser": "利用者ビューに切り替えました"
       },
       "pendingApproveConfirmTitle": "承認確認",
       "pendingApproveConfirmMessage": "{name}を承認しますか？",
@@ -2882,7 +2888,33 @@
         "conflictingDeleteMessage": "先に削除だけを保存してから、種目の変更を保存してください。\n{list}",
         "saveFailedDuplicate": "保存に失敗しました。種目の重複が原因の可能性があります。もう一度お試しください。"
       },
-      "tabSettings": "設定"
+      "tabSettings": "設定",
+      "tabSchedule": "予定",
+      "tabOthers": "その他",
+      "calendarColorDescription": "ホームのカレンダーで、このチームの練習・大会を表示する色を設定します。",
+      "headerAnnouncements": "お知らせ",
+      "headerSettings": "チーム設定",
+      "schedule": {
+        "filterAll": "全て",
+        "filterPractices": "練習",
+        "filterCompetitions": "大会",
+        "filterPast": "過去",
+        "add": "追加",
+        "addMenuTitle": "追加する予定",
+        "emptyUpcoming": "今後の予定はありません",
+        "emptyPast": "過去の予定はありません",
+        "emptyPractices": "今後の練習はありません",
+        "emptyCompetitions": "今後の大会はありません",
+        "fetchFailed": "予定の取得に失敗しました",
+        "emptyPastPractices": "過去の練習はありません",
+        "emptyPastCompetitions": "過去の大会はありません"
+      },
+      "others": {
+        "rankingsTitle": "ランキング",
+        "rankingsDescription": "種目・距離ごとのチーム内ランキング",
+        "goalsTitle": "メンバーの目標",
+        "goalsDescription": "大会ごとの目標とマイルストーンの進み具合"
+      }
     },
     "page": {
       "title": "マイチーム",
