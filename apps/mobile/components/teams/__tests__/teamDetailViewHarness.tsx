@@ -93,9 +93,11 @@ vi.mock("../TeamMemberList", () => ({ TeamMemberList: () => <span>MEMBERS_MARKER
 vi.mock("../PendingMembersSection", () => ({
   PendingMembersSection: () => <span>PENDING_MEMBERS_MARKER</span>,
 }));
-vi.mock("../MyMonthlyAttendance", () => ({ MyMonthlyAttendance: () => <span>MY_ATTENDANCE_MARKER</span> }));
-vi.mock("../AdminMonthlyAttendance", () => ({
-  AdminMonthlyAttendance: () => <span>ADMIN_ATTENDANCE_MARKER</span>,
+// 出欠タブは管理者ビューかどうかで表示が切り替わる (同じ部品に isAdminView を渡す)
+vi.mock("../attendance/TeamAttendanceTab", () => ({
+  TeamAttendanceTab: ({ isAdminView }: { isAdminView: boolean }) => (
+    <span>{isAdminView ? "ADMIN_ATTENDANCE_MARKER" : "MY_ATTENDANCE_MARKER"}</span>
+  ),
 }));
 vi.mock("../group-management", () => ({ TeamGroupManagement: () => <span>GROUPS_MARKER</span> }));
 vi.mock("../TeamScheduleList", () => ({
