@@ -16,6 +16,10 @@ import { TeamRecordStyleDetailScreen } from "@/screens/TeamRecordStyleDetailScre
 import { TeamPracticeLogBulkFormScreen } from "@/screens/TeamPracticeLogBulkFormScreen";
 import { TeamEntryBulkFormScreen } from "@/screens/TeamEntryBulkFormScreen";
 import { TeamBulkRegisterScreen } from "@/screens/TeamBulkRegisterScreen";
+import { TeamSettingsScreen } from "@/screens/TeamSettingsScreen";
+import { TeamAnnouncementsScreen } from "@/screens/TeamAnnouncementsScreen";
+import { TeamRankingsScreen } from "@/screens/TeamRankingsScreen";
+import { TeamMemberGoalsScreen } from "@/screens/TeamMemberGoalsScreen";
 import { AccountPlanScreen } from "@/screens/AccountPlanScreen";
 import { AccountCalendarScreen } from "@/screens/AccountCalendarScreen";
 import { AccountSecurityScreen } from "@/screens/AccountSecurityScreen";
@@ -165,6 +169,38 @@ export const MainStack: React.FC = () => {
         options={{
           ...baseHeaderOptions,
           title: t("teamsAdmin.tabs.bulkRegister"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamSettings"
+        component={TeamSettingsScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.teamSettings"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamAnnouncements"
+        component={TeamAnnouncementsScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.teamAnnouncements"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamRankings"
+        component={TeamRankingsScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.teamRankings"),
+        }}
+      />
+      <Stack.Screen
+        name="TeamMemberGoals"
+        component={TeamMemberGoalsScreen}
+        options={{
+          ...baseHeaderOptions,
+          title: t("navigation.mobile.titles.teamMemberGoals"),
         }}
       />
       <Stack.Screen

@@ -23,7 +23,7 @@ import { TeamCreateModal } from "@/components/teams/TeamCreateModal";
 import { TeamJoinModal } from "@/components/teams/TeamJoinModal";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
-import { ProfileSkeleton } from "@/components/ui/ScreenSkeletons";
+import { AccountSkeleton } from "@/components/ui/ScreenSkeletons";
 import type { MainStackParamList } from "@/navigation/types";
 import type { UserProfile } from "@swim-hub/shared/types";
 import { colors, sectionSurface } from "@/constants/theme";
@@ -217,11 +217,19 @@ export const MyPageScreen: React.FC = () => {
     );
   }
 
+  // ページヘッダー (スクロール固定)。読み込み中も出し、表示後に中身がずれないようにする
+  const pageHeader = (
+    <View style={styles.pageHeader}>
+      <Text style={styles.pageHeaderTitle}>{t("account.mobile.pageTitle")}</Text>
+    </View>
+  );
+
   // ローディング状態
   if (isLoading && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <ProfileSkeleton />
+        {pageHeader}
+        <AccountSkeleton />
       </SafeAreaView>
     );
   }
@@ -239,10 +247,7 @@ export const MyPageScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {/* ページヘッダー (スクロール固定) */}
-      <View style={styles.pageHeader}>
-        <Text style={styles.pageHeaderTitle}>{t("account.mobile.pageTitle")}</Text>
-      </View>
+      {pageHeader}
       <StaleDataBanner
         visible={isError}
         onRetry={() => {

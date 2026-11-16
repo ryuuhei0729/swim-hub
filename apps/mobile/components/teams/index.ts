@@ -1,6 +1,5 @@
 export { MemberDetailModal } from "./member-detail";
 export { MemberSelectModal } from "./MemberSelectModal";
-export { MyMonthlyAttendance } from "./MyMonthlyAttendance";
 export { PendingMembersSection } from "./PendingMembersSection";
 export { TeamBulkRegisterForm } from "./TeamBulkRegisterForm";
 export { TeamCreateModal } from "./TeamCreateModal";
@@ -13,3 +12,4 @@ export { TeamMemberGroupFilter } from "./TeamMemberGroupFilter";
 export { TeamMemberList } from "./TeamMemberList";
 export { TeamRankings } from "./rankings";
 export { TeamTabs, type TeamTabType } from "./TeamTabs";
+export { TeamAttendanceTab } from "./attendance/TeamAttendanceTab";

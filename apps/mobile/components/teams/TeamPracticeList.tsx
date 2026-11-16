@@ -33,7 +33,8 @@ interface TeamPracticeListProps {
   isAdmin: boolean;
 }
 
-const PracticeItem = React.memo(function PracticeItem({
+/** 練習カード 1 枚。チーム練習一覧と予定タブ (TeamScheduleList) で共用する */
+export const PracticeItem = React.memo(function PracticeItem({
   practice,
   isAdmin,
   onEdit,
@@ -129,12 +130,15 @@ const PracticeItem = React.memo(function PracticeItem({
   );
 });
 
-export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
+/**
+ * チーム練習カードの操作 (追加・一括登録・編集・記録入力・削除)。
+ * チーム練習一覧と予定タブ (TeamScheduleList) で同じ導線を使うためにまとめている。
+ */
+export function useTeamPracticeActions(teamId: string, isAdmin: boolean) {
   const { supabase } = useAuth();
   const navigation = useNavigation<NavigationProp>();
   const { t } = useTranslation();
 
-  const { data: practices, isLoading, isError, error, refetch } = useTeamPracticesQuery(supabase, teamId);
   const deleteMutation = useDeleteTeamPracticeMutation(supabase);
 
   const handleAdd = useCallback(() => {
@@ -219,6 +223,32 @@ export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
       ],
     );
   }, [deleteMutation, teamId, t, runDelete, isDeleteBusy]);
+
+  return {
+    handleAdd,
+    handleBulkRegister,
+    handleEdit,
+    handleAddLog,
+    handleDelete,
+    deletingId,
+    isDeletePending,
+  };
+}
+
+export function TeamPracticeList({ teamId, isAdmin }: TeamPracticeListProps) {
+  const { supabase } = useAuth();
+  const { t } = useTranslation();
+
+  const { data: practices, isLoading, isError, error, refetch } = useTeamPracticesQuery(supabase, teamId);
+  const {
+    handleAdd,
+    handleBulkRegister,
+    handleEdit,
+    handleAddLog,
+    handleDelete,
+    deletingId,
+    isDeletePending,
+  } = useTeamPracticeActions(teamId, isAdmin);
 
   const renderItem = useCallback(({ item }: { item: Practice }) => (
     <PracticeItem

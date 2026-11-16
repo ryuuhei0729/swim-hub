@@ -313,6 +313,7 @@ describe("[V-A50〜A55] TeamSettingsTab セクションの出し分け", () => {
     renderTab({ isAdminView: false, members: [makeMember("me", "admin"), makeMember("u1", "user")] });
 
     expect(screen.queryByText(label("teams.settingsTab.editTeamInfo"))).toBeNull();
+    expect(document.querySelector('[testid="team-settings-edit-info"]')).toBeNull();
   });
 
   // [V-D3] 対照 (退行検知): 「削除だけ消えた」ことを示す。
@@ -324,7 +325,11 @@ describe("[V-A50〜A55] TeamSettingsTab セクションの出し分け", () => {
   it("[V-D3] 対照: 管理者ビュー (isAdminView=true) では「編集」は出るが「チームを削除」は出ない", () => {
     renderTab({ isAdminView: true, members: [makeMember("me", "admin"), makeMember("u1", "user")] });
 
-    expect(screen.getByText(label("teams.settingsTab.editTeamInfo"))).toBeTruthy();
+    // 編集はボタンではなく、チーム情報カード右上の鉛筆アイコン (文言は accessibilityLabel のみ)
+    const editIcon = document.querySelector('[testid="team-settings-edit-info"]');
+    expect(editIcon, "鉛筆アイコンが出ていない").not.toBeNull();
+    expect(editIcon!.querySelector('[data-testid="icon-edit-2"]')).not.toBeNull();
+    expect(screen.queryByText(label("teams.settingsTab.editTeamInfo"))).toBeNull();
     expect(screen.queryByText(label("teams.settingsTab.deleteTeam"))).toBeNull();
     expect(screen.queryByText(label("teams.settingsTab.deleteDescription"))).toBeNull();
     expect(screen.queryByText(label("teams.settingsTab.deleteButton"))).toBeNull();

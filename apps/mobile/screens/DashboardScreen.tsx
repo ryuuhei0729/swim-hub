@@ -29,7 +29,7 @@ import { CalendarView } from "@/components/calendar";
 import { DayDetailModal } from "@/components/calendar";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
-import { CalendarSkeleton } from "@/components/ui/ScreenSkeletons";
+import { DashboardSkeleton } from "@/components/ui/ScreenSkeletons";
 import { useTeamsQuery } from "@apps/shared/hooks/queries/teams";
 import { useCalendarColorSettingsQuery } from "@apps/shared/hooks/queries/calendarColors";
 import {
@@ -110,8 +110,14 @@ export const DashboardScreen: React.FC = () => {
     currentDate,
   });
   const entries = useMemo(() => calendarData ?? [], [calendarData]);
+  // 一度でもカレンダーを取得できたか。月を切り替えると新しい月のデータが届くまで calendarData は
+  // undefined に戻るが、そのときはホーム全体ではなくカレンダーだけを読み込み中にする
+  const [hasLoadedCalendar, setHasLoadedCalendar] = useState(false);
+  if (calendarData !== undefined && !hasLoadedCalendar) {
+    setHasLoadedCalendar(true);
+  }
   // 再取得に失敗しても、前回取得したカレンダーがあれば全画面エラーにせず表示を続ける
-  const hasCachedEntries = calendarData !== undefined;
+  const hasCachedEntries = calendarData !== undefined || hasLoadedCalendar;
 
   // 記録色カスタマイズ設定 (未設定・取得前はデフォルト色を使うフォールバック値)
   const {
@@ -335,11 +341,13 @@ export const DashboardScreen: React.FC = () => {
     );
   }
 
-  // ローディング状態
-  if (isLoading && entries.length === 0) {
+  // ローディング状態 (初回だけ。月の切り替え時はカレンダーのヘッダーに読み込み中を出す)
+  if (isLoading && !hasLoadedCalendar) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <CalendarSkeleton />
+        <DashboardSkeleton
+          showNotices={teams.some((m) => m.status === "approved" && m.is_active)}
+        />
       </SafeAreaView>
     );
   }

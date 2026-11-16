@@ -14,7 +14,8 @@
 //   [TH-07] 切替シートの「作成」は、シートが閉じ終わってから作成モーダルを開く
 //   [TH-08] 作成したチームは一覧の再取得後に選ぶ
 //   [TH-05] asMember (自分の出欠に回答する導線) ではそのチームの管理者ビューを OFF にして開く
-//   [TH-09] 脱退したら、一覧の再取得を待たず (失敗しても) 脱退したチームを除いて残りへ倒す
+//   [TH-09] チーム設定画面で脱退して戻ってきたら (params.leftTeamId)、一覧の再取得を待たず
+//           (失敗しても) 脱退したチームを除いて残りへ倒し、params を消す
 //   [TH-10] タブに戻ったら、一覧と表示中のチームの情報 (teamKeys.detail 配下) を取り直す
 //
 // TeamDetailView・TeamSwitcherSheet・各モーダルは、TeamsScreen との受け渡し (props の配線) だけを
@@ -58,17 +59,14 @@ vi.mock("@/components/teams/TeamDetailView", () => ({
     teamId,
     teamName,
     onOpenSwitcher,
-    onLeftTeam,
   }: {
     teamId: string;
     teamName: string;
     onOpenSwitcher: () => void;
-    onLeftTeam: () => void;
   }) => (
     <div data-testid="team-view" data-team-id={teamId}>
       {teamName}
       <button data-testid="open-switcher" onClick={onOpenSwitcher} />
-      <button data-testid="leave-team" onClick={onLeftTeam} />
     </div>
   ),
 }));
@@ -266,7 +264,7 @@ describe("TeamsScreen — 最後に開いたチームを表示するチームタ
     mocks.teams = [alpha, beta];
     useTeamViewStore.setState({
       byTeam: {
-        "team-alpha": { adminView: true, tab: "groups" },
+        "team-alpha": { adminView: true, tab: "others" },
         "team-beta": { adminView: true, tab: "members" },
       },
     });
@@ -283,7 +281,7 @@ describe("TeamsScreen — 最後に開いたチームを表示するチームタ
     mocks.teams = [alpha];
     useTeamViewStore.setState({ byTeam: { "team-alpha": { adminView: true } } });
 
-    renderScreen({ teamId: "team-alpha", initialTab: "competitions" });
+    renderScreen({ teamId: "team-alpha", initialTab: "schedule" });
 
     expect(useTeamViewStore.getState().byTeam["team-alpha"]?.adminView).toBe(true);
   });
@@ -357,23 +355,19 @@ describe("TeamsScreen — 最後に開いたチームを表示するチームタ
   it("[TH-09] 脱退したら、一覧の再取得を待たず残りのチームへ倒し、選択を外す", () => {
     mocks.teams = [alpha, beta];
     useTeamViewStore.setState({ lastTeamId: "team-alpha" });
-    const { q, shownTeamId } = renderScreen();
-    expect(shownTeamId()).toBe("team-alpha");
-
-    fireEvent.click(q("leave-team") as HTMLElement);
+    const { shownTeamId } = renderScreen({ leftTeamId: "team-alpha" });
 
     expect(shownTeamId()).toBe("team-beta");
     expect(useTeamViewStore.getState().lastTeamId).toBeNull();
     expect(mocks.refetch).toHaveBeenCalledTimes(1);
+    expect(setParams).toHaveBeenCalledWith({ leftTeamId: undefined });
   });
 
   it("[TH-09] 一覧の再取得に失敗して古い一覧が残っても、脱退したチームへは戻らない", async () => {
     mocks.teams = [alpha, beta];
     mocks.refetch.mockRejectedValueOnce(new Error("network"));
     useTeamViewStore.setState({ lastTeamId: "team-alpha" });
-    const { q, shownTeamId } = renderScreen();
-
-    fireEvent.click(q("leave-team") as HTMLElement);
+    const { shownTeamId } = renderScreen({ leftTeamId: "team-alpha" });
     await act(async () => {});
 
     // useTeamsQuery は脱退前の一覧 (alpha を含む) を返し続けている

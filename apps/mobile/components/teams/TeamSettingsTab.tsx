@@ -146,7 +146,22 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
     >
       {/* チーム情報（招待コードもこのカードに内包する） */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("teams.settingsTab.teamInfoTitle")}</Text>
+        {/* 編集はボタンではなく、カード右上の鉛筆アイコン (管理者ビューのときだけ) */}
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionTitle}>{t("teams.settingsTab.teamInfoTitle")}</Text>
+          {isAdminView && (
+            <Pressable
+              style={styles.editIconButton}
+              onPress={() => setEditModalVisible(true)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t("teams.settingsTab.editTeamInfo")}
+              testID="team-settings-edit-info"
+            >
+              <Feather name="edit-2" size={16} color="#2563EB" />
+            </Pressable>
+          )}
+        </View>
         <Text style={styles.teamName}>{teamName}</Text>
         {teamDescription ? (
           <Text style={styles.teamDescription}>{teamDescription}</Text>
@@ -190,18 +205,6 @@ export const TeamSettingsTab: React.FC<TeamSettingsTabProps> = ({
           )}
         </View>
 
-        {isAdminView && (
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => setEditModalVisible(true)}
-            accessibilityRole="button"
-          >
-            <Feather name="edit-2" size={14} color="#2563EB" />
-            <Text style={styles.secondaryButtonText}>
-              {t("teams.settingsTab.editTeamInfo")}
-            </Text>
-          </Pressable>
-        )}
       </View>
 
       {/* このチームの記録色 */}
@@ -268,6 +271,14 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  editIconButton: {
+    padding: 4,
+  },
   sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
@@ -322,23 +333,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#DC2626",
     flexShrink: 1,
-  },
-  secondaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-    backgroundColor: "#EFF6FF",
-  },
-  secondaryButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#2563EB",
   },
   // settings/AccountDeleteSettings.tsx と同じカード構成（余白・角丸・配色を揃える）
   dangerCardBox: {

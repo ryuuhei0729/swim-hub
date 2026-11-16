@@ -743,7 +743,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     if (target.kind === "team") {
       navigation.popTo("MainTabs", {
         screen: "Teams",
-        params: { teamId: target.teamId, initialTab: "competitions" },
+        params: { teamId: target.teamId, initialTab: "schedule" },
       });
     } else if (target.kind === "goBack") {
       navigation.goBack();

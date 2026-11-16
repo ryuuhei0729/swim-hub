@@ -2,10 +2,11 @@
 // teamViewStore.test.ts - チームタブの表示状態 (最後のチーム・チームごとのタブ/管理者ビュー)
 // =============================================================================
 //   [TV-1] タブと管理者ビューはチームごとに独立して覚える
-//   [TV-2] 利用者ビューへ切り替えると、管理者専用タブにいたら members に戻す
+//   [TV-2] 利用者ビューへ切り替えてもタブは変えない (管理者専用タブが無いため)
 //   [TV-3] 管理者ビューへ切り替えるときはタブを変えない
 //   [TV-4] 変更は AsyncStorage の "team-view" に保存される
 //   [TV-5] 読み込み時、存在しないタブ ID・真偽値でない adminView・文字列でない lastTeamId は捨てる
+//   [TV-6] 読み込み時、旧タブ構成の ID は対応する新しいタブへ読み替える
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,34 +22,25 @@ describe("useTeamViewStore", () => {
     selectTeam("team-a");
     setTab("team-a", "attendance");
     setAdminView("team-a", true);
-    setTab("team-b", "rankings");
+    setTab("team-b", "others");
 
     const state = useTeamViewStore.getState();
     expect(state.lastTeamId).toBe("team-a");
     expect(state.byTeam["team-a"]).toEqual({ tab: "attendance", adminView: true });
-    expect(state.byTeam["team-b"]).toEqual({ tab: "rankings" });
+    expect(state.byTeam["team-b"]).toEqual({ tab: "others" });
   });
 
-  it("[TV-2] 利用者ビューへ切り替えると、管理者専用タブ (groups) にいたら members に戻す", () => {
-    const { setTab, setAdminView } = useTeamViewStore.getState();
-    setAdminView("team-a", true);
-    setTab("team-a", "groups");
-    setAdminView("team-a", false);
+  it.each(["members", "schedule", "attendance", "others"] as const)(
+    "[TV-2] 利用者ビューへ切り替えても、%s タブはそのまま",
+    (tab) => {
+      const { setTab, setAdminView } = useTeamViewStore.getState();
+      setAdminView("team-a", true);
+      setTab("team-a", tab);
+      setAdminView("team-a", false);
 
-    expect(useTeamViewStore.getState().byTeam["team-a"]).toEqual({
-      tab: "members",
-      adminView: false,
-    });
-  });
-
-  it("[TV-2] 利用者ビューへ切り替えても、全員向けのタブ (practices) はそのまま", () => {
-    const { setTab, setAdminView } = useTeamViewStore.getState();
-    setAdminView("team-a", true);
-    setTab("team-a", "practices");
-    setAdminView("team-a", false);
-
-    expect(useTeamViewStore.getState().byTeam["team-a"]?.tab).toBe("practices");
-  });
+      expect(useTeamViewStore.getState().byTeam["team-a"]).toEqual({ tab, adminView: false });
+    },
+  );
 
   it("[TV-3] 管理者ビューへ切り替えるときはタブを変えない (未設定なら未設定のまま)", () => {
     useTeamViewStore.getState().setAdminView("team-a", true);
@@ -87,5 +79,30 @@ describe("useTeamViewStore", () => {
     expect(state.lastTeamId).toBeNull();
     expect(state.byTeam["team-a"]).toEqual({ tab: undefined, adminView: false });
     expect(state.byTeam["team-b"]).toEqual({ tab: "attendance", adminView: true });
+  });
+
+  it("[TV-6] 読み込み時、旧タブ構成の ID は対応する新しいタブへ読み替える", async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(
+      JSON.stringify({
+        version: 1,
+        state: {
+          lastTeamId: "team-a",
+          byTeam: {
+            "team-a": { tab: "practices", adminView: true },
+            "team-b": { tab: "rankings", adminView: false },
+            "team-c": { tab: "groups", adminView: true },
+            "team-d": { tab: "settings" },
+          },
+        },
+      }),
+    );
+
+    await useTeamViewStore.persist.rehydrate();
+
+    const { byTeam } = useTeamViewStore.getState();
+    expect(byTeam["team-a"]).toEqual({ tab: "schedule", adminView: true });
+    expect(byTeam["team-b"]).toEqual({ tab: "others", adminView: false });
+    expect(byTeam["team-c"]).toEqual({ tab: "members", adminView: true });
+    expect(byTeam["team-d"]).toEqual({ tab: "members", adminView: false });
   });
 });

@@ -2,7 +2,6 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { ChipScrollRow } from "@/components/ui/ChipScrollRow";
 import { TEAM_TAB_DEFS, type TeamTabType } from "./teamTabDefs";
 import { cardSurface } from "@/constants/theme";
 
@@ -21,18 +20,11 @@ export interface TeamTabsProps {
 
 /**
  * チームタブコンポーネント
- * メンバー、練習、大会、出欠、ランキング、お知らせ、設定のタブ切り替え
- * お知らせ・グループタブは管理者ビュー時のみ表示
+ * メンバー・予定・出欠・その他 の 4 タブを均等幅で並べる。
  *
- * タブは横スクロールさせる。非管理者6タブ/管理者8タブを幅 360dp の端末に
- * 均等割り (flex:1) で詰め込むと1タブ約51dp になりラベルが読めなくなるため、
- * 各タブは内容に応じた幅にして溢れた分は横スクロールで見せる
- * (web の components/team/TeamTabs.tsx が `overflow-x-auto` + `whitespace-nowrap`
- * で解決しているのと同じ方針)。
- *
- * 横スクロールできること自体が気づかれにくいため、記録入力の種目チップ
- * (components/forms/StyleChipSelector.tsx) と同じ ChipScrollRow に載せ、
- * 右端に隠れたタブがある間だけ右端フェードを重ねる。
+ * タブの数・位置は管理者ビューでも変えない (以前は管理者ビューで 7→9 タブに増え、
+ * 横スクロールしないと右端のタブが見えなかった)。管理者向け機能はタブの中や
+ * ヘッダーのアイコンから開くので、ここでは数を増やさない。
  */
 export const TeamTabs: React.FC<TeamTabsProps> = ({
   activeTab,
@@ -44,34 +36,32 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
   const visibleTabs = TEAM_TAB_DEFS.filter((tab) => !tab.adminOnly || isAdmin);
 
   return (
-    <View style={styles.container}>
-      {/* 下線 (borderBottom) はスクロールする中身ではなく container 側に付ける。
-          こうするとスクロール位置に関わらず可視領域の全幅に線が引かれ
-          (web が `overflow-x-auto` の親 div 側に `border-b` を置いているのと同じ)、
-          かつ右端フェードは線の上ではなく内側に重なるので線が途切れない */}
-      <ChipScrollRow contentContainerStyle={styles.tabListContent}>
-        {visibleTabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          const showBadge = tab.id === "members" && pendingCount > 0;
+    <View style={styles.container} accessibilityRole="tablist">
+      {visibleTabs.map((tab) => {
+        const isActive = activeTab === tab.id;
+        const showBadge = tab.id === "members" && pendingCount > 0;
 
-          return (
-            <Pressable
-              key={tab.id}
-              style={[styles.tab, isActive && styles.tabActive]}
-              onPress={() => onTabChange(tab.id)}
-            >
-              <Feather name={tab.icon} size={14} color={isActive ? "#2563EB" : "#6B7280"} />
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{t(tab.nameKey)}</Text>
-              {showBadge && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{pendingCount > 99 ? "99+" : pendingCount}</Text>
-                </View>
-              )}
-              {isActive && <View style={styles.tabIndicator} />}
-            </Pressable>
-          );
-        })}
-      </ChipScrollRow>
+        return (
+          <Pressable
+            key={tab.id}
+            style={[styles.tab, isActive && styles.tabActive]}
+            onPress={() => onTabChange(tab.id)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
+          >
+            <Feather name={tab.icon} size={14} color={isActive ? "#2563EB" : "#6B7280"} />
+            <Text style={[styles.tabText, isActive && styles.tabTextActive]} numberOfLines={1}>
+              {t(tab.nameKey)}
+            </Text>
+            {showBadge && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingCount > 99 ? "99+" : pendingCount}</Text>
+              </View>
+            )}
+            {isActive && <View style={styles.tabIndicator} />}
+          </Pressable>
+        );
+      })}
     </View>
   );
 };
@@ -82,25 +72,17 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginTop: 4,
     marginBottom: 4,
-  },
-  tabListContent: {
-    // タブが画面幅に収まる場合 (非管理者・大画面) に左へ寄って詰まって見えないよう、
-    // 中身を可視領域まで伸ばして等間隔に配置する。溢れる場合は中身が可視領域より
-    // 大きくなるため justifyContent は効かず、各タブは自然幅のまま横スクロールになる
-    flexGrow: 1,
-    justifyContent: "space-between",
-    // ChipScrollRow 既定の gap 6 を打ち消す。タブは paddingHorizontal 12 で
-    // 間隔を持っており、gap を足すとタブ数の多い管理者ビューで更に溢れる
-    gap: 0,
+    flexDirection: "row",
+    overflow: "hidden",
   },
   tab: {
-    // flex:1 の均等割りは廃止。タブ数が増えるとラベルが潰れるため、
-    // 内容に応じた幅にして溢れた分を横スクロールで見せる
+    // 4 タブを均等割りにする (タブ数は固定なので横スクロールは不要)
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
     gap: 4,
     position: "relative",
   },
@@ -108,6 +90,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
   },
   tabText: {
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: "500",
     color: "#6B7280",

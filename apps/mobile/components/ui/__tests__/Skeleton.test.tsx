@@ -19,12 +19,13 @@ import { render } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { Skeleton, SkeletonBlock } from "../Skeleton";
 import {
-  CalendarSkeleton,
+  DashboardSkeleton,
   GoalListSkeleton,
   PracticeListSkeleton,
-  ProfileSkeleton,
+  AccountSkeleton,
   RecordListSkeleton,
-  TeamListSkeleton,
+  TeamBodySkeleton,
+  TeamSkeleton,
 } from "../ScreenSkeletons";
 
 const PROGRESSBAR = '[accessibilityrole="progressbar"]';
@@ -56,10 +57,11 @@ describe("Skeleton", () => {
   it.each([
     ["PracticeListSkeleton", PracticeListSkeleton],
     ["RecordListSkeleton", RecordListSkeleton],
-    ["TeamListSkeleton", TeamListSkeleton],
+    ["TeamSkeleton", TeamSkeleton],
     ["GoalListSkeleton", GoalListSkeleton],
-    ["ProfileSkeleton", ProfileSkeleton],
-    ["CalendarSkeleton", CalendarSkeleton],
+    ["AccountSkeleton", AccountSkeleton],
+    ["DashboardSkeleton", DashboardSkeleton],
+    ["TeamBodySkeleton", TeamBodySkeleton],
   ])("[V-SK-03] %s は Skeleton を根に持つ", (_name, Preset) => {
     const { container } = render(<Preset />);
     expect(container.querySelectorAll(PROGRESSBAR)).toHaveLength(1);

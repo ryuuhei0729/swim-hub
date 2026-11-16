@@ -43,6 +43,11 @@ export type TabParamList = {
          * そのチームの管理者ビューを OFF にして開く (管理者ビューの出欠タブでは自分の回答ができないため)
          */
         asMember?: boolean;
+        /**
+         * チーム設定画面 (TeamSettings) で脱退したチーム ID。
+         * チームタブはこのチームを一覧から外し、残りのチームへ切り替える
+         */
+        leftTeamId?: string;
       }
     | undefined;
   Goals: undefined;
@@ -156,6 +161,22 @@ export type MainStackParamList = {
   };
   /** チーム練習・大会一括登録（管理者専用） */
   TeamBulkRegister: {
+    teamId: string;
+  };
+  /** チーム設定 (チーム情報・招待コード・記録色・脱退)。チームタブのヘッダー ⚙ から開く */
+  TeamSettings: {
+    teamId: string;
+  };
+  /** チームのお知らせ一覧。チームタブのヘッダー 🔔 から開く (作成・編集は管理者ビューのみ) */
+  TeamAnnouncements: {
+    teamId: string;
+  };
+  /** チーム内ランキング。チームタブ「その他」から開く */
+  TeamRankings: {
+    teamId: string;
+  };
+  /** メンバーの目標 (管理者ビュー専用)。チームタブ「その他」から開く */
+  TeamMemberGoals: {
     teamId: string;
   };
   /** アカウント > プラン */

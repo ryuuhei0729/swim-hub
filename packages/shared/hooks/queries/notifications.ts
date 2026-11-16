@@ -2,7 +2,7 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { useQuery } from "@tanstack/react-query";
-import { endOfMonth, format } from "date-fns";
+import { format } from "date-fns";
 import { notificationKeys } from "./keys";
 
 export interface UnansweredAttendance {
@@ -28,7 +28,12 @@ interface TeamInfo {
 }
 
 /**
- * 今日から今月末までの、出欠未回答の練習・大会を取得するクエリ
+ * 「受付中で未回答」の練習・大会を取得するクエリ (ホームのお知らせ・チームタブのバッジ・モバイルの出欠タブで同じ定義)
+ *
+ * - 受付中: イベント日が今日以降で、attendance_status が締切 (closed) でないもの。
+ *   null (旧データの「未設定」) は受付中として数える (受付状態は 受付中 / 締切 の 2 つだけを扱うため)
+ * - 未回答: 自分の出欠の行が無いか、行の status が null
+ * - 期間の上限は設けない (来月以降の受付中のイベントも数える)
  */
 export function useUnansweredAttendancesQuery(
   supabase: SupabaseClient,
@@ -40,9 +45,8 @@ export function useUnansweredAttendancesQuery(
   return useQuery<UnansweredAttendance[]>({
     queryKey: notificationKeys.unanswered(userId ?? "", teamIds),
     queryFn: async () => {
-      const now = new Date();
-      const startDateStr = format(now, "yyyy-MM-dd");
-      const endDateStr = format(endOfMonth(now), "yyyy-MM-dd");
+      // 今日は過去扱いしない (resolveAttendanceStatus / isCompetitionDateInPast と同じ境界 = 端末のローカル日付)
+      const startDateStr = format(new Date(), "yyyy-MM-dd");
 
       // 全チームを並列で処理
       const results = await Promise.all(
@@ -56,17 +60,13 @@ export function useUnansweredAttendancesQuery(
               .from("practices")
               .select("id, title, date, attendance_status")
               .eq("team_id", teamId)
-              .eq("attendance_status", "open")
               .gte("date", startDateStr)
-              .lte("date", endDateStr)
               .order("date", { ascending: true }),
             supabase
               .from("competitions")
               .select("id, title, date, attendance_status")
               .eq("team_id", teamId)
-              .eq("attendance_status", "open")
               .gte("date", startDateStr)
-              .lte("date", endDateStr)
               .order("date", { ascending: true }),
           ]);
 
@@ -78,8 +78,10 @@ export function useUnansweredAttendancesQuery(
             return [];
           }
 
-          const practices = practicesResult.data ?? [];
-          const competitions = competitionsResult.data ?? [];
+          // 締切のものを除く (null = 未設定は受付中として残す)
+          const isOpen = (e: { attendance_status: string | null }) => e.attendance_status !== "closed";
+          const practices = (practicesResult.data ?? []).filter(isOpen);
+          const competitions = (competitionsResult.data ?? []).filter(isOpen);
 
           // 出欠情報を並列で取得
           const practiceIds = practices.map((p) => p.id);

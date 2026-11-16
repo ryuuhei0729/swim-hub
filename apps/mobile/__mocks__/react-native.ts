@@ -150,6 +150,51 @@ export const FlatList = ({
   return React.createElement("div", props, items);
 };
 
+// SectionList: 一覧の上 (ListHeaderComponent)・セクションの見出し・行・空のときの表示をそのまま描く。
+// refreshControl など DOM に出しても意味の無い要素プロップは捨てる
+export const SectionList = ({
+  sections,
+  renderItem,
+  renderSectionHeader,
+  keyExtractor,
+  ListHeaderComponent,
+  ListEmptyComponent,
+  refreshControl: _refreshControl,
+  testID,
+}: {
+  sections?: { key?: string; data: unknown[] }[];
+  renderItem?: (info: { item: unknown; index: number; section: { data: unknown[] } }) => React.ReactNode;
+  renderSectionHeader?: (info: { section: { key?: string; data: unknown[] } }) => React.ReactNode;
+  keyExtractor?: (item: unknown, index: number) => string;
+  ListHeaderComponent?: React.ReactNode;
+  ListEmptyComponent?: React.ReactNode;
+  refreshControl?: React.ReactNode;
+  testID?: string;
+} & Record<string, unknown>) => {
+  const list = sections ?? [];
+  return React.createElement(
+    "div",
+    { testid: testID },
+    ListHeaderComponent ?? null,
+    list.length === 0
+      ? (ListEmptyComponent ?? null)
+      : list.map((section, sectionIndex) =>
+          React.createElement(
+            "div",
+            { key: section.key ?? sectionIndex },
+            renderSectionHeader ? renderSectionHeader({ section }) : null,
+            section.data.map((item, index) =>
+              React.createElement(
+                "div",
+                { key: keyExtractor ? keyExtractor(item, index) : index },
+                renderItem ? renderItem({ item, index, section }) : null,
+              ),
+            ),
+          ),
+        ),
+  );
+};
+
 export const ActivityIndicator = ({ ...props }: Record<string, unknown>) =>
   React.createElement("div", props, "Loading...");
 
@@ -424,6 +469,7 @@ const ReactNative = {
   Pressable,
   ScrollView,
   FlatList,
+  SectionList,
   KeyboardAvoidingView,
   Modal,
   ActivityIndicator,
