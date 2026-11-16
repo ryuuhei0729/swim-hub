@@ -14,7 +14,7 @@ import { TeamDetailView } from "@/components/teams/TeamDetailView";
 import { TeamSwitcherSheet } from "@/components/teams/TeamSwitcherSheet";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
-import { TeamListSkeleton } from "@/components/ui/ScreenSkeletons";
+import { TeamSkeleton } from "@/components/ui/ScreenSkeletons";
 import { PressableScale } from "@/components/ui/PressableScale";
 import type { TabParamList } from "@/navigation/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
@@ -199,7 +199,7 @@ export const TeamsScreen: React.FC<Props> = ({ route, navigation }) => {
   if ((isLoading && teams.length === 0) || !hydrated) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        <TeamListSkeleton />
+        <TeamSkeleton />
       </SafeAreaView>
     );
   }

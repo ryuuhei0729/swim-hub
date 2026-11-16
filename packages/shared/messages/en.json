@@ -902,7 +902,7 @@
     "announcements": {
       "title": "Announcements",
       "adminRole": "Admin",
-      "unansweredAttendance": "You have events with unanswered attendance this month. ({count} items)",
+      "unansweredAttendance": "You have events with unanswered attendance. ({count} items)",
       "unsubmittedEntry": "Your entry for {name} ({date}) has not been submitted."
     },
     "dayDetail": {
@@ -2911,6 +2911,37 @@
         "rankingsDescription": "Team rankings by event and distance",
         "goalsTitle": "Member goals",
         "goalsDescription": "Goals and milestone progress for each competition"
+      },
+      "attendanceTab": {
+        "summaryTitle": "Open attendance",
+        "unansweredCount": "{count} unanswered",
+        "allAnswered": "All answered",
+        "savedToast": "Attendance saved",
+        "statusChangedToast": "Set {count} to \"{status}\"",
+        "closedTag": "Closed",
+        "empty": "No upcoming practices or competitions",
+        "rowAria": "View everyone's attendance for {title} on {date}",
+        "answerAria": "Answer \"{status}\" for {title}",
+        "statusPillAria": "Change status of {title} (now: {status})",
+        "selectAria": "Select {title}",
+        "adminHint": "Tap a status on the right to change it",
+        "bulkChange": "Change multiple",
+        "bulkSelected": "{count} selected",
+        "bulkToOpen": "Set to open",
+        "bulkToClosed": "Set to closed",
+        "statusHelpOpen": "Members can answer",
+        "statusHelpClosed": "Answers are closed. Changes after closing add the edit time to the note. Events close automatically once the date has passed",
+        "statusSection": "Attendance status",
+        "myAnswer": "Your attendance",
+        "myAnswerHint": "Saved when you tap",
+        "myAnswerHintClosed": "Changes after closing add the edit time to the note",
+        "noteSave": "Save note",
+        "everyone": "Everyone's attendance",
+        "editMember": "Edit",
+        "editMemberAria": "Edit attendance of {name}",
+        "you": "you",
+        "noteAdd": "+ Note",
+        "noteEditAria": "Enter a note for {title}"
       }
     },
     "page": {

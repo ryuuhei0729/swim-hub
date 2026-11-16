@@ -8,14 +8,13 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useListPendingMembersQuery } from "@apps/shared/hooks/queries/teams";
 import { TeamTabs, type TeamTabType } from "./TeamTabs";
 import { TeamMemberList } from "./TeamMemberList";
-import { MyMonthlyAttendance } from "./MyMonthlyAttendance";
 import { PendingMembersSection } from "./PendingMembersSection";
 import { TeamGroupManagement } from "./group-management";
-import { AdminMonthlyAttendance } from "./AdminMonthlyAttendance";
+import { TeamAttendanceTab } from "./attendance/TeamAttendanceTab";
 import { TeamHeaderAdminToggle } from "./TeamHeaderAdminToggle";
 import { TeamScheduleList } from "./TeamScheduleList";
 import { TeamOthersTab } from "./TeamOthersTab";
-import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
+import { TeamBodySkeleton } from "@/components/ui/ScreenSkeletons";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
@@ -162,7 +161,7 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
     return (
       <View style={styles.container}>
         {header}
-        <LoadingSpinner fullScreen message={t("teams.mobile.loadingTeam")} />
+        <TeamBodySkeleton />
       </View>
     );
   }
@@ -238,11 +237,7 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
       case "schedule":
         return <TeamScheduleList teamId={teamId} isAdmin={effectiveIsAdminView} />;
       case "attendance":
-        return effectiveIsAdminView ? (
-          <AdminMonthlyAttendance teamId={teamId} />
-        ) : (
-          <MyMonthlyAttendance teamId={teamId} />
-        );
+        return <TeamAttendanceTab teamId={teamId} isAdminView={effectiveIsAdminView} />;
       case "others":
         return <TeamOthersTab teamId={teamId} isAdminView={effectiveIsAdminView} />;
       default:

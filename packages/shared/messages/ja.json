@@ -905,7 +905,7 @@
     "announcements": {
       "title": "のお知らせ",
       "adminRole": "管理者",
-      "unansweredAttendance": "今月、出欠が未回答のイベントがあります（{count}件）",
+      "unansweredAttendance": "出欠が未回答のイベントがあります（{count}件）",
       "unsubmittedEntry": "{name}（{date}）のエントリーが未提出です。"
     },
     "dayDetail": {
@@ -2914,6 +2914,37 @@
         "rankingsDescription": "種目・距離ごとのチーム内ランキング",
         "goalsTitle": "メンバーの目標",
         "goalsDescription": "大会ごとの目標とマイルストーンの進み具合"
+      },
+      "attendanceTab": {
+        "summaryTitle": "受付中の出欠",
+        "unansweredCount": "未回答 {count}件",
+        "allAnswered": "すべて回答済み",
+        "savedToast": "出欠を保存しました",
+        "statusChangedToast": "{count}件を「{status}」にしました",
+        "closedTag": "締切",
+        "empty": "これからの練習・大会はありません",
+        "rowAria": "{date} {title} の全員の出欠を見る",
+        "answerAria": "{title} を「{status}」で回答",
+        "statusPillAria": "{title} の受付状態を変更（現在: {status}）",
+        "selectAria": "{title} を選択",
+        "adminHint": "右の受付状態を押すと変更できます",
+        "bulkChange": "まとめて変更",
+        "bulkSelected": "{count}件を選択中",
+        "bulkToOpen": "受付中にする",
+        "bulkToClosed": "締切にする",
+        "statusHelpOpen": "メンバーが回答できます",
+        "statusHelpClosed": "回答を締め切ります。締切後に回答を変えると、備考に編集日時が付きます。日付が過ぎると自動で締切になります",
+        "statusSection": "受付状態",
+        "myAnswer": "あなたの出欠",
+        "myAnswerHint": "押すと保存されます",
+        "myAnswerHintClosed": "締切後の変更は、備考に編集日時が付きます",
+        "noteSave": "備考を保存",
+        "everyone": "全員の出欠",
+        "editMember": "変更",
+        "editMemberAria": "{name} の出欠を変更",
+        "you": "あなた",
+        "noteAdd": "＋備考",
+        "noteEditAria": "{title} の備考を入力"
       }
     },
     "page": {

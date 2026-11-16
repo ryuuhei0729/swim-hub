@@ -905,7 +905,7 @@
     "announcements": {
       "title": "的通知",
       "adminRole": "管理员",
-      "unansweredAttendance": "本月有尚未回复出勤的活动。（{count}条）",
+      "unansweredAttendance": "有尚未回复出勤的活动。（{count}条）",
       "unsubmittedEntry": "{name}（{date}）的报名尚未提交。"
     },
     "dayDetail": {
@@ -2914,6 +2914,37 @@
         "rankingsDescription": "按项目和距离的团队内排名",
         "goalsTitle": "成员目标",
         "goalsDescription": "每场比赛的目标和里程碑进度"
+      },
+      "attendanceTab": {
+        "summaryTitle": "正在接受的出勤",
+        "unansweredCount": "未回复 {count}项",
+        "allAnswered": "已全部回复",
+        "savedToast": "已保存出勤",
+        "statusChangedToast": "已将 {count} 项设为“{status}”",
+        "closedTag": "已截止",
+        "empty": "没有即将到来的练习或比赛",
+        "rowAria": "查看 {date} {title} 的全员出勤",
+        "answerAria": "将 {title} 回复为“{status}”",
+        "statusPillAria": "更改 {title} 的接受状态（当前：{status}）",
+        "selectAria": "选择 {title}",
+        "adminHint": "点击右侧的接受状态即可更改",
+        "bulkChange": "批量更改",
+        "bulkSelected": "已选择 {count}项",
+        "bulkToOpen": "设为接受中",
+        "bulkToClosed": "设为已截止",
+        "statusHelpOpen": "成员可以回复",
+        "statusHelpClosed": "截止回复。截止后更改回复时，备注中会添加编辑时间。日期过后会自动截止",
+        "statusSection": "接受状态",
+        "myAnswer": "你的出勤",
+        "myAnswerHint": "点击即保存",
+        "myAnswerHintClosed": "截止后的更改会在备注中添加编辑时间",
+        "noteSave": "保存备注",
+        "everyone": "全员出勤",
+        "editMember": "更改",
+        "editMemberAria": "更改 {name} 的出勤",
+        "you": "你",
+        "noteAdd": "＋备注",
+        "noteEditAria": "输入 {title} 的备注"
       }
     },
     "page": {
