@@ -94,8 +94,7 @@ export const TeamBulkRegisterScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
-    padding: 12,
+    backgroundColor: "#F3F6FB",
   },
   permissionContainer: {
     flex: 1,

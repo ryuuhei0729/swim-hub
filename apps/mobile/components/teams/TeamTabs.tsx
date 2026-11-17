@@ -16,6 +16,8 @@ export interface TeamTabsProps {
   isAdmin?: boolean;
   /** 承認待ちメンバー数（メンバータブにバッジ表示。web TeamAdminTabs の pendingCount 相当） */
   pendingCount?: number;
+  /** 自分の出欠未回答の件数（出欠タブにバッジ表示。下のタブバーの「チーム」バッジの内訳） */
+  attendanceCount?: number;
 }
 
 /**
@@ -31,6 +33,7 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
   onTabChange,
   isAdmin = false,
   pendingCount = 0,
+  attendanceCount = 0,
 }) => {
   const { t } = useTranslation();
   const visibleTabs = TEAM_TAB_DEFS.filter((tab) => !tab.adminOnly || isAdmin);
@@ -39,7 +42,9 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
     <View style={styles.container} accessibilityRole="tablist">
       {visibleTabs.map((tab) => {
         const isActive = activeTab === tab.id;
-        const showBadge = tab.id === "members" && pendingCount > 0;
+        const badgeCount =
+          tab.id === "members" ? pendingCount : tab.id === "attendance" ? attendanceCount : 0;
+        const showBadge = badgeCount > 0;
 
         return (
           <Pressable
@@ -48,6 +53,12 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
             onPress={() => onTabChange(tab.id)}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
+            accessibilityLabel={
+              showBadge
+                ? t("teams.mobile.tabBadgeAria", { name: t(tab.nameKey), count: badgeCount })
+                : undefined
+            }
+            testID={`team-tab-${tab.id}`}
           >
             <Feather name={tab.icon} size={14} color={isActive ? "#2563EB" : "#6B7280"} />
             <Text style={[styles.tabText, isActive && styles.tabTextActive]} numberOfLines={1}>
@@ -55,7 +66,7 @@ export const TeamTabs: React.FC<TeamTabsProps> = ({
             </Text>
             {showBadge && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{pendingCount > 99 ? "99+" : pendingCount}</Text>
+                <Text style={styles.badgeText}>{badgeCount > 99 ? "99+" : badgeCount}</Text>
               </View>
             )}
             {isActive && <View style={styles.tabIndicator} />}
