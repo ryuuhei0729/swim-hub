@@ -36,6 +36,40 @@ platform :ios do
     )
   end
 
+  desc "編集中バージョンの「このバージョンの新機能」だけを更新する (他の項目・ロケールの追加はしない)"
+  desc "metadata/<locale>/release_notes.txt を読む。無ければ同じ言語 (en-GB → en-*) のファイルを使う"
+  desc "options: apply:true で実際に書き込む (既定は確認のみ)"
+  lane :upload_release_notes do |options|
+    apply = options[:apply].to_s == "true"
+    swimhub_api_key
+    app = Spaceship::ConnectAPI::App.find("app.swimhub")
+    UI.user_error!("アプリが見つかりません: app.swimhub") unless app
+    version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+    UI.user_error!("編集中の iOS バージョンがありません") unless version
+    UI.message("対象バージョン: #{version.version_string} (#{version.app_store_state})")
+
+    metadata_dir = File.expand_path("./metadata", __dir__)
+    find_notes = lambda do |locale|
+      exact = File.join(metadata_dir, locale, "release_notes.txt")
+      return exact if File.exist?(exact)
+      lang = locale.split("-").first
+      Dir.glob(File.join(metadata_dir, "#{lang}*", "release_notes.txt")).min
+    end
+
+    version.get_app_store_version_localizations.each do |loc|
+      path = find_notes.call(loc.locale)
+      unless path
+        UI.important("#{loc.locale}: release_notes.txt が無いのでスキップ")
+        next
+      end
+      text = File.read(path).strip
+      UI.user_error!("#{loc.locale}: 4000 文字を超えています (#{text.length})") if text.length > 4000
+      UI.message("#{loc.locale}: #{File.basename(File.dirname(path))}/release_notes.txt (#{text.length} 文字) / 現在 #{loc.whats_new.to_s.length} 文字")
+      loc.update(attributes: { whats_new: text }) if apply
+    end
+    UI.success(apply ? "リリースノートを更新しました" : "確認のみ (書き込むには apply:true)")
+  end
+
   desc "Maestro が撮った生スクショにデバイス枠+訴求テキストを合成する (frameit) ※現在は未使用"
   lane :frame do
     frame_screenshots(
