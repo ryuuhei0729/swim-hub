@@ -28,6 +28,7 @@ describe("TeamTabs", () => {
       isAdmin: boolean;
       onTabChange: (tab: TeamTabType) => void;
       pendingCount: number;
+      attendanceCount: number;
     }> = {},
   ) => ({
     activeTab: "members" as TeamTabType,
@@ -72,6 +73,18 @@ describe("TeamTabs", () => {
 
     rerender(<TeamTabs {...makeProps({ isAdmin: true, pendingCount: 0 })} />);
     expect(screen.queryByText("0")).toBeNull();
+  });
+
+  it("出欠未回答があれば出欠タブにバッジを出す (チームタブのバッジの内訳)。0 件なら出さない", () => {
+    const { container, rerender } = render(<TeamTabs {...makeProps({ attendanceCount: 2 })} />);
+    const attendanceTab = container.querySelector('[testid="team-tab-attendance"]')!;
+    expect(attendanceTab.textContent).toBe("出欠2");
+    expect(attendanceTab.getAttribute("accessibilitylabel")).toBe("出欠（未対応 2件）");
+    // 他のタブには出さない
+    expect(container.querySelector('[testid="team-tab-members"]')!.textContent).toBe("メンバー");
+
+    rerender(<TeamTabs {...makeProps({ attendanceCount: 0 })} />);
+    expect(container.querySelector('[testid="team-tab-attendance"]')!.textContent).toBe("出欠");
   });
 });
 

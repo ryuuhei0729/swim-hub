@@ -46,9 +46,9 @@ vi.mock("@/screens/MyPageScreen", () => ({ MyPageScreen: () => null }));
 vi.mock("@/contexts/AuthProvider", () => ({ useAuth: () => ({ supabase: {}, user: { id: "u1" } }) }));
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useTeamsQuery: () => ({ teams: mocks.teams, isLoading: false, isError: false, refetch: vi.fn() }),
-  usePendingMembersCountQuery: (_supabase: unknown, teamIds: readonly string[]) => {
+  usePendingMembersCountsByTeamQuery: (_supabase: unknown, teamIds: readonly string[]) => {
     mocks.pendingTeamIds = teamIds;
-    return mocks.pendingCount;
+    return mocks.pendingCount > 0 ? { [teamIds[0] ?? "team-x"]: mocks.pendingCount } : {};
   },
 }));
 vi.mock("@apps/shared/hooks/queries/notifications", () => ({

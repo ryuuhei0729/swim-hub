@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { DashboardScreen } from "@/screens/DashboardScreen";
 import { RecordsHubScreen } from "@/screens/RecordsHubScreen";
@@ -12,10 +12,7 @@ import {
   tabNavigatorScreenOptions,
   tabScreenOptions,
 } from "./tabBar";
-import { useAuth } from "@/contexts/AuthProvider";
-import { useTeamsQuery, usePendingMembersCountQuery } from "@apps/shared/hooks/queries/teams";
-import { useUnansweredAttendancesQuery } from "@apps/shared/hooks/queries/notifications";
-import { groupTeamMemberships } from "@/utils/teamMembershipGroups";
+import { useTeamBadgeCounts } from "@/hooks/useTeamBadgeCounts";
 import { formatBadgeCount } from "@/utils/formatBadgeCount";
 
 // 実機では tabBar.native.tsx (OS 標準のタブバー)、web とテストでは tabBar.tsx (JS 描画)
@@ -29,36 +26,11 @@ const Tab = createTabNavigator();
  */
 export const TabNavigator: React.FC = () => {
   const { t } = useTranslation();
-  const { supabase, user } = useAuth();
-
-  // DashboardScreen も同じ queryKey (teamKeys.list()) を購読済みのため dedupe され追加フェッチは発生しない
-  const { teams } = useTeamsQuery(supabase, {
-    enableRealtime: false,
-  });
 
   // チームタブのバッジ = 出欠未回答の件数 + 自分が管理者のチームの承認待ちメンバー数。
-  // 出欠未回答はホームの DashboardNoticesSection と同じ引数 (承認済みチームを一覧の順で) にして
-  // queryKey を揃え、同じキャッシュを使う
-  const { approvedTeams } = useMemo(() => groupTeamMemberships(teams), [teams]);
-  const teamsForNotifications = useMemo(
-    () =>
-      approvedTeams.map((m) => ({
-        team_id: m.team_id,
-        team: m.teams ? { name: m.teams.name } : undefined,
-      })),
-    [approvedTeams],
-  );
-  const adminTeamIds = useMemo(
-    () => approvedTeams.filter((m) => m.role === "admin").map((m) => m.team_id),
-    [approvedTeams],
-  );
-  const { data: unansweredAttendances = [] } = useUnansweredAttendancesQuery(
-    supabase,
-    user?.id,
-    teamsForNotifications,
-  );
-  const pendingMembersCount = usePendingMembersCountQuery(supabase, adminTeamIds);
-  const teamsBadge = formatBadgeCount(unansweredAttendances.length + pendingMembersCount);
+  // チーム画面の中のタブ・チーム切替シートも同じフックでチームごとの件数を出す
+  const { total: teamsBadgeTotal } = useTeamBadgeCounts();
+  const teamsBadge = formatBadgeCount(teamsBadgeTotal);
 
   return (
     <TabBarShell>

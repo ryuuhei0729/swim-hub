@@ -8,6 +8,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  InputAccessoryView,
+  Keyboard,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-navigation/native";
@@ -30,6 +33,7 @@ import { UserFacingError, toUserFacingMessage } from "@apps/shared/utils/userFac
 import { excludeNonSwimmers } from "@apps/shared/utils/swimmerFilter";
 import { checkIsPremium } from "@swim-hub/shared/utils/premium";
 import { formatTime } from "@/utils/formatters";
+import { parseTime } from "@apps/shared/utils/time";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 import { ErrorView } from "@/components/layout/ErrorView";
 import { PremiumBadge } from "@/components/shared/PremiumBadge";
@@ -49,6 +53,13 @@ import type { PracticeTag } from "@apps/shared/types";
 import type { PracticeLogTemplate } from "@apps/shared/types/practiceLogTemplate";
 
 type RouteProps = RouteProp<MainStackParamList, "TeamPracticeLogBulkForm">;
+const TIME_INPUT_ACCESSORY_ID = "team-practice-bulk-time-next";
+
+/** タイムセルの識別子 (表示中メニュー内で一意) */
+function timeCellKey(userId: string, setNumber: number, repNumber: number): string {
+  return `${userId}:${setNumber}:${repNumber}`;
+}
+
 type NavProps = NativeStackNavigationProp<MainStackParamList>;
 
 /** RN には crypto.randomUUID がないため簡易 ID 生成（クライアント内のみで使用） */
@@ -145,7 +156,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
   const toast = useToast();
   const queryClient = useQueryClient();
   const isPremium = checkIsPremium(subscription);
-  const { parseInput } = useQuickTimeInput();
+  const { parseInput, resetContext } = useQuickTimeInput();
 
   // メンバー一覧（権限判定にも使用）
   const { members, isLoading: membersLoading } = useTeamsQuery(supabase, {
@@ -160,7 +171,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
   }, [user, members]);
 
   // メンバー選択候補（非泳者を除外）。isCurrentUserAdmin 判定・氏名解決には
-  // 生の members を使い続け、候補提示・デフォルト全選択の直前だけこの配列を使う (PM 裁定 R4)。
+  // 生の members を使い続け、候補提示の直前だけこの配列を使う (PM 裁定 R4)。
   const memberSelectCandidates = useMemo(() => excludeNonSwimmers(members), [members]);
 
   const [practice, setPractice] = useState<PracticeInfo | null>(null);
@@ -237,7 +248,8 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
           circleSec: 30,
           note: "",
           tags: [],
-          targetUserIds: present.length > 0 ? present : memberSelectCandidates.map((m) => m.user_id),
+          // デフォルトの対象は出席者のみ。出席者が 0 人なら空 (ユーザー選択から追加する)
+          targetUserIds: present,
           times: {},
           videoAssets: {},
         },
@@ -352,7 +364,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-    // members が確定してから初期メニューのデフォルト対象を決めたいので members も依存に含める
+    // members の取得完了後に再実行させるため members.length も依存に含める (initializedRef で1回のみ)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, practiceId, teamId, members.length]);
 
@@ -405,10 +417,7 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
           circleSec: 30,
           note: "",
           tags: [],
-          targetUserIds:
-            presentUserIds.length > 0
-              ? presentUserIds
-              : memberSelectCandidates.map((m) => m.user_id),
+          targetUserIds: presentUserIds,
           times: {},
           videoAssets: {},
         },
@@ -492,36 +501,79 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
     );
   };
 
+  /** menu の指定セルのタイムを置き換えた新しい menu を返す */
+  const withCellEntry = (menu: PracticeMenu, userId: string, entry: MemberTimeEntry): PracticeMenu => {
+    const existing = menu.times[userId] ?? [];
+    const idx = existing.findIndex(
+      (e) => e.setNumber === entry.setNumber && e.repNumber === entry.repNumber,
+    );
+    const nextEntries =
+      idx >= 0 ? existing.map((e, i) => (i === idx ? entry : e)) : [...existing, entry];
+    return { ...menu, times: { ...menu.times, [userId]: nextEntries } };
+  };
+
   const setMemberTimeCell = (
     menuId: string,
     userId: string,
     setNumber: number,
     repNumber: number,
     rawValue: string,
+    commit = false,
   ) => {
-    const { time, displayValue } = parseInput(rawValue);
+    // 入力中 (commit=false) は打った文字列をそのまま表示し、整形はフォーカスアウト時のみ行う。
+    // 以前はキー入力ごとに整形結果で上書きしていたため、「32.0」→「32.00」のように
+    // 文字数が戻り、Backspace で削除できなかった。
+    // 入力中の time はコンテキスト非依存の parseTime で仮に同期しておき、
+    // クイック入力 (「2.4」→ 直前の十の位を引き継いで 32.40) の解釈は確定時の parseInput で行う。
+    // 確定せずに保存した場合は handleSubmit 側でフォーカス中のセルを確定し直す。
+    if (!rawValue.trim()) resetContext();
+    const { time, displayValue } = commit
+      ? parseInput(rawValue)
+      : { time: parseTime(rawValue), displayValue: rawValue };
+    const entry: MemberTimeEntry = {
+      setNumber,
+      repNumber,
+      time,
+      displayValue: displayValue || rawValue,
+    };
     setMenus((prev) =>
-      prev.map((menu) => {
-        if (menu.id !== menuId) return menu;
-        const existing = menu.times[userId] ?? [];
-        const idx = existing.findIndex(
-          (e) => e.setNumber === setNumber && e.repNumber === repNumber,
-        );
-        let nextEntries: MemberTimeEntry[];
-        const entry: MemberTimeEntry = {
-          setNumber,
-          repNumber,
-          time,
-          displayValue: displayValue || rawValue,
-        };
-        if (idx >= 0) {
-          nextEntries = existing.map((e, i) => (i === idx ? entry : e));
-        } else {
-          nextEntries = [...existing, entry];
-        }
-        return { ...menu, times: { ...menu.times, [userId]: nextEntries } };
-      }),
+      prev.map((menu) => (menu.id === menuId ? withCellEntry(menu, userId, entry) : menu)),
     );
+  };
+
+  // ---- タイム入力の「次へ」移動 ----
+  // 表示中メニューのセルを「メンバー → セット → 本」の順に並べ、次のセルへフォーカスを移す。
+  // decimal-pad (iOS) には改行キーが無いため、キーボード上部に「次へ」/「完了」バーを出す。
+  const timeInputRefs = useRef<Map<string, TextInput>>(new Map());
+  // フォーカス中のセル。保存ボタンを押した時点で未確定 (blur 前) の入力を確定するために使う
+  const focusedCellRef = useRef<{
+    menuId: string;
+    userId: string;
+    setNumber: number;
+    repNumber: number;
+  } | null>(null);
+  const activeMenu = menus[activeMenuIndex];
+  const activeCellKeys: string[] = [];
+  if (activeMenu) {
+    const sets = Number(activeMenu.sets) || 0;
+    const reps = Number(activeMenu.reps) || 0;
+    for (const userId of activeMenu.targetUserIds) {
+      for (let si = 1; si <= sets; si++) {
+        for (let ri = 1; ri <= reps; ri++) {
+          activeCellKeys.push(timeCellKey(userId, si, ri));
+        }
+      }
+    }
+  }
+  const focusNextTimeCell = (cellKey: string) => {
+    const nextKey = activeCellKeys[activeCellKeys.indexOf(cellKey) + 1];
+    const nextInput = nextKey ? timeInputRefs.current.get(nextKey) : undefined;
+    if (nextInput) {
+      // 移動元のセルは blur 時の onEndEditing で確定される
+      nextInput.focus();
+    } else {
+      Keyboard.dismiss();
+    }
   };
 
   const getCellValue = (
@@ -580,9 +632,29 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
     setSaving(true);
 
     try {
+      // フォーカス中のセルは blur (onEndEditing) より先に保存ボタンが押されることがあり、
+      // その場合は入力中の仮の time のままなので、ここで確定し直してから保存する
+      let menusToSave = menus;
+      const focused = focusedCellRef.current;
+      if (focused) {
+        const focusedEntry = menus
+          .find((m) => m.id === focused.menuId)
+          ?.times[focused.userId]?.find(
+            (e) => e.setNumber === focused.setNumber && e.repNumber === focused.repNumber,
+          );
+        if (focusedEntry && focusedEntry.displayValue.trim()) {
+          const { time, displayValue } = parseInput(focusedEntry.displayValue);
+          menusToSave = menus.map((m) =>
+            m.id === focused.menuId
+              ? withCellEntry(m, focused.userId, { ...focusedEntry, time, displayValue })
+              : m,
+          );
+        }
+      }
+
       // RPC へ渡すログデータを準備（空欄/time<=0 はスキップ）
       const logsData: ReplaceLogData[] = [];
-      for (const menu of menus) {
+      for (const menu of menusToSave) {
         const targetMembers = members.filter((m) => menu.targetUserIds.includes(m.user_id));
         for (const member of targetMembers) {
           const memberTimes = (menu.times[member.user_id] ?? []).filter((e) => e.time > 0);
@@ -1018,12 +1090,19 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
                                   <View style={styles.repRow}>
                                     {Array.from({ length: repCount }, (_, ri) => {
                                       const repNumber = ri + 1;
+                                      const cellKey = timeCellKey(userId, setNumber, repNumber);
+                                      const isLastCell =
+                                        cellKey === activeCellKeys[activeCellKeys.length - 1];
                                       return (
                                         <View key={repNumber} style={styles.repCell}>
                                           <Text style={styles.repCellLabel}>
                                             {t("practice.modal.repLabel", { n: repNumber })}
                                           </Text>
                                           <TextInput
+                                            ref={(ref) => {
+                                              if (ref) timeInputRefs.current.set(cellKey, ref);
+                                              else timeInputRefs.current.delete(cellKey);
+                                            }}
                                             style={styles.repInput}
                                             value={getCellValue(menu, userId, setNumber, repNumber)}
                                             onChangeText={(text) =>
@@ -1034,6 +1113,40 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
                                                 repNumber,
                                                 text,
                                               )
+                                            }
+                                            onFocus={() => {
+                                              focusedCellRef.current = {
+                                                menuId: menu.id,
+                                                userId,
+                                                setNumber,
+                                                repNumber,
+                                              };
+                                            }}
+                                            onEndEditing={(e) => {
+                                              if (
+                                                focusedCellRef.current?.menuId === menu.id &&
+                                                focusedCellRef.current.userId === userId &&
+                                                focusedCellRef.current.setNumber === setNumber &&
+                                                focusedCellRef.current.repNumber === repNumber
+                                              ) {
+                                                focusedCellRef.current = null;
+                                              }
+                                              setMemberTimeCell(
+                                                menu.id,
+                                                userId,
+                                                setNumber,
+                                                repNumber,
+                                                e.nativeEvent.text,
+                                                true,
+                                              );
+                                            }}
+                                            onSubmitEditing={() => focusNextTimeCell(cellKey)}
+                                            returnKeyType={isLastCell ? "done" : "next"}
+                                            blurOnSubmit={false}
+                                            inputAccessoryViewID={
+                                              Platform.OS === "ios"
+                                                ? `${TIME_INPUT_ACCESSORY_ID}-${cellKey}`
+                                                : undefined
                                             }
                                             placeholder={t(
                                               "teams.record.timePlaceholder",
@@ -1162,11 +1275,55 @@ export const TeamPracticeLogBulkFormScreen: React.FC = () => {
           navigation.navigate("PracticeLogTemplates");
         }}
       />
+
+      {/*
+        キーボード上の「次へ」/「完了」バー (iOS のみ。decimal-pad は改行キーが無いため専用ボタンで代替する)。
+        InputAccessoryView は同一 nativeID を複数の TextInput で共有すると最初にフォーカスした
+        入力欄以外で表示されなくなる既知のバグがあるため、セルごとに一意な nativeID で用意する
+        (PracticeTimeFormScreen と同じ方式)。
+      */}
+      {Platform.OS === "ios" &&
+        activeCellKeys.map((cellKey, index) => {
+          const isLast = index === activeCellKeys.length - 1;
+          return (
+            <InputAccessoryView key={cellKey} nativeID={`${TIME_INPUT_ACCESSORY_ID}-${cellKey}`}>
+              <View style={styles.accessoryBar}>
+                <Pressable
+                  onPress={() => (isLast ? Keyboard.dismiss() : focusNextTimeCell(cellKey))}
+                  style={styles.accessoryNextButton}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.accessoryNextButtonText}>
+                    {isLast ? t("practice.form.timeInputDone") : t("practice.form.timeInputNext")}
+                  </Text>
+                </Pressable>
+              </View>
+            </InputAccessoryView>
+          );
+        })}
     </FormKeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+  accessoryBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#F3F4F6",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#D1D5DB",
+  },
+  accessoryNextButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  accessoryNextButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
   container: { flex: 1, backgroundColor: "#F9FAFB" },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 32 },

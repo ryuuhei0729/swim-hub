@@ -217,18 +217,19 @@ export const MyPageScreen: React.FC = () => {
     );
   }
 
-  // ページヘッダー (スクロール固定)。読み込み中も出し、表示後に中身がずれないようにする
-  const pageHeader = (
-    <View style={styles.pageHeader}>
-      <Text style={styles.pageHeaderTitle}>{t("account.mobile.pageTitle")}</Text>
-    </View>
+  // ページタイトル。上に固定せず、プロフィールと同じ白いカードの先頭に置いて一緒にスクロールさせる。
+  // 読み込み中も出し、表示後に中身がずれないようにする
+  const pageTitle = (
+    <Text style={styles.pageTitle} accessibilityRole="header">
+      {t("account.mobile.pageTitle")}
+    </Text>
   );
 
   // ローディング状態
   if (isLoading && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-        {pageHeader}
+        <View style={styles.loadingTitle}>{pageTitle}</View>
         <AccountSkeleton />
       </SafeAreaView>
     );
@@ -247,7 +248,6 @@ export const MyPageScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
-      {pageHeader}
       <StaleDataBanner
         visible={isError}
         onRetry={() => {
@@ -269,8 +269,9 @@ export const MyPageScreen: React.FC = () => {
           />
         }
       >
-        {/* プロフィール */}
+        {/* ページタイトル + プロフィール (1枚のカードにまとめる) */}
         <View style={styles.profileCard}>
+          {pageTitle}
           <ProfileDisplay
             profile={profile}
             teams={teams}
@@ -382,28 +383,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 16,
     paddingBottom: 24,
     gap: 16,
   },
   profileCard: {
     ...sectionSurface,
-    paddingVertical: 20,
+    borderTopWidth: 0,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
-  pageHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  pageHeaderTitle: {
+  pageTitle: {
     fontSize: 20,
     fontWeight: "600",
     color: "#111827",
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  loadingTitle: {
+    backgroundColor: colors.surface,
+    paddingTop: 12,
   },
   errorContainer: {
     padding: 20,

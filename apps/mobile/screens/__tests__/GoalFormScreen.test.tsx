@@ -638,9 +638,9 @@ describe("V4-1 / SC5 編集モード: 保存済みの目標のベストを出し
 });
 
 // =============================================================================
-// v7 C: 新規大会の入力欄 (ダッシュボードの大会作成と同じ UI) + 終了日
+// v7 C: 新規大会の入力欄 (ダッシュボードの大会作成と同じ UI)。終了日は「開始日 + 日数」で入力する
 // =============================================================================
-describe("v7 C: 新規大会の開始日・終了日・大会名・場所・水路", () => {
+describe("v7 C: 新規大会の開始日・日数・大会名・場所・水路", () => {
   const openNew = async () => { renderScreen(); await flush(); fireEvent.click(screen.getByText("新規大会を作成")); };
   const fillValid = async () => {
     fireEvent.change(nameInput(), { target: { value: "新規杯" } });
@@ -648,26 +648,36 @@ describe("v7 C: 新規大会の開始日・終了日・大会名・場所・水�
     fireEvent.click(screen.getByTestId("style-1"));
     typeInto("goal-target-time", "1:00.00");
   };
+  const daysButton = (kind: "増やす" | "減らす") => {
+    const el = document.querySelector<HTMLElement>(`[accessibilitylabel="日数を${kind}"]`);
+    if (!el) throw new Error(`日数を${kind} ボタンが無い`);
+    return el;
+  };
+  const addDays = (n: number) => { for (let i = 0; i < n; i++) fireEvent.click(daysButton("増やす")); };
 
-  it("開始日・終了日・大会名・場所・水路 (短/長) の入力欄がある。終了日は任意表示", async () => {
+  it("開始日・日数・大会名・場所・水路 (短/長) の入力欄がある。終了日の入力欄は無い", async () => {
     await openNew();
     expect(screen.getByTestId("date-field")).toBeTruthy();
-    expect(screen.getByTestId("end-date-field")).toBeTruthy();
+    expect(screen.queryByTestId("end-date-field")).toBeNull();
+    expect(daysButton("増やす")).toBeTruthy();
     expect(nameInput()).toBeTruthy();
     expect(Array.from(document.querySelectorAll("input")).some((i) => ["場所（任意）", "例: 東京アクアティクスセンター"].includes(i.placeholder))).toBe(true);
     expect(poolBtn(false)).toBeTruthy();
     expect(poolBtn(true)).toBeTruthy();
     const text = document.body.textContent ?? "";
     expect(text).toContain("開始日");
-    expect(text).toContain("終了日");
+    expect(text).toContain("日数");
+    expect(text).toContain("1日間");
     expect(text).toContain("大会名");
     expect(text).toContain("水路");
   });
 
-  it("作成: 終了日を入れると createGoal の competitionData に endDate が厳密一致で入る", async () => {
+  it("作成: 日数を3日にすると createGoal の competitionData の endDate は開始日+2日", async () => {
     await openNew();
     await fillValid();
-    fireEvent.click(screen.getByTestId("end-date-field"));
+    addDays(2);
+    expect(document.body.textContent).toContain("3日間");
+    expect(document.body.textContent).toContain("終了日: 2100年1月2日");
     await submit();
     expect(h.createGoal).toHaveBeenCalledTimes(1);
     expect(h.createGoal.mock.calls[0]![0].competitionData).toEqual({
@@ -675,40 +685,33 @@ describe("v7 C: 新規大会の開始日・終了日・大会名・場所・水�
     });
   });
 
-  it("作成: 終了日が未入力なら endDate は null", async () => {
+  it("作成: 日数が1日 (既定) なら endDate は null", async () => {
     await openNew();
     await fillValid();
     await submit();
     expect(h.createGoal.mock.calls[0]![0].competitionData.endDate).toBeNull();
   });
 
-  it("終了日 < 開始日は保存不可: createGoal 未呼び出し + competition.form.endBeforeStart", async () => {
+  it("日数を増やしてから1日に戻すと単日 (endDate null) になる", async () => {
     await openNew();
     await fillValid();
-    h.pickEndDate = "2099-12-30";
-    fireEvent.click(screen.getByTestId("end-date-field"));
+    addDays(1);
+    fireEvent.click(daysButton("減らす"));
     await submit();
-    expect(h.createGoal).not.toHaveBeenCalled();
-    expect(errorText().join("|") + document.body.textContent).toContain("終了日は開始日以降の日付を指定してください");
+    expect(h.createGoal.mock.calls[0]![0].competitionData.endDate).toBeNull();
   });
 
-  it("終了日 = 開始日は可", async () => {
+  it("開始日を変えても日数は保たれ、終了日が同じだけずれる", async () => {
     await openNew();
-    await fillValid();
-    h.pickEndDate = "2099-12-31";
-    fireEvent.click(screen.getByTestId("end-date-field"));
+    await fillValid(); // 開始日 2099-12-31
+    addDays(2); // 3日間
+    h.pickDate = "2099-12-01";
+    fireEvent.click(screen.getByTestId("date-field"));
+    expect(document.body.textContent).toContain("3日間");
     await submit();
-    expect(h.createGoal.mock.calls[0]![0].competitionData.endDate).toBe("2099-12-31");
-  });
-
-  it("終了日の DatePicker の minDate は開始日", async () => {
-    await openNew();
-    fireEvent.click(screen.getByTestId("date-field")); // start = 2099-12-31
-    const end = [...h.dateProps].reverse().find((d) => d.label === "end")!;
-    expect(end.minDate).toBeInstanceOf(Date);
-    expect(end.minDate!.getFullYear()).toBe(2099);
-    expect(end.minDate!.getMonth()).toBe(11);
-    expect(end.minDate!.getDate()).toBe(31);
+    expect(h.createGoal.mock.calls[0]![0].competitionData).toMatchObject({
+      date: "2099-12-01", endDate: "2099-12-03",
+    });
   });
 
   it("開始日 < 今日は保存不可 (v4 M3 維持)", async () => {
@@ -738,7 +741,7 @@ describe("v7 C: 新規大会の開始日・終了日・大会名・場所・水�
       await flush();
       fireEvent.change(nameInput(), { target: { value: "新大会" } });
       fireEvent.click(screen.getByTestId("date-field"));
-      fireEvent.click(screen.getByTestId("end-date-field"));
+      addDays(2);
       await submit("更新");
       expect(h.createCompetition).toHaveBeenCalledTimes(1);
       expect(h.createCompetition.mock.calls[0]![0]).toMatchObject({ title: "新大会", date: "2099-12-31", end_date: "2100-01-02", pool_type: 0 });
@@ -754,23 +757,22 @@ describe("v7 C: 新規大会の開始日・終了日・大会名・場所・水�
       expect(h.createCompetition.mock.calls[0]![0].end_date).toBeNull();
     });
 
-    it("[M-A] 終了日だけ変えた再保存でも updateCompetition(作成済み id, {end_date: 新しい値}) が呼ばれ、createCompetition は1回のまま", async () => {
+    it("[M-A] 日数だけ変えた再保存でも updateCompetition(作成済み id, {end_date: 新しい値}) が呼ばれ、createCompetition は1回のまま", async () => {
       h.updateGoal.mockRejectedValueOnce(new Error("x"));
       await openNew();
       await flush();
       fireEvent.change(nameInput(), { target: { value: "新大会" } });
       fireEvent.click(screen.getByTestId("date-field"));
-      fireEvent.click(screen.getByTestId("end-date-field")); // 2100-01-02
+      addDays(2); // 2100-01-02
       await submit("更新");
       expect(h.updateCompetition).not.toHaveBeenCalled();
-      h.pickEndDate = "2100-02-03";
-      fireEvent.click(screen.getByTestId("end-date-field"));
+      addDays(1); // 4日間 → 2100-01-03
       await submit("更新");
       expect(h.createCompetition).toHaveBeenCalledTimes(1);
       expect(h.updateCompetition).toHaveBeenCalledTimes(1);
       const [id, updates] = h.updateCompetition.mock.calls[0]!;
       expect(id).toBe("newc");
-      expect(updates).toMatchObject({ end_date: "2100-02-03" });
+      expect(updates).toMatchObject({ end_date: "2100-01-03" });
       expect(h.updateGoal.mock.calls[1]![1].competitionId).toBe("newc");
     });
   });
