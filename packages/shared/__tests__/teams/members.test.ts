@@ -155,6 +155,31 @@ describe("TeamMembersAPI", () => {
     });
   });
 
+  describe("退会日 (left_at) は端末の日付で記録する", () => {
+    // left_at は date 型。以前は toISOString (UTC) を入れていたため、日本時間 0〜9 時に
+    // 退会すると前日の日付になっていた。日本時間 2025-01-02 08:30 (= UTC 2025-01-01 23:30) で確かめる
+    const ORIGINAL_TZ = process.env.TZ;
+    beforeEach(() => {
+      process.env.TZ = "Asia/Tokyo";
+      vi.setSystemTime(new Date("2025-01-01T23:30:00Z"));
+    });
+    afterEach(() => {
+      if (ORIGINAL_TZ === undefined) delete process.env.TZ;
+      else process.env.TZ = ORIGINAL_TZ;
+    });
+
+    it("leave: 日本時間の朝に退会 → 日本の日付 (2025-01-02) で記録する", async () => {
+      supabaseMock.queueTable("team_memberships", [
+        { data: null, configure: (builder) => builder.update.mockReturnValue(builder) },
+      ]);
+
+      await api.leave("team-1");
+
+      const updateArg = supabaseMock.getBuilder("team_memberships").update.mock.calls[0]![0];
+      expect(updateArg.left_at).toBe("2025-01-02");
+    });
+  });
+
   describe("leave", () => {
     it("自身のチームメンバーシップを退会できる", async () => {
       supabaseMock.queueTable("team_memberships", [
@@ -172,7 +197,7 @@ describe("TeamMembersAPI", () => {
       expect(builder.update).toHaveBeenCalled();
       const updateArg = builder.update.mock.calls[0]![0]; // toHaveBeenCalled() を直前で確認済み
       expect(updateArg.is_active).toBe(false);
-      expect(updateArg.left_at).toEqual(new Date("2025-01-01T00:00:00Z").toISOString());
+      expect(updateArg.left_at).toBe("2025-01-01");
       expect(builder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(builder.eq).toHaveBeenCalledWith("user_id", "test-user-id");
     });
@@ -287,7 +312,7 @@ describe("TeamMembersAPI", () => {
       expect(updateBuilder.update).toHaveBeenCalled();
       const updateArg = updateBuilder.update.mock.calls[0]![0]; // toHaveBeenCalled() を直前で確認済み
       expect(updateArg.is_active).toBe(false);
-      expect(updateArg.left_at).toEqual(new Date("2025-01-01T00:00:00Z").toISOString());
+      expect(updateArg.left_at).toBe("2025-01-01");
       expect(updateBuilder.eq).toHaveBeenCalledWith("team_id", "team-1");
       expect(updateBuilder.eq).toHaveBeenCalledWith("user_id", "member-1");
       // 0行更新検知のために .select().single() が必ず呼ばれること
