@@ -1,5 +1,11 @@
 import { handleAuthCallback } from "@ryuuhei0729/swimhub-oauth/web";
 import { encrypt, isEncrypted } from "@/lib/encryption";
+import {
+  isLoginMethod,
+  LAST_LOGIN_METHOD_COOKIE,
+  LAST_LOGIN_METHOD_MAX_AGE_SECONDS,
+  LOGIN_METHOD_QUERY_PARAM,
+} from "@/lib/lastLoginMethod";
 import { NextRequest } from "next/server";
 import type { SupabaseClient, User, Session } from "@supabase/supabase-js";
 import type { Database } from "@apps/shared/types/supabase-schema";
@@ -100,6 +106,10 @@ async function handleCalendarConnection(
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const isCalendarConnect = requestUrl.searchParams.get("calendar_connect") === "true";
+  const rawLoginMethod = requestUrl.searchParams.get(LOGIN_METHOD_QUERY_PARAM);
+  const loginMethod = isLoginMethod(rawLoginMethod) ? rawLoginMethod : null;
+  // セッション確立 (= ログイン成功) を確認できたときだけ「直近で利用」を記録する
+  let loginSucceeded = false;
 
   // onSessionEstablished の戻り値は handleAuthCallback 側で無視されるため、
   // カレンダー連携が成功したかどうかをクロージャのローカル変数に記録し、
@@ -115,6 +125,10 @@ export async function GET(request: NextRequest) {
     loginPath: "/login",
     getDefaultRedirectForOtpType,
     onSessionEstablished: async (session, { supabase, flow }) => {
+      if (flow === "code") {
+        loginSucceeded = true;
+      }
+
       // カレンダー連携は code フロー (OAuth) の calendar_connect=true 指定時のみ行う。
       // token_hash (メール確認) フローでは対象外。
       if (flow !== "code" || !isCalendarConnect) {
@@ -152,6 +166,15 @@ export async function GET(request: NextRequest) {
       locationUrl.searchParams.set("calendar_connected", "true");
       response.headers.set("location", locationUrl.toString());
     }
+  }
+
+  if (loginSucceeded && loginMethod) {
+    // ログイン画面の JS から読むため httpOnly にしない
+    const secure = requestUrl.protocol === "https:" ? "; Secure" : "";
+    response.headers.append(
+      "Set-Cookie",
+      `${LAST_LOGIN_METHOD_COOKIE}=${loginMethod}; Path=/; Max-Age=${LAST_LOGIN_METHOD_MAX_AGE_SECONDS}; SameSite=Lax${secure}`,
+    );
   }
 
   return response;

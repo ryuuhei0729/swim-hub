@@ -558,7 +558,8 @@
       "emailMethodButton": "Emailでログイン",
       "emailPageTitle": "メールでログイン",
       "emailPageSubtitle": "メールアドレスとパスワードを入力してください",
-      "otherMethods": "他の方法でログイン"
+      "otherMethods": "他の方法でログイン",
+      "lastUsed": "直近で利用"
     },
     "signup": {
       "title": "アカウント作成",

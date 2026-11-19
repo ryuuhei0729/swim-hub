@@ -21,6 +21,7 @@ import {
 } from "@/lib/google-auth";
 import { saveGoogleCalendarRefreshToken } from "@/lib/google-calendar-api";
 import { supabase } from "@/lib/supabase";
+import { saveLastLoginMethod } from "@/lib/lastLoginMethod";
 import { localizeSupabaseAuthError, localizeAuthError } from "@/utils/authErrorLocalizer";
 
 // WebBrowserの完了処理を登録
@@ -93,6 +94,7 @@ export const useGoogleAuth = (): UseGoogleAuthReturn => {
             return { success: false, error: result.error ?? new Error(message) };
           }
 
+          await saveLastLoginMethod("google");
           return { success: true };
         }
 

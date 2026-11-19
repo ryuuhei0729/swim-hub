@@ -558,7 +558,8 @@
       "emailMethodButton": "Mit E-Mail fortfahren",
       "emailPageTitle": "Mit E-Mail anmelden",
       "emailPageSubtitle": "Geben Sie Ihre E-Mail-Adresse und Ihr Passwort ein",
-      "otherMethods": "Andere Anmeldemethoden"
+      "otherMethods": "Andere Anmeldemethoden",
+      "lastUsed": "Zuletzt verwendet"
     },
     "signup": {
       "title": "Konto erstellen",

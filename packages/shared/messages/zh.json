@@ -558,7 +558,8 @@
       "emailMethodButton": "使用邮箱继续",
       "emailPageTitle": "使用邮箱登录",
       "emailPageSubtitle": "请输入您的邮箱地址和密码",
-      "otherMethods": "其他登录方式"
+      "otherMethods": "其他登录方式",
+      "lastUsed": "最近使用"
     },
     "signup": {
       "title": "创建账户",

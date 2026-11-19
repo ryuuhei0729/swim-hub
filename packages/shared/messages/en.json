@@ -555,7 +555,8 @@
       "emailMethodButton": "Continue with email",
       "emailPageTitle": "Log in with email",
       "emailPageSubtitle": "Enter your email address and password",
-      "otherMethods": "Other sign-in options"
+      "otherMethods": "Other sign-in options",
+      "lastUsed": "Last used"
     },
     "signup": {
       "title": "Create Account",

@@ -246,3 +246,53 @@ describe("GET /api/auth/callback — V-16: パラメータなし", () => {
     expect(location(res)).toBe(`${ORIGIN}/login?error=missing_code`);
   });
 });
+
+describe("GET /api/auth/callback — 「直近で利用」ログイン手法の記録", () => {
+  function lastLoginCookie(res: Response): string | undefined {
+    return res.headers
+      .getSetCookie()
+      .find((c) => c.startsWith("swimhub_last_login_method="));
+  }
+
+  it("OAuth (code) でセッションが確立したら login_method を JS から読める Cookie に記録する", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: "t" }, user: { id: "u1", app_metadata: {} } },
+      error: null,
+    });
+    const res = await GET(
+      makeRequest(`${ORIGIN}/api/auth/callback?code=pkce-code&login_method=google`),
+    );
+    const cookie = lastLoginCookie(res);
+    expect(cookie).toContain("swimhub_last_login_method=google");
+    expect(cookie).not.toMatch(/HttpOnly/i);
+    expect(location(res)).toBe(`${ORIGIN}/dashboard`);
+  });
+
+  it("コード交換に失敗した (ログイン失敗) 場合は記録しない", async () => {
+    exchangeCodeForSession.mockResolvedValue({ data: { session: null }, error: { message: "boom" } });
+    const res = await GET(
+      makeRequest(`${ORIGIN}/api/auth/callback?code=bad-code&login_method=google`),
+    );
+    expect(lastLoginCookie(res)).toBeUndefined();
+  });
+
+  it("login_method が無い (カレンダー連携など) 場合は記録しない", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: "t" }, user: { id: "u1", app_metadata: {} } },
+      error: null,
+    });
+    const res = await GET(makeRequest(`${ORIGIN}/api/auth/callback?code=pkce-code`));
+    expect(lastLoginCookie(res)).toBeUndefined();
+  });
+
+  it("不正な login_method は記録しない", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: "t" }, user: { id: "u1", app_metadata: {} } },
+      error: null,
+    });
+    const res = await GET(
+      makeRequest(`${ORIGIN}/api/auth/callback?code=pkce-code&login_method=evil%3B%20Domain%3Dx`),
+    );
+    expect(lastLoginCookie(res)).toBeUndefined();
+  });
+});

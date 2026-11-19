@@ -198,7 +198,7 @@ describe("AuthProvider.tsx — signInWithOAuth のデフォルト redirectTo に
     fireEvent.click(screen.getByRole("button"));
   }
 
-  it("[V-B4-03] locale='ja' の場合、options を渡さない呼び出しの redirectTo は http://localhost:3000/?redirect_to=/ja/onboarding", async () => {
+  it("[V-B4-03] locale='ja' の場合、options を渡さない呼び出しの redirectTo は http://localhost:3000/?redirect_to=/ja/onboarding&login_method=google", async () => {
     mocks.useLocale.mockReturnValue("ja");
     await renderProviderAndClick();
 
@@ -207,10 +207,10 @@ describe("AuthProvider.tsx — signInWithOAuth のデフォルト redirectTo に
     });
     const call = mocks.supabaseSignInWithOAuth.mock.calls[0]![0];
     expect(call.provider).toBe("google");
-    expect(call.options.redirectTo).toBe("http://localhost:3000/?redirect_to=/ja/onboarding");
+    expect(call.options.redirectTo).toBe("http://localhost:3000/?redirect_to=/ja/onboarding&login_method=google");
   });
 
-  it("[V-B4-04] locale='de' の場合、redirectTo は http://localhost:3000/?redirect_to=/de/onboarding (locale決め打ちでないことの確認、二重prefixでもない)", async () => {
+  it("[V-B4-04] locale='de' の場合、redirectTo は http://localhost:3000/?redirect_to=/de/onboarding&login_method=google (locale決め打ちでないことの確認、二重prefixでもない)", async () => {
     mocks.useLocale.mockReturnValue("de");
     await renderProviderAndClick();
 
@@ -218,7 +218,7 @@ describe("AuthProvider.tsx — signInWithOAuth のデフォルト redirectTo に
       expect(mocks.supabaseSignInWithOAuth).toHaveBeenCalledTimes(1);
     });
     const call = mocks.supabaseSignInWithOAuth.mock.calls[0]![0];
-    expect(call.options.redirectTo).toBe("http://localhost:3000/?redirect_to=/de/onboarding");
+    expect(call.options.redirectTo).toBe("http://localhost:3000/?redirect_to=/de/onboarding&login_method=google");
     expect(call.options.redirectTo).not.toContain("/de/de/");
   });
 });

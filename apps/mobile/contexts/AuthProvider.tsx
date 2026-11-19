@@ -19,6 +19,7 @@ import {
   saveCachedOnboardingCompleted,
 } from "@/lib/onboardingCache";
 import i18n from "@/i18n";
+import { saveLastLoginMethod } from "@/lib/lastLoginMethod";
 import {
   getRedirectUri,
   extractTokensFromUrl,
@@ -243,6 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { data: null, error: error as import("@supabase/supabase-js").AuthError };
       }
 
+      await saveLastLoginMethod("email");
       return { data: data ? { user: data.user, session: data.session } : null, error: null };
     } catch (error) {
       console.error("Sign in error:", error);

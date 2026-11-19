@@ -2,6 +2,11 @@
 
 import { extractLocale, stripLocale } from "@/i18n/routing";
 import { getSafeRedirectUrl } from "@/utils/redirect";
+import {
+  isLoginMethod,
+  LAST_LOGIN_METHOD_COOKIE,
+  LOGIN_METHOD_QUERY_PARAM,
+} from "@/lib/lastLoginMethod";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@swim-hub/shared/types";
 import { NextResponse, type NextRequest } from "next/server";
@@ -35,6 +40,11 @@ export async function updateSession(request: NextRequest) {
     const callbackUrl = new URL("/api/auth/callback", request.url);
     callbackUrl.searchParams.set("code", code);
     callbackUrl.searchParams.set("redirect_to", redirectTo);
+    // 「直近で利用」ラベル用。コールバックでセッションが確立したときだけ記録される
+    const loginMethod = request.nextUrl.searchParams.get(LOGIN_METHOD_QUERY_PARAM);
+    if (isLoginMethod(loginMethod)) {
+      callbackUrl.searchParams.set(LOGIN_METHOD_QUERY_PARAM, loginMethod);
+    }
 
     const oauthResponse = NextResponse.redirect(callbackUrl);
     // Cookieを設定（既存のCookieを保持）
@@ -44,6 +54,8 @@ export async function updateSession(request: NextRequest) {
     // ブラウザが Cookie を破棄し、PKCE code verifier が失われる (lib/supabase.ts と同じ理由)。
     const isHttps = request.nextUrl.protocol === "https:";
     request.cookies.getAll().forEach((cookie) => {
+      // ログイン画面の JS から読む Cookie のため、httpOnly で上書きしない
+      if (cookie.name === LAST_LOGIN_METHOD_COOKIE) return;
       if (cookie.value) {
         // Cookie属性を明示的に設定
         oauthResponse.cookies.set(cookie.name, cookie.value, {
