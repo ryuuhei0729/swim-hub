@@ -264,7 +264,7 @@ jobs:
           profile: ${{ steps.profile.outputs.profile }}
           ram-size: 4096M
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim ${{ steps.block.outputs.emu_dns }}
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -change-locale ${{ matrix.locale }} ${{ steps.block.outputs.emu_dns }}
           script: bash scripts/android/run_agent.sh
 
       - name: Encrypt results
