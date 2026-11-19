@@ -36,7 +36,19 @@ if ! online; then
   for i in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 3; done
   for i in $(seq 1 30); do online && break; sleep 3; done
 fi
-online || { echo "::error::The emulator has no network (DNS fails): not starting the agent"; adb shell ip route show table all | head -20; exit 1; }
+if ! online; then
+  # 原因を切り分けるための診断 (公開ログに出るのは端末とランナーのネットワーク情報だけ)
+  echo "::group::Network diagnostics"
+  echo "host -> 8.8.8.8 DNS: $(dig +short +time=3 +tries=1 www.google.com @8.8.8.8 | head -1)"
+  echo "host resolv.conf: $(grep -E '^nameserver' /etc/resolv.conf | tr '\n' ' ')"
+  echo "emulator ping 8.8.8.8 (IP, no DNS): $(adb shell ping -c 1 -W 3 8.8.8.8 2>&1 | head -2 | tr '\n' ' ')"
+  echo "emulator ping www.google.com: $(adb shell ping -c 1 -W 3 www.google.com 2>&1 | head -1)"
+  echo "emulator TCP 142.250.0.0/16 443: $(adb shell 'echo | toybox nc -w 5 142.251.42.164 443 >/dev/null 2>&1 && echo ok || echo fail')"
+  adb shell dumpsys connectivity 2>/dev/null | grep -E "Active default network|NetworkAgentInfo\{|DnsAddresses|PrivateDns|VALIDATED|PARTIAL" | head -12
+  adb shell getprop | grep -E "dns|net\.(eth0|wlan0)" | head -10
+  echo "::endgroup::"
+  echo "::error::The emulator has no network (DNS fails): not starting the agent"; exit 1
+fi
 echo "Emulator network OK"
 # 3. App + persona settings. The package inside the APK wins over app_id
 # (which may be the iOS bundle id)
