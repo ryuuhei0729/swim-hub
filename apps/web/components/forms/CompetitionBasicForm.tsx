@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import CompetitionDateDaysFields from "@/components/forms/CompetitionDateDaysFields";
+import DatePicker from "@/components/ui/DatePicker";
 import PlaceCombobox from "@/components/ui/PlaceCombobox";
 import FormStepper from "@/components/ui/FormStepper";
 import { XMarkIcon } from "@heroicons/react/24/outline";
@@ -407,18 +407,32 @@ export default function CompetitionBasicForm({
                 </div>
               )}
 
-              {/* 日程（開始日 + 日数）。終了日は日数から計算する */}
-              <CompetitionDateDaysFields
-                date={formData.date}
-                endDate={formData.endDate}
-                onChange={(date, endDate) => {
-                  setFormData({ ...formData, date, endDate });
-                  setValidationError(null);
-                }}
-                startLabel={t("start_date_label")}
-                required
-                testIdPrefix="competition"
-              />
+              {/* 日付（開始日・終了日） */}
+              <div className="grid grid-cols-2 gap-4">
+                <DatePicker
+                  label={t("start_date_label")}
+                  value={formData.date}
+                  onChange={(date) => {
+                    setFormData({ ...formData, date });
+                    setValidationError(null);
+                  }}
+                  required
+                  placeholder={t("start_date_label")}
+                  data-testid="competition-date"
+                />
+                <DatePicker
+                  label={t("end_date_label")}
+                  value={formData.endDate}
+                  onChange={(date) => {
+                    setFormData({ ...formData, endDate: date });
+                    setValidationError(null);
+                  }}
+                  minDate={formData.date ? new Date(formData.date) : undefined}
+                  placeholder=""
+                  popupAlign="right"
+                  data-testid="competition-end-date"
+                />
+              </div>
 
               {/* 大会名・場所・プール種別 */}
               <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">

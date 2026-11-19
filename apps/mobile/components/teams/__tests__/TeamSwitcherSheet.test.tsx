@@ -79,13 +79,4 @@ describe("TeamSwitcherSheet", () => {
     fireEvent.click(container.querySelector('[testid="team-switcher-join"]') as HTMLElement);
     expect(props.onJoin).toHaveBeenCalledTimes(1);
   });
-
-  it("[SW-4] チームごとの未対応件数 (出欠未回答 + 承認待ち) をバッジで出す。0 件・承認待ちのチームには出さない", () => {
-    const { container } = renderSheet({ badgeCounts: { alpha: 3, beta: 0, gamma: 5 } });
-    const badge = (teamId: string) =>
-      container.querySelector(`[testid="team-switcher-badge-${teamId}"]`);
-    expect(badge("alpha")?.textContent).toBe("3");
-    expect(badge("beta")).toBeNull();
-    expect(badge("gamma")).toBeNull();
-  });
 });

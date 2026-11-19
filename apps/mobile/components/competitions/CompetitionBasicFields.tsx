@@ -1,14 +1,8 @@
 import React from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { isValid, parseISO } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { DatePickerField } from "@/components/ui/DatePickerField";
-import { formatDate } from "@apps/shared/utils/date";
-import {
-  competitionDaysFromRange,
-  competitionEndDateFromDays,
-} from "@apps/shared/utils/competitionDays";
-import { useDateLocale } from "@/hooks/useDateLocale";
-import { CompetitionDaysStepper } from "./CompetitionDaysStepper";
 
 const POOL_TYPES = [
   { value: 0, labelKey: "competition.form.poolTypeShort" },
@@ -24,11 +18,8 @@ interface CompetitionBasicFieldsProps {
   place: string;
   /** 0: 短水路, 1: 長水路 */
   poolType: number;
-  /**
-   * 開始日・終了日の変更 (日数の変更も終了日の変更として届く)。
-   * 開始日を変えると日数を保ったまま終了日もずらすため、2つを同時に受け取る。
-   */
-  onDateRangeChange: (date: string, endDate: string) => void;
+  onDateChange: (date: string) => void;
+  onEndDateChange: (date: string) => void;
   onTitleChange: (title: string) => void;
   onPlaceChange: (place: string) => void;
   onPoolTypeChange: (poolType: number) => void;
@@ -42,9 +33,7 @@ interface CompetitionBasicFieldsProps {
 }
 
 /**
- * 大会の基本項目 (開始日・日数・大会名・場所・水路) の入力欄。
- * 終了日は直接入れず「開始日 + 日数」で入力する (保存値は従来どおり endDate。単日なら空文字)。
- * 開始日を変えても日数は保ち、終了日をずらす。
+ * 大会の基本項目 (開始日・終了日・大会名・場所・水路) の入力欄。
  * 大会タブのフォームと目標フォームの新規大会入力で共有する。親の gap で並べる前提のフラグメント。
  */
 export const CompetitionBasicFields: React.FC<CompetitionBasicFieldsProps> = ({
@@ -53,7 +42,8 @@ export const CompetitionBasicFields: React.FC<CompetitionBasicFieldsProps> = ({
   title,
   place,
   poolType,
-  onDateRangeChange,
+  onDateChange,
+  onEndDateChange,
   onTitleChange,
   onPlaceChange,
   onPoolTypeChange,
@@ -63,13 +53,6 @@ export const CompetitionBasicFields: React.FC<CompetitionBasicFieldsProps> = ({
   locked = false,
 }) => {
   const { t } = useTranslation();
-  const locale = useDateLocale();
-  const days = competitionDaysFromRange(date, endDate);
-
-  // 開始日を変えても日数は保つ (終了日を同じ日数だけずらす)
-  const handleDateChange = (next: string) =>
-    onDateRangeChange(next, days > 1 ? competitionEndDateFromDays(next, days) : "");
-
   return (
     <>
       <View style={styles.section}>
@@ -80,7 +63,7 @@ export const CompetitionBasicFields: React.FC<CompetitionBasicFieldsProps> = ({
             </Text>
             <DatePickerField
               value={date}
-              onChange={handleDateChange}
+              onChange={onDateChange}
               required
               disabled={disabled}
               error={errors?.date}
@@ -88,23 +71,22 @@ export const CompetitionBasicFields: React.FC<CompetitionBasicFieldsProps> = ({
               compact
             />
           </View>
-          <View>
-            <Text style={styles.label}>{t("competition.form.daysLabel")}</Text>
-            <CompetitionDaysStepper
-              days={days}
-              onChange={(next) => onDateRangeChange(date, competitionEndDateFromDays(date, next))}
-              disabled={disabled || !date}
+          <View style={styles.dateColumn}>
+            <Text style={styles.label}>
+              {t("competition.form.endDateLabel")}{" "}
+              <Text style={styles.optional}>{t("competition.form.multiDayHint")}</Text>
+            </Text>
+            <DatePickerField
+              value={endDate}
+              onChange={onEndDateChange}
+              allowClear
+              disabled={disabled}
+              error={errors?.endDate}
+              minDate={isValid(parseISO(date)) ? parseISO(date) : undefined}
+              compact
             />
           </View>
         </View>
-        {days > 1 && endDate ? (
-          <Text style={styles.endDatePreview}>
-            {t("competition.form.endDatePreview", {
-              date: formatDate(endDate, "longWithWeekday", locale),
-            })}
-          </Text>
-        ) : null}
-        {errors?.endDate ? <Text style={styles.errorText}>{errors.endDate}</Text> : null}
       </View>
 
       <View style={[styles.section, styles.horizontalField]}>
@@ -171,24 +153,17 @@ const styles = StyleSheet.create({
   required: {
     color: "#EF4444",
   },
+  optional: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontWeight: "400",
+  },
   dateRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
     gap: 12,
   },
   dateColumn: {
     flex: 1,
-    minWidth: 0,
-  },
-  endDatePreview: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 6,
-  },
-  errorText: {
-    fontSize: 12,
-    color: "#DC2626",
-    marginTop: 4,
   },
   horizontalField: {
     flexDirection: "row",

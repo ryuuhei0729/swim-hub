@@ -273,9 +273,8 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
       },
     });
 
-    // 終了日は「開始日 + 日数」で表示される (2099-01-01〜01-03 = 3日間)
     await waitFor(() => {
-      expect(screen.getByTestId("competition-tab-days")).toHaveValue(3);
+      expect(screen.getByTestId("competition-tab-end-date")).toHaveValue("2099-01-03");
     });
 
     await act(async () => {
@@ -752,14 +751,13 @@ describe("CompetitionTabModal — pool_type/end_date/note 保持契約", () => {
         expect(screen.getByTestId("competition-tab-modal")).toBeInTheDocument();
       });
       await waitFor(() => {
-        expect(screen.getByTestId("competition-tab-days")).toHaveValue(2); // 8/5〜8/6
+        expect(screen.getByTestId("competition-tab-end-date")).toHaveValue("2026-08-06");
       });
 
       const user = userEvent.setup();
-      // endDate だけを日数で変更する (2日間 → 6日間 = 8/10 まで)
-      for (let i = 0; i < 4; i++) {
-        await user.click(screen.getByTestId("competition-tab-days-increase"));
-      }
+      // endDate だけをカレンダーで変更する (同じ月内の別日を選択)
+      await user.click(screen.getByTestId("competition-tab-end-date-button"));
+      await user.click(screen.getByRole("button", { name: "2026年8月10日" }));
 
       await act(async () => {
         screen.getByTestId("competition-tab-modal-save").click();

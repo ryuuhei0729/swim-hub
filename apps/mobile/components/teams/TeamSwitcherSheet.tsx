@@ -18,8 +18,6 @@ interface TeamSwitcherSheetProps {
   onSelect: (teamId: string) => void;
   onCreate: () => void;
   onJoin: () => void;
-  /** チームごとの未対応件数 (出欠未回答 + 承認待ち)。下のタブバーの「チーム」バッジの内訳 */
-  badgeCounts?: Record<string, number>;
 }
 
 /** チームタブのヘッダーから開く、所属チームの切替シート。チームの作成・参加もここから行う */
@@ -33,7 +31,6 @@ export const TeamSwitcherSheet: React.FC<TeamSwitcherSheetProps> = ({
   onSelect,
   onCreate,
   onJoin,
-  badgeCounts = {},
 }) => {
   const { t } = useTranslation();
   const insets = useSafeInsets();
@@ -65,13 +62,6 @@ export const TeamSwitcherSheet: React.FC<TeamSwitcherSheetProps> = ({
           membership.role === "admin" && (
             <Text style={styles.roleBadge}>{t("teams.mobile.roleAdmin")}</Text>
           )
-        )}
-        {!isPending && (badgeCounts[membership.team_id] ?? 0) > 0 && (
-          <View style={styles.countBadge} testID={`team-switcher-badge-${membership.team_id}`}>
-            <Text style={styles.countBadgeText}>
-              {(badgeCounts[membership.team_id] ?? 0) > 99 ? "99+" : badgeCounts[membership.team_id]}
-            </Text>
-          </View>
         )}
         {selected && <Feather name="check" size={18} color="#2563EB" />}
       </Pressable>
@@ -128,20 +118,6 @@ export const TeamSwitcherSheet: React.FC<TeamSwitcherSheetProps> = ({
 };
 
 const styles = StyleSheet.create({
-  countBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 5,
-    backgroundColor: "#DC2626",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  countBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
   sheet: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 16,

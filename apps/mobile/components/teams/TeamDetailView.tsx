@@ -20,7 +20,6 @@ import { StaleDataBanner } from "@/components/layout/StaleDataBanner";
 import { resolveActiveTabOnAdminViewToggle } from "@/utils/teamAdminView";
 import { useTeamViewStore } from "@/stores/teamViewStore";
 import { useTeamAdminView } from "@/hooks/useTeamAdminView";
-import { useTeamBadgeCounts } from "@/hooks/useTeamBadgeCounts";
 import type { MainStackParamList } from "@/navigation/types";
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
@@ -86,15 +85,6 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
   );
   const pendingCount = pendingMembers?.length ?? 0;
 
-  // 下のタブバーの「チーム」バッジの内訳。このチームの分は中のタブに、
-  // 他のチームの分はチーム名 (切替) の横に出し、何が残っているか辿れるようにする
-  const { total: badgeTotal, countOf } = useTeamBadgeCounts();
-  const thisTeamCount = countOf(teamId);
-  const otherTeamsCount = Math.max(
-    0,
-    badgeTotal - thisTeamCount.unanswered - thisTeamCount.pendingMembers,
-  );
-
   const header = (
     <View style={styles.header}>
       <Pressable
@@ -109,17 +99,6 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
           {currentTeam?.name || teamName}
         </Text>
         <Feather name="chevron-down" size={20} color="#6B7280" />
-        {otherTeamsCount > 0 && (
-          <View
-            style={styles.otherTeamsBadge}
-            accessibilityLabel={t("teams.mobile.otherTeamsBadgeAria", { count: otherTeamsCount })}
-            testID="team-switcher-other-teams-badge"
-          >
-            <Text style={styles.otherTeamsBadgeText}>
-              {otherTeamsCount > 99 ? "99+" : otherTeamsCount}
-            </Text>
-          </View>
-        )}
       </Pressable>
       <View style={styles.headerActions}>
         <Pressable
@@ -275,7 +254,6 @@ export const TeamDetailView: React.FC<TeamDetailViewProps> = ({
         onTabChange={handleTabChange}
         isAdmin={effectiveIsAdminView}
         pendingCount={isCurrentUserAdmin ? pendingCount : 0}
-        attendanceCount={thisTeamCount.unanswered}
       />
       {/* 再取得に失敗しても、前回取得した内容をそのまま表示する */}
       <StaleDataBanner visible={isError} onRetry={() => refetch()} />
@@ -313,20 +291,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     flexShrink: 1,
-  },
-  otherTeamsBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 5,
-    backgroundColor: "#DC2626",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  otherTeamsBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#FFFFFF",
   },
   headerTitle: {
     fontSize: 20,

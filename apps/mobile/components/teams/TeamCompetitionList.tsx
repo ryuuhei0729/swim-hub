@@ -368,7 +368,7 @@ export const CompetitionItem = React.memo(function CompetitionItem({
                 accessibilityRole="button"
                 accessibilityLabel={t("teams.mobile.teamCompetitionList.recordBulkButton")}
               >
-                <Feather name="clock" size={13} color="#2563EB" />
+                <Feather name="clock" size={13} color="#059669" />
                 <Text style={styles.recordButtonText}>
                   {t("teams.mobile.teamCompetitionList.recordBulkButton")}
                 </Text>
@@ -438,7 +438,7 @@ export const CompetitionItem = React.memo(function CompetitionItem({
                 accessibilityRole="button"
                 accessibilityLabel={t("teams.mobile.teamCompetitionList.recordButton")}
               >
-                <Feather name="plus" size={13} color="#2563EB" />
+                <Feather name="plus" size={13} color="#059669" />
                 <Text style={styles.recordButtonText}>{t("teams.mobile.teamCompetitionList.recordButton")}</Text>
               </Pressable>
             )}
@@ -1062,13 +1062,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 6,
     borderWidth: 1,
-    // 大会系は青、練習系は緑で統一する (練習カードの記録ボタンは緑)
-    borderColor: "#2563EB",
+    borderColor: "#059669",
   },
   recordButtonText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#2563EB",
+    color: "#059669",
   },
   centerContainer: {
     flex: 1,

@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import CompetitionDateDaysFields from "@/components/forms/CompetitionDateDaysFields";
+import DatePicker from "@/components/ui/DatePicker";
 import PlaceCombobox from "@/components/ui/PlaceCombobox";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import CompetitionImageUploader from "@/components/forms/CompetitionImageUploader";
@@ -1293,19 +1293,34 @@ export default function CompetitionTabModal({
                 </div>
               )}
 
-              {/* 日程（開始日 + 日数）。終了日は日数から計算する */}
-              <CompetitionDateDaysFields
-                date={basicData.date}
-                endDate={basicData.endDate}
-                onChange={(date, endDate) => {
-                  setBasicData((prev) => ({ ...prev, date, endDate }));
-                  setBasicValidationError(null);
-                }}
-                startLabel={t("start_date_label")}
-                required
-                disabled={!allowParentUpdate}
-                testIdPrefix="competition-tab"
-              />
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <DatePicker
+                  label={t("start_date_label")}
+                  value={basicData.date}
+                  onChange={(date) => {
+                    setBasicData((prev) => ({ ...prev, date }));
+                    setBasicValidationError(null);
+                  }}
+                  required
+                  disabled={!allowParentUpdate}
+                  placeholder={t("start_date_label")}
+                  data-testid="competition-tab-date"
+                />
+                <DatePicker
+                  label={t("end_date_label")}
+                  value={basicData.endDate}
+                  onChange={(date) => {
+                    setBasicData((prev) => ({ ...prev, endDate: date }));
+                    setBasicValidationError(null);
+                  }}
+                  minDate={basicData.date ? new Date(basicData.date) : undefined}
+                  placeholder=""
+                  popupAlign="right"
+                  disabled={!allowParentUpdate}
+                  data-testid="competition-tab-end-date"
+                />
+              </div>
 
               {/* Name, Place, PoolType */}
               <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">

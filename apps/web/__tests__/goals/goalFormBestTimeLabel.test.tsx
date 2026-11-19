@@ -7,10 +7,10 @@
  *    data-testid="goal-best-time-label"、文言は「forms.recordLog.<labelKey>: <formatTimeBest(time)>」、緑の丸いラベル。
  *    同じ水路 → 別の水路 (bestTimeLong / bestTimeShort) の順。目標タイム入力欄の右 (狭い幅では下に折り返す)。
  *    種目が未選択・水路が未確定・ベスト一覧が取得中 / 失敗・該当なしのときは要素ごと出さない (「記録なし」「—」は無い)
- *  - V4-2 新規大会の入力: 1行目に開始日・日数、2行目に大会名 (1行全部)、3行目に場所と水路の切り替えボタン
+ *  - V4-2 新規大会の入力: 1行目に開始日・終了日、2行目に大会名 (1行全部)、3行目に場所と水路の切り替えボタン
  *    (大会記録の登録と同じ並び。水路の select は無い)。
- *    日数から求めた終了日を保存する (作成: competitionData.endDate / 編集: createCompetition・updateCompetition の end_date)。
- *    日数で入力するため「終了日 < 開始日」は起きない
+ *    終了日を保存する (作成: competitionData.endDate / 編集: createCompetition・updateCompetition の end_date)。
+ *    終了日 < 開始日は alert(forms.competition.end_date_error) で保存しない
  *  - 残す観点: 大会作成 (既存・新規)、大会未選択では保存しない、保存失敗時の再送、開き直し・別の目標の編集
  *
  * RecordAPI.getBestTimes は BestTime[] (aggregateBestTimes の形) を返すモック。DatePicker は値を変えられる入力欄に差し替える。
@@ -120,9 +120,7 @@ const targetInput = () => screen.getByPlaceholderText("goals.form.targetTimePlac
 const compSelect = () => screen.getAllByRole("combobox")[0]!;
 const poolButton = (value: 0 | 1) => screen.getByTestId(`goal-new-competition-pool-type-${value}`);
 const startDate = () => screen.getByTestId("goal-new-competition-date") as HTMLInputElement;
-const daysInput = () => screen.getByTestId("goal-new-competition-days") as HTMLInputElement;
-/** 開催日数を入れる (終了日 = 開始日 + 日数 - 1) */
-const setDays = (n: number) => act(async () => { fireEvent.change(daysInput(), { target: { value: String(n) } }); });
+const endDate = () => screen.getByTestId("goal-new-competition-end-date") as HTMLInputElement;
 const today = () => format(new Date(), "yyyy-MM-dd");
 
 let qc: QueryClient;
@@ -351,16 +349,15 @@ describe("GoalCreateModal", () => {
   });
 
   describe("V4-2 新規大会の入力", () => {
-    it("1行目に開始日・日数、2行目に大会名 (1行全部)、3行目に場所と水路の切り替えボタン。水路の select と終了日の入力欄は無い", async () => {
+    it("1行目に開始日・終了日 (grid-cols-2)、2行目に大会名 (1行全部)、3行目に場所と水路の切り替えボタン。水路の select は無い", async () => {
       const user = userEvent.setup();
       await openNewCompetition(user);
       const start = startDate();
-      const end = daysInput();
+      const end = endDate();
       expect(start.getAttribute("aria-label")).toBe("forms.competition.start_date_label");
-      expect(end.getAttribute("aria-label")).toBe("forms.competition.days_label");
-      expect(end.value).toBe("1");
-      expect(screen.queryByTestId("goal-new-competition-end-date")).toBeNull();
-      expect(start.compareDocumentPosition(end) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(end.getAttribute("aria-label")).toBe("forms.competition.end_date_label");
+      expect(start.parentElement).toBe(end.parentElement);
+      expect(start.parentElement!.className.split(/\s+/)).toContain("grid-cols-2");
 
       const name = screen.getByPlaceholderText("goals.form.competitionNamePlaceholder");
       const place = screen.getByPlaceholderText("goals.form.competitionPlacePlaceholder");
@@ -392,12 +389,13 @@ describe("GoalCreateModal", () => {
       expect(poolButton(1).getAttribute("aria-pressed")).toBe("true");
     });
 
-    it("開始日の minDate は今日", async () => {
+    it("開始日の minDate は今日、終了日の minDate は開始日", async () => {
       const user = userEvent.setup();
       await openNewCompetition(user);
       await setDate(startDate(), "2099-12-01");
       const lastOf = (id: string) => [...mocks.datePickerProps].reverse().find((p) => p.testId === id)!;
       expect(format(lastOf("goal-new-competition-date").minDate!, "yyyy-MM-dd")).toBe(today());
+      expect(format(lastOf("goal-new-competition-end-date").minDate!, "yyyy-MM-dd")).toBe("2099-12-01");
     });
   });
 
@@ -467,13 +465,13 @@ describe("GoalCreateModal", () => {
       expect(arg).not.toHaveProperty("poolType");
     });
 
-    it("[V4-2] 日数から求めた終了日を保存する (competitionData.endDate)。1日なら endDate=null", async () => {
+    it("[V4-2] 新規大会の終了日を保存する (competitionData.endDate)。終了日 = 開始日も保存できる", async () => {
       const user = userEvent.setup();
       await openNewCompetition(user);
       await user.type(screen.getByPlaceholderText("goals.form.competitionNamePlaceholder"), "2日間杯");
       await user.type(screen.getByPlaceholderText("goals.form.competitionPlacePlaceholder"), "県立プール");
       await setDate(startDate(), "2099-12-01");
-      await setDays(3);
+      await setDate(endDate(), "2099-12-03");
       await pickStyle(user, 100, "Fr");
       await user.type(targetInput(), "1:00.00");
       await submit(user);
@@ -486,27 +484,30 @@ describe("GoalCreateModal", () => {
       await openNewCompetition(user);
       await user.type(screen.getByPlaceholderText("goals.form.competitionNamePlaceholder"), "単日杯");
       await setDate(startDate(), "2099-12-01");
-      await setDays(2);
-      await setDays(1);
+      await setDate(endDate(), "2099-12-01");
       await pickStyle(user, 100, "Fr");
       await user.type(targetInput(), "1:00.00");
       await submit(user);
       expect(mocks.createGoal).toHaveBeenCalledTimes(1);
-      expect(mocks.createGoal.mock.calls[0]![0].competitionData.endDate).toBeNull();
+      expect(mocks.createGoal.mock.calls[0]![0].competitionData.endDate).toBe("2099-12-01");
     });
 
-    it("[V4-2] 開始日を変えても日数は保たれ、終了日が同じだけずれる", async () => {
+    it("[V4-2] 終了日 < 開始日は alert(forms.competition.end_date_error) で保存しない。直せば保存できる", async () => {
       const user = userEvent.setup();
       await openNewCompetition(user);
-      await user.type(screen.getByPlaceholderText("goals.form.competitionNamePlaceholder"), "移動杯");
-      await setDate(startDate(), "2099-12-01");
-      await setDays(2);
-      await setDate(startDate(), "2099-12-10");
-      expect(daysInput().value).toBe("2");
+      await user.type(screen.getByPlaceholderText("goals.form.competitionNamePlaceholder"), "逆転杯");
+      await setDate(startDate(), "2099-12-03");
+      await setDate(endDate(), "2099-12-01");
       await pickStyle(user, 100, "Fr");
       await user.type(targetInput(), "1:00.00");
       await submit(user);
-      expect(mocks.createGoal.mock.calls[0]![0].competitionData).toMatchObject({ date: "2099-12-10", endDate: "2099-12-11" });
+      expect(window.alert).toHaveBeenCalledWith("forms.competition.end_date_error");
+      expect(mocks.createGoal).not.toHaveBeenCalled();
+
+      await setDate(endDate(), "2099-12-04");
+      await submit(user);
+      expect(mocks.createGoal).toHaveBeenCalledTimes(1);
+      expect(mocks.createGoal.mock.calls[0]![0].competitionData).toMatchObject({ date: "2099-12-03", endDate: "2099-12-04" });
     });
 
     it("大会未選択では保存しない (大会の select は required。ネイティブ検証か competitionRequired のどちらかで止まる)", async () => {
@@ -619,11 +620,11 @@ describe("GoalEditModal", () => {
   });
 
   describe("[V4-2] 新規大会の終了日 (createCompetition / updateCompetition の end_date)", () => {
-    it("複数日: createCompetition の入力に end_date が入り、updateGoal は作成した大会の id を使う。1日なら end_date=null", async () => {
+    it("終了日あり: createCompetition の入力に end_date が入り、updateGoal は作成した大会の id を使う。終了日なしは end_date=null", async () => {
       const user = userEvent.setup();
       await openNewCompetition(user);
       await setDate(startDate(), "2099-12-01");
-      await setDays(3);
+      await setDate(endDate(), "2099-12-03");
       await submit(user);
       expect(mocks.createCompetition).toHaveBeenCalledTimes(1);
       expect(mocks.createCompetition.mock.calls[0]![0]).toMatchObject({ title: "新大会", date: "2099-12-01", end_date: "2099-12-03", pool_type: 0 });
@@ -637,16 +638,27 @@ describe("GoalEditModal", () => {
       expect(mocks.createCompetition.mock.calls[0]![0]).toMatchObject({ date: "2099-12-01", end_date: null });
     });
 
-    it("updateGoal 失敗後に日数だけ直して再送: createCompetition は1回のまま、updateCompetition(作成済み id, { end_date: 新しい値 })", async () => {
+    it("終了日 < 開始日は alert(forms.competition.end_date_error) で、大会も目標も保存しない", async () => {
+      const user = userEvent.setup();
+      await openNewCompetition(user);
+      await setDate(startDate(), "2099-12-03");
+      await setDate(endDate(), "2099-12-01");
+      await submit(user);
+      expect(window.alert).toHaveBeenCalledWith("forms.competition.end_date_error");
+      expect(mocks.createCompetition).not.toHaveBeenCalled();
+      expect(mocks.updateGoal).not.toHaveBeenCalled();
+    });
+
+    it("updateGoal 失敗後に終了日だけ直して再送: createCompetition は1回のまま、updateCompetition(作成済み id, { end_date: 新しい値 })", async () => {
       mocks.updateGoal.mockRejectedValueOnce(new Error("rls"));
       const user = userEvent.setup();
       await openNewCompetition(user);
       await setDate(startDate(), "2099-12-01");
-      await setDays(2); // 〜12/02
+      await setDate(endDate(), "2099-12-02");
       await submit(user);
       expect(mocks.createCompetition).toHaveBeenCalledTimes(1);
       expect(mocks.updateCompetition).not.toHaveBeenCalled();
-      await setDays(5); // 〜12/05
+      await setDate(endDate(), "2099-12-05");
       await submit(user);
       expect(mocks.createCompetition).toHaveBeenCalledTimes(1);
       expect(mocks.updateCompetition).toHaveBeenCalledTimes(1);

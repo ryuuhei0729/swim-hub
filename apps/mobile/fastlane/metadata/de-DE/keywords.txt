@@ -1,1 +1,1 @@
-schwimmen,schwimmer,schwimmverein,wettkampf,masters,trainer,tagebuch,zwischenzeiten,anwesenheit
+schwimmen,schwimmtraining,bestzeiten,wettkampf,verein,masters,freistil,kraul,tagebuch,zeiten,bahn

@@ -20,7 +20,6 @@ import type { TabParamList } from "@/navigation/types";
 import { useRefreshOnFocus } from "@/hooks/useRefreshOnFocus";
 import { useTeamViewHydrated } from "@/hooks/useTeamViewHydrated";
 import { useTeamViewStore } from "@/stores/teamViewStore";
-import { useTeamBadgeCounts } from "@/hooks/useTeamBadgeCounts";
 import { groupTeamMemberships, resolveSelectedTeam } from "@/utils/teamMembershipGroups";
 import { Feather } from "@expo/vector-icons";
 
@@ -72,16 +71,6 @@ export const TeamsScreen: React.FC<Props> = ({ route, navigation }) => {
   const groups = useMemo(
     () => groupTeamMemberships(teams.filter((m) => !leftTeamIds.has(m.team_id))),
     [teams, leftTeamIds],
-  );
-
-  // チーム切替シートに出す、チームごとの未対応件数 (出欠未回答 + 承認待ち)
-  const { byTeam: badgeByTeam } = useTeamBadgeCounts();
-  const switcherBadgeCounts = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(badgeByTeam).map(([teamId, c]) => [teamId, c.unanswered + c.pendingMembers]),
-      ),
-    [badgeByTeam],
   );
 
   // 他画面からの指定を表示状態ストアへ移す。
@@ -287,7 +276,6 @@ export const TeamsScreen: React.FC<Props> = ({ route, navigation }) => {
         onSelect={handleSelectTeam}
         onCreate={() => openFromSwitcher("create")}
         onJoin={() => openFromSwitcher("join")}
-        badgeCounts={switcherBadgeCounts}
       />
       {modals}
     </SafeAreaView>

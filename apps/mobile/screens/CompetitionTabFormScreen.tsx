@@ -696,11 +696,23 @@ export const CompetitionTabFormScreen: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, entries]);
 
-  // ---- 開始日・終了日の変更 (日数の入力から届く。開始日を変えても日数は保たれる) ----
-  const handleDateRangeChange = useCallback((newDate: string, newEndDate: string) => {
-    setDate(newDate);
-    setEndDate(newEndDate);
-  }, []);
+  // ---- 開始日変更ハンドラ ----
+  const handleStartDateChange = useCallback(
+    (newDate: string) => {
+      setDate(newDate);
+      const parsedNew = parseISO(newDate);
+      const parsedEnd = parseISO(endDate);
+      if (
+        endDate &&
+        isValid(parsedEnd) &&
+        isValid(parsedNew) &&
+        isBefore(parsedEnd, parsedNew)
+      ) {
+        setEndDate("");
+      }
+    },
+    [endDate],
+  );
 
   // ---- 保存完了 → 前画面へ戻る ----
   // setIsSaved(true) の直後に navigation.goBack()/popTo() を同期で呼ぶと、
@@ -2129,7 +2141,8 @@ export const CompetitionTabFormScreen: React.FC = () => {
               title={title}
               place={place}
               poolType={poolType}
-              onDateRangeChange={handleDateRangeChange}
+              onDateChange={handleStartDateChange}
+              onEndDateChange={setEndDate}
               onTitleChange={setTitle}
               onPlaceChange={setPlace}
               onPoolTypeChange={handlePoolTypeChange}

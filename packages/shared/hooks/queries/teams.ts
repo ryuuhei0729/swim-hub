@@ -551,28 +551,6 @@ export function usePendingMembersCountQuery(
   });
 }
 
-/**
- * 複数チームの承認待ちメンバー数をチームごとに返す ({ [teamId]: 件数 })。
- * usePendingMembersCountQuery (合計) と同じ queryKey なのでキャッシュを共有する。
- */
-export function usePendingMembersCountsByTeamQuery(
-  supabase: SupabaseClient,
-  teamIds: readonly string[],
-  api?: TeamMembersAPI,
-): Record<string, number> {
-  const membersApi = useMemo(() => api ?? new TeamMembersAPI(supabase), [supabase, api]);
-
-  return useQueries({
-    queries: teamIds.map((teamId) => ({
-      queryKey: teamKeys.pendingMembers(teamId),
-      queryFn: () => membersApi.listPending(teamId),
-      staleTime: 5 * 60 * 1000, // 5分
-    })),
-    combine: (results) =>
-      Object.fromEntries(teamIds.map((teamId, i) => [teamId, results[i]?.data?.length ?? 0])),
-  });
-}
-
 export function useApproveMemberMutation(
   supabase: SupabaseClient,
   api?: TeamMembersAPI,

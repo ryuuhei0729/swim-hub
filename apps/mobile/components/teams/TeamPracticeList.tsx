@@ -94,42 +94,37 @@ export const PracticeItem = React.memo(function PracticeItem({
             </View>
           )}
         </View>
-        {/* 大会カード (TeamCompetitionList) と揃え、情報を左・ボタンを右に並べる */}
-        <View style={styles.itemBodyRow}>
-          <View style={styles.itemInfoColumn}>
-            {practice.title && (
-              <Text style={styles.itemTitle}>{practice.title}</Text>
-            )}
-            {practice.place && (
-              <View style={styles.itemRow}>
-                <Feather name="map-pin" size={12} color="#9CA3AF" />
-                <Text style={styles.itemPlace}>{practice.place}</Text>
-              </View>
-            )}
-            {practice.note && (
-              <Text style={styles.itemNote} numberOfLines={2}>{practice.note}</Text>
-            )}
+        {practice.title && (
+          <Text style={styles.itemTitle}>{practice.title}</Text>
+        )}
+        {practice.place && (
+          <View style={styles.itemRow}>
+            <Feather name="map-pin" size={12} color="#9CA3AF" />
+            <Text style={styles.itemPlace}>{practice.place}</Text>
           </View>
-          <Pressable
-            style={styles.logButton}
-            onPress={() => onAddLog(practice)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isAdmin
-                ? t("teams.mobile.teamPracticeList.recordBulkButton")
-                : t("teams.mobile.teamPracticeList.addLog")
-            }
-          >
-            {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-2 を維持する。
-                非admin は「記録追加」という追加操作に変わったため plus に切り替える。 */}
-            <Feather name={isAdmin ? "edit-2" : "plus"} size={13} color="#059669" />
-            <Text style={styles.logButtonText}>
-              {isAdmin
-                ? t("teams.mobile.teamPracticeList.recordBulkButton")
-                : t("teams.mobile.teamPracticeList.addLog")}
-            </Text>
-          </Pressable>
-        </View>
+        )}
+        {practice.note && (
+          <Text style={styles.itemNote} numberOfLines={2}>{practice.note}</Text>
+        )}
+      </Pressable>
+      <Pressable
+        style={styles.logButton}
+        onPress={() => onAddLog(practice)}
+        accessibilityRole="button"
+        accessibilityLabel={
+          isAdmin
+            ? t("teams.mobile.teamPracticeList.recordBulkButton")
+            : t("teams.mobile.teamPracticeList.addLog")
+        }
+      >
+        {/* admin の「記録代理入力」は代理入力(編集的操作)のままなので edit-2 を維持する。
+            非admin は「記録追加」という追加操作に変わったため plus に切り替える。 */}
+        <Feather name={isAdmin ? "edit-2" : "plus"} size={13} color="#2563EB" />
+        <Text style={styles.logButtonText}>
+          {isAdmin
+            ? t("teams.mobile.teamPracticeList.recordBulkButton")
+            : t("teams.mobile.teamPracticeList.addLog")}
+        </Text>
       </Pressable>
     </View>
   );
@@ -469,31 +464,22 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     marginTop: 4,
   },
-  itemBodyRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  itemInfoColumn: {
-    flex: 1,
-  },
   logButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    flexShrink: 0,
+    marginTop: 8,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 6,
     borderWidth: 1,
-    // 練習系は緑、大会系は青で統一する (大会カードの記録ボタンは青)
-    borderColor: "#059669",
+    borderColor: "#2563EB",
+    alignSelf: "flex-start",
   },
   logButtonText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#059669",
+    color: "#2563EB",
   },
   centerContainer: {
     flex: 1,

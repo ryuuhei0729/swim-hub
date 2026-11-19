@@ -415,13 +415,14 @@ describe("CompetitionTabFormScreen — origin=teamAdmin による大会基本情
       // [CTAO-2] 制限バナーが出ない
       expect(screen.queryByText(EDIT_RESTRICTED_MESSAGE)).toBeNull();
 
-      // [CTAO-3] DatePickerField (開始日) と日数の＋ボタン、ImageUploader が disabled=false。
-      // 開始日だけを見ると日数側の disabled 配線ミスを見逃すため、両方見る。
+      // [CTAO-3] DatePickerField (開始日/終了日の2つ) と ImageUploader が disabled=false。
+      // 開始日だけを見ると終了日側の disabled 配線ミスを見逃すため、件数も固定する。
       const datePickerFlags = screen.getAllByTestId("date-picker-disabled-flag");
-      expect(datePickerFlags).toHaveLength(1);
-      expect(datePickerFlags[0]!.getAttribute("data-disabled")).toBe("false");
-      const increaseDays = document.querySelector<HTMLButtonElement>('[accessibilitylabel="日数を増やす"]');
-      expect(increaseDays?.disabled).toBe(false);
+      expect(datePickerFlags).toHaveLength(2);
+      expect(datePickerFlags.map((el) => el.getAttribute("data-disabled"))).toEqual([
+        "false",
+        "false",
+      ]);
       expect(screen.getByTestId("image-uploader-disabled-flag").getAttribute("data-disabled")).toBe(
         "false",
       );
