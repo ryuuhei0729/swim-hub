@@ -35,6 +35,20 @@ metadata/<locale>/release_notes.txt を読む。無ければ同じ言語 (en-GB 
 
 options: apply:true で実際に書き込む (既定は確認のみ)
 
+### ios upload_search_metadata
+
+```sh
+[bundle exec] fastlane ios upload_search_metadata
+```
+
+検索に効く項目 (名前・サブタイトル・キーワード) だけを更新する。概要などには触れない
+
+metadata/<locale>/{name,subtitle,keywords}.txt を読む。無ければ同じ言語 (en-AU → en-*) のファイルを使う
+
+ASC に無いロケールのうち metadata/<locale>/ があるもの (en-US) は作る。概要・宣伝文・新機能も入れ、スクショは copy_screenshots_from (既定 en-GB) から複製する
+
+options: apply:true で実際に書き込む (既定は確認のみ)
+
 ### ios frame
 
 ```sh
