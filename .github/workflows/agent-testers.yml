@@ -208,15 +208,21 @@ jobs:
 
       # エミュレーターは DNS をホスト経由で引く (-dns-server 127.0.0.1):
       # dnsmasq がブロック対象に 0.0.0.0 を返し、iptables が実 IP への通信を落とす。
+      # block_hosts が空ならエミュレーター標準の DNS をそのまま使う (dnsmasq を挟むと名前解決できないことがあった)
       - name: Block hosts
+        id: block
         env:
           HOSTS: ${{ inputs.block_hosts }}
         run: |
+          if [ -z "${HOSTS// /}" ]; then echo "emu_dns=" >> "$GITHUB_OUTPUT"; echo "No hosts to block"; exit 0; fi
           sudo apt-get install -y -qq dnsmasq dnsutils >/dev/null 2>&1 || { sudo apt-get update -qq && sudo apt-get install -y -qq dnsmasq dnsutils >/dev/null; }
           { printf 'listen-address=127.0.0.1\nbind-interfaces\nno-resolv\nserver=8.8.8.8\nserver=1.1.1.1\n'
             for h in $HOSTS; do printf 'address=/%s/0.0.0.0\naddress=/%s/::\n' "$h" "$h"; done; } | sudo tee /etc/dnsmasq.d/block.conf >/dev/null
           sudo systemctl restart dnsmasq
+          # dnsmasq が実際に名前解決できることを確かめてからエミュレーターに使わせる
+          dig +short +time=3 +tries=2 A www.google.com @127.0.0.1 | grep -qE '^[0-9.]+$' || { echo "::error::dnsmasq on 127.0.0.1 does not resolve"; sudo systemctl status dnsmasq --no-pager || true; exit 1; }
           for h in $HOSTS; do for ip in $(dig +short A "$h" @8.8.8.8 | grep -E '^[0-9.]+$'); do sudo iptables -I OUTPUT -d "$ip" -j REJECT; done; done
+          echo "emu_dns=-dns-server 127.0.0.1" >> "$GITHUB_OUTPUT"
 
       - name: Device profile (fallback to pixel_6)
         id: profile
@@ -257,7 +263,7 @@ jobs:
           profile: ${{ steps.profile.outputs.profile }}
           ram-size: 4096M
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -dns-server 127.0.0.1
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim ${{ steps.block.outputs.emu_dns }}
           script: bash scripts/android/run_agent.sh
 
       - name: Encrypt results

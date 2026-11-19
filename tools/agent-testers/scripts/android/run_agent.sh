@@ -19,6 +19,18 @@ if [ "$(adb shell getprop persist.sys.locale | tr -d '\r')" != "$LOCALE" ]; then
   adb shell "setprop persist.sys.locale $LOCALE; setprop ctl.restart zygote"; sleep 10; adb wait-for-device
   for i in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 3; done
 fi
+# 2b. Internet from inside the emulator (the zygote restart above can leave it offline).
+# ping prints "PING host (IP)" once DNS works, even though ICMP replies never come back.
+online() { adb shell ping -c 1 -W 3 www.google.com 2>&1 | head -1 | grep -qE '\(([0-9]{1,3}\.){3}[0-9]{1,3}\)'; }
+for i in $(seq 1 20); do online && break; sleep 3; done
+if ! online; then
+  echo "No network in the emulator: toggling wifi and mobile data"
+  adb shell svc wifi disable; adb shell svc data disable; sleep 3
+  adb shell svc wifi enable; adb shell svc data enable
+  for i in $(seq 1 20); do online && break; sleep 3; done
+fi
+online || { echo "::error::The emulator has no network (DNS fails): not starting the agent"; adb shell ip route show table all | head -20; exit 1; }
+echo "Emulator network OK"
 # 3. App + persona settings. The package inside the APK wins over app_id
 # (which may be the iOS bundle id)
 AAPT2=$(ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
