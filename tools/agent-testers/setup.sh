@@ -52,7 +52,16 @@ if ! has AGENT_TESTERS_LOGIN_EMAIL || ! has AGENT_TESTERS_LOGIN_PASSWORD; then
   ask_secret AGENT_TESTERS_LOGIN_PASSWORD "パスワード"
 fi
 
-has DOTENV_PRIVATE_KEY_DEVELOPMENT || echo "注意: Secret DOTENV_PRIVATE_KEY_DEVELOPMENT がありません (ビルドに必要。web の CI と同じもの)"
+# モバイルの .env.development は web/ルートとは別の鍵で暗号化されている。apps/mobile/.env.keys から登録する
+if ! has DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE; then
+  KEYS="$(git -C "$HERE" rev-parse --show-toplevel)/apps/mobile/.env.keys"
+  if [ -f "$KEYS" ] && grep -q '^DOTENV_PRIVATE_KEY_DEVELOPMENT=' "$KEYS"; then
+    grep '^DOTENV_PRIVATE_KEY_DEVELOPMENT=' "$KEYS" | head -1 | cut -d= -f2- | tr -d '"' | gh secret set DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE
+    echo "Secret DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE を apps/mobile/.env.keys から設定しました"
+  else
+    echo "注意: apps/mobile/.env.keys が見つかりません。DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE を手動で設定してください"
+  fi
+fi
 
 cat <<MSG
 

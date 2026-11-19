@@ -103,8 +103,9 @@ jobs:
       - name: Build APK (development 環境, ログは暗号化)
         working-directory: apps/mobile
         env:
-          DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT }}
-        run: pnpm exec dotenvx run -f .env.development -- bash ../../tools/agent-testers/scripts/build/android.sh
+          # apps/mobile/.env.development は web/ルートとは別の鍵で暗号化されている (apps/mobile/.env.keys)
+          DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE }}
+        run: pnpm exec dotenvx run --strict -f .env.development -- bash ../../tools/agent-testers/scripts/build/android.sh
       - name: Encrypt APK
         working-directory: tools/agent-testers
         env:
@@ -146,8 +147,9 @@ jobs:
       - name: Build Simulator .app (development 環境, ログは暗号化)
         working-directory: apps/mobile
         env:
-          DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT }}
-        run: pnpm exec dotenvx run -f .env.development -- bash ../../tools/agent-testers/scripts/build/ios.sh
+          # apps/mobile/.env.development は web/ルートとは別の鍵で暗号化されている (apps/mobile/.env.keys)
+          DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE }}
+        run: pnpm exec dotenvx run --strict -f .env.development -- bash ../../tools/agent-testers/scripts/build/ios.sh
       - name: Encrypt .app
         working-directory: tools/agent-testers
         env:

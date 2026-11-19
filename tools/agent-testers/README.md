@@ -31,7 +31,8 @@ iOS シミュレーターを用意して、Claude Code のエージェントに�
    - `~/.mobile-agent-testers/<owner>_swim-hub.pem` に秘密鍵を作り、`results_public.pem` に公開鍵を書く
    - Secrets を設定: `ARTIFACT_PASSPHRASE`、`CLAUDE_CODE_OAUTH_TOKEN`（または `ANTHROPIC_API_KEY`）、
      `AGENT_TESTERS_LOGIN_EMAIL`、`AGENT_TESTERS_LOGIN_PASSWORD`
-   - ビルドには既存の `DOTENV_PRIVATE_KEY_DEVELOPMENT` を使う（`apps/mobile/.env.development` を復号）
+   - `apps/mobile/.env.keys` から `DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE` を設定（`apps/mobile/.env.development` の復号用。
+     web/ルートの `DOTENV_PRIVATE_KEY_DEVELOPMENT` とは別の鍵）
 3. `tools/agent-testers/results_public.pem` をコミットし、develop にマージする
    （`workflow_dispatch` のワークフローはデフォルトブランチにないと実行できない）。
 
