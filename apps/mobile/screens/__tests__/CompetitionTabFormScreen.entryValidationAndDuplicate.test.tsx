@@ -501,6 +501,23 @@ describe("CompetitionTabFormScreen — 「エントリーする」から開い�
     expect(h.mockEntryApiCreateTeamEntry).not.toHaveBeenCalled();
   });
 
+  it("[E-4] 種目必須エラーが出たあと種目を選ぶ → エラーがすぐ消え、そのまま保存できる", async () => {
+    const utils = await renderExistingCompetitionForEntry();
+    await waitFor(() =>
+      expect(
+        (utils.queryByTestId("entry-style-1-current") as HTMLElement | null)?.textContent,
+      ).toBe(""),
+    );
+    fireEvent.click(await utils.findByTestId("competition-tab-form-save"));
+    expect(await utils.findByText("種目を選択してください")).toBeDefined();
+
+    fireEvent.click(await utils.findByTestId("entry-style-1-option-2"));
+    await waitFor(() => expect(utils.queryByText("種目を選択してください")).toBeNull());
+
+    fireEvent.click(await utils.findByTestId("competition-tab-form-save"));
+    await waitFor(() => expect(h.mockEntryApiCreatePersonalEntry).toHaveBeenCalledTimes(1));
+  });
+
   it("[E-2] 「エントリーする」で開き、デフォルトと同じ種目を選んで保存 → 未編集扱いで捨てずにエントリーを作成する (選択済みに見えるのに種目必須エラーで抜けられない状態にしない)", async () => {
     const utils = await renderExistingCompetitionForEntry();
 

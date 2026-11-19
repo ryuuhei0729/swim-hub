@@ -1634,6 +1634,16 @@ export const CompetitionTabFormScreen: React.FC = () => {
       if (linkedRecordDraftId) {
         updateRecord(linkedRecordDraftId, { styleId });
       }
+      // 種目を選んだら、その行の「種目を選択してください」を消す (次の保存まで残っていた)
+      if (styleId) {
+        const index = entries.findIndex((e) => e.draftId === draftId);
+        setEntryErrors((prev) => {
+          if (!prev[`style-${index}`]) return prev;
+          const next = { ...prev };
+          delete next[`style-${index}`];
+          return next;
+        });
+      }
     },
     [updateEntry, updateRecord, entries, records],
   );
