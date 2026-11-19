@@ -1,52 +1,42 @@
-import React, { useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  Platform,
-} from "react-native";
-import { format } from "date-fns";
+import React, { useCallback, useMemo, useState } from "react";
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { addMonths, format, isValid, parseISO, startOfMonth, subMonths } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
 import { useSafeInsets } from "@/hooks/useSafeInsets";
 import { getSafeFooterPadding } from "@/utils/safeFooterPadding";
-import { TeamBulkRegisterAPI, type BulkRegisterInput } from "@apps/shared/api/teams/bulkRegister";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { TeamBulkRegisterAPI } from "@apps/shared/api/teams/bulkRegister";
+import {
+  useTeamPracticesQuery,
+  useTeamCompetitionsQuery,
+} from "@apps/shared/hooks/queries/teams";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
-import { cardSurface } from "@/constants/theme";
-
-interface PracticeRow {
-  date: string;
-  title: string;
-  place: string;
-  note: string;
-}
-
-interface CompetitionRow {
-  date: string;
-  endDate: string;
-  title: string;
-  place: string;
-  poolType: number; // 0: 短水路(25m), 1: 長水路(50m)
-  note: string;
-}
-
-/** 何も入力されていない行。検証・送信の対象外にする (日付だけの行は登録対象) */
-const isBlankPracticeRow = (row: PracticeRow): boolean =>
-  !row.date.trim() && !row.title.trim() && !row.place.trim() && !row.note.trim();
-
-/** 何も入力されていない行。poolType は既定値 (0: 短水路) のままなら未入力とみなす */
-const isBlankCompetitionRow = (row: CompetitionRow): boolean =>
-  row.poolType === 0 &&
-  !row.date.trim() &&
-  !row.endDate.trim() &&
-  !row.title.trim() &&
-  !row.place.trim() &&
-  !row.note.trim();
+import { formatDate } from "@apps/shared/utils/date";
+import { FormKeyboardAvoidingView } from "@/components/forms/FormKeyboardAvoidingView";
+import { BulkRegisterCalendar } from "./bulkRegister/BulkRegisterCalendar";
+import { CompetitionDraftSheet } from "./bulkRegister/CompetitionDraftSheet";
+import { PracticePerDaySheet } from "./bulkRegister/PracticePerDaySheet";
+import { BulkRegisterConfirmSheet } from "./bulkRegister/BulkRegisterConfirmSheet";
+import { BULK_COLORS } from "./bulkRegister/bulkRegisterColors";
+import {
+  EMPTY_PRACTICE_FIELDS,
+  buildBulkRegisterInput,
+  buildExistingScheduleMap,
+  competitionEndDate,
+  countByMonth,
+  findDraftCovering,
+  getDateFnsLocale,
+  hasOverride,
+  rangeOverlapsCompetition,
+  toCircledNumber,
+  toggleDate,
+  toggleWeekdayInMonth,
+  type CompetitionDraft,
+  type PracticeFields,
+} from "./bulkRegister/bulkRegisterUtils";
 
 interface TeamBulkRegisterFormProps {
   teamId: string;
@@ -55,676 +45,661 @@ interface TeamBulkRegisterFormProps {
 
 type Mode = "practice" | "competition";
 
-type Result = {
-  practicesCreated: number;
-  competitionsCreated: number;
-  errors: string[];
-} | null;
+let draftSeq = 0;
+const newDraftId = () => `draft-${Date.now()}-${++draftSeq}`;
 
 /**
- * チーム練習・大会一括登録フォーム（手動入力）
+ * チーム練習・大会の一括登録フォーム (カレンダー型)。
+ * - 練習: カレンダーで日付を複数選び、タイトル・場所・メモは共通で1回入力 (日ごとに上書き可)。
+ *   曜日の見出しをタップするとその月の同じ曜日をまとめて選べる。
+ * - 大会: カレンダーで初日をタップ → シートで日数・大会名などを入力。複数日は帯で表示。
+ * 練習と大会の入力はタブを切り替えても残り、登録ボタンで両方まとめて登録する。
  */
-export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({
-  teamId,
-  onSuccess,
-}) => {
+export const TeamBulkRegisterForm: React.FC<TeamBulkRegisterFormProps> = ({ teamId, onSuccess }) => {
   const { supabase } = useAuth();
   const { t } = useTranslation();
   const toast = useToast();
-  // Android の Edge-to-Edge 強制下では、スクロール最下部の登録ボタンと結果表示が
-  // システムナビゲーションバー(3ボタン)の背後に隠れる。下部インセットを
-  // スクロール余白に加算する。親画面 TeamBulkRegisterScreen の container が
-  // padding:12 を持つぶんクリアランスは 12dp 過剰になるが、余剰はスクロール
-  // 余白として現れるだけなので、親の padding に依存する減算はしない。
   const insets = useSafeInsets();
+  const locale = useDateLocale();
   const api = useMemo(() => new TeamBulkRegisterAPI(supabase), [supabase]);
 
-  const today = format(new Date(), "yyyy-MM-dd");
+  // 登録済みの予定 (カレンダーの印と、大会との重複の注意に使う)
+  const { data: existingPractices } = useTeamPracticesQuery(supabase, teamId);
+  const { data: existingCompetitions } = useTeamCompetitionsQuery(supabase, teamId);
+  const existing = useMemo(
+    () => buildExistingScheduleMap(existingPractices ?? [], existingCompetitions ?? []),
+    [existingPractices, existingCompetitions],
+  );
 
   const [mode, setMode] = useState<Mode>("practice");
-  const [practiceRows, setPracticeRows] = useState<PracticeRow[]>([
-    { date: today, title: "", place: "", note: "" },
-  ]);
-  const [competitionRows, setCompetitionRows] = useState<CompetitionRow[]>([
-    { date: today, endDate: "", title: "", place: "", poolType: 0, note: "" },
-  ]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<Result>(null);
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
 
-  // 追加行の日付は空で始める。今日の日付を入れておくと、何も入力していない行まで
-  // 「今日の無題の練習」として登録されてしまうため (空行は検証・送信の対象外)
-  const handleAddPracticeRow = () => {
-    setPracticeRows((prev) => [...prev, { date: "", title: "", place: "", note: "" }]);
-  };
+  // 練習
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [common, setCommon] = useState<PracticeFields>(EMPTY_PRACTICE_FIELDS);
+  const [overrides, setOverrides] = useState<Record<string, PracticeFields>>({});
+  const [isPerDayOpen, setIsPerDayOpen] = useState(false);
 
-  const handleRemovePracticeRow = (index: number) => {
-    setPracticeRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
-  };
+  // 大会
+  const [drafts, setDrafts] = useState<CompetitionDraft[]>([]);
+  const [compSheet, setCompSheet] = useState<{
+    visible: boolean;
+    draft: CompetitionDraft | null;
+    isEditing: boolean;
+  }>({ visible: false, draft: null, isEditing: false });
 
-  const handlePracticeChange = (index: number, key: keyof PracticeRow, value: string) => {
-    setPracticeRows((prev) => {
-      const next = [...prev];
-      const current = next[index];
-      if (!current) return prev; // index が不正な場合は何も更新しない
-      next[index] = { ...current, [key]: value };
-      return next;
-    });
-  };
+  // 登録
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleAddCompetitionRow = () => {
-    setCompetitionRows((prev) => [
-      ...prev,
-      { date: "", endDate: "", title: "", place: "", poolType: 0, note: "" },
-    ]);
-  };
+  const input = useMemo(
+    () => buildBulkRegisterInput(selectedDates, common, overrides, drafts),
+    [selectedDates, common, overrides, drafts],
+  );
+  const total = input.practices.length + input.competitions.length;
 
-  const handleRemoveCompetitionRow = (index: number) => {
-    setCompetitionRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
-  };
-
-  const handleCompetitionChange = (
-    index: number,
-    key: keyof CompetitionRow,
-    value: string | number,
-  ) => {
-    setCompetitionRows((prev) => {
-      const next = [...prev];
-      const current = next[index];
-      if (!current) return prev; // index が不正な場合は何も更新しない
-      next[index] = { ...current, [key]: value };
-      return next;
-    });
-  };
-
-  const validatePracticeRows = (): string[] => {
-    const errors: string[] = [];
-    practiceRows.forEach((row, idx) => {
-      if (isBlankPracticeRow(row)) return;
-      if (!row.date.trim()) {
-        errors.push(t("teams.mobile.bulkRegister.errorDateRequired", { row: idx + 1 }));
-      }
-    });
-    return errors;
-  };
-
-  const validateCompetitionRows = (): string[] => {
-    const errors: string[] = [];
-    competitionRows.forEach((row, idx) => {
-      if (isBlankCompetitionRow(row)) return;
-      if (!row.date.trim()) {
-        errors.push(t("teams.mobile.bulkRegister.errorStartDateRequired", { row: idx + 1 }));
-      }
-      if (row.endDate && row.endDate < row.date) {
-        errors.push(t("teams.mobile.bulkRegister.errorEndDateAfterStart", { row: idx + 1 }));
-      }
-    });
-    return errors;
-  };
-
-  const buildInput = (): BulkRegisterInput => {
-    return {
-      practices: practiceRows
-        .filter((row) => row.date.trim())
-        .map((row) => ({
-          date: row.date.trim(),
-          title: row.title.trim() || null,
-          place: row.place.trim() || null,
-          note: row.note.trim() || null,
-        })),
-      competitions: competitionRows
-        .filter((row) => row.date.trim())
-        .map((row) => ({
-          date: row.date.trim(),
-          end_date: row.endDate.trim() || null,
-          title: row.title.trim() || null,
-          place: row.place.trim() || null,
-          pool_type: row.poolType,
-          note: row.note.trim() || null,
-        })),
-    };
-  };
-
-  const handleSubmit = async () => {
-    setResult(null);
-    setError(null);
-
-    const errors = mode === "practice" ? validatePracticeRows() : validateCompetitionRows();
-    if (errors.length > 0) {
-      setError(errors.join("\n"));
-      return;
-    }
-
-    // プレビュー用に全入力を構築
-    const previewInput = buildInput();
-
-    // 現在のモードに応じて送信データを限定
-    const input: BulkRegisterInput =
-      mode === "practice"
-        ? { practices: previewInput.practices, competitions: [] }
-        : { practices: [], competitions: previewInput.competitions };
-
-    if (mode === "practice" && input.practices.length === 0) {
-      setError(t("teams.mobile.bulkPracticeEmpty"));
-      return;
-    }
-    if (mode === "competition" && input.competitions.length === 0) {
-      setError(t("teams.mobile.bulkCompetitionEmpty"));
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const result = await api.bulkRegister(teamId, input);
-      setResult({
-        practicesCreated: result.practicesCreated,
-        competitionsCreated: result.competitionsCreated,
-        errors: result.errors,
-      });
-      if (result.success) {
-        toast.success(t("common.savedToast"));
-        if (onSuccess) onSuccess();
-      }
-      // 正常終了時は送信したタブだけリセットする (もう片方のタブの入力は送信していないので残す)
-      if (result.success) {
-        if (mode === "practice") {
-          setPracticeRows([{ date: today, title: "", place: "", note: "" }]);
-        } else {
-          setCompetitionRows([
-            { date: today, endDate: "", title: "", place: "", poolType: 0, note: "" },
-          ]);
-        }
-      }
-    } catch (err) {
-      const message = toUserFacingMessage(err, t("teams.mobile.bulkRegisterFailed"));
-      setError(message);
-      if (Platform.OS === "web") {
-        window.alert(message);
-      } else {
-        Alert.alert(t("common.error"), message, [{ text: "OK" }]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const renderPracticeRows = () => (
-    <View style={styles.section}>
-      {practiceRows.map((row, index) => (
-        <View key={index} style={styles.rowCard}>
-          <View style={styles.rowHeader}>
-            <Text style={styles.rowTitle}>{t("teams.mobile.bulkRegister.rowTitlePractice", { n: index + 1 })}</Text>
-            {practiceRows.length > 1 && (
-              <Pressable onPress={() => handleRemovePracticeRow(index)} style={styles.deleteButton}>
-                <Text style={styles.deleteButtonText}>{t("teams.mobile.bulkRegister.deleteButton")}</Text>
-              </Pressable>
-            )}
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelDate")}</Text>
-            <TextInput
-              style={styles.input}
-              value={row.date}
-              onChangeText={(text) => handlePracticeChange(index, "date", text)}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelTitle")}</Text>
-            <TextInput
-              style={styles.input}
-              value={row.title}
-              onChangeText={(text) => handlePracticeChange(index, "title", text)}
-              placeholder={t("teams.mobile.bulkPracticeTitlePlaceholder")}
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelPlace")}</Text>
-            <TextInput
-              style={styles.input}
-              value={row.place}
-              onChangeText={(text) => handlePracticeChange(index, "place", text)}
-              placeholder={t("teams.mobile.bulkPlacePlaceholder")}
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelNote")}</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={row.note}
-              onChangeText={(text) => handlePracticeChange(index, "note", text)}
-              placeholder={t("teams.mobile.bulkMemoPlaceholder")}
-              placeholderTextColor="#9CA3AF"
-              multiline
-            />
-          </View>
-        </View>
-      ))}
-      <Pressable style={styles.addRowButton} onPress={handleAddPracticeRow}>
-        <Text style={styles.addRowButtonText}>{t("teams.mobile.bulkRegister.addRowButton")}</Text>
-      </Pressable>
-    </View>
+  const isCompetitionDay = useCallback(
+    (date: string) => !!existing[date]?.competition || !!findDraftCovering(drafts, date),
+    [existing, drafts],
   );
 
-  const renderCompetitionRows = () => (
-    <View style={styles.section}>
-      {competitionRows.map((row, index) => (
-        <View key={index} style={styles.rowCard}>
-          <View style={styles.rowHeader}>
-            <Text style={styles.rowTitle}>{t("teams.mobile.bulkRegister.rowTitleCompetition", { n: index + 1 })}</Text>
-            {competitionRows.length > 1 && (
-              <Pressable
-                onPress={() => handleRemoveCompetitionRow(index)}
-                style={styles.deleteButton}
-              >
-                <Text style={styles.deleteButtonText}>{t("teams.mobile.bulkRegister.deleteButton")}</Text>
-              </Pressable>
-            )}
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelStartDate")}</Text>
-            <TextInput
-              style={styles.input}
-              value={row.date}
-              onChangeText={(text) => handleCompetitionChange(index, "date", text)}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelEndDate")}</Text>
-            <TextInput
-              style={styles.input}
-              value={row.endDate}
-              onChangeText={(text) => handleCompetitionChange(index, "endDate", text)}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelCompetitionName")}</Text>
-            <TextInput
-              style={styles.input}
-              value={row.title}
-              onChangeText={(text) => handleCompetitionChange(index, "title", text)}
-              placeholder={t("teams.mobile.bulkCompetitionNamePlaceholder")}
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelPlace")}</Text>
-            <TextInput
-              style={styles.input}
-              value={row.place}
-              onChangeText={(text) => handleCompetitionChange(index, "place", text)}
-              placeholder={t("teams.mobile.bulkPlacePlaceholder")}
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelPoolType")}</Text>
-            <View style={styles.poolTypeContainer}>
-              <Pressable
-                style={[styles.poolTypeButton, row.poolType === 0 && styles.poolTypeButtonActive]}
-                onPress={() => handleCompetitionChange(index, "poolType", 0)}
-              >
-                <Text
-                  style={[styles.poolTypeText, row.poolType === 0 && styles.poolTypeTextActive]}
-                >
-                  25m
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.poolTypeButton, row.poolType === 1 && styles.poolTypeButtonActive]}
-                onPress={() => handleCompetitionChange(index, "poolType", 1)}
-              >
-                <Text
-                  style={[styles.poolTypeText, row.poolType === 1 && styles.poolTypeTextActive]}
-                >
-                  50m
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{t("teams.mobile.bulkRegister.labelNote")}</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={row.note}
-              onChangeText={(text) => handleCompetitionChange(index, "note", text)}
-              placeholder={t("teams.mobile.bulkMemoPlaceholder")}
-              placeholderTextColor="#9CA3AF"
-              multiline
-            />
-          </View>
-        </View>
-      ))}
-      <Pressable style={styles.addRowButton} onPress={handleAddCompetitionRow}>
-        <Text style={styles.addRowButtonText}>{t("teams.mobile.bulkRegister.addRowButton")}</Text>
-      </Pressable>
-    </View>
-  );
-
-  const renderPreview = () => {
-    const input = buildInput();
-    const hasPractices = input.practices.length > 0;
-    const hasCompetitions = input.competitions.length > 0;
-    if (!hasPractices && !hasCompetitions) return null;
-
-    return (
-      <View style={styles.previewContainer}>
-        <Text style={styles.previewTitle}>{t("teams.mobile.bulkRegister.previewTitle")}</Text>
-        {hasPractices && (
-          <View style={styles.previewSection}>
-            <Text style={styles.previewSectionTitle}>{t("teams.mobile.bulkRegister.previewSectionPractices", { count: input.practices.length })}</Text>
-            {input.practices.slice(0, 5).map((p, idx) => (
-              <Text key={idx} style={styles.previewItem}>
-                {p.date} / {p.title || t("teams.mobile.fallbackPractice")} / {p.place || "-"}
-              </Text>
-            ))}
-            {input.practices.length > 5 && (
-              <Text style={styles.previewMore}>{t("teams.mobile.bulkRegister.previewMore", { count: input.practices.length - 5 })}</Text>
-            )}
-          </View>
-        )}
-        {hasCompetitions && (
-          <View style={styles.previewSection}>
-            <Text style={styles.previewSectionTitle}>{t("teams.mobile.bulkRegister.previewSectionCompetitions", { count: input.competitions.length })}</Text>
-            {input.competitions.slice(0, 5).map((c, idx) => (
-              <Text key={idx} style={styles.previewItem}>
-                {c.date}
-                {c.end_date ? `〜${c.end_date}` : ""} / {c.title || t("teams.mobile.fallbackCompetitionTitle")} / {c.place || "-"} /{" "}
-                {c.pool_type === 0 ? "25m" : "50m"}
-              </Text>
-            ))}
-            {input.competitions.length > 5 && (
-              <Text style={styles.previewMore}>{t("teams.mobile.bulkRegister.previewMore", { count: input.competitions.length - 5 })}</Text>
-            )}
-          </View>
-        )}
-      </View>
+  // ---- カレンダー操作 ----
+  const handlePressDate = (date: string) => {
+    if (mode === "practice") {
+      setSelectedDates((prev) => toggleDate(prev, date));
+      return;
+    }
+    const covering = findDraftCovering(drafts, date);
+    setCompSheet(
+      covering
+        ? { visible: true, draft: covering, isEditing: true }
+        : {
+            visible: true,
+            isEditing: false,
+            draft: {
+              id: newDraftId(),
+              date,
+              days: 1,
+              title: "",
+              place: "",
+              poolType: 0,
+              note: "",
+              noteOpen: false,
+            },
+          },
     );
   };
 
+  const handlePressWeekday = (weekday: number) => {
+    setSelectedDates((prev) => toggleWeekdayInMonth(prev, month, weekday));
+  };
+
+  const removeSelectedDate = (date: string) => {
+    setSelectedDates((prev) => {
+      const next = prev.filter((d) => d !== date);
+      if (next.length === 0) setIsPerDayOpen(false);
+      return next;
+    });
+  };
+
+  // ---- 大会シート ----
+  const closeCompSheet = () => setCompSheet((prev) => ({ ...prev, visible: false }));
+
+  const handleSaveDraft = (draft: CompetitionDraft) => {
+    setDrafts((prev) =>
+      prev.some((d) => d.id === draft.id)
+        ? prev.map((d) => (d.id === draft.id ? draft : d))
+        : [...prev, draft],
+    );
+    // 日程を別の月に変えた場合も、カレンダーで帯が見えるようその月へ移る
+    const start = parseISO(draft.date);
+    if (isValid(start)) setMonth(startOfMonth(start));
+    closeCompSheet();
+  };
+
+  const handleDeleteDraft = (id: string) => {
+    setDrafts((prev) => prev.filter((d) => d.id !== id));
+    closeCompSheet();
+  };
+
+  const openDraft = (draft: CompetitionDraft) => {
+    setMonth(startOfMonth(parseISO(draft.date)));
+    setCompSheet({ visible: true, draft, isEditing: true });
+  };
+
+  const hasOverlap = useCallback(
+    (date: string, days: number, excludeId: string | null) =>
+      rangeOverlapsCompetition(date, days, existing, drafts, excludeId),
+    [existing, drafts],
+  );
+
+  // ---- 登録 ----
+  const handleSubmit = async () => {
+    if (submitting || total === 0) return;
+    setSubmitting(true);
+    try {
+      const result = await api.bulkRegister(teamId, input);
+      const created = result.practicesCreated + result.competitionsCreated;
+      // 全件登録できた側だけ入力をリセットする (失敗した側は入力を残して直せるようにする)
+      if (input.practices.length > 0 && result.practicesCreated === input.practices.length) {
+        setSelectedDates([]);
+        setCommon(EMPTY_PRACTICE_FIELDS);
+        setOverrides({});
+      }
+      if (input.competitions.length > 0 && result.competitionsCreated === input.competitions.length) {
+        setDrafts([]);
+      }
+      if (created > 0) {
+        toast.success(t("teams.mobile.bulkRegister.registeredToast", { count: created }));
+        onSuccess?.();
+      }
+      if (result.errors.length > 0) {
+        Alert.alert(
+          t("common.error"),
+          t("teams.mobile.bulkRegister.resultErrorPrefix", { detail: result.errors.join("\n") }),
+        );
+      } else {
+        setIsConfirmOpen(false);
+      }
+    } catch (err) {
+      Alert.alert(t("common.error"), toUserFacingMessage(err, t("teams.mobile.bulkRegisterFailed")));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ---- 表示 ----
+  const monthChipLabel = (yyyyMM: string, count: number) =>
+    `${format(parseISO(`${yyyyMM}-01`), "MMM", { locale: getDateFnsLocale(locale) })} ${toCircledNumber(count)}`;
+
+  const renderPractice = () => {
+    const clashCount = selectedDates.filter(isCompetitionDay).length;
+    const overrideCount = selectedDates.filter((d) => hasOverride(overrides[d])).length;
+    return (
+      <>
+        <View style={styles.card}>
+          <BulkRegisterCalendar
+            mode="practice"
+            month={month}
+            onPrevMonth={() => setMonth((m) => subMonths(m, 1))}
+            onNextMonth={() => setMonth((m) => addMonths(m, 1))}
+            existing={existing}
+            selectedDates={selectedDates}
+            drafts={drafts}
+            onPressDate={handlePressDate}
+            onPressWeekday={handlePressWeekday}
+          />
+          <Text style={styles.hint}>{t("teams.mobile.bulkRegister.calendarHintPractice")}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardLabel}>
+              {t("teams.mobile.bulkRegister.selectedDays", { count: selectedDates.length })}
+            </Text>
+            {selectedDates.length > 0 && (
+              <Pressable onPress={() => setSelectedDates([])} hitSlop={6} accessibilityRole="button">
+                <Text style={[styles.link, { color: BULK_COLORS.practice.text }]}>
+                  {t("teams.mobile.bulkRegister.clearSelection")}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+          {selectedDates.length > 0 ? (
+            <View style={styles.chips}>
+              {countByMonth(selectedDates).map(({ month: m, count }) => (
+                <Text key={m} style={styles.monthChip}>{monthChipLabel(m, count)}</Text>
+              ))}
+              {clashCount > 0 && (
+                <Text style={styles.warnChip}>
+                  {t("teams.mobile.bulkRegister.sameDayAsCompetitionCount", { count: clashCount })}
+                </Text>
+              )}
+            </View>
+          ) : (
+            <Text style={styles.empty}>{t("teams.mobile.bulkRegister.selectPracticeDaysEmpty")}</Text>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardLabel}>
+              {selectedDates.length > 0
+                ? t("teams.mobile.bulkRegister.applyToAll", { count: selectedDates.length })
+                : t("teams.mobile.bulkRegister.commonContent")}
+            </Text>
+            {selectedDates.length > 0 && (
+              <Pressable onPress={() => setIsPerDayOpen(true)} hitSlop={6} accessibilityRole="button">
+                <Text style={[styles.link, { color: BULK_COLORS.practice.text }]}>
+                  {t("teams.mobile.bulkRegister.perDayEdit")}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+          <Text style={styles.fieldLabel}>{t("teams.mobile.bulkRegister.labelTitle")}</Text>
+          <TextInput
+            style={styles.input}
+            value={common.title}
+            onChangeText={(v) => setCommon((c) => ({ ...c, title: v }))}
+            placeholder={t("teams.mobile.bulkPracticeTitlePlaceholder")}
+            placeholderTextColor="#9CA3AF"
+          />
+          <Text style={styles.fieldLabel}>{t("teams.mobile.bulkRegister.labelPlace")}</Text>
+          <TextInput
+            style={styles.input}
+            value={common.place}
+            onChangeText={(v) => setCommon((c) => ({ ...c, place: v }))}
+            placeholder={t("teams.mobile.bulkPlacePlaceholder")}
+            placeholderTextColor="#9CA3AF"
+          />
+          {common.noteOpen ? (
+            <>
+              <Text style={styles.fieldLabel}>{t("teams.mobile.bulkRegister.labelMemo")}</Text>
+              <TextInput
+                style={[styles.input, styles.memoInput]}
+                value={common.note}
+                onChangeText={(v) => setCommon((c) => ({ ...c, note: v }))}
+                placeholder={t("teams.mobile.bulkMemoPlaceholder")}
+                placeholderTextColor="#9CA3AF"
+                multiline
+                autoFocus
+              />
+            </>
+          ) : (
+            <Pressable
+              style={styles.memoButton}
+              onPress={() => setCommon((c) => ({ ...c, noteOpen: true }))}
+              accessibilityRole="button"
+            >
+              <Text style={styles.memoButtonText}>{t("teams.mobile.bulkRegister.addMemo")}</Text>
+            </Pressable>
+          )}
+          {overrideCount > 0 && (
+            <Text style={styles.hint}>
+              {t("teams.mobile.bulkRegister.overrideNotice", { count: overrideCount })}
+            </Text>
+          )}
+        </View>
+      </>
+    );
+  };
+
+  const renderCompetition = () => {
+    const sorted = [...drafts].sort((a, b) => a.date.localeCompare(b.date));
+    return (
+      <>
+        <View style={styles.card}>
+          <BulkRegisterCalendar
+            mode="competition"
+            month={month}
+            onPrevMonth={() => setMonth((m) => subMonths(m, 1))}
+            onNextMonth={() => setMonth((m) => addMonths(m, 1))}
+            existing={existing}
+            selectedDates={selectedDates}
+            drafts={drafts}
+            onPressDate={handlePressDate}
+          />
+          <Text style={styles.hint}>{t("teams.mobile.bulkRegister.calendarHintCompetition")}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={[styles.cardLabel, styles.cardLabelSpacing]}>
+            {t("teams.mobile.bulkRegister.competitionsToAdd", { count: drafts.length })}
+          </Text>
+          {sorted.length === 0 ? (
+            <Text style={styles.empty}>{t("teams.mobile.bulkRegister.competitionsEmpty")}</Text>
+          ) : (
+            sorted.map((c) => {
+              const end = competitionEndDate(c.date, c.days);
+              return (
+                <Pressable
+                  key={c.id}
+                  style={styles.compItem}
+                  onPress={() => openDraft(c)}
+                  accessibilityRole="button"
+                  accessibilityLabel={c.title || t("teams.mobile.fallbackCompetitionTitle")}
+                >
+                  <View style={styles.compDate}>
+                    <Text style={styles.compDateMain}>{formatDate(c.date, "short", locale)}</Text>
+                    <Text style={styles.compDateSub}>
+                      {c.days > 1
+                        ? `〜${formatDate(end, "short", locale)}`
+                        : format(parseISO(c.date), "EEE", { locale: getDateFnsLocale(locale) })}
+                    </Text>
+                  </View>
+                  <View style={styles.compBody}>
+                    <Text style={[styles.compTitle, !c.title && styles.compPlaceholder]} numberOfLines={1}>
+                      {c.title || t("teams.mobile.bulkRegister.competitionNameUnset")}
+                    </Text>
+                    <Text style={styles.compSub} numberOfLines={1}>
+                      {[
+                        c.place || t("teams.mobile.bulkRegister.placeUnset"),
+                        c.poolType === 1 ? t("competition.form.poolTypeLong") : t("competition.form.poolTypeShort"),
+                      ].join(" · ")}
+                    </Text>
+                    {!!c.note && (
+                      <Text style={styles.compSub} numberOfLines={1}>{c.note}</Text>
+                    )}
+                  </View>
+                  <Feather name="chevron-right" size={16} color="#9CA3AF" />
+                </Pressable>
+              );
+            })
+          )}
+        </View>
+      </>
+    );
+  };
+
+  const submitLabel =
+    total === 0
+      ? t("teams.mobile.bulkRegister.submitEmpty")
+      : t("teams.mobile.bulkRegister.submitButton", {
+          summary: [
+            input.practices.length > 0
+              ? t("teams.mobile.bulkRegister.submitPractice", { count: input.practices.length })
+              : "",
+            input.competitions.length > 0
+              ? t("teams.mobile.bulkRegister.submitCompetition", { count: input.competitions.length })
+              : "",
+          ]
+            .filter(Boolean)
+            .join("・"),
+        });
+
   return (
-    <View style={styles.container}>
-      {/* モード切り替え */}
-      <View style={styles.modeTabs}>
-        <Pressable
-          style={[styles.modeTab, mode === "practice" && styles.modeTabActive]}
-          onPress={() => setMode("practice")}
-        >
-          <Text style={[styles.modeTabText, mode === "practice" && styles.modeTabTextActive]}>
-            {t("teams.mobile.bulkRegister.modeTabPractice")}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.modeTab, mode === "competition" && styles.modeTabActive]}
-          onPress={() => setMode("competition")}
-        >
-          <Text style={[styles.modeTabText, mode === "competition" && styles.modeTabTextActive]}>
-            {t("teams.mobile.bulkRegister.modeTabCompetition")}
-          </Text>
-        </Pressable>
+    <FormKeyboardAvoidingView style={styles.container}>
+      {/* タブ (件数バッジ付き。練習は緑、大会は青) */}
+      <View style={styles.tabs}>
+        {(["practice", "competition"] as const).map((m) => {
+          const active = mode === m;
+          const count = m === "practice" ? selectedDates.length : drafts.length;
+          const color = m === "practice" ? BULK_COLORS.practice : BULK_COLORS.competition;
+          return (
+            <Pressable
+              key={m}
+              style={[styles.tab, active && styles.tabActive]}
+              onPress={() => setMode(m)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+            >
+              <Text style={[styles.tabText, active && { color: color.text }]}>
+                {m === "practice"
+                  ? t("teams.mobile.bulkRegister.modeTabPractice")
+                  : t("teams.mobile.bulkRegister.modeTabCompetition")}
+              </Text>
+              {count > 0 && (
+                <View style={[styles.tabBadge, { backgroundColor: color.main }]}>
+                  <Text style={styles.tabBadgeText}>{count}</Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
       </View>
 
       <ScrollView
-        style={styles.formArea}
-        contentContainerStyle={[
-          styles.formContent,
-          { paddingBottom: getSafeFooterPadding(24, insets.bottom) },
-        ]}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        {mode === "practice" ? renderPracticeRows() : renderCompetitionRows()}
-
-        {renderPreview()}
-
-        {/* エラー表示: 押した登録ボタンの直上に出す (スクロール領域の先頭だと行が多いとき画面外になり、
-            押しても何も起きないように見えるため) */}
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {/* 登録ボタン */}
-        <Pressable
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          <Text style={styles.submitButtonText}>
-            {loading ? t("teams.mobile.bulkRegisterLoading") : t("teams.mobile.bulkRegisterSubmit")}
-          </Text>
-        </Pressable>
-
-        {/* 結果表示 */}
-        {result && (
-          <View style={styles.resultBox}>
-            <Text style={styles.resultTitle}>{t("teams.mobile.bulkRegister.resultTitle")}</Text>
-            {result.practicesCreated > 0 && (
-              <Text style={styles.resultText}>{t("teams.mobile.bulkRegister.resultPracticesCreated", { count: result.practicesCreated })}</Text>
-            )}
-            {result.competitionsCreated > 0 && (
-              <Text style={styles.resultText}>{t("teams.mobile.bulkRegister.resultCompetitionsCreated", { count: result.competitionsCreated })}</Text>
-            )}
-            {result.errors.length > 0 && (
-              <Text style={[styles.resultText, styles.resultError]}>
-                {t("teams.mobile.bulkRegister.resultErrorPrefix", { detail: result.errors.join(", ") })}
-              </Text>
-            )}
-          </View>
-        )}
+        {mode === "practice" ? renderPractice() : renderCompetition()}
       </ScrollView>
-    </View>
+
+      {/* 登録ボタンは画面下に固定し、件数を常に表示する */}
+      <View style={[styles.footer, { paddingBottom: getSafeFooterPadding(12, insets.bottom) }]}>
+        <Pressable
+          style={[styles.submitButton, total === 0 && styles.submitButtonDisabled]}
+          onPress={() => setIsConfirmOpen(true)}
+          disabled={total === 0}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: total === 0 }}
+        >
+          <Text style={styles.submitButtonText}>{submitLabel}</Text>
+        </Pressable>
+      </View>
+
+      <CompetitionDraftSheet
+        visible={compSheet.visible}
+        draft={compSheet.draft}
+        isEditing={compSheet.isEditing}
+        hasOverlap={hasOverlap}
+        onSave={handleSaveDraft}
+        onDelete={handleDeleteDraft}
+        onClose={closeCompSheet}
+      />
+      <PracticePerDaySheet
+        visible={isPerDayOpen}
+        dates={selectedDates}
+        common={common}
+        overrides={overrides}
+        existing={existing}
+        onChangeOverride={(date, next) => setOverrides((prev) => ({ ...prev, [date]: next }))}
+        onRemoveDate={removeSelectedDate}
+        onClose={() => setIsPerDayOpen(false)}
+      />
+      <BulkRegisterConfirmSheet
+        visible={isConfirmOpen}
+        input={input}
+        submitting={submitting}
+        onSubmit={handleSubmit}
+        onClose={() => setIsConfirmOpen(false)}
+      />
+    </FormKeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 12,
   },
-  modeTabs: {
+  tabs: {
     flexDirection: "row",
-    marginBottom: 12,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 10,
+    padding: 3,
+    marginHorizontal: 12,
+    marginTop: 12,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
     borderRadius: 8,
+  },
+  tabActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  tabBadge: {
+    minWidth: 20,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 12,
+    gap: 10,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    overflow: "hidden",
-  },
-  modeTab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
-  },
-  modeTabActive: {
-    backgroundColor: "#2563EB",
-  },
-  modeTabText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  modeTabTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  formArea: {
-    flex: 1,
-  },
-  formContent: {
-    paddingBottom: 24,
-    gap: 12,
-  },
-  errorBox: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
-    borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 14,
     padding: 12,
   },
-  errorText: {
-    color: "#DC2626",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  section: {
-    gap: 12,
-  },
-  rowCard: {
-    ...cardSurface,
-    padding: 12,
-  },
-  rowHeader: {
+  cardHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
-  rowTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  deleteButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: "#FEF2F2",
-  },
-  deleteButtonText: {
+  cardLabel: {
     fontSize: 12,
-    fontWeight: "500",
-    color: "#DC2626",
+    fontWeight: "700",
+    color: "#6B7280",
   },
-  fieldGroup: {
+  cardLabelSpacing: {
+    marginBottom: 8,
+  },
+  link: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  hint: {
+    fontSize: 11,
+    color: "#6B7280",
     marginTop: 8,
+    lineHeight: 16,
+  },
+  chips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 6,
   },
-  label: {
+  monthChip: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "700",
+    color: BULK_COLORS.practice.text,
+    backgroundColor: BULK_COLORS.practice.light,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    overflow: "hidden",
+  },
+  warnChip: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#92400E",
+    backgroundColor: "#FEF3C7",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    overflow: "hidden",
+  },
+  empty: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: "700",
     color: "#374151",
+    marginBottom: 5,
   },
   input: {
     borderWidth: 1,
     borderColor: "#D1D5DB",
     borderRadius: 8,
-    padding: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 15,
     color: "#111827",
     backgroundColor: "#FFFFFF",
+    marginBottom: 10,
   },
-  textArea: {
-    minHeight: 80,
+  memoInput: {
+    minHeight: 64,
     textAlignVertical: "top",
   },
-  poolTypeContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  poolTypeButton: {
-    paddingVertical: 8,
+  memoButton: {
+    alignSelf: "flex-start",
     paddingHorizontal: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#FFFFFF",
-  },
-  poolTypeButtonActive: {
-    borderColor: "#2563EB",
-    backgroundColor: "#EFF6FF",
-  },
-  poolTypeText: {
-    fontSize: 14,
-    color: "#374151",
-  },
-  poolTypeTextActive: {
-    color: "#2563EB",
-    fontWeight: "600",
-  },
-  addRowButton: {
-    marginTop: 8,
-    paddingVertical: 10,
+    paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#D1D5DB",
+  },
+  memoButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  compItem: {
+    flexDirection: "row",
     alignItems: "center",
-  },
-  addRowButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-  },
-  previewContainer: {
-    padding: 12,
+    gap: 10,
     borderWidth: 1,
     borderColor: "#E5E7EB",
-    borderRadius: 10,
-    backgroundColor: "#F9FAFB",
-    gap: 8,
+    borderRadius: 11,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    marginBottom: 6,
   },
-  previewTitle: {
-    fontSize: 16,
+  compDate: {
+    width: 64,
+    alignItems: "center",
+  },
+  compDateMain: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: BULK_COLORS.competition.text,
+  },
+  compDateSub: {
+    fontSize: 11,
+    color: "#6B7280",
+  },
+  compBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  compTitle: {
+    fontSize: 14,
     fontWeight: "700",
     color: "#111827",
   },
-  previewSection: {
-    gap: 4,
+  compPlaceholder: {
+    color: "#9CA3AF",
   },
-  previewSectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1F2937",
-  },
-  previewItem: {
-    fontSize: 13,
-    color: "#374151",
-  },
-  previewMore: {
+  compSub: {
     fontSize: 12,
     color: "#6B7280",
   },
+  footer: {
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    paddingTop: 10,
+  },
   submitButton: {
-    marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#2563EB",
+    height: 48,
+    borderRadius: 10,
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#2563EB",
   },
   submitButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    backgroundColor: "#93C5FD",
   },
   submitButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  resultBox: {
-    marginTop: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
-    borderRadius: 10,
-    backgroundColor: "#EFF6FF",
-    gap: 4,
-  },
-  resultTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#1E3A8A",
-  },
-  resultText: {
-    fontSize: 13,
-    color: "#1E3A8A",
-  },
-  resultError: {
-    color: "#DC2626",
+    color: "#FFFFFF",
   },
 });

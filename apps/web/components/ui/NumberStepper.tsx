@@ -20,6 +20,8 @@ interface NumberStepperProps {
   decreaseLabel?: string;
   increaseLabel?: string;
   "data-testid"?: string;
+  /** 入力不可 */
+  disabled?: boolean;
 }
 
 /**
@@ -38,6 +40,7 @@ export default function NumberStepper({
   decreaseLabel,
   increaseLabel,
   "data-testid": dataTestid,
+  disabled = false,
 }: NumberStepperProps) {
   const current = value === "" ? NaN : Number(value);
 
@@ -53,8 +56,8 @@ export default function NumberStepper({
     onChange(String(clamp(base + delta)));
   };
 
-  const atMin = !Number.isNaN(current) && current <= min;
-  const atMax = max !== undefined && !Number.isNaN(current) && current >= max;
+  const atMin = disabled || (!Number.isNaN(current) && current <= min);
+  const atMax = disabled || (max !== undefined && !Number.isNaN(current) && current >= max);
 
   const buttonClass =
     "flex items-center justify-center w-7 sm:w-9 shrink-0 text-blue-500 hover:text-blue-600 disabled:text-gray-300 disabled:hover:text-gray-300 transition-colors";
@@ -77,6 +80,7 @@ export default function NumberStepper({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        disabled={disabled}
         min={min}
         max={max}
         step={Number.isInteger(step) ? 1 : "any"}

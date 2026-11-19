@@ -2,10 +2,10 @@
 
 import React, { useMemo } from "react";
 import Input from "@/components/ui/Input";
-import DatePicker from "@/components/ui/DatePicker";
+import CompetitionDateDaysFields from "@/components/forms/CompetitionDateDaysFields";
 import StyleChipSelector from "@/components/forms/StyleChipSelector";
 import TimeSecondsInput from "../shared/TimeSecondsInput";
-import { parseISO, startOfDay } from "date-fns";
+import { startOfDay } from "date-fns";
 import type { Style, Competition } from "@apps/shared/types";
 import { useAuth } from "@/contexts";
 import { formatTimeBest } from "@/utils/formatters";
@@ -193,26 +193,15 @@ export default function GoalForm({
         ) : (
           // 大会記録の登録 (CompetitionTabModal の大会タブ) と同じ並び。場所と水路は同じ行
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <DatePicker
-                label={tCompetition("start_date_label")}
-                value={newCompetition.date}
-                onChange={(date) => onNewCompetitionChange({ ...newCompetition, date })}
-                minDate={startOfDay(new Date())}
-                required
-                placeholder={tCompetition("start_date_label")}
-                data-testid="goal-new-competition-date"
-              />
-              <DatePicker
-                label={tCompetition("end_date_label")}
-                value={newCompetition.endDate}
-                onChange={(endDate) => onNewCompetitionChange({ ...newCompetition, endDate })}
-                minDate={newCompetition.date ? parseISO(newCompetition.date) : startOfDay(new Date())}
-                placeholder=""
-                popupAlign="right"
-                data-testid="goal-new-competition-end-date"
-              />
-            </div>
+            <CompetitionDateDaysFields
+              date={newCompetition.date}
+              endDate={newCompetition.endDate}
+              onChange={(date, endDate) => onNewCompetitionChange({ ...newCompetition, date, endDate })}
+              startLabel={tCompetition("start_date_label")}
+              minDate={startOfDay(new Date())}
+              required
+              testIdPrefix="goal-new-competition"
+            />
             <div className="grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-4 items-center">
               <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                 {tCompetition("name_label")}

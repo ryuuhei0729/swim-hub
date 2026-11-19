@@ -36,6 +36,15 @@ const mocks = vi.hoisted(() => ({
   switcherOnClosed: null as null | (() => void),
 }));
 
+// チーム関連のバッジ件数 (下のタブバーの「チーム」バッジの内訳) はこのテストの観点外なので 0 件にする
+vi.mock("@/hooks/useTeamBadgeCounts", () => ({
+  useTeamBadgeCounts: () => ({
+    total: 0,
+    byTeam: {},
+    countOf: () => ({ unanswered: 0, pendingMembers: 0 }),
+  }),
+}));
+
 vi.mock("@/contexts/AuthProvider");
 
 vi.mock("@apps/shared/hooks/queries/teams", () => ({

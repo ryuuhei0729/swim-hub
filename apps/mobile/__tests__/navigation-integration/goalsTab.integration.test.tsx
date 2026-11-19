@@ -33,7 +33,7 @@ vi.mock("@/screens/MyPageScreen", () => ({ MyPageScreen: () => <span data-testid
 vi.mock("@/contexts/AuthProvider", () => ({ useAuth: () => ({ supabase: {}, user: { id: "u1" } }) }));
 vi.mock("@apps/shared/hooks/queries/teams", () => ({
   useTeamsQuery: () => ({ teams: mocks.teams, isLoading: false, isError: false, refetch: vi.fn() }),
-  usePendingMembersCountQuery: () => 0,
+  usePendingMembersCountsByTeamQuery: () => ({}),
 }));
 vi.mock("@apps/shared/hooks/queries/notifications", () => ({
   useUnansweredAttendancesQuery: () => ({ data: [] }),

@@ -451,9 +451,8 @@ export const GoalFormScreen: React.FC = () => {
                 title={form.newCompetition.title}
                 place={form.newCompetition.place}
                 poolType={form.newCompetition.poolType}
-                onDateChange={(date) => patchForm({ newCompetition: { ...form.newCompetition, date } })}
-                onEndDateChange={(endDate) =>
-                  patchForm({ newCompetition: { ...form.newCompetition, endDate } })
+                onDateRangeChange={(date, endDate) =>
+                  patchForm({ newCompetition: { ...form.newCompetition, date, endDate } })
                 }
                 onTitleChange={(title) =>
                   patchForm({ newCompetition: { ...form.newCompetition, title } })
