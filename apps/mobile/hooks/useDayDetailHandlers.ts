@@ -135,7 +135,17 @@ export function useDayDetailHandlers(
                 profile?.ios_calendar_enabled &&
                 profile?.ios_calendar_sync_practices
               ) {
-                const practiceToDelete = practices.find((p) => p.id === itemId);
+                // 一覧の取得範囲 (過去1年〜今日) の外にある先の日付の練習は practices に無いため、
+                // 見つからなければ ID で取り直す (取り直さないと iOS カレンダーに予定が残る)
+                let practiceToDelete = practices.find((p) => p.id === itemId);
+                if (!practiceToDelete) {
+                  try {
+                    practiceToDelete =
+                      (await new PracticeAPI(supabase).getPracticeById(itemId)) ?? undefined;
+                  } catch (fetchError) {
+                    console.warn("カレンダー同期用の練習取得エラー:", fetchError);
+                  }
+                }
                 if (practiceToDelete) {
                   try {
                     await syncPractice(practiceToDelete, "delete");

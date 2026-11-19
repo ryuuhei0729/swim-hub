@@ -13,6 +13,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
+import { format } from "date-fns";
 import { PracticeAPI } from "../../api/practices";
 import { GoalAPI } from "../../api/goals";
 import type {
@@ -64,15 +65,14 @@ export function usePracticesQuery(
   // デフォルトの日付範囲を計算
   const defaultStartDate = useMemo(() => {
     if (startDate) return startDate;
-    const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
-    return date.toISOString().split("T")[0]!;
+    // ローカル日付で作る (toISOString は UTC のため、日本時間 0〜9 時に前日になる)
+    return format(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
   }, [startDate]);
 
   const defaultEndDate = useMemo(() => {
     if (endDate) return endDate;
-    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
-    return new Date().toISOString().split("T")[0]!;
+    // ローカル日付で作る (toISOString は UTC のため、日本時間 0〜9 時に前日になり今日の練習が外れる)
+    return format(new Date(), "yyyy-MM-dd");
   }, [endDate]);
 
   // ページング計算
@@ -161,15 +161,14 @@ export function usePracticesCountQuery(
   // デフォルトの日付範囲を計算
   const defaultStartDate = useMemo(() => {
     if (startDate) return startDate;
-    const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
-    return date.toISOString().split("T")[0]!;
+    // ローカル日付で作る (toISOString は UTC のため、日本時間 0〜9 時に前日になる)
+    return format(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
   }, [startDate]);
 
   const defaultEndDate = useMemo(() => {
     if (endDate) return endDate;
-    // split(sep) は仕様上必ず1要素以上の配列を返すため [0] は常に存在する
-    return new Date().toISOString().split("T")[0]!;
+    // ローカル日付で作る (toISOString は UTC のため、日本時間 0〜9 時に前日になり今日の練習が外れる)
+    return format(new Date(), "yyyy-MM-dd");
   }, [endDate]);
 
   return useQuery({
