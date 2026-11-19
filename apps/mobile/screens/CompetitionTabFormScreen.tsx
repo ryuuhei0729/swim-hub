@@ -823,11 +823,26 @@ export const CompetitionTabFormScreen: React.FC = () => {
   // isDefaultUntouchedEntry は全フィールドが未入力のときだけ true を返すため、
   // 種目だけ選んだ・タイムだけ入れた等「部分的に触られた行」はここでは false になり
   // 従来通り下のチェック対象になる (スキップされるのは完全な未編集行のみ)。
+  // 「エントリーする」から既存の大会を開いたか (competitionId + initialTab="entry")。
+  // このときはエントリーの登録そのものが目的。
+  const opensExistingCompetitionForEntry = !!initialCompetitionId && initialTab === "entry";
+  // 検証と保存で「未編集の行」として捨てる行かどうか。validate 側と save 側が別の述語を
+  // 使うと一方だけ通る不整合が起きるため、両方とも必ずこれを使う。
+  // エントリー目的で開いたときは、種目が入っている行は自動セットのデフォルト種目のまま
+  // でも画面上は選択済みに見えるため、捨てずに保存する (種目一覧の取得と既存データの
+  // 読み込みの順序次第でデフォルト種目が残ることがある)。
+  const isSkippableEntryRow = useCallback(
+    (entry: EntryDraftRow): boolean =>
+      isDefaultUntouchedEntry(entry, defaultEntryStyleIdRef.current) &&
+      !(opensExistingCompetitionForEntry && entry.styleId !== ""),
+    [opensExistingCompetitionForEntry],
+  );
+
   const validateEntryTab = useCallback((): boolean => {
     if (!showEntryTab) return true;
     const newErrors: Record<string, string> = {};
     entries.forEach((entry, index) => {
-      if (isDefaultUntouchedEntry(entry, defaultEntryStyleIdRef.current)) return;
+      if (isSkippableEntryRow(entry)) return;
       if (!entry.styleId) {
         newErrors[`style-${index}`] = t("competition.entry.selectStyleRequired");
       }
@@ -842,14 +857,27 @@ export const CompetitionTabFormScreen: React.FC = () => {
     // ここでも同じ述語で除外し、未編集行同士 (または未編集行と実際の入力行) の
     // styleId 一致を「重複」として誤検知しないようにする。
     const styleIds = entries
-      .filter((e) => e.styleId && !isDefaultUntouchedEntry(e, defaultEntryStyleIdRef.current))
+      .filter((e) => e.styleId && !isSkippableEntryRow(e))
       .map((e) => e.styleId);
     if (styleIds.length !== new Set(styleIds).size) {
       newErrors.duplicate = t("forms.tabModal.duplicateEntryStyle");
     }
+    // エントリー目的で開いたのに、既存エントリーが無く保存する行も無い (種目未選択の
+    // 空行だけ) まま保存すると、何も保存されずエラーも出ずに戻ってしまう (AI テスターの指摘)。
+    // この場合だけ種目未選択として止める。大会の新規作成 (エントリー 0 件で大会だけ登録して
+    // よい) と、通常の編集 (initialTab 指定なし) は従来どおり空行をスキップする。
+    const hasExistingEntries =
+      entries.some((e) => e.existingEntryId) ||
+      (snapshotRef.current?.entries ?? []).some((e) => e.existingEntryId);
+    const hasEntryToSave = entries.some((e) => !isSkippableEntryRow(e));
+    if (opensExistingCompetitionForEntry && !hasExistingEntries && !hasEntryToSave) {
+      newErrors["style-0"] = t("competition.entry.selectStyleRequired");
+      // エラーは表示中の項目タブにしか出ないため、エラーを出した 1 つ目の項目を開く
+      setActiveEntryIndex(0);
+    }
     setEntryErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [entries, showEntryTab, t]);
+  }, [entries, showEntryTab, t, opensExistingCompetitionForEntry, isSkippableEntryRow]);
 
   // ---- レコードタブ バリデーション (空→valid) ----
   const validateRecordTab = useCallback((): boolean => {
@@ -1136,9 +1164,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
       // 消える。ブロックごとスキップすれば既存データは DB にそのまま残る。
       // 未編集のデフォルト行 (種目取得後に自動セットされた1行目が未操作のまま) は
       // 保存対象から除外する。編集モードの既存行 (existingEntryId あり) は対象外。
-      const effectiveEntries = entries.filter(
-        (e) => !isDefaultUntouchedEntry(e, defaultEntryStyleIdRef.current),
-      );
+      const effectiveEntries = entries.filter((e) => !isSkippableEntryRow(e));
 
       // effectiveEntries が空 (全行が未編集デフォルト or 全削除) でも、既存エントリーの
       // 全件削除を resolveEntryMutations に委ねる必要があるためブロック自体はスキップしない。
@@ -1393,6 +1419,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
     showEntryTab,
     showRecordTab,
     entries,
+    isSkippableEntryRow,
     records,
     swimStyles,
     competitionTeamId,

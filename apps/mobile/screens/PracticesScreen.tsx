@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, RefreshControl } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { parseISO, isValid } from "date-fns";
+import { addYears, format, parseISO, isValid, subYears } from "date-fns";
 import { useAuth } from "@/contexts/AuthProvider";
 import { practiceKeys } from "@apps/shared/hooks/queries/keys";
 import { PracticeAPI } from "@apps/shared/api/practices";
@@ -161,17 +161,14 @@ export const PracticesScreen: React.FC<PracticesScreenProps> = ({ embedded }) =>
     setDisplayCount(PAGE_INCREMENT);
   }, [resetFilters]);
 
-  // デフォルトの日付範囲（過去1年間）- 初期化時に一度だけ計算
-  const [defaultStartDate] = useState(() => {
-    const date = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    // toISOString() は仕様上必ず "YYYY-MM-DDTHH:mm:ss.sssZ" 形式を返すため
-    // split("T") は必ず2要素以上の配列になり [0] は常に存在する
-    return date.toISOString().split("T")[0]!;
-  });
+  // デフォルトの日付範囲 (過去1年〜1年先) - 初期化時に一度だけ計算。
+  // - 終わりを「今日」にすると、予定として先の日付で登録した練習が一覧に出ない
+  //   (カレンダーには出るのに一覧に無い、と AI テスターが指摘)。大会一覧も先の日付を含む。
+  // - 日付は端末のローカル日付で作る。toISOString() は UTC のため、日本時間 0〜9 時は
+  //   前日になり、その日の朝に記録した練習が一覧から外れていた。
+  const [defaultStartDate] = useState(() => format(subYears(new Date(), 1), "yyyy-MM-dd"));
 
-  const [defaultEndDate] = useState(() => {
-    return new Date().toISOString().split("T")[0]!;
-  });
+  const [defaultEndDate] = useState(() => format(addYears(new Date(), 1), "yyyy-MM-dd"));
 
   const practiceApi = useMemo(() => new PracticeAPI(supabase), [supabase]);
 
