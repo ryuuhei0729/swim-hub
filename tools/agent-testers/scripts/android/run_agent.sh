@@ -20,9 +20,13 @@ if [ "$(adb shell getprop persist.sys.locale | tr -d '\r')" != "$LOCALE" ]; then
   adb shell "setprop persist.sys.locale $LOCALE; setprop ctl.restart zygote"; sleep 10; adb wait-for-device
   for i in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 3; done
 fi
-# 2b. Internet from inside the emulator (the zygote restart above can leave it offline).
-# ping prints "PING host (IP)" once DNS works, even though ICMP replies never come back.
-online() { adb shell ping -c 1 -W 3 www.google.com 2>&1 | head -1 | grep -qE '\(([0-9]{1,3}\.){3}[0-9]{1,3}\)'; }
+# 2b. Internet from inside the emulator. Android validates each network itself (DNS + an HTTP check
+# to Google): trust that. Resolving a name with the shell's ping is flaky even when the network works,
+# so it is only a second chance (it prints "PING host (IP)" once DNS works; ICMP never answers).
+online() {
+  adb shell dumpsys connectivity 2>/dev/null | grep 'NetworkAgentInfo{' | grep -q 'INTERNET.*&VALIDATED' && return 0
+  adb shell ping -c 1 -W 3 www.google.com 2>&1 | head -1 | grep -qE '\(([0-9]{1,3}\.){3}[0-9]{1,3}\)'
+}
 for i in $(seq 1 20); do online && break; sleep 3; done
 if ! online; then
   echo "No network in the emulator: toggling wifi and mobile data"
