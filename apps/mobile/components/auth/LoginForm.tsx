@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   Pressable,
+  ScrollView,
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
@@ -90,6 +91,7 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const passwordInputRef = useRef<TextInput>(null);
 
   const { signIn } = useAuth();
   const { t } = useTranslation();
@@ -139,7 +141,15 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
 
   return (
     <FormKeyboardAvoidingView style={{ flex: 1 }} hasNativeHeader={false}>
-      <View style={styles.container}>
+      {/* SignupForm と同じく ScrollView で包む。キーボード表示中や小さい画面でも
+          ログインボタンまでスクロールでき、keyboardShouldPersistTaps でキーボードを
+          開いたままボタンを 1 回のタップで押せる */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.formContainer}>
         <View style={styles.header}>
           <Text style={styles.title}>{t("auth.signin.emailMethodTitle")}</Text>
@@ -164,6 +174,9 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
               autoComplete="email"
               keyboardType="email-address"
               textContentType="emailAddress"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
               editable={!loading}
               testID="login-email-input"
             />
@@ -172,6 +185,7 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t("auth.fields.password")}</Text>
             <TextInput
+              ref={passwordInputRef}
               style={styles.input}
               placeholder={t("auth.fields.password")}
               placeholderTextColor="#9CA3AF"
@@ -181,6 +195,10 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
               autoCapitalize="none"
               autoComplete="password"
               textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={() => {
+                if (!loading) void handleSubmit();
+              }}
               editable={!loading}
               testID="login-password-input"
             />
@@ -214,14 +232,20 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
           )}
         </View>
       </View>
-      </View>
+      </ScrollView>
     </FormKeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scroll: {
     flex: 1,
+    backgroundColor: "#EFF6FF",
+  },
+  container: {
+    // flex ではなく flexGrow: 縦に余裕があれば中央寄せ、キーボード表示中は
+    // ボタンまでスクロールできる (SignupForm と同じ)
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
