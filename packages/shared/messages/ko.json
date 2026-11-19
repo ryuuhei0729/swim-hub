@@ -558,7 +558,8 @@
       "emailMethodButton": "Email로 로그인",
       "emailPageTitle": "이메일로 로그인",
       "emailPageSubtitle": "이메일 주소와 비밀번호를 입력해 주세요",
-      "otherMethods": "다른 로그인 방법"
+      "otherMethods": "다른 로그인 방법",
+      "lastUsed": "최근 사용"
     },
     "signup": {
       "title": "계정 만들기",

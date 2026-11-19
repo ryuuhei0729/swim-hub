@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -9,6 +9,8 @@ import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { useAppleAuth } from "@/hooks/useAppleAuth";
 import { AppleLoginButton } from "@/components/auth/AppleLoginButton";
 import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
+import { LastUsedBadge } from "@/components/auth/LastUsedBadge";
+import { loadLastLoginMethod, type LoginMethod } from "@/lib/lastLoginMethod";
 import type { AuthStackParamList } from "@/navigation/types";
 
 export const LoginMethodScreen: React.FC = () => {
@@ -29,8 +31,23 @@ export const LoginMethodScreen: React.FC = () => {
     isAvailable: isAppleAvailable,
   } = useAppleAuth();
   const [error, setError] = useState<string | null>(null);
+  const [lastLoginMethod, setLastLoginMethod] = useState<LoginMethod | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadLastLoginMethod().then((method) => {
+      if (!cancelled) setLastLoginMethod(method);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isLoading = googleLoading || appleLoading;
+
+  // バッジは読み上げ対象外のため、該当ボタンの読み上げラベルに「直近で利用」を含める
+  const a11yLabel = (method: LoginMethod, label: string) =>
+    lastLoginMethod === method ? `${label}, ${t("auth.signin.lastUsed")}` : label;
 
   const handleAppleLogin = async () => {
     if (appleLoading) return;
@@ -77,38 +94,49 @@ export const LoginMethodScreen: React.FC = () => {
         <View style={styles.buttonGroup}>
           {/* Appleでログイン（iOSのみ） */}
           {isAppleAvailable && (
-            <AppleLoginButton
-              onPress={handleAppleLogin}
-              loading={appleLoading}
-              disabled={isLoading}
-            />
+            <View>
+              <AppleLoginButton
+                onPress={handleAppleLogin}
+                loading={appleLoading}
+                disabled={isLoading}
+                accessibilityLabel={a11yLabel("apple", t("auth.appleSignin"))}
+              />
+              {lastLoginMethod === "apple" && <LastUsedBadge testID="login-last-used-apple" />}
+            </View>
           )}
 
           {/* Googleでログイン */}
-          <GoogleLoginButton
-            onPress={handleGoogleLogin}
-            loading={googleLoading}
-            disabled={isLoading}
-          />
+          <View>
+            <GoogleLoginButton
+              onPress={handleGoogleLogin}
+              loading={googleLoading}
+              disabled={isLoading}
+              accessibilityLabel={a11yLabel("google", t("auth.googleSignin"))}
+            />
+            {lastLoginMethod === "google" && <LastUsedBadge testID="login-last-used-google" />}
+          </View>
 
           {/* Emailでログイン */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.emailButton,
-              isLoading && styles.buttonDisabled,
-              pressed && !isLoading && styles.emailButtonPressed,
-            ]}
-            onPress={() => navigation.navigate("EmailLogin")}
-            disabled={isLoading}
-            accessibilityRole="button"
-            accessibilityLabel={emailMethodLabel}
-            testID="login-email-method-button"
-          >
-            <View style={styles.emailButtonContent}>
-              <Feather name="mail" size={20} color="#374151" />
-              <Text style={styles.emailButtonText}>{emailMethodLabel}</Text>
-            </View>
-          </Pressable>
+          <View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.emailButton,
+                isLoading && styles.buttonDisabled,
+                pressed && !isLoading && styles.emailButtonPressed,
+              ]}
+              onPress={() => navigation.navigate("EmailLogin")}
+              disabled={isLoading}
+              accessibilityRole="button"
+              accessibilityLabel={a11yLabel("email", emailMethodLabel)}
+              testID="login-email-method-button"
+            >
+              <View style={styles.emailButtonContent}>
+                <Feather name="mail" size={20} color="#374151" />
+                <Text style={styles.emailButtonText}>{emailMethodLabel}</Text>
+              </View>
+            </Pressable>
+            {lastLoginMethod === "email" && <LastUsedBadge testID="login-last-used-email" />}
+          </View>
 
           {/* 新規登録への導線 */}
           <View style={styles.crossLinkRow}>

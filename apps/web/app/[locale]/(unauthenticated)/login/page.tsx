@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { useEffect, useId, useMemo, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { OAuthButtons } from "@/components/auth";
+import { LastUsedBadge } from "@/components/auth/LastUsedBadge";
+import { getLastLoginMethod, type LoginMethod } from "@/lib/lastLoginMethod";
 import { useAuth } from "@/contexts";
 import { useRouter, Link } from "@/i18n/navigation";
 import { FullScreenLoading } from "@/components/ui/LoadingSpinner";
@@ -88,6 +90,13 @@ function LoginPageContent() {
   const [oauthError, setOauthError] = useState<string | null>(null);
   // OAuth ボタン押下後は URL 由来のエラーを隠す（urlError が oauthError を永続的に隠す問題を防ぐ）
   const [urlErrorDismissed, setUrlErrorDismissed] = useState(false);
+  // Cookie はクライアントでしか読めないため、ハイドレーション後に反映する
+  const [lastLoginMethod, setLastLoginMethodState] = useState<LoginMethod | null>(null);
+  const emailBadgeId = useId();
+
+  useEffect(() => {
+    setLastLoginMethodState(getLastLoginMethod());
+  }, []);
 
   // エラーコードを翻訳済みメッセージに変換
   const urlError = useMemo(() => {
@@ -176,6 +185,7 @@ function LoginPageContent() {
           onGoogleClick={handleGoogleClick}
           onAppleClick={handleAppleClick}
           loading={oauthLoading}
+          lastUsedMethod={lastLoginMethod}
         />
 
         {/* 区切り線 */}
@@ -189,14 +199,20 @@ function LoginPageContent() {
         </div>
 
         {/* メールログイン — 控えめなゴーストボタン */}
-        <Link
-          href={emailHref}
-          data-testid="email-signin-button"
-          aria-disabled={oauthLoading}
-          className={`w-full flex items-center justify-center py-2.5 px-4 border border-gray-300 rounded-xl text-sm font-medium text-gray-500 bg-transparent hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 transition duration-150 ease-in-out${oauthLoading ? " pointer-events-none opacity-50" : ""}`}
-        >
-          {tSignin("emailMethodButton")}
-        </Link>
+        <div className="relative">
+          <Link
+            href={emailHref}
+            data-testid="email-signin-button"
+            aria-disabled={oauthLoading}
+            aria-describedby={lastLoginMethod === "email" ? emailBadgeId : undefined}
+            className={`w-full flex items-center justify-center py-2.5 px-4 border border-gray-300 rounded-xl text-sm font-medium text-gray-500 bg-transparent hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 transition duration-150 ease-in-out${oauthLoading ? " pointer-events-none opacity-50" : ""}`}
+          >
+            {tSignin("emailMethodButton")}
+          </Link>
+          {lastLoginMethod === "email" && (
+            <LastUsedBadge id={emailBadgeId} testId="last-used-badge-email" />
+          )}
+        </div>
 
         {/* 新規登録リンク */}
         <div className="text-center pt-2">

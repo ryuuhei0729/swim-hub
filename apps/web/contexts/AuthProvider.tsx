@@ -10,6 +10,7 @@ import { useLocale } from "next-intl";
 import { getQueryClient } from "@/providers/QueryProvider";
 import { AuthContextType } from "@swim-hub/shared/types/auth";
 import { useSubscription } from "@/hooks/useSubscription";
+import { LOGIN_METHOD_QUERY_PARAM, setLastLoginMethod } from "@/lib/lastLoginMethod";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -63,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return { data: null, error: error as import("@supabase/supabase-js").AuthError };
         }
 
+        setLastLoginMethod("email");
         return { data: data ? { user: data.user, session: data.session } : null, error: null };
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
@@ -155,8 +157,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         // 重要: redirectToはルートパス(/)に設定し、Middlewareで/api/auth/callbackにリダイレクトさせる
         // これにより、PKCE code verifier Cookieが確実に転送される
+        // login_method は /api/auth/callback がセッション確立時に「直近で利用」を記録するために使う。
+        // redirectTo を明示する呼び出し (Googleカレンダー連携など) はログインではないため付けない。
         const redirectTo =
-          options?.redirectTo || `${window.location.origin}/?redirect_to=/${locale}/onboarding`;
+          options?.redirectTo ||
+          `${window.location.origin}/?redirect_to=/${locale}/onboarding&${LOGIN_METHOD_QUERY_PARAM}=${provider}`;
 
         const { data, error } = await supabaseClient.auth.signInWithOAuth({
           provider,

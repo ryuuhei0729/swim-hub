@@ -8,6 +8,7 @@ import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
+import { saveLastLoginMethod } from "@/lib/lastLoginMethod";
 import { localizeSupabaseAuthError } from "@/utils/authErrorLocalizer";
 
 export interface AppleAuthResult {
@@ -132,6 +133,9 @@ export const useAppleAuth = (): UseAppleAuthReturn => {
         setError(localizeSupabaseAuthError(signInError));
         return { success: false, error: signInError };
       }
+
+      // ログインはここで成立している（後続の名前更新の成否に左右されないよう先に記録する）
+      await saveLastLoginMethod("apple");
 
       // ユーザー名が取得できた場合はメタデータを更新
       if (displayName) {

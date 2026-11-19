@@ -16,6 +16,8 @@ interface AppleLoginButtonProps {
   disabled?: boolean;
   /** ボタンラベル */
   label?: string;
+  /** 読み上げ用ラベル（省略時は表示ラベル） */
+  accessibilityLabel?: string;
 }
 
 /**
@@ -35,6 +37,7 @@ export const AppleLoginButton: React.FC<AppleLoginButtonProps> = ({
   loading = false,
   disabled = false,
   label,
+  accessibilityLabel,
 }) => {
   const { t } = useTranslation();
   const resolvedLabel = label ?? t("auth.appleSignin");
@@ -56,7 +59,7 @@ export const AppleLoginButton: React.FC<AppleLoginButtonProps> = ({
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
-      accessibilityLabel={resolvedLabel}
+      accessibilityLabel={accessibilityLabel ?? resolvedLabel}
       accessibilityState={{ disabled: isDisabled }}
     >
       {loading ? (
