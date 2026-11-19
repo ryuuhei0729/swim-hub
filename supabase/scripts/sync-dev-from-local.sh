@@ -20,6 +20,7 @@
 #   - public.contact_messages (問い合わせの氏名・メール・IP・本文。マスクされていない)
 #   - public.contact_rate_limit_daily_usage (IP ハッシュ)
 #   - public.processed_webhook_events (本番の Stripe イベント ID)
+#   - storage.objects (画像の実ファイルは dev のストレージにないため)
 #
 # 必要なもの: Docker (ローカル Supabase), psql, apps/mobile/.env.keys,
 #   dev の接続文字列 (Dashboard > Connect > Session pooler、パスワード入り)
@@ -44,7 +45,7 @@ psql "$LOCAL_DB_URL" -Atc "select 1" >/dev/null 2>&1 || die "ローカルの Sup
 
 # shellcheck source=./seed-excluded-tables.sh
 source "$SCRIPT_DIR/seed-excluded-tables.sh"
-EXCLUDED=("${SEED_EXCLUDED_TABLES[@]}" public.contact_messages public.contact_rate_limit_daily_usage public.processed_webhook_events)
+EXCLUDED=("${SEED_EXCLUDED_TABLES[@]}" public.contact_messages public.contact_rate_limit_daily_usage public.processed_webhook_events storage.objects)
 
 # --- 接続先 (dev) の特定 ---
 DEV_API_URL="$(cd "$PROJECT_DIR/apps/mobile" && pnpm exec dotenvx get EXPO_PUBLIC_SUPABASE_URL -f .env.development 2>/dev/null || true)"
@@ -79,18 +80,26 @@ read -rp "続けるなら dev のプロジェクト ID ($DEV_REF) を入力: " A
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
-DATA="$TMP_DIR/data.sql"
+AUTH_DATA="$TMP_DIR/auth.sql"
+PUBLIC_DATA="$TMP_DIR/public.sql"
 
 # --- 1/4 ローカルのデータをダンプ ---
+# hosted の Supabase では postgres ロールが session_replication_role を設定できない
+# (トリガーと外部キーを一括で止められない) ので、auth と public を分けて順番に入れる。
 echo ""
 echo "1/4 ローカルのデータをダンプ中..."
 EXCLUDE_ARGS=()
 for t in "${EXCLUDED[@]}"; do EXCLUDE_ARGS+=(-x "$t"); done
-pnpm exec supabase db dump --local --data-only "${EXCLUDE_ARGS[@]}" -f "$DATA"
-[ -s "$DATA" ] || die "ダンプが空です"
-# pg_dump 17.6 以降が付ける \restrict / \unrestrict は psql 16 以前では解釈できず止まる。
-# 自分で作ったダンプなので外してよい
-grep -vE '^\\(un)?restrict ' "$DATA" > "$DATA.tmp" && mv "$DATA.tmp" "$DATA"
+for SCHEMA in auth public; do
+  OUT="$TMP_DIR/$SCHEMA.sql"
+  pnpm exec supabase db dump --local --data-only -s "$SCHEMA" "${EXCLUDE_ARGS[@]}" -f "$OUT.raw"
+  [ -s "$OUT.raw" ] || die "$SCHEMA のダンプが空です"
+  # pg_dump 17.6 以降の \restrict / \unrestrict は psql 16 以前で解釈できず、
+  # session_replication_role は hosted では権限がないので外す (自分で作ったダンプなので安全)
+  grep -vE '^\\(un)?restrict |^SET session_replication_role' "$OUT.raw" > "$OUT"
+done
+PUBLIC_TABLES=$(grep -oE '^INSERT INTO "public"\."[a-z_]+"' "$PUBLIC_DATA" | sed -E 's/^INSERT INTO //' | sort -u)
+[ -n "$PUBLIC_TABLES" ] || die "public のダンプにデータがありません"
 
 # --- 2/4 dev を migration どおりに作り直す ---
 echo ""
@@ -100,14 +109,20 @@ pnpm exec supabase db reset --db-url "$DEV_DB_URL" --no-seed
 # --- 3/4 + 4/4 データ投入と鍵かけ (1 トランザクション: 途中で失敗したら何も入らない) ---
 echo ""
 echo "3/4 データを投入中 / 4/4 鍵かけ..."
-# ダンプが入れる auth / storage のテーブルは reset 後も残っているので、先に空にする
-CLEAR="$TMP_DIR/clear.sql"
-grep -oE '^INSERT INTO "(auth|storage)"\."[a-z_]+"' "$DATA" | sort -u \
-  | sed -E 's/^INSERT INTO (.*)$/DELETE FROM \1;/' > "$CLEAR"
-# dev に残っているログインセッションも消す (ダンプには含めていない)
-printf 'DELETE FROM auth.%s;\n' refresh_tokens sessions mfa_amr_claims one_time_tokens flow_state >> "$CLEAR"
-LOCK="$TMP_DIR/lock.sql"
-cat > "$LOCK" <<SQL
+LOAD="$TMP_DIR/load.sql"
+{
+  # auth は reset 後も残っているので空にする (public 側は ON DELETE CASCADE で一緒に消える)
+  printf 'DELETE FROM auth.%s;\n' refresh_tokens sessions mfa_amr_claims one_time_tokens flow_state identities users
+  echo "\\i $AUTH_DATA"
+  # auth.users のトリガー handle_new_user が作った行を消して、ダンプの行で入れ直す
+  echo "DELETE FROM public.user_subscriptions;"
+  echo "DELETE FROM public.users;"
+  # public のトリガー (updated_at の上書き、出欠の自動作成、team_id 変更禁止など) を投入中だけ止める。
+  # 外部キーは有効のまま (pg_dump が参照順に並べている)
+  for t in $PUBLIC_TABLES; do echo "ALTER TABLE $t DISABLE TRIGGER USER;"; done
+  echo "\\i $PUBLIC_DATA"
+  for t in $PUBLIC_TABLES; do echo "ALTER TABLE $t ENABLE TRIGGER USER;"; done
+  cat <<SQL
 DO \$\$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = '$KEEP_LOGIN_EMAIL') THEN
     RAISE EXCEPTION '$KEEP_LOGIN_EMAIL がデータにありません';
@@ -120,9 +135,8 @@ UPDATE auth.users
 -- 本番の Stripe の ID は dev に置かない
 UPDATE public.user_subscriptions SET stripe_customer_id = NULL, provider_subscription_id = NULL;
 SQL
-psql "$DEV_DB_URL" --single-transaction -v ON_ERROR_STOP=1 -q \
-  -c "SET session_replication_role = replica" \
-  -f "$CLEAR" -f "$DATA" -f "$LOCK" >/dev/null
+} > "$LOAD"
+psql "$DEV_DB_URL" --single-transaction -v ON_ERROR_STOP=1 -q -f "$LOAD" >/dev/null
 
 # --- 確認 ---
 echo ""
