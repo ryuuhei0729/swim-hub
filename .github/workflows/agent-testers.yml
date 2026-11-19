@@ -65,9 +65,13 @@ jobs:
           HOSTS: ${{ inputs.block_hosts }}
         run: |
           test -s results_public.pem || { echo "::error::results_public.pem がありません: tools/agent-testers/setup.sh を実行してコミットしてください"; exit 1; }
-          [[ "$BRIEF" =~ ^[A-Za-z0-9_.-]+\.md$ ]] && [ -f "$BRIEF" ] || { echo "::error::brief は tools/agent-testers/ 内の .md ファイル名で指定してください"; exit 1; }
-          [[ "$MODEL" =~ ^[A-Za-z0-9._\[\]-]+$ ]] || { echo "::error::model が不正です"; exit 1; }
-          [[ "$HOSTS" =~ ^[A-Za-z0-9.\ -]*$ ]] || { echo "::error::block_hosts が不正です"; exit 1; }
+          # 正規表現は変数に入れて渡す ([[ =~ ]] に直接書くとブラケット内のエスケープが効かない)
+          brief_re='^[A-Za-z0-9_.-]+\.md$'
+          model_re='^[][A-Za-z0-9._-]+$'   # 先頭の ] と [ で "claude-opus-5-5[1m]" のような ID も通す
+          hosts_re='^[A-Za-z0-9. -]*$'
+          [[ "$BRIEF" =~ $brief_re ]] && [ -f "$BRIEF" ] || { echo "::error::brief は tools/agent-testers/ 内の .md ファイル名で指定してください"; exit 1; }
+          [[ "$MODEL" =~ $model_re ]] || { echo "::error::model が不正です: $MODEL"; exit 1; }
+          [[ "$HOSTS" =~ $hosts_re ]] || { echo "::error::block_hosts が不正です"; exit 1; }
       - id: m
         env:
           A: ${{ inputs.android_personas }}
