@@ -1,0 +1,8 @@
+# 復号したレポート・スクリーンショット・動画 (公開リポジトリなので絶対にコミットしない)
+runs/
+# CI の作業ファイル
+results/
+results.enc/
+app.apk
+app-ios.tgz
+app/
