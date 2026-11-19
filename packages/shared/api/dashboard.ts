@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { format } from "date-fns";
 import { authRequiredError } from "./auth-utils";
 import { CalendarItemType } from "../types";
 import { CalendarItem } from "../types/ui";
@@ -87,12 +88,10 @@ export class DashboardAPI {
     } = await this.supabase.auth.getUser();
     if (!user) throw authRequiredError(authError);
 
-    // 月の開始日と終了日を正確に計算
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0); // 月の最後の日を取得
-
-    const startDateStr = startDate.toISOString().split("T")[0];
-    const endDateStr = endDate.toISOString().split("T")[0];
+    // 月の開始日と終了日。ローカル日付のまま文字列にする (toISOString は UTC に変換するため、
+    // 日本時間のブラウザ/端末では 1 日前にずれ「前月末日〜当月末日の前日」を数えていた)
+    const startDateStr = format(new Date(year, month - 1, 1), "yyyy-MM-dd");
+    const endDateStr = format(new Date(year, month, 0), "yyyy-MM-dd"); // 月の最後の日
 
     // 練習回数と大会数を並列取得
     const [{ count: practiceCount }, { count: competitionCount }] = await Promise.all([

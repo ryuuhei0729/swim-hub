@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { format } from "date-fns";
 import { Team, TeamInsert, TeamMembershipWithUser, TeamUpdate, TeamWithMembers } from "../../types";
 import { UserFacingError } from "../../utils/userFacingError";
 import { requireAuth, requireTeamAdmin, requireTeamMembership } from "../auth-utils";
@@ -149,7 +150,8 @@ export class TeamCoreAPI {
       role: "admin",
       status: "approved",
       is_active: true,
-      joined_at: new Date().toISOString().split("T")[0],
+      // ローカル日付 (toISOString は UTC のため日本時間 0〜9 時に前日になる)
+      joined_at: format(new Date(), "yyyy-MM-dd"),
     });
 
     if (membershipError) {
