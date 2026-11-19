@@ -13,8 +13,8 @@ for h in $BLOCK_HOSTS; do
   ip=$(adb shell ping -c 1 -W 2 "$h" 2>&1 | head -1 | grep -oE '\(([0-9]{1,3}\.){3}[0-9]{1,3}\)' | tr -d '()')
   case "$ip" in ""|0.0.0.0|127.*) ;; *) echo "$h reachable from the emulator ($ip): aborting"; exit 1 ;; esac
 done
-# 2. Phone language. The workflow boots the emulator with -change-locale, so this is only a
-# fallback: restarting zygote (google_apis images allow adb root) sometimes leaves the network down
+# 2. Phone language (the emulator boots in en-US; google_apis images allow adb root).
+# Not -change-locale: it switches after boot and restarts services under the emulator action's own adb calls
 if [ "$(adb shell getprop persist.sys.locale | tr -d '\r')" != "$LOCALE" ]; then
   adb root >/dev/null 2>&1; sleep 3; adb wait-for-device
   adb shell "setprop persist.sys.locale $LOCALE; setprop ctl.restart zygote"; sleep 10; adb wait-for-device
