@@ -17,6 +17,13 @@ fail() { echo "::error::Android build failed: see the encrypted build log ($1)";
 [[ "${EXPO_PUBLIC_SUPABASE_URL:-}" =~ ^https?:// ]] || { echo "::error::EXPO_PUBLIC_SUPABASE_URL is not a URL: check DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE (apps/mobile/.env.keys)"; exit 1; }
 [[ "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" != encrypted:* ]] && [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo "::error::EXPO_PUBLIC_SUPABASE_ANON_KEY could not be decrypted"; exit 1; }
 [ "${EXPO_PUBLIC_ENVIRONMENT:-development}" != production ] || { echo "::error::Refusing to build against production"; exit 1; }
+# CI のランナーから Supabase に届くか確かめる (ローカル / LAN / tailnet の URL だと、アプリがログインで
+# Network request failed になるだけでエージェントの使用量が無駄になる)。公開ログなので URL は出さない。
+HOST=$(sed -E 's#^https?://([^/:]+).*#\1#' <<<"$EXPO_PUBLIC_SUPABASE_URL")
+case "$HOST" in *.supabase.co) KIND="Supabase cloud" ;; localhost|127.*|10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*|100.*|*.local|*.ts.net) KIND="local / private network" ;; *) KIND="other host" ;; esac
+CODE=$(curl -s -o /dev/null -m 10 -w '%{http_code}' -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY" "${EXPO_PUBLIC_SUPABASE_URL%/}/auth/v1/health" || true)
+echo "Supabase URL: $KIND, /auth/v1/health from the runner: HTTP ${CODE:-none}"
+[ "$CODE" = 200 ] || { echo "::error::Supabase ($KIND) is not reachable from GitHub Actions: apps/mobile/.env.development must point to a public development project"; exit 1; }
 export EXPO_NO_DOTENV=1   # Expo CLI に .env.production などを読ませない
 
 cd "$ROOT/apps/mobile" || exit 1
