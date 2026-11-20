@@ -6,7 +6,8 @@ import { getServerUser } from "@/lib/supabase-server";
 import { TeamGoalTargetsAPI } from "@apps/shared/api/teams/goalTargets";
 import type { TeamGoalTarget } from "@apps/shared/types/goalTargets";
 import { RecordAPI } from "@apps/shared/api/records";
-import { isCompetitionDateInPast } from "@apps/shared/utils/date";
+import { format, isValid, parseISO } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { isPoolType, type Competition, type Style } from "@apps/shared/types";
 import { compareMembersByBirthday } from "@apps/shared/utils/memberSort";
 import { getEntryReturnPath, type EntryReturnOrigin } from "@/utils/entryReturnOrigin";
@@ -177,7 +178,14 @@ export default async function EntriesDataLoader({
   // admin 確定後 (:159-161 の認可ガードとは別) のこの分岐は、往路 (returnOrigin) に
   // 従って戻り先を分岐する (追加スプリント)。既定値は "admin" のため、
   // origin 未指定時は従来どおり teams-admin へ戻る
-  if (isCompetitionDateInPast(competition.date)) {
+  // 「今日」は日本時間で決める。サーバーは UTC で動くため、端末の日付で判定する
+  // isCompetitionDateInPast をここで使うと、日本時間 0〜9 時はまだ前日扱いになり、
+  // 前日の大会に代理入力できてしまっていた (画面側・モバイルは端末の日付で判定済み)
+  const todayJst = format(toZonedTime(new Date(), "Asia/Tokyo"), "yyyy-MM-dd");
+  const competitionDate = competition.date ? competition.date.slice(0, 10) : "";
+  const isPastInJapan =
+    competitionDate !== "" && isValid(parseISO(competitionDate)) && competitionDate < todayJst;
+  if (isPastInJapan) {
     return redirect({ href: getEntryReturnPath(returnOrigin, teamId), locale });
   }
 
