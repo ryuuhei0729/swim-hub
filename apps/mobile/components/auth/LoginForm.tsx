@@ -1,12 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   Pressable,
   ScrollView,
-  Keyboard,
-  Platform,
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
@@ -94,23 +92,6 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const passwordInputRef = useRef<TextInput>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
-  // Android ではキーボードが出ても画面が縮まず (edge-to-edge)、ScrollView に余白が無いため
-  // スクロールしてもログインボタンが出てこなかった (AI テスターで確認)。キーボードの高さぶん
-  // 下に余白を足し、ボタンまでスクロールする。iOS は FormKeyboardAvoidingView に任せる。
-  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setAndroidKeyboardHeight(e.endCoordinates.height);
-      requestAnimationFrame(() => scrollViewRef.current?.scrollToEnd({ animated: true }));
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setAndroidKeyboardHeight(0));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   const { signIn } = useAuth();
   const { t } = useTranslation();
@@ -164,12 +145,8 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
           ログインボタンまでスクロールでき、keyboardShouldPersistTaps でキーボードを
           開いたままボタンを 1 回のタップで押せる */}
       <ScrollView
-        ref={scrollViewRef}
         style={styles.scroll}
-        contentContainerStyle={[
-          styles.container,
-          androidKeyboardHeight > 0 && { paddingBottom: androidKeyboardHeight + 20 },
-        ]}
+        contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

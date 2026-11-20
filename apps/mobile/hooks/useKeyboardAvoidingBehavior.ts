@@ -60,9 +60,15 @@ export interface KeyboardAvoidingBehaviorConfig {
  *
  * ## Android
  *
- * Sprint #31 (2026-07-18) で確定した方針 (`behavior=undefined` で
- * `AndroidManifest.xml` の `windowSoftInputMode(adjustResize)` に委譲、Hermes 環境の
- * 高さ計算ズレ回避) を維持する。ここでは変更しない。
+ * `behavior="padding"`。Sprint #31 (2026-07-18) では `behavior=undefined` にして
+ * `AndroidManifest.xml` の `windowSoftInputMode(adjustResize)` に委譲していたが、
+ * edge-to-edge の現在の構成ではキーボードが出ても画面が縮まず、フォーム下部のボタン・入力欄が
+ * キーボードに隠れたままだった (AI テスターの Android エミュレーターで、キーボードの開閉で
+ * 画面内の要素の位置が変わらないことを確認)。
+ * `padding` は「重なっている量」だけ余白を足すため、画面が縮む端末でも二重に避けない。
+ * (Sprint #31 で避けた高さ計算ズレは `behavior="height"` のもの)
+ * `keyboardVerticalOffset` はヘッダー・ステータスバーの高さが機種で変わるため、ここでは 0 を返し
+ * `FormKeyboardAvoidingView` が画面上の位置を実測して決める。
  *
  * @param hasNativeHeader この KeyboardAvoidingView がネイティブヘッダー
  * (`headerShown: true` な画面) の直下にあるか。`<Modal>` 配下 (CenterModal/SlideUpModal
@@ -72,6 +78,10 @@ export function useKeyboardAvoidingBehavior(
   hasNativeHeader: boolean = true,
 ): KeyboardAvoidingBehaviorConfig {
   const insets = useSafeInsets();
+
+  if (Platform.OS === "android") {
+    return { behavior: "padding", keyboardVerticalOffset: 0 };
+  }
 
   if (Platform.OS !== "ios") {
     return { behavior: undefined, keyboardVerticalOffset: 0 };

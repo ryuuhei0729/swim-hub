@@ -18,11 +18,12 @@
 //   変化させた場合に offset も追随するかで検証する。
 //
 // Sprint Contract 検証観点:
-//   [V-KAV-03] iOS では behavior="padding"、Android/Web (iOS 以外) では behavior=undefined
+//   [V-KAV-03] iOS / Android では behavior="padding"、Web では behavior=undefined
+//     (Android は edge-to-edge で adjustResize が効かないため padding。offset は FormKeyboardAvoidingView が実測)
 //   [V-KAV-04] keyboardVerticalOffset がヘッダー高さの固定値の丸写しでなく、insets.top に
 //     連動して変化する (= 算出されている) こと。Dynamic Island 搭載機 (topInset > 50) では
 //     react-navigation と同じ補正が入ること
-//   [V-KAV-09] Android では hasNativeHeader の値に関わらず behavior=undefined のまま
+//   [V-KAV-09] Android では hasNativeHeader の値に関わらず behavior="padding" / offset=0 (実測は FormKeyboardAvoidingView)
 // =============================================================================
 
 import { renderHook } from "@testing-library/react";
@@ -88,23 +89,23 @@ describe("useKeyboardAvoidingBehavior", () => {
     insetsState.right = 0;
   });
 
-  it("[V-KAV-03] Android では hasNativeHeader=true (既定) でも behavior=undefined / offset=0", () => {
+  it("[V-KAV-03] Android では hasNativeHeader=true (既定) でも behavior=\"padding\" / offset=0", () => {
     platformState.OS = "android";
     insetsState.top = 47;
 
     const { result } = renderHook(() => useKeyboardAvoidingBehavior());
 
-    expect(result.current.behavior).toBeUndefined();
+    expect(result.current.behavior).toBe("padding");
     expect(result.current.keyboardVerticalOffset).toBe(0);
   });
 
-  it("[V-KAV-09] Android では hasNativeHeader=false を渡しても behavior=undefined / offset=0 のまま変わらない", () => {
+  it("[V-KAV-09] Android では hasNativeHeader=false を渡しても behavior=\"padding\" / offset=0 のまま変わらない", () => {
     platformState.OS = "android";
     insetsState.top = 47;
 
     const { result } = renderHook(() => useKeyboardAvoidingBehavior(false));
 
-    expect(result.current.behavior).toBeUndefined();
+    expect(result.current.behavior).toBe("padding");
     expect(result.current.keyboardVerticalOffset).toBe(0);
   });
 

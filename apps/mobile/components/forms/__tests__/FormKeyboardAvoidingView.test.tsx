@@ -68,7 +68,7 @@ describe("FormKeyboardAvoidingView", () => {
     );
   });
 
-  it("[V-KAV-05] Android: behavior=undefined が渡り、offset は0になる", () => {
+  it("[V-KAV-05] Android: behavior='padding' が渡り、offset は実測前の 0 から始まる", () => {
     platformState.OS = "android";
     insetsState.top = 30;
 
@@ -79,7 +79,7 @@ describe("FormKeyboardAvoidingView", () => {
     );
 
     const kav = container.firstElementChild as HTMLElement;
-    expect(kav.getAttribute("data-behavior")).toBeNull();
+    expect(kav.getAttribute("data-behavior")).toBe("padding");
     expect(kav.getAttribute("data-keyboard-vertical-offset")).toBe("0");
   });
 
