@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { useNavigationState } from "@react-navigation/native";
 import Animated, {
   Easing,
@@ -12,6 +12,7 @@ import {
   createNativeBottomTabNavigator,
   type NativeBottomTabNavigationOptions,
 } from "@react-navigation/bottom-tabs/unstable";
+import { SafeAreaView as ScreensSafeAreaView } from "react-native-screens/experimental";
 import type {
   BottomTabNavigationOptions,
   createBottomTabNavigator,
@@ -119,10 +120,34 @@ const TabFadeIn: React.FC<{ routeKey: string; children: React.ReactNode }> = ({
   return <Animated.View style={[styles.fill, animatedStyle]}>{children}</Animated.View>;
 };
 
-/** Tab.Navigator の screenLayout。各タブ画面を TabFadeIn で包む */
+/**
+ * Android でタブ画面の中身をタブバーの上に収める
+ *
+ * Android のネイティブタブ (react-native-screens の TabsHost) は、画面の中身の上に
+ * BottomNavigationView を重ねて置く。iOS はスクロールビューの
+ * `contentInsetAdjustmentBehavior="automatic"` で OS がタブバーの分の余白を足すが、これは
+ * iOS 専用のため、Android では中身の一番下 (ホームの「一括入力」、アカウントの「ログアウト」など) が
+ * タブバーの裏に隠れて押せず、スクロールでも出てこなかった (AI テスターで確認)。
+ * TabsHost がタブバーの高さを「interface」のインセットとして渡すので、react-native-screens の
+ * SafeAreaView で下側だけその分を空ける。iOS は従来どおり OS に任せる (二重にしない)。
+ */
+const AndroidTabBarInset: React.FC<{ children: React.ReactNode }> = ({ children }) =>
+  Platform.OS === "android" ? (
+    <ScreensSafeAreaView edges={{ bottom: true }} insetType="interface">
+      {children}
+    </ScreensSafeAreaView>
+  ) : (
+    <>{children}</>
+  );
+
+/** Tab.Navigator の screenLayout。各タブ画面を TabFadeIn で包む (Android はタブバーの上に収める) */
 export const tabNavigatorScreenLayout: NonNullable<
   React.ComponentProps<JsTabNavigator["Navigator"]>["screenLayout"]
-> = ({ route, children }) => <TabFadeIn routeKey={route.key}>{children}</TabFadeIn>;
+> = ({ route, children }) => (
+  <TabFadeIn routeKey={route.key}>
+    <AndroidTabBarInset>{children}</AndroidTabBarInset>
+  </TabFadeIn>
+);
 
 const styles = StyleSheet.create({
   fill: {
