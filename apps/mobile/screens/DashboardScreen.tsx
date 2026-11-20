@@ -139,7 +139,8 @@ export const DashboardScreen: React.FC = () => {
   // - ScrollView の automaticallyAdjustKeyboardInsets は使わない。フォーカスした入力欄へ
   //   自前でスクロールするため、こちらの送りと二重になり「一度上に動いてから下に動く」挙動になった
   // - 送るのはキーボードと入力欄の分の余白が下端に足された後 (足す前だと末尾が足りず途中で止まる)
-  // - Android はウィンドウ自体が縮む (adjustResize) のでキーボード分の余白は足さない
+  // - Android もウィンドウは縮まない (edge-to-edge では adjustResize が効かない) ため、iOS と同じく
+  //   キーボードの高さで入力欄を持ち上げる。キーボード表示中はタブバーを隠す (tabBar.native.tsx)
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const containerRef = useRef<View>(null);
@@ -184,11 +185,8 @@ export const DashboardScreen: React.FC = () => {
       isIOS ? "keyboardWillShow" : "keyboardDidShow",
       (e) => {
         keyboardVisibleRef.current = true;
-        if (isIOS) {
-          setKeyboardHeight(e.endCoordinates.height);
-        } else if (pendingRevealRef.current) {
-          scrollToBestTimes();
-        }
+        // 余白が足されて中身の大きさが変わった後に handleContentSizeChange が送る
+        setKeyboardHeight(e.endCoordinates.height);
       },
     );
     const hideSub = Keyboard.addListener(
@@ -229,22 +227,27 @@ export const DashboardScreen: React.FC = () => {
   }, [scrollToBestTimes]);
 
   // 画面 (SafeAreaView) の下端と端末の下端の差。入力欄をキーボードの真上に置くのに使う
+  // (Android は edge-to-edge でウィンドウ = 画面全体のため、画面の高さと比べる)
   const measureContainer = useCallback(() => {
     containerRef.current?.measureInWindow((_x, y, _w, h) => {
-      setContainerBottomGap(
-        Math.max(0, Dimensions.get("window").height - (y + h)),
-      );
+      const deviceHeight = Dimensions.get(Platform.OS === "android" ? "screen" : "window").height;
+      setContainerBottomGap(Math.max(0, deviceHeight - (y + h)));
     });
   }, []);
   // キーボードが出ていない (ハードウェアキーボードなど) ときは、iOS のネイティブのタブバーの裏に
   // 隠れないよう、ホームインジケータ + タブバーの上に出す。
-  // Android のタブバーは画面の外側に置かれるので 0 でよい
+  // Android: キーボードが出ていないときは中身がタブバーの上に収まる (tabBar.native.tsx) ので 0。
+  // キーボードの高さはナビゲーションバーを差し引いた値で通知されるため、その分 (insets.bottom) を足す
   const dockBottom =
-    Platform.OS !== "ios"
-      ? 0
-      : keyboardHeight > 0
-        ? Math.max(0, keyboardHeight - containerBottomGap)
-        : Math.max(0, insets.bottom + IOS_TAB_BAR_HEIGHT - containerBottomGap);
+    Platform.OS === "android"
+      ? keyboardHeight > 0
+        ? Math.max(0, keyboardHeight + insets.bottom - containerBottomGap)
+        : 0
+      : Platform.OS !== "ios"
+        ? 0
+        : keyboardHeight > 0
+          ? Math.max(0, keyboardHeight - containerBottomGap)
+          : Math.max(0, insets.bottom + IOS_TAB_BAR_HEIGHT - containerBottomGap);
 
   // この画面と子孫(DashboardNoticesSection・NextCompetitionCard・DashboardBestTimesSection)が
   // 依存する全クエリを尽くす。

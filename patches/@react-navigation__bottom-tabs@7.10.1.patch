@@ -1,0 +1,54 @@
+diff --git a/lib/module/unstable/NativeBottomTabView.native.js b/lib/module/unstable/NativeBottomTabView.native.js
+index b2f297263042d63b7d9c12a4d22493367f5d5bd8..a4ba5e10265acf0ea48e0aca40ae6417ee29187b 100644
+--- a/lib/module/unstable/NativeBottomTabView.native.js
++++ b/lib/module/unstable/NativeBottomTabView.native.js
+@@ -91,6 +91,7 @@ export function NativeBottomTabView({
+       tabBarItemLabelVisibilityMode: currentOptions?.tabBarLabelVisibilityMode,
+       tabBarControllerMode: tabBarControllerMode,
+       tabBarMinimizeBehavior: tabBarMinimizeBehavior,
++      tabBarHidden: currentOptions.tabBarStyle?.display === 'none',
+       tabBarTintColor: activeTintColor,
+       tabBarItemIconColor: inactiveTintColor,
+       tabBarItemIconColorActive: activeTintColor,
+diff --git a/lib/typescript/src/unstable/types.d.ts b/lib/typescript/src/unstable/types.d.ts
+index 3ced95e8d2b658b1d59fb3c751fabf5e4174da3b..74db33af14e7e37e22a8f1eebc1e39ebbc87708e 100644
+--- a/lib/typescript/src/unstable/types.d.ts
++++ b/lib/typescript/src/unstable/types.d.ts
+@@ -187,6 +187,10 @@ export type NativeBottomTabNavigationOptions = NativeHeaderOptions & {
+      * Style object for the tab bar container.
+      */
+     tabBarStyle?: {
++    /**
++     * Set to 'none' to hide the tab bar (backported from @react-navigation/bottom-tabs 7.21).
++     */
++    display?: 'flex' | 'none';
+         /**
+          * Background color of the tab bar.
+          *
+diff --git a/src/unstable/NativeBottomTabView.native.tsx b/src/unstable/NativeBottomTabView.native.tsx
+index 9518985c601dba19342fb954bf5238b314aee91c..d7a41ef852d1818fdc38e799e7e25751213aae0c 100644
+--- a/src/unstable/NativeBottomTabView.native.tsx
++++ b/src/unstable/NativeBottomTabView.native.tsx
+@@ -155,6 +155,7 @@ export function NativeBottomTabView({ state, navigation, descriptors }: Props) {
+         }
+         tabBarControllerMode={tabBarControllerMode}
+         tabBarMinimizeBehavior={tabBarMinimizeBehavior}
++        tabBarHidden={currentOptions.tabBarStyle?.display === 'none'}
+         tabBarTintColor={activeTintColor}
+         tabBarItemIconColor={inactiveTintColor}
+         tabBarItemIconColorActive={activeTintColor}
+diff --git a/src/unstable/types.tsx b/src/unstable/types.tsx
+index 5398a9d37ce32ec21caae6901c553198fd021f6a..aa19dc2fd1e8876069407aac8398f7ba22d5b801 100644
+--- a/src/unstable/types.tsx
++++ b/src/unstable/types.tsx
+@@ -237,6 +237,10 @@ export type NativeBottomTabNavigationOptions = NativeHeaderOptions & {
+    * Style object for the tab bar container.
+    */
+   tabBarStyle?: {
++    /**
++     * Set to 'none' to hide the tab bar (backported from @react-navigation/bottom-tabs 7.21).
++     */
++    display?: 'flex' | 'none';
+     /**
+      * Background color of the tab bar.
+      *
