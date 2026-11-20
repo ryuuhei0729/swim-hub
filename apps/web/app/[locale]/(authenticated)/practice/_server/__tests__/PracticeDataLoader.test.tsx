@@ -147,8 +147,8 @@ describe("getDefaultDateRange — 「今日」は日本時間で決める", () =
     else process.env.TZ = ORIGINAL_TZ;
   });
 
-  it("UTC のサーバーで日本時間の朝 → endDate は日本の今日 (2026-11-20)、startDate はその 365 日前", async () => {
+  it("UTC のサーバーで日本時間の朝 → 日本の今日 (2026-11-20) を基準に 1 年前〜1 年先", async () => {
     const { getDefaultDateRange } = await import("../PracticeDataLoader");
-    expect(getDefaultDateRange()).toEqual({ startDate: "2025-11-20", endDate: "2026-11-20" });
+    expect(getDefaultDateRange()).toEqual({ startDate: "2025-11-20", endDate: "2027-11-20" });
   });
 });

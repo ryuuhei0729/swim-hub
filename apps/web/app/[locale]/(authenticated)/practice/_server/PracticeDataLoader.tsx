@@ -3,7 +3,7 @@
 // =============================================================================
 
 import React from "react";
-import { format, subDays } from "date-fns";
+import { addYears, format, subYears } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
@@ -15,10 +15,12 @@ import PracticeClient from "../_client/PracticeClient";
 import type { Style, PracticeTag } from "@apps/shared/types";
 
 /**
- * この練習一覧ページにおける日付範囲(直近1年)の計算。ここで得た startDate/endDate を
+ * この練習一覧ページにおける日付範囲 (過去1年〜1年先) の計算。ここで得た startDate/endDate を
  * 下記の prefetchQuery の queryKey と <PracticeClient> の startDate/endDate props の
  * 両方にそのまま渡すことで、SSR/CSR で同一の queryKey を使わせる。
  *
+ * 終わりを 1 年先にするのは、予定として先の日付で登録した練習も一覧に出すため (大会一覧と
+ * 同じく先の日付を含める。モバイルの PracticesScreen と同じ範囲)。
  * 「今日」は日本時間 (Asia/Tokyo) で決める。サーバーは UTC で動くため、実行環境のローカル日付
  * (= UTC) を使うと日本時間 0〜9 時に「今日」が前日になり、その日の練習が一覧から外れていた。
  * ダッシュボード (DashboardDataLoader / CalendarData) と同じく toZonedTime で日本時間に直す。
@@ -32,8 +34,8 @@ import type { Style, PracticeTag } from "@apps/shared/types";
  */
 export function getDefaultDateRange(): { startDate: string; endDate: string } {
   const todayJst = toZonedTime(new Date(), "Asia/Tokyo");
-  const endDate = format(todayJst, "yyyy-MM-dd");
-  const startDate = format(subDays(todayJst, 365), "yyyy-MM-dd");
+  const startDate = format(subYears(todayJst, 1), "yyyy-MM-dd");
+  const endDate = format(addYears(todayJst, 1), "yyyy-MM-dd");
   return { startDate, endDate };
 }
 
