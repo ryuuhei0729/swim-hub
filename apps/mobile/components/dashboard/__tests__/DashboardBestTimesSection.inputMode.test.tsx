@@ -94,6 +94,12 @@ vi.mock("@apps/shared/api/teams", () => ({
 }));
 
 import { DashboardBestTimesSection } from "../DashboardBestTimesSection";
+import { View } from "react-native";
+import {
+  BottomDockHost,
+  BottomDockProvider,
+  type BottomDockSetter,
+} from "@/components/ui/BottomDock";
 
 // 100m自由形 (styleId=3) 短水路のベスト 54.97
 const FR100_RECORD = {
@@ -359,5 +365,55 @@ describe("ホームの暗い部分から入力モードを抜ける", () => {
     act(() => home.exitRef.current!());
     expect(Alert.alert).toHaveBeenCalledTimes(1);
     expect(raw(container, "best-time-input-grid")).toBeTruthy();
+  });
+});
+
+describe("キャンセル・登録の位置", () => {
+  it("マスを選んでいなくても、キャンセル・登録は下に固定する部分 (BottomDock) に出し、表の下には出さない", async () => {
+    // 表の一番下に置くと、キーボードと入力欄の裏に入ってスクロールしないと押せなかった (AI テスター)
+    const supabaseMock = createTableDispatchSupabase({
+      userId: USER_ID,
+      tables: { users: { data: { id: USER_ID, name: "テストユーザー", gender: 0 } } },
+    });
+    h.supabase = supabaseMock.client;
+    h.getMyTeams.mockResolvedValue([]);
+    h.getBestTimes.mockResolvedValue([FR100_RECORD]);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    let setDock: BottomDockSetter | null = null;
+    const dockApi = { set: (node: React.ReactNode | null) => setDock?.(node) };
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <BottomDockProvider value={dockApi}>
+          <View testID="table-area">
+            <DashboardBestTimesSection
+              exitRequestRef={home.exitRef}
+              onEditingChange={home.onEditingChange}
+            />
+          </View>
+        </BottomDockProvider>
+        <View testID="dock-area">
+          <BottomDockHost
+            register={(setter) => {
+              setDock = setter;
+            }}
+            bottom={0}
+            onHeightChange={() => {}}
+          />
+        </View>
+      </QueryClientProvider>,
+    );
+    await screen.findByText("54.97");
+    fireEvent.click(screen.getByText("一括入力"));
+
+    const dockArea = raw(container, "dock-area")!;
+    const tableArea = raw(container, "table-area")!;
+    await waitFor(() => expect(raw(dockArea, "best-times-edit-save")).toBeTruthy());
+    expect(raw(dockArea, "best-times-edit-cancel")).toBeTruthy();
+    expect(raw(tableArea, "best-times-edit-save")).toBeNull();
+    expect(raw(tableArea, "best-times-edit-cancel")).toBeNull();
+    // 入力欄 (マスを選んだとき) は出ていない
+    expect(raw(dockArea, "best-time-cell-editor")).toBeNull();
   });
 });

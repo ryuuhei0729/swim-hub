@@ -216,8 +216,8 @@ export const DashboardScreen: React.FC = () => {
     }
   }, [scrollToBestTimes]);
 
-  // 入力モードに入ったら、表全体 (下の「キャンセル / 登録」まで) が見える位置へ送る。
-  // ホームの最後の欄なので、そのままだと下の段がタブバーの裏に隠れることがある
+  // 入力モードに入ったら、表全体が見える位置へ送る (「キャンセル / 登録」は入力欄と一緒に
+  // 下に固定されるので、表の下までは送らなくてよい)
   const handleBestTimesEditingChange = useCallback(
     (editing: boolean) => {
       setIsBestTimesEditing(editing);
