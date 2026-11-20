@@ -79,12 +79,11 @@ describe("KeyboardAvoidingView 適用確認 (Sprint Contract #31)", () => {
       },
     );
 
-    // NOTE (2026-07-18): Android の behavior は 'height' から undefined に統一済み
-    // (Hermes 環境における高さ計算ズレの回避のため)。behavior 未指定時は
-    // AndroidManifest.xml の android:windowSoftInputMode (adjustResize) による
-    // ネイティブ側のリサイズ挙動に委譲する。
+    // NOTE (2026-11-20): Android の behavior は undefined (adjustResize に委譲) から "padding" に変更。
+    // edge-to-edge の現構成では adjustResize で画面が縮まず、フォーム下部がキーボードに隠れていたため。
+    // offset は FormKeyboardAvoidingView が画面上の位置を実測して決める (useKeyboardAvoidingBehavior 参照)。
     it.todo(
-      "[V-20] LoginForm の KAV behavior が Android では undefined であること (adjustResize に委譲)",
+      "[V-20] LoginForm の KAV behavior が Android では 'padding' であること",
       async () => {
         // TODO: Developer 実装後に有効化
         // Platform.OS を 'android' にモックして behavior prop を確認
