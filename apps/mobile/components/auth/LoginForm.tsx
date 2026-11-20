@@ -110,7 +110,31 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
     return () => sub.remove();
   }, []);
 
+  // エラーの枠が出てカードが伸びたときも、キーボード表示中ならボタンまで送る (文字 200% で隠れていた)
+  useEffect(() => {
+    if (error && Keyboard.isVisible()) scrollToLoginButton();
+  }, [error]);
+
   const { signIn } = useAuth();
+
+  /** キーボードが出ていれば閉じて、閉じ切るまで (最大 0.5 秒) 待つ */
+  const dismissKeyboardAndWait = () =>
+    new Promise<void>((resolve) => {
+      if (!Keyboard.isVisible()) {
+        resolve();
+        return;
+      }
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        sub.remove();
+        resolve();
+      };
+      const sub = Keyboard.addListener("keyboardDidHide", finish);
+      setTimeout(finish, 500);
+      Keyboard.dismiss();
+    });
   const { t } = useTranslation();
 
   const validateForm = (): boolean => {
@@ -138,6 +162,11 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
     if (!validateForm()) {
       return;
     }
+
+    // キーボードを閉じ切ってから送る。キーボードを開いたまま (確定キーで) ログインすると、
+    // キーボード回避の余白が変わっている最中にログイン画面ごと消え、Android でまれに落ちていた
+    // (Fabric: "Unable to find viewState for tag"。AI テスターで 3 回に 1 回程度再現、logcat で確認)
+    await dismissKeyboardAndWait();
 
     setLoading(true);
     setError(null);
