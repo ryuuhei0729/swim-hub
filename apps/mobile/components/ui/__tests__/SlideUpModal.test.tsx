@@ -644,7 +644,7 @@ describe("SlideUpModal", () => {
       expect(kav.getAttribute("data-keyboard-vertical-offset")).toBe("0");
     });
 
-    it("[V-KAV-09] Android: behavior=undefined のまま (data-behavior 属性が付かない)", () => {
+    it("[V-KAV-09] Android: behavior=\"padding\" (edge-to-edge で adjustResize が効かないため。offset は FormKeyboardAvoidingView が実測)", () => {
       platformState.OS = "android";
       insetsState.top = 47;
 
@@ -656,7 +656,7 @@ describe("SlideUpModal", () => {
 
       const modalRoot = container.firstElementChild as HTMLElement;
       const kav = modalRoot.firstElementChild as HTMLElement;
-      expect(kav.getAttribute("data-behavior")).toBeNull();
+      expect(kav.getAttribute("data-behavior")).toBe("padding");
     });
   });
 });
