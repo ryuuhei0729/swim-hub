@@ -70,6 +70,12 @@ export interface BestTimeInputGridProps {
   disabled: boolean;
   /** マスを選んだとき・キーボードが出たときに、表と入力欄が見える位置まで画面を送る */
   onRequestReveal?: () => void;
+  /**
+   * 入力欄の下 (キーボードの真上・タブバーの上に固定される部分) に常に出すもの。
+   * 「入力済み N件 / キャンセル / 登録」を渡す。表の一番下に置くと、キーボードと入力欄の裏に
+   * 入ってスクロールしないと押せなかった (AI テスターで確認)
+   */
+  dockFooter?: React.ReactNode;
 }
 
 /**
@@ -87,6 +93,7 @@ export const BestTimeInputGrid: React.FC<BestTimeInputGridProps> = ({
   onClearCell,
   disabled,
   onRequestReveal,
+  dockFooter,
 }) => {
   const { t } = useTranslation();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -260,25 +267,37 @@ export const BestTimeInputGrid: React.FC<BestTimeInputGridProps> = ({
         ))}
       </View>
 
-      {selectedKey && selectedStyle && (
+      {((selectedKey && selectedStyle) || dockFooter) && (
         <BottomDockPortal>
-          <BestTimeCellEditor
-            key={selectedKey}
-            title={formatStyleDisplay(selectedStyle, t)}
-            subtitle={
-              isRelaying
-                ? `${poolLabel} · ${t("mypage.bestTimesTable.edit.relayTag")}`
-                : poolLabel
-            }
-            time={inputs[selectedKey]?.time ?? ""}
-            note={inputs[selectedKey]?.note ?? ""}
-            currentBest={currentBest.get(selectedKey)}
-            disabled={disabled}
-            onChangeTime={(v) => onUpdateCell(selectedKey, "time", v)}
-            onChangeNote={(v) => onUpdateCell(selectedKey, "note", v)}
-            onClear={() => onClearCell(selectedKey)}
-            onDone={closeEditor}
-          />
+          {selectedKey && selectedStyle && (
+            <BestTimeCellEditor
+              key={selectedKey}
+              title={formatStyleDisplay(selectedStyle, t)}
+              subtitle={
+                isRelaying
+                  ? `${poolLabel} · ${t("mypage.bestTimesTable.edit.relayTag")}`
+                  : poolLabel
+              }
+              time={inputs[selectedKey]?.time ?? ""}
+              note={inputs[selectedKey]?.note ?? ""}
+              currentBest={currentBest.get(selectedKey)}
+              disabled={disabled}
+              onChangeTime={(v) => onUpdateCell(selectedKey, "time", v)}
+              onChangeNote={(v) => onUpdateCell(selectedKey, "note", v)}
+              onClear={() => onClearCell(selectedKey)}
+              onDone={closeEditor}
+            />
+          )}
+          {dockFooter && (
+            <View
+              style={[
+                styles.dockFooter,
+                !(selectedKey && selectedStyle) && styles.dockFooterStandalone,
+              ]}
+            >
+              {dockFooter}
+            </View>
+          )}
         </BottomDockPortal>
       )}
     </View>
@@ -513,6 +532,23 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
   },
   // キーボードの真上に固定する入力欄 (BottomDockHost の中に出る)
+  // 入力欄の下に固定する「入力済み N件 / キャンセル / 登録」
+  dockFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  // マスを選んでいない (入力欄が無い) ときは、これ単体で上の角を丸める
+  dockFooterStandalone: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
   editor: {
     paddingHorizontal: 14,
     paddingTop: 12,

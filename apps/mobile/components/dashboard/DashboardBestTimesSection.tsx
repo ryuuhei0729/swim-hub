@@ -161,31 +161,6 @@ export const DashboardBestTimesSection: React.FC<DashboardBestTimesSectionProps>
     exitEditing();
   };
 
-  const edit: BestTimesTableEdit | undefined = isEditing
-    ? {
-        render: ({ poolType, isRelaying }) => (
-          <>
-            <BestTimeInputGrid
-              key={`${poolType}_${isRelaying ? 1 : 0}`}
-              bestTimes={bestTimes}
-              poolType={poolType}
-              isRelaying={isRelaying}
-              inputs={bulk.inputs}
-              onUpdateCell={bulk.updateCell}
-              onClearCell={bulk.clearCell}
-              disabled={bulk.saving}
-              onRequestReveal={onRequestReveal}
-            />
-            {bulk.saveError && (
-              <View style={styles.saveErrorBanner}>
-                <Text style={styles.saveErrorText}>{bulk.saveError}</Text>
-              </View>
-            )}
-          </>
-        ),
-      }
-    : undefined;
-
   const editActions = (
     <>
       <Text style={styles.editCount}>
@@ -224,6 +199,32 @@ export const DashboardBestTimesSection: React.FC<DashboardBestTimesSectionProps>
       </View>
     </>
   );
+
+  const edit: BestTimesTableEdit | undefined = isEditing
+    ? {
+        render: ({ poolType, isRelaying }) => (
+          <>
+            <BestTimeInputGrid
+              key={`${poolType}_${isRelaying ? 1 : 0}`}
+              bestTimes={bestTimes}
+              poolType={poolType}
+              isRelaying={isRelaying}
+              inputs={bulk.inputs}
+              onUpdateCell={bulk.updateCell}
+              onClearCell={bulk.clearCell}
+              disabled={bulk.saving}
+              onRequestReveal={onRequestReveal}
+              dockFooter={editActions}
+            />
+            {bulk.saveError && (
+              <View style={styles.saveErrorBanner}>
+                <Text style={styles.saveErrorText}>{bulk.saveError}</Text>
+              </View>
+            )}
+          </>
+        ),
+      }
+    : undefined;
 
   // 表の下の1行: 左に表示切り替え (タイム/点数)、右に一括入力。
   // 表示の切り替えは水路タブと同じセグメント形にして、今どちらを表示しているかを常に見せる。
@@ -298,7 +299,7 @@ export const DashboardBestTimesSection: React.FC<DashboardBestTimesSectionProps>
           isWaPointsMode={isWaPointsMode}
           ageCategory={ageCategory}
           title={title}
-          footer={isEditing ? editActions : actions}
+          footer={isEditing ? undefined : actions}
           edit={edit}
         />
       )}
