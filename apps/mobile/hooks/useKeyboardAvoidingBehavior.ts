@@ -63,13 +63,11 @@ export interface KeyboardAvoidingBehaviorConfig {
  * `behavior="padding"`。Sprint #31 (2026-07-18) では `behavior=undefined` にして
  * `AndroidManifest.xml` の `windowSoftInputMode(adjustResize)` に委譲していたが、
  * edge-to-edge の現在の構成ではキーボードが出ても画面が縮まず、フォーム下部のボタン・入力欄が
- * キーボードに隠れたままだった (AI テスターの Android エミュレーターで、キーボードの開閉で
- * 画面内の要素の位置が変わらないことを確認)。
- * `padding` は「重なっている量」だけ余白を足すため、画面が縮む端末でも二重に避けない。
- * (Sprint #31 で避けた高さ計算ズレは `behavior="height"` のもの)
- * `keyboardVerticalOffset` は、ここではナビゲーションバーの高さ (下側のセーフエリア) を返す
- * (RN の Android のキーボード位置がナビゲーションバーを差し引いた値のため)。ヘッダー・ステータスバーの
- * 高さは機種で変わるため、`FormKeyboardAvoidingView` が画面上の位置を実測して足す。
+ * キーボード に隠れたままだった (AI テスターの Android エミュレーターで確認)。
+ * Android は `FormKeyboardAvoidingView` が react-native-keyboard-controller の KeyboardAvoidingView を
+ * 使う (RN 標準は Android でキーボードの高さを 1 回しか通知せず、タイミングで低い値のまま固まるため)。
+ * keyboard-controller は edge-to-edge でナビゲーションバー込みの高さを使うので、ここでは offset 0 を返し、
+ * ヘッダー・ステータスバーのぶんは `FormKeyboardAvoidingView` が画面上の位置を実測して足す。
  *
  * @param hasNativeHeader この KeyboardAvoidingView がネイティブヘッダー
  * (`headerShown: true` な画面) の直下にあるか。`<Modal>` 配下 (CenterModal/SlideUpModal
@@ -81,11 +79,8 @@ export function useKeyboardAvoidingBehavior(
   const insets = useSafeInsets();
 
   if (Platform.OS === "android") {
-    // RN は Android のキーボード位置をナビゲーションバーを差し引いた高さで通知するため、
-    // そのままだとナビゲーションバーの高さぶん余白が足りず、画面下のボタンの下側がキーボードに
-    // 隠れる (AI テスターで確認)。下側のセーフエリア (ナビゲーションバー) を足す。
-    // 画面上の位置のぶんは FormKeyboardAvoidingView が実測して加える。
-    return { behavior: "padding", keyboardVerticalOffset: insets.bottom };
+    // 画面上の位置 (ヘッダー・ステータスバー) のぶんは FormKeyboardAvoidingView が実測して加える
+    return { behavior: "padding", keyboardVerticalOffset: 0 };
   }
 
   if (Platform.OS !== "ios") {

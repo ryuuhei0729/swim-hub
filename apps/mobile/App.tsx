@@ -4,6 +4,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { useTranslation } from "react-i18next";
 import * as Font from "expo-font";
 import { ChakraPetch_700Bold } from "@expo-google-fonts/chakra-petch";
@@ -122,20 +123,24 @@ const AppNavigator: React.FC = () => {
 export default function App() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <I18nProvider>
-        <ErrorBoundary>
-          <QueryProvider>
-            <NetworkProvider>
-              <AuthProvider>
-                {/* トーストは画面全体の上に出すため、ナビゲーターの外側で 1 つだけ持つ */}
-                <ToastProvider>
-                  <AppNavigator />
-                </ToastProvider>
-              </AuthProvider>
-            </NetworkProvider>
-          </QueryProvider>
-        </ErrorBoundary>
-      </I18nProvider>
+      {/* Android のキーボードの高さを表示中もずっと追いかける (FormKeyboardAvoidingView・ホームの入力モード)。
+          RN 標準は表示/非表示の切り替わりで 1 回だけ高さを通知するため、タイミングで低い値のまま固まっていた */}
+      <KeyboardProvider>
+        <I18nProvider>
+          <ErrorBoundary>
+            <QueryProvider>
+              <NetworkProvider>
+                <AuthProvider>
+                  {/* トーストは画面全体の上に出すため、ナビゲーターの外側で 1 つだけ持つ */}
+                  <ToastProvider>
+                    <AppNavigator />
+                  </ToastProvider>
+                </AuthProvider>
+              </NetworkProvider>
+            </QueryProvider>
+          </ErrorBoundary>
+        </I18nProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

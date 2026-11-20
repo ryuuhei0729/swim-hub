@@ -15,6 +15,7 @@ import {
   Platform,
   Dimensions,
 } from "react-native";
+import { useKeyboardState } from "react-native-keyboard-controller";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { FullWindowOverlay } from "react-native-screens";
 import { addMonths, parseISO, subMonths, format as formatDate } from "date-fns";
@@ -140,11 +141,15 @@ export const DashboardScreen: React.FC = () => {
   //   自前でスクロールするため、こちらの送りと二重になり「一度上に動いてから下に動く」挙動になった
   // - 送るのはキーボードと入力欄の分の余白が下端に足された後 (足す前だと末尾が足りず途中で止まる)
   // - Android もウィンドウは縮まない (edge-to-edge では adjustResize が効かない) ため、iOS と同じく
-  //   キーボードの高さで入力欄を持ち上げる。キーボード表示中はタブバーを隠す (tabBar.native.tsx)
+  //   キーボードの高さで入力欄を持ち上げる。キーボード表示中はタブバーを隠す (tabBar.native.tsx)。
+  //   高さは react-native-keyboard-controller から取る (RN 標準は Android で高さを 1 回しか通知せず、
+  //   低い値のまま固まって入力欄の下半分がキーボードに隠れることがあった。こちらはナビゲーションバー込み)
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const containerRef = useRef<View>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [iosKeyboardHeight, setIosKeyboardHeight] = useState(0);
+  const androidKeyboardHeight = useKeyboardState((state) => (state.isVisible ? state.height : 0));
+  const keyboardHeight = Platform.OS === "android" ? androidKeyboardHeight : iosKeyboardHeight;
   const [containerBottomGap, setContainerBottomGap] = useState(0);
   const [dockHeight, setDockHeight] = useState(0);
   const keyboardVisibleRef = useRef(false);
@@ -186,14 +191,14 @@ export const DashboardScreen: React.FC = () => {
       (e) => {
         keyboardVisibleRef.current = true;
         // 余白が足されて中身の大きさが変わった後に handleContentSizeChange が送る
-        setKeyboardHeight(e.endCoordinates.height);
+        if (isIOS) setIosKeyboardHeight(e.endCoordinates.height);
       },
     );
     const hideSub = Keyboard.addListener(
       isIOS ? "keyboardWillHide" : "keyboardDidHide",
       () => {
         keyboardVisibleRef.current = false;
-        setKeyboardHeight(0);
+        setIosKeyboardHeight(0);
       },
     );
     return () => {
@@ -236,12 +241,11 @@ export const DashboardScreen: React.FC = () => {
   }, []);
   // キーボードが出ていない (ハードウェアキーボードなど) ときは、iOS のネイティブのタブバーの裏に
   // 隠れないよう、ホームインジケータ + タブバーの上に出す。
-  // Android: キーボードが出ていないときは中身がタブバーの上に収まる (tabBar.native.tsx) ので 0。
-  // キーボードの高さはナビゲーションバーを差し引いた値で通知されるため、その分 (insets.bottom) を足す
+  // Android: キーボードが出ていないときは中身がタブバーの上に収まる (tabBar.native.tsx) ので 0
   const dockBottom =
     Platform.OS === "android"
       ? keyboardHeight > 0
-        ? Math.max(0, keyboardHeight + insets.bottom - containerBottomGap)
+        ? Math.max(0, keyboardHeight - containerBottomGap)
         : 0
       : Platform.OS !== "ios"
         ? 0
