@@ -99,6 +99,21 @@ describe("useKeyboardAvoidingBehavior", () => {
     expect(result.current.keyboardVerticalOffset).toBe(0);
   });
 
+  it("[V-KAV-10] Android では offset にナビゲーションバーの高さ (下側のセーフエリア) が入る", () => {
+    platformState.OS = "android";
+    insetsState.top = 47;
+    insetsState.bottom = 24;
+
+    expect(renderHook(() => useKeyboardAvoidingBehavior()).result.current).toEqual({
+      behavior: "padding",
+      keyboardVerticalOffset: 24,
+    });
+    expect(renderHook(() => useKeyboardAvoidingBehavior(false)).result.current).toEqual({
+      behavior: "padding",
+      keyboardVerticalOffset: 24,
+    });
+  });
+
   it("[V-KAV-09] Android では hasNativeHeader=false を渡しても behavior=\"padding\" / offset=0 のまま変わらない", () => {
     platformState.OS = "android";
     insetsState.top = 47;
