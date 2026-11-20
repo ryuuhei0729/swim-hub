@@ -79,7 +79,8 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
     (event: LayoutChangeEvent) => {
       onLayout?.(event);
       const localY = event.nativeEvent.layout.y;
-      setDbgLayout((prev) => ({ ...prev, y: Math.round(localY), h: Math.round(event.nativeEvent.layout.height) }));
+      const dbgH = Math.round(event.nativeEvent.layout.height);
+      setDbgLayout((prev) => ({ ...prev, y: Math.round(localY), h: dbgH }));
       measureAndroidOffset(localY);
       // 画面遷移のアニメーション中は画面上の位置がずれて見えるため、落ち着いた後にもう一度測る
       if (remeasureTimerRef.current) clearTimeout(remeasureTimerRef.current);
