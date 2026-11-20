@@ -1,10 +1,11 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   Pressable,
   ScrollView,
+  Keyboard,
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
@@ -92,6 +93,22 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const passwordInputRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const isPasswordFocusedRef = useRef(false);
+
+  // パスワード入力中はログインボタンまでスクロールする。文字を大きくしているとカードが
+  // キーボードの上に収まらず、ボタンが見切れていた (AI テスター、Android 文字 200%)。
+  // キーボードが出て FormKeyboardAvoidingView の余白が付いた後でないと届かないため、
+  // keyboardDidShow でもスクロールする。
+  const scrollToLoginButton = () => {
+    requestAnimationFrame(() => scrollViewRef.current?.scrollToEnd({ animated: true }));
+  };
+  useEffect(() => {
+    const sub = Keyboard.addListener("keyboardDidShow", () => {
+      if (isPasswordFocusedRef.current) scrollToLoginButton();
+    });
+    return () => sub.remove();
+  }, []);
 
   const { signIn } = useAuth();
   const { t } = useTranslation();
@@ -145,6 +162,7 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
           ログインボタンまでスクロールでき、keyboardShouldPersistTaps でキーボードを
           開いたままボタンを 1 回のタップで押せる */}
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scroll}
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
@@ -186,6 +204,13 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
             <Text style={styles.label}>{t("auth.fields.password")}</Text>
             <TextInput
               ref={passwordInputRef}
+              onFocus={() => {
+                isPasswordFocusedRef.current = true;
+                if (Keyboard.isVisible()) scrollToLoginButton();
+              }}
+              onBlur={() => {
+                isPasswordFocusedRef.current = false;
+              }}
               style={styles.input}
               placeholder={t("auth.fields.password")}
               placeholderTextColor="#9CA3AF"
