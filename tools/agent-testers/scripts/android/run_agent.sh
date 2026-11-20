@@ -66,6 +66,10 @@ adb shell settings put system font_scale "${FONT_SCALE:-1.0}"
 adb emu geo fix "${GEO#*,}" "${GEO%,*}" >/dev/null 2>&1   # longitude first
 adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 adb logcat -c; sleep 5
+# クラッシュの記録を results/ に残す (screen.py は撮るたびに logcat -c で消すため、最初から流しっぱなしで保存する)
+adb logcat -v time -b main -b crash AndroidRuntime:E ReactNativeJS:E ReactNative:E DEBUG:F libc:F '*:S' \
+  > "results/$PERSONA/crash.log" 2>&1 &
+LOGCAT=$!
 # 4. Optional screen recording, kept in results/ (encrypted like the rest)
 REC=""
 if [ "${RECORD_VIDEO:-false}" = true ]; then
@@ -95,4 +99,6 @@ if [ -n "$REC" ]; then
   mkdir -p "results/$PERSONA/video"
   for f in $(adb shell ls /sdcard/ | tr -d '\r' | grep '^rec_'); do adb pull "/sdcard/$f" "results/$PERSONA/video/" >/dev/null 2>&1; done
 fi
+kill "$LOGCAT" 2>/dev/null
+[ -s "results/$PERSONA/crash.log" ] && echo "crash.log: $(grep -c "FATAL EXCEPTION" "results/$PERSONA/crash.log") fatal exception(s)"
 echo "Agent finished (exit $CODE), $(ls "results/$PERSONA" | wc -l) files"
