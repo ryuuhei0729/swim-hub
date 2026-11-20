@@ -375,6 +375,8 @@ const styles = StyleSheet.create({
   editButtons: {
     flexDirection: "row",
     gap: 8,
+    // 入力欄の下で 1 行に収まらず次の行に回ったときも右に寄せる
+    marginLeft: "auto",
   },
   editButton: {
     height: 36,
