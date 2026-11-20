@@ -535,6 +535,8 @@ const styles = StyleSheet.create({
   // 入力欄の下に固定する「入力済み N件 / キャンセル / 登録」
   dockFooter: {
     flexDirection: "row",
+    // 文字を大きくしていると 1 行に収まらず「登録」が右端で切れていたので、ボタンを次の行に回す
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     gap: 8,
