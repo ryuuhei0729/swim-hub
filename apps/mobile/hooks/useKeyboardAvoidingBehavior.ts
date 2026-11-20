@@ -67,8 +67,9 @@ export interface KeyboardAvoidingBehaviorConfig {
  * 画面内の要素の位置が変わらないことを確認)。
  * `padding` は「重なっている量」だけ余白を足すため、画面が縮む端末でも二重に避けない。
  * (Sprint #31 で避けた高さ計算ズレは `behavior="height"` のもの)
- * `keyboardVerticalOffset` はヘッダー・ステータスバーの高さが機種で変わるため、ここでは 0 を返し
- * `FormKeyboardAvoidingView` が画面上の位置を実測して決める。
+ * `keyboardVerticalOffset` は、ここではナビゲーションバーの高さ (下側のセーフエリア) を返す
+ * (RN の Android のキーボード位置がナビゲーションバーを差し引いた値のため)。ヘッダー・ステータスバーの
+ * 高さは機種で変わるため、`FormKeyboardAvoidingView` が画面上の位置を実測して足す。
  *
  * @param hasNativeHeader この KeyboardAvoidingView がネイティブヘッダー
  * (`headerShown: true` な画面) の直下にあるか。`<Modal>` 配下 (CenterModal/SlideUpModal
@@ -80,7 +81,11 @@ export function useKeyboardAvoidingBehavior(
   const insets = useSafeInsets();
 
   if (Platform.OS === "android") {
-    return { behavior: "padding", keyboardVerticalOffset: 0 };
+    // RN は Android のキーボード位置をナビゲーションバーを差し引いた高さで通知するため、
+    // そのままだとナビゲーションバーの高さぶん余白が足りず、画面下のボタンの下側がキーボードに
+    // 隠れる (AI テスターで確認)。下側のセーフエリア (ナビゲーションバー) を足す。
+    // 画面上の位置のぶんは FormKeyboardAvoidingView が実測して加える。
+    return { behavior: "padding", keyboardVerticalOffset: insets.bottom };
   }
 
   if (Platform.OS !== "ios") {

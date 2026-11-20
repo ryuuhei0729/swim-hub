@@ -86,7 +86,9 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
     <KeyboardAvoidingView
       ref={kavRef}
       behavior={behavior}
-      keyboardVerticalOffset={Platform.OS === "android" ? androidOffset : keyboardVerticalOffset}
+      keyboardVerticalOffset={
+        Platform.OS === "android" ? androidOffset + keyboardVerticalOffset : keyboardVerticalOffset
+      }
       onLayout={handleLayout}
       {...rest}
     >
