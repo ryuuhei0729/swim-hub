@@ -52,6 +52,11 @@ overrides:
   '@tailwindcss/typography>postcss-selector-parser': ^7.1.6
   glob@10: ^10.5.0
 
+patchedDependencies:
+  '@react-navigation/bottom-tabs@7.10.1':
+    hash: fdef2d0a8ccc1280d5da6483223290102b7b881346c334a151b7167bc11df54d
+    path: patches/@react-navigation__bottom-tabs@7.10.1.patch
+
 importers:
 
   .:
@@ -122,7 +127,7 @@ importers:
         version: 2.11.4(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
       '@react-navigation/bottom-tabs':
         specifier: 7.10.1
-        version: 7.10.1(@react-navigation/native@7.1.28(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-safe-area-context@5.6.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-screens@4.23.0(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+        version: 7.10.1(patch_hash=fdef2d0a8ccc1280d5da6483223290102b7b881346c334a151b7167bc11df54d)(@react-navigation/native@7.1.28(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-safe-area-context@5.6.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-screens@4.23.0(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
       '@react-navigation/native':
         specifier: 7.1.28
         version: 7.1.28(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
@@ -10614,7 +10619,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.14
 
-  '@react-navigation/bottom-tabs@7.10.1(@react-navigation/native@7.1.28(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-safe-area-context@5.6.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-screens@4.23.0(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)':
+  '@react-navigation/bottom-tabs@7.10.1(patch_hash=fdef2d0a8ccc1280d5da6483223290102b7b881346c334a151b7167bc11df54d)(@react-navigation/native@7.1.28(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-safe-area-context@5.6.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-screens@4.23.0(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@react-navigation/elements': 2.9.10(@react-navigation/native@7.1.28(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native-safe-area-context@5.6.2(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
       '@react-navigation/native': 7.1.28(react-native@0.83.6(@babel/core@7.29.7)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)

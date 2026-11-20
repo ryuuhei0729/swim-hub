@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Platform, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Keyboard, Platform, StyleSheet } from "react-native";
 import { useNavigationState } from "@react-navigation/native";
 import Animated, {
   Easing,
@@ -58,7 +58,7 @@ export const TabBarShell: React.FC<{ children: React.ReactNode }> = ({ children 
   <>{children}</>
 );
 
-export const tabNavigatorScreenOptions = {
+const nativeTabNavigatorScreenOptions = {
   headerShown: false,
   tabBarActiveTintColor: "#2563EB",
   tabBarInactiveTintColor: "#6B7280",
@@ -72,7 +72,46 @@ export const tabNavigatorScreenOptions = {
   tabBarLabelVisibilityMode: "labeled",
   // iOS 18 以前と Android のバー背景 (iOS 26 の Liquid Glass では無視される)
   tabBarStyle: { backgroundColor: "#FFFFFF" },
+} satisfies NativeBottomTabNavigationOptions;
+
+export const tabNavigatorScreenOptions =
+  nativeTabNavigatorScreenOptions as unknown as BottomTabNavigationOptions;
+
+/** キーボード表示中 (Android) の screenOptions: タブバーを隠す */
+const tabNavigatorScreenOptionsTabBarHidden = {
+  ...nativeTabNavigatorScreenOptions,
+  tabBarStyle: { ...nativeTabNavigatorScreenOptions.tabBarStyle, display: "none" },
 } satisfies NativeBottomTabNavigationOptions as unknown as BottomTabNavigationOptions;
+
+/**
+ * Android でキーボードが出ている間はタブバーを隠す
+ *
+ * Android のタブバー (BottomNavigationView) はキーボードが出るとその上に乗って残り、
+ * ホームのベストタイム入力モードの入力欄や「キャンセル / 登録」を覆っていた (AI テスターで確認)。
+ * Android のアプリの一般的な挙動に合わせ、キーボード表示中は tabBarStyle.display = "none" にする
+ * (React Navigation 7.10.1 はこれを TabsHost の tabBarHidden に渡さないため、7.21 と同じ受け渡しを
+ * patches/@react-navigation__bottom-tabs@7.10.1.patch で足している。7.21 以上に上げたらパッチは不要)。
+ * タブバーを隠すと TabsHost のタブバー分のインセットも 0 になり、画面の中身が下まで広がる。
+ */
+function useAndroidKeyboardVisible(): boolean {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const showSub = Keyboard.addListener("keyboardDidShow", () => setVisible(true));
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+  return visible;
+}
+
+/** Tab.Navigator の screenOptions。Android でキーボード表示中はタブバーを隠す */
+export const useTabNavigatorScreenOptions = (): BottomTabNavigationOptions => {
+  const keyboardVisible = useAndroidKeyboardVisible();
+  return keyboardVisible ? tabNavigatorScreenOptionsTabBarHidden : tabNavigatorScreenOptions;
+};
 
 export const tabScreenOptions = (tab: TabVisual): BottomTabNavigationOptions =>
   ({

@@ -9,8 +9,8 @@ import {
   createTabNavigator,
   TabBarShell,
   tabNavigatorScreenLayout,
-  tabNavigatorScreenOptions,
   tabScreenOptions,
+  useTabNavigatorScreenOptions,
 } from "./tabBar";
 import { useTeamBadgeCounts } from "@/hooks/useTeamBadgeCounts";
 import { formatBadgeCount } from "@/utils/formatBadgeCount";
@@ -26,6 +26,7 @@ const Tab = createTabNavigator();
  */
 export const TabNavigator: React.FC = () => {
   const { t } = useTranslation();
+  const screenOptions = useTabNavigatorScreenOptions();
 
   // チームタブのバッジ = 出欠未回答の件数 + 自分が管理者のチームの承認待ちメンバー数。
   // チーム画面の中のタブ・チーム切替シートも同じフックでチームごとの件数を出す
@@ -35,7 +36,7 @@ export const TabNavigator: React.FC = () => {
   return (
     <TabBarShell>
       <Tab.Navigator
-        screenOptions={tabNavigatorScreenOptions}
+        screenOptions={screenOptions}
         screenLayout={tabNavigatorScreenLayout}
       >
         <Tab.Screen
