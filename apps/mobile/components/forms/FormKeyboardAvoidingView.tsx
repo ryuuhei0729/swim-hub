@@ -4,7 +4,9 @@ import {
   Platform,
   type KeyboardAvoidingViewProps,
   type LayoutChangeEvent,
+  type View,
 } from "react-native";
+import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
 import { useKeyboardAvoidingBehavior } from "@/hooks/useKeyboardAvoidingBehavior";
 
 export interface FormKeyboardAvoidingViewProps
@@ -22,20 +24,19 @@ export interface FormKeyboardAvoidingViewProps
 /** 画面遷移のアニメーションが落ち着いてから測り直すまでの時間 (Android) */
 const ANDROID_REMEASURE_DELAY_MS = 500;
 
-type MeasurableView = {
-  measureInWindow?: (callback: (x: number, y: number, width: number, height: number) => void) => void;
-};
-
 /**
  * フォーム画面・モーダルで使う KeyboardAvoidingView の唯一の定義元。
  * `behavior`/`keyboardVerticalOffset` の判定ロジックは `useKeyboardAvoidingBehavior` に集約し、
  * 個々の画面・コンポーネントには一切コピペしない。
  *
- * Android の `keyboardVerticalOffset` だけはここで実測する。KeyboardAvoidingView は
- * 「自分の位置 (親基準) + 高さ − キーボード上端 (画面基準)」で隠れる量を計算するため、
- * 親の上端の画面上の位置 (ヘッダー・ステータスバーの高さ) を offset で補う必要がある。
- * Android のヘッダー高さは機種・設定で変わり固定値にできないため、
- * 「画面上の位置 (measureInWindow) − 親基準の位置」で求める。
+ * - iOS: RN の KeyboardAvoidingView (ヘッダー高さの offset は useKeyboardAvoidingBehavior が計算)
+ * - Android: react-native-keyboard-controller の KeyboardAvoidingView。RN 標準は Android で
+ *   キーボードの高さを表示/非表示の切り替わりで 1 回だけ通知するため、タイミングで低い値のまま
+ *   固まり、画面下のボタンがキーボードに隠れることがあった (AI テスターで確認)。
+ *   keyboard-controller は表示中も高さを追いかけ、edge-to-edge ではナビゲーションバー込みの
+ *   本当の高さを使う。
+ *   `keyboardVerticalOffset` (親の上端の画面上の位置 = ヘッダー・ステータスバー) は機種で変わるため、
+ *   「画面上の位置 (measureInWindow) − 親基準の位置」を実測して渡す。
  */
 export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> = ({
   hasNativeHeader = true,
@@ -44,7 +45,7 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
   ...rest
 }) => {
   const { behavior, keyboardVerticalOffset } = useKeyboardAvoidingBehavior(hasNativeHeader);
-  const kavRef = useRef<KeyboardAvoidingView>(null);
+  const androidViewRef = useRef<View>(null);
   const [androidOffset, setAndroidOffset] = useState(0);
   const remeasureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,20 +57,15 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
   );
 
   const measureAndroidOffset = useCallback((localY: number) => {
-    // KeyboardAvoidingView が内側の View に付けている viewRef を使う (onLayout は内部で
-    // await した後に呼ばれるため、イベントの currentTarget はもう使えない)
-    const view = (kavRef.current as unknown as { viewRef?: { current?: MeasurableView | null } } | null)
-      ?.viewRef?.current;
-    view?.measureInWindow?.((_x, windowY) => {
+    androidViewRef.current?.measureInWindow?.((_x, windowY) => {
       const next = Math.max(0, Math.round(windowY - localY));
       setAndroidOffset((prev) => (prev === next ? prev : next));
     });
   }, []);
 
-  const handleLayout = useCallback(
+  const handleAndroidLayout = useCallback(
     (event: LayoutChangeEvent) => {
       onLayout?.(event);
-      if (Platform.OS !== "android") return;
       const localY = event.nativeEvent.layout.y;
       measureAndroidOffset(localY);
       // 画面遷移のアニメーション中は画面上の位置がずれて見えるため、落ち着いた後にもう一度測る
@@ -82,14 +78,27 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
     [onLayout, measureAndroidOffset],
   );
 
+  if (Platform.OS === "android") {
+    // contentContainerStyle は behavior="position" 専用 (padding では RN でも使われない)
+    const { contentContainerStyle: _unused, ...androidRest } = rest;
+    return (
+      <KeyboardControllerAvoidingView
+        ref={androidViewRef}
+        behavior={behavior}
+        keyboardVerticalOffset={androidOffset + keyboardVerticalOffset}
+        onLayout={handleAndroidLayout}
+        {...androidRest}
+      >
+        {children}
+      </KeyboardControllerAvoidingView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
-      ref={kavRef}
       behavior={behavior}
-      keyboardVerticalOffset={
-        Platform.OS === "android" ? androidOffset + keyboardVerticalOffset : keyboardVerticalOffset
-      }
-      onLayout={handleLayout}
+      keyboardVerticalOffset={keyboardVerticalOffset}
+      onLayout={onLayout}
       {...rest}
     >
       {children}

@@ -99,18 +99,14 @@ describe("useKeyboardAvoidingBehavior", () => {
     expect(result.current.keyboardVerticalOffset).toBe(0);
   });
 
-  it("[V-KAV-10] Android では offset にナビゲーションバーの高さ (下側のセーフエリア) が入る", () => {
+  it("[V-KAV-10] Android ではナビゲーションバーがあっても offset は 0 (keyboard-controller がナビゲーションバー込みの高さを使うため)", () => {
     platformState.OS = "android";
     insetsState.top = 47;
     insetsState.bottom = 24;
 
     expect(renderHook(() => useKeyboardAvoidingBehavior()).result.current).toEqual({
       behavior: "padding",
-      keyboardVerticalOffset: 24,
-    });
-    expect(renderHook(() => useKeyboardAvoidingBehavior(false)).result.current).toEqual({
-      behavior: "padding",
-      keyboardVerticalOffset: 24,
+      keyboardVerticalOffset: 0,
     });
   });
 
