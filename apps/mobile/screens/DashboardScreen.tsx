@@ -231,14 +231,20 @@ export const DashboardScreen: React.FC = () => {
       scrollToBestTimes();
   }, [scrollToBestTimes]);
 
-  // 画面 (SafeAreaView) の下端と端末の下端の差。入力欄をキーボードの真上に置くのに使う
-  // (Android は edge-to-edge でウィンドウ = 画面全体のため、画面の高さと比べる)
+  // 画面 (SafeAreaView) の下端と端末の下端の差。入力欄をキーボードの真上に置くのに使う。
+  // Android: キーボードの高さ (keyboard-controller) は画面全体基準。measureInWindow は
+  // ステータスバーの下を 0 とする座標で返すため、ステータスバーの高さを足して画面の高さと比べる
+  const statusBarHeight = insets.top;
   const measureContainer = useCallback(() => {
     containerRef.current?.measureInWindow((_x, y, _w, h) => {
-      const deviceHeight = Dimensions.get(Platform.OS === "android" ? "screen" : "window").height;
-      setContainerBottomGap(Math.max(0, deviceHeight - (y + h)));
+      if (Platform.OS === "android") {
+        const screenBottom = y + statusBarHeight + h;
+        setContainerBottomGap(Math.max(0, Dimensions.get("screen").height - screenBottom));
+        return;
+      }
+      setContainerBottomGap(Math.max(0, Dimensions.get("window").height - (y + h)));
     });
-  }, []);
+  }, [statusBarHeight]);
   // キーボードが出ていない (ハードウェアキーボードなど) ときは、iOS のネイティブのタブバーの裏に
   // 隠れないよう、ホームインジケータ + タブバーの上に出す。
   // Android: キーボードが出ていないときは中身がタブバーの上に収まる (tabBar.native.tsx) ので 0

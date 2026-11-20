@@ -12,8 +12,8 @@ import {
   useWindowDimensions as useKcWindowDimensions,
 } from "react-native-keyboard-controller";
 import { Dimensions, Text } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useKeyboardAvoidingBehavior } from "@/hooks/useKeyboardAvoidingBehavior";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
 
 export interface FormKeyboardAvoidingViewProps
   extends Omit<KeyboardAvoidingViewProps, "behavior" | "keyboardVerticalOffset"> {
@@ -42,7 +42,10 @@ const ANDROID_REMEASURE_DELAY_MS = 500;
  *   keyboard-controller は表示中も高さを追いかけ、edge-to-edge ではナビゲーションバー込みの
  *   本当の高さを使う。
  *   `keyboardVerticalOffset` (親の上端の画面上の位置 = ヘッダー・ステータスバー) は機種で変わるため、
- *   「画面上の位置 (measureInWindow) − 親基準の位置」を実測して渡す。
+ *   「画面上の位置 − 親基準の位置」を実測して渡す。Android の measureInWindow はステータスバーの下を
+ *   0 とする座標 (RN の window 座標) で返すため、画面上の位置にするにはステータスバーの高さ
+ *   (insets.top) を足す (足さないと offset がステータスバー分小さく、画面下が隠れていた。
+ *   AI テスターの計測: 画面 914dp / RN window 838dp = 914 − ステータスバー 52 − ナビゲーションバー 24)。
  */
 export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> = ({
   hasNativeHeader = true,
@@ -51,13 +54,13 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
   ...rest
 }) => {
   const { behavior, keyboardVerticalOffset } = useKeyboardAvoidingBehavior(hasNativeHeader);
+  const statusBarHeight = useSafeInsets().top;
   const androidViewRef = useRef<View>(null);
   const [androidOffset, setAndroidOffset] = useState(0);
   const remeasureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // DEBUG (確認用ブランチのみ): キーボード回避の計算に使う値を画面に出す
   const dbgKb = useKeyboardState((s) => s);
   const dbgKcWin = useKcWindowDimensions();
-  const dbgInsets = useSafeAreaInsets();
   const [dbgLayout, setDbgLayout] = useState({ y: 0, h: 0, winY: 0 });
 
   useEffect(
@@ -70,10 +73,11 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
   const measureAndroidOffset = useCallback((localY: number) => {
     androidViewRef.current?.measureInWindow?.((_x, windowY) => {
       setDbgLayout((prev) => ({ ...prev, winY: Math.round(windowY) }));
-      const next = Math.max(0, Math.round(windowY - localY));
+      const screenY = windowY + statusBarHeight;
+      const next = Math.max(0, Math.round(screenY - localY));
       setAndroidOffset((prev) => (prev === next ? prev : next));
     });
-  }, []);
+  }, [statusBarHeight]);
 
   const handleAndroidLayout = useCallback(
     (event: LayoutChangeEvent) => {
@@ -108,7 +112,7 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
           style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 9999, backgroundColor: "#FFFF00", color: "#000", fontSize: 11 }}
           allowFontScaling={false}
         >
-          {`DBG kbVis=${dbgKb.isVisible} kbH=${Math.round(dbgKb.height)} kcWinH=${Math.round(dbgKcWin.height)} rnWinH=${Math.round(Dimensions.get("window").height)} rnScrH=${Math.round(Dimensions.get("screen").height)} insT=${Math.round(dbgInsets.top)} insB=${Math.round(dbgInsets.bottom)} offset=${androidOffset}+${keyboardVerticalOffset} layY=${dbgLayout.y} layH=${dbgLayout.h} winY=${dbgLayout.winY} pad=${Math.round(Math.max(0, dbgLayout.y + dbgLayout.h - (dbgKcWin.height - dbgKb.height - androidOffset - keyboardVerticalOffset)))}`}
+          {`DBG kbVis=${dbgKb.isVisible} kbH=${Math.round(dbgKb.height)} kcWinH=${Math.round(dbgKcWin.height)} rnWinH=${Math.round(Dimensions.get("window").height)} rnScrH=${Math.round(Dimensions.get("screen").height)} insT=${statusBarHeight} offset=${androidOffset}+${keyboardVerticalOffset} layY=${dbgLayout.y} layH=${dbgLayout.h} winY=${dbgLayout.winY} pad=${Math.round(Math.max(0, dbgLayout.y + dbgLayout.h - (dbgKcWin.height - dbgKb.height - androidOffset - keyboardVerticalOffset)))}`}
         </Text>
       </KeyboardControllerAvoidingView>
     );
