@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { KeyboardAvoidingView as KeyboardControllerAvoidingView } from "react-native-keyboard-controller";
 import { useKeyboardAvoidingBehavior } from "@/hooks/useKeyboardAvoidingBehavior";
+import { useSafeInsets } from "@/hooks/useSafeInsets";
 
 export interface FormKeyboardAvoidingViewProps
   extends Omit<KeyboardAvoidingViewProps, "behavior" | "keyboardVerticalOffset"> {
@@ -36,7 +37,10 @@ const ANDROID_REMEASURE_DELAY_MS = 500;
  *   keyboard-controller は表示中も高さを追いかけ、edge-to-edge ではナビゲーションバー込みの
  *   本当の高さを使う。
  *   `keyboardVerticalOffset` (親の上端の画面上の位置 = ヘッダー・ステータスバー) は機種で変わるため、
- *   「画面上の位置 (measureInWindow) − 親基準の位置」を実測して渡す。
+ *   「画面上の位置 − 親基準の位置」を実測して渡す。Android の measureInWindow はステータスバーの下を
+ *   0 とする座標 (RN の window 座標) で返すため、画面上の位置にするにはステータスバーの高さ
+ *   (insets.top) を足す (足さないと offset がステータスバー分小さく、画面下が隠れていた。
+ *   AI テスターの計測: 画面 914dp / RN window 838dp = 914 − ステータスバー 52 − ナビゲーションバー 24)。
  */
 export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> = ({
   hasNativeHeader = true,
@@ -45,6 +49,7 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
   ...rest
 }) => {
   const { behavior, keyboardVerticalOffset } = useKeyboardAvoidingBehavior(hasNativeHeader);
+  const statusBarHeight = useSafeInsets().top;
   const androidViewRef = useRef<View>(null);
   const [androidOffset, setAndroidOffset] = useState(0);
   const remeasureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,10 +63,11 @@ export const FormKeyboardAvoidingView: React.FC<FormKeyboardAvoidingViewProps> =
 
   const measureAndroidOffset = useCallback((localY: number) => {
     androidViewRef.current?.measureInWindow?.((_x, windowY) => {
-      const next = Math.max(0, Math.round(windowY - localY));
+      const screenY = windowY + statusBarHeight;
+      const next = Math.max(0, Math.round(screenY - localY));
       setAndroidOffset((prev) => (prev === next ? prev : next));
     });
-  }, []);
+  }, [statusBarHeight]);
 
   const handleAndroidLayout = useCallback(
     (event: LayoutChangeEvent) => {
