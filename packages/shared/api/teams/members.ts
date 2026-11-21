@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { format } from "date-fns";
 import { TeamMembership, TeamMembershipWithUser } from "../../types";
 import { requireAuth, requireTeamAdmin } from "../auth-utils";
 import { UserFacingError } from "../../utils/userFacingError";
@@ -89,7 +90,8 @@ export class TeamMembersAPI {
     const userId = await requireAuth(this.supabase);
     const { error } = await this.supabase
       .from("team_memberships")
-      .update({ is_active: false, left_at: new Date().toISOString() })
+      // left_at は date 型。端末の日付で入れる (toISOString は UTC のため日本時間 0〜9 時に前日になる)
+      .update({ is_active: false, left_at: format(new Date(), "yyyy-MM-dd") })
       .eq("team_id", teamId)
       .eq("user_id", userId)
       .select("*")
@@ -153,7 +155,8 @@ export class TeamMembersAPI {
 
     const { error } = await this.supabase
       .from("team_memberships")
-      .update({ is_active: false, left_at: new Date().toISOString() })
+      // left_at は date 型。端末の日付で入れる (toISOString は UTC のため日本時間 0〜9 時に前日になる)
+      .update({ is_active: false, left_at: format(new Date(), "yyyy-MM-dd") })
       .eq("team_id", teamId)
       .eq("user_id", userId)
       .select("*")

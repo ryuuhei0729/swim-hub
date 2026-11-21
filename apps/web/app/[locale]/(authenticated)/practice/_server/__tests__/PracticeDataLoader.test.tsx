@@ -17,7 +17,7 @@
  * ことを検証する。バックオフ待ちが無くなったため、以前付けていたタイムアウト延長は撤去。
  */
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import type { ReactElement } from "react";
 import { practiceKeys } from "@apps/shared/hooks/queries/keys";
 
@@ -128,5 +128,27 @@ describe("PracticeDataLoader - prefetch エラーハンドリング", () => {
     expect(dehydratedState.queries[0]!.state.data).toEqual(practices);
 
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("getDefaultDateRange — 「今日」は日本時間で決める", () => {
+  // サーバーは UTC で動く。以前は実行環境のローカル日付 (= UTC) を使っていたため、
+  // 日本時間 0〜9 時は「今日」が前日になり、その日の練習が一覧から外れていた
+  const ORIGINAL_TZ = process.env.TZ;
+  beforeEach(() => {
+    process.env.TZ = "UTC";
+    vi.useFakeTimers();
+    // 日本時間 2026-11-20 08:30 (= UTC 2026-11-19 23:30)
+    vi.setSystemTime(new Date("2026-11-19T23:30:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    if (ORIGINAL_TZ === undefined) delete process.env.TZ;
+    else process.env.TZ = ORIGINAL_TZ;
+  });
+
+  it("UTC のサーバーで日本時間の朝 → 日本の今日 (2026-11-20) を基準に 1 年前〜1 年先", async () => {
+    const { getDefaultDateRange } = await import("../PracticeDataLoader");
+    expect(getDefaultDateRange()).toEqual({ startDate: "2025-11-20", endDate: "2027-11-20" });
   });
 });

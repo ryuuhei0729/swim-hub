@@ -3,7 +3,8 @@
 // =============================================================================
 
 import React from "react";
-import { format } from "date-fns";
+import { addYears, format, subYears } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
 import { PracticeAPI } from "@apps/shared/api/practices";
@@ -14,23 +15,27 @@ import PracticeClient from "../_client/PracticeClient";
 import type { Style, PracticeTag } from "@apps/shared/types";
 
 /**
- * この練習一覧ページにおける日付範囲(直近1年)の計算。ここで得た startDate/endDate を
+ * この練習一覧ページにおける日付範囲 (過去1年〜1年先) の計算。ここで得た startDate/endDate を
  * 下記の prefetchQuery の queryKey と <PracticeClient> の startDate/endDate props の
  * 両方にそのまま渡すことで、SSR/CSR で同一の queryKey を使わせる。
  *
- * 背景: 本関数は date-fns の `format(new Date(), ...)` でサーバー実行環境のローカル TZ を
- * 使う一方、shared 側の usePracticesQuery の内部デフォルト計算は `toISOString()`(UTC)を
- * 使っている。サーバーTZ ≠ UTC の環境ではこの2つの既定値がズレて別の queryKey になり、
+ * 終わりを 1 年先にするのは、予定として先の日付で登録した練習も一覧に出すため (大会一覧と
+ * 同じく先の日付を含める。モバイルの PracticesScreen と同じ範囲)。
+ * 「今日」は日本時間 (Asia/Tokyo) で決める。サーバーは UTC で動くため、実行環境のローカル日付
+ * (= UTC) を使うと日本時間 0〜9 時に「今日」が前日になり、その日の練習が一覧から外れていた。
+ * ダッシュボード (DashboardDataLoader / CalendarData) と同じく toZonedTime で日本時間に直す。
+ *
+ * 背景: shared 側の usePracticesQuery の内部デフォルト計算 (端末のローカル日付) とサーバーの
+ * 計算はタイムゾーンが異なりうるため、既定値に任せると SSR と CSR で別の queryKey になり、
  * HydrationBoundary のキャッシュがヒットせず二重フェッチが起きる。この練習ページでは
- * props 経由で同一のリテラル値を明示的に渡すことでそのズレを回避している(shared フック側の
- * UTC 既定計算自体は変更していないため、startDate/endDate を渡さない他の呼び出し箇所には
- * この対策は及ばない)。
+ * props 経由で同一のリテラル値を明示的に渡すことでそのズレを回避している。
  *
  * QA テスト用に named export にしている(prefetch key と props の一致検証に使う想定)。
  */
 export function getDefaultDateRange(): { startDate: string; endDate: string } {
-  const endDate = format(new Date(), "yyyy-MM-dd");
-  const startDate = format(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+  const todayJst = toZonedTime(new Date(), "Asia/Tokyo");
+  const startDate = format(subYears(todayJst, 1), "yyyy-MM-dd");
+  const endDate = format(addYears(todayJst, 1), "yyyy-MM-dd");
   return { startDate, endDate };
 }
 

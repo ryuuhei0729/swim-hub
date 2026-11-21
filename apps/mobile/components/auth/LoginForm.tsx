@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   Pressable,
+  ScrollView,
+  Keyboard,
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
@@ -90,8 +92,49 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const isPasswordFocusedRef = useRef(false);
+
+  // パスワード入力中はログインボタンまでスクロールする。文字を大きくしているとカードが
+  // キーボードの上に収まらず、ボタンが見切れていた (AI テスター、Android 文字 200%)。
+  // キーボードが出て FormKeyboardAvoidingView の余白が付いた後でないと届かないため、
+  // keyboardDidShow でもスクロールする。
+  const scrollToLoginButton = () => {
+    requestAnimationFrame(() => scrollViewRef.current?.scrollToEnd({ animated: true }));
+  };
+  useEffect(() => {
+    const sub = Keyboard.addListener("keyboardDidShow", () => {
+      if (isPasswordFocusedRef.current) scrollToLoginButton();
+    });
+    return () => sub.remove();
+  }, []);
+
+  // エラーの枠が出てカードが伸びたときも、キーボード表示中ならボタンまで送る (文字 200% で隠れていた)
+  useEffect(() => {
+    if (error && Keyboard.isVisible()) scrollToLoginButton();
+  }, [error]);
 
   const { signIn } = useAuth();
+
+  /** キーボードが出ていれば閉じて、閉じ切るまで (最大 0.5 秒) 待つ */
+  const dismissKeyboardAndWait = () =>
+    new Promise<void>((resolve) => {
+      if (!Keyboard.isVisible()) {
+        resolve();
+        return;
+      }
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        sub.remove();
+        resolve();
+      };
+      const sub = Keyboard.addListener("keyboardDidHide", finish);
+      setTimeout(finish, 500);
+      Keyboard.dismiss();
+    });
   const { t } = useTranslation();
 
   const validateForm = (): boolean => {
@@ -120,6 +163,11 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
       return;
     }
 
+    // キーボードを閉じ切ってから送る。キーボードを開いたまま (確定キーで) ログインすると、
+    // キーボード回避の余白が変わっている最中にログイン画面ごと消え、Android でまれに落ちていた
+    // (Fabric: "Unable to find viewState for tag"。AI テスターで 3 回に 1 回程度再現、logcat で確認)
+    await dismissKeyboardAndWait();
+
     setLoading(true);
     setError(null);
 
@@ -139,7 +187,16 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
 
   return (
     <FormKeyboardAvoidingView style={{ flex: 1 }} hasNativeHeader={false}>
-      <View style={styles.container}>
+      {/* SignupForm と同じく ScrollView で包む。キーボード表示中や小さい画面でも
+          ログインボタンまでスクロールでき、keyboardShouldPersistTaps でキーボードを
+          開いたままボタンを 1 回のタップで押せる */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.formContainer}>
         <View style={styles.header}>
           <Text style={styles.title}>{t("auth.signin.emailMethodTitle")}</Text>
@@ -164,6 +221,9 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
               autoComplete="email"
               keyboardType="email-address"
               textContentType="emailAddress"
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => passwordInputRef.current?.focus()}
               editable={!loading}
               testID="login-email-input"
             />
@@ -172,6 +232,14 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t("auth.fields.password")}</Text>
             <TextInput
+              ref={passwordInputRef}
+              onFocus={() => {
+                isPasswordFocusedRef.current = true;
+                if (Keyboard.isVisible()) scrollToLoginButton();
+              }}
+              onBlur={() => {
+                isPasswordFocusedRef.current = false;
+              }}
               style={styles.input}
               placeholder={t("auth.fields.password")}
               placeholderTextColor="#9CA3AF"
@@ -181,6 +249,10 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
               autoCapitalize="none"
               autoComplete="password"
               textContentType="password"
+              returnKeyType="go"
+              onSubmitEditing={() => {
+                if (!loading) void handleSubmit();
+              }}
               editable={!loading}
               testID="login-password-input"
             />
@@ -214,14 +286,20 @@ const LoginFormContent: React.FC<LoginFormContentProps> = ({ onSuccess, onResetP
           )}
         </View>
       </View>
-      </View>
+      </ScrollView>
     </FormKeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scroll: {
     flex: 1,
+    backgroundColor: "#EFF6FF",
+  },
+  container: {
+    // flex ではなく flexGrow: 縦に余裕があれば中央寄せ、キーボード表示中は
+    // ボタンまでスクロールできる (SignupForm と同じ)
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,

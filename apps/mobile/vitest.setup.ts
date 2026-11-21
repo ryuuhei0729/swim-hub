@@ -65,6 +65,22 @@ vi.mock("react-native-screens", () => ({
     React.createElement(React.Fragment, null, children),
 }));
 
+// react-native-keyboard-controller: ネイティブモジュールのため vitest では読み込めない。
+// KeyboardAvoidingView は react-native (の __mocks__) のものをそのまま使い、behavior などを
+// data 属性で検証できるようにする。キーボードは常に閉じている扱い
+vi.mock("react-native-keyboard-controller", async () => {
+  const RN = await import("react-native");
+  type KeyboardState = { isVisible: boolean; height: number };
+  const closed: KeyboardState = { isVisible: false, height: 0 };
+  return {
+    KeyboardProvider: ({ children }: { children?: React.ReactNode }) =>
+      React.createElement(React.Fragment, null, children),
+    KeyboardAvoidingView: RN.KeyboardAvoidingView,
+    useKeyboardState: <T,>(selector?: (state: KeyboardState) => T) =>
+      selector ? selector(closed) : closed,
+  };
+});
+
 // expo-crypto: useAppleAuth 等で digestStringAsync / getRandomValues を使用
 vi.mock("expo-crypto", () => ({
   digestStringAsync: vi.fn(async () => "mock-digest"),

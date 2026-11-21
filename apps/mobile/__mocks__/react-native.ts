@@ -448,6 +448,7 @@ export const Alert = {
 export const Keyboard = {
   dismiss: vi.fn(),
   addListener: vi.fn(() => ({ remove: vi.fn() })),
+  isVisible: vi.fn(() => false),
 };
 
 // BackHandler API (Android の戻るボタン。入力モード中のキャンセルに使う)

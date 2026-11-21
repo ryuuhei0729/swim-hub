@@ -62,6 +62,10 @@ export const tabNavigatorScreenOptions: BottomTabNavigationOptions = {
  */
 export const tabNavigatorScreenLayout = undefined;
 
+/** Tab.Navigator の screenOptions (JS 描画版は固定。ネイティブ版はキーボード表示中にタブバーを隠す) */
+export const useTabNavigatorScreenOptions = (): BottomTabNavigationOptions =>
+  tabNavigatorScreenOptions;
+
 /** カスタムラベルは accessibilityLabel を自動導出しないため、表示文言を明示的に渡す */
 export const tabScreenOptions = (tab: TabVisual): BottomTabNavigationOptions => ({
   tabBarLabel: ({ color }) => <TabBarLabel color={color}>{tab.label}</TabBarLabel>,

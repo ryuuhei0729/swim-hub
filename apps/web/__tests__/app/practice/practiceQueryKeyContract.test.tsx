@@ -69,7 +69,7 @@ function Wrapper({ client, children }: { client: QueryClient; children: React.Re
 const YYYY_MM_DD = /^\d{4}-\d{2}-\d{2}$/;
 
 describe("PracticeDataLoader.getDefaultDateRange()", () => {
-  it("startDate/endDate が yyyy-MM-dd 形式で、startDate <= endDate かつ約365日レンジであること", () => {
+  it("startDate/endDate が yyyy-MM-dd 形式で、過去約1年〜約1年先 (先の日付の練習も一覧に出す) のレンジであること", () => {
     const { startDate, endDate } = getDefaultDateRange();
 
     expect(startDate).toMatch(YYYY_MM_DD);
@@ -80,9 +80,11 @@ describe("PracticeDataLoader.getDefaultDateRange()", () => {
     expect(start.getTime()).toBeLessThanOrEqual(end.getTime());
 
     const diffDays = (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000);
-    // ±1日の誤差はテスト実行タイミング(日付境界をまたぐケース)の許容誤差
-    expect(diffDays).toBeGreaterThanOrEqual(364);
-    expect(diffDays).toBeLessThanOrEqual(366);
+    // 1年前〜1年先 (うるう年で 731 日)。±1日はテスト実行タイミング (日付境界をまたぐケース) の許容誤差
+    expect(diffDays).toBeGreaterThanOrEqual(729);
+    expect(diffDays).toBeLessThanOrEqual(732);
+    // 終わりは今日より先 (予定として先の日付で登録した練習も一覧に出す)
+    expect(end.getTime()).toBeGreaterThan(Date.now());
   });
 });
 

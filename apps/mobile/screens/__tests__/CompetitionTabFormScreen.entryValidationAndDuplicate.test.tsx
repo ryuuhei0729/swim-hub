@@ -463,6 +463,89 @@ describe("CompetitionTabFormScreen — validateEntryTab 未編集行スキップ
   );
 });
 
+/**
+ * ホームの「エントリーする」(NextCompetitionCard / DashboardNoticesSection) と同じ params
+ * (competitionId + date + initialTab="entry") で既存の大会を開く。既存エントリーは 0 件。
+ */
+async function renderExistingCompetitionForEntry() {
+  h.mockUseRoute.mockReturnValue({
+    params: { competitionId: "comp-entry-1", date: FUTURE_DATE, initialTab: "entry" },
+  });
+  h.mockEntryApiGetEntriesByCompetition.mockResolvedValue([]);
+  h.mockRecordApiGetRecords.mockResolvedValue([]);
+  const Wrapper = createQueryWrapper();
+  const utils = render(<CompetitionTabFormScreen />, { wrapper: Wrapper });
+  await utils.findByTestId("entry-item-tabs");
+  return utils;
+}
+
+describe("CompetitionTabFormScreen — 「エントリーする」から開いたときの空保存 (AI テスター指摘)", () => {
+  beforeEach(() => {
+    setupCommonMocks();
+  });
+
+  it("[E-1] 既存エントリー 0 件の大会を「エントリーする」で開き、種目未選択のまま保存 → 種目必須エラーで止まり、何も保存せず戻らない", async () => {
+    const utils = await renderExistingCompetitionForEntry();
+    // 「既存データ初期化」effect が種目未選択の空行 (styleId="") にする ([B-5] と同じ前提)
+    await waitFor(() =>
+      expect(
+        (utils.queryByTestId("entry-style-1-current") as HTMLElement | null)?.textContent,
+      ).toBe(""),
+    );
+
+    fireEvent.click(await utils.findByTestId("competition-tab-form-save"));
+
+    expect(await utils.findByText("種目を選択してください")).toBeDefined();
+    expect(h.mockGoBack).not.toHaveBeenCalled();
+    expect(h.mockEntryApiCreatePersonalEntry).not.toHaveBeenCalled();
+    expect(h.mockEntryApiCreateTeamEntry).not.toHaveBeenCalled();
+  });
+
+  it("[E-4] 種目必須エラーが出たあと種目を選ぶ → エラーがすぐ消え、そのまま保存できる", async () => {
+    const utils = await renderExistingCompetitionForEntry();
+    await waitFor(() =>
+      expect(
+        (utils.queryByTestId("entry-style-1-current") as HTMLElement | null)?.textContent,
+      ).toBe(""),
+    );
+    fireEvent.click(await utils.findByTestId("competition-tab-form-save"));
+    expect(await utils.findByText("種目を選択してください")).toBeDefined();
+
+    fireEvent.click(await utils.findByTestId("entry-style-1-option-2"));
+    await waitFor(() => expect(utils.queryByText("種目を選択してください")).toBeNull());
+
+    fireEvent.click(await utils.findByTestId("competition-tab-form-save"));
+    await waitFor(() => expect(h.mockEntryApiCreatePersonalEntry).toHaveBeenCalledTimes(1));
+  });
+
+  it("[E-2] 「エントリーする」で開き、デフォルトと同じ種目を選んで保存 → 未編集扱いで捨てずにエントリーを作成する (選択済みに見えるのに種目必須エラーで抜けられない状態にしない)", async () => {
+    const utils = await renderExistingCompetitionForEntry();
+
+    // STYLE_A はデフォルト種目 (種目一覧の先頭) と同じ ID。isDefaultUntouchedEntry 単体では
+    // 「未編集」と判定される値だが、エントリー目的で開いたときは保存対象にする
+    fireEvent.click(await utils.findByTestId("entry-style-1-option-1"));
+    fireEvent.click(await utils.findByTestId("competition-tab-form-save"));
+
+    await waitFor(() => expect(h.mockEntryApiCreatePersonalEntry).toHaveBeenCalledTimes(1));
+    expect(h.mockEntryApiCreatePersonalEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ style_id: STYLE_A.id }),
+    );
+    expect(utils.queryByText("種目を選択してください")).toBeNull();
+  });
+
+  it("[E-3] 「エントリーする」で開き、別の種目を選んで保存 → エントリーを作成する (従来どおり)", async () => {
+    const utils = await renderExistingCompetitionForEntry();
+
+    fireEvent.click(await utils.findByTestId("entry-style-1-option-2"));
+    fireEvent.click(await utils.findByTestId("competition-tab-form-save"));
+
+    await waitFor(() => expect(h.mockEntryApiCreatePersonalEntry).toHaveBeenCalledTimes(1));
+    expect(h.mockEntryApiCreatePersonalEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ style_id: STYLE_B.id }),
+    );
+  });
+});
+
 describe("CompetitionTabFormScreen — 種目重複チェック (2-C・指示外の変更の実証)", () => {
   beforeEach(() => {
     setupCommonMocks();

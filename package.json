@@ -145,6 +145,9 @@
         "GHSA-mrhx-c7xc-m3w5",
         "GHSA-fc5q-39xc-vjpf"
       ]
+    },
+    "patchedDependencies": {
+      "@react-navigation/bottom-tabs@7.10.1": "patches/@react-navigation__bottom-tabs@7.10.1.patch"
     }
   },
   "engines": {

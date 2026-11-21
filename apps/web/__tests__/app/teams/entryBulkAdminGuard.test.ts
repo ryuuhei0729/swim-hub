@@ -35,7 +35,9 @@
  * notFound は引き続き "next/navigation" から直接 import されているため変更していない。
  */
 
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { getURLFromRedirectError } from "next/dist/client/components/redirect";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 
@@ -344,10 +346,8 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
       "（人間の意図: 仕様#6『closedでも管理者は入力可（静的バナーのみ）』。" +
       "closedを理由にサーバー側で弾いてしまう過剰実装を検出する）",
     async () => {
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
-        today.getDate(),
-      ).padStart(2, "0")}`;
+      // サーバーの判定と同じく日本時間の「今日」(CI の UTC で日付がずれないように)
+      const todayStr = format(toZonedTime(new Date(), "Asia/Tokyo"), "yyyy-MM-dd");
 
       mockCreateAuthenticatedServerClient.mockResolvedValue(
         buildSupabaseMock({
@@ -388,6 +388,64 @@ describe("EntriesDataLoader — 管理者権限ガード (Phase B)", () => {
       expect(result).toBeTruthy();
     },
   );
+
+  describe("大会日の過去判定は日本時間 (サーバーは UTC)", () => {
+    // UTC 2026-11-19 16:00 = 日本時間 2026-11-20 01:00。UTC の日付ではまだ 11/19 (大会当日) だが、
+    // 日本ではもう翌日なので 11/19 の大会は締め切り。以前は UTC の日付で判定して入れてしまっていた
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-11-19T16:00:00Z"));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const competitionOn = (date: string) =>
+      buildSupabaseMock({
+        team_memberships: { single: { data: { id: "m-1", role: "admin" }, error: null } },
+        competitions: {
+          single: {
+            data: {
+              id: "comp-1",
+              user_id: "user-1",
+              team_id: "team-1",
+              title: "大会",
+              date,
+              end_date: null,
+              place: null,
+              pool_type: 0,
+              entry_status: "open",
+              note: null,
+              created_at: "2020-01-01T00:00:00Z",
+              team: { id: "team-1", name: "チーム" },
+            },
+            error: null,
+          },
+        },
+        entries: { order: { data: [], error: null } },
+        styles: { order: { data: [], error: null } },
+      });
+
+    it("日本時間の深夜 1 時: 前日 (11/19) の大会は redirect される", async () => {
+      mockCreateAuthenticatedServerClient.mockResolvedValue(competitionOn("2026-11-19"));
+      const EntriesDataLoader = await loadEntriesDataLoader();
+      const url = await captureRedirectUrl(() =>
+        EntriesDataLoader({ teamId: "team-1", competitionId: "comp-1", returnOrigin: "admin" }),
+      );
+      expect(url).toBe("/ja/teams-admin/team-1?tab=competitions");
+    });
+
+    it("日本時間の深夜 1 時: 当日 (11/20) の大会は redirect されない", async () => {
+      mockCreateAuthenticatedServerClient.mockResolvedValue(competitionOn("2026-11-20"));
+      const EntriesDataLoader = await loadEntriesDataLoader();
+      const result = await EntriesDataLoader({
+        teamId: "team-1",
+        competitionId: "comp-1",
+        returnOrigin: "admin",
+      });
+      expect(result).toBeTruthy();
+    });
+  });
 
   // V-10（非adminがAPI越しに他人のエントリーを作成→拒否）は
   // server loader (画面ガード) ではなく API 層の責務。

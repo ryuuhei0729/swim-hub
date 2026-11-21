@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { format } from "date-fns";
 import { TeamGroup, TeamGroupInsert, TeamGroupUpdate, TeamGroupMembership } from "../../types";
 import { requireAuth, requireTeamAdmin, requireTeamMembership } from "../auth-utils";
 
@@ -173,7 +174,8 @@ export class TeamGroupsAPI {
         team_group_id: groupId,
         user_id: uid,
         assigned_by: userId,
-        assigned_at: new Date().toISOString().split("T")[0],
+        // ローカル日付 (toISOString は UTC のため日本時間 0〜9 時に前日になる)
+        assigned_at: format(new Date(), "yyyy-MM-dd"),
       }));
       const { error: insError } = await this.supabase
         .from("team_group_memberships")
