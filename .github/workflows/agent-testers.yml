@@ -65,9 +65,13 @@ jobs:
           HOSTS: ${{ inputs.block_hosts }}
         run: |
           test -s results_public.pem || { echo "::error::results_public.pem がありません: tools/agent-testers/setup.sh を実行してコミットしてください"; exit 1; }
-          [[ "$BRIEF" =~ ^[A-Za-z0-9_.-]+\.md$ ]] && [ -f "$BRIEF" ] || { echo "::error::brief は tools/agent-testers/ 内の .md ファイル名で指定してください"; exit 1; }
-          [[ "$MODEL" =~ ^[A-Za-z0-9._\[\]-]+$ ]] || { echo "::error::model が不正です"; exit 1; }
-          [[ "$HOSTS" =~ ^[A-Za-z0-9.\ -]*$ ]] || { echo "::error::block_hosts が不正です"; exit 1; }
+          # 正規表現は変数に入れて渡す ([[ =~ ]] に直接書くとブラケット内のエスケープが効かない)
+          brief_re='^[A-Za-z0-9_.-]+\.md$'
+          model_re='^[][A-Za-z0-9._-]+$'   # 先頭の ] と [ で "claude-opus-5-5[1m]" のような ID も通す
+          hosts_re='^[A-Za-z0-9. -]*$'
+          [[ "$BRIEF" =~ $brief_re ]] && [ -f "$BRIEF" ] || { echo "::error::brief は tools/agent-testers/ 内の .md ファイル名で指定してください"; exit 1; }
+          [[ "$MODEL" =~ $model_re ]] || { echo "::error::model が不正です: $MODEL"; exit 1; }
+          [[ "$HOSTS" =~ $hosts_re ]] || { echo "::error::block_hosts が不正です"; exit 1; }
       - id: m
         env:
           A: ${{ inputs.android_personas }}
@@ -99,8 +103,9 @@ jobs:
       - name: Build APK (development 環境, ログは暗号化)
         working-directory: apps/mobile
         env:
-          DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT }}
-        run: pnpm exec dotenvx run -f .env.development -- bash ../../tools/agent-testers/scripts/build/android.sh
+          # apps/mobile/.env.development は web/ルートとは別の鍵で暗号化されている (apps/mobile/.env.keys)
+          DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE }}
+        run: pnpm exec dotenvx run --strict -f .env.development -- bash ../../tools/agent-testers/scripts/build/android.sh
       - name: Encrypt APK
         working-directory: tools/agent-testers
         env:
@@ -142,8 +147,9 @@ jobs:
       - name: Build Simulator .app (development 環境, ログは暗号化)
         working-directory: apps/mobile
         env:
-          DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT }}
-        run: pnpm exec dotenvx run -f .env.development -- bash ../../tools/agent-testers/scripts/build/ios.sh
+          # apps/mobile/.env.development は web/ルートとは別の鍵で暗号化されている (apps/mobile/.env.keys)
+          DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT_MOBILE }}
+        run: pnpm exec dotenvx run --strict -f .env.development -- bash ../../tools/agent-testers/scripts/build/ios.sh
       - name: Encrypt .app
         working-directory: tools/agent-testers
         env:
@@ -202,15 +208,22 @@ jobs:
 
       # エミュレーターは DNS をホスト経由で引く (-dns-server 127.0.0.1):
       # dnsmasq がブロック対象に 0.0.0.0 を返し、iptables が実 IP への通信を落とす。
+      # block_hosts が空なら公開 DNS を直接使う。指定しないとエミュレーターはホストの /etc/resolv.conf
+      # (Ubuntu ランナーでは 127.0.0.53 の systemd-resolved) を使おうとして名前解決できない
       - name: Block hosts
+        id: block
         env:
           HOSTS: ${{ inputs.block_hosts }}
         run: |
+          if [ -z "${HOSTS// /}" ]; then echo "emu_dns=-dns-server 8.8.8.8,1.1.1.1" >> "$GITHUB_OUTPUT"; echo "No hosts to block"; exit 0; fi
           sudo apt-get install -y -qq dnsmasq dnsutils >/dev/null 2>&1 || { sudo apt-get update -qq && sudo apt-get install -y -qq dnsmasq dnsutils >/dev/null; }
           { printf 'listen-address=127.0.0.1\nbind-interfaces\nno-resolv\nserver=8.8.8.8\nserver=1.1.1.1\n'
             for h in $HOSTS; do printf 'address=/%s/0.0.0.0\naddress=/%s/::\n' "$h" "$h"; done; } | sudo tee /etc/dnsmasq.d/block.conf >/dev/null
           sudo systemctl restart dnsmasq
+          # dnsmasq が実際に名前解決できることを確かめてからエミュレーターに使わせる
+          dig +short +time=3 +tries=2 A www.google.com @127.0.0.1 | grep -qE '^[0-9.]+$' || { echo "::error::dnsmasq on 127.0.0.1 does not resolve"; sudo systemctl status dnsmasq --no-pager || true; exit 1; }
           for h in $HOSTS; do for ip in $(dig +short A "$h" @8.8.8.8 | grep -E '^[0-9.]+$'); do sudo iptables -I OUTPUT -d "$ip" -j REJECT; done; done
+          echo "emu_dns=-dns-server 127.0.0.1" >> "$GITHUB_OUTPUT"
 
       - name: Device profile (fallback to pixel_6)
         id: profile
@@ -251,7 +264,7 @@ jobs:
           profile: ${{ steps.profile.outputs.profile }}
           ram-size: 4096M
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -dns-server 127.0.0.1
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim ${{ steps.block.outputs.emu_dns }}
           script: bash scripts/android/run_agent.sh
 
       - name: Encrypt results
