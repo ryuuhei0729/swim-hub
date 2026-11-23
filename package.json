@@ -138,10 +138,7 @@
       "ignoreGhsas": [
         "GHSA-w3rx-r6r6-pgpr",
         "GHSA-5p2g-fcmc-qvqq",
-        "GHSA-vfj7-8cjw-p6xm",
         "GHSA-86w9-cpqp-85rv",
-        "GHSA-hp3w-g68c-fv3c",
-        "GHSA-vcc3-ghjq-m6fr",
         "GHSA-mrhx-c7xc-m3w5",
         "GHSA-fc5q-39xc-vjpf"
       ]
