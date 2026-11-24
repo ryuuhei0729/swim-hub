@@ -1,7 +1,6 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { createAuthenticatedServerClient, getServerUser } from "@/lib/supabase-server-auth";
 import { GoalAPI } from "@apps/shared/api/goals";
-import { goalKeys } from "@apps/shared/hooks/queries/goals";
 import { createQueryClient } from "@apps/shared/lib/react-query";
 import { runMilestoneJudgment } from "@/utils/milestoneJudgment";
 import { getStyles } from "@/lib/data-loaders/common";
@@ -13,7 +12,13 @@ import GoalsClient from "../_client/GoalsClient";
  * (goalKeys.list()) と同一でなければならない (SSR/CSR でキーがずれると
  * ハイドレートしたデータが使われず二重取得になる)。テストで一致を検証するため export している。
  */
-export const GOALS_LIST_QUERY_KEY = goalKeys.list();
+//
+// ⚠️ goalKeys を @apps/shared/hooks/queries/goals から import してはいけない。そのファイルは
+// "use client" なので、Server Component から読むと中身がクライアント参照に置き換わり、
+// goalKeys.list() が「関数ではない」として next build が失敗する (テストでは再現しない)。
+// 共有パッケージは mobile も使うので動かさず、ここでは値を直接書く。
+// goalKeys.list() と一致することは GoalDataLoader.hydration.test.tsx で検証している。
+export const GOALS_LIST_QUERY_KEY = ["goals", "list", undefined] as const;
 
 /**
  * 目標管理ページのデータを並行取得するServer Component
