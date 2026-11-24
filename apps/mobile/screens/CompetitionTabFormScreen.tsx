@@ -16,6 +16,7 @@ import { useRoute, useNavigation, usePreventRemove, RouteProp } from "@react-nav
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { format, parseISO, isValid, isBefore } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/providers/ToastProvider";
@@ -1357,7 +1358,7 @@ export const CompetitionTabFormScreen: React.FC = () => {
       }
 
       // クエリ無効化
-      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      void invalidateCalendarAfterSave(queryClient, { competitionId: savedCompetitionId });
       if (competitionTeamId) {
         queryClient.invalidateQueries({ queryKey: teamKeys.competitions(competitionTeamId) });
       }

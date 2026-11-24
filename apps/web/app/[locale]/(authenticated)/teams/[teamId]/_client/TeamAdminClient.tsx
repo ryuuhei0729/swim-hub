@@ -57,7 +57,8 @@ const TeamGroupManagement = dynamic(
 import type { MemberDetail } from "@/components/team/MemberDetailModal";
 import { TeamMembership, TeamWithMembers } from "@swim-hub/shared/types";
 import { useTeamAdminStore } from "@/stores/form/teamAdminStore";
-import { TeamMembersAPI } from "@apps/shared/api/teams/members";
+import { usePendingMemberCountQuery } from "@/hooks/queries/teamMemberQueries";
+import { useTeamTabPrefetch } from "@/hooks/queries/useTeamTabPrefetch";
 
 interface TeamAdminClientProps {
   teamId: string;
@@ -81,7 +82,6 @@ export default function TeamAdminClient({
   const router = useRouter();
   const t = useTranslations("teamsAdmin");
   const { user, supabase } = useAuth();
-  const [pendingCount, setPendingCount] = useState(0);
   // メンバー詳細モーダルでの権限・泳者区分の変更を、開いたまま裏側の一覧
   // (TeamMemberManagement) にもバックグラウンドで反映するためのシグナル。
   // undefined のままなら一覧側は再取得しない
@@ -157,24 +157,18 @@ export default function TeamAdminClient({
     }
   }, [searchParams, initialTab, appliedTabParam, setAppliedTabParam, setActiveTab]);
 
-  // 承認待ち数を取得
+  // 承認待ち数 (タブのバッジ)。管理者ビューを開くたびに再取得し、再取得中は前回の件数を出す。
+  // 承認・却下では invalidateTeamMemberQueries が teamKeys.pendingMembers ごと落とす
+  const isAdminMembership = !!displayTeam && displayMembership?.role === "admin";
+  // 開いているタブの読み込みが終わったら、既定タブと隣のタブのデータを先読みする
+  useTeamTabPrefetch(teamId, activeTab, "admin", isAdminMembership);
+
+  const pendingCountQuery = usePendingMemberCountQuery(supabase, teamId, isAdminMembership);
+  const pendingCount = pendingCountQuery.data ?? 0;
+  const pendingCountError = pendingCountQuery.error;
   useEffect(() => {
-    const loadPendingCount = async () => {
-      if (displayMembership?.role !== "admin") return;
-
-      try {
-        const api = new TeamMembersAPI(supabase);
-        const count = await api.countPending(teamId);
-        setPendingCount(count);
-      } catch (err) {
-        console.error("承認待ち数の取得に失敗:", err);
-      }
-    };
-
-    if (displayTeam && displayMembership?.role === "admin") {
-      loadPendingCount();
-    }
-  }, [teamId, displayTeam, displayMembership, supabase]);
+    if (pendingCountError) console.error("承認待ち数の取得に失敗:", pendingCountError);
+  }, [pendingCountError]);
 
   if (loading && !displayTeam) {
     return (

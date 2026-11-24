@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 import { EmailSignInForm } from "@/components/auth";
 import { useAuth } from "@/contexts";
-import { useRouter } from "@/i18n/navigation";
+import { useFullPageRouter } from "@/i18n/fullPageNavigation";
 import { FullScreenLoading } from "@/components/ui/LoadingSpinner";
 import { resolveSafeLocalRedirect } from "@/utils/localeRedirect";
 
@@ -26,7 +26,8 @@ export default function LoginEmailPage() {
 function LoginEmailContent() {
   const { user, session, loading } = useAuth();
   const isAuthenticated = !!user && !!session;
-  const router = useRouter();
+  // ログイン後はページを読み直す (前のユーザーの画面のキャッシュを使い回さない)
+  const router = useFullPageRouter();
   const searchParams = useSearchParams();
   const hasRedirectedRef = useRef(false);
   const tSignin = useTranslations("auth.signin");

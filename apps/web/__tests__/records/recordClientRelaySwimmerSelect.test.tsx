@@ -25,7 +25,7 @@
  *             (withCurrentSelection() の union パターンで解消)
  */
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { renderWithQueryClient as render, screen } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Style } from "@apps/shared/types";
 import {

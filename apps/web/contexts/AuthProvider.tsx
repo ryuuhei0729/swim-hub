@@ -390,12 +390,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     let isMounted = true;
+    // このタブで最後にログインしていたユーザー。ログアウトしても覚えておき、
+    // 次にログインしたのが別のユーザーかどうかの判定に使う
+    let lastSignedInUserId: string | null = null;
 
     // 認証状態の変更を監視
     const {
       data: { subscription: authSubscription },
     } = supabaseClient.auth.onAuthStateChange(async (event: string, session: Session | null) => {
       if (!isMounted) return;
+
+      const nextUserId = session?.user?.id ?? null;
+      const isDifferentUser =
+        nextUserId !== null && lastSignedInUserId !== null && nextUserId !== lastSignedInUserId;
+      if (nextUserId !== null) lastSignedInUserId = nextUserId;
 
       // loading: false — subscription を待たずに即座に認証状態を確定
       setCoreState({
@@ -414,7 +422,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const isAuthPage = authPages.some((page) => currentPath.startsWith(page));
 
         if (!isAuthPage) {
-          router.refresh();
+          if (event === "SIGNED_IN" && isDifferentUser) {
+            // 別のタブでログアウトして別のユーザーでログインした場合など。ページ遷移の
+            // キャッシュ (next.config.mjs の staleTimes) に前のユーザーの画面が残っているので、
+            // 今の画面だけを描画し直す router.refresh() では足りない。ページごと読み直す
+            window.location.reload();
+          } else {
+            router.refresh();
+          }
         }
       }
     });

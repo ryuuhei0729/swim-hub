@@ -35,6 +35,11 @@ import MemberSelectModal, { type MemberSelectOption } from "@/components/team/Me
 import EntryBulkConfirmModal, {
   type EntryBulkConfirmRow,
 } from "@/components/team/entry/EntryBulkConfirmModal";
+import { useOptionalQueryClient } from "@/hooks/queries/useOptionalQueryClient";
+import {
+  resetTeamQueriesAfterExternalSave,
+  teamDetailKeys,
+} from "@/hooks/queries/teamDetailKeys";
 
 export interface ExistingEntryDisplay {
   id: string;
@@ -106,6 +111,8 @@ export default function EntriesClient({
   // 再利用する (同義キーを増やさない)
   const tRecordLog = useTranslations("forms.recordLog");
   const { supabase } = useAuth();
+  // チーム画面のキャッシュを落とすため。Provider が無い環境 (既存テスト) では null
+  const queryClient = useOptionalQueryClient();
 
   const [rows, setRows] = useState<EntryDraftRow[]>(() => buildInitialRows(existingEntries));
   const [showMemberSelectModal, setShowMemberSelectModal] = useState(false);
@@ -479,6 +486,14 @@ export default function EntriesClient({
       }
 
       setShowConfirmModal(false);
+      // 戻った直後にチーム画面のキャッシュ (カードのエントリー数・エントリー一覧モーダル) から
+      // 保存前の内容が一瞬表示されないよう捨てる
+      if (queryClient) {
+        void resetTeamQueriesAfterExternalSave(queryClient, [
+          teamDetailKeys.competitionPages(teamId),
+          teamDetailKeys.competitionEntriesAll(teamId, competitionId),
+        ]);
+      }
       // 戻り先は往路 (returnOrigin) に従う。enum → ハードコードパス定数のマップ経由で
       // 解決するため、クエリの値そのものがパス文字列に埋め込まれることはない (R11)
       router.push(getEntryReturnPath(returnOrigin, teamId));

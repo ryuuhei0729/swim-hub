@@ -63,6 +63,12 @@ const mocks = vi.hoisted(() => ({
   signInWithOAuth: vi.fn(),
 }));
 
+// ログイン・ログアウト直後の遷移はページ全体を読み直す useFullPageRouter を使う
+// (前のユーザーの画面のキャッシュを使い回さないため)。渡すパスの検証は従来どおり同じモックで行う。
+vi.mock("@/i18n/fullPageNavigation", () => ({
+  useFullPageRouter: () => ({ push: mocks.push, replace: mocks.push }),
+}));
+
 vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: mocks.push }),
   Link: ({

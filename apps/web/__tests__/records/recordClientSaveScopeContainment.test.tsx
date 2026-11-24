@@ -11,7 +11,7 @@
 //         (=大会内の他 team / 他 competition の records には一切触れない)。
 
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, waitFor, fireEvent } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Style } from "@apps/shared/types";
 import {

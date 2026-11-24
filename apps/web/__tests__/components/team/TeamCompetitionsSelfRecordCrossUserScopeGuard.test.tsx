@@ -35,7 +35,7 @@
  */
 
 import React from "react";
-import { renderWithI18n as render, screen } from "../../utils/render";
+import { renderWithI18n as render, screen } from "@/__tests__/helpers/teamQueryTestUtils";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildSupabaseCompetitionsMock } from "../../utils/supabaseCompetitionsMock";

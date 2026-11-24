@@ -22,7 +22,8 @@
  * 通すことができたため、実コンポーネントの実描画で検証する。
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithQueryClient } from "@/__tests__/helpers/dashboardQueryTestUtils";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import messages from "@apps/shared/messages/ja.json";
@@ -93,7 +94,7 @@ vi.mock("@/contexts", () => ({
 const renderWithIntl = (props: Partial<CompetitionDetailsProps>, recordRows: unknown[]) => {
   fakeSupabase = createFakeSupabase(recordRows);
 
-  return render(
+  return renderWithQueryClient(
     <NextIntlClientProvider locale="ja" messages={messages as unknown as AbstractIntlMessages}>
       <CompetitionDetails
         competitionId="comp-1"

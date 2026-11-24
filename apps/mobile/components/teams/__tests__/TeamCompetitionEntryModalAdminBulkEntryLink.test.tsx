@@ -19,7 +19,8 @@
 
 import React from "react";
 import { describe, it, vi, beforeEach, expect } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 
 const mocks = vi.hoisted(() => ({
   getEntriesByCompetition: vi.fn(),

@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { TEAM_VIEW_QUERY_OPTIONS, teamDetailKeys } from "@/hooks/queries/teamDetailKeys";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { PlusIcon } from "@heroicons/react/24/outline";
@@ -33,6 +35,8 @@ interface TeamMemberForSelection {
   };
 }
 
+const EMPTY_SELECTABLE_MEMBERS: TeamMemberForSelection[] = [];
+
 export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps) {
   const t = useTranslations("teamsAdmin");
   const { supabase, user } = useAuth();
@@ -56,9 +60,6 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
     clearError,
   } = useGroupActions(teamId, supabase, loadGroups);
 
-  // チームメンバー一覧（メンバー割り当て用）
-  const [teamMembers, setTeamMembers] = useState<TeamMemberForSelection[]>([]);
-
   // モーダル状態
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingGroup, setEditingGroup] = useState<TeamGroupWithCount | null>(null);
@@ -79,14 +80,10 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
   // 一括振り分けモーダル
   const [bulkAssignCategory, setBulkAssignCategory] = useState<string | null>(null);
 
-  // 初期読み込み
-  useEffect(() => {
-    loadGroups();
-  }, [loadGroups]);
-
-  // チームメンバー一覧を取得
-  useEffect(() => {
-    const loadTeamMembers = async () => {
+  // チームメンバー一覧（メンバー割り当て用の選択肢）。取得に失敗したら以前と同じく空のまま
+  const selectableMembersQuery = useQuery({
+    queryKey: teamDetailKeys.selectableMembers(teamId),
+    queryFn: async () => {
       const { data, error: fetchError } = await supabase
         .from("team_memberships")
         .select(
@@ -104,15 +101,13 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         .eq("team_id", teamId)
         .eq("status", "approved")
         .eq("is_active", true);
-      if (!fetchError && data) {
-        // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
-        setTeamMembers(
-          (data as unknown as TeamMemberForSelection[]).sort(compareMembersByBirthday),
-        );
-      }
-    };
-    loadTeamMembers();
-  }, [teamId, supabase]);
+      if (fetchError) throw fetchError;
+      // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+      return ((data ?? []) as unknown as TeamMemberForSelection[]).sort(compareMembersByBirthday);
+    },
+    ...TEAM_VIEW_QUERY_OPTIONS,
+  });
+  const teamMembers = selectableMembersQuery.data ?? EMPTY_SELECTABLE_MEMBERS;
 
   // グループ作成/編集ハンドラ
   const handleFormSubmit = useCallback(
@@ -328,7 +323,7 @@ export default function TeamGroupManagement({ teamId }: TeamGroupManagementProps
         isCurrentUserAdmin={true}
         onMembershipChange={() => {
           // グループ一覧 (人数カウント等) を更新
-          loadGroups();
+          void loadGroups();
           // GroupMemberListModal の一覧をバックグラウンドで最新化する。
           // モーダル自体の表示は displayMember (MemberDetailModal 内) が
           // 即時反映するので、この再取得の完了を待つ必要はない

@@ -32,7 +32,7 @@
  */
 
 import React from "react";
-import { render, screen, act, waitFor } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, act, waitFor } from "@/__tests__/helpers/teamQueryTestUtils";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { describe, it, expect, vi, beforeEach } from "vitest";

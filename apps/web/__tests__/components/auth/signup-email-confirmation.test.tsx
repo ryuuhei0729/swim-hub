@@ -147,6 +147,12 @@ vi.mock("next-intl", () => ({
 
 // @/i18n/navigation mock
 const mockRouterPush = vi.fn();
+// ログイン・ログアウト直後の遷移はページ全体を読み直す useFullPageRouter を使う
+// (前のユーザーの画面のキャッシュを使い回さないため)。渡すパスの検証は従来どおり同じモックで行う。
+vi.mock("@/i18n/fullPageNavigation", () => ({
+  useFullPageRouter: vi.fn(() => ({ push: mockRouterPush, replace: vi.fn() })),
+}));
+
 vi.mock("@/i18n/navigation", () => ({
   useRouter: vi.fn(() => ({
     push: mockRouterPush,

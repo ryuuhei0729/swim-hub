@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React from "react";
 import { useTranslations } from "next-intl";
 import { XMarkIcon, ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/contexts";
-import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
+import { useDayDetailAttendanceQuery } from "@/hooks/queries/dayDetailQueries";
 import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
 import Link from "next/link";
 import type { TeamAttendanceWithDetails } from "@apps/shared/types";
 import type { AttendanceModalProps } from "../../types";
+
+const EMPTY_ATTENDANCES: TeamAttendanceWithDetails[] = [];
 
 export function AttendanceModal({
   isOpen,
@@ -19,33 +21,25 @@ export function AttendanceModal({
 }: AttendanceModalProps) {
   const { supabase } = useAuth();
   const t = useTranslations("dashboard");
-  const [attendances, setAttendances] = useState<TeamAttendanceWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const attendanceAPI = useMemo(() => new AttendanceAPI(supabase), [supabase]);
-
-  const loadAttendances = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data =
-        eventType === "practice"
-          ? await attendanceAPI.getAttendanceByPractice(eventId)
-          : await attendanceAPI.getAttendanceByCompetition(eventId);
-      setAttendances(data);
-    } catch (err) {
-      console.error("出欠情報の取得に失敗:", err);
-      setError(toUserFacingMessage(err, t("attendance.fetchFailed")));
-    } finally {
-      setLoading(false);
-    }
-  }, [eventType, eventId, attendanceAPI, t]);
-
-  useEffect(() => {
-    if (isOpen) {
-      loadAttendances();
-    }
-  }, [isOpen, eventId, eventType, loadAttendances]);
+  // 出欠 (開くたびに取り直す。同じ予定を開き直したときは前回の内容を先に表示する)
+  const {
+    data,
+    error: queryError,
+    isFetching,
+    refetch,
+  } = useDayDetailAttendanceQuery(supabase, {
+    eventType,
+    eventId,
+    enabled: isOpen,
+  });
+  const attendances = data ?? EMPTY_ATTENDANCES;
+  // データが無いときだけ読み込み中・エラーを表示する (裏での取り直し中・その失敗では隠さない)
+  // 再試行中は (エラーではなく) 読み込み中を表示する
+  const loading = !data && (!queryError || isFetching);
+  const error =
+    !data && !isFetching && queryError
+      ? toUserFacingMessage(queryError, t("attendance.fetchFailed"))
+      : null;
 
   if (!isOpen) return null;
 
@@ -91,7 +85,7 @@ export function AttendanceModal({
                 <p className="text-red-600 mb-4">{error}</p>
                 <button
                   type="button"
-                  onClick={loadAttendances}
+                  onClick={() => void refetch()}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   再試行

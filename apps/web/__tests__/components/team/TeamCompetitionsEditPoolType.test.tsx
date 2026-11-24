@@ -11,7 +11,7 @@
  */
 
 import React from "react";
-import { renderWithI18n as render, screen } from "../../utils/render";
+import { renderWithI18n as render, screen } from "@/__tests__/helpers/teamQueryTestUtils";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -111,7 +111,8 @@ describe("TeamCompetitions — handleEditCompetition の pool_type/end_date 伝�
     render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
     await screen.findByText("県大会(長水路)");
-    await user.click(screen.getByTestId("team-competition-edit-button"));
+    // 一覧は React Query 経由で非同期に描画されるので、編集ボタンの出現を待つ
+    await user.click(await screen.findByTestId("team-competition-edit-button"));
 
     expect(await screen.findByTestId("competition-basic-form-stub")).toBeInTheDocument();
     expect(screen.getByTestId("basic-form-pool-type")).toHaveTextContent("1");
@@ -122,7 +123,8 @@ describe("TeamCompetitions — handleEditCompetition の pool_type/end_date 伝�
     render(<TeamCompetitions teamId="team-1" isAdmin={true} />);
 
     await screen.findByText("県大会(長水路)");
-    await user.click(screen.getByTestId("team-competition-edit-button"));
+    // 一覧は React Query 経由で非同期に描画されるので、編集ボタンの出現を待つ
+    await user.click(await screen.findByTestId("team-competition-edit-button"));
 
     expect(await screen.findByTestId("competition-basic-form-stub")).toBeInTheDocument();
     expect(screen.getByTestId("basic-form-end-date")).toHaveTextContent("2026-08-03");

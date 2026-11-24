@@ -38,14 +38,17 @@ export default async function AuthenticatedGroupLayout({
   const normalizedPath = stripLocale(currentPath);
   const isOnboardingPath = normalizedPath.startsWith("/onboarding");
 
-  if (!isOnboardingPath) {
-    const profile = await getServerUserProfile(user.id);
-    if (!profile || !profile.onboarding_completed) {
-      redirect(`/${locale}/onboarding`);
-    }
-  }
+  // プロフィール (オンボーディング判定用) とサブスクリプションは互いに依存しないので、
+  // 順番に待たずに同時に取得する。オンボーディング未完了でリダイレクトする場合は
+  // サブスクリプションの取得が無駄になるが、それは初回の一度だけ。
+  const [profile, subscription] = await Promise.all([
+    isOnboardingPath ? Promise.resolve(null) : getServerUserProfile(user.id),
+    getServerSubscription(user.id),
+  ]);
 
-  const subscription = await getServerSubscription(user.id);
+  if (!isOnboardingPath && (!profile || !profile.onboarding_completed)) {
+    redirect(`/${locale}/onboarding`);
+  }
 
   return (
     <SubscriptionHydrator userId={user.id} subscription={subscription}>

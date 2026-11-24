@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCalendarAfterSave } from "@/hooks/dayDetailQueries";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -44,7 +45,7 @@ export const TeamBulkRegisterScreen: React.FC = () => {
     // 一括登録後にチームの練習・大会一覧を再取得
     queryClient.invalidateQueries({ queryKey: teamKeys.practices(teamId) });
     queryClient.invalidateQueries({ queryKey: teamKeys.competitions(teamId) });
-    queryClient.invalidateQueries({ queryKey: ["calendar"] });
+    void invalidateCalendarAfterSave(queryClient);
   };
 
   if (isLoading) {

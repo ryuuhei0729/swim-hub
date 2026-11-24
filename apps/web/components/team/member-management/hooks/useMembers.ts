@@ -25,6 +25,44 @@ export interface TeamMember {
 }
 
 /**
+ * 承認済み・在籍中のメンバーを年上順で取得する。
+ * useMembers と React Query のメンバー一覧クエリ (teamMemberQueries) の共通の取得処理。
+ */
+export async function fetchApprovedTeamMembers(
+  supabase: SupabaseClient,
+  teamId: string,
+): Promise<TeamMember[]> {
+  const { data, error: fetchError } = await supabase
+    .from("team_memberships")
+    .select(
+      `
+    id,
+    user_id,
+    role,
+    is_active,
+    status,
+    joined_at,
+    is_swimmer,
+    users!team_memberships_user_id_fkey (
+      id,
+      name,
+      gender,
+      birthday,
+      bio,
+      profile_image_path
+    )
+  `,
+    )
+    .eq("team_id", teamId)
+    .eq("status", "approved")
+    .eq("is_active", true);
+
+  if (fetchError) throw fetchError;
+  // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
+  return ((data ?? []) as unknown as TeamMember[]).sort(compareMembersByBirthday);
+}
+
+/**
  * 承認済みメンバーを管理するカスタムフック
  */
 export const useMembers = (teamId: string, supabase: SupabaseClient) => {
@@ -43,34 +81,7 @@ export const useMembers = (teamId: string, supabase: SupabaseClient) => {
         if (!silent) setLoading(true);
         setError(null);
 
-        const { data, error: fetchError } = await supabase
-          .from("team_memberships")
-          .select(
-            `
-          id,
-          user_id,
-          role,
-          is_active,
-          status,
-          joined_at,
-          is_swimmer,
-          users!team_memberships_user_id_fkey (
-            id,
-            name,
-            gender,
-            birthday,
-            bio,
-            profile_image_path
-          )
-        `,
-          )
-          .eq("team_id", teamId)
-          .eq("status", "approved")
-          .eq("is_active", true);
-
-        if (fetchError) throw fetchError;
-        // 年上順（生年月日昇順、未設定は末尾）。memberSort.ts が唯一の比較ロジック定義元
-        setMembers(((data ?? []) as unknown as TeamMember[]).sort(compareMembersByBirthday));
+        setMembers(await fetchApprovedTeamMembers(supabase, teamId));
       } catch (err) {
         console.error("メンバー情報の取得に失敗:", err);
         setError(t("membersHook.loadError"));

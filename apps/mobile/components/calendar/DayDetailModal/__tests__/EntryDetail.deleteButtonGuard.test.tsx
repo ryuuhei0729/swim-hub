@@ -28,7 +28,8 @@
  *             (同じセレクタが機能することの証明、V-M-E01 の偽陽性防止)
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { CalendarItem } from "@apps/shared/types/ui";
 
@@ -64,7 +65,7 @@ function renderEntryDetail(
         Promise.resolve({ data: [], error: null }).then(resolve),
     })),
   };
-  vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase }));
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: { id: "user-1" }, supabase }));
 
   return render(
     <EntryDetail

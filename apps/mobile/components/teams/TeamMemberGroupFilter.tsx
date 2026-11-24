@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useQuery } from "@tanstack/react-query";
+import { ALWAYS_REVALIDATE } from "@/hooks/cachedQuery";
+import { teamDetailKeys } from "@/hooks/teamDetailQueries";
 import { TeamGroupsAPI } from "@apps/shared/api/teams/groups";
 import type {
   TeamGroup,
@@ -18,6 +21,14 @@ interface MemberGroupSorterProps {
     groupHeaders: Map<number, string>,
   ) => void;
 }
+
+interface GroupFilterData {
+  groups: TeamGroup[];
+  memberships: TeamGroupMembership[];
+}
+
+const NO_GROUPS: TeamGroup[] = [];
+const NO_MEMBERSHIPS: TeamGroupMembership[] = [];
 
 // 性別カテゴリの内部識別子。表示は t("teams.mobile.genderCategoryLabel") 経由。
 // 末尾アンダースコアでユーザー定義カテゴリ名との衝突を避ける。
@@ -36,31 +47,30 @@ export const TeamMemberGroupFilter: React.FC<MemberGroupSorterProps> = ({
   onGroupedMembersChange,
 }) => {
   const { t } = useTranslation();
-  const [groups, setGroups] = useState<TeamGroup[]>([]);
-  const [memberships, setMemberships] = useState<TeamGroupMembership[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(GENDER_CATEGORY);
-  const [_loading, setLoading] = useState(true);
 
   // グループとメンバーシップを取得
-  useEffect(() => {
-    const load = async () => {
+  // メンバータブ・メンバー選択モーダルなど複数の場所で同じデータを使うので、キャッシュを
+  // 共有する。開き直したときは前回の並びをすぐ出し、裏で取り直す。
+  const { data: groupFilterData } = useQuery({
+    queryKey: teamDetailKeys.groupFilter(teamId),
+    queryFn: async (): Promise<GroupFilterData> => {
       try {
-        setLoading(true);
         const api = new TeamGroupsAPI(supabase);
-        const [groupsData, membershipsData] = await Promise.all([
+        const [groups, memberships] = await Promise.all([
           api.list(teamId),
           api.listAllMemberships(teamId),
         ]);
-        setGroups(groupsData);
-        setMemberships(membershipsData);
+        return { groups, memberships };
       } catch (err) {
         console.error("グループ情報の取得に失敗:", err);
-      } finally {
-        setLoading(false);
+        throw err;
       }
-    };
-    load();
-  }, [teamId, supabase]);
+    },
+    staleTime: ALWAYS_REVALIDATE,
+  });
+  const groups = groupFilterData?.groups ?? NO_GROUPS;
+  const memberships = groupFilterData?.memberships ?? NO_MEMBERSHIPS;
 
   // カテゴリ別グループ
   const groupsByCategory = useMemo(() => {

@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { TeamMembersAPI } from "@apps/shared/api/teams/members";
 import { toUserFacingMessage } from "@apps/shared/utils/userFacingError";
 import type { MemberDetail } from "@/types/member-detail";
+import { useOptionalQueryClient } from "@/hooks/queries/useOptionalQueryClient";
+import { invalidateTeamMemberQueries } from "@/hooks/queries/teamDetailKeys";
 
 export function useMemberDetail(
   supabase: SupabaseClient,
@@ -18,6 +20,13 @@ export function useMemberDetail(
   const [error, setError] = useState<string | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
   const membersApi = useMemo(() => new TeamMembersAPI(supabase), [supabase]);
+  const queryClient = useOptionalQueryClient();
+
+  // 権限・泳者区分・在籍の変更で中身が変わるメンバー系クエリ (一覧・承認待ち・グループ) を落とす。
+  // ベストタイム表は重いので落とさない (追放ならメンバー構成が変わりキー自体が変わる)
+  const invalidateMembers = useCallback(() => {
+    if (queryClient) void invalidateTeamMemberQueries(queryClient, teamId);
+  }, [queryClient, teamId]);
 
   const handleRoleChange = useCallback(
     async (member: MemberDetail, newRole: "admin" | "user") => {
@@ -30,6 +39,7 @@ export function useMemberDetail(
 
         await membersApi.updateRole(teamId, member.user_id, newRole);
 
+        invalidateMembers();
         onMembershipChange?.();
       } catch (err) {
         console.error("権限変更エラー:", err);
@@ -37,7 +47,7 @@ export function useMemberDetail(
         throw err;
       }
     },
-    [membersApi, teamId, onMembershipChange, t],
+    [membersApi, teamId, onMembershipChange, invalidateMembers, t],
   );
 
   const handleSwimmerStatusChange = useCallback(
@@ -47,6 +57,7 @@ export function useMemberDetail(
 
         await membersApi.updateSwimmerStatus(teamId, member.user_id, isSwimmer);
 
+        invalidateMembers();
         onMembershipChange?.();
       } catch (err) {
         console.error("非泳者設定エラー:", err);
@@ -54,7 +65,7 @@ export function useMemberDetail(
         throw err;
       }
     },
-    [membersApi, teamId, onMembershipChange, tNonSwimmer],
+    [membersApi, teamId, onMembershipChange, invalidateMembers, tNonSwimmer],
   );
 
   const handleRemoveMember = useCallback(
@@ -77,6 +88,7 @@ export function useMemberDetail(
         // shared API 経由で is_active=false + left_at を記録する（updateRole と同経路）
         await membersApi.remove(teamId, member.user_id);
 
+        invalidateMembers();
         onMembershipChange?.();
         return true;
       } catch (err) {
@@ -87,7 +99,7 @@ export function useMemberDetail(
         setIsRemoving(false);
       }
     },
-    [membersApi, teamId, currentUserId, onMembershipChange, t],
+    [membersApi, teamId, currentUserId, onMembershipChange, invalidateMembers, t],
   );
 
   return {

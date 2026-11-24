@@ -27,7 +27,8 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 
 const mocks = vi.hoisted(() => ({
   getAttendanceByPractice: vi.fn(),
@@ -194,6 +195,35 @@ describe("AttendanceGroupModal", () => {
       expect(onClose).not.toHaveBeenCalled();
     },
   );
+
+  it("閉じて開き直すと、前回の出欠を読み込み表示なしですぐ出し、裏で取り直した内容に差し替える", async () => {
+    mocks.fetchTeamMembers.mockResolvedValue([{ id: "u1", name: "田中" }]);
+    mocks.getAttendanceByPractice.mockResolvedValueOnce([makeAttendance("u1", "present", "田中")]);
+
+    const { rerender } = render(<AttendanceGroupModal {...defaultProps} />);
+    expect(await screen.findByText("出席 (1名)")).toBeTruthy();
+
+    rerender(<AttendanceGroupModal {...defaultProps} visible={false} />);
+
+    // 開き直したあとの取り直しは返ってこないままにする (通信が遅い状況)
+    let resolveRefetch: (rows: unknown[]) => void = () => {};
+    mocks.getAttendanceByPractice.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRefetch = resolve;
+      }),
+    );
+    rerender(<AttendanceGroupModal {...defaultProps} visible />);
+
+    // 取り直しは走っているが、待たずに前回の内容が出ている
+    await waitFor(() => expect(mocks.getAttendanceByPractice).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("出席 (1名)")).toBeTruthy();
+    expect(screen.queryByText("読み込み中...")).toBeNull();
+
+    // 取り直しが届いたら新しい内容に差し替わる
+    resolveRefetch([makeAttendance("u1", "absent", "田中")]);
+    expect(await screen.findByText("欠席 (1名)")).toBeTruthy();
+    expect(screen.getByText("出席 (0名)")).toBeTruthy();
+  });
 
   it("[V-T6-03] 非表示インスタンスは名簿取得を遅延し、開いたインスタンスのみ1回だけ取得する(visibleガードの仕様固定)", async () => {
     // T-6 の本番形状: 同じ日に複数のチームイベントカードがあり、カードごとに

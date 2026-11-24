@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   XMarkIcon,
   TagIcon,
@@ -12,6 +13,8 @@ import { formatTime, formatTimeAverage } from "@/utils/formatters";
 import type { PracticeTag } from "@apps/shared/types";
 import { toStyleCode } from "@apps/shared/utils/swimStyles";
 import { useTranslations } from "next-intl";
+import { TEAM_VIEW_QUERY_OPTIONS, teamDetailKeys } from "@/hooks/queries/teamDetailKeys";
+import { fetchTeamPracticeDetail } from "@/hooks/queries/teamPracticeQueries";
 
 const getTextColor = (backgroundColor: string) => {
   const hex = backgroundColor.replace("#", "");
@@ -316,9 +319,6 @@ export default function TeamPracticeDetailModal({
 }: TeamPracticeDetailModalProps) {
   const { supabase } = useAuth();
   const t = useTranslations("teams.practiceDetailModal");
-  const [practice, setPractice] = useState<PracticeDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const swimStyles = useMemo(
     () => ({
@@ -339,71 +339,22 @@ export default function TeamPracticeDetailModal({
     return (code && (swimStyles as Record<string, string>)[code]) || styleValue;
   };
 
+  // 開くたびに再取得するが (staleTime 0)、前回開いたときの内容があれば先に表示する
+  const practiceQuery = useQuery({
+    queryKey: teamDetailKeys.practiceDetail(practiceId),
+    queryFn: () =>
+      fetchTeamPracticeDetail<PracticeDetail>(supabase, practiceId, t("dataNotFound")),
+    enabled: isOpen,
+    ...TEAM_VIEW_QUERY_OPTIONS,
+  });
+  const practice = practiceQuery.data ?? null;
+  // 読み込み表示 / エラーは表示できる内容が無いときだけ出す
+  const loading = !practice && practiceQuery.isPending;
+  const error = !practice && practiceQuery.isError ? t("loadError") : null;
+  const fetchError = practiceQuery.error;
   useEffect(() => {
-    if (!isOpen) return;
-
-    const loadPractice = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data, error: fetchError } = await supabase
-          .from("practices")
-          .select(
-            `
-            id,
-            date,
-            title,
-            place,
-            note,
-            practice_logs (
-              id,
-              user_id,
-              style,
-              swim_category,
-              rep_count,
-              set_count,
-              distance,
-              circle,
-              note,
-              practice_times (
-                id,
-                time,
-                rep_number,
-                set_number,
-                user_id
-              ),
-              practice_log_tags (
-                practice_tag_id,
-                practice_tags (
-                  id,
-                  name,
-                  color
-                )
-              ),
-              users!practice_logs_user_id_fkey (
-                name
-              )
-            )
-          `,
-          )
-          .eq("id", practiceId)
-          .single();
-
-        if (fetchError) throw fetchError;
-        if (!data) throw new Error(t("dataNotFound"));
-
-        setPractice(data as unknown as PracticeDetail);
-      } catch (err) {
-        console.error("チーム練習詳細の取得エラー:", err);
-        setError(t("loadError"));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPractice();
-  }, [isOpen, practiceId, supabase, t]);
+    if (fetchError) console.error("チーム練習詳細の取得エラー:", fetchError);
+  }, [fetchError]);
 
   // MemberTimeTable に渡すラベル
   const memberTimeTableLabels = useMemo(

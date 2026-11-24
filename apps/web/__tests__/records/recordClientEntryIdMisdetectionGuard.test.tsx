@@ -14,7 +14,7 @@
 // エラーにせず0行成功で返すため、記録が保存されずに silent failure になる。
 
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, waitFor, fireEvent } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Style } from "@apps/shared/types";
 import {

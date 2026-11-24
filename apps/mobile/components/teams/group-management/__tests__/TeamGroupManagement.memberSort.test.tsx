@@ -12,7 +12,8 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 
 const mocks = vi.hoisted(() => ({
   selectCalls: [] as string[],

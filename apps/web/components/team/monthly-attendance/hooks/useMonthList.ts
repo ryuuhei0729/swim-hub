@@ -1,161 +1,62 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttendanceAPI } from "@swim-hub/shared/api/attendance";
 import { useTranslations } from "next-intl";
-import { getMonthDateRange } from "@swim-hub/shared/utils/date";
-import { format, startOfMonth, endOfMonth, addMonths, parseISO } from "date-fns";
 import { toUserFacingMessage } from "@swim-hub/shared/utils/userFacingError";
+import {
+  calculateMyMonthStatus,
+  currentBaseMonth,
+  myMonthListQueryOptions,
+  type MonthItem,
+} from "@/hooks/queries/teamAttendanceQueries";
+import { teamDetailKeys } from "@/hooks/queries/teamDetailKeys";
 
-export interface MonthItem {
-  year: number;
-  month: number;
-  status: "has_unanswered" | "all_answered" | null;
-  eventCount: number;
-  answeredCount: number;
-}
+export type { MonthItem } from "@/hooks/queries/teamAttendanceQueries";
 
+const EMPTY_MONTH_LIST: MonthItem[] = [];
+
+/**
+ * 出欠タブの月別サマリ。
+ *
+ * 取得は React Query (`teamDetailKeys.myMonthList`)。タブを開くたびに再取得するが
+ * (staleTime 0)、再取得中は前回の一覧を表示する。自分の回答を数えるので
+ * userId をキーに含める。
+ */
 export const useMonthList = (
   teamId: string,
   supabase: SupabaseClient,
   attendanceAPI: AttendanceAPI,
+  userId: string | null,
 ) => {
   const t = useTranslations("teams");
-  const [monthList, setMonthList] = useState<MonthItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const baseMonth = currentBaseMonth();
+  const query = useQuery(myMonthListQueryOptions(supabase, teamId, userId, baseMonth));
 
-  const calculateMonthStatus = useCallback(
-    async (
-      year: number,
-      month: number,
-    ): Promise<{
-      eventCount: number;
-      answeredCount: number;
-      status: "has_unanswered" | "all_answered" | null;
-    }> => {
-      const [startDateStr, endDateStr] = getMonthDateRange(year, month);
+  const fetchError = query.error;
+  useEffect(() => {
+    if (fetchError) console.error("月リストの取得に失敗:", fetchError);
+  }, [fetchError]);
 
-      const [practicesResult, competitionsResult] = await Promise.all([
-        supabase
-          .from("practices")
-          .select("id")
-          .eq("team_id", teamId)
-          .gte("date", startDateStr)
-          .lte("date", endDateStr),
-        supabase
-          .from("competitions")
-          .select("id")
-          .eq("team_id", teamId)
-          .gte("date", startDateStr)
-          .lte("date", endDateStr),
-      ]);
-
-      if (practicesResult.error) throw practicesResult.error;
-      if (competitionsResult.error) throw competitionsResult.error;
-
-      const practiceIds = (practicesResult.data || []).map((p) => p.id);
-      const competitionIds = (competitionsResult.data || []).map((c) => c.id);
-      const eventCount = practiceIds.length + competitionIds.length;
-
-      const attendanceData = await attendanceAPI.getMyAttendancesByMonth(teamId, year, month);
-      const answeredCount = attendanceData.filter((a) => a.status !== null).length;
-
-      const eventIds = new Set([...practiceIds, ...competitionIds]);
-      const answeredEventIds = new Set(
-        attendanceData
-          .filter((a) => a.status !== null)
-          .map((a) => a.practice_id || a.competition_id)
-          .filter((id): id is string => id !== null),
-      );
-
-      const allAnswered =
-        eventCount > 0 && Array.from(eventIds).every((id) => answeredEventIds.has(id));
-
-      return {
-        eventCount,
-        answeredCount,
-        status: eventCount === 0 ? null : allAnswered ? "all_answered" : "has_unanswered",
-      };
-    },
-    [teamId, supabase, attendanceAPI],
-  );
-
+  const { refetch } = query;
   const loadMonthList = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+    // refetch は enabled を無視するので、ユーザー未確定のときは取得しない
+    if (userId === null) return;
+    await refetch();
+  }, [refetch, userId]);
 
-      const now = new Date();
-      const oneYearLater = addMonths(now, 12);
-      const startDateStr = format(startOfMonth(now), "yyyy-MM-dd");
-      const endDateStr = format(endOfMonth(oneYearLater), "yyyy-MM-dd");
-
-      const [practicesResult, competitionsResult] = await Promise.all([
-        supabase
-          .from("practices")
-          .select("date")
-          .eq("team_id", teamId)
-          .gte("date", startDateStr)
-          .lte("date", endDateStr),
-        supabase
-          .from("competitions")
-          .select("date")
-          .eq("team_id", teamId)
-          .gte("date", startDateStr)
-          .lte("date", endDateStr),
-      ]);
-
-      if (practicesResult.error) throw practicesResult.error;
-      if (competitionsResult.error) throw competitionsResult.error;
-
-      const monthSet = new Set<string>();
-      const allDates = [
-        ...(practicesResult.data || []).map((p) => p.date),
-        ...(competitionsResult.data || []).map((c) => c.date),
-      ];
-
-      allDates.forEach((dateStr) => {
-        const date = parseISO(dateStr);
-        const monthKey = format(date, "yyyy-MM");
-        monthSet.add(monthKey);
-      });
-
-      const monthList: MonthItem[] = [];
-      const sortedMonthKeys = Array.from(monthSet).sort();
-
-      for (const monthKey of sortedMonthKeys) {
-        const [yearStr, monthStr] = monthKey.split("-");
-        if (!yearStr || !monthStr) continue; // monthKey は同ファイル内で
-          // format(date, "yyyy-MM") により生成されるため常に2要素に分割されるが、
-          // split() の型上は保証されないため防御的にスキップする
-        const year = parseInt(yearStr);
-        const month = parseInt(monthStr);
-
-        const status = await calculateMonthStatus(year, month);
-        monthList.push({
-          year,
-          month,
-          ...status,
-        });
-      }
-
-      setMonthList(monthList);
-    } catch (err) {
-      console.error("月リストの取得に失敗:", err);
-      setError(toUserFacingMessage(err, t("monthListHook.loadError")));
-    } finally {
-      setLoading(false);
-    }
-  }, [teamId, supabase, calculateMonthStatus, t]);
-
+  // 1 か月分だけ回答状況を計算し直してキャッシュに反映する (直近の出欠を保存したとき)
   const updateMonthStatus = useCallback(
     async (year: number, month: number) => {
       try {
-        const status = await calculateMonthStatus(year, month);
-        setMonthList((prev) =>
-          prev.map((item) =>
+        const status = await calculateMyMonthStatus(supabase, attendanceAPI, teamId, year, month);
+        queryClient.setQueryData<MonthItem[]>(
+          teamDetailKeys.myMonthList(teamId, userId, baseMonth),
+          (prev) =>
+          prev?.map((item) =>
             item.year === year && item.month === month
               ? {
                   ...item,
@@ -170,13 +71,18 @@ export const useMonthList = (
         console.error("月ステータスの更新に失敗:", err);
       }
     },
-    [calculateMonthStatus],
+    [supabase, attendanceAPI, teamId, queryClient, userId, baseMonth],
   );
 
   return {
-    monthList,
-    loading,
-    error,
+    monthList: query.data ?? EMPTY_MONTH_LIST,
+    // スピナー / エラーは表示できる一覧が無いときだけ出す。
+    // ユーザー確定待ち (enabled: false) の間も isPending なので読み込み表示のまま
+    loading: query.isPending,
+    error:
+      fetchError && !query.data
+        ? toUserFacingMessage(fetchError, t("monthListHook.loadError"))
+        : null,
     loadMonthList,
     updateMonthStatus,
   };

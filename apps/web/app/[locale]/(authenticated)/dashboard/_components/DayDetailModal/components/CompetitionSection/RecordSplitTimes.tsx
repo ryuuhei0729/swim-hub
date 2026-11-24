@@ -1,49 +1,26 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts";
 import { LapTimeDisplay } from "@/components/forms/LapTimeDisplay";
-import type { SplitTime } from "@apps/shared/types";
+import { useRecordSplitTimesQuery } from "@/hooks/queries/dayDetailQueries";
 import type { RecordSplitTimesProps } from "../../types";
 
 export function RecordSplitTimes({ recordId, raceDistance, recordTime }: RecordSplitTimesProps) {
   const { supabase } = useAuth();
   const t = useTranslations("dashboard");
-  const [splits, setSplits] = useState<SplitTime[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  // スプリットタイム (開くたびに取り直す。前回の内容があれば先に表示する)
+  const { data, error } = useRecordSplitTimesQuery(supabase, recordId);
 
-  useEffect(() => {
-    const loadSplits = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("split_times")
-          .select("*")
-          .eq("record_id", recordId)
-          .order("distance", { ascending: true });
-
-        if (error) throw error;
-
-        setSplits(data || []);
-      } catch (err) {
-        console.error("スプリットタイムの取得エラー:", err);
-        setError(err as Error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSplits();
-  }, [recordId, supabase]);
-
-  if (loading) {
+  // データが無いときだけ読み込み中・エラーを表示する (裏での取り直し中・その失敗では隠さない)
+  if (!data) {
+    if (error) {
+      return <div className="mt-3 text-sm text-red-600">{t("competition.splitFetchError")}</div>;
+    }
     return <div className="mt-3 text-sm text-gray-500">{t("competition.splitLoading")}</div>;
   }
-  if (error) {
-    return <div className="mt-3 text-sm text-red-600">{t("competition.splitFetchError")}</div>;
-  }
+  const splits = data;
 
   // DBにsplit_timeがない場合は表示しない
   if (!splits.length) {

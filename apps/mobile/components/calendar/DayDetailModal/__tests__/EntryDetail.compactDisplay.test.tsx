@@ -7,7 +7,8 @@
  * - 「大会記録を追加」の + アイコンは黒 (背景が淡い青なので白だと見えない)
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { CalendarItem } from "@apps/shared/types/ui";
 
@@ -52,7 +53,7 @@ function renderEntryDetail(props: Partial<EntryDetailProps> = {}) {
         Promise.resolve({ data: ENTRY_ROWS, error: null }).then(resolve),
     })),
   };
-  vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: null, supabase }));
+  vi.mocked(useAuth).mockReturnValue(buildAuthContext({ user: { id: "user-1" }, supabase }));
 
   const entries = [
     { id: "entry-1", type: "entry", date: "2026-11-14", title: "こずみっくTy", metadata: {} },

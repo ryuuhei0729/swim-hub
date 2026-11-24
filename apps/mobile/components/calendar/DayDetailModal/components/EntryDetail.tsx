@@ -1,8 +1,14 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useMemo } from "react";
 import { View, Text, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
+import {
+  useInvalidateWhenChanged,
+  useIsAwaitingFreshData,
+} from "@/hooks/cachedQuery";
+import { DAY_DETAIL_QUERY_OPTIONS, dayDetailKeys } from "@/hooks/dayDetailQueries";
 import { formatTime } from "@/utils/formatters";
 import { localizedStyleName } from "@/utils/styleName";
 import type { CalendarItem } from "@apps/shared/types/ui";
@@ -20,6 +26,16 @@ const LEGACY_WRAPPER_BORDER = "#DBEAFE";
 const LEGACY_ENTRY_BOX_BACKGROUND = "#FFF7ED";
 const LEGACY_ENTRY_BOX_BORDER = "#FED7AA";
 const LEGACY_ENTRY_BOX_TEXT = "#9A3412";
+
+interface EntryRow {
+  id: string;
+  style_id: number;
+  entry_time: number | null;
+  note: string | null;
+  style:
+    | { id: number; name_jp: string; style: string }
+    | { id: number; name_jp: string; style: string }[];
+}
 
 /**
  * エントリー詳細表示コンポーネント（大会ごとにグループ化、記録未登録）
@@ -60,87 +76,79 @@ export const EntryDetail: React.FC<EntryDetailProps> = ({
     : hexToRgba(color, CALENDAR_COLOR_ALPHA.DAY_DETAIL_BORDER);
   const entryBoxTextColor = isDefaultAccent ? LEGACY_ENTRY_BOX_TEXT : darkenHex(color, 0.65);
   const { t, i18n } = useTranslation();
-  const { supabase } = useAuth();
-  const [actualEntries, setActualEntries] = useState<EntryData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { supabase, user } = useAuth();
+  const userId = user?.id;
 
-  const fetchEntries = useCallback(async () => {
-    try {
-      setLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data: entryData, error } = await supabase
-        .from("entries")
-        .select(
-          `
+  // 自分のエントリーを取得する。同じ日を開き直したときは前回の内容をすぐ表示し、裏で取り直す。
+  // 種目名は表示言語で変わるので、キャッシュには行をそのまま持たせて描画時に組み立てる。
+  const entriesKey = dayDetailKeys.entries(competitionId, userId ?? "");
+  const entriesQuery = useQuery({
+    queryKey: entriesKey,
+    queryFn: async (): Promise<EntryRow[]> => {
+      try {
+        const { data: entryData, error } = await supabase
+          .from("entries")
+          .select(
+            `
           id,
           style_id,
           entry_time,
           note,
           style:styles!inner(id, name_jp, style)
         `,
-        )
-        .eq("competition_id", competitionId)
-        .eq("user_id", user.id);
+          )
+          .eq("competition_id", competitionId)
+          .eq("user_id", userId!);
 
-      if (error) throw error;
-
-      if (entryData && entryData.length > 0) {
-        type EntryRow = {
-          id: string;
-          style_id: number;
-          entry_time: number | null;
-          note: string | null;
-          style:
-            | { id: number; name_jp: string; style: string }
-            | { id: number; name_jp: string; style: string }[];
-        };
-
-        const mapped = (entryData as EntryRow[]).map((row) => {
-          const style = Array.isArray(row.style) ? row.style[0] : row.style;
-          return {
-            id: row.id,
-            styleId: row.style_id,
-            styleName: localizedStyleName(style, t),
-            entryTime: row.entry_time,
-            note: row.note,
-          };
-        });
-        setActualEntries(mapped);
-      } else {
-        // カレンダーアイテムから初期データを構築
-        const initialEntries = entries.map((entry) => {
-          const style = entry.metadata?.style;
-          return {
-            id: entry.id,
-            styleId:
-              typeof style === "object" && style !== null && "id" in style ? Number(style.id) : 0,
-            styleName:
-              typeof style === "object" && style !== null
-                ? localizedStyleName(style as { style?: string; name_jp?: string }, t)
-                : "",
-            entryTime: entry.metadata?.entry_time || null,
-            note: entry.note || null,
-          };
-        });
-        setActualEntries(initialEntries);
+        if (error) throw error;
+        return (entryData ?? []) as EntryRow[];
+      } catch (err) {
+        console.error("エントリーデータの取得エラー:", err);
+        throw err;
       }
-    } catch (err) {
-      console.error("エントリーデータの取得エラー:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [competitionId, supabase, entries, t]);
+    },
+    enabled: !!userId,
+    ...DAY_DETAIL_QUERY_OPTIONS,
+  });
+  // カレンダー側のエントリーが差し替わったら (編集・削除のあと) 取り直す
+  useInvalidateWhenChanged(entries, entriesKey);
+  const awaitingFresh = useIsAwaitingFreshData(entriesKey, entriesQuery.isFetching);
 
-  useEffect(() => {
-    fetchEntries();
-  }, [fetchEntries]);
+  const entryRows = entriesQuery.data;
+  // 取得できるまでは読み込み中。取得に失敗した場合は0件として扱う
+  const loading =
+    !!userId && ((entryRows === undefined && !entriesQuery.isError) || awaitingFresh);
+
+  const actualEntries = useMemo<EntryData[]>(() => {
+    if (entryRows === undefined) return [];
+    if (entryRows.length > 0) {
+      return entryRows.map((row) => {
+        const style = Array.isArray(row.style) ? row.style[0] : row.style;
+        return {
+          id: row.id,
+          styleId: row.style_id,
+          styleName: localizedStyleName(style, t),
+          entryTime: row.entry_time,
+          note: row.note,
+        };
+      });
+    }
+    // カレンダーアイテムから初期データを構築
+    return entries.map((entry) => {
+      const style = entry.metadata?.style;
+      return {
+        id: entry.id,
+        styleId:
+          typeof style === "object" && style !== null && "id" in style ? Number(style.id) : 0,
+        styleName:
+          typeof style === "object" && style !== null
+            ? localizedStyleName(style as { style?: string; name_jp?: string }, t)
+            : "",
+        entryTime: entry.metadata?.entry_time || null,
+        note: entry.note || null,
+      };
+    });
+  }, [entryRows, entries, t]);
 
   // 「新宿コズミックセンター（短水路）」のように会場と水路を1行で出す。
   // 括弧は ja のみ全角 (styleOptions.ts の formatStyleDisplay と同じ言語判定)。

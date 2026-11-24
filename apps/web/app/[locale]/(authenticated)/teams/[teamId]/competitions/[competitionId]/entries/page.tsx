@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { createAuthenticatedServerClient } from "@/lib/supabase-server-auth";
 import { parseEntryReturnOrigin } from "@/utils/entryReturnOrigin";
 import EntriesDataLoader from "./_server/EntriesDataLoader";
+import { FreshServerRender } from "@/components/ui/FreshServerRender";
+import CompetitionEntriesLoading from "./loading";
 
 export async function generateMetadata({
   params,
@@ -63,7 +65,11 @@ export default async function EntriesPage({ params, searchParams }: EntriesPageP
         </div>
       }
     >
-      <EntriesDataLoader teamId={teamId} competitionId={competitionId} returnOrigin={origin} />
+      {/* 保存した直後に同じ画面を開き直すと、ページ遷移のキャッシュに残った保存前のデータで
+          フォームが開き、重複登録や上書きになる。使い回された描画なら最新を取り直す */}
+      <FreshServerRender renderId={crypto.randomUUID()} fallback={<CompetitionEntriesLoading />}>
+        <EntriesDataLoader teamId={teamId} competitionId={competitionId} returnOrigin={origin} />
+      </FreshServerRender>
     </Suspense>
   );
 }

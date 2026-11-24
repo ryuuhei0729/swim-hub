@@ -40,7 +40,7 @@
  */
 
 import React from "react";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { renderWithQueryClient as render, screen, fireEvent, within } from "@/__tests__/helpers/teamQueryTestUtils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PracticeTag } from "@apps/shared/types";
 import PracticeLogClient from "../../../app/[locale]/(authenticated)/teams-admin/[teamId]/practices/[practiceId]/logs/_client/PracticeLogClient";

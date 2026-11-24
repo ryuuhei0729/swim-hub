@@ -11,7 +11,8 @@
  */
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 
 vi.mock("@/hooks/useSignedImageUrl", () => ({
   useSignedImageUrl: () => ({ url: null, isLoading: false }),

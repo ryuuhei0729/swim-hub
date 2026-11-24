@@ -38,7 +38,8 @@
  *   ミューテーション対象は record 用ボタンの type 条件そのものである。
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+import { renderWithQuery as render } from "@/__tests__/helpers/testUtils";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createMockSupabaseClient } from "@/__mocks__/supabase";
 import type { CalendarItem } from "@apps/shared/types/ui";
